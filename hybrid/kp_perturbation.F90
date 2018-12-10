@@ -16,7 +16,6 @@
       USE m_constants
       USE m_ylm
       USE m_gaunt
-      USE m_apws
       USE m_util
       USE m_types
       USE m_io_hybrid

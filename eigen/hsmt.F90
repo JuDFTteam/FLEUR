@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_hsmt
   USE m_juDFT
   IMPLICIT NONE
@@ -25,6 +30,7 @@ CONTAINS
     USE m_hsmt_fjgj
     USE m_hsmt_spinor
     USE m_hsmt_soc_offdiag
+    USE m_hsmt_mtNocoPot_offdiag
     USE m_hsmt_offdiag
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: mpi
@@ -84,15 +90,18 @@ CONTAINS
              !global spin-matrices.
              CALL hmat_tmp%clear();CALL smat_tmp%clear()
              CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ispin),&
-                           usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat_tmp,hmat_tmp)
+                  usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),smat_tmp,hmat_tmp)
              CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,1,1,chi_one,noco,cell,lapw,td,&
-                              fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat_tmp)
+                  fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat_tmp)
              CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
-                          n,chi_one,ispin,iintsp,jintsp,hmat_tmp,smat_tmp)
+                  n,chi_one,ispin,iintsp,jintsp,hmat_tmp,smat_tmp)
              CALL hsmt_spinor(ispin,n,noco,chi)
              CALL hsmt_distspins(chi,smat_tmp,smat)
              CALL hsmt_distspins(chi,hmat_tmp,hmat)
              !Add off-diagonal contributions to Hamiltonian if needed
+             IF (ispin==1.AND.noco%l_mtNocoPot) THEN
+                CALL hsmt_mtNocoPot_offdiag(n,mpi,sym,atoms,noco,cell,lapw,td,fj,gj,hmat_tmp,hmat)
+             ENDIF
              IF (ispin==1.and.noco%l_soc) &
                   CALL hsmt_soc_offdiag(n,atoms,mpi,noco,lapw,usdus,td,fj(:,0:,:,iintsp),gj(:,0:,:,iintsp),hmat)
              IF (noco%l_constr) &

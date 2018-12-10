@@ -175,9 +175,9 @@ SUBROUTINE addRadFunScalarProducts(thisDenCoeffsOffdiag, atoms, f, g, flo, iType
 
    CLASS(t_denCoeffsOffdiag), INTENT(INOUT) :: thisDenCoeffsOffdiag
    TYPE(t_atoms),             INTENT(IN)    :: atoms
-   REAL,                      INTENT(IN)    :: f(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,dimension%jspd)
-   REAL,                      INTENT(IN)    :: g(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,dimension%jspd)
-   REAL,                      INTENT(IN)    :: flo(:,:,:,:)!(atoms%jmtd,2,atoms%nlod,dimension%jspd)
+   REAL,                      INTENT(IN)    :: f(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)
+   REAL,                      INTENT(IN)    :: g(:,:,0:,:)!(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)
+   REAL,                      INTENT(IN)    :: flo(:,:,:,:)!(atoms%jmtd,2,atoms%nlod,input%jspins)
    INTEGER,                   INTENT(IN)    :: iType
 
    INTEGER :: l, ilo
@@ -208,8 +208,8 @@ SUBROUTINE calcCoefficients(thisDenCoeffsOffdiag,atoms,sphhar,sym,eigVecCoeffs,w
    TYPE(t_sphhar),            INTENT(IN)    :: sphhar
    TYPE(t_sym),               INTENT(IN)    :: sym
    TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
-   REAL,                      INTENT(IN)    :: we(noccbd)
    INTEGER,                   INTENT(IN)    :: noccbd
+   REAL,                      INTENT(IN)    :: we(noccbd)
 
    CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,thisDenCoeffsOffdiag%uu21,thisDenCoeffsOffdiag%ud21,&
                 thisDenCoeffsOffdiag%du21,thisDenCoeffsOffdiag%dd21,thisDenCoeffsOffdiag%uulo21,&

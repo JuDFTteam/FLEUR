@@ -28,6 +28,7 @@
           USE m_setupMPI
           USE m_cdn_io
           USE m_fleur_info
+          USE m_broyd_io
           USE m_checks
           USE m_prpqfftmap
           USE m_writeOutHeader
@@ -221,7 +222,7 @@
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
   
-          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,DIMENSION%jspd,.FALSE.)
+          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,input%jspins,.FALSE.)
                    !-odim
           oneD%odd%nq2 = oneD%odd%n2d
           oneD%odd%kimax2 = oneD%odd%nq2 - 1
@@ -523,6 +524,7 @@
           CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN
+             IF(input%gw.NE.0) CALL resetBroydenHistory()
              CALL setStartingDensity(noco%l_noco)
           END IF
 

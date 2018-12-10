@@ -97,9 +97,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
            IF (input%secvar) THEN
               CALL juDFT_error("LO + sevcar not implemented",calledby ="postprocessInput")
            END IF
-           IF (input%isec1<input%itmax) THEN
-              CALL juDFT_error("LO + Wu not implemented",calledby ="postprocessInput")
-           END IF
            IF (atoms%nlo(iType).GT.atoms%nlod) THEN
               WRITE (6,*) 'nlo(n) =',atoms%nlo(iType),' > nlod =',atoms%nlod
               CALL juDFT_error("nlo(n)>nlod",calledby ="postprocessInput")
@@ -165,7 +162,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      IF (atoms%n_u.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
-        IF (input%isec1<input%itmax) CALL juDFT_error("LDA+U and Wu not implemented",calledby ="postprocessInput")
         IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
      END IF
 
@@ -239,7 +235,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
      IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
      IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
-     IF (dimension%neigd.LT.minNeigd) THEN
+     IF ((dimension%neigd.NE.-1).AND.(dimension%neigd.LT.minNeigd)) THEN
         IF (dimension%neigd>0) THEN
            WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
            WRITE(*,*) 'changed numbands (dimension%neigd) to ',minNeigd
@@ -254,8 +250,18 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
 
      CALL lapw_fft_dim(cell,input,noco,stars)
-     
-        
+
+     atoms%nlotot = 0
+     DO n = 1, atoms%ntype
+        DO l = 1,atoms%nlo(n)
+           atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+        END DO
+     END DO
+
+     IF(dimension%neigd.EQ.-1) THEN
+        dimension%neigd = dimension%nvd + atoms%nlotot
+     END IF
+
      obsolete%lepr = 0
 
      IF (noco%l_noco) dimension%neigd = 2*dimension%neigd

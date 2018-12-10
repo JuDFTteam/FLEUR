@@ -32,16 +32,16 @@ CONTAINS
     REAL,    INTENT (OUT) :: wronk
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nv2(dimension%jspd)
-    INTEGER, INTENT (IN) :: kvac1(dimension%nv2d,dimension%jspd),kvac2(dimension%nv2d,dimension%jspd)
+    INTEGER, INTENT (IN) :: nv2(input%jspins)
+    INTEGER, INTENT (IN) :: kvac1(dimension%nv2d,input%jspins),kvac2(dimension%nv2d,input%jspins)
     COMPLEX, INTENT (IN) :: vxy(vacuum%nmzxyd,stars%ng2-1)
     COMPLEX, INTENT (OUT):: tddv(dimension%nv2d,dimension%nv2d),tduv(dimension%nv2d,dimension%nv2d)
     COMPLEX, INTENT (OUT):: tudv(dimension%nv2d,dimension%nv2d),tuuv(dimension%nv2d,dimension%nv2d)
-    REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,4) ,evac(2,dimension%jspd)
+    REAL,    INTENT (IN) :: vz(vacuum%nmzd,2,4) ,evac(2,input%jspins)
     REAL,    INTENT (IN) :: bkpt(3) 
-    REAL,    INTENT (OUT):: udz(dimension%nv2d,dimension%jspd),uz(dimension%nv2d,dimension%jspd)
-    REAL,    INTENT (OUT):: dudz(dimension%nv2d,dimension%jspd),duz(dimension%nv2d,dimension%jspd)
-    REAL,    INTENT (OUT):: ddnv(dimension%nv2d,dimension%jspd)
+    REAL,    INTENT (OUT):: udz(dimension%nv2d,input%jspins),uz(dimension%nv2d,input%jspins)
+    REAL,    INTENT (OUT):: dudz(dimension%nv2d,input%jspins),duz(dimension%nv2d,input%jspins)
+    REAL,    INTENT (OUT):: ddnv(dimension%nv2d,input%jspins)
     !     ..
     !     .. Local Scalars ..
     REAL ev,scale,xv,yv,vzero
@@ -50,9 +50,11 @@ CONTAINS
     LOGICAL tail
     !     ..
     !     .. Local Arrays ..
-    REAL u(vacuum%nmzd,dimension%nv2d,dimension%jspd),ud(vacuum%nmzd,dimension%nv2d,dimension%jspd)
+    REAL u(vacuum%nmzd,dimension%nv2d,input%jspins),ud(vacuum%nmzd,dimension%nv2d,input%jspins)
     REAL v(3),x(vacuum%nmzd), qssbti(2,2)
     !     ..
+    tuuv=0.0;tudv=0.0;tddv=0.0;tduv=0.0
+    udz=0.0;duz=0.0;ddnv=0.0;udz=0.;uz=0.
     tail = .true.
     np1 = vacuum%nmzxy + 1
     !--->    wronksian for the schrodinger equation given by an identity

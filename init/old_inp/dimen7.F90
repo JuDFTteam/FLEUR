@@ -355,8 +355,8 @@
       IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
 
       atoms%nlod = max(atoms%nlod,2) ! for chkmt
-      dimension%jspd=input%jspins
-      CALL parawrite(sym,stars,atoms,sphhar,dimension,vacuum,obsolete,kpts,oneD)
+      input%jspins=input%jspins
+      CALL parawrite(sym,stars,atoms,sphhar,DIMENSION,vacuum,obsolete,kpts,oneD,input)
 
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&

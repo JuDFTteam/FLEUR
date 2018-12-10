@@ -30,7 +30,7 @@ CONTAINS
     LOGICAL, INTENT (IN) :: spav ! if T, spin-averaged pot is used
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: vr(:,:)!(atoms%jmtd,dimension%jspd),
+    REAL,    INTENT (IN) :: vr(:,:)!(atoms%jmtd,input%jspins),
     !     ..
     !     .. Local Scalars ..
     REAL ddn1,e ,ulops,dulops,duds1

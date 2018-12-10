@@ -76,8 +76,8 @@ c****************************************************************
       real tmp_zatom(1:ntype),tmp_dx(1:ntype),tmp_rmt(1:ntype)
       integer tmp_jri(1:ntype),tmp_neq(1:ntype),tmp_rmsh(jmtd,ntype)
       complex,allocatable::wannint(:,:,:,:)
-      real(4) delta1,delta2,plot_time_int,plot_read_data_time
-      real(4) plot_time_sph,time_sqrt
+      real delta1,delta2,plot_time_int,plot_read_data_time
+      real plot_time_sph,time_sqrt
       plot_time_sph=0.0
       plot_time_int=0.0
       plot_read_data_time=0.0

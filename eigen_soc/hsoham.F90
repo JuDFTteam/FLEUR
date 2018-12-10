@@ -27,7 +27,7 @@ CONTAINS
     !     ..
     INTEGER, INTENT (IN) ::  nat_start,nat_stop,n_rank,n_size,SUB_COMM,neigd
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nsz(:)!(dimension%jspd)  
+    INTEGER, INTENT (IN) :: nsz(:)!(input%jspins)  
     COMPLEX, INTENT (IN) :: ahelp((atoms%lmaxd+2)*atoms%lmaxd,nat_stop-nat_start+1,neigd,input%jspins)
     COMPLEX, INTENT (IN) :: bhelp((atoms%lmaxd+2)*atoms%lmaxd,nat_stop-nat_start+1,neigd,input%jspins)
     COMPLEX, INTENT (IN) :: chelp(-atoms%llod:atoms%llod,neigd,atoms%nlod,nat_stop-nat_start+1,input%jspins)

@@ -6,11 +6,11 @@
 
 MODULE m_types_usdus
   TYPE t_usdus
-     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: us
-     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dus
-     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: uds
-     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: duds !(0:lmaxd,ntype,jspd)
-     REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: ddn  !(0:lmaxd,ntype,jspd)
+     REAL,ALLOCATABLE,DIMENSION(:,:,:) CPP_MANAGED   :: us
+     REAL,ALLOCATABLE,DIMENSION(:,:,:) CPP_MANAGED   :: dus
+     REAL,ALLOCATABLE,DIMENSION(:,:,:) CPP_MANAGED   :: uds
+     REAL,ALLOCATABLE,DIMENSION(:,:,:) CPP_MANAGED   :: duds !(0:lmaxd,ntype,jspd)
+     REAL,ALLOCATABLE,DIMENSION(:,:,:) CPP_MANAGED   :: ddn  !(0:lmaxd,ntype,jspd)
      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: ulos
      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: dulos
      REAL,ALLOCATABLE,DIMENSION(:,:,:)   :: uulon

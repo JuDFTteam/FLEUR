@@ -37,18 +37,18 @@ CONTAINS
 
 
 
-  SUBROUTINE alloc_fa4_arrays(atoms,dimension)
+  SUBROUTINE alloc_fa4_arrays(atoms,input)
     !     This subroutine allocates the arrays filled in cdnovlp.F
     !     so their content can be provided in totale.f, where the addition takes place
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms),INTENT(IN)       :: atoms
 
     !     .. Scalar Arguments ..
 
     IF (.not.allocated(force_a4_mt)) THEN
-       ALLOCATE ( force_a4_mt(3,atoms%ntype,dimension%jspd),force_a4_is(3,atoms%ntype,dimension%jspd) )
+       ALLOCATE ( force_a4_mt(3,atoms%ntype,input%jspins),force_a4_is(3,atoms%ntype,input%jspins) )
     END IF
 
   END SUBROUTINE alloc_fa4_arrays

@@ -114,6 +114,21 @@ CONTAINS
              END DO
           END DO
        END IF
+       !MT part
+       IF (noco%l_mtnocopot) THEN
+          na = 1
+          DO n = 1,atoms%ntype
+             DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+                DO i = 1,atoms%jri(n)
+                   j = j + 1
+                   den%mt(i,l,n,3)=s_in(j) 
+                   j = j + 1
+                    den%mt(i,l,n,4)=s_in(j)
+                END DO
+             END DO
+             na = na + atoms%neq(n)
+          END DO
+       END IF
     ENDIF
 
     IF ( atoms%n_u > 0 ) THEN

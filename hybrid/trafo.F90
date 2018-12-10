@@ -8,10 +8,9 @@
 
       CONTAINS
 
-      SUBROUTINE waveftrafo_symm( &
-     &     cmt_out,z_out,cmt,l_real,z_r,z_c,bandi,ndb,&
-     &     nk,iop,atoms, hybrid,kpts, sym,&
-     &     jsp,dimension, cell,gpt,lapw )
+      SUBROUTINE waveftrafo_symm(cmt_out,z_out,cmt,l_real,z_r,z_c,bandi,ndb,&
+                                 nk,iop,atoms,hybrid,kpts,sym,&
+                                 jsp,dimension,cell,lapw)
 
       USE m_constants     
       USE m_util          ,ONLY:  modulo1 
@@ -32,8 +31,6 @@
       INTEGER,INTENT(IN)      ::  bandi,iop
 
 !     - arrays -
-      INTEGER,INTENT(IN)      ::  gpt(3,lapw%nv(jsp))
-
       COMPLEX,INTENT(IN)      ::  cmt(dimension%neigd,hybrid%maxlmindx,atoms%nat)
       LOGICAL,INTENT(IN)      ::  l_real
       REAL,INTENT(IN)         ::  z_r(dimension%nbasfcn,dimension%neigd)
@@ -129,11 +126,11 @@
       z_out = 0
 
       DO igpt = 1,lapw%nv(jsp)
-         g    = matmul( invrrot,gpt(:,igpt)+g1 )
+         g    = matmul( invrrot,lapw%gvec(:,igpt,jsp)+g1 )
 !determine number of g
          igpt1 = 0
          DO i = 1,lapw%nv(jsp)
-            IF ( maxval( abs( g - gpt(:,i) ) ) .le. 1E-06  ) THEN
+            IF ( maxval( abs( g - lapw%gvec(:,i,jsp) ) ) .le. 1E-06  ) THEN
                igpt1 = i
                EXIT
             END IF
@@ -141,7 +138,7 @@
          IF ( igpt1 .eq. 0 ) THEN 
             STOP 'wavetrafo_symm: rotated G vector not found'
          END IF
-         cdum =  exp( tpiimg*dotprod(rkpt+gpt(:,igpt),trans(:)) )
+         cdum =  exp( tpiimg*dotprod(rkpt+lapw%gvec(:,igpt,jsp),trans(:)) )
          if (l_real) THEN
             z_out(igpt,1:ndb) = cdum * z_r(igpt1,bandi:bandi+ndb-1)
          else

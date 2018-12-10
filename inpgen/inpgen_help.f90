@@ -12,16 +12,16 @@ CONTAINS
     USE m_juDFT
     USE m_fleur_arguments
     IMPLICIT NONE
-    CHARACTER(LEN=500):: infostring
+    CHARACTER(:), ALLOCATABLE:: infostring
 
     PRINT *,"     Welcome to FLEUR - inpgen   (www.flapw.de)   "
-    PRINT *,"     MaX-Release 2.1          (www.max-centre.eu)"
+    PRINT *,"     MaX-Release 3.0          (www.max-centre.eu)"
 
     IF (.NOT. juDFT_was_argument("-h")) RETURN
 
     !now print version info and help on command line arguments:
     CALL get_compile_desc_string(infostring)
-    WRITE(*,'(a500)') infostring
+    WRITE(*,'(a)') infostring
     WRITE(*,'(a)')
     WRITE(*,'(a)')"------------------------------------------------------"
     WRITE(*,'(a)')"inpgen usage info:"
@@ -32,6 +32,7 @@ CONTAINS
     CALL print_argument("-explicit")
     CALL print_argument("-electronConfig")
     CALL print_argument("-fast_defaults")
+    CALL print_argument("-kpts_gw")
     CALL print_argument("-h")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"

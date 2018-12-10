@@ -24,7 +24,6 @@ CONTAINS
     !***********************************************************************
     USE m_constants,ONLY: fpi_const
     USE m_types
-    USE m_apws
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -35,7 +34,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)      :: na,ntyp 
-    INTEGER, INTENT (IN)      :: iintsp,jintsp
+    INTEGER, INTENT (IN)      :: jintsp,iintsp
     COMPLEX, INTENT (IN)      :: chi
     INTEGER, INTENT(IN)       :: isp
     !     ..
@@ -55,19 +54,19 @@ CONTAINS
 
     COMPLEX,   ALLOCATABLE  :: cph(:,:)
     ALLOCATE(cph(MAXVAL(lapw%nv),2))
-    DO i=MIN(iintsp,jintsp),MAX(iintsp,jintsp)
+    DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
        CALL lapw%phase_factors(i,atoms%taual(:,na),noco%qss,cph(:,i))
     ENDDO
 
-    IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
+    IF ((atoms%invsat(na) == 0) .OR. (atoms%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
        !--->    the contributions to the overlap matrix of both atoms are added
        !--->    at once. where it is made use of the fact, that the sum of
        !--->    these contributions is twice the real part of the contribution
        !--->    of each atom. note, that in this case there are twice as many
        !--->    (2*(2*l+1)) k-vectors (compare abccoflo and comments there).
-       IF (atoms%invsat(na).EQ.0) invsfct = 1
-       IF (atoms%invsat(na).EQ.1) invsfct = 2
+       IF (atoms%invsat(na) == 0) invsfct = 1
+       IF (atoms%invsat(na) == 1) invsfct = 2
    
        con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
@@ -82,33 +81,33 @@ CONTAINS
                clo1(lo)*    clo1(lo) )
           DO nkvec = 1,invsfct* (2*l+1) !Each LO can have several functions
              !+t3e
-             locol = lapw%nv(iintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-             IF (MOD(locol-1,mpi%n_size).EQ.mpi%n_rank) THEN
+             locol = lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
+             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN
                 locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
                 !-t3e
                 k = lapw%kvec(nkvec,lo,na)
                 !--->          calculate the overlap matrix elements with the regular
                 !--->          flapw basis-functions
-                DO kp = 1,lapw%nv(jintsp)
+                DO kp = 1,lapw%nv(iintsp)
                    fact2 = con * fl2p1 * (&
-                        fj(kp,l,jintsp)* ( alo1(lo) + &
+                        fj(kp,l,iintsp)* ( alo1(lo) + &
                         clo1(lo)*ud%uulon(lo,ntyp,isp))+&
-                        gj(kp,l,jintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
+                        gj(kp,l,iintsp)* ( blo1(lo) * ud%ddn(l,ntyp,isp)+&
                         clo1(lo)*ud%dulon(lo,ntyp,isp)))
-                   dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
+                   dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
                       smat%data_r(kp,locol) = smat%data_r(kp,locol) + chi*invsfct*fact2 * legpol(l,dotp) *&
-                           cph(k,iintsp)*CONJG(cph(kp,jintsp))
+                           cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ELSE
                       smat%data_c(kp,locol) = smat%data_c(kp,locol) + chi*invsfct*fact2 * legpol(l,dotp) *&
-                           cph(k,iintsp)*CONJG(cph(kp,jintsp))
+                           cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO
                 !--->          calculate the overlap matrix elements with other local
                 !--->          orbitals at the same atom, if they have the same l
                 DO lop = 1, (lo-1)
                    lp = atoms%llo(lop,ntyp)
-                   IF (l.EQ.lp) THEN
+                   IF (l == lp) THEN
                       fact3 = con**2 * fl2p1 * (&
                            alo1(lop)*(alo1(lo) + &
                            clo1(lo)*ud%uulon(lo,ntyp,isp))+&
@@ -119,14 +118,14 @@ CONTAINS
                            clo1(lo)*ud%uloulopn(lop,lo,ntyp,isp)))
                       DO nkvecp = 1,invsfct* (2*lp+1)
                          kp = lapw%kvec(nkvecp,lop,na)
-                         lorow=lapw%nv(jintsp)+lapw%index_lo(lop,na)+nkvecp
-                         dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
+                         lorow=lapw%nv(iintsp)+lapw%index_lo(lop,na)+nkvecp
+                         dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                          IF (smat%l_real) THEN
                             smat%data_r(lorow,locol) =smat%data_r(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)* &
-                                 cph(k,iintsp)*conjg(cph(kp,jintsp))
+                                 cph(k,jintsp)*conjg(cph(kp,iintsp))
                          ELSE
                             smat%data_c(lorow,locol) =smat%data_c(lorow,locol)+chi*invsfct*fact3*legpol(l,dotp)*&
-                                 cph(k,iintsp)*CONJG(cph(kp,jintsp)) 
+                                 cph(k,jintsp)*CONJG(cph(kp,iintsp)) 
                          ENDIF
                       END DO
                    ELSE
@@ -136,14 +135,14 @@ CONTAINS
                 !--->          orbital with itself
                 DO nkvecp = 1,nkvec
                    kp = lapw%kvec(nkvecp,lo,na)
-                   lorow=lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvecp
-                   dotp = dot_PRODUCT(lapw%gk(:,k,iintsp),lapw%gk(:,kp,jintsp))
+                   lorow=lapw%nv(iintsp)+lapw%index_lo(lo,na)+nkvecp
+                   dotp = dot_PRODUCT(lapw%gk(:,k,jintsp),lapw%gk(:,kp,iintsp))
                    IF (smat%l_real) THEN
                       smat%data_r(lorow,locol) = smat%data_r(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp) *&
-                           cph(k,iintsp)*CONJG(cph(kp,jintsp))
+                           cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ELSE
                       smat%data_c(lorow,locol) = smat%data_c(lorow,locol) + chi*invsfct*fact1*legpol(l,dotp)*&
-                           cph(k,iintsp)*CONJG(cph(kp,jintsp))
+                           cph(k,jintsp)*CONJG(cph(kp,iintsp))
                    ENDIF
                 END DO
              ENDIF ! mod(locol-1,n_size) = nrank 

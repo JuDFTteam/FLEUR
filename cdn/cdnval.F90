@@ -91,7 +91,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nStart,nEnd,nbasfcn
-   LOGICAL :: l_orbcomprot, l_real, l_write, l_dosNdir, l_corespec
+   LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: we(:)
@@ -127,7 +127,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end))
-   ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,dimension%jspd))
+   ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
 
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
@@ -159,10 +159,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
-   l_write = input%cdinf.AND.mpi%irank==0
    DO iType = 1, atoms%ntype
       DO ispin = jsp_start, jsp_end
-         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,l_write,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
+         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
       END DO
       IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
@@ -227,7 +226,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
       ! valence density in the atomic spheres
-      CALL eigVecCoeffs%init(dimension,atoms,noco,jspin,noccbd)
+      CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
@@ -276,7 +275,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #endif
 
    IF (mpi%irank==0) THEN
-      CALL cdnmt(dimension%jspd,atoms,sphhar,noco,jsp_start,jsp_end,&
+      CALL cdnmt(input%jspins,atoms,sphhar,noco,jsp_start,jsp_end,&
                  enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt)
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end

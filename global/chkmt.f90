@@ -274,7 +274,7 @@
             CALL juDFT_error("Too many atoms at same position.",calledby ="chkmt")
          END IF
          numNearestNeighbors(n) = MIN(maxCubeAtoms,iNeighborAtom)
-         CALL sort(iNeighborAtom,sqrDistances,distIndexList)
+         CALL sort(distIndexList(:iNeighborAtom),sqrDistances(:iNeighborAtom))
          DO i = 1, numNearestNeighbors(n)
             nearestNeighbors(i,n) = neighborAtoms(distIndexList(i))
             nearestNeighborDists(i,n) = SQRT(sqrDistances(distIndexList(i)))
@@ -293,7 +293,7 @@
 
 !        Sort distances and set MT radii for the atoms
 
-      CALL sort(atoms%ntype,nearestAtomDists,sortedDistList)
+      CALL sort(sortedDistList,nearestAtomDists)
       rmt1 = -1.0
       minRmts = -1.0
       DO i = 1, atoms%ntype

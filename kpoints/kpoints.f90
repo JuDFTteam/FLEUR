@@ -35,20 +35,20 @@ contains
        END IF
     END IF
 
-     IF (.NOT.l_kpts) THEN
+    IF (.NOT.l_kpts) THEN
        IF (.NOT.oneD%odd%d1) THEN
           IF (input%l_wann) THEN
              sym_hlp=sym
              sym_hlp%nop=1
              sym_hlp%nop2=1
-             CALL kptgen_hybrid(kpts,sym_hlp%invs,noco%l_soc,sym_hlp%nop,sym_hlp%mrot,sym_hlp%tau)
+             CALL kptgen_hybrid(input,cell,sym_hlp,kpts,noco%l_soc)
           ELSE IF (.FALSE.) THEN !this was used to generate q-points in jij case
              sym_hlp=sym
              sym_hlp%nop=1
              sym_hlp%nop2=1
              CALL julia(sym_hlp,cell,input,noco,banddos,kpts,.FALSE.,.TRUE.)
           ELSE IF (kpts%l_gamma.and.(banddos%ndir.eq.0)) THEN
-             CALL kptgen_hybrid(kpts,sym%invs,noco%l_soc,sym%nop,sym%mrot,sym%tau)
+             CALL kptgen_hybrid(input,cell,sym,kpts,noco%l_soc)
           ELSE
              IF (banddos%unfoldband) THEN
                CALL unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
@@ -64,19 +64,19 @@ contains
           CALL od_kptsgen (kpts%nkpt)
        END IF
 
-    !Rescale weights and kpoints
-    IF (.not.banddos%unfoldband) THEN
-    	kpts%wtkpt(:) = kpts%wtkpt(:) / sum(kpts%wtkpt)
+       !Rescale weights and kpoints
+       IF (.not.banddos%unfoldband) THEN
+          kpts%wtkpt(:) = kpts%wtkpt(:) / sum(kpts%wtkpt)
+       END IF
+       kpts%bk(:,:) = kpts%bk(:,:) / kpts%posScale
+       kpts%posScale = 1.0
+       IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
+    ELSE
+       IF (banddos%unfoldband) THEN
+          CALL unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
+          CALL find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
+       END IF
     END IF
-   	 kpts%bk(:,:) = kpts%bk(:,:) / kpts%posScale
-   	 kpts%posScale = 1.0
-    	IF (kpts%nkpt3(3).EQ.0) kpts%nkpt3(3) = 1
-  ELSE
-             IF (banddos%unfoldband) THEN
-               CALL unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)
-               CALL find_supercell_kpts(banddos,p_cell,cell,p_kpts,kpts)
-             END IF
-  END IF
 
 end subroutine kpoints
 end module m_kpoints
