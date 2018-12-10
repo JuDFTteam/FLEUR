@@ -72,7 +72,7 @@ END SUBROUTINE symm_hf_init
 
 SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
                    lapw,jsp,mpi,irank2,rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,&
-                   symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
+                   symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
 
       USE m_constants
       USE m_types
@@ -112,8 +112,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       INTEGER,ALLOCATABLE,INTENT(OUT) :: n_q(:)      
 
       REAL,INTENT(IN)                 :: eig_irr(dimension%neigd,kpts%nkpt)
-      COMPLEX,INTENT(INOUT)           :: rep_c(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,&
-                                               0:hybdat%lmaxcd,nsymop,atoms%nat)
 
 !     - local scalars -
       INTEGER                         :: ikpt,ikpt1,iop,isym,iisym,m
@@ -548,9 +546,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
 
             cdum   = exp(-2*pi*img*dot_product(rotkpt,sym%tau(:,iisym)))* &
      &               exp( 2*pi*img*dot_product(g,atoms%taual(:,ratom)))
-
-            rep_c(:,:,:,iop,iatom) = &
-     &         hybrid%d_wgn2(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,isym) * cdum
           END DO
         END DO
         iatom0 = iatom0 + atoms%neq(itype)

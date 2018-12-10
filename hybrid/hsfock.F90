@@ -112,7 +112,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    TYPE(t_mat)             :: olap,trafo,invtrafo,ex,tmp,v_x,z
    COMPLEX                 ::  exch(dimension%neigd,dimension%neigd)
    COMPLEX,ALLOCATABLE     ::  carr(:)
-   COMPLEX,ALLOCATABLE     ::  rep_c(:,:,:,:,:)
       
    CALL timestart("total time hsfock")
     
@@ -156,11 +155,8 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       CALL timestart("symm_hf")
       CALL symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
 
-      ALLOCATE(rep_c(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,nsymop,atoms%nat), stat=ok)
-      IF(ok.NE.0) STOP 'hsfock: failure allocation rep_c'
-
       CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
-                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
+                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
       CALL timestop("symm_hf")
 
       ! remove weights(wtkpt) in w_iks
@@ -178,7 +174,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       CALL exchange_valence_hf(nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,cell,dimension,input,jsp,hybdat,mnobd,lapw,&
                                eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,it,xcpot,noco,nsest,indx_sest,&
                                mpi,irank2,isize2,comm,ex)
-      DEALLOCATE (rep_c)
       CALL timestop("valence exchange calculation")
 
       WRITE(1224,'(a,i7)') 'kpoint: ', nk
