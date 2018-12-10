@@ -269,9 +269,9 @@ CONTAINS
       TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen(:,:)
 
+#ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
-#ifdef CPP_LIBXC
 
       IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")

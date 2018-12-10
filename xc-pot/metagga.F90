@@ -13,10 +13,11 @@ MODULE m_metagga
 
 CONTAINS
    SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS)
-#ifdef CPP_LIBXC
+      USE m_juDFT_stop
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
       REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
+#ifdef CPP_LIBXC
       REAL, PARAMETER                  :: eps = 1e-15
 
       !implicit allocation
@@ -28,7 +29,6 @@ CONTAINS
       endif
    
 #else
-      USE m_juDFT_stop
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
 #endif
    END SUBROUTINE calc_kinEnergyDen
