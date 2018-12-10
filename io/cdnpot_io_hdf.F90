@@ -2734,9 +2734,9 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
       INTEGER(HID_T), INTENT(IN) :: fileID
-      REAL,           INTENT(IN) :: rhcs(:,:,:)!(dimension%msh,atoms%ntype,DIMENSION%jspd)
-      REAL,           INTENT(IN) :: tecs(:,:)!(atoms%ntype,DIMENSION%jspd)
-      REAL,           INTENT(IN) :: qints(:,:)!(atoms%ntype,DIMENSION%jspd)
+      REAL,           INTENT(IN) :: rhcs(:,:,:)!(dimension%msh,atoms%ntype,input%jspins)
+      REAL,           INTENT(IN) :: tecs(:,:)!(atoms%ntype,input%jspins)
+      REAL,           INTENT(IN) :: qints(:,:)!(atoms%ntype,input%jspins)
 
       INTEGER hdfError
       INTEGER(HID_T) cdncGroupID, rhcsSpaceID, rhcsSetID
@@ -2750,21 +2750,21 @@ MODULE m_cdnpot_io_hdf
       IF(l_exist) THEN ! replace current core density
          CALL h5gopen_f(fileID, '/cdnc', cdncGroupID, hdfError)
 
-         CALL io_write_attint0(cdncGroupID,'jspd',DIMENSION%jspd)
+         CALL io_write_attint0(cdncGroupID,'jspd',input%jspins)
          CALL io_write_attint0(cdncGroupID,'ntype',atoms%ntype)
          CALL io_write_attint0(cdncGroupID,'jmtd',atoms%jmtd)
 
-         dimsInt(:3)=(/atoms%jmtd,atoms%ntype,DIMENSION%jspd/)
+         dimsInt(:3)=(/atoms%jmtd,atoms%ntype,input%jspins/)
          CALL h5dopen_f(cdncGroupID, 'rhcs', rhcsSetID, hdfError)
          CALL io_write_real3(rhcsSetID,(/1,1,1/),dimsInt(:3),rhcs(:dimsInt(1),:dimsInt(2),:dimsInt(3)))
          CALL h5dclose_f(rhcsSetID, hdfError)
 
-         dimsInt(:2)=(/atoms%ntype,DIMENSION%jspd/)
+         dimsInt(:2)=(/atoms%ntype,input%jspins/)
          CALL h5dopen_f(cdncGroupID, 'tecs', tecsSetID, hdfError)
          CALL io_write_real2(tecsSetID,(/1,1/),dimsInt(:2),tecs)
          CALL h5dclose_f(tecsSetID, hdfError)
 
-         dimsInt(:2)=(/atoms%ntype,DIMENSION%jspd/)
+         dimsInt(:2)=(/atoms%ntype,input%jspins/)
          CALL h5dopen_f(cdncGroupID, 'qints', qintsSetID, hdfError)
          CALL io_write_real2(qintsSetID,(/1,1/),dimsInt(:2),qints)
          CALL h5dclose_f(qintsSetID, hdfError)
@@ -2773,11 +2773,11 @@ MODULE m_cdnpot_io_hdf
       ELSE ! write new core density
          CALL h5gcreate_f(fileID, '/cdnc', cdncGroupID, hdfError)
 
-         CALL io_write_attint0(cdncGroupID,'jspd',DIMENSION%jspd)
+         CALL io_write_attint0(cdncGroupID,'jspd',input%jspins)
          CALL io_write_attint0(cdncGroupID,'ntype',atoms%ntype)
          CALL io_write_attint0(cdncGroupID,'jmtd',atoms%jmtd)
 
-         dims(:3)=(/atoms%jmtd,atoms%ntype,DIMENSION%jspd/)
+         dims(:3)=(/atoms%jmtd,atoms%ntype,input%jspins/)
          dimsInt = dims
          CALL h5screate_simple_f(3,dims(:3),rhcsSpaceID,hdfError)
          CALL h5dcreate_f(cdncGroupID, "rhcs", H5T_NATIVE_DOUBLE, rhcsSpaceID, rhcsSetID, hdfError)
@@ -2785,7 +2785,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_real3(rhcsSetID,(/1,1,1/),dimsInt(:3),rhcs(:dimsInt(1),:dimsInt(2),:dimsInt(3)))
          CALL h5dclose_f(rhcsSetID, hdfError)
 
-         dims(:2)=(/atoms%ntype,DIMENSION%jspd/)
+         dims(:2)=(/atoms%ntype,input%jspins/)
          dimsInt = dims
          CALL h5screate_simple_f(2,dims(:2),tecsSpaceID,hdfError)
          CALL h5dcreate_f(cdncGroupID, "tecs", H5T_NATIVE_DOUBLE, tecsSpaceID, tecsSetID, hdfError)
@@ -2793,7 +2793,7 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_real2(tecsSetID,(/1,1/),dimsInt(:2),tecs)
          CALL h5dclose_f(tecsSetID, hdfError)
 
-         dims(:2)=(/atoms%ntype,DIMENSION%jspd/)
+         dims(:2)=(/atoms%ntype,input%jspins/)
          dimsInt = dims
          CALL h5screate_simple_f(2,dims(:2),qintsSpaceID,hdfError)
          CALL h5dcreate_f(cdncGroupID, "qints", H5T_NATIVE_DOUBLE, qintsSpaceID, qintsSetID, hdfError)
@@ -2813,9 +2813,9 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
       INTEGER(HID_T), INTENT(IN) :: fileID
-      REAL,    INTENT(OUT)       :: rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
-      REAL,    INTENT(OUT)       :: tecs(atoms%ntype,DIMENSION%jspd)
-      REAL,    INTENT(OUT)       :: qints(atoms%ntype,DIMENSION%jspd)
+      REAL,    INTENT(OUT)       :: rhcs(atoms%jmtd,atoms%ntype,input%jspins)
+      REAL,    INTENT(OUT)       :: tecs(atoms%ntype,input%jspins)
+      REAL,    INTENT(OUT)       :: qints(atoms%ntype,input%jspins)
 
       INTEGER hdfError
       INTEGER(HID_T) cdncGroupID, rhcsSetID, tecsSetID, qintsSetID
@@ -2834,21 +2834,21 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(cdncGroupID,'ntype',ntypeTemp)
       CALL io_read_attint0(cdncGroupID,'jmtd',jmtdTemp)
 
-      IF(jspdTemp.NE.DIMENSION%jspd) CALL juDFT_error("jspd is inconsistent",calledby ="readCoreDensityHDF")
+      IF(jspdTemp.NE.input%jspins) CALL juDFT_error("jspd is inconsistent",calledby ="readCoreDensityHDF")
       IF(ntypeTemp.NE.atoms%ntype) CALL juDFT_error("ntype is inconsistent",calledby ="readCoreDensityHDF")
       IF(jmtdTemp.NE.atoms%jmtd) CALL juDFT_error("jmtd is inconsistent",calledby ="readCoreDensityHDF")
 
-      dimsInt(:3)=(/atoms%jmtd,atoms%ntype,DIMENSION%jspd/)
+      dimsInt(:3)=(/atoms%jmtd,atoms%ntype,input%jspins/)
       CALL h5dopen_f(cdncGroupID, 'rhcs', rhcsSetID, hdfError)
       CALL io_read_real3(rhcsSetID,(/1,1,1/),dimsInt(:3),rhcs)
       CALL h5dclose_f(rhcsSetID, hdfError)
 
-      dimsInt(:2)=(/atoms%ntype,DIMENSION%jspd/)
+      dimsInt(:2)=(/atoms%ntype,input%jspins/)
       CALL h5dopen_f(cdncGroupID, 'tecs', tecsSetID, hdfError)
       CALL io_read_real2(tecsSetID,(/1,1/),dimsInt(:2),tecs)
       CALL h5dclose_f(tecsSetID, hdfError)
 
-      dimsInt(:2)=(/atoms%ntype,DIMENSION%jspd/)
+      dimsInt(:2)=(/atoms%ntype,input%jspins/)
       CALL h5dopen_f(cdncGroupID, 'qints', qintsSetID, hdfError)
       CALL io_read_real2(qintsSetID,(/1,1/),dimsInt(:2),qints)
       CALL h5dclose_f(qintsSetID, hdfError)

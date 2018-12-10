@@ -24,11 +24,11 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL, INTENT(IN)              :: vr(atoms%jmtd,atoms%ntype)
-    REAL, INTENT(INOUT)           :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-    REAL, INTENT(INOUT)           :: rhc(DIMENSION%msh,atoms%ntype,DIMENSION%jspd)
-    REAL, INTENT(INOUT)           :: qint(atoms%ntype,DIMENSION%jspd)
-    REAL, INTENT(INOUT)           :: tec(atoms%ntype,DIMENSION%jspd)
-    REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL, INTENT(INOUT)           :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+    REAL, INTENT(INOUT)           :: rhc(DIMENSION%msh,atoms%ntype,input%jspins)
+    REAL, INTENT(INOUT)           :: qint(atoms%ntype,input%jspins)
+    REAL, INTENT(INOUT)           :: tec(atoms%ntype,input%jspins)
+    REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !     ..
     !     .. Local Scalars ..
     REAL eig,fj,fl,fn,q,rad,rhos,rhs,sea,sume,t2
@@ -82,7 +82,7 @@ CONTAINS
        !         rn = rmt(jatom)
        dxx = atoms%dx(jatom)
        bmu = 0.0
-       CALL setcor(jatom,DIMENSION%jspd,atoms,input,bmu,nst,kappa,nprnc,occ_h)
+       CALL setcor(jatom,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
        IF ((bmu > 99.)) THEN
           occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
        ELSE

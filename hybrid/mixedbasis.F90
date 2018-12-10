@@ -129,7 +129,7 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
    IF(ALLOCATED(hybrid%gptm))     DEALLOCATE(hybrid%gptm)
    IF(ALLOCATED(hybrid%basm1))    DEALLOCATE(hybrid%basm1)
    
-   CALL usdus%init(atoms,dimension%jspd)
+   CALL usdus%init(atoms,input%jspins)
 
    ! If restart is specified read file if it already exists. If not create it.
    IF (l_restart) THEN
@@ -175,7 +175,7 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
    ! initialize gridf for radial integration
    CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,gridf)
 
-   ALLOCATE (vr0(atoms%jmtd,atoms%ntype,DIMENSION%jspd))
+   ALLOCATE (vr0(atoms%jmtd,atoms%ntype,input%jspins))
 
    vr0(:,:,:) = v%mt(:,0,:,:)
    
@@ -184,12 +184,12 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
    ! bas1 = large component ,bas2 = small component
 
    ALLOCATE(f(atoms%jmtd,2,0:atoms%lmaxd), df(atoms%jmtd,2,0:atoms%lmaxd))
-   ALLOCATE(bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
-   ALLOCATE(bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd))
+   ALLOCATE(bas1(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype,input%jspins))
+   ALLOCATE(bas2(atoms%jmtd,hybrid%maxindx,0:atoms%lmaxd,atoms%ntype,input%jspins))
 
    DO itype = 1, atoms%ntype
       ng = atoms%jri(itype)
-      DO ispin = 1, DIMENSION%jspd
+      DO ispin = 1, input%jspins
          DO l = 0, atoms%lmax(itype)
             CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr0(:,itype,ispin),atoms,&
                         f(:,:,l),df(:,:,l),usdus,nodem,noded,wronk)
@@ -217,7 +217,7 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
    DEALLOCATE(f,df)
 
    ! the radial functions are normalized
-   DO ispin = 1, DIMENSION%jspd
+   DO ispin = 1, input%jspins
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
             DO i = 1, hybrid%nindx(l,itype)
@@ -481,7 +481,7 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
                WRITE(6,'(A)') 'mixedbasis: Warning!  No basis-function product of ' // lchar(l) //&
                '-angular momentum defined.'
           hybrid%maxindxp1        = MAX(hybrid%maxindxp1,M)
-          hybrid%nindxm1(l,itype) = n*DIMENSION%jspd
+          hybrid%nindxm1(l,itype) = n*input%jspins
        END DO
     END DO
     hybrid%maxindxm1 = MAXVAL(hybrid%nindxm1)
@@ -536,7 +536,7 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
                    DO n2=1,hybrid%nindx(l2,itype)
 
                       IF(selecmat(n1,l1,n2,l2)) THEN
-                         DO ispin=1,DIMENSION%jspd
+                         DO ispin=1,input%jspins
                             i = i + 1
                             IF(i.GT.n) call judft_error('got too many product functions',hint='This is a BUG, please report',calledby='mixedbasis')
 

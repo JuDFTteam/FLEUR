@@ -175,6 +175,15 @@ MODULE m_cdn_io
 
       CALL getIOMode(mode)
 
+#ifndef CPP_HDF
+      filename = 'cdn.hdf'
+      IF(PRESENT(inFilename)) filename = TRIM(ADJUSTL(inFilename))//'.hdf'
+      INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+      IF (l_exist) THEN
+         CALL juDFT_warn('Fleur not compiled for HDF5, but '//TRIM(ADJUSTL(filename))//' present',calledby='readDensity')
+      END IF
+#endif
+
       IF(mode.EQ.CDN_HDF5_MODE) THEN
 #ifdef CPP_HDF
 
@@ -719,9 +728,9 @@ MODULE m_cdn_io
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
-      REAL, INTENT(OUT) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
-      REAL, INTENT(OUT) :: tecs(:,:)!(atoms%ntype,DIMENSION%jspd)
-      REAL, INTENT(OUT) :: qints(:,:)!(atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(OUT) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
+      REAL, INTENT(OUT) :: tecs(:,:)!(atoms%ntype,input%jspins)
+      REAL, INTENT(OUT) :: qints(:,:)!(atoms%ntype,input%jspins)
 
       INTEGER            :: mode, iUnit, iSpin, iAtom, i
       LOGICAL            :: l_exist
@@ -792,9 +801,9 @@ MODULE m_cdn_io
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
-      REAL, INTENT(IN) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
-      REAL, INTENT(IN) :: tecs(:,:)!(atoms%ntype,DIMENSION%jspd)
-      REAL, INTENT(IN) :: qints(:,:)!(atoms%ntype,DIMENSION%jspd)
+      REAL, INTENT(IN) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
+      REAL, INTENT(IN) :: tecs(:,:)!(atoms%ntype,input%jspins)
+      REAL, INTENT(IN) :: qints(:,:)!(atoms%ntype,input%jspins)
 
       INTEGER :: mode, iUnit, iSpin, iAtom, i
 

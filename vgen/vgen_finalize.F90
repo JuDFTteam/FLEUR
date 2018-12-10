@@ -6,7 +6,7 @@
 MODULE m_vgen_finalize
   USE m_juDFT
 CONTAINS
-  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,vTot,denRot)
+  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -17,6 +17,7 @@ CONTAINS
     USE m_constants
     USE m_vmatgen
     USE m_types
+    USE m_rotate_mt_den_tofrom_local
     IMPLICIT NONE
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
@@ -24,7 +25,8 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)        :: stars
     TYPE(t_atoms),INTENT(IN)        :: atoms 
     TYPE(t_input),INTENT(IN)        :: input
-    TYPE(t_potden),INTENT(INOUT)    :: vTot,denRot
+    TYPE(t_sphhar),INTENT(IN)       :: sphhar
+    TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot
     !     ..
     !     .. Local Scalars ..
     INTEGER i,js,n
@@ -37,7 +39,7 @@ CONTAINS
        ENDDO
     ENDDO     ! js =1,input%jspins
     
-    ! Rescale pw_w with number of stars
+    ! Rescale vTot%pw_w with number of stars
     IF (.NOT.noco%l_noco) THEN
        DO js=1,SIZE(vtot%pw_w,2)
           DO i=1,stars%ng3
@@ -46,7 +48,15 @@ CONTAINS
        END DO
     ELSEIF(noco%l_noco) THEN
        CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
+       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
     ENDIF
+
+    ! Rescale vCoul%pw_w with number of stars
+    DO js = 1, SIZE(vCoul%pw_w,2)
+       DO i = 1, stars%ng3
+          vcoul%pw_w(i,js) = vcoul%pw_w(i,js) / stars%nstr(i)  !this normalization is needed for gw
+       END DO
+    END DO
 
     !Copy first vacuum into second vacuum if this was not calculated before 
     IF (vacuum%nvac==1) THEN

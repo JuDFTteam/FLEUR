@@ -58,6 +58,27 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
    CALL writeXMLElementFormPoly('bands',(/'numbands'/),&
                                 attributes(:1),reshape((/9,8/),(/1,2/)))
 
+   WRITE(attributes(1),'(f0.8)') cell%vol
+   WRITE(attributes(2),'(f0.8)') cell%volint
+   IF(input%film) THEN
+      WRITE(attributes(3),'(f0.8)') cell%omtil
+      WRITE(attributes(4),'(f0.8)') cell%area
+      WRITE(attributes(5),'(f0.8)') cell%z1
+      CALL openXMLElementFormPoly('volumes',(/'unitCell    ', 'interstitial', 'omegaTilda  ', 'surfaceArea ', 'z1          '/),&
+                                  attributes(:5),reshape((/8,12,10,11,2,10,10,10,10,10/),(/5,2/)))
+   ELSE
+      CALL openXMLElementFormPoly('volumes',(/'unitCell    ', 'interstitial'/),&
+                                  attributes(:2),reshape((/8,12,10,10/),(/2,2/)))
+   END IF
+   DO i = 1, atoms%ntype
+      WRITE(attributes(1),'(i0)') i
+      WRITE(attributes(2),'(f0.8)') atoms%rmt(i)
+      WRITE(attributes(3),'(f0.8)') atoms%volmts(i)
+      CALL writeXMLElementFormPoly('mtVolume',(/'atomType','mtRadius','mtVolume'/),&
+                                   attributes(:3),reshape((/8,8,8,5,10,10/),(/3,2/)))
+   END DO
+   CALL closeXMLElement('volumes')
+
    sumWeight = SUM(kpts%wtkpt(:kpts%nkpt))
    WRITE(attributes(1),'(f0.8)') kpts%posScale
    WRITE(attributes(2),'(f0.8)') sumWeight

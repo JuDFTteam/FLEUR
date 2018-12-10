@@ -172,7 +172,7 @@
       INTEGER,INTENT(INOUT)     ::  lmaxc(:)
       INTEGER,INTENT(INOUT)     ::  nindxc(0:lmaxcd,atoms%ntype)
 
-      REAL   , INTENT(IN)       ::  vr(:,:,:)!(atoms%jmtd,atoms%ntypd,dimension%jspd)
+      REAL   , INTENT(IN)       ::  vr(:,:,:)!(atoms%jmtd,atoms%ntypd,input%jspins)
       REAL   , INTENT(INOUT)    ::  core1(:,:,0:,:) !(atoms%jmtd,maxindxc,0:lmaxcd,atoms%ntype)
      REAL   , INTENT(INOUT)     ::  core2(:,:,0:,:) !(jmtd,maxindxc,0:lmaxcd,ntype)
 
@@ -301,7 +301,7 @@
 
       !  - arrays - 
       INTEGER, INTENT (OUT):: nindxcr(0:ncstd,atoms%ntype)
-      REAL   , INTENT (IN) :: vr(:,:,:)!(atoms%jmtd,atoms%ntypd,dimension%jspd)
+      REAL   , INTENT (IN) :: vr(:,:,:)!(atoms%jmtd,atoms%ntypd,input%jspins)
       REAL   , ALLOCATABLE :: core1(:,:,:,:),core2(:,:,:,:)
       REAL   , ALLOCATABLE :: eig_c(:,:,:)
 
@@ -323,7 +323,7 @@
       c = c_light(1.0)
 
       IF( first ) THEN
-         ALLOCATE( vr0(atoms%jmtd,atoms%ntype,dimension%jspd) )
+         ALLOCATE( vr0(atoms%jmtd,atoms%ntype,input%jspins) )
       END IF
 
       IF ( input%frcor ) THEN

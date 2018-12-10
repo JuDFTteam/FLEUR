@@ -74,8 +74,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
    CALL moments%init(input,atoms)
-   CALL overallDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
-   CALL overallVCoul%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_POTCOUL)
+   CALL overallDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+   CALL overallVCoul%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTCOUL)
    ALLOCATE(overallVCoul%pw_w(SIZE(overallDen%pw,1),1))
    IF (ALLOCATED(vTot%pw_w)) DEALLOCATE (vTot%pw_w)
    ALLOCATE(vTot%pw_w(SIZE(overallDen%pw,1),1))
@@ -116,7 +116,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
             ! Call cdnval to construct density
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
-            CALL singleStateDen%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+            CALL singleStateDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
             CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                         sphhar,sym,vTot,oneD,cdnvalJob,singleStateDen,regCharges,dos,results,moments)
 

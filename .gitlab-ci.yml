@@ -100,7 +100,7 @@ build-intel:
        - build.intel
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
-    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -l intel AUTO ; cd build.intel; make 
+    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -l intel INTEL_MPI ; cd build.intel; make 
   only:
     - schedules
     - triggers

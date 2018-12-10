@@ -53,10 +53,10 @@
       INTEGER, INTENT (IN) :: jsp
 
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,dimension%jspd)
+      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,input%jspins)
       COMPLEX, INTENT (IN) :: vpw(:,:)!(n3d,jspd)
       COMPLEX, INTENT (IN) :: excpw(stars%ng3)
-      COMPLEX, INTENT (IN) :: vxcpw(:,:)!(stars%ng3,dimension%jspd)
+      COMPLEX, INTENT (IN) :: vxcpw(:,:)!(stars%ng3,input%jspins)
 
 !     .. Local Scalars ..
       INTEGER :: n,j,itype,s,l ,lm,t,lp,mp,lmp,jp,natom,m
@@ -331,9 +331,9 @@
 
 !     .. Array Arguments ..
       REAL   , INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) ! 
-      REAL   , INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+      REAL   , INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
       REAL   , INTENT (IN) :: excr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-      REAL   , INTENT (IN) :: vxcr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+      REAL   , INTENT (IN) :: vxcr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
 
 !     .. Local Scalars ..
       INTEGER :: natom,itype,nd,lh,l,lhp,lp,mem,m,memp,mp,t,i,lmp

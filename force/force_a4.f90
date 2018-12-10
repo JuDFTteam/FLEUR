@@ -30,8 +30,8 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     COMPLEX forc_a4(3),gv(3),ycomp1(3,-1:1)
-    REAL rhoaux(atoms%jmtd),rhoc(atoms%jmtd,atoms%ntype,dimension%jspd)
-    REAL tec(atoms%ntype,dimension%jspd),qintc(atoms%ntype,dimension%jspd)
+    REAL rhoaux(atoms%jmtd),rhoc(atoms%jmtd,atoms%ntype,input%jspins)
+    REAL tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins)
     !     ..
     !     .. Data statements ..
     COMPLEX,PARAMETER:: czero=(0.000,0.000)

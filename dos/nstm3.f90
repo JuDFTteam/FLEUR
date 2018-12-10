@@ -61,7 +61,7 @@ CONTAINS
           END DO
           gvacl(n2) = SQRT(REAL(gvac(1)**2+gvac(2)**2))
        ENDDO k_loop
-       CALL sort(n2,gvacl,gindex)
+       CALL sort(gindex(:n2),gvacl)
        DO j = 1,n2
           !  gvac1d, gvac2d are now ordered by increasing length
           gvac1d(j)=gvac1(gindex(j))

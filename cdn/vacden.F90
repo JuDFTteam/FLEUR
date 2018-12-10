@@ -70,15 +70,15 @@ CONTAINS
     INTEGER,PARAMETER    :: n2max=13
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
-    REAL,    INTENT(IN)     :: evac(2,DIMENSION%jspd)
+    REAL,    INTENT(IN)     :: evac(2,input%jspins)
     REAL,    INTENT(IN)     :: we(DIMENSION%neigd)
     REAL                    :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
     !     STM-Arguments
     REAL,    INTENT (IN)    :: eig(DIMENSION%neigd)
     !     local STM variables
-    INTEGER nv2(DIMENSION%jspd)
-    INTEGER kvac1(DIMENSION%nv2d,DIMENSION%jspd),kvac2(DIMENSION%nv2d,DIMENSION%jspd),map2(DIMENSION%nvd,DIMENSION%jspd)
-    INTEGER kvac3(DIMENSION%nv2d,DIMENSION%jspd),map1(DIMENSION%nvd,DIMENSION%jspd)
+    INTEGER nv2(input%jspins)
+    INTEGER kvac1(DIMENSION%nv2d,input%jspins),kvac2(DIMENSION%nv2d,input%jspins),map2(DIMENSION%nvd,input%jspins)
+    INTEGER kvac3(DIMENSION%nv2d,input%jspins),map1(DIMENSION%nvd,input%jspins)
     INTEGER mapg2k(DIMENSION%nv2d)
     !     .. Local Scalars ..
     COMPLEX aa,ab,av,ba,bb,bv,t1,aae,bbe,abe,bae,aaee,bbee,abee,baee,&
@@ -138,14 +138,14 @@ CONTAINS
 
     CALL timestart("vacden")
 
-    ALLOCATE ( ac(DIMENSION%nv2d,DIMENSION%neigd,DIMENSION%jspd),bc(DIMENSION%nv2d,DIMENSION%neigd,DIMENSION%jspd),dt(DIMENSION%nv2d),&
+    ALLOCATE ( ac(DIMENSION%nv2d,DIMENSION%neigd,input%jspins),bc(DIMENSION%nv2d,DIMENSION%neigd,input%jspins),dt(DIMENSION%nv2d),&
          &           dte(DIMENSION%nv2d),du(vacuum%nmzd),ddu(vacuum%nmzd,DIMENSION%nv2d),due(vacuum%nmzd),&
          &           ddue(vacuum%nmzd,DIMENSION%nv2d),t(DIMENSION%nv2d),te(DIMENSION%nv2d),&
-         &           tei(DIMENSION%nv2d,DIMENSION%jspd),u(vacuum%nmzd,DIMENSION%nv2d,DIMENSION%jspd),ue(vacuum%nmzd,DIMENSION%nv2d,DIMENSION%jspd),&
+         &           tei(DIMENSION%nv2d,input%jspins),u(vacuum%nmzd,DIMENSION%nv2d,input%jspins),ue(vacuum%nmzd,DIMENSION%nv2d,input%jspins),&
          &           v(3),yy(vacuum%nmzd))
     IF (oneD%odi%d1) THEN
-       ALLOCATE (      ac_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%neigd,DIMENSION%jspd),&
-            &                  bc_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%neigd,DIMENSION%jspd),&
+       ALLOCATE (      ac_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%neigd,input%jspins),&
+            &                  bc_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%neigd,input%jspins),&
             &                  dt_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
             &                 dte_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
             &                  du_1(vacuum%nmzd,-oneD%odi%mb:oneD%odi%mb),&
@@ -154,9 +154,9 @@ CONTAINS
             &           ddue_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
             &                   t_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
             &                  te_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
-            &                 tei_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%jspd),&
-            &              u_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%jspd),&
-            &             ue_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%jspd) )
+            &                 tei_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins),&
+            &              u_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins),&
+            &             ue_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins) )
     END IF ! oneD%odi%d1
     !
 

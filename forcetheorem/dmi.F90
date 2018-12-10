@@ -52,11 +52,14 @@ CONTAINS
     this%evsum=0
   END SUBROUTINE dmi_init
 
-  SUBROUTINE dmi_start(this)
+  SUBROUTINE dmi_start(this,potden,l_io)
+    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
+    TYPE(t_potden) ,INTENT(INOUT)       :: potden
+    LOGICAL,INTENT(IN)                  :: l_io
     this%q_done=0
-    CALL this%t_forcetheo%start() !call routine of basis type
+    CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
   END SUBROUTINE  dmi_start
 
   LOGICAL FUNCTION dmi_next_job(this,lastiter,noco)
@@ -78,6 +81,8 @@ CONTAINS
     
     !Now modify the noco-file
     noco%qss=this%qvec(:,this%q_done)
+    IF (.NOT.this%l_io) RETURN
+  
     IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_DMI')
     CALL openXMLElementPoly('Forcetheorem_Loop_DMI',(/'Q-vec:'/),(/this%q_done/))
   END FUNCTION dmi_next_job
@@ -91,24 +96,26 @@ CONTAINS
     INTEGER:: n,q
     CHARACTER(LEN=12):: attributes(4)
     IF (this%q_done==0) RETURN
-  
-    !Now output the results
-    call closeXMLElement('Forcetheorem_Loop_DMI')
-    CALL openXMLElementPoly('Forcetheorem_DMI',(/'qPoints','Angles '/),(/SIZE(this%evsum,2),SIZE(this%evsum,1)/))
-    DO q=1,SIZE(this%evsum,2)
-       WRITE(attributes(1),'(i5)') q
-       WRITE(attributes(2),'(f12.7)') this%evsum(0,q) 
-       CALL writeXMLElementForm('Entry',(/'q     ','ev-sum'/),attributes(1:2),&
-            RESHAPE((/1,6,5,12/),(/2,2/)))
-       DO n=1,SIZE(this%evsum,1)-1
-          WRITE(attributes(2),'(f12.7)') this%theta(n)
-          WRITE(attributes(3),'(f12.7)') this%phi(n)
-          WRITE(attributes(4),'(f12.7)') this%evsum(n,q)     
-          CALL writeXMLElementForm('Entry',(/'q     ','theta ','phi   ','ev-sum'/),attributes,&
-               RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
-       END DO
-    ENDDO
-    CALL closeXMLElement('Forcetheorem_DMI')
+    IF (this%l_io) THEN
+       !Now output the results
+       CALL closeXMLElement('Forcetheorem_Loop_DMI')
+       CALL openXMLElementPoly('Forcetheorem_DMI',(/'qPoints','Angles '/),(/SIZE(this%evsum,2),SIZE(this%evsum,1)/))
+       DO q=1,SIZE(this%evsum,2)
+          WRITE(attributes(1),'(i5)') q
+          WRITE(attributes(2),'(f12.7)') this%evsum(0,q) 
+          CALL writeXMLElementForm('Entry',(/'q     ','ev-sum'/),attributes(1:2),&
+               RESHAPE((/1,6,5,12/),(/2,2/)))
+          DO n=1,SIZE(this%evsum,1)-1
+             WRITE(attributes(2),'(f12.7)') this%theta(n)
+             WRITE(attributes(3),'(f12.7)') this%phi(n)
+             WRITE(attributes(4),'(f12.7)') this%evsum(n,q)     
+             CALL writeXMLElementForm('Entry',(/'q     ','theta ','phi   ','ev-sum'/),attributes,&
+                  RESHAPE((/1,5,3,6,5,12,12,12/),(/4,2/)))
+          END DO
+       ENDDO
+       CALL closeXMLElement('Forcetheorem_DMI')
+    ENDIF
+
     CALL judft_end("Forcetheorem DMI")
   END SUBROUTINE dmi_postprocess
 

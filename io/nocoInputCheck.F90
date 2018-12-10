@@ -23,16 +23,6 @@ MODULE m_nocoInputCheck
       INTEGER itype
       LOGICAL l_relax_any
 
-
-
-!---> make sure Wu-diagonalization is switched off
-      IF (input%isec1 .LE. input%itmax) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the Wu-diagonalization!!'
-         WRITE (6,*) 'itmax = ',input%itmax,'isec1 = ',input%isec1
-         CALL juDFT_error("Wu-diagonalization cannot be used!!!",calledby="nocoInputCheck")
-      END IF
-
 !---> make sure second variation is switched off
       IF (input%secvar) THEN
          WRITE (6,*) 'This non-collinear version of the flapw program'

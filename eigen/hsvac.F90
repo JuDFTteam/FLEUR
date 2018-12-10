@@ -35,7 +35,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: jsp
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: evac(2,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: evac(2,input%jspins)
     !     ..
     !     .. Local Scalars ..
     COMPLEX hij,sij,apw_lo,c_1
@@ -46,16 +46,16 @@ CONTAINS
     INTEGER i_start,nc,nc_0
     !     ..
     !     .. Local Arrays ..
-    INTEGER:: nv2(DIMENSION%jspd)
-    INTEGER kvac1(DIMENSION%nv2d,DIMENSION%jspd),kvac2(DIMENSION%nv2d,DIMENSION%jspd)
-    INTEGER map2(DIMENSION%nvd,DIMENSION%jspd)
+    INTEGER:: nv2(input%jspins)
+    INTEGER kvac1(DIMENSION%nv2d,input%jspins),kvac2(DIMENSION%nv2d,input%jspins)
+    INTEGER map2(DIMENSION%nvd,input%jspins)
     COMPLEX tddv(DIMENSION%nv2d,DIMENSION%nv2d),tduv(DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX tudv(DIMENSION%nv2d,DIMENSION%nv2d),tuuv(DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX vxy_help(stars%ng2-1)
-    COMPLEX a(DIMENSION%nvd,DIMENSION%jspd),b(DIMENSION%nvd,DIMENSION%jspd)
-    REAL ddnv(DIMENSION%nv2d,DIMENSION%jspd),dudz(DIMENSION%nv2d,DIMENSION%jspd)
-    REAL duz(DIMENSION%nv2d,DIMENSION%jspd), udz(DIMENSION%nv2d,DIMENSION%jspd)
-    REAL uz(DIMENSION%nv2d,DIMENSION%jspd)
+    COMPLEX a(DIMENSION%nvd,input%jspins),b(DIMENSION%nvd,input%jspins)
+    REAL ddnv(DIMENSION%nv2d,input%jspins),dudz(DIMENSION%nv2d,input%jspins)
+    REAL duz(DIMENSION%nv2d,input%jspins), udz(DIMENSION%nv2d,input%jspins)
+    REAL uz(DIMENSION%nv2d,input%jspins)
     !     ..
 
     d2 = SQRT(cell%omtil/cell%area)
@@ -121,14 +121,14 @@ CONTAINS
           ENDIF
           !--->       update hamiltonian and overlap matrices
           IF (jspin1==jspin2) THEN
-             DO  i = mpi%n_rank+1,lapw%nv(jspin1),mpi%n_size
+             DO  i = mpi%n_rank+1,lapw%nv(jspin2),mpi%n_size
                 i0=(i-1)/mpi%n_size+1 !local column index
-                ik = map2(i,jspin1)
+                ik = map2(i,jspin2)
                 DO j = 1,i - 1 !TODO check noco case
                    !--->             overlap: only  (g-g') parallel=0       '
                    IF (map2(j,jspin1).EQ.ik) THEN
-                      sij = CONJG(a(i,jspin1))*a(j,jspin1) + &
-                           CONJG(b(i,jspin1))*b(j,jspin1)*ddnv(ik,jspin1)
+                      sij = CONJG(a(i,jspin2))*a(j,jspin2) + &
+                           CONJG(b(i,jspin2))*b(j,jspin2)*ddnv(ik,jspin2)
                       !+APW_LO
                       IF (input%l_useapw) THEN
                          apw_lo = CONJG(a(i,jspin1)*  uz(ik,jspin1) + b(i,jspin1)* udz(ik,jspin1) ) &
@@ -151,7 +151,7 @@ CONTAINS
                    END IF
                 ENDDO
                 !Diagonal term of Overlapp matrix, Hamiltonian later
-                sij = CONJG(a(i,jspin1))*a(i,jspin1) + CONJG(b(i,jspin1))*b(i,jspin1)*ddnv(ik,jspin1)
+                sij = CONJG(a(i,jspin2))*a(i,jspin2) + CONJG(b(i,jspin2))*b(i,jspin2)*ddnv(ik,jspin2)
                 IF (hmat(1,1)%l_real) THEN
                    smat(s1,s2)%data_r(j,i0) = smat(s1,s2)%data_r(j,i0) + REAL(sij)
                 ELSE
@@ -163,15 +163,15 @@ CONTAINS
           !--->    hamiltonian update
           DO  i = mpi%n_rank+1,lapw%nv(jspin2),mpi%n_size
              i0=(i-1)/mpi%n_size+1 !local column index
-             ik = map2(i,jspin1)
-             DO j = 1,i
-                jk = map2(j,jspin2)
+             ik = map2(i,jspin2)
+             DO j = 1,MIN(i,lapw%nv(jspin1))
+                jk = map2(j,jspin1)
                 IF (jspin2>jspin1) THEN
-                   hij = CONJG(CONJG(a(j,jspin2))* (tuuv(jk,ik)*a(i,jspin1) +tudv(jk,ik)*b(i,jspin1))&
-                        + CONJG(b(j,jspin2))* (tddv(jk,ik)*b(i,jspin1) +tduv(jk,ik)*a(i,jspin1)))
+                   hij = CONJG(CONJG(a(j,jspin1))* (tuuv(jk,ik)*a(i,jspin2) +tudv(jk,ik)*b(i,jspin2))&
+                        + CONJG(b(j,jspin1))* (tddv(jk,ik)*b(i,jspin2) +tduv(jk,ik)*a(i,jspin2)))
                 ELSE
-                   hij = CONJG(a(i,jspin1))* (tuuv(ik,jk)*a(j,jspin2) +tudv(ik,jk)*b(j,jspin2))&
-                        + CONJG(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
+                   hij = CONJG(a(i,jspin2))* (tuuv(ik,jk)*a(j,jspin1) +tudv(ik,jk)*b(j,jspin1))&
+                        + CONJG(b(i,jspin2))* (tddv(ik,jk)*b(j,jspin1) +tduv(ik,jk)*a(j,jspin1))
                 ENDIF
                 IF (hmat(1,1)%l_real) THEN
                    hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + REAL(hij)

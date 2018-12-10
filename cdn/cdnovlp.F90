@@ -109,10 +109,10 @@
           LOGICAL,INTENT (IN) :: l_st
           !     ..
           !     .. Array Arguments ..
-          COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,DIMENSION%jspd)
-          COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
-          REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-          REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
+          COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,input%jspins)
+          COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
+          REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+          REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
           REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
@@ -324,6 +324,7 @@
                          IF (rkappa.GT.zero) rkappa=MAX(rkappa,tol_14)
                          ! gb works also around
                          zvac   = - LOG( tol_14/cabs(VALUE) ) / rkappa
+                         zvac   = MIN (2.*vacuum%nmz,abs(zvac)) ! avoid int-overflow in next line
                          nzvac  = INT( zvac/vacuum%delz ) + 1
                          !               IF ( rkappa.GT.zero .AND. real(value).GT.zero ) THEN
                          IF ( rkappa.GT.zero ) THEN

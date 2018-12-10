@@ -28,7 +28,7 @@ CONTAINS
     !     ..
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !     ..
     !     .. Local Scalars ..
     INTEGER is1,is2,jspin1,jspin2,l,l1,l2,m1,m2,n

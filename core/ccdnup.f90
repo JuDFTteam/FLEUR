@@ -24,10 +24,10 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rhochr(:),rhospn(:)!(dimension%msh)
-    REAL,    INTENT (IN) :: vrs(:,:,:)!(atoms%jmtd,atoms%ntype,dimension%jspd)
-    REAL,    INTENT (OUT) :: tecs(:,:)!(atoms%ntype,dimension%jspd)
-    REAL,    INTENT (OUT) :: qints(:,:)!(atoms%ntype,dimension%jspd)
-    REAL,    INTENT (INOUT) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (IN) :: vrs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
+    REAL,    INTENT (OUT) :: tecs(:,:)!(atoms%ntype,input%jspins)
+    REAL,    INTENT (OUT) :: qints(:,:)!(atoms%ntype,input%jspins)
+    REAL,    INTENT (INOUT) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !     ..
     !     .. Local Scalars ..
     REAL d,dxx,q,rad,rhs

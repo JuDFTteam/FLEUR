@@ -49,24 +49,24 @@ CONTAINS
     !     ..
     !     .. Allocatable Arrays ..
     REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
-    COMPLEX, ALLOCATABLE :: rho21(:,:,:)
+    COMPLEX :: rho21
     !
 
     CALL timestart("cdnmt")
 
     IF (noco%l_mperp) THEN
        IF (denCoeffsOffdiag%l_fmpl) THEN
-          ALLOCATE ( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
-          rho21(:,:,:) = cmplx(0.0,0.0)
+          !ALLOCATE ( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
+          rho(:,:,:,3:4) = CMPLX(0.0,0.0)
        ENDIF
     ENDIF
 
     !$OMP PARALLEL DEFAULT(none) &
 
-    !$OMP SHARED(usdus,rho,moments,rho21,qmtl) &
+    !$OMP SHARED(usdus,rho,moments,qmtl) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
     !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
-    !$OMP PRIVATE(itype,na,ispin,l,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
+    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
     ELSE
@@ -187,7 +187,10 @@ CONTAINS
                         + denCoeffsOffdiag%ud21(l,itype)*( f(j,1,l,2)*g(j,1,l,1) +f(j,2,l,2)*g(j,2,l,1) )&
                         + denCoeffsOffdiag%du21(l,itype)*( g(j,1,l,2)*f(j,1,l,1) +g(j,2,l,2)*f(j,2,l,1) )&
                         + denCoeffsOffdiag%dd21(l,itype)*( g(j,1,l,2)*g(j,1,l,1) +g(j,2,l,2)*g(j,2,l,1) )
-                   rho21(j,0,itype) = rho21(j,0,itype)+ conjg(cs)/(atoms%neq(itype)*sfp_const)
+                   !rho21(j,0,itype) = rho21(j,0,itype)+ conjg(cs)/(atoms%neq(itype)*sfp_const)
+                   rho21=CONJG(cs)/(atoms%neq(itype)*sfp_const)
+                   rho(j,0,itype,3)=rho(j,0,itype,3)+REAL(rho21)
+                   rho(j,0,itype,4)=rho(j,0,itype,4)+imag(rho21)
                 ENDDO
              ENDDO
 
@@ -203,7 +206,10 @@ CONTAINS
                               + f(j,2,lp,2)*g(j,2,l,1) )+ denCoeffsOffdiag%dunmt21(llp,lh,itype)*(g(j,1,lp,2)*f(j,1,l,1)&
                               + g(j,2,lp,2)*f(j,2,l,1) )+ denCoeffsOffdiag%ddnmt21(llp,lh,itype)*(g(j,1,lp,2)*g(j,1,l,1)&
                               + g(j,2,lp,2)*g(j,2,l,1) )
-                         rho21(j,lh,itype)= rho21(j,lh,itype)+ conjg(cs)/atoms%neq(itype)
+                         !rho21(j,lh,itype)= rho21(j,lh,itype)+ CONJG(cs)/atoms%neq(itype)
+                         rho21=CONJG(cs)/atoms%neq(itype)
+                         rho(j,lh,itype,3)=rho(j,lh,itype,3)+REAL(rho21)
+                         rho(j,lh,itype,4)=rho(j,lh,itype,4)+imag(rho21)
                       ENDDO
                    ENDDO
                 ENDDO
@@ -241,15 +247,6 @@ CONTAINS
 
     CALL timestop("cdnmt")
 
-    !---> for testing: to plot the offdiag. part of the density matrix it
-    !---> is written to the file rhomt21. This file can read in pldngen.
-    IF (denCoeffsOffdiag%l_fmpl) THEN
-       OPEN (26,file='rhomt21',form='unformatted',status='unknown')
-       WRITE (26) rho21
-       CLOSE (26)
-       DEALLOCATE ( rho21 )
-    ENDIF
-    !---> end of test output
-
+ 
   END SUBROUTINE cdnmt
 END MODULE m_cdnmt

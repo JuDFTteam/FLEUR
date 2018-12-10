@@ -39,7 +39,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: qpwc(stars%ng3)
-    REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !-odim
     !+odim
     !     ..

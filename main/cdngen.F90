@@ -96,8 +96,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
 
-   CALL outDen%init(stars,    atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_DEN)
-   CALL EnergyDen%init(stars, atoms, sphhar, vacuum, input%jspins, noco%l_noco, POTDEN_TYPE_EnergyDen)
+   CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+   CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
 
    IF (mpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -178,7 +178,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
 
-         IF (noco%l_soc) CALL orbMagMoms(dimension,atoms,noco,moments%clmom)
+         IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,moments%clmom)
       END IF
    END IF ! mpi%irank == 0
 

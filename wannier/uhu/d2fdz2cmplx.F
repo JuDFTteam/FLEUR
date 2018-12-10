@@ -7,6 +7,7 @@
 
       IMPLICIT NONE
       
+      INTEGER, INTENT(IN) :: jmtd
       COMPLEX, INTENT(INOUT) :: d2f(jmtd)
       COMPLEX, INTENT(IN)    :: fac(jmtd)
 
@@ -15,7 +16,6 @@
       REAL, INTENT(IN)    :: dx
 
       INTEGER, INTENT(IN) :: jri
-      INTEGER, INTENT(IN) :: jmtd
 
       REAL, ALLOCATABLE :: fr(:),fi(:),dfr(:),dfi(:)
       INTEGER :: i

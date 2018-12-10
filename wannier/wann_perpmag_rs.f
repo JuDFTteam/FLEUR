@@ -482,7 +482,7 @@ c       close(321)
           do i=1,num_wann2
            do kk=1,3
             write(321,*) r1,r2,r3,i,j,kk,real(hreal(kk,i,j,rvecind)),
-     &                                   imag(hreal(kk,i,j,rvecind))
+     &                                   aimag(hreal(kk,i,j,rvecind))
            enddo !kk 
           enddo !i
          enddo !j   

@@ -30,10 +30,21 @@ CONTAINS
     chi(2,2) =  exp(ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
     !--->       and determine the prefactors for the Hamitonian- and
     !--->       overlapp-matrix elements
-    chi_mat(1,1) = chi(1,isp)*CONJG(chi(1,isp))
-    chi_mat(2,1) = chi(2,isp)*CONJG(chi(1,isp))
-    chi_mat(2,2) = chi(2,isp)*CONJG(chi(2,isp))
-    chi_mat(1,2) = chi(1,isp)*CONJG(chi(2,isp))
+    IF (isp<3) THEN
+       isp1=isp
+       isp2=isp
+    ELSEIF(isp==3) THEN
+       isp1=1
+       isp2=2
+    ELSE
+       isp1=2
+       isp2=1
+    ENDIF
+    
+    chi_mat(1,1) = chi(1,isp1)*CONJG(chi(1,isp2))
+    chi_mat(2,1) = chi(2,isp1)*CONJG(chi(1,isp2))
+    chi_mat(2,2) = chi(2,isp1)*CONJG(chi(2,isp2))
+    chi_mat(1,2) = chi(1,isp1)*CONJG(chi(2,isp2))
 
     
     

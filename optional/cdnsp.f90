@@ -44,8 +44,8 @@
           LOGICAL n_exist,l_qfix
           !     ..
           !     .. Local Arrays ..
-          REAL rhoc(atoms%jmtd,atoms%ntype,dimension%jspd)
-          REAL tec(atoms%ntype,dimension%jspd),qintc(atoms%ntype,dimension%jspd)
+          REAL rhoc(atoms%jmtd,atoms%ntype,input%jspins)
+          REAL tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins)
           CHARACTER(len=140), ALLOCATABLE :: clines(:)
           CHARACTER(len=140)              :: lineread
           !      ..
@@ -54,7 +54,7 @@
 
           IF (input%jspins/=2) CALL juDFT_error("cdnsp: set jspins = 2 and remove fl7para!", calledby ="cdnsp")
 
-          CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+          CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
           input%jspins=1
           CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)

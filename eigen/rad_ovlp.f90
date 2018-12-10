@@ -25,8 +25,8 @@ MODULE m_radovlp
     TYPE(t_usdus),INTENT(INOUT):: usdus
 
     !     .. Array Arguments ..
-    REAL,    INTENT  (IN):: epar(0:,:,:)!(0:atoms%lmaxd,atoms%ntype,dimension%jspd)
-    REAL,    INTENT  (IN):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT  (IN):: epar(0:,:,:)!(0:atoms%lmaxd,atoms%ntype,input%jspins)
+    REAL,    INTENT  (IN):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT):: uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype)
     REAL,    INTENT (OUT):: dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype)
     !     ..

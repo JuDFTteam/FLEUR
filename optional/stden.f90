@@ -66,14 +66,14 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    DATA del/1.e-6/
    PARAMETER (l_st=.true.)
 
-   IF (input%jspins > DIMENSION%jspd) CALL juDFT_error("input%jspins > dimension%jspd", calledby = "stden")
+   IF (input%jspins > input%jspins) CALL juDFT_error("input%jspins > input%jspins", calledby = "stden")
 
-   CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
-   ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,DIMENSION%jspd,atoms%ntype) )
-   ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),rh1(DIMENSION%msh,atoms%ntype,DIMENSION%jspd) )
+   ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,input%jspins,atoms%ntype) )
+   ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,input%jspins),rh1(DIMENSION%msh,atoms%ntype,input%jspins) )
    ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
-   ALLOCATE ( rhoss(DIMENSION%msh,DIMENSION%jspd) )
+   ALLOCATE ( rhoss(DIMENSION%msh,input%jspins) )
 
    rh = 0.0
    rhoss = 0.0
