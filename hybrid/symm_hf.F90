@@ -72,7 +72,7 @@ END SUBROUTINE symm_hf_init
 
 SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
                    lapw,jsp,mpi,irank2,rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,&
-                   symop,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
+                   pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
 
       USE m_constants
       USE m_types
@@ -105,7 +105,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       INTEGER,INTENT(IN)              :: rrot(3,3,sym%nsym)
       INTEGER,INTENT(IN)              :: psym(sym%nsym)
       INTEGER,INTENT(OUT)             :: parent(kpts%nkptf)
-      INTEGER,INTENT(OUT)             :: symop(kpts%nkptf)
       INTEGER,INTENT(OUT)             :: nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))  
       INTEGER,ALLOCATABLE,INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER,ALLOCATABLE,INTENT(OUT) :: n_q(:)      
@@ -163,7 +162,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
         list(i) = i-1
       END DO
 
-      symop = 0
       DO ikpt=2,kpts%nkptf
         DO iop=1,nsymop
 
@@ -186,7 +184,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
             list(nrkpt)   = 0
             neqvkpt(ikpt) = neqvkpt(ikpt) + 1
             parent(nrkpt) = ikpt
-            symop(nrkpt)  = psym(iop)
           END IF
           IF ( all(list .eq. 0) ) EXIT
 

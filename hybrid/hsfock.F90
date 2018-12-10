@@ -102,7 +102,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    INTEGER                 ::  rrot(3,3,sym%nsym)
    INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
 
-   INTEGER,ALLOCATABLE     ::  parent(:),symop(:)
+   INTEGER,ALLOCATABLE     ::  parent(:)
    INTEGER,ALLOCATABLE     ::  pointer_EIBZ(:)
    INTEGER,ALLOCATABLE     ::  n_q(:)
 
@@ -147,15 +147,15 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       IF( nk .eq. 1 .and. jsp .eq. 1 .and. input%imix .gt. 10) CALL system('rm -f broyd*')
       ! calculate all symmetrie operations, which yield k invariant
 
-      ALLOCATE( parent(kpts%nkptf),symop(kpts%nkptf) ,stat=ok)
-      IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation parent/symop'
-      parent = 0 ; symop = 0
+      ALLOCATE(parent(kpts%nkptf), stat=ok)
+      IF(ok.NE.0) STOP 'mhsfock: failure allocation parent'
+      parent = 0
 
       CALL timestart("symm_hf")
       CALL symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
 
       CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
-                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,symop,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
+                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,maxndb,nddb,nsest,indx_sest)
       CALL timestop("symm_hf")
 
       ! remove weights(wtkpt) in w_iks
