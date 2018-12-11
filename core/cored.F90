@@ -45,6 +45,9 @@ CONTAINS
       CHARACTER(LEN=20) :: attributes(6)
       REAL stateEnergies(29)
       !     ..
+
+      write (*,*) "cored is running!!!"
+
       c = c_light(1.0)
       seig = 0.
       !
