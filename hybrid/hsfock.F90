@@ -89,8 +89,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    INTEGER                 ::  ikpt,ikpt0
    INTEGER                 ::  irec
    INTEGER                 ::  irecl_olap,irecl_z,irecl_vx
-   INTEGER                 ::  maxndb, nbasfcn
-   INTEGER                 ::  nddb
+   INTEGER                 ::  nbasfcn
    INTEGER                 ::  nsymop
    INTEGER                 ::  nkpt_EIBZ
    INTEGER                 ::  ncstd
@@ -98,12 +97,11 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    REAL                    ::  a_ex
 
    ! local arrays
-   INTEGER                 ::  degenerat(hybrid%ne_eig(nk))
    INTEGER                 ::  nsest(hybrid%nbands(nk)),indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))
    INTEGER                 ::  rrot(3,3,sym%nsym)
    INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
 
-   INTEGER,ALLOCATABLE     ::  parent(:),symop(:)
+   INTEGER,ALLOCATABLE     ::  parent(:)
    INTEGER,ALLOCATABLE     ::  pointer_EIBZ(:)
    INTEGER,ALLOCATABLE     ::  n_q(:)
 
@@ -112,7 +110,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    TYPE(t_mat)             :: olap,trafo,invtrafo,ex,tmp,v_x,z
    COMPLEX                 ::  exch(dimension%neigd,dimension%neigd)
    COMPLEX,ALLOCATABLE     ::  carr(:)
-   COMPLEX,ALLOCATABLE     ::  rep_c(:,:,:,:,:)
       
    CALL timestart("total time hsfock")
     
@@ -149,18 +146,15 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       IF( nk .eq. 1 .and. jsp .eq. 1 .and. input%imix .gt. 10) CALL system('rm -f broyd*')
       ! calculate all symmetrie operations, which yield k invariant
 
-      ALLOCATE( parent(kpts%nkptf),symop(kpts%nkptf) ,stat=ok)
-      IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation parent/symop'
-      parent = 0 ; symop = 0
+      ALLOCATE(parent(kpts%nkptf), stat=ok)
+      IF(ok.NE.0) STOP 'mhsfock: failure allocation parent'
+      parent = 0
 
       CALL timestart("symm_hf")
       CALL symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
 
-      ALLOCATE(rep_c(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,nsymop,atoms%nat), stat=ok)
-      IF(ok.NE.0) STOP 'hsfock: failure allocation rep_c'
-
       CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
-                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
+                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
       CALL timestop("symm_hf")
 
       ! remove weights(wtkpt) in w_iks
@@ -178,7 +172,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       CALL exchange_valence_hf(nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,cell,dimension,input,jsp,hybdat,mnobd,lapw,&
                                eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,it,xcpot,noco,nsest,indx_sest,&
                                mpi,irank2,isize2,comm,ex)
-      DEALLOCATE (rep_c)
       CALL timestop("valence exchange calculation")
 
       WRITE(1224,'(a,i7)') 'kpoint: ', nk
