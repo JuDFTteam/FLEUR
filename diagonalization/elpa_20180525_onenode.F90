@@ -29,6 +29,9 @@ CONTAINS
 #ifdef CPP_ELPA_ONENODE
     USE elpa
 #endif
+#ifdef CPP_GPU
+    USE nvtx
+#endif
     IMPLICIT NONE
 
     CLASS(t_mat),INTENT(INOUT)    :: hmat,smat
@@ -45,7 +48,9 @@ CONTAINS
     INTEGER           :: kernel
     CLASS(elpa_t),pointer :: elpa_obj
 
-    print*, "ELPA 20180525 started"
+#ifdef CPP_GPU
+    call nvtxStartRange("ELPA",5)    
+#endif
     err = elpa_init(20180525)
     elpa_obj => elpa_allocate()
        
@@ -65,15 +70,23 @@ CONTAINS
     CALL elpa_obj%set("gpu",1,err)
 #endif
     err = elpa_obj%setup()
+    call elpa_obj%get("solver", kernel)
+    print *, "elpa uses " // elpa_int_value_to_string("solver", kernel) // " solver"
 
     CALL hmat%add_transpose(hmat)       
     CALL smat%add_transpose(smat)       
 
+#ifdef CPP_GPU
+    call nvtxStartRange("EigVec",7)    
+#endif
     IF (hmat%l_real) THEN
         CALL elpa_obj%generalized_eigenvectors(hmat%data_r,smat%data_r,eig2, ev_dist%data_r, .FALSE.,err)
     ELSE
         CALL elpa_obj%generalized_eigenvectors(hmat%data_c,smat%data_c,eig2, ev_dist%data_c, .FALSE., err)
     ENDIF
+#ifdef CPP_GPU
+    call nvtxEndRange!("EigVec",8)    
+#endif
        
     CALL elpa_deallocate(elpa_obj)
     CALL elpa_uninit()
@@ -86,6 +99,9 @@ CONTAINS
     CALL ev%alloc(hmat%l_real,hmat%matsize1,ne)
     CALL ev%copy(ev_dist,1,1)
 
+#ifdef CPP_GPU
+    call nvtxEndRange!("ELPA",7)    
+#endif
 #endif
  
 END SUBROUTINE elpa_diag_onenode
