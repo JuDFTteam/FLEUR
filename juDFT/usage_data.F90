@@ -8,8 +8,8 @@ MODULE m_judft_usage
   PRIVATE
   CHARACTER(LEN=99),PARAMETER:: URL_STRING="www.flapw.de/collect.pl"
   INTEGER,PARAMETER :: MAX_NO_KEYS=20
-  CHARACTER(LEN=20) :: keys(MAX_NO_KEYS)
-  CHARACTER(LEN=20) :: values(MAX_NO_KEYS)
+  CHARACTER(LEN=200) :: keys(MAX_NO_KEYS)
+  CHARACTER(LEN=200) :: values(MAX_NO_KEYS)
   INTEGER           :: no_keys=0
 
   INTERFACE add_usage_data

@@ -45,6 +45,7 @@ MODULE m_xmlOutput
    SUBROUTINE startXMLOutput()
 
       USE m_juDFT_args
+      USE m_juDFT_usage
       USE m_constants
       USE m_utility
       USE m_compile_descr
@@ -91,6 +92,7 @@ MODULE m_xmlOutput
       CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host,compile_flags,link_flags)
       gitdescTemp = gitdesc
       githashTemp = githash
+      CALL add_usage_data("githash", githash)
       gitbranchTemp = gitbranch
       compile_dateTemp = compile_date
       compile_userTemp = compile_user
