@@ -62,7 +62,6 @@ CONTAINS
     ENDIF
 
     !$OMP PARALLEL DEFAULT(none) &
-
     !$OMP SHARED(usdus,rho,moments,qmtl) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
     !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
