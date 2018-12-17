@@ -5,7 +5,7 @@
       SUBROUTINE checkolap(atoms,hybdat,&
      &                  hybrid,&
      &                  nkpti,kpts,&
-     &                  dimension,mpi,irank2,skip_kpt,&
+     &                  dimension,mpi,skip_kpt,&
      &                  input,sym,noco,&
      &                  cell,lapw,jsp)
       USE m_util     , ONLY: intgrf,intgrf_init,chr,sphbessel,harmonicsr
@@ -33,9 +33,6 @@
 
 
       ! - arrays -
-      INTEGER, INTENT(IN)     ::  irank2(nkpti)
-
-   
       LOGICAL, INTENT(IN)     ::  skip_kpt(nkpti)
 
       ! - local scalars -
@@ -314,11 +311,9 @@
               END DO
             END DO
             rarr = sqrt ( rarr / (4*pi_const) )
- !           IF ( irank2(ikpt) == 0 ) THEN
  !             WRITE(outtext,'(I6,4X,F14.12,''  ('',F14.12,'')'')') &
  !    &              ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
  !             CALL writeout(outtext,mpi%irank)
- !           END IF
 !             IF( iatom .eq. 6 ) THEN
 !               cdum = exp(2*pi*img*dot_product(bkf(:,ikpt),(/0d0,0d0,1d0/) ))
 !               lm = 0 

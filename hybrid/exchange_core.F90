@@ -21,7 +21,7 @@ MODULE m_exchange_core
 CONTAINS
 
   SUBROUTINE exchange_vccv(nk,atoms, hybrid,hybdat, DIMENSION,jsp,lapw,&
-       maxbands,mnobd,mpi,irank2, degenerat,symequivalent,results,&
+       maxbands,mnobd,mpi,degenerat,symequivalent,results,&
        ex_vv_r,ex_vv_c,l_real)
 
 
@@ -43,7 +43,6 @@ CONTAINS
     !     -scalars -
     INTEGER,INTENT(IN)      :: jsp 
     INTEGER,INTENT(IN)      ::nk  ,maxbands, mnobd
-    INTEGER,INTENT(IN)      :: irank2
     !     - arays -
     INTEGER,INTENT(IN)      ::  degenerat(hybrid%ne_eig(nk))
     LOGICAL,INTENT(IN)      :: l_real
@@ -77,10 +76,8 @@ CONTAINS
 
     LOGICAL                 ::  ldum(hybrid%nbands(nk),hybrid%nbands(nk))
 
-    IF ( irank2 == 0 ) THEN
-       WRITE(6,'(A)') new_LINE('n') // new_LINE('n') // '### valence-core-core-valence exchange ###'
-       WRITE(6,'(A)') new_LINE('n') // '        k-point       band    exchange (core contribution)'
-    END IF
+    WRITE(6,'(A)') new_LINE('n') // new_LINE('n') // '### valence-core-core-valence exchange ###'
+    WRITE(6,'(A)') new_LINE('n') // '        k-point       band    exchange (core contribution)'
 
     ! read in mt wavefunction coefficients from file cmt
     CALL read_cmt(cmt,nk)
@@ -237,9 +234,7 @@ CONTAINS
        results%te_hfex%core = results%te_hfex%core - results%w_iks(n1,nk,jsp)*exchange(n1,n1)
     END DO
 
-    IF ( irank2 == 0 ) THEN
-       WRITE(6,'(A,F20.15)') 'sum of the absolut real part of the non diagonal elements',sum_offdia
-    END IF
+    WRITE(6,'(A,F20.15)') 'sum of the absolut real part of the non diagonal elements',sum_offdia
 
 
   END SUBROUTINE exchange_vccv
