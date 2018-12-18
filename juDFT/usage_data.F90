@@ -60,19 +60,13 @@ CONTAINS
 #endif
 
 !#ifdef CPP_ALLOW_USAGE_DATA
-      CALL DATE_AND_TIME(values = dt)
-      r = (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 + &
-          dt(2) * 31 * 24 * 60 * 60 * 1000 + &
-          dt(3) * 24 * 60 * 60  * 1000 + dt(5) * 60 * 60 * 1000 + &
-          dt(6) * 60 * 1000 + dt(7) * 1000 + dt(8)
-      !pid = GETPID()
-      !r=r*1000+pid
+      r = random_id()
 
       !First write a json file
       OPEN(unit=961,file="usage.json",status='replace')
       WRITE(961,*) '{'
       WRITE(961,*) '  "url":"',TRIM(ADJUSTL(URL_STRING)),'",'
-      WRITE(961,"(a,i0,a)") '  "random":"',r,'",'
+      WRITE(961,"(a,Z0.16,a)") '  "random":"',r,'",'
       WRITE(961,*) '  "data": {'
       DO i=1,no_keys
          WRITE(961,*) '       "',TRIM(ADJUSTL(keys(i))),'":"',TRIM(ADJUSTL(values(i))),'",'
@@ -96,4 +90,24 @@ CONTAINS
 !    PRINT *,"No usage data collected"
 !#endif
    END SUBROUTINE send_usage_data
+
+   FUNCTION random_id() result(r)
+      implicit none
+      integer(8)     :: r, rand_i
+      integer        :: dt(8), i
+      real(8)       :: rand_r
+
+      CALL DATE_AND_TIME(values = dt)
+      r = (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 + &
+          dt(2) * 31 * 24 * 60 * 60 * 1000 + &
+          dt(3) * 24 * 60 * 60  * 1000 + dt(5) * 60 * 60 * 1000 + &
+          dt(6) * 60 * 1000 + dt(7) * 1000 + dt(8)
+
+      ! 10 times xorshift64
+      do i = 1,10
+         r = ieor(r, ishft(r,13))
+         r = ieor(r, ishft(r,-7))
+         r = ieor(r, ishft(r,17))
+      enddo
+   END FUNCTION random_id
 END MODULE m_judft_usage
