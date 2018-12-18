@@ -45,7 +45,7 @@ MODULE m_hsfock
 CONTAINS
 
 SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,sym,cell,noco,&
-                  results,it,mnobd,xcpot,mpi,irank2,isize2,comm)
+                  results,it,mnobd,xcpot,mpi)
 
    USE m_types
    USE m_symm_hf
@@ -76,7 +76,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    ! scalars
    INTEGER,               INTENT(IN)    :: jsp 
    INTEGER,               INTENT(IN)    :: it
-   INTEGER,               INTENT(IN)    :: irank2 ,isize2,comm
    INTEGER,               INTENT(IN)    :: nk
    INTEGER,               INTENT(IN)    :: mnobd
 
@@ -151,9 +150,9 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       parent = 0
 
       CALL timestart("symm_hf")
-      CALL symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
+      CALL symm_hf_init(sym,kpts,nk,nsymop,rrot,psym)
 
-      CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,irank2,&
+      CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,&
                    rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
       CALL timestop("symm_hf")
 
@@ -171,7 +170,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       ex%l_real=sym%invs
       CALL exchange_valence_hf(nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,cell,dimension,input,jsp,hybdat,mnobd,lapw,&
                                eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,it,xcpot,noco,nsest,indx_sest,&
-                               mpi,irank2,isize2,comm,ex)
+                               mpi,ex)
       CALL timestop("valence exchange calculation")
 
       WRITE(1224,'(a,i7)') 'kpoint: ', nk
@@ -186,8 +185,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       END DO
 
       CALL timestart("core exchange calculation")
-      ! do the rest of the calculation only on master
-      IF (irank2 /= 0) RETURN
 
       ! calculate contribution from the core states to the HF exchange
       IF (xcpot%is_name("hse").OR.xcpot%is_name("vhse")) THEN

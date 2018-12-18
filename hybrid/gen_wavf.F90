@@ -16,7 +16,7 @@ MODULE m_gen_wavf
 CONTAINS
 
    SUBROUTINE gen_wavf (nkpti,kpts,it,sym,atoms,el_eig,ello_eig,cell,dimension,hybrid,vr0,&
-                        hybdat,noco,oneD,mpi,irank2,input,jsp,zmat)
+                        hybdat,noco,oneD,mpi,input,jsp,zmat)
 
       ! nkpti      ::     number of irreducible k-points
       ! nkpt       ::     number of all k-points 
@@ -49,7 +49,6 @@ CONTAINS
       INTEGER,           INTENT(IN)    :: nkpti, it
       INTEGER,           INTENT(IN)    :: jsp
 
-      INTEGER,           INTENT(IN)    :: irank2(nkpti)
       REAL,              INTENT(IN)    :: vr0(:,:,:)!(jmtd,ntype,jspd)
       REAL,              INTENT(IN)    :: el_eig(0:atoms%lmaxd,atoms%ntype)
       REAL,              INTENT(IN)    :: ello_eig(atoms%nlod,atoms%ntype)
@@ -179,12 +178,9 @@ CONTAINS
       found = .false.
 #ifdef CPP_MPI
       DO ikpt = 1, nkpti
-         IF (irank2(ikpt) == 0 .AND. .NOT.found) THEN
+         IF (.NOT.found) THEN
             lower = ikpt
             found = .true.
-         ELSE IF (irank2(ikpt) /= 0 .AND. found) THEN
-            upper = ikpt-1
-            EXIT
          END IF
       END DO
 #else
