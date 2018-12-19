@@ -32,8 +32,8 @@ CONTAINS
       IMPLICIT NONE
       CHARACTER(len=*),INTENT(IN):: key
       INTEGER,intent(in)         :: value
-
       CHARACTER(len=20)::txt
+
       WRITE(txt,*) VALUE
       CALL add_usage_data_s(key,txt)
    END SUBROUTINE add_usage_data_i
