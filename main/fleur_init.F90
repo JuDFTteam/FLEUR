@@ -184,6 +184,9 @@
                      l_kpts)
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
+#ifdef CPP_MPI
+             CALL mpi_dist_forcetheorem(mpi,forcetheo)
+#endif 
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
@@ -210,7 +213,7 @@
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
                   kpts,enpara,sphhar,mpi,obsolete)
 #ifndef CPP_OLDINTEL
-             CALL mpi_dist_forcetheorem(mpi,forcetheo)
+!             CALL mpi_dist_forcetheorem(mpi,forcetheo)
 #endif
 #endif
 
