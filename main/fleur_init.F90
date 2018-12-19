@@ -523,6 +523,7 @@
           CALL add_usage_data("PlaneWaves",DIMENSION%nvd)
           CALL add_usage_data("LOs",atoms%nlotot)
           CALL add_usage_data("Iterations",input%itmax)
+          CALL add_usage_data("nkpt", kpts%nkpt)
           
           CALL results%init(dimension,input,atoms,kpts,noco)
 
