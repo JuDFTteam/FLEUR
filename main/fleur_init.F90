@@ -215,6 +215,7 @@
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
                   kpts,enpara,sphhar,mpi,obsolete)
+
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
