@@ -92,7 +92,7 @@ CONTAINS
              jspin=jsp
           CALL vacfun(&
                vacuum,DIMENSION,stars,&
-               jsp,input,noco,ipot,&
+               jsp,input,noco,jspin1,jspin2,&
                sym, cell,ivac,evac(1,1),lapw%bkpt,v%vacxy(:,:,ivac,ipot),v%vacz(:,:,:),kvac1,kvac2,nv2,&
                tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
           !
