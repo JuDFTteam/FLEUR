@@ -215,12 +215,7 @@
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
                   kpts,enpara,sphhar,mpi,obsolete)
-<<<<<<< HEAD
-#ifndef CPP_OLDINTEL
-!             CALL mpi_dist_forcetheorem(mpi,forcetheo)
-#endif
-=======
->>>>>>> 41c649b8ff2ed52b52299ae6ee4f36cd3fe18d93
+
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
