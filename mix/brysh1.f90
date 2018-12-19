@@ -195,6 +195,7 @@ CONTAINS
     nmap = j
     nall = (intfac*stars%ng3 + mapmt + mapvac + 49*2*atoms%n_u )*input%jspins
     IF (noco%l_noco) nall = nall + 2*stars%ng3 + mapvac2
+    IF (noco%l_mtnocopot) nall=nall+mapmt*2
     IF (nall.NE.nmap) THEN
        WRITE(6,*)'The total number of charge density coefficients is'
        WRITE(6,*)'inconsitent:'
