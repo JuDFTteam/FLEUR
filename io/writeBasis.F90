@@ -427,6 +427,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
     version = 1
     filename = 'eig_gw.hdf'
 
+    IF(input%gw==2) THEN
     INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
     IF(l_exist) THEN
        CALL system('rm '//TRIM(ADJUSTL(filename)))       
@@ -617,21 +618,12 @@ write(*,*)numbands,ndbands
    END DO
    CALL h5fclose_f(fileID, hdfError)  
 !-------------------------write potential--------------------
-
-   WRITE(6000,*) ALLOCATED(vCoul%pw)
-   WRITE(6000,*) ALLOCATED(vCoul%pw_w)
-   FLUSH(6000)
-   DO i = 1, stars%ng3
-      WRITE(6000,'(i7,4f15.8)') i, REAL(vCoul%pw(i,1)), REAL(vCoul%pw_w(i,1))
-      WRITE(6001,'(i7,4f15.8)') i, REAL(vTot%pw(i,1)), REAL(vTot%pw_w(i,1))
-   END DO
-
    CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot%mt,vTot%pw_w,vTot%vacz,vTot%vacxy)
    CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul%mt,vCoul%pw_w,vCoul%vacz,vCoul%vacxy)
    CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx%mt,vx%pw_w,vx%vacz,vx%vacxy)
 
-
-
+   END IF
+   
 #else
    CALL juDFT_error("writeBasis called without HDF5! ",calledby="writeBasis")
 #endif

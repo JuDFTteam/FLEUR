@@ -9,7 +9,7 @@ MODULE m_hf_setup
 CONTAINS
 
 SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,results,jsp,enpara,eig_id_hf,&
-                    hybdat,irank2,it,l_real,vr0,eig_irr) 
+                    hybdat,it,l_real,vr0,eig_irr) 
    USE m_types
    USE m_eig66_io
    USE m_util
@@ -33,7 +33,7 @@ SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,res
    TYPE(t_results),   INTENT(INOUT) :: results
    TYPE(t_hybdat),    INTENT(INOUT) :: hybdat
 
-   INTEGER,           INTENT(IN)    :: irank2(:),it
+   INTEGER,           INTENT(IN)    :: it
    INTEGER,           INTENT(IN)    :: jsp,eig_id_hf
    REAL,              INTENT(IN)    :: vr0(:,:,:)
    LOGICAL,           INTENT(IN)    :: l_real
@@ -171,11 +171,11 @@ SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,res
             rcvreqd = rcvreqd + 1
             CALL MPI_IRECV(hybrid%nobd(nk),1,MPI_INTEGER4, MPI_ANY_SOURCE,TAG_SNDRCV_HYBDAT%NOBD+nk, mpi,rcvreq(rcvreqd),ierr(1))
          ELSE
-            i = MOD( mpi%irank + isize2(nk), mpi%isize )
-            DO WHILE ( i < mpi%irank-irank2(nk) .OR. i >= mpi%irank-irank2(nk)+isize2(nk) )
+            i = MOD( mpi%irank + 1, mpi%isize )
+            DO WHILE ( i < mpi%irank .OR. i >= mpi%irank+1 )
                sndreqd = sndreqd + 1
                CALL MPI_ISSEND(hybrid%nobd(nk),1,MPI_INTEGER4,i, TAG_SNDRCV_HYBDAT%NOBD+nk,mpi, sndreq(sndreqd),ierr(1) )
-               i = MOD( i + isize2(nk), mpi%isize )
+               i = MOD( i + 1, mpi%isize )
             END DO
          END IF
       END DO
@@ -194,7 +194,7 @@ SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,res
 
       ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
       CALL gen_wavf(kpts%nkpt,kpts,it,sym,atoms,enpara%el0(:,:,jsp),enpara%ello0(:,:,jsp),cell,dimension,&
-                    hybrid,vr0,hybdat,noco,oneD,mpi,irank2,input,jsp,zmat)
+                    hybrid,vr0,hybdat,noco,oneD,mpi,input,jsp,zmat)
 
       ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
       CALL corewf(atoms,jsp,input,DIMENSION,vr0,hybdat%lmaxcd,hybdat%maxindxc,mpi,&
@@ -206,7 +206,7 @@ SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,res
 #endif
 
       ! check olap between core-basis/core-valence/basis-basis
-      CALL checkolap(atoms,hybdat,hybrid,kpts%nkpt,kpts,dimension,mpi,irank2,skip_kpt,&
+      CALL checkolap(atoms,hybdat,hybrid,kpts%nkpt,kpts,dimension,mpi,skip_kpt,&
                      input,sym,noco,cell,lapw,jsp)
 
       ! set up pointer pntgpt

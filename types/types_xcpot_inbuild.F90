@@ -43,6 +43,7 @@ MODULE m_types_xcpot_inbuild
 
    CONTAINS
       !overloading t_xcpot:
+      PROCEDURE        :: is_lda=>xcpot_is_lda
       PROCEDURE        :: is_gga=>xcpot_is_gga
       PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
       PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
@@ -105,6 +106,12 @@ CONTAINS
       xcpot%DATA%exchange_weight=xcpot%get_exchange_weight()
 
    END SUBROUTINE xcpot_init
+   
+   LOGICAL FUNCTION xcpot_is_lda(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_is_lda = (.not. xcpot%is_gga()) .and. (.not. xcpot%is_hybrid())
+   END FUNCTION xcpot_is_lda
 
    LOGICAL FUNCTION xcpot_is_gga(xcpot)
       IMPLICIT NONE

@@ -88,7 +88,6 @@ CONTAINS
 #else
     CALL get_elpa_row_col_comms(hmat%blacsdata%mpi_com, hmat%blacsdata%myrow, hmat%blacsdata%mycol,mpi_comm_rows, mpi_comm_cols)
 #endif
-    !print *,"creating ELPA comms  --  done"
 
     num2=ne !no of states solved for
     
@@ -130,13 +129,16 @@ CONTAINS
         print *, "elpa uses " // elpa_int_value_to_string("complex_kernel", kernel) // " kernel"
     endif
 #endif
-    !print *,"Before elpa"
 
-    !ELPA -start here
-    ! Solive generalized preblem
+    ! Solve generalized problem
     !
     ! 1. Calculate Cholesky factorization of Matrix S = U**T * U
-    !    and invert triangular matrix U
+    !    and invert triangular matrix U.
+    !    Cholesky factorization: 
+    !         Only upper triangle needs to be set. On return, the upper triangle contains
+    !         the Cholesky factor and the lower triangle is set to 0.
+    !    invert_triangular:
+    !         Inverts an upper triangular real or complex matrix.
     !
     ! Please note: cholesky_complex/invert_trm_complex are not trimmed for speed.
     ! The only reason having them is that the Scalapack counterpart
@@ -183,6 +185,7 @@ CONTAINS
     ! H is only set in the upper half, solve_evp_real needs a full matrix
     ! Set lower half from upper half
 
+    ! Set the lower half of the H matrix to zeros.
     DO i=1,hmat%matsize2
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in H
@@ -195,7 +198,7 @@ CONTAINS
        ENDIF
     ENDDO
  
-
+    ! Use the ev_dist array to store the calculated values for the lower part.
     IF (hmat%l_real) THEN
        CALL pdtran(hmat%global_size1,hmat%global_size1,1.d0,hmat%data_r,1,1,&
                          hmat%blacsdata%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacsdata%blacs_desc)
@@ -204,7 +207,7 @@ CONTAINS
                          hmat%blacsdata%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacsdata%blacs_desc)
     ENDIF
 
-    
+    ! Copy the calculated values to the lower part of the H matrix
     DO i=1,hmat%matsize2
        ! Get global column corresponding to i and number of local rows up to
        ! and including the diagonal, these are unchanged in H
@@ -254,7 +257,7 @@ CONTAINS
     ENDIF
 #endif
 
-    ! 2b. tmp2 = eigvec**T
+    ! 2b. tmp2 = ev_dist**T
     IF (hmat%l_real) THEN
        CALL pdtran(ev_dist%global_size1,ev_dist%global_size1,1.d0,ev_dist%data_r,1,1,&
                           ev_dist%blacsdata%blacs_desc,0.d0,tmp2_r,1,1,ev_dist%blacsdata%blacs_desc)
@@ -325,7 +328,7 @@ CONTAINS
     ENDDO
 
     ! 3. Calculate eigenvalues/eigenvectors of U**-T * A * U**-1
-    !    Eigenvectors go to eigvec
+    !    Eigenvectors go to ev_dist
 #if defined (CPP_ELPA_201705003)
     IF (hmat%l_real) THEN
        CALL elpa_obj%eigenvectors(hmat%data_r, eig2, ev_dist%data_r, err)
@@ -389,7 +392,7 @@ CONTAINS
 #endif
 
 
-    ! 4. Backtransform eigenvectors: Z = U**-1 * eigvec
+    ! 4. Backtransform eigenvectors: Z = U**-1 * ev_dist
 
     ! mult_ah_b_complex needs the transpose of U**-1, thus tmp2 = (U**-1)**T
     IF (hmat%l_real) THEN

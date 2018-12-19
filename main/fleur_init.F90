@@ -185,8 +185,11 @@
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
 #ifdef CPP_MPI
+#ifndef CPP_OLDINTEL
              CALL mpi_dist_forcetheorem(mpi,forcetheo)
-#endif 
+#endif
+#endif
+            
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
@@ -212,9 +215,12 @@
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
                   kpts,enpara,sphhar,mpi,obsolete)
+<<<<<<< HEAD
 #ifndef CPP_OLDINTEL
 !             CALL mpi_dist_forcetheorem(mpi,forcetheo)
 #endif
+=======
+>>>>>>> 41c649b8ff2ed52b52299ae6ee4f36cd3fe18d93
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"

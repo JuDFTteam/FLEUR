@@ -51,7 +51,6 @@ CONTAINS
     LOGICAL           :: l_restart=.FALSE.
     LOGICAL           :: l_zref
 
-    INTEGER           :: comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt)
     REAL              :: bkpt(3)
     REAL, ALLOCATABLE :: eig_irr(:,:)
 
@@ -119,19 +118,19 @@ CONTAINS
     CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot,l_restart)
     CALL timestop("generation of coulomb matrix")
 
-    CALL hf_init(hybrid,kpts,atoms,input,DIMENSION,hybdat,irank2,isize2,sym%invs)
+    CALL hf_init(hybrid,kpts,atoms,input,DIMENSION,hybdat,sym%invs)
     CALL timestop("Preparation for Hybrid functionals")
 
     CALL timestart("Calculation of non-local HF potential")
     DO jsp = 1,input%jspins
        CALL HF_setup(hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jsp,enpara,eig_id,&
-                     hybdat,irank2,iterHF,sym%invs,v%mt(:,0,:,:),eig_irr)
+                     hybdat,iterHF,sym%invs,v%mt(:,0,:,:),eig_irr)
 
        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
           CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref)
   
           CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,sym,cell,&
-                      noco,results,iterHF,MAXVAL(hybrid%nobd),xcpot,mpi,irank2(nk),isize2(nk),comm(nk))
+                      noco,results,iterHF,MAXVAL(hybrid%nobd),xcpot,mpi)
        END DO
     END DO
     CALL timestop("Calculation of non-local HF potential")
