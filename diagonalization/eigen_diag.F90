@@ -66,6 +66,7 @@ CONTAINS
     USE m_types_gpumat
     USE m_matrix_copy
     USE m_cusolver_diag
+    USE m_judft_usage
     IMPLICIT NONE
 #ifdef CPP_MPI
     include 'mpif.h'
@@ -108,6 +109,7 @@ CONTAINS
        
     CALL timestart("Diagonalization")
     !Select the solver
+    CALL add_usage_data("diag-solver", priv_select_solver(parallel))
     SELECT CASE (priv_select_solver(parallel))
     CASE (diag_elpa)
        CALL elpa_diag(hmat,smat,ne,eig,ev)

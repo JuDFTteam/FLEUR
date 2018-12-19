@@ -21,7 +21,14 @@ MODULE m_judft_usage
 CONTAINS
    SUBROUTINE add_usage_data_s(key,VALUE)
       IMPLICIT NONE
-      CHARACTER(len=*),INTENT(IN)::key,VALUE
+      CHARACTER(len=*),INTENT(IN)  :: key,VALUE
+      INTEGER                      :: i
+
+      ! don't add a key twice
+      do i = 1,no_keys
+         if(keys(i) == key) return
+      enddo
+
       no_keys=no_keys+1
       IF (no_keys>MAX_NO_KEYS) STOP "BUG, too many keys in usage_data"
       keys(no_keys)  =key
