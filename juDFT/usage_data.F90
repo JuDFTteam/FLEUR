@@ -13,7 +13,7 @@ MODULE m_judft_usage
    INTEGER           :: no_keys=0
 
    INTERFACE add_usage_data
-      MODULE PROCEDURE  add_usage_data_s,add_usage_data_i,add_usage_data_l
+      MODULE PROCEDURE  add_usage_data_s,add_usage_data_i,add_usage_data_l,add_usage_data_r
    END INTERFACE add_usage_data
 
    PUBLIC :: add_usage_data,send_usage_data
@@ -37,6 +37,16 @@ CONTAINS
       WRITE(txt,*) VALUE
       CALL add_usage_data_s(key,txt)
    END SUBROUTINE add_usage_data_i
+   
+   SUBROUTINE add_usage_data_r(key,VALUE)
+      IMPLICIT NONE
+      CHARACTER(len=*),INTENT(IN):: key
+      REAL,intent(in)            :: value
+
+      CHARACTER(len=20)::txt
+      WRITE(txt,'(F18.2)') VALUE
+      CALL add_usage_data_s(key,txt)
+   END SUBROUTINE add_usage_data_r
 
    SUBROUTINE add_usage_data_l(key,VALUE)
       IMPLICIT NONE
