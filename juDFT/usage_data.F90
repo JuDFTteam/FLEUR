@@ -76,7 +76,7 @@ CONTAINS
       OPEN(unit=961,file="usage.json",status='replace')
       WRITE(961,*) '{'
       WRITE(961,*) '  "url":"',TRIM(ADJUSTL(URL_STRING)),'",'
-      WRITE(961,"(a,Z0.16,a)") '  "random":"',r,'",'
+      WRITE(961,"(a,Z0.16,a)") '  "calculation-id":"',r,'",'
       WRITE(961,*) '  "data": {'
       DO i=1,no_keys
          WRITE(961,*) '       "',TRIM(ADJUSTL(keys(i))),'":"',TRIM(ADJUSTL(values(i))),'",'
