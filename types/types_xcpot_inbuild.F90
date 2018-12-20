@@ -114,7 +114,6 @@ CONTAINS
       xcpot%DATA%exchange_weight=xcpot%get_exchange_weight()
 
    END SUBROUTINE xcpot_init
-<<<<<<< HEAD
   
    !! LDA
    

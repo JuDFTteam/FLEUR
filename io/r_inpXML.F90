@@ -2185,17 +2185,17 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       ! 2 -> GGA
       ! 3 -> MetaGGA
       ! 4 -> Hybrid functional
-      if(xcpot%is_lda()) then
+      if(xcpot%vxc_is_lda()) then
          call add_usage_data("XC-treatment", 1)
          return
       endif
 
-      if(xcpot%is_MetaGGA()) then
+      if(xcpot%exc_is_MetaGGA()) then
          call add_usage_data("XC-treatment", 3)
          return
       endif
 
-      if(xcpot%is_GGA()) then
+      if(xcpot%vxc_is_GGA()) then
          call add_usage_data("XC-treatment", 2)
          return
       endif
@@ -2208,7 +2208,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
    END SUBROUTINE set_xcpot_usage
 
    SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
-
+      use m_juDFT_stop
       IMPLICIT NONE
 
       CHARACTER(*),         INTENT(IN)  :: string
