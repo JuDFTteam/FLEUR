@@ -67,8 +67,9 @@ CONTAINS
 
    SUBROUTINE send_usage_data()
       IMPLICIT NONE
-      INTEGER :: i,ierr,pid,dt(8)
-      INTEGER*8 :: r
+      INTEGER            :: i,ierr,pid,dt(8)
+      CHARACTER(len=200) :: model, modelname
+      INTEGER(8)         :: r
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
 
@@ -78,6 +79,9 @@ CONTAINS
 
 !#ifdef CPP_ALLOW_USAGE_DATA
       r = random_id()
+      call get_cpuinfo(model, modelname)
+      call add_usage_data("cpu_model", model)
+      call add_usage_data("cpu_modelname", modelname)
 
       !First write a json file
       OPEN(unit=961,file="usage.json",status='replace')
@@ -127,4 +131,71 @@ CONTAINS
          r = ieor(r, ishft(r,17))
       enddo
    END FUNCTION random_id
+
+   SUBROUTINE get_cpuinfo(model, modelname)
+      implicit none
+      character(len=200), intent(out) :: model, modelname
+      character(len=1000)             :: line
+      integer                         :: openstatus, readstatus
+      logical                         :: found_model, found_modelname, done
+
+      model     = "unknown"
+      modelname = "unknown"
+
+      done            = .False.
+      found_model     = .False.
+      found_modelname = .False.
+
+      readstatus      = 0
+
+      open(unit=77, file="/proc/cpuinfo", iostat=openstatus)
+      if(openstatus == 0) then
+         do while(.not. done)
+            read(77,'(A)', iostat=readstatus) line
+
+            if(readstatus == 0) then
+               if(index(line, "model name") /= 0) then
+                  modelname = trim(line(index(line, ":")+1:1000))
+
+                  found_modelname = .True.
+                  done            = found_modelname .and. found_model
+                  cycle
+               endif
+               
+               if(index(line, "model") /= 0) then
+                  model = trim(line(index(line,":")+1:1000))
+
+                  found_model = .True.
+                  done        = found_modelname .and. found_model
+                  cycle
+               endif
+            else
+               exit
+            endif
+         enddo
+      endif
+      if(openstatus == 0) close(77)
+   END SUBROUTINE get_cpuinfo
+
+   !SUBROUTINE get_meminfo(VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap)
+      !implicit none
+      !character(len=200), intent(out)   :: VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap
+      !character(len=1000)               :: line
+      !integer                           :: stat
+
+   
+      !VmPeak = ""
+      !VmSize = ""
+      !VmData = ""
+      !VmStk  = ""
+      !VmExe  = ""
+      !VmSwap = ""
+
+      !open(unit=77, file="/proc/cpuinfo", iostat=stat)
+      !do while(stat == 0)
+         
+      !enddo
+
+   !END SUBROUTINE
+
 END MODULE m_judft_usage
