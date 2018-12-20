@@ -7,7 +7,7 @@ MODULE m_judft_usage
    IMPLICIT NONE
    PRIVATE
    CHARACTER(LEN=99),PARAMETER:: URL_STRING="www.flapw.de/collect.pl"
-   INTEGER,PARAMETER :: MAX_NO_KEYS=20
+   INTEGER,PARAMETER :: MAX_NO_KEYS=40
    CHARACTER(LEN=200) :: keys(MAX_NO_KEYS)
    CHARACTER(LEN=200) :: values(MAX_NO_KEYS)
    INTEGER           :: no_keys=0
@@ -66,9 +66,10 @@ CONTAINS
    END SUBROUTINE add_usage_data_l
 
    SUBROUTINE send_usage_data()
+      use m_juDFT_args
       IMPLICIT NONE
       INTEGER            :: i,ierr,pid,dt(8)
-      CHARACTER(len=200) :: model, modelname
+      CHARACTER(len=200) :: model, modelname, VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap
       INTEGER(8)         :: r
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -79,9 +80,20 @@ CONTAINS
 
 !#ifdef CPP_ALLOW_USAGE_DATA
       r = random_id()
+
+      !add cpuinfos
       call get_cpuinfo(model, modelname)
       call add_usage_data("cpu_model", model)
       call add_usage_data("cpu_modelname", modelname)
+
+      !add meminfos
+      call get_meminfo(VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap)
+      call add_usage_data("VmPeak", VmPeak)
+      call add_usage_data("VmSize", VmSize)
+      call add_usage_data("VmData", VmData)
+      call add_usage_data("VmStk",  VmStk)
+      call add_usage_data("VmExe",  VmExe)
+      call add_usage_data("VmSwap", VmSwap)
 
       !First write a json file
       OPEN(unit=961,file="usage.json",status='replace')
@@ -96,17 +108,18 @@ CONTAINS
       WRITE(961,*) '}'
       CLOSE(961)
 
-#ifdef CPP_CURL
       IF (judft_was_argument("-no_send")) THEN
          PRINT *,"As requested by command line option usage data was not send, please send usage.json manually"
       ELSE
-         !Send using curl
-         CALL system('curl -H "Content-Type: application/json" --data @usage.json '\\URL_STRING)
-         PRINT *,"Usage data send using curl: usage.json"
-      ENDIF
+#ifdef CPP_DEBUG
+         WRITE (*,*) "usage.json not send, because this is a debugging run."
 #else
-      PRINT *,'curl not found in compilation. Please send usage.json manually'
+         !Send using curl
+         !CALL system('curl -H "Content-Type: application/json" --data @usage.json '\\URL_STRING)
+         WRITE (*,*) "CURL call not yet implemented"
+         PRINT *,"Usage data send using curl: usage.json"
 #endif
+      ENDIF
 !#else
 !    PRINT *,"No usage data collected"
 !#endif
@@ -177,25 +190,36 @@ CONTAINS
       if(openstatus == 0) close(77)
    END SUBROUTINE get_cpuinfo
 
-   !SUBROUTINE get_meminfo(VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap)
-      !implicit none
-      !character(len=200), intent(out)   :: VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap
-      !character(len=1000)               :: line
-      !integer                           :: stat
+   SUBROUTINE get_meminfo(VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap)
+      use m_juDFT_string
+      implicit none
+      character(len=200), intent(out)   :: VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap
+      character(len=1000)               :: line
+      integer                           :: openstat, readstat
 
    
-      !VmPeak = ""
-      !VmSize = ""
-      !VmData = ""
-      !VmStk  = ""
-      !VmExe  = ""
-      !VmSwap = ""
+      VmPeak = ""
+      VmSize = ""
+      VmData = ""
+      VmStk  = ""
+      VmExe  = ""
+      VmSwap = ""
 
-      !open(unit=77, file="/proc/cpuinfo", iostat=stat)
-      !do while(stat == 0)
-         
-      !enddo
+      readstat = 0
 
-   !END SUBROUTINE
+      open(unit=77, file="/proc/self/status", iostat=openstat)
+      do while(readstat == 0)
+         read(77,'(A)', iostat=readstat) line
+         if(index(line, "VmPeak") /= 0) VmPeak = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
+         if(index(line, "VmSize") /= 0) VmSize = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
+         if(index(line, "VmData") /= 0) VmData = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
+         if(index(line, "VmStk")  /= 0) VmStk  = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
+         if(index(line, "VmExe")  /= 0) VmExe  = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
+         if(index(line, "VmSwap") /= 0) VmSwap = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
+      enddo
+
+      if(openstat == 0) close(77)
+
+   END SUBROUTINE
 
 END MODULE m_judft_usage
