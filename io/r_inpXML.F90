@@ -2169,10 +2169,45 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       END SELECT
 
+      CALL set_xcpot_usage(xcpot)
    END SUBROUTINE setXCParameters
 
-   SUBROUTINE getIntegerSequenceFromString(string, SEQUENCE, count)
-      USE m_juDFT
+   SUBROUTINE set_xcpot_usage(xcpot)
+      use m_judft_usage
+      USE m_types
+      USE m_types_xcpot_inbuild
+      USE m_types_xcpot_libxc
+      implicit none
+      class(t_xcpot), intent(in)    :: xcpot
+
+      ! give some information about XC functional to usage.json
+      ! 1 -> LDA
+      ! 2 -> GGA
+      ! 3 -> MetaGGA
+      ! 4 -> Hybrid functional
+      if(xcpot%is_lda()) then
+         call add_usage_data("XC-treatment", 1)
+         return
+      endif
+
+      if(xcpot%is_MetaGGA()) then
+         call add_usage_data("XC-treatment", 3)
+         return
+      endif
+
+      if(xcpot%is_GGA()) then
+         call add_usage_data("XC-treatment", 2)
+         return
+      endif
+
+      if(xcpot%is_hybrid()) then
+         call add_usage_data("XC-treatment", 4)
+         return
+      endif
+
+   END SUBROUTINE set_xcpot_usage
+
+   SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
 
       IMPLICIT NONE
 

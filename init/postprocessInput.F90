@@ -37,7 +37,9 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_od_kptsgen
   USE m_gen_bz
   USE m_nocoInputCheck
-  USE m_kpoints
+  USE m_kpoints   
+  USE m_types_forcetheo_extended
+
   IMPLICIT NONE
 
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi

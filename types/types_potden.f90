@@ -86,7 +86,7 @@ CONTAINS
     that%vacxy(:,:,:,1)=this%vacxy(:,:,:,1)
     IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)
     
-    IF (SIZE(that%mt,4)==2) THEN
+    IF (SIZE(that%mt,4)>1) THEN
        that%mt(:,0:,:,2)=this%mt(:,0:,:,1)
        that%pw(:,2)=this%pw(:,1)
        that%vacz(:,:,2)=this%vacz(:,:,1)

@@ -21,7 +21,7 @@ CONTAINS
     TYPE(t_xcpot_inbuild)    :: xcpot !local xcpot that is LDA to indicate we do not need gradients
     TYPE(t_gradients)        :: grad
 
-    INTEGER :: n,nsp,imesh
+    INTEGER :: n,nsp,imesh,i
     REAL    :: rho_11,rho_22,rho_21r,rho_21i,mx,my,mz,magmom
     REAL    :: rhotot,rho_up,rho_down,theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
@@ -34,7 +34,7 @@ CONTAINS
     CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
        CALL mt_to_grid(xcpot,4,atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
-       DO imesh = 1,nsp
+       DO imesh = 1,nsp*atoms%jri(n)
     
           rho_11  = ch(imesh,1)
           rho_22  = ch(imesh,2)
@@ -80,6 +80,9 @@ CONTAINS
           den%phi_mt(imesh,n) = phi
        ENDDO
        CALL mt_from_grid(atoms,sphhar,nsp,n,2,ch,den%mt(:,0:,n,:))
+       DO i=1,atoms%jri(n)
+          den%mt(i,:,n,:)=den%mt(i,:,n,:)*atoms%rmsh(i,n)**2
+       ENDDO
     END DO
     CALL finish_mt_grid()
   END SUBROUTINE rotate_mt_den_to_local
@@ -95,7 +98,7 @@ CONTAINS
     TYPE(t_xcpot_inbuild)     :: xcpot !local xcpot that is LDA to indicate we do not need gradients
     TYPE(t_gradients) :: grad
     
-    INTEGER :: n,nsp,imesh
+    INTEGER :: n,nsp,imesh,i
     REAL    :: vup,vdown,veff,beff
     REAL    :: theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
@@ -108,7 +111,7 @@ CONTAINS
     CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
        CALL mt_to_grid(xcpot,4,atoms,sphhar,vtot%mt(:,0:,n,:),nsp,n,grad,ch)
-       DO imesh = 1,nsp
+       DO imesh = 1,nsp*atoms%jri(n)
           vup   = ch(imesh,1)
           vdown = ch(imesh,2)
           theta = den%theta_mt(imesh,n)
@@ -121,6 +124,9 @@ CONTAINS
           ch(imesh,4) = beff*SIN(theta)*SIN(phi)
        ENDDO
        CALL mt_from_grid(atoms,sphhar,nsp,n,4,ch,vtot%mt(:,0:,n,:))
+       DO i=1,atoms%jri(n)
+          vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
+       ENDDO
     END DO
     CALL finish_mt_grid()
   END SUBROUTINE rotate_mt_den_from_local
