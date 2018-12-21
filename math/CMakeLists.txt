@@ -14,7 +14,6 @@ math/inwint.f
 math/matmul.f
 math/outint.f
 math/points.f
-math/qranf.f
 math/qsf.f
 math/rfft.F
 math/sphbes.f
@@ -23,6 +22,7 @@ math/util.F
 math/difcub.f
 )
 set(fleur_F90 ${fleur_F90}
+math/qranf.f90
 math/differentiate.f90
 math/fft2d.F90
 math/fft3d.f90
