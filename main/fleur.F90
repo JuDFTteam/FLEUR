@@ -347,6 +347,10 @@ CONTAINS
           CALL timestart("generation of new charge density (total)")
           CALL outDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
+          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum, &
+                      dimension,kpts,atoms,sphhar,stars,sym,&
+                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
+                      archiveType,xcpot,outDen,EnergyDen)
 
           IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                                   sphhar,sym,field,vTot,oneD,noco,results)
