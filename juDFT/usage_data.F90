@@ -19,10 +19,19 @@ MODULE m_judft_usage
    PUBLIC :: add_usage_data,send_usage_data
 
 CONTAINS
-   SUBROUTINE add_usage_data_s(key,VALUE)
+   SUBROUTINE add_usage_data_s(key,VALUE,string_val)
+      use m_juDFT_string
       IMPLICIT NONE
       CHARACTER(len=*),INTENT(IN)  :: key,VALUE
       INTEGER                      :: i
+      LOGICAL, OPTIONAL            :: string_val
+      LOGICAL                      :: add_quotes
+
+      IF(PRESENT(string_val)) THEN
+         add_quotes = string_val
+      ELSE
+         add_quotes = .True.
+      ENDIF
 
       ! don't add a key twice
       do i = 1,no_keys
@@ -31,8 +40,13 @@ CONTAINS
 
       no_keys=no_keys+1
       IF (no_keys>MAX_NO_KEYS) STOP "BUG, too many keys in usage_data"
-      keys(no_keys)  =key
-      values(no_keys)=VALUE
+      keys(no_keys) = key
+      
+      IF(add_quotes) THEN
+         values(no_keys) = '"' // strip(VALUE) // '"'
+      ELSE
+         values(no_keys) = VALUE
+      ENDIF
    END SUBROUTINE add_usage_data_s
 
    SUBROUTINE add_usage_data_i(key,VALUE)
@@ -42,7 +56,7 @@ CONTAINS
       CHARACTER(len=20)::txt
 
       WRITE(txt,*) VALUE
-      CALL add_usage_data_s(key,txt)
+      CALL add_usage_data_s(key,txt, string_val=.False.)
    END SUBROUTINE add_usage_data_i
    
    SUBROUTINE add_usage_data_r(key,VALUE)
@@ -52,7 +66,7 @@ CONTAINS
 
       CHARACTER(len=20)::txt
       WRITE(txt,'(F18.2)') VALUE
-      CALL add_usage_data_s(key,txt)
+      CALL add_usage_data_s(key,txt, string_val=.False.)
    END SUBROUTINE add_usage_data_r
 
    SUBROUTINE add_usage_data_l(key,VALUE)
@@ -61,12 +75,13 @@ CONTAINS
       LOGICAL,INTENT(in)         :: VALUE
 
       CHARACTER(len=20)::txt
-      txt=MERGE("TRUE ","FALSE",value)
-      CALL add_usage_data_s(key,txt)
+      txt=MERGE("True ","False",value)
+      CALL add_usage_data_s(key,txt, string_val=.False.)
    END SUBROUTINE add_usage_data_l
 
    SUBROUTINE send_usage_data()
       use m_juDFT_args
+      use m_juDFT_string
       IMPLICIT NONE
       INTEGER            :: i,ierr,pid,dt(8)
       CHARACTER(len=200) :: model, modelname, VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap
@@ -88,21 +103,21 @@ CONTAINS
 
       !add meminfos
       call get_meminfo(VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap)
-      call add_usage_data("VmPeak", VmPeak)
-      call add_usage_data("VmSize", VmSize)
-      call add_usage_data("VmData", VmData)
-      call add_usage_data("VmStk",  VmStk)
-      call add_usage_data("VmExe",  VmExe)
-      call add_usage_data("VmSwap", VmSwap)
+      call add_usage_data("VmPeak", VmPeak, string_val=.False.)
+      call add_usage_data("VmSize", VmSize, string_val=.False.)
+      call add_usage_data("VmData", VmData, string_val=.False.)
+      call add_usage_data("VmStk",  VmStk, string_val=.False.)
+      call add_usage_data("VmExe",  VmExe, string_val=.False.)
+      call add_usage_data("VmSwap", VmSwap, string_val=.False.)
 
       !First write a json file
       OPEN(unit=961,file="usage.json",status='replace')
       WRITE(961,*) '{'
-      WRITE(961,*) '  "url":"',TRIM(ADJUSTL(URL_STRING)),'",'
+      WRITE(961,*) '  "url":"',strip(URL_STRING),'",'
       WRITE(961,"(a,Z0.16,a)") '  "calculation-id":"',r,'",'
       WRITE(961,*) '  "data": {'
       DO i=1,no_keys
-         WRITE(961,*) '       "',TRIM(ADJUSTL(keys(i))),'":"',TRIM(ADJUSTL(values(i))),'",'
+         WRITE(961,*) '       "',strip(keys(i)),'":',strip(values(i))
       ENDDO
       WRITE(961,*) '     }'
       WRITE(961,*) '}'
