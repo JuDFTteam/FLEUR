@@ -4,7 +4,7 @@ xc-pot/potl0.f90
 xc-pot/mkgl0.f90
 xc-pot/grdchlh.f90
 xc-pot/easypbe.f90
-xc-pot/corg91.F90
+xc-pot/corg91.f90
 xc-pot/corl91.f90
 )
 
@@ -32,7 +32,7 @@ xc-pot/xcxal.f
 
 set(inpgen_F90 ${inpgen_F90}
 xc-pot/easypbe.f90
-xc-pot/corg91.F90
+xc-pot/corg91.f90
 xc-pot/corl91.f90
 )
 
