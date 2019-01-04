@@ -81,7 +81,7 @@
 !--->   for electric field case (sigma.ne.0), add the extra charge
 !--->   to the uppermost level; ignore the possible problem that
 !--->   the occupations may not be between 0 and 2
-      IF (input%jspins.EQ.1) THEN
+      IF (input%jspins==1) THEN
         occ(nst,1) = occ(nst,1) + qdel
       ELSE
         occ(nst,1) = occ(nst,1) + qdel/2.
@@ -198,7 +198,7 @@
          DO i = 1,n
             dens(i) = rhoss(i,1)
          ENDDO
-         IF (input%jspins.EQ.2) THEN
+         IF (input%jspins==2) THEN
            DO i = 1,n
               dens(i) = dens(i) + rhoss(i,input%jspins)
            ENDDO
@@ -241,7 +241,7 @@
            dist = dist + sqrt((3.0e0/r3)*b(n))
          ENDDO
          IF (lastit) GO TO 190
-         IF (dist.LT.distol) lastit = .true.
+         IF (dist<distol) lastit = .true.
 !     mix new input potential
          p1 = 1.0e0/dist
          p = min(pmax,p1)
