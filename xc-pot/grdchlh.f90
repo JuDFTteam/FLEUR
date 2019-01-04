@@ -1,17 +1,15 @@
-      MODULE m_grdchlh
+MODULE m_grdchlh
       use m_juDFT
-c.....-----------------------------------------------------------------
-c     input: iexpm=1: exponential mesh. otherwise dx interval mesh.
-cc           ro: charge or quantity to be derivated.
-c     evaluates d(ro)/dr,d{d(ro)/dr}/dr.
-c     drr=d(ro)/dr, ddrr=d(drr)/dr.
-c     coded by t.asada. 1996.
-c.....------------------------------------------------------------------
+!     -----------------------------------------------------------------
+!     input: iexpm=1: exponential mesh. otherwise dx interval mesh.
+!            ro: charge or quantity to be derivated.
+!     evaluates d(ro)/dr,d{d(ro)/dr}/dr.
+!     drr=d(ro)/dr, ddrr=d(drr)/dr.
+!     coded by t.asada. 1996.
+!     ------------------------------------------------------------------
       CONTAINS
 
-      SUBROUTINE grdchlh(
-     >                   iexpm,ist,ied,dx,rv,ro,ndvgrd,
-     <                   drr,ddrr)
+      SUBROUTINE grdchlh(iexpm,ist,ied,dx,rv,ro,ndvgrd, drr,ddrr)
 
       IMPLICIT NONE
 
@@ -28,16 +26,15 @@ c.....------------------------------------------------------------------
           ddrr(i) = 0.0
       ENDDO
 
-      IF (ied-ist.lt.3) RETURN
+      IF (ied-ist < 3) RETURN
 
 
-      IF (ndvgrd.LT.3 .OR. ndvgrd.GT.6) THEN
+      IF (ndvgrd < 3 .OR. ndvgrd.GT.6) THEN
           WRITE (16,fmt=126) ndvgrd
-          CALL juDFT_error("ndvgrd<3 .or. ndvgrd>6",calledby
-     +         ="grdchlh")
+          CALL juDFT_error("ndvgrd<3 .or. ndvgrd>6",calledby="grdchlh")
       ENDIF
   126 FORMAT (/,' ndvgrd should be ge.4 .or. le.6. ndvgrd=',i3)
-c.....
+
       i1 = ist
       i2 = ist + 1
       i3 = ist + 2
@@ -45,26 +42,26 @@ c.....
       i5 = ist + 4
       i6 = ist + 5
 
-      IF (ndvgrd.EQ.3) THEN
+      IF (ndvgrd==3) THEN
 
           drx1  = f131(ro(i1),ro(i2),ro(i3),dx)
           drxx1 = f231(ro(i1),ro(i2),ro(i3),dx)
 
-      ELSEIF (ndvgrd.EQ.4) THEN
+      ELSEIF (ndvgrd==4) THEN
 
           drx1  = f141(ro(i1),ro(i2),ro(i3),ro(i4),dx)
           drxx1 = f241(ro(i1),ro(i2),ro(i3),ro(i4),dx)
           drx2  = f142(ro(i1),ro(i2),ro(i3),ro(i4),dx)
           drxx2 = f242(ro(i1),ro(i2),ro(i3),ro(i4),dx)
 
-      ELSEIF (ndvgrd.EQ.5) THEN
+      ELSEIF (ndvgrd==5) THEN
 
           drx1  = f151(ro(i1),ro(i2),ro(i3),ro(i4),ro(i5),dx)
           drxx1 = f251(ro(i1),ro(i2),ro(i3),ro(i4),ro(i5),dx)
           drx2  = f152(ro(i1),ro(i2),ro(i3),ro(i4),ro(i5),dx)
           drxx2 = f252(ro(i1),ro(i2),ro(i3),ro(i4),ro(i5),dx)
 
-      ELSEIF (ndvgrd.EQ.6) THEN
+      ELSEIF (ndvgrd==6) THEN
 
           drx1  = f161(ro(i1),ro(i2),ro(i3),ro(i4),ro(i5),ro(i6),dx)
           drxx1 = f261(ro(i1),ro(i2),ro(i3),ro(i4),ro(i5),ro(i6),dx)
@@ -75,7 +72,7 @@ c.....
 
       ENDIF
 
-      IF (iexpm.EQ.1) THEN
+      IF (iexpm==1) THEN
           drr(i1)  = drx1/rv(i1)
           ddrr(i1) = (drxx1-drx1)/rv(i1)**2
       ELSE
@@ -85,7 +82,7 @@ c.....
 
       IF (ndvgrd.GT.3) THEN
 
-          IF (iexpm.eq.1) THEN
+          IF (iexpm==1) THEN
               drr(i2) = drx2/rv(i2)
               ddrr(i2) = (drxx2-drx2)/rv(i2)**2
           ELSE
@@ -93,8 +90,8 @@ c.....
               ddrr(i2) = drxx2
           ENDIF
 
-          IF (ndvgrd.EQ.6) THEN
-              IF (iexpm.EQ.1) THEN
+          IF (ndvgrd==6) THEN
+              IF (iexpm==1) THEN
                   drr(i3)  = drx3/rv(i3)
                   ddrr(i3) = (drxx3-drx3)/rv(i3)**2
               ELSE
@@ -108,38 +105,35 @@ c.....
       nred = REAL(ndvgrd)/2 + 0.1
 
       IF (ied-nred.LE.ist) THEN
-          WRITE(16,fmt='(/'' ied-nred.lt.ist. ied,nred,ist='',3i4)')
-     +      ied,nred,ist
+          WRITE(16,fmt='(/'' ied-nred < ist. ied,nred,ist='',3i4)') ied,nred,ist
            CALL juDFT_error("ied-nred.le.ist",calledby="grdchlh")
       ENDIF
 
       DO j = nred + ist,ied - nred
 
-          IF (ndvgrd.EQ.3) THEN
+          IF (ndvgrd==3) THEN
 
               drx  = f132(ro(j-1),ro(j),ro(j+1),dx)
               drxx = f232(ro(j-1),ro(j),ro(j+1),dx)
 
-          ELSEIF (ndvgrd.EQ.4) THEN
+          ELSEIF (ndvgrd==4) THEN
 
               drx  = f142(ro(j-1),ro(j),ro(j+1),ro(j+2),dx)
               drxx = f242(ro(j-1),ro(j),ro(j+1),ro(j+2),dx)
 
-          ELSEIF (ndvgrd.EQ.5) THEN
+          ELSEIF (ndvgrd==5) THEN
 
               drx  = f153(ro(j-2),ro(j-1),ro(j),ro(j+1),ro(j+2),dx)
               drxx = f253(ro(j-2),ro(j-1),ro(j),ro(j+1),ro(j+2),dx)
 
-          ELSEIF (ndvgrd.EQ.6) THEN
+          ELSEIF (ndvgrd==6) THEN
 
-              drx  = f164(ro(j-3),ro(j-2),ro(j-1),ro(j),ro(j+1),ro(j+2),
-     +               dx)
-              drxx = f264(ro(j-3),ro(j-2),ro(j-1),ro(j),ro(j+1),ro(j+2),
-     +               dx)
+              drx  = f164(ro(j-3),ro(j-2),ro(j-1),ro(j),ro(j+1),ro(j+2), dx)
+              drxx = f264(ro(j-3),ro(j-2),ro(j-1),ro(j),ro(j+1),ro(j+2), dx)
 
           ENDIF
 
-          IF (iexpm.EQ.1) THEN
+          IF (iexpm==1) THEN
               drr(j)  = drx/rv(j)
               ddrr(j) = (drxx-drx)/rv(j)**2
           ELSE
@@ -149,54 +143,44 @@ c.....
 
 
       ENDDO ! j
-c.....
-      IF (ndvgrd.EQ.3) THEN
+      
+      IF (ndvgrd==3) THEN
 
           drx0  = f133(ro(ied-2),ro(ied-1),ro(ied),dx)
           drxx0 = f233(ro(ied-2),ro(ied-1),ro(ied),dx)
 
-      ELSEIF (ndvgrd.EQ.4) THEN
+      ELSEIF (ndvgrd==4) THEN
 
           drx1  = f143(ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),dx)
           drxx1 = f243(ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),dx)
           drx0  = f144(ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),dx)
           drxx0 = f244(ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),dx)
 
-      ELSEIF (ndvgrd.EQ.5) THEN
+      ELSEIF (ndvgrd==5) THEN
 
-          drx1  = f154(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),
-     +            dx)
-          drxx1 = f254(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),
-     +            dx)
-          drx0  = f155(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),
-     +            dx)
-          drxx0 = f255(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied),
-     +            dx)
+          drx1  = f154(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied), dx)
+          drxx1 = f254(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied), dx)
+          drx0  = f155(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied), dx)
+          drxx0 = f255(ro(ied-4),ro(ied-3),ro(ied-2),ro(ied-1),ro(ied), dx)
 
-      ELSEIF (ndvgrd.EQ.6) THEN
+      ELSEIF (ndvgrd==6) THEN
 
-          drx2  = f164(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2),
-     +            ro(ied-1),ro(ied),dx)
-          drxx2 = f264(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2),
-     +            ro(ied-1),ro(ied),dx)
+          drx2  = f164(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
+          drxx2 = f264(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
 
-          drx1  = f165(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2),
-     +            ro(ied-1),ro(ied),dx)
-          drxx1 = f265(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2),
-     +            ro(ied-1),ro(ied),dx)
+          drx1  = f165(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
+          drxx1 = f265(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
 
-          drx0  = f166(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2),
-     +            ro(ied-1),ro(ied),dx)
-          drxx0 = f266(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2),
-     +            ro(ied-1),ro(ied),dx)
+          drx0  = f166(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
+          drxx0 = f266(ro(ied-5),ro(ied-4),ro(ied-3),ro(ied-2), ro(ied-1),ro(ied),dx)
 
 
       ENDIF
 
       IF (ndvgrd.GT.3) THEN
 
-          IF (ndvgrd.EQ.6) THEN
-              IF (iexpm.EQ.1) THEN
+          IF (ndvgrd==6) THEN
+              IF (iexpm==1) THEN
                   drr(ied-2)  = drx2/rv(ied-2)
                   ddrr(ied-2) = (drxx2-drx2)/rv(ied-2)**2
               ELSE
@@ -205,7 +189,7 @@ c.....
               ENDIF
           ENDIF
 
-          IF (iexpm.EQ.1) THEN
+          IF (iexpm==1) THEN
               drr(ied-1)  = drx1/rv(ied-1)
               ddrr(ied-1) = (drxx1-drx1)/rv(ied-1)**2
           ELSE
@@ -215,7 +199,7 @@ c.....
 
       ENDIF
 
-      IF (iexpm.EQ.1) THEN
+      IF (iexpm==1) THEN
           drr(ied)  = drx0/rv(ied)
           ddrr(ied) = (drxx0-drx0)/rv(ied)**2
       ELSE
