@@ -38,7 +38,7 @@ CONTAINS
                      drr(1,ispin),ddrr(1,ispin))
       ENDDO
 
-      CALL mkgl0(mshd,msh,jspd,jspins,rad,dens,drr,ddrr,&
+      CALL mkgl0(jspins,rad,dens,drr,ddrr,&
                  grad)
 !
 ! --> calculate the potential.

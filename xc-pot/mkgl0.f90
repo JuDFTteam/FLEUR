@@ -9,14 +9,14 @@ MODULE m_mkgl0
 !      grgru,d: grad(ro)*grad(rou),for rod., gzgr: grad(zeta)*grad(ro).
 !      ------------------------------------------------------------------
 CONTAINS
-   SUBROUTINE mkgl0(mshd,msh,jspd,jspins,rad, densi,drri,ddrri, grad)
+   SUBROUTINE mkgl0(jspins,rad, densi,drri,ddrri, grad)
 
       USE m_types
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN) :: mshd,msh,jspd,jspins
-      REAL,    INTENT (IN) :: rad(mshd),densi(mshd,jspd)
-      REAL,    INTENT (IN) :: drri(mshd,jspd),ddrri(mshd,jspd)
+      INTEGER, INTENT (IN) :: jspins
+      REAL,    INTENT (IN) :: rad(:),densi(:,:)
+      REAL,    INTENT (IN) :: drri(:,:),ddrri(:,:)
       TYPE(t_gradients)::grad
 
       REAL dagrr,dagrru,ddrr,ddrrd,ddrru,drr,drrd,drru,dzdr,ro,rod,rou,rv,spnf
@@ -25,7 +25,7 @@ CONTAINS
 
       spnf = 1./(3-jspins)
       IF (allocated(grad%sigma)) THEN
-         DO i=1,msh
+         DO i=1,size(rad)
             grad%sigma(1,i)=spnf * drri(i,1)*spnf * drri(i,1)
             IF (jspins>1) THEN
                grad%sigma(2,i)=spnf * drri(i,1)*spnf * drri(i,2)
@@ -34,7 +34,7 @@ CONTAINS
          ENDDO
          RETURN
       ENDIF
-      DO i = 1,msh
+      DO i = 1,size(rad)
 
          rv = rad(i)
          ro =  spnf * (densi(i,1) + densi(i,jspins))
