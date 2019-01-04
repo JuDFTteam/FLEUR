@@ -134,8 +134,8 @@
       DO n = 1, natin
          DO i = n+1, natin
             IF ( all( abs( pos(:,n) - pos(:,i) ) < eps7 ) ) then
-               WRITE(6,'(/," Error in atomic positions: atoms",i3,
-     &             " and",i3," (at least) are the same")') n,i
+               WRITE(6,'(/," Error in atomic positions: atoms",i5,
+     &             " and",i5," (at least) are the same")') n,i
                 CALL juDFT_error("atom positions",calledby="spg_gen")
             ENDIF
          ENDDO
