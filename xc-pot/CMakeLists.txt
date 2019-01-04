@@ -3,13 +3,13 @@ xc-pot/libxc_postprocess_gga.f90
 xc-pot/potl0.f90
 xc-pot/mkgl0.f90
 xc-pot/grdchlh.f90
+xc-pot/easypbe.f90
 )
 
 set(fleur_F77 ${fleur_F77}
 xc-pot/corg91.F
 xc-pot/corl91.f
 xc-pot/corpbe.f
-xc-pot/easypbe.f
 xc-pot/excepbe.f
 xc-pot/exchpbe.F
 xc-pot/excl91.f
@@ -32,13 +32,13 @@ xc-pot/xcxal.f
 
 set(ipngen_F90 ${inpgen_F90}
 xc-pot/grdchlh.f90
+xc-pot/easypbe.f90
 )
 
 set(inpgen_F77 ${inpgen_F77}
 xc-pot/corg91.F
 xc-pot/corl91.f
 xc-pot/corpbe.f
-xc-pot/easypbe.f
 xc-pot/excepbe.f
 xc-pot/exchpbe.F
 xc-pot/excl91.f
