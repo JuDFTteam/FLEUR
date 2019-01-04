@@ -30,8 +30,7 @@ xc-pot/xcwgn.f
 xc-pot/xcxal.f
 )
 
-set(ipngen_F90 ${inpgen_F90}
-xc-pot/grdchlh.f90
+set(inpgen_F90 ${inpgen_F90}
 xc-pot/easypbe.f90
 )
 
