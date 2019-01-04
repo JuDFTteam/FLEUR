@@ -19,8 +19,7 @@
       REAL,    INTENT (IN) :: drri(mshd,jspd),ddrri(mshd,jspd)
       TYPE(t_gradients)::grad
       
-      REAL dagrr,dagrru,ddrr,ddrrd,ddrru,drr,drrd,drru,dzdr,ro,
-     +     rod,rou,rv,spnf
+      REAL dagrr,dagrru,ddrr,ddrrd,ddrru,drr,drrd,drru,dzdr,ro,rod,rou,rv,spnf
       INTEGER i
 !     ------------------------------------------------------------------
       
