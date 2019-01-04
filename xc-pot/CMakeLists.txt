@@ -4,10 +4,10 @@ xc-pot/potl0.f90
 xc-pot/mkgl0.f90
 xc-pot/grdchlh.f90
 xc-pot/easypbe.f90
+xc-pot/corg91.F90
 )
 
 set(fleur_F77 ${fleur_F77}
-xc-pot/corg91.F
 xc-pot/corl91.f
 xc-pot/corpbe.f
 xc-pot/excepbe.f
@@ -32,10 +32,10 @@ xc-pot/xcxal.f
 
 set(inpgen_F90 ${inpgen_F90}
 xc-pot/easypbe.f90
+xc-pot/corg91.F90
 )
 
 set(inpgen_F77 ${inpgen_F77}
-xc-pot/corg91.F
 xc-pot/corl91.f
 xc-pot/corpbe.f
 xc-pot/excepbe.f
