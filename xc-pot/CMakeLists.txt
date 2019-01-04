@@ -1,6 +1,7 @@
 set(fleur_F90 ${fleur_F90}
 xc-pot/libxc_postprocess_gga.f90
 xc-pot/potl0.f90
+xc-pot/mkgl0.f90
 )
 
 set(fleur_F77 ${fleur_F77}
@@ -15,7 +16,6 @@ xc-pot/excpw91.f
 xc-pot/excwb91.f
 xc-pot/gaunt.f
 xc-pot/grdchlh.f
-xc-pot/mkgl0.f
 xc-pot/pbecor2.f
 xc-pot/relcor.f
 xc-pot/vxcepbe.f
