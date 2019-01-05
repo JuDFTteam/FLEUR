@@ -23,11 +23,11 @@ xc-pot/xcbh.f90
 xc-pot/xcpz.f90
 xc-pot/xcvwn.f90
 xc-pot/xcwgn.f90
+xc-pot/xcxal.f90
 )
 
 set(fleur_F77 ${fleur_F77}
 xc-pot/xch91.F
-xc-pot/xcxal.f
 )
 
 set(inpgen_F90 ${inpgen_F90}
@@ -50,11 +50,11 @@ xc-pot/xcbh.f90
 xc-pot/xcpz.f90
 xc-pot/xcvwn.f90
 xc-pot/xcwgn.f90
+xc-pot/xcxal.f90
 )
 
 set(inpgen_F77 ${inpgen_F77}
 xc-pot/xch91.F
-xc-pot/xcxal.f
 )
 
  
