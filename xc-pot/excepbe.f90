@@ -36,11 +36,11 @@ CONTAINS
       REAL, PARAMETER :: sml = 1.e-14
       REAL, PARAMETER :: smlc = 2.01e-14
 
-! OMP parallel do default(private)
-! OMP& SHARED(xcpot,jspins,mirm,irmx)
-! OMP& SHARED(rh,agr,agru,agrd)
-! OMP& SHARED(g2ru,g2rd,gggr,gggru,gggrd)
-! OMP& SHARED(exc)
+!$OMP parallel do default(private) &
+!$OMP SHARED(xcpot,jspins,mirm,irmx) &
+!$OMP SHARED(rh,agr,agru,agrd) &
+!$OMP SHARED(g2ru,g2rd,gggr,gggru,gggrd) &
+!$OMP SHARED(exc)
       DO i = 1,irmx
 
          IF (jspins == 1) THEN
@@ -99,6 +99,6 @@ CONTAINS
          exc(i) = xced*2  ! in ry
 
       ENDDO
-! OMP end parallel do
+!$OMP end parallel do
    END SUBROUTINE excepbe
 END MODULE m_excepbe
