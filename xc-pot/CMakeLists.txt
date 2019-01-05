@@ -16,10 +16,10 @@ xc-pot/gaunt.f90
 xc-pot/excwb91.f90
 xc-pot/pbecor2.f90
 xc-pot/relcor.f90
+xc-pot/vxcl91.f90
 )
 
 set(fleur_F77 ${fleur_F77}
-xc-pot/vxcl91.f
 xc-pot/vxcpw91.f
 xc-pot/vxcwb91.f
 xc-pot/xcbh.f
@@ -43,10 +43,10 @@ xc-pot/excpw91.f90
 xc-pot/excwb91.f90
 xc-pot/pbecor2.f90
 xc-pot/relcor.f90
+xc-pot/vxcl91.f90
 )
 
 set(inpgen_F77 ${inpgen_F77}
-xc-pot/vxcl91.f
 xc-pot/vxcpw91.f
 xc-pot/vxcwb91.f
 xc-pot/xcbh.f
