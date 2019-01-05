@@ -7,11 +7,11 @@ xc-pot/easypbe.f90
 xc-pot/corg91.f90
 xc-pot/corl91.f90
 xc-pot/corpbe.f90
+xc-pot/excepbe.f90
+xc-pot/exchpbe.f90
 )
 
 set(fleur_F77 ${fleur_F77}
-xc-pot/excepbe.f
-xc-pot/exchpbe.F
 xc-pot/excl91.f
 xc-pot/excpw91.f
 xc-pot/excwb91.f
@@ -35,11 +35,11 @@ xc-pot/easypbe.f90
 xc-pot/corg91.f90
 xc-pot/corl91.f90
 xc-pot/corpbe.f90
+xc-pot/excepbe.f90
+xc-pot/exchpbe.f90
 )
 
 set(inpgen_F77 ${inpgen_F77}
-xc-pot/excepbe.f
-xc-pot/exchpbe.F
 xc-pot/excl91.f
 xc-pot/excpw91.f
 xc-pot/excwb91.f
