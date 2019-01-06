@@ -1,43 +1,43 @@
-      MODULE m_corg91
-c.....-----------------------------------------------------------------
-c     gga91 correlation
-c.....-----------------------------------------------------------------
-      CONTAINS
-      SUBROUTINE corg91(fk,sk,gz,ec,ecrs,eczta,rs,zta,t,uu,vv,ww,h,
-     +                  dvcup,dvcdn)
-c.....-----------------------------------------------------------------
-c     input
-c           rs: seitz radius
-c         zta: relative spin polarization
-c            t: abs(grad d)/(d*2.*ks*gz)
-c           uu: (grad d)*grad(abs(grad d))/(d**2 * (2*ks*gz)**3)
-c           vv: (laplacian d)/(d * (2*ks*gz)**2)
-c           ww: (grad d)*(gradzta)/(d * (2*ks*gz)**2
-c      output
-c                  h: nonlocal part of correlation energy per electron
-c          dvcup,-dn: nonlocal parts of correlation potentials.
+MODULE m_corg91
+!.....-----------------------------------------------------------------
+!     gga91 correlation
+!.....-----------------------------------------------------------------
+CONTAINS
+   SUBROUTINE corg91(fk,sk,gz,ec,ecrs,eczta,rs,zta,t,uu,vv,ww,h, &
+                     dvcup,dvcdn)
+!.....-----------------------------------------------------------------
+!     input
+!           rs: seitz radius
+!         zta: relative spin polarization
+!            t: abs(grad d)/(d*2.*ks*gz)
+!           uu: (grad d)*grad(abs(grad d))/(d**2 * (2*ks*gz)**3)
+!           vv: (laplacian d)/(d * (2*ks*gz)**2)
+!           ww: (grad d)*(gradzta)/(d * (2*ks*gz)**2
+!      output
+!                  h: nonlocal part of correlation energy per electron
+!          dvcup,-dn: nonlocal parts of correlation potentials.
 
-c      with ks=sqrt(4*kf/pai), gz=[(1+zta)**(2/3)+(1-zta)**(2/3)]/2, &
-c           kf=cbrt(3*pai**2*d).
-c.....-----------------------------------------------------------------
-c.....-----------------------------------------------------------------
-c     .. previously untyped names ..
+!      with ks=sqrt(4*kf/pai), gz=[(1+zta)**(2/3)+(1-zta)**(2/3)]/2, &
+!           kf=cbrt(3*pai**2*d).
+!.....-----------------------------------------------------------------
+!.....-----------------------------------------------------------------
+!     .. previously untyped names ..
       IMPLICIT NONE
 
-      REAL dvcdn,dvcup,ec,ecrs,eczta,fk,gz,h,rs,sk,t,uu,vv,ww,zta,a4,
-     +     alf,argmx,b,b2,b2fac,bec,bet,bg,c1,c2,c3,c4,c5,c6,cc,cc0,
-     +     ccrs,coeff,comm,cx,delt,fact0,fact1,fact2,fact3,fact4,fact5,
-     +     gm,gz3,gz4,h0,h0b,h0bt,h0rs,h0rst,h0t,h0tt,h0z,h0zt,h1,h1rs,
-     +     h1rst,h1t,h1tt,h1z,h1zt,hrs,hrst,ht,htt,hz,hzt,pon,pref,q4,
-     +     q5,q6,q7,q8,q9,r0,r1,r2,r3,r4,rs2,rs3,rsthrd,t2,t4,t6,thrd2,
-     +     thrdm,xnu,r1t2,expsm
-c     ..
+      REAL :: dvcdn,dvcup,ec,ecrs,eczta,fk,gz,h,rs,sk,t,uu,vv,ww,zta,a4, &
+              alf,argmx,b,b2,b2fac,bec,bet,bg,c1,c2,c3,c4,c5,c6,cc,cc0, &
+              ccrs,coeff,comm,cx,delt,fact0,fact1,fact2,fact3,fact4,fact5, &
+              gm,gz3,gz4,h0,h0b,h0bt,h0rs,h0rst,h0t,h0tt,h0z,h0zt,h1,h1rs, &
+              h1rst,h1t,h1tt,h1z,h1zt,hrs,hrst,ht,htt,hz,hzt,pon,pref,q4, &
+              q5,q6,q7,q8,q9,r0,r1,r2,r3,r4,rs2,rs3,rsthrd,t2,t4,t6,thrd2, &
+              thrdm,xnu,r1t2,expsm
+!     ..
       DATA xnu,cc0,cx,alf/15.75592e0,0.00423500,-0.001667212e0,0.0900/
       DATA c1,c2,c3,c4/0.00256800,0.02326600,7.389e-6,8.723e0/
       DATA c5,c6,a4/0.472e0,7.389e-2,100.00/
       DATA thrdm,thrd2/-0.333333333333e0,0.666666666667e0/
-c.....-----------------------------------------------------------------
-c     expsm: argument of exponential-smallest.
+!.....-----------------------------------------------------------------
+!     expsm: argument of exponential-smallest.
       expsm=minexponent(expsm)/1.5
       argmx = 174.0
       bet = xnu*cc0
@@ -45,10 +45,10 @@ c     expsm: argument of exponential-smallest.
       gz3 = gz**3
       gz4 = gz3*gz
       pon = -delt*ec/ (gz3*bet)
-      IF (pon.gt.argmx) THEN
-          b = 0.
+      IF (pon > argmx) THEN
+         b = 0.
       ELSE
-          b = delt/ (exp(pon)-1.00)
+         b = delt/ (exp(pon)-1.00)
       ENDIF
       b2 = b*b
       t2 = t*t
@@ -65,26 +65,26 @@ c     expsm: argument of exponential-smallest.
       r1 = a4*r0*gz4
       coeff = cc - cc0 - 3.e0*cx/7.00
       r2 = xnu*coeff*gz3
-c+tagu
+! tagu
       r1t2=max(-r1*t2,expsm)
       r3 = exp(r1t2)
-c-tagu
+! tagu
       h0 = gz3* (bet/delt)*log(1.00+delt*q4*t2/q5)
       h1 = r3*r2*t2
       h = h0 + h1
-c  local correlation option:
-c     h=0.0e0
+!  local correlation option:
+!     h=0.0e0
 
-c  energy done. now the potential:
+!  energy done. now the potential:
 
       ccrs = (c2+2.*c3*rs)/q7 - q6* (c4+2.*c5*rs+3.*c6*rs2)/q7**2
       rsthrd = rs/3.e0
       r4 = rsthrd*ccrs/coeff
       gm = ((1.00+zta)**thrdm- (1.00-zta)**thrdm)/3.00
-      IF (pon.gt.argmx) THEN
-          b2fac = 0.
+      IF (pon > argmx) THEN
+         b2fac = 0.
       ELSE
-          b2fac = b2* (delt/b+1.00)
+         b2fac = b2* (delt/b+1.00)
       ENDIF
       bg = -3.e0*ec*b2fac/ (bet*gz4)
       bec = b2fac/ (bet*gz3)
@@ -122,9 +122,9 @@ c  energy done. now the potential:
       dvcup = comm + pref
       dvcdn = comm - pref
 
-c  local correlation option:
-c     dvcup=0.0e0
-c     dvcdn=0.0e0
+!  local correlation option:
+!     dvcup=0.0e0
+!     dvcdn=0.0e0
 
-      END SUBROUTINE corg91
-      END MODULE m_corg91
+   END SUBROUTINE corg91
+END MODULE m_corg91
