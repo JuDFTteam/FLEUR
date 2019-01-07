@@ -75,7 +75,7 @@ CONTAINS
       LOGICAL,INTENT(in)         :: VALUE
 
       CHARACTER(len=20)::txt
-      txt=MERGE("True ","False",value)
+      txt=MERGE("true ","false",value)
       CALL add_usage_data_s(key,txt, string_val=.False.)
    END SUBROUTINE add_usage_data_l
 
@@ -112,15 +112,19 @@ CONTAINS
 
       !First write a json file
       OPEN(unit=961,file="usage.json",status='replace')
-      WRITE(961,*) '{'
+      WRITE(961,'(A)') '{'
       WRITE(961,*) '  "url":"',strip(URL_STRING),'",'
-      WRITE(961,"(a,Z0.16,a)") '  "calculation-id":"',r,'",'
+      WRITE(961,"(a,Z0.16,a)") '   "calculation-id":"',r,'",'
       WRITE(961,*) '  "data": {'
       DO i=1,no_keys
-         WRITE(961,*) '       "',strip(keys(i)),'":',strip(values(i))
+         if(i < no_keys) then
+            WRITE(961,*) '       "',strip(keys(i)),'":',strip(values(i)),","
+         else
+            WRITE(961,*) '       "',strip(keys(i)),'":',strip(values(i))
+         endif
       ENDDO
       WRITE(961,*) '     }'
-      WRITE(961,*) '}'
+      WRITE(961,"(A)") '}'
       CLOSE(961)
 
       IF (judft_was_argument("-no_send")) THEN
