@@ -4,7 +4,7 @@ MODULE m_potl0
 ! gradients,dens,... only for nonmagnetic.
 ! ******************************************************************
 CONTAINS
-   SUBROUTINE potl0(xcpot,mshd,jspd,jspins,msh,dx,rad,dens, &
+   SUBROUTINE potl0(xcpot,jspins,dx,rad,dens, &
                     vxc)
 
       USE m_grdchlh
@@ -13,32 +13,33 @@ CONTAINS
       IMPLICIT NONE
 
       CLASS(t_xcpot),intent(in)::xcpot
-      INTEGER, INTENT (IN) :: jspins,jspd,mshd,msh
+      INTEGER, INTENT (IN) :: jspins
       REAL,    INTENT (IN) :: dx
-      REAL,    INTENT (IN) :: rad(msh),dens(mshd,jspd)
-      REAL,    INTENT (OUT):: vxc(mshd,jspd)
+      REAL,    INTENT (IN) :: rad(:),dens(:,:)
+      REAL,    INTENT (OUT):: vxc(:,:)
 
 !     .. previously untyped names ..
       INTEGER,PARAMETER :: ndvgrd=6
 
       TYPE(t_gradients)::grad
 
-      INTEGER i,ispin
+      INTEGER i,ispin,msh
       REAL, ALLOCATABLE :: drr(:,:),ddrr(:,:)
 
-      REAL              :: vx(mshd,jspd)
+      REAL              :: vx(size(rad),jspins)
 
-      ALLOCATE ( drr(mshd,jspd),ddrr(mshd,jspd))
+      msh = size(rad)
+      ALLOCATE ( drr(msh,jspins),ddrr(msh,jspins))
 !
 !-->  evaluate gradients of dens.
 !
       CALL xcpot%alloc_gradients(msh,jspins,grad)
       DO ispin = 1, jspins
-         CALL grdchlh(1,1,msh,dx,rad,dens(1,ispin),ndvgrd,&
-                     drr(1,ispin),ddrr(1,ispin))
+         CALL grdchlh(1,1,msh,dx,rad,dens(1:1,ispin),ndvgrd,&
+                     drr(1:1,ispin),ddrr(1:1,ispin))
       ENDDO
 
-      CALL mkgl0(mshd,msh,jspd,jspins,rad,dens,drr,ddrr,&
+      CALL mkgl0(jspins,rad,dens,drr,ddrr,&
                  grad)
 !
 ! --> calculate the potential.

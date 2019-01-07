@@ -525,6 +525,12 @@
           CALL add_usage_data("LOs",atoms%nlotot)
           CALL add_usage_data("Iterations",input%itmax)
           CALL add_usage_data("nkpt", kpts%nkpt)
+
+#ifdef CPP_GPU
+         CALL add_usage_data("gpu_per_node",1)
+#else
+         CALL add_usage_data("gpu_per_node",0)
+#endif
           
           CALL results%init(dimension,input,atoms,kpts,noco)
 
