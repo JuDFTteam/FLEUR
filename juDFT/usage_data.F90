@@ -75,7 +75,7 @@ CONTAINS
       LOGICAL,INTENT(in)         :: VALUE
 
       CHARACTER(len=20)::txt
-      txt=MERGE("True ","False",value)
+      txt=MERGE("true ","false",value)
       CALL add_usage_data_s(key,txt, string_val=.False.)
    END SUBROUTINE add_usage_data_l
 
@@ -112,15 +112,19 @@ CONTAINS
 
       !First write a json file
       OPEN(unit=961,file="usage.json",status='replace')
-      WRITE(961,*) '{'
+      WRITE(961,'(A)') '{'
       WRITE(961,*) '  "url":"',strip(URL_STRING),'",'
-      WRITE(961,"(a,Z0.16,a)") '  "calculation-id":"',r,'",'
+      WRITE(961,"(a,Z0.16,a)") '   "calculation-id":"',r,'",'
       WRITE(961,*) '  "data": {'
       DO i=1,no_keys
-         WRITE(961,*) '       "',strip(keys(i)),'":',strip(values(i))
+         if(i < no_keys) then
+            WRITE(961,*) '       "',strip(keys(i)),'":',strip(values(i)),","
+         else
+            WRITE(961,*) '       "',strip(keys(i)),'":',strip(values(i))
+         endif
       ENDDO
       WRITE(961,*) '     }'
-      WRITE(961,*) '}'
+      WRITE(961,"(A)") '}'
       CLOSE(961)
 
       IF (judft_was_argument("-no_send")) THEN
@@ -130,9 +134,15 @@ CONTAINS
          WRITE (*,*) "usage.json not send, because this is a debugging run."
 #else
          !Send using curl
-         !CALL system('curl -H "Content-Type: application/json" --data @usage.json '\\URL_STRING)
-         WRITE (*,*) "CURL call not yet implemented"
-         PRINT *,"Usage data send using curl: usage.json"
+         call execute_command_line(&
+            'curl -X POST -H "Content-Type: application/json" -d @usage.json https://docker.iff.kfa-juelich.de/fleur-usage-stats/',&
+            exitstat=ierr)
+         if(ierr == 0) then
+            write (*,*) "Usage data send using curl: usage.json"
+         else
+            write (*,*) "Usage data sending failed"
+         endif
+
 #endif
       ENDIF
 !#else
