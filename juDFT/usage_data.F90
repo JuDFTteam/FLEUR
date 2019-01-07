@@ -134,9 +134,15 @@ CONTAINS
          WRITE (*,*) "usage.json not send, because this is a debugging run."
 #else
          !Send using curl
-         !CALL system('curl -H "Content-Type: application/json" --data @usage.json '\\URL_STRING)
-         WRITE (*,*) "CURL call not yet implemented"
-         PRINT *,"Usage data send using curl: usage.json"
+         call execute_command_line(&
+            'curl -X POST -H "Content-Type: application/json" -d @usage.json https://docker.iff.kfa-juelich.de/fleur-usage-stats/',&
+            exitstat=ierr)
+         if(ierr == 0) then
+            write (*,*) "Usage data send using curl: usage.json"
+         else
+            write (*,*) "Usage data sending failed"
+         endif
+
 #endif
       ENDIF
 !#else
