@@ -79,6 +79,7 @@ CONTAINS
           den%theta_mt(imesh,n) = theta
           den%phi_mt(imesh,n) = phi
        ENDDO
+       den%mt(:,0:,n,:)=0.0
        CALL mt_from_grid(atoms,sphhar,nsp,n,2,ch,den%mt(:,0:,n,:))
        DO i=1,atoms%jri(n)
           den%mt(i,:,n,:)=den%mt(i,:,n,:)*atoms%rmsh(i,n)**2
@@ -123,6 +124,7 @@ CONTAINS
           ch(imesh,3) = beff*SIN(theta)*COS(phi)
           ch(imesh,4) = beff*SIN(theta)*SIN(phi)
        ENDDO
+       vtot%mt(:,0:,n,:)=0.0
        CALL mt_from_grid(atoms,sphhar,nsp,n,4,ch,vtot%mt(:,0:,n,:))
        DO i=1,atoms%jri(n)
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
