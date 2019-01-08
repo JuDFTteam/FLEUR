@@ -117,6 +117,7 @@ CONTAINS
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
       INTEGER            :: ldau_l(4), numVac, numU
+      INTEGER            :: ldahia_l, numHIA
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -218,6 +219,7 @@ CONTAINS
       ALLOCATE(atoms%nflip(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
+      ALLOCATE(atoms%lda_hia(atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%neq(atoms%ntype))
@@ -681,6 +683,21 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%ldauMixParam = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
          input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
       END IF
+
+      xPathA = '/fleurInput/calculationSetup/ldaHIA'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         input%ldahia_etop = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@e_top'))
+         input%ldahia_ebot = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@e_bot'))
+         input%ldahia_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
+         input%ldahia_ne = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ne'))
+         input%ldahia_tetra = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_tetra'))
+      END IF
+
+      IF((input%ldahia_tetra).AND.(.NOT.input%tria)) THEN
+         CALL juDFT_error("Tetrahedron method not set up with this k-point-set but l_tetra is true", calledby="r_inpXML")
+      ENDIF
+
 
       ! Read in optional q point mesh for spin spirals
 
@@ -1250,6 +1267,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       atoms%numStatesProvided = 0
       atoms%lapw_l(:) = -1
       atoms%n_u = 0
+      atoms%n_hia = 0
 
       DEALLOCATE(noel)
       ALLOCATE(noel(atoms%ntype))
@@ -1290,6 +1308,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@J'))
           l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
          END DO
+
+         numHIA = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA')
+         IF(numHIA.EQ.1) THEN
+            ldahia_l       = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@l'))
+         ENDIF
 
          speciesNLO(iSpecies) = 0
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/lo'
@@ -1341,6 +1364,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
                   atoms%lda_u(atoms%n_u)%atomType = iType
                END DO
+               IF (numHIA.EQ.1) THEN
+                  atoms%n_hia = atoms%n_hia + 1
+                  atoms%lda_hia(atoms%n_hia)%l        = ldahia_l
+                  atoms%lda_hia(atoms%n_hia)%atomType = iType
+               ENDIF
                atomTypeSpecies(iType) = iSpecies
                IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
             END IF

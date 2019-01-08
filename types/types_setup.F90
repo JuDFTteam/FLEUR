@@ -71,6 +71,18 @@ MODULE m_types_setup
   END TYPE t_utype
 
   !
+  ! Type for LDA+HIA 
+  !
+  TYPE t_hiatype
+
+    INTEGER :: l         ! The l quantum number to which the Hubbard-1 Approximation should be applied
+    INTEGER :: atomType  ! The atom type to which the Hubbard-1 Approximation should be applied
+
+  END TYPE t_hiatype
+
+
+
+  !
   ! Type for the electric field
   !
  
@@ -89,6 +101,8 @@ MODULE m_types_setup
      INTEGER:: lmaxd
      ! no of lda+us
      INTEGER ::n_u
+     ! no of lda+hias 
+     INTEGER ::n_hia
      ! dimensions
      INTEGER :: jmtd
      !No of element
@@ -164,6 +178,8 @@ MODULE m_types_setup
      LOGICAL,          ALLOCATABLE :: relcor(:)
      !lda_u information(ntype)
      TYPE(t_utype),ALLOCATABLE::lda_u(:)
+     !lda+hia information
+     TYPE(t_hiatype),ALLOCATABLE::lda_hia(:)
      INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
   END TYPE t_atoms
@@ -417,6 +433,11 @@ MODULE m_types_setup
      LOGICAL :: ldauLinMix
      REAL    :: ldauMixParam
      REAL    :: ldauSpinf
+     REAL    :: ldahia_etop
+     REAL    :: ldahia_ebot
+     REAL    :: ldahia_sigma
+     INTEGER :: ldahia_ne
+     LOGICAL :: ldahia_tetra
   END TYPE t_input
 
   TYPE t_sliceplot

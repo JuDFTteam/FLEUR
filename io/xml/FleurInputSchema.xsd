@@ -51,6 +51,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="expertModes" type="ExpertModeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="geometryOptimization" type="GeometryOptimizerType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaU" type="LdaUGeneralType"/>
+	 <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAGeneralType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="spinSpiralQPointMesh" type="SpinSpiralQPointMeshType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="eField" type="EFieldType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameterLimits" type="EnergyParameterLimitsType"/>
@@ -371,6 +372,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="electronConfig" type="ElectronConfigType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
@@ -402,6 +404,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="force" type="ForceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbcomprot" type="Double3DVecType"/>
       </xsd:sequence>
@@ -454,6 +457,10 @@
       <xsd:attribute name="U" type="xsd:string" use="required"/>
       <xsd:attribute name="J" type="xsd:string" use="required"/>
       <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="LdaHIAType">
+      <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="ForceType">
@@ -591,6 +598,14 @@
       <xsd:attribute default="F" name="l_linMix" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.05" name="mixParam" type="xsd:double" use="optional"/>
       <xsd:attribute default="1.00" name="spinf" type="xsd:double" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="LdaHIAGeneralType">
+      <xsd:attribute name="e_top" type="xsd:string" use="required"/>
+      <xsd:attribute name="e_bot" type="xsd:string" use="required"/>
+      <xsd:attribute name="ne" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="sigma" type="xsd:string" use="required"/>
+      <xsd:attribute name="l_tetra" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="DOSOutputType">
