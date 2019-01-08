@@ -88,7 +88,7 @@ CONTAINS
   END SUBROUTINE chase_distance
 
 #ifdef CPP_CHASE
-    SUBROUTINE init_chase(mpi,DIMENSION,atoms,kpts,noco,l_real)
+    SUBROUTINE init_chase(mpi,DIMENSION,input,atoms,kpts,noco,l_real)
     USE m_types_mpimat
     USE m_types
     USE m_types_mpi
@@ -99,6 +99,7 @@ CONTAINS
 
     TYPE(t_mpi),               INTENT(IN)    :: mpi
     TYPE(t_dimension),         INTENT(IN)    :: dimension
+    TYPE(t_input),             INTENT(IN)    :: input
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     TYPE(t_kpts),              INTENT(IN)    :: kpts
     TYPE(t_noco),              INTENT(IN)    :: noco
