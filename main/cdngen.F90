@@ -38,6 +38,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_Ekwritesl
    USE m_banddos_io
    USE m_unfold_band_kpts
+   USE m_gOnsite
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -77,6 +78,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
    TYPE(t_cdnvalJob)     :: cdnvalJob
+   TYPE(t_greensf)       :: gOnsite
 
 
    !Local Scalars
@@ -93,6 +95,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
+   CALL gOnsite%init(input,atoms,kpts,dimension)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -105,8 +108,15 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,gOnsite)
    END DO
+
+    IF (atoms%n_hia.GT.0) THEN
+      DO jspin = 1, jspmax
+         CALL calc_onsite(atoms,jspin,input%jspins,dimension%neigd,kpts%ntet,kpts%nkpt,kpts%ntetra(1:4,:),kpts%voltet(:),&
+                                                results%neig(:,jspin),results%eig(:,:,jspin),gOnsite)
+      ENDDO
+   ENDIF
 
    IF (mpi%irank.EQ.0) THEN
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN

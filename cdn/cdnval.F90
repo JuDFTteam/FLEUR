@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,coreSpecInput,mcd,slab,orbcomp)
+                  moments,coreSpecInput,mcd,slab,orbcomp,gOnsite)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -38,6 +38,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_pwden
    USE m_forcea8
    USE m_checkdopall
+   USE m_gOnsite     ! calculate the non-interacting on-site green's function
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
@@ -79,6 +80,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_mcd),           OPTIONAL, INTENT(INOUT) :: mcd
    TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
    TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
+   TYPE(t_greensf),       OPTIONAL, INTENT(INOUT) :: gOnsite
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -233,7 +235,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
-
+         IF (PRESENT(gOnsite)) THEN
+            IF (gOnsite%l_tetra) THEN
+               CALL calc_qalmmpMat(atoms,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite)
+            ELSE
+               CALL im_gmmpMathist(atoms,ispin,input%jspins,noccbd,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
+            ENDIF
+         ENDIF
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
