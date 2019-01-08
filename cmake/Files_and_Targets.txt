@@ -41,6 +41,7 @@ include(wannier/uhu/CMakeLists.txt)
 include(forcetheorem/CMakeLists.txt)
 include(rdmft/CMakeLists.txt)
 include(kpoints/CMakeLists.txt)
+include(ldahia/CMakeLists.txt)
 
 
 include(tests/tests_old.cmake)
