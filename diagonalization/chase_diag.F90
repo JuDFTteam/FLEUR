@@ -473,6 +473,7 @@ CONTAINS
     EXTERNAL blacs_pinfo, blacs_gridinit
     INTEGER,EXTERNAL::numroc,indxl2g
 
+    ALLOCATE(mat%blacsdata)
     mat%blacsdata%mpi_com=hmat%blacsdata%mpi_com
     mat%global_size1=hmat%global_size1
     mat%global_size2=hmat%global_size1
