@@ -169,7 +169,7 @@ CONTAINS
                     noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
 
 #ifdef CPP_CHASE
-    CALL init_chase(mpi,dimension,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
+    CALL init_chase(mpi,dimension,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
 #endif
     ! Open/allocate eigenvector storage (end)
 
