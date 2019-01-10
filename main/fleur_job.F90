@@ -130,7 +130,6 @@ CONTAINS
     SUBROUTINE fleur_job_init()
       USE m_fleur_help
       use m_judft
-        INTEGER:: i
         INTEGER:: irank=0
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -162,7 +161,7 @@ CONTAINS
         TYPE(t_job),INTENT(IN) ::jobs(:)
 
         INTEGER:: njob=1
-        INTEGER:: irank=0,ierr
+        INTEGER:: irank=0
 
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
