@@ -125,7 +125,8 @@ CONTAINS
          f_ik(:,ikpt) = e_i * w_i
       ENDDO
    END SUBROUTINE calc_EnergyDen_auxillary_weights
-   SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
+
+   SUBROUTINE calc_kinED_pw(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                      vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,kinED,regCharges,dos,results,&
                      moments,coreSpecInput,mcd,slab,orbcomp)
 
@@ -206,7 +207,7 @@ CONTAINS
       INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
       INTEGER :: iErr,nbands,noccbd,iType
       INTEGER :: skip_t,skip_tt,nStart,nEnd,nbasfcn
-      LOGICA :: l_orbcomprot, l_real, l_dosNdir, l_corespec
+      LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
 
       ! Local Arrays
       REAL,    ALLOCATABLE :: we(:)
@@ -221,7 +222,7 @@ CONTAINS
       TYPE (t_eigVecCoeffs)     :: eigVecCoeffs
       TYPE (t_usdus)            :: usdus
       TYPE (t_mat)              :: zMat, zPrime
-      TYPE(t_potden),           :: kinED_comp(3)
+      TYPE (t_potden)           :: kinED_comp(3)
       TYPE (t_gVacMap)          :: gVacMap
 
       CALL timestart("cdnval")
@@ -318,6 +319,8 @@ CONTAINS
          nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
          CALL zMat%init(l_real,nbasfcn,noccbd)
          CALL read_eig(eig_id,ikpt,jsp,n_start=nStart,n_end=nEnd,neig=nbands,zmat=zMat)
+
+         call set_zPrime(zMat, kpts%bk(:,ikpt), lapw, zPrime)
 #ifdef CPP_MPI
          CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
@@ -409,5 +412,25 @@ CONTAINS
 
       CALL timestop("cdnval")
 
-   END SUBROUTINE cdnval
+      write (*,*) "done calc_kinED_pw"
+   END SUBROUTINE calc_kinED_pw
+
+   subroutine set_zPrime(zMat, kpt, lapw, zPrime)
+      USE m_types
+      implicit none
+      TYPE (t_mat), intent(in) :: zMat
+      REAL, intent(in)         :: kpt(3) 
+      TYPE(t_lapw), intent(in) :: lapw
+      TYPE (t_mat)             :: zPrime
+
+      call zPrime%init(zMat)
+
+      if(zPrime%l_real) then
+         write (*,*) "zMat is real"
+      else
+         write (*,*) "zMat is complex"
+      endif
+
+
+   end subroutine set_zPrime
 END MODULE m_metagga
