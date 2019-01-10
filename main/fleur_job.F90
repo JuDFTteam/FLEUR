@@ -133,7 +133,7 @@ CONTAINS
         INTEGER:: irank=0
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
-        INTEGER ierr(3)
+        INTEGER ierr(3), i
         CALL MPI_INIT_THREAD(MPI_THREAD_SERIALIZED,i,ierr)
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
@@ -164,6 +164,7 @@ CONTAINS
         INTEGER:: irank=0
 
 #ifdef CPP_MPI
+        INTEGER:: ierr
       INCLUDE 'mpif.h'
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 
