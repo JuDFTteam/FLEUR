@@ -17,7 +17,7 @@ MODULE m_types_greensf
          REAL     :: e_top
          REAL     :: e_bot
 
-         REAL     :: kkintgr_cut !cutoff for the kramers-kronig integration
+         INTEGER  :: kkintgr_cut !cutoff for the kramers-kronig integration
 
          REAL     :: sigma       !Smoothing parameter
 

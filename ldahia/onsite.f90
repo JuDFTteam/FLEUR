@@ -5,10 +5,13 @@ CONTAINS
 SUBROUTINE calc_qalmmpMat(atoms,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite)
 
    !This Subroutine is used if we want to use the tetrahedron method 
-   !It calcualtes the weights for the individual k-points for the integration,
+   !It calculates the weights for the individual k-points for the integration,
    !which is performed in the subroutine calc_onsite
 
+   !It is essentially the f-density of states in a (m,mp) matrix with an additional factor - pi
+
    USE m_types
+   USE m_constants
 
    IMPLICIT NONE
 
@@ -47,7 +50,7 @@ SUBROUTINE calc_qalmmpMat(atoms,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite)
             DO mp = -l,l
                lmp = l*(l+1)+mp
                DO i = 1,noccbd
-                  gOnsite%qalmmpMat(i,ikpt,i_hia,m,mp,ispin) = gOnsite%qalmmpMat(i,ikpt,i_hia,m,mp,ispin) - fac *&
+                  gOnsite%qalmmpMat(i,ikpt,i_hia,m,mp,ispin) = gOnsite%qalmmpMat(i,ikpt,i_hia,m,mp,ispin) - fac * pi_const*&
                                                           (conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
                                                            conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin) *&
                                                            usdus%ddn(l,n,ispin))
@@ -65,6 +68,8 @@ SUBROUTINE im_gmmpMathist(atoms,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCoeffs
    !This Subroutine calculates the imaginary part of the Matrix elements G^[n \sigma]_{Lm Lm'}(E+i*sigma)
    !at the current k-Point (it is called in cdnval) inside the MT-sphere (averaged over the radial component)
    !and sums over the Brillouin-Zone using the histogram method
+
+   !It is essentially the f-density of states in a (m,mp) matrix with an additional factor - pi
 
    USE m_types
    USE m_constants
@@ -112,7 +117,7 @@ SUBROUTINE im_gmmpMathist(atoms,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCoeffs
 
                   j = NINT((eig(i)-gOnsite%e_bot)/del)+1
                   IF( (j.LE.gOnsite%ne).AND.(j.GE.1) ) THEN
-                     gOnsite%gmmpMat(j,i_hia,m,mp,ispin) = gOnsite%gmmpMat(j,i_hia,m,mp,ispin) - ImagUnit * wk * fac *&
+                     gOnsite%gmmpMat(j,i_hia,m,mp,ispin) = gOnsite%gmmpMat(j,i_hia,m,mp,ispin) - ImagUnit * pi_const * wk * fac *&
                                                           (conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
                                                            conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin) *&
                                                            usdus%ddn(l,n,ispin))
@@ -161,7 +166,6 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
    ENDDO
 
 
-
    DO i_hia = 1,atoms%n_hia
       l = atoms%lda_hia(i_hia)%l
       DO m = -l, l
@@ -174,15 +178,14 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
                IF(jspins.EQ.1) gOnsite%gmmpMat(:,i_hia,m,mp,1) = 2.0 * gOnsite%gmmpMat(:,i_hia,m,mp,1)
             END IF
             
-            !smooth the imaginary part using gaussian broadening
-
+            !smooth the imaginary part using gaussian broadening 
             im = AIMAG(gOnsite%gmmpMat(:,i_hia,m,mp,jspin))
             CALL smooth(e(:),im(:),gOnsite%sigma,gOnsite%ne)
             gOnsite%gmmpMat(:,i_hia,m,mp,jspin) = ImagUnit * im(:)
 
-
          ENDDO
       ENDDO
+
 
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
 
@@ -191,9 +194,11 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
       DO m= -l,l
          DO mp= -l,l
             im = AIMAG(gOnsite%gmmpMat(:,i_hia,m,mp,jspin))
-            CALL kkintgr(gOnsite%ne,gOnsite%sigma,del,im(:),gOnsite%gmmpMat(:,i_hia,m,mp,jspin))
+            CALL kkintgr(gOnsite%kkintgr_cut,gOnsite%sigma,del,im(:),gOnsite%gmmpMat(:,i_hia,m,mp,jspin),gOnsite%e_bot)
          ENDDO
       ENDDO
+
+      CALL greensf_cutoff(gOnsite,atoms)
 
    ENDDO
 
@@ -209,6 +214,7 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms)
    USE m_types
    USE m_intgr
    USE m_juDFT
+   USE m_constants
    
    IMPLICIT NONE
 
@@ -225,20 +231,27 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms)
    REAL a,b
 
    ALLOCATE(fDOS(gOnsite%ne))
-   fDOS(:) = 0.0
+
 
    DO i = 1, atoms%n_hia
 
+      fDOS(:) = 0.0
       l = atoms%lda_hia(i)%l      
 
 
       jspin = 1 !TEMPORARY!!!
-      !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS
+      !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS (sum over spins??)
+
+      !n_f(e) = -1/pi * TR[Im(G_f(e))]
+
       DO m = -l , l
          DO j = 1, gOnsite%ne
-            fDOS(j) = fDOS(j) - AIMAG(gOnsite%gmmpMat(j,i,m,m,jspin))
+            fDOS(j) = fDOS(j) + AIMAG(gOnsite%gmmpMat(j,i,m,m,jspin))
          ENDDO
       ENDDO
+
+      fDOS(:) = -1/pi_const * fDOS(:)
+
 
       del = (gOnsite%e_top-gOnsite%e_bot)/REAL(gOnsite%ne-1)
 
@@ -246,11 +259,11 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms)
 
       WRITE(*,*) "Integral over fDOS: ", integral
 
-      gOnsite%kkintgr_cut = gOnsite%e_top
+      gOnsite%kkintgr_cut = gOnsite%ne
 
       IF(integral.LT.13.5) THEN
          ! If the integral is to small we stop here to avoid problems
-         CALL juDFT_error("fDOS-integral too small", calledby="greensf_cutoff")
+         !CALL juDFT_error("fDOS-integral too small", calledby="greensf_cutoff")
          
       ELSE IF((integral.GT.14).AND.((integral-14).GT.0.1)) THEN
          !IF the integral is bigger than 14, search for the cutoff using the bisection method   
@@ -265,9 +278,11 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms)
             
             CALL intgz0(fDOS(:),del,n_c,integral,.false.)
 
+            WRITE(*,*) integral
+
             IF((ABS(integral-14).LT.0.01).OR.(ABS(a-b)/2.0.LT.del)) THEN
 
-               gOnsite%kkintgr_cut = (a+b)/2.0
+               gOnsite%kkintgr_cut = INT(((a+b)/2.0-gOnsite%e_bot)/del)+1
                EXIT
 
             ELSE IF((integral-14).LT.0) THEN
@@ -278,14 +293,14 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms)
 
          ENDDO
 
-         n_c = INT((gOnsite%kkintgr_cut-gOnsite%e_bot)/del)+1
-
-         CALL intgz0(fDOS(:),del,n_c,integral,.false.)
+         CALL intgz0(fDOS(:),del,gOnsite%kkintgr_cut,integral,.false.)
 
          WRITE(*,*) "CALCULATED CUTOFF: ", gOnsite%kkintgr_cut
          WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
-         WRITE(*,*) "fDOS at the cutoff", fDOS(n_c)
-   END IF
+         WRITE(*,*) "fDOS at the cutoff", fDOS(gOnsite%kkintgr_cut)
+      END IF
+
+      gOnsite%kkintgr_cut = gOnsite%ne !TEMPORARY to avoid cutoff
    ENDDO
 
 
