@@ -64,7 +64,7 @@ contains
     real                              :: sbf(0:atoms%lmaxd)
     real, allocatable, dimension(:,:) :: il, kl
     
-    !$ COMPLEX vtl_loc(0:sphhar%nlhd,atoms%ntype)
+    !$ complex, allocatable :: vtl_loc(:,:)
 #ifdef CPP_MPI
     include 'mpif.h'
     integer                       :: ierr(3)
@@ -91,7 +91,8 @@ contains
     !$omp parallel default( none ) &
     !$omp& shared( mpi, stars, vpw, oneD, atoms, sym, cell, sphhar, vtl ) &
     !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
-    !$omp& private( vtl_loc ) 
+    !$omp& private( vtl_loc )
+    !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype)) 
     !$ vtl_loc(:,:) = cmplx(0.d0,0.d0)
     !$omp do
     do k = mpi%irank+2, stars%ng3, mpi%isize
@@ -114,10 +115,10 @@ contains
             lm = l * ( l + 1 ) + m + 1 
             sm = sm + conjg( sphhar%clnu(jm,lh,nd) ) * pylm(lm,n)
           end do
-        !$ if (.false.) then
-        vtl(lh,n) = vtl(lh,n) + cp * sbf(l) * sm
-        !$ end if
-        !$ vtl_loc(lh,n) = vtl_loc(lh,n) + cp * sbf(l) * sm
+          !$ if (.false.) then
+          vtl(lh,n) = vtl(lh,n) + cp * sbf(l) * sm
+          !$ end if
+          !$ vtl_loc(lh,n) = vtl_loc(lh,n) + cp * sbf(l) * sm
         end do
         nat = nat + atoms%neq(n)
       end do
@@ -126,6 +127,7 @@ contains
     !$omp critical
     !$ vtl = vtl + vtl_loc
     !$omp end critical
+    !$ deallocate(vtl_loc) 
     !$omp end parallel
 #ifdef CPP_MPI
     n1 = ( sphhar%nlhd + 1 ) * atoms%ntype
