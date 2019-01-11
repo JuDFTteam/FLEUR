@@ -6,8 +6,7 @@
 MODULE m_cdngen
    USE m_types
 
-   TYPE(t_potden)   :: comparison_kinED_pw
-
+   TYPE(t_potden)   :: comparison_kinED_pw(3)
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
@@ -87,6 +86,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !Local Scalars
    REAL                  :: fix, qtot, dummy,eFermiPrev
    INTEGER               :: jspin, jspmax
+   INTEGER               :: dim_idx
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
@@ -100,6 +100,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+   do dim_idx = 1,3
+      CALL comparison_kinED_pw(dim_idx)%init(stars,atoms,sphhar,vacuum,&
+                                             noco,input%jspins, POTDEN_TYPE_DEN)
+   enddo
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
 
    IF (mpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
@@ -114,12 +118,16 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
-      fake_regCharges = regCharges
-      fake_dos        = dos
-      fake_results    = results
-      fake_moments    = moments
-      CALL calc_kinED_pw(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-         sphhar,sym,vTot,oneD,cdnvalJob,comparison_kinED_pw,fake_regCharges,fake_dos,fake_results,fake_moments)
+      do dim_idx =1,3
+         fake_regCharges = regCharges
+         fake_dos        = dos
+         fake_results    = results
+         fake_moments    = moments
+         CALL calc_kinED_pw(dim_idx,eig_id,mpi,kpts,jspin,noco,input,banddos,cell,&
+                            atoms,enpara,stars,vacuum,dimension,sphhar,sym,vTot,oneD,&
+                            cdnvalJob,comparison_kinED_pw(dim_idx),fake_regCharges,&
+                            fake_dos,fake_results,fake_moments)
+      enddo
    END DO
 
    ! calculate kinetic energy density for MetaGGAs
@@ -196,5 +204,31 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #endif
 
 END SUBROUTINE cdngen
+
+subroutine save_kinED(xcpot, input, noco, stars, cell)
+   use m_types
+   use m_pw_tofrom_grid
+   implicit none
+
+   CLASS(t_xcpot),INTENT(IN)   :: xcpot
+   type(t_input), intent(in)   :: input
+   type(t_noco), intent(in)    :: noco
+   type(t_stars), intent(in)   :: stars
+   type(t_cell), intent(in)    :: cell
+
+   integer                     :: dim_idx
+   real, allocatable           :: tmp(:,:), kinED(:,:)
+   type(t_gradients)           :: grad
+
+   do dim_idx = 1,3
+      call pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, &
+         comparison_kinED_pw(dim_idx)%pw, grad, tmp)
+      if(.not. allocated(kinED)) allocate(kinED, mold=tmp)
+      kinEd = kinED + tmp
+      deallocate(tmp)
+   enddo
+
+   write (*,*) "kED shape =", shape(kinED)
+end subroutine save_kinED
 
 END MODULE m_cdngen

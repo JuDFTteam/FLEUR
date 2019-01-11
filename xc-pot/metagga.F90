@@ -14,6 +14,7 @@ MODULE m_metagga
 CONTAINS
    SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS)
       USE m_juDFT_stop
+      !use m_cdngen
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
       REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
@@ -126,7 +127,7 @@ CONTAINS
       ENDDO
    END SUBROUTINE calc_EnergyDen_auxillary_weights
 
-   SUBROUTINE calc_kinED_pw(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
+   SUBROUTINE calc_kinED_pw(dim_idx, eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                      vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,kinED,regCharges,dos,results,&
                      moments,coreSpecInput,mcd,slab,orbcomp)
 
@@ -169,7 +170,7 @@ CONTAINS
 #endif
 
       IMPLICIT NONE
-
+      
       TYPE(t_results),       INTENT(INOUT) :: results
       TYPE(t_mpi),           INTENT(IN)    :: mpi
       TYPE(t_dimension),     INTENT(IN)    :: dimension
@@ -197,7 +198,7 @@ CONTAINS
       TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
 
       ! Scalar Arguments
-      INTEGER,               INTENT(IN)    :: eig_id, jspin
+      INTEGER,               INTENT(IN)    :: eig_id, jspin, dim_idx
 
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -320,7 +321,7 @@ CONTAINS
          CALL zMat%init(l_real,nbasfcn,noccbd)
          CALL read_eig(eig_id,ikpt,jsp,n_start=nStart,n_end=nEnd,neig=nbands,zmat=zMat)
 
-         call set_zPrime(zMat, kpts%bk(:,ikpt), lapw, zPrime)
+         call set_zPrime(dim_idx, zMat, kpts%bk(:,ikpt), lapw, zPrime)
 #ifdef CPP_MPI
          CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
@@ -411,26 +412,27 @@ CONTAINS
       END IF
 
       CALL timestop("cdnval")
-
-      write (*,*) "done calc_kinED_pw"
    END SUBROUTINE calc_kinED_pw
 
-   subroutine set_zPrime(zMat, kpt, lapw, zPrime)
+   subroutine set_zPrime(dim_idx, zMat, kpt, lapw, zPrime)
       USE m_types
       implicit none
+      INTEGER, intent(in)      :: dim_idx
       TYPE (t_mat), intent(in) :: zMat
       REAL, intent(in)         :: kpt(3) 
       TYPE(t_lapw), intent(in) :: lapw
       TYPE (t_mat)             :: zPrime
 
-      call zPrime%init(zMat)
+      REAL                     :: fac
+      INTEGER                  :: basis_idx
 
-      if(zPrime%l_real) then
-         write (*,*) "zMat is real"
-      else
-         write (*,*) "zMat is complex"
+      if(.not. allocated(zPrime%data_r)) then
+         call zPrime%init(zMat)
       endif
-
-
+   
+      do basis_idx = 1,size(lapw%gvec,dim=2)
+         fac = kpt(dim_idx) + lapw%gvec(dim_idx,basis_idx,1)
+         zPrime%data_r(basis_idx,:) = fac * zPrime%data_r(basis_idx,:) 
+      enddo
    end subroutine set_zPrime
 END MODULE m_metagga
