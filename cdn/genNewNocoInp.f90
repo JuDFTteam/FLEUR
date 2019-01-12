@@ -47,7 +47,7 @@ SUBROUTINE genNewNocoInp(input,atoms,noco,noco_new)
       iatom= iatom + atoms%neq(iType)
    END DO
 
-   OPEN (24,file='nocoinp',form='formatted', status='old')
+   OPEN (24,file='nocoinp',form='formatted', status='unknown')
    REWIND (24)
    CALL rw_noco_write(atoms,noco_new, input)
    CLOSE (24)
