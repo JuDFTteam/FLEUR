@@ -34,7 +34,7 @@ SUBROUTINE genNewNocoInp(input,atoms,noco,noco_new)
          alphdiff = 2.0*pi_const*(noco%qss(1)*atoms%taual(1,iAtom) + &
                                   noco%qss(2)*atoms%taual(2,iAtom) + &
                                   noco%qss(3)*atoms%taual(3,iAtom) )
-         noco_new%alph(iType) = noco%alph(iType) - alphdiff
+         noco_new%alph(iType) = noco_new%alph(iType) - alphdiff
          DO WHILE (noco_new%alph(iType) > +pi_const)
             noco_new%alph(iType)= noco_new%alph(iType) - 2.0*pi_const
          END DO
@@ -42,7 +42,7 @@ SUBROUTINE genNewNocoInp(input,atoms,noco,noco_new)
             noco_new%alph(iType)= noco_new%alph(iType) + 2.0*pi_const
          END DO
       ELSE
-         noco_new%alph(iType) = noco%alph(iType)
+         noco_new%alph(iType) = noco_new%alph(iType)
       END IF
       iatom= iatom + atoms%neq(iType)
    END DO
