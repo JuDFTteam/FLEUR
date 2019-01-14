@@ -10,13 +10,13 @@ diagonalization/symmetrize_matrix.f90
 diagonalization/cusolver_diag.F90
 diagonalization/elemental.F90
 diagonalization/elpa_20180525_onenode.F90)
-#if (FLEUR_USE_ELPA_20180525)
-# set(fleur_F90 ${fleur_F90}
-#  diagonalization/elpa_20180525.F90
-#)
-#else()
+if (FLEUR_USE_ELPA_20180525)
+ set(fleur_F90 ${fleur_F90}
+  diagonalization/elpa_20180525.F90
+)
+else()
  set(fleur_F90 ${fleur_F90}
   diagonalization/elpa.F90
 )
-#endif()
+endif()
 
