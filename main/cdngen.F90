@@ -4,9 +4,6 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_cdngen
-   USE m_types
-
-   TYPE(t_potden)   :: comparison_kinED_pw(3)
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
@@ -101,7 +98,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    do dim_idx = 1,3
-      CALL comparison_kinED_pw(dim_idx)%init(stars,atoms,sphhar,vacuum,&
+      CALL xcpot%comparison_kinED_pw(dim_idx)%init(stars,atoms,sphhar,vacuum,&
                                              noco,input%jspins, POTDEN_TYPE_DEN)
    enddo
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
@@ -125,7 +122,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          fake_moments    = moments
          CALL calc_kinED_pw(dim_idx,eig_id,mpi,kpts,jspin,noco,input,banddos,cell,&
                             atoms,enpara,stars,vacuum,dimension,sphhar,sym,vTot,oneD,&
-                            cdnvalJob,comparison_kinED_pw(dim_idx),fake_regCharges,&
+                            cdnvalJob,xcpot%comparison_kinED_pw(dim_idx),fake_regCharges,&
                             fake_dos,fake_results,fake_moments)
       enddo
    END DO
@@ -134,6 +131,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    if(xcpot%exc_is_metagga()) then
       CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars,&
                              vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
+      call save_kinED(xcpot, input, noco, stars, cell, sym)
    endif
 
    IF (mpi%irank == 0) THEN
@@ -205,7 +203,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
 END SUBROUTINE cdngen
 
-subroutine save_kinED(xcpot, input, noco, stars, cell)
+subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    use m_types
    use m_pw_tofrom_grid
    implicit none
@@ -215,20 +213,32 @@ subroutine save_kinED(xcpot, input, noco, stars, cell)
    type(t_noco), intent(in)    :: noco
    type(t_stars), intent(in)   :: stars
    type(t_cell), intent(in)    :: cell
+   TYPE(t_sym),INTENT(IN)      :: sym
 
    integer                     :: dim_idx
    real, allocatable           :: tmp(:,:), kinED(:,:)
    type(t_gradients)           :: grad
 
+   call init_pw_grid(xcpot, stars, sym, cell)
    do dim_idx = 1,3
       call pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, &
-         comparison_kinED_pw(dim_idx)%pw, grad, tmp)
+         xcpot%comparison_kinED_pw(dim_idx)%pw, grad, tmp)
+
+      if(allocated(tmp)) then
+         write (77,*) "tmp not allocated"
+         deallocate(tmp)
+      else
+         write (77,*) "tmp is so allocated"
+      endif
+
       if(.not. allocated(kinED)) allocate(kinED, mold=tmp)
       kinEd = kinED + tmp
-      deallocate(tmp)
-   enddo
 
-   write (*,*) "kED shape =", shape(kinED)
+   enddo
+   
+   call finish_pw_grid()
+
+   write (77,*) "kED shape =", shape(kinED)
 end subroutine save_kinED
 
 END MODULE m_cdngen

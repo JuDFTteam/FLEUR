@@ -82,6 +82,7 @@ CONTAINS
       TYPE(t_results)                 :: tmp_results
       TYPE(t_cdnvalJob)               :: cdnvalJob
       TYPE(t_potden)                  :: aux_den, real_den
+   
 
       CALL regCharges%init(input, atoms)
       CALL dos%init(input,        atoms, DIMENSION, kpts, vacuum)
@@ -426,9 +427,8 @@ CONTAINS
       REAL                     :: fac
       INTEGER                  :: basis_idx
 
-      if(.not. allocated(zPrime%data_r)) then
-         call zPrime%init(zMat)
-      endif
+      call zPrime%free()
+      call zPrime%init(zMat)
    
       do basis_idx = 1,size(lapw%gvec,dim=2)
          fac = kpt(dim_idx) + lapw%gvec(dim_idx,basis_idx,1)

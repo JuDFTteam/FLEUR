@@ -12,12 +12,14 @@
 !! In addition to overloading the t_xcpot datatype also mpi_bc_xcpot must be adjusted
 !! for additional implementations.
 MODULE m_types_xcpot
+   use m_types_potden
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: t_xcpot,t_gradients
+   PUBLIC           :: t_xcpot,t_gradients
    
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
+      TYPE(t_potden)   :: comparison_kinED_pw(3)
    CONTAINS
       PROCEDURE        :: vxc_is_LDA=>xcpot_vxc_is_LDA
       PROCEDURE        :: exc_is_LDA=>xcpot_exc_is_LDA
@@ -157,6 +159,6 @@ CONTAINS
       ALLOCATE(grad%g2ru(ngrid),grad%g2rd(ngrid),grad%gggrt(ngrid))
       ALLOCATE(grad%gggru(ngrid),grad%gzgr(ngrid),grad%g2rt(ngrid))
       ALLOCATE(grad%gggrd(ngrid),grad%grgru(ngrid),grad%grgrd(ngrid))
-   END SUBROUTINE xcpot_alloc_gradients
+  END SUBROUTINE xcpot_alloc_gradients
 
 END MODULE m_types_xcpot
