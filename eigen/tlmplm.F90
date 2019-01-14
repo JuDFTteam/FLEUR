@@ -31,7 +31,7 @@ CONTAINS
     REAL dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
     REAL uvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
     REAL uvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
-    REAL f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd),x(atoms%jmtd)
+    REAL f(atoms%jmtd,2,0:atoms%lmaxd,2),g(atoms%jmtd,2,0:atoms%lmaxd,2),x(atoms%jmtd)
 
     REAL flo(atoms%jmtd,2,atoms%nlod)
     INTEGER:: indt(0:SIZE(td%tuu,1)-1)
@@ -40,14 +40,21 @@ CONTAINS
     COMPLEX  :: cil
     REAL     :: temp
     INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
-    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u
+    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2
 
 
     vr0=v%mt(:,:,n,jsp)
     IF (jsp<3) vr0(:,0)=0.0
 
-
-    CALL genMTBasis(atoms,enpara,v,mpi,n,jspin,ud,f,g,flo)
+    DO i=MERGE(1,jspin,jspin>2),MERGE(2,jspin,jspin>2)
+       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo)
+    ENDDO
+    IF (jspin>2) THEN
+       jspin1=1
+       jspin2=2
+    ELSE
+       jspin1=jspin;jspin2=jspin
+    END IF
     na=SUM(atoms%neq(:n-1))+1
     nsym = atoms%ntypsy(na)
     nh = sphhar%nlh(nsym)
@@ -73,22 +80,22 @@ CONTAINS
                 dvu(lpl,lh) = 0.0
              ELSE
                 DO i = 1,atoms%jri(n)
-                   x(i) = (f(i,1,lp)*f(i,1,l)+f(i,2,lp)*f(i,2,l))* vr0(i,lh)
+                   x(i) = (f(i,1,lp,jspin1)*f(i,1,l,jspin2)+f(i,2,lp,jspin1)*f(i,2,l,jspin2))* vr0(i,lh)
                 END DO
                 CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                 uvu(lpl,lh) = temp
                 DO i = 1,atoms%jri(n)
-                   x(i) = (g(i,1,lp)*f(i,1,l)+g(i,2,lp)*f(i,2,l))* vr0(i,lh)
+                   x(i) = (g(i,1,lp,jspin1)*f(i,1,l,jspin2)+g(i,2,lp,jspin1)*f(i,2,l,jspin2))* vr0(i,lh)
                 END DO
                 CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                 dvu(lpl,lh) = temp
                 DO i = 1,atoms%jri(n)
-                   x(i) = (f(i,1,lp)*g(i,1,l)+f(i,2,lp)*g(i,2,l))* vr0(i,lh)
+                   x(i) = (f(i,1,lp,jspin1)*g(i,1,l,jspin2)+f(i,2,lp,jspin1)*g(i,2,l,jspin2))* vr0(i,lh)
                 END DO
                 CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                 uvd(lpl,lh) = temp
                 DO i = 1,atoms%jri(n)
-                   x(i) = (g(i,1,lp)*g(i,1,l)+g(i,2,lp)*g(i,2,l))* vr0(i,lh)
+                   x(i) = (g(i,1,lp,jspin1)*g(i,1,l,jspin2)+g(i,2,lp,jspin1)*g(i,2,l,jspin2))* vr0(i,lh)
                 END DO
                 CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                 dvd(lpl,lh) = temp

@@ -41,7 +41,7 @@ CONTAINS
 
     !     .. Intrinsic Functions ..
     INTRINSIC conjg
-
+    qal21=0.0
     !--->    l-decomposed density for each occupied state
     states : DO i = 1, noccbd
        nt1 = 1

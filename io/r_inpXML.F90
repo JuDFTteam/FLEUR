@@ -34,6 +34,7 @@ CONTAINS
       USE m_calculator
       USE m_constants
       USE m_inpeig
+      USE m_inpnoco
       USE m_sort
       USE m_types_xcpot_inbuild
 #ifdef CPP_LIBXC
@@ -122,7 +123,7 @@ CONTAINS
       REAL               :: tauTemp(3,48)
       REAL               :: bk(3)
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
-      LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp, tempBool
+      LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
       REAL               :: weightScale, eParamUp, eParamDown
@@ -2100,6 +2101,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          CALL enpara%READ(atoms,input%jspins,input%film,.FALSE.)
       END IF
 
+      ! Read in nocoinp file iff available
+      l_nocoinp = .FALSE.
+      INQUIRE (file ='nocoinp',exist= l_nocoinp)
+      IF (l_nocoinp) THEN
+         CALL inpnoco(atoms,input,vacuum,noco)
+      END IF
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of non-XML input
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -2138,7 +2146,43 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          CALL xcpot%init(jspins,id_x,id_c)
       END SELECT
 
+      CALL set_xcpot_usage(xcpot)
    END SUBROUTINE setXCParameters
+
+   SUBROUTINE set_xcpot_usage(xcpot)
+      use m_judft_usage
+      USE m_types
+      USE m_types_xcpot_inbuild
+      USE m_types_xcpot_libxc
+      implicit none
+      class(t_xcpot), intent(in)    :: xcpot
+
+      ! give some information about XC functional to usage.json
+      ! 1 -> LDA
+      ! 2 -> GGA
+      ! 3 -> MetaGGA
+      ! 4 -> Hybrid functional
+      if(xcpot%is_lda()) then
+         call add_usage_data("XC-treatment", 1)
+         return
+      endif
+
+      if(xcpot%is_MetaGGA()) then
+         call add_usage_data("XC-treatment", 3)
+         return
+      endif
+
+      if(xcpot%is_GGA()) then
+         call add_usage_data("XC-treatment", 2)
+         return
+      endif
+
+      if(xcpot%is_hybrid()) then
+         call add_usage_data("XC-treatment", 4)
+         return
+      endif
+
+   END SUBROUTINE set_xcpot_usage
 
    SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
 

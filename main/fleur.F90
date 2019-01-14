@@ -168,7 +168,7 @@ CONTAINS
                     noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
 
 #ifdef CPP_CHASE
-    CALL init_chase(mpi,dimension,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
+    CALL init_chase(mpi,dimension,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
 #endif
     ! Open/allocate eigenvector storage (end)
 
@@ -400,8 +400,12 @@ CONTAINS
 
        CALL forcetheo%postprocess()
 
-       IF ((input%gw.GT.0).AND.(mpi%irank.EQ.0)) THEN
-          CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,results,eig_id,oneD,sphhar,stars,vacuum)
+       IF (input%gw.GT.0) THEN
+          IF (mpi%irank.EQ.0) THEN
+             CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
+                             results,eig_id,oneD,sphhar,stars,vacuum)
+          END IF
+          CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
        END IF
 
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)

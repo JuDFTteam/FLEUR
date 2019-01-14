@@ -95,8 +95,10 @@ CONTAINS
     ! In the parallel case also a redistribution happens
     ALLOCATE(smat_final,mold=smat(1,1))
     ALLOCATE(hmat_final,mold=smat(1,1))
+    CALL timestart("Matrix redistribution")
     CALL eigen_redist_matrix(mpi,lapw,atoms,smat,smat_final)
     CALL eigen_redist_matrix(mpi,lapw,atoms,hmat,hmat_final,smat_final)
+    CALL timestop("Matrix redistribution")
 
   END SUBROUTINE eigen_hssetup
 END MODULE m_eigen_hssetup

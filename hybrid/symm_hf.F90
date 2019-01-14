@@ -15,7 +15,7 @@ MODULE m_symm_hf
 
 CONTAINS
 
-SUBROUTINE symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
+SUBROUTINE symm_hf_init(sym,kpts,nk,nsymop,rrot,psym)
 
    USE m_types
    USE m_util   ,ONLY: modulo1
@@ -25,7 +25,6 @@ SUBROUTINE symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
    TYPE(t_sym),  INTENT(IN)    :: sym
    TYPE(t_kpts), INTENT(IN)    :: kpts
    INTEGER,      INTENT(IN)    :: nk
-   INTEGER,      INTENT(IN)    :: irank2
    INTEGER,      INTENT(OUT)   :: nsymop
    INTEGER,      INTENT(INOUT) :: rrot(3,3,sym%nsym)
    INTEGER,      INTENT(INOUT) :: psym(sym%nsym) ! Note: psym is only filled up to index nsymop
@@ -62,17 +61,15 @@ SUBROUTINE symm_hf_init(sym,kpts,nk,irank2,nsymop,rrot,psym)
       END IF
    END DO
 
-   IF (irank2 == 0) THEN
-      WRITE(6,'(A,i3)') ' nk',nk
-      WRITE(6,'(A,3f10.5)') ' kpts%bkf(:,nk):',kpts%bkf(:,nk)
-      WRITE(6,'(A,i3)') ' Number of elements in the little group:',nsymop
-   END IF
+   WRITE(6,'(A,i3)') ' nk',nk
+   WRITE(6,'(A,3f10.5)') ' kpts%bkf(:,nk):',kpts%bkf(:,nk)
+   WRITE(6,'(A,i3)') ' Number of elements in the little group:',nsymop
 
 END SUBROUTINE symm_hf_init
 
 SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
-                   lapw,jsp,mpi,irank2,rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,&
-                   symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
+                   lapw,jsp,mpi,rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,&
+                   pointer_EIBZ,nsest,indx_sest)
 
       USE m_constants
       USE m_types
@@ -96,24 +93,18 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
 !     - scalars -
       INTEGER,INTENT(IN)              :: nk  
       INTEGER,INTENT(IN)              :: jsp
-      INTEGER,INTENT(IN)              :: irank2
       INTEGER,INTENT(OUT)             :: nkpt_EIBZ
       INTEGER,INTENT(IN)              :: nsymop
-      INTEGER,INTENT(OUT)             :: maxndb,nddb
 
 !     - arrays -
       INTEGER,INTENT(IN)              :: rrot(3,3,sym%nsym)
       INTEGER,INTENT(IN)              :: psym(sym%nsym)
       INTEGER,INTENT(OUT)             :: parent(kpts%nkptf)
-      INTEGER,INTENT(OUT)             :: symop(kpts%nkptf)
-      INTEGER,INTENT(INOUT)           :: degenerat(hybrid%ne_eig(nk))
       INTEGER,INTENT(OUT)             :: nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))  
       INTEGER,ALLOCATABLE,INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER,ALLOCATABLE,INTENT(OUT) :: n_q(:)      
 
       REAL,INTENT(IN)                 :: eig_irr(dimension%neigd,kpts%nkpt)
-      COMPLEX,INTENT(INOUT)           :: rep_c(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,&
-                                               0:hybdat%lmaxcd,nsymop,atoms%nat)
 
 !     - local scalars -
       INTEGER                         :: ikpt,ikpt1,iop,isym,iisym,m
@@ -126,6 +117,7 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       INTEGER                         :: n1,n2,nn
       INTEGER                         :: ndb,ndb1,ndb2
       INTEGER                         :: nrkpt
+      INTEGER                         :: maxndb, nddb
 
       REAL                            :: tolerance,pi
 
@@ -135,6 +127,7 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
 !     - local arrays -
       INTEGER                         :: neqvkpt(kpts%nkptf)
       INTEGER                         :: list(kpts%nkptf)
+      INTEGER                         :: degenerat(hybrid%ne_eig(nk))
       INTEGER,ALLOCATABLE             :: help(:)
       
       REAL                            :: rotkpt(3),g(3)
@@ -151,9 +144,7 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       COMPLEX,ALLOCATABLE             :: rep_d(:,:,:)
       LOGICAL,ALLOCATABLE             :: symequivalent(:,:)
 
-      IF ( irank2 == 0 ) THEN
-        WRITE(6,'(A)') new_line('n') // new_line('n') // '### subroutine: symm ###'
-      END IF
+      WRITE(6,'(A)') new_line('n') // new_line('n') // '### subroutine: symm ###'
 
       ! determine extented irreducible BZ of k ( EIBZ(k) ), i.e.
       ! those k-points, which can generate the whole BZ by
@@ -165,7 +156,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
         list(i) = i-1
       END DO
 
-      symop = 0
       DO ikpt=2,kpts%nkptf
         DO iop=1,nsymop
 
@@ -188,7 +178,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
             list(nrkpt)   = 0
             neqvkpt(ikpt) = neqvkpt(ikpt) + 1
             parent(nrkpt) = ikpt
-            symop(nrkpt)  = psym(iop)
           END IF
           IF ( all(list .eq. 0) ) EXIT
 
@@ -217,9 +206,7 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
         END IF
       END DO
 
-      IF ( irank2 == 0 ) THEN
-        WRITE(6,'(A,i5)') ' Number of k-points in the EIBZ',nkpt_EIBZ
-      END IF
+      WRITE(6,'(A,i5)') ' Number of k-points in the EIBZ',nkpt_EIBZ
 
 
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
@@ -257,9 +244,8 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       tolerance = 1E-07 !0.00001
 
       degenerat = 1
-      IF ( irank2 == 0 ) THEN
-        WRITE(6,'(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
-     END IF
+
+      WRITE(6,'(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
 
       DO i=1,hybrid%nbands(nk)
         DO j=i+1,hybrid%nbands(nk)
@@ -282,13 +268,10 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       ! number of different degenerate bands/states
       nddb   = count( degenerat .ge. 1)
 
-
-      IF ( irank2 == 0 ) THEN
-        WRITE(6,*) ' Degenerate states:'
-        DO iband = 1,hybrid%nbands(nk)/5+1
-          WRITE(6,'(5i5)')degenerat(iband*5-4:min(iband*5,hybrid%nbands(nk)))
-        END DO
-      END IF
+      WRITE(6,*) ' Degenerate states:'
+      DO iband = 1,hybrid%nbands(nk)/5+1
+         WRITE(6,'(5i5)')degenerat(iband*5-4:min(iband*5,hybrid%nbands(nk)))
+      END DO
 
       IF( irreps ) THEN
         ! calculate representation, i.e. the action of an element of
@@ -548,9 +531,6 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
 
             cdum   = exp(-2*pi*img*dot_product(rotkpt,sym%tau(:,iisym)))* &
      &               exp( 2*pi*img*dot_product(g,atoms%taual(:,ratom)))
-
-            rep_c(:,:,:,iop,iatom) = &
-     &         hybrid%d_wgn2(-hybdat%lmaxcd:hybdat%lmaxcd,-hybdat%lmaxcd:hybdat%lmaxcd,0:hybdat%lmaxcd,isym) * cdum
           END DO
         END DO
         iatom0 = iatom0 + atoms%neq(itype)

@@ -16,7 +16,7 @@ build-gfortran-hdf5:
      paths:
        - build
   script:
-    - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make 
+    - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make -j 4
 #  only:
 #    - schedules
 #    - triggers
@@ -100,7 +100,7 @@ build-intel:
        - build.intel
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
-    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -l intel INTEL_MPI ; cd build.intel; make 
+    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -l intel INTEL_MPI ; cd build.intel; make -j 4
   only:
     - schedules
     - triggers
@@ -133,7 +133,7 @@ gfortran-coverage:
      paths:
         - build
   script:
-      - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make
+      - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
       - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";ctest
       - lcov --capture  -d CMakeFiles -o after.info 

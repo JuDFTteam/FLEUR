@@ -4,7 +4,7 @@ MODULE m_hf_init
   !     preparations for HF and hybrid functional calculation
   !
 CONTAINS
-  SUBROUTINE hf_init(hybrid,kpts,atoms,input,DIMENSION,hybdat,irank2,isize2,l_real)
+  SUBROUTINE hf_init(hybrid,kpts,atoms,input,DIMENSION,hybdat,l_real)
     USE m_types
     USE m_read_core
     USE m_util
@@ -15,7 +15,6 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)         :: atoms
     TYPE(t_input),INTENT(IN)         :: input
     TYPE(t_dimension),INTENT(IN)     :: DIMENSION
-    INTEGER,INTENT(OUT)              :: irank2(:),isize2(:)
     TYPE(t_hybdat),INTENT(OUT)       :: hybdat
     LOGICAL,INTENT(IN)               :: l_real
     
@@ -81,10 +80,6 @@ CONTAINS
        END DO
     END DO
 
-
-
-    irank2   = 0
-    isize2   = 1
     !skip_kpt = .false.
 
   END SUBROUTINE hf_init

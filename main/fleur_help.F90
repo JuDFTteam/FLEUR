@@ -67,6 +67,8 @@ CONTAINS
     CALL print_argument("-sd")
     CALL print_argument("-delden")
 #endif
+    WRITE (*,'(a)') "Options for privacy sensitive users"
+    CALL print_argument("-no_send")
     
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details."
