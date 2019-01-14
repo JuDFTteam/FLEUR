@@ -47,6 +47,12 @@ MODULE m_corespec_io
     csi%emx = 20.d0
     csi%ein = 0.1d0
 
+    csi%nqphi = 12
+    csi%nqr = 20
+    csi%alpha_ex=0.1 
+    csi%beta_ex=0.08 
+    csi%I0 = 10 
+
 ! reading of input parameters from 'corespec_inp' file
 
     call iounit(ui)
@@ -75,6 +81,48 @@ MODULE m_corespec_io
 ! sanity check of the input parameters; if they are not correct, program stops
 ! unit conversion if necessary
 ! if csi%verb = 1, detailed information is written to stdout
+
+!   csv%nqphi
+    if(csi%nqphi.lt.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%nqphi < 0 !"//csmsgerr ; stop
+    endif
+    csv%nqphi = csi%nqphi
+    if(csi%verb.eq.1) write(*,csmsgsis)  trim(smeno),&
+           &"Mesh number of angles: ","csi%nqphi = ",csv%nqphi,"will be used"
+ 
+! csi%nqr
+    if(csi%nqr.lt.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%nqr < 0 !"//csmsgerr ; stop
+    endif
+    csv%nqr = csi%nqr
+    if(csi%verb.eq.1) write(*,csmsgsis)  trim(smeno),&
+           &"Mesh number of radii: ","csi%nqr = ",csv%nqr,"will be used"
+
+! csi%alpha_ex
+    if(csi%alpha_ex.lt.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%alpha_ex < 0 !"//csmsgerr ; stop
+    endif
+    csv%alpha_ex = csi%alpha_ex
+    if(csi%verb.eq.1) write(*,csmsgsfs)  trim(smeno),&
+           &"Experimental convergence angle of incoming e-: ","csi%alpha_ex = ",csv%alpha_ex,"will be used"
+
+! csi%beta_ex
+    if(csi%beta_ex.lt.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%beta_ex < 0 !"//csmsgerr ; stop
+    endif
+    csv%beta_ex = csi%beta_ex
+    if(csi%verb.eq.1) write(*,csmsgsfs)  trim(smeno),&
+           &"Experimental convergence angle of outgoing e-: ","csi%beta_ex = ",csv%beta_ex,"will be used"
+
+! csi%I0
+    if(csi%I0.le.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%I0 <= 0 !"//csmsgerr ; stop
+    endif
+    csv%I0 = csi%I0
+    if(csi%verb.eq.1) write(*,csmsgsfs)  trim(smeno),&
+           &"Intensity of incoming electrons: ","csi%I0 = ",csv%I0,"will be used"
+
+
 
 ! csi%atomType
     if(csi%atomType.le.0) then
@@ -232,5 +280,7 @@ MODULE m_corespec_io
   end subroutine iounit
 !
 !===============================================================================
+
+
 
 end module m_corespec_io

@@ -545,6 +545,11 @@ MODULE m_types_setup
      real :: emn  ! energy spectrum lower bound
      real :: emx  ! energy spectrum upper bound
      real :: ein  ! energy spectrum increment
+     integer :: nqphi ! no. of angle-sectors for integral over q vectors
+     integer :: nqr   ! no. of radial-sectors for integral over q vectors
+     real :: alpha_ex  ! maximal angle of incoming electrons
+     real :: beta_ex   ! maximal (measured) angle of outcoming electrons
+     real :: I0        ! incoming intensity
   END TYPE t_coreSpecInput
 
 
