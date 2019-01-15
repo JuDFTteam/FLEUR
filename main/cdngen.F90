@@ -149,8 +149,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
 
+   CALL timestart("cdngen: cdncore")
    CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                 stars,cell,sphhar,atoms,vTot,outDen,moments,results)
+   CALL timestop("cdngen: cdncore")
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 
