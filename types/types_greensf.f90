@@ -11,7 +11,7 @@ MODULE m_types_greensf
 
       TYPE t_greensf 
 
-         INTEGER  :: ne       !number of energy grid points
+         INTEGER  :: ne       !number of energy grid points for imaginary part calculations
 
          !Cutoff parameters for energy integration
          REAL     :: e_top
@@ -22,6 +22,16 @@ MODULE m_types_greensf
          REAL     :: sigma       !Smoothing parameter
 
          LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration (not yet implemented)
+
+         !Energy contour parameters
+
+         INTEGER  :: mode 
+         INTEGER  :: n_in
+
+         INTEGER  :: nz
+
+         COMPLEX, ALLOCATABLE  :: e(:)
+         COMPLEX, ALLOCATABLE  :: de(:)
 
 
 
@@ -54,12 +64,30 @@ MODULE m_types_greensf
          thisGREENSF%e_bot    = input%ldahia_ebot
          thisGREENSF%sigma    = input%ldahia_sigma
          thisGREENSF%l_tetra  = input%ldahia_tetra
+         thisGREENSF%mode     = input%ldahia_mode
+         thisGREENSF%n_in     = input%ldahia_nz
+
 
          ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
          IF (thisGREENSF%l_tetra) THEN 
             ALLOCATE (thisGREENSF%qalmmpMat(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
             thisGREENSF%qalmmpMat   = 0.0 
          ENDIF
+
+         IF(thisGREENSF%mode.EQ.1) THEN
+            ALLOCATE (thisGREENSF%e(thisGREENSF%n_in))
+            ALLOCATE (thisGREENSF%de(thisGREENSF%n_in))
+
+            thisGREENSF%e(:) = CMPLX(0.0,0.0)
+            thisGREENSF%de(:)= CMPLX(0.0,0.0)
+         ELSE IF(thisGREENSF%mode.EQ.2) THEN
+            ALLOCATE (thisGREENSF%e(2**thisGREENSF%n_in))
+            ALLOCATE (thisGREENSF%de(2**thisGREENSF%n_in))
+
+            thisGREENSF%e(:) = CMPLX(0.0,0.0)
+            thisGREENSF%de(:)= CMPLX(0.0,0.0)
+         END IF
+
 
          thisGREENSF%gmmpMat     = CMPLX(0.0,0.0)
       END SUBROUTINE greensf_init

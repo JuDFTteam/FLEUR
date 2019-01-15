@@ -60,6 +60,8 @@ SUBROUTINE calc_qalmmpMat(atoms,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite)
       ENDDO
    ENDDO
 
+
+
 END SUBROUTINE calc_qalmmpMat
 
 
@@ -160,11 +162,11 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
 
    ALLOCATE (e(gOnsite%ne))
    ALLOCATE (im(gOnsite%ne))
+   
    del = (gOnsite%e_top - gOnsite%e_bot)/REAL(gOnsite%ne-1)
    DO i = 1, gOnsite%ne
       e(i) = del * (i-1) + gOnsite%e_bot
    ENDDO
-
 
    DO i_hia = 1,atoms%n_hia
       l = atoms%lda_hia(i_hia)%l
@@ -194,7 +196,7 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
       DO m= -l,l
          DO mp= -l,l
             im = AIMAG(gOnsite%gmmpMat(:,i_hia,m,mp,jspin))
-            CALL kkintgr(gOnsite%kkintgr_cut,gOnsite%sigma,del,im(:),gOnsite%gmmpMat(:,i_hia,m,mp,jspin),gOnsite%e_bot)
+            CALL kkintgr_real(gOnsite%kkintgr_cut,gOnsite%sigma,del,im(:),gOnsite%gmmpMat(:,i_hia,m,mp,jspin),gOnsite%e_bot)
          ENDDO
       ENDDO
 

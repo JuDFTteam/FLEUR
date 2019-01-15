@@ -438,6 +438,8 @@ MODULE m_types_setup
      REAL    :: ldahia_sigma
      INTEGER :: ldahia_ne
      LOGICAL :: ldahia_tetra
+     INTEGER :: ldahia_mode
+     INTEGER :: ldahia_nz
   END TYPE t_input
 
   TYPE t_sliceplot
