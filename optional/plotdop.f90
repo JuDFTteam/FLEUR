@@ -188,7 +188,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
       outFilenames(1) = 'plot'
    ELSE
       DO i = 1, numInFiles
-         outFilenames(i) = cdnFilenames(i)//'_pl'
+         outFilenames(i) = TRIM(ADJUSTL(cdnFilenames(i)))//'_pl'
       END DO
       IF (polar) THEN
          outFilenames(5) = 'mabs_pl'
