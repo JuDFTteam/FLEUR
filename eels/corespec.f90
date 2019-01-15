@@ -61,6 +61,11 @@ module m_corespec
      real, allocatable :: eloss(:,:)  ! efermi-eedge+egrid
      integer :: nen  ! minimum index for which egrid >=0
      integer :: nqv  ! no. of q vectors
+     integer :: nqphi ! no. of angle-sectors for integral over q vectors
+     integer :: nqr   ! no. of radial-sectors for integral over q vectors
+     real :: alpha_ex  ! maximal angle of incoming electrons
+     real :: beta_ex   ! maximal (measured) angle of outcoming electrons
+     real :: I0        ! incoming intensity
      real :: qv0  ! |q| of incoming electrons
      real, allocatable :: qv1(:,:,:)  ! |q| of outgoing electrons
      real, allocatable :: qv(:,:,:,:)  ! delta q vectors

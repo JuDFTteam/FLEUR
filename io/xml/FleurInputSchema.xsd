@@ -718,6 +718,11 @@
       <xsd:attribute name="eMax" type="xsd:double" use="required"/>
       <xsd:attribute name="numPoints" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute default="F" name="verbose" type="FleurBool" use="optional"/>
+      <xsd:attribute default="10" name="nqphi" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute default="10" name="nqr" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute default="0.024" name="alpha_Ex" type="xsd:double" use="optional"/>
+      <xsd:attribute default="0.05" name="beta_Ex" type="xsd:double" use="optional"/>
+      <xsd:attribute default="155" name="I_initial" type="xsd:double" use="optional"/>      
    </xsd:complexType>
 
    <xsd:complexType name="MagneticCircularDichroismType">

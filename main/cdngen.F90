@@ -45,6 +45,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IMPLICIT NONE
 
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
+#endif
+
    ! Type instance arguments
    TYPE(t_results),INTENT(INOUT)    :: results
    TYPE(t_mpi),INTENT(IN)           :: mpi
@@ -55,7 +59,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_vacuum),INTENT(IN)        :: vacuum
-   TYPE(t_noco),INTENT(IN)          :: noco
+   TYPE(t_noco),INTENT(INOUT)       :: noco
    TYPE(t_sym),INTENT(IN)           :: sym
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
@@ -83,7 +87,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy,eFermiPrev
-   INTEGER               :: jspin, jspmax
+   INTEGER               :: jspin, jspmax, ierr
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
@@ -155,8 +159,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
 
+   CALL timestart("cdngen: cdncore")
    CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                 stars,cell,sphhar,atoms,vTot,outDen,moments,results)
+   CALL timestop("cdngen: cdncore")
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 
@@ -171,6 +177,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
          CALL magMoms(dimension,input,atoms,noco_new,vTot,moments)
 
+         noco = noco_new
+
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
          IF (ANY(noco%l_relax(:atoms%ntype)).OR.noco%l_constr) THEN
@@ -178,10 +186,23 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          END IF
 
          IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,moments%clmom)
+         
       END IF
    END IF ! mpi%irank.EQ.0
 
 #ifdef CPP_MPI
+   CALL MPI_BCAST(noco%l_ss,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%l_mperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%l_constr,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%mix_b,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+
+   CALL MPI_BCAST(noco%alphInit,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%beta,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%l_relax,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%qss,3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
 

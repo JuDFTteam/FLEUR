@@ -30,6 +30,7 @@ CONTAINS
     CALL print_argument("-old")
     CALL print_argument("-genEnpara")
     CALL print_argument("-explicit")
+    CALL print_argument("-noco")
     CALL print_argument("-electronConfig")
     CALL print_argument("-fast_defaults")
     CALL print_argument("-kpts_gw")

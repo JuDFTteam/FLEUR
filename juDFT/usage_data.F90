@@ -83,7 +83,7 @@ CONTAINS
       use m_juDFT_args
       use m_juDFT_string
       IMPLICIT NONE
-      INTEGER            :: i,ierr,pid,dt(8)
+      INTEGER            :: i,ierr(2),pid,dt(8)
       CHARACTER(len=200) :: model, modelname, VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap
       INTEGER(8)         :: r
 #ifdef CPP_MPI
@@ -136,8 +136,8 @@ CONTAINS
          !Send using curl
          call execute_command_line(&
             'curl -X POST -H "Content-Type: application/json" -d @usage.json https://docker.iff.kfa-juelich.de/fleur-usage-stats/',&
-            exitstat=ierr)
-         if(ierr == 0) then
+            exitstat=ierr(1), cmdstat=ierr(2))
+         if(all(ierr == 0)) then
             write (*,*) "Usage data send using curl: usage.json"
          else
             write (*,*) "Usage data sending failed"
