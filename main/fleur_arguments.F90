@@ -13,7 +13,7 @@ MODULE m_fleur_arguments
      CHARACTER(len=200)  :: values
   END TYPE t_fleur_param
   
-  INTEGER,PARAMETER:: no_params=22
+  INTEGER,PARAMETER:: no_params=24
   TYPE(t_fleur_param) :: fleur_param(no_params)=(/&
        !Input options
        t_fleur_param(0,"-toXML","Convert an old 'inp' file into the new XML format",""),&
@@ -28,6 +28,9 @@ MODULE m_fleur_arguments
        t_fleur_param(1,"-diag","Choose method for diagonalization","lapack,debugout"&
 #ifdef CPP_SCALAPACK
        //",scalapack"&
+#endif
+#ifdef CPP_ELPA_ONENODE
+       //",elpa_1node"&
 #endif
 #ifdef CPP_ELPA
        //",elpa"&
@@ -57,6 +60,8 @@ MODULE m_fleur_arguments
        !Output
        t_fleur_param(0,"-no_out","Do not open the 'out' file but write to stdout",""),&
        t_fleur_param(0,"-genEnpara","Generate an 'enpara' file for the energy parameters",""),&
+       t_fleur_param(0,"-kpts_gw","add alternative k point set for GW in all outputs for the XML input file",""),&
+       t_fleur_param(0,"-noco","write out noco parameters in all outputs for inp.xml",""),&
        t_fleur_param(0,"-h","Print this message",""),&
        t_fleur_param(0,"-no_send","Do not send usage data","")&
        !HDF density

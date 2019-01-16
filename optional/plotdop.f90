@@ -134,7 +134,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 
    ! Read in charge/potential
    DO i = 1, numInFiles
-      CALL den(i)%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+      CALL den(i)%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                           CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
@@ -174,7 +174,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 
    ! Open the plot_inp file for input
    OPEN (18,file='plot_inp')
-   READ(18,'(i2,5x,l1,a)') nplot,xsf,textline
+   READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
    polar = .FALSE.
    IF ((noco%l_noco).AND.(numInFiles.EQ.4)) THEN
       polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
@@ -188,7 +188,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
       outFilenames(1) = 'plot'
    ELSE
       DO i = 1, numInFiles
-         outFilenames(i) = cdnFilenames(i)//'_pl'
+         outFilenames(i) = TRIM(ADJUSTL(cdnFilenames(i)))//'_pl'
       END DO
       IF (polar) THEN
          outFilenames(5) = 'mabs_pl'

@@ -298,7 +298,7 @@ CONTAINS
        globaltimer%starttime=-1
     ENDIF
     WRITE(fn,"('Total execution time: ',i0,'sec')") INT(globaltimer%time)
-    CALL add_usage_data("Runtime",INT(globaltimer%time))
+    CALL add_usage_data("Runtime",globaltimer%time)
     CALL priv_writetimes_longest(globaltimer,fid=fn)
 
     WRITE(fn,"('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &

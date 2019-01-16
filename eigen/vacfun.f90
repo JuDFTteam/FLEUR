@@ -2,7 +2,7 @@ MODULE m_vacfun
   use m_juDFT
 CONTAINS
   SUBROUTINE vacfun(&
-       vacuum,dimension,stars, jsp,input,noco,ipot,&
+       vacuum,DIMENSION,stars, jsp,input,noco,jsp1,jsp2,&
        sym, cell,ivac,evac,bkpt, vxy,vz,kvac1,kvac2,nv2,&
        tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
     !*********************************************************************
@@ -28,7 +28,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)        :: cell
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jsp ,ivac,ipot
+    INTEGER, INTENT (IN) :: jsp ,ivac,jsp1,jsp2
     REAL,    INTENT (OUT) :: wronk
     !     ..
     !     .. Array Arguments ..
@@ -46,13 +46,15 @@ CONTAINS
     !     .. Local Scalars ..
     REAL ev,scale,xv,yv,vzero
     COMPLEX phase
-    INTEGER i,i1,i2,i3,ik,ind2,ind3,jk,np1,jspin,jsp1,jsp2
+    INTEGER i,i1,i2,i3,ik,ind2,ind3,jk,np1,jspin
     LOGICAL tail
     !     ..
     !     .. Local Arrays ..
     REAL u(vacuum%nmzd,dimension%nv2d,input%jspins),ud(vacuum%nmzd,dimension%nv2d,input%jspins)
     REAL v(3),x(vacuum%nmzd), qssbti(2,2)
     !     ..
+    tuuv=0.0;tudv=0.0;tddv=0.0;tduv=0.0
+    udz=0.0;duz=0.0;ddnv=0.0;udz=0.;uz=0.
     tail = .true.
     np1 = vacuum%nmzxy + 1
     !--->    wronksian for the schrodinger equation given by an identity
@@ -85,21 +87,6 @@ CONTAINS
        enddo
     ENDDO
     !--->    set up the tuuv, etc. matrices
-    IF (noco%l_noco) THEN
-       IF (ipot.EQ.1) THEN
-          jsp1 = 1
-          jsp2 = 1
-       ELSEIF (ipot.EQ.2) THEN
-          jsp1 = 2
-          jsp2 = 2
-       ELSEIF (ipot.EQ.3) THEN
-          jsp1 = 2
-          jsp2 = 1
-       ENDIF
-    ELSE
-       jsp1 = jsp
-       jsp2 = jsp
-    ENDIF
     DO  ik = 1,nv2(jsp1)
        DO  jk = 1,nv2(jsp2)
 
@@ -173,7 +160,7 @@ CONTAINS
           ELSE
 
              !--->       diagonal (film muffin-tin) terms
-             IF ((ipot.EQ.1) .OR. (ipot.EQ.2)) THEN
+             IF (jsp1==jsp2) THEN
                 tuuv(ik,ik) = cmplx(evac(ivac,jsp1),0.0)
                 tddv(ik,ik) = cmplx(evac(ivac,jsp1)*ddnv(ik,jsp1),0.0)
                 tudv(ik,ik) = cmplx(0.5,0.0)

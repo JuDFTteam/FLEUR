@@ -25,6 +25,8 @@ CONTAINS
 #ifdef CPP_MPI
        write(*,*) "Number of MPI-tasks:  ",mpi%isize
        CALL add_usage_data("MPI-PE",mpi%isize)     
+#else
+       CALL add_usage_data("MPI-PE",1)     
 #endif
        IF (omp==-1) THEN
           write(*,*) "No OpenMP version of FLEUR."

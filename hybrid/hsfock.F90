@@ -45,10 +45,10 @@ MODULE m_hsfock
 CONTAINS
 
 SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,sym,cell,noco,&
-                  results,it,mnobd,xcpot,mpi,irank2,isize2,comm)
+                  results,it,mnobd,xcpot,mpi)
 
    USE m_types
-   USE m_symm_hf       ,ONLY: symm_hf
+   USE m_symm_hf
    USE m_util          ,ONLY: intgrf,intgrf_init
    USE m_exchange_valence_hf
    USE m_exchange_core
@@ -76,7 +76,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    ! scalars
    INTEGER,               INTENT(IN)    :: jsp 
    INTEGER,               INTENT(IN)    :: it
-   INTEGER,               INTENT(IN)    :: irank2 ,isize2,comm
    INTEGER,               INTENT(IN)    :: nk
    INTEGER,               INTENT(IN)    :: mnobd
 
@@ -89,8 +88,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    INTEGER                 ::  ikpt,ikpt0
    INTEGER                 ::  irec
    INTEGER                 ::  irecl_olap,irecl_z,irecl_vx
-   INTEGER                 ::  maxndb, nbasfcn
-   INTEGER                 ::  nddb
+   INTEGER                 ::  nbasfcn
    INTEGER                 ::  nsymop
    INTEGER                 ::  nkpt_EIBZ
    INTEGER                 ::  ncstd
@@ -98,12 +96,11 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    REAL                    ::  a_ex
 
    ! local arrays
-   INTEGER                 ::  gpt(3,lapw%nv(jsp))
-   INTEGER                 ::  degenerat(hybrid%ne_eig(nk))
    INTEGER                 ::  nsest(hybrid%nbands(nk)),indx_sest(hybrid%nbands(nk),hybrid%nbands(nk))
+   INTEGER                 ::  rrot(3,3,sym%nsym)
+   INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
 
-   INTEGER,ALLOCATABLE     ::  parent(:),symop(:)
-   INTEGER,ALLOCATABLE     ::  psym(:)
+   INTEGER,ALLOCATABLE     ::  parent(:)
    INTEGER,ALLOCATABLE     ::  pointer_EIBZ(:)
    INTEGER,ALLOCATABLE     ::  n_q(:)
 
@@ -112,10 +109,8 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    TYPE(t_mat)             :: olap,trafo,invtrafo,ex,tmp,v_x,z
    COMPLEX                 ::  exch(dimension%neigd,dimension%neigd)
    COMPLEX,ALLOCATABLE     ::  carr(:)
-   COMPLEX,ALLOCATABLE     ::  rep_c(:,:,:,:,:)
       
    CALL timestart("total time hsfock")
-   CALL timestart("symm_hf")
     
    ! preparations
 
@@ -125,11 +120,6 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    ! initialize weighting factor for HF exchange part
    a_ex=xcpot%get_exchange_weight()
 
-   ! write k1,k2,k3 in gpt
-   DO i=1,lapw%nv(jsp)
-      gpt(:,i) = (/lapw%k1(i,jsp),lapw%k2(i,jsp),lapw%k3(i,jsp)/)
-   END DO
-      
    ! read in lower triangle part of overlap matrix from direct acces file olap
    nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
    call olap%alloc(sym%invs,nbasfcn)
@@ -155,14 +145,17 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       IF( nk .eq. 1 .and. jsp .eq. 1 .and. input%imix .gt. 10) CALL system('rm -f broyd*')
       ! calculate all symmetrie operations, which yield k invariant
 
-      ALLOCATE( parent(kpts%nkptf),symop(kpts%nkptf) ,stat=ok)
-      IF( ok .ne. 0 ) STOP 'mhsfock: failure allocation parent/symop'
-      parent = 0 ; symop = 0
+      ALLOCATE(parent(kpts%nkptf), stat=ok)
+      IF(ok.NE.0) STOP 'mhsfock: failure allocation parent'
+      parent = 0
 
-      CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,gpt,mpi,irank2,&
-                   nsymop,psym,nkpt_EIBZ,n_q,parent,symop,degenerat,pointer_EIBZ,maxndb,nddb,nsest,indx_sest,rep_c)
+      CALL timestart("symm_hf")
+      CALL symm_hf_init(sym,kpts,nk,nsymop,rrot,psym)
 
+      CALL symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jsp,mpi,&
+                   rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
       CALL timestop("symm_hf")
+
       ! remove weights(wtkpt) in w_iks
       DO ikpt=1,kpts%nkptf
          DO iband=1,dimension%neigd
@@ -174,18 +167,24 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       ! calculate contribution from valence electrons to the
       ! HF exchange
       CALL timestart("valence exchange calculation")
-
       ex%l_real=sym%invs
       CALL exchange_valence_hf(nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,cell,dimension,input,jsp,hybdat,mnobd,lapw,&
                                eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,it,xcpot,noco,nsest,indx_sest,&
-                               mpi,irank2,isize2,comm,ex)
-
-      DEALLOCATE (rep_c)
+                               mpi,ex)
       CALL timestop("valence exchange calculation")
 
+      WRITE(1224,'(a,i7)') 'kpoint: ', nk
+      DO i = 1, ex%matsize1
+         DO j = 1, i
+            IF (ex%l_real) THEN
+               WRITE(1224,'(2i7,2f15.8)') i, j, ex%data_r(j,i) !ex%data_r(i,j), ex%data_r(j,i)
+            ELSE
+               WRITE(1224,'(2i7,4f15.8)') i, j, ex%data_c(j,i) !ex%data_c(i,j), ex%data_c(j,i)
+            ENDIF
+         END DO
+      END DO
+
       CALL timestart("core exchange calculation")
-      ! do the rest of the calculation only on master
-      IF (irank2 /= 0) RETURN
 
       ! calculate contribution from the core states to the HF exchange
       IF (xcpot%is_name("hse").OR.xcpot%is_name("vhse")) THEN
@@ -227,12 +226,45 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
          ENDDO
       ENDDO
 
+      WRITE(1225,'(a,i7)') 'kpoint: ', nk
+      DO i = 1, ex%matsize1
+         DO j = 1, i
+            IF (ex%l_real) THEN
+               WRITE(1225,'(2i7,2f15.8)') i, j, ex%data_r(i,j), ex%data_r(j,i)
+            ELSE
+               WRITE(1225,'(2i7,4f15.8)') i, j, ex%data_c(i,j), ex%data_c(j,i)
+            ENDIF
+         END DO
+      END DO
+
       CALL ex%multiply(invtrafo,tmp)
       CALL trafo%multiply(tmp,v_x)
         
       CALL timestop("time for performing T^-1*mat_ex*T^-1*")
 
-      CALL symmetrizeh(atoms,kpts%bkf(:,nk),dimension,jsp,lapw,gpt,sym,hybdat%kveclo_eig,cell,nsymop,psym,v_x)
+      WRITE(1231,'(a,i7)') 'kpoint: ', nk
+      DO i = 1, v_x%matsize1
+         DO j = 1, i
+            IF (v_x%l_real) THEN
+               WRITE(1231,'(2i7,1f15.8)') i, j, v_x%data_r(i,j)
+            ELSE
+               WRITE(1231,'(2i7,2f15.8)') i, j, v_x%data_c(i,j)
+            ENDIF
+         END DO
+      END DO
+
+      CALL symmetrizeh(atoms,kpts%bkf(:,nk),dimension,jsp,lapw,sym,hybdat%kveclo_eig,cell,nsymop,psym,v_x)
+
+      WRITE(1232,'(a,i7)') 'kpoint: ', nk
+      DO i = 1, v_x%matsize1
+         DO j = 1, i
+            IF (v_x%l_real) THEN
+               WRITE(1232,'(2i7,1f15.8)') i, j, v_x%data_r(j,i) ! Note the different indices in comparison to points above. This is wanted!
+            ELSE
+               WRITE(1232,'(2i7,2f15.8)') i, j, v_x%data_c(j,i) ! Note the different indices in comparison to points above. This is wanted!
+            ENDIF
+         END DO
+      END DO
 
       CALL write_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
    END IF ! hybrid%l_calhf

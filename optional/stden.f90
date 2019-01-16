@@ -68,7 +68,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    IF (input%jspins > input%jspins) CALL juDFT_error("input%jspins > input%jspins", calledby = "stden")
 
-   CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
    ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,input%jspins,atoms%ntype) )
    ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,input%jspins),rh1(DIMENSION%msh,atoms%ntype,input%jspins) )

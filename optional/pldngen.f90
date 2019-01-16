@@ -122,7 +122,7 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    !---> reload the density matrix from file rhomat_inp
    archiveType = CDN_ARCHIVE_TYPE_CDN1_const
    IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
-   CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
    IF (.NOT.sliceplot%slice) THEN
       CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                        0,fermiEnergyTemp,l_qfix,den)
@@ -141,7 +141,7 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    END IF
 
    IF (.NOT. sliceplot%slice) THEN
-      CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+      CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       den%iter = iter
       den%mt(:,0:,1:,:input%jspins) = rho(:,0:,1:,:input%jspins)
       den%pw(1:,:input%jspins) = qpw(1:,:input%jspins)
@@ -317,7 +317,7 @@ SUBROUTINE pldngen(sym,stars,atoms,sphhar,vacuum,&
    inp=input
    inp%jspins=1
 
-   CALL den%init(stars,atoms,sphhar,vacuum,inp%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,inp%jspins,POTDEN_TYPE_DEN)
    den%iter = iter
    den%mt(:,0:,1:,1:1) = rho(:,0:,1:,1:1)
    den%pw(1:,1:1) = qpw(1:,1:1)

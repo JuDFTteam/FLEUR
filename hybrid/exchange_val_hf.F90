@@ -58,7 +58,7 @@ CONTAINS
 
 SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension,input,jsp,hybdat,mnobd,lapw,&
                                eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,it,xcpot, noco,nsest,indx_sest,&
-                               mpi,irank2,isize2,comm,mat_ex)
+                               mpi,mat_ex)
 
    USE m_types
    USE m_wrapper
@@ -93,7 +93,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    TYPE(t_mat),           INTENT(INOUT) :: mat_ex
 
    ! scalars
-   INTEGER,               INTENT(IN)    :: it,irank2,isize2,comm
+   INTEGER,               INTENT(IN)    :: it
    INTEGER,               INTENT(IN)    :: jsp
    INTEGER,               INTENT(IN)    :: nk,nkpt_EIBZ
    INTEGER,               INTENT(IN)    :: mnobd 

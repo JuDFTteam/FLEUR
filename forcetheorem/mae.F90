@@ -39,11 +39,14 @@ CONTAINS
   END SUBROUTINE mae_init
     
 
-  SUBROUTINE mae_start(this)
+  SUBROUTINE mae_start(this,potden,l_io)
+    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
+    TYPE(t_potden) ,INTENT(INOUT)       :: potden
+    LOGICAL,INTENT(IN)                  :: l_io
     this%directions_done=0
-    CALL this%t_forcetheo%start() !call routine of basis type
+    CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
   END SUBROUTINE  mae_start
 
 
@@ -67,8 +70,8 @@ CONTAINS
        noco%theta=this%theta(this%directions_done)
        noco%phi=this%phi(this%directions_done)
        noco%l_soc=.true.
-       IF (this%directions_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_MAE')
-       CALL openXMLElementPoly('Forcetheorem_Loop_MAE',(/'No'/),(/this%directions_done/))
+       IF (this%directions_done.NE.1.AND.this%l_io) CALL closeXMLElement('Forcetheorem_Loop_MAE')
+       IF (this%l_io) CALL openXMLElementPoly('Forcetheorem_Loop_MAE',(/'No'/),(/this%directions_done/))
   END FUNCTION mae_next_job
 
   FUNCTION mae_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
@@ -111,17 +114,19 @@ CONTAINS
        RETURN
     ENDIF
     
-    !Now output the results
-    call closeXMLElement('Forcetheorem_Loop_MAE')
-    CALL openXMLElementPoly('Forcetheorem_MAE',(/'Angles'/),(/SIZE(this%evsum)/))
-    DO n=1,SIZE(this%evsum)
-       WRITE(attributes(1),'(f12.7)') this%theta(n)
-       WRITE(attributes(2),'(f12.7)') this%phi(n)
-       WRITE(attributes(3),'(f12.7)') this%evsum(n)     
-       CALL writeXMLElementForm('Angle',(/'theta ','phi   ','ev-sum'/),attributes,&
-                                   reshape((/5,3,6,12,12,12/),(/3,2/)))
-    END DO
-    CALL closeXMLElement('Forcetheorem_MAE')
+    IF (this%l_io) THEN
+       !Now output the results
+       CALL closeXMLElement('Forcetheorem_Loop_MAE')
+       CALL openXMLElementPoly('Forcetheorem_MAE',(/'Angles'/),(/SIZE(this%evsum)/))
+       DO n=1,SIZE(this%evsum)
+          WRITE(attributes(1),'(f12.7)') this%theta(n)
+          WRITE(attributes(2),'(f12.7)') this%phi(n)
+          WRITE(attributes(3),'(f12.7)') this%evsum(n)     
+          CALL writeXMLElementForm('Angle',(/'theta ','phi   ','ev-sum'/),attributes,&
+               RESHAPE((/5,3,6,12,12,12/),(/3,2/)))
+       END DO
+       CALL closeXMLElement('Forcetheorem_MAE')
+    ENDIF
     CALL judft_end("Forcetheorem MAE")
   END SUBROUTINE mae_postprocess
 

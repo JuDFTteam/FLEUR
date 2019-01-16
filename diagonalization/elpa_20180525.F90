@@ -71,6 +71,7 @@ CONTAINS
        CALL elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
        CALL elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
        CALL elpa_obj%set("blacs_context", hmat%blacsdata%blacs_desc(2), err)
+       CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
        err = elpa_obj%setup()
 
        CALL hmat%generate_full_matrix()

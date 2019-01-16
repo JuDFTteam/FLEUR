@@ -28,6 +28,7 @@
           USE m_setupMPI
           USE m_cdn_io
           USE m_fleur_info
+          USE m_broyd_io
           USE m_checks
           USE m_prpqfftmap
           USE m_writeOutHeader
@@ -183,6 +184,12 @@
                      l_kpts)
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
+#ifdef CPP_MPI
+#ifndef CPP_OLDINTEL
+             CALL mpi_dist_forcetheorem(mpi,forcetheo)
+#endif
+#endif
+            
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
@@ -208,9 +215,7 @@
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
                   kpts,enpara,sphhar,mpi,obsolete)
-#ifndef CPP_OLDINTEL
-             CALL mpi_dist_forcetheorem(mpi,forcetheo)
-#endif
+
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
@@ -519,10 +524,18 @@
           CALL add_usage_data("PlaneWaves",DIMENSION%nvd)
           CALL add_usage_data("LOs",atoms%nlotot)
           CALL add_usage_data("Iterations",input%itmax)
+          CALL add_usage_data("nkpt", kpts%nkpt)
+
+#ifdef CPP_GPU
+         CALL add_usage_data("gpu_per_node",1)
+#else
+         CALL add_usage_data("gpu_per_node",0)
+#endif
           
           CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN
+             IF(input%gw.NE.0) CALL resetBroydenHistory()
              CALL setStartingDensity(noco%l_noco)
           END IF
 

@@ -150,6 +150,9 @@ CONTAINS
                            WRITE(1233,'(2i7,2f15.8)') i, j, hmat%data_r(i,j), hmat%data_r(j,i)
                         END IF
                      ELSE
+                        IF ((i.LE.5).AND.(j.LE.5)) THEN
+                           WRITE(1233,'(2i7,4f15.8)') i, j, hmat%data_c(i,j), hmat%data_c(j,i)
+                        END IF
                      ENDIF
                   END DO
                END DO
@@ -170,6 +173,8 @@ CONTAINS
 
             l_wu=.FALSE.
             ne_all=DIMENSION%neigd
+            IF(ne_all < 0) ne_all = lapw%nmat
+            IF(ne_all > lapw%nmat) ne_all = lapw%nmat
 
             !Try to symmetrize matrix
             CALL symmetrize_matrix(mpi,noco,kpts,nk,hmat,smat)

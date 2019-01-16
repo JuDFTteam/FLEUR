@@ -36,10 +36,10 @@ CONTAINS
 
     CALL timestart("tlmplm")
     CALL td%init(DIMENSION%lmplmd,DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),&
-         DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2,input%jspins,&
+         DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2,MERGE(4,input%jspins,noco%l_mtNocoPot),&
          (noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.noco%l_constr)!l_offdiag
 
-    DO jsp=1,input%jspins
+    DO jsp=1,MERGE(4,input%jspins,noco%l_mtNocoPot)
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
        CALL tlmplm_cholesky(sphhar,atoms,noco,enpara,jsp,jsp,mpi,vTot,input,td,ud)
        IF (input%l_f) CALL write_tlmplm(td,vTot%mmpMat,atoms%n_u>0,jsp,jsp,input%jspins)

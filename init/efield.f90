@@ -964,15 +964,15 @@
 
       ELEMENTAL FUNCTION lower_case(string)
         CHARACTER(len=*), INTENT(IN) :: string
-        CHARACTER(len=20):: lower_case
+        CHARACTER(len=len(string))   :: lower_case
 
         INTEGER :: i
 
         DO i = 1, LEN (string)
-          IF (      IACHAR ('A') <= IACHAR (string(i:i))&
-     &        .and. IACHAR ('Z') >= IACHAR (string(i:i))) THEN
+          IF (      IACHAR ('A') <= IACHAR (string(i:i)) &
+              .and. IACHAR ('Z') >= IACHAR (string(i:i))) THEN
             lower_case(i:i) = ACHAR (IACHAR (string(i:i))&
-     &                        + IACHAR ('a') - IACHAR ('A'))
+                              + IACHAR ('a') - IACHAR ('A'))
           ELSE
             lower_case(i:i) = string(i:i)
           END IF

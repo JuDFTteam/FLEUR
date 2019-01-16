@@ -7,22 +7,22 @@ global/radsra.f
 global/radsrd.F
 global/radsrdn.f
 global/soc_sym.f
-global/sort.f
 global/ss_sym.f
 global/starf.f
 global/triang.f
 global/vacudz.f
 global/vacuz.f
 global/abcrot.f
-global/savewigner.f
 global/differ.f
 )
 set(fleur_F90 ${fleur_F90}
 global/constants.f90
+global/savewigner.f90
 #global/differ.f90
 global/matrix_copy.F90
 global/checkdop.F90
 global/checkdopall.f90
+global/sort.f90
 global/genMTBasis.f90
 global/chkmt.f90
 global/convn.f90

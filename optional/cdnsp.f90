@@ -54,7 +54,7 @@
 
           IF (input%jspins/=2) CALL juDFT_error("cdnsp: set jspins = 2 and remove fl7para!", calledby ="cdnsp")
 
-          CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
+          CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
           input%jspins=1
           CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)

@@ -1,21 +1,21 @@
-      MODULE m_exchpbe
-c----------------------------------------------------------------------
-c     pbe exchange for a spin-unpolarized electronic system
-c     k burke's modification of pw91 codes, may 14, 1996
-c     modified again by k. burke, june 29, 1996, with simpler fx(s)
-c     inclusion of HSE function by M. Schlipf 2009
-c----------------------------------------------------------------------
-c     references:
-c     [a]j.p.~perdew, k.~burke, and m.~ernzerhof, submiited to prl, may96
-c     [b]j.p. perdew and y. wang, phys. rev.  b {\bf 33},  8800  (1986);
-c     {\bf 40},  3399  (1989) (e).
-c     [c] B.~Hammer, L.~B.~Hansen and J.~K.~Norskov PRB 59 7413 (1999)
-c     [d] J.~Heyd, G.~E.~Scuseria, M.~Ernzerhof, J. Chem. Phys. {\bf 118},
-c     8207 (2003) 
-c----------------------------------------------------------------------
-      CONTAINS
-      SUBROUTINE exchpbe(xcpot,rho,s,u,v,lgga,lpot,
-     <     ex,vx,vx_sr)
+MODULE m_exchpbe
+!----------------------------------------------------------------------
+!     pbe exchange for a spin-unpolarized electronic system
+!     k burke's modification of pw91 codes, may 14, 1996
+!     modified again by k. burke, june 29, 1996, with simpler fx(s)
+!     inclusion of HSE function by M. Schlipf 2009
+!----------------------------------------------------------------------
+!     references:
+!     [a]j.p.~perdew, k.~burke, and m.~ernzerhof, submiited to prl, may96
+!     [b]j.p. perdew and y. wang, phys. rev.  b {\bf 33},  8800  (1986);
+!     {\bf 40},  3399  (1989) (e).
+!     [c] B.~Hammer, L.~B.~Hansen and J.~K.~Norskov PRB 59 7413 (1999)
+!     [d] J.~Heyd, G.~E.~Scuseria, M.~Ernzerhof, J. Chem. Phys. {\bf 118},
+!     8207 (2003)
+!----------------------------------------------------------------------
+CONTAINS
+   SUBROUTINE exchpbe(xcpot,rho,s,u,v,lgga,lpot, &
+                      ex,vx,vx_sr)
 !      USE m_hsefunctional, ONLY: calculateEnhancementFactor
       USE m_constants,     ONLY: pi_const
       USE m_types_xcpot_data
@@ -46,9 +46,9 @@ c----------------------------------------------------------------------
       REAL, PARAMETER :: thrd4=4.e0/3.e0
       REAL, PARAMETER :: ax=-0.738558766382022405884230032680836e0 ! -0.75*(3/pi)^(1/3)
 
-c----------------------------------------------------------------------
-c     uk, ul defined after [a](13)  (for icorr==7)
-c----------------------------------------------------------------------
+!----------------------------------------------------------------------
+!     uk, ul defined after [a](13)  (for icorr==7)
+!----------------------------------------------------------------------
 !      IF (xcpot%is_name("pbe").OR.xcpot%is_name("wc").OR.
 !     +     xcpot%is_name("PBEs")) THEN
 !         uk=0.8040
@@ -68,25 +68,24 @@ c----------------------------------------------------------------------
 !         um=0.2195149727645171e0
 !      ENDIF
 
-      
       ul=xcpot%um/xcpot%uk
-c----------------------------------------------------------------------
-c     construct lda exchange energy density: 
-!     e_x[unif] = -0.75 * (3/pi)^(1/3) * rho^(4/3)  
-c----------------------------------------------------------------------
+!----------------------------------------------------------------------
+!     construct lda exchange energy density:
+!     e_x[unif] = -0.75 * (3/pi)^(1/3) * rho^(4/3)
+!----------------------------------------------------------------------
       exunif = ax*rho**thrd
-      IF (lgga.EQ.0) THEN
+      IF (lgga == 0) THEN
          ex = exunif
          vx = ex*thrd4
          RETURN
       ENDIF
-c----------------------------------------------------------------------
-c     construct pbe enhancement factor
-c     e_x[pbe]=e_x[unif]*fxpbe(s)
-c     fxpbe(s)=1+xcpot%uk-xcpot%uk/(1+ul*s*s)                 [a](13)
-c----------------------------------------------------------------------
+!----------------------------------------------------------------------
+!     construct pbe enhancement factor
+!     e_x[pbe]=e_x[unif]*fxpbe(s)
+!     fxpbe(s)=1+xcpot%uk-xcpot%uk/(1+ul*s*s)                 [a](13)
+!----------------------------------------------------------------------
       s2 = s*s
-      
+
 !     calculate fxpbe
       p0 = 1.e0 + ul*s2
       fxpbe = 1e0 + xcpot%uk - xcpot%uk/p0
@@ -99,30 +98,30 @@ c----------------------------------------------------------------------
          p0 = 1.e0 + xwu/xcpot%uk
          fxpbe = 1e0 + xcpot%uk - xcpot%uk/p0
       ENDIF
-c     -gu
+!     -gu
 !     Mixing of short and long range components
       IF (xcpot%is_hse) THEN
-!     ex = (1-a)ex,SR + ex,LR
-!     = (1-a)ex,SR + (ex,PBE - ex,SR)
-!     = (fxpbe - a*fxhse)*exunif
-!     Calculate the enhancement factor fxhse and its derivatives 
-!     as integral over the exchange hole (cf. [d])
+         !     ex = (1-a)ex,SR + ex,LR
+         !     = (1-a)ex,SR + (ex,PBE - ex,SR)
+         !     = (fxpbe - a*fxhse)*exunif
+         !     Calculate the enhancement factor fxhse and its derivatives
+         !     as integral over the exchange hole (cf. [d])
          kF = (3.0 * pi_const**2 * rho)**thrd
          CALL judft_error("HSE not implemented",calledby="exchpbe")
-         !This creates a depency loop
-!     CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2,
-!     &        dFx_dkF, d2Fx_dsdkF)
+         ! his creates a depency loop
+         !     CALL calculateEnhancementFactor(kF, s, fxhse, dFx_ds, d2Fx_ds2,
+         !     &        dFx_dkF, d2Fx_dsdkF)
          ex = exunif * (fxpbe - xcpot%exchange_weight * fxhse )
       ELSE
          ex = exunif*fxpbe
       END IF
-      IF (lpot.EQ.0) RETURN
-c----------------------------------------------------------------------
-c     energy done. now the potential:
-c     find first and second derivatives of fx w.r.t s.
-c     fs=(1/s)*d fxpbe/ ds
-c     fss=d fs/ds
-c----------------------------------------------------------------------
+      IF (lpot == 0) RETURN
+!----------------------------------------------------------------------
+!     energy done. now the potential:
+!     find first and second derivatives of fx w.r.t s.
+!     fs=(1/s)*d fxpbe/ ds
+!     fss=d fs/ds
+!----------------------------------------------------------------------
 !     derivatives for the pbe part
       fs = 2.e0*xcpot%uk*ul/ (p0*p0)
       fss = -4.e0*ul*s*fs/p0
@@ -132,27 +131,27 @@ c----------------------------------------------------------------------
       ELSEIF (xcpot%is_wc) THEN
          dxwu = 2*teo + 2*(xcpot%um-teo)*exp(-s2)*(1-s2) + 4*cwu*s2/css
          fs = dxwu / (p0*p0)
-         ddx = 4*s*((xcpot%um-teo)*exp(-s2)*(s2-2)+2*cwu*
-     &        (1-cwu*s2*s2)/css**2)
+         ddx = 4*s*((xcpot%um-teo)*exp(-s2)*(s2-2)+2*cwu* &
+                    (1-cwu*s2*s2)/css**2)
          fss = ( ddx - 2*s*dxwu*dxwu/(p0*xcpot%uk) ) / (p0*p0)
       ENDIF
-c     -gu
-c----------------------------------------------------------------------
-c     calculate potential from [b](24)
-c----------------------------------------------------------------------
+!     -gu
+!----------------------------------------------------------------------
+!     calculate potential from [b](24)
+!----------------------------------------------------------------------
       vx = exunif* (thrd4*fxpbe- (u-thrd4*s2*s)*fss-v*fs)
 
-      IF (.not.(xcpot%is_hse)) RETURN
+      IF ( .NOT. (xcpot%is_hse)) RETURN
 
-c----------------------------------------------------------------------
-c     short ranged potential (HSE functional)
-c----------------------------------------------------------------------
+!----------------------------------------------------------------------
+!     short ranged potential (HSE functional)
+!----------------------------------------------------------------------
 !     calculate fs and fss for the HSE functional
 !     where the 1st and 2nd derivative of Fx are known
       fs    = dFx_ds / s
       fss   = (d2Fx_ds2 - fs) / s
-      vx_sr = exunif * ( thrd4*fxhse - (u-thrd4*s2*s)*fss - v*fs
-     &     + thrd*kF * ( dFx_dkF - d2Fx_dsdkF*s ) )
+      vx_sr = exunif * ( thrd4*fxhse - (u-thrd4*s2*s)*fss - v*fs &
+                        + thrd*kF * ( dFx_dkF - d2Fx_dsdkF*s ) )
 
-      END SUBROUTINE exchpbe
-      END 
+   END SUBROUTINE exchpbe
+END MODULE m_exchpbe

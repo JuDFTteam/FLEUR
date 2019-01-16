@@ -22,10 +22,10 @@ CONTAINS
 
     !     .. Array Arguments ..
     REAL,                INTENT(IN)    :: we(:)!(nobd)
-    COMPLEX,             INTENT(INOUT) :: uu21(atoms%lmaxd,atoms%ntype)
-    COMPLEX,             INTENT(INOUT) :: ud21(atoms%lmaxd,atoms%ntype)
-    COMPLEX,             INTENT(INOUT) :: du21(atoms%lmaxd,atoms%ntype)
-    COMPLEX,             INTENT(INOUT) :: dd21(atoms%lmaxd,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: uu21(0:atoms%lmaxd,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: ud21(0:atoms%lmaxd,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: du21(0:atoms%lmaxd,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: dd21(0:atoms%lmaxd,atoms%ntype)
     COMPLEX,             INTENT(INOUT) :: uulo21(atoms%nlod,atoms%ntype)
     COMPLEX,             INTENT(INOUT) :: dulo21(atoms%nlod,atoms%ntype)
     COMPLEX,             INTENT(INOUT) :: ulou21(atoms%nlod,atoms%ntype)

@@ -122,7 +122,7 @@ SUBROUTINE w_inpXML(&
    IF (PRESENT(name_opt)) name=name_opt
 
    l_explicit = l_explicitIn.OR.l_outFile
-   l_nocoOpt = noco%l_noco!.OR.juDFT_was_argument("-noco")
+   l_nocoOpt = noco%l_noco.OR.juDFT_was_argument("-noco")
 
    symFilename = 'sym.out'
    kptGamma = l_gamma
@@ -279,6 +279,13 @@ SUBROUTINE w_inpXML(&
       212 FORMAT('         <kPointDensity denX="',f0.6,'" denY="',f0.6,'" denZ="',f0.6,'" gamma="',l1,'"/>')
       WRITE (fileNum,212) kpts%kPointDensity(1),kpts%kPointDensity(2),kpts%kPointDensity(3),kptGamma
    END IF
+
+   IF(juDFT_was_argument("-kpts_gw")) THEN
+      WRITE(fileNum,'(a)') '         <altKPointSet purpose="GW">'
+      WRITE(fileNum,'(a)') '            <kPointListFile filename="kpts_gw"/>'
+      WRITE(fileNum,'(a)') '         </altKPointSet>'
+   END IF
+
    WRITE (fileNum,'(a)') '      </bzIntegration>'
 
 !      <energyParameterLimits ellow="-2.00000" elup="2.00000"/>
