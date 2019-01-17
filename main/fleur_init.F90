@@ -102,8 +102,7 @@
           INQUIRE(file='inp',exist=l_found)
           IF (input%l_inpXML) THEN
              !xml found, we will use it, check if we also have a inp-file
-             IF (l_found) &
-                  CALL judft_warn("Both inp & inp.xml given.",calledby="fleur_init",hint="Please delete one of the input files")
+             IF (l_found) CALL judft_warn("Both inp & inp.xml given.", calledby="fleur_init",hint="Please delete one of the input files")
           ELSE
              IF (.NOT.l_found) CALL judft_error("No input file found",calledby='fleur_init',hint="To use FLEUR, you have to provide either an 'inp' or an 'inp.xml' file in the working directory")
           END IF
@@ -190,9 +189,11 @@
 #endif
 #endif
             
+             CALL timestart("postprocessInput") 
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
+             CALL timestop("postprocessInput") 
 
              IF (mpi%irank.EQ.0) THEN
                 filename = ''
