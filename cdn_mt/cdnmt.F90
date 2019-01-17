@@ -10,7 +10,7 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
+  SUBROUTINE cdnmt(mpi,jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
                    vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
@@ -19,6 +19,7 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
+    TYPE(t_mpi),     INTENT(IN)    :: mpi
     TYPE(t_usdus),   INTENT(INOUT) :: usdus !in fact only the lo part is intent(in)
     TYPE(t_noco),    INTENT(IN)    :: noco
     TYPE(t_sphhar),  INTENT(IN)    :: sphhar
@@ -54,6 +55,7 @@ CONTAINS
 
     CALL timestart("cdnmt")
 
+   IF (mpi%irank==0) THEN
     IF (noco%l_mperp) THEN
        IF (denCoeffsOffdiag%l_fmpl) THEN
           !ALLOCATE ( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
@@ -244,6 +246,7 @@ CONTAINS
        ENDDO
     ENDDO
 
+   ENDIF !(mpi%irank==0) THEN
     CALL timestop("cdnmt")
 
  

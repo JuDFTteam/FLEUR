@@ -459,6 +459,8 @@ CONTAINS
        END IF
 
     END DO scfloop ! DO WHILE (l_cont)
+   
+    CALL add_usage_data("Iterations",iter)
 
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
 

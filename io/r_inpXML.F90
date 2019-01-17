@@ -34,6 +34,7 @@ CONTAINS
       USE m_calculator
       USE m_constants
       USE m_inpeig
+      USE m_inpnoco
       USE m_sort
       USE m_types_xcpot_inbuild
 #ifdef CPP_LIBXC
@@ -122,7 +123,7 @@ CONTAINS
       REAL               :: tauTemp(3,48)
       REAL               :: bk(3)
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
-      LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp, tempBool
+      LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
       REAL               :: weightScale, eParamUp, eParamDown
@@ -1987,6 +1988,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             coreSpecInput%emx = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eMax'))
             tempInt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numPoints'))
             coreSpecInput%ein = (coreSpecInput%emx - coreSpecInput%emn) / (tempInt - 1.0)
+            coreSpecInput%nqphi = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nqphi'))
+            coreSpecInput%nqr = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nqr'))
+            coreSpecInput%alpha_ex = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@alpha_Ex'))
+            coreSpecInput%beta_ex = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@beta_Ex'))
+            coreSpecInput%I0 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@I_initial'))
             xPathB = TRIM(ADJUSTL(xPathA))//'/edgeIndices'
             xPathB = TRIM(ADJUSTL(xPathB))//'/text()'
             valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))
@@ -2128,6 +2134,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       INQUIRE (file ='enpara',exist= l_enpara)
       IF (l_enpara) THEN
          CALL enpara%READ(atoms,input%jspins,input%film,.FALSE.)
+      END IF
+
+      ! Read in nocoinp file iff available
+      l_nocoinp = .FALSE.
+      INQUIRE (file ='nocoinp',exist= l_nocoinp)
+      IF (l_nocoinp) THEN
+         CALL inpnoco(atoms,input,vacuum,noco)
       END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
