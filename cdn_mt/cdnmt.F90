@@ -72,6 +72,7 @@ CONTAINS
 
     CALL timestart("cdnmt")
 
+    IF (mpi%irank==0) THEN
     ALLOCATE(rho_loc(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd))
     ALLOCATE(chmom(atoms%ntype,jsp_start:jsp_end)) 
     IF (noco%l_mperp) THEN
@@ -105,7 +106,7 @@ CONTAINS
     qmtl = 0
     
     !$OMP DO
-    DO itype = 1 + mpi%irank, atoms%ntype, mpi%isize
+    DO itype = 1 + mpi%irank, atoms%ntype!, mpi%isize
        na = 1
        DO i = 1, itype - 1
           na = na + atoms%neq(i)
@@ -254,6 +255,7 @@ CONTAINS
     !$OMP END PARALLEL
 
 #ifdef CPP_MPI
+    IF (.false.) THEN
     n_buf=atoms%jmtd*(1+sphhar%nlhd)*atoms%ntype*jspd
     ALLOCATE(buf_r(n_buf))
     CALL MPI_REDUCE(rho_loc(1,0,1,1),buf_r,n_buf,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -281,13 +283,14 @@ CONTAINS
        IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n_buf,buf_c,1,qa21(1),1)
        DEALLOCATE (buf_c)
     ENDIF
+    ENDIF
 #endif 
     rho = rho + rho_loc
     moments%chmom(:,jsp_start:jsp_end) = chmom(:,jsp_start:jsp_end)
     IF (noco%l_mperp) moments%qa21 = moments%qa21 + qa21
     IF (noco%l_soc)   moments%clmom(:,:,jsp_start:jsp_end) = clmom(:,:,jsp_start:jsp_end)
 
-    IF (mpi%irank==0) THEN
+    !IF (mpi%irank==0) THEN
        WRITE (6,FMT=8000)
        WRITE (16,FMT=8000)
 8000   FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
