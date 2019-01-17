@@ -11,31 +11,26 @@ MODULE m_types_greensf
 
       TYPE t_greensf 
 
+         !Energy grid for Imaginary part
          INTEGER  :: ne       !number of energy grid points for imaginary part calculations
-
-         !Cutoff parameters for energy integration
-         REAL     :: e_top
+         REAL     :: e_top    !Cutoff energies
          REAL     :: e_bot
-
+         REAL     :: sigma       !Smoothing parameter
          INTEGER  :: kkintgr_cut !cutoff for the kramers-kronig integration
 
-         REAL     :: sigma       !Smoothing parameter
-
-         LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration (not yet implemented)
+         LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration
 
          !Energy contour parameters
+         INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
+         INTEGER  :: nz    !number of points in the contour
 
-         INTEGER  :: mode 
-         INTEGER  :: n_in
+         !array for energy contour
+         COMPLEX, ALLOCATABLE  :: e(:)  !energy points
+         COMPLEX, ALLOCATABLE  :: de(:) !weights for integration
 
-         INTEGER  :: nz
-
-         COMPLEX, ALLOCATABLE  :: e(:)
-         COMPLEX, ALLOCATABLE  :: de(:)
-
-
-
-         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:)  
+         !Arrays for Green's function
+         REAL, ALLOCATABLE :: im_gmmpMat(:,:,:,:,:)   !the imaginary part is stored in a different array because the number of energy points can differ
+         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:)   
          REAL, ALLOCATABLE :: qalmmpMat(:,:,:,:,:,:) 
 
          CONTAINS
@@ -58,38 +53,48 @@ MODULE m_types_greensf
          TYPE(t_kpts),           INTENT(IN)     :: kpts
          TYPE(t_dimension),      INTENT(IN)     :: dimension
 
-         !Cutoffs need to be calculated and sigma can probably taken from somewhere else
+         INTEGER n
+
+         !Parameters for calculation of the imaginary part
          thisGREENSF%ne       = input%ldahia_ne
          thisGREENSF%e_top    = input%ldahia_etop
          thisGREENSF%e_bot    = input%ldahia_ebot
          thisGREENSF%sigma    = input%ldahia_sigma
+
          thisGREENSF%l_tetra  = input%ldahia_tetra
-         thisGREENSF%mode     = input%ldahia_mode
-         thisGREENSF%n_in     = input%ldahia_nz
+
+         !Parameters for the energy contour in the complex plan
+         !We use default values for now
+         !thisGREENSF%mode     = input%ldahia_mode
+         thisGREENSF%mode = 2
+         n = 7
+
+          IF(thisGREENSF%mode.EQ.1) THEN
+            !thisGREENSF%nz = input%ldahia_nin
+         ELSE IF(thisGREENSF%mode.EQ.2) THEN
+            !n = input%ldahia_nin
+            IF(n.LT.2) n = 2
+            IF(n.GT.7) n = 7
+            thisGREENSF%nz = 2**n
+         END IF
+
+         ALLOCATE (thisGREENSF%e(thisGREENSF%nz))
+         ALLOCATE (thisGREENSF%de(thisGREENSF%nz))
+         thisGREENSF%e(:) = CMPLX(0.0,0.0)
+         thisGREENSF%de(:)= CMPLX(0.0,0.0)
 
 
-         ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
          IF (thisGREENSF%l_tetra) THEN 
             ALLOCATE (thisGREENSF%qalmmpMat(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
             thisGREENSF%qalmmpMat   = 0.0 
          ENDIF
 
-         IF(thisGREENSF%mode.EQ.1) THEN
-            ALLOCATE (thisGREENSF%e(thisGREENSF%n_in))
-            ALLOCATE (thisGREENSF%de(thisGREENSF%n_in))
+         ALLOCATE (thisGREENSF%im_gmmpMat(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+         ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
 
-            thisGREENSF%e(:) = CMPLX(0.0,0.0)
-            thisGREENSF%de(:)= CMPLX(0.0,0.0)
-         ELSE IF(thisGREENSF%mode.EQ.2) THEN
-            ALLOCATE (thisGREENSF%e(2**thisGREENSF%n_in))
-            ALLOCATE (thisGREENSF%de(2**thisGREENSF%n_in))
-
-            thisGREENSF%e(:) = CMPLX(0.0,0.0)
-            thisGREENSF%de(:)= CMPLX(0.0,0.0)
-         END IF
-
-
+         thisGREENSF%im_gmmpMat     = 0.0
          thisGREENSF%gmmpMat     = CMPLX(0.0,0.0)
+
       END SUBROUTINE greensf_init
 
 END MODULE m_types_greensf
