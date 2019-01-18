@@ -398,7 +398,7 @@ CONTAINS
 #endif
 
       IF (mpi%irank==0) THEN
-         CALL cdnmt(input%jspins,atoms,sphhar,noco,jsp_start,jsp_end,&
+         CALL cdnmt(mpi, input%jspins,atoms,sphhar,noco,jsp_start,jsp_end,&
                     enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,kinED%mt)
          IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
          DO ispin = jsp_start,jsp_end
@@ -429,10 +429,14 @@ CONTAINS
 
       call zPrime%free()
       call zPrime%init(zMat)
-   
+
       do basis_idx = 1,size(lapw%gvec,dim=2)
          fac = kpt(dim_idx) + lapw%gvec(dim_idx,basis_idx,1)
-         zPrime%data_r(basis_idx,:) = fac * zPrime%data_r(basis_idx,:) 
+         if(zPrime%l_real) then
+            zPrime%data_r(basis_idx,:) = fac * zPrime%data_r(basis_idx,:) 
+         else
+            zPrime%data_c(basis_idx,:) = fac * zPrime%data_c(basis_idx,:) 
+         endif
       enddo
    end subroutine set_zPrime
 END MODULE m_metagga
