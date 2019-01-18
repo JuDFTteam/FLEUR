@@ -69,7 +69,7 @@ CONTAINS
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)
-          DO lh = 1, nh
+          DO lh = MERGE(1,0,jspin<3), nh
              lamda = sphhar%llh(lh,nsym)
              lmin = lp - l
              lmx = lp + l
@@ -117,7 +117,7 @@ CONTAINS
           lmp = lp* (lp+1) + mp
           lmpl = (lmp* (lmp+1))/2
           !--->    loop over lattice harmonics
-          DO lh = 1, nh
+          DO lh = MERGE(1,0,jspin<3), nh
              lamda = sphhar%llh(lh,nsym)
              lmin0 = abs(lp-lamda)
              IF (lmin0.GT.lp) CYCLE
