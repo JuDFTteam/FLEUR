@@ -174,7 +174,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
 
    ! Open the plot_inp file for input
    OPEN (18,file='plot_inp')
-   READ(18,'(i2,5x,l1,a)') nplot,xsf,textline
+   READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
    polar = .FALSE.
    IF ((noco%l_noco).AND.(numInFiles.EQ.4)) THEN
       polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
@@ -188,7 +188,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
       outFilenames(1) = 'plot'
    ELSE
       DO i = 1, numInFiles
-         outFilenames(i) = cdnFilenames(i)//'_pl'
+         outFilenames(i) = TRIM(ADJUSTL(cdnFilenames(i)))//'_pl'
       END DO
       IF (polar) THEN
          outFilenames(5) = 'mabs_pl'

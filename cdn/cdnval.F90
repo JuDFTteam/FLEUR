@@ -282,8 +282,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    END DO
 #endif
 
-   !IF (mpi%irank==0) THEN
-      CALL cdnmt(mpi,input%jspins,atoms,sphhar,noco,jsp_start,jsp_end,&
+   CALL cdnmt(mpi,input%jspins,atoms,sphhar,noco,jsp_start,jsp_end,&
                  enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt)
    IF (mpi%irank==0) THEN
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
