@@ -16,8 +16,7 @@ MODULE m_types_greensf
          REAL     :: e_top    !Cutoff energies
          REAL     :: e_bot
          REAL     :: sigma       !Smoothing parameter
-         INTEGER  :: kkintgr_cut !cutoff for the kramers-kronig integration
-
+     
          LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration
 
          !Energy contour parameters
@@ -67,14 +66,15 @@ MODULE m_types_greensf
          !We use default values for now
          !thisGREENSF%mode     = input%ldahia_mode
          thisGREENSF%mode = 2
-         n = 7
+         n = 6
 
           IF(thisGREENSF%mode.EQ.1) THEN
             !thisGREENSF%nz = input%ldahia_nin
          ELSE IF(thisGREENSF%mode.EQ.2) THEN
             !n = input%ldahia_nin
+            !ensure that we don't flood the memory accidentally
             IF(n.LT.2) n = 2
-            IF(n.GT.7) n = 7
+            !IF(n.GT.7) n = 7
             thisGREENSF%nz = 2**n
          END IF
 

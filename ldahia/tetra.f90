@@ -18,7 +18,7 @@ SUBROUTINE int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,qal,eig,ne,g,top,bot)
    INTEGER,                INTENT(IN)     :: nevk(nkpt)
    REAL,                   INTENT(IN)     :: qal(neigd,nkpt)
    REAL,                   INTENT(IN)     :: eig(neigd,nkpt)
-   COMPLEX,                INTENT(INOUT)  :: g(ne)
+   REAL   ,                INTENT(INOUT)  :: g(ne)
    REAL,                   INTENT(IN)     :: top
    REAL,                   INTENT(IN)     :: bot
 
@@ -90,7 +90,7 @@ SUBROUTINE contr_singletetra(g,mean,ev,vol,ne,top,bot)
    REAL,                   INTENT(INOUT)  :: ev(4)
    REAL,                   INTENT(IN)     :: mean
    REAL,                   INTENT(IN)     :: vol, top, bot
-   COMPLEX,                INTENT(INOUT)  :: g(ne)
+   REAL,                   INTENT(INOUT)  :: g(ne)
    
    INTEGER i , j, n
    REAL emin, emax, e
@@ -146,21 +146,21 @@ SUBROUTINE contr_singletetra(g,mean,ev,vol,ne,top,bot)
          !If emin and emax are inside the same energy step we use a different formula (from where?)
          IF(nstart.EQ.nend) THEN
             deln = (emax-emin)/del * (a + b*(emax+emin) + c *((emax+emin)**2-emax*emin))
-            IF((nstart.LE.ne).AND.(nstart.GE.1)) g(nstart) = g(nstart) + ImagUnit * deln * mean
+            IF((nstart.LE.ne).AND.(nstart.GE.1)) g(nstart) = g(nstart) + deln * mean
          ELSE
             !Part of the integral between emin and the first grid point
             deln = aw/del * (a + b*(2*emin+aw) + c*((2*emin+aw)**2-emin*(emin+aw)))
-            IF((nstart.LE.ne).AND.(nstart.GE.1)) g(nstart) = g(nstart) + ImagUnit *  deln * mean
+            IF((nstart.LE.ne).AND.(nstart.GE.1)) g(nstart) = g(nstart) + deln * mean
             e = emin + aw
             !loop over grid points between emin and emax
             DO n = nstart + 1, nend-1 
                deln = (a + b*(2*e+del) + c*((2*e+del)**2-e*(e+del)))
-               IF((n.LE.ne).AND.(n.GE.1)) g(n) = g(n) + ImagUnit * deln * mean
+               IF((n.LE.ne).AND.(n.GE.1)) g(n) = g(n) + deln * mean
                e = e + del
             ENDDO
             !Part of the integral between the last grid point before emax and emax
             deln = bw/del * (a + b*(2*e+bw) + c*((2*e+bw)**2-e*(e+bw)))
-            IF((nend.LE.ne).AND.(nend.GE.1)) g(nend) = g(nend) + ImagUnit * deln * mean
+            IF((nend.LE.ne).AND.(nend.GE.1)) g(nend) = g(nend) + deln * mean
          ENDIF
       ENDDO
    ENDIF  

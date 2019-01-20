@@ -118,7 +118,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
     IF (atoms%n_hia.GT.0) THEN
       DO jspin = 1, jspmax
          CALL calc_onsite(atoms,jspin,input%jspins,dimension%neigd,kpts%ntet,kpts%nkpt,kpts%ntetra(1:4,:),kpts%voltet(:),&
-                                                results%neig(:,jspin),results%eig(:,:,jspin),gOnsite)
+                                                results%neig(:,jspin),results%eig(:,:,jspin),gOnsite,results%ef,sym)
       ENDDO
    ENDIF
 
