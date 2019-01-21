@@ -25,7 +25,7 @@ SUBROUTINE calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite
    INTEGER,                INTENT(IN)     :: ikpt
    INTEGER,                INTENT(IN)     :: ispin
 
-   INTEGER i_hia, n, l, natom, i,nn,m,lm,mp,lmp, it,is, isi
+   INTEGER i_hia, n, l, natom, i,nn,m,lm,mp,lmp, it,is, isi, ilo, ilop
    REAL fac
 
    COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -60,9 +60,37 @@ SUBROUTINE calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite
                                    usdus%ddn(l,n,ispin))
                ENDDO
             ENDDO
+            !
+            ! add local orbital contribution
+            !
+            DO ilo = 1, atoms%nlo(n)
+               IF(atoms%llo(ilo,n).EQ.l) THEN
 
-            !TODO: add local orbital contribution
+                  DO m = -l, l
+                     lm = l*(l+1)+m
+                     DO mp = -l, l
+                        lmp = l*(l+1)+mp
 
+                        n_tmp(m,mp) = n_tmp(m,mp) - pi_const *(  usdus%uulon(ilo,n,ispin) * (&
+                                 conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
+                                 conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) )&
+                                 + usdus%dulon(ilo,n,ispin) * (&
+                                 conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
+                                 conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin)))
+
+                        DO ilop = 1, atoms%nlo(n)
+                           IF (atoms%llo(ilop,n).EQ.l) THEN
+
+                            n_tmp(m,mp) = n_tmp(m,mp) - pi_const * usdus%uloulopn(ilo,ilop,n,ispin) *&
+                                 conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,i,ilo,natom,ispin)
+
+                           ENDIF
+                        ENDDO
+
+                     ENDDO
+                  ENDDO
+               ENDIF
+            ENDDO
             !
             !  n_mmp should be rotated by D_mm' ; compare force_a21; taken from n_mat.f90
             !
@@ -124,7 +152,7 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
    REAL,                   INTENT(IN)     :: wtkpt
    REAL,                   INTENT(IN)     :: eig(noccbd)
 
-   INTEGER i_hia, i, j, n, nn, natom, l, m, mp, lm, lmp, it,is, isi
+   INTEGER i_hia, i, j, n, nn, natom, l, m, mp, lm, lmp, it,is, isi, ilo, ilop
    REAL fac, wk
 
    COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -161,9 +189,37 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
                                       usdus%ddn(l,n,ispin))
                   ENDDO
                ENDDO
+               !
+               ! add local orbital contribution
+               !
+               DO ilo = 1, atoms%nlo(n)
+                  IF(atoms%llo(ilo,n).EQ.l) THEN
 
-               !TODO: add local orbital contribution
+                     DO m = -l, l
+                        lm = l*(l+1)+m
+                        DO mp = -l, l
+                           lmp = l*(l+1)+mp
 
+                           n_tmp(m,mp) = n_tmp(m,mp) - pi_const *(  usdus%uulon(ilo,n,ispin) * (&
+                                    conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
+                                    conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) )&
+                                    + usdus%dulon(ilo,n,ispin) * (&
+                                    conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
+                                    conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin)))
+
+                           DO ilop = 1, atoms%nlo(n)
+                              IF (atoms%llo(ilop,n).EQ.l) THEN
+
+                               n_tmp(m,mp) = n_tmp(m,mp) - pi_const * usdus%uloulopn(ilo,ilop,n,ispin) *&
+                                    conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,i,ilo,natom,ispin)
+
+                              ENDIF
+                           ENDDO
+
+                        ENDDO
+                     ENDDO
+                  ENDIF
+               ENDDO
                !
                !  n_mmp should be rotated by D_mm' ; compare force_a21; taken from n_mat.f90
                !
