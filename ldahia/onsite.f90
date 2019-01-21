@@ -125,13 +125,12 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
    REAL,                   INTENT(IN)     :: eig(noccbd)
 
    INTEGER i_hia, i, j, n, nn, natom, l, m, mp, lm, lmp, it,is, isi
-   REAL fac, wk, del
+   REAL fac, wk
 
    COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
    COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
-   del = (gOnsite%e_top - gOnsite%e_bot)/REAL(gOnsite%ne-1)
-   wk = 2.*wtkpt/REAL(jspins)/del
+   wk = 2.*wtkpt/REAL(jspins)/gOnsite%del
 
    !One HIA per atom at the moment
 
@@ -148,7 +147,7 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
       DO nn = 1, atoms%neq(n)
          natom = natom +1
          DO i = 1, noccbd
-            j = NINT((eig(i)-gOnsite%e_bot)/del)+1
+            j = NINT((eig(i)-gOnsite%e_bot)/gOnsite%del)+1
             IF( (j.LE.gOnsite%ne).AND.(j.GE.1) ) THEN
                n_tmp(:,:) = cmplx(0.0,0.0)
                DO m = -l, l
@@ -223,18 +222,8 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
    REAL,                   INTENT(IN)     :: ef
 
    INTEGER i, i_hia, l, m, mp
-   REAL del
 
-   REAL, ALLOCATABLE :: e(:), im(:)
-   !construct an energy grid for smoothing (required by the function in m_smooth)
-
-   ALLOCATE (e(gOnsite%ne))
-   ALLOCATE (im(gOnsite%ne))
-   
-   del = (gOnsite%e_top - gOnsite%e_bot)/REAL(gOnsite%ne-1)
-   DO i = 1, gOnsite%ne
-      e(i) = del * (i-1) + gOnsite%e_bot
-   ENDDO
+   REAL, ALLOCATABLE :: e(:)   
 
    DO i_hia = 1,atoms%n_hia
       l = atoms%lda_hia(i_hia)%l
@@ -249,8 +238,16 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
             END IF
             
             !smooth the imaginary part using gaussian broadening 
-            IF(gOnsite%sigma.NE.0.0) CALL smooth(e(:),gOnsite%im_gmmpMat(:,i_hia,m,mp,jspin),gOnsite%sigma,gOnsite%ne)
+            IF(gOnsite%sigma.NE.0.0) THEN
 
+               !construct an energy grid for smoothing (required by the function in m_smooth)
+               ALLOCATE (e(gOnsite%ne))
+               DO i = 1, gOnsite%ne
+                  e(i) = gOnsite%del * (i-1) + gOnsite%e_bot
+               ENDDO
+               CALL smooth(e(:),gOnsite%im_gmmpMat(:,i_hia,m,mp,jspin),gOnsite%sigma,gOnsite%ne)
+
+            ENDIF
          ENDDO
       ENDDO
 
@@ -264,10 +261,10 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
       DO m= -l,l
          DO mp= -l,l
             IF(gOnsite%mode.EQ.1) THEN
-               CALL kkintgr_real(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,del,gOnsite%e_bot,&
+               CALL kkintgr_real(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
                                  gOnsite%im_gmmpMat(:,i_hia,m,mp,jspin),gOnsite%gmmpMat(:,i_hia,m,mp,jspin))
             ELSE IF(gOnsite%mode.EQ.2) THEN
-               CALL kkintgr_complex(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,del,gOnsite%e_bot,&
+               CALL kkintgr_complex(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
                                     gOnsite%im_gmmpMat(:,i_hia,m,mp,jspin),gOnsite%gmmpMat(:,i_hia,m,mp,jspin))
             END IF
          ENDDO
@@ -304,7 +301,7 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
    INTEGER i_hia, i,l, m,mp, ispin, j, n_c, kkintgr_cut
 
-   REAL integral, del
+   REAL integral
 
    REAL a,b
    LOGICAL l_write
@@ -331,7 +328,6 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
       fDOS(:) = -1/pi_const * fDOS(:)
 
-      del = (gOnsite%e_top-gOnsite%e_bot)/REAL(gOnsite%ne-1)
 
       IF(l_write) THEN
 
@@ -339,7 +335,7 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
          DO j = 1, gOnsite%ne
 
-            WRITE(1337,*) (j-1) * del + gOnsite%e_bot, fDOS(j)
+            WRITE(1337,*) (j-1) * gOnsite%del + gOnsite%e_bot, fDOS(j)
 
          ENDDO
 
@@ -349,7 +345,7 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
 
 
-      CALL trapz(fDOS(:), del, gOnsite%ne, integral)
+      CALL trapz(fDOS(:), gOnsite%del, gOnsite%ne, integral)
 
       WRITE(*,*) "Integral over fDOS: ", integral
 
@@ -368,13 +364,13 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
          DO
 
-            n_c = INT(((a+b)/2.0-gOnsite%e_bot)/del)+1
+            n_c = INT(((a+b)/2.0-gOnsite%e_bot)/gOnsite%del)+1
             
-            CALL trapz(fDOS(:),del,n_c,integral)
+            CALL trapz(fDOS(:),gOnsite%del,n_c,integral)
 
-            IF((ABS(integral-14).LT.0.001).OR.(ABS(a-b)/2.0.LT.del)) THEN
+            IF((ABS(integral-14).LT.0.001).OR.(ABS(a-b)/2.0.LT.gonsite%del)) THEN
 
-               kkintgr_cut = INT(((a+b)/2.0-gOnsite%e_bot)/del)+1
+               kkintgr_cut = INT(((a+b)/2.0-gOnsite%e_bot)/gOnsite%del)+1
                EXIT
 
             ELSE IF((integral-14).LT.0) THEN
@@ -385,7 +381,7 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
          ENDDO
 
-         CALL trapz(fDOS(:),del,kkintgr_cut,integral)
+         CALL trapz(fDOS(:),gOnsite%del,kkintgr_cut,integral)
 
          WRITE(*,*) "CALCULATED CUTOFF: ", kkintgr_cut
          WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral

@@ -15,7 +15,10 @@ MODULE m_types_greensf
          INTEGER  :: ne       !number of energy grid points for imaginary part calculations
          REAL     :: e_top    !Cutoff energies
          REAL     :: e_bot
-         REAL     :: sigma       !Smoothing parameter
+         REAL     :: del
+
+
+         REAL     :: sigma       !Smoothing parameter(not used at the moment)
      
          LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration
 
@@ -61,6 +64,9 @@ MODULE m_types_greensf
          thisGREENSF%sigma    = input%ldahia_sigma
 
          thisGREENSF%l_tetra  = input%ldahia_tetra
+
+         !set up energy grid for imaginary part
+         thisGREENSF%del = (thisGREENSF%e_top-thisGREENSF%e_bot)/REAL(thisGREENSF%ne-1)
 
          !Parameters for the energy contour in the complex plan
          !We use default values for now
