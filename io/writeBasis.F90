@@ -316,7 +316,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
             CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
             write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
-            CALL h5oexists_by_name_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
+            CALL h5lexists_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
             IF (link_exists) CYCLE
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------enter output gvec etc here--------------------
@@ -449,7 +449,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
             CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
             write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
-            CALL h5oexists_by_name_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
+            CALL h5lexists_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
             IF (link_exists) CYCLE
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------abcoff, zmat, eig output here-------------------
