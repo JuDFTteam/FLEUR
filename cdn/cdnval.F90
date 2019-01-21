@@ -236,11 +236,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
          IF (PRESENT(gOnsite)) THEN
+            CALL timestart("On-Site: Setup")
             IF (gOnsite%l_tetra) THEN
                CALL calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite)
             ELSE
                CALL im_gmmpMathist(atoms,sym,ispin,input%jspins,noccbd,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
             ENDIF
+            CALL timestop("On-Site: Setup")
          ENDIF
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum

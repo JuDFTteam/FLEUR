@@ -200,6 +200,7 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
 
    USE m_types
    USE m_constants
+   USE m_juDFT
    USE m_tetra
    USE m_smooth
    USE m_kkintgr
@@ -227,6 +228,7 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
 
    DO i_hia = 1,atoms%n_hia
       l = atoms%lda_hia(i_hia)%l
+      CALL timestart("On-Site: Tetrahedron method")
       DO m = -l, l
          DO mp = -l,l
 
@@ -250,6 +252,7 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
             ENDIF
          ENDDO
       ENDDO
+      CALL timestop("On-Site: Tetrahedron method")
 
 
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
@@ -258,6 +261,7 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
 
       CALL energy_contour(gOnsite,ef)
 
+      CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO m= -l,l
          DO mp= -l,l
             IF(gOnsite%mode.EQ.1) THEN
@@ -269,6 +273,7 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
             END IF
          ENDDO
       ENDDO
+      CALL timestop("On-Site: Kramer-Kronigs-Integration")
 
       CALL calc_occ_from_g(gOnsite,atoms,jspins,ef,sym)
 
