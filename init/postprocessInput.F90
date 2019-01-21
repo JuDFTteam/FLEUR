@@ -466,7 +466,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Calculate additional symmetry information
 
-     IF (atoms%n_u.GT.0) THEN
+     IF ((atoms%n_u.GT.0).OR.(atoms%n_hia.GT.0)) THEN
         CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
      END IF
      IF (.NOT.oneD%odd%d1) THEN
