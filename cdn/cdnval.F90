@@ -237,9 +237,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
          IF (PRESENT(gOnsite)) THEN
             IF (gOnsite%l_tetra) THEN
-               CALL calc_qalmmpMat(atoms,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite)
+               CALL calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite)
             ELSE
-               CALL im_gmmpMathist(atoms,ispin,input%jspins,noccbd,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
+               CALL im_gmmpMathist(atoms,sym,ispin,input%jspins,noccbd,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
             ENDIF
          ENDIF
          ! perform Brillouin zone integration and summation over the

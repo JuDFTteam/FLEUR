@@ -21,13 +21,12 @@ MODULE m_occupation
       INTEGER,                INTENT(IN)     :: jspins
       REAL,                   INTENT(IN)     :: ef
 
-      INTEGER i, m,mp, l, i_hia, ispin,it,is,isi, n, natom,nn
-      REAL fac
+      INTEGER i, m,mp, l, i_hia, ispin
+      REAL n_l
       !Uśe similar structure to lda+u later
       COMPLEX,ALLOCATABLE :: mmpmat(:,:,:,:)
       CHARACTER(len=30) :: filename
-      COMPLEX n_tmp(-3:3,-3:3),nr_tmp(-3:3,-3:3),d_tmp(-3:3,-3:3)
-      COMPLEX n1_tmp(-3:3,-3:3)
+
 
       ALLOCATE(mmpmat(atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins))
 
@@ -36,7 +35,6 @@ MODULE m_occupation
       DO i_hia = 1, atoms%n_hia
 
          l = atoms%lda_hia(i_hia)%l
-         n = atoms%lda_hia(i_hia)%atomType
 
          DO ispin = 1, jspins
             DO m = -l, l
@@ -44,36 +42,18 @@ MODULE m_occupation
 
                   DO i = 1, g%nz
 
-                     n_tmp(m,mp) = n_tmp(m,mp) + AIMAG(g%gmmpMat(i,i_hia,m,mp,ispin)*g%de(i))
+                     mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + AIMAG(g%gmmpMat(i,i_hia,m,mp,ispin)*g%de(i))
 
                   ENDDO
 
-                  n_tmp(m,mp) = -1/pi_const * n_tmp(m,mp)
+                  mmpmat(i_hia,m,mp,ispin) = -1/pi_const * mmpmat(i_hia,m,mp,ispin)
                ENDDO
             ENDDO
-
-            DO nn = 1, atoms%neq(n) 
-               natom = natom + 1
-               DO it = 1, sym%invarind(natom)
-
-                   fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
-                   is = sym%invarop(natom,it)
-                   isi = sym%invtab(is)
-                   d_tmp(:,:) = cmplx(0.0,0.0)
-                   DO m = -l,l
-                      DO mp = -l,l
-                         d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
-                      ENDDO
-                   ENDDO
-                   nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
-                   n1_tmp =  matmul( nr_tmp, d_tmp )
-                   DO m = -l,l
-                      DO mp = -l,l
-                         mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac
-                      ENDDO
-                   ENDDO
-               ENDDO
+            n_l = 0.0
+            DO m =-l, l
+               n_l = n_l + mmpmat(i_hia,m,m,ispin)
             ENDDO
+            WRITE(*,*) "OCCUPATION: ", n_l
          ENDDO
       ENDDO 
 
