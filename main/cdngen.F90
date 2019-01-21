@@ -251,7 +251,7 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
 
    enddo
 
-   kindED = 0.5 * kinED
+   kinED = 0.5 * kinED
    
    call finish_pw_grid()
 
