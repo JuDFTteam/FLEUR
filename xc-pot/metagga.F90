@@ -28,7 +28,19 @@ CONTAINS
          write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
          kinEnergyDen_RS = max(kinEnergyDen_RS, eps)
       endif
+      write (*,*) "kinED shape:", shape(kinEnergyDen_RS)
 
+      if(all(shape(kinEnergyDen_RS) == [6144,1])) then
+         write (*,*) "write old"
+         open(unit=69, file="kinED_pw_schroeway.dat")
+         write (69,*) kinEnergyDen_RS
+         close(69)
+
+         write (*,*) "read new"
+         open(unit=69, file="kin_ED_pwway.dat")
+         read(69,*) kinEnergyDen_RS
+         close(69)
+      endif
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
 #endif
