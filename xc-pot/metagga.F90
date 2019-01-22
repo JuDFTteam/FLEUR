@@ -22,7 +22,12 @@ CONTAINS
       REAL, PARAMETER                  :: eps = 1e-15
 
       !implicit allocation
+      call give_stats(EnergyDen_RS, array_name="ED_RS")
+      call give_stats(vTot_RS, array_name="vTot_RS")
+      call give_stats(den_RS, array_name="den_RS")
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
+      call give_stats(kinEnergyDen_RS, array_name="kin_ED_RS")
+      write (*,*) ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
       if(any(kinEnergyDen_RS < eps)) then
          write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
@@ -33,7 +38,7 @@ CONTAINS
       if(all(shape(kinEnergyDen_RS) == [6144,1])) then
          write (*,*) "write old"
          open(unit=69, file="kinED_pw_schroeway.dat")
-         write (69,*) kinEnergyDen_RS
+         write (69,'(ES17.10)') kinEnergyDen_RS
          close(69)
 
          write (*,*) "read new"
@@ -45,6 +50,20 @@ CONTAINS
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
 #endif
    END SUBROUTINE calc_kinEnergyDen
+
+   SUBROUTINE give_stats(array, array_name)
+      implicit none
+      real, intent(in)           :: array(:,:)
+      character(len=*), optional :: array_name
+      
+      write (*,*) "#############################"
+      if(present(array_name)) write (*,*) "Array = ", array_name
+      write (*,'(A,ES17.10)') "min    = ", minval(array)
+      write (*,'(A,ES17.10)') "max    = ", maxval(array)
+      write (*,'(A,ES17.10)') "mean   = ", sum(array) / size(array)
+      write (*,*) "#############################"
+   END SUBROUTINE give_stats
+
 
    SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
                              vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)

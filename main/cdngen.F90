@@ -257,7 +257,7 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
 
    write (*,*) "kED shape =", shape(kinED)
    open(unit=69, file="kin_ED_pwway.dat")
-   write (69,*) kinED
+   write (69,'(ES17.10)') kinED
    close(69)
 end subroutine save_kinED
 
