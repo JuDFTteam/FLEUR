@@ -565,6 +565,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          l_kpts = .TRUE.
          kpts%specificationType = 3
          kpts%posScale=1.0
+
+         ! We need to set input%film for inpeig. Unfortunately this is actually initialized at a later stage.
+         ! So we do it here additionally.
+         input%film = .FALSE.
+         numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/filmLattice')
+         IF (numberNodes.EQ.1) input%film = .TRUE.
+
          CALL inpeig(atoms,cell,input,.FALSE.,kpts,kptsFilename=TRIM(ADJUSTL(valueString)))
       END IF
 
