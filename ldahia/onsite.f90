@@ -337,7 +337,7 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
       !
       CALL greensf_cutoff(gOnsite,atoms,jspins)
 
-      CALL energy_contour(gOnsite,ef)
+      CALL gOnsite%init_e_contour(ef)
 
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO m= -l,l
@@ -353,7 +353,7 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
 
-      CALL calc_occ_from_g(gOnsite,atoms,jspins,ef,sym)
+      CALL gOnsite%calc_mmpmat(atoms,jspins)
 
 
    ENDDO
