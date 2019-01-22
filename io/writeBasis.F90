@@ -114,6 +114,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
       integer(HSIZE_T)  :: Hdim1(4)
       INTEGER           :: lmn, na,lm,n,nn, m
       complex,parameter :: img=(0.,1.)
+      REAL              :: bk(3)
 
       LOGICAL l_zref,l_real, link_exists
       INTEGER jsp,nk,l,itype
@@ -314,8 +315,12 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 !        DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
          DO nk = 1,kpts%nkpt
             CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
+            bk(:) = kpts%bk(:,nk)
+            IF(abs(bk(1)).LT.1e-7) bk(1) = abs(bk(1))
+            IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
+            IF(abs(bk(3)).LT.1e-7) bk(3) = abs(bk(3))
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
-            write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
+            write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',bk(1),',',bk(2),',',bk(3)
             CALL h5lexists_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
             IF (link_exists) CYCLE
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
@@ -447,8 +452,12 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 !      DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
        DO nk = 1,kpts%nkpt
             CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
+            bk(:) = kpts%bk(:,nk)
+            IF(abs(bk(1)).LT.1e-7) bk(1) = abs(bk(1))
+            IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
+            IF(abs(bk(3)).LT.1e-7) bk(3) = abs(bk(3))
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
-            write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
+            write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',bk(1),',',bk(2),',',bk(3)
             CALL h5lexists_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
             IF (link_exists) CYCLE
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
