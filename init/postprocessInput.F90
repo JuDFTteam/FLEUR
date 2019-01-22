@@ -506,6 +506,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Generate stars
 
+     CALL timestart("strgn") 
      IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
         CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
         IF (oneD%odd%d1) THEN
@@ -514,6 +515,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      ELSE
         CALL strgn2(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
      END IF
+     CALL timestop("strgn") 
 
      ! Other small stuff
 
@@ -546,7 +548,9 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
+  CALL timestart("stepf") 
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
+  CALL timestop("stepf") 
   IF (.NOT.sliceplot%iplot) THEN   
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)

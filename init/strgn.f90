@@ -8,6 +8,9 @@ MODULE m_strgn
   !     implementation of new box-dimension: to treat nonorthogonal
   !     lattice systems
   !     S. Bl"ugel, IFF, 17.Nov.97
+  !
+  !     OpenMP paralleliation added
+  !     U.Alekseeva          Jan.2019
   !     *********************************************************
 CONTAINS
   SUBROUTINE strgn1(&
@@ -752,6 +755,10 @@ CONTAINS
        stars%rgphs(:,:,:) = cmplx(1.0,0.0)
     ELSE
        pon = 1.0 / sym%nop
+       !$OMP PARALLEL DO &
+       !$OMP DEFAULT(none) &
+       !$OMP SHARED(mxx1,mxx2,mxx3,stars,nfftx,nffty,nfftz,nfftxy,pon) &
+       !$OMP PRIVATE(k1,k2,k3,k,kfx,kfy,kfz,kfft,kidx,i)
        DO k3 = -mxx3,mxx3
           DO k2 = -mxx2,mxx2
              DO k1 = -mxx1,mxx1
@@ -772,6 +779,7 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO
+       !OMP END PARALLLEL DO
     ENDIF
     if ( stars%mx1 < mxx1 .or. stars%mx2 < mxx2 .or. stars%mx3 < mxx3 ) call &
          judft_error("BUG 1 in strgen") 
@@ -782,7 +790,9 @@ CONTAINS
     ENDIF
 
     !--->    write /str0/ and /str1/ to file
+    CALL timestart("writeStars") 
     CALL writeStars(stars,l_xcExtended,.FALSE.)
+    CALL timestop("writeStars") 
 
 270 CONTINUE
 

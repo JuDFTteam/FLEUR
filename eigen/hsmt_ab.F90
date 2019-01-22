@@ -227,7 +227,7 @@ CONTAINS
     !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fj,gj,abclo,cell,atoms) &
     !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n) &
     !$OMP& PRIVATE(k,vmult,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec)
-    DO k = 1,lapw%nv(1)
+    DO k = 1,lapw%nv(iintsp)
        !-->    generate spherical harmonics
        vmult(:) =  gkrot(:,k)
        CALL ylm4(lmax,vmult,ylm)
