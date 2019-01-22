@@ -48,6 +48,14 @@ SUBROUTINE calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOn
 
       DO nn = 1, atoms%neq(n)
          natom = natom +1
+         fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
+         !$OMP PARALLEL DEFAULT(none) &
+         !$OMP SHARED(natom,l,n,ispin,ikpt,noccbd,i_hia,fac) &
+         !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,gOnsite,eig) &
+         !$OMP PRIVATE(m,mp,lm,lmp,ilo,ilop,it,is,isi) &
+         !$OMP PRIVATE(n_tmp,n1_tmp,nr_tmp,d_tmp)
+
+         !$OMP DO
          DO i = 1, noccbd
             IF(eig(i).LT.gonsite%e_top) THEN
                n_tmp(:,:) = cmplx(0.0,0.0)
@@ -101,7 +109,6 @@ SUBROUTINE calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOn
                !
                DO it = 1, sym%invarind(natom)
 
-                  fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
                   is = sym%invarop(natom,it)
                   isi = sym%invtab(is)
                   d_tmp(:,:) = cmplx(0.0,0.0)
@@ -124,6 +131,8 @@ SUBROUTINE calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOn
                gOnsite%qalmmpMat(i,ikpt,i_hia,:,:,ispin) = 0.0
             END IF
          ENDDO !loop over bands
+         !$OMP END DO
+         !$OMP END PARALLEL
       ENDDO !loop over equivalent atoms
    ENDDO !loop over number of DFT+HIAs
 
@@ -178,6 +187,14 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
 
       DO nn = 1, atoms%neq(n)
          natom = natom +1
+         fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
+         !$OMP PARALLEL DEFAULT(none) &
+         !$OMP SHARED(natom,l,n,ispin,wk,noccbd,i_hia,fac) &
+         !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,gOnsite,eig) &
+         !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,it,is,isi) &
+         !$OMP PRIVATE(n_tmp,n1_tmp,nr_tmp,d_tmp)
+
+         !$OMP DO
          DO i = 1, noccbd
             j = NINT((eig(i)-gOnsite%e_bot)/gOnsite%del)+1
             IF( (j.LE.gOnsite%ne).AND.(j.GE.1) ) THEN
@@ -231,7 +248,6 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
                !
                DO it = 1, sym%invarind(natom)
 
-                  fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
                   is = sym%invarop(natom,it)
                   isi = sym%invtab(is)
                   d_tmp(:,:) = cmplx(0.0,0.0)
@@ -253,6 +269,8 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
                ENDDO
             ENDIF
          ENDDO
+         !$OMP END DO
+         !$OMP END PARALLEL
       ENDDO
    ENDDO
 
