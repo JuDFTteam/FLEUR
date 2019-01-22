@@ -70,17 +70,15 @@ MODULE m_types_greensf
 
          !Parameters for the energy contour in the complex plan
          !We use default values for now
-         !thisGREENSF%mode     = input%ldahia_mode
-         thisGREENSF%mode = 2
-         n = 6
+         thisGREENSF%mode     = input%ldahia_mode
 
           IF(thisGREENSF%mode.EQ.1) THEN
-            !thisGREENSF%nz = input%ldahia_nin
+            thisGREENSF%nz = input%ldahia_nin
          ELSE IF(thisGREENSF%mode.EQ.2) THEN
-            !n = input%ldahia_nin
+            n = input%ldahia_nin
             !ensure that we don't flood the memory accidentally
             IF(n.LT.2) n = 2
-            !IF(n.GT.7) n = 7
+            IF(n.GT.7) n = 7
             thisGREENSF%nz = 2**n
          END IF
 

@@ -693,11 +693,15 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%ldahia_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
          input%ldahia_ne = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ne'))
          input%ldahia_tetra = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_tetra'))
+         input%ldahia_mode = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mode'))
+         input%ldahia_nin = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nz'))
       END IF
 
       IF((input%ldahia_tetra).AND.(.NOT.input%tria)) THEN
          CALL juDFT_error("Tetrahedron method not set up with this k-point-set but l_tetra is true", calledby="r_inpXML")
       ENDIF
+
+      IF(input%ldahia_mode.GT.2) CALL juDFT_error("No valid mode for the energy contour of Green's function", calledby="r_inpXML")
 
 
       ! Read in optional q point mesh for spin spirals
@@ -1366,6 +1370,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%lda_u(atoms%n_u)%atomType = iType
                END DO
                IF (numHIA.EQ.1) THEN
+                  input%l_hia = .true. !We only set this switch to true if there are actual atoms calculated with DFT+HIA
                   atoms%n_hia = atoms%n_hia + 1
                   atoms%lda_hia(atoms%n_hia)%l        = ldahia_l
                   atoms%lda_hia(atoms%n_hia)%atomType = iType

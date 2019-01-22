@@ -436,10 +436,11 @@ MODULE m_types_setup
      REAL    :: ldahia_etop
      REAL    :: ldahia_ebot
      REAL    :: ldahia_sigma
+     LOGICAL :: l_hia !this switch is used to make sure, that all bands are included in the calculation
      INTEGER :: ldahia_ne
      LOGICAL :: ldahia_tetra
      INTEGER :: ldahia_mode
-     INTEGER :: ldahia_nz
+     INTEGER :: ldahia_nin
   END TYPE t_input
 
   TYPE t_sliceplot

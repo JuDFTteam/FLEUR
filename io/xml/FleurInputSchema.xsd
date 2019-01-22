@@ -601,11 +601,13 @@
    </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">
-      <xsd:attribute name="e_top" type="xsd:string" use="required"/>
-      <xsd:attribute name="e_bot" type="xsd:string" use="required"/>
-      <xsd:attribute name="ne" type="xsd:nonNegativeInteger" use="required"/>
-      <xsd:attribute name="sigma" type="xsd:string" use="required"/>
+      <xsd:attribute name="e_top" type="xsd:string" use="optional"/>
+      <xsd:attribute name="e_bot" type="xsd:string" use="optional"/>
+      <xsd:attribute name="ne" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="sigma" type="xsd:string" use="optional"/>
       <xsd:attribute name="l_tetra" type="FleurBool" use="optional"/>
+      <xsd:attribute name="mode" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="nz" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="DOSOutputType">

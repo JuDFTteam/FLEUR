@@ -145,6 +145,16 @@
           input%scaleA1 = 1.0
           input%scaleA2 = 1.0
           input%scaleC = 1.0
+          input%l_hia = .false.
+
+          !Many of these can probably be eliminated
+          input%ldahia_ne = 1301 !same as for dos calculations
+          input%ldahia_etop = 1.0
+          input%ldahia_ebot = -1.0
+          input%ldahia_sigma = 0.0
+          input%ldahia_tetra = .false.
+          input%ldahia_mode = 2
+          input%ldahia_nin = 5
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
