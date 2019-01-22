@@ -284,7 +284,6 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
    USE m_tetra
    USE m_smooth
    USE m_kkintgr
-   USE m_occupation
 
    IMPLICIT NONE
 
