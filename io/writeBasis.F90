@@ -115,7 +115,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
       INTEGER           :: lmn, na,lm,n,nn, m
       complex,parameter :: img=(0.,1.)
 
-      LOGICAL l_zref,l_real
+      LOGICAL l_zref,l_real, link_exists
       INTEGER jsp,nk,l,itype
       INTEGER numbands, nbasfcn, ndbands !ndbands number of bands without highest (degenerate)
 
@@ -316,17 +316,19 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
             CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
             write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
-	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
+            CALL h5lexists_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
+            IF (link_exists) CYCLE
+            CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------enter output gvec etc here--------------------
             CALL io_write_attint0(kptGroupID,'nv',lapw%nv(jsp))
 
-	    dims(:2)=(/3,lapw%nv(jsp)/)
-	    dimsInt=dims
-	    CALL h5screate_simple_f(2,dims(:2),gvecSpaceID,hdfError)
-	    CALL h5dcreate_f(kptGroupID, "gvec", H5T_NATIVE_INTEGER, gvecSpaceID, gvecSetID, hdfError)
-	    CALL h5sclose_f(gvecSpaceID,hdfError)
- 	    CALL io_write_integer2(gvecSetID,(/1,1/),dimsInt(:2),lapw%gvec(:,:lapw%nv(jsp),jsp))
-	    CALL h5dclose_f(gvecSetID, hdfError)	
+            dims(:2)=(/3,lapw%nv(jsp)/)
+            dimsInt=dims
+            CALL h5screate_simple_f(2,dims(:2),gvecSpaceID,hdfError)
+            CALL h5dcreate_f(kptGroupID, "gvec", H5T_NATIVE_INTEGER, gvecSpaceID, gvecSetID, hdfError)
+            CALL h5sclose_f(gvecSpaceID,hdfError)
+            CALL io_write_integer2(gvecSetID,(/1,1/),dimsInt(:2),lapw%gvec(:,:lapw%nv(jsp),jsp))
+            CALL h5dclose_f(gvecSetID, hdfError)	
 	      
             CALL h5gclose_f(kptGroupID, hdfError)   
          END DO
@@ -447,6 +449,8 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
             CALL lapw%init(input,noco,kpts,atoms,sym,nk,cell,l_zref)
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
             write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',kpts%bk(1,nk),',',kpts%bk(2,nk),',',kpts%bk(3,nk)
+            CALL h5lexists_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
+            IF (link_exists) CYCLE
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------abcoff, zmat, eig output here-------------------
 !,results%neig(nk,jsp),results%eig(:,nk,jsp)
