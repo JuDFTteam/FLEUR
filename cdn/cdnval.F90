@@ -112,6 +112,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    CALL timestart("cdnval")
 
+
    l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
    l_dosNdir = banddos%dos.AND.(banddos%ndir.EQ.-3)
 
@@ -238,7 +239,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF (PRESENT(gOnsite)) THEN
             CALL timestart("On-Site: Setup")
             IF (gOnsite%l_tetra) THEN
-               CALL calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eigVecCoeffs,gOnsite)
+               CALL calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOnsite)
             ELSE
                CALL im_gmmpMathist(atoms,sym,ispin,input%jspins,noccbd,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
             ENDIF
