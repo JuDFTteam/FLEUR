@@ -114,7 +114,12 @@ CONTAINS
 
       ALLOCATE (integrand(ne))
 
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP SHARED(ne,del,nz,bot) &
+      !$OMP SHARED(g,e,im) &
+      !$OMP PRIVATE(j,ez,integrand,re,imag)
 
+      !$OMP DO
 
       DO iz = 1, nz
 
@@ -135,6 +140,8 @@ CONTAINS
 
          g(iz) = -1/pi_const*CMPLX(re,imag)
       ENDDO
+      !$OMP END DO
+      !$OMP END PARALLEL
 
 
    END SUBROUTINE kkintgr_complex
