@@ -153,6 +153,7 @@
           input%ldahia_ebot = -1.0
           input%ldahia_sigma = 0.0
           input%ldahia_tetra = .false.
+          input%ldahia_sphavg = .true.
           input%ldahia_mode = 2
           input%ldahia_nin = 5
 

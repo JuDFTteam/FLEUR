@@ -5,4 +5,5 @@ set(fleur_F90 ${fleur_F90}
 ldahia/onsite.f90
 ldahia/kkintgr.f90
 ldahia/tetra.f90
+ldahia/onsite_radial.f90
 )

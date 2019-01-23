@@ -39,6 +39,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_banddos_io
    USE m_unfold_band_kpts
    USE m_gOnsite
+   USE m_gOnsite_radial !to be unified with m_gOnsite
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -117,8 +118,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
     IF (atoms%n_hia.GT.0) THEN
       DO jspin = 1, jspmax
-         CALL calc_onsite(atoms,jspin,input%jspins,dimension%neigd,kpts%ntet,kpts%nkpt,kpts%ntetra(1:4,:),kpts%voltet(:),&
-                                                results%neig(:,jspin),results%eig(:,:,jspin),gOnsite,results%ef,sym)
+         IF(input%ldahia_sphavg) THEN
+            CALL calc_onsite(atoms,jspin,input%jspins,dimension%neigd,kpts%ntet,kpts%nkpt,kpts%ntetra(1:4,:),kpts%voltet(:),&
+                                                   results%neig(:,jspin),results%eig(:,:,jspin),gOnsite,results%ef,sym)
+         ELSE
+            CALL calc_onsite_radial(atoms,enpara,vTot%mt(:,0,:,:),jspin,input%jspins,dimension%neigd,kpts%ntet,kpts%nkpt,kpts%ntetra(1:4,:),kpts%voltet(:),&
+                                                   results%neig(:,jspin),results%eig(:,:,jspin),gOnsite,results%ef,sym)
+         ENDIF
       ENDDO
    ENDIF
 

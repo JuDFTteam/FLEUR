@@ -39,6 +39,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_forcea8
    USE m_checkdopall
    USE m_gOnsite     ! calculate the non-interacting on-site green's function
+   USE m_gOnsite_radial ! to be unified with m_gOnsite
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
@@ -236,15 +237,25 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
+
          IF (PRESENT(gOnsite)) THEN
             CALL timestart("On-Site: Setup")
-            IF (gOnsite%l_tetra) THEN
-               CALL calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOnsite)
+            IF(input%ldahia_sphavg) THEN
+               IF (gOnsite%l_tetra) THEN
+                  CALL calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOnsite)
+               ELSE
+                  CALL im_gmmpMathist(atoms,sym,ispin,input%jspins,noccbd,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
+               ENDIF
             ELSE
-               CALL im_gmmpMathist(atoms,sym,ispin,input%jspins,noccbd,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
+               IF (gOnsite%l_tetra) THEN
+                  CALL onsite_coeffs(atoms,ispin,noccbd,ikpt,eig,eigVecCoeffs,gOnsite)
+               ELSE
+                  CALL juDFT_error("Radial dependence + Histogram method not implemented yet", calledby="cdnval")
+               ENDIF
             ENDIF
             CALL timestop("On-Site: Setup")
          ENDIF
+
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
          CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&

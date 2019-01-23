@@ -608,6 +608,7 @@
       <xsd:attribute name="l_tetra" type="FleurBool" use="optional"/>
       <xsd:attribute name="mode" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="nz" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="l_sphavg" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="DOSOutputType">

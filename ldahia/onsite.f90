@@ -1,5 +1,7 @@
 MODULE m_gOnsite
 
+   !These are the subroutines for the spherically averaged greens function
+
 CONTAINS
 
 SUBROUTINE calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOnsite)
@@ -262,7 +264,7 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
 
                   DO m = -l,l
                      DO mp = -l,l
-                        gOnsite%im_gmmpMat(j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(j,i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac * wk
+                        gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac * wk
                      ENDDO
                   ENDDO
 
@@ -305,6 +307,14 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
 
    REAL, ALLOCATABLE :: e(:)   
 
+   IF(gOnsite%sigma.NE.0.0) THEN
+      !construct an energy grid for smoothing (required by the function in m_smooth)
+      ALLOCATE (e(gOnsite%ne))
+      DO i = 1, gOnsite%ne
+         e(i) = gOnsite%del * (i-1) + gOnsite%e_bot
+      ENDDO
+   END IF
+
    DO i_hia = 1,atoms%n_hia
       l = atoms%lda_hia(i_hia)%l
       DO m = -l, l
@@ -314,21 +324,15 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
             IF(gOnsite%l_tetra) THEN
                CALL timestart("On-Site: Tetrahedron method")
                CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%qalmmpMat(:,:,i_hia,m,mp,jspin)&
-                                          ,eigv,gOnsite%ne,gOnsite%im_gmmpMat(:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
-               IF(jspins.EQ.1) gOnsite%im_gmmpMat(:,i_hia,m,mp,1) = 2.0 * gOnsite%im_gmmpMat(:,i_hia,m,mp,1)
+                                          ,eigv,gOnsite%ne,gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
+               IF(jspins.EQ.1) gOnsite%im_gmmpMat(1,:,i_hia,m,mp,1) = 2.0 * gOnsite%im_gmmpMat(1,:,i_hia,m,mp,1)
                CALL timestop("On-Site: Tetrahedron method")
             ENDIF
             !
             !smooth the imaginary part using gaussian broadening 
             !
-            IF(gOnsite%sigma.NE.0.0) THEN
-               !construct an energy grid for smoothing (required by the function in m_smooth)
-               ALLOCATE (e(gOnsite%ne))
-               DO i = 1, gOnsite%ne
-                  e(i) = gOnsite%del * (i-1) + gOnsite%e_bot
-               ENDDO
-               CALL smooth(e(:),gOnsite%im_gmmpMat(:,i_hia,m,mp,jspin),gOnsite%sigma,gOnsite%ne)
-            ENDIF
+            IF(gOnsite%sigma.NE.0.0) CALL smooth(e(:),gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%sigma,gOnsite%ne)
+
          ENDDO
       ENDDO
       !
@@ -343,10 +347,10 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
          DO mp= -l,l
             IF(gOnsite%mode.EQ.1) THEN
                CALL kkintgr_real(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
-                                 gOnsite%im_gmmpMat(:,i_hia,m,mp,jspin),gOnsite%gmmpMat(:,i_hia,m,mp,jspin))
+                                 gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(1,:,i_hia,m,mp,jspin))
             ELSE IF(gOnsite%mode.EQ.2) THEN
                CALL kkintgr_complex(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
-                                    gOnsite%im_gmmpMat(:,i_hia,m,mp,jspin),gOnsite%gmmpMat(:,i_hia,m,mp,jspin))
+                                    gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(1,:,i_hia,m,mp,jspin))
             END IF
          ENDDO
       ENDDO
@@ -403,7 +407,7 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
       DO ispin = 1, jspins
          DO m = -l , l
             DO j = 1, gOnsite%ne
-               fDOS(j) = fDOS(j) + gOnsite%im_gmmpMat(j,i_hia,m,m,ispin)
+               fDOS(j) = fDOS(j) + gOnsite%im_gmmpMat(1,j,i_hia,m,m,ispin)
             ENDDO
          ENDDO
       ENDDO
@@ -475,7 +479,7 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
          DO i = kkintgr_cut+1, gOnsite%ne
             DO m = -l, l
                DO mp = -l,l
-                  gOnsite%im_gmmpMat(i,i_hia,m,mp,ispin) = 0.0e0
+                  gOnsite%im_gmmpMat(1,i,i_hia,m,mp,ispin) = 0.0e0
                ENDDO
             ENDDO
          ENDDO

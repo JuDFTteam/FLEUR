@@ -22,6 +22,8 @@ MODULE m_types_greensf
      
          LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration
          LOGICAL  :: l_ef     !This switch determines wether the energy contour ends at efermi
+         INTEGER, ALLOCATABLE :: nr(:) !dimension(atoms%n_hia) number of radial points
+                                       !in case of spherical average nr(:) = 1
 
          !Energy contour parameters
          INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
@@ -32,15 +34,29 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE  :: de(:) !weights for integration
 
          !Arrays for Green's function
-         REAL, ALLOCATABLE :: im_gmmpMat(:,:,:,:,:)   !the imaginary part is stored in a different array because the number of energy points can differ
-         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:)   
+         REAL, ALLOCATABLE :: im_gmmpMat(:,:,:,:,:,:)   !the imaginary part is stored in a different array because the number of energy points can differ
+         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:) 
+
+         !For spherical averaged green's function  
          REAL, ALLOCATABLE :: qalmmpMat(:,:,:,:,:,:) 
+
+
+         ! These arrays are only used in the case we want the green's function with radial dependence
+         !Look at how to unify those
+         REAL, ALLOCATABLE :: uu(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: dd(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: du(:,:,:,:,:,:)
+
+         REAL, ALLOCATABLE :: im_uu(:,:,:,:,:)
+         REAL, ALLOCATABLE :: im_dd(:,:,:,:,:)
+         REAL, ALLOCATABLE :: im_du(:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init => greensf_init
             PROCEDURE       :: init_e_contour
             PROCEDURE       :: calc_mmpmat
       END TYPE t_greensf
+
 
    PUBLIC t_greensf
 
@@ -58,7 +74,7 @@ MODULE m_types_greensf
          TYPE(t_kpts),           INTENT(IN)     :: kpts
          TYPE(t_dimension),      INTENT(IN)     :: dimension
 
-         INTEGER n
+         INTEGER n, i_hia
 
          !Parameters for calculation of the imaginary part
          thisGREENSF%ne       = input%ldahia_ne
@@ -67,16 +83,16 @@ MODULE m_types_greensf
          thisGREENSF%sigma    = input%ldahia_sigma
 
          thisGREENSF%l_tetra  = input%ldahia_tetra
-         thisGREENSF%l_ef = .false.
+         thisGREENSF%l_ef     = .false.
 
          !set up energy grid for imaginary part
-         thisGREENSF%del = (thisGREENSF%e_top-thisGREENSF%e_bot)/REAL(thisGREENSF%ne-1)
+         thisGREENSF%del      = (thisGREENSF%e_top-thisGREENSF%e_bot)/REAL(thisGREENSF%ne-1)
 
          !Parameters for the energy contour in the complex plan
          !We use default values for now
          thisGREENSF%mode     = input%ldahia_mode
 
-          IF(thisGREENSF%mode.EQ.1) THEN
+         IF(thisGREENSF%mode.EQ.1) THEN
             thisGREENSF%nz = input%ldahia_nin
          ELSE IF(thisGREENSF%mode.EQ.2) THEN
             n = input%ldahia_nin
@@ -86,21 +102,50 @@ MODULE m_types_greensf
             thisGREENSF%nz = 2**n
          END IF
 
+         ALLOCATE(thisGREENSF%nr(atoms%n_hia))
+
+         IF(input%ldahia_sphavg) THEN
+            thisGREENSF%nr(:) = 1
+         ELSE
+            DO i_hia = 1, atoms%n_hia
+               n = atoms%lda_hia(i_hia)%atomType 
+               thisGREENSF%nr(i_hia) = atoms%jri(n)
+            ENDDO
+         END IF
+
          ALLOCATE (thisGREENSF%e(thisGREENSF%nz))
          ALLOCATE (thisGREENSF%de(thisGREENSF%nz))
          thisGREENSF%e(:) = CMPLX(0.0,0.0)
          thisGREENSF%de(:)= CMPLX(0.0,0.0)
 
 
-         IF (thisGREENSF%l_tetra) THEN 
+         IF (thisGREENSF%l_tetra.AND.input%ldahia_sphavg) THEN 
             ALLOCATE (thisGREENSF%qalmmpMat(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
             thisGREENSF%qalmmpMat   = 0.0 
-         ENDIF
+         ELSE IF (thisGREENSF%l_tetra.AND.(.NOT.input%ldahia_sphavg)) THEN 
+            ALLOCATE (thisGREENSF%uu(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            ALLOCATE (thisGREENSF%dd(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            ALLOCATE (thisGREENSF%du(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            
+            ALLOCATE (thisGREENSF%im_uu(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            ALLOCATE (thisGREENSF%im_dd(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            ALLOCATE (thisGREENSF%im_du(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+           
+            thisGREENSF%uu      = 0.0
+            thisGREENSF%dd      = 0.0
+            thisGREENSF%du      = 0.0
+            thisGREENSF%im_uu   = 0.0
+            thisGREENSF%im_dd   = 0.0
+            thisGREENSF%im_du   = 0.0
+         END IF
 
-         ALLOCATE (thisGREENSF%im_gmmpMat(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-         ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+         !Set number of radial points
 
-         thisGREENSF%im_gmmpMat     = 0.0
+
+         ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+         ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+
+         thisGREENSF%im_gmmpMat  = 0.0
          thisGREENSF%gmmpMat     = CMPLX(0.0,0.0)
 
       END SUBROUTINE greensf_init
@@ -236,6 +281,7 @@ MODULE m_types_greensf
          USE m_types_setup
          USE m_constants
          USE m_juDFT
+         USE m_intgr
 
          IMPLICIT NONE
 
@@ -244,8 +290,8 @@ MODULE m_types_greensf
 
          INTEGER,                INTENT(IN)     :: jspins
 
-         INTEGER i, m,mp, l, i_hia, ispin
-         REAL n_l
+         INTEGER i, m,mp, l, i_hia, ispin, n
+         REAL n_l, imag, re
          CHARACTER(len=30) :: filename
          COMPLEX, ALLOCATABLE :: mmpmat(:,:,:,:)
 
@@ -258,14 +304,24 @@ MODULE m_types_greensf
             DO i_hia = 1, atoms%n_hia
 
                l = atoms%lda_hia(i_hia)%l
+               n = atoms%lda_hia(i_hia)%atomType
 
                DO ispin = 1, jspins
                   DO m = -l, l
                      DO mp = -l, l
-
                         DO i = 1, this%nz
-                           mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + AIMAG(this%gmmpMat(i,i_hia,m,mp,ispin)*this%de(i))
+                           IF(this%nr(i_hia).NE.1) THEN
 
+                              CALL intgr3(REAL(this%gmmpMat(:,i,i_hia,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
+                              CALL intgr3(AIMAG(this%gmmpMat(:,i,i_hia,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
+
+                              mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + AIMAG((re+ImagUnit*imag)*this%de(i))
+
+                           ELSE
+
+                              mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + AIMAG(this%gmmpMat(1,i,i_hia,m,mp,ispin)*this%de(i))
+                           
+                           END IF
                         ENDDO
 
                         mmpmat(i_hia,m,mp,ispin) = -1/pi_const * mmpmat(i_hia,m,mp,ispin)
