@@ -22,20 +22,22 @@ CONTAINS
       REAL, PARAMETER                  :: eps = 1e-15
 
       !implicit allocation
-      call give_stats(EnergyDen_RS, array_name="ED_RS")
-      call give_stats(vTot_RS, array_name="vTot_RS")
-      call give_stats(den_RS, array_name="den_RS")
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
-      call give_stats(kinEnergyDen_RS, array_name="kin_ED_RS")
+      if(all(shape(kinEnergyDen_RS) == [6144,1])) then
+         call give_stats(EnergyDen_RS, array_name="ED_RS")
+         call give_stats(vTot_RS, array_name="vTot_RS")
+         call give_stats(den_RS, array_name="den_RS")
+         call give_stats(kinEnergyDen_RS, array_name="kin_ED_RS")
+      endif
       write (*,*) ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
       if(any(kinEnergyDen_RS < eps)) then
          write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
          kinEnergyDen_RS = max(kinEnergyDen_RS, eps)
       endif
-      write (*,*) "kinED shape:", shape(kinEnergyDen_RS)
 
       if(all(shape(kinEnergyDen_RS) == [6144,1])) then
+         write (*,*) "kinED shape:", shape(kinEnergyDen_RS)
          write (*,*) "write old"
          open(unit=69, file="kinED_pw_schroeway.dat")
          write (69,'(ES17.10)') kinEnergyDen_RS

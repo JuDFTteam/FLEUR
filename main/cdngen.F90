@@ -229,6 +229,7 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    use m_types
    use m_pw_tofrom_grid
    use m_judft_stop
+   use m_metagga, only: give_stats
    implicit none
 
    CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -246,10 +247,29 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    do dim_idx = 1,3
       call pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, &
          xcpot%comparison_kinED_pw(dim_idx)%pw, grad, tmp)
-      if(.not. allocated(kinED)) allocate(kinED, mold=tmp)
+      if(any(tmp > 1e5)) then
+         write (*,*) "tmp > 1e5 for", dim_idx
+         call give_stats(tmp, "tmp(dim_idx)")
+      endif
+      if(.not. allocated(kinED)) then
+         allocate(kinED, mold=tmp)
+         kinED = 0.0
+      endif
       kinEd = kinED + tmp
 
    enddo
+
+   open(unit=69, file="kin_ED_rezi_x.dat")
+   write (69,'(ES17.10)') xcpot%comparison_kinED_pw(1)%pw
+   close(69)
+
+   open(unit=69, file="kin_ED_rezi_y.dat")
+   write (69,'(ES17.10)') xcpot%comparison_kinED_pw(2)%pw
+   close(69)
+
+   open(unit=69, file="kin_ED_rezi_z.dat")
+   write (69,'(ES17.10)') xcpot%comparison_kinED_pw(3)%pw
+   close(69)
 
    kinED = 0.5 * kinED
    
