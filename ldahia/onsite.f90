@@ -278,7 +278,7 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
 
 END SUBROUTINE im_gmmpMathist
 
-SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,eigv,gOnsite,ef,sym)
+SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,eigv,gOnsite,ef,sym)
 
    USE m_types
    USE m_constants
@@ -286,10 +286,12 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
    USE m_tetra
    USE m_smooth
    USE m_kkintgr
+   USE m_radfun
 
    IMPLICIT NONE
 
    TYPE(t_atoms),          INTENT(IN)     :: atoms
+   TYPE(t_enpara),         INTENT(IN)     :: enpara
    TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
    TYPE(t_sym),            INTENT(IN)     :: sym
 
@@ -302,10 +304,21 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
    REAL,                   INTENT(INOUT)  :: eigv(neigd,nkpt)
 
    REAL,                   INTENT(IN)     :: ef
+   REAL,                   INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,jspins)
 
-   INTEGER i, i_hia, l, m, mp
+   TYPE(t_usdus) usdus
+   INTEGER i, i_hia, l, m, mp, jr, noded, nodeu, n, j
+   REAL wronk
 
+
+   REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
    REAL, ALLOCATABLE :: e(:)   
+
+   ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
+   ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
+
+   CALL usdus%init(atoms,jspins)
+
 
    IF(gOnsite%sigma.NE.0.0) THEN
       !construct an energy grid for smoothing (required by the function in m_smooth)
@@ -317,21 +330,46 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
 
    DO i_hia = 1,atoms%n_hia
       l = atoms%lda_hia(i_hia)%l
+      n = atoms%lda_hia(i_hia)%atomType
+
+      IF(gOnsite%nr(i_hia).NE.1)CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),vr(:,n,jspin),atoms,&
+                                       f(:,:,l,jspin),g(:,:,l,jspin),usdus, nodeu,noded,wronk)
+
       DO m = -l, l
          DO mp = -l,l
-
             !calculate the imaginary part if we use the tetrahedron method
             IF(gOnsite%l_tetra) THEN
                CALL timestart("On-Site: Tetrahedron method")
-               CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%qalmmpMat(:,:,i_hia,m,mp,jspin)&
-                                          ,eigv,gOnsite%ne,gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
-               IF(jspins.EQ.1) gOnsite%im_gmmpMat(1,:,i_hia,m,mp,1) = 2.0 * gOnsite%im_gmmpMat(1,:,i_hia,m,mp,1)
+               IF(gOnsite%nr(i_hia).EQ.1) THEN
+                  CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%qalmmpMat(:,:,i_hia,m,mp,jspin)&
+                                             ,eigv,gOnsite%ne,gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
+               ELSE
+                  !look at eliminating im_uu arrays
+                  CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%uu(:,:,i_hia,m,mp,jspin)&
+                                             ,eigv,gOnsite%ne,gOnsite%im_uu(:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
+                  CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%dd(:,:,i_hia,m,mp,jspin)&
+                                             ,eigv,gOnsite%ne,gOnsite%im_dd(:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
+                  CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%du(:,:,i_hia,m,mp,jspin)&
+                                             ,eigv,gOnsite%ne,gOnsite%im_du(:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot) 
+
+                  DO jr = 1, gOnsite%nr(i_hia)
+                     gOnsite%im_gmmpmat(jr,:,i_hia,m,mp,jspin) = gOnsite%im_gmmpmat(jr,:,i_hia,m,mp,jspin) + &
+                                       gOnsite%im_uu(:,i_hia,m,mp,jspin) * (f(jr,1,l,jspin)*f(jr,1,l,jspin)+f(jr,2,l,jspin)*f(jr,2,l,jspin)) +&
+                                       gOnsite%im_dd(:,i_hia,m,mp,jspin) * (g(jr,1,l,jspin)*g(jr,1,l,jspin)+g(jr,2,l,jspin)*g(jr,2,l,jspin)) +&
+                                       gOnsite%im_du(:,i_hia,m,mp,jspin) * (f(jr,1,l,jspin)*g(jr,1,l,jspin)+f(jr,2,l,jspin)*g(jr,2,l,jspin))
+                  ENDDO
+               END IF                  
+               IF(jspins.EQ.1) gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1) = 2.0 * gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1)
                CALL timestop("On-Site: Tetrahedron method")
             ENDIF
             !
             !smooth the imaginary part using gaussian broadening 
             !
-            IF(gOnsite%sigma.NE.0.0) CALL smooth(e(:),gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%sigma,gOnsite%ne)
+            IF(gOnsite%sigma.NE.0.0) THEN
+               DO jr = 1, gOnsite%nr(i_hia)
+                  CALL smooth(e(:),gOnsite%im_gmmpMat(jr,:,i_hia,m,mp,jspin),gOnsite%sigma,gOnsite%ne)
+               ENDDO
+            ENDIF
 
          ENDDO
       ENDDO
@@ -345,13 +383,15 @@ SUBROUTINE calc_onsite(atoms,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,e
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO m= -l,l
          DO mp= -l,l
-            IF(gOnsite%mode.EQ.1) THEN
-               CALL kkintgr_real(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
-                                 gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(1,:,i_hia,m,mp,jspin))
-            ELSE IF(gOnsite%mode.EQ.2) THEN
-               CALL kkintgr_complex(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
-                                    gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(1,:,i_hia,m,mp,jspin))
-            END IF
+            DO jr = 1, gOnsite%nr(i_hia)
+               IF(gOnsite%mode.EQ.1) THEN
+                  CALL kkintgr_real(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
+                                    gOnsite%im_gmmpMat(jr,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_hia,m,mp,jspin))
+               ELSE IF(gOnsite%mode.EQ.2) THEN
+                  CALL kkintgr_complex(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
+                                       gOnsite%im_gmmpMat(jr,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_hia,m,mp,jspin))
+               END IF
+            ENDDO
          ENDDO
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
@@ -385,11 +425,11 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
    REAL, ALLOCATABLE :: fDOS(:)
 
-   INTEGER i_hia, i,l, m,mp, ispin, j, n_c, kkintgr_cut
+   INTEGER i_hia, i,l, m,mp, ispin, j, n_c, kkintgr_cut, jr, n
 
    REAL integral
 
-   REAL a,b
+   REAL a,b, imag
    LOGICAL l_write
 
    ALLOCATE(fDOS(gOnsite%ne))
@@ -399,7 +439,8 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
    DO i_hia = 1, atoms%n_hia
 
       fDOS(:) = 0.0
-      l = atoms%lda_hia(i_hia)%l      
+      l = atoms%lda_hia(i_hia)%l 
+      n = atoms%lda_hia(i_hia)%atomType     
 
       !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS 
 
@@ -407,7 +448,12 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
       DO ispin = 1, jspins
          DO m = -l , l
             DO j = 1, gOnsite%ne
-               fDOS(j) = fDOS(j) + gOnsite%im_gmmpMat(1,j,i_hia,m,m,ispin)
+               IF(gOnsite%nr(i_hia).NE.1) THEN
+                  CALL intgr3(gOnsite%im_gmmpMat(:,j,i_hia,m,m,ispin),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
+               ELSE
+                  imag = gOnsite%im_gmmpMat(1,j,i_hia,m,m,ispin)
+               END IF
+               fDOS(j) = fDOS(j) + imag
             ENDDO
          ENDDO
       ENDDO
@@ -479,7 +525,9 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
          DO i = kkintgr_cut+1, gOnsite%ne
             DO m = -l, l
                DO mp = -l,l
-                  gOnsite%im_gmmpMat(1,i,i_hia,m,mp,ispin) = 0.0e0
+                  DO jr = 1, gOnsite%nr(i_hia)
+                     gOnsite%im_gmmpMat(jr,i,i_hia,m,mp,ispin) = 0.0e0
+                  ENDDO
                ENDDO
             ENDDO
          ENDDO
