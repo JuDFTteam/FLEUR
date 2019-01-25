@@ -2344,11 +2344,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       n=xmlGetNumberOfNodes(TRIM(ADJUSTL(path))//'/q')
       ALLOCATE(q(3,n))
       DO i = 1, n
-         PRINT *, path,'/q[',i,']'
+         !PRINT *, path,'/q[',i,']'
          WRITE(xPathA,"(a,a,i0,a)") TRIM(ADJUSTL(path)),'/q[',i,']'
-         PRINT *,xpatha
+         !PRINT *,xpatha
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-         PRINT *,"Q:",valueString
+         !PRINT *,"Q:",valueString
          READ(valueString,*) q(1,i),q(2,i),q(3,i)
       END DO
    END FUNCTION priv_read_q_list
