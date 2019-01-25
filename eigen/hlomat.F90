@@ -26,8 +26,8 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_noco),INTENT(IN)   :: noco
-    
-    
+
+
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: na,ntyp  
@@ -48,20 +48,20 @@ CONTAINS
     INTEGER locol,lorow,ii,ij,n,k,ab_size
     !     ..
     !     .. Local Arrays ..
-    COMPLEX, ALLOCATABLE :: ab(:,:),ax(:),bx(:),cx(:)
+    COMPLEX, ALLOCATABLE :: ab(:,:,:),ax(:),bx(:),cx(:)
     COMPLEX,ALLOCATABLE  :: abclo(:,:,:,:,:)
     !     ..
 
-    
+
     !-->              synthesize the complex conjugates of a and b
-    ALLOCATE(ab(MAXVAL(lapw%nv),0:2*atoms%lmaxd*(atoms%lmaxd+2)+1))
+    ALLOCATE(ab(MAXVAL(lapw%nv),0:2*atoms%lmaxd*(atoms%lmaxd+2)+1,MIN(jintsp,iintsp):MAX(jintsp,iintsp)))
     ALLOCATE(ax(MAXVAL(lapw%nv)),bx(MAXVAL(lapw%nv)),cx(MAXVAL(lapw%nv)))
     ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,2))
     DO i=MIN(jintsp,iintsp),MAX(jintsp,iintsp)
-       CALL hsmt_ab(sym,atoms,noco,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1,blo1,clo1)
+       CALL hsmt_ab(sym,atoms,noco,isp,i,ntyp,na,cell,lapw,fj,gj,ab(:,:,i),ab_size,.TRUE.,abclo(:,:,:,:,i),alo1,blo1,clo1)
     ENDDO
 
-    
+
     mlo=0;mlolo=0
     DO m=1,ntyp-1
        mlo=mlo+atoms%nlo(m)
@@ -80,7 +80,7 @@ CONTAINS
        IF (atoms%invsat(na) == 0) invsfct = 1
        IF (atoms%invsat(na) == 1) invsfct = 2
        !
-    
+
        DO lo = 1,atoms%nlo(ntyp)
           l = atoms%llo(lo,ntyp)
           !--->       calculate the hamiltonian matrix elements with the regular
@@ -117,19 +117,18 @@ CONTAINS
                       !--->                   and that a,b,alo... are the complex
                       !--->                   conjugates of the a,b...-coefficients
                       DO kp = 1,lapw%nv(iintsp)
-                         ax(kp) = ax(kp) + ab(kp,lmp)*utu + ab(kp,ab_size/2+lmp)*dtu
-                         bx(kp) = bx(kp) + ab(kp,lmp)*utd + ab(kp,ab_size/2+lmp)*dtd
-                         cx(kp) = cx(kp) + ab(kp,lmp)*utulo + ab(kp,ab_size/2+lmp)*dtulo
+                         ax(kp) = ax(kp) + ab(kp,lmp,iintsp)*utu + ab(kp,ab_size/2+lmp,iintsp)*dtu
+                         bx(kp) = bx(kp) + ab(kp,lmp,iintsp)*utd + ab(kp,ab_size/2+lmp,iintsp)*dtd
+                         cx(kp) = cx(kp) + ab(kp,lmp,iintsp)*utulo + ab(kp,ab_size/2+lmp,iintsp)*dtulo
                       END DO
                    END IF
                 END DO
              END DO
              !+t3e
              DO nkvec = 1,invsfct* (2*l+1)
-               locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-                IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN
+                locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
+                IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
                    locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
-                   !-t3e
                    IF (hmat%l_real) THEN
                       DO kp = 1,lapw%nv(iintsp)
                          hmat%data_r(kp,locol) = hmat%data_r(kp,locol) + chi*invsfct * (&
@@ -142,8 +141,8 @@ CONTAINS
                          IF (input%l_useapw) THEN
                             !---> APWlo
                             hmat%data_r(kp,locol) = hmat%data_r(kp,locol) + 0.25 * atoms%rmt(ntyp)**2 * chi*invsfct * (&
-                                 (CONJG(ab(kp,lm))* ud%us(l,ntyp,isp)+&
-                                 CONJG(ab(kp,ab_size/2+lm))*ud%uds(l,ntyp,isp))*&
+                                 (CONJG(ab(kp,lm,iintsp))* ud%us(l,ntyp,isp)+&
+                                 CONJG(ab(kp,ab_size/2+lm,iintsp))*ud%uds(l,ntyp,isp))*&
                                  (abclo(1,m,nkvec,lo,jintsp)*  ud%dus(l,ntyp,isp)&
                                  +abclo(2,m,nkvec,lo,jintsp)* ud%duds(l,ntyp,isp)&
                                  +abclo(3,m,nkvec,lo,jintsp)*ud%dulos(lo,ntyp,isp) ))
@@ -151,19 +150,19 @@ CONTAINS
                       ENDDO
                    ELSE
                       DO kp = 1,lapw%nv(iintsp)
-                            hmat%data_c(kp,locol) = hmat%data_c(kp,locol) + chi*invsfct * (&
-                                 abclo(1,m,nkvec,lo,jintsp) * CONJG( ax(kp) ) +&
-                                 abclo(2,m,nkvec,lo,jintsp) * CONJG( bx(kp) ) +&
-                                 abclo(3,m,nkvec,lo,jintsp) * CONJG( cx(kp) ) )
-                            IF (input%l_useapw) THEN
-                               !---> APWlo
-                               hmat%data_c(kp,locol)=hmat%data_c(kp,locol) + 0.25 * atoms%rmt(ntyp)**2 * chi*invsfct*(&
-                                    (CONJG(ab(kp,lm))* ud%us(l,ntyp,isp)+&
-                                    CONJG(ab(kp,ab_size/2+lm))*ud%uds(l,ntyp,isp))*&
-                                    (abclo(1,m,nkvec,lo,jintsp)*  ud%dus(l,ntyp,isp)&
-                                    +abclo(2,m,nkvec,lo,jintsp)* ud%duds(l,ntyp,isp)&
-                                    +abclo(3,m,nkvec,lo,jintsp)*ud%dulos(lo,ntyp,isp) ))
-                            ENDIF
+                         hmat%data_c(kp,locol) = hmat%data_c(kp,locol) + chi*invsfct * (&
+                              abclo(1,m,nkvec,lo,jintsp) * CONJG( ax(kp) ) +&
+                              abclo(2,m,nkvec,lo,jintsp) * CONJG( bx(kp) ) +&
+                              abclo(3,m,nkvec,lo,jintsp) * CONJG( cx(kp) ) )
+                         IF (input%l_useapw) THEN
+                            !---> APWlo
+                            hmat%data_c(kp,locol)=hmat%data_c(kp,locol) + 0.25 * atoms%rmt(ntyp)**2 * chi*invsfct*(&
+                                 (CONJG(ab(kp,lm,iintsp))* ud%us(l,ntyp,isp)+&
+                                 CONJG(ab(kp,ab_size/2+lm,iintsp))*ud%uds(l,ntyp,isp))*&
+                                 (abclo(1,m,nkvec,lo,jintsp)*  ud%dus(l,ntyp,isp)&
+                                 +abclo(2,m,nkvec,lo,jintsp)* ud%duds(l,ntyp,isp)&
+                                 +abclo(3,m,nkvec,lo,jintsp)*ud%dulos(lo,ntyp,isp) ))
+                         ENDIF
                       ENDDO
                    ENDIF
                    !--->             jump to the last matrixelement of the current row
@@ -173,13 +172,13 @@ CONTAINS
           !--->       calculate the hamiltonian matrix elements with other
           !--->       local orbitals at the same atom and with itself
           DO nkvec = 1,invsfct* (2*l+1)
-             locol = lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
-             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN
+             locol= lapw%nv(jintsp)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
+             IF (MOD(locol-1,mpi%n_size) == mpi%n_rank) THEN !only this MPI rank calculates this column
                 locol=(locol-1)/mpi%n_size+1 !this is the column in local storage
-                !-t3e
                 !--->          calculate the hamiltonian matrix elements with other
                 !--->          local orbitals at the same atom, if they have the same l
-                DO lop = 1, (lo-1)
+                DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),iintsp==jintsp)
+                   IF (lop==lo) CYCLE
                    lp = atoms%llo(lop,ntyp)
                    DO nkvecp = 1,invsfct* (2*lp+1)
                       lorow=lapw%nv(iintsp)+lapw%index_lo(lop,na)+nkvecp
@@ -207,8 +206,13 @@ CONTAINS
                                ulotu=CONJG(tlmplm%tuulo(lm,mp,lop+mlo,isp))
                                ulotd=CONJG(tlmplm%tdulo(lm,mp,lop+mlo,isp))
                                !--->                         note that lo > lop
-                               lolop = ((lo-1)*lo)/2 + lop
-                               ulotulo = CONJG(tlmplm%tuloulo (m,mp,lolop+mlolo,isp))
+                               IF (lo>lop) THEN
+                                  lolop = ((lo-1)*lo)/2 + lop
+                                  ulotulo = CONJG(tlmplm%tuloulo (m,mp,lolop+mlolo,isp))
+                               ELSE
+                                  lolop = ((lop-1)*lop)/2 + lo
+                                  ulotulo = CONJG(tlmplm%tuloulo (mp,m,lolop+mlolo,isp))
+                               ENDIF
                                axx=CONJG(abclo(1,m,nkvec,lo,jintsp))*utu +&
                                     CONJG(abclo(2,m,nkvec,lo,jintsp))*utd +&
                                     CONJG(abclo(3,m,nkvec,lo,jintsp))*utulo
@@ -240,7 +244,8 @@ CONTAINS
                 END DO
                 !--->          calculate the hamiltonian matrix elements of one local
                 !--->          orbital with itself
-                DO nkvecp = 1,nkvec
+                lop=lo
+                DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),iintsp==jintsp)
                    lorow=lapw%nv(iintsp)+lapw%index_lo(lop,na)+nkvecp
                    DO m = -l,l
                       lm = l* (l+1) + m
@@ -294,13 +299,12 @@ CONTAINS
                       END DO
                    END DO
                 END DO
-             ENDIF
-             !-t3e
+             ENDIF !If this lo to be calculated by mpi rank
           END DO
        END DO ! end of lo = 1,atoms%nlo loop
-   
+
     END IF
     !$OMP END MASTER
     !$OMP barrier
   END SUBROUTINE hlomat
-      END MODULE m_hlomat
+END MODULE m_hlomat
