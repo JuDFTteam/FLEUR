@@ -156,7 +156,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,di
       CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,overallDen,moments,results)
       IF (mpi%irank.EQ.0) THEN
-         CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,overallDen,noco%l_noco,.TRUE.,.true.,fix)
+         CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,overallDen,noco%l_noco,.TRUE.,.true.,fix)
       END IF
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,overallDen)

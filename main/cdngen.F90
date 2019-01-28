@@ -164,7 +164,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF (vacuum%nstm == 3) CALL juDFT_end("VACWAVE OK",mpi%irank)
 
    IF (mpi%irank == 0) THEN
-      CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
+      CALL cdntot(mpi,stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
       CALL closeXMLElement('valenceDensity')
    END IF ! mpi%irank = 0
 
@@ -185,7 +185,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF (mpi%irank == 0) THEN
       CALL openXMLElementNoAttributes('allElectronCharges')
-      CALL qfix(stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.true.,fix)
+      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.true.,fix)
       CALL closeXMLElement('allElectronCharges')
 
       IF (input%jspins == 2) THEN

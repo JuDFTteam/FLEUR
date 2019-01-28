@@ -148,7 +148,7 @@ CONTAINS
                'branchLowest ','branchHighest','value        '/),&
                attributes,RESHAPE((/12,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
        ENDIF
-       WRITE(6,'(a6,i3,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
+       WRITE(6,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
             e_lo, ' to',e_up,' htr. ; e_l =',e
     ENDIF
   END FUNCTION priv_method1

@@ -265,7 +265,7 @@ contains
         if( input%jspins == 2 ) call resDen%ChargeAndMagnetisationToSpins()
         ! fix the preconditioned density
         call outDen%addPotDen( resDen, inDen )
-        call qfix( stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .false., .true., fix )
+        call qfix(mpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .false., .true., fix )
         call resDen%subPotDen( outDen, inDen )
         call brysh1( input, stars, atoms, sphhar, noco, vacuum, sym, oneD, &
                      intfac, vacfac, resDen, nmap, nmaph, mapmt, mapvac, mapvac2, fsm )
@@ -297,7 +297,7 @@ contains
       DEALLOCATE (sm,fsm)
 
       !fix charge of the new density
-      CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false., fix)
+      CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false., fix)
 
       IF(atoms%n_u.NE.n_u_keep) THEN
          inDen%mmpMat = n_mmpTemp
