@@ -71,6 +71,7 @@ CONTAINS
        q_vectors(:,1)=noco%qss
     END SELECT
 
+    if (any(abs(noco%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
     noco%qss=q_vectors(:,1) ! Usually does not do anything, but ensures that in
                             !force theorem CASE noco%qss is first q-vector in list
 
