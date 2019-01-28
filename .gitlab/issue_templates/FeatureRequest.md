@@ -1,12 +1,12 @@
-#Summary
+# Summary
 
 (Summarize the feature concisely.)
 
-##Why is this feature needed?
+## Why is this feature needed?
 
 (Please describe the usecase.)
 
-##Implementation ideas
+## Implementation ideas
 
 (If yoy have ideas how the feature should be realized share them.)
 

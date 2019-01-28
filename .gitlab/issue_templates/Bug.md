@@ -1,21 +1,21 @@
-#Summary
+# Summary
 
 (Summarize the bug encountered concisely.)
 
 
-##Input and output file:
+## Input and output file:
 
 (Please provide at least the inp.xml and the out files produced.)
 
-##Compute environment
+## Compute environment
 
 (Please shortly describe the machine&compiler you use.)
 
-##This is BUG because:
+## This is BUG because:
 
 (Please indicate the correct behaviour you expect.)
 
-##The problem only occurs if:
+## The problem only occurs if:
 
 (Please indicate if you checked if the bug only occurs if, e.g. you run on a specific machine,
 in MPI mode, with several OpenMP task, you use LOs or SOC or ...)
