@@ -10,6 +10,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_vis_xc
    USE m_juDFT
+   use m_convol
    !     ******************************************************
    !     subroutine generates the exchange-correlation potential
    !     in the interstitial region    c.l.fu
@@ -34,6 +35,7 @@ CONTAINS
       USE m_types_xcpot_libxc
       USE m_libxc_postprocess_gga
       USE m_metagga
+      USE m_npy
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)     :: xcpot
@@ -42,18 +44,20 @@ CONTAINS
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_stars),INTENT(IN)      :: stars
       TYPE(t_cell),INTENT(IN)       :: cell
-      TYPE(t_potden),INTENT(IN)     :: den, EnergyDen
+      TYPE(t_potden),INTENT(IN)  :: den, EnergyDen
       TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc
 
       TYPE(t_gradients) :: grad, tmp_grad
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:), kinED_rs(:,:)
+      REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
+      COMPLEX, ALLOCATABLE :: den_pw_w(:,:), EnergyDen_pw_w(:,:)
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:,:)
+      INTEGER           :: jspin
 
       CALL init_pw_grid(xcpot,stars,sym,cell)
 
       !Put the charge on the grid, in GGA case also calculate gradients
       CALL pw_to_grid(xcpot,input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho)
-      call give_stats(rho, "rho")
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
 
@@ -71,11 +75,32 @@ CONTAINS
 
       ! use updated vTot for exc calculation
       IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
+         allocate(den_pw_w,       mold=vTot%pw_w)
+         allocate(EnergyDen_pw_w, mold=vTot%pw_w)
+         do jspin = 1,input%jspins
+            call convol(stars, vTot%pw_w(:,jspin),      vTot%pw,      stars%ufft)
+            call convol(stars, den_pw_w(:,jspin),       den%pw,       stars%ufft)
+            call convol(stars, EnergyDen_pw_w(:,jspin), EnergyDen%pw, stars%ufft)
+         enddo
+
+         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                         cell,  vTot%pw_w,      tmp_grad,    vTot_conv)
+
+         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                         cell,  den_pw_w, tmp_grad,    rho_conv)
+         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                         cell,  EnergyDen_pw_w, tmp_grad,    ED_conv)
+
+         call save_npy("den_conv.npy", rho_conv)
+         call save_npy("EnergyDen_conv.npy", ED_conv)
+         call save_npy("vTot_conv.npy", vTot_conv)
+         call save_npy("kinED_schr_conv_precut.npy", ED_conv - vTot_conv*rho_conv)
+
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  EnergyDen%pw, tmp_grad,    ED_rs)
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  vTot%pw,      tmp_grad,    vTot_rs)
-         CALL calc_kinEnergyDen(ED_rs, vTot_rs, rho, kinED_rs)
+         CALL calc_kinEnergyDen(ED_rs, vTot_rs, rho, kinED_rs, .True.)
       ENDIF
 
       !calculate the ex.-cor energy density

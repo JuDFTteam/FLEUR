@@ -21,4 +21,7 @@ juDFT/string.f90
 juDFT/time.F90
 juDFT/args.F90
 juDFT/sysinfo.F90
+# just for debugging purposes
+juDFT/npy.F90
+juDFT/endian_swap.f90
 )

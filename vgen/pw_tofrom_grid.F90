@@ -111,6 +111,7 @@ CONTAINS
           ALLOCATE( mx(0:ifftd-1),my(0:ifftd-1),magmom(0:ifftd-1))
        ENDIF
     END IF
+
     IF (PRESENT(rho)) THEN
     !Put den_pw on grid and store into rho(:,1:2)
        DO js=1,jspins

@@ -148,7 +148,7 @@ CONTAINS
             CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, vTot_tmp%mt(:,0:,n,:), &
                             nsp,   n,            tmp_grad, vTot_rs)
 
-            CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs)
+            CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs, .False.)
          ENDIF
 
          IF (ALLOCATED(exc%mt)) THEN

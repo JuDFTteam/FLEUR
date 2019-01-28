@@ -12,36 +12,35 @@ MODULE m_metagga
    end type t_RS_potden
 
 CONTAINS
-   SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS)
+   SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS, is_pw)
       USE m_juDFT_stop
+      use m_npy
       !use m_cdngen
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
       REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
+      LOGICAL, INTENT(IN), optional    :: is_pw
 #ifdef CPP_LIBXC
       REAL, PARAMETER                  :: eps = 1e-15
 
       !implicit allocation
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
-      if(all(shape(kinEnergyDen_RS) == [6144,1])) then
-         call give_stats(EnergyDen_RS, array_name="ED_RS")
-         call give_stats(vTot_RS, array_name="vTot_RS")
-         call give_stats(den_RS, array_name="den_RS")
-         call give_stats(kinEnergyDen_RS, array_name="kin_ED_RS")
+
+      if(is_pw) then
+         call save_npy("EnergyDen_RS.npy", EnergyDen_RS)
+         call save_npy("vTot_RS.npy", vTot_RS)
+         call save_npy("den_RS.npy", den_RS)
+         call save_npy("vTot_RSxdenRS.npy", vtot_RS*den_RS)
+         call save_npy("kinED_pw_schroeway_precut.npy",kinEnergyDen_RS) 
       endif
-      write (*,*) ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
       if(any(kinEnergyDen_RS < eps)) then
          write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
          kinEnergyDen_RS = max(kinEnergyDen_RS, eps)
       endif
 
-      if(all(shape(kinEnergyDen_RS) == [6144,1])) then
-         write (*,*) "kinED shape:", shape(kinEnergyDen_RS)
-         write (*,*) "write old"
-         open(unit=69, file="kinED_pw_schroeway.dat")
-         write (69,'(ES17.10)') kinEnergyDen_RS
-         close(69)
+      if(is_pw) then
+         call save_npy("kinED_pw_schroeway.npy",kinEnergyDen_RS) 
 
          write (*,*) "read new"
          open(unit=69, file="kin_ED_pwway.dat")
@@ -65,6 +64,17 @@ CONTAINS
       write (*,'(A,ES17.10)') "mean   = ", sum(array) / size(array)
       write (*,*) "#############################"
    END SUBROUTINE give_stats
+
+   SUBROUTINE dump_array(array, filename)
+      implicit none
+      real, intent(in)             :: array(:,:)
+      character(len=*), intent(in) :: filename
+
+      open(69, file=filename)
+      write (69,'(ES17.10)') array
+      close(69)
+
+   END SUBROUTINE
 
 
    SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &

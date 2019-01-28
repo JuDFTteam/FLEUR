@@ -230,6 +230,7 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    use m_pw_tofrom_grid
    use m_judft_stop
    use m_metagga, only: give_stats
+   use m_npy
    implicit none
 
    CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -247,10 +248,6 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    do dim_idx = 1,3
       call pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, &
          xcpot%comparison_kinED_pw(dim_idx)%pw, grad, tmp)
-      if(any(tmp > 1e5)) then
-         write (*,*) "tmp > 1e5 for", dim_idx
-         call give_stats(tmp, "tmp(dim_idx)")
-      endif
       if(.not. allocated(kinED)) then
          allocate(kinED, mold=tmp)
          kinED = 0.0
@@ -276,6 +273,7 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    call finish_pw_grid()
 
    write (*,*) "kED shape =", shape(kinED)
+   call save_npy("kin_ED_pwway.npy", kinED)
    open(unit=69, file="kin_ED_pwway.dat")
    write (69,'(ES17.10)') kinED
    close(69)
