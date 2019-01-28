@@ -68,12 +68,6 @@ MODULE m_tlo
                       dvulo(lo,lp,lh) = 0.0
                    ELSE
                       DO i = 1,atoms%jri(ntyp)
-                         PRINT *,i,lp,lo,lh
-                         PRINT *,SHAPE(f)
-                         CALL FLUSH()
-                         PRINT *,f(i,1:2,lp)
-                         PRINT *,flo(i,1:2,lo)
-                         PRINT *,vr(i,lh)
                          x(i) = (f(i,1,lp)*flo(i,1,lo)+ f(i,2,lp)*flo(i,2,lo))*vr(i,lh)
                       END DO
                       CALL intgr3(x,atoms%rmsh(:,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),uvulo(lo,lp,lh))
