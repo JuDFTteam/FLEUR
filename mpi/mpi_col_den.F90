@@ -69,14 +69,16 @@ CONTAINS
 
     ! -> Collect den%vacxy(:,:,:,jspin)
     IF (input%film) THEN
-       n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
+       !n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
+       n=size(den%vacxy(:,:,:,jspin))
        ALLOCATE(c_b(n))
        CALL MPI_REDUCE(den%vacxy(:,:,:,jspin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) CALL CPP_BLAS_ccopy(n, c_b, 1, den%vacxy(:,:,:,jspin), 1)
        DEALLOCATE (c_b)
 
        ! -> Collect den%vacz(:,:,jspin)
-       n = vacuum%nmzd*2
+       !n = vacuum%nmzd*2
+       n=size(den%vacz(:,:,jspin))
        ALLOCATE(r_b(n))
        CALL MPI_REDUCE(den%vacz(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, den%vacz(:,:,jspin), 1)
@@ -118,7 +120,7 @@ CONTAINS
 
     !--> svac & pvac
     IF ( input%film ) THEN
-       n=2
+       n=SIZE(regCharges%svac,1)
        ALLOCATE(r_b(n))
        CALL MPI_REDUCE(regCharges%svac(:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%svac(:,jspin), 1)
@@ -336,7 +338,8 @@ CONTAINS
        !
        IF (input%film) THEN
 
-          n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
+          !n = vacuum%nmzxyd*(oneD%odi%n2d-1)*2
+          n=size(den%vacxy(:,:,:,3))
           ALLOCATE(c_b(n))
           CALL MPI_REDUCE(den%vacxy(:,:,:,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
@@ -344,7 +347,8 @@ CONTAINS
           ENDIF
           DEALLOCATE (c_b)
           !
-          n = vacuum%nmzd*2*2
+          !n = vacuum%nmzd*2*2
+          n=SIZE(den%vacz(:,:,3:4))
           ALLOCATE(r_b(n))
           CALL MPI_REDUCE(den%vacz(:,:,3:4),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
           IF (mpi%irank.EQ.0) THEN
