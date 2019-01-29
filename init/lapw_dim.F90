@@ -89,16 +89,16 @@ CONTAINS
              nv = 0
              nv2 = 0
              DO j1 = -mk1,mk1
-                s(1) = bkpt(1) + j1 + (2*ispin - 3)/2.0*noco%qss(1)
+                s(1) = bkpt(1) + j1 + (2*ispin - 3)/2.0*qss(1)
                 DO j2 = -mk2,mk2
-                   s(2) = bkpt(2) + j2 + (2*ispin - 3)/2.0*noco%qss(2)
+                   s(2) = bkpt(2) + j2 + (2*ispin - 3)/2.0*qss(2)
                    !--->          nv2 for films
                    s(3) = 0.0
                    !r2 = dotirp(s,s,cell%bbmat)
                    r2 = dot_product(matmul(s,cell%bbmat),s)
                    IF (r2.LE.rk2) nv2 = nv2 + 1
                    DO j3 = -mk3,mk3
-                      s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*noco%qss(3)
+                      s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*qss(3)
                       !r2 = dotirp(s,s,cell%bbmat)
                       r2 = dot_product(matmul(s,cell%bbmat),s)
                       IF (r2.LE.rk2) THEN
@@ -113,7 +113,7 @@ CONTAINS
                 s(1) = 0.0
                 s(2) = 0.0
                 DO j3 = -mk3,mk3
-                   s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*noco%qss(3)
+                   s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*qss(3)
                    !r2 = dotirp(s,s,cell%bbmat)
                    r2 = dot_product(matmul(s,cell%bbmat),s)
 
