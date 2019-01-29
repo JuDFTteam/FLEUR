@@ -14,7 +14,6 @@ MODULE m_metagga
 CONTAINS
    SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS, is_pw)
       USE m_juDFT_stop
-      use m_npy
       !use m_cdngen
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
@@ -26,13 +25,13 @@ CONTAINS
       !implicit allocation
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
 
-      if(is_pw) then
-         call save_npy("EnergyDen_RS.npy", EnergyDen_RS)
-         call save_npy("vTot_RS.npy", vTot_RS)
-         call save_npy("den_RS.npy", den_RS)
-         call save_npy("vTot_RSxdenRS.npy", vtot_RS*den_RS)
-         call save_npy("kinED_pw_schroeway_precut.npy",kinEnergyDen_RS) 
-      endif
+      !if(is_pw) then
+         !call save_npy("EnergyDen_RS.npy", EnergyDen_RS)
+         !call save_npy("vTot_RS.npy", vTot_RS)
+         !call save_npy("den_RS.npy", den_RS)
+         !call save_npy("vTot_RSxdenRS.npy", vtot_RS*den_RS)
+         !call save_npy("kinED_pw_schroeway_precut.npy",kinEnergyDen_RS) 
+      !endif
 
       if(any(kinEnergyDen_RS < eps)) then
          write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
@@ -40,7 +39,7 @@ CONTAINS
       endif
 
       if(is_pw) then
-         call save_npy("kinED_pw_schroeway.npy",kinEnergyDen_RS) 
+         !call save_npy("kinED_pw_schroeway.npy",kinEnergyDen_RS) 
 
          write (*,*) "read new"
          open(unit=69, file="kin_ED_pwway.dat")
@@ -134,6 +133,7 @@ CONTAINS
 
       DO jspin = 1,input%jspins
          CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
+         
 
          ! replace brillouin weights with auxillary weights
          CALL calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
@@ -159,15 +159,16 @@ CONTAINS
       INTEGER,      INTENT(in)        :: jspin
       TYPE(t_kpts), INTENT(in)        :: kpts
       REAL,         INTENT(inout)     :: f_ik(:,:) ! f_ik(band_idx, kpt_idx)
+      REAL, allocatable               :: eigenvalues(:,:)
 
       ! local vars
-      REAL                       :: w_i(SIZE(f_ik,dim=1)), e_i(SIZE(f_ik,dim=1))
+      REAL                       :: e_i(SIZE(f_ik,dim=1))
       INTEGER                    :: ikpt
 
       DO ikpt = 1,kpts%nkpt
-         CALL read_eig(eig_id,ikpt,jspin, eig=e_i, w_iks=w_i)
-
-         f_ik(:,ikpt) = e_i * w_i
+         CALL read_eig(eig_id,ikpt,jspin, eig=e_i)
+         eigenvalues(:,ikpt) = e_i
+         f_ik(:,ikpt) = f_ik(:,ikpt) * e_i
       ENDDO
    END SUBROUTINE calc_EnergyDen_auxillary_weights
 
