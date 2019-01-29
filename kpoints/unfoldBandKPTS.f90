@@ -173,6 +173,7 @@ CONTAINS
     !write(91,'(3f15.8)') kpts%bk
     !write(92,*) kpts%wtkpt
     ALLOCATE (kpts%sc_list(13,p_kpts%nkpt))
+    kpts%specialPointIndices(:) = p_kpts%specialPointIndices(:)
     kpts%sc_list=list
     !write(90,'(10f15.8)') kpts%sc_list
   END SUBROUTINE find_supercell_kpts

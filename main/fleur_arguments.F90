@@ -29,6 +29,9 @@ MODULE m_fleur_arguments
 #ifdef CPP_SCALAPACK
        //",scalapack"&
 #endif
+#ifdef CPP_ELPA_ONENODE
+       //",elpa_1node"&
+#endif
 #ifdef CPP_ELPA
        //",elpa"&
 #endif

@@ -68,7 +68,6 @@ MODULE m_banddos_io
 
       INTEGER           :: hdfError, dimsInt(7)
       INTEGER           :: version
-      INTEGER           :: fakeLogical
       REAL              :: eFermiPrev
       LOGICAL           :: l_error
 
@@ -100,9 +99,7 @@ MODULE m_banddos_io
       CALL h5gcreate_f(fileID, '/general', generalGroupID, hdfError)
       CALL io_write_attint0(generalGroupID,'spins',input%jspins)
       CALL io_write_attreal0(generalGroupID,'lastFermiEnergy',eFermiPrev)
-      fakeLogical = 0
-      IF (banddos%unfoldband) fakeLogical = 1
-      CALL io_write_attint0(generalGroupID,'bandUnfolding',fakeLogical)
+      CALL io_write_attlog0(generalGroupID,'bandUnfolding',banddos%unfoldband)
       CALL h5gclose_f(generalGroupID, hdfError)
 
       CALL h5gcreate_f(fileID, '/cell', cellGroupID, hdfError)
@@ -249,6 +246,7 @@ MODULE m_banddos_io
       INTEGER(HID_T)    :: jsymSpaceID, jsymSetID
       INTEGER(HID_T)    :: ksymSpaceID, ksymSetID
       INTEGER(HID_T)    :: bUWeightsSpaceID, bUWeightsSetID
+      INTEGER(HID_T)    :: supercellSpaceID, supercellSetID
 
       INTEGER           :: hdfError, dimsInt(7)
 
@@ -305,6 +303,14 @@ MODULE m_banddos_io
 
       IF (banddos%unfoldband) THEN
          CALL h5gcreate_f(fileID, '/bandUnfolding', bandUnfoldingGroupID, hdfError)
+
+         dims(:1)=(/3/)
+         dimsInt = dims
+         CALL h5screate_simple_f(1,dims(:1),supercellSpaceID,hdfError)
+         CALL h5dcreate_f(bandUnfoldingGroupID, "supercell", H5T_NATIVE_INTEGER, supercellSpaceID, supercellSetID, hdfError)
+         CALL h5sclose_f(supercellSpaceID,hdfError)
+         CALL io_write_integer1(supercellSetID,(/1/),dimsInt(:1),(/banddos%s_cell_x,banddos%s_cell_y,banddos%s_cell_z/))
+         CALL h5dclose_f(supercellSetID, hdfError)
 
          dims(:3)=(/neigd,kpts%nkpt,input%jspins/)
          dimsInt = dims

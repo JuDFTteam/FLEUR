@@ -93,11 +93,13 @@ CONTAINS
 
   
 
-  SUBROUTINE jij_start(this)
+  SUBROUTINE jij_start(this,potden)
+    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
+    TYPE(t_potden) ,INTENT(INOUT)       :: potden
     this%loopindex=0
-    CALL this%t_forcetheo%start() !call routine of basis type
+    CALL this%t_forcetheo%start(potden) !call routine of basis type
   END SUBROUTINE  jij_start
 
   LOGICAL FUNCTION jij_next_job(this,lastiter,noco)

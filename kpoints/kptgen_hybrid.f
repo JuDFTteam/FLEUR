@@ -16,18 +16,19 @@
       !Modified for types D.W.
 
 
-      SUBROUTINE kptgen_hybrid(kpts,invs,l_soc,nop,mrot,tau)
+      SUBROUTINE kptgen_hybrid(input,cell,sym,kpts,l_soc)
+
       USE m_types
+      USE m_divi
+
       IMPLICIT NONE
 
-      TYPE(t_kpts),INTENT(INOUT)::kpts
+      TYPE(t_input), INTENT(IN)    :: input
+      TYPE(t_cell),  INTENT(IN)    :: cell
+      TYPE(t_sym),   INTENT(IN)    :: sym
+      TYPE(t_kpts),  INTENT(INOUT) :: kpts
       ! - scalars -
-      INTEGER, INTENT(IN)   ::  nop
-      LOGICAL, INTENT(IN)   ::  invs
       LOGICAL, INTENT(IN)   ::  l_soc
-      ! - local arrays -
-      INTEGER, INTENT(IN)   ::  mrot(3,3,nop)
-      REAL   , INTENT(IN)   ::  tau(3,nop)
       ! - local scalars -
       INTEGER               ::  i,j,k,nkpt
       INTEGER               ::  ikpt,ikpt0,nkpti
@@ -42,6 +43,11 @@
       REAL,ALLOCATABLE      ::  bk(:,:),bkhlp(:,:)
       REAL,ALLOCATABLE      ::  rarr(:)
       LOGICAL               ::  ldum
+
+      IF (sum(kpts%nkpt3).EQ.0) THEN
+         CALL divi(kpts%nkpt,cell%bmat,input%film,sym%nop,
+     &             sym%nop2,kpts%nkpt3)
+      END IF
 
       nkpt=kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3)
       ALLOCATE( bk(3,nkpt),bkhlp(3,nkpt) )
@@ -59,22 +65,22 @@
       
       IF( ikpt .ne. nkpt) STOP 'failure: number of k-points'
 
-      IF( invs .or. l_soc ) THEN
-        nsym = nop
+      IF( sym%invs .or. l_soc ) THEN
+        nsym = sym%nop
       ELSE
-        nsym = 2*nop
+        nsym = 2*sym%nop
       END IF
       
       ALLOCATE( rot(3,3,nsym),rtau(3,nsym) )
 
-      DO i=1,nop
-         rot(:,:,i) = mrot(:,:,i)
-        rtau(  :,i) = tau(:,i)
+      DO i=1,sym%nop
+         rot(:,:,i) = sym%mrot(:,:,i)
+        rtau(  :,i) = sym%tau(:,i)
       END DO
 
-      DO i = nop+1,nsym
-         rot(:,:,i) =  rot(:,:,i-nop)
-        rtau(  :,i)   = rtau(  :,i-nop)
+      DO i = sym%nop+1,nsym
+         rot(:,:,i) =  rot(:,:,i-sym%nop)
+        rtau(  :,i)   = rtau(  :,i-sym%nop)
       END DO
 
       IF(any(rot(:,:,1)-reshape((/1,0,0,0,1,0,0,0,1/),(/3,3/)).ne.0))
@@ -84,8 +90,8 @@
 
       invtab = 0
 
-      DO i = 1,nop
-        DO j = 1,nop
+      DO i = 1,sym%nop
+        DO j = 1,sym%nop
 
           IF(    all(    matmul(rot(:,:,i),rot(:,:,j))
      &               .eq.reshape((/1,0,0,0,1,0,0,0,1/),(/3,3/)))
@@ -102,8 +108,8 @@
       END DO
 
 
-      DO i = nop+1,nsym
-         rrot(:,:,i) = - rrot(:,:,i-nop)
+      DO i = sym%nop+1,nsym
+         rrot(:,:,i) = - rrot(:,:,i-sym%nop)
       END DO
 
       ALLOCATE ( kptp(nkpt),symkpt(nkpt),rarr(3),iarr2(3),iarr(nkpt) )

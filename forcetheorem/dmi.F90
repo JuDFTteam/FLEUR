@@ -52,11 +52,13 @@ CONTAINS
     this%evsum=0
   END SUBROUTINE dmi_init
 
-  SUBROUTINE dmi_start(this)
+  SUBROUTINE dmi_start(this,potden)
+    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
+    TYPE(t_potden) ,INTENT(INOUT)       :: potden
     this%q_done=0
-    CALL this%t_forcetheo%start() !call routine of basis type
+    CALL this%t_forcetheo%start(potden) !call routine of basis type
   END SUBROUTINE  dmi_start
 
   LOGICAL FUNCTION dmi_next_job(this,lastiter,noco)
