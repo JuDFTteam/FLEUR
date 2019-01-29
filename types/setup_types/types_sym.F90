@@ -277,7 +277,7 @@ CONTAINS
       
   END SUBROUTINE read_xml_sym
   
-  SUBROUTINE init_sym(sym,cell,input)
+  SUBROUTINE init_sym(sym,cell,input,noco)
     USE m_types_cell
     USE m_types_input
     USE m_closure
@@ -286,7 +286,8 @@ CONTAINS
     CLASS(t_sym),INTENT(INOUT):: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_input),INTENT(IN)  :: input
-
+    TYPE(t_noco),INTENT(IN)   :: noco
+    
     LOGICAL :: invSym
     INTEGER :: nop48
     INTEGER,ALLOCATABLE::invOps(:),multtab(:,:),optype(:)
@@ -304,6 +305,14 @@ CONTAINS
          CALL juDFT_error("nonsymmorphic symmetries not yet implemented for films!",calledby ="r_inpXML")
     sym%invs2 = sym%invs.AND.sym%zrfs
     !TODO
+    IF( sym%invs .OR. noco%l_soc ) THEN
+       sym%nsym = sym%nop
+    ELSE
+       ! combine time reversal symmetry with the spatial symmetry opera
+       ! thus the symmetry operations are doubled
+       sym%nsym = 2*sym%nop
+    END IF
+    
   END SUBROUTINE init_sym
 
   

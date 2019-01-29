@@ -216,10 +216,17 @@ CONTAINS
   END SUBROUTINE read_xml_stars
 
 
-  SUBROUTINE init_stars(stars)
+  SUBROUTINE init_stars(stars,sym,input)
+    USE m_types_sym
+    USE m_types_input
+    USE m_prpqfftmap
     IMPLICIT NONE
     CLASS(t_stars),INTENT(INOUT):: stars
+    TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE(t_input),INTENT(IN)    :: input
+    
 
+    
      CALL lapw_fft_dim(cell,input,noco,stars)
 
      IF (input%film) THEN
@@ -288,6 +295,10 @@ CONTAINS
        CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
            ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
     ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
-  
+
+    ! Set up pointer for backtransformation from g-vector in positive 
+    ! domain of carge density fftibox into stars
+    CALL prp_qfft_map(stars,sym,input)
+    
    END SUBROUTINE init_stars
 END MODULE m_types_stars

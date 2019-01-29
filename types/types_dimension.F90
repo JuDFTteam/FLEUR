@@ -6,16 +6,10 @@
 MODULE m_types_dimension
   
   TYPE t_dimension
-     INTEGER :: nspd
      INTEGER :: nvd
      INTEGER :: nv2d
      INTEGER :: neigd
      INTEGER :: neigd2
-     INTEGER :: ncvd
-     INTEGER :: nstd
-     INTEGER :: msh
-     INTEGER :: lmd
-     INTEGER :: lmplmd
      INTEGER :: nbasfcn
   END TYPE t_dimension
 

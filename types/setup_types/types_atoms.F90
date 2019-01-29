@@ -40,6 +40,7 @@ MODULE m_types_atoms
      INTEGER,ALLOCATABLE::jri(:)
      !core states
      INTEGER,ALLOCATABLE::ncst(:)
+     INTEGER            :: mshd !dimension of core mesh
      !How many states are explicitely provided?
      INTEGER,ALLOCATABLE::numStatesProvided(:)
      !core state occupations
@@ -506,7 +507,75 @@ END DO
        END IF
      
     END DO
-      
+
+    atoms%nlotot = 0
+    DO n = 1, atoms%ntype
+       DO l = 1,atoms%nlo(n)
+          atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+       ENDDO
+    ENDDO
+
+    ! Check the LO stuff and call setlomap (from inped):
+
+    ALLOCATE(atoms%lo1l(0:atoms%llod,atoms%ntype))
+    ALLOCATE(atoms%nlol(0:atoms%llod,atoms%ntype))
+
+    
+    DO iType = 1, atoms%ntype
+       IF (atoms%nlo(iType).GE.1) THEN
+           IF (atoms%nlo(iType).GT.atoms%nlod) THEN
+              WRITE (6,*) 'nlo(n) =',atoms%nlo(iType),' > nlod =',atoms%nlod
+              CALL juDFT_error("nlo(n)>nlod",calledby ="postprocessInput")
+           END IF
+           DO j=1,atoms%nlo(iType)
+              IF ( (atoms%llo(j,iType).GT.atoms%llod).OR.(MOD(-atoms%llod,10)-1).GT.atoms%llod ) THEN
+                 WRITE (6,*) 'llo(j,n) =',atoms%llo(j,iType),' > llod =',atoms%llod
+                 CALL juDFT_error("llo(j,n)>llod",calledby ="postprocessInput")
+              END IF
+           END DO
+
+           ! Replace call to setlomap with the following 3 loops (preliminary).
+           ! atoms%nlol and atoms%lo1l arrays are strange. This should be solved differently.
+           DO l = 0,atoms%llod
+              atoms%nlol(l,iType) = 0
+              atoms%lo1l(l,iType) = 0
+           END DO
+
+           DO ilo = 1,atoms%nlod
+              atoms%l_dulo(ilo,iType) = .FALSE.
+           END DO
+
+           DO ilo = 1,atoms%nlo(iType)
+              WRITE(6,'(A,I2,A,I2)') 'I use',atoms%ulo_der(ilo,iType),'. derivative of l =',atoms%llo(ilo,iType)
+              IF (atoms%llo(ilo,iType)>atoms%llod) CALL juDFT_error(" l > llod!!!",calledby="postprocessInput")
+              l = atoms%llo(ilo,iType)
+              IF (ilo.EQ.1) THEN
+                 atoms%lo1l(l,iType) = ilo
+              ELSE
+                 IF (l.NE.atoms%llo(ilo-1,iType)) THEN
+                    atoms%lo1l(l,iType) = ilo
+                 END IF
+              END IF
+              atoms%nlol(l,iType) = atoms%nlol(l,iType) + 1
+           END DO
+           WRITE (6,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(iType)
+        END IF
+
+     END DO
+
+     ! Check lda+u stuff (from inped)
+
+     DO i = 1, atoms%n_u
+        n = atoms%lda_u(i)%atomType
+        IF (atoms%nlo(n).GE.1) THEN
+           DO j = 1, atoms%nlo(n)
+              IF ((ABS(atoms%llo(j,n)).EQ.atoms%lda_u(i)%l) .AND. (.NOT.atoms%l_dulo(j,n)) ) &
+                 WRITE (*,*) 'LO and LDA+U for same l not implemented'
+           END DO
+        END IF
+     END DO
+
+
   END SUBROUTINE read_xml_atoms
 
 

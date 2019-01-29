@@ -344,12 +344,12 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,DIMENSION,atoms,noco,jspin,n
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
 
    IF (noco%l_mperp) THEN
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
    ELSE
-      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin))
-      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat,jspin:jspin))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
    END IF
 
@@ -374,12 +374,12 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms,kpts)
    TYPE(t_kpts),          INTENT(IN)    :: kpts
 
    ALLOCATE (thisMCD%ncore(atoms%ntype))
-   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
+   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,nstd_dim))
    IF (banddos%l_mcd) THEN
       thisMCD%emcd_lo = banddos%e_mcd_lo
       thisMCD%emcd_up = banddos%e_mcd_up
-      ALLOCATE (thisMCD%m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2))
-      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd,kpts%nkpt,input%jspins) )
+      ALLOCATE (thisMCD%m_mcd(nstd_dim,(3+1)**2,3*atoms%ntype,2))
+      ALLOCATE (thisMCD%mcd(3*atoms%ntype,nstd_dim,dimension%neigd,kpts%nkpt,input%jspins) )
       IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
    ELSE
       ALLOCATE (thisMCD%m_mcd(1,1,1,1))

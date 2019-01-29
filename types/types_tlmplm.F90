@@ -38,13 +38,15 @@ MODULE m_types_tlmplm
   END TYPE t_tlmplm
   PUBLIC t_tlmplm,t_rsoc
 CONTAINS
-  SUBROUTINE tlmplm_init(td,lmplmd,lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins,l_offdiag)
+  SUBROUTINE tlmplm_init(td,ntype,lmaxd,llod,mlotot,mlolotot,jspins,l_offdiag)
     USE m_judft
     CLASS(t_tlmplm),INTENT(INOUT):: td
-    INTEGER,INTENT(in)           :: lmplmd,lmd,ntype,lmaxd,llod,mlotot,mlolotot,jspins
+    INTEGER,INTENT(in)           :: ntype,lmaxd,llod,mlotot,mlolotot,jspins
     LOGICAL,INTENT(IN)           :: l_offdiag
-    INTEGER :: err
+    INTEGER :: err,lmplmd,lmd
 
+    lmd=lmaxd*(lmaxd+2)
+    lmplmd= (lmd* (lmd+3))/2
     IF (ALLOCATED(td%tuu)) &
          DEALLOCATE(td%tuu,td%tud,td%tdd,td%tdu,td%tdulo,td%tuulo,&
          td%tuloulo,td%ind,td%h_loc,td%e_shift,td%h_off)

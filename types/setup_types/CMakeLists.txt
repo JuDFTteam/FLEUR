@@ -14,7 +14,10 @@ types/setup_types/types_banddos.F90
 types/setup_types/types_sliceplot.F90
 types/setup_types/econfig.F90
 types/setup_types/types_sphhar.F90
+types/setup_types/types_corespecInput.F90
 types/setup_types/init_stars.F90
+types/setup_types/types_field.F90
+types/setup_types/types_wannier.F90
 )
 
 set(inpgen_F90 ${inpgen_F90}
