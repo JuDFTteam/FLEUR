@@ -9,7 +9,7 @@ if (XXD_PROG)
 else()
   ADD_CUSTOM_COMMAND(
         OUTPUT ${CMAKE_SOURCE_DIR}/io/xml/inputSchema.h
-        COMMAND mv  ${CMAKE_SOURCE_DIR}/io/xml/inputSchema.h.backup ${CMAKE_SOURCE_DIR}/io/xml/inputSchema.h
+        COMMAND cp  ${CMAKE_SOURCE_DIR}/io/xml/inputSchema.h.backup ${CMAKE_SOURCE_DIR}/io/xml/inputSchema.h
         COMMENT "No xxd found using backup")
   message("No xxd command found! Using backup of inputSchema.h")
 endif()     

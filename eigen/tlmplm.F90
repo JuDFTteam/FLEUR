@@ -27,22 +27,28 @@ CONTAINS
 
     INTEGER, INTENT (IN) :: n,jspin,jsp !atom index,physical spin&spin index for data
 
-    REAL dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
-    REAL dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
-    REAL uvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
-    REAL uvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd )
-    REAL f(atoms%jmtd,2,0:atoms%lmaxd,2),g(atoms%jmtd,2,0:atoms%lmaxd,2),x(atoms%jmtd)
-
-    REAL flo(atoms%jmtd,2,atoms%nlod)
-    INTEGER:: indt(0:SIZE(td%tuu,1)-1)
-    REAL vr0(SIZE(v%mt,1),0:SIZE(v%mt,2)-1)
+    REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:)
+    INTEGER,ALLOCATABLE :: indt(:)
+    REAL,ALLOCATABLE    :: vr0(:,:)
+   
 
     COMPLEX  :: cil
     REAL     :: temp
     INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
     INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2
 
+    ALLOCATE( dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
+    ALLOCATE( dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
+    ALLOCATE( uvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
+    ALLOCATE( uvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
+    ALLOCATE( f(atoms%jmtd,2,0:atoms%lmaxd,2),g(atoms%jmtd,2,0:atoms%lmaxd,2),x(atoms%jmtd))
 
+    ALLOCATE( flo(atoms%jmtd,2,atoms%nlod))
+    ALLOCATE( indt(0:SIZE(td%tuu,1)-1))
+    ALLOCATE( vr0(SIZE(v%mt,1),0:SIZE(v%mt,2)-1))
+
+
+    
     vr0=v%mt(:,:,n,jsp)
     IF (jsp<3) vr0(:,0)=0.0
 
@@ -179,7 +185,7 @@ CONTAINS
     !--->   if there are any
     IF (atoms%nlo(n).GE.1) THEN
        CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
-            na,flo,f,g,ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
+            na,flo,f(:,:,:,jspin),g(:,:,:,jspin),ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
 
     ENDIF
   END SUBROUTINE tlmplm
