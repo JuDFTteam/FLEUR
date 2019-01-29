@@ -312,9 +312,9 @@
       LOGICAL, SAVE        :: first = .true.
 
       !  - local arrays -
-      INTEGER              :: kappa(dimension%nstd),nprnc(dimension%nstd)
-      REAL                 :: vrd(dimension%msh)
-      REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(dimension%msh),b(dimension%msh)
+      INTEGER              :: kappa(nstd_dim),nprnc(nstd_dim)
+      REAL                 :: vrd(atoms%mshd)
+      REAL                 :: occ(nstd_dim),occ_h(nstd_dim,2),a(atoms%mshd),b(atoms%mshd)
       REAL,ALLOCATABLE,SAVE:: vr0(:,:,:)
 
       !   - intrinsic functions -
@@ -355,7 +355,7 @@
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))
         ncmsh = nint( log( (atoms%rmt(itype)+10.0)/rnot ) / dxx + 1 )
-        ncmsh = min( ncmsh, dimension%msh )
+        ncmsh = min( ncmsh, atoms%mshd )
         rn = rnot* (d** (ncmsh-1))
 
         nst = atoms%ncst(itype)
@@ -397,7 +397,7 @@
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))
         ncmsh = nint( log( (atoms%rmt(itype)+10.0)/rnot ) / dxx + 1 )
-        ncmsh = min( ncmsh, dimension%msh )
+        ncmsh = min( ncmsh, atoms%mshd )
         rn = rnot* (d** (ncmsh-1))
         IF ( mpi%irank == 0 ) THEN
           WRITE(6 ,FMT=8000) z,rnot,dxx,atoms%jri(itype)
@@ -492,9 +492,9 @@
       REAL                 :: d,dxx,rn,rnot,z,t1,rr 
 
       !  - local arrays -
-      INTEGER              :: kappa(dimension%nstd),nprnc(dimension%nstd)
-      INTEGER              :: nindxcr(0:dimension%nstd,atoms%ntype) 
-      REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(dimension%msh),b(dimension%msh)
+      INTEGER              :: kappa(nstd_dim),nprnc(nstd_dim)
+      INTEGER              :: nindxcr(0:nstd_dim,atoms%ntype) 
+      REAL                 :: occ(nstd_dim),occ_h(nstd_dim,2),a(atoms%mshd),b(atoms%mshd)
       INTEGER              :: lmaxc(atoms%ntype)
 
 
@@ -518,7 +518,7 @@
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))
         ncmsh = nint( log( (atoms%rmt(itype)+10.0)/rnot ) / dxx + 1 )
-        ncmsh = min( ncmsh, dimension%msh )
+        ncmsh = min( ncmsh, atoms%mshd )
         rn = rnot* (d** (ncmsh-1))
 
         nst = atoms%ncst(itype)

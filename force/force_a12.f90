@@ -44,7 +44,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     COMPLEX forc_a12(3),gv(3)
-    COMPLEX acof_flapw(nobd,0:DIMENSION%lmd),bcof_flapw(nobd,0:DIMENSION%lmd)
+    COMPLEX acof_flapw(nobd,0:(atoms%lmaxd*(atoms%lmaxd+2))),bcof_flapw(nobd,0:(atoms%lmaxd*(atoms%lmaxd+2)))
     REAL aaa(2),bbb(2),ccc(2),ddd(2),eee(2),fff(2),gvint(3),starsum(3),vec(3),vecsum(3)
     !     ..
     !     .. Statement Functions ..

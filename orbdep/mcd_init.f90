@@ -37,8 +37,8 @@ CONTAINS
 
     INTEGER kap,mue,iri,l,ispin,i,icore,korb,nst,n_core,ierr
     REAL  c,t2,e,fj,fl,fn ,d,ms,rn ,bmu
-    INTEGER kappa(DIMENSION%nstd),nprnc(DIMENSION%nstd),l_core(DIMENSION%nstd)
-    REAL vrd(DIMENSION%msh),occ(DIMENSION%nstd,1),a(DIMENSION%msh),b(DIMENSION%msh),j_core(DIMENSION%nstd),e_mcd1(DIMENSION%nstd)
+    INTEGER kappa(nstd_dim),nprnc(nstd_dim),l_core(nstd_dim)
+    REAL vrd(atoms%mshd),occ(nstd_dim,1),a(atoms%mshd),b(atoms%mshd),j_core(nstd_dim),e_mcd1(nstd_dim)
     REAL gv1(atoms%jmtd)
     REAL, ALLOCATABLE :: gc(:,:,:),fc(:,:,:)
     REAL, ALLOCATABLE :: gv(:,:,:,:),fv(:,:,:,:),dgv(:,:,:,:)
@@ -62,8 +62,8 @@ CONTAINS
        DO iri = 1, atoms%jri(itype)
           vrd(iri) = vr(iri,itype,ispin)
        ENDDO
-       t2 = vrd(atoms%jri(itype)) / (atoms%jri(itype) - DIMENSION%msh)
-       DO iri = atoms%jri(itype) + 1, DIMENSION%msh
+       t2 = vrd(atoms%jri(itype)) / (atoms%jri(itype) - atoms%mshd)
+       DO iri = atoms%jri(itype) + 1, atoms%mshd
           vrd(iri) =  vrd(atoms%jri(itype))  + t2* ( iri-atoms%jri(itype) )
        ENDDO
 
@@ -77,9 +77,9 @@ CONTAINS
              fl = fj + (.5e0)*isign(1,kappa(korb))
              e = -2* (atoms%zatom(itype)/ (fn+fl))**2
              d = EXP(atoms%dx(itype))
-             rn = atoms%rmsh(1,itype)*( d**(DIMENSION%msh-1) )
+             rn = atoms%rmsh(1,itype)*( d**(atoms%mshd-1) )
              CALL differ(fn,fl,fj,c,atoms%zatom(itype),atoms%dx(itype),atoms%rmsh(1,itype),&
-                  rn,d,DIMENSION%msh,vrd, e, a,b,ierr)
+                  rn,d,atoms%mshd,vrd, e, a,b,ierr)
              IF (ierr/=0)  CALL juDFT_error("error in core-levels", calledby="mcd_init")
              IF ( (e.LE.mcd%emcd_up).AND.(e.GE.mcd%emcd_lo) ) THEN
                 WRITE(*,*) 'good    ev = ',e
@@ -107,7 +107,7 @@ CONTAINS
        DO i = 1, 2
           DO iri = 3*(itype-1)+1 , 3*(itype-1)+3
              DO l = 1, (l_max+1)**2
-                DO icore = 1, DIMENSION%nstd
+                DO icore = 1, nstd_dim
                    mcd%m_mcd(icore,l,iri,i) = CMPLX(0.0,0.0)
                 ENDDO
              ENDDO
@@ -139,14 +139,14 @@ CONTAINS
 
              DO i = 1, 2
                 !              write(*,*) j_core(icore),l_core(icore),l_max,ms
-                CALL nabla(itype,icore,atoms%jri(itype),atoms%dx(itype),DIMENSION%nstd,atoms%ntype,&
+                CALL nabla(itype,icore,atoms%jri(itype),atoms%dx(itype),nstd_dim,atoms%ntype,&
                      j_core(icore),l_core(icore),l_max,ms,atoms%rmsh(:,itype),gc(:,icore,ispin),&
                      gv(:,0:,ispin,i),dgv(:,0:,ispin,i), mcd%m_mcd(:,:,:,i) )
              ENDDO
 
              DO i = 1, 2*icore*l_core(icore)
                 mcd%ncore(itype) = mcd%ncore(itype) + 1
-                IF (mcd%ncore(itype)>DIMENSION%nstd)  CALL juDFT_error("dimension%nstd too small" ,calledby ="mcd_init")
+                IF (mcd%ncore(itype)>nstd_dim)  CALL juDFT_error("nstd_dim too small" ,calledby ="mcd_init")
                 mcd%e_mcd(itype,ispin,mcd%ncore(itype)) = e_mcd1(icore)
              ENDDO
           ENDDO

@@ -66,7 +66,7 @@ CONTAINS
 #ifdef CPP_MPI
     i_vec = (/sym%nop,stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%ng2,stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft&
          &     ,atoms%ntype,atoms%nat,atoms%jmtd,sphhar%ntypsd,sphhar%nlhd,sphhar%memd,atoms%lmaxd,input%jspins,vacuum%nvac,dimension%nvd,dimension%nv2d&
-         &     ,1,kpts%nkpt,dimension%nstd,dimension%neigd,dimension%msh,25,vacuum%layers,atoms%nlod,atoms%llod,itmax/)
+         &     ,1,kpts%nkpt,nstd_dim,dimension%neigd,atoms%mshd,25,vacuum%layers,atoms%nlod,atoms%llod,itmax/)
     CALL MPI_BCAST(i_vec,33,MPI_INTEGER,0,mpi%Mpi_comm,ierr)
     sym%nop=i_vec(1);stars%mx1=i_vec(2);stars%mx2=i_vec(3);stars%mx3=i_vec(4);stars%ng3=i_vec(5)
     stars%ng2 = i_vec(6);stars%kq1_fft=i_vec(7);stars%kq2_fft=i_vec(8);stars%kq3_fft=i_vec(9)
@@ -74,7 +74,7 @@ CONTAINS
     atoms%ntype = i_vec(13);atoms%nat =i_vec(14);atoms%jmtd=i_vec(15);sphhar%ntypsd=i_vec(16)
     sphhar%nlhd = i_vec(17);sphhar%memd=i_vec(18);atoms%lmaxd=i_vec(19);input%jspins=i_vec(20)
     vacuum%nvac=i_vec(21);dimension%nvd=i_vec(22);dimension%nv2d=i_vec(23)
-    kpts%nkpt = i_vec(25); dimension%nstd=i_vec(26);dimension%neigd=i_vec(27);dimension%msh=i_vec(28)
+    kpts%nkpt = i_vec(25); nstd_dim=i_vec(26);dimension%neigd=i_vec(27);atoms%mshd=i_vec(28)
     vacuum%layers=i_vec(30);atoms%nlod=i_vec(31);atoms%llod=i_vec(32)
     itmax=i_vec(33)
     CALL MPI_BCAST(oneD%odd%d1,1,MPI_LOGICAL,0,mpi%Mpi_comm,ierr)

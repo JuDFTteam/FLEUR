@@ -133,12 +133,12 @@ CONTAINS
       ! Compute APW coefficients
 
       ! Calculate bascof
-      ALLOCATE(ahlp(DIMENSION%nvd,0:DIMENSION%lmd,atoms%nat),bhlp(DIMENSION%nvd,0:DIMENSION%lmd,atoms%nat),stat=ok)
+      ALLOCATE(ahlp(DIMENSION%nvd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat),bhlp(DIMENSION%nvd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat),stat=ok)
       IF(ok.NE.0) STOP 'subvxc: error in allocation of ahlp/bhlp'
 #ifndef CPP_OLDINTEL
       CALL abcof3(input,atoms,sym,jsp,cell,bk,lapw,usdus,oneD,ahlp,bhlp,bascof_lo)
 #endif
-      ALLOCATE(bascof(DIMENSION%nvd,2*(DIMENSION%lmd+1),atoms%nat), stat=ok)
+      ALLOCATE(bascof(DIMENSION%nvd,2*((atoms%lmaxd*(atoms%lmaxd+2))+1),atoms%nat), stat=ok)
       IF(ok.NE.0) STOP 'subvxc: error in allocation of bascof'
 
       bascof = 0

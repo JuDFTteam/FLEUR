@@ -65,7 +65,7 @@ MODULE m_constants
    INTEGER,DIMENSION(6),PARAMETER :: nobleGasNumStatesList_const=(/1, 4, 7, 12, 17, 24/)
    !some dimensions with default values
     integer,parameter:: ncvd_dim=25
-
+    INTEGER,parameter:: nstd_dim=30
 
    CONTAINS
 

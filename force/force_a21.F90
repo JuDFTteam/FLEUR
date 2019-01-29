@@ -58,7 +58,7 @@ CONTAINS
     COMPLEX dtd,dtu,utd,utu
     INTEGER lo, mlotot, mlolotot, mlot_d, mlolot_d
     INTEGER i,ie,im,in,l1,l2,ll1,ll2,lm1,lm2,m1,m2,n,natom,m,i_u
-    INTEGER natrun,is,isinv,j,irinv,it
+    INTEGER natrun,is,isinv,j,irinv,it,lmplmd
     REAL   ,PARAMETER:: zero=0.0
     COMPLEX,PARAMETER:: czero=CMPLX(0.,0.)
     !     ..
@@ -73,7 +73,7 @@ CONTAINS
 
     CALL timestart("force_a21")
 
-    !dimension%lmplmd = (dimension%lmd* (dimension%lmd+3))/2
+    lmplmd = ((atoms%lmaxd*(atoms%lmaxd+2))* ((atoms%lmaxd*(atoms%lmaxd+2))+3))/2
     mlotot = 0 ; mlolotot = 0
     DO n = 1, atoms%ntype
        mlotot = mlotot + atoms%nlo(n)
@@ -81,12 +81,12 @@ CONTAINS
     ENDDO
     mlot_d = MAX(mlotot,1)
     mlolot_d = MAX(mlolotot,1)
-    ALLOCATE ( tlmplm%tdd(0:DIMENSION%lmplmd,atoms%ntype,1),tlmplm%tuu(0:DIMENSION%lmplmd,atoms%ntype,1),&
-         tlmplm%tdu(0:DIMENSION%lmplmd,atoms%ntype,1),tlmplm%tud(0:DIMENSION%lmplmd,atoms%ntype,1),&
-         tlmplm%tuulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
-         tlmplm%tdulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
+    ALLOCATE ( tlmplm%tdd(0:lmplmd,atoms%ntype,1),tlmplm%tuu(0:lmplmd,atoms%ntype,1),&
+         tlmplm%tdu(0:lmplmd,atoms%ntype,1),tlmplm%tud(0:lmplmd,atoms%ntype,1),&
+         tlmplm%tuulo(0:(atoms%lmaxd*(atoms%lmaxd+2)),-atoms%llod:atoms%llod,mlot_d,1),&
+         tlmplm%tdulo(0:(atoms%lmaxd*(atoms%lmaxd+2)),-atoms%llod:atoms%llod,mlot_d,1),&
          tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1),&
-         a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
+         a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:(atoms%lmaxd*(atoms%lmaxd+2)),0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%ntype,1) )
     !
     IF(atoms%n_u.GT.0) THEN
        ALLOCATE(v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u))

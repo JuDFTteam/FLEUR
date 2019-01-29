@@ -58,7 +58,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    REAL,    ALLOCATABLE :: rat(:,:),eig(:,:,:),sigm(:)
    REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
    REAL,    ALLOCATABLE :: vacpar(:)
-   INTEGER lnum(DIMENSION%nstd,atoms%ntype),nst(atoms%ntype) 
+   INTEGER lnum(nstd_dim,atoms%ntype),nst(atoms%ntype) 
    INTEGER jrc(atoms%ntype)
    LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
    REAL                 :: occ(SIZE(atoms%corestateoccs,1),2)
@@ -70,10 +70,10 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    CALL den%init(stars,atoms,sphhar,vacuum,input%jspins,noco%l_noco,POTDEN_TYPE_DEN)
 
-   ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,input%jspins,atoms%ntype) )
-   ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,input%jspins),rh1(DIMENSION%msh,atoms%ntype,input%jspins) )
+   ALLOCATE ( rat(atoms%mshd,atoms%ntype),eig(nstd_dim,input%jspins,atoms%ntype) )
+   ALLOCATE ( rh(atoms%mshd,atoms%ntype,input%jspins),rh1(atoms%mshd,atoms%ntype,input%jspins) )
    ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmz) )
-   ALLOCATE ( rhoss(DIMENSION%msh,input%jspins) )
+   ALLOCATE ( rhoss(atoms%mshd,input%jspins) )
 
    rh = 0.0
    rhoss = 0.0
@@ -97,7 +97,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          d = EXP(atoms%dx(n))
          jrc(n) = 0
          DO WHILE (r < atoms%rmt(n) + 20.0) 
-            IF (jrc(n) > DIMENSION%msh) CALL juDFT_error("increase msh in fl7para!",calledby ="stden")
+            IF (jrc(n) > atoms%mshd) CALL juDFT_error("increase msh in fl7para!",calledby ="stden")
             jrc(n) = jrc(n) + 1
             rat(jrc(n),n) = r
             r = r*d
@@ -125,7 +125,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
             IF (ANY(ABS(occ(:,:)-atoms%coreStateOccs(:,:,n1))>del)) CYCLE
             IF (jr.NE.atoms%jri(n1)) CYCLE
             DO ispin = 1, input%jspins
-               DO i = 1,jrc(n) ! dimension%msh
+               DO i = 1,jrc(n) ! atoms%mshd
                   rh(i,n,ispin) = rh(i,n1,ispin)
                END DO
             END DO
@@ -143,7 +143,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          rnot = atoms%rmsh(1,n)
          IF (z.LT.1.0) THEN
             DO ispin = 1, input%jspins
-               DO i = 1,jrc(n) ! dimension%msh
+               DO i = 1,jrc(n) ! atoms%mshd
                   rh(i,n,ispin) = 1.e-10
                END DO
             END DO
@@ -151,7 +151,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
             CALL atom2(DIMENSION,atoms,xcpot,input,n,jrc(n),rnot,qdel,&
                        rhoss,nst(n),lnum(1,n),eig(1,1,n),vbar(1,n))
             DO ispin = 1, input%jspins
-               DO i = 1, jrc(n) ! dimension%msh
+               DO i = 1, jrc(n) ! atoms%mshd
                   rh(i,n,ispin) = rhoss(i,ispin)
                END DO
             END DO
@@ -172,7 +172,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
             DO i = 1, jrc(n)
                rh1(i,n,ispin) = rh(i,n,ispin)*fpi_const*rat(i,n)**2
             END DO
-            rh1(jrc(n):DIMENSION%msh,n,ispin) = 0.0
+            rh1(jrc(n):atoms%mshd,n,ispin) = 0.0
             ! prepare spherical mt charge
             DO i = 1,atoms%jri(n)
                den%mt(i,0,n,ispin) = rh(i,n,ispin)*sfp_const*atoms%rmsh(i,n)**2

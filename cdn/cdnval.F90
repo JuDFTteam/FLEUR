@@ -165,8 +165,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       END DO
       IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
-      IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,dimension%nstd,input%jspins,jspin,results%ef,&
-                                        dimension%msh,vTot%mt(:,0,:,:),f,g)
+      IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,nstd_dim,input%jspins,jspin,results%ef,&
+                                        atoms%mshd,vTot%mt(:,0,:,:),f,g)
    END DO
    DEALLOCATE (f,g,flo)
 
@@ -256,7 +256,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) CALL force%addContribsA21A12(input,atoms,dimension,sym,cell,oneD,enpara,&
                                                      usdus,eigVecCoeffs,noccbd,ispin,eig,we,results)
-         IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
+         IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,kpts%nkpt,ikpt,dimension%neigd,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)

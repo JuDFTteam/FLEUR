@@ -49,14 +49,24 @@ FUNCTION juDFT_string_for_argument(arg) RESULT(argstring)
     CHARACTER(len=1000)::argstring
 
     INTEGER:: i
-    CHARACTER(LEN=30)::str
+    CHARACTER(LEN=30)  ::str
+    CHARACTER(LEN=1000)::env
     argstring=""
-    DO i=1,COMMAND_ARGUMENT_COUNT()
-       CALL GET_COMMAND_ARGUMENT(i,str)
-       IF(ADJUSTL(str)==ADJUSTL(arg)) THEN
-          if (i<=COMMAND_ARGUMENT_COUNT()) CALL GET_COMMAND_ARGUMENT(i+1,argstring)
-       endif
-    ENDDO
- 
+    IF (judft_was_argument(arg)) THEN
+       DO i=1,COMMAND_ARGUMENT_COUNT()
+          CALL GET_COMMAND_ARGUMENT(i,str)
+          IF(ADJUSTL(str)==ADJUSTL(arg)) THEN
+             IF (i<=COMMAND_ARGUMENT_COUNT()) CALL GET_COMMAND_ARGUMENT(i+1,argstring)
+             RETURN !Argument found
+          ENDIF
+       ENDDO
+       !Not found so must be in environment variable
+       CALL GET_ENVIRONMENT_VARIABLE("juDFT",env,status=i)
+       !cut of argument string
+       env=ADJUSTL(env(INDEX(env//' ',TRIM(ADJUSTL(arg)))+1:))//' '
+       i=INDEX(env,' ') !find first blank
+       argstring=TRIM(env(:i))
+    END IF
+       
   END FUNCTION juDFT_string_for_argument
 END MODULE m_juDFT_args

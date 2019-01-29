@@ -23,7 +23,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntype,input%jspins)
     REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntype,input%jspins),qints(atoms%ntype,input%jspins)
+    REAL,    INTENT (OUT) :: rhc(atoms%mshd,atoms%ntype,input%jspins),qints(atoms%ntype,input%jspins)
     !     ..
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
@@ -31,9 +31,9 @@ CONTAINS
     LOGICAL exetab
     !     ..
     !     .. Local Arrays ..
-    REAL br(atoms%jmtd,atoms%ntype),brd(DIMENSION%msh),etab(100,atoms%ntype),&
-         rhcs(atoms%jmtd,atoms%ntype,input%jspins),rhochr(DIMENSION%msh),rhospn(DIMENSION%msh),&
-         tecs(atoms%ntype,input%jspins),vr(atoms%jmtd,atoms%ntype),vrd(DIMENSION%msh)
+    REAL br(atoms%jmtd,atoms%ntype),brd(atoms%mshd),etab(100,atoms%ntype),&
+         rhcs(atoms%jmtd,atoms%ntype,input%jspins),rhochr(atoms%mshd),rhospn(atoms%mshd),&
+         tecs(atoms%ntype,input%jspins),vr(atoms%jmtd,atoms%ntype),vrd(atoms%mshd)
     INTEGER nkmust(atoms%ntype),ntab(100,atoms%ntype),ltab(100,atoms%ntype)
 
     !     ..
@@ -76,7 +76,7 @@ CONTAINS
        CALL etabinit(atoms,DIMENSION,input, vr, etab,ntab,ltab,nkmust)
     END IF
     !
-    ncmsh = DIMENSION%msh
+    ncmsh = atoms%mshd
     seig = 0.
     ! ---> set up densities
     DO jatom = 1,atoms%ntype
@@ -125,7 +125,7 @@ CONTAINS
        z = atoms%zatom(jatom)
        dxx = atoms%dx(jatom)
 
-       CALL spratm(DIMENSION%msh,vrd,brd,z,rnot,dxx,ncmsh,&
+       CALL spratm(atoms%mshd,vrd,brd,z,rnot,dxx,ncmsh,&
             etab(1,jatom),ntab(1,jatom),ltab(1,jatom), sume,rhochr,rhospn)
 
        seig = seig + atoms%neq(jatom)*sume
@@ -144,12 +144,12 @@ CONTAINS
           END DO
        END IF
        IF (input%jspins.EQ.2) THEN
-          DO j = 1,DIMENSION%msh
+          DO j = 1,atoms%mshd
              rhc(j,jatom,input%jspins) = (rhochr(j)+rhospn(j))*0.5
              rhc(j,jatom,1) = (rhochr(j)-rhospn(j))*0.5
           ENDDO
        ELSE
-          DO j = 1,DIMENSION%msh
+          DO j = 1,atoms%mshd
              rhc(j,jatom,1) = rhochr(j)
           END DO
        END IF

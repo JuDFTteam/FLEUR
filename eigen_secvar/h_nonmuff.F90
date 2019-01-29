@@ -46,8 +46,8 @@ CONTAINS
     INTEGER i,im,in,j,k,ke ,m1,n,na,nn,np,ii,ij,m
     !     ..
     !     .. Local Arrays ..
-    COMPLEX a(DIMENSION%neigd,0:DIMENSION%lmd),ax(DIMENSION%neigd)
-    COMPLEX b(DIMENSION%neigd,0:DIMENSION%lmd),bx(DIMENSION%neigd), ylm( (atoms%lmaxd+1)**2 )
+    COMPLEX a(DIMENSION%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2))),ax(DIMENSION%neigd)
+    COMPLEX b(DIMENSION%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2))),bx(DIMENSION%neigd), ylm( (atoms%lmaxd+1)**2 )
     REAL vmult(3),vsmult(3),f(0:atoms%lmaxd,SIZE(lapw%k1,1)),g(0:atoms%lmaxd,SIZE(lapw%k1,1))
     !     ..
     !     ..

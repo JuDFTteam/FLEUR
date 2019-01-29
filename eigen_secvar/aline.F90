@@ -126,7 +126,7 @@ CONTAINS
        END DO
     END DO
 
-    ALLOCATE ( acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat),bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat) )
+    ALLOCATE ( acof(DIMENSION%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat),bcof(DIMENSION%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat) )
     ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat) ) 
 
     !     conjugate again for use with abcof; finally use cdotc to revert again

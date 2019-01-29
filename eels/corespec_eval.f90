@@ -363,7 +363,7 @@ MODULE m_corespec_eval
 !
 !-------------------------------------------------------------------------------
 !
-  subroutine corespec_dos(atoms,usdus,ispin,lmd,nkpt,ikpt,&
+  subroutine corespec_dos(atoms,usdus,ispin,nkpt,ikpt,&
                           neigd,noccbd,efermi,sig_dos,eig,we,eigVecCoeffs)
 
     IMPLICIT NONE
@@ -373,7 +373,7 @@ MODULE m_corespec_eval
     TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
 
 !     .. Scalar Arguments ..
-    integer, intent(in) :: ispin,lmd,nkpt,ikpt
+    integer, intent(in) :: ispin,nkpt,ikpt
     integer, intent(in) :: neigd,noccbd
     real, intent(in) :: efermi,sig_dos
 !     .. Array Arguments ..
@@ -444,7 +444,7 @@ MODULE m_corespec_eval
       enddo
       write(36,*) ""
       write(*,'(10i8)') atoms%llod,noccbd,atoms%nlod,atoms%nat,neigd,atoms%ntype,atoms%lmaxd
-      write(*,'(10i8)') lmd,atoms%ntype
+      WRITE(*,'(10i8)') atoms%lmaxd*(atoms%lmaxd+2),atoms%ntype
 
       if(csi%verb.eq.1) write(*,*) ""
     endif

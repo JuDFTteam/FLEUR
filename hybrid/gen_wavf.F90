@@ -198,9 +198,9 @@ CONTAINS
       ! (acof,bcof,ccof) and APW-basis coefficients
       ! (a,b,bascofold_lo) at irred. kpoints
 
-      ALLOCATE(acof(dimension%neigd,0:dimension%lmd,atoms%nat),stat=ok)
+      ALLOCATE(acof(dimension%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat),stat=ok)
       IF (ok.NE.0) STOP 'gen_wavf: failure allocation acof'
-      ALLOCATE(bcof(dimension%neigd,0:dimension%lmd,atoms%nat),stat=ok)
+      ALLOCATE(bcof(dimension%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat),stat=ok)
       IF (ok.NE.0) STOP 'gen_wavf: failure allocation bcof'
       ALLOCATE(ccof(-atoms%llod:atoms%llod,dimension%neigd,atoms%nlod,atoms%nat),stat=ok)
       IF (ok.NE.0) STOP 'gen_wavf: failure allocation ccof'

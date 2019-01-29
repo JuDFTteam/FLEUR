@@ -38,8 +38,8 @@
       INTEGER n,iwd,nst,nc
 !     ..
 !     .. Local Array ..
-      INTEGER kappa(dimension%nstd),nprnc(dimension%nstd)
-      REAL occ(dimension%nstd,1)
+      INTEGER kappa(nstd_dim),nprnc(nstd_dim)
+      REAL occ(nstd_dim,1)
 !     ..
 !     .. Local Parameters ..
       INTEGER, PARAMETER :: pTOP = 1, pBOT = 2, pTOPBOT = 3

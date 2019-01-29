@@ -256,7 +256,7 @@ CONTAINS
     CALL MPI_BCAST(noco%socscale,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 
     IF(input%l_inpXML) THEN
-       n = dimension%nstd*atoms%ntype
+       n = nstd_dim*atoms%ntype
        CALL MPI_BCAST(atoms%numStatesProvided,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(atoms%coreStateOccs,2*n,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(atoms%coreStateNprnc,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)

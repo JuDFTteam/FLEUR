@@ -207,12 +207,12 @@ CONTAINS
 !
 ! some basic arrays allocated in eigen()
 !
-      mem = (dimension%lmplmd+1)*atoms%ntype*4                       ! tlmplm%tuu,tlmplm%tdd etc.
-      mem = mem + (dimension%lmd+1)*(2*atoms%llod+1)*max(mlotot,1)*2 ! tlmplm%tuulo ...
+      mem = ((atoms%lmaxd*(atoms%lmaxd+2))**2+1)*atoms%ntype*4                       ! tlmplm%tuu,tlmplm%tdd etc.
+      mem = mem + ((atoms%lmaxd*(atoms%lmaxd+2))+1)*(2*atoms%llod+1)*max(mlotot,1)*2 ! tlmplm%tuulo ...
       mem = mem + (2*atoms%llod+1)**2 * max(mlolotot,1)    ! tlmplm%tuloulo
       IF (noco%l_noco) mem = mem * 2                      ! both spins
       mem = mem + 49*atoms%n_u*input%jspins*2                      ! lda+U, *2 for complex
-      mem = mem+INT((dimension%nbasfcn*2+(dimension%lmd+1)*atoms%ntype)*0.5)+1 ! tlmplm%ind, *0.5 for integer
+      mem = mem+INT((dimension%nbasfcn*2+((atoms%lmaxd*(atoms%lmaxd+2))+1)*atoms%ntype)*0.5)+1 ! tlmplm%ind, *0.5 for integer
 
       matsz = dimension%nbasfcn * CEILING(REAL(dimension%nbasfcn)/n_size) ! size of a, b
 #ifdef CPP_INVERSION
@@ -223,7 +223,7 @@ CONTAINS
 !
 ! now the arrays in hssphn()
 !
-      m_h = dimension%nvd*(dimension%lmd+1)*4  + dimension%nvd*8 + atoms%nlod            ! ar, ai ..., cph, rph, vk, gk
+      m_h = dimension%nvd*((atoms%lmaxd*(atoms%lmaxd+2))+1)*4  + dimension%nvd*8 + atoms%nlod            ! ar, ai ..., cph, rph, vk, gk
       m_h = m_h + 2 * (2*atoms%llod+1)**2 * atoms%nlod * 3 * 2   ! alo,blo,clo
       IF (noco%l_ss) m_h = m_h * 2
       m_h = m_h + dimension%nvd*(5+atoms%lmaxd)                      ! axr, ... plegend

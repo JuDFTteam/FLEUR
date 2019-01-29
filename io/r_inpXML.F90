@@ -1292,11 +1292,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       ALLOCATE(atoms%l_dulo(atoms%nlod,atoms%ntype)) ! For what is this?
 
-      dimension%nstd = 29
+      nstd_dim = 29
 
-      ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype)); atoms%coreStateOccs=0.0
-      ALLOCATE(atoms%coreStateNprnc(dimension%nstd,atoms%ntype))
-      ALLOCATE(atoms%coreStateKappa(dimension%nstd,atoms%ntype))
+      ALLOCATE(atoms%coreStateOccs(nstd_dim,2,atoms%ntype)); atoms%coreStateOccs=0.0
+      ALLOCATE(atoms%coreStateNprnc(nstd_dim,atoms%ntype))
+      ALLOCATE(atoms%coreStateKappa(nstd_dim,atoms%ntype))
 
       CALL enpara%init(atoms,input%jspins)
       enpara%evac0(:,:) = evac0Temp(:,:)

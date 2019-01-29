@@ -77,7 +77,7 @@
 !-gu
 
       WRITE (6,'(6x,''Nuclear mesh and core levels'')')
-      WRITE (6,8200) dimension%msh,dimension%nstd
+      WRITE (6,8200) atoms%mshd,nstd_dim
 
  8200 FORMAT(6x,'parameter (msh=',i4,',nstd=',i2,')')
 

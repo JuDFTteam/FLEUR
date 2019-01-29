@@ -262,7 +262,7 @@ SUBROUTINE postprocessInput(mpi,job,input,field,sym,stars,atoms,vacuum,obsolete,
      cell%volint = cell%vol
      atoms%jmtd = maxval(atoms%jri(:))
      CALL ylmnorm_init(atoms%lmaxd)
-     dimension%msh = 0
+     atoms%mshd = 0
      ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
      ALLOCATE(atoms%volmts(atoms%ntype))
      na = 0
@@ -298,7 +298,7 @@ SUBROUTINE postprocessInput(mpi,job,input,field,sym,stars,atoms,vacuum,obsolete,
            jrc = jrc + 1
            radius = radius*dr
         END DO
-        dimension%msh = max(dimension%msh,jrc)
+        atoms%mshd = max(atoms%mshd,jrc)
 
         atoms%volmts(iType) = (fpi_const/3.0)*atoms%rmt(iType)**3
         cell%volint = cell%volint - atoms%volmts(iType)*atoms%neq(iType)

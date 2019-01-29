@@ -7,7 +7,7 @@
 MODULE m_prpqfftmap
   use m_juDFT
 CONTAINS
-  SUBROUTINE prp_qfft_map(stars,sym,input, igq2_fft,igq_fft)
+  SUBROUTINE prp_qfft_map(stars,sym,input)
     !*********************************************************************
     !     This subroutine prepares the pointer which identifies a 
     !     threedimensional g-vector in the positive domain of the 
@@ -25,10 +25,8 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)     :: sym
-    TYPE(t_stars),INTENT(IN)   :: stars
+    TYPE(t_stars),INTENT(INOUT):: stars
     !
-    !
-    INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1),igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1)
     !
     !---> local variables
     !
@@ -87,11 +85,11 @@ CONTAINS
              if(im.lt.0) im=im+stars%kq2_fft
              if(in.lt.0) in=in+stars%kq3_fft
              iv1d = in*ifftq2 + im*ifftq1 + il
-             igq_fft(kidx)=iv1d 
+             stars%igq_fft(kidx)=iv1d 
              kidx=kidx+1
              IF (input%film.AND.(stars%kv3(3,istr).EQ.0)) THEN
                 iv1d = im*ifftq1 + il
-                igq2_fft(kid2x)=iv1d 
+                stars%igq2_fft(kid2x)=iv1d 
                 kid2x=kid2x+1
              ENDIF
           ENDIF

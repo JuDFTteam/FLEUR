@@ -27,8 +27,8 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
-    COMPLEX, INTENT (IN) :: acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
+    COMPLEX, INTENT (IN) :: acof(DIMENSION%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(DIMENSION%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat)
     COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat)
 
     REAL,    OPTIONAL,INTENT (INOUT) :: h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd)
@@ -50,8 +50,8 @@ CONTAINS
 
     l_real=PRESENT(h_r)
 
-    ALLOCATE ( a(DIMENSION%neigd,0:DIMENSION%lmd),ax(DIMENSION%neigd) )
-    ALLOCATE ( b(DIMENSION%neigd,0:DIMENSION%lmd),bx(DIMENSION%neigd) )
+    ALLOCATE ( a(DIMENSION%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2))),ax(DIMENSION%neigd) )
+    ALLOCATE ( b(DIMENSION%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2))),bx(DIMENSION%neigd) )
     na = 0
     DO n = 1,atoms%ntype        ! loop over atom-types
        lwn = atoms%lmax(n)
@@ -62,7 +62,7 @@ CONTAINS
              CALL timestart("hssr_wu: spherical")
              IF (atoms%invsat(na).EQ.0) invsfct = 1.0
              IF (atoms%invsat(na).EQ.1) invsfct = SQRT(2.0)
-             DO lm = 0, DIMENSION%lmd
+             DO lm = 0, (atoms%lmaxd*(atoms%lmaxd+2))
                 DO ke = 1, ne
                    a(ke,lm) = invsfct*acof(ke,lm,na)
                    b(ke,lm) = invsfct*bcof(ke,lm,na)

@@ -68,8 +68,8 @@ CONTAINS
     ! needed directly for calculating matrix elements  
     seigvso=0.0
     ALLOCATE(eig_shift(DIMENSION%neigd,kpts%nkpt,SIZE(theta)));eig_shift=0.0
-    ALLOCATE( acof(dimension%neigd,0:dimension%lmd,atoms%nat,2,2),&
-         bcof(dimension%neigd,0:dimension%lmd,atoms%nat,2,2) )
+    ALLOCATE( acof(dimension%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat,2,2),&
+         bcof(dimension%neigd,0:(atoms%lmaxd*(atoms%lmaxd+2)),atoms%nat,2,2) )
     ALLOCATE( ccof(-atoms%llod:atoms%llod,dimension%neigd,atoms%nlod,atoms%nat,2,2) )
 
     ALLOCATE( matel(neigf,DIMENSION%neigd,0:atoms%ntype) )
@@ -110,7 +110,7 @@ CONTAINS
              nat= nat+1 
              r1= noco%alph(n) 
              r2= noco%beta(n) 
-             DO lm= 0,DIMENSION%lmd
+             DO lm= 0,(atoms%lmaxd*(atoms%lmaxd+2))
                 DO band= 1,DIMENSION%neigd
                    c1= acof(band,lm,nat,1,1)
                    c2= acof(band,lm,nat,2,1)
@@ -219,7 +219,7 @@ CONTAINS
     ! natall*lmd*neigd*(lmd+neigd) ; note that  lmd+neigd << lmd*neigd
 
     matel(:,:,:)= CMPLX(0.,0.) 
-    ALLOCATE ( sa(2,0:dimension%lmd),sb(2,0:dimension%lmd),ra(2,0:dimension%lmd),rb(2,0:dimension%lmd) )
+    ALLOCATE ( sa(2,0:(atoms%lmaxd*(atoms%lmaxd+2))),sb(2,0:(atoms%lmaxd*(atoms%lmaxd+2))),ra(2,0:(atoms%lmaxd*(atoms%lmaxd+2))),rb(2,0:(atoms%lmaxd*(atoms%lmaxd+2))) )
     ALLOCATE ( sc(2,-atoms%llod:atoms%llod,atoms%nlod),rc(2,-atoms%llod:atoms%llod,atoms%nlod) )
     ALLOCATE ( ral(2,-atoms%llod:atoms%llod,atoms%nlod),rbl(2,-atoms%llod:atoms%llod,atoms%nlod) )
 

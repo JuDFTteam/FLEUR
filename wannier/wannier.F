@@ -278,7 +278,7 @@ c---->gwf
       integer :: doublespin_max,nrec5
       integer :: count_i,count_j
       integer :: aoff,d1,d10,d100
-      integer :: n1,n2,ii,jj
+      integer :: n1,n2,ii,jj,lmplmd
 
       complex :: interchi,vacchi,amnchi
       complex :: phasfac,phasfac2,cmplx_1                                 
@@ -312,7 +312,8 @@ c---->gwf
       eig_id = eig_idList(1)
 
 c----<gwf
-
+      lmplmd=((atoms%lmaxd*(atoms%lmaxd+2))*
+     +     ((atoms%lmaxd*(atoms%lmaxd+2))+3))/2
 
       aoff = iachar('1')-1
       d1  = mod(mpi%irank,10)
@@ -417,7 +418,7 @@ c-----input file for orbital decomposition
      >      DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,
      >      stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,
      >      cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,
-     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,
+     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,
      >      sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,
      >      noco%theta,noco%phi)
 
@@ -457,7 +458,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >      vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,
      >      cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,
      >      cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,
-     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,
+     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,
      >      sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,
      >      noco%theta,noco%phi,
      >      wann%l_ms,wann%l_sgwf,wann%l_socgwf,wann%aux_latt_const,
@@ -500,7 +501,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >      vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,
      >      cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,
      >      cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,
-     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,
+     >      sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,
      >      sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,
      >      noco%theta,noco%phi,
      >      wann%l_ms,wann%l_sgwf,wann%l_socgwf,wann%aux_latt_const,

@@ -71,13 +71,13 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(sphhar%ntypsd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(sphhar%memd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(dimension%nstd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(nstd_dim,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(stars%kimax,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(stars%kimax2,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%nvd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%neigd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%nv2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(dimension%msh,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(atoms%mshd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%numSpecialPoints,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -145,9 +145,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%lo1l(0:atoms%llod,atoms%ntype))
       ALLOCATE(atoms%nlol(0:atoms%llod,atoms%ntype))
 
-      ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype));atoms%coreStateOccs=0.0
-      ALLOCATE(atoms%coreStateNprnc(dimension%nstd,atoms%ntype))
-      ALLOCATE(atoms%coreStateKappa(dimension%nstd,atoms%ntype))
+      ALLOCATE(atoms%coreStateOccs(nstd_dim,2,atoms%ntype));atoms%coreStateOccs=0.0
+      ALLOCATE(atoms%coreStateNprnc(nstd_dim,atoms%ntype))
+      ALLOCATE(atoms%coreStateKappa(nstd_dim,atoms%ntype))
 
       ALLOCATE(vacuum%izlay(vacuum%layers,2))
 

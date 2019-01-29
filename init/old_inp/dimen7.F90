@@ -132,7 +132,7 @@
       atoms%lmaxd = 0
       atoms%jmtd  = 0
       dimension%neigd = 0
-      dimension%nstd  = maxval(atoms%ncst)
+      nstd_dim  = maxval(atoms%ncst)
       atoms%lmaxd = maxval(atoms%lmax)
       atoms%jmtd  = maxval(atoms%jri)
       DO n = 1,atoms%ntype
@@ -169,7 +169,7 @@
 !
 ! determine core mesh
 !
-      dimension%msh = 0
+      atoms%mshd = 0
       DO n = 1,atoms%ntype
          r = atoms%rmt(n)
          d = exp(atoms%dx(n))
@@ -178,7 +178,7 @@
             jrc = jrc + 1
             r = r*d
          ENDDO
-         dimension%msh = max( dimension%msh, jrc ) 
+         atoms%mshd = max( atoms%mshd, jrc ) 
       ENDDO
 !
 ! ---> now, set the lattice harmonics, determine nlhd
@@ -327,7 +327,7 @@
 !
       CALL inpeig_dim(input,obsolete,cell,noco,oneD,kpts,dimension,stars)
       vacuum%layers = max(vacuum%layers,1)
-      dimension%nstd = max(dimension%nstd,30)
+      nstd_dim = max(nstd_dim,30)
       atoms%ntype = atoms%ntype
       IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
 
