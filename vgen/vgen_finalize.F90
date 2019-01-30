@@ -51,6 +51,12 @@ CONTAINS
        IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
     ENDIF
 
+    write (*,*) "Set vTot to zero, except for const shift"
+    vTot%pw_w = 0.0
+    vTot%pw   = 0.0
+
+    !write (*,*) "vTot const = ", vTot%pw_w(1,:), vTot%pw(1,:)
+
     ! Rescale vCoul%pw_w with number of stars
     DO js = 1, SIZE(vCoul%pw_w,2)
        DO i = 1, stars%ng3

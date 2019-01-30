@@ -14,6 +14,7 @@ MODULE m_metagga
 CONTAINS
    SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS, is_pw)
       USE m_juDFT_stop
+      use m_npy
       !use m_cdngen
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
@@ -25,13 +26,13 @@ CONTAINS
       !implicit allocation
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
 
-      !if(is_pw) then
-         !call save_npy("EnergyDen_RS.npy", EnergyDen_RS)
-         !call save_npy("vTot_RS.npy", vTot_RS)
-         !call save_npy("den_RS.npy", den_RS)
-         !call save_npy("vTot_RSxdenRS.npy", vtot_RS*den_RS)
-         !call save_npy("kinED_pw_schroeway_precut.npy",kinEnergyDen_RS) 
-      !endif
+      if(is_pw) then
+         call save_npy("EnergyDen_RS.npy", EnergyDen_RS)
+         call save_npy("vTot_RS.npy", vTot_RS)
+         call save_npy("den_RS.npy", den_RS)
+         call save_npy("vTot_RSxdenRS.npy", vtot_RS*den_RS)
+         call save_npy("kinED_pw_schroeway_precut.npy",kinEnergyDen_RS) 
+      endif
 
       if(any(kinEnergyDen_RS < eps)) then
          write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
@@ -39,7 +40,7 @@ CONTAINS
       endif
 
       if(is_pw) then
-         !call save_npy("kinED_pw_schroeway.npy",kinEnergyDen_RS) 
+         call save_npy("kinED_pw_schroeway.npy",kinEnergyDen_RS) 
 
          write (*,*) "read new"
          open(unit=69, file="kin_ED_pwway.dat")

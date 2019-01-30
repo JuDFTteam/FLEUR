@@ -50,9 +50,9 @@ CONTAINS
       TYPE(t_gradients) :: grad, tmp_grad
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:), kinED_rs(:,:)
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
-      COMPLEX, ALLOCATABLE :: den_pw_w(:,:), EnergyDen_pw_w(:,:)
+      COMPLEX, ALLOCATABLE :: den_pw_w(:,:), EnergyDen_pw_w(:,:), vtot_pw_norm(:,:) 
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:,:)
-      INTEGER           :: jspin
+      INTEGER           :: jspin, i, js
 
       CALL init_pw_grid(xcpot,stars,sym,cell)
 
@@ -77,29 +77,23 @@ CONTAINS
       IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
          allocate(den_pw_w,       mold=vTot%pw_w)
          allocate(EnergyDen_pw_w, mold=vTot%pw_w)
-         do jspin = 1,input%jspins
-            call convol(stars, vTot%pw_w(:,jspin),      vTot%pw,      stars%ufft)
-            call convol(stars, den_pw_w(:,jspin),       den%pw,       stars%ufft)
-            call convol(stars, EnergyDen_pw_w(:,jspin), EnergyDen%pw, stars%ufft)
-         enddo
-
-         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
-                         cell,  vTot%pw_w,      tmp_grad,    vTot_conv)
-
-         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
-                         cell,  den_pw_w, tmp_grad,    rho_conv)
-         CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
-                         cell,  EnergyDen_pw_w, tmp_grad,    ED_conv)
-
-         call save_npy("den_conv.npy", rho_conv)
-         call save_npy("EnergyDen_conv.npy", ED_conv)
-         call save_npy("vTot_conv.npy", vTot_conv)
-         call save_npy("kinED_schr_conv_precut.npy", ED_conv - vTot_conv*rho_conv)
+         allocate(vtot_pw_norm,   mold=vTot%pw)
 
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  EnergyDen%pw, tmp_grad,    ED_rs)
+
+         DO js=1,SIZE(vtot_pw_norm,2)
+            DO i=1,stars%ng3
+               vTot_pw_norm(i,js)=vTot%pw(i,js) / stars%nstr(i)
+            END DO
+         END DO
+         write (*,*) "set vtot = 0 again (except shift of course)"
+         vTot_pw_norm = 0.0
+         vTot%pw      = 0.0
+         vTot%pw_w    = 0.0
+                      
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
-                         cell,  vTot%pw,      tmp_grad,    vTot_rs)
+                         cell,  vTot_pw_norm, tmp_grad,    vTot_rs)
          CALL calc_kinEnergyDen(ED_rs, vTot_rs, rho, kinED_rs, .True.)
       ENDIF
 
