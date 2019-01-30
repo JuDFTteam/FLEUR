@@ -11,5 +11,6 @@ $result=jt::test_grepexists("$workdir/out","it=  1  is completed");
 #test orbital moment
 $result+=jt::test_grepnumber("$workdir/out","mm       1",".*  1  *([^ ]*)",0.287,0.001);
 $result+=jt::test_grepnumber("$workdir/out","qfix",".*x= *([^ ]*)",1.0,0.0001);
-
+$result+=jt::test_grepnumber("$workdir/out","new fermi energy",": *([^ ]*)",-0.2398,0.0001);
+$result+=jt::test_grepnumber("$workdir/out","total energy=","= *([^ ]*)",-1272.6849,0.001);
 jt::stageresult($workdir,$result,"1");

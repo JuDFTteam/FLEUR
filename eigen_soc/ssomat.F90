@@ -272,6 +272,7 @@ CONTAINS
                    DO m1 = -l, l
                       DO jsloc2= 1,2
                          sc(jsloc2,m1,ilo) = CMPLX(0.,0.)
+                         IF (l==0) CYCLE
                          DO m2= -l, l
                             sc(jsloc2,m1,ilo) = sc(jsloc2,m1,ilo) +&
                                  CONJG(ccof2(m2,band2,ilo,na,jsloc2,js2))&
@@ -344,6 +345,7 @@ CONTAINS
 
                 DO ilo = 1, atoms%nlo(n) ! LO-part
                    l = atoms%llo(ilo,n)
+                   IF (l==0) CYCLE
                    DO m1 = -l, l
                       lm1= l*(l+1) + m1
 
