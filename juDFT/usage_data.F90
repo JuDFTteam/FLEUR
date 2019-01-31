@@ -135,7 +135,7 @@ CONTAINS
 #else
          !Send using curl
          call execute_command_line(&
-            'curl -X POST -H --connect-timeout 4 "Content-Type: application/json" -d @usage.json https://docker.iff.kfa-juelich.de/fleur-usage-stats/',&
+            'curl -m 5 -X POST -H "Content-Type: application/json" -d @usage.json https://docker.iff.kfa-juelich.de/fleur-usage-stats/',&
             exitstat=ierr(1), cmdstat=ierr(2))
          if(all(ierr == 0)) then
             write (*,*) "Usage data send using curl: usage.json"
