@@ -6,10 +6,8 @@ MODULE m_alineso
   ! Eigenvalues and vectors (eig_so and zso) are returned 
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE alineso(eig_id,lapw,&
-       mpi,DIMENSION,atoms,sym,kpts,&
-       input,noco,cell,oneD, nk, usdus,rsoc,&
-       nsize,nmat, eig_so,zso)
+  SUBROUTINE alineso(eig_id,lapw,mpi,DIMENSION,atoms,sym,kpts,input,noco,&
+                     cell,oneD, nk, usdus,rsoc,nsize,nmat, eig_so,zso)
 
 #include"cpp_double.h"
     USE m_types
@@ -99,16 +97,12 @@ CONTAINS
     zso(:,:,:)= CMPLX(0.,0.)
 
     DO jsp = 1,input%jspins
-       CALL read_eig(&
-            eig_id,nk,jsp, neig=ne,eig=eig(:,jsp))
+       CALL read_eig(eig_id,nk,jsp, neig=ne,eig=eig(:,jsp))
        IF (judft_was_argument("-debugtime")) THEN
           WRITE(6,*) "Non-SOC ev for nk,jsp:",nk,jsp
           WRITE(6,"(6(f10.6,1x))") eig(:ne,jsp)
        ENDIF
-       CALL read_eig(&
-               eig_id,nk,jsp,&
-               n_start=1,n_end=ne,&
-               zmat=zmat(jsp))
+       CALL read_eig(eig_id,nk,jsp,n_start=1,n_end=ne,zmat=zmat(jsp))
 
        ! write(*,*) 'process',irank,' reads ',nk
 
@@ -156,50 +150,36 @@ CONTAINS
         nat_stop  = atoms%nat
       ENDIF
       nat_l = nat_stop - nat_start + 1
-    !
+
     ! set up A and B coefficients
-    !
-    ALLOCATE ( ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins) )
-    ALLOCATE ( bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins) )
-    ALLOCATE ( chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,input%jspins) )
+    ALLOCATE (ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins))
+    ALLOCATE (bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,DIMENSION%neigd,input%jspins))
+    ALLOCATE (chelp(-atoms%llod :atoms%llod, DIMENSION%neigd,atoms%nlod,nat_l,input%jspins))
     CALL timestart("alineso SOC: -help") 
-    write(*,*) nat_start,nat_stop,nat_l
-    CALL hsohelp(&
-         &             DIMENSION,atoms,sym,&
-         &             input,lapw,nsz,&
-         &             cell,&
-         &             zmat,usdus,&
-         &             zso,noco,oneD,&
-         &             nat_start,nat_stop,nat_l,&
-         &             ahelp,bhelp,chelp)
+    CALL hsohelp(DIMENSION,atoms,sym,input,lapw,nsz,cell,zmat,usdus,&
+                 zso,noco,oneD,nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -help") 
-    !
+
     ! set up hamilton matrix
-    !
     CALL timestart("alineso SOC: -ham") 
 #ifdef CPP_MPI
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #endif
-    ALLOCATE ( hsomtx(DIMENSION%neigd,DIMENSION%neigd,2,2) )
+    ALLOCATE (hsomtx(DIMENSION%neigd,DIMENSION%neigd,2,2))
     CALL hsoham(atoms,noco,input,nsz,dimension%neigd,chelp,rsoc,ahelp,bhelp,&
-                nat_start,nat_stop,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,&
-                hsomtx)
-    write(*,*) 'after hsoham'
-    DEALLOCATE ( ahelp,bhelp,chelp )
+                nat_start,nat_stop,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,hsomtx)
+    DEALLOCATE (ahelp,bhelp,chelp)
     CALL timestop("alineso SOC: -ham") 
     IF (mpi%n_rank==0) THEN
-    !
+
     ! add e.v. on diagonal
-    !
     !      write(*,*) '!!!!!!!!!!! remove SOC !!!!!!!!!!!!!!'
     !      hsomtx = 0 !!!!!!!!!!!!
     DO jsp = 1,input%jspins
        DO i = 1,nsz(jsp)
-          hsomtx(i,i,jsp,jsp) = hsomtx(i,i,jsp,jsp) +&
-               &                           CMPLX(eig(i,jsp),0.)
+          hsomtx(i,i,jsp,jsp) = hsomtx(i,i,jsp,jsp) + CMPLX(eig(i,jsp),0.)
           IF (input%jspins.EQ.1) THEN
-             hsomtx(i,i,2,2) =  hsomtx(i,i,2,2) +&
-                  &                           CMPLX(eig(i,jsp),0.)
+             hsomtx(i,i,2,2) =  hsomtx(i,i,2,2) + CMPLX(eig(i,jsp),0.)
           ENDIF
        ENDDO
     ENDDO
@@ -207,34 +187,33 @@ CONTAINS
     !
     !  resort H-matrix 
     !
-    ALLOCATE ( hso(2*DIMENSION%neigd,2*DIMENSION%neigd) )
+    ALLOCATE (hso(2*DIMENSION%neigd,2*DIMENSION%neigd))
     DO jsp = 1,2
        DO jsp1 = 1,2
           IF (jsp.EQ.1) nn = 0 
           IF (jsp1.EQ.1) nn1 = 0
           IF (jsp.EQ.2) nn = nsz(1)
           IF (jsp1.EQ.2) nn1 = nsz(1)
-          !
+
           !write(3333,'(2i3,4e15.8)') jsp,jsp1,hsomtx(jsp,jsp1,8,8),hsomtx(jsp,jsp1,32,109) 
           DO i = 1,nsz(jsp)
              DO j = 1,nsz(jsp1)
                 hso(i+nn,j+nn1) = hsomtx(i,j,jsp,jsp1)
              ENDDO
           ENDDO
-          !
        ENDDO
     ENDDO
-    DEALLOCATE ( hsomtx )
+    DEALLOCATE (hsomtx)
 
     !
     !  add Sigma-vxc (QSGW)
     !
-    IF( l_qsgw ) THEN
+    IF(l_qsgw) THEN
        nbas = lapw%nv(1) + atoms%nlotot
        WRITE(*,'(A,I3,A,I5,A)') 'Read fleur.qsgw  (',nk,',',nbas,')'
        IF( input%jspins .EQ. 2 ) STOP 'alineso: GW+noco not implemented.'
-       ALLOCATE ( sigma_xc(2*nsz(1),2*nsz(1)) )        
-       ALLOCATE ( sigma_xc_apw(nbas,nbas) )
+       ALLOCATE (sigma_xc(2*nsz(1),2*nsz(1)))
+       ALLOCATE (sigma_xc_apw(nbas,nbas))
        INQUIRE(667,opened=l_open)
        IF( .NOT.l_open ) THEN
           IF( nk.NE.1 ) STOP 'unit 667 not opened but not at 1st k'
@@ -260,12 +239,12 @@ CONTAINS
              j  = nsz(1) * (jsp2-1) + 1 ; j1 = nsz(1) * jsp2
              if (l_real) THEN
                 sigma_xc(i:i1,j:j1) = &
-                     &        MATMUL (       TRANSPOSE(zmat(1)%data_r(:nbas,:))  ,&
-                     &        MATMUL ( sigma_xc_apw,   zmat(1)%data_r(:nbas,:) ) )
+                              MATMUL (       TRANSPOSE(zmat(1)%data_r(:nbas,:))  ,&
+                              MATMUL ( sigma_xc_apw,   zmat(1)%data_r(:nbas,:) ) )
 else
              sigma_xc(i:i1,j:j1) = &
-                  &        MATMUL ( CONJG(TRANSPOSE(zmat(1)%data_c(:nbas,:))) ,&
-                  &        MATMUL ( sigma_xc_apw,   zmat(1)%data_c(:nbas,:) ) )
+                           MATMUL ( CONJG(TRANSPOSE(zmat(1)%data_c(:nbas,:))) ,&
+                           MATMUL ( sigma_xc_apw,   zmat(1)%data_c(:nbas,:) ) )
           endif
              hso(i:i1,j:j1) = hso(i:i1,j:j1) + CONJG(sigma_xc(i:i1,j:j1))
              IF(jsp1.NE.jsp2) THEN
@@ -274,7 +253,7 @@ else
              ENDIF
           ENDDO
        ENDDO
-       DEALLOCATE ( sigma_xc_apw )
+       DEALLOCATE (sigma_xc_apw)
     ENDIF
 
     !
@@ -285,29 +264,25 @@ else
 
     CALL timestart("alineso SOC: -diag") 
 
-    ALLOCATE ( cwork(idim_c),rwork(idim_r) )
+    ALLOCATE (cwork(idim_c),rwork(idim_r))
 
     IF (input%eonly) THEN
        vectors= 'N'
     ELSE
        vectors= 'V'
     ENDIF
-    CALL CPP_LAPACK_cheev(vectors,'U',nsize,&
-         &                      hso,2*DIMENSION%neigd,&
-         &                      eig_so,&
-         &                      cwork, idim_c, rwork, &
-         &                      info)
+    CALL CPP_LAPACK_cheev(vectors,'U',nsize,hso,2*DIMENSION%neigd,eig_so,&
+                          cwork, idim_c, rwork, info)
     IF (info.NE.0) WRITE (6,FMT=8000) info
 8000 FORMAT (' AFTER CPP_LAPACK_cheev: info=',i4)
     CALL timestop("alineso SOC: -diag") 
 
-    DEALLOCATE ( cwork,rwork )
+    DEALLOCATE (cwork,rwork)
 
     IF (input%eonly) THEN
-       IF(l_socvec)  CALL juDFT_error&
-            &        ("EONLY set. Vectors not calculated.",calledby ="alineso")
+       IF(l_socvec) CALL juDFT_error("EONLY set. Vectors not calculated.",calledby ="alineso")
     ELSE
-       ALLOCATE ( zhelp2(DIMENSION%neigd,2*DIMENSION%neigd) )
+       ALLOCATE (zhelp2(DIMENSION%neigd,2*DIMENSION%neigd))
        !
        ! proj. back to G - space: old eigenvector 'z' to new one 'Z'
        !                                 +
@@ -354,11 +329,11 @@ else
                   &                 MATMUL ( sigma_xc , CONJG(hso(:nn,:nn)) ) )
              WRITE(1014) nn
              WRITE(1014) ((sigma_xc(i,j),i=1,j),j=1,nn)
-             DEALLOCATE ( sigma_xc )
+             DEALLOCATE (sigma_xc)
           ENDIF
        ENDIF
 
-       DEALLOCATE ( zhelp2 )
+       DEALLOCATE (zhelp2)
     ENDIF ! (.NOT.input%eonly)
 
     DEALLOCATE ( hso )

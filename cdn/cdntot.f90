@@ -4,7 +4,7 @@ MODULE m_cdntot
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
-   SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
+   SUBROUTINE cdntot(mpi,stars,atoms,sym,vacuum,input,cell,oneD,&
                      den,l_printData,qtot,qistot)
 
       USE m_intgr, ONLY : intgr3
@@ -18,6 +18,7 @@ CONTAINS
       IMPLICIT NONE
 
 !     .. Scalar Arguments ..
+      TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -88,7 +89,7 @@ CONTAINS
          ELSE
             qis = 0.
 
-            CALL pwint_all(stars,atoms,sym,oneD,cell,x)
+            CALL pwint_all(stars,atoms,sym,oneD,cell,1,stars%ng3,x)
             DO j = 1,stars%ng3
                qis = qis + den%pw(j,jspin)*x(j)*stars%nstr(j)
             ENDDO

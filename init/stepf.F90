@@ -38,7 +38,7 @@
           LOGICAL l_error
           !     ..
           !     .. Local Arrays ..
-          COMPLEX sf(stars%ng3)
+          COMPLEX,ALLOCATABLE:: sf(:)
           REAL g(3),gm(3),fJ
           REAL,    ALLOCATABLE :: bfft(:)
           INTEGER, ALLOCATABLE :: icm(:,:,:)
@@ -69,7 +69,7 @@
         END IF
 
         IF (mpi%irank == 0) THEN
-
+           ALLOCATE(sf(stars%ng3))
           IF (input%film) THEN
              dd = vacuum%dvac*cell%area/cell%omtil
              IF (oneD%odd%d1) dd = cell%vol/cell%omtil

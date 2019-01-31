@@ -567,6 +567,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          l_kpts = .TRUE.
          kpts%specificationType = 3
          kpts%posScale=1.0
+
+         ! We need to set input%film for inpeig. Unfortunately this is actually initialized at a later stage.
+         ! So we do it here additionally.
+         input%film = .FALSE.
+         numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/filmLattice')
+         IF (numberNodes.EQ.1) input%film = .TRUE.
+
          CALL inpeig(atoms,cell,input,.FALSE.,kpts,kptsFilename=TRIM(ADJUSTL(valueString)))
       END IF
 
@@ -2371,11 +2378,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       n=xmlGetNumberOfNodes(TRIM(ADJUSTL(path))//'/q')
       ALLOCATE(q(3,n))
       DO i = 1, n
-         PRINT *, path,'/q[',i,']'
+         !PRINT *, path,'/q[',i,']'
          WRITE(xPathA,"(a,a,i0,a)") TRIM(ADJUSTL(path)),'/q[',i,']'
-         PRINT *,xpatha
+         !PRINT *,xpatha
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-         PRINT *,"Q:",valueString
+         !PRINT *,"Q:",valueString
          READ(valueString,*) q(1,i),q(2,i),q(3,i)
       END DO
    END FUNCTION priv_read_q_list

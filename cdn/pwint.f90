@@ -122,7 +122,7 @@
       END SUBROUTINE pwint
       SUBROUTINE pwint_all(&
      &                 stars,atoms,sym,oneD,&
-     &                 cell,&
+     &                 cell,x_start,x_end,&
      &                 x)
 
       USE m_spgrot
@@ -138,6 +138,7 @@
       TYPE(t_sym),INTENT(IN)   :: sym
       TYPE(t_oneD),INTENT(IN)  :: oneD
       TYPE(t_cell),INTENT(IN)  :: cell
+      INTEGER, INTENT (IN) :: x_start,x_end
       COMPLEX, INTENT (OUT):: x(:)
 !     ..
 !-odim
@@ -159,7 +160,7 @@
 !$OMP PARALLEL DO default(shared)  &
 !$OMP PRIVATE(ng,ig3d,g,gr,fj,ig2d,s,na,kr,ph,n)&
 !$OMP PRIVATE(srmt,nn,sfs,arg,s1,ii)
-      starloop:DO ng=1,size(x)
+      starloop:DO ng=x_start,x_end
       ig3d = stars%ig(stars%kv3(1,ng),stars%kv3(2,ng),stars%kv3(3,ng))
       IF (ig3d.EQ.0) THEN
          x(ng) = (0.,0.)
