@@ -367,7 +367,7 @@ CONTAINS
          CALL zMat%init(l_real,nbasfcn,noccbd)
          CALL read_eig(eig_id,ikpt,jsp,n_start=nStart,n_end=nEnd,neig=nbands,zmat=zMat)
 
-         call set_zPrime(dim_idx, zMat, kpts%bk(:,ikpt), lapw, zPrime)
+         call set_zPrime(dim_idx, zMat, kpts%bk(:,ikpt), lapw, cell, zPrime)
 #ifdef CPP_MPI
          CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
@@ -460,23 +460,27 @@ CONTAINS
       CALL timestop("cdnval")
    END SUBROUTINE calc_kinED_pw
 
-   subroutine set_zPrime(dim_idx, zMat, kpt, lapw, zPrime)
+   subroutine set_zPrime(dim_idx, zMat, kpt, lapw, cell, zPrime)
       USE m_types
       implicit none
       INTEGER, intent(in)      :: dim_idx
       TYPE (t_mat), intent(in) :: zMat
       REAL, intent(in)         :: kpt(3) 
       TYPE(t_lapw), intent(in) :: lapw
+      TYPE(t_cell), intent(in) :: cell
       TYPE (t_mat)             :: zPrime
 
-      REAL                     :: fac
+      REAL                     :: k_plus_g(3), fac
       INTEGER                  :: basis_idx
 
       call zPrime%free()
       call zPrime%init(zMat)
 
       do basis_idx = 1,size(lapw%gvec,dim=2)
-         fac = kpt(dim_idx) + lapw%gvec(dim_idx,basis_idx,1)
+         k_plus_g = kpt + lapw%gvec(:,basis_idx,1)
+         k_plus_g = internal_to_rez(cell, k_plus_g)
+
+         fac = k_plus_g(dim_idx)
          if(zPrime%l_real) then
             zPrime%data_r(basis_idx,:) = fac * zPrime%data_r(basis_idx,:) 
          else
@@ -484,4 +488,14 @@ CONTAINS
          endif
       enddo
    end subroutine set_zPrime
+
+   function internal_to_rez(cell, vec) result(res)
+      use m_types
+      implicit none
+      type(t_cell), intent(in) :: cell
+      real, intent(in)      :: vec(3)
+      real                  :: res(3)
+
+      res = matmul(transpose(cell%bmat), vec)
+   end function internal_to_rez
 END MODULE m_metagga
