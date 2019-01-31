@@ -49,18 +49,18 @@
       INTEGER:: irank,ierr
 
       CALL MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
-      WRITE(*,*) "Signal ",signal," detected on PE:",irank
+      WRITE(0,*) "Signal ",signal," detected on PE:",irank
 #else
-      WRITE(*,*) "Signal detected:",signal
+      WRITE(0,*) "Signal detected:",signal
 #endif
-      WRITE(*,*) "This might be due to either:"
-      WRITE(*,*) " - A bug in FLEUR"
-      WRITE(*,*) " - Your job running out of memory"
-      WRITE(*,*) " - Your job got killed externally (e.g. no cpu-time left)"
-      WRITE(*,*) " - ...." 
-      WRITE(*,*) "Please check and report if you believe you found a bug"
+      WRITE(0,*) "This might be due to either:"
+      WRITE(0,*) " - A bug"
+      WRITE(0,*) " - Your job running out of memory"
+      WRITE(0,*) " - Your job got killed externally (e.g. no cpu-time left)"
+      WRITE(0,*) " - ...." 
+      WRITE(0,*) "Please check and report if you believe you found a bug"
       CALL writetimes()
-      CALL PRINT_memory_info()
+      CALL PRINT_memory_info(0,.true.)
 #ifdef CPP_MPI
       CALL MPI_ABORT(MPI_COMM_WORLD,ierr)
 #endif      
