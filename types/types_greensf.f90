@@ -37,19 +37,11 @@ MODULE m_types_greensf
          REAL, ALLOCATABLE :: im_gmmpMat(:,:,:,:,:,:)   !the imaginary part is stored in a different array because the number of energy points can differ
          COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:) 
 
-         !For spherical averaged green's function  
-         REAL, ALLOCATABLE :: qalmmpMat(:,:,:,:,:,:) 
-
-
          ! These arrays are only used in the case we want the green's function with radial dependence
          !Look at how to unify those
-         REAL, ALLOCATABLE :: uu(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: dd(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: du(:,:,:,:,:,:)
-
-         REAL, ALLOCATABLE :: im_uu(:,:,:,:,:)
-         REAL, ALLOCATABLE :: im_dd(:,:,:,:,:)
-         REAL, ALLOCATABLE :: im_du(:,:,:,:,:)
+         REAL, ALLOCATABLE :: uu(:,:,:,:,:)
+         REAL, ALLOCATABLE :: dd(:,:,:,:,:)
+         REAL, ALLOCATABLE :: du(:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init => greensf_init
@@ -88,7 +80,7 @@ MODULE m_types_greensf
          !set up energy grid for imaginary part
          thisGREENSF%del      = (thisGREENSF%e_top-thisGREENSF%e_bot)/REAL(thisGREENSF%ne-1)
 
-         !Parameters for the energy contour in the complex plan
+         !Parameters for the energy contour in the complex plane
          !We use default values for now
          thisGREENSF%mode     = input%ldahia_mode
 
@@ -102,6 +94,8 @@ MODULE m_types_greensf
             thisGREENSF%nz = 2**n
          END IF
 
+
+         !Set number of radial points
          ALLOCATE(thisGREENSF%nr(atoms%n_hia))
 
          IF(input%ldahia_sphavg) THEN
@@ -119,27 +113,16 @@ MODULE m_types_greensf
          thisGREENSF%de(:)= CMPLX(0.0,0.0)
 
 
-         IF (thisGREENSF%l_tetra.AND.input%ldahia_sphavg) THEN 
-            ALLOCATE (thisGREENSF%qalmmpMat(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            thisGREENSF%qalmmpMat   = 0.0 
-         ELSE IF (thisGREENSF%l_tetra.AND.(.NOT.input%ldahia_sphavg)) THEN 
-            ALLOCATE (thisGREENSF%uu(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            ALLOCATE (thisGREENSF%dd(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            ALLOCATE (thisGREENSF%du(dimension%neigd,kpts%nkpt,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            
-            ALLOCATE (thisGREENSF%im_uu(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            ALLOCATE (thisGREENSF%im_dd(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            ALLOCATE (thisGREENSF%im_du(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+         IF (.NOT.input%ldahia_sphavg) THEN 
+            ALLOCATE (thisGREENSF%uu(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            ALLOCATE (thisGREENSF%dd(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            ALLOCATE (thisGREENSF%du(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
            
             thisGREENSF%uu      = 0.0
             thisGREENSF%dd      = 0.0
             thisGREENSF%du      = 0.0
-            thisGREENSF%im_uu   = 0.0
-            thisGREENSF%im_dd   = 0.0
-            thisGREENSF%im_du   = 0.0
-         END IF
 
-         !Set number of radial points
+         END IF
 
 
          ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
@@ -271,7 +254,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE init_e_contour
 
-      SUBROUTINE calc_mmpmat(this,atoms,jspins)
+      SUBROUTINE calc_mmpmat(this,atoms,sym,jspins)
 
 
          !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
@@ -287,12 +270,15 @@ MODULE m_types_greensf
 
          CLASS(t_greensf),       INTENT(IN)     :: this
          TYPE(t_atoms),          INTENT(IN)     :: atoms
+         TYPE(t_sym),            INTENT(IN)     :: sym
 
          INTEGER,                INTENT(IN)     :: jspins
 
-         INTEGER i, m,mp, l, i_hia, ispin, n
-         REAL n_l, imag, re
+         INTEGER i, m,mp, l, i_hia, ispin, n, it,is, isi, natom, nn
+         REAL n_l, imag, re, fac
          CHARACTER(len=30) :: filename
+         COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+         COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
          COMPLEX, ALLOCATABLE :: mmpmat(:,:,:,:)
 
          ALLOCATE(mmpmat(atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins))
@@ -307,6 +293,7 @@ MODULE m_types_greensf
                n = atoms%lda_hia(i_hia)%atomType
 
                DO ispin = 1, jspins
+                  n_tmp(:,:) = CMPLX(0.0,0.0)
                   DO m = -l, l
                      DO mp = -l, l
                         DO i = 1, this%nz
@@ -315,19 +302,51 @@ MODULE m_types_greensf
                               CALL intgr3(REAL(this%gmmpMat(:,i,i_hia,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
                               CALL intgr3(AIMAG(this%gmmpMat(:,i,i_hia,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
 
-                              mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + AIMAG((re+ImagUnit*imag)*this%de(i))
+                              n_tmp(m,mp) = n_tmp(m,mp) + AIMAG((re+ImagUnit*imag)*this%de(i))
 
                            ELSE
 
-                              mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + AIMAG(this%gmmpMat(1,i,i_hia,m,mp,ispin)*this%de(i))
+                              n_tmp(m,mp) = n_tmp(m,mp) + AIMAG(this%gmmpMat(1,i,i_hia,m,mp,ispin)*this%de(i))
                            
                            END IF
                         ENDDO
 
-                        mmpmat(i_hia,m,mp,ispin) = -1/pi_const * mmpmat(i_hia,m,mp,ispin)
+                        n_tmp(m,mp) = -1/pi_const * n_tmp(m,mp)
 
                      ENDDO
                   ENDDO
+
+                  natom = 0
+                  DO i = 1, n-1
+                     natom = natom +atoms%neq(i)
+                  ENDDO
+                  DO nn = 1, atoms%neq(n)
+                     natom = natom + 1
+                     DO it = 1, sym%invarind(natom)
+                        
+                        fac = 1./(sym%invarind(natom)*atoms%neq(n))
+                        is = sym%invarop(natom,it)
+                        isi = sym%invtab(is)
+                        d_tmp(:,:) = cmplx(0.0,0.0)
+                        DO m = -l,l
+                           DO mp = -l,l
+                              d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
+                           ENDDO
+                        ENDDO
+                        nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
+                        n1_tmp(:,:) =  matmul( nr_tmp, d_tmp )
+
+                        DO m = -l,l
+                           DO mp = -l,l
+                              mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac
+                           ENDDO
+                        ENDDO
+                     ENDDO
+                  ENDDO
+
+
+
+
                   n_l = 0.0
                   DO m =-l, l
                      n_l = n_l + mmpmat(i_hia,m,m,ispin)

@@ -4,144 +4,7 @@ MODULE m_gOnsite
 
 CONTAINS
 
-SUBROUTINE calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOnsite)
-
-   !This Subroutine is used if we want to use the tetrahedron method 
-   !It calculates the weights for the individual k-points for the integration,
-   !which is performed in the subroutine calc_onsite
-
-   !It is essentially the f-density of states in a (m,mp) matrix with an additional factor - pi
-
-   USE m_types
-   USE m_constants
-
-   IMPLICIT NONE
-
-   TYPE(t_atoms),          INTENT(IN)     :: atoms
-   TYPE(t_sym),            INTENT(IN)     :: sym
-   TYPE(t_usdus),          INTENT(IN)     :: usdus
-   TYPE(t_eigVecCoeffs),   INTENT(IN)     :: eigVecCoeffs
-   TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
-
-   INTEGER,                INTENT(IN)     :: noccbd
-   INTEGER,                INTENT(IN)     :: ikpt
-   INTEGER,                INTENT(IN)     :: ispin
-   REAL,                   INTENT(IN)     :: eig(noccbd)
-
-   INTEGER i_hia, n, l, natom, i,nn,m,lm,mp,lmp, it,is, isi, ilo, ilop
-   REAL fac
-
-   COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-   COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-
-
-
-   !One HIA per atom at the moment
-
-   DO i_hia = 1, atoms%n_hia
-      n = atoms%lda_hia(i_hia)%atomType
-      l = atoms%lda_hia(i_hia)%l
-
-      !finding the right starting index
-      natom = 0
-      DO i = 1, n-1
-         natom = natom +atoms%neq(i)
-      ENDDO
-
-      DO nn = 1, atoms%neq(n)
-         natom = natom +1
-         fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
-         !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(natom,l,n,ispin,ikpt,noccbd,i_hia,fac) &
-         !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,gOnsite,eig) &
-         !$OMP PRIVATE(m,mp,lm,lmp,ilo,ilop,it,is,isi) &
-         !$OMP PRIVATE(n_tmp,n1_tmp,nr_tmp,d_tmp)
-
-         !$OMP DO
-         DO i = 1, noccbd
-            IF(eig(i).LT.gonsite%e_top) THEN
-               n_tmp(:,:) = cmplx(0.0,0.0)
-               !
-               ! contribution from states
-               !
-               DO m = -l, l
-                  lm = l*(l+1)+m
-                  DO mp = -l,l
-                     lmp = l*(l+1)+mp
-
-                        n_tmp(m,mp) = n_tmp(m,mp) -  pi_const*&
-                                     (conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
-                                      conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin) *&
-                                      usdus%ddn(l,n,ispin))
-                  ENDDO
-               ENDDO
-               !
-               ! add local orbital contribution
-               !
-               DO ilo = 1, atoms%nlo(n)
-                  IF(atoms%llo(ilo,n).EQ.l) THEN
-
-                     DO m = -l, l
-                        lm = l*(l+1)+m
-                        DO mp = -l, l
-                           lmp = l*(l+1)+mp
-
-                           n_tmp(m,mp) = n_tmp(m,mp) - pi_const *(  usdus%uulon(ilo,n,ispin) * (&
-                                    conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) )&
-                                    + usdus%dulon(ilo,n,ispin) * (&
-                                    conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin)))
-
-                           DO ilop = 1, atoms%nlo(n)
-                              IF (atoms%llo(ilop,n).EQ.l) THEN
-
-                               n_tmp(m,mp) = n_tmp(m,mp) - pi_const * usdus%uloulopn(ilo,ilop,n,ispin) *&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,i,ilo,natom,ispin)
-
-                              ENDIF
-                           ENDDO
-
-                        ENDDO
-                     ENDDO
-                  ENDIF
-               ENDDO
-               !
-               !  n_mmp should be rotated by D_mm' ; compare force_a21; taken from n_mat.f90
-               !
-               DO it = 1, sym%invarind(natom)
-
-                  is = sym%invarop(natom,it)
-                  isi = sym%invtab(is)
-                  d_tmp(:,:) = cmplx(0.0,0.0)
-                  DO m = -l,l
-                     DO mp = -l,l
-                        d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
-                     ENDDO
-                  ENDDO
-                  nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
-                  n1_tmp =  matmul( nr_tmp, d_tmp )
-
-
-                  DO m = -l,l
-                     DO mp = -l,l
-                        gOnsite%qalmmpMat(i,ikpt,i_hia,m,mp,ispin) = gOnsite%qalmmpMat(i,ikpt,i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac
-                     ENDDO
-                  ENDDO
-               ENDDO
-            ELSE
-               gOnsite%qalmmpMat(i,ikpt,i_hia,:,:,ispin) = 0.0
-            END IF
-         ENDDO !loop over bands
-         !$OMP END DO
-         !$OMP END PARALLEL
-      ENDDO !loop over equivalent atoms
-   ENDDO !loop over number of DFT+HIAs
-
-END SUBROUTINE calc_qalmmpMat
-
-
-SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCoeffs,gOnsite)
+SUBROUTINE im_gmmpMat(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdus,eigVecCoeffs,gOnsite)
 
    !This Subroutine calculates the imaginary part of the Matrix elements G^[n \sigma]_{Lm Lm'}(E+i*sigma)
    !at the current k-Point (it is called in cdnval) inside the MT-sphere (averaged over the radial component)
@@ -151,6 +14,7 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
 
    USE m_types
    USE m_constants
+   USE m_differentiate
 
    IMPLICIT NONE
 
@@ -165,15 +29,21 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
    INTEGER,                INTENT(IN)     :: noccbd
 
    REAL,                   INTENT(IN)     :: wtkpt
+   REAL,                   INTENT(IN)     :: tetweights(:,:)
    REAL,                   INTENT(IN)     :: eig(noccbd)
+   LOGICAL l_nzero
 
    INTEGER i_hia, i, j, n, nn, natom, l, m, mp, lm, lmp, it,is, isi, ilo, ilop
+   INTEGER jarr, narr
    REAL fac, wk
+   REAL, ALLOCATABLE :: dos_weights(:)
 
-   COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+   COMPLEX n_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
    COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
-   wk = 2.*wtkpt/REAL(jspins)/gOnsite%del
+   wk = wtkpt/gOnsite%del
+
+   ALLOCATE(dos_weights(gOnsite%ne))
 
    !One HIA per atom at the moment
 
@@ -192,15 +62,24 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
          fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
          !$OMP PARALLEL DEFAULT(none) &
          !$OMP SHARED(natom,l,n,ispin,wk,noccbd,i_hia,fac) &
-         !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,gOnsite,eig) &
-         !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,it,is,isi) &
-         !$OMP PRIVATE(n_tmp,n1_tmp,nr_tmp,d_tmp)
+         !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,gOnsite,eig,tetweights) &
+         !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,it,is,isi,l_nzero,narr,jarr) &
+         !$OMP PRIVATE(n_tmp,n1_tmp,nr_tmp,d_tmp,dos_weights)
 
          !$OMP DO
          DO i = 1, noccbd
-            j = NINT((eig(i)-gOnsite%e_bot)/gOnsite%del)+1
-            IF( (j.LE.gOnsite%ne).AND.(j.GE.1) ) THEN
-               n_tmp(:,:) = cmplx(0.0,0.0)
+            l_nzero = .false.
+            IF(gOnsite%l_tetra) THEN
+               !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
+               IF(ANY(tetweights(:,i).NE.0.0)) l_nzero = .true.
+            ELSE
+               !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
+               j = NINT((eig(i)-gOnsite%e_bot)/gOnsite%del)+1
+               IF( (j.LE.gOnsite%ne).AND.(j.GE.1) ) l_nzero = .true.
+            END IF
+
+            IF(l_nzero) THEN
+               n_tmp(:,:,:) = cmplx(0.0,0.0)
                !
                ! contribution from states
                !
@@ -208,67 +87,87 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
                   lm = l*(l+1)+m
                   DO mp = -l,l
                      lmp = l*(l+1)+mp
-
-                        n_tmp(m,mp) = n_tmp(m,mp) -  pi_const*&
+                     IF(gOnsite%nr(i_hia).EQ.1) THEN
+                        n_tmp(1,m,mp) = n_tmp(1,m,mp) -  pi_const*&
                                      (conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
                                       conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin) *&
                                       usdus%ddn(l,n,ispin))
+                     ELSE
+                        n_tmp(1,m,mp) = n_tmp(1,m,mp) - pi_const * conjg(eigVecCoeffs%acof(i,lm,natom,ispin))*eigVecCoeffs%acof(i,lmp,natom,ispin)
+                        n_tmp(2,m,mp) = n_tmp(2,m,mp) - pi_const * conjg(eigVecCoeffs%bcof(i,lm,natom,ispin))*eigVecCoeffs%bcof(i,lmp,natom,ispin)
+                        n_tmp(3,m,mp) = n_tmp(3,m,mp) - pi_const * (conjg(eigVecCoeffs%acof(i,lm,natom,ispin))*eigVecCoeffs%bcof(i,lmp,natom,ispin)+&
+                                                                   conjg(eigVecCoeffs%bcof(i,lm,natom,ispin))*eigVecCoeffs%acof(i,lmp,natom,ispin)) 
+                     END IF
                   ENDDO
                ENDDO
                !
-               ! add local orbital contribution
+               ! add local orbital contribution (not implemented for radial dependence yet and not tested for average)
                !
-               DO ilo = 1, atoms%nlo(n)
-                  IF(atoms%llo(ilo,n).EQ.l) THEN
-                     DO m = -l, l
-                        lm = l*(l+1)+m
-                        DO mp = -l, l
-                           lmp = l*(l+1)+mp
+               IF(gOnsite%nr(i_hia).EQ.1) THEN
+                  DO ilo = 1, atoms%nlo(n)
+                     IF(atoms%llo(ilo,n).EQ.l) THEN
+                        DO m = -l, l
+                           lm = l*(l+1)+m
+                           DO mp = -l, l
+                              lmp = l*(l+1)+mp
 
-                           n_tmp(m,mp) = n_tmp(m,mp) - pi_const *(  usdus%uulon(ilo,n,ispin) * (&
-                                    conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) )&
-                                    + usdus%dulon(ilo,n,ispin) * (&
-                                    conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin)))
+                              n_tmp(1,m,mp) = n_tmp(1,m,mp) - pi_const *(  usdus%uulon(ilo,n,ispin) * (&
+                                       conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
+                                       conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) )&
+                                       + usdus%dulon(ilo,n,ispin) * (&
+                                       conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
+                                       conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin)))
 
-                           DO ilop = 1, atoms%nlo(n)
-                              IF (atoms%llo(ilop,n).EQ.l) THEN
+                              DO ilop = 1, atoms%nlo(n)
+                                 IF (atoms%llo(ilop,n).EQ.l) THEN
 
-                               n_tmp(m,mp) = n_tmp(m,mp) - pi_const * usdus%uloulopn(ilo,ilop,n,ispin) *&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,i,ilo,natom,ispin)
+                                  n_tmp(1,m,mp) = n_tmp(1,m,mp) - pi_const * usdus%uloulopn(ilo,ilop,n,ispin) *&
+                                       conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,i,ilo,natom,ispin)
 
-                              ENDIF
+                                 ENDIF
+                              ENDDO
+
                            ENDDO
-
+                        ENDDO
+                     ENDIF
+                  ENDDO
+                  !
+                  !  n_mmp should be rotated by D_mm' ; compare force_a21; taken from n_mat.f90
+                  !
+                  fac = 1./atoms%neq(n)
+                     DO m = -l,l
+                        DO mp = -l,l
+                           IF(gOnsite%l_tetra) THEN
+                              !We need to differentiate the weights with respect to energy (can maybe be done analytically)
+                              CALL diff3(tetweights(:,i),gOnsite%del,dos_weights(:))
+                              DO j = 1, gOnsite%ne
+                                 gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) + n_tmp(1,m,mp) * fac * dos_weights(j)
+                              ENDDO
+                           ELSE    
+                              gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) + n_tmp(1,m,mp) * fac * wk
+                           END IF
                         ENDDO
                      ENDDO
-                  ENDIF
-               ENDDO
-               !
-               !  n_mmp should be rotated by D_mm' ; compare force_a21; taken from n_mat.f90
-               !
-               DO it = 1, sym%invarind(natom)
-
-                  is = sym%invarop(natom,it)
-                  isi = sym%invtab(is)
-                  d_tmp(:,:) = cmplx(0.0,0.0)
+               ELSE
+                  fac = 1./atoms%neq(n)
                   DO m = -l,l
                      DO mp = -l,l
-                        d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
+                        IF(gOnsite%l_tetra) THEN
+                           !We need to differentiate the weights with respect to energy (can maybe be done analytically)
+                           CALL diff3(tetweights(:,i),gOnsite%del,dos_weights(:))
+                           DO j = 1, gOnsite%ne
+                              gOnsite%uu(j,i_hia,m,mp,ispin) = gOnsite%uu(j,i_hia,m,mp,ispin) + n_tmp(1,m,mp) * fac * dos_weights(j)      
+                              gOnsite%dd(j,i_hia,m,mp,ispin) = gOnsite%dd(j,i_hia,m,mp,ispin) + n_tmp(2,m,mp) * fac * dos_weights(j)
+                              gOnsite%du(j,i_hia,m,mp,ispin) = gOnsite%du(j,i_hia,m,mp,ispin) + n_tmp(3,m,mp) * fac * dos_weights(j)
+                           ENDDO
+                        ELSE
+                           gOnsite%uu(j,i_hia,m,mp,ispin) = gOnsite%uu(j,i_hia,m,mp,ispin) + n_tmp(1,m,mp) * fac * wk
+                           gOnsite%dd(j,i_hia,m,mp,ispin) = gOnsite%dd(j,i_hia,m,mp,ispin) + n_tmp(2,m,mp) * fac * wk
+                           gOnsite%du(j,i_hia,m,mp,ispin) = gOnsite%du(j,i_hia,m,mp,ispin) + n_tmp(3,m,mp) * fac * wk
+                        END IF
                      ENDDO
                   ENDDO
-                  nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
-                  n1_tmp =  matmul( nr_tmp, d_tmp )
-
-
-                  DO m = -l,l
-                     DO mp = -l,l
-                        gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac * wk
-                     ENDDO
-                  ENDDO
-
-               ENDDO
+               ENDIF       
             ENDIF
          ENDDO
          !$OMP END DO
@@ -276,14 +175,13 @@ SUBROUTINE im_gmmpMathist(atoms,sym,ispin,jspins,noccbd,wtkpt,eig,usdus,eigVecCo
       ENDDO
    ENDDO
 
-END SUBROUTINE im_gmmpMathist
+END SUBROUTINE im_gmmpMat
 
 SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,eigv,gOnsite,ef,sym)
 
    USE m_types
    USE m_constants
    USE m_juDFT
-   USE m_tetra
    USE m_smooth
    USE m_kkintgr
    USE m_radfun
@@ -312,13 +210,15 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,neigd,ntetra,nkpt,itetra,vol
 
 
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
-   REAL, ALLOCATABLE :: e(:)   
+   REAL, ALLOCATABLE :: e(:), dos(:)   
 
    ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
    ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
 
    CALL usdus%init(atoms,jspins)
 
+   ALLOCATE(dos(gOnsite%ne))
+   dos = 0.0
 
    IF(gOnsite%sigma.NE.0.0) THEN
       !construct an energy grid for smoothing (required by the function in m_smooth)
@@ -339,29 +239,19 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,neigd,ntetra,nkpt,itetra,vol
          DO mp = -l,l
             !calculate the imaginary part if we use the tetrahedron method
             IF(gOnsite%l_tetra) THEN
-               CALL timestart("On-Site: Tetrahedron method")
-               IF(gOnsite%nr(i_hia).EQ.1) THEN
-                  CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%qalmmpMat(:,:,i_hia,m,mp,jspin)&
-                                             ,eigv,gOnsite%ne,gOnsite%im_gmmpMat(1,:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
-               ELSE
-                  !look at eliminating im_uu arrays
-                  CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%uu(:,:,i_hia,m,mp,jspin)&
-                                             ,eigv,gOnsite%ne,gOnsite%im_uu(:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
-                  CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%dd(:,:,i_hia,m,mp,jspin)&
-                                             ,eigv,gOnsite%ne,gOnsite%im_dd(:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot)
-                  CALL int_tetra(nkpt,ntetra,itetra,voltet,neigd,nevk,gOnsite%du(:,:,i_hia,m,mp,jspin)&
-                                             ,eigv,gOnsite%ne,gOnsite%im_du(:,i_hia,m,mp,jspin),gOnsite%e_top,gOnsite%e_bot) 
-
+               IF(gOnsite%nr(i_hia).NE.1) THEN
                   DO jr = 1, gOnsite%nr(i_hia)
                      gOnsite%im_gmmpmat(jr,:,i_hia,m,mp,jspin) = gOnsite%im_gmmpmat(jr,:,i_hia,m,mp,jspin) + &
-                                       gOnsite%im_uu(:,i_hia,m,mp,jspin) * (f(jr,1,l,jspin)*f(jr,1,l,jspin)+f(jr,2,l,jspin)*f(jr,2,l,jspin)) +&
-                                       gOnsite%im_dd(:,i_hia,m,mp,jspin) * (g(jr,1,l,jspin)*g(jr,1,l,jspin)+g(jr,2,l,jspin)*g(jr,2,l,jspin)) +&
-                                       gOnsite%im_du(:,i_hia,m,mp,jspin) * (f(jr,1,l,jspin)*g(jr,1,l,jspin)+f(jr,2,l,jspin)*g(jr,2,l,jspin))
+                                       gOnsite%uu(:,i_hia,m,mp,jspin) * (f(jr,1,l,jspin)*f(jr,1,l,jspin)+f(jr,2,l,jspin)*f(jr,2,l,jspin)) +&
+                                       gOnsite%dd(:,i_hia,m,mp,jspin) * (g(jr,1,l,jspin)*g(jr,1,l,jspin)+g(jr,2,l,jspin)*g(jr,2,l,jspin)) +&
+                                       gOnsite%du(:,i_hia,m,mp,jspin) * (f(jr,1,l,jspin)*g(jr,1,l,jspin)+f(jr,2,l,jspin)*g(jr,2,l,jspin))
                   ENDDO
-               END IF                  
-               IF(jspins.EQ.1) gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1) = 2.0 * gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1)
-               CALL timestop("On-Site: Tetrahedron method")
+               END IF
             ENDIF
+            !
+            !taking care of spin degeneracy
+            !
+            IF(jspins.EQ.1) gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1) = 2.0 * gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1)
             !
             !smooth the imaginary part using gaussian broadening 
             !
@@ -396,7 +286,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,neigd,ntetra,nkpt,itetra,vol
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
 
-      CALL gOnsite%calc_mmpmat(atoms,jspins)
+      CALL gOnsite%calc_mmpmat(atoms,sym,jspins)
 
 
    ENDDO

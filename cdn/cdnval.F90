@@ -39,7 +39,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_forcea8
    USE m_checkdopall
    USE m_gOnsite     ! calculate the non-interacting on-site green's function
-   USE m_gOnsite_radial ! to be unified with m_gOnsite
+   USE m_tetra_weights
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
@@ -100,6 +100,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    REAL,    ALLOCATABLE :: we(:)
    REAL,    ALLOCATABLE :: eig(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
+   REAL,    ALLOCATABLE :: tetweights(:,:)
 
    TYPE (t_lapw)             :: lapw
    TYPE (t_orb)              :: orb
@@ -180,6 +181,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    ALLOCATE (eig(MAXVAL(cdnvalJob%noccbd(:))))
    jsp = MERGE(1,jspin,noco%l_noco)
 
+   IF(PRESENT(gOnsite)) THEN
+      IF(gOnsite%l_tetra) ALLOCATE(tetweights(gOnsite%ne,dimension%neigd))
+   END IF
+
    DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement
 
       IF (ikpt.GT.kpts%nkpt) THEN
@@ -238,21 +243,15 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
-         IF (PRESENT(gOnsite)) THEN
-            CALL timestart("On-Site: Setup")
-            IF(input%ldahia_sphavg) THEN
-               IF (gOnsite%l_tetra) THEN
-                  CALL calc_qalmmpMat(atoms,sym,ispin,noccbd,ikpt,usdus,eig,eigVecCoeffs,gOnsite)
-               ELSE
-                  CALL im_gmmpMathist(atoms,sym,ispin,input%jspins,noccbd,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
-               ENDIF
-            ELSE
-               IF (gOnsite%l_tetra) THEN
-                  CALL onsite_coeffs(atoms,ispin,noccbd,ikpt,eig,eigVecCoeffs,gOnsite)
-               ELSE
-                  CALL juDFT_error("Radial dependence + Histogram method not implemented yet", calledby="cdnval")
-               ENDIF
+         IF (atoms%n_hia.GT.0) THEN
+            IF(gOnsite%l_tetra) THEN
+               CALL timestart("OnSite: TetWeights")
+               tetweights = 0.0
+               CALL tetra_weights(ikpt,kpts,results%neig(:,ispin),results%eig(:,:,ispin),gOnsite,tetweights(:,:),results%ef)
+               CALL timestop("OnSite: TetWeights")
             ENDIF
+            CALL timestart("On-Site: Setup")
+               CALL im_gmmpMat(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
             CALL timestop("On-Site: Setup")
          ENDIF
 
