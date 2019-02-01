@@ -126,7 +126,7 @@
                   OPEN (6,file='out',form='formatted',status='unknown')
              ENDIF
              CALL writeOutHeader()
-             OPEN (16,status='SCRATCH')
+             !OPEN (16,status='SCRATCH')
           ENDIF
 
           input%l_wann = .FALSE.
