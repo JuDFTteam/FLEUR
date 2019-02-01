@@ -221,8 +221,6 @@ c
             ENDDO
          ENDDO
       ELSE
-c     write(16,1000) ((v(i,j),i=1,2),j=1,nt)
-!          CALL juDFT_error("triang",calledby="triang")
       ENDIF
 c
 99001 FORMAT (' $$$ error in triang: collinear k-points'/(5x,2F12.6))

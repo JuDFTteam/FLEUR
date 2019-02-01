@@ -93,7 +93,6 @@ CONTAINS
     ENDDO conv_loop
     workf = -hartree_to_ev_const*ef
     IF ( mpi%irank == 0 ) THEN
-       WRITE (16,FMT=8010) ef,workf,s
        WRITE (6,FMT=8010) ef,workf,s
     END IF
 8010 FORMAT (/,10x,'fermi energy=',f10.5,' har',3x,'work function=',&
@@ -138,7 +137,6 @@ CONTAINS
     chmom = s1 - input%jspins*s
     IF ( mpi%irank == 0 ) THEN
        WRITE (6,FMT=8050) seigv - seigv1,s1,chmom
-       WRITE (16,FMT=8050) seigv - seigv1,s1,chmom
     END IF
 8050 FORMAT (/,10x,'sum of eigenvalues-correction=',f12.5,/,10x,&
           'sum of weight                =',f12.5,/,10x,&

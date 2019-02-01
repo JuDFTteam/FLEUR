@@ -114,7 +114,6 @@
 8010      FORMAT (/,/,4x,10a8,/,/)
           !--->    the menu for namgrp can be found in subroutine spgset
           WRITE (6,FMT=8030) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
-          WRITE (16,FMT=8030) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
 8030      FORMAT (' lattice=',a3,/,' name of space group=',a4,/,' inversion symmetry=   ',l1&
                ,/,' z-reflection symmetry=',l1,/,' vacuum-inversion symm=',l1,/,' jspins=',i1)
 
@@ -161,13 +160,10 @@
           a2(:) = input%scaleCell*a2(:)
           a3(:) = input%scaleCell*a3(:)
           WRITE (6,FMT=8050) input%scaleCell
-          WRITE (16,FMT=8050) input%scaleCell
 8050      FORMAT (' unit cell scaled by    ',f10.6)
           WRITE (6,FMT=8060) cell%z1
-          WRITE (16,FMT=8060) cell%z1
 8060      FORMAT (' the vacuum begins at z=',f10.6)
           WRITE (6,FMT=8070) dtild/2.
-          WRITE (16,FMT=8070) dtild/2.
 8070      FORMAT (' dtilda/2=              ',f10.6)
           !     set up bravais matrices of real and reciprocal lattices
           cell%amat(:,1) = a1(:)
@@ -271,8 +267,6 @@
              !                 idsprs set to be zero.
 
 
-             WRITE (16,FMT=8122) 1,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
-             WRITE (16,'(/)')
              WRITE (6,FMT=8122) 1,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
              WRITE (6,'(/)')
 8122         FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1, ',chng=',d10.3)
@@ -280,11 +274,7 @@
           ENDIF
           !-guta
           !     specification of atoms
-          IF (atoms%ntype.GT.atoms%ntype) THEN
-             WRITE (6,FMT='(a)') 'ntype > ntypd !!!'
-             WRITE (16,FMT='(a)') 'ntype > ntypd !!!'
-             CALL juDFT_error("ntypd",calledby ="inped")
-          END IF
+          
           cell%volint = cell%vol
 
           DO  n = 1,atoms%ntype
@@ -292,13 +282,11 @@
                 CALL trans(namat_const(n),str_up,str_do)
                 IF ( (TRIM(ADJUSTL(noel(n))).NE.TRIM(ADJUSTL(str_up))) .OR.&
                      &        (TRIM(ADJUSTL(noel(n))).NE.TRIM(ADJUSTL(str_do))) ) THEN
-                   WRITE(16,*) 'Element ',noel(n),' does not match Z = ',atoms%nz(n)
                    WRITE( 6,*) 'Element ',noel(n),' does not match Z = ',atoms%nz(n)
                    CALL juDFT_warn ("Element name and nuclear number do not match!" ,calledby ="inped")
                 ENDIF
              ENDIF
              WRITE (6,8140) noel(n),atoms%nz(n),atoms%ncst(n),atoms%lmax(n),atoms%jri(n),atoms%rmt(n),atoms%dx(n)
-             WRITE (16,8140) noel(n),atoms%nz(n),atoms%ncst(n),atoms%lmax(n),atoms%jri(n),atoms%rmt(n),atoms%dx(n)
 8140         FORMAT (a3,i3,3i5,2f10.6)
              IF (atoms%jri(n)>atoms%jmtd)  CALL juDFT_error("jmtd",calledby ="inped")
              atoms%zatom(n) = atoms%nz(n)
@@ -337,7 +325,6 @@
                 !--->    i.e. they are given in internal units scaled by 'scpos'
                 !
                 WRITE (6,FMT=8170) (atoms%taual(i,na),i=1,3),1.0
-                WRITE (16,FMT=8170) (atoms%taual(i,na),i=1,3),1.0
 8170            FORMAT (4f10.6)
                 !
                 !--->   for films, the z-coordinates are given in absolute values:
@@ -397,12 +384,9 @@
 
           !--->    nwd = number of energy windows; lepr = 0 (1) for energy
           !--->    parameters given on absolute (floating) scale
-          WRITE (16,FMT=*) 'nwd=',1,'lepr=',obsolete%lepr
           IF (ALL(obsolete%lepr .NE. (/0,1/))) CALL judft_error("Wrong choice of lepr",calledby="inped")
           WRITE (6,FMT=8320) input%l_f,input%eonly,1,llr(obsolete%lepr)
-          WRITE (16,FMT=8320) input%l_f,input%eonly,1,llr(obsolete%lepr)
           WRITE (6,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
-          WRITE (16,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
 8320      FORMAT (1x,/,/,/,' input of parameters for eigenvalues:',/,t5,&
                &       'calculate Pulay-forces = ',l1,/,t5,'eigenvalues ',&
                &       'only = ',l1,/,t5,'number of energy windows =',i2,/,t5,&
@@ -414,7 +398,6 @@
           !
           IF (obsolete%lepr.EQ.1) THEN
              WRITE ( 6,'(//,''  Floating energy parameters: relative'',                                    '' window(s):'')')
-             WRITE (16,'(//,''  Floating energy parameters: relative'',                                    '' window(s):'')')
           ENDIF
           !--->    energy window
 
@@ -426,18 +409,15 @@
           ENDIF
           !
           WRITE (6,FMT=8350) input%ellow,input%elup,input%zelec
-          WRITE (16,FMT=8350) input%ellow,input%elup,input%zelec
 8350      FORMAT (1x,/,/,' energy window from',f8.3,' to', f8.3,' hartrees; nr. of electrons=',f6.1)
           !--->    input of wavefunction cutoffs: input is a scaled quantity
           !--->    related to the absolute value by rscale (e.g. a muffin-tin
           !--->    radius)
           WRITE (6,FMT=8290) input%rkmax
-          WRITE (16,FMT=8290) input%rkmax
 8290      FORMAT (1x,/,' wavefunction cutoff =',f10.5)
           !
           IF ((input%tria) .AND. (input%gauss)) THEN
              WRITE (6,FMT='(a)') 'choose: either gaussian or triangular!'
-             WRITE (16,FMT='(a)') 'choose: either gaussian or triangular!'
              CALL juDFT_error("integration method",calledby ="inped")
           END IF
           WRITE (6,FMT=8230) input%gauss,input%delgau
@@ -446,9 +426,7 @@
 8240      FORMAT (/,10x,'number of valence electrons=',f10.5,/,10x, 'temperature broadening     =',f10.5)
           WRITE (6,FMT=*) 'itmax=',input%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
           WRITE (6,FMT=*) 'alpha=',input%alpha,' spinf=',input%spinf
-          WRITE (16,FMT=*) 'itmax=',input%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
-          WRITE (16,FMT=*) 'alpha=',input%alpha,' spinf=',input%spinf
-
+    
           IF ((.NOT.sym%invs).AND.input%secvar) THEN
              WRITE(6,*)'The second variation is not implemented in the'
              WRITE(6,*)'complex version of the program.'
@@ -468,7 +446,6 @@
           IF (sliceplot%slice) THEN
              input%cdinf = .FALSE.
              WRITE (6,FMT=8390) sliceplot%kk,sliceplot%e1s,sliceplot%e2s
-             WRITE (16,FMT=8390) sliceplot%kk,sliceplot%e1s,sliceplot%e2s
           END IF
 8390      FORMAT (' slice: k=',i3,' e1s=',f10.6,' e2s=',f10.6)
           !

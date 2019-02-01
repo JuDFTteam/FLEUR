@@ -456,8 +456,6 @@ CONTAINS
     IF ((obsolete%lepr.EQ.1).AND.(mpi%irank.EQ.0)) THEN
        WRITE ( 6,'(//,'' Reference energies for energy parameters'')')
        WRITE ( 6,'('' ----------------------------------------'')')
-       WRITE (16,'(//,'' Reference energies for energy parameters'')')
-       WRITE (16,'('' ----------------------------------------'')')
     ENDIF
     !
     spins: DO jsp = 1,input%jspins
@@ -473,7 +471,6 @@ CONTAINS
              vbar = vr(j,0,n,jsp)/rj
              IF (mpi%irank.EQ.0) THEN
                 WRITE ( 6,'('' spin'',i2,'', atom type'',i3,'' ='',f12.6,''   r='',f8.5)') jsp,n,vbar,rj
-                WRITE (16,'('' spin'',i2,'', atom type'',i3,'' ='',f12.6,''   r='',f8.5)') jsp,n,vbar,rj
              ENDIF
           ELSE
              vbar = 0.0
@@ -511,7 +508,6 @@ CONTAINS
                 vz0 = vz(1,ivac,jsp)
                 IF (mpi%irank.EQ.0) THEN
                    WRITE ( 6,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0 
-                   WRITE (16,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
                 ENDIF
              ENDIF
              evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0

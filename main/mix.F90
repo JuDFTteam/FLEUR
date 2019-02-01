@@ -140,13 +140,13 @@ contains
       !imix=:generalozed anderson mixing
       select case( input%imix )
         case( 0 )
-          write( 16, fmt='(a,2f10.5)' ) 'STRAIGHT MIXING',input%alpha
+          write( 6, fmt='(a,2f10.5)' ) 'STRAIGHT MIXING',input%alpha
         case( 3 )
-          write( 16, fmt='(a,f10.5)' ) 'BROYDEN FIRST MIXING',input%alpha
+          write( 6, fmt='(a,f10.5)' ) 'BROYDEN FIRST MIXING',input%alpha
         case( 5 )
-          write( 16, fmt='(a,f10.5)' ) 'BROYDEN SECOND MIXING',input%alpha
+          write( 6, fmt='(a,f10.5)' ) 'BROYDEN SECOND MIXING',input%alpha
         case( 7 )
-          write( 16, fmt='(a,f10.5)' ) 'ANDERSON GENERALIZED',input%alpha
+          write( 6, fmt='(a,f10.5)' ) 'ANDERSON GENERALIZED',input%alpha
         case default
           call juDFT_error( "mix: input%imix =/= 0,3,5,7 ", calledby ="mix" )
       end select
@@ -187,10 +187,8 @@ contains
          WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/cell%vol))
          CALL writeXMLElementForm('chargeDensity',(/'spin    ','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
          IF( hybrid%l_calhf ) THEN
-            WRITE (16,FMT=7901) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
             WRITE ( 6,FMT=7901) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
          ELSE
-            WRITE (16,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
             WRITE ( 6,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/cell%vol))
          END IF
       END DO
@@ -209,13 +207,9 @@ contains
          CALL writeXMLElementFormPoly('spinDensity',(/'distance'/),&
                                       (/1000*SQRT(ABS(dist(5)/cell%vol))/),reshape((/19,20/),(/1,2/)))
          IF( hybrid%l_calhf ) THEN
-            WRITE (16,FMT=8001) inDen%iter,1000*SQRT(ABS(dist(4)/cell%vol))
-            WRITE (16,FMT=8011) inDen%iter,1000*SQRT(ABS(dist(5)/cell%vol))
             WRITE ( 6,FMT=8001) inDen%iter,1000*SQRT(ABS(dist(4)/cell%vol))
             WRITE ( 6,FMT=8011) inDen%iter,1000*SQRT(ABS(dist(5)/cell%vol))
          ELSE
-            WRITE (16,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/cell%vol))
-            WRITE (16,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/cell%vol))
             WRITE ( 6,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/cell%vol))
             WRITE ( 6,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/cell%vol))
          END IF

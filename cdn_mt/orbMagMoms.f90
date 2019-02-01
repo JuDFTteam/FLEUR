@@ -29,7 +29,6 @@ SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
    thetai = noco%theta
    phii   = noco%phi
    WRITE (6,FMT=9020)
-   WRITE (16,FMT=9020)
    CALL openXMLElement('orbitalMagneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
    DO iType = 1, atoms%ntype
       IF (noco%l_noco) THEN
@@ -52,7 +51,6 @@ SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
                          sin(phii)*clmom(2,iType,2))
 
       WRITE (6,FMT=8030) iType,slmom,(clmom(3,iType,j),j=1,2)
-      WRITE (16,FMT=8030) iType,slmom,(clmom(3,iType,j),j=1,2)
       attributes = ''
       WRITE(attributes(1),'(i0)') iType
       WRITE(attributes(2),'(f15.10)') slmom

@@ -2,7 +2,6 @@ set(fleur_F77 ${fleur_F77}
 io/calculator.f
 io/cdn_read.F
 io/rw_symfile.f
-io/write_gw.F
 )
 set(fleur_F90 ${fleur_F90}
 io/io_matrix.F90

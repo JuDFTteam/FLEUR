@@ -540,7 +540,6 @@ CONTAINS
 
        !
        WRITE (6,fmt=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
-       WRITE(16,fmt=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
 8020   FORMAT(/,5x,'vacuum zero for vacuum',i3,' = ',2f14.10)
        !
        !     calculate the ex-corr. energy density now beyond warping region

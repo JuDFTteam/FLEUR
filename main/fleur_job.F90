@@ -135,6 +135,7 @@ CONTAINS
       INCLUDE 'mpif.h'
         INTEGER ierr(3), i
         CALL MPI_INIT_THREAD(MPI_THREAD_SERIALIZED,i,ierr)
+        CALL judft_init()
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
            !$    IF (i<MPI_THREAD_SERIALIZED) THEN
@@ -249,7 +250,6 @@ PROGRAM fleurjob
     USE m_juDFT
     IMPLICIT NONE
     TYPE(t_job),ALLOCATABLE::jobs(:)
-    CALL judft_init()
     CALL fleur_job_init()
     CALL fleur_job_arguments(jobs)
     CALL fleur_job_distribute(jobs)

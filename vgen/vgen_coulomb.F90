@@ -207,7 +207,6 @@ contains
           call timestart( "den-pot integrals" )
           !     CALCULATE THE INTEGRAL OF n*Vcoulomb
           write( 6, fmt=8020 )
-          write( 16, fmt=8020 )
 8020      format (/,10x,'density-coulomb potential integrals',/)
           !       interstitial first
           !       convolute ufft and pot: F(G) = \sum_(G') U(G - G') V(G')
@@ -217,7 +216,6 @@ contains
                        vCoul, den, results%te_vcoul )
 
           write( 6, fmt=8030 ) results%te_vcoul
-          write( 16, fmt=8030 ) results%te_vcoul
 8030      format (/,10x,'total density-coulomb potential integral :', t40,f20.10)
 
           call timestop( "den-pot integrals" )

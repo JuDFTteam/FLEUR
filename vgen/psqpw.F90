@@ -181,7 +181,6 @@ contains
         psint = psq(1) * stars%nstr(1) * cell%omtil
       end if
       write( 6, fmt=8000 ) psint
-      write( 16, fmt=8000 ) psint
 8000  format (/,10x,'integral of pseudo charge density inside the slab='&
             &       ,5x,2f11.6)
       if ( .not. input%film .or. potdenType == POTDEN_TYPE_POTYUK ) return
@@ -207,7 +206,6 @@ contains
       fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
       psq(1) = psq(1) - fact
       write( 6, fmt=8010 ) fact * 1000
-      write( 16, fmt=8010 ) fact * 1000
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
     end if ! mpi%irank == 0 

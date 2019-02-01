@@ -72,7 +72,6 @@
              DO j = 1,atoms%jri(n)
                 den%mt(j,0,n,1) = den%mt(j,0,n,1) - rhoc(j,n,1)/sfp
              ENDDO
-             !         WRITE (16,FMT='(8f10.4)') (den%mt(i,0,n,1),i=1,16)
              CALL intgr3(den%mt(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),qval)
              p = (atoms%bmu(n)+sfp*qval)/ (2.*sfp*qval)
              pp = 1. - p

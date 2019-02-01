@@ -407,7 +407,7 @@ CONTAINS
              ELSE
                 bandf= 1 
              ENDIF
-             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-10) THEN
+             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-8) THEN
                 PRINT *,bandf,band2,n,AIMAG(matel(bandf,band2,n))
                 CALL judft_error('Stop in ssomatel:  diagonal matrix element not real')
              ENDIF
