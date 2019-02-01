@@ -99,7 +99,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
-   CALL gOnsite%init(input,atoms,kpts,dimension)
+   CALL gOnsite%init(input,atoms,kpts,dimension,.true.)
 
    !IF(atoms%n_hia.GT.0.AND.gOnsite%l_tetra) CALL calc_weights()
 

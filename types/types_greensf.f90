@@ -34,11 +34,12 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE  :: de(:) !weights for integration
 
          !Arrays for Green's function
-         REAL, ALLOCATABLE :: im_gmmpMat(:,:,:,:,:,:)   !the imaginary part is stored in a different array because the number of energy points can differ
          COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:) 
 
+         !These arrays are needed to calculate the onsite-Green's function from the eigenstates and eigenvalues of the DFT calculation
+         REAL, ALLOCATABLE :: im_gmmpMat(:,:,:,:,:,:)
+
          ! These arrays are only used in the case we want the green's function with radial dependence
-         !Look at how to unify those
          REAL, ALLOCATABLE :: uu(:,:,:,:,:)
          REAL, ALLOCATABLE :: dd(:,:,:,:,:)
          REAL, ALLOCATABLE :: du(:,:,:,:,:)
@@ -54,7 +55,7 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(thisGREENSF,input,atoms,kpts,dimension)
+      SUBROUTINE greensf_init(thisGREENSF,input,atoms,kpts,dimension,l_onsite)
 
          USE m_types_setup
          USE m_types_kpts
@@ -65,6 +66,7 @@ MODULE m_types_greensf
          TYPE(t_input),          INTENT(IN)     :: input
          TYPE(t_kpts),           INTENT(IN)     :: kpts
          TYPE(t_dimension),      INTENT(IN)     :: dimension
+         LOGICAL,                INTENT(IN)     :: l_onsite !this switch determines wether we want to use this type to calculate the on-site green's function
 
          INTEGER n, i_hia
 
@@ -112,20 +114,21 @@ MODULE m_types_greensf
          thisGREENSF%e(:) = CMPLX(0.0,0.0)
          thisGREENSF%de(:)= CMPLX(0.0,0.0)
 
+         IF(l_onsite) THEN
+            IF (.NOT.input%ldahia_sphavg) THEN 
+               ALLOCATE (thisGREENSF%uu(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               ALLOCATE (thisGREENSF%dd(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               ALLOCATE (thisGREENSF%du(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+              
+               thisGREENSF%uu      = 0.0
+               thisGREENSF%dd      = 0.0
+               thisGREENSF%du      = 0.0
 
-         IF (.NOT.input%ldahia_sphavg) THEN 
-            ALLOCATE (thisGREENSF%uu(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            ALLOCATE (thisGREENSF%dd(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            ALLOCATE (thisGREENSF%du(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-           
-            thisGREENSF%uu      = 0.0
-            thisGREENSF%dd      = 0.0
-            thisGREENSF%du      = 0.0
+            END IF
 
+
+            ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
          END IF
-
-
-         ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
          ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
 
          thisGREENSF%im_gmmpMat  = 0.0
