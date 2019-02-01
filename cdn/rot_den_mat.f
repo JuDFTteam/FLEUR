@@ -70,7 +70,7 @@ c---> are real.
      +           ="rot_den_mat",hint=
      +        'After the rotation of the density matrix in the '//
      +       'muffin-tin sphere one diagonal element of the '//
-     +       '(hermitian) density matrix is not real. That means '//fg
+     +       '(hermitian) density matrix is not real. That means '//
      +       'that the density matrix was probably damaged.')
          ENDIF
       ENDDO
