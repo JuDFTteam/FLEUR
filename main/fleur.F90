@@ -185,7 +185,7 @@ CONTAINS
 !!$             input%alpha = input%alpha - NINT(input%alpha)
 !!$          END IF
 
-       CALL resetIterationDependentTimers()
+       !CALL resetIterationDependentTimers()
        CALL timestart("Iteration")
        IF (mpi%irank.EQ.0) THEN
           WRITE (6,FMT=8100) iter
@@ -449,7 +449,7 @@ CONTAINS
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
 
-       CALL writeTimesXML()
+       !CALL writeTimesXML()
 
        IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
           CALL closeXMLElement('iteration')
