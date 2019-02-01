@@ -484,7 +484,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 		           oneD%odi,oneD%ods,&
 		           eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
 !-------------------------for spex output: nbasfcn=nv(because lo info not needed) and numbands setting to numbands without highest (degenerat) state-------- 
-                nbasfcn=lapw%nv(jsp)
+!                nbasfcn= MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
 		ndbands=numbands-1
 		DO i=(numbands-1),1,-1
 		    IF (abs(results%eig(i+1,nk,jsp)-results%eig(i,nk,jsp)).LT.0.000001) THEN
