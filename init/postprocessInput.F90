@@ -28,7 +28,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_strgn
   USE m_od_strgn1
   USE m_prpqfft
-  USE m_writegw
   USE m_prpxcfft
   USE m_stepf
   USE m_convn
@@ -534,12 +533,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      CALL prp_qfft(stars,cell,noco,input)
 
-     IF (input%gw.GE.1) THEN
-        CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
-                      atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
-                      atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
-                      atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
-     END IF
 
      CALL prp_xcfft(stars,input,cell,xcpot)
  

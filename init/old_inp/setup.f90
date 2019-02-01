@@ -41,7 +41,6 @@
           USE m_stepf
           USE m_cdn_io
           USE m_mapatom
-          USE m_writegw
           USE m_convn
           USE m_prpqfft
           USE m_prpxcfft
@@ -165,11 +164,6 @@
           !
           CALL  prp_qfft(stars, cell,noco, input)
 
-          IF (input%gw.GE.1) CALL write_gw(&
-               atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
-               atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
-               atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
-               atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
           !
           !-----> prepare dimensions for xc fft-box in visxc(g).f
           !
