@@ -161,17 +161,6 @@ CONTAINS
    SUBROUTINE calc_kinED_pw(dim_idx, eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                      vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,kinED,regCharges,dos,results,&
                      moments,coreSpecInput,mcd,slab,orbcomp)
-
-      !************************************************************************************
-      !     This is the FLEUR valence density generator
-      !******** ABBREVIATIONS *************************************************************
-      !     noccbd   : number of occupied bands
-      !     pallst   : if set to .true. bands above the Fermi-Energy are taken into account
-      !     ener     : band energy averaged over all bands and k-points,
-      !                wheighted with the l-like charge of each atom type
-      !     sqal     : l-like charge of each atom type. sum over all k-points and bands
-      !************************************************************************************
-
       USE m_types
       USE m_eig66_io
       USE m_genMTBasis
@@ -257,10 +246,8 @@ CONTAINS
       TYPE (t_potden)           :: kinED_comp(3)
       TYPE (t_gVacMap)          :: gVacMap
 
-      CALL timestart("cdnval")
-
       l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
-      l_dosNdir = banddos%dos.AND.(banddos%ndir.EQ.-3)
+      l_dosNdir = banddos%dos.AND.(banddos%ndir == -3)
 
       IF (noco%l_mperp) THEN
          ! when the off-diag. part of the desinsity matrix, i.e. m_x and
@@ -291,23 +278,6 @@ CONTAINS
       IF (l_dosNdir.AND.oneD%odi%d1) CALL juDFT_error("layer-resolved feature does not work with 1D",calledby ="cdnval")
       IF (banddos%l_mcd.AND..NOT.PRESENT(mcd)) CALL juDFT_error("mcd is missing",calledby ="cdnval")
 
-      ! calculation of core spectra (EELS) initializations -start-
-      !l_coreSpec = .FALSE.
-      !IF (PRESENT(coreSpecInput)) THEN
-         !CALL corespec_init(input,atoms,coreSpecInput)
-         !IF(l_cs.AND.(mpi%isize.NE.1)) CALL juDFT_error('EELS + MPI not implemented', calledby = 'cdnval')
-         !IF(l_cs.AND.jspin.EQ.1) CALL corespec_gaunt()
-         !l_coreSpec = l_cs
-      !END IF
-      ! calculation of core spectra (EELS) initializations -end-
-
-      !IF (mpi%irank==0) THEN
-         !WRITE (6,FMT=8000) jspin
-         !WRITE (16,FMT=8000) jspin
-         !CALL openXMLElementPoly('mtCharges',(/'spin'/),(/jspin/))
-      !END IF
-8000  FORMAT (/,/,10x,'valence density: spin=',i2)
-
       DO iType = 1, atoms%ntype
          DO ispin = jsp_start, jsp_end
             CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
@@ -327,7 +297,7 @@ CONTAINS
 
       DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement
 
-         IF (ikpt.GT.kpts%nkpt) THEN
+         IF (ikpt > kpts%nkpt) THEN
 #ifdef CPP_MPI
             CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif
@@ -362,61 +332,11 @@ CONTAINS
          CALL gVacMap%init(dimension,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
          ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
-         IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
+         IF (.NOT.((jspin == 2).AND.noco%l_noco)) THEN
             ! valence density in the interstitial region
             CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
                        jspin,lapw,noccbd,we,eig,kinED,results,force%f_b8,zPrime,dos)
-            ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-            !IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
-            !! valence density in the vacuum region
-            !IF (input%film) THEN
-               !CALL vacden(vacuum,dimension,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
-                           !gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac,eig,kinED,zMat,dos)
-            !END IF
          END IF
-
-         ! valence density in the atomic spheres
-         !CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
-         !DO ispin = jsp_start, jsp_end
-            !IF (input%l_f) CALL force%init2(noccbd,input,atoms)
-            !CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
-                       !eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
-                       !eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
-            !IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,kinED%mmpMat(:,:,:,jspin))
-
-            !! perform Brillouin zone integration and summation over the
-            !! bands in order to determine the energy parameters for each atom and angular momentum
-            !CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
-                        !skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
-
-            !IF (noco%l_mperp.AND.(ispin==jsp_end)) THEN
-               !CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
-            !ENDIF
-
-            !! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
-            !IF (l_dosNdir) THEN
-               !IF (PRESENT(slab)) CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
-
-               !INQUIRE (file='orbcomprot',exist=l_orbcomprot)
-               !IF (l_orbcomprot) CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
-
-               !IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
-            !END IF
-
-            !CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
-
-            !IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
-            !IF (input%l_f) CALL force%addContribsA21A12(input,atoms,dimension,sym,cell,oneD,enpara,&
-                                                        !usdus,eigVecCoeffs,noccbd,ispin,eig,we,results)
-            !IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
-                                             !noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
-         !END DO ! end loop over ispin
-         !IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
-
-         !IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
-            !! since z is no longer an argument of cdninf sympsi has to be called here!
-            !CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
-         !END IF
       END DO ! end of k-point loop
 
 #ifdef CPP_MPI
@@ -425,23 +345,6 @@ CONTAINS
                           results,denCoeffs,orb,denCoeffsOffdiag,kinED,kinED%mmpMat(:,:,:,jspin),mcd,slab,orbcomp)
       END DO
 #endif
-
-      !IF (mpi%irank==0) THEN
-         !CALL cdnmt(mpi, input%jspins,atoms,sphhar,noco,jsp_start,jsp_end,&
-                    !enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,kinED%mt)
-         !IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
-         !DO ispin = jsp_start,jsp_end
-            !IF (input%cdinf) THEN
-               !WRITE (6,FMT=8210) ispin
-!8210           FORMAT (/,5x,'check continuity of cdn for spin=',i2)
-               !CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,cell,kinED,ispin)
-            !END IF
-            !IF (input%l_f) CALL force_a8(input,atoms,sphhar,ispin,vTot%mt(:,:,:,ispin),kinED%mt,force,results)
-         !END DO
-         !CALL closeXMLElement('mtCharges')
-      !END IF
-
-      CALL timestop("cdnval")
    END SUBROUTINE calc_kinED_pw
 
    subroutine set_zPrime(dim_idx, zMat, kpt, lapw, cell, zPrime)

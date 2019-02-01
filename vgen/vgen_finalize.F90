@@ -51,7 +51,7 @@ CONTAINS
        IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
     ENDIF
 
-    write (*,*) "Set vTot to zero"
+    write (*,*) "Set vTot to zero in vgen_finalize()"
     vTot%pw_w = 0.0
     vTot%pw   = 0.0
 
