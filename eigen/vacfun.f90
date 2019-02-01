@@ -99,7 +99,6 @@ CONTAINS
           phase = stars%rgphs(i1,i2,i3)
           ind2 = stars%ig2(ind3)
           IF (ind2.EQ.0) THEN
-             WRITE (16,FMT=8000) ik,jk
              WRITE (6,FMT=8000) ik,jk
 8000         FORMAT (' **** error in map2 for 2-d stars',2i5)
              CALL juDFT_error("error in map2 for 2-d stars",calledby ="vacfun")

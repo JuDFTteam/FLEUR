@@ -554,12 +554,9 @@
         force_sf(:,:) = force_is(:,:) - force_mt(:,:)
         force(:,:,isp) = force(:,:,isp) + real(force_sf(:,:))
         WRITE (6,*)
-        WRITE (16,*)
         DO itype = 1,atoms%ntype
           WRITE (6,FMT=8010) itype
-          WRITE (16,FMT=8010) itype
           WRITE (6,FMT=8020) (force_sf(dir,itype),dir=1,3)
-          WRITE (16,FMT=8020) (force_sf(dir,itype),dir=1,3)
         END DO ! itype
         isdone = .false.
         mtdone = .false.

@@ -66,17 +66,14 @@ c---> check wether the diagonal elements of the rotated density
 c---> are real.
       DO ispin = 1,2
          IF (aimag(rho(ispin,ispin)).GT.eps) THEN
-            WRITE(16,8000)
-            WRITE( 6,8000)
             CALL juDFT_error("rotation of mag. failed",calledby
-     +           ="rot_den_mat")
-         ENDIF
-      ENDDO
- 8000 FORMAT('After the rotation of the density matrix in the'/
+     +           ="rot_den_mat",hint='After the rotation of the density matrix in the'/
      +       'muffin-tin sphere one diagonal element of the'/
      +       '(hermitian) density matrix is not real. That means'/
      +       'that the density matrix was probably damaged.')
-
+         ENDIF
+      ENDDO
+ 
       rho11 = real(rho(1,1))
       rho22 = real(rho(2,2))
       rho21 =      rho(2,1)

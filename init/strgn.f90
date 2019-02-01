@@ -195,7 +195,6 @@ CONTAINS
 
     IF (stars%mx3.GT.stars%mx3) THEN
        WRITE ( 6,FMT=8000) stars%mx3,stars%mx3
-       WRITE (16,FMT=8000) stars%mx3,stars%mx3
        CALL juDFT_error("mx3.gt.k3d",calledby="strgn")
     ENDIF
 8000 FORMAT('   mx3.gt.k3d:',2i6)
@@ -468,9 +467,7 @@ CONTAINS
     !
     !-->  listing
     !
-    WRITE (16,FMT=8010) stars%gmax,stars%ng3,stars%ng2
 8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i5,/,' nq2=  ',i5,/)
-    WRITE (16,FMT=8020) stars%mx1,stars%mx2
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,/)
     WRITE (6,FMT=8030)
 8030 FORMAT (/,/,/,'   s t a r   l i s t',/)
@@ -798,9 +795,7 @@ CONTAINS
 
     !
     !-->  listing
-    WRITE (16,FMT=8010) stars%gmax,stars%ng3
 8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i7,/)
-    WRITE (16,FMT=8020) stars%mx1,stars%mx2,stars%mx3
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,' mx3= ',i5,/)
     WRITE (6,FMT=8030)
 8030 FORMAT (/,/,/,'   s t a r   l i s t',/)

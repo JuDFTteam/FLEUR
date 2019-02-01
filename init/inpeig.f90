@@ -142,10 +142,8 @@
          kpts%wtkpt(:) = kpts%wtkpt(:)/wt
      
          WRITE (6,FMT=8120)  kpts%nkpt
-         WRITE (16,FMT=8120) kpts%nkpt
          DO  nk = 1,kpts%nkpt
             WRITE (6,FMT=8040)  kpts%bk(:,nk),kpts%wtkpt(nk)
-            WRITE (16,FMT=8040) kpts%bk(:,nk),kpts%wtkpt(nk)
          ENDDO
  8120    FORMAT (1x,/,' number of k-points for this window =',i5,/,t12,&
      &          'coordinates',t34,'weights')

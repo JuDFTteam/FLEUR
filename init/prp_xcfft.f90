@@ -140,8 +140,6 @@
       IF (gmxxc_new.LT.xcpot%gmaxxc) THEN
          WRITE (6,'('' gmaxxc recalculated '')')
          WRITE (6,2100) xcpot%gmaxxc, gmxxc_new, gmxxc_new*gmxxc_new
-         WRITE (16,'('' gmaxxc recalculated '')')
-         WRITE (16,2100) xcpot%gmaxxc, gmxxc_new, gmxxc_new*gmxxc_new
          xcpot%gmaxxc = gmxxc_new
       ENDIF
 !
@@ -162,8 +160,6 @@
      &                            stars%kxc3_fft.gt.stars%kxc3_fft) THEN
           WRITE (6,'('' box dim. for fft too small'')')
           WRITE (6,2110) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
-          WRITE(16,'('' box dim. for fft too small'')')
-          WRITE(16,2110) stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft
           CALL juDFT_error("mxc[1,2,3]d>kxc[1,2,3]d ",calledby&
      &         ="prp_xcfft")
        ENDIF
@@ -183,17 +179,12 @@
          WRITE (6,'('' presumably ng3 too small '')')
          WRITE (6,'('' sk3max, gmaxxc '', 2f10.6)')&
      &                stars%sk3(stars%ng3),xcpot%gmaxxc
-         WRITE(16,'('' presumably ng3 too small '')')
-         WRITE(16,'('' sk3max, gmaxxc '', 2f10.6)')&
-     &                 stars%sk3(stars%ng3),xcpot%gmaxxc
          CALL juDFT_error("nxc3_fft==0",calledby ="prp_xcfft")
       ENDIF
 !
       IF ( stars%nxc3_fft.GT.stars%ng3 ) THEN
          WRITE (6,'('' nxc3_fft > n3d '')')
          WRITE (6,'('' nxc3_fft, n3d '',2i10)') stars%nxc3_fft, stars%ng3
-         WRITE (16,'('' nxc3_fft > n3d '')')
-         WRITE (16,'('' nxc3_fft, n3d '',2i10)') stars%nxc3_fft, stars%ng3
          CALL juDFT_error("nxc3_fft>n3d ",calledby ="prp_xcfft")
       ENDIF
 !
@@ -208,12 +199,6 @@
           WRITE(6,'('' kxc1_fft,kxc2_fft,kxc3_fft,kv1,kv2,kv3 '',6i5)')&
      &                 stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,2*stars%kv3(1,istr),&
      &                 2*stars%kv3(2,istr),2*stars%kv3(3,istr)
-          write(16,'('' not all nxc3_fft stars in xc-pot/eng fft box''&
-     &              )')
-          WRITE(16,'('' inconsistency in def.s see also strgn1'')')
-          WRITE(16,'('' kxc1_fft,kxc2_fft,kxc3_fft,kv1,kv2,kv3 '',6i5)')&
-     &                  stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,2*stars%kv3(1,istr),&
-     &                  2*stars%kv3(2,istr),2*stars%kv3(3,istr)
           CALL juDFT_error("2*stars([1,2,3],istr)>mxc[1,2,3]d",calledby&
      &         ="prp_xcfft")
         ENDIF

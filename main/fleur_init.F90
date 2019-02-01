@@ -126,11 +126,7 @@
                   OPEN (6,file='out',form='formatted',status='unknown')
              ENDIF
              CALL writeOutHeader()
-             IF (judft_was_argument("-info")) THEN
-                OPEN (16,status='SCRATCH')
-             ELSE
-                OPEN (16,file='inf',form='formatted',status='unknown')
-             ENDIF
+             OPEN (16,status='SCRATCH')
           ENDIF
 
           input%l_wann = .FALSE.

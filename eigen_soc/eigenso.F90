@@ -144,8 +144,8 @@ CONTAINS
             input,noco,cell,oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN
-          WRITE (16,FMT=8010) nk,nsz
-          WRITE (16,FMT=8020) (eig_so(i),i=1,nsz)
+          WRITE (6,FMT=8010) nk,nsz
+          WRITE (6,FMT=8020) (eig_so(i),i=1,nsz)
        ENDIF
 8010   FORMAT (1x,/,/,' #k=',i6,':',/,&
             ' the',i4,' SOC eigenvalues are:')

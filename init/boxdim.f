@@ -82,7 +82,7 @@ c---> check on the zeros of some determinants
 c
       DO j = 1 , 3
          IF ( det(j,j) .lt. eps ) THEN
-            WRITE (16,
+            WRITE (6,
      +                '('' problem with det('',i1,'','',i1,'')'')') j,j
             CALL juDFT_error(" boxdim: determinant",calledby ="boxdim")
          END IF

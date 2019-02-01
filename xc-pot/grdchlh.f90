@@ -29,7 +29,6 @@ CONTAINS
       IF (ied-ist < 3) RETURN
 
       IF (ndvgrd < 3 .OR. ndvgrd>6) THEN
-         WRITE (16,fmt=126) ndvgrd
          CALL juDFT_error("ndvgrd<3 .or. ndvgrd>6",calledby="grdchlh")
       ENDIF
 126   FORMAT (/,' ndvgrd should be ge.4 .or. le.6. ndvgrd=',i3)
@@ -104,7 +103,7 @@ CONTAINS
       nred = REAL(ndvgrd)/2 + 0.1
 
       IF (ied-nred.LE.ist) THEN
-         WRITE(16,fmt='(/'' ied-nred < ist. ied,nred,ist='',3i4)') ied,nred,ist
+         WRITE(6,fmt='(/'' ied-nred < ist. ied,nred,ist='',3i4)') ied,nred,ist
          CALL juDFT_error("ied-nred.le.ist",calledby="grdchlh")
       ENDIF
 

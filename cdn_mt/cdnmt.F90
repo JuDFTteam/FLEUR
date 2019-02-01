@@ -225,14 +225,12 @@ CONTAINS
     !$OMP END PARALLEL
 
     WRITE (6,FMT=8000)
-    WRITE (16,FMT=8000)
 8000 FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&
          &     t33,'d',t42,'f',t51,'total')
 
     DO itype = 1,atoms%ntype
        DO ispin = jsp_start,jsp_end
           WRITE ( 6,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),moments%chmom(itype,ispin)
-          WRITE (16,FMT=8100) itype, (qmtl(l,ispin,itype),l=0,3),moments%chmom(itype,ispin)
 8100      FORMAT (' -->',i3,2x,4f9.5,2x,f9.5)
           attributes = ''
           WRITE(attributes(1),'(i0)') itype

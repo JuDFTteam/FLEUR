@@ -189,7 +189,6 @@ CONTAINS
        CALL timestart("Iteration")
        IF (mpi%irank.EQ.0) THEN
           WRITE (6,FMT=8100) iter
-          WRITE (16,FMT=8100) iter
 8100      FORMAT (/,10x,'   iter=  ',i5)
        ENDIF !mpi%irank.eq.0
        input%total = .TRUE.
@@ -419,7 +418,6 @@ CONTAINS
        
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
-         WRITE (16,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
          WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
          CALL timestop("Iteration")

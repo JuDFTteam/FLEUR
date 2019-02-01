@@ -164,8 +164,7 @@ CONTAINS
     eps=0.01
     ic = CMPLX(0.,1.)
     !    ------------------
-    !     WRITE (16,'(a,i2)') 'nstars=',nstars
-
+   
     !     -----> set up mapping arrays
     IF (noco%l_ss) THEN
        jsp_start = 1

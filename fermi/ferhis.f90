@@ -140,7 +140,6 @@ CONTAINS
     END IF
     IF ( mpi%irank == 0 ) THEN
        WRITE ( 6,FMT=8010) spindg* (ws-weight)
-       WRITE (16,FMT=8010) spindg* (ws-weight)
     END IF
     !
     !---> DETERMINE OCCUPATION AT THE FERMI LEVEL
@@ -177,7 +176,6 @@ CONTAINS
           IF (ink>n) THEN
              IF ( mpi%irank == 0 ) THEN
                 WRITE (6,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below ef + 8kt.'
-                WRITE (16,*) 'CAUTION!!!  All calculated eigenvalues ', 'are below ef + 8kt.'
              END IF
           ENDIF
 
@@ -192,7 +190,6 @@ CONTAINS
              CALL ef_newton(n,mpi%irank, inkem,nocst,index,tkb,e, w_near_ef,ef,we)
              !
              IF ( mpi%irank == 0 ) THEN
-                WRITE (16,FMT=8030) ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
                 WRITE (6,FMT=8030) ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
              END IF
 

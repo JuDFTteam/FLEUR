@@ -516,13 +516,13 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
          IF (sliceplot%slice.AND.thisCdnvalJob%noccbd(ikpt).GT.0) THEN
             thisCdnvalJob%nStart(ikpt) = 1
             thisCdnvalJob%nEnd(ikpt)   = -1
-            IF (mpi%irank==0) WRITE (16,FMT=*) 'NNNE',sliceplot%nnne
-            IF (mpi%irank==0) WRITE (16,FMT=*) 'sliceplot%kk',sliceplot%kk
+            IF (mpi%irank==0) WRITE (6,FMT=*) 'NNNE',sliceplot%nnne
+            IF (mpi%irank==0) WRITE (6,FMT=*) 'sliceplot%kk',sliceplot%kk
             nslibd = 0
             IF (sliceplot%kk.EQ.0) THEN
                IF (mpi%irank==0) THEN
-                  WRITE (16,FMT='(a)') 'ALL K-POINTS ARE TAKEN IN SLICE'
-                  WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
+                  WRITE (6,FMT='(a)') 'ALL K-POINTS ARE TAKEN IN SLICE'
+                  WRITE (6,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
                END IF
 
                iBand = 1
@@ -540,11 +540,11 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
                END IF
                thisCdnvalJob%nEnd(ikpt) = iBand
                nslibd = MAX(0,thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1)
-               IF (mpi%irank==0) WRITE (16,'(a,i3)') ' eigenvalues in sliceplot%slice:', nslibd
+               IF (mpi%irank==0) WRITE (6,'(a,i3)') ' eigenvalues in sliceplot%slice:', nslibd
             ELSE IF (sliceplot%kk.EQ.ikpt) THEN
-               IF (mpi%irank==0) WRITE (16,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
+               IF (mpi%irank==0) WRITE (6,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
                IF ((sliceplot%e1s.EQ.0.0) .AND. (sliceplot%e2s.EQ.0.0)) THEN
-                  IF (mpi%irank==0) WRITE (16,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
+                  IF (mpi%irank==0) WRITE (6,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
                        sliceplot%nnne,results%eig(sliceplot%nnne,ikpt,jsp)
                   nslibd = 1
                   thisCdnvalJob%nStart(ikpt) = sliceplot%nnne
@@ -565,7 +565,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
                   END IF
                   thisCdnvalJob%nEnd(ikpt) = iBand
                   nslibd = MAX(0,thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1)
-                  IF (mpi%irank==0) WRITE (16,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
+                  IF (mpi%irank==0) WRITE (6,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
                END IF
             END IF
             thisCdnvalJob%noccbd(ikpt) = nslibd

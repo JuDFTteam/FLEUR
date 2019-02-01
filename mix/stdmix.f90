@@ -34,10 +34,10 @@ CONTAINS
     REAL,PARAMETER:: tol_6=1.0e-6
     !     ..
     !
-    WRITE (16,FMT='(a)') 'STRAIGHT MIXING'
-    IF (input%jspins.EQ.1) WRITE (16,FMT='(a,2f10.5)')&
+    WRITE (6,FMT='(a)') 'STRAIGHT MIXING'
+    IF (input%jspins.EQ.1) WRITE (6,FMT='(a,2f10.5)')&
          &    'charge density mixing parameter:',input%alpha
-    IF (input%jspins.EQ.2) WRITE (16,FMT='(a,2f10.5)')&
+    IF (input%jspins.EQ.2) WRITE (6,FMT='(a,2f10.5)')&
          &    'spin density mixing parameter:',input%alpha*input%spinf
     IF ( ABS(input%spinf-1.0e0).LE.tol_6 .OR. input%jspins.EQ.1 ) THEN
        !     --> perform simple mixing 
