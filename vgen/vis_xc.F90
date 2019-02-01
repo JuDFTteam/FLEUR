@@ -87,7 +87,7 @@ CONTAINS
                vTot_pw_norm(i,js)=vTot%pw(i,js) / stars%nstr(i)
             END DO
          END DO
-         write (*,*) "set vtot = 0 again (except shift of course)"
+         write (*,*) "set vtot = 0 again"
          vTot_pw_norm = 0.0
          vTot%pw      = 0.0
          vTot%pw_w    = 0.0
