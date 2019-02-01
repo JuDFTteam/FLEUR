@@ -231,7 +231,6 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    use m_types
    use m_pw_tofrom_grid
    use m_judft_stop
-   use m_metagga, only: give_stats
    use m_npy
    implicit none
 
