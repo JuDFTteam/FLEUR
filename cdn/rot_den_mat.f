@@ -68,9 +68,9 @@ c---> are real.
          IF (aimag(rho(ispin,ispin)).GT.eps) THEN
             CALL juDFT_error("rotation of mag. failed",calledby
      +           ="rot_den_mat",hint=
-     +        'After the rotation of the density matrix in the'/
-     +       'muffin-tin sphere one diagonal element of the'/
-     +       '(hermitian) density matrix is not real. That means'/
+     +        'After the rotation of the density matrix in the '\\
+     +       'muffin-tin sphere one diagonal element of the '\\
+     +       '(hermitian) density matrix is not real. That means '\\
      +       'that the density matrix was probably damaged.')
          ENDIF
       ENDDO
