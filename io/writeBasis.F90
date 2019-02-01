@@ -479,7 +479,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 !            DO i=1,atoms%nat
 !	     	atoms%ngopr(i)=ngopr_temp(i)
 !            END DO
-		CALL abcrot(atoms%ntype,atoms%nat,dimension%neigd,atoms%lmaxd,dimension%lmd,atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
+		CALL abcrot(atoms%ntype,atoms%nat,numbands,atoms%lmaxd,dimension%lmd,atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
 		            numbands,atoms%lmax,atoms%nlo,atoms%llo,sym%nop,atoms%ngopr,sym%mrot,atoms%invsat,sym%invsatnr,cell%bmat,&
 		           oneD%odi,oneD%ods,&
 		           eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
