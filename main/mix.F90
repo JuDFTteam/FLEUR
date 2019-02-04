@@ -35,8 +35,7 @@ contains
     use m_types
     use m_xmlOutput
     use m_umix
-    use m_vgen_coulomb
-    use m_VYukawaFilm
+    use m_kerker
 #ifdef CPP_MPI
     use m_mpi_bc_potden
 #endif
@@ -225,48 +224,13 @@ contains
     end if MPI0_a
 
     ! KERKER PRECONDITIONER
-    if( input%preconditioning_param /= 0 ) then
-      CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
-      CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
-      MPI0_b: if( mpi%irank == 0 ) then 
-        call resDen%subPotDen( outDen, inDen )
-        if( input%jspins == 2 ) call resDen%SpinsToChargeAndMagnetisation()
-      end if MPI0_b
-#ifdef CPP_MPI
-      call mpi_bc_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
-#endif
-      if ( .not. input%film ) then
-        call vgen_coulomb( 1, mpi, dimension, oneD, input, field, vacuum, sym, stars, cell, &
-                           sphhar, atoms, resDen, vYukawa )
-      else
-        vYukawa%iter = resDen%iter
-        call VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, dimension, oneD, resDen, &
-                         vYukawa )
-      end if
-    end if
+    IF( input%preconditioning_param /= 0 ) THEN
+       call kerker(field, DIMENSION, mpi, &
+                stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+                oneD, inDen, outDen, fsm ,mapmt,mapvac,mapvac2,nmap,nmaph  )
+    ENDIF
     MPI0_c: if( mpi%irank == 0 ) then
-      if( input%preconditioning_param /= 0 ) then
-        resDen%pw(1:stars%ng3,1) = resDen%pw(1:stars%ng3,1) - input%preconditioning_param ** 2 / fpi_const * vYukawa%pw(1:stars%ng3,1)
-        do n = 1, atoms%ntype
-          do lh = 0, sphhar%nlhd
-            resDen%mt(1:atoms%jri(n),lh,n,1) = resDen%mt(1:atoms%jri(n),lh,n,1) &
-                    - input%preconditioning_param ** 2 / fpi_const &
-                    * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
-          end do
-        end do
-        resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz
-        resDen%vacxy = resDen%vacxy - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacxy
-        if( input%jspins == 2 ) call resDen%ChargeAndMagnetisationToSpins()
-        ! fix the preconditioned density
-        call outDen%addPotDen( resDen, inDen )
-        call qfix(mpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .false., .true., fix )
-        call resDen%subPotDen( outDen, inDen )
-        call brysh1( input, stars, atoms, sphhar, noco, vacuum, sym, oneD, &
-                     intfac, vacfac, resDen, nmap, nmaph, mapmt, mapvac, mapvac2, fsm )
-      end if
-    ! end of preconditioner
-
-
+       
     !mixing of the densities
       IF (input%imix.EQ.0) THEN
          CALL stmix(atoms,input,noco, nmap,nmaph,fsm, sm)
