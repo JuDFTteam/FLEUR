@@ -172,7 +172,7 @@ CONTAINS
              WRITE (6,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
              WRITE (6,FMT=8015) n
              WRITE (6,FMT=8020) ((force_a4_mt(dir,n,jsp)),dir=1,3) ! 8020
-             FORMAT (' FORCES: IS ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
+8010         FORMAT (' FORCES: IS ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
 8015         FORMAT (' FORCES: MT ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
              !  8025   FORMAT (' FORCES: VACUUM ADD. TO EQUATION A4 FOR ATOM TYPE',i4)
              !  8020   FORMAT (' FX_A4=',2f19.15,' FY_A4=',2f19.15,' FZ_A4=',2f19.15)

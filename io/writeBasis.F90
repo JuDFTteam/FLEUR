@@ -457,10 +457,10 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
             IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
             IF(abs(bk(3)).LT.1e-7) bk(3) = abs(bk(3))
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
-            write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',bk(1),',',bk(2),',',bk(3)
-            CALL h5lexists_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
+            write(kpt_name , '(a,f12.10,a,f12.10,a,f12.10)') '/kpt_',bk(1),',',bk(2),',',bk(3)
+            CALL h5lexists_f(jspGroupID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
             IF (link_exists) CYCLE
-            CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
+            CALL h5gcreate_f(jspGroupID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------abcoff, zmat, eig output here-------------------
 !,results%neig(nk,jsp),results%eig(:,nk,jsp)
             numbands=results%neig(nk,jsp)
@@ -479,12 +479,12 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 !            DO i=1,atoms%nat
 !	     	atoms%ngopr(i)=ngopr_temp(i)
 !            END DO
-		CALL abcrot(atoms%ntype,atoms%nat,dimension%neigd,atoms%lmaxd,dimension%lmd,atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
+		CALL abcrot(atoms%ntype,atoms%nat,numbands,atoms%lmaxd,dimension%lmd,atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
 		            numbands,atoms%lmax,atoms%nlo,atoms%llo,sym%nop,atoms%ngopr,sym%mrot,atoms%invsat,sym%invsatnr,cell%bmat,&
 		           oneD%odi,oneD%ods,&
 		           eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
 !-------------------------for spex output: nbasfcn=nv(because lo info not needed) and numbands setting to numbands without highest (degenerat) state-------- 
-                nbasfcn=lapw%nv(jsp)
+!                nbasfcn= MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
 		ndbands=numbands-1
 		DO i=(numbands-1),1,-1
 		    IF (abs(results%eig(i+1,nk,jsp)-results%eig(i,nk,jsp)).LT.0.000001) THEN
@@ -493,7 +493,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 			EXIT
 		    END IF
 		END DO
-write(*,*)numbands,ndbands
+                write(*,*)numbands,ndbands
 		numbands=ndbands
 !------------------------setting variables numbands and nbasfcn end -------------------
 		!CALL read_eig(eig_id,nk,jsp,eig=results%eig(:,nk,jsp),zmat=zMat)
@@ -517,8 +517,8 @@ write(*,*)numbands,ndbands
 		ELSE
                       AllOCATE(output3(2,nbasfcn,numbands))
 !			SIZE(zMat%data_c,1),SIZE(zMat%data_c,2)
-		      output3(1,:,:)=REAL(zMat%data_c(:,:))
-		      output3(2,:,:)=AIMAG(zMat%data_c(:,:))
+		      output3(1,:,:)=REAL(zMat%data_c(:,:numbands))
+		      output3(2,:,:)=AIMAG(zMat%data_c(:,:numbands))
 		      dims(:3)=(/2,nbasfcn,numbands/)
 		      dimsInt=dims
 		      CALL h5screate_simple_f(3,dims(:3),zmatSpaceID,hdfError)
