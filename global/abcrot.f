@@ -54,9 +54,11 @@ C
         PRINT*,"calculate wigner-matrix"
         IF (.NOT.odi%d1) THEN
           ALLOCATE (d_wgn(-lmaxd:lmaxd,-lmaxd:lmaxd,lmaxd,nop))
+          d_wgn = CMPLX(0.0,0.0) ! Initialization is done to avoid complaints by Lord Valgrind
           CALL d_wigner(nop,mrot,bmat,lmaxd,d_wgn)
         ELSE
           ALLOCATE (d_wgn(-lmaxd:lmaxd,-lmaxd:lmaxd,lmaxd,ods%nop))
+          d_wgn = CMPLX(0.0,0.0) ! Initialization is done to avoid complaints by Lord Valgrind
           CALL d_wigner(ods%nop,ods%mrot,bmat,lmaxd,d_wgn)
         ENDIF
       ENDIF
