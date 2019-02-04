@@ -2,32 +2,38 @@
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
-  !--------------------------------------------------------------------------------
-MODULE m_type_mixvector
-  TYPE t_mixvector
-     REAL,ALLOCATABLE(:) :: vec(:)
-     INTEGER             :: mmap, mmaph, nmaph, nmap, mapmt, mapvac, mapvac2,intfac
-     LOGICAL             :: l_pot !Is this a potential?
-     !Here we store the pointers used for metric
-     TYPE(t_oneD),POINTER   :: oneD
-     TYPE(t_input),POINTER  :: input
-     TYPE(t_vacuum),POINTER :: vacuum
-     TYPE(t_noco),POINTER   :: noco
-     TYPE(t_sym),POINTER    :: sym
-     TYPE(t_stars),POINTER  :: stars
-     TYPE(t_cell),POINTER   :: cell
-     TYPE(t_sphhar),POINTER :: sphhar
-     TYPE(t_atoms),POINTER  :: atoms    
+!--------------------------------------------------------------------------------
+MODULE m_types_mixvector
+  use m_types
+  implicit none
+  PRIVATE
+  !Here we store the pointers used for metric
+  TYPE(t_oneD),POINTER   :: oneD
+  TYPE(t_input),POINTER  :: input
+  TYPE(t_vacuum),POINTER :: vacuum
+  TYPE(t_noco),POINTER   :: noco
+  TYPE(t_sym),POINTER    :: sym
+  TYPE(t_stars),POINTER  :: stars
+  TYPE(t_cell),POINTER   :: cell
+  TYPE(t_sphhar),POINTER :: sphhar
+  TYPE(t_atoms),POINTER  :: atoms  =>null()  
+  INTEGER                :: mmap, mmaph, nmaph, nmap, mapmt, mapvac, mapvac2
+  real                   :: intfac,vacfac
+  
+  TYPE,PUBLIC:: t_mixvector
+     REAL,ALLOCATABLE       :: vec(:)
+     LOGICAL                :: l_pot=.false. !Is this a potential?
    CONTAINS
-     PROCEDURE init=>mixvector_init
-     PROCEDURE from_density=>mixvector_from_density
-     PROCEDURE to_density=>mixvector_to_density
-     PROCEDURE apply_metric=>mixvector_metric
+     PROCEDURE :: init=>mixvector_init
+     procedure :: alloc=>mixvector_alloc
+     PROCEDURE :: from_density=>mixvector_from_density
+     PROCEDURE :: to_density=>mixvector_to_density
+     PROCEDURE :: apply_metric=>mixvector_metric
   END TYPE t_mixvector
 
-  INTERFACE assignement(=)
+  INTERFACE assignment(=)
      MODULE PROCEDURE assign_vectors
-  END INTERFACE assignement
+  END INTERFACE assignment(=)
 
   INTERFACE OPERATOR (*)
      MODULE PROCEDURE multiply_scalar
@@ -41,8 +47,11 @@ MODULE m_type_mixvector
   INTERFACE OPERATOR (.dot.)
      MODULE PROCEDURE multiply_dot
   END INTERFACE OPERATOR (.dot.)
-     
-  PRIVATE
+
+  public :: Operator(+),operator(-),operator(*),operator(.dot.)
+  public :: assignment(=)
+  
+  
 CONTAINS
 
   SUBROUTINE mixvector_from_density(vec,den)
@@ -52,8 +61,8 @@ CONTAINS
     CLASS(t_mixvector),INTENT(INOUT)    :: vec
     TYPE(t_potden),    INTENT(in)       :: Den
 
-    CALL brysh1( vec%input, vec%stars, vec%atoms, vec%sphhar, vec%noco, vec%vacuum, vec%sym, vec%oneD, &
-         vec%intfac, vec%vacfac, Den, vec%nmap, vec%nmaph, vec%mapmt, vec%mapvac, vec%mapvac2, vec%vec)
+    CALL brysh1( input, stars, atoms, sphhar, noco, vacuum, sym, oneD, &
+         intfac, vacfac, Den, nmap, nmaph, mapmt, mapvac, mapvac2, vec%vec)
   END SUBROUTINE mixvector_from_density
 
   SUBROUTINE mixvector_to_density(vec,den)
@@ -63,7 +72,7 @@ CONTAINS
     CLASS(t_mixvector),INTENT(IN)    :: vec
     TYPE(t_potden),    INTENT(OUT)       :: Den
 
-    CALL brysh2( vec%input, vec%stars, vec%atoms, vec%sphhar, vec%noco, vec%vacuum, vec%sym, vec%vec,vec%oneD,den)
+    CALL brysh2( input, stars, atoms, sphhar, noco, vacuum, sym, vec%vec,oneD,den)
   END SUBROUTINE mixvector_to_density
 
 
@@ -75,50 +84,50 @@ CONTAINS
     TYPE(t_mixvector)                :: mvec
 
     mvec=vec
-    CALL metric( vec%cell, vec%atoms, vec%vacuum, vec%sphhar, vec%input, vec%noco, vec%stars, vec%sym, vec%oneD, &
-         vec%mmap, vec%nmaph, vec%mapmt, vec%mapvac2, vec%vec, mvec%vec, vec%l_pot )
+    CALL metric( cell, atoms, vacuum, sphhar, input, noco, stars, sym, oneD, &
+         mmap, nmaph, mapmt, mapvac2, vec%vec, mvec%vec, vec%l_pot )
   END FUNCTION mixvector_metric
-    
-  SUBROUTINE mixvector_init(vec,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
+
+  SUBROUTINE mixvector_init(vec,oneD_i,input_i,vacuum_i,noco_i,sym_i,stars_i,cell_i,sphhar_i,atoms_i)
     USE m_types
     IMPLICIT NONE
     CLASS(t_mixvector),INTENT(OUT)    :: vec
-    TYPE(t_oneD),INTENT(IN),TARGET   :: oneD
-    TYPE(t_input),INTENT(IN),TARGET  :: input
-    TYPE(t_vacuum),INTENT(IN),TARGET :: vacuum
-    TYPE(t_noco),INTENT(IN),TARGET   :: noco
-    TYPE(t_sym),INTENT(IN),TARGET    :: sym
-    TYPE(t_stars),INTENT(IN),TARGET  :: stars
-    TYPE(t_cell),INTENT(IN),TARGET   :: cell
-    TYPE(t_sphhar),INTENT(IN),TARGET :: sphhar
-    TYPE(t_atoms),INTENT(IN),TARGET  :: atoms
+    TYPE(t_oneD),INTENT(IN),TARGET   :: oneD_i
+    TYPE(t_input),INTENT(IN),TARGET  :: input_i
+    TYPE(t_vacuum),INTENT(IN),TARGET :: vacuum_i
+    TYPE(t_noco),INTENT(IN),TARGET   :: noco_i
+    TYPE(t_sym),INTENT(IN),TARGET    :: sym_i
+    TYPE(t_stars),INTENT(IN),TARGET  :: stars_i
+    TYPE(t_cell),INTENT(IN),TARGET   :: cell_i
+    TYPE(t_sphhar),INTENT(IN),TARGET :: sphhar_i
+    TYPE(t_atoms),INTENT(IN),TARGET  :: atoms_i
 
-
+    if(.not.associated(atoms)) then
     !Store pointers to data-types
-    vec%oneD=>oneD;vec%input=>input;vec%vacuum=>vacuum;vec%noco=>noco
-    vec%sym=>sym;vec%stars=>stars;vec%cell=>cell;vec%sphhar=>sphhar;vec%atoms=>atoms
-     
+    oneD=>oneD_i;input=>input_i;vacuum=>vacuum_i;noco=>noco_i
+    sym=>sym_i;stars=>stars_i;cell=>cell_i;sphhar=>sphhar_i;atoms=>atoms_i
+
     !In systems without inversions symmetry the interstitial star-
     !coefficients are complex. Thus twice as many numbers have to be
     !stored.
-    vec%intfac=MERGE(1.0,2.0,sym%invs)
-    
+    intfac=MERGE(1,2,sym%invs)
+
     !The corresponding is true for the coeff. of the warping vacuum
     !density depending on the two dimensional inversion.
-    vec%vacfac=MERGE(1.0,2.0,sym%invs2)
-     
-    vec%mmaph = vec%intfac * stars%ng3 + atoms%ntype * ( sphhar%nlhd + 1 ) * atoms%jmtd + &
+    vacfac=MERGE(1,2,sym%invs2)
+
+    mmaph = intfac * stars%ng3 + atoms%ntype * ( sphhar%nlhd + 1 ) * atoms%jmtd + &
          vacfac * vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
-    vec%mmap  =vec%mmaph * input%jspins
+    mmap  =mmaph * input%jspins
     !in a non-collinear calculations extra space is needed for the
     !off-diag. part of the density matrix. these coeff. are generally
     !complex independ of invs and invs2.
     IF ( noco%l_noco ) THEN
-       vec%mmap = vec%mmap + 2 * stars%ng3 + 2 * vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + &
+       mmap = mmap + 2 * stars%ng3 + 2 * vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + &
             2 * vacuum%nmzd * vacuum%nvac
-       IF (noco%l_mtnocopot) vec%mmap= vec%mmap+ 2*atoms%ntype * ( sphhar%nlhd + 1 ) * atoms%jmtd 
+       IF (noco%l_mtnocopot) mmap= mmap+ 2*atoms%ntype * ( sphhar%nlhd + 1 ) * atoms%jmtd 
     END IF
-     
+
     ! LDA+U (start)
     PRINT *,"MIXING of LDA+U missing....."
     !n_mmpTemp = inDen%mmpMat
@@ -135,46 +144,50 @@ CONTAINS
     ! ELSE
     !    atoms%n_u = 0
     ! END IF
-     
+ endif
+ call vec%alloc()
+ SUBROUTINE mixvector_alloc(vec)
+    IMPLICIT NONE
+    CLASS(t_mixvector),INTENT(OUT)    :: vec
     ALLOCATE( vec%vec(mmap) )
-     
-  END SUBROUTINE mixvector_init
+  END SUBROUTINE mixvector_alloc
 
-    !The operators
-    SUBROUTINE assign_vectors(vec,vecin)
-      TYPE(t_mixvector),INTENT(OUT)::vec
-      TYPE(t_mixvector),INTENT(IN) ::vecin
-      vec=vecin
-    END SUBROUTINE assign_vectors
+  !The operators
+  SUBROUTINE assign_vectors(vec,vecin)
+    TYPE(t_mixvector),INTENT(OUT)::vec
+    TYPE(t_mixvector),INTENT(IN) ::vecin
+    vec=vecin
+  END SUBROUTINE assign_vectors
 
-    FUNCTION multiply_scalar(scalar,vec)RESULT(vecout)
-      TYPE(t_mixvector),INTENT(IN)::vec
-      REAL,INTENT(IN)             ::scalar
-      TYPE(t_mixvector)           ::vecout
+  FUNCTION multiply_scalar(scalar,vec)RESULT(vecout)
+    TYPE(t_mixvector),INTENT(IN)::vec
+    REAL,INTENT(IN)             ::scalar
+    TYPE(t_mixvector)           ::vecout
 
-      vecout=vecin
-      vecout%vec=vecout%vec*scalar
-    END FUNCTION multiply_scalar
-    
-    FUNCTION add_vectors(vec1,vec2)RESULT(vecout)
-      TYPE(t_mixvector),INTENT(IN)::vec1,vec2
-      TYPE(t_mixvector)           ::vecout
+    vecout=vec
+    vecout%vec=vecout%vec*scalar
+  END FUNCTION multiply_scalar
 
-      vecout=vec1
-      vecout%vec=vec1%vec+vec2%vec
-    END FUNCTION add_vectors
-    
-    FUNCTION multiply_dot(vec1,vec2)RESULT(dprod)
-      TYPE(t_mixvector),INTENT(IN)::vec1,vec2
-      REAL                        ::dprod
+  FUNCTION add_vectors(vec1,vec2)RESULT(vecout)
+    TYPE(t_mixvector),INTENT(IN)::vec1,vec2
+    TYPE(t_mixvector)           ::vecout
 
-      dprod=dot_PRODUCT(vec1%vec,vec2%vec)
-    END FUNCTION multiply_dot
-    
-    FUNCTION add_vectors(vec1,vec2)RESULT(vecout)
-      TYPE(t_mixvector),INTENT(IN)::vec1,vec2
-      TYPE(t_mixvector)           ::vecout
+    vecout=vec1
+    vecout%vec=vec1%vec+vec2%vec
+  END FUNCTION add_vectors
 
-      vecout=vec1
-      vecout%vec=vec1%vec-vec2%vec
-    END FUNCTION add_vectors
+  FUNCTION multiply_dot(vec1,vec2)RESULT(dprod)
+    TYPE(t_mixvector),INTENT(IN)::vec1,vec2
+    REAL                        ::dprod
+
+    dprod=dot_PRODUCT(vec1%vec,vec2%vec)
+  END FUNCTION multiply_dot
+
+  FUNCTION subtract_vectors(vec1,vec2)RESULT(vecout)
+    TYPE(t_mixvector),INTENT(IN)::vec1,vec2
+    TYPE(t_mixvector)           ::vecout
+
+    vecout=vec1
+    vecout%vec=vec1%vec-vec2%vec
+  END FUNCTION subtract_vectors
+end MODULE m_types_mixvector

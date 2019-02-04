@@ -1,4 +1,4 @@
---------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -8,12 +8,14 @@ MODULE m_kerker
 
     SUBROUTINE kerker(field, DIMENSION, mpi, &
                 stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-                oneD, inDen, outDen, fsm ,mapmt,mapvac,mapvac2,nmap,nmaph  )
+                oneD, inDen, outDen, precon_v  )
       !Implementation of the Kerker preconditioner by M.Hinzen
       USE m_vgen_coulomb
       USE m_VYukawaFilm
       USE m_juDFT
       USE m_types
+      USE m_types_mixvector
+      USE m_constants
       IMPLICIT NONE
       TYPE(t_oneD),      INTENT(in)    :: oneD
       TYPE(t_input),     INTENT(in)    :: input
@@ -23,20 +25,18 @@ MODULE m_kerker
       TYPE(t_stars),     INTENT(in)    :: stars
       TYPE(t_cell),      INTENT(in)    :: cell
       TYPE(t_sphhar),    INTENT(in)    :: sphhar
-      TYPE(t_field),     INTENT(in)    :: field
+      TYPE(t_field),     INTENT(inout) :: field
       TYPE(t_dimension), INTENT(in)    :: DIMENSION
       TYPE(t_mpi),       INTENT(in)    :: mpi
       TYPE(t_atoms),     INTENT(in)    :: atoms 
-      TYPE(t_potden),    INTENT(in)    :: outDen
-      TYPE(t_potden),    INTENT(inout) :: inDen
-      
-      TYPE(t_potden),    INTENT(in) :: outDen,inDen
-      REAL, ALLOCATABLE,INTENT(OUT) :: fsm(:)
-      INTEGER, INTENT (OUT) :: mapmt,mapvac,mapvac2,nmap,nmaph
-
+      TYPE(t_potden),    INTENT(inout) :: outDen
+      TYPE(t_potden),    INTENT(in)    :: inDen
+      TYPE(t_mixvector), INTENT(INOUT) :: precon_v
+     
       !Locals
       type(t_potden)                :: resDen, vYukawa
-    
+      real                          :: fix
+      integer                       :: lh,n
       
       CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
       CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
@@ -73,9 +73,9 @@ MODULE m_kerker
             CALL outDen%addPotDen( resDen, inDen )
             CALL qfix(mpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .FALSE., .TRUE., fix )
             CALL resDen%subPotDen( outDen, inDen )
-            CALL brysh1( input, stars, atoms, sphhar, noco, vacuum, sym, oneD, &
-                 intfac, vacfac, resDen, nmap, nmaph, mapmt, mapvac, mapvac2, fsm )
+            call precon_v%from_density(resden)
          END IF
          ! end of preconditioner
       END IF MPI0_c
     END SUBROUTINE kerker
+  end MODULE m_kerker
