@@ -295,7 +295,7 @@ CONTAINS
     message_list=""
     !Announce that I have a message to all PE
     DO i=0,isize-1
-       CALL MPI_ibsend(message,100,MPI_CHARACTER,i,999,MPI_COMM_WORLD,ihandle(0),ierr)
+       CALL MPI_isend(message,100,MPI_CHARACTER,i,999,MPI_COMM_WORLD,ihandle(0),ierr)
     ENDDO
     !Collect all message
     DO i=0,isize-1
