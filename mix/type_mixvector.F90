@@ -520,17 +520,27 @@ CONTAINS
 #endif      
     END FUNCTION multiply_dot
 
-    FUNCTION multiply_dot_mask(vec1,vec2,mask)RESULT(dprod)
+    FUNCTION multiply_dot_mask(vec1,vec2,mask,spin)RESULT(dprod)
       TYPE(t_mixvector),INTENT(IN)::vec1,vec2
       LOGICAL,INTENT(IN)          ::mask(4)
+      INTEGER,INTENT(IN)          ::spin
       REAL                        ::dprod
       dprod=0.0
-      
-      IF (mask(1)) dprod=dot_PRODUCT(vec1%vec_pw,vec2%vec_pw)
-      IF (mask(2)) dprod=dprod+dot_PRODUCT(vec1%vec_mt,vec2%vec_mt)
-      IF (mask(3)) dprod=dprod+dot_PRODUCT(vec1%vec_vac,vec2%vec_vac)
-      IF (mask(4)) dprod=dprod+dot_PRODUCT(vec1%vec_misc,vec2%vec_misc)
-      
+
+      DO js=1,3
+         IF (mask(1).and.(spin==js.or.spin==0.and.start_pw(js)>0)) &
+                 dprod=dprod+dot_PRODUCT(vec1%vec_pw(start_pw(js):stop_pw(js)),&
+                 vec2%vec_pw(start_pw(js):stop_pw(js)))
+         IF (mask(2).and.(spin==js.or.spin==0.and.start_mt(js)>0)) &
+                 dprod=dprod+dot_PRODUCT(vec1%vec_mt(start_mt(js):stop_mt(js)),&
+                 vec2%vec_mt(start_mt(js):stop_mt(js)))
+         IF (mask(3).and.(spin==js.or.spin==0.and.start_vac(js)>0)) &
+                 dprod=dprod+dot_PRODUCT(vec1%vec_vac(start_vac(js):stop_vac(js)),&
+                 vec2%vec_vac(start_vac(js):stop_vac(js)))
+         IF (mask(4).and.(spin==js.or.spin==0.and.start_misc(js)>0)) &
+                 dprod=dprod+dot_PRODUCT(vec1%vec_misc(start_misc(js):stop_misc(js)),&
+                 vec2%vec_misc(start_misc(js):stop_misc(js)))
+      enddo
          
 #ifdef CPP_MPI
       CALL MPI_REDUCE_ALL()

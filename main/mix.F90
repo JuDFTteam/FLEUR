@@ -15,33 +15,24 @@ MODULE m_mix
 
 contains
 
-  SUBROUTINE mix( field, xcpot, DIMENSION, obsolete, sliceplot, mpi, &
+  SUBROUTINE mix( field, DIMENSION,  mpi, &
                 stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-                oneD, hybrid, archiveType, inDen, outDen, results )
+                oneD, archiveType, inDen, outDen, results )
 
     use m_juDFT
     use m_constants
     use m_cdn_io
-    use m_broyd_io
-    use m_brysh1
     use m_stmix
     use m_broyden
-    use m_broyden2
-    use m_brysh2
-    use m_metric
     use m_qfix
     use m_types
-    use m_xmlOutput
     use m_umix
     USE m_kerker
     use m_types_mixvector
-#ifdef CPP_MPI
-    use m_mpi_bc_potden
-#endif
+    use m_distance
     implicit none
 
     type(t_oneD),      intent(in)    :: oneD
-    type(t_hybrid),    intent(in)    :: hybrid 
     type(t_input),     intent(in)    :: input
     type(t_vacuum),    intent(in)    :: vacuum
     type(t_noco),      intent(in)    :: noco
@@ -50,10 +41,7 @@ contains
     type(t_cell),      intent(in)    :: cell
     type(t_sphhar),    intent(in)    :: sphhar
     type(t_field),     intent(inout) :: field
-    class(t_xcpot),    intent(in)    :: xcpot
     type(t_dimension), intent(in)    :: dimension
-    type(t_obsolete),  intent(in)    :: obsolete
-    type(t_sliceplot), intent(in)    :: sliceplot
     type(t_mpi),       intent(in)    :: mpi
     type(t_atoms),     intent(inout) :: atoms !n_u is modified temporarily
     type(t_potden),    intent(inout) :: outDen
@@ -63,8 +51,10 @@ contains
 
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
-    TYPE(t_mixvector)                :: sm, fsm, fmMet, smMet,fsm_mag
+    TYPE(t_mixvector),allocatable    :: sm(:), fsm(:)
+    TYPE(t_mixvector)                :: fmMet, smMet,fsm_mag
     LOGICAL                          :: l_densitymatrix
+    integer                          :: it
 
     
     MPI0_a: IF( mpi%irank == 0 ) THEN
@@ -104,51 +94,24 @@ contains
       ENDIF
    ENDIF
    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
-    
-   CALL sm%alloc()
-   CALL fsm%alloc()
-   CALL fmMet%alloc()
-   CALL fsm_mag%alloc()
-   !put input charge density into array sm
-   !(in the spin polarized case the arrays sm and fsm consist of spin up and spin down densities)
-   
-   CALL sm%from_density(inDen)
-   CALL fsm%from_density(outDen)
-   
-   !store the difference fsm - sm in fsm
-   fsm = fsm - sm
-   ! calculate Magnetisation-difference
-   CALL fsm_mag%from_density(outden,swapspin=.true.)
-   fsm_mag=fsm_mag-sm
-
-   ! Apply metric w to fsm and store in fmMet:  w |fsm>
-   fmMet=fsm%apply_metric()
-   
-   !CALL distance(fsm,fmMet)
+   maxiter=merge(1,input%maxiter,input%imix==0)
+   CALL mixing_history(maxiter,inden,outden,sm,fsm,it)
+  
+   CALL distance(mpi%irank,cell%vol,input%jspins,fsm,sm,inDen%iter,outDen,results)
    
     ! KERKER PRECONDITIONER
-    IF( input%preconditioning_param /= 0 ) THEN
-       call kerker(field, DIMENSION, mpi, &
+    IF( input%preconditioning_param /= 0 )  call kerker(field, DIMENSION, mpi, &
                 stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-                oneD, inDen, outDen, fsm )
-    ENDIF
-
+                oneD, inDen, outDen, fsm(it) )
+    
     
     !mixing of the densities
-    SELECT CASE(input%imix)
-    CASE(0)
-       CALL stmix(atoms,input,noco,fsm,fsm_mag,sm)
-    CASE(9)
-       CALL pulay()
-    CASE default
-       PRINT *,"New Broyden"
-       
-       !CALL broyden(cell,stars,atoms,vacuum,sphhar,input,noco,oneD,sym,&
-       !     hybrid,mmap,nmaph,mapmt,mapvac2,nmap,fsm,sm)
-    END SELECT
+    if(input%imix==0.or.it==1) CALL stmix(atoms,input,noco,fsm(it),fsm_mag,sm(it))
+    !if(it>1.and.input%imix==9) CALL pulay(input%alpha,fsm,sm)
+    if(it>1.and.(input%imax==3.or.input%imix==5.or.input%imix==7)) Call broyden(input%alpha,fsm,sm)
 
     !initiatlize mixed density and extract it 
-    CALL sm%to_density(inDen)
+    CALL sm(it)%to_density(inDen)
       
     !fix charge of the new density
     CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE., fix)
@@ -190,14 +153,7 @@ contains
 
     inDen%iter = inDen%iter + 1
     
-7900 FORMAT (/,'---->    distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')
-7901 FORMAT (/,'----> HF distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')
-8000 FORMAT (/,'---->    distance of charge densities for it=',i5,':', f13.6,' me/bohr**3')
-8001 FORMAT (/,'----> HF distance of charge densities for it=',i5,':', f13.6,' me/bohr**3')
-8010 FORMAT (/,'---->    distance of spin densities for it=',i5,':', f13.6,' me/bohr**3')
-8011 FORMAT (/,'----> HF distance of spin densities for it=',i5,':', f13.6,' me/bohr**3')
-8020 FORMAT (4d25.14)
-8030 FORMAT (10i10)
+
 
   END SUBROUTINE mix
   
