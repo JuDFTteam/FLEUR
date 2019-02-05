@@ -288,6 +288,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       END IF
    END DO ! end of k-point loop
 
+   IF(atoms%n_hia.GT.0) THEN
+      CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),jspin,input%jspins,gOnsite,results%ef,sym)
+   END IF
+
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&

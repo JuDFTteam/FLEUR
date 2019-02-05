@@ -117,13 +117,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,gOnsite)
    END DO
 
-    IF (atoms%n_hia.GT.0) THEN
-      DO jspin = 1, jspmax
-            !can probably be moved to cdnval.f90 behind k-point loop
-            CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),jspin,input%jspins,dimension%neigd,kpts%ntet,kpts%nkpt,kpts%ntetra(1:4,:),kpts%voltet(:),&
-                                                   results%neig(:,jspin),results%eig(:,:,jspin),gOnsite,results%ef,sym)
-      ENDDO
-   ENDIF
 
    IF (mpi%irank.EQ.0) THEN
       IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN

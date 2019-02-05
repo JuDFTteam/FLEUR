@@ -172,7 +172,7 @@ SUBROUTINE im_gmmpMat(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdus,e
 
 END SUBROUTINE im_gmmpMat
 
-SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,neigd,ntetra,nkpt,itetra,voltet,nevk,eigv,gOnsite,ef,sym)
+SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,gOnsite,ef,sym)
 
    USE m_types
    USE m_constants
@@ -188,13 +188,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,neigd,ntetra,nkpt,itetra,vol
    TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
    TYPE(t_sym),            INTENT(IN)     :: sym
 
-   INTEGER,                INTENT(IN)     :: neigd,jspin,jspins
-   INTEGER,                INTENT(IN)     :: ntetra,nkpt
-
-
-   INTEGER,                INTENT(IN)     :: itetra(4,6*nkpt),nevk(nkpt)
-   REAL,                   INTENT(IN)     :: voltet(6*nkpt)
-   REAL,                   INTENT(INOUT)  :: eigv(neigd,nkpt)
+   INTEGER,                INTENT(IN)     :: jspin,jspins
 
    REAL,                   INTENT(IN)     :: ef
    REAL,                   INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,jspins)
