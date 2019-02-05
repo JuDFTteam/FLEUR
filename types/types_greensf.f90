@@ -93,7 +93,8 @@ MODULE m_types_greensf
             thisGREENSF%nr(:) = 1
          ELSE
             DO i_hia = 1, atoms%n_hia
-               n = atoms%lda_hia(i_hia)%atomType 
+               n = atoms%lda_hia(i_hia)%atomType  
+   
                thisGREENSF%nr(i_hia) = atoms%jri(n)
             ENDDO
          END IF
@@ -271,7 +272,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE init_e_contour
 
-      SUBROUTINE calc_mmpmat(this,atoms,sym,jspins)
+      SUBROUTINE calc_mmpmat(this,atoms,sym,jspins,mmpMat)
 
 
          !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
@@ -288,26 +289,23 @@ MODULE m_types_greensf
          CLASS(t_greensf),       INTENT(IN)     :: this
          TYPE(t_atoms),          INTENT(IN)     :: atoms
          TYPE(t_sym),            INTENT(IN)     :: sym
+         COMPLEX,                INTENT(INOUT)  :: mmpMat(atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
 
          INTEGER,                INTENT(IN)     :: jspins
 
          INTEGER i, m,mp, l, i_hia, ispin, n, it,is, isi, natom, nn
-         REAL n_l, imag, re, fac
-         CHARACTER(len=30) :: filename
+         REAL imag, re, fac
          COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
          COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-         COMPLEX, ALLOCATABLE :: mmpmat(:,:,:,:)
 
-         ALLOCATE(mmpmat(atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins))
 
-         mmpmat(:,:,:,:) = CMPLX(0.0,0.0)
-
+         mmpMat(:,:,:,:) = CMPLX(0.0,0.0)
 
          IF(this%l_ef) THEN
             DO i_hia = 1, atoms%n_hia
-
                l = atoms%lda_hia(i_hia)%l
-               n = atoms%lda_hia(i_hia)%atomType
+               n = atoms%lda_hia(i_hia)%atomType  
+  
 
                DO ispin = 1, jspins
                   n_tmp(:,:) = CMPLX(0.0,0.0)
@@ -333,10 +331,7 @@ MODULE m_types_greensf
                      ENDDO
                   ENDDO
 
-                  natom = 0
-                  DO i = 1, n-1
-                     natom = natom +atoms%neq(i)
-                  ENDDO
+                  natom = SUM(atoms%neq(:n-1))
                   DO nn = 1, atoms%neq(n)
                      natom = natom + 1
                      DO it = 1, sym%invarind(natom)
@@ -355,30 +350,14 @@ MODULE m_types_greensf
 
                         DO m = -l,l
                            DO mp = -l,l
-                              mmpmat(i_hia,m,mp,ispin) = mmpmat(i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac
+                              mmpMat(i_hia,m,mp,ispin) = mmpMat(i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac
                            ENDDO
                         ENDDO
                      ENDDO
                   ENDDO
-
-
-
-
-                  n_l = 0.0
-                  DO m =-l, l
-                     n_l = n_l + mmpmat(i_hia,m,m,ispin)
-                  ENDDO
-                  WRITE(*,*) "OCCUPATION: ", n_l
                ENDDO
             ENDDO 
 
-            !write density matrix to file (Missing write to xml)
-
-            filename = "n_mmp_mat_g"
-
-            OPEN (69,file=TRIM(ADJUSTL(filename)),status='replace',form='formatted')
-            WRITE (69,'(7f20.13)') mmpMat(:,:,:,:)
-            CLOSE (69)
          ELSE
 
             CALL juDFT_error("Green's Function is calculated on a contour not ending at Efermi", calledby="calc_mmpmat")
