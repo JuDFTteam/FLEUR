@@ -98,8 +98,6 @@ CONTAINS
          q = q + qis
          WRITE (6,FMT=8000) jspin,q,qis, (qmt(n),n=1,atoms%ntype)
          IF (input%film) WRITE (6,FMT=8010) (i,qvac(i),i=1,vacuum%nvac)
-         WRITE (16,FMT=8000) jspin,q,qis, (qmt(n),n=1,atoms%ntype)
-         IF (input%film) WRITE (16,FMT=8010) (i,qvac(i),i=1,vacuum%nvac)
          mtCharge = SUM(qmt(1:atoms%ntype) * atoms%neq(1:atoms%ntype))
          names(1) = 'spin'         ; WRITE(attributes(1),'(i0)') jspin       ; lengths(1,1)=4  ; lengths(1,2)=1
          names(2) = 'total'        ; WRITE(attributes(2),'(f14.7)') q        ; lengths(2,1)=5  ; lengths(2,2)=14
@@ -123,7 +121,6 @@ CONTAINS
       END DO ! loop over spins
       DEALLOCATE (lengths)
       WRITE (6,FMT=8020) qtot
-      WRITE (16,FMT=8020) qtot
       IF(l_printData) THEN
          CALL writeXMLElementFormPoly('totalCharge',(/'value'/),(/qtot/),reshape((/5,20/),(/1,2/)))
       END IF

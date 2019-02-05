@@ -59,7 +59,6 @@ CONTAINS
        d = EXP(atoms%dx(jatom))
        rn = rnot* (d** (ncmsh-1))
        WRITE (6,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
-       WRITE (16,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
        DO j = 1,atoms%jri(jatom)
           vrd(j) = vr(j,jatom)
        ENDDO
@@ -95,7 +94,6 @@ CONTAINS
                e, a,b,ierr)
           IF (ierr/=0)  CALL juDFT_error("error in core-levels",calledby="etabinit")
           WRITE (6,FMT=8010) fn,fl,fj,e,weight
-          WRITE (16,FMT=8010) fn,fl,fj,e,weight
           eig(korb) = e
        ENDDO
        ic = 0

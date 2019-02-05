@@ -84,7 +84,6 @@ CONTAINS
     !CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
 
     WRITE (6,FMT=8000)
-    WRITE (16,FMT=8000)
 8000 FORMAT (/,/,/,5x,'t o t a l  e n e r g y')
     !
     !      ---> sum of eigenvalues (core, semicore and valence states)
@@ -92,28 +91,24 @@ CONTAINS
     eigSum = results%seigscv + results%seigc
     results%tote = eigSum
     WRITE (6,FMT=8010) results%tote
-    WRITE (16,FMT=8010) results%tote
 8010 FORMAT (/,10x,'sum of eigenvalues =',t40,f20.10)
     !
     !      ---> add contribution of coulomb potential
     !
     results%tote = results%tote + 0.5e0*results%te_vcoul
     WRITE (6,FMT=8020) results%te_vcoul
-    WRITE (16,FMT=8020) results%te_vcoul
 8020 FORMAT (/,10x,'density-coulomb potential integral =',t40,f20.10)
     !
     !      ---> add contribution of effective potential
     !
     results%tote = results%tote - results%te_veff
     WRITE (6,FMT=8030) results%te_veff
-    WRITE (16,FMT=8030) results%te_veff
 8030 FORMAT (/,10x,'density-effective potential integral =',t40,f20.10)
     !
     !      ---> add contribution of exchange-correlation energy
     !
     results%tote = results%tote + results%te_exc
     WRITE (6,FMT=8040) results%te_exc
-    WRITE (16,FMT=8040) results%te_exc
 8040 FORMAT (/,10x,'charge density-ex.-corr.energy density integral=', t40,f20.10)
     !
     !      ---> Fock exchange contribution 
@@ -126,9 +121,7 @@ CONTAINS
        !END IF
     ENDIF
     WRITE (6,FMT=8100)  0.5e0*results%te_hfex%valence
-    WRITE (16,FMT=8100) 0.5e0*results%te_hfex%valence
     WRITE (6,FMT=8101)  0.5e0*results%te_hfex%core
-    WRITE (16,FMT=8101) 0.5e0*results%te_hfex%core
 8100 FORMAT (/,10x,'Fock-exchange energy (valence)=',t40,f20.10)
 8101 FORMAT (10x,'Fock-exchange energy (core)=',t40,f20.10)
 
@@ -175,26 +168,21 @@ CONTAINS
        !
        zintn_r(n) = atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
        WRITE (6,FMT=8045) zintn_r(n)
-       WRITE (16,FMT=8045) zintn_r(n)
        CALL intgr3(mt(1,n),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
        vmd(n) = atoms%rmt(n)*vCoul%mt(atoms%jri(n),0,n,1)/sfp_const + atoms%zatom(n) - totz*sfp_const
        vmd(n) = -atoms%neq(n)*atoms%zatom(n)*vmd(n)/ (2.*atoms%rmt(n))
        WRITE (6,FMT=8050) n,vmd(n)
-       WRITE (16,FMT=8050) n,vmd(n)
        results%tote = results%tote + vmd(n)
     ENDDO
     IF (atoms%n_u.GT.0) THEN
        WRITE ( 6,FMT=8090) results%e_ldau
-       WRITE (16,FMT=8090) results%e_ldau
        results%tote = results%tote - results%e_ldau             ! gu test
     ENDIF
     ! print 'HF' before total energy to make it grepable
     IF ( .NOT. hybrid%l_calhf ) THEN
        WRITE ( 6,FMT=8060) results%tote
-       WRITE (16,FMT=8060) results%tote
     ELSE
        WRITE ( 6,FMT=8061) results%tote
-       WRITE (16,FMT=8061) results%tote
     END IF
 
     CALL force_w(input,atoms,sym,results,cell,oneD,vacuum)
@@ -205,18 +193,12 @@ CONTAINS
     ! print 'HF' before all energies to make them grepable
     IF ( .NOT. hybrid%l_calhf ) THEN
        WRITE ( 6,FMT=8065) results%ts
-       WRITE (16,FMT=8065) results%ts
        WRITE ( 6,FMT=8070) results%tote-results%ts
-       WRITE (16,FMT=8070) results%tote-results%ts
        WRITE ( 6,FMT=8080) results%tote-0.5e0*results%ts
-       WRITE (16,FMT=8080) results%tote-0.5e0*results%ts
     ELSE
        WRITE ( 6,FMT=8066) results%ts
-       WRITE (16,FMT=8066) results%ts
        WRITE ( 6,FMT=8071) results%tote-results%ts
-       WRITE (16,FMT=8071) results%tote-results%ts
        WRITE ( 6,FMT=8081) results%tote-0.5e0*results%ts
-       WRITE (16,FMT=8081) results%tote-0.5e0*results%ts
     END IF
 
     WRITE(attributes(1),'(f20.10)') results%tote

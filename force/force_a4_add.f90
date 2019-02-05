@@ -169,25 +169,9 @@ CONTAINS
 
              !       write to out-file
              WRITE (6,FMT=8010) n
-             WRITE (16,FMT=8010) n
              WRITE (6,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
-             WRITE (16,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
-             !         WRITE (6,FMT=8020) (real(force_a4_is(dir,n,jsp)),dir=1,3)
-             !         WRITE (16,FMT=8020) (real(force_a4_is(dir,n,jsp)),dir=1,3)
              WRITE (6,FMT=8015) n
-             WRITE (16,FMT=8015) n
              WRITE (6,FMT=8020) ((force_a4_mt(dir,n,jsp)),dir=1,3) ! 8020
-             WRITE (16,FMT=8020) ((force_a4_mt(dir,n,jsp)),dir=1,3) ! 8020
-             !         WRITE (6,FMT=8020) (real(force_a4_mt(dir,n,jsp)),dir=1,3)
-             !         WRITE (16,FMT=8020) (real(force_a4_mt(dir,n,jsp)),dir=1,3)
-             !         IF (film.AND..not.odi%d1) THEN
-             !         WRITE (6,FMT=8025) n
-             !         WRITE (16,FMT=8025) n
-             !         WRITE (6,FMT=8070) ((force_a4_2d(dir,n,jsp)),dir=1,3)
-             !         WRITE (16,FMT=8070) ((force_a4_2d(dir,n,jsp)),dir=1,3)
-             ! !         WRITE (6,FMT=8070) (real(force_a4_2d(dir,n,jsp)),dir=1,3)
-             ! !         WRITE (16,FMT=8070) (real(force_a4_2d(dir,n,jsp)),dir=1,3)
-             !         END IF
 8010         FORMAT (' FORCES: IS ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
 8015         FORMAT (' FORCES: MT ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
              !  8025   FORMAT (' FORCES: VACUUM ADD. TO EQUATION A4 FOR ATOM TYPE',i4)

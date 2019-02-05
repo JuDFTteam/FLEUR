@@ -50,7 +50,7 @@ CONTAINS
 
     !Calculate radial soc-matrix elements
     DO n = 1,atoms%ntype
-       CALL sorad(atoms,input,n,vr(:atoms%jri(n),0,n,:),enpara,noco%l_spav,rsoc,usdus)
+       CALL sorad(atoms,input,n,vr(:,0,n,:),enpara,noco%l_spav,rsoc,usdus)
     END DO
     
     !

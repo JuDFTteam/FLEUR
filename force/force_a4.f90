@@ -62,7 +62,6 @@ CONTAINS
              END DO
              !
              CALL intgr0(rhoc(:,n,jsp),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),qcore)
-             !     write(16,1616) qcore
 8000         FORMAT (' FORCE_A4: core charge=',1p,e16.8)
              !
              !
@@ -135,9 +134,7 @@ CONTAINS
              !     write result
              !
              WRITE (6,FMT=8010) n
-             WRITE (16,FMT=8010) n
              WRITE (6,FMT=8020) (forc_a4(i),i=1,3)
-             WRITE (16,FMT=8020) (forc_a4(i),i=1,3)
 8010         FORMAT (' FORCES: EQUATION A4 FOR ATOM TYPE',i4)
 8020         FORMAT (' FX_A4=',2f10.6,' FY_A4=',2f10.6,' FZ_A4=',2f10.6)
              ! type loop ends

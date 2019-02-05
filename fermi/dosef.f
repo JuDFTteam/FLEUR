@@ -52,7 +52,6 @@ c---  >    e1<ei<e2
          ENDDO
 !     gb         s = (2./jspins)*s
          s = sfac * s
-         WRITE (16,FMT=8000) ei,jsp,s
          WRITE (6,FMT=8000) ei,jsp,s
       ENDDO
 

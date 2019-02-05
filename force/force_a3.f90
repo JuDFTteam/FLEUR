@@ -44,7 +44,6 @@ CONTAINS
     grd1(3,1) = czero
     !
     WRITE  (6,*)
-    WRITE (16,*)
     spin: DO jsp = 1,input%jspins
        na = 1
        DO n = 1,atoms%ntype
@@ -78,8 +77,6 @@ CONTAINS
                 !+Gu
                 a3_2 = vr(atoms%jri(n),lh,n,jsp)/(input%jspins*atoms%rmt(n))
                 !-Gu
-                !               WRITE (16,FMT=8000) a3_1,a3_2,zatom(n),rmt(n)
-                ! 8000          FORMAT (' a3_1,a3_2,zatom(n),rmt(n)',4e12.4)
                 DO i = 1,3
                    forc_a3(i) = forc_a3(i) + (a3_1+a3_2)*gv(i)*atoms%zatom(n)
                 END DO
@@ -91,9 +88,7 @@ CONTAINS
              !
              !     write result
              WRITE (6,FMT=8010) n
-             WRITE (16,FMT=8010) n
              WRITE (6,FMT=8020) (forc_a3(i),i=1,3)
-             WRITE (16,FMT=8020) (forc_a3(i),i=1,3)
 8010         FORMAT (' FORCES: EQUATION A3 FOR ATOM TYPE',i4)
 8020         FORMAT (' FX_A3=',2f10.6,' FY_A3=',2f10.6,' FZ_A3=',2f10.6)
 

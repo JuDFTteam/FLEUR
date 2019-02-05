@@ -76,7 +76,6 @@ CONTAINS
 
     IF (input%film) THEN
        WRITE (6,FMT=8000) (bkpt(i),i=1,3)
-       WRITE (16,FMT=8000) (bkpt(i),i=1,3)
 8000   FORMAT (/,3x,'q(atom,l): k=',3f10.5,/,/,t8,'e',t13,'max',t18,&
             &          'int',t22,'vac',t28,'spheres(s,p,d,f)')
        IF (banddos%dos) THEN
@@ -89,7 +88,6 @@ CONTAINS
        END IF
     ELSE
        WRITE (6,FMT=8010) (bkpt(i),i=1,3)
-       WRITE (16,FMT=8010) (bkpt(i),i=1,3)
 8010   FORMAT (/,3x,'q(atom,l): k=',3f10.5,/,/,t8,'e',t13,'max',t18,&
             &          'int',t24,'spheres(s,p,d,f)')
        IF (banddos%dos) THEN
@@ -102,7 +100,6 @@ CONTAINS
     DO iband = 1,nbands
        IF (sliceplot%slice) THEN
           WRITE (6,FMT=8030) iband,eig(iband)
-          WRITE (16,FMT=8030) iband,eig(iband)
 8030      FORMAT (' cdnval: slice for i=',i4,'  and energy',1e12.4)
        END IF
 
@@ -136,8 +133,6 @@ CONTAINS
        IF (input%film) THEN
           WRITE (6,FMT=8040) eig(iband),chstat(lqmax),itypqmax,&
                &        iqispc,iqvacpc, ((iqalpc(l,ityp),l=0,3),ityp=1,atoms%ntype)
-          WRITE (16,FMT=8040) eig(iband),chstat(lqmax),itypqmax,&
-               &        iqispc,iqvacpc, ((iqalpc(l,ityp),l=0,3),ityp=1,atoms%ntype)
 8040      FORMAT (f10.4,2x,a1,i2,2x,2i3, (t26,6 (4i3,1x)))
           IF (banddos%dos) THEN
              IF (banddos%ndir.NE.0) THEN
@@ -169,8 +164,6 @@ CONTAINS
           !     **************************************
        ELSE
           WRITE (6,FMT=8080) eig(iband),chstat(lqmax),itypqmax,&
-               &        iqispc, ((iqalpc(l,ityp),l=0,3),ityp=1,atoms%ntype)
-          WRITE (16,FMT=8080) eig(iband),chstat(lqmax),itypqmax,&
                &        iqispc, ((iqalpc(l,ityp),l=0,3),ityp=1,atoms%ntype)
 8080      FORMAT (f10.4,2x,a1,i2,2x,i3, (t26,6 (4i3,1x)))
           IF (banddos%dos) THEN

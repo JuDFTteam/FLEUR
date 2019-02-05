@@ -677,7 +677,6 @@ CONTAINS
                    ENDDO
                 ENDIF
                 WRITE ( 6,'(''bad quality of charge density'',2f13.8)')q0, REAL( cwk(1) )
-                WRITE (16,'(''bad quality of charge density'',2f13.8)')q0, REAL( cwk(1) )
                 CALL juDFT_warn('pwden: bad quality of charge')
              ENDIF
           ENDIF

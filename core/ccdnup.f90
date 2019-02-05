@@ -66,9 +66,7 @@ CONTAINS
        CALL intgr3(rhoc,atoms%rmsh(1,jatom),atoms%dx(jatom),nm,rhs)
        tecs(jatom,jspin) = sume/input%jspins - rhs
        WRITE (6,FMT=8010) jatom,jspin,tecs(jatom,jspin),sume/input%jspins
-       WRITE (16,FMT=8010) jatom,jspin,tecs(jatom,jspin),sume/input%jspins
-       !     write(17) tec
-
+  
        !     ---> simpson integration
        dxx = atoms%dx(jatom)
        d = EXP(atoms%dx(jatom))
@@ -81,10 +79,7 @@ CONTAINS
           q = q + rad*rhoss(nm1+1)
        ENDDO
        q = 2*q*dxx/3
-       !+sb
        WRITE (6,FMT=8000) q/input%jspins
-       WRITE (16,FMT=8000) q/input%jspins
-       !-sb
        qints(jatom,jspin) = q*atoms%neq(jatom)
 
     END DO ! end-do-loop input%jspins

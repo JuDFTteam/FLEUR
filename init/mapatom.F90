@@ -136,7 +136,7 @@
              CALL juDFT_error("mapatom",calledby="mapatom")
            ENDIF
             WRITE (6,FMT=8010) nat1,na,atoms%ngopr(na)
- 8010       FORMAT (5x,'atom',i3,' can be mapped into atom',i3,&
+ 8010       FORMAT (5x,'atom',i5,' can be mapped into atom',i5,&
      &             ' through group  operation',i4)
 !
 ! end of equivalent atoms

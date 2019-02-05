@@ -159,7 +159,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    IF (mpi%irank==0) THEN
       WRITE (6,FMT=8000) jspin
-      WRITE (16,FMT=8000) jspin
       CALL openXMLElementPoly('mtCharges',(/'spin'/),(/jspin/))
    END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)

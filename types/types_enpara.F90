@@ -191,7 +191,6 @@ CONTAINS
              vbar = v%mt(j,0,n,jsp)/rj
              IF (mpi%irank.EQ.0) THEN
                 WRITE ( 6,'('' spin'',i2,'', atom type'',i3,'' ='',f12.6,''   r='',f8.5)') jsp,n,vbar,rj
-                WRITE (16,'('' spin'',i2,'', atom type'',i3,'' ='',f12.6,''   r='',f8.5)') jsp,n,vbar,rj
              ENDIF
              DO l = 0,atoms%lmax(n)
                 IF ( .NOT.l_done(l,n,jsp) ) THEN
@@ -226,7 +225,6 @@ CONTAINS
                 vz0 = v%vacz(1,ivac,jsp)
                 IF (mpi%irank.EQ.0) THEN
                    WRITE ( 6,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0 
-                   WRITE (16,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
                 ENDIF
              ENDIF
              enpara%evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0

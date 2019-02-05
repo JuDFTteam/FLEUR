@@ -90,7 +90,7 @@ CONTAINS
     ENDDO
     
     DO nk=mpi%irank+1,kpts%nkpt,mpi%isize
-       CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.false., mpi)
+       CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.false.)
        zMat%matsize1=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
        zmat%matsize2=DIMENSION%neigd
        zmat%l_real=.FALSE.
@@ -407,7 +407,7 @@ CONTAINS
              ELSE
                 bandf= 1 
              ENDIF
-             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-10) THEN
+             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-8) THEN
                 PRINT *,bandf,band2,n,AIMAG(matel(bandf,band2,n))
                 CALL judft_error('Stop in ssomatel:  diagonal matrix element not real')
              ENDIF

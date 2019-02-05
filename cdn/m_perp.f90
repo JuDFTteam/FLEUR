@@ -57,11 +57,9 @@ CONTAINS
     my = 2*AIMAG(qa21(itype))
     mz = chmom(itype,1) - chmom(itype,2)
     WRITE  (6,8025) mx,my
-    WRITE (16,8025) mx,my
     !---> determine the polar angles of the moment vector in the local frame
     CALL pol_angle(mx,my,mz,betah,alphh)
     WRITE  (6,8026) betah,alphh
-    WRITE (16,8026) betah,alphh
 8025 FORMAT(2x,'--> local frame: ','mx=',f9.5,' my=',f9.5)
 8026 FORMAT(2x,'-->',10x,' delta beta=',f9.5,&
          &                   '  delta alpha=',f9.5)
@@ -79,9 +77,7 @@ CONTAINS
        mz = rho11 - rho22
        CALL pol_angle(mx,my,mz,betah,alphh)
        WRITE  (6,8027) noco%beta(itype),noco%alph(itype)-alphdiff
-       WRITE (16,8027) noco%beta(itype),noco%alph(itype)-alphdiff
        WRITE  (6,8028) betah,alphh-alphdiff
-       WRITE (16,8028) betah,alphh-alphdiff
 8027   FORMAT(2x,'-->',10x,' input noco%beta=',f9.5, '  input noco%alpha=',f9.5)
 8028   FORMAT(2x,'-->',10x,'output noco%beta=',f9.5, ' output noco%alpha=',f9.5)
 
@@ -96,7 +92,6 @@ CONTAINS
        my_mix = 2*AIMAG(rho21)
        mz_mix = rho11 - rho22
        WRITE  (6,8031) mx_mix,my_mix
-       WRITE (16,8031) mx_mix,my_mix 
 8031   FORMAT(2x,'--> global frame: ','mixed mx=',f9.5,' mixed my=',f9.5)
        ! if magnetic moment (in local frame!) is negative, direction of quantization
        ! has to be antiparallel! 
@@ -109,7 +104,6 @@ CONTAINS
        ! calculate angles alpha and beta in global frame
        CALL pol_angle(mx_mix,my_mix,mz_mix,betah,alphh)
        WRITE  (6,8029) betah,alphh-alphdiff
-       WRITE (16,8029) betah,alphh-alphdiff
 8029   FORMAT(2x,'-->',10x,' new noco%beta  =',f9.5, '  new noco%alpha  =',f9.5)
        noco%alph(itype) = alphh
        noco%beta(itype) = betah
@@ -129,9 +123,7 @@ CONTAINS
        b_con_outy = scale*my
        !--->    mix input and output constraint fields
        WRITE  (6,8100) noco%b_con(1,itype),noco%b_con(2,itype)
-       WRITE (16,8100) noco%b_con(1,itype),noco%b_con(2,itype)
        WRITE  (6,8200) b_con_outx,b_con_outy
-       WRITE (16,8200) b_con_outx,b_con_outy
        noco%b_con(1,itype) = noco%b_con(1,itype) + noco%mix_b*b_con_outx
        noco%b_con(2,itype) = noco%b_con(2,itype) + noco%mix_b*b_con_outy
     ENDIF

@@ -6,8 +6,10 @@ then
     curl -LO "http://elpa.mpcdf.mpg.de/html/Releases/${elpa_version}/elpa-${elpa_version}.tar.gz"
     tar xzf elpa-${elpa_version}.tar.gz
     cd elpa-${elpa_version}
-    #configure
-    ./configure --enable-c-tests=no --disable-doxygen-doc --enable-shared=no --disable-mpi-module --disable-legacy --enable-openmp --prefix=$PWD/INSTALL_DIR
+    #configue
+    ./configure --enable-c-tests=no --disable-doxygen-doc --enable-shared=no --disable-mpi-module --enable-openmp --prefix=$PWD/INSTALL_DIR \
+                --enable-option-checking=fatal SCALAPACK_LDFLAGS="-L$MKLROOT/lib/intel64 -lmkl_scalapack_lp64 -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lmkl_blacs_intelmpi_lp64 -lpthread "\
+                SCALAPACK_FCFLAGS="-I$MKL_HOME/include/intel64/lp64"
     #Compile&test (This will take a while)
     make
     #Do make install 

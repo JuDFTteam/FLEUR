@@ -86,10 +86,8 @@
              !     ---> vacuum part
              IF (l_cdn) THEN
                 WRITE (6,FMT=9000) ivac
-                WRITE (16,FMT=9000) ivac
              ELSE
                 WRITE (6,FMT=8000) ivac
-                WRITE (16,FMT=8000) ivac
              ENDIF
              DO  j = 1,np
                 IF (.NOT.oneD%odi%d1) THEN
@@ -117,17 +115,14 @@
                    rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
                    WRITE (6,FMT=8020)  rcc,(p(i,j),i=1,3),v1(j),v2(j)
-                   WRITE (16,FMT=8020) rcc,(p(i,j),i=1,3),v1(j),v2(j)
                 ELSE
                    !CALL cotra0(p(1,j),rcc,cell%amat)
                    rcc=MATMUL(cell%amat,p(:,j))
                    WRITE (6,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
-                   WRITE (16,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
                 ENDIF
              ENDDO
              CALL fitchk(v1(:np),v2(:np),av,rms,dms)
              WRITE (6,FMT=8030) av,rms,dms
-             WRITE (16,FMT=8030) av,rms,dms
              RETURN
           ENDIF
           !      ----> interstitial part
@@ -147,10 +142,8 @@
           !     ----> m.t. part
           IF (l_cdn) THEN
              WRITE (6,FMT=9010) n
-             WRITE (16,FMT=9010) n
           ELSE
              WRITE (6,FMT=8010) n
-             WRITE (16,FMT=8010) n
           ENDIF
           ir2 = 1.0
           IF (l_cdn) ir2 = 1.0 / ( atoms%rmt(n)*atoms%rmt(n) )
@@ -203,12 +196,10 @@
                 rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
                 WRITE (6,FMT=8020) rcc, (p(i,j),i=1,3),v1(j),v2(j)
-                WRITE (16,FMT=8020) rcc, (p(i,j),i=1,3),v1(j),v2(j)
              END IF
           ENDDO
           CALL fitchk(v1(:np),v2(:np),av,rms,dms)
           WRITE (6,FMT=8030) av,rms,dms
-          WRITE (16,FMT=8030) av,rms,dms
 8000      FORMAT (/,'    int.-vac. boundary (potential): ivac=',i2,/,t10,&
                &       'int-coord',t36,'cart-coord',t57,' inter. ',t69,' vacuum ')
 8010      FORMAT (/,'    int.-m.t. boundary (potential): atom type=',i2,/,&
