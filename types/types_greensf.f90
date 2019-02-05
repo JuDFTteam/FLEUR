@@ -55,7 +55,7 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(thisGREENSF,input,atoms,kpts,dimension,l_onsite)
+      SUBROUTINE greensf_init(thisGREENSF,input,atoms,kpts,dimension,l_onsite,nz_in,e_in,de_in)
 
          USE m_types_setup
          USE m_types_kpts
@@ -67,6 +67,10 @@ MODULE m_types_greensf
          TYPE(t_kpts),           INTENT(IN)     :: kpts
          TYPE(t_dimension),      INTENT(IN)     :: dimension
          LOGICAL,                INTENT(IN)     :: l_onsite !this switch determines wether we want to use this type to calculate the on-site green's function
+         !Pass a already calculated energy contour to the type
+         INTEGER, OPTIONAL,      INTENT(IN)     :: nz_in
+         COMPLEX, OPTIONAL,      INTENT(IN)     :: e_in(:)
+         COMPLEX, OPTIONAL,      INTENT(IN)     :: de_in(:)
 
          INTEGER n, i_hia
 
@@ -82,21 +86,6 @@ MODULE m_types_greensf
          !set up energy grid for imaginary part
          thisGREENSF%del      = (thisGREENSF%e_top-thisGREENSF%e_bot)/REAL(thisGREENSF%ne-1)
 
-         !Parameters for the energy contour in the complex plane
-         !We use default values for now
-         thisGREENSF%mode     = input%ldahia_mode
-
-         IF(thisGREENSF%mode.EQ.1) THEN
-            thisGREENSF%nz = input%ldahia_nin
-         ELSE IF(thisGREENSF%mode.EQ.2) THEN
-            n = input%ldahia_nin
-            !ensure that we don't flood the memory accidentally
-            IF(n.LT.2) n = 2
-            IF(n.GT.7) n = 7
-            thisGREENSF%nz = 2**n
-         END IF
-
-
          !Set number of radial points
          ALLOCATE(thisGREENSF%nr(atoms%n_hia))
 
@@ -109,10 +98,34 @@ MODULE m_types_greensf
             ENDDO
          END IF
 
+         IF(PRESENT(nz_in)) THEN
+            thisGREENSF%nz = nz_in
+         ELSE
+            !Parameters for the energy contour in the complex plane
+            thisGREENSF%mode     = input%ldahia_mode
+
+            IF(thisGREENSF%mode.EQ.1) THEN
+               thisGREENSF%nz = input%ldahia_nin
+            ELSE IF(thisGREENSF%mode.EQ.2) THEN
+               n = input%ldahia_nin
+               !ensure that we don't flood the memory accidentally
+               IF(n.LT.2) n = 2
+               IF(n.GT.7) n = 7
+               thisGREENSF%nz = 2**n
+            END IF
+         END IF
+
          ALLOCATE (thisGREENSF%e(thisGREENSF%nz))
          ALLOCATE (thisGREENSF%de(thisGREENSF%nz))
-         thisGREENSF%e(:) = CMPLX(0.0,0.0)
-         thisGREENSF%de(:)= CMPLX(0.0,0.0)
+
+         IF(PRESENT(e_in)) THEN
+            thisGREENSF%e(:) = e_in(:)
+            thisGREENSF%de(:)= de_in(:)
+         ELSE
+            !If no energy contour is given it is set up to zero
+            thisGREENSF%e(:) = CMPLX(0.0,0.0)
+            thisGREENSF%de(:)= CMPLX(0.0,0.0)
+         END IF
 
          IF(l_onsite) THEN
             IF (.NOT.input%ldahia_sphavg) THEN 
@@ -128,11 +141,12 @@ MODULE m_types_greensf
 
 
             ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            thisGREENSF%im_gmmpMat  = 0.0
          END IF
+
          ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
 
-         thisGREENSF%im_gmmpMat  = 0.0
-         thisGREENSF%gmmpMat     = CMPLX(0.0,0.0)
+         thisGREENSF%gmmpMat = CMPLX(0.0,0.0)
 
       END SUBROUTINE greensf_init
 
