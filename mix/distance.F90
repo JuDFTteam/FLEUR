@@ -5,11 +5,17 @@
 !--------------------------------------------------------------------------------
 module m_distance
 contains
-  subroutine distance(fsm)
+  SUBROUTINE distance(irank,fsm)
 
     
-    real            :: dist(6)
+    REAL            :: dist(6) !1:up,2:down,3:total,4:
  
+
+
+    CALL fsm_up%alloc()
+    IF (input%jspin
+    fsm_up=
+    
     
 
     dist(:) = 0.0
