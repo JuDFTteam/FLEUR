@@ -48,6 +48,7 @@ MODULE m_types_mixvector
      PROCEDURE :: from_density=>mixvector_from_density
      PROCEDURE :: to_density=>mixvector_to_density
      PROCEDURE :: apply_metric=>mixvector_metric
+     PROCEDURE :: multiply_dot_mask
   END TYPE t_mixvector
 
   INTERFACE OPERATOR (*)
@@ -65,7 +66,7 @@ MODULE m_types_mixvector
   END INTERFACE OPERATOR (.dot.)
 
   PUBLIC :: OPERATOR(+),OPERATOR(-),OPERATOR(*),OPERATOR(.dot.)
-  PUBLIC :: mixvector_init,multiply_dot_mask
+  PUBLIC :: mixvector_init
 
 CONTAINS
 
@@ -181,7 +182,7 @@ CONTAINS
 
   FUNCTION mixvector_metric(vec)RESULT(mvec)
     USE m_types
-    USE m_metric
+    USE m_convol
     IMPLICIT NONE
     CLASS(t_mixvector),INTENT(IN)    :: vec
     TYPE(t_mixvector)                :: mvec
@@ -521,25 +522,29 @@ CONTAINS
     END FUNCTION multiply_dot
 
     FUNCTION multiply_dot_mask(vec1,vec2,mask,spin)RESULT(dprod)
-      TYPE(t_mixvector),INTENT(IN)::vec1,vec2
+      CLASS(t_mixvector),INTENT(IN)::vec1
+      TYPE(t_mixvector),INTENT(IN)::vec2
       LOGICAL,INTENT(IN)          ::mask(4)
       INTEGER,INTENT(IN)          ::spin
       REAL                        ::dprod
+
+      INTEGER:: js
+
       dprod=0.0
 
       DO js=1,3
-         IF (mask(1).and.(spin==js.or.spin==0.and.start_pw(js)>0)) &
-                 dprod=dprod+dot_PRODUCT(vec1%vec_pw(start_pw(js):stop_pw(js)),&
-                 vec2%vec_pw(start_pw(js):stop_pw(js)))
-         IF (mask(2).and.(spin==js.or.spin==0.and.start_mt(js)>0)) &
-                 dprod=dprod+dot_PRODUCT(vec1%vec_mt(start_mt(js):stop_mt(js)),&
-                 vec2%vec_mt(start_mt(js):stop_mt(js)))
-         IF (mask(3).and.(spin==js.or.spin==0.and.start_vac(js)>0)) &
-                 dprod=dprod+dot_PRODUCT(vec1%vec_vac(start_vac(js):stop_vac(js)),&
-                 vec2%vec_vac(start_vac(js):stop_vac(js)))
-         IF (mask(4).and.(spin==js.or.spin==0.and.start_misc(js)>0)) &
-                 dprod=dprod+dot_PRODUCT(vec1%vec_misc(start_misc(js):stop_misc(js)),&
-                 vec2%vec_misc(start_misc(js):stop_misc(js)))
+         IF (mask(1).and.(spin==js.or.spin==0.and.pw_start(js)>0)) &
+                 dprod=dprod+dot_PRODUCT(vec1%vec_pw(pw_start(js):pw_stop(js)),&
+                 vec2%vec_pw(pw_start(js):pw_stop(js)))
+         IF (mask(2).and.(spin==js.or.spin==0.and.mt_start(js)>0)) &
+                 dprod=dprod+dot_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)),&
+                 vec2%vec_mt(mt_start(js):mt_stop(js)))
+         IF (mask(3).and.(spin==js.or.spin==0.and.vac_start(js)>0)) &
+                 dprod=dprod+dot_PRODUCT(vec1%vec_vac(vac_start(js):vac_stop(js)),&
+                 vec2%vec_vac(vac_start(js):vac_stop(js)))
+         IF (mask(4).and.(spin==js.or.spin==0.and.misc_start(js)>0)) &
+                 dprod=dprod+dot_PRODUCT(vec1%vec_misc(misc_start(js):misc_stop(js)),&
+                 vec2%vec_misc(misc_start(js):misc_stop(js)))
       enddo
          
 #ifdef CPP_MPI

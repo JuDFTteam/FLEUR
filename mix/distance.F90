@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 module m_distance
 contains
-  SUBROUTINE distance(irank,vol,jspins,fsm,sm,iter,outden,results)
+  SUBROUTINE distance(irank,vol,jspins,fsm,sm,iter,outden,results,fsm_mag)
     use m_types
     use m_types_mixvector
     use m_xmlOutput
@@ -16,40 +16,42 @@ contains
     type(t_mixvector),INTENT(IN)   :: fsm,sm
     TYPE(t_potden),INTENT(IN)      :: outden
     TYPE(t_results),INTENT(INOUT)  :: results
+    type(t_mixvector),INTENT(OUT)   :: fsm_mag
     
     integer         ::js
     REAL            :: dist(6) !1:up,2:down,3:spinoff,4:total,5:magnet,6:noco
-    type(t_mixvector)::fmMet,fsm_mag
+    TYPE(t_mixvector)::fmMet
     character(len=100)::attributes(2)
     
     CALL fmMet%alloc()
-    if (input%jspins==2) CALL fsm_mag%alloc()
+    if (jspins==2) CALL fsm_mag%alloc()
  
     ! calculate Magnetisation-difference
     CALL fsm_mag%from_density(outden,swapspin=.true.)
-    fsm_mag=fsm_mag-sm(it)
+    fsm_mag=fsm_mag-sm
 
     ! Apply metric w to fsm and store in fmMet:  w |fsm>
     fmMet=fsm%apply_metric()
   
     dist(:) = 0.0
-    DO js = 1,input%jspins
+    DO js = 1,jspins
        dist(js) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),js)
     END DO
     dist(6) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),3)
-    IF (input%jspins.EQ.2) then
+    IF (jspins.EQ.2) THEN
        dist(3) = fsm_mag%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),1)+&
             fsm_mag%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),2)
        dist(4) = dist(1) + dist(2) + 2.0e0*dist(3)
        dist(5) = dist(1) + dist(2) - 2.0e0*dist(3)
-    endif
+    ENDIF
+    
     results%last_distance=maxval(1000*SQRT(ABS(dist/vol)))
     if (irank>1) return
 
     !calculate the distance of charge densities for each spin
     CALL openXMLElement('densityConvergence',(/'units'/),(/'me/bohr^3'/))
     
-    DO js = 1,input%jspins         
+    DO js = 1,jspins         
        attributes = ''
        WRITE(attributes(1),'(i0)') js
        WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/vol))
@@ -62,7 +64,7 @@ contains
     !calculate the distance of total charge and spin density
     !|rho/m(o) - rho/m(i)| = |rh1(o) -rh1(i)|+ |rh2(o) -rh2(i)| +/_
     !                        +/_2<rh2(o) -rh2(i)|rh1(o) -rh1(i)>
-    IF (input%jspins.EQ.2) THEN
+    IF (jspins.EQ.2) THEN
        CALL writeXMLElementFormPoly('overallChargeDensity',(/'distance'/),&
             (/1000*SQRT(ABS(dist(4)/vol))/),reshape((/10,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('spinDensity',(/'distance'/),&

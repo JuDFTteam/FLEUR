@@ -13,6 +13,7 @@ MODULE m_kerker
       USE m_vgen_coulomb
       USE m_VYukawaFilm
       USE m_juDFT
+      USE m_qfix
       USE m_types
       USE m_types_mixvector
       USE m_constants

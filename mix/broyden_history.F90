@@ -25,10 +25,10 @@ CONTAINS
     REAL              :: dfivi,fmvm,vmnorm
     REAL,ALLOCATABLE  :: am(:)
     TYPE(t_mixvector) :: fm1,sm1,ui,um,vi,vm
-    Type(t_mixvector) :: u_store(:),v_store(:)
+    TYPE(t_mixvector),allocatable :: u_store(:),v_store(:)
 
     hlen=size(fm)
-    ALLOCATE(u_store(hlen-1),v_store(h_len-1))
+    ALLOCATE(u_store(hlen-1),v_store(hlen-1))
     do it=1,hlen-1
        call u_store(it)%alloc()
        call v_store(it)%alloc()
@@ -55,7 +55,7 @@ CONTAINS
           ui=u_store(n)
           vi=v_store(n)
           
-          am(it) = vi.dot.fm
+          am(it) = vi.dot.fm(n)
           ! calculate um(:) = -am(it)*ui(:) + um(:)
           um=um-am(it)*ui
           WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it) 
@@ -83,9 +83,9 @@ CONTAINS
     enddo
     ! update rho(m+1)
     ! calculate <fm|w|vm>
-    fmvm = vm.dot.fm
+    fmvm = vm.dot.fm(hlen)
     ! calculate sm(:) = (1.0-fmvm)*um(:) + sm
-    sm=sm+(1.0-fmvm)*um
+    sm(hlen)=sm(hlen)+(1.0-fmvm)*um
  
   END SUBROUTINE broyden
 END MODULE m_broyden

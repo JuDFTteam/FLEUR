@@ -29,7 +29,8 @@ contains
     use m_umix
     USE m_kerker
     use m_types_mixvector
-    use m_distance
+    USE m_distance
+    use m_mixing_history
     implicit none
 
     type(t_oneD),      intent(in)    :: oneD
@@ -51,10 +52,10 @@ contains
 
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
-    TYPE(t_mixvector),allocatable    :: sm(:), fsm(:)
-    TYPE(t_mixvector)                :: fmMet, smMet,fsm_mag
+    TYPE(t_mixvector),ALLOCATABLE    :: sm(:), fsm(:)
+    TYPE(t_mixvector)                :: fsm_mag
     LOGICAL                          :: l_densitymatrix
-    integer                          :: it
+    INTEGER                          :: it,maxiter
 
     
     MPI0_a: IF( mpi%irank == 0 ) THEN
@@ -97,7 +98,7 @@ contains
    maxiter=merge(1,input%maxiter,input%imix==0)
    CALL mixing_history(maxiter,inden,outden,sm,fsm,it)
   
-   CALL distance(mpi%irank,cell%vol,input%jspins,fsm,sm,inDen%iter,outDen,results)
+   CALL distance(mpi%irank,cell%vol,input%jspins,fsm(it),sm(it),inDen%iter,outDen,results,fsm_Mag)
    
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 )  call kerker(field, DIMENSION, mpi, &
@@ -108,7 +109,7 @@ contains
     !mixing of the densities
     if(input%imix==0.or.it==1) CALL stmix(atoms,input,noco,fsm(it),fsm_mag,sm(it))
     !if(it>1.and.input%imix==9) CALL pulay(input%alpha,fsm,sm)
-    if(it>1.and.(input%imax==3.or.input%imix==5.or.input%imix==7)) Call broyden(input%alpha,fsm,sm)
+    if(it>1.and.(input%imix==3.or.input%imix==5.or.input%imix==7)) Call broyden(input%alpha,fsm,sm)
 
     !initiatlize mixed density and extract it 
     CALL sm(it)%to_density(inDen)
@@ -116,11 +117,7 @@ contains
     !fix charge of the new density
     CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE., fix)
 
-    IF(atoms%n_u.NE.n_u_keep) THEN
-       inDen%mmpMat = outden%mmpMat
-    END IF
-
-    atoms%n_u=n_u_keep
+   
 
     IF(vacuum%nvac.EQ.1) THEN
        inDen%vacz(:,2,:) = inDen%vacz(:,1,:)
@@ -131,13 +128,7 @@ contains
        END IF
     END IF
     
-    IF (atoms%n_u > 0) THEN
-       IF (.NOT.l_densityMatrixPresent) THEN
-          inDen%mmpMat(:,:,:,:) = outDen%mmpMat(:,:,:,:)
-          CALL resetBroydenHistory()
-       END IF
-    ENDIF
-    
+   
     !write out mixed density
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,.TRUE.,inDen)

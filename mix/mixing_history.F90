@@ -16,7 +16,9 @@ contains
     integer,intent(in)::maxiter
     type(t_potden),intent(in)::inden,outden
     type(t_mixvector),ALLOCATABLE::sm(:),fsm(:)
-    integer,intent(out)::it
+    INTEGER,INTENT(out)::it
+
+    INTEGER:: n
 
     if (.not.allocated(sm_store)) THEN
        allocate(sm_store(maxiter),fsm_store(maxiter))
@@ -31,7 +33,7 @@ contains
     fsm(it) = fsm(it) - sm(it)
     do n=it-1,1,-1 !Copy from storage
        sm(n)=sm_store(n)
-       fm(n)=fsm_store(n)
+       fsm(n)=fsm_store(n)
     ENDDO
     if(iter_stored<maxiter) THEN
        iter_stored=iter_stored+1
@@ -39,7 +41,7 @@ contains
        fsm_store(:iter_stored)=fsm(:iter_stored)
     else
        sm_store(:maxiter-1)=sm(2:maxiter)
-       fsm_store(:maxiter-1)=sm(2:maxiter)
+       fsm_store(:maxiter-1)=fsm(2:maxiter)
     endif
   end subroutine mixing_history
 

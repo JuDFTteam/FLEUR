@@ -412,8 +412,8 @@ CONTAINS
 
        ! mix input and output densities
        CALL timestart("mixing")
-       CALL mix(field2,xcpot,dimension,obsolete,sliceplot,mpi,stars,atoms,sphhar,vacuum,input,&
-                sym,cell,noco,oneD,hybrid,archiveType,inDen,outDen,results)
+       CALL mix(field2,dimension,mpi,stars,atoms,sphhar,vacuum,input,&
+                sym,cell,noco,oneD,archiveType,inDen,outDen,results)
        CALL timestop("mixing")
        
        IF(mpi%irank == 0) THEN
