@@ -98,7 +98,7 @@ contains
    maxiter=merge(1,input%maxiter,input%imix==0)
    CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
   
-   CALL distance(mpi%irank,cell%vol,input%jspins,fsm(it),sm(it),inDen%iter,outDen,results,fsm_Mag)
+   CALL distance(mpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
    
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 )  call kerker(field, DIMENSION, mpi, &
