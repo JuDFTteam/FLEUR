@@ -82,6 +82,8 @@ CONTAINS
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  EnergyDen%pw, tmp_grad,    ED_rs)
 
+         call save_npy("EnergyDen_rezi.npy", EnergyDen%pw)
+
          DO js=1,SIZE(vtot_pw_norm,2)
             DO i=1,stars%ng3
                vTot_pw_norm(i,js)=vTot%pw(i,js) / stars%nstr(i)

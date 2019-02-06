@@ -247,6 +247,12 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    character(len=1000)         :: filename
 
    call init_pw_grid(xcpot, stars, sym, cell)
+
+   call save_npy("kED_pw_rezi_sum.npy", &
+      xcpot%comparison_kinED_pw(1)%pw &
+   +  xcpot%comparison_kinED_pw(2)%pw &
+   +  xcpot%comparison_kinED_pw(3)%pw )
+
    do dim_idx = 1,3
       call pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, &
          xcpot%comparison_kinED_pw(dim_idx)%pw, grad, tmp)
