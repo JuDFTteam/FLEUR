@@ -96,7 +96,7 @@ contains
    ENDIF
    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
    maxiter=merge(1,input%maxiter,input%imix==0)
-   CALL mixing_history(maxiter,inden,outden,sm,fsm,it)
+   CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
   
    CALL distance(mpi%irank,cell%vol,input%jspins,fsm(it),sm(it),inDen%iter,outDen,results,fsm_Mag)
    

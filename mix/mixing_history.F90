@@ -10,10 +10,10 @@ MODULE m_mixing_history
   type(t_mixvector),allocatable::sm_store(:),fsm_store(:)
 contains
   
-  subroutine mixing_history(maxiter,inden,outden,sm,fsm,it)
+  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it)
     use m_types
     implicit none
-    integer,intent(in)::maxiter
+    INTEGER,INTENT(in)::imix,maxiter
     type(t_potden),intent(in)::inden,outden
     type(t_mixvector),ALLOCATABLE::sm(:),fsm(:)
     INTEGER,INTENT(out)::it
@@ -23,7 +23,9 @@ contains
     if (.not.allocated(sm_store)) THEN
        allocate(sm_store(maxiter),fsm_store(maxiter))
     endif
-    it=min(iter_stored+1,maxiter)
+    IF (iter_stored+1==maxiter.AND.imix.NE.9) iter_stored=0 !This is a broyden method which has to 
+                                                            !be reset as soon as maxiter is reached
+    it=MIN(iter_stored+1,maxiter)
     allocate(sm(it),fsm(it))
     CALL sm(it)%alloc()
     CALL fsm(it)%alloc()

@@ -160,11 +160,11 @@ CONTAINS
                  den%vacz(:,iv,js)=vec%vec_vac(ii+1:ii+SIZE(den%vacz,1))
                  ii=ii+SIZE(den%vacz,1)
                  IF (invs2)THEN
-                    den%vacxy(:,:,iv,js)=RESHAPE(vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,js))),SHAPE(den%vacxy(:,:,iv,js)))
+                    den%vacxy(:,:,iv,js)=RESHAPE(vec%vec_vac(ii:ii+SIZE(den%vacxy(:,:,iv,js))-1),SHAPE(den%vacxy(:,:,iv,js)))
                     ii=ii+SIZE(den%vacxy(:,:,iv,js))
                  ELSE
-                    den%vacxy(:,:,iv,js)=RESHAPE(CMPLX(vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,js))),&
-                         vec%vec_vac(ii+SIZE(den%vacxy(:,:,iv,js))+1:ii+2*SIZE(den%vacxy(:,:,iv,js)))),&
+                    den%vacxy(:,:,iv,js)=RESHAPE(CMPLX(vec%vec_vac(ii:ii+SIZE(den%vacxy(:,:,iv,js))-1),&
+                         vec%vec_vac(ii+SIZE(den%vacxy(:,:,iv,js)):ii+2*SIZE(den%vacxy(:,:,iv,js)))-1),&
                          SHAPE(den%vacxy(:,:,iv,js)))
                     ii=ii+2*SIZE(den%vacxy(:,:,iv,js))
                  ENDIF

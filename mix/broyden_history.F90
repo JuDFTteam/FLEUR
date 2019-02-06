@@ -22,19 +22,18 @@ CONTAINS
 
     ! Locals
     INTEGER           :: n,it,hlen
-    REAL              :: dfivi,fmvm,vmnorm
-    REAL,ALLOCATABLE  :: am(:)
+    REAL              :: fmvm,vmnorm
+    REAL,ALLOCATABLE  :: am(:),dfivi(:)
     TYPE(t_mixvector) :: fm1,sm1,ui,um,vi,vm
     TYPE(t_mixvector),allocatable :: u_store(:),v_store(:)
 
     hlen=size(fm)
-    ALLOCATE(u_store(hlen-1),v_store(hlen-1))
-    do it=1,hlen-1
+    ALLOCATE(u_store(hlen-2),v_store(hlen-2))
+    do it=1,hlen-2
        call u_store(it)%alloc()
        call v_store(it)%alloc()
     enddo
      
-    dfivi = 0.0
     CALL fm1%alloc()
     CALL sm1%alloc()
     CALL ui%alloc()
@@ -42,7 +41,8 @@ CONTAINS
     CALL vi%alloc()
     CALL vm%alloc()
     
-    ALLOCATE (am(hlen-1))
+    ALLOCATE (am(hlen-1),dfivi(hlen-1))
+    dfivi = 0.0
     am  = 0.0
     DO n=2,hlen
        sm1 = sm(n) - sm(n-1)
@@ -55,7 +55,7 @@ CONTAINS
           ui=u_store(it)
           vi=v_store(it)
           
-          am(it) = vi.dot.fm(n)
+          am(it) = vi.dot.fm1
           ! calculate um(:) = -am(it)*ui(:) + um(:)
           um=um-am(it)*ui
           WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it) 
@@ -67,7 +67,7 @@ CONTAINS
        DO it = n-2,1,-1
           vi=v_store(it)
           ! calculate vm(:) = -am(it)*dfivi*vi(:) + vm
-          vm=vm-am(it)*dfivi*vi
+          vm=vm-am(it)*dfivi(it)*vi
        END DO
 
        vmnorm=fm1.dot.vm
@@ -77,9 +77,9 @@ CONTAINS
        vm=(1.0/vmnorm)*vm
      
        ! save dfivi(mit) for next iteration
-       dfivi = vmnorm
-       if (n<hlen) u_store(n)=um
-       if (n<hlen) v_store(n)=vm
+       dfivi(n-1) = vmnorm
+       IF (n<hlen) u_store(n-1)=um
+       IF (n<hlen) v_store(n-1)=vm
     enddo
     ! update rho(m+1)
     ! calculate <fm|w|vm>
