@@ -88,9 +88,9 @@ CONTAINS
        IF (spin_here(js)) THEN
           !PW part
           IF (pw_here) THEN
-             vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3)=REAL(den%pw(:,j))
+             vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)=REAL(den%pw(:,j))
              IF (.NOT.invs) THEN
-                vec%vec_pw(pw_start(js)+stars%ng3+1:pw_start(js)+2*stars%ng3)=AIMAG(den%pw(:,j))
+                vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1)=AIMAG(den%pw(:,j))
              ENDIF
           ENDIF
           IF (mt_here) THEN
@@ -118,8 +118,8 @@ CONTAINS
              ENDDO
           ENDIF
           IF (misc_here) THEN
-             vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,j)))=RESHAPE(REAL(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
-             vec%vec_misc(misc_start(js)+1+SIZE(den%mmpMat(:,:,:,j)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,j)))=RESHAPE(AIMAG(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
+             vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,j))-1)=RESHAPE(REAL(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
+             vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,j)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,j))-1)=RESHAPE(AIMAG(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
           END IF
        END IF
     END DO
@@ -138,9 +138,9 @@ CONTAINS
            !PW part
            IF (pw_here) THEN
               IF (invs) THEN
-                 den%pw(:,js)=vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3)
+                 den%pw(:,js)=vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)
               ELSE
-                 den%pw(:,js)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3),vec%vec_pw(pw_start(js)+stars%ng3+1:pw_start(js)+2*stars%ng3))
+                 den%pw(:,js)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1),vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1))
               ENDIF
            ENDIF
            IF (mt_here) THEN
@@ -148,7 +148,7 @@ CONTAINS
               ii=mt_start(js)
               DO n=mt_rank+1,atoms%ntype,mt_size
                  DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
-                    den%mt(:atoms%jri(n),l,n,js)=vec%vec_mt(ii+1:ii+atoms%jri(n))
+                    den%mt(:atoms%jri(n),l,n,js)=vec%vec_mt(ii:ii+atoms%jri(n)-1)
                     ii=ii+atoms%jri(n)
                  ENDDO
               ENDDO
@@ -171,7 +171,7 @@ CONTAINS
               ENDDO
            ENDIF
            IF (misc_here) THEN
-              den%mmpMat(:,:,:,js)=RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,js))),vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,js))+1:misc_start(js)+2*SIZE(den%mmpMat(:,:,:,js)))),SHAPE(den%mmpMat(:,:,:,js)))
+              den%mmpMat(:,:,:,js)=RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,js))-1),vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,js)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,js)))-1),SHAPE(den%mmpMat(:,:,:,js)))
            END IF
         END IF
      ENDDO
@@ -198,15 +198,15 @@ CONTAINS
           IF (pw_here) THEN
              !Put back on g-grid and use convol
              IF (invs) THEN
-                pw(:)=vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3)
+                pw(:)=vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)
              ELSE
-                pw(:)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3),vec%vec_pw(pw_start(js)+stars%ng3+1:pw_start(js)+2*stars%ng3))
+                pw(:)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3)-1,vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1))
              ENDIF
              CALL convol(stars,pw_w,pw,stars%ufft)
              pw_w=pw_w*cell%omtil
-             mvec%vec_pw(pw_start(js):pw_start(js)+stars%ng3)=REAL(pw_w)
+             mvec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)=REAL(pw_w)
              IF (.NOT.invs) THEN
-                mvec%vec_pw(pw_start(js)+stars%ng3+1:pw_start(js)+2*stars%ng3)=AIMAG(pw_w)
+                mvec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1)=AIMAG(pw_w)
              ENDIF
           ENDIF
           IF (mt_here) THEN
@@ -391,6 +391,7 @@ CONTAINS
     
 
     !Store pointers to data-types
+    if (associated(atoms)) return !was done before...
     jspins=input%jspins
     nvac=vacuum%nvac
     l_noco=noco%l_noco
@@ -419,7 +420,7 @@ CONTAINS
              mt_start(js)=mt_length+1
              !This PE stores some(or all) MT data
              DO n=mt_rank+1,atoms%ntype,mt_size
-                mt_length=mt_length+sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))*atoms%jri(n)
+                mt_length=mt_length+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
              ENDDO
              mt_stop(js)=mt_length
           END IF
@@ -493,9 +494,9 @@ CONTAINS
       
       vecout=vec1
       vecout%vec_pw=vecout%vec_pw+vec2%vec_pw
-      vecout%vec_mt=vecout%vec_mt+vec2%vec_pw
-      vecout%vec_vac=vecout%vec_vac+vec2%vec_pw
-      vecout%vec_misc=vecout%vec_misc+vec2%vec_pw
+      vecout%vec_mt=vecout%vec_mt+vec2%vec_mt
+      vecout%vec_vac=vecout%vec_vac+vec2%vec_vac
+      vecout%vec_misc=vecout%vec_misc+vec2%vec_misc
     END FUNCTION add_vectors
     
     FUNCTION subtract_vectors(vec1,vec2)RESULT(vecout)
@@ -504,9 +505,9 @@ CONTAINS
       
       vecout=vec1
       vecout%vec_pw=vecout%vec_pw-vec2%vec_pw
-      vecout%vec_mt=vecout%vec_mt-vec2%vec_pw
-      vecout%vec_vac=vecout%vec_vac-vec2%vec_pw
-      vecout%vec_misc=vecout%vec_misc-vec2%vec_pw
+      vecout%vec_mt=vecout%vec_mt-vec2%vec_mt
+      vecout%vec_vac=vecout%vec_vac-vec2%vec_vac
+      vecout%vec_misc=vecout%vec_misc-vec2%vec_misc
     END FUNCTION subtract_vectors
     
     FUNCTION multiply_dot(vec1,vec2)RESULT(dprod)

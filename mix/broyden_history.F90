@@ -52,8 +52,8 @@ CONTAINS
        um = alpha * fm1 + sm1
        
        DO it = n-2,1,-1
-          ui=u_store(n)
-          vi=v_store(n)
+          ui=u_store(it)
+          vi=v_store(it)
           
           am(it) = vi.dot.fm(n)
           ! calculate um(:) = -am(it)*ui(:) + um(:)
@@ -65,7 +65,7 @@ CONTAINS
        ! convolute fm1 with the metrik and store in vm
        vm=fm1%apply_metric()
        DO it = n-2,1,-1
-          vi=v_store(n)
+          vi=v_store(it)
           ! calculate vm(:) = -am(it)*dfivi*vi(:) + vm
           vm=vm-am(it)*dfivi*vi
        END DO

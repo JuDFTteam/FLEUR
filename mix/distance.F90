@@ -24,12 +24,12 @@ contains
     character(len=100)::attributes(2)
     
     CALL fmMet%alloc()
-    if (jspins==2) CALL fsm_mag%alloc()
- 
-    ! calculate Magnetisation-difference
-    CALL fsm_mag%from_density(outden,swapspin=.true.)
-    fsm_mag=fsm_mag-sm
-
+    IF (jspins==2) THEN
+       CALL fsm_mag%alloc()
+       ! calculate Magnetisation-difference
+       CALL fsm_mag%from_density(outden,swapspin=.TRUE.)
+       fsm_mag=fsm_mag-sm
+    ENDIF
     ! Apply metric w to fsm and store in fmMet:  w |fsm>
     fmMet=fsm%apply_metric()
   
@@ -37,7 +37,7 @@ contains
     DO js = 1,jspins
        dist(js) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),js)
     END DO
-    dist(6) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),3)
+    IF (SIZE(outden%pw,2)>2) dist(6) = fsm%multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE.,.FALSE./),3)
     IF (jspins.EQ.2) THEN
        dist(3) = fsm_mag%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),1)+&
             fsm_mag%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),2)
