@@ -83,10 +83,10 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     CLASS(t_mixvector),INTENT(INOUT)    :: vec
-    TYPE(t_potden),    INTENT(in)       :: Den
+    TYPE(t_potden),    INTENT(inout)    :: Den
     LOGICAL,INTENT(IN),OPTIONAL         :: swapspin
     INTEGER:: js,ii,n,l,iv,j
-    PRINT *,"TODO MPI distribute density"
+    call den%distribute(mix_mpi_comm)
     DO js=1,MERGE(jspins,3,.NOT.l_noco)
        j=js
        IF (PRESENT(swapspin)) THEN
@@ -208,7 +208,7 @@ CONTAINS
            END IF
         END IF
      ENDDO
-     PRINT *,"TODO MPI collect density"
+     call den%collect(mix_mpi_comm)
     
   END SUBROUTINE mixvector_to_density
 
@@ -562,13 +562,14 @@ CONTAINS
     
     FUNCTION multiply_dot(vec1,vec2)RESULT(dprod)
       TYPE(t_mixvector),INTENT(IN)::vec1,vec2
-      REAL                        ::dprod
+      REAL                        ::dprod,dprod_tmp
       dprod=dot_PRODUCT(vec1%vec_pw,vec2%vec_pw)
       dprod=dprod+dot_PRODUCT(vec1%vec_mt,vec2%vec_mt)
       dprod=dprod+dot_PRODUCT(vec1%vec_vac,vec2%vec_vac)
       dprod=dprod+dot_PRODUCT(vec1%vec_misc,vec2%vec_misc)
 #ifdef CPP_MPI
-      CALL MPI_REDUCE_ALL()
+      CALL MPI_ALLREDUCE_ALL(dprod,dprod_tmp,1,MPI_DOUBLE_PRECISION,MPI_SUM,mix_mpi_comm)
+      dprod=dprod_tmp
 #endif      
     END FUNCTION multiply_dot
 
@@ -577,7 +578,7 @@ CONTAINS
       TYPE(t_mixvector),INTENT(IN)::vec2
       LOGICAL,INTENT(IN)          ::mask(4)
       INTEGER,INTENT(IN)          ::spin
-      REAL                        ::dprod
+      REAL                        ::dprod,dprod_tmp
 
       INTEGER:: js
 
@@ -597,9 +598,10 @@ CONTAINS
                  dprod=dprod+dot_PRODUCT(vec1%vec_misc(misc_start(js):misc_stop(js)),&
                  vec2%vec_misc(misc_start(js):misc_stop(js)))
       enddo
-         
+
 #ifdef CPP_MPI
-      CALL MPI_REDUCE_ALL()
-#endif      
+      CALL MPI_ALLREDUCE_ALL(dprod,dprod_tmp,1,MPI_DOUBLE_PRECISION,MPI_SUM,mix_mpi_comm)
+      dprod=dprod_tmp
+#endif
     END FUNCTION multiply_dot_mask
   end MODULE m_types_mixvector

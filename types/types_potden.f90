@@ -41,10 +41,76 @@ MODULE m_types_potden
      procedure :: ChargeAndMagnetisationToSpins
      procedure :: addPotDen
      procedure :: subPotDen
+     procedure :: distribute
+     procedure :: collect
   END TYPE t_potden
 
 CONTAINS
-
+  subroutine collect(this,mpi_comm)
+    use m_mpi_bc_tool
+    implicit none
+    class(t_potden),INTENT(INOUT) :: this
+    integer :: mpi_comm
+#ifdef CPP_MPI
+    include 'mpif.h'
+    real,ALLOCATABLE::rtmp(:)
+    complex,ALLOCATABLE::ctmp(:)
+    !pw
+    ALLOCATE(ctmp(size(this%pw)))
+    CALL MPI_REDUCE(this%pw,ctmp,size(this%pw),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+    if (irank==0) this%pw=reshape(ctmp,shape(this%pw))
+    deallocate(ctmp)
+    !mt
+    ALLOCATE(rtmp(size(this%mt)))
+    CALL MPI_REDUCE(this%mt,rtmp,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,mpi_comm,ierr)
+    if (irank==0) this%mt=reshape(rtmp,shape(this%mt))
+    deallocate(rtmp)
+    !vac
+    if (allocated(this%vacz)) THEN
+       ALLOCATE(rtmp(size(this%vacz)))
+       CALL MPI_REDUCE(this%vacz,rtmp,size(this%vacz),MPI_DOUBLE_PRECISION,MPI_SUM,0,mpi_comm,ierr)
+       if (irank==0) this%vacz=reshape(rtmp,shape(this%vacz))
+       deallocate(rtmp)
+       ALLOCATE(ctmp(size(this%vacxy)))
+       CALL MPI_REDUCE(this%vacxy,ctmp,size(this%vacxy),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+       if (irank==0) this%vacxy=reshape(ctmp,shape(this%vacxy))
+       deallocate(ctmp)
+    endif
+    !density matrix
+    if (allocated(this%mmpMat)) then
+       ALLOCATE(ctmp(size(this%mmpMat)))
+       CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+       if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
+       deallocate(ctmp)
+    endif
+#endif
+  end subroutine collect
+  
+  subroutine distribute(this,mpi_comm)
+    use m_mpi_bc_tool
+    implicit none
+    class(t_potden),INTENT(INOUT) :: this
+    integer :: mpi_comm
+#ifdef CPP_MPI
+    include 'mpif.h'
+    call mpi_bc(this%iter,0,mpi_comm)
+    call mpi_bc(this%potdentype,0,mpi_comm)
+    call mpi_bc(this%pw,0,mpi_comm)
+    call mpi_bc(this%pw_w ,0,mpi_comm)
+    call mpi_bc(this%mt ,0,mpi_comm)
+    call mpi_bc(this%vacz,0,mpi_comm)
+    call mpi_bc(this%vacxy,0,mpi_comm)
+    call mpi_bc(this%theta_pw,0,mpi_comm)
+    call mpi_bc(this%phi_pw,0,mpi_comm)
+    call mpi_bc(this%theta_vacz,0,mpi_comm)
+    call mpi_bc(this%phi_vacz,0,mpi_comm)
+    call mpi_bc(this%theta_vacxy,0,mpi_comm)
+    call mpi_bc(this%phi_vacxy,0,mpi_comm)
+    call mpi_bc(this%theta_mt,0,mpi_comm)
+    call mpi_bc(this%phi_mt,0,mpi_comm)
+#endif
+  end subroutine distribute
+  
   SUBROUTINE sum_both_spin(this,that)
     IMPLICIT NONE
     CLASS(t_potden),INTENT(INOUT)   :: this

@@ -92,6 +92,7 @@ contains
       IF (ALL(inDen%mmpMat==0.0)) THEN
          l_densitymatrix=.FALSE.
          inDen%mmpMat=outDen%mmpMat
+         if (mpi%irank.ne.0) inden%mmpmat=0.0 
       ENDIF
    ENDIF
    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
