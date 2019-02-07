@@ -128,7 +128,12 @@ contains
        END IF
     END IF
     
-   
+    IF (atoms%n_u>0.AND..NOT.l_densitymatrix.AND..NOT.input%ldaulinmix) THEN
+       !No density matrix was present 
+       !but is now created...
+       CALL mixing_history_reset()
+       CALL mixvector_reset()
+    ENDIF
     !write out mixed density
     CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,.TRUE.,inDen)

@@ -47,4 +47,9 @@ contains
     endif
   end subroutine mixing_history
 
+  SUBROUTINE mixing_history_reset()
+    IMPLICIT NONE
+    iter_stored=0
+  END SUBROUTINE mixing_history_reset
+
 end MODULE m_mixing_history

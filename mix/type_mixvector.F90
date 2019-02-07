@@ -18,15 +18,15 @@ MODULE m_types_mixvector
   TYPE(t_sphhar),POINTER :: sphhar
   TYPE(t_atoms),POINTER  :: atoms  =>null()
   INTEGER                :: jspins,nvac
-  LOGICAL                :: l_noco,invs,invs2
+  LOGICAL                :: l_noco,invs,invs2,l_mtnocopot
   INTEGER                :: pw_length !The shape of the local arrays
-  INTEGER                :: pw_start(3),pw_stop(3) !First and last index for spin
-  INTEGER                :: mt_length
-  INTEGER                :: mt_start(3),mt_stop(3) !First and last index for spin
-  INTEGER                :: vac_length
-  INTEGER                :: vac_start(3),vac_stop(3) !First and last index for spin
+  INTEGER                :: pw_start(3)=0,pw_stop(3) !First and last index for spin
+  INTEGER                :: mt_length,mt_length_g
+  INTEGER                :: mt_start(3)=0,mt_stop(3) !First and last index for spin
+  INTEGER                :: vac_length,vac_length_g
+  INTEGER                :: vac_start(3)=0,vac_stop(3) !First and last index for spin
   INTEGER                :: misc_length=0
-  INTEGER                :: misc_start(3),misc_stop(3) !First and last index for spin
+  INTEGER                :: misc_start(3)=0,misc_stop(3) !First and last index for spin
   INTEGER                :: mix_mpi_comm !Communicator for all PEs doing mixing
   LOGICAL                :: spin_here(3)=.TRUE.
   LOGICAL                :: pw_here=.TRUE.
@@ -66,10 +66,17 @@ MODULE m_types_mixvector
   END INTERFACE OPERATOR (.dot.)
 
   PUBLIC :: OPERATOR(+),OPERATOR(-),OPERATOR(*),OPERATOR(.dot.)
-  PUBLIC :: mixvector_init
+  PUBLIC :: mixvector_init,mixvector_reset
 
 CONTAINS
 
+  SUBROUTINE mixvector_reset()
+    IMPLICIT NONE
+    atoms=>NULL()
+    DEALLOCATE(g_mt)
+    IF (ALLOCATED(g_vac)) DEALLOCATE(g_vac)
+    IF (ALLOCATED(g_misc)) DEALLOCATE(g_misc)
+  END SUBROUTINE mixvector_reset
 
   
   SUBROUTINE mixvector_from_density(vec,den,swapspin)
@@ -89,19 +96,9 @@ CONTAINS
           !PW part
           IF (pw_here) THEN
              vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)=REAL(den%pw(:,j))
-             IF (.NOT.invs) THEN
+             IF ((.NOT.invs).or.(js==3)) THEN
                 vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1)=AIMAG(den%pw(:,j))
              ENDIF
-          ENDIF
-          IF (mt_here) THEN
-             !This PE stores some(or all) MT data
-             ii=mt_start(js)-1
-             DO n=mt_rank+1,atoms%ntype,mt_size
-                DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
-                   vec%vec_mt(ii+1:ii+atoms%jri(n))=den%mt(:atoms%jri(n),l,n,j)
-                   ii=ii+atoms%jri(n)
-                ENDDO
-             ENDDO
           ENDIF
           IF (vac_here) THEN
              !This PE stores vac-data
@@ -111,12 +108,36 @@ CONTAINS
                 ii=ii+SIZE(den%vacz,1)
                 vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,js)))=RESHAPE(REAL(den%vacxy(:,:,iv,j)),(/SIZE(den%vacxy(:,:,iv,j))/))
                 ii=ii+SIZE(den%vacxy(:,:,iv,j))
-                IF (.NOT.invs2)THEN
+                IF ((.NOT.invs2).or.(js==3))THEN
                    vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,j)))=RESHAPE(AIMAG(den%vacxy(:,:,iv,j)),(/SIZE(den%vacxy(:,:,iv,j))/))
                    ii=ii+SIZE(den%vacxy(:,:,iv,j))
                 ENDIF
+                IF (js>2)THEN
+                   vec%vec_vac(ii+1:ii+SIZE(den%vacz,1))=den%vacz(:,iv,4)
+                   ii=ii+SIZE(den%vacz,1)
+                ENDIF
              ENDDO
           ENDIF
+          IF (js>2.AND..NOT.l_mtnocopot) RETURN
+          IF (mt_here) THEN
+             !This PE stores some(or all) MT data
+             ii=mt_start(js)-1
+             DO n=mt_rank+1,atoms%ntype,mt_size
+                DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
+                   vec%vec_mt(ii+1:ii+atoms%jri(n))=den%mt(:atoms%jri(n),l,n,j)
+                   ii=ii+atoms%jri(n)
+                ENDDO
+             ENDDO
+             IF (js==3) THEN !Imaginary part 
+                DO n=mt_rank+1,atoms%ntype,mt_size
+                   DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
+                      vec%vec_mt(ii+1:ii+atoms%jri(n))=den%mt(:atoms%jri(n),l,n,4)
+                      ii=ii+atoms%jri(n)
+                   ENDDO
+                ENDDO
+             ENDIF
+          ENDIF
+          IF (js>2) RETURN
           IF (misc_here) THEN
              vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,j))-1)=RESHAPE(REAL(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
              vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,j)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,j))-1)=RESHAPE(AIMAG(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
@@ -137,13 +158,13 @@ CONTAINS
         IF (spin_here(js)) THEN
            !PW part
            IF (pw_here) THEN
-              IF (invs) THEN
+              IF (invs.and.js<3) THEN
                  den%pw(:,js)=vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)
               ELSE
                  den%pw(:,js)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1),vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1))
               ENDIF
            ENDIF
-           IF (mt_here) THEN
+           IF (mt_here.AND.(js<3.OR.l_mtnocopot)) THEN
               !This PE stores some(or all) MT data
               ii=mt_start(js)
               DO n=mt_rank+1,atoms%ntype,mt_size
@@ -152,26 +173,38 @@ CONTAINS
                     ii=ii+atoms%jri(n)
                  ENDDO
               ENDDO
+              IF (js==3) THEN !Imaginary part comes as 4th spin
+                 DO n=mt_rank+1,atoms%ntype,mt_size
+                    DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
+                       den%mt(:atoms%jri(n),l,n,4)=vec%vec_mt(ii:ii+atoms%jri(n)-1)
+                       ii=ii+atoms%jri(n)
+                    ENDDO
+                 ENDDO
+              ENDIF
            ENDIF
            IF (vac_here) THEN
               !This PE stores vac-data
-              ii=vac_start(js)
+              ii=vac_start(js)-1
               DO iv=1,nvac
                  den%vacz(:,iv,js)=vec%vec_vac(ii+1:ii+SIZE(den%vacz,1))
                  ii=ii+SIZE(den%vacz,1)
-                 IF (invs2)THEN
-                    den%vacxy(:,:,iv,js)=RESHAPE(vec%vec_vac(ii:ii+SIZE(den%vacxy(:,:,iv,js))-1),SHAPE(den%vacxy(:,:,iv,js)))
+                 IF (invs2.and.js<3)THEN
+                    den%vacxy(:,:,iv,js)=RESHAPE(vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,js))),SHAPE(den%vacxy(:,:,iv,js)))
                     ii=ii+SIZE(den%vacxy(:,:,iv,js))
                  ELSE
-                    den%vacxy(:,:,iv,js)=RESHAPE(CMPLX(vec%vec_vac(ii:ii+SIZE(den%vacxy(:,:,iv,js))-1),&
-                         vec%vec_vac(ii+SIZE(den%vacxy(:,:,iv,js)):ii+2*SIZE(den%vacxy(:,:,iv,js)))-1),&
+                    den%vacxy(:,:,iv,js)=RESHAPE(CMPLX(vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,js))),&
+                         vec%vec_vac(ii+SIZE(den%vacxy(:,:,iv,js))+1:ii+2*SIZE(den%vacxy(:,:,iv,js)))),&
                          SHAPE(den%vacxy(:,:,iv,js)))
                     ii=ii+2*SIZE(den%vacxy(:,:,iv,js))
                  ENDIF
+                 IF (js>2) THEN
+                    den%vacz(:,iv,4)=vec%vec_vac(ii+1:ii+SIZE(den%vacz,1))
+                    ii=ii+SIZE(den%vacz,1)
+              ENDIF
               ENDDO
            ENDIF
-           IF (misc_here) THEN
-              den%mmpMat(:,:,:,js)=RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,js))-1),vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,js)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,js)))-1),SHAPE(den%mmpMat(:,:,:,js)))
+           IF (misc_here.AND.js<3) THEN
+              den%mmpMat(:,:,:,js)=RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,js))-1),vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,js)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,js))-1)),SHAPE(den%mmpMat(:,:,:,js)))
            END IF
         END IF
      ENDDO
@@ -197,29 +230,36 @@ CONTAINS
           !PW part
           IF (pw_here) THEN
              !Put back on g-grid and use convol
-             IF (invs) THEN
+             IF (invs.and.js<3) THEN
                 pw(:)=vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)
              ELSE
-                pw(:)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3)-1,vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1))
+                pw(:)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1),vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1))
              ENDIF
              CALL convol(stars,pw_w,pw,stars%ufft)
              pw_w=pw_w*cell%omtil
              mvec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)=REAL(pw_w)
-             IF (.NOT.invs) THEN
+             IF ((.NOT.invs).or.(js==3)) THEN 
                 mvec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1)=AIMAG(pw_w)
              ENDIF
           ENDIF
-          IF (mt_here) THEN
+          IF (mt_here.AND.(js<3.OR.l_mtnocopot)) THEN
              !This PE stores some(or all) MT data
-             mvec%vec_mt(mt_start(js):mt_stop(js))=g_mt*vec%vec_mt(mt_start(js):mt_stop(js))
+             mvec%vec_mt(mt_start(js):mt_start(js)+SIZE(g_mt)-1)=g_mt*vec%vec_mt(mt_start(js):mt_start(js)+SIZE(g_mt)-1)
+             IF (js==3) THEN    
+                !Here we have a the imaginary part as well
+                mvec%vec_mt(mt_start(js)+SIZE(g_mt):mt_stop(js))=g_mt*vec%vec_mt(mt_start(js)+SIZE(g_mt):mt_stop(js))
+             ENDIF
           ENDIF
           IF (vac_here) THEN
-             mvec%vec_vac(vac_start(js):vac_stop(js))=g_vac*vec%vec_vac(vac_start(js):vac_stop(js))
+             mvec%vec_vac(vac_start(js):vac_start(js)+SIZE(g_vac)-1)=g_vac*vec%vec_vac(vac_start(js):vac_start(js)+SIZE(g_vac)-1)
+             IF (js==3) THEN !We have some extra data that corresponds to first part of metric
+                mvec%vec_vac(vac_start(js)+SIZE(g_vac):vac_stop(js))=g_vac(:vac_stop(js)-vac_start(js)-SIZE(g_vac)+1)*vec%vec_vac(vac_start(js)+SIZE(g_vac):vac_stop(js))
+             ENDIF
           ENDIF
-          IF (misc_here) THEN
+          IF (misc_here.AND.(js<3)) THEN
              mvec%vec_misc(misc_start(js):misc_stop(js))=g_misc*vec%vec_misc(misc_start(js):misc_stop(js))
           END IF
-       END IF
+       ENDIF
     END DO
    
   END FUNCTION mixvector_metric
@@ -238,7 +278,7 @@ CONTAINS
     
     IF (mt_here) THEN
        !This PE stores some(or all) MT data
-       ALLOCATE(g_mt(mt_length))
+       ALLOCATE(g_mt(mt_length_g)) 
        i=0
        DO n =mt_rank+1,atoms%ntype,mt_size
           dxn = atoms%neq(n) * atoms%dx(n) / 3.0
@@ -275,7 +315,7 @@ CONTAINS
        iv2 = 2
        IF (invs2) iv2 = 1
 
-       ALLOCATE(g_vac(vac_length),wght(vacuum%nmzd))
+       ALLOCATE(g_vac(vac_length_g),wght(vacuum%nmzd))
        dvol = cell%area*vacuum%delz
        ! nvac=1 if (zrfs.or.invs)
        IF (vacuum%nvac.EQ.1) dvol = dvol + dvol
@@ -395,6 +435,7 @@ CONTAINS
     jspins=input%jspins
     nvac=vacuum%nvac
     l_noco=noco%l_noco
+    l_mtnocopot=noco%l_mtnocopot
     invs=sym%invs
     invs2=sym%invs2
     stars=>stars_i;cell=>cell_i;sphhar=>sphhar_i;atoms=>atoms_i
@@ -409,32 +450,41 @@ CONTAINS
           !Now calculate the length of the vectors
           IF (pw_here) THEN
              pw_start(js)=pw_length+1
-             IF (invs) THEN
+             IF (invs.and.js<3) THEN
                 pw_length=pw_length+stars%ng3
              ELSE
                 pw_length=pw_length+2*stars%ng3
              ENDIF
           ENDIF
           pw_stop(js)=pw_length
-          IF (mt_here) THEN
+          IF (mt_here.AND.(js<3.OR.noco%l_mtnocopot)) THEN
              mt_start(js)=mt_length+1
              !This PE stores some(or all) MT data
              DO n=mt_rank+1,atoms%ntype,mt_size
                 mt_length=mt_length+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
              ENDDO
+             IF (js==3) THEN
+                !need to store imaginary part as well...
+                DO n=mt_rank+1,atoms%ntype,mt_size
+                   mt_length=mt_length+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
+                ENDDO
+             ENDIF
              mt_stop(js)=mt_length
           END IF
+          IF (js==1) mt_length_g=mt_length
           IF (vac_here) THEN
              !This PE stores vac-data
              vac_start(js)=vac_length+1
-             IF (invs2) THEN
+             IF (invs2.and.js<3) THEN
                 vac_length=vac_length+vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
              ELSE
                 vac_length=vac_length+2*vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
              ENDIF
+             IF (js==3) vac_length=vac_length+vacuum%nmzd * vacuum%nvac !Offdiagnal potential is complex
              vac_stop(js)=vac_length
           ENDIF
-          IF (misc_here) THEN
+          IF (js==1) vac_length_g=vac_length
+          IF (misc_here.AND.(js<3)) THEN
              misc_start(js)=misc_length+1
              misc_length=misc_length+7*7*2*atoms%n_u
              misc_stop(js)=misc_length
@@ -534,16 +584,16 @@ CONTAINS
       dprod=0.0
 
       DO js=1,3
-         IF (mask(1).and.(spin==js.or.spin==0.and.pw_start(js)>0)) &
+         IF (mask(1).and.(spin==js.or.spin==0).and.pw_start(js)>0) &
                  dprod=dprod+dot_PRODUCT(vec1%vec_pw(pw_start(js):pw_stop(js)),&
                  vec2%vec_pw(pw_start(js):pw_stop(js)))
-         IF (mask(2).and.(spin==js.or.spin==0.and.mt_start(js)>0)) &
+         IF (mask(2).and.(spin==js.or.spin==0).and.mt_start(js)>0) &
                  dprod=dprod+dot_PRODUCT(vec1%vec_mt(mt_start(js):mt_stop(js)),&
                  vec2%vec_mt(mt_start(js):mt_stop(js)))
-         IF (mask(3).and.(spin==js.or.spin==0.and.vac_start(js)>0)) &
+         IF (mask(3).and.(spin==js.or.spin==0).and.vac_start(js)>0) &
                  dprod=dprod+dot_PRODUCT(vec1%vec_vac(vac_start(js):vac_stop(js)),&
                  vec2%vec_vac(vac_start(js):vac_stop(js)))
-         IF (mask(4).and.(spin==js.or.spin==0.and.misc_start(js)>0)) &
+         IF (mask(4).and.(spin==js.or.spin==0).and.misc_start(js)>0) &
                  dprod=dprod+dot_PRODUCT(vec1%vec_misc(misc_start(js):misc_stop(js)),&
                  vec2%vec_misc(misc_start(js):misc_stop(js)))
       enddo

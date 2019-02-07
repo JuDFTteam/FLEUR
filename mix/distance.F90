@@ -40,7 +40,7 @@ contains
     END DO
     IF (SIZE(outden%pw,2)>2) dist(6) = fsm%multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE.,.FALSE./),3)
     IF (jspins.EQ.2) THEN
-       dist(3) = fsMet%multiply_dot_mask(fsm_mag,(/.true.,.true.,.true.,.false./),1)
+       dist(3) = fmMet%multiply_dot_mask(fsm_mag,(/.true.,.true.,.true.,.false./),1)
        dist(4) = dist(1) + dist(2) + 2.0e0*dist(3)
        dist(5) = dist(1) + dist(2) - 2.0e0*dist(3)
     ENDIF
