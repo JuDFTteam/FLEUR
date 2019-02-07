@@ -180,7 +180,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    ALLOCATE (eig(MAXVAL(cdnvalJob%noccbd(:))))
    jsp = MERGE(1,jspin,noco%l_noco)
 
-   IF(PRESENT(gOnsite)) THEN
+   IF(atoms%n_hia.GT.0) THEN
       IF(gOnsite%l_tetra) ALLOCATE(tetweights(gOnsite%ne,dimension%neigd))
    END IF
 

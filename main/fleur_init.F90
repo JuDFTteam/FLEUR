@@ -141,7 +141,6 @@
           input%scaleA1 = 1.0
           input%scaleA2 = 1.0
           input%scaleC = 1.0
-          input%l_hia = .false.
 
           !Many of these can probably be eliminated
           input%ldahia_ne = 1301 !same as for dos calculations
@@ -152,6 +151,8 @@
           input%ldahia_sphavg = .true.
           input%ldahia_mode = 2
           input%ldahia_nin = 5
+          input%l_hia = .false.
+          atoms%n_hia = 0
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1

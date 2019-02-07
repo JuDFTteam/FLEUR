@@ -38,7 +38,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_Ekwritesl
    USE m_banddos_io
    USE m_unfold_band_kpts
-   USE m_gOnsite
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -99,9 +98,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
-   CALL gOnsite%init(input,atoms,kpts,dimension,.true.)
-
-   !IF(atoms%n_hia.GT.0.AND.gOnsite%l_tetra) CALL calc_weights()
+   IF(atoms%n_hia.GT.0) CALL gOnsite%init(input,atoms,kpts,dimension,.true.)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
