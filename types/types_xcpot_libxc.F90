@@ -259,7 +259,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen_KS)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
       INTEGER, INTENT (IN)           :: jspins
@@ -267,7 +267,16 @@ CONTAINS
       REAL, INTENT (OUT)             :: exc(:) !points
       ! optional arguments for GGA
       TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
-      REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen(:,:)
+
+      ! kinED from Kohn-Sham equations:
+      ! tau = sum[phi_i(r)^dag nabla phi_i(r)]
+      ! see eq (2) in https://doi.org/10.1063/1.1565316
+      ! (-0.5 is applied below)
+      
+      REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:,:)
+      ! tau = 0.5 * sum[|grad phi_i(r)|²]
+      ! see eq (3) in https://doi.org/10.1063/1.1565316
+      REAL, ALLOCATABLE              :: kinEnergyDen_libXC(:,:)
 
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
@@ -288,12 +297,14 @@ CONTAINS
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
          IF(PRESENT(kinEnergyDen)) THEN 
+            ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
+            kinEnergyDen_libXC = transpose(0.25 * grad%laplace - 0.5 * kinEnergyDen_KS)
             call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
-                                 transpose(grad%laplace), transpose(kinEnergyDen), exc)
+                                 transpose(grad%laplace), kinEnergyDen_libXC, exc)
 
             IF (xcpot%func_exc_id_c>0) THEN
                CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
-                                    transpose(grad%laplace), transpose(kinEnergyDen), excc)
+                                    transpose(grad%laplace), kinEnergyDen_libXC, excc)
                exc=exc+excc
             END IF
             

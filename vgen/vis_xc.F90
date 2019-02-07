@@ -89,10 +89,10 @@ CONTAINS
                vTot_pw_norm(i,js)=vTot%pw(i,js) / stars%nstr(i)
             END DO
          END DO
-         write (*,*) "set vtot = 0 again in vis_xc"
-         vTot_pw_norm = 0.0
-         vTot%pw      = 0.0
-         vTot%pw_w    = 0.0
+         !write (*,*) "set vtot = 0 again in vis_xc"
+         !vTot_pw_norm = 0.0
+         !vTot%pw      = 0.0
+         !vTot%pw_w    = 0.0
                       
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  vTot_pw_norm, tmp_grad,    vTot_rs)

@@ -245,7 +245,7 @@ CONTAINS
     ENDIF
     IF (time<min_time*globaltimer%time) RETURN !do not print parts that take less than min_time of the totaltime
     IF (timer%no_calls>1) THEN
-       WRITE(fid,"(a,T7,a,T46,a,T85,a,i0,a,f9.0,a,f9.0,a)") TRIM(indentstring),TRIM(timername),TRIM(timestring(time,globaltimer%time,level)),"(",timer%no_calls,"calls:",timer%mintime,"sec -",timer%maxtime,"sec)"
+       WRITE(fid,"(a,T7,a,T46,a,T85,a,i0,a,f9.3,a,f9.3,a)") TRIM(indentstring),TRIM(timername),TRIM(timestring(time,globaltimer%time,level)),"%  (",timer%no_calls,"calls:",timer%mintime,"sec -",timer%maxtime,"sec)"
     ELSE
        WRITE(fid,"(a,T7,a,T46,a)") TRIM(indentstring),TRIM(timername),timestring(time,globaltimer%time,level)
     END IF
@@ -304,6 +304,7 @@ CONTAINS
        OPEN(2,FILE ='juDFT_times',STATUS="replace")
     ENDIF
     globaltimer%time=cputime()-globaltimer%starttime
+    globaltimer%starttime=cputime()
     WRITE(fn,"('Total execution time: ',i0,'sec')") INT(globaltimer%time)
     CALL add_usage_data("Runtime",globaltimer%time)
     CALL priv_writetimes_longest(globaltimer,fid=fn)

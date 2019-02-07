@@ -51,9 +51,9 @@ CONTAINS
        IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
     ENDIF
 
-    write (*,*) "Set vTot to zero in vgen_finalize()"
-    vTot%pw_w = 0.0
-    vTot%pw   = 0.0
+    !write (*,*) "Set vTot to zero in vgen_finalize()"
+    !vTot%pw_w = 0.0
+    !vTot%pw   = 0.0
 
     ! Rescale vCoul%pw_w with number of stars
     DO js = 1, SIZE(vCoul%pw_w,2)
