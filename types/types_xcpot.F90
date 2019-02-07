@@ -122,7 +122,7 @@ CONTAINS
       call juDFT_error("Can't use XC-parrent class")
    END SUBROUTINE xcpot_get_vxc
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS)
       USE m_types_misc
       USE m_judft
       USE, INTRINSIC :: IEEE_ARITHMETIC
@@ -136,7 +136,7 @@ CONTAINS
       !---> xc energy density
       REAL, INTENT (OUT)                    :: exc (:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) :: grad
-      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen(:,:)
+      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
 
       exc = 0.0
       call juDFT_error("Can't use XC-parrent class")

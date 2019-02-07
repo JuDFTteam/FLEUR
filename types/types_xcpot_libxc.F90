@@ -274,13 +274,14 @@ CONTAINS
       ! (-0.5 is applied below)
       
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:,:)
-      ! tau = 0.5 * sum[|grad phi_i(r)|²]
-      ! see eq (3) in https://doi.org/10.1063/1.1565316
-      REAL, ALLOCATABLE              :: kinEnergyDen_libXC(:,:)
 
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
+
+      ! tau = 0.5 * sum[|grad phi_i(r)|²]
+      ! see eq (3) in https://doi.org/10.1063/1.1565316
+      REAL, ALLOCATABLE              :: kinEnergyDen_libXC(:,:)
 
       IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
@@ -296,7 +297,7 @@ CONTAINS
             exc=exc+excc
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
-         IF(PRESENT(kinEnergyDen)) THEN 
+         IF(PRESENT(kinEnergyDen_KS)) THEN 
             ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
             kinEnergyDen_libXC = transpose(0.25 * grad%laplace - 0.5 * kinEnergyDen_KS)
             call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &

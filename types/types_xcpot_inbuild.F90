@@ -259,7 +259,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 !***********************************************************************
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS)
 !***********************************************************************
       USE m_xcxal, ONLY : excxal
       USE m_xcwgn, ONLY : excwgn
@@ -277,7 +277,7 @@ CONTAINS
       REAL,INTENT (IN)                      :: rh(:,:)
       REAL, INTENT (OUT)                    :: exc(:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) ::grad
-      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen(:,:)
+      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
 
 !c
 !c ---> local scalars
