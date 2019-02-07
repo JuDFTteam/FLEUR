@@ -300,6 +300,9 @@ CONTAINS
          IF(PRESENT(kinEnergyDen_KS)) THEN 
             ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
             kinEnergyDen_libXC = transpose(0.25 * grad%laplace - 0.5 * kinEnergyDen_KS)
+            if(any(kinEnergyDen_libXC < 0.0)) write (*,*) "kED negative", &
+                                                           minval(kinEnergyDen_libxc)
+ 
             call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
                                  transpose(grad%laplace), kinEnergyDen_libXC, exc)
 

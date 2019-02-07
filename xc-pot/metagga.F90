@@ -34,18 +34,13 @@ CONTAINS
          call save_npy("kinED_pw_schroeway_precut.npy",kinEnergyDen_RS) 
       endif
 
-      if(any(kinEnergyDen_RS < eps)) then
-         write (6,*) "         lowest kinetic energy density cutoff = ", minval(kinEnergyDen_RS)
-         kinEnergyDen_RS = max(kinEnergyDen_RS, eps)
-      endif
-
       if(is_pw) then
          call save_npy("kinED_pw_schroeway.npy",kinEnergyDen_RS) 
 
-         write (*,*) "read new"
-         open(unit=69, file="kin_ED_pwway.dat")
-         read(69,*) kinEnergyDen_RS
-         close(69)
+         !write (*,*) "read new"
+         !open(unit=69, file="kin_ED_pwway.dat")
+         !read(69,*) kinEnergyDen_RS
+         !close(69)
       endif
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
