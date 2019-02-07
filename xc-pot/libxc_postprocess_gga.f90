@@ -41,6 +41,7 @@ CONTAINS
  SUBROUTINE libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
     USE m_pw_tofrom_grid
     USE m_types
+    USE m_npy
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN)   :: xcpot
     TYPE(t_stars),INTENT(IN)    :: stars
@@ -61,7 +62,8 @@ CONTAINS
     !vsigma_g(:,1)=vsigma_g(:,1)*stars%nstr(:)
     ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
     CALL pw_to_grid(xcpot,n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma)
-    
+   
+    call save_npy("lapl.npy", grad%laplace)
     CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
 
   END SUBROUTINE libxc_postprocess_gga_pw
