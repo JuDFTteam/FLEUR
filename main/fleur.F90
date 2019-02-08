@@ -446,7 +446,9 @@ CONTAINS
           END IF
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
-          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
+          ! MetaGGAs need a at least 2 iterations
+          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f & 
+                               .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
 
