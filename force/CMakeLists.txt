@@ -1,9 +1,9 @@
 set(fleur_F77 ${fleur_F77}
-force/bfgs.f
-force/bfgs0.f
 force/relax.F
 )
 set(fleur_F90 ${fleur_F90}
+force/bfgs0.f90
+force/bfgs.f90
 force/force_b8.f90
 force/force_0.f90
 force/force_a12.f90
