@@ -41,7 +41,7 @@ CONTAINS
     USE m_fleur_init
     USE m_optional
     USE m_cdn_io
-    USE m_broyd_io
+    USE m_mixing_history
     USE m_qfix
     USE m_vgen
     USE m_writexcstuff
@@ -212,7 +212,7 @@ CONTAINS
                               cell,oneD,enpara,results,sym,xcpot,vTot,iter,iterHF)
           END SELECT
           IF(hybrid%l_calhf) THEN
-             CALL system("rm broyd*")
+             call mixing_history_reset(mpi)
              iter = 0
           END IF
        ENDIF
@@ -412,8 +412,9 @@ CONTAINS
 
        ! mix input and output densities
        CALL timestart("mixing")
-       CALL mix(field2,dimension,mpi,stars,atoms,sphhar,vacuum,input,&
-                sym,cell,noco,oneD,archiveType,inDen,outDen,results)
+       CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
+            stars,atoms,sphhar,vacuum,input,&
+            sym,cell,noco,oneD,archiveType,inDen,outDen,results)
        CALL timestop("mixing")
        
        IF(mpi%irank == 0) THEN
@@ -485,7 +486,7 @@ CONTAINS
             CLOSE(2)
             PRINT *,"qfix set to F"
          ENDIF
-         CALL resetBroydenHistory()
+         call mixing_history_reset(mpi)
       ENDIF
       CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
     END SUBROUTINE priv_geo_end

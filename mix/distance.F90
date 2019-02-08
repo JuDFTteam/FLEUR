@@ -14,9 +14,9 @@ contains
     integer,intent(in)             :: irank,jspins
     real,intent(in)                :: vol
     type(t_mixvector),INTENT(IN)   :: fsm
-    TYPE(t_potden),INTENT(IN)      :: inden,outden
+    TYPE(t_potden),INTENT(INOUT)   :: inden,outden
     TYPE(t_results),INTENT(INOUT)  :: results
-    type(t_mixvector),INTENT(OUT)   :: fsm_mag
+    type(t_mixvector),INTENT(OUT)  :: fsm_mag
     
     integer         ::js
     REAL            :: dist(6) !1:up,2:down,3:spinoff,4:total,5:magnet,6:noco
@@ -46,8 +46,7 @@ contains
     ENDIF
     
     results%last_distance=maxval(1000*SQRT(ABS(dist/vol)))
-    if (irank>1) return
-
+    if (irank>0) return
     !calculate the distance of charge densities for each spin
     CALL openXMLElement('densityConvergence',(/'units'/),(/'me/bohr^3'/))
     

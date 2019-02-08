@@ -53,8 +53,10 @@ CONTAINS
     integer :: mpi_comm
 #ifdef CPP_MPI
     include 'mpif.h'
+    INTEGER:: ierr,irank
     real,ALLOCATABLE::rtmp(:)
     complex,ALLOCATABLE::ctmp(:)
+    CALL MPI_COMM_RANK(mpi_comm,irank,ierr)
     !pw
     ALLOCATE(ctmp(size(this%pw)))
     CALL MPI_REDUCE(this%pw,ctmp,size(this%pw),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
@@ -96,18 +98,11 @@ CONTAINS
     call mpi_bc(this%iter,0,mpi_comm)
     call mpi_bc(this%potdentype,0,mpi_comm)
     call mpi_bc(this%pw,0,mpi_comm)
-    call mpi_bc(this%pw_w ,0,mpi_comm)
-    call mpi_bc(this%mt ,0,mpi_comm)
-    call mpi_bc(this%vacz,0,mpi_comm)
-    call mpi_bc(this%vacxy,0,mpi_comm)
-    call mpi_bc(this%theta_pw,0,mpi_comm)
-    call mpi_bc(this%phi_pw,0,mpi_comm)
-    call mpi_bc(this%theta_vacz,0,mpi_comm)
-    call mpi_bc(this%phi_vacz,0,mpi_comm)
-    call mpi_bc(this%theta_vacxy,0,mpi_comm)
-    call mpi_bc(this%phi_vacxy,0,mpi_comm)
-    call mpi_bc(this%theta_mt,0,mpi_comm)
-    call mpi_bc(this%phi_mt,0,mpi_comm)
+    IF (ALLOCATED(this%pw_w)) CALL mpi_bc(this%pw_w ,0,mpi_comm)
+    CALL mpi_bc(this%mt ,0,mpi_comm)
+    IF (ALLOCATED(this%vacz)) call mpi_bc(this%vacz,0,mpi_comm)
+    IF (ALLOCATED(this%vacxy)) CALL mpi_bc(this%vacxy,0,mpi_comm)
+    IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,mpi_comm)
 #endif
   end subroutine distribute
   

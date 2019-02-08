@@ -15,9 +15,9 @@ MODULE m_mix
 
 contains
 
-  SUBROUTINE mix( field, DIMENSION,  mpi, &
-                stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-                oneD, archiveType, inDen, outDen, results )
+  SUBROUTINE mix_charge( field, DIMENSION,  mpi, l_writehistory,&
+       stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+       oneD, archiveType, inDen, outDen, results )
 
     use m_juDFT
     use m_constants
@@ -38,17 +38,18 @@ contains
     type(t_vacuum),    intent(in)    :: vacuum
     type(t_noco),      intent(in)    :: noco
     type(t_sym),       intent(in)    :: sym
-    type(t_stars),     intent(in)    :: stars
-    type(t_cell),      intent(in)    :: cell
-    type(t_sphhar),    intent(in)    :: sphhar
+    TYPE(t_stars),TARGET,INTENT(in)  :: stars
+    TYPE(t_cell),TARGET,INTENT(in)   :: cell
+    TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
     type(t_dimension), intent(in)    :: dimension
     type(t_mpi),       intent(in)    :: mpi
-    type(t_atoms),     intent(inout) :: atoms !n_u is modified temporarily
+    TYPE(t_atoms),TARGET,INTENT(in)  :: atoms 
     type(t_potden),    intent(inout) :: outDen
     type(t_results),   intent(inout) :: results
     type(t_potden),    intent(inout) :: inDen
     integer,           intent(in)    :: archiveType
+    LOGICAL,           INTENT(IN)    :: l_writehistory
 
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
@@ -57,68 +58,84 @@ contains
     LOGICAL                          :: l_densitymatrix
     INTEGER                          :: it,maxiter
 
-    
+
     MPI0_a: IF( mpi%irank == 0 ) THEN
-      !determine type of mixing:
-      !imix=0:straight, imix=o broyden first, imix=5:broyden second
-      !imix=:generalozed anderson mixing
-      select case( input%imix )
-        case( 0 )
-           WRITE( 6, fmt='(a,2f10.5)' ) 'STRAIGHT MIXING',input%alpha
-           IF (input%jspins.EQ.1) WRITE (6,FMT='(a,2f10.5)')&
-                &    'charge density mixing parameter:',input%alpha
-           IF (input%jspins.EQ.2) WRITE (6,FMT='(a,2f10.5)')&
-                &    'spin density mixing parameter:',input%alpha*input%spinf
+       !determine type of mixing:
+       !imix=0:straight, imix=o broyden first, imix=5:broyden second
+       !imix=:generalozed anderson mixing
+       select case( input%imix )
+       case( 0 )
+          WRITE( 6, fmt='(a,2f10.5)' ) 'STRAIGHT MIXING',input%alpha
+          IF (input%jspins.EQ.1) WRITE (6,FMT='(a,2f10.5)')&
+               &    'charge density mixing parameter:',input%alpha
+          IF (input%jspins.EQ.2) WRITE (6,FMT='(a,2f10.5)')&
+               &    'spin density mixing parameter:',input%alpha*input%spinf
 
-        case( 3 )
+       case( 3 )
           write( 6, fmt='(a,f10.5)' ) 'BROYDEN FIRST MIXING',input%alpha
-        case( 5 )
+       case( 5 )
           write( 6, fmt='(a,f10.5)' ) 'BROYDEN SECOND MIXING',input%alpha
-        case( 7 )
+       case( 7 )
           write( 6, fmt='(a,f10.5)' ) 'ANDERSON GENERALIZED',input%alpha
-        case default
+       case default
           call juDFT_error( "mix: input%imix =/= 0,3,5,7 ", calledby ="mix" )
-      end select
+       end select
 
-      if ( input%jspins == 2 .and. input%imix /= 0 ) then
-        write( 6, '(''WARNING : for QUASI-NEWTON METHODS SPINF=1'')' )
-      end if
-   ENDIF MPI0_a
+       if ( input%jspins == 2 .and. input%imix /= 0 ) then
+          write( 6, '(''WARNING : for QUASI-NEWTON METHODS SPINF=1'')' )
+       end if
+    ENDIF MPI0_a
 
-   l_densitymatrix=.FALSE.
-   IF (atoms%n_u>0) THEN
-      l_densitymatrix=.NOT.input%ldaulinmix
-      CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
-      IF (ALL(inDen%mmpMat==0.0)) THEN
-         l_densitymatrix=.FALSE.
-         inDen%mmpMat=outDen%mmpMat
-         if (mpi%irank.ne.0) inden%mmpmat=0.0 
-      ENDIF
-   ENDIF
-   CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
-   maxiter=merge(1,input%maxiter,input%imix==0)
-   CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
-  
-   CALL distance(mpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
-   
+    l_densitymatrix=.FALSE.
+    IF (atoms%n_u>0) THEN
+       l_densitymatrix=.NOT.input%ldaulinmix
+       IF (mpi%irank==0) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
+       IF (ALL(inDen%mmpMat==0.0)) THEN
+          l_densitymatrix=.FALSE.
+          inDen%mmpMat=outDen%mmpMat
+          if (mpi%irank.ne.0) inden%mmpmat=0.0 
+       ENDIF
+    ENDIF
+    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
+
+    CALL mixing_history_open(mpi,input%maxiter)
+
+    maxiter=MERGE(1,input%maxiter,input%imix==0)
+    CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
+
+    CALL distance(mpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
+
     ! KERKER PRECONDITIONER
-    IF( input%preconditioning_param /= 0 )  call kerker(field, DIMENSION, mpi, &
-                stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-                oneD, inDen, outDen, fsm(it) )
-    
-    
+    IF( input%preconditioning_param /= 0 )  THEN 
+       CALL kerker(field, DIMENSION, mpi, &
+            stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+            oneD, inDen, outDen, fsm(it) )
+       !Store modified density in history
+       CALL mixing_history_store(fsm(it))
+    END IF
     !mixing of the densities
     if(input%imix==0.or.it==1) CALL stmix(atoms,input,noco,fsm(it),fsm_mag,sm(it))
     !if(it>1.and.input%imix==9) CALL pulay(input%alpha,fsm,sm)
     if(it>1.and.(input%imix==3.or.input%imix==5.or.input%imix==7)) Call broyden(input%alpha,fsm,sm)
 
-    !initiatlize mixed density and extract it 
+    !extracte mixed density 
+    inDen%pw=0.0;inDen%mt=0.0
+    IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
+    IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
+    IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat=0.0
     CALL sm(it)%to_density(inDen)
-      
-    !fix charge of the new density
-    CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE., fix)
+    IF (atoms%n_u>0.AND..NOT.l_densitymatrix.AND..NOT.input%ldaulinmix) THEN
+       !No density matrix was present 
+       !but is now created...
+       inden%mmpMAT=outden%mmpMat
+       CALL mixing_history_reset(mpi)
+       CALL mixvector_reset()
+    ENDIF
 
-   
+    !fix charge of the new density
+    IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE., fix)
+
+
 
     IF(vacuum%nvac.EQ.1) THEN
        inDen%vacz(:,2,:) = inDen%vacz(:,1,:)
@@ -128,30 +145,25 @@ contains
           inDen%vacxy(:,:,2,:) = inDen%vacxy(:,:,1,:)
        END IF
     END IF
-    
-    IF (atoms%n_u>0.AND..NOT.l_densitymatrix.AND..NOT.input%ldaulinmix) THEN
-       !No density matrix was present 
-       !but is now created...
-       CALL mixing_history_reset()
-       CALL mixvector_reset()
-    ENDIF
+
+
     !write out mixed density
-    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    IF (mpi%irank==0) CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,.TRUE.,inDen)
-    
+
 #ifdef CPP_HDF
-    IF (judft_was_argument("-last_extra")) THEN
+    IF (mpi%irank==0.and.judft_was_argument("-last_extra")) THEN
        CALL system("rm cdn_last.hdf")
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
             1,results%last_distance,results%ef,.TRUE.,inDen,'cdn_last')
-       
+
     END IF
 #endif
 
     inDen%iter = inDen%iter + 1
-    
 
+    IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(mpi)
 
-  END SUBROUTINE mix
+  END SUBROUTINE mix_charge
   
 END MODULE m_mix

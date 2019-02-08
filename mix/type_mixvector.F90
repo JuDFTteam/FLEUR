@@ -7,10 +7,12 @@ MODULE m_types_mixvector
   !TODO!!!
   ! LDA+U
   ! Noco (third spin)
-
   
   use m_types
   implicit none
+#ifdef CPP_MPI
+      include 'mpif.h'
+#endif
   PRIVATE
   !Here we store the pointers used for metric
   TYPE(t_stars),POINTER  :: stars
@@ -49,6 +51,10 @@ MODULE m_types_mixvector
      PROCEDURE :: to_density=>mixvector_to_density
      PROCEDURE :: apply_metric=>mixvector_metric
      PROCEDURE :: multiply_dot_mask
+     PROCEDURE :: read_unformatted
+     PROCEDURE :: write_unformatted
+     GENERIC :: READ(UNFORMATTED) =>read_unformatted
+     GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
   END TYPE t_mixvector
 
   INTERFACE OPERATOR (*)
@@ -69,6 +75,35 @@ MODULE m_types_mixvector
   PUBLIC :: mixvector_init,mixvector_reset
 
 CONTAINS
+
+  SUBROUTINE READ_unformatted(this,unit,iostat,iomsg)
+    IMPLICIT NONE
+    CLASS(t_mixvector),INTENT(INOUT)::this
+    INTEGER,INTENT(IN)::unit
+    INTEGER,INTENT(OUT)::iostat
+    CHARACTER(len=*),INTENT(INOUT)::iomsg
+
+    CALL this%alloc()
+    IF (pw_here) READ(unit) this%vec_pw
+    IF (mt_here) READ(unit) this%vec_mt
+    IF (vac_here) READ(unit) this%vec_vac
+    IF (misc_here) READ(unit) this%vec_misc
+  END SUBROUTINE READ_unformatted
+
+  SUBROUTINE write_unformatted(this,unit,iostat,iomsg)
+    IMPLICIT NONE
+    CLASS(t_mixvector),INTENT(IN)::this
+    INTEGER,INTENT(IN)::unit
+    INTEGER,INTENT(OUT)::iostat
+    CHARACTER(len=*),INTENT(INOUT)::iomsg
+    IF (pw_here) WRITE(unit) this%vec_pw
+    IF (mt_here) WRITE(unit) this%vec_mt
+    IF (vac_here) WRITE(unit) this%vec_vac
+    IF (misc_here) WRITE(unit) this%vec_misc
+  END SUBROUTINE write_unformatted
+
+  
+
 
   SUBROUTINE mixvector_reset()
     IMPLICIT NONE
@@ -369,19 +404,18 @@ CONTAINS
   SUBROUTINE init_storage_mpi(mpi_comm)
     IMPLICIT NONE
     INTEGER,INTENT(in):: mpi_comm
+    INTEGER      :: irank,isize,err,js,new_comm
     mix_mpi_comm=mpi_comm
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-    INTEGER      :: irank,isize,err,js,new_comm
 
     CALL mpi_comm_rank(mpi_comm,irank,err)
     CALL mpi_comm_size(mpi_comm,isize,err)
 
     IF (isize==1) RETURN !No parallelization
     js=MERGE(jspins,3,.NOT.l_noco)!distribute spins
-    js=MAX(js,isize)
-    CALL MPI_COMM_SPLIT(mpi_comm,MOD(irank,js),irank,new_comm)
-    spin_here=(/MOD(irank,js)==0,MOD(irank,js)==1,(isize=2.AND.irank==0).or.MOD(irank,js)==2/)
+    js=MIN(js,isize)
+    CALL MPI_COMM_SPLIT(mpi_comm,MOD(irank,js),irank,new_comm,err)
+    spin_here=(/MOD(irank,js)==0,MOD(irank,js)==1,(isize==2.AND.irank==0).or.MOD(irank,js)==2/)
 
     CALL mpi_comm_rank(new_comm,irank,err)
     CALL mpi_comm_size(new_comm,isize,err)
@@ -391,20 +425,21 @@ CONTAINS
     IF(isize==1) return !No further parallelism
     !Split off the pw-part
     pw_here=(irank==0)
-    mt_here=(irank>1)
-    vac_here=vac_here.AND.(irank>1)
-    misc_here=misc_here.AND.(irank>1)
+    mt_here=(irank>0)
+    vac_here=vac_here.AND.(irank>0)
+    misc_here=misc_here.AND.(irank>0)
     isize=isize-1
     irank=irank-1
+    mt_rank=irank
+    mt_size=isize
     IF(isize==1.OR.irank<0) RETURN !No further parallelism
     IF (vac_here.OR.misc_here) THEN !split off-vacuum&misc part
        vac_here=vac_here.AND.(irank==0)
        misc_here=misc_here.AND.(irank==0)
-       mt_here=(irank>1)
+       mt_here=(irank>0)
        isize=isize-1
        irank=irank-1
     ENDIF
-    IF(isize==1.OR.irank<0) RETURN !No further parallelism
     mt_rank=irank
     mt_size=isize
 #endif
@@ -427,7 +462,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN),TARGET :: sphhar_i
     TYPE(t_atoms),INTENT(IN),TARGET  :: atoms_i
 
-    INTEGER::js,n
+    INTEGER::js,n,len
     
 
     !Store pointers to data-types
@@ -445,6 +480,7 @@ CONTAINS
     CALL init_storage_mpi(mpi_comm)
     
     pw_length=0;mt_length=0;vac_length=0;misc_length=0
+    mt_length_g=0;vac_length_g=0
     DO js=1,MERGE(jspins,3,.NOT.l_noco)
        IF (spin_here(js)) THEN
           !Now calculate the length of the vectors
@@ -457,33 +493,37 @@ CONTAINS
              ENDIF
           ENDIF
           pw_stop(js)=pw_length
-          IF (mt_here.AND.(js<3.OR.noco%l_mtnocopot)) THEN
-             mt_start(js)=mt_length+1
+          IF (mt_here) THEN
+             IF (js<3.OR.noco%l_mtnocopot) mt_start(js)=mt_length+1
+             len=0
              !This PE stores some(or all) MT data
              DO n=mt_rank+1,atoms%ntype,mt_size
-                mt_length=mt_length+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
+                len=len+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
              ENDDO
+             mt_length_g=MAX(len,mt_length_g)
              IF (js==3) THEN
                 !need to store imaginary part as well...
                 DO n=mt_rank+1,atoms%ntype,mt_size
-                   mt_length=mt_length+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
+                   len=len+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
                 ENDDO
              ENDIF
+             IF (js<3.OR.noco%l_mtnocopot) mt_length=mt_length+len
              mt_stop(js)=mt_length
           END IF
-          IF (js==1) mt_length_g=mt_length
           IF (vac_here) THEN
              !This PE stores vac-data
              vac_start(js)=vac_length+1
+             len=0
              IF (invs2.and.js<3) THEN
-                vac_length=vac_length+vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
+                len=len+vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
              ELSE
-                vac_length=vac_length+2*vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
+                len=len+2*vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
              ENDIF
-             IF (js==3) vac_length=vac_length+vacuum%nmzd * vacuum%nvac !Offdiagnal potential is complex
+             vac_length_g=MAX(vac_length_g,len)
+             IF (js==3) len=len+vacuum%nmzd * vacuum%nvac !Offdiagnal potential is complex
+             vac_length=vac_length+len
              vac_stop(js)=vac_length
           ENDIF
-          IF (js==1) vac_length_g=vac_length
           IF (misc_here.AND.(js<3)) THEN
              misc_start(js)=misc_length+1
              misc_length=misc_length+7*7*2*atoms%n_u
@@ -563,12 +603,13 @@ CONTAINS
     FUNCTION multiply_dot(vec1,vec2)RESULT(dprod)
       TYPE(t_mixvector),INTENT(IN)::vec1,vec2
       REAL                        ::dprod,dprod_tmp
+      integer                     ::ierr
       dprod=dot_PRODUCT(vec1%vec_pw,vec2%vec_pw)
       dprod=dprod+dot_PRODUCT(vec1%vec_mt,vec2%vec_mt)
       dprod=dprod+dot_PRODUCT(vec1%vec_vac,vec2%vec_vac)
       dprod=dprod+dot_PRODUCT(vec1%vec_misc,vec2%vec_misc)
 #ifdef CPP_MPI
-      CALL MPI_ALLREDUCE_ALL(dprod,dprod_tmp,1,MPI_DOUBLE_PRECISION,MPI_SUM,mix_mpi_comm)
+      CALL MPI_ALLREDUCE(dprod,dprod_tmp,1,MPI_DOUBLE_PRECISION,MPI_SUM,mix_mpi_comm,ierr)
       dprod=dprod_tmp
 #endif      
     END FUNCTION multiply_dot
@@ -580,7 +621,7 @@ CONTAINS
       INTEGER,INTENT(IN)          ::spin
       REAL                        ::dprod,dprod_tmp
 
-      INTEGER:: js
+      INTEGER:: js,ierr
 
       dprod=0.0
 
@@ -600,7 +641,7 @@ CONTAINS
       enddo
 
 #ifdef CPP_MPI
-      CALL MPI_ALLREDUCE_ALL(dprod,dprod_tmp,1,MPI_DOUBLE_PRECISION,MPI_SUM,mix_mpi_comm)
+      CALL MPI_ALLREDUCE(dprod,dprod_tmp,1,MPI_DOUBLE_PRECISION,MPI_SUM,mix_mpi_comm,ierr)
       dprod=dprod_tmp
 #endif
     END FUNCTION multiply_dot_mask
