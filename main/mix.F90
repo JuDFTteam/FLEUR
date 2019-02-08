@@ -28,6 +28,7 @@ contains
     use m_types
     use m_umix
     USE m_kerker
+    use m_pulay
     use m_types_mixvector
     USE m_distance
     use m_mixing_history
@@ -117,6 +118,8 @@ contains
     if(input%imix==0.or.it==1) CALL stmix(atoms,input,noco,fsm(it),fsm_mag,sm(it))
     !if(it>1.and.input%imix==9) CALL pulay(input%alpha,fsm,sm)
     if(it>1.and.(input%imix==3.or.input%imix==5.or.input%imix==7)) Call broyden(input%alpha,fsm,sm)
+    !PRINT *,"ATTENTION Broyden replaced by Pulay"
+    IF (it>1.and.input%imix==9) CALL pulay(input%alpha,fsm,sm)
 
     !extracte mixed density 
     inDen%pw=0.0;inDen%mt=0.0

@@ -82,7 +82,7 @@ CONTAINS
     endif
     IF (iter_stored+1==maxiter.AND.imix.NE.9) iter_stored=0 !This is a broyden method which has to 
                                                             !be reset as soon as maxiter is reached
-    it=MIN(iter_stored+1,maxiter)
+    it=MIN(iter_stored+1,maxiter+1)
     allocate(sm(it),fsm(it))
     CALL sm(it)%alloc()
     CALL fsm(it)%alloc()
@@ -109,6 +109,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(in)::mpi
     iter_stored=0
+    PRINT *, "Reset of history"
     IF (mpi%irank==0) CALL system('rm mixing_history*')
   END SUBROUTINE mixing_history_reset
   
