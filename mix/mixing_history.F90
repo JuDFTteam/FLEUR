@@ -10,7 +10,7 @@ MODULE m_mixing_history
   INTEGER:: iter_stored=0
   TYPE(t_mixvector),ALLOCATABLE::sm_store(:),fsm_store(:)
   PUBLIC :: mixing_history,mixing_history_reset,mixing_history_store
-  PUBLIC :: mixing_history_open,mixing_history_close
+  PUBLIC :: mixing_history_open,mixing_history_close,mixing_history_limit
 CONTAINS
   
   SUBROUTINE mixing_history_open(mpi,maxiter)
@@ -82,7 +82,7 @@ CONTAINS
     endif
     IF (iter_stored+1==maxiter.AND.imix.NE.9) iter_stored=0 !This is a broyden method which has to 
                                                             !be reset as soon as maxiter is reached
-    it=MIN(iter_stored+1,maxiter+1)
+    it=iter_stored+1
     allocate(sm(it),fsm(it))
     CALL sm(it)%alloc()
     CALL fsm(it)%alloc()
@@ -90,17 +90,17 @@ CONTAINS
     CALL fsm(it)%from_density(outDen)
     !store the difference fsm - sm in fsm
     fsm(it) = fsm(it) - sm(it)
-    do n=it-1,1,-1 !Copy from storage
+    do n=1,it-1 !Copy from storage
        sm(n)=sm_store(n)
        fsm(n)=fsm_store(n)
     ENDDO
     if(iter_stored<maxiter) THEN
        iter_stored=iter_stored+1
-       sm_store(:iter_stored)=sm(:iter_stored)
-       fsm_store(:iter_stored)=fsm(:iter_stored)
+       sm_store(iter_stored)=sm(iter_stored)
+       fsm_store(iter_stored)=fsm(iter_stored)
     else
-       sm_store(:maxiter-1)=sm(2:maxiter)
-       fsm_store(:maxiter-1)=fsm(2:maxiter)
+       sm_store(:maxiter)=sm(2:maxiter+1)
+       fsm_store(:maxiter)=fsm(2:maxiter+1)
     endif
   end subroutine mixing_history
 
@@ -112,6 +112,17 @@ CONTAINS
     PRINT *, "Reset of history"
     IF (mpi%irank==0) CALL system('rm mixing_history*')
   END SUBROUTINE mixing_history_reset
+
+  subroutine mixing_history_limit(len)
+    IMPLICIT NONE
+    INTEGER,INTENT(in)::len
+
+    if (iter_stored>len) then
+       fsm_store(:len)=fsm_store(iter_stored-len+1:iter_stored)
+       sm_store(:len)=sm_store(iter_stored-len+1:iter_stored)
+       iter_stored=len
+    end if
+  end subroutine mixing_history_limit
   
   SUBROUTINE mixing_history_store(fsm)
     IMPLICIT NONE

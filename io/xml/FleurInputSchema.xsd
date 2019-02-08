@@ -879,6 +879,7 @@
          <xsd:enumeration value="Broyden1"/>
          <xsd:enumeration value="Broyden2"/>
          <xsd:enumeration value="Anderson"/>
+	 <xsd:enumeration value="Pulay"/>
       </xsd:restriction>
    </xsd:simpleType>
 

@@ -78,8 +78,10 @@ contains
           write( 6, fmt='(a,f10.5)' ) 'BROYDEN SECOND MIXING',input%alpha
        case( 7 )
           write( 6, fmt='(a,f10.5)' ) 'ANDERSON GENERALIZED',input%alpha
+       case ( 9 )
+          write( 6, fmt='(a,f10.5)' ) 'PULAY MIXING',input%alpha
        case default
-          call juDFT_error( "mix: input%imix =/= 0,3,5,7 ", calledby ="mix" )
+          call juDFT_error( "mix: input%imix =/= 0,3,5,7,9 ", calledby ="mix" )
        end select
 
        if ( input%jspins == 2 .and. input%imix /= 0 ) then
@@ -119,8 +121,10 @@ contains
     !if(it>1.and.input%imix==9) CALL pulay(input%alpha,fsm,sm)
     if(it>1.and.(input%imix==3.or.input%imix==5.or.input%imix==7)) Call broyden(input%alpha,fsm,sm)
     !PRINT *,"ATTENTION Broyden replaced by Pulay"
-    IF (it>1.and.input%imix==9) CALL pulay(input%alpha,fsm,sm)
-
+    IF (it>1.and.input%imix==9) THEN
+       CALL pulay(input%alpha,fsm,sm)
+       if (it==input%maxiter) call mixing_history_limit(1)
+    endif
     !extracte mixed density 
     inDen%pw=0.0;inDen%mt=0.0
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0

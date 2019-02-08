@@ -329,6 +329,8 @@ CONTAINS
          input%imix = 5
       CASE ('Anderson')
          input%imix = 7
+      CASE ("Pulay")
+         input%imix = 9
       CASE DEFAULT
          STOP 'Error: unknown mixing scheme selected!'
       END SELECT
