@@ -272,7 +272,6 @@ CONTAINS
       ! tau = sum[phi_i(r)^dag nabla phi_i(r)]
       ! see eq (2) in https://doi.org/10.1063/1.1565316
       ! (-0.5 is applied below)
-      
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:,:)
 
 #ifdef CPP_LIBXC
