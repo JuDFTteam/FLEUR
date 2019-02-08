@@ -2213,14 +2213,14 @@ CONTAINS
        ! Ensure numerical stability. If both formulas are not sufficiently stable, the program stops.
        IF(r1.GT.r2) THEN
           IF(r1.LT.1d-6 .AND. l_warn) THEN
-             WRITE(6,'(A,E10.5,A,E10.5,A)') 'sphbessel_integral: Warning! Formula One possibly unstable. Ratios:',r1,'(',r2,')'
+             WRITE(6,'(A,E12.5,A,E12.5,A)') 'sphbessel_integral: Warning! Formula One possibly unstable. Ratios:',r1,'(',r2,')'
              WRITE(6,'(A,2F15.10,I4)') '                    Current qnorms and atom type:', q1,q2,itype
              l_warned = .TRUE.
           END IF
           sphbessel_integral = s**3 / dq * da 
        ELSE
           IF(r2.LT.1d-6 .AND. l_warn) THEN
-             WRITE(6,'(A,E10.5,A,E10.5,A)') 'sphbessel_integral: Warning! Formula Two possibly unstable. Ratios:',r2,'(',r1,')'
+             WRITE(6,'(A,E13.5,A,E13.5,A)') 'sphbessel_integral: Warning! Formula Two possibly unstable. Ratios:',r2,'(',r1,')'
              WRITE(6,'(A,2F15.10,I4)') '                    Current qnorms and atom type:', q1,q2,itype
              l_warned = .TRUE.
           END IF
