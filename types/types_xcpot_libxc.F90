@@ -260,6 +260,7 @@ CONTAINS
 
 
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen_KS)
+      use m_npy
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
       INTEGER, INTENT (IN)           :: jspins
@@ -273,6 +274,7 @@ CONTAINS
       ! see eq (2) in https://doi.org/10.1063/1.1565316
       ! (-0.5 is applied below)
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:,:)
+      character(len=200)             :: filename
 
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
@@ -298,9 +300,12 @@ CONTAINS
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
          IF(PRESENT(kinEnergyDen_KS)) THEN 
             ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
-            kinEnergyDen_libXC = transpose(0.25 * grad%laplace - 0.5 * kinEnergyDen_KS)
+            kinEnergyDen_libXC = transpose(kinEnergyDen_KS + 0.25 * grad%laplace)
             if(any(kinEnergyDen_libXC < 0.0)) write (*,*) "kED negative", &
                                                            minval(kinEnergyDen_libxc)
+
+            write (filename, '("kED_libxc_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=2)
+            call save_npy(filename, transpose(kinEnergyDen_libxc))
  
             call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
                                  transpose(grad%laplace), kinEnergyDen_libXC, exc)
