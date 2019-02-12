@@ -39,7 +39,7 @@ CONTAINS
     DO n=1,h_len
        df(n)=fm(n+1)-fm(n)
        ds(n)=sm(n+1)-sm(n)
-       mdf=df(n).apply_metric()
+       mdf=df(n)%apply_metric()
        b(n)=mdf.dot.fm(h_len+1)
        DO nn=1,n
           a%data_r(n,nn)=mdf.dot.df(nn)
