@@ -411,11 +411,9 @@ CONTAINS
        field2 = field
 
        ! mix input and output densities
-       CALL timestart("mixing")
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
             sym,cell,noco,oneD,archiveType,inDen,outDen,results)
-       CALL timestop("mixing")
        
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter

@@ -28,6 +28,11 @@ CONTAINS
     TYPE(t_mixvector),allocatable :: u_store(:),v_store(:)
 
     hlen=size(fm)
+    IF (hlen<2) THEN !Do a simple mixing step
+       sm(hlen)=sm(hlen)+alpha*fm(hlen)
+       RETURN
+    ENDIF
+
     ALLOCATE(u_store(hlen-2),v_store(hlen-2))
     do it=1,hlen-2
        call u_store(it)%alloc()

@@ -80,7 +80,7 @@ CONTAINS
     if (.not.allocated(sm_store)) THEN
        allocate(sm_store(maxiter),fsm_store(maxiter))
     endif
-    IF (iter_stored+1==maxiter.AND.imix.NE.9) iter_stored=0 !This is a broyden method which has to 
+    IF (iter_stored+1==maxiter.AND.imix<8) iter_stored=0 !This is a broyden method which has to 
                                                             !be reset as soon as maxiter is reached
     it=iter_stored+1
     allocate(sm(it),fsm(it))

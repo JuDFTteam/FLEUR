@@ -29,6 +29,7 @@ contains
     use m_umix
     USE m_kerker
     use m_pulay
+    use m_a_pulay
     use m_types_mixvector
     USE m_distance
     use m_mixing_history
@@ -60,35 +61,7 @@ contains
     INTEGER                          :: it,maxiter
 
 
-    MPI0_a: IF( mpi%irank == 0 ) THEN
-       !determine type of mixing:
-       !imix=0:straight, imix=o broyden first, imix=5:broyden second
-       !imix=:generalozed anderson mixing
-       select case( input%imix )
-       case( 0 )
-          WRITE( 6, fmt='(a,2f10.5)' ) 'STRAIGHT MIXING',input%alpha
-          IF (input%jspins.EQ.1) WRITE (6,FMT='(a,2f10.5)')&
-               &    'charge density mixing parameter:',input%alpha
-          IF (input%jspins.EQ.2) WRITE (6,FMT='(a,2f10.5)')&
-               &    'spin density mixing parameter:',input%alpha*input%spinf
-
-       case( 3 )
-          write( 6, fmt='(a,f10.5)' ) 'BROYDEN FIRST MIXING',input%alpha
-       case( 5 )
-          write( 6, fmt='(a,f10.5)' ) 'BROYDEN SECOND MIXING',input%alpha
-       case( 7 )
-          write( 6, fmt='(a,f10.5)' ) 'ANDERSON GENERALIZED',input%alpha
-       case ( 9 )
-          write( 6, fmt='(a,f10.5)' ) 'PULAY MIXING',input%alpha
-       case default
-          call juDFT_error( "mix: input%imix =/= 0,3,5,7,9 ", calledby ="mix" )
-       end select
-
-       if ( input%jspins == 2 .and. input%imix /= 0 ) then
-          write( 6, '(''WARNING : for QUASI-NEWTON METHODS SPINF=1'')' )
-       end if
-    ENDIF MPI0_a
-
+    CALL timestart("Charge Density Mixing")
     l_densitymatrix=.FALSE.
     IF (atoms%n_u>0) THEN
        l_densitymatrix=.NOT.input%ldaulinmix
@@ -99,6 +72,8 @@ contains
           if (mpi%irank.ne.0) inden%mmpmat=0.0 
        ENDIF
     ENDIF
+
+    CALL timestart("Reading of distances")
     CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
 
     CALL mixing_history_open(mpi,input%maxiter)
@@ -107,24 +82,58 @@ contains
     CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it)
 
     CALL distance(mpi%irank,cell%vol,input%jspins,fsm(it),inDen,outDen,results,fsm_Mag)
-
+    CALL timestop("Reading of distances")
+ 
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 )  THEN 
+       CALL timestart("Preconditioner")
        CALL kerker(field, DIMENSION, mpi, &
             stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
             oneD, inDen, outDen, fsm(it) )
        !Store modified density in history
        CALL mixing_history_store(fsm(it))
+       CALL timestop("Preconditioner")
     END IF
+  
+    CALL timestart("Mixing")
     !mixing of the densities
-    if(input%imix==0.or.it==1) CALL stmix(atoms,input,noco,fsm(it),fsm_mag,sm(it))
-    !if(it>1.and.input%imix==9) CALL pulay(input%alpha,fsm,sm)
-    if(it>1.and.(input%imix==3.or.input%imix==5.or.input%imix==7)) Call broyden(input%alpha,fsm,sm)
-    !PRINT *,"ATTENTION Broyden replaced by Pulay"
-    IF (it>1.and.input%imix==9) THEN
-       CALL pulay(input%alpha,fsm,sm)
-       if (it==input%maxiter) call mixing_history_limit(1)
-    endif
+    SELECT CASE(input%imix)
+    CASE(0)
+       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,f10.5)' ) &
+            'STRAIGHT MIXING: alpha=',input%alpha," spin-mixing=",MERGE(input%alpha*input%spinf,0.,input%jspins>1)
+       CALL stmix(atoms,input,noco,fsm(it),fsm_mag,sm(it))
+    CASE(3,5)
+       CALL judft_error("Broyden 1/2 method not implemented")
+    CASE(7)
+       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0)' ) &
+            'GENERALIZED ANDERSON MIXING: alpha=',input%alpha," History-length=",it-1
+       Call broyden(input%alpha,fsm,sm)
+    CASE(9)
+       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+            'PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
+       CALL pulay(input%alpha,fsm,sm,0)
+    CASE(11)
+       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+            'PERIODIC PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
+       CALL pulay(input%alpha,fsm,sm,input%maxiter)
+    CASE(13)
+       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+            'RESTARTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
+       CALL pulay(input%alpha,fsm,sm,0)
+       IF (it==input%maxiter) CALL mixing_history_limit(0) !Restarting Pulay 
+    CASE(15)
+       IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
+            'ADAPTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
+       CALL a_pulay(input%alpha,fsm,sm)
+       IF (input%maxiter<4) CALL judft_error("History length too short for aPulay")
+       IF (it==4) CALL mixing_history_limit(0) 
+    CASE DEFAULT
+       CALL judft_error("Unknown Mixing schema")
+    END SELECT
+    CALL timestop("Mixing")
+
+
+    CALL timestart("Postprocessing")
     !extracte mixed density 
     inDen%pw=0.0;inDen%mt=0.0
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
@@ -171,6 +180,9 @@ contains
 
     IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(mpi)
 
+    CALL timestop("Postprocessing")
+
+    CALL timestop("Charge Density Mixing")
   END SUBROUTINE mix_charge
   
 END MODULE m_mix

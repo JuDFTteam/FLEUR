@@ -8,6 +8,7 @@ mix/broyden_history.F90
 mix/mixing_history.F90
 mix/distance.F90
 mix/pulay.F90
+mix/a_pulay.F90
 #mix/broyden2.F90
 #mix/brysh1.f90
 #mix/brysh2.f90
