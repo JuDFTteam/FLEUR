@@ -187,4 +187,18 @@ CONTAINS
       !
       RETURN
    END SUBROUTINE vmt_xc
+   
+   function get_radial_line(den, line_idx, nsp) result(line)
+      implicit none
+      real, intent(in)         :: den(:, :)
+      integer, intent(in)      :: line_idx, nsp
+      real, allocatable        :: line(:, :)
+
+      integer                  :: num_elem
+
+      write (*, *) "size(den(:,1)) =", size(den(:, 1))
+      write (*, *) "nsp =", nsp
+      write (*, *) "size(den(:,1))/nsp =", size(den(:, 1))/nsp
+   end function
+
 END MODULE m_vmt_xc
