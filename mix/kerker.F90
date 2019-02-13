@@ -73,8 +73,8 @@ CONTAINS
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )
        CALL qfix(mpi,stars, atoms, sym, vacuum, sphhar, input, cell, oneD, outDen, noco%l_noco, .FALSE., .TRUE., fix )
-!       CALL resDen%subPotDen( outDen, inDen )
-!       CALL precon_v%from_density(resden)
+       CALL resDen%subPotDen( outDen, inDen )
+       CALL precon_v%from_density(resden)
     END IF MPI0_c
     ! end of preconditioner
 END SUBROUTINE kerker
