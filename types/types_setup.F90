@@ -69,19 +69,6 @@ MODULE m_types_setup
      INTEGER atomType ! The atom type to which this U parameter belongs
      LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
   END TYPE t_utype
-
-  !
-  ! Type for LDA+HIA 
-  !
-  TYPE t_hiatype
-
-    INTEGER :: l         ! The l quantum number to which the Hubbard-1 Approximation should be applied
-    INTEGER :: atomType  ! The atom type to which the Hubbard-1 Approximation should be applied
-
-  END TYPE t_hiatype
-
-
-
   !
   ! Type for the electric field
   !
@@ -179,7 +166,7 @@ MODULE m_types_setup
      !lda_u information(ntype)
      TYPE(t_utype),ALLOCATABLE::lda_u(:)
      !lda+hia information
-     TYPE(t_hiatype),ALLOCATABLE::lda_hia(:)
+     TYPE(t_utype),ALLOCATABLE::lda_hia(:)
      INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
   END TYPE t_atoms
