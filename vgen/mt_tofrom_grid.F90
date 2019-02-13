@@ -94,8 +94,9 @@ CONTAINS
 
       kt = 0
       DO jr = 1, atoms%jri(n)
-         ch_tmp(:, :) = 0.0     ! charge density (on extended grid for all jr)
-         !         following are at points on jr-th sphere.
+         ! charge density (on extended grid for all jr)
+         ! following are at points on jr-th sphere.
+         ch_tmp(:, :) = 0.0     
          !  generate the densities on an angular mesh
          DO js = 1, jspins
             DO lh = 0, sphhar%nlh(nd)
