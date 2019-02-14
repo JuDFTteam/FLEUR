@@ -125,8 +125,6 @@ contains
        IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,i0,a,i0)' ) &
             'ADAPTED PULAY MIXING: alpha=',input%alpha," History-length=",it-1,"/",input%maxiter
        CALL a_pulay(input%alpha,fsm,sm)
-       IF (input%maxiter<4) CALL judft_error("History length too short for aPulay")
-       IF (it==4) CALL mixing_history_limit(0) 
     CASE DEFAULT
        CALL judft_error("Unknown Mixing schema")
     END SELECT

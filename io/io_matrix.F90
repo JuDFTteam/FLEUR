@@ -6,6 +6,7 @@
 
 MODULE m_io_matrix
   USE m_types
+  USE m_judft
   IMPLICIT NONE
   private
   INTEGER:: mode=1
