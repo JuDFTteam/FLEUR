@@ -43,7 +43,7 @@ MODULE m_types_mat
      REAL,ALLOCATABLE:: work(:)
      INTEGER,allocatable::ipiv(:)
     
-     IF ((mat%l_real.NE.vec%l_real).OR.(mat%matsize1.NE.mat%matsize2).OR.(mat%matsize1.NE.vec%matsize1)) &
+     IF ((mat%l_real.NEQV.vec%l_real).OR.(mat%matsize1.NE.mat%matsize2).OR.(mat%matsize1.NE.vec%matsize1)) &
           CALL judft_error("Invalid matices in t_mat_lproblem")
      IF (mat%l_real) THEN
         IF (ALL(ABS(mat%data_r-TRANSPOSE(mat%data_r))<1E-8)) THEN
