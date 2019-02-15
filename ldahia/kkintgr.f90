@@ -123,9 +123,6 @@ CONTAINS
 
       DO iz = 1, nz
 
-         !the term i*sigma is to account for broadening that may have been done on the 
-         !imaginary part
-
          ez = e(iz) - bot 
 
          DO j = 1, ne

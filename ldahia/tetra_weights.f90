@@ -19,9 +19,12 @@ MODULE m_tetra_weights
 
       INTEGER icorn, itet, ib, j, k, l, nstart,corn_ind
 
-      REAL e(4), weight
+      REAL e(4), weight,dweight
 
       INTEGER ind(4),tmp
+      LOGICAL l_bloechl
+
+      l_bloechl = .true.
 
 
       DO itet = 1, kpts%ntet
@@ -68,6 +71,7 @@ MODULE m_tetra_weights
 
 
             nstart = INT((e(1)-g%e_bot)/g%del)+1
+            IF(l_bloechl) CALL bloechl_corrections(ef,kpts%voltet(itet)/kpts%ntet,e(ind(:)),dweight,corn_ind)
             DO ie = MAX(1,nstart), g%ne
 
                CALL contrib_singletetra((ie-1)*g%del+g%e_bot,kpts%voltet(itet)/kpts%ntet,e(ind(:)),weight,corn_ind)
@@ -155,6 +159,53 @@ MODULE m_tetra_weights
       !END IF
 
    END SUBROUTINE contrib_singletetra
+
+   SUBROUTINE bloechl_corrections(ef,vol,e,dweight,ind)
+
+      REAL,                INTENT(IN)     :: ef
+      REAL,                INTENT(IN)     :: vol
+      REAL,                INTENT(IN)     :: e(4)
+      REAL,                INTENT(OUT)  :: dweight
+      INTEGER,             INTENT(IN)     :: ind
+
+      INTEGER i
+      REAL dos
+
+      CALL dos_tetra(ef,vol,e,dos)
+
+      dweight = 0.0
+      DO i = 1, 4
+         dweight = dweight + 1/40.0*dos*(e(i)-e(ind))
+      ENDDO
+
+
+   END SUBROUTINE bloechl_corrections
+
+   SUBROUTINE dos_tetra(energy,vol,e,dos)
+
+      IMPLICIT NONE
+
+      REAL,                INTENT(IN)     :: energy
+      REAL,                INTENT(IN)     :: vol
+      REAL,                INTENT(IN)     :: e(4)
+      REAL,                INTENT(OUT)    :: dos
+
+      IF((energy.GT.e(4)).OR.(energy.LT.e(1))) THEN
+         dos = 0.0
+      ELSE IF((energy.GT.e(1)).AND.(energy.LT.e(2))) THEN
+
+         dos = 3.0 * vol * (energy-e(1))**2/((e(2)-e(1))*(e(3)-e(1))*(e(4)-e(1)))
+
+      ELSE IF((energy.GT.e(2)).AND.(energy.LT.e(3))) THEN
+
+         dos = 3.0 * vol * 1./((e(3)-e(1))*(e(4)-e(1))) * (e(2) - e(1) + 2*(energy - e(2)) -&
+               (e(3)-e(1)+e(4)-e(2)) * (energy-e(2))**2/((e(3)-e(2))*(e(4)-e(2))))
+
+      ELSE IF((energy.GT.e(3)).AND.(energy.LT.e(4))) THEN
+
+         dos = 3.0 * vol * (e(4)-energy)**2/((e(4)-e(1))*(e(4)-e(2))*(e(4)-e(3)))
+      END IF
+   END SUBROUTINE dos_tetra
 
 
    ! Not used at the moment
