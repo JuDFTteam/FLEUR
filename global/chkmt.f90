@@ -391,7 +391,11 @@
             jri11 = NINT(220*rmt1(n)) 
          END IF
          jri11 = NINT(jri11*0.5) * 2 + 1
-         dx11 = LOG(3200*atoms%nz(n)*rmt1(n))/(jri11-1)
+         IF (atoms%nz(n) > 0) THEN
+           dx11 = LOG(3200*atoms%nz(n)*rmt1(n))/(jri11-1)
+         ELSE
+           dx11 = LOG(3200*rmt1(n))/(jri11-1)
+         ENDIF
          rkm = MAX(rkm, lmax11/rmt1(n))
          WRITE (6,'(a3,i3,2i5,2f10.6)') noel(n),atoms%nz(n),lmax11,jri11,rmt1(n),dx11
          dx1(n) = dx11
