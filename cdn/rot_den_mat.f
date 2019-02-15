@@ -15,6 +15,7 @@ c This subroutine rotates the direction of the magnetization of the
 c density matrix by multiplying with the unitary 2x2 spin rotation
 c matrix. --> U*rho*U^dagger
 c Philipp Kurz 2000-02-03
+c new method for improved stability (l_new=t) gb'19
 c***********************************************************************
 
       use m_constants
@@ -28,11 +29,29 @@ C     .. Scalar Arguments ..
 C     ..
 C     .. Local Scalars ..
       INTEGER ispin
-      REAL eps
+      REAL eps,r11n,r22n
+      COMPLEX r21n
+      LOGICAL l_new
 C     ..
 C     .. Local Arrays ..
       COMPLEX u2(2,2),rho(2,2),rhoh(2,2)
 C     ..
+      l_new = .true.
+
+      IF (l_new) THEN
+
+      r11n = 0.5*(1.0+cos(beta))*rho11 - sin(beta)*real(rho21) +
+     +       0.5*(1.0-cos(beta))*rho22
+      r22n = 0.5*(1.0-cos(beta))*rho11 + sin(beta)*real(rho21) +
+     +       0.5*(1.0+cos(beta))*rho22
+      r21n = CMPLX(cos(alph),-sin(alph))*(sin(beta)*(rho11-rho22) +
+     +       2.0*(cos(beta)*real(rho21)-cmplx(0.0,aimag(rho21))))*0.5
+
+      rho11 = r11n
+      rho22 = r22n
+      rho21 = r21n
+
+      ELSE
       
       eps = 1.0e-10
 
@@ -79,6 +98,8 @@ c---> are real.
       rho22 = real(rho(2,2))
       rho21 =      rho(2,1)
 
+      ENDIF
+      
       END SUBROUTINE rot_den_mat
       END MODULE m_rotdenmat
 

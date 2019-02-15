@@ -530,7 +530,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         !      The following call to inpeig should not be required.
         !      CALL inpeig(atoms,cell,input,oneD%odd%d1,kpts,enpara)
      END IF
-
+     kpts%wtkpt=kpts%wtkpt/sum(kpts%wtkpt) !Normalize k-point weight
      CALL prp_qfft(stars,cell,noco,input)
 
 

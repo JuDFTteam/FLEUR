@@ -10,6 +10,7 @@ MODULE m_types_potden
      INTEGER             :: iter  
      INTEGER             :: potdenType
      COMPLEX,ALLOCATABLE :: pw(:,:),pw_w(:,:)
+     !                      mt(radial_grid, sphhar, atom, spin)
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
      REAL,ALLOCATABLE    :: vacz(:,:,:)
      COMPLEX,ALLOCATABLE :: vacxy(:,:,:,:)
