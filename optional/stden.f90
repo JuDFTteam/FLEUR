@@ -48,7 +48,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    TYPE(t_xcpot_inbuild)    :: xcpot_dummy
 
    ! Local Scalars
-   REAL d,del,fix,h,r,rnot,z,bm,qdel
+   REAL d,del,fix,h,r,rnot,z,bm,qdel,va
    REAL denz1(1,1),vacxpot(1,1),vacpot(1,1) 
    INTEGER i,ivac,iza,j,jr,k,n,n1,ispin 
    INTEGER nw,ilo,natot,nat 
@@ -142,9 +142,10 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          !--->    new atom
          rnot = atoms%rmsh(1,n)
          IF (z.LT.1.0) THEN
+            va = max(z,1.e-8)/(input%jspins*sfp_const*atoms%volmts(n))
             DO ispin = 1, input%jspins
                DO i = 1,jrc(n) ! dimension%msh
-                  rh(i,n,ispin) = 1.e-10
+                  rh(i,n,ispin) = va/rat(i,n)**2
                END DO
             END DO
          ELSE

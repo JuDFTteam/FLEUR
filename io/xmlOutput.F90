@@ -22,6 +22,7 @@ MODULE m_xmlOutput
    INTEGER, SAVE :: currentElementIndex
    INTEGER, SAVE :: maxNumElements
    INTEGER, SAVE :: xmlOutputUnit
+   LOGICAL, SAVE :: xmlOpened = .FALSE.
    CHARACTER(LEN= 40), ALLOCATABLE :: elementList(:)
 
    PUBLIC startXMLOutput, endXMLOutput
@@ -86,6 +87,7 @@ MODULE m_xmlOutput
       ELSE
          OPEN (xmlOutputUnit,file='out.xml',form='formatted',status='unknown')
       ENDIF
+      xmlOpened = .TRUE.
       WRITE (xmlOutputUnit,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (xmlOutputUnit,'(a)') '<fleurOutput fleurOutputVersion="0.27">'
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
@@ -150,6 +152,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=10) :: dateString
       CHARACTER(LEN=10)  :: timeString
 
+      IF (.NOT.xmlOpened) RETURN
       DO WHILE (currentElementIndex.NE.0)
          CALL closeXMLElement(elementList(currentElementIndex))
       END DO

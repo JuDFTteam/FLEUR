@@ -457,10 +457,10 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
             IF(abs(bk(2)).LT.1e-7) bk(2) = abs(bk(2))
             IF(abs(bk(3)).LT.1e-7) bk(3) = abs(bk(3))
             !write(kpt_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/kpt_',nk
-            write(kpt_name , '(a,f12.10,a,f12.10,a,f12.10)') '/kpt_',bk(1),',',bk(2),',',bk(3)
-            CALL h5lexists_f(jspGroupID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
+            write(kpt_name , '(2a,f12.10,a,f12.10,a,f12.10)') TRIM(ADJUSTL(jsp_name)),'/kpt_',bk(1),',',bk(2),',',bk(3)
+            CALL h5lexists_f(fileID, TRIM(ADJUSTL(kpt_name)), link_exists, hdfError)
             IF (link_exists) CYCLE
-            CALL h5gcreate_f(jspGroupID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
+            CALL h5gcreate_f(fileID, TRIM(ADJUSTL(kpt_name)), kptGroupID, hdfError)
 !--------------------abcoff, zmat, eig output here-------------------
 !,results%neig(nk,jsp),results%eig(:,nk,jsp)
             numbands=results%neig(nk,jsp)
