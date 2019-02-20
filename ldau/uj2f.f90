@@ -5,19 +5,21 @@ MODULE m_uj2f
    !  * input in eV; output in htr.                                       *
    !  *-------------------------------------------------------------------*
    !  * Extension to multiple U per atom type by G.M. 2017                *
+   !  * Extension for uses beyond LDA+U by H.J 2019                       *
    !  *********************************************************************
    CONTAINS
 
-   SUBROUTINE uj2f(jspins,atoms,f0,f2,f4,f6)
+   SUBROUTINE uj2f(jspins,u_in,n_u,f0,f2,f4,f6)
 
       USE m_types
       IMPLICIT NONE
       !
       !  .. Arguments ..
       INTEGER,          INTENT(IN)  :: jspins
-      TYPE(t_atoms),    INTENT(IN)  :: atoms
-      REAL,             INTENT(OUT) :: f0(atoms%n_u+atoms%n_hia,jspins),f2(atoms%n_u+atoms%n_hia,jspins)
-      REAL,             INTENT(OUT) :: f4(atoms%n_u+atoms%n_hia,jspins),f6(atoms%n_u+atoms%n_hia,jspins)
+      INTEGER,          INTENT(IN)  :: n_u
+      TYPE(t_utype),    INTENT(IN)  :: u_in(n_u)
+      REAL,             INTENT(OUT) :: f0(n_u,jspins),f2(n_u,jspins)
+      REAL,             INTENT(OUT) :: f4(n_u,jspins),f6(n_u,jspins)
       !
       !  .. Local variables ..
       INTEGER l,itype,ltest,ispin,i_u
@@ -33,14 +35,9 @@ MODULE m_uj2f
          !
          OPEN (45,file='slaterf',form='formatted',status='old')
          DO ispin = 1, jspins
-            DO i_u = 1, atoms%n_u+atoms%n_hia
-               IF(i_u.LE.atoms%n_u) THEN
-                 itype = atoms%lda_u(i_u)%atomType
-                 l = atoms%lda_u(i_u)%l
-               ELSE
-                 itype = atoms%lda_hia(i_u)%atomType
-                 l = atoms%lda_hia(i_u)%l
-               ENDIF
+            DO i_u = 1, n_u
+               itype = u_in(i_u)%atomType
+               l = u_in(i_u)%l
                f2(i_u,ispin)=0.0 ; f4(i_u,ispin)=0.0 ; f6(i_u,ispin)=0.0
 100            READ (45,'(i3,4f20.10)') ltest,ftest(1:4)
                IF (ltest.EQ.l) THEN
@@ -64,26 +61,19 @@ MODULE m_uj2f
 
                !              write(*,*) n,ispin,l,f0(n,ispin),f2(n,ispin),
                !    +                              f4(n,ispin),f6(n,ispin)
-            END DO ! atoms%n_u
+            END DO ! n_u
          ENDDO
          CLOSE (45)
       ELSE
          !
          ! lda_u%l: orb.mom; lda_u%u,j: in eV
          !
-         DO i_u = 1, atoms%n_u+atoms%n_hia
-
-            IF(i_u.LE.atoms%n_u) THEN
-               itype = atoms%lda_u(i_u)%atomType
-               l = atoms%lda_u(i_u)%l
-               u = atoms%lda_u(i_u)%u
-               j = atoms%lda_u(i_u)%j
-            ELSE
-               itype = atoms%lda_hia(i_u)%atomType
-               l = atoms%lda_hia(i_u)%l
-               u = atoms%lda_hia(i_u)%u
-               j = atoms%lda_hia(i_u)%j
-            ENDIF
+         DO i_u = 1, n_u
+            
+            itype = u_in(i_u)%atomType
+            l = u_in(i_u)%l
+            u = u_in(i_u)%u
+            j = u_in(i_u)%j
             !
             !        l.eq.0 :  f0 = u (the l=0 and l=1 case approximated g.b.`01)
             !
@@ -130,7 +120,7 @@ MODULE m_uj2f
                f6(i_u,jspins) = f6(i_u,1)
             ENDIF
 
-         END DO ! atoms%n_u
+         END DO ! n_u
        ! 
       ENDIF
 

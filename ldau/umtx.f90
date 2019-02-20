@@ -6,38 +6,34 @@ MODULE m_umtx
    !* Extension to multiple U per atom type by G.M. 2017                *
    !*********************************************************************
 CONTAINS
-   SUBROUTINE umtx(atoms,f0,f2,f4,f6,u)
+   SUBROUTINE umtx(u_in,n_u,f0,f2,f4,f6,u)
 
       USE m_constants
       USE m_sgaunt
       USE m_types
       IMPLICIT NONE
 
-      TYPE(t_atoms), INTENT(IN)  :: atoms
-      REAL,          INTENT(IN)  :: f0(atoms%n_u+atoms%n_hia),f2(atoms%n_u+atoms%n_hia),f4(atoms%n_u+atoms%n_hia),f6(atoms%n_u+atoms%n_hia)
+      INTEGER,       INTENT(IN)  :: n_u
+      TYPE(t_utype), INTENT(IN)  :: u_in(n_u)
+      REAL,          INTENT(IN)  :: f0(n_u),f2(n_u),f4(n_u),f6(n_u)
       REAL,          INTENT(OUT) :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                      -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u+atoms%n_hia)
+                                      -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
 
       INTEGER, PARAMETER         :: lmaxw=3,lmmaxw1=(2*lmaxw+2)**2
 
       INTEGER i,j,k,l,m,mk,nfk,itype,i_u
       INTEGER m1,m2,m3,m4,lm1,lm2,lm3,lm4,kf
       REAL    uk,uq,avu,avj,cgk1,cgk2,tol
-      REAL    fk(lmaxU_const+1,atoms%n_u+atoms%n_hia)
+      REAL    fk(lmaxU_const+1,n_u)
       REAL,   ALLOCATABLE :: c(:,:,:)
       !
       tol = 1.0e-14
       !
       ! transformation to Hr-units:
       !
-      DO i_u = 1, atoms%n_u+atoms%n_hia
-         IF(i_u.LE.atoms%n_u) THEN
-            itype = atoms%lda_u(i_u)%atomType
-            l = atoms%lda_u(i_u)%l
-         ELSE
-            itype = atoms%lda_hia(i_u)%atomType
-            l = atoms%lda_hia(i_u)%l
-         ENDIF
+      DO i_u = 1, n_u
+         itype = u_in(i_u)%atomType
+         l = u_in(i_u)%l
          fk(1,i_u) = f0(i_u) / hartree_to_ev_const
          fk(2,i_u) = f2(i_u) / hartree_to_ev_const
          fk(3,i_u) = f4(i_u) / hartree_to_ev_const
@@ -61,12 +57,8 @@ CONTAINS
 
       CALL sgaunt(lmaxw,lmmaxw1,lmaxU_const,c)
 
-      DO i_u = 1, atoms%n_u+atoms%n_hia           !!Over U parameters
-         IF(i_u.LE.atoms%n_u) THEN
-            l = atoms%lda_u(i_u)%l
-         ELSE
-            l = atoms%lda_hia(i_u)%l
-         ENDIF
+      DO i_u = 1, n_u
+         l = u_in(i_u)%l
          kf = 2*l
          DO m1 = -l,l
             lm1 = l*(l+1)+m1+1

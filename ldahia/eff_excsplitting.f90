@@ -26,18 +26,18 @@ MODULE m_eff_excsplitting
 
       INTEGER i_hia,iz,m,l,mp,ispin
       ! calculate slater integrals from u and j
-      CALL uj2f(input%jspins,atoms,f0,f2,f4,f6)
+      CALL uj2f(input%jspins,atoms%lda_hia(:),atoms%n_hia,f0,f2,f4,f6)
 
       ! set up e-e- interaction matrix
       ALLOCATE (u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_hia+atoms%n_u),input%jspins))
+                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_hia),input%jspins))
       ALLOCATE (delta(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
       DO ispin = 1, 1 ! input%jspins
          f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
          f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
          f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
          f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-         CALL umtx(atoms,f0(1,ispin),f2(1,ispin),f4(1,ispin),f6(1,ispin),&
+         CALL umtx(atoms%lda_hia(:),atoms%n_hia,f0(1,ispin),f2(1,ispin),f4(1,ispin),f6(1,ispin),&
                  u(-lmaxU_const,-lmaxU_const,-lmaxU_const,-lmaxU_const,1,ispin))
       END DO
 

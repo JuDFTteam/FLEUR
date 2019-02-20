@@ -52,7 +52,7 @@ CONTAINS
     IF (ANY(inDen%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
 
        ! calculate slater integrals from u and j
-       CALL uj2f(input%jspins,atoms,f0,f2,f4,f6)
+       CALL uj2f(input%jspins,atoms%lda_u(:),atoms%n_u,f0,f2,f4,f6)
 
        ! set up e-e- interaction matrix
        ALLOCATE (u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
@@ -64,7 +64,7 @@ CONTAINS
           f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
           f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
           f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-          CALL umtx(atoms,f0(1,ispin),f2(1,ispin),f4(1,ispin),f6(1,ispin),&
+          CALL umtx(atoms%lda_u(:),atoms%n_u,f0(1,ispin),f2(1,ispin),f4(1,ispin),f6(1,ispin),&
                     u(-lmaxU_const,-lmaxU_const,-lmaxU_const,-lmaxU_const,1,ispin))
        END DO
 
