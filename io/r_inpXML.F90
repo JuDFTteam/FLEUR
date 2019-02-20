@@ -124,7 +124,7 @@ CONTAINS
       REAL               :: tauTemp(3,48)
       REAL               :: bk(3)
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
-      LOGICAL            :: l_vca, coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
+      LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
       REAL               :: weightScale, eParamUp, eParamDown
@@ -142,7 +142,7 @@ CONTAINS
 
       INTEGER            :: altKPointSetIndex,  altKPointSetIndices(2)
       LOGICAL            :: ldaSpecies
-      REAL               :: socscaleSpecies,b_field_mtspecies
+      REAL               :: socscaleSpecies,b_field_mtspecies,vcaspecies
 
       INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
       INTEGER, ALLOCATABLE :: loOrderList(:)
@@ -1326,12 +1326,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
             IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
                atoms%nz(iType) = atomicNumber
+               atoms%zatom(iType) = atoms%nz(iType)
                IF (atoms%nz(iType).EQ.0) THEN
                   WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', iType
                   atoms%zatom(iType) = 1.0e-10
                END IF
+               atoms%zatom(iType)=atoms%zatom(iType)+vcaspecies
                noel(iType) = namat_const(atoms%nz(iType))
-               atoms%zatom(iType) = atoms%nz(iType)
                atoms%rmt(iType) = radius
                atoms%jri(iType) = gridPoints
                atoms%dx(iType) = logIncrement
@@ -1409,11 +1410,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          ! Special switches for species
          ldaspecies=.FALSE.
          socscalespecies=1.0
+         vcaspecies=0.0
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
          numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
          IF (numberNodes==1) THEN
             ldaSpecies = evaluateFirstBoolOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lda'))))
             socscaleSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socscale'))))
+            vcaSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vca_charge'))))
             IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field_mt')>0) THEN
                b_field_mtSpecies=evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@b_field_mt'))))
                field%l_b_field=.TRUE.
