@@ -6,4 +6,5 @@ ldahia/onsite.f90
 ldahia/kkintgr.f90
 ldahia/fock_basis.f90
 ldahia/tetra_weights.f90
+ldahia/eff_excsplitting.f90
 )

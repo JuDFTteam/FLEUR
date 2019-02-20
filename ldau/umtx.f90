@@ -81,7 +81,7 @@ CONTAINS
                         uq = 0.e0
                         DO mk=-k,k
                            IF (mk.NE.m1-m3)  CYCLE
-                              cgk1 = c(k/2,lm1,lm3)
+                           cgk1 = c(k/2,lm1,lm3)
                            IF (ABS(cgk1).LT.tol) CYCLE
                            IF (mk.NE.m4-m2)  CYCLE
                            cgk2 = c(k/2,lm4,lm2)

@@ -289,12 +289,12 @@ MODULE m_types_greensf
          CLASS(t_greensf),       INTENT(IN)     :: this
          TYPE(t_atoms),          INTENT(IN)     :: atoms
          TYPE(t_sym),            INTENT(IN)     :: sym
-         COMPLEX,                INTENT(INOUT)  :: mmpMat(atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
+         COMPLEX,                INTENT(INOUT)  :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_hia),jspins)
 
          INTEGER,                INTENT(IN)     :: jspins
 
          INTEGER i, m,mp, l, i_hia, ispin, n, it,is, isi, natom, nn
-         REAL imag, re, fac
+         REAL imag, re, fac, n_l
          COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
          COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
@@ -303,6 +303,7 @@ MODULE m_types_greensf
 
          IF(this%l_ef) THEN
             DO i_hia = 1, atoms%n_hia
+               n_l = 0.0
                l = atoms%lda_hia(i_hia)%l
                n = atoms%lda_hia(i_hia)%atomType  
   
@@ -326,36 +327,13 @@ MODULE m_types_greensf
                            END IF
                         ENDDO
 
-                        n_tmp(m,mp) = -1/pi_const * n_tmp(m,mp)
+                        mmpMat(m,mp,i_hia,ispin) = -1/pi_const * n_tmp(m,mp)
+                        IF(m.EQ.mp) n_l = n_l + mmpMat(m,mp,i_hia,ispin)
 
-                     ENDDO
-                  ENDDO
-
-                  natom = SUM(atoms%neq(:n-1))
-                  DO nn = 1, atoms%neq(n)
-                     natom = natom + 1
-                     DO it = 1, sym%invarind(natom)
-                        
-                        fac = 1./(sym%invarind(natom)*atoms%neq(n))
-                        is = sym%invarop(natom,it)
-                        isi = sym%invtab(is)
-                        d_tmp(:,:) = cmplx(0.0,0.0)
-                        DO m = -l,l
-                           DO mp = -l,l
-                              d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
-                           ENDDO
-                        ENDDO
-                        nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
-                        n1_tmp(:,:) =  matmul( nr_tmp, d_tmp )
-
-                        DO m = -l,l
-                           DO mp = -l,l
-                              mmpMat(i_hia,m,mp,ispin) = mmpMat(i_hia,m,mp,ispin) + conjg(n1_tmp(m,mp)) * fac
-                           ENDDO
-                        ENDDO
                      ENDDO
                   ENDDO
                ENDDO
+               WRITE(*,*) "OCCUPATION: ", n_l
             ENDDO 
 
          ELSE

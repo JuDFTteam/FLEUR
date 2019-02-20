@@ -38,6 +38,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_Ekwritesl
    USE m_banddos_io
    USE m_unfold_band_kpts
+   USE m_eff_excsplitting
+   USE m_gOnsite
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -91,6 +93,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error
+   REAL                  :: j0
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
@@ -113,6 +116,16 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,gOnsite)
    END DO
+
+
+   IF(atoms%n_hia.GT.0) THEN
+      CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,gOnsite,results%ef,sym)
+   END IF
+   !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
+   IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2) THEN
+      CALL eff_excsplitting(gOnsite,atoms,input,j0)
+   ENDIF
+
 
 
    IF (mpi%irank.EQ.0) THEN

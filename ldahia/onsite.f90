@@ -1,6 +1,6 @@
 MODULE m_gOnsite
 
-   !These are the subroutines for the spherically averaged greens function
+USE m_juDFT
 
 CONTAINS
 
@@ -33,12 +33,12 @@ SUBROUTINE im_gmmpMat(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdus,e
    REAL,                   INTENT(IN)     :: eig(noccbd)
    
    LOGICAL l_zero
-   INTEGER i_hia, i, j, n, nn, natom, l, m, mp, lm, lmp, it,is, isi, ilo, ilop
+   INTEGER i_hia, i, j, n, nn, natom, l, m, mp, lm, lmp, it,is, isi, ilo, ilop, jarr
    REAL fac, wk
    REAL, ALLOCATABLE :: dos_weights(:)
 
    COMPLEX n_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-   COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+   COMPLEX n1_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
    wk = wtkpt/gOnsite%del
 
@@ -130,37 +130,66 @@ SUBROUTINE im_gmmpMat(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdus,e
                !
                !  n_mmp should be rotated by D_mm' ; compare force_a21; taken from n_mat.f90
                !
-               fac = 1./atoms%neq(n)
+               DO it = 1, sym%invarind(natom)
+                  is = sym%invarop(natom,it)
+                  isi = sym%invtab(is)
+                  d_tmp(:,:) = cmplx(0.0,0.0)
+                  DO m = -l,l
+                     DO mp = -l,l
+                        d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
+                     ENDDO
+                  ENDDO
+                  nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp(1,:,:))
+                  n1_tmp(1,:,:) =  matmul( nr_tmp, d_tmp )
+
                   DO m = -l,l
                      DO mp = -l,l
                         IF(gOnsite%l_tetra) THEN
                            !We need to differentiate the weights with respect to energy (can maybe be done analytically)
                            CALL diff3(tetweights(:,i),gOnsite%del,dos_weights(:))
                            DO j = 1, gOnsite%ne
-                              gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) + n_tmp(1,m,mp) * fac * dos_weights(j)
+                              gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * dos_weights(j)
                            ENDDO
                         ELSE    
-                           gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) + n_tmp(1,m,mp) * fac * wk
+                           gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) = gOnsite%im_gmmpMat(1,j,i_hia,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * wk
                         END IF
                      ENDDO
                   ENDDO
+               ENDDO
             ELSE
-               fac = 1./atoms%neq(n)
-               DO m = -l,l
-                  DO mp = -l,l
-                     IF(gOnsite%l_tetra) THEN
-                        !We need to differentiate the weights with respect to energy (can maybe be done analytically)
-                        CALL diff3(tetweights(:,i),gOnsite%del,dos_weights(:))
-                        DO j = 1, gOnsite%ne
-                           gOnsite%uu(j,i_hia,m,mp,ispin) = gOnsite%uu(j,i_hia,m,mp,ispin) + n_tmp(1,m,mp) * fac * dos_weights(j)      
-                           gOnsite%dd(j,i_hia,m,mp,ispin) = gOnsite%dd(j,i_hia,m,mp,ispin) + n_tmp(2,m,mp) * fac * dos_weights(j)
-                           gOnsite%du(j,i_hia,m,mp,ispin) = gOnsite%du(j,i_hia,m,mp,ispin) + n_tmp(3,m,mp) * fac * dos_weights(j)
-                        ENDDO
-                     ELSE
-                        gOnsite%uu(j,i_hia,m,mp,ispin) = gOnsite%uu(j,i_hia,m,mp,ispin) + n_tmp(1,m,mp) * fac * wk
-                        gOnsite%dd(j,i_hia,m,mp,ispin) = gOnsite%dd(j,i_hia,m,mp,ispin) + n_tmp(2,m,mp) * fac * wk
-                        gOnsite%du(j,i_hia,m,mp,ispin) = gOnsite%du(j,i_hia,m,mp,ispin) + n_tmp(3,m,mp) * fac * wk
-                     END IF
+               !
+               !MISSING: Local Orbitals with radial dependence
+               !
+               DO it = 1, sym%invarind(natom)
+                  is = sym%invarop(natom,it)
+                  isi = sym%invtab(is)
+                  d_tmp(:,:) = cmplx(0.0,0.0)
+                  DO m = -l,l
+                     DO mp = -l,l
+                        d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
+                     ENDDO
+                  ENDDO
+                  DO jarr = 1, 3
+                     nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp(jarr,:,:))
+                     n1_tmp(jarr,:,:) =  matmul( nr_tmp, d_tmp )
+                  ENDDO
+
+                  DO m = -l,l
+                     DO mp = -l,l
+                        IF(gOnsite%l_tetra) THEN
+                           !We need to differentiate the weights with respect to energy (can maybe be done analytically)
+                           CALL diff3(tetweights(:,i),gOnsite%del,dos_weights(:))
+                           DO j = 1, gOnsite%ne
+                              gOnsite%uu(j,i_hia,m,mp,ispin) = gOnsite%uu(j,i_hia,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * dos_weights(j)      
+                              gOnsite%dd(j,i_hia,m,mp,ispin) = gOnsite%dd(j,i_hia,m,mp,ispin) + conjg(n1_tmp(2,m,mp)) * fac * dos_weights(j)
+                              gOnsite%du(j,i_hia,m,mp,ispin) = gOnsite%du(j,i_hia,m,mp,ispin) + conjg(n1_tmp(3,m,mp)) * fac * dos_weights(j)
+                           ENDDO
+                        ELSE
+                           gOnsite%uu(j,i_hia,m,mp,ispin) = gOnsite%uu(j,i_hia,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * wk
+                           gOnsite%dd(j,i_hia,m,mp,ispin) = gOnsite%dd(j,i_hia,m,mp,ispin) + conjg(n1_tmp(2,m,mp)) * fac * wk
+                           gOnsite%du(j,i_hia,m,mp,ispin) = gOnsite%du(j,i_hia,m,mp,ispin) + conjg(n1_tmp(3,m,mp)) * fac * wk
+                        END IF
+                     ENDDO
                   ENDDO
                ENDDO
             ENDIF       
@@ -172,11 +201,10 @@ SUBROUTINE im_gmmpMat(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdus,e
 
 END SUBROUTINE im_gmmpMat
 
-SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,gOnsite,ef,sym)
+SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,gOnsite,ef,sym)
 
    USE m_types
    USE m_constants
-   USE m_juDFT
    USE m_smooth
    USE m_kkintgr
    USE m_radfun
@@ -188,13 +216,13 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,gOnsite,ef,sym)
    TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
    TYPE(t_sym),            INTENT(IN)     :: sym
 
-   INTEGER,                INTENT(IN)     :: jspin,jspins
+   INTEGER,                INTENT(IN)     :: jspins
 
    REAL,                   INTENT(IN)     :: ef
    REAL,                   INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,jspins)
 
    TYPE(t_usdus) usdus
-   INTEGER i, i_hia, l, m, mp, jr, noded, nodeu, n, j
+   INTEGER i, i_hia, l, m, mp, jr, noded, nodeu, n, j, jspin
    REAL wronk
    CHARACTER(len=30) :: filename
 
@@ -224,14 +252,14 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,gOnsite,ef,sym)
       l = atoms%lda_hia(i_hia)%l
       n = atoms%lda_hia(i_hia)%atomType  
 
+      DO jspin = 1, jspins
+         !The functions f and g can probably be taken from another call of the routine
+         IF(gOnsite%nr(i_hia).NE.1) CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),vr(:,n,jspin),atoms,&
+                                          f(:,:,l,jspin),g(:,:,l,jspin),usdus, nodeu,noded,wronk)
 
-      IF(gOnsite%nr(i_hia).NE.1)CALL radfun(l,n,jspin,enpara%el0(l,n,jspin),vr(:,n,jspin),atoms,&
-                                       f(:,:,l,jspin),g(:,:,l,jspin),usdus, nodeu,noded,wronk)
-
-      DO m = -l, l
-         DO mp = -l,l
-            !calculate the imaginary part if we use the tetrahedron method
-            IF(gOnsite%l_tetra) THEN
+         DO m = -l, l
+            DO mp = -l,l
+               !calculate the radial dependence
                IF(gOnsite%nr(i_hia).NE.1) THEN
                   DO jr = 1, gOnsite%nr(i_hia)
                      gOnsite%im_gmmpmat(jr,:,i_hia,m,mp,jspin) = gOnsite%im_gmmpmat(jr,:,i_hia,m,mp,jspin) + &
@@ -240,22 +268,22 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,gOnsite,ef,sym)
                                        gOnsite%du(:,i_hia,m,mp,jspin) * (f(jr,1,l,jspin)*g(jr,1,l,jspin)+f(jr,2,l,jspin)*g(jr,2,l,jspin))
                   ENDDO
                END IF
-            ENDIF
-            !
-            !taking care of spin degeneracy
-            !
-            IF(jspins.EQ.1) gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1) = 2.0 * gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1)
-            !
-            !smooth the imaginary part using gaussian broadening 
-            !
-            IF(gOnsite%sigma.NE.0.0) THEN
-               DO jr = 1, gOnsite%nr(i_hia)
-                  CALL smooth(e(:),gOnsite%im_gmmpMat(jr,:,i_hia,m,mp,jspin),gOnsite%sigma,gOnsite%ne)
-               ENDDO
-            ENDIF
+               !
+               !smooth the imaginary part using gaussian broadening 
+               !
+               IF(gOnsite%sigma.NE.0.0) THEN
+                  DO jr = 1, gOnsite%nr(i_hia)
+                     CALL smooth(e(:),gOnsite%im_gmmpMat(jr,:,i_hia,m,mp,jspin),gOnsite%sigma,gOnsite%ne)
+                  ENDDO
+               ENDIF
 
+            ENDDO
          ENDDO
       ENDDO
+      !
+      !taking care of spin degeneracy
+      !
+      IF(jspins.EQ.1) gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1) = 2.0 * gOnsite%im_gmmpMat(:,:,i_hia,m,mp,1)
       !
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
       !
@@ -264,16 +292,18 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspin,jspins,gOnsite,ef,sym)
       CALL gOnsite%init_e_contour(ef)
 
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
-      DO m= -l,l
-         DO mp= -l,l
-            DO jr = 1, gOnsite%nr(i_hia)
-               IF(gOnsite%mode.EQ.1) THEN
-                  CALL kkintgr_real(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
-                                    gOnsite%im_gmmpMat(jr,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_hia,m,mp,jspin))
-               ELSE IF(gOnsite%mode.EQ.2) THEN
-                  CALL kkintgr_complex(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
+      DO jspin = 1, jspins
+         DO m= -l,l
+            DO mp= -l,l
+               DO jr = 1, gOnsite%nr(i_hia)
+                  IF(gOnsite%mode.EQ.1) THEN
+                     CALL kkintgr_real(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
                                        gOnsite%im_gmmpMat(jr,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_hia,m,mp,jspin))
-               END IF
+                  ELSE IF(gOnsite%mode.EQ.2) THEN
+                     CALL kkintgr_complex(gOnsite%nz,gOnsite%e(:),gOnsite%ne,gOnsite%sigma,gOnsite%del,gOnsite%e_bot,&
+                                          gOnsite%im_gmmpMat(jr,:,i_hia,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_hia,m,mp,jspin))
+                  END IF
+               ENDDO
             ENDDO
          ENDDO
       ENDDO
@@ -298,12 +328,11 @@ END SUBROUTINE calc_onsite
 SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
    !This Subroutine determines the cutoff energy for the kramers-kronig-integration
    !This cutoff energy is defined so that the integral over the fDOS up to this cutoff 
-   !is equal to 14 (the number of states in the 4f shell) or not to small
+   !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
 
 
    USE m_types
    USE m_intgr
-   USE m_juDFT
    USE m_constants
    USE m_kkintgr
    
@@ -316,11 +345,11 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
    REAL, ALLOCATABLE :: fDOS(:)
 
-   INTEGER i_hia, i,l, m,mp, ispin, j, n_c, kkintgr_cut, jr, n
+   INTEGER i_hia, i,l, m,mp, j, n_c, kkintgr_cut, jr, n, ispin
 
    REAL integral
 
-   REAL a,b, imag
+   REAL a,b, imag, n_states
    LOGICAL l_write
 
    ALLOCATE(fDOS(gOnsite%ne))
@@ -349,36 +378,19 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
          ENDDO
       ENDDO
 
-      fDOS(:) = -1/pi_const * fDOS(:)
-
-
-      IF(l_write) THEN
-
-         open(unit=1337,file="fDOS.txt",status="replace", action="write")
-
-         DO j = 1, gOnsite%ne
-
-            WRITE(1337,*) (j-1) * gOnsite%del + gOnsite%e_bot, fDOS(j)
-
-         ENDDO
-
-         close(unit=1337)
-
-      END IF       
-
-
-
       CALL trapz(fDOS(:), gOnsite%del, gOnsite%ne, integral)
 
+      n_states = 2*(2*l+1)
+      
       WRITE(*,*) "Integral over fDOS: ", integral
 
       kkintgr_cut = gOnsite%ne
 
-      IF(integral.LT.13.5) THEN
+      IF(integral.LT.n_states-0.5) THEN
          ! If the integral is to small we stop here to avoid problems
          CALL juDFT_error("fDOS-integral too small: make sure numbands is big enough", calledby="greensf_cutoff")
          
-      ELSE IF((integral.GT.14).AND.((integral-14).GT.0.001)) THEN
+      ELSE IF((integral.GT.n_states).AND.((integral-n_states).GT.0.001)) THEN
          !IF the integral is bigger than 14, search for the cutoff using the bisection method   
 
          a = gOnsite%e_bot
@@ -391,14 +403,14 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
             
             CALL trapz(fDOS(:),gOnsite%del,n_c,integral)
 
-            IF((ABS(integral-14).LT.0.001).OR.(ABS(a-b)/2.0.LT.gonsite%del)) THEN
+            IF((ABS(integral-n_states).LT.0.001).OR.(ABS(a-b)/2.0.LT.gonsite%del)) THEN
 
                kkintgr_cut = INT(((a+b)/2.0-gOnsite%e_bot)/gOnsite%del)+1
                EXIT
 
-            ELSE IF((integral-14).LT.0) THEN
+            ELSE IF((integral-n_states).LT.0) THEN
                a = (a+b)/2.0
-            ELSE IF((integral-14).GT.0) THEN
+            ELSE IF((integral-n_states).GT.0) THEN
                b = (a+b)/2.0
             END IF
 
@@ -422,7 +434,7 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
                ENDDO
             ENDDO
          ENDDO
-      ENDDO
+      ENDDo
 
    ENDDO
 
