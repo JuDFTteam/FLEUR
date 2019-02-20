@@ -461,6 +461,8 @@
 
    <xsd:complexType name="LdaHIAType">
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="U" type="xsd:string" use="required"/>
+      <xsd:attribute name="J" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="ForceType">

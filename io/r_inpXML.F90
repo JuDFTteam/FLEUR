@@ -119,6 +119,7 @@ CONTAINS
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
       INTEGER            :: ldau_l(4), numVac, numU
       INTEGER            :: ldahia_l, numHIA
+      REAL               :: ldahia_u, ldahia_j
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -1319,12 +1320,14 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l'))
             ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@U'))
             ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@J'))
-          l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
+            l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
          END DO
 
          numHIA = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA')
          IF(numHIA.EQ.1) THEN
-            ldahia_l       = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@l'))
+            ldahia_l = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@l'))
+            ldahia_u = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@U'))
+            ldahia_j = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@J'))
          ENDIF
 
          speciesNLO(iSpecies) = 0
@@ -1378,10 +1381,12 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%lda_u(atoms%n_u)%atomType = iType
                END DO
                IF (numHIA.EQ.1) THEN
-                  input%l_hia = .true. !We only set this switch to true if there are actual atoms calculated with DFT+HIA
+                  input%l_hia = .true. !We only set this switch to true if there are actual atoms calculated with DFT+HIA (Where is this used?)
                   atoms%n_hia = atoms%n_hia + 1
                   atoms%lda_hia(atoms%n_hia)%l        = ldahia_l
                   atoms%lda_hia(atoms%n_hia)%atomType = iType
+                  atoms%lda_hia(atoms%n_hia)%u        = ldahia_u
+                  atoms%lda_hia(atoms%n_hia)%j        = ldahia_j
                ENDIF
                atomTypeSpecies(iType) = iSpecies
                IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
