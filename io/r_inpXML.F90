@@ -14,7 +14,7 @@ MODULE m_rinpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE r_inpXML(&
-      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
+      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
       cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
       noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
       xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
@@ -58,6 +58,7 @@ CONTAINS
       TYPE(t_noco),INTENT(INOUT)     :: noco
       TYPE(t_dimension),INTENT(OUT)  :: dimension
       TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
+      TYPE(t_field), INTENT(INOUT)   :: field
       CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT):: forcetheo
       TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
       TYPE(t_wann)   ,INTENT(INOUT)  :: wann
@@ -141,7 +142,7 @@ CONTAINS
 
       INTEGER            :: altKPointSetIndex,  altKPointSetIndices(2)
       LOGICAL            :: ldaSpecies
-      REAL               :: socscaleSpecies
+      REAL               :: socscaleSpecies,b_field_mtspecies
 
       INTEGER, ALLOCATABLE :: lNumbers(:), nNumbers(:), speciesLLO(:)
       INTEGER, ALLOCATABLE :: loOrderList(:)
@@ -700,27 +701,31 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       !   END IF
 
       ! Read in optional E-Field parameters
-
-      xPathA = '/fleurInput/calculationSetup/eField'
+     
+      xPathA = '/fleurInput/calculationSetup/fields'
       numberNodes = xmlGetNumberOfNodes(xPathA)
 
       IF (numberNodes.EQ.1) THEN
-         !input%efield%zsigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
-         !input%efield%sig_b(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
-         !input%efield%sig_b(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_2'))
-         !input%efield%plot_charge = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_charge'))
-         !input%efield%plot_rho = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_rho'))
-         !input%efield%autocomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@autocomp'))
-         !input%efield%dirichlet = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
-         !l_eV = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
+         IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
+            field%b_field=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
+            field%l_b_field=.true.
+         ENDIF
+         field%efield%zsigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
+         field%efield%sig_b(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
+         field%efield%sig_b(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_2'))
+         field%efield%plot_charge = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_charge'))
+         field%efield%plot_rho = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_rho'))
+         field%efield%autocomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@autocomp'))
+         field%efield%dirichlet = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
+         field%efield%l_eV = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
 
-         STOP 'Error: Reading input for E-Fields not yet implemented completely!'
-         !      ALLOCATE(input%efield%sigEF(3*k1d, 3*k2d, nvac))
-         !      input%efield%sigEF = 0.0
-         !IF (l_eV) THEN
-         !   input%efield%sig_b(:) = input%efield%sig_b/hartree_to_ev_const
-         !         input%efield%sigEF(:,:,:) = input%efield%sigEF/hartree_to_ev_const
-         !END IF
+         numberNodes=xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/shape')
+         ALLOCATE(field%efield%shapes(numberNodes))
+         DO i=1,numberNodes
+            WRITE(xPathB,"(a,a,i0,a)") TRIM(ADJUSTL(xpathA)),'/shape[',i,']'
+            field%efield%shapes(i)=TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
+         ENDDO
+         
       END IF
 
       ! Read in optional energy parameter limits
@@ -1409,6 +1414,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          IF (numberNodes==1) THEN
             ldaSpecies = evaluateFirstBoolOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lda'))))
             socscaleSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socscale'))))
+            IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field_mt')>0) THEN
+               b_field_mtSpecies=evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@b_field_mt'))))
+               field%l_b_field=.TRUE.
+            ENDIF
          ENDIF
          ! Explicitely provided core configurations
 
@@ -1621,6 +1630,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   xcpot%lda_atom(iType)=ldaSpecies
                END SELECT
                noco%socscale(iType)=socscaleSpecies
+               IF (field%l_b_field) THEN
+                  IF (.NOT.ALLOCATED(field%b_field_mt)) THEN
+                     ALLOCATE(field%b_field_mt(atoms%ntype))
+                     field%b_field_mt=0.0
+                  ENDIF
+                  field%b_field_mt(itype)=b_field_mtSpecies
+               ENDIF
             END IF
          END DO
          DEALLOCATE(loOrderList)

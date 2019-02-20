@@ -24,6 +24,8 @@ MODULE m_types_field
      LOGICAL :: autocomp    = .TRUE.  ! Auto-compensate film charge
      LOGICAL :: dirichlet = .FALSE. ! Dirichlet vs. Neumann boundary cond.
      LOGICAL :: l_dirichlet_coeff = .FALSE. ! For MPI, true if C1/C2 set
+     LOGICAL :: l_eV =.FALSE. !Input in eV
+     CHARACTER(len=50),ALLOCATABLE :: shapes(:)
   END TYPE t_efield
 
   TYPE t_field
