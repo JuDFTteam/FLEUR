@@ -184,7 +184,7 @@
                 a2 = 0.0
                 a3 = 0.0
                 CALL r_inpXML(&
-                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
+                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
