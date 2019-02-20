@@ -697,16 +697,27 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       xPathA = '/fleurInput/calculationSetup/onsiteGF'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
-         input%onsite_etop = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@e_top'))
-         input%onsite_ebot = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@e_bot'))
-         input%onsite_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
-         input%onsite_ne = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ne'))
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@sigma'
+         numberNodes = xmlGetNumberOfNodes(xPathA)
+         IF(numberNodes.EQ.1) input%onsite_sigma = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
+
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@ne'
+         numberNodes = xmlGetNumberOfNodes(xPathA)
+         IF(numberNodes.EQ.1) input%onsite_ne = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
+
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@mode'
+         numberNodes = xmlGetNumberOfNodes(xPathA)
+         IF(numberNodes.EQ.1) input%onsite_mode = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
+
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@nz'
+         numberNodes = xmlGetNumberOfNodes(xPathA)
+         IF(numberNodes.EQ.1) input%onsite_nz = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
+
+         xPathA = '/fleurInput/calculationSetup/onsiteGF'
          input%onsite_tetra = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_tetra'))
          input%onsite_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
-         input%onsite_mode = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mode'))
-         input%onsite_nin = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nz'))
       END IF
-
+      
       IF((input%onsite_tetra).AND.(.NOT.input%tria)) THEN
          CALL juDFT_error("Tetrahedron method not set up with this k-point-set but l_tetra is true", calledby="r_inpXML")
       ENDIF

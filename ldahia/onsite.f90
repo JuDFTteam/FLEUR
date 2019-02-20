@@ -289,8 +289,6 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,gOnsite,ef,sym)
       !
       CALL greensf_cutoff(gOnsite,atoms,jspins)
 
-      CALL gOnsite%init_e_contour(ef)
-
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO jspin = 1, jspins
          DO m= -l,l
@@ -378,6 +376,8 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
          ENDDO
       ENDDO
 
+      fDOS(:) = -1/pi_const*fDOS(:)
+
       CALL trapz(fDOS(:), gOnsite%del, gOnsite%ne, integral)
 
       n_states = 2*(2*l+1)
@@ -395,7 +395,6 @@ SUBROUTINE greensf_cutoff(gOnsite,atoms,jspins)
 
          a = gOnsite%e_bot
          b = gOnsite%e_top
-
 
          DO
 

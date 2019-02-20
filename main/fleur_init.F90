@@ -144,13 +144,11 @@
 
           !Many of these can probably be eliminated
           input%onsite_ne = 1301 !same as for dos calculations
-          input%onsite_etop = 1.0
-          input%onsite_ebot = -1.0
           input%onsite_sigma = 0.0
           input%onsite_tetra = .false.
           input%onsite_sphavg = .true.
           input%onsite_mode = 2
-          input%onsite_nin = 5
+          input%onsite_nz = 32
           input%l_hia = .false.
           atoms%n_hia = 0
 

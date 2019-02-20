@@ -101,7 +101,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
-   IF(atoms%n_hia.GT.0) CALL gOnsite%init(input,atoms,kpts,dimension,.true.)
+   IF(atoms%n_hia.GT.0) CALL gOnsite%init(input,atoms,kpts,dimension,results%ef,.true.)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 

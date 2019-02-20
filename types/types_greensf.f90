@@ -55,7 +55,7 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(thisGREENSF,input,atoms,kpts,dimension,l_onsite,nz_in,e_in,de_in)
+      SUBROUTINE greensf_init(thisGREENSF,input,atoms,kpts,dimension,ef,l_onsite,nz_in,e_in,de_in)
 
          USE m_types_setup
          USE m_types_kpts
@@ -66,18 +66,28 @@ MODULE m_types_greensf
          TYPE(t_input),          INTENT(IN)     :: input
          TYPE(t_kpts),           INTENT(IN)     :: kpts
          TYPE(t_dimension),      INTENT(IN)     :: dimension
+         REAL,                   INTENT(IN)     :: ef
          LOGICAL,                INTENT(IN)     :: l_onsite !this switch determines wether we want to use this type to calculate the on-site green's function
          !Pass a already calculated energy contour to the type
          INTEGER, OPTIONAL,      INTENT(IN)     :: nz_in
          COMPLEX, OPTIONAL,      INTENT(IN)     :: e_in(:)
          COMPLEX, OPTIONAL,      INTENT(IN)     :: de_in(:)
 
-         INTEGER n, i_hia
+         INTEGER i_hia
+         REAL    tol,n
 
+         tol = 1e-14
          !Parameters for calculation of the imaginary part
          thisGREENSF%ne       = input%onsite_ne
-         thisGREENSF%e_top    = input%onsite_etop
-         thisGREENSF%e_bot    = input%onsite_ebot
+         !take the energyParameterLimits from inp.xml if they are set, otherwise use default values
+         IF(ABS(input%ellow).LT.tol.AND.ABS(input%elup).LT.tol) THEN
+            thisGREENSF%e_top    = 1.0
+            thisGREENSF%e_bot    = -1.0
+         ELSE
+            thisGREENSF%e_top    = input%elup
+            thisGREENSF%e_bot    = input%ellow
+         ENDIF
+
          thisGREENSF%sigma    = input%onsite_sigma
 
          thisGREENSF%l_tetra  = input%onsite_tetra
@@ -106,13 +116,14 @@ MODULE m_types_greensf
             thisGREENSF%mode     = input%onsite_mode
 
             IF(thisGREENSF%mode.EQ.1) THEN
-               thisGREENSF%nz = input%onsite_nin
+               thisGREENSF%nz = input%onsite_nz
             ELSE IF(thisGREENSF%mode.EQ.2) THEN
-               n = input%onsite_nin
-               !ensure that we don't flood the memory accidentally
-               IF(n.LT.2) n = 2
-               IF(n.GT.7) n = 7
-               thisGREENSF%nz = 2**n
+               n = LOG(REAL(input%onsite_nz))/LOG(2.0)
+               IF(MOD(n,1.0).GT.tol) THEN
+                  WRITE(*,*) "This mode for the energy contour uses 2^n number of points."
+                  WRITE(*,*) "Setting nz = ", 2**AINT(n) 
+               END IF
+               thisGREENSF%nz = 2**AINT(n)
             END IF
          END IF
 
@@ -127,6 +138,8 @@ MODULE m_types_greensf
             thisGREENSF%e(:) = CMPLX(0.0,0.0)
             thisGREENSF%de(:)= CMPLX(0.0,0.0)
          END IF
+
+         CALL thisGREENSF%init_e_contour(ef)
 
          IF(l_onsite) THEN
             IF (.NOT.input%onsite_sphavg) THEN 
