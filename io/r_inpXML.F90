@@ -694,24 +694,24 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
       END IF
 
-      xPathA = '/fleurInput/calculationSetup/ldaHIA'
+      xPathA = '/fleurInput/calculationSetup/onsiteGF'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
-         input%ldahia_etop = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@e_top'))
-         input%ldahia_ebot = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@e_bot'))
-         input%ldahia_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
-         input%ldahia_ne = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ne'))
-         input%ldahia_tetra = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_tetra'))
-         input%ldahia_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
-         input%ldahia_mode = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mode'))
-         input%ldahia_nin = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nz'))
+         input%onsite_etop = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@e_top'))
+         input%onsite_ebot = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@e_bot'))
+         input%onsite_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
+         input%onsite_ne = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ne'))
+         input%onsite_tetra = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_tetra'))
+         input%onsite_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
+         input%onsite_mode = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mode'))
+         input%onsite_nin = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nz'))
       END IF
 
-      IF((input%ldahia_tetra).AND.(.NOT.input%tria)) THEN
+      IF((input%onsite_tetra).AND.(.NOT.input%tria)) THEN
          CALL juDFT_error("Tetrahedron method not set up with this k-point-set but l_tetra is true", calledby="r_inpXML")
       ENDIF
 
-      IF(input%ldahia_mode.GT.2) CALL juDFT_error("No valid mode for the energy contour of Green's function", calledby="r_inpXML")
+      IF(input%onsite_mode.GT.2) CALL juDFT_error("No valid mode for the energy contour of Green's function", calledby="r_inpXML")
 
 
       ! Read in optional q point mesh for spin spirals

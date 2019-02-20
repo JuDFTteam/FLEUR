@@ -420,15 +420,15 @@ MODULE m_types_setup
      LOGICAL :: ldauLinMix
      REAL    :: ldauMixParam
      REAL    :: ldauSpinf
-     REAL    :: ldahia_etop
-     REAL    :: ldahia_ebot
-     REAL    :: ldahia_sigma
+     REAL    :: onsite_etop
+     REAL    :: onsite_ebot
+     REAL    :: onsite_sigma
      LOGICAL :: l_hia !this switch is used to make sure, that all bands are included in the calculation
-     INTEGER :: ldahia_ne
-     LOGICAL :: ldahia_tetra
-     LOGICAL :: ldahia_sphavg
-     INTEGER :: ldahia_mode
-     INTEGER :: ldahia_nin
+     INTEGER :: onsite_ne
+     LOGICAL :: onsite_tetra
+     LOGICAL :: onsite_sphavg
+     INTEGER :: onsite_mode
+     INTEGER :: onsite_nin
   END TYPE t_input
 
   TYPE t_sliceplot

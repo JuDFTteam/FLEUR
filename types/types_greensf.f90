@@ -75,12 +75,12 @@ MODULE m_types_greensf
          INTEGER n, i_hia
 
          !Parameters for calculation of the imaginary part
-         thisGREENSF%ne       = input%ldahia_ne
-         thisGREENSF%e_top    = input%ldahia_etop
-         thisGREENSF%e_bot    = input%ldahia_ebot
-         thisGREENSF%sigma    = input%ldahia_sigma
+         thisGREENSF%ne       = input%onsite_ne
+         thisGREENSF%e_top    = input%onsite_etop
+         thisGREENSF%e_bot    = input%onsite_ebot
+         thisGREENSF%sigma    = input%onsite_sigma
 
-         thisGREENSF%l_tetra  = input%ldahia_tetra
+         thisGREENSF%l_tetra  = input%onsite_tetra
          thisGREENSF%l_ef     = .false.
 
          !set up energy grid for imaginary part
@@ -89,7 +89,7 @@ MODULE m_types_greensf
          !Set number of radial points
          ALLOCATE(thisGREENSF%nr(atoms%n_hia))
 
-         IF(input%ldahia_sphavg) THEN
+         IF(input%onsite_sphavg) THEN
             thisGREENSF%nr(:) = 1
          ELSE
             DO i_hia = 1, atoms%n_hia
@@ -103,12 +103,12 @@ MODULE m_types_greensf
             thisGREENSF%nz = nz_in
          ELSE
             !Parameters for the energy contour in the complex plane
-            thisGREENSF%mode     = input%ldahia_mode
+            thisGREENSF%mode     = input%onsite_mode
 
             IF(thisGREENSF%mode.EQ.1) THEN
-               thisGREENSF%nz = input%ldahia_nin
+               thisGREENSF%nz = input%onsite_nin
             ELSE IF(thisGREENSF%mode.EQ.2) THEN
-               n = input%ldahia_nin
+               n = input%onsite_nin
                !ensure that we don't flood the memory accidentally
                IF(n.LT.2) n = 2
                IF(n.GT.7) n = 7
@@ -129,7 +129,7 @@ MODULE m_types_greensf
          END IF
 
          IF(l_onsite) THEN
-            IF (.NOT.input%ldahia_sphavg) THEN 
+            IF (.NOT.input%onsite_sphavg) THEN 
                ALLOCATE (thisGREENSF%uu(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
                ALLOCATE (thisGREENSF%dd(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
                ALLOCATE (thisGREENSF%du(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
