@@ -1,11 +1,11 @@
-MODULE m_eff_excsplitting
+MODULE m_eff_excinteraction
 
    !This module calculates the effective exchange interaction
    !from the onsite green's function
 
    CONTAINS
 
-   SUBROUTINE eff_excsplitting(gOnsite,atoms,input,j0)
+   SUBROUTINE eff_excinteraction(gOnsite,atoms,input,j0)
 
       USE m_types
       USE m_constants
@@ -79,8 +79,8 @@ MODULE m_eff_excsplitting
 
          j0 = j0*1/fpi_const*hartree_to_ev_const
 
-         WRITE(*,*)  "Eff. Exchange splitting for atom", atoms%lda_hia(i_hia)%atomType, ": ", j0, "eV"
+         WRITE(*,*)  "Eff. Exchange Interaction for atom", atoms%lda_hia(i_hia)%atomType, ": ", j0, "eV"
       ENDDO
-   END SUBROUTINE eff_excsplitting
+   END SUBROUTINE eff_excinteraction
 
-END MODULE m_eff_excsplitting
+END MODULE m_eff_excinteraction

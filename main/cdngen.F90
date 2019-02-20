@@ -38,7 +38,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_Ekwritesl
    USE m_banddos_io
    USE m_unfold_band_kpts
-   USE m_eff_excsplitting
+   USE m_eff_excinteraction
    USE m_gOnsite
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
@@ -123,7 +123,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END IF
    !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
    IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2) THEN
-      CALL eff_excsplitting(gOnsite,atoms,input,j0)
+      CALL eff_excinteraction(gOnsite,atoms,input,j0)
    ENDIF
 
 
