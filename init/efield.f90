@@ -264,11 +264,11 @@
         ! New format
         ALLOCATE(E%sigEF(3*k1d, 3*k2d, nvac))
         E%sigEF = 0.0
-
+        if (allocated(e%shapes)) then
         DO i=1,SIZE(e%shapes)
            CALL read_shape (E, e%shapes(i), nvac)
         END DO
-       
+        endif
         IF (e%l_eV) THEN
           E%sig_b(:) = E%sig_b/hartree_to_ev_const
           E%sigEF(:,:,:) = E%sigEF/hartree_to_ev_const
