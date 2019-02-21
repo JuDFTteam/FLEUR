@@ -11,7 +11,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,&
                   enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                  archiveType,outDen)
+                  archiveType,outDen,gOnsite)
 
    !*****************************************************
    !    Charge density generator
@@ -70,6 +70,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
    TYPE(t_potden),INTENT(IN)        :: vTot
    TYPE(t_potden),INTENT(INOUT)     :: outDen
+   TYPE(t_greensf),INTENT(INOUT)    :: gOnsite
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -83,7 +84,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
    TYPE(t_cdnvalJob)     :: cdnvalJob
-   TYPE(t_greensf)       :: gOnsite
+
 
 
    !Local Scalars
@@ -101,7 +102,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
-   IF(atoms%n_hia.GT.0.OR.atoms%n_j0.GT.0) CALL gOnsite%init(input,atoms,kpts,dimension,results%ef,.true.)
+   
+   IF(atoms%n_hia+atoms%n_j0.GT.0) CALL gOnsite%init_e_contour(results%ef)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 

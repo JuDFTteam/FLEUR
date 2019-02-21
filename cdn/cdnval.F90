@@ -242,7 +242,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
-         IF (atoms%n_hia.GT.0) THEN
+         IF (atoms%n_hia+atoms%n_j0.GT.0) THEN
             IF(gOnsite%l_tetra) THEN
                CALL timestart("OnSite: TetWeights")
                tetweights = 0.0

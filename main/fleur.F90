@@ -99,6 +99,7 @@ CONTAINS
     TYPE(t_potden)                  :: inDen, outDen
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
+    TYPE(t_greensf)                 :: gOnsite
 
     ! local scalars
     INTEGER :: eig_id,archiveType
@@ -161,6 +162,7 @@ CONTAINS
     CALL vx%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTCOUL)
     CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
+    IF(atoms%n_hia.GT.0.OR.atoms%n_j0.GT.0) CALL gOnsite%init(input,atoms,kpts,dimension,noco,.true.)
 
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco
@@ -346,7 +348,7 @@ CONTAINS
           CALL outDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
-                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen)
+                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen,gOnsite)
 
           IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                                   sphhar,sym,field,vTot,oneD,noco,results)
