@@ -1320,7 +1320,14 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             speciesNLO(iSpecies) = speciesNLO(iSpecies) + lNumCount
             DEALLOCATE (lNumbers, nNumbers)
          END DO
-
+         ! Special switches for species
+         vcaspecies=0.0
+         WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
+         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+         IF (numberNodes==1) THEN
+            vcaSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vca_charge'))))
+         ENDIF
+       
          DO iType = 1, atoms%ntype
             WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
@@ -1410,13 +1417,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          ! Special switches for species
          ldaspecies=.FALSE.
          socscalespecies=1.0
-         vcaspecies=0.0
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/special'
          numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
          IF (numberNodes==1) THEN
             ldaSpecies = evaluateFirstBoolOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lda'))))
             socscaleSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socscale'))))
-            vcaSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vca_charge'))))
             IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field_mt')>0) THEN
                b_field_mtSpecies=evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@b_field_mt'))))
                field%l_b_field=.TRUE.
@@ -2138,7 +2143,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 !!! End of non-XML input
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      CALL xmlFreeResources()
+      !CALL xmlFreeResources()
 
       !WRITE(*,*) 'Reading of inp.xml file finished'
 
