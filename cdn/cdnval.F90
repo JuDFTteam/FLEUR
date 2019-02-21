@@ -240,17 +240,18 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
+         !Shouldn't this be ispin??
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
          IF (atoms%n_hia+atoms%n_j0.GT.0) THEN
             IF(gOnsite%l_tetra) THEN
                CALL timestart("OnSite: TetWeights")
                tetweights = 0.0
-               CALL tetra_weights(ikpt,kpts,results%neig(:,jspin),results%eig(:,:,jspin),gOnsite,tetweights(:,:),results%ef)
+               CALL tetra_weights(ikpt,kpts,results%neig(:,ispin),results%eig(:,:,ispin),gOnsite,tetweights(:,:),results%ef)
                CALL timestop("OnSite: TetWeights")
             ENDIF
             CALL timestart("On-Site: Setup")
-               CALL im_gmmpMat(atoms,sym,jspin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
+               CALL im_gmmpMat(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
             CALL timestop("On-Site: Setup")
          ENDIF
 
@@ -260,6 +261,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                      skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
 
          IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+         !PLACEHOLDER
+         !IF (noco%l_mperp.AND.(ispin==jsp_end).AND.atoms%n_hia+atoms%n_j0.GT.0) THEN 
+         !   CALL onsite_21(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
+         !END IF
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
          IF (l_dosNdir) THEN
