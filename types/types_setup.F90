@@ -90,6 +90,8 @@ MODULE m_types_setup
      INTEGER ::n_u
      ! no of lda+hias 
      INTEGER ::n_hia
+     ! no of j0 calculations
+     INTEGER ::n_j0
      ! dimensions
      INTEGER :: jmtd
      !No of element
@@ -167,6 +169,8 @@ MODULE m_types_setup
      TYPE(t_utype),ALLOCATABLE::lda_u(:)
      !lda+hia information
      TYPE(t_utype),ALLOCATABLE::lda_hia(:)
+     !j0 calc information
+     TYPE(t_utype),ALLOCATABLE::j0(:)
      INTEGER,ALLOCATABLE :: relax(:,:) !<(3,ntype)
      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
   END TYPE t_atoms
@@ -421,12 +425,12 @@ MODULE m_types_setup
      REAL    :: ldauMixParam
      REAL    :: ldauSpinf
      REAL    :: onsite_sigma
-     LOGICAL :: l_hia !this switch is used to make sure, that all bands are included in the calculation
      INTEGER :: onsite_ne
      LOGICAL :: onsite_tetra
      LOGICAL :: onsite_sphavg
      INTEGER :: onsite_mode
      INTEGER :: onsite_nz
+     LOGICAL :: l_hia !this switch is used to make sure, that all bands are included in the calculation
   END TYPE t_input
 
   TYPE t_sliceplot

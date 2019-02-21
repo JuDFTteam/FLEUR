@@ -22,8 +22,13 @@ MODULE m_types_greensf
      
          LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration
          LOGICAL  :: l_ef     !This switch determines wether the energy contour ends at efermi
-         INTEGER, ALLOCATABLE :: nr(:) !dimension(atoms%n_hia) number of radial points
+         INTEGER, ALLOCATABLE :: nr(:) !dimension(thisGREENSF%n_gf) number of radial points
                                        !in case of spherical average nr(:) = 1
+
+         !we store the atom types and l's for which to calculate the onsite gf to make it easier to reuse in other circumstances
+         INTEGER  :: n_gf
+         INTEGER, ALLOCATABLE :: atomType(:)
+         INTEGER, ALLOCATABLE :: l_gf(:)
 
          !Energy contour parameters
          INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
@@ -73,8 +78,9 @@ MODULE m_types_greensf
          COMPLEX, OPTIONAL,      INTENT(IN)     :: e_in(:)
          COMPLEX, OPTIONAL,      INTENT(IN)     :: de_in(:)
 
-         INTEGER i_hia
+         INTEGER i,j
          REAL    tol,n
+         LOGICAL l_new
 
          tol = 1e-14
          !Parameters for calculation of the imaginary part
@@ -96,16 +102,50 @@ MODULE m_types_greensf
          !set up energy grid for imaginary part
          thisGREENSF%del      = (thisGREENSF%e_top-thisGREENSF%e_bot)/REAL(thisGREENSF%ne-1)
 
+         !Determine for which types and l's to calculate the onsite gf
+         ALLOCATE(thisGREENSF%atomType(atoms%n_hia+atoms%n_j0))
+         ALLOCATE(thisGREENSF%l_gf(atoms%n_hia+atoms%n_j0))
+         thisGREENSF%atomType(:) = 0
+         thisGREENSF%l_gf(:) = 0
+
+         thisGREENSF%n_gf = 0
+         !DFT+HIA:
+         DO i = 1, atoms%n_hia
+
+            thisGREENSF%n_gf = thisGREENSF%n_gf + 1
+            thisGREENSF%atomType(thisGREENSF%n_gf) =  atoms%lda_hia(i)%atomType
+            thisGREENSF%l_gf(thisGREENSF%n_gf)     =  atoms%lda_hia(i)%l
+
+         ENDDO
+
+         !Effective exchange interaction:
+         DO i = 1, atoms%n_j0
+            !Avoid double calculations:
+            l_new = .true.
+            DO j = 1, thisGREENSF%n_gf
+               IF(thisGREENSF%atomType(j).EQ.atoms%j0(i)%atomType.AND.thisGREENSF%l_gf(j).EQ.atoms%j0(i)%l) THEN
+                  l_new = .false.
+                  EXIT
+               ENDIF
+            ENDDO
+
+            IF(l_new) THEN
+               thisGREENSF%n_gf = thisGREENSF%n_gf + 1
+               thisGREENSF%atomType(thisGREENSF%n_gf) =  atoms%j0(i)%atomType
+               thisGREENSF%l_gf(thisGREENSF%n_gf)     =  atoms%j0(i)%l
+            ENDIF 
+         ENDDO
+
+
+
          !Set number of radial points
-         ALLOCATE(thisGREENSF%nr(atoms%n_hia))
+         ALLOCATE(thisGREENSF%nr(thisGREENSF%n_gf))
 
          IF(input%onsite_sphavg) THEN
             thisGREENSF%nr(:) = 1
          ELSE
-            DO i_hia = 1, atoms%n_hia
-               n = atoms%lda_hia(i_hia)%atomType  
-   
-               thisGREENSF%nr(i_hia) = atoms%jri(n)
+            DO i = 1, thisGREENSF%n_gf 
+               thisGREENSF%nr(i) = atoms%jri(thisGREENSF%atomType(i))
             ENDDO
          END IF
 
@@ -143,9 +183,9 @@ MODULE m_types_greensf
 
          IF(l_onsite) THEN
             IF (.NOT.input%onsite_sphavg) THEN 
-               ALLOCATE (thisGREENSF%uu(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-               ALLOCATE (thisGREENSF%dd(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-               ALLOCATE (thisGREENSF%du(thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               ALLOCATE (thisGREENSF%uu(thisGREENSF%ne,thisGREENSF%n_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               ALLOCATE (thisGREENSF%dd(thisGREENSF%ne,thisGREENSF%n_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               ALLOCATE (thisGREENSF%du(thisGREENSF%ne,thisGREENSF%n_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
               
                thisGREENSF%uu      = 0.0
                thisGREENSF%dd      = 0.0
@@ -154,11 +194,11 @@ MODULE m_types_greensf
             END IF
 
 
-            ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,thisGREENSF%n_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
             thisGREENSF%im_gmmpMat  = 0.0
          END IF
 
-         ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,atoms%n_hia,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+         ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,thisGREENSF%n_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
 
          thisGREENSF%gmmpMat = CMPLX(0.0,0.0)
 
@@ -302,11 +342,11 @@ MODULE m_types_greensf
          CLASS(t_greensf),       INTENT(IN)     :: this
          TYPE(t_atoms),          INTENT(IN)     :: atoms
          TYPE(t_sym),            INTENT(IN)     :: sym
-         COMPLEX,                INTENT(INOUT)  :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_hia),jspins)
+         COMPLEX,                INTENT(INOUT)  :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,this%n_gf),jspins)
 
          INTEGER,                INTENT(IN)     :: jspins
 
-         INTEGER i, m,mp, l, i_hia, ispin, n, it,is, isi, natom, nn
+         INTEGER i, m,mp, l, i_gf, ispin, n, it,is, isi, natom, nn
          REAL imag, re, fac, n_l
          COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
          COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -315,10 +355,10 @@ MODULE m_types_greensf
          mmpMat(:,:,:,:) = CMPLX(0.0,0.0)
 
          IF(this%l_ef) THEN
-            DO i_hia = 1, atoms%n_hia
+            DO i_gf = 1, this%n_gf
                n_l = 0.0
-               l = atoms%lda_hia(i_hia)%l
-               n = atoms%lda_hia(i_hia)%atomType  
+               l = this%l_gf(i_gf)
+               n = this%atomType(i_gf) 
   
 
                DO ispin = 1, jspins
@@ -326,22 +366,22 @@ MODULE m_types_greensf
                   DO m = -l, l
                      DO mp = -l, l
                         DO i = 1, this%nz
-                           IF(this%nr(i_hia).NE.1) THEN
+                           IF(this%nr(i_gf).NE.1) THEN
 
-                              CALL intgr3(REAL(this%gmmpMat(:,i,i_hia,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
-                              CALL intgr3(AIMAG(this%gmmpMat(:,i,i_hia,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
+                              CALL intgr3(REAL(this%gmmpMat(:,i,i_gf,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
+                              CALL intgr3(AIMAG(this%gmmpMat(:,i,i_gf,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
 
                               n_tmp(m,mp) = n_tmp(m,mp) + AIMAG((re+ImagUnit*imag)*this%de(i))
 
                            ELSE
 
-                              n_tmp(m,mp) = n_tmp(m,mp) + AIMAG(this%gmmpMat(1,i,i_hia,m,mp,ispin)*this%de(i))
+                              n_tmp(m,mp) = n_tmp(m,mp) + AIMAG(this%gmmpMat(1,i,i_gf,m,mp,ispin)*this%de(i))
                            
                            END IF
                         ENDDO
 
-                        mmpMat(m,mp,i_hia,ispin) = -1/pi_const * n_tmp(m,mp)
-                        IF(m.EQ.mp) n_l = n_l + mmpMat(m,mp,i_hia,ispin)
+                        mmpMat(m,mp,i_gf,ispin) = -1/pi_const * n_tmp(m,mp)
+                        IF(m.EQ.mp) n_l = n_l + mmpMat(m,mp,i_gf,ispin)
 
                      ENDDO
                   ENDDO

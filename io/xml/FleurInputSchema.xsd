@@ -379,6 +379,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAType"/>
+	 <xsd:element maxOccurs="1" minOccurs="0" name="J0" type="LdaHIAType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>

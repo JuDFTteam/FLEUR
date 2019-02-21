@@ -121,6 +121,8 @@ CONTAINS
       INTEGER            :: ldau_l(4), numVac, numU
       INTEGER            :: ldahia_l, numHIA
       REAL               :: ldahia_u, ldahia_j
+      INTEGER            :: j0_l, numj0
+      REAL               :: j0_u, j0_j
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -223,6 +225,7 @@ CONTAINS
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%lda_hia(atoms%ntype))
+      ALLOCATE(atoms%j0(atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%neq(atoms%ntype))
@@ -1346,6 +1349,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ldahia_j = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@J'))
          ENDIF
 
+         numj0 = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/j0')
+         IF(numj0.EQ.1) THEN
+            j0_l = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l'))
+            j0_u = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@U'))
+            j0_j = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@J'))
+         ENDIF
+
          speciesNLO(iSpecies) = 0
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/lo'
          numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
@@ -1403,6 +1413,14 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%lda_hia(atoms%n_hia)%atomType = iType
                   atoms%lda_hia(atoms%n_hia)%u        = ldahia_u
                   atoms%lda_hia(atoms%n_hia)%j        = ldahia_j
+               ENDIF
+               IF (numj0.EQ.1) THEN
+                  input%l_hia = .true. !We only set this switch to true if there are actual atoms calculated with DFT+HIA (Where is this used?)
+                  atoms%n_j0 = atoms%n_j0 + 1
+                  atoms%j0(atoms%n_j0)%l        = j0_l
+                  atoms%j0(atoms%n_j0)%atomType = iType
+                  atoms%j0(atoms%n_j0)%u        = j0_u
+                  atoms%j0(atoms%n_j0)%j        = j0_j
                ENDIF
                atomTypeSpecies(iType) = iSpecies
                IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType

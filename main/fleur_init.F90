@@ -151,6 +151,7 @@
           input%onsite_nz = 32
           input%l_hia = .false.
           atoms%n_hia = 0
+          atoms%n_j0 = 0
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
