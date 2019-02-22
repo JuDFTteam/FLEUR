@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_vmt_xc
+  USE m_judft
    !.....------------------------------------------------------------------
    !     Calculate the GGA xc-potential in the MT-spheres
    !.....------------------------------------------------------------------
