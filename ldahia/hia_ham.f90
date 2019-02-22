@@ -12,6 +12,7 @@ MODULE m_hia_ham
       USE m_types
       USE m_vmmp
       USE m_constants
+      USE m_fock_basis
 
       IMPLICIT NONE
 
@@ -27,21 +28,22 @@ MODULE m_hia_ham
 
       REAL,    INTENT(IN)           :: el(0:,:,:) !(0:atoms%lmaxd,ntype,jspd)
 
-      INTEGER     i,i_hia,n,i_gf,ind,m,n_elec,ind_h,n_basis(3)
+      INTEGER     i,i_hia,N,n_occ,i_gf,ind,m,ind_h,N_basis,N_states
       INTEGER     itype,ispin,j,k,l,jspin,urec,i_u
       INTEGER     noded,nodeu,ios,lty(atoms%n_u)
-      INTEGER     max_states, neig(3)
+      INTEGER     max_states, neig
       REAL        wronk, n_f, mu
       LOGICAL     n_exist
       CHARACTER*8 l_type*2,l_form*9
 
       REAL f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
       REAL f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
+
       REAL, ALLOCATABLE :: u(:,:,:,:,:)
       COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:)
-      INTEGER, ALLOCATABLE :: basis(:,:)
-      COMPLEX, ALLOCATABLE :: ev(:,:,:)
-      COMPLEX, ALLOCATABLE :: eig(:,:)
+      INTEGER, ALLOCATABLE :: basis(:)
+      COMPLEX, ALLOCATABLE :: ev(:,:)
+      COMPLEX, ALLOCATABLE :: eig(:)
       TYPE(t_mat) :: h_mat
 
 
@@ -95,21 +97,19 @@ MODULE m_hia_ham
             !Set up and digaonalize the atomic hamiltonian for n-1, n and n+1 electrons in the correlated orbitals
             !n being the nearest integer value of n_f
             !
-            n = ANINT(n_f)
-            DO n_elec = n-1, n+1
-               n_basis(n_elec-n+2) = binom(2*(2*l+1),n)
-            ENDDO
-            max_states = MAXVAL(n_basis(:))
-            ALLOCATE(basis(3,max_states))
-            ALLOCATE(eig(3,max_states))
-            ALLOCATE(ev(3,max_states,max_states))
-            DO n_elec = n-1, n+1
+            n_occ = ANINT(n_f)
+
+            DO N = n_occ-1, n_occ+1
                !TEMPORARY:
                mu = 0.0
+               !
+               !Find all 2*(2*l+1) bit numbers with N bits being 1
+               !
+               N_states = 2*(2*l+1) !number of one-particle states in the orbital
+               CALL gen_fock_states(N,N_states,basis,N_basis)
 
-               ind_h = n_elec-n+2
-               CALL h_mat%init(.true.,n_basis(ind_h),n_basis(ind_h))
-               CALL hia_ham(l,n,u(:,:,:,:,i_hia),mu,basis(ind_h,:),h_mat)
+               CALL h_mat%init(.true.,N_basis,N_basis)
+               CALL hia_ham(l,N,u(:,:,:,:,i_hia),mu,basis(:),h_mat)
                !
                !Diagonalize the matrix
                !
@@ -240,12 +240,6 @@ MODULE m_hia_ham
       !and use the corresponding integer to label them. This way every state is uniquely determined by the number 
 
       !Difficulty: keep track of what bit means what (done in m_fock_basis)
-
-      !
-      !Find all 2*(2*l+1) bit numbers with N bits being 1
-      !
-      N_states = 2*(2*l+1) !number of one-particle states in the orbital
-      CALL gen_fock_states(N,N_states,basis,N_basis)
       !
       !At the moment we construct the full matrix and do not try to reduce space usage by using the sparseness
       !
@@ -315,36 +309,5 @@ MODULE m_hia_ham
 
 
    END SUBROUTINE
-   !
-   !MATHEMATICAL FUNCTIONS:
-   !
-   INTEGER FUNCTION binom(n,k)
-
-      IMPLICIT NONE
-
-      INTEGER,       INTENT(IN)  :: n
-      INTEGER,       INTENT(IN)  :: k
-
-      binom = fac(n)/(fac(k)*fac(n-k))
-
-   END FUNCTION binom
-
-
-   ELEMENTAL REAL FUNCTION  fac(n)
-
-      IMPLICIT NONE
- 
-      INTEGER, INTENT (IN) :: n
-      INTEGER :: i
-
-      fac = 0
-      IF (n.LT.0) RETURN
-      fac = 1
-      IF (n.EQ.0) RETURN
-      DO i = 2,n
-      fac = fac * i
-      ENDDO
- 
-   END FUNCTION  fac
 
 END MODULE m_hia_ham

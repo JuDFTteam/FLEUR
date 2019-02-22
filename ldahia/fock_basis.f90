@@ -1,4 +1,5 @@
 MODULE m_fock_basis
+   USE m_juDFT
 
    CONTAINS
 
@@ -31,7 +32,7 @@ MODULE m_fock_basis
 
       INTEGER,             INTENT(IN)     :: N        !number of electrons
       INTEGER,             INTENT(IN)     :: N_states !number of one-particle states
-      INTEGER,             INTENT(INOUT)  :: states(:)!Array of fock states
+      INTEGER,ALLOCATABLE, INTENT(OUT)    :: states(:)!Array of fock states
       INTEGER,             INTENT(OUT)    :: N_f      !number of fock-states 
 
       LOGICAL next
@@ -39,9 +40,11 @@ MODULE m_fock_basis
       INTEGER count
       INTEGER state
 
+      ALLOCATE(states(binom(N_states,N)))
       states(:) = 0
 
-      IF(N.GT.N_states) RETURN !replace with error code
+      IF(N.GT.N_states) CALL juDFT_error("Invalid occupation for DFT+Hubbard 1", &
+                                        calledby="gen_fock_states",hint="This This is a BUG in FLEUR, please report")
 
       IF(N.EQ.0) THEN
          N_f = 0
@@ -487,6 +490,37 @@ MODULE m_fock_basis
       ENDDO
 
    END SUBROUTINE write_state
+   !
+   !MATHEMATICAL FUNCTIONS:
+   !
+   INTEGER FUNCTION binom(n,k)
+
+      IMPLICIT NONE
+
+      INTEGER,       INTENT(IN)  :: n
+      INTEGER,       INTENT(IN)  :: k
+
+      binom = fac(n)/(fac(k)*fac(n-k))
+
+   END FUNCTION binom
+
+
+   ELEMENTAL REAL FUNCTION  fac(n)
+
+      IMPLICIT NONE
+ 
+      INTEGER, INTENT (IN) :: n
+      INTEGER :: i
+
+      fac = 0
+      IF (n.LT.0) RETURN
+      fac = 1
+      IF (n.EQ.0) RETURN
+      DO i = 2,n
+      fac = fac * i
+      ENDDO
+ 
+   END FUNCTION  fac
 
 
 END MODULE m_fock_basis
