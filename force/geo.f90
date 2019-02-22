@@ -104,6 +104,7 @@ CONTAINS
     REAL                          :: scale_temp, dtild_temp
     REAL                          :: forceAllAtoms(3,atoms%nat)
     CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
+    TYPE(t_field)                 :: field
     input=input_in
     atoms_new=atoms
 
@@ -207,7 +208,7 @@ CONTAINS
           ALLOCATE(xmlCoreOccs(1,1,1))
           CALL initWannierDefaults(wann_temp)
           CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-                        banddos_temp,dimension_temp,forcetheo,cell_temp,sym_temp,xcpot_temp,noco_temp,&
+                        banddos_temp,dimension_temp,forcetheo,field,cell_temp,sym_temp,xcpot_temp,noco_temp,&
                         oneD_temp,hybrid_temp,kpts_temp,enpara_temp,coreSpecInput_temp,wann_temp,noel_temp,&
                         namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,xmlElectronStates,&
                         xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp)
