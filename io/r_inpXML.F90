@@ -118,11 +118,7 @@ CONTAINS
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
-      INTEGER            :: ldau_l(4), numVac, numU
-      INTEGER            :: ldahia_l, numHIA
-      REAL               :: ldahia_u, ldahia_j
-      INTEGER            :: j0_l, numj0
-      REAL               :: j0_u, j0_j
+      INTEGER            :: ldau_l(4), numVac, numU, ldau_use(4)
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -1301,6 +1297,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       atoms%lapw_l(:) = -1
       atoms%n_u = 0
       atoms%n_hia = 0
+      atoms%n_j0 = 0
 
       DEALLOCATE(noel)
       ALLOCATE(noel(atoms%ntype))
@@ -1328,33 +1325,38 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
          END IF
 
-         numU = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
-        IF (numU.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
+         !here the way to read in parameters for lda+u, lda+hia an other things using u parameters is changed
+         !The additional argument use defines where we need these u parameters
+         !The uses are stored as:
+         !  1 -> LDA+U
+         !  2 -> LDA+Hubbard 1 and calculate j0 in magnetic case
+         !  3 -> calculate j0 without LDA+Hubbard 1
+
+         numU = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/U')
+         IF (numU.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
          ldau_l = -1
          ldau_u = 0.0
          ldau_j = 0.0
          l_amf = .FALSE.
+         ldau_use = -1
          DO i = 1, numU
             WRITE(xPathB,*) i
-            ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l'))
-            ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@U'))
-            ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@J'))
-            l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
+            ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/U['//TRIM(ADJUSTL(xPathB))//']/@l'))
+            ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/U['//TRIM(ADJUSTL(xPathB))//']/@U'))
+            ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/U['//TRIM(ADJUSTL(xPathB))//']/@J'))
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+            IF(TRIM(ADJUSTL(valueString)).EQ.'U') THEN
+               ldau_use(i) = 1
+               l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/U['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
+            ELSE IF(TRIM(ADJUSTL(valueString)).EQ.'Hubbard1') THEN
+               ldau_use(i) = 2
+               !l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/U['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
+            ELSE IF(TRIM(ADJUSTL(valueString)).EQ.'J0') THEN
+               ldau_use(i) = 3
+            ELSE
+               CALL juDFT_error("Not a valid use for U-parameter", calledby="r_inpXML")
+            ENDIF
          END DO
-
-         numHIA = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA')
-         IF(numHIA.EQ.1) THEN
-            ldahia_l = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@l'))
-            ldahia_u = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@U'))
-            ldahia_j = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA/@J'))
-         ENDIF
-
-         numj0 = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/j0')
-         IF(numj0.EQ.1) THEN
-            j0_l = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l'))
-            j0_u = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@U'))
-            j0_j = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@J'))
-         ENDIF
 
          speciesNLO(iSpecies) = 0
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/lo'
@@ -1407,29 +1409,42 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                ENDIF
                atoms%bmu(iType) = magMom
                DO i = 1, numU
-                  atoms%n_u = atoms%n_u + 1
-                  atoms%lda_u(atoms%n_u)%l = ldau_l(i)
-                  atoms%lda_u(atoms%n_u)%u = ldau_u(i)
-                  atoms%lda_u(atoms%n_u)%j = ldau_j(i)
-                  atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
-                  atoms%lda_u(atoms%n_u)%atomType = iType
-               END DO
-               IF (numHIA.EQ.1) THEN
-                  input%l_hia = .true. !We only set this switch to true if there are actual atoms calculated with DFT+HIA (Where is this used?)
-                  atoms%n_hia = atoms%n_hia + 1
-                  atoms%lda_hia(atoms%n_hia)%l        = ldahia_l
-                  atoms%lda_hia(atoms%n_hia)%atomType = iType
-                  atoms%lda_hia(atoms%n_hia)%u        = ldahia_u
-                  atoms%lda_hia(atoms%n_hia)%j        = ldahia_j
-               ENDIF
-               IF (numj0.EQ.1) THEN
-                  input%l_hia = .true. !We only set this switch to true if there are actual atoms calculated with DFT+HIA (Where is this used?)
-                  atoms%n_j0 = atoms%n_j0 + 1
-                  atoms%j0(atoms%n_j0)%l        = j0_l
-                  atoms%j0(atoms%n_j0)%atomType = iType
-                  atoms%j0(atoms%n_j0)%u        = j0_u
-                  atoms%j0(atoms%n_j0)%j        = j0_j
-               ENDIF
+                  IF(ldau_use(i).EQ.1) THEN
+                     atoms%n_u = atoms%n_u + 1
+                     atoms%lda_u(atoms%n_u)%l = ldau_l(i)
+                     atoms%lda_u(atoms%n_u)%u = ldau_u(i)
+                     atoms%lda_u(atoms%n_u)%j = ldau_j(i)
+                     atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
+                     atoms%lda_u(atoms%n_u)%atomType = iType
+                  ELSE IF(ldau_use(i).EQ.2) THEN
+                     input%l_gf = .true. !We only set this switch to true if there are actual atoms calculated with DFT+HIA (Where is this used?)
+                     atoms%n_hia = atoms%n_hia + 1
+                     atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
+                     atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
+                     atoms%lda_hia(atoms%n_hia)%j        = ldau_j(i)
+                     atoms%lda_hia(atoms%n_hia)%atomType = iType
+
+                     !We calculate j0 everytime for LDA+HIA if the calculation is magnetic (better solution)
+                     IF(input%jspins.EQ.2) THEN
+                        atoms%n_j0 = atoms%n_j0 + 1
+                        atoms%j0(atoms%n_j0)%l        = j0_l
+                        atoms%j0(atoms%n_j0)%u        = j0_u
+                        atoms%j0(atoms%n_j0)%j        = j0_j
+                        atoms%j0(atoms%n_j0)%atomType = iType
+                     END IF 
+                  ELSE IF(ldau_use(i).EQ.3) THEN
+                     IF(input%jspins.EQ.2) THEN
+                        input%l_gf = .true. !We only set this switch to true if there are actual atoms calculated with DFT+HIA (Where is this used?)
+                        atoms%n_j0 = atoms%n_j0 + 1
+                        atoms%j0(atoms%n_j0)%l        = j0_l
+                        atoms%j0(atoms%n_j0)%u        = j0_u
+                        atoms%j0(atoms%n_j0)%j        = j0_j
+                        atoms%j0(atoms%n_j0)%atomType = iType
+                     ELSE
+                        CALL juDFT_warn("No J0 calculation for non-magnetic systems", calledby="r_inpXML")
+                     ENDIF
+                  END IF 
+               ENDDO
                atomTypeSpecies(iType) = iSpecies
                IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
             END IF
