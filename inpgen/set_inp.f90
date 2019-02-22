@@ -201,8 +201,8 @@
       a1(:) = cell%amat(:,1) ; a2(:) = cell%amat(:,2) ; a3(:) = cell%amat(:,3) 
 
       CALL chkmt(&
-     &           atoms,input,vacuum,cell,oneD,&
-     &           l_gga,noel,l_test,&
+     &           atoms,input,vacuum,cell,oneD,l_test,&
+     &           l_gga,noel,&
      &           kmax,dtild,vacuum%dvac,atoms%lmax,atoms%jri,atoms%rmt,atoms%dx)
 
 ! --> read in (possibly) atomic info
@@ -236,8 +236,8 @@
       rmtTemp = 999.0
       l_test = .true.
       CALL chkmt(&
-     &           atoms,input,vacuum,cell,oneD,&
-     &           l_gga,noel,l_test,&
+     &           atoms,input,vacuum,cell,oneD,l_test,&
+     &           l_gga,noel,&
      &           kmax0,dtild0,dvac0,lmax0,jri0,rmtTemp,dx0)
 
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN

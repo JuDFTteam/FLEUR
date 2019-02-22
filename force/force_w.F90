@@ -3,14 +3,14 @@
 ! Printing force components
 ! ************************************************************
       CONTAINS
-      SUBROUTINE force_w(&
-     &                   input,atoms,sym,results,cell,oneD,vacuum)
+        SUBROUTINE force_w(mpi,input,atoms,sym,results,cell,oneD,vacuum)
       USE m_geo
       USE m_relax
       USE m_types
       USE m_xmlOutput
+      use m_relaxation
       IMPLICIT NONE
-
+      TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_results),INTENT(IN)   :: results
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_input),INTENT(IN)     :: input
@@ -24,7 +24,7 @@
       REAL sum
       INTEGER i,jsp,n,nat1,ierr
       REAL eps_force
-      LOGICAL :: l_new
+      LOGICAL :: l_new,l_relax
 !     ..
 !     .. Local Arrays ..
       REAL forcetot(3,atoms%ntype)
@@ -32,6 +32,7 @@
 !
 !     write spin-dependent forces
 !
+      IF (mpi%irank==0) THEN
       nat1 = 1
       DO n = 1,atoms%ntype
          IF (atoms%l_geo(n)) THEN
@@ -107,19 +108,12 @@
  
       WRITE (6,8020) eps_force,sum
  8020 FORMAT ('eps_force=',f8.5,'max=',f8.5)
-
-      INQUIRE(file ="relax_inp",exist= l_new)
-      IF (l_new) THEN
-        CALL relax(input%film,atoms%pos,atoms%neq,sym%mrot,sym%tau,cell%amat,cell%bmat,atoms%ngopr,sym%invtab&
-     &        ,forcetot)
-      ELSE
-
-         IF ((sum<eps_force).AND.input%l_f) THEN
-            CALL geo(&
-     &           atoms,sym,cell,&
-     &           oneD,vacuum,input,results%tote,forcetot)
-         END IF
-      ENDIF
-
-      END SUBROUTINE force_w
-      END MODULE m_forcew
+   ENDIF
+   l_relax=sum<eps_force
+#ifdef CPP_MPI
+   CALL MPI_BCAST(l_relax,1,MPI_LOGICAL,0,ierr)
+#endif
+   IF (l_relax.and.input%l_f) CALL relaxation(mpi,input,atoms,cell,sym,forcetot,results%tote)
+      
+ END SUBROUTINE force_w
+END MODULE m_forcew

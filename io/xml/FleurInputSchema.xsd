@@ -14,6 +14,7 @@
          <xsd:element name="atomGroups" type="AtomGroupsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="output" type="OutputType"/>
 	 <xsd:element maxOccurs="1" minOccurs="0" name="forceTheorem" type="ForcetheoremType"/>
+	 <xsd:element maxOccurs="1" minOccurs="0" name="relaxation" type="RelaxationType"/>
       </xsd:all>
       <xsd:attribute name="fleurInputVersion" type="FleurVersionType" use="required"/>
    </xsd:complexType>
@@ -739,6 +740,41 @@
       <xsd:attribute default="F" name="bsComf" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="atomList" type="FleurBool" use="optional"/>
    </xsd:complexType>
+
+   <xsd:complexType name="RelaxationType">
+     <xsd:all>
+         <xsd:element maxOccurs="1" minOccurs="0" name="displacements" type="DisplacementType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="relaxation-history" type="RelaxHistType"/>
+      </xsd:all>
+   </xsd:complexType>
+
+   <xsd:complexType name="DisplacementType">
+     <xsd:sequence>
+       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="displace" type="DisplaceType" />
+     </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="DisplaceType">
+     <xsd:simpleContent>
+       <xsd:extension base="Double3DVecType">
+       </xsd:extension>
+     </xsd:simpleContent>
+   </xsd:complexType>
+
+   
+   <xsd:complexType name="RelaxHistType">
+     <xsd:sequence>
+       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="step" type="RelaxStepType" />
+     </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="RelaxStepType">
+     <xsd:sequence>
+       <xsd:element maxOccurs="unbounded" minOccurs="1"  name="posforce" type="xsd:string" />
+     </xsd:sequence>
+      <xsd:attribute name="energy" type="xsd:string"/>
+   </xsd:complexType>
+
 
    <xsd:complexType name="ForcetheoremType">
      <xsd:choice>

@@ -16,7 +16,8 @@ force/force_a4_add.f90
 force/force_a8.F90
 force/force_b8.f90
 force/force_sf.F90
-force/force_w.f90
+force/force_w.F90
 force/geo.f90
 force/stern.f90
+force/relaxation.F90
 )

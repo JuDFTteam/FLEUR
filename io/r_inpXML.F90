@@ -704,6 +704,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
      
       xPathA = '/fleurInput/calculationSetup/fields'
       numberNodes = xmlGetNumberOfNodes(xPathA)
+      field%b_field=0.0
+      field%l_b_field=.FALSE.
+      field%efield%sigma=0.0
+      
 
       IF (numberNodes.EQ.1) THEN
          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
@@ -725,7 +729,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             WRITE(xPathB,"(a,a,i0,a)") TRIM(ADJUSTL(xpathA)),'/shape[',i,']'
             field%efield%shapes(i)=TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
          ENDDO
-         
+      ELSE
+         ALLOCATE(field%efield%shapes(0))
       END IF
 
       ! Read in optional energy parameter limits
@@ -2139,12 +2144,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          CALL inpnoco(atoms,input,vacuum,noco)
       END IF
 
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of non-XML input
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       !CALL xmlFreeResources()
-
+      
       !WRITE(*,*) 'Reading of inp.xml file finished'
 
       DEALLOCATE(speciesNLO)
