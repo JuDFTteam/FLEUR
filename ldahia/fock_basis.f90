@@ -21,7 +21,7 @@ MODULE m_fock_basis
    !*                                                           HJ (2019) *
    !***********************************************************************
 
-   SUBROUTINE gen_fock_states(N,N_states,states,N_f)
+   SUBROUTINE gen_fock_states(N,N_states,states)
 
       !finds all possible fock states with N electrons 
       !by generating the states in increasing order of the associated integer
@@ -32,15 +32,13 @@ MODULE m_fock_basis
 
       INTEGER,             INTENT(IN)     :: N        !number of electrons
       INTEGER,             INTENT(IN)     :: N_states !number of one-particle states
-      INTEGER,ALLOCATABLE, INTENT(OUT)    :: states(:)!Array of fock states
-      INTEGER,             INTENT(OUT)    :: N_f      !number of fock-states 
+      INTEGER,             INTENT(INOUT)  :: states(:)!Array of fock states
 
       LOGICAL next
-      INTEGER length, i,j,k
+      INTEGER length, i,j,k, N_f
       INTEGER count
       INTEGER state
 
-      ALLOCATE(states(binom(N_states,N)))
       states(:) = 0
 
       IF(N.GT.N_states) CALL juDFT_error("Invalid occupation for DFT+Hubbard 1", &

@@ -28,11 +28,12 @@ MODULE m_hia_ham
 
       REAL,    INTENT(IN)           :: el(0:,:,:) !(0:atoms%lmaxd,ntype,jspd)
 
-      INTEGER     i,i_hia,N,n_occ,i_gf,m,ind_h,N_basis,N_states
+      INTEGER     i,iz,i_hia,N,n_occ,i_gf,ind_h,N_basis(3),N_states
+      INTEGER     m,mp,s,sp,neig(3)
       INTEGER     itype,ispin,j,k,l,jspin,urec,i_u
       INTEGER     noded,nodeu,ios,lty(atoms%n_u)
-      INTEGER     max_states, neig
-      REAL        wronk, n_f, mu
+      INTEGER     max_states
+      REAL        wronk, n_f, mu, tol, tmp, beta
       LOGICAL     n_exist
       CHARACTER*8 l_type*2,l_form*9
 
@@ -41,10 +42,13 @@ MODULE m_hia_ham
 
       REAL, ALLOCATABLE :: u(:,:,:,:,:)
       COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:)
-      INTEGER, ALLOCATABLE :: basis(:)
-      COMPLEX, ALLOCATABLE :: ev(:,:)
-      COMPLEX, ALLOCATABLE :: eig(:)
+      INTEGER, ALLOCATABLE :: basis(:,:)
+      REAL, ALLOCATABLE :: ev(:,:,:)
+      REAL, ALLOCATABLE :: eig(:,:)
+      COMPLEX, ALLOCATABLE :: g_at(:,:,:,:,:)
       TYPE(t_mat) :: h_mat
+      tol = 1e-14
+      beta = 0.0
 
 
       IF(ANY(gOnsite%gmmpMat(:,:,:,:,:,:).NE.CMPLX(0.0,0.0)).AND.atoms%n_hia.GT.0) THEN
@@ -73,6 +77,7 @@ MODULE m_hia_ham
          !Calculate the number of electrons in the correlated orbitals
          !
          CALL gOnsite%calc_mmpmat(atoms,sym,input%jspins,n_mmp)
+         ALLOCATE(g_at(gOnsite%nz,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,2,2))
          DO i_hia = 1, atoms%n_hia
 
             l = atoms%lda_hia(i_hia)%l
@@ -93,17 +98,25 @@ MODULE m_hia_ham
             !
             n_occ = ANINT(n_f)
 
+            N_states = 2*(2*l+1) !number of one-particle states in the orbital
+            DO N = n_occ-1, n_occ+1
+               N_basis(N-n_occ+2) = binom(N_states,N)
+            ENDDO
+            max_states = MAXVAL(N_basis(:))
+
+            ALLOCATE(basis(3,max_states))
+            ALLOCATE(eig(3,max_states))
+            ALLOCATE(ev(3,max_states,max_states))
+
             DO N = n_occ-1, n_occ+1
                !TEMPORARY:
                mu = 0.0
                !
                !Find all 2*(2*l+1) bit numbers with N bits being 1
                !
-               N_states = 2*(2*l+1) !number of one-particle states in the orbital
-               CALL gen_fock_states(N,N_states,basis,N_basis)
-
-               CALL h_mat%init(.true.,N_basis,N_basis)
-               CALL hia_ham(l,N,u(:,:,:,:,i_hia),mu,basis(:),h_mat)
+               CALL gen_fock_states(N,N_states,basis(N-n_occ+2,:))
+               CALL h_mat%init(.true.,N_basis(N-n_occ+2),N_basis(N-n_occ+2))
+               CALL hia_ham(l,N,u(:,:,:,:,i_hia),mu,basis(N-n_occ+2,:),N_basis(N-n_occ+2),h_mat)
                !
                !Diagonalize the matrix
                !
@@ -117,12 +130,44 @@ MODULE m_hia_ham
             !
             !Calculate the interacting Green's function
             !
+            IF(.false.) THEN
+            g_at = 0.0
+            DO m = -l,l
+               DO s = 0, 1 
+                  DO mp = -l,l
+                     DO sp = 0,1
 
+                        DO i = 1, neig(2)
+                           !calculate the matrix elements <n-1|c|n><n|c^dag|n-1>
+                           !|n> stands for a eigenstate with n electrons
+                           DO j = 1, neig(1)
+                              CALL excitation(m,s,mp,sp,l,ev(2,i,:),ev(1,j,:),basis(2,:),basis(1,:),N_basis(2),N_basis(1),tmp)
+                              IF(ABS(tmp).LT.tol) CYCLE
+                              DO iz = 1, gOnsite%nz
+                                 !
+                                 !MISSING: factor 1/Z
+                                 !
+                                 g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(1,j)-eig(2,i)) * (EXP(-beta*eig(1,j))+EXP(-beta*eig(2,i)))
+                              ENDDO
+                           ENDDO
+                           !calculate the matrix elements <n|c|n+1><n+1|c^dag|n>
+                           DO j = 1, neig(3)
+                              CALL excitation(m,s,mp,sp,l,ev(3,j,:),ev(2,i,:),basis(3,:),basis(2,:),N_basis(3),N_basis(2),tmp)
+                              IF(ABS(tmp).LT.tol) CYCLE
+                              DO iz = 1, gOnsite%nz
+                                 !
+                                 !MISSING: factor 1/Z
+                                 !
+                                 g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(2,i)-eig(3,j)) * (EXP(-beta*eig(3,j))+EXP(-beta*eig(2,i)))
+                              ENDDO
+                           ENDDO
+                        ENDDO
 
-
-
-
-
+                     ENDDO
+                  ENDDO
+               ENDDO
+            ENDDO
+            ENDIF
             !
             !Invert to obtain the self-energy
             !
@@ -205,7 +250,7 @@ MODULE m_hia_ham
    END SUBROUTINE
 
 
-   SUBROUTINE hia_ham(l,N,U,mu,basis,h_mat)
+   SUBROUTINE hia_ham(l,N,U,mu,basis,N_basis,h_mat)
 
       USE m_types
       USE m_constants
@@ -217,13 +262,14 @@ MODULE m_hia_ham
       INTEGER,                INTENT(IN)    :: N                                                     !number of electrons for which to set up the hamiltonian
       REAL,                   INTENT(IN)    :: mu                                                    !chemical potential
       REAL,                   INTENT(IN)    :: U(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&   
-                                         -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)   !Full U-tensor for the site
+                                                 -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)   !Full U-tensor for the site
       !REAL,                   INTENT(IN)    :: H(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)!Hamiltonian from DFT for the correlated orbitals (??)
 
-      INTEGER,                INTENT(INOUT) :: basis(:)
+      INTEGER,                INTENT(IN)    :: basis(:)
+      INTEGER,                INTENT(IN)    :: N_basis
       TYPE(t_mat),            INTENT(INOUT) :: h_mat
 
-      INTEGER N_states, N_op, N_basis
+      INTEGER N_states, N_op
       INTEGER dist
       INTEGER i,j,i_op
       INTEGER, ALLOCATABLE :: op(:,:)
@@ -296,12 +342,75 @@ MODULE m_hia_ham
    END SUBROUTINE hia_ham
 
 
-   SUBROUTINE g_at_matrixelem(m,spin,l,nu,nuprime,b,bprime,N,Nprime)
+   SUBROUTINE excitation(m1,spin1,m2,spin2,l,nu,nuprime,b,bprime,N,Nprime,result)
+
+      USE m_fock_basis
 
       !This subroutine calculates the matrix elements needed for the interacting green's function 
       !of the atomic hamilatonian in the lehmann representation
+      !calculates:
+      !           <nu'|c_[m1,spin1]|nu> * <nu|c^dag_[m2,spin2]|nu'>
+
+      !Scalar Arguments:
+      !-----------------------
+      INTEGER,             INTENT(IN)  :: m1,spin1
+      INTEGER,             INTENT(IN)  :: m2,spin2
+      INTEGER,             INTENT(IN)  :: l
+      INTEGER,             INTENT(IN)  :: N,Nprime
+      REAL,                INTENT(OUT) :: result
+
+      !Array Arguments:
+      !-----------------------      
+      REAL,                INTENT(IN)  :: nu(:), nuprime(:) !eigenvectors
+      INTEGER,             INTENT(IN)  :: b(:),bprime(:)    !basis states
+
+      REAL, ALLOCATABLE :: tmp(:)
+      REAL tol 
+
+      tol = 1e-14
+      result = 0.0
+      !<nu|c^dag_[m2,spin2]|nu'>:
+      CALL c_mu(.true.,m2,spin2,l,2*(2*l+1),Nprime,N,nuprime(:),bprime(:),tmp,b(:))
+      result = result + dot_product(nu,tmp)
+      DEALLOCATE(tmp)
+      IF(ABS(result).GT.tol) THEN
+         !<nu'|c_[m1,spin1]|nu>:
+         CALL c_mu(.false.,m1,spin1,l,2*(2*l+1),N,Nprime,nu(:),b(:),tmp,bprime(:))
+         result = result + dot_product(nuprime,tmp)
+         DEALLOCATE(tmp)
+      END IF 
+
+   END SUBROUTINE excitation
+   !
+   !MATHEMATICAL FUNCTIONS:
+   !
+   INTEGER FUNCTION binom(n,k)
+
+      IMPLICIT NONE
+
+      INTEGER,       INTENT(IN)  :: n
+      INTEGER,       INTENT(IN)  :: k
+
+      binom = fac(n)/(fac(k)*fac(n-k))
+
+   END FUNCTION binom
 
 
-   END SUBROUTINE
+   ELEMENTAL REAL FUNCTION  fac(n)
+
+      IMPLICIT NONE
+ 
+      INTEGER, INTENT (IN) :: n
+      INTEGER :: i
+
+      fac = 0
+      IF (n.LT.0) RETURN
+      fac = 1
+      IF (n.EQ.0) RETURN
+      DO i = 2,n
+      fac = fac * i
+      ENDDO
+ 
+   END FUNCTION  fac
 
 END MODULE m_hia_ham

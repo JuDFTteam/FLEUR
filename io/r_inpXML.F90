@@ -720,9 +720,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          numberNodes = xmlGetNumberOfNodes(xPathA)
          IF(numberNodes.EQ.1) input%onsite_nz = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
 
-         xPathA = '/fleurInput/calculationSetup/onsiteGF'
-         input%onsite_tetra = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_tetra'))
-         input%onsite_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@l_tetra'
+         numberNodes = xmlGetNumberOfNodes(xPathA)
+         IF(numberNodes.EQ.1) input%onsite_tetra = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
+      
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@l_sphavg'
+         numberNodes = xmlGetNumberOfNodes(xPathA)
+         IF(numberNodes.EQ.1) input%onsite_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
       END IF
       
       IF((input%onsite_tetra).AND.(.NOT.input%tria)) THEN
@@ -1468,6 +1472,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
                      atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
                      atoms%lda_hia(atoms%n_hia)%j        = ldau_j(i)
+                     atoms%lda_u(atoms%n_u)%l_amf        = l_amf(i)
                      atoms%lda_hia(atoms%n_hia)%atomType = iType
                      IF(ldau_use(i).EQ.4) THEN
                         IF(input%jspins.EQ.2) THEN

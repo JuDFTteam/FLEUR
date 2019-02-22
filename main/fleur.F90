@@ -163,7 +163,7 @@ CONTAINS
     CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
 
-    CALL gOnsite%init(input,atoms,kpts,dimension,noco,.true.)
+    CALL gOnsite%init(input,atoms,kpts,noco,.true.)
 
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco

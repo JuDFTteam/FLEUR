@@ -70,7 +70,7 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(thisGREENSF,input,atoms,kpts,dimension,noco,l_onsite,nz_in,e_in,de_in)
+      SUBROUTINE greensf_init(thisGREENSF,input,atoms,kpts,noco,l_onsite,nz_in,e_in,de_in)
 
          USE m_types_setup
          USE m_types_kpts
@@ -79,9 +79,8 @@ MODULE m_types_greensf
          CLASS(t_greensf),       INTENT(INOUT)  :: thisGREENSF
          TYPE(t_atoms),          INTENT(IN)     :: atoms
          TYPE(t_input),          INTENT(IN)     :: input
-         TYPE(t_kpts),           INTENT(IN)     :: kpts
-         TYPE(t_dimension),      INTENT(IN)     :: dimension
-         TYPE(t_noco),           INTENT(IN)     :: noco
+         TYPE(t_kpts), OPTIONAL, INTENT(IN)     :: kpts
+         TYPE(t_noco), OPTIONAL, INTENT(IN)     :: noco
          LOGICAL,                INTENT(IN)     :: l_onsite !this switch determines wether we want to use this type to calculate the on-site green's function
          !Pass a already calculated energy contour to the type
          INTEGER, OPTIONAL,      INTENT(IN)     :: nz_in
