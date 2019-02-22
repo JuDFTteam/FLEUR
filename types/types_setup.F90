@@ -430,7 +430,7 @@ MODULE m_types_setup
      LOGICAL :: onsite_sphavg
      INTEGER :: onsite_mode
      INTEGER :: onsite_nz
-     LOGICAL :: l_hia !this switch is used to make sure, that all bands are included in the calculation
+     LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
   END TYPE t_input
 
   TYPE t_sliceplot

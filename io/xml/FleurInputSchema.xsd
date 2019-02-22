@@ -377,7 +377,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="force" type="ForceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="electronConfig" type="ElectronConfigType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
-         <xsd:element maxOccurs="4" minOccurs="0" name="U" type="UType"/>
+         <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
@@ -408,7 +408,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="EnergyParametersType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="force" type="ForceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
-         <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="UType"/>
+         <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbcomprot" type="Double3DVecType"/>
       </xsd:sequence>
@@ -456,12 +456,14 @@
       <xsd:attribute name="f" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
-   <xsd:complexType name="UType">
+   <xsd:complexType name="LdaUType">
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="U" type="xsd:string" use="required"/>
       <xsd:attribute name="J" type="xsd:string" use="required"/>
-      <xsd:attribute name="l_amf" type="FleurBool" use="optional"/>
-      <xsd:attribute name="use" type="xsd:string" use="required"/>
+      <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
+      <xsd:attribute name="l_hia" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_j0" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_U" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ForceType">

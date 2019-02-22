@@ -149,7 +149,7 @@
           input%onsite_sphavg = .true.
           input%onsite_mode = 2
           input%onsite_nz = 32
-          input%l_hia = .false.
+          input%l_gf = .false.
           atoms%n_hia = 0
           atoms%n_j0 = 0
 

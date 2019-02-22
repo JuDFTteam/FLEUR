@@ -499,7 +499,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
    DO ikpt = thisCdnvalJob%ikptStart, kpts%nkpt, thisCdnvalJob%ikptIncrement
 
       DO iBand = 1,results%neig(ikpt,jsp)
-         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst.OR.input%l_hia) THEN
+         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst.OR.input%l_gf) THEN
             thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%noccbd(ikpt) + 1
          END IF
       END DO
