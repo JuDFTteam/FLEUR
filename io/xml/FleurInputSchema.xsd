@@ -587,10 +587,10 @@
    
    <xsd:complexType name="GeometryOptimizerType">
       <xsd:attribute name="l_f" type="FleurBool" use="required"/>
-      <xsd:attribute name="xa" type="xsd:string" use="required"/>
-      <xsd:attribute name="thetad" type="xsd:string" use="required"/>
-      <xsd:attribute name="epsdisp" type="xsd:string" use="required"/>
-      <xsd:attribute name="epsforce" type="xsd:string" use="required"/>
+      <xsd:attribute name="forcealpha" type="xsd:string" use="required"/>
+      <xsd:attribute name="epsdisp" type="xsd:string" use="optional" default="0.001"/>
+      <xsd:attribute name="epsforce" type="xsd:string" use="optional" default="0.001"/>
+      <xsd:attribute name="forcemix" type="xsd:string" use="optional" default="3" />
       <xsd:attribute name="qfix" type="FleurBool" use="optional"/>
    </xsd:complexType>
 

@@ -5,6 +5,9 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_relaxio
+  !This module handles IO to the relax.xml file
+  !The writing is done directly to relax.xml
+  !The reading uses the libxml interface to inp.xml. Hence the relax.xml has to be included here.
   USE m_judft
   IMPLICIT NONE
   PRIVATE
@@ -19,7 +22,7 @@ CONTAINS
     INTEGER :: no_steps,n,ntype,step
     No_steps=SIZE(positions,3)
     ntype=SIZE(positions,2)
-    IF (ntype.NE.SIZE(forces,2).OR.ntype.ne.SIZE(displace,2).OR.&
+    IF (ntype.NE.SIZE(forces,2).OR.ntype.NE.SIZE(displace,2).OR.&
          no_steps.NE.SIZE(forces,3).OR.no_steps.NE.SIZE(energies))THEN
        CALL judft_error("BUG in relax_io")
     ENDIF
@@ -32,7 +35,7 @@ CONTAINS
             '    <displace>',displace(:,n),'</displace>'
     END DO
     WRITE(765,"(a)") '  </displacements>'
-    
+
     !Write all known old positions,forces and energies
     WRITE(765,*) "  <relaxation-history>"
     DO step=1,no_steps
@@ -47,14 +50,14 @@ CONTAINS
     WRITE(765,*) "</relaxation>"
     CLOSE(765)
   END SUBROUTINE write_relax
-  
+
   SUBROUTINE read_relax(positions,forces,energies)
     USE m_xmlIntWrapFort 
     USE m_calculator
     REAL,INTENT(INOUT),ALLOCATABLE:: positions(:,:,:)
     REAL,INTENT(INOUT),ALLOCATABLE:: forces(:,:,:)
     REAL,INTENT(INOUT),ALLOCATABLE:: energies(:)
-    
+
     REAL,ALLOCATABLE::rtmp(:,:,:)
     INTEGER:: no_steps
     INTEGER:: ntype,step,n
@@ -68,15 +71,15 @@ CONTAINS
     IF (ALLOCATED(positions)) THEN 
        !Assume that we got already a set of positions, forces, energy and extend that list
        rtmp=positions
-       deallocate(positions)
+       DEALLOCATE(positions)
        ALLOCATE(positions(3,ntype,no_steps+SIZE(rtmp,3)))
        positions(:,:,no_steps+1:)=rtmp
        rtmp=forces
-       deallocate(forces)
+       DEALLOCATE(forces)
        ALLOCATE(forces(3,ntype,no_steps+SIZE(rtmp,3)))
        forces(:,:,no_steps+1:)=rtmp
        rtmp(1,1,:)=energies
-       deallocate(energies)
+       DEALLOCATE(energies)
        ALLOCATE(energies(no_steps+SIZE(rtmp,3)))
        energies(no_steps+1:)=rtmp(1,1,:)
     ELSE
@@ -96,7 +99,7 @@ CONTAINS
     END DO
   END SUBROUTINE read_relax
 
-   
+
   SUBROUTINE read_displacements(atoms,disp)
     USE m_xmlIntWrapFort 
     USE m_calculator
@@ -104,22 +107,22 @@ CONTAINS
     TYPE(t_atoms),INTENT(in)::atoms
     REAL,INTENT(out)::disp(:,:)
     CHARACTER(len=50):: path,str
-    integer :: n
-      disp=0.0
-      IF (xmlGetNumberOfNodes('/fleurInput/relaxation/displacements')==0) RETURN
-      !read displacements and apply to positions
-      IF (atoms%ntype.NE.xmlGetNumberOfNodes('/fleurInput/relaxation/displacements/displace')) CALL judft_error("Wrong number of displacements in relaxation")
-      DO n=1,atoms%ntype
-         WRITE(path,"(a,i0,a)") '/fleurInput/relaxation/displacements/displace[',n,']'
-         str=xmlGetAttributeValue(path)
-         disp(:,n)=(/evaluateFirst(str),evaluateFirst(str),evaluateFirst(str)/)
-      END DO
-    END SUBROUTINE read_displacements
- 
- SUBROUTINE apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
+    INTEGER :: n
+    disp=0.0
+    IF (xmlGetNumberOfNodes('/fleurInput/relaxation/displacements')==0) RETURN
+    !read displacements and apply to positions
+    IF (atoms%ntype.NE.xmlGetNumberOfNodes('/fleurInput/relaxation/displacements/displace')) CALL judft_error("Wrong number of displacements in relaxation")
+    DO n=1,atoms%ntype
+       WRITE(path,"(a,i0,a)") '/fleurInput/relaxation/displacements/displace[',n,']'
+       str=xmlGetAttributeValue(path)
+       disp(:,n)=(/evaluateFirst(str),evaluateFirst(str),evaluateFirst(str)/)
+    END DO
+  END SUBROUTINE read_displacements
+
+  SUBROUTINE apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
     USE m_types
     USE m_chkmt
-    use m_mapatom
+    USE m_mapatom
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_vacuum),INTENT(IN)  :: vacuum
     TYPE(t_cell),INTENT(IN)    :: cell
@@ -128,8 +131,8 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)    :: noco
 
     TYPE(t_atoms),INTENT(INOUT):: atoms
-   
-    
+
+
     INTEGER:: n,indx(2)
     REAL   :: disp(3,atoms%ntype),disp_all(3,atoms%nat),taual0(3,atoms%nat),overlap(0:atoms%ntype,atoms%ntype)
 
@@ -138,9 +141,9 @@ CONTAINS
     !Fist make sure original MT spheres do not overlap
     CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
     IF(ANY(overlap>0.0)) CALL judft_error("Overlapping MT-spheres in relaxation before even applying any displacement",hint="You messed up your setup")
-    
+
     taual0=atoms%taual !Store original positions
-    
+
     !Now check for overlapping mt-spheres
     overlap=1.0
     DO WHILE(ANY(overlap>1E-10))
@@ -159,9 +162,9 @@ CONTAINS
           WRITE(*,*) indx,overlap(indx(1),indx(2))
        END IF
     END DO
-    
+
     CALL mapatom(sym,atoms,cell,input,noco)
- 
+
     WRITE(6,*) "Atomic positions including displacements:"
     DO n=1,atoms%nat
        WRITE(6,*) n,atoms%taual(:,n),atoms%pos(:,n)
@@ -176,11 +179,11 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
     REAL,INTENT(out)         :: disp_all(:,:)
-    
+
     INTEGER:: n,na,jop
     REAL   :: tau0(3),tau0_rot(3),tau_rot(3)
-   
-       
+
+
     DO n=1,atoms%ntype
        tau0=atoms%taual(:,n)
        DO na=SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))

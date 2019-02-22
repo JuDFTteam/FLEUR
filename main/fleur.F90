@@ -49,7 +49,6 @@ CONTAINS
     USE m_eigen
     USE m_eigenso
     USE m_fermie
-    USE m_force0
     USE m_cdngen
     USE m_totale
     USE m_potdis
@@ -330,7 +329,6 @@ CONTAINS
              CYCLE forcetheoloop
           ENDIF
 
-          CALL force_0(results)! ----> initialise force_old
           
 !!$          !+Wannier functions
 !!$          IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN

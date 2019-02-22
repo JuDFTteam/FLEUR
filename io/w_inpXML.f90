@@ -220,8 +220,8 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,180) input%gw,input%secvar
 
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
-   190 FORMAT('      <geometryOptimization l_f="',l1,'" xa="',f0.8,'" thetad="',f0.8,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
-   WRITE (fileNum,190) input%l_f,input%xa,input%thetad,input%epsdisp,input%epsforce
+   190 FORMAT('      <geometryOptimization l_f="',l1,'" forcealpha="',f0.8,'" forcemix="',i0,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
+   WRITE (fileNum,190) input%l_f,input%forcealpha,input%forcemix,input%epsdisp,input%epsforce
 
    IF(input%gauss.AND.input%tria) THEN
       STOP 'Error: bz integration modes gauss AND tria selected!'
