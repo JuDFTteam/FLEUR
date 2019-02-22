@@ -1,7 +1,7 @@
 MODULE m_types_mat
   USE m_judft
   IMPLICIT NONE
-
+  PRIVATE
   !<This is the basic type to store and manipulate real/complex rank-2 matrices
   !!
   !! In its simple implementation here, it contains a fields for the matrix-size and
@@ -20,6 +20,7 @@ MODULE m_types_mat
      PROCEDURE        :: transpose=>t_mat_transpose          !> transpose the matrix
      PROCEDURE        :: from_packed=>t_mat_from_packed      !> initialized from a packed-storage matrix
      PROCEDURE        :: inverse =>t_mat_inverse             !> invert the matrix
+     PROCEDURE        :: linear_problem => t_mat_lproblem    !> Solve linear equation
      PROCEDURE        :: to_packed=>t_mat_to_packed          !> convert to packed-storage matrix
      PROCEDURE        :: clear => t_mat_clear                !> set data arrays to zero
      PROCEDURE        :: copy => t_mat_copy                  !> copy into another t_mat (overloaded for t_mpimat)
@@ -30,9 +31,41 @@ MODULE m_types_mat
      PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
      PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
    END type t_mat
-   
+   PUBLIC t_mat
  CONTAINS
-   
+
+   SUBROUTINE t_mat_lproblem(mat,vec)
+     IMPLICIT NONE
+     CLASS(t_mat),INTENT(IN)     :: mat
+     TYPE(t_mat),INTENT(INOUT)   :: vec
+
+     INTEGER:: lwork,info
+     REAL,ALLOCATABLE:: work(:)
+     INTEGER,allocatable::ipiv(:)
+    
+     IF ((mat%l_real.NEQV.vec%l_real).OR.(mat%matsize1.NE.mat%matsize2).OR.(mat%matsize1.NE.vec%matsize1)) &
+          CALL judft_error("Invalid matices in t_mat_lproblem")
+     IF (mat%l_real) THEN
+        IF (ALL(ABS(mat%data_r-TRANSPOSE(mat%data_r))<1E-8)) THEN
+           !Matrix is symmetric
+           CALL DPOSV( 'Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, vec%data_r, vec%matsize1, INFO )
+           IF (INFO>0) THEN
+              !Matrix was not positive definite
+              lwork=-1;ALLOCATE(work(1))
+              CALL DSYSV( 'Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, vec%data_r, vec%matsize1, WORK, LWORK,INFO )
+              lwork=INT(work(1))
+              DEALLOCATE(work);ALLOCATE(ipiv(mat%matsize1),work(lwork))
+              CALL DSYSV( 'Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, vec%data_r, vec%matsize1, WORK, LWORK,INFO )
+              IF (info.NE.0) CALL judft_error("Could not solve linear equation, matrix singular")
+           END IF
+        ELSE
+           CALL judft_error("TODO: mode not implemented in t_mat_lproblem")
+        END IF
+     ELSE
+        CALL judft_error("TODO: mode not implemented in t_mat_lproblem")
+     ENDIF
+   END SUBROUTINE t_mat_lproblem
+
    SUBROUTINE t_mat_free(mat)
      CLASS(t_mat),INTENT(INOUT)::mat
      IF (ALLOCATED(mat%data_c)) DEALLOCATE(mat%data_c)

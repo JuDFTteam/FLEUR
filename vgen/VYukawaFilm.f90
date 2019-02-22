@@ -158,12 +158,18 @@ module m_VYukawaFilm
 
     ! CONTRIBUTION FROM THE VACUUM CHARGE DENSITY
 
+    ! shifting z:
+    do irec2 = 1, stars%ng2
+      exp_m(1:vacuum%nmz,irec2) = exp_m(1:vacuum%nmz,irec2) * expDhg(irec2)
+      exp_p(1:vacuum%nmz,irec2) = exp_p(1:vacuum%nmz,irec2) / expDhg(irec2)
+    end do
+
     ! case irec2 > 1:
     do irec2 = 2, stars%ng2
       do ivac = 1, vacuum%nvac
         ! integrands:
-        fa(1:vacuum%nmzxy,irec2) = rhtxy(1:vacuum%nmzxy,irec2-1,ivac) * exp_m(1:vacuum%nmzxy,irec2) * expDhg(irec2)
-        fb(1:vacuum%nmzxy,irec2) = rhtxy(1:vacuum%nmzxy,irec2-1,ivac) * exp_p(1:vacuum%nmzxy,irec2) * expDhg(irec2)
+        fa(1:vacuum%nmzxy,irec2) = rhtxy(1:vacuum%nmzxy,irec2-1,ivac) * exp_m(1:vacuum%nmzxy,irec2)
+        fb(1:vacuum%nmzxy,irec2) = rhtxy(1:vacuum%nmzxy,irec2-1,ivac) * exp_p(1:vacuum%nmzxy,irec2)
         ! integrals:
         ! alpha(z,q_xy,ivac) = int_z^infty rho(z',q_xy,ivac) exp(-sqrt(q_xy**2+prec_param**2)*z') dz'
         ! beta (z,q_xy,ivac) = int_{D/2}^z rho(z',q_xy,ivac) exp(+sqrt(q_xy**2+prec_param**2)*z') dz'
@@ -184,14 +190,14 @@ module m_VYukawaFilm
         gamma(1:vacuum%nmzxy,irec2) = exp_m(1:vacuum%nmzxy,irec2) * ( alphm(irec2,mod(ivac,2)+1) + beta(1:vacuum%nmzxy,irec2,ivac) ) &
                                     + exp_p(1:vacuum%nmzxy,irec2) *                               alpha(1:vacuum%nmzxy,irec2,ivac) ! mod(ivac,2)+1 outputs the other ivac value 
         where ( 2. * gamma(:,irec2) == gamma(:,irec2) ) gamma(:,irec2) = cmplx( 0., 0. )
-        VVxy(1:vacuum%nmzxy,irec2,ivac) = VVxy(1:vacuum%nmzxy,irec2,ivac) + vcons(irec2) * gamma(1:vacuum%nmzxy,irec2) * expDhg(irec2) 
+        VVxy(1:vacuum%nmzxy,irec2,ivac) = VVxy(1:vacuum%nmzxy,irec2,ivac) + vcons(irec2) * gamma(1:vacuum%nmzxy,irec2) 
       end do
     end do
 
     ! case irec2 = 1:
     do ivac = 1, vacuum%nvac
-      ga(1:vacuum%nmz) = rht(1:vacuum%nmz,ivac) * exp_m(1:vacuum%nmz,1) * expDhg(1)
-      gb(1:vacuum%nmz) = rht(1:vacuum%nmz,ivac) * exp_p(1:vacuum%nmz,1) * expDhg(1)
+      ga(1:vacuum%nmz) = rht(1:vacuum%nmz,ivac) * exp_m(1:vacuum%nmz,1)
+      gb(1:vacuum%nmz) = rht(1:vacuum%nmz,ivac) * exp_p(1:vacuum%nmz,1)
       call intgz1Reverse( ga(:), vacuum%delz, vacuum%nmz, delta(:,ivac), .true. ) ! integrals 
       call qsf( vacuum%delz, gb(:), epsilon(:,ivac), vacuum%nmz, 1 )
       alphm(1,ivac) = delta(1,ivac)
@@ -201,7 +207,7 @@ module m_VYukawaFilm
       zeta(1:vacuum%nmz) = exp_m(1:vacuum%nmz,1) * ( alphm(1,mod(ivac,2)+1) + epsilon(1:vacuum%nmz,ivac) ) &
                          + exp_p(1:vacuum%nmz,1) *                              delta(1:vacuum%nmz,ivac) 
       where ( 2. * zeta == zeta ) zeta = 0.
-      VVz(1:vacuum%nmz,ivac) = VVz(1:vacuum%nmz,ivac) + vcons(1) * zeta(1:vacuum%nmz) * expDhg(1)
+      VVz(1:vacuum%nmz,ivac) = VVz(1:vacuum%nmz,ivac) + vcons(1) * zeta(1:vacuum%nmz)
     end do
 
 
@@ -325,7 +331,7 @@ module m_VYukawaFilm
           case( 1 )
             nUpper = nzmax; nLower =  nzdh + 1; jvac = 1
           case( 2 )
-            nUpper = nzmin; nLower = -nzdh - 1; jvac = 2; if ( sym%invs .or. sym%zrfs ) jvac = 1
+            nLower = nzmin; nUpper = -nzdh - 1; jvac = 2; if ( sym%invs .or. sym%zrfs ) jvac = 1
         end select
         do iz = nLower, nUpper
           rz = ( abs( z(iz) ) - cell%z1 ) / vacuum%delz + 1.0

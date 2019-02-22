@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mkgxyz3
+  USE m_judft
   !.....------------------------------------------------------------------
   !c     by use of cartesian x,y,z components of charge density gradients,
   !c     make the quantities

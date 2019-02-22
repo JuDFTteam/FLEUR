@@ -12,7 +12,7 @@ types/types_lapw.F90
 types/types_tlmplm.F90
 types/types_misc.F90
 types/types_mpimat.F90
-types/types_potden.f90
+types/types_potden.F90
 types/types_forcetheo.F90
 types/types_kpts.f90
 types/types_enpara.F90
@@ -40,7 +40,7 @@ types/types_lapw.F90
 types/types_tlmplm.F90
 types/types_misc.F90
 types/types_mpimat.F90
-types/types_potden.f90
+types/types_potden.F90
 types/types_forcetheo.F90
 types/types_kpts.f90
 types/types_enpara.F90

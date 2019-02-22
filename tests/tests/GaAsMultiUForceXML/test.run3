@@ -7,8 +7,8 @@ jt::testrun($executable,$workdir);
 
 #now test output
 
-$result=jt::test_grepexists("$workdir/forces.dat","energy =    -4204.782359");
-$result+=jt::test_grepexists("$workdir/forces.dat","1.3806");
-$result+=jt::test_grepexists("$workdir/forces.dat","0.009423");
+$result=jt::test_grepnumber("$workdir/forces.dat","energy =","= *([^ ]*)",-4204.782,0.001);
+$result+=jt::test_grepexists("$workdir/forces.dat","1.380");
+$result+=jt::test_grepexists("$workdir/forces.dat","0.00942");
 
 jt::stageresult($workdir,$result,"3");
