@@ -20,7 +20,7 @@ MODULE m_eff_excinteraction
       TYPE(t_input),          INTENT(IN)  :: input
 
       COMPLEX tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),integrand
-      INTEGER i_j0,iz,m,l,mp,ispin,n,i_gf,ind
+      INTEGER i_j0,iz,m,l,mp,ispin,n,i_gf
 
       REAL f0(atoms%n_j0,input%jspins),f2(atoms%n_j0,input%jspins)
       REAL f4(atoms%n_j0,input%jspins),f6(atoms%n_j0,input%jspins)
@@ -61,13 +61,7 @@ MODULE m_eff_excinteraction
          WRITE(*,'(7f14.8)') delta(:,:)
 
          !Find the corresponding index of the onsite gf
-         ind =  0
-         DO i_gf = 1, gOnsite%n_gf
-            IF(gOnsite%atomType(i_gf).EQ.n.AND.gOnsite%l_gf(i_gf).EQ.l) THEN
-               ind = i_gf
-               EXIT
-            ENDIF
-         ENDDO
+         CALL gOnsite%index(l,n,i_gf)
 
          DO iz = 1, gOnsite%nz
             !
@@ -75,10 +69,10 @@ MODULE m_eff_excinteraction
             !
             !  Tr[\Delta (G_up-G-down) + \Delta G_up \Delta G-down]
             !
-            tmp(-l:l,-l:l) = gOnsite%gmmpMat(1,iz,ind,-l:l,-l:l,2)-gOnsite%gmmpMat(1,iz,ind,-l:l,-l:l,1)
+            tmp(-l:l,-l:l) = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,2)-gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,1)
             tmp(-l:l,-l:l) = matmul(delta(-l:l,-l:l),tmp(-l:l,-l:l))
-            tmp(-l:l,-l:l) = tmp(-l:l,-l:l) + matmul(matmul(delta(-l:l,-l:l),gOnsite%gmmpMat(1,iz,ind,-l:l,-l:l,2)),&
-                              matmul(delta(-l:l,-l:l),gOnsite%gmmpMat(1,iz,ind,-l:l,-l:l,1)))
+            tmp(-l:l,-l:l) = tmp(-l:l,-l:l) + matmul(matmul(delta(-l:l,-l:l),gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,2)),&
+                              matmul(delta(-l:l,-l:l),gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,1)))
             !WRITE(*,*) iz
             !WRITE(*,'(14f14.8)') tmp(:,:)
             integrand = CMPLX(0.0,0.0)

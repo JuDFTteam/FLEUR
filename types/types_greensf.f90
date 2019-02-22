@@ -62,6 +62,7 @@ MODULE m_types_greensf
             PROCEDURE, PASS :: init => greensf_init
             PROCEDURE       :: init_e_contour
             PROCEDURE       :: calc_mmpmat
+            PROCEDURE       :: index
       END TYPE t_greensf
 
 
@@ -145,94 +146,89 @@ MODULE m_types_greensf
             ENDIF 
          ENDDO
 
-         !Set number of radial points
-         ALLOCATE(thisGREENSF%nr(MAX(1,thisGREENSF%n_gf)))
 
-         IF(input%onsite_sphavg) THEN
-            thisGREENSF%nr(:) = 1
-         ELSE
-            DO i = 1, thisGREENSF%n_gf 
-               thisGREENSF%nr(i) = atoms%jri(thisGREENSF%atomType(i))
-            ENDDO
-         END IF
+         IF(thisGREENSF%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
+            !Set number of radial points
+            ALLOCATE(thisGREENSF%nr(MAX(1,thisGREENSF%n_gf)))
 
-         IF(PRESENT(nz_in)) THEN
-            thisGREENSF%nz = nz_in
-         ELSE
-            !Parameters for the energy contour in the complex plane
-            thisGREENSF%mode     = input%onsite_mode
+            IF(input%onsite_sphavg) THEN
+               thisGREENSF%nr(:) = 1
+            ELSE
+               DO i = 1, thisGREENSF%n_gf 
+                  thisGREENSF%nr(i) = atoms%jri(thisGREENSF%atomType(i))
+               ENDDO
+            END IF
 
-            IF(thisGREENSF%mode.EQ.1) THEN
-               thisGREENSF%nz = input%onsite_nz
-            ELSE IF(thisGREENSF%mode.EQ.2) THEN
-               n = LOG(REAL(input%onsite_nz))/LOG(2.0)
-               IF(MOD(n,1.0).GT.tol) THEN
-                  WRITE(*,*) "This mode for the energy contour uses 2^n number of points."
-                  WRITE(*,*) "Setting nz = ", 2**AINT(n) 
+            IF(PRESENT(nz_in)) THEN
+               thisGREENSF%nz = nz_in
+            ELSE
+               !Parameters for the energy contour in the complex plane
+               thisGREENSF%mode     = input%onsite_mode
+
+               IF(thisGREENSF%mode.EQ.1) THEN
+                  thisGREENSF%nz = input%onsite_nz
+               ELSE IF(thisGREENSF%mode.EQ.2) THEN
+                  n = LOG(REAL(input%onsite_nz))/LOG(2.0)
+                  IF(MOD(n,1.0).GT.tol) THEN
+                     WRITE(*,*) "This mode for the energy contour uses 2^n number of points."
+                     WRITE(*,*) "Setting nz = ", 2**AINT(n) 
+                  END IF
+                  thisGREENSF%nz = 2**AINT(n)
                END IF
-               thisGREENSF%nz = 2**AINT(n)
-            END IF
-         END IF
-
-         ALLOCATE (thisGREENSF%e(thisGREENSF%nz))
-         ALLOCATE (thisGREENSF%de(thisGREENSF%nz))
-
-         IF(PRESENT(e_in)) THEN
-            thisGREENSF%e(:) = e_in(:)
-            thisGREENSF%de(:)= de_in(:)
-         ELSE
-            !If no energy contour is given it is set up to zero
-            thisGREENSF%e(:) = CMPLX(0.0,0.0)
-            thisGREENSF%de(:)= CMPLX(0.0,0.0)
-         END IF
-
-         !Allocate arrays for the case, where we calculate the GF from the eigenstates of DFT
-         IF(l_onsite) THEN
-            IF (.NOT.input%onsite_sphavg) THEN 
-               ALLOCATE (thisGREENSF%uu(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-               ALLOCATE (thisGREENSF%dd(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-               ALLOCATE (thisGREENSF%du(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-              
-               thisGREENSF%uu      = 0.0
-               thisGREENSF%dd      = 0.0
-               thisGREENSF%du      = 0.0
-
             END IF
 
+            ALLOCATE (thisGREENSF%e(thisGREENSF%nz))
+            ALLOCATE (thisGREENSF%de(thisGREENSF%nz))
 
-            ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            thisGREENSF%im_gmmpMat  = 0.0
-         END IF
+            IF(PRESENT(e_in)) THEN
+               thisGREENSF%e(:) = e_in(:)
+               thisGREENSF%de(:)= de_in(:)
+            ELSE
+               !If no energy contour is given it is set up to zero
+               thisGREENSF%e(:) = CMPLX(0.0,0.0)
+               thisGREENSF%de(:)= CMPLX(0.0,0.0)
+            END IF
 
-         ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-
-         thisGREENSF%gmmpMat = CMPLX(0.0,0.0)
-
-
-         !Allocate arrays for non-colinear part
-         IF(noco%l_mperp) THEN
-            ALLOCATE (thisGREENSF%gmmpMat21(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-
-            thisGREENSF%gmmpMat21 = CMPLX(0.0,0.0)
-
+            !Allocate arrays for the case, where we calculate the GF from the eigenstates of DFT
             IF(l_onsite) THEN
-            IF (.NOT.input%onsite_sphavg) THEN 
-               ALLOCATE (thisGREENSF%uu21(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-               ALLOCATE (thisGREENSF%dd21(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-               ALLOCATE (thisGREENSF%du21(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-              
-               thisGREENSF%uu21    = 0.0
-               thisGREENSF%dd21    = 0.0
-               thisGREENSF%du21    = 0.0
+               IF(.NOT.input%onsite_sphavg) THEN 
+                  ALLOCATE (thisGREENSF%uu(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  ALLOCATE (thisGREENSF%dd(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  ALLOCATE (thisGREENSF%du(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                 
+                  thisGREENSF%uu      = 0.0
+                  thisGREENSF%dd      = 0.0
+                  thisGREENSF%du      = 0.0
+               ENDIF
 
-            END IF
+               ALLOCATE (thisGREENSF%im_gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               thisGREENSF%im_gmmpMat  = 0.0
+            ENDIF
 
+            ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+            thisGREENSF%gmmpMat = CMPLX(0.0,0.0)
 
-            ALLOCATE (thisGREENSF%im_gmmpMat21(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-            thisGREENSF%im_gmmpMat21  = 0.0
-         END IF
+            !Allocate arrays for non-colinear part
+            IF(noco%l_mperp) THEN
+               ALLOCATE (thisGREENSF%gmmpMat21(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               thisGREENSF%gmmpMat21 = CMPLX(0.0,0.0)
 
-         ENDIF
+               IF(l_onsite) THEN
+                  IF(.NOT.input%onsite_sphavg) THEN 
+                     ALLOCATE (thisGREENSF%uu21(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                     ALLOCATE (thisGREENSF%dd21(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                     ALLOCATE (thisGREENSF%du21(thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                    
+                     thisGREENSF%uu21    = 0.0
+                     thisGREENSF%dd21    = 0.0
+                     thisGREENSF%du21    = 0.0
+                  ENDIF
+
+                  ALLOCATE (thisGREENSF%im_gmmpMat21(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%ne,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  thisGREENSF%im_gmmpMat21  = 0.0
+               ENDIF
+            ENDIF
+         ENDIF 
 
       END SUBROUTINE greensf_init
 
@@ -428,5 +424,26 @@ MODULE m_types_greensf
          ENDIF
 
       END SUBROUTINE calc_mmpmat
+
+      SUBROUTINE index(this,l,n,ind)
+
+         USE m_juDFT
+
+         !Finds the corresponding entry in gmmpMat for given atomType and l
+
+         CLASS(t_greensf),    INTENT(IN)  :: this
+         INTEGER,             INTENT(IN)  :: l,n
+         INTEGER,             INTENT(OUT) :: ind
+
+         ind = 0
+         DO 
+            ind = ind + 1
+            IF(this%atomType(ind).EQ.n.AND.this%l_gf(ind).EQ.l) THEN
+               EXIT
+            ENDIF
+            IF(ind.EQ.this%n_gf) CALL juDFT_error("Green's function element not found", hint="This is a bug in FLEUR, please report")
+         ENDDO
+      END SUBROUTINE
+
 
 END MODULE m_types_greensf

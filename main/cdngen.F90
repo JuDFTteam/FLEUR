@@ -103,7 +103,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
-   IF(atoms%n_hia+atoms%n_j0.GT.0) CALL gOnsite%init_e_contour(results%ef)
+   IF(gOnsite%n_gf.GT.0) CALL gOnsite%init_e_contour(results%ef)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -120,14 +120,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END DO
 
 
-   IF(atoms%n_hia.GT.0.OR.atoms%n_j0.GT.0) THEN
+   IF(gOnsite%n_gf.GT.0) THEN
       CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,gOnsite,results%ef,sym)
+      !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
+      IF(atoms%n_j0.GT.0.AND.input%jspins.EQ.2) THEN
+         CALL eff_excinteraction(gOnsite,atoms,input,j0)
+      ENDIF
    END IF
-   !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
-   IF(atoms%n_j0.GT.0.AND.input%jspins.EQ.2) THEN
-      CALL eff_excinteraction(gOnsite,atoms,input,j0)
-   ENDIF
-
 
 
    IF (mpi%irank.EQ.0) THEN

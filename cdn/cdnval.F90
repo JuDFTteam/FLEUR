@@ -243,7 +243,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          !Shouldn't this be ispin??
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
-         IF (atoms%n_hia+atoms%n_j0.GT.0) THEN
+         IF (gOnsite%n_gf.GT.0) THEN
             IF(gOnsite%l_tetra) THEN
                CALL timestart("OnSite: TetWeights")
                tetweights = 0.0
@@ -262,7 +262,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
          IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
          !PLACEHOLDER
-         !IF (noco%l_mperp.AND.(ispin==jsp_end).AND.atoms%n_hia+atoms%n_j0.GT.0) THEN 
+         !IF (noco%l_mperp.AND.(ispin==jsp_end).AND.gOnsite%n_gf.GT.0) THEN 
          !   CALL onsite_21(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
          !END IF
 

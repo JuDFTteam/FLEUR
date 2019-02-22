@@ -28,7 +28,7 @@ MODULE m_hia_ham
 
       REAL,    INTENT(IN)           :: el(0:,:,:) !(0:atoms%lmaxd,ntype,jspd)
 
-      INTEGER     i,i_hia,N,n_occ,i_gf,ind,m,ind_h,N_basis,N_states
+      INTEGER     i,i_hia,N,n_occ,i_gf,m,ind_h,N_basis,N_states
       INTEGER     itype,ispin,j,k,l,jspin,urec,i_u
       INTEGER     noded,nodeu,ios,lty(atoms%n_u)
       INTEGER     max_states, neig
@@ -79,18 +79,12 @@ MODULE m_hia_ham
             n = atoms%lda_hia(i_hia)%atomType
 
             !Find the corresponding index of the onsite gf
-            ind =  0
-            DO i_gf = 1, gOnsite%n_gf
-               IF(gOnsite%atomType(i_gf).EQ.n.AND.gOnsite%l_gf(i_gf).EQ.l) THEN
-                  ind = i_gf
-                  EXIT
-               ENDIF
-            ENDDO
+            CALL gOnsite%index(l,n,i_gf)
 
             n_f = 0.0
             DO ispin = 1, input%jspins
                DO m = -l,l
-                  n_f = n_f + n_mmp(m,m,ind,ispin)
+                  n_f = n_f + n_mmp(m,m,i_gf,ispin)
                ENDDO
             ENDDO
             !
