@@ -678,6 +678,8 @@ SUBROUTINE w_inpXML(&
    IF(l_outFile) THEN
       CALL closeXMLElement('inputData')
    ELSE
+      WRITE (fileNum,'(a)')' <!-- We include the file relax.inp here to enable relaxations (see documentation) -->'
+      WRITE (fileNum,'(a)')'  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>'
       WRITE (fileNum,'(a)') '</fleurInput>'
       CLOSE (fileNum)
    END IF
