@@ -24,6 +24,7 @@ MODULE m_vmt_xc
 CONTAINS
    SUBROUTINE vmt_xc(DIMENSION,mpi,sphhar,atoms,&
                      den,xcpot,input,sym, obsolete,EnergyDen,vTot,vx,exc)
+   use m_npy
 
 #include"cpp_double.h"
       use m_libxc_postprocess_gga
@@ -31,6 +32,7 @@ CONTAINS
       USE m_types_xcpot_inbuild
       USE m_types
       USE m_metagga
+      USE m_juDFT_string
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)      :: xcpot
@@ -106,7 +108,7 @@ CONTAINS
       n_start=1
       n_stride=1
 #endif
-
+      call save_npy("rmsh.npy", atoms%rmsh)
       DO n = n_start,atoms%ntype,n_stride
          CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
          !
@@ -129,7 +131,7 @@ CONTAINS
          ENDIF
 
          !Add postprocessing for libxc
-         IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad)
+         IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num=n)
 
          CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
          CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt(:,0:,n,:))
@@ -147,8 +149,7 @@ CONTAINS
             ENDDO
             CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, vTot_tmp%mt(:,0:,n,:), &
                             nsp,   n,            tmp_grad, vTot_rs)
-
-            CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs, .False.)
+            CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs, is_pw=.False., nsp=nsp, atm_idx=n)
          ENDIF
 
          IF (ALLOCATED(exc%mt)) THEN
@@ -158,6 +159,7 @@ CONTAINS
             
             IF(perform_MetaGGA) THEN
                CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad, kinED_rs)
+               call save_npy("exc_mt.npy", e_xc(:,1))
             ELSE
                CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
             ENDIF
@@ -187,18 +189,4 @@ CONTAINS
       !
       RETURN
    END SUBROUTINE vmt_xc
-   
-   function get_radial_line(den, line_idx, nsp) result(line)
-      implicit none
-      real, intent(in)         :: den(:, :)
-      integer, intent(in)      :: line_idx, nsp
-      real, allocatable        :: line(:, :)
-
-      integer                  :: num_elem
-
-      write (*, *) "size(den(:,1)) =", size(den(:, 1))
-      write (*, *) "nsp =", nsp
-      write (*, *) "size(den(:,1))/nsp =", size(den(:, 1))/nsp
-   end function
-
 END MODULE m_vmt_xc

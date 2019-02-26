@@ -12,14 +12,16 @@ MODULE m_metagga
    end type t_RS_potden
 
 CONTAINS
-   SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS, is_pw)
+   SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS, is_pw, nsp, atm_idx)
       USE m_juDFT_stop
+      USE m_juDFT_string
       use m_npy
       !use m_cdngen
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
       REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
       LOGICAL, INTENT(IN), optional    :: is_pw
+      INTEGER, INTENT(IN), optional    :: nsp, atm_idx
 #ifdef CPP_LIBXC
       REAL, PARAMETER                  :: eps = 1e-15
 
@@ -27,20 +29,27 @@ CONTAINS
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
 
       if(is_pw) then
-         call save_npy("EnergyDen_RS.npy", EnergyDen_RS)
-         call save_npy("vTot_RS.npy", vTot_RS)
-         call save_npy("den_RS.npy", den_RS)
-         call save_npy("vTot_RSxdenRS.npy", vtot_RS*den_RS)
-         call save_npy("kinED_pw_schroeway_precut.npy",kinEnergyDen_RS) 
-      endif
-
-      if(is_pw) then
-         call save_npy("kinED_pw_schroeway.npy",kinEnergyDen_RS) 
-
-         !write (*,*) "read new"
-         !open(unit=69, file="kin_ED_pwway.dat")
-         !read(69,*) kinEnergyDen_RS
-         !close(69)
+         call save_npy("pw_EnergyDen_RS.npy", EnergyDen_RS)
+         call save_npy("pw_vTot_RS.npy", vTot_RS)
+         call save_npy("pw_den_RS.npy", den_RS)
+         call save_npy("pw_vTot_RSxdenRS.npy", vtot_RS*den_RS)
+         call save_npy("pw_kinED_pw_schroeway.npy",kinEnergyDen_RS) 
+      else
+         if(present(nsp) .and. present(atm_idx)) then
+            !call save_npy("mt=" // int2str(atm_idx) // "_EnergyDen_RS.npy", &
+                          !get_radial_line(EnergyDen_RS,1,nsp))
+            !call save_npy("mt=" // int2str(atm_idx) // "_vTot_RS.npy", &
+                          !get_radial_line(vTot_RS,1,nsp))
+            !call save_npy("mt=" // int2str(atm_idx) // "_den_RS.npy", &
+                          !get_radial_line(den_RS,1,nsp))
+            !call save_npy("mt=" // int2str(atm_idx) // "_vTot_RSxdenRS.npy", &
+                          !get_radial_line(vtot_RS*den_RS,1,nsp))
+            !call save_npy("mt=" // int2str(atm_idx) // "_kinED_schroeway.npy", &
+                          !get_radial_line(kinEnergyDen_RS,1,nsp)) 
+            call save_npy("mt=" // int2str(atm_idx) // "_den_RS.npy", den_RS)
+         else
+            write (*,*) "something not present"
+         endif
       endif
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
@@ -223,7 +232,7 @@ CONTAINS
       INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
       INTEGER :: iErr,nbands,noccbd,iType
       INTEGER :: skip_t,skip_tt,nStart,nEnd,nbasfcn
-      LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
+      LOGICAL :: l_orbcomprot, l_real, l_dosNdir
 
       ! Local Arrays
       REAL,    ALLOCATABLE :: we(:)
@@ -279,8 +288,6 @@ CONTAINS
          END DO
          IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
          IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
-         IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,dimension%nstd,input%jspins,jspin,results%ef,&
-                                           dimension%msh,vTot%mt(:,0,:,:),f,g)
       END DO
       DEALLOCATE (f,g,flo)
 
@@ -381,4 +388,23 @@ CONTAINS
 
       res = matmul(transpose(cell%bmat), vec)
    end function internal_to_rez
+   
+   function get_radial_line(den, line_idx, nsp) result(line)
+      use m_npy
+      implicit none
+      real, intent(in)         :: den(:, :)
+      integer, intent(in)      :: line_idx, nsp
+      real, allocatable        :: line(:, :)
+
+      integer                  :: num_elem
+      integer, allocatable     :: mask(:)
+
+      allocate(mask(size(den, dim=1)))
+      mask                          = 0
+      mask(line_idx:size(mask):nsp) = 1
+      call save_npy("line_mask.npy", mask)
+
+      num_elem = size(den(:, 1))/nsp
+      line = den(line_idx:size(den(:,1)):nsp,:)
+   end function
 END MODULE m_metagga

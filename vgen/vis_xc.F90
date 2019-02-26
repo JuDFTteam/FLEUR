@@ -105,6 +105,7 @@ CONTAINS
 
          IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, kinED_rs)
+            call save_npy("exc_pw.npy", e_xc(:,1))
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad)
          ENDIF

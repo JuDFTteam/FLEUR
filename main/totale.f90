@@ -91,25 +91,25 @@ CONTAINS
     eigSum = results%seigscv + results%seigc
     results%tote = eigSum
     WRITE (6,FMT=8010) results%tote
-8010 FORMAT (/,10x,'sum of eigenvalues =',t40,f20.10)
+8010 FORMAT (/,10x,'sum of eigenvalues =',t40,ES20.10)
     !
     !      ---> add contribution of coulomb potential
     !
     results%tote = results%tote + 0.5e0*results%te_vcoul
     WRITE (6,FMT=8020) results%te_vcoul
-8020 FORMAT (/,10x,'density-coulomb potential integral =',t40,f20.10)
+8020 FORMAT (/,10x,'density-coulomb potential integral =',t40,ES20.10)
     !
     !      ---> add contribution of effective potential
     !
     results%tote = results%tote - results%te_veff
     WRITE (6,FMT=8030) results%te_veff
-8030 FORMAT (/,10x,'density-effective potential integral =',t40,f20.10)
+8030 FORMAT (/,10x,'density-effective potential integral =',t40,ES20.10)
     !
     !      ---> add contribution of exchange-correlation energy
     !
     results%tote = results%tote + results%te_exc
     WRITE (6,FMT=8040) results%te_exc
-8040 FORMAT (/,10x,'charge density-ex.-corr.energy density integral=', t40,f20.10)
+8040 FORMAT (/,10x,'charge density-ex.-corr.energy density integral=', t40,ES20.10)
     !
     !      ---> Fock exchange contribution 
     !
@@ -122,8 +122,8 @@ CONTAINS
     ENDIF
     WRITE (6,FMT=8100)  0.5e0*results%te_hfex%valence
     WRITE (6,FMT=8101)  0.5e0*results%te_hfex%core
-8100 FORMAT (/,10x,'Fock-exchange energy (valence)=',t40,f20.10)
-8101 FORMAT (10x,'Fock-exchange energy (core)=',t40,f20.10)
+8100 FORMAT (/,10x,'Fock-exchange energy (valence)=',t40,ES20.10)
+8101 FORMAT (10x,'Fock-exchange energy (core)=',t40,ES20.10)
 
 
     !     ----> VM terms
@@ -201,7 +201,7 @@ CONTAINS
        WRITE ( 6,FMT=8081) results%tote-0.5e0*results%ts
     END IF
 
-    WRITE(attributes(1),'(f20.10)') results%tote
+    WRITE(attributes(1),'(ES20.10)') results%tote
     WRITE(attributes(2),'(a)') 'Htr'
     WRITE(attributes(3),'(a)') 'HF'
     IF (hybrid%l_calhf) THEN
@@ -231,19 +231,19 @@ CONTAINS
     CALL writeXMLElementFormPoly('freeEnergy',(/'value'/),(/results%tote-results%ts/),reshape((/38,20/),(/1,2/)))
     CALL writeXMLElementFormPoly('extrapolationTo0K',(/'value'/),(/results%tote-0.5e0*results%ts/),reshape((/31,20/),(/1,2/)))
     CALL closeXMLElement('totalEnergy')
-8060 FORMAT (/,/,' ---->    input%total energy=',t40,f20.10,' htr')
-8061 FORMAT (/,/,' ----> HF input%total energy=',t40,f20.10,' htr')
-8050 FORMAT (/,10x,'Madelung term for atom type:',i3,t40,f20.10)
-8045 FORMAT (/,10x,'el.-nucl. inter. diff. m.t.',t40,f20.10)
-8065 FORMAT (/,/,' ---->    (input%tkb*entropy) TS=',t40,f20.10,' htr')
-8066 FORMAT (/,/,' ----> HF (input%tkb*entropy) TS=',t40,f20.10,' htr')
-8070 FORMAT (/,/,' ---->    free energy=',t40,f20.10,' htr')
-8071 FORMAT (/,/,' ----> HF free energy=',t40,f20.10,' htr')
+8060 FORMAT (/,/,' ---->    input%total energy=',t40,ES20.10,' htr')
+8061 FORMAT (/,/,' ----> HF input%total energy=',t40,ES20.10,' htr')
+8050 FORMAT (/,10x,'Madelung term for atom type:',i3,t40,ES20.10)
+8045 FORMAT (/,10x,'el.-nucl. inter. diff. m.t.',t40,ES20.10)
+8065 FORMAT (/,/,' ---->    (input%tkb*entropy) TS=',t40,ES20.10,' htr')
+8066 FORMAT (/,/,' ----> HF (input%tkb*entropy) TS=',t40,ES20.10,' htr')
+8070 FORMAT (/,/,' ---->    free energy=',t40,ES20.10,' htr')
+8071 FORMAT (/,/,' ----> HF free energy=',t40,ES20.10,' htr')
 8080 FORMAT (/,/,'      extrapolation for T->0',&
-               /,' ---->    input%total electron energy=',t40,f20.10,' htr')
+               /,' ---->    input%total electron energy=',t40,ES20.10,' htr')
 8081 FORMAT (/,/,'      extrapolation for T->0',&
-               /,' ----> HF input%total electron energy=',t40,f20.10,' htr')
-8090 FORMAT (/,/,' ---->    correction for lda+U =',t40,f20.10,' htr')
+               /,' ----> HF input%total electron energy=',t40,ES20.10,' htr')
+8090 FORMAT (/,/,' ---->    correction for lda+U =',t40,ES20.10,' htr')
 
   END SUBROUTINE totale
 END MODULE m_totale
