@@ -28,7 +28,7 @@
           USE m_setupMPI
           USE m_cdn_io
           USE m_fleur_info
-          USE m_broyd_io
+          USE m_mixing_history
           USE m_checks
           USE m_prpqfftmap
           USE m_writeOutHeader
@@ -172,7 +172,7 @@
                 a2 = 0.0
                 a3 = 0.0
                 CALL r_inpXML(&
-                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,&
+                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
@@ -531,7 +531,7 @@
           CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN
-             IF(input%gw.NE.0) CALL resetBroydenHistory()
+             IF(input%gw.NE.0) CALL mixing_history_reset(mpi)
              CALL setStartingDensity(noco%l_noco)
           END IF
 

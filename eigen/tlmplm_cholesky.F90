@@ -1,5 +1,5 @@
 MODULE m_tlmplm_cholesky
-
+  use m_judft
   IMPLICIT NONE
   !*********************************************************************
   !     sets up the local Hamiltonian, i.e. the Hamiltonian in the

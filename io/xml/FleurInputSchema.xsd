@@ -52,7 +52,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="geometryOptimization" type="GeometryOptimizerType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaU" type="LdaUGeneralType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="spinSpiralQPointMesh" type="SpinSpiralQPointMeshType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="eField" type="EFieldType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="fields" type="FieldType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameterLimits" type="EnergyParameterLimitsType"/>
       </xsd:all>
    </xsd:complexType>
@@ -62,7 +62,11 @@
       <xsd:attribute name="elup" type="xsd:string"/>
    </xsd:complexType>
 
-   <xsd:complexType name="EFieldType">
+   <xsd:complexType name="FieldType">
+      <xsd:sequence>
+       <xsd:element maxOccurs="unbounded" minOccurs="0"  name="shape" type="xsd:string" />
+     </xsd:sequence>
+      <xsd:attribute default="0.0" name="b_field" type="xsd:string" use="optional"/>
       <xsd:attribute default="10.0" name="zsigma" type="xsd:string" use="optional"/>
       <xsd:attribute default="0.0" name="sig_b_1" type="xsd:string" use="optional"/>
       <xsd:attribute default="0.0" name="sig_b_2" type="xsd:string" use="optional"/>
@@ -360,6 +364,8 @@
    <xsd:complexType name="SpecialType">
      <xsd:attribute name="lda" type="FleurBool" use="optional" default="F"/>
      <xsd:attribute name="socscale" type="ZeroToOneNumberType" use="optional" default="1.0"/>
+     <xsd:attribute name="b_field_mt" type="xsd:string" use="optional" default="0.0"/>
+     <xsd:attribute name="vca_charge" type="xsd:string" use="optional" default="0.0"/>
    </xsd:complexType>
 
 
@@ -883,6 +889,10 @@
          <xsd:enumeration value="Broyden1"/>
          <xsd:enumeration value="Broyden2"/>
          <xsd:enumeration value="Anderson"/>
+	 <xsd:enumeration value="Pulay"/>
+	 <xsd:enumeration value="rPulay"/>
+	 <xsd:enumeration value="pPulay"/>
+	 <xsd:enumeration value="aPulay"/>
       </xsd:restriction>
    </xsd:simpleType>
 

@@ -29,7 +29,7 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_potden),INTENT(IN)     :: v
-    CLASS(t_mat),INTENT(INOUT)     :: hmat(:,:),smat(:,:)
+    CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:),smat(:,:)
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp
@@ -40,14 +40,14 @@ CONTAINS
     !     .. Local Scalars ..
     COMPLEX hij,sij,apw_lo,c_1
     REAL d2,gz,sign,th,wronk
-    INTEGER i,i2,ii,jj,ik,j,jk,k,jspin,ipot,ii0,i0
+    INTEGER i,i2,ii,jj,ik,j,jk,k,jspin,ii0,i0
     INTEGER ivac,irec,imz,igvm2,igvm2i,s1,s2
     INTEGER jspin1,jspin2,jmax,jsp_start,jsp_end
     INTEGER i_start,nc,nc_0
     !     ..
     !     .. Local Arrays ..
     INTEGER:: nv2(input%jspins)
-    INTEGER kvac1(DIMENSION%nv2d,input%jspins),kvac2(DIMENSION%nv2d,input%jspins)
+    INTEGER kvac(2,DIMENSION%nv2d,input%jspins)
     INTEGER map2(DIMENSION%nvd,input%jspins)
     COMPLEX tddv(DIMENSION%nv2d,DIMENSION%nv2d),tduv(DIMENSION%nv2d,DIMENSION%nv2d)
     COMPLEX tudv(DIMENSION%nv2d,DIMENSION%nv2d),tuuv(DIMENSION%nv2d,DIMENSION%nv2d)
@@ -66,16 +66,14 @@ CONTAINS
        nv2(jspin) = 0
        k_loop:DO  k = 1,lapw%nv(jspin)
           DO  j = 1,nv2(jspin)
-             IF (lapw%k1(k,jspin).EQ.kvac1(j,jspin)&
-                  .AND. lapw%k2(k,jspin).EQ.kvac2(j,jspin)) THEN
+             IF (all(lapw%gvec(1:2,k,jspin)==kvac(1:2,j,jspin))) THEN
                 map2(k,jspin) = j
                 CYCLE k_loop
              END IF
           ENDDO
           nv2(jspin) = nv2(jspin) + 1
           IF (nv2(jspin)>DIMENSION%nv2d)  CALL juDFT_error("hsvac:dimension%nv2d",calledby ="hsvac")
-          kvac1(nv2(jspin),jspin) = lapw%k1(k,jspin)
-          kvac2(nv2(jspin),jspin) = lapw%k2(k,jspin)
+          kvac(1:2,nv2(jspin),jspin) = lapw%gvec(1:2,k,jspin)
           map2(k,jspin) = nv2(jspin)
        ENDDO k_loop
     ENDDO
@@ -86,20 +84,16 @@ CONTAINS
           s1=MIN(SIZE(hmat,1),jspin1) !in colinear case s1=1
           DO jspin2=MERGE(1,jsp,noco%l_noco),MERGE(2,jsp,noco%l_noco) !loop over global spin
              s2=MIN(SIZE(hmat,1),jspin2) !in colinear case s2=1
-             ipot=3
-             IF (jspin1==jspin2) ipot=jspin1
           !--->       get the wavefunctions and set up the tuuv, etc matrices          
-             jspin=jsp
-          CALL vacfun(&
-               vacuum,DIMENSION,stars,&
-               jsp,input,noco,jspin1,jspin2,&
-               sym, cell,ivac,evac(1,1),lapw%bkpt,v%vacxy(:,:,ivac,ipot),v%vacz(:,:,:),kvac1,kvac2,nv2,&
-               tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
+             CALL vacfun(&
+                  vacuum,stars,&
+                  input,noco,jspin1,jspin2,&
+                  sym, cell,ivac,evac,lapw%bkpt,v%vacxy,v%vacz,kvac,nv2,&
+                  tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk)
           !
           !--->       generate a and b coeffficients
           !
-          IF (noco%l_noco) THEN
-             DO jspin = 1,input%jspins
+             DO jspin = MIN(jspin1,jspin2),MAX(jspin1,jspin2)
                 DO k = 1,lapw%nv(jspin)
                    gz = sign*cell%bmat(3,3)*lapw%k3(k,jspin)
                    i2 = map2(k,jspin)
@@ -109,16 +103,6 @@ CONTAINS
                    b(k,jspin) =   c_1 * CMPLX(duz(i2,jspin), gz* uz(i2,jspin) )
                 ENDDO
              ENDDO
-          ELSE
-             DO k = 1,lapw%nv(jsp)
-                gz = sign*cell%bmat(3,3)*lapw%gvec(3,k,jsp)
-                i2 = map2(k,jsp)
-                th = gz*cell%z1
-                c_1 = CMPLX( COS(th), SIN(th) )/ (d2*wronk)
-                a(k,jsp) = - c_1 * CMPLX(dudz(i2,jsp), gz*udz(i2,jsp) )
-                b(k,jsp) =   c_1 * CMPLX(duz(i2,jsp), gz* uz(i2,jsp) )
-             ENDDO
-          ENDIF
           !--->       update hamiltonian and overlap matrices
           IF (jspin1==jspin2) THEN
              DO  i = mpi%n_rank+1,lapw%nv(jspin2),mpi%n_size
@@ -153,30 +137,25 @@ CONTAINS
                 !Diagonal term of Overlapp matrix, Hamiltonian later
                 sij = CONJG(a(i,jspin2))*a(i,jspin2) + CONJG(b(i,jspin2))*b(i,jspin2)*ddnv(ik,jspin2)
                 IF (hmat(1,1)%l_real) THEN
-                   smat(s1,s2)%data_r(j,i0) = smat(s1,s2)%data_r(j,i0) + REAL(sij)
+                   smat(s2,s1)%data_r(j,i0) = smat(s1,s2)%data_r(j,i0) + REAL(sij)
                 ELSE
-                   smat(s1,s2)%data_c(j,i0) = smat(s1,s2)%data_c(j,i0) + sij
+                   smat(s2,s1)%data_c(j,i0) = smat(s1,s2)%data_c(j,i0) + sij
                 ENDIF
              ENDDO
           ENDIF
 
           !--->    hamiltonian update
-          DO  i = mpi%n_rank+1,lapw%nv(jspin2),mpi%n_size
+          DO  i = mpi%n_rank+1,lapw%nv(jspin1),mpi%n_size
              i0=(i-1)/mpi%n_size+1 !local column index
-             ik = map2(i,jspin2)
-             DO j = 1,MIN(i,lapw%nv(jspin1))
-                jk = map2(j,jspin1)
-                IF (jspin2>jspin1) THEN
-                   hij = CONJG(CONJG(a(j,jspin1))* (tuuv(jk,ik)*a(i,jspin2) +tudv(jk,ik)*b(i,jspin2))&
-                        + CONJG(b(j,jspin1))* (tddv(jk,ik)*b(i,jspin2) +tduv(jk,ik)*a(i,jspin2)))
-                ELSE
-                   hij = CONJG(a(i,jspin2))* (tuuv(ik,jk)*a(j,jspin1) +tudv(ik,jk)*b(j,jspin1))&
-                        + CONJG(b(i,jspin2))* (tddv(ik,jk)*b(j,jspin1) +tduv(ik,jk)*a(j,jspin1))
-                ENDIF
+             ik = map2(i,jspin1)
+             DO j = 1,MERGE(i,lapw%nv(jspin2),jspin1==jspin2)
+                jk = map2(j,jspin2)
+                hij = CONJG(a(i,jspin1))* (tuuv(ik,jk)*a(j,jspin2) +tudv(ik,jk)*b(j,jspin2))&
+                     + CONJG(b(i,jspin1))* (tddv(ik,jk)*b(j,jspin2) +tduv(ik,jk)*a(j,jspin2))
                 IF (hmat(1,1)%l_real) THEN
-                   hmat(s1,s2)%data_r(j,i0) = hmat(s1,s2)%data_r(j,i0) + REAL(hij)
+                   hmat(s2,s1)%data_r(j,i0) = hmat(s2,s1)%data_r(j,i0) + REAL(hij)
                 ELSE
-                   hmat(s1,s2)%data_c(j,i0) = hmat(s1,s2)%data_c(j,i0) + hij
+                   hmat(s2,s1)%data_c(j,i0) = hmat(s2,s1)%data_c(j,i0) + hij
                 ENDIF
              ENDDO
           ENDDO
