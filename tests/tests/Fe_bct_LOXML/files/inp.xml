@@ -13,7 +13,6 @@
          <qss>0.0 0.0 0.0</qss>
       </nocoParams>
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointCount count="5" gamma="F"/>
       </bzIntegration>

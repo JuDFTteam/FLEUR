@@ -32,6 +32,9 @@ CONTAINS
     !     .. Local Arrays ..
     REAL forcetot(3,atoms%ntype)
     CHARACTER(LEN=20) :: attributes(7)
+#ifdef CPP_MPI
+    include 'mpif.h'
+#endif
     !
     !     write spin-dependent forces
     !
