@@ -229,8 +229,8 @@ CONTAINS
        CALL writeXMLElementFormPoly('freeEnergy',(/'value'/),(/results%tote-results%ts/),reshape((/38,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('extrapolationTo0K',(/'value'/),(/results%tote-0.5e0*results%ts/),reshape((/31,20/),(/1,2/)))
        CALL closeXMLElement('totalEnergy')
-8060   FORMAT (/,/,' ---->    input%total energy=',t40,f20.10,' htr')
-8061   FORMAT (/,/,' ----> HF input%total energy=',t40,f20.10,' htr')
+8060   FORMAT (/,/,' ---->    total energy=',t40,f20.10,' htr')
+8061   FORMAT (/,/,' ----> HF total energy=',t40,f20.10,' htr')
 8050   FORMAT (/,10x,'Madelung term for atom type:',i3,t40,f20.10)
 8045   FORMAT (/,10x,'el.-nucl. inter. diff. m.t.',t40,f20.10)
 8065   FORMAT (/,/,' ---->    (input%tkb*entropy) TS=',t40,f20.10,' htr')
@@ -238,9 +238,9 @@ CONTAINS
 8070   FORMAT (/,/,' ---->    free energy=',t40,f20.10,' htr')
 8071   FORMAT (/,/,' ----> HF free energy=',t40,f20.10,' htr')
 8080   FORMAT (/,/,'      extrapolation for T->0',&
-            /,' ---->    input%total electron energy=',t40,f20.10,' htr')
+            /,' ---->    total electron energy=',t40,f20.10,' htr')
 8081   FORMAT (/,/,'      extrapolation for T->0',&
-            /,' ----> HF input%total electron energy=',t40,f20.10,' htr')
+            /,' ----> HF total electron energy=',t40,f20.10,' htr')
 8090   FORMAT (/,/,' ---->    correction for lda+U =',t40,f20.10,' htr')
     ENDIF
     CALL force_w(mpi,input,atoms,sym,results,cell,oneD,vacuum)
