@@ -969,8 +969,8 @@ MODULE m_cdn_io
             CALL closeCDNPOT_HDF(fileID)
          ENDIF
 #ifdef CPP_MPI
-         CALL mpi_bc(l_same,1,MPI_LOGICAL,0,ierr)
-         CALL mpi_bc(l_structure_by_shift,1,MPI_LOGICAL,0,ierr)
+         CALL mpi_bcast(l_same,1,MPI_LOGICAL,0,ierr)
+         CALL mpi_bcast(l_structure_by_shift,1,MPI_LOGICAL,0,ierr)
 #endif
          IF (l_same.OR..NOT.l_structure_by_shift) RETURN ! nothing to do
          
