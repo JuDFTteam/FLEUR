@@ -44,10 +44,10 @@ CONTAINS
     if (l_firstcall) THEN
        INQUIRE(file='qfix',exist=l_qfixfile)
        IF (l_qfixfile) CALL judft_info("qfix file no longer supported, check the qfix option in inp.xml","INFO")
-       if (input%qfix==1) fixtotal=.false.
+       IF (input%qfix==1) fixtotal=.FALSE.
        l_firstcall=.false.
     ELSE
-       IF (input%qfix==0.AND..NOT.force_fix) RETURN
+       IF (MOD(input%qfix,2)==0.AND..NOT.force_fix) RETURN
     ENDIF
     ! qfix==0 means no qfix was given in inp.xml. 
     ! In this case do nothing except when forced to fix!

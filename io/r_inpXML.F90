@@ -671,14 +671,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%epsforce = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
          input%forcemix = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix'))
          input%force_converged = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@force_converged'))
-         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@qfix')
-         IF (numberNodes.EQ.1) THEN
-            input%qfix = 1
-            l_qfix = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
-            IF (l_qfix) THEN
-               input%qfix = 2
-            END IF
-         END IF
+         input%qfix = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
       END IF
 
       ! Read in optional general LDA+U parameters

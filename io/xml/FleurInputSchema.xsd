@@ -590,8 +590,9 @@
       <xsd:attribute name="forcealpha" type="xsd:string" use="required"/>
       <xsd:attribute name="epsdisp" type="xsd:string" use="optional" default="0.001"/>
       <xsd:attribute name="epsforce" type="xsd:string" use="optional" default="0.001"/>
-      <xsd:attribute name="forcemix" type="xsd:string" use="optional" default="3" />
-      <xsd:attribute name="qfix" type="FleurBool" use="optional"/>
+      <xsd:attribute name="forcemix" type="xsd:integer" use="optional" default="3" />
+      <xsd:attribute name="qfix" type="xsd:integer" use="optional" default="0" />
+      <xsd:attribute name="force_converged" type="xsd:string" use="optional" default="0.00001" />
    </xsd:complexType>
 
    <xsd:complexType name="LdaUGeneralType">
