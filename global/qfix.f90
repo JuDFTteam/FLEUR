@@ -12,7 +12,7 @@ MODULE m_qfix
 
 CONTAINS
   SUBROUTINE qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
-                  den,l_noco,l_printData,force_fix,fix)
+                  den,l_noco,l_printData,force_fix,fix,fix_pw_only)
 
     USE m_types
     USE m_cdntot
@@ -32,7 +32,7 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT) :: den
     LOGICAL,INTENT(IN)           :: l_noco,l_printData,force_fix
     REAL,    INTENT (OUT)        :: fix
-
+    LOGICAL,INTENT(IN),OPTIONAL  :: fix_pw_only
     !     .. Local Scalars ..
     LOGICAL :: l_qfixfile,fixtotal
     LOGICAL :: l_firstcall=.true.
@@ -40,11 +40,9 @@ CONTAINS
     INTEGER :: jm,lh,n,na
     !     ..
     fixtotal=.true. !this is the default
+    IF (PRESENT(fix_pw_only)) fixtotal=.NOT.fix_pw_only
     fix=1.0
-    if (l_firstcall) THEN
-       INQUIRE(file='qfix',exist=l_qfixfile)
-       IF (l_qfixfile) CALL judft_info("qfix file no longer supported, check the qfix option in inp.xml","INFO")
-       IF (input%qfix==1) fixtotal=.FALSE.
+    IF (l_firstcall) THEN
        l_firstcall=.false.
     ELSE
        IF (MOD(input%qfix,2)==0.AND..NOT.force_fix) RETURN

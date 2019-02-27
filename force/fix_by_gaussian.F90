@@ -34,7 +34,6 @@ CONTAINS
     INTEGER :: kr(3,sym%nop)
     COMPLEX :: sf,phas(sym%nop)
     INTEGER :: js,n,l,k,nat,j
-    TYPE(t_input)    :: inputtmp
 
     DO js=1,input%jspins
        DO n=1,atoms%ntype
@@ -67,10 +66,8 @@ CONTAINS
           ENDDO
        END DO
     END DO
-    inputtmp=input
-    inputtmp%qfix=1
-    CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,inputtmp,cell,oneD,&
-         den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix)
+    CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+         den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
   END SUBROUTINE fix_by_gaussian
 
   FUNCTION gaussian_r(r,alpha)
