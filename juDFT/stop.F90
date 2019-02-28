@@ -212,6 +212,7 @@ CONTAINS
     CALL send_usage_data()
 #ifdef CPP_MPI
     IF(PRESENT(irank)) THEN
+       write (*,*) "Going into post send barrier"
        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
        CALL MPI_FINALIZE(ierr)
     ELSE
