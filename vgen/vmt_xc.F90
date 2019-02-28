@@ -84,7 +84,7 @@ CONTAINS
          l_libxc=.true. !libxc!!
       END SELECT
 
-      nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
+      nsp=atoms%nsp()
       ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
       IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
 
@@ -111,7 +111,7 @@ CONTAINS
 #endif
       call save_npy("rmsh.npy", atoms%rmsh)
       DO n = n_start,atoms%ntype,n_stride
-         CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
+         CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
          !
          !         calculate the ex.-cor. potential
          CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
@@ -134,8 +134,8 @@ CONTAINS
          !Add postprocessing for libxc
          IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num=n)
 
-         CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
          ! use updated vTot for exc calculation
          IF(perform_MetaGGA) THEN
@@ -177,7 +177,7 @@ CONTAINS
                   nt=nt+nsp
                END DO
             ENDIF
-            CALL mt_from_grid(atoms,sphhar,nsp,n,1,e_xc,exc%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
          ENDIF
       ENDDO
 
