@@ -99,7 +99,7 @@ CONTAINS
 #endif
 
       DO n = n_start,atoms%ntype,n_stride
-         CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
+         CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
          !
          !         calculate the ex.-cor. potential
          CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
