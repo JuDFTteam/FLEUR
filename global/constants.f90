@@ -83,10 +83,7 @@ MODULE m_constants
 
       REAL, INTENT (IN) :: fac
       c_light = 137.0359895e0 * fac 
-<<<<<<< Updated upstream
-=======
       !c_light = 1e6*fac
->>>>>>> Stashed changes
    END FUNCTION c_light
 
 END MODULE m_constants
