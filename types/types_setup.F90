@@ -161,6 +161,8 @@ MODULE m_types_setup
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
+   CONTAINS
+      procedure :: nsp => calc_nsp_atom
    END TYPE t_atoms
 
    TYPE t_cell
@@ -664,5 +666,12 @@ MODULE m_types_setup
       !---> gwf
 
    END TYPE t_wann
+CONTAINS
+   function calc_nsp_atom(self) result(nsp) 
+      implicit none
+      CLASS(t_atoms),INTENT(IN)      :: self
+      INTEGER                        :: nsp
 
+      nsp = (self%lmaxd+1+MOD(self%lmaxd+1,2))*(2*self%lmaxd+1)
+   end function
 END MODULE m_types_setup

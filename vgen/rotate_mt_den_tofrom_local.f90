@@ -26,9 +26,10 @@ CONTAINS
     REAL    :: rhotot,rho_up,rho_down,theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
     REAL    :: eps=1E-10
-    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd
-    ALLOCATE(ch(nsp,4),den%theta_mt(nsp,atoms%ntype),den%phi_mt(nsp,atoms%ntype))
-    nsp=nsp/atoms%jmtd
+    nsp=atoms%nsp()
+    ALLOCATE(ch(nsp*atoms%jmtd,4),&
+             den%theta_mt(nsp*atoms%jmtd,atoms%ntype),&
+             den%phi_mt(nsp*atoms%jmtd,atoms%ntype))
     CALL xcpot%init("vwn",.FALSE.,1)
 
     CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)

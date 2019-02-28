@@ -79,7 +79,7 @@ CONTAINS
          l_libxc=.true. !libxc!!
       END SELECT
 
-      nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
+      nsp=atoms%nsp()
       ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
       IF (xcpot%is_gga()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
 
