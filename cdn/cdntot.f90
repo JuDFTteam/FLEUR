@@ -4,7 +4,32 @@ MODULE m_cdntot
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
-   SUBROUTINE cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
+   SUBROUTINE integrate_grid(stars, atoms, sym, vacuum, input, cell, oneD, sphhar, nsp, is_inte, mt_inte)
+      IMPLICIT NONE
+      REAL, intent(in)   :: is_inte(:,:), mt_inte(:,:)
+      REAL, INTENT(out)  :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
+                            qvac(2,input%jspins), qtot, qistot
+
+      TYPE(t_potden)     :: integrand
+      
+      INTEGER            :: n
+
+      !allocate potden type
+      call integrad%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+
+      !put is in potden-basis
+      call pw_from_grid(xcpot, stars,.True., is_inte, integrand%pw, integrand%pw_w)
+      !put mt in potden-basis
+      do n = 1,atoms%ntype
+         call mt_from_grid(atoms,sphhar,nsp,n,input%jspins,mt_inte,integrad%mt(:,0:,n,:))
+      enddo
+
+      ! integrate my integrand
+      call integrate_cdn(stars, atoms, sym, vacuum, input, cell, oneD, integrand,&
+                        q, qis, qmt, qvac, qtot, qistot)
+   END SUBROUTINE integrate_grid
+
+   SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
                                    q, qis, qmt, qvac, qtot, qistot)
       USE m_intgr, ONLY : intgr3
       USE m_constants
@@ -73,7 +98,7 @@ CONTAINS
          q(jsp) = q(jsp) + qis(jsp)
          qtot = qtot + q(jsp)
       END DO ! loop over spins
-   END SUBROUTINE cdntot_integrate
+   END SUBROUTINE integrate_cdn
 
    SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
                      den,l_printData,qtot,qistot)
@@ -110,7 +135,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
       
-      call cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, den, &
+      call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
  
       IF (input%film) THEN
