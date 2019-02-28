@@ -26,7 +26,7 @@ CONTAINS
       ALLOCATE(vsigma(nsp,n_sigma),vsigma_mt(atoms%jri(n),0:sphhar%nlhd,n_sigma))
       vsigma_mt=0.0
       vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-      CALL mt_from_grid(atoms,sphhar,nsp/atoms%jmtd,n,n_sigma,vsigma,vsigma_mt)
+      CALL mt_from_grid(atoms,sphhar,n,n_sigma,vsigma,vsigma_mt)
       DO i=1,atoms%jri(n)
          vsigma_mt(i,:,:)=vsigma_mt(i,:,:)*atoms%rmsh(i,n)**2
       ENDDO

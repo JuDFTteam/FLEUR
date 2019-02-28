@@ -150,17 +150,20 @@ CONTAINS
 
    END SUBROUTINE mt_to_grid
 
-   SUBROUTINE mt_from_grid(atoms, sphhar, nsp, n, jspins, v_in, vr)
+   SUBROUTINE mt_from_grid(atoms, sphhar, n, jspins, v_in, vr)
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_sphhar), INTENT(IN):: sphhar
-      INTEGER, INTENT(IN)       :: nsp, jspins, n
+      INTEGER, INTENT(IN)       :: jspins, n
       REAL, INTENT(IN)          :: v_in(:, :)
       REAL, INTENT(INOUT)       :: vr(:, 0:, :)
 
-      REAL    :: vpot(nsp), vlh
-      INTEGER :: js, kt, lh, jr, nd
+      REAL    :: vpot(atoms%nsp()), vlh
+      INTEGER :: js, kt, lh, jr, nd, nsp
+
+      nsp = atoms%nsp()
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+
       DO js = 1, jspins
          !
          kt = 0

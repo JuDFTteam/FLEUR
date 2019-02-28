@@ -119,8 +119,8 @@ CONTAINS
          !Add postprocessing for libxc
          IF (l_libxc.AND.xcpot%is_gga()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad)
 
-         CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
          IF (ALLOCATED(exc%mt)) THEN
             !
@@ -138,7 +138,7 @@ CONTAINS
                   nt=nt+nsp
                END DO
             ENDIF
-            CALL mt_from_grid(atoms,sphhar,nsp,n,1,e_xc,exc%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
          ENDIF
       ENDDO
 
