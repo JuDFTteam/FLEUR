@@ -11,17 +11,12 @@ if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
    else()
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mkl -r8 -qopenmp -assume byterecl")
    endif()     
-<<<<<<< Updated upstream
    set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -xHost -O2 -g")
    if (${CMAKE_Fortran_COMPILER_VERSION} VERSION_LESS "19.0.0.0")
        set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -ftrapuv -check uninit -check pointers -DCPP_DEBUG")
    else()
        set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -CB -traceback -O0 -g -ftrapuv -check uninit -check pointers -DCPP_DEBUG")
    endif()
-=======
-   set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -xHost -O0 -g")
-   set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -traceback -O0 -g -ftrapuv -check uninit -check pointers -CB -DCPP_DEBUG")
->>>>>>> Stashed changes
 elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
    message("PGI Fortran detected")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake

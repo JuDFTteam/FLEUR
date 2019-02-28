@@ -195,66 +195,6 @@ END FUNCTION xcpot_is_LDA
             CALL xc_f03_lda_exc(xcpot%xc_func_c, SIZE(rh,1), TRANSPOSE(rh), excc)
             exc=exc+excc
          END IF
-<<<<<<< Updated upstream
-=======
-      ELSEIF(xcpot%exc_is_MetaGGA()) THEN
-         IF(PRESENT(kinEnergyDen_KS)) THEN 
-            ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
-            kinEnergyDen_libXC = transpose(kinEnergyDen_KS + 0.25 * grad%laplace)
-            !where(kinEnergyDen_libXC < 1d-5) kinEnergyDen_libXC = 1d-5
-
-            !write (*,*) "apply tf approx. shapes: "
-            !write (*,*) "shape(rh) = ", shape(rh)
-            !write (*,*) "shape(grad%sigma) = ", shape(transpose(grad%sigma))
-            !write (*,*) "shape(grad%lapl)  = ", shape(grad%laplace)
-
-            !kinEnergyDen_libXC = 0.3 * (3.0*pi_const**2)**(2./3.) * rh**(5./3.) &
-                               !+ 1.0/72.0 * transpose(abs(grad%sigma))/rh &
-                               !+ 1.0/6.0  * grad%laplace
-           
-            !pkzb_zaehler = (1./8. * transpose(abs(grad%sigma))/rh)**2
-            !pkzb_nenner  = kinEnergyDen_libxc**2
-            !pkzb_ratio   = pkzb_zaehler/pkzb_nenner
-            !write (*,*) "pkzb ratio:"
-            !write (*,*) "min = ", minval(pkzb_ratio)
-            !write (*,*) "max = ", maxval(pkzb_ratio)
-      
-            write (filename, '("kED_libxc_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=2)
-            call save_npy(filename, transpose(kinEnergyDen_libxc))
-
-            write (filename, '("sigma_", I0.6, ".npy")') size(grad%sigma, dim=2)
-            call save_npy(filename, grad%sigma)
-
-            !write (filename, '("pkzb_zaehler_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=1)
-            !call save_npy(filename, transpose(pkzb_zaehler))
-            !write (filename, '("pkzb_nenner_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=1)
-            !call save_npy(filename, transpose(pkzb_nenner))
-            !write (filename, '("pkzb_ratio_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=1)
-            !call save_npy(filename, transpose(pkzb_ratio))
-            
-            exc  = 0.0
-            excc = 0.0
-            call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
-                                 transpose(grad%laplace), kinEnergyDen_libXC, exc)
-
-            IF (xcpot%func_exc_id_c>0) THEN
-               CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
-                                    transpose(grad%laplace), kinEnergyDen_libXC, excc)
-               exc=exc+excc
-            END IF
-            
-         ELSE ! first iteration is GGA
-            IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a MetaGGA potential without providing derivatives")
-            CALL xc_f03_gga_exc(xcpot%vxc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
-            IF (xcpot%func_exc_id_c>0) THEN
-               CALL xc_f03_gga_exc(xcpot%vxc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
-               exc=exc+excc
-            END IF
-         ENDIF
-
-      ELSE
-         call juDFT_error("exc is part of a known Family", calledby="xcpot_get_exc@libxc")
->>>>>>> Stashed changes
       ENDIF
 
 #endif
