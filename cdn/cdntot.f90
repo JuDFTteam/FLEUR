@@ -4,7 +4,7 @@ MODULE m_cdntot
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
-   SUBROUTINE integrate_lapw_basis(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
+   SUBROUTINE cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
                                    q, qis, qmt, qvac, qtot, qistot)
       USE m_intgr, ONLY : intgr3
       USE m_constants
@@ -73,7 +73,7 @@ CONTAINS
          q(jsp) = q(jsp) + qis(jsp)
          qtot = qtot + q(jsp)
       END DO ! loop over spins
-   END SUBROUTINE integrate_lapw_basis
+   END SUBROUTINE cdntot_integrate
 
    SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
                      den,l_printData,qtot,qistot)
@@ -110,7 +110,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
       
-      call integrate_lapw_basis(stars,atoms,sym,vacuum,input,cell,oneD, den, &
+      call cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
  
       IF (input%film) THEN
