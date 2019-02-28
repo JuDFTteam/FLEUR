@@ -12,6 +12,7 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
 
    USE m_constants
+   USE m_judft
    USE m_cdn_io
    USE m_cdnovlp
    USE m_cored

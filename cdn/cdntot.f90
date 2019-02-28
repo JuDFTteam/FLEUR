@@ -83,17 +83,13 @@ CONTAINS
             ENDDO
          END IF
 !     -----is region
-         IF (.FALSE.) THEN !Change this for old way of determination of int-charge
-            CALL convol(stars,x,den%pw(:,jspin),stars%ufft)
-            qis = x(1)*cell%omtil
-         ELSE
-            qis = 0.
+         qis = 0.
 
-            CALL pwint_all(stars,atoms,sym,oneD,cell,1,stars%ng3,x)
-            DO j = 1,stars%ng3
-               qis = qis + den%pw(j,jspin)*x(j)*stars%nstr(j)
-            ENDDO
-         endif
+         CALL pwint_all(stars,atoms,sym,oneD,cell,1,stars%ng3,x)
+         DO j = 1,stars%ng3
+            qis = qis + den%pw(j,jspin)*x(j)*stars%nstr(j)
+         ENDDO
+
          qistot = qistot + qis
          q = q + qis
          WRITE (6,FMT=8000) jspin,q,qis, (qmt(n),n=1,atoms%ntype)
