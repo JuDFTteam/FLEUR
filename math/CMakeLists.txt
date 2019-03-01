@@ -1,6 +1,5 @@
 set(fleur_F77 ${fleur_F77}
 math/angle.f
-math/cfft.F
 math/clebsch.f
 math/cylbes.f
 math/cylpts.f
@@ -21,6 +20,7 @@ math/util.F
 math/difcub.f
 )
 set(fleur_F90 ${fleur_F90}
+math/cfft.F90
 math/rfft.f90
 math/qranf.f90
 math/differentiate.f90

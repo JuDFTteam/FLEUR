@@ -27,7 +27,7 @@ MODULE m_types_mixvector
   INTEGER                :: mt_start(3)=0,mt_stop(3) !First and last index for spin
   INTEGER                :: vac_length,vac_length_g
   INTEGER                :: vac_start(3)=0,vac_stop(3) !First and last index for spin
-  INTEGER                :: misc_length=0
+  INTEGER                :: misc_length=0,misc_length_g
   INTEGER                :: misc_start(3)=0,misc_stop(3) !First and last index for spin
   INTEGER                :: mix_mpi_comm !Communicator for all PEs doing mixing
   LOGICAL                :: spin_here(3)=.TRUE.
@@ -392,7 +392,7 @@ CONTAINS
        END DO
     END IF
     IF (misc_here) THEN
-       ALLOCATE(g_misc(misc_length))
+       ALLOCATE(g_misc(misc_length_g))
        g_misc=1.0
     END IF
     
@@ -480,7 +480,7 @@ CONTAINS
     CALL init_storage_mpi(mpi_comm)
     
     pw_length=0;mt_length=0;vac_length=0;misc_length=0
-    mt_length_g=0;vac_length_g=0
+    mt_length_g=0;vac_length_g=0;misc_length_g=0
     DO js=1,MERGE(jspins,3,.NOT.l_noco)
        IF (spin_here(js)) THEN
           !Now calculate the length of the vectors
@@ -525,9 +525,11 @@ CONTAINS
              vac_stop(js)=vac_length
           ENDIF
           IF (misc_here.AND.(js<3)) THEN
+             len = 7*7*2*atoms%n_u
              misc_start(js)=misc_length+1
-             misc_length=misc_length+7*7*2*atoms%n_u
+             misc_length = misc_length + len
              misc_stop(js)=misc_length
+             misc_length_g = MAX(len,misc_length_g)
           END IF
        END IF
     END DO
