@@ -4,8 +4,23 @@ MODULE m_cdntot
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
-   SUBROUTINE integrate_grid(stars, atoms, sym, vacuum, input, cell, oneD, sphhar, nsp, is_inte, mt_inte)
+   SUBROUTINE integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
+                             is_inte, mt_inte, &
+                             q, qis, qmt, qvac, qtot, qistot)
+      USE m_pw_tofrom_grid
+      USE m_types
+      USE m_constants
       IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN)     :: xcpot
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_sym),INTENT(IN)    :: sym
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_cell),INTENT(IN)   :: cell
+      TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_sphhar), INTENT(IN):: sphhar
+      TYPE(t_noco), INTENT(INOUT)   :: noco
       REAL, intent(in)   :: is_inte(:,:), mt_inte(:,:)
       REAL, INTENT(out)  :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
                             qvac(2,input%jspins), qtot, qistot
@@ -15,13 +30,13 @@ CONTAINS
       INTEGER            :: n
 
       !allocate potden type
-      call integrad%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+      call integrand%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
 
       !put is in potden-basis
       call pw_from_grid(xcpot, stars,.True., is_inte, integrand%pw, integrand%pw_w)
       !put mt in potden-basis
       do n = 1,atoms%ntype
-         call mt_from_grid(atoms,sphhar,nsp,n,input%jspins,mt_inte,integrad%mt(:,0:,n,:))
+         call mt_from_grid(atoms,sphhar,n,input%jspins,mt_inte,integrand%mt(:,0:,n,:))
       enddo
 
       ! integrate my integrand
