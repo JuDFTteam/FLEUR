@@ -256,33 +256,33 @@ CONTAINS
 !
 ! output
 !
-         WRITE (6, FMT=8030) dist
-         conv = .false.
+      WRITE (6, FMT=8030) dist
+      conv = .false.
 !     list eigenvalues
-190      IF (conv) WRITE (6, FMT=8040) it, dist
-         DO ispin = 1, input%jspins
-            WRITE (6, '(a8,i2)') 'spin No.', ispin
-            DO k = 1, nst
-               fj = iabs(kappa(k)) - 0.5e0
-               l = fj + 0.5e0*isign(1, kappa(k)) + 0.01e0
-               lnum(k) = l
-               WRITE (6, FMT=8050) nprnc(k), kappa(k), l, fj,&
-         &                        occ(k, ispin), eig(k, ispin), rev(k, ispin)
-            ENDDO
+190   IF (conv) WRITE (6, FMT=8040) it, dist
+      DO ispin = 1, input%jspins
+         WRITE (6, '(a8,i2)') 'spin No.', ispin
+         DO k = 1, nst
+            fj = iabs(kappa(k)) - 0.5e0
+            l = fj + 0.5e0*isign(1, kappa(k)) + 0.01e0
+            lnum(k) = l
+            WRITE (6, FMT=8050) nprnc(k), kappa(k), l, fj,&
+      &                        occ(k, ispin), eig(k, ispin), rev(k, ispin)
+         ENDDO
 !
 !--->   guess enpara if it doesn't exist, using floating energy parameters
 !
-            i = atoms%jri(ntyp) - (log(4.0)/atoms%dx(ntyp) + 1.51)
-            vbar(ispin) = vr1(i, ispin)/(rnot*exp(atoms%dx(ntyp)*(i - 1)))
-            WRITE (6, '(/,'' reference energy = '',2f12.6,/)') vbar(ispin)
-         ENDDO
+         i = atoms%jri(ntyp) - (log(4.0)/atoms%dx(ntyp) + 1.51)
+         vbar(ispin) = vr1(i, ispin)/(rnot*exp(atoms%dx(ntyp)*(i - 1)))
+         WRITE (6, '(/,'' reference energy = '',2f12.6,/)') vbar(ispin)
+      ENDDO
 
-8030     FORMAT(/, /, /, ' $$$ error: not converged, dist=', f10.6,/)
-8040     FORMAT(/, /, 3x, 'converged in', i4, ' iterations to a distance of',&
-         &       e12.5, ' har', /, /, 3x, 'n  kappa  l    j  ', 5x,&
-         &       'occ.   eigenvalue (har)  <r>  ',/)
-8050     FORMAT(3x, i1, i5, i5, f6.1, 2(3x, f7.2, 1x, 2f12.6))
-8060     FORMAT('it,dist,p=', i4, 2f12.5)
+8030  FORMAT(/, /, /, ' $$$ error: not converged, dist=', f10.6,/)
+8040  FORMAT(/, /, 3x, 'converged in', i4, ' iterations to a distance of',&
+      &       e12.5, ' har', /, /, 3x, 'n  kappa  l    j  ', 5x,&
+      &       'occ.   eigenvalue (har)  <r>  ',/)
+8050  FORMAT(3x, i1, i5, i5, f6.1, 2(3x, f7.2, 1x, 2f12.6))
+8060  FORMAT('it,dist,p=', i4, 2f12.5)
 
-      END SUBROUTINE atom2
-   END MODULE m_atom2
+   END SUBROUTINE atom2
+END MODULE m_atom2
