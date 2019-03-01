@@ -203,14 +203,14 @@ CONTAINS
             ENDDO
          ENDIF
          CALL intgr1(dens,rnot,h,n,a)
-         DO 110 i = 1,n
+         DO  i = 1,n
             rh(i) = dens(i)/rad(i)
-110         CONTINUE
+         ENDDO
             CALL intgr1(rh,rnot,h,n,b)
             fisr = b(n)
-            DO 120 i = 1,n
+            DO i = 1,n
                vr(i) = (a(i)+rad(i)* (fisr-b(i))-z)
-120            CONTINUE
+            ENDDO
 !+ta
                DO ispin = 1, input%jspins
                   DO i = 1,n
