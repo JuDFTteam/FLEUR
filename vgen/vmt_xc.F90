@@ -134,13 +134,13 @@ CONTAINS
          !Add postprocessing for libxc
          IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num=n)
 
-         CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
          CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
          ! use updated vTot for exc calculation
          IF(perform_MetaGGA) THEN
             CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
-                            nsp,   n,            tmp_grad, ED_rs)
+                            n,            tmp_grad, ED_rs)
 
             ! multiply potentials with r^2, because mt_to_grid is made for densities,
             ! which are stored with a factor r^2
@@ -149,7 +149,7 @@ CONTAINS
                vTot_tmp%mt(jr,0:,n,:) = vTot_tmp%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
             ENDDO
             CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, vTot_tmp%mt(:,0:,n,:), &
-                            nsp,   n,            tmp_grad, vTot_rs)
+                            n,            tmp_grad, vTot_rs)
             CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs, is_pw=.False., nsp=nsp, atm_idx=n)
          ENDIF
 
