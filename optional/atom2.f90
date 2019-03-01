@@ -101,7 +101,7 @@ CONTAINS
       conv = .true.
       delrv = 0.100
       inr0 = log(5.0/rnot)/h + 1.5
-      DO 180 it = 1, itmax
+      DO it = 1, itmax
          DO ispin = 1, input%jspins
 !
 !---->     load potential
@@ -252,7 +252,7 @@ CONTAINS
                vr1(i, ispin) = p1*vr1(i, ispin) + p*vr2(i, ispin)
             ENDDO
          ENDDO
-180      CONTINUE
+      ENDDO
 !
 ! output
 !
