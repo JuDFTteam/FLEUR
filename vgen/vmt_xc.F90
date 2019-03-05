@@ -95,7 +95,7 @@ CONTAINS
          ALLOCATE(kinED_RS, mold=ch)
       ENDIF
 
-      CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,xcpot,sym)
+      CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
 
 #ifdef CPP_MPI
       n_start=mpi%irank+1

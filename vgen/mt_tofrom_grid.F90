@@ -13,12 +13,12 @@ MODULE m_mt_tofrom_grid
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:)
    PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, finish_mt_grid
 CONTAINS
-   SUBROUTINE init_mt_grid(nsp, jspins, atoms, sphhar, xcpot, sym)
+   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, xcpot, sym)
       USE m_gaussp
       USE m_lhglptg
       USE m_lhglpts
       IMPLICIT NONE
-      INTEGER, INTENT(IN)          :: nsp, jspins
+      INTEGER, INTENT(IN)          :: jspins
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
@@ -27,10 +27,10 @@ CONTAINS
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
       ! theta are zeros of the legendre polynomials
-      ALLOCATE (wt(nsp), rx(3, nsp), thet(nsp))
+      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()))
       CALL gaussp(atoms%lmaxd, rx, wt)
       ! generate the lattice harmonics on the angular mesh
-      ALLOCATE (ylh(nsp, 0:sphhar%nlhd, sphhar%ntypsd))
+      ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
       IF (xcpot%needs_grad()) THEN
          ALLOCATE (ylht, MOLD=ylh)
          ALLOCATE (ylhtt, MOLD=ylh)
@@ -38,10 +38,10 @@ CONTAINS
          ALLOCATE (ylhff, MOLD=ylh)
          ALLOCATE (ylhtf, MOLD=ylh)
 
-         CALL lhglptg(sphhar, atoms, rx, nsp, xcpot, sym, &
+         CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot, sym, &
                       ylh, thet, ylht, ylhtt, ylhf, ylhff, ylhtf)
       ELSE
-         CALL lhglpts(sphhar, atoms, rx, nsp, sym, ylh)
+         CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
       END IF
    END SUBROUTINE init_mt_grid
 
