@@ -32,7 +32,7 @@ CONTAINS
              den%phi_mt(nsp*atoms%jmtd,atoms%ntype))
     CALL xcpot%init("vwn",.FALSE.,1)
 
-    CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
+    CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
        CALL mt_to_grid(xcpot,4,atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
@@ -109,7 +109,7 @@ CONTAINS
     ALLOCATE(ch(nsp*atoms%jmtd,4))
     CALL xcpot%init("vwn",.FALSE.,1)
 
-    CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
+    CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
        CALL mt_to_grid(xcpot,4,atoms,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
