@@ -8,10 +8,12 @@ CONTAINS
                              is_inte, mt_inte, &
                              q, qis, qmt, qvac, qtot, qistot)
       USE m_pw_tofrom_grid
+      USE m_mt_tofrom_grid
       USE m_types
       USE m_constants
+      !USE m_types_xcpot
       IMPLICIT NONE
-      CLASS(t_xcpot),INTENT(IN)     :: xcpot
+      CLASS(t_xcpot),INTENT(IN) :: xcpot
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sym),INTENT(IN)    :: sym
@@ -21,27 +23,34 @@ CONTAINS
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_sphhar), INTENT(IN):: sphhar
       TYPE(t_noco), INTENT(INOUT)   :: noco
-      REAL, intent(in)   :: is_inte(:,:), mt_inte(:,:)
+      TYPE(t_lapl), INTENT(in)  :: is_inte, mt_inte(:)
       REAL, INTENT(out)  :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
                             qvac(2,input%jspins), qtot, qistot
 
       TYPE(t_potden)     :: integrand
       
+      TYPE(t_lapl)       :: is_inte_mut
       INTEGER            :: n
+      
+      call init_pw_grid(xcpot, stars, sym, cell)
+      is_inte_mut = is_inte
 
       !allocate potden type
       call integrand%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+      allocate(integrand%pw_w, mold=integrand%pw)
 
+      call init_mt_grid()
       !put is in potden-basis
-      call pw_from_grid(xcpot, stars,.True., is_inte, integrand%pw, integrand%pw_w)
+      call pw_from_grid(xcpot, stars,.True., is_inte_mut%lapl, integrand%pw, integrand%pw_w)
       !put mt in potden-basis
       do n = 1,atoms%ntype
-         call mt_from_grid(atoms,sphhar,n,input%jspins,mt_inte,integrand%mt(:,0:,n,:))
+         call mt_from_grid(atoms,sphhar,n,input%jspins,mt_inte(n)%lapl,integrand%mt(:,0:,n,:))
       enddo
 
       ! integrate my integrand
       call integrate_cdn(stars, atoms, sym, vacuum, input, cell, oneD, integrand,&
                         q, qis, qmt, qvac, qtot, qistot)
+      call finish_pw_grid()
    END SUBROUTINE integrate_grid
 
    SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &

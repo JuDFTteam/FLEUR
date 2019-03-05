@@ -82,8 +82,8 @@ MODULE m_constants
       !  Hartree and Rydbergs changed by fac = 1.0 or 2.0
 
       REAL, INTENT (IN) :: fac
-      c_light = 137.0359895e0 * fac 
-      !c_light = 1e6*fac
+      !c_light = 137.0359895e0 * fac 
+      c_light = 1e6*fac
    END FUNCTION c_light
 
 END MODULE m_constants

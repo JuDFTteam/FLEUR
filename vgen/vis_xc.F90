@@ -38,7 +38,7 @@ CONTAINS
       USE m_npy
       IMPLICIT NONE
 
-      CLASS(t_xcpot),INTENT(IN)     :: xcpot
+      CLASS(t_xcpot),INTENT(INOUT)     :: xcpot
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_noco),INTENT(IN)       :: noco
       TYPE(t_sym),INTENT(IN)        :: sym
@@ -58,6 +58,9 @@ CONTAINS
 
       !Put the charge on the grid, in GGA case also calculate gradients
       CALL pw_to_grid(xcpot,input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho)
+      write (*,*) "set is_grad"
+      xcpot%is_lapl%lapl = grad%laplace
+
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
 

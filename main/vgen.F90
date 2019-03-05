@@ -35,7 +35,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT)  :: results
-      CLASS(t_xcpot),    INTENT(IN)     :: xcpot
+      CLASS(t_xcpot),    INTENT(INOUT)  :: xcpot
       TYPE(t_hybrid),    INTENT(IN)     :: hybrid
       TYPE(t_mpi),       INTENT(IN)     :: mpi
       TYPE(t_dimension), INTENT(IN)     :: dimension
@@ -45,7 +45,7 @@ CONTAINS
       TYPE(t_input),     INTENT(IN)     :: input
       TYPE(t_field),     INTENT(INOUT)  :: field  !efield can be modified
       TYPE(t_vacuum),    INTENT(IN)     :: vacuum
-      TYPE(t_noco),      INTENT(IN)     :: noco
+      TYPE(t_noco),      INTENT(INOUT)  :: noco
       TYPE(t_sym),       INTENT(IN)     :: sym
       TYPE(t_stars),     INTENT(IN)     :: stars
       TYPE(t_cell),      INTENT(IN)     :: cell
@@ -103,6 +103,45 @@ CONTAINS
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
 #endif
 
+      call integrate_lapl(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco) 
    END SUBROUTINE vgen
+
+   SUBROUTINE integrate_lapl(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco)
+      use m_cdntot
+      use m_types
+      implicit none
+      CLASS(t_xcpot),INTENT(IN) :: xcpot
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_sym),INTENT(IN)    :: sym
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_cell),INTENT(IN)   :: cell
+      TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_sphhar), INTENT(IN):: sphhar
+      TYPE(t_noco), INTENT(INOUT)   :: noco
+      
+      REAL :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
+              qvac(2,input%jspins), qtot, qistot
+
+      call integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
+                          xcpot%is_lapl, xcpot%mt_lapl, &
+                          q, qis, qmt, qvac, qtot, qistot)
+
+      write (*,*) "lapl integration:"
+      write (*,*) "q = "
+      write (*,*) q
+      write (*,*) "qis = "
+      write (*,*) qis
+      write (*,*) "qmt = "
+      write (*,*) qmt
+      write (*,*) "qvac = "
+      write (*,*) qvac
+      write (*,*) "qtot = "
+      write (*,*) qtot
+      write (*,*) "q = "
+      write (*,*) qistot
+
+   END SUBROUTINE integrate_lapl
 
 END MODULE m_vgen

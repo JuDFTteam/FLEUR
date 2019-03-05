@@ -36,7 +36,7 @@ CONTAINS
     IMPLICIT NONE
 
 
-    CLASS(t_xcpot),    INTENT(IN)              :: xcpot
+    CLASS(t_xcpot),    INTENT(INOUT)           :: xcpot
     TYPE(t_hybrid),    INTENT(IN)              :: hybrid
     TYPE(t_mpi),       INTENT(IN)              :: mpi
     TYPE(t_dimension), INTENT(IN)              :: dimension

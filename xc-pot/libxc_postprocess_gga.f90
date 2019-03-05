@@ -38,10 +38,18 @@ CONTAINS
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
       CALL mt_to_grid(xcpot,n_sigma,atoms,sphhar,vsigma_mt,n,grad=grad_vsigma)
 
-      fname = merge("mt=" //int2str(atom_num) // "_lapl.npy","mt_lapl.npy", present(atom_num))
+      if(present(atom_num)) then
+         fname = "mt=" //int2str(atom_num) // "_lapl.npy"
+      else
+         fname = "mt_lapl.npy"
+      endif
       call save_npy(fname, grad%laplace)
 
-      fname = merge("mt="// int2str(atom_num) // "_grad.npy", "mt_grad.npy", present(atom_num))
+      if(present(atom_num)) then
+         fname = "mt="// int2str(atom_num) // "_grad.npy"
+      else
+         fname = "mt_grad.npy"
+      endif
       call save_npy(fname, grad%gr) 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_mt

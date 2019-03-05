@@ -248,7 +248,7 @@ CONTAINS
     REAL,INTENT(INOUT)            :: v_in(0:,:)
     LOGICAL,INTENT(in)            :: l_pw_w
     COMPLEX,INTENT(INOUT)         :: v_out_pw(:,:)
-    COMPLEX,INTENT(INOUT),OPTIONAL::v_out_pw_w(:,:)
+    COMPLEX,INTENT(INOUT),OPTIONAL:: v_out_pw_w(:,:)
     
     
     INTEGER              :: js,k,i
