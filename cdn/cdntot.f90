@@ -39,7 +39,7 @@ CONTAINS
       call integrand%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
       allocate(integrand%pw_w, mold=integrand%pw)
 
-      call init_mt_grid()
+      call init_mt_grid(input%jspins, atoms, sphhar, xcpot, sym)
       !put is in potden-basis
       call pw_from_grid(xcpot, stars,.True., is_inte_mut%lapl, integrand%pw, integrand%pw_w)
       !put mt in potden-basis
