@@ -13,12 +13,12 @@ MODULE m_mt_tofrom_grid
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:)
    PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, finish_mt_grid
 CONTAINS
-   SUBROUTINE init_mt_grid(nsp, jspins, atoms, sphhar, xcpot, sym)
+   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, xcpot, sym)
       USE m_gaussp
       USE m_lhglptg
       USE m_lhglpts
       IMPLICIT NONE
-      INTEGER, INTENT(IN)          :: nsp, jspins
+      INTEGER, INTENT(IN)          :: jspins
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
@@ -27,10 +27,10 @@ CONTAINS
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
       ! theta are zeros of the legendre polynomials
-      ALLOCATE (wt(nsp), rx(3, nsp), thet(nsp))
+      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()))
       CALL gaussp(atoms%lmaxd, rx, wt)
       ! generate the lattice harmonics on the angular mesh
-      ALLOCATE (ylh(nsp, 0:sphhar%nlhd, sphhar%ntypsd))
+      ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
       IF (xcpot%needs_grad()) THEN
          ALLOCATE (ylht, MOLD=ylh)
          ALLOCATE (ylhtt, MOLD=ylh)
@@ -38,14 +38,14 @@ CONTAINS
          ALLOCATE (ylhff, MOLD=ylh)
          ALLOCATE (ylhtf, MOLD=ylh)
 
-         CALL lhglptg(sphhar, atoms, rx, nsp, xcpot, sym, &
+         CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot, sym, &
                       ylh, thet, ylht, ylhtt, ylhf, ylhff, ylhtf)
       ELSE
-         CALL lhglpts(sphhar, atoms, rx, nsp, sym, ylh)
+         CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
       END IF
    END SUBROUTINE init_mt_grid
 
-   SUBROUTINE mt_to_grid(xcpot, jspins, atoms, sphhar, den_mt, nsp, n, grad, ch)
+   SUBROUTINE mt_to_grid(xcpot, jspins, atoms, sphhar, den_mt, n, grad, ch)
       USE m_grdchlh
       USE m_mkgylm
       IMPLICIT NONE
@@ -53,7 +53,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       REAL, INTENT(IN)             :: den_mt(:, 0:, :)
-      INTEGER, INTENT(IN)          :: n, jspins, nsp
+      INTEGER, INTENT(IN)          :: n, jspins
       REAL, INTENT(OUT), OPTIONAL      :: ch(:, :)
       TYPE(t_gradients), INTENT(INOUT):: grad
 
@@ -61,9 +61,10 @@ CONTAINS
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
-      INTEGER:: nd, lh, js, jr, kt, k
+      INTEGER:: nd, lh, js, jr, kt, k, nsp
 
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nsp = atoms%nsp()
 
       ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspins))
       ALLOCATE (ch_tmp(nsp, jspins))
@@ -149,17 +150,20 @@ CONTAINS
 
    END SUBROUTINE mt_to_grid
 
-   SUBROUTINE mt_from_grid(atoms, sphhar, nsp, n, jspins, v_in, vr)
+   SUBROUTINE mt_from_grid(atoms, sphhar, n, jspins, v_in, vr)
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_sphhar), INTENT(IN):: sphhar
-      INTEGER, INTENT(IN)       :: nsp, jspins, n
+      INTEGER, INTENT(IN)       :: jspins, n
       REAL, INTENT(IN)          :: v_in(:, :)
       REAL, INTENT(INOUT)       :: vr(:, 0:, :)
 
-      REAL    :: vpot(nsp), vlh
-      INTEGER :: js, kt, lh, jr, nd
+      REAL    :: vpot(atoms%nsp()), vlh
+      INTEGER :: js, kt, lh, jr, nd, nsp
+
+      nsp = atoms%nsp()
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+
       DO js = 1, jspins
          !
          kt = 0

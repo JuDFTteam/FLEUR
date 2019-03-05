@@ -6,7 +6,6 @@ Testing/*
 build
 build.*
 *.o
-*.mod
 *.x
 *.swp
 tags

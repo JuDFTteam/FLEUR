@@ -52,7 +52,7 @@ CONTAINS
     ! qfix==0 means no qfix was given in inp.xml. 
     ! In this case do nothing except when forced to fix!
     
-    CALL cdntot(mpi,stars,atoms,sym,vacuum,input,cell,oneD,den,.TRUE.,qtot,qis)
+    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,.TRUE.,qtot,qis)
 
     !The total nucleii charge
     zc=SUM(atoms%neq(:)*atoms%zatom(:))
@@ -93,7 +93,7 @@ CONTAINS
     IF (ABS(fix-1.0)<1.E-6) RETURN !no second calculation of cdntot as nothing was fixed
 
     CALL openXMLElementNoAttributes('fixedCharges')
-    CALL cdntot(mpi,stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis)
+    CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,den,l_printData,qtot,qis)
     CALL closeXMLElement('fixedCharges')
 
     IF (fix>1.1) CALL juDFT_WARN("You lost too much charge")

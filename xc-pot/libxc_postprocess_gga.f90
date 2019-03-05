@@ -26,12 +26,12 @@ CONTAINS
       ALLOCATE(vsigma(nsp,n_sigma),vsigma_mt(atoms%jri(n),0:sphhar%nlhd,n_sigma))
       vsigma_mt=0.0
       vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-      CALL mt_from_grid(atoms,sphhar,nsp/atoms%jmtd,n,n_sigma,vsigma,vsigma_mt)
+      CALL mt_from_grid(atoms,sphhar,n,n_sigma,vsigma,vsigma_mt)
       DO i=1,atoms%jri(n)
          vsigma_mt(i,:,:)=vsigma_mt(i,:,:)*atoms%rmsh(i,n)**2
       ENDDO
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
-      CALL mt_to_grid(xcpot,n_sigma,atoms,sphhar,vsigma_mt,nsp/atoms%jmtd,n,grad=grad_vsigma)
+      CALL mt_to_grid(xcpot,n_sigma,atoms,sphhar,vsigma_mt,n,grad=grad_vsigma)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_mt
