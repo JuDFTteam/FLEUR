@@ -15,17 +15,17 @@ MODULE m_types_xcpot
    use m_types_potden
    IMPLICIT NONE
    PRIVATE
-   PUBLIC           :: t_xcpot,t_gradients, t_lapl
+   PUBLIC           :: t_xcpot,t_gradients, t_grid
 
-   type t_lapl
-      real, allocatable  :: lapl(:,:)
-   end type t_lapl
+   type t_grid
+      real, allocatable  :: grid(:,:)
+   end type t_grid
    
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
       TYPE(t_potden)   :: comparison_kinED_pw(3)
-      TYPE(t_lapl)     :: is_lapl
-      TYPE(t_lapl), allocatable :: mt_lapl(:)
+      TYPE(t_grid)     :: is_lapl, is_kED_schr
+      TYPE(t_grid), allocatable :: mt_lapl(:), mt_kED_schr(:)
    CONTAINS
       PROCEDURE        :: vxc_is_LDA=>xcpot_vxc_is_LDA
       PROCEDURE        :: exc_is_LDA=>xcpot_exc_is_LDA

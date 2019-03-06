@@ -104,6 +104,8 @@ CONTAINS
 #endif
 
       call integrate_lapl(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco) 
+      call integrate_kED_schr(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco) 
+      call integrate_kED_libxc(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco)
    END SUBROUTINE vgen
 
    SUBROUTINE integrate_lapl(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco)
@@ -128,6 +130,7 @@ CONTAINS
                           xcpot%is_lapl, xcpot%mt_lapl, &
                           q, qis, qmt, qvac, qtot, qistot)
 
+      write (*,*) "------------------------"
       write (*,*) "lapl integration:"
       write (*,*) "q = "
       write (*,*) q
@@ -139,9 +142,103 @@ CONTAINS
       write (*,*) qvac
       write (*,*) "qtot = "
       write (*,*) qtot
-      write (*,*) "q = "
+      write (*,*) "qistot = "
       write (*,*) qistot
+      write (*,*) "------------------------"
 
    END SUBROUTINE integrate_lapl
+   
+   SUBROUTINE integrate_kED_schr(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco)
+      use m_cdntot
+      use m_types
+      implicit none
+      CLASS(t_xcpot),INTENT(IN) :: xcpot
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_sym),INTENT(IN)    :: sym
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_cell),INTENT(IN)   :: cell
+      TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_sphhar), INTENT(IN):: sphhar
+      TYPE(t_noco), INTENT(INOUT)   :: noco
+      
+      REAL :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
+              qvac(2,input%jspins), qtot, qistot
 
+      if(allocated(xcpot%is_kED_schr%grid) .and. allocated(xcpot%mt_kED_schr)) then
+         call integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
+                             xcpot%is_kED_schr, xcpot%mt_kED_schr, &
+                             q, qis, qmt, qvac, qtot, qistot)
+
+         write (*,*) "------------------------"
+         write (*,*) "kED_schr integration:"
+         write (*,*) "q = "
+         write (*,*) q
+         write (*,*) "qis = "
+         write (*,*) qis
+         write (*,*) "qmt = "
+         write (*,*) qmt
+         write (*,*) "qvac = "
+         write (*,*) qvac
+         write (*,*) "qtot = "
+         write (*,*) qtot
+         write (*,*) "qistot = "
+         write (*,*) qistot
+         write (*,*) "------------------------"
+      endif
+
+   END SUBROUTINE integrate_kED_schr
+
+   SUBROUTINE integrate_kED_libxc(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco)
+      use m_cdntot
+      use m_types
+      implicit none
+      CLASS(t_xcpot),INTENT(IN) :: xcpot
+      TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      TYPE(t_sym),INTENT(IN)    :: sym
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_cell),INTENT(IN)   :: cell
+      TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_sphhar), INTENT(IN):: sphhar
+      TYPE(t_noco), INTENT(INOUT)   :: noco
+      
+      REAL :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
+              qvac(2,input%jspins), qtot, qistot
+      TYPE(t_grid)              :: is_kED_libxc
+      TYPE(t_grid), allocatable :: mt_kED_libxc(:)
+      INTEGER                   :: i
+
+      if(allocated(xcpot%is_kED_schr%grid) .and. allocated(xcpot%mt_kED_schr)) then
+         allocate(mt_kED_libxc(size(xcpot%mt_kED_schr)))
+         
+         is_kED_libXC%grid = xcpot%is_kED_schr%grid + 0.25 * xcpot%is_lapl%grid
+         do i = 1,atoms%ntype
+            mt_kED_libXC(i)%grid = xcpot%mt_kED_schr(i)%grid + 0.25 * xcpot%mt_lapl(i)%grid
+         enddo
+
+         call integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
+                             is_kED_libXC, mt_kED_libXC, &
+                             q, qis, qmt, qvac, qtot, qistot)
+
+         write (*,*) "------------------------"
+         write (*,*) "kED_libXC integration:"
+         write (*,*) "q = "
+         write (*,*) q
+         write (*,*) "qis = "
+         write (*,*) qis
+         write (*,*) "qmt = "
+         write (*,*) qmt
+         write (*,*) "qvac = "
+         write (*,*) qvac
+         write (*,*) "qtot = "
+         write (*,*) qtot
+         write (*,*) "qistot = "
+         write (*,*) qistot
+         write (*,*) "------------------------"
+      endif
+
+   END SUBROUTINE integrate_kED_libxc
 END MODULE m_vgen

@@ -23,13 +23,13 @@ CONTAINS
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_sphhar), INTENT(IN):: sphhar
       TYPE(t_noco), INTENT(INOUT)   :: noco
-      TYPE(t_lapl), INTENT(in)  :: is_inte, mt_inte(:)
+      TYPE(t_grid), INTENT(in)  :: is_inte, mt_inte(:)
       REAL, INTENT(out)  :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
                             qvac(2,input%jspins), qtot, qistot
 
       TYPE(t_potden)     :: integrand
       
-      TYPE(t_lapl)       :: is_inte_mut
+      TYPE(t_grid)       :: is_inte_mut
       INTEGER            :: n
       
       call init_pw_grid(xcpot, stars, sym, cell)
@@ -39,12 +39,13 @@ CONTAINS
       call integrand%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
       allocate(integrand%pw_w, mold=integrand%pw)
 
-      call init_mt_grid(input%jspins, atoms, sphhar, xcpot, sym)
       !put is in potden-basis
-      call pw_from_grid(xcpot, stars,.True., is_inte_mut%lapl, integrand%pw, integrand%pw_w)
+      call pw_from_grid(xcpot, stars,.True., is_inte_mut%grid, integrand%pw, integrand%pw_w)
+
       !put mt in potden-basis
+      call init_mt_grid(input%jspins, atoms, sphhar, xcpot, sym)
       do n = 1,atoms%ntype
-         call mt_from_grid(atoms,sphhar,n,input%jspins,mt_inte(n)%lapl,integrand%mt(:,0:,n,:))
+         call mt_from_grid(atoms,sphhar,n,input%jspins,mt_inte(n)%grid,integrand%mt(:,0:,n,:))
       enddo
 
       ! integrate my integrand
@@ -77,7 +78,6 @@ CONTAINS
       REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
       COMPLEX                   :: x(stars%ng3)
       
-      CALL timestart("cdntot")
       qtot = 0.0
       qistot = 0.0
       DO jsp = 1,input%jspins
@@ -159,6 +159,7 @@ CONTAINS
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
       
+      CALL timestart("cdntot")
       call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
  

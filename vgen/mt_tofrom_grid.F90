@@ -27,22 +27,24 @@ CONTAINS
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
       ! theta are zeros of the legendre polynomials
-      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()))
-      CALL gaussp(atoms%lmaxd, rx, wt)
-      ! generate the lattice harmonics on the angular mesh
-      ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
-      IF (xcpot%needs_grad()) THEN
-         ALLOCATE (ylht, MOLD=ylh)
-         ALLOCATE (ylhtt, MOLD=ylh)
-         ALLOCATE (ylhf, MOLD=ylh)
-         ALLOCATE (ylhff, MOLD=ylh)
-         ALLOCATE (ylhtf, MOLD=ylh)
+      if(.not. allocated(wt)) then
+         ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()))
+         CALL gaussp(atoms%lmaxd, rx, wt)
+         ! generate the lattice harmonics on the angular mesh
+         ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
+         IF (xcpot%needs_grad()) THEN
+            ALLOCATE (ylht, MOLD=ylh)
+            ALLOCATE (ylhtt, MOLD=ylh)
+            ALLOCATE (ylhf, MOLD=ylh)
+            ALLOCATE (ylhff, MOLD=ylh)
+            ALLOCATE (ylhtf, MOLD=ylh)
 
-         CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot, sym, &
-                      ylh, thet, ylht, ylhtt, ylhf, ylhff, ylhtf)
-      ELSE
-         CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
-      END IF
+            CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot, sym, &
+                         ylh, thet, ylht, ylhtt, ylhf, ylhff, ylhtf)
+         ELSE
+            CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
+         END IF
+      ENDIF
    END SUBROUTINE init_mt_grid
 
    SUBROUTINE mt_to_grid(xcpot, jspins, atoms, sphhar, den_mt, n, grad, ch)

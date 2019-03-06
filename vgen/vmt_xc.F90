@@ -93,6 +93,7 @@ CONTAINS
          ALLOCATE(ED_rs, mold=ch)
          ALLOCATE(vTot_rs, mold=ch)
          ALLOCATE(kinED_RS, mold=ch)
+         if(.not. allocated(xcpot%mt_kED_schr)) allocate(xcpot%mt_kED_schr(atoms%ntype))
       ENDIF
 
       CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
@@ -114,7 +115,7 @@ CONTAINS
       DO n = n_start,atoms%ntype,n_stride
          CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
          write (*,*) "set grad for mt = ", n
-         xcpot%mt_lapl(n)%lapl = grad%laplace
+         xcpot%mt_lapl(n)%grid = grad%laplace
 
          !
          !         calculate the ex.-cor. potential
@@ -164,6 +165,7 @@ CONTAINS
             
             IF(perform_MetaGGA) THEN
                CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad, kinED_rs)
+               xcpot%mt_kED_schr(n)%grid = kinED_rs
                call save_npy("exc_mt.npy", e_xc(:,1))
             ELSE
                CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
