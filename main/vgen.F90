@@ -130,22 +130,7 @@ CONTAINS
                           xcpot%is_lapl, xcpot%mt_lapl, &
                           q, qis, qmt, qvac, qtot, qistot)
 
-      write (*,*) "------------------------"
-      write (*,*) "lapl integration:"
-      write (*,*) "q = "
-      write (*,*) q
-      write (*,*) "qis = "
-      write (*,*) qis
-      write (*,*) "qmt = "
-      write (*,*) qmt
-      write (*,*) "qvac = "
-      write (*,*) qvac
-      write (*,*) "qtot = "
-      write (*,*) qtot
-      write (*,*) "qistot = "
-      write (*,*) qistot
-      write (*,*) "------------------------"
-
+      call print_qs(q,qis,qmt,qvac,qtot,qistot,"laplace")
    END SUBROUTINE integrate_lapl
    
    SUBROUTINE integrate_kED_schr(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco)
@@ -171,21 +156,7 @@ CONTAINS
                              xcpot%is_kED_schr, xcpot%mt_kED_schr, &
                              q, qis, qmt, qvac, qtot, qistot)
 
-         write (*,*) "------------------------"
-         write (*,*) "kED_schr integration:"
-         write (*,*) "q = "
-         write (*,*) q
-         write (*,*) "qis = "
-         write (*,*) qis
-         write (*,*) "qmt = "
-         write (*,*) qmt
-         write (*,*) "qvac = "
-         write (*,*) qvac
-         write (*,*) "qtot = "
-         write (*,*) qtot
-         write (*,*) "qistot = "
-         write (*,*) qistot
-         write (*,*) "------------------------"
+         call print_qs(q,qis,qmt,qvac,qtot,qistot,"kED_schr")
       endif
 
    END SUBROUTINE integrate_kED_schr
@@ -222,23 +193,34 @@ CONTAINS
          call integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
                              is_kED_libXC, mt_kED_libXC, &
                              q, qis, qmt, qvac, qtot, qistot)
-
-         write (*,*) "------------------------"
-         write (*,*) "kED_libXC integration:"
-         write (*,*) "q = "
-         write (*,*) q
-         write (*,*) "qis = "
-         write (*,*) qis
-         write (*,*) "qmt = "
-         write (*,*) qmt
-         write (*,*) "qvac = "
-         write (*,*) qvac
-         write (*,*) "qtot = "
-         write (*,*) qtot
-         write (*,*) "qistot = "
-         write (*,*) qistot
-         write (*,*) "------------------------"
+         call print_qs(q,qis,qmt,qvac,qtot,qistot,"kED_libxc")
       endif
 
    END SUBROUTINE integrate_kED_libxc
+
+   subroutine print_qs(q,qis,qmt,qvac,qtot,qistot, label)
+      implicit none
+      REAL, INTENT(in)             :: q(:), qis(:), qmt(:,:), qvac(:,:), qtot, qistot
+      character(len=*), intent(in) :: label
+         
+      write (*,*) "------------------------"
+      write (*,*) label // " integration:"
+      write (*,*) "q = "
+      write (*,'(ES17.10)') q
+      write (*,*) "qis = "
+      write (*,'(ES17.10)') qis
+      write (*,*) "qmt = "
+      write (*,'(ES17.10)') qmt
+
+      if(.not. all(isnan(qvac))) then
+         write (*,*) "qvac = "
+         write (*,'(ES17.10)') qvac
+      endif
+
+      write (*,*) "qtot = "
+      write (*,'(ES17.10)') qtot
+      write (*,*) "qistot = "
+      write (*,'(ES17.10)') qistot
+      write (*,*) "------------------------"
+   end subroutine print_qs
 END MODULE m_vgen

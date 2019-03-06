@@ -33,6 +33,8 @@ CONTAINS
       INTEGER            :: n
       
       call init_pw_grid(xcpot, stars, sym, cell)
+      call init_mt_grid(input%jspins, atoms, sphhar, xcpot, sym)
+
       is_inte_mut = is_inte
 
       !allocate potden type
@@ -43,7 +45,6 @@ CONTAINS
       call pw_from_grid(xcpot, stars,.True., is_inte_mut%grid, integrand%pw, integrand%pw_w)
 
       !put mt in potden-basis
-      call init_mt_grid(input%jspins, atoms, sphhar, xcpot, sym)
       do n = 1,atoms%ntype
          call mt_from_grid(atoms,sphhar,n,input%jspins,mt_inte(n)%grid,integrand%mt(:,0:,n,:))
       enddo
@@ -52,6 +53,7 @@ CONTAINS
       call integrate_cdn(stars, atoms, sym, vacuum, input, cell, oneD, integrand,&
                         q, qis, qmt, qvac, qtot, qistot)
       call finish_pw_grid()
+      call finish_mt_grid()
    END SUBROUTINE integrate_grid
 
    SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
