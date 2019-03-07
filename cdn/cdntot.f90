@@ -30,7 +30,7 @@ CONTAINS
       TYPE(t_potden)     :: integrand
       
       TYPE(t_grid)       :: is_inte_mut
-      INTEGER            :: n
+      INTEGER            :: n,i 
       
       call init_pw_grid(xcpot, stars, sym, cell)
       call init_mt_grid(input%jspins, atoms, sphhar, xcpot, sym)
@@ -47,6 +47,9 @@ CONTAINS
       !put mt in potden-basis
       do n = 1,atoms%ntype
          call mt_from_grid(atoms,sphhar,n,input%jspins,mt_inte(n)%grid,integrand%mt(:,0:,n,:))
+         do i =1,atoms%jri(n)
+            integrand%mt(i,0:,n,:) = integrand%mt(i,0:,n,:) * atoms%rmsh(i,n)**2
+         enddo
       enddo
 
       ! integrate my integrand
