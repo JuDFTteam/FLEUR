@@ -119,9 +119,9 @@ CONTAINS
        !ELSE
           results%tote = results%tote - 0.5e0*results%te_hfex%valence + 0.5e0*results%te_hfex%core
        !END IF
+       WRITE (6,FMT=8100)  0.5e0*results%te_hfex%valence
+       WRITE (6,FMT=8101)  0.5e0*results%te_hfex%core
     ENDIF
-    WRITE (6,FMT=8100)  0.5e0*results%te_hfex%valence
-    WRITE (6,FMT=8101)  0.5e0*results%te_hfex%core
 8100 FORMAT (/,10x,'Fock-exchange energy (valence)=',t40,f20.10)
 8101 FORMAT (10x,'Fock-exchange energy (core)=',t40,f20.10)
 
