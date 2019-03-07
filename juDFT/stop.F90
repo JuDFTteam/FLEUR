@@ -234,6 +234,7 @@ CONTAINS
     INTEGER, OPTIONAL, INTENT(IN)  :: errorCode
     INTEGER :: error
     LOGICAL :: calltrace
+    LOGICAL,ALLOCATABLE::a(:)
 #ifdef CPP_MPI
     INTEGER :: ierr
 #endif
@@ -252,6 +253,7 @@ CONTAINS
 #elif (defined(CPP_AIX)&&!defined(__PGI))
        CALL xl__trbk()
 #endif
+       DEALLOCATE(a)!will generate an error that can be found by the compiler
     ENDIF
 
 #if defined(CPP_MPI)
