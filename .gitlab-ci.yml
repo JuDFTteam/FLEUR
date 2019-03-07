@@ -120,10 +120,10 @@ build-intel:
   stage: build-intel
   cache: 
      paths:
-       - build.intel
+       - build.intel.debug
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
-    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -l intel INTEL_MPI ; cd build.intel; make -j 4
+    - cd /builds/fleur/fleur; FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -d -l intel INTEL_MPI ; cd build.intel.debug; make -j 4
   only:
     - schedules
     - triggers
@@ -135,15 +135,15 @@ test-intel:
   stage: test-intel
   cache:
      paths:
-       - build.intel
+       - build.intel.debug
   script:
     - set +e && source compilervars.sh intel64 && set -e; ulimit -s unlimited
-    - cd /builds/fleur/fleur/build.intel;ctest
+    - cd /builds/fleur/fleur/build.intel.debug;ctest
   artifacts:
     when: on_failure
     paths:
-      - build/Testing/failed
-      - build/Testing/test.oldlogs
+      - build.intel.debug/Testing/failed
+      - build.intel.debug/Testing/test.oldlogs
   only:
      - schedules
      - web
