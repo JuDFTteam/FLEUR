@@ -148,6 +148,7 @@ CONTAINS
     !-for
     !     ---> add spin-up and spin-down charge density for lh=0
     !
+    mt = 0.0
     DO  n = 1,atoms%ntype
        DO  i = 1,atoms%jri(n)
           mt(i,n) = den%mt(i,0,n,1) + den%mt(i,0,n,input%jspins)
@@ -163,11 +164,11 @@ CONTAINS
           dpj(j) = mt(j,n)/atoms%rmsh(j,n)
        ENDDO
        CALL intgr3(dpj,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),rhs)
-       !
-       results%tote = results%tote - atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
-       !
-       zintn_r(n) = atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
+
+       zintn_r(n)   = atoms%neq(n)*atoms%zatom(n)*sfp_const*rhs/2.
+       results%tote = results%tote - zintn_r(n)
        WRITE (6,FMT=8045) zintn_r(n)
+
        CALL intgr3(mt(1,n),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),totz)
        vmd(n) = atoms%rmt(n)*vCoul%mt(atoms%jri(n),0,n,1)/sfp_const + atoms%zatom(n) - totz*sfp_const
        vmd(n) = -atoms%neq(n)*atoms%zatom(n)*vmd(n)/ (2.*atoms%rmt(n))
