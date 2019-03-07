@@ -733,7 +733,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             WRITE(xPathB,"(a,a,i0,a)") TRIM(ADJUSTL(xpathA)),'/shape[',i,']'
             field%efield%shapes(i)=TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
          ENDDO
-         
+      ELSE
+         ALLOCATE(field%efield%shapes(0))
       END IF
 
       ! Read in optional energy parameter limits

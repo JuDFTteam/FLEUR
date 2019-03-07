@@ -148,6 +148,7 @@ CONTAINS
     !-for
     !     ---> add spin-up and spin-down charge density for lh=0
     !
+    mt = 0.0
     DO  n = 1,atoms%ntype
        DO  i = 1,atoms%jri(n)
           mt(i,n) = den%mt(i,0,n,1) + den%mt(i,0,n,input%jspins)
