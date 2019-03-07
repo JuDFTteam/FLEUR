@@ -252,6 +252,8 @@ CONTAINS
 #elif (defined(CPP_AIX)&&!defined(__PGI))
        CALL xl__trbk()
 #endif
+       ! cause an error, so that the compiler generates a stacktrace
+       DEALLOCATE(a)
     ENDIF
 
 #if defined(CPP_MPI)
