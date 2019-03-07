@@ -116,7 +116,7 @@ build-intel-static:
  
 
 build-intel:
-  image: iffregistry.fz-juelich.de/docker-images/centos7-intel-compilers/extended
+  image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: build-intel
   cache: 
      paths:
@@ -131,7 +131,7 @@ build-intel:
  
     
 test-intel:
-  image: iffregistry.fz-juelich.de/docker-images/centos7-intel-compilers/extended
+  image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: test-intel
   cache:
      paths:
