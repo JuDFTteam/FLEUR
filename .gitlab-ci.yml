@@ -5,6 +5,7 @@ stages:
    - deploy
    - build-pgi
    - test-pgi
+   - build-intel-static
    - build-intel
    - test-intel
 
@@ -92,8 +93,30 @@ pages:
 #     - web
 #     - triggers
      
+
+build-intel-static:
+  image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
+  stage: build-intel-static
+  cache: 
+     paths:
+       - build.intel-static
+  script:
+    - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
+    - cd /builds/fleur/fleur; ./configure.sh -l intel-static INTEL_DOCKER_STATIC ; cd build.intel-static; make -j 4
+  artifacts:
+    when: on_success
+    paths:
+    - build.intel-static/fleur
+    - build.intel-static/fleur_MPI
+    - build.intel-static/inpgen
+  only:
+    - schedules
+    - triggers
+    - web
+ 
+
 build-intel:
-  image: iffregistry.fz-juelich.de/docker-images/centos7-intel-compilers/extended
+  image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: build-intel
   cache: 
      paths:
@@ -108,7 +131,7 @@ build-intel:
  
     
 test-intel:
-  image: iffregistry.fz-juelich.de/docker-images/centos7-intel-compilers/extended
+  image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: test-intel
   cache:
      paths:
