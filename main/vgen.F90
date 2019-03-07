@@ -126,11 +126,13 @@ CONTAINS
       REAL :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
               qvac(2,input%jspins), qtot, qistot
 
-      call integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
-                          xcpot%is_lapl, xcpot%mt_lapl, &
-                          q, qis, qmt, qvac, qtot, qistot)
+      if(allocated(xcpot%is_lapl%grid)) then
+         call integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
+                             xcpot%is_lapl, xcpot%mt_lapl, &
+                             q, qis, qmt, qvac, qtot, qistot)
 
-      call print_qs(q,qis,qmt,qvac,qtot,qistot,"laplace")
+         call print_qs(q,qis,qmt,qvac,qtot,qistot,"laplace")
+      endif
    END SUBROUTINE integrate_lapl
    
    SUBROUTINE integrate_kED_schr(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco)
