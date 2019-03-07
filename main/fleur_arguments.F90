@@ -13,7 +13,7 @@ MODULE m_fleur_arguments
      CHARACTER(len=200)  :: values
   END TYPE t_fleur_param
   
-  INTEGER,PARAMETER:: no_params=24
+  INTEGER,PARAMETER:: no_params=25
   TYPE(t_fleur_param) :: fleur_param(no_params)=(/&
        !Input options
        t_fleur_param(0,"-toXML","Convert an old 'inp' file into the new XML format",""),&
@@ -58,6 +58,7 @@ MODULE m_fleur_arguments
        t_fleur_param(0,"-trace","Try to generate a stacktrace in case of an error",""),&
        t_fleur_param(0,"-debugtime","Write the start/stop of all timers to the console",""),&
        !Output
+       t_fleur_param(0,"-mix_io","Do not store mixing history in memory but do IO in each iteration",""),&
        t_fleur_param(0,"-no_out","Do not open the 'out' file but write to stdout",""),&
        t_fleur_param(0,"-genEnpara","Generate an 'enpara' file for the energy parameters",""),&
        t_fleur_param(0,"-kpts_gw","add alternative k point set for GW in all outputs for the XML input file",""),&

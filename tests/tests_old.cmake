@@ -1,7 +1,7 @@
 enable_testing()
 
 set(SerialParallelTests CuBulk CuBulkXML SiLOXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML
-Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOC Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML Fe_fccXML
+Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML Fe_fccXML
 GaAsMultiUForceXML SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML)
 
 set(SerialOnlyTests Fe_bct_LO Fe_fcc)# TiO2eels TiO2eelsXML)

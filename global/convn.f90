@@ -57,22 +57,18 @@
 !--->    output and make sure ncv(n).le.ncvd
    30 CONTINUE
       WRITE (6,FMT=8010)
-      WRITE (16,FMT=8010)
       DO 40 n = 1,atoms%ntype
          nc = atoms%ncv(n)
          l = nc - 1
          WRITE (6,FMT=8020) n,nc,l
-         WRITE (16,FMT=8020) n,nc,l
    40 CONTINUE
       l = dimension%ncvd - 1
       WRITE (6,FMT=8030) dimension%ncvd,l
-      WRITE (16,FMT=8030) dimension%ncvd,l
       DO 50 n = 1,atoms%ntype
          atoms%ncv(n) = min0(atoms%ncv(n),dimension%ncvd)
    50 CONTINUE
       RETURN
    60 WRITE (6,FMT=8040) n,sck
-      WRITE (16,FMT=8040) n,sck
        CALL juDFT_error("ncv",calledby="convn")
  8000 FORMAT (10i5)
  8010 FORMAT (/,/,10x,'convergence parameters for the pseudocharge',&

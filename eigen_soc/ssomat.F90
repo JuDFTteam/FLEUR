@@ -90,7 +90,7 @@ CONTAINS
     ENDDO
     
     DO nk=mpi%irank+1,kpts%nkpt,mpi%isize
-       CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.false., mpi)
+       CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.false.)
        zMat%matsize1=lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot
        zmat%matsize2=DIMENSION%neigd
        zmat%l_real=.FALSE.
@@ -272,6 +272,7 @@ CONTAINS
                    DO m1 = -l, l
                       DO jsloc2= 1,2
                          sc(jsloc2,m1,ilo) = CMPLX(0.,0.)
+                         IF (l==0) CYCLE
                          DO m2= -l, l
                             sc(jsloc2,m1,ilo) = sc(jsloc2,m1,ilo) +&
                                  CONJG(ccof2(m2,band2,ilo,na,jsloc2,js2))&
@@ -344,6 +345,7 @@ CONTAINS
 
                 DO ilo = 1, atoms%nlo(n) ! LO-part
                    l = atoms%llo(ilo,n)
+                   IF (l==0) CYCLE
                    DO m1 = -l, l
                       lm1= l*(l+1) + m1
 
@@ -405,7 +407,7 @@ CONTAINS
              ELSE
                 bandf= 1 
              ENDIF
-             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-10) THEN
+             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-8) THEN
                 PRINT *,bandf,band2,n,AIMAG(matel(bandf,band2,n))
                 CALL judft_error('Stop in ssomatel:  diagonal matrix element not real')
              ENDIF

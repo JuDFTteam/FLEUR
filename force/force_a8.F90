@@ -54,8 +54,7 @@ CONTAINS
     CALL timestart("force_a8")
 
     WRITE  (6,*)
-    WRITE (16,*)
-
+ 
     na = 1
     DO  n = 1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
@@ -73,7 +72,6 @@ CONTAINS
           !     components of the density have been multiplied by r**2
           !     (see for example subr. checkdop which constructs true MT-density at Rmt)
           !     factor sqrt(4pi) comes from Y_00 * \int d\Omega = 1/sqrt(4pi) * 4pi
-          !     write(16,1616) qval*sfp
 8000      FORMAT (' FORCE_A8: valence charge=',1p,e16.8)
 
           !    PART I of FORCE_A8
@@ -240,9 +238,7 @@ CONTAINS
           !     write result
           !
           WRITE (6,FMT=8010) n
-          WRITE (16,FMT=8010) n
           WRITE (6,FMT=8020) (forc_a8(i),i=1,3)
-          WRITE (16,FMT=8020) (forc_a8(i),i=1,3)
 8010      FORMAT (' FORCES: EQUATION A8 FOR ATOM TYPE',i4)
 8020      FORMAT (' FX_A8=',2f10.6,' FY_A8=',2f10.6,' FZ_A8=',2f10.6)
 
@@ -256,51 +252,39 @@ CONTAINS
     IF (.NOT.input%l_useapw) THEN
 
        WRITE  (6,*)
-       WRITE (16,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8030) n
-             WRITE (16,FMT=8030) n
              WRITE  (6,FMT=8040) (force%f_a12(i,n),i=1,3)
-             WRITE (16,FMT=8040) (force%f_a12(i,n),i=1,3)
           ENDIF
 8030      FORMAT (' FORCES: EQUATION A12 FOR ATOM TYPE',i4)
 8040      FORMAT (' FX_A12=',2f10.6,' FY_A12=',2f10.6,' FZ_A12=',2f10.6)
        ENDDO
     ELSE
        WRITE  (6,*)
-       WRITE (16,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8070) n
-             WRITE (16,FMT=8070) n
              WRITE  (6,FMT=8080) (force%f_b4(i,n),i=1,3)
-             WRITE (16,FMT=8080) (force%f_b4(i,n),i=1,3)
           ENDIF
 8070      FORMAT (' FORCES: EQUATION B4 FOR ATOM TYPE',i4)
 8080      FORMAT (' FX_B4=',2f10.6,' FY_B4=',2f10.6,' FZ_B4=',2f10.6)
        ENDDO
        WRITE  (6,*)
-       WRITE (16,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8090) n
-             WRITE (16,FMT=8090) n
              WRITE  (6,FMT=8100) (force%f_b8(i,n),i=1,3)
-             WRITE (16,FMT=8100) (force%f_b8(i,n),i=1,3)
           ENDIF
 8090      FORMAT (' FORCES: EQUATION B8 FOR ATOM TYPE',i4)
 8100      FORMAT (' FX_B8=',2f10.6,' FY_B8=',2f10.6,' FZ_B8=',2f10.6)
        ENDDO
     ENDIF
     WRITE  (6,*)
-    WRITE (16,*)
     DO n=1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
           WRITE  (6,FMT=8050) n
-          WRITE (16,FMT=8050) n
           WRITE  (6,FMT=8060) (force%f_a21(i,n),i=1,3)
-          WRITE (16,FMT=8060) (force%f_a21(i,n),i=1,3)
        ENDIF
 8050   FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
 8060   FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)

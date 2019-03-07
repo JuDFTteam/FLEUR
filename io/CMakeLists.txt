@@ -2,11 +2,11 @@ set(fleur_F77 ${fleur_F77}
 io/calculator.f
 io/cdn_read.F
 io/rw_symfile.f
-io/write_gw.F
 )
 set(fleur_F90 ${fleur_F90}
 io/io_matrix.F90
 io/io_hybrid.F90
+io/relax_io.F90
 io/eig66_da.F90
 io/eig66_data.F90
 io/eig66_hdf.F90
@@ -21,7 +21,6 @@ io/cdnpot_io_common.F90
 io/cdn_io.F90
 io/pot_io.F90
 io/banddos_io.F90
-io/broyd_io.F90
 io/rw_inp.f90
 io/rw_noco.f90
 io/r_inpXML.F90

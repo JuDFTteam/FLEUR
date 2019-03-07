@@ -154,7 +154,6 @@ CONTAINS
        ENDDO
        !
        WRITE (6,FMT=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
-       WRITE (16,FMT=8020) ivac, (vxc%vacz(vacuum%nmz,ivac,js),js=1,input%jspins)
 8020   FORMAT (/,5x,'vacuum zero for vacuum',i3,' = ',2f10.5)
        !
        !        calculate the ex.-corr. energy density now beyond warping region

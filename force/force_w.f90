@@ -39,8 +39,6 @@
             DO jsp = 1,input%jspins
                WRITE (6,FMT=8000) jsp,n, (atoms%pos(i,nat1),i=1,3),&
      &           (results%force(i,n,jsp),i=1,3)
-               WRITE (16,FMT=8000) jsp,n, (atoms%pos(i,nat1),i=1,3),&
-     &           (results%force(i,n,jsp),i=1,3)
             END DO
          END IF
  8000    FORMAT ('SPIN-',i1,1x,'FORCE FOR ATOM TYPE=',i3,2x,'X=',f7.3,&
@@ -53,7 +51,6 @@
 !     write total forces
 !
       WRITE  (6,8005)
-      WRITE (16,8005)
  8005 FORMAT (/,' ***** TOTAL FORCES ON ATOMS ***** ',/)
       IF (input%l_f) CALL openXMLElement('totalForcesOnRepresentativeAtoms',(/'units'/),(/'Htr/bohr'/))
       nat1 = 1
@@ -70,9 +67,7 @@
 
             WRITE (6,FMT=8010) n, (atoms%pos(i,nat1),i=1,3),&
      &        (forcetot(i,n),i=1,3)
-            WRITE (16,FMT=8010) n, (atoms%pos(i,nat1),i=1,3),&
-     &        (forcetot(i,n),i=1,3)
- 8010       FORMAT (' TOTAL FORCE FOR ATOM TYPE=',i3,2x,'X=',f7.3,3x,'Y=',&
+  8010       FORMAT (' TOTAL FORCE FOR ATOM TYPE=',i3,2x,'X=',f7.3,3x,'Y=',&
      &              f7.3,3x,'Z=',f7.3,/,22x,' FX_TOT=',f9.6,&
      &              ' FY_TOT=',f9.6,' FZ_TOT=',f9.6)
 

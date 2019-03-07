@@ -55,7 +55,6 @@
       DATA de/5.0e-3/
 
       IF ( irank == 0 ) THEN
-        WRITE (16,FMT=8000)
         WRITE (6,FMT=8000)
       END IF
  8000 FORMAT (/,/,10x,'linear triangular method')
@@ -96,7 +95,6 @@ c--->   write results of triang
          ELSE
             IF ( irank == 0 ) THEN
               WRITE (6,*)  'reading tetrahedrons from file kpts'
-              WRITE (16,*) 'reading tetrahedrons from file kpts'
             END IF
             OPEN (41,file='kpts',FORM='formatted',STATUS='old')
             DO i = 1, nkpt+1
@@ -130,11 +128,9 @@ c--->   write results of triang
            atr(i) = atr(i)/as
         ENDDO
         IF ( irank == 0 ) THEN
-          WRITE (16,FMT=8010) ntria,as
           WRITE (6,FMT=8010) ntria,as
           DO i = 1,ntria
             WRITE (6,FMT=8020) i, (itria(j,i),j=1,3),atr(i)
-            WRITE (16,FMT=8020) i, (itria(j,i),j=1,3),atr(i)
           ENDDO
         END IF
  8010   FORMAT (/,10x,'triangular decomposition of brillouin zone:',/,
@@ -143,7 +139,6 @@ c--->   write results of triang
      +          'no.,corners and (normalized) area of each triangle:',/)
  8020   FORMAT (10x,i3,3x,3i3,f14.6)
         IF ( irank == 0 ) THEN
-          WRITE (16,FMT=*) 'ef_hist=',ef
           WRITE (6,FMT=*) 'ef_hist=',ef
         END IF
         ei = ef
@@ -172,7 +167,7 @@ c
           IF (emin.GT.emax) GO TO 90
         ENDIF
         IF (ct.NE.zc) THEN
-          IF ( irank == 0 ) WRITE (16,FMT=*) '2nd dosint'
+          IF ( irank == 0 ) WRITE (6,FMT=*) '2nd dosint'
 c--->     refine ef to a value of 5 mry * (2**-20)
           iterate : DO i = 1, 40
             ei = 0.5* (emin+emax)
@@ -196,7 +191,6 @@ c
         dez = zc - ct
         workf = -13.6058*2*ef
         IF ( irank == 0 ) THEN
-          WRITE (16,FMT=8030) ef,workf,del,dez
           WRITE (6,FMT=8030) ef,workf,del,dez
         END IF
  8030   FORMAT(/,10x,'fermi energy=',f10.5,' har',/,10x,'work function='
@@ -245,7 +239,6 @@ c
       seigv = sfac*seigv
       chmom = s1 - jspins*s
       IF ( irank == 0 ) THEN
-        WRITE (16,FMT=8040) seigv,s1,chmom
         WRITE (6,FMT=8040) seigv,s1,chmom
       END IF
  8040 FORMAT (/,10x,'sum of valence eigenvalues=',f20.6,5x,
@@ -253,7 +246,6 @@ c
       RETURN
 c
   230 IF ( irank == 0 ) THEN
-        WRITE (16,FMT=8050) ei,ef,emin,emax,ct,zc
         WRITE (6,FMT=8050) ei,ef,emin,emax,ct,zc
       END IF
  8050 FORMAT (/,/,10x,'error fertri: initial guess of ef off by 25 mry',

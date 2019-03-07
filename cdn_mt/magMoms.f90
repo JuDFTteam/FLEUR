@@ -28,13 +28,11 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
    CHARACTER(LEN=20)             :: attributes(4)
 
    WRITE (6,FMT=8000)
-   WRITE (16,FMT=8000)
    DO iType = 1,atoms%ntype
       sval = moments%svdn(iType,1) - moments%svdn(iType,input%jspins)
       stot = moments%stdn(iType,1) - moments%stdn(iType,input%jspins)
       scor = stot - sval
       WRITE (6,FMT=8010) iType,stot,sval,scor,moments%svdn(iType,1),moments%stdn(iType,1)
-      WRITE (16,FMT=8010) iType,stot,sval,scor,moments%svdn(iType,1),moments%stdn(iType,1)
    END DO
 
    8000 FORMAT (/,/,10x,'spin density at the nucleus:',/,10x,'type',t25,&
@@ -43,14 +41,12 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
    8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
 
    WRITE (6,FMT=8020)
-   WRITE (16,FMT=8020)
-
+  
    CALL openXMLElement('magneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
    iRepAtom = 1
    DO iType = 1, atoms%ntype
       smom = moments%chmom(iType,1) - moments%chmom(iType,input%jspins)
       WRITE (6,FMT=8030) iType,smom, (moments%chmom(iType,j),j=1,input%jspins)
-      WRITE (16,FMT=8030) iType,smom, (moments%chmom(iType,j),j=1,input%jspins)
       attributes = ''
       WRITE(attributes(1),'(i0)') iType
       WRITE(attributes(2),'(f15.10)') smom

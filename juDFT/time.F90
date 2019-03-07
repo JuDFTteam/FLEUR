@@ -26,7 +26,8 @@ MODULE m_juDFT_time
 
   TYPE t_timer
      REAL                  :: starttime
-     REAL                  :: time
+     REAL                  :: time,mintime,maxtime
+     INTEGER               :: no_calls
      CHARACTER(LEN=60)     :: name
      INTEGER               :: n_subtimers
      TYPE(t_p),ALLOCATABLE :: subtimer(:)
@@ -38,9 +39,9 @@ MODULE m_juDFT_time
   CHARACTER(LEN=256),SAVE   :: lastfile=""
   INTEGER           ,SAVE   :: lastline=0
 
-  PUBLIC timestart,timestop,writetimes,writelocation,writeTimesXML
+  PUBLIC timestart,timestop,writetimes,writeTimesXML
   PUBLIC resetIterationDependentTimers,check_time_for_next_iteration
-  PUBLIC juDFT_time_lastlocation !should not be used
+  PUBLIC juDFT_time_lastlocation !should be used for error handling only
 
 CONTAINS
 
@@ -49,9 +50,6 @@ CONTAINS
   SUBROUTINE priv_new_timer(name)
     IMPLICIT NONE
     CHARACTER(LEN=*),INTENT(IN)          ::name
-
-
-
     TYPE(t_timer),POINTER      ::t
     TYPE(t_p),ALLOCATABLE      :: tmp(:)
 
@@ -59,6 +57,9 @@ CONTAINS
     ALLOCATE(t)
     t%starttime=cputime()
     t%time=0.0
+    t%mintime=1E99
+    t%maxtime=0.0
+    t%no_calls=0
     t%name=name
     t%n_subtimers=0
     t%parenttimer=>null()
@@ -131,6 +132,8 @@ CONTAINS
   SUBROUTINE timestop(ttimer)
     CHARACTER(LEN =*),INTENT(IN) :: ttimer
 
+    REAL::time
+
     IF (.NOT.TRIM(ttimer)==TRIM(current_timer%name)) THEN
        WRITE(*,*)"Current timer:",current_timer%name," could not stop:",ttimer
        STOP "BUG:timestop"
@@ -139,7 +142,11 @@ CONTAINS
        WRITE(*,*)   "Timer not initialized:"//ttimer
        STOP "BUG:timestop"
     ENDIF
-    current_timer%time=current_timer%time+cputime()-current_timer%starttime
+    time=cputime()-current_timer%starttime !This runtime
+    current_timer%time=current_timer%time+time
+    current_timer%no_calls=current_timer%no_calls+1
+    current_timer%mintime=MIN(current_timer%mintime,time)
+    current_timer%maxtime=MAX(current_timer%maxtime,time)
     current_timer%starttime=-1
 
     CALL priv_debug_output(" stopped ",current_timer%name)
@@ -168,7 +175,7 @@ CONTAINS
 
   RECURSIVE SUBROUTINE priv_writetimes_longest(timer,fid,timernames,timertimes)
     IMPLICIT NONE
-    TYPE(t_timer),INTENT(IN) :: timer
+    TYPE(t_timer),INTENT(IN)                 :: timer
     INTEGER,INTENT(IN),OPTIONAL              :: fid
     CHARACTER(LEN=60),INTENT(INOUT),OPTIONAL ::timernames(10)
     REAL,INTENT(INOUT),OPTIONAL              ::timertimes(10)
@@ -236,8 +243,12 @@ CONTAINS
        time=timer%time
        timername=timer%name
     ENDIF
-    IF (time<min_time*globaltimer%time) RETURN !do not print parts that take less than min_time
-    WRITE(fid,"(a,T7,a,T46,a)") TRIM(indentstring),TRIM(timername),timestring(time,globaltimer%time,level)
+    IF (time<min_time*globaltimer%time) RETURN !do not print parts that take less than min_time of the totaltime
+    IF (timer%no_calls>1) THEN
+       WRITE(fid,"(a,T7,a,T46,a,T85,a,i0,a,f9.3,a,f9.3,a)") TRIM(indentstring),TRIM(timername),TRIM(timestring(time,globaltimer%time,level)),"%  (",timer%no_calls,"calls:",timer%mintime,"sec -",timer%maxtime,"sec)"
+    ELSE
+       WRITE(fid,"(a,T7,a,T46,a)") TRIM(indentstring),TRIM(timername),timestring(time,globaltimer%time,level)
+    END IF
     FLUSH(fid)
     IF (PRESENT(debug).OR.timer%n_subtimers==0) RETURN
 
@@ -245,7 +256,7 @@ CONTAINS
     DO n=1,timer%n_subtimers
        time=time+timer%subtimer(n)%p%time
     ENDDO
-    WRITE(fid,"(a,a,T46,a)") TRIM(indentstring)," measured in submodules:",timestring(time,-.1,level)
+    WRITE(fid,"(a,a,T46,3a)") TRIM(indentstring)," measured in submodules:",TRIM(timestring(time,-.1,level))
     FLUSH(fid)
     DO n=1,timer%n_subtimers
        CALL priv_writetimes(timer%subtimer(n)%p,level+1,fid)
@@ -263,7 +274,7 @@ CONTAINS
     IF (.NOT.PRESENT(location)) THEN
        IF (ASSOCIATED(current_timer)) CALL writelocation(current_timer)
     ELSE
-       WRITE(*,*) "Timer:",location%name
+       WRITE(0,*) "Timer:",location%name
        IF (ASSOCIATED(location%parenttimer)) CALL writelocation(location%parenttimer)
     ENDIF
   END SUBROUTINE writelocation
@@ -292,11 +303,8 @@ CONTAINS
        fn=2
        OPEN(2,FILE ='juDFT_times',STATUS="replace")
     ENDIF
-    !Stop globaltimer if still running
-    IF (globaltimer%starttime>-1) THEN
-       globaltimer%time=cputime()-globaltimer%starttime
-       globaltimer%starttime=-1
-    ENDIF
+    globaltimer%time=cputime()-globaltimer%starttime
+    globaltimer%starttime=cputime()
     WRITE(fn,"('Total execution time: ',i0,'sec')") INT(globaltimer%time)
     CALL add_usage_data("Runtime",globaltimer%time)
     CALL priv_writetimes_longest(globaltimer,fid=fn)
@@ -515,22 +523,17 @@ CONTAINS
     !     .. Local Scalars ..
     REAL :: rest,seconds
     INTEGER :: ihours,iminutes
-    CHARACTER(LEN=90)::formatstring
-    rest = time
 
+    rest = time
     ihours = INT(rest/3600.0)
     rest = rest - REAL(ihours)*3600
-
     iminutes = INT(rest/60.0)
     seconds = rest - REAL(iminutes)*60
     IF (ttime<0) THEN
-       formatstring="(f9.2,'sec = ',i3,'h ',i2,'min ',i2,'sec')"
-       WRITE (timestring,FMT = formatstring) time,ihours,iminutes,INT(seconds)
+       WRITE (timestring,"(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec')") time,ihours,iminutes,INT(seconds)
     ELSE
-       WRITE(formatstring,"(a,i0,a)") "(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec ->',",(2*level-1),"x,f5.1,'%')"
-       WRITE (timestring,FMT = formatstring) time,ihours,iminutes,INT(seconds),time/ttime*100.0
+       WRITE (timestring,"(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec ->',1x,f5.1,'%')") time,ihours,iminutes,INT(seconds),time/ttime*100.0
     ENDIF
-
   END FUNCTION timestring
 
   !>
@@ -560,13 +563,19 @@ CONTAINS
 #endif
   END FUNCTION cputime
   !>
-  SUBROUTINE juDFT_time_lastlocation(PE)
-    CHARACTER(LEN=4),INTENT(IN):: PE
-    IF (lastline>0) THEN
-       WRITE(0,*) PE,"Last kown location:"
-       WRITE(0,*) PE,"File:",TRIM(lastfile),":",lastline
-       WRITE(0,*) PE,"*****************************************"
-    ENDIF
+  SUBROUTINE juDFT_time_lastlocation()
+    IF (ASSOCIATED(current_timer)) THEN
+       WRITE(0,*) "Last kown location:"
+       WRITE(0,*) "Last timer:",current_timer%name
+       IF (lastline>0) THEN
+          WRITE(0,*) "File:",TRIM(lastfile),":",lastline
+       ENDIF
+       IF (ASSOCIATED(current_timer%parenttimer)) THEN
+          WRITE(0,*) "Timerstack:"
+          CALL writelocation(current_timer%parenttimer)
+       ENDIF
+       WRITE(0,*) "*****************************************"
+    END IF
   END SUBROUTINE juDFT_time_lastlocation
 END MODULE m_juDFT_time
 

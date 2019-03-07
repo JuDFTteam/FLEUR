@@ -26,7 +26,7 @@ CONTAINS
       INTEGER i,ispin,msh
       REAL, ALLOCATABLE :: drr(:,:),ddrr(:,:)
 
-      REAL              :: vx(size(rad),jspins)
+      REAL              :: vx(size(vxc,1),jspins)
 
       msh = size(rad)
       ALLOCATE ( drr(msh,jspins),ddrr(msh,jspins))

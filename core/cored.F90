@@ -71,7 +71,6 @@ CONTAINS
             nm = atoms%jri(n)
             CALL intgr3(rhoc,atoms%rmsh(1,n),atoms%dx(n),nm,rhos)
             sea = tec(n,jspin) + rhos
-            WRITE (16,FMT=8030) n,jspin,tec(n,jspin),sea
             WRITE (6,FMT=8030) n,jspin,tec(n,jspin),sea
             seig = seig + atoms%neq(n)*sea
          ENDDO
@@ -97,7 +96,6 @@ CONTAINS
          ncmsh = MIN( ncmsh, DIMENSION%msh )
          rn = rnot* (d** (ncmsh-1))
          WRITE (6,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
-         WRITE (16,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
          DO  j = 1,atoms%jri(jatom)
             rhoss(j) = 0.
             vrd(j) = vr(j,jatom)
@@ -144,7 +142,6 @@ CONTAINS
                CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,ncmsh,vrd, e, a,b,ierr)
                stateEnergies(korb) = e
                WRITE (6,FMT=8010) fn,fl,fj,e,weight
-               WRITE (16,FMT=8010) fn,fl,fj,e,weight
                IF (ierr/=0)  CALL juDFT_error("error in core-level routine" ,calledby ="cored")
                IF (input%gw==1 .OR. input%gw==3) WRITE (15) NINT(fl),weight,e,&
                   a(1:atoms%jri(jatom)),b(1:atoms%jri(jatom))
@@ -175,8 +172,7 @@ CONTAINS
          CALL intgr3(rhoc,atoms%rmsh(1,jatom),atoms%dx(jatom),nm,rhs)
          tec(jatom,jspin) = sume - rhs
          WRITE (6,FMT=8030) jatom,jspin,tec(jatom,jspin),sume
-         WRITE (16,FMT=8030) jatom,jspin,tec(jatom,jspin),sume
-
+         
          !     ---> simpson integration
          rad = atoms%rmt(jatom)
          q = rad*rhoss(nm)/2.
@@ -189,7 +185,6 @@ CONTAINS
          q = 2*q*dxx/3
          !+sb
          WRITE (6,FMT=8020) q/input%jspins
-         WRITE (16,FMT=8020) q/input%jspins
          !-sb
          qint(jatom,jspin) = q*atoms%neq(jatom)
          attributes = ''

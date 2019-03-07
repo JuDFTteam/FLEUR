@@ -221,7 +221,6 @@ CONTAINS
     dis(:) = SQRT(dis(:)/cell%vol)*1000.
 
     WRITE (6,FMT=8000) iter,dis(1)
-    WRITE (16,FMT=8000) iter,dis(1)
 8000 FORMAT (/,'----> distance of  the potential for it=',i3,':',f11.6, ' mhtr/bohr**3')
     WRITE(6,*) "Details of potential differences for each atom type"
     WRITE(6,*) "Atom: total difference: difference of first sphhar"
@@ -231,7 +230,6 @@ CONTAINS
     WRITE(6,*) "Difference of interstitial:",pdis(0,0,1)
     IF (input%jspins.EQ.2) THEN
        WRITE (6,FMT=8010) iter,dis(2)
-       WRITE (16,FMT=8010) iter,dis(2)
 8010   FORMAT (/,'----> distance of spin potential for it=',i3,':', f11.6,' mhtr/bohr**3')
        WRITE(6,*) "Details of potential differences for each atom type"
        WRITE(6,*) "Atom: total difference: difference of first sphhar"

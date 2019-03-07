@@ -44,7 +44,6 @@ CONTAINS
     tis = cell%omtil * REAL( DOT_PRODUCT(vpot%pw_w(:stars%ng3,ispin),den%pw(:stars%ng3,ispin)))
 
     WRITE (6,FMT=8020) tis
-    WRITE (16,FMT=8020) tis
 8020 FORMAT (/,10x,'interstitial :',t40,f20.10)
 
     RESULT = RESULT + tis
@@ -64,7 +63,6 @@ CONTAINS
        nat = nat + atoms%neq(n)
     ENDDO
     WRITE (6,FMT=8030) tmt
-    WRITE (16,FMT=8030) tmt
 8030 FORMAT (/,10x,'muffin tin spheres :',t40,f20.10)
     RESULT = RESULT + tmt
     !
@@ -98,7 +96,6 @@ CONTAINS
           tvact = tvact + cell%area*tvac*facv
        ENDDO
        WRITE (6,FMT=8040) tvact
-       WRITE (16,FMT=8040) tvact
 8040   FORMAT (/,10x,'vacuum :',t40,f20.10)
        RESULT = RESULT + tvact
     ELSEIF (oneD%odi%d1) THEN
@@ -126,7 +123,6 @@ CONTAINS
        CALL intgz0(dpz,vacuum%delz,vacuum%nmz,tvac,tail)
        tvact = tvact + cell%area*tvac
        WRITE (6,FMT=8041) tvact
-       WRITE (16,FMT=8041) tvact
 8041   FORMAT (/,10x,'vacuum :',t40,f20.10)
        RESULT = RESULT + tvact
        !+odim

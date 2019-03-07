@@ -258,54 +258,18 @@
         INTEGER, INTENT(IN) :: k1d, k2d, nvac
         REAL, INTENT(IN) :: area
 
-        REAL :: zsigma, sig_b(2), tmp
-        INTEGER, PARAMETER :: iou = 33
-        INTEGER :: ios
-        LOGICAL :: exists, eV
-        CHARACTER(len=50) :: str
-
-        INQUIRE (file='apwefl',exist=exists)
-        IF (.NOT. exists) RETURN
-
-        OPEN (iou,file='apwefl',form='formatted',status='old')
-        READ (iou, '(a)') str
-        str = ADJUSTL (str)
-
-        ! Old format: zsigma, optionally followed by
-        ! sig_b (1) and (2)
-        IF (str(1:1) /= '!' .AND. str(1:1) /= '#'&
-     &      .AND. str(1:1) /= '&' .AND. str /= '') THEN
-          READ (str, *) E%zsigma
-          READ (iou, *, iostat=ios) sig_b
-          IF (ios == 0) E%sig_b = sig_b
-          RETURN
-        END IF
-
+        REAL ::   tmp
+        INTEGER :: i
+   
         ! New format
         ALLOCATE(E%sigEF(3*k1d, 3*k2d, nvac))
         E%sigEF = 0.0
-        eV = .false.
-
-        REWIND(iou)
-        DO
-          READ(iou,'(a)', IOSTAT=ios) str
-          IF (ios /= 0) EXIT
-          str = ADJUSTL (str)
-          IF (str(1:1) == '#' .OR. str(1:1) == '!' .OR. str == '')&
-     &      CYCLE
-          IF (lower_case (str(1:8)) == '&efield ') THEN
-            BACKSPACE (iou)
-            CALL read_namelist (iou, E, eV)
-          ELSE IF (str(1:1) == '&') THEN
-             CALL juDFT_error("ERROR reading 'apwefl': Unknown namelist"&
-     &            ,calledby ="efield")
-          ELSE
-            CALL read_shape (E, str, nvac)
-          END IF
+        if (allocated(e%shapes)) then
+        DO i=1,SIZE(e%shapes)
+           CALL read_shape (E, e%shapes(i), nvac)
         END DO
-        CLOSE (iou)
-
-        IF (eV) THEN
+        endif
+        IF (e%l_eV) THEN
           E%sig_b(:) = E%sig_b/hartree_to_ev_const
           E%sigEF(:,:,:) = E%sigEF/hartree_to_ev_const
         END IF
