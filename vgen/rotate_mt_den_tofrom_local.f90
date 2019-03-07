@@ -105,9 +105,8 @@ CONTAINS
     REAL    :: theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
     
-    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd
-    ALLOCATE(ch(nsp,4))
-    nsp=nsp/atoms%jmtd
+    nsp=atoms%nsp()
+    ALLOCATE(ch(nsp*atoms%jmtd,4))
     CALL xcpot%init("vwn",.FALSE.,1)
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)

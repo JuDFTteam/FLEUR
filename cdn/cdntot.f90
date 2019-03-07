@@ -175,7 +175,7 @@ CONTAINS
       END IF
 
       DO jsp = 1,input%jspins
-         WRITE (6,FMT=8000) jsp,q(jsp),qis, (qmt(n,jsp),n=1,atoms%ntype)
+         WRITE (6,FMT=8000) jsp,q(jsp),qis(jsp), (qmt(n,jsp),n=1,atoms%ntype)
          IF (input%film) WRITE (6,FMT=8010) (i,qvac(i,jsp),i=1,vacuum%nvac)
          mtCharge = SUM(qmt(1:atoms%ntype,jsp) * atoms%neq(1:atoms%ntype))
          names(1) = 'spin'         ; WRITE(attributes(1),'(i0)')    jsp      ; lengths(1,1)=4  ; lengths(1,2)=1
