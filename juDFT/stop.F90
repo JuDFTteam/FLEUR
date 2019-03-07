@@ -253,7 +253,8 @@ CONTAINS
 #elif (defined(CPP_AIX)&&!defined(__PGI))
        CALL xl__trbk()
 #endif
-       DEALLOCATE(a)!will generate an error that can be found by the compiler
+       ! cause an error, so that the compiler generates a stacktrace
+       DEALLOCATE(a)
     ENDIF
 
 #if defined(CPP_MPI)
