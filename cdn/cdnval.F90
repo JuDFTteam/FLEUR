@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,coreSpecInput,mcd,slab,orbcomp,gOnsite)
+                  moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -81,7 +81,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_mcd),           OPTIONAL, INTENT(INOUT) :: mcd
    TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
    TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
-   TYPE(t_greensf),       OPTIONAL, INTENT(INOUT) :: gOnsite
+   TYPE(t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -180,8 +180,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    ALLOCATE (eig(MAXVAL(cdnvalJob%noccbd(:))))
    jsp = MERGE(1,jspin,noco%l_noco)
 
-   IF(atoms%n_hia.GT.0) THEN
-      IF(gOnsite%l_tetra) ALLOCATE(tetweights(gOnsite%ne,dimension%neigd))
+   IF(greensfCoeffs%n_gf.GT.0) THEN
+      IF(greensfCoeffs%l_tetra) ALLOCATE(tetweights(greensfCoeffs%ne,dimension%neigd))
    END IF
 
    DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement
@@ -243,15 +243,15 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          !Shouldn't this be ispin??
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
-         IF (gOnsite%n_gf.GT.0) THEN
-            IF(gOnsite%l_tetra) THEN
+         IF (greensfCoeffs%n_gf.GT.0) THEN
+            IF(greensfCoeffs%l_tetra) THEN
                CALL timestart("OnSite: TetWeights")
                tetweights = 0.0
-               CALL tetra_weights(ikpt,kpts,results%neig(:,ispin),results%eig(:,:,ispin),gOnsite,tetweights(:,:),results%ef)
+               CALL tetra_weights(ikpt,kpts,results%neig(:,ispin),results%eig(:,:,ispin),greensfCoeffs,tetweights(:,:),results%ef)
                CALL timestop("OnSite: TetWeights")
             ENDIF
             CALL timestart("On-Site: Setup")
-               CALL im_gmmpMat(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
+               CALL onsite_coeffs(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs,input%onsite_sphavg)
             CALL timestop("On-Site: Setup")
          ENDIF
 
@@ -262,8 +262,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
          IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
          !PLACEHOLDER
-         !IF (noco%l_mperp.AND.(ispin==jsp_end).AND.gOnsite%n_gf.GT.0) THEN 
-         !   CALL onsite_21(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,gOnsite)
+         !IF (noco%l_mperp.AND.(ispin==jsp_end).AND.greensfCoeffs%n_gf.GT.0) THEN 
+         !   CALL onsite_21(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
          !END IF
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film

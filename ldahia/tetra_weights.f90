@@ -7,14 +7,14 @@ MODULE m_tetra_weights
       USE m_types
       USE m_constants
 
-      INTEGER,             INTENT(IN)     :: ikpt
-      TYPE(t_kpts),        INTENT(IN)     :: kpts
-      INTEGER,             INTENT(IN)     :: neig(:)
-      REAL,                INTENT(IN)     :: eig(:,:)
-      TYPE(t_greensf),     INTENT(IN)     :: g
+      INTEGER,                INTENT(IN)     :: ikpt
+      TYPE(t_kpts),           INTENT(IN)     :: kpts
+      INTEGER,                INTENT(IN)     :: neig(:)
+      REAL,                   INTENT(IN)     :: eig(:,:)
+      TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
 
-      REAL,                INTENT(OUT)    :: weights(:,:)
-      REAL,                INTENT(IN)     :: ef
+      REAL,                   INTENT(OUT)    :: weights(:,:)
+      REAL,                   INTENT(IN)     :: ef
 
 
       INTEGER icorn, itet, ib, j, k, l, nstart,corn_ind
@@ -165,7 +165,7 @@ MODULE m_tetra_weights
       REAL,                INTENT(IN)     :: ef
       REAL,                INTENT(IN)     :: vol
       REAL,                INTENT(IN)     :: e(4)
-      REAL,                INTENT(OUT)  :: dweight
+      REAL,                INTENT(OUT)    :: dweight
       INTEGER,             INTENT(IN)     :: ind
 
       INTEGER i
@@ -218,11 +218,11 @@ MODULE m_tetra_weights
 
       IMPLICIT NONE
 
-      REAL,                INTENT(IN)     :: energy
-      REAL,                INTENT(IN)     :: vol
-      REAL,                INTENT(IN)     :: ev(4)
-      REAL,                INTENT(INOUT)    :: w(:)
-      TYPE(t_greensf),     INTENT(IN)     :: g
+      REAL,                   INTENT(IN)     :: energy
+      REAL,                   INTENT(IN)     :: vol
+      REAL,                   INTENT(IN)     :: ev(4)
+      REAL,                   INTENT(INOUT)  :: w(:)
+      TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
 
       INTEGER i , j, n
       REAL emin, emax, e

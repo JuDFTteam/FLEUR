@@ -100,6 +100,7 @@ CONTAINS
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
     TYPE(t_greensf)                 :: gOnsite
+    TYPE(t_greensf)                 :: gIntersite
 
     ! local scalars
     INTEGER :: eig_id,archiveType
@@ -163,7 +164,12 @@ CONTAINS
     CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
 
-    CALL gOnsite%init(input,atoms,kpts,noco,.true.)
+    ! Initialize Green's function (start)
+    CALL timestart("Green's function initialization")
+    CALL gOnsite%init(input,3,atoms,kpts,noco,.true.)
+    CALL gIntersite%init(input,3,atoms,kpts,noco,.false.)
+    CALL timestop("Green's function initialization")
+    ! Initialize Green's function (end)
 
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco

@@ -84,6 +84,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
    TYPE(t_cdnvalJob)     :: cdnvalJob
+   TYPE(t_greensfCoeffs) :: greensfCoeffs
 
 
 
@@ -103,7 +104,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
-   IF(gOnsite%n_gf.GT.0) CALL gOnsite%init_e_contour(results%ef)
+   CALL greensfCoeffs%init(input,3,atoms,kpts,noco,.true.,.false.)
+   IF(gOnsite%n_gf.GT.0) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,results%ef)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -116,12 +118,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,gOnsite)
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 
 
    IF(gOnsite%n_gf.GT.0) THEN
-      CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,gOnsite,results%ef,sym)
+      CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,results%ef,sym,input%onsite_sphavg)
       !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
       IF(atoms%n_j0.GT.0.AND.input%jspins.EQ.2) THEN
          CALL eff_excinteraction(gOnsite,atoms,input,j0)

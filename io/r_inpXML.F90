@@ -1372,8 +1372,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                l_U = .NOT.l_hia
             ENDIF
 
-            IF(l_hia.AND.l_U) CALL juDFT_error("LDA+U and LDA+HIA on the same orbital is not allowed", calledby="r_inpXML")
-
             numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_j0')
             IF(numberNodes.EQ.1) THEN
                l_j0 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_j0'))
@@ -1394,6 +1392,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                ENDIF
             ENDIF 
             IF(.NOT.l_U.AND.l_j0) ldau_use(i) = 5
+
+            IF(l_hia.AND.l_U) THEN!Only for testing
+               ldau_use(i) = 6
+               !CALL juDFT_error("LDA+U and LDA+HIA on the same orbital is not allowed", calledby="r_inpXML")
+            END IF 
          ENDDO
 
          speciesNLO(iSpecies) = 0
@@ -1494,6 +1497,21 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      ELSE
                         CALL juDFT_warn("No J0 calculation for non-magnetic systems", calledby="r_inpXML")
                      ENDIF 
+                  ELSE IF(ldau_use(i).EQ.6) THEN
+                     atoms%n_u = atoms%n_u + 1
+                     atoms%lda_u(atoms%n_u)%l = ldau_l(i)
+                     atoms%lda_u(atoms%n_u)%u = ldau_u(i)
+                     atoms%lda_u(atoms%n_u)%j = ldau_j(i)
+                     atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
+                     atoms%lda_u(atoms%n_u)%atomType = iType
+                     
+                     input%l_gf = .true. 
+                     atoms%n_hia = atoms%n_hia + 1
+                     atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
+                     atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
+                     atoms%lda_hia(atoms%n_hia)%j        = ldau_j(i)
+                     atoms%lda_u(atoms%n_u)%l_amf        = l_amf(i)
+                     atoms%lda_hia(atoms%n_hia)%atomType = iType
                   ELSE
                      CALL juDFT_error("Invalid use for U-Parameters", hint="This is a bug in FLEUR, please report")
                   END IF 
