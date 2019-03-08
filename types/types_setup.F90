@@ -165,8 +165,8 @@ MODULE m_types_setup
       TYPE(t_utype),ALLOCATABLE::lda_u(:)
       !lda+hia information
       TYPE(t_utype),ALLOCATABLE::lda_hia(:)
-      !lda_u information(ntype)
-      TYPE(t_utype), ALLOCATABLE::lda_u(:)
+      !j0 calc information
+      TYPE(t_utype), ALLOCATABLE::j0(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
    CONTAINS

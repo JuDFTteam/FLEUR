@@ -36,17 +36,19 @@ MODULE m_hia_ham
       REAL        wronk, n_f, mu, tol, tmp, beta
       LOGICAL     n_exist
       CHARACTER*8 l_type*2,l_form*9
+      INTEGER     dealloc_stat
+      character(len=300)        :: errmsg
 
       REAL f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
       REAL f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
 
-      REAL, ALLOCATABLE :: u(:,:,:,:,:)
-      COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:)
-      INTEGER, ALLOCATABLE :: basis(:,:)
-      REAL, ALLOCATABLE :: ev(:,:,:)
-      REAL, ALLOCATABLE :: eig(:,:)
-      COMPLEX, ALLOCATABLE :: g_at(:,:,:,:,:)
-      TYPE(t_mat) :: h_mat
+      REAL,        ALLOCATABLE :: u(:,:,:,:,:)
+      COMPLEX,     ALLOCATABLE :: n_mmp(:,:,:,:)
+      INTEGER,     ALLOCATABLE :: basis(:,:)
+      REAL,        ALLOCATABLE :: eig(:,:)
+      COMPLEX,     ALLOCATABLE :: g_at(:,:,:,:,:)
+      TYPE(t_mat), ALLOCATABLE :: hmat
+      !TYPE(t_mat), ALLOCATABLE :: ev
       tol = 1e-14
       beta = 0.0
 
@@ -106,7 +108,6 @@ MODULE m_hia_ham
 
             ALLOCATE(basis(3,max_states))
             ALLOCATE(eig(3,max_states))
-            ALLOCATE(ev(3,max_states,max_states))
 
             DO N = n_occ-1, n_occ+1
                !TEMPORARY:
@@ -115,59 +116,64 @@ MODULE m_hia_ham
                !Find all 2*(2*l+1) bit numbers with N bits being 1
                !
                CALL gen_fock_states(N,N_states,basis(N-n_occ+2,:))
-               CALL h_mat%init(.true.,N_basis(N-n_occ+2),N_basis(N-n_occ+2))
-               CALL hia_ham(l,N,u(:,:,:,:,i_hia),mu,basis(N-n_occ+2,:),N_basis(N-n_occ+2),h_mat)
+               CALL hmat%init(.true.,N_basis(N-n_occ+2),N_basis(N-n_occ+2))
+               CALL hia_ham(l,N,u(:,:,:,:,i_hia),mu,basis(N-n_occ+2,:),N_basis(N-n_occ+2),hmat)
                !
                !Diagonalize the matrix
                !
-               !At the moment we use the lapack routine (the goal should be to reuse the interface for diagonalization but we want to avoid creating the overlap matrix (unity in our case)) 
-               !
+               
+               !CALL exact_diag(mpi,hmat,neig,eig,ev)
+               DEALLOCATE(hmat, stat=dealloc_stat, errmsg=errmsg)
+               IF(dealloc_stat /= 0) CALL juDFT_error("deallocate failed for hmat",&
+                                                      hint=errmsg, calledby="hia_setup.F90")
 
                neig = 0
                eig = 0.0
-               ev = 0.0
+
             ENDDO
             !
             !Calculate the interacting Green's function
             !
-            IF(.false.) THEN
-            g_at = 0.0
-            DO m = -l,l
-               DO s = 0, 1 
-                  DO mp = -l,l
-                     DO sp = 0,1
-
-                        DO i = 1, neig(2)
-                           !calculate the matrix elements <n-1|c|n><n|c^dag|n-1>
-                           !|n> stands for a eigenstate with n electrons
-                           DO j = 1, neig(1)
-                              CALL excitation(m,s,mp,sp,l,ev(2,i,:),ev(1,j,:),basis(2,:),basis(1,:),N_basis(2),N_basis(1),tmp)
-                              IF(ABS(tmp).LT.tol) CYCLE
-                              DO iz = 1, gOnsite%nz
-                                 !
-                                 !MISSING: factor 1/Z
-                                 !
-                                 g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(1,j)-eig(2,i)) * (EXP(-beta*eig(1,j))+EXP(-beta*eig(2,i)))
-                              ENDDO
-                           ENDDO
-                           !calculate the matrix elements <n|c|n+1><n+1|c^dag|n>
-                           DO j = 1, neig(3)
-                              CALL excitation(m,s,mp,sp,l,ev(3,j,:),ev(2,i,:),basis(3,:),basis(2,:),N_basis(3),N_basis(2),tmp)
-                              IF(ABS(tmp).LT.tol) CYCLE
-                              DO iz = 1, gOnsite%nz
-                                 !
-                                 !MISSING: factor 1/Z
-                                 !
-                                 g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(2,i)-eig(3,j)) * (EXP(-beta*eig(3,j))+EXP(-beta*eig(2,i)))
-                              ENDDO
-                           ENDDO
-                        ENDDO
-
-                     ENDDO
-                  ENDDO
-               ENDDO
-            ENDDO
-            ENDIF
+      !      IF(.false.) THEN
+       !     g_at = 0.0
+        !    DO m = -l,l
+         !      DO s = 0, 1 
+           !       DO mp = -l,l
+            !         DO sp = 0,1
+!
+ !                       DO i = 1, neig(2)
+  !                         !calculate the matrix elements <n-1|c|n><n|c^dag|n-1>
+   !                        !|n> stands for a eigenstate with n electrons
+    !                       DO j = 1, neig(1)
+     !                         CALL excitation(m,s,mp,sp,l,ev(2,i,:),ev(1,j,:),basis(2,:),basis(1,:),N_basis(2),N_basis(1),tmp)
+      !                        IF(ABS(tmp).LT.tol) CYCLE
+       !                       DO iz = 1, gOnsite%nz
+        !                         !
+         !                        !MISSING: factor 1/Z
+          !                       !
+           !                      g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(1,j)-eig(2,i)) *&
+            !                                                                      (EXP(-beta*eig(1,j))+EXP(-beta*eig(2,i)))
+             !                 ENDDO
+              !             ENDDO
+               !            !calculate the matrix elements <n|c|n+1><n+1|c^dag|n>
+                !           DO j = 1, neig(3)
+                 !             CALL excitation(m,s,mp,sp,l,ev(3,j,:),ev(2,i,:),basis(3,:),basis(2,:),N_basis(3),N_basis(2),tmp)
+                  !            IF(ABS(tmp).LT.tol) CYCLE
+                   !           DO iz = 1, gOnsite%nz
+                    !             !
+                     !            !MISSING: factor 1/Z
+                      !           !
+                       !          g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(2,i)-eig(3,j)) *&
+                        !                                                         (EXP(-beta*eig(3,j))+EXP(-beta*eig(2,i)))
+                         !     ENDDO
+                          ! ENDDO
+!                        ENDDO
+!
+ !                    ENDDO
+  !                ENDDO
+   !            ENDDO
+    !        ENDDO
+     !       ENDIF
             !
             !Invert to obtain the self-energy
             !
@@ -250,7 +256,7 @@ MODULE m_hia_ham
    END SUBROUTINE
 
 
-   SUBROUTINE hia_ham(l,N,U,mu,basis,N_basis,h_mat)
+   SUBROUTINE hia_ham(l,N,U,mu,basis,N_basis,hmat)
 
       USE m_types
       USE m_constants
@@ -267,7 +273,7 @@ MODULE m_hia_ham
 
       INTEGER,                INTENT(IN)    :: basis(:)
       INTEGER,                INTENT(IN)    :: N_basis
-      TYPE(t_mat),            INTENT(INOUT) :: h_mat
+      TYPE(t_mat),            INTENT(INOUT) :: hmat
 
       INTEGER N_states, N_op
       INTEGER dist
@@ -288,7 +294,7 @@ MODULE m_hia_ham
       !Add the chemical potential to the diagonal elements of the Fock-Matrix
       !
       DO i = 1, N_basis
-         h_mat%data_r(i,i) = h_mat%data_r(i,i) + mu
+         hmat%data_r(i,i) = hmat%data_r(i,i) + mu
       ENDDO
       !
       !Construct the matrix elements of the atomic hamiltonian
@@ -312,7 +318,7 @@ MODULE m_hia_ham
                   !
                   ! The corresponding U-element is 1/2*U(m1, m2, m4, m3) 
                   !
-                  h_mat%data_r(i,j) = h_mat%data_r(i,j) + 1/2. * U(m(1),m(2),m(4),m(3))
+                  hmat%data_r(i,j) = hmat%data_r(i,j) + 1/2. * U(m(1),m(2),m(4),m(3))
                ENDDO
             END IF
             !
