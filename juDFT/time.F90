@@ -255,8 +255,7 @@ CONTAINS
       DO n = 1, timer%n_subtimers
          time = time + timer%subtimer(n)%p%time
       ENDDO
-      WRITE (fid, "(a,a,T46,3a)") TRIM(indentstring), &
-         " measured in submodules:", TRIM(timestring(time, -.1, level))
+      WRITE (fid, "(a,a,T46,3a)") TRIM(indentstring), " measured in submodules:", TRIM(timestring(time, -.1, level))
       FLUSH(fid)
       DO n = 1, timer%n_subtimers
          CALL priv_writetimes(timer%subtimer(n)%p, level + 1, fid)
@@ -264,6 +263,62 @@ CONTAINS
    END SUBROUTINE priv_writetimes
 
    !<-- S:writetimes()
+   
+   RECURSIVE SUBROUTINE priv_genjson(timer, level, outstr)
+      use m_judft_string
+      IMPLICIT NONE
+      TYPE(t_timer), INTENT(IN)                    :: timer
+      INTEGER, INTENT(IN)                          :: level
+      CHARACTER(len=:), allocatable, INTENT(INOUT) :: outstr
+
+      CHARACTER(len=1), PARAMETER   :: nl=NEW_LINE("A")
+      INTEGER, PARAMETER            :: indent_spaces=2
+
+      INTEGER          :: n
+      REAL             :: time
+      CHARACTER(LEN=30):: timername 
+      CHARACTER(LEN=:), allocatable :: idstr, nlidstr
+     
+      write (*,*) "in lvl", level
+      IF (timer%starttime > 0) THEN
+         time = timer%time + cputime() - timer%starttime
+         timername = timer%name//" not term."
+      ELSE
+         time = timer%time
+         timername = timer%name
+      ENDIF
+      
+      idstr   = repeat(" ", (level)*indent_spaces)
+      nlidstr = nl // idstr
+      IF (time >= min_time*globaltimer%time) THEN
+         if(level > 1 ) outstr = outstr // nl 
+         outstr = outstr // repeat(" ", (level-1)*indent_spaces) // "{"
+         outstr = outstr // nlidstr // '"timername" : "' // trim(timername)         // '",'
+         outstr = outstr // nlidstr // '"totaltime" : '  // float2str(time)      
+         if(level > 1) then
+            outstr = outstr // ","
+            outstr = outstr // nlidstr // '"mintime"   : '  // float2str(timer%mintime)// ','
+            outstr = outstr // nlidstr // '"maxtime"   : '  // float2str(timer%maxtime)// ','
+            outstr = outstr // nlidstr // '"ncalls"    : '  // int2str(timer%no_calls) 
+         endif
+
+         time = 0
+         DO n = 1, timer%n_subtimers
+            time = time + timer%subtimer(n)%p%time
+         ENDDO
+         if(timer%n_subtimers > 0) then
+            !add comma behind ncalls
+            outstr = outstr // "," 
+            outstr = outstr // nlidstr // '"subtimers": '  // "[" 
+            DO n = 1, timer%n_subtimers
+               CALL priv_genjson(timer%subtimer(n)%p, level + 1, outstr)
+               if(n /= timer%n_subtimers) outstr = outstr // ","
+            ENDDO
+            outstr = outstr // nlidstr // ']' 
+         endif
+      ENDIF
+      outstr = outstr // nl // repeat(" ", (level-1)*indent_spaces) // "}"
+   END SUBROUTINE priv_genjson
 
    RECURSIVE SUBROUTINE writelocation(location)
       !writes the stack of current timers to std-out
@@ -286,6 +341,7 @@ CONTAINS
       LOGICAL, INTENT(IN), OPTIONAL::stdout
       INTEGER :: fn, irank = 0
       LOGICAL :: l_out
+      CHARACTER(len=:), allocatable :: json_str
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
@@ -324,6 +380,13 @@ CONTAINS
       CALL priv_writetimes(globaltimer, 1, fn)
       FLUSH(fn)
       IF (.NOT. l_out) CLOSE (2)
+
+      json_str = ""
+      call priv_genjson(globaltimer, 1, json_str)
+      open(32, file="juDFT_times.json")
+      write (32,"(A)") json_str
+      close(32)
+
 
    END SUBROUTINE writetimes
 

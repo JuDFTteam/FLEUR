@@ -44,4 +44,18 @@ contains
       write (ret_str,*) num
       ret_str = strip(ret_str)
    end function int2str
+   
+   function float2str(num) result(ret_str)
+      implicit none
+      real, intent(in)               :: num
+      character(len=:), allocatable  :: ret_str
+
+      allocate(character(100) :: ret_str)
+      if(num >= 1e-1 .and. num <= 1e4) then
+         write (ret_str,"(F10.5)") num
+      else
+         write (ret_str,"(ES10.4)") num
+      endif
+      ret_str = strip(ret_str)
+   end function float2str
 end module m_juDFT_string
