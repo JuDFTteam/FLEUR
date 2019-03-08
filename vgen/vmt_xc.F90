@@ -114,8 +114,8 @@ CONTAINS
       if(.not. allocated(xcpot%mt_lapl)) allocate(xcpot%mt_lapl(atoms%ntype))
       DO n = n_start,atoms%ntype,n_stride
          CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
-         write (*,*) "set grad for mt = ", n
-         xcpot%mt_lapl(n)%grid = grad%laplace
+
+         if(allocated(grad%laplace)) xcpot%mt_lapl(n)%grid = grad%laplace
 
          !
          !         calculate the ex.-cor. potential
