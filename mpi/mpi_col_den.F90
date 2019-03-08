@@ -112,20 +112,20 @@ CONTAINS
     !--> ener & sqal
     n=4*atoms%ntype
     ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(regCharges%ener(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%ener(:,:,jspin), 1)
-    CALL MPI_REDUCE(regCharges%sqal(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%sqal(:,:,jspin), 1)
+    CALL MPI_ALLREDUCE(regCharges%ener(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,MPI_COMM_WORLD,ierr)
+    CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%ener(0:,:,jspin), 1)
+    CALL MPI_ALLREDUCE(regCharges%sqal(0:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,MPI_COMM_WORLD,ierr)
+    CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%sqal(0:,:,jspin), 1)
     DEALLOCATE (r_b)
 
     !--> svac & pvac
     IF ( input%film ) THEN
        n=SIZE(regCharges%svac,1)
        ALLOCATE(r_b(n))
-       CALL MPI_REDUCE(regCharges%svac(:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-       IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%svac(:,jspin), 1)
-       CALL MPI_REDUCE(regCharges%pvac(:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-       IF (mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%pvac(:,jspin), 1)
+       CALL MPI_ALLREDUCE(regCharges%svac(:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,MPI_COMM_WORLD,ierr)
+       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%svac(:,jspin), 1)
+       CALL MPI_ALLREDUCE(regCharges%pvac(:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,MPI_COMM_WORLD,ierr)
+       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%pvac(:,jspin), 1)
        DEALLOCATE (r_b)
     ENDIF
 
@@ -237,14 +237,10 @@ CONTAINS
        CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%aclo(:,:,jspin), 1)
        CALL MPI_ALLREDUCE(denCoeffs%bclo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM, MPI_COMM_WORLD,ierr)
        CALL CPP_BLAS_scopy(n, r_b, 1, denCoeffs%bclo(:,:,jspin), 1)
-       CALL MPI_REDUCE(regCharges%enerlo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-       IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%enerlo(:,:,jspin), 1)
-       ENDIF
-       CALL MPI_REDUCE(regCharges%sqlo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-       IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%sqlo(:,:,jspin), 1)
-       ENDIF
+       CALL MPI_ALLREDUCE(regCharges%enerlo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,MPI_COMM_WORLD,ierr)
+       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%enerlo(:,:,jspin), 1)
+       CALL MPI_ALLREDUCE(regCharges%sqlo(:,:,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,MPI_COMM_WORLD,ierr)
+       CALL CPP_BLAS_scopy(n, r_b, 1, regCharges%sqlo(:,:,jspin), 1)
        DEALLOCATE (r_b)
 
        n = atoms%nlod * atoms%nlod * atoms%ntype

@@ -212,6 +212,7 @@ CONTAINS
     CALL send_usage_data()
 #ifdef CPP_MPI
     IF(PRESENT(irank)) THEN
+       write (*,*) "Going into post send barrier"
        CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
        CALL MPI_FINALIZE(ierr)
     ELSE
@@ -252,7 +253,8 @@ CONTAINS
 #elif (defined(CPP_AIX)&&!defined(__PGI))
        CALL xl__trbk()
 #endif
-       DEALLOCATE(a)!will generate an error that can be found by the compiler
+       ! cause an error, so that the compiler generates a stacktrace
+       DEALLOCATE(a)
     ENDIF
 
 #if defined(CPP_MPI)

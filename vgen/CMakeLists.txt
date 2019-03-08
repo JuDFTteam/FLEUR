@@ -1,6 +1,5 @@
 set(fleur_F77 ${fleur_F77}
 vgen/dylm3.f
-vgen/fft3dxc.f
 vgen/grdrsvac.f
 vgen/mkgz.f
 vgen/modcyli.f
@@ -14,6 +13,7 @@ vgen/visp5_0.f
 vgen/visp5_z.f
 )
 set(fleur_F90 ${fleur_F90}
+vgen/fft3dxc.f90
 vgen/rotate_mt_den_tofrom_local.f90
 vgen/b_field.F90
 vgen/mkgylm.f90

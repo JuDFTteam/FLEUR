@@ -79,11 +79,11 @@ CONTAINS
          l_libxc=.true. !libxc!!
       END SELECT
 
-      nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
+      nsp=atoms%nsp()
       ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
       IF (xcpot%is_gga()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
 
-      CALL init_mt_grid(nsp,input%jspins,atoms,sphhar,xcpot,sym)
+      CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
 
 #ifdef CPP_MPI
       n_start=mpi%irank+1
@@ -99,7 +99,7 @@ CONTAINS
 #endif
 
       DO n = n_start,atoms%ntype,n_stride
-         CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
+         CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
          !
          !         calculate the ex.-cor. potential
          CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
@@ -119,8 +119,8 @@ CONTAINS
          !Add postprocessing for libxc
          IF (l_libxc.AND.xcpot%is_gga()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad)
 
-         CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms,sphhar,nsp,n,input%jspins,v_x,vx%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
          IF (ALLOCATED(exc%mt)) THEN
             !
@@ -138,7 +138,7 @@ CONTAINS
                   nt=nt+nsp
                END DO
             ENDIF
-            CALL mt_from_grid(atoms,sphhar,nsp,n,1,e_xc,exc%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
          ENDIF
       ENDDO
 
