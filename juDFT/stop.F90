@@ -234,6 +234,7 @@ CONTAINS
     INTEGER, OPTIONAL, INTENT(IN)  :: errorCode
     INTEGER :: error
     LOGICAL :: calltrace
+    LOGICAL, allocatable :: a(:)
 #ifdef CPP_MPI
     INTEGER :: ierr
 #endif
