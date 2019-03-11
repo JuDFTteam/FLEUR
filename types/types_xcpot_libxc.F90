@@ -234,8 +234,6 @@ CONTAINS
       ALLOCATE(vxc_tmp(SIZE(vxc,2),SIZE(vxc,1)));vxc_tmp=0.0
       ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
 
-      write (*,*) "vxc_tmp shape = ", shape(vxc_tmp)
-      write (*,*) "vx_tmp shape = ",  shape(vx_tmp)
       IF (xcpot%needs_grad()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          ALLOCATE(vsigma,mold=grad%vsigma)
