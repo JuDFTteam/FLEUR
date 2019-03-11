@@ -107,7 +107,7 @@ CONTAINS
        END IF
     ENDIF
 #ifdef CPP_MPI
-    CALL MPI_BCAST(l_relax,1,MPI_LOGICAL,0,ierr)
+    CALL MPI_BCAST(l_relax,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
     IF (l_relax.AND.input%l_f) CALL relaxation(mpi,input,atoms,cell,sym,forcetot,results%tote)
 
