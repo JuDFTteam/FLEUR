@@ -16,7 +16,7 @@ MODULE m_mpi_bc_tool
      MODULE PROCEDURE  mpi_bc_int,mpi_bc_int1,mpi_bc_int2,mpi_bc_int3,mpi_bc_int4,mpi_bc_int5
      MODULE PROCEDURE  mpi_bc_real,mpi_bc_real1,mpi_bc_real2,mpi_bc_real3,mpi_bc_real4,mpi_bc_real5
      MODULE PROCEDURE  mpi_bc_complex,mpi_bc_complex1,mpi_bc_complex2,mpi_bc_complex3,mpi_bc_complex4,mpi_bc_complex5
-  END INTERFACE mpi_bc
+  END INTERFACE mpi_bc=0
 #else
    INTEGER,PARAMETER :: mpi_bc !dummy in serial case
 #endif
