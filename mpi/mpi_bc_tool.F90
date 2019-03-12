@@ -8,6 +8,7 @@ MODULE m_mpi_bc_tool
   USE m_judft
   IMPLICIT NONE
   PRIVATE
+#ifdef CPP_MPI  
   INCLUDE 'mpif.h'
   !This interface is used to broadcast data. On the recieving PE the data-array is first allocated to
   !have the same shape as the one on irank
@@ -16,8 +17,11 @@ MODULE m_mpi_bc_tool
      MODULE PROCEDURE  mpi_bc_real,mpi_bc_real1,mpi_bc_real2,mpi_bc_real3,mpi_bc_real4,mpi_bc_real5
      MODULE PROCEDURE  mpi_bc_complex,mpi_bc_complex1,mpi_bc_complex2,mpi_bc_complex3,mpi_bc_complex4,mpi_bc_complex5
   END INTERFACE mpi_bc
-
+#else
+   INTEGER,PARAMETER :: mpi_bc !dummy in serial case
+#endif
   PUBLIC :: mpi_bc
+#ifdef CPP_MPI  
 CONTAINS
   SUBROUTINE mpi_bc_int(i,irank,mpi_comm)
     IMPLICIT NONE
@@ -438,4 +442,5 @@ CONTAINS
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_complex5
+#endif  
 END MODULE m_mpi_bc_tool
