@@ -8,4 +8,5 @@ ldahia/hia_ham.f90
 ldahia/fock_basis.f90
 ldahia/tetra_weights.f90
 ldahia/eff_excinteraction.f90
+ldahia/exact_diag.f90
 )
