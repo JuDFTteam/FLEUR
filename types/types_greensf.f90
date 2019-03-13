@@ -31,8 +31,24 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:) 
          !Off-diagonal elements for noco calculations
          COMPLEX, ALLOCATABLE :: gmmpMat21(:,:,:,:,:,:)
-         !Array for intersite Greens-functions argument order (r,r',E,n,n',L,L',spin) n is the site index
-         COMPLEX, ALLOCATABLE :: gmmpMat_int(:,:,:,:,:,:,:,:)
+         !Arrays for intersite Greens-functions argument order (E,n,n',L,L',spin) n is the site index
+         !We store the radial function and the coefficients for those to obtain the imaginary part as the torage demands 
+         !to store the whole green's function is too big
+         !Because of that we need information on the energy grid in this case
+         !Energy grid for Imaginary part
+         INTEGER  :: ne       !number of energy grid points for imaginary part calculations
+         REAL     :: e_top    !Cutoff energies
+         REAL     :: e_bot
+         REAL     :: del
+         REAL     :: sigma       !Smoothing parameter(not used at the moment)
+
+         REAL, ALLOCATABLE :: uu_int(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: dd_int(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: du_int(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: ud_int(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: R(:,:,:,:,:,:)
+
+         
 
          CONTAINS
             PROCEDURE, PASS :: init => greensf_init
@@ -172,12 +188,23 @@ MODULE m_types_greensf
             !
             !intersite case; Here we look at l/=l' r/=r' and multiple sites
             !
-            r_dim = MAXVAL(atoms%jri(:))
-            l_dim = lmax**2 + lmax  
+            !We cannot store the green's function for every radial point r,r' because it takes up way too much space
+            r_dim = MAXVAL(atoms%jri(:)) 
+            l_dim = lmax**2 + lmax
 
-            ALLOCATE (thisGREENSF%gmmpMat_int(1,r_dim,thisGREENSF%nz,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
+            ALLOCATE (thisGREENSF%uu_int(thisGREENSF%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
+            ALLOCATE (thisGREENSF%dd_int(thisGREENSF%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
+            ALLOCATE (thisGREENSF%du_int(thisGREENSF%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
+            ALLOCATE (thisGREENSF%ud_int(thisGREENSF%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
 
-            thisGREENSF%gmmpMat_int    = 0.0
+            ALLOCATE (thisGREENSF%R(thisGREENSF%ne,r_dim,2,atoms%nat,0:l_dim,input%jspins))
+
+            thisGREENSF%uu_int      = 0.0
+            thisGREENSF%dd_int      = 0.0
+            thisGREENSF%du_int      = 0.0
+            thisGREENSF%ud_int      = 0.0
+
+            thisGREENSF%R           = 0.0
 
          ENDIF 
 
@@ -381,6 +408,5 @@ MODULE m_types_greensf
             IF(ind.EQ.this%n_gf) CALL juDFT_error("Green's function element not found", hint="This is a bug in FLEUR, please report")
          ENDDO
       END SUBROUTINE
-
 
 END MODULE m_types_greensf

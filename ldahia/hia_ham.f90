@@ -5,7 +5,7 @@ MODULE m_hia_ham
 
    SUBROUTINE hia_setup(gOnsite,sym,atoms,sphhar, input,el,inDen,pot,mpi,results)
 
-      !Sets up quantities needed for DFT+HIA (Has similar structure to u_setup.f90 but also sets up the stomic hamiltonians)
+      !Sets up quantities needed for DFT+HIA (Has similar structure to u_setup.f90 but also sets up the atomic hamiltonians)
 
       USE m_umtx
       USE m_uj2f
@@ -137,51 +137,46 @@ MODULE m_hia_ham
                DEALLOCATE(hmat,tmat, stat=dealloc_stat, errmsg=errmsg)
                IF(dealloc_stat /= 0) CALL juDFT_error("deallocate failed for hmat or evmat",&
                                                       hint=errmsg, calledby="hia_setup.F90")
-
             ENDDO
             !
             !Calculate the interacting Green's function
             !
-            IF(.false.) THEN
-            g_at = 0.0
-            DO m = -l,l
-               DO s = 0, 1 
-                  DO mp = -l,l
-                     DO sp = 0,1
-
-                        DO i = 1, neig(2)
-                           !calculate the matrix elements <n-1|c|n><n|c^dag|n-1>
-                           !|n> stands for a eigenstate with n electrons
-                           DO j = 1, neig(1)
-                              CALL excitation(m,s,mp,sp,l,ev_n%data_r(i,:),ev_nm1%data_r(j,:),basis(2,:),basis(1,:),N_basis(2),N_basis(1),tmp)
-                              IF(ABS(tmp).LT.tol) CYCLE
-                              DO iz = 1, gOnsite%nz
-                                 !
-                                 !MISSING: factor 1/Z
-                                 !
-                                 g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(1,j)-eig(2,i)) *&
-                                                                                  (EXP(-beta*eig(1,j))+EXP(-beta*eig(2,i)))
-                              ENDDO
-                           ENDDO
-                           !calculate the matrix elements <n|c|n+1><n+1|c^dag|n>
-                           DO j = 1, neig(3)
-                              CALL excitation(m,s,mp,sp,l,ev_np1%data_r(j,:),ev_n%data_r(i,:),basis(3,:),basis(2,:),N_basis(3),N_basis(2),tmp)
-                              IF(ABS(tmp).LT.tol) CYCLE
-                              DO iz = 1, gOnsite%nz
-                                 !
-                                 !MISSING: factor 1/Z
-                                 !
-                                 g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(2,i)-eig(3,j)) *&
-                                                                                 (EXP(-beta*eig(3,j))+EXP(-beta*eig(2,i)))
-                              ENDDO
-                           ENDDO
-                        ENDDO
-
-                     ENDDO
-                  ENDDO
-               ENDDO
-            ENDDO
-            ENDIF
+            !g_at = 0.0
+            !DO m = -l,l
+            !   DO s = 0, 1 
+            !      DO mp = -l,l
+            !         DO sp = 0,1
+            !            DO i = 1, neig(2)
+            !               !calculate the matrix elements <n-1|c|n><n|c^dag|n-1>
+            !               !|n> stands for a eigenstate with n electrons
+            !               DO j = 1, neig(1)
+            !                  CALL excitation(m,s,mp,sp,l,ev_n%data_r(i,:),ev_nm1%data_r(j,:),basis(2,:),basis(1,:),N_basis(2),N_basis(1),tmp)
+            !                  IF(ABS(tmp).LT.tol) CYCLE
+            !                  DO iz = 1, gOnsite%nz
+            !                     !
+            !                     !MISSING: factor 1/Z
+            !                     !
+            !                     g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(1,j)-eig(2,i)) *&
+            !                                                                      (EXP(-beta*eig(1,j))+EXP(-beta*eig(2,i)))
+            !                  ENDDO
+            !               ENDDO
+            !               !calculate the matrix elements <n|c|n+1><n+1|c^dag|n>
+            !               DO j = 1, neig(3)
+            !                  CALL excitation(m,s,mp,sp,l,ev_np1%data_r(j,:),ev_n%data_r(i,:),basis(3,:),basis(2,:),N_basis(3),N_basis(2),tmp)
+            !                  IF(ABS(tmp).LT.tol) CYCLE
+            !                  DO iz = 1, gOnsite%nz
+            !                     !
+            !                     !MISSING: factor 1/Z
+            !                     !
+            !                     g_at(iz,m,mp,s,sp) = g_at(iz,m,mp,s,sp) + tmp * 1/(gOnsite%e(iz)+eig(2,i)-eig(3,j)) *&
+            !                                                                     (EXP(-beta*eig(3,j))+EXP(-beta*eig(2,i)))
+            !                  ENDDO
+            !               ENDDO
+            !            ENDDO
+            !         ENDDO
+            !      ENDDO
+            !   ENDDO
+            !ENDDO
             !
             !Invert to obtain the self-energy
             !
