@@ -58,7 +58,7 @@ CONTAINS
 
       !Put the charge on the grid, in GGA case also calculate gradients
       CALL pw_to_grid(xcpot,input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho)
-      xcpot%is_lapl%grid = grad%laplace
+      if(allocated(grad%laplace)) xcpot%is_lapl%grid = grad%laplace
 
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
