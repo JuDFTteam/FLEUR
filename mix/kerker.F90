@@ -17,7 +17,9 @@ CONTAINS
     USE m_types
     USE m_types_mixvector
     USE m_constants
+#ifdef CPP_MPI    
     USE m_mpi_bc_potden
+#endif    
     IMPLICIT NONE
     TYPE(t_oneD),      INTENT(in)    :: oneD
     TYPE(t_input),     INTENT(in)    :: input

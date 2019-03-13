@@ -38,9 +38,9 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_cell),INTENT(IN)       :: cell
-      TYPE(t_potden), INTENT(IN)    :: vTot
-      TYPE(t_potden), INTENT(IN)    :: vCoul
-      TYPE(t_potden), INTENT(IN)    :: vx
+      TYPE(t_potden), INTENT(INOUT) :: vTot
+      TYPE(t_potden), INTENT(INOUT) :: vCoul
+      TYPE(t_potden), INTENT(INOUT) :: vx
       TYPE(t_mpi), INTENT(IN)       :: mpi
       TYPE(t_results), INTENT(INOUT):: results
       INTEGER, INTENT(IN)           :: eig_id
@@ -631,9 +631,9 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
    END DO
    CALL h5fclose_f(fileID, hdfError)  
 !-------------------------write potential--------------------
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot%mt,vTot%pw_w,vTot%vacz,vTot%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul%mt,vCoul%pw_w,vCoul%vacz,vCoul%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx%mt,vx%pw_w,vx%vacz,vx%vacxy)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot,vTot%pw_w)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul,vCoul%pw_w)
+   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
 
    END IF
    

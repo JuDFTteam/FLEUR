@@ -160,23 +160,23 @@ MODULE m_pot_io
    END SUBROUTINE readPotential
 
    SUBROUTINE writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
-                             iter,fr,fpw,fz,fzxy)
+                             iter,pot,fpw)
 
-      TYPE(t_stars),INTENT(IN)  :: stars
-      TYPE(t_vacuum),INTENT(IN) :: vacuum
-      TYPE(t_atoms),INTENT(IN)  :: atoms
-      TYPE(t_cell), INTENT(IN)  :: cell
-      TYPE(t_sphhar),INTENT(IN) :: sphhar
-      TYPE(t_input),INTENT(IN)  :: input
-      TYPE(t_sym),INTENT(IN)    :: sym
-      TYPE(t_oneD),INTENT(IN)   :: oneD
+      TYPE(t_stars),INTENT(IN)      :: stars
+      TYPE(t_vacuum),INTENT(IN)     :: vacuum
+      TYPE(t_atoms),INTENT(IN)      :: atoms
+      TYPE(t_cell), INTENT(IN)      :: cell
+      TYPE(t_sphhar),INTENT(IN)     :: sphhar
+      TYPE(t_input),INTENT(IN)      :: input
+      TYPE(t_sym),INTENT(IN)        :: sym
+      TYPE(t_oneD),INTENT(IN)       :: oneD
+      TYPE(t_potden), INTENT(INOUT) :: pot
 
       INTEGER, INTENT (IN)      :: iter
       INTEGER, INTENT (IN)      :: archiveType
       !     ..
       !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins), fzxy(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
-      REAL,    INTENT (IN) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins), fz(vacuum%nmzd,2,input%jspins)
+      COMPLEX, INTENT (IN) :: fpw(stars%ng3,input%jspins)
 
       ! local variables
       INTEGER           :: mode, iUnit
@@ -190,9 +190,6 @@ MODULE m_pot_io
       INTEGER           :: currentStructureIndex,currentStepfunctionIndex
       INTEGER           :: potentialType
       CHARACTER(LEN=30) :: archiveName
-
-      REAL              :: fzTemp(vacuum%nmzd,2,input%jspins)
-      COMPLEX           :: fzxyTemp(vacuum%nmzxyd,stars%ng2-1,2,input%jspins)
 
       CALL getMode(mode)
 
@@ -218,19 +215,17 @@ MODULE m_pot_io
 
          potentialType = POTENTIAL_TYPE_IN_const
 
-         fzTemp(:,:,:) = fz(:,:,:)
-         fzxyTemp(:,:,:,:) = fzxy(:,:,:,:)
          IF(vacuum%nvac.EQ.1) THEN
-            fzTemp(:,2,:)=fzTemp(:,1,:)
+            pot%vacz(:,2,:) = pot%vacz(:,1,:)
             IF (sym%invs) THEN
-               fzxyTemp(:,:,2,:) = CONJG(fzxyTemp(:,:,1,:))
+               pot%vacxy(:,:,2,:) = CONJG(pot%vacxy(:,:,1,:))
             ELSE
-               fzxyTemp(:,:,2,:) = fzxyTemp(:,:,1,:)
+               pot%vacxy(:,:,2,:) = pot%vacxy(:,:,1,:)
             END IF
          END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                                currentStepfunctionIndex,iter,fr,fpw,fzTemp,fzxyTemp)
+                                currentStepfunctionIndex,iter,pot,fpw)
 
          IF(l_storeIndices) THEN
             CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&
@@ -258,7 +253,7 @@ MODULE m_pot_io
          iUnit = 11
          OPEN (iUnit,file=TRIM(ADJUSTL(filename)),form='unformatted',status='unknown')
          CALL wrtdop(stars,vacuum,atoms,sphhar,input,sym,&
-                     iUnit,iter,fr,fpw,fz,fzxy)
+                     iUnit,iter,pot%mt,fpw,pot%vacz(:,:,:input%jspins),pot%vacxy(:,:,:,:input%jspins))
          CLOSE(iUnit)
       END IF
 

@@ -245,7 +245,7 @@ CONTAINS
        CALL forcetheo%start(vtot,mpi%irank==0)
        forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
 
-          CALL timestart("generation of hamiltonian and diagonalization (total)")
+          CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
           vTemp = vTot
           CALL timestart("Updating energy parameters")
@@ -278,7 +278,7 @@ CONTAINS
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
              CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
                           obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
-          CALL timestop("generation of hamiltonian and diagonalization (total)")
+          CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI
           CALL MPI_BARRIER(mpi%mpi_comm,ierr)
