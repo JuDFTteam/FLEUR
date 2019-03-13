@@ -1,5 +1,5 @@
 hdf5_version=1.10.3
-if [ ! -r CMake-hdf5-${hdf5_version} ]
+if [ ! -r CMake-hdf5-${hdf5_version}_${FC} ]
 then
     #Get the file with the code
     curl -LO "https://github.com/MRedies/hdf5-mirror/raw/master/CMake-hdf5-${hdf5_version}.tar.gz"
@@ -10,7 +10,8 @@ then
     fi
     
     tar xzf CMake-hdf5-${hdf5_version}.tar.gz
-    cd CMake-hdf5-${hdf5_version}
+    mv CMake-hdf5-${hdf5_version} CMake-hdf5-${hdf5_version}_${FC}
+    cd CMake-hdf5-${hdf5_version}_${FC}
     #copy options.cmake to adjust settings for compilation
     cp ../HDF5options.cmake .
     #Compile&test (This will take a while)
@@ -20,7 +21,7 @@ then
     make install
     cd ..
 else
-    cd CMake-hdf5-${hdf5_version}    
+    cd CMake-hdf5-${hdf5_version}_${FC}
 fi
 #Store the installation location
 FLEUR_LIBDIR="$PWD/HDF_Group/HDF5/${hdf5_version}/lib $FLEUR_LIBDIR"
