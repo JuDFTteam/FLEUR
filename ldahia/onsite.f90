@@ -1,4 +1,19 @@
-MODULE m_gOnsite
+MODULE m_onsite
+
+!------------------------------------------------------------------------------
+!
+! MODULE: m_onsite
+!
+!> @author
+!> Henning Janßen
+!
+! DESCRIPTION: 
+!>  This module contains the functions to calculate the imaginary part of the 
+!>  onsite GF with and without radial dependence
+!>  Further we can transform this imaginary part to obtain the onsite GF
+!>  using the Kramer Kronig Transformation
+!
+!------------------------------------------------------------------------------
 
 USE m_juDFT
 
@@ -471,4 +486,4 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg)
 END SUBROUTINE greensf_cutoff
 
 
-END MODULE m_gOnsite
+END MODULE m_onsite

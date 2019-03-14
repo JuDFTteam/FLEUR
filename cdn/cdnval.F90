@@ -38,7 +38,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_pwden
    USE m_forcea8
    USE m_checkdopall
-   USE m_gOnsite     ! calculate the non-interacting on-site green's function
+   USE m_onsite     ! calculate the non-interacting on-site green's function
    USE m_tetra_weights
    USE m_onsite21
    USE m_cdnmt       ! calculate the density and orbital moments etc.

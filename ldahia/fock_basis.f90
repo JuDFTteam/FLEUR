@@ -2,24 +2,32 @@ MODULE m_fock_basis
    USE m_juDFT
 
    CONTAINS
-
-   !***********************************************************************
-   !*This module contains the subroutines to set up and perform operations* 
-   !*on the fock basis for the atomic hamiltonian used in DFT+Hubbard1    *
-   !*The states are represented by bit strings where every bit determines *
-   !*wether a state is occupied or not                                    *
-   !*The order of the states is as follows (labeled as [m,up/down]) where *
-   !*up/down is the spin index:                                           *
-   !***********************************************************************
-   !*[l,up], [l,down], [l-1,up], [l-1,down], .... , [-l,up], [-l,down]    *
-   !********************************************************************* *
-   !*Here the last state [-l,down] sits on the bit with index 0           *
-   !*                                                                     *
-   !*The goal is to keep much of the actual bit logic inside this         *
-   !*module and work only with magnetic quantum numbers and spin indices  *
-   !*outside of here                                                      *
-   !*                                                           HJ (2019) *
-   !***********************************************************************
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE:  m_fock_basis
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  This module contains the subroutines to set up and perform operations
+   !>  on the fock basis for the atomic hamiltonian used in DFT+Hubbard1    
+   !>  The states are represented by bit strings where every bit determines 
+   !>  wether a state is occupied or not                                    
+   !>  The order of the states is as follows (labeled as [m,up/down]) where 
+   !>  up/down is the spin index:                                          
+   !>    ********************************************************************
+   !>    [l,up], [l,down], [l-1,up], [l-1,down], .... , [-l,up], [-l,down]    
+   !>    ******************************************************************** 
+   !>  Here the last state [-l,down] sits on the bit with index 0           
+   !>                                                                     
+   !>  The goal is to keep much of the actual bit logic inside this         
+   !>  module and work only with magnetic quantum numbers and spin indices  
+   !>  outside of here                                           
+   !
+   ! REVISION HISTORY:
+   ! February 2019 - Initial Version
+   !------------------------------------------------------------------------------
 
    SUBROUTINE gen_fock_states(N,N_states,states)
 

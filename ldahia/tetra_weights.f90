@@ -1,5 +1,19 @@
 MODULE m_tetra_weights
 
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE: m_tetra_weights
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  calculates the weights for one k-point in the tetrahedron method 
+   !>  the weights are calculated according to PhysRevB.49.16223 
+   !>  When used to calculate a DOS we need to differentiate with respect to energy
+   !
+   !------------------------------------------------------------------------------
+
    CONTAINS
 
    SUBROUTINE tetra_weights(ikpt,kpts,neig,eig,g,weights,ef)

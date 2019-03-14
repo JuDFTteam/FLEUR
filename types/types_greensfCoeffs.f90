@@ -1,7 +1,25 @@
 MODULE m_types_greensfCoeffs
 
-   !This type contains all the information used in the calculation of the green's function from the DFT eigenstates
-   !These arrays were split off from t_greensf to avoid dragging these temporary arrays through the whole program
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE: m_types_greensfCoeffs
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  Contains a type, which stores coefficients for the Green's function calculated 
+   !>  in the k-point loop in cdnval
+   !>  Contains Arrays for the following cases:
+   !>       -onsite
+   !>           -spherically averaged/radial dependence (r=r')
+   !>           -non-magnetic/collinear/noco
+   !>       -intersite
+   !>  Furthermore this module contains the information about the energy grid where
+   !>  the imaginary part is calculated
+   ! REVISION HISTORY:
+   ! February 2019 - Initial Version
+   !------------------------------------------------------------------------------
 
    IMPLICIT NONE
 

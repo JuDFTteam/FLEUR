@@ -1,5 +1,18 @@
 MODULE m_intersite
 
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE: m_intersite
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  This module calculates the intersite green's function (WIP)
+   !
+   ! REVISION HISTORY:
+   ! February 2019 - Initial Version
+   !------------------------------------------------------------------------------
    USE m_juDFT
    USE m_types
 

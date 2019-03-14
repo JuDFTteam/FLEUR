@@ -1,7 +1,19 @@
 MODULE m_eff_excinteraction
 
-   !This module calculates the effective exchange interaction
-   !from the onsite green's function
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE: m_eff_excinteraction
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  This module calculates the effective exchange interaction from th onsite
+   !>  green's function according to Condens. Matter 26 (2014) 476003 EQ.1
+   !
+   ! REVISION HISTORY:
+   ! February 2019 - Initial Version
+   !------------------------------------------------------------------------------
 
    CONTAINS
 
@@ -11,6 +23,7 @@ MODULE m_eff_excinteraction
       USE m_constants
       USE m_umtx
       USE m_uj2f
+      
 
       IMPLICIT NONE
 

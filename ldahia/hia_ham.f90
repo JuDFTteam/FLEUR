@@ -1,4 +1,19 @@
 MODULE m_hia_ham
+
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE: m_hia_ham
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  This module sets up and diagonalizes the atomic hamiltonian used in the 
+   !>  DFT+Hubbard1 method
+   !
+   ! REVISION HISTORY:
+   ! February 2019 - Initial Version
+   !------------------------------------------------------------------------------
    USE m_juDFT
 
    CONTAINS

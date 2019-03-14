@@ -1,8 +1,20 @@
 MODULE m_bound
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE:  m_bound
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>   calculates the factor between u_l(r) and R_l(r) for energy E
+   !>   where u_l(r) is the normed solution of the radial equation and
+   !>   R_l(r) is matched to bessel functions at the mt-radius
+   !
+   ! REVISION HISTORY:
+   ! February 2019 - Initial Version
+   !------------------------------------------------------------------------------
 
-   !calculate the factor between u_l(r) and R_l(r) for energy E
-   !where u_l(r) is the normed solution of the radial equation and
-   !R_l(r) is matched to bessel functions at the mt-radius
 
    CONTAINS
 

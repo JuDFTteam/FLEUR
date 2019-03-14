@@ -1,6 +1,18 @@
 MODULE m_kkintgr
 
-CONTAINS
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE: m_kkintgr
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  Performs the Kramer-Kronig-Transformation to obtain the Green's function 
+   !>  in the complex plane from the imaginary part calculated on the real axis
+   !
+   !------------------------------------------------------------------------------
+   CONTAINS
 
    SUBROUTINE kkintgr_real(nz,e,ne,sigma,del,bot,im,g)
 
@@ -130,7 +142,8 @@ CONTAINS
             integrand(j) = 1/(ez-(j-1)*del) * im(j)
 
          ENDDO
-
+         !We don't use the normal integration routines given in m_intgr because
+         !the functions are very peaky and these are handled better by a simple trapezian method
          CALL trapz(REAL(integrand(:)),del,ne,re)
          CALL trapz(AIMAG(integrand(:)),del,ne,imag)
 

@@ -3,6 +3,27 @@
 ! The Greens function is an on-Site Green' function which is stored in the matrix gmmpMat 
 ! and only contains Blocks with l = lprime in the MT-sphere
 
+!------------------------------------------------------------------------------
+!
+! MODULE: m_types_greensf
+!
+!> @author
+!> Henning Janßen
+!
+! DESCRIPTION: 
+!>  Contains a type for onsite and intersite green's functions
+!>  It stores the energy contour in the complex plane and the corresponding   
+!>  matrix elements of the green's function
+!>  We have the following cases
+!>    -onsite
+!>       -we look at l=l' but m\=m'
+!>       -we treat non-magnetic/collinear and noco (not tested)
+!>       -we look at r=r' and spherically averaged gf
+!>    -intersite
+!>       -l\=l' and m\=m'
+!>       -r\=r' (not stored we calculate the gf by calling calc_intersite in m_intersite for specific r and r')
+!------------------------------------------------------------------------------
+
 MODULE m_types_greensf
 
    IMPLICIT NONE
