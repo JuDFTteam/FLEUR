@@ -33,6 +33,7 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)              :: sym
     CHARACTER(len=*),INTENT(INOUT)      :: theta_s,phi_s
 
+    INTEGER::n
     LOGICAL::error(sym%nop)
     
     CALL evaluateList(this%theta,theta_s)
