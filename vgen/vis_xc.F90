@@ -86,18 +86,8 @@ CONTAINS
 
          call save_npy("EnergyDen_rezi.npy", EnergyDen%pw)
 
-         DO js=1,SIZE(vtot_pw_norm,2)
-            DO i=1,stars%ng3
-               vTot_pw_norm(i,js)=vTot%pw(i,js) / stars%nstr(i)
-            END DO
-         END DO
-         !write (*,*) "set vtot = 0 again in vis_xc"
-         !vTot_pw_norm = 0.0
-         !vTot%pw      = 0.0
-         !vTot%pw_w    = 0.0
-                      
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
-                         cell,  vTot_pw_norm, tmp_grad,    vTot_rs)
+                         cell,  vTot%pw, tmp_grad,    vTot_rs)
          CALL calc_kinEnergyDen(ED_rs, vTot_rs, rho, kinED_rs, .True.)
       ENDIF
 
