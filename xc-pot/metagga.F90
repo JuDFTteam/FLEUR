@@ -25,32 +25,31 @@ CONTAINS
 #ifdef CPP_LIBXC
       REAL, PARAMETER                  :: eps = 1e-15
 
-      !implicit allocation
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
 
-      if(is_pw) then
-         call save_npy("pw_EnergyDen_RS.npy", EnergyDen_RS)
-         call save_npy("pw_vTot_RS.npy", vTot_RS)
-         call save_npy("pw_den_RS.npy", den_RS)
-         call save_npy("pw_vTot_RSxdenRS.npy", vtot_RS*den_RS)
-         call save_npy("pw_kinED_pw_schroeway.npy",kinEnergyDen_RS) 
-      else
-         if(present(nsp) .and. present(atm_idx)) then
-            !call save_npy("mt=" // int2str(atm_idx) // "_EnergyDen_RS.npy", &
-                          !get_radial_line(EnergyDen_RS,1,nsp))
-            !call save_npy("mt=" // int2str(atm_idx) // "_vTot_RS.npy", &
-                          !get_radial_line(vTot_RS,1,nsp))
-            !call save_npy("mt=" // int2str(atm_idx) // "_den_RS.npy", &
-                          !get_radial_line(den_RS,1,nsp))
-            !call save_npy("mt=" // int2str(atm_idx) // "_vTot_RSxdenRS.npy", &
-                          !get_radial_line(vtot_RS*den_RS,1,nsp))
-            !call save_npy("mt=" // int2str(atm_idx) // "_kinED_schroeway.npy", &
-                          !get_radial_line(kinEnergyDen_RS,1,nsp)) 
-            call save_npy("mt=" // int2str(atm_idx) // "_den_RS.npy", den_RS)
-         else
-            write (*,*) "something not present"
-         endif
-      endif
+      !if(is_pw) then
+         !call save_npy("pw_EnergyDen_RS.npy", EnergyDen_RS)
+         !call save_npy("pw_vTot_RS.npy", vTot_RS)
+         !call save_npy("pw_den_RS.npy", den_RS)
+         !call save_npy("pw_vTot_RSxdenRS.npy", vtot_RS*den_RS)
+         !call save_npy("pw_kinED_pw_schroeway.npy",kinEnergyDen_RS) 
+      !else
+         !if(present(nsp) .and. present(atm_idx)) then
+            !!call save_npy("mt=" // int2str(atm_idx) // "_EnergyDen_RS.npy", &
+                          !!get_radial_line(EnergyDen_RS,1,nsp))
+            !!call save_npy("mt=" // int2str(atm_idx) // "_vTot_RS.npy", &
+                          !!get_radial_line(vTot_RS,1,nsp))
+            !!call save_npy("mt=" // int2str(atm_idx) // "_den_RS.npy", &
+                          !!get_radial_line(den_RS,1,nsp))
+            !!call save_npy("mt=" // int2str(atm_idx) // "_vTot_RSxdenRS.npy", &
+                          !!get_radial_line(vtot_RS*den_RS,1,nsp))
+            !!call save_npy("mt=" // int2str(atm_idx) // "_kinED_schroeway.npy", &
+                          !!get_radial_line(kinEnergyDen_RS,1,nsp)) 
+            !call save_npy("mt=" // int2str(atm_idx) // "_den_RS.npy", den_RS)
+         !else
+            !write (*,*) "something not present"
+         !endif
+      !endif
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
 #endif
