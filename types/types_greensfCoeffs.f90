@@ -36,10 +36,10 @@ MODULE m_types_greensfCoeffs
          REAL, ALLOCATABLE :: ud(:,:,:,:,:)
 
          !noco case
-         REAL, ALLOCATABLE :: uu21(:,:,:,:,:)
-         REAL, ALLOCATABLE :: dd21(:,:,:,:,:)
-         REAL, ALLOCATABLE :: du21(:,:,:,:,:)
-         REAL, ALLOCATABLE :: im_g21(:,:,:,:,:)
+         REAL, ALLOCATABLE :: uu21(:,:,:,:)
+         REAL, ALLOCATABLE :: dd21(:,:,:,:)
+         REAL, ALLOCATABLE :: du21(:,:,:,:)
+         COMPLEX, ALLOCATABLE :: im_g21(:,:,:,:)
 
          !intersite case
          REAL, ALLOCATABLE :: uu_int(:,:,:,:,:,:)
@@ -158,9 +158,9 @@ MODULE m_types_greensfCoeffs
                !Allocate arrays for non-colinear part
                IF(noco%l_mperp) THEN
                   IF(.NOT.input%onsite_sphavg) THEN 
-                     ALLOCATE (thisGREENSFCOEFFS%uu21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-                     ALLOCATE (thisGREENSFCOEFFS%dd21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-                     ALLOCATE (thisGREENSFCOEFFS%du21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                     ALLOCATE (thisGREENSFCOEFFS%uu21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+                     ALLOCATE (thisGREENSFCOEFFS%dd21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+                     ALLOCATE (thisGREENSFCOEFFS%du21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
                     
                      thisGREENSFCOEFFS%uu21    = 0.0
                      thisGREENSFCOEFFS%dd21    = 0.0
@@ -168,7 +168,7 @@ MODULE m_types_greensfCoeffs
                   ENDIF
 
                   ALLOCATE (thisGREENSFCOEFFS%im_g21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),&
-                                                            -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                                                            -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
                   thisGREENSFCOEFFS%im_g21  = 0.0
                ENDIF
             ENDIF

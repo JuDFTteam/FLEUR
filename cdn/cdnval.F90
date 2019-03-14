@@ -40,6 +40,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_checkdopall
    USE m_gOnsite     ! calculate the non-interacting on-site green's function
    USE m_tetra_weights
+   USE m_onsite21
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
@@ -261,10 +262,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                      skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
 
          IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
-         !PLACEHOLDER
-         !IF (noco%l_mperp.AND.(ispin==jsp_end).AND.greensfCoeffs%n_gf.GT.0) THEN 
-         !   CALL onsite_21(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
-         !END IF
+         IF (noco%l_mperp.AND.(ispin==jsp_end).AND.greensfCoeffs%n_gf.GT.0) THEN 
+            CALL onsite21(atoms,input,sym,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
+         END IF
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
          IF (l_dosNdir) THEN
