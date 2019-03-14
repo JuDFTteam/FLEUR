@@ -23,7 +23,7 @@ MODULE m_types_mae
   END TYPE t_forcetheo_mae
 
 CONTAINS
-  SUBROUTINE mae_init(this,theta_s,phi_s)
+  SUBROUTINE mae_init(this,cell,sym,theta_s,phi_s)
     USE m_calculator
     USE m_socsym
     USE m_types
