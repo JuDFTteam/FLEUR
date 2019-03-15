@@ -23,17 +23,28 @@ MODULE m_types_mae
   END TYPE t_forcetheo_mae
 
 CONTAINS
-  SUBROUTINE mae_init(this,theta_s,phi_s)
+  SUBROUTINE mae_init(this,cell,sym,theta_s,phi_s)
     USE m_calculator
+    USE m_socsym
+    USE m_types
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
+    TYPE(t_cell),INTENT(IN)             :: cell
+    TYPE(t_sym),INTENT(IN)              :: sym
     CHARACTER(len=*),INTENT(INOUT)      :: theta_s,phi_s
 
+    INTEGER::n
+    LOGICAL::error(sym%nop)
+    
     CALL evaluateList(this%theta,theta_s)
     CALL evaluateList(this%phi,phi_s)
 
     IF (SIZE(this%phi).NE.SIZE(this%theta)) CALL &
          judft_error("Lists for theta/phi must have the same length in MAE force theorem calculations")
+    DO n=1,SIZE(this%phi)
+       CALL soc_sym(sym%nop,sym%mrot,this%theta(n),this%phi(n),cell%amat,error)
+       IF (ANY(error)) CALL judft_error("Force theory choice of SOC-SQA breaks symmetry")
+    END DO
     ALLOCATE(this%evsum(SIZE(this%phi)))
     this%evsum=0
   END SUBROUTINE mae_init

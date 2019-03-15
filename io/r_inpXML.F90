@@ -1824,7 +1824,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ALLOCATE(t_forcetheo_mae::forcetheo)
             SELECT TYPE(forcetheo)
             TYPE IS(t_forcetheo_mae) !this is ok, we just allocated the type...
-               CALL forcetheo%init(lString,nString)
+               CALL forcetheo%init(cell,sym,lString,nString)
             END SELECT
          ENDIF
          !spin-spiral dispersion
