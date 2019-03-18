@@ -94,7 +94,7 @@ if(${FLEUR_USE_MPI})
   target_compile_definitions(fleur_MPI PUBLIC ${FLEUR_MPI_DEFINITIONS})
   target_link_libraries(fleur_MPI ${FLEUR_LIBRARIES})
    target_link_libraries(fleur_MPI juDFT)
-  set_target_properties(fleur_MPI PROPERTIES Fortran_MODULE_DIRECTORY fleur_MPI_modules COMPILE_OPTIONS "-Ijudft_modules -Ifleur_MPI_modules)
+  set_target_properties(fleur_MPI PROPERTIES Fortran_MODULE_DIRECTORY fleur_MPI_modules COMPILE_OPTIONS "-IjuDFT_modules -Ifleur_MPI_modules")
 endif ()
 
 
