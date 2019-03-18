@@ -117,7 +117,7 @@
           input%gw_neigd          =  0
           !-t3e
           IF (mpi%irank.EQ.0) THEN
-             CALL startXMLOutput()
+             CALL startFleur_XMLOutput()
              IF (judft_was_argument("-info")) THEN
                   CLOSE(6)
                   OPEN (6,status='SCRATCH')
