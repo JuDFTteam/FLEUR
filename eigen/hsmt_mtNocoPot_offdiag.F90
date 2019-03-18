@@ -27,7 +27,11 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_tlmplm),INTENT(IN)     :: td
-    REAL,INTENT(IN)               :: fj(:,0:,:,:),gj(:,0:,:,:)
+#if defined CPP_GPU
+    REAL,MANAGED,INTENT(IN)    :: fj(:,:,:,:),gj(:,:,:,:)
+#else
+    REAL,INTENT(IN)            :: fj(:,0:,:,:),gj(:,0:,:,:)
+#endif
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)          :: n
     COMPLEX                       :: chi_one,chi(2,2)

@@ -66,32 +66,32 @@ pages:
     - triggers
     - web 
 
-#build-pgi:
-#  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
-#  stage: build-pgi
-#  cache: 
-#     paths:
-#       - build.debug
-#  script:
-#    - cd /builds/fleur/fleur; ./configure.sh -d AUTO ; cd build.debug; make 
-#  only:
-#    - schedules
-#    - triggers
-#    - web
+build-pgi:
+  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
+  stage: build-pgi
+  cache: 
+     paths:
+       - build.pgi
+  script:
+    - cd /builds/fleur/fleur; ./configure.sh -l pgi ; cd build.pgi; make 
+  only:
+    - schedules
+    - triggers
+    - web
  
     
-#test-pgi:
-#  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
-#  stage: test-pgi
-#  cache:
-#     paths:
-#       - build.debug
-#  script:
-#    - cd /builds/fleur/fleur/build.debug;ctest
-#  only:
-#     - schedules
-#     - web
-#     - triggers
+test-pgi:
+  image: iffregistry.fz-juelich.de/fleur/fleur:pgi
+  stage: test-pgi
+  cache:
+     paths:
+       - build.pgi
+  script:
+    - cd /builds/fleur/fleur/build.pgi;ctest
+  only:
+     - schedules
+     - web
+     - triggers
      
 
 build-intel-static:
