@@ -361,7 +361,7 @@ CONTAINS
       IF (irank == 0) THEN
          globaltimer%time = cputime() - globaltimer%starttime
          globaltimer%starttime = cputime()
-         WRITE (6, "('\n\nTotal execution time: ',i0,'sec')") INT(globaltimer%time)
+         WRITE (6, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
          CALL add_usage_data("Runtime", globaltimer%time)
          CALL priv_writetimes_longest(globaltimer, fid=6)
 
