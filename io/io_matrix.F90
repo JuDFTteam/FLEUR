@@ -50,7 +50,7 @@ CONTAINS
     CLASS(t_Mat),INTENT(INOUT)  :: mat
     INTEGER,INTENT(IN)          :: rec,id
 
-    CALL mat%alloc()
+    !CALL mat%alloc()
     SELECT CASE (fh(id)%mode)
     CASE (1)
        SELECT TYPE(mat)

@@ -24,8 +24,9 @@ PROGRAM diag_test
   IF (isize>1) THEN
      ALLOCATE(t_mpimat::hmat)
      ALLOCATE(t_mpimat::smat)
+     ALLOCATE(hmat%blacsdata)
+     smat%blacsdata=>hmat%blacsdata
      hmat%blacsdata%mpi_comm=MPI_COMM_WORLD
-     smat%blacsdata%mpi_comm=MPI_COMM_WORLD
   END IF
 #endif
   IF (.NOT.ALLOCATED(hmat)) THEN
@@ -33,23 +34,24 @@ PROGRAM diag_test
      ALLOCATE(t_mat::smat)
   ENDIF
 
-  ! get mode
-  filename=judft_string_for_argument("-mode")
-  READ(filename,*) mode
 
   ! get filename
   filename=judft_string_for_argument("-file")
-  INQUIRE(file=filename,exist=l_exist)
+  INQUIRE(file=trim(filename)//".hdf",exist=l_exist)
   IF (.NOT.l_exist) CALL judft_error("File specified does not exist")
   
 
-  !matsize is actually only needed if file is created
-  fid=open_matrix(l_real,matsize,2,2,filename)
+  !l_real,matsize is actually only needed if file is created
+  fid=open_matrix(l_real,matsize,2,2,trim(filename))
 
   CALL read_matrix(hmat,1,fid)
   CALL read_matrix(smat,2,fid)
   SELECT TYPE(hmat)
   TYPE is (t_mpimat)
+     SELECT TYPE(smat)
+     TYPE is (t_mpimat)
+        smat%blacsdata=>hmat%blacsdata!make sure we use same blacs-grids
+     END SELECT
      ne=0.15*hmat%global_size1
      ALLOCATE(eig(hmat%global_size1))
   CLASS default
@@ -58,6 +60,7 @@ PROGRAM diag_test
   END SELECT
   
   CALL cpu_TIME(t1)
+  mode=0
   CALL eigen_diag(mode,hmat,smat,ne,eig,ev)
   CALL cpu_TIME(t2)
   PRINT *,"No of eigenvalues:",ne
