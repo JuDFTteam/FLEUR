@@ -1,3 +1,6 @@
+
+
+
 if (${FLEUR_USE_HDF5})
 set(judft_HDF 
 juDFT/hdf_accessprp.F90
@@ -28,4 +31,5 @@ juDFT/xmlOutput.F90
 )
 target_compile_definitions(juDFT PUBLIC ${FLEUR_DEFINITIONS})
 target_link_libraries(juDFT ${FLEUR_LIBRARIES})
-set_target_properties(juDFT PROPERTIES Fortran_MODULE_DIRECTORY juDFT_modules COMPILE_OPTIONS -IjuDFT_modules)
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/juDFT")
+set_target_properties(juDFT PROPERTIES Fortran_MODULE_DIRECTORY modules/juDFT)
