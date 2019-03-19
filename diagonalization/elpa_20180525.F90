@@ -24,7 +24,7 @@ CONTAINS
     !----------------------------------------------------
     USE m_juDFT
     USE m_types_mpimat
-    USE m_types
+    USE m_types_mat
     USE elpa
     IMPLICIT NONE
 

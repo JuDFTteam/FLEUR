@@ -45,5 +45,5 @@ add_executable(diag_test ${diag_test_files})
 target_compile_definitions(diag_test PUBLIC ${FLEUR_DEFINITIONS})
 target_link_libraries(diag_test ${FLEUR_LIBRARIES})
 target_link_libraries(diag_test juDFT)
-set_target_properties(diag_test PROPERTIES Fortran_MODULE_DIRECTORY diag_test_modules COMPILE_OPTIONS "-IjuDFT_modules -Idiag_test_modules")
+set_target_properties(diag_test PROPERTIES Fortran_MODULE_DIRECTORY diag_test_modules COMPILE_OPTIONS "-IjuDFT_modules;-Idiag_test_modules")
 
