@@ -5,7 +5,8 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_io_matrix
-  USE m_types
+  USE m_types_mat
+  USE m_types_mpimat
   USE m_judft
   USE m_iomatrix_hdf
 #ifdef CPP_HDF
@@ -46,7 +47,6 @@ CONTAINS
   END FUNCTION OPEN_MATRIX
 
   SUBROUTINE read_matrix(mat,rec,id)
-    USE m_types_mpimat
     CLASS(t_Mat),INTENT(INOUT)  :: mat
     INTEGER,INTENT(IN)          :: rec,id
 
@@ -67,7 +67,6 @@ CONTAINS
   END SUBROUTINE read_matrix
 
   SUBROUTINE write_matrix(mat,rec,id)
-    USE m_types_mpimat
     CLASS(t_Mat),INTENT(IN)  :: mat
     INTEGER,INTENT(IN)       :: rec,id
 

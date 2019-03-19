@@ -2,7 +2,7 @@ MODULE m_writeout
 CONTAINS
 
   SUBROUTINE diag_writeout(smat,hmat)
-    USE m_types
+    USE m_types_mat
     USE m_judft
     USE m_io_matrix
     USE m_types_mpimat

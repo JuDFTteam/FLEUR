@@ -2,14 +2,14 @@ MODULE m_iomatrix_hdf
   USE m_judft
   USE hdf5
   USE m_hdf_tools
+  USE m_types_mat
+  USE m_types_mpimat
   IMPLICIT NONE
   PRIVATE
   PUBLIC iomatrix_hdf_close,iomatrix_hdf_open,iomatrix_hdf_write,iomatrix_hdf_read
   
 CONTAINS
   SUBROUTINE  iomatrix_hdf_read(mat,nrec,did)
-    USE m_types
-    USE m_types_mpimat
     CLASS(t_Mat),INTENT(INOUT)  :: mat
     INTEGER,INTENT(IN)          :: nrec
     INTEGER(HID_t),INTENT(in)   :: did
@@ -58,8 +58,6 @@ CONTAINS
   END SUBROUTINE iomatrix_hdf_read
 
   SUBROUTINE  iomatrix_hdf_write(mat,rec,did)
-    USE m_types
-    USE m_types_mpimat
     CLASS(t_Mat),INTENT(IN)  :: mat
     INTEGER,INTENT(IN)       :: rec
     INTEGER(HID_t),INTENT(in)::did

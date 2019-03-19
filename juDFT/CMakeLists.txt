@@ -23,7 +23,7 @@ juDFT/string.f90
 juDFT/time.F90
 juDFT/args.F90
 juDFT/sysinfo.F90
-main/fleur_arguments.F90
+juDFT/fleur_arguments.F90
 juDFT/xmlOutput.F90
 )
 target_compile_definitions(juDFT PUBLIC ${FLEUR_DEFINITIONS})
