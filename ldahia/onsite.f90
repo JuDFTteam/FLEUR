@@ -19,17 +19,16 @@ USE m_juDFT
 
 CONTAINS
 
-SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs,l_sphavg)
+SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs,l_sphavg)
 
-   !This Subroutine calculates the imaginary part of the Matrix elements G^[n \sigma]_{Lm Lm'}(E+i*sigma)
-   !at the current k-Point (it is called in cdnval) inside the MT-sphere (averaged over the radial component)
-   !and sums over the Brillouin-Zone using the histogram method
+   !This Subroutine calculates the contribution to the imaginary part of the Matrix elements G^[n \sigma]_{Lm Lm'}(E+i*sigma)
+   !of the current k-Point (it is called in cdnval) inside the MT-sphere 
+   !and sums over the Brillouin-Zone using the histogram method or linear tetrahedron method
 
    !It is essentially the f-density of states in a (m,mp) matrix with an additional factor - pi
 
    USE m_types
    USE m_constants
-   USE m_differentiate
 
    IMPLICIT NONE
 
@@ -45,21 +44,20 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdu
 
    REAL,                   INTENT(IN)     :: wtkpt
    REAL,                   INTENT(IN)     :: tetweights(:,:)
+   INTEGER,                INTENT(IN)     :: ind(:,:)
    REAL,                   INTENT(IN)     :: eig(noccbd)
 
    LOGICAL,                INTENT(IN)     :: l_sphavg
    
    LOGICAL l_zero
    INTEGER i_gf, i, j, n, nn, natom, l, m, mp, lm, lmp, it,is, isi, ilo, ilop, jarr
-   REAL fac, wk
-   REAL, ALLOCATABLE :: dos_weights(:)
+   REAL fac, wk,tmp, tol
 
    COMPLEX n_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
    COMPLEX n1_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
    wk = wtkpt/greensfCoeffs%del
-
-   ALLOCATE(dos_weights(greensfCoeffs%ne))
+   tol = 1E-14
 
    !Loop through the gf elements to be calculated
    DO i_gf = 1, greensfCoeffs%n_gf
@@ -73,10 +71,10 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdu
          natom = natom +1
          fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(natom,l,n,ispin,wk,noccbd,i_gf,fac,l_sphavg) &
-         !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights) &
-         !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,it,is,isi,l_zero) &
-         !$OMP PRIVATE(n_tmp,n1_tmp,nr_tmp,d_tmp,dos_weights)
+         !$OMP SHARED(natom,l,n,ispin,wk,noccbd,i_gf,fac,l_sphavg,tol) &
+         !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
+         !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,it,is,isi,l_zero,tmp) &
+         !$OMP PRIVATE(n_tmp,n1_tmp,nr_tmp,d_tmp)
 
          !$OMP DO
          DO i = 1, noccbd
@@ -102,9 +100,9 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdu
                   lmp = l*(l+1)+mp
                   IF(l_sphavg) THEN
                      n_tmp(1,m,mp) = n_tmp(1,m,mp) -  pi_const*&
-                                  (conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
+                                  REAL((conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
                                    conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin) *&
-                                   usdus%ddn(l,n,ispin))
+                                   usdus%ddn(l,n,ispin)))
                   ELSE
                      n_tmp(1,m,mp) = n_tmp(1,m,mp) - pi_const * conjg(eigVecCoeffs%acof(i,lm,natom,ispin))*eigVecCoeffs%acof(i,lmp,natom,ispin)
                      n_tmp(2,m,mp) = n_tmp(2,m,mp) - pi_const * conjg(eigVecCoeffs%bcof(i,lm,natom,ispin))*eigVecCoeffs%bcof(i,lmp,natom,ispin)
@@ -163,9 +161,8 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdu
                      DO mp = -l,l
                         IF(greensfCoeffs%l_tetra) THEN
                            !We need to differentiate the weights with respect to energy (can maybe be done analytically)
-                           CALL diff3(tetweights(:,i),greensfCoeffs%del,dos_weights(:))
-                           DO j = 1, greensfCoeffs%ne
-                              greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * dos_weights(j)
+                           DO j = ind(i,1), ind(i,2) 
+                              greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * tetweights(j,i)
                            ENDDO
                         ELSE    
                            greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * wk
@@ -194,12 +191,10 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,wtkpt,eig,usdu
                   DO m = -l,l
                      DO mp = -l,l
                         IF(greensfCoeffs%l_tetra) THEN
-                           !We need to differentiate the weights with respect to energy (can maybe be done analytically)
-                           CALL diff3(tetweights(:,i),greensfCoeffs%del,dos_weights(:))
-                           DO j = 1, greensfCoeffs%ne
-                              greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * dos_weights(j)      
-                              greensfCoeffs%dd(j,i_gf,m,mp,ispin) = greensfCoeffs%dd(j,i_gf,m,mp,ispin) + conjg(n1_tmp(2,m,mp)) * fac * dos_weights(j)
-                              greensfCoeffs%du(j,i_gf,m,mp,ispin) = greensfCoeffs%du(j,i_gf,m,mp,ispin) + conjg(n1_tmp(3,m,mp)) * fac * dos_weights(j)
+                           DO j = ind(i,1), ind(i,2)
+                              greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * tetweights(j,i)      
+                              greensfCoeffs%dd(j,i_gf,m,mp,ispin) = greensfCoeffs%dd(j,i_gf,m,mp,ispin) + conjg(n1_tmp(2,m,mp)) * fac * tetweights(j,i)
+                              greensfCoeffs%du(j,i_gf,m,mp,ispin) = greensfCoeffs%du(j,i_gf,m,mp,ispin) + conjg(n1_tmp(3,m,mp)) * fac * tetweights(j,i)
                            ENDDO
                         ELSE
                            greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * wk
@@ -311,7 +306,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
       !
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
       !
-      CALL greensf_cutoff(im(:,:,:,:,:),atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg)
+      CALL greensf_cutoff(im(:,:,:,:,:),atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg,ef)
 
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO jspin = 1, jspins
@@ -340,7 +335,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
    filename = "n_mmp_mat_g"
 
    OPEN (69,file=TRIM(ADJUSTL(filename)),status='replace',form='formatted')
-   WRITE (*,'(7f14.8)') mmpMat(:,:,:,:)
+   !WRITE (*,'(7f14.8)') mmpMat(:,:,:,:)
    WRITE (69,'(7f14.8)') mmpMat(:,:,:,:)
    CLOSE (69)
 
@@ -348,7 +343,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
 END SUBROUTINE calc_onsite
 
 
-SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg)
+SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef)
    !This Subroutine determines the cutoff energy for the kramers-kronig-integration
    !This cutoff energy is defined so that the integral over the fDOS up to this cutoff 
    !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
@@ -373,11 +368,12 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg)
    REAL,                INTENT(IN)     :: del
    REAL,                INTENT(IN)     :: e_bot
    REAL,                INTENT(IN)     :: e_top
+   REAL,                INTENT(IN)     :: ef
 
    LOGICAL,             INTENT(IN)     :: l_sphavg
 
 
-   REAL, ALLOCATABLE :: fDOS(:)
+   REAL, ALLOCATABLE :: fDOS(:,:)
 
    INTEGER i,m,mp,j,n_c,kkintgr_cut,jr,ispin
 
@@ -385,11 +381,11 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg)
    REAL a,b, imag, n_states
    LOGICAL l_write
 
-   ALLOCATE(fDOS(ne))
+   ALLOCATE(fDOS(ne,jspins))
 
    l_write=.true.
 
-   fDOS(:) = 0.0
+   fDOS = 0.0
 
 
    !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS 
@@ -403,27 +399,36 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg)
             ELSE
                CALL intgr3(im(:,j,m,m,ispin),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
             END IF
-            fDOS(j) = fDOS(j) + imag
+            fDOS(j,ispin) = fDOS(j,ispin) + imag
          ENDDO
       ENDDO
    ENDDO
 
-   fDOS(:) = -1/pi_const*fDOS(:)
-
-   CALL trapz(fDOS(1:ne), del, ne, integral)
+   fDOS(:,:) = -1/pi_const*fDOS(:,:)
 
    IF(l_write) THEN
+      
+      OPEN(1337,file="fDOS_up.txt",action="write",status="replace")
 
-      OPEN(1337,file="fDOS.txt",action="write",status="replace")
+      DO i = INT(ne/2.0), ne
+         WRITE(1337,*) ((i-1)*del + e_bot-ef)*hartree_to_ev_const, fDOS(i,1)
+      ENDDO
 
-      DO i = 1, ne
-         WRITE(1337,*) (i-1)*del + e_bot, fDOS(i)
+      CLOSE(unit = 1337)
+
+      OPEN(1337,file="fDOS_dwn.txt",action="write",status="replace")
+
+      DO i = INT(ne/2.0), ne
+         WRITE(1337,*) ((i-1)*del + e_bot-ef)*hartree_to_ev_const, -fDOS(i,2)
       ENDDO
 
       CLOSE(unit = 1337)
 
    ENDIF
-   
+
+   fDOS(:,1) = fDOS(:,1) + fDOS(:,2)
+
+   CALL trapz(fDOS(1:ne,1), del, ne, integral)
 
    n_states = 2*(2*l+1)
    
@@ -444,7 +449,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg)
       DO
 
          n_c = INT(((a+b)/2.0-e_bot)/del)+1
-         CALL trapz(fDOS(1:n_c),del,n_c,integral)
+         CALL trapz(fDOS(1:n_c,1),del,n_c,integral)
 
          IF((ABS(integral-n_states).LT.0.001).OR.(ABS(a-b)/2.0.LT.del)) THEN
 
@@ -459,7 +464,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg)
 
       ENDDO
 
-      CALL trapz(fDOS(1:kkintgr_cut),del,kkintgr_cut,integral)
+      CALL trapz(fDOS(1:kkintgr_cut,1),del,kkintgr_cut,integral)
 
       WRITE(*,*) "CALCULATED CUTOFF: ", kkintgr_cut
       WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral

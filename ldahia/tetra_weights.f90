@@ -16,10 +16,11 @@ MODULE m_tetra_weights
 
    CONTAINS
 
-   SUBROUTINE tetra_weights(ikpt,kpts,neig,eig,g,weights,ef)
+   SUBROUTINE tetra_weights(ikpt,kpts,neig,eig,g,weights,e_ind,ef)
 
       USE m_types
       USE m_constants
+      USE m_differentiate
 
       INTEGER,                INTENT(IN)     :: ikpt
       TYPE(t_kpts),           INTENT(IN)     :: kpts
@@ -28,24 +29,38 @@ MODULE m_tetra_weights
       TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
 
       REAL,                   INTENT(OUT)    :: weights(:,:)
+      INTEGER,                INTENT(OUT)    :: e_ind(:,:)
       REAL,                   INTENT(IN)     :: ef
 
-
+      !Local Scalars
       INTEGER icorn, itet, ib, j, k, l, nstart,corn_ind
-
-      REAL e(4), weight,dweight
-
-      INTEGER ind(4),tmp
+      REAL    weight,dweight,tol,tmp,max_ib
       LOGICAL l_bloechl
 
+      !Local Arrays
+      REAL,ALLOCATABLE :: dos_weights(:)
+      REAL             :: e(4)
+      INTEGER          :: ind(4)
+
       l_bloechl = .true.
+      ALLOCATE( dos_weights(g%ne) )
+      dos_weights = 0.0
+      e_ind(:,1) = g%ne
+      e_ind(:,2) = 0
+      max_ib = 0
 
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP SHARED(ikpt,ef,l_bloechl,max_ib) &
+      !$OMP SHARED(kpts,neig,eig,g,weights) &
+      !$OMP PRIVATE(itet,icorn,ib,j,k,l,nstart,corn_ind,weight,dweight,tmp) &
+      !$OMP PRIVATE(ind,e)
 
+      !$OMP DO
       DO itet = 1, kpts%ntet
 
          IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE !search for the tetrahedra containing ikpt
          
-
+         IF(MINVAL(neig(kpts%ntetra(1:4,itet))).GT.max_ib) max_ib = MINVAL(neig(kpts%ntetra(1:4,itet)))
          DO ib = 1, MINVAL(neig(kpts%ntetra(1:4,itet))) !Only go up to the band index which exists at all corners
 
             IF((MINVAL(eig(ib,kpts%ntetra(1:4,itet))).GT.g%e_top).OR.(MAXVAL(eig(ib,kpts%ntetra(1:4,itet))).LT.g%e_bot)) CYCLE !Maybe cancel the band loop completely if we go above top
@@ -85,17 +100,56 @@ MODULE m_tetra_weights
 
 
             nstart = INT((e(1)-g%e_bot)/g%del)+1
+
             IF(l_bloechl) CALL bloechl_corrections(ef,kpts%voltet(itet)/kpts%ntet,e(ind(:)),dweight,corn_ind)
             DO ie = MAX(1,nstart), g%ne
-
                CALL contrib_singletetra((ie-1)*g%del+g%e_bot,kpts%voltet(itet)/kpts%ntet,e(ind(:)),weight,corn_ind)
                weights(ie,ib) = weights(ie,ib) + weight
-
-            ENDDO
-
+            ENDDO 
          ENDDO
       ENDDO
-
+      !$OMP ENDDO
+      !$OMP END PARALLEL
+      !
+      !Differentiate the weights with respect to energy to get the correct weights for a DOS-calculation
+      !
+      tol = 1E-14
+      DO ib = 1, max_ib
+         dos_weights = 0.0
+         CALL diff3(weights(:,ib),g%del,dos_weights(:))
+         !
+         !Find the range where the weights are not equal to 0
+         !
+         !Start
+         i = 1
+         DO
+            IF(dos_weights(i).GT.tol) THEN
+               e_ind(ib,1) = i
+               EXIT
+            ELSE
+               i = i + 1
+               IF(i.EQ.g%ne+1) THEN
+                  e_ind(ib,1) = g%ne
+                  EXIT
+               ENDIF
+            ENDIF
+         ENDDO
+         !End
+         i = g%ne
+         DO
+            IF(dos_weights(i).GT.tol) THEN
+               e_ind(ib,2) = i
+               EXIT
+            ELSE
+               i = i - 1
+               IF(i.EQ.0) THEN
+                  e_ind(ib,2) = 1
+                  EXIT
+               ENDIF
+            ENDIF
+         ENDDO
+         weights(:,ib) = dos_weights(:)
+      ENDDO
    END SUBROUTINE tetra_weights
 
    SUBROUTINE contrib_singletetra(energy,vol,e,weight,ind)

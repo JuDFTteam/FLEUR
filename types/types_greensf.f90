@@ -1,30 +1,25 @@
-
-! This module defines a type for the Greens-functions used in the LDA+HIA formalism
-! The Greens function is an on-Site Green' function which is stored in the matrix gmmpMat 
-! and only contains Blocks with l = lprime in the MT-sphere
-
-!------------------------------------------------------------------------------
-!
-! MODULE: m_types_greensf
-!
-!> @author
-!> Henning Janßen
-!
-! DESCRIPTION: 
-!>  Contains a type for onsite and intersite green's functions
-!>  It stores the energy contour in the complex plane and the corresponding   
-!>  matrix elements of the green's function
-!>  We have the following cases
-!>    -onsite
-!>       -we look at l=l' but m\=m'
-!>       -we treat non-magnetic/collinear and noco (not tested)
-!>       -we look at r=r' and spherically averaged gf
-!>    -intersite
-!>       -l\=l' and m\=m'
-!>       -r\=r' (not stored we calculate the gf by calling calc_intersite in m_intersite for specific r and r')
-!------------------------------------------------------------------------------
-
 MODULE m_types_greensf
+
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE: m_types_greensf
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  Contains a type for onsite and intersite green's functions in the mt-sphere
+   !>  It stores the energy contour in the complex plane and the corresponding   
+   !>  matrix elements of the green's function
+   !>  We have the following cases
+   !>    -onsite
+   !>       -we look at l=l' but m\=m'
+   !>       -we treat non-magnetic/collinear and noco (not tested)
+   !>       -we look at r=r' and spherically averaged gf
+   !>    -intersite
+   !>       -l\=l' and m\=m'
+   !>       -r\=r' (not stored we calculate the gf by calling calc_intersite in m_intersite for specific r and r')
+   !------------------------------------------------------------------------------
 
    IMPLICIT NONE
 
@@ -234,7 +229,7 @@ MODULE m_types_greensf
       SUBROUTINE init_e_contour(this,eb,ef,sigma)
 
          ! calculates the energy contour where the greens function is calculated
-         ! mode determines the kind of contour between e_bot and the fermi energy (if l_ef = .true.) 
+         ! mode determines the kind of contour between e_bot and the fermi energy
          ! mode = 1 gives a equidistant contour with imaginary part g%sigma with g%nz points
 
          ! mode = 2 gives a half circle with 2**g%nz points
@@ -401,9 +396,9 @@ MODULE m_types_greensf
                      mmpMat(m,mp,i_gf,ispin) = -1/pi_const * n_tmp(m,mp)
                   ENDDO
                ENDDO
-            ENDDO
-            DO m = -l, l
-               n_l = n_l - 1/pi_const * n_tmp(m,m)
+               DO m = -l, l
+                  n_l = n_l - 1/pi_const * n_tmp(m,m)
+               ENDDO
             ENDDO
             WRITE(*,*) "OCCUPATION: ", n_l
          ENDDO 

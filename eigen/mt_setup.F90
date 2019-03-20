@@ -13,7 +13,6 @@ CONTAINS
     USE m_tlmplm_cholesky
     USE m_tlmplm_store
     USE m_spnorb
-    USE m_hia_ham
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: mpi

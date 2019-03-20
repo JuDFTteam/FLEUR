@@ -102,6 +102,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    REAL,    ALLOCATABLE :: eig(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
    REAL,    ALLOCATABLE :: tetweights(:,:)
+   INTEGER, ALLOCATABLE :: tet_ind(:,:)
 
    TYPE (t_lapw)             :: lapw
    TYPE (t_orb)              :: orb
@@ -182,7 +183,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    jsp = MERGE(1,jspin,noco%l_noco)
 
    IF(greensfCoeffs%n_gf.GT.0) THEN
-      IF(greensfCoeffs%l_tetra) ALLOCATE(tetweights(greensfCoeffs%ne,dimension%neigd))
+      IF(greensfCoeffs%l_tetra) THEN
+         ALLOCATE(tetweights(greensfCoeffs%ne,dimension%neigd))
+         ALLOCATE(tet_ind(dimension%neigd,2))
+      ENDIF
    END IF
 
    DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement
@@ -248,11 +252,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
             IF(greensfCoeffs%l_tetra) THEN
                CALL timestart("OnSite: TetWeights")
                tetweights = 0.0
-               CALL tetra_weights(ikpt,kpts,results%neig(:,ispin),results%eig(:,:,ispin),greensfCoeffs,tetweights(:,:),results%ef)
+               CALL tetra_weights(ikpt,kpts,results%neig(:,ispin),results%eig(:,:,ispin),greensfCoeffs,tetweights(:,:),tet_ind(:,:),results%ef)
                CALL timestop("OnSite: TetWeights")
             ENDIF
             CALL timestart("On-Site: Setup")
-               CALL onsite_coeffs(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs,input%onsite_sphavg)
+               CALL onsite_coeffs(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),tet_ind(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs,input%onsite_sphavg)
             CALL timestop("On-Site: Setup")
          ENDIF
 
@@ -262,9 +266,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                      skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
 
          IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
-         IF (noco%l_mperp.AND.(ispin==jsp_end).AND.greensfCoeffs%n_gf.GT.0) THEN 
-            CALL onsite21(atoms,input,sym,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
-         END IF
+         !IF (noco%l_mperp.AND.(ispin==jsp_end).AND.greensfCoeffs%n_gf.GT.0) THEN 
+         !   CALL onsite21(atoms,input,sym,input%jspins,noccbd,tetweights(:,:),kpts%wtkpt(ikpt),eig,usdus,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
+         !END IF
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
          IF (l_dosNdir) THEN

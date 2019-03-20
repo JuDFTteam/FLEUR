@@ -87,7 +87,8 @@ MODULE m_kkintgr
 
          !The singularity is treated analytically
 
-         g(iz) = -1/pi_const * (result - im(i_sing) * LOG(ABS(ez/REAL(ez-(ne-1)*del)))) + ImagUnit * im(i_sing)
+         g(iz) = -1/pi_const * result  + ImagUnit * im(i_sing)
+         !(result - im(i_sing) * LOG(ABS(ez/REAL(ez-(ne-1)*del)))) + ImagUnit * im(i_sing)
       ENDDO
       !$OMP END DO
       !$OMP END PARALLEL
