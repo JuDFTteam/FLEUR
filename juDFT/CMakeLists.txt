@@ -31,5 +31,7 @@ juDFT/xmlOutput.F90
 )
 target_compile_definitions(juDFT PUBLIC ${FLEUR_DEFINITIONS})
 target_link_libraries(juDFT ${FLEUR_LIBRARIES})
+target_compile_options(juDFT PUBLIC ${FLEUR_PRECISION_OPTION})
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/juDFT")
+target_link_libraries(juDFT "hdf5;hdf5_fortran")
 set_target_properties(juDFT PROPERTIES Fortran_MODULE_DIRECTORY modules/juDFT)
