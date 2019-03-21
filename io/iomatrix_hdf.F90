@@ -111,7 +111,7 @@ CONTAINS
     INTEGER(hid_t),INTENT(out)  :: fid,did
     
     INTEGER :: dims(4),err
-    INTEGER :: l_exist
+    LOGICAL :: l_exist
     INTEGER(HID_T)  :: access_prp
 #if defined(CPP_HDFMPI) && defined(CPP_MPI)
     include 'mpif.h'
