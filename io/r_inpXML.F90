@@ -706,7 +706,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       IF (numberNodes.EQ.1) THEN
          xPathA = '/fleurInput/calculationSetup/onsiteGF/@sigma'
          numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_sigma = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
+         IF(numberNodes.EQ.1) input%onsite_sigma = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
 
          xPathA = '/fleurInput/calculationSetup/onsiteGF/@ne'
          numberNodes = xmlGetNumberOfNodes(xPathA)
