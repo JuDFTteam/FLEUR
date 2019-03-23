@@ -13,16 +13,16 @@ MODULE m_eff_excinteraction
    !
    ! REVISION HISTORY:
    ! February 2019 - Initial Version
+   ! March    2019 - Changed calculation of the onsite exchange matrix
    !------------------------------------------------------------------------------
 
    CONTAINS
 
-   SUBROUTINE eff_excinteraction(gOnsite,atoms,input,j0)
+   SUBROUTINE eff_excinteraction(gOnsite,atoms,input,j0,onsite_exc_split)
 
       USE m_types
       USE m_constants
-      USE m_umtx
-      USE m_uj2f
+      USE m_juDFT
       
 
       IMPLICIT NONE
@@ -31,76 +31,120 @@ MODULE m_eff_excinteraction
       TYPE(t_atoms),          INTENT(IN)  :: atoms
       REAL,                   INTENT(OUT) :: j0
       TYPE(t_input),          INTENT(IN)  :: input
+      REAL,                   INTENT(IN)  :: onsite_exc_split
 
-      COMPLEX tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),integrand
-      INTEGER i_j0,iz,m,l,mp,ispin,n,i_gf
+      COMPLEX tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),integrand(2)
+      INTEGER i_j0,iz,m,l,mp,ispin,n,i_gf,matsize,i
+      LOGICAL l_matinv
 
-      REAL f0(atoms%n_j0,input%jspins),f2(atoms%n_j0,input%jspins)
-      REAL f4(atoms%n_j0,input%jspins),f6(atoms%n_j0,input%jspins)
-      REAL, ALLOCATABLE :: u(:,:,:,:,:)
-      REAL, ALLOCATABLE :: delta(:,:)
 
-      ! calculate slater integrals from u and j
-      CALL uj2f(input%jspins,atoms%j0(:),atoms%n_j0,f0,f2,f4,f6)
 
-      ! set up e-e- interaction matrix
-      ALLOCATE (u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_j0)))
-      ALLOCATE (delta(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+      COMPLEX :: delta(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      COMPLEX :: g_up(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      COMPLEX :: g_dwn(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      INTEGER              :: info
+      INTEGER, ALLOCATABLE :: ipiv(:)
+      COMPLEX, ALLOCATABLE :: work(:)
+      COMPLEX, ALLOCATABLE :: invup(:,:)
+      COMPLEX, ALLOCATABLE :: invdwn(:,:)
+      COMPLEX, ALLOCATABLE :: inv(:,:)
 
-      !If the slater integrals are calculated in cored they depend on spin
-      !We average over them
-      f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
-      f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
-      f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
-      f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-
-      CALL umtx(atoms%j0(:),atoms%n_j0,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
-
+      l_matinv = .true. !Determines how the onsite exchange splitting is calculated
+      
       DO i_j0 = 1, atoms%n_j0
-         !
-         !Calculate the onsite exchange matrix 
-         !
          j0 = 0.0
          l = atoms%j0(i_j0)%l
          n = atoms%j0(i_j0)%atomType
-         delta = 0.0
-         DO m = -l,l
-            DO mp = -l,l
-               IF(m.NE.mp) delta(m,mp) = u(m,mp,mp,m,i_j0)
-            ENDDO
-         ENDDO
-
-         WRITE(*,'(7f14.8)') delta(:,:)
-
          !Find the corresponding index of the onsite gf
          CALL gOnsite%index(l,n,i_gf)
+         IF(.true.) THEN
+            matsize = 2*l+1
+            ALLOCATE(work(matsize))
+            ALLOCATE(invup(matsize,matsize))
+            ALLOCATE(invdwn(matsize,matsize))
+            ALLOCATE(inv(matsize,matsize))
+            ALLOCATE(ipiv(matsize))
+         ENDIF 
 
          DO iz = 1, gOnsite%nz
             !
-            !calculate the integrand for the current energy point
+            !calculate the onsite exchange matrix
+            !
+            IF(l_matinv) THEN
+               !First Way: Matrix Inversion
+               !---------------------------------------------
+               !\Delta = (G_up)^-1-(G_down)^-1
+               !---------------------------------------------
+               !Symmetrize the green's function for up/down 
+               !spin with respect to the complex plane
+               !Here we assume that the onsite Hamiltonian
+               !is real
+               !---------------------------------------------
+               !G^(up/down)^-1 = 1/2 * (G+^(up/down) + G-^(up/down))
+               !---------------------------------------------
+               inv(1:matsize,1:matsize) = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,1,1)
+               CALL zgetrf(matsize,matsize,inv,matsize,ipiv,info)
+               IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
+               CALL zgetri(matsize,inv,matsize,ipiv,work,size(work),info)
+               IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
+               invup(1:matsize,1:matsize) = inv(1:matsize,1:matsize)
+               inv(1:matsize,1:matsize) = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,1,2)
+               CALL zgetrf(matsize,matsize,inv,matsize,ipiv,info)
+               IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
+               CALL zgetri(matsize,inv,matsize,ipiv,work,size(work),info)
+               IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
+               invup(1:matsize,1:matsize) = 1/2.0*(invup(1:matsize,1:matsize) +inv(1:matsize,1:matsize))
+
+
+               inv(1:matsize,1:matsize) = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,2,1)
+               CALL zgetrf(matsize,matsize,inv,matsize,ipiv,info)
+               IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
+               CALL zgetri(matsize,inv,matsize,ipiv,work,size(work),info)
+               IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
+               invdwn(1:matsize,1:matsize) = inv(1:matsize,1:matsize)
+               inv(1:matsize,1:matsize) = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,2,2)
+               CALL zgetrf(matsize,matsize,inv,matsize,ipiv,info)
+               IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
+               CALL zgetri(matsize,inv,matsize,ipiv,work,size(work),info)
+               IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
+               invdwn(1:matsize,1:matsize) = 1/2.0*(invdwn(1:matsize,1:matsize) +inv(1:matsize,1:matsize))
+
+               delta(-l:l,-l:l) = invup(1:matsize,1:matsize) - invdwn(1:matsize,1:matsize)
+            ELSE
+               !Second Way: onsite_exc_split is the difference in the center of gravity of the up/down bands
+               delta = 0.0
+               DO m = -l, l
+                  delta(m,m) = onsite_exc_split
+               ENDDO
+            ENDIF
             !
             !  Tr[\Delta (G_up-G-down) + \Delta G_up \Delta G-down]
             !
-            tmp(-l:l,-l:l) = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,2)-gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,1)
-            tmp(-l:l,-l:l) = matmul(delta(-l:l,-l:l),tmp(-l:l,-l:l))
-            tmp(-l:l,-l:l) = tmp(-l:l,-l:l) + matmul(matmul(delta(-l:l,-l:l),gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,2)),&
-                              matmul(delta(-l:l,-l:l),gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,1)))
-            !WRITE(*,*) iz
-            !WRITE(*,'(14f14.8)') tmp(:,:)
-            integrand = CMPLX(0.0,0.0)
-            !Trace over m
-            DO m = -l,l
-               integrand = integrand + tmp(m,m)
+            integrand = 0.0
+            DO i = 1, 2
+               g_up(-l:l,-l:l)   = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,1,i)
+               g_dwn(-l:l,-l:l)  = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,2,i)
+               tmp(-l:l,-l:l)    = g_up(-l:l,-l:l)-g_dwn(-l:l,-l:l)
+               tmp(-l:l,-l:l)    = matmul(delta(-l:l,-l:l),tmp(-l:l,-l:l))
+               tmp(-l:l,-l:l)    = tmp(-l:l,-l:l) + matmul(matmul(delta(-l:l,-l:l),g_up(-l:l,-l:l)),&
+                                 matmul(delta(-l:l,-l:l),g_dwn(-l:l,-l:l)))
+               !Trace over m
+               DO m = -l,l
+                  integrand(i) = integrand(i) + tmp(m,m)
+               ENDDO
             ENDDO
-
-            j0 = j0 + AIMAG(integrand*gOnsite%de(iz))
+            j0 = j0 + 1/2.0 * AIMAG(integrand(1)*gOnsite%de(iz)-integrand(2)*conjg(gOnsite%de(iz)))
          ENDDO
 
-         j0 = j0*1/fpi_const*hartree_to_ev_const
-
+         
+         j0 = -j0*1/fpi_const*hartree_to_ev_const
          WRITE(*,*)  "Eff. Exchange Interaction for atom", n, ": ", j0, "eV"
+         IF(ALLOCATED(work)) DEALLOCATE(work)
+         IF(ALLOCATED(ipiv)) DEALLOCATE(ipiv)
+         IF(ALLOCATED(invup)) DEALLOCATE(invup)
+         IF(ALLOCATED(invdwn)) DEALLOCATE(invdwn)
       ENDDO
    END SUBROUTINE eff_excinteraction
+
 
 END MODULE m_eff_excinteraction

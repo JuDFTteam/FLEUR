@@ -213,7 +213,7 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
 
 END SUBROUTINE onsite_coeffs
 
-SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sphavg)
+SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sphavg,onsite_exc_split)
 
    USE m_types
    USE m_constants
@@ -233,6 +233,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
 
    REAL,                   INTENT(IN)     :: ef
    REAL,                   INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,jspins)
+   REAL,                   INTENT(OUT)     :: onsite_exc_split
 
    LOGICAL,                INTENT(IN)     :: l_sphavg
 
@@ -291,11 +292,11 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
                !
                !smooth the imaginary part using gaussian broadening 
                !
-               IF(greensfCoeffs%sigma.NE.0.0) THEN
-                  DO jr = 1, gOnsite%nr(i_gf)
-                     CALL smooth(e(:),im(jr,:,m,mp,jspin),greensfCoeffs%sigma,greensfCoeffs%ne)
-                  ENDDO
-               ENDIF
+               !IF(greensfCoeffs%sigma.NE.0.0) THEN
+               !   DO jr = 1, gOnsite%nr(i_gf)
+               !      CALL smooth(e(:),im(jr,:,m,mp,jspin),greensfCoeffs%sigma,greensfCoeffs%ne)
+               !   ENDDO
+               !ENDIF
                !
                !taking care of spin degeneracy in non-magnetic case
                !
@@ -306,20 +307,19 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
       !
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
       !
-      CALL greensf_cutoff(im(:,:,:,:,:),atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg,ef)
+      CALL greensf_cutoff(im(:,:,:,:,:),atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg,ef,onsite_exc_split)
 
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO jspin = 1, jspins
          DO m= -l,l
             DO mp= -l,l
                DO jr = 1, gOnsite%nr(i_gf)
-                  IF(gOnsite%mode.EQ.1) THEN
-                     CALL kkintgr_real(gOnsite%nz,gOnsite%e(:),greensfCoeffs%ne,greensfCoeffs%sigma,greensfCoeffs%del,greensfCoeffs%e_bot,&
-                                       im(jr,:,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_gf,m,mp,jspin))
-                  ELSE IF(gOnsite%mode.EQ.2) THEN
-                     CALL kkintgr_complex(gOnsite%nz,gOnsite%e(:),greensfCoeffs%ne,greensfCoeffs%sigma,greensfCoeffs%del,greensfCoeffs%e_bot,&
-                                          im(jr,:,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_gf,m,mp,jspin))
-                  END IF
+                  !G^+ = G(E+idelta)
+                  CALL kkintgr(gOnsite%nz,gOnsite%e(:),greensfCoeffs%ne,greensfCoeffs%sigma,greensfCoeffs%del,greensfCoeffs%e_bot,&
+                                       im(jr,:,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_gf,m,mp,jspin,1),.true.)
+                  !G^- = G(E-idelta)
+                  CALL kkintgr(gOnsite%nz,gOnsite%e(:),greensfCoeffs%ne,greensfCoeffs%sigma,greensfCoeffs%del,greensfCoeffs%e_bot,&
+                                       im(jr,:,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_gf,m,mp,jspin,2),.false.)
                ENDDO
             ENDDO
          ENDDO
@@ -336,14 +336,14 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
 
    OPEN (69,file=TRIM(ADJUSTL(filename)),status='replace',form='formatted')
    !WRITE (*,'(7f14.8)') mmpMat(:,:,:,:)
-   WRITE (69,'(7f14.8)') mmpMat(:,:,:,:)
+   WRITE (69,'(14f10.6)') mmpMat(:,:,:,:)
    CLOSE (69)
 
 
 END SUBROUTINE calc_onsite
 
 
-SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef)
+SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,onsite_exc_split)
    !This Subroutine determines the cutoff energy for the kramers-kronig-integration
    !This cutoff energy is defined so that the integral over the fDOS up to this cutoff 
    !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
@@ -369,19 +369,23 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef)
    REAL,                INTENT(IN)     :: e_bot
    REAL,                INTENT(IN)     :: e_top
    REAL,                INTENT(IN)     :: ef
+   REAL,                INTENT(OUT)    :: onsite_exc_split
 
    LOGICAL,             INTENT(IN)     :: l_sphavg
 
 
    REAL, ALLOCATABLE :: fDOS(:,:)
 
-   INTEGER i,m,mp,j,n_c,kkintgr_cut,jr,ispin
+   REAL, ALLOCATABLE :: tmp(:,:)
 
-   REAL integral
+   INTEGER i,m,mp,j,n_c,kkintgr_cut,jr,ispin,cut
+
+   REAL integral, m_up, m_dwn
    REAL a,b, imag, n_states
    LOGICAL l_write
 
    ALLOCATE(fDOS(ne,jspins))
+   ALLOCATE(tmp(ne,jspins))
 
    l_write=.true.
 
@@ -405,6 +409,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef)
    ENDDO
 
    fDOS(:,:) = -1/pi_const*fDOS(:,:)
+
 
    IF(l_write) THEN
       
@@ -470,6 +475,20 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef)
       WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
    END IF
 
+   !If we are in the magnetic case we want to calculate the effectiv exchange interaction j0 from the Gf
+   !For that we can use the difference in the center of gravity of the up and down bands
+   !This is calculated here
+   cut = 2600
+   IF(jspins.EQ.2) THEN
+      fDOS(:,1) = fDOS(:,1)-fDOS(:,2)
+      !multiply fDOS(E)*E
+      DO j = 1, cut
+         tmp(j,:) = fDOS(j,:) *((j-1) * del + e_bot)
+      ENDDO
+      CALL trapz(tmp(1:cut,1),del,cut,m_up)
+      CALL trapz(tmp(1:cut,2),del,cut,m_dwn)
+      onsite_exc_split = (m_dwn - m_up)/n_states*2.0
+   ENDIF
 
    !Now we set the imaginary part of the greens function to zero above this cutoff
    DO ispin = 1, jspins

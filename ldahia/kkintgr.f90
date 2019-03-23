@@ -96,13 +96,11 @@ MODULE m_kkintgr
 
    ENDSUBROUTINE kkintgr_real
 
-   SUBROUTINE kkintgr_complex(nz,e,ne,sigma,del,bot,im,g)
+   SUBROUTINE kkintgr(nz,e,ne,sigma,del,bot,im,g,l_upper)
 
       !calculates the Kramer Kronig Transformation on the same contour where the imaginary part was calculated
 
-      !G(z) = -1/pi * int_bot^top dE' 1/(z-E') * Im(G(E'+i*delta))
-
-      !The imaginary part is defined on a equidistant energy mesh with spacing del
+      !G(z) = -1/pi * int_bot^top dE' 1/(z-E') * Im(G(E'+-i*delta))
 
       USE m_types
       USE m_constants
@@ -119,6 +117,7 @@ MODULE m_kkintgr
       REAL,                INTENT(IN)     :: sigma       
       REAL,                INTENT(IN)     :: del
       REAL,                INTENT(IN)     :: bot
+      LOGICAL,             INTENT(IN)     :: l_upper
 
       INTEGER iz, j
       COMPLEX ez
@@ -128,7 +127,7 @@ MODULE m_kkintgr
       ALLOCATE (integrand(ne))
 
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(ne,del,nz,bot) &
+      !$OMP SHARED(ne,del,nz,bot,l_upper) &
       !$OMP SHARED(g,e,im) &
       !$OMP PRIVATE(j,ez,integrand,re,imag)
 
@@ -137,6 +136,8 @@ MODULE m_kkintgr
       DO iz = 1, nz
 
          ez = e(iz) - bot 
+
+         IF(.NOT.l_upper) ez = conjg(ez)
 
          DO j = 1, ne
 
@@ -155,8 +156,8 @@ MODULE m_kkintgr
       !$OMP END PARALLEL
 
 
-   END SUBROUTINE kkintgr_complex
-
+   END SUBROUTINE kkintgr
+   
    !trapezoidal rule (more efficient than simpsons scheme in e.g intgz0
    ! for our peak-like functions)
    SUBROUTINE trapz(y,h,n,z)

@@ -44,7 +44,7 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE  :: de(:) !weights for integration
 
          !Arrays for Green's function
-         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:) 
+         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:,:) 
          !Off-diagonal elements for noco calculations
          COMPLEX, ALLOCATABLE :: gmmpMat21(:,:,:,:,:,:)
          !Arrays for intersite Greens-functions argument order (E,n,n',L,L',spin) n is the site index
@@ -191,7 +191,7 @@ MODULE m_types_greensf
                   ENDDO
                END IF
 
-               ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
                thisGREENSF%gmmpMat = CMPLX(0.0,0.0)
 
                !Allocate arrays for non-colinear part
@@ -380,16 +380,13 @@ MODULE m_types_greensf
                   DO mp = -l, l
                      DO i = 1, this%nz
                         IF(this%nr(i_gf).NE.1) THEN
+                           CALL intgr3(REAL(this%gmmpMat(:,i,i_gf,m,mp,ispin,1)-this%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
+                           CALL intgr3(AIMAG(this%gmmpMat(:,i,i_gf,m,mp,ispin,1)-this%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
 
-                           CALL intgr3(REAL(this%gmmpMat(:,i,i_gf,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
-                           CALL intgr3(AIMAG(this%gmmpMat(:,i,i_gf,m,mp,ispin)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
+                           n_tmp(m,mp) = n_tmp(m,mp) + (re+ImagUnit*imag)*this%de(i)
 
-                           n_tmp(m,mp) = n_tmp(m,mp) + AIMAG((re+ImagUnit*imag)*this%de(i))
-
-                        ELSE
-
-                           n_tmp(m,mp) = n_tmp(m,mp) + AIMAG(this%gmmpMat(1,i,i_gf,m,mp,ispin)*this%de(i))
-                        
+                        ELSE  
+                           n_tmp(m,mp) = n_tmp(m,mp) + 1/2.0 * AIMAG(this%gmmpMat(1,i,i_gf,m,mp,ispin,1)*this%de(i)-this%gmmpMat(1,i,i_gf,m,mp,ispin,2)*conjg(this%de(i)))
                         END IF
                      ENDDO
 
@@ -397,7 +394,7 @@ MODULE m_types_greensf
                   ENDDO
                ENDDO
                DO m = -l, l
-                  n_l = n_l - 1/pi_const * n_tmp(m,m)
+                  n_l = n_l -1/pi_const * n_tmp(m,m)
                ENDDO
             ENDDO
             WRITE(*,*) "OCCUPATION: ", n_l
