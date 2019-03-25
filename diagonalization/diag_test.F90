@@ -9,6 +9,7 @@ PROGRAM diag_test
   USE m_types_mpimat
   USE m_eigen_diag
   USE m_io_matrix
+  USE m_hdf_tools
   IMPLICIT NONE
 
   INTEGER            :: matsize,ne,mode,fid
@@ -20,13 +21,20 @@ PROGRAM diag_test
   REAL               :: t1,t2
 #ifdef CPP_MPI
   Include 'mpif.h'
+  CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,isize,err)
   CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
   IF (isize>1) THEN
      ALLOCATE(t_mpimat::hmat)
      ALLOCATE(t_mpimat::smat)
-     ALLOCATE(hmat%blacsdata)
-     smat%blacsdata=>hmat%blacsdata
-     hmat%blacsdata%mpi_comm=MPI_COMM_WORLD
+     SELECT TYPE(hmat)
+     TYPE is (t_mpimat)
+        ALLOCATE(hmat%blacsdata)
+        hmat%blacsdata%mpi_com=MPI_COMM_WORLD
+        SELECT TYPE(smat)
+        TYPE is (t_mpimat)
+           smat%blacsdata=>hmat%blacsdata
+        END SELECT
+     END SELECT
   END IF
 #endif
   IF (.NOT.ALLOCATED(hmat)) THEN
@@ -39,7 +47,7 @@ PROGRAM diag_test
   filename=judft_string_for_argument("-file")
   INQUIRE(file=trim(filename)//".hdf",exist=l_exist)
   IF (.NOT.l_exist) CALL judft_error("File specified does not exist")
-  
+  call hdf_init()  
 
   !l_real,matsize is actually only needed if file is created
   fid=open_matrix(l_real,matsize,2,2,trim(filename))
@@ -66,7 +74,7 @@ PROGRAM diag_test
   PRINT *,"No of eigenvalues:",ne
   PRINT *,eig(:ne)
 
-  PRINT *,"Time used:",t1-t2
+  PRINT *,"Time used:",t2-t1
 
   CALL close_matrix(fid)
 

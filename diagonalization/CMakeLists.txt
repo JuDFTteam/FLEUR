@@ -20,7 +20,7 @@ else()
  set(diag_test_files diagonalization/elpa.F90)
 endif()
 
-if (FLEUR_USE_HDF)	
+if (FLEUR_USE_HDF5)	
 set(diag_test_files ${diag_test_files}
 diagonalization/diag_test.F90
 diagonalization/eigen_diag.F90
@@ -43,9 +43,13 @@ io/iomatrix_hdf.F90
 )
 
 add_executable(diag_test ${diag_test_files})
-target_compile_definitions(diag_test PUBLIC ${FLEUR_DEFINITIONS})
 target_link_libraries(diag_test ${FLEUR_LIBRARIES})
 target_link_libraries(diag_test juDFT)
+if (FLEUR_USE_MPI)
+target_compile_definitions(diag_test PUBLIC ${FLEUR_MPI_DEFINITIONS})
+else()
+target_compile_definitions(diag_test PUBLIC ${FLEUR_DEFINITIONS})
+endif()
 set_target_properties(diag_test PROPERTIES Fortran_MODULE_DIRECTORY modules/diag_test COMPILE_OPTIONS -Imodules/diag_test RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools")
 
 endif()
