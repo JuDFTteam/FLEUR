@@ -60,11 +60,6 @@ MODULE m_judft_xmlOutput
 #endif
       INTEGER           :: numFlags
       INTEGER           :: nOMPThreads
-      CHARACTER(LEN=8)  :: date
-      CHARACTER(LEN=10) :: time
-      CHARACTER(LEN=10) :: zone
-      CHARACTER(LEN=10) :: dateString
-      CHARACTER(LEN=10) :: timeString
       CHARACTER(LEN=6)  :: precisionString
       CHARACTER(LEN=9)  :: flags(11)
       CHARACTER(LEN=20) :: structureSpecifiers(11)
@@ -81,9 +76,7 @@ MODULE m_judft_xmlOutput
       elementList = ''
       currentElementIndex = 0
       xmlOutputUnit = 53
-      CALL DATE_AND_TIME(date,time,zone)
-      WRITE(dateString,'(a4,a1,a2,a1,a2)') date(1:4),'/',date(5:6),'/',date(7:8)
-      WRITE(timeString,'(a2,a1,a2,a1,a2)') time(1:2),':',time(3:4),':',time(5:6)
+   
       IF (juDFT_was_argument("-info")) THEN
          OPEN (xmlOutputUnit,status='scratch')
       ELSE

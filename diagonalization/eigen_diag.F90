@@ -77,6 +77,7 @@ CONTAINS
     CASE default
        CALL judft_error("No solver available to diagonalize matrix")
     END SELECT
+    CALL timestop("Diagonalization")
 
   END SUBROUTINE eigen_diag
 

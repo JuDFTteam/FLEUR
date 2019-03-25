@@ -51,7 +51,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp
       CHARACTER(LEN=20) :: attributes(7)
       
-      CALL startxmloutput("out.xmL","FLEURoutput")
+      CALL startxmloutput("out.xml","FLEURoutput")
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
       CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host,compile_flags,link_flags)
       gitdescTemp = gitdesc
@@ -100,7 +100,10 @@ MODULE m_xmlOutput
                                    attributes(:1),reshape((/13,8/),(/1,2/)))
 #endif
       CALL closeXMLElement('parallelSetup')
-
+      
+      CALL DATE_AND_TIME(date,time,zone)
+      WRITE(dateString,'(a4,a1,a2,a1,a2)') date(1:4),'/',date(5:6),'/',date(7:8)
+      WRITE(timeString,'(a2,a1,a2,a1,a2)') time(1:2),':',time(3:4),':',time(5:6)
       CALL writeXMLElement('startDateAndTime',(/'date','time','zone'/),(/dateString,timeString,zone/))
     END SUBROUTINE startfleur_XMLOutput
 
