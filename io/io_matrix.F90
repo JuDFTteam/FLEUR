@@ -8,8 +8,8 @@ MODULE m_io_matrix
   USE m_types_mat
   USE m_types_mpimat
   USE m_judft
-  USE m_iomatrix_hdf
 #ifdef CPP_HDF
+  USE m_iomatrix_hdf
   USE hdf5
 #endif
   IMPLICIT NONE
@@ -17,7 +17,9 @@ MODULE m_io_matrix
   TYPE t_iomatrix_handle
      INTEGER:: mode=0 !can be 1 for DA or 2 for HDF
      INTEGER:: id !file ID in direct-access mode
+#ifdef CPP_HDF
      INTEGER(hid_t):: fid,did !file-handle in hdf mode
+#endif
   END TYPE t_iomatrix_handle
 
   TYPE(t_iomatrix_handle)::fh(10)
@@ -39,8 +41,12 @@ CONTAINS
        fh(open_matrix)%mode=1
        fh(OPEN_matrix)%id=open_DA(l_real,matsize,no_rec,filename)
     CASE(2)
+#ifdef CPP_HDF
        fh(open_matrix)%mode=2
        CALL iomatrix_hdf_open(l_real,matsize,no_rec,filename,fh(open_matrix)%fid,fh(open_matrix)%did)
+#else
+       CALL judft_error("You compiled without HDF5")
+#endif
     CASE default
        CALL judft_error("BUG in io_matrix")
     END SELECT
@@ -60,7 +66,11 @@ CONTAINS
           CALL judft_error("Matrix IO for parallel matrix only with HDF5")
        END SELECT  
     CASE(2)
+#ifdef CPP_HDF
        CALL iomatrix_hdf_read(mat,rec,fh(id)%did)
+#else
+       CALL judft_error("You compiled without HDF5")
+#endif
     CASE default
        CALL judft_error("BUG in io_matrix")
     END SELECT
@@ -79,7 +89,11 @@ CONTAINS
           CALL judft_error("Matrix IO for parallel matrix only with HDF5")
        END SELECT
     CASE(2)
+#ifdef CPP_HDF
        CALL iomatrix_hdf_write(mat,rec,fh(id)%did)
+#else
+       CALL judft_error("You compiled without HDF5")
+#endif
     CASE default
        CALL judft_error("BUG in io_matrix")
     END SELECT
@@ -91,7 +105,11 @@ CONTAINS
     CASE (1)
        CALL close_matrix_DA(fh(id)%id)
     CASE (2)
+#ifdef CPP_HDF
        CALL iomatrix_hdf_close(fh(id)%fid,fh(id)%did)
+#else
+       CALL judft_error("You compiled without HDF5")
+#endif
     CASE default
        CALL judft_error("BUG in io_matrix")
     END SELECT

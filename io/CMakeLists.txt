@@ -32,6 +32,9 @@ io/writeOutParameters.f90
 io/xsf_io.f90
 io/xmlIntWrapFort.f90
 io/xmlOutput.F90
-io/iomatrix_hdf.F90
 )
+if (FLEUR_USE_HDF)
+set(fleur_F90 ${fleur_F90}
+io/iomatrix_hdf.F90)
+endif()
 

@@ -21,7 +21,6 @@ CONTAINS
     INTEGER(hsize_t):: dims(4)
     INTEGER        :: err
     REAL,ALLOCATABLE :: dat(:,:,:,:)
-   
     SELECT TYPE(mat)
     TYPE is (t_mpimat)
        mpi_comm=mat%blacsdata%mpi_com !Only information used from mat intent(in)

@@ -20,6 +20,7 @@ else()
  set(diag_test_files diagonalization/elpa.F90)
 endif()
 
+if (FLEUR_USE_HDF)	
 set(diag_test_files ${diag_test_files}
 diagonalization/diag_test.F90
 diagonalization/eigen_diag.F90
@@ -47,3 +48,4 @@ target_link_libraries(diag_test ${FLEUR_LIBRARIES})
 target_link_libraries(diag_test juDFT)
 set_target_properties(diag_test PROPERTIES Fortran_MODULE_DIRECTORY modules/diag_test COMPILE_OPTIONS -Imodules/diag_test RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools")
 
+endif()
