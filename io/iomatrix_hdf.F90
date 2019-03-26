@@ -148,6 +148,7 @@ CONTAINS
     INTEGER         :: nprow,npcol,myrow,mycol,block_row,block_col,matsize,blacs_ctxt,err
     LOGICAL         :: ok
     !For readability get data from blacsdesc
+#ifdef CPP_MPI
     blacs_ctxt=blacsdesc(2)
     block_row=blacsdesc(5)
     block_col=blacsdesc(6)
@@ -171,5 +172,6 @@ CONTAINS
        CALL h5sselect_valid_f(sid,ok,err)
        IF (.NOT.ok) CALL judft_error("Writing of matrix failed, BUG in parallel HDF-IO")
     ENDIF
+#endif
   END SUBROUTINE priv_create_hyperslab_from_blacsdesc
 END MODULE m_iomatrix_hdf

@@ -10,14 +10,15 @@ set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${tmp}")
 
 include("cmake/CompilerConfig.txt")
 
-include("cmake/ReportConfig.txt")
 include("cmake/Generate_Schema.cmake")
 
 include("cmake/Files_and_Targets.txt")
 
 include("cmake/filespecific.cmake")
-
 include("cmake/hdf5-subproject.cmake")
+
+include("cmake/ReportConfig.txt")
+
 
 
 
