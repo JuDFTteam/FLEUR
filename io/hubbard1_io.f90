@@ -51,7 +51,7 @@ MODULE m_hubbard1_io
       
       WRITE(io_unit,"(A)") "#  Orbital quantum number"
       WRITE(io_unit,9010)  l
-9010  FORMAT(TR3,'LOrb',I4.1)
+9010  FORMAT(TR3,'Lorb',I4.1)
 
       WRITE(io_unit,"(A)") "#  Slater Integrals"
       SELECT CASE(l)
