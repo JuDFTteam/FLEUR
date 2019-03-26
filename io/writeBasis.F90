@@ -133,6 +133,13 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
     ALLOCATE (flo(atoms%jmtd,2,atoms%nlod))
 
 
+    !-------------------------write potential--------------------
+    IF(input%gw==1) THEN
+       CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot,vTot%pw_w)
+       CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul,vCoul%pw_w)
+       CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
+    END IF
+
 
       l_real=sym%invs.AND..NOT.noco%l_noco
 !     check if z-reflection trick can be used
@@ -434,6 +441,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
     version = 1
     filename = 'eig_gw.hdf'
 
+
     IF(input%gw==2) THEN
     INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
     IF(l_exist) THEN
@@ -630,10 +638,6 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
        CALL h5gclose_f(jspGroupID, hdfError)
    END DO
    CALL h5fclose_f(fileID, hdfError)  
-!-------------------------write potential--------------------
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot,vTot%pw_w)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul,vCoul%pw_w)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
 
    END IF
    

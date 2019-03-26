@@ -88,9 +88,12 @@ CONTAINS
       INTEGER(8)         :: r
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
-
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD,i,ierr)
-      IF (i.NE.0) RETURN
+      LOGICAL MPI_init
+      CALL MPI_INITALIZED(mpi_init,ierr)
+      IF (mpi_init) THEN
+         CALL MPI_COMM_RANK(MPI_COMM_WORLD,i,ierr)
+         IF (i.NE.0) RETURN
+      ENDIF
 #endif
 
 !#ifdef CPP_ALLOW_USAGE_DATA

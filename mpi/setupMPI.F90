@@ -12,7 +12,7 @@ CONTAINS
   SUBROUTINE setupMPI(nkpt,mpi)
 !$  use omp_lib
     USE m_types  
-    USE m_eigen_diag,ONLY:parallel_solver_available
+    USE m_available_solvers,ONLY:parallel_solver_available
     INTEGER,INTENT(in)           :: nkpt
     TYPE(t_mpi),INTENT(inout)    :: mpi
 
@@ -192,7 +192,7 @@ CONTAINS
   END SUBROUTINE priv_create_comm
 
   SUBROUTINE priv_dist_info(nkpt)
-    USE m_eigen_diag,ONLY:parallel_solver_available
+    USE m_available_solvers,ONLY:parallel_solver_available
     IMPLICIT NONE
     INTEGER,INTENT(in)           :: nkpt
 

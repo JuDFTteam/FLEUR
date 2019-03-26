@@ -10,7 +10,7 @@ MODULE m_juDFT_args
   PUBLIC judft_was_argument,juDFT_string_for_argument
 CONTAINS
   FUNCTION juDFT_was_argument(arg) RESULT(OK)
-    USE m_fleur_arguments
+    USE m_check_arguments
     IMPLICIT NONE
     CHARACTER(len=*),INTENT(IN)::arg
     LOGICAL ok

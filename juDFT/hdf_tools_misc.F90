@@ -301,8 +301,14 @@
 #ifdef CPP_HDFMPI
       INCLUDE 'mpif.h' 
       INTEGER::hdferr 
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, trans, hdferr) 
-      CALL h5pset_dxpl_mpio_f(trans,H5FD_MPIO_INDEPENDENT_F,hdferr) 
+      LOGICAL::l_mpi
+      CALL MPI_INITIALIZED(l_mpi,hdferr)
+      IF (l_mpi) THEN
+         CALL h5pcreate_f(H5P_DATASET_XFER_F, trans, hdferr) 
+         CALL h5pset_dxpl_mpio_f(trans,H5FD_MPIO_INDEPENDENT_F,hdferr)
+      ELSE
+         trans=H5P_DEFAULT_f 
+      ENDIF
 #else                                                                   
       trans=H5P_DEFAULT_f 
 #endif                                                                  
@@ -352,8 +358,12 @@
 #ifdef CPP_HDFMPI                                                          
       include 'mpif.h' 
       INTEGER             :: irank,nerr 
-      CALL MPI_COMM_rank(MPI_COMM_WORLD,irank,nerr) 
-      WRITE(pe,"(i4,a)") irank,":" 
+      LOGICAL             :: l_mpi
+      CALL MPI_INITIALIZED(l_mpi,nerr)
+      IF (l_mpi) THEN
+         CALL MPI_COMM_rank(MPI_COMM_WORLD,irank,nerr) 
+         WRITE(pe,"(i4,a)") irank,":" 
+      ENDIF
 #endif                                                                  
       n = 500 
       IF (err>=0) RETURN 

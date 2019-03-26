@@ -81,7 +81,7 @@ CONTAINS
       INTEGER ne,lh0
       INTEGER isp,i,j,err
       LOGICAL l_wu,l_file,l_real,l_zref
-
+      INTEGER :: solver=0
       ! Local Arrays
       INTEGER              :: ierr(3)
       INTEGER              :: neigBuffer(kpts%nkpt,input%jspins)
@@ -197,8 +197,8 @@ CONTAINS
                end select
             END IF
 
-            CALL eigen_diag(mpi,hmat,smat,nk,jsp,iter,ne_all,eig,zMat)
-            
+            CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
+              
             CALL smat%free()
             CALL hmat%free()
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)

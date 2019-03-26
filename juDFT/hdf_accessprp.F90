@@ -37,6 +37,8 @@ module m_hdf_accessprp
       character(len=128)::path
 #ifdef CPP_HDFMPI
       INCLUDE 'mpif.h'
+      LOGICAL :: l_mpi
+      CALL MPI_INITALIZED(l_mpi,ierr)
 #endif
 
       IF (.not.present(setupfile)) THEN
@@ -61,7 +63,11 @@ module m_hdf_accessprp
       readloop:DO
         filename="default"
 #ifdef CPP_HDFMPI
-        driver="mpiio"
+        IF (l_mpi) THEN
+           driver="mpiio"
+        ELSE
+           driver='default'
+        ENDIF
 #else
         driver="default"
 #endif
@@ -96,6 +102,7 @@ module m_hdf_accessprp
             cycle readloop
         ENDIF
 #ifdef CPP_HDFMPI
+        IF (l_mpi) THEN
         CALL MPI_BARRIER(MPI_COMM_WORLD,hdferr)
         IF (index(driver,"mpiio")==1) THEN
             !create info object
@@ -122,6 +129,7 @@ module m_hdf_accessprp
             if (alignment>0) CALL h5pset_alignment_f(access_prp(n), INT(0,hsize_t),alignment, hdferr)
             cycle readloop
         ENDIF
+     ENDIF
 #endif
         write(0,*) "Driver name unkown:",driver
         call judft_error("Unkown driver",calledby="gf_io2dmat")

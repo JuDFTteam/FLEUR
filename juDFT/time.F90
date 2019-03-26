@@ -12,11 +12,11 @@ MODULE m_juDFT_time
    !     called with suitable names for timers
    !     Daniel Wortmann, Fri Sep  6 11:53:08 2002
    !*****************************************************************
-   USE m_xmlOutput
+   USE m_judft_xmlOutput
    IMPLICIT NONE
    !     List of different timers
    PRIVATE
-   INTEGER, PARAMETER         :: max_subtimer = 5 ! blocks of subtimers are allocated in this size
+   INTEGER, PARAMETER        :: max_subtimer = 5 ! blocks of subtimers are allocated in this size
    REAL                      :: min_time = 0.02 ! minimal time to display in output (part of total)
    LOGICAL                   :: l_debug  !write out each start& stop of timer
    REAL                      :: debugtimestart = -1.0
@@ -95,10 +95,6 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL           :: line
 
       INTEGER::n
-#ifdef CPP_MPI
-      INTEGER::irank, ierr
-      INCLUDE 'mpif.h'
-#endif
       IF (PRESENT(file)) lastfile = file
       IF (PRESENT(line)) lastline = line
       IF (.NOT. ASSOCIATED(current_timer)) THEN
@@ -158,13 +154,19 @@ CONTAINS
       CHARACTER(LEN=*), INTENT(IN):: startstop, name
 #ifdef CPP_MPI
       INTEGER::irank, ierr
+      LOGICAL:: l_mpi
       INCLUDE 'mpif.h'
 #endif
       IF (.NOT. l_debug) RETURN
       if (debugtimestart < 0) debugtimestart = cputime()
 #ifdef CPP_MPI
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
-      WRITE (*, "(i3,3a,f20.2,5x,a)") irank, startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
+      CALL MPI_INITALIZED(l_mpi,ierr)
+      IF (l_mpi) THEN
+         CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
+         WRITE (*, "(i3,3a,f20.2,5x,a)") irank, startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
+      ELSE
+         WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
+      ENDIF
 #else
       WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
 #endif
@@ -348,55 +350,41 @@ CONTAINS
       USE m_judft_usage
       IMPLICIT NONE
       LOGICAL, INTENT(IN), OPTIONAL::stdout
-      INTEGER :: fn, irank = 0
-      LOGICAL :: l_out
+      INTEGER :: irank = 0
       CHARACTER(len=:), allocatable :: json_str
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
-      INTEGER::err, isize
-
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
+      INTEGER::err,isize
+      LOGICAL:: l_mpi
+      CALL mpi_initialized(l_mpi,err)
+      if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
       IF (.NOT. ASSOCIATED(globaltimer)) RETURN !write nothing if no timing recorded
-      l_out = .FALSE.
-      IF (PRESENT(stdout)) l_out = stdout
-      IF (l_out) THEN
-         fn = 6
-      ELSE
-         IF (irank > 0) RETURN
-         fn = 2
-         OPEN (2, FILE='juDFT_times', STATUS="replace")
-      ENDIF
-      globaltimer%time = cputime() - globaltimer%starttime
-      globaltimer%starttime = cputime()
-      WRITE (fn, "('Total execution time: ',i0,'sec')") INT(globaltimer%time)
-      CALL add_usage_data("Runtime", globaltimer%time)
-      CALL priv_writetimes_longest(globaltimer, fid=fn)
 
-      WRITE (fn, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
-         INT(globaltimer%time), INT(min_time*globaltimer%time)
+
+      IF (irank == 0) THEN
+         globaltimer%time = cputime() - globaltimer%starttime
+         globaltimer%starttime = cputime()
+         WRITE (6, "(//,'Total execution time: ',i0,'sec')") INT(globaltimer%time)
+         CALL add_usage_data("Runtime", globaltimer%time)
+         CALL priv_writetimes_longest(globaltimer, fid=6)
+
+         WRITE (6, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
+            INT(globaltimer%time), INT(min_time*globaltimer%time)
+
+         CALL priv_writetimes(globaltimer, 1, 6)
 #ifdef CPP_MPI
-      CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
-      WRITE (fn, *) "Program used ", isize, " PE"
+      IF (l_mpi) THEN
+         CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
+         WRITE (fn, *) "Program used ", isize, " PE"
+      ENDIF
 #endif
-      CALL priv_writetimes(globaltimer, 1, fn)
-
-      WRITE (fn, *)
-      WRITE (fn, *) "-------------------------------------------------"
-      WRITE (fn, *)
-      WRITE (fn, *) "Total timings:"
-      min_time = 0.0
-      CALL priv_writetimes(globaltimer, 1, fn)
-      FLUSH(fn)
-      IF (.NOT. l_out) CLOSE (2)
-
-      json_str = ""
-      call priv_genjson(globaltimer, 1, json_str)
-      open(32, file="juDFT_times.json")
-      write (32,"(A)") json_str
-      close(32)
-
-
+         json_str = ""
+         call priv_genjson(globaltimer, 1, json_str)
+         open(32, file="juDFT_times.json")
+         write (32,"(A)") json_str
+         close(32)
+      ENDIF
    END SUBROUTINE writetimes
 
    ! writes all times to out.xml file
@@ -410,8 +398,9 @@ CONTAINS
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
-
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
+      LOGICAL:: l_mpi
+      CALL mpi_initialized(l_mpi,err)
+      IF (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
 
       IF (irank .NE. 0) RETURN
@@ -486,7 +475,9 @@ CONTAINS
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
+      LOGICAL:: l_mpi
+      CALL mpi_initialized(l_mpi,err)
+      if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
 
       IF (.NOT. l_cont) RETURN !stop anyway
@@ -519,8 +510,9 @@ CONTAINS
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
-
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
+      LOGICAL:: l_mpi
+      CALL mpi_initialized(l_mpi,err)
+      if (l_mpi)  CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
       !Check if not enough time for another iteration is left
 
