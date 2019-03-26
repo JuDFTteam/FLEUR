@@ -71,29 +71,33 @@ MODULE m_hubbard1_io
       WRITE(io_unit,9050) bz 
 9050  FORMAT(TR3,'Bz',f15.8)
 
+      WRITE(io_unit,"(A)") "#  Inverse Temperature"
+      WRITE(io_unit,9060) beta
+9060  FORMAT(TR3,'beta',f8.3)
+
       WRITE(io_unit,"(A)") "#  Chemical potential"
-      WRITE(io_unit,9060) mu
-9060  FORMAT(TR3,'mu',f15.8)
+      WRITE(io_unit,9070) mu
+9070  FORMAT(TR3,'mu',f15.8)
 
       WRITE(io_unit,"(A)") "#**********************************************************",&
                            "#  Parameters for the Solver"                               ,&                   
                            "#**********************************************************"
       WRITE(io_unit,"(A)") "#  Minimum and maximum occupation of the orbital"
-      WRITE(io_unit,9070) n_min
-9070  FORMAT(TR3,'Nap_min',I4.1)
-      WRITE(io_unit,9080) n_max
-9080  FORMAT(TR3,'Nap_max',I4.1)
+      WRITE(io_unit,9080) n_min
+9080  FORMAT(TR3,'Nap_min',I4.1)
+      WRITE(io_unit,9090) n_max
+9090  FORMAT(TR3,'Nap_max',I4.1)
 
       WRITE(io_unit,"(A)") "#  Setting the solver to use the power lanczos method"
       WRITE(io_unit,"(TR3,A12)") "method_lancz"
 
       WRITE(io_unit,"(A)") "#  Number of iterations"
-      WRITE(io_unit,9090)  100
-9090  FORMAT(TR3,'N_lancz_iter',I4.1)
+      WRITE(io_unit,9100)  100
+9100  FORMAT(TR3,'N_lancz_iter',I4.1)
 
       WRITE(io_unit,"(A)") "#  Number of eigenstates calculated"
-      WRITE(io_unit,9100) 35
-9100  FORMAT(TR3,'N_lancz_states',I3.1)
+      WRITE(io_unit,9110) 35
+9110  FORMAT(TR3,'N_lancz_states',I3.1)
 
       WRITE(io_unit,"(A)") "#**********************************************************",&
                            "#  Parameters for the frequency/energy axis"                ,&                   
