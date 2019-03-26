@@ -69,7 +69,6 @@ MODULE m_types_greensf
          CONTAINS
             PROCEDURE, PASS :: init => greensf_init
             PROCEDURE       :: init_e_contour
-            PROCEDURE       :: calc_mmpmat
             PROCEDURE       :: index
       END TYPE t_greensf
 
@@ -339,68 +338,6 @@ MODULE m_types_greensf
 
 
       END SUBROUTINE init_e_contour
-
-      SUBROUTINE calc_mmpmat(this,atoms,sym,jspins,mmpMat)
-
-
-         !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
-
-         !The Greens-function should already be prepared on a energy contour ending at e_fermi
-
-         USE m_types_setup
-         USE m_constants
-         USE m_juDFT
-         USE m_intgr
-
-         IMPLICIT NONE
-
-         CLASS(t_greensf),       INTENT(IN)     :: this
-         TYPE(t_atoms),          INTENT(IN)     :: atoms
-         TYPE(t_sym),            INTENT(IN)     :: sym
-         COMPLEX,                INTENT(INOUT)  :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,this%n_gf),jspins)
-
-         INTEGER,                INTENT(IN)     :: jspins
-
-         INTEGER i, m,mp, l, i_gf, ispin, n, it,is, isi, natom, nn
-         REAL imag, re, fac, n_l
-         COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-         COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-
-
-         mmpMat(:,:,:,:) = CMPLX(0.0,0.0)
-         DO i_gf = 1, this%n_gf
-            n_l = 0.0
-            l = this%l_gf(i_gf)
-            n = this%atomType(i_gf) 
-
-
-            DO ispin = 1, jspins
-               n_tmp(:,:) = CMPLX(0.0,0.0)
-               DO m = -l, l
-                  DO mp = -l, l
-                     DO i = 1, this%nz
-                        IF(this%nr(i_gf).NE.1) THEN
-                           CALL intgr3(REAL(this%gmmpMat(:,i,i_gf,m,mp,ispin,1)-this%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
-                           CALL intgr3(AIMAG(this%gmmpMat(:,i,i_gf,m,mp,ispin,1)-this%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
-
-                           n_tmp(m,mp) = n_tmp(m,mp) + (re+ImagUnit*imag)*this%de(i)
-
-                        ELSE  
-                           n_tmp(m,mp) = n_tmp(m,mp) + 1/2.0 * AIMAG(this%gmmpMat(1,i,i_gf,m,mp,ispin,1)*this%de(i)-this%gmmpMat(1,i,i_gf,m,mp,ispin,2)*conjg(this%de(i)))
-                        END IF
-                     ENDDO
-
-                     mmpMat(m,mp,i_gf,ispin) = -1/pi_const * n_tmp(m,mp)
-                  ENDDO
-               ENDDO
-               DO m = -l, l
-                  n_l = n_l -1/pi_const * n_tmp(m,m)
-               ENDDO
-            ENDDO
-            WRITE(*,*) "OCCUPATION: ", n_l
-         ENDDO 
-
-      END SUBROUTINE calc_mmpmat
 
       SUBROUTINE index(this,l,n,ind)
 

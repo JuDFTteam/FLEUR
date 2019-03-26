@@ -125,7 +125,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,inden,v,mpi,results,DIMENSION,td,ud)
+      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,inden,v,mpi,results,DIMENSION,td,ud,iter)
 
       neigBuffer = 0
       results%neig = 0

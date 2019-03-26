@@ -1366,6 +1366,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ELSE
                l_hia = .false.
             ENDIF
+
             numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_U')
             IF(numberNodes.EQ.1) THEN
                l_U = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_U'))
@@ -1392,7 +1393,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   ldau_use(i) = 4
                ENDIF
             ENDIF 
-            IF(.NOT.l_U.AND.l_j0) ldau_use(i) = 5
+            IF(.NOT.l_hia.AND.l_j0) ldau_use(i) = 5
 
             IF(l_hia.AND.l_U) THEN!Only for testing
                ldau_use(i) = 6

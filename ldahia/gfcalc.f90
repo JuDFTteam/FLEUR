@@ -1,31 +1,34 @@
-MODULE m_eff_excinteraction
+MODULE m_gfcalc
 
    !------------------------------------------------------------------------------
    !
-   ! MODULE: m_eff_excinteraction
+   ! MODULE: m_gfcalc
    !
    !> @author
    !> Henning Janßen
    !
    ! DESCRIPTION: 
-   !>  This module calculates the effective exchange interaction from th onsite
-   !>  green's function according to Condens. Matter 26 (2014) 476003 EQ.1
+   !>  This module contains various subroutines calculating properties from the
+   !>  green's functions:
+   !>       -calculates the effective exchange interaction from the onsite
+   !>          green's function according to Condens. Matter 26 (2014) 476003 EQ.1
+   !>       -calculates the occuaption matrix 
    !
    ! REVISION HISTORY:
    ! February 2019 - Initial Version
    ! March    2019 - Changed calculation of the onsite exchange matrix
    !------------------------------------------------------------------------------
 
+
+   USE m_types
+   USE m_constants
+   USE m_juDFT
+
+   IMPLICIT NONE
+
    CONTAINS
 
    SUBROUTINE eff_excinteraction(gOnsite,atoms,input,j0,onsite_exc_split)
-
-      USE m_types
-      USE m_constants
-      USE m_juDFT
-      
-
-      IMPLICIT NONE
 
       TYPE(t_greensf),        INTENT(IN)  :: gOnsite
       TYPE(t_atoms),          INTENT(IN)  :: atoms
@@ -57,7 +60,7 @@ MODULE m_eff_excinteraction
          n = atoms%j0(i_j0)%atomType
          !Find the corresponding index of the onsite gf
          CALL gOnsite%index(l,n,i_gf)
-         IF(.true.) THEN
+         IF(l_matinv) THEN
             matsize = 2*l+1
             ALLOCATE(work(matsize))
             ALLOCATE(invup(matsize,matsize))
@@ -82,6 +85,7 @@ MODULE m_eff_excinteraction
                !---------------------------------------------
                !G^(up/down)^-1 = 1/2 * (G+^(up/down) + G-^(up/down))
                !---------------------------------------------
+               !TODO: Replace Matrix inversion with calls to tmat%inverse
                inv(1:matsize,1:matsize) = gOnsite%gmmpMat(1,iz,i_gf,-l:l,-l:l,1,1)
                CALL zgetrf(matsize,matsize,inv,matsize,ipiv,info)
                IF(info.NE.0) CALL judft_error("Failed to invert matrix: dpotrf failed.",calledby="eff_excinteraction")
@@ -133,6 +137,7 @@ MODULE m_eff_excinteraction
                   integrand(i) = integrand(i) + tmp(m,m)
                ENDDO
             ENDDO
+            WRITE(*,*) gOnsite%e(iz), gOnsite%de(iz),  1/2.0 * AIMAG(integrand(1)*gOnsite%de(iz)-integrand(2)*conjg(gOnsite%de(iz)))
             j0 = j0 + 1/2.0 * AIMAG(integrand(1)*gOnsite%de(iz)-integrand(2)*conjg(gOnsite%de(iz)))
          ENDDO
 
@@ -146,5 +151,59 @@ MODULE m_eff_excinteraction
       ENDDO
    END SUBROUTINE eff_excinteraction
 
+   SUBROUTINE occmtx(gOnsite,i_gf,atoms,sym,jspins,mmpMat)
 
-END MODULE m_eff_excinteraction
+      USE m_intgr
+
+      !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
+      !The Greens-function should already be prepared on a energy contour ending at e_fermi
+
+      IMPLICIT NONE
+
+      TYPE(t_greensf),        INTENT(IN)  :: gOnsite
+      TYPE(t_atoms),          INTENT(IN)  :: atoms
+      TYPE(t_sym),            INTENT(IN)  :: sym
+      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
+      INTEGER,                INTENT(IN)  :: i_gf
+      INTEGER,                INTENT(IN)  :: jspins
+
+      INTEGER i, m,mp, l, ispin, n, it,is, isi, natom, nn
+      REAL imag, re, fac, n_l
+      COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+
+
+      mmpMat(:,:,:) = CMPLX(0.0,0.0)
+      n_l = 0.0
+      l = gOnsite%l_gf(i_gf)
+      n = gOnsite%atomType(i_gf) 
+
+      DO ispin = 1, jspins
+         n_tmp(:,:) = CMPLX(0.0,0.0)
+         DO m = -l, l
+            DO mp = -l, l
+               DO i = 1, gOnsite%nz
+                  IF(gOnsite%nr(i_gf).NE.1) THEN
+                     CALL intgr3(REAL(gOnsite%gmmpMat(:,i,i_gf,m,mp,ispin,1)-gOnsite%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
+                     CALL intgr3(AIMAG(gOnsite%gmmpMat(:,i,i_gf,m,mp,ispin,1)-gOnsite%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
+
+                     n_tmp(m,mp) = n_tmp(m,mp) + (re+ImagUnit*imag)*gOnsite%de(i)
+
+                  ELSE  
+                     n_tmp(m,mp) = n_tmp(m,mp) + 1/2.0 * AIMAG(gOnsite%gmmpMat(1,i,i_gf,m,mp,ispin,1)*gOnsite%de(i)-gOnsite%gmmpMat(1,i,i_gf,m,mp,ispin,2)*conjg(gOnsite%de(i)))
+                  END IF
+               ENDDO
+
+               mmpMat(m,mp,ispin) = -1/pi_const * n_tmp(m,mp)
+            ENDDO
+         ENDDO
+         DO m = -l, l
+            n_l = n_l -1/pi_const * n_tmp(m,m)
+         ENDDO
+      ENDDO
+      WRITE(*,*) "OCCUPATION: ", n_l
+
+END SUBROUTINE occmtx
+
+
+END MODULE m_gfcalc

@@ -328,16 +328,16 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
    ENDDO
 
 
-   CALL gOnsite%calc_mmpmat(atoms,sym,jspins,mmpMat)
-
-   !write density matrix to file 
-
-   filename = "n_mmp_mat_g"
-
-   OPEN (69,file=TRIM(ADJUSTL(filename)),status='replace',form='formatted')
-   !WRITE (*,'(7f14.8)') mmpMat(:,:,:,:)
-   WRITE (69,'(14f10.6)') mmpMat(:,:,:,:)
-   CLOSE (69)
+   !CALL gOnsite%calc_mmpmat(atoms,sym,jspins,mmpMat)
+!
+   !!write density matrix to file 
+!
+   !filename = "n_mmp_mat_g"
+!
+   !OPEN (69,file=TRIM(ADJUSTL(filename)),status='replace',form='formatted')
+   !!WRITE (*,'(7f14.8)') mmpMat(:,:,:,:)
+   !WRITE (69,'(14f10.6)') mmpMat(:,:,:,:)
+   !CLOSE (69)
 
 
 END SUBROUTINE calc_onsite

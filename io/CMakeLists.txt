@@ -32,5 +32,6 @@ io/writeOutParameters.f90
 io/xsf_io.f90
 io/xmlIntWrapFort.f90
 io/xmlOutput.F90
+io/hubbard1_io.f90
 )
 

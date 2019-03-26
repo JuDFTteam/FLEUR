@@ -7,12 +7,13 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,inden,vTot,mpi,results,DIMENSION,td,ud)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,inden,vTot,mpi,results,DIMENSION,td,ud,iter)
     USE m_types
     USE m_usetup
     USE m_tlmplm_cholesky
     USE m_tlmplm_store
     USE m_spnorb
+    USE m_hubbard1_setup
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -28,15 +29,16 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT) :: vTot
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
+    INTEGER,INTENT(IN)           :: iter
 
     INTEGER:: jsp
 
     IF ((atoms%n_u.GT.0)) THEN
        CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
-    !IF((atoms%n_hia.GT.0)) THEN
-    !   CALL hia_setup(gOnsite,sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
-    !END IF
+    IF((atoms%n_hia.GT.0)) THEN
+      CALL hubbard1_setup(iter,atoms,sym,mpi,input,inDen,vTot,gOnsite,.true.)
+    END IF
 
     CALL timestart("tlmplm")
     CALL td%init(DIMENSION%lmplmd,DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),&

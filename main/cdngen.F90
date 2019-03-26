@@ -38,8 +38,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_Ekwritesl
    USE m_banddos_io
    USE m_unfold_band_kpts
-   USE m_eff_excinteraction
+   USE m_gfcalc
    USE m_onsite
+   USE m_hubbard1_io
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -106,6 +107,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
    CALL greensfCoeffs%init(input,3,atoms,kpts,noco,.true.,.false.)
+   WRITE(*,*) greensfCoeffs%sigma
    IF(gOnsite%n_gf.GT.0) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,results%ef,greensfCoeffs%sigma)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
@@ -122,14 +124,14 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 
-
+   WRITE(*,*) atoms%n_u, atoms%n_hia, atoms%n_j0
    IF(gOnsite%n_gf.GT.0) THEN
       CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,results%ef,sym,input%onsite_sphavg,onsite_excsplit)
       !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
       CALL write_onsite_gf("greenf.dat",gOnsite,1)
-      IF(atoms%n_j0.GT.0.AND.input%jspins.EQ.2) THEN
-         CALL eff_excinteraction(gOnsite,atoms,input,j0,onsite_excsplit)
-      ENDIF
+      !IF(atoms%n_j0.GT.0.AND.input%jspins.EQ.2) THEN
+      !   CALL eff_excinteraction(gOnsite,atoms,input,j0,onsite_excsplit)
+      !ENDIF
    END IF
 
 
