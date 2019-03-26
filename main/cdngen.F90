@@ -128,7 +128,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(gOnsite%n_gf.GT.0) THEN
       CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,results%ef,sym,input%onsite_sphavg,onsite_excsplit)
       !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
-      CALL write_onsite_gf("greenf.dat",gOnsite,1)
+      !CALL write_onsite_gf("greenf.dat",gOnsite,1)
       !IF(atoms%n_j0.GT.0.AND.input%jspins.EQ.2) THEN
       !   CALL eff_excinteraction(gOnsite,atoms,input,j0,onsite_excsplit)
       !ENDIF

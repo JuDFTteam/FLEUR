@@ -34,7 +34,7 @@ MODULE m_hubbard1_setup
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins)
       REAL     n_l(input%jspins)
 
-      beta = 500.0
+      beta = 10.0
       !Check wether the hubbard 1 solver was run for this iteration
       !Then there should be a occupation matrix file tagged with the current iteration
       IF(ANY(inDen%mmpMat(atoms%n_u+1:atoms%n_hia+atoms%n_u,:,:,:).NE.0.0)) THEN
@@ -84,7 +84,7 @@ MODULE m_hubbard1_setup
             n_occ = ANINT(n_l(1)+n_l(2))
 
             CALL write_hubbard1_input(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
-                                       0.02,-0.00015,MAX(1,n_occ-2),MIN(2*(2*l+1),n_occ+2),beta,mu)
+                                       0.16,-0.00015,MAX(1,n_occ-2),MIN(2*(2*l+1),n_occ+2),beta,mu)
             !There has to be a better solution
             !Maybe use CALL System() to start the solver from here
             !EXPERIMENTAL:
@@ -95,6 +95,7 @@ MODULE m_hubbard1_setup
                CALL SYSTEM("/home/henning/GIT/hub2new4sp/selfen")
                CALL SYSTEM("/home/henning/GIT/hub2new4sp/angmom")    
             ELSE
+               !If we do this we need to write out the green's function in some form
                CALL juDFT_error("The input configurations for the hubbard 1 solver have been written: Please execute the solver now",calledby="hubbard1_setup")
             ENDIF
          ENDDO
