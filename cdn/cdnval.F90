@@ -135,6 +135,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end))
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
+   ALLOCATE(tetweights(greensfCoeffs%ne,dimension%neigd))
+   ALLOCATE(tet_ind(dimension%neigd,2))
 
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
@@ -181,13 +183,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    ALLOCATE (we(MAXVAL(cdnvalJob%noccbd(:))))
    ALLOCATE (eig(MAXVAL(cdnvalJob%noccbd(:))))
    jsp = MERGE(1,jspin,noco%l_noco)
-
-   IF(greensfCoeffs%n_gf.GT.0) THEN
-      IF(greensfCoeffs%l_tetra) THEN
-         ALLOCATE(tetweights(greensfCoeffs%ne,dimension%neigd))
-         ALLOCATE(tet_ind(dimension%neigd,2))
-      ENDIF
-   END IF
 
    DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement
 
@@ -256,7 +251,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                CALL timestop("OnSite: TetWeights")
             ENDIF
             CALL timestart("On-Site: Setup")
-               CALL onsite_coeffs(atoms,sym,ispin,input%jspins,noccbd,tetweights(:,:),tet_ind(:,:),kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs,input%onsite_sphavg)
+               CALL onsite_coeffs(atoms,sym,ispin,input%jspins,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs,input%onsite_sphavg)
             CALL timestop("On-Site: Setup")
          ENDIF
 

@@ -33,8 +33,8 @@ MODULE m_tetra_weights
       REAL,                   INTENT(IN)     :: ef
 
       !Local Scalars
-      INTEGER icorn, itet, ib, j, k, l, nstart,corn_ind
-      REAL    weight,dweight,tol,tmp,max_ib
+      INTEGER icorn, itet, ib, j, k, l, nstart,corn_ind,max_ib
+      REAL    weight,dweight,tol,tmp
       LOGICAL l_bloechl
 
       !Local Arrays

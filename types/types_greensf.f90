@@ -124,8 +124,9 @@ MODULE m_types_greensf
             IF(thisGREENSF%mode.EQ.1) THEN
                thisGREENSF%nz = input%onsite_nz
             ELSE IF(thisGREENSF%mode.EQ.2) THEN
+               !We want a power of 2 as number of points
                n = LOG(REAL(input%onsite_nz))/LOG(2.0)
-               IF(MOD(n,1.0).GT.tol) THEN
+               IF(n.NE.AINT(n)) THEN
                   WRITE(*,*) "This mode for the energy contour uses 2^n number of points."
                   WRITE(*,*) "Setting nz = ", 2**AINT(n) 
                END IF

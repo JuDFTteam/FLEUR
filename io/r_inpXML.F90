@@ -1454,10 +1454,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                DO i = 1, numU
                   IF(ldau_use(i).LE.2.AND.ldau_use(i).GT.0) THEN
                      atoms%n_u = atoms%n_u + 1
-                     atoms%lda_u(atoms%n_u)%l = ldau_l(i)
-                     atoms%lda_u(atoms%n_u)%u = ldau_u(i)
-                     atoms%lda_u(atoms%n_u)%j = ldau_j(i)
-                     atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
+                     atoms%lda_u(atoms%n_u)%l        = ldau_l(i)
+                     atoms%lda_u(atoms%n_u)%u        = ldau_u(i)
+                     atoms%lda_u(atoms%n_u)%j        = ldau_j(i)
+                     atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
                      atoms%lda_u(atoms%n_u)%atomType = iType
                      IF(ldau_use(i).EQ.2) THEN
                         IF(input%jspins.EQ.2) THEN
@@ -1477,7 +1477,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
                      atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
                      atoms%lda_hia(atoms%n_hia)%j        = ldau_j(i)
-                     atoms%lda_u(atoms%n_u)%l_amf        = l_amf(i)
+                     atoms%lda_hia(atoms%n_hia)%l_amf    = l_amf(i)
                      atoms%lda_hia(atoms%n_hia)%atomType = iType
                      IF(ldau_use(i).EQ.4) THEN
                         IF(input%jspins.EQ.2) THEN
@@ -1501,10 +1501,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      ENDIF 
                   ELSE IF(ldau_use(i).EQ.6) THEN
                      atoms%n_u = atoms%n_u + 1
-                     atoms%lda_u(atoms%n_u)%l = ldau_l(i)
-                     atoms%lda_u(atoms%n_u)%u = ldau_u(i)
-                     atoms%lda_u(atoms%n_u)%j = ldau_j(i)
-                     atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
+                     atoms%lda_u(atoms%n_u)%l        = ldau_l(i)
+                     atoms%lda_u(atoms%n_u)%u        = ldau_u(i)
+                     atoms%lda_u(atoms%n_u)%j        = ldau_j(i)
+                     atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
                      atoms%lda_u(atoms%n_u)%atomType = iType
                      
                      input%l_gf = .true. 
@@ -1512,7 +1512,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
                      atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
                      atoms%lda_hia(atoms%n_hia)%j        = ldau_j(i)
-                     atoms%lda_u(atoms%n_u)%l_amf        = l_amf(i)
+                     atoms%lda_hia(atoms%n_hia)%l_amf    = l_amf(i)
                      atoms%lda_hia(atoms%n_hia)%atomType = iType
                   ELSE
                      CALL juDFT_error("Invalid use for U-Parameters", hint="This is a bug in FLEUR, please report")

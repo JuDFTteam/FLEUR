@@ -478,7 +478,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
    !If we are in the magnetic case we want to calculate the effectiv exchange interaction j0 from the Gf
    !For that we can use the difference in the center of gravity of the up and down bands
    !This is calculated here
-   cut = 2600
+   cut = kkintgr_cut
    IF(jspins.EQ.2) THEN
       fDOS(:,1) = fDOS(:,1)-fDOS(:,2)
       !multiply fDOS(E)*E

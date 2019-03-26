@@ -124,7 +124,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 
-   WRITE(*,*) atoms%n_u, atoms%n_hia, atoms%n_j0
+
    IF(gOnsite%n_gf.GT.0) THEN
       CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,results%ef,sym,input%onsite_sphavg,onsite_excsplit)
       !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
