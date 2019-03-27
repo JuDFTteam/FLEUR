@@ -145,13 +145,12 @@
           !Many of these can probably be eliminated
           input%onsite_ne = 1301 !same as for dos calculations
           input%onsite_sigma = 0.0
-          input%onsite_tetra = .false.
           input%onsite_sphavg = .true.
           input%onsite_mode = 2
           input%onsite_nz = 32
           input%l_gf = .false.
           atoms%n_hia = 0
-          atoms%n_j0 = 0
+          atoms%n_gf = 0
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1

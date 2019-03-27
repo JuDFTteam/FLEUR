@@ -111,7 +111,7 @@
 !
 ! search for operations which leave taual invariant
 !
-               IF (input%l_f.OR.(atoms%n_u+atoms%n_hia+atoms%n_j0.GT.0)) THEN 
+               IF (input%l_f.OR.(atoms%n_u+atoms%n_gf.GT.0)) THEN 
                   DO j3 = -2,2
                      sr(3) = gaminv(3) + real(j3)
                      DO j2 = -2,2

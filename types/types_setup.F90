@@ -67,6 +67,12 @@ MODULE m_types_setup
       LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
    END TYPE t_utype
 
+   TYPE t_onsitegftype
+      SEQUENCE
+      INTEGER l        ! the l quantum number to which this U parameter belongs
+      INTEGER atomType ! The atom type to which this U parameter belongs
+   END TYPE t_onsitegftype
+
    !
    ! Type for the electric field
    !
@@ -86,8 +92,8 @@ MODULE m_types_setup
       INTEGER ::n_u
       ! no of lda+hias 
       INTEGER ::n_hia
-      ! no of j0 calculations
-      INTEGER ::n_j0
+      ! no of greens function calculations (includes n_hia)
+      INTEGER ::n_gf
       ! dimensions
       INTEGER :: jmtd
       !No of element
@@ -166,7 +172,7 @@ MODULE m_types_setup
       !lda+hia information
       TYPE(t_utype),ALLOCATABLE::lda_hia(:)
       !j0 calc information
-      TYPE(t_utype), ALLOCATABLE::j0(:)
+      TYPE(t_onsitegftype), ALLOCATABLE::onsiteGF(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
    CONTAINS

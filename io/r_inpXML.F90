@@ -118,7 +118,7 @@ CONTAINS
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
-      INTEGER            :: ldau_l(4), numVac, numU, ldau_use(4)
+      INTEGER            :: ldau_l(4), onsiteGF_l(4), numVac, numU, numOnsite
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -128,7 +128,7 @@ CONTAINS
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
       REAL               :: weightScale, eParamUp, eParamDown
-      LOGICAL            :: l_amf(4), l_hia,l_j0,l_U
+      LOGICAL            :: l_amf(4), l_hia(4),l_found
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
@@ -221,7 +221,7 @@ CONTAINS
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%lda_hia(4*atoms%ntype))
-      ALLOCATE(atoms%j0(4*atoms%ntype))
+      ALLOCATE(atoms%onsiteGF(4*atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%neq(atoms%ntype))
@@ -719,19 +719,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          xPathA = '/fleurInput/calculationSetup/onsiteGF/@nz'
          numberNodes = xmlGetNumberOfNodes(xPathA)
          IF(numberNodes.EQ.1) input%onsite_nz = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
-
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@l_tetra'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_tetra = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
       
          xPathA = '/fleurInput/calculationSetup/onsiteGF/@l_sphavg'
          numberNodes = xmlGetNumberOfNodes(xPathA)
          IF(numberNodes.EQ.1) input%onsite_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
       END IF
-      
-      IF((input%onsite_tetra).AND.(.NOT.input%tria)) THEN
-         CALL juDFT_error("Tetrahedron method not set up with this k-point-set but l_tetra is true", calledby="r_inpXML")
-      ENDIF
 
       IF(input%onsite_mode.GT.2) CALL juDFT_error("No valid mode for the energy contour of Green's function", calledby="r_inpXML")
 
@@ -1310,7 +1302,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       atoms%lapw_l(:) = -1
       atoms%n_u = 0
       atoms%n_hia = 0
-      atoms%n_j0 = 0
+      atoms%n_gf = 0
 
       DEALLOCATE(noel)
       ALLOCATE(noel(atoms%ntype))
@@ -1338,21 +1330,14 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
          END IF
 
-         !ldau_use determines what these u parameters are going to be used for
-         !It is determined from l_hia and l_j0 and l_u
-         !  1 -> LDA+U
-         !  2 -> LDA+U and calculation of J0
-         !  3 -> LDA+HIA 
-         !  4 -> LDA+HIA and calculation of J0
-         !  5 -> only calculate j0 (necessary)
-
+         !The LdaUType is used to define both LDA+U and LDA+Hubbard1 (determined by the switch l_hubbard1)
          numU = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
          IF (numU.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
          ldau_l = -1
          ldau_u = 0.0
          ldau_j = 0.0
          l_amf = .FALSE.
-         ldau_use = -1
+         l_hia = .FALSE.
          DO i = 1, numU
             WRITE(xPathB,*) i
             ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l'))
@@ -1360,46 +1345,21 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@J'))
             l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
 
-            numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_hia')
+            numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_hubbard1')
             IF(numberNodes.EQ.1) THEN
-               l_hia = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_hia'))
-            ELSE
-               l_hia = .false.
+               l_hia(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_hubbard1'))
             ENDIF
-
-            numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_U')
-            IF(numberNodes.EQ.1) THEN
-               l_U = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_U'))
-            ELSE
-               l_U = .NOT.l_hia
-            ENDIF
-
-            numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_j0')
-            IF(numberNodes.EQ.1) THEN
-               l_j0 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_j0'))
-            ELSE
-               l_j0 = l_hia
-            ENDIF
-            IF(.NOT.l_hia) THEN
-               IF(.NOT.l_j0) THEN
-                  ldau_use(i) = 1
-               ELSE
-                  ldau_use(i) = 2
-               ENDIF
-            ELSE 
-               IF(.NOT.l_j0) THEN
-                  ldau_use(i) = 3
-               ELSE
-                  ldau_use(i) = 4
-               ENDIF
-            ENDIF 
-            IF(.NOT.l_hia.AND.l_j0) ldau_use(i) = 5
-
-            IF(l_hia.AND.l_U) THEN!Only for testing
-               ldau_use(i) = 6
-               !CALL juDFT_error("LDA+U and LDA+HIA on the same orbital is not allowed", calledby="r_inpXML")
-            END IF 
          ENDDO
+         
+         !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
+         numOnsite = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/onsiteGF')
+         IF (numOnsite.GT.4) CALL juDFT_error("Too many l parameters for onsite GF provided for a certain species (maximum is 4).",calledby ="r_inpXML")
+         onsiteGF_l = -1
+         DO i = 1, numOnsite
+            WRITE(xPathB,*) i
+            onsiteGF_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/onsiteGF['//TRIM(ADJUSTL(xPathB))//']/@l'))
+         ENDDO
+
 
          speciesNLO(iSpecies) = 0
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/lo'
@@ -1452,71 +1412,39 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                ENDIF
                atoms%bmu(iType) = magMom
                DO i = 1, numU
-                  IF(ldau_use(i).LE.2.AND.ldau_use(i).GT.0) THEN
-                     atoms%n_u = atoms%n_u + 1
-                     atoms%lda_u(atoms%n_u)%l        = ldau_l(i)
-                     atoms%lda_u(atoms%n_u)%u        = ldau_u(i)
-                     atoms%lda_u(atoms%n_u)%j        = ldau_j(i)
-                     atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
-                     atoms%lda_u(atoms%n_u)%atomType = iType
-                     IF(ldau_use(i).EQ.2) THEN
-                        IF(input%jspins.EQ.2) THEN
-                           input%l_gf = .true. 
-                           atoms%n_j0 = atoms%n_j0 + 1
-                           atoms%j0(atoms%n_j0)%l        = ldau_l(i)
-                           atoms%j0(atoms%n_j0)%u        = ldau_u(i)
-                           atoms%j0(atoms%n_j0)%j        = ldau_j(i)
-                           atoms%j0(atoms%n_j0)%atomType = iType
-                        ELSE
-                           CALL juDFT_warn("No J0 calculation for non-magnetic systems", calledby="r_inpXML")
-                        ENDIF 
-                     ENDIF
-                  ELSE IF(ldau_use(i).LE.4.AND.ldau_use(i).GT.0) THEN
+                  IF(l_hia(i)) THEN
                      input%l_gf = .true. 
                      atoms%n_hia = atoms%n_hia + 1
-                     atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
-                     atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
-                     atoms%lda_hia(atoms%n_hia)%j        = ldau_j(i)
-                     atoms%lda_hia(atoms%n_hia)%l_amf    = l_amf(i)
-                     atoms%lda_hia(atoms%n_hia)%atomType = iType
-                     IF(ldau_use(i).EQ.4) THEN
-                        IF(input%jspins.EQ.2) THEN
-                           atoms%n_j0 = atoms%n_j0 + 1
-                           atoms%j0(atoms%n_j0)%l        = ldau_l(i)
-                           atoms%j0(atoms%n_j0)%u        = ldau_u(i)
-                           atoms%j0(atoms%n_j0)%j        = ldau_j(i)
-                           atoms%j0(atoms%n_j0)%atomType = iType
-                        END IF
-                     END IF 
-                  ELSE IF(ldau_use(i).EQ.5) THEN
-                     IF(input%jspins.EQ.2) THEN
-                        input%l_gf = .true. 
-                        atoms%n_j0 = atoms%n_j0 + 1
-                        atoms%j0(atoms%n_j0)%l        = ldau_l(i)
-                        atoms%j0(atoms%n_j0)%u        = ldau_u(i)
-                        atoms%j0(atoms%n_j0)%j        = ldau_j(i)
-                        atoms%j0(atoms%n_j0)%atomType = iType
-                     ELSE
-                        CALL juDFT_warn("No J0 calculation for non-magnetic systems", calledby="r_inpXML")
-                     ENDIF 
-                  ELSE IF(ldau_use(i).EQ.6) THEN
-                     atoms%n_u = atoms%n_u + 1
-                     atoms%lda_u(atoms%n_u)%l        = ldau_l(i)
-                     atoms%lda_u(atoms%n_u)%u        = ldau_u(i)
-                     atoms%lda_u(atoms%n_u)%j        = ldau_j(i)
-                     atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
-                     atoms%lda_u(atoms%n_u)%atomType = iType
-                     
-                     input%l_gf = .true. 
-                     atoms%n_hia = atoms%n_hia + 1
+                     atoms%n_gf = atoms%n_gf + 1
+                     atoms%onsiteGF(atoms%n_gf)%l = onsiteGF_l(i)
+                     atoms%onsiteGF(atoms%n_gf)%atomType = iType
                      atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
                      atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
                      atoms%lda_hia(atoms%n_hia)%j        = ldau_j(i)
                      atoms%lda_hia(atoms%n_hia)%l_amf    = l_amf(i)
                      atoms%lda_hia(atoms%n_hia)%atomType = iType
                   ELSE
-                     CALL juDFT_error("Invalid use for U-Parameters", hint="This is a bug in FLEUR, please report")
-                  END IF 
+                     atoms%n_u = atoms%n_u + 1
+                     atoms%lda_u(atoms%n_u)%l        = ldau_l(i)
+                     atoms%lda_u(atoms%n_u)%u        = ldau_u(i)
+                     atoms%lda_u(atoms%n_u)%j        = ldau_j(i)
+                     atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
+                     atoms%lda_u(atoms%n_u)%atomType = iType
+                  ENDIF   
+               ENDDO
+               DO i = 1, numOnsite
+                  !Is the green's function already being calculated
+                  l_found = .false.
+                  DO j = 1, atoms%n_gf
+                     IF(atoms%onsiteGF(j)%l.EQ.onsiteGF_l(i).AND.atoms%onsiteGF(j)%atomType.EQ.iType) THEN 
+                        l_found = .true.
+                     ENDIF
+                  ENDDO
+                  IF(l_found) CYCLE
+                  input%l_gf = .true. 
+                  atoms%n_gf = atoms%n_gf + 1
+                  atoms%onsiteGF(atoms%n_gf)%l = onsiteGF_l(i)
+                  atoms%onsiteGF(atoms%n_gf)%atomType = iType
                ENDDO
                atomTypeSpecies(iType) = iSpecies
                IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType

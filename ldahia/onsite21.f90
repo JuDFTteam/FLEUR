@@ -55,9 +55,9 @@ MODULE m_onsite21
       IF(.NOT.input%onsite_sphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of&
                                                    onsite-GF not implemented",calledby="onsite21")
 
-      DO i_gf = 1, greensfCoeffs%n_gf
-         n = greensfCoeffs%atomType(i_gf)
-         l = greensfCoeffs%l_gf(i_gf)
+      DO i_gf = 1, atoms%n_gf
+         n = atoms%onsiteGF(i_gf)%atomType
+         l = atoms%onsiteGF(i_gf)%l
 
          natom = SUM(atoms%neq(:n-1))
          DO nn = 1, atoms%neq(n)
@@ -107,21 +107,22 @@ MODULE m_onsite21
 
    END SUBROUTINE onsite21
 
-   SUBROUTINE rot_gf_mat(noco,greensfCoeffs)
+   SUBROUTINE rot_gf_mat(atoms,noco,greensfCoeffs)
 
       USE m_types
       USE m_rotdenmat
 
       IMPLICIT NONE
        
+      TYPE(t_atoms),          INTENT(IN)     :: atoms
       TYPE(t_noco),           INTENT(IN)     :: noco
       TYPE(t_greensfCoeffs),  INTENT(INOUT)  :: greensfCoeffs
 
       INTEGER  i_gf,n,l,m,mp,j
 
-      DO i_gf = 1, greensfCoeffs%n_gf
-         n = greensfCoeffs%atomType(i_gf)
-         l = greensfCoeffs%l_gf(i_gf)
+      DO i_gf = 1, atoms%n_gf
+         n = atoms%onsiteGF(i_gf)%atomType
+         l = atoms%onsiteGF(i_gf)%l
 
          DO m = -l, l 
             DO mp = -l, l 

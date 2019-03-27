@@ -60,9 +60,9 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
    tol = 1E-14
 
    !Loop through the gf elements to be calculated
-   DO i_gf = 1, greensfCoeffs%n_gf
-      l = greensfCoeffs%l_gf(i_gf)
-      n = greensfCoeffs%atomType(i_gf)
+   DO i_gf = 1, atoms%n_gf
+      l = atoms%onsiteGF(i_gf)%l
+      n = atoms%onsiteGF(i_gf)%atomType
 
       !finding the right starting index
       natom = SUM(atoms%neq(:n-1))
@@ -247,7 +247,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
    REAL, ALLOCATABLE :: e(:)
 
    COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
-   ALLOCATE(mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,greensfCoeffs%n_gf,jspins))
+   ALLOCATE(mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,jspins))
 
    ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
    ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
@@ -264,9 +264,9 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
 
    ALLOCATE( im(MAXVAL(gOnsite%nr(:)),greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins) )
 
-   DO i_gf = 1, greensfCoeffs%n_gf
-      l = greensfCoeffs%l_gf(i_gf)
-      n = greensfCoeffs%atomType(i_gf)
+   DO i_gf = 1, atoms%n_gf
+      l = atoms%onsiteGF(i_gf)%l
+      n = atoms%onsiteGF(i_gf)%atomType
 
       im = 0.0
       DO jspin = 1, jspins

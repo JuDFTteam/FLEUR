@@ -68,7 +68,7 @@ MODULE m_hubbard1_setup
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
             
             !calculate the occupation of the correlated shell
-            CALL gOnsite%index(l,n,i_gf)
+            CALL indexgf(atoms,l,n,i_gf)
             CALL occmtx(gOnsite,i_gf,atoms,sym,input%jspins,mmpMat)
             n_l = 0.0
             DO ispin = 1, input%jspins
@@ -142,6 +142,29 @@ MODULE m_hubbard1_setup
 9010  FORMAT(TR3,A4,TR1,A7,TR3,A7,TR3,A9,TR3,A5)
 9020  FORMAT(TR7,f8.4,TR2,f8.4,TR2,f8.4,TR4,f8.4)
 9030  FORMAT(TR3,"mu = ",f7.4)
+   END SUBROUTINE
+
+   SUBROUTINE indexgf(atoms,l,n,ind)
+
+      !Find the index of the greens function associated with this l,n 
+
+      USE m_juDFT
+      USE m_types
+
+      !Finds the corresponding entry in gmmpMat for given atomType and l
+
+      TYPE(t_atoms),       INTENT(IN)  :: atoms
+      INTEGER,             INTENT(IN)  :: l,n
+      INTEGER,             INTENT(OUT) :: ind
+
+      ind = 0
+      DO 
+         ind = ind + 1
+         IF(atoms%onsiteGF(ind)%atomType.EQ.n.AND.atoms%onsiteGF(ind)%l.EQ.l) THEN
+            EXIT
+         ENDIF
+         IF(ind.EQ.atoms%n_gf) CALL juDFT_error("Green's function element not found", hint="This is a bug in FLEUR, please report")
+      ENDDO
    END SUBROUTINE
 
 END MODULE m_hubbard1_setup

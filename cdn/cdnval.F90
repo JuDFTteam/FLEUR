@@ -243,8 +243,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          !Shouldn't this be ispin??
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
-         IF (greensfCoeffs%n_gf.GT.0) THEN
-            IF(greensfCoeffs%l_tetra) THEN
+         IF (atoms%n_gf.GT.0) THEN
+            IF(input%tria) THEN
                CALL timestart("OnSite: TetWeights")
                tetweights = 0.0
                CALL tetra_weights(ikpt,kpts,results%neig(:,ispin),results%eig(:,:,ispin),greensfCoeffs,tetweights(:,:),tet_ind(:,:),results%ef)

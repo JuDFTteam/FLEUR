@@ -19,10 +19,9 @@ MODULE m_gfcalc
    ! March    2019 - Changed calculation of the onsite exchange matrix
    !------------------------------------------------------------------------------
 
-
+   USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_juDFT
 
    IMPLICIT NONE
 
@@ -37,7 +36,7 @@ MODULE m_gfcalc
       REAL,                   INTENT(IN)  :: onsite_exc_split
 
       COMPLEX tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),integrand(2)
-      INTEGER i_j0,iz,m,l,mp,ispin,n,i_gf,matsize,i
+      INTEGER iz,m,l,mp,ispin,n,i_gf,matsize,i
       LOGICAL l_matinv
 
 
@@ -54,12 +53,10 @@ MODULE m_gfcalc
 
       l_matinv = .true. !Determines how the onsite exchange splitting is calculated
       
-      DO i_j0 = 1, atoms%n_j0
+      DO i_gf = 1, atoms%n_gf
          j0 = 0.0
-         l = atoms%j0(i_j0)%l
-         n = atoms%j0(i_j0)%atomType
-         !Find the corresponding index of the onsite gf
-         CALL gOnsite%index(l,n,i_gf)
+         l = atoms%onsiteGF(i_gf)%l
+         n = atoms%onsiteGF(i_gf)%atomType
          IF(l_matinv) THEN
             matsize = 2*l+1
             ALLOCATE(work(matsize))
@@ -175,8 +172,8 @@ MODULE m_gfcalc
 
       mmpMat(:,:,:) = CMPLX(0.0,0.0)
       n_l = 0.0
-      l = gOnsite%l_gf(i_gf)
-      n = gOnsite%atomType(i_gf) 
+      l = atoms%onsiteGF(i_gf)%l
+      n = atoms%onsiteGF(i_gf)%atomType 
 
       DO ispin = 1, jspins
          n_tmp(:,:) = CMPLX(0.0,0.0)

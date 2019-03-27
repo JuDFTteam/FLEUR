@@ -28,12 +28,8 @@ MODULE m_types_greensf
       TYPE t_greensf
 
          LOGICAL  :: l_onsite !This switch determines wether we look at a intersite or an onsite gf
-         INTEGER, ALLOCATABLE :: nr(:) !dimension(thisGREENSF%n_gf) number of radial points
+         INTEGER, ALLOCATABLE :: nr(:) !dimension(atoms%n_gf) number of radial points
                                        !in case of spherical average nr(:) = 1
-         !we store the atom types and l's for which to calculate the onsite gf to make it easier to reuse in other circumstances
-         INTEGER  :: n_gf
-         INTEGER, ALLOCATABLE :: atomType(:)
-         INTEGER, ALLOCATABLE :: l_gf(:)
 
          !Energy contour parameters
          INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
@@ -69,7 +65,6 @@ MODULE m_types_greensf
          CONTAINS
             PROCEDURE, PASS :: init => greensf_init
             PROCEDURE       :: init_e_contour
-            PROCEDURE       :: index
       END TYPE t_greensf
 
 
@@ -107,11 +102,6 @@ MODULE m_types_greensf
          !
          !Set up general parameters for the Green's function (intersite and onsite)
          !
-         !Determine for which types and l's to calculate the onsite gf
-         ALLOCATE(thisGREENSF%atomType(MAX(1,atoms%n_hia+atoms%n_j0)))
-         ALLOCATE(thisGREENSF%l_gf(MAX(1,atoms%n_hia+atoms%n_j0)))
-         thisGREENSF%atomType(:) = 0
-         thisGREENSF%l_gf(:) = 0
          !
          !Setting up parameters for the energy contour
          !
@@ -148,55 +138,24 @@ MODULE m_types_greensf
 
 
          IF(thisGREENSF%l_onsite) THEN
-            !
-            !In the case of an onsite gf we look at the case l=l' and r=r' on one site
-            !
-            thisGREENSF%n_gf = 0
-            !DFT+HIA:
-            DO i = 1, atoms%n_hia
-
-               thisGREENSF%n_gf = thisGREENSF%n_gf + 1
-               thisGREENSF%atomType(thisGREENSF%n_gf) =  atoms%lda_hia(i)%atomType
-               thisGREENSF%l_gf(thisGREENSF%n_gf)     =  atoms%lda_hia(i)%l
-
-            ENDDO
-
-            !Effective exchange interaction:
-            DO i = 1, atoms%n_j0
-               !Avoid double calculations:
-               l_new = .true.
-               DO j = 1, thisGREENSF%n_gf
-                  IF(thisGREENSF%atomType(j).EQ.atoms%j0(i)%atomType.AND.thisGREENSF%l_gf(j).EQ.atoms%j0(i)%l) THEN
-                     l_new = .false.
-                     EXIT
-                  ENDIF
-               ENDDO
-
-               IF(l_new) THEN
-                  thisGREENSF%n_gf = thisGREENSF%n_gf + 1
-                  thisGREENSF%atomType(thisGREENSF%n_gf) =  atoms%j0(i)%atomType
-                  thisGREENSF%l_gf(thisGREENSF%n_gf)     =  atoms%j0(i)%l
-               ENDIF 
-            ENDDO
-
-            IF(thisGREENSF%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
+            IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
                !Set number of radial points
-               ALLOCATE(thisGREENSF%nr(MAX(1,thisGREENSF%n_gf)))
+               ALLOCATE(thisGREENSF%nr(MAX(1,atoms%n_gf)))
 
                IF(input%onsite_sphavg) THEN
                   thisGREENSF%nr(:) = 1
                ELSE
-                  DO i = 1, thisGREENSF%n_gf 
-                     thisGREENSF%nr(i) = atoms%jri(thisGREENSF%atomType(i))
+                  DO i = 1, atoms%n_gf
+                     thisGREENSF%nr(i) = atoms%jri(atoms%onsiteGF(i)%atomType)
                   ENDDO
                END IF
 
-               ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
+               ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
                thisGREENSF%gmmpMat = CMPLX(0.0,0.0)
 
                !Allocate arrays for non-colinear part
                IF(noco%l_mperp) THEN
-                  ALLOCATE (thisGREENSF%gmmpMat21(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,thisGREENSF%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  ALLOCATE (thisGREENSF%gmmpMat21(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
                   thisGREENSF%gmmpMat21 = CMPLX(0.0,0.0)
                ENDIF
             ENDIF
@@ -339,25 +298,5 @@ MODULE m_types_greensf
 
 
       END SUBROUTINE init_e_contour
-
-      SUBROUTINE index(this,l,n,ind)
-
-         USE m_juDFT
-
-         !Finds the corresponding entry in gmmpMat for given atomType and l
-
-         CLASS(t_greensf),    INTENT(IN)  :: this
-         INTEGER,             INTENT(IN)  :: l,n
-         INTEGER,             INTENT(OUT) :: ind
-
-         ind = 0
-         DO 
-            ind = ind + 1
-            IF(this%atomType(ind).EQ.n.AND.this%l_gf(ind).EQ.l) THEN
-               EXIT
-            ENDIF
-            IF(ind.EQ.this%n_gf) CALL juDFT_error("Green's function element not found", hint="This is a bug in FLEUR, please report")
-         ENDDO
-      END SUBROUTINE
 
 END MODULE m_types_greensf

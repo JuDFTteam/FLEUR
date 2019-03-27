@@ -39,11 +39,6 @@ MODULE m_types_greensfCoeffs
      
          LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration
 
-         !we store the atom types and l's for which to calculate the onsite gf to make it easier to reuse in other circumstances
-         INTEGER  :: n_gf
-         INTEGER, ALLOCATABLE :: atomType(:)
-         INTEGER, ALLOCATABLE :: l_gf(:)
-
          !Array declarations
          REAL, ALLOCATABLE :: im_g(:,:,:,:,:)
 
@@ -115,58 +110,25 @@ MODULE m_types_greensfCoeffs
          ENDIF
 
          thisGREENSFCOEFFS%sigma    = input%onsite_sigma
-         thisGREENSFCOEFFS%l_tetra  = input%onsite_tetra
+         thisGREENSFCOEFFS%l_tetra  = input%tria
 
          !set up energy grid for imaginary part
          thisGREENSFCOEFFS%del      = (thisGREENSFCOEFFS%e_top-thisGREENSFCOEFFS%e_bot)/REAL(thisGREENSFCOEFFS%ne-1)
-
-         !Determine for which types and l's to calculate the onsite gf
-         ALLOCATE(thisGREENSFCOEFFS%atomType(MAX(1,atoms%n_hia+atoms%n_j0)))
-         ALLOCATE(thisGREENSFCOEFFS%l_gf(MAX(1,atoms%n_hia+atoms%n_j0)))
-         thisGREENSFCOEFFS%atomType(:) = 0
-         thisGREENSFCOEFFS%l_gf(:) = 0
 
          IF(thisGREENSFCOEFFS%l_onsite) THEN
             !
             !In the case of an onsite gf we look at the case l=l' and r=r' on one site
             !
-            thisGREENSFCOEFFS%n_gf = 0
-            !DFT+HIA:
-            DO i = 1, atoms%n_hia
 
-               thisGREENSFCOEFFS%n_gf = thisGREENSFCOEFFS%n_gf + 1
-               thisGREENSFCOEFFS%atomType(thisGREENSFCOEFFS%n_gf) =  atoms%lda_hia(i)%atomType
-               thisGREENSFCOEFFS%l_gf(thisGREENSFCOEFFS%n_gf)     =  atoms%lda_hia(i)%l
-
-            ENDDO
-
-            !Effective exchange interaction:
-            DO i = 1, atoms%n_j0
-               !Avoid double calculations:
-               l_new = .true.
-               DO j = 1, thisGREENSFCOEFFS%n_gf
-                  IF(thisGREENSFCOEFFS%atomType(j).EQ.atoms%j0(i)%atomType.AND.thisGREENSFCOEFFS%l_gf(j).EQ.atoms%j0(i)%l) THEN
-                     l_new = .false.
-                     EXIT
-                  ENDIF
-               ENDDO
-
-               IF(l_new) THEN
-                  thisGREENSFCOEFFS%n_gf = thisGREENSFCOEFFS%n_gf + 1
-                  thisGREENSFCOEFFS%atomType(thisGREENSFCOEFFS%n_gf) =  atoms%j0(i)%atomType
-                  thisGREENSFCOEFFS%l_gf(thisGREENSFCOEFFS%n_gf)     =  atoms%j0(i)%l
-               ENDIF 
-            ENDDO
-
-            IF(thisGREENSFCOEFFS%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
+            IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
 
                IF(input%onsite_sphavg) THEN
-                  ALLOCATE (thisGREENSFCOEFFS%im_g(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  ALLOCATE (thisGREENSFCOEFFS%im_g(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
                   thisGREENSFCOEFFS%im_g     = 0.0
                ELSE
-                  ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-                  ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-                  ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
                   
                   thisGREENSFCOEFFS%uu      = 0.0
                   thisGREENSFCOEFFS%dd      = 0.0
@@ -176,16 +138,16 @@ MODULE m_types_greensfCoeffs
                !Allocate arrays for non-colinear part
                IF(noco%l_mperp) THEN
                   IF(.NOT.input%onsite_sphavg) THEN 
-                     ALLOCATE (thisGREENSFCOEFFS%uu21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-                     ALLOCATE (thisGREENSFCOEFFS%dd21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-                     ALLOCATE (thisGREENSFCOEFFS%du21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+                     ALLOCATE (thisGREENSFCOEFFS%uu21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+                     ALLOCATE (thisGREENSFCOEFFS%dd21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+                     ALLOCATE (thisGREENSFCOEFFS%du21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
                     
                      thisGREENSFCOEFFS%uu21    = 0.0
                      thisGREENSFCOEFFS%dd21    = 0.0
                      thisGREENSFCOEFFS%du21    = 0.0
                   ENDIF
 
-                  ALLOCATE (thisGREENSFCOEFFS%im_g21(thisGREENSFCOEFFS%ne,MAX(1,thisGREENSFCOEFFS%n_gf),&
+                  ALLOCATE (thisGREENSFCOEFFS%im_g21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),&
                                                             -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
                   thisGREENSFCOEFFS%im_g21  = 0.0
                ENDIF
