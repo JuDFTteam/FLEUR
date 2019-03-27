@@ -23,7 +23,7 @@ if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
        set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -CB -traceback -O0 -g -ftrapuv -check uninit -check pointers -DCPP_DEBUG")
    endif()
 elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
-   set(FLEUR_PRECISION_OPTION "-Mr8 -Mr8intrinsics")
+   set(FLEUR_PRECISION_OPTION "-Mr8;-Mr8intrinsics")
    message("PGI Fortran detected")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake
    #CPU   
