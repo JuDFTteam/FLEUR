@@ -25,7 +25,7 @@ CONTAINS
 #include"cpp_double.h"
     USE m_juDFT
     USE m_types_mpimat
-    USE m_types
+    USE m_types_mat
     IMPLICIT NONE
     CLASS(t_mat),INTENT(INOUT)    :: hmat,smat
     CLASS(t_mat),ALLOCATABLE,INTENT(OUT)::ev

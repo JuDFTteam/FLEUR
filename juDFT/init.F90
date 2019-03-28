@@ -47,9 +47,14 @@
 #ifdef CPP_MPI
       include "mpif.h"
       INTEGER:: irank,ierr
-
-      CALL MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
-      WRITE(0,*) "Signal ",signal," detected on PE:",irank
+      LOGICAL:: mpi_init
+      CALL MPI_initialized(mpi_init,ierr)
+      IF (mpi_init) THEN
+         CALL MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
+         WRITE(0,*) "Signal ",signal," detected on PE:",irank
+      ELSE
+         WRITE(0,*) "Signal detected:",signal
+      END IF
 #else
       WRITE(0,*) "Signal detected:",signal
 #endif
@@ -62,7 +67,7 @@
       CALL writetimes()
       CALL PRINT_memory_info(0,.true.)
 #ifdef CPP_MPI
-      CALL MPI_ABORT(MPI_COMM_WORLD,ierr)
+      IF (mpi_init) CALL MPI_ABORT(MPI_COMM_WORLD,ierr)
 #endif      
       STOP "Signal"
       intel_signal_handler=0

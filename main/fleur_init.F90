@@ -28,7 +28,7 @@
           USE m_setupMPI
           USE m_cdn_io
           USE m_fleur_info
-          USE m_broyd_io
+          USE m_mixing_history
           USE m_checks
           USE m_prpqfftmap
           USE m_writeOutHeader
@@ -117,7 +117,7 @@
           input%gw_neigd          =  0
           !-t3e
           IF (mpi%irank.EQ.0) THEN
-             CALL startXMLOutput()
+             CALL startFleur_XMLOutput()
              IF (judft_was_argument("-info")) THEN
                   CLOSE(6)
                   OPEN (6,status='SCRATCH')
@@ -531,7 +531,7 @@
           CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN
-             IF(input%gw.NE.0) CALL resetBroydenHistory()
+             IF(input%gw.NE.0) CALL mixing_history_reset(mpi)
              CALL setStartingDensity(noco%l_noco)
           END IF
 

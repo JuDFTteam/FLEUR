@@ -4,7 +4,8 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_cusolver_diag
-  USE m_types
+  USE m_types_mat
+  USE m_types_mpimat
   USE m_judft
 #ifdef CPP_GPU  
   USE m_types_gpumat
@@ -39,7 +40,6 @@ MODULE m_cusolver_diag
 CONTAINS
   SUBROUTINE cusolver_diag(hmat,smat,ne,eig,zmat)
     !Simple driver to solve Generalized Eigenvalue Problem using CuSolverDN
-    USE m_types
     IMPLICIT NONE
     CLASS(t_mat),INTENT(INOUT) :: hmat,smat
     INTEGER,INTENT(INOUT)      :: ne

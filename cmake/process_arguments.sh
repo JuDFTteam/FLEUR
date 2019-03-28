@@ -22,6 +22,7 @@ do
 	-magma) shift; CLI_USE_MAGMA=$1;;
 	-gpu) shift; CLI_USE_GPU=$1;;
 	-chase) shift; CLI_USE_CHASE=$1;;
+        -libxc) shift; CLI_USE_LIBXC=$1;;
 	-link) shift; CLI_LIBRARIES=$1;;
 	-libdir) shift; CLI_LIBDIR="$CLI_LIBDIR $1";;
 	-flags) shift; CLI_FLAGS=$1;;
@@ -81,10 +82,11 @@ General options:
   -cmake_opts # : additional options for cmake can be specified here directly
  
 Command line options to switch on/off features. These options overwrite the results of 
-the test and might lead to the configuration to fail.
+the test and might lead to the configuration to fail. 
   -hdf5    [TRUE|FALSE] : use HDF5 library
   -wannier [TRUE|FALSE] : use Wannier90 library
   -mpi     [TRUE|FALSE] : compile the MPI parallel version
+  -libxc   [TRUE|FALSE] : use libxc library
 
 Command line option to compile external libraries:
   -external # : download and compile external libraries before building FLEUR

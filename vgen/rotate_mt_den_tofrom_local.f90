@@ -26,14 +26,15 @@ CONTAINS
     REAL    :: rhotot,rho_up,rho_down,theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
     REAL    :: eps=1E-10
-    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd
-    ALLOCATE(ch(nsp,4),den%theta_mt(nsp,atoms%ntype),den%phi_mt(nsp,atoms%ntype))
-    nsp=nsp/atoms%jmtd
+    nsp=atoms%nsp()
+    ALLOCATE(ch(nsp*atoms%jmtd,4),&
+             den%theta_mt(nsp*atoms%jmtd,atoms%ntype),&
+             den%phi_mt(nsp*atoms%jmtd,atoms%ntype))
     CALL xcpot%init("vwn",.FALSE.,1)
 
-    CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
+    CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot,4,atoms,sphhar,den%mt(:,0:,n,:),nsp,n,grad,ch)
+       CALL mt_to_grid(xcpot,4,atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
     
           rho_11  = ch(imesh,1)
@@ -80,7 +81,7 @@ CONTAINS
           den%phi_mt(imesh,n) = phi
        ENDDO
        den%mt(:,0:,n,:)=0.0
-       CALL mt_from_grid(atoms,sphhar,nsp,n,2,ch,den%mt(:,0:,n,:))
+       CALL mt_from_grid(atoms,sphhar,n,2,ch,den%mt(:,0:,n,:))
        DO i=1,atoms%jri(n)
           den%mt(i,:,n,:)=den%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO
@@ -104,14 +105,13 @@ CONTAINS
     REAL    :: theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
     
-    nsp=(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd
-    ALLOCATE(ch(nsp,4))
-    nsp=nsp/atoms%jmtd
+    nsp=atoms%nsp()
+    ALLOCATE(ch(nsp*atoms%jmtd,4))
     CALL xcpot%init("vwn",.FALSE.,1)
 
-    CALL init_mt_grid(nsp,4,atoms,sphhar,xcpot,sym)
+    CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot,4,atoms,sphhar,vtot%mt(:,0:,n,:),nsp,n,grad,ch)
+       CALL mt_to_grid(xcpot,4,atoms,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
           vup   = ch(imesh,1)
           vdown = ch(imesh,2)
@@ -125,7 +125,7 @@ CONTAINS
           ch(imesh,4) = beff*SIN(theta)*SIN(phi)
        ENDDO
        vtot%mt(:,0:,n,:)=0.0
-       CALL mt_from_grid(atoms,sphhar,nsp,n,4,ch,vtot%mt(:,0:,n,:))
+       CALL mt_from_grid(atoms,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
        DO i=1,atoms%jri(n)
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO

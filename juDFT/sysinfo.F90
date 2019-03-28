@@ -23,9 +23,15 @@ CONTAINS
     LOGICAL,INTENT(IN),OPTIONAL :: maxmem
     CHARACTER(LEN=1024):: line
     INTEGER            :: err,irank
+    LOGICAL :: l_mpi=.FALSE.
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
+    CALL mpi_initialized(l_mpi,err)
+    IF (l_mpi) THEN
+       CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,err)
+    ELSE
+       irank=0
+    ENDIF
 #else
     irank=0
 #endif
@@ -80,7 +86,7 @@ CONTAINS
   SUBROUTINE checkstack()
     CHARACTER(LEN=10):: l1,l2,l3,l4
     INTEGER          :: err
-    LOGICAL          :: unlimited
+    LOGICAL          :: unlimited,l_mpi
 #ifdef CPP_MPI
     include 'mpif.h'
     INTEGER:: ierr,irank
@@ -97,7 +103,9 @@ CONTAINS
     ENDDO
 999 CLOSE(99,IOSTAT=err)
 #ifdef CPP_MPI
-    CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
+    CALL mpi_initialized(l_mpi,ierr)
+    irank=0
+    if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
     IF (irank.NE.0) THEN
        IF (.NOT.unlimited) WRITE(*,*)"Warning, stacksize limited at PE:",irank
        RETURN

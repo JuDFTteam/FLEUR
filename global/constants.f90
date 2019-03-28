@@ -21,12 +21,13 @@ MODULE m_constants
    REAL,             PARAMETER :: eVac0Default_const = -0.25
    CHARACTER(len=9), PARAMETER :: version_const = 'fleur 27'
 
-   INTEGER,          PARAMETER :: POTDEN_TYPE_OTHER   =    0 ! POTDEN_TYPE <= 0 ==> undefined
-   INTEGER,          PARAMETER :: POTDEN_TYPE_POTTOT  =    1 ! 0 < POTDEN_TYPE <= 1000 ==> potential
-   INTEGER,          PARAMETER :: POTDEN_TYPE_POTCOUL =    2
-   INTEGER,          PARAMETER :: POTDEN_TYPE_POTX    =    3
-   INTEGER,          PARAMETER :: POTDEN_TYPE_POTYUK  =    4
-   INTEGER,          PARAMETER :: POTDEN_TYPE_DEN     = 1001 ! 1000 < POTDEN_TYPE ==> density
+   INTEGER, PARAMETER :: POTDEN_TYPE_OTHER     = 0    ! POTDEN_TYPE <= 0 ==> undefined
+   INTEGER, PARAMETER :: POTDEN_TYPE_POTTOT    = 1    ! 0 < POTDEN_TYPE <= 1000 ==> potential
+   INTEGER, PARAMETER :: POTDEN_TYPE_POTCOUL   = 2
+   INTEGER, PARAMETER :: POTDEN_TYPE_POTX      = 3
+   INTEGER, PARAMETER :: POTDEN_TYPE_POTYUK    = 4
+   INTEGER, PARAMETER :: POTDEN_TYPE_EnergyDen = 5
+   INTEGER, PARAMETER :: POTDEN_TYPE_DEN       = 1001 ! 1000 < POTDEN_TYPE ==> density
 
    CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&
         'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',&
@@ -65,21 +66,23 @@ MODULE m_constants
    CONTAINS
 
    REAL PURE FUNCTION pimach()
-   !  This subprogram supplies the value of the constant PI correct to
-   !  machine precision where
+      IMPLICIT NONE
+      !  This subprogram supplies the value of the constant PI correct to
+      !  machine precision where
 
-   !  PI=3.1415926535897932384626433832795028841971693993751058209749446
+      !  PI=3.1415926535897932384626433832795028841971693993751058209749446
 
-   pimach = 3.1415926535897932
+      pimach = 3.1415926535897932
    END FUNCTION pimach
 
    REAL ELEMENTAL FUNCTION c_light(fac)
-   !  This subprogram supplies the value of c according to
-   !  NIST standard 13.1.99 
-   !  Hartree and Rydbergs changed by fac = 1.0 or 2.0
+      IMPLICIT NONE
+      !  This subprogram supplies the value of c according to
+      !  NIST standard 13.1.99 
+      !  Hartree and Rydbergs changed by fac = 1.0 or 2.0
 
-   REAL, INTENT (IN) :: fac
-   c_light = 137.0359895e0 * fac 
+      REAL, INTENT (IN) :: fac
+      c_light = 137.0359895e0 * fac 
    END FUNCTION c_light
 
 END MODULE m_constants

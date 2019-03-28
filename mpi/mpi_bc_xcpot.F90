@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mpi_bc_xcpot
+  use m_judft
 CONTAINS
   SUBROUTINE mpi_bc_xcpot(xcpot,mpi)
     USE m_types

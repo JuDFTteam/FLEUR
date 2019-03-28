@@ -26,7 +26,7 @@ CONTAINS
 #include"cpp_double.h"
     USE m_juDFT
     USE m_types_mpimat
-    USE m_types
+    USE m_types_mat
 #ifdef CPP_ELPA  
     USE elpa1
 #ifdef CPP_ELPA2

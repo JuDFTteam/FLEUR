@@ -101,11 +101,14 @@ then
     echo "set(CLI_FLEUR_USE_GPU $CLI_USE_GPU)"  >>config.cmake
 fi
 
+if [ "$CLI_USE_LIBXC" ]
+then
+    echo "set(CLI_FLEUR_USE_LIBXC $CLI_USE_LIBXC)"  >>config.cmake
+fi
+
 if [ "$CLI_USE_SERIAL" ]
 then
-    echo "set(FLEUR_USE_SERIAL $CLI_USE_SERIAL)"  >>config.cmake
-else
-    echo "set(FLEUR_USE_SERIAL TRUE)"  >>config.cmake
+    echo "set(CLI_FLEUR_USE_SERIAL $CLI_USE_SERIAL)"  >>config.cmake
 fi
 
 if [ "$CLI_ELPA_OPENMP" ]

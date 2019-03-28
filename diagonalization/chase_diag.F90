@@ -90,7 +90,7 @@ CONTAINS
 #ifdef CPP_CHASE
     SUBROUTINE init_chase(mpi,DIMENSION,input,atoms,kpts,noco,l_real)
     USE m_types_mpimat
-    USE m_types
+    USE m_types_setup
     USE m_types_mpi
     USE m_judft
     USE m_eig66_io
@@ -125,8 +125,8 @@ CONTAINS
 #endif
   
    SUBROUTINE chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
-     USE m_types_mpimat
-    USE m_types
+    USE m_types_mpimat
+    USE m_types_mat
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
@@ -164,7 +164,7 @@ CONTAINS
 #ifdef CPP_CHASE  
   SUBROUTINE chase_diag_noMPI(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
 
-    USE m_types
+    USE m_types_mat
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
@@ -312,7 +312,7 @@ CONTAINS
 
   SUBROUTINE chase_diag_MPI(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
     use m_types_mpimat
-    USE m_types
+    USE m_types_mat
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
@@ -455,6 +455,7 @@ CONTAINS
 
   SUBROUTINE priv_init_chasempimat(hmat,mat,nev,nex)
     USE m_types_mpimat
+    USE m_types_mat
     IMPLICIT NONE
     TYPE(t_mpimat),INTENT(INOUT)::hmat,mat
     INTEGER,INTENT(IN)          :: nev,nex

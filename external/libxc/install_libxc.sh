@@ -1,5 +1,5 @@
 libxc_version=4.2.1
-if [ ! -d libxc-${libxc_version} ]
+if [ ! -d libxc-${libxc_version}_${FC} ]
 then
     #Get the file with the code
     curl --connect-timeout 10 -LO "https://github.com/MRedies/libxc-mirror/raw/master/libxc-${libxc_version}.tar.gz"
@@ -10,13 +10,14 @@ then
     fi
 
     tar xzf libxc-${libxc_version}.tar.gz
-    cd libxc-${libxc_version}
+    mv libxc-${libxc_version} libxc-${libxc_version}_${FC}
+    cd libxc-${libxc_version}_${FC}
     #Compile&test (This will take a while)
     ./configure --prefix=$PWD/INSTALL_DIR
     make -j
     make install
 else
-    cd libxc-${libxc_version}
+    cd libxc-${libxc_version}_${FC}
 fi
 #Store the installation location
 FLEUR_LIBDIR="$PWD/INSTALL_DIR/lib $FLEUR_LIBDIR"

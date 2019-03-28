@@ -330,6 +330,14 @@ CONTAINS
          input%imix = 5
       CASE ('Anderson')
          input%imix = 7
+      CASE ("Pulay")
+         input%imix = 9
+      CASE ("pPulay")
+         input%imix = 11
+      CASE ("rPulay")
+         input%imix = 13
+      CASE ("aPulay")
+         input%imix = 15
       CASE DEFAULT
          STOP 'Error: unknown mixing scheme selected!'
       END SELECT
@@ -1778,7 +1786,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ALLOCATE(t_forcetheo_mae::forcetheo)
             SELECT TYPE(forcetheo)
             TYPE IS(t_forcetheo_mae) !this is ok, we just allocated the type...
-               CALL forcetheo%init(lString,nString)
+               CALL forcetheo%init(cell,sym,lString,nString)
             END SELECT
          ENDIF
          !spin-spiral dispersion

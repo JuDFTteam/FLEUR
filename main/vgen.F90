@@ -66,9 +66,10 @@ CONTAINS
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
 #else
-      ALLOCATE( vTot%pw_w(size(vTot%pw,1),size(vTot%pw,2)) )
+      ALLOCATE( vTot%pw_w(size(vTot%pw,1),size(vTot%pw,2)))
 #endif
-      ALLOCATE(vCoul%pw_w(SIZE(den%pw,1),1))
+      ALLOCATE(vCoul%pw_w(SIZE(vCoul%pw,1),size(vCoul%pw,2)))
+      vCoul%pw_w = CMPLX(0.0,0.0)
 
       CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
 
