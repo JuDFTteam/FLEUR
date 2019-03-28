@@ -10,7 +10,7 @@ endif()
 set(JUDFT_USE_MPI ${FLEUR_USE_MPI} CACHE BOOL "Compile with MPI, will also work in serial")
 set(JUDFT_USE_HDF5 ${FLEUR_USE_HDF5} CACHE BOOL "Compile with HDF5")
 if (DEFINED FLEUR_USE_HDF5MPI)
-set(JUDFT_USE_HDF5MPI FLEUR_USE_HDF5MPI CACHE BOOL"Is the HDF5 version able to do parallel IO" )
+set(JUDFT_USE_HDF5MPI FLEUR_USE_HDF5MPI CACHE BOOL "Is the HDF5 version able to do parallel IO" )
 endif()
 #In addition you might want to set
 set(JUDFT_COMPILEOPTS ${FLEUR_PRECISION_OPTION})
