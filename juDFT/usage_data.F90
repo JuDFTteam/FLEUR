@@ -89,7 +89,7 @@ CONTAINS
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
       LOGICAL MPI_init
-      CALL MPI_INITALIZED(mpi_init,ierr)
+      CALL MPI_INITIALIZED(mpi_init,ierr)
       IF (mpi_init) THEN
          CALL MPI_COMM_RANK(MPI_COMM_WORLD,i,ierr)
          IF (i.NE.0) RETURN
