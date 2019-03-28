@@ -6,6 +6,7 @@
 
 module m_hdf_accessprp
     USE hdf5
+    USE m_judft_stop
     implicit none
     private
     !the hdf-access-properties
