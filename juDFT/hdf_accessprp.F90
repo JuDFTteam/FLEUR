@@ -6,7 +6,6 @@
 
 module m_hdf_accessprp
     USE hdf5
-#include "juDFT_env.h"
     implicit none
     private
     !the hdf-access-properties
@@ -42,13 +41,11 @@ module m_hdf_accessprp
 #endif
 
       IF (.not.present(setupfile)) THEN
-         CPP_juDFT_timestart_debug("generating access prp")
          n_access_prp=1
          call priv_generate_access_prp("default")
          call getenv("HOME",path)
          call priv_generate_access_prp(trim(path)//"/.gf_hdf")
          call priv_generate_access_prp("gf_hdf")
-         CPP_juDFT_timestop_debug("generating access prp")
          return
       ENDIF
 
@@ -143,7 +140,6 @@ module m_hdf_accessprp
       character(len=*),intent(in) :: filename
       INTEGER(hid_t)          :: hdf_access_prp
       INTEGER                 :: n
-      CPP_juDFT_timestart_debug("getting access prp")
       !if this is the first attempt to get an access_prp, generate them
       if (n_access_prp==0) CALL priv_generate_access_prp()
       hdf_access_prp=access_prp(1)
@@ -153,7 +149,6 @@ module m_hdf_accessprp
                   write(6,*) "Assigned:",n," to ", filename
           ENDIF
       ENDDO
-      CPP_juDFT_timestop_debug("getting access prp")
       END function
 
 end module m_hdf_accessprp

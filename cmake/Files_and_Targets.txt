@@ -72,7 +72,7 @@ set_source_files_properties(${fleur_F77} PROPERTIES Fortran_FORMAT FIXED)
 set_source_files_properties(${inpgen_F90} PROPERTIES Fortran_FORMAT FREE)
 set_source_files_properties(${inpgen_F77} PROPERTIES Fortran_FORMAT FIXED)
 
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS};${FLEUR_PRECISION_OPTION}")
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")
 
 if (${FLEUR_USE_SERIAL})
    #Serial executables
