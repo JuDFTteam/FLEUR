@@ -22,4 +22,6 @@ include("cmake/tests/test_ELPA.cmake")
 include("cmake/tests/test_ChASE.cmake")
 endif()
 
+include("cmake/tests/test_juDFT.cmake")
+
 include("cmake/compileenv.txt")
