@@ -3,8 +3,8 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
 MODULE m_juDFT_time
+!DEC$ NOOPTIMIZE
    !*****************************************************************
    !     DESC:Timer module for measuring the execution times of different
    !     parts of the code
