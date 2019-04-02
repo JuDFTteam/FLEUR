@@ -129,6 +129,8 @@
              !OPEN (16,status='SCRATCH')
           ENDIF
 
+          input%l_rdmft = .FALSE.
+
           input%l_wann = .FALSE.
           CALL initWannierDefaults(wann)
 
