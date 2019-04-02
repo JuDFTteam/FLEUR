@@ -411,6 +411,11 @@ MODULE m_types_setup
       LOGICAL :: ldauLinMix
       REAL    :: ldauMixParam
       REAL    :: ldauSpinf
+      LOGICAL :: l_rdmft
+      REAL    :: rdmftOccEps
+      INTEGER :: rdmftStatesBelow
+      INTEGER :: rdmftStatesAbove
+      INTEGER :: rdmftFunctional
    END TYPE t_input
 
    TYPE t_sliceplot

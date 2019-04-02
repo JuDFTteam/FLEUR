@@ -699,6 +699,30 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
       END IF
 
+      ! Read in RDMFT parameters
+
+      input%l_rdmft = .FALSE.
+      input%rdmftOccEps = 0.00001
+      input%rdmftStatesBelow = 5
+      input%rdmftStatesAbove = 5
+      input%rdmftFunctional = -1
+
+      xPathA = '/fleurInput/calculationSetup/rdmft'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         input%l_rdmft = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_rdmft'))
+         input%rdmftOccEps = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@occEps'))
+         input%rdmftStatesBelow = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@statesBelow'))
+         input%rdmftStatesAbove = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@statesAbove'))
+         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@functional')))
+         SELECT CASE (valueString)
+            CASE ('Muller')
+               input%rdmftFunctional = 1
+            CASE DEFAULT
+               STOP 'Error: unknown RDMFT functional selected!'
+         END SELECT
+      END IF
+
       ! Read in optional q point mesh for spin spirals
 
       xPathA = '/fleurInput/calculationSetup/spinSpiralQPointMesh'
