@@ -18,7 +18,7 @@ CONTAINS
     !After generating new positions the code stops
     USE m_types
     USE m_relaxio
-    USE m_broyd_io
+    USE m_mixing_history
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
@@ -82,7 +82,7 @@ CONTAINS
     IF (l_conv) THEN
        CALL judft_end("Structual relaxation: Done",0)
     ELSE
-       CALL resetBroydenHistory()
+       CALL mixing_history_reset(mpi)
        CALL judft_end("Structual relaxation: new displacements generated",0)
     END IF
   END SUBROUTINE relaxation
