@@ -601,7 +601,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="RDMFTType">
-      <xsd:attribute default="F" name="l_rdmft" type="FleurBool" use="required"/>
+      <xsd:attribute name="l_rdmft" type="FleurBool" use="required"/>
       <xsd:attribute default="0.00001" name="occEps" type="xsd:double" use="optional"/>
       <xsd:attribute name="statesBelow" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="statesAbove" type="xsd:positiveInteger" use="required"/>
