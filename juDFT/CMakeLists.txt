@@ -62,7 +62,7 @@ if (DEFINED JUDFT_LIBRARIES )
 endif()
 
 if (DEFINED JUDFT_COMPILEOPTS )
-  target_compile_options(juDFT PUBLIC ${JUDFT_COMPILEOPTS})
+  target_compile_options(juDFT PRIVATE ${JUDFT_COMPILEOPTS})
 endif()
 
 #Set module directories

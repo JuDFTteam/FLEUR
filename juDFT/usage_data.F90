@@ -136,15 +136,19 @@ CONTAINS
 #ifdef CPP_DEBUG
          WRITE (*,*) "usage.json not send, because this is a debugging run."
 #else
+#ifdef  __INTEL_COMPILER
          !Send using curl
          call execute_command_line(&
             'curl --output /dev/null -m 5 -X POST -H "Content-Type: application/json" -d @usage.json https://docker.iff.kfa-juelich.de/fleur-usage-stats/',&
             exitstat=ierr(1), cmdstat=ierr(2))
-         if(all(ierr == 0)) then
+         IF(ALL(ierr == 0)) THEN
             write (*,*) "Usage data send using curl: usage.json"
          else
             write (*,*) "Usage data sending failed"
-         endif
+         ENDIF
+#else
+         CALL system('curl --output /dev/null -m 5 -X POST -H "Content-Type: application/json" -d @usage.json https://docker.iff.kfa-juelich.de/fleur-usage-stats/')
+#endif         
 
 #endif
       ENDIF

@@ -72,7 +72,9 @@ set_source_files_properties(${fleur_F77} PROPERTIES Fortran_FORMAT FIXED)
 set_source_files_properties(${inpgen_F90} PROPERTIES Fortran_FORMAT FREE)
 set_source_files_properties(${inpgen_F77} PROPERTIES Fortran_FORMAT FIXED)
 
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")
+string(REPLACE ";" " " CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")
+message("Flags: ${CMAKE_Fortran_FLAGS}")
+
 
 if (${FLEUR_USE_SERIAL})
    #Serial executables
@@ -87,7 +89,6 @@ if(${FLEUR_USE_MPI})
   #fleur_MPI
   add_executable(fleur_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_filesFleur} ${fleur_SRC_MPI})
   target_compile_definitions(fleur_MPI PUBLIC ${FLEUR_MPI_DEFINITIONS})
-  target_compile_options(fleur_MPI PUBLIC ${FLEUR_PRECISION_OPTION})
   target_link_libraries(fleur_MPI ${FLEUR_LIBRARIES})
   target_link_libraries(fleur_MPI juDFT)
   set_target_properties(fleur_MPI PROPERTIES Fortran_MODULE_DIRECTORY modules/fleur_MPI COMPILE_OPTIONS -Imodules/fleur_MPI)
@@ -96,11 +97,12 @@ endif ()
 #inpgen executable
 add_executable(inpgen ${inpgen_F77} ${inpgen_F90} ${juDFT_SRC_F90} ${c_filesInpgen})
 target_compile_definitions(inpgen PUBLIC ${FLEUR_DEFINITIONS})
-target_compile_options(inpgen PUBLIC ${FLEUR_PRECISION_OPTION})
 target_link_libraries(inpgen ${FLEUR_LIBRARIES})
 target_link_libraries(inpgen juDFT)
 set_target_properties(inpgen PROPERTIES Fortran_MODULE_DIRECTORY modules/inpgen COMPILE_OPTIONS -Imodules/inpgen)
 
+
+include(cmake/docker.txt)
 
 
 #if (${FLEUR_USE_SERIAL})        

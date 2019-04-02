@@ -42,7 +42,7 @@ io/io_matrix.F90
 io/iomatrix_hdf.F90
 )
 
-add_executable(diag_test ${diag_test_files})
+add_executable(diag_test EXCLUDE_FROM_ALL ${diag_test_files}  )
 target_link_libraries(diag_test ${FLEUR_LIBRARIES})
 target_link_libraries(diag_test juDFT)
 if (FLEUR_USE_MPI)
