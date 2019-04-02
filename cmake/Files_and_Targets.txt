@@ -102,6 +102,8 @@ target_link_libraries(inpgen juDFT)
 set_target_properties(inpgen PROPERTIES Fortran_MODULE_DIRECTORY modules/inpgen COMPILE_OPTIONS -Imodules/inpgen)
 
 
+include(cmake/docker.txt)
+
 
 #if (${FLEUR_USE_SERIAL})        
 #install(TARGETS fleur inpgen 
