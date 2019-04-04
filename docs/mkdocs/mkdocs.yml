@@ -1,0 +1,17 @@
+site_name: Fleur Documentation
+repo_url: https://iffgit.fz-juelich.de/fleur/fleur
+nav:
+    - Welcome: Docu-Main.md
+    - Further support: support.md
+    - User Guide:
+        - Installation: Install.md
+        - Running FLEUR: Running.md
+        - The input-generator: inpgen.md
+        - The FLEUR input file: xmlio.md
+        - The FLEUR-AiiDA interface: http://aiida-fleur.readthedocs.io/en/develop/
+    - Developers Infomation:
+        - Fleur-GITLAB: https://iffgit.fz-juelich.de/fleur/fleur/
+        - The DOXYGEN documentation of the source code: https://fleur.iffgit.fz-juelich.de/fleur/html
+        - The coverage analysis: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
+        - Developers Guide/Manual: developer.md
+theme: readthedocs
