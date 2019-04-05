@@ -372,7 +372,7 @@ MODULE m_types_setup
       REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
       REAL    :: epsforce !< minimal force. If all forces <epsforce stop
       REAL    :: force_converged=0.00001
-      REAL    :: forcemix=3
+      INTEGER :: forcemix=3
       REAL    :: delgau
       REAL    :: alpha
       REAL    :: preconditioning_param
