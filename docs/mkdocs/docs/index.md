@@ -12,3 +12,13 @@ Please feel free to [download](downloads.md) and [run our code](Docu-Main.md).
 
 Fleur is part of the [juDFT family](http://www.judft.de) of codes developed in Jülich.
 
+
+
+
+
+FLEUR development team
+----------------------
+
+FLEUR is mainly developed at the Forschungszentrum Jülich at the Institute of Advanced Simulation and the Peter Grünberg Institut.
+
+[Impressum](about.md)

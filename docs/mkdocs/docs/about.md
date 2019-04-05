@@ -1,7 +1,3 @@
-FLEUR development team
-----------------------
-
-FLEUR is mainly developed at the Forschungszentrum Jülich at the Institute of Advanced Simulation and the Peter Grünberg Institut.
 
 # IMPRESSUM
 
