@@ -61,7 +61,6 @@ CONTAINS
     USE m_wann_optional
     USE m_wannier
     USE m_bs_comfort
-    USE m_gen_map
     USE m_dwigner
     USE m_ylm
 #ifdef CPP_MPI
@@ -348,8 +347,13 @@ CONTAINS
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen)
 
-          IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                                  sphhar,sym,field,vTot,oneD,noco,results)
+          IF (input%l_rdmft) THEN
+             SELECT TYPE(xcpot)
+                TYPE IS(t_xcpot_inbuild)
+                   CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
+                              sphhar,sym,field,vTot,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
+             END SELECT
+          END IF
 
           IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
 
