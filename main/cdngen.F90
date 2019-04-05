@@ -27,7 +27,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_cdn_io
    USE m_wrtdop
    USE m_cdntot
-   USE m_cdnovlp
    USE m_qfix
    USE m_genNewNocoInp
    USE m_xmlOutput
