@@ -82,7 +82,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    INTEGER                              :: iState, iStep, numStates, maxHistoryLength, numRelevantStates
    REAL                                 :: fix, potDenInt, fermiEnergyTemp
    REAL                                 :: rdmftFunctionalValue, occStateI
-   REAL                                 :: exchangeTerm, chemPot, equalityCriterion
+   REAL                                 :: exchangeTerm, lagrangeMultiplier, equalityCriterion
    REAL                                 :: mixParam, convCrit, rdmftEnergy
    REAL                                 :: sumOcc, tempOcc, addCharge, subCharge, addChargeWeight, subChargeWeight
    REAL, PARAMETER                      :: degenEps = 0.00001
@@ -127,8 +127,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 #ifndef CPP_OLDINTEL
    ! General initializations
    mixParam = 0.0001
-   convCrit = 1.0e-6
-   chemPot = results%ef
+   convCrit = 1.0e-8
+   lagrangeMultiplier = 0.1 !results%ef
 
    neigTemp(:,:) = results%neig(:,:)
 
@@ -347,7 +347,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    ALLOCATE(lastParameters(numStates+1))
    lastGradient = 0.0
    lastParameters = 0.0
-   maxHistoryLength = 3!7
+   maxHistoryLength = 5!7
    ALLOCATE(gradientCorrections(numStates+1,maxHistoryLength))
    ALLOCATE(paramCorrections(numStates+1,maxHistoryLength))
    gradientCorrections = 0.0
@@ -501,7 +501,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
                exchangeTerm = - rdmftFunctionalValue * exDiag(iBand,ikpt,isp) * kpts%wtkpt(ikpt)!*kpts%nkptf
 
                dEdOcc(iBand,ikpt,isp) = +(results%eig(iBand,ikpt,isp) - vTotSSDen(iBand,ikpt,isp) + &
-                                              overallVCoulSSDen(iBand,ikpt,isp) + exchangeTerm)
+                                              overallVCoulSSDen(iBand,ikpt,isp) + exchangeTerm) + &
+                                              lagrangeMultiplier ! lagrangeMultiplier for charge conservation
             END DO
          END DO
       END DO
@@ -539,7 +540,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       END DO
       equalityCriterion = input%zelec/(2.0/REAL(input%jspins))
       gradient(numStates+1) = gradient(numStates+1) - equalityCriterion ! This should actually always be 0.0
-      parameters(numStates+1) = chemPot
+      parameters(numStates+1) = lagrangeMultiplier
 
       mixParam = 0.01 / MAXVAL(ABS(gradient(:numStates)))
       WRITE(*,*) 'mixParam: ', mixParam

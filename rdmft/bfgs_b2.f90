@@ -138,7 +138,7 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
       tempVecA(:) = 0.0
       CALL dgemv('N',vecLength,vecLength,1.0,hessMat(:,:),vecLength,paramCorrections(:,stepIndex),1,0.0,tempVecA(:),1)
       norm = ddot(vecLength,paramCorrections(:,stepIndex),1,tempVecA(:),1)
-      CALL dgemm('N','N',vecLength,vecLength,1,1.0/norm,tempVecA(:),vecLength,tempVecA(:),1,0.0,tempMatB,vecLength)
+      CALL dgemm('N','N',vecLength,vecLength,1,-1.0/norm,tempVecA(:),vecLength,tempVecA(:),1,0.0,tempMatB,vecLength)
 
       WRITE(2002,*) '======================================='
       WRITE(2002,'(a,2i7)') 'stepIndex, iStep: ', stepIndex, iStep
@@ -239,8 +239,8 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
    DO WHILE (.NOT.converged)
 
    WRITE(*,*) 'bfgs_b2 - Point D'
-   WRITE(*,*) 'prelimNextPoint(:vecLength): ', prelimNextPoint(:vecLength)
-   WRITE(*,*) 'prelimGradient(:vecLength): ', prelimGradient(:vecLength)
+   WRITE(1999,'(a,8f15.10)') 'prelimNextPoint(:vecLength): ', prelimNextPoint(:vecLength)
+   WRITE(1999,'(a,8f15.10)') 'prelimGradient(:vecLength):  ', prelimGradient(:vecLength)
 
       ! Determine free parameters (parameters not on boundaries with a gradient pointing outwards)
       numFixedParams = 0
