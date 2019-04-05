@@ -28,7 +28,6 @@ CONTAINS
       REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
       COMPLEX                   :: x(stars%ng3)
       
-      CALL timestart("cdntot")
       qtot = 0.0
       qistot = 0.0
       DO jsp = 1,input%jspins
@@ -109,7 +108,10 @@ CONTAINS
       REAL qmt(atoms%ntype,input%jspins),qvac(2,input%jspins)
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
-      
+     
+
+      CALL timestart("cdntot")
+ 
       call cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
  

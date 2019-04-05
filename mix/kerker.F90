@@ -4,12 +4,15 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_kerker
+
 CONTAINS
 
-  SUBROUTINE kerker(field, DIMENSION, mpi, &
+  SUBROUTINE kerker( field, DIMENSION, mpi, &
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
        oneD, inDen, outDen, precon_v  )
+
     !Implementation of the Kerker preconditioner by M.Hinzen
+
     USE m_vgen_coulomb
     USE m_VYukawaFilm
     USE m_juDFT
@@ -19,6 +22,7 @@ CONTAINS
     USE m_constants
     USE m_mpi_bc_potden
     IMPLICIT NONE
+
     TYPE(t_oneD),      INTENT(in)    :: oneD
     TYPE(t_input),     INTENT(in)    :: input
     TYPE(t_vacuum),    INTENT(in)    :: vacuum
@@ -35,10 +39,9 @@ CONTAINS
     TYPE(t_potden),    INTENT(in)    :: inDen
     TYPE(t_mixvector), INTENT(INOUT) :: precon_v
 
-    !Locals
-    type(t_potden)                :: resDen, vYukawa
-    real                          :: fix
-    integer                       :: lh,n
+    type(t_potden)                   :: resDen, vYukawa, resDenMod
+    real                             :: fix
+    integer                          :: lh,n
 
     CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
     CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
@@ -53,8 +56,12 @@ CONTAINS
        CALL vgen_coulomb( 1, mpi, DIMENSION, oneD, input, field, vacuum, sym, stars, cell, &
             sphhar, atoms, resDen, vYukawa )
     ELSE
+       if( mpi%irank == 0 ) then 
+          call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
+          call resDenMod%copyPotDen( resDen )
+       end if
        vYukawa%iter = resDen%iter
-       CALL VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, DIMENSION, oneD, resDen, &
+       CALL VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, DIMENSION, oneD, noco, resDenMod, &
             vYukawa )
     END IF
 
@@ -67,8 +74,6 @@ CONTAINS
                   * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
           END DO
        END DO
-       resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz
-       resDen%vacxy = resDen%vacxy - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacxy
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )
@@ -76,6 +81,7 @@ CONTAINS
        CALL resDen%subPotDen( outDen, inDen )
     END IF MPI0_c
     CALL precon_v%from_density(resden)
-    ! end of preconditioner
-END SUBROUTINE kerker
+
+  END SUBROUTINE kerker
+
 END MODULE m_kerker
