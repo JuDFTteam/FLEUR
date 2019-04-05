@@ -77,7 +77,7 @@ CONTAINS
 
     ENDIF
 #ifdef CPP_MPI
-    CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,ierr)
+    CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
     IF (l_conv) THEN
        CALL judft_end("Structual relaxation: Done",0)
