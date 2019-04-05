@@ -349,7 +349,7 @@
           !
           l_gga= xcpot%is_gga()
           l_test = .TRUE.                  ! only checking, dont use new parameters
-          CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
+          CALL chkmt(atoms,input,vacuum,cell,oneD,l_test,l_gga,noel, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
 
           WRITE (6,FMT=8180) cell%volint
 8180      FORMAT (13x,' volume of interstitial region=',f12.6)

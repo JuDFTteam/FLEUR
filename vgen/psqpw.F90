@@ -16,7 +16,7 @@ module m_psqpw
 
 contains
 
-  subroutine psqpw( mpi, atoms, sphhar, stars, vacuum, dimension, cell, input, sym, oneD, &
+  subroutine psqpw( mpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
        &     qpw, rho, rht, l_xyav, potdenType, psq )
 
 #include"cpp_double.h"
@@ -37,7 +37,6 @@ contains
     type(t_sphhar),     intent(in)  :: sphhar
     type(t_stars),      intent(in)  :: stars
     type(t_vacuum),     intent(in)  :: vacuum
-    type(t_dimension),  intent(in)  :: dimension
     type(t_cell),       intent(in)  :: cell
     type(t_input),      intent(in)  :: input
     type(t_sym),        intent(in)  :: sym
@@ -56,7 +55,7 @@ contains
     complex                         :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     real                            :: q2(vacuum%nmzd)
     real                            :: pn(0:atoms%lmaxd,atoms%ntype)
-    real                            :: aj(0:atoms%lmaxd+DIMENSION%ncvd+1)
+    real                            :: aj(0:atoms%lmaxd+maxval(atoms%ncv)+1)
     real                            :: rht1(vacuum%nmz)
     real, allocatable, dimension(:) :: il, kl
     real                            :: g0(atoms%ntype)

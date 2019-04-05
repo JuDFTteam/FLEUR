@@ -61,7 +61,7 @@ MODULE m_cdnpot_io_common
    END SUBROUTINE compareStepfunctions
 
    SUBROUTINE compareStructure(input, atoms, vacuum, cell, sym, refInput, refAtoms, refVacuum,&
-                               refCell, refSym, l_same)
+                               refCell, refSym, l_same,l_shift_only)
 
       TYPE(t_input),INTENT(IN)  :: input, refInput
       TYPE(t_atoms),INTENT(IN)  :: atoms, refAtoms
@@ -70,10 +70,12 @@ MODULE m_cdnpot_io_common
       TYPE(t_sym),INTENT(IN)    :: sym, refSym
 
       LOGICAL,      INTENT(OUT) :: l_same
+      LOGICAL,OPTIONAL,INTENT(OUT) ::l_shift_only
 
       INTEGER                   :: i
 
       l_same = .TRUE.
+  
 
       IF(atoms%ntype.NE.refAtoms%ntype) l_same = .FALSE.
       IF(atoms%nat.NE.refAtoms%nat) l_same = .FALSE.
@@ -97,6 +99,9 @@ MODULE m_cdnpot_io_common
          IF(ANY(sym%mrot(:,:,:sym%nop).NE.refSym%mrot(:,:,:sym%nop))) l_same = .FALSE.
          IF(ANY(ABS(sym%tau(:,:sym%nop)-refSym%tau(:,:sym%nop)).GT.1e-10)) l_same = .FALSE.
       END IF
+  
+      IF (PRESENT(l_shift_only)) l_shift_only=l_same
+      !Now the positions are checked...
       IF(l_same) THEN
          DO i = 1, atoms%nat
             IF(ANY(ABS(atoms%pos(:,i)-refAtoms%pos(:,i)).GT.1e-10)) l_same = .FALSE.

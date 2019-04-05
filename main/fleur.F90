@@ -49,7 +49,6 @@ CONTAINS
     USE m_eigen
     USE m_eigenso
     USE m_fermie
-    USE m_force0
     USE m_cdngen
     USE m_totale
     USE m_potdis
@@ -329,7 +328,6 @@ CONTAINS
              CYCLE forcetheoloop
           ENDIF
 
-          CALL force_0(results)! ----> initialise force_old
           
 !!$          !+Wannier functions
 !!$          IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
@@ -377,7 +375,6 @@ CONTAINS
 #endif
           CALL timestop("generation of new charge density (total)")
 
-          IF (mpi%irank.EQ.0) THEN
              
 !!$             !----> output potential and potential difference
 !!$             IF (obsolete%disp) THEN
@@ -393,10 +390,9 @@ CONTAINS
              
              ! total energy
              CALL timestart('determination of total energy')
-             CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
+             CALL totale(mpi,atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
                          xcpot,hybrid,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
-          END IF ! mpi%irank.EQ.0
           IF (hybrid%l_hybrid) CALL close_eig(eig_id)
 
        END DO forcetheoloop

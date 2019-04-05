@@ -155,7 +155,7 @@
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
       banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
-      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
+      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix=0
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
       banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
       input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
@@ -201,8 +201,8 @@
       a1(:) = cell%amat(:,1) ; a2(:) = cell%amat(:,2) ; a3(:) = cell%amat(:,3) 
 
       CALL chkmt(&
-     &           atoms,input,vacuum,cell,oneD,&
-     &           l_gga,noel,l_test,&
+     &           atoms,input,vacuum,cell,oneD,l_test,&
+     &           l_gga,noel,&
      &           kmax,dtild,vacuum%dvac,atoms%lmax,atoms%jri,atoms%rmt,atoms%dx)
 
 ! --> read in (possibly) atomic info
@@ -236,8 +236,8 @@
       rmtTemp = 999.0
       l_test = .true.
       CALL chkmt(&
-     &           atoms,input,vacuum,cell,oneD,&
-     &           l_gga,noel,l_test,&
+     &           atoms,input,vacuum,cell,oneD,l_test,&
+     &           l_gga,noel,&
      &           kmax0,dtild0,dvac0,lmax0,jri0,rmtTemp,dx0)
 
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN
