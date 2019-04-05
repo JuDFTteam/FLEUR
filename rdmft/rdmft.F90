@@ -317,6 +317,11 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    ! Initializations for exchange contributions
 
+   IF(ALLOCATED(hybrid%ne_eig)) DEALLOCATE(hybrid%ne_eig)
+   IF(ALLOCATED(hybrid%nbands)) DEALLOCATE(hybrid%nbands)
+   IF(ALLOCATED(hybrid%nobd)) DEALLOCATE(hybrid%nobd)
+   IF(ALLOCATED(hybrid%nbasm)) DEALLOCATE(hybrid%nbasm)
+   IF(ALLOCATED(hybrid%div_vv)) DEALLOCATE(hybrid%div_vv)
    ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf))
    ALLOCATE(hybrid%nbasm(kpts%nkptf))
    ALLOCATE(hybrid%div_vv(DIMENSION%neigd,kpts%nkpt,input%jspins))
