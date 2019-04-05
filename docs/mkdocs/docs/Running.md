@@ -1,6 +1,6 @@
 Running Fleur
 =================
-Here we deal with the question of how to run FLEUR "by hand". If you are interested in running FLEUR in a scripting environment you might want to check the  [AiiDA plug-in](AiiDA.md).
+Here we deal with the question of how to run FLEUR "by hand". If you are interested in running FLEUR in a scripting environment you might want to check the  [AiiDA plug-in](http://aiida-fleur.readthedocs.io/en/develop/).
 
 At first you might notice that there are several executables created in the build process. You might find:
 

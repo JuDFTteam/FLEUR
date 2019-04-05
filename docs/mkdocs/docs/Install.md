@@ -35,9 +35,9 @@ There are a couple of external dependencies in the build process of FLEUR.
 
 **Required are:**
 
-* *cmake*: The build process uses cmake to configure FLEUR. You should have at least version 3.0. Some options might require newer versions. Cmake is available for free at [www.cmake.org]([http://www.cmake.org).
+* *cmake*: The build process uses cmake to configure FLEUR. You should have at least version 3.0. Some options might require newer versions. Cmake is available for free at [www.cmake.org](http://www.cmake.org).
 * *Compilers*: You will need a Fortran compiler and a corresponding C-compiler (i.e. the two have to be able to work together via the iso-c bindings of Fortran). Please check our [list of compilers](#compilers) to see if your compiler should work.
-* *BLAS/LAPACK*: These standard linear algebra libraries are required. You should try your best not to use a reference implementation from [Netlib](http://www.netlib.org) but look for an optimized version for your system. In general compiler and/or hardware vendors provide optimized libraries such as the MKL (Intel) or ESSL (IBM). If you do not have access to those, check [openBLAS]([http://www.openbas.net).
+* *BLAS/LAPACK*: These standard linear algebra libraries are required. You should try your best not to use a reference implementation from [Netlib](http://www.netlib.org) but look for an optimized version for your system. In general compiler and/or hardware vendors provide optimized libraries such as the MKL (Intel) or ESSL (IBM). If you do not have access to those, check [openBLAS](http://www.openbas.net).
 * *libxml2*: this is a standard XML-library that is available on most systems. If it is missing on your computer you should really complain with your admin. *Please note that you might need a development package of this library as well.* To compile this library yourself, see [xmlsoft.org](http://xmlsoft.org).
 
 **Optional**:
@@ -76,8 +76,6 @@ The `configure.sh` script performs the following steps:
 
 If you specify -d as argument of configure.sh, the string "debug" will be added to LABEL and a debugging version of FLEUR will be build, i.e. the corresponding compiler switches will be set.
 
-You might want to check our page on 
-[how to adjust to your configuration](InstallTroubles.md) if you run into trouble.
 
 #How to adjust the Configuration
 While `cmake` and the `configure.sh` script can determine the correct compilation switches automatically in some cases (mostly those known to us), in many other instances 

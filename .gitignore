@@ -1,3 +1,4 @@
+docs/mkdocs/site
 init/compileinfo.h
 io/xml/inputSchema.h
 Testing/*

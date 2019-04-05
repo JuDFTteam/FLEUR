@@ -1,9 +1,13 @@
-site_name: Fleur Documentation
-repo_url: https://iffgit.fz-juelich.de/fleur/fleur
+site_name: FLEUR
+repo_url: https://iffgit.fz-juelich.de/fleur/fleur/
+site_url: https://www.flapw.de/s/
+repo_name: GIT
+edit_url: edit/develop/docs/mkdocs/
 nav:
-    - Welcome: Docu-Main.md
+    - Welcome: index.md
     - Further support: support.md
     - User Guide:
+        - Overview: Docu-Main.md
         - Installation: Install.md
         - Running FLEUR: Running.md
         - The input-generator: inpgen.md
@@ -13,5 +17,5 @@ nav:
         - Fleur-GITLAB: https://iffgit.fz-juelich.de/fleur/fleur/
         - The DOXYGEN documentation of the source code: https://fleur.iffgit.fz-juelich.de/fleur/html
         - The coverage analysis: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
-        - Developers Guide/Manual: developer.md
-theme: readthedocs
+        - Developers Guide/Manual: developers.md
+    - About/Impressum: about.md
