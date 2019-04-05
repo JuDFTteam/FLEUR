@@ -674,19 +674,12 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       IF (numberNodes.EQ.1) THEN
          input%l_f = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
-         input%xa = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@xa'))
-         input%thetad = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@thetad'))
+         input%forcealpha = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
          input%epsdisp = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
          input%epsforce = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
-
-         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@qfix')
-         IF (numberNodes.EQ.1) THEN
-            input%qfix = 1
-            l_qfix = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
-            IF (l_qfix) THEN
-               input%qfix = 2
-            END IF
-         END IF
+         input%forcemix = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix'))
+         input%force_converged = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@force_converged'))
+         input%qfix = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
       END IF
 
       ! Read in optional general LDA+U parameters
@@ -697,6 +690,30 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%ldauLinMix = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_linMix'))
          input%ldauMixParam = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
          input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
+      END IF
+
+      ! Read in RDMFT parameters
+
+      input%l_rdmft = .FALSE.
+      input%rdmftOccEps = 0.00001
+      input%rdmftStatesBelow = 5
+      input%rdmftStatesAbove = 5
+      input%rdmftFunctional = -1
+
+      xPathA = '/fleurInput/calculationSetup/rdmft'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         input%l_rdmft = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_rdmft'))
+         input%rdmftOccEps = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@occEps'))
+         input%rdmftStatesBelow = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@statesBelow'))
+         input%rdmftStatesAbove = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@statesAbove'))
+         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@functional')))
+         SELECT CASE (valueString)
+            CASE ('Muller')
+               input%rdmftFunctional = 1
+            CASE DEFAULT
+               STOP 'Error: unknown RDMFT functional selected!'
+         END SELECT
       END IF
 
       ! Read in optional q point mesh for spin spirals
@@ -712,6 +729,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
      
       xPathA = '/fleurInput/calculationSetup/fields'
       numberNodes = xmlGetNumberOfNodes(xPathA)
+      field%b_field=0.0
+      field%l_b_field=.FALSE.
+      field%efield%sigma=0.0
+      
 
       IF (numberNodes.EQ.1) THEN
          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
@@ -1789,7 +1810,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ALLOCATE(t_forcetheo_mae::forcetheo)
             SELECT TYPE(forcetheo)
             TYPE IS(t_forcetheo_mae) !this is ok, we just allocated the type...
-               CALL forcetheo%init(lString,nString)
+               CALL forcetheo%init(cell,sym,lString,nString)
             END SELECT
          ENDIF
          !spin-spiral dispersion
@@ -2148,12 +2169,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          CALL inpnoco(atoms,input,vacuum,noco)
       END IF
 
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of non-XML input
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       !CALL xmlFreeResources()
-
+      
       !WRITE(*,*) 'Reading of inp.xml file finished'
 
       DEALLOCATE(speciesNLO)

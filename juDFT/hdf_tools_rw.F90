@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_hdf_tools2 
-#include "juDFT_env.h"
 !-----------------------------------------------                        
 !     major rewrite of hdf_tools                                        
 !     this module contains only the                                     
@@ -14,6 +13,7 @@
 !     only the generic interface is public                              
 !-----------------------------------------------                        
       USE m_hdf_tools4 
+      USE m_judft_stop
       !PRIVATE                                                          
       !<--definitions of interfaces                                     
                                                                         
@@ -1543,7 +1543,7 @@
          foffset=1 
          fncount=2
       ENDWHERE
-      if (count(start<0).ne.1) CPP_error("Wrong no of negatives")
+      if (count(start<0).ne.1) call judft_error("Wrong no of negatives")
       if (start(1)<0) then
           ALLOCATE(A(2,SIZE(DATA,1),size(data,2)))
           CALL io_read_real3(did,foffset,fncount,a,trans)
@@ -1581,7 +1581,7 @@
          foffset=1 
          fncount=2
       ENDWHERE 
-      if (count(start<0).ne.1) CPP_error("Wrong no of negatives")
+      if (count(start<0).ne.1) call judft_error("Wrong no of negatives")
       if (start(1)<0) then
           ALLOCATE(A(2,SIZE(DATA,1),size(data,2),size(data,3)))
           CALL io_read_real4(did,foffset,fncount,a,trans)
@@ -1591,7 +1591,7 @@
           CALL io_read_real4(did,foffset,fncount,a,trans)
           DATA=CMPLX(a(:,:,:,1),a(:,:,:,2))
       else
-          CPP_error("Wrong position of negative")
+          call judft_error("Wrong position of negative")
       endif
       DEALLOCATE(a)
       END SUBROUTINE 
@@ -1617,7 +1617,7 @@
          foffset=1
          fncount=2
       ENDWHERE 
-      if (count(start<0)/=1) CPP_error("Wrong no of negatives")
+      if (count(start<0)/=1) call judft_error("Wrong no of negatives")
       if (start(1)<0) then
           ALLOCATE(A(2,SIZE(DATA,1),size(data,2),size(data,3),size(data,4)))
           CALL io_read_real5(did,foffset,fncount,a,trans)
@@ -1627,7 +1627,7 @@
           CALL io_read_real5(did,foffset,fncount,a,trans)
           DATA=CMPLX(a(:,:,:,:,1),a(:,:,:,:,2))
       else
-          CPP_error("Wrong position of negative")
+          call judft_error("Wrong position of negative")
       endif
       DEALLOCATE(a)
       END SUBROUTINE 
@@ -1653,7 +1653,7 @@
          foffset=1
          fncount=2
       ENDWHERE 
-      if (count(start<0)/=1) CPP_error("Wrong no of negatives")
+      if (count(start<0)/=1) call judft_error("Wrong no of negatives")
       if (start(1)<0) then
           ALLOCATE(A(2,SIZE(DATA,1),size(data,2),size(data,3),size(data,4),size(data,5)))
           CALL io_read_real6(did,foffset,fncount,a,trans)
@@ -1663,7 +1663,7 @@
           CALL io_read_real6(did,foffset,fncount,a,trans)
           DATA=CMPLX(a(:,:,:,:,:,1),a(:,:,:,:,:,2))
       else
-          CPP_error("Wrong position of negative")
+          call judft_error("Wrong position of negative")
       endif
       DEALLOCATE(a)
       END SUBROUTINE 

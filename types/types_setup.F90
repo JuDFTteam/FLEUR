@@ -368,10 +368,11 @@ MODULE m_types_setup
       INTEGER :: gw
       INTEGER :: gw_neigd
       INTEGER :: qfix
-      REAL    :: xa !< mixing parameter for geometry optimzer
-      REAL    :: thetad !< Debey temperature for first step of geometry optimzer
+      REAL    :: forcealpha !< mixing parameter for geometry optimzer
       REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
       REAL    :: epsforce !< minimal force. If all forces <epsforce stop
+      REAL    :: force_converged=0.00001
+      INTEGER :: forcemix=3
       REAL    :: delgau
       REAL    :: alpha
       REAL    :: preconditioning_param
@@ -411,6 +412,11 @@ MODULE m_types_setup
       LOGICAL :: ldauLinMix
       REAL    :: ldauMixParam
       REAL    :: ldauSpinf
+      LOGICAL :: l_rdmft
+      REAL    :: rdmftOccEps
+      INTEGER :: rdmftStatesBelow
+      INTEGER :: rdmftStatesAbove
+      INTEGER :: rdmftFunctional
    END TYPE t_input
 
    TYPE t_sliceplot

@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_lapack_diag
-  USE m_types
+  USE m_types_mat
   USE m_judft
 IMPLICIT NONE
   CONTAINS

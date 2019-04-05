@@ -49,7 +49,6 @@ CONTAINS
     USE m_eigen
     USE m_eigenso
     USE m_fermie
-    USE m_force0
     USE m_cdngen
     USE m_totale
     USE m_potdis
@@ -61,7 +60,6 @@ CONTAINS
     USE m_wann_optional
     USE m_wannier
     USE m_bs_comfort
-    USE m_gen_map
     USE m_dwigner
     USE m_ylm
 #ifdef CPP_MPI
@@ -244,7 +242,7 @@ CONTAINS
        CALL forcetheo%start(vtot,mpi%irank==0)
        forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
 
-          CALL timestart("generation of hamiltonian and diagonalization (total)")
+          CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
           vTemp = vTot
           CALL timestart("Updating energy parameters")
@@ -277,7 +275,7 @@ CONTAINS
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
              CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
                           obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
-          CALL timestop("generation of hamiltonian and diagonalization (total)")
+          CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI
           CALL MPI_BARRIER(mpi%mpi_comm,ierr)
@@ -330,7 +328,6 @@ CONTAINS
              CYCLE forcetheoloop
           ENDIF
 
-          CALL force_0(results)! ----> initialise force_old
           
 !!$          !+Wannier functions
 !!$          IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
@@ -348,8 +345,13 @@ CONTAINS
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen)
 
-          IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                                  sphhar,sym,field,vTot,oneD,noco,results)
+          IF (input%l_rdmft) THEN
+             SELECT TYPE(xcpot)
+                TYPE IS(t_xcpot_inbuild)
+                   CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
+                              sphhar,sym,field,vTot,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
+             END SELECT
+          END IF
 
           IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
 
@@ -373,7 +375,6 @@ CONTAINS
 #endif
           CALL timestop("generation of new charge density (total)")
 
-          IF (mpi%irank.EQ.0) THEN
              
 !!$             !----> output potential and potential difference
 !!$             IF (obsolete%disp) THEN
@@ -389,10 +390,9 @@ CONTAINS
              
              ! total energy
              CALL timestart('determination of total energy')
-             CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
+             CALL totale(mpi,atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
                          xcpot,hybrid,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
-          END IF ! mpi%irank.EQ.0
           IF (hybrid%l_hybrid) CALL close_eig(eig_id)
 
        END DO forcetheoloop

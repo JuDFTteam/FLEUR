@@ -155,7 +155,7 @@
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
       banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
-      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
+      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix=0
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
       banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
       input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
@@ -201,8 +201,8 @@
       a1(:) = cell%amat(:,1) ; a2(:) = cell%amat(:,2) ; a3(:) = cell%amat(:,3) 
 
       CALL chkmt(&
-     &           atoms,input,vacuum,cell,oneD,&
-     &           l_gga,noel,l_test,&
+     &           atoms,input,vacuum,cell,oneD,l_test,&
+     &           l_gga,noel,&
      &           kmax,dtild,vacuum%dvac,atoms%lmax,atoms%jri,atoms%rmt,atoms%dx)
 
 ! --> read in (possibly) atomic info
@@ -236,8 +236,8 @@
       rmtTemp = 999.0
       l_test = .true.
       CALL chkmt(&
-     &           atoms,input,vacuum,cell,oneD,&
-     &           l_gga,noel,l_test,&
+     &           atoms,input,vacuum,cell,oneD,l_test,&
+     &           l_gga,noel,&
      &           kmax0,dtild0,dvac0,lmax0,jri0,rmtTemp,dx0)
 
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN
@@ -314,9 +314,6 @@
          input%elup  = input%elup  + 10.0
          input%gw_neigd = bands
          l_gamma = .true.
-         IF(juDFT_was_argument("-old")) THEN
-            CALL juDFT_error('No hybrid functionals input for old input file implemented', calledby='set_inp')
-         END IF
          input%minDistance = 1.0e-5
       ELSE
         input%gw_neigd = 0
@@ -434,7 +431,6 @@
          kpts%specificationType = 2
       END IF
 
-      IF(.NOT.juDFT_was_argument("-old")) THEN
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
 
@@ -494,8 +490,7 @@
 
          kpts%nkpt = nkptOld
          cell%latnam = latnamTemp
-      END IF !xml output
-
+ 
       DEALLOCATE (noco%l_relax,noco%b_con,noco%alphInit,noco%alph,noco%beta)
       DEALLOCATE (atoms%ulo_der)
 
@@ -512,31 +507,6 @@
 
       CLOSE (6)
 
-      IF (juDFT_was_argument("-old")) THEN
-         IF (atoms%ntype.GT.999) THEN
-            CALL juDFT_error('More than 999 atom types only work with the inp.xml input file',calledby='set_inp')
-         END IF
-         IF (kpts%specificationType.EQ.4) THEN
-            CALL juDFT_error('No k point set specification by density supported for old inp file',&
-                             calledby = 'set_inp')
-         END IF
-
-         CALL rw_inp(ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                     cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-                     noel,namex,relcor,a1,a2,a3,dtild,input%comment)
-
-         iofile = 6
-         OPEN (iofile,file='inp',form='formatted',status='old',position='append')
-      
-         IF((div(1) == 0).OR.(div(2) == 0)) THEN 
-            WRITE (iofile,'(a5,i5)') 'nkpt=',kpts%nkpt
-         ELSE
-            WRITE (iofile,'(a5,i5,3(a4,i2))') 'nkpt=',kpts%nkpt,',nx=',div(1),',ny=',div(2),',nz=',div(3)
-         ENDIF
-
-         CLOSE (iofile)
-
-      END IF
 
       END SUBROUTINE set_inp
       END MODULE m_setinp

@@ -1946,9 +1946,10 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 starsIndex, latharmsIndex, structureIndex,stepfunctionIndex,&
-                                iter,fr,fpw,fz,fzxy)
+                                iter,pot,fpw)
 
       TYPE(t_input),    INTENT(IN) :: input
+      TYPE(t_potden),   INTENT(IN) :: pot
       INTEGER(HID_T),   INTENT(IN) :: fileID
       INTEGER,          INTENT(IN) :: potentialType
       INTEGER,          INTENT(IN) :: starsIndex, latharmsIndex, structureIndex
@@ -1957,10 +1958,7 @@ MODULE m_cdnpot_io_hdf
 
       INTEGER, INTENT (IN)         :: iter
 
-      REAL,    INTENT (IN)         :: fr(:,:,:,:)
-      REAL,    INTENT (IN)         :: fz(:,:,:)
       COMPLEX, INTENT (IN)         :: fpw(:,:)
-      COMPLEX, INTENT (IN)         :: fzxy(:,:,:,:)
 
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz, nvac, od_nq2, nmzxy
@@ -2070,7 +2068,7 @@ MODULE m_cdnpot_io_hdf
 
             dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),pot%mt)
             CALL h5dclose_f(frSetID, hdfError)
 
             dimsInt(:3)=(/2,ng3,input%jspins/)
@@ -2081,12 +2079,12 @@ MODULE m_cdnpot_io_hdf
             IF (l_film) THEN
                dimsInt(:3)=(/nmzd,2,input%jspins/)
                CALL h5dopen_f(groupID, 'fz', fzSetID, hdfError)
-               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
+               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),pot%vacz(:,:,:input%jspins))
                CALL h5dclose_f(fzSetID, hdfError)
 
                dimsInt(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
                CALL h5dopen_f(groupID, 'fzxy', fzxySetID, hdfError)
-               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
+               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),pot%vacxy(:,:,:,:input%jspins))
                CALL h5dclose_f(fzxySetID, hdfError)
             END IF
 
@@ -2099,7 +2097,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
             CALL h5sclose_f(frSpaceID,hdfError)
-            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),pot%mt)
             CALL h5dclose_f(frSetID, hdfError)
 
             dims(:3)=(/2,ng3,input%jspins/)
@@ -2116,7 +2114,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(3,dims(:3),fzSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "fz", H5T_NATIVE_DOUBLE, fzSpaceID, fzSetID, hdfError)
                CALL h5sclose_f(fzSpaceID,hdfError)
-               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
+               CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),pot%vacz(:,:,:input%jspins))
                CALL h5dclose_f(fzSetID, hdfError)
 
                dims(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
@@ -2124,7 +2122,7 @@ MODULE m_cdnpot_io_hdf
                CALL h5screate_simple_f(5,dims(:5),fzxySpaceID,hdfError)
                CALL h5dcreate_f(groupID, "fzxy", H5T_NATIVE_DOUBLE, fzxySpaceID, fzxySetID, hdfError)
                CALL h5sclose_f(fzxySpaceID,hdfError)
-               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
+               CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),pot%vacxy(:,:,:,:input%jspins))
                CALL h5dclose_f(fzxySetID, hdfError)
             END IF
 
@@ -2149,7 +2147,7 @@ MODULE m_cdnpot_io_hdf
          CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
          CALL h5sclose_f(frSpaceID,hdfError)
-         CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
+         CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),pot%mt)
          CALL h5dclose_f(frSetID, hdfError)
 
          dims(:3)=(/2,ng3,input%jspins/)
@@ -2166,7 +2164,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(3,dims(:3),fzSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fz", H5T_NATIVE_DOUBLE, fzSpaceID, fzSetID, hdfError)
             CALL h5sclose_f(fzSpaceID,hdfError)
-            CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),fz)
+            CALL io_write_real3(fzSetID,(/1,1,1/),dimsInt(:3),pot%vacz(:,:,:input%jspins))
             CALL h5dclose_f(fzSetID, hdfError)
 
             dims(:5)=(/2,nmzxyd,ng2-1,2,input%jspins/)
@@ -2174,7 +2172,7 @@ MODULE m_cdnpot_io_hdf
             CALL h5screate_simple_f(5,dims(:5),fzxySpaceID,hdfError)
             CALL h5dcreate_f(groupID, "fzxy", H5T_NATIVE_DOUBLE, fzxySpaceID, fzxySetID, hdfError)
             CALL h5sclose_f(fzxySpaceID,hdfError)
-            CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),fzxy)
+            CALL io_write_complex4(fzxySetID,(/-1,1,1,1,1/),dimsInt(:5),pot%vacxy(:,:,:,:input%jspins))
             CALL h5dclose_f(fzxySetID, hdfError)
          END IF
 
@@ -2650,11 +2648,11 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT(IN)          :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT(OUT)          :: date, time, iter
-      INTEGER, INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
-      INTEGER, INTENT(OUT)          :: previousDensityIndex, jspins
-      REAL,    INTENT(OUT)          :: fermiEnergy, distance
-      LOGICAL, INTENT(OUT)          :: l_qfix
+      INTEGER, INTENT(OUT),OPTIONAL          :: date, time, iter
+      INTEGER, INTENT(OUT),OPTIONAL          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
+      INTEGER, INTENT(OUT),OPTIONAL          :: previousDensityIndex, jspins
+      REAL,    INTENT(OUT),OPTIONAL          :: fermiEnergy, distance
+      LOGICAL, INTENT(OUT),OPTIONAL          :: l_qfix
 
       INTEGER              :: localDensityType
       LOGICAL              :: l_exist
@@ -2706,20 +2704,20 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
-      CALL io_read_attint0(archiveID,'previousDensityIndex',previousDensityIndex)
-      CALL io_read_attint0(archiveID,'starsIndex',starsIndex)
-      CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndex)
-      CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
-      CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
-      CALL io_read_attint0(archiveID,'spins',jspins)
-      CALL io_read_attint0(archiveID,'iter',iter)
-      CALL io_read_attint0(archiveID,'date',date)
-      CALL io_read_attint0(archiveID,'time',time)
-      CALL io_read_attreal0(archiveID,'distance',distance)
+      IF (PRESENT(previousDensityIndex)) CALL io_read_attint0(archiveID,'previousDensityIndex',previousDensityIndex)
+      IF (PRESENT(starsIndex)) CALL io_read_attint0(archiveID,'starsIndex',starsIndex)
+      IF (PRESENT(latharmsIndex)) CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndex)
+      IF (PRESENT(structureIndex)) CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
+      IF (PRESENT(stepfunctionIndex)) CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
+      IF (PRESENT(jspins)) CALL io_read_attint0(archiveID,'spins',jspins)
+      IF (PRESENT(iter)) CALL io_read_attint0(archiveID,'iter',iter)
+      IF (PRESENT(date)) CALL io_read_attint0(archiveID,'date',date)
+      IF (PRESENT(time)) CALL io_read_attint0(archiveID,'time',time)
+      IF (PRESENT(distance)) CALL io_read_attreal0(archiveID,'distance',distance)
 
       IF (densityType.NE.DENSITY_TYPE_UNDEFINED_const) THEN
-         CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
-         CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
+         IF (PRESENT(fermiEnergy)) CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
+         IF (PRESENT(l_qfix)) CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
       END IF
 
       CALL h5gclose_f(groupID, hdfError)

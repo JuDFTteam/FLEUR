@@ -75,7 +75,7 @@ contains
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )      
-    call psqpw( mpi, atoms, sphhar, stars, vacuum, dimension, cell, input, sym, oneD, &
+    call psqpw( mpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
          den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
     call timestop( "psqpw" )
 

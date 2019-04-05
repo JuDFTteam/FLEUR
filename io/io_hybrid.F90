@@ -24,9 +24,9 @@ contains
     opened=.true.
 
     print *,"Open olap.mat"
-    id_olap=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"olap.mat")
+    id_olap=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"olap.mat")
     print *,"Open z.mat"
-    id_z=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"z.mat")
+    id_z=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"z.mat")
   END SUBROUTINE open_hybrid_io1
 
 
@@ -40,7 +40,7 @@ contains
     opened=.true.
 
     print *,"Open v_x.mat"
-    id_v_x=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"v_x.mat")
+    id_v_x=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"v_x.mat")
   END SUBROUTINE open_hybrid_io1b
 
 

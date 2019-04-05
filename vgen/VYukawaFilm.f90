@@ -47,7 +47,7 @@ contains
 
     ! PSEUDO-CHARGE DENSITY
 
-    call psqpw( mpi, atoms, sphhar, stars, vacuum, dimension, cell, input, sym, oneD, & 
+    call psqpw( mpi, atoms, sphhar, stars, vacuum, cell, input, sym, oneD, & 
                 den%pw(:,1), den%mt(:,:,:,1), den%vacz(:,:,1), .false., VYukawa%potdenType, &
                 psq )
 
