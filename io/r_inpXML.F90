@@ -1413,10 +1413,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                atoms%bmu(iType) = magMom
                DO i = 1, numU
                   IF(l_hia(i)) THEN
-                     input%l_gf = .true. 
+                     input%l_gf  = .true. 
                      atoms%n_hia = atoms%n_hia + 1
-                     atoms%n_gf = atoms%n_gf + 1
-                     atoms%onsiteGF(atoms%n_gf)%l = onsiteGF_l(i)
+                     atoms%n_gf  = atoms%n_gf + 1
+                     atoms%onsiteGF(atoms%n_gf)%l        = ldau_l(i)
                      atoms%onsiteGF(atoms%n_gf)%atomType = iType
                      atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
                      atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
