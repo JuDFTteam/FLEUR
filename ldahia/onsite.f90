@@ -213,13 +213,15 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
 
 END SUBROUTINE onsite_coeffs
 
-SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sphavg,onsite_exc_split)
+SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,ef,l_sphavg,onsite_exc_split)
 
    USE m_types
    USE m_constants
    USE m_smooth
    USE m_kkintgr
    USE m_radfun
+   USE m_gfcalc
+   USE m_cfmat
 
    IMPLICIT NONE
 
@@ -228,7 +230,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
    TYPE(t_greensfCoeffs),  INTENT(IN)     :: greensfCoeffs
    TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
    TYPE(t_sym),            INTENT(IN)     :: sym
-
+   COMPLEX,                INTENT(IN)     :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,jspins)
    INTEGER,                INTENT(IN)     :: jspins
 
    REAL,                   INTENT(IN)     :: ef
@@ -238,16 +240,14 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
    LOGICAL,                INTENT(IN)     :: l_sphavg
 
    TYPE(t_usdus) usdus
-   INTEGER i_gf,i,l,m,mp,jr,noded,nodeu,n,j,jspin
+   INTEGER i_gf,i,l,m,mp,jr,noded,nodeu,n,j,jspin,i_hia
+   INTEGER e_cut(2)
    REAL wronk
    CHARACTER(len=30) :: filename
 
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
    REAL,    ALLOCATABLE :: im(:,:,:,:,:)
    REAL, ALLOCATABLE :: e(:)
-
-   COMPLEX, ALLOCATABLE :: mmpMat(:,:,:,:)
-   ALLOCATE(mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,jspins))
 
    ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
    ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
@@ -263,7 +263,6 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
    END IF
 
    ALLOCATE( im(MAXVAL(gOnsite%nr(:)),greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins) )
-
    DO i_gf = 1, atoms%n_gf
       l = atoms%onsiteGF(i_gf)%l
       n = atoms%onsiteGF(i_gf)%atomType
@@ -279,16 +278,16 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
          DO m = -l, l
             DO mp = -l,l
                !calculate the radial dependence
-                  DO jr = 1, gOnsite%nr(i_gf)
-                     IF(gOnsite%nr(i_gf).NE.1) THEN
-                        im(jr,:,m,mp,jspin) = im(jr,:,m,mp,jspin) + &
-                                             greensfCoeffs%uu(:,i_gf,m,mp,jspin) * (f(jr,1,l,jspin)*f(jr,1,l,jspin)+f(jr,2,l,jspin)*f(jr,2,l,jspin)) +&
-                                             greensfCoeffs%dd(:,i_gf,m,mp,jspin) * (g(jr,1,l,jspin)*g(jr,1,l,jspin)+g(jr,2,l,jspin)*g(jr,2,l,jspin)) +&
-                                             greensfCoeffs%du(:,i_gf,m,mp,jspin) * (f(jr,1,l,jspin)*g(jr,1,l,jspin)+f(jr,2,l,jspin)*g(jr,2,l,jspin))
-                     ELSE
-                        im(1,:,m,mp,jspin) = greensfCoeffs%im_g(:,i_gf,m,mp,jspin)
-                     ENDIF
-                  ENDDO
+               DO jr = 1, gOnsite%nr(i_gf)
+                  IF(gOnsite%nr(i_gf).NE.1) THEN
+                     im(jr,:,m,mp,jspin) = im(jr,:,m,mp,jspin) + &
+                                          greensfCoeffs%uu(:,i_gf,m,mp,jspin) * (f(jr,1,l,jspin)*f(jr,1,l,jspin)+f(jr,2,l,jspin)*f(jr,2,l,jspin)) +&
+                                          greensfCoeffs%dd(:,i_gf,m,mp,jspin) * (g(jr,1,l,jspin)*g(jr,1,l,jspin)+g(jr,2,l,jspin)*g(jr,2,l,jspin)) +&
+                                          greensfCoeffs%du(:,i_gf,m,mp,jspin) * (f(jr,1,l,jspin)*g(jr,1,l,jspin)+f(jr,2,l,jspin)*g(jr,2,l,jspin))
+                  ELSE
+                     im(1,:,m,mp,jspin) = greensfCoeffs%im_g(:,i_gf,m,mp,jspin)
+                  ENDIF
+               ENDDO
                !
                !smooth the imaginary part using gaussian broadening 
                !
@@ -307,7 +306,9 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
       !
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
       !
-      CALL greensf_cutoff(im(:,:,:,:,:),atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg,ef,onsite_exc_split)
+      CALL greensf_cutoff(im(:,:,:,:,:),atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg,ef,onsite_exc_split,e_cut)
+
+      CALL cfcontrib(-1/pi_const * im(1,:,:,:,:),l,n,e_cut(1),e_cut(2),greensfCoeffs%ne,greensfCoeffs%del,jspins) 
 
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO jspin = 1, jspins
@@ -327,23 +328,10 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,ef,sym,l_sph
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
    ENDDO
 
-
-   !CALL gOnsite%calc_mmpmat(atoms,sym,jspins,mmpMat)
-!
-   !!write density matrix to file 
-!
-   !filename = "n_mmp_mat_g"
-!
-   !OPEN (69,file=TRIM(ADJUSTL(filename)),status='replace',form='formatted')
-   !!WRITE (*,'(7f14.8)') mmpMat(:,:,:,:)
-   !WRITE (69,'(14f10.6)') mmpMat(:,:,:,:)
-   !CLOSE (69)
-
-
 END SUBROUTINE calc_onsite
 
 
-SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,onsite_exc_split)
+SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,onsite_exc_split,e_cut)
    !This Subroutine determines the cutoff energy for the kramers-kronig-integration
    !This cutoff energy is defined so that the integral over the fDOS up to this cutoff 
    !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
@@ -371,6 +359,8 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
    REAL,                INTENT(IN)     :: ef
    REAL,                INTENT(OUT)    :: onsite_exc_split
 
+   INTEGER,             INTENT(OUT)    :: e_cut(2)
+
    LOGICAL,             INTENT(IN)     :: l_sphavg
 
 
@@ -391,7 +381,6 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
 
    fDOS = 0.0
 
-
    !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS 
 
    !n_f(e) = -1/pi * TR[Im(G_f(e))]
@@ -407,7 +396,6 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
          ENDDO
       ENDDO
    ENDDO
-
    fDOS(:,:) = -1/pi_const*fDOS(:,:)
 
 
@@ -421,17 +409,18 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
 
       CLOSE(unit = 1337)
 
-      OPEN(1337,file="fDOS_dwn.txt",action="write",status="replace")
+      IF(jspins.EQ.2) THEN
+         OPEN(1337,file="fDOS_dwn.txt",action="write",status="replace")
 
-      DO i = INT(ne/2.0), ne
-         WRITE(1337,*) ((i-1)*del + e_bot-ef)*hartree_to_ev_const, -fDOS(i,2)
-      ENDDO
+         DO i = INT(ne/2.0), ne
+            WRITE(1337,*) ((i-1)*del + e_bot-ef)*hartree_to_ev_const, -fDOS(i,2)
+         ENDDO
 
-      CLOSE(unit = 1337)
-
+         CLOSE(unit = 1337)
+      ENDIF
    ENDIF
-
-   fDOS(:,1) = fDOS(:,1) + fDOS(:,2)
+   
+   IF(jspins.EQ.2) fDOS(:,1) = fDOS(:,1) + fDOS(:,2)
 
    CALL trapz(fDOS(1:ne,1), del, ne, integral)
 
@@ -475,6 +464,8 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
       WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
    END IF
 
+   e_cut(1) = 1
+   e_cut(2) = kkintgr_cut
    !If we are in the magnetic case we want to calculate the effectiv exchange interaction j0 from the Gf
    !For that we can use the difference in the center of gravity of the up and down bands
    !This is calculated here

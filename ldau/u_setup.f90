@@ -90,7 +90,7 @@ CONTAINS
        ENDIF
 
        ! calculate potential matrix and total energy correction
-       CALL v_mmp(sym,atoms,input%jspins,n_mmp,u,f0,f2,pot%mmpMat,results)
+       CALL v_mmp(sym,atoms,atoms%lda_u,atoms%n_u,input%jspins,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
 
        IF (mpi%irank.EQ.0) THEN
           DO jspin = 1,input%jspins

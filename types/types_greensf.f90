@@ -34,6 +34,7 @@ MODULE m_types_greensf
          !Energy contour parameters
          INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
          INTEGER  :: nz    !number of points in the contour
+         INTEGER  :: nef
 
          !array for energy contour
          COMPLEX, ALLOCATABLE  :: e(:)  !energy points
@@ -72,24 +73,22 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(thisGREENSF,input,lmax,atoms,kpts,noco,l_onsite,nz_in,e_in,de_in)
+      SUBROUTINE greensf_init(thisGREENSF,input,lmax,atoms,l_onsite,noco,nz_in,e_in,de_in)
 
          USE m_juDFT
          USE m_types_setup
-         USE m_types_kpts
          USE m_constants, only : lmaxU_const
 
-         CLASS(t_greensf),       INTENT(INOUT)  :: thisGREENSF
-         TYPE(t_atoms),          INTENT(IN)     :: atoms
-         TYPE(t_input),          INTENT(IN)     :: input
-         INTEGER,                INTENT(IN)     :: lmax
-         TYPE(t_kpts), OPTIONAL, INTENT(IN)     :: kpts
-         TYPE(t_noco), OPTIONAL, INTENT(IN)     :: noco
-         LOGICAL,                INTENT(IN)     :: l_onsite
+         CLASS(t_greensf),    INTENT(INOUT)  :: thisGREENSF
+         TYPE(t_atoms),       INTENT(IN)     :: atoms
+         TYPE(t_input),       INTENT(IN)     :: input
+         INTEGER,             INTENT(IN)     :: lmax
+         TYPE(t_noco),        INTENT(IN)     :: noco
+         LOGICAL,             INTENT(IN)     :: l_onsite
          !Pass a already calculated energy contour to the type (not used)
-         INTEGER, OPTIONAL,      INTENT(IN)     :: nz_in
-         COMPLEX, OPTIONAL,      INTENT(IN)     :: e_in(:)
-         COMPLEX, OPTIONAL,      INTENT(IN)     :: de_in(:)
+         INTEGER, OPTIONAL,   INTENT(IN)     :: nz_in
+         COMPLEX, OPTIONAL,   INTENT(IN)     :: e_in(:)
+         COMPLEX, OPTIONAL,   INTENT(IN)     :: de_in(:)
 
          INTEGER i,j,r_dim,l_dim
          REAL    tol,n
@@ -185,7 +184,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE greensf_init
 
-      SUBROUTINE init_e_contour(this,eb,ef,sigma)
+      SUBROUTINE init_e_contour(this,eb,et,ef,sigma)
 
          ! calculates the energy contour where the greens function is calculated
          ! mode determines the kind of contour between e_bot and the fermi energy
@@ -200,6 +199,7 @@ MODULE m_types_greensf
 
          CLASS(t_greensf),  INTENT(INOUT)  :: this
          REAL,              INTENT(IN)     :: eb  
+         REAL,              INTENT(IN)     :: et
          REAL,              INTENT(IN)     :: ef
          REAL, OPTIONAL,    INTENT(IN)     :: sigma
 
@@ -214,9 +214,10 @@ MODULE m_types_greensf
          IF(this%mode.EQ.1) THEN
 
             e1 = eb
-            e2 = ef
+            e2 = et
 
             del = (e2-e1)/REAL(this%nz-1)
+            this%nef = INT((ef-eb)/del)+1
 
             DO i = 1, this%nz
                IF(PRESENT(sigma)) THEN
@@ -238,7 +239,7 @@ MODULE m_types_greensf
 
             e1 = eb
             e2 = ef
-
+            this%nef = this%nz
             !Radius
             r  = (e2-e1)*0.5
             !midpoint

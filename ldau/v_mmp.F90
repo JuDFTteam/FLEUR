@@ -19,23 +19,25 @@ MODULE m_vmmp
   !     Extension to multiple U per atom type  G.M. 2017
   !     ************************************************************
 CONTAINS
-  SUBROUTINE v_mmp(sym,atoms,jspins,ns_mmp,u,f0,f2, vs_mmp,results)
+  SUBROUTINE v_mmp(sym,atoms,u_in,n_u,jspins,ns_mmp,u,f0,f2, vs_mmp,e)
 
     USE m_types
     USE m_constants
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)          :: sym
-    TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_atoms),INTENT(IN)        :: atoms
+    REAL,INTENT(INOUT)              :: e
+    INTEGER,          INTENT(IN)  :: n_u
+    TYPE(t_utype),    INTENT(IN)  :: u_in(n_u)
     !
     ! ..  Arguments ..
     INTEGER, INTENT(IN)    :: jspins 
     REAL,    INTENT(IN)    :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
-    REAL,    INTENT(IN)    :: f0(atoms%n_u),f2(atoms%n_u)
-    COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,jspins)
+                                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
+    REAL,    INTENT(IN)    :: f0(n_u),f2(n_u)
+    COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
 
-    COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u,jspins)
+    COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
 
     ! ..  Local Variables ..
     INTEGER ispin,jspin,l ,mp,p,q,itype,m,i_u
@@ -48,13 +50,13 @@ CONTAINS
     ! Loop over atoms
     !
     spin_deg = 1.0 / (3 - jspins)
-    results%e_ldau = 0.0
+    e = 0.0
 
-    DO i_u = 1, atoms%n_u
-       iType = atoms%lda_u(i_u)%atomType
-       l = atoms%lda_u(i_u)%l
-       u_htr = atoms%lda_u(i_u)%u / hartree_to_ev_const
-       j_htr = atoms%lda_u(i_u)%j / hartree_to_ev_const
+    DO i_u = 1, n_u
+       iType = u_in(i_u)%atomType
+       l = u_in(i_u)%l
+       u_htr = u_in(i_u)%u / hartree_to_ev_const
+       j_htr = u_in(i_u)%j / hartree_to_ev_const
        u_htr = f0(i_u)/hartree_to_ev_const
        IF (l.EQ.1) THEN
           j_htr = f2(i_u)/(5*hartree_to_ev_const)
@@ -75,7 +77,7 @@ CONTAINS
           rho_tot = rho_tot + rho_sig(ispin)
        END DO
        rho_sig(1) = rho_sig(1) * spin_deg  ! if jspins = 1, divide by 2
-       IF (atoms%lda_u(i_u)%l_amf) THEN
+       IF (u_in(i_u)%l_amf) THEN
           eta(1) = rho_sig(1) / (2*l + 1) 
           eta(jspins) = rho_sig(jspins) / (2*l + 1) 
           eta(0) = (eta(1) + eta(jspins) ) / 2
@@ -181,12 +183,12 @@ CONTAINS
        !       e_ldau = e_ldau + (e_ee -  u_htr * rho_tot * ( rho_tot - 1. ) 
        !    +    + j_htr * ns_sum  - (u_htr - j_htr) * rho_tot) * neq(itype)
        !       write(*,*) e_ldau
-       results%e_ldau = results%e_ldau + ( e_ee - e_dc - e_dcc) * atoms%neq(itype)
+       e = e + ( e_ee - e_dc - e_dcc) * atoms%neq(itype)
        !       write(*,*) e_ldau
 
     END DO ! loop over U parameters
 
-    results%e_ldau = results%e_ldau / 2
+    e = e / 2
 
   END SUBROUTINE v_mmp
 END MODULE m_vmmp

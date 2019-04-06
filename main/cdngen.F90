@@ -95,7 +95,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
-   LOGICAL               :: l_error
+   LOGICAL               :: l_error,l_exist
    REAL                  :: j0
    REAL                  :: onsite_excsplit
 
@@ -107,7 +107,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
    CALL greensfCoeffs%init(input,3,atoms,kpts,noco,.true.,.false.)
-   IF(atoms%n_gf.GT.0) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,results%ef,greensfCoeffs%sigma)
+   IF(atoms%n_gf.GT.0) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -125,12 +125,22 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
 
    IF(atoms%n_gf.GT.0) THEN
-      CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,results%ef,sym,input%onsite_sphavg,onsite_excsplit)
+      !If there was an hubbard1 run there should be a density matrix file
+      INQUIRE(file="n_mmpmat_hubbard1",exist=l_exist)
+      IF(l_exist) THEN
+         OPEN(unit = 1337, file="n_mmpmat_hubbard1",status="old",form="formatted",action="read")
+         READ(1337,"(7f14.8)") outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:)
+         CLOSE(unit=1337)
+      ENDIF
+
+      CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:),&
+                        sym,results%ef,input%onsite_sphavg,onsite_excsplit)
       !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
       !CALL write_onsite_gf("greenf.dat",gOnsite,1)
       IF(input%jspins.EQ.2) THEN
          CALL eff_excinteraction(gOnsite,atoms,input,j0,onsite_excsplit)
       ENDIF
+      
    END IF
 
 

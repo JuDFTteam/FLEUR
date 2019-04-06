@@ -9,7 +9,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,noco,enpara,&
-       jspin,jsp,mpi,v,input,td,ud)
+       jspin,jsp,mpi,v,input,td,ud,l_runhia)
     USE m_tlmplm
     USE m_types
     USE m_gaunt, ONLY: gaunt2
@@ -20,6 +20,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_enpara),INTENT(IN)   :: enpara
+    LOGICAL,INTENT(IN)          :: l_runhia
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
@@ -59,7 +60,7 @@ CONTAINS
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input)
+    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input,l_runhia)
     DO  n = 1,atoms%ntype
        CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,td,ud)
        OK=.FALSE.
@@ -111,6 +112,23 @@ CONTAINS
                 ENDDO
              ENDDO
           END DO
+
+         !Contribution from LDA+HIA
+         DO i_u=1,atoms%n_hia
+            IF (n.NE.atoms%lda_hia(i_u)%atomtype) CYCLE
+            !Found a "U" for this atom type
+            l=atoms%lda_hia(i_u)%l
+            lp=atoms%lda_hia(i_u)%l
+            DO m = -l,l
+               lm = l* (l+1) + m
+               DO mp = -lp,lp
+                  lmp = lp* (lp+1) + mp
+                  td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + v%mmpMat(m,mp,atoms%n_u+i_u,jsp)
+                  td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ v%mmpMat(m,mp,atoms%n_u+i_u,jsp)*ud%ddn(lp,n,jsp)
+               ENDDO
+            ENDDO
+         END DO
+
           !Now add diagonal contribution to matrices
           IF (jsp<3) THEN
              DO l = 0,atoms%lmax(n)

@@ -7,7 +7,7 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,inden,vTot,mpi,results,DIMENSION,td,ud,iter)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,inden,vTot,mpi,results,DIMENSION,td,ud,iter,l_runhia)
     USE m_types
     USE m_usetup
     USE m_tlmplm_cholesky
@@ -30,6 +30,7 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
     INTEGER,INTENT(IN)           :: iter
+    LOGICAL,INTENT(IN)           :: l_runhia
 
     INTEGER:: jsp
 
@@ -37,7 +38,7 @@ CONTAINS
        CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
     IF((atoms%n_hia.GT.0)) THEN
-      CALL hubbard1_setup(iter,atoms,sym,mpi,input,inDen,vTot,gOnsite,.true.)
+      CALL hubbard1_setup(iter,atoms,sym,mpi,noco,input,inDen,vTot,gOnsite,.true.,l_runhia)
     END IF
 
     CALL timestart("tlmplm")
@@ -47,7 +48,7 @@ CONTAINS
 
     DO jsp=1,MERGE(4,input%jspins,noco%l_mtNocoPot)
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
-       CALL tlmplm_cholesky(sphhar,atoms,noco,enpara,jsp,jsp,mpi,vTot,input,td,ud)
+       CALL tlmplm_cholesky(sphhar,atoms,noco,enpara,jsp,jsp,mpi,vTot,input,td,ud,l_runhia)
        IF (input%l_f) CALL write_tlmplm(td,vTot%mmpMat,atoms%n_u>0,jsp,jsp,input%jspins)
     END DO
     CALL timestop("tlmplm")

@@ -105,13 +105,14 @@ CONTAINS
     ! local scalars
     INTEGER :: eig_id,archiveType
     INTEGER :: n,iter,iterHF
-    LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real
+    LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real,l_runhia
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr(2)
 #endif
 
+    l_runhia = .FALSE.
     mpi%mpi_comm = mpi_comm
 
     CALL timestart("Initialization")
@@ -165,10 +166,8 @@ CONTAINS
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
-    CALL timestart("Green's function initialization")
-    CALL gOnsite%init(input,3,atoms,kpts,noco,.true.)
-    CALL gIntersite%init(input,3,atoms,kpts,noco,.false.)
-    CALL timestop("Green's function initialization")
+    CALL gOnsite%init(input,lmaxU_const,atoms,.true.,noco)
+    CALL gIntersite%init(input,lmaxU_const,atoms,.false.,noco)
     ! Initialize Green's function (end)
 
     ! Open/allocate eigenvector storage (start)
@@ -260,7 +259,7 @@ CONTAINS
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx,gOnsite)
+                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx,gOnsite,l_runhia)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -422,7 +421,7 @@ CONTAINS
        ! mix input and output densities
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
-            sym,cell,noco,oneD,archiveType,inDen,outDen,results)
+            sym,cell,noco,oneD,archiveType,inDen,outDen,results,l_runhia)
        
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
@@ -452,6 +451,9 @@ CONTAINS
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
+          !If we have converged run hia
+          l_runhia = .NOT.l_cont.AND.(atoms%n_hia > 0)
+          l_cont = l_cont.OR.l_runhia
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
 

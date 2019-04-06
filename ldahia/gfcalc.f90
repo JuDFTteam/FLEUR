@@ -66,7 +66,7 @@ MODULE m_gfcalc
             ALLOCATE(ipiv(matsize))
          ENDIF 
 
-         DO iz = 1, gOnsite%nz
+         DO iz = 1, gOnsite%nef
             !
             !calculate the onsite exchange matrix
             !
@@ -134,8 +134,9 @@ MODULE m_gfcalc
                   integrand(i) = integrand(i) + tmp(m,m)
                ENDDO
             ENDDO
-            WRITE(*,*) gOnsite%e(iz), gOnsite%de(iz),  1/2.0 * AIMAG(integrand(1)*gOnsite%de(iz)-integrand(2)*conjg(gOnsite%de(iz)))
-            j0 = j0 + 1/2.0 * AIMAG(integrand(1)*gOnsite%de(iz)-integrand(2)*conjg(gOnsite%de(iz)))
+            !WRITE(*,*) gOnsite%e(iz), gOnsite%de(iz),  1/2.0 * AIMAG(integrand(1)*gOnsite%de(iz)-integrand(2)*conjg(gOnsite%de(iz)))
+            WRITE(*,*) j0
+            j0 = j0 + 1/2.0 * integrand(1)*gOnsite%de(iz)-integrand(2)*conjg(gOnsite%de(iz))
          ENDDO
 
          
@@ -148,7 +149,7 @@ MODULE m_gfcalc
       ENDDO
    END SUBROUTINE eff_excinteraction
 
-   SUBROUTINE occmtx(gOnsite,i_gf,atoms,sym,jspins,mmpMat)
+   SUBROUTINE occmtx(g,i_gf,atoms,sym,jspins,mmpMat)
 
       USE m_intgr
 
@@ -157,7 +158,7 @@ MODULE m_gfcalc
 
       IMPLICIT NONE
 
-      TYPE(t_greensf),        INTENT(IN)  :: gOnsite
+      TYPE(t_greensf),        INTENT(IN)  :: g
       TYPE(t_atoms),          INTENT(IN)  :: atoms
       TYPE(t_sym),            INTENT(IN)  :: sym
       COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
@@ -165,13 +166,12 @@ MODULE m_gfcalc
       INTEGER,                INTENT(IN)  :: jspins
 
       INTEGER i, m,mp, l, ispin, n, it,is, isi, natom, nn
-      REAL imag, re, fac, n_l
+      REAL imag, re, fac
       COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
 
       mmpMat(:,:,:) = CMPLX(0.0,0.0)
-      n_l = 0.0
       l = atoms%onsiteGF(i_gf)%l
       n = atoms%onsiteGF(i_gf)%atomType 
 
@@ -179,28 +179,105 @@ MODULE m_gfcalc
          n_tmp(:,:) = CMPLX(0.0,0.0)
          DO m = -l, l
             DO mp = -l, l
-               DO i = 1, gOnsite%nz
-                  IF(gOnsite%nr(i_gf).NE.1) THEN
-                     CALL intgr3(REAL(gOnsite%gmmpMat(:,i,i_gf,m,mp,ispin,1)-gOnsite%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
-                     CALL intgr3(AIMAG(gOnsite%gmmpMat(:,i,i_gf,m,mp,ispin,1)-gOnsite%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
+               DO i = 1, g%nef
+                  IF(g%nr(i_gf).NE.1) THEN
+                     CALL intgr3(REAL(g%gmmpMat(:,i,i_gf,m,mp,ispin,1)-g%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),re)
+                     CALL intgr3(AIMAG(g%gmmpMat(:,i,i_gf,m,mp,ispin,1)-g%gmmpMat(:,i,i_gf,m,mp,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
 
-                     n_tmp(m,mp) = n_tmp(m,mp) + (re+ImagUnit*imag)*gOnsite%de(i)
+                     n_tmp(m,mp) = n_tmp(m,mp) + (re+ImagUnit*imag)*g%de(i)
 
                   ELSE  
-                     n_tmp(m,mp) = n_tmp(m,mp) + 1/2.0 * AIMAG(gOnsite%gmmpMat(1,i,i_gf,m,mp,ispin,1)*gOnsite%de(i)-gOnsite%gmmpMat(1,i,i_gf,m,mp,ispin,2)*conjg(gOnsite%de(i)))
+                     n_tmp(m,mp) = n_tmp(m,mp) + 1/2.0 * AIMAG(g%gmmpMat(1,i,i_gf,m,mp,ispin,1)*g%de(i)-g%gmmpMat(1,i,i_gf,m,mp,ispin,2)*conjg(g%de(i)))
                   END IF
                ENDDO
 
                mmpMat(m,mp,ispin) = -1/pi_const * n_tmp(m,mp)
             ENDDO
          ENDDO
-         DO m = -l, l
-            n_l = n_l -1/pi_const * n_tmp(m,m)
+      ENDDO
+
+   END SUBROUTINE occmtx
+
+   SUBROUTINE ldosmtx(app,g,i_gf,atoms,sym,jspins)
+
+      !calculates the l-dos from the onsite green's function 
+      !If mode = 2 this may not make sense
+
+      USE m_intgr
+
+      CHARACTER(len=*),       INTENT(IN)  :: app
+      TYPE(t_greensf),        INTENT(IN)  :: g
+      TYPE(t_atoms),          INTENT(IN)  :: atoms 
+      TYPE(t_sym),            INTENT(IN)  :: sym 
+      INTEGER,                INTENT(IN)  :: i_gf
+      INTEGER,                INTENT(IN)  :: jspins
+      REAL :: dos(g%nz,jspins)
+
+      INTEGER ispin,m,j,l,n,i
+      REAL    imagpl,imagmi
+
+      dos = 0.0
+
+      IF(g%mode.EQ.2) CALL juDFT_warn("The green's function is calculated on a semicircle in the complex plane; The ldos might not make sense", calledby="ldosmtx")
+      !n(E) = 1/2pii * Tr(G^+-G^-)
+      l = atoms%onsiteGF(i_gf)%l
+      n = atoms%onsiteGF(i_gf)%atomType
+      DO ispin = 1, jspins
+         DO m = -l , l
+            DO j = 1, g%nz
+               IF(g%nr(i_gf).EQ.1) THEN
+                  imagpl = AIMAG(g%gmmpMat(1,j,i_gf,m,m,ispin,1))
+                  imagmi = AIMAG(g%gmmpMat(1,j,i_gf,m,m,ispin,2))
+               ELSE
+                  CALL intgr3(AIMAG(g%gmmpMat(:,j,i_gf,m,m,ispin,1)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imagpl)
+                  CALL intgr3(AIMAG(g%gmmpMat(:,j,i_gf,m,m,ispin,2)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imagmi)
+               END IF
+               dos(j,ispin) = dos(j,ispin) - 1/(2*pi_const) * (imagpl-imagmi)
+            ENDDO
          ENDDO
       ENDDO
-      WRITE(*,*) "OCCUPATION: ", n_l
 
-END SUBROUTINE occmtx
+      OPEN(1337,file="lDOS_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+
+      DO i = 1, g%nz
+         WRITE(1337,*) REAL(g%e(i)), dos(i,1)
+      ENDDO
+
+      CLOSE(unit = 1337)
+      IF(jspins.EQ.2) THEN
+         OPEN(1337,file="lDOS_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+
+         DO i = 1, g%nz
+            WRITE(1337,*) REAL(g%e(i)), dos(i,2)
+         ENDDO
+
+         CLOSE(unit = 1337)
+      ENDIF
+
+   END SUBROUTINE
+
+   SUBROUTINE indexgf(atoms,l,n,ind)
+
+      !Find the index of the greens function associated with this l,n 
+
+      USE m_types
+
+      !Finds the corresponding entry in gmmpMat for given atomType and l
+
+      TYPE(t_atoms),       INTENT(IN)  :: atoms
+      INTEGER,             INTENT(IN)  :: l,n
+      INTEGER,             INTENT(OUT) :: ind
+
+      ind = 0
+      DO 
+         ind = ind + 1
+         IF(atoms%onsiteGF(ind)%atomType.EQ.n.AND.atoms%onsiteGF(ind)%l.EQ.l) THEN
+            EXIT
+         ENDIF
+         IF(ind.EQ.atoms%n_gf) CALL juDFT_error("Green's function element not found", hint="This is a bug in FLEUR, please report")
+      ENDDO
+   END SUBROUTINE
+
 
 
 END MODULE m_gfcalc

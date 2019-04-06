@@ -19,7 +19,7 @@ CONTAINS
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                    cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx,gOnsite)
+                    cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx,gOnsite,l_runhia)
 
 #include"cpp_double.h"
       USE m_constants, ONLY : pi_const,sfp_const
@@ -65,6 +65,7 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)    :: inden,vx
       TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
       TYPE(t_greensf),INTENT(INOUT):: gOnsite
+      LOGICAL,INTENT(IN)           :: l_runhia
 
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -125,7 +126,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,inden,v,mpi,results,DIMENSION,td,ud,iter)
+      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,inden,v,mpi,results,DIMENSION,td,ud,iter,l_runhia)
 
       neigBuffer = 0
       results%neig = 0

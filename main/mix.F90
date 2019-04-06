@@ -17,7 +17,7 @@ contains
 
   SUBROUTINE mix_charge( field, DIMENSION,  mpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-       oneD, archiveType, inDen, outDen, results )
+       oneD, archiveType, inDen, outDen, results ,l_runhia)
 
     use m_juDFT
     use m_constants
@@ -52,6 +52,7 @@ contains
     type(t_potden),    intent(inout) :: inDen
     integer,           intent(in)    :: archiveType
     LOGICAL,           INTENT(IN)    :: l_writehistory
+    LOGICAL,           INTENT(IN)    :: l_runhia
 
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
@@ -72,6 +73,10 @@ contains
           if (mpi%irank.ne.0) inden%mmpmat=0.0 
        ENDIF
     ENDIF
+
+    IF(atoms%n_hia>0) THEN
+      inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:) = outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:)
+    ENDIF 
 
     CALL timestart("Reading of distances")
     CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
@@ -145,6 +150,11 @@ contains
        CALL mixing_history_reset(mpi)
        CALL mixvector_reset()
     ENDIF
+
+    IF (atoms%n_hia>0.AND.l_runhia) THEN
+      CALL mixing_history_reset(mpi)
+      CALL mixvector_reset()
+   ENDIF
 
     !fix charge of the new density
     IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE., fix)
