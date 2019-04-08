@@ -11,8 +11,8 @@ If you manage to compile on some system that can be of general interest, please 
 * [How to adjust to your configuration](#how-to-adjust-the-configuration)
 * [Running the automatic tests](#ci-tests)
 
-#Quick guide 
-
+Quick guide 
+============
 If you are extremely lucky (and/or your system is directly supported by us) installation can be very simple:
 
 * run the configuration script `'PATH_TO_SOURCE_CODE/configure.sh`. You can do that in any directory in which the 'build' directory should be created. The script accepts some useful arguments, you can run the script with `configure.sh -h`  to get a list of supported arguments.
@@ -29,8 +29,8 @@ Usually only the serial or the MPI version will be build. You can run the MPI-ve
 
 You might want to [run the automatic tests](#ci-tests).
 
-#Requirements 
-
+Requirements 
+=========
 There are a couple of external dependencies in the build process of FLEUR. 
 
 **Required are:**
@@ -51,8 +51,8 @@ FLEUR can benefit significantly if the following further software components are
 
 You should also check the output of `configure.sh -h` for further dependencies and hints.
 
-#Configure
-
+Configure
+=======
 The `configure.sh` script found in the main FLEUR source directory can (and should) be used to start the configuration of FLEUR. 
 It is called as
 
@@ -84,7 +84,8 @@ fine-tuning is needed. In particular you might have to:
 * provide hints on which compiler to use
 * provide hints on how to use libraries.
 
-## Setting of the compiler to use
+Setting the compiler to use
+-------------
 By defining the environment variables FC and CC to point to the Fortran and C compiler you can make sure that cmake uses the correct compilers. E.g. you might want to say
 
 `export FC=mpif90`.
@@ -96,25 +97,23 @@ This should be done using the `-flag` option to `configure.sh`. So for example y
 
 In general for a compiler [not known](#compilers) in cmake/compilerflags.cmake you need at least an option to specify the promotion of standard real variables to double precision (like the `-r8`). But additional switches can/should be used.
 
-###Adding include directories
+### Adding include directories
 For libraries with a Fortran-90 interface, ELPA, HDF5, MAGMA, ... you probably will have to give an include path. This can
 be achieved using the `-includedir` option. So you might want to say something like
 `configure.sh -includedir SOMEPATH` 
-###Adding linker flags
+### Adding linker flags
 To add flags to the linker you can do
 
 * add a directory in which the linker looks for libraries with `-libdir SOMEDIR`
 * add the corresponding link option(s) with e.g. `-link "-lxml2;-llapack;-lblas"`. Please note that the specification is different from the compiler switches as different switches are separated by ';'.
 
-### Further options:
-
+Further options:
+------
 There are more options you might find useful. Please
 check `configure.sh -h` for a list.
 
-
-
-##Compilers
-
+Compiler specifics
+-------
 FLEUR is known to work with the following compilers:
 
 **INTEL**:
@@ -135,11 +134,10 @@ GFortran is knwon to work with versions newer thant 6.3.
 **PGI:**
 
 The PGI compilers also can compile FLEUR. Here you need ad least version 18.4 but might still run into some problems.
-  
 
 
-#CI-Tests
-
+CI-Tests
+=========
 After the build was finished you might want to run the automatic test. 
 
 Just type `ctest` in the build directory for this purpose.

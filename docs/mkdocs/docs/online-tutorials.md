@@ -1,17 +1,13 @@
-Installation of FLEUR
--------------------
-<script src="//katacoda.com/embed.js"></script>
-<div id="katacoda-scenario-1"
-    data-katacoda-id="wortmann/fleur_install"
-    data-katacoda-color="004d7f"
-    style="height: 600px; padding-top: 20px;"></div>
+Online tutorials
+===========================
 
-First calculation
-------------------
+We provide some online-tutorial using [KataCoda](http://www.katacoda.com). You might use
+the [KataCoda-Site for FLEUR](http://www.katacoda.com/wortmann) or the list below to
+access the tutorials.
 
-<script src="//katacoda.com/embed.js"></script>
-<div id="katacoda-scenario-1"
-    data-katacoda-id="wortmann/first_calculation"
-    data-katacoda-color="004d7f"
-    style="height: 600px; padding-top: 20px;"></div>
+# Install Fleur
+A short tutorial demonstrating how to install FLEUR from its Git source can be found [here](katacoda1.md)
+
+# First Calculation
+A simple Si bulk calculation is performed [here](katacoda2.md)
 

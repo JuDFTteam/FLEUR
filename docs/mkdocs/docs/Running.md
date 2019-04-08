@@ -12,7 +12,7 @@ In most cases you will first run the [input generator](inpgen.md) to create an [
 Please note that fleur/fleur_MPI will always read its setting from an inp.xml file in the current directory.
 
 Command line options
-------------------
+======
 The run-time behaviour of FLEUR can be modified using command line switches. You should understand that these switches modify the way FLEUR might operate or in some cases determine what FLEUR actually does. If you want to change the calculation setup you should modify the [inp.xml](xmlio.md) file.
 
 Here we document the most relevant command line options. For a full list of available options, please run 
@@ -45,11 +45,11 @@ Here we document the most relevant command line options. For a full list of avai
 * Further options might be available, check `fleur -h` for a list.
 
 
- Environment Variables
+Environment Variables
 -----------------------
 There are basically two environments variables you might want to change when using FLEUR.
 
-# OMP_NUM_THREADS
+### OMP_NUM_THREADS
 
 As FLEUR uses OpenMP it is generally a good idea to consider adjusting OMP_NUM_THREADS to use
 all cores available. While this might happen automatically in you queuing system you should check if you use
@@ -58,7 +58,7 @@ appropriate values. Check the output of FLEUR to standard out.
 So you might want to use `export OMP_NUM_THREADS=2` or something similar.
 
 
-#juDFT
+### juDFT
 
 You can use the juDFT variable to set command line switches that do not require an additional argument. For example
 
@@ -69,12 +69,12 @@ would run FLEUR with these command line switches.
 
 
 Hybrid MPI/OpenMP Parallelization
-------------------------
+===============
 The efficient usage of FLEUR on modern supercomputers is ensured by hybrid MPI/OpenMP parallelization. The k-point loop and the eigenvector problem 
 are parallelized via MPI (Message Passing Interface). In addition to that, every MPI process can be executed on several computer cores with shared memory,
 using either OpenMP (Open Multi-Processing) interface or multi-threaded libraries.
 
-#MPI parallelization
+### MPI parallelization
 * The k-point parallelisation gives us increased speed when making calculations with large k-point sets.
 * The eigenvector parallelisation gives us an additional speed up but also allows us to tackle larger systems by reducing the amount of memory that we use with each MPI process.
 
@@ -82,7 +82,7 @@ Depending on the specific architecture, one or the other or both levels of paral
 
 http:/images/Parallel.gif
 
-##k-point Parallelisation 
+### k-point Parallelisation 
 
 This type of parallelization is always chosen, if the number of  k-points (K) is a multiple of the number of MPI processes (P). If K/P is not integer, a mixed parallelization will be attempted and M MPI processes will work on a single k-point, so that K.M/P is integer. This type of parallelization 
 can be very efficient, because all three most time-consuming parts of the code (Hamiltonian matrix setup, diagonalization and generation of the new charge density) are independent for different k-points and there is no need to communicate during the calculation. That is why this type of parallelization is fine, 
@@ -96,7 +96,7 @@ of the speedup from the ideal.
 (NaCl, 64 atoms, 216 k-points) on a computer cluster (Intel E5-2650V4, 2.2 GHz). 
 Execution time of one iteration is 3 hours 53 minutes.                                                                                                                                                                                                                                                                                                                                                      
 
-##Eigenvector Parallelization                                                                                                                                                                                                                                                        
+### Eigenvector Parallelization                                                                                                                                                                                                                                                        
 
 If the number of  k-points is not a multiple of the number of MPI processes, every k-point will be parallelized over several MPI processes. It might be necessary 
 to use this type of parallelization to reduce the memory usage per MPI process, i.e. if the eigenvalue-problem is too large. This type of parallelization depends 
@@ -111,7 +111,7 @@ to use HDF library if needed.
 Test system: CuAg (256 atoms, 1 k-point). Memory usage was measured on 
 the CLAIX supercomputer (Intel E5-2650V4, 2.2 GHz, 128 GB per node)
 
-## OpenMP parallelization
+### OpenMP parallelization
 Modern HPC systems are usually cluster systems, i.e. they consist of shared-memory computer nodes connected through a communication network. 
 It is possible to use the distributed-memory paradigm (that means MPI parallelization) also inside the node, but in this case the memory available 
 for every MPI process will be considerably smaller. Imagine you use a node with 24 cores and 120 GB memory. If you start one MPI process it will get 
@@ -124,7 +124,7 @@ from this type of parallelization, you would need ELPA and multithreaded MKL lib
  Timing measurements of the GaAs system (512 atoms) on the CLAIX supercomputer 
 (Intel E5-2650V4, 2.2 GHz, 24 cores per node, 128 GB per node).
 
-## Parallel execution: best practices
+### Parallel execution: best practices
 Since there are several levels of parallelization available in FLEUR: k-point MPI parallelization, eigenvalue MPI parallelization and multi-threaded
 parallelization, it is not always an easy decision, how to use the available HPC resources in the most effective way: how many nodes does one need, 
 how many MPI processes per node, how many threads per MPI process. First of all, if your system contains several k-point, choose the number of MPI 

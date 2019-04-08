@@ -2,10 +2,9 @@ site_name: FLEUR
 repo_url: https://iffgit.fz-juelich.de/fleur/fleur/
 site_url: https://www.flapw.de/s/
 repo_name: GIT
-edit_url: edit/develop/docs/mkdocs/
+edit_uri: edit/develop/docs/mkdocs/docs/
 nav:
     - Welcome: index.md
-    - Further support: support.md
     - User Guide:
         - Overview: Docu-Main.md
         - Installation: Install.md
@@ -24,4 +23,5 @@ nav:
 plugins:
   - search
 theme:
-    name: cosmo
+    name: cerulean
+    custom_dir: tutorial_scheme 
