@@ -10,7 +10,8 @@ For older versions of FLEUR you find the
 * [Installation of FLEUR](Install.md) including some hints for configuration.
 * [Running FLEUR](Running.md) describes the standard workflow to perform a FLEUR calculation.
 * [Using the input-generator](inpgen.md) to generate the full input out of a simple file.
-* [XML based IO](xmlio.md): documentation of the input of FLEUR, its features and hints how to use them.
+* [XML based input-file](xml-inp.md): documentation of the input of FLEUR, its features and hints how to use them.
+* [More advanced features](xml-advanced.md) and their use in the XML-input file.
 * [The AiiDA interface to FLEUR](http://aiida-fleur.readthedocs.io/en/develop/) can be used to generate, run and store complex workflows.
 
 If you are a more expert user or developer, you might be interested in:

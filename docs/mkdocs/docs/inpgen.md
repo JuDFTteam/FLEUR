@@ -1,7 +1,7 @@
 The FLEUR input generator
 ===============================
 
-For those, who think that the [Fleur inp.xml](xmlio.md) is too complicated, contains too many options or a too complex format, or  those in need for  defaults for their calculation, a inp-file generator is provided.
+For those, who think that the [Fleur inp.xml](xml-inp.md) is too complicated, contains too many options or a too complex format, or  those in need for  defaults for their calculation, a inp-file generator is provided.
 
 The `inpgen` executable takes a simplified input file and generates defaults for:
 
@@ -18,7 +18,7 @@ In general the input generator does not know:
 * how many k-points will you need? For metallic systems it might be more than for semiconductors or insulators. In the latter cases, also the mixing parameters might be chosen larger.
 * is the specified energy range for the valence band ok? Normally, it should, but it's better to check, especially if LO's are used. 
 
-You have to modify your [inp.xml](xmlio.md) file accordingly. Depending on your demands, you might want to change something else, e.g. the XC-functional, the switches for relaxation, use LDA+U etc. ...
+You have to modify your [inp.xml](xml-inp.md) file accordingly. Depending on your demands, you might want to change something else, e.g. the XC-functional, the switches for relaxation, use LDA+U etc. ...
 
 #Running inpgen
 
