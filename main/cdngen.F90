@@ -70,7 +70,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
    TYPE(t_potden),INTENT(IN)        :: vTot
    TYPE(t_potden),INTENT(INOUT)     :: outDen
-   TYPE(t_greensf),INTENT(INOUT)    :: gOnsite
+   TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: gOnsite
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -106,7 +106,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
    CALL greensfCoeffs%init(input,3,atoms,kpts,noco,.true.,.false.)
-   IF(atoms%n_gf.GT.0) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma)
+   IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -123,25 +123,26 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 
+   IF(PRESENT(gOnsite)) THEN
+      IF(atoms%n_gf.GT.0) THEN
+         !If there was an hubbard1 run there should be a density matrix file
+         INQUIRE(file="n_mmpmat_hubbard1",exist=l_exist)
+         IF(l_exist) THEN
+            OPEN(unit = 1337, file="n_mmpmat_hubbard1",status="old",form="formatted",action="read")
+            READ(1337,"(7f14.8)") outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:)
+            CLOSE(unit=1337)
+         ENDIF
 
-   IF(atoms%n_gf.GT.0) THEN
-      !If there was an hubbard1 run there should be a density matrix file
-      INQUIRE(file="n_mmpmat_hubbard1",exist=l_exist)
-      IF(l_exist) THEN
-         OPEN(unit = 1337, file="n_mmpmat_hubbard1",status="old",form="formatted",action="read")
-         READ(1337,"(7f14.8)") outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:)
-         CLOSE(unit=1337)
-      ENDIF
-
-      CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:),&
-                        sym,results%ef,input%onsite_sphavg,onsite_excsplit)
-      !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
-      !CALL write_onsite_gf("greenf.dat",gOnsite,1)
-      IF(input%jspins.EQ.2) THEN
-         CALL eff_excinteraction(gOnsite,atoms,input,j0,onsite_excsplit)
-      ENDIF
+         CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:),&
+                           sym,results%ef,input%onsite_sphavg,onsite_excsplit)
+         !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
+         !CALL write_onsite_gf("greenf.dat",gOnsite,1)
+         IF(input%jspins.EQ.2) THEN
+            CALL eff_excinteraction(gOnsite,atoms,input,j0,onsite_excsplit)
+         ENDIF
       
-   END IF
+      ENDIF
+   ENDIF
 
 
    IF (mpi%irank.EQ.0) THEN
