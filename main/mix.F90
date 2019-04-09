@@ -75,6 +75,7 @@ contains
     ENDIF
 
     IF(atoms%n_hia>0) THEN
+      !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
       inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:) = outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:)
     ENDIF 
 

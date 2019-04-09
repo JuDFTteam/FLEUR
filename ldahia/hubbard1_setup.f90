@@ -24,7 +24,7 @@ MODULE m_hubbard1_setup
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_potden),   INTENT(IN)     :: inDen
       TYPE(t_potden),   INTENT(INOUT)  :: pot
-      TYPE(t_greensf),  INTENT(INOUT)  :: gdft !green's function in the mt-sphere including the potential correction form dft+hubbard1 
+      TYPE(t_greensf),  INTENT(IN)  :: gdft !green's function in the mt-sphere including the potential correction form dft+hubbard1 
       LOGICAL,          INTENT(IN)     :: l_runinfleur !Determines wether we call the the solver here or run separately
       LOGICAL,          INTENT(IN)     :: l_runhia
       
@@ -100,8 +100,8 @@ MODULE m_hubbard1_setup
             WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
          
-            !calculate the occupation of the correlated shell
-            CALL occmtx(g0,i_gf,atoms,sym,input%jspins,mmpMat(:,:,i_hia,:))
+            !calculate the occupation of the correlated shell (!!!FROM THE LDA+U GREEN'S FUNCTION)
+            CALL occmtx(gdft,i_gf,atoms,sym,input%jspins,mmpMat(:,:,i_hia,:))
             n_l(i_hia,:) = 0.0
             DO ispin = 1, input%jspins
                DO m = -l, l
@@ -161,6 +161,7 @@ MODULE m_hubbard1_setup
                WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
                CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/")
                CALL indexgf(atoms,l,n,i_gf)
+               CALL ldosmtx("gdft",gdft,i_gf,atoms,sym,input%jspins)
                CALL ldosmtx("g0",g0,i_gf,atoms,sym,input%jspins)
                CALL ldosmtx("g",gu,i_gf,atoms,sym,input%jspins)
             ENDDO
