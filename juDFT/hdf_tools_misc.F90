@@ -6,7 +6,6 @@
 
       MODULE m_hdf_tools4 
       USE hdf5
-#include "juDFT_env.h"
 !-----------------------------------------------                        
 !     major rewrite of hdf_tools                                        
 !     this module contains various subroutines                          
@@ -455,6 +454,7 @@
 !     Version for LINUX compiled with IFC                               
 !             (last modified: 05-02-25) D. Wortmann                     
 !-----------------------------------------------                        
+      use m_juDFT_stop
       IMPLICIT NONE 
       !<-- Arguments                                                    
       CHARACTER*(*)        ::message 
@@ -462,7 +462,7 @@
       !>                                                                
       WRITE(*,*) "Error in HDF-io" 
       WRITE(*,*) message 
-      CPP_error(message)
+      call judft_error(message)
       END SUBROUTINE 
                                                                         
       !>                                                                

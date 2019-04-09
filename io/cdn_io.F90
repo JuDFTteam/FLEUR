@@ -34,7 +34,7 @@ MODULE m_cdn_io
    PUBLIC readStars, writeStars
    PUBLIC readStepfunction, writeStepfunction
    PUBLIC setStartingDensity, readPrevEFermi, deleteDensities
-   PUBLIC storeStructureIfNew
+   PUBLIC storeStructureIfNew,transform_by_moving_atoms
    PUBLIC getIOMode
    PUBLIC CDN_INPUT_DEN_const, CDN_OUTPUT_DEN_const
    PUBLIC CDN_ARCHIVE_TYPE_CDN1_const, CDN_ARCHIVE_TYPE_NOCO_const
@@ -841,7 +841,7 @@ MODULE m_cdn_io
 
    END SUBROUTINE writeCoreDensity
 
-   SUBROUTINE storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
+   SUBROUTINE storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym,mpi,sphhar,noco)
 
       TYPE(t_input),INTENT(IN)   :: input
       TYPE(t_atoms), INTENT(IN)  :: atoms
@@ -849,6 +849,10 @@ MODULE m_cdn_io
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_oneD),INTENT(IN)    :: oneD
       TYPE(t_sym),INTENT(IN)     :: sym
+      TYPE(t_mpi),INTENT(IN)      :: mpi
+      TYPE(t_sphhar),INTENT(IN)   :: sphhar
+      TYPE(t_noco),INTENT(IN)     :: noco
+      TYPE(t_stars),INTENT(IN)    :: stars
 
       TYPE(t_input)              :: inputTemp
       TYPE(t_atoms)              :: atomsTemp
@@ -885,6 +889,7 @@ MODULE m_cdn_io
             END IF
          END IF
 
+ 
          IF (l_writeStructure) THEN
             CALL writeStructureHDF(fileID, input, atoms, cell, vacuum, oneD, sym, currentStructureIndex,.TRUE.)
             CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
@@ -901,6 +906,108 @@ MODULE m_cdn_io
       END IF
 
    END SUBROUTINE storeStructureIfNew
+
+   SUBROUTINE transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
+     USE m_types
+     USE m_qfix
+     use m_fix_by_gaussian
+     IMPLICIT NONE
+     TYPE(t_mpi),INTENT(IN)      :: mpi
+     TYPE(t_atoms),INTENT(IN)    :: atoms
+     TYPE(t_sym),INTENT(IN)      :: sym
+     TYPE(t_vacuum),INTENT(IN)   :: vacuum
+     TYPE(t_sphhar),INTENT(IN)   :: sphhar
+     TYPE(t_input),INTENT(IN)    :: input
+     TYPE(t_oneD),INTENT(IN)     :: oneD
+     TYPE(t_cell),INTENT(IN)     :: cell
+     TYPE(t_noco),INTENT(IN)     :: noco
+     TYPE(t_stars),INTENT(IN)    :: stars
+     !Locals
+     INTEGER :: archiveType
+     LOGICAL :: l_qfix
+     REAL    :: fermiEnergy,fix
+     REAL    :: shifts(3,SIZE(atoms%taual,2))
+
+     TYPE(t_potden):: den
+
+     TYPE(t_input)              :: inputTemp
+     TYPE(t_atoms)              :: atomsTemp
+     TYPE(t_cell)               :: cellTemp
+     TYPE(t_vacuum)             :: vacuumTemp
+     TYPE(t_oneD)               :: oneDTemp
+     TYPE(t_sym)                :: symTemp
+     
+
+     INTEGER :: mode,currentStarsIndex,currentLatharmsIndex,currentStructureIndex
+     INTEGER :: currentStepfunctionIndex,readDensityIndex,lastDensityIndex,structureindex
+     LOGICAL :: l_same,l_structure_by_shift
+
+#ifdef CPP_HDF
+      INTEGER(HID_T) :: fileID
+      character(len=50) :: archivename
+#endif
+#ifdef CPP_MPI
+      INCLUDE 'mpif.h'
+      integer :: ierr
+#endif
+      l_same=.TRUE.;l_structure_by_shift=.TRUE.
+          
+      CALL getIOMode(mode)
+      IF(mode.EQ.CDN_HDF5_MODE) THEN
+#ifdef CPP_HDF
+         IF (mpi%irank==0) THEN
+            CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
+                 currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
+            IF (currentStructureIndex>0.AND.lastdensityindex>0) THEN
+               !Determine structure of last density
+               WRITE(archivename,"(a,i0)") "cdn-",lastdensityindex
+               CALL peekDensityEntryHDF(fileID, archivename, DENSITY_TYPE_IN_const, structureIndex=structureIndex)
+               !Read that structure
+               CALL readStructureHDF(fileID, inputTemp, atomsTemp, cellTemp, vacuumTemp, oneDTemp, symTemp, StructureIndex)
+               CALL compareStructure(input, atoms, vacuum, cell, sym, inputTemp, atomsTemp, vacuumTemp, cellTemp, symTemp, l_same,l_structure_by_shift)
+            ENDIF
+            CALL closeCDNPOT_HDF(fileID)
+         ENDIF
+#ifdef CPP_MPI
+         CALL mpi_bcast(l_same,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+         CALL mpi_bcast(l_structure_by_shift,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+#endif
+         IF (l_same.OR..NOT.l_structure_by_shift) RETURN ! nothing to do
+         
+         IF (mpi%irank==0) THEN
+            WRITE(6,*) "Atomic movement detected, trying to adjust charge density" 
+            
+            !Calculate shifts
+            shifts=atomsTemp%taual-atoms%taual
+            
+            !Determine type of charge
+            archiveType = MERGE(CDN_ARCHIVE_TYPE_NOCO_const,CDN_ARCHIVE_TYPE_CDN1_const,noco%l_noco)
+            !read the current density
+            CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+            CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                 0,fermiEnergy,l_qfix,den)
+         ENDIF
+         !Now fix the density
+         SELECT CASE(input%qfix)
+         CASE (0,1) !just qfix the density
+            IF (mpi%irank==0) WRITE(6,*) "Using qfix to adjust density"
+            CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+                 den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix)
+         CASE(2,3)
+            CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+                 den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
+         CASE(4,5)
+            CALL fix_by_gaussian(shifts,atoms,stars,mpi,sym,vacuum,sphhar,input,oned,cell,noco,den)
+         CASE default
+            CALL judft_error("Wrong choice of qfix in input")
+         END SELECT
+         !Now write the density to file
+         IF (mpi%irank==0) CALL writedensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+              0,-1.0,fermiEnergy,l_qfix,den)
+         
+#endif
+      END IF
+    END SUBROUTINE transform_by_moving_atoms
 
    SUBROUTINE writeStars(stars,l_xcExtended,l_ExtData)
 

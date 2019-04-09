@@ -129,6 +129,8 @@
              !OPEN (16,status='SCRATCH')
           ENDIF
 
+          input%l_rdmft = .FALSE.
+
           input%l_wann = .FALSE.
           CALL initWannierDefaults(wann)
 
@@ -448,11 +450,11 @@
 
           ! Initializations for Wannier functions (end)
 
-          IF (    xcpot%is_hybrid() ) THEN
-             IF (input%film .OR. oneD%odi%d1)&
-                  &    CALL juDFT_error("2D film and 1D calculations not implemented"&
-                  &                 //"for HF/EXX/PBE0/HSE", calledby ="fleur",&
-                  &                 hint="Use a supercell or a different functional")
+          IF (xcpot%is_hybrid().OR.input%l_rdmft) THEN
+             IF (input%film.OR.oneD%odi%d1) THEN
+                CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
+                                 calledby ="fleur", hint="Use a supercell or a different functional")
+             END IF
 
 !             IF( ANY( atoms%l_geo  ) )&
 !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
@@ -460,11 +462,9 @@
 
              !calculate whole Brilloun zone
              !CALL gen_bz(kpts,sym)
-             CALL gen_map(&
-                  &          atoms,sym,oneD,hybrid)
-             !
+             CALL gen_map(atoms,sym,oneD,hybrid)
+
              ! calculate d_wgn
-             !
              ALLOCATE (hybrid%d_wgn2(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,sym%nsym))
              CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,hybrid%d_wgn2(:,:,1:,:sym%nop))
              hybrid%d_wgn2(:,:,0,:) = 1
@@ -506,7 +506,11 @@
                 END IF
              END IF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
-             hybrid%l_calhf   = .FALSE.
+             hybrid%l_calhf = .FALSE.
+          END IF
+
+          IF(input%l_rdmft) THEN
+             hybrid%l_calhf = .FALSE.
           END IF
  
           IF (mpi%irank.EQ.0) THEN

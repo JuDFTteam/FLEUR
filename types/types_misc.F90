@@ -152,8 +152,8 @@ CONTAINS
 !   neigd2 = dimension%neigd
       IF (noco%l_soc.AND.(.NOT.noco%l_noco)) neigd2 = 2*neigd2
 
-      ALLOCATE (thisResults%force(3,atoms%ntype,input%jspins))
-      ALLOCATE (thisResults%force_old(3,atoms%ntype))
+      ALLOCATE (thisResults%force(3,atoms%ntype,input%jspins));thisResults%force=0.0
+      ALLOCATE (thisResults%force_old(3,atoms%ntype));thisResults%force_old=0.0
       ALLOCATE (thisResults%w_iks(neigd2,kpts%nkpt,input%jspins))
       ALLOCATE (thisResults%neig(kpts%nkpt,input%jspins))
       ALLOCATE (thisResults%eig(neigd2,kpts%nkpt,input%jspins))

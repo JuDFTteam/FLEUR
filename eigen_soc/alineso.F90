@@ -63,11 +63,6 @@ CONTAINS
     !     ..
     !     .. External Subroutines ..
     EXTERNAL CPP_LAPACK_cheev
-    !     ..
-    !     .. External Functions ..
-    COMPLEX  CPP_BLAS_cdotu,CPP_BLAS_cdotc
-    EXTERNAL CPP_BLAS_cdotu,CPP_BLAS_cdotc
-    !     ..
 
     !     read from eigenvalue and -vector file
     !

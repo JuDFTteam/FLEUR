@@ -63,7 +63,7 @@ CONTAINS
           am(it) = vi.dot.fm1
           ! calculate um(:) = -am(it)*ui(:) + um(:)
           um=um-am(it)*ui
-          WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it) 
+          !WRITE(6,FMT='(5x,"<vi|w|Fm> for it",i2,5x,f10.6)')it,am(it) 
        END DO
 
        ! calculate vm = alpha*wfm1 -\sum <fm1|w|vi> <fi1|w|vi><vi|

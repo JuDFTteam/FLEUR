@@ -142,7 +142,7 @@
 
           ! Store structure data
 
-          CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
+          CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym,mpi,sphhar,noco)
 
           !+odim
           IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN

@@ -3,8 +3,8 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
 MODULE m_juDFT_time
+!DEC$ NOOPTIMIZE
    !*****************************************************************
    !     DESC:Timer module for measuring the execution times of different
    !     parts of the code
@@ -160,7 +160,7 @@ CONTAINS
       IF (.NOT. l_debug) RETURN
       if (debugtimestart < 0) debugtimestart = cputime()
 #ifdef CPP_MPI
-      CALL MPI_INITALIZED(l_mpi,ierr)
+      CALL MPI_INITIALIZED(l_mpi,ierr)
       IF (l_mpi) THEN
          CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
          WRITE (*, "(i3,3a,f20.2,5x,a)") irank, startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
@@ -376,7 +376,7 @@ CONTAINS
 #ifdef CPP_MPI
       IF (l_mpi) THEN
          CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
-         WRITE (fn, *) "Program used ", isize, " PE"
+         WRITE (6, *) "Program used ", isize, " PE"
       ENDIF
 #endif
          json_str = ""
@@ -392,7 +392,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      INTEGER                :: fn, irank = 0
+      INTEGER                ::  irank = 0
       LOGICAL                :: l_out
       TYPE(t_timer), POINTER :: timer
 #ifdef CPP_MPI
@@ -504,7 +504,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      INTEGER                :: fn, irank = 0
+      INTEGER                ::  irank = 0
       LOGICAL                :: l_out
       TYPE(t_timer), POINTER :: timer, parenttimer
 #ifdef CPP_MPI

@@ -66,7 +66,7 @@ CONTAINS
 #ifdef CPP_MPI
     include 'mpif.h'
     LOGICAL :: first_parallel
-    CALL MPI_INITALIZED(l_mpi,e)
+    CALL MPI_INITIALIZED(l_mpi,e)
     IF (l_mpi) THEN
        CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,e)
        CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,e)
@@ -196,7 +196,7 @@ CONTAINS
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr
-    CALL MPI_INITALIZED(l_mpi,ierr)
+    CALL MPI_INITIALIZED(l_mpi,ierr)
 #endif
 
     l_endXML_local = .TRUE.

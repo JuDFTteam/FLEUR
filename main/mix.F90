@@ -92,9 +92,9 @@ contains
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 )  THEN 
        CALL timestart("Preconditioner")
-       CALL kerker(field, DIMENSION, mpi, &
-            stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-            oneD, inDen, outDen, fsm(it) )
+       CALL kerker( field, DIMENSION, mpi, &
+                    stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
+                    oneD, inDen, outDen, fsm(it) )
        !Store modified density in history
        CALL mixing_history_store(fsm(it))
        CALL timestop("Preconditioner")

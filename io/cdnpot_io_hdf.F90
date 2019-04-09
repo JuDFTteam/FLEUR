@@ -2648,11 +2648,11 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT(IN)          :: densityType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
 
-      INTEGER, INTENT(OUT)          :: date, time, iter
-      INTEGER, INTENT(OUT)          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
-      INTEGER, INTENT(OUT)          :: previousDensityIndex, jspins
-      REAL,    INTENT(OUT)          :: fermiEnergy, distance
-      LOGICAL, INTENT(OUT)          :: l_qfix
+      INTEGER, INTENT(OUT),OPTIONAL          :: date, time, iter
+      INTEGER, INTENT(OUT),OPTIONAL          :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
+      INTEGER, INTENT(OUT),OPTIONAL          :: previousDensityIndex, jspins
+      REAL,    INTENT(OUT),OPTIONAL          :: fermiEnergy, distance
+      LOGICAL, INTENT(OUT),OPTIONAL          :: l_qfix
 
       INTEGER              :: localDensityType
       LOGICAL              :: l_exist
@@ -2704,20 +2704,20 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(archiveName)), archiveID, hdfError)
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
-      CALL io_read_attint0(archiveID,'previousDensityIndex',previousDensityIndex)
-      CALL io_read_attint0(archiveID,'starsIndex',starsIndex)
-      CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndex)
-      CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
-      CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
-      CALL io_read_attint0(archiveID,'spins',jspins)
-      CALL io_read_attint0(archiveID,'iter',iter)
-      CALL io_read_attint0(archiveID,'date',date)
-      CALL io_read_attint0(archiveID,'time',time)
-      CALL io_read_attreal0(archiveID,'distance',distance)
+      IF (PRESENT(previousDensityIndex)) CALL io_read_attint0(archiveID,'previousDensityIndex',previousDensityIndex)
+      IF (PRESENT(starsIndex)) CALL io_read_attint0(archiveID,'starsIndex',starsIndex)
+      IF (PRESENT(latharmsIndex)) CALL io_read_attint0(archiveID,'latharmsIndex',latharmsIndex)
+      IF (PRESENT(structureIndex)) CALL io_read_attint0(archiveID,'structureIndex',structureIndex)
+      IF (PRESENT(stepfunctionIndex)) CALL io_read_attint0(archiveID,'stepfunctionIndex',stepfunctionIndex)
+      IF (PRESENT(jspins)) CALL io_read_attint0(archiveID,'spins',jspins)
+      IF (PRESENT(iter)) CALL io_read_attint0(archiveID,'iter',iter)
+      IF (PRESENT(date)) CALL io_read_attint0(archiveID,'date',date)
+      IF (PRESENT(time)) CALL io_read_attint0(archiveID,'time',time)
+      IF (PRESENT(distance)) CALL io_read_attreal0(archiveID,'distance',distance)
 
       IF (densityType.NE.DENSITY_TYPE_UNDEFINED_const) THEN
-         CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
-         CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
+         IF (PRESENT(fermiEnergy)) CALL io_read_attreal0(groupID,'fermiEnergy',fermiEnergy)
+         IF (PRESENT(l_qfix)) CALL io_read_attlog0(groupID,'l_qfix',l_qfix)
       END IF
 
       CALL h5gclose_f(groupID, hdfError)
