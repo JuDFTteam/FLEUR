@@ -9,6 +9,9 @@ nav:
         - Downloads: downloads.md
         - Features and Description: features.md
         - Development Team: team.md
+        - SPEX: spex.md
+        - GFleur: gfleur.md
+        - User support: support.md
         - Impressum: about.md
     - User Guide:
         - Overview: Docu-Main.md
@@ -18,9 +21,12 @@ nav:
         - The FLEUR input file: xml-inp.md
         - More advanced settings: xml-advanced.md
         - The FLEUR-AiiDA interface: http://aiida-fleur.readthedocs.io/en/develop/
-    - Tutorials: 
-        - Available Tutorials: tutorials.md
-        - Online tutorials: online-tutorials.md 
+        - Glossary of typical expression: glossary.md
+    - Tutorials/Examples: 
+        - Tutorials: tutorials.md
+        - Online tutorials: online-tutorials.md
+        - Videos: video.md
+        - Example inputs: examples.md
     - Developers Infomation:
         - Fleur-GITLAB: https://iffgit.fz-juelich.de/fleur/fleur/
         - The DOXYGEN documentation of the source code: https://fleur.iffgit.fz-juelich.de/fleur/html
