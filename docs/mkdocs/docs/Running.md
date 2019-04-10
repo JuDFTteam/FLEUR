@@ -8,7 +8,9 @@ At first you might notice that there are several executables created in the buil
 * **fleur** A serial version (i.e. no MPI distributed memory parallelism, multithreading might still be used)
 * **fleur_MPI** A parallel version of FLEUR able to run on multiple nodes using MPI.
 
-In most cases you will first run the [input generator](inpgen.md) to create an [inp.xml](xml-inpThe FLEUR input generator
+In most cases you will first run the [input generator](inpgen.md) to create an [inp.xml](xml-inp.md).
+
+The FLEUR input generator
 ===============================
 
 For those, who think that the [Fleur inp.xml](xml-inp.md) is too complicated, contains too many options or a too complex format, or  those in need for  defaults for their calculation, a inp-file generator is provided.
