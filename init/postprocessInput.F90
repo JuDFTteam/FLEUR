@@ -38,6 +38,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_nocoInputCheck
   USE m_kpoints   
   USE m_types_forcetheo_extended
+  USE m_relaxio
 
   IMPLICIT NONE
 
@@ -319,15 +320,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      END DO
 
 
-     ! Check muffin tin radii
 
-     ALLOCATE (jri1(atoms%ntype), lmax1(atoms%ntype))
-     ALLOCATE (rmt1(atoms%ntype), dx1(atoms%ntype))
-     l_test = .TRUE. ! only checking, dont use new parameters
-     l_gga=xcpot%needs_grad()
-     CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test,&
-                kmax1,dtild1,dvac1,lmax1,jri1,rmt1,dx1)
-     DEALLOCATE (jri1,lmax1,rmt1,dx1)
 
      ! Dimensioning of lattice harmonics
 
@@ -468,6 +461,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      IF (atoms%n_u.GT.0) THEN
         CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
      END IF
+
      IF (.NOT.oneD%odd%d1) THEN
         CALL mapatom(sym,atoms,cell,input,noco)
         oneD%ngopr1(1:atoms%nat) = atoms%ngopr(1:atoms%nat)
@@ -477,6 +471,13 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         CALL mapatom(sym,atoms,cell,input,noco)
         CALL od_mapatom(oneD,atoms,sym,cell)
      END IF
+    ! Check muffin tin radii
+
+     l_test = .TRUE. ! only checking, dont use new parameters
+     CALL chkmt(atoms,input,vacuum,cell,oneD,l_test)
+
+     !adjust positions by displacements
+     CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
 
      !Calculate kpoint in the full BZ
      IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2) THEN
@@ -501,7 +502,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Store structure data
 
-     CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
+     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
 
      ! Generate stars
 
@@ -551,7 +552,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      END IF !(mpi%irank.EQ.0)
   END IF
 
-  ! 
+ 
+  CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of input postprocessing (calculate missing parameters)

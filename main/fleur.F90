@@ -49,7 +49,6 @@ CONTAINS
     USE m_eigen
     USE m_eigenso
     USE m_fermie
-    USE m_force0
     USE m_cdngen
     USE m_totale
     USE m_potdis
@@ -61,7 +60,6 @@ CONTAINS
     USE m_wann_optional
     USE m_wannier
     USE m_bs_comfort
-    USE m_gen_map
     USE m_dwigner
     USE m_ylm
     USE m_metagga
@@ -331,7 +329,6 @@ CONTAINS
              CYCLE forcetheoloop
           ENDIF
 
-          CALL force_0(results)! ----> initialise force_old
           
 !!$          !+Wannier functions
 !!$          IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
@@ -351,8 +348,13 @@ CONTAINS
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
 
-          IF (.FALSE.) CALL rdmft(eig_id,mpi,input,kpts,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                                  sphhar,sym,field,vTot,oneD,noco,results)
+          IF (input%l_rdmft) THEN
+             SELECT TYPE(xcpot)
+                TYPE IS(t_xcpot_inbuild)
+                   CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
+                              sphhar,sym,field,vTot,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
+             END SELECT
+          END IF
 
           IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
 
@@ -376,7 +378,6 @@ CONTAINS
 #endif
           CALL timestop("generation of new charge density (total)")
 
-          IF (mpi%irank.EQ.0) THEN
              
 !!$             !----> output potential and potential difference
 !!$             IF (obsolete%disp) THEN
@@ -392,10 +393,9 @@ CONTAINS
              
              ! total energy
              CALL timestart('determination of total energy')
-             CALL totale(atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
+             CALL totale(mpi,atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
                          xcpot,hybrid,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
-          END IF ! mpi%irank.EQ.0
           IF (hybrid%l_hybrid) CALL close_eig(eig_id)
 
        END DO forcetheoloop

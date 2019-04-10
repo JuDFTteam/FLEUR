@@ -631,9 +631,10 @@
      &                sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
       WRITE (6,9250) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
 !
-      READ (UNIT=5,FMT=8090,END=99,ERR=99)&
-     &                input%xa,input%thetad,input%epsdisp,input%epsforce
-      WRITE (6,9260) input%xa,input%thetad,input%epsdisp,input%epsforce
+      READ (UNIT=5,FMT=8090,END=99,ERR=99) !
+                     !input%xa,input%thetad,input%epsdisp,input%epsforce
+      WRITE (6,*) "No relaxation with old input anymore" 
+      !input%xa,input%thetad,input%epsdisp,input%epsforce
  8090 FORMAT (3x,f10.5,8x,f10.5,9x,f10.5,10x,f10.5)
 !
 
@@ -931,7 +932,8 @@
  9240 FORMAT ('iplot=',l1,',score=',l1,',plpot=',l1,',band=',l1)
       WRITE (5,9250) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
  9250 FORMAT (i3,2f10.6,',nnne=',i3,',pallst=',l1)
-      WRITE (5,9260) input%xa,input%thetad,input%epsdisp,input%epsforce
+      WRITE(5,*) "No relaxation with old input anymore"
+      !WRITE (5,9260) input%xa,input%thetad,input%epsdisp,input%epsforce
  9260 FORMAT ('xa=',f10.5,',thetad=',f10.5,',epsdisp=',f10.5,&
      &        ',epsforce=',f10.5)
 !+/-gb

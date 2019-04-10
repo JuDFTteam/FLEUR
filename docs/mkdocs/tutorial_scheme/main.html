@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if page.meta.no_toc %}
+	<div class="col-md-12" role="main">{% include "content.html" %}</div>
+{% else %}
+	<div class="col-md-3">{% include "toc.html" %}</div>
+	<div class="col-md-9" role="main">{% include "content.html" %}</div>
+{% endif %}
+{% endblock %}

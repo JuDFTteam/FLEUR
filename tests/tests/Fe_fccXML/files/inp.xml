@@ -13,7 +13,6 @@
          <qss>.300000000000000 .100000000000000 .000000000000000</qss>
       </nocoParams>
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <bzIntegration valenceElectrons="8.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointList posScale="2.00000000" weightScale="1.00000000" count="1">
             <kPoint weight="    1.000000">    0.000000     0.000000     0.000000</kPoint>

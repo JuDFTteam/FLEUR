@@ -25,7 +25,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_cdn_io
    USE m_wrtdop
    USE m_cdntot
-   USE m_cdnovlp
    USE m_qfix
    USE m_genNewNocoInp
    USE m_xmlOutput
@@ -115,6 +114,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !density matrix in the muffin-tins is calculated, the a- and
    !b-coef. for both spins are needed at once. Thus, cdnval is only
    !called once and both spin directions are calculated in a single run.
+   results%force=0.0
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax

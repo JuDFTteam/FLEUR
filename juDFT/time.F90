@@ -3,8 +3,8 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
 MODULE m_juDFT_time
+!DEC$ NOOPTIMIZE
    !*****************************************************************
    !     DESC:Timer module for measuring the execution times of different
    !     parts of the code
@@ -12,7 +12,7 @@ MODULE m_juDFT_time
    !     called with suitable names for timers
    !     Daniel Wortmann, Fri Sep  6 11:53:08 2002
    !*****************************************************************
-   USE m_xmlOutput
+   USE m_judft_xmlOutput
    IMPLICIT NONE
    !     List of different timers
    PRIVATE
@@ -95,10 +95,6 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL           :: line
 
       INTEGER::n
-#ifdef CPP_MPI
-      INTEGER::irank, ierr
-      INCLUDE 'mpif.h'
-#endif
       IF (PRESENT(file)) lastfile = file
       IF (PRESENT(line)) lastline = line
       IF (.NOT. ASSOCIATED(current_timer)) THEN
@@ -158,13 +154,19 @@ CONTAINS
       CHARACTER(LEN=*), INTENT(IN):: startstop, name
 #ifdef CPP_MPI
       INTEGER::irank, ierr
+      LOGICAL:: l_mpi
       INCLUDE 'mpif.h'
 #endif
       IF (.NOT. l_debug) RETURN
       if (debugtimestart < 0) debugtimestart = cputime()
 #ifdef CPP_MPI
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
-      WRITE (*, "(i3,3a,f20.2,5x,a)") irank, startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
+      CALL MPI_INITIALIZED(l_mpi,ierr)
+      IF (l_mpi) THEN
+         CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
+         WRITE (*, "(i3,3a,f20.2,5x,a)") irank, startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
+      ELSE
+         WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
+      ENDIF
 #else
       WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
 #endif
@@ -352,11 +354,13 @@ CONTAINS
       CHARACTER(len=:), allocatable :: json_str
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
-      INTEGER::err, isize
-
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
+      INTEGER::err,isize
+      LOGICAL:: l_mpi
+      CALL mpi_initialized(l_mpi,err)
+      if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
       IF (.NOT. ASSOCIATED(globaltimer)) RETURN !write nothing if no timing recorded
+
 
       IF (irank == 0) THEN
          globaltimer%time = cputime() - globaltimer%starttime
@@ -367,12 +371,14 @@ CONTAINS
 
          WRITE (6, "('Total execution time: ',i0,'sec, minimal timing printed:',i0,'sec')") &
             INT(globaltimer%time), INT(min_time*globaltimer%time)
+
+         CALL priv_writetimes(globaltimer, 1, 6)
 #ifdef CPP_MPI
+      IF (l_mpi) THEN
          CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
          WRITE (6, *) "Program used ", isize, " PE"
+      ENDIF
 #endif
-         CALL priv_writetimes(globaltimer, 1, 6)
-
          json_str = ""
          call priv_genjson(globaltimer, 1, json_str)
          open(32, file="juDFT_times.json")
@@ -386,14 +392,15 @@ CONTAINS
 
       IMPLICIT NONE
 
-      INTEGER                :: fn, irank = 0
+      INTEGER                ::  irank = 0
       LOGICAL                :: l_out
       TYPE(t_timer), POINTER :: timer
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
-
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
+      LOGICAL:: l_mpi
+      CALL mpi_initialized(l_mpi,err)
+      IF (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
 
       IF (irank .NE. 0) RETURN
@@ -468,7 +475,9 @@ CONTAINS
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
+      LOGICAL:: l_mpi
+      CALL mpi_initialized(l_mpi,err)
+      if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
 
       IF (.NOT. l_cont) RETURN !stop anyway
@@ -495,14 +504,15 @@ CONTAINS
 
       IMPLICIT NONE
 
-      INTEGER                :: fn, irank = 0
+      INTEGER                ::  irank = 0
       LOGICAL                :: l_out
       TYPE(t_timer), POINTER :: timer, parenttimer
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err, isize
-
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
+      LOGICAL:: l_mpi
+      CALL mpi_initialized(l_mpi,err)
+      if (l_mpi)  CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
       !Check if not enough time for another iteration is left
 

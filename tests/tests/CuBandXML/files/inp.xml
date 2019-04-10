@@ -10,7 +10,6 @@
       <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F" soc66="T"/>
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <bzIntegration valenceElectrons="22.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointCount count="20" gamma="F">
             <specialPoint name="G">0.0 0.0 0.0</specialPoint>

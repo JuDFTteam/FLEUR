@@ -42,6 +42,7 @@ MODULE m_types_potden
      procedure :: ChargeAndMagnetisationToSpins
      procedure :: addPotDen
      procedure :: subPotDen
+     procedure :: copyPotDen
      procedure :: distribute
      procedure :: collect
   END TYPE t_potden
@@ -232,6 +233,21 @@ CONTAINS
     end if
  
   end subroutine
+
+  subroutine copyPotDen( PotDenCopy, PotDen )
+  
+    implicit none
+    class(t_potden), intent(in)    :: PotDen
+    class(t_potden), intent(inout) :: PotDenCopy
+
+    PotDenCopy%iter       = PotDen%iter
+    PotDenCopy%potdenType = PotDen%potdenType
+    PotDenCopy%mt         = PotDen%mt
+    PotDenCopy%pw         = PotDen%pw
+    PotDenCopy%vacz       = PotDen%vacz
+    PotDenCopy%vacxy      = PotDen%vacxy
+
+  end subroutine copyPotDen
 
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,jspins,potden_type)
     USE m_judft

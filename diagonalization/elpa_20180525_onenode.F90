@@ -25,7 +25,6 @@ CONTAINS
     !----------------------------------------------------
     USE m_juDFT
     USE m_types_mat
-    USE m_types
 #ifdef CPP_ELPA_ONENODE
     USE elpa
 #endif

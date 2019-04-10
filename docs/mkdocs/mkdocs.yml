@@ -1,0 +1,33 @@
+site_name: FLEUR
+repo_url: https://iffgit.fz-juelich.de/fleur/fleur/
+site_url: https://www.flapw.de/s/
+repo_name: GIT
+edit_uri: edit/develop/docs/mkdocs/docs/
+nav:
+    - Home:
+        - Welcome: index.md
+        - Downloads: downloads.md
+        - Features and Description: features.md
+        - Development Team: team.md
+        - Impressum: about.md
+    - User Guide:
+        - Overview: Docu-Main.md
+        - Installation: Install.md
+        - Running FLEUR: Running.md
+        - The input-generator: inpgen.md
+        - The FLEUR input file: xml-inp.md
+        - More advanced settings: xml-advanced.md
+        - The FLEUR-AiiDA interface: http://aiida-fleur.readthedocs.io/en/develop/
+    - Tutorials: 
+        - Available Tutorials: tutorials.md
+        - Online tutorials: online-tutorials.md 
+    - Developers Infomation:
+        - Fleur-GITLAB: https://iffgit.fz-juelich.de/fleur/fleur/
+        - The DOXYGEN documentation of the source code: https://fleur.iffgit.fz-juelich.de/fleur/html
+        - The coverage analysis: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
+        - Developers Guide/Manual: developers.md
+plugins:
+  - search
+theme:
+    name: cerulean
+    custom_dir: tutorial_scheme 

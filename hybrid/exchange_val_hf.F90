@@ -352,7 +352,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
                IF (mat_ex%l_real) THEN
                   carr1_v_r(:n) = matvec( coulomb_r(:nn),cprod_vv_r(:n,iband,n1) )
                ELSE
-                  carr1_v_r(:n) = matvec( coulomb_c(:nn),cprod_vv_c(:n,iband,n1) )
+                  carr1_v_c(:n) = matvec( coulomb_c(:nn),cprod_vv_c(:n,iband,n1) )
                END IF
 #endif
 

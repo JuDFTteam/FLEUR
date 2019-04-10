@@ -6,7 +6,7 @@
 
 module m_hdf_accessprp
     USE hdf5
-#include "juDFT_env.h"
+    USE m_judft_stop
     implicit none
     private
     !the hdf-access-properties
@@ -37,16 +37,16 @@ module m_hdf_accessprp
       character(len=128)::path
 #ifdef CPP_HDFMPI
       INCLUDE 'mpif.h'
+      LOGICAL :: l_mpi
+      CALL MPI_INITALIZED(l_mpi,ierr)
 #endif
 
       IF (.not.present(setupfile)) THEN
-         CPP_juDFT_timestart_debug("generating access prp")
          n_access_prp=1
          call priv_generate_access_prp("default")
          call getenv("HOME",path)
          call priv_generate_access_prp(trim(path)//"/.gf_hdf")
          call priv_generate_access_prp("gf_hdf")
-         CPP_juDFT_timestop_debug("generating access prp")
          return
       ENDIF
 
@@ -61,7 +61,11 @@ module m_hdf_accessprp
       readloop:DO
         filename="default"
 #ifdef CPP_HDFMPI
-        driver="mpiio"
+        IF (l_mpi) THEN
+           driver="mpiio"
+        ELSE
+           driver='default'
+        ENDIF
 #else
         driver="default"
 #endif
@@ -96,6 +100,7 @@ module m_hdf_accessprp
             cycle readloop
         ENDIF
 #ifdef CPP_HDFMPI
+        IF (l_mpi) THEN
         CALL MPI_BARRIER(MPI_COMM_WORLD,hdferr)
         IF (index(driver,"mpiio")==1) THEN
             !create info object
@@ -122,6 +127,7 @@ module m_hdf_accessprp
             if (alignment>0) CALL h5pset_alignment_f(access_prp(n), INT(0,hsize_t),alignment, hdferr)
             cycle readloop
         ENDIF
+     ENDIF
 #endif
         write(0,*) "Driver name unkown:",driver
         call judft_error("Unkown driver",calledby="gf_io2dmat")
@@ -135,7 +141,6 @@ module m_hdf_accessprp
       character(len=*),intent(in) :: filename
       INTEGER(hid_t)          :: hdf_access_prp
       INTEGER                 :: n
-      CPP_juDFT_timestart_debug("getting access prp")
       !if this is the first attempt to get an access_prp, generate them
       if (n_access_prp==0) CALL priv_generate_access_prp()
       hdf_access_prp=access_prp(1)
@@ -145,7 +150,6 @@ module m_hdf_accessprp
                   write(6,*) "Assigned:",n," to ", filename
           ENDIF
       ENDDO
-      CPP_juDFT_timestop_debug("getting access prp")
       END function
 
 end module m_hdf_accessprp
