@@ -50,11 +50,10 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
    LOGICAL,                INTENT(IN)     :: l_sphavg
    
    LOGICAL l_zero
-   INTEGER i_gf, i, j, n, nn, natom, l, m, mp, lm, lmp, it,is, isi, ilo, ilop, jarr
+   INTEGER i_gf, i, j, n, nn, natom, l, m, mp, lm, lmp, jarr, ilo, ilop
    REAL fac, wk,tmp, tol
 
-   COMPLEX n_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-   COMPLEX n1_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+   COMPLEX n_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
    wk = wtkpt/greensfCoeffs%del
    tol = 1E-14
@@ -69,12 +68,12 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
 
       DO nn = 1, atoms%neq(n)
          natom = natom +1
-         fac = 1.0  /  ( sym%invarind(natom) * atoms%neq(n) )
+         fac = 1.0  / atoms%neq(n)
          !$OMP PARALLEL DEFAULT(none) &
          !$OMP SHARED(natom,l,n,ispin,wk,noccbd,i_gf,fac,l_sphavg,tol) &
          !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
-         !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,it,is,isi,l_zero,tmp) &
-         !$OMP PRIVATE(n_tmp,n1_tmp,nr_tmp,d_tmp)
+         !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,l_zero,tmp) &
+         !$OMP PRIVATE(n_tmp)
 
          !$OMP DO
          DO i = 1, noccbd
@@ -142,66 +141,36 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
                      ENDDO
                   ENDIF
                ENDDO
-               !
-               !  n_mmp should be rotated by D_mm' ; compare force_a21; taken from n_mat.f90
-               !
-               DO it = 1, sym%invarind(natom)
-                  is = sym%invarop(natom,it)
-                  isi = sym%invtab(is)
-                  d_tmp(:,:) = cmplx(0.0,0.0)
-                  DO m = -l,l
-                     DO mp = -l,l
-                        d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
-                     ENDDO
-                  ENDDO
-                  nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp(1,:,:))
-                  n1_tmp(1,:,:) =  matmul( nr_tmp, d_tmp )
-
-                  DO m = -l,l
-                     DO mp = -l,l
-                        IF(greensfCoeffs%l_tetra) THEN
-                           !We need to differentiate the weights with respect to energy (can maybe be done analytically)
-                           DO j = ind(i,1), ind(i,2) 
-                              greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * tetweights(j,i)
-                           ENDDO
-                        ELSE    
-                           greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * wk
-                        END IF
-                     ENDDO
+               DO m = -l,l
+                  DO mp = -l,l
+                     IF(greensfCoeffs%l_tetra) THEN
+                        !We need to differentiate the weights with respect to energy (can maybe be done analytically)
+                        DO j = ind(i,1), ind(i,2) 
+                           greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n_tmp(1,m,mp)) * fac * tetweights(j,i)
+                        ENDDO
+                     ELSE    
+                        greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n_tmp(1,m,mp)) * fac * wk
+                     END IF
                   ENDDO
                ENDDO
+               !ENDDO
             ELSE
                !
                !MISSING: Local Orbitals with radial dependence
                !
-               DO it = 1, sym%invarind(natom)
-                  is = sym%invarop(natom,it)
-                  isi = sym%invtab(is)
-                  d_tmp(:,:) = cmplx(0.0,0.0)
-                  DO m = -l,l
-                     DO mp = -l,l
-                        d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
-                     ENDDO
-                  ENDDO
-                  DO jarr = 1, 3
-                     nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp(jarr,:,:))
-                     n1_tmp(jarr,:,:) =  matmul( nr_tmp, d_tmp )
-                  ENDDO
-
-                  DO m = -l,l
-                     DO mp = -l,l
-                        IF(greensfCoeffs%l_tetra) THEN
-                           DO j = ind(i,1), ind(i,2)
-                              greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * tetweights(j,i)      
-                              greensfCoeffs%dd(j,i_gf,m,mp,ispin) = greensfCoeffs%dd(j,i_gf,m,mp,ispin) + conjg(n1_tmp(2,m,mp)) * fac * tetweights(j,i)
-                              greensfCoeffs%du(j,i_gf,m,mp,ispin) = greensfCoeffs%du(j,i_gf,m,mp,ispin) + conjg(n1_tmp(3,m,mp)) * fac * tetweights(j,i)
-                           ENDDO
-                        ELSE
-                           greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n1_tmp(1,m,mp)) * fac * wk
-                           greensfCoeffs%dd(j,i_gf,m,mp,ispin) = greensfCoeffs%dd(j,i_gf,m,mp,ispin) + conjg(n1_tmp(2,m,mp)) * fac * wk
-                           greensfCoeffs%du(j,i_gf,m,mp,ispin) = greensfCoeffs%du(j,i_gf,m,mp,ispin) + conjg(n1_tmp(3,m,mp)) * fac * wk
-                        END IF
-                     ENDDO
+               DO m = -l,l
+                  DO mp = -l,l
+                     IF(greensfCoeffs%l_tetra) THEN
+                        DO j = ind(i,1), ind(i,2)
+                           greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n_tmp(1,m,mp)) * fac * tetweights(j,i)      
+                           greensfCoeffs%dd(j,i_gf,m,mp,ispin) = greensfCoeffs%dd(j,i_gf,m,mp,ispin) + conjg(n_tmp(2,m,mp)) * fac * tetweights(j,i)
+                           greensfCoeffs%du(j,i_gf,m,mp,ispin) = greensfCoeffs%du(j,i_gf,m,mp,ispin) + conjg(n_tmp(3,m,mp)) * fac * tetweights(j,i)
+                        ENDDO
+                     ELSE
+                        greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n_tmp(1,m,mp)) * fac * wk
+                        greensfCoeffs%dd(j,i_gf,m,mp,ispin) = greensfCoeffs%dd(j,i_gf,m,mp,ispin) + conjg(n_tmp(2,m,mp)) * fac * wk
+                        greensfCoeffs%du(j,i_gf,m,mp,ispin) = greensfCoeffs%du(j,i_gf,m,mp,ispin) + conjg(n_tmp(3,m,mp)) * fac * wk
+                     END IF
                   ENDDO
                ENDDO
             ENDIF       
@@ -240,14 +209,16 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,e
    LOGICAL,                INTENT(IN)     :: l_sphavg
 
    TYPE(t_usdus) usdus
-   INTEGER i_gf,i,l,m,mp,jr,noded,nodeu,n,j,jspin,i_hia
+   INTEGER i_gf,i,l,m,mp,jr,noded,nodeu,n,j,jspin,i_hia,it,is, isi,natom
    INTEGER e_cut(2)
-   REAL wronk
+   REAL wronk,fac
    CHARACTER(len=30) :: filename
 
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
    REAL,    ALLOCATABLE :: im(:,:,:,:,:)
    REAL, ALLOCATABLE :: e(:)
+   COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+   COMPLEX n1_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const), d_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
    ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
    ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,jspins) )
@@ -263,6 +234,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,e
    END IF
 
    ALLOCATE( im(MAXVAL(gOnsite%nr(:)),greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins) )
+
    DO i_gf = 1, atoms%n_gf
       l = atoms%onsiteGF(i_gf)%l
       n = atoms%onsiteGF(i_gf)%atomType
@@ -302,6 +274,38 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,e
                IF(jspins.EQ.1) im(:,:,m,mp,1) = 2.0 * im(:,:,m,mp,1)
             ENDDO
          ENDDO
+      ENDDO
+      !
+      !Enforcing that the projected density of states follows the local symmetries
+      !
+      DO jr = 1, gOnsite%nr(i_gf)
+         DO j = 1, greensfCoeffs%ne
+            DO jspin = 1, jspins
+               n_tmp = 0.0
+               n_tmp(-l:l,-l:l) = im(jr,j,-l:l,-l:l,jspin)
+               im(jr,j,-l:l,-l:l,jspin) = 0.0
+               DO natom = SUM(atoms%neq(:n-1)) + 1, SUM(atoms%neq(:n-1)) + atoms%neq(n)
+                  fac = 1./(sym%invarind(natom)*atoms%neq(n))
+                  DO it = 1, sym%invarind(natom)
+                     is = sym%invarop(natom,it)
+                     isi = sym%invtab(is)
+                     d_tmp(:,:) = cmplx(0.0,0.0)
+                     DO m = -l,l
+                        DO mp = -l,l
+                           d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
+                        ENDDO
+                     ENDDO
+                     nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
+                     n1_tmp =  matmul( nr_tmp, d_tmp )
+                     DO m = -l,l
+                        DO mp = -l,l
+                           im(jr,j,m,mp,jspin) = im(jr,j,m,mp,jspin) + conjg(n1_tmp(m,mp)) * fac
+                        ENDDO
+                     ENDDO
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO            
       ENDDO
       !
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
@@ -365,6 +369,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
 
 
    REAL, ALLOCATABLE :: fDOS(:,:)
+   REAL :: projDOS(ne+1,jspins,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
    REAL, ALLOCATABLE :: tmp(:,:)
 
@@ -372,12 +377,35 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
 
    REAL integral, m_up, m_dwn
    REAL a,b, imag, n_states
-   LOGICAL l_write
+   LOGICAL l_write,l_checkprojDOS
 
    ALLOCATE(fDOS(ne,jspins))
    ALLOCATE(tmp(ne,jspins))
 
    l_write=.true.
+   l_checkprojDOS = .false.
+
+   !For debugging: print out the proj. density of states integrated over energy
+   IF (l_checkprojDOS) THEN
+      projDOS = 0.0
+      DO ispin = 1, jspins
+         DO m = -l , l
+            DO mp = -l , l
+               DO j = 1, ne
+                  IF(l_sphavg) THEN
+                     imag = im(1,j,m,mp,ispin)
+                  ELSE
+                     CALL intgr3(im(:,j,m,mp,ispin),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
+                  END IF
+                  projDOS(j,ispin,m,mp) = projDOS(j,ispin,m,mp) + imag
+               ENDDO
+               CALL trapz(projDOS(1:ne,ispin,m,mp), del, ne, projDOS(ne+1,ispin,m,mp))
+            ENDDO
+         ENDDO
+      ENDDO
+      WRITE(*,"(7f14.8)") projDOS(ne+1,:,:,:)
+   ENDIF
+
 
    fDOS = 0.0
 
