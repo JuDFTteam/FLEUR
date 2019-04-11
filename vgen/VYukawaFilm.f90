@@ -292,7 +292,7 @@ contains
     end do
 
     ! integrate the potential over the film region
-    call cdntot_integrate( stars, atoms, sym, vacuum, input, cell, oneD, VYukawaModification, q, qis, qmt, qvac, qtot, qistot  )
+    call integrate_cdn( stars, atoms, sym, vacuum, input, cell, oneD, VYukawaModification, q, qis, qmt, qvac, qtot, qistot  )
     q0 = qtot / cell%area
     ldh = input%preconditioning_param * cell%z1
     qhat = ( q0 / ( 2 * dh ) ) / ( sinh(ldh) / ( ldh * cosh( ldh ) ) - 1 )
