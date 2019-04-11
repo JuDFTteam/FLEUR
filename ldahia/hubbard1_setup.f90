@@ -389,7 +389,7 @@ MODULE m_hubbard1_setup
          !intialize the matrices
          CALL gmat%init(.false.,2*ns,2*ns)
          CALL vmat%init(.false.,2*ns,2*ns)
-         CALL to_tmat(vmat,v(:,:,i_hia,:),jspins,l)
+         CALL to_tmat(vmat,-v(:,:,i_hia,:),jspins,l)
          DO iz = 1, g%nz
             DO ipm = 1, 2
                CALL to_tmat(gmat,g%gmmpMat(1,iz,i_gf,:,:,:,ipm),jspins,l)
