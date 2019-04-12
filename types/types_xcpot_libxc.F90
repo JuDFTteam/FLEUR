@@ -310,30 +310,12 @@ CONTAINS
             !write (*,*) "shape(grad%sigma) = ", shape(transpose(grad%sigma))
             !write (*,*) "shape(grad%lapl)  = ", shape(grad%laplace)
 
-            !kinEnergyDen_libXC = 0.3 * (3.0*pi_const**2)**(2./3.) * rh**(5./3.) &
-                               !+ 1.0/72.0 * transpose(abs(grad%sigma))/rh &
-                               !+ 1.0/6.0  * grad%laplace
-           
-            !pkzb_zaehler = (1./8. * transpose(abs(grad%sigma))/rh)**2
-            !pkzb_nenner  = kinEnergyDen_libxc**2
-            !pkzb_ratio   = pkzb_zaehler/pkzb_nenner
-            !write (*,*) "pkzb ratio:"
-            !write (*,*) "min = ", minval(pkzb_ratio)
-            !write (*,*) "max = ", maxval(pkzb_ratio)
-      
             write (filename, '("kED_libxc_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=2)
             call save_npy(filename, transpose(kinEnergyDen_libxc))
 
             write (filename, '("sigma_", I0.6, ".npy")') size(grad%sigma, dim=2)
             call save_npy(filename, grad%sigma)
 
-            !write (filename, '("pkzb_zaehler_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=1)
-            !call save_npy(filename, transpose(pkzb_zaehler))
-            !write (filename, '("pkzb_nenner_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=1)
-            !call save_npy(filename, transpose(pkzb_nenner))
-            !write (filename, '("pkzb_ratio_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=1)
-            !call save_npy(filename, transpose(pkzb_ratio))
-            
             exc  = 0.0
             excc = 0.0
             call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
