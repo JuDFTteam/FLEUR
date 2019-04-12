@@ -2,9 +2,29 @@
 
 {% block content %}
 {% if page.meta.no_toc %}
-	<div class="col-md-12" role="main">{% include "content.html" %}</div>
+<div class="col-md-12" role="main">{% include "content.html" %}</div>
+{% elif page.meta.index %}
+<div class="col-md-3">
+  <div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+      <li class="main active"> <img width="200px" src="img/fleur.gif"></li>
+      <li><a href="#downloading-fleur">Downloading FLEUR</a></li>
+      <li><a href="#fleur-development-team">FLEUR development team</a></li>
+      <br><br><br>
+      <img width="80px" src="img/new.png"><br>
+      <li><a href="handson"> Hands-on tutorial in September</a></li>
+      <br><br><br>
+      <li><a href="https://www.flapw.de/pm/index.php"> Link to the old FLEUR-pages</a></li>
+    </ul>
+  </div>
+</div>
+<div class="col-md-9" role="main">{% include "content.html" %}</div>
 {% else %}
 	<div class="col-md-3">{% include "toc.html" %}</div>
 	<div class="col-md-9" role="main">{% include "content.html" %}</div>
 {% endif %}
 {% endblock %}
+
+{% block footer %}
+	Documentation for  <a href="https://www.flapw.de">FLEUR</a>  build using   <a href="https://www.mkdocs.org">MkDocs</a>
+{% endblock %}	
