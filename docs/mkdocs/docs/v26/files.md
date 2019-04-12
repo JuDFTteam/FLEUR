@@ -6,7 +6,7 @@ FLEUR input- & output-file
 
 * [[input file for the input generator]]
 or
-* The [inp](inpfile.md) file (deprecated in v0.27)
+* The [inp](../inpfile.md) file (deprecated in v0.27)
 
 
 ## These you have to specify sometimes  
