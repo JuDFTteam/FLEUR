@@ -36,7 +36,8 @@ plugins:
   - search
 theme:
     name: cerulean
-    custom_dir: tutorial_scheme 
+    custom_dir: tutorial_scheme
+    extra_css: custom.css
 extra_javascript: 
     - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML
 markdown_extensions:

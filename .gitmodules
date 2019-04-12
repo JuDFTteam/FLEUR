@@ -4,3 +4,6 @@
 [submodule "external/libxc-git"]
 	path = external/libxc-git
 	url = https://gitlab.com/libxc/libxc.git
+[submodule "docs/katacoda-tutorials"]
+	path = docs/katacoda-tutorials
+	url = gitlab@iffgit.fz-juelich.de:fleur/katacoda-tutorials.git

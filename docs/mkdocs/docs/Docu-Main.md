@@ -23,3 +23,4 @@ If you are a more expert user or developer, you might be interested in:
 * Discussion of reasons why v27 gives [differences](v26differences.md) to v26.
 * A [Guide/Manual](developers.md) for developers of FLEUR.
 
+Part of the documentation of the Version v0.26 of FLEUR was also made available [here](v26/v26.md).
