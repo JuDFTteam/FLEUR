@@ -11,7 +11,8 @@ Suppose, you have converged a charge density, e.g. of a 3 layer Cu film as descr
 *   change ` force =F ` to ` force =T ` in the inp-file, for those atoms, which you want to relax. 
 *   change ` l_f=F ` to ` l_f=T ` in the inp-file, to allow the generation of Pulay-forces 
 *   edit the line ` relax 000 001 ` at the end of the inp-file to allow relaxations in specific directions (here, ` 000` means no relaxation of the first atom, ` 001 ` means only in z-direction for the second). 
-*   then run a few iterations, until the program stops with ` GEO: new inp created !`. This will happen, if the forces of two subsequent iterations do not differ more than 0.00001 htr/a.u. (This parameter should not be changed to ensure good convergence of the forces. It can, however, in cases of emergency be changed by creating an "eps_force"-file, which contains a different convergence parameter.) 
+*   then run a few iterations, until the program stops with ` Structual relaxation: new displacements generated`. This will happen, if the forces of two subsequent iterations do not differ more than 0.00001 htr/a.u. (This parameter should not be changed to ensure good convergence of the forces. It can, however, in cases of emergency be changed by creating an "eps_force"-file, which contains a different convergence parameter.) 
+*   now the new forces and the displacement is saved in the file `relax.xml`. When starting fleur for another time this file is included in the `inp.xml` and will be used for the new positions of the atoms. 
 
 When this is finished, you will notice that you have two new files in your working directory: 
 
