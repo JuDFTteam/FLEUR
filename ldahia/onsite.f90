@@ -70,7 +70,7 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
          natom = natom +1
          fac = 1.0  / atoms%neq(n)
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(natom,l,n,ispin,wk,noccbd,i_gf,fac,l_sphavg,tol) &
+         !$OMP SHARED(natom,l,n,ispin,wk,noccbd,i_gf,fac,l_sphavg,tol,jspins) &
          !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
          !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,l_zero,tmp) &
          !$OMP PRIVATE(n_tmp)
@@ -98,10 +98,11 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
                DO mp = -l,l
                   lmp = l*(l+1)+mp
                   IF(l_sphavg) THEN
+                     !CHANGE: We drop the dependency of u/u_dot on spin and average over the two 
                      n_tmp(1,m,mp) = n_tmp(1,m,mp) -  pi_const*&
-                                  REAL((conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
+                                  REAL(conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
                                    conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin) *&
-                                   usdus%ddn(l,n,ispin)))
+                                   SUM(usdus%ddn(l,n,:)/jspins))
                   ELSE
                      n_tmp(1,m,mp) = n_tmp(1,m,mp) - pi_const * conjg(eigVecCoeffs%acof(i,lm,natom,ispin))*eigVecCoeffs%acof(i,lmp,natom,ispin)
                      n_tmp(2,m,mp) = n_tmp(2,m,mp) - pi_const * conjg(eigVecCoeffs%bcof(i,lm,natom,ispin))*eigVecCoeffs%bcof(i,lmp,natom,ispin)
@@ -182,7 +183,7 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
 
 END SUBROUTINE onsite_coeffs
 
-SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,ef,l_sphavg,onsite_exc_split)
+SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,l_sphavg,onsite_exc_split)
 
    USE m_types
    USE m_constants
@@ -191,6 +192,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,e
    USE m_radfun
    USE m_gfcalc
    USE m_cfmat
+   USE m_hubbard1_io
 
    IMPLICIT NONE
 
@@ -199,10 +201,10 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,e
    TYPE(t_greensfCoeffs),  INTENT(IN)     :: greensfCoeffs
    TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
    TYPE(t_sym),            INTENT(IN)     :: sym
-   COMPLEX,                INTENT(IN)     :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,jspins)
    INTEGER,                INTENT(IN)     :: jspins
 
    REAL,                   INTENT(IN)     :: ef
+   REAL,                   INTENT(IN)     :: beta
    REAL,                   INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,jspins)
    REAL,                   INTENT(OUT)     :: onsite_exc_split
 
@@ -215,6 +217,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,e
    CHARACTER(len=30) :: filename
 
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
+   COMPLEX mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,jspins)
    REAL,    ALLOCATABLE :: im(:,:,:,:,:)
    REAL, ALLOCATABLE :: e(:)
    COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -330,6 +333,10 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,mmpMat,sym,e
          ENDDO
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
+      CALL write_gf("gdft",gOnsite,i_gf)
+      CALL occmtx(gOnsite,i_gf,atoms,sym,jspins,beta,mmpMat(:,:,i_gf,:))
+      CALL ldosmtx("g",gOnsite,i_gf,atoms,sym,jspins)
+      WRITE(*,"(7f14.8)") REAL(mmpMat(:,:,i_gf,:))
    ENDDO
 
 END SUBROUTINE calc_onsite
@@ -391,7 +398,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
       DO ispin = 1, jspins
          DO m = -l , l
             DO mp = -l , l
-               DO j = 1, ne
+               DO j = 1, INT((ef-e_bot)/del) + 1
                   IF(l_sphavg) THEN
                      imag = im(1,j,m,mp,ispin)
                   ELSE
@@ -403,7 +410,8 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
             ENDDO
          ENDDO
       ENDDO
-      WRITE(*,"(7f14.8)") projDOS(ne+1,:,:,:)
+      WRITE(*,"(7f14.8)") -1/pi_const * projDOS(ne+1,1,:,:)
+      WRITE(*,"(7f14.8)") -1/pi_const * projDOS(ne+1,2,:,:)
    ENDIF
 
 

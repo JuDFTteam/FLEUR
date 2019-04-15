@@ -712,10 +712,18 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          xPathA = '/fleurInput/calculationSetup/onsiteGF/@nz'
          numberNodes = xmlGetNumberOfNodes(xPathA)
          IF(numberNodes.EQ.1) input%onsite_nz = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
+
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@nmatsub'
+         numberNodes = xmlGetNumberOfNodes(xPathA)
+         IF(numberNodes.EQ.1) input%onsite_nmatsub = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
       
          xPathA = '/fleurInput/calculationSetup/onsiteGF/@l_sphavg'
          numberNodes = xmlGetNumberOfNodes(xPathA)
          IF(numberNodes.EQ.1) input%onsite_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
+
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@beta'
+         numberNodes = xmlGetNumberOfNodes(xPathA)
+         IF(numberNodes.EQ.1) input%onsite_beta = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
       END IF
 
       IF(input%onsite_mode.GT.2) CALL juDFT_error("No valid mode for the energy contour of Green's function", calledby="r_inpXML")

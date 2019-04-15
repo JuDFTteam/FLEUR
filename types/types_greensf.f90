@@ -34,7 +34,7 @@ MODULE m_types_greensf
          !Energy contour parameters
          INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
          INTEGER  :: nz    !number of points in the contour
-         INTEGER  :: nef
+         INTEGER  :: nmatsub
 
          !array for energy contour
          COMPLEX, ALLOCATABLE  :: e(:)  !energy points
@@ -73,7 +73,7 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(thisGREENSF,input,lmax,atoms,l_onsite,noco,nz_in,e_in,de_in)
+      SUBROUTINE greensf_init(thisGREENSF,input,lmax,atoms,l_onsite,noco,nz_in,e_in,de_in,matsub_in)
 
          USE m_juDFT
          USE m_types_setup
@@ -87,6 +87,7 @@ MODULE m_types_greensf
          LOGICAL,             INTENT(IN)     :: l_onsite
          !Pass a already calculated energy contour to the type (not used)
          INTEGER, OPTIONAL,   INTENT(IN)     :: nz_in
+         INTEGER, OPTIONAL,   INTENT(IN)     :: matsub_in
          COMPLEX, OPTIONAL,   INTENT(IN)     :: e_in(:)
          COMPLEX, OPTIONAL,   INTENT(IN)     :: de_in(:)
 
@@ -105,22 +106,19 @@ MODULE m_types_greensf
          !Setting up parameters for the energy contour
          !
          IF(PRESENT(nz_in)) THEN
-            thisGREENSF%nz = nz_in
+            thisGREENSF%nz = nz_in 
+            thisGREENSF%nmatsub = matsub_in
          ELSE
             !Parameters for the energy contour in the complex plane
             thisGREENSF%mode     = input%onsite_mode
 
             IF(thisGREENSF%mode.EQ.1) THEN
-               thisGREENSF%nz = input%onsite_nz
+                  thisGREENSF%nz = input%onsite_nz+input%onsite_nmatsub
+                  thisGREENSF%nmatsub = input%onsite_nmatsub
             ELSE IF(thisGREENSF%mode.EQ.2) THEN
-               !We want a power of 2 as number of points
-               n = LOG(REAL(input%onsite_nz))/LOG(2.0)
-               IF(n.NE.AINT(n)) THEN
-                  WRITE(*,*) "This mode for the energy contour uses 2^n number of points."
-                  WRITE(*,*) "Setting nz = ", 2**AINT(n) 
-               END IF
-               thisGREENSF%nz = 2**AINT(n)
-            END IF
+               thisGREENSF%nz = input%onsite_nz+input%onsite_nmatsub
+               thisGREENSF%nmatsub = input%onsite_nmatsub
+            ENDIF
          END IF
 
          ALLOCATE (thisGREENSF%e(thisGREENSF%nz))
@@ -184,7 +182,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE greensf_init
 
-      SUBROUTINE init_e_contour(this,eb,et,ef,sigma)
+      SUBROUTINE init_e_contour(this,eb,et,ef,sigma,n1,n2,n3,nmatsub,beta)
 
          ! calculates the energy contour where the greens function is calculated
          ! mode determines the kind of contour between e_bot and the fermi energy
@@ -194,7 +192,7 @@ MODULE m_types_greensf
 
          USE m_constants
          USE m_juDFT
-
+         USE m_grule
          IMPLICIT NONE
 
          CLASS(t_greensf),  INTENT(INOUT)  :: this
@@ -202,32 +200,55 @@ MODULE m_types_greensf
          REAL,              INTENT(IN)     :: et
          REAL,              INTENT(IN)     :: ef
          REAL, OPTIONAL,    INTENT(IN)     :: sigma
+         INTEGER, OPTIONAL, INTENT(IN)     :: n1
+         INTEGER, OPTIONAL, INTENT(IN)     :: n2
+         INTEGER, OPTIONAL, INTENT(IN)     :: n3
+         INTEGER, OPTIONAL, INTENT(IN)     :: nmatsub
+         REAL, OPTIONAL,    INTENT(IN)     :: beta
 
-
-         INTEGER i, j, iz, np
+         INTEGER i, j, iz, np,imatsub
 
          REAL e1, e2, del
-         REAL psi(4), wpsi(4), r, xr, xm, c, s, a, b
+         REAL r, xr, xm, c, s, a, b
+         REAL x(this%nz), w(this%nz)
 
 
 
          IF(this%mode.EQ.1) THEN
 
+            !Using a rectangular contour ending at efermi and including N_matsub matsubara frequencies 
+            !at the moment we use a equidistant mesh to make interfacing with the hubbard 1 solver easier
+
             e1 = eb
-            e2 = et
+            e2 = ef
 
-            del = (e2-e1)/REAL(this%nz-1)
-            this%nef = INT((ef-eb)/del)+1
+            !Determine the imaginary part of the rectangle
 
-            DO i = 1, this%nz
-               IF(PRESENT(sigma)) THEN
-                  this%e(i) = (i-1)*del + e1 + ImagUnit * sigma
-               ELSE
-                  CALL juDFT_error("Sigma not given for energy contour",calledby="init_e_contour")
-               ENDIF
+            IF(nmatsub.NE.0) THEN
+               this%sigma = 2 * pi_const * nmatsub * 1./beta
+            ELSE
+               this%sigma = sigma
+            ENDIF
+            this%nmatsub = nmatsub
+
+            del = (e2-e1)/REAL(n2-1)
+
+            !ATM we only use an equidistant mesh at the imaginary part 2*pi*n_matsub*kT and 
+            !the matsubara frequencies as thats the only thing we can comfortably get from the solver
+
+            DO iz = 1, n2
+               IF(iz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
+               this%e(iz) = (iz-1) * del + e1 + ImagUnit * this%sigma
+               this%de(iz) = del
             ENDDO
+            iz = n2
+            DO imatsub = nmatsub , 1 , -1
+               iz = iz + 1 
+               IF(iz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
+               this%e(iz)  = e2 + ImagUnit * ((2*imatsub-1)*pi_const*1./beta)
+               this%de(iz) =  ImagUnit * 2.*pi_const*1./beta
+            ENDDO 
 
-            this%de(:) = del
 
          ELSE IF(this%mode.EQ.2) THEN
 
@@ -235,59 +256,23 @@ MODULE m_types_greensf
             !Further we use four-point gaussian quadrature
             !The method is based on an old kkr version 
 
-            np = INT(this%nz/4.)
-
             e1 = eb
             e2 = ef
-            this%nef = this%nz
+            this%nmatsub = 0
             !Radius
             r  = (e2-e1)*0.5
             !midpoint
             xr = (e2+e1)*0.5
 
-            !supports for four-point gaussian quadrature
-            a = 0.43056815579702629
-            b = 0.16999052179242813
+            CALL grule(this%nz,x(1:(this%nz)/2),w(1:(this%nz)/2))
 
-            psi(1) =    a/np
-            psi(2) =    b/np
-            psi(3) =   -b/np
-            psi(4) =   -a/np
-
-            !weights for four-point gaussian quadrature
-            a = 0.17392742256872693
-            b = 0.32607257743127307
-
-            wpsi(1) =   a/np
-            wpsi(2) =   b/np
-            wpsi(3) =   b/np
-            wpsi(4) =   a/np
-
-            iz = 1
-
-            DO i = 1, np
-
-               !midpoint for the current interval in terms of angle
-               xm = (np-i+0.5)/np
-
-               DO j = 1, 4
-
-                  !the squaring moves the points closer to the right end of the contour where the fermi energy is located
-
-                  c = cos((psi(j)+xm)**2*pi_const)
-                  s = sin((psi(j)+xm)**2*pi_const)
-
-                  !TODO: implement sigma to ensure the integral can be calculated with finite sigma (look at weights)
-
-                  this%e(iz) = CMPLX(xr+r*c, r*s*0.25)
-
-                  this%de(iz) = pi_const * CMPLX((psi(j)+xm)*r*s*wpsi(j)*2.0,&
-                                             -(psi(j)+xm)*r*c*wpsi(j)*0.5)
-
-                  iz = iz+1
-
-               ENDDO
-
+            DO i = 1, this%nz/2
+               x(this%nz-i+1) = -x(i)
+               w(this%nz-i+1) =  w(i)
+            ENDDO
+            DO i = 1, this%nz
+               this%e(i) = xr + ImagUnit * r * EXP(-ImagUnit*pi_const/2.0 * x(this%nz-i+1))
+               this%de(i) = pi_const/2.0 * r * EXP(-ImagUnit*pi_const/2.0 * x(this%nz-i+1)) * w(this%nz-i+1)
             ENDDO
 
          ELSE
@@ -299,5 +284,6 @@ MODULE m_types_greensf
 
 
       END SUBROUTINE init_e_contour
+
 
 END MODULE m_types_greensf

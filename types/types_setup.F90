@@ -432,6 +432,8 @@ MODULE m_types_setup
       LOGICAL :: onsite_sphavg
       INTEGER :: onsite_mode
       INTEGER :: onsite_nz
+      REAL    :: onsite_beta
+      INTEGER :: onsite_nmatsub
       LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps

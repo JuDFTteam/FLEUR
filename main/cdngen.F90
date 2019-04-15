@@ -95,7 +95,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error,l_exist
-   REAL                  :: j0
+   COMPLEX                  :: j0
    REAL                  :: onsite_excsplit
 
    CALL regCharges%init(input,atoms)
@@ -106,7 +106,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
    CALL greensfCoeffs%init(input,3,atoms,kpts,noco,.true.,.false.)
-   IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma)
+   IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma,0,gOnsite%nz-gOnsite%nmatsub,0,gOnsite%nmatsub,input%onsite_beta)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 

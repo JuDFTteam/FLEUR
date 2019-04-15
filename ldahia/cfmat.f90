@@ -68,20 +68,20 @@ MODULE m_cfmat
             cfmat(m,mp) = 0.5*SUM(cfmat_sp(m,mp,:))
          ENDDO
       ENDDO
-      WRITE(*,"(A)") "AVERAGE#############"
-      WRITE(*,"(7f10.5)") cfmat(:,:)
+      !WRITE(*,"(A)") "AVERAGE#############"
+      !WRITE(*,"(7f10.5)") cfmat(:,:)
 
       !Make the matrix traceless
       trac = 0.0
       DO m = -l, l
          trac = trac + cfmat(m,m)
       ENDDO
-      WRITE(*,*) trac/(2*l+1)
+      !WRITE(*,*) trac/(2*l+1)
       DO m = -l, l
          cfmat(m,m) = cfmat(m,m) - trac/(2*l+1)
       ENDDO
-      WRITE(*,"(A)") "AVERAGE - TRACE#############"
-      WRITE(*,"(7f10.5)") cfmat(:,:)
+      !WRITE(*,"(A)") "AVERAGE - TRACE#############"
+      !WRITE(*,"(7f10.5)") cfmat(:,:)
 
 
    END SUBROUTINE cfcontrib

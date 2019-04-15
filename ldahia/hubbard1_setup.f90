@@ -6,7 +6,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(iter,atoms,sym,mpi,noco,input,inDen,pot,gdft,l_runinfleur,l_runhia)
+   SUBROUTINE hubbard1_setup(iter,atoms,sym,mpi,noco,input,inDen,usdus,pot,gdft,l_runinfleur,l_runhia)
 
       USE m_types
       USE m_hubbard1_io
@@ -22,6 +22,7 @@ MODULE m_hubbard1_setup
       TYPE(t_mpi),      INTENT(IN)     :: mpi
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
+      TYPE(t_usdus),    INTENT(IN)     :: usdus
       TYPE(t_potden),   INTENT(IN)     :: inDen
       TYPE(t_potden),   INTENT(INOUT)  :: pot
       TYPE(t_greensf),  INTENT(IN)  :: gdft !green's function in the mt-sphere including the potential correction form dft+hubbard1 
@@ -43,13 +44,12 @@ MODULE m_hubbard1_setup
 
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       COMPLEX  mmpMat_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
-      COMPLEX  selfen(atoms%n_hia,gdft%nz,1:2*(2*lmaxU_const+1),1:2*(2*lmaxU_const+1))
+      COMPLEX  selfen(atoms%n_hia,gdft%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
       REAL     e(gdft%nz),dist(input%jspins)
       REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_exist
 
       IF(g0%mode.EQ.2) CALL juDFT_error("This energy contour is not supported at the moment for DFT+Hubbard1",calledby="hubbard1_setup")
-      beta = 100.0
 
       
       !the occupation matrix was calculated --> simply calculate potential correction
@@ -75,10 +75,8 @@ MODULE m_hubbard1_setup
          !was not yet run
          !--> write out the configuration for the hubbard 1 solver 
 
-         CALL gu%init(input,lmaxU_const,atoms,.true.,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de)
-         CALL g0%init(input,lmaxU_const,atoms,.true.,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de)
-         gu%nef = gdft%nef
-         g0%nef = gdft%nef
+         CALL gu%init(input,lmaxU_const,atoms,.true.,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de,matsub_in=gdft%nmatsub)
+         CALL g0%init(input,lmaxU_const,atoms,.true.,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de,matsub_in=gdft%nmatsub)
 
          !Get the working directory
          CALL get_environment_variable('PWD',cwd)
@@ -87,9 +85,8 @@ MODULE m_hubbard1_setup
          WRITE(folder,"(A5,I3.3)") "hub1_" , iter
          path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
          CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)))
-
          !Eliminate the potential V_U from the onsite green's function
-         CALL elim_interaction(gdft,g0,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),atoms,input%jspins)
+         CALL elim_interaction(gdft,g0,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),atoms,usdus,input%jspins)
 
          DO i_hia = 1, atoms%n_hia
             n = atoms%lda_hia(i_hia)%atomType
@@ -101,7 +98,7 @@ MODULE m_hubbard1_setup
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
          
             !calculate the occupation of the correlated shell (!!!FROM THE LDA+U GREEN'S FUNCTION)
-            CALL occmtx(gdft,i_gf,atoms,sym,input%jspins,mmpMat(:,:,i_hia,:))
+            CALL occmtx(gdft,i_gf,atoms,sym,input%jspins,input%onsite_beta,mmpMat(:,:,i_hia,:))
             n_l(i_hia,:) = 0.0
             DO ispin = 1, input%jspins
                DO m = -l, l
@@ -109,6 +106,10 @@ MODULE m_hubbard1_setup
                ENDDO
             ENDDO
             WRITE(*,*) "OCCUPATION: ", SUM(n_l(i_hia,:))
+            !IF(ALL(pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:).EQ.0.0)) THEN
+            !   n_l(i_hia,1) = 7.0
+            !   n_l(i_hia,2) = 0.0
+            !ENDIF 
 
             !calculate the chemical potential
             CALL mudc(atoms%lda_hia(i_hia)%U,atoms%lda_hia(i_hia)%J,l,n_l(i_hia,:),atoms%lda_hia(i_hia)%l_amf,mu,input%jspins)
@@ -121,11 +122,21 @@ MODULE m_hubbard1_setup
             INQUIRE(file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/" // "se.atom",exist=l_exist)
 
             IF(l_exist) THEN
-               CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,:,1:2*(2*l+1),1:2*(2*l+1)),g0%nz,2*(2*l+1),e(:))
+               CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,1:g0%nz-g0%nmatsub,1:2*(2*l+1),1:2*(2*l+1)),g0%nz-g0%nmatsub,2*(2*l+1),e(:),.false.)
+               CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,g0%nz-g0%nmatsub:g0%nz,1:2*(2*l+1),1:2*(2*l+1)),g0%nmatsub,2*(2*l+1),e(:),.true.)
             ELSE
                CALL write_hubbard1_input(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
-                                          0.16,-0.00015,MAX(1,n_occ-2),MIN(2*(2*l+1),n_occ+2),beta,mu,&
-                                          g0%nz,REAL(g0%e(1)),REAL(g0%e(g0%nz)),AIMAG(g0%e(1)))
+                                          0.20,-0.0001,MAX(1,n_occ-2),MIN(2*(2*l+1),n_occ+2),input%onsite_beta,mu,&
+                                          gdft%nz-gdft%nmatsub,gdft%nmatsub,REAL(g0%e(1)),REAL(g0%e(g0%nz-g0%nmatsub)),AIMAG(g0%e(1)))
+
+               OPEN(unit=1337,file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/" // "contour.dat",status="replace",action="write")
+
+               DO iz = 1, gdft%nz
+                  WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
+               ENDDO
+
+               CLOSE(unit= 1337)
+               
                !There has to be a better solution
                !Maybe use CALL System() to start the solver from here
                !EXPERIMENTAL:
@@ -134,19 +145,18 @@ MODULE m_hubbard1_setup
                   CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/")
                   WRITE(*,"(A)") "Running Hubbard 1 solver"
                   CALL SYSTEM("/home/henning/GIT/hub2new4sp/eigen > out")
-                  CALL SYSTEM("/home/henning/GIT/hub2new4sp/dos > out")
-                  CALL SYSTEM("/home/henning/GIT/hub2new4sp/selfen > out")
-                  CALL SYSTEM("/home/henning/GIT/hub2new4sp/angmom > out")   
+                  CALL SYSTEM("/home/henning/GIT/hub2new4sp/selfen > out") 
                   WRITE(*,"(A)") "Hubbard 1 solver finished" 
                   CALL timestop("Hubbard 1 solver")
-                  CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,:,1:2*(2*l+1),1:2*(2*l+1)),g0%nz,2*(2*l+1),e(:))
+                  CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,1:g0%nz-g0%nmatsub,1:2*(2*l+1),1:2*(2*l+1)),g0%nz-g0%nmatsub,2*(2*l+1),e(:),.false.)
+                  IF(g0%nmatsub.GT.0) CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,g0%nz-g0%nmatsub:g0%nz,1:2*(2*l+1),1:2*(2*l+1)),g0%nmatsub,2*(2*l+1),e(:),.true.)
                ENDIF
             ENDIF
          ENDDO
          CALL CHDIR(TRIM(ADJUSTL(cwd)))
 
          IF(l_exist.OR.l_runinfleur) THEN
-            CALL add_selfen(g0,gu,selfen,atoms,sym,input%jspins,n_l(:,1),mmpMat)
+            CALL add_selfen(g0,gu,selfen,atoms,sym,input%onsite_beta,input%jspins,n_l(:,1),mmpMat)
             ! calculate potential matrix and total energy correction
             CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,.true.,mmpMat,&
                   u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),e_lda_hia)
@@ -173,8 +183,16 @@ MODULE m_hubbard1_setup
                READ(1337,"(7f14.8)") mmpMat_in(:,:,:,:)
                CLOSE(unit=1337)
                CALL n_mmp_dist(mmpMat_in,mmpMat,atoms,dist,input%jspins)
+               inquire(file="n_mmp_dist", exist=l_exist)
+               if (l_exist) then
+                 open(12, file="n_mmp_dist", status="old", position="append", action="write")
+               else
+                 open(12, file="n_mmp_dist", status="new", action="write")
+               end if
+               write(12, "(f14.8)") NORM2(dist)
+               close(12)
             ENDIF 
-            
+  
             !Write out the density matrix (because i don't wanna change inDen to intent(inout)
             OPEN(unit=1337,file="n_mmpmat_hubbard1",status="replace",action="write",iostat=io_error)
             IF(io_error.NE.0) CALL juDFT_error("IO-error in density matrix",calledby="hubbard1_setup")
@@ -191,6 +209,8 @@ MODULE m_hubbard1_setup
 9010        FORMAT("Hubbard 1 input written into hub1_",I3.3)
          ENDIF
       END IF
+
+      WRITE(*,"(7f14.8)") REAL(pot%mmpMat(:,:,:,:))
      
    END SUBROUTINE hubbard1_setup
 
@@ -240,7 +260,7 @@ MODULE m_hubbard1_setup
 9030  FORMAT(TR3,"mu = ",f7.4)
    END SUBROUTINE
 
-   SUBROUTINE add_selfen(g,gp,selfen,atoms,sym,jspins,n_occ,mmpMat)
+   SUBROUTINE add_selfen(g,gp,selfen,atoms,sym,beta,jspins,n_occ,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -261,14 +281,16 @@ MODULE m_hubbard1_setup
 
       TYPE(t_greensf),  INTENT(IN)     :: g
       TYPE(t_greensf),  INTENT(INOUT)  :: gp
-      COMPLEX,          INTENT(IN)     :: selfen(:,:,:,:)
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
+      COMPLEX,          INTENT(IN)     :: selfen(atoms%n_hia,g%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
       INTEGER,          INTENT(IN)     :: jspins
+      REAL,             INTENT(IN)     :: beta
       REAL,             INTENT(IN)     :: n_occ(atoms%n_hia)
       COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,jspins)
 
       INTEGER i_hia,l,nType,i_gf,ns,ispin,m,iz,ipm
+      CHARACTER(len=6) app
 
       REAL mu_a,mu_b,mu_step,mu_max,n_max
       REAL mu,n
@@ -278,7 +300,7 @@ MODULE m_hubbard1_setup
       !Interval where we expect the correct mu
       mu_a = -2.0
       mu_b = 2.0
-      mu_step = 0.01
+      mu_step = 0.05
       mu_max = 0.0
       n_max = 0.0
 
@@ -303,7 +325,7 @@ MODULE m_hubbard1_setup
                   CALL to_g(gmat,gp%gmmpMat(1,iz,i_gf,:,:,:,ipm),jspins,l)
                ENDDO
             ENDDO
-            CALL occmtx(gp,i_gf,atoms,sym,jspins,mmpMat(:,:,i_hia,:))
+            CALL occmtx(gp,i_gf,atoms,sym,jspins,beta,mmpMat(:,:,i_hia,:))
             !Calculate the trace
             n = 0.0
             DO ispin = 1, jspins
@@ -330,7 +352,7 @@ MODULE m_hubbard1_setup
                   CALL to_g(gmat,gp%gmmpMat(1,iz,i_gf,:,:,:,ipm),jspins,l)
                ENDDO
             ENDDO
-            CALL occmtx(gp,i_gf,atoms,sym,jspins,mmpMat(:,:,i_hia,:))
+            CALL occmtx(gp,i_gf,atoms,sym,jspins,beta,mmpMat(:,:,i_hia,:))
             !Calculate the trace
             n = 0.0
             DO ispin = 1, jspins
@@ -359,7 +381,7 @@ MODULE m_hubbard1_setup
    END SUBROUTINE add_selfen
 
 
-   SUBROUTINE elim_interaction(g,gp,v,atoms,jspins)
+   SUBROUTINE elim_interaction(g,gp,v,atoms,usdus,jspins)
 
       !Calculates the new non-interacting green's function for 
       !DFT+Hubbard 1 by eliminating the potential correction with
@@ -370,11 +392,13 @@ MODULE m_hubbard1_setup
 
       USE m_types
       USE m_gfcalc
+      USE m_constants
 
       TYPE(t_greensf),     INTENT(IN)     :: g
       TYPE(t_greensf),     INTENT(INOUT)  :: gp
-      COMPLEX,             INTENT(IN)     :: v(:,:,:,:)
       TYPE(t_atoms),       INTENT(IN)     :: atoms 
+      COMPLEX,             INTENT(IN)     :: v(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,jspins)
+      TYPE(t_usdus),       INTENT(IN)     :: usdus
       INTEGER,             INTENT(IN)     :: jspins
 
       INTEGER i_hia,iz,ipm,i_gf,l,n,ns
@@ -390,6 +414,7 @@ MODULE m_hubbard1_setup
          CALL gmat%init(.false.,2*ns,2*ns)
          CALL vmat%init(.false.,2*ns,2*ns)
          CALL to_tmat(vmat,-v(:,:,i_hia,:),jspins,l)
+         WRITE(*,"(14f10.5)") REAL(vmat%data_c)
          DO iz = 1, g%nz
             DO ipm = 1, 2
                CALL to_tmat(gmat,g%gmmpMat(1,iz,i_gf,:,:,:,ipm),jspins,l)
@@ -427,72 +452,6 @@ MODULE m_hubbard1_setup
       ENDDO
       CALL gmat%inverse()
    END SUBROUTINE add_pot
-
-   !Conversion between TYPE(t_mat) and array in TYPE(t_greensf) to make use of inversion routines
-
-   SUBROUTINE to_tmat(gmat,g,jspins,l)
-
-      USE m_types
-      USE m_constants
-      !Writes the array consisting of (m,mp,ispin) into a 2d matrix of type(t_mat)
-
-      TYPE(t_mat),   INTENT(INOUT)  :: gmat 
-      COMPLEX,       INTENT(IN)     :: g(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
-      INTEGER,       INTENT(IN)     :: jspins
-      INTEGER,       INTENT(IN)     :: l
-
-      INTEGER ns,ind1,ind2,i,j,spin
-
-      ns = 2*l + 1
-
-      gmat%data_c = 0.0
-      DO spin = 1, 2
-         DO i = 1, ns
-            DO j = 1, ns
-               ind1 = i + (spin-1)*ns
-               ind2 = j + (spin-1)*ns
-               IF(jspins.EQ.1) THEN
-                  gmat%data_c(ind1,ind2) = 0.5*g(i-l-1,j-l-1,1)
-               ELSE
-                  gmat%data_c(ind1,ind2) = g(i-l-1,j-l-1,spin)
-               ENDIF
-            ENDDO
-         ENDDO
-      ENDDO
-   
-   END SUBROUTINE to_tmat
-
-   SUBROUTINE to_g(gmat,g,jspins,l)
-
-      USE m_types
-      USE m_constants
-      !Writes the array consisting of (m,mp,ispin) into a 2d matrix of type(t_mat)
-
-      TYPE(t_mat),   INTENT(IN)  :: gmat 
-      COMPLEX,       INTENT(OUT) :: g(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
-      INTEGER,       INTENT(IN)  :: jspins
-      INTEGER,       INTENT(IN)  :: l
-
-      INTEGER ns,ind1,ind2,i,j,spin
-
-      ns = 2*l + 1
-
-      g = 0.0
-      DO spin = 1, 2
-         DO i = 1, ns
-            DO j = 1, ns
-               ind1 = i + (spin-1)*ns
-               ind2 = j + (spin-1)*ns
-               IF(jspins.EQ.1) THEN
-                  g(i-l-1,j-l-1,1) = g(i-l-1,j-l-1,1) + gmat%data_c(ind1,ind2)
-               ELSE
-                  g(i-l-1,j-l-1,spin) = gmat%data_c(ind1,ind2)
-               ENDIF
-            ENDDO
-         ENDDO
-      ENDDO
-   
-   END SUBROUTINE to_g
 
    SUBROUTINE n_mmp_dist(n_mmp_in,n_mmp_out,atoms,dist,jspins)
 

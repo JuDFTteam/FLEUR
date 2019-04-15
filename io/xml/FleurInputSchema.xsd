@@ -616,6 +616,8 @@
       <xsd:attribute default="0.0314" name="sigma" type="xsd:string" use="optional"/>
       <xsd:attribute default="1" name="mode" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="1301" name="nz" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute default="100" name="nmatsub" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute default="100." name="beta" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="RDMFTType">

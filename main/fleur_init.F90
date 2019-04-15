@@ -146,10 +146,12 @@
 
           !Many of these can probably be eliminated
           input%onsite_ne = 1301 !same as for dos calculations
-          input%onsite_sigma = 0.0
+          input%onsite_sigma = 0.00314
           input%onsite_sphavg = .true.
-          input%onsite_mode = 2
-          input%onsite_nz = 32
+          input%onsite_mode = 1
+          input%onsite_nz = 1301
+          input%onsite_beta = 100.0
+          input%onsite_nmatsub = 0
           input%l_gf = .false.
           atoms%n_hia = 0
           atoms%n_gf = 0
