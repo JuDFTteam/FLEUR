@@ -62,7 +62,7 @@ MODULE m_hubbard1_setup
       CALL umtx(atoms%lda_hia(:),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
       IF(ANY(inDen%mmpMat(atoms%n_u+1:atoms%n_hia+atoms%n_u,:,:,:).NE.0.0)) THEN
          mmpMat = inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:)
-         CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,mmpMat,&
+         CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,.true.,mmpMat,&
          u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),e_lda_hia)
       ELSE !occupation matrix is zero
          !There is nothing to be done yet just set the potential correction to 0
@@ -148,7 +148,7 @@ MODULE m_hubbard1_setup
          IF(l_exist.OR.l_runinfleur) THEN
             CALL add_selfen(g0,gu,selfen,atoms,sym,input%jspins,n_l(:,1),mmpMat)
             ! calculate potential matrix and total energy correction
-            CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,mmpMat,&
+            CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,.true.,mmpMat,&
                   u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),e_lda_hia)
             !
             ! Output the density of states from the two green's functions

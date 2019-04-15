@@ -19,7 +19,7 @@ MODULE m_vmmp
   !     Extension to multiple U per atom type  G.M. 2017
   !     ************************************************************
 CONTAINS
-  SUBROUTINE v_mmp(sym,atoms,u_in,n_u,jspins,ns_mmp,u,f0,f2, vs_mmp,e)
+  SUBROUTINE v_mmp(sym,atoms,u_in,n_u,jspins,spin_avg,ns_mmp,u,f0,f2, vs_mmp,e)
 
     USE m_types
     USE m_constants
@@ -38,6 +38,7 @@ CONTAINS
     COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
 
     COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
+    LOGICAL, INTENT(IN)    :: spin_avg
 
     ! ..  Local Variables ..
     INTEGER ispin,jspin,l ,mp,p,q,itype,m,i_u
@@ -143,9 +144,17 @@ CONTAINS
              DO mp = -l,l
                 vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) * spin_deg
              END DO
-             vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + v_diag(ispin)
           END DO
+          IF(.NOT.spin_avg) vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + v_diag(ispin)
        END DO
+      !Spin-averaged double-counting (for LDA+HIA)
+      IF(spin_avg) THEN
+         DO ispin = 1, jspins
+            DO m = -l,l
+               vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + SUM(v_diag(:))/jspins
+            END DO
+         ENDDO
+      ENDIF
 
        !----------------------------------------------------------------------+
        !              s                                                       !
