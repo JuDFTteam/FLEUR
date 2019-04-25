@@ -133,19 +133,19 @@ CONTAINS
          IF (mpi%irank == 0) WRITE (6,FMT=8000) itype
          ng = atoms%jri(itype)
          DO l=0,atoms%lmax(itype)
-            CALL radfun(l,itype,1,el_eig(l,itype),vr(:,itype,jsp),atoms,f(:,:,l),df(:,:,l),usdus,nodem,noded,wronk)
-            IF (mpi%irank == 0 ) WRITE (6,FMT=8010) l,el_eig(l,itype),usdus%us(l,itype,1),usdus%dus(l,itype,1),nodem,&
-                                                    usdus%uds(l,itype,1),usdus%duds(l,itype,1),noded,usdus%ddn(l,itype,1),wronk
+            CALL radfun(l,itype,jsp,el_eig(l,itype),vr(:,itype,jsp),atoms,f(:,:,l),df(:,:,l),usdus,nodem,noded,wronk)
+            IF (mpi%irank == 0 ) WRITE (6,FMT=8010) l,el_eig(l,itype),usdus%us(l,itype,jsp),usdus%dus(l,itype,jsp),nodem,&
+                                                    usdus%uds(l,itype,jsp),usdus%duds(l,itype,jsp),noded,usdus%ddn(l,itype,jsp),wronk
 
             hybdat%bas1(1:ng,1,l,itype) =  f(1:ng,1,l)
             hybdat%bas2(1:ng,1,l,itype) =  f(1:ng,2,l)
             hybdat%bas1(1:ng,2,l,itype) = df(1:ng,1,l)
             hybdat%bas2(1:ng,2,l,itype) = df(1:ng,2,l)
 
-            hybdat%bas1_MT(1,l,itype)   = usdus%us(l,itype,1)
-            hybdat%drbas1_MT(1,l,itype) = usdus%dus(l,itype,1)
-            hybdat%bas1_MT(2,l,itype)   = usdus%uds(l,itype,1)
-            hybdat%drbas1_MT(2,l,itype) = usdus%duds(l,itype,1)
+            hybdat%bas1_MT(1,l,itype)   = usdus%us(l,itype,jsp)
+            hybdat%drbas1_MT(1,l,itype) = usdus%dus(l,itype,jsp)
+            hybdat%bas1_MT(2,l,itype)   = usdus%uds(l,itype,jsp)
+            hybdat%drbas1_MT(2,l,itype) = usdus%duds(l,itype,jsp)
          END DO
 
          IF (atoms%nlo(itype).GE.1) THEN
@@ -155,8 +155,8 @@ CONTAINS
                iarr(atoms%llo(ilo,itype),itype) = iarr(atoms%llo(ilo,itype),itype) + 1
                hybdat%bas1(1:ng,iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype) = flo(1:ng,1,ilo)
                hybdat%bas2(1:ng,iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype) = flo(1:ng,2,ilo)
-               hybdat%bas1_MT(iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype) = usdus%ulos(ilo,itype,1)
-               hybdat%drbas1_MT(iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype) = usdus%dulos(ilo,itype,1)
+               hybdat%bas1_MT(iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype) = usdus%ulos(ilo,itype,jsp)
+               hybdat%drbas1_MT(iarr(atoms%llo(ilo,itype),itype),atoms%llo(ilo,itype),itype) = usdus%dulos(ilo,itype,jsp)
             END DO
          END IF
       END DO
