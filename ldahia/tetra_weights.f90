@@ -21,7 +21,7 @@ MODULE m_tetra_weights
       USE m_types
       USE m_constants
       USE m_differentiate
-
+      USE m_juDFT
       INTEGER,                INTENT(IN)     :: ikpt
       TYPE(t_kpts),           INTENT(IN)     :: kpts
       INTEGER,                INTENT(IN)     :: neig(:)
@@ -33,8 +33,8 @@ MODULE m_tetra_weights
       REAL,                   INTENT(IN)     :: ef
 
       !Local Scalars
-      INTEGER icorn, itet, ib, j, k, l, nstart,corn_ind,max_ib
-      REAL    weight,dweight,tol,tmp
+      INTEGER icorn, itet, ib, j, k, l, nstart,corn_ind,max_ib,tmp
+      REAL    weight,dweight,tol
       LOGICAL l_bloechl
 
       !Local Arrays
@@ -48,7 +48,7 @@ MODULE m_tetra_weights
       e_ind(:,1) = g%ne
       e_ind(:,2) = 0
       max_ib = 0
-
+      weights = 0.0
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(ikpt,ef,l_bloechl,max_ib) &
       !$OMP SHARED(kpts,neig,eig,g,weights) &
@@ -89,17 +89,14 @@ MODULE m_tetra_weights
                ENDDO
             ENDDO
 
-            !weight = 0.0
-            !CALL getTetraContrib(ef,kpts%voltet(itet)/kpts%ntet,e(:),weight(:),g)
-
             !search for the corner ikpt in the sorted array
 
             DO l = 1, 4
-               IF(kpts%ntetra(ind(l),itet).EQ.ikpt) corn_ind = ind(l)
+               IF(kpts%ntetra(ind(l),itet).EQ.ikpt) corn_ind = l
             ENDDO
 
 
-            nstart = INT((e(1)-g%e_bot)/g%del)+1
+            nstart = INT((e(ind(1))-g%e_bot)/g%del)+1
 
             IF(l_bloechl) CALL bloechl_corrections(ef,kpts%voltet(itet)/kpts%ntet,e(ind(:)),dweight,corn_ind)
             DO ie = MAX(1,nstart), g%ne
@@ -127,6 +124,7 @@ MODULE m_tetra_weights
                e_ind(ib,1) = i
                EXIT
             ELSE
+               dos_weights(i) = 0.0
                i = i + 1
                IF(i.EQ.g%ne+1) THEN
                   e_ind(ib,1) = g%ne
@@ -141,6 +139,7 @@ MODULE m_tetra_weights
                e_ind(ib,2) = i
                EXIT
             ELSE
+               dos_weights(i) = 0.0
                i = i - 1
                IF(i.EQ.0) THEN
                   e_ind(ib,2) = 1
@@ -154,6 +153,7 @@ MODULE m_tetra_weights
 
    SUBROUTINE contrib_singletetra(energy,vol,e,weight,ind)
 
+      USE m_juDFT
       !Integration weights taken from 
       !PhysRevB.49.16223 
 
@@ -169,12 +169,11 @@ MODULE m_tetra_weights
 
       REAL C
       REAL C1, C2, C3
-
       IF(energy.GT.e(4)) THEN
 
          weight = 1/4.*vol
 
-      ELSE IF(energy.GT.e(1)) THEN
+      ELSE IF(energy.LT.e(1)) THEN
 
          weight = 0.0
 
@@ -220,11 +219,6 @@ MODULE m_tetra_weights
          END IF
 
       END IF
-
-      !IF(ISNAN(weight(1)).OR.ISNAN(weight(2)).OR.ISNAN(weight(3)).OR.ISNAN(weight(4))) THEN
-      !   WRITE(*,*) "ENERGIES: ", e(1), e(2), e(3), e(4)
-      !   WRITE(*,*) "WEIGHTS: ",weight(1), weight(2), weight(3), weight(4)
-      !END IF
 
    END SUBROUTINE contrib_singletetra
 
