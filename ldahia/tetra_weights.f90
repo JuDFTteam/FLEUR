@@ -49,13 +49,13 @@ MODULE m_tetra_weights
       e_ind(:,2) = 0
       max_ib = 0
       weights = 0.0
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(ikpt,ef,l_bloechl,max_ib) &
-      !$OMP SHARED(kpts,neig,eig,g,weights) &
-      !$OMP PRIVATE(itet,icorn,ib,j,k,l,nstart,corn_ind,weight,dweight,tmp) &
-      !$OMP PRIVATE(ind,e)
+      !!$OMP PARALLEL DEFAULT(none) &
+      !!$OMP SHARED(ikpt,ef,l_bloechl,max_ib) &
+      !!$OMP SHARED(kpts,neig,eig,g,weights) &
+      !!$OMP PRIVATE(itet,icorn,ib,j,k,l,nstart,corn_ind,weight,dweight,tmp) &
+      !!$OMP PRIVATE(ind,e)
 
-      !$OMP DO
+      !!$OMP DO
       DO itet = 1, kpts%ntet
 
          IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE !search for the tetrahedra containing ikpt
@@ -105,8 +105,8 @@ MODULE m_tetra_weights
             ENDDO 
          ENDDO
       ENDDO
-      !$OMP ENDDO
-      !$OMP END PARALLEL
+      !!$OMP ENDDO
+      !!$OMP END PARALLEL
       !
       !Differentiate the weights with respect to energy to get the correct weights for a DOS-calculation
       !

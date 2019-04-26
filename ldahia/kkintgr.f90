@@ -63,8 +63,7 @@ MODULE m_kkintgr
          sigma = AIMAG(ez(1)) 
          IF(sigma.NE.0.0) THEN
             CALL lorentzian_smooth(del,im_calc,sigma,ne)
-         ENDIF
-         IF(l_conjg) im_calc = -im_calc
+         ENDIF       
       ENDIF
       
       g = 0.0
@@ -91,7 +90,6 @@ MODULE m_kkintgr
                !Here we perform the integrations
                re_n2 = re_ire(im_calc,ne,n2,method)
                re_n1 = re_ire(im_calc,ne,n1,method)
-
                !Real Part (only split up to make it readable)
                g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
                !Imaginary Part
@@ -106,7 +104,6 @@ MODULE m_kkintgr
             IF(sigma.NE.0.0) THEN
                CALL lorentzian_smooth(del,im_calc,sigma,ne)
             ENDIF
-            IF (l_conjg) im_calc = -im_calc
             !Next point to the left
             n1 = INT((REAL(ez(iz))-eb)/del) +1
             !next point to the right
@@ -123,6 +120,8 @@ MODULE m_kkintgr
          CASE default
             CALL juDFT_error("Not a valid shape for the energy contour",calledby="kkintgr")
          END SELECT
+
+         IF(l_conjg) g(iz) = conjg(g(iz))
 
       ENDDO
       !$OMP END DO
@@ -184,7 +183,6 @@ MODULE m_kkintgr
    !This is essentially smooth out of m_smooth but with a lorentzian distribution
    SUBROUTINE lorentzian_smooth(dx,f,sigma,n)
 
-      !USE m_constants, ONLY: pi_const
       IMPLICIT NONE
 
 !    Arguments
@@ -222,32 +220,32 @@ MODULE m_kkintgr
       ENDDO
       DEALLOCATE ( ee )
 
-      END SUBROUTINE lorentzian_smooth
+   END SUBROUTINE lorentzian_smooth
 
-      !General Purpose trapezian method integration (not used in kkintgr)
-      SUBROUTINE trapz(y,h,n,z)
+   !General Purpose trapezian method integration (not used in kkintgr)
+   SUBROUTINE trapz(y,h,n,z)
 
-         IMPLICIT NONE
-      
-         REAL,          INTENT(IN)     :: y(n)
-         REAL,          INTENT(OUT)    :: z
-      
-         INTEGER,       INTENT(IN)     :: n
-         REAL,          INTENT(IN)     :: h
-      
-      
-         INTEGER i
-      
-         z = y(1)
-         DO i = 2, n-1
-      
-            z = z + 2*y(i)
-      
-         ENDDO
-         z = z + y(n)
-      
-         z = z*h/2.0
-      
-      END SUBROUTINE trapz
+      IMPLICIT NONE
+   
+      REAL,          INTENT(IN)     :: y(n)
+      REAL,          INTENT(OUT)    :: z
+   
+      INTEGER,       INTENT(IN)     :: n
+      REAL,          INTENT(IN)     :: h
+   
+   
+      INTEGER i
+   
+      z = y(1)
+      DO i = 2, n-1
+   
+         z = z + 2*y(i)
+   
+      ENDDO
+      z = z + y(n)
+   
+      z = z*h/2.0
+   
+   END SUBROUTINE trapz
 
 END MODULE m_kkintgr
