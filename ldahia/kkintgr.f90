@@ -12,177 +12,242 @@ MODULE m_kkintgr
    !>  in the complex plane from the imaginary part calculated on the real axis
    !
    !------------------------------------------------------------------------------
-   CONTAINS
 
-   SUBROUTINE kkintgr_real(nz,e,ne,sigma,del,bot,im,g)
+   USE m_constants
+   USE m_juDFT
+
+   INTEGER, PARAMETER :: method_maclaurin = 1
+   INTEGER, PARAMETER :: method_deriv     = 2
+
+   INTEGER, PARAMETER :: rectangular      = 1
+   INTEGER, PARAMETER :: semicircle       = 2
+
+   CONTAINS 
+
+   SUBROUTINE kkintgr(im,eb,del,ne,g,ez,l_conjg,shape,nz,method)
 
       !calculates the Kramer Kronig Transformation on the same contour where the imaginary part was calculated
-
       !Re(G(E+i * delta)) = -1/pi * int_bot^top dE' P(1/(E-E')) * Im(G(E'+i*delta))
 
-      USE m_types
-      USE m_constants
-      USE m_intgr
+      !The dominant source of error for this routine is a insufficiently dense energy mesh on the real axis
+      !TODO: Some way to estimate the error (maybe search for the sharpest peak and estimate from width)
+
 
       IMPLICIT NONE
 
-      COMPLEX,             INTENT(OUT)    :: g(:)  !green's function
-      COMPLEX,             INTENT(IN)     :: e(:)  !energy contour, on which to calculate G(z)
-      REAL,                INTENT(IN)     :: im(:) !previously calculated imaginary part on equidistant mesh at E+i*sigma
+      !Information about the integrand
+      REAL,          INTENT(IN)  :: im(ne)      !part of the green's function on the real axis 
+      REAL,          INTENT(IN)  :: eb          !Bottom energy cutoff
+      REAL,          INTENT(IN)  :: del         !Energy step on the real axis 
+      INTEGER,       INTENT(IN)  :: ne          !Number of energy points on the real axis
 
-      INTEGER,             INTENT(IN)     :: nz
-      INTEGER,             INTENT(IN)     :: ne
-      REAL,                INTENT(IN)     :: sigma       
-      REAL,                INTENT(IN)     :: del
-      REAL,                INTENT(IN)     :: bot
+      !Information about the complex energy contour
+      COMPLEX,       INTENT(OUT) :: g(nz)       !Green's function on the complex plane
+      COMPLEX,       INTENT(IN)  :: ez(nz)      !Complex energy contour
+      LOGICAL,       INTENT(IN)  :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
+      INTEGER,       INTENT(IN)  :: shape       !Determines wether we have a rectangular (1) or a semicircle contour(2)
+      INTEGER,       INTENT(IN)  :: nz          !Number of energy points on the complex contour
+  
+      !Information about the method 
+      INTEGER,       INTENT(IN)  :: method      !Integer associated with the method to be used (definitions above)
 
-      !Local declarations:
-      INTEGER iz, j, i_sing
-      COMPLEX  ez
-      REAL, ALLOCATABLE :: integrand(:)
-      REAL result
+      REAL ::  im_calc(ne)  !Array where the smoothed version of im is stored
 
-      ALLOCATE (integrand(ne))
+      INTEGER  iz,n1,n2
+      REAL     sigma,re_n1,re_n2
 
 
+      IF(shape.EQ.rectangular) THEN
+         !If we have a rectangular contour we only need  to smooth the imaginary part once
+         im_calc = im
+         sigma = AIMAG(ez(1)) 
+         IF(sigma.NE.0.0) THEN
+            CALL lorentzian_smooth(del,im_calc,sigma,ne)
+         ENDIF
+         IF(l_conjg) im_calc = -im_calc
+      ENDIF
+      
+      g = 0.0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(ne,sigma,del,nz,bot) &
-      !$OMP SHARED(g,im,e) &
-      !$OMP PRIVATE(j,ez,integrand,result,i_sing)
+      !$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
+      !$OMP SHARED(g,ez,im) &
+      !$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2) &
+      !$OMP PRIVATE(im_calc)
 
       !$OMP DO
       DO iz = 1, nz
 
-         !We calculate the integral by removing the singularity and treating it analytically
-         ez = REAL(e(iz)) - bot
+         SELECT CASE(shape)
 
-         i_sing = INT(ez/del) + 1
+         CASE (rectangular)
+            IF(nz.EQ.ne) THEN
+               g(iz) = re_ire(im_calc,ne,iz,method) + ImagUnit * im_calc(iz)
+            ELSE IF(nz.LT.ne) THEN
+               !Next point to the left
+               n1 = INT((REAL(ez(iz))-eb)/del) +1
+               !next point to the right
+               n2 = n1 + 1
 
-         DO j = 1, i_sing -1
+               !Here we perform the integrations
+               re_n2 = re_ire(im_calc,ne,n2,method)
+               re_n1 = re_ire(im_calc,ne,n1,method)
 
-            !Formula for the integrand if the contour is on the same imaginary part as before
-            integrand(j) = (im(j)-im(i_sing))/((j-1)*del-ez)
+               !Real Part (only split up to make it readable)
+               g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
+               !Imaginary Part
+               g(iz) = g(iz) + ImagUnit *( (im_calc(n2)-im_calc(n1))/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_calc(n1) )
+            ELSE
+               CALL juDFT_error("Complex Grid finer than on the real axis",calledby="kkintgr")
+            ENDIF
+         CASE (semicircle)
+            !For a semicircle we need to smooth to the correct imaginary part first
+            im_calc = im
+            sigma = AIMAG(ez(iz)) 
+            IF(sigma.NE.0.0) THEN
+               CALL lorentzian_smooth(del,im_calc,sigma,ne)
+            ENDIF
+            IF (l_conjg) im_calc = -im_calc
+            !Next point to the left
+            n1 = INT((REAL(ez(iz))-eb)/del) +1
+            !next point to the right
+            n2 = n1 + 1
 
-         ENDDO
+            !Here we perform the integrations
+            re_n2 = re_ire(im_calc,ne,n2,method)
+            re_n1 = re_ire(im_calc,ne,n1,method)
 
-         !at j = iz we estimate the integrand with the centered three-point formula for the derivative of im(e) 
-         !(at the edges we use backward/forward formulas)
+            !Real Part (only split up to make it readable)
+            g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
+            !Imaginary Part
+            g(iz) = g(iz) + ImagUnit *( (im_calc(n2)-im_calc(n1))/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_calc(n1) )
+         CASE default
+            CALL juDFT_error("Not a valid shape for the energy contour",calledby="kkintgr")
+         END SELECT
 
-         IF(i_sing.EQ.1) THEN 
-            integrand(i_sing) = (im(2)-im(1))/(del) 
-         ELSE IF(i_sing.EQ.ne) THEN
-            integrand(i_sing) = (im(ne)-im(ne-1))/del
-         ELSE
-            integrand(i_sing) = (im(i_sing+1)-im(i_sing-1))/(2*del) 
-         END IF
-
-         DO j = i_sing+1, ne
-
-            !Formula for the integrand if the contour is on the same imaginary part as before
-            integrand(j) = (im(j)-im(i_sing))/((j-1)*del-ez)
-
-         ENDDO
-
-         CALL intgz0(integrand(:), del,ne,result,.false.)
-
-         !The singularity is treated analytically
-
-         g(iz) = -1/pi_const * result  + ImagUnit * im(i_sing)
-         !(result - im(i_sing) * LOG(ABS(ez/REAL(ez-(ne-1)*del)))) + ImagUnit * im(i_sing)
       ENDDO
       !$OMP END DO
       !$OMP END PARALLEL
-
-
-   ENDSUBROUTINE kkintgr_real
-
-   SUBROUTINE kkintgr(nz,e,ne,sigma,del,bot,im,g,l_upper)
-
-      !calculates the Kramer Kronig Transformation on the same contour where the imaginary part was calculated
-
-      !G(z) = -1/pi * int_bot^top dE' 1/(z-E') * Im(G(E'+-i*delta))
-
-      USE m_types
-      USE m_constants
-      USE m_intgr
-
-      IMPLICIT NONE
-
-      COMPLEX,             INTENT(OUT)    :: g(:)  !green's function
-      COMPLEX,             INTENT(IN)     :: e(:)  !energy contour, on which to calculate G(z)
-      REAL,                INTENT(IN)     :: im(:) !previously calculated imaginary part on equidistant mesh at E+i*sigma
-
-      INTEGER,             INTENT(IN)     :: nz
-      INTEGER,             INTENT(IN)     :: ne
-      REAL,                INTENT(IN)     :: sigma       
-      REAL,                INTENT(IN)     :: del
-      REAL,                INTENT(IN)     :: bot
-      LOGICAL,             INTENT(IN)     :: l_upper
-
-      INTEGER iz, j
-      COMPLEX ez
-      COMPLEX,ALLOCATABLE :: integrand(:)
-      REAL re, imag
-
-      ALLOCATE (integrand(ne))
-
-      !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(ne,del,nz,bot,l_upper) &
-      !$OMP SHARED(g,e,im) &
-      !$OMP PRIVATE(j,ez,integrand,re,imag)
-
-      !$OMP DO
-
-      DO iz = 1, nz
-
-         ez = e(iz) - bot 
-
-         IF(.NOT.l_upper) ez = conjg(ez)
-
-         DO j = 1, ne
-
-            integrand(j) = 1/(ez-(j-1)*del) * im(j)
-
-         ENDDO
-         !We don't use the normal integration routines given in m_intgr because
-         !the functions are very peaky and these are handled better by a simple trapezian method
-         CALL trapz(REAL(integrand(:)),del,ne,re)
-         CALL trapz(AIMAG(integrand(:)),del,ne,imag)
-
-
-         g(iz) = -1/pi_const*CMPLX(re,imag)
-      ENDDO
-      !$OMP END DO
-      !$OMP END PARALLEL
-
 
    END SUBROUTINE kkintgr
-   
-   !trapezoidal rule (more efficient than simpsons scheme in e.g intgz0
-   ! for our peak-like functions)
-   SUBROUTINE trapz(y,h,n,z)
 
+   REAL FUNCTION re_ire(im,ne,ire,method)
+
+      IMPLICIT NONE 
+
+      REAL,    INTENT(IN)  :: im(ne) !Imaginary part
+      INTEGER, INTENT(IN)  :: ne     !Dimension of the energy grid
+      INTEGER, INTENT(IN)  :: ire    !Position where to calculate the real part
+      INTEGER, INTENT(IN)  :: method !Method to be used
+      INTEGER i,j
+      REAL    y
+
+      re_ire = 0.0
+      SELECT CASE(method)
+               
+      CASE (method_maclaurin)
+         !Calculate the real part on the same energy points as the imaginary part
+         !regardless of the contour
+         !If i is odd skip the odd points and the other way around and use the trapezian method
+         DO j = 1, INT(ne/2.0)
+            IF(MOD(ire,2).EQ.0) THEN
+               i = 2*j-1
+            ELSE
+               i = 2*j 
+            ENDIF
+            y = - 1/pi_const * 2.0 * im(i)/REAL(ire-i) 
+            IF(j.EQ.1.OR.j.EQ.INT(ne/2.0)) y = y/2.0
+            re_ire = re_ire + y
+         ENDDO
+
+      CASE (method_deriv)
+         !Remove the singularity and treat it analytically
+         DO j = 1, ne
+            IF(j-ire.NE.0) THEN
+               y = -1/pi_const * (im(j)-im(ire))/REAL(ire-j)
+            ELSE
+               IF(ire.EQ.1) THEN
+                  y = -1/pi_const * (im(2)-im(1))
+               ELSE IF(ire.EQ.ne) THEN
+                  y = -1/pi_const * (im(ne)-im(ne-1))
+               ELSE
+                  y = -1/pi_const * (im(ire+1)-im(ire-1))/2.0
+               ENDIF
+            ENDIF
+            IF(j.EQ.1.OR.j.EQ.INT(ne/2.0)) y = y/2.0
+            re_ire = re_ire + y
+         ENDDO
+      CASE default
+         CALL juDFT_error("No valid method for KK-integration chosen",calledby="kkintgr")
+      END SELECT
+   END FUNCTION re_ire
+
+   !This is essentially smooth out of m_smooth but with a lorentzian distribution
+   SUBROUTINE lorentzian_smooth(dx,f,sigma,n)
+
+      !USE m_constants, ONLY: pi_const
       IMPLICIT NONE
 
-      REAL,          INTENT(IN)     :: y(n)
-      REAL,          INTENT(OUT)    :: z
+!    Arguments
+      INTEGER, INTENT(IN)    :: n
+      REAL,    INTENT(INOUT) :: f(n)
+      REAL,    INTENT(IN)    :: sigma 
+      REAL,    INTENT(IN)    :: dx
 
-      INTEGER,       INTENT(IN)     :: n
-      REAL,          INTENT(IN)     :: h
+!    Locals
+      REAL :: c , f0(n)
+      INTEGER :: i , j , j1 , j2 , m1, m
 
+      REAL, ALLOCATABLE :: ee(:)
+ 
+      c = dx/(pi_const) * sigma
 
-      INTEGER i
-
-      z = y(1)
-      DO i = 2, n-1
-
-         z = z + 2*y(i)
-
+      m = NINT(sqrt(c/1e-14-sigma**2))+1
+      ALLOCATE ( ee(m) )
+      DO i = 1, m
+         ee(i) = c * 1.0/(sigma**2+(i-1)**2*dx**2)
+         IF ( ee(i).LT.1.E-14 ) EXIT
       ENDDO
-      z = z + y(n)
+      m1=i-1
+      f0 = f
+      f = 0.
+      
+      DO i = 1 , N
+         j1 = i - m1 + 1
+         IF ( j1.LT.1 ) j1 = 1
+         j2 = i + m1 - 1
+         IF ( j2.GT.N ) j2 = N
+         DO j = j1 , j2
+            f(i) = f(i) + ee(IABS(j-i)+1)*f0(j)
+         ENDDO
+      ENDDO
+      DEALLOCATE ( ee )
 
-      z = z*h/2.0
+      END SUBROUTINE lorentzian_smooth
 
+      !General Purpose trapezian method integration (not used in kkintgr)
+      SUBROUTINE trapz(y,h,n,z)
+
+         IMPLICIT NONE
+      
+         REAL,          INTENT(IN)     :: y(n)
+         REAL,          INTENT(OUT)    :: z
+      
+         INTEGER,       INTENT(IN)     :: n
+         REAL,          INTENT(IN)     :: h
+      
+      
+         INTEGER i
+      
+         z = y(1)
+         DO i = 2, n-1
+      
+            z = z + 2*y(i)
+      
+         ENDDO
+         z = z + y(n)
+      
+         z = z*h/2.0
+      
       END SUBROUTINE trapz
 
-ENDMODULE m_kkintgr 
+END MODULE m_kkintgr

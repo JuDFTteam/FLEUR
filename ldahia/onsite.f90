@@ -322,12 +322,12 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
          DO m= -l,l
             DO mp= -l,l
                DO jr = 1, gOnsite%nr(i_gf)
-                  !G^+ = G(E+idelta)
-                  CALL kkintgr(gOnsite%nz,gOnsite%e(:),greensfCoeffs%ne,greensfCoeffs%sigma,greensfCoeffs%del,greensfCoeffs%e_bot,&
-                                       im(jr,:,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_gf,m,mp,jspin,1),.true.)
-                  !G^- = G(E-idelta)
-                  CALL kkintgr(gOnsite%nz,gOnsite%e(:),greensfCoeffs%ne,greensfCoeffs%sigma,greensfCoeffs%del,greensfCoeffs%e_bot,&
-                                       im(jr,:,m,mp,jspin),gOnsite%gmmpMat(jr,:,i_gf,m,mp,jspin,2),.false.)
+                  !G(E+i delta)
+                  CALL kkintgr(im(jr,:,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
+                              gOnsite%gmmpMat(jr,:,i_gf,m,mp,jspin,1),gOnsite%e,.false.,gOnsite%mode,gOnsite%nz,1)
+                  !G(E-i delta)
+                  CALL kkintgr(im(jr,:,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
+                              gOnsite%gmmpMat(jr,:,i_gf,m,mp,jspin,2),gOnsite%e,.true.,gOnsite%mode,gOnsite%nz,1)
                ENDDO
             ENDDO
          ENDDO
