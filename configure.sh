@@ -29,6 +29,7 @@ if test -d $DIR/.git
     then
         echo "Git version found"
     else
+        mkdir -p $DIR/.git/hooks
         ln -s $DIR/tests/git-hooks/pre-commit $DIR/.git/hooks
         echo "Git version found, hook installed"
     fi
