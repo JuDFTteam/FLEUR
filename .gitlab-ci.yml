@@ -4,11 +4,6 @@ stages:
    - coverage
    - html
    - deploy
-   - build-pgi
-   - test-pgi
-   - build-intel-static
-   - build-intel
-   - test-intel
 
 
 build-gfortran-hdf5:
@@ -103,7 +98,7 @@ mkdocs:
 
 build-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:pgi
-  stage: build-pgi
+  stage: build
   cache: 
      paths:
        - build.pgi
@@ -117,7 +112,9 @@ build-pgi:
     
 test-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:pgi
-  stage: test-pgi
+  stage: test
+  dependencies:
+    - build-pgi
   cache:
      paths:
        - build.pgi
@@ -131,7 +128,7 @@ test-pgi:
 
 build-intel-static:
   image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
-  stage: build-intel-static
+  stage: build
   cache: 
      paths:
        - build.intel-static
@@ -152,7 +149,7 @@ build-intel-static:
 
 build-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
-  stage: build-intel
+  stage: build
   cache: 
      paths:
        - build.intel.debug
@@ -167,7 +164,9 @@ build-intel:
     
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
-  stage: test-intel
+  stage: test
+  dependencies:
+     - build-intel
   cache:
      paths:
        - build.intel.debug
