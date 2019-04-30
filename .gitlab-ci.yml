@@ -74,7 +74,7 @@ pages2:
        - public
   script:
     - cd /builds/fleur/fleur/docs/mkdocs ; mkdocs build
-    - cp tutorial_scheme/color.css site/css/base/css
+    - cp tutorial_scheme/color.css site/css/base.css
     - mv site ../public/
   environment:
     name: mkdocs
