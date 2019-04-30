@@ -52,6 +52,7 @@ pages:
   script:
     - mv /builds/fleur/fleur/docs/Docu_main.html ../public/index.html
   environment: 
+     name: HTML-Pages
      url: https://fleur.iffgit.fz-juelich.de/fleur
   artifacts:
     paths:
