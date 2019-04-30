@@ -1,7 +1,6 @@
 stages:
    - build
    - test
-   - coverage
    - html
    - deploy
 
@@ -107,6 +106,7 @@ build-pgi:
        - build.pgi
   script:
     - cd /builds/fleur/fleur; ./configure.sh -l pgi ; cd build.pgi; make 
+  allow_failure: true
   only:
     - schedules
     - triggers
@@ -123,6 +123,7 @@ test-pgi:
        - build.pgi
   script:
     - cd /builds/fleur/fleur/build.pgi;ctest
+  allow_failure: true
   only:
      - schedules
      - web
@@ -144,6 +145,7 @@ build-intel-static:
     - build.intel-static/fleur
     - build.intel-static/fleur_MPI
     - build.intel-static/inpgen
+  allow_failure: true
   only:
     - schedules
     - triggers
@@ -159,6 +161,7 @@ build-intel:
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
     - cd /builds/fleur/fleur; CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -d -l intel INTEL_MPI ; cd build.intel.debug; make -j 4
+  allow_failure: true
   only:
     - schedules
     - triggers
@@ -176,6 +179,7 @@ test-intel:
   script:
     - set +e && source compilervars.sh intel64 && set -e; ulimit -s unlimited
     - cd /builds/fleur/fleur/build.intel.debug;ctest
+  allow_failure: true
   artifacts:
     when: on_failure
     paths:
@@ -188,7 +192,7 @@ test-intel:
 
 gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
-  stage: coverage
+  stage: html
   cache: 
      paths:
         - build
@@ -200,6 +204,7 @@ gfortran-coverage:
       - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
       - genhtml combined.info --output-directory html_out
       - mkdir ../public;mv html_out ../public/coverage_html
+  allow_failure: true
   artifacts:
     paths:
       - public 
