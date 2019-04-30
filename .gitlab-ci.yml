@@ -45,7 +45,7 @@ pages:
         - build
         - public
   script:
-    - mv /builds/fleur/fleur/docs/Docu_main.html ../public/index.html
+    - echo "HTML should be ready from cache..."
   environment: 
      name: HTML-Pages
      url: https://fleur.iffgit.fz-juelich.de/fleur
@@ -67,6 +67,7 @@ doxygen:
   script:
     - cd /builds/fleur/fleur/build ; make doc
     - mv docs/html/ ../public/
+    - mv /builds/fleur/fleur/docs/Docu_main.html ../public/index.html
   artifacts:
     paths:
       - public
