@@ -68,6 +68,7 @@ doxygen:
        - public
   script:
     - cd /builds/fleur/fleur/build ; make doc
+    - mkdir ../public
     - mv docs/html/ ../public/doxygen
   artifacts:
     paths:
@@ -89,6 +90,7 @@ mkdocs:
   script:
     - cd /builds/fleur/fleur/docs/mkdocs ; mkdocs build
     - cp tutorial_scheme/color.css site/css/base.css
+    - mkdir ../../public
     - mv site ../../public/site
   artifacts:
     paths:
