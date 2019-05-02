@@ -89,7 +89,7 @@ mkdocs:
        - public
   script:
     - cd /builds/fleur/fleur/docs/mkdocs ; mkdocs build
-    - cp tutorial_scheme/color.css site/css/base.css
+    - cp tutorial_scheme/color.css site/css/bootstrap-custom.min.css
     - mkdir ../../public
     - mv site ../../public/site
   artifacts:
