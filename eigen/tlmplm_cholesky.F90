@@ -25,7 +25,6 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
-    INTEGER, INTENT (IN) :: iterHIA
     !     ..
     TYPE(t_potden),INTENT(IN)    :: v
     TYPE(t_tlmplm),INTENT(INOUT) :: td
@@ -37,7 +36,6 @@ CONTAINS
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in
     INTEGER lpl ,mp,n,m,s,i_u
     LOGICAL OK
-    LOGICAL l_hia(0:lmaxU_const)
     !     ..
     !     .. Local Arrays ..
 
@@ -65,13 +63,7 @@ CONTAINS
     !$OMP PRIVATE(OK,s,in,info)&
     !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input,hub1)
     DO  n = 1,atoms%ntype
-       l_hia = .FALSE.
-       DO i = 1, hub1%n_hia
-          IF(n.EQ.hub1%lda_u(i)%atomType) THEN
-             l_hia(hub1%lda_u(i)%l) = .TRUE..AND.(iterHIA.GT.0)
-          ENDIF
-       ENDDO
-       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,td,ud,l_hia)
+       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,td,ud)
        OK=.FALSE.
        cholesky_loop:DO WHILE(.NOT.OK)
           td%h_loc(:,:,n,jsp)=0.0
