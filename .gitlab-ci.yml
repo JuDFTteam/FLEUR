@@ -54,10 +54,10 @@ pages:
   artifacts:
     paths:
       - public
-  only:
-    - schedules
-    - triggers
-    - web
+#  only:
+#    - schedules
+#    - triggers
+#    - web
   
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
@@ -95,10 +95,10 @@ mkdocs:
   artifacts:
     paths:
       - public
-  only:
-    - schedules
-    - triggers
-    - web
+#  only:
+#    - schedules
+#    - triggers
+#    - web
 
 build-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:pgi
