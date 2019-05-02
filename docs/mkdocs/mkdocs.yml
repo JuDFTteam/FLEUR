@@ -28,8 +28,9 @@ nav:
         - Videos: video.md
         - Example inputs: examples.md
     - Developers Infomation:
+        - Developers Home: develop-main.md
         - Fleur-GITLAB: https://iffgit.fz-juelich.de/fleur/fleur/
-        - The DOXYGEN documentation of the source code: https://fleur.iffgit.fz-juelich.de/fleur/html
+        - The DOXYGEN documentation of the source code: https://fleur.iffgit.fz-juelich.de/fleur/doxygen
         - The coverage analysis: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
         - Developers Guide/Manual: developers.md
 plugins:
