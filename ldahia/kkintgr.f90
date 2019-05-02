@@ -69,9 +69,9 @@ MODULE m_kkintgr
       g = 0.0
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
-      !$OMP SHARED(g,ez,im) &
-      !$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2) &
-      !$OMP PRIVATE(im_calc)
+      !$OMP SHARED(g,ez,im,im_calc) &
+      !$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2) 
+      
 
       !$OMP DO
       DO iz = 1, nz

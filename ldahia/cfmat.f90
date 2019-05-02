@@ -25,7 +25,7 @@ MODULE m_cfmat
 
    CONTAINS 
 
-   SUBROUTINE cfcontrib(projDOS,l,n,nb,nc,ne,del,jspins)
+   SUBROUTINE cfcontrib(projDOS,l,n,nb,nc,ne,del,jspins,cfmat)
 
       REAL,                INTENT(IN)  :: projDOS(ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
       INTEGER,             INTENT(IN)  :: l
@@ -35,9 +35,9 @@ MODULE m_cfmat
       INTEGER,             INTENT(IN)  :: ne
       REAL,                INTENT(IN)  :: del 
       INTEGER,             INTENT(IN)  :: jspins
+      REAL,                INTENT(OUT) :: cfmat(-l:l,-l:l)
       
       REAL :: cfmat_sp(-l:l,-l:l,jspins)
-      REAL :: cfmat(-l:l,-l:l)
       INTEGER ispin,m,mp,i
       REAL trac
 
@@ -65,12 +65,9 @@ MODULE m_cfmat
       cfmat = 0.0
       DO m = -l, l
          DO mp = -l, l
-            cfmat(m,mp) = 0.5*SUM(cfmat_sp(m,mp,:))
+            cfmat(m,mp) = SUM(cfmat_sp(m,mp,:))/REAL(jspins)
          ENDDO
       ENDDO
-      !WRITE(*,"(A)") "AVERAGE#############"
-      !WRITE(*,"(7f10.5)") cfmat(:,:)
-
       !Make the matrix traceless
       trac = 0.0
       DO m = -l, l
@@ -80,8 +77,6 @@ MODULE m_cfmat
       DO m = -l, l
          cfmat(m,m) = cfmat(m,m) - trac/(2*l+1)
       ENDDO
-      !WRITE(*,"(A)") "AVERAGE - TRACE#############"
-      !WRITE(*,"(7f10.5)") cfmat(:,:)
 
 
    END SUBROUTINE cfcontrib

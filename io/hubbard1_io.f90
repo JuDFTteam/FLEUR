@@ -24,7 +24,7 @@ MODULE m_hubbard1_io
 
    CONTAINS
 
-   SUBROUTINE write_hubbard1_input(path,l,f0,f2,f4,f6,xi,bz,n_min,n_max,beta,mu,ne,nmatsub,e_min,e_max,sigma)
+   SUBROUTINE write_hubbard1_input(path,l,f0,f2,f4,f6,xi,bz,n_min,n_max,beta,mu,l_ccf,ne,nmatsub,e_min,e_max,sigma)
 
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: l
@@ -34,6 +34,7 @@ MODULE m_hubbard1_io
       INTEGER,          INTENT(IN)  :: n_min,n_max
       REAL,             INTENT(IN)  :: beta
       REAL,             INTENT(IN)  :: mu 
+      LOGICAL,          INTENT(IN)  :: l_ccf
       INTEGER,          INTENT(IN)  :: ne
       INTEGER,          INTENT(IN)  :: nmatsub
       REAL,             INTENT(IN)  :: e_min
@@ -65,7 +66,7 @@ MODULE m_hubbard1_io
          WRITE(io_unit,9020) f0, f2, f4, f6
 9020     FORMAT(TR3,'Fk',TR2,4f7.2)
       CASE(2)
-         WRITE(io_unit,9030) f0, f2, f4, f6
+         WRITE(io_unit,9030) f0, f2, f4
 9030     FORMAT(TR3,'Fk',TR2,3f7.2)
       END SELECT
 
@@ -84,26 +85,35 @@ MODULE m_hubbard1_io
       WRITE(io_unit,"(A)") "#  Chemical potential"
       WRITE(io_unit,9070) mu
 9070  FORMAT(TR3,'mu',f15.8)
+      !WRITE(io_unit,"(A)") "#  Chemical potential"
+      !WRITE(io_unit,9070) -mu
+9200  FORMAT(TR3,'ea',f15.8)
+
+      IF(l_ccf) THEN
+         WRITE(io_unit,"(A)") "#  Is the crystal field splitting given in ccf.dat"
+         WRITE(io_unit,9080) l_ccf
+9080     FORMAT(TR3,'ccf',f4.1)
+      ENDIF
 
       WRITE(io_unit,"(A)") "#**********************************************************",&
                            "#  Parameters for the Solver"                               ,&                   
                            "#**********************************************************"
       WRITE(io_unit,"(A)") "#  Minimum and maximum occupation of the orbital"
-      WRITE(io_unit,9080) n_min
-9080  FORMAT(TR3,'Nap_min',I4.1)
-      WRITE(io_unit,9090) n_max
-9090  FORMAT(TR3,'Nap_max',I4.1)
+      WRITE(io_unit,9090) n_min
+9090  FORMAT(TR3,'Nap_min',I4.1)
+      WRITE(io_unit,9100) n_max
+9100  FORMAT(TR3,'Nap_max',I4.1)
 
       WRITE(io_unit,"(A)") "#  Setting the solver to use the power lanczos method"
       WRITE(io_unit,"(TR3,A12)") "method_lancz"
 
       WRITE(io_unit,"(A)") "#  Number of iterations"
-      WRITE(io_unit,9100)  100
-9100  FORMAT(TR3,'N_lancz_iter',I4.1)
+      WRITE(io_unit,9110)  100
+9110  FORMAT(TR3,'N_lancz_iter',I4.1)
 
       WRITE(io_unit,"(A)") "#  Number of eigenstates calculated"
-      WRITE(io_unit,9110) 35
-9110  FORMAT(TR3,'N_lancz_states',I3.1)
+      WRITE(io_unit,9120) 35
+9120  FORMAT(TR3,'N_lancz_states',I3.1)
 
       WRITE(io_unit,"(A)") "#**********************************************************",&
                            "#  Parameters for the frequency/energy axis"                ,&                   
@@ -166,6 +176,31 @@ MODULE m_hubbard1_io
 9020  FORMAT("Energy:"2f14.8)
    END SUBROUTINE write_gf
 
+   SUBROUTINE write_ccfmat(path,ccfmat,l)
+
+      CHARACTER(len=*), INTENT(IN)  :: path
+      REAL,             INTENT(IN)  :: ccfmat(-l:l,-l:l)
+      INTEGER,          INTENT(IN)  :: l
+
+      CHARACTER(len=300) :: fname
+      INTEGER :: info, io_error,io_unit
+
+      io_unit = 17
+
+      fname = "ccf.dat"
+
+      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(fname)), status="replace", action="write", iostat=io_error)
+
+      IF(l.EQ.2) THEN
+         WRITE(io_unit,"(5f10.6)") ccfmat*hartree_to_ev_const
+      ELSE IF(l.EQ.3) THEN
+         WRITE(io_unit,"(7f10.6)") ccfmat*hartree_to_ev_const
+      ENDIF
+
+      CLOSE(io_unit)
+
+   END SUBROUTINE write_ccfmat
+
    SUBROUTINE read_selfen(path,selfen,ne,matsize,e,l_matsub)
       
       USE m_constants
@@ -180,7 +215,7 @@ MODULE m_hubbard1_io
       LOGICAL,          INTENT(IN)  :: l_matsub  
       
       INTEGER io_error,io_unit
-      INTEGER n,m,i,tmp_int
+      INTEGER n,m,i
       REAL tmp(matsize,matsize)
       io_unit = 17
       !Open the selfenergy file
@@ -188,7 +223,7 @@ MODULE m_hubbard1_io
          OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // "selfen_matsub_bundle.dat",status="old", action="read", iostat=io_error)
 
          IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
-         READ(io_unit,*) tmp_int,tmp_int,tmp_int
+         READ(io_unit,*)
          DO i = 1, ne
             READ(io_unit,*) e(i)
             DO m = 1, matsize
@@ -201,29 +236,10 @@ MODULE m_hubbard1_io
          IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
          
          DO i = 1, ne
-            !Spins are flipped around in the solver
             READ(io_unit,9010) e(i)
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            !SPIN-UP:
-            !selfen(i,1:INT(matsize/2.0),1:INT(matsize/2.0)) = tmp(INT(matsize/2.0)+1:matsize,INT(matsize/2.0)+1:matsize)/hartree_to_ev_const
-            !!SPIN-DWN:
-            !selfen(i,INT(matsize/2.0)+1:matsize,INT(matsize/2.0)+1:matsize) = tmp(1:INT(matsize/2.0),1:INT(matsize/2.0))/hartree_to_ev_const
-            !!OFF-DIAG:
-            !selfen(i,1:INT(matsize/2.0),INT(matsize/2.0)+1:matsize) = tmp(INT(matsize/2.0)+1:matsize,1:INT(matsize/2.0))/hartree_to_ev_const
-            !selfen(i,INT(matsize/2.0)+1:matsize,1:INT(matsize/2.0)) = tmp(1:INT(matsize/2.0),INT(matsize/2.0)+1:matsize)/hartree_to_ev_const
             selfen(i,1:matsize,1:matsize) = tmp(1:matsize,1:matsize)/hartree_to_ev_const 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            !SPIN-UP:
-            !selfen(i,1:INT(matsize/2.0),1:INT(matsize/2.0)) = selfen(i,1:INT(matsize/2.0),1:INT(matsize/2.0))+&
-            !                                                ImagUnit * tmp(INT(matsize/2.0)+1:matsize,INT(matsize/2.0)+1:matsize)/hartree_to_ev_const
-            !!SPIN-DWN:
-            !selfen(i,INT(matsize/2.0)+1:matsize,INT(matsize/2.0)+1:matsize) = selfen(i,INT(matsize/2.0)+1:matsize,INT(matsize/2.0)+1:matsize)+&
-            !                                                ImagUnit *tmp(1:INT(matsize/2.0),1:INT(matsize/2.0))/hartree_to_ev_const
-            !!OFF-DIAG:
-            !selfen(i,1:INT(matsize/2.0),INT(matsize/2.0)+1:matsize) = selfen(i,1:INT(matsize/2.0),INT(matsize/2.0)+1:matsize)+&
-            !                                                ImagUnit * tmp(INT(matsize/2.0)+1:matsize,1:INT(matsize/2.0))/hartree_to_ev_const
-            !selfen(i,INT(matsize/2.0)+1:matsize,1:INT(matsize/2.0)) = selfen(i,INT(matsize/2.0)+1:matsize,1:INT(matsize/2.0))+&
-            !                                                ImagUnit * tmp(1:INT(matsize/2.0),INT(matsize/2.0)+1:matsize)/hartree_to_ev_const
             selfen(i,1:matsize,1:matsize) = selfen(i,1:matsize,1:matsize) + ImagUnit * tmp(1:matsize,1:matsize)/hartree_to_ev_const 
          ENDDO
       ENDIF

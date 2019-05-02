@@ -18,7 +18,7 @@ CONTAINS
       cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
       noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
       xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
-      l_kpts)
+      l_kpts,hub1)
 
       USE iso_c_binding
       USE m_juDFT
@@ -62,6 +62,7 @@ CONTAINS
       CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT):: forcetheo
       TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
       TYPE(t_wann)   ,INTENT(INOUT)  :: wann
+      TYPE(t_hub1ham),INTENT(INOUT)  :: hub1  
       LOGICAL, INTENT(OUT)           :: l_kpts
       INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
       INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
@@ -118,7 +119,7 @@ CONTAINS
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
-      INTEGER            :: ldau_l(4), onsiteGF_l(4), numVac, numU, numOnsite
+      INTEGER            :: ldau_l(4), hub1_l(4), onsiteGF_l(4), numVac, numU, numOnsite, numHIA
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -126,9 +127,9 @@ CONTAINS
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
       LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
-      REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
+      REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_xi(4), hub1_bz(4), tempReal
       REAL               :: weightScale, eParamUp, eParamDown
-      LOGICAL            :: l_amf(4), l_hia(4),l_found
+      LOGICAL            :: l_amf(4), hub1_amf(4), l_ccf(4),l_found
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
@@ -220,7 +221,6 @@ CONTAINS
       ALLOCATE(atoms%nflip(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
-      ALLOCATE(atoms%lda_hia(4*atoms%ntype))
       ALLOCATE(atoms%onsiteGF(4*atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
@@ -265,6 +265,12 @@ CONTAINS
       ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
 
       ALLOCATE (wannAtomList(atoms%nat))
+
+      ALLOCATE(hub1%lda_u(4*atoms%ntype))
+      ALLOCATE(hub1%xi(4*atoms%ntype))
+      ALLOCATE(hub1%l_ccf(4*atoms%ntype))
+      ALLOCATE(hub1%ccfmat(4*atoms%ntype,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+      ALLOCATE(hub1%bz(4*atoms%ntype))
 
       ! Read in constants
 
@@ -723,7 +729,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
          xPathA = '/fleurInput/calculationSetup/onsiteGF/@beta'
          numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_beta = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
+         IF(numberNodes.EQ.1) THEN
+            input%onsite_beta = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
+            hub1%beta = input%onsite_beta
+         ENDIF
       END IF
 
       IF(input%onsite_mode.GT.2) CALL juDFT_error("No valid mode for the energy contour of Green's function", calledby="r_inpXML")
@@ -1330,6 +1339,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       atoms%numStatesProvided = 0
       atoms%lapw_l(:) = -1
       atoms%n_u = 0
+      hub1%n_hia = 0
       atoms%n_hia = 0
       atoms%n_gf = 0
 
@@ -1366,18 +1376,32 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          ldau_u = 0.0
          ldau_j = 0.0
          l_amf = .FALSE.
-         l_hia = .FALSE.
          DO i = 1, numU
             WRITE(xPathB,*) i
             ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l'))
             ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@U'))
             ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@J'))
             l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
-
-            numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_hubbard1')
-            IF(numberNodes.EQ.1) THEN
-               l_hia(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_hubbard1'))
-            ENDIF
+         ENDDO
+         !Parameters for LDA+Hubbard1
+         numHIA = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA')
+         IF (numHIA.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
+         hub1_l = -1
+         hub1_u = 0.0
+         hub1_j = 0.0
+         hub1_amf = .FALSE.
+         hub1_xi = 0.0
+         hub1_bz = 0.0
+         l_ccf = .FALSE.
+         DO i = 1, numHIA
+            WRITE(xPathB,*) i
+            hub1_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l'))
+            hub1_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@U'))
+            hub1_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@J'))
+            hub1_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
+            hub1_xi(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@soc'))
+            hub1_bz(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@exc'))
+            l_ccf(i)   = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@lcrystfield'))
          ENDDO
          
          !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
@@ -1441,25 +1465,28 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                ENDIF
                atoms%bmu(iType) = magMom
                DO i = 1, numU
-                  IF(l_hia(i)) THEN
-                     input%l_gf  = .true. 
-                     atoms%n_hia = atoms%n_hia + 1
-                     atoms%n_gf  = atoms%n_gf + 1
-                     atoms%onsiteGF(atoms%n_gf)%l        = ldau_l(i)
-                     atoms%onsiteGF(atoms%n_gf)%atomType = iType
-                     atoms%lda_hia(atoms%n_hia)%l        = ldau_l(i)
-                     atoms%lda_hia(atoms%n_hia)%u        = ldau_u(i)
-                     atoms%lda_hia(atoms%n_hia)%j        = ldau_j(i)
-                     atoms%lda_hia(atoms%n_hia)%l_amf    = l_amf(i)
-                     atoms%lda_hia(atoms%n_hia)%atomType = iType
-                  ELSE
-                     atoms%n_u = atoms%n_u + 1
-                     atoms%lda_u(atoms%n_u)%l        = ldau_l(i)
-                     atoms%lda_u(atoms%n_u)%u        = ldau_u(i)
-                     atoms%lda_u(atoms%n_u)%j        = ldau_j(i)
-                     atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
-                     atoms%lda_u(atoms%n_u)%atomType = iType
-                  ENDIF   
+                  atoms%n_u = atoms%n_u + 1
+                  atoms%lda_u(atoms%n_u)%l        = ldau_l(i)
+                  atoms%lda_u(atoms%n_u)%u        = ldau_u(i)
+                  atoms%lda_u(atoms%n_u)%j        = ldau_j(i)
+                  atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
+                  atoms%lda_u(atoms%n_u)%atomType = iType 
+               ENDDO
+               DO i = 1, numHIA
+                  input%l_gf  = .true. 
+                  hub1%n_hia = hub1%n_hia + 1
+                  atoms%n_hia = atoms%n_hia + 1
+                  atoms%n_gf  = atoms%n_gf + 1
+                  atoms%onsiteGF(atoms%n_gf)%l        = hub1_l(i)
+                  atoms%onsiteGF(atoms%n_gf)%atomType = iType
+                  hub1%lda_u(hub1%n_hia)%l        = hub1_l(i)
+                  hub1%lda_u(hub1%n_hia)%u        = hub1_u(i)
+                  hub1%lda_u(hub1%n_hia)%j        = hub1_j(i)
+                  hub1%lda_u(hub1%n_hia)%l_amf    = hub1_amf(i)
+                  hub1%lda_u(hub1%n_hia)%atomType = iType
+                  hub1%xi(hub1%n_hia) = hub1_xi(i)
+                  hub1%bz(hub1%n_hia) = hub1_bz(i)
+                  hub1%l_ccf(hub1%n_hia) = l_ccf(i)
                ENDDO
                DO i = 1, numOnsite
                   !Is the green's function already being calculated

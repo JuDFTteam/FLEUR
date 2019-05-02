@@ -77,6 +77,10 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
 
          !$OMP DO
          DO i = 1, noccbd
+            IF(ANY(tetweights(:,i).LT.0.0)) THEN
+               WRITE(*,*) tetweights(ind(i,1):ind(i,2),i)
+               CALL juDFT_error("ERROR IN TETWEIGHTS: NEGATIVE WEIGHT",calledby="onsite_coeffs")
+            ENDIF
             l_zero = .true.
             IF(greensfCoeffs%l_tetra) THEN
                !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
@@ -183,11 +187,10 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
 
 END SUBROUTINE onsite_coeffs
 
-SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,l_sphavg,onsite_exc_split)
+SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,l_sphavg,onsite_exc_split,hub1)
 
    USE m_types
    USE m_constants
-   USE m_smooth
    USE m_kkintgr
    USE m_radfun
    USE m_gfcalc
@@ -201,6 +204,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
    TYPE(t_greensfCoeffs),  INTENT(IN)     :: greensfCoeffs
    TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
    TYPE(t_sym),            INTENT(IN)     :: sym
+   TYPE(t_hub1ham),        INTENT(INOUT)  :: hub1
    INTEGER,                INTENT(IN)     :: jspins
 
    REAL,                   INTENT(IN)     :: ef
@@ -211,13 +215,13 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
    LOGICAL,                INTENT(IN)     :: l_sphavg
 
    TYPE(t_usdus) usdus
-   INTEGER i_gf,i,l,m,mp,jr,noded,nodeu,n,j,jspin,i_hia,it,is, isi,natom
+   INTEGER i_gf,i,l,m,mp,jr,noded,nodeu,n,j,jspin,i_hia,it,is, isi,natom,n_op
    INTEGER e_cut(2)
    REAL wronk,fac
    CHARACTER(len=30) :: filename
 
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
-   COMPLEX mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,jspins)
+   COMPLEX mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,jspins), sym_diag(-lmaxU_const:lmaxU_const)
    REAL,    ALLOCATABLE :: im(:,:,:,:,:)
    REAL, ALLOCATABLE :: e(:)
    COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),nr_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -264,14 +268,6 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
                   ENDIF
                ENDDO
                !
-               !smooth the imaginary part using gaussian broadening 
-               !
-               !IF(greensfCoeffs%sigma.NE.0.0) THEN
-               !   DO jr = 1, gOnsite%nr(i_gf)
-               !      CALL smooth(e(:),im(jr,:,m,mp,jspin),greensfCoeffs%sigma,greensfCoeffs%ne)
-               !   ENDDO
-               !ENDIF
-               !
                !taking care of spin degeneracy in non-magnetic case
                !
                IF(jspins.EQ.1) im(:,:,m,mp,1) = 2.0 * im(:,:,m,mp,1)
@@ -281,14 +277,15 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
       !
       !Enforcing that the projected density of states follows the local symmetries
       !
+     
       DO jr = 1, gOnsite%nr(i_gf)
          DO j = 1, greensfCoeffs%ne
             DO jspin = 1, jspins
                n_tmp = 0.0
                n_tmp(-l:l,-l:l) = im(jr,j,-l:l,-l:l,jspin)
                im(jr,j,-l:l,-l:l,jspin) = 0.0
+               n_op = 0
                DO natom = SUM(atoms%neq(:n-1)) + 1, SUM(atoms%neq(:n-1)) + atoms%neq(n)
-                  fac = 1./(sym%invarind(natom)*atoms%neq(n))
                   DO it = 1, sym%invarind(natom)
                      is = sym%invarop(natom,it)
                      isi = sym%invtab(is)
@@ -298,24 +295,41 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
                            d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
                         ENDDO
                      ENDDO
+                     DO m = -l,l
+                        sym_diag(m) = d_tmp(m,m)
+                        d_tmp(m,m) = 0.0
+                     ENDDO
+                     !Exclude all symmetries that would prevent splitting of the levels
+                     IF(ANY(d_tmp(:,:).NE.0.0)) CYCLE
+                     n_op = n_op + 1
+                     DO m = -l,l
+                        d_tmp(m,m) = sym_diag(m)
+                     ENDDO
                      nr_tmp = matmul( transpose( conjg(d_tmp) ) , n_tmp)
                      n1_tmp =  matmul( nr_tmp, d_tmp )
                      DO m = -l,l
                         DO mp = -l,l
-                           im(jr,j,m,mp,jspin) = im(jr,j,m,mp,jspin) + conjg(n1_tmp(m,mp)) * fac
+                           im(jr,j,m,mp,jspin) = im(jr,j,m,mp,jspin) + conjg(n1_tmp(m,mp))
                         ENDDO
                      ENDDO
                   ENDDO
                ENDDO
+               IF(n_op.EQ.0) CALL juDFT_error("Symmetry error",calledby="calc_onsite")
+               fac = 1.0/(REAL(n_op))
+               im(jr,j,:,:,jspin) = im(jr,j,:,:,jspin) * fac
             ENDDO
          ENDDO            
       ENDDO
       !
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
       !
-      CALL greensf_cutoff(im(:,:,:,:,:),atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg,ef,onsite_exc_split,e_cut)
+      CALL greensf_cutoff(im,atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg,ef,onsite_exc_split,e_cut)
 
-      CALL cfcontrib(-1/pi_const * im(1,:,:,:,:),l,n,e_cut(1),e_cut(2),greensfCoeffs%ne,greensfCoeffs%del,jspins) 
+      DO i_hia = 1, atoms%n_hia
+         IF(hub1%lda_u(i_hia)%l.NE.l.OR.hub1%lda_u(i_hia)%atomType.NE.n) CYCLE
+         CALL cfcontrib(-1/pi_const * im(1,:,:,:,:),l,n,e_cut(1),e_cut(2),greensfCoeffs%ne,greensfCoeffs%del,jspins,hub1%ccfmat(i_hia,:,:)) 
+      ENDDO
+      
 
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO jspin = 1, jspins
@@ -333,10 +347,9 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
          ENDDO
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
-      CALL write_gf("gdft",gOnsite,i_gf)
-      CALL occmtx(gOnsite,i_gf,atoms,sym,jspins,beta,mmpMat(:,:,i_gf,:))
+      CALL occmtx(gOnsite,i_gf,atoms,sym,jspins,beta*hartree_to_ev_const,ef,mmpMat(:,:,i_gf,:))
+      !CALL write_gf("gdft",gOnsite,i_gf)
       CALL ldosmtx("g",gOnsite,i_gf,atoms,sym,jspins)
-      WRITE(*,"(7f14.8)") REAL(mmpMat(:,:,i_gf,:))
    ENDDO
 
 END SUBROUTINE calc_onsite
@@ -382,7 +395,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
 
    INTEGER i,m,mp,j,n_c,kkintgr_cut,jr,ispin,cut
 
-   REAL integral, m_up, m_dwn
+   REAL integral, m_up, m_dwn,norm_up,norm_dwn
    REAL a,b, imag, n_states
    LOGICAL l_write,l_checkprojDOS
 
@@ -405,6 +418,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
                      CALL intgr3(im(:,j,m,mp,ispin),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
                   END IF
                   projDOS(j,ispin,m,mp) = projDOS(j,ispin,m,mp) + imag
+                  IF(m.EQ.mp.AND.imag.GT.0) CALL juDFT_error("SIGN ERROR")
                ENDDO
                CALL trapz(projDOS(1:ne,ispin,m,mp), del, ne, projDOS(ne+1,ispin,m,mp))
             ENDDO
@@ -440,7 +454,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
       OPEN(1337,file="fDOS_up.txt",action="write",status="replace")
 
       DO i = INT(ne/2.0), ne
-         WRITE(1337,*) ((i-1)*del + e_bot-ef)*hartree_to_ev_const, fDOS(i,1)
+         WRITE(1337,*) ((i-1)*del + e_bot-ef)*hartree_to_ev_const, fDOS(i,1)/hartree_to_ev_const
       ENDDO
 
       CLOSE(unit = 1337)
@@ -449,7 +463,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
          OPEN(1337,file="fDOS_dwn.txt",action="write",status="replace")
 
          DO i = INT(ne/2.0), ne
-            WRITE(1337,*) ((i-1)*del + e_bot-ef)*hartree_to_ev_const, -fDOS(i,2)
+            WRITE(1337,*) ((i-1)*del + e_bot-ef)*hartree_to_ev_const, -fDOS(i,2)/hartree_to_ev_const
          ENDDO
 
          CLOSE(unit = 1337)
@@ -496,8 +510,8 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
 
       CALL trapz(fDOS(1:kkintgr_cut,1),del,kkintgr_cut,integral)
 
-      WRITE(*,*) "CALCULATED CUTOFF: ", kkintgr_cut
-      WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
+      !WRITE(*,*) "CALCULATED CUTOFF: ", kkintgr_cut
+      !WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
    END IF
 
    e_cut(1) = 1
@@ -505,16 +519,19 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
    !If we are in the magnetic case we want to calculate the effectiv exchange interaction j0 from the Gf
    !For that we can use the difference in the center of gravity of the up and down bands
    !This is calculated here
-   cut = kkintgr_cut
+   cut = 2500
    IF(jspins.EQ.2) THEN
       fDOS(:,1) = fDOS(:,1)-fDOS(:,2)
       !multiply fDOS(E)*E
+      tmp = 0.0
       DO j = 1, cut
          tmp(j,:) = fDOS(j,:) *((j-1) * del + e_bot)
       ENDDO
       CALL trapz(tmp(1:cut,1),del,cut,m_up)
       CALL trapz(tmp(1:cut,2),del,cut,m_dwn)
-      onsite_exc_split = (m_dwn - m_up)/n_states*2.0
+      CALL trapz(fDOS(1:cut,1),del,cut,norm_up)
+      CALL trapz(fDOS(1:cut,2),del,cut,norm_dwn)
+      onsite_exc_split = m_dwn/norm_dwn - m_up/norm_up
    ENDIF
 
    !Now we set the imaginary part of the greens function to zero above this cutoff
@@ -535,6 +552,5 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
    ENDDO
 
 END SUBROUTINE greensf_cutoff
-
 
 END MODULE m_onsite

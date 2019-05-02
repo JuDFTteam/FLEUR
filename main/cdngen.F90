@@ -11,7 +11,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   dimension,kpts,atoms,sphhar,stars,sym,&
                   enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                  archiveType,outDen,gOnsite)
+                  archiveType,outDen,gOnsite,hub1)
 
    !*****************************************************
    !    Charge density generator
@@ -71,6 +71,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(IN)        :: vTot
    TYPE(t_potden),INTENT(INOUT)     :: outDen
    TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: gOnsite
+   TYPE(t_hub1ham),OPTIONAL,INTENT(INOUT)    :: hub1
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -95,7 +96,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error,l_exist
-   COMPLEX                  :: j0
+   REAL                  :: j0
    REAL                  :: onsite_excsplit
 
    CALL regCharges%init(input,atoms)
@@ -126,19 +127,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(PRESENT(gOnsite)) THEN
       IF(atoms%n_gf.GT.0) THEN
          !If there was an hubbard1 run there should be a density matrix file
-         INQUIRE(file="n_mmpmat_hubbard1",exist=l_exist)
-         IF(l_exist) THEN
-            OPEN(unit = 1337, file="n_mmpmat_hubbard1",status="old",form="formatted",action="read")
-            READ(1337,"(7f14.8)") outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:)
-            CLOSE(unit=1337)
-         ENDIF
-
-         CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:),&
-                           sym,results%ef,input%onsite_sphavg,onsite_excsplit)
+         CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,&
+                           sym,results%ef,input%onsite_beta,input%onsite_sphavg,onsite_excsplit,hub1)
          !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
          !CALL write_onsite_gf("greenf.dat",gOnsite,1)
          IF(input%jspins.EQ.2) THEN
-            CALL eff_excinteraction(gOnsite,atoms,input,j0,onsite_excsplit)
+            CALL eff_excinteraction(gOnsite,atoms,input,j0,results%ef,onsite_excsplit)
          ENDIF
       
       ENDIF

@@ -144,8 +144,8 @@ CONTAINS
              DO mp = -l,l
                 vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) * spin_deg
              END DO
+             IF(.NOT.spin_avg) vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + v_diag(ispin)
           END DO
-          IF(.NOT.spin_avg) vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + v_diag(ispin)
        END DO
       !Spin-averaged double-counting (for LDA+HIA)
       IF(spin_avg) THEN
@@ -170,7 +170,11 @@ CONTAINS
              DO mp =-l,l
                 e_ee=e_ee+REAL(vs_mmp(m,mp,i_u,ispin)*ns_mmp(m,mp,i_u,ispin))
              END DO
-             e_ee = e_ee - v_diag(ispin) * REAL( ns_mmp(m,m,i_u,ispin) )
+             IF(spin_avg) THEN
+               e_ee = e_ee - SUM(v_diag(:))/jspins * REAL( ns_mmp(m,m,i_u,ispin) )
+             ELSE
+               e_ee = e_ee - v_diag(ispin) * REAL( ns_mmp(m,m,i_u,ispin) )
+             ENDIF
           END DO
        END DO
 

@@ -99,11 +99,12 @@ CONTAINS
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
     TYPE(t_greensf)                 :: gOnsite
     TYPE(t_greensf)                 :: gIntersite
+    TYPE(t_hub1ham)                 :: hub1
 
     ! local scalars
     INTEGER :: eig_id,archiveType
-    INTEGER :: n,iter,iterHF
-    LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real,l_runhia
+    INTEGER :: n,iter,iterHF,iterHIA
+    LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real,l_runhia,l_exist
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -115,7 +116,7 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
-                    banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
+                    banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,hub1,l_opti)
     CALL timestop("Initialization")
 
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
@@ -137,6 +138,7 @@ CONTAINS
 
     iter     = 0
     iterHF   = 0
+    iterHIA  = 0
     l_cont = (iter < input%itmax)
     
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
@@ -249,7 +251,16 @@ CONTAINS
 
        CALL forcetheo%start(vtot,mpi%irank==0)
        forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
-
+         !TODO: Put in Subroutine
+          INQUIRE(file="n_mmpmat_hubbard1",exist=l_exist)
+          IF(l_exist) THEN
+             OPEN(unit = 1337, file="n_mmpmat_hubbard1",status="old",form="formatted",action="read")
+             READ(1337,"(I3.3,2f14.8)") iterHIA,results%last_occdistance,results%last_mmpMatdistance
+             READ(1337,"(7f14.8)") inDen%mmpMat(:,:,atoms%n_u+1:hub1%n_hia,:)
+             CLOSE(unit=1337)
+          ELSE
+            inDen%mmpMat(:,:,atoms%n_u+1:hub1%n_hia,:) = 0.0
+          ENDIF
           CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
           vTemp = vTot
@@ -257,7 +268,7 @@ CONTAINS
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx,gOnsite,l_runhia)
+                     cell,enpara,banddos,noco,oneD,hybrid,iter,iterHIA,eig_id,results,inDen,vTemp,vx,gOnsite,hub1,l_runhia)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -351,7 +362,7 @@ CONTAINS
           CALL outDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
-                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen,gOnsite)
+                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen,gOnsite,hub1)
 
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)
@@ -451,8 +462,8 @@ CONTAINS
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
-          !If we have converged run hia
-          l_runhia = .NOT.l_cont.AND.(atoms%n_hia > 0)
+          !If we have converged run hia if the density matrix has not converged
+          l_runhia = .NOT.l_cont.AND.(hub1%n_hia > 0).AND.(0.01<=results%last_occdistance.OR.0.001<=results%last_mmpMatdistance)
           l_cont = l_cont.OR.l_runhia
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF

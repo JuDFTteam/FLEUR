@@ -67,6 +67,21 @@ MODULE m_types_setup
       LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
    END TYPE t_utype
 
+
+   TYPE t_hub1ham
+      !Contains the u_type for use in the LDA+U routines and the additional 
+      !information for the atomic hamiltonian
+      INTEGER                    :: n_hia
+      TYPE(t_utype), ALLOCATABLE :: lda_u(:)         !Information for the interaction term
+      REAL, ALLOCATABLE          :: xi(:)           !Spin-orbit coupling parameter
+      LOGICAL, ALLOCATABLE       :: l_ccf(:)
+      REAL, ALLOCATABLE          :: ccfmat(:,:,:)   !crystal field splitting matrix
+      REAL, ALLOCATABLE          :: bz(:)           !external magnet field
+      REAL                       :: beta            !inverse Temperature
+      INTEGER                    :: n_exc = 2       !number of excitations considered 
+
+   END TYPE t_hub1ham
+
    TYPE t_onsitegftype
       SEQUENCE
       INTEGER l        ! the l quantum number to which this U parameter belongs
@@ -90,7 +105,6 @@ MODULE m_types_setup
       INTEGER:: lmaxd
       ! no of lda+us
       INTEGER ::n_u
-      ! no of lda+hias 
       INTEGER ::n_hia
       ! no of greens function calculations (includes n_hia)
       INTEGER ::n_gf
@@ -169,8 +183,6 @@ MODULE m_types_setup
       LOGICAL, ALLOCATABLE :: relcor(:)
       !lda_u information(ntype)
       TYPE(t_utype),ALLOCATABLE::lda_u(:)
-      !lda+hia information
-      TYPE(t_utype),ALLOCATABLE::lda_hia(:)
       !j0 calc information
       TYPE(t_onsitegftype), ALLOCATABLE::onsiteGF(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)

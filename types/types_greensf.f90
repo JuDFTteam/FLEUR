@@ -219,16 +219,12 @@ MODULE m_types_greensf
             !Using a rectangular contour ending at efermi and including N_matsub matsubara frequencies 
             !at the moment we use a equidistant mesh to make interfacing with the hubbard 1 solver easier
 
-            e1 = eb
-            e2 = ef
+            e1 = -1.0+ef
+            e2 = 1.0+ef
 
             !Determine the imaginary part of the rectangle
 
-            IF(nmatsub.NE.0) THEN
-               this%sigma = 2 * pi_const * nmatsub * 1./beta
-            ELSE
-               this%sigma = sigma
-            ENDIF
+            this%sigma = 2 * pi_const  * 1./beta/hartree_to_ev_const
             this%nmatsub = nmatsub
 
             del = (e2-e1)/REAL(n2-1)

@@ -9,7 +9,7 @@
         SUBROUTINE fleur_init(mpi,&
              input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
              sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
-             oneD,coreSpecInput,wann,l_opti)
+             oneD,coreSpecInput,wann,hub1,l_opti)
           USE m_types
           USE m_judft
           USE m_juDFT_init
@@ -70,6 +70,7 @@
           TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
           TYPE(t_wann)     ,INTENT(OUT):: wann
           CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT)::forcetheo
+          TYPE(t_hub1ham)  ,INTENT(OUT):: hub1 
           LOGICAL,          INTENT(OUT):: l_opti
 
 
@@ -153,6 +154,7 @@
           input%onsite_beta = 100.0
           input%onsite_nmatsub = 0
           input%l_gf = .false.
+          hub1%n_hia = 0
           atoms%n_hia = 0
           atoms%n_gf = 0
 
@@ -190,7 +192,7 @@
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
-                     l_kpts)
+                     l_kpts,hub1)
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
 #ifdef CPP_MPI
@@ -202,7 +204,7 @@
              CALL timestart("postprocessInput") 
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
-                                   noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
+                                   noco,hub1,dimension,enpara,sphhar,l_opti,noel,l_kpts)
              CALL timestop("postprocessInput") 
 
              IF (mpi%irank.EQ.0) THEN

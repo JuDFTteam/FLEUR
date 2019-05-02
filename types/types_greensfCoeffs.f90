@@ -102,12 +102,14 @@ MODULE m_types_greensfCoeffs
          thisGREENSFCOEFFS%ne       = input%onsite_ne
          !take the energyParameterLimits from inp.xml if they are set, otherwise use default values
          IF(ABS(input%ellow).LT.tol.AND.ABS(input%elup).LT.tol) THEN
-            thisGREENSFCOEFFS%e_top    = 1.0
-            thisGREENSFCOEFFS%e_bot    = -1.0
+            thisGREENSFCOEFFS%e_top    = 2.0
+            thisGREENSFCOEFFS%e_bot    = -2.0
          ELSE
             thisGREENSFCOEFFS%e_top    = input%elup
             thisGREENSFCOEFFS%e_bot    = input%ellow
          ENDIF
+         thisGREENSFCOEFFS%e_top    = 2.0
+         thisGREENSFCOEFFS%e_bot    = -2.0
 
          thisGREENSFCOEFFS%sigma    = input%onsite_sigma
          thisGREENSFCOEFFS%l_tetra  = input%tria

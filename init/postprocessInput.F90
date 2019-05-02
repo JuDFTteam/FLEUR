@@ -10,7 +10,7 @@ CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
      oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
-     noco,DIMENSION,enpara,sphhar,l_opti,noel,l_kpts)
+     noco,hub1,DIMENSION,enpara,sphhar,l_opti,noel,l_kpts)
 
   USE m_juDFT
   USE m_types
@@ -62,6 +62,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   TYPE(t_enpara)   ,INTENT(INOUT) :: enpara
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   TYPE(t_field),    INTENT(INOUT) :: field
+  TYPE(t_hub1ham),  INTENT(INOUT) :: hub1
   LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
   CHARACTER(len=3), ALLOCATABLE, INTENT(IN) :: noel(:)
@@ -165,6 +166,33 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      IF (atoms%n_u.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
         IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
+     END IF
+
+     !  Check lda+hia stuff
+     !TODO: REAL energy mesh should be finer than the complex one if we have a equidistant mesh
+     !      LO+LDA+HIA? 
+     !      LDA+U and LDA+HIA not on the same orbital
+     
+     DO i = 1, hub1%n_hia
+        n = hub1%lda_u(i)%atomType
+        l = hub1%lda_u(i)%l
+        IF(atoms%n_u.GE.1) THEN
+           DO j = 1, atoms%n_u
+              IF(atoms%lda_u(j)%atomType.EQ.n.AND.atoms%lda_u(j)%l.EQ.l) &
+                 CALL juDFT_error("LDA+U and LDA+Hubbard1 should not be used on the same orbital",calledby="postprocessInput")
+           END DO
+        END IF
+        IF (atoms%nlo(n).GE.1) THEN
+           DO j = 1, atoms%nlo(n)
+              IF ((ABS(atoms%llo(j,n)).EQ.l) .AND. (.NOT.atoms%l_dulo(j,n)) ) &
+                 WRITE (*,*) 'LO and LDA+Hubbard1 for same l not implemented'
+           END DO
+        END IF
+     END DO
+
+     IF (hub1%n_hia.GT.0) THEN
+        IF (input%secvar) CALL juDFT_error("LDA+Hubbard1 and sevcar not implemented",calledby ="postprocessInput")
+        IF (noco%l_mperp) CALL juDFT_error("LDA+Hubbard1 and l_mperp not implemented",calledby ="postprocessInput")
      END IF
 
      ! Check DOS related stuff (from inped)

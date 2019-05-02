@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,enpara,&
-       jspin,jsp,mpi,v,input,td,ud)
+       jspin,jsp,mpi,v,input,td,ud,l_hia)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
@@ -24,6 +24,7 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)    :: v
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
+    LOGICAL, INTENT(IN)          :: l_hia(0:lmaxU_const) !Is true for the orbitals where LDA+Hubbard 1 is applied if we have already run LDA+HIA
 
     INTEGER, INTENT (IN) :: n,jspin,jsp !atom index,physical spin&spin index for data
 
@@ -72,6 +73,9 @@ CONTAINS
        lp1 = (lp* (lp+1))/2
        DO l = 0,lp
           lpl = lp1 + l
+          IF(l.EQ.lp.AND.l.LE.lmaxU_const) THEN
+            IF(l_hia(l)) CYCLE
+          ENDIF
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)

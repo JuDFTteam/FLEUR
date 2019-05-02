@@ -9,10 +9,11 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,noco,enpara,&
-       jspin,jsp,mpi,v,input,td,ud,l_runhia)
+       jspin,jsp,mpi,v,input,td,ud,hub1)
     USE m_tlmplm
     USE m_types
     USE m_gaunt, ONLY: gaunt2
+    USE m_constants, ONLY: lmaxU_const
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -20,10 +21,11 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_enpara),INTENT(IN)   :: enpara
-    LOGICAL,INTENT(IN)          :: l_runhia
+    TYPE(t_hub1ham),INTENT(IN)  :: hub1
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
+    INTEGER, INTENT (IN) :: iterHIA
     !     ..
     TYPE(t_potden),INTENT(IN)    :: v
     TYPE(t_tlmplm),INTENT(INOUT) :: td
@@ -35,6 +37,7 @@ CONTAINS
     INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in
     INTEGER lpl ,mp,n,m,s,i_u
     LOGICAL OK
+    LOGICAL l_hia(0:lmaxU_const)
     !     ..
     !     .. Local Arrays ..
 
@@ -60,9 +63,15 @@ CONTAINS
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input,l_runhia)
+    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input,hub1)
     DO  n = 1,atoms%ntype
-       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,td,ud)
+       l_hia = .FALSE.
+       DO i = 1, hub1%n_hia
+          IF(n.EQ.hub1%lda_u(i)%atomType) THEN
+             l_hia(hub1%lda_u(i)%l) = .TRUE..AND.(iterHIA.GT.0)
+          ENDIF
+       ENDDO
+       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,td,ud,l_hia)
        OK=.FALSE.
        cholesky_loop:DO WHILE(.NOT.OK)
           td%h_loc(:,:,n,jsp)=0.0
@@ -114,11 +123,11 @@ CONTAINS
           END DO
 
          !Contribution from LDA+HIA
-         DO i_u=1,atoms%n_hia
-            IF (n.NE.atoms%lda_hia(i_u)%atomtype) CYCLE
+         DO i_u=1,hub1%n_hia
+            IF (n.NE.hub1%lda_u(i_u)%atomtype) CYCLE
             !Found a "U" for this atom type
-            l=atoms%lda_hia(i_u)%l
-            lp=atoms%lda_hia(i_u)%l
+            l=hub1%lda_u(i_u)%l
+            lp=hub1%lda_u(i_u)%l
             DO m = -l,l
                lm = l* (l+1) + m
                DO mp = -lp,lp
