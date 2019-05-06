@@ -86,7 +86,7 @@ CONTAINS
     noco%qss=this%qvec(:,this%q_done)
     IF (.NOT.this%l_io) RETURN
     IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_SSDISP')
-    CALL openXMLElementPoly('Forcetheorem_Loop_SSDISP',(/'Q-vec:'/),(/this%q_done/))
+    CALL openXMLElementPoly('Forcetheorem_Loop_SSDISP',(/'Q-vec'/),(/this%q_done/))
   END FUNCTION ssdisp_next_job
 
   SUBROUTINE ssdisp_postprocess(this)
