@@ -58,7 +58,7 @@
          INTEGER               :: n,nsp,nt,jr
          INTEGER               :: i, j, idx
          REAL                  :: divi
-         REAL, PARAMETER       :: cut_ratio = 0.1
+         REAL, PARAMETER       :: cut_ratio = 0.9
          LOGICAL, allocatable  :: cut_mask(:)
 
          !     ..
@@ -147,15 +147,17 @@
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
             ! use updated vTot for exc calculation
-            IF(perform_MetaGGA) THEN
-               cut_mask = [(.False., i=1,size(atoms%rmsh,dim=1)*nsp)]
-               idx  = 1
-               do i = 1, floor(size(atoms%rmsh, dim=1)*cut_ratio)
-                  do j = 1,nsp
-                     cut_mask(idx) = .True.
-                     idx = idx +1
-                  enddo
+            cut_mask = [(.False., i=1,size(atoms%rmsh,dim=1)*nsp)]
+            idx  = 1
+            do i = 1, floor(size(atoms%rmsh, dim=1)*cut_ratio)
+               do j = 1,nsp
+                  cut_mask(idx) = .True.
+                  idx = idx +1
                enddo
+            enddo
+
+            write (*,*) "set cut_mask", allocated(cut_mask)
+            IF(perform_MetaGGA) THEN
 
                CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
                                n,            tmp_grad, ED_rs)
@@ -182,7 +184,9 @@
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
                ENDIF
-
+   
+               !write (*,*) "cut first ", cut_ratio, " number of points"
+               !where(cut_mask) e_xc(:,1) = 0.0
 
                IF (lda_atom(n)) THEN
                   ! Use local part of pw91 for this atom
@@ -195,6 +199,8 @@
                      nt=nt+nsp
                   END DO
                ENDIF
+               call save_npy("mt=" // int2str(n) // "_exc.npy", &
+                             get_radial_line(e_xc,1,nsp) )
                CALL mt_from_grid(atoms,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
          ENDDO

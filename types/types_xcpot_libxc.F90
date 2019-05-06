@@ -281,10 +281,13 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
+      REAL  :: cut_ratio = 0.0
+      INTEGER :: cut_idx
 
       ! tau = 0.5 * sum[|grad phi_i(r)|²]
       ! see eq (3) in https://doi.org/10.1063/1.1565316
       REAL, ALLOCATABLE              :: kinEnergyDen_libXC(:,:), pkzb_ratio(:,:), pkzb_zaehler(:,:), pkzb_nenner(:,:)
+
 
       IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
@@ -300,16 +303,12 @@ CONTAINS
             exc=exc+excc
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
+         write (*,*) "cut_ration Mgga = ", cut_ratio
          IF(PRESENT(kinEnergyDen_KS)) THEN 
+            cut_idx = NINT(size(rh,1) * cut_ratio)
             ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
             kinEnergyDen_libXC = transpose(kinEnergyDen_KS + 0.25 * grad%laplace)
-            !where(kinEnergyDen_libXC < 1d-5) kinEnergyDen_libXC = 1d-5
-
-            !write (*,*) "apply tf approx. shapes: "
-            !write (*,*) "shape(rh) = ", shape(rh)
-            !write (*,*) "shape(grad%sigma) = ", shape(transpose(grad%sigma))
-            !write (*,*) "shape(grad%lapl)  = ", shape(grad%laplace)
-
+            
             write (filename, '("kED_libxc_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=2)
             call save_npy(filename, transpose(kinEnergyDen_libxc))
 
@@ -318,12 +317,33 @@ CONTAINS
 
             exc  = 0.0
             excc = 0.0
-            call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
-                                 transpose(grad%laplace), kinEnergyDen_libXC, exc)
+            call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh(cut_idx+1:,:),1),& 
+                                                   TRANSPOSE(rh(cut_idx+1:,:)), &
+                                                   grad%sigma(:,cut_idx+1:), &
+                                                   transpose(grad%laplace(cut_idx+1:,:)), &
+                                                   kinEnergyDen_libXC(:,cut_idx+1:), &
+                                                   exc(cut_idx+1:))
+
+            call xc_f03_gga_exc(xcpot%vxc_func_x, SIZE(rh(:cut_idx,:),1), &
+                                                  TRANSPOSE(rh(:cut_idx,:)), &
+                                                  grad%sigma(:,:cut_idx), &
+                                                  exc(:cut_idx))
+            write (*,*) "max(exc)", maxval(abs(exc(:cut_idx))), maxval(abs(exc(cut_idx+1:)))
 
             IF (xcpot%func_exc_id_c>0) THEN
-               CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
-                                    transpose(grad%laplace), kinEnergyDen_libXC, excc)
+               !CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
+                                    !transpose(grad%laplace), kinEnergyDen_libXC, excc)
+               call xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh(cut_idx+1:,:),1), &
+                                                      TRANSPOSE(rh(cut_idx+1:,:)), &
+                                                      grad%sigma(:,cut_idx+1:), &
+                                                      transpose(grad%laplace(cut_idx+1:,:)), &
+                                                      kinEnergyDen_libXC(:,cut_idx+1:), &
+                                                      excc(cut_idx+1:))
+               
+               call xc_f03_gga_exc(xcpot%vxc_func_c, SIZE(rh(:cut_idx,:),1), &
+                                                      TRANSPOSE(rh(:cut_idx,:)), &
+                                                      grad%sigma(:,:cut_idx), &
+                                                      excc(:cut_idx))
                exc=exc+excc
             END IF
             
