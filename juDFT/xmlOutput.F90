@@ -23,7 +23,7 @@ MODULE m_judft_xmlOutput
    INTEGER, SAVE :: maxNumElements
    INTEGER, SAVE :: xmlOutputUnit
    LOGICAL, SAVE :: xmlOpened = .FALSE.
-   CHARACTER(len=10) :: maintag
+   CHARACTER(len=15) :: maintag
    CHARACTER(LEN= 40), ALLOCATABLE :: elementList(:)
 
    PUBLIC startXMLOutput, endXMLOutput
