@@ -39,6 +39,7 @@ time.F90
 args.F90
 sysinfo.F90
 check_arguments.F90
+check_para.f90
 xmlOutput.F90
 )
 if (JUDFT_USE_MPI) 
