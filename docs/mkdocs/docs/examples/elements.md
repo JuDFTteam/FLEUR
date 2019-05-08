@@ -57,7 +57,7 @@ Hydrogen (APW+lo used for actual calculation)
  
 **Compounds:  **
  
-** BH'_3_' **
+** BH~3~ **
 ```
 Diborane molecule with LDA using film setup
 
@@ -85,7 +85,7 @@ Diborane molecule with LDA using film setup
 
 Bond-length plot: ![](img/Diborane.png)
 
-** H'_2_'O **
+** H~2~O **
 
 Elemental input for H2O (Ice II):
 
