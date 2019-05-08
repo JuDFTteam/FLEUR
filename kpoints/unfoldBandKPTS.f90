@@ -272,6 +272,16 @@ CONTAINS
 !		write(345,'(3I6)') lapw%gvec(:,:,jsp)
 	write (*,*)results%ef
         write (*,*) i_kpt
+	IF (.not. method_rubel) THEN
+!          IF (mpi%n_size==1) THEN       
+!             call smat_unfold%multiply(zMat,zMat_s)
+!          ELSE
+!             call smat_unfold%mpimat_multiply(zMat,zMat_s)
+!          ENDIF  
+           call smat_unfold%multiply(zMat,zMat_s)
+        END IF
+       !$omp parallel private(j,n_i,nn,na,lo,nk,nki,gi)
+       !$omp do
 	DO i=1,zMat%matsize2
 		IF (method_rubel) THEN
 			DO j=1,lapw%nv(jsp)
@@ -324,7 +334,6 @@ CONTAINS
 			END DO
 !--------------------------LO's finished----------------
 		ELSE
-			call smat_unfold%multiply(zMat,zMat_s)
 			DO j=1,lapw%nv(jsp)
 !				DO k=1,zMat%matsize1
 					IF (zmat%l_real) THEN
@@ -423,6 +432,9 @@ CONTAINS
 !	        	END IF
 !		END IF			
 	END DO
+       !$omp end do
+       !$omp end parallel
+        write (*,*) 'finished',i_kpt
 	IF (i_kpt==kpts%nkpt) THEN
 		IF (write_to_file .AND. jsp==1) CLOSE (679)
 		IF (jsp==input%jspins) THEN
