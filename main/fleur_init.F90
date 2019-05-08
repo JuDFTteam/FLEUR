@@ -553,6 +553,11 @@
              CALL setStartingDensity(noco%l_noco)
           END IF
 
+          !Open temporary output file for LDA+HIA related stuff (will be moved to out/out.xml)
+          IF(mpi%irank.EQ.0.AND.atoms%n_hia.GT.0) THEN
+             OPEN(unit=2804,file="outHIA",status="unknown",form="formatted")
+          ENDIF
+
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
 

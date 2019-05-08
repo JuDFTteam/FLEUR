@@ -84,7 +84,7 @@ SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,
             l_zero = .true.
             IF(greensfCoeffs%l_tetra) THEN
                !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
-               IF(ANY(tetweights(:,i).NE.0.0)) l_zero = .false.
+               IF(ANY(tetweights(ind(i,1):ind(i,2),i).NE.0.0)) l_zero = .false.
             ELSE
                !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
                j = NINT((eig(i)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
@@ -325,10 +325,10 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
       !
       CALL greensf_cutoff(im,atoms,gOnsite%nr(i_gf),l,n,jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,l_sphavg,ef,onsite_exc_split,e_cut)
 
-      DO i_hia = 1, atoms%n_hia
-         IF(hub1%lda_u(i_hia)%l.NE.l.OR.hub1%lda_u(i_hia)%atomType.NE.n) CYCLE
-         CALL cfcontrib(-1/pi_const * im(1,:,:,:,:),l,n,e_cut(1),e_cut(2),greensfCoeffs%ne,greensfCoeffs%del,jspins,hub1%ccfmat(i_hia,:,:)) 
-      ENDDO
+      !DO i_hia = 1, atoms%n_hia
+      !   IF(hub1%lda_u(i_hia)%l.NE.l.OR.hub1%lda_u(i_hia)%atomType.NE.n) CYCLE
+      !   CALL cfcontrib(-1/pi_const * im(1,:,:,:,:),l,n,e_cut(1),e_cut(2),greensfCoeffs%ne,greensfCoeffs%del,jspins,hub1%ccfmat(i_hia,:,:)) 
+      !ENDDO
       
 
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
@@ -347,9 +347,9 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
          ENDDO
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
-      CALL occmtx(gOnsite,i_gf,atoms,sym,jspins,beta*hartree_to_ev_const,ef,mmpMat(:,:,i_gf,:))
+      !CALL occmtx(gOnsite,i_gf,atoms,sym,jspins,beta*hartree_to_ev_const,ef,mmpMat(:,:,i_gf,:))
       !CALL write_gf("gdft",gOnsite,i_gf)
-      CALL ldosmtx("g",gOnsite,i_gf,atoms,sym,jspins)
+      !CALL ldosmtx("g",gOnsite,i_gf,atoms,sym,jspins)
    ENDDO
 
 END SUBROUTINE calc_onsite
@@ -402,7 +402,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
    ALLOCATE(fDOS(ne,jspins))
    ALLOCATE(tmp(ne,jspins))
 
-   l_write=.true.
+   l_write=.false.
    l_checkprojDOS = .false.
 
    !For debugging: print out the proj. density of states integrated over energy
@@ -476,7 +476,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
 
    n_states = 2*(2*l+1)
    
-   WRITE(*,*) "Integral over fDOS: ", integral
+   !WRITE(*,*) "Integral over fDOS: ", integral
 
    kkintgr_cut = ne
 

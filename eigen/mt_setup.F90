@@ -39,7 +39,7 @@ CONTAINS
        CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
     IF((hub1%n_hia.GT.0)) THEN
-      CALL hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,inDen,ud,vTot,gOnsite,.false.,l_runhia,results)
+      CALL hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,ud,vTot,gOnsite,.true.,l_runhia,results)
     END IF
 
     CALL timestart("tlmplm")

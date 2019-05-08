@@ -47,7 +47,7 @@ MODULE m_gfcalc
 
       beta = input%onsite_beta *hartree_to_ev_const
       l_matinv = .false. !Determines how the onsite exchange splitting is calculated
-      WRITE(*,*) onsite_exc_split
+      !WRITE(*,*) onsite_exc_split
 
       DO i_gf = 1, atoms%n_gf
          j0 = 0.0

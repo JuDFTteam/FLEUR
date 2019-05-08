@@ -6,7 +6,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,inDen,usdus,pot,gdft,l_runinfleur,l_runhia,results)
+   SUBROUTINE hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,usdus,pot,gdft,l_runinfleur,l_runhia,results)
 
       USE m_types
       USE m_hubbard1_io
@@ -24,19 +24,18 @@ MODULE m_hubbard1_setup
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_usdus),    INTENT(IN)     :: usdus
-      TYPE(t_potden),   INTENT(IN)     :: inDen
       TYPE(t_potden),   INTENT(INOUT)  :: pot
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_greensf),  INTENT(IN)     :: gdft !green's function in the mt-sphere including the potential correction form dft+hubbard1 
       LOGICAL,          INTENT(IN)     :: l_runinfleur !Determines wether we call the the solver here or run separately
       LOGICAL,          INTENT(IN)     :: l_runhia
       
-      INTEGER i_hia,i_gf,n,l,n_occ,ispin,m,matsize,i,iz,N_mu,i_mu,j,io_error
+      INTEGER i_hia,i_gf,n,l,n_occ,ispin,m,matsize,i,iz,k,j,io_error
       REAL mu_dc,beta,e_lda_hia
-      CHARACTER(len=300) :: cwd
-      CHARACTER(len=300) :: path
-      CHARACTER(len=300) :: folder
-      CHARACTER(len=300) :: message
+
+      CHARACTER(len=300) :: cwd,path,folder,message
+      CHARACTER*8 l_type*2,l_form*9
+
       TYPE(t_greensf)    :: gu
 
       REAL     f0(hub1%n_hia,input%jspins),f2(hub1%n_hia,input%jspins)
@@ -51,10 +50,21 @@ MODULE m_hubbard1_setup
       REAL     n_l(hub1%n_hia,input%jspins)
       LOGICAL  l_exist
 
+      !TODO: We don't need to calculate the green's function in every iteration
 
-
-
-      IF(ANY(inDen%mmpMat(:,:,atoms%n_u+1:hub1%n_hia+atoms%n_u,:).NE.0.0).OR.l_runhia) THEN
+      !Read in density matrix from n_mmpmat_hubbard1
+      !We use a separate file because we need to keep track of the distances and the iteration between different runs of fleur
+      INQUIRE(file="n_mmpmat_hubbard1",exist=l_exist)
+      IF(l_exist) THEN
+         OPEN(unit = 1337, file="n_mmpmat_hubbard1",status="old",form="formatted",action="read")
+         READ(1337,"(I3.3,2f14.8)") iterHIA,results%last_occdistance,results%last_mmpMatdistance
+         READ(1337,"(7f14.8)") mmpMat(:,:,:,:)
+         CLOSE(unit=1337)
+      ELSE
+        mmpMat(:,:,:,:) = 0.0
+      ENDIF
+      
+      IF(ANY(mmpMat(:,:,:,:).NE.0.0).OR.l_runhia) THEN
          !Get the slater integrals from the U and J parameters
          CALL uj2f(input%jspins,hub1%lda_u(:),hub1%n_hia,f0,f2,f4,f6)
          f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
@@ -63,7 +73,6 @@ MODULE m_hubbard1_setup
          f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
          CALL umtx(hub1%lda_u(:),hub1%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
 
-         mmpMat = inDen%mmpMat(:,:,atoms%n_u+1:hub1%n_hia,:)
          CALL v_mmp(sym,atoms,hub1%lda_u(:),hub1%n_hia,input%jspins,.true.,mmpMat,&
          u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+hub1%n_hia,:),e_lda_hia)
 
@@ -101,8 +110,11 @@ MODULE m_hubbard1_setup
                      n_l(i_hia,ispin) = n_l(i_hia,ispin) + mmpMat(m,m,i_hia,ispin)
                   ENDDO
                ENDDO
-               WRITE(*,*) "OCCUPATION: ", SUM(n_l(i_hia,:))
-
+               WRITE(2804,9010) n
+               WRITE(2804,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
+               WRITE(2804,"(A)") "Occupation from DFT-Green's function:"
+               WRITE(2804,9020) 'spin-up','spin-dn'
+               WRITE(2804,9030) n_l(i_hia,:)
                !calculate the chemical potential
                CALL mudc(hub1%lda_u(i_hia)%U,hub1%lda_u(i_hia)%J,l,n_l(i_hia,:),hub1%lda_u(i_hia)%l_amf,mu_dc,input%jspins)
                
@@ -164,8 +176,8 @@ MODULE m_hubbard1_setup
                   WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
                   CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/")
                   CALL indexgf(atoms,l,n,i_gf)
-                  CALL ldosmtx("gdft",gdft,i_gf,atoms,sym,input%jspins)
-                  CALL ldosmtx("g",gu,i_gf,atoms,sym,input%jspins)
+                  !CALL ldosmtx("gdft",gdft,i_gf,atoms,sym,input%jspins)
+                  !CALL ldosmtx("g",gu,i_gf,atoms,sym,input%jspins)
                ENDDO
                CALL CHDIR(TRIM(ADJUSTL(cwd)))
                INQUIRE(file="n_mmpmat_hubbard1",exist = l_exist)
@@ -178,26 +190,56 @@ MODULE m_hubbard1_setup
                   CALL n_mmp_dist(mmpMat_in,mmpMat,hub1,results,input%jspins)
                ENDIF 
    
-               !Write out the density matrix (because i don't wanna change inDen to intent(inout)
+               !Write out the density matrix and the additional inforamtion (current iteration, distances)
                OPEN(unit=1337,file="n_mmpmat_hubbard1",status="replace",action="write",iostat=io_error)
                IF(io_error.NE.0) CALL juDFT_error("IO-error in density matrix",calledby="hubbard1_setup")
                WRITE(1337,"(I3.3,2f14.8)") iterHIA,results%last_occdistance,results%last_mmpMatdistance
                WRITE(1337,"(7f14.8)") mmpMat(:,:,:,:)
                CLOSE(unit=1337)
-               WRITE(*,"(7f14.8)") REAL(pot%mmpMat(:,:,:,:))
+               WRITE(*,*) "Hubbard 1 Iteration: ", iterHIA
+               WRITE(*,*)  "Occ. Distance: ", results%last_occdistance, &
+                           "Mat. Distance: ", results%last_mmpMatdistance
             ELSE
-               WRITE(message,9010) iterHIA
+               WRITE(message,9100) iterHIA
                CALL juDFT_END(message)
-9010           FORMAT("Hubbard 1 input written into hub1_",I3.3)
             ENDIF
          ENDIF
+         !Write out the density matrix and potential matrix (compare u_setup.f90)
+         IF (mpi%irank.EQ.0) THEN
+            DO ispin = 1,input%jspins
+               WRITE (2804,'(a7,i3)') 'spin #',ispin
+               DO i_hia = 1, atoms%n_hia
+                  n = hub1%lda_u(i_hia)%atomType
+                  l = hub1%lda_u(i_hia)%l
+                  WRITE (l_type,'(i2)') 2*(2*l+1)
+                  l_form = '('//l_type//'f12.7)'
+                  WRITE (2804,'(a20,i3)') 'n-matrix for atom # ',n
+                  WRITE (2804,l_form) ((mmpMat(k,j,atoms%n_u+i_hia,ispin),k=-l,l),j=-l,l)
+                  WRITE (2804,'(a20,i3)') 'V-matrix for atom # ',n
+                  IF (hub1%lda_u(i_hia)%l_amf) THEN
+                     WRITE (2804,*) 'using the around-mean-field limit '
+                  ELSE
+                     WRITE (2804,*) 'using the atomic limit of LDA+U '
+                  ENDIF
+                  WRITE (2804,l_form) ((pot%mmpMat(k,j,atoms%n_u+i_hia,ispin),k=-l,l),j=-l,l)
+               END DO
+            END DO
+            WRITE (2804,*) results%e_ldau
+         ENDIF
+
       ELSE
          !occupation matrix is zero and LDA+Hubbard 1 shouldn't be run yet
          !There is nothing to be done yet just set the potential correction to 0
          pot%mmpMat(:,:,atoms%n_u+1:hub1%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
       ENDIF
       
-     
+      !FORMAT Statements:
+9010  FORMAT("Setup for Hubbard 1 solver for atom ", I3, ": ")
+9020  FORMAT(TR8,A7,TR3,A7)
+9030  FORMAT(TR7,f8.4,TR2,f8.4)
+9100  FORMAT("Hubbard 1 input written into hub1_",I3.3)
+
+
    END SUBROUTINE hubbard1_setup
 
    SUBROUTINE mudc(U,J,l,n,l_amf,mu,jspins)
@@ -226,31 +268,31 @@ MODULE m_hubbard1_setup
       vdcfll2= u*(nup+ndn -0.5) - j*(ndn-0.5)
       vdcamf1= u*ndn+2.0*l/(2.0*l+1)*(u-j)*nup
       vdcamf2= u*nup+2.0*l/(2.0*l+1)*(u-j)*ndn
-      WRITE(*,"(A)") 'Double counting chemical potential:'
-      WRITE(*,9010) 'FLL: ','spin-up','spin-dn','(up+dn)/2','up-dn'
-      WRITE(*,9020) vdcfll1,vdcfll2,(vdcfll1+vdcfll2)/2,vdcfll1-vdcfll2
-      WRITE(*,9010) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
-      WRITE(*,9020)  vdcamf1,vdcamf2,(vdcamf1+vdcamf2)/2,vdcamf1-vdcamf2
+      WRITE(2804,"(A)") 'Double counting chemical potential:'
+      WRITE(2804,9040) 'FLL: ','spin-up','spin-dn','(up+dn)/2','up-dn'
+      WRITE(2804,9050) vdcfll1,vdcfll2,(vdcfll1+vdcfll2)/2,vdcfll1-vdcfll2
+      WRITE(2804,9040) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
+      WRITE(2804,9050)  vdcamf1,vdcamf2,(vdcamf1+vdcamf2)/2,vdcamf1-vdcamf2
 
       IF(l_amf) THEN
-         WRITE(*,"(A)") "Using the around-mean-field limit"
+         WRITE(2804,"(A)") "Using the around-mean-field limit"
          mu = (vdcamf1+vdcamf2)/2
       ELSE
-      WRITE(*,"(A)") "Using the fully-localized limit"
+      WRITE(2804,"(A)") "Using the fully-localized limit"
          mu = (vdcfll1+vdcfll2)/2
       ENDIF 
-      WRITE(*,9030) mu
+      WRITE(2804,9060) mu
 
-9010  FORMAT(TR3,A4,TR1,A7,TR3,A7,TR3,A9,TR3,A5)
-9020  FORMAT(TR7,f8.4,TR2,f8.4,TR2,f8.4,TR4,f8.4)
-9030  FORMAT(TR3,"mu = ",f7.4)
+9040  FORMAT(TR3,A4,TR1,A7,TR3,A7,TR3,A9,TR3,A5)
+9050  FORMAT(TR7,f8.4,TR2,f8.4,TR2,f8.4,TR4,f8.4)
+9060  FORMAT(TR3,"mu = ",f7.4)
    END SUBROUTINE
 
    SUBROUTINE add_selfen(g,gp,selfen,atoms,hub1,sym,beta,ef,jspins,n_occ,mu_dc,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
-      ! (G)^-1 = (G_0)^-1 - mu 1 - selfen
+      ! (G)^-1 = (G_0)^-1 - mu 1 + V_dc - selfen
       !
       !The term mu * unity is there to ensure that the number of particles 
       !doesn't change and is determined by a two-step process
@@ -291,8 +333,8 @@ MODULE m_hubbard1_setup
       l_mperp = .true.
 
       !Interval where we expect the correct mu
-      mu_a = -2.0
-      mu_b = 2.0
+      mu_a = 0.0
+      mu_b = 4.0
       mu_step = 0.05
       mu_max = 0.0
       n_max = 0.0
@@ -306,7 +348,7 @@ MODULE m_hubbard1_setup
          CALL gmat%init(.false.,2*ns,2*ns)
          CALL vmat%init(.false.,2*ns,2*ns)
          !Search for the maximum of occupation
-         OPEN(unit=1337,file="mu",status="replace",action="write")
+         !OPEN(unit=1337,file="mu",status="replace",action="write")
          mu = mu_a
          DO WHILE(mu.LE.mu_b)
             mu = mu + mu_step
@@ -331,13 +373,13 @@ MODULE m_hubbard1_setup
                   n = n + mmpMat(m,m,i_hia,ispin)
                ENDDO
             ENDDO
-            WRITE(1337,*) mu,n
+            !WRITE(1337,*) mu,n
             IF(n.GT.n_max) THEN
                mu_max = mu
                n_max  = n
             ENDIF
          ENDDO
-         CLOSE(1337)
+         !CLOSE(1337)
          !Set up the interval for the bisection method (mu_max,mu_b)
          mu_a = mu_max
          DO 
@@ -365,9 +407,8 @@ MODULE m_hubbard1_setup
             ENDDO
             IF(ABS(n-n_occ(i_hia)).LT.0.001.OR.ABS((mu_b - mu_a)/2.0).LT.0.00001) THEN
                !We found the chemical potential to within the desired accuracy
-               !TODO: Write to output file
-               WRITE(*,*) "Calculated mu: ", mu
-               WRITE(*,*) "OCCUPATION: ", n
+               WRITE(2804,"(A)") "Calculated mu to match Self-energy to DFT-GF"
+               WRITE(2804,"(TR3,A4,f8.4)") "mu = ", mu
                EXIT
             ELSE IF((n - n_occ(i_hia)).GT.0) THEN
                !The occupation is to small --> choose the left interval
@@ -446,8 +487,8 @@ MODULE m_hubbard1_setup
          END DO
       ENDDO
       results%last_occdistance = ABS(n_out-n_in)
-      WRITE(*,*) "Occupation distance: ", results%last_occdistance
-      WRITE(*,*) "Density matrix distance: ", results%last_mmpMatdistance
+      WRITE(2804,*) "Occupation distance: ", results%last_occdistance
+      WRITE(2804,*) "Density matrix distance: ", results%last_mmpMatdistance
    
    END SUBROUTINE n_mmp_dist
 

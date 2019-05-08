@@ -25,7 +25,7 @@ MODULE m_cfmat
 
    CONTAINS 
 
-   SUBROUTINE cfcontrib(projDOS,l,n,nb,nc,ne,del,jspins,cfmat)
+   SUBROUTINE cfcontrib(projDOS,l,n,nb,nc,ne,del,jspins,cfmat,pot)
 
       REAL,                INTENT(IN)  :: projDOS(ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
       INTEGER,             INTENT(IN)  :: l
@@ -36,6 +36,8 @@ MODULE m_cfmat
       REAL,                INTENT(IN)  :: del 
       INTEGER,             INTENT(IN)  :: jspins
       REAL,                INTENT(OUT) :: cfmat(-l:l,-l:l)
+      !Stuff to be removed from the local hamiltonian to obtain cfmat
+      REAL,                INTENT(IN)  :: pot(-l:l,-l:l,jspins)
       
       REAL :: cfmat_sp(-l:l,-l:l,jspins)
       INTEGER ispin,m,mp,i
@@ -56,6 +58,8 @@ MODULE m_cfmat
                   integrand(i) = (i-1+nb) * del * projDOS(i+nb,m,mp,ispin)
                ENDDO
                CALL trapz(integrand,del,nc-nb,cfmat_sp(m,mp,ispin))
+                !Remove the LDA+U potential
+               cfmat_sp(m,mp,ispin) = cfmat_sp(m,mp,ispin) - pot(m,mp,ispin) 
             ENDDO
          ENDDO
       ENDDO
