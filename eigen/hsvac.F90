@@ -11,7 +11,7 @@ CONTAINS
   !Overlap matrix
   !-----------------------------------------------------------
   SUBROUTINE hsvac(&
-       vacuum,stars,DIMENSION, atoms,mpi,jsp,input,v,evac,cell,&
+       vacuum,stars,DIMENSION, mpi,jsp,input,v,evac,cell,&
        lapw,sym, noco,hmat,smat)
  
 
@@ -25,7 +25,6 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
-    TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_potden),INTENT(IN)     :: v
@@ -57,6 +56,7 @@ CONTAINS
     REAL duz(DIMENSION%nv2d,input%jspins), udz(DIMENSION%nv2d,input%jspins)
     REAL uz(DIMENSION%nv2d,input%jspins)
     !     ..
+
 
     d2 = SQRT(cell%omtil/cell%area)
 
