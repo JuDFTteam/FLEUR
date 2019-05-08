@@ -281,7 +281,7 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
-      REAL  :: cut_ratio = 0.0
+      REAL  :: cut_ratio = 0.9
       INTEGER :: cut_idx
 
       ! tau = 0.5 * sum[|grad phi_i(r)|²]
