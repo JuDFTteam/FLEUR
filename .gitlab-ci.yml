@@ -81,24 +81,6 @@ doxygen:
     - triggers
     - web
 
-mkdocs:
-  image: iffregistry.fz-juelich.de/fleur/fleur:mkdocs
-  stage: html
-  cache:
-     paths:
-       - public
-  script:
-    - cd /builds/fleur/fleur/docs/mkdocs ; mkdocs build
-    - cp tutorial_scheme/color.css site/css/bootstrap-custom.min.css
-    - mkdir ../../public
-    - mv site ../../public/site
-  artifacts:
-    paths:
-      - public
-#  only:
-#    - schedules
-#    - triggers
-#    - web
 
 build-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:pgi
