@@ -20,6 +20,7 @@ CONTAINS
     USE m_types
     USE m_types_mixvector
     USE m_constants
+
 #ifdef CPP_MPI    
     USE m_mpi_bc_potden
 #endif    
@@ -45,6 +46,7 @@ CONTAINS
     real                             :: fix
     integer                          :: lh,n
 
+
     CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
     CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
     MPI0_b: IF( mpi%irank == 0 ) THEN 
@@ -63,7 +65,7 @@ CONTAINS
           call resDenMod%copyPotDen( resDen )
        end if
        vYukawa%iter = resDen%iter
-       CALL VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, DIMENSION, oneD, noco, resDenMod, &
+       CALL VYukawaFilm( stars, vacuum, cell, sym, input, mpi, atoms, sphhar, oneD, noco, resDenMod, &
             vYukawa )
     END IF
 
@@ -76,6 +78,8 @@ CONTAINS
                   * vYukawa%mt(1:atoms%jri(n),lh,n,1) * atoms%rmsh(1:atoms%jri(n),n) ** 2
           END DO
        END DO
+       resDen%vacz  = resDen%vacz  - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacz
+       resDen%vacxy = resDen%vacxy - input%preconditioning_param ** 2 / fpi_const * vYukawa%vacxy
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )

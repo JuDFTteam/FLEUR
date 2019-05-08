@@ -1,3 +1,4 @@
+index:on
 Welcome to the FLEUR-project
 ===========================
 This is the homepage of FLEUR, a feature-full, freely available FLAPW (full potential linearized augmented planewave) code, based on density-functional theory.
@@ -26,10 +27,6 @@ Fleur is part of the [juDFT family](http://www.judft.de) of codes developed in J
 --------------------------
 To obtain FLEUR have a look at out [download page](downloads.md)
 
-
-Support for FLEUR-users
-------------------
-We have established a mailing list for all users and developers of the FLEUR code. To subscribe to the list simply send a mail to <fleur-join@fz-juelich.de>.
 
 
 FLEUR development team
