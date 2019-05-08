@@ -1,6 +1,6 @@
 #Examples by Lattice
 
-#CrInp
+#Cr Inp
 ```
 bcc Cr
 
@@ -17,7 +17,7 @@ bcc Cr
 &comp kmax=5.2 gmaxxc=12.5 gmax=15.0 /
 &kpt div1=24 div2=24 div3=24 tkb=0.0005 /
 ```
-#AgInp
+#Ag Inp
 ```
 fcc silver
 
@@ -32,7 +32,7 @@ fcc silver
 &comp kmax=5.0 gmaxxc=12.5 gmax=15.0 /
 &kpt div1=25 div2=25 div3=25 tkb=0.0005 /
 ```
-#FeInp
+#Fe Inp
 ```
 bcc Fe
 
@@ -47,7 +47,7 @@ bcc Fe
 &comp kmax=5.2 gmaxxc=12.5 gmax=15.0 /
 &kpt div1=27 div2=27 div3=27 tkb=0.0005 /
 ```
-#MnInp
+#Mn Inp
 ```
 tet manganese
 
@@ -64,7 +64,7 @@ tet manganese
 &comp kmax=5.2 gmaxxc=13.0 gmax=15.5 /
 &kpt div1=28 div2=28 div3=20 tkb=0.0005 /
 ```
-#InInp
+#In Inp
 ```
 bct In
 
@@ -79,7 +79,7 @@ bct In
 &comp kmax=5.0 gmaxxc=12.5 gmax=15.0 /
 &kpt div1=17 div2=17 div3=13 tkb=0.0005 /
 ```
-#BrInp
+#Br Inp
 ```
 Bromium(o)
 
@@ -97,7 +97,7 @@ Bromium(o)
 &comp kmax=5.0 gmaxxc=12.5 gmax=15.0 /
 &kpt div1= 4 div2= 8 div3= 4 tkb=0.0005 /
 ```
-#HBrInp
+#HBr Inp
 ```
 HBr oF (ICSD # 28842)
 
@@ -122,7 +122,7 @@ HBr oF (ICSD # 28842)
   0  1  0   0.0
   0  0 -1   0.0 /               ! we leave out the centering translation
 ```
-#HgOInp
+#HgO Inp
 ```
 HgO   from ICSD database (http://icsd.fiz-karlsruhe.de/)  #16627
 
@@ -148,7 +148,7 @@ HgO   from ICSD database (http://icsd.fiz-karlsruhe.de/)  #16627
 &comp kmax=5.0 gmaxxc=12.5 gmax=15.0 /
 &exco xctyp="pz" /
 ```
-#Ta2HInp
+#Ta<sub>2</sub>H Inp
 ```
 Ta2D  from ICSD database (http://icsd.fiz-karlsruhe.de/)  #61486
 
@@ -173,7 +173,7 @@ Ta2D  from ICSD database (http://icsd.fiz-karlsruhe.de/)  #61486
 &comp kmax=5.0 gmaxxc=12.5 gmax=15.0 /
 &exco xctyp="pz" /
 ```
-#Ta2HBInp
+#Ta<sub>2</sub>H B Inp
 ```
 Ta2D  from ICSD database #61486 but with oB setting 
 
@@ -198,7 +198,7 @@ Ta2D  from ICSD database #61486 but with oB setting
 &comp kmax=5.0 gmaxxc=12.5 gmax=15.0 /
 &exco xctyp="pz" /
 ```
-#Ta2HCInp
+#Ta<sub>2</sub>H C Inp
 ```
 Ta2D  from ICSD database #61486 but with oC setting
 
@@ -223,7 +223,7 @@ Ta2D  from ICSD database #61486 but with oC setting
 &comp kmax=5.0 gmaxxc=12.5 gmax=15.0 /
 &exco xctyp="pz" /
 ```
-#PdP2PInp
+#PdP<sub>2</sub> P Inp
 ```
 PdP2 (mP) from ICSD database # 48163 (conventional unit cell with all atoms)
 
@@ -249,7 +249,7 @@ PdP2 (mP) from ICSD database # 48163 (conventional unit cell with all atoms)
 15 0.1651 -.6886  0.6237
 15 -.1651 0.6886  -.6237
 ```
-#PdP2IInp
+#PdP<sub>2</sub> I Inp
 ```
 PdP2 (mI) from ICSD database # 48163 (published data)
 
@@ -274,7 +274,7 @@ PdP2 (mI) from ICSD database # 48163 (published data)
   0 -1  0   0.0
   0  0 -1   0.0 /               ! inversion
 ```
-#PdP2AInp
+#PdP<sub>2</sub> A Inp
 ```
 PdP2 (mA)  from ICSD database # 48163 (standardized data)
 
@@ -299,7 +299,7 @@ PdP2 (mA)  from ICSD database # 48163 (standardized data)
   0 -1  0   0.5
   0  0 -1   0.5 /               ! inversion
 ```
-#PdP2BInp
+#PdP<sub>2</sub> B Inp
 ```
 PdP2 (mB)  from ICSD database # 48163 (standardized data)
 
@@ -324,7 +324,7 @@ PdP2 (mB)  from ICSD database # 48163 (standardized data)
   0 -1  0   0.0
   0  0 -1   0.5 /               ! inversion
 ```
-#Binp
+#B inp
 ```
 B (tricl) (APW+lo used for actual calculation)
 
@@ -350,7 +350,7 @@ B (tricl) (APW+lo used for actual calculation)
 &comp kmax=4.5 gmaxxc=12.0 gmax=13.5 /
 &kpt div1=10 div2= 10 div3= 6 tkb=0.0005 /
 ```
-#Cinp
+#C inp
 ```
 grahite C (APW+lo used for actual calculation)
 
@@ -369,7 +369,7 @@ grahite C (APW+lo used for actual calculation)
 &comp kmax=5.2 gmaxxc=13.0 gmax=15.5 /
 &kpt div1=16 div2=16 div3= 6 tkb=0.0005 /
 ```
-#AsInp
+#As Inp
 ```
 As
 
@@ -385,7 +385,7 @@ As
 &comp kmax=5.0 gmaxxc=12.5 gmax=15.0 /
 &kpt div1=13 div2=13 div3=13 tkb=0.0005 /
 ```
-#S6Inp
+#S<sub>6</sub> Inp
 ```
 S6 (ICSD # 40021)
 

@@ -57,7 +57,7 @@ Hydrogen (APW+lo used for actual calculation)
  
 **Compounds:  **
  
-** BH'_3_' **
+** BH<sub>3</sub> **
 ```
 Diborane molecule with LDA using film setup
 
@@ -85,7 +85,7 @@ Diborane molecule with LDA using film setup
 
 Bond-length plot: ![](img/Diborane.png)
 
-** H'_2_'O **
+** H<sub>2</sub>O **
 
 Elemental input for H2O (Ice II):
 
@@ -263,7 +263,7 @@ B (tricl) (APW+lo used for actual calculation)
 
 **Compounds:  **
  
- ** BH'_3_' ** [See Hydrogen](#hydrogen)
+ ** BH<sub>3</sub> ** [See Hydrogen](#hydrogen)
    
 
 
@@ -364,9 +364,9 @@ monoclinic oxygen (introduce magn. moment with the swsp=T switch!) (APW+lo used 
  
 **Compounds:  **
  
-**H'_2_'O**: [See Hydrogen](#hydrogen)
+**H<sub>2</sub>O**: [See Hydrogen](#hydrogen)
 
-**TiO'_2_'**: [See Ti](#titanium)
+**TiO<sub>2</sub>**: [See Ti](#titanium)
 
 **ZnO**: [See Zn](%zink)
 
@@ -758,7 +758,7 @@ Bandstructure-plot: ![](img/Ti_band.png)
  
 **Compounds:**
  
-**TiO'_2_'**:
+**TiO<sub>2</sub>**:
 ```
 TiO2 Rutile
 
@@ -1763,7 +1763,7 @@ bcc tantalum
 
 **Compounds:  **
  
-**Ta'_2_'D**:
+**Ta<sub>2</sub>D**:
 
 ```
 Ta2D  from ICSD database (http://icsd.fiz-karlsruhe.de/)  #61486 
