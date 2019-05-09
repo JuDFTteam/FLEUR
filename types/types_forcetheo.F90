@@ -42,11 +42,12 @@ CONTAINS
     this%l_io=l_io
   END SUBROUTINE forcetheo_start
 
-  LOGICAL FUNCTION forcetheo_next_job(this,lastiter,noco)
+  LOGICAL FUNCTION forcetheo_next_job(this,lastiter,atoms,noco)
     USE m_types_setup
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
-     LOGICAL,INTENT(IN)                  :: lastiter
+    LOGICAL,INTENT(IN)                  :: lastiter
+    TYPE(t_atoms),INTENT(IN)            :: atoms
     !Stuff that might be modified...
     TYPE(t_noco),INTENT(INOUT) :: noco
     forcetheo_next_job=this%firstloop

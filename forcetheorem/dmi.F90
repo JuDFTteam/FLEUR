@@ -62,12 +62,13 @@ CONTAINS
     CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
   END SUBROUTINE  dmi_start
 
-  LOGICAL FUNCTION dmi_next_job(this,lastiter,noco)
+  LOGICAL FUNCTION dmi_next_job(this,lastiter,atoms,noco)
     USE m_types_setup
     USE m_xmlOutput
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
+    TYPE(t_atoms),INTENT(IN)            :: atoms
     !Stuff that might be modified...
     TYPE(t_noco),INTENT(INOUT) :: noco
     INTEGER                    :: itype

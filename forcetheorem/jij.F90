@@ -103,13 +103,14 @@ CONTAINS
     CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
   END SUBROUTINE  jij_start
 
-  LOGICAL FUNCTION jij_next_job(this,lastiter,noco)
+  LOGICAL FUNCTION jij_next_job(this,lastiter,atoms,noco)
     USE m_types_setup
     USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
+    TYPE(t_atoms),INTENT(IN)            :: atoms
     !Stuff that might be modified...
     TYPE(t_noco),INTENT(INOUT) :: noco
 
