@@ -65,24 +65,26 @@ CONTAINS
       logical            :: parallel_ok
       real               :: summe, t_omp, t_seq
       integer            :: rank, size, ierr
-      integer            :: i, omp_threads
+      integer            :: i, j, omp_threads
       integer, parameter :: loop_end = 300000000
 
       summe = 0.0
-      t_omp=0.0
-      !$omp parallel reduction(+: t_omp)
+      t_omp = 0.0
+   
+      !$omp parallel reduction(+: t_omp) 
       omp_threads = OMP_GET_NUM_THREADS()
       t_omp = OMP_GET_WTIME()
-      !$omp do reduction(+:summe)
-      do i = 1, loop_end*omp_threads
-         summe = summe + 1.0
+      !$omp do schedule(static) reduction(+:summe)
+      do i = 1, loop_end
+         do j = 1, omp_threads
+            summe = summe + 1.0
+         enddo
       enddo
       !$omp end do
       t_omp = OMP_GET_WTIME() - t_omp
       !$omp end parallel
 
       t_omp = t_omp / omp_threads
-
       summe = summe / omp_threads
 
       t_seq = OMP_GET_WTIME()
