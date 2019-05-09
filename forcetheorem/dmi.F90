@@ -70,6 +70,7 @@ CONTAINS
     LOGICAL,INTENT(IN)                  :: lastiter
     !Stuff that might be modified...
     TYPE(t_noco),INTENT(INOUT) :: noco
+    INTEGER                    :: itype
     IF (.NOT.lastiter) THEN
        dmi_next_job=this%t_forcetheo%next_job(lastiter,noco)
        RETURN
@@ -81,6 +82,10 @@ CONTAINS
     
     !Now modify the noco-file
     noco%qss=this%qvec(:,this%q_done)
+    !Modify the alpha-angles
+    DO iType = 1,atoms%ntype
+       noco%alph(iType) = noco%alphInit(iType) + tpi_const*dot_PRODUCT(noco%qss,atoms%taual(:,SUM(atoms%neq(:itype-1))+1))
+    END DO
     IF (.NOT.this%l_io) RETURN
   
     IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_DMI')
