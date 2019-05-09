@@ -217,8 +217,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
            na = 1
            DO iType = 1,atoms%ntype
-              noco%phi = tpi_const*dot_product(noco%qss,atoms%taual(:,na))
-              noco%alph(iType) = noco%alphInit(iType) + noco%phi
+              noco%alph(iType) = noco%alphInit(iType) + tpi_const*dot_product(noco%qss,atoms%taual(:,na))
               na = na + atoms%neq(iType)
            END DO
         END IF

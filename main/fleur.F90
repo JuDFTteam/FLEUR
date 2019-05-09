@@ -241,7 +241,7 @@ CONTAINS
 #endif
 
        CALL forcetheo%start(vtot,mpi%irank==0)
-       forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
+       forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,atoms,noco))
 
           CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")

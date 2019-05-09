@@ -13,7 +13,7 @@ CONTAINS
       omp_para_loc = check_omp_para()
 
       call MPI_Reduce(omp_para_loc, omp_root_and, 1,&
-                      MPI_LOGICAL, MPI_LAND, 0, MPI_COMM_WORLD)
+                      MPI_LOGICAL, MPI_LAND, 0, MPI_COMM_WORLD,ierr)
 
       if(irank == 0 .and. omp_root_and) then
          write (*,*) "Parallelization OK"
@@ -63,12 +63,13 @@ CONTAINS
       use m_judft_stop
       implicit none
       logical            :: parallel_ok
-      real(8)            :: summe, t_omp, t_seq
-      integer(4)         :: rank, size, ierr
+      real               :: summe, t_omp, t_seq
+      integer            :: rank, size, ierr
       integer            :: i, omp_threads
       integer, parameter :: loop_end = 300000000
 
       summe = 0.0
+      t_omp=0.0
       !$omp parallel reduction(+: t_omp)
       omp_threads = OMP_GET_NUM_THREADS()
       t_omp = OMP_GET_WTIME()
