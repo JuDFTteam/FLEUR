@@ -111,7 +111,7 @@
 #ifdef CPP_HDF
           CALL hdf_init()
 #endif
-          call juDFT_check_para()
+          !call juDFT_check_para()
           CALL field%init(input)
 
           input%gw                = -1
