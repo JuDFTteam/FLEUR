@@ -64,6 +64,7 @@ CONTAINS
   LOGICAL FUNCTION mae_next_job(this,lastiter,atoms,noco)
     USE m_types_setup
     USE m_xmlOutput
+    USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
@@ -71,7 +72,7 @@ CONTAINS
     !Stuff that might be modified...
     TYPE(t_noco),INTENT(INOUT) :: noco
        IF (.NOT.lastiter) THEN
-          mae_next_job=this%t_forcetheo%next_job(lastiter,noco)
+          mae_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco)
           RETURN
        ENDIF
        !OK, now we start the MAE-loop

@@ -118,7 +118,7 @@ CONTAINS
     INTEGER:: n
 
     IF (.NOT.lastiter) THEN
-       jij_next_job=this%t_forcetheo%next_job(lastiter,noco)
+       jij_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco)
        RETURN
     ENDIF
     

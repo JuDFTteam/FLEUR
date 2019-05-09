@@ -65,6 +65,7 @@ CONTAINS
   LOGICAL FUNCTION dmi_next_job(this,lastiter,atoms,noco)
     USE m_types_setup
     USE m_xmlOutput
+    USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
@@ -73,7 +74,7 @@ CONTAINS
     TYPE(t_noco),INTENT(INOUT) :: noco
     INTEGER                    :: itype
     IF (.NOT.lastiter) THEN
-       dmi_next_job=this%t_forcetheo%next_job(lastiter,noco)
+       dmi_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco)
        RETURN
     ENDIF
     !OK, now we start the DMI-loop
