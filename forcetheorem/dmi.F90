@@ -84,7 +84,7 @@ CONTAINS
     IF (.NOT.this%l_io) RETURN
   
     IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_DMI')
-    CALL openXMLElementPoly('Forcetheorem_Loop_DMI',(/'Q-vec:'/),(/this%q_done/))
+    CALL openXMLElementPoly('Forcetheorem_Loop_DMI',(/'Q-vec'/),(/this%q_done/))
   END FUNCTION dmi_next_job
 
   SUBROUTINE dmi_postprocess(this)
