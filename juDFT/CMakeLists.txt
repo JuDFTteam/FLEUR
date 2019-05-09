@@ -39,7 +39,7 @@ time.F90
 args.F90
 sysinfo.F90
 check_arguments.F90
-check_para.f90
+check_para.F90
 xmlOutput.F90
 npy.F90
 endian_swap.f90
