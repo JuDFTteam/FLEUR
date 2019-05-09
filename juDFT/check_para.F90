@@ -13,7 +13,7 @@ CONTAINS
       omp_para_loc = check_omp_para()
 
       call MPI_Reduce(omp_para_loc, omp_root_and, 1,&
-                      MPI_LOGICAL, MPI_LAND, 0, MPI_COMM_WORLD)
+                      MPI_LOGICAL, MPI_LAND, 0, MPI_COMM_WORLD,ierr)
 
       if(irank == 0 .and. omp_root_and) then
          write (*,*) "Parallelization OK"
