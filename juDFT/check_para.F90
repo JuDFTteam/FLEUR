@@ -3,7 +3,26 @@ MODULE m_judft_para
 CONTAINS
    subroutine juDFT_check_para()
       implicit none
-      call check_omp_para()
+      logical   :: omp_para_loc, omp_root_and
+      integer   :: irank, ierr
+
+#ifdef CPP_MPI
+      INCLUDE 'mpif.h'
+
+      call MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
+      omp_para_loc = check_omp_para()
+
+      call MPI_Reduce(omp_para_loc, omp_root_and, 1,&
+                      MPI_LOGICAL, MPI_LAND, 0, MPI_COMM_WORLD)
+
+      if(irank == 0 .and. omp_root_and) then
+         write (*,*) "Parallelization OK"
+      endif
+#else
+      omp_para_loc = check_omp_para()
+      if(omp_para_loc) write (*,*) "Parallelization OK"
+#endif
+
    end subroutine juDFT_check_para
 
    !subroutine check_mpi_para(mpi)
@@ -38,15 +57,15 @@ CONTAINS
 
    !end subroutine check_mpi_para
 
-
-   subroutine check_omp_para()
+   function check_omp_para() result(parallel_ok)
       use omp_lib
       use m_judft_string
       use m_judft_stop
       implicit none
-      real(8)  :: summe, t_omp, t_seq
-      integer(4)  :: rank, size, ierr
-      integer  :: i, omp_threads
+      logical            :: parallel_ok
+      real(8)            :: summe, t_omp, t_seq
+      integer(4)         :: rank, size, ierr
+      integer            :: i, omp_threads
       integer, parameter :: loop_end = 300000000
 
       summe = 0.0
@@ -72,7 +91,7 @@ CONTAINS
       t_seq = OMP_GET_WTIME() - t_seq
 
       if( abs(t_seq/t_omp -1.0) < 0.1)then
-         write (*,*) "Parallelization OK"
+         parallel_ok = .True.
       else
          write (*,*) "number of OMPs = ", omp_threads
          write (*,*) "t_omp = ", t_omp
@@ -81,7 +100,8 @@ CONTAINS
 
          call juDFT_warn("OMP parallelization underperform with a parallel efficiency of " // &
             float2str(t_seq/t_omp), hint="check if your slurm files is set properly")
+         parallel_ok = .False.
       endif
-   end subroutine check_omp_para
+   end function check_omp_para
 
 END MODULE m_judft_para
