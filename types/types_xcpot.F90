@@ -23,7 +23,7 @@ MODULE m_types_xcpot
    
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
-      TYPE(t_potden)   :: comparison_kinED_pw(3)
+      TYPE(t_potden)   :: comparison_kinED_pw(3), core_den, val_den
       TYPE(t_grid)     :: is_lapl, is_kED_schr
       TYPE(t_grid), allocatable :: mt_lapl(:), mt_kED_schr(:)
    CONTAINS

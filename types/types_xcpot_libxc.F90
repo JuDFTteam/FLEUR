@@ -81,6 +81,7 @@ CONTAINS
          ! energy functionals
          CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_UNPOLARIZED)
          IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, XC_UNPOLARIZED)
+         
       ELSE
          ! potential functionals  
          CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_POLARIZED)
@@ -281,7 +282,7 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
-      REAL  :: cut_ratio = 0.9
+      REAL  :: cut_ratio = 0.0
       INTEGER :: cut_idx
 
       ! tau = 0.5 * sum[|grad phi_i(r)|²]

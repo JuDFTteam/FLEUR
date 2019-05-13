@@ -133,6 +133,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                             fake_dos,fake_results,fake_moments)
       enddo
    END DO
+   call xcpot%val_den%copyPotDen(outDen)
 
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
@@ -181,6 +182,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL timestart("cdngen: cdncore")
    CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                 stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
+   call xcpot%core_den%subPotDen(outDen, xcpot%val_den)
    CALL timestop("cdngen: cdncore")
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
