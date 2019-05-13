@@ -167,6 +167,8 @@ CONTAINS
    SUBROUTINE integrate_kED_libxc(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco)
       use m_cdntot
       use m_types
+      use m_npy
+      use m_juDFT
       implicit none
       CLASS(t_xcpot),INTENT(IN) :: xcpot
       TYPE(t_stars),INTENT(IN)  :: stars
@@ -174,6 +176,7 @@ CONTAINS
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_vacuum),INTENT(IN) :: vacuum
       TYPE(t_input),INTENT(IN)  :: input
+
       TYPE(t_cell),INTENT(IN)   :: cell
       TYPE(t_oneD),INTENT(IN)   :: oneD
       TYPE(t_sphhar), INTENT(IN):: sphhar
@@ -189,8 +192,10 @@ CONTAINS
          allocate(mt_kED_libxc(size(xcpot%mt_kED_schr)))
          
          is_kED_libXC%grid = xcpot%is_kED_schr%grid + 0.25 * xcpot%is_lapl%grid
+         call save_npy("pw_kED_libXC.npy", is_kED_libXC%grid)
          do i = 1,atoms%ntype
             mt_kED_libXC(i)%grid = xcpot%mt_kED_schr(i)%grid + 0.25 * xcpot%mt_lapl(i)%grid
+            call save_npy("mt=" // int2str(i) // "_kED_libXC.npy", mt_kED_libXC(i)%grid)
          enddo
 
          call integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
