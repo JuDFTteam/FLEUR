@@ -12,48 +12,66 @@ MODULE m_metagga
    end type t_RS_potden
 
 CONTAINS
-   SUBROUTINE calc_kinEnergyDen(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS, is_pw, nsp, atm_idx)
+   SUBROUTINE calc_kinEnergyDen_pw(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS)
       USE m_juDFT_stop
-      USE m_juDFT_string
       use m_npy
       !use m_cdngen
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
       REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
-      LOGICAL, INTENT(IN), optional    :: is_pw
-      INTEGER, INTENT(IN), optional    :: nsp, atm_idx
 #ifdef CPP_LIBXC
       REAL, PARAMETER                  :: eps = 1e-15
 
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
 
-      if(is_pw) then
-         call save_npy("pw_EnergyDen_RS.npy", EnergyDen_RS)
-         call save_npy("pw_vTot_RS.npy", vTot_RS)
-         call save_npy("pw_den_RS.npy", den_RS)
-         call save_npy("pw_vTot_RSxdenRS.npy", vtot_RS*den_RS)
-         call save_npy("pw_kinED_pw_schroeway.npy",kinEnergyDen_RS) 
-      else
-         if(present(nsp) .and. present(atm_idx)) then
-            call save_npy("mt=" // int2str(atm_idx) // "_EnergyDen_RS.npy", &
-                          get_radial_line(EnergyDen_RS,1,nsp))
-            call save_npy("mt=" // int2str(atm_idx) // "_vTot_RS.npy", &
-                          get_radial_line(vTot_RS,1,nsp))
-            call save_npy("mt=" // int2str(atm_idx) // "_den_RS.npy", &
-                          get_radial_line(den_RS,1,nsp))
-            call save_npy("mt=" // int2str(atm_idx) // "_vTot_RSxdenRS.npy", &
-                          get_radial_line(vtot_RS*den_RS,1,nsp))
-            call save_npy("mt=" // int2str(atm_idx) // "_kinED_schroeway.npy", &
-                          get_radial_line(kinEnergyDen_RS,1,nsp)) 
-            call save_npy("mt=" // int2str(atm_idx) // "_den_RS.npy", den_RS)
-         else
-            write (*,*) "something not present"
-         endif
-      endif
+      call save_npy("pw_EnergyDen_RS.npy", EnergyDen_RS)
+      call save_npy("pw_vTot_RS.npy", vTot_RS)
+      call save_npy("pw_den_RS.npy", den_RS)
+      call save_npy("pw_vTot_RSxdenRS.npy", vtot_RS*den_RS)
+      call save_npy("pw_kinED_pw_schroeway.npy",kinEnergyDen_RS) 
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
 #endif
-   END SUBROUTINE calc_kinEnergyDen
+   END SUBROUTINE calc_kinEnergyDen_pw
+
+   SUBROUTINE calc_kinEnergyDen_mt(EnergyDen_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
+                                   atm_idx, nsp, kinEnergyDen_RS)
+      USE m_juDFT_stop
+      USE m_juDFT_string
+      use m_npy
+      implicit none
+      REAL, INTENT(in)                 :: EnergyDen_RS(:,:), vTot_rs(:,:), vTot0_rs(:,:), core_den_rs(:,:), val_den_rs(:,:)
+      INTEGER, intent(in)              :: atm_idx, nsp
+      REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
+
+#ifdef CPP_LIBXC
+      kinEnergyDen_RS = EnergyDen_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
+      call save_npy("mt=" // int2str(atm_idx) // "_EnergyDen_RS.npy", &
+         get_radial_line(EnergyDen_RS,1,nsp))
+      call save_npy("mt=" // int2str(atm_idx) // "_vTot_RS.npy", &
+         get_radial_line(vTot_RS,1,nsp))
+      call save_npy("mt=" // int2str(atm_idx) // "_vTot0_RS.npy", &
+         get_radial_line(vTot0_RS,1,nsp))
+      call save_npy("mt=" // int2str(atm_idx) // "_core_den_RS.npy", &
+         get_radial_line(core_den_RS,1,nsp))
+      call save_npy("mt=" // int2str(atm_idx) // "_val_den_RS.npy", &
+         get_radial_line(val_den_RS,1,nsp))
+
+      call save_npy("mt=" // int2str(atm_idx) // "_vTot0_RSxcore_denRS.npy", &
+         get_radial_line(vtot0_RS*core_den_RS,1,nsp))
+      call save_npy("mt=" // int2str(atm_idx) // "_vTot_RSxval_denRS.npy", &
+         get_radial_line(vtot_RS*val_den_RS,1,nsp))
+
+      call save_npy("mt=" // int2str(atm_idx) // "_kinED_schroeway.npy", &
+         get_radial_line(kinEnergyDen_RS,1,nsp)) 
+      call save_npy("mt=" // int2str(atm_idx) // "_val_den_RS.npy", &
+         get_radial_line(val_den_RS,1,nsp))
+      call save_npy("mt=" // int2str(atm_idx) // "_core_den_RS.npy", &
+         get_radial_line(core_den_RS,1,nsp))
+#else
+      CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
+#endif
+   END SUBROUTINE calc_kinEnergyDen_mt
 
    SUBROUTINE dump_array(array, filename)
       implicit none
@@ -68,7 +86,7 @@ CONTAINS
 
 
    SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
-                             vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
+         vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
       ! calculates the energy density
       ! EnergyDen = \sum_i n_i(r) \varepsilon_i
       ! where n_i(r) is the one-particle density
@@ -115,7 +133,7 @@ CONTAINS
       TYPE(t_results)                 :: tmp_results
       TYPE(t_cdnvalJob)               :: cdnvalJob
       TYPE(t_potden)                  :: aux_den, real_den
-   
+
 
       CALL regCharges%init(input, atoms)
       CALL dos%init(input,        atoms, DIMENSION, kpts, vacuum)
@@ -124,14 +142,14 @@ CONTAINS
 
       DO jspin = 1,input%jspins
          CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
-         
+
 
          ! replace brillouin weights with auxillary weights
          CALL calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
 
          CALL cdnval(eig_id, mpi, kpts, jspin, noco, input, banddos, cell, atoms, &
-                     enpara, stars, vacuum, DIMENSION, sphhar, sym, vTot, oneD, cdnvalJob, &
-                     EnergyDen, regCharges, dos, tmp_results, moments)
+            enpara, stars, vacuum, DIMENSION, sphhar, sym, vTot, oneD, cdnvalJob, &
+            EnergyDen, regCharges, dos, tmp_results, moments)
       ENDDO
 
    END SUBROUTINE calc_EnergyDen
@@ -162,8 +180,8 @@ CONTAINS
    END SUBROUTINE calc_EnergyDen_auxillary_weights
 
    SUBROUTINE calc_kinED_pw(dim_idx, eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
-                     vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,kinED,regCharges,dos,results,&
-                     moments,coreSpecInput,mcd,slab,orbcomp)
+         vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,kinED,regCharges,dos,results,&
+         moments,coreSpecInput,mcd,slab,orbcomp)
       USE m_types
       USE m_eig66_io
       USE m_genMTBasis
@@ -193,7 +211,7 @@ CONTAINS
 #endif
 
       IMPLICIT NONE
-      
+
       TYPE(t_results),       INTENT(INOUT) :: results
       TYPE(t_mpi),           INTENT(IN)    :: mpi
       TYPE(t_dimension),     INTENT(IN)    :: dimension
@@ -336,14 +354,14 @@ CONTAINS
          IF (.NOT.((jspin == 2).AND.noco%l_noco)) THEN
             ! valence density in the interstitial region
             CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                       jspin,lapw,noccbd,we,eig,kinED,results,force%f_b8,zPrime,dos)
+               jspin,lapw,noccbd,we,eig,kinED,results,force%f_b8,zPrime,dos)
          END IF
       END DO ! end of k-point loop
 
 #ifdef CPP_MPI
       DO ispin = jsp_start,jsp_end
          CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
-                          results,denCoeffs,orb,denCoeffsOffdiag,kinED,kinED%mmpMat(:,:,:,jspin),mcd,slab,orbcomp)
+            results,denCoeffs,orb,denCoeffsOffdiag,kinED,kinED%mmpMat(:,:,:,jspin),mcd,slab,orbcomp)
       END DO
 #endif
    END SUBROUTINE calc_kinED_pw
@@ -387,7 +405,7 @@ CONTAINS
 
       res = matmul(transpose(cell%bmat), vec)
    end function internal_to_rez
-   
+
    function get_radial_line(den, line_idx, nsp) result(line)
       use m_npy
       implicit none

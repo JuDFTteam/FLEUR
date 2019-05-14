@@ -54,9 +54,11 @@
          TYPE(t_gradients)     :: grad, tmp_grad
          TYPE(t_xcpot_inbuild) :: xcpot_tmp
          TYPE(t_potden)        :: vTot_tmp
-         REAL, ALLOCATABLE     :: ch(:,:), ED_rs(:,:), vTot_rs(:,:), kinED_rs(:,:)
+         TYPE(t_sphhar)        :: tmp_sphhar
+         REAL, ALLOCATABLE     :: ch(:,:), core_den_rs(:,:), val_den_rs(:,:), ED_rs(:,:), &
+                                  vTot_rs(:,:), vTot0_rs(:,:), kinED_rs(:,:)
          INTEGER               :: n,nsp,nt,jr
-         INTEGER               :: i, j, idx
+         INTEGER               :: i, j, idx, cnt
          REAL                  :: divi
          REAL, PARAMETER       :: cut_ratio = 0.9
          LOGICAL, allocatable  :: cut_mask(:)
@@ -95,6 +97,9 @@
             IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,tmp_grad)
             ALLOCATE(ED_rs, mold=ch)
             ALLOCATE(vTot_rs, mold=ch)
+            ALLOCATE(vTot0_rs, mold=vTot_rs)
+            ALLOCATE(core_den_rs, mold=ch)
+            ALLOCATE(val_den_rs, mold=ch)
             ALLOCATE(kinED_RS, mold=ch)
             if(.not. allocated(xcpot%mt_kED_schr)) allocate(xcpot%mt_kED_schr(atoms%ntype))
          ENDIF
@@ -170,7 +175,20 @@
                ENDDO
                CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, vTot_tmp%mt(:,0:,n,:), &
                                n,            tmp_grad, vTot_rs)
-               CALL calc_kinEnergyDen(ED_rs, vTot_rs, ch, kinED_rs, is_pw=.False., nsp=nsp, atm_idx=n)
+               tmp_sphhar%nlhd = sphhar%nlhd
+               tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
+               write (*,*) "sphhar =     ", sphhar%nlh
+               write (*,*) "tmp_sphhar = ", tmp_sphhar%nlh
+               CALL mt_to_grid(xcpot, input%jspins, atoms, tmp_sphhar, vTot_tmp%mt(:,0:0,n,:), &
+                               n,            tmp_grad, vTot0_rs)
+               write (*,*) "allocated core_den ", allocated(xcpot%core_den%mt), lbound(xcpot%core_den%mt)
+               write (*,*) "allocated val_den  ", allocated(xcpot%val_den%mt), lbound(xcpot%val_den%mt)
+               CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
+                               xcpot%core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
+               CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
+                               xcpot%val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
+               CALL calc_kinEnergyDen_mt(ED_rs, vTot_rs, vTot0_rs, &
+                                      core_den_rs, val_den_rs, n, nsp, kinED_rs)
             ENDIF
 
             IF (ALLOCATED(exc%mt)) THEN

@@ -88,7 +88,7 @@ CONTAINS
 
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  vTot%pw, tmp_grad,    vTot_rs)
-         CALL calc_kinEnergyDen(ED_rs, vTot_rs, rho, kinED_rs, .True.)
+         CALL calc_kinEnergyDen_pw(ED_rs, vTot_rs, rho, kinED_rs)
       ENDIF
 
       !calculate the ex.-cor energy density

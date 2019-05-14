@@ -191,7 +191,7 @@ CONTAINS
     INTEGER, OPTIONAL, INTENT(IN)  :: irank
     LOGICAL, OPTIONAL, INTENT(IN)  :: l_endXML
 
-    LOGICAL l_endXML_local
+    LOGICAL l_endXML_local, is_root
     LOGICAL :: l_mpi=.false.
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -213,19 +213,27 @@ CONTAINS
        END IF
     END IF
     IF (TRIM(message)=="") STOP ! simple stop if no end message is given
-    WRITE(0,*)
-    WRITE(0,*) "*****************************************"
-    WRITE(0,*) "Run finished successfully"
-    WRITE(0,*) "Stop message:"
-    WRITE(0,*) "  ",message
-    WRITE(0,*) "*****************************************"
+    
+    if(present(irank)) then
+       is_root = irank == 0
+    else
+       is_root = .True.
+    endif
+
+    IF(is_root) THEN
+       WRITE(0,*)
+       WRITE(0,*) "*****************************************"
+       WRITE(0,*) "Run finished successfully"
+       WRITE(0,*) "Stop message:"
+       WRITE(0,*) "  ",message
+       WRITE(0,*) "*****************************************"
+    ENDIF
     CALL writetimes()
     CALL print_memory_info(0,.true.)
     CALL send_usage_data()
 #ifdef CPP_MPI
     IF (l_mpi) THEN
        IF(PRESENT(irank)) THEN
-          WRITE (*,*) "Going into post send barrier"
           CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
           CALL MPI_FINALIZE(ierr)
        ELSE
