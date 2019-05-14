@@ -16,181 +16,150 @@ MODULE m_onsite
 !------------------------------------------------------------------------------
 
 USE m_juDFT
+USE m_types
+USE m_constants
 
 CONTAINS
 
-SUBROUTINE onsite_coeffs(atoms,sym,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs,l_sphavg)
+SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
 
    !This Subroutine calculates the contribution to the imaginary part of the Matrix elements G^[n \sigma]_{Lm Lm'}(E+i*sigma)
    !of the current k-Point (it is called in cdnval) inside the MT-sphere 
    !and sums over the Brillouin-Zone using the histogram method or linear tetrahedron method
-
-   !It is essentially the f-density of states in a (m,mp) matrix with an additional factor - pi
-
-   USE m_types
-   USE m_constants
+   !It is essentially the l-density of states in a (m,mp) matrix with an additional factor - pi
 
    IMPLICIT NONE
 
-   TYPE(t_atoms),          INTENT(IN)     :: atoms
-   TYPE(t_sym),            INTENT(IN)     :: sym
-   TYPE(t_eigVecCoeffs),   INTENT(IN)     :: eigVecCoeffs
-   TYPE(t_usdus),          INTENT(IN)     :: usdus
-   TYPE(t_greensfCoeffs),  INTENT(INOUT)  :: greensfCoeffs
+   !-Type Arguments
+   TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
+   TYPE(t_usdus),         INTENT(IN)    :: usdus
+   TYPE(t_greensfCoeffs), INTENT(INOUT) :: greensfCoeffs
+   TYPE(t_input),         INTENT(IN)    :: input 
 
-   INTEGER,                INTENT(IN)     :: ispin
-   INTEGER,                INTENT(IN)     :: jspins
-   INTEGER,                INTENT(IN)     :: noccbd
+   !-Scalar Arguments 
+   INTEGER,               INTENT(IN)    :: ispin  !Current spin index
+   INTEGER,               INTENT(IN)    :: nbands !Number of bands to be considered
+   REAL,                  INTENT(IN)    :: wtkpt  !Weight of the current k-point
 
-   REAL,                   INTENT(IN)     :: wtkpt
-   REAL,                   INTENT(IN)     :: tetweights(:,:)
-   INTEGER,                INTENT(IN)     :: ind(:,:)
-   REAL,                   INTENT(IN)     :: eig(noccbd)
+   !-Array Arguments
+   REAL,                  INTENT(IN)    :: tetweights(greensfCoeffs%ne,nbands) !Precalculated tetrahedron weights for the current k-point
+   INTEGER,               INTENT(IN)    :: ind(nbands,2)                       !Gives the range where the tetrahedron weights are non-zero
+   REAL,                  INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
 
-   LOGICAL,                INTENT(IN)     :: l_sphavg
-   
+   !-Local Scalars
    LOGICAL l_zero
-   INTEGER i_gf, i, j, n, nn, natom, l, m, mp, lm, lmp, jarr, ilo, ilop
-   REAL fac, wk,tmp, tol
+   INTEGER i_gf,ib,ie,j,nType,natom,l,m,mp,lm,lmp,ilo,ilop
+   REAL    fac,weight
 
-   COMPLEX n_tmp(3,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
-   wk = wtkpt/greensfCoeffs%del
-   tol = 1E-14
 
    !Loop through the gf elements to be calculated
    DO i_gf = 1, atoms%n_gf
-      l = atoms%onsiteGF(i_gf)%l
-      n = atoms%onsiteGF(i_gf)%atomType
 
-      !finding the right starting index
-      natom = SUM(atoms%neq(:n-1))
+      l     = atoms%onsiteGF(i_gf)%l
+      nType = atoms%onsiteGF(i_gf)%atomType
+      fac = 1.0  / atoms%neq(nType)
 
-      DO nn = 1, atoms%neq(n)
-         natom = natom +1
-         fac = 1.0  / atoms%neq(n)
+      !Loop through equivalent atoms
+      DO natom = SUM(atoms%neq(:nType-1)), SUM(atoms%neq(:nType))
+
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(natom,l,n,ispin,wk,noccbd,i_gf,fac,l_sphavg,tol,jspins) &
-         !$OMP SHARED(atoms,sym,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
-         !$OMP PRIVATE(j,m,mp,lm,lmp,ilo,ilop,l_zero,tmp) &
-         !$OMP PRIVATE(n_tmp)
+         !$OMP SHARED(natom,l,nType,ispin,wtkpt,nbands,i_gf,fac,input) &
+         !$OMP SHARED(atoms,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
+         !$OMP PRIVATE(ib,ie,j,m,mp,lm,lmp,ilo,ilop,l_zero,weight)
 
          !$OMP DO
-         DO i = 1, noccbd
-            IF(ANY(tetweights(:,i).LT.0.0)) THEN
-               WRITE(*,*) tetweights(ind(i,1):ind(i,2),i)
-               CALL juDFT_error("ERROR IN TETWEIGHTS: NEGATIVE WEIGHT",calledby="onsite_coeffs")
-            ENDIF
+         !Loop through bands
+         DO ib = 1, nbands
+
+            !Check wether there is a non-zero weight for the energy window
             l_zero = .true.
-            IF(greensfCoeffs%l_tetra) THEN
+            IF(input%tria) THEN
                !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
-               IF(ANY(tetweights(ind(i,1):ind(i,2),i).NE.0.0)) l_zero = .false.
+               IF(ANY(tetweights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
             ELSE
                !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
-               j = NINT((eig(i)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
-               IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) ) l_zero = .false.
+               j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
+               IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) )         l_zero = .false.
             END IF
 
             IF(l_zero) CYCLE
 
-            n_tmp(:,:,:) = cmplx(0.0,0.0)
-            !
-            ! contribution from states
-            !
-            DO m = -l, l
-               lm = l*(l+1)+m
-               DO mp = -l,l
-                  lmp = l*(l+1)+mp
-                  IF(l_sphavg) THEN
-                     !CHANGE: We drop the dependency of u/u_dot on spin and average over the two 
-                     n_tmp(1,m,mp) = n_tmp(1,m,mp) -  pi_const*&
-                                  REAL(conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) +&
-                                   conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin) *&
-                                   SUM(usdus%ddn(l,n,:)/jspins))
-                  ELSE
-                     n_tmp(1,m,mp) = n_tmp(1,m,mp) - pi_const * conjg(eigVecCoeffs%acof(i,lm,natom,ispin))*eigVecCoeffs%acof(i,lmp,natom,ispin)
-                     n_tmp(2,m,mp) = n_tmp(2,m,mp) - pi_const * conjg(eigVecCoeffs%bcof(i,lm,natom,ispin))*eigVecCoeffs%bcof(i,lmp,natom,ispin)
-                     n_tmp(3,m,mp) = n_tmp(3,m,mp) - pi_const * (conjg(eigVecCoeffs%acof(i,lm,natom,ispin))*eigVecCoeffs%bcof(i,lmp,natom,ispin)+&
-                                                                conjg(eigVecCoeffs%bcof(i,lm,natom,ispin))*eigVecCoeffs%acof(i,lmp,natom,ispin)) 
-                  END IF
+            !Choose the relevant energy points depending on the bz-integration method
+            DO ie = MERGE(ind(ib,1),j,input%tria), MERGE(ind(ib,2),j,input%tria)
+               !weight for the bz-integration including spin-degeneracy
+               weight = 2.0/input%jspins * fac * MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,input%tria)    
+               !
+               ! contribution from states
+               !    
+               DO m = -l, l
+                  lm = l*(l+1)+m
+                  DO mp = -l,l
+                     lmp = l*(l+1)+mp
+                        IF(input%onsite_sphavg) THEN
+                           !CHANGE: We drop the dependency of u/u_dot on spin and average over the two 
+                           greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
+                                                                     REAL(conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) +&
+                                                                          conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin) *&
+                                                                          SUM(usdus%ddn(l,nType,:)/input%jspins))
+                        ELSE
+                           greensfCoeffs%uu(ie,i_gf,m,mp,ispin) = greensfCoeffs%uu(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
+                                                                  conjg(eigVecCoeffs%acof(ib,lm,natom,ispin))*eigVecCoeffs%acof(ib,lmp,natom,ispin)
+                           greensfCoeffs%dd(ie,i_gf,m,mp,ispin) = greensfCoeffs%dd(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
+                                                                  conjg(eigVecCoeffs%bcof(ib,lm,natom,ispin))*eigVecCoeffs%bcof(ib,lmp,natom,ispin)
+                           greensfCoeffs%ud(ie,i_gf,m,mp,ispin) = greensfCoeffs%ud(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
+                                                                  conjg(eigVecCoeffs%acof(ib,lm,natom,ispin))*eigVecCoeffs%bcof(ib,lmp,natom,ispin)
+                           greensfCoeffs%du(ie,i_gf,m,mp,ispin) = greensfCoeffs%uu(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
+                                                                  conjg(eigVecCoeffs%bcof(ib,lm,natom,ispin))*eigVecCoeffs%acof(ib,lmp,natom,ispin)
+                        END IF
+                  ENDDO
                ENDDO
-            ENDDO
-            !
-            ! add local orbital contribution (not implemented for radial dependence yet and not tested for average)
-            !
-            IF(l_sphavg) THEN
-               DO ilo = 1, atoms%nlo(n)
-                  IF(atoms%llo(ilo,n).EQ.l) THEN
+               !
+               ! add local orbital contribution (not implemented for radial dependence yet and not tested for average)
+               !
+               DO ilo = 1, atoms%nlo(nType)
+                  IF(atoms%llo(ilo,nType).EQ.l) THEN
+                     !There is a local orbital here
+                     !We just add it to the projdos in the spherical average case (What to do in the radial dependence case??)
                      DO m = -l, l
                         lm = l*(l+1)+m
                         DO mp = -l, l
                            lmp = l*(l+1)+mp
+                           IF(input%onsite_sphavg) THEN
+                              greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) &
+                                                                        - pi_const *(  usdus%uulon(ilo,nType,ispin) * (&
+                                                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%ccof(m,ib,ilo,natom,ispin) +&
+                                                                        conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) )&
+                                                                        + usdus%dulon(ilo,nType,ispin) * (&
+                                                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%ccof(m,ib,ilo,natom,ispin) +&
+                                                                        conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)))
 
-                           n_tmp(1,m,mp) = n_tmp(1,m,mp) - pi_const *(  usdus%uulon(ilo,n,ispin) * (&
-                                    conjg(eigVecCoeffs%acof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%acof(i,lm,natom,ispin) )&
-                                    + usdus%dulon(ilo,n,ispin) * (&
-                                    conjg(eigVecCoeffs%bcof(i,lmp,natom,ispin))*eigVecCoeffs%ccof(m,i,ilo,natom,ispin) +&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,ispin))*eigVecCoeffs%bcof(i,lm,natom,ispin)))
+                              DO ilop = 1, atoms%nlo(nType)
+                                 IF (atoms%llo(ilop,nType).EQ.l) THEN
 
-                           DO ilop = 1, atoms%nlo(n)
-                              IF (atoms%llo(ilop,n).EQ.l) THEN
+                                    greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) &
+                                                                              - pi_const * usdus%uloulopn(ilo,ilop,nType,ispin) *&
+                                                                              conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
 
-                               n_tmp(1,m,mp) = n_tmp(1,m,mp) - pi_const * usdus%uloulopn(ilo,ilop,n,ispin) *&
-                                    conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,i,ilo,natom,ispin)
-
-                              ENDIF
-                           ENDDO
-
+                                 ENDIF
+                              ENDDO
+                           ENDIF
                         ENDDO
                      ENDDO
                   ENDIF
-               ENDDO
-               DO m = -l,l
-                  DO mp = -l,l
-                     IF(greensfCoeffs%l_tetra) THEN
-                        !We need to differentiate the weights with respect to energy (can maybe be done analytically)
-                        DO j = ind(i,1), ind(i,2) 
-                           greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n_tmp(1,m,mp)) * fac * tetweights(j,i)
-                        ENDDO
-                     ELSE    
-                        greensfCoeffs%im_g(j,i_gf,m,mp,ispin) = greensfCoeffs%im_g(j,i_gf,m,mp,ispin) + conjg(n_tmp(1,m,mp)) * fac * wk
-                     END IF
-                  ENDDO
-               ENDDO
-               !ENDDO
-            ELSE
-               !
-               !MISSING: Local Orbitals with radial dependence
-               !
-               DO m = -l,l
-                  DO mp = -l,l
-                     IF(greensfCoeffs%l_tetra) THEN
-                        DO j = ind(i,1), ind(i,2)
-                           greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n_tmp(1,m,mp)) * fac * tetweights(j,i)      
-                           greensfCoeffs%dd(j,i_gf,m,mp,ispin) = greensfCoeffs%dd(j,i_gf,m,mp,ispin) + conjg(n_tmp(2,m,mp)) * fac * tetweights(j,i)
-                           greensfCoeffs%du(j,i_gf,m,mp,ispin) = greensfCoeffs%du(j,i_gf,m,mp,ispin) + conjg(n_tmp(3,m,mp)) * fac * tetweights(j,i)
-                        ENDDO
-                     ELSE
-                        greensfCoeffs%uu(j,i_gf,m,mp,ispin) = greensfCoeffs%uu(j,i_gf,m,mp,ispin) + conjg(n_tmp(1,m,mp)) * fac * wk
-                        greensfCoeffs%dd(j,i_gf,m,mp,ispin) = greensfCoeffs%dd(j,i_gf,m,mp,ispin) + conjg(n_tmp(2,m,mp)) * fac * wk
-                        greensfCoeffs%du(j,i_gf,m,mp,ispin) = greensfCoeffs%du(j,i_gf,m,mp,ispin) + conjg(n_tmp(3,m,mp)) * fac * wk
-                     END IF
-                  ENDDO
-               ENDDO
-            ENDIF       
-         ENDDO
+               ENDDO  
+            ENDDO !ie
+         ENDDO !ib
          !$OMP END DO
          !$OMP END PARALLEL
-      ENDDO
-   ENDDO
+      ENDDO !natom
+   ENDDO !i_gf
 
 END SUBROUTINE onsite_coeffs
 
 SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,l_sphavg,onsite_exc_split,hub1)
 
-   USE m_types
-   USE m_constants
    USE m_kkintgr
    USE m_radfun
    USE m_gfcalc
@@ -205,8 +174,8 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
    TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
    TYPE(t_sym),            INTENT(IN)     :: sym
    TYPE(t_hub1ham),        INTENT(INOUT)  :: hub1
-   INTEGER,                INTENT(IN)     :: jspins
 
+   INTEGER,                INTENT(IN)     :: jspins
    REAL,                   INTENT(IN)     :: ef
    REAL,                   INTENT(IN)     :: beta
    REAL,                   INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,jspins)
@@ -215,7 +184,7 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
    LOGICAL,                INTENT(IN)     :: l_sphavg
 
    TYPE(t_usdus) usdus
-   INTEGER i_gf,i,l,m,mp,jr,noded,nodeu,n,j,jspin,i_hia,it,is, isi,natom,n_op
+   INTEGER i_gf,i,l,m,mp,jr,noded,nodeu,n,j,jspin,i_hia,it,is,isi,natom,n_op
    INTEGER e_cut(2)
    REAL wronk,fac
    CHARACTER(len=30) :: filename
@@ -264,13 +233,9 @@ SUBROUTINE calc_onsite(atoms,enpara,vr,jspins,greensfCoeffs,gOnsite,sym,ef,beta,
                                           greensfCoeffs%dd(:,i_gf,m,mp,jspin) * (g(jr,1,l,jspin)*g(jr,1,l,jspin)+g(jr,2,l,jspin)*g(jr,2,l,jspin)) +&
                                           greensfCoeffs%du(:,i_gf,m,mp,jspin) * (f(jr,1,l,jspin)*g(jr,1,l,jspin)+f(jr,2,l,jspin)*g(jr,2,l,jspin))
                   ELSE
-                     im(1,:,m,mp,jspin) = greensfCoeffs%im_g(:,i_gf,m,mp,jspin)
+                     im(1,:,m,mp,jspin) = greensfCoeffs%projdos(:,i_gf,m,mp,jspin)
                   ENDIF
                ENDDO
-               !
-               !taking care of spin degeneracy in non-magnetic case
-               !
-               IF(jspins.EQ.1) im(:,:,m,mp,1) = 2.0 * im(:,:,m,mp,1)
             ENDDO
          ENDDO
       ENDDO
@@ -360,10 +325,7 @@ SUBROUTINE greensf_cutoff(im,atoms,nr,l,n,jspins,ne,del,e_bot,e_top,l_sphavg,ef,
    !This cutoff energy is defined so that the integral over the fDOS up to this cutoff 
    !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
 
-
-   USE m_types
    USE m_intgr
-   USE m_constants
    USE m_kkintgr
    
    IMPLICIT NONE

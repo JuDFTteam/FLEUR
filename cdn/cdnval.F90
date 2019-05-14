@@ -38,9 +38,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_pwden
    USE m_forcea8
    USE m_checkdopall
-   USE m_onsite     ! calculate the non-interacting on-site green's function
+   USE m_onsite     ! calculates the on-site green's function
    USE m_tetra_weights
-   USE m_onsite21
+   !USE m_onsite21
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
@@ -251,7 +251,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                CALL timestop("OnSite: TetWeights")
             ENDIF
             CALL timestart("On-Site: Setup")
-               CALL onsite_coeffs(atoms,sym,ispin,input%jspins,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs,input%onsite_sphavg)
+               CALL onsite_coeffs(atoms,input,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
             CALL timestop("On-Site: Setup")
          ENDIF
 
