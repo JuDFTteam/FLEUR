@@ -16,25 +16,29 @@ MODULE m_tetra_weights
 
    CONTAINS
 
-   SUBROUTINE tetra_weights(ikpt,kpts,neig,eig,g,weights,e_ind,ef)
+   SUBROUTINE tetra_weights(mpi,ikpt,kpts,neig,eig,g,weights,e_ind,ef)
 
       USE m_types
       USE m_constants
       USE m_differentiate
       USE m_juDFT
+
+      IMPLICIT NONE
+
       INTEGER,                INTENT(IN)     :: ikpt
       TYPE(t_kpts),           INTENT(IN)     :: kpts
       INTEGER,                INTENT(IN)     :: neig(:)
       REAL,                   INTENT(IN)     :: eig(:,:)
       TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
+      TYPE(t_mpi),            INTENT(IN)     :: mpi
 
       REAL,                   INTENT(OUT)    :: weights(:,:)
       INTEGER,                INTENT(OUT)    :: e_ind(:,:)
       REAL,                   INTENT(IN)     :: ef
 
       !Local Scalars
-      INTEGER icorn, itet, ib, j, k, l, nstart,corn_ind,max_ib,tmp
-      REAL    weight,dweight,tol
+      INTEGER itet, ie, ib,i, j,icorn, nstart,nend,max_ib,max_ib_tet,tmp
+      REAL    weight,dweight,tol,vol
       LOGICAL l_bloechl
 
       !Local Arrays
@@ -49,64 +53,75 @@ MODULE m_tetra_weights
       e_ind(:,2) = 0
       max_ib = 0
       weights = 0.0
-      !!$OMP PARALLEL DEFAULT(none) &
-      !!$OMP SHARED(ikpt,ef,l_bloechl,max_ib) &
-      !!$OMP SHARED(kpts,neig,eig,g,weights) &
-      !!$OMP PRIVATE(itet,icorn,ib,j,k,l,nstart,corn_ind,weight,dweight,tmp) &
-      !!$OMP PRIVATE(ind,e)
-
-      !!$OMP DO
       DO itet = 1, kpts%ntet
 
          IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE !search for the tetrahedra containing ikpt
          
-         IF(MINVAL(neig(kpts%ntetra(1:4,itet))).GT.max_ib) max_ib = MINVAL(neig(kpts%ntetra(1:4,itet)))
-         DO ib = 1, MINVAL(neig(kpts%ntetra(1:4,itet))) !Only go up to the band index which exists at all corners
+         max_ib_tet = MINVAL(neig(kpts%ntetra(1:4,itet))) 
+         IF(max_ib_tet.GT.max_ib) max_ib = max_ib_tet
+         !$OMP PARALLEL DEFAULT(none) &
+         !$OMP SHARED(ikpt,itet,ef,l_bloechl,max_ib_tet) &
+         !$OMP SHARED(kpts,eig,g,weights) &
+         !$OMP PRIVATE(ib,ie,i,j,nstart,nend,icorn,weight,dweight,tmp,vol) &
+         !$OMP PRIVATE(ind,e)
 
+         !$OMP DO
+         DO ib = 1, max_ib_tet!Only go up to the band index which exists at all 
+            
+            !check if the band is inside the energy window
             IF((MINVAL(eig(ib,kpts%ntetra(1:4,itet))).GT.g%e_top).OR.(MAXVAL(eig(ib,kpts%ntetra(1:4,itet))).LT.g%e_bot)) CYCLE !Maybe cancel the band loop completely if we go above top
 
             ind(1:4) = (/1,2,3,4/) !array for sorting the energies
-            e(:) = eig(ib,kpts%ntetra(1:4,itet)) 
+            e(1:4) = eig(ib,kpts%ntetra(1:4,itet)) 
 
-
-            DO l = 1, 3
-               DO k = l+1, 4
-                  IF (e(ind(l)).GT.e(ind(k))) THEN
-                     tmp = ind(l)
-                     ind(l) = ind(k)
-                     ind(k) = tmp
+            !Sort the energies in the tetrahedron in ascending order
+            DO i = 1, 3
+               DO j = i+1, 4
+                  IF (e(ind(i)).GT.e(ind(j))) THEN
+                     tmp = ind(i)
+                     ind(i) = ind(j)
+                     ind(j) = tmp
                   ENDIF
                ENDDO
             ENDDO
 
             !check for energy degeneracies 
-            DO l = 1, 3
-               DO k = l+1, 4
-                  IF(abs(e(ind(l))-e(ind(k))).LT.1.0E-9) THEN
-                     e(ind(l)) = e(ind(l)) - l*1.0E-9
-                     e(ind(k)) = e(ind(k)) + l*1.0E-9
+            DO i = 1, 3
+               DO j = i+1, 4
+                  IF(abs(e(ind(i))-e(ind(j))).LT.1.0E-9) THEN
+                     e(ind(i)) = e(ind(i)) - i*1.0E-9
+                     e(ind(j)) = e(ind(j)) + i*1.0E-9
                   ENDIF
                ENDDO
             ENDDO
 
             !search for the corner ikpt in the sorted array
-
-            DO l = 1, 4
-               IF(kpts%ntetra(ind(l),itet).EQ.ikpt) corn_ind = l
+            DO i = 1, 4
+               IF(kpts%ntetra(ind(i),itet).EQ.ikpt) icorn = i
             ENDDO
 
-
+            !Below this index the weight is 0
             nstart = INT((e(ind(1))-g%e_bot)/g%del)+1
+            vol = kpts%voltet(itet)/kpts%ntet
+            nend = g%ne
 
-            IF(l_bloechl) CALL bloechl_corrections(ef,kpts%voltet(itet)/kpts%ntet,e(ind(:)),dweight,corn_ind)
+            IF(l_bloechl) CALL bloechl_corrections(ef,vol,e(ind(:)),dweight,icorn)
             DO ie = MAX(1,nstart), g%ne
-               CALL contrib_singletetra((ie-1)*g%del+g%e_bot,kpts%voltet(itet)/kpts%ntet,e(ind(:)),weight,corn_ind)
+               CALL contrib_singletetra((ie-1)*g%del+g%e_bot,vol,e(ind(:)),weight,icorn)
                weights(ie,ib) = weights(ie,ib) + weight
+               IF(weight.EQ.1/4.0*vol) THEN
+                  !here we are above all eigenergies at the corners 
+                  !of the tetrahedron and we can simplify the rest of the loop
+                  nend = ie
+                  EXIT
+               ENDIF
             ENDDO 
+            IF(nend.NE.g%ne) weights(nend+1:g%ne,ib) = weights(nend+1:g%ne,ib) + 1/4.0*vol
+
          ENDDO
+         !$OMP ENDDO
+         !$OMP END PARALLEL
       ENDDO
-      !!$OMP ENDDO
-      !!$OMP END PARALLEL
       !
       !Differentiate the weights with respect to energy to get the correct weights for a DOS-calculation
       !
@@ -147,6 +162,10 @@ MODULE m_tetra_weights
                ENDIF
             ENDIF
          ENDDO
+         IF(ANY(dos_weights(:).LT.0)) THEN 
+            WRITE(*,*) weights(e_ind(ib,1):e_ind(ib,2),ib)
+            CALL juDFT_error("Negative tetra weight",calledby="tetra_weights")
+         ENDIF
          weights(:,ib) = dos_weights(:)
       ENDDO
    END SUBROUTINE tetra_weights
