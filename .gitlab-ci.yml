@@ -13,7 +13,6 @@ build-gfortran-hdf5:
        - build
   script:
     - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make -j 4
-  allow_failure: true
 #  only:
 #    - schedules
 #    - triggers
@@ -27,7 +26,6 @@ test-gfortran-hdf5:
        - build
   script:
     - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";export OMP_NUM_THREADS=4;cd /builds/fleur/fleur/build;ctest
-  allow_failure: true
   artifacts:
     when: on_failure
     paths:
@@ -54,10 +52,10 @@ pages:
   artifacts:
     paths:
       - public
-#  only:
-#    - schedules
-#    - triggers
-#    - web
+  only:
+    - schedules
+    - triggers
+    - web
   
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
