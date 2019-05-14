@@ -175,7 +175,6 @@ CONTAINS
 
          IF(present(EnergyDen)) then
             DO  j = 1,nm
-               rhoc(j) = rhoss(j)/input%jspins
                EnergyDen(j,0,jatom,jspin) = EnergyDen(j,0,jatom,jspin) &
                                             + rhoss_aux(j) /(input%jspins * sfp_const)
             ENDDO
