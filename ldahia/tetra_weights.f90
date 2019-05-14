@@ -16,7 +16,7 @@ MODULE m_tetra_weights
 
    CONTAINS
 
-   SUBROUTINE tetra_weights(mpi,ikpt,kpts,neig,eig,g,weights,e_ind,ef)
+   SUBROUTINE tetra_weights(ikpt,kpts,neig,eig,g,weights,e_ind,ef)
 
       USE m_types
       USE m_constants
@@ -30,7 +30,6 @@ MODULE m_tetra_weights
       INTEGER,                INTENT(IN)     :: neig(:)
       REAL,                   INTENT(IN)     :: eig(:,:)
       TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
-      TYPE(t_mpi),            INTENT(IN)     :: mpi
 
       REAL,                   INTENT(OUT)    :: weights(:,:)
       INTEGER,                INTENT(OUT)    :: e_ind(:,:)
