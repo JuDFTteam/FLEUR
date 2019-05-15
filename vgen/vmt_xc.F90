@@ -161,7 +161,6 @@
                enddo
             enddo
 
-            write (*,*) "set cut_mask", allocated(cut_mask)
             IF(perform_MetaGGA) THEN
 
                CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &

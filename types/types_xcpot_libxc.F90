@@ -282,7 +282,7 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
-      REAL  :: cut_ratio = 0.0
+      REAL  :: cut_ratio = 0.1
       INTEGER :: cut_idx
 
       ! tau = 0.5 * sum[|grad phi_i(r)|²]
@@ -304,7 +304,6 @@ CONTAINS
             exc=exc+excc
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
-         write (*,*) "cut_ration Mgga = ", cut_ratio
          IF(PRESENT(kinEnergyDen_KS)) THEN 
             cut_idx = NINT(size(rh,1) * cut_ratio)
             ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
@@ -329,7 +328,6 @@ CONTAINS
                                                   TRANSPOSE(rh(:cut_idx,:)), &
                                                   grad%sigma(:,:cut_idx), &
                                                   exc(:cut_idx))
-            write (*,*) "max(exc)", maxval(abs(exc(:cut_idx))), maxval(abs(exc(cut_idx+1:)))
 
             IF (xcpot%func_exc_id_c>0) THEN
                !CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
