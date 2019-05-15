@@ -227,7 +227,7 @@ CONTAINS
         jobs%mpi_comm=MPI_UNDEFINED
         CALL MPI_COMM_SPLIT(MPI_COMM_WORLD,i,irank,new_comm,ierr)
         IF (i.LE.size(jobs)) THEN
-            PRINT* ,"PE:",irank," works on job ",i," in ",jobs(i)%directory
+            if(size(jobs) > 1) PRINT* ,"PE:",irank," works on job ",i," in ",jobs(i)%directory
             jobs(i)%mpi_comm=new_comm
         ENDIF
 
