@@ -95,6 +95,7 @@ CONTAINS
          WRITE (6,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
          DO  j = 1,atoms%jri(jatom)
             rhoss(j)     = 0.0
+            if(present(EnergyDen)) rhoss_aux(j) = 0.0
             vrd(j) = vr(j,jatom)
          ENDDO
          !
@@ -111,6 +112,7 @@ CONTAINS
          IF ( atoms%jri(jatom) < ncmsh) THEN
             DO  i = atoms%jri(jatom) + 1,ncmsh
                rhoss(i) = 0.
+               if(present(EnergyDen)) rhoss_aux(i) = 0.0
                IF (input%l_core_confpot) THEN
                   rr = d*rr
                   vrd(i) = rr*( t2 + rr*t1 )
@@ -155,7 +157,7 @@ CONTAINS
                ENDDO
 
                IF(present(EnergyDen)) THEN
-                  rhoss_aux = rhoss
+                  !rhoss_aux = rhoss
                   DO j = 1,ncmsh
                      ! for energy density we want to multiply the weights
                      ! with the eigenenergies
