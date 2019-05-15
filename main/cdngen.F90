@@ -180,8 +180,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    END IF
 
    CALL timestart("cdngen: cdncore")
-   CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
-                stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
+   if(xcpot%exc_is_MetaGGA()) then
+      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
+   else
+      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results)
+   endif
    call xcpot%core_den%subPotDen(outDen, xcpot%val_den)
    CALL timestop("cdngen: cdncore")
 
