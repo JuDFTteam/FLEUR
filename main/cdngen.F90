@@ -101,10 +101,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
-   do dim_idx = 1,3
-      CALL xcpot%comparison_kinED_pw(dim_idx)%init(stars,atoms,sphhar,vacuum,&
-                                             noco,input%jspins, POTDEN_TYPE_DEN)
-   enddo
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
 
    IF (mpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
@@ -120,16 +116,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
-      do dim_idx =1,3
-         fake_regCharges = regCharges
-         fake_dos        = dos
-         fake_results    = results
-         fake_moments    = moments
-         CALL calc_kinED_pw(dim_idx,eig_id,mpi,kpts,jspin,noco,input,banddos,cell,&
-                            atoms,enpara,stars,vacuum,dimension,sphhar,sym,vTot,oneD,&
-                            cdnvalJob,xcpot%comparison_kinED_pw(dim_idx),fake_regCharges,&
-                            fake_dos,fake_results,fake_moments)
-      enddo
    END DO
    call xcpot%val_den%copyPotDen(outDen)
 
@@ -137,7 +123,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    if(xcpot%exc_is_metagga()) then
       CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars,&
                              vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
-      call save_kinED(xcpot, input, noco, stars, cell, sym)
    endif
 
    IF (mpi%irank == 0) THEN
@@ -231,40 +216,5 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #endif
 
 END SUBROUTINE cdngen
-
-subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
-   use m_types
-   use m_pw_tofrom_grid
-   use m_judft_stop
-   implicit none
-
-   CLASS(t_xcpot),INTENT(IN)   :: xcpot
-   type(t_input), intent(in)   :: input
-   type(t_noco), intent(in)    :: noco
-   type(t_stars), intent(in)   :: stars
-   type(t_cell), intent(in)    :: cell
-   TYPE(t_sym),INTENT(IN)      :: sym
-
-   integer                     :: dim_idx
-   real, allocatable           :: tmp(:,:), kinED(:,:)
-   type(t_gradients)           :: grad
-   character(len=1000)         :: filename
-
-   call init_pw_grid(xcpot, stars, sym, cell)
-
-   do dim_idx = 1,3
-      call pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, &
-         xcpot%comparison_kinED_pw(dim_idx)%pw, grad, tmp)
-      if(.not. allocated(kinED)) then
-         allocate(kinED, mold=tmp)
-         kinED = 0.0
-      endif
-      kinEd = kinED + tmp
-   enddo
-
-   kinED = 0.5 * kinED
-   
-   call finish_pw_grid()
-end subroutine save_kinED
 
 END MODULE m_cdngen
