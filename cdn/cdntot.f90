@@ -4,61 +4,6 @@ MODULE m_cdntot
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
-   SUBROUTINE integrate_grid(xcpot, stars, atoms, sym, vacuum, input, cell, oneD, sphhar,noco,&
-                             is_inte, mt_inte, &
-                             q, qis, qmt, qvac, qtot, qistot)
-      USE m_pw_tofrom_grid
-      USE m_mt_tofrom_grid
-      USE m_types
-      USE m_constants
-      !USE m_types_xcpot
-      IMPLICIT NONE
-      CLASS(t_xcpot),INTENT(IN) :: xcpot
-      TYPE(t_stars),INTENT(IN)  :: stars
-      TYPE(t_atoms),INTENT(IN)  :: atoms
-      TYPE(t_sym),INTENT(IN)    :: sym
-      TYPE(t_vacuum),INTENT(IN) :: vacuum
-      TYPE(t_input),INTENT(IN)  :: input
-      TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_oneD),INTENT(IN)   :: oneD
-      TYPE(t_sphhar), INTENT(IN):: sphhar
-      TYPE(t_noco), INTENT(INOUT)   :: noco
-      TYPE(t_grid), INTENT(in)  :: is_inte, mt_inte(:)
-      REAL, INTENT(out)  :: q(input%jspins), qis(input%jspins), qmt(atoms%ntype,input%jspins),&
-                            qvac(2,input%jspins), qtot, qistot
-
-      TYPE(t_potden)     :: integrand
-      
-      TYPE(t_grid)       :: is_inte_mut
-      INTEGER            :: n,i 
-      
-      call init_pw_grid(xcpot, stars, sym, cell)
-      call init_mt_grid(input%jspins, atoms, sphhar, xcpot, sym)
-
-      is_inte_mut = is_inte
-
-      !allocate potden type
-      call integrand%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
-      allocate(integrand%pw_w, mold=integrand%pw)
-
-      !put is in potden-basis
-      call pw_from_grid(xcpot, stars,.True., is_inte_mut%grid, integrand%pw, integrand%pw_w)
-
-      !put mt in potden-basis
-      do n = 1,atoms%ntype
-         call mt_from_grid(atoms,sphhar,n,input%jspins,mt_inte(n)%grid,integrand%mt(:,0:,n,:))
-         do i =1,atoms%jri(n)
-            integrand%mt(i,0:,n,:) = integrand%mt(i,0:,n,:) * atoms%rmsh(i,n)**2
-         enddo
-      enddo
-
-      ! integrate my integrand
-      call integrate_cdn(stars, atoms, sym, vacuum, input, cell, oneD, integrand,&
-                        q, qis, qmt, qvac, qtot, qistot)
-      call finish_pw_grid()
-      call finish_mt_grid()
-   END SUBROUTINE integrate_grid
-
    SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
                                    q, qis, qmt, qvac, qtot, qistot)
       USE m_intgr, ONLY : intgr3

@@ -99,7 +99,6 @@
             ALLOCATE(core_den_rs, mold=ch)
             ALLOCATE(val_den_rs, mold=ch)
             ALLOCATE(kinED_RS, mold=ch)
-            if(.not. allocated(xcpot%mt_kED_schr)) allocate(xcpot%mt_kED_schr(atoms%ntype))
          ENDIF
 
          CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
@@ -116,11 +115,8 @@
          n_start=1
          n_stride=1
 #endif
-         if(.not. allocated(xcpot%mt_lapl)) allocate(xcpot%mt_lapl(atoms%ntype))
          DO n = n_start,atoms%ntype,n_stride
             CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
-
-            if(allocated(grad%laplace)) xcpot%mt_lapl(n)%grid = grad%laplace
 
             !
             !         calculate the ex.-cor. potential
@@ -189,7 +185,6 @@
                
                IF(perform_MetaGGA) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad, kinED_rs)
-                  xcpot%mt_kED_schr(n)%grid = kinED_rs
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
                ENDIF
