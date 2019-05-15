@@ -189,20 +189,4 @@ CONTAINS
       res = matmul(transpose(cell%bmat), vec)
    end function internal_to_rez
 
-   function get_radial_line(den, line_idx, nsp) result(line)
-      implicit none
-      real, intent(in)         :: den(:, :)
-      integer, intent(in)      :: line_idx, nsp
-      real, allocatable        :: line(:, :)
-
-      integer                  :: num_elem
-      integer, allocatable     :: mask(:)
-
-      allocate(mask(size(den, dim=1)))
-      mask                          = 0
-      mask(line_idx:size(mask):nsp) = 1
-
-      num_elem = size(den(:, 1))/nsp
-      line = den(line_idx:size(den(:,1)):nsp,:)
-   end function
 END MODULE m_metagga
