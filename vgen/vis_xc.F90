@@ -57,7 +57,6 @@ CONTAINS
 
       !Put the charge on the grid, in GGA case also calculate gradients
       CALL pw_to_grid(xcpot,input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho)
-      if(allocated(grad%laplace)) xcpot%is_lapl%grid = grad%laplace
 
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
@@ -94,7 +93,6 @@ CONTAINS
 
          IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, kinED_rs)
-            xcpot%is_kED_schr%grid = kinED_rs
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad)
          ENDIF
