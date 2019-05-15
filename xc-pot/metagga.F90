@@ -43,17 +43,6 @@ CONTAINS
 #endif
    END SUBROUTINE calc_kinEnergyDen_mt
 
-   SUBROUTINE dump_array(array, filename)
-      implicit none
-      real, intent(in)             :: array(:,:)
-      character(len=*), intent(in) :: filename
-
-      open(69, file=filename)
-      write (69,'(ES17.10)') array
-      close(69)
-
-   END SUBROUTINE
-
 
    SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
          vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)

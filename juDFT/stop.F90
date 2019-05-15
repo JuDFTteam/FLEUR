@@ -215,7 +215,7 @@ CONTAINS
     IF (TRIM(message)=="") STOP ! simple stop if no end message is given
     
     if(present(irank)) then
-       is_root = irank == 0
+       is_root = (irank == 0)
     else
        is_root = .True.
     endif
@@ -241,7 +241,11 @@ CONTAINS
        END IF
     ENDIF
 #endif
-    STOP 'OK'
+    if(is_root) then
+       STOP 'OK'
+    else
+       STOP
+    endif
   END SUBROUTINE juDFT_END
 
   !this is a private subroutine that stops the calculations
