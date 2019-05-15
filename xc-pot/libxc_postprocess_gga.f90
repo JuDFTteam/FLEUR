@@ -9,7 +9,6 @@ CONTAINS
    SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num)
       USE m_mt_tofrom_grid
       USE m_types
-      USE m_npy
       use m_judft_string
 
       IMPLICIT NONE
@@ -38,26 +37,12 @@ CONTAINS
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
       CALL mt_to_grid(xcpot,n_sigma,atoms,sphhar,vsigma_mt,n,grad=grad_vsigma)
 
-      if(present(atom_num)) then
-         fname = "mt=" //int2str(atom_num) // "_lapl.npy"
-      else
-         fname = "mt_lapl.npy"
-      endif
-      call save_npy(fname, grad%laplace)
-
-      if(present(atom_num)) then
-         fname = "mt="// int2str(atom_num) // "_grad.npy"
-      else
-         fname = "mt_grad.npy"
-      endif
-      call save_npy(fname, grad%gr) 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_mt
 
    SUBROUTINE libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
       USE m_pw_tofrom_grid
       USE m_types
-      USE m_npy
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -80,10 +65,7 @@ CONTAINS
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
       CALL pw_to_grid(xcpot,n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma)
 
-      call save_npy("pw_lapl.npy", grad%laplace)
-      call save_npy("pw_grad.npy", grad%gr) 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
-
    END SUBROUTINE libxc_postprocess_gga_pw
 
    SUBROUTINE libxc_postprocess_gga(vsigma,grad,grad_vsigma,v_xc)

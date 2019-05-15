@@ -36,7 +36,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_banddos_io
    USE m_metagga
    USE m_unfold_band_kpts
-   use m_npy
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -119,7 +118,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
-      call save_npy("cdngen_weights.npy", cdnvalJob%weights)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
       do dim_idx =1,3
@@ -238,7 +236,6 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
    use m_types
    use m_pw_tofrom_grid
    use m_judft_stop
-   use m_npy
    implicit none
 
    CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -255,11 +252,6 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
 
    call init_pw_grid(xcpot, stars, sym, cell)
 
-   call save_npy("kED_pw_rezi_sum.npy", &
-      xcpot%comparison_kinED_pw(1)%pw &
-   +  xcpot%comparison_kinED_pw(2)%pw &
-   +  xcpot%comparison_kinED_pw(3)%pw )
-
    do dim_idx = 1,3
       call pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, cell, &
          xcpot%comparison_kinED_pw(dim_idx)%pw, grad, tmp)
@@ -268,22 +260,11 @@ subroutine save_kinED(xcpot, input, noco, stars, cell, sym)
          kinED = 0.0
       endif
       kinEd = kinED + tmp
-
-      write (filename, '( "kED_pw_comp_", I1, ".npy" )') dim_idx
-      call save_npy(filename, xcpot%comparison_kinED_pw(dim_idx)%pw)
-
-      write (filename, '( "kED_realspace_comp_", I1, ".npy" )') dim_idx
-      call save_npy(filename, tmp)
    enddo
 
    kinED = 0.5 * kinED
    
    call finish_pw_grid()
-
-   call save_npy("kin_ED_pwway.npy", kinED)
-   open(unit=69, file="kin_ED_pwway.dat")
-   write (69,'(ES17.10)') kinED
-   close(69)
 end subroutine save_kinED
 
 END MODULE m_cdngen

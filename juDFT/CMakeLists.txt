@@ -41,8 +41,6 @@ sysinfo.F90
 check_arguments.F90
 check_para.F90
 xmlOutput.F90
-npy.F90
-endian_swap.f90
 )
 if (JUDFT_USE_MPI) 
   target_compile_definitions(juDFT PUBLIC CPP_MPI)

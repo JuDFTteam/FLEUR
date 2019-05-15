@@ -262,7 +262,6 @@ CONTAINS
 
 
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen_KS)
-      use m_npy
       use m_constants
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
@@ -308,12 +307,6 @@ CONTAINS
             cut_idx = NINT(size(rh,1) * cut_ratio)
             ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
             kinEnergyDen_libXC = transpose(kinEnergyDen_KS + 0.25 * grad%laplace)
-            
-            write (filename, '("kED_libxc_", I0.6, ".npy")') size(kinEnergyDen_libxc, dim=2)
-            call save_npy(filename, transpose(kinEnergyDen_libxc))
-
-            write (filename, '("sigma_", I0.6, ".npy")') size(grad%sigma, dim=2)
-            call save_npy(filename, grad%sigma)
 
             exc  = 0.0
             excc = 0.0

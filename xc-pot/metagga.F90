@@ -14,7 +14,6 @@ MODULE m_metagga
 CONTAINS
    SUBROUTINE calc_kinEnergyDen_pw(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS)
       USE m_juDFT_stop
-      use m_npy
       !use m_cdngen
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
@@ -23,12 +22,6 @@ CONTAINS
       REAL, PARAMETER                  :: eps = 1e-15
 
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
-
-      call save_npy("pw_EnergyDen_RS.npy", EnergyDen_RS)
-      call save_npy("pw_vTot_RS.npy", vTot_RS)
-      call save_npy("pw_den_RS.npy", den_RS)
-      call save_npy("pw_vTot_RSxdenRS.npy", vtot_RS*den_RS)
-      call save_npy("pw_kinED_pw_schroeway.npy",kinEnergyDen_RS) 
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
 #endif
@@ -38,7 +31,6 @@ CONTAINS
                                    atm_idx, nsp, kinEnergyDen_RS)
       USE m_juDFT_stop
       USE m_juDFT_string
-      use m_npy
       implicit none
       REAL, INTENT(in)                 :: EnergyDen_RS(:,:), vTot_rs(:,:), vTot0_rs(:,:), core_den_rs(:,:), val_den_rs(:,:)
       INTEGER, intent(in)              :: atm_idx, nsp
@@ -46,28 +38,6 @@ CONTAINS
 
 #ifdef CPP_LIBXC
       kinEnergyDen_RS = EnergyDen_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
-      call save_npy("mt=" // int2str(atm_idx) // "_EnergyDen_RS.npy", &
-         get_radial_line(EnergyDen_RS,1,nsp))
-      call save_npy("mt=" // int2str(atm_idx) // "_vTot_RS.npy", &
-         get_radial_line(vTot_RS,1,nsp))
-      call save_npy("mt=" // int2str(atm_idx) // "_vTot0_RS.npy", &
-         get_radial_line(vTot0_RS,1,nsp))
-      call save_npy("mt=" // int2str(atm_idx) // "_core_den_RS.npy", &
-         get_radial_line(core_den_RS,1,nsp))
-      call save_npy("mt=" // int2str(atm_idx) // "_val_den_RS.npy", &
-         get_radial_line(val_den_RS,1,nsp))
-
-      call save_npy("mt=" // int2str(atm_idx) // "_vTot0_RSxcore_denRS.npy", &
-         get_radial_line(vtot0_RS*core_den_RS,1,nsp))
-      call save_npy("mt=" // int2str(atm_idx) // "_vTot_RSxval_denRS.npy", &
-         get_radial_line(vtot_RS*val_den_RS,1,nsp))
-
-      call save_npy("mt=" // int2str(atm_idx) // "_kinED_schroeway.npy", &
-         get_radial_line(kinEnergyDen_RS,1,nsp)) 
-      call save_npy("mt=" // int2str(atm_idx) // "_val_den_RS.npy", &
-         get_radial_line(val_den_RS,1,nsp))
-      call save_npy("mt=" // int2str(atm_idx) // "_core_den_RS.npy", &
-         get_radial_line(core_den_RS,1,nsp))
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
 #endif
@@ -407,7 +377,6 @@ CONTAINS
    end function internal_to_rez
 
    function get_radial_line(den, line_idx, nsp) result(line)
-      use m_npy
       implicit none
       real, intent(in)         :: den(:, :)
       integer, intent(in)      :: line_idx, nsp
@@ -419,7 +388,6 @@ CONTAINS
       allocate(mask(size(den, dim=1)))
       mask                          = 0
       mask(line_idx:size(mask):nsp) = 1
-      call save_npy("line_mask.npy", mask)
 
       num_elem = size(den(:, 1))/nsp
       line = den(line_idx:size(den(:,1)):nsp,:)

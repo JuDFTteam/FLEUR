@@ -25,8 +25,6 @@
    CONTAINS
       SUBROUTINE vmt_xc(DIMENSION,mpi,sphhar,atoms,&
                         den,xcpot,input,sym, obsolete,EnergyDen,vTot,vx,exc)
-      use m_npy
-
 #include"cpp_double.h"
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
@@ -118,8 +116,6 @@
          n_start=1
          n_stride=1
 #endif
-         call save_npy("rmsh.npy", atoms%rmsh)
-
          if(.not. allocated(xcpot%mt_lapl)) allocate(xcpot%mt_lapl(atoms%ntype))
          DO n = n_start,atoms%ntype,n_stride
             CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
@@ -212,8 +208,6 @@
                      nt=nt+nsp
                   END DO
                ENDIF
-               call save_npy("mt=" // int2str(n) // "_exc.npy", &
-                             get_radial_line(e_xc,1,nsp) )
                CALL mt_from_grid(atoms,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
          ENDDO

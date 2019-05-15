@@ -35,7 +35,6 @@ CONTAINS
       USE m_types_xcpot_libxc
       USE m_libxc_postprocess_gga
       USE m_metagga
-      USE m_npy
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(INOUT)     :: xcpot
@@ -84,8 +83,6 @@ CONTAINS
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  EnergyDen%pw, tmp_grad,    ED_rs)
 
-         call save_npy("EnergyDen_rezi.npy", EnergyDen%pw)
-
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  vTot%pw, tmp_grad,    vTot_rs)
          CALL calc_kinEnergyDen_pw(ED_rs, vTot_rs, rho, kinED_rs)
@@ -98,7 +95,6 @@ CONTAINS
          IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, kinED_rs)
             xcpot%is_kED_schr%grid = kinED_rs
-            call save_npy("exc_pw.npy", e_xc(:,1))
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad)
          ENDIF
