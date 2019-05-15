@@ -58,8 +58,6 @@
          INTEGER               :: n,nsp,nt,jr
          INTEGER               :: i, j, idx, cnt
          REAL                  :: divi
-         REAL, PARAMETER       :: cut_ratio = 0.9
-         LOGICAL, allocatable  :: cut_mask(:)
 
          !     ..
 
@@ -142,16 +140,6 @@
 
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
-
-            ! use updated vTot for exc calculation
-            cut_mask = [(.False., i=1,size(atoms%rmsh,dim=1)*nsp)]
-            idx  = 1
-            do i = 1, floor(size(atoms%rmsh, dim=1)*cut_ratio)
-               do j = 1,nsp
-                  cut_mask(idx) = .True.
-                  idx = idx +1
-               enddo
-            enddo
 
             IF(perform_MetaGGA) THEN
 
