@@ -177,12 +177,8 @@
                                n,            tmp_grad, vTot_rs)
                tmp_sphhar%nlhd = sphhar%nlhd
                tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
-               write (*,*) "sphhar =     ", sphhar%nlh
-               write (*,*) "tmp_sphhar = ", tmp_sphhar%nlh
                CALL mt_to_grid(xcpot, input%jspins, atoms, tmp_sphhar, vTot_tmp%mt(:,0:0,n,:), &
                                n,            tmp_grad, vTot0_rs)
-               write (*,*) "allocated core_den ", allocated(xcpot%core_den%mt), lbound(xcpot%core_den%mt)
-               write (*,*) "allocated val_den  ", allocated(xcpot%val_den%mt), lbound(xcpot%val_den%mt)
                CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
                                xcpot%core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
                CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
