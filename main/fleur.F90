@@ -57,6 +57,7 @@ CONTAINS
     USE m_juDFT_time
     USE m_calc_hybrid
     USE m_rdmft
+    USE m_io_hybrid
     USE m_wann_optional
     USE m_wannier
     USE m_bs_comfort
@@ -214,6 +215,10 @@ CONTAINS
              iter = 0
           END IF
        ENDIF
+       !RDMFT
+       IF(input%l_rdmft) THEN
+          CALL open_hybrid_io1(DIMENSION,sym%invs)
+       END IF
 
        CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
 
@@ -349,7 +354,7 @@ CONTAINS
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
                    CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
-                              sphhar,sym,field,vTot,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
+                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
              END SELECT
           END IF
 
