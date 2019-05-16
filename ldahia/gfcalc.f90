@@ -13,6 +13,7 @@ MODULE m_gfcalc
    !>       -calculates the effective exchange interaction from the onsite
    !>          green's function according to Condens. Matter 26 (2014) 476003 EQ.1
    !>       -calculates the occupation matrix 
+   !>       -calculates the crystal-field-contrbution for the local hamiltonian
    !
    ! REVISION HISTORY:
    ! February 2019 - Initial Version
@@ -27,33 +28,36 @@ MODULE m_gfcalc
 
    CONTAINS
 
-   SUBROUTINE eff_excinteraction(g0,atoms,input,j0,ef,onsite_exc_split)
+   SUBROUTINE eff_excinteraction(g0,atoms,input,ef,g0Coeffs)
 
       USE m_ExpSave
+      USE m_kkintgr
+
       TYPE(t_greensf),        INTENT(IN)  :: g0
       TYPE(t_atoms),          INTENT(IN)  :: atoms
-      REAL,                INTENT(OUT) :: j0
-      REAL,                INTENT(IN)  :: ef
+      TYPE(t_greensfCoeffs),  INTENT(IN)  :: g0Coeffs !For determining the onsite exchange splitting from the difference in the COM of the d-bands
+      REAL,                   INTENT(IN)  :: ef
       TYPE(t_input),          INTENT(IN)  :: input
-      REAL,                   INTENT(IN)  :: onsite_exc_split
 
       COMPLEX integrand
-      INTEGER i,iz,m,l,mp,ispin,n,i_gf,matsize,ipm
-      REAL beta
+      INTEGER i,iz,m,l,mp,ispin,n,i_gf,matsize,ipm,ie,n_cut
+      REAL beta,j0,exc_split
       LOGICAL l_matinv
       TYPE(t_mat) :: calcup,calcdwn
       TYPE(t_mat) :: delta
       TYPE(t_mat) :: calc
 
-      beta = input%onsite_beta *hartree_to_ev_const
-      l_matinv = .false. !Determines how the onsite exchange splitting is calculated
-      !WRITE(*,*) onsite_exc_split
+      REAL :: int_norm(g0Coeffs%ne,input%jspins), int_com(g0Coeffs%ne,input%jspins)
 
+      beta = input%onsite_beta*hartree_to_ev_const
+      l_matinv = .false. !Determines how the onsite exchange splitting is calculated
+      IF(ANY(atoms%onsiteGF(:)%l.EQ.2)) WRITE(6,9000)
       DO i_gf = 1, atoms%n_gf
          j0 = 0.0
          l = atoms%onsiteGF(i_gf)%l
          !We want to calculate j0 from the d-bands
          IF(l.NE.2) CYCLE
+
          n = atoms%onsiteGF(i_gf)%atomType
          matsize = 2*l+1
          CALL calcup%init(.false.,matsize,matsize)
@@ -61,11 +65,26 @@ MODULE m_gfcalc
          CALL delta%init(.false.,matsize,matsize)
          CALL calc%init(.false.,matsize,matsize)
          IF(.NOT.l_matinv) THEN
+            !Determine the difference in the center of mass of the bands
+            n_cut = g0Coeffs%kkintgr_cutoff(i_gf,2)
+            int_com = 0.0
+            int_norm = 0.0
+            DO ispin = 1, input%jspins
+               DO ie = 1, n_cut
+                  DO m = -l, l
+                     int_com(ie,ispin) = int_com(ie,ispin) + ((ie-1)*g0Coeffs%del+g0Coeffs%e_bot)*g0Coeffs%projdos(ie,i_gf,m,m,ispin)
+                     int_norm(ie,ispin) = int_norm(ie,ispin) + g0Coeffs%projdos(ie,i_gf,m,m,ispin)
+                  ENDDO
+               ENDDO
+            ENDDO
+
+            exc_split = trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,2),g0Coeffs%del,n_cut) -&
+                        trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,1),g0Coeffs%del,n_cut)
+
             DO i = 1, matsize
-               delta%data_c(i,i) = onsite_exc_split
+               delta%data_c(i,i) = exc_split
             ENDDO
          ENDIF
-         OPEN(unit=1337,file="j0",status="replace",action="write")
          DO iz = 1, g0%nz
             !
             !calculate the onsite exchange matrix if we use matrix inversion
@@ -84,7 +103,7 @@ MODULE m_gfcalc
                delta%data_c = 0.0
                DO ispin = 1, input%jspins
                   DO ipm = 1, 2
-                     CALL to_tmat(calc,g0%gmmpMat(1,iz,i_gf,:,:,ispin,ipm),1,1,l)
+                     CALL to_tmat(calc,g0%gmmpMat(iz,i_gf,:,:,ispin,ipm),1,1,l)
                      CALL calc%inverse()
                      delta%data_c = delta%data_c + 1/2.0 * (-1)**(ispin-1) * calc%data_c
                   ENDDO
@@ -96,8 +115,8 @@ MODULE m_gfcalc
             ! calculated for G^+/- and then substract to obtain imaginary part
             integrand = 0.0
             DO ipm = 1, 2
-               CALL to_tmat(calcup,g0%gmmpMat(1,iz,i_gf,:,:,1,ipm),1,1,l)
-               CALL to_tmat(calcdwn,g0%gmmpMat(1,iz,i_gf,:,:,2,ipm),1,1,l)
+               CALL to_tmat(calcup,g0%gmmpMat(iz,i_gf,:,:,1,ipm),1,1,l)
+               CALL to_tmat(calcdwn,g0%gmmpMat(iz,i_gf,:,:,2,ipm),1,1,l)
                
                calcup%data_c  = matmul(delta%data_c,calcup%data_c)
                calcdwn%data_c = matmul(delta%data_c,calcdwn%data_c)
@@ -109,21 +128,22 @@ MODULE m_gfcalc
                   integrand = integrand + (-1)**(ipm-1) * calc%data_c(i,i)
                ENDDO
             ENDDO
-            WRITE(1337,"(2f14.8)") REAL(g0%e(iz)), AIMAG(integrand/(1.0+exp_save(beta*(real(g0%e(iz))-ef))))
             j0 = j0 + AIMAG(integrand*(REAL(g0%de(iz)))/(1.0+exp_save(beta*(real(g0%e(iz))-ef))))
          ENDDO
-         CLOSE(1337)
          j0 = -1/(2.0*fpi_const)*hartree_to_ev_const * j0
-         WRITE(*,*)  "Eff. Exchange Interaction for atom", n, ": ", j0, "eV"
+         WRITE(6,9010) n,j0
+
 
          CALL calcup%free()
          CALL calcdwn%free()
          CALL calc%free()
          CALL delta%free()
       ENDDO
+9000  FORMAT("Effective Magnetic Exchange Interaction J0 (Compare Condens. Matter 26, 476003 (2014) EQ.1)")
+9010  FORMAT("J0 for atom ", I3, ": " f14.8 " eV")
    END SUBROUTINE eff_excinteraction
 
-   SUBROUTINE occmtx(g,i_gf,atoms,sym,jspins,beta,ef,mmpMat)
+   SUBROUTINE occmtx(g,i_gf,atoms,sym,input,beta,ef,mmpMat,enpara,vr)
 
 
       USE m_ExpSave
@@ -138,42 +158,51 @@ MODULE m_gfcalc
       TYPE(t_greensf),        INTENT(IN)  :: g
       TYPE(t_atoms),          INTENT(IN)  :: atoms
       TYPE(t_sym),            INTENT(IN)  :: sym
-      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
+      TYPE(t_input),          INTENT(IN)  :: input
+      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins)
       INTEGER,                INTENT(IN)  :: i_gf
       REAL,                   INTENT(IN)  :: beta
       REAL,                   INTENT(IN)  :: ef
-      INTEGER,                INTENT(IN)  :: jspins
+      TYPE(t_enpara), OPTIONAL, INTENT(IN) :: enpara
+      REAL, OPTIONAL,          INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,input%jspins)
 
-      INTEGER i, m,mp, l, ispin, n,ipm,iz
+      INTEGER i, m,mp, l, ispin, nType,ipm,iz
       LOGICAL l_vertcorr
-      COMPLEX :: g_int(g%nz)
+      COMPLEX g_int
+
+      IF(.NOT.input%onsite_sphavg.AND.(.NOT.PRESENT(enpara).OR..NOT.PRESENT(vr))) THEN
+         CALL juDFT_error("Cannot calculate radial dependence for green's function", calledby="occmtx")
+      ENDIF
 
       l_vertcorr = .false. !Enables/Disables a correction for the vertical parts of the rectangular contour
 
       mmpMat(:,:,:) = CMPLX(0.0,0.0)
       l = atoms%onsiteGF(i_gf)%l
-      n = atoms%onsiteGF(i_gf)%atomType 
+      nType = atoms%onsiteGF(i_gf)%atomType 
 
-      DO ispin = 1, jspins
+      DO ispin = 1, input%jspins
          DO m = -l, l
             DO mp = -l, l
                DO ipm = 1, 2
-                  !If necessary here the radial averaging is performed
-                  CALL int_sph(g%gmmpMat(:,:,i_gf,m,mp,ispin,ipm),atoms,n,g%nz,g%nr(i_gf),g_int)
-                  !APPROXIMATION FOR THE VERTICAL PARTS OF THE CONTOUR:
-                  IF(g%mode.EQ.1.AND.l_vertcorr) THEN
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * ImagUnit * REAL(g_int(1)) * AIMAG(g%e(1))
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) - (-1)**(ipm-1) * ImagUnit * REAL(g_int(g%nz-g%nmatsub)) * AIMAG(g%e(1))
-                  ENDIF
                   !Integrate over the contour:
                   DO iz = 1, g%nz-g%nmatsub
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * AIMAG(g_int(iz))*REAL(g%de(iz))/(1.0+exp_save(beta*real(g%e(iz)-ef)))
+                     !If necessary here the radial averaging is performed
+                     IF(input%onsite_sphavg) THEN
+                        g_int = g%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
+                     ELSE
+                        g_int = 0.0
+                     ENDIF
+                     IF((iz.EQ.1.OR.iz.EQ.g%nz-g%nmatsub).AND.(g%mode.EQ.1.AND.l_vertcorr)) THEN
+                        !APPROXIMATION FOR THE VERTICAL PARTS OF THE CONTOUR:
+                        mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * ImagUnit * REAL(g_int) * AIMAG(g%e(1))
+                     ENDIF
+                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * AIMAG(g_int)*REAL(g%de(iz))/(1.0+exp_save(beta*real(g%e(iz)-ef)))
                   ENDDO
                   !NOT WORKING: MATSUBARA FREQ
                   !iz = g%nz-g%nmatsub
                   !DO i = g%nmatsub, 1, -1
                   !   iz = iz + 1
-                  !   mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * g%gmmpMat(1,iz,i_gf,m,mp,ispin,ipm)*g%de(iz)
+                  !   mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * g%gmmpMat(iz,i_gf,m,mp,ispin,ipm)*g%de(iz)
                   !ENDDO
                ENDDO
                mmpMat(m,mp,ispin) = -1/(2.0 * pi_const) * mmpMat(m,mp,ispin)
@@ -212,85 +241,6 @@ MODULE m_gfcalc
       ENDDO
 
    END SUBROUTINE int_sph
-
-
-
-   SUBROUTINE ldosmtx(app,g,i_gf,atoms,sym,jspins)
-
-      !calculates the l-dos from the onsite green's function 
-      !If mode = 2 this may not make sense
-
-      USE m_intgr
-
-      CHARACTER(len=*),       INTENT(IN)  :: app
-      TYPE(t_greensf),        INTENT(IN)  :: g
-      TYPE(t_atoms),          INTENT(IN)  :: atoms 
-      TYPE(t_sym),            INTENT(IN)  :: sym 
-      INTEGER,                INTENT(IN)  :: i_gf
-      INTEGER,                INTENT(IN)  :: jspins
-      REAL :: dos(-lmaxU_const:lmaxU_const,g%nz,jspins)
-      REAL :: re(-lmaxU_const:lmaxU_const,g%nz,jspins)
-      INTEGER ispin,m,j,l,n,i,ipm
-      REAL    imag
-
-      dos = 0.0
-      re = 0.0
-
-     
-      !n(E) = 1/2pii * Tr(G^+-G^-)
-      l = atoms%onsiteGF(i_gf)%l
-      n = atoms%onsiteGF(i_gf)%atomType
-      DO ispin = 1, jspins
-         DO m = -l , l
-            DO ipm = 1, 2
-               DO j = 1, g%nz
-                  IF(g%nr(i_gf).EQ.1) THEN
-                     imag = AIMAG(g%gmmpMat(1,j,i_gf,m,m,ispin,ipm))
-                  ELSE
-                     CALL intgr3(AIMAG(g%gmmpMat(:,j,i_gf,m,m,ispin,ipm)),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),imag)
-                  END IF
-                  dos(m,j,ispin) = dos(m,j,ispin) - (-1)**(ipm-1)  * imag
-                  re(m,j,ispin) = re(m,j,ispin)  +  REAL(g%gmmpMat(1,j,i_gf,m,m,ispin,ipm))
-               ENDDO
-            ENDDO
-         ENDDO
-      ENDDO
-
-      OPEN(1337,file="lDOS_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
-
-      DO i = 1, g%nz
-         WRITE(1337,"(9f14.8)") REAL(g%e(i)), SUM(dos(-l:l,i,1)), (dos(m,i,1), m = -lmaxU_const, lmaxU_const)
-      ENDDO
-
-      CLOSE(unit = 1337)
-      IF(jspins.EQ.2) THEN
-         OPEN(1337,file="lDOS_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
-
-         DO i = 1, g%nz
-            WRITE(1337,"(9f14.8)") REAL(g%e(i)),SUM(dos(-l:l,i,2)), (dos(m,i,2), m = -lmaxU_const, lmaxU_const)
-         ENDDO
-
-         CLOSE(unit = 1337)
-      ENDIF
-
-      OPEN(1337,file="Re_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
-
-      DO i = 1, g%nz
-         WRITE(1337,"(9f15.8)") REAL(g%e(i)), SUM(re(-l:l,i,1)), (re(m,i,1), m = -lmaxU_const, lmaxU_const)
-      ENDDO
-
-      CLOSE(unit = 1337)
-      IF(jspins.EQ.2) THEN
-         OPEN(1337,file="Re_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
-
-         DO i = 1, g%nz
-            WRITE(1337,"(9f15.8)") REAL(g%e(i)),SUM(re(-l:l,i,2)), (re(m,i,2), m = -lmaxU_const, lmaxU_const)
-         ENDDO
-
-         CLOSE(unit = 1337)
-      ENDIF
-
-   END SUBROUTINE
 
    SUBROUTINE indexgf(atoms,l,n,ind)
 
@@ -383,62 +333,173 @@ MODULE m_gfcalc
    
    END SUBROUTINE to_g
 
-   SUBROUTINE local_sym(mat,atoms,sym,l,n)
+   SUBROUTINE crystal_field(atoms,input,greensfCoeffs,hub1,vu)
 
-      USE m_types
-      !Make sure that the elements that should be zero by symmetry are actually zero
-   
-      COMPLEX, INTENT(INOUT) :: mat(-l:l,-l:l)
-      TYPE(t_sym), INTENT(IN) :: sym 
-      TYPE(t_atoms),INTENT(IN) :: atoms
-      INTEGER, INTENT(IN) :: l
-      INTEGER, INTENT(IN) :: n
-   
-      INTEGER natom,it,is,isi,m,mp,n_op
-      COMPLEX mat_tmp(-l:l,-l:l)
-      COMPLEX mat_op(-l:l,-l:l),d_tmp(-l:l,-l:l)
-      COMPLEX sym_diag(-l:l)
-   
-      !Store the original matrix
-      mat_tmp(-l:l,-l:l) = mat(-l:l,-l:l)
-      mat = 0.0
-      n_op =0
-      !Is the loop over equivalent atoms necessary ??
-      DO natom = SUM(atoms%neq(:n-1)) + 1, SUM(atoms%neq(:n))
-         IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No local symmetries found for projected DOS",&
-                                       hint="This is a bug in FLEUR, please report",calledby="local_sym")
-         DO it = 1, sym%invarind(natom)
-            is = sym%invarop(natom,it)
-            isi = sym%invtab(is)
-            d_tmp(:,:) = cmplx(0.0,0.0)
-            DO m = -l,l
-               DO mp = -l,l
-                  d_tmp(m,mp) = sym%d_wgn(m,mp,l,isi)
+      !calculates the crystal-field matrix for the local hamiltonian
+      !In addition we calculate the onsite exchange splitting for the calculation of j0
+
+
+      USE m_kkintgr
+
+      IMPLICIT NONE
+
+      !-Type Arguments
+      TYPE(t_greensfCoeffs), INTENT(IN)    :: greensfCoeffs
+      TYPE(t_atoms),         INTENT(IN)    :: atoms
+      TYPE(t_input),         INTENT(IN)    :: input
+      TYPE(t_hub1ham),       INTENT(INOUT) :: hub1
+
+      !-Array Arguments
+      COMPLEX,               INTENT(IN)    :: vu(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins) !LDA+U potential (should be removed from h_loc)
+
+      !-Local Scalars
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia
+
+      !-Local Arrays
+      REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,input%jspins)
+      REAL :: integrand(greensfCoeffs%ne), norm(input%jspins),tr_hloc(atoms%n_gf,input%jspins)
+
+      h_loc = 0.0
+      tr_hloc = 0.0
+      DO i_gf = 1, atoms%n_gf
+         l     = atoms%onsiteGF(i_gf)%l
+         nType = atoms%onsiteGF(i_gf)%atomType
+         !Perform the integration 
+         !
+         ! \int_{E_b}^{E_c} dE E * N_LL'(E)
+         !
+         norm = 0.0
+         DO jspin = 1, input%jspins
+            DO m = -l, l
+               DO mp = -l, l
+                  integrand = 0.0
+                  DO ie = greensfCoeffs%kkintgr_cutoff(i_gf,1), greensfCoeffs%kkintgr_cutoff(i_gf,2)
+                     integrand(ie) = ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) * greensfCoeffs%projdos(ie,i_gf,m,mp,jspin)
+                  ENDDO
+                  h_loc(m,mp,i_gf,jspin) = trapz(integrand,greensfCoeffs%del,greensfCoeffs%ne)
                ENDDO
-            ENDDO
-            DO m = -l,l
-               sym_diag(m) = d_tmp(m,m)
-               d_tmp(m,m) = 0.0
-            ENDDO
-            !Exclude all symmetries that would prevent splitting of the levels
-            !IF(ANY(d_tmp(:,:).NE.0.0)) CYCLE
-            n_op = n_op + 1
-            DO m = -l,l
-               d_tmp(m,m) = sym_diag(m)
-            ENDDO
-            mat_op = matmul( transpose( conjg(d_tmp) ) , mat_tmp)
-            mat_op =  matmul( mat_op, d_tmp )
-            DO m = -l,l
-               DO mp = -l,l
-                  mat(m,mp) = mat(m,mp) + conjg(mat_op(m,mp))
-               ENDDO
+               !trace of the integrated E*projdos
+               tr_hloc(i_gf,jspin) = tr_hloc(i_gf,jspin) + h_loc(m,m,i_gf,jspin)
             ENDDO
          ENDDO
       ENDDO
-   
-      mat = mat * 1.0/(REAL(n_op))
-   
-   END SUBROUTINE local_sym
 
+      !Crystal-field contirbution
+      DO i_hia = 1, atoms%n_hia
+         l =      hub1%lda_u(i_hia)%l
+         nType =  hub1%lda_u(i_hia)%atomType 
+
+         CALL indexgf(atoms,l,nType,i_gf)
+         !Average over spins
+         hub1%ccfmat(i_hia,:,:) = 0.0
+         DO m = -l, l
+            DO mp = -l, l
+               hub1%ccfmat(i_hia,m,mp) = SUM(h_loc(m,mp,i_gf,:))/REAL(input%jspins) &
+                                       - SUM(vu(m,mp,i_hia,:))/REAL(input%jspins)
+            ENDDO
+            hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - SUM(tr_hloc(i_gf,:))/REAL(input%jspins*(2*l+1))
+         ENDDO
+      ENDDO
+
+
+   END SUBROUTINE crystal_field
+
+   FUNCTION onsite_radial(uu,dd,du,ud,u,udot,nr)
+
+      !Return the radial dependence of the onsite green's function for one specific matrix elements
+   
+      IMPLICIT NONE
+
+      COMPLEX,        INTENT(IN) :: uu,dd,du,ud 
+      INTEGER,        INTENT(IN) :: nr
+      REAL, OPTIONAL, INTENT(IN) :: u(nr,2),udot(nr,2)
+      COMPLEX :: onsite_radial(nr)
+
+      INTEGER jr 
+
+      onsite_radial = 0.0
+      DO jr = 1, nr
+         onsite_radial(jr) = uu * (u(jr,1)*u(jr,1)+u(jr,2)*u(jr,2)) + &
+                             dd * (udot(jr,1)*udot(jr,1)+udot(jr,2)*udot(jr,2))+&
+                             ud * (u(jr,1)*udot(jr,1)+u(jr,2)*udot(jr,2))+&
+                             du * (udot(jr,1)*u(jr,1)+udot(jr,2)*u(jr,2))
+      ENDDO
+   
+   END FUNCTION onsite_radial
+
+
+      !SUBROUTINE ldosmtx(app,g,i_gf,atoms,sym,jspins)
+!
+   !   !calculates the l-dos from the onsite green's function 
+   !   !If mode = 2 this may not make sense
+!
+   !   USE m_intgr
+!
+   !   CHARACTER(len=*),       INTENT(IN)  :: app
+   !   TYPE(t_greensf),        INTENT(IN)  :: g
+   !   TYPE(t_atoms),          INTENT(IN)  :: atoms 
+   !   TYPE(t_sym),            INTENT(IN)  :: sym 
+   !   INTEGER,                INTENT(IN)  :: i_gf
+   !   INTEGER,                INTENT(IN)  :: jspins
+   !   REAL :: dos(-lmaxU_const:lmaxU_const,g%nz,jspins)
+   !   REAL :: re(-lmaxU_const:lmaxU_const,g%nz,jspins)
+   !   INTEGER ispin,m,j,l,n,i,ipm
+   !   REAL    imag
+!
+   !   dos = 0.0
+   !   re = 0.0
+!
+   !  
+   !   !n(E) = 1/2pii * Tr(G^+-G^-)
+   !   l = atoms%onsiteGF(i_gf)%l
+   !   n = atoms%onsiteGF(i_gf)%atomType
+   !   DO ispin = 1, jspins
+   !      DO m = -l , l
+   !         DO ipm = 1, 2
+   !            DO j = 1, g%nz
+!
+   !               imag = AIMAG(g%gmmpMat(j,i_gf,m,m,ispin,ipm))
+   !               dos(m,j,ispin) = dos(m,j,ispin) - (-1)**(ipm-1)  * imag
+   !               re(m,j,ispin) = re(m,j,ispin)  +  REAL(g%gmmpMat(1,j,i_gf,m,m,ispin,ipm))
+   !            ENDDO
+   !         ENDDO
+   !      ENDDO
+   !   ENDDO
+!
+   !   OPEN(1337,file="lDOS_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+!
+   !   DO i = 1, g%nz
+   !      WRITE(1337,"(9f14.8)") REAL(g%e(i)), SUM(dos(-l:l,i,1)), (dos(m,i,1), m = -lmaxU_const, lmaxU_const)
+   !   ENDDO
+!
+   !   CLOSE(unit = 1337)
+   !   IF(jspins.EQ.2) THEN
+   !      OPEN(1337,file="lDOS_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+!
+   !      DO i = 1, g%nz
+   !         WRITE(1337,"(9f14.8)") REAL(g%e(i)),SUM(dos(-l:l,i,2)), (dos(m,i,2), m = -lmaxU_const, lmaxU_const)
+   !      ENDDO
+!
+   !      CLOSE(unit = 1337)
+   !   ENDIF
+!
+   !   OPEN(1337,file="Re_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+!
+   !   DO i = 1, g%nz
+   !      WRITE(1337,"(9f15.8)") REAL(g%e(i)), SUM(re(-l:l,i,1)), (re(m,i,1), m = -lmaxU_const, lmaxU_const)
+   !   ENDDO
+!
+   !   CLOSE(unit = 1337)
+   !   IF(jspins.EQ.2) THEN
+   !      OPEN(1337,file="Re_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+!
+   !      DO i = 1, g%nz
+   !         WRITE(1337,"(9f15.8)") REAL(g%e(i)),SUM(re(-l:l,i,2)), (re(m,i,2), m = -lmaxU_const, lmaxU_const)
+   !      ENDDO
+!
+   !      CLOSE(unit = 1337)
+   !   ENDIF
+!
+   !END SUBROUTINE
 
 END MODULE m_gfcalc

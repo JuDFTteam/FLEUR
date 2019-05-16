@@ -36,29 +36,19 @@ MODULE m_types_greensfCoeffs
          REAL     :: e_bot
          REAL     :: del
          REAL     :: sigma       !Smoothing parameter(not used at the moment)
-     
-         LOGICAL  :: l_tetra  !Determines wether to use the tetrahedron method for Brillouin-Zone integration
 
-         !Array declarations
-         REAL, ALLOCATABLE :: im_g(:,:,:,:,:)
+         INTEGER, ALLOCATABLE :: kkintgr_cutoff(:,:)
+
+         !Array declarations 
+         !If we look at the Green's function that only depends on Energy and not on spatial arguments
+         !the imaginary part is equal to the proected density of states
+         REAL, ALLOCATABLE :: projdos(:,:,:,:,:)
 
          ! These arrays are only used in the case we want the green's function with radial dependence
          REAL, ALLOCATABLE :: uu(:,:,:,:,:)
          REAL, ALLOCATABLE :: dd(:,:,:,:,:)
          REAL, ALLOCATABLE :: du(:,:,:,:,:)
          REAL, ALLOCATABLE :: ud(:,:,:,:,:)
-
-         !noco case
-         REAL, ALLOCATABLE :: uu21(:,:,:,:)
-         REAL, ALLOCATABLE :: dd21(:,:,:,:)
-         REAL, ALLOCATABLE :: du21(:,:,:,:)
-         COMPLEX, ALLOCATABLE :: im_g21(:,:,:,:)
-
-         !intersite case
-         REAL, ALLOCATABLE :: uu_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: dd_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: du_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: ud_int(:,:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init => greensfCoeffs_init
@@ -87,6 +77,7 @@ MODULE m_types_greensfCoeffs
          INTEGER i,j,l_dim
          REAL    tol
          LOGICAL l_new
+         INTEGER n_spins
 
          thisGREENSFCOEFFS%l_onsite = l_onsite
          thisGREENSFCOEFFS%l_intersite = l_intersite
@@ -110,9 +101,7 @@ MODULE m_types_greensfCoeffs
          ENDIF
          thisGREENSFCOEFFS%e_top    = 2.0
          thisGREENSFCOEFFS%e_bot    = -2.0
-
          thisGREENSFCOEFFS%sigma    = input%onsite_sigma
-         thisGREENSFCOEFFS%l_tetra  = input%tria
 
          !set up energy grid for imaginary part
          thisGREENSFCOEFFS%del      = (thisGREENSFCOEFFS%e_top-thisGREENSFCOEFFS%e_bot)/REAL(thisGREENSFCOEFFS%ne-1)
@@ -123,35 +112,21 @@ MODULE m_types_greensfCoeffs
             !
 
             IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
-
-               IF(input%onsite_sphavg) THEN
-                  ALLOCATE (thisGREENSFCOEFFS%im_g(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-                  thisGREENSFCOEFFS%im_g     = 0.0
-               ELSE
-                  ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-                  ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
-                  ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+               !Do we need the off-diagonal elements
+               ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,2))
+               n_spins = MERGE(4,input%jspins,noco%l_mperp)
+               ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
+               thisGREENSFCOEFFS%projdos     = 0.0
+               IF(.NOT.input%onsite_sphavg) THEN
+                  ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
+                  ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
+                  ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
+                  ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
                   
                   thisGREENSFCOEFFS%uu      = 0.0
                   thisGREENSFCOEFFS%dd      = 0.0
                   thisGREENSFCOEFFS%du      = 0.0  
-               ENDIF
-
-               !Allocate arrays for non-colinear part
-               IF(noco%l_mperp) THEN
-                  IF(.NOT.input%onsite_sphavg) THEN 
-                     ALLOCATE (thisGREENSFCOEFFS%uu21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-                     ALLOCATE (thisGREENSFCOEFFS%dd21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-                     ALLOCATE (thisGREENSFCOEFFS%du21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-                    
-                     thisGREENSFCOEFFS%uu21    = 0.0
-                     thisGREENSFCOEFFS%dd21    = 0.0
-                     thisGREENSFCOEFFS%du21    = 0.0
-                  ENDIF
-
-                  ALLOCATE (thisGREENSFCOEFFS%im_g21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),&
-                                                            -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-                  thisGREENSFCOEFFS%im_g21  = 0.0
+                  thisGREENSFCOEFFS%ud      = 0.0  
                ENDIF
             ENDIF
          END IF
@@ -162,15 +137,7 @@ MODULE m_types_greensfCoeffs
             !
 
             l_dim = lmax**2 + lmax
-            ALLOCATE (thisGREENSFCOEFFS%uu_int(thisGREENSFCOEFFS%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
-            ALLOCATE (thisGREENSFCOEFFS%dd_int(thisGREENSFCOEFFS%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
-            ALLOCATE (thisGREENSFCOEFFS%du_int(thisGREENSFCOEFFS%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
-            ALLOCATE (thisGREENSFCOEFFS%ud_int(thisGREENSFCOEFFS%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
-
-            thisGREENSFCOEFFS%uu_int      = 0.0
-            thisGREENSFCOEFFS%dd_int      = 0.0
-            thisGREENSFCOEFFS%du_int      = 0.0
-            thisGREENSFCOEFFS%ud_int      = 0.0
+            !How to incorporate smoothly into the arrays
 
          ENDIF 
 

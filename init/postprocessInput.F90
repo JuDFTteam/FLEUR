@@ -190,7 +190,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         END IF
      END DO
 
-     IF (hub1%n_hia.GT.0) THEN
+     IF (atoms%n_hia.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+Hubbard1 and sevcar not implemented",calledby ="postprocessInput")
         IF (noco%l_mperp) CALL juDFT_error("LDA+Hubbard1 and l_mperp not implemented",calledby ="postprocessInput")
      END IF

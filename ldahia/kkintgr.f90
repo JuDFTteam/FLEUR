@@ -223,12 +223,11 @@ MODULE m_kkintgr
    END SUBROUTINE lorentzian_smooth
 
    !General Purpose trapezian method integration (not used in kkintgr)
-   SUBROUTINE trapz(y,h,n,z)
+   REAL FUNCTION trapz(y,h,n)
 
       IMPLICIT NONE
    
       REAL,          INTENT(IN)     :: y(n)
-      REAL,          INTENT(OUT)    :: z
    
       INTEGER,       INTENT(IN)     :: n
       REAL,          INTENT(IN)     :: h
@@ -236,16 +235,16 @@ MODULE m_kkintgr
    
       INTEGER i
    
-      z = y(1)
+      trapz = y(1)
       DO i = 2, n-1
    
-         z = z + 2*y(i)
+         trapz = trapz + 2*y(i)
    
       ENDDO
-      z = z + y(n)
+      trapz = trapz + y(n)
    
-      z = z*h/2.0
+      trapz = trapz*h/2.0
    
-   END SUBROUTINE trapz
+   END FUNCTION trapz
 
 END MODULE m_kkintgr

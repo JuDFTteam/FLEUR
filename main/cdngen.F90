@@ -96,8 +96,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error,l_exist
-   REAL                  :: j0
-   REAL                  :: onsite_excsplit
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
@@ -107,7 +105,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
    CALL greensfCoeffs%init(input,3,atoms,kpts,noco,.true.,.false.)
-   IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma,0,gOnsite%nz-gOnsite%nmatsub,0,gOnsite%nmatsub,input%onsite_beta)
+   IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite).AND.mpi%irank.EQ.0) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma,0,gOnsite%nz-gOnsite%nmatsub,0,gOnsite%nmatsub,input%onsite_beta)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -124,15 +122,16 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 
-   IF(PRESENT(gOnsite)) THEN
+   IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       IF(atoms%n_gf.GT.0) THEN
-         !If there was an hubbard1 run there should be a density matrix file
-         CALL calc_onsite(atoms,enpara,vTot%mt(:,0,:,:),input%jspins,greensfCoeffs,gOnsite,&
-                           sym,results%ef,input%onsite_beta,input%onsite_sphavg,onsite_excsplit,hub1)
-         !TESTING THE CALCULATION OF THE EFFECTIVE EXCHANGE INTERACTION:
-         !CALL write_onsite_gf("greenf.dat",gOnsite,1)
+         !Perform the Kramer-Kronigs-Integration
+         CALL calc_onsite(atoms,input,greensfCoeffs,gOnsite,sym)
+         !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
+         IF(atoms%n_hia.GT.0.AND.ANY(hub1%l_ccf(:))) THEN
+            CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:))
+         ENDIF
          IF(input%jspins.EQ.2) THEN
-            CALL eff_excinteraction(gOnsite,atoms,input,j0,results%ef,onsite_excsplit)
+            CALL eff_excinteraction(gOnsite,atoms,input,results%ef,greensfCoeffs)
          ENDIF
       
       ENDIF

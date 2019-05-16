@@ -18,7 +18,7 @@ MODULE m_intersite
 
    CONTAINS
 
-   SUBROUTINE intersite_coeffs(kpt,atoms,sym,cell,ispin,jspins,noccbd,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
+   SUBROUTINE intersite_coeffs(kpt,atoms,sym,cell,input,ispin,noccbd,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
 
       USE m_constants
       USE m_sel_sites
@@ -31,9 +31,9 @@ MODULE m_intersite
       TYPE(t_eigVecCoeffs),   INTENT(IN)     :: eigVecCoeffs
       TYPE(t_usdus),          INTENT(IN)     :: usdus
       TYPE(t_greensfCoeffs),  INTENT(INOUT)  :: greensfCoeffs
+      TYPE(t_input),          INTENT(IN)     :: input
 
       INTEGER,                INTENT(IN)     :: ispin
-      INTEGER,                INTENT(IN)     :: jspins
       INTEGER,                INTENT(IN)     :: noccbd
 
       REAL,                   INTENT(IN)     :: kpt(3)
@@ -66,7 +66,7 @@ MODULE m_intersite
 
                DO i = 1, noccbd
                   l_zero = .true.
-                  IF(greensfCoeffs%l_tetra) THEN
+                  IF(input%tria) THEN
                      !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
                      IF(ANY(tetweights(ind(i,1):ind(i,2),i).NE.0.0)) l_zero = .false.
                   ELSE
@@ -84,7 +84,7 @@ MODULE m_intersite
                            lm = l*(l+1)+m
                            DO mp = -lp,lp
                               lmp = lp*(lp+1)+mp
-                              IF(greensfCoeffs%l_tetra) THEN
+                              IF(input%tria) THEN
                                  !We need to differentiate the weights with respect to energy (can maybe be done analytically)
                                  DO j = ind(i,1), ind(i,2)
                                     tmp = cil * phase * conjg(eigVecCoeffs%acof(i,lm,n,ispin))*eigVecCoeffs%acof(i,lmp,np,ispin)

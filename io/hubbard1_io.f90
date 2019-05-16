@@ -160,14 +160,14 @@ MODULE m_hubbard1_io
             WRITE(io_unit,9020) gOnsite%e(iz)
             WRITE(io_unit,"(A)") "Spin up"
             WRITE(io_unit,"(A)") "   Real part"
-            WRITE(io_unit,9010)  REAL(gOnsite%gmmpMat(1,iz,i_gf,:,:,1,ipm))
+            WRITE(io_unit,9010)  REAL(gOnsite%gmmpMat(iz,i_gf,:,:,1,ipm))
             WRITE(io_unit,"(A)") "   Imaginary part"
-            WRITE(io_unit,9010)  AIMAG(gOnsite%gmmpMat(1,iz,i_gf,:,:,1,ipm))
+            WRITE(io_unit,9010)  AIMAG(gOnsite%gmmpMat(iz,i_gf,:,:,1,ipm))
             WRITE(io_unit,"(A)") "Spin down"
             WRITE(io_unit,"(A)") "   Real part"
-            WRITE(io_unit,9010)  REAL(gOnsite%gmmpMat(1,iz,i_gf,:,:,2,ipm))
+            WRITE(io_unit,9010)  REAL(gOnsite%gmmpMat(iz,i_gf,:,:,2,ipm))
             WRITE(io_unit,"(A)") "   Imaginary part"
-            WRITE(io_unit,9010)  AIMAG(gOnsite%gmmpMat(1,iz,i_gf,:,:,2,ipm))
+            WRITE(io_unit,9010)  AIMAG(gOnsite%gmmpMat(iz,i_gf,:,:,2,ipm))
          ENDDO
          CLOSE(unit=io_unit)
       ENDDO

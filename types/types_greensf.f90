@@ -28,8 +28,6 @@ MODULE m_types_greensf
       TYPE t_greensf
 
          LOGICAL  :: l_onsite !This switch determines wether we look at a intersite or an onsite gf
-         INTEGER, ALLOCATABLE :: nr(:) !dimension(atoms%n_gf) number of radial points
-                                       !in case of spherical average nr(:) = 1
 
          !Energy contour parameters
          INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
@@ -41,9 +39,9 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE  :: de(:) !weights for integration
 
          !Arrays for Green's function
-         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:,:) 
+         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:) 
          !Off-diagonal elements for noco calculations
-         COMPLEX, ALLOCATABLE :: gmmpMat21(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: gmmpMat21(:,:,:,:,:)
          !Arrays for intersite Greens-functions argument order (E,n,n',L,L',spin) n is the site index
          !We store the radial function and the coefficients for those to obtain the imaginary part as the torage demands 
          !to store the whole green's function is too big
@@ -55,11 +53,12 @@ MODULE m_types_greensf
          REAL     :: del
          REAL     :: sigma       !Smoothing parameter(not used at the moment)
 
-         REAL, ALLOCATABLE :: uu_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: dd_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: du_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: ud_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: R(:,:,:,:,:,:)
+
+         !for radial dependence
+         COMPLEX, ALLOCATABLE :: uu(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: dd(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: du(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
 
          
 
@@ -97,7 +96,8 @@ MODULE m_types_greensf
 
          thisGREENSF%l_onsite = l_onsite
 
-         IF(.NOT.l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + intersite gf not implented",calledby="greensf_init")
+         IF(.NOT.l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + intersite gf not implemented",calledby="greensf_init")
+         IF(l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + onsite gf not implemented",calledby="greensf_init")
 
          !
          !Set up general parameters for the Green's function (intersite and onsite)
@@ -136,23 +136,26 @@ MODULE m_types_greensf
 
          IF(thisGREENSF%l_onsite) THEN
             IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
-               !Set number of radial points
-               ALLOCATE(thisGREENSF%nr(MAX(1,atoms%n_gf)))
 
                IF(input%onsite_sphavg) THEN
-                  thisGREENSF%nr(:) = 1
+                  ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
+                  thisGREENSF%gmmpMat = 0.0
                ELSE
-                  DO i = 1, atoms%n_gf
-                     thisGREENSF%nr(i) = atoms%jri(atoms%onsiteGF(i)%atomType)
-                  ENDDO
-               END IF
+                  ALLOCATE (thisGREENSF%uu(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
+                  ALLOCATE (thisGREENSF%dd(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
+                  ALLOCATE (thisGREENSF%du(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
+                  ALLOCATE (thisGREENSF%ud(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
 
-               ALLOCATE (thisGREENSF%gmmpMat(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
-               thisGREENSF%gmmpMat = CMPLX(0.0,0.0)
+                  thisGREENSF%uu = 0.0
+                  thisGREENSF%dd = 0.0
+                  thisGREENSF%du = 0.0
+                  thisGREENSF%ud = 0.0
+               ENDIF
+
 
                !Allocate arrays for non-colinear part
                IF(noco%l_mperp) THEN
-                  ALLOCATE (thisGREENSF%gmmpMat21(MAXVAL(thisGREENSF%nr(:)),thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
+                  ALLOCATE (thisGREENSF%gmmpMat21(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins))
                   thisGREENSF%gmmpMat21 = CMPLX(0.0,0.0)
                ENDIF
             ENDIF
@@ -163,20 +166,6 @@ MODULE m_types_greensf
             !We cannot store the green's function for every radial point r,r' because it takes up way too much space
             r_dim = MAXVAL(atoms%jri(:)) 
             l_dim = lmax**2 + lmax
-
-            ALLOCATE (thisGREENSF%uu_int(thisGREENSF%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
-            ALLOCATE (thisGREENSF%dd_int(thisGREENSF%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
-            ALLOCATE (thisGREENSF%du_int(thisGREENSF%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
-            ALLOCATE (thisGREENSF%ud_int(thisGREENSF%ne,atoms%nat,atoms%nat,0:l_dim,0:l_dim,input%jspins))
-
-            ALLOCATE (thisGREENSF%R(thisGREENSF%ne,r_dim,2,atoms%nat,0:l_dim,input%jspins))
-
-            thisGREENSF%uu_int      = 0.0
-            thisGREENSF%dd_int      = 0.0
-            thisGREENSF%du_int      = 0.0
-            thisGREENSF%ud_int      = 0.0
-
-            thisGREENSF%R           = 0.0
 
          ENDIF 
 

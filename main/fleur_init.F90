@@ -272,6 +272,8 @@
           CALL MPI_BCAST(input%strho ,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(atoms%n_u,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(atoms%n_hia,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(atoms%n_gf,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(atoms%lmaxd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           call MPI_BCAST( input%preconditioning_param, 1, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
@@ -552,12 +554,7 @@
              IF(input%gw.NE.0) CALL mixing_history_reset(mpi)
              CALL setStartingDensity(noco%l_noco)
           END IF
-
-          !Open temporary output file for LDA+HIA related stuff (will be moved to out/out.xml)
-          IF(mpi%irank.EQ.0.AND.atoms%n_hia.GT.0) THEN
-             OPEN(unit=2804,file="outHIA",status="unknown",form="formatted")
-          ENDIF
-
+          
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
 
