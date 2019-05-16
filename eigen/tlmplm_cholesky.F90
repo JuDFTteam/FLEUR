@@ -111,18 +111,8 @@ CONTAINS
                 ENDDO
              ENDDO
           END DO
-          !Now add diagonal contribution to matrices
+          
           IF (jsp<3) THEN
-             DO l = 0,atoms%lmax(n)
-                DO  m = -l,l
-                   lm = l* (l+1) + m
-                   lmplm = (lm* (lm+3))/2
-                   td%tuu(lmplm,n,jsp)=td%tuu(lmplm,n,jsp) + enpara%el0(l,n,jsp)
-                   td%tdd(lmplm,n,jsp)=td%tdd(lmplm,n,jsp) + enpara%el0(l,n,jsp)*ud%ddn(l,n,jsp)
-                   td%tud(lmplm,n,jsp)=td%tud(lmplm,n,jsp) + 0.5
-                   td%tdu(lmplm,n,jsp)=td%tdu(lmplm,n,jsp) + 0.5
-                ENDDO
-             ENDDO
              !Create Cholesky decomposition of local hamiltonian
              
              !--->    Add diagonal terms to make matrix positive definite
@@ -155,6 +145,19 @@ CONTAINS
              ENDIF
           ENDIF
        ENDDO cholesky_loop
+       !Now add diagonal contribution to matrices
+       IF (jsp<3) THEN
+          DO l = 0,atoms%lmax(n)
+             DO  m = -l,l
+                lm = l* (l+1) + m
+                lmplm = (lm* (lm+3))/2
+                td%tuu(lmplm,n,jsp)=td%tuu(lmplm,n,jsp) + enpara%el0(l,n,jsp)
+                td%tdd(lmplm,n,jsp)=td%tdd(lmplm,n,jsp) + enpara%el0(l,n,jsp)*ud%ddn(l,n,jsp)
+                td%tud(lmplm,n,jsp)=td%tud(lmplm,n,jsp) + 0.5
+                td%tdu(lmplm,n,jsp)=td%tdu(lmplm,n,jsp) + 0.5
+             ENDDO
+          ENDDO
+       ENDIF
     ENDDO
     !$OMP END PARALLEL DO
     IF (noco%l_constr) CALL tlmplm_constrained(atoms,v,enpara,input,ud,noco,td)

@@ -43,6 +43,7 @@ CONTAINS
       ELSE
          CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
       END IF
+      !ENDIF
    END SUBROUTINE init_mt_grid
 
    SUBROUTINE mt_to_grid(xcpot, jspins, atoms, sphhar, den_mt, n, grad, ch)
@@ -54,7 +55,7 @@ CONTAINS
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       REAL, INTENT(IN)             :: den_mt(:, 0:, :)
       INTEGER, INTENT(IN)          :: n, jspins
-      REAL, INTENT(OUT), OPTIONAL      :: ch(:, :)
+      REAL, INTENT(OUT), OPTIONAL  :: ch(:, :)
       TYPE(t_gradients), INTENT(INOUT):: grad
 
       REAL, ALLOCATABLE :: chlh(:, :, :), chlhdr(:, :, :), chlhdrr(:, :, :)
@@ -77,7 +78,6 @@ CONTAINS
       ENDIF
 
       DO lh = 0, sphhar%nlh(nd)
-
          !         calculates gradients of radial charge densities of l=> 0.
          !         rho*ylh/r**2 is charge density. chlh=rho/r**2.
          !         charge density=sum(chlh*ylh).
@@ -97,7 +97,7 @@ CONTAINS
       DO jr = 1, atoms%jri(n)
          ! charge density (on extended grid for all jr)
          ! following are at points on jr-th sphere.
-         ch_tmp(:, :) = 0.0     
+         ch_tmp(:, :) = 0.0
          !  generate the densities on an angular mesh
          DO js = 1, jspins
             DO lh = 0, sphhar%nlh(nd)

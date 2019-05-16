@@ -35,7 +35,7 @@ CONTAINS
 #else
     irank=0
 #endif
-    WRITE(io,"(a,i0,a,a)") "Rank:",irank," used ",TRIM(memory_usage_string(maxmem))
+    if(irank == 0) WRITE(io,"(a,i0,a,a)") "Rank:",irank," used ",TRIM(memory_usage_string(maxmem))
   END SUBROUTINE print_memory_info
   
   !Read mstat to find out current memory usage

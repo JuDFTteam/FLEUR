@@ -326,6 +326,8 @@
          ELSE IF (minRmts(atoms%nz(typeB)).LT.0.0) THEN
            minRmts(atoms%nz(typeB)) = rmtFac * (dist - minRmts(atoms%nz(typeA)))
          END IF
+         minRmts(atoms%nz(typeA)) = min(minRmts(atoms%nz(typeA)),rmtMaxDefault) ! limit already here 
+         minRmts(atoms%nz(typeB)) = min(minRmts(atoms%nz(typeB)),rmtMaxDefault) ! to a reasonable value
       END DO
 
 !     6. Correct bad choices and set missing MT radii, vacuum distances, and other parameters

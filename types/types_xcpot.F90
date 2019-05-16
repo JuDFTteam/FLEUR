@@ -12,16 +12,20 @@
 !! In addition to overloading the t_xcpot datatype also mpi_bc_xcpot must be adjusted
 !! for additional implementations.
 MODULE m_types_xcpot
+   use m_types_potden
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: t_xcpot,t_gradients
+   PUBLIC           :: t_xcpot,t_gradients
 
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
+      TYPE(t_potden)   :: core_den, val_den
    CONTAINS
-      PROCEDURE        :: is_lda=>xcpot_is_lda
-      PROCEDURE        :: is_gga=>xcpot_is_gga
-      PROCEDURE        :: is_MetaGGA=>xcpot_is_MetaGGA
+      PROCEDURE        :: vxc_is_LDA=>xcpot_vxc_is_LDA
+      PROCEDURE        :: exc_is_LDA=>xcpot_exc_is_LDA
+      PROCEDURE        :: vxc_is_gga=>xcpot_vxc_is_gga
+      PROCEDURE        :: exc_is_gga=>xcpot_exc_is_gga
+      PROCEDURE        :: exc_is_MetaGGA=>xcpot_exc_is_MetaGGA
       PROCEDURE        :: needs_grad=>xcpot_needs_grad
       PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
       PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
@@ -46,31 +50,45 @@ MODULE m_types_xcpot
       REAL,ALLOCATABLE :: gr(:,:,:)
       REAL,ALLOCATABLE :: laplace(:,:)
    END TYPE t_gradients
-
+   
 CONTAINS
-   LOGICAL FUNCTION xcpot_is_lda(xcpot)
+   ! LDA
+   LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
-      xcpot_is_lda=.false.
-   END FUNCTION xcpot_is_lda
+      xcpot_vxc_is_LDA=.false.
+   END FUNCTION xcpot_vxc_is_LDA
 
-   LOGICAL FUNCTION xcpot_is_gga(xcpot)
+   LOGICAL FUNCTION xcpot_exc_is_LDA(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
-      xcpot_is_gga=.false.
-   END FUNCTION xcpot_is_gga
+      xcpot_exc_is_LDA=.false.
+   END FUNCTION xcpot_exc_is_LDA
 
-   LOGICAL FUNCTION xcpot_is_MetaGGA(xcpot)
+   ! GGA
+   LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
-      xcpot_is_MetaGGA=.false.
-   END FUNCTION xcpot_is_MetaGGA
+      xcpot_vxc_is_gga=.false.
+   END FUNCTION xcpot_vxc_is_gga
+
+   LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_exc_is_gga=.false.
+   END FUNCTION xcpot_exc_is_gga
+
+   LOGICAL FUNCTION xcpot_exc_is_MetaGGA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_exc_is_MetaGGA=.false.
+   END FUNCTION xcpot_exc_is_MetaGGA
 
    LOGICAL FUNCTION xcpot_needs_grad(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
 
-      xcpot_needs_grad= xcpot%is_gga() .or. xcpot%is_MetaGGA()
+      xcpot_needs_grad= xcpot%vxc_is_gga()
    END FUNCTION xcpot_needs_grad
 
    LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
@@ -88,6 +106,9 @@ CONTAINS
    END FUNCTION xcpot_get_exchange_weight
 
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad)
+      USE m_judft
+      IMPLICIT NONE
+
       CLASS(t_xcpot),INTENT(IN) :: xcpot
       INTEGER, INTENT (IN)     :: jspins
       !--> charge density
@@ -95,19 +116,35 @@ CONTAINS
       !---> xc potential
       REAL, INTENT (OUT)       :: vxc (:,:),vx(:,:)
       TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
+
+      vxc = 0.0
+      vx  = 0.0
+      call juDFT_error("Can't use XC-parrent class")
    END SUBROUTINE xcpot_get_vxc
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad)
-      CLASS(t_xcpot),INTENT(IN) :: xcpot
-      INTEGER, INTENT (IN)     :: jspins
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS)
+      USE m_types_misc
+      USE m_judft
+      USE, INTRINSIC :: IEEE_ARITHMETIC
+      IMPLICIT NONE
+
+      CLASS(t_xcpot),INTENT(IN)             :: xcpot
+      INTEGER, INTENT (IN)                  :: jspins
       !--> charge density
-      REAL,INTENT (IN)         :: rh(:,:)
+      REAL,INTENT (IN)                      :: rh(:,:)
+      !--> kinetic energy density
       !---> xc energy density
-      REAL, INTENT (OUT)       :: exc (:)
-      TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+      REAL, INTENT (OUT)                    :: exc (:)
+      TYPE(t_gradients),OPTIONAL,INTENT(IN) :: grad
+      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
+
+      exc = 0.0
+      call juDFT_error("Can't use XC-parrent class")
    END SUBROUTINE xcpot_get_exc
 
    SUBROUTINE xcpot_alloc_gradients(ngrid,jspins,grad)
+      IMPLICIT NONE
+
       INTEGER, INTENT (IN)         :: jspins,ngrid
       TYPE(t_gradients),INTENT(INOUT):: grad
 
@@ -122,6 +159,6 @@ CONTAINS
       ALLOCATE(grad%g2ru(ngrid),grad%g2rd(ngrid),grad%gggrt(ngrid))
       ALLOCATE(grad%gggru(ngrid),grad%gzgr(ngrid),grad%g2rt(ngrid))
       ALLOCATE(grad%gggrd(ngrid),grad%grgru(ngrid),grad%grgrd(ngrid))
-   END SUBROUTINE xcpot_alloc_gradients
+  END SUBROUTINE xcpot_alloc_gradients
 
 END MODULE m_types_xcpot

@@ -23,7 +23,7 @@ MODULE m_judft_xmlOutput
    INTEGER, SAVE :: maxNumElements
    INTEGER, SAVE :: xmlOutputUnit
    LOGICAL, SAVE :: xmlOpened = .FALSE.
-   CHARACTER(len=10) :: maintag
+   CHARACTER(len=15) :: maintag
    CHARACTER(LEN= 40), ALLOCATABLE :: elementList(:)
 
    PUBLIC startXMLOutput, endXMLOutput
@@ -214,7 +214,7 @@ MODULE m_judft_xmlOutput
       INTEGER, ALLOCATABLE            :: bigLengths(:,:)
       INTEGER :: i, j, contentLineLength, contentLineListSize
       CHARACTER(LEN=150)               :: format
-      CHARACTER(LEN=1000)              :: outputString
+      CHARACTER(LEN=:), allocatable   :: outputString
       INTEGER                         :: contentListSize, overallListSize, numContentLineChars
       INTEGER                         :: lengthsShape(2)
 
@@ -240,13 +240,8 @@ MODULE m_judft_xmlOutput
 
       outputString = '<'//TRIM(ADJUSTL(elementName))
       DO i = 1, SIZE(attributeNames)
-         WRITE(format,'(a)') "(a,a,a"
-         IF (bigLengths(i,1).GT.0) WRITE(format,'(a,i0)') TRIM(ADJUSTL(format)),bigLengths(i,1)
-         WRITE(format,'(a,a)') TRIM(ADJUSTL(format)),",a,a"
-         IF (bigLengths(i,2).GT.0) WRITE(format,'(a,i0)') TRIM(ADJUSTL(format)),bigLengths(i,2)
-         WRITE(format,'(a,a)') TRIM(ADJUSTL(format)),",a)"
-         WRITE(outputString,format) TRIM(ADJUSTL(outputString)), ' ', TRIM(ADJUSTL(attributeNames(i))),&
-                                    '="', TRIM(ADJUSTL(attributeValues(i))), '"'
+         outputString = TRIM(ADJUSTL(outputString)) // ' ' // TRIM(ADJUSTL(attributeNames(i))) //&
+                                    '="' // TRIM(ADJUSTL(attributeValues(i))) // '"'
       END DO
       WRITE(format,'(a,i0,a)') "(a",3*(currentElementIndex+1),",a)"
       IF (PRESENT(contentList)) THEN

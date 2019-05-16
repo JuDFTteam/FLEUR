@@ -7,7 +7,7 @@
 MODULE m_rfft
    use m_juDFT
    PRIVATE
-! odule also contains routines vrffti,vrfftf&vrfftb as private routines below
+! module also contains routines vrffti,vrfftf&vrfftb as private routines below
    PUBLIC rfft
 CONTAINS
    SUBROUTINE rfft( &

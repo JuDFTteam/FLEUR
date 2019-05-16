@@ -10,7 +10,7 @@ MODULE m_vgen_xcpot
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybrid, input, xcpot, dimension, atoms, sphhar, stars, vacuum, sym, &
-                         obsolete, cell, oneD, sliceplot, mpi, noco, den, denRot, vTot, vx, results)
+                         obsolete, cell, oneD, sliceplot, mpi, noco, den, denRot, EnergyDen, vTot, vx, results)
 
       !     ***********************************************************
       !     FLAPW potential generator                           *
@@ -35,7 +35,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      CLASS(t_xcpot), INTENT(IN)              :: xcpot
+      CLASS(t_xcpot), INTENT(INOUT)           :: xcpot
       TYPE(t_hybrid), INTENT(IN)              :: hybrid
       TYPE(t_mpi), INTENT(IN)              :: mpi
       TYPE(t_dimension), INTENT(IN)              :: dimension
@@ -50,7 +50,7 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)              :: cell
       TYPE(t_sphhar), INTENT(IN)              :: sphhar
       TYPE(t_atoms), INTENT(IN)              :: atoms
-      TYPE(t_potden), INTENT(IN)              :: den, denRot
+      TYPE(t_potden), INTENT(IN)              :: den, denRot, EnergyDen
       TYPE(t_potden), INTENT(INOUT)           :: vTot, vx
       TYPE(t_results), INTENT(INOUT), OPTIONAL :: results
 
@@ -84,7 +84,7 @@ CONTAINS
             ifftd2 = 9*stars%mx1*stars%mx2
             IF (oneD%odi%d1) ifftd2 = 9*stars%mx3*oneD%odi%M
 
-            IF (.NOT. xcpot%is_gga()) THEN  ! LDA
+            IF (.NOT. xcpot%needs_grad()) THEN  ! LDA
 
                IF (.NOT. oneD%odi%d1) THEN
                   CALL vvacxc(ifftd2, stars, vacuum, xcpot, input, noco, Den, vTot, exc)
@@ -111,9 +111,9 @@ CONTAINS
          ! interstitial region
          CALL timestart("Vxc in interstitial")
 
-         IF ((.NOT. obsolete%lwb) .OR. (.not. xcpot%is_gga())) THEN
+         IF ((.NOT. obsolete%lwb) .OR. (.not. xcpot%needs_grad())) THEN
             ! no White-Bird-trick
-            CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, vTot, vx, exc)
+            CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen, vTot, vx, exc)
 
          ELSE
             ! White-Bird-trick
@@ -134,7 +134,7 @@ CONTAINS
       END IF
 
       CALL vmt_xc(DIMENSION, mpi, sphhar, atoms, den, xcpot, input, sym, &
-                  obsolete, vTot, vx, exc)
+                  obsolete, EnergyDen, vTot, vx, exc)
 
       !
 
@@ -183,7 +183,7 @@ CONTAINS
             END DO
 
             WRITE (6, FMT=8060) results%te_veff
-8060        FORMAT(/, 10x, 'total density-effective potential integral :', t40, f20.10)
+8060        FORMAT(/, 10x, 'total density-effective potential integral :', t40, ES20.10)
 
             ! CALCULATE THE INTEGRAL OF n*exc
 
@@ -197,7 +197,7 @@ CONTAINS
             CALL int_nv(1, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, exc, workDen, results%te_exc)
             WRITE (6, FMT=8080) results%te_exc
 
-8080        FORMAT(/, 10x, 'total charge density-energy density integral :', t40, f20.10)
+8080        FORMAT(/, 10x, 'total charge density-energy density integral :', t40, ES20.10)
          END IF
       END IF ! mpi%irank == 0
 

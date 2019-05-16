@@ -63,6 +63,7 @@ CONTAINS
     USE m_bs_comfort
     USE m_dwigner
     USE m_ylm
+    USE m_metagga
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -95,7 +96,7 @@ CONTAINS
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
-    TYPE(t_potden)                  :: inDen, outDen
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
@@ -237,7 +238,7 @@ CONTAINS
 
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                 obsolete,cell,oneD,sliceplot,mpi,results,noco,inDen,vTot,vx,vCoul)
+                 obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
 #ifdef CPP_MPI
@@ -245,7 +246,7 @@ CONTAINS
 #endif
 
        CALL forcetheo%start(vtot,mpi%irank==0)
-       forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
+       forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,atoms,noco))
 
           CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
@@ -347,8 +348,10 @@ CONTAINS
           CALL timestart("generation of new charge density (total)")
           CALL outDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
-          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
-                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen)
+          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum, &
+                      dimension,kpts,atoms,sphhar,stars,sym,&
+                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
+                      archiveType,xcpot,outDen,EnergyDen)
 
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)
@@ -447,7 +450,9 @@ CONTAINS
           END IF
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
-          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
+          ! MetaGGAs need a at least 2 iterations
+          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f & 
+                               .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
 

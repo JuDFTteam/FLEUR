@@ -51,7 +51,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp
       CHARACTER(LEN=20) :: attributes(7)
       
-      CALL startxmloutput("out.xml","FLEURoutput")
+      CALL startxmloutput("out.xml","fleurOutput")
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
       CALL get_compile_desc(gitdesc,githash,gitbranch,compile_date,compile_user,compile_host,compile_flags,link_flags)
       gitdescTemp = gitdesc

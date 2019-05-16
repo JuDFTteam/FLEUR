@@ -1,1 +1,0 @@
-Homepages of various workshops with FLEUR hands-on sessions

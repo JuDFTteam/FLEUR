@@ -6,9 +6,11 @@
 MODULE m_libxc_postprocess_gga
 CONTAINS
 
-   SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad)
+   SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num)
       USE m_mt_tofrom_grid
       USE m_types
+      use m_judft_string
+
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -16,10 +18,12 @@ CONTAINS
       INTEGER,INTENT(IN)          :: n
       REAL,INTENT(INOUT)          :: v_xc(:,:)
       TYPE(t_gradients),INTENT(IN):: grad
+      INTEGER, OPTIONAL           :: atom_num
 
       INTEGER :: nsp,n_sigma,i
       REAL,ALLOCATABLE:: vsigma(:,:),vsigma_mt(:,:,:)
       TYPE(t_gradients)::grad_vsigma
+      character(len=:), allocatable :: fname
 
       n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !Number of contracted gradients in libxc 1 for non-spin-polarized, 3 otherwise
       nsp=SIZE(v_xc,1) !no of points
@@ -39,6 +43,7 @@ CONTAINS
    SUBROUTINE libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
       USE m_pw_tofrom_grid
       USE m_types
+
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_stars),INTENT(IN)    :: stars
@@ -61,7 +66,6 @@ CONTAINS
       CALL pw_to_grid(xcpot,n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
-
    END SUBROUTINE libxc_postprocess_gga_pw
 
    SUBROUTINE libxc_postprocess_gga(vsigma,grad,grad_vsigma,v_xc)

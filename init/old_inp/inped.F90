@@ -257,7 +257,7 @@
 !!$          !+guta
 !!$          IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
 
-          IF (xcpot%is_gga()) THEN
+          IF (xcpot%needs_grad()) THEN
              obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
             
 
@@ -347,7 +347,7 @@
           !
           !  check muffin tin radii
           !
-          l_gga= xcpot%is_gga()
+          l_gga= xcpot%needs_grad()
           l_test = .TRUE.                  ! only checking, dont use new parameters
           CALL chkmt(atoms,input,vacuum,cell,oneD,l_test,l_gga,noel, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
 
