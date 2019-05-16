@@ -140,7 +140,7 @@ CONTAINS
        !      ENDDO    ! ivac
        !      DO ivac = 1,nvac
 
-       IF (xcpot%is_gga()) THEN
+       IF (xcpot%needs_grad()) THEN
           DO js=1,input%jspins
              !
              ! calculate first (rhtdz) & second (rhtdzz) derivative of den%vacz(1:nmz)
@@ -236,7 +236,7 @@ CONTAINS
 
           END IF
 
-          IF (xcpot%is_gga()) THEN 
+          IF (xcpot%needs_grad()) THEN 
              ! calculate derivatives with respect to x,y in g-space 
              ! and transform them to real-space.  
 
@@ -352,7 +352,7 @@ CONTAINS
 
              END IF ! noco%l_noco  
 
-          END IF ! xcpot%is_gga 
+          END IF ! vxc_is_gga 
           !
           ! set minimal value of af2 to 1.0e-13
           !
@@ -490,7 +490,7 @@ CONTAINS
        !c      energy.
 
        CALL xcpot%alloc_gradients(nmzdiff,input%jspins,grad)
-       IF (xcpot%is_gga())  THEN
+       IF (xcpot%needs_grad())  THEN
           if(oneD%odi%d1)then
 !             CALL od_mkgz(&
 !                              cell%z1,vacuum%nmzxy,vacuum%delz,&

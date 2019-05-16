@@ -58,7 +58,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_potden),        INTENT(INOUT) :: vTot
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_noco),          INTENT(INOUT) :: noco
-   TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
+   TYPE(t_xcpot_inbuild), INTENT(INOUT) :: xcpot
    TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
@@ -66,6 +66,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    INTEGER,               INTENT(IN)    :: eig_id
    INTEGER,               INTENT(IN)    :: archiveType
+   TYPE(t_potden)                       :: EnergyDen
 
 #ifndef CPP_OLDINTEL
    TYPE(t_cdnvalJob)                    :: cdnvalJob
@@ -582,7 +583,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
    CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
-               enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen)
+               enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,xcpot,outDen, EnergyDen)
 
    WRITE(*,*) 'Point H reached'
 

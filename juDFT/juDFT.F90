@@ -6,6 +6,7 @@
 
 MODULE m_juDFT
   USE m_juDFT_stop
+  USE m_juDFT_string
   USE m_juDFT_time
   USE m_juDFT_init
   USE m_judft_args
