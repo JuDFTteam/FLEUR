@@ -33,8 +33,9 @@ MODULE m_types_xcpot_libxc
       !PROCEDURE        :: vxc_is_LDA          => xcpot_vxc_is_LDA
       !PROCEDURE        :: vxc_is_gga          => xcpot_vxc_is_gga
 
-      PROCEDURE        :: vx_is_LDA => xcpot_vx_is_LDA
-      PROCEDURE        :: vx_is_GGA => xcpot_vx_is_GGA
+      PROCEDURE        :: vx_is_LDA     => xcpot_vx_is_LDA
+      PROCEDURE        :: vx_is_GGA     => xcpot_vx_is_GGA
+      PROCEDURE        :: vx_is_MetaGGA => xcpot_vx_is_MetaGGA
       
       PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
       PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
@@ -202,6 +203,19 @@ CONTAINS
 #endif
    END FUNCTION xcpot_vx_is_gga
 
+   LOGICAL FUNCTION xcpot_vx_is_MetaGGA(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_c)
+      xcpot_vx_is_MetaGGA =  ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f03_func_info_get_family(xc_info))
+#else
+      xcpot_vx_is_MetaGGA=.false.
+#endif
+   END FUNCTION xcpot_vx_is_MetaGGA
+
    LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
@@ -295,34 +309,35 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen_KS)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen_KS, mt_call)
       use m_constants
       IMPLICIT NONE
-   CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
-      INTEGER, INTENT (IN)           :: jspins
-      REAL,INTENT (IN)               :: rh(:,:)  !points,spin
-      REAL, INTENT (OUT)             :: exc(:) !points
+   CLASS(t_xcpot_libxc),INTENT(IN)          :: xcpot
+      INTEGER, INTENT (IN)                  :: jspins
+      REAL,INTENT (IN)                      :: rh(:,:)  !points,spin
+      REAL, INTENT (OUT)                    :: exc(:) !points
       ! optional arguments for GGA
-      TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+      TYPE(t_gradients),OPTIONAL,INTENT(IN) :: grad
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
 
       ! kinED from Kohn-Sham equations:
       ! tau = sum[phi_i(r)^dag nabla phi_i(r)]
       ! see eq (2) in https://doi.org/10.1063/1.1565316
       ! (-0.5 is applied below)
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:,:)
-      character(len=200)             :: filename
 
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
       REAL  :: cut_ratio = 0.1
       INTEGER :: cut_idx
+      LOGICAL :: is_mt
 
       ! tau = 0.5 * sum[|grad phi_i(r)|²]
       ! see eq (3) in https://doi.org/10.1063/1.1565316
       REAL, ALLOCATABLE              :: kinEnergyDen_libXC(:,:), pkzb_ratio(:,:), pkzb_zaehler(:,:), pkzb_nenner(:,:)
 
-
+      is_mt = merge(mt_call, .False., present(mt_call))
       IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
          CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
@@ -338,9 +353,11 @@ CONTAINS
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
          IF(PRESENT(kinEnergyDen_KS)) THEN 
-            cut_idx = NINT(size(rh,1) * cut_ratio)
             ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
             kinEnergyDen_libXC = transpose(kinEnergyDen_KS + 0.25 * grad%laplace)
+
+            !only cut core of muffin tin
+            cut_idx = MERGE(NINT(size(rh,1) * cut_ratio), 0, is_mt)
 
             exc  = 0.0
             excc = 0.0
@@ -357,8 +374,6 @@ CONTAINS
                                                   exc(:cut_idx))
 
             IF (xcpot%func_exc_id_c>0) THEN
-               !CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
-                                    !transpose(grad%laplace), kinEnergyDen_libXC, excc)
                call xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh(cut_idx+1:,:),1), &
                                                       TRANSPOSE(rh(cut_idx+1:,:)), &
                                                       grad%sigma(:,cut_idx+1:), &

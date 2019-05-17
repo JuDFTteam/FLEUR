@@ -21,21 +21,22 @@ MODULE m_types_xcpot
       REAL :: gmaxxc
       TYPE(t_potden)   :: core_den, val_den
    CONTAINS
-      PROCEDURE        :: vxc_is_LDA     => xcpot_vxc_is_LDA
-      PROCEDURE        :: vxc_is_GGA     => xcpot_vxc_is_GGA
+      PROCEDURE        :: vxc_is_LDA => xcpot_vxc_is_LDA
+      PROCEDURE        :: vxc_is_GGA => xcpot_vxc_is_GGA
 
       PROCEDURE        :: vx_is_LDA     => xcpot_vx_is_LDA
       PROCEDURE        :: vx_is_GGA     => xcpot_vx_is_GGA
+      PROCEDURE        :: vx_is_MetaGGA => xcpot_vx_is_MetaGGA
 
-      PROCEDURE        :: vc_is_LDA     => xcpot_vc_is_LDA
-      PROCEDURE        :: vc_is_GGA     => xcpot_vc_is_GGA
+      PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
+      PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
 
       PROCEDURE        :: exc_is_LDA     => xcpot_exc_is_LDA
       PROCEDURE        :: exc_is_GGA     => xcpot_exc_is_GGA
       PROCEDURE        :: exc_is_MetaGGA => xcpot_exc_is_MetaGGA
 
-      PROCEDURE        :: needs_grad     => xcpot_needs_grad
-      PROCEDURE        :: is_hybrid      => xcpot_is_hybrid
+      PROCEDURE        :: needs_grad => xcpot_needs_grad
+      PROCEDURE        :: is_hybrid  => xcpot_is_hybrid
 
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc             => xcpot_get_vxc
@@ -111,6 +112,12 @@ CONTAINS
       xcpot_exc_is_gga=.false.
    END FUNCTION xcpot_exc_is_gga
 
+   LOGICAL FUNCTION xcpot_vx_is_MetaGGA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_vx_is_MetaGGA=.false.
+   END FUNCTION xcpot_vx_is_MetaGGA
+
    LOGICAL FUNCTION xcpot_exc_is_MetaGGA(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
@@ -121,7 +128,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
 
-      xcpot_needs_grad= xcpot%vxc_is_gga()
+      xcpot_needs_grad= xcpot%vc_is_gga()
    END FUNCTION xcpot_needs_grad
 
    LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
@@ -155,7 +162,7 @@ CONTAINS
       call juDFT_error("Can't use XC-parrent class")
    END SUBROUTINE xcpot_get_vxc
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS, mt_call)
       USE m_types_misc
       USE m_judft
       USE, INTRINSIC :: IEEE_ARITHMETIC
@@ -169,6 +176,7 @@ CONTAINS
       !---> xc energy density
       REAL, INTENT (OUT)                    :: exc (:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) :: grad
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
       REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
 
       exc = 0.0

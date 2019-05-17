@@ -111,7 +111,7 @@ CONTAINS
        skip=.FALSE.
        RETURN
     ENDIF
-    this%evsum(this%directions_done)=results%seigv
+    this%evsum(this%directions_done)=results%seigv/2.0 
     skip=.TRUE.
   END FUNCTION  mae_eval
 
