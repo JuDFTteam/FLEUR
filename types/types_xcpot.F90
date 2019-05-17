@@ -21,17 +21,26 @@ MODULE m_types_xcpot
       REAL :: gmaxxc
       TYPE(t_potden)   :: core_den, val_den
    CONTAINS
-      PROCEDURE        :: vxc_is_LDA=>xcpot_vxc_is_LDA
-      PROCEDURE        :: exc_is_LDA=>xcpot_exc_is_LDA
-      PROCEDURE        :: vxc_is_gga=>xcpot_vxc_is_gga
-      PROCEDURE        :: exc_is_gga=>xcpot_exc_is_gga
-      PROCEDURE        :: exc_is_MetaGGA=>xcpot_exc_is_MetaGGA
-      PROCEDURE        :: needs_grad=>xcpot_needs_grad
-      PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
-      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
-      PROCEDURE        :: get_vxc=>xcpot_get_vxc
-      PROCEDURE        :: get_exc=>xcpot_get_exc
-      PROCEDURE,NOPASS :: alloc_gradients=>xcpot_alloc_gradients
+      PROCEDURE        :: vxc_is_LDA     => xcpot_vxc_is_LDA
+      PROCEDURE        :: vxc_is_GGA     => xcpot_vxc_is_GGA
+
+      PROCEDURE        :: vx_is_LDA     => xcpot_vx_is_LDA
+      PROCEDURE        :: vx_is_GGA     => xcpot_vx_is_GGA
+
+      PROCEDURE        :: vc_is_LDA     => xcpot_vc_is_LDA
+      PROCEDURE        :: vc_is_GGA     => xcpot_vc_is_GGA
+
+      PROCEDURE        :: exc_is_LDA     => xcpot_exc_is_LDA
+      PROCEDURE        :: exc_is_GGA     => xcpot_exc_is_GGA
+      PROCEDURE        :: exc_is_MetaGGA => xcpot_exc_is_MetaGGA
+
+      PROCEDURE        :: needs_grad     => xcpot_needs_grad
+      PROCEDURE        :: is_hybrid      => xcpot_is_hybrid
+
+      PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
+      PROCEDURE        :: get_vxc             => xcpot_get_vxc
+      PROCEDURE        :: get_exc             => xcpot_get_exc
+      PROCEDURE,NOPASS :: alloc_gradients     => xcpot_alloc_gradients
    END TYPE t_xcpot
 
    TYPE t_gradients
@@ -53,10 +62,22 @@ MODULE m_types_xcpot
    
 CONTAINS
    ! LDA
+   LOGICAL FUNCTION xcpot_vc_is_LDA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_vc_is_LDA=.false.
+   END FUNCTION xcpot_vc_is_LDA
+
+   LOGICAL FUNCTION xcpot_vx_is_LDA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_vx_is_LDA=.false.
+   END FUNCTION xcpot_vx_is_LDA
+   
    LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
-      xcpot_vxc_is_LDA=.false.
+      xcpot_vxc_is_LDA = xcpot%vx_is_LDA() .and. xcpot%vc_is_LDA()
    END FUNCTION xcpot_vxc_is_LDA
 
    LOGICAL FUNCTION xcpot_exc_is_LDA(xcpot)
@@ -66,10 +87,22 @@ CONTAINS
    END FUNCTION xcpot_exc_is_LDA
 
    ! GGA
+   LOGICAL FUNCTION xcpot_vc_is_GGA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_vc_is_GGA=.false.
+   END FUNCTION xcpot_vc_is_GGA
+
+   LOGICAL FUNCTION xcpot_vx_is_GGA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot),INTENT(IN):: xcpot
+      xcpot_vx_is_GGA=.false.
+   END FUNCTION xcpot_vx_is_GGA
+   
    LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
-      xcpot_vxc_is_gga=.false.
+      xcpot_vxc_is_gga= xcpot%vx_is_GGA() .and. xcpot%vc_is_GGA()
    END FUNCTION xcpot_vxc_is_gga
 
    LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)

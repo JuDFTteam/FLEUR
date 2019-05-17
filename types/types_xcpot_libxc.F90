@@ -30,11 +30,19 @@ MODULE m_types_xcpot_libxc
 
 
    CONTAINS
-      PROCEDURE        :: vxc_is_LDA          => xcpot_vxc_is_LDA
-      PROCEDURE        :: exc_is_LDA          => xcpot_exc_is_LDA
-      PROCEDURE        :: vxc_is_gga          => xcpot_vxc_is_gga
-      PROCEDURE        :: exc_is_gga          => xcpot_exc_is_gga
-      PROCEDURE        :: exc_is_MetaGGA      => xcpot_exc_is_MetaGGA
+      !PROCEDURE        :: vxc_is_LDA          => xcpot_vxc_is_LDA
+      !PROCEDURE        :: vxc_is_gga          => xcpot_vxc_is_gga
+
+      PROCEDURE        :: vx_is_LDA => xcpot_vx_is_LDA
+      PROCEDURE        :: vx_is_GGA => xcpot_vx_is_GGA
+      
+      PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
+      PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
+
+      PROCEDURE        :: exc_is_LDA     => xcpot_exc_is_LDA
+      PROCEDURE        :: exc_is_gga     => xcpot_exc_is_gga
+      PROCEDURE        :: exc_is_MetaGGA => xcpot_exc_is_MetaGGA
+
       PROCEDURE        :: is_hybrid           => xcpot_is_hybrid 
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc             => xcpot_get_vxc
@@ -128,19 +136,32 @@ CONTAINS
    END SUBROUTINE xcpot_init
 
    ! LDA
-   LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
+   LOGICAL FUNCTION xcpot_vx_is_LDA(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)        :: xc_info
 
       xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
-      xcpot_vxc_is_LDA =  XC_FAMILY_LDA == xc_f03_func_info_get_family(xc_info)
+      xcpot_vx_is_LDA =  XC_FAMILY_LDA == xc_f03_func_info_get_family(xc_info)
 #else
-      xcpot_vxc_is_LDA = .false.
+      xcpot_vx_is_LDA = .false.
 #endif
-   END FUNCTION xcpot_vxc_is_LDA
+   END FUNCTION xcpot_vx_is_LDA
+   
+   LOGICAL FUNCTION xcpot_vc_is_LDA(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
 
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_c)
+      xcpot_vc_is_LDA =  XC_FAMILY_LDA == xc_f03_func_info_get_family(xc_info)
+#else
+      xcpot_vc_is_LDA = .false.
+#endif
+   END FUNCTION xcpot_vc_is_LDA
+   
    LOGICAL FUNCTION xcpot_exc_is_LDA(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
@@ -155,18 +176,31 @@ CONTAINS
    END FUNCTION xcpot_exc_is_LDA
 
    ! GGA
-   LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
+   LOGICAL FUNCTION xcpot_vc_is_gga(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)        :: xc_info
 
-      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
-      xcpot_vxc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_c)
+      xcpot_vc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
-      xcpot_vxc_is_gga=.false.
+      xcpot_vc_is_gga=.false.
 #endif
-   END FUNCTION xcpot_vxc_is_gga
+   END FUNCTION xcpot_vc_is_gga
+
+   LOGICAL FUNCTION xcpot_vx_is_gga(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_c)
+      xcpot_vx_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
+#else
+      xcpot_vx_is_gga=.false.
+#endif
+   END FUNCTION xcpot_vx_is_gga
 
    LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
       IMPLICIT NONE

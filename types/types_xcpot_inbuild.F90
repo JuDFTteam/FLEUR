@@ -49,18 +49,23 @@ MODULE m_types_xcpot_inbuild
 
    CONTAINS
       !overloading t_xcpot:
-      PROCEDURE        :: vxc_is_LDA=>xcpot_is_LDA
-      PROCEDURE        :: exc_is_LDA=>xcpot_is_LDA
-      PROCEDURE        :: vxc_is_gga=>xcpot_vxc_is_gga
-      PROCEDURE        :: exc_is_gga=>xcpot_exc_is_gga
-      PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
-      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
-      PROCEDURE        :: get_vxc=>xcpot_get_vxc
-      PROCEDURE        :: get_exc=>xcpot_get_exc
+      PROCEDURE        :: vx_is_LDA => xcpot_vx_is_LDA
+      PROCEDURE        :: vx_is_GGA => xcpot_vx_is_GGA
+
+      PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
+      PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
+      
+      PROCEDURE        :: exc_is_LDA => xcpot_exc_is_LDA
+      PROCEDURE        :: exc_is_gga => xcpot_exc_is_gga
+      PROCEDURE        :: is_hybrid  => xcpot_is_hybrid
+
+      PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
+      PROCEDURE        :: get_vxc             => xcpot_get_vxc
+      PROCEDURE        :: get_exc             => xcpot_get_exc
       !not overloaded
-      PROCEDURE        :: get_name=>xcpot_get_name
-      PROCEDURE        :: is_name=>xcpot_is_name
-      PROCEDURE        :: init=>xcpot_init
+      PROCEDURE        :: get_name => xcpot_get_name
+      PROCEDURE        :: is_name  => xcpot_is_name
+      PROCEDURE        :: init     => xcpot_init
    END TYPE t_xcpot_inbuild
    PUBLIC t_xcpot_inbuild
 CONTAINS
@@ -116,20 +121,35 @@ CONTAINS
    END SUBROUTINE xcpot_init
   
    !! LDA
-   
-   LOGICAL FUNCTION xcpot_is_lda(xcpot)
-      IMPLICIT NONE
+   logical function xcpot_exc_is_lda(xcpot)
+      implicit none
       CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
-      xcpot_is_lda = (.not. xcpot%vxc_is_gga()) .and. (.not. xcpot%is_hybrid())
-   END FUNCTION xcpot_is_lda
+      xcpot_exc_is_lda= xcpot%vxc_is_lda()
+   end function xcpot_exc_is_lda
    
-   !! GGA
+   logical function xcpot_vx_is_lda(xcpot)
+      implicit none
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_vx_is_lda=(.not. xcpot%vxc_is_gga()) .and. (.not. xcpot%is_hybrid())
+   end function xcpot_vx_is_lda
 
-   LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
-      IMPLICIT NONE
+   logical function xcpot_vc_is_lda(xcpot)
+      implicit none
       CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
-      xcpot_vxc_is_gga=priv_gga(xcpot%icorr)
-   END FUNCTION xcpot_vxc_is_gga
+      xcpot_vc_is_lda=(.not. xcpot%vxc_is_gga()) .and. (.not. xcpot%is_hybrid())
+   end function xcpot_vc_is_lda
+
+   logical function xcpot_vx_is_gga(xcpot)
+      implicit none
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_vx_is_gga=priv_gga(xcpot%icorr)
+   end function xcpot_vx_is_gga
+
+   logical function xcpot_vc_is_gga(xcpot)
+      implicit none
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_vc_is_gga=priv_gga(xcpot%icorr)
+   end function xcpot_vc_is_gga
 
    LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
       IMPLICIT NONE
