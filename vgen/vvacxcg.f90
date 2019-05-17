@@ -422,7 +422,7 @@ CONTAINS
           !
           IF (ALLOCATED(exc%vacz)) THEN
 
-             CALL xcpot%get_exc(input%jspins,af2,e_xc,grad)
+             CALL xcpot%get_exc(input%jspins,af2,e_xc,grad, mt_call=.False.)
    
              !           ----> 2-d back fft to g space
              !
@@ -545,7 +545,7 @@ CONTAINS
        !     calculate the ex-corr. energy density now beyond warping region
        !
        IF (ALLOCATED(exc%vacz)) THEN
-          CALL xcpot%get_exc(input%jspins,rhtxc(:nmzdiff,:),exc%vacz(vacuum%nmzxy+1:,ivac,1),grad)
+          CALL xcpot%get_exc(input%jspins,rhtxc(:nmzdiff,:),exc%vacz(vacuum%nmzxy+1:,ivac,1),grad, mt_call=.False.)
        ENDIF
 
 

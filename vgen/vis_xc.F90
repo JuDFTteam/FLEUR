@@ -92,9 +92,9 @@ CONTAINS
          ALLOCATE ( e_xc(SIZE(rho,1),1) ); e_xc=0.0
 
          IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
-            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, kinED_rs)
+            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, kinED_rs, mt_call=.False.)
          ELSE
-            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad)
+            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
          ENDIF
          CALL pw_from_grid(xcpot,stars,.TRUE.,e_xc,exc%pw,exc%pw_w)
       ENDIF

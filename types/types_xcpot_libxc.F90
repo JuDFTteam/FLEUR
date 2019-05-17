@@ -309,34 +309,35 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen_KS)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinEnergyDen_KS, mt_call)
       use m_constants
       IMPLICIT NONE
-   CLASS(t_xcpot_libxc),INTENT(IN)   :: xcpot
-      INTEGER, INTENT (IN)           :: jspins
-      REAL,INTENT (IN)               :: rh(:,:)  !points,spin
-      REAL, INTENT (OUT)             :: exc(:) !points
+   CLASS(t_xcpot_libxc),INTENT(IN)          :: xcpot
+      INTEGER, INTENT (IN)                  :: jspins
+      REAL,INTENT (IN)                      :: rh(:,:)  !points,spin
+      REAL, INTENT (OUT)                    :: exc(:) !points
       ! optional arguments for GGA
-      TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
+      TYPE(t_gradients),OPTIONAL,INTENT(IN) :: grad
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
 
       ! kinED from Kohn-Sham equations:
       ! tau = sum[phi_i(r)^dag nabla phi_i(r)]
       ! see eq (2) in https://doi.org/10.1063/1.1565316
       ! (-0.5 is applied below)
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:,:)
-      character(len=200)             :: filename
 
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
       REAL  :: cut_ratio = 0.1
       INTEGER :: cut_idx
+      LOGICAL :: is_mt
 
       ! tau = 0.5 * sum[|grad phi_i(r)|²]
       ! see eq (3) in https://doi.org/10.1063/1.1565316
       REAL, ALLOCATABLE              :: kinEnergyDen_libXC(:,:), pkzb_ratio(:,:), pkzb_zaehler(:,:), pkzb_nenner(:,:)
 
-
+      is_mt = merge(mt_call, .False., present(mt_call))
       IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
          CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
@@ -352,9 +353,11 @@ CONTAINS
          END IF
       ELSEIF(xcpot%exc_is_MetaGGA()) THEN
          IF(PRESENT(kinEnergyDen_KS)) THEN 
-            cut_idx = NINT(size(rh,1) * cut_ratio)
             ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
             kinEnergyDen_libXC = transpose(kinEnergyDen_KS + 0.25 * grad%laplace)
+
+            !only cut core of muffin tin
+            cut_idx = MERGE(NINT(size(rh,1) * cut_ratio), 0, is_mt)
 
             exc  = 0.0
             excc = 0.0

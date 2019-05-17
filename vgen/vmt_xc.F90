@@ -172,9 +172,11 @@
                !
                
                IF(perform_MetaGGA) THEN
-                  CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad, kinED_rs)
+                  CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
+                     e_xc(:nsp*atoms%jri(n),1),grad, kinED_rs, mt_call=.True.)
                ELSE
-                  CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),e_xc(:nsp*atoms%jri(n),1),grad)
+                  CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
+                     e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)
                ENDIF
    
                !write (*,*) "cut first ", cut_ratio, " number of points"

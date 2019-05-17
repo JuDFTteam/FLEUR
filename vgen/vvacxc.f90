@@ -110,7 +110,7 @@ CONTAINS
           !i        calculate the exchange-correlation energy density in  real space
           !
           IF (ALLOCATED(exc%vacz)) THEN
-             call xcpot%get_exc(input%jspins,af2,e_xc)
+             call xcpot%get_exc(input%jspins,af2,e_xc, mt_call=.False.)
              !
              !     ----> 2-d back fft to g space
              !
@@ -159,7 +159,7 @@ CONTAINS
        !        calculate the ex.-corr. energy density now beyond warping region
        !
        IF (ALLOCATED(exc%vacz)) THEN
-          CALL xcpot%get_exc(input%jspins,af2(0:nmzdiff-1,:),exc%vacz(vacuum%nmzxy+1:,ivac,1))
+          CALL xcpot%get_exc(input%jspins,af2(0:nmzdiff-1,:),exc%vacz(vacuum%nmzxy+1:,ivac,1), mt_call=.False.)
        END IF
     ENDDO
     IF (noco%l_noco) THEN 

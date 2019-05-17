@@ -279,7 +279,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 !***********************************************************************
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS, mt_call)
 !***********************************************************************
       USE m_xcxal, ONLY : excxal
       USE m_xcwgn, ONLY : excwgn
@@ -297,6 +297,7 @@ CONTAINS
       REAL,INTENT (IN)                      :: rh(:,:)
       REAL, INTENT (OUT)                    :: exc(:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) ::grad
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
       REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
 
 !c
