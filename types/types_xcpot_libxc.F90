@@ -33,8 +33,9 @@ MODULE m_types_xcpot_libxc
       !PROCEDURE        :: vxc_is_LDA          => xcpot_vxc_is_LDA
       !PROCEDURE        :: vxc_is_gga          => xcpot_vxc_is_gga
 
-      PROCEDURE        :: vx_is_LDA => xcpot_vx_is_LDA
-      PROCEDURE        :: vx_is_GGA => xcpot_vx_is_GGA
+      PROCEDURE        :: vx_is_LDA     => xcpot_vx_is_LDA
+      PROCEDURE        :: vx_is_GGA     => xcpot_vx_is_GGA
+      PROCEDURE        :: vx_is_MetaGGA => xcpot_vx_is_MetaGGA
       
       PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
       PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
@@ -202,6 +203,19 @@ CONTAINS
 #endif
    END FUNCTION xcpot_vx_is_gga
 
+   LOGICAL FUNCTION xcpot_vx_is_MetaGGA(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_c)
+      xcpot_vx_is_MetaGGA =  ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f03_func_info_get_family(xc_info))
+#else
+      xcpot_vx_is_MetaGGA=.false.
+#endif
+   END FUNCTION xcpot_vx_is_MetaGGA
+
    LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
@@ -357,8 +371,6 @@ CONTAINS
                                                   exc(:cut_idx))
 
             IF (xcpot%func_exc_id_c>0) THEN
-               !CALL xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), grad%sigma, &
-                                    !transpose(grad%laplace), kinEnergyDen_libXC, excc)
                call xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh(cut_idx+1:,:),1), &
                                                       TRANSPOSE(rh(cut_idx+1:,:)), &
                                                       grad%sigma(:,cut_idx+1:), &
