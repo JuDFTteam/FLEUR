@@ -5,7 +5,9 @@ LINK_LIBRARIES ${FLEUR_LIBRARIES}
 
 #Try typical mkl string
 if (NOT FLEUR_USE_SCALAPACK)
+     message("Test for SCALAPCK with mkl flags")
      set(TEST_LIBRARIES "${FLEUR_LIBRARIES};-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64")
+     message("Testlibraries:${TEST_LIBRARIES}")
      try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_SCALAPACK.f90
            LINK_LIBRARIES ${TEST_LIBRARIES}
             )

@@ -87,9 +87,11 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    REAL                                 :: fix, potDenInt, fermiEnergyTemp, spinDegenFac
    REAL                                 :: rdmftFunctionalValue, occStateI, gradSum
    REAL                                 :: exchangeTerm, lagrangeMultiplier, equalityCriterion
-   REAL                                 :: mixParam, convCrit, rdmftEnergy
+   REAL                                 :: mixParam, rdmftEnergy
    REAL                                 :: sumOcc, tempOcc, addCharge, subCharge, addChargeWeight, subChargeWeight
    REAL, PARAMETER                      :: degenEps = 0.00001
+   REAL, PARAMETER                      :: convCrit = 1.0e-6
+   REAL, PARAMETER                      :: minOcc = 1.0e-8
    LOGICAL                              :: converged, l_qfix, l_restart, l_zref
    CHARACTER(LEN=20)                    :: filename
 
@@ -134,7 +136,6 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    ! General initializations
    mixParam = 0.0001
-   convCrit = 1.0e-6
    lagrangeMultiplier = 0.1 !results%ef
    spinDegenFac = 2.0 / input%jspins ! This factor is used to compensate the missing second spin in non-spinpolarized calculations
 
@@ -574,7 +575,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
          DO ikpt = 1, kpts%nkpt
             DO iBand = 1, highestState(ikpt,isp)
                occStateI = results%w_iks(iBand,ikpt,isp) / (kpts%wtkpt(ikpt))!*kpts%nkptf)
-               occStateI = MAX(occStateI,1.0e-9)
+               occStateI = MAX(occStateI,minOcc)
 !               IF(occStateI.LT.1.0e-7) occStateI = 5.0e-4 ! This is preliminary. I have to discuss what do do here.
 !               occStateI = cdnvalJob%weights(iBand,ikpt)
                rdmftFunctionalValue = 0.5*0.5*SQRT(1.0/occStateI) ! for Müller functional derivative
@@ -624,6 +625,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
                iState = iState + 1
                occStateI = results%w_iks(iBand,ikpt,isp) / kpts%wtkpt(ikpt)
+               occStateI = MAX(occStateI,minOcc)
                equalityLinCombi(iState) = kpts%wtkpt(ikpt)
                gradient(iState) = dEdOcc(iBand,ikpt,isp) + lagrangeMultiplier
                gradient(numStates+1) = gradient(numStates+1) + occStateI * kpts%wtkpt(ikpt)
@@ -648,7 +650,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
          DO ikpt = 1, kpts%nkpt
             DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
                iState = iState + 1
-               results%w_iks(iBand,ikpt,isp) = parameters(iState) * kpts%wtkpt(ikpt)
+               results%w_iks(iBand,ikpt,isp) = MERGE(parameters(iState) * kpts%wtkpt(ikpt),0.0,parameters(iState).GT.minOcc)
             END DO
          END DO
       END DO
