@@ -34,7 +34,7 @@ CONTAINS
       implicit none
       REAL, INTENT(in)                 :: EnergyDen_RS(:,:), vTot_rs(:,:), vTot0_rs(:,:), core_den_rs(:,:), val_den_rs(:,:)
       INTEGER, intent(in)              :: atm_idx, nsp
-      REAL, INTENT(inout), allocatable :: kinEnergyDen_RS(:,:)
+      REAL, INTENT(inout)              :: kinEnergyDen_RS(:,:)
 
 #ifdef CPP_LIBXC
       kinEnergyDen_RS = EnergyDen_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)

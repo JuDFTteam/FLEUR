@@ -17,9 +17,17 @@ MODULE m_types_xcpot
    PRIVATE
    PUBLIC           :: t_xcpot,t_gradients
 
+   TYPE t_kinED
+      real, allocatable   :: is(:,:)   ! (nsp*jmtd, jspins)
+      real, allocatable   :: mt(:,:,:) ! (nsp*jmtd, jspins, local num of types)
+   contains
+      procedure           :: alloc_mt => kED_alloc_mt
+   END TYPE t_kinED
+
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
       TYPE(t_potden)   :: core_den, val_den
+      TYPE(t_kinED)    :: kinED
    CONTAINS
       PROCEDURE        :: vxc_is_LDA => xcpot_vxc_is_LDA
       PROCEDURE        :: vxc_is_GGA => xcpot_vxc_is_GGA
@@ -60,8 +68,22 @@ MODULE m_types_xcpot
       REAL,ALLOCATABLE :: gr(:,:,:)
       REAL,ALLOCATABLE :: laplace(:,:)
    END TYPE t_gradients
-   
 CONTAINS
+   subroutine kED_alloc_mt(kED,nsp_x_jmtd, jspins, n_start, n_types, n_stride)
+      implicit none
+      class(t_kinED), intent(inout)   :: kED
+      integer, intent(in)            :: nsp_x_jmtd, jspins, n_start, n_types, n_stride
+      integer                        :: cnt, n
+
+      if(.not. allocated(kED%mt)) then
+         cnt = 0
+         do n = n_start,n_types,n_stride
+            cnt = cnt + 1
+         enddo
+         allocate(kED%mt(nsp_x_jmtd, jspins, cnt))
+      endif
+   end subroutine kED_alloc_mt
+
    ! LDA
    LOGICAL FUNCTION xcpot_vc_is_LDA(xcpot)
       IMPLICIT NONE

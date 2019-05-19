@@ -54,8 +54,8 @@
          TYPE(t_potden)        :: vTot_tmp
          TYPE(t_sphhar)        :: tmp_sphhar
          REAL, ALLOCATABLE     :: ch(:,:), core_den_rs(:,:), val_den_rs(:,:), ED_rs(:,:), &
-                                  vTot_rs(:,:), vTot0_rs(:,:), kinED_rs(:,:)
-         INTEGER               :: n,nsp,nt,jr
+                                  vTot_rs(:,:), vTot0_rs(:,:)
+         INTEGER               :: n,nsp,nt,jr, loc_n
          INTEGER               :: i, j, idx, cnt
          REAL                  :: divi
 
@@ -70,7 +70,8 @@
          REAL,ALLOCATABLE:: xcl(:,:)
          LOGICAL :: lda_atom(atoms%ntype),l_libxc, perform_MetaGGA
          !.....------------------------------------------------------------------
-         perform_MetaGGA = ALLOCATED(EnergyDen%mt) .AND. xcpot%exc_is_MetaGGA()
+         perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
+                         .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
          lda_atom=.FALSE.; l_libxc=.FALSE.
          SELECT TYPE(xcpot)
          TYPE IS(t_xcpot_inbuild)
@@ -96,7 +97,6 @@
             ALLOCATE(vTot0_rs, mold=vTot_rs)
             ALLOCATE(core_den_rs, mold=ch)
             ALLOCATE(val_den_rs, mold=ch)
-            ALLOCATE(kinED_RS, mold=ch)
          ENDIF
 
          CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
@@ -113,7 +113,10 @@
          n_start=1
          n_stride=1
 #endif
+         loc_n = 0
+         call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
+            loc_n = loc_n + 1
             CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
 
             !
@@ -163,7 +166,7 @@
                CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
                                xcpot%val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
                CALL calc_kinEnergyDen_mt(ED_rs, vTot_rs, vTot0_rs, &
-                                      core_den_rs, val_den_rs, n, nsp, kinED_rs)
+                                      core_den_rs, val_den_rs, n, nsp, xcpot%kinED%mt(:,:,loc_n))
             ENDIF
 
             IF (ALLOCATED(exc%mt)) THEN
@@ -173,7 +176,7 @@
                
                IF(perform_MetaGGA) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
-                     e_xc(:nsp*atoms%jri(n),1),grad, kinED_rs, mt_call=.True.)
+                     e_xc(:nsp*atoms%jri(n),1),grad, xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)
