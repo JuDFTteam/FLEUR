@@ -505,13 +505,17 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
       thisCdnvalJob%noccbd(ikpt) = iBand
 
 !      DO iBand = 1,results%neig(ikpt,jsp)
-!         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst.OR.input%l_gf) THEN
+!         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst) THEN
 !            thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%noccbd(ikpt) + 1
 !         END IF
 !      END DO
 
       IF(PRESENT(banddos)) THEN
             IF (banddos%dos) thisCdnvalJob%noccbd(ikpt) = results%neig(ikpt,jsp)
+      END IF 
+
+      IF(input%l_gf) THEN
+         thisCdnvalJob%noccbd(ikpt) = results%neig(ikpt,jsp)
       END IF 
 
       thisCdnvalJob%nStart(ikpt) = 1
