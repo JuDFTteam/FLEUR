@@ -121,7 +121,15 @@
 
             !
             !         calculate the ex.-cor. potential
-            CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
+            write (*,*) "perform_MGGA = ", perform_MetaGGA
+            write (*,*) "xcpot%kinED%set = ", xcpot%kinED%set
+            if(perform_MetaGGA .and. xcpot%kinED%set) then
+               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
+                   , v_x(:nsp*atoms%jri(n),:),grad, kinED_KS=xcpot%kinED%mt(:,:,loc_n))
+            else
+               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
+                  , v_x(:nsp*atoms%jri(n),:),grad)
+            endif
             IF (lda_atom(n)) THEN
                ! Use local part of pw91 for this atom
                CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
@@ -167,6 +175,7 @@
                                xcpot%val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
                CALL calc_kinEnergyDen_mt(ED_rs, vTot_rs, vTot0_rs, &
                                       core_den_rs, val_den_rs, n, nsp, xcpot%kinED%mt(:,:,loc_n))
+               xcpot%kinED%set = .True.
             ENDIF
 
             IF (ALLOCATED(exc%mt)) THEN
@@ -174,9 +183,10 @@
                !           calculate the ex.-cor energy density
                !
                
-               IF(perform_MetaGGA) THEN
+               IF(perform_MetaGGA .and. xcpot%kinED%set) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
-                     e_xc(:nsp*atoms%jri(n),1),grad, xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
+                     e_xc(:nsp*atoms%jri(n),1),grad, &
+                     kinED_KS=xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)

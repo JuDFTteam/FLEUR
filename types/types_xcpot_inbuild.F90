@@ -177,7 +177,7 @@ CONTAINS
       IF (xcpot%is_name("vhse")) a_ex=amix_hse
    END FUNCTION xcpot_get_exchange_weight
 
-   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
+   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad, kinED_KS)
 !
       USE m_xcxal, ONLY : vxcxal
       USE m_xcwgn, ONLY : vxcwgn
@@ -203,6 +203,7 @@ CONTAINS
 !c
       REAL, INTENT (OUT) :: vx (:,:)
       REAL, INTENT (OUT) :: vxc(:,:)
+      REAL, INTENT(IN),OPTIONAL:: kinED_KS(:,:)
 
       ! optional arguments for GGA
       TYPE(t_gradients),INTENT(INOUT),OPTIONAL::grad
@@ -279,7 +280,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
 !***********************************************************************
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS, mt_call)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinED_KS, mt_call)
 !***********************************************************************
       USE m_xcxal, ONLY : excxal
       USE m_xcwgn, ONLY : excwgn
@@ -298,7 +299,7 @@ CONTAINS
       REAL, INTENT (OUT)                    :: exc(:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) ::grad
       LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
-      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
+      REAL, INTENT(IN), OPTIONAL            :: kinED_KS(:,:)
 
 !c
 !c ---> local scalars

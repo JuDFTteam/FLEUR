@@ -37,7 +37,7 @@ CONTAINS
       USE m_metagga
       IMPLICIT NONE
 
-      CLASS(t_xcpot),INTENT(INOUT)     :: xcpot
+      CLASS(t_xcpot),INTENT(INOUT)  :: xcpot
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_noco),INTENT(IN)       :: noco
       TYPE(t_sym),INTENT(IN)        :: sym
@@ -52,7 +52,10 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: den_pw_w(:,:), EnergyDen_pw_w(:,:), vtot_pw_norm(:,:) 
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:,:)
       INTEGER           :: jspin, i, js
+      LOGICAL           :: perform_MetaGGA
 
+      perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
+                      .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
       CALL init_pw_grid(xcpot,stars,sym,cell)
 
       !Put the charge on the grid, in GGA case also calculate gradients
@@ -61,7 +64,11 @@ CONTAINS
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
 
-      CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
+      if(perform_MetaGGA .and. xcpot%kinED%set) then
+         CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinED_KS=xcpot%kinED%is)
+      else
+         CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
+      endif
 
       IF (xcpot%needs_grad()) THEN
          SELECT TYPE(xcpot)
@@ -85,6 +92,7 @@ CONTAINS
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  vTot%pw, tmp_grad,    vTot_rs)
          CALL calc_kinEnergyDen_pw(ED_rs, vTot_rs, rho, xcpot%kinED%is)
+         xcpot%kinED%set = .True.
       ENDIF
 
       !calculate the ex.-cor energy density
