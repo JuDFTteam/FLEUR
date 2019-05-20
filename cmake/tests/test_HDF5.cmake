@@ -17,7 +17,7 @@ foreach(ADD_String "-lhdf5_fortran;-lhdf5"
    	    LINK_LIBRARIES ${TEST_LIBRARIES}
             )
      if (FLEUR_USE_HDF5)
-          set(FLEUR_LIBRARIES ${TEST_LIBRARIES})
+          set(FLEUR_HDF5_LIBRARIES ${TEST_LIBRARIES})
      endif()       	    
    endif()
 endforeach()
@@ -25,7 +25,7 @@ endforeach()
 #check if HDF is parallel
 if ( FLEUR_USE_HDF5)
    try_compile(FLEUR_USE_HDF5MPI ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5MPI.f90
-            LINK_LIBRARIES ${FLEUR_LIBRARIES}
+            LINK_LIBRARIES ${FLEUR_HDF5_LIBRARIES}
             )
 endif()
 
@@ -62,7 +62,7 @@ if (DEFINED CLI_FLEUR_USE_HDF5)
 	   add_subdirectory (external/hdf5-git EXCLUDE_FROM_ALL)
 	   set(FLEUR_USE_HDF5 TRUE)
            set(FLEUR_USE_HDF5MPI FLEUR_USE_MPI)
-           set(FLEUR_COMPILE_HDF true)
+           set(FLEUR_COMPILE_HDF5 true)
            include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/external")
            include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/external/static")
        endif()
