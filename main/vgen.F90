@@ -20,7 +20,7 @@ CONTAINS
    !!     TE_EXC :   charge density-ex-corr.energy density integral
 
    SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                   obsolete,cell,oneD,sliceplot,mpi,results,noco,den,vTot,vx,vCoul)
+                   obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul)
 
       USE m_types
       USE m_rotate_int_den_to_local
@@ -35,7 +35,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT)  :: results
-      CLASS(t_xcpot),    INTENT(IN)     :: xcpot
+      CLASS(t_xcpot),    INTENT(INOUT)  :: xcpot
       TYPE(t_hybrid),    INTENT(IN)     :: hybrid
       TYPE(t_mpi),       INTENT(IN)     :: mpi
       TYPE(t_dimension), INTENT(IN)     :: dimension
@@ -45,12 +45,13 @@ CONTAINS
       TYPE(t_input),     INTENT(IN)     :: input
       TYPE(t_field),     INTENT(INOUT)  :: field  !efield can be modified
       TYPE(t_vacuum),    INTENT(IN)     :: vacuum
-      TYPE(t_noco),      INTENT(IN)     :: noco
+      TYPE(t_noco),      INTENT(INOUT)  :: noco
       TYPE(t_sym),       INTENT(IN)     :: sym
       TYPE(t_stars),     INTENT(IN)     :: stars
       TYPE(t_cell),      INTENT(IN)     :: cell
       TYPE(t_sphhar),    INTENT(IN)     :: sphhar
       TYPE(t_atoms),     INTENT(IN)     :: atoms
+      TYPE(t_potden),    INTENT(IN)     :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT)  :: den
       TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul
 
@@ -89,7 +90,7 @@ CONTAINS
       ENDIF
 
       CALL vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
-                      obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
+                      obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
       CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
@@ -102,7 +103,5 @@ CONTAINS
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
 #endif
-
    END SUBROUTINE vgen
-
 END MODULE m_vgen

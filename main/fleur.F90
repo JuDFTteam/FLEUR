@@ -57,11 +57,13 @@ CONTAINS
     USE m_juDFT_time
     USE m_calc_hybrid
     USE m_rdmft
+    USE m_io_hybrid
     USE m_wann_optional
     USE m_wannier
     USE m_bs_comfort
     USE m_dwigner
     USE m_ylm
+    USE m_metagga
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -94,7 +96,7 @@ CONTAINS
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
-    TYPE(t_potden)                  :: inDen, outDen
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
     TYPE(t_greensf)                 :: gOnsite
@@ -224,6 +226,10 @@ CONTAINS
              iter = 0
           END IF
        ENDIF
+       !RDMFT
+       IF(input%l_rdmft) THEN
+          CALL open_hybrid_io1(DIMENSION,sym%invs)
+       END IF
 
        CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
 
@@ -242,7 +248,7 @@ CONTAINS
 
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                 obsolete,cell,oneD,sliceplot,mpi,results,noco,inDen,vTot,vx,vCoul)
+                 obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
 #ifdef CPP_MPI
@@ -250,7 +256,8 @@ CONTAINS
 #endif
 
        CALL forcetheo%start(vtot,mpi%irank==0)
-       forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,noco))
+       forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,atoms,noco))
+
           CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
           vTemp = vTot
@@ -351,14 +358,16 @@ CONTAINS
           CALL timestart("generation of new charge density (total)")
           CALL outDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
-          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
-                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,outDen,gOnsite,hub1)
+          CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum, &
+                      dimension,kpts,atoms,sphhar,stars,sym,&
+                      enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
+                      archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1)
 
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
                    CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
-                              sphhar,sym,field,vTot,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
+                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
              END SELECT
           END IF
 
@@ -453,7 +462,9 @@ CONTAINS
           END IF
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
-          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f)
+         ! MetaGGAs need a at least 2 iterations
+          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f & 
+                               .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
           !If we have converged run hia if the density matrix has not converged (not if we are at itmax)
           l_runhia = .NOT.l_cont.AND.(iter < input%itmax).AND.(atoms%n_hia > 0).AND.(0.01<=results%last_occdistance.OR.0.001<=results%last_mmpMatdistance)
           l_cont = l_cont.OR.l_runhia

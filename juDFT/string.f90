@@ -54,7 +54,7 @@ contains
       if(num >= 1e-1 .and. num <= 1e4) then
          write (ret_str,"(F10.5)") num
       else
-         write (ret_str,"(ES10.4)") num
+         write (ret_str,"(ES12.4)") num
       endif
       ret_str = strip(ret_str)
    end function float2str

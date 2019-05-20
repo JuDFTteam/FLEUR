@@ -65,16 +65,19 @@ CONTAINS
     
   END SUBROUTINE  ssdisp_start
 
-  LOGICAL FUNCTION ssdisp_next_job(this,lastiter,noco)
+  LOGICAL FUNCTION ssdisp_next_job(this,lastiter,atoms,noco)
     USE m_types_setup
     USE m_xmlOutput
+    USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
+    TYPE(t_atoms),INTENT(IN)            :: atoms
     !Stuff that might be modified...
     TYPE(t_noco),INTENT(INOUT) :: noco
+    INTEGER                    :: itype
     IF (.NOT.lastiter) THEN
-       ssdisp_next_job=this%t_forcetheo%next_job(lastiter,noco)
+       ssdisp_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco)
        RETURN
     ENDIF
     !OK, now we start the SSDISP-loop
@@ -84,6 +87,10 @@ CONTAINS
     
     !Now modify the noco-file
     noco%qss=this%qvec(:,this%q_done)
+    !Modify the alpha-angles
+    DO iType = 1,atoms%ntype
+       noco%alph(iType) = noco%alphInit(iType) + tpi_const*dot_PRODUCT(noco%qss,atoms%taual(:,SUM(atoms%neq(:itype-1))+1))
+    END DO
     IF (.NOT.this%l_io) RETURN
     IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_SSDISP')
     CALL openXMLElementPoly('Forcetheorem_Loop_SSDISP',(/'Q-vec'/),(/this%q_done/))

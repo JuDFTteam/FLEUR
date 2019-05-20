@@ -5,13 +5,13 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_rinpXML
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!
-!!! The routine r_inpXML reads in the inp.xml file
-!!!
-!!!                               GM'16
-!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !!!
+   !!! The routine r_inpXML reads in the inp.xml file
+   !!!
+   !!!                               GM'16
+   !!!
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE r_inpXML(&
       atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
@@ -87,7 +87,7 @@ CONTAINS
       ! ..
       ! ..  Local Variables
       REAL     :: scpos  ,zc
-      INTEGER ieq,i,k,na,n,ii,id_c,id_x
+      INTEGER ieq,i,k,na,n,ii,vxc_id_c,vxc_id_x,exc_id_c,exc_id_x
       REAL s3,ah,a,hs2,rest,thetaj
       LOGICAL l_hyb,l_sym,ldum
       INTEGER :: ierr
@@ -154,7 +154,7 @@ CONTAINS
       REAL,    ALLOCATABLE :: speciesLOeParams(:), speciesLLOReal(:)
       LOGICAL, ALLOCATABLE :: wannAtomList(:)
 
-! Variables for MT radius testing:
+      ! Variables for MT radius testing:
 
       REAL                 :: dtild1,kmax1,dvac1
       LOGICAL              :: l_test
@@ -163,25 +163,25 @@ CONTAINS
 
       EXTERNAL prp_xcfft_box
 
-      interface
-         function dropInputSchema() bind(C, name="dropInputSchema")
-            use iso_c_binding
+      INTERFACE
+         FUNCTION dropInputSchema() BIND(C, name="dropInputSchema")
+            USE iso_c_binding
             INTEGER(c_int) dropInputSchema
-         end function dropInputSchema
-      end interface
+         END FUNCTION dropInputSchema
+      END INTERFACE
 
       errorStatus = 0
       errorStatus = dropInputSchema()
       IF(errorStatus.NE.0) THEN
-         STOP 'Error: Cannot print out FleurInputSchema.xsd'
+         CALL juDFT_error('Error: Cannot print out FleurInputSchema.xsd')
       END IF
 
       schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
       docFilename = "inp.xml"//C_NULL_CHAR
 
       !TODO! these switches should be in the inp-file
-      input%l_core_confpot=.true. !former CPP_CORE
-      input%l_useapw=.false.   !former CPP_APW
+      input%l_core_confpot=.TRUE. !former CPP_CORE
+      input%l_useapw=.FALSE.   !former CPP_APW
       !WRITE(*,*) 'Start reading of inp.xml file'
       CALL xmlInitInterface()
       CALL xmlParseSchema(schemaFilename)
@@ -193,7 +193,7 @@ CONTAINS
       versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
       IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
          (TRIM(ADJUSTL(versionString)).NE.'0.29')) THEN
-         STOP 'version number of inp.xml file is not compatible with this fleur version'
+         CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
       END IF
 
       ! Get number of atoms, atom types, and atom species
@@ -291,7 +291,7 @@ CONTAINS
       xPathA = '/fleurInput/comment'
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
       DO i = 1, LEN(TRIM(ADJUSTL(valueString)))
-         IF (valueString(i:i).EQ.achar(10)) valueString(i:i) = ' ' !remove line breaks
+         IF (valueString(i:i) == ACHAR(10)) valueString(i:i) = ' ' !remove line breaks
       END DO
       valueString = TRIM(ADJUSTL(valueString))
       DO i = 1, 10
@@ -312,13 +312,13 @@ CONTAINS
 
       xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
       numberNodes = xmlGetNumberOfNodes(xPathA)
-      dimension%neigd = 0
+      DIMENSION%neigd = 0
       IF(numberNodes.EQ.1) THEN
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
          IF(TRIM(ADJUSTL(valueString)).EQ.'all') THEN
             dimension%neigd = -1
          ELSE
-            READ(valueString,*) dimension%neigd
+            READ(valueString,*) DIMENSION%neigd
          END IF
       END IF
 
@@ -347,7 +347,7 @@ CONTAINS
       CASE ("aPulay")
          input%imix = 15
       CASE DEFAULT
-         STOP 'Error: unknown mixing scheme selected!'
+         CALL juDFT_error('Error: unknown mixing scheme selected!')
       END SELECT
 
       input%alpha = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
@@ -440,7 +440,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%gauss = .FALSE.
          input%tria = .TRUE.
       CASE DEFAULT
-         STOP 'Invalid bzIntegration mode selected!'
+         CALL juDFT_error('Invalid bzIntegration mode selected!')
       END SELECT
 
       nodeSum = 0
@@ -458,7 +458,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%tkb = boltzmannConst * input%tkb
       END IF
       IF(nodeSum.GE.2) THEN
-         STOP 'Error: Multiple fermi Smearing parameters provided in input file!'
+         CALL juDFT_error('Error: Multiple fermi Smearing parameters provided in input file!')
       END IF
 
       xPathA = '/fleurInput/calculationSetup/bzIntegration/@valenceElectrons'
@@ -466,7 +466,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       IF (numberNodes.EQ.1) THEN
          input%zelec = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
       ELSE
-         STOP 'Error: Optionality of valence electrons in input file not yet implemented!'
+         CALL juDFT_error('Error: Optionality of valence electrons in input file not yet implemented!')
       END IF
 
       IF (altKPointSetIndex.EQ.-1) THEN
@@ -517,7 +517,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
          numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(kPointsPrefix))//'/kPointCount/specialPoint')
          IF(numberNodes.EQ.1) THEN
-            STOP 'Error: Single special k point provided. This does not make sense!'
+            CALL juDFT_error('Error: Single special k point provided. This does not make sense!')
          END IF
          kpts%numSpecialPoints = numberNodes
          IF(kpts%numSpecialPoints.GE.2) THEN
@@ -626,7 +626,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       noco%b_con(:,:) = 0.0
 
       IF ((noco%l_noco).AND.(numberNodes.EQ.0)) THEN
-         STOP 'Error: l_noco is true but no noco parameters set in xml input file!'
+         CALL juDFT_error('Error: l_noco is true but no noco parameters set in xml input file!')
       END IF
 
       IF (numberNodes.EQ.1) THEN
@@ -768,7 +768,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       numberNodes = xmlGetNumberOfNodes(xPathA)
 
       !   IF ((noco%l_ss).AND.(numberNodes.EQ.0)) THEN
-      !      STOP 'Error: l_ss is true but no q point mesh set in xml input file!'
+      !      call juDFT_error('Error: l_ss is true but no q point mesh set in xml input file!')
       !   END IF
 
       ! Read in optional E-Field parameters
@@ -871,7 +871,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   END IF
                   evac0Temp(numVac,1) = eParamUp
                   IF(input%jspins.GT.1) evac0Temp(numVac,2) = eParamDown
-                  IF(i.EQ.1) THEN
+                  IF(i == 1) THEN
                      evac0Temp(3-numVac,1) = eParamUp
                      IF(input%jspins.GT.1) evac0Temp(3-numVac,2) = eParamDown
                   END IF
@@ -964,7 +964,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             sym%nop = 48
             ! Read in sym.out file if sym%namgrp='any' set.
             CALL rw_symfile('r',94,'sym.out',48,cell%bmat,&
-                 &                        mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
+               &                        mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
             IF (ALLOCATED(sym%mrot)) THEN
                DEALLOCATE(sym%mrot)
             END IF
@@ -993,14 +993,14 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                CALL juDFT_error("Could not determine spacegroup!", calledby = "r_inpXML")
             END IF
             IF ((n2spg.GE.13).AND.(n2spg.LE.17)) THEN
-               IF (.not.((cell%latnam.EQ.'hx3').OR.(cell%latnam.EQ.'hex'))) THEN
+               IF (.NOT.((cell%latnam.EQ.'hx3').OR.(cell%latnam.EQ.'hex'))) THEN
                   CALL juDFT_error("Use only hex or hx3 with p3, p3m1, p31m, p6 or p6m!", calledby ="r_inpXML")
                END IF
             END IF
             sym%nop = ord2(n2spg)
             IF (sym%invs) THEN
                sym%nop = 2*sym%nop
-               IF (sym%zrfs.and.(.not.l_c2(n2spg))) sym%nop = 2*sym%nop
+               IF (sym%zrfs.AND.(.NOT.l_c2(n2spg))) sym%nop = 2*sym%nop
             ELSE
                IF (sym%zrfs) sym%nop = 2*sym%nop
             END IF
@@ -1013,7 +1013,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             END IF
             ALLOCATE(sym%tau(3,sym%nop))
             CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam,&
-                 &                     sym%mrot,sym%tau,sym%nop2,sym%symor)
+               &                     sym%mrot,sym%tau,sym%nop2,sym%symor)
          END IF
       END IF
 
@@ -1027,7 +1027,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@filename')))
 
          CALL rw_symfile('r',94,TRIM(ADJUSTL(valueString)),48,cell%bmat,&
-              &                     mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
+            &                     mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
 
          IF (ALLOCATED(sym%mrot)) THEN
             DEALLOCATE(sym%mrot)
@@ -1118,20 +1118,20 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             a2(2) = a1(1)
          ELSE IF (cell%latnam.EQ.'c-b') THEN
             aTemp = a1(1)
-            a1(1) = aTemp*0.5*sqrt(2.0)
+            a1(1) = aTemp*0.5*SQRT(2.0)
             a1(2) = -aTemp*0.5
-            a2(1) = aTemp*0.5*sqrt(2.0)
+            a2(1) = aTemp*0.5*SQRT(2.0)
             a2(2) = aTemp*0.5
          ELSE IF (cell%latnam.EQ.'hex') THEN
             aTemp = 0.5*a1(1)
-            a1(1) = aTemp*sqrt(3.0)
+            a1(1) = aTemp*SQRT(3.0)
             a1(2) = -aTemp
             a2(1) = a1(1)
             a2(2) = aTemp
          ELSE IF (cell%latnam.EQ.'hx3') THEN
             aTemp = 0.5*a1(1)
             a1(1) = aTemp
-            a1(2) = -aTemp*sqrt(3.0)
+            a1(2) = -aTemp*SQRT(3.0)
             a2(1) = a1(1)
             a2(2) = -a1(2)
          ELSE IF (cell%latnam.EQ.'fcc') THEN
@@ -1179,7 +1179,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       cell%bmat(:,:) = tpi_const*cell%bmat(:,:)
-      cell%omtil = abs(cell%omtil)
+      cell%omtil = ABS(cell%omtil)
 
       IF (input%film.AND..NOT.oneD%odd%d1) THEN
          cell%vol = (cell%omtil/cell%amat(3,3))*vacuum%dvac
@@ -1192,7 +1192,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       ELSE
          cell%vol = cell%omtil
          cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
-         IF (cell%area.lt.1.0e-7) THEN
+         IF (cell%area < 1.0e-7) THEN
             IF (cell%latnam.EQ.'any') THEN
                cell%area = 1.
             ELSE
@@ -1206,13 +1206,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          nop48 = 48
          ALLOCATE (invOps(sym%nop),multtab(sym%nop,sym%nop),optype(nop48))
          CALL check_close(sym%nop,sym%mrot,sym%tau,&
-              &                      multtab,invOps,optype)
+            &                      multtab,invOps,optype)
 
          CALL symproperties(nop48,optype,input%film,sym%nop,multtab,cell%amat,&
-              &                        sym%symor,sym%mrot,sym%tau,&
-              &                        invSym,sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2)
+            &                        sym%symor,sym%mrot,sym%tau,&
+            &                        invSym,sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2)
          DEALLOCATE(invOps,multtab,optype)
-         IF (.not.input%film) sym%nop2=sym%nop
+         IF (.NOT.input%film) sym%nop2=sym%nop
          IF (input%film) THEN
             DO n = 1, sym%nop
                DO i = 1, 3
@@ -1252,28 +1252,63 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       !Read in libxc parameters if present
-      if(      xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCID')   == 1 &
-         .and. xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCName') == 1) then
-         call judft_error("LibXC is given both by Name and ID and is therefore overdetermined", calledby="r_inpXML")
-      endif
+      xPathA = '/fleurInput/xcFunctional/LibXCID'
+      xPathB = '/fleurInput/xcFunctional/LibXCName'
 
-      IF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCID') == 1) THEN
-         id_x=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/LibXCID/@exchange'))
-         id_c=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/LibXCID/@correlation'))
-      ELSEIF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/LibXCName') == 1) THEN
-         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/LibXCName/@exchange')))))
+      IF(xmlGetNumberOfNodes(xPathA) == 1 .AND. xmlGetNumberOfNodes(xPathB) == 1) THEN
+         CALL judft_error("LibXC is given both by Name and ID and is therefore overdetermined", calledby="r_inpXML")
+      ENDIF
+
+
+      ! LibXCID 
+      IF (xmlGetNumberOfNodes(xPathA) == 1) THEN
 #ifdef CPP_LIBXC
-         id_x =  xc_f03_functional_get_number(TRIM(valueString))
-         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/LibXCName/@correlation')))))
-         id_c =  xc_f03_functional_get_number(TRIM(valueString))
+         vxc_id_x=evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@exchange'))
+         vxc_id_c=evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@correlation'))
+
+         IF(xmlGetNumberOfNodes(TRIM(xPathA) // '/@etot_exchange') == 1) THEN
+            exc_id_x = evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@etot_exchange'))
+         ELSE
+            exc_id_x = vxc_id_x
+         ENDIF
+         
+         IF(xmlGetNumberOfNodes(TRIM(xPathA) // '/@exc_correlation') == 1) THEN
+            exc_id_c = evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@exc_correlation'))
+         ELSE
+            exc_id_c = vxc_id_c
+         ENDIF
+#else
+         CALL judft_error("To use libxc functionals you have to compile with libXC support")
+#endif
+      ! LibXCName 
+      ELSEIF (xmlGetNumberOfNodes(TRIM(xPathB)) == 1) THEN
+#ifdef CPP_LIBXC
+         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@exchange')))
+         vxc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
+
+         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@correlation')))
+         vxc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
+         
+         IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
+            exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
+         ELSE
+            exc_id_x = vxc_id_x
+         ENDIF
+         
+         IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
+            exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
+         ELSE
+            exc_id_c = vxc_id_c
+         ENDIF
 #else
          CALL judft_error("To use libxc functionals you have to compile with libXC support")
 #endif
       ELSE
-         id_x=0; id_c=0
+         vxc_id_x=0; vxc_id_c=0;
+         exc_id_x=0; exc_id_c=0;
       ENDIF
-
-      !write (*,*) "id_x = ", id_x, "id_c = ", id_c
 
       ! Read in xc functional parameters
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
@@ -1286,7 +1321,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       END IF
 
       !now initialize the xcpot variable
-      CALL setXCParameters(atoms,valueString,l_relcor,input%jspins,id_x,id_c,xcpot)
+      CALL setXCParameters(atoms,valueString,l_relcor,input%jspins,vxc_id_x,vxc_id_c,exc_id_x, exc_id_c, xcpot)
 
       xPathA = '/fleurInput/calculationSetup/cutoffs/@GmaxXC'
       numberNodes = xmlGetNumberOfNodes(xPathA)
@@ -1299,20 +1334,20 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 
       obsolete%lwb=.FALSE.
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%needs_grad()) THEN
          obsolete%ndvgrd=6
          obsolete%chng=-0.1e-11
       END IF
 
-      IF (xcpot%is_gga()) THEN
-         obsolete%ndvgrd = max(obsolete%ndvgrd,3)
+      IF (xcpot%needs_grad()) THEN
+         obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
       END IF
 
       hybrid%gcutm1 = input%rkmax - 0.5
       hybrid%tolerance1 = 1.0e-4
       hybrid%ewaldlambda = 3
       hybrid%lexp = 16
-      hybrid%bands1 = dimension%neigd
+      hybrid%bands1 = DIMENSION%neigd
 
       numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
       IF (numberNodes==0) THEN
@@ -1425,7 +1460,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             CALL getIntegerSequenceFromString(TRIM(ADJUSTL(lString)), lNumbers, lNumCount)
             CALL getIntegerSequenceFromString(TRIM(ADJUSTL(nString)), nNumbers, nNumCount)
             IF(lNumCount.NE.nNumCount) THEN
-               STOP 'Error in LO input: l quantum number count does not equal n quantum number count'
+               CALL judft_error('Error in LO input: l quantum number count does not equal n quantum number count')
             END IF
             speciesNLO(iSpecies) = speciesNLO(iSpecies) + lNumCount
             DEALLOCATE (lNumbers, nNumbers)
@@ -1508,22 +1543,22 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          END DO
       END DO
 
-      atoms%lmaxd = maxval(atoms%lmax(:))
+      atoms%lmaxd = MAXVAL(atoms%lmax(:))
       atoms%llod  = 0
       atoms%nlod = 0
       DO iType = 1, atoms%ntype
-         atoms%nlod = max(atoms%nlod,atoms%nlo(iType))
+         atoms%nlod = MAX(atoms%nlod,atoms%nlo(iType))
       END DO
-      atoms%nlod = max(atoms%nlod,2) ! for chkmt
+      atoms%nlod = MAX(atoms%nlod,2) ! for chkmt
       ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype)); atoms%llo=-1
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       ALLOCATE(atoms%l_dulo(atoms%nlod,atoms%ntype)) ! For what is this?
 
-      dimension%nstd = 29
+      DIMENSION%nstd = 29
 
-      ALLOCATE(atoms%coreStateOccs(dimension%nstd,2,atoms%ntype)); atoms%coreStateOccs=0.0
-      ALLOCATE(atoms%coreStateNprnc(dimension%nstd,atoms%ntype))
-      ALLOCATE(atoms%coreStateKappa(dimension%nstd,atoms%ntype))
+      ALLOCATE(atoms%coreStateOccs(DIMENSION%nstd,2,atoms%ntype)); atoms%coreStateOccs=0.0
+      ALLOCATE(atoms%coreStateNprnc(DIMENSION%nstd,atoms%ntype))
+      ALLOCATE(atoms%coreStateKappa(DIMENSION%nstd,atoms%ntype))
 
       CALL enpara%init(atoms,input%jspins)
       enpara%evac0(:,:) = evac0Temp(:,:)
@@ -1587,7 +1622,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   DO i = 1, 6
                      IF (TRIM(ADJUSTL(token)).EQ.nobleGasConfigList_const(i)) THEN
                         IF (providedCoreStates+nobleGasNumStatesList_const(i).GT.29) THEN
-                           STOP 'Error: Too many core states provided in xml input file!'
+                           CALL judft_error('Error: Too many core states provided in xml input file!')
                         END IF
                         DO j = providedCoreStates+1, providedCoreStates+nobleGasNumStatesList_const(i)
                            coreStateOccs(j-providedCoreStates,:) = coreStateNumElecsList_const(j)
@@ -1603,7 +1638,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      IF (TRIM(ADJUSTL(token)).EQ.coreStateList_const(i)) THEN
                         providedCoreStates = providedCoreStates + 1
                         IF (providedCoreStates.GT.29) THEN
-                           STOP 'Error: Too many core states provided in xml input file!'
+                           CALL judft_error('Error: Too many core states provided in xml input file!')
                         END IF
                         coreStateOccs(providedCoreStates,:) = coreStateNumElecsList_const(i)
                         coreStateNprnc(providedCoreStates) = coreStateNprncList_const(i)
@@ -1624,7 +1659,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      IF (TRIM(ADJUSTL(token)).EQ.coreStateList_const(i)) THEN
                         providedStates = providedStates + 1
                         IF (providedStates.GT.29) THEN
-                           STOP 'Error: Too many valence states provided in xml input file!'
+                           CALL judft_error('Error: Too many valence states provided in xml input file!')
                         END IF
                         coreStateOccs(providedStates,:) = coreStateNumElecsList_const(i)
                         coreStateNprnc(providedStates) = coreStateNprncList_const(i)
@@ -1644,7 +1679,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          IF (numberNodes.GE.1) THEN
             IF (.NOT.coreConfigPresent) THEN
                WRITE(*,*) 'Note: This just has to be implemented:'
-               STOP 'Error: Core occupation given while core config not set!'
+               CALL judft_error('Error: Core occupation given while core config not set!')
             END IF
             DO i = 1, numberNodes
                WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'[',i,']'
@@ -1685,7 +1720,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             CALL getIntegerSequenceFromString(TRIM(ADJUSTL(lString)), lNumbers, lNumCount)
             CALL getIntegerSequenceFromString(TRIM(ADJUSTL(nString)), nNumbers, nNumCount)
             IF(lNumCount.NE.nNumCount) THEN
-               STOP 'Error in LO input: l quantum number count does not equal n quantum number count'
+               CALL judft_error('Error in LO input: l quantum number count does not equal n quantum number count')
             END IF
             loEDeriv = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathE))))
             DO i = 1, lNumCount
@@ -1720,7 +1755,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
                      WRITE(6,*) " providedCoreStates:",providedCoreStates
                      WRITE(6,*) "atoms%ncst(iType)  :",atoms%ncst(iType)
-                     STOP 'Wrong number of core states provided!'
+                     CALL judft_error('Wrong number of core states provided!')
                   END IF
                   DO k = 1, providedStates !atoms%ncst(iType)
                      atoms%coreStateOccs(k,1,iType) = coreStateOccs(k,1)
@@ -1736,7 +1771,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                DO iLLO = 1, speciesNLO(iSpecies)
                   atoms%llo(iLLO,iType) = speciesLLO(loOrderList(iLLO))
                   atoms%ulo_der(iLLO,iType) = speciesLOEDeriv(loOrderList(iLLO))
-                  atoms%llod = max(abs(atoms%llo(iLLO,iType)),atoms%llod)
+                  atoms%llod = MAX(ABS(atoms%llo(iLLO,iType)),atoms%llod)
                   DO jsp = 1, input%jspins
                      enpara%ello0(iLLO,iType,jsp) = speciesLOeParams(loOrderList(iLLO))
                      IF (enpara%ello0(iLLO,iType,jsp)==NINT(enpara%ello0(iLLO,iType,jsp))) THEN
@@ -1753,7 +1788,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   DO l = 0, 3
                      enpara%el0(l,iType,jsp) = speciesEParams(l)
                      IF (enpara%el0(l,iType,jsp)==NINT(enpara%el0(l,iType,jsp))) THEN
-                        enpara%qn_el(l,iType,jsp)=nint(enpara%el0(l,iType,jsp))
+                        enpara%qn_el(l,iType,jsp)=NINT(enpara%el0(l,iType,jsp))
                         enpara%el0(l,iType,jsp)=0
                      ELSE
                         enpara%qn_el(l,iType,jsp)=0
@@ -1844,7 +1879,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             atoms%taual(1,na) = evaluatefirst(valueString)
             atoms%taual(2,na) = evaluatefirst(valueString)
             atoms%taual(3,na) = evaluatefirst(valueString)
-            atoms%pos(:,na) = matmul(cell%amat,atoms%taual(:,na))
+            atoms%pos(:,na) = MATMUL(cell%amat,atoms%taual(:,na))
             l_orbcomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
             IF(l_orbcomp) THEN
                IF(banddos%l_orb) THEN
@@ -1859,7 +1894,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/absPos')
          DO i = 1, numberNodes
             na = na + 1
-            STOP 'absPos not yet implemented!'
+            CALL judft_error('absPos not yet implemented!')
          END DO
 
          numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/filmPos')
@@ -1875,7 +1910,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             atoms%taual(1,na) = evaluatefirst(valueString)
             atoms%taual(2,na) = evaluatefirst(valueString)
             atoms%taual(3,na) = evaluatefirst(valueString) / cell%amat(3,3)
-            atoms%pos(:,na) = matmul(cell%amat,atoms%taual(:,na))
+            atoms%pos(:,na) = MATMUL(cell%amat,atoms%taual(:,na))
             l_orbcomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
             IF(l_orbcomp) THEN
                IF(banddos%l_orb) THEN
@@ -2292,7 +2327,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
    END SUBROUTINE r_inpXML
 
-   SUBROUTINE setXCParameters(atoms,namex,relcor,jspins,id_x,id_c,xcpot)
+   SUBROUTINE setXCParameters(atoms,namex,relcor,jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c,xcpot)
       USE m_juDFT
       USE m_types
       USE m_types_xcpot_inbuild
@@ -2302,7 +2337,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       TYPE(t_atoms),INTENT(IN)          :: atoms
       CHARACTER(LEN=*),     INTENT(IN)  :: namex
       LOGICAL,              INTENT(IN)  :: relcor
-      INTEGER,              INTENT(IN)  :: jspins,id_c,id_x
+      INTEGER,              INTENT(IN)  :: jspins,vxc_id_c,vxc_id_x,exc_id_x,exc_id_c
       CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE      :: xcpot
 
       IF (namex(1:5)=='LibXC') THEN
@@ -2315,7 +2350,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       TYPE IS(t_xcpot_inbuild)
          CALL xcpot%init(namex(1:4),relcor,atoms%ntype)
       TYPE IS(t_xcpot_libxc)
-         CALL xcpot%init(jspins,id_x,id_c)
+         CALL xcpot%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
+
       END SELECT
 
       CALL set_xcpot_usage(xcpot)
@@ -2334,17 +2370,17 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       ! 2 -> GGA
       ! 3 -> MetaGGA
       ! 4 -> Hybrid functional
-      if(xcpot%is_lda()) then
+      if(xcpot%vxc_is_lda()) then
          call add_usage_data("XC-treatment", 1)
          return
       endif
 
-      if(xcpot%is_MetaGGA()) then
+      if(xcpot%exc_is_MetaGGA()) then
          call add_usage_data("XC-treatment", 3)
          return
       endif
 
-      if(xcpot%is_GGA()) then
+      if(xcpot%vxc_is_GGA()) then
          call add_usage_data("XC-treatment", 2)
          return
       endif
@@ -2357,7 +2393,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
    END SUBROUTINE set_xcpot_usage
 
    SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
-
+      use m_juDFT_stop
       IMPLICIT NONE
 
       CHARACTER(*),         INTENT(IN)  :: string
@@ -2387,7 +2423,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          CASE ('0':'9')
          CASE (',')
             IF ((start.EQ.i).OR.(dash)) THEN
-               STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
+               CALL judft_error('String has wrong syntax (in getIntegerSequenceFromString)')
             END IF
             singleNumber = .FALSE.
             comma = .TRUE.
@@ -2396,18 +2432,18 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             start = i+1
          CASE ('-')
             IF ((start.EQ.i).OR.(dash).OR.(comma)) THEN
-               STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
+               CALL judft_error('String has wrong syntax (in getIntegerSequenceFromString)')
             END IF
             singleNumber = .FALSE.
             dash = .TRUE.
             READ(string(start:i-1),*) lastNumber
             start = i+1
          CASE DEFAULT
-            STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
+            CALL judft_error('String has wrong syntax (in getIntegerSequenceFromString)')
          END SELECT
       END DO
       IF(start.GT.length) THEN
-         STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
+         CALL judft_error('String has wrong syntax (in getIntegerSequenceFromString)')
       END IF
       READ(string(start:length),*) currentNumber
       IF (dash) THEN
@@ -2438,7 +2474,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                comma = .TRUE.
                READ(string(start:i-1),*) lastNumber
                start = i+1
-               sequence(index) = lastNumber
+               SEQUENCE(index) = lastNumber
                index = index + 1
             END SELECT
          END DO

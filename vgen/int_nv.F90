@@ -44,7 +44,7 @@ CONTAINS
     tis = cell%omtil * REAL( DOT_PRODUCT(vpot%pw_w(:stars%ng3,ispin),den%pw(:stars%ng3,ispin)))
 
     WRITE (6,FMT=8020) tis
-8020 FORMAT (/,10x,'interstitial :',t40,f20.10)
+8020 FORMAT (/,10x,'interstitial :',t40,ES20.10)
 
     RESULT = RESULT + tis
     !
@@ -63,7 +63,7 @@ CONTAINS
        nat = nat + atoms%neq(n)
     ENDDO
     WRITE (6,FMT=8030) tmt
-8030 FORMAT (/,10x,'muffin tin spheres :',t40,f20.10)
+8030 FORMAT (/,10x,'muffin tin spheres :',t40,ES20.10)
     RESULT = RESULT + tmt
     !
     ! *********** VACUUM REGION**************

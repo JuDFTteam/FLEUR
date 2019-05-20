@@ -498,11 +498,17 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
    ! determine bands to be used for each k point, MPI process
    DO ikpt = thisCdnvalJob%ikptStart, kpts%nkpt, thisCdnvalJob%ikptIncrement
 
-      DO iBand = 1,results%neig(ikpt,jsp)
-         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst.OR.input%l_gf) THEN
-            thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%noccbd(ikpt) + 1
-         END IF
+      iBand = results%neig(ikpt,jsp)
+      DO WHILE (results%w_iks(iBand,ikpt,jsp).LT.1.e-8)
+         iBand = iBand - 1
       END DO
+      thisCdnvalJob%noccbd(ikpt) = iBand
+
+!      DO iBand = 1,results%neig(ikpt,jsp)
+!         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst.OR.input%l_gf) THEN
+!            thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%noccbd(ikpt) + 1
+!         END IF
+!      END DO
 
       IF(PRESENT(banddos)) THEN
             IF (banddos%dos) thisCdnvalJob%noccbd(ikpt) = results%neig(ikpt,jsp)

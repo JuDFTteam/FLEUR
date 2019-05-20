@@ -175,7 +175,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
 
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%needs_grad()) THEN
          ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
          ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                    oneD%pgft1xy(0:oneD%odd%nn2d-1),&

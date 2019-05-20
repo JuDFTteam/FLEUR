@@ -77,13 +77,14 @@ set_source_files_properties(${inpgen_F77} PROPERTIES Fortran_FORMAT FIXED)
 string(REPLACE ";" " " CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")
 message("Flags: ${CMAKE_Fortran_FLAGS}")
 
+set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};juDFT")
 
 if (${FLEUR_USE_SERIAL})
    #Serial executables
    add_executable(fleur ${fleur_SRC} ${c_filesFleur})
    target_compile_definitions(fleur PUBLIC ${FLEUR_DEFINITIONS})
    target_link_libraries(fleur ${FLEUR_LIBRARIES})
-   target_link_libraries(fleur juDFT)
+   target_link_libraries(fleur ${FLEUR_LINK_LIBRARIES})
    set_target_properties(fleur PROPERTIES Fortran_MODULE_DIRECTORY modules/fleur COMPILE_OPTIONS -Imodules/fleur)
 endif()
 #parallel executables
@@ -92,7 +93,7 @@ if(${FLEUR_USE_MPI})
   add_executable(fleur_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_filesFleur} ${fleur_SRC_MPI})
   target_compile_definitions(fleur_MPI PUBLIC ${FLEUR_MPI_DEFINITIONS})
   target_link_libraries(fleur_MPI ${FLEUR_LIBRARIES})
-  target_link_libraries(fleur_MPI juDFT)
+  target_link_libraries(fleur_MPI  ${FLEUR_LINK_LIBRARIES})
   set_target_properties(fleur_MPI PROPERTIES Fortran_MODULE_DIRECTORY modules/fleur_MPI COMPILE_OPTIONS -Imodules/fleur_MPI)
 endif ()
 

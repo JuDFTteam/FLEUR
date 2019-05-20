@@ -4,7 +4,7 @@ MODULE m_cdntot
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
-   SUBROUTINE cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
+   SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
                                    q, qis, qmt, qvac, qtot, qistot)
       USE m_intgr, ONLY : intgr3
       USE m_constants
@@ -72,7 +72,7 @@ CONTAINS
          q(jsp) = q(jsp) + qis(jsp)
          qtot = qtot + q(jsp)
       END DO ! loop over spins
-   END SUBROUTINE cdntot_integrate
+   END SUBROUTINE integrate_cdn
 
    SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
                      den,l_printData,qtot,qistot)
@@ -108,11 +108,9 @@ CONTAINS
       REAL qmt(atoms%ntype,input%jspins),qvac(2,input%jspins)
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
-     
-
+      
       CALL timestart("cdntot")
- 
-      call cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, den, &
+      call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
  
       IF (input%film) THEN
