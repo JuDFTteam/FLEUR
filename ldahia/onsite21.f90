@@ -20,7 +20,7 @@ MODULE m_onsite21
 
    CONTAINS
 
-   SUBROUTINE onsite21(atoms,input,nbands,tetweights,ind,wtkpt,eig,usdus,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
+   SUBROUTINE onsite21(atoms,input,nbands,tetweights,ind,wtkpt,eig,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
 
 
       IMPLICIT NONE
@@ -29,14 +29,13 @@ MODULE m_onsite21
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
-      TYPE(t_usdus),             INTENT(IN)     :: usdus
       TYPE(t_greensfCoeffs),     INTENT(INOUT)  :: greensfCoeffs
 
       INTEGER,                   INTENT(IN)     :: nbands   
       REAL,                      INTENT(IN)     :: wtkpt
       REAL,                      INTENT(IN)     :: tetweights(greensfCoeffs%ne,nbands)
       INTEGER,                   INTENT(IN)     :: ind(nbands,2)
-      REAL,                      INTENT(IN)     :: eig(nbands)
+      REAL,                      INTENT(IN)     :: eig(nbands,input%jspins)
 
       INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp
       REAL     weight

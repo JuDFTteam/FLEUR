@@ -157,6 +157,7 @@
           hub1%n_hia = 0
           atoms%n_hia = 0
           atoms%n_gf = 0
+          atoms%n_intergf = 0
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1

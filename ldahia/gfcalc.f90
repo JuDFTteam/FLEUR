@@ -77,9 +77,7 @@ MODULE m_gfcalc
                   ENDDO
                ENDDO
             ENDDO
-
-            exc_split = trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,2),g0Coeffs%del,n_cut) -&
-                        trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,1),g0Coeffs%del,n_cut)
+            exc_split = -1/(pi_const*(2*l+1))*(trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)-trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut))
 
             DO i = 1, matsize
                delta%data_c(i,i) = exc_split
@@ -143,10 +141,12 @@ MODULE m_gfcalc
 9010  FORMAT("J0 for atom ", I3, ": " f14.8 " eV")
    END SUBROUTINE eff_excinteraction
 
-   SUBROUTINE occmtx(g,i_gf,atoms,sym,input,beta,ef,mmpMat,enpara,vr)
+   SUBROUTINE occmtx(g,i_gf,atoms,sym,input,beta,ef,mmpMat,el0,vr)
 
 
       USE m_ExpSave
+      USE m_radfun
+      USE m_intgr
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
       !The occupation is calculated with:
@@ -163,24 +163,42 @@ MODULE m_gfcalc
       INTEGER,                INTENT(IN)  :: i_gf
       REAL,                   INTENT(IN)  :: beta
       REAL,                   INTENT(IN)  :: ef
-      TYPE(t_enpara), OPTIONAL, INTENT(IN) :: enpara
-      REAL, OPTIONAL,          INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,input%jspins)
+      REAL, OPTIONAL,         INTENT(IN)  :: el0(input%jspins)  !energy parameter for radial functions
+      REAL, OPTIONAL,         INTENT(IN)  :: vr(atoms%jmtd,input%jspins)
 
       INTEGER i, m,mp, l, ispin, nType,ipm,iz
+      INTEGER nodeu,noded
       LOGICAL l_vertcorr
       COMPLEX g_int
+      REAL    wronk,re,imag
+      TYPE(t_usdus) :: usdus
 
-      IF(.NOT.input%onsite_sphavg.AND.(.NOT.PRESENT(enpara).OR..NOT.PRESENT(vr))) THEN
+      REAL, ALLOCATABLE :: u(:,:),udot(:,:)
+      COMPLEX, ALLOCATABLE :: gr(:)
+
+      IF(.NOT.input%onsite_sphavg.AND.(.NOT.PRESENT(el0).OR..NOT.PRESENT(vr))) THEN
          CALL juDFT_error("Cannot calculate radial dependence for green's function", calledby="occmtx")
       ENDIF
-
+      IF(.NOT.input%onsite_sphavg) THEN
+         ALLOCATE(u(atoms%jmtd,2))
+         ALLOCATE(udot(atoms%jmtd,2))
+         ALLOCATE(gr(atoms%jmtd))
+         u = 0.0
+         udot = 0.0
+         gr = 0.0
+      ENDIF 
       l_vertcorr = .false. !Enables/Disables a correction for the vertical parts of the rectangular contour
 
       mmpMat(:,:,:) = CMPLX(0.0,0.0)
       l = atoms%onsiteGF(i_gf)%l
       nType = atoms%onsiteGF(i_gf)%atomType 
 
+
       DO ispin = 1, input%jspins
+         IF(.NOT.input%onsite_sphavg) THEN
+            !If we have the radial dependence of the greens function calculate the radial functions here
+            CALL radfun(l,nType,ispin,el0(ispin),vr(:,ispin),atoms,u,udot,usdus,nodeu,noded,wronk)
+         ENDIF
          DO m = -l, l
             DO mp = -l, l
                DO ipm = 1, 2
@@ -190,7 +208,11 @@ MODULE m_gfcalc
                      IF(input%onsite_sphavg) THEN
                         g_int = g%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
                      ELSE
-                        g_int = 0.0
+                        gr = onsite_radial(g%uu(iz,i_gf,m,mp,ispin,ipm),g%dd(iz,i_gf,m,mp,ispin,ipm),g%du(iz,i_gf,m,mp,ispin,ipm),&
+                                           g%ud(iz,i_gf,m,mp,ispin,ipm),u,udot,atoms%jmtd)
+                        CALL intgr3(REAL(gr),atoms%rmsh(:,nType),atoms%dx(nType),atoms%jri(nType),re)
+                        CALL intgr3(AIMAG(gr),atoms%rmsh(:,nType),atoms%dx(nType),atoms%jri(nType),imag)
+                        g_int = re + ImagUnit * imag
                      ENDIF
                      IF((iz.EQ.1.OR.iz.EQ.g%nz-g%nmatsub).AND.(g%mode.EQ.1.AND.l_vertcorr)) THEN
                         !APPROXIMATION FOR THE VERTICAL PARTS OF THE CONTOUR:
@@ -212,35 +234,6 @@ MODULE m_gfcalc
 
    END SUBROUTINE occmtx
 
-   SUBROUTINE int_sph(g,atoms,nType,nz,nr,g_int)
-
-      USE m_types
-      USE m_intgr
-      USE m_constants
-      !Performs the radial averaging if the green's function is calculated with radial dependence
-
-      TYPE(t_atoms), INTENT(IN)  :: atoms
-      COMPLEX,       INTENT(IN)  :: g(nr,nz)
-      COMPLEX,       INTENT(OUT) :: g_int(nz)
-      INTEGER,       INTENT(IN)  :: nr 
-      INTEGER,       INTENT(IN)  :: nz
-      INTEGER,       INTENT(IN)  :: nType
-
-      INTEGER iz 
-      REAL    re,imag
-
-      DO iz = 1, nz
-         IF(nr.EQ.1) THEN
-            !Green's function was already calculated with spherical average
-            g_int(iz) = g(1,iz)
-         ELSE
-            CALL intgr3( REAL(g(:,iz)),atoms%rmsh(:,nType),atoms%dx(nType),atoms%jri(nType),re)
-            CALL intgr3(AIMAG(g(:,iz)),atoms%rmsh(:,nType),atoms%dx(nType),atoms%jri(nType),imag)
-            g_int(iz) = re + ImagUnit * imag
-         ENDIF
-      ENDDO
-
-   END SUBROUTINE int_sph
 
    SUBROUTINE indexgf(atoms,l,n,ind)
 

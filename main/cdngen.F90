@@ -104,7 +104,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
-   CALL greensfCoeffs%init(input,3,atoms,kpts,noco,.true.,.false.)
+   CALL greensfCoeffs%init(input,3,atoms,noco,.true.,.false.)
    IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite).AND.mpi%irank.EQ.0) CALL gOnsite%init_e_contour(greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma,0,gOnsite%nz-gOnsite%nmatsub,0,gOnsite%nmatsub,input%onsite_beta)
 
    IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')

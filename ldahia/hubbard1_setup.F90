@@ -15,9 +15,9 @@ MODULE m_hubbard1_setup
       USE m_gfcalc
       USE m_umtx
       USE m_vmmp
-      !#ifdef CPP_MPI
-      !   INCLUDE "mpif.h"
-      !#endif
+#ifdef CPP_MPI
+      INCLUDE "mpif.h"
+#endif
 
       INTEGER,          INTENT(INOUT)  :: iterHIA !number of iteration 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
@@ -33,11 +33,11 @@ MODULE m_hubbard1_setup
       LOGICAL,          INTENT(IN)     :: l_runinfleur !Determines wether we call the the solver here or run separately
       LOGICAL,          INTENT(IN)     :: l_runhia
       
-      !#ifdef CPP_MPI
-      !   EXTERNAL MPI_BCAST
-      !#endif
+#ifdef CPP_MPI
+      EXTERNAL MPI_BCAST
+#endif
 
-      INTEGER i_hia,i_gf,n,l,n_occ,ispin,m,matsize,i,iz,k,j,io_error
+      INTEGER i_hia,i_gf,n,l,n_occ,ispin,m,matsize,i,iz,k,j,io_error,ierr
       REAL mu_dc,beta,e_lda_hia
 
       CHARACTER(len=300) :: cwd,path,folder,message
@@ -166,7 +166,6 @@ MODULE m_hubbard1_setup
                      ENDIF
                   ENDIF
                ENDIF
-               ENDIF
             ENDDO
             IF(mpi%irank.EQ.0) CALL CHDIR(TRIM(ADJUSTL(cwd)))
 
@@ -200,25 +199,25 @@ MODULE m_hubbard1_setup
                   CALL n_mmp_dist(mmpMat_in,mmpMat,hub1,results,input%jspins)
                ENDIF 
                IF(mpi%irank.EQ.0) THEN
-               !Write out the density matrix and the additional inforamtion (current iteration, distances)
-               OPEN(unit=1337,file="n_mmpmat_hubbard1",status="replace",action="write",iostat=io_error)
-               IF(io_error.NE.0) CALL juDFT_error("IO-error in density matrix",calledby="hubbard1_setup")
-                  WRITE(1337,9110) iterHIA,results%last_occdistance,results%last_mmpMatdistance
-               WRITE(1337,"(7f14.8)") mmpMat(:,:,:,:)
-               CLOSE(unit=1337)
-               WRITE(*,*) "Hubbard 1 Iteration: ", iterHIA
-               WRITE(*,*)  "Occ. Distance: ", results%last_occdistance, &
-                           "Mat. Distance: ", results%last_mmpMatdistance
+                  !Write out the density matrix and the additional inforamtion (current iteration, distances)
+                  OPEN(unit=1337,file="n_mmpmat_hubbard1",status="replace",action="write",iostat=io_error)
+                  IF(io_error.NE.0) CALL juDFT_error("IO-error in density matrix",calledby="hubbard1_setup")
+                     WRITE(1337,9110) iterHIA,results%last_occdistance,results%last_mmpMatdistance
+                  WRITE(1337,"(7f14.8)") mmpMat(:,:,:,:)
+                  CLOSE(unit=1337)
+                  WRITE(*,*) "Hubbard 1 Iteration: ", iterHIA
+                  WRITE(*,*)  "Occ. Distance: ", results%last_occdistance, &
+                              "Mat. Distance: ", results%last_mmpMatdistance
                ENDIF
             ELSE
                WRITE(message,9100) iterHIA
                CALL juDFT_END(message,mpi%irank)
             ENDIF
          ENDIF
-         !#ifdef CPP_MPI
-         !   CALL MPI_BCAST(pot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),&
-         !                  49*atoms%n_hia*input%jspins,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
-         !#endif 
+#ifdef CPP_MPI
+         CALL MPI_BCAST(pot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),&
+                        49*atoms%n_hia*input%jspins,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+#endif 
          !Write out the density matrix and potential matrix (compare u_setup.f90)
          IF (mpi%irank.EQ.0) THEN
             DO ispin = 1,input%jspins
@@ -347,7 +346,7 @@ MODULE m_hubbard1_setup
       TYPE(t_mat) :: gmat,vmat
 
       !replace with noco%l_mperp
-      l_mperp = .false.
+      l_mperp = .true.
 
       !Interval where we expect the correct mu
       mu_a = 0.0

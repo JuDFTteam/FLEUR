@@ -104,10 +104,12 @@ MODULE m_types_setup
       !lmaxd=maxval(lmax)
       INTEGER:: lmaxd
       ! no of lda+us
-      INTEGER ::n_u
-      INTEGER ::n_hia
+      INTEGER :: n_u
+      INTEGER :: n_hia
       ! no of greens function calculations (includes n_hia)
-      INTEGER ::n_gf
+      INTEGER :: n_gf
+      ! how many intersite gf
+      INTEGER :: n_intergf
       ! dimensions
       INTEGER :: jmtd
       !No of element

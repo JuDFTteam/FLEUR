@@ -18,7 +18,7 @@ MODULE m_intersite
 
    CONTAINS
 
-   SUBROUTINE intersite_coeffs(kpt,atoms,sym,cell,input,ispin,noccbd,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
+   SUBROUTINE intersite_coeffs(kpt,atoms,sym,cell,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
 
       USE m_constants
       USE m_sel_sites
@@ -34,29 +34,26 @@ MODULE m_intersite
       TYPE(t_input),          INTENT(IN)     :: input
 
       INTEGER,                INTENT(IN)     :: ispin
-      INTEGER,                INTENT(IN)     :: noccbd
+      INTEGER,                INTENT(IN)     :: nbands
 
       REAL,                   INTENT(IN)     :: kpt(3)
       REAL,                   INTENT(IN)     :: wtkpt
       REAL,                   INTENT(IN)     :: tetweights(:,:)
       INTEGER,                INTENT(IN)     :: ind(:,:)
-      REAL,                   INTENT(IN)     :: eig(noccbd)
+      REAL,                   INTENT(IN)     :: eig(nbands)
 
-      INTEGER  i_gf,ntype,n,np,i_np,n_nearest,nn,l,lp,lm,lmp,m,mp,j,i
-      REAL     wk, fac
+      INTEGER  i_gf,ntype,n,np,i_np,n_nearest,nn,l,lp,lm,lmp,m,mp,j,ib
+      REAL     fac,weight
       LOGICAL  l_zero
       COMPLEX  phase,cil,tmp
 
       INTEGER :: at(27*atoms%nat)
       REAL    :: dist(3,27*atoms%nat)
-      wk = wtkpt/greensfCoeffs%del
 
       !Loop through the atoms
       DO nType = 1, atoms%ntype 
-         n = SUM(atoms%neq(:ntype-1))
-         DO nn = 1, atoms%neq(ntype)
+         DO n = SUM(atoms%neq(:ntype-1)) + 1, SUM(atoms%neq(:ntype))
             fac = 1.0/atoms%neq(ntype)
-            n = n+1
             !Find the nearest neighbours to the current atom 
             CALL n_neighbours(n,atoms,cell,2,n_nearest,dist,at)
             DO i_np = 1, n_nearest
@@ -64,54 +61,42 @@ MODULE m_intersite
                !Bloch phase:
                phase = exp(ImagUnit*dot_product(kpt,dist(:,i_np)))
 
-               DO i = 1, noccbd
+               DO ib = 1, nbands
                   l_zero = .true.
                   IF(input%tria) THEN
                      !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
-                     IF(ANY(tetweights(ind(i,1):ind(i,2),i).NE.0.0)) l_zero = .false.
+                     IF(ANY(tetweights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
                   ELSE
                      !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
-                     j = NINT((eig(i)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
+                     j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
                      IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) ) l_zero = .false.
                   END IF
 
                   IF(l_zero) CYCLE
 
-                  DO l = 0, lmaxU_const
-                     DO lp = 0, lmaxU_const
-                        cil = ImagUnit**(l-lp)
-                        DO m = -l,l
-                           lm = l*(l+1)+m
-                           DO mp = -lp,lp
-                              lmp = lp*(lp+1)+mp
-                              IF(input%tria) THEN
-                                 !We need to differentiate the weights with respect to energy (can maybe be done analytically)
-                                 DO j = ind(i,1), ind(i,2)
-                                    tmp = cil * phase * conjg(eigVecCoeffs%acof(i,lm,n,ispin))*eigVecCoeffs%acof(i,lmp,np,ispin)
-                                    greensfCoeffs%uu_int(j,n,np,lm,lmp,ispin) = greensfCoeffs%uu_int(j,n,np,m,mp,ispin) - fac * tetweights(j,i) * pi_const * REAL(tmp)
-                                    
-                                    tmp = cil * phase * conjg(eigVecCoeffs%bcof(i,lm,n,ispin))*eigVecCoeffs%bcof(i,lmp,np,ispin)                                                                    
-                                    greensfCoeffs%dd_int(j,n,np,lm,lmp,ispin) = greensfCoeffs%dd_int(j,n,np,m,mp,ispin) - fac * tetweights(j,i) * pi_const * REAL(tmp)
-                                    
-                                    tmp = cil * phase * conjg(eigVecCoeffs%acof(i,lm,n,ispin))*eigVecCoeffs%bcof(i,lmp,np,ispin)                                                                
-                                    greensfCoeffs%du_int(j,n,np,lm,lmp,ispin) = greensfCoeffs%du_int(j,n,np,m,mp,ispin) - fac * tetweights(j,i) * pi_const * REAL(tmp)
-                                                                                                   
-                                    tmp = cil * phase * conjg(eigVecCoeffs%bcof(i,lm,n,ispin))*eigVecCoeffs%acof(i,lmp,np,ispin)
-                                    greensfCoeffs%ud_int(j,n,np,lm,lmp,ispin) = greensfCoeffs%ud_int(j,n,np,m,mp,ispin) - fac * tetweights(j,i) * pi_const * REAL(tmp)
-                                 ENDDO
-                              ELSE
-                                 tmp = cil * phase * conjg(eigVecCoeffs%acof(i,lm,n,ispin))*eigVecCoeffs%acof(i,lmp,np,ispin)
-                                 greensfCoeffs%uu_int(j,n,np,lm,lmp,ispin) = greensfCoeffs%uu_int(j,n,np,m,mp,ispin) - fac * wk * pi_const * REAL(tmp)
+                  DO ie = MERGE(ind(ib,1),j,input%tria), MERGE(ind(ib,2),j,input%tria)
+
+                     weight = MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,input%tria)
+
+                     DO l = 0, lmaxU_const
+                        DO lp = 0, lmaxU_const
+                           cil = ImagUnit**(l-lp)
+                           DO m = -l,l
+                              lm = l*(l+1)+m
+                              DO mp = -lp,lp
+                                 lmp = lp*(lp+1)+mp
+                                 tmp = cil * phase * conjg(eigVecCoeffs%acof(ib,lm,n,ispin))*eigVecCoeffs%acof(ib,lmp,np,ispin)
+                                 greensfCoeffs%uu_int(ie,n,np,lm,lmp,ispin) = greensfCoeffs%uu_int(ie,n,np,m,mp,ispin) - pi_const * weight * REAL(tmp)
                                  
-                                 tmp = cil * phase * conjg(eigVecCoeffs%bcof(i,lm,n,ispin))*eigVecCoeffs%bcof(i,lmp,np,ispin)                                                                    
-                                 greensfCoeffs%dd_int(j,n,np,lm,lmp,ispin) = greensfCoeffs%dd_int(j,n,np,m,mp,ispin) - fac * wk * pi_const * REAL(tmp)
+                                 tmp = cil * phase * conjg(eigVecCoeffs%bcof(ib,lm,n,ispin))*eigVecCoeffs%bcof(ib,lmp,np,ispin)                                                                    
+                                 greensfCoeffs%dd_int(ie,n,np,lm,lmp,ispin) = greensfCoeffs%dd_int(ie,n,np,m,mp,ispin) - pi_const * weight * REAL(tmp)
                                  
-                                 tmp = cil * phase * conjg(eigVecCoeffs%acof(i,lm,n,ispin))*eigVecCoeffs%bcof(i,lmp,np,ispin)                                                                
-                                 greensfCoeffs%du_int(j,n,np,lm,lmp,ispin) = greensfCoeffs%du_int(j,n,np,m,mp,ispin) - fac * wk * pi_const * REAL(tmp)
+                                 tmp = cil * phase * conjg(eigVecCoeffs%acof(ib,lm,n,ispin))*eigVecCoeffs%bcof(ib,lmp,np,ispin)                                                                
+                                 greensfCoeffs%du_int(ie,n,np,lm,lmp,ispin) = greensfCoeffs%du_int(ie,n,np,m,mp,ispin) - pi_const * weight * REAL(tmp)
                                                                                                 
-                                 tmp = cil * phase * conjg(eigVecCoeffs%bcof(i,lm,n,ispin))*eigVecCoeffs%acof(i,lmp,np,ispin)
-                                 greensfCoeffs%ud_int(j,n,np,lm,lmp,ispin) = greensfCoeffs%ud_int(j,n,np,m,mp,ispin) - fac * wk * pi_const * REAL(tmp)
-                              END IF
+                                 tmp = cil * phase * conjg(eigVecCoeffs%bcof(ib,lm,n,ispin))*eigVecCoeffs%acof(ib,lmp,np,ispin)
+                                 greensfCoeffs%ud_int(ie,n,np,lm,lmp,ispin) = greensfCoeffs%ud_int(ie,n,np,m,mp,ispin) - pi_const * weight * REAL(tmp)
+                              ENDDO
                            ENDDO
                         ENDDO
                      ENDDO
@@ -122,78 +107,6 @@ MODULE m_intersite
       ENDDO
 
    END SUBROUTINE intersite_coeffs
-
-   !SUBROUTINE prepare_intersite(atoms,vr,jspins,gf,ef,greensfCoeffs,sym,lmax)
-!
-   !   !sets up the information for the intersite green's function in the green's function type 
-   !   !and calculates the radial function R_l, which is the KKR-radial function
-!
-   !   USE m_radsra
-   !   USE m_constants
-!
-   !   IMPLICIT NONE
-!
-   !   TYPE(t_atoms),          INTENT(IN)     :: atoms
-   !   TYPE(t_greensf),        INTENT(INOUT)  :: gf
-   !   TYPE(t_greensfCoeffs),  INTENT(IN)     :: greensfCoeffs
-   !   TYPE(t_sym),            INTENT(IN)     :: sym
-!
-   !   INTEGER,                INTENT(IN)     :: jspins
-   !   INTEGER,                INTENT(IN)     :: lmax
-!
-   !   REAL,                   INTENT(IN)     :: ef
-   !   REAL,                   INTENT(IN)     :: vr(atoms%jmtd,atoms%ntype,jspins)
-!
-   !   INTEGER  n,jspin,j,l,nodeu
-   !   REAL     e,c
-!
-   !   REAL :: u_mt(lmax),du_mt(lmax),alpha(lmax)
-   !   
-   !   IF(gf%l_onsite.OR..NOT.greensfCoeffs%l_intersite) CALL juDFT_error("Green's function not initialized for Intersite calculations",calledby="prepare_intersite")
-!
-   !   !
-   !   !Give the Green#s function the information about the energy grid
-   !   !
-   !   gf%ne    = greensfCoeffs%ne
-   !   gf%e_bot = greensfCoeffs%e_bot
-   !   gf%e_top = greensfCoeffs%e_top
-   !   gf%del   = greensfCoeffs%del 
-   !   gf%sigma = greensfCoeffs%sigma 
-   !   !
-   !   !Write the coefficients to the corresponding arrays
-   !   !
-   !   CALL move_ALLOC(greensfCoeffs%uu_int,gf%uu_int)
-   !   CALL move_ALLOC(greensfCoeffs%dd_int,gf%dd_int)
-   !   CALL move_ALLOC(greensfCoeffs%du_int,gf%du_int)
-   !   CALL move_ALLOC(greensfCoeffs%ud_int,gf%ud_int)
-   !   !
-   !   !Calculate the KKR-radial functions
-   !   !
-   !   DO n = 1, atoms%nat 
-   !      DO jspin = 1, jspins
-   !         DO j = 1, gf%ne 
-   !            e = j*gf%del+gf%e_bot
-   !            IF(e.LT.0) CYCLE
-   !            DO l = 0, lmax
-   !               !
-   !               !Calculate the radial function R_l^\alpha(r,E)
-   !               !
-   !               c = c_light(1.0)
-   !               !This calculates the normed radial function
-   !               CALL radsra(e,l,vr(:,n,jspin),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),&
-   !                           c, u_mt(l),du_mt(l),nodeu,gf%R(j,:,1,l,jspin),gf%R(j,:,2,l,jspin))
-   !            ENDDO
-   !            !Now we calculate the factor resulting from the different boundary condition
-   !            !CALL bound(e,atoms%rmsh(atoms%jri(n),n),alpha(:),u_mt(:),du_mt(:)/u_mt(:),lmax)
-   !            !Now rescale R_l accordingly
-   !            DO l = 0, lmax
-   !               gf%R(j,:,:,l,jspin) = alpha(l) * gf%R(j,:,:,l,jspin) 
-   !            ENDDO
-   !         ENDDO
-   !      ENDDO
-   !   ENDDO
-!
-   !END SUBROUTINE prepare_intersite
 !
    !SUBROUTINE calc_intersite(gf,jr,jrp,atoms,vr,enpara,sym,jspins,lmax,ef,gmmpMat)
    !      
