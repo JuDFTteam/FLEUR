@@ -447,6 +447,7 @@ MODULE m_types_setup
       INTEGER :: s_cell_x
       INTEGER :: s_cell_y
       INTEGER :: s_cell_z
+      REAL    :: alpha,beta,gamma !For orbital decomp. (was orbcomprot)
    END TYPE t_banddos
 
    TYPE t_obsolete

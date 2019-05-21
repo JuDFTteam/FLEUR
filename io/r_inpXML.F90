@@ -1813,6 +1813,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                END IF
                banddos%l_orb = .TRUE.
                banddos%orbCompAtom = na
+               banddos%alpha=0.0;banddos%beta=0.0;banddos%gamma=0.0
+               WRITE(*,*) "Orbcomp-Rotation feature not fully implemented. Please create an issue on gitlab if you need it :-)"
             END IF
             wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
          END DO
