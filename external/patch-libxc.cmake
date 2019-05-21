@@ -27,6 +27,10 @@ option_with_flags(ENABLE_XHOST "Enable processor-specific optimization" ON
 option_with_print(ENABLE_FORTRAN "Build Fortran 90 interface" OFF)
 option_with_print(ENABLE_FORTRAN03 "Build Fortran 2003 interface" OFF)
 
+option_with_print(DISABLE_VXC "Don't compile first derivative code" OFF)
+option_with_print(DISABLE_FXC "Don't compile second derivative code" OFF)
+option_with_print(DISABLE_KXC "Don't compile third derivative code" ON)
+
 ######################### Process & Validate Options ###########################
 include(autocmake_safeguards)
 include(custom_static_library)
@@ -48,6 +52,21 @@ int main() {
 if (HAVE_CBRT)
   add_definitions (-DHAVE_CBRT)
 endif (HAVE_CBRT)
+
+# Turn off derivative code
+if(DISABLE_VXC)
+  add_definitions (-DXC_DONT_COMPILE_VXC)
+  add_definitions (-DXC_DONT_COMPILE_FXC)
+  add_definitions (-DXC_DONT_COMPILE_KXC)
+endif(DISABLE_VXC)
+if(DISABLE_FXC)
+  add_definitions (-DXC_DONT_COMPILE_FXC)
+  add_definitions (-DXC_DONT_COMPILE_KXC)
+endif(DISABLE_FXC)
+if(DISABLE_KXC)
+  add_definitions (-DXC_DONT_COMPILE_KXC)
+endif(DISABLE_KXC)
+
 # <<<  Build  >>>
 
 # repurpose xc_version from Make for CMake
@@ -112,6 +131,7 @@ gga_c_wi.c
 gga_c_wl.c
 gga_c_zpbeint.c
 gga_c_zvpbeint.c
+gga_c_zvpbeloc.c
 gga_k_dk.c
 gga_k_meyer.c
 gga_k_ol1.c
@@ -131,6 +151,12 @@ gga_x_ak13.c
 gga_x_am05.c
 gga_x_b86.c
 gga_x_b88.c
+gga_k_llp.c
+gga_k_pw86.c
+gga_k_mpbe.c
+gga_k_apbe.c
+gga_k_apbeint.c
+gga_k_lc94.c
 gga_x_bayesian.c
 gga_x_beefvdw.c
 gga_x_bpccac.c
@@ -177,6 +203,7 @@ gga_x_vmt.c
 gga_x_vmt84.c
 gga_x_wc.c
 gga_x_wpbeh.c
+gga_x_fd_lb94.c
 gga_xc_1w.c
 gga_xc_b97.c
 gga_xc_edf1.c
@@ -198,6 +225,7 @@ hyb_gga_xc_lcy_pbe.c
 hyb_gga_xc_o3lyp.c
 hyb_gga_xc_pbeh.c
 hyb_gga_xc_wb97.c
+hyb_lda_xc_cam_lda0.c
 hyb_mgga_x_dldf.c
 hyb_mgga_x_m05.c
 hyb_mgga_x_mvsh.c
@@ -257,6 +285,7 @@ mgga_c_m08.c
 mgga_c_pkzb.c
 mgga_c_revscan.c
 mgga_c_revtpss.c
+mgga_c_rscan.c
 mgga_c_scan.c
 mgga_c_tpss.c
 mgga_c_tpssloc.c
@@ -282,11 +311,13 @@ mgga_x_mvs.c
 mgga_x_mvsb.c
 mgga_x_pbe_gx.c
 mgga_x_pkzb.c
+mgga_x_rscan.c
 mgga_x_sa_tpss.c
 mgga_x_scan.c
 mgga_x_tau_hcth.c
 mgga_x_tm.c
 mgga_x_tpss.c
+mgga_x_regtpss.c
 mgga_x_vt84.c
 mgga_x_rtpss.c
 mgga_xc_b97mv.c
@@ -295,6 +326,7 @@ mgga_xc_hle17.c
 mgga_xc_otpss_d.c
 mgga_xc_zlp.c
 mgga_xc_b98.c
+mgga_x_2d_js17.c
 mix_func.c
 references.c
 special_functions.c
