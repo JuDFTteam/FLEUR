@@ -27,8 +27,6 @@ MODULE m_types_xcpot_libxc
       INTEGER                  :: func_vxc_id_c, func_vxc_id_x !> functionals to be used for potential & density convergence
       INTEGER                  :: func_exc_id_c, func_exc_id_x !> functionals to be used in exc- & totale-calculations
       INTEGER                  :: jspins
-
-
    CONTAINS
       PROCEDURE        :: vx_is_LDA     => xcpot_vx_is_LDA
       PROCEDURE        :: vx_is_GGA     => xcpot_vx_is_GGA
@@ -263,7 +261,7 @@ CONTAINS
 
    !***********************************************************************
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad, kinED_KS)
-      !***********************************************************************
+      USE, INTRINSIC :: IEEE_ARITHMETIC
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN) :: xcpot
       INTEGER, INTENT (IN)     :: jspins
@@ -277,11 +275,17 @@ CONTAINS
       REAL,ALLOCATABLE  :: vxc_tmp(:,:),vx_tmp(:,:),vsigma(:,:), &
                            tmp_vsig(:,:), tmp_vlapl(:,:), tmp_vtau(:,:), &
                            kinED_libxc(:,:)
+      integer           :: idx
       !libxc uses the spin as a first index, hence we have to transpose....
       ALLOCATE(vxc_tmp(SIZE(vxc,2),SIZE(vxc,1)));vxc_tmp=0.0
       ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
 
+      write (*,*) "vgen call"
+      if(present(kinED_KS)) then
+         write (*,*) "max(abs(kED)", maxval(abs(kinED_KS))
+      endif
       IF (xcpot%vc_is_GGA()) THEN
+         write (*,*) "somehow in GGA branch"
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          ALLOCATE(vsigma,mold=grad%vsigma)
          !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9
@@ -294,24 +298,34 @@ CONTAINS
             vxc_tmp=vx_tmp
          ENDIF
       ELSE  !LDA potentials
-         if(xcpot%vx_is_MetaGGA()) then
-            if(present(kinED_KS)) then
-               kinED_libXC = transpose(kinED_KS + 0.25 * grad%laplace)
+         write (*,*) "Is MGGA          = ", xcpot%vx_is_MetaGGA()
+         write (*,*) "kinED_KS present = ", present(kinED_KS)
+         if(xcpot%vx_is_MetaGGA() .and. present(kinED_KS)) then
+            kinED_libXC = transpose(kinED_KS + 0.25 * grad%laplace)
 
-               allocate(tmp_vsig,  mold=vx_tmp)
-               allocate(tmp_vlapl, mold=vx_tmp)
-               allocate(tmp_vtau,  mold=vx_tmp)
+            allocate(tmp_vsig,  mold=vx_tmp)
+            allocate(tmp_vlapl, mold=vx_tmp)
+            allocate(tmp_vtau,  mold=vx_tmp)
+            
+            write (*,*) "using = ", trim(xc_f03_func_info_get_name(&
+                                      xc_f03_func_get_info(xcpot%vxc_func_x)))
 
-               call xc_f03_mgga_vxc(xcpot%vxc_func_x, size(rh,1), transpose(rh), &
-                                    grad%sigma, transpose(grad%laplace), kinED_libxc,&
-                                    vx_tmp, tmp_vsig, tmp_vlapl, tmp_vtau)
-               write (*,*) "did some TB09 stuff"
-            endif
+            call xc_f03_mgga_vxc(xcpot%vxc_func_x, size(rh,1), transpose(rh), &
+                                 grad%sigma, transpose(grad%laplace), kinED_libxc,&
+                                 vx_tmp, tmp_vsig, tmp_vlapl, tmp_vtau)
+
+            idx = find_first_normal(vx_tmp)+1
+            vx_tmp(:,:idx) = 0.0
+            CALL xc_f03_lda_vxc(initial_lda_func(jspins), idx, TRANSPOSE(rh(:idx,:)), vx_tmp(:,:idx))
+            write (*,*) "vx has nan = ", any(ieee_is_nan(vx_tmp))
          else
-            CALL xc_f03_lda_vxc(inital_lda_func(jspins), SIZE(rh,1), TRANSPOSE(rh), vx_tmp)
+            write (*,*) "using = ", trim(xc_f03_func_info_get_name(&
+                                      xc_f03_func_get_info(initial_lda_func(jspins))))
+            CALL xc_f03_lda_vxc(initial_lda_func(jspins), SIZE(rh,1), TRANSPOSE(rh), vx_tmp)
          endif
          IF (xcpot%func_vxc_id_c>0) THEN
             CALL xc_f03_lda_vxc(xcpot%vxc_func_c, SIZE(rh,1), TRANSPOSE(rh), vxc_tmp)
+            write (*,*) "added correlation"
             vxc_tmp=vxc_tmp+vx_tmp
          ENDIF
       ENDIF
@@ -320,6 +334,19 @@ CONTAINS
 
 #endif
    END SUBROUTINE xcpot_get_vxc
+
+   FUNCTION find_first_normal(vec) result(idx)
+      USE, INTRINSIC :: IEEE_ARITHMETIC
+      implicit none
+      real, intent(in)    :: vec(:,:)
+      integer             :: idx
+
+      idx = size(vec, dim=2)
+      do while(all(.not. ieee_is_nan(vec(:,idx))))
+         idx = idx - 1
+      enddo
+   END FUNCTION find_first_normal
+
 
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad, kinED_KS, mt_call)
       use m_constants
@@ -426,6 +453,10 @@ CONTAINS
       ALLOCATE(grad%laplace(ngrid,jspins))
       ALLOCATE(grad%vsigma(MERGE(1,3,jspins==1),ngrid))
 
+      grad%gr      = 0.0
+      grad%laplace = 0.0
+      grad%sigma   = 0.0
+      grad%vsigma  = 0.0
    END SUBROUTINE xcpot_alloc_gradients
 
 #ifdef CPP_LIBXC  
@@ -490,18 +521,22 @@ CONTAINS
       family = xc_f03_func_info_get_family(xc_f03_func_get_info(xc_func))
    END FUNCTION xc_get_family
 
-   function inital_lda_func(jspins) result(lda)
+   function initial_lda_func(jspins) result(lda)
       use, intrinsic :: iso_c_binding
       implicit none
       INTEGER, intent(in) :: jspins
       TYPE(xc_f03_func_t) :: lda
+      integer             :: ierr
 
       if(jspins == 1) then
-         CALL xc_f03_func_init(lda, 1, XC_UNPOLARIZED)
+         CALL xc_f03_func_init(lda, 1, XC_UNPOLARIZED, err=ierr)
       else
-         CALL xc_f03_func_init(lda, 1, XC_POLARIZED)
+         CALL xc_f03_func_init(lda, 1, XC_POLARIZED, err=ierr)
       ENDIF
-   end function inital_lda_func
+
+      if(ierr /= 0) call juDFT_error("can't find lda_x for init")
+
+   end function initial_lda_func
 
 #endif
 

@@ -151,7 +151,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
 
-      xcpot_needs_grad= xcpot%vc_is_gga() !.or. xcpot%vx_is_MetaGGA()
+      xcpot_needs_grad= xcpot%vc_is_gga() .or. xcpot%vx_is_MetaGGA()
    END FUNCTION xcpot_needs_grad
 
    LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
