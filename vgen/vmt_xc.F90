@@ -23,7 +23,7 @@
       !     *********************************************************
 
    CONTAINS
-      SUBROUTINE vmt_xc(DIMENSION,mpi,sphhar,atoms,&
+      SUBROUTINE vmt_xc(mpi,sphhar,atoms,&
                         den,xcpot,input,sym, obsolete,EnergyDen,vTot,vx,exc)
 #include"cpp_double.h"
          use m_libxc_postprocess_gga
@@ -35,7 +35,6 @@
          IMPLICIT NONE
 
          CLASS(t_xcpot),INTENT(INOUT)      :: xcpot
-         TYPE(t_dimension),INTENT(IN)   :: dimension
          TYPE(t_mpi),INTENT(IN)         :: mpi
          TYPE(t_obsolete),INTENT(IN)    :: obsolete
          TYPE(t_input),INTENT(IN)       :: input
@@ -121,8 +120,6 @@
 
             !
             !         calculate the ex.-cor. potential
-            write (*,*) "perform_MGGA = ", perform_MetaGGA
-            write (*,*) "xcpot%kinED%set = ", xcpot%kinED%set
             if(perform_MetaGGA .and. xcpot%kinED%set) then
                CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
                    , v_x(:nsp*atoms%jri(n),:),grad, kinED_KS=xcpot%kinED%mt(:,:,loc_n))

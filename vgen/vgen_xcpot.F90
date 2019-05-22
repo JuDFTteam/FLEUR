@@ -133,7 +133,7 @@ CONTAINS
          CALL timestart("Vxc in MT")
       END IF
 
-      CALL vmt_xc(DIMENSION, mpi, sphhar, atoms, den, xcpot, input, sym, &
+      CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
                   obsolete, EnergyDen, vTot, vx, exc)
 
       !
