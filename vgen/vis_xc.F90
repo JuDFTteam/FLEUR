@@ -49,7 +49,6 @@ CONTAINS
       TYPE(t_gradients) :: grad, tmp_grad
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:)
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
-      COMPLEX, ALLOCATABLE :: den_pw_w(:,:), EnergyDen_pw_w(:,:), vtot_pw_norm(:,:) 
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),e_xc(:,:)
       INTEGER           :: jspin, i, js
       LOGICAL           :: perform_MetaGGA
@@ -82,10 +81,6 @@ CONTAINS
 
       ! use updated vTot for exc calculation
       IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
-         allocate(den_pw_w,       mold=vTot%pw_w)
-         allocate(EnergyDen_pw_w, mold=vTot%pw_w)
-         allocate(vtot_pw_norm,   mold=vTot%pw)
-
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  EnergyDen%pw, tmp_grad,    ED_rs)
 
