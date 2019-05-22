@@ -134,7 +134,7 @@ CONTAINS
       END IF
 
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
-                  obsolete, EnergyDen, vTot, vx, exc)
+                  EnergyDen, vTot, vx, exc)
 
       !
 

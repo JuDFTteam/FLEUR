@@ -24,7 +24,7 @@
 
    CONTAINS
       SUBROUTINE vmt_xc(mpi,sphhar,atoms,&
-                        den,xcpot,input,sym, obsolete,EnergyDen,vTot,vx,exc)
+                        den,xcpot,input,sym,EnergyDen,vTot,vx,exc)
 #include"cpp_double.h"
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
@@ -36,7 +36,6 @@
 
          CLASS(t_xcpot),INTENT(INOUT)      :: xcpot
          TYPE(t_mpi),INTENT(IN)         :: mpi
-         TYPE(t_obsolete),INTENT(IN)    :: obsolete
          TYPE(t_input),INTENT(IN)       :: input
          TYPE(t_sym),INTENT(IN)         :: sym
          TYPE(t_sphhar),INTENT(IN)      :: sphhar
