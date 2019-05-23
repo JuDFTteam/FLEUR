@@ -5,7 +5,9 @@
 !--------------------------------------------------------------------------------
 MODULE m_metagga
    PUBLIC  :: calc_EnergyDen
-   PRIVATE :: calc_EnergyDen_auxillary_weights
+   PRIVATE :: calc_EnergyDen_auxillary_weights, &
+              calc_kinEnergyDen_pw, &
+              calc_kinEnergyDen_mt
 
    type t_RS_potden
       REAL, ALLOCATABLE :: is(:,:), mt(:,:)

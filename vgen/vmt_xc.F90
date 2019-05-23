@@ -88,15 +88,6 @@
          ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
          IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
 
-         IF (perform_MetaGGA) THEN
-            IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,tmp_grad)
-            ALLOCATE(ED_rs, mold=ch)
-            ALLOCATE(vTot_rs, mold=ch)
-            ALLOCATE(vTot0_rs, mold=vTot_rs)
-            ALLOCATE(core_den_rs, mold=ch)
-            ALLOCATE(val_den_rs, mold=ch)
-         ENDIF
-
          CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
 
 #ifdef CPP_MPI
@@ -148,31 +139,6 @@
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
-            IF(perform_MetaGGA) THEN
-
-               CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
-                               n,            tmp_grad, ED_rs)
-
-               ! multiply potentials with r^2, because mt_to_grid is made for densities,
-               ! which are stored with a factor r^2
-               vTot_tmp = vTot
-               DO jr=1,atoms%jri(n)
-                  vTot_tmp%mt(jr,0:,n,:) = vTot_tmp%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
-               ENDDO
-               CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, vTot_tmp%mt(:,0:,n,:), &
-                               n,            tmp_grad, vTot_rs)
-               tmp_sphhar%nlhd = sphhar%nlhd
-               tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
-               CALL mt_to_grid(xcpot, input%jspins, atoms, tmp_sphhar, vTot_tmp%mt(:,0:0,n,:), &
-                               n,            tmp_grad, vTot0_rs)
-               CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
-                               xcpot%core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
-               CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
-                               xcpot%val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
-               CALL calc_kinEnergyDen_mt(ED_rs, vTot_rs, vTot0_rs, &
-                                      core_den_rs, val_den_rs, n, nsp, xcpot%kinED%mt(:,:,loc_n))
-               xcpot%kinED%set = .True.
-            ENDIF
 
             IF (ALLOCATED(exc%mt)) THEN
                !
