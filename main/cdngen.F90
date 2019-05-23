@@ -92,7 +92,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
-   LOGICAL               :: l_error
+   LOGICAL               :: l_error, perform_MetaGGA
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
@@ -200,8 +200,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       END IF
    END IF ! mpi%irank == 0
    
-   call set_kinED(mpi, sphhar, atoms, core_den, val_den, xcpot, &
-                  input, noco, stars, cell, outDen, EnergyDen, vTot)
+   perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
+                   .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+   if(perform_MetaGGA) then
+      call set_kinED(mpi, sphhar, atoms, core_den, val_den, xcpot, &
+                     input, noco, stars, cell, outDen, EnergyDen, vTot)
+   endif
 #ifdef CPP_MPI
    CALL MPI_BCAST(noco%l_ss,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(noco%l_mperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
