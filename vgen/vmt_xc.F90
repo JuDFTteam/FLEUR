@@ -34,7 +34,7 @@
          USE m_juDFT_string
          IMPLICIT NONE
 
-         CLASS(t_xcpot),INTENT(INOUT)      :: xcpot
+         CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
          TYPE(t_mpi),INTENT(IN)         :: mpi
          TYPE(t_input),INTENT(IN)       :: input
          TYPE(t_sym),INTENT(IN)         :: sym

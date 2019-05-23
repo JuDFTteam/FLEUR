@@ -81,6 +81,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
    TYPE(t_cdnvalJob)     :: cdnvalJob
+   TYPE(t_potden)        :: val_den, core_den
 
 
    !Local Scalars
@@ -117,7 +118,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
-   call xcpot%val_den%copyPotDen(outDen)
+   call val_den%copyPotDen(outDen)
 
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
@@ -170,7 +171,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results)
    endif
-   call xcpot%core_den%subPotDen(outDen, xcpot%val_den)
+   call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
@@ -198,7 +199,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          
       END IF
    END IF ! mpi%irank == 0
-
+   
+   call set_kinED(mpi, sphhar, atoms, core_den, val_den, xcpot, &
+                  input, noco, stars, cell, outDen, EnergyDen, vTot)
 #ifdef CPP_MPI
    CALL MPI_BCAST(noco%l_ss,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(noco%l_mperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)

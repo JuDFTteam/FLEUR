@@ -178,4 +178,114 @@ CONTAINS
       res = matmul(transpose(cell%bmat), vec)
    end function internal_to_rez
 
+   subroutine set_kinED(mpi,   sphhar, atoms, core_den, val_den, xcpot, &
+                        input, noco,   stars, cell,     den,     EnergyDen, vTot)
+      use m_types
+      implicit none
+      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_potden),INTENT(IN)    :: core_den, val_den
+      CLASS(t_xcpot),INTENT(INOUT) :: xcpot
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
+
+      call set_kinED_is(xcpot, input, noco, stars, cell, den, EnergyDen, vTot)
+      call set_kinED_mt(mpi,   sphhar,    atoms, core_den, val_den, &
+                           xcpot, EnergyDen, input, vTot)
+   end subroutine set_kinED
+
+   subroutine set_kinED_is(xcpot, input, noco, stars, cell, den, EnergyDen, vTot)
+      use m_types
+      use m_pw_tofrom_grid
+      implicit none
+      CLASS(t_xcpot),INTENT(INOUT) :: xcpot
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
+
+      !local arrays
+      REAL, ALLOCATABLE            :: den_rs(:,:), ED_rs(:,:), vTot_rs(:,:)
+      TYPE(t_gradients)            :: tmp_grad
+
+      CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                      cell,  EnergyDen%pw, tmp_grad,    ED_rs)
+      CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                      cell,  vTot%pw,      tmp_grad,    vTot_rs)
+      CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                      cell,  den%pw,       tmp_grad,    den_rs)
+
+      xcpot%kinED%is  = ED_RS - vTot_RS * den_RS
+      xcpot%kinED%set = .True.
+   end subroutine set_kinED_is
+
+   subroutine set_kinED_mt(mpi,   sphhar,    atoms, core_den, val_den, &
+                           xcpot, EnergyDen, input, vTot)
+      use m_types
+      use m_mt_tofrom_grid
+      implicit none
+      TYPE(t_mpi),INTENT(IN)         :: mpi
+      TYPE(t_sphhar),INTENT(IN)      :: sphhar
+      TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_potden),INTENT(IN)      :: core_den, val_den, EnergyDen, vTot
+      CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
+      TYPE(t_input),INTENT(IN)       :: input
+
+      INTEGER                        :: jr, loc_n, n, n_start, n_stride, cnt
+      REAL,ALLOCATABLE               :: vTot_mt(:,:,:), ED_rs(:,:), vTot_rs(:,:), vTot0_rs(:,:),&
+                                        core_den_rs(:,:), val_den_rs(:,:)
+      TYPE(t_gradients)              :: tmp_grad
+      TYPE(t_sphhar)                 :: tmp_sphhar
+
+#ifdef CPP_MPI
+      n_start=mpi%irank+1
+      n_stride=mpi%isize
+#else
+      n_start=1
+      n_stride=1
+#endif
+      loc_n = 0
+      call xcpot%kinED%alloc_mt(atoms%nsp()*atoms%jmtd, input%jspins, &
+                                n_start,                atoms%ntype,  n_stride)
+      loc_n = 0
+      do n = n_start,atoms%ntype,n_stride
+         loc_n = loc_n + 1
+
+         if(.not. allocated(vTot_mt)) then
+            allocate(vTot_mt(lbound(vTot%mt, dim=1):ubound(vTot%mt, dim=1),&
+                             lbound(vTot%mt, dim=2):ubound(vTot%mt, dim=2),&
+                             lbound(vTot%mt, dim=4):ubound(vTot%mt, dim=4)))
+            write (*,*) "lbound vTot_mt = ", lbound(vTot_mt)
+            write (*,*) "ubound vTot_mt = ", ubound(vTot_mt)
+            write (*,*) "lbound vTot%mt = ", lbound(vTot%mt)
+            write (*,*) "ubound vTot%mt = ", ubound(vTot%mt)
+         endif
+         
+         do jr=1,atoms%jri(n)
+            vTot_mt(jr,0:,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
+         enddo
+         CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, EnergyDen%mt(:, 0:, n, :), &
+                         n,     tmp_grad,     ED_rs)
+         CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, vTot_mt(:,0:,:), &
+                         n,     tmp_grad,     vTot_rs)
+         
+         tmp_sphhar%nlhd = sphhar%nlhd
+         tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
+
+         CALL mt_to_grid(xcpot, input%jspins, atoms, tmp_sphhar, vTot_mt(:,0:0,:), &
+                         n,     tmp_grad,     vTot0_rs)
+         CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
+                         core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
+         CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
+                         val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
+         
+         xcpot%kinED%mt(:,:,loc_n) = ED_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
+      enddo
+      xcpot%kinED%set = .True.
+   end subroutine set_kinED_mt
 END MODULE m_metagga

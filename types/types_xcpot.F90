@@ -27,7 +27,6 @@ MODULE m_types_xcpot
 
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
-      TYPE(t_potden)   :: core_den, val_den
       TYPE(t_kinED)    :: kinED
    CONTAINS
       PROCEDURE        :: vxc_is_LDA => xcpot_vxc_is_LDA
