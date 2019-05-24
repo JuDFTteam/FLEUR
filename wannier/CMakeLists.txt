@@ -52,7 +52,6 @@ wannier/wann_mmnk_symm.f
 wannier/wann_nabla_pauli_rs.f
 wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
-wannier/wann_optional.f
 wannier/wann_orbcomp.f
 #wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
@@ -99,4 +98,5 @@ wannier/bs_comfort.F
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
 wannier/wann_read_inp.f90
+wannier/wann_optional.f90
 )
