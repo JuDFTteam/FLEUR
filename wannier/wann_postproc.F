@@ -147,10 +147,11 @@ c      real,intent(inout)   :: fermi_weights(:,:,:) !(neigd,nkptd,jspd)
       integer             :: rvecnum,rvecind,num(3),int_dummy
       integer,allocatable :: rvec(:,:),ndegen(:)
       real                :: scale
-      real                :: kpoints(3,fullnkpts)
+      real,allocatable    :: kpoints(:,:)!(3,fullnkpts)
       integer             :: r1,r2,r3,spinspin,num_angl
       logical             :: l_nocosoc
 
+      ALLOCATE(kpoints(3,fullnkpts))
       l_nocosoc=.false.
       if(l_soc)l_nocosoc=.true.
       if(l_noco)l_nocosoc=.true.
