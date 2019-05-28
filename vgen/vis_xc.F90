@@ -92,6 +92,5 @@ CONTAINS
       ENDIF
 
       CALL finish_pw_grid()
-
    END SUBROUTINE vis_xc
 END MODULE m_vis_xc

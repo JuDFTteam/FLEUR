@@ -180,13 +180,14 @@ CONTAINS
       res = matmul(transpose(cell%bmat), vec)
    end function internal_to_rez
 
-   subroutine set_kinED(mpi,   sphhar, atoms, core_den, val_den, xcpot, &
+   subroutine set_kinED(mpi,   sphhar, atoms, sym, core_den, val_den, xcpot, &
                         input, noco,   stars, cell,     den,     EnergyDen, vTot)
       use m_types
       implicit none
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_sym), INTENT(IN)      :: sym
       TYPE(t_potden),INTENT(IN)    :: core_den, val_den
       CLASS(t_xcpot),INTENT(INOUT) :: xcpot
       TYPE(t_input),INTENT(IN)     :: input
@@ -195,12 +196,12 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
 
-      call set_kinED_is(xcpot, input, noco, stars, cell, den, EnergyDen, vTot)
-      call set_kinED_mt(mpi,   sphhar,    atoms, core_den, val_den, &
+      call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot)
+      call set_kinED_mt(mpi,   sphhar,    atoms, sym, core_den, val_den, &
                            xcpot, EnergyDen, input, vTot)
    end subroutine set_kinED
 
-   subroutine set_kinED_is(xcpot, input, noco, stars, cell, den, EnergyDen, vTot)
+   subroutine set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot)
       use m_types
       use m_pw_tofrom_grid
       implicit none
@@ -208,12 +209,15 @@ CONTAINS
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_sym), INTENT(IN)      :: sym
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
 
       !local arrays
       REAL, ALLOCATABLE            :: den_rs(:,:), ED_rs(:,:), vTot_rs(:,:)
       TYPE(t_gradients)            :: tmp_grad
+      
+      CALL init_pw_grid(xcpot,stars,sym,cell)
 
       CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                       cell,  EnergyDen%pw, tmp_grad,    ED_rs)
@@ -222,11 +226,13 @@ CONTAINS
       CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                       cell,  den%pw,       tmp_grad,    den_rs)
 
+      CALL finish_pw_grid()
+
       xcpot%kinED%is  = ED_RS - vTot_RS * den_RS
       xcpot%kinED%set = .True.
    end subroutine set_kinED_is
 
-   subroutine set_kinED_mt(mpi,   sphhar,    atoms, core_den, val_den, &
+   subroutine set_kinED_mt(mpi,   sphhar,    atoms, sym, core_den, val_den, &
                            xcpot, EnergyDen, input, vTot)
       use m_types
       use m_mt_tofrom_grid
@@ -234,6 +240,7 @@ CONTAINS
       TYPE(t_mpi),INTENT(IN)         :: mpi
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_sym), INTENT(IN)        :: sym
       TYPE(t_potden),INTENT(IN)      :: core_den, val_den, EnergyDen, vTot
       CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
       TYPE(t_input),INTENT(IN)       :: input
@@ -251,7 +258,14 @@ CONTAINS
       n_start=1
       n_stride=1
 #endif
+      CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
       loc_n = 0
+      allocate(ED_rs(atoms%nsp()*atoms%jmtd, input%jspins))
+      allocate(vTot_rs, mold=ED_rs)
+      allocate(vTot0_rs, mold=ED_rs)
+      allocate(core_den_rs, mold=ED_rs)
+      allocate(val_den_rs, mold=ED_rs)
+
       call xcpot%kinED%alloc_mt(atoms%nsp()*atoms%jmtd, input%jspins, &
                                 n_start,                atoms%ntype,  n_stride)
       loc_n = 0
@@ -262,10 +276,6 @@ CONTAINS
             allocate(vTot_mt(lbound(vTot%mt, dim=1):ubound(vTot%mt, dim=1),&
                              lbound(vTot%mt, dim=2):ubound(vTot%mt, dim=2),&
                              lbound(vTot%mt, dim=4):ubound(vTot%mt, dim=4)))
-            write (*,*) "lbound vTot_mt = ", lbound(vTot_mt)
-            write (*,*) "ubound vTot_mt = ", ubound(vTot_mt)
-            write (*,*) "lbound vTot%mt = ", lbound(vTot%mt)
-            write (*,*) "ubound vTot%mt = ", ubound(vTot%mt)
          endif
          
          do jr=1,atoms%jri(n)
@@ -289,5 +299,6 @@ CONTAINS
          xcpot%kinED%mt(:,:,loc_n) = ED_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
       enddo
       xcpot%kinED%set = .True.
+      CALL finish_mt_grid()
    end subroutine set_kinED_mt
 END MODULE m_metagga

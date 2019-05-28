@@ -203,7 +203,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
                    .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
    if(perform_MetaGGA) then
-      call set_kinED(mpi, sphhar, atoms, core_den, val_den, xcpot, &
+      call set_kinED(mpi, sphhar, atoms, sym, core_den, val_den, xcpot, &
                      input, noco, stars, cell, outDen, EnergyDen, vTot)
    endif
 #ifdef CPP_MPI

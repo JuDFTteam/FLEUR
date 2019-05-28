@@ -51,8 +51,7 @@
          TYPE(t_xcpot_inbuild) :: xcpot_tmp
          TYPE(t_potden)        :: vTot_tmp
          TYPE(t_sphhar)        :: tmp_sphhar
-         REAL, ALLOCATABLE     :: ch(:,:), core_den_rs(:,:), val_den_rs(:,:), ED_rs(:,:), &
-                                  vTot_rs(:,:), vTot0_rs(:,:)
+         REAL, ALLOCATABLE     :: ch(:,:)
          INTEGER               :: n,nsp,nt,jr, loc_n
          INTEGER               :: i, j, idx, cnt
          REAL                  :: divi

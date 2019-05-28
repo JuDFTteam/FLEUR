@@ -280,12 +280,7 @@ CONTAINS
       ALLOCATE(vxc_tmp(SIZE(vxc,2),SIZE(vxc,1)));vxc_tmp=0.0
       ALLOCATE(vx_tmp(SIZE(vx,2),SIZE(vx,1)));vx_tmp=0.0
 
-      write (*,*) "vgen call"
-      if(present(kinED_KS)) then
-         write (*,*) "max(abs(kED)", maxval(abs(kinED_KS))
-      endif
       IF (xcpot%vc_is_GGA()) THEN
-         write (*,*) "somehow in GGA branch"
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          ALLOCATE(vsigma,mold=grad%vsigma)
          !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9
@@ -298,8 +293,6 @@ CONTAINS
             vxc_tmp=vx_tmp
          ENDIF
       ELSE  !LDA potentials
-         write (*,*) "Is MGGA          = ", xcpot%vx_is_MetaGGA()
-         write (*,*) "kinED_KS present = ", present(kinED_KS)
          if(xcpot%vx_is_MetaGGA() .and. present(kinED_KS)) then
             kinED_libXC = transpose(kinED_KS + 0.25 * grad%laplace)
 
@@ -307,9 +300,6 @@ CONTAINS
             allocate(tmp_vlapl, mold=vx_tmp)
             allocate(tmp_vtau,  mold=vx_tmp)
             
-            write (*,*) "using = ", trim(xc_f03_func_info_get_name(&
-                                      xc_f03_func_get_info(xcpot%vxc_func_x)))
-
             call xc_f03_mgga_vxc(xcpot%vxc_func_x, size(rh,1), transpose(rh), &
                                  grad%sigma, transpose(grad%laplace), kinED_libxc,&
                                  vx_tmp, tmp_vsig, tmp_vlapl, tmp_vtau)
@@ -317,15 +307,11 @@ CONTAINS
             idx = find_first_normal(vx_tmp)+1
             vx_tmp(:,:idx) = 0.0
             CALL xc_f03_lda_vxc(initial_lda_func(jspins), idx, TRANSPOSE(rh(:idx,:)), vx_tmp(:,:idx))
-            write (*,*) "vx has nan = ", any(ieee_is_nan(vx_tmp))
          else
-            write (*,*) "using = ", trim(xc_f03_func_info_get_name(&
-                                      xc_f03_func_get_info(initial_lda_func(jspins))))
             CALL xc_f03_lda_vxc(initial_lda_func(jspins), SIZE(rh,1), TRANSPOSE(rh), vx_tmp)
          endif
          IF (xcpot%func_vxc_id_c>0) THEN
             CALL xc_f03_lda_vxc(xcpot%vxc_func_c, SIZE(rh,1), TRANSPOSE(rh), vxc_tmp)
-            write (*,*) "added correlation"
             vxc_tmp=vxc_tmp+vx_tmp
          ENDIF
       ENDIF
@@ -344,6 +330,7 @@ CONTAINS
       idx = size(vec, dim=2)
       do while(all(.not. ieee_is_nan(vec(:,idx))))
          idx = idx - 1
+         if(idx == 0) exit
       enddo
    END FUNCTION find_first_normal
 
