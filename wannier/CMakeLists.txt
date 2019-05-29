@@ -4,9 +4,7 @@ wannier/eulerrot.f
 #wannier/w90kpunktgen.f
 wannier/wann_1dvacabcof.F
 wannier/wann_2dvacabcof.F
-wannier/wann_abinv.f
 wannier/wann_amn.f
-wannier/wann_anglmom.f
 wannier/wann_dipole2.f
 wannier/wann_dipole3.f
 wannier/wann_dipole_electronic.f
@@ -27,7 +25,6 @@ wannier/wann_gwf_commat.f
 wannier/wann_gwf_tools.f
 wannier/wann_gwf_write_mmnk.F
 wannier/wann_hopping.F
-wannier/wannier.F
 wannier/wannier_to_lapw.F
 wannier/wann_ioncharge_gen.f
 wannier/wann_kpointgen.f
@@ -52,7 +49,6 @@ wannier/wann_mmnk_symm.f
 wannier/wann_nabla_pauli_rs.f
 wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
-wannier/wann_orbcomp.f
 #wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
 wannier/wann_perpmag_rs.f
@@ -62,7 +58,6 @@ wannier/wann_plot_symm.f
 wannier/wann_plot_um_dat.F
 wannier/wann_plot_vac.F
 #wannier/wann_plotw90.F
-wannier/wann_postproc.F
 wannier/wann_postproc_setup4.F
 wannier/wann_postproc_setup5.F
 wannier/wann_postproc_setup.F
@@ -99,6 +94,11 @@ set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
 wannier/wann_read_inp.f90
 wannier/wann_optional.f90
+wannier/wann_abinv.f90
+wannier/wann_anglmom.f90
+wannier/wannier.F90
+wannier/wann_orbcomp.f90
+wannier/wann_postproc.F90
 )
 if(FLEUR_USE_WANN)
 set(fleur_F90 ${fleur_F90}

@@ -847,11 +847,9 @@ c...for the lapws and local orbitals, summed by the basis functions
      +              bcof(1:,0:,1:,jspin),ccof(-llod:,1:,1:,1:,jspin),
      +              zMat(jspin))
 
-         call wann_abinv(
-     >       ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
-     >       noccbd,lmax,nlo,llo,invsat,invsatnr,bkpt,taual,
-     X       acof(1,0,1,jspin),bcof(1,0,1,jspin),
-     <       ccof(-llod,1,1,1,jspin))
+         call wann_abinv(atoms,
+     X        acof(:,0:,:,jspin),bcof(:,0:,:,jspin),
+     <       ccof(-llod:,:,:,:,jspin))
       enddo !jspin
 
       DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
