@@ -199,6 +199,12 @@ CONTAINS
                end select
             END IF
 
+            ! Solve generalized eigenvalue problem.
+            !     ne_all ... number of eigenpairs searched (and found) on this node
+            !                on input, overall number of eigenpairs searched,
+            !                on output, local number of eigenpairs found
+            !     eig ...... all eigenvalues, output
+            !     zMat ..... local eigenvectors, output
             CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
               
             CALL smat%free()
@@ -220,8 +226,18 @@ CONTAINS
             IF (.NOT.zMat%l_real) THEN
                zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
             END IF
-            CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
-                           eig(:ne_found),n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
+            IF (mpi%n_rank == 0) THEN
+                ! Only process 0 writes out the value of ne_all and the
+                ! eigenvalues. 
+                ! Trying to use MPI_PUT for the very same slot by all processes
+                ! causes problems with IntelMPI/2019
+                !        Mai 2019                 U. Alekseeva      
+                CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
+                           eig(:ne_all),n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
+            ELSE
+                CALL write_eig(eig_id, nk,jsp,ne_found,&
+                           n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
+            ENDIF
             neigBuffer(nk,jsp) = ne_found
 #if defined(CPP_MPI)
             ! RMA synchronization
