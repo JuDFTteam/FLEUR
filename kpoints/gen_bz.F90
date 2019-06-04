@@ -58,7 +58,11 @@ SUBROUTINE gen_bz( kpts,sym)
    
    nsym=sym%nop
    if (.not.sym%invs) nsym=2*sym%nop
-   
+
+   IF (ANY(kpts%nkpt3==0)) THEN
+      CALL judft_warn("Generating kpoints in full BZ failed. You have to specify nx,ny,nz in the kpoint-grid section of inp.xml")
+      RETURN ! you skipped the error, so you get what you deserve...
+   END IF
    ALLOCATE (kpts%bkf(3,nsym*kpts%nkpt))
    ALLOCATE (kpts%bkp(nsym*kpts%nkpt))
    ALLOCATE (kpts%bksym(nsym*kpts%nkpt))
@@ -71,7 +75,8 @@ SUBROUTINE gen_bz( kpts,sym)
          rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
       END IF
    END DO
-  
+
+    
    !Add existing vectors to list of full vectors
    id_mat=0
    ID_mat(1,1)=1;ID_mat(2,2)=1;ID_mat(3,3)=1

@@ -244,12 +244,11 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF (l_dosNdir) THEN
             IF (PRESENT(slab)) CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
-            INQUIRE (file='orbcomprot',exist=l_orbcomprot)
-            IF (l_orbcomprot) CALL abcrot2(atoms,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
-
-            IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
-         END IF
-
+            IF (banddos%l_orb.AND.ANY((/banddos%alpha,banddos%beta,banddos%gamma/).NE.0.0)) THEN
+               CALL abcrot2(atoms,banddos,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
+               IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+            END IF
+         ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)

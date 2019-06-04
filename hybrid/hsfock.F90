@@ -203,8 +203,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
 
       CALL timestart("time for performing T^-1*mat_ex*T^-1*")
       !calculate trafo from wavefunctions to APW basis
-      IF(dimension%neigd.LT.hybrid%nbands(nk)) STOP 'mhsfock: neigd  < nbands(nk) ; '& 
-                                                    'trafo from wavefunctions to APW requires at least nbands(nk) '
+      IF(dimension%neigd.LT.hybrid%nbands(nk)) STOP " mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)"
 
       call z%init(olap%l_real,nbasfcn,dimension%neigd)
       call read_z(z,kpts%nkpt*(jsp-1)+nk)

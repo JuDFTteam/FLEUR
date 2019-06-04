@@ -7,3 +7,6 @@
 [submodule "docs/katacoda-tutorials"]
 	path = docs/katacoda-tutorials
 	url = gitlab@iffgit.fz-juelich.de:fleur/katacoda-tutorials.git
+[submodule "external/wannier90"]
+	path = external/wannier90
+	url = https://github.com/wannier-developers/wannier90.git

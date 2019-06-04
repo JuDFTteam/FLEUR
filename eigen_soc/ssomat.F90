@@ -85,6 +85,7 @@ CONTAINS
 
     ALLOCATE(soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
          atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,SIZE(theta)))
+    soangl=0.0
     DO nr=1,SIZE(theta)
        CALL spnorb_angles(atoms,mpi,theta(nr),phi(nr),soangl(:,:,:,:,:,:,nr))
     ENDDO
@@ -407,7 +408,7 @@ CONTAINS
              ELSE
                 bandf= 1 
              ENDIF
-             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-8) THEN
+             IF (ABS(AIMAG(matel(bandf,band2,n)))>1.e-12) THEN
                 PRINT *,bandf,band2,n,AIMAG(matel(bandf,band2,n))
                 CALL judft_error('Stop in ssomatel:  diagonal matrix element not real')
              ENDIF

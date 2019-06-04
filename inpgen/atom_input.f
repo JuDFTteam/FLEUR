@@ -6,7 +6,7 @@
 
       MODULE m_atominput
       use m_juDFT
-
+      INTEGER, PARAMETER ::  l_buffer=512   ! maximum length of e-config string
       INTEGER, PARAMETER  :: dbgfh=6, errfh=6, warnfh=6
       REAL, PARAMETER     :: eps=0.00000001
 
@@ -52,7 +52,6 @@
       CHARACTER(len=xl_buffer) :: buffer
 
 !===> data
-      INTEGER, PARAMETER ::  l_buffer=512   ! maximum length of e-config string
       INTEGER, PARAMETER ::  nwdd=2         ! maximum number of windows
       INTEGER, PARAMETER ::  nstd=31        ! maximum number of core states
 
@@ -154,7 +153,7 @@
         ELSE
 !--->     read defaults for atom defaults
           CALL read_allatoms(
-     >                       bfh,l_buffer,
+     >                       bfh,
      <                       rmt0_def,dx0_def,jri0_def,lmax0_def,
      <                       lnonsph0_def,ncst0_def,econfig0_def,
      <                       bmu0_def,ios)
@@ -216,7 +215,7 @@
 
 !--->   read namelist
         CALL read_atom(
-     >                 bfh,l_buffer,lotype,
+     >                 bfh,lotype,
      <                 id,zat0,rmt0,jri0,dx0,lmax0,lnonsph0,
      <                 ncst0,econfig0,speciesName0,bmu0,lo0,nlod0,llod,
      <                 ios)
@@ -750,7 +749,7 @@ c           in s and p states equal occupation of up and down states
 !----------------------------------------------------------------
 !================================================================
       SUBROUTINE read_allatoms(
-     >                         bfh,l_buffer,
+     >                         bfh,
      X                         rmt,dx,jri,lmax,lnonsph,ncst,econfig,
      <                         bmu,ios)
 !****************************************************************
@@ -759,7 +758,7 @@ c           in s and p states equal occupation of up and down states
 
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN)    :: bfh,l_buffer
+      INTEGER, INTENT (IN)    :: bfh
       INTEGER, INTENT (INOUT) :: jri     ! mt radial mesh points
       INTEGER, INTENT (INOUT) :: lmax    ! max. l to include for density, overlap etc.
       INTEGER, INTENT (INOUT) :: lnonsph ! max. l for nonspherical MT-contributions
@@ -778,7 +777,7 @@ c           in s and p states equal occupation of up and down states
       END SUBROUTINE read_allatoms
 !================================================================
       SUBROUTINE read_atom(
-     >                     bfh,l_buffer,lotype,
+     >                     bfh,lotype,
      X                     id,z,rmt,jri,dx,lmax,lnonsph,ncst,econfig,
      <                     speciesName,bmu,lo,nlod,llod,ios )
 !***********************************************************************
@@ -789,7 +788,7 @@ c           in s and p states equal occupation of up and down states
       IMPLICIT NONE
 
 ! ... arguments ...
-      INTEGER, INTENT (IN)           :: bfh,l_buffer
+      INTEGER, INTENT (IN)           :: bfh
       REAL, INTENT (OUT)             :: id,z,rmt,dx,bmu
       INTEGER                        :: lmax,lnonsph,ncst,jri,nlod,llod
       CHARACTER(len=l_buffer)        :: econfig

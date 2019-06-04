@@ -38,11 +38,10 @@ CONTAINS
     REAL,    INTENT(IN)           :: el(0:,:,:) !(0:atoms%lmaxd,ntype,jspd)
     ! ... Local Variables ...
     INTEGER itype,ispin,j,k,l,jspin,urec,i_u
-    INTEGER noded,nodeu,ios,lty(atoms%n_u)
+    INTEGER noded,nodeu,ios
     REAL wronk
-    LOGICAL n_exist
     CHARACTER*8 l_type*2,l_form*9
-    REAL f(atoms%jmtd,2),g(atoms%jmtd,2),theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
+    REAL f(atoms%jmtd,2),g(atoms%jmtd,2),zero(atoms%n_u)
     REAL f0(atoms%n_u,input%jspins),f2(atoms%n_u,input%jspins),f4(atoms%n_u,input%jspins),f6(atoms%n_u,input%jspins)
     REAL, ALLOCATABLE :: u(:,:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:)
@@ -69,26 +68,9 @@ CONTAINS
        END DO
 
        ! check for possible rotation of n_mmp
-       INQUIRE (file='n_mmp_rot',exist=n_exist)
-       IF (n_exist) THEN
-          OPEN (68,file='n_mmp_rot',status='old',form='formatted')
-          DO i_u = 1, atoms%n_u
-             itype = atoms%lda_u(i_u)%atomType
-             l = atoms%lda_u(i_u)%l
-             READ(68,*,iostat=ios) theta(i_u),phi(i_u)
-             IF (ios == 0) THEN
-                lty(i_u) = l
-             ELSE
-                IF (i_u == 1)  CALL juDFT_error("ERROR reading n_mmp_rot",calledby ="u_setup")
-                theta(i_u) = theta(i_u-1) ; phi(i_u) = phi(i_u-1)
-                lty(i_u) = lty(i_u-1)
-             END IF
-          END DO
-          CLOSE (68)
-          zero = 0.0
-          CALL nmat_rot(phi,theta,zero,3,atoms%n_u,input%jspins,lty,n_mmp)
-       ENDIF
-
+       zero = 0.0
+       CALL nmat_rot(atoms%lda_u(:)%phi,Atoms%lda_u(:)%theta,zero,3,atoms%n_u,input%jspins,atoms%lda_u%l,n_mmp)
+       
        ! calculate potential matrix and total energy correction
        CALL v_mmp(sym,atoms,input%jspins,n_mmp,u,f0,f2,pot%mmpMat,results)
 

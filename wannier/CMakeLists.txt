@@ -52,7 +52,6 @@ wannier/wann_mmnk_symm.f
 wannier/wann_nabla_pauli_rs.f
 wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
-wannier/wann_optional.f
 wannier/wann_orbcomp.f
 #wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
@@ -99,4 +98,24 @@ wannier/bs_comfort.F
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
 wannier/wann_read_inp.f90
+wannier/wann_optional.f90
 )
+if(FLEUR_USE_WANN)
+set(fleur_F90 ${fleur_F90}
+external/wannier90/src/comms.F90      
+external/wannier90/src/disentangle.F90  
+external/wannier90/src/io.F90     
+external/wannier90/src/overlap.F90     
+external/wannier90/src/plot.F90  
+external/wannier90/src/sitesym.F90    
+external/wannier90/src/utility.F90     
+external/wannier90/src/wannierise.F90   
+external/wannier90/src/constants.F90  
+external/wannier90/src/hamiltonian.F90  
+external/wannier90/src/kmesh.F90  
+external/wannier90/src/parameters.F90  
+external/wannier90/src/transport.F90  
+external/wannier90/src/wannier_lib.F90  
+external/wannier90/src/ws_distance.F90
+)
+endif()

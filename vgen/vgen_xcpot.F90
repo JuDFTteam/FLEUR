@@ -32,6 +32,7 @@ CONTAINS
       USE m_checkdopall
       USE m_cdn_io
       USE m_convol
+      use m_cdntot
 
       IMPLICIT NONE
 
@@ -136,7 +137,10 @@ CONTAINS
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
                   EnergyDen, vTot, vx, exc)
 
-      !
+      if(allocated(xcpot%kinED%mt) .and. allocated(xcpot%kinED%is)) then
+         call integrate_realspace(xcpot, atoms, sym, sphhar, input, stars, cell, oneD,&
+                                  vacuum, noco, xcpot%kinED%mt, xcpot%kinED%is, "kinED")
+      endif
 
       ! add MT EXX potential to vr
       IF (mpi%irank == 0) THEN

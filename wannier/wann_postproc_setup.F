@@ -56,7 +56,6 @@ c******************************************************
       integer             :: nn,ikpt
       real                :: pos(3,natd)
 
-
       ! Taken from wannier90-1.2/src/wannier_lib.F90
       interface
         subroutine wannier_setup(seed__name, mp_grid_loc, num_kpts_loc,
@@ -65,7 +64,8 @@ c******************************************************
      +    atoms_cart_loc, gamma_only_loc, spinors_loc, nntot_loc,
      +    nnlist_loc, nncell_loc, num_bands_loc, num_wann_loc,
      +    proj_site_loc, proj_l_loc, proj_m_loc, proj_radial_loc,
-     +    proj_z_loc, proj_x_loc, proj_zona_loc, exclude_bands_loc)
+     +    proj_z_loc, proj_x_loc, proj_zona_loc, exclude_bands_loc
+     +    ,proj_s_loc,proj_s_qaxis_loc)
 
          implicit none
          integer, parameter :: dp = selected_real_kind(15,300)
@@ -107,9 +107,12 @@ c******************************************************
      +      proj_zona_loc
          integer, dimension(num_bands_tot), intent(out) ::
      +      exclude_bands_loc
-        end subroutine wannier_setup
+         integer, dimension(num_bands_tot), optional, intent(out) :: 
+     +       proj_s_loc
+         real(kind=dp),dimension(3,num_bands_tot),optional,intent(out)::
+     +       proj_s_qaxis_loc
+         end subroutine wannier_setup
       end interface
-
       do j=1,natd
          pos(:,j)=matmul(amat(:,:),taual(:,j))
       enddo
@@ -132,7 +135,7 @@ c**********************************************************
 c     Call Wannier90 routine for preparation.
 c**********************************************************
       call wannier_setup(
-     >     seedname,num,
+     >     seed,num,
      >     nkpts,
      >     transpose(amat),bmat,
      >     kpoints,num_bands, 

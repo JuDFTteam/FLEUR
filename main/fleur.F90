@@ -103,7 +103,7 @@ CONTAINS
     ! local scalars
     INTEGER :: eig_id,archiveType
     INTEGER :: n,iter,iterHF
-    LOGICAL :: l_opti,l_cont,l_qfix,l_wann_inp,l_real
+    LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -124,16 +124,11 @@ CONTAINS
     IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
                               stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
 
-    !+Wannier (start)
-    INQUIRE (file='wann_inp',exist=l_wann_inp)
-    input%l_wann = input%l_wann.OR.l_wann_inp
     IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
        IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
-    IF (wann%l_gwf) input%itmax = 1
-    !-Wannier (end)
-
+  
     iter     = 0
     iterHF   = 0
     l_cont = (iter < input%itmax)
@@ -335,14 +330,13 @@ CONTAINS
           ENDIF
 
           
-!!$          !+Wannier functions
-!!$          IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
-!!$             CALL wannier(DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
-!!$                  wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
-!!$                  eig_idList,(sym%invs).AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco),kpts%nkpt)
-!!$          END IF
-!!$          IF (wann%l_gwf) CALL juDFT_error("provide wann_inp if l_gwf=T", calledby = "fleur")
-!!$          !-Wannier
+          !+Wannier functions
+          IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
+             CALL wannier(DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
+                  wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
+                  (/eig_id/),(sym%invs).AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco),kpts%nkpt)
+          END IF
+          !-Wannier
 
           ! charge density generation
           CALL timestart("generation of new charge density (total)")
