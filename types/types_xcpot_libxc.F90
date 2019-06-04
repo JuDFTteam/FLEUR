@@ -258,6 +258,8 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)        :: xc_info
 
+      write (*,*) "check for hybrid"
+
       xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
       xcpot_is_hybrid=ANY([XC_FAMILY_HYB_MGGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
