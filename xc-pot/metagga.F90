@@ -23,6 +23,10 @@ CONTAINS
 #ifdef CPP_LIBXC
       REAL, PARAMETER                  :: eps = 1e-15
 
+      write (*, *) "interstitial"
+      write (*, *) "ED_is min max", minval(EnergyDen_RS), maxval(EnergyDen_RS)
+      write (*, *) "den min max",   minval(den_rs),       maxval(den_rs)
+      write (*, *) "vTot_is",       minval(vTot_rs),      maxval(vTot_rs)
       kinEnergyDen_RS = EnergyDen_RS - vTot_RS * den_RS
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
@@ -39,6 +43,13 @@ CONTAINS
       REAL, INTENT(inout)              :: kinEnergyDen_RS(:,:)
 
 #ifdef CPP_LIBXC
+      write (*, *) "muffin-tin"
+      write (*, *) "ED_mt min max",    minval(EnergyDen_RS), maxval(EnergyDen_RS)
+      write (*, *) "vTot0_mt min max", minval(vTot0_rs),     maxval(vTot0_rs)
+      write (*, *) "core_den min max", minval(core_den_rs),  maxval(core_den_rs)
+      write (*, *) "vTot_mt",          minval(vTot_rs),      maxval(vTot_rs)
+      write (*, *) "val_den min max",  minval(val_den_rs),   maxval(val_den_rs)
+      
       kinEnergyDen_RS = EnergyDen_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
 #else
       CALL juDFT_error("MetaGGA require LibXC",hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
