@@ -34,12 +34,11 @@ CONTAINS
    END SUBROUTINE calc_kinEnergyDen_pw
 
    SUBROUTINE calc_kinEnergyDen_mt(EnergyDen_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
-                                   atm_idx, nsp, kinEnergyDen_RS)
+                                   kinEnergyDen_RS)
       USE m_juDFT_stop
       USE m_juDFT_string
       implicit none
       REAL, INTENT(in)                 :: EnergyDen_RS(:,:), vTot_rs(:,:), vTot0_rs(:,:), core_den_rs(:,:), val_den_rs(:,:)
-      INTEGER, intent(in)              :: atm_idx, nsp
       REAL, INTENT(inout)              :: kinEnergyDen_RS(:,:)
 
 #ifdef CPP_LIBXC
@@ -238,8 +237,9 @@ CONTAINS
                       cell,  den%pw,       tmp_grad,    den_rs)
 
       CALL finish_pw_grid()
-
-      xcpot%kinED%is  = ED_RS - vTot_RS * den_RS
+      
+      call calc_kinEnergyDen_pw(ED_rs, vTot_rs, den_rs, xcpot%kinED%is)
+      !xcpot%kinED%is  = ED_RS - vTot_RS * den_RS
       xcpot%kinED%set = .True.
    end subroutine set_kinED_is
 
@@ -307,7 +307,9 @@ CONTAINS
          CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
                          val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
          
-         xcpot%kinED%mt(:,:,loc_n) = ED_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
+         call calc_kinEnergyDen_mt(ED_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
+                                   xcpot%kinED%mt(:,:,loc_n))
+         !xcpot%kinED%mt(:,:,loc_n) = ED_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
       enddo
       xcpot%kinED%set = .True.
       CALL finish_mt_grid()
