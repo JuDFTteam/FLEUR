@@ -87,19 +87,21 @@ CONTAINS
        CALL elpa_uninit()
        ! END of ELPA stuff
        !
-       !     Put those eigenvalues expected by chani to eig, i.e. for
-       !     process i these are eigenvalues i+1, np+i+1, 2*np+i+1...
+       !     Each process has all eigenvalues in output
+       eig(:ne) = eig2(:ne)    
+       DEALLOCATE(eig2)
+       !
+       !
+       !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
+       !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
+       !     Only num=num2/np eigenvectors per process
        !
        num=ne
        ne=0
        DO i=myid+1,num,np
           ne=ne+1
-          eig(ne)=eig2(i)
        ENDDO
-       DEALLOCATE(eig2)
        !
-       !     Redistribute eigvec from ScaLAPACK distribution to each process
-       !     having all eigenvectors corresponding to his eigenvalues as above
        !
        ALLOCATE(t_mpimat::ev)
        CALL ev%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%blacsdata%mpi_com,.FALSE.)
