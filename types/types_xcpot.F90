@@ -28,6 +28,7 @@ MODULE m_types_xcpot
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
       TYPE(t_kinED)    :: kinED
+      TYPE(t_kinED)    :: lapl
    CONTAINS
       PROCEDURE        :: vxc_is_LDA => xcpot_vxc_is_LDA
       PROCEDURE        :: vxc_is_GGA => xcpot_vxc_is_GGA

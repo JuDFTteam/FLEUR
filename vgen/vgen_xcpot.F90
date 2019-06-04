@@ -57,6 +57,7 @@ CONTAINS
 
       ! Local type instances
       TYPE(t_potden) :: workDen, exc, veff
+      real, allocatable :: tmp_mt(:,:,:), tmp_is(:,:)
       ! Local Scalars
       INTEGER ifftd, ifftd2, ifftxc3d, ispin, i
 #ifdef CPP_MPI
@@ -140,6 +141,17 @@ CONTAINS
       if(allocated(xcpot%kinED%mt) .and. allocated(xcpot%kinED%is)) then
          call integrate_realspace(xcpot, atoms, sym, sphhar, input, stars, cell, oneD,&
                                   vacuum, noco, xcpot%kinED%mt, xcpot%kinED%is, "kinED")
+      endif
+      if(allocated(xcpot%lapl%mt) .and. allocated(xcpot%lapl%is)) then
+         call integrate_realspace(xcpot, atoms, sym, sphhar, input, stars, cell, oneD,&
+                                  vacuum, noco, xcpot%lapl%mt, xcpot%lapl%is, "laplace")
+      endif
+      if(allocated(xcpot%lapl%mt) .and. allocated(xcpot%lapl%is) .and. &
+         allocated(xcpot%kinED%mt) .and. allocated(xcpot%kinED%is)) then
+         tmp_mt = xcpot%kinED%mt + 0.25 * xcpot%lapl%mt
+         tmp_is = xcpot%kinED%is + 0.25 * xcpot%lapl%is
+         call integrate_realspace(xcpot, atoms, sym, sphhar, input, stars, cell, oneD,&
+                                  vacuum, noco, tmp_mt, tmp_is, "corrected kinED")
       endif
 
       ! add MT EXX potential to vr

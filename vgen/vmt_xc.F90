@@ -103,6 +103,7 @@
 #endif
          loc_n = 0
          call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
+         call xcpot%lapl%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
             loc_n = loc_n + 1
             CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
@@ -148,6 +149,7 @@
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, &
                      kinED_KS=xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
+                  xcpot%lapl%mt(:,:,loc_n) = grad%laplace
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)

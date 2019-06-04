@@ -225,5 +225,6 @@ CONTAINS
       endif
       write (*, *) "qtot",    qtot
       write (*, *) "qis_tot", qistot
+      write (*, *) "-------------------------"
    END SUBROUTINE print_cdn_inte
 END MODULE m_cdntot
