@@ -20,7 +20,11 @@ MODULE m_kkintgr
    INTEGER, PARAMETER :: method_deriv     = 2
 
    INTEGER, PARAMETER :: rectangular      = 1
-   INTEGER, PARAMETER :: semicircle       = 2
+   INTEGER, PARAMETER :: semicircle       = 2 !Not recommended: either we need to smooth projdos for every energy point (SLOW)
+                                              !                 Or we use a rather unprecise approximation
+
+   !PARAMETER FOR LORENTZIAN SMOOTHING
+   REAL,    PARAMETER :: cut              = 1e-14
 
    CONTAINS 
 
@@ -56,7 +60,7 @@ MODULE m_kkintgr
       INTEGER  iz,n1,n2
       REAL     sigma,re_n1,re_n2
 
-
+      CALL timestart("kkintgr: smoothing")
       IF(shape.EQ.rectangular) THEN
          !If we have a rectangular contour we only need  to smooth the imaginary part once
          im_calc = im
@@ -65,7 +69,9 @@ MODULE m_kkintgr
             CALL lorentzian_smooth(del,im_calc,sigma,ne)
          ENDIF       
       ENDIF
+      CALL timestop("kkintgr: smoothing")
       
+      CALL timestart("kkintgr: integration")
       g = 0.0
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
@@ -79,9 +85,10 @@ MODULE m_kkintgr
          SELECT CASE(shape)
 
          CASE (rectangular)
-            IF(nz.EQ.ne) THEN
-               g(iz) = re_ire(im_calc,ne,iz,method) + ImagUnit * im_calc(iz)
-            ELSE IF(nz.LT.ne) THEN
+            !IF(nz.EQ.ne) THEN
+            !   !no interpolation necessary
+            !   g(iz) = re_ire(im_calc,ne,iz,method) + ImagUnit * im_calc(iz)
+            !ELSE IF(nz.LT.ne) THEN
                !Next point to the left
                n1 = INT((REAL(ez(iz))-eb)/del) +1
                !next point to the right
@@ -90,33 +97,42 @@ MODULE m_kkintgr
                !Here we perform the integrations
                re_n2 = re_ire(im_calc,ne,n2,method)
                re_n1 = re_ire(im_calc,ne,n1,method)
+
+               !Interpolate to coarser mesh
+               !Real Part 
+               g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
+               !Imaginary Part
+               g(iz) = g(iz) + ImagUnit *( (im_calc(n2)-im_calc(n1))/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_calc(n1) )
+            !ELSE
+            !   CALL juDFT_error("Complex Grid finer than on the real axis",calledby="kkintgr")
+            !ENDIF
+         CASE (semicircle)
+            CALL juDFT_warn("This contour is either slow or unprecise atm",calledby="kkintgr")
+            IF(method.LE.2) THEN
+               !For a semicircle we need to smooth to the correct imaginary part first
+               im_calc = im
+               sigma = AIMAG(ez(iz)) 
+               IF(sigma.NE.0.0) THEN
+                  CALL lorentzian_smooth(del,im_calc,sigma,ne)
+               ENDIF
+               !Next point to the left
+               n1 = INT((REAL(ez(iz))-eb)/del) +1
+               !next point to the right
+               n2 = n1 + 1
+
+               !Here we perform the integrations
+               re_n2 = re_ire(im_calc,ne,n2,method)
+               re_n1 = re_ire(im_calc,ne,n1,method)
+
                !Real Part (only split up to make it readable)
                g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
                !Imaginary Part
                g(iz) = g(iz) + ImagUnit *( (im_calc(n2)-im_calc(n1))/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_calc(n1) )
             ELSE
-               CALL juDFT_error("Complex Grid finer than on the real axis",calledby="kkintgr")
-            ENDIF
-         CASE (semicircle)
-            !For a semicircle we need to smooth to the correct imaginary part first
-            im_calc = im
-            sigma = AIMAG(ez(iz)) 
-            IF(sigma.NE.0.0) THEN
-               CALL lorentzian_smooth(del,im_calc,sigma,ne)
-            ENDIF
-            !Next point to the left
-            n1 = INT((REAL(ez(iz))-eb)/del) +1
-            !next point to the right
-            n2 = n1 + 1
+               !Rather unprecise treatment by orders of magnitude faster than smoothing beforehand everytime
 
-            !Here we perform the integrations
-            re_n2 = re_ire(im_calc,ne,n2,method)
-            re_n1 = re_ire(im_calc,ne,n1,method)
 
-            !Real Part (only split up to make it readable)
-            g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
-            !Imaginary Part
-            g(iz) = g(iz) + ImagUnit *( (im_calc(n2)-im_calc(n1))/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_calc(n1) )
+            ENDIF
          CASE default
             CALL juDFT_error("Not a valid shape for the energy contour",calledby="kkintgr")
          END SELECT
@@ -126,6 +142,7 @@ MODULE m_kkintgr
       ENDDO
       !$OMP END DO
       !$OMP END PARALLEL
+      CALL timestop("kkintgr: integration")
 
    END SUBROUTINE kkintgr
 
@@ -195,30 +212,41 @@ MODULE m_kkintgr
       REAL :: c , f0(n)
       INTEGER :: i , j , j1 , j2 , m1, m
 
-      REAL, ALLOCATABLE :: ee(:)
- 
-      c = dx/(pi_const) * sigma
-
-      m = NINT(sqrt(c/1e-14-sigma**2))+1
-      ALLOCATE ( ee(m) )
-      DO i = 1, m
-         ee(i) = c * 1.0/(sigma**2+(i-1)**2*dx**2)
-         IF ( ee(i).LT.1.E-14 ) EXIT
-      ENDDO
-      m1=i-1
-      f0 = f
-      f = 0.
+      INTEGER ie,je
+      REAL fac,sum,energy
       
-      DO i = 1 , N
-         j1 = i - m1 + 1
-         IF ( j1.LT.1 ) j1 = 1
-         j2 = i + m1 - 1
-         IF ( j2.GT.N ) j2 = N
-         DO j = j1 , j2
-            f(i) = f(i) + ee(IABS(j-i)+1)*f0(j)
+
+      !LORENTZIAN SMOOTHING COMPARE https://heasarc.nasa.gov/xanadu/xspec/models/glsmooth.html
+      f0 = f
+      f = 0.0
+      DO ie = 1, n 
+
+         energy = (ie-0.5)*dx
+
+         fac = 1.0
+         je = ie
+         sum = 0.0
+         DO WHILE(fac.GT.cut.AND.je.GE.1) 
+            fac = 1/pi_const * ( atan(2*((je)*dx-energy)/sigma) &
+                                 -atan(2*((je-1)*dx-energy)/sigma) )
+
+            f(je) = f(je) + fac * f0(ie)
+            sum = sum + fac
+            je = je-1
          ENDDO
+
+         fac = 1.0
+         je = ie+1
+         DO WHILE(fac.GT.cut.AND.je.LE.n) 
+            fac = 1/pi_const * ( atan(2*((je)*dx-energy)/sigma) &
+                                 -atan(2*((je-1)*dx-energy)/sigma) )
+
+            f(je) = f(je) + fac * f0(ie)
+            sum = sum + fac
+            je = je+1
+         ENDDO
+
       ENDDO
-      DEALLOCATE ( ee )
 
    END SUBROUTINE lorentzian_smooth
 
