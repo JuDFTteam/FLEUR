@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,enpara,&
-       jspin,jsp,mpi,v,input,td,ud)
+       jspin,jsp,mpi,v,input,hub1,td,ud)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
@@ -22,6 +22,7 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)   :: enpara
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_potden),INTENT(IN)    :: v
+    TYPE(t_hub1ham),INTENT(IN)   :: hub1
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
@@ -36,6 +37,7 @@ CONTAINS
     REAL     :: temp
     INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
     INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2
+    LOGICAL l_remove
 
     ALLOCATE( dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
     ALLOCATE( dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
@@ -75,6 +77,18 @@ CONTAINS
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)
+
+          !Remove the nonspherical contribution to the non-spherical potential
+          !In LDA+HIA case
+          l_remove = .FALSE.
+          IF(atoms%n_hia>0.AND.l.EQ.lp) THEN
+            DO i = 1, atoms%n_hia
+               IF(hub1%lda_u(i)%atomType.EQ.n.AND.hub1%lda_u(i)%l.EQ.l) THEN
+                  l_remove = .TRUE.
+               ENDIF
+            ENDDO
+          ENDIF
+
           DO lh = MERGE(1,0,jspin<3), nh
              lamda = sphhar%llh(lh,nsym)
              lmin = lp - l
