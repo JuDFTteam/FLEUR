@@ -190,6 +190,36 @@ CONTAINS
       res = matmul(transpose(cell%bmat), vec)
    end function internal_to_rez
 
+   subroutine undo_vgen_finalize(vtot, atoms, noco, stars)
+      use m_types
+      use m_constants
+      use m_judft
+      implicit none
+      TYPE(t_potden), intent(inout)  :: vtot
+      type(t_atoms), intent(in)      :: atoms
+      type(t_noco), intent(in)       :: noco
+      type(t_stars), intent(in)      :: stars
+   
+      integer                        :: js, n, st
+
+      do js = 1,size(vtot%mt,4)
+         do n = 1,atoms%ntype
+            vTot%mt(:atoms%jri(n),0,n,js) = vtot%mt(:atoms%jri(n),0,n,js) &
+                  / (atoms%rmsh(:atoms%jri(n),n) / sfp_const )
+         enddo
+      enddo
+
+      if(.not. noco%l_noco) then
+         do js=1,size(vtot%pw_w,2)
+            do st=1,stars%ng3
+               vTot%pw_w(st,js) = vTot%pw_w(st,js) * stars%nstr(st)
+            enddo
+         enddo
+      else
+         call juDFT_error("undo vgen_finalize not implemented for noco")
+      endif
+   end subroutine undo_vgen_finalize
+
    subroutine set_kinED(mpi,   sphhar, atoms, sym, core_den, val_den, xcpot, &
                         input, noco,   stars, cell,     den,     EnergyDen, vTot)
       use m_types
@@ -205,10 +235,15 @@ CONTAINS
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
+      
+      TYPE(t_potden)               :: vTot_corrected
+   
+      call vTot_corrected%copyPotDen(vTot)
+      call undo_vgen_finalize(vTot_corrected, atoms, noco, stars)
 
-      call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot)
+      call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot_corrected)
       call set_kinED_mt(mpi,   sphhar,    atoms, sym, core_den, val_den, &
-                           xcpot, EnergyDen, input, vTot)
+                           xcpot, EnergyDen, input, vTot_corrected)
    end subroutine set_kinED
 
    subroutine set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot)
