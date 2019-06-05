@@ -481,7 +481,7 @@ CONTAINS
 
     CALL close_eig(eig_id)
     !Keyword for terminating a bash script for LDA+HIA
-    IF(mpi%irank.EQ.0.AND.atoms%n_hia) THEN
+    IF(mpi%irank.EQ.0.AND.atoms%n_hia>0) THEN
       IF(results%last_occdistance<0.01.AND.results%last_mmpMatdistance<0.001) WRITE(6,"(A)") "Density matrix converged"
     ENDIF
     CALL juDFT_end("all done",mpi%irank)
