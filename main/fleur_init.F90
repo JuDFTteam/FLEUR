@@ -288,21 +288,6 @@
           DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
 
           
-          !Now check for additional input files
-          IF (mpi%irank.EQ.0) THEN
-             IF(.NOT.banddos%l_orb) THEN
-                INQUIRE(file='orbcomp',exist=banddos%l_orb)
-                IF (banddos%l_orb) THEN
-                   OPEN (111,file='orbcomp',form='formatted')
-                   READ (111,*) banddos%orbCompAtom
-                   CLOSE (111)
-                END IF
-             END IF
-             INQUIRE(file='mcd_inp',exist=l_found)
-             IF(l_found) THEN
-                CALL judft_error("setup of mcd calculation is only supported in the inp.xml file",calledby="fleur_init")
-             END IF
-          END IF
 
           ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
           ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))

@@ -36,16 +36,16 @@ MODULE m_types_mpimat
      INTEGER                   :: global_size1,global_size2        !> this is the size of the full-matrix
      TYPE(t_blacsdata),POINTER :: blacsdata
    CONTAINS
-     PROCEDURE,PASS   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
-     PROCEDURE,PASS   :: move => mpimat_move     !<overwriten from t_mat, also performs redistribution
-     PROCEDURE,PASS   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
-     PROCEDURE,PASS   :: multiply =>mpimat_multiply  !<overwriten from t_mat, takes care of blacs-grids
-     PROCEDURE,PASS   :: init_details => mpimat_init
-     PROCEDURE,PASS   :: init_template =>mpimat_init_template     !<overwriten from t_mat, also calls alloc in t_mat
-     PROCEDURE,PASS   :: add_transpose => mpimat_add_transpose !<overwriten from t_mat
-     PROCEDURE,PASS   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
-     PROCEDURE,PASS   :: print_matrix
-     PROCEDURE,PASS   :: from_non_dist
+     PROCEDURE   :: copy => mpimat_copy     !<overwriten from t_mat, also performs redistribution
+     PROCEDURE   :: move => mpimat_move     !<overwriten from t_mat, also performs redistribution
+     PROCEDURE   :: free => mpimat_free     !<overwriten from t_mat, takes care of blacs-grids
+     PROCEDURE   :: multiply =>mpimat_multiply  !<overwriten from t_mat, takes care of blacs-grids
+     PROCEDURE   :: init_details => mpimat_init
+     PROCEDURE   :: init_template =>mpimat_init_template     !<overwriten from t_mat, also calls alloc in t_mat
+     PROCEDURE   :: add_transpose => mpimat_add_transpose !<overwriten from t_mat
+     PROCEDURE   :: generate_full_matrix    ! construct full matrix if only upper triangle of hermitian matrix is given
+     PROCEDURE   :: print_matrix
+     PROCEDURE   :: from_non_dist
      FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
   END TYPE t_mpimat
   

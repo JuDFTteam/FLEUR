@@ -22,7 +22,7 @@ c********************************************************
       logical,intent(in)  :: l_bzsym,film
       logical,intent(in)  :: l_onedimens,l_readkpts
       integer,intent(out) :: nkpts
-      real,intent(inout)  :: kpoints(:,:)
+      real,intent(inout),allocatable  :: kpoints(:,:)
 
       real             :: scale
       integer          :: at,j

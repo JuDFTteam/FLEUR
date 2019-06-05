@@ -42,7 +42,8 @@
 
       REAL dmat(3,3),dmati(3,3)
 
-      
+      IF (ALL(ABS(alpha)<1E-10).AND.ALL(ABS(beta)<1E-10)
+     +     .AND.ALL(ABS(gamma)<1E-10)) RETURN
 
       
       DO n = 1, n_u

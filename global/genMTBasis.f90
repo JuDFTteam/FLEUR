@@ -34,8 +34,8 @@ CONTAINS
 
 
     LOGICAL    :: l_write
-    l_write=mpi%irank==0 &
-    !$ .and.omp_get_num_threads()==1
+    l_write=mpi%irank==0 
+    !$ l_write = l_write .and. omp_get_num_threads()==1
 
 
     IF (l_write) WRITE (6,FMT=8000) iType

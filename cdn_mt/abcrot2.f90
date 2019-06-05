@@ -8,12 +8,13 @@ MODULE m_abcrot2
   PRIVATE
   PUBLIC :: abcrot2
 CONTAINS
-  SUBROUTINE abcrot2(atoms,neig,eigVecCoeffs,jsp)
+  SUBROUTINE abcrot2(atoms,banddos,neig,eigVecCoeffs,jsp)
     USE m_dwigner
     USE m_types
     IMPLICIT NONE
 
     TYPE(t_atoms),INTENT(IN)           :: atoms
+    TYPE(t_banddos),INTENT(IN)         :: banddos
     TYPE(t_eigVecCoeffs),INTENT(INOUT) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
@@ -21,17 +22,11 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,ineq,iatom,iop,ilo,i,l ,lm,lmp,ifac
-    REAL   beta,alpha,gamma
     REAL amx(3,3,1),imx(3,3)
     COMPLEX  d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,1:atoms%lmaxd,1)
 
-    OPEN (333,file='orbcomprot')
-    READ (333,*) alpha
-    READ (333,*) beta
-    READ (333,*) gamma
-    CLOSE (333)
-
-    CALL euler(alpha,beta,gamma, amx)
+    
+    CALL euler(banddos%alpha,banddos%beta,banddos%gamma, amx)
 
     imx(:,:) = 0. ; imx(1,1) = 1. ; imx(2,2) = 1. ; imx(3,3) = 1.
 

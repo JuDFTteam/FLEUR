@@ -63,6 +63,7 @@ CONTAINS
       INTEGER, INTENT(IN)                 :: vxc_id_x, vxc_id_c ! potential functional
       INTEGER, INTENT(IN)                 :: exc_id_x, exc_id_c ! energy functionals
       LOGICAL                             :: same_functionals   ! are vxc and exc equal
+      INTEGER                             :: errors(4)
 
 #ifdef CPP_LIBXC
       INTEGER :: err
@@ -84,22 +85,31 @@ CONTAINS
 
       IF (jspins==1) THEN
          ! potential functionals      
-         CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_UNPOLARIZED)
-         IF (xcpot%func_vxc_id_c>0) CALL xc_f03_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, XC_UNPOLARIZED)
+         CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_UNPOLARIZED, err=errors(1))
+         IF (xcpot%func_vxc_id_c>0) CALL xc_f03_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, &
+                                                                 XC_UNPOLARIZED, err=errors(2))
 
          ! energy functionals
-         CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_UNPOLARIZED)
-         IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, XC_UNPOLARIZED)
+         CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_UNPOLARIZED, err=errors(3))
+         IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, &
+                                                                  XC_UNPOLARIZED, err=errors(4))
          
       ELSE
          ! potential functionals  
-         CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_POLARIZED)
-         IF (xcpot%func_vxc_id_c>0) CALL xc_f03_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, XC_POLARIZED)
+         CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_POLARIZED, err=errors(1))
+         IF (xcpot%func_vxc_id_c>0) CALL xc_f03_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, &
+                                                                  XC_POLARIZED, err=errors(2))
 
          !energy functionals
-         CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_POLARIZED)
-         IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, XC_POLARIZED)
+         CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_POLARIZED, err=errors(3))
+         IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, &
+                                                                  XC_POLARIZED, err=errors(4))
       END IF
+
+      IF(errors(1) /= 0) call juDFT_error("Exchange potential functional not in LibXC")
+      IF(errors(2) /= 0) call juDFT_error("Correlation potential functional not in LibXC")
+      IF(errors(3) /= 0) call juDFT_error("Exchange energy functional not in LibXC")
+      IF(errors(4) /= 0) call juDFT_error("Correlation energy functional not in LibXC")
 
       !check if any potental is a MetaGGA
       IF(ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_x))) THEN

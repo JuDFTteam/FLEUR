@@ -18,8 +18,8 @@ CONTAINS
     ! ne ....... number of ev's searched (and found) on this node
     !            On input, overall number of ev's searched,
     !            On output, local number of ev's found
-    ! eig ...... eigenvalues, output
-    ! ev ....... eigenvectors, output
+    ! eig ...... all eigenvalues, output
+    ! ev ....... local eigenvectors, output
     !
     !----------------------------------------------------
 
@@ -453,21 +453,23 @@ CONTAINS
     CALL MPI_COMM_FREE(mpi_comm_cols,err)
 #endif
     !
-    !     Put those eigenvalues expected by chani to eig, i.e. for
-    !     process i these are eigenvalues i+1, np+i+1, 2*np+i+1...
-    !     Only num=num2/np eigenvalues per process
+    !     Each process has all eigenvalues in output
+    eig(:num2) = eig2(:num2)    
+    DEALLOCATE(eig2)
+    !
+    !
+    !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
+    !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
+    !     Only num=num2/np eigenvectors per process
     !
     num=FLOOR(REAL(num2)/np)
     IF (myid.LT.num2-(num2/np)*np) num=num+1
     ne=0
     DO i=myid+1,num2,np
        ne=ne+1
-       eig(ne)=eig2(i)
+       !eig(ne)=eig2(i)
     ENDDO
-    DEALLOCATE(eig2)
     !
-    !     Redistribute eigvec from ScaLAPACK distribution to each process
-    !     having all eigenvectors corresponding to his eigenvalues as above
     !
     ALLOCATE(t_mpimat::ev)
     CALL ev%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%blacsdata%mpi_com,.FALSE.)

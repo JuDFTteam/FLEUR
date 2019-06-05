@@ -461,8 +461,7 @@ c******************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat,
+     <              nmat,nbands,eigg,zzMat,
      >              .false.,1)
 
 

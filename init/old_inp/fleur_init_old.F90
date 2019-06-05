@@ -265,7 +265,7 @@ CONTAINS
           CALL w_inpXML(&
                atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
                cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
-               noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
+               noel,namex,relcor,a1,a2,a3,cell%amat(3,3),input%comment,&
                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
                .TRUE.,numSpecies,enpara)

@@ -84,6 +84,7 @@ CONTAINS
     
     !Now modify the noco-file
     noco%qss=this%qvec(:,this%q_done)
+    noco%l_spav=.true.
     !Modify the alpha-angles
     DO iType = 1,atoms%ntype
        noco%alph(iType) = noco%alphInit(iType) + tpi_const*dot_PRODUCT(noco%qss,atoms%taual(:,SUM(atoms%neq(:itype-1))+1))

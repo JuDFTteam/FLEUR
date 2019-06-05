@@ -128,6 +128,7 @@ CONTAINS
       LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_xi(4), hub1_bz(4), tempReal
+      REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
       LOGICAL            :: l_amf(4), hub1_amf(4), l_ccf(4),l_found
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
@@ -1404,7 +1405,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             lmaxAPW = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/atomicCutoffs/@lmaxAPW'))
          END IF
 
-         !The LdaUType is used to define both LDA+U and LDA+Hubbard1 (determined by the switch l_hubbard1)
          numU = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaU')
          IF (numU.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
          ldau_l = -1
@@ -1416,8 +1416,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             ldau_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l'))
             ldau_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@U'))
             ldau_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@J'))
+            ldau_phi(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@phi'))
+            ldau_theta(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@theta'))
             l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
-         ENDDO
+         END DO
+
          !Parameters for LDA+Hubbard1
          numHIA = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA')
          IF (numHIA.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
@@ -1504,6 +1507,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%lda_u(atoms%n_u)%l        = ldau_l(i)
                   atoms%lda_u(atoms%n_u)%u        = ldau_u(i)
                   atoms%lda_u(atoms%n_u)%j        = ldau_j(i)
+                  atoms%lda_u(atoms%n_u)%phi = ldau_phi(i)
+                  atoms%lda_u(atoms%n_u)%theta = ldau_theta(i)
                   atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
                   atoms%lda_u(atoms%n_u)%atomType = iType 
                ENDDO
@@ -1918,6 +1923,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                END IF
                banddos%l_orb = .TRUE.
                banddos%orbCompAtom = na
+               banddos%alpha=0.0;banddos%beta=0.0;banddos%gamma=0.0
+               WRITE(*,*) "Orbcomp-Rotation feature not fully implemented. Please create an issue on gitlab if you need it :-)"
             END IF
             wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
          END DO

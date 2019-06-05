@@ -66,8 +66,7 @@ c****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
+     <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
         nkbnd = 0
