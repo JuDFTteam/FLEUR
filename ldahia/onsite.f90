@@ -19,7 +19,7 @@ USE m_juDFT
 USE m_types
 USE m_constants
 
-LOGICAL, PARAMETER :: l_debug
+LOGICAL, PARAMETER :: l_debug = .FALSE.
 
 CONTAINS
 

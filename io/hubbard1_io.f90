@@ -201,7 +201,7 @@ MODULE m_hubbard1_io
 
    END SUBROUTINE write_ccfmat
 
-   SUBROUTINE read_selfen(path,selfen,ne,matsize,e,l_matsub)
+   SUBROUTINE read_selfen(path,selfen,ne,matsize,l_matsub)
       
       USE m_constants
       !This Subroutine reads in the self-energy
@@ -211,7 +211,6 @@ MODULE m_hubbard1_io
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: ne
       INTEGER,          INTENT(IN)  :: matsize
-      REAL,             INTENT(OUT) :: e(:)  
       LOGICAL,          INTENT(IN)  :: l_matsub  
       
       INTEGER io_error,io_unit
@@ -225,7 +224,7 @@ MODULE m_hubbard1_io
          IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
          READ(io_unit,*)
          DO i = 1, ne
-            READ(io_unit,*) e(i)
+            READ(io_unit,*) 
             DO m = 1, matsize
                READ(io_unit,*) selfen(i,1:matsize,m)
             ENDDO
@@ -236,7 +235,7 @@ MODULE m_hubbard1_io
          IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
          
          DO i = 1, ne
-            READ(io_unit,9010) e(i)
+            READ(io_unit,9010) 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
             selfen(i,1:matsize,1:matsize) = tmp(1:matsize,1:matsize)/hartree_to_ev_const 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
