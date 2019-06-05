@@ -105,12 +105,12 @@ MODULE m_types_greensf
          !
          !Setting up parameters for the energy contour
          !
+         thisGREENSF%mode     = input%onsite_mode
          IF(PRESENT(nz_in)) THEN
             thisGREENSF%nz = nz_in 
             thisGREENSF%nmatsub = matsub_in
          ELSE
             !Parameters for the energy contour in the complex plane
-            thisGREENSF%mode     = input%onsite_mode
 
             IF(thisGREENSF%mode.EQ.1) THEN
                   thisGREENSF%nz = input%onsite_nz+input%onsite_nmatsub
