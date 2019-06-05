@@ -125,6 +125,11 @@ MODULE m_tetra_weights
       !Differentiate the weights with respect to energy to get the correct weights for a DOS-calculation
       !
       tol = 1E-14
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP SHARED(weights,g,e_ind,tol,max_ib) &
+      !$OMP PRIVATE(ib,i,dos_weights) 
+
+      !$OMP DO
       DO ib = 1, max_ib
          dos_weights = 0.0
          CALL diff3(weights(:,ib),g%del,dos_weights(:))
@@ -162,11 +167,12 @@ MODULE m_tetra_weights
             ENDIF
          ENDDO
          IF(ANY(dos_weights(:).LT.0)) THEN 
-            WRITE(*,*) weights(e_ind(ib,1):e_ind(ib,2),ib)
             CALL juDFT_error("Negative tetra weight",calledby="tetra_weights")
          ENDIF
          weights(:,ib) = dos_weights(:)
       ENDDO
+      !$OMP END DO
+      !$OMP END PARALLEL
    END SUBROUTINE tetra_weights
 
    SUBROUTINE contrib_singletetra(energy,vol,e,weight,ind)
