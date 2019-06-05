@@ -19,6 +19,8 @@ USE m_juDFT
 USE m_types
 USE m_constants
 
+LOGICAL, PARAMETER :: l_debug
+
 CONTAINS
 
 SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
@@ -115,7 +117,7 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
                      DO ilo = 1, atoms%nlo(nType)
                         IF(atoms%llo(ilo,nType).EQ.l) THEN
                            greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) &
-                                                               - pi_const *(  usdus%uulon(ilo,nType,ispin) * (&
+                                                               - pi_const * weight * (  usdus%uulon(ilo,nType,ispin) * (&
                                                                conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%ccof(m,ib,ilo,natom,ispin) +&
                                                                conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) )&
                                                                + usdus%dulon(ilo,nType,ispin) * (&
@@ -126,7 +128,7 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
                      DO ilop = 1, atoms%nlo(nType)
                         IF (atoms%llo(ilop,nType).EQ.l) THEN
                            greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) &
-                                                               - pi_const * usdus%uloulopn(ilo,ilop,nType,ispin) *&
+                                                               - pi_const * weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
                                                                conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
 
                         ENDIF
@@ -142,9 +144,11 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
 
 END SUBROUTINE onsite_coeffs
 
-SUBROUTINE calc_onsite(atoms,input,greensfCoeffs,gOnsite,sym)
+SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
 
    USE m_kkintgr
+   USE m_onsite21
+   USE m_gfcalc
 
    IMPLICIT NONE
 
@@ -153,11 +157,15 @@ SUBROUTINE calc_onsite(atoms,input,greensfCoeffs,gOnsite,sym)
    TYPE(t_greensfCoeffs),  INTENT(INOUT)  :: greensfCoeffs     !This is INTENT(INOUT) because the projected dos is useful for other things 
    TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
    TYPE(t_sym),            INTENT(IN)     :: sym
+   TYPE(t_noco),           INTENT(IN)     :: noco
+   REAL,                   INTENT(IN)     :: ef
    TYPE(t_input),          INTENT(IN)     :: input
 
    !-Local Scalars
    INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm
    REAL    fac
+
+   COMPLEX mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,input%jspins)
 
    DO i_gf = 1, atoms%n_gf
       l =     atoms%onsiteGF(i_gf)%l
@@ -229,9 +237,20 @@ SUBROUTINE calc_onsite(atoms,input,greensfCoeffs,gOnsite,sym)
          ENDDO
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
-
       !TODO: Add checks for the Green's function
+      IF(l_debug) THEN
+         CALL occmtx(gOnsite,i_gf,atoms,sym,input,ef,mmpMat(:,:,i_gf,:))
+         DO jspin = 1, input%jspins
+            DO m = -l, l
+               WRITE(*,*) jspin, m, REAL(mmpMat(m,m,i_gf,jspin))
+            ENDDO
+         ENDDO
+         CALL ldosmtx("g",gOnsite,1,atoms,sym,input)
+      ENDIF
    ENDDO
+
+   !In the noco case we need to rotate into the global frame
+   IF(input%onsite_sphavg.AND.noco%l_mperp) CALL rot_onsite(atoms,noco,gOnsite)
 
 END SUBROUTINE calc_onsite
 
@@ -307,14 +326,14 @@ SUBROUTINE greensf_cutoff(im,atoms,l,jspins,ne,del,e_bot,e_top,cutoff)
 
    n_states = 2*(2*l+1)
    
-   IF(l_write) WRITE(*,*) "Integral over fDOS: ", integral
+   IF(l_write) WRITE(*,*) "Integral over DOS: ", integral
 
    cutoff(1) = 1   !at the moment we don't modify the lower bound
    cutoff(2) = ne
 
-   IF(integral.LT.n_states-0.5) THEN
+   IF(integral.LT.n_states-0.1) THEN
       ! If the integral is to small we stop here to avoid problems
-      CALL juDFT_error("fDOS-integral too small: make sure numbands is big enough", calledby="greensf_cutoff")
+      CALL juDFT_error("integral over DOS too small", calledby="greensf_cutoff")
       
    ELSE IF((integral.GT.n_states).AND.((integral-n_states).GT.0.001)) THEN
       !IF the integral is bigger than 14, search for the cutoff using the bisection method   
@@ -350,6 +369,8 @@ END SUBROUTINE greensf_cutoff
 
 SUBROUTINE local_sym(mat,l,nType,sym,atoms)
 
+   IMPLICIT NONE
+
    TYPE(t_sym),   INTENT(IN)    :: sym 
    TYPE(t_atoms), INTENT(IN)    :: atoms
    INTEGER,       INTENT(IN)    :: l 
@@ -366,6 +387,7 @@ SUBROUTINE local_sym(mat,l,nType,sym,atoms)
    orig_mat(-l:l,-l:l) = mat(-l:l,-l:l)
 
    mat = 0.0
+   nop = 0
    DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
       DO it = 1, sym%invarind(natom)
          is = sym%invarop(natom,it)
@@ -382,7 +404,7 @@ SUBROUTINE local_sym(mat,l,nType,sym,atoms)
          ENDDO
          !Exclude all symmetries that would prevent splitting of the levels
          IF(ANY(d_mat(:,:).NE.0.0)) CYCLE
-         n_op = n_op + 1
+         nop = nop + 1
          DO m = -l,l
             d_mat(m,m) = diag(m)
          ENDDO
@@ -395,8 +417,8 @@ SUBROUTINE local_sym(mat,l,nType,sym,atoms)
          ENDDO
       ENDDO
    ENDDO
-   IF(n_op.EQ.0) CALL juDFT_error("No symmetry operations found",calledby="local_sym")
-   fac = 1.0/(REAL(n_op))
+   IF(nop.EQ.0) CALL juDFT_error("No symmetry operations found",calledby="local_sym")
+   fac = 1.0/(REAL(nop))
    mat = mat * fac
 
 END SUBROUTINE local_sym
