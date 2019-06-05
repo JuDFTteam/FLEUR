@@ -63,7 +63,7 @@ CONTAINS
     !$OMP PRIVATE(OK,s,in,info)&
     !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input,hub1)
     DO  n = 1,atoms%ntype
-       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,td,ud)
+       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,hub1,td,ud)
        OK=.FALSE.
        cholesky_loop:DO WHILE(.NOT.OK)
           td%h_loc(:,:,n,jsp)=0.0
@@ -98,12 +98,12 @@ CONTAINS
                 END DO
              END DO
           ENDDO
-          !Include contribution from LDA+U
-          DO i_u=1,atoms%n_u
-             IF (n.NE.atoms%lda_u(i_u)%atomtype) CYCLE
+          !Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
+          DO i_u=1,atoms%n_u+atoms%n_hia
+             IF (n.NE.MERGE(atoms%lda_u(i_u)%atomType,hub1%lda_u(i_u)%atomType,i_u.LE.atoms%n_u)) CYCLE
              !Found a "U" for this atom type
-             l=atoms%lda_u(i_u)%l
-             lp=atoms%lda_u(i_u)%l
+             l=MERGE(atoms%lda_u(i_u)%l,hub1%lda_u(i_u)%l,i_u.LE.atoms%n_u)
+             lp=MERGE(atoms%lda_u(i_u)%l,hub1%lda_u(i_u)%l,i_u.LE.atoms%n_u)
              DO m = -l,l
                 lm = l* (l+1) + m
                 DO mp = -lp,lp
@@ -113,22 +113,6 @@ CONTAINS
                 ENDDO
              ENDDO
           END DO
-
-         !Contribution from LDA+HIA
-         DO i_u=1,hub1%n_hia
-            IF (n.NE.hub1%lda_u(i_u)%atomtype) CYCLE
-            !Found a "U" for this atom type
-            l=hub1%lda_u(i_u)%l
-            lp=hub1%lda_u(i_u)%l
-            DO m = -l,l
-               lm = l* (l+1) + m
-               DO mp = -lp,lp
-                  lmp = lp* (lp+1) + mp
-                  td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + v%mmpMat(m,mp,atoms%n_u+i_u,jsp)
-                  td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ v%mmpMat(m,mp,atoms%n_u+i_u,jsp)*ud%ddn(lp,n,jsp)
-               ENDDO
-            ENDDO
-         END DO
 
           !Now add diagonal contribution to matrices
           IF (jsp<3) THEN
