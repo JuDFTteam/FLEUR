@@ -81,7 +81,7 @@ CONTAINS
          do n = n_start,n_types,n_stride
             cnt = cnt + 1
          enddo
-         allocate(kED%mt(nsp_x_jmtd, jspins, cnt))
+         allocate(kED%mt(nsp_x_jmtd, jspins, cnt), source=0.0)
       endif
    end subroutine kED_alloc_mt
 
