@@ -30,7 +30,7 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
     TYPE(t_hub1ham),INTENT(IN)   :: hub1
-    INTEGER,INTENT(INOUT)           :: iterHIA
+    INTEGER,INTENT(INOUT)        :: iterHIA
     LOGICAL,INTENT(IN)           :: l_runhia
 
     INTEGER:: jsp
@@ -39,7 +39,7 @@ CONTAINS
        CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
     IF((atoms%n_hia.GT.0)) THEN
-      CALL hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,ud,vTot,gOnsite,.true.,l_runhia,results)
+      CALL hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,ud,vTot,gOnsite,l_runhia,results)
     END IF
 
     CALL timestart("tlmplm")

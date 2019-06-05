@@ -4,9 +4,11 @@ MODULE m_hubbard1_setup
 
    IMPLICIT NONE
 
+   LOGICAL, PARAMETER :: l_debug = .FALSE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
+
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,usdus,pot,gdft,l_runinfleur,l_runhia,results)
+   SUBROUTINE hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,usdus,pot,gdft,l_runhia,results)
 
       USE m_types
       USE m_hubbard1_io
@@ -29,21 +31,21 @@ MODULE m_hubbard1_setup
       TYPE(t_usdus),    INTENT(IN)     :: usdus
       TYPE(t_potden),   INTENT(INOUT)  :: pot
       TYPE(t_results),  INTENT(INOUT)  :: results
-      TYPE(t_greensf),  INTENT(IN)     :: gdft !green's function in the mt-sphere including the potential correction form dft+hubbard1 
-      LOGICAL,          INTENT(IN)     :: l_runinfleur !Determines wether we call the the solver here or run separately
+      TYPE(t_greensf),  INTENT(IN)     :: gdft !green's function calculated from the Kohn-Sham system
       LOGICAL,          INTENT(IN)     :: l_runhia
       
 #ifdef CPP_MPI
       EXTERNAL MPI_BCAST
 #endif
 
-      INTEGER i_hia,i_gf,n,l,n_occ,ispin,m,matsize,i,iz,k,j,io_error,ierr
-      REAL mu_dc,beta,e_lda_hia
+      INTEGER i_hia,i_gf,n,l,n_occ,ispin,m,iz,k,j
+      INTEGER io_error,ierr
+      REAL    mu_dc,e_lda_hia
 
       CHARACTER(len=300) :: cwd,path,folder,message
-      CHARACTER*8 l_type*2,l_form*9
+      CHARACTER(len=8)   :: l_type*2,l_form*9
 
-      TYPE(t_greensf)    :: gu
+      TYPE(t_greensf)    :: gu 
 
       REAL     f0(hub1%n_hia,input%jspins),f2(hub1%n_hia,input%jspins)
       REAL     f4(hub1%n_hia,input%jspins),f6(hub1%n_hia,input%jspins)
@@ -53,7 +55,6 @@ MODULE m_hubbard1_setup
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,input%jspins)
       COMPLEX  mmpMat_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,input%jspins)
       COMPLEX  selfen(hub1%n_hia,gdft%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
-      REAL     e(gdft%nz),dist(input%jspins)
       REAL     n_l(hub1%n_hia,input%jspins)
       LOGICAL  l_exist
 
@@ -70,7 +71,7 @@ MODULE m_hubbard1_setup
       ELSE
         mmpMat(:,:,:,:) = 0.0
       ENDIF
-      
+
       IF(ANY(mmpMat(:,:,:,:).NE.0.0).OR.l_runhia) THEN
          !Get the slater integrals from the U and J parameters
          CALL uj2f(input%jspins,hub1%lda_u(:),hub1%n_hia,f0,f2,f4,f6)
@@ -103,21 +104,22 @@ MODULE m_hubbard1_setup
                n = hub1%lda_u(i_hia)%atomType
                l = hub1%lda_u(i_hia)%l
                CALL indexgf(atoms,l,n,i_gf)
-               matsize = 2*(2*l+1)
                !Create a subdirectory for the atomType and shell
                WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
                CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
             
                !calculate the occupation of the correlated shell
-               CALL occmtx(gdft,i_gf,atoms,sym,input,input%onsite_beta*hartree_to_ev_const,results%ef,mmpMat(:,:,i_hia,:))
+               CALL occmtx(gdft,i_gf,atoms,sym,input,results%ef,mmpMat(:,:,i_hia,:))
                n_l(i_hia,:) = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
                      n_l(i_hia,ispin) = n_l(i_hia,ispin) + mmpMat(m,m,i_hia,ispin)
                   ENDDO
                ENDDO
+               WRITE(6,*)
                WRITE(6,9010) n
                WRITE(6,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
+               WRITE(6,*)
                WRITE(6,"(A)") "Occupation from DFT-Green's function:"
                WRITE(6,9020) 'spin-up','spin-dn'
                WRITE(6,9030) n_l(i_hia,:)
@@ -141,53 +143,44 @@ MODULE m_hubbard1_setup
                      IF(hub1%l_ccf(i_hia)) THEN
                         CALL write_ccfmat(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",hub1%ccfmat(i_hia,-l:l,-l:l),l)
                      ENDIF
-                     !OPEN(unit=1337,file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/" // "contour.dat",status="replace",action="write")
-!
-                     !DO iz = 1, gdft%nz
-                     !   WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
-                     !ENDDO
-!
-                     !CLOSE(unit= 1337)
-                     
-                     !There has to be a better solution
-                     !Maybe use CALL System() to start the solver from here
-                     !EXPERIMENTAL:
-                     IF(l_runinfleur) THEN
-                        CALL timestart("Hubbard 1 solver")
-                        CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/")
-                        WRITE(*,"(A)") "Running Hubbard 1 solver"
-                        CALL SYSTEM("/home/henning/GIT/hub2new4sp/eigen > out")
-                        CALL SYSTEM("/home/henning/GIT/hub2new4sp/selfen > outselfen") 
-                        CALL SYSTEM("/home/henning/GIT/hub2new4sp/angmom > outangmom") 
-                        WRITE(*,"(A)") "Hubbard 1 solver finished" 
-                        CALL timestop("Hubbard 1 solver")
-                        CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,1:gdft%nz-gdft%nmatsub,1:2*(2*l+1),1:2*(2*l+1)),gdft%nz-gdft%nmatsub,2*(2*l+1),e(:),.false.)
-                        IF(gdft%nmatsub.GT.0) CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,gdft%nz-gdft%nmatsub:gdft%nz,1:2*(2*l+1),1:2*(2*l+1)),gdft%nmatsub,2*(2*l+1),e(:),.true.)
-                     ENDIF
+
+                     IF(gdft%mode.NE.1) THEN
+                        OPEN(unit=1337,file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/" // "contour.dat",status="replace",action="write")
+                        DO iz = 1, gdft%nz
+                           WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
+                        ENDDO
+                        CLOSE(unit= 1337)
+                     ENDIF     
                   ENDIF
                ENDIF
             ENDDO
             IF(mpi%irank.EQ.0) CALL CHDIR(TRIM(ADJUSTL(cwd)))
 
-            IF(l_exist.OR.l_runinfleur) THEN
-               CALL add_selfen(gdft,gu,selfen,atoms,hub1,sym,input,input%onsite_beta,results%ef,input%jspins,n_l(:,1),mu_dc/hartree_to_ev_const,mmpMat)
+            IF(l_exist) THEN
+               CALL add_selfen(gdft,gu,selfen,atoms,hub1,sym,input,results%ef,n_l(:,1),mu_dc/hartree_to_ev_const,&
+                              pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+hub1%n_hia,:),mmpMat)
                ! calculate potential matrix and total energy correction
                CALL v_mmp(sym,atoms,hub1%lda_u,hub1%n_hia,input%jspins,.true.,mmpMat,&
                      u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+hub1%n_hia,:),results%e_ldau)
                !
-               ! Output the density of states from the two green's functions
+               ! Output the density of states from the two green's functions (DEBUG)
                !
-               !DO i_hia = 1, hub1%n_hia
-               !   n = hub1%lda_u(i_hia)%atomType
-               !   l = hub1%lda_u(i_hia)%l
-               !   WRITE(folder,"(A5,I3.3)") "hub1_" , iterHIA
-               !   path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
-               !   WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
-               !   CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/")
-               !   CALL indexgf(atoms,l,n,i_gf)
-               !   CALL ldosmtx("gdft",gdft,i_gf,atoms,sym,input%jspins)
-               !   CALL ldosmtx("g",gu,i_gf,atoms,sym,input%jspins)
-               !ENDDO
+               IF(l_debug) THEN
+                  DO i_hia = 1, hub1%n_hia
+                     n = hub1%lda_u(i_hia)%atomType
+                     l = hub1%lda_u(i_hia)%l
+                     WRITE(folder,"(A5,I3.3)") "hub1_" , iterHIA
+                     path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
+                     WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
+                     CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/")
+                     CALL indexgf(atoms,l,n,i_gf)
+                     CALL ldosmtx("gdft",gdft,i_gf,atoms,sym,input)
+                     CALL ldosmtx("g",gu,i_gf,atoms,sym,input)
+                  ENDDO
+               ENDIF
+               !
+               !Read in the last density matrix
+               !
                CALL CHDIR(TRIM(ADJUSTL(cwd)))
                INQUIRE(file="n_mmpmat_hubbard1",exist = l_exist)
                IF(l_exist) THEN
@@ -196,8 +189,11 @@ MODULE m_hubbard1_setup
                   READ(1337,9110)
                   READ(1337,"(7f14.8)") mmpMat_in(:,:,:,:)
                   CLOSE(unit=1337)
-                  CALL n_mmp_dist(mmpMat_in,mmpMat,hub1,results,input%jspins)
-               ENDIF 
+               ELSE
+                  mmpMat_in = 0.0
+               ENDIF
+               CALL n_mmp_dist(mmpMat_in,mmpMat,hub1,results,input%jspins)
+
                IF(mpi%irank.EQ.0) THEN
                   !Write out the density matrix and the additional inforamtion (current iteration, distances)
                   OPEN(unit=1337,file="n_mmpmat_hubbard1",status="replace",action="write",iostat=io_error)
@@ -211,7 +207,7 @@ MODULE m_hubbard1_setup
                ENDIF
             ELSE
                WRITE(message,9100) iterHIA
-               CALL juDFT_END(message,mpi%irank)
+               CALL juDFT_END(TRIM(ADJUSTL(message)),mpi%irank)
             ENDIF
          ENDIF
 #ifdef CPP_MPI
@@ -252,7 +248,7 @@ MODULE m_hubbard1_setup
 9020  FORMAT(TR8,A7,TR3,A7)
 9030  FORMAT(TR7,f8.4,TR2,f8.4)
 9100  FORMAT("Hubbard 1 input written into hub1_",I3.3)
-9110  FORMAT("Hubbard 1 Iteration ", I3, " Last Distance in Occpation: ",f14.8," Last density matrix Distance: ", f14.8)
+9110  FORMAT("Hubbard 1 Iteration ", I3, " Last Distance in Occupation: ",f14.8," Last density matrix Distance: ", f14.8)
 
 
    END SUBROUTINE hubbard1_setup
@@ -303,7 +299,7 @@ MODULE m_hubbard1_setup
 9060  FORMAT(TR3,"mu = ",f7.4)
    END SUBROUTINE
 
-   SUBROUTINE add_selfen(g,gp,selfen,atoms,hub1,sym,input,beta,ef,jspins,n_occ,mu_dc,mmpMat)
+   SUBROUTINE add_selfen(g,gp,selfen,atoms,hub1,sym,input,ef,n_occ,mu_dc,vmmp,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -329,12 +325,11 @@ MODULE m_hubbard1_setup
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_input),    INTENT(IN)     :: input
       COMPLEX,          INTENT(IN)     :: selfen(hub1%n_hia,g%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
-      INTEGER,          INTENT(IN)     :: jspins
-      REAL,             INTENT(IN)     :: beta
       REAL,             INTENT(IN)     :: ef
       REAL,             INTENT(IN)     :: n_occ(hub1%n_hia)
       REAL,             INTENT(IN)     :: mu_dc
-      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,jspins)
+      COMPLEX,          INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,input%jspins)
+      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,input%jspins)
 
       INTEGER i_hia,l,nType,i_gf,ns,ispin,m,iz,ipm
       CHARACTER(len=6) app
@@ -347,7 +342,6 @@ MODULE m_hubbard1_setup
 
       !replace with noco%l_mperp
       l_mperp = .true.
-
       !Interval where we expect the correct mu
       mu_a = 0.0
       mu_b = 4.0
@@ -364,7 +358,7 @@ MODULE m_hubbard1_setup
          CALL gmat%init(.false.,2*ns,2*ns)
          CALL vmat%init(.false.,2*ns,2*ns)
          !Search for the maximum of occupation
-         !OPEN(unit=1337,file="mu",status="replace",action="write")
+         IF(l_debug) OPEN(unit=1337,file="mu",status="replace",action="write")
          mu = mu_a
          DO WHILE(mu.LE.mu_b)
             mu = mu + mu_step
@@ -376,24 +370,26 @@ MODULE m_hubbard1_setup
                   vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                ENDIF
                DO ipm = 1, 2
-                  CALL to_tmat(gmat,g%gmmpMat(iz,i_gf,:,:,:,ipm),jspins,2,l)
+                  CALL to_tmat(gmat,g%gmmpMat(iz,i_gf,:,:,:,ipm),input%jspins,2,l)
                   CALL add_pot(gmat,vmat,mu-mu_dc,(ipm.EQ.1))
-                  CALL to_g(gmat,gp%gmmpMat(iz,i_gf,:,:,:,ipm),2,jspins,l)
+                  CALL to_g(gmat,gp%gmmpMat(iz,i_gf,:,:,:,ipm),2,input%jspins,l)
                ENDDO
             ENDDO
-            CALL occmtx(gp,i_gf,atoms,sym,input,beta*hartree_to_ev_const,ef,mmpMat(:,:,i_hia,:))
+            CALL occmtx(gp,i_gf,atoms,sym,input,ef,mmpMat(:,:,i_hia,:))
             !Calculate the trace
             n = 0.0
-            DO ispin = 1, jspins
+            DO ispin = 1, input%jspins
                DO m = -l, l
                   n = n + mmpMat(m,m,i_hia,ispin)
                ENDDO
             ENDDO
+            IF(l_debug) WRITE(1337,"(2f15.8)") mu,n
             IF(n.GT.n_max) THEN
                mu_max = mu
                n_max  = n
             ENDIF
          ENDDO
+         IF(l_debug) CLOSE(1337)
          !Set up the interval for the bisection method (mu_max,mu_b)
          mu_a = mu_max
          DO 
@@ -406,15 +402,15 @@ MODULE m_hubbard1_setup
                   vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                ENDIF
                DO ipm = 1, 2
-                  CALL to_tmat(gmat,g%gmmpMat(iz,i_gf,:,:,:,ipm),jspins,2,l)
+                  CALL to_tmat(gmat,g%gmmpMat(iz,i_gf,:,:,:,ipm),input%jspins,2,l)
                   CALL add_pot(gmat,vmat,mu-mu_dc,(ipm.EQ.1))
-                  CALL to_g(gmat,gp%gmmpMat(iz,i_gf,:,:,:,ipm),2,jspins,l)
+                  CALL to_g(gmat,gp%gmmpMat(iz,i_gf,:,:,:,ipm),2,input%jspins,l)
                ENDDO
             ENDDO
-            CALL occmtx(gp,i_gf,atoms,sym,input,beta,ef,mmpMat(:,:,i_hia,:))
+            CALL occmtx(gp,i_gf,atoms,sym,input,ef,mmpMat(:,:,i_hia,:))
             !Calculate the trace
             n = 0.0
-            DO ispin = 1, jspins
+            DO ispin = 1, input%jspins
                DO m = -l, l
                   n = n + mmpMat(m,m,i_hia,ispin)
                ENDDO

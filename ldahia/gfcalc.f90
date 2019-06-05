@@ -77,8 +77,10 @@ MODULE m_gfcalc
                   ENDDO
                ENDDO
             ENDDO
-            exc_split = -1/(pi_const*(2*l+1))*(trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)-trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut))
+            exc_split = trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,2),g0Coeffs%del,n_cut)&
+                        -trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,1),g0Coeffs%del,n_cut)
 
+            !WRITE(*,*) exc_split
             DO i = 1, matsize
                delta%data_c(i,i) = exc_split
             ENDDO
@@ -141,7 +143,7 @@ MODULE m_gfcalc
 9010  FORMAT("J0 for atom ", I3, ": " f14.8 " eV")
    END SUBROUTINE eff_excinteraction
 
-   SUBROUTINE occmtx(g,i_gf,atoms,sym,input,beta,ef,mmpMat,el0,vr)
+   SUBROUTINE occmtx(g,i_gf,atoms,sym,input,ef,mmpMat,el0,vr)
 
 
       USE m_ExpSave
@@ -161,7 +163,6 @@ MODULE m_gfcalc
       TYPE(t_input),          INTENT(IN)  :: input
       COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins)
       INTEGER,                INTENT(IN)  :: i_gf
-      REAL,                   INTENT(IN)  :: beta
       REAL,                   INTENT(IN)  :: ef
       REAL, OPTIONAL,         INTENT(IN)  :: el0(input%jspins)  !energy parameter for radial functions
       REAL, OPTIONAL,         INTENT(IN)  :: vr(atoms%jmtd,input%jspins)
@@ -169,8 +170,8 @@ MODULE m_gfcalc
       INTEGER i, m,mp, l, ispin, nType,ipm,iz
       INTEGER nodeu,noded
       LOGICAL l_vertcorr
-      COMPLEX g_int
-      REAL    wronk,re,imag
+      COMPLEX g_int,nmmp,weight
+      REAL    wronk,re,imag,beta
       TYPE(t_usdus) :: usdus
 
       REAL, ALLOCATABLE :: u(:,:),udot(:,:)
@@ -201,9 +202,12 @@ MODULE m_gfcalc
          ENDIF
          DO m = -l, l
             DO mp = -l, l
+               nmmp = 0.0
                DO ipm = 1, 2
                   !Integrate over the contour:
-                  DO iz = 1, g%nz-g%nmatsub
+                  DO iz = 1, g%nz
+                     !weight for the energy integration
+                     weight = MERGE(g%de(iz)/(1.0+exp_save(real(g%e(iz)-ef)/input%tkb)),g%de(iz),g%mode.EQ.1)
                      !If necessary here the radial averaging is performed
                      IF(input%onsite_sphavg) THEN
                         g_int = g%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
@@ -216,18 +220,12 @@ MODULE m_gfcalc
                      ENDIF
                      IF((iz.EQ.1.OR.iz.EQ.g%nz-g%nmatsub).AND.(g%mode.EQ.1.AND.l_vertcorr)) THEN
                         !APPROXIMATION FOR THE VERTICAL PARTS OF THE CONTOUR:
-                        mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * ImagUnit * REAL(g_int) * AIMAG(g%e(1))
+                        nmmp = nmmp + (-1)**(ipm-1) * ImagUnit * REAL(g_int) * AIMAG(g%e(1))
                      ENDIF
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * AIMAG(g_int)*REAL(g%de(iz))/(1.0+exp_save(beta*real(g%e(iz)-ef)))
+                     nmmp = nmmp + (-1)**(ipm-1) * g_int * weight
                   ENDDO
-                  !NOT WORKING: MATSUBARA FREQ
-                  !iz = g%nz-g%nmatsub
-                  !DO i = g%nmatsub, 1, -1
-                  !   iz = iz + 1
-                  !   mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + (-1)**(ipm-1) * g%gmmpMat(iz,i_gf,m,mp,ispin,ipm)*g%de(iz)
-                  !ENDDO
                ENDDO
-               mmpMat(m,mp,ispin) = -1/(2.0 * pi_const) * mmpMat(m,mp,ispin)
+               mmpMat(m,mp,ispin) = -1/(2.0 * pi_const) * AIMAG(nmmp)
             ENDDO
          ENDDO
       ENDDO
@@ -354,9 +352,11 @@ MODULE m_gfcalc
 
       h_loc = 0.0
       tr_hloc = 0.0
-      DO i_gf = 1, atoms%n_gf
-         l     = atoms%onsiteGF(i_gf)%l
-         nType = atoms%onsiteGF(i_gf)%atomType
+      DO i_hia = 1, atoms%n_hia
+
+         l     = hub1%lda_u(i_hia)%l
+         nType = hub1%lda_u(i_hia)%atomType
+         CALL indexgf(atoms,l,nType,i_gf)
          !Perform the integration 
          !
          ! \int_{E_b}^{E_c} dE E * N_LL'(E)
@@ -372,17 +372,10 @@ MODULE m_gfcalc
                   h_loc(m,mp,i_gf,jspin) = trapz(integrand,greensfCoeffs%del,greensfCoeffs%ne)
                ENDDO
                !trace of the integrated E*projdos
-               tr_hloc(i_gf,jspin) = tr_hloc(i_gf,jspin) + h_loc(m,m,i_gf,jspin)
+               tr_hloc(i_gf,jspin) = tr_hloc(i_gf,jspin) + h_loc(m,m,i_gf,jspin) - REAL(vu(m,m,i_hia,jspin))
             ENDDO
          ENDDO
-      ENDDO
 
-      !Crystal-field contirbution
-      DO i_hia = 1, atoms%n_hia
-         l =      hub1%lda_u(i_hia)%l
-         nType =  hub1%lda_u(i_hia)%atomType 
-
-         CALL indexgf(atoms,l,nType,i_gf)
          !Average over spins
          hub1%ccfmat(i_hia,:,:) = 0.0
          DO m = -l, l
@@ -421,78 +414,78 @@ MODULE m_gfcalc
    END FUNCTION onsite_radial
 
 
-      !SUBROUTINE ldosmtx(app,g,i_gf,atoms,sym,jspins)
-!
-   !   !calculates the l-dos from the onsite green's function 
-   !   !If mode = 2 this may not make sense
-!
-   !   USE m_intgr
-!
-   !   CHARACTER(len=*),       INTENT(IN)  :: app
-   !   TYPE(t_greensf),        INTENT(IN)  :: g
-   !   TYPE(t_atoms),          INTENT(IN)  :: atoms 
-   !   TYPE(t_sym),            INTENT(IN)  :: sym 
-   !   INTEGER,                INTENT(IN)  :: i_gf
-   !   INTEGER,                INTENT(IN)  :: jspins
-   !   REAL :: dos(-lmaxU_const:lmaxU_const,g%nz,jspins)
-   !   REAL :: re(-lmaxU_const:lmaxU_const,g%nz,jspins)
-   !   INTEGER ispin,m,j,l,n,i,ipm
-   !   REAL    imag
-!
-   !   dos = 0.0
-   !   re = 0.0
-!
-   !  
-   !   !n(E) = 1/2pii * Tr(G^+-G^-)
-   !   l = atoms%onsiteGF(i_gf)%l
-   !   n = atoms%onsiteGF(i_gf)%atomType
-   !   DO ispin = 1, jspins
-   !      DO m = -l , l
-   !         DO ipm = 1, 2
-   !            DO j = 1, g%nz
-!
-   !               imag = AIMAG(g%gmmpMat(j,i_gf,m,m,ispin,ipm))
-   !               dos(m,j,ispin) = dos(m,j,ispin) - (-1)**(ipm-1)  * imag
-   !               re(m,j,ispin) = re(m,j,ispin)  +  REAL(g%gmmpMat(1,j,i_gf,m,m,ispin,ipm))
-   !            ENDDO
-   !         ENDDO
-   !      ENDDO
-   !   ENDDO
-!
-   !   OPEN(1337,file="lDOS_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
-!
-   !   DO i = 1, g%nz
-   !      WRITE(1337,"(9f14.8)") REAL(g%e(i)), SUM(dos(-l:l,i,1)), (dos(m,i,1), m = -lmaxU_const, lmaxU_const)
-   !   ENDDO
-!
-   !   CLOSE(unit = 1337)
-   !   IF(jspins.EQ.2) THEN
-   !      OPEN(1337,file="lDOS_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
-!
-   !      DO i = 1, g%nz
-   !         WRITE(1337,"(9f14.8)") REAL(g%e(i)),SUM(dos(-l:l,i,2)), (dos(m,i,2), m = -lmaxU_const, lmaxU_const)
-   !      ENDDO
-!
-   !      CLOSE(unit = 1337)
-   !   ENDIF
-!
-   !   OPEN(1337,file="Re_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
-!
-   !   DO i = 1, g%nz
-   !      WRITE(1337,"(9f15.8)") REAL(g%e(i)), SUM(re(-l:l,i,1)), (re(m,i,1), m = -lmaxU_const, lmaxU_const)
-   !   ENDDO
-!
-   !   CLOSE(unit = 1337)
-   !   IF(jspins.EQ.2) THEN
-   !      OPEN(1337,file="Re_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
-!
-   !      DO i = 1, g%nz
-   !         WRITE(1337,"(9f15.8)") REAL(g%e(i)),SUM(re(-l:l,i,2)), (re(m,i,2), m = -lmaxU_const, lmaxU_const)
-   !      ENDDO
-!
-   !      CLOSE(unit = 1337)
-   !   ENDIF
-!
-   !END SUBROUTINE
+      SUBROUTINE ldosmtx(app,g,i_gf,atoms,sym,input)
+
+         !calculates the l-dos from the onsite green's function 
+         !If mode = 2 this may not make sense
+
+      USE m_intgr
+      USE m_ExpSave
+      CHARACTER(len=*),       INTENT(IN)  :: app
+      TYPE(t_greensf),        INTENT(IN)  :: g
+      TYPE(t_atoms),          INTENT(IN)  :: atoms 
+      TYPE(t_sym),            INTENT(IN)  :: sym 
+      TYPE(t_input),          INTENT(IN)  :: input
+      INTEGER,                INTENT(IN)  :: i_gf
+      REAL :: dos(-lmaxU_const:lmaxU_const,g%nz,input%jspins)
+      REAL :: re(-lmaxU_const:lmaxU_const,g%nz,input%jspins)
+      INTEGER ispin,m,j,l,n,i,ipm
+      REAL    imag
+
+      dos = 0.0
+      re = 0.0
+
+      IF(.NOT.input%onsite_sphavg) CALL juDFT_warn("Not implemented for radial dependence",calledby="ldosmtx")
+      !n(E) = 1/2pii * Tr(G^+-G^-)
+      l = atoms%onsiteGF(i_gf)%l
+      n = atoms%onsiteGF(i_gf)%atomType
+      DO ispin = 1, input%jspins
+         DO m = -l , l
+            DO ipm = 1, 2
+               DO j = 1, g%nz
+
+                  imag = AIMAG(g%gmmpMat(j,i_gf,m,m,ispin,ipm))
+                  dos(m,j,ispin) = dos(m,j,ispin) + (-1)**(ipm-1)  * imag
+                  re(m,j,ispin) = re(m,j,ispin)  +  REAL(g%gmmpMat(j,i_gf,m,m,ispin,ipm))
+               ENDDO
+            ENDDO
+         ENDDO
+      ENDDO
+
+      OPEN(1337,file="lDOS_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+
+      DO i = 1, g%nz
+         WRITE(1337,"(9f15.8)") REAL(g%e(i)), SUM(dos(-l:l,i,1)), (dos(m,i,1), m = -lmaxU_const, lmaxU_const)
+      ENDDO
+
+      CLOSE(unit = 1337)
+      IF(input%jspins.EQ.2) THEN
+         OPEN(1337,file="lDOS_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+
+         DO i = 1, g%nz
+            WRITE(1337,"(9f15.8)") REAL(g%e(i)),SUM(dos(-l:l,i,2)), (dos(m,i,2), m = -lmaxU_const, lmaxU_const)
+         ENDDO
+
+         CLOSE(unit = 1337)
+      ENDIF
+
+      OPEN(1337,file="Re_up_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+
+      DO i = 1, g%nz
+         WRITE(1337,"(9f15.8)") REAL(g%e(i)), SUM(re(-l:l,i,1)), (re(m,i,1), m = -lmaxU_const, lmaxU_const)
+      ENDDO
+
+      CLOSE(unit = 1337)
+      IF(input%jspins.EQ.2) THEN
+         OPEN(1337,file="Re_dwn_" // TRIM(ADJUSTL(app)) // ".txt",action="write",status="replace")
+
+         DO i = 1, g%nz
+            WRITE(1337,"(9f15.8)") REAL(g%e(i)),SUM(re(-l:l,i,2)), (re(m,i,2), m = -lmaxU_const, lmaxU_const)
+         ENDDO
+
+         CLOSE(unit = 1337)
+      ENDIF
+
+   END SUBROUTINE
 
 END MODULE m_gfcalc
