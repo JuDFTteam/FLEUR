@@ -390,6 +390,13 @@ MODULE m_hubbard1_setup
             ENDIF
          ENDDO
          IF(l_debug) CLOSE(1337)
+
+         !Sanity check for the maximum occupation
+         IF(n_max.GT.2*ns+0.5) THEN
+            !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
+            CALL juDFT_error("Something went wrong with the addition of the selfenergy",calledby="add_selfen")
+         ENDIF
+
          !Set up the interval for the bisection method (mu_max,mu_b)
          mu_a = mu_max
          DO 
