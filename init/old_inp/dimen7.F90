@@ -100,7 +100,7 @@
      & atoms%lmax(atoms%ntype),atoms%ntypsy(atoms%nat),atoms%neq(atoms%ntype),atoms%nlhtyp(atoms%ntype),&
      & atoms%rmt(atoms%ntype),atoms%zatom(atoms%ntype),atoms%jri(atoms%ntype),atoms%dx(atoms%ntype), &
      & atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),&
-     & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%ncst(atoms%ntype),atoms%lnonsph(atoms%ntype),&
+     & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%econf(atoms%ntype),atoms%lnonsph(atoms%ntype),&
      & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
      & atoms%l_geo(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),&
@@ -132,7 +132,7 @@
       atoms%jmtd  = 0
       rmtmax      = 0.0
       dimension%neigd = 0
-      dimension%nstd  = maxval(atoms%ncst)
+      dimension%nstd  = maxval(atoms%econf%num_core_states)
       atoms%lmaxd = maxval(atoms%lmax)
       atoms%jmtd  = maxval(atoms%jri)
       rmtmax      = maxval(atoms%rmt)
@@ -360,7 +360,7 @@
 
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
-     & vacuum%izlay,atoms%ncst,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
+     & vacuum%izlay,atoms%econf,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & atoms%l_geo,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,noco%b_con,sphhar%clnu,sphhar%nlh,&
      & sphhar%llh,sphhar%nmem,sphhar%mlh,hybrid%select1,hybrid%lcutm1,&
      & hybrid%lcutwf)

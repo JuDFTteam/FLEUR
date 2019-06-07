@@ -49,11 +49,8 @@ CONTAINS
     LOGICAL,          INTENT(OUT):: l_opti
 
 
-    INTEGER, ALLOCATABLE          :: xmlElectronStates(:,:)
     INTEGER, ALLOCATABLE          :: atomTypeSpecies(:)
     INTEGER, ALLOCATABLE          :: speciesRepAtomType(:)
-    REAL, ALLOCATABLE             :: xmlCoreOccs(:,:,:)
-    LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:,:)
     CHARACTER(len=3), ALLOCATABLE :: noel(:)
     !     .. Local Scalars ..
     INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType
@@ -91,7 +88,6 @@ CONTAINS
     ENDIF
     !-odim
     ALLOCATE ( atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),atoms%nlhtyp(atoms%ntype))
-    ALLOCATE (atoms%corestateoccs(1,2,atoms%ntype));atoms%corestateoccs=0.0
     ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%ng3) )
     ALLOCATE ( stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3),stars%ig2(stars%ng3) )
     ALLOCATE ( atoms%jri(atoms%ntype),stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3),sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd) )
@@ -101,7 +97,7 @@ CONTAINS
     ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
     ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
     ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2),atoms%nflip(atoms%ntype) )
-    ALLOCATE ( atoms%ncst(atoms%ntype) )
+    ALLOCATE ( atoms%econf(atoms%ntype) )
     ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
     ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
     ALLOCATE ( sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop) )
@@ -123,7 +119,6 @@ CONTAINS
     ALLOCATE ( noco%b_con(2,atoms%ntype),atoms%lda_u(atoms%ntype),atoms%l_dulo(atoms%nlod,atoms%ntype) )
     ALLOCATE ( sym%d_wgn(-3:3,-3:3,3,sym%nop) )
     ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntype) )
-    ALLOCATE ( atoms%numStatesProvided(atoms%ntype))
     ALLOCATE ( kpts%ntetra(4,kpts%ntet), kpts%voltet(kpts%ntet))
     !+odim
     ALLOCATE ( oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M) )
@@ -138,7 +133,6 @@ CONTAINS
     ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
 
     kpts%specificationType = 0
-    atoms%numStatesProvided(:) = 0
     input%l_coreSpec = .FALSE.
 
 
@@ -225,12 +219,8 @@ CONTAINS
           WRITE(*,*) 'beautiful.'
           WRITE(*,*) ''
           ALLOCATE(noel(atoms%ntype),atomTypeSpecies(atoms%ntype),speciesRepAtomType(atoms%ntype))
-          ALLOCATE(xmlElectronStates(29,atoms%ntype),xmlPrintCoreStates(29,atoms%ntype))
-          ALLOCATE(xmlCoreOccs(1,1,1),atoms%label(atoms%nat))
           ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
           filename = 'inpConverted.xml'
-          xmlElectronStates = noState_const
-          xmlPrintCoreStates = .FALSE.
           DO i = 1, atoms%nat
              WRITE(atoms%label(i),'(i0)') i
           END DO
@@ -266,12 +256,10 @@ CONTAINS
                atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
                cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                noel,namex,relcor,a1,a2,a3,cell%amat(3,3),input%comment,&
-               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
                .TRUE.,numSpecies,enpara)
           DEALLOCATE(atoms%speciesName, atoms%label)
           DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
-          DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
           CALL juDFT_end("Fleur inp to XML input conversion completed.")
        END IF
     END IF ! mpi%irank.eq.0

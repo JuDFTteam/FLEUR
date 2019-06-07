@@ -17,7 +17,7 @@ CONTAINS
       USE m_constants
       USE m_potl0
       USE m_stpot1
-      USE m_setcor
+    !  USE m_setcor
       USE m_differ
       USE m_types
       IMPLICIT NONE
@@ -72,10 +72,11 @@ CONTAINS
       enddo
       rn = rad(n)
       bmu_l = atoms%bmu(ntyp)
-      IF (bmu_l > 0.001 .AND. atoms%numStatesProvided(ntyp) .NE. 0) CALL &
-         judft_warn("You specified both: inital moment and occupation numbers.", &
-                    hint="The inital moment will be ignored, set magMom=0.0", calledby="atom2.f90")
-      CALL setcor(ntyp, input%jspins, atoms, input, bmu_l, nst, kappa, nprnc, occ)
+      !IF (bmu_l > 0.001 .AND. atoms%numStatesProvided(ntyp) .NE. 0) CALL &
+      !   judft_warn("You specified both: inital moment and occupation numbers.", &
+      !              hint="The inital moment will be ignored, set magMom=0.0", calledby="atom2.f90")
+      !CALL setcor(ntyp, input%jspins, atoms, input, bmu_l, nst, kappa, nprnc, occ)
+      CALL atoms%econf(ntyp)%get_core(nst,nprnc,kappa,occ)
 
 !
 !--->   for electric field case (sigma.ne.0), add the extra charge

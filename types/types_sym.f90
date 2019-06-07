@@ -6,6 +6,7 @@
 
 MODULE m_types_sym
   IMPLICIT NONE
+  PRIVATE
   !symmetry information
    TYPE t_sym
       !No of sym ops
@@ -55,14 +56,16 @@ MODULE m_types_sym
     CONTAINS
       PROCEDURE :: init
    END TYPE t_sym
+   PUBLIC t_sym
  CONTAINS
-   SUBROUTINE init(sym,amat,film)
+   SUBROUTINE init(sym,cell,film)
      !Generates missing symmetry info.
      !tau,mrot and nop have to be specified already
      USE m_closure
      USE m_dwigner
+     use m_types_cell
      CLASS(t_sym),INTENT(INOUT):: sym
-     REAL,INTENT(in)           :: amat(3,3)
+     CLASS(t_cell),INTENT(IN)  :: cell
      LOGICAL,INTENT(in)        :: film
 
 
@@ -75,7 +78,7 @@ MODULE m_types_sym
 
      IF (sym%nop==0) CALL judft_error("BUG in calling sym%init. mrot,tau&nop have to be set before")
 
-     IF (ALLOCATED(sym%invtab)) DEALLOCATE(sym%intab)
+     IF (ALLOCATED(sym%invtab)) DEALLOCATE(sym%invtab)
      IF (ALLOCATED(sym%multab)) DEALLOCATE(sym%multab)
      ALLOCATE ( sym%invtab(sym%nop),sym%multab(sym%nop,sym%nop) )
      CALL check_close(sym%nop,sym%mrot,sym%tau, sym%multab,sym%invtab,optype)
@@ -94,21 +97,21 @@ MODULE m_types_sym
      DO n = 1, sym%nop
         IF ( optype(n) == -1 )THEN
             !--->  check if we have inversion as a symmetry operation
-            IF ( ALL ( ABS( tau(:,n) ) < eps12 ) ) THEN
+            IF ( ALL ( ABS( sym%tau(:,n) ) < eps12 ) ) THEN
                invsop = n
                sym%invs = .TRUE.
             ENDIF
          ENDIF
          IF ( optype(n) == -2 )THEN
             !---> check for z-reflection
-            IF ( mrot(3,3,n) == -1 .AND. ALL(ABS(tau(:,n))<eps12) ) THEN
+            IF ( sym%mrot(3,3,n) == -1 .AND. ALL(ABS(sym%tau(:,n))<eps12) ) THEN
                zrfsop = n
                sym%zrfs = .TRUE.
             ENDIF
          ENDIF
          IF ( optype(n) == 2 )THEN
             !---> check for 2d inversion
-            IF ( mrot(3,3,n) == 1 .AND. ALL(ABS(tau(:,n))<eps12) ) THEN
+            IF ( sym%mrot(3,3,n) == 1 .AND. ALL(ABS(sym%tau(:,n))<eps12) ) THEN
                invs2op = n
                sym%invs2 = .TRUE.
             ENDIF
@@ -116,7 +119,7 @@ MODULE m_types_sym
       ENDDO !nops
 
       !if z-axis is not orthogonal we will not use z-reflect and 2d-invs
-      IF ( amat(3,1)==0.00 .AND. amat(3,2)==0.00 .AND.amat(1,3)==0.00 .AND. amat(2,3)==0.00 ) THEN
+      IF ( cell%amat(3,1)==0.00 .AND. cell%amat(3,2)==0.00 .AND.cell%amat(1,3)==0.00 .AND.cell%amat(2,3)==0.00 ) THEN
          zorth= .TRUE.
       ELSE       
          zorth= .FALSE.
@@ -160,11 +163,11 @@ MODULE m_types_sym
           sym%tau(:,i)    = tauaux(:,j)
           usedop(j) = usedop(j) - 1
           j = sym%multab(magicinv,indtwo(i))
-          sym%mrot(:,:,i+nop2) =  mrotaux(:,:,j)
-          sym%tau(:,i+nop2) = tauaux(:,j)
+          sym%mrot(:,:,i+sym%nop2) =  mrotaux(:,:,j)
+          sym%tau(:,i+sym%nop2) = tauaux(:,j)
           usedop(j) = usedop(j) - 1
         ENDDO
-        IF ( ANY( usedop(1:nops) < 0 ) )  CALL juDFT_error("Fatal Error! #01",calledby="types_sym")
+        IF ( ANY( usedop(1:sym%nop) < 0 ) )  CALL juDFT_error("Fatal Error! #01",calledby="types_sym")
  
         IF ( 2*sym%nop2.ne.sym%nop ) THEN
           n = 0
@@ -185,7 +188,7 @@ MODULE m_types_sym
       n = 1
       DO WHILE (n <= sym%nop)
          IF (ABS(sym%tau(3,n)) > 0.000001) THEN
-            WRITE(6,'(/," Full space group has",i3," operations.",/)') nops
+            WRITE(6,'(/," Full space group has",i3," operations.",/)') sym%nop
             WRITE(6,'(i3,"th operation violate the 2d symmetry in fleur and has been removed.",/)') n
              DO nn = n+1, sym%nop
                 sym%mrot(:,:,nn-1) = sym%mrot(:,:,nn)
@@ -206,6 +209,6 @@ MODULE m_types_sym
     CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
     
     !---> redo to ensure proper mult. table and mapping functions
-    CALL check_close(sym%nops,sym%mrot,sym%tau, sym%multab,sym%invtab,optype)
+    CALL check_close(sym%nop,sym%mrot,sym%tau, sym%multab,sym%invtab,optype)
   END SUBROUTINE init
 END MODULE m_types_sym

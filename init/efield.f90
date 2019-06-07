@@ -18,7 +18,7 @@
 !*********************************************************************
 
       USE m_types
-      USE m_setcor, ONLY: setcor
+      !USE m_setcor, ONLY: setcor
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
@@ -37,9 +37,6 @@
       REAL  qn,qe,bmu
       INTEGER n,iwd,nst,nc
 !     ..
-!     .. Local Array ..
-      INTEGER kappa(dimension%nstd),nprnc(dimension%nstd)
-      REAL occ(dimension%nstd,1)
 !     ..
 !     .. Local Parameters ..
       INTEGER, PARAMETER :: pTOP = 1, pBOT = 2, pTOPBOT = 3
@@ -59,11 +56,7 @@
 !---> core electrons
       DO n = 1,atoms%ntype
          IF (atoms%zatom(n).GE.1.0) THEN
-            bmu = 0.0
-            CALL setcor(n,1,atoms,input,bmu, nst,kappa,nprnc,occ)
-            DO nc=1,atoms%ncst(n)
-              qe=qe+atoms%neq(n)*occ(nc,1)
-            ENDDO
+            qe=qe+atoms%neq(n)*atoms%econf(n)%core_electrons
             WRITE (6,*) 'neq= ',atoms%neq(n),'  ncore= ',qe
          ENDIF
       ENDDO

@@ -25,6 +25,9 @@ types/types_dos.f90
 types/types_denCoeffsOffdiag.f90
 types/types_force.f90
 types/types_gpumat.F90
+types/types_econfig.F90
+types/types_cell.f90
+types/types_sym.f90
 )
 
 set(inpgen_F90 ${inpgen_F90}

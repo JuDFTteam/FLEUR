@@ -98,6 +98,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(oneD%odd%nn2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    !CALL MPI_BCAST(obsolete%nwdd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
+   DO n=1,atoms%ntype
+      CALL atoms%econf(n)%broadcast(mpi%mpi_comm)
+   END DO
    IF (mpi%irank.NE.0) THEN
       IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
       IF(ALLOCATED(atoms%volmts)) DEALLOCATE(atoms%volmts)
@@ -106,11 +109,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%nz(atoms%ntype),atoms%zatom(atoms%ntype)) !nz and zatom have the same content!
       ALLOCATE(atoms%jri(atoms%ntype),atoms%dx(atoms%ntype),atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%lmax(atoms%ntype),atoms%nlo(atoms%ntype),atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%ncst(atoms%ntype),atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),atoms%neq(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype),atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat))
-      ALLOCATE(atoms%numStatesProvided(atoms%ntype))
       ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
       ALLOCATE(atoms%volmts(atoms%ntype))
    

@@ -5,7 +5,9 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_cell
+  USE m_judft
   IMPLICIT NONE
+  PRIVATE
   TYPE t_cell
       !name of 2D-lattice type
       CHARACTER*3::latnam
@@ -28,12 +30,14 @@ MODULE m_types_cell
     CONTAINS
       PROCEDURE :: init
    END TYPE t_cell
+   PUBLIC t_cell
  CONTAINS
    SUBROUTINE init(cell,dvac)
      !initialize cell, only input it cell%amat and dvac in case of a film
      USE m_inv3
      USE m_constants,ONLY:tpi_const
-     CLASS (t_cell),INTENT(INOUT)::cell
+     CLASS (t_cell),INTENT(INOUT):: cell
+     REAL,INTENT(IN)             :: dvac
 
 
      CALL inv3(cell%amat,cell%bmat,cell%omtil)

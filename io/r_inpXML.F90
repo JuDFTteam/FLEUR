@@ -16,8 +16,8 @@ CONTAINS
    SUBROUTINE r_inpXML(&
       atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
       cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
-      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
-      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
+      noel,namex,relcor,a1,a2,a3,dtild,&
+      atomTypeSpecies,speciesRepAtomType,&
       l_kpts)
 
       USE iso_c_binding
@@ -30,7 +30,7 @@ CONTAINS
       USE m_inv3
       USE m_spg2set
       USE m_closure, ONLY : check_close
-      USE m_symproperties
+      !USE m_symproperties
       USE m_calculator
       USE m_constants
       USE m_inpeig
@@ -63,11 +63,8 @@ CONTAINS
       TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
       TYPE(t_wann)   ,INTENT(INOUT)  :: wann
       LOGICAL, INTENT(OUT)           :: l_kpts
-      INTEGER,          ALLOCATABLE, INTENT(INOUT) :: xmlElectronStates(:,:)
       INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
       INTEGER,          ALLOCATABLE, INTENT(INOUT) :: speciesRepAtomType(:)
-      REAL,             ALLOCATABLE, INTENT(INOUT) :: xmlCoreOccs(:,:,:)
-      LOGICAL,          ALLOCATABLE, INTENT(INOUT) :: xmlPrintCoreStates(:,:)
       CHARACTER(len=3), ALLOCATABLE, INTENT(INOUT) :: noel(:)
       CHARACTER(len=4), INTENT(OUT)  :: namex
       CHARACTER(len=12), INTENT(OUT) :: relcor
@@ -102,21 +99,16 @@ CONTAINS
       CHARACTER(len=20) :: mixingScheme
       CHARACTER(len=10) :: loType
       LOGICAL :: kptGamma, l_relcor,ldummy
-      INTEGER :: iAtomType, startCoreStates, endCoreStates
+      INTEGER :: iAtomType
       CHARACTER(len=100) :: xPosString, yPosString, zPosString
-      CHARACTER(len=200) :: coreStatesString
       !   REAL :: tempTaual(3,atoms%nat)
-      REAL             :: coreStateOccs(29,2)
-      INTEGER          :: coreStateNprnc(29), coreStateKappa(29)
-      INTEGER          :: speciesXMLElectronStates(29)
-      REAL             :: speciesXMLCoreOccs(2,29)
-      LOGICAL          :: speciesXMLPrintCoreStates(29)
+      TYPE(t_econfig)  :: econf
 
       INTEGER            :: iType, iLO, iSpecies, lNumCount, nNumCount, iLLO, jsp, j, l, absSum, numTokens
       INTEGER            :: numberNodes, nodeSum, numSpecies, n2spg, n1, n2, ikpt, iqpt
-      INTEGER            :: atomicNumber, coreStates, gridPoints, lmax, lnonsphr, lmaxAPW
+      INTEGER            :: atomicNumber,  gridPoints, lmax, lnonsphr, lmaxAPW
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
-      INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
+      INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
       INTEGER            :: ldau_l(4), numVac, numU
       INTEGER            :: speciesEParams(0:3)
@@ -216,7 +208,7 @@ CONTAINS
       ALLOCATE(atoms%dx(atoms%ntype))
       ALLOCATE(atoms%lmax(atoms%ntype))
       ALLOCATE(atoms%nlo(atoms%ntype))
-      ALLOCATE(atoms%ncst(atoms%ntype))
+      ALLOCATE(atoms%econf(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
       ALLOCATE(atoms%nflip(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
@@ -228,7 +220,6 @@ CONTAINS
       ALLOCATE(atoms%label(atoms%nat))
       ALLOCATE(atoms%pos(3,atoms%nat))
       ALLOCATE(atoms%rmt(atoms%ntype))
-      ALLOCATE(atoms%numStatesProvided(atoms%ntype))
       ALLOCATE(atoms%namex(atoms%ntype))
       ALLOCATE(atoms%icorr(atoms%ntype))
       ALLOCATE(atoms%igrd(atoms%ntype))
@@ -253,14 +244,7 @@ CONTAINS
       atomTypeSpecies = -1
       speciesRepAtomType = -1
 
-      DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
-      ALLOCATE(xmlElectronStates(29,atoms%ntype))
-      ALLOCATE(xmlPrintCoreStates(29,atoms%ntype))
-      ALLOCATE(xmlCoreOccs(2,29,atoms%ntype))
-      xmlElectronStates = noState_const
-      xmlPrintCoreStates = .FALSE.
-      xmlCoreOccs = 0.0
-
+    
       ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
 
       ALLOCATE (wannAtomList(atoms%nat))
@@ -1158,31 +1142,11 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       ! Construction of missing symmetry information
       IF ((symmetryDef.EQ.2).OR.(symmetryDef.EQ.3)) THEN
-         nop48 = 48
-         ALLOCATE (invOps(sym%nop),multtab(sym%nop,sym%nop),optype(nop48))
-         CALL check_close(sym%nop,sym%mrot,sym%tau,&
-            &                      multtab,invOps,optype)
-
-         CALL symproperties(optype,input%film,sym%nop,multtab,cell%amat,&
-            &                        sym%symor,sym%mrot,sym%tau,&
-            &                        invSym,sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2)
-         DEALLOCATE(invOps,multtab,optype)
-         IF (.NOT.input%film) sym%nop2=sym%nop
-         IF (input%film) THEN
-            DO n = 1, sym%nop
-               DO i = 1, 3
-                  IF (ABS(sym%tau(i,n)) > 0.00001) THEN
-                     CALL juDFT_error("nonsymmorphic symmetries not yet implemented for films!",calledby ="r_inpXML")
-                  ENDIF
-               END DO
-            END DO
-         END IF
+         CALL sym%init(cell,input%film)
       END IF
-      sym%invs2 = sym%invs.AND.sym%zrfs
-
+ 
       ALLOCATE (sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat))
-      ALLOCATE (sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop))
-      ALLOCATE (sym%invsatnr(atoms%nat),sym%d_wgn(-3:3,-3:3,3,sym%nop))
+      ALLOCATE (sym%invsatnr(atoms%nat))
 
       !some settings for film calculations
       vacuum%nmzd = 250
@@ -1326,7 +1290,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       ALLOCATE (speciesNLO(numSpecies))
       ALLOCATE(atoms%speciesName(numSpecies))
 
-      atoms%numStatesProvided = 0
       atoms%lapw_l(:) = -1
       atoms%n_u = 0
 
@@ -1338,7 +1301,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
          atoms%speciesName(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
          atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
-         coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
          magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
          flipSpin = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
 
@@ -1413,7 +1375,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                atoms%dx(iType) = logIncrement
                atoms%lmax(iType) = lmax
                atoms%nlo(iType) = speciesNLO(iSpecies)
-               atoms%ncst(iType) = coreStates
                atoms%lnonsph(iType) = lnonsphr
                atoms%lapw_l(iType) = lmaxAPW
                IF (flipSpin) THEN
@@ -1451,10 +1412,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       DIMENSION%nstd = 29
 
-      ALLOCATE(atoms%coreStateOccs(DIMENSION%nstd,2,atoms%ntype)); atoms%coreStateOccs=0.0
-      ALLOCATE(atoms%coreStateNprnc(DIMENSION%nstd,atoms%ntype))
-      ALLOCATE(atoms%coreStateKappa(DIMENSION%nstd,atoms%ntype))
-
+ 
       CALL enpara%init(atoms,input%jspins)
       enpara%evac0(:,:) = evac0Temp(:,:)
 
@@ -1500,73 +1458,20 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          ! Explicitely provided core configurations
 
          coreConfigPresent = .FALSE.
-         providedCoreStates = 0
-         providedStates = 0
-         coreStateOccs = 0.0
-         speciesXMLElectronStates = noState_const
-         speciesXMLCoreOccs = -1.0
-         speciesXMLPrintCoreStates = .FALSE.
-         WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/electronConfig'
-         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
+         WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
+         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/electronConfig')
          IF (numberNodes.EQ.1) THEN
             coreConfigPresent = .TRUE.
-            valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/coreConfig')
-            token = popFirstStringToken(valueString)
-            DO WHILE (token.NE.' ')
-               IF (token(1:1).EQ.'[') THEN
-                  DO i = 1, 6
-                     IF (TRIM(ADJUSTL(token)).EQ.nobleGasConfigList_const(i)) THEN
-                        IF (providedCoreStates+nobleGasNumStatesList_const(i).GT.29) THEN
-                           CALL judft_error('Error: Too many core states provided in xml input file!')
-                        END IF
-                        DO j = providedCoreStates+1, providedCoreStates+nobleGasNumStatesList_const(i)
-                           coreStateOccs(j-providedCoreStates,:) = coreStateNumElecsList_const(j)
-                           coreStateNprnc(j-providedCoreStates) = coreStateNprncList_const(j)
-                           coreStateKappa(j-providedCoreStates) = coreStateKappaList_const(j)
-                           speciesXMLElectronStates(j) = coreState_const
-                        END DO
-                        providedCoreStates = providedCoreStates + nobleGasNumStatesList_const(i)
-                     END IF
-                  END DO
-               ELSE
-                  DO i = 1, 29
-                     IF (TRIM(ADJUSTL(token)).EQ.coreStateList_const(i)) THEN
-                        providedCoreStates = providedCoreStates + 1
-                        IF (providedCoreStates.GT.29) THEN
-                           CALL judft_error('Error: Too many core states provided in xml input file!')
-                        END IF
-                        coreStateOccs(providedCoreStates,:) = coreStateNumElecsList_const(i)
-                        coreStateNprnc(providedCoreStates) = coreStateNprncList_const(i)
-                        coreStateKappa(providedCoreStates) = coreStateKappaList_const(i)
-                        speciesXMLElectronStates(i) = coreState_const
-                     END IF
-                  END DO
-               END IF
-               token = popFirstStringToken(valueString)
-            END DO
-            numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/valenceConfig')
-            providedStates = providedCoreStates
-            IF(numberNodes.EQ.1) THEN
-               valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/valenceConfig')
-               token = popFirstStringToken(valueString)
-               DO WHILE (token.NE.' ')
-                  DO i = 1, 29
-                     IF (TRIM(ADJUSTL(token)).EQ.coreStateList_const(i)) THEN
-                        providedStates = providedStates + 1
-                        IF (providedStates.GT.29) THEN
-                           CALL judft_error('Error: Too many valence states provided in xml input file!')
-                        END IF
-                        coreStateOccs(providedStates,:) = coreStateNumElecsList_const(i)
-                        coreStateNprnc(providedStates) = coreStateNprncList_const(i)
-                        coreStateKappa(providedStates) = coreStateKappaList_const(i)
-                        speciesXMLElectronStates(i) = valenceState_const
-                     END IF
-                  END DO
-                  token = popFirstStringToken(valueString)
-               END DO
+            valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/electronConfig/coreConfig')
+            numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/electronConfig/valenceConfig')
+            IF (numberNodes==1) THEN
+               lstring=xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/electronConfig/valenceConfig')
+               CALL econf%init(valuestring,lstring)
+            ELSE
+               atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
+               CALL econf%init_nz(valuestring,atomicNumber)          
             END IF
-         END IF
-
+         ENDIF
          ! Explicitely provided core occupations
 
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/electronConfig/stateOccupation'
@@ -1579,23 +1484,9 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             DO i = 1, numberNodes
                WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)),'[',i,']'
                valueString = xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@state')
-               nprncTemp = 0
-               kappaTemp = 0
-               DO j = 1, 29
-                  IF (TRIM(ADJUSTL(valueString)).EQ.coreStateList_const(j)) THEN
-                     nprncTemp = coreStateNprncList_const(j)
-                     kappaTemp = coreStateKappaList_const(j)
-                     speciesXMLPrintCoreStates(j) = .TRUE.
-                     speciesXMLCoreOccs(1,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinUp'))
-                     speciesXMLCoreOccs(2,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinDown'))
-                  END IF
-               END DO
-               DO j = 1, providedStates
-                  IF ((nprncTemp.EQ.coreStateNprnc(j)).AND.(kappaTemp.EQ.coreStateKappa(j))) THEN
-                     coreStateOccs(j,1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinUp'))
-                     coreStateOccs(j,2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinDown'))
-                  END IF
-               END DO
+               CALL econf%set_occupation(valueString,&
+                    evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinUp')),&
+                    evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@spinDown')))             
             END DO
          END IF
 
@@ -1645,23 +1536,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
             IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
-               atoms%numStatesProvided(iType) = providedStates
                IF (coreConfigPresent) THEN
-                  IF (providedCoreStates.NE.atoms%ncst(iType)) THEN
-                     WRITE(6,*) " providedCoreStates:",providedCoreStates
-                     WRITE(6,*) "atoms%ncst(iType)  :",atoms%ncst(iType)
-                     CALL judft_error('Wrong number of core states provided!')
-                  END IF
-                  DO k = 1, providedStates !atoms%ncst(iType)
-                     atoms%coreStateOccs(k,1,iType) = coreStateOccs(k,1)
-                     atoms%coreStateOccs(k,2,iType) = coreStateOccs(k,2)
-                     atoms%coreStateNprnc(k,iType) = coreStateNprnc(k)
-                     atoms%coreStateKappa(k,iType) = coreStateKappa(k)
-                     xmlElectronStates(k,iType) = speciesXMLElectronStates(k)
-                     xmlPrintCoreStates(k,iType) = speciesXMLPrintCoreStates(k)
-                     xmlCoreOccs (1,k,iType) = speciesXMLCoreOccs(1,k)
-                     xmlCoreOccs (2,k,iType) = speciesXMLCoreOccs(2,k)
-                  END DO
+                  atoms%econf(iType)=econf
                END IF
                DO iLLO = 1, speciesNLO(iSpecies)
                   atoms%llo(iLLO,iType) = speciesLLO(loOrderList(iLLO))

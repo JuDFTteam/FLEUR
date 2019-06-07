@@ -193,7 +193,7 @@
       REAL,ALLOCATABLE          ::  core11r(:,:,:,:),core22r(:,:,:,:)
       REAL,ALLOCATABLE          ::  eig_cr(:,:,:)
 
-      ncstd = maxval(atoms%ncst)
+      ncstd = maxval(atoms%econf%num_core_states)
       ALLOCATE( nindxcr(0:ncstd,atoms%ntype),stat = ok )
 
       ! generate relativistic core wave functions( ->core1r,core2r )
@@ -284,7 +284,7 @@
 
       USE m_intgr, ONLY : intgr3,intgr0,intgr1
       USE m_constants, ONLY : c_light
-      USE m_setcor
+      !USE m_setcor
       USE m_differ
       USE m_types
       IMPLICIT NONE
@@ -344,9 +344,11 @@
         z    = atoms%zatom(itype)
         dxx  = atoms%dx(itype)
         bmu  = 0.0
-        CALL setcor( itype,input%jspins,atoms,input,bmu,&
-     &               nst,kappa,nprnc,occ_h)
+!        CALL setcor( itype,input%jspins,atoms,input,bmu,&
+!     &               nst,kappa,nprnc,occ_h)
+        call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
 
+        
         IF ((bmu > 99.)) THEN
           occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
         ELSE
@@ -358,7 +360,7 @@
         ncmsh = min( ncmsh, dimension%msh )
         rn = rnot* (d** (ncmsh-1))
 
-        nst = atoms%ncst(itype)
+        nst = atoms%econf(itype)%num_core_states
 
         DO 80 korb = 1,nst
           IF (occ(korb).EQ.0) GOTO 80
@@ -387,7 +389,8 @@
         z    = atoms%zatom(itype)
         dxx  = atoms%dx(itype)
         bmu  = 0.0
-        CALL setcor(itype,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
+        !CALL setcor(itype,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
+        call atoms%econf(itype)%get_core(nst,nprnc,kappa,occ_h)
 
         IF ((bmu > 99.)) THEN
           occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
@@ -427,7 +430,7 @@
           END DO
         END IF
 
-        nst = atoms%ncst(itype)
+        nst = atoms%econf(itype)%num_core_states
 
 
         DO 90 korb = 1,nst
@@ -473,7 +476,7 @@
 
       USE m_intgr, ONLY : intgr3,intgr0,intgr1
       USE m_constants, ONLY : c_light
-      USE m_setcor
+      !USE m_setcor
       USE m_differ
       USE m_types
       IMPLICIT NONE
@@ -509,7 +512,8 @@
         z    = atoms%zatom(itype)
         dxx  = atoms%dx(itype)
         bmu  = 0.0
-        CALL setcor(itype,input%jspins,atoms,input,bmu, nst,kappa,nprnc,occ_h)
+        !CALL setcor(itype,input%jspins,atoms,input,bmu, nst,kappa,nprnc,occ_h)
+        call atoms%econf(itype)%get_core(nst,nprnc,kappa,occ_h)
 
         occ(1:nst) = occ_h(1:nst,1) 
 
@@ -519,7 +523,7 @@
         ncmsh = min( ncmsh, dimension%msh )
         rn = rnot* (d** (ncmsh-1))
 
-        nst = atoms%ncst(itype)
+        nst = atoms%econf(itype)%num_core_states
 
         DO  korb = 1,nst
           IF (occ(korb).EQ.0) CYCLE

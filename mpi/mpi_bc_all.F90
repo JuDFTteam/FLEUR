@@ -200,7 +200,6 @@ CONTAINS
     CALL MPI_BCAST(atoms%zatom,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(field%efield%sig_b,2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%zelec,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%ncst,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%nlo,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     n =  atoms%nlod*atoms%ntype
     CALL MPI_BCAST(atoms%llo,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)

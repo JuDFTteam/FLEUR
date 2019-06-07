@@ -8,7 +8,7 @@ CONTAINS
       USE m_juDFT
       USE m_intgr, ONLY : intgr3,intgr0,intgr1
       USE m_constants, ONLY : c_light,sfp_const
-      USE m_setcor
+      !USE m_setcor
       USE m_differ
       USE m_types
       USE m_xmlOutput
@@ -39,9 +39,9 @@ CONTAINS
 
       REAL rhcs(DIMENSION%msh),rhoc(DIMENSION%msh),rhoss(DIMENSION%msh),vrd(DIMENSION%msh),f(0:3)
       REAL rhcs_aux(DIMENSION%msh), rhoss_aux(DIMENSION%msh) !> quantities for energy density calculations
-      REAL occ(DIMENSION%nstd),a(DIMENSION%msh),b(DIMENSION%msh),ain(DIMENSION%msh),ahelp(DIMENSION%msh)
-      REAL occ_h(DIMENSION%nstd,2)
-      INTEGER kappa(DIMENSION%nstd),nprnc(DIMENSION%nstd)
+      REAL occ(maxval(atoms%econf%num_states)),a(DIMENSION%msh),b(DIMENSION%msh),ain(DIMENSION%msh),ahelp(DIMENSION%msh)
+      REAL occ_h(maxval(atoms%econf%num_states),2)
+      INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
       CHARACTER(LEN=20) :: attributes(6)
       REAL stateEnergies(29)
       !     ..
@@ -81,7 +81,10 @@ CONTAINS
          !         rn = rmt(jatom)
          dxx = atoms%dx(jatom)
          bmu = 0.0
-         CALL setcor(jatom,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
+         !CALL setcor(jatom,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
+         CALL atoms%econf(jatom)%get_core(nst,nprnc,kappa,occ_h)
+
+         
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
          ELSE
@@ -124,7 +127,7 @@ CONTAINS
             ENDDO
          END IF
 
-         nst = atoms%ncst(jatom)        ! for lda+U
+         nst = atoms%econf(jatom)%num_core_states        ! for lda+U
 
          IF (input%gw==1 .OR. input%gw==3)&
               &                      WRITE(15) nst,atoms%rmsh(1:atoms%jri(jatom),jatom)
@@ -217,7 +220,7 @@ CONTAINS
          CALL openXMLElementForm('coreStates',(/'atomType     ','atomicNumber ','spin         ','kinEnergy    ',&
                                                 'eigValSum    ','lostElectrons'/),&
                                  attributes,RESHAPE((/8,12,4,9,9,13,6,3,1,18,18,9/),(/6,2/)))
-         DO korb = 1, atoms%ncst(jatom)
+         DO korb = 1, atoms%econf(jatom)%num_core_states
             fj = iabs(kappa(korb)) - .5e0
             weight = 2*fj + 1.e0
             IF (bmu > 99.) weight = occ(korb)

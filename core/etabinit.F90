@@ -17,7 +17,7 @@ CONTAINS
        etab,ntab,ltab,nkmust)
 
     USE m_constants, ONLY : c_light
-    USE m_setcor
+    !USE m_setcor
     USE m_differ
     USE m_types
     IMPLICIT NONE
@@ -35,12 +35,11 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL  c,d,dxx,e,fj,fl,fn,rn,rnot,t2 ,z,t1,rr,weight
-    REAL  bmu
     INTEGER i,ic,iksh,ilshell,j,jatom,korb,l, nst,ncmsh ,nshell,ipos,ierr
     !     ..
     !     .. Local Arrays ..
-    INTEGER kappa(DIMENSION%nstd),nprnc(DIMENSION%nstd)
-    REAL eig(DIMENSION%nstd),occ(DIMENSION%nstd,1),vrd(DIMENSION%msh),a(DIMENSION%msh),b(DIMENSION%msh)
+    INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
+    REAL eig(maxval(atoms%econf%num_states)),occ(maxval(atoms%econf%num_states),1),vrd(DIMENSION%msh),a(DIMENSION%msh),b(DIMENSION%msh)
     !     ..
     !
     c = c_light(1.0)
@@ -53,8 +52,8 @@ CONTAINS
        z = atoms%zatom(jatom)
        rn = atoms%rmt(jatom)
        dxx = atoms%dx(jatom)
-       bmu = 0.0
-       CALL setcor(jatom,1,atoms,input,bmu,nst,kappa,nprnc,occ)
+       !CALL setcor(jatom,1,atoms,input,bmu,nst,kappa,nprnc,occ)
+       CALL atoms%econf(jatom)%get_core(nst,nprnc,kappa,occ)
        rnot = atoms%rmsh(1,jatom)
        d = EXP(atoms%dx(jatom))
        rn = rnot* (d** (ncmsh-1))
@@ -83,7 +82,7 @@ CONTAINS
           ENDDO
        END IF
 
-       nst = atoms%ncst(jatom)
+       nst = atoms%econf(jatom)%num_core_states
        DO  korb = 1,nst
           fn = nprnc(korb)
           fj = iabs(kappa(korb)) - .5e0

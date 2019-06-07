@@ -177,7 +177,7 @@
           CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntype,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
 #endif
           nloop: DO  n = 1 , atoms%ntype
-              IF ((atoms%ncst(n).GT.0).OR.l_st) THEN
+              IF ((atoms%econf(n)%num_core_states.GT.0).OR.l_st) THEN
                    DO  j = 1 , atoms%jri(n)
                       rat(j,n) = atoms%rmsh(j,n)
                    ENDDO
@@ -205,7 +205,7 @@
           !       IF mshc = jri  either core tail too small or no core (i.e. H)
           !
           DO  n = 1,atoms%ntype
-              IF ((mshc(n).GT.atoms%jri(n)).AND.((atoms%ncst(n).GT.0).OR.l_st)) THEN
+              IF ((mshc(n).GT.atoms%jri(n)).AND.((atoms%econf(n)%num_core_states.GT.0).OR.l_st)) THEN
 
                    j1 = atoms%jri(n) - 1
                    IF ( method1 .EQ. 1) THEN
@@ -440,7 +440,7 @@
              !           they are contained in the plane wave part 
              !
              DO n = 1,atoms%ntype
-                IF  ((mshc(n).GT.atoms%jri(n)).AND.((atoms%ncst(n).GT.0).OR.l_st)) THEN
+                IF  ((mshc(n).GT.atoms%jri(n)).AND.((atoms%econf(n)%num_core_states.GT.0).OR.l_st)) THEN
                    DO j = 1,atoms%jri(n)
                       rho(j,0,n,jspin) = rho(j,0,n,jspin)&
                            &                          - sfp_const*rat(j,n)*rat(j,n)*rh(j,n)

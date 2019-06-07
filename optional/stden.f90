@@ -61,7 +61,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    INTEGER lnum(DIMENSION%nstd,atoms%ntype),nst(atoms%ntype) 
    INTEGER jrc(atoms%ntype)
    LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
-   REAL                 :: occ(SIZE(atoms%corestateoccs,1),2)
+   REAL                 :: occ(MAXVAL(atoms%econf%num_states),2)
    ! Data statements
    DATA del/1.e-6/
    PARAMETER (l_st=.true.)
@@ -115,14 +115,14 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          ELSE
             bm = 0.
          END IF
-         occ=atoms%coreStateOccs(:,:,n)
+         occ=atoms%econf(n)%Occupation(:,:)
          ! check whether this atom has been done already
          DO n1 = 1, n - 1
             IF (ABS(z-atoms%zatom(n1)).GT.del) CYCLE
             IF (ABS(r-atoms%rmt(n1)).GT.del) CYCLE
             IF (ABS(h-atoms%dx(n1)).GT.del) CYCLE
             IF (ABS(bm-atoms%bmu(n1)).GT.del) CYCLE
-            IF (ANY(ABS(occ(:,:)-atoms%coreStateOccs(:,:,n1))>del)) CYCLE
+            IF (ANY(ABS(occ(:,:)-atoms%econf(n1)%Occupation(:,:))>del)) CYCLE
             IF (jr.NE.atoms%jri(n1)) CYCLE
             DO ispin = 1, input%jspins
                DO i = 1,jrc(n) ! dimension%msh

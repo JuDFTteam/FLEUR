@@ -25,5 +25,5 @@ core/ccdnup.f90
 core/cored.F90
 core/coredr.F90
 core/etabinit.F90
-core/setcor.f90
+#core/setcor.f90
 )

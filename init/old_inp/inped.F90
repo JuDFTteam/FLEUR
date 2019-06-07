@@ -286,7 +286,7 @@
                    CALL juDFT_warn ("Element name and nuclear number do not match!" ,calledby ="inped")
                 ENDIF
              ENDIF
-             WRITE (6,8140) noel(n),atoms%nz(n),atoms%ncst(n),atoms%lmax(n),atoms%jri(n),atoms%rmt(n),atoms%dx(n)
+             WRITE (6,8140) noel(n),atoms%nz(n),atoms%econf(n)%num_core_states,atoms%lmax(n),atoms%jri(n),atoms%rmt(n),atoms%dx(n)
 8140         FORMAT (a3,i3,3i5,2f10.6)
              IF (atoms%jri(n)>atoms%jmtd)  CALL juDFT_error("jmtd",calledby ="inped")
              atoms%zatom(n) = atoms%nz(n)

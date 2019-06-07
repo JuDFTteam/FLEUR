@@ -177,8 +177,8 @@
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
-                     noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
-                     xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
+                     noel,namex,relcor,a1,a2,a3,dtild,&
+                     atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
@@ -201,7 +201,6 @@
                               atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
                               cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                               noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
-                              xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
                              .TRUE.,numSpecies,enpara)
 

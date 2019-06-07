@@ -10,7 +10,8 @@ MODULE m_types_setup
    !*************************************************************
   USE m_types_cell
   USE m_types_sym
-   ! types for 1D calculations
+  use m_types_econfig
+  ! types for 1D calculations
    TYPE od_dim
       LOGICAL :: d1
       INTEGER :: mb, M, k3, m_cyl
@@ -95,15 +96,7 @@ MODULE m_types_setup
       !radial grid points
       INTEGER, ALLOCATABLE::jri(:)
       !core states
-      INTEGER, ALLOCATABLE::ncst(:)
-      !How many states are explicitely provided?
-      INTEGER, ALLOCATABLE::numStatesProvided(:)
-      !core state occupations
-      REAL, ALLOCATABLE::coreStateOccs(:, :, :)
-      !core state nprnc
-      INTEGER, ALLOCATABLE::coreStateNprnc(:, :)
-      !core state kappa
-      INTEGER, ALLOCATABLE::coreStateKappa(:, :)
+      TYPE(t_econfig),ALLOCATABLE::econf(:)
       !lmax
       INTEGER, ALLOCATABLE::lmax(:)
       !lmax non-spherical

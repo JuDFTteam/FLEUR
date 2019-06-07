@@ -69,7 +69,7 @@
 ! ..
 ! ..  Local Variables
       REAL     ::scpos  ,zc,dtild   
-      INTEGER  ::nw,idsprs
+      INTEGER  ::nw,idsprs,ncst
       INTEGER ieq,i,k,na,n,ilo
       REAL s3,ah,a,hs2,rest
       LOGICAL l_hyb,l_sym,ldum
@@ -365,8 +365,9 @@
       DO n=1,atoms%ntype
 !
          READ (UNIT=5,FMT=7140,END=99,ERR=99) noel(n),atoms%nz(n),&
-     &                      atoms%ncst(n),atoms%lmax(n),atoms%jri(n),atoms%rmt(n),atoms%dx(n)
-         WRITE (6,9070) noel(n),atoms%nz(n),atoms%ncst(n),atoms%lmax(n),atoms%jri(n),&
+              &                      ncst,atoms%lmax(n),atoms%jri(n),atoms%rmt(n),atoms%dx(n)
+         CALL atoms%econf(n)%init(ncst,atoms%nz(n))
+         WRITE (6,9070) noel(n),atoms%nz(n),atoms%econf(n)%num_core_states,atoms%lmax(n),atoms%jri(n),&
      &                      atoms%rmt(n),atoms%dx(n)
  7140    FORMAT (a3,i3,3i5,2f10.6)
 !
@@ -805,7 +806,7 @@
  9060 FORMAT ('**********************************')
       i_u = 1
       DO n=1,atoms%ntype
-         WRITE (5,9070) noel(n),atoms%nz(n),atoms%ncst(n),atoms%lmax(n),atoms%jri(n),&
+         WRITE (5,9070) noel(n),atoms%nz(n),atoms%econf(n)%num_core_states,atoms%lmax(n),atoms%jri(n),&
      &                       atoms%rmt(n),atoms%dx(n)
  9070    FORMAT (a3,i3,3i5,2f10.6)
 !+lda_u
