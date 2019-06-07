@@ -316,6 +316,7 @@ CONTAINS
 
             idx = find_first_normal(vx_tmp)+1
             vx_tmp(:,:idx) = 0.0
+
             CALL xc_f03_lda_vxc(initial_lda_func(jspins), idx, TRANSPOSE(rh(:idx,:)), vx_tmp(:,:idx))
          else
             CALL xc_f03_lda_vxc(initial_lda_func(jspins), SIZE(rh,1), TRANSPOSE(rh), vx_tmp)
@@ -327,7 +328,6 @@ CONTAINS
       ENDIF
       vx=TRANSPOSE(vx_tmp) 
       vxc=TRANSPOSE(vxc_tmp) 
-
 #endif
    END SUBROUTINE xcpot_get_vxc
 
