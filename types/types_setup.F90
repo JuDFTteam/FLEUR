@@ -8,7 +8,8 @@ MODULE m_types_setup
    !*************************************************************
    !     This module contains definitions for all kind of types
    !*************************************************************
-
+  USE m_types_cell
+  USE m_types_sym
    ! types for 1D calculations
    TYPE od_dim
       LOGICAL :: d1
@@ -166,27 +167,7 @@ MODULE m_types_setup
       procedure :: nsp => calc_nsp_atom
    END TYPE t_atoms
 
-   TYPE t_cell
-      !name of 2D-lattice type
-      CHARACTER*3::latnam
-      !vol of dtilde box
-      REAL::omtil
-      !2D area
-      REAL::area
-      !bravais matrix
-      REAL::amat(3, 3)
-      !rez. bravais matrx
-      REAL::bmat(3, 3)
-      !square of bbmat
-      REAL::bbmat(3, 3)
-      !d-value
-      REAL::z1
-      !volume of cell
-      REAL::vol
-      !volume of interstitial
-      REAL::volint
-      REAL:: c
-   END TYPE t_cell
+  
 !The stars
    TYPE t_stars
       !max-length of star
@@ -499,40 +480,7 @@ MODULE m_types_setup
       COMPLEX, ALLOCATABLE ::clnu(:, :, :)
    END TYPE t_sphhar
 
-   !symmetry information
-   TYPE t_sym
-      INTEGER :: symSpecType
-      !Symophic group
-      LOGICAL ::symor
-      INTEGER ::nsymt
-      INTEGER :: nsym
-      COMPLEX, ALLOCATABLE:: d_wgn(:, :, :, :)
-      !2D-inv-sym
-      LOGICAL ::invs2
-      !Inversion-sym
-      LOGICAL ::invs
-      !Z-refls. sym
-      LOGICAL ::zrfs
-      !No of sym ops
-      INTEGER ::nop
-      !No of 2D-sym ops
-      INTEGER ::nop2
-      !Rot-matrices (3,3,nop)
-      INTEGER, ALLOCATABLE::mrot(:, :, :)
-      !inverse operation (nop)
-      INTEGER, ALLOCATABLE::invtab(:)
-      !translation vectors (3,nop)
-      REAL, ALLOCATABLE::tau(:, :)
-      !Name of lattice type
-      CHARACTER*3   :: latnam
-      !Name of sym
-      CHARACTER*4   :: namgrp
-      INTEGER, ALLOCATABLE :: multab(:, :)
-      INTEGER, ALLOCATABLE :: invsatnr(:)
-      INTEGER, ALLOCATABLE :: invarop(:, :)
-      INTEGER, ALLOCATABLE :: invarind(:)
-
-   END TYPE t_sym
+  
 
    ! type for the input to the calculation of the core spectrum (EELS)
    TYPE t_coreSpecInput

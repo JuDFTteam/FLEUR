@@ -1163,7 +1163,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          CALL check_close(sym%nop,sym%mrot,sym%tau,&
             &                      multtab,invOps,optype)
 
-         CALL symproperties(nop48,optype,input%film,sym%nop,multtab,cell%amat,&
+         CALL symproperties(optype,input%film,sym%nop,multtab,cell%amat,&
             &                        sym%symor,sym%mrot,sym%tau,&
             &                        invSym,sym%invs,sym%zrfs,sym%invs2,sym%nop,sym%nop2)
          DEALLOCATE(invOps,multtab,optype)
