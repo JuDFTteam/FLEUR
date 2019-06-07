@@ -30,9 +30,9 @@ CONTAINS
     IMPLICIT NONE
     INTEGER,                   INTENT(INOUT) :: solver
     CLASS(t_mat),              INTENT(INOUT) :: smat,hmat
-    CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: ev
-    INTEGER,                   INTENT(INOUT) :: ne
-    REAL,                      INTENT(OUT)   :: eig(:)
+    CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: ev         ! eigenvectors
+    INTEGER,                   INTENT(INOUT) :: ne         ! number of eigenpairs to be found
+    REAL,                      INTENT(OUT)   :: eig(:)     ! eigenvalues
 
     !Only for chase
     INTEGER,OPTIONAL,          INTENT(IN)    :: ikpt
@@ -64,7 +64,7 @@ CONTAINS
     CASE (diag_scalapack)
        CALL scalapack(hmat,smat,ne,eig,ev)
     CASE (diag_magma)
-       !CALL magma_diag(hmat,smat,ne,eig,ev)
+       CALL magma_diag(hmat,smat,ne,eig,ev)
     CASE (diag_cusolver)
        CALL cusolver_diag(hmat,smat,ne,eig,ev)
     CASE (diag_lapack)

@@ -265,7 +265,8 @@ CONTAINS
 
     pe=d%pe_basis(nk,jspin)
     slot=d%slot_basis(nk,jspin)
-    !write the number of eigenvalues values
+    !write the number of eigenvalues 
+    !only one process needs to do it
     IF (PRESENT(neig_total)) THEN
        CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%neig_handle,e)
        ALLOCATE(tmp_int(1))
@@ -275,25 +276,15 @@ CONTAINS
        DEALLOCATE(tmp_int)
     ENDIF
 
+    !write the eigenvalues 
+    !only one process needs to do it
     IF (PRESENT(eig).OR.PRESENT(w_iks)) THEN
        ALLOCATE(tmp_real(d%size_eig))
        tmp_real=1E99
        if (PRESENT(EIG)) THEN
-          n1=1;n3=1
-          IF (PRESENT(n_rank)) n1=n_rank+1
-          IF (PRESENT(n_size)) n3=n_size
-          n2=SIZE(eig)*n3+n1-1
-          nn=1
-          DO n=n1,min(n2,d%size_eig),n3
-             tmp_real(n)=eig(nn)
-             nn=nn+1
-          ENDDO
+          tmp_real(:d%size_eig) = eig(:d%size_eig)
           CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%eig_handle,e)
-          IF (n3.ne.1) THEN
-             CALL MPI_ACCUMULATE(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,MPI_MIN,d%eig_handle,e)
-          ELSE
-             CALL MPI_PUT(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
-          ENDIF
+          CALL MPI_PUT(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
           CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
        END if
        IF (PRESENT(w_iks)) THEN
@@ -304,6 +295,9 @@ CONTAINS
        END IF
        DEALLOCATE(tmp_real)
     ENDIF
+
+    !write the eigenvectors
+    !all procceses participate 
     IF (PRESENT(zmat)) THEN
        tmp_size=zmat%matsize1
        ALLOCATE(tmp_real(tmp_size))
