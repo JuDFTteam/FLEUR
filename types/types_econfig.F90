@@ -196,14 +196,14 @@ CONTAINS
        econf%num_core_states=econf%num_core_states+1
     ENDDO
     econf%num_states=econf%num_core_states
-    CALL econf%set_occupation("(1s1/2)",-1.,-1.)
     !valence charge 
     charge=nz-SUM(ABS(kap(:econf%num_core_states)))*2
     DO  WHILE(charge>0) !Add valence 
        str=coreStateList_const(econf%num_states+1)
+       PRINT*,econf%num_states,str,charge
        CALL extract_next(str,np(econf%num_states+1),kap(econf%num_states+1))
        econf%num_states=econf%num_states+1
-       charge=charge-kap(econf%num_states)
+       charge=charge-ABS(kap(econf%num_states))
     ENDDO
 
     ALLOCATE(econf%nprnc(econf%num_states),econf%kappa(econf%num_states))
@@ -220,7 +220,7 @@ CONTAINS
   END SUBROUTINE init_nz
 
   SUBROUTINE set_occupation(econf,state,u,d)
-    CLASS(t_econfig),INTENT(OUT):: econf
+    CLASS(t_econfig),INTENT(INOUT):: econf
     CHARACTER(len=*),INTENT(IN) :: state
     REAL,INTENT(in)             :: u,d!up,down
 
