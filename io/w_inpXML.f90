@@ -17,11 +17,11 @@ MODULE m_winpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
 SUBROUTINE w_inpXML(&
-&                   atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+&                   atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
 &                   cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
-&                   noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt,&
-&                   atomTypeSpecies,speciesRepAtomType,l_outFile,filename,&
-&                   l_explicitIn,numSpecies,enpara)
+&                   namex,relcor,a1,a2,a3,dtild_opt,name_opt,&
+&                   l_outFile,filename,&
+&                   l_explicitIn,enpara)
 
    USE m_types
    USE m_juDFT
@@ -37,7 +37,6 @@ SUBROUTINE w_inpXML(&
    TYPE(t_stars),INTENT(IN)   :: stars 
    TYPE(t_atoms),INTENT(IN)   :: atoms
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-   TYPE(t_obsolete),INTENT(IN) :: obsolete
    TYPE(t_kpts),INTENT(IN)     :: kpts
    TYPE(t_oneD),INTENT(IN)     :: oneD
    TYPE(t_hybrid),INTENT(IN)   :: hybrid
@@ -48,13 +47,9 @@ SUBROUTINE w_inpXML(&
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_enpara),INTENT(IN)   :: enpara
    CLASS(t_forcetheo),INTENT(IN):: forcetheo !nothing is done here so far....
-   INTEGER, INTENT (IN)        :: numSpecies
    INTEGER, INTENT (IN)        :: div(3)
-   INTEGER, INTENT (IN)        :: atomTypeSpecies(atoms%ntype)
-   INTEGER, INTENT (IN)        :: speciesRepAtomType(numSpecies)
    LOGICAL, INTENT (IN)        :: l_gamma, l_outFile, l_explicitIn
    REAL,    INTENT (IN)        :: a1(3),a2(3),a3(3)
-   CHARACTER(len=3),INTENT(IN) :: noel(atoms%ntype)
    CHARACTER(len=4),INTENT(IN) :: namex
    CHARACTER(len=12),INTENT(IN):: relcor
    CHARACTER(LEN=*),INTENT(IN) :: filename
@@ -62,9 +57,15 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
 
 
-   INTEGER :: iSpecies, fileNum
+   INTEGER          :: iSpecies, fileNum
    CHARACTER(len=8) :: name(10)
-
+   INTEGER          :: numSpecies
+   INTEGER          :: speciesRepAtomType(numSpecies)
+   CHARACTER(len=20):: speciesNames(atoms%ntype)
+   LOGICAL          :: known_species
+   
+   
+ 
 !+lda+u
    REAL    u,j
    INTEGER l, i_u
@@ -433,6 +434,18 @@ SUBROUTINE w_inpXML(&
       uIndices(2,atoms%lda_u(i_u)%atomType) = i_u
    END DO
 
+   !Build list of species
+   speciesNames=''
+   numSpecies=0
+   DO n=1,atoms%ntype
+      known_species=any(trim(adjustl(atoms%speciesname(n)))==trim(adjustl(speciesNames(:numSpecies))))
+      if (.not.known_species) THEN
+         numSpecies=numSpecies+1
+         speciesNames(numSpecies)=atoms%speciesname(n)
+         speciesRepAtomType(numSpecies)=n
+      end if
+   enddo
+   
    WRITE (fileNum,'(a)') '   <atomSpecies>'
    DO iSpecies=1, numSpecies
       iAtomType = speciesRepAtomType(iSpecies)
@@ -442,7 +455,7 @@ SUBROUTINE w_inpXML(&
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
       300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
-      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
+      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(namat_const(nint(atoms%nz(iAtomType)+1)))),atoms%nz(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
       310 FORMAT('         <mtSphere radius="',f0.8,'" gridPoints="',i0,'" logIncrement="',f0.8,'"/>')

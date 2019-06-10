@@ -12,12 +12,9 @@ MODULE m_make_defaults
 !  help in the out-file.                                        gb`02
 !---------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE make_defaults(&
-     &                   infh,nline,xl_buffer,bfh,buffer,l_hyb,&
-     &                   atoms,sym,cell,title,idlist,&
-     &                   input,vacuum,noco,&
-     &                   atomTypeSpecies,speciesRepAtomType,numSpecies,&
-     &                   a1,a2,a3)
+  SUBROUTINE make_defaults(atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+&                   cell,sym,xcpot,noco,oneD,hybrid,kpts)
+     &                  title
 
       USE m_types
       USE iso_c_binding
@@ -33,61 +30,14 @@ CONTAINS
       USE m_types_xcpot_inbuild
 
       IMPLICIT NONE
-      TYPE(t_input),INTENT(INOUT)    :: input
-      TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
-      TYPE(t_noco),INTENT(INOUT)     :: noco
-      TYPE(t_sym),INTENT(INOUT)      :: sym
-      TYPE(t_cell),INTENT(INOUT)     :: cell
-      TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
-      INTEGER, INTENT (IN) :: infh,xl_buffer,bfh,numSpecies
-      INTEGER, INTENT (INOUT) :: nline
-      INTEGER, INTENT (IN) :: atomTypeSpecies(atoms%ntype)
-      INTEGER, INTENT (IN) :: speciesRepAtomType(atoms%nat)
-      CHARACTER(len=xl_buffer) :: buffer
-      LOGICAL, INTENT (IN) :: l_hyb  
-      REAL,    INTENT (IN) :: idlist(:)
-      REAL,    INTENT (INOUT) :: a1(3),a2(3),a3(3)
-      CHARACTER(len=80), INTENT (IN) :: title
- 
-      INTEGER nel,i,j, nkptOld
-      REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
-      REAL    recVecLength, kPointDen(3)
-      LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
-      REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
-      REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
-      INTEGER  div(3)
-      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
-      CHARACTER(len=1)  :: ch_rw
-      CHARACTER(len=4)  :: namex
-      CHARACTER(len=3)  :: noel(atoms%ntype)
-      CHARACTER(len=12) :: relcor
-      CHARACTER(len=3)  :: latnamTemp
-      CHARACTER(LEN=20) :: filename
-      INTEGER  nu,iofile
-      INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus
-      REAL     scpos ,zc
-
-      TYPE(t_banddos)::banddos
-      TYPE(t_obsolete)::obsolete
-      TYPE(t_sliceplot)::sliceplot
-      TYPE(t_oneD)::oneD
-      TYPE(t_stars)::stars
-      TYPE(t_hybrid)::hybrid
-      TYPE(t_xcpot_inbuild)::xcpot
-      TYPE(t_kpts)::kpts
-      TYPE(t_enpara)::enpara
-      TYPE(t_forcetheo)::forcetheo
 
     !-odim
 !+odim
 !      REAL, PARAMETER :: eps=0.00000001
 !     ..
 !HF   added for HF and hybrid functionals
-      REAL     ::  taual_hyb(3,atoms%nat)
       INTEGER  ::  bands
-      LOGICAL  ::  l_gamma
       INTEGER  :: nkpt3(3)
 !HF
 
@@ -108,7 +58,7 @@ CONTAINS
       l_test = .false.
       l_gga  = .true.
    
- 
+      ! Set parameters to defaults that can not be given to inpgen
       ch_rw = 'w'
       sym%namgrp= 'any ' 
       banddos%dos   = .false. ; banddos%l_mcd = .false. ; banddos%unfoldband = .FALSE. ; input%secvar = .false.
@@ -138,6 +88,7 @@ CONTAINS
       kpts%numSpecialPoints = 0
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
       input%l_wann = .FALSE.
+      input%gw = 0
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
@@ -154,17 +105,11 @@ CONTAINS
       ENDDO 
       IF (noco%l_noco) input%jspins = 2
        
-      a1(:) = cell%amat(:,1) ; a2(:) = cell%amat(:,2) ; a3(:) = cell%amat(:,3) 
 
-
-
-! --> read in (possibly) atomic info
-
-      stars%gmax = 3.0 * kmax ; xcpot%gmaxxc = 2.5 * kmax ; input%rkmax = kmax
-
-
-
-
+      !defaults ...
+      stars%gmax=merge(stars%gmax,3.0*input%rkmax,stars%gmax>0)
+      xcpot%gmaxxc=merge(xcpot%gmaxxc,3.0*input%rkmax,xcpot%gmaxxc>0)
+      
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN
         input%ellow = -1.8
       ELSE
@@ -179,66 +124,29 @@ CONTAINS
       IF (.not.input%film) THEN
          vacuum%dvac = a3(3) ; dtild = vacuum%dvac
       ENDIF
-      IF ( (abs(a1(3)).GT.eps).OR.(abs(a2(3)).GT.eps).OR.&
-     &     (abs(a3(1)).GT.eps).OR.(abs(a3(2)).GT.eps) ) THEN          
-        cell%latnam = 'any'
-      ELSE
-        IF ( (abs(a1(2)).LT.eps).AND.(abs(a2(1)).LT.eps) ) THEN
-          IF (abs(a1(1)-a2(2)).LT.eps) THEN
-            cell%latnam = 'squ'
-          ELSE
-            cell%latnam = 'p-r'
-          ENDIF
-        ELSE
-          n1 = sqrt(a1(1)**2 + a1(2)**2); n2 = sqrt(a2(1)**2 + a2(2)**2)
-          IF (abs(n1-n2).LT.eps) THEN
-            gam = ( a1(1)*a2(1) + a1(2)*a2(2) ) / (n1 * n2)
-            gam = 57.295779512*acos(gam)
-            IF (abs(gam-60.).LT.eps) THEN
-               cell%latnam = 'hex'
-               a1(2) = n1 * 0.5
-               a1(1) = a1(2) * sqrt(3.0)
-            ELSEIF (abs(gam-120.).LT.eps) THEN
-               cell%latnam = 'hx3'
-               a1(1) = n1 * 0.5
-               a1(2) = a1(1) * sqrt(3.0)
-            ELSE
-               cell%latnam = 'c-r'
-               gam = 0.5 * gam / 57.295779512
-               a1(1) =  n1 * cos(gam)
-               a1(2) = -n1 * sin(gam)
-            ENDIF
-            a2(1) =   a1(1)
-            a2(2) = - a1(2)
-          ELSE
-            cell%latnam = 'obl'
-          ENDIF
-        ENDIF
-      ENDIF
 
 !HF   added for HF and hybrid functionals
       hybrid%gcutm1       = input%rkmax - 0.5
       hybrid%tolerance1   = 1e-4
-      taual_hyb   = atoms%taual
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
       ALLOCATE(hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype))
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
       hybrid%lexp        = 16
-      hybrid%lcutm1 = 4
+      hybrid%lcutm1      = 4
       hybrid%select1(1,:) = 4
       hybrid%select1(2,:) = 0
       hybrid%select1(3,:) = 4
       hybrid%select1(4,:) = 2
       bands       = max( nint(input%zelec)*10, 60 )
-      l_gamma     = .false.
       hybrid%l_hybrid = l_hyb
+      
       IF (l_hyb) THEN
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
          input%gw_neigd = bands
-         l_gamma = .true.
+         kpts%l_gamma = .true.
          input%minDistance = 1.0e-5
       ELSE
         input%gw_neigd = 0
@@ -267,17 +175,8 @@ CONTAINS
 !
 
 
-      INQUIRE(file="inp",exist=l_exists)
-      IF (l_exists) THEN
-         CALL juDFT_error("inp-file exists. Cannot write another input file in this directory.",calledby="set_inp")
-      ENDIF
-      INQUIRE(file="inp.xml",exist=l_exists)
-      IF (l_exists) THEN
-         CALL juDFT_error("inp.xml-file exists. Cannot write another input file in this directory.",calledby="set_inp")
-      ENDIF
 
       nu = 8 
-      input%gw = 0
 
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
@@ -320,7 +219,7 @@ CONTAINS
       noco%l_mperp = .FALSE.
       noco%l_constr = .FALSE.
       noco%mix_b = 0.0
-      noco%qss = 0.0
+      noco%qss = merge(noco%qss,[0.0,0.0,0.0],noco%l_ss)
 
       noco%l_relax(:) = .FALSE.
       noco%alphInit(:) = 0.0
@@ -329,8 +228,6 @@ CONTAINS
       noco%b_con(:,:) = 0.0
 
      
-      CALL inv3(cell%amat,cell%bmat,cell%omtil)
-      cell%bmat=tpi_const*cell%bmat
       kpts%nkpt3(:) = div(:)
 
       IF (kpts%specificationType.EQ.4) THEN
@@ -353,83 +250,28 @@ CONTAINS
          div(:) = kpts%nkpt3(:)
          kpts%specificationType = 2
       END IF
-
-         nkptOld = kpts%nkpt
-         latnamTemp = cell%latnam
+latnamTemp = cell%latnam
 
          l_explicit = juDFT_was_argument("-explicit")
 
-         a1Temp(:) = a1(:)
-         a2Temp(:) = a2(:)
-         a3Temp(:) = a3(:)
-
          IF(l_explicit) THEN
             ! kpts generation
-            kpts%l_gamma = l_gamma
-
+         
             CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
 
             kpts%specificationType = 3
             IF (l_hyb) kpts%specificationType = 2
          END IF
 
-         IF(l_explicit) THEN
-            sym%symSpecType = 3
-            !set latnam to any
-            cell%latnam = 'any'
-
-            a1Temp(:) = cell%amat(:,1)
-            a2Temp(:) = cell%amat(:,2)
-            a3Temp(:) = cell%amat(:,3)
-         END IF
 
          errorStatus = 0
          errorStatus = dropInputSchema()
          IF(errorStatus.NE.0) THEN
             STOP 'Error: Cannot print out FleurInputSchema.xsd'
          END IF
-         filename = 'inp.xml'
-
-         CALL w_inpXML(&
-     &                 atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-     &                 cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
-     &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
-     &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-     &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
-     &                 l_explicit,numSpecies,enpara)
-
-         IF(juDFT_was_argument("-explicit")) THEN
-            sumWeight = 0.0
-            WRITE(6,*) ''
-            WRITE(6,'(a,(a3,i10))') 'k-point count:','', kpts%nkpt
-            DO i = 1, kpts%nkpt
-               sumWeight = sumWeight + kpts%wtkpt(i)
-            END DO
-            DO i = 1, kpts%nkpt
-               kpts%wtkpt(i) = kpts%wtkpt(i) / sumWeight
-               kpts%wtkpt(i) = kpts%wtkpt(i)
-            END DO
-         END IF
-
-         kpts%nkpt = nkptOld
-         cell%latnam = latnamTemp
- 
-      DEALLOCATE (noco%l_relax,noco%b_con,noco%alphInit,noco%alph,noco%beta)
-      DEALLOCATE (atoms%ulo_der)
-
-      IF (ANY(kpts%nkpt3(:).NE.0)) THEN
-         DO i = 1, 3
-            recVecLength = SQRT(cell%bmat(i,1)**2 + cell%bmat(i,2)**2 + cell%bmat(i,3)**2)
-            kPointDen(i) = kpts%nkpt3(i) / recVecLength
-         END DO
-         WRITE(6,*) ''
-         WRITE(6,'(a,3(a4,i10))')   'k-point mesh:'   , '', kpts%nkpt3(1),'', kpts%nkpt3(2),'', kpts%nkpt3(3)
-         WRITE(6,'(a,3(a4,f10.6))') 'k-point density:', '', kPointDen(1),'', kPointDen(2),'', kPointDen(3)
-         WRITE(6,*) ''
-      END IF
-
-      CLOSE (6)
 
 
-      END SUBROUTINE set_inp
-      END MODULE m_setinp
+
+
+       END SUBROUTINE make_defaults
+     END MODULE m_make_defaults

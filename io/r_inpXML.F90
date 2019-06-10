@@ -17,7 +17,6 @@ CONTAINS
       atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
       cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
       noel,namex,relcor,a1,a2,a3,dtild,&
-      atomTypeSpecies,speciesRepAtomType,&
       l_kpts)
 
       USE iso_c_binding
@@ -63,8 +62,6 @@ CONTAINS
       TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
       TYPE(t_wann)   ,INTENT(INOUT)  :: wann
       LOGICAL, INTENT(OUT)           :: l_kpts
-      INTEGER,          ALLOCATABLE, INTENT(INOUT) :: atomTypeSpecies(:)
-      INTEGER,          ALLOCATABLE, INTENT(INOUT) :: speciesRepAtomType(:)
       CHARACTER(len=3), ALLOCATABLE, INTENT(INOUT) :: noel(:)
       CHARACTER(len=4), INTENT(OUT)  :: namex
       CHARACTER(len=12), INTENT(OUT) :: relcor
@@ -238,12 +235,7 @@ CONTAINS
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
       ALLOCATE(noco%socscale(atoms%ntype))
 
-      DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
-      ALLOCATE(atomTypeSpecies(atoms%ntype))
-      ALLOCATE(speciesRepAtomType(numSpecies))
-      atomTypeSpecies = -1
-      speciesRepAtomType = -1
-
+   
     
       ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
 
@@ -1288,7 +1280,9 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       ALLOCATE (speciesNLO(numSpecies))
-      ALLOCATE(atoms%speciesName(numSpecies))
+      
+      ALLOCATE(speciesName(numSpecies))
+      ALLOCATE(atoms%speciesName(atoms%ntype))
 
       atoms%lapw_l(:) = -1
       atoms%n_u = 0
@@ -1299,7 +1293,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       DO iSpecies = 1, numSpecies
          ! Attributes of species
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
-         atoms%speciesName(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
+         speciesName(iSpecies) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')))
          atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
          magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
          flipSpin = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
@@ -1360,8 +1354,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
        
          DO iType = 1, atoms%ntype
             WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-            IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
+            atom%speciesName(iType) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+            IF(TRIM(ADJUSTL(speciesName(iSpecies))).EQ.TRIM(ADJUSTL(atom%speciesName(iType)))) THEN
                atoms%nz(iType) = atomicNumber
                atoms%zatom(iType) = atoms%nz(iType)
                IF (atoms%nz(iType).EQ.0) THEN
@@ -1393,8 +1387,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%lda_u(atoms%n_u)%l_amf = l_amf(i)
                   atoms%lda_u(atoms%n_u)%atomType = iType
                END DO
-               atomTypeSpecies(iType) = iSpecies
-               IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
             END IF
          END DO
       END DO

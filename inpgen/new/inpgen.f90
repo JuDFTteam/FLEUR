@@ -58,26 +58,42 @@ PROGRAM inpgen
       TYPE(t_sym)      :: sym
       TYPE(t_noco)     :: noco
       TYPE(t_vacuum)   :: vacuum
-      
+
+      !Start program and greet user
       CALL inpgen_help()
 
+      !read the input
+      CALL read_input(film,symor,atomid,atompos,atomlabel,amat,dvac,noco)
 
-      CALL read_input()
+      !First we determine the spacegoup and map the atoms to groups
+      CALL make_crystal(film,symor,atomid,atompos,atomlabel,amat,dvac,noco,&
+           cell,sym,atoms)          
 
-      CALL make_crystal(film, symor,atomid,atompos,atomlabel,amat,dvac,noco,&
-           cell,sym,atoms)
-
-          
-
+      !All atom related parameters are set here. Note that some parameters might
+      !have been set in the read_input call before by adding defaults to the atompar module
       CALL make_atomic_defaults(cell,atoms)
 
+      !Set all defaults that have not been specified before or can not be specified in inpgen
+      call make_defaults(atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+&                   cell,sym,xcpot,noco,oneD,hybrid,kpts)
+
+      !
       !Now the IO-section
-      
-      CALL w_inpxml()
+      !
+
+      !the inp.xml file
+      CALL w_inpxml(&
+&                   atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+&                   div,l_gamma,& !should be in kpts!?
+&                   namex,relcor,dtild_opt,name_opt,&!?should be somewhere...
+&                   l_outFile,"inp.xml",&
+&                   l_explicit,enpara)
+
+      !the sym.xml file
       CALL write_sym()
-!
-! --> Structure in  xsf-format
-!
+      
+      ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
       CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)
       CLOSE (55)
