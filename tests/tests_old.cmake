@@ -32,8 +32,8 @@ endif()
 
 #Tests for LibXC
 if (${FLEUR_USE_LIBXC})
-    set(Testdirs ${Testdirs} CuBulkLibXC Fe_bct_LibXC)
-    set(ParTestdirs ${ParTestdirs} CuBulkLibXC Fe_bct_LibXC)
+   set(Testdirs ${Testdirs} CuBulkLibXC Fe_bct_LibXC, Diamond_SCAN)
+   set(ParTestdirs ${ParTestdirs} CuBulkLibXC Fe_bct_LibXC, Diamond_SCAN)
 endif()
 #The serial tests
 if (${FLEUR_USE_SERIAL})
