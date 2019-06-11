@@ -178,7 +178,6 @@
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,&
-                     atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
@@ -198,11 +197,11 @@
                 filename = ''
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
-                              atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+                              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
                               cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
-                              noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
-                              atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
-                             .TRUE.,numSpecies,enpara)
+                              namex,relcor,a1,a2,a3,dtild,input%comment,&
+                              .TRUE.,filename,&
+                             .TRUE.,enpara)
 
                 DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)

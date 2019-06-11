@@ -49,11 +49,8 @@ CONTAINS
     LOGICAL,          INTENT(OUT):: l_opti
 
 
-    INTEGER, ALLOCATABLE          :: atomTypeSpecies(:)
-    INTEGER, ALLOCATABLE          :: speciesRepAtomType(:)
-    CHARACTER(len=3), ALLOCATABLE :: noel(:)
     !     .. Local Scalars ..
-    INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType
+    INTEGER    :: i,n,l,m1,m2,isym,iisym,pc,iAtom,iType
     COMPLEX    :: cdum
     CHARACTER(len=4)              :: namex
     CHARACTER(len=12)             :: relcor, tempNumberString
@@ -218,17 +215,15 @@ CONTAINS
           WRITE(*,*) 'Also the generated XML input file is not meant to be'
           WRITE(*,*) 'beautiful.'
           WRITE(*,*) ''
-          ALLOCATE(noel(atoms%ntype),atomTypeSpecies(atoms%ntype),speciesRepAtomType(atoms%ntype))
           ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
           filename = 'inpConverted.xml'
           DO i = 1, atoms%nat
              WRITE(atoms%label(i),'(i0)') i
           END DO
+          ALLOCATE(atoms%speciesName(atoms%ntype))
           DO iType = 1, atoms%ntype
-             noel(iType) = namat_const(atoms%nz(iType))
-             atomTypeSpecies(iType) = iType
-             speciesRepAtomType(iType) = iType
-
+             WRITE(tempNumberString,'(i0)') iType
+             atoms%speciesName(itype) = TRIM(ADJUSTL(namat_const(atoms%nz(iType)))) // '-' // TRIM(ADJUSTL(tempNumberString))
              hybrid%lcutm1(iType) = 4
              hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
              hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
@@ -239,27 +234,17 @@ CONTAINS
           hybrid%lexp = 16
           hybrid%bands1 = max( nint(input%zelec)*10, 60 )
 
-          numSpecies = SIZE(speciesRepAtomType)
-          ALLOCATE(atoms%speciesName(numSpecies))
-          atoms%speciesName = ''
-          DO i = 1, numSpecies
-             tempNumberString = ''
-             WRITE(tempNumberString,'(i0)') i
-             atoms%speciesName(i) = TRIM(ADJUSTL(noel(speciesRepAtomType(i)))) // '-' // TRIM(ADJUSTL(tempNumberString))
-          END DO
           a1(:) = a1(:) / input%scaleCell
           a2(:) = a2(:) / input%scaleCell
           a3(:) = a3(:) / input%scaleCell
           kpts%specificationType = 3
           sym%symSpecType = 3
           CALL w_inpXML(&
-               atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
                cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
-               noel,namex,relcor,a1,a2,a3,cell%amat(3,3),input%comment,&
-               atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
-               .TRUE.,numSpecies,enpara)
-          DEALLOCATE(atoms%speciesName, atoms%label)
-          DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
+               namex,relcor,a1,a2,a3,cell%amat(3,3),input%comment,&
+               .FALSE.,filename,&
+               .TRUE.,enpara)
           CALL juDFT_end("Fleur inp to XML input conversion completed.")
        END IF
     END IF ! mpi%irank.eq.0

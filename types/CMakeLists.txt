@@ -1,5 +1,5 @@
 set(fleur_F77 ${fleur_F77}
-)
+) 
 set(fleur_F90 ${fleur_F90}
 types/types.F90
 types/types_mat.F90
@@ -28,6 +28,12 @@ types/types_gpumat.F90
 types/types_econfig.F90
 types/types_cell.f90
 types/types_sym.f90
+types/types_input.f90
+types/types_sliceplot.f90
+types/types_oneD.f90
+types/types_hybrid.f90
+types/types_noco.f90
+types/types_banddos.f90
 )
 
 set(inpgen_F90 ${inpgen_F90}

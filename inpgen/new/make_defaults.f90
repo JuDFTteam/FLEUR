@@ -12,8 +12,8 @@ MODULE m_make_defaults
 !  help in the out-file.                                        gb`02
 !---------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE make_defaults(atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-&                   cell,sym,xcpot,noco,oneD,hybrid,kpts)
+  SUBROUTINE make_defaults(atoms,vacuum,input,stars,&
+&                   cell,sym,xcpot,noco,hybrid,kpts)
      &                  title
 
       USE m_types
@@ -61,48 +61,21 @@ CONTAINS
       ! Set parameters to defaults that can not be given to inpgen
       ch_rw = 'w'
       sym%namgrp= 'any ' 
-      banddos%dos   = .false. ; banddos%l_mcd = .false. ; banddos%unfoldband = .FALSE. ; input%secvar = .false.
-      input%vchk = .false. ; input%cdinf = .false. 
-      input%l_bmt= .false. ; input%eonly  = .false.
-      input%gauss= .false. ; input%tria  = .false. 
-      sliceplot%slice= .false. ;  input%swsp  = .false.
-      input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
-      sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
-      input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
-      input%strho  = .false.  ; input%l_f = .false. 
-      noco%l_noco = noco%l_ss ;   input%jspins = 1
-      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
-      input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
-      input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
-      sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
+      vacuum%nstars = 0 ; vacuum%nstm = 0 
       nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
-      banddos%ndir = 0 ; vacuum%layers = 0  ; vacuum%izlay(:,:) = 0
-      banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
+      vacuum%layers = 0  ; vacuum%izlay(:,:) = 0
       
-      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix=0
-      sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
-      banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
-      input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
+      
+      vacuum%tworkf = 0.0 ; scpos = 1.0
       zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
       kpts%numSpecialPoints = 0
-      input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
-      input%l_wann = .FALSE.
-      input%gw = 0
+     
 
-!+odim
-      oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
-      oneD%odd%k3 = 0 ; oneD%odd%n2d= 0 ; oneD%odd%nq2 = 0 ; oneD%odd%nn2d = 0 
-      oneD%odd%nop = 0 ; oneD%odd%kimax2 = 0 ; oneD%odd%nat = 0
-      oneD%odd%invs = .false. ; oneD%odd%zrfs = .false. ; oneD%odd%d1 = .false.
-!-odim
 
 
       input%delgau = input%tkb
-      DO i = 1, 10
-        j = (i-1) * 8 + 1
-        input%comment(i) = title(j:j+7)
-      ENDDO 
+      input%comment = title
       IF (noco%l_noco) input%jspins = 2
        
 
@@ -127,13 +100,10 @@ CONTAINS
 
 !HF   added for HF and hybrid functionals
       hybrid%gcutm1       = input%rkmax - 0.5
-      hybrid%tolerance1   = 1e-4
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
       ALLOCATE(hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype))
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
-      hybrid%ewaldlambda = 3
-      hybrid%lexp        = 16
       hybrid%lcutm1      = 4
       hybrid%select1(1,:) = 4
       hybrid%select1(2,:) = 0
@@ -216,9 +186,6 @@ CONTAINS
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
    
       IF (noco%l_ss) input%ctail = .FALSE.
-      noco%l_mperp = .FALSE.
-      noco%l_constr = .FALSE.
-      noco%mix_b = 0.0
       noco%qss = merge(noco%qss,[0.0,0.0,0.0],noco%l_ss)
 
       noco%l_relax(:) = .FALSE.

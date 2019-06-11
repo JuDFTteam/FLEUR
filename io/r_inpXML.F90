@@ -98,6 +98,8 @@ CONTAINS
       LOGICAL :: kptGamma, l_relcor,ldummy
       INTEGER :: iAtomType
       CHARACTER(len=100) :: xPosString, yPosString, zPosString
+      CHARACTER(len=20),ALLOCATABLE :: speciesName(:)
+      
       !   REAL :: tempTaual(3,atoms%nat)
       TYPE(t_econfig)  :: econf
 
@@ -262,12 +264,8 @@ CONTAINS
       DO i = 1, LEN(TRIM(ADJUSTL(valueString)))
          IF (valueString(i:i) == ACHAR(10)) valueString(i:i) = ' ' !remove line breaks
       END DO
-      valueString = TRIM(ADJUSTL(valueString))
-      DO i = 1, 10
-         j = (i-1) * 8 + 1
-         input%comment(i) = valueString(j:j+7)
-      END DO
-
+      input%comment = TRIM(ADJUSTL(valueString))
+    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of calculationSetup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1354,8 +1352,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
        
          DO iType = 1, atoms%ntype
             WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
-            atom%speciesName(iType) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-            IF(TRIM(ADJUSTL(speciesName(iSpecies))).EQ.TRIM(ADJUSTL(atom%speciesName(iType)))) THEN
+            atoms%speciesName(iType) = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+            IF(TRIM(ADJUSTL(speciesName(iSpecies))).EQ.TRIM(ADJUSTL(atoms%speciesName(iType)))) THEN
                atoms%nz(iType) = atomicNumber
                atoms%zatom(iType) = atoms%nz(iType)
                IF (atoms%nz(iType).EQ.0) THEN

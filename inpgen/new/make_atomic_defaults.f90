@@ -9,49 +9,19 @@ MODULE m_make_atomic_defaults
   IMPLICIT NONE
 
 CONTAINS
-  SUBROUTINE make_atomic_defaults(atoms,sym)
-    
-
-
-
-    CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
-
-     ALLOCATE (atomTypeSpecies(atoms%ntype))
-      ALLOCATE (speciesRepAtomType(atoms%nat))
-      ALLOCATE (atoms%speciesName(atoms%nat))
-      elementNumSpecies = 0
-      numSpecies = 0
-      speciesRepAtomType = -1
-      atomTypeSpecies = -1
-      atoms%speciesName = ''
-      DO i = 1, atoms%nat
-         newSpecies = .TRUE.
-         DO j = 1, i-1
-            IF(atomid(i).EQ.atomid(j)) THEN
-               newSpecies = .FALSE.
-               atomTypeSpecies(natype(i)) = atomTypeSpecies(natype(j))
-               EXIT
-            END IF
-         END DO
-         IF(newSpecies) THEN
-            numSpecies = numSpecies + 1
-            speciesRepAtomType(numSpecies) = natype(i)
-            atomTypeSpecies(natype(i)) = numSpecies
-            element = nint(atoms%zatom(natype(i)))
-            elementNumSpecies(element) = elementNumSpecies(element) + 1
-            tempNumberString = ''
-            WRITE(tempNumberString,'(i0)') elementNumSpecies(element)
-            atoms%speciesName(numSpecies) = &
-               TRIM(ADJUSTL(namat_const(element))) // '-' // TRIM(ADJUSTL(tempNumberString))
-         END IF
-      END DO
-
-
-         DATA xmlCoreRefOccs /2,2,2,4,2,2,4,2,4,6,2,4,2,4,6,2,4,2,6,8,4,&
-     &                     6,2,4,2,6,8,4,6/
-      xmlElectronStates = noState_const
-      xmlPrintCoreStates = .FALSE.
-      xmlCoreOccs = 0.0
+  SUBROUTINE make_atomic_defaults(input,vacuum,cell,oneD,atoms)
+    USE m_check_mt_radii
+    USE m_atompar
+    TYPE(t_atoms),INTENT(INOUT) :: atoms
+      TYPE(t_input),INTENT(IN)    :: input
+      TYPE(t_vacuum),INTENT(IN)   :: vacuum
+      TYPE(t_cell),INTENT(IN)     :: cell
+      TYPE(t_oneD),INTENT(IN)     :: oneD
+      
+      INTEGER :: i,l
+      
+      CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
+      TYPE(t_atompar):: ap
 
       atoms%nlod=9  ! This fixed dimensioning might have to be made more dynamical!
       ALLOCATE(atoms%nz(atoms%ntype))
@@ -100,7 +70,7 @@ CONTAINS
          atoms%nlo(n)len_TRIM(ap%lo)/2
          DO i=1,atoms%nlo
             DO l = 0, 3
-               IF (ap%lo(2*i:2*) == lotype(l)) atoms%llo(i,n) = l         
+               IF (ap%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l         
             ENDDO
          ENDDO
          atoms%ulo_der(:,n)=.FALSE.
@@ -118,8 +88,6 @@ CONTAINS
          atoms%dx(:)   = REAL(NINT(atoms%dx(:)   * 1000) / 1000.)
       END DO
       
-
-
 
     END SUBROUTINE make_atomic_defaults
   END MODULE m_make_atomic_defaults

@@ -71,11 +71,11 @@ PROGRAM inpgen
 
       !All atom related parameters are set here. Note that some parameters might
       !have been set in the read_input call before by adding defaults to the atompar module
-      CALL make_atomic_defaults(cell,atoms)
+      CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms)
 
       !Set all defaults that have not been specified before or can not be specified in inpgen
       call make_defaults(atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-&                   cell,sym,xcpot,noco,oneD,hybrid,kpts)
+           cell,sym,xcpot,noco,oneD,hybrid,kpts)
 
       !
       !Now the IO-section
@@ -83,13 +83,13 @@ PROGRAM inpgen
 
       !the inp.xml file
       CALL w_inpxml(&
-&                   atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-&                   div,l_gamma,& !should be in kpts!?
-&                   namex,relcor,dtild_opt,name_opt,&!?should be somewhere...
-&                   l_outFile,"inp.xml",&
-&                   l_explicit,enpara)
-
+           atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+           cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+           div,l_gamma,& !should be in kpts!?
+           namex,relcor,dtild_opt,name_opt,&!?should be somewhere...
+           l_outFile,"inp.xml",&
+           l_explicit,enpara)
+      
       !the sym.xml file
       CALL write_sym()
       

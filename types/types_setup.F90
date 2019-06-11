@@ -10,57 +10,13 @@ MODULE m_types_setup
    !*************************************************************
   USE m_types_cell
   USE m_types_sym
-  use m_types_econfig
-  ! types for 1D calculations
-   TYPE od_dim
-      LOGICAL :: d1
-      INTEGER :: mb, M, k3, m_cyl
-      INTEGER :: chi, rot
-      LOGICAL :: invs, zrfs
-      INTEGER :: n2d, nq2, nn2d
-      INTEGER :: kimax2
-      INTEGER :: nop, nat
-   END TYPE od_dim
-
-   TYPE od_inp
-      LOGICAL :: d1
-      INTEGER :: mb, M, k3, m_cyl
-      INTEGER :: chi, rot
-      LOGICAL :: invs, zrfs
-      INTEGER :: n2d, nq2, nn2d
-      INTEGER :: kimax2
-      INTEGER, POINTER :: ig(:, :)  !(-k3:k3,-M:M)
-      INTEGER, POINTER :: kv(:, :)        !(2,n2d)
-      INTEGER, POINTER :: nst2(:)        !(n2d)
-   END TYPE od_inp
-
-   TYPE od_sym
-      INTEGER :: nop, nat
-      INTEGER, POINTER :: ngopr(:)     !(nat)
-      REAL, POINTER :: mrot(:, :, :)  !(3,3,nop)
-      REAL, POINTER :: tau(:, :)     !(3,nop)
-      INTEGER, POINTER :: invtab(:)    !(nop)
-      INTEGER, POINTER :: multab(:, :)  !(nop,nop)
-   END TYPE od_sym
-
-   TYPE od_lda
-      INTEGER :: nn2d
-      INTEGER, POINTER :: igf(:, :)  !(0:nn2d-1,2)
-      REAL, POINTER :: pgf(:)    !(0:nn2d-1)
-   END TYPE od_lda
-
-   TYPE od_gga
-      INTEGER          :: nn2d
-      REAL, POINTER    :: pgfx(:)  ! (0:nn2d-1)
-      REAL, POINTER    :: pgfy(:)
-      REAL, POINTER    :: pgfxx(:)
-      REAL, POINTER    :: pgfyy(:)
-      REAL, POINTER    :: pgfxy(:)
-   END TYPE od_gga
-
-   !
-   ! Type for LDA+U:
-   !
+  USE m_types_banddos
+  USE m_types_econfig
+  USE m_types_input
+  USE m_types_sliceplot
+  USE m_types_oneD
+  USE m_types_hybrid
+  USE m_types_noco
    TYPE t_utype
       SEQUENCE
       REAL :: u, j         ! the actual U and J parameters
@@ -231,67 +187,8 @@ MODULE m_types_setup
       REAL, ALLOCATABLE    :: ufft(:)
    END TYPE t_stars
 
-   TYPE t_oneD
-      TYPE(od_dim) :: odd
-      TYPE(od_inp) :: odi
-      TYPE(od_sym) :: ods
-      TYPE(od_lda) :: odl
-      TYPE(od_gga) :: odg
-      INTEGER, POINTER :: ig1(:, :)
-      INTEGER, POINTER :: kv1(:, :)
-      INTEGER, POINTER :: nstr1(:)
-      INTEGER, POINTER :: ngopr1(:)
-      REAL, POINTER :: mrot1(:, :, :)
-      REAL, POINTER :: tau1(:, :)
-      INTEGER, POINTER :: invtab1(:)
-      INTEGER, POINTER :: multab1(:, :)
-      INTEGER, POINTER :: igfft1(:, :)
-      REAL, POINTER :: pgfft1(:)
-      REAL, POINTER :: pgft1x(:)
-      REAL, POINTER :: pgft1y(:)
-      REAL, POINTER :: pgft1xx(:)
-      REAL, POINTER :: pgft1yy(:)
-      REAL, POINTER :: pgft1xy(:)
-   END TYPE t_oneD
+  
 
-   TYPE t_hybrid
-      LOGICAL               ::  l_hybrid = .false.
-      LOGICAL               ::  l_subvxc = .false.
-      LOGICAL               ::  l_calhf = .false.
-      LOGICAL               ::  l_addhf = .false.
-      INTEGER               ::  ewaldlambda
-      INTEGER               ::  lexp
-      INTEGER               ::  bands1 !Only read in
-      INTEGER               ::  nbasp
-      INTEGER               ::  maxlcutm1
-      INTEGER               ::  maxindxm1
-      INTEGER               ::  maxbasm1
-      INTEGER               ::  maxindxp1
-      INTEGER               ::  maxgptm
-      INTEGER               ::  maxgptm1
-      INTEGER               ::  maxindx
-      INTEGER               ::  maxlmindx
-      INTEGER               ::  gptmd
-      INTEGER, ALLOCATABLE   ::  nindx(:, :)
-      INTEGER, ALLOCATABLE   ::  select1(:, :)
-      INTEGER, ALLOCATABLE   ::  lcutm1(:)
-      INTEGER, ALLOCATABLE   ::  nindxm1(:, :)
-      INTEGER, ALLOCATABLE   ::  gptm(:, :)
-      INTEGER, ALLOCATABLE   ::  ngptm1(:)
-      INTEGER, ALLOCATABLE   ::  pgptm1(:, :)
-      INTEGER, ALLOCATABLE   ::  ngptm(:)
-      INTEGER, ALLOCATABLE   ::  pgptm(:, :)
-      INTEGER, ALLOCATABLE   ::  lcutwf(:)
-      INTEGER, ALLOCATABLE   ::  map(:, :)
-      INTEGER, ALLOCATABLE   ::  tvec(:, :, :)
-      INTEGER, ALLOCATABLE ::  nbasm(:)
-      REAL                  ::  gcutm1
-      REAL                  ::  tolerance1  !only read in
-      REAL, ALLOCATABLE   ::  basm1(:, :, :, :)
-      COMPLEX, ALLOCATABLE   ::  d_wgn2(:, :, :, :)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:)                   !alloc in eigen_HF_init
-      REAL, ALLOCATABLE   ::  div_vv(:, :, :)
-   END TYPE t_hybrid
 
    TYPE t_dimension
       INTEGER :: nspd
@@ -307,122 +204,7 @@ MODULE m_types_setup
       INTEGER :: nbasfcn
    END TYPE t_dimension
 
-   TYPE t_noco
-      LOGICAL:: l_noco
-      LOGICAL:: l_ss
-      LOGICAL:: l_mperp
-      LOGICAL:: l_constr
-      LOGICAL:: l_mtNocoPot
-      REAL:: qss(3)
-      REAL:: mix_b
-      LOGICAL, ALLOCATABLE :: l_relax(:)
-      REAL, ALLOCATABLE :: alphInit(:)
-      REAL, ALLOCATABLE :: alph(:)
-      REAL, ALLOCATABLE :: beta(:)
-      REAL, ALLOCATABLE :: b_con(:, :)
-      LOGICAL           :: l_soc
-      LOGICAL           :: l_spav
-      REAL              :: theta
-      REAL              :: phi
-      REAL, ALLOCATABLE  :: socscale(:)
-   END TYPE t_noco
-
-   TYPE t_input
-      LOGICAL :: strho
-      LOGICAL :: cdinf
-      LOGICAL :: vchk
-      LOGICAL :: l_f
-      LOGICAL :: eonly
-      LOGICAL :: film
-      LOGICAL :: ctail
-      INTEGER :: coretail_lmax
-      INTEGER :: itmax
-      REAL    :: minDistance
-      INTEGER :: maxiter
-      INTEGER :: imix
-      INTEGER :: gw
-      INTEGER :: gw_neigd
-      INTEGER :: qfix
-      REAL    :: forcealpha !< mixing parameter for geometry optimzer
-      REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
-      REAL    :: epsforce !< minimal force. If all forces <epsforce stop
-      REAL    :: force_converged=0.00001
-      INTEGER :: forcemix=3
-      REAL    :: delgau
-      REAL    :: alpha
-      REAL    :: preconditioning_param
-      REAL    :: spinf
-      REAL    :: tkb
-      LOGICAL :: gauss
-      LOGICAL :: l_bmt
-      !INTEGER:: scale
-      INTEGER:: jspins
-      INTEGER:: kcrel
-      LOGICAL:: frcor
-      LOGICAL:: lflip
-      LOGICAL:: score
-      LOGICAL:: swsp
-      LOGICAL:: tria
-      LOGICAL:: integ
-      LOGICAL:: pallst
-      LOGICAL:: l_coreSpec
-      LOGICAL:: l_wann
-      LOGICAL:: secvar
-      LOGICAL:: evonly
-      LOGICAL:: total
-      LOGICAL:: l_inpXML
-      REAL :: scaleCell
-      REAL :: scaleA1
-      REAL :: scaleA2
-      REAL :: scaleC
-      REAL :: ellow
-      REAL :: elup
-      REAL :: rkmax
-      REAL :: zelec
-      REAL :: fixed_moment = 0.0
-      CHARACTER(LEN=8) :: comment(10)
-      REAL, POINTER :: sigma !this is the difference in charge due to the electric field it points to the value stored in t_efield
-      LOGICAL :: l_core_confpot
-      LOGICAL :: l_useapw
-      LOGICAL :: ldauLinMix
-      REAL    :: ldauMixParam
-      REAL    :: ldauSpinf
-      LOGICAL :: l_rdmft
-      REAL    :: rdmftOccEps
-      INTEGER :: rdmftStatesBelow
-      INTEGER :: rdmftStatesAbove
-      INTEGER :: rdmftFunctional
-   END TYPE t_input
-
-   TYPE t_sliceplot
-      LOGICAL :: iplot
-      LOGICAL :: slice
-      LOGICAL :: plpot
-      INTEGER :: kk
-      INTEGER :: nnne
-      REAL    :: e1s
-      REAL    :: e2s
-   END TYPE t_sliceplot
-
-   TYPE t_banddos
-      LOGICAL :: dos
-      LOGICAL :: band
-      LOGICAL :: l_mcd
-      LOGICAL :: l_orb
-      LOGICAL :: vacdos
-      INTEGER :: ndir
-      INTEGER :: orbCompAtom
-      REAL    :: e1_dos
-      REAL    :: e2_dos
-      REAL    :: sig_dos
-      REAL    :: e_mcd_lo
-      REAL    :: e_mcd_up
-      LOGICAL :: unfoldband
-      INTEGER :: s_cell_x
-      INTEGER :: s_cell_y
-      INTEGER :: s_cell_z
-      REAL    :: alpha,beta,gamma !For orbital decomp. (was orbcomprot)
-   END TYPE t_banddos
+  
 
    TYPE t_obsolete
       INTEGER:: lepr !floating energy parameters...

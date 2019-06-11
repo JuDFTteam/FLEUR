@@ -11,7 +11,7 @@
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt)
+     &                  noel,namex,relcor,a1,a2,a3,dtild_opt)!,name_opt)
 
 !*********************************************************************
 !* This subroutine reads or writes an inp - file on unit iofile      *
@@ -46,11 +46,11 @@
       CHARACTER(len=4),INTENT(OUT) :: namex 
       CHARACTER(len=12),INTENT(OUT):: relcor
       REAL,INTENT(IN),OPTIONAL     :: dtild_opt
-      CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
+      !CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
 
 
 
-      CHARACTER(len=8) :: name(10)
+      CHARACTER(len=80) :: name
 
 !+lda+u
       REAL    u,j
@@ -87,7 +87,7 @@
       CHARACTER (len=1)     ::  check
 
       IF (PRESENT(dtild_opt)) dtild=dtild_opt
-      IF (PRESENT(name_opt)) name=name_opt
+      !IF (PRESENT(name_opt)) name=name_opt
 
 !     Initialize variables
       l_hyb = .false.

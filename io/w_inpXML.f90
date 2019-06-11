@@ -60,7 +60,7 @@ SUBROUTINE w_inpXML(&
    INTEGER          :: iSpecies, fileNum
    CHARACTER(len=8) :: name(10)
    INTEGER          :: numSpecies
-   INTEGER          :: speciesRepAtomType(numSpecies)
+   INTEGER          :: speciesRepAtomType(atoms%ntype)
    CHARACTER(len=20):: speciesNames(atoms%ntype)
    LOGICAL          :: known_species
    
@@ -438,7 +438,7 @@ SUBROUTINE w_inpXML(&
    speciesNames=''
    numSpecies=0
    DO n=1,atoms%ntype
-      known_species=any(trim(adjustl(atoms%speciesname(n)))==trim(adjustl(speciesNames(:numSpecies))))
+      known_species=ANY(atoms%speciesname(n)==speciesNames(:numSpecies))
       if (.not.known_species) THEN
          numSpecies=numSpecies+1
          speciesNames(numSpecies)=atoms%speciesname(n)
@@ -455,7 +455,7 @@ SUBROUTINE w_inpXML(&
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
       300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
-      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(namat_const(nint(atoms%nz(iAtomType)+1)))),atoms%nz(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
+      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)+1))),atoms%nz(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
       310 FORMAT('         <mtSphere radius="',f0.8,'" gridPoints="',i0,'" logIncrement="',f0.8,'"/>')
@@ -525,10 +525,9 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,'(a)') '   <atomGroups>'
    na = 0
    DO iAtomType=1, atoms%ntype
-      iSpecies = atomTypeSpecies(iAtomType)
 !      <atomGroup species="Si-1">
       330 FORMAT('      <atomGroup species="',a,'">')
-      speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
+      speciesName = TRIM(ADJUSTL(atoms%speciesName(iAtomType)))
       WRITE (fileNum,330) TRIM(ADJUSTL(speciesName))
 
       DO ieq=1,atoms%neq(iAtomType)
