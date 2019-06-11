@@ -213,27 +213,6 @@ MODULE m_types_setup
       LOGICAL :: lwb   !remove
    END TYPE t_obsolete
 
-   TYPE t_vacuum
-      !Stuff for the vacuum
-      INTEGER ::nmz
-      INTEGER ::nmzd
-      INTEGER ::nmzxy
-      INTEGER ::nmzxyd
-      INTEGER :: layerd
-      INTEGER :: layers
-      INTEGER :: nvac
-      INTEGER :: nvacd
-      REAL :: delz
-      REAL :: dvac
-      INTEGER::nstars
-      INTEGER:: nstm
-      REAL :: tworkf
-      REAL :: locx(2)
-      REAL :: locy(2)
-      LOGICAL ::starcoeff
-      INTEGER, ALLOCATABLE :: izlay(:, :)
-   END TYPE t_vacuum
-
    !Data for the spherical harmonics
    TYPE t_sphhar
       !No of symmetry types (must
