@@ -103,7 +103,7 @@ CONTAINS
        l_relax=sum<input%force_converged
        IF (.NOT.l_relax) THEN
           WRITE (6,8020) input%force_converged,sum
-8020      FORMAT ('No new postions, force convergence required=',f8.5,'max force distance=',f8.5)
+8020      FORMAT ('No new postions, force convergence required=',f8.5,'; max force distance=',f8.5)
        END IF
     ENDIF
 #ifdef CPP_MPI
