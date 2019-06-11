@@ -85,7 +85,6 @@ CONTAINS
 
          IF(xcpot%kinED%set) THEN
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, xcpot%kinED%is, mt_call=.False.)
-            xcpot%lapl%is = grad%laplace
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
          ENDIF
