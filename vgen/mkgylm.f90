@@ -89,268 +89,269 @@ CONTAINS
          RETURN !Do not calculate arrays for in-build GGA
       END IF
       !     Old code for in-build xcpots
-      IF (jspins==1) THEN
-
-         points_1 : DO i = 1,nsp
-
-            grad%agrt(kt+i)  = 0.0
-            grad%agru(kt+i)  = 0.0
-            grad%agrd(kt+i)  = 0.0
-            grad%g2rt(kt+i)  = 0.0
-            grad%g2ru(kt+i)  = 0.0
-            grad%g2rd(kt+i)  = 0.0
-            grad%gggrt(kt+i) = 0.0
-            grad%gggru(kt+i) = 0.0
-            grad%gggrd(kt+i) = 0.0
-            grad%grgru(kt+i) = 0.0
-            grad%grgrd(kt+i) = 0.0
-            grad%gzgr(kt+i)  = 0.0
+      IF(allocated(grad%agrt)) THEN
+         IF (jspins==1) THEN
+
+            points_1 : DO i = 1,nsp
+
+               grad%agrt(kt+i)  = 0.0
+               grad%agru(kt+i)  = 0.0
+               grad%agrd(kt+i)  = 0.0
+               grad%g2rt(kt+i)  = 0.0
+               grad%g2ru(kt+i)  = 0.0
+               grad%g2rd(kt+i)  = 0.0
+               grad%gggrt(kt+i) = 0.0
+               grad%gggru(kt+i) = 0.0
+               grad%gggrd(kt+i) = 0.0
+               grad%grgru(kt+i) = 0.0
+               grad%grgrd(kt+i) = 0.0
+               grad%gzgr(kt+i)  = 0.0
 
-            ro = rh(i,1)
+               ro = rh(i,1)
 
-            IF (ro<chsml) CYCLE points_1
-            sint1 = sin(thet(i))
-            sint2 = sint1**2
-            tant1 = tan(thet(i))
-            rvsin1 = rv1*sint1
+               IF (ro<chsml) CYCLE points_1
+               sint1 = sin(thet(i))
+               sint2 = sint1**2
+               tant1 = tan(thet(i))
+               rvsin1 = rv1*sint1
 
-            rou   = ro/2
-            rdru  = rhdr(i,1)/2
-            rdtu  = rhdt(i,1)/2
-            rdfu  = rhdf(i,1)/2
-            rdrru = rhdrr(i,1)/2
-            rdttu = rhdtt(i,1)/2
-            rdffu = rhdff(i,1)/2
-            rdtfu = rhdtf(i,1)/2
-            rdrtu = rhdrt(i,1)/2
-            rdrfu = rhdrf(i,1)/2
+               rou   = ro/2
+               rdru  = rhdr(i,1)/2
+               rdtu  = rhdt(i,1)/2
+               rdfu  = rhdf(i,1)/2
+               rdrru = rhdrr(i,1)/2
+               rdttu = rhdtt(i,1)/2
+               rdffu = rhdff(i,1)/2
+               rdtfu = rhdtf(i,1)/2
+               rdrtu = rhdrt(i,1)/2
+               rdrfu = rhdrf(i,1)/2
 
-            rod   = rou
-            rdrd  = rdru
-            rdtd  = rdtu
-            rdfd  = rdfu
-            rdrrd = rdrru
-            rdttd = rdttu
-            rdffd = rdffu
-            rdtfd = rdtfu
-            rdrtd = rdrtu
-            rdrfd = rdrfu
+               rod   = rou
+               rdrd  = rdru
+               rdtd  = rdtu
+               rdfd  = rdfu
+               rdrrd = rdrru
+               rdttd = rdttu
+               rdffd = rdffu
+               rdtfd = rdtfu
+               rdrtd = rdrtu
+               rdrfd = rdrfu
 
-            rdr  = rdru  + rdrd
-            rdt  = rdtu  + rdtd
-            rdf  = rdfu  + rdfd
-            drdr = rdrru + rdrrd
-            rdtt = rdttu + rdttd
-            rdff = rdffu + rdffd
-            rdtf = rdtfu + rdtfd
-            rdrt = rdrtu + rdrtd
-            rdrf = rdrfu + rdrfd
+               rdr  = rdru  + rdrd
+               rdt  = rdtu  + rdtd
+               rdf  = rdfu  + rdfd
+               drdr = rdrru + rdrrd
+               rdtt = rdttu + rdttd
+               rdff = rdffu + rdffd
+               rdtf = rdtfu + rdtfd
+               rdrt = rdrtu + rdrtd
+               rdrf = rdrfu + rdrfd
 
-            ro2 = ro**2
+               ro2 = ro**2
 
-            grr = rdr
-            grt = rdt/rv1
-            grf = rdf/rvsin1
+               grr = rdr
+               grt = rdt/rv1
+               grf = rdf/rvsin1
 
-            grad%agrt(kt+i) = sqrt(grr**2+grt**2+grf**2)
+               grad%agrt(kt+i) = sqrt(grr**2+grt**2+grf**2)
 
-            IF (grad%agrt(kt+i)<chsml) CYCLE points_1
+               IF (grad%agrt(kt+i)<chsml) CYCLE points_1
 
-            dagrr = (rdr*drdr*rv3+rdt* (rdrt*rv1-rdt)+ &
-                     rdf* (rdrf*rv1-rdf)/sint2)/grad%agrt(kt+i)/rv3
+               dagrr = (rdr*drdr*rv3+rdt* (rdrt*rv1-rdt)+ &
+                        rdf* (rdrf*rv1-rdf)/sint2)/grad%agrt(kt+i)/rv3
 
-            dagrt =(rdr*rdrt*rv2+rdt*rdtt+rdf* (-rdf/tant1+rdtf)/sint2)/&
-                    (grad%agrt(kt+i)*rv3)
+               dagrt =(rdr*rdrt*rv2+rdt*rdtt+rdf* (-rdf/tant1+rdtf)/sint2)/&
+                       (grad%agrt(kt+i)*rv3)
 
-            dagrf = (rdr*rdrf*rv2+rdt*rdtf+rdf*rdff/sint2)/&
-                    (grad%agrt(kt+i)*rv3*sint1)
+               dagrf = (rdr*rdrf*rv2+rdt*rdtf+rdf*rdff/sint2)/&
+                       (grad%agrt(kt+i)*rv3*sint1)
 
-            grad%g2rt(kt+i)=drdr+2.0*rdr/rv1+&
-                             (rdtt+rdt/tant1+rdff/sint2)/rv2
+               grad%g2rt(kt+i)=drdr+2.0*rdr/rv1+&
+                                (rdtt+rdt/tant1+rdff/sint2)/rv2
 
-            dzdr = ((rdru-rdrd)*ro- (rou-rod)*rdr)/ro2
+               dzdr = ((rdru-rdrd)*ro- (rou-rod)*rdr)/ro2
+
+               !--   >      dzdtr,dzdfs vanish by definition.
+
+               dzdtr = 0.0
+               dzdfs = 0.0
+
+               grad%gggrt(kt+i) = grr*dagrr + grt*dagrt + grf*dagrf
+
+               grad%gzgr(kt+i) = dzdr*grr + dzdtr*grt + dzdfs*grf
+
+               grru = rdru
+               grtu = rdtu/rv1
+               grfu = rdfu/rvsin1
+
+               grad%agru(kt+i) = sqrt(grru**2+grtu**2+grfu**2)
+
+               dagrru = (rdru*rdrru*rv3+rdtu* (rdrtu*rv1-rdtu)+&
+                         rdfu* (rdrfu*rv1-rdfu)/sint2)/grad%agru(kt+i)/rv3
+
+               dagrtu = (rdru*rdrtu*rv2+rdtu*rdttu+&
+                         rdfu* (-rdfu/tant1+rdtfu)/sint2)/ (grad%agru(kt+i)*rv3)
+
+               dagrfu = (rdru*rdrfu*rv2+rdtu*rdtfu+rdfu*rdffu/sint2)/&
+                        (grad%agru(kt+i)*rv3*sint1)
 
-            !--   >      dzdtr,dzdfs vanish by definition.
-
-            dzdtr = 0.0
-            dzdfs = 0.0
-
-            grad%gggrt(kt+i) = grr*dagrr + grt*dagrt + grf*dagrf
-
-            grad%gzgr(kt+i) = dzdr*grr + dzdtr*grt + dzdfs*grf
-
-            grru = rdru
-            grtu = rdtu/rv1
-            grfu = rdfu/rvsin1
-
-            grad%agru(kt+i) = sqrt(grru**2+grtu**2+grfu**2)
-
-            dagrru = (rdru*rdrru*rv3+rdtu* (rdrtu*rv1-rdtu)+&
-                      rdfu* (rdrfu*rv1-rdfu)/sint2)/grad%agru(kt+i)/rv3
-
-            dagrtu = (rdru*rdrtu*rv2+rdtu*rdttu+&
-                      rdfu* (-rdfu/tant1+rdtfu)/sint2)/ (grad%agru(kt+i)*rv3)
-
-            dagrfu = (rdru*rdrfu*rv2+rdtu*rdtfu+rdfu*rdffu/sint2)/&
-                     (grad%agru(kt+i)*rv3*sint1)
+               grad%g2ru(kt+i) = rdrru + 2.e0*rdru/rv1 +&
+                                 (rdttu+rdtu/tant1+rdffu/sint2)/rv2
 
-            grad%g2ru(kt+i) = rdrru + 2.e0*rdru/rv1 +&
-                              (rdttu+rdtu/tant1+rdffu/sint2)/rv2
+               grad%gggru(kt+i) = grru*dagrru + grtu*dagrtu + grfu*dagrfu
 
-            grad%gggru(kt+i) = grru*dagrru + grtu*dagrtu + grfu*dagrfu
+               grad%grgru(kt+i) = grr*grru + grt*grtu + grf*grfu
 
-            grad%grgru(kt+i) = grr*grru + grt*grtu + grf*grfu
+               grrd = rdrd
+               grtd = rdtd/rv1
+               grfd = rdfd/rvsin1
 
-            grrd = rdrd
-            grtd = rdtd/rv1
-            grfd = rdfd/rvsin1
+               grad%agrd(kt+i) = sqrt(grrd**2+grtd**2+grfd**2)
 
-            grad%agrd(kt+i) = sqrt(grrd**2+grtd**2+grfd**2)
+               dagrrd = (rdrd*rdrrd*rv3+rdtd* (rdrtd*rv1-rdtd)+&
+                         rdfd* (rdrfd*rv1-rdfd)/sint2)/grad%agrd(kt+i)/rv3
 
-            dagrrd = (rdrd*rdrrd*rv3+rdtd* (rdrtd*rv1-rdtd)+&
-                      rdfd* (rdrfd*rv1-rdfd)/sint2)/grad%agrd(kt+i)/rv3
+               dagrtd = (rdrd*rdrtd*rv2+rdtd*rdttd+&
+                         rdfd* (-rdfd/tant1+rdtfd)/sint2)/ (grad%agrd(kt+i)*rv3)
 
-            dagrtd = (rdrd*rdrtd*rv2+rdtd*rdttd+&
-                      rdfd* (-rdfd/tant1+rdtfd)/sint2)/ (grad%agrd(kt+i)*rv3)
+               dagrfd = (rdrd*rdrfd*rv2+rdtd*rdtfd+rdfd*rdffd/sint2)/&
+                        (grad%agrd(kt+i)*rv3*sint1)
 
-            dagrfd = (rdrd*rdrfd*rv2+rdtd*rdtfd+rdfd*rdffd/sint2)/&
-                     (grad%agrd(kt+i)*rv3*sint1)
+               grad%g2rd(kt+i) = rdrrd + 2*rdrd/rv1 +&
+                                 (rdttd+rdtd/tant1+rdffd/sint2)/rv2
 
-            grad%g2rd(kt+i) = rdrrd + 2*rdrd/rv1 +&
-                              (rdttd+rdtd/tant1+rdffd/sint2)/rv2
+               grad%gggrd(kt+i) = grrd*dagrrd + grtd*dagrtd + grfd*dagrfd
 
-            grad%gggrd(kt+i) = grrd*dagrrd + grtd*dagrtd + grfd*dagrfd
+               grad%grgrd(kt+i) = grr*grrd + grt*grtd + grf*grfd
 
-            grad%grgrd(kt+i) = grr*grrd + grt*grtd + grf*grfd
+            ENDDO points_1
 
-         ENDDO points_1
+         ELSE
 
-      ELSE
+            points_2 : DO i = 1,nsp
 
-         points_2 : DO i = 1,nsp
+               grad%agrt(kt+i)  = 0.0
+               grad%agru(kt+i)  = 0.0
+               grad%agrd(kt+i)  = 0.0
+               grad%g2rt(kt+i)  = 0.0
+               grad%g2ru(kt+i)  = 0.0
+               grad%g2rd(kt+i)  = 0.0
+               grad%gggrt(kt+i) = 0.0
+               grad%gggru(kt+i) = 0.0
+               grad%gggrd(kt+i) = 0.0
+               grad%grgru(kt+i) = 0.0
+               grad%grgrd(kt+i) = 0.0
+               grad%gzgr(kt+i)  = 0.0
 
-            grad%agrt(kt+i)  = 0.0
-            grad%agru(kt+i)  = 0.0
-            grad%agrd(kt+i)  = 0.0
-            grad%g2rt(kt+i)  = 0.0
-            grad%g2ru(kt+i)  = 0.0
-            grad%g2rd(kt+i)  = 0.0
-            grad%gggrt(kt+i) = 0.0
-            grad%gggru(kt+i) = 0.0
-            grad%gggrd(kt+i) = 0.0
-            grad%grgru(kt+i) = 0.0
-            grad%grgrd(kt+i) = 0.0
-            grad%gzgr(kt+i)  = 0.0
+               ro = rh(i,1) + rh(i,jspins)
 
-            ro = rh(i,1) + rh(i,jspins)
+               IF (ro<chsml) CYCLE points_2
 
-            IF (ro<chsml) CYCLE points_2
+               sint1 = sin(thet(i))
+               sint2 = sint1**2
+               tant1 = tan(thet(i))
+               rvsin1 = rv1*sint1
 
-            sint1 = sin(thet(i))
-            sint2 = sint1**2
-            tant1 = tan(thet(i))
-            rvsin1 = rv1*sint1
+               rou   = rh(i,1)
+               rdru  = rhdr(i,1)
+               rdtu  = rhdt(i,1)
+               rdfu  = rhdf(i,1)
+               rdrru = rhdrr(i,1)
+               rdttu = rhdtt(i,1)
+               rdffu = rhdff(i,1)
+               rdtfu = rhdtf(i,1)
+               rdrtu = rhdrt(i,1)
+               rdrfu = rhdrf(i,1)
 
-            rou   = rh(i,1)
-            rdru  = rhdr(i,1)
-            rdtu  = rhdt(i,1)
-            rdfu  = rhdf(i,1)
-            rdrru = rhdrr(i,1)
-            rdttu = rhdtt(i,1)
-            rdffu = rhdff(i,1)
-            rdtfu = rhdtf(i,1)
-            rdrtu = rhdrt(i,1)
-            rdrfu = rhdrf(i,1)
+               rod   = rh(i,jspins)
+               rdrd  = rhdr(i,jspins)
+               rdtd  = rhdt(i,jspins)
+               rdfd  = rhdf(i,jspins)
+               rdrrd = rhdrr(i,jspins)
+               rdttd = rhdtt(i,jspins)
+               rdffd = rhdff(i,jspins)
+               rdtfd = rhdtf(i,jspins)
+               rdrtd = rhdrt(i,jspins)
+               rdrfd = rhdrf(i,jspins)
 
-            rod   = rh(i,jspins)
-            rdrd  = rhdr(i,jspins)
-            rdtd  = rhdt(i,jspins)
-            rdfd  = rhdf(i,jspins)
-            rdrrd = rhdrr(i,jspins)
-            rdttd = rhdtt(i,jspins)
-            rdffd = rhdff(i,jspins)
-            rdtfd = rhdtf(i,jspins)
-            rdrtd = rhdrt(i,jspins)
-            rdrfd = rhdrf(i,jspins)
+               rdr   = rdru  + rdrd
+               rdt   = rdtu  + rdtd
+               rdf   = rdfu  + rdfd
+               drdr  = rdrru + rdrrd
+               rdtt  = rdttu + rdttd
+               rdff  = rdffu + rdffd
+               rdtf  = rdtfu + rdtfd
+               rdrt  = rdrtu + rdrtd
+               rdrf  = rdrfu + rdrfd
 
-            rdr   = rdru  + rdrd
-            rdt   = rdtu  + rdtd
-            rdf   = rdfu  + rdfd
-            drdr  = rdrru + rdrrd
-            rdtt  = rdttu + rdttd
-            rdff  = rdffu + rdffd
-            rdtf  = rdtfu + rdtfd
-            rdrt  = rdrtu + rdrtd
-            rdrf  = rdrfu + rdrfd
+               ro2 = ro**2
 
-            ro2 = ro**2
+               grr = rdr
+               grt = rdt/rv1
+               grf = rdf/rvsin1
 
-            grr = rdr
-            grt = rdt/rv1
-            grf = rdf/rvsin1
+               grad%agrt(kt+i) = sqrt(grr**2+grt**2+grf**2)
 
-            grad%agrt(kt+i) = sqrt(grr**2+grt**2+grf**2)
+               IF (grad%agrt(kt+i)<chsml) CYCLE points_2
 
-            IF (grad%agrt(kt+i)<chsml) CYCLE points_2
+               dagrr = (rdr*drdr*rv3+rdt* (rdrt*rv1-rdt)+ rdf* (rdrf*rv1-rdf)/sint2)/grad%agrt(kt+i)/rv3
 
-            dagrr = (rdr*drdr*rv3+rdt* (rdrt*rv1-rdt)+ rdf* (rdrf*rv1-rdf)/sint2)/grad%agrt(kt+i)/rv3
+               dagrt =(rdr*rdrt*rv2+rdt*rdtt+rdf* (-rdf/tant1+rdtf)/sint2)/ (grad%agrt(kt+i)*rv3)
 
-            dagrt =(rdr*rdrt*rv2+rdt*rdtt+rdf* (-rdf/tant1+rdtf)/sint2)/ (grad%agrt(kt+i)*rv3)
+               dagrf = (rdr*rdrf*rv2+rdt*rdtf+rdf*rdff/sint2)/(grad%agrt(kt+i)*rv3*sint1)
 
-            dagrf = (rdr*rdrf*rv2+rdt*rdtf+rdf*rdff/sint2)/(grad%agrt(kt+i)*rv3*sint1)
+               grad%g2rt(kt+i)= drdr+2.0*rdr/rv1+(rdtt+rdt/tant1+rdff/sint2)/rv2
 
-            grad%g2rt(kt+i)= drdr+2.0*rdr/rv1+(rdtt+rdt/tant1+rdff/sint2)/rv2
+               dzdr = ((rdru-rdrd)*ro- (rou-rod)*rdr)/ro2
 
-            dzdr = ((rdru-rdrd)*ro- (rou-rod)*rdr)/ro2
+               !     dzdtr,dzdfs vanish by definition.
+               dzdtr = 0.0
+               dzdfs = 0.0
 
-            !     dzdtr,dzdfs vanish by definition.
-            dzdtr = 0.0
-            dzdfs = 0.0
+               grad%gggrt(kt+i) = grr*dagrr + grt*dagrt + grf*dagrf
 
-            grad%gggrt(kt+i) = grr*dagrr + grt*dagrt + grf*dagrf
+               grad%gzgr(kt+i) = dzdr*grr + dzdtr*grt + dzdfs*grf
 
-            grad%gzgr(kt+i) = dzdr*grr + dzdtr*grt + dzdfs*grf
+               grru = rdru
+               grtu = rdtu/rv1
+               grfu = rdfu/rvsin1
 
-            grru = rdru
-            grtu = rdtu/rv1
-            grfu = rdfu/rvsin1
+               grad%agru(kt+i) = sqrt(grru**2+grtu**2+grfu**2)
 
-            grad%agru(kt+i) = sqrt(grru**2+grtu**2+grfu**2)
+               dagrru = (rdru*rdrru*rv3+rdtu* (rdrtu*rv1-rdtu)+&
+                         rdfu* (rdrfu*rv1-rdfu)/sint2)/grad%agru(kt+i)/rv3
 
-            dagrru = (rdru*rdrru*rv3+rdtu* (rdrtu*rv1-rdtu)+&
-                      rdfu* (rdrfu*rv1-rdfu)/sint2)/grad%agru(kt+i)/rv3
+               dagrtu = (rdru*rdrtu*rv2+rdtu*rdttu+ rdfu* (-rdfu/tant1+rdtfu)/sint2)/ (grad%agru(kt+i)*rv3)
 
-            dagrtu = (rdru*rdrtu*rv2+rdtu*rdttu+ rdfu* (-rdfu/tant1+rdtfu)/sint2)/ (grad%agru(kt+i)*rv3)
+               dagrfu = (rdru*rdrfu*rv2+rdtu*rdtfu+rdfu*rdffu/sint2)/ (grad%agru(kt+i)*rv3*sint1)
 
-            dagrfu = (rdru*rdrfu*rv2+rdtu*rdtfu+rdfu*rdffu/sint2)/ (grad%agru(kt+i)*rv3*sint1)
+               grad%g2ru(kt+i) = rdrru + 2.e0*rdru/rv1 + (rdttu+rdtu/tant1+rdffu/sint2)/rv2
 
-            grad%g2ru(kt+i) = rdrru + 2.e0*rdru/rv1 + (rdttu+rdtu/tant1+rdffu/sint2)/rv2
+               grad%gggru(kt+i) = grru*dagrru + grtu*dagrtu + grfu*dagrfu
 
-            grad%gggru(kt+i) = grru*dagrru + grtu*dagrtu + grfu*dagrfu
+               grad%grgru(kt+i) = grr*grru + grt*grtu + grf*grfu
 
-            grad%grgru(kt+i) = grr*grru + grt*grtu + grf*grfu
+               grrd = rdrd
+               grtd = rdtd/rv1
+               grfd = rdfd/rvsin1
 
-            grrd = rdrd
-            grtd = rdtd/rv1
-            grfd = rdfd/rvsin1
+               grad%agrd(kt+i) = sqrt(grrd**2+grtd**2+grfd**2)
 
-            grad%agrd(kt+i) = sqrt(grrd**2+grtd**2+grfd**2)
+               dagrrd = (rdrd*rdrrd*rv3+rdtd* (rdrtd*rv1-rdtd)+ rdfd* (rdrfd*rv1-rdfd)/sint2)/grad%agrd(kt+i)/rv3
 
-            dagrrd = (rdrd*rdrrd*rv3+rdtd* (rdrtd*rv1-rdtd)+ rdfd* (rdrfd*rv1-rdfd)/sint2)/grad%agrd(kt+i)/rv3
+               dagrtd = (rdrd*rdrtd*rv2+rdtd*rdttd+ rdfd* (-rdfd/tant1+rdtfd)/sint2)/ (grad%agrd(kt+i)*rv3)
 
-            dagrtd = (rdrd*rdrtd*rv2+rdtd*rdttd+ rdfd* (-rdfd/tant1+rdtfd)/sint2)/ (grad%agrd(kt+i)*rv3)
+               dagrfd = (rdrd*rdrfd*rv2+rdtd*rdtfd+rdfd*rdffd/sint2)/ (grad%agrd(kt+i)*rv3*sint1)
 
-            dagrfd = (rdrd*rdrfd*rv2+rdtd*rdtfd+rdfd*rdffd/sint2)/ (grad%agrd(kt+i)*rv3*sint1)
+               grad%g2rd(kt+i) = rdrrd + 2*rdrd/rv1 + (rdttd+rdtd/tant1+rdffd/sint2)/rv2
 
-            grad%g2rd(kt+i) = rdrrd + 2*rdrd/rv1 + (rdttd+rdtd/tant1+rdffd/sint2)/rv2
+               grad%gggrd(kt+i) = grrd*dagrrd + grtd*dagrtd + grfd*dagrfd
 
-            grad%gggrd(kt+i) = grrd*dagrrd + grtd*dagrtd + grfd*dagrfd
+               grad%grgrd(kt+i) = grr*grrd + grt*grtd + grf*grfd
 
-            grad%grgrd(kt+i) = grr*grrd + grt*grtd + grf*grfd
+            ENDDO points_2
 
-         ENDDO points_2
-
+         ENDIF
       ENDIF
-      RETURN
    END SUBROUTINE mkgylm
 END MODULE m_mkgylm

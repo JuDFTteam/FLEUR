@@ -23,8 +23,8 @@
       !     *********************************************************
 
    CONTAINS
-      SUBROUTINE vmt_xc(DIMENSION,mpi,sphhar,atoms,&
-                        den,xcpot,input,sym, obsolete,EnergyDen,vTot,vx,exc)
+      SUBROUTINE vmt_xc(mpi,sphhar,atoms,&
+                        den,xcpot,input,sym,EnergyDen,vTot,vx,exc)
 #include"cpp_double.h"
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
@@ -34,10 +34,8 @@
          USE m_juDFT_string
          IMPLICIT NONE
 
-         CLASS(t_xcpot),INTENT(INOUT)      :: xcpot
-         TYPE(t_dimension),INTENT(IN)   :: dimension
+         CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
          TYPE(t_mpi),INTENT(IN)         :: mpi
-         TYPE(t_obsolete),INTENT(IN)    :: obsolete
          TYPE(t_input),INTENT(IN)       :: input
          TYPE(t_sym),INTENT(IN)         :: sym
          TYPE(t_sphhar),INTENT(IN)      :: sphhar
@@ -53,8 +51,7 @@
          TYPE(t_xcpot_inbuild) :: xcpot_tmp
          TYPE(t_potden)        :: vTot_tmp
          TYPE(t_sphhar)        :: tmp_sphhar
-         REAL, ALLOCATABLE     :: ch(:,:), core_den_rs(:,:), val_den_rs(:,:), ED_rs(:,:), &
-                                  vTot_rs(:,:), vTot0_rs(:,:)
+         REAL, ALLOCATABLE     :: ch(:,:)
          INTEGER               :: n,nsp,nt,jr, loc_n
          INTEGER               :: i, j, idx, cnt
          REAL                  :: divi
@@ -90,15 +87,6 @@
          ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
          IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
 
-         IF (perform_MetaGGA) THEN
-            IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,tmp_grad)
-            ALLOCATE(ED_rs, mold=ch)
-            ALLOCATE(vTot_rs, mold=ch)
-            ALLOCATE(vTot0_rs, mold=vTot_rs)
-            ALLOCATE(core_den_rs, mold=ch)
-            ALLOCATE(val_den_rs, mold=ch)
-         ENDIF
-
          CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
 
 #ifdef CPP_MPI
@@ -121,7 +109,13 @@
 
             !
             !         calculate the ex.-cor. potential
-            CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
+            if(perform_MetaGGA .and. xcpot%kinED%set) then
+               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
+                   , v_x(:nsp*atoms%jri(n),:),grad, kinED_KS=xcpot%kinED%mt(:,:,loc_n))
+            else
+               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
+                  , v_x(:nsp*atoms%jri(n),:),grad)
+            endif
             IF (lda_atom(n)) THEN
                ! Use local part of pw91 for this atom
                CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
@@ -144,39 +138,16 @@
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
-            IF(perform_MetaGGA) THEN
-
-               CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
-                               n,            tmp_grad, ED_rs)
-
-               ! multiply potentials with r^2, because mt_to_grid is made for densities,
-               ! which are stored with a factor r^2
-               vTot_tmp = vTot
-               DO jr=1,atoms%jri(n)
-                  vTot_tmp%mt(jr,0:,n,:) = vTot_tmp%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
-               ENDDO
-               CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, vTot_tmp%mt(:,0:,n,:), &
-                               n,            tmp_grad, vTot_rs)
-               tmp_sphhar%nlhd = sphhar%nlhd
-               tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
-               CALL mt_to_grid(xcpot, input%jspins, atoms, tmp_sphhar, vTot_tmp%mt(:,0:0,n,:), &
-                               n,            tmp_grad, vTot0_rs)
-               CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
-                               xcpot%core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
-               CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
-                               xcpot%val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
-               CALL calc_kinEnergyDen_mt(ED_rs, vTot_rs, vTot0_rs, &
-                                      core_den_rs, val_den_rs, n, nsp, xcpot%kinED%mt(:,:,loc_n))
-            ENDIF
 
             IF (ALLOCATED(exc%mt)) THEN
                !
                !           calculate the ex.-cor energy density
                !
                
-               IF(perform_MetaGGA) THEN
+               IF(perform_MetaGGA .and. xcpot%kinED%set) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
-                     e_xc(:nsp*atoms%jri(n),1),grad, xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
+                     e_xc(:nsp*atoms%jri(n),1),grad, &
+                     kinED_KS=xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)

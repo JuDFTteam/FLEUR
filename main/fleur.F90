@@ -415,7 +415,7 @@ CONTAINS
        ! mix input and output densities
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
-            sym,cell,noco,oneD,archiveType,inDen,outDen,results)
+            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
        
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
