@@ -36,14 +36,25 @@ CONTAINS
 
 
   
-  SUBROUTINE make_defaults(atoms,vacuum,input,stars,&
-&                   cell,sym,xcpot,noco,hybrid,kpts)
+  SUBROUTINE make_defaults(atoms,sym,vacuum,input,stars,&
+&                   xcpot,noco,hybrid)
       USE m_types
-     
+      TYPE(t_atoms),INTENT(IN)    ::atoms
+      TYPE(t_sym),INTENT(IN)      ::sym
+      
+      TYPE(t_vacuum),INTENT(INOUT)::vacuum
+      TYPE(t_input),INTENT(INOUT) ::input
+      TYPE(t_stars),INTENT(INOUT) ::stars
+      TYPE(t_xcpot),INTENT(INOUT) ::xcpot
+      TYPE(t_noco),INTENT(INOUT)  ::noco
+      TYPE(t_hybrid),INTENT(INOUT)::hybrid
+      
+      
       IMPLICIT NONE
 
-      
-      !Set some more input switches
+      !
+      !input
+      !
       input%delgau = input%tkb
       IF (noco%l_noco) input%jspins = 2
        
@@ -70,25 +81,47 @@ CONTAINS
       input%rkmax   = real(NINT(input%rkmax   * 10  ) / 10.)
       IF (noco%l_ss) input%ctail = .FALSE.
  
-
-
-     
-      stars%gmax=merge(stars%gmax,3.0*input%rkmax,stars%gmax>0)
-      stars%gmax    = real(NINT(stars%gmax    * 10  ) / 10.)
+      !
+      ! stars
+      !
+      stars%gmax     = merge(stars%gmax,3.0*input%rkmax,stars%gmax>0)
+      stars%gmax     = real(NINT(stars%gmax    * 10  ) / 10.)
       stars%gmaxInit = stars%gmax
 
-      xcpot%gmaxxc=merge(xcpot%gmaxxc,3.0*input%rkmax,xcpot%gmaxxc>0)
+      !
+      !xcpot
+      !
+      xcpot%gmaxxc  = merge(xcpot%gmaxxc,3.0*input%rkmax,xcpot%gmaxxc>0)
       xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
       
 
-      
+      !
+      !vacuum
+      !
       IF (.not.input%film) THEN
          vacuum%dvac = a3(3) 
       Else
-         vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
+         vacuum%dvac = REAL(NINT(vacuum%dvac*100)/100.)
       ENDIF
-!
-!HF   added for HF and hybrid functionals
+      vacuum%nvac = 2
+      IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
+      IF (oneD%odd%d1) vacuum%nvac = 1
+   
+      !
+      !noco
+      !
+      ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
+      ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
+      noco%qss = MERGE(noco%qss,[0.0,0.0,0.0],noco%l_ss)
+      noco%l_relax(:) = .FALSE.
+      noco%alphInit(:) = 0.0
+      noco%alph(:) = 0.0
+      noco%beta(:) = 0.0
+      noco%b_con(:,:) = 0.0
+      
+      !
+      !hybrid
+      !
       hybrid%gcutm1       = input%rkmax - 0.5
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
       ALLOCATE(hybrid%lcutm1(atoms%ntype))
@@ -101,55 +134,7 @@ CONTAINS
       hybrid%select1(4,:) = 2
       hybrid%l_hybrid = l_hyb
       hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
-      
-
-      ! Set defaults for noco  types
-      ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
-      ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
-   
-      noco%qss = merge(noco%qss,[0.0,0.0,0.0],noco%l_ss)
-
-      noco%l_relax(:) = .FALSE.
-      noco%alphInit(:) = 0.0
-      noco%alph(:) = 0.0
-      noco%beta(:) = 0.0
-      noco%b_con(:,:) = 0.0
-
-      
-
-      
-
-
-      ! set vacuum%nvac
-      vacuum%nvac = 2
-      IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
-      IF (oneD%odd%d1) vacuum%nvac = 1
-      
-
-     
     
-      IF (l_hyb) THEN
-         ! Changes for hybrid functionals
-         namex = 'pbe0'
-          atoms%l_geo = .false.! ; input%frcor = .true.
-      END IF
 
-         l_explicit = juDFT_was_argument("-explicit")
-
-         IF(l_explicit) THEN
-            ! kpts generation
-         
-            CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
-
-            kpts%specificationType = 3
-            kpts%l_gamma = .true.
-
-            IF (l_hyb) kpts%specificationType = 2
-         END IF
-
-
-
-
-
-       END SUBROUTINE make_defaults
-     END MODULE m_make_defaults
+    END SUBROUTINE make_defaults
+  END MODULE m_make_defaults

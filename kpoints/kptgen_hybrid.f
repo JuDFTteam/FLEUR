@@ -16,17 +16,17 @@
       !Modified for types D.W.
 
 
-      SUBROUTINE kptgen_hybrid(input,cell,sym,kpts,l_soc)
+      SUBROUTINE kptgen_hybrid(film,grid,cell,sym,kpts,l_soc)
 
       USE m_types
-      USE m_divi
-
+  
       IMPLICIT NONE
 
-      TYPE(t_input), INTENT(IN)    :: input
+      LOGICAL,INTENT(IN)           :: film
+      INTEGER,INTENT(IN)           :: grid(3)
       TYPE(t_cell),  INTENT(IN)    :: cell
       TYPE(t_sym),   INTENT(IN)    :: sym
-      TYPE(t_kpts),  INTENT(INOUT) :: kpts
+      TYPE(t_kpts),  INTENT(OUT)   :: kpts
       ! - scalars -
       LOGICAL, INTENT(IN)   ::  l_soc
       ! - local scalars -
@@ -44,21 +44,17 @@
       REAL,ALLOCATABLE      ::  rarr(:)
       LOGICAL               ::  ldum
 
-      IF (sum(kpts%nkpt3).EQ.0) THEN
-         CALL divi(kpts%nkpt,cell%bmat,input%film,sym%nop,
-     &             sym%nop2,kpts%nkpt3)
-      END IF
-
-      nkpt=kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3)
+  
+      nkpt=grid(1)*grid(2)*grid(3)
       ALLOCATE( bk(3,nkpt),bkhlp(3,nkpt) )
 
       ikpt = 0
-      DO i=0,kpts%nkpt3(1)-1
-        DO j=0,kpts%nkpt3(2)-1
-          DO k=0,kpts%nkpt3(3)-1
+      DO i=0,grid(1)-1
+        DO j=0,grid(2)-1
+          DO k=0,grid(3)-1
             ikpt       = ikpt + 1
-            bk(:,ikpt) = (/ 1.0*i/kpts%nkpt3(1),1.0*j/kpts%nkpt3(2),
-     &                                     1.0*k/kpts%nkpt3(3) /)
+            bk(:,ikpt) = (/ 1.0*i/grid(1),1.0*j/grid(2),
+     &                                     1.0*k/grid(3) /)
           END DO
         END DO
       END DO
@@ -113,16 +109,16 @@
       END DO
 
       ALLOCATE ( kptp(nkpt),symkpt(nkpt),rarr(3),iarr2(3),iarr(nkpt) )
-      ALLOCATE ( pkpt(kpts%nkpt3(1)+1,kpts%nkpt3(2)+1,kpts%nkpt3(3)+1) )
+      ALLOCATE ( pkpt(grid(1)+1,grid(2)+1,grid(3)+1) )
       pkpt = 0
       DO ikpt = 1,nkpt
-        iarr2 = nint ( bk(:,ikpt) * kpts%nkpt3 ) + 1
+        iarr2 = nint ( bk(:,ikpt) * grid ) + 1
         pkpt(iarr2(1),iarr2(2),iarr2(3)) = ikpt
       END DO
 
-      pkpt(kpts%nkpt3(1)+1,    :     ,    :     ) = pkpt(1,:,:)
-      pkpt(    :     ,kpts%nkpt3(2)+1,    :     ) = pkpt(:,1,:)
-      pkpt(    :     ,    :     ,kpts%nkpt3(3)+1) = pkpt(:,:,1)
+      pkpt(grid(1)+1,    :     ,    :     ) = pkpt(1,:,:)
+      pkpt(    :     ,grid(2)+1,    :     ) = pkpt(:,1,:)
+      pkpt(    :     ,    :     ,grid(3)+1) = pkpt(:,:,1)
       
       IF(any(pkpt.eq.0)) THEN
          CALL juDFT_error('kptgen: Definition of pkpt-pointer failed.',
@@ -135,15 +131,15 @@
         kptp(i)   = i
         symkpt(i) = 1
         DO k = 2,nsym
-          rarr  = matmul(rrot(:,:,k),bk(:,i)) * kpts%nkpt3
+          rarr  = matmul(rrot(:,:,k),bk(:,i)) * grid
           iarr2 = nint(rarr)
           IF(any(abs(iarr2-rarr).gt.1d-10)) THEN
             WRITE(6,'(A,I3,A)') 'kptgen: Symmetry operation',k,
      &                        ' incompatible with k-point set.'
             ldum = .true.
           END IF
-          iarr2 = modulo(iarr2,kpts%nkpt3) + 1
-          IF(any(iarr2.gt.kpts%nkpt3)) 
+          iarr2 = modulo(iarr2,grid) + 1
+          IF(any(iarr2.gt.grid)) 
      &    STOP 'kptgen: pointer indices exceed pointer dimensions.'
           j     = pkpt(iarr2(1),iarr2(2),iarr2(3))
           IF(j.eq.0) STOP 'kptgen: k-point index is zero (bug?)'
@@ -174,9 +170,9 @@
       kptp         = iarr(kptp)
       kptp(iarr)   = kptp
       symkpt(iarr) = symkpt
-      DO i=1,kpts%nkpt3(1)+1 
-        DO j=1,kpts%nkpt3(2)+1
-          DO k=1,kpts%nkpt3(3)+1 
+      DO i=1,grid(1)+1 
+        DO j=1,grid(2)+1
+          DO k=1,grid(3)+1 
             pkpt(i,j,k) = iarr(pkpt(i,j,k))
           END DO
         END DO
@@ -201,7 +197,6 @@
          kpts%bk(:,ikpt)=bk(:,ikpt)
          kpts%wtkpt(ikpt)=neqkpt(ikpt)
       END DO
-      kpts%posScale=1.0
       
       CONTAINS
 

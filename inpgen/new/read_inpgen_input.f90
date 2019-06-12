@@ -8,6 +8,7 @@ MODULE m_read_inpgen_input
   USE m_judft
   IMPLICIT NONE
 CONTAINS
+
   SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,amat,div,namex,relcor,dtild&
        input,sym,noco,vacuum,stars,kpts,xcpot,&
        filename)
@@ -45,77 +46,245 @@ CONTAINS
     REAL :: a1(3),a2(3),a3(3),SCALE(3),factor(3),aa  !lattice definition
     INTEGER:: infh,errfh,warnfh,dbgfh,outfh,symfh    !file handles
 
+    filename=juDFT_string_for_argument("-f")
+    INQUIRE(file=filename,exist=l_exist)
+    IF (.NOT.l_exist) CALL judft_error("Input file specified is not readable")
 
-    ALLOCATE ( mmrot(3,3,48), ttr(3,48) )
-    ALLOCATE ( atompos(3,natmax),atomid(natmax) )
-    ALLOCATE (atomLabel(natmax))
-    atomLabel = ''
+    OPEN(97,file=filename)
+    OPEN(98,status='scratch')
 
-    OPEN (bfh,file='bfh.txt',form='formatted',status='unknown')
-    IF (PRESENT(filename)) OPEN(5,file=filename)
+    CALL  normalize_file(97,98)
+
+    REWIND(98)
+    READ(98,"(a)",iostat=ios) input%comment
+    namelist_ok=.TRUE.
+    DO WHILE(ios.NE.0)
+       READ(98,"(a)",iostat=ios) line
+       IF (ios.NE.0) EXIT
+       IF (line(1:1)=="&") THEN
+          !process the namelist
+          SELECT CASE(line(2:5)) !e.g. atom
+          CASE ('latt')
+             CALL process_lattice(line,cell)???
+          CASE('inpu')
+             CALL process_input(line,input%film,sym%symor)
+          CASE('qss ')
+             CALL process_qss(line,noco)
+          CASE('soc ')
+             CALL process_soc(line,noco)
+          CASE('shif')
+             CALL process_shift(line,atom_pos)
+          CASE('fact')
+             CALL process_factor(line,atom_pos)
+          CASE('exco')
+             CALL process_exco(line,xcpot)
+          CASE('comp')
+             CALL process_comp(line,input%jspins,input%frcor,input%ctail,input%kcrel,stars%gmax,xcpot%gmaxxc,input%rkmax)
+          CASE('kpt ')
+             CALL process_kpt(line,???)???
+          CASE('film')
+             CALL process_film(line,vacuum%dvac,vacuum%dtild)???
+          CASE('gen ','sym ')
+             CALL judft_error("Specifying the symmetries no longer supported in inpgen")
+          CASE default
+             CALL judft_error(("Unkown input in:"//line))
+          END SELECT
+       ELSE
+          IF (SUM(ABS(cell%amat))>0) THEN
+             !cell was set already, so list of atoms follow
+             READ(line,*,iostat=ios) n
+             IF (ios.NE.0) CALL judft_error(("Surprising error in reading input:"//line))
+             ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n))
+             DO i=1,n
+                READ(98,"(a)",iostat=ios) line
+                IF (ios.NE.0) CALL judft_error(("List of atoms not complete:"//line))
+                atom_id(i)=evaluatefirst(line)
+                atom_pos(1,i)=evaluatefirst(line)
+                atom_pos(2,i)=evaluatefirst(line)
+                atom_pos(3,i)=evaluatefirst(line)
+                IF(TRIM(ADJUSTL(line)).NE.'') THEN
+                   atom_Label(i) = TRIM(ADJUSTL(line))
+                ELSE
+                   WRITE(atom_Label(i),'(i0)') n
+                END IF
+             END DO
+          ELSE
+             !the bravais matrix has to follow
+             ???
+          ENDIF
+       ENDIF
+    END DO
+
+    IF (.NOT.ALLOCATED(atompos).OR.SUM(ABS(cell%amat))==0.0) CALL judft_error("input not complete")
     
-    noco%l_ss = .FALSE.
-    vacuum%dvac=0.0
-    noco%l_soc=.FALSE.
+  END SUBROUTINE read_inpgen_input
 
+    SUBROUTINE process_input(line,film,symor,hybrid)
+      CHARACTER(len=*),INTENT(in)::line
+      LOGICAL,INTENT(out)::film,symor,hybrid
+
+      INTEGER :: ios
+      LOGICAL :: cartesian, cal_symm, checkinp,inistop,oldfleur
+      cartesian=.FALSE.
+      cal_sym=.FALSE.
+      oldfleur=.FALSE.
+      NAMELIST /input/ film, cartesian, cal_symm, checkinp, inistop,
+     &                 symor, oldfleur, hybrid
+     READ(line,input,iostat=ios)
+     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ANY([cal_symm, checkinp,oldfleur])) CALL judft_error("Switches cal_symm, checkinp,oldfleur no longer supported")
+   END SUBROUTINE process_input
+   SUBROUTINE process_qss(line,noco)
+     CHARACTER(len=*),INTENT(in)::line
+     TYPE(t_noco),INTENT(INOUT) :: noco
+     CHARACTER(len=1000) :: buf
+
+     buf=ADJUSTL(line(5:len_TRIM(line)-1)
+          
+     READ(line,*,iostat=ios) noco%qss
+     noco%l_ss=.TRUE.
+     noco%l_noco=.TRUE.
+     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+   END SUBROUTINE process_qss
+   SUBROUTINE process_soc(line,noco)
+     CHARACTER(len=*),INTENT(in)::line
+     TYPE(t_noco),INTENT(INOUT) :: noco
+     CHARACTER(len=1000) :: buf
+
+     buf=ADJUSTL(line(5:len_TRIM(line)-1)
+          
+     READ(line,*,iostat=ios) noco%theta,noco%phi
+     noco%l_soc=.TRUE.
+     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+   END SUBROUTINE process_soc
+
+   SUBROUTINE process_shift(line,atompos)
+     CHARACTER(len=*),INTENT(in)::line
+     REAL,INTENT(INOUT) :: atompos(:,:)
+     CHARACTER(len=1000) :: buf
+     REAL :: shift(3)
+     INTEGER :: ios,n
+     
+     buf=ADJUSTL(line(7:len_TRIM(line)-1)    
+     READ(line,*,iostat=ios) shift
+     
+     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     DO n=1,SIZE(atompos,2)
+        atompos(:,n)=atompos(:,)+shift
+     ENDDO
+   END SUBROUTINE process_shift
+   SUBROUTINE process_factor(line,atompos)
+     CHARACTER(len=*),INTENT(in)::line
+     REAL,INTENT(INOUT) :: atompos(:,:)
+     CHARACTER(len=1000) :: buf
+     REAL :: factor(3)
+     INTEGER :: ios,n
+     
+     buf=ADJUSTL(line(8:len_TRIM(line)-1)    
+     READ(line,*,iostat=ios) factor
+     
+     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     DO n=1,SIZE(atompos,2)
+        atompos(:,n)=atompos(:,)/factor
+     ENDDO
+   END SUBROUTINE process_factor
+
+   SUBROUTINE process_exco(line,xcpot)
+     CHARACTER(len=*),INTENT(in)::line
+     TYPE(t_xcpot),INTENT(INOUT) :: xcpot
+     LOGICAL::relxc
+     CHARACTER(len=4) :: xctyp
+     NAMELIST /exco/   xctyp, relxc 
+     INTEGER :: ios
+     
+     READ(line,exco,iostat=ios) 
+     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+
+     call xcpot???
+   END SUBROUTINE process_exco
+
+   SUBROUTINE process_comp(line,jspins,frcor,ctail,kcrel,gmax,gmaxxc,rkmax)
+     CHARACTER(len=*),INTENT(in)::line
+     INTEGER,INTENT(inout):: jspins,frcor,ctail,kcrel
+     REAL,intent(inout)   :: gmax,gmaxxc,rkmax
+
+     INTEGER :: ios
+     NAMELIST /comp/   jspins, frcor, ctail, kcrel, gmax, gmaxxc, kmax
+     
+     READ(line,comp,iostat=ios) 
+     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+   END SUBROUTINE process_comp
+
+   
+
+      SUBROUTINE normalize_file(infh,outfh)
+    !***********************************************************************
+    !     reads in the file from infh
+    ! and:
+    !  - deletes comments
+    !  - deletes empty line
+    !  - combines multiple line namelists into single line
+    !
+    !  then the input is written to outfh
+    ! 
+    !***********************************************************************
     
-    !default file handlers
-    infh = 5
-    errfh = 6 ; warnfh = 6 ; dbgfh = 6 ; outfh = 6;symfh=97
+      IMPLICIT NONE
 
+      INTEGER, INTENT (IN)    :: infh            ! input filehandle (5)
+      INTEGER, INTENT (IN)    :: outh            ! Output filehandle
+
+      INTEGER               :: n,ios
+      LOGICAL               :: building, complete
+      CHARACTER(len=1000)   :: line,buffer
+
+      
+      
+      !---> initialize some variables
+      building = .false.
+      complete = .false.
+
+      loop: DO
+         READ (infh,'(a)',IOSTAT=ios) line
+         IF (ios.NE.0) EXIT !done
+         
+         LINE = ADJUSTL(line)
+         n = SCAN(line,'!')                 ! remove end of line comments
+         IF ( n>0 ) THEN
+            line = line(1:n-1)
+         ENDIF
+         n = LEN_TRIM( line )               ! length of line without trailing blanks
+         IF ( n == 0 ) CYCLE loop
+
+         IF ( line(1:1)=='&' ) THEN         ! check if beginning of namelist
+            IF (building) CALL juDFT_error ("missing end of namelist marker / in  or before line")
+            building = .TRUE.
+            buffer = line
+            IF( line(n:n)=='/' ) complete = .TRUE.
+         ELSEIF ( line(n:n)=='/' ) THEN     ! check if end of namelist
+            IF (building) THEN
+               complete = .TRUE.
+               buffer = trim(buffer)//' '//line
+            ELSE
+               CALL juDFT_error ("out of place end of namelist marker / in line")
+            ENDIF
+         ELSEIF ( building ) THEN           ! add line to buffer
+            buffer = trim(buffer)//' '//line
+         ELSEIF ( n > 0 ) THEN              ! check for non empty lines outside of namelists
+            buffer = line
+            complete = .TRUE.
+         ENDIF
+
+         IF ( complete ) THEN
+            WRITE(outfh,"(a)") TRIM(buffer)
+            buffer=''
+            building=.FALSE.
+            complete=.FALSE.
+         END IF
+      END DO loop
+
+    END SUBROUTINE normalize_file
+
+  
     
-    nline=0
-    CALL struct_input(&
-                       infh,errfh,warnfh,symfh,'sym    ',bfh,&
-                       natmax,48,&
-                       nline,size(buffer),buffer,&
-                       title,input%film,cal_symm,checkinp,sym%symor,&
-                       cartesian,oldfleur,a1,a2,a3,vacuum%dvac,aa,scale,i_c,&
-                       factor,natin,atomid,atompos,ngen,mmrot,ttr,atomLabel,&
-                       l_hyb,noco%l_soc,noco%l_ss,noco%theta,noco%phi,noco%qss,inistop)
-
-    !Check output
-    IF (.NOT.cal_symm) CALL judft_error("Reading of symmetry no longer supported")
-    IF (checkinp.OR.inistop) CALL judft_warn("checkinp and inistop no longer supported")
-    IF (cartesian) CALL judft_error("Scaled Cartesian coordinates no longer supported")
-    IF (l_hyb) CALL judft_warn("Hybrid option no longer supported")
-    if (oldfleur.and..not.input%film)  CALL judft_warn("oldfleur only in film setups")
-
-    !Generate amat
-    amat(:,1)=aa*SCALE(:)*a1(:)
-    amat(:,2)=aa*SCALE(:)*a2(:)
-    amat(:,3)=aa*SCALE(:)*a3(:)
-    !Generate list of atoms
-    ALLOCATE(atom_pos(3,natin),atom_id(natin),atom_label(natin))
-    atom_pos=atompos(:,:natin)
-    atom_id=atomid(:,:natin)
-    atom_label=atomlabel(:,:natin)
-    !title
-    DO i = 1, 10
-       j = (i-1) * 8 + 1
-       input%comment(i) = title(j:j+7)
-    ENDDO
-    IF (.NOT.input%film) vacuum%dvac=a3(3)
-    dtild=0.0
-    input%l_inpXML = .TRUE.
-    
-    CALL lapw_input(&
-                     infh,nline,xl_buffer,bfh,buffer,&
-                     input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,kpts%kPointDensity,&
-                     input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
-                     vacuum%dvac,dtild,input%tkb,namex,relcor)
-
-      CLOSE(bfh)
-
-      !Read the &atom namelists and put into atompar as defaults
-      
-      CALL read_params("bfh.txt")
-
-      OPEN(bfh,"bfh,txt")
-      CLOSE(bfh,status='delete')
-      
-      IF (PRESENT(filename)) CLOSE(5)
-      
-      
-    END SUBROUTINE read_inpgen_input
   END MODULE m_read_inpgen_input

@@ -62,36 +62,63 @@ PROGRAM inpgen
       !Start program and greet user
       CALL inpgen_help()
 
-      !read the input
-      CALL read_input(film,symor,atomid,atompos,atomlabel,amat,dvac,noco)
+      INQUIRE(file='inp.xml',exist=l_inpxml)
+      IF (l_inpxml.AND..NOT.judft_was_argument("-inp.xml")) CALL judft_error("inp.xml exists and can not be overwritten")
+      
+      IF (judft_was_argument("-inp")) THEN
+         STOP "not yet"
+         !CALL read_old_input()
+         full_input=.TRUE.
+      ELSEIF (judft_was_argument("-inp.xml")) THEN
+         STOP "not yet"
+         !CALL r_inpXML()
+         full_input=.TRUE.
+      ELSEIF(judft_was_argument("-f")) THEN
+         !read the input
+         
+         CALL read_inpgen_input(atom_pos,atom_id,atom_label,amat,
 
-      !First we determine the spacegoup and map the atoms to groups
-      CALL make_crystal(film,symor,atomid,atompos,atomlabel,amat,dvac,noco,&
-           cell,sym,atoms)          
 
-      !All atom related parameters are set here. Note that some parameters might
-      !have been set in the read_input call before by adding defaults to the atompar module
-      CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms)
-
-      !Set all defaults that have not been specified before or can not be specified in inpgen
-      call make_defaults(atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-           cell,sym,xcpot,noco,oneD,hybrid,kpts)
-
+         film,symor,atomid,atompos,atomlabel,amat,dvac,noco)
+         full_input=.FALSE.
+      ELSE
+         CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
+      ENDIF
+      IF (.NOT.full_input) THEN
+         !First we determine the spacegoup and map the atoms to groups
+         CALL make_crystal(film,symor,atomid,atompos,atomlabel,amat,dvac,noco,&
+              cell,sym,atoms)          
+         
+         !All atom related parameters are set here. Note that some parameters might
+         !have been set in the read_input call before by adding defaults to the atompar module
+         CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms)
+         
+         !Set all defaults that have not been specified before or can not be specified in inpgen
+         CALL make_defaults(atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+              cell,sym,xcpot,noco,oneD,hybrid,kpts)
+      ENDIF
+      !
+      ! k-points can also be modified here
+      !
+      call make_kpoints()
       !
       !Now the IO-section
       !
-
-      !the inp.xml file
-      CALL w_inpxml(&
-           atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-           cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-           div,l_gamma,& !should be in kpts!?
-           namex,relcor,dtild_opt,name_opt,&!?should be somewhere...
-           l_outFile,"inp.xml",&
-           l_explicit,enpara)
-      
-      !the sym.xml file
-      CALL write_sym()
+      IF (.NOT.l_inpxml) THEN
+         !the inp.xml file
+         l_explicit=judft_was_argument("-explicit")
+         CALL dump_FleurInputSchema()
+         CALL w_inpxml(&
+              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+              cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+              div,l_gamma,& !should be in kpts!?
+              namex,relcor,dtild_opt,name_opt,&!?should be somewhere...
+              .false.,"inp.xml",&
+              l_explicit,enpara)
+         !the sym.xml file
+         CALL sym%writeXML(0,"sym.xml")
+      ENDIF
+      CALL kpts%writeXML(0,"kpts.xml")
       
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
