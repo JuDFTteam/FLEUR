@@ -98,7 +98,7 @@ CONTAINS
     iterHF = iterHF + 1
 
     !Delete broyd files
-    CALL system("rm broyd*")
+    CALL system("rm -f broyd*")
 
     !check if z-reflection trick can be used
 
