@@ -102,12 +102,12 @@ CONTAINS
 
     ! local scalars
     INTEGER :: eig_id,archiveType
-    INTEGER :: n,iter,iterHF
+    INTEGER :: iter,iterHF
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER :: ierr(2)
+    INTEGER :: ierr(2),n
 #endif
 
     mpi%mpi_comm = mpi_comm
