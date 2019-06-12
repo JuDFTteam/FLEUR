@@ -296,37 +296,35 @@ CONTAINS
          timername = timer%name
       ENDIF
       
-      IF (time >= min_time*globaltimer%time) THEN
-         if(level > 1 ) outstr = outstr // nl 
-         outstr = outstr // idstr // "{"
+      if(level > 1 ) outstr = outstr // nl 
+      outstr = outstr // idstr // "{"
+      idstr = idstr // repeat(" ", indent_spaces)
+
+      outstr = outstr // nl // idstr // '"timername" : "' // trim(timername)         // '",'
+      outstr = outstr // nl // idstr // '"totaltime" : '  // float2str(time)      
+      if(level > 1) then
+         outstr = outstr // ","
+         outstr = outstr // nl // idstr // '"mintime"   : '  // float2str(timer%mintime)// ','
+         outstr = outstr // nl // idstr // '"maxtime"   : '  // float2str(timer%maxtime)// ','
+         outstr = outstr // nl // idstr // '"ncalls"    : '  // int2str(timer%no_calls) 
+      endif
+
+      time = 0
+      DO n = 1, timer%n_subtimers
+         time = time + timer%subtimer(n)%p%time
+      ENDDO
+      if(timer%n_subtimers > 0) then
+         !add comma behind ncalls
+         outstr = outstr // "," 
+         outstr = outstr // nl // idstr // '"subtimers": '  // "[" 
          idstr = idstr // repeat(" ", indent_spaces)
-
-         outstr = outstr // nl // idstr // '"timername" : "' // trim(timername)         // '",'
-         outstr = outstr // nl // idstr // '"totaltime" : '  // float2str(time)      
-         if(level > 1) then
-            outstr = outstr // ","
-            outstr = outstr // nl // idstr // '"mintime"   : '  // float2str(timer%mintime)// ','
-            outstr = outstr // nl // idstr // '"maxtime"   : '  // float2str(timer%maxtime)// ','
-            outstr = outstr // nl // idstr // '"ncalls"    : '  // int2str(timer%no_calls) 
-         endif
-
-         time = 0
          DO n = 1, timer%n_subtimers
-            time = time + timer%subtimer(n)%p%time
+            CALL priv_genjson(timer%subtimer(n)%p, level + 1, outstr, idstr)
+            if(n /= timer%n_subtimers) outstr = outstr // ","
          ENDDO
-         if(timer%n_subtimers > 0) then
-            !add comma behind ncalls
-            outstr = outstr // "," 
-            outstr = outstr // nl // idstr // '"subtimers": '  // "[" 
-            idstr = idstr // repeat(" ", indent_spaces)
-            DO n = 1, timer%n_subtimers
-               CALL priv_genjson(timer%subtimer(n)%p, level + 1, outstr, idstr)
-               if(n /= timer%n_subtimers) outstr = outstr // ","
-            ENDDO
-            idstr  = idstr(:len(idstr)-indent_spaces) 
-            outstr = outstr // nl // idstr // ']' 
-         endif
-      ENDIF
+         idstr  = idstr(:len(idstr)-indent_spaces) 
+         outstr = outstr // nl // idstr // ']' 
+      endif
       idstr  = idstr(:len(idstr)-indent_spaces) 
       outstr = outstr // nl // idstr // "}"
    END SUBROUTINE priv_genjson
