@@ -8,4 +8,7 @@ ldahia/kkintgr.f90
 ldahia/tetra_weights.f90
 ldahia/gfcalc.f90
 ldahia/hubbard1_setup.F90
+ldahia/mudc.f90
+ldahia/denmat_dist.f90
+ldahia/add_selfen.f90
 )
