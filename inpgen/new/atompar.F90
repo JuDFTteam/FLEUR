@@ -193,7 +193,7 @@ contains
              ap=t_atompar(id=id,nucnumber=z,rmt=rmt,rmt_min=rmt_min,jri=jri,dx=dx,bmu=bmu,lmax=lmax,lnonsph=lnonsph,lo=lo,econfig=econfig,desc=desc)
           ELSE
              !try old namelist
-             CALL read_params_old(ap)
+             CALL read_params_old(99,ap)
           END IF
           CALL add_atompar(ap)
        ENDIF
@@ -201,8 +201,9 @@ contains
 100 CLOSE(99)
   END SUBROUTINE read_params
 
-  SUBROUTINE read_params_old(ap)
+  SUBROUTINE read_atom_params_old(fh,ap)
     !Try to read old namelist
+    integer,intent(in)::fh
     TYPE(t_atompar),INTENT(out)::ap
 
     REAL:: id,z,rmt,dx,bmu
@@ -213,11 +214,11 @@ contains
 
     id=-9999.9;z=-1.0;rmt=0.0;dx=0.0;jri=0;lmax=0;lnonsph=0;ncst=-1;lo='';econfig='';name='';bmu=-9999.0
     
-    BACKSPACE(99)
-    READ(99,atom,iostat=io_stat)
+    BACKSPACE(fh)
+    READ(fh,atom,iostat=io_stat)
     IF(io_stat.NE.0) THEN
-       BACKSPACE(99)
-       READ(99,*) name
+       BACKSPACE(fh)
+       READ(fh,*) name
        WRITE(*,*) name
        CALL judft_error("Found a &atom namelist in input that was incorrect")
     END IF

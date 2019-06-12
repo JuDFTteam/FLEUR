@@ -19,7 +19,7 @@ CONTAINS
     REAL,    INTENT(IN)     :: amat,dvac
     TYPE(t_noco),INTENT(in) :: noco
 
-    TYPE(t_cell),INTENT(out)  ::cell
+    TYPE(t_cell),INTENT(in)  ::cell
     TYPE(t_sym),INTENT(out)   ::sym
     TYPE(t_atoms),INTENT(out) ::atoms
   
@@ -28,14 +28,7 @@ CONTAINS
     INTEGER :: i,j,k,n,m,na,nt,inversionOp
     REAL,PARAMETER :: eps7 = 1.0e-7  
   
-
-    !Generate cell-datatype
-    cell%amat=amat
-    IF (film) THEN
-       CALL cell%init(dvac)
-    ELSE
-       CALL cell%init()
-    ENDIF
+    
 
     
     !generate basic atom type
