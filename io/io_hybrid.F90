@@ -23,9 +23,9 @@ contains
     if (opened) return
     opened=.true.
 
-    print *,"Open olap.mat"
+    !print *,"Open olap.mat"
     id_olap=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"olap.mat")
-    print *,"Open z.mat"
+    !print *,"Open z.mat"
     id_z=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"z.mat")
   END SUBROUTINE open_hybrid_io1
 
@@ -39,7 +39,7 @@ contains
     if (opened) return
     opened=.true.
 
-    print *,"Open v_x.mat"
+    !print *,"Open v_x.mat"
     id_v_x=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"v_x.mat")
   END SUBROUTINE open_hybrid_io1b
 
@@ -115,7 +115,7 @@ contains
     real,intent(in) :: coulomb_mtir(:)
     integer,intent(in) :: nk
     
-    print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
+    !print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
     write(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine write_coulomb_spm_r
 
@@ -136,7 +136,7 @@ contains
     real,intent(out) :: coulomb_mtir(:)
     integer,intent(in) :: nk
     
-    print *, "read coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
+    !print *, "read coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
     read(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine read_coulomb_spm_r
 
@@ -187,7 +187,7 @@ contains
     implicit none
     TYPE(t_mat),INTENT(INOUT):: mat
     INTEGER,INTENT(IN)           :: rec
-    print *,"read z:",rec
+    !print *,"read z:",rec
     
     CALL read_matrix(mat,rec,id_z)
   END subroutine read_z
@@ -196,7 +196,7 @@ contains
     implicit none
     TYPE(t_mat),INTENT(IN)   :: mat
     INTEGER,INTENT(IN)           :: rec
-     print *,"write z:",rec
+     !print *,"write z:",rec
    CALL write_matrix(mat,rec,id_z)
   END subroutine write_z
 

@@ -172,18 +172,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
                                eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,it,xcpot,noco,nsest,indx_sest,&
                                mpi,ex)
       CALL timestop("valence exchange calculation")
-
-      WRITE(1224,'(a,i7)') 'kpoint: ', nk
-      DO i = 1, ex%matsize1
-         DO j = 1, i
-            IF (ex%l_real) THEN
-               WRITE(1224,'(2i7,2f15.8)') i, j, ex%data_r(j,i) !ex%data_r(i,j), ex%data_r(j,i)
-            ELSE
-               WRITE(1224,'(2i7,4f15.8)') i, j, ex%data_c(j,i) !ex%data_c(i,j), ex%data_c(j,i)
-            ENDIF
-         END DO
-      END DO
-
+   
       CALL timestart("core exchange calculation")
 
       ! calculate contribution from the core states to the HF exchange
@@ -225,45 +214,14 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
          ENDDO
       ENDDO
 
-      WRITE(1225,'(a,i7)') 'kpoint: ', nk
-      DO i = 1, ex%matsize1
-         DO j = 1, i
-            IF (ex%l_real) THEN
-               WRITE(1225,'(2i7,2f15.8)') i, j, ex%data_r(i,j), ex%data_r(j,i)
-            ELSE
-               WRITE(1225,'(2i7,4f15.8)') i, j, ex%data_c(i,j), ex%data_c(j,i)
-            ENDIF
-         END DO
-      END DO
-
       CALL ex%multiply(invtrafo,tmp)
       CALL trafo%multiply(tmp,v_x)
         
       CALL timestop("time for performing T^-1*mat_ex*T^-1*")
 
-      WRITE(1231,'(a,i7)') 'kpoint: ', nk
-      DO i = 1, v_x%matsize1
-         DO j = 1, i
-            IF (v_x%l_real) THEN
-               WRITE(1231,'(2i7,1f15.8)') i, j, v_x%data_r(i,j)
-            ELSE
-               WRITE(1231,'(2i7,2f15.8)') i, j, v_x%data_c(i,j)
-            ENDIF
-         END DO
-      END DO
-
+      call timestart("symmetrizeh")
       CALL symmetrizeh(atoms,kpts%bkf(:,nk),dimension,jsp,lapw,sym,hybdat%kveclo_eig,cell,nsymop,psym,v_x)
-
-      WRITE(1232,'(a,i7)') 'kpoint: ', nk
-      DO i = 1, v_x%matsize1
-         DO j = 1, i
-            IF (v_x%l_real) THEN
-               WRITE(1232,'(2i7,1f15.8)') i, j, v_x%data_r(j,i) ! Note the different indices in comparison to points above. This is wanted!
-            ELSE
-               WRITE(1232,'(2i7,2f15.8)') i, j, v_x%data_c(j,i) ! Note the different indices in comparison to points above. This is wanted!
-            ENDIF
-         END DO
-      END DO
+      call timestop("symmetrizeh")
 
       CALL write_v_x(v_x,kpts%nkpt*(jsp-1) + nk)
    END IF ! hybrid%l_calhf
