@@ -30,7 +30,8 @@ SUBROUTINE gen_bz( kpts,sym)
 
    USE m_juDFT
    USE m_util, ONLY: modulo1
-   USE m_types
+   USE m_types_sym
+   USE m_types_kpts
    USE m_closure
 
    IMPLICIT NONE

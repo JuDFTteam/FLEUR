@@ -3,12 +3,10 @@ math/angle.f
 math/clebsch.f
 math/cylbes.f
 math/cylpts.f
-math/d_wigner.F
 math/dcylbs.f
 math/dsphbs.f
 math/gaussp.f
 math/grule.f
-math/inv3.f
 math/inwint.f
 math/matmul.f
 math/outint.f
@@ -20,6 +18,8 @@ math/util.F
 math/difcub.f
 )
 set(fleur_F90 ${fleur_F90}
+math/d_wigner.F90
+math/inv3.f90
 math/cfft.F90
 math/rfft.f90
 math/qranf.f90

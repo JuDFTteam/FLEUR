@@ -18,6 +18,7 @@ include("cmake/filespecific.cmake")
 
 include("cmake/ReportConfig.txt")
 
+add_subdirectory("inpgen/new")
 
 
 

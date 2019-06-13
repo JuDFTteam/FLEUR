@@ -8,7 +8,10 @@ types/types_xcpot_inbuild.F90
 types/types_xcpot_data.F90
 types/types_xcpot_libxc.F90
 types/types_mpi.F90
+types/types_stars.F90
+types/types_atoms.F90
 types/types_lapw.F90
+types/types_sphhar.F90
 types/types_tlmplm.F90
 types/types_misc.F90
 types/types_mpimat.F90

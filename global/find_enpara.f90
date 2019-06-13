@@ -17,7 +17,7 @@ CONTAINS
   !! Different schemes are implemented. Nqn (main quantum number) is used as a switch.
   !! This code was previously in lodpot.f
   REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
-    USE m_types_setup
+    USE m_types_atoms
     USE m_types_mpi
     USE m_radsra
     USE m_differ
@@ -36,7 +36,7 @@ CONTAINS
 
 
   REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
-    USE m_types_setup
+    USE m_types_atoms
     USE m_types_mpi
     USE m_radsra
     USE m_differ
@@ -154,7 +154,7 @@ CONTAINS
   END FUNCTION priv_method1
 
   REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
-    USE m_types_setup
+    USE m_types_atoms
     USE m_types_mpi
     USE m_radsra
     USE m_differ

@@ -18,12 +18,28 @@ MODULE m_winpXML
 CONTAINS
 SUBROUTINE w_inpXML(&
 &                   atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
-&                   namex,relcor,a1,a2,a3,dtild_opt,name_opt,&
+&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,&
 &                   l_outFile,filename,&
 &                   l_explicitIn,enpara)
 
-   USE m_types
+
+   use m_types_input
+   use m_types_sym
+   use m_types_stars 
+   use m_types_atoms
+   use m_types_vacuum
+   use m_types_kpts
+   use m_types_oneD
+   use m_types_hybrid
+   use m_types_cell
+   use m_types_banddos
+   use m_types_sliceplot
+   USE m_types_xcpot
+   USE m_types_xcpot_inbuild_nofunction
+   USE m_types_noco
+   use m_types_enpara
+   USE m_types_forcetheo 
+  
    USE m_juDFT
    USE m_constants
    USE m_xmlOutput
@@ -47,14 +63,8 @@ SUBROUTINE w_inpXML(&
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_enpara),INTENT(IN)   :: enpara
    CLASS(t_forcetheo),INTENT(IN):: forcetheo !nothing is done here so far....
-   INTEGER, INTENT (IN)        :: div(3)
-   LOGICAL, INTENT (IN)        :: l_gamma, l_outFile, l_explicitIn
-   REAL,    INTENT (IN)        :: a1(3),a2(3),a3(3)
-   CHARACTER(len=4),INTENT(IN) :: namex
-   CHARACTER(len=12),INTENT(IN):: relcor
+   LOGICAL, INTENT (IN)        :: l_outFile, l_explicitIn
    CHARACTER(LEN=*),INTENT(IN) :: filename
-   REAL,INTENT(IN),OPTIONAL    :: dtild_opt
-   CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
 
 
    INTEGER          :: iSpecies, fileNum
@@ -83,7 +93,7 @@ SUBROUTINE w_inpXML(&
 !-odim
 ! ..
 ! ..  Local Variables
-   REAL     ::dtild, zc, sumWeight,occ(2)
+   REAL     :: zc, sumWeight,occ(2)
    INTEGER  ::nw,idsprs, n1, n2
    INTEGER ieq,i,k,na,n,ilo
    REAL s3,ah,a,hs2,rest
@@ -107,38 +117,22 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=10) :: loType
    CHARACTER(len=10) :: bzIntMode
    CHARACTER(len=200) :: symFilename
-   LOGICAL :: kptGamma, l_relcor, l_explicit, l_nocoOpt
+   LOGICAL ::   l_explicit, l_nocoOpt
    INTEGER :: iAtomType, startCoreStates, endCoreStates
    CHARACTER(len=100) :: posString(3)
    CHARACTER(len=7) :: str
    REAL :: tempTaual(3,atoms%nat), scpos(3)
-   REAL :: a1Temp(3),a2Temp(3),a3Temp(3)
    REAL :: amatTemp(3,3), bmatTemp(3,3)
 
-   IF (PRESENT(dtild_opt)) dtild=dtild_opt
-   IF (PRESENT(name_opt)) name=name_opt
 
    l_explicit = l_explicitIn.OR.l_outFile
    l_nocoOpt = noco%l_noco.OR.juDFT_was_argument("-noco")
 
    symFilename = 'sym.out'
-   kptGamma = l_gamma
    band = .false.
    nw=1
-   IF (TRIM(ADJUSTL(namex)).EQ.'hf'.OR.TRIM(ADJUSTL(namex)).EQ.'exx'.OR.&
-       TRIM(ADJUSTL(namex)).EQ.'hse'.OR.TRIM(ADJUSTL(namex)).EQ.'vhse') l_hyb = .true.
-   l_relcor=.true.
-   IF(relcor.EQ.'relativi') THEN
-      l_relcor=.true.
-   ELSE 
-      l_relcor=.false.
-   END IF
+  
 
-   DO i = 1, 3
-      a1Temp(i) = a1(i)
-      a2Temp(i) = a2(i)
-      a3Temp(i) = a3(i)
-   END DO
 
    fileNum = -1
    IF(l_outFile) THEN
@@ -153,12 +147,10 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.29">'
    END IF
 
-   IF(PRESENT(name_opt)) THEN
-      WRITE (fileNum,'(a)') '   <comment>'
-      WRITE (fileNum,'(a6,10a8)') '      ',name
-      WRITE (fileNum,'(a)') '   </comment>'
-   END IF
-
+   WRITE (fileNum,'(a)') '   <comment>'
+   WRITE (fileNum,'(a6,10a8)') '      ',input%comment
+   WRITE (fileNum,'(a)') '   </comment>'
+   
    WRITE (fileNum,'(a)') '   <calculationSetup>'
 
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
@@ -239,49 +231,51 @@ SUBROUTINE w_inpXML(&
    200 FORMAT('      <bzIntegration valenceElectrons="',f0.8,'" mode="',a,'" fermiSmearingEnergy="',f0.8,'">')
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
 
-   IF(kpts%specificationType.EQ.3) THEN
-      sumWeight = 0.0
-      DO i = 1, kpts%nkpt
-         sumWeight = sumWeight + kpts%wtkpt(i)
-      END DO
-      205 FORMAT('         <kPointList posScale="',f0.8,'" weightScale="',f0.8,'" count="',i0,'">')
-      WRITE (fileNum,205) kpts%posScale, sumWeight, kpts%nkpt
-      DO i = 1, kpts%nkpt
-         206 FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>')
-         WRITE (fileNum,206) kpts%wtkpt(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
-      END DO
-      WRITE (fileNum,'(a)')('         </kPointList>')
-   ELSE IF(kpts%specificationType.EQ.1) THEN
-
-      IF (kpts%numSpecialPoints.GE.2) THEN
-         207 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'">')
-         WRITE (fileNum,207) kpts%nkpt,kptGamma
-         209 FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
-         DO i = 1, kpts%numSpecialPoints
-            WRITE(fileNum,209) TRIM(ADJUSTL(kpts%specialPointNames(i))),&
-                               kpts%specialPoints(1,i),kpts%specialPoints(2,i),kpts%specialPoints(3,i)
-         END DO
-         WRITE (fileNum,'(a)') '         </kPointCount>'
-      ELSE
-!            <kPointCount count="100" gamma="F"/>
-         208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
-         WRITE (fileNum,208) kpts%nkpt,kptGamma
-      END IF
-
-   ELSE IF (kpts%specificationType.EQ.2) THEN
-!            <kPointMesh nx="10" ny="10" nz="10" gamma="F"/>
-      210 FORMAT('         <kPointMesh nx="',i0,'" ny="',i0,'" nz="',i0,'" gamma="',l1,'"/>')
-      WRITE (fileNum,210) div(1),div(2),div(3),kptGamma
-   ELSE !(kpts%specificationType.EQ.4)
-      212 FORMAT('         <kPointDensity denX="',f0.6,'" denY="',f0.6,'" denZ="',f0.6,'" gamma="',l1,'"/>')
-      WRITE (fileNum,212) kpts%kPointDensity(1),kpts%kPointDensity(2),kpts%kPointDensity(3),kptGamma
-   END IF
-
-   IF(juDFT_was_argument("-kpts_gw")) THEN
-      WRITE(fileNum,'(a)') '         <altKPointSet purpose="GW">'
-      WRITE(fileNum,'(a)') '            <kPointListFile filename="kpts_gw"/>'
-      WRITE(fileNum,'(a)') '         </altKPointSet>'
-   END IF
+   PRINT *,"KPTS->XML broken"
+   
+!!$   IF(kpts%specificationType.EQ.3) THEN
+!!$      sumWeight = 0.0
+!!$      DO i = 1, kpts%nkpt
+!!$         sumWeight = sumWeight + kpts%wtkpt(i)
+!!$      END DO
+!!$      205 FORMAT('         <kPointList posScale="',f0.8,'" weightScale="',f0.8,'" count="',i0,'">')
+!!$      WRITE (fileNum,205) kpts%posScale, sumWeight, kpts%nkpt
+!!$      DO i = 1, kpts%nkpt
+!!$         206 FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>')
+!!$         WRITE (fileNum,206) kpts%wtkpt(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
+!!$      END DO
+!!$      WRITE (fileNum,'(a)')('         </kPointList>')
+!!$   ELSE IF(kpts%specificationType.EQ.1) THEN
+!!$
+!!$      IF (kpts%numSpecialPoints.GE.2) THEN
+!!$         207 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'">')
+!!$         WRITE (fileNum,207) kpts%nkpt,kptGamma
+!!$         209 FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
+!!$         DO i = 1, kpts%numSpecialPoints
+!!$            WRITE(fileNum,209) TRIM(ADJUSTL(kpts%specialPointNames(i))),&
+!!$                               kpts%specialPoints(1,i),kpts%specialPoints(2,i),kpts%specialPoints(3,i)
+!!$         END DO
+!!$         WRITE (fileNum,'(a)') '         </kPointCount>'
+!!$      ELSE
+!!$!            <kPointCount count="100" gamma="F"/>
+!!$         208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
+!!$         WRITE (fileNum,208) kpts%nkpt,kptGamma
+!!$      END IF
+!!$
+!!$   ELSE IF (kpts%specificationType.EQ.2) THEN
+!!$!            <kPointMesh nx="10" ny="10" nz="10" gamma="F"/>
+!!$      210 FORMAT('         <kPointMesh nx="',i0,'" ny="',i0,'" nz="',i0,'" gamma="',l1,'"/>')
+!!$      WRITE (fileNum,210) div(1),div(2),div(3),kptGamma
+!!$   ELSE !(kpts%specificationType.EQ.4)
+!!$      212 FORMAT('         <kPointDensity denX="',f0.6,'" denY="',f0.6,'" denZ="',f0.6,'" gamma="',l1,'"/>')
+!!$      WRITE (fileNum,212) kpts%kPointDensity(1),kpts%kPointDensity(2),kpts%kPointDensity(3),kptGamma
+!!$   END IF
+!!$
+!!$   IF(juDFT_was_argument("-kpts_gw")) THEN
+!!$      WRITE(fileNum,'(a)') '         <altKPointSet purpose="GW">'
+!!$      WRITE(fileNum,'(a)') '            <kPointListFile filename="kpts_gw"/>'
+!!$      WRITE(fileNum,'(a)') '         </altKPointSet>'
+!!$   END IF
 
    WRITE (fileNum,'(a)') '      </bzIntegration>'
 
@@ -317,116 +311,47 @@ SUBROUTINE w_inpXML(&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Note: Different options for the cell definition!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   IF (cell%latnam.EQ.'c-b') THEN
-      a1Temp(1) = sqrt(2.)* a1Temp(1)
-   END IF
-   IF (cell%latnam.EQ.'hex') THEN
-      s3 = sqrt(3.)
-      a1Temp(1) = 2*a1Temp(1)/sqrt(3.)
-   END IF
-   IF (cell%latnam.EQ.'hx3') THEN
-      a1Temp(1) = 2*a1Temp(1)
-   END IF
-
    IF (input%film) THEN
 !      <xsd:attribute name="dVac" type="xsd:double" use="required"/>
 !      <xsd:attribute name="dTilda" type="xsd:double" use="required"/>
 !      <filmLattice ...>
-      241 FORMAT('      <filmLattice scale="',f0.8,'" latnam="',a,'" dVac="',f0.8,'" dTilda="',f0.8,'">')
-      WRITE(fileNum,241) input%scaleCell, TRIM(ADJUSTL(cell%latnam)), vacuum%dvac, dtild
-      IF (cell%latnam.EQ.'any') THEN
-         WRITE (fileNum,'(a)') '         <bravaisMatrix>'
-         255 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
-         WRITE (fileNum,255) a1Temp(1),a1Temp(2),a1Temp(3)
-         265 FORMAT('            <row-2>',f0.10,' ',f0.10,' ',f0.10,'</row-2>')
-         WRITE (fileNum,265) a2Temp(1),a2Temp(2),a2Temp(3)
-         275 FORMAT('            <row-3>',f0.10,' ',f0.10,' ',f0.10,'</row-3>')
-         WRITE (fileNum,275) a3Temp(1),a3Temp(2),a3Temp(3)
-         WRITE (fileNum,'(a)') '         </bravaisMatrix>'
-      ELSE
-         IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
-     &       (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
-     &       (cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            256 FORMAT('         <a1 scale="',f0.10,'">',f0.10,'</a1>')
-            WRITE (fileNum,256) input%scaleA1, a1Temp(1) / input%scaleA1
-         END IF
-         IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            266 FORMAT('         <a2 scale="',f0.10,'">',f0.10,'</a2>')
-            WRITE (fileNum,266) input%scaleA2, a2Temp(2) / input%scaleA2
-         END IF
-
-         IF (cell%latnam.EQ.'obl') THEN
-            257 FORMAT('         <row-1>',f0.10,' ',f0.10,'</row-1>')
-            WRITE (fileNum,257) a1Temp(1), a1Temp(2)
-            267 FORMAT('         <row-2>',f0.10,' ',f0.10,'</row-2>')
-            WRITE (fileNum,267) a2Temp(1), a2Temp(2)
-         END IF
-      END IF
-
-      268 FORMAT('         <vacuumEnergyParameters vacuum="',i0,'" spinUp="',f0.8,'" spinDown="',f0.8,'"/>')
+      241 FORMAT('      <filmLattice scale="',f0.8,'" dVac="',f0.8,'" dTilda="',f0.8,'">')
+      WRITE(fileNum,241) 1.0,  vacuum%dvac, cell%amat(3,3)
+   ELSE
+242   FORMAT('      <bulkLattice scale="',f0.10,'">')
+      WRITE (fileNum,242) 1.0
+   ENDIF
+   !         <bravaisMatrix>
+   WRITE (fileNum,'(a)') '         <bravaisMatrix>'
+   !            <row-1>0.00000 5.13000 5.13000</row-1>
+250 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
+   WRITE (fileNum,250) cell%amat(:,1)
+   !            <row-2>5.13000 0.00000 5.13000</row-2>
+260 FORMAT('            <row-2>',f0.10,' ',f0.10,' ',f0.10,'</row-2>')
+   WRITE (fileNum,260) cell%amat(:,2)
+   !            <row-3>5.13000 5.13000 0.00000</row-3>
+270 FORMAT('            <row-3>',f0.10,' ',f0.10,' ',f0.10,'</row-3>')
+   WRITE (fileNum,270)  cell%amat(:,3)
+   WRITE (fileNum,'(a)') '         </bravaisMatrix>'
+      
+   IF (input%film) THEN
+268 FORMAT('         <vacuumEnergyParameters vacuum="',i0,'" spinUp="',f0.8,'" spinDown="',f0.8,'"/>')
       DO i = 1, vacuum%nvac
          WRITE(fileNum,268) i, enpara%evac0(i,1), enpara%evac0(i,input%jspins)
       END DO
 
       WRITE (fileNum,'(a)') '      </filmLattice>'
    ELSE
-
-      242 FORMAT('      <bulkLattice scale="',f0.10,'" latnam="',a,'">')
-      WRITE (fileNum,242) input%scaleCell, TRIM(ADJUSTL(cell%latnam))
-
-      IF (cell%latnam.EQ.'any') THEN
-
-!         <bravaisMatrix>
-         WRITE (fileNum,'(a)') '         <bravaisMatrix>'
-
-!            <row-1>0.00000 5.13000 5.13000</row-1>
-         250 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
-         WRITE (fileNum,250) a1Temp(1),a1Temp(2),a1Temp(3)
-!            <row-2>5.13000 0.00000 5.13000</row-2>
-         260 FORMAT('            <row-2>',f0.10,' ',f0.10,' ',f0.10,'</row-2>')
-         WRITE (fileNum,260) a2Temp(1),a2Temp(2),a2Temp(3)
-!            <row-3>5.13000 5.13000 0.00000</row-3>
-         270 FORMAT('            <row-3>',f0.10,' ',f0.10,' ',f0.10,'</row-3>')
-         WRITE (fileNum,270) a3Temp(1),a3Temp(2),a3Temp(3)
-
-         WRITE (fileNum,'(a)') '         </bravaisMatrix>'
-      END IF
-
-      IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
-     &    (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
-     &    (cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-         252 FORMAT('         <a1 scale="',f0.10,'">',f0.10,'</a1>')
-         WRITE (fileNum,252) input%scaleA1, a1Temp(1) / input%scaleA1
-
-         IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            262 FORMAT('         <a2 scale="',f0.10,'">',f0.10,'</a2>')
-            WRITE (fileNum,262) input%scaleA2, a2Temp(2) / input%scaleA2
-         END IF
-
-         272 FORMAT('         <c scale="',f0.10,'">',f0.10,'</c>')
-         WRITE (fileNum,272) input%scaleC, a3Temp(3) / input%scaleC
-      END IF
-
-      IF (cell%latnam.EQ.'obl') THEN
-         254 FORMAT('         <row-1>',f0.10,' ',f0.10,'</row-1>')
-         WRITE (fileNum,254) a1Temp(1), a1Temp(2)
-
-         264 FORMAT('         <row-2>',f0.10,' ',f0.10,'</row-2>')
-         WRITE (fileNum,264) a2Temp(1), a2Temp(2)
-
-         274 FORMAT('         <c scale="',f0.10,'">',f0.10,'</c>')
-         WRITE (fileNum,274) input%scaleC, a3Temp(3) / input%scaleC
-      END IF
-
       WRITE (fileNum,'(a)') '      </bulkLattice>'
    END IF
    WRITE (fileNum,'(a)') '   </cell>'
 
-!   <xcFunctional name="pbe" relativisticCorrections="F">
-   280 FORMAT('   <xcFunctional name="',a,'" relativisticCorrections="',l1,'"/>')
-   WRITE (fileNum,280) TRIM(namex), l_relcor
-
+   SELECT TYPE(xcpot)
+   CLASS IS (t_xcpot_inbuild_nf)
+      !   <xcFunctional name="pbe" relativisticCorrections="F">
+      280 FORMAT('   <xcFunctional name="',a,'" relativisticCorrections="',l1,'"/>')
+      WRITE (fileNum,280) xcpot%get_name(),xcpot%relativistic_correction()
+   END SELECT
 
    uIndices = -1
    DO i_u = 1, atoms%n_u
@@ -551,12 +476,12 @@ SUBROUTINE w_inpXML(&
          END DO
          IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos(3)
          IF (input%film) THEN
-            tempTaual(3,na) = dtild*tempTaual(3,na)/input%scaleCell
+            tempTaual(3,na) = cell%amat(3,3)*tempTaual(3,na)/input%scaleCell
          END IF
 !+odim in 1D case all the coordinates are given in cartesian YM
          IF (oneD%odd%d1) THEN
-            tempTaual(1,na) = tempTaual(1,na)*a1(1)
-            tempTaual(2,na) = tempTaual(2,na)*a2(2)
+            !tempTaual(1,na) = tempTaual(1,na)*a1(1)
+            !tempTaual(2,na) = tempTaual(2,na)*a2(2)
          END IF
 !-odim
          IF (oneD%odd%d1) THEN

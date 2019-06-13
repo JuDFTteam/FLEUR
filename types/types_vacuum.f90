@@ -24,6 +24,6 @@ MODULE m_types_vacuum
       REAL :: locx(2)=[0.,0.]
       REAL :: locy(2)=[0.,0.]
       LOGICAL ::starcoeff=.false.
-      INTEGER, ALLOCATABLE :: izlay(:, :)= reshape([0.,0.],[1,2])
+      INTEGER, ALLOCATABLE :: izlay(:, :)
    END TYPE t_vacuum
  end MODULE m_types_vacuum

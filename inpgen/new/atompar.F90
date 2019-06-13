@@ -1,6 +1,6 @@
 MODULE m_atompar
-  IMPLICIT NONE
   USE m_judft
+  IMPLICIT NONE
   type t_atompar
      integer :: id = -1
      integer :: nucnumber = 0
@@ -26,7 +26,7 @@ contains
     class(t_atompar),intent(inout)::ap
 
     TYPE(t_atompar):: ap_d
-
+    INTEGER        :: n
 
     
     if (ap%rmt>0) then
@@ -54,7 +54,7 @@ contains
           ap%lmax=10
        endif
     endif
-    IF(ap%lnonsph==0) ap%lnonsph=MIN( MAX( (ap%lmax(:)-2),3 ), 8 )
+    IF(ap%lnonsph==0) ap%lnonsph=MIN( MAX( (ap%lmax-2),3 ), 8 )
     IF (ap%lnonsph>ap%lmax) THEN
        WRITE(*,*) "lnonsph had to be reduced for some atom"
        ap%lnonsph=ap%lmax
@@ -85,10 +85,11 @@ contains
     END IF
 
     !make sure there are no blanks in lo
-    DO n=1,len_TRIM(lo)
-       IF (ad%lo(n:n)=' ') THEN
-          ad%lo(n:LEN(ad%lo)-n)=ad%lo(n+1:)
-          ad%lo(LEN(ad%lo):LEN(ad%lo))=' '
+    DO n=1,len_TRIM(ap%lo)
+       IF (ap%lo(n:n)==' ') THEN
+          ap%lo(n:LEN(ap%lo)-n)=ap%lo(n+1:)
+          ap%lo(LEN(ap%lo):LEN(ap%lo))=' '
+       END IF
     ENDDO
     
     
@@ -193,7 +194,7 @@ contains
              ap=t_atompar(id=id,nucnumber=z,rmt=rmt,rmt_min=rmt_min,jri=jri,dx=dx,bmu=bmu,lmax=lmax,lnonsph=lnonsph,lo=lo,econfig=econfig,desc=desc)
           ELSE
              !try old namelist
-             CALL read_params_old(99,ap)
+             CALL read_atom_params_old(99,ap)
           END IF
           CALL add_atompar(ap)
        ENDIF
@@ -270,7 +271,7 @@ contains
       ENDDO
       
     END FUNCTION element_to_z
-  END SUBROUTINE read_params_old
+  END SUBROUTINE read_atom_params_old
 
   SUBROUTINE dump_list()
     INTEGER::n

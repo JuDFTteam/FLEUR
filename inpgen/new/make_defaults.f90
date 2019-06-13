@@ -6,52 +6,41 @@
 
 MODULE m_make_defaults
   USE m_juDFT
+  IMPLICIT NONE
 !---------------------------------------------------------------------
 !  Check muffin tin radii and determine a reasonable choice for MTRs.
 !  Derive also other parameters for the input file, to provide some
 !  help in the out-file.                                        gb`02
 !---------------------------------------------------------------------
 CONTAINS
-
-  subroutine make_FleurInputSchema()
-     USE iso_c_binding
-     implicit none
-    integer :: errorStatus
-    logical :: l_exist
-    interface
-       function dropInputSchema() bind(C, name="dropInputSchema")
-         use iso_c_binding
-         INTEGER(c_int) dropInputSchema
-       end function dropInputSchema
-    end interface
-    
-    inquire(file="FleurInputSchema",exist=l_exist)
-    if (l_exist) return
-    errorStatus = 0
-    errorStatus = dropInputSchema()
-    IF(errorStatus.NE.0) THEN
-       call judft_error('Error: Cannot print out FleurInputSchema.xsd')
-    END IF
-  end subroutine make_FleurInputSchema
-
-
   
-  SUBROUTINE make_defaults(atoms,sym,vacuum,input,stars,&
-&                   xcpot,noco,hybrid)
-      USE m_types
+  SUBROUTINE make_defaults(atoms,sym,cell,vacuum,input,stars,&
+                   xcpot,noco,hybrid)
+    USE m_types_atoms
+    USE m_types_cell
+    USE m_types_sym
+    USE m_types_vacuum
+    USE m_types_xcpot_inbuild_nofunction
+    USE m_types_input
+    USE m_types_stars
+    USE m_types_noco
+    USE m_types_hybrid
+    
+    
       TYPE(t_atoms),INTENT(IN)    ::atoms
       TYPE(t_sym),INTENT(IN)      ::sym
+      TYPE(t_cell),INTENT(IN)     ::cell
+      
       
       TYPE(t_vacuum),INTENT(INOUT)::vacuum
       TYPE(t_input),INTENT(INOUT) ::input
       TYPE(t_stars),INTENT(INOUT) ::stars
-      TYPE(t_xcpot),INTENT(INOUT) ::xcpot
+      TYPE(t_xcpot_inbuild_nf),INTENT(INOUT) ::xcpot
       TYPE(t_noco),INTENT(INOUT)  ::noco
       TYPE(t_hybrid),INTENT(INOUT)::hybrid
       
       
-      IMPLICIT NONE
-
+  
       !
       !input
       !
@@ -68,7 +57,7 @@ CONTAINS
       ELSE
          input%elup = 1.0
       ENDIF 
-      IF (l_hyb) THEN
+      IF (hybrid%l_hybrid) THEN
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
          input%gw_neigd = max( nint(input%zelec)*10, 60 )
@@ -99,13 +88,13 @@ CONTAINS
       !vacuum
       !
       IF (.not.input%film) THEN
-         vacuum%dvac = a3(3) 
+         vacuum%dvac = cell%amat(3,3)
       Else
          vacuum%dvac = REAL(NINT(vacuum%dvac*100)/100.)
       ENDIF
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
-      IF (oneD%odd%d1) vacuum%nvac = 1
+      !IF (oneD%odd%d1) vacuum%nvac = 1
    
       !
       !noco
@@ -132,7 +121,7 @@ CONTAINS
       hybrid%select1(2,:) = 0
       hybrid%select1(3,:) = 4
       hybrid%select1(4,:) = 2
-      hybrid%l_hybrid = l_hyb
+      !hybrid%l_hybrid = l_hyb
       hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
     
 

@@ -76,10 +76,6 @@ C-----> PARAMETER STATEMENTS
 C     
       INTEGER, INTENT (IN) :: mkpt,mface,mdir
 c     
-c     ---> running mode parameter
-c     
-      INTEGER, INTENT (IN) :: ktest
-C     
 C----->  Symmetry information
 C     
       INTEGER, INTENT (IN) :: nsym,idsyst,idtype
@@ -432,7 +428,7 @@ c
 !     vkrep(ix,ik); ix=1,3; ik=1,nkstar
 !     
       CALL ordstar(
-     >     6,kpri,ktest,
+     >     6,0,0,
      >     fnorm,fdist,nface,iside,
      >     nsym,ccr,rltv,mkpt,mface,mdir,
      =     nkpt,vkxyz,

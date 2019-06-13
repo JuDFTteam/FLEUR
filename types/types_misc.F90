@@ -115,7 +115,10 @@ CONTAINS
 
    SUBROUTINE results_init(thisResults,dimension,input,atoms,kpts,noco)
 
-      USE m_types_setup
+     USE m_types_atoms
+     USE m_types_input
+     USE m_types_noco
+     USE m_types_dimension
       USE m_types_kpts
 
       IMPLICIT NONE

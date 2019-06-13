@@ -13,11 +13,11 @@ CONTAINS
     IMPLICIT NONE
 
     !==> Arguments
+    CHARACTER(len=*),INTENT(INOUT)::line
     REAL,    INTENT (OUT) :: a1(3),a2(3),a3(3)
     REAL,    INTENT (OUT) :: aa                ! overall scaling constant
     REAL,    INTENT (OUT) :: scale(3),mat(3,3) ! for trigonal lattices
-    INTEGER, INTENT (OUT) :: i_c
-
+    
     !==> Local Variables
     CHARACTER(len=40) :: latsys
     REAL    :: a0,a_rho
@@ -26,7 +26,7 @@ CONTAINS
     REAL    :: c1(3),c2(3),c3(3)
     REAL    :: ar,br,cr,b1,b2,am(3,3)
     REAL    :: ca,cb,at
-    INTEGER :: i,j,err,i1,i2,i_c
+    INTEGER :: i,j,err,i1,i2,i_c,ios
     LOGICAL :: noangles
 
     REAL, PARAMETER :: eps = 1.0e-7, sqrt2  =  1.4142135623730950, &
@@ -167,8 +167,8 @@ CONTAINS
 
        !===>  5.1: hexagonal-R      (hR) trigonal,( rhombohedral )
 
-    ELSEIF ( latsys =='hexagonal-R'.OR.latsys =='hR'.OR.latsys =='r'.&
-         OR.latsys =='R'.OR.latsys =='rhombohedral'.OR.&
+    ELSEIF ( latsys =='hexagonal-R'.OR.latsys =='hR'.OR.latsys =='r'&
+         .OR.latsys =='R'.OR.latsys =='rhombohedral'.OR.&
          latsys =='rho'.OR.latsys =='trigonal' ) THEN
 
        noangles=.false.
@@ -295,8 +295,8 @@ CONTAINS
 
        !===> 11: orthorhombic-S   (oS) (oC) 
 
-    ELSEIF ( latsys =='orthorhombic-S'.OR.latsys =='orthorhombic-C'.or&
-         .latsys =='oS'.OR.latsys =='oC'.OR.latsys =='orC'.OR.&
+    ELSEIF ( latsys =='orthorhombic-S'.OR.latsys =='orthorhombic-C'.OR.&
+         latsys =='oS'.OR.latsys =='oC'.OR.latsys =='orC'.OR.&
          latsys =='base-centered-orthorhombic' ) THEN
 
        noangles=.true.

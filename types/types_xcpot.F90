@@ -185,7 +185,7 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS, mt_call)
-      USE m_types_misc
+      !USE m_types_misc
       USE m_judft
       USE, INTRINSIC :: IEEE_ARITHMETIC
       IMPLICIT NONE

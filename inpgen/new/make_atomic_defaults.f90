@@ -12,13 +12,19 @@ CONTAINS
   SUBROUTINE make_atomic_defaults(input,vacuum,cell,oneD,atoms)
     USE m_check_mt_radii
     USE m_atompar
-    TYPE(t_atoms),INTENT(INOUT) :: atoms
+    USE m_types_atoms
+    USE m_types_input
+    USE m_types_vacuum
+    USE m_types_cell
+    USE m_types_oneD
+    
+    TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_input),INTENT(IN)    :: input
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
       TYPE(t_cell),INTENT(IN)     :: cell
       TYPE(t_oneD),INTENT(IN)     :: oneD
       
-      INTEGER :: i,l
+      INTEGER :: i,l,id,n
       
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap
@@ -30,12 +36,12 @@ CONTAINS
       ALLOCATE(atoms%lmax(atoms%ntype))
       ALLOCATE(atoms%nlo(atoms%ntype))
       ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype))
-      ALLOCATE(atoms%ncst(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
       ALLOCATE(atoms%nflip(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(atoms%ntype))
-      ALLOCATE(atoms%bmu(atoms%ntype))
+      !ALLOCATE(atoms%bmu(atoms%ntype))
+      ALLOCATE(atoms%econf(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       
@@ -65,18 +71,18 @@ CONTAINS
          atoms%dx(n)=ap%dx
          atoms%lmax(n)=ap%lmax
          atoms%lnonsph(n)=ap%lnonsph
-         atoms%bmu(n))=ap%bmu
+         !atoms%bmu(n))=ap%bmu
          !local orbitals
-         atoms%nlo(n)len_TRIM(ap%lo)/2
-         DO i=1,atoms%nlo
+         atoms%nlo(n)=len_TRIM(ap%lo)/2
+         DO i=1,atoms%nlo(n)
             DO l = 0, 3
                IF (ap%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l         
             ENDDO
          ENDDO
-         atoms%ulo_der(:,n)=.FALSE.
+         atoms%ulo_der(:,n)=0
          
-         econfig(n)=ap%econfig
-         atoms%ncst(n)=econfig_count_core(econfig)
+         call atoms%econf(n)%init(ap%econfig)
+         !atoms%ncst(n)=econfig_count_core(econfig)
          
          
          atoms%nflip(n)=1

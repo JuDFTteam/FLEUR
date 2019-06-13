@@ -9,8 +9,6 @@ MODULE m_types_cell
   IMPLICIT NONE
   PRIVATE
   TYPE t_cell
-      !name of 2D-lattice type
-      CHARACTER*3::latnam
       !vol of dtilde box
       REAL::omtil
       !2D area

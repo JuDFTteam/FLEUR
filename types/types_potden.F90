@@ -263,7 +263,12 @@ CONTAINS
 
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,jspins,potden_type)
     USE m_judft
-    USE m_types_setup
+    USE m_types_atoms
+    USE m_types_stars
+    USE m_types_vacuum
+    USE m_types_noco
+    USE m_types_sphhar
+       
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT):: pd 
     TYPE(t_atoms),INTENT(IN) :: atoms

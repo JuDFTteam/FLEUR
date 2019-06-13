@@ -3,7 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
+#ifndef CPP_MANAGED
+#define CPP_MANAGED
+#endif
 MODULE m_types_enpara
   USE m_judft
   IMPLICIT NONE
@@ -41,7 +43,7 @@ MODULE m_types_enpara
 
 CONTAINS
   SUBROUTINE init(this,atoms,jspins,l_defaults)
-    USE m_types_setup
+    USE m_types_atoms
     USE m_constants
     CLASS(t_enpara),INTENT(inout):: this
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -124,7 +126,9 @@ CONTAINS
   !! calculated them in case of qn_el>-1,qn_ello>-1
   !! Before this was done in lodpot.F
   SUBROUTINE update(enpara,mpi,atoms,vacuum,input,v)
-    USE m_types_setup
+    USE m_types_atoms
+    USE m_types_vacuum
+    USE m_types_input
     USE m_types_mpi
     USE m_xmlOutput
     USE m_types_potden
@@ -255,7 +259,7 @@ CONTAINS
   END SUBROUTINE update
 
   SUBROUTINE READ(enpara,atoms,jspins,film,l_required)
-    USE m_types_setup
+    USE m_types_atoms
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT):: enpara
     INTEGER, INTENT (IN)        :: jspins
@@ -363,7 +367,7 @@ CONTAINS
 
     ! write enpara-file
     !
-    USE m_types_setup
+    USE m_types_atoms
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(IN) :: enpara
     INTEGER, INTENT (IN) :: jspins
@@ -423,7 +427,9 @@ CONTAINS
 
   SUBROUTINE mix(enpara,mpi,atoms,vacuum,input,vr,vz)
     !------------------------------------------------------------------
-    USE m_types_setup
+    USE m_types_atoms
+    USE m_types_input
+    USE m_types_vacuum
     USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)  :: enpara
@@ -544,7 +550,9 @@ CONTAINS
   END SUBROUTINE mix
 
   SUBROUTINE calcOutParams(enpara,input,atoms,vacuum,regCharges)
-    USE m_types_setup
+    USE m_types_atoms
+    USE m_types_vacuum
+    USE m_types_input
     USE m_types_regionCharges
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT)    :: enpara

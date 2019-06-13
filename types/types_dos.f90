@@ -27,27 +27,29 @@ PUBLIC t_dos
 
 CONTAINS
 
-SUBROUTINE dos_init(thisDOS,input,atoms,dimension,kpts,vacuum)
+SUBROUTINE dos_init(thisDOS,neigd,input,atoms,kpts,vacuum)
 
-   USE m_types_setup
-   USE m_types_kpts
-
+  USE m_types_input
+  USE m_types_atoms
+  USE m_types_vacuum
+  USE m_types_kpts
+  
    IMPLICIT NONE
 
    CLASS(t_dos),           INTENT(INOUT) :: thisDOS
+   INTEGER        ,        INTENT(IN)    :: neigd
    TYPE(t_input),          INTENT(IN)    :: input
    TYPE(t_atoms),          INTENT(IN)    :: atoms
-   TYPE(t_dimension),      INTENT(IN)    :: dimension
    TYPE(t_kpts),           INTENT(IN)    :: kpts
    TYPE(t_vacuum),         INTENT(IN)    :: vacuum
 
-   ALLOCATE(thisDOS%jsym(dimension%neigd,kpts%nkpt,input%jspins))
-   ALLOCATE(thisDOS%ksym(dimension%neigd,kpts%nkpt,input%jspins))
-   ALLOCATE(thisDOS%qis(dimension%neigd,kpts%nkpt,input%jspins))
-   ALLOCATE(thisDOS%qal(0:3,atoms%ntype,dimension%neigd,kpts%nkpt,input%jspins))
-   ALLOCATE(thisDOS%qvac(dimension%neigd,2,kpts%nkpt,input%jspins))
-   ALLOCATE(thisDOS%qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
-   ALLOCATE(thisDOS%qstars(vacuum%nstars,dimension%neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
+   ALLOCATE(thisDOS%jsym(neigd,kpts%nkpt,input%jspins))
+   ALLOCATE(thisDOS%ksym(neigd,kpts%nkpt,input%jspins))
+   ALLOCATE(thisDOS%qis(neigd,kpts%nkpt,input%jspins))
+   ALLOCATE(thisDOS%qal(0:3,atoms%ntype,neigd,kpts%nkpt,input%jspins))
+   ALLOCATE(thisDOS%qvac(neigd,2,kpts%nkpt,input%jspins))
+   ALLOCATE(thisDOS%qvlay(neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
+   ALLOCATE(thisDOS%qstars(vacuum%nstars,neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
 
    thisDOS%jsym = 0
    thisDOS%ksym = 0

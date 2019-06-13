@@ -30,7 +30,8 @@ CONTAINS
 
 SUBROUTINE regionCharges_init(thisRegCharges,input,atoms)
 
-   USE m_types_setup
+   USE m_types_input
+   USE m_types_atoms
 
    IMPLICIT NONE
 
@@ -57,7 +58,9 @@ END SUBROUTINE regionCharges_init
 
 SUBROUTINE sumBandsVac(thisRegCharges,vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
-   USE m_types_setup
+  USE m_types_vacuum
+  USE m_types_dos
+  
    USE m_types_dos
 
    IMPLICIT NONE

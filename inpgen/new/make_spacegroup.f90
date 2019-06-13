@@ -10,12 +10,17 @@ MODULE m_make_spacegroup
   !         Modified by GM (2016)
   !********************************************************************
 CONTAINS
-  SUBROUTINE make_spacegroup(film,noco,cell,atompos,atomid,sym)
+  SUBROUTINE make_spacegroup(film,noco,cell,pos,atomid,sym)
 
     USE m_bravaissymm
     USE m_closure, ONLY : close_pt, closure
     USE m_supercheck
-
+    USE m_types_noco
+    USE m_types_cell
+    USE m_types_sym
+    USE m_sssym
+    USE m_socsym
+    USE m_film_sym
     IMPLICIT NONE
     LOGICAL,INTENT(in)         :: film
     TYPE(t_noco),INTENT(in)    :: noco
@@ -30,7 +35,7 @@ CONTAINS
   
     INTEGER,PARAMETER::nop48=48
     !   point group operations from bravais lattice
-    INTEGER mops,mmrot(3,3,nop48),m_inv(nop48)
+    INTEGER mops,nops,mmrot(3,3,nop48),m_inv(nop48)
     INTEGER ncyl(nop48)
     INTEGER index_op(nop48),num_tr(nop48)
 
@@ -55,16 +60,17 @@ CONTAINS
     INTEGER, ALLOCATABLE :: mtable(:,:), binSizes(:,:,:)
     INTEGER, ALLOCATABLE :: atomIndexBins(:,:,:,:)
     REAL,    ALLOCATABLE :: inipos(:,:)
+    LOGICAL,ALLOCATABLE  :: error(:)
 
     eps7= 1.0e-7 ; istep0 = 0
 
     !---> determine the point group of the Bravais lattice
     CALL bravais_symm(cell, mops,mmrot)
     !reduce symmetry in special setups
-    ALLOCATE ( error(mpos) ); error=.FALSE.
+    ALLOCATE ( error(mops) ); error=.FALSE.
     ! reduce symmetry if SSDW calculation
     IF (noco%l_ss) CALL ss_sym(mops,mmrot,noco%qss,error)
-    IF (noco%l_soc) CALL soc_sym(mops,mmrot,noco%theta,noco%phi,amat, error)
+    IF (noco%l_soc) CALL soc_sym(mops,mmrot,noco%theta,noco%phi,cell%amat, error)
     IF (film) CALL film_sym(mops,mmrot,error)
     n=0 !Keep only operations without error
     DO i=1,mops
@@ -72,7 +78,7 @@ CONTAINS
           n=n+1
           mmrot(:,:,n)=mmrot(:,:,i)
        ENDIF
-    ENDIF
+    END DO
     mops=n
 
 
@@ -457,7 +463,7 @@ CONTAINS
 
     
     ALLOCATE ( sym%mrot(3,3,nops),sym%tau(3,nops) )
-    sym%nops=nops
+    sym%nop=nops
     DO n=1,nops
        sym%mrot(:,:,n) = mmrot(:,:,index_op(n))
        sym%tau(:,n) = ttau(:,index_op(n))
@@ -465,7 +471,7 @@ CONTAINS
     IF ( sym%symor ) THEN
        !--->   reduce symmetry to the largest symmorphic subgroup
        j = 1
-       DO i = 1, sym%nops
+       DO i = 1, sym%nop
           IF ( ALL ( ABS( sym%tau(:,i) ) < eps7 ) ) THEN
              IF ( j<i ) THEN
                 sym%mrot(:,:,j) = sym%mrot(:,:,i)
@@ -474,9 +480,9 @@ CONTAINS
           ENDIF
        ENDDO
        sym%tau = 0.00
-       IF ( sym%nops > j-1 ) THEN
+       IF ( sym%nop > j-1 ) THEN
           WRITE (6,*) 'System has non-symmorphic symmetry with', nops, 'operations.'
-          sym%nops = j - 1
+          sym%nop = j - 1
           WRITE(6,*) 'Symmetry reduced to symmorphic subgroup with', nops, 'operations.'
        ENDIF
 

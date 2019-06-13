@@ -50,14 +50,14 @@ inpgen/element.f inpgen/atom_input.f inpgen/crystal.f inpgen/lattice2.f inpgen/s
 inpgen/atom_sym.f inpgen/generator.f inpgen/read_record.f inpgen/soc_or_ssdw.f inpgen/symproperties.f
 inpgen/bravais_symm.f  inpgen/set_atom_core.f inpgen/spg_gen.f global/triang.f
 inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.f
-io/calculator.f global/ss_sym.f global/soc_sym.f math/inv3.f  io/rw_symfile.f
+io/calculator.f global/ss_sym.f global/soc_sym.f   io/rw_symfile.f
 kpoints/kptgen_hybrid.f kpoints/od_kptsgen.f kpoints/bravais.f kpoints/divi.f kpoints/brzone.f
 kpoints/kptmop.f kpoints/kpttet.f init/bandstr1.F kpoints/ordstar.f kpoints/fulstar.f kpoints/kprep.f
 kpoints/tetcon.f kpoints/kvecon.f init/boxdim.f global/radsra.f global/differ.f math/inwint.f
 math/outint.f math/grule.f )
 
 set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
-eigen/orthoglo.F90  math/ylm4.F90 mpi/mpi_bc_tool.F90
+eigen/orthoglo.F90  math/ylm4.F90 mpi/mpi_bc_tool.F90 math/inv3.f90
 global/sort.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90  global/find_enpara.f90
 inpgen/closure.f90  math/intgr.F90
 io/w_inpXML.f90 kpoints/julia.f90 global/utility.F90 

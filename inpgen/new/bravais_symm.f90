@@ -9,7 +9,7 @@ MODULE m_bravaissymm
   !********************************************************************
 CONTAINS
   SUBROUTINE bravais_symm(cell,nops,mrot)
-
+    USE m_types_cell
     IMPLICIT NONE
 
     !==> Arguments
@@ -32,9 +32,9 @@ CONTAINS
     d1 = cell%aamat(1,1)
     d2 = cell%aamat(2,2)
     d3 = cell%aamat(3,3)
-    b1 = ( cell%bmat(1,1)/scale(1) )**2 + ( cell%bmat(1,2)/scale(2) )**2 + ( cell%bmat(1,3)/scale(3) )**2
-    b2 = ( cell%bmat(2,1)/scale(1) )**2 + ( cell%bmat(2,2)/scale(2) )**2 + ( cell%bmat(2,3)/scale(3) )**2
-    b3 = ( cell%bmat(3,1)/scale(1) )**2 + ( cell%bmat(3,2)/scale(2) )**2 + ( cell%bmat(3,3)/scale(3) )**2
+    b1 = ( cell%bmat(1,1) )**2 + ( cell%bmat(1,2) )**2 + ( cell%bmat(1,3) )**2
+    b2 = ( cell%bmat(2,1) )**2 + ( cell%bmat(2,2) )**2 + ( cell%bmat(2,3) )**2
+    b3 = ( cell%bmat(3,1) )**2 + ( cell%bmat(3,2) )**2 + ( cell%bmat(3,3) )**2
 
     !---> determine the cutoffs along each direction a_i:
     dmax = max( d1,d2,d3)

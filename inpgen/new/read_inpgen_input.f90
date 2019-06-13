@@ -6,16 +6,26 @@
 
 MODULE m_read_inpgen_input
   USE m_judft
+  USE m_calculator
   IMPLICIT NONE
   private
   public read_inpgen_input
 CONTAINS
 
   SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,kpts_str,&
-       input,sym,noco,vacuum,stars,xcpot,cell)
+       input,sym,noco,vacuum,stars,xcpot,cell,hybrid)
     !Subroutine reads the old-style input for inpgen
     use m_atompar
-    use m_types
+    USE m_types_input
+    USE m_types_sym
+    USE m_types_noco
+    USE m_types_vacuum
+    USE m_types_stars
+    USE m_types_xcpot_inbuild_nofunction
+    USE m_types_cell
+    USE m_types_hybrid
+    USE m_process_lattice_namelist
+    
     use m_inv3
     REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:)
     CHARACTER(len=20), ALLOCATABLE,INTENT(OUT) :: atom_Label(:)
@@ -25,11 +35,13 @@ CONTAINS
     TYPE(t_noco),INTENT(OUT)     :: noco
     TYPE(t_vacuum),INTENT(OUT)   :: vacuum
     TYPE(t_stars),INTENT(OUT)    :: stars
-    TYPE(t_xcpot),INTENT(OUT)    :: xcpot
+    TYPE(t_xcpot_inbuild_nf),INTENT(OUT)    :: xcpot
     TYPE(t_cell),INTENT(OUT)     :: cell
+    TYPE(t_hybrid),INTENT(OUT)   :: hybrid
+    
     
     !locals
-    REAL                :: a1(3),a2(3),a3(3),aa,scale(3),mat(3,3)
+    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),det
     integer             :: ios,n,i
     CHARACTER(len=100)  :: filename
     logical             :: l_exist
@@ -64,7 +76,7 @@ CONTAINS
           CASE ('latt')
              CALL process_lattice(line,a1,a2,a3,aa,scale,mat)
           CASE('inpu')
-             CALL process_input(line,input%film,sym%symor)
+             CALL process_input(line,input%film,sym%symor,hybrid%l_hybrid)
           CASE('atom')
              CALL read_atom_params_old(98,ap)
              call add_atompar(ap)
@@ -83,7 +95,7 @@ CONTAINS
           CASE('kpt ')
              CALL process_kpts(line,kpts_str,input%tria,input%tkb)
           CASE('film')
-             CALL process_film(line,vacuum%dvac,vacuum%dtild)
+             CALL process_film(line,vacuum%dvac,cell%amat(3,3))
           CASE('gen ','sym ')
              CALL judft_error("Specifying the symmetries no longer supported in inpgen")
           CASE default
@@ -153,7 +165,7 @@ CONTAINS
     IF (input%film) THEN
        CALL cell%init(vacuum%dvac)
     ELSE
-       CALL cell%init()
+       CALL cell%init(-1.0)
     ENDIF
     
   END SUBROUTINE read_inpgen_input
@@ -168,8 +180,8 @@ CONTAINS
 
       integer :: div1,div2,div3,nkpt
       real    :: den
-      div1=0;div2=0;div3=0;nkpt=0;den=0.0
       NAMELIST /kpt/nkpt,div1,div2,div3,tkb,tria,den
+      div1=0;div2=0;div3=0;nkpt=0;den=0.0
 
       kpts_str=''
       if (den>0.0) THEN
@@ -187,22 +199,24 @@ CONTAINS
 
       INTEGER :: ios
       LOGICAL :: cartesian, cal_symm, checkinp,inistop,oldfleur
+      NAMELIST /input/ film, cartesian, cal_symm, checkinp, inistop,&
+                      symor, oldfleur, hybrid
       cartesian=.FALSE.
-      cal_sym=.FALSE.
+      cal_symm=.FALSE.
       oldfleur=.FALSE.
-      NAMELIST /input/ film, cartesian, cal_symm, checkinp, inistop,
-     &                 symor, oldfleur, hybrid
      READ(line,input,iostat=ios)
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
      IF (ANY([cal_symm, checkinp,oldfleur])) CALL judft_error("Switches cal_symm, checkinp,oldfleur no longer supported")
    END SUBROUTINE process_input
    
    SUBROUTINE process_qss(line,noco)
+     USE m_types_noco
      CHARACTER(len=*),INTENT(in)::line
      TYPE(t_noco),INTENT(INOUT) :: noco
      CHARACTER(len=1000) :: buf
-
-     buf=ADJUSTL(line(5:len_TRIM(line)-1)
+     INTEGER :: ios
+ 
+     buf=ADJUSTL(line(5:len_TRIM(line)-1))
           
      READ(buf,*,iostat=ios) noco%qss
      noco%l_ss=.TRUE.
@@ -211,11 +225,13 @@ CONTAINS
    END SUBROUTINE process_qss
 
    SUBROUTINE process_soc(line,noco)
+     USE m_types_noco
      CHARACTER(len=*),INTENT(in)::line
      TYPE(t_noco),INTENT(INOUT) :: noco
      CHARACTER(len=1000) :: buf
-
-     buf=ADJUSTL(line(5:len_TRIM(line)-1)
+     INTEGER :: ios
+ 
+     buf=ADJUSTL(line(5:len_TRIM(line)-1))
           
      READ(buf,*,iostat=ios) noco%theta,noco%phi
      noco%l_soc=.TRUE.
@@ -224,7 +240,8 @@ CONTAINS
 
    SUBROUTINE process_film(line,dvac,dtild)
      CHARACTER(len=*),INTENT(in):: line
-     real,intent(out)           :: dvac,dtild
+     REAL,INTENT(out)           :: dvac,dtild
+     INTEGER :: ios
      NAMELIST /film/   dvac, dtild
      READ(line,film,iostat=ios)
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
@@ -237,12 +254,12 @@ CONTAINS
      REAL :: shift(3)
      INTEGER :: ios,n
      
-     buf=ADJUSTL(line(7:len_TRIM(line)-1)    
+     buf=ADJUSTL(line(7:len_TRIM(line)-1))    
      READ(buf,*,iostat=ios) shift
      
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
      DO n=1,SIZE(atompos,2)
-        atompos(:,n)=atompos(:,)+shift
+        atompos(:,n)=atompos(:,n)+shift
      ENDDO
    END SUBROUTINE process_shift
 
@@ -253,18 +270,19 @@ CONTAINS
      REAL :: factor(3)
      INTEGER :: ios,n
      
-     buf=ADJUSTL(line(8:len_TRIM(line)-1)    
+     buf=ADJUSTL(line(8:len_TRIM(line)-1))    
      READ(buf,*,iostat=ios) factor
      
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
      DO n=1,SIZE(atompos,2)
-        atompos(:,n)=atompos(:,)/factor
+        atompos(:,n)=atompos(:,n)/factor
      ENDDO
    END SUBROUTINE process_factor
 
    SUBROUTINE process_exco(line,xcpot)
+     USE m_types_xcpot_inbuild_nofunction
      CHARACTER(len=*),INTENT(in)::line
-     TYPE(t_xcpot),INTENT(INOUT) :: xcpot
+     TYPE(t_xcpot_inbuild_nf),INTENT(INOUT) :: xcpot
      LOGICAL::relxc
      CHARACTER(len=4) :: xctyp
      NAMELIST /exco/   xctyp, relxc 
@@ -278,11 +296,12 @@ CONTAINS
 
    SUBROUTINE process_comp(line,jspins,frcor,ctail,kcrel,gmax,gmaxxc,rkmax)
      CHARACTER(len=*),INTENT(in)::line
-     INTEGER,INTENT(inout):: jspins,frcor,ctail,kcrel
+     INTEGER,INTENT(inout):: jspins,kcrel
+     LOGICAL,INTENT(inout):: frcor,ctail
      REAL,intent(inout)   :: gmax,gmaxxc,rkmax
 
      INTEGER :: ios
-     NAMELIST /comp/   jspins, frcor, ctail, kcrel, gmax, gmaxxc, kmax
+     NAMELIST /comp/   jspins, frcor, ctail, kcrel, gmax, gmaxxc, rkmax
      
      READ(line,comp,iostat=ios) 
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
@@ -304,7 +323,7 @@ CONTAINS
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)    :: infh            ! input filehandle (5)
-      INTEGER, INTENT (IN)    :: outh            ! Output filehandle
+      INTEGER, INTENT (IN)    :: outfh            ! Output filehandle
 
       INTEGER               :: n,ios
       LOGICAL               :: building, complete

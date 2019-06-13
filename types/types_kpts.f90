@@ -5,7 +5,10 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_kpts
+ IMPLICIT NONE
+ 
   PRIVATE
+  
   TYPE t_kpts
      INTEGER               :: nkpt=0
      INTEGER               :: ntet=0
@@ -43,7 +46,10 @@ CONTAINS
   SUBROUTINE add_special_line(kpts,point,name)
     CLASS(t_kpts),INTENT(inout):: kpts
     CHARACTER(len=*),INTENT(in):: name
-    REAL,INTENT(in)            :: point
+    REAL,INTENT(in)            :: point(3)
+
+    CHARACTER(len=50),ALLOCATABLE:: names(:)
+    REAL,ALLOCATABLE             :: points(:,:)
 
     IF (kpts%numspecialpoints>0) THEN
        CALL move_ALLOC(kpts%specialPointNames,names)
@@ -52,7 +58,7 @@ CONTAINS
        ALLOCATE(kpts%specialPoints(3,SIZE(names)+1))
        ALLOCATE(kpts%specialPointIndices(SIZE(names)+1))
        ALLOCATE(kpts%specialPointNames(SIZE(names)+1))
-       kpts%specialPoints(3,:SIZE(names))=points
+       kpts%specialPoints(:,:SIZE(names))=points
        kpts%specialPointNames(:SIZE(names))=names
     ELSE
        ALLOCATE(kpts%specialPoints(3,1))
@@ -60,16 +66,19 @@ CONTAINS
        ALLOCATE(kpts%specialPointNames(1))
     ENDIF
     kpts%numspecialpoints=kpts%numspecialpoints+1
-    kpts%specialPoints(3,kpts%numspecialpoints)=point
+    kpts%specialPoints(:,kpts%numspecialpoints)=point
     kpts%specialPointNames(kpts%numspecialpoints)=name
   END SUBROUTINE add_special_line
   
-  SUBROUTINE init_special(kpts,cell)
+  SUBROUTINE init_special(kpts,cell,film)
+    USE m_types_cell
     CLASS(t_kpts),INTENT(inout):: kpts
     LOGICAL,INTENT(IN)         :: film
     TYPE(t_cell),intent(IN)    :: cell
 
-    IF (kpts%numSpecialPoints<2) CALL get_special_points(film,cell)
+    REAL:: nextp(3),lastp(3),d(MAX(kpts%nkpt,kpts%numSpecialPoints))
+    INTEGER:: nk(MAX(kpts%nkpt,kpts%numSpecialPoints)),i,ii
+    IF (kpts%numSpecialPoints<2) CALL add_special_points_default(kpts,film,cell)
     kpts%nkpt=MAX(kpts%nkpt,kpts%numSpecialPoints)
     !all sepecial kpoints are now set already
 
@@ -87,7 +96,7 @@ CONTAINS
        nk(i)=NINT((kpts%nkpt-kpts%numSpecialPoints)*(d(i)/SUM(d)))
     ENDDO
 
-    ALLOCATE(kpts%bk(kpts%numSpecialPoints+SUM(nk)))
+    ALLOCATE(kpts%bk(3,kpts%numSpecialPoints+SUM(nk)))
     
     !Generate lines
     kpts%nkpt=1
@@ -108,9 +117,11 @@ CONTAINS
   END SUBROUTINE init_special
     
           
-  SUBROUTINE init_defaults(kpts,film,area,cell,sym)
-    class(t_kpts),intent(out):: kpts
-    LOGICAL,INTENT(in)       :: film
+  SUBROUTINE init_defaults(kpts,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+    USE m_types_cell
+    USE m_types_sym
+    CLASS(t_kpts),INTENT(out):: kpts
+    LOGICAL,INTENT(in)       :: film,tria,l_soc_or_ss,l_gamma
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
 
@@ -120,14 +131,17 @@ CONTAINS
     ELSE
        nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
     ENDIF
-    call kpts%init_by_number(nkpt)
+    call kpts%init_by_number(nkpt,cell,sym,film,tria,l_soc_or_ss,l_gamma)
   end subroutine init_defaults
 
-  SUBROUTINE init_by_density(kpts,density,cell,sym)
-    CLASS(t_kpts),INTENT(out):: kpts
+  SUBROUTINE init_by_density(kpts,density,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+  USE m_types_cell
+  USE m_types_sym
+  CLASS(t_kpts),INTENT(out):: kpts
     REAL,INTENT(in)          :: density
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
+    LOGICAL,INTENT(IN)             :: film,tria,l_soc_or_ss,l_gamma
     REAL    :: length
     INTEGER :: n,grid(3)
 
@@ -135,24 +149,27 @@ CONTAINS
        length=sqrt(dot_product(cell%bmat(n,:),cell%bmat(n,:)))  !TODO why not bmat(:,n)???
        grid(n)=ceiling(density*length)
     end do
-    call kpts%init_by_grid(grid)
+    call kpts%init_by_grid(grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
     
   end subroutine init_by_density
 
-  SUBROUTINE init_by_number(kpts,nkpt,film,cell,sym)
+  SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,tria,l_soc_or_ss,l_gamma)
     USE m_divi
+  USE m_types_cell
+    USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
     INTEGER,INTENT(IN)       :: nkpt
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
+    LOGICAL,INTENT(IN)             :: film,tria,l_soc_or_ss,l_gamma
     
     INTEGER :: grid(3)
 
-    CALL divi(nkpt,cell%bmat,film,sym%nop,syom%nop2,grid)
-    CALL kpts%init_by_grid(grid)
+    CALL divi(nkpt,cell%bmat,film,sym%nop,sym%nop2,grid)
+    CALL kpts%init_by_grid(grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
   END SUBROUTINE init_by_number
 
-  SUBROUTINE init_by_grid(kpts,sym,cell,grid,film,tria,l_soc_or_ss)
+  SUBROUTINE init_by_grid(kpts,grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
     !----------------------------------------------------------------------+
     ! Generate a k-point file with approx. nkpt k-pts or a Monkhorst-Pack  |
     ! set with nmod(i) divisions in i=x,y,z direction. Interface to kptmop |
@@ -164,16 +181,16 @@ CONTAINS
     USE m_brzone2
     USE m_kptmop
     USE m_kpttet
-    USE m_gen_bz
-    USE m_types
-
+    USE m_types_cell
+    USE m_types_sym
+    !USE m_kptgen_hybrid
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
     TYPE(t_sym),     INTENT(IN)    :: sym
     TYPE(t_cell),    INTENT(IN)    :: cell
-    INTEGER,INTENT(IN)             :: grid(3)
-    LOGICAL,INTENT(IN)             :: film,tria,l_soc_or_ss
+    INTEGER,INTENT(INout)          :: grid(3)
+    LOGICAL,INTENT(IN)             :: film,tria,l_soc_or_ss,l_gamma
 
 
     INTEGER, PARAMETER :: nop48  = 48
@@ -231,7 +248,8 @@ CONTAINS
 
     IF (l_gamma) THEN
        IF (tria) CALL judft_error("tria and l_gamma incompatible")
-       CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss)
+       call judft_error("l_gamma not supported at present")
+       !CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss)
     ELSE
        !------------------------------------------------------------
        !
@@ -267,10 +285,10 @@ CONTAINS
        ! Lattice information
 
        bltv=TRANSPOSE(cell%amat)
-       binv=TRANSPOSE(cell%bmat)/tpi_conts
+       binv=TRANSPOSE(cell%bmat)/tpi_const
        rltv=TRANSPOSE(cell%bmat)
        DO i=1,nsym
-          rlsymr(:,:,i)=REAL(TRANSPOSE(sym%mat(:,:,i))
+          rlsymr(:,:,i)=REAL(TRANSPOSE(sym%mrot(:,:,i)))
        ENDDO
 
        talfa=MATMUL(bltv,sym%tau(:,:nsym))
@@ -306,7 +324,7 @@ CONTAINS
        CALL brzone2(rltv,nsym,ccr,mface,nbsz,nv48,cpoint,xvec,ncorn,nedge,nface,fnorm,fdist)
 
        IF (nbound.EQ.1) THEN
-          mkpt = PRODUCT(2*grid(:idimens)+1))
+          mkpt = PRODUCT((2*grid(:idimens)+1))
        ELSE
           mkpt=PRODUCT(grid(:idimens))
        END IF
@@ -354,17 +372,20 @@ CONTAINS
   END SUBROUTINE init_by_grid
 
 
-SUBROUTINE add_special_points_default(kpts,film,amat)
-    TYPE(t_kpts),INTENT(inout):: kpts
-    LOGICAL,INTENT(in)        :: film
-    REAL,INTENT(in)           :: amat(3,3)
+SUBROUTINE add_special_points_default(kpts,film,cell)
+  USE m_judft
+  USE m_bravais
+  use m_types_cell
+  TYPE(t_kpts),INTENT(inout):: kpts
+  LOGICAL,INTENT(in)        :: film
+  TYPE(t_cell),INTENT(in)   :: cell
     
     REAL, PARAMETER :: f12 = 1./2., f14 = 1./4., zro = 0.0
     REAL, PARAMETER :: f34 = 3./4., f38 = 3./8., one = 1.0
     REAL, PARAMETER :: f13 = 1./3., f23 = 2./3.
 
     INTEGER:: idsyst,idtype
-    CALL bravais(amat,idsyst,idtype) 
+    CALL bravais(cell%amat,idsyst,idtype) 
     
       IF (.NOT.film) THEN
          IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
@@ -387,7 +408,7 @@ SUBROUTINE add_special_points_default(kpts,film,amat)
             call kpts%add_special_line((/f12,f12, zro/) ,"F")
          ENDIF
          IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
-            IF (bmat(1,1)*bmat(2,1)+bmat(1,2)*bmat(2,2) > 0.0) THEN
+            IF (cell%bmat(1,1)*cell%bmat(2,1)+cell%bmat(1,2)*cell%bmat(2,2) > 0.0) THEN
                call kpts%add_special_line((/zro,zro, zro/) ,"g")
                call kpts%add_special_line((/zro,f12, zro/) ,"M")
                call kpts%add_special_line((/f13,f13, zro/) ,"K")
@@ -466,7 +487,7 @@ SUBROUTINE add_special_points_default(kpts,film,amat)
             call kpts%add_special_line((/f12,zro, f12/) ,"U")    ! via P)
             call kpts%add_special_line((/f12,f12, f12/) ,"R")    ! via E)
             call kpts%add_special_line((/zro,f12, f12/) ,"T")    ! via B)
-            syp(:,10)= (/zro,zro, f12/)  ; ssy(8) = "Z"
+            CALL kpts%add_special_line((/zro,zro, f12/), "Z")
          ENDIF
       ELSE
          WRITE(*,*) 'Note:'
@@ -479,7 +500,7 @@ SUBROUTINE add_special_points_default(kpts,film,amat)
             call kpts%add_special_line((/f12,f12, zro/) ,"F")
          ENDIF
          IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
-            IF (bmat(1,1)*bmat(2,1)+bmat(1,2)*bmat(2,2) > 0.0) THEN
+            IF (cell%bmat(1,1)*cell%bmat(2,1)+cell%bmat(1,2)*cell%bmat(2,2) > 0.0) THEN
                call kpts%add_special_line((/zro,zro, zro/) ,"g")
                call kpts%add_special_line((/zro,f12, zro/) ,"M")
                call kpts%add_special_line((/f13,f13, zro/) ,"K")
@@ -516,5 +537,114 @@ SUBROUTINE add_special_points_default(kpts,film,amat)
     END SUBROUTINE add_special_points_default
   
 
+    SUBROUTINE gen_bz( kpts,sym)
+
+   !     bk     ::    irreducible k-points
+   !     nkpt   ::    number of irr. k-points
+   !     bkf    ::    all k-points
+   !     nkptf  ::    number of all k-points
+   !     bkp    ::    k-point parent
+   !     bksym  ::    symmetry operation, that connects the parent
+   !                  k-point with the current one
+
+   USE m_juDFT
+   USE m_util, ONLY: modulo1
+   USE m_types_sym
+   USE m_closure
+
+   IMPLICIT NONE
+
+   TYPE(t_kpts),INTENT(INOUT) :: kpts
+   TYPE(t_sym),INTENT(IN)     :: sym
+
+!  - local scalars -
+   INTEGER                 ::  ic,iop,ikpt,ikpt1
+   LOGICAL                 ::  l_found
+      
+!  - local arrays - 
+   INTEGER,ALLOCATABLE     ::  iarr(:)
+   REAL                    ::  rrot(3,3,2*sym%nop),rotkpt(3)
+   REAL,ALLOCATABLE        ::  rarr1(:,:)
+
+   INTEGER:: nsym,ID_mat(3,3)
+
+   !As we might be early in init process, the inverse operation might not be available in sym. Hence
+   !we calculate it here
+   INTEGER                 :: inv_op(sym%nop),optype(sym%nop)
+   INTEGER                 :: multtab(sym%nop,sym%nop)
+
+   CALL check_close(sym%nop,sym%mrot,sym%tau,multtab,inv_op,optype)
+   
+   nsym=sym%nop
+   if (.not.sym%invs) nsym=2*sym%nop
+
+   IF (ANY(kpts%nkpt3==0)) THEN
+      CALL judft_warn("Generating kpoints in full BZ failed. You have to specify nx,ny,nz in the kpoint-grid section of inp.xml")
+      RETURN ! you skipped the error, so you get what you deserve...
+   END IF
+   ALLOCATE (kpts%bkf(3,nsym*kpts%nkpt))
+   ALLOCATE (kpts%bkp(nsym*kpts%nkpt))
+   ALLOCATE (kpts%bksym(nsym*kpts%nkpt))
+      
+   ! Generate symmetry operations in reciprocal space
+   DO iop=1,nsym
+      IF( iop .le. sym%nop ) THEN
+         rrot(:,:,iop) = TRANSPOSE( sym%mrot(:,:,inv_op(iop)) )
+      ELSE
+         rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
+      END IF
+   END DO
+
+    
+   !Add existing vectors to list of full vectors
+   id_mat=0
+   ID_mat(1,1)=1;ID_mat(2,2)=1;ID_mat(3,3)=1
+   IF (ANY(sym%mrot(:,:,1).NE.ID_mat)) CALL judft_error("Identity must be first symmetry operation",calledby="gen_bz")
+   
+   ic=0
+   DO iop=1,nsym
+      DO ikpt=1,kpts%nkpt
+         l_found = .FALSE.
+         rotkpt = MATMUL(rrot(:,:,iop), kpts%bk(:,ikpt))
+         !transform back into IBZ
+         rotkpt = modulo1(rotkpt,kpts%nkpt3)
+         DO ikpt1=1,ic
+            IF (MAXVAL(ABS(kpts%bkf(:,ikpt1) - rotkpt)).LE.1e-08) THEN
+               l_found = .TRUE.
+               EXIT
+            END IF
+         END DO
+          
+         IF(.NOT.l_found) THEN
+            ic = ic + 1
+            kpts%bkf(:,ic) = rotkpt
+            kpts%bkp(ic) = ikpt
+            kpts%bksym(ic) = iop
+         END IF
+      END DO
+   END DO
+
+   kpts%nkptf = ic
+
+   ! Reallocate bkf, bkp, bksym
+   ALLOCATE (iarr(kpts%nkptf))
+   iarr = kpts%bkp(:kpts%nkptf)
+   DEALLOCATE(kpts%bkp)
+   ALLOCATE (kpts%bkp(kpts%nkptf))
+   kpts%bkp = iarr
+   iarr= kpts%bksym(:kpts%nkptf)
+   DEALLOCATE (kpts%bksym )
+   ALLOCATE (kpts%bksym(kpts%nkptf))
+   kpts%bksym = iarr
+   DEALLOCATE(iarr)
+   ALLOCATE (rarr1(3,kpts%nkptf))
+   rarr1 = kpts%bkf(:,:kpts%nkptf)
+   DEALLOCATE (kpts%bkf )
+   ALLOCATE (kpts%bkf(3,kpts%nkptf))
+   kpts%bkf = rarr1
+   DEALLOCATE(rarr1)
+      
+END SUBROUTINE gen_bz
+    
   
 END MODULE m_types_kpts

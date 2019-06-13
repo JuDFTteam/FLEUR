@@ -11,8 +11,11 @@ MODULE m_check_mt_radii
   !---------------------------------------------------------------------
 CONTAINS
   SUBROUTINE check_mt_radii(atoms,input,vacuum,cell,oneD,l_test,rmt1,overlap)
-
-    USE m_types
+    USE m_types_input
+    USE m_types_atoms
+    USE m_types_vacuum
+    USE m_types_cell
+    USE m_types_oneD
     USE m_sort
     USE m_inv3
     USE m_juDFT

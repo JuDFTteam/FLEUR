@@ -4,30 +4,33 @@ MODULE m_make_crystal
   !      generate space group operations from lattice information
   !********************************************************************
 CONTAINS
-  SUBROUTINE make_crystal(film, symor,atomid,atompos,atomlabel,amat,dvac,noco,&
+  SUBROUTINE make_crystal(film, atomid,atompos,atomlabel,dvac,noco,&
        cell,sym,atoms)
-    USE m_types
-    USE m_spggen
-    USE m_generator
+    USE m_types_cell
+    USE m_types_sym
+    USE m_types_atoms
+    USE m_types_noco
+    USE m_make_spacegroup
+    use m_make_atom_groups
+    !USE m_generator
     IMPLICIT NONE
     !===> Arguments
     LOGICAL, INTENT(IN)     :: film
-    LOGICAL, INTENT(IN)     :: symor       ! on input: if true, reduce symmetry if oldfleur
     REAL,    INTENT(IN)     :: atomid(:)
-    REAL,    INTENT(INOUT)  :: atompos(:,;)!might be shifted
+    REAL,    INTENT(INOUT)  :: atompos(:,:)!might be shifted
     CHARACTER(len=*),INTENT(IN)::atomlabel(:)
-    REAL,    INTENT(IN)     :: amat,dvac
+    REAL,    INTENT(IN)     :: dvac
     TYPE(t_noco),INTENT(in) :: noco
 
-    TYPE(t_cell),INTENT(in)  ::cell
-    TYPE(t_sym),INTENT(out)   ::sym
+    TYPE(t_cell),INTENT(in)   ::cell
+    TYPE(t_sym),INTENT(inout) ::sym !symor is checked
     TYPE(t_atoms),INTENT(out) ::atoms
   
  
     !===> Local Variables
     INTEGER :: i,j,k,n,m,na,nt,inversionOp
     REAL,PARAMETER :: eps7 = 1.0e-7  
-  
+    INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
     
 
     
@@ -48,14 +51,13 @@ CONTAINS
     ENDDO
 
     !--->    calculate space group symmetry
-    sym%symor=symor
     CALL make_spacegroup(film,noco,cell,atompos,atomid,sym)
     ! Check whether there is an inversion center that is not at the
     ! origin and if one is found shift the crystal such that the
     ! inversion is with respect to the origin. Then recalculate
     ! symmetry operations.
     inversionOp = -1
-    symOpLoop: DO k = 1, sym%nops
+    symOpLoop: DO k = 1, sym%nop
        IF (ALL(sym%mrot(:,:,k)==invs_matrix)) THEN
           inversionOp = k
           EXIT symOpLoop
@@ -75,18 +77,18 @@ CONTAINS
     END IF
 
     !finish generation of symmetry....
-    CALL sym%init(cell%amat,film)
+    CALL sym%init(cell,film)
 
     !Generate basic atom type
-    call make_atom_groups(sym,atompos,atomid,atomlabel,atoms)
+    CALL make_atom_groups(sym,cell,atompos,atomid,atomlabel,atoms)
     
     !--->    determine a set of generators for this group
-    CALL generator(sym%nops,sym%mrot,sym%tau,6,0)
+    !CALL generator(sym%nop,sym%mrot,sym%tau,6,0)
 
     !---> output: the atomic positions, etc.
 
     WRITE (6,'(//," Atomic positions:",/,1x,17("-"))')
-    WRITE (6,'(" atom types =",i5/,"      total =",i5)') ntype,nat
+    WRITE (6,'(" atom types =",i5/,"      total =",i5)') atoms%ntype,atoms%nat
     WRITE (6,'(/,7x,"lattice coordinates",15x,"(scaled) Cartesian coordinates   atom")')
 
     na = 0
@@ -99,5 +101,5 @@ CONTAINS
 
     RETURN
 
-  END SUBROUTINE crystal
-END MODULE m_crystal
+  END SUBROUTINE make_crystal
+END MODULE m_make_crystal
