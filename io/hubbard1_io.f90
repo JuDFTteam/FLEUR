@@ -22,6 +22,21 @@ MODULE m_hubbard1_io
 
    IMPLICIT NONE
 
+   !------------------------------------------------------------------
+   !Here the keywords for the hubbard 1 solver input file are defined
+   !------------------------------------------------------------------
+
+   CHARACTER(len=300), PARAMETER :: input_filename ="hubbard1.cfg"
+   INTEGER, PARAMETER            :: indent_before_key=3
+   INTEGER, PARAMETER            :: space_after_key =2
+   CHARACTER(len=30), PARAMETER  :: orbital_key    ="Lorb"
+   CHARACTER(len=30), PARAMETER  :: slater_key     ="Fk"
+   CHARACTER(len=30), PARAMETER  :: soc_key        ="gfact"
+   CHARACTER(len=30), PARAMETER  :: bz_key         ="Bz"
+   CHARACTER(len=30), PARAMETER  :: bx_key         ="Bx"
+   CHARACTER(len=30), PARAMETER  :: beta_key       ="beta"
+   CHARACTER(len=30), PARAMETER  :: chempot_key    ="mu"
+
    CONTAINS
 
    SUBROUTINE write_hubbard1_input(path,l,f0,f2,f4,f6,xi,bz,n_min,n_max,beta,mu,l_ccf,ne,nmatsub,e_min,e_max,sigma)

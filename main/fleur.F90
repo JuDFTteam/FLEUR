@@ -460,10 +460,13 @@ CONTAINS
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f & 
                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
           !If we have converged run hia if the density matrix has not converged (not if we are at itmax)
-          l_runhia = .NOT.l_cont.AND.(iter < input%itmax).AND.(atoms%n_hia > 0).AND.(0.01<=results%last_occdistance.OR.0.001<=results%last_mmpMatdistance)
-          !Run after first overall iteration to generate a starting density matrix
-          l_runhia = l_runhia.OR.((atoms%n_hia > 0).AND.iter==1.AND.iterHIA.EQ.0)
-          l_cont = l_cont.OR.l_runhia
+          IF(atoms%n_hia>0) THEN
+             hub1%l_runthisiter = .NOT.l_cont.AND.(iter < input%itmax).AND.(0.01<=results%last_occdistance.OR.0.001<=results%last_mmpMatdistance)
+             !Run after first overall iteration to generate a starting density matrix
+             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.iterHIA==0)
+             !Prevent that the scf loop terminates
+             l_cont = l_cont.OR.hub1%l_runthisiter
+          ENDIF
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
 

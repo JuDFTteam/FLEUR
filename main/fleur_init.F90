@@ -149,13 +149,14 @@
           !Many of these can probably be eliminated
           input%onsite_ne = 1301 !same as for dos calculations
           input%onsite_sigma = 0.00314
+          input%greensf_ecut = 1.0
           input%onsite_sphavg = .true.
           input%onsite_mode = 1
           input%onsite_nz = 1301
-          input%onsite_beta = 100.0
           input%onsite_nmatsub = 0
           input%l_gf = .false.
           hub1%n_hia = 0
+          hub1%l_runthisiter = .FALSE.
           atoms%n_hia = 0
           atoms%n_gf = 0
           atoms%n_intergf = 0
@@ -229,7 +230,7 @@
 #ifdef CPP_MPI
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                   DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
-                  kpts,enpara,sphhar,mpi,obsolete)
+                  kpts,enpara,sphhar,mpi,obsolete,hub1)
 
 #endif
 
@@ -296,7 +297,7 @@
                &           mpi,stars,sphhar,atoms,obsolete,&
                &           sym,kpts,DIMENSION,input,field,&
                &           banddos,sliceplot,vacuum,cell,enpara,&
-               &           noco,oneD,hybrid)
+               &           noco,oneD,hybrid,hub1)
 #endif
 
           ! Set up pointer for backtransformation from g-vector in positive 

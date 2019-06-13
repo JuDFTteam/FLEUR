@@ -73,6 +73,7 @@ MODULE m_types_setup
       !Contains the u_type for use in the LDA+U routines and the additional 
       !information for the atomic hamiltonian
       INTEGER                    :: n_hia
+      LOGICAL                    :: l_runthisiter   !switch which determines wether Hubbard 1 will be run in the current iteration 
       TYPE(t_utype), ALLOCATABLE :: lda_u(:)         !Information for the interaction term
       REAL, ALLOCATABLE          :: xi(:)           !Spin-orbit coupling parameter
       LOGICAL, ALLOCATABLE       :: l_ccf(:)
@@ -392,6 +393,8 @@ MODULE m_types_setup
       INTEGER :: coretail_lmax
       INTEGER :: itmax
       REAL    :: minDistance
+      REAL    :: minoccDistance !Distances for the density matrix in DFT+Hubbard 1 case
+      REAL    :: minmatDistance
       INTEGER :: maxiter
       INTEGER :: imix
       INTEGER :: gw
@@ -441,13 +444,12 @@ MODULE m_types_setup
       LOGICAL :: ldauLinMix
       REAL    :: ldauMixParam
       REAL    :: ldauSpinf
+      REAL    :: greensf_ecut
       REAL    :: onsite_sigma
       INTEGER :: onsite_ne
-      LOGICAL :: onsite_tetra
       LOGICAL :: onsite_sphavg
       INTEGER :: onsite_mode
       INTEGER :: onsite_nz
-      REAL    :: onsite_beta
       INTEGER :: onsite_nmatsub
       LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
       LOGICAL :: l_rdmft

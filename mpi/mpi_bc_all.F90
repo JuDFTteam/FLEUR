@@ -10,7 +10,7 @@ CONTAINS
        mpi,stars,sphhar,atoms,obsolete,sym,&
        kpts,DIMENSION,input,field,banddos,sliceplot,&
        vacuum,cell,enpara,noco,oneD,&
-        hybrid)
+        hybrid,hub1)
     !
     !**********************************************************************
     USE m_types
@@ -34,6 +34,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(INOUT)       :: kpts
     TYPE(t_sphhar),INTENT(INOUT)     :: sphhar
     TYPE(t_atoms),INTENT(INOUT)      :: atoms
+    TYPE(t_hub1ham),INTENT(INOUT)    :: hub1
     !     .. Scalar Arguments ..
     INTEGER n
     REAL rdum
@@ -227,16 +228,20 @@ CONTAINS
 
     CALL MPI_BCAST(atoms%onsiteGF(:)%l,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%onsiteGF(:)%atomType,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    
     CALL MPI_BCAST(input%onsite_mode,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%onsite_ne,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%onsite_nz,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%onsite_nmatsub,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(input%onsite_beta,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%onsite_sigma,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%l_gf,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%onsite_sphavg,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(input%onsite_tetra,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 
+    CALL MPI_BCAST(hub1%lda_u(:)%l,atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(hub1%lda_u(:)%atomType,atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(hub1%lda_u(:)%u,atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(hub1%lda_u(:)%j,atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(hub1%lda_u(:)%l_amf,atoms%n_hia,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 
     n = 7*7*3*sym%nop
     CALL MPI_BCAST(sym%d_wgn,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)

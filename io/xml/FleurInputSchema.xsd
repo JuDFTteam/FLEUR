@@ -52,7 +52,8 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="expertModes" type="ExpertModeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="geometryOptimization" type="GeometryOptimizerType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaU" type="LdaUGeneralType"/>
-	      <xsd:element maxOccurs="1" minOccurs="0" name="onsiteGF" type="OnsiteGFGeneralType"/>
+	 <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAGeneralType"/>
+	 <xsd:element maxOccurs="1" minOccurs="0" name="onsiteGF" type="OnsiteGFGeneralType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="spinSpiralQPointMesh" type="SpinSpiralQPointMeshType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="fields" type="FieldType"/>
@@ -624,6 +625,12 @@
       <xsd:attribute default="F" name="l_linMix" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.05" name="mixParam" type="xsd:double" use="optional"/>
       <xsd:attribute default="1.00" name="spinf" type="xsd:double" use="optional"/>
+   </xsd:complexType>   
+
+   <xsd:complexType name="LdaHIAGeneralType">
+      <xsd:attribute default="100.0" name="beta" type="xsd:double" use="optional"/>
+      <xsd:attribute default="0.01" name="minoccDistance" type="xsd:double" use="optional"/>
+      <xsd:attribute default="0.001" name="minmatDistance" type="xsd:double" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OnsiteGFGeneralType">
@@ -633,7 +640,7 @@
       <xsd:attribute default="1" name="mode" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="1301" name="nz" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="100" name="nmatsub" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute default="100." name="beta" type="xsd:string" use="optional"/>
+      <xsd:attribute default="1.0" name="ecut" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="RDMFTType">

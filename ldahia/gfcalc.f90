@@ -49,7 +49,6 @@ MODULE m_gfcalc
 
       REAL :: int_norm(g0Coeffs%ne,input%jspins), int_com(g0Coeffs%ne,input%jspins)
 
-      beta = input%onsite_beta*hartree_to_ev_const
       l_matinv = .false. !Determines how the onsite exchange splitting is calculated
       IF(ANY(atoms%onsiteGF(:)%l.EQ.2)) WRITE(6,9000)
       DO i_gf = 1, atoms%n_gf
@@ -128,7 +127,7 @@ MODULE m_gfcalc
                   integrand = integrand + (-1)**(ipm-1) * calc%data_c(i,i)
                ENDDO
             ENDDO
-            j0 = j0 + AIMAG(integrand*(REAL(g0%de(iz)))/(1.0+exp_save(beta*(real(g0%e(iz))-ef))))
+            j0 = j0 + AIMAG(integrand*MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1))
          ENDDO
          j0 = -1/(2.0*fpi_const)*hartree_to_ev_const * j0
          WRITE(6,9010) n,j0
@@ -207,7 +206,6 @@ MODULE m_gfcalc
                   !Integrate over the contour:
                   DO iz = 1, g%nz
                      !weight for the energy integration
-                     weight = MERGE(g%de(iz)/(1.0+exp_save(real(g%e(iz)-ef)/input%tkb)),g%de(iz),g%mode.EQ.1)
                      !If necessary here the radial averaging is performed
                      IF(input%onsite_sphavg) THEN
                         g_int = g%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
@@ -222,7 +220,7 @@ MODULE m_gfcalc
                         !APPROXIMATION FOR THE VERTICAL PARTS OF THE CONTOUR:
                         nmmp = nmmp + (-1)**(ipm-1) * ImagUnit * REAL(g_int) * AIMAG(g%e(1))
                      ENDIF
-                     nmmp = nmmp + (-1)**(ipm-1) * g_int * weight
+                     nmmp = nmmp + (-1)**(ipm-1) * g_int * MERGE(g%de(iz),conjg(g%de(iz)),ipm.EQ.1)
                   ENDDO
                ENDDO
                mmpMat(m,mp,ispin) = -1/(2.0 * pi_const) * AIMAG(nmmp)

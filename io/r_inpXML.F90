@@ -701,6 +701,14 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          input%ldauSpinf = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
       END IF
 
+      xPathA = '/fleurInput/calculationSetup/ldaHIA'
+      numberNodes = xmlGetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         input%minoccDistance = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minoccDistance'))
+         input%minmatDistance = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minmatDistance'))
+         hub1%beta            = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@beta'))
+      END IF
+
       xPathA = '/fleurInput/calculationSetup/onsiteGF'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
@@ -728,12 +736,9 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          numberNodes = xmlGetNumberOfNodes(xPathA)
          IF(numberNodes.EQ.1) input%onsite_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
 
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@beta'
+         xPathA = '/fleurInput/calculationSetup/onsiteGF/@ecut'
          numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) THEN
-            input%onsite_beta = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
-            hub1%beta = input%onsite_beta
-         ENDIF
+         IF(numberNodes.EQ.1) input%greensf_ecut = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
       END IF
 
       IF(input%onsite_mode.GT.2) CALL juDFT_error("No valid mode for the energy contour of Green's function", calledby="r_inpXML")

@@ -28,7 +28,8 @@ MODULE m_types_greensfCoeffs
       TYPE t_greensfCoeffs
 
          LOGICAL  :: l_onsite !Are the arrays for onsite calculations allocated
-         LOGICAL  :: l_intersite !Are the arrays for intersite calculations allocated
+         LOGICAL  :: l_intersite !Are the arrays for intersite calculations allocated#
+         LOGICAL  :: l_calc   !Should the greens function be calculated in this iteration
 
          !Energy grid for Imaginary part
          INTEGER  :: ne       !number of energy grid points for imaginary part calculations
@@ -87,7 +88,8 @@ MODULE m_types_greensfCoeffs
 
          IF(.NOT.l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + intersite gf not implented",calledby="greensf_init")
          IF(l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + onsite gf not implented",calledby="greensf_init")
-
+         
+         !IF(thisGREENSFCOEFFS%l_calc) THEN 
          !
          !Set up general parameters for the Green's function (intersite and onsite)
          !
@@ -143,6 +145,7 @@ MODULE m_types_greensfCoeffs
             thisGREENSFCOEFFS%du_int = 0.0
             thisGREENSFCOEFFS%ud_int = 0.0
          ENDIF 
+         !ENDIF !l_calc
 
       END SUBROUTINE greensfCoeffs_init
 

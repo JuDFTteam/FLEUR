@@ -18,7 +18,7 @@ CONTAINS
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                                  dimension,cell,sym,xcpot,noco,oneD,hybrid,&
-                                 kpts,enpara,sphhar,mpi,obsolete)
+                                 kpts,enpara,sphhar,mpi,obsolete,hub1)
 
    USE m_types
 
@@ -42,6 +42,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_enpara),   INTENT(INOUT) :: enpara
    TYPE(t_sphhar),   INTENT(INOUT) :: sphhar
    TYPE(t_obsolete), INTENT(INOUT) :: obsolete
+   TYPE(t_hub1ham),  INTENT(INOUT) :: hub1
 #ifdef CPP_MPI
    INCLUDE 'mpif.h'
 
@@ -106,7 +107,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%nz(atoms%ntype),atoms%zatom(atoms%ntype)) !nz and zatom have the same content!
       ALLOCATE(atoms%jri(atoms%ntype),atoms%dx(atoms%ntype),atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%lmax(atoms%ntype),atoms%nlo(atoms%ntype),atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%ncst(atoms%ntype),atoms%lda_u(4*atoms%ntype),atoms%onsiteGF(4*atoms%ntype))
+      ALLOCATE(atoms%ncst(atoms%ntype),atoms%lda_u(4*atoms%ntype),atoms%onsiteGF(4*atoms%ntype),hub1%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),atoms%neq(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype),atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat))

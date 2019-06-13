@@ -171,7 +171,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE greensf_init
 
-      SUBROUTINE init_e_contour(this,eb,et,ef,sigma,n1,n2,n3,nmatsub,beta)
+      SUBROUTINE init_e_contour(this,input,eb,et,ef,sigma,n1,n2,n3,nmatsub,beta)
 
          ! calculates the energy contour where the greens function is calculated
          ! mode determines the kind of contour between e_bot and the fermi energy
@@ -179,12 +179,16 @@ MODULE m_types_greensf
 
          ! mode = 2 gives a half circle with 2**g%nz points
 
+         USE m_types_setup
          USE m_constants
          USE m_juDFT
          USE m_grule
+         USE m_ExpSave
+
          IMPLICIT NONE
 
          CLASS(t_greensf),  INTENT(INOUT)  :: this
+         TYPE(t_input),     INTENT(IN)     :: input
          REAL,              INTENT(IN)     :: eb  
          REAL,              INTENT(IN)     :: et
          REAL,              INTENT(IN)     :: ef
@@ -208,29 +212,26 @@ MODULE m_types_greensf
             !Using a rectangular contour ending at efermi and including N_matsub matsubara frequencies 
             !at the moment we use a equidistant mesh to make interfacing with the hubbard 1 solver easier
 
-            e1 = -1.0+ef
-            e2 = 1.0+ef
+            e1 = input%greensf_ecut+ef
+            e2 = input%greensf_ecut+ef
 
             !Determine the imaginary part of the rectangle
 
-            this%sigma = 2 * pi_const  * 1./beta/hartree_to_ev_const
+            this%sigma = input%onsite_sigma
             this%nmatsub = nmatsub
 
             del = (e2-e1)/REAL(n2-1)
 
-            !ATM we only use an equidistant mesh at the imaginary part 2*pi*n_matsub*kT and 
-            !the matsubara frequencies as thats the only thing we can comfortably get from the solver
-
             DO iz = 1, n2
                IF(iz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
                this%e(iz) = (iz-1) * del + e1 + ImagUnit * this%sigma
-               this%de(iz) = del
+               this%de(iz) = del/(1.0+exp_save((real(this%e(iz))-ef)/input%tkb))
             ENDDO
             iz = n2
-            DO imatsub = nmatsub , 1 , -1
+            DO imatsub = 0 , nmatsub - 1 
                iz = iz + 1 
                IF(iz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
-               this%e(iz)  = e2 + ImagUnit * ((2*imatsub-1)*pi_const*1./beta)
+               this%e(iz)  = e2 + ImagUnit * ((2*imatsub+1)*pi_const*1./beta)
                this%de(iz) =  ImagUnit * 2.*pi_const*1./beta
             ENDDO 
 
