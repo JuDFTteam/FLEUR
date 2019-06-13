@@ -120,18 +120,21 @@ CONTAINS
     INTEGER :: n
     REAL,allocatable :: core_occ(:),valence_occ(:)
     
-    IF (INDEX(str,"|")==0) CALL judft_error(("Invalid econfig:"//TRIM(str)))
+    n=INDEX(str,"|")
+    IF (n==0) CALL judft_error(("Invalid econfig:"//TRIM(str)))
     
-    CALL convert_to_extended(str(:INDEX(str,"|")-1),core,core_occ)
+
+    CALL convert_to_extended(str(1:n-1),core,core_occ)
     CALL convert_to_extended(str(INDEX(str,"|")+1:),valence,valence_occ)
 
     CALL econf%init(core,valence)
     !Now set occupations
-    core=core(INDEX(core,"("):) !remove noble gas
+    core=econf%coreconfig(INDEX(econf%coreconfig,"("):) !remove noble gas
     DO n=1,SIZE(core_occ)
        CALL econf%set_occupation(core(:INDEX(core,")")),core_occ(n),-1.)
        core=core(INDEX(core,")")+1:)
     ENDDO
+    valence=econf%valenceconfig
     DO n=1,SIZE(valence_occ)
        CALL econf%set_occupation(valence(:INDEX(valence,")")),valence_occ(n),-1.)
        valence=valence(INDEX(valence,")")+1:)
@@ -358,6 +361,7 @@ CONTAINS
       REAL :: occ,occupation(100) !this is the tmp local variable (no 's')
       INTEGER:: n,nn
       CHARACTER:: n_ch,ch
+      extended=""
 
       conf=ADJUSTL(simple)
       n=INDEX(conf,"[")
@@ -371,24 +375,24 @@ CONTAINS
       IF (VERIFY(conf,"01234567890spdf ")>0) CALL judft_error(("Invalid econfig:"//TRIM(simple)))
       n=1
       DO WHILE (len_TRIM(conf)>1)
-         READ(conf,"(i1,a1,i2)") n_ch,ch,occ
+         READ(conf,"(a1,a1,i2)") n_ch,ch,occ
          SELECT CASE (ch)
          CASE ('s')
-            extended=extended//" ("//n_ch//"s1/2)"
+            extended=trim(extended)//" ("//n_ch//"s1/2)"
             occupation(n)=occ
             n=n+1
          CASE ('p')
-            extended=extended//" ("//n_ch//"p1/2) ("//n_ch//"p3/2)"
+            extended=trim(extended)//" ("//n_ch//"p1/2) ("//n_ch//"p3/2)"
             occupation(n)=occ*1./3.
             occupation(n+1)=occ*2./3.
             n=n+2
          CASE('d')
-            extended=extended//" ("//n_ch//"d3/2) ("//n_ch//"d5/2)"
+            extended=trim(extended)//" ("//n_ch//"d3/2) ("//n_ch//"d5/2)"
             occupation(n)=occ*2./5.
             occupation(n+1)=occ*3./5.
             n=n+2
          CASE('f')
-            extended=extended//" ("//n_ch//"f5/2) ("//n_ch//"f7/2)"
+            extended=trim(extended)//" ("//n_ch//"f5/2) ("//n_ch//"f7/2)"
             occupation(n)=occ*3./7.
             occupation(n+1)=occ*4./7.
             n=n+2

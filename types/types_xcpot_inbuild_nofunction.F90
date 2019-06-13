@@ -37,11 +37,7 @@ MODULE m_types_xcpot_inbuild_nofunction
    REAL, PARAMETER       ::  amix_hf   = 1.00
 
    TYPE, EXTENDS(t_xcpot):: t_xcpot_inbuild_nf
-#ifdef CPP_MPI
-      INTEGER             :: icorr=0 !not private to allow bcasting it around
-#else
-      INTEGER,PRIVATE     :: icorr=0
-#endif
+      INTEGER             :: icorr=0 !not private to allow bcasting it around, and to check for initiazaition
 
       TYPE(t_xcpot_data)   :: DATA
 

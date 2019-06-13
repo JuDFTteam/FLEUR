@@ -103,6 +103,33 @@ MODULE m_types_atoms
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
   ! CONTAINS
   !    procedure :: nsp => calc_nsp_atom
+    contains
+      PROCEDURE :: same_species
    END TYPE t_atoms
+
+ contains
+   LOGICAL function same_species(atoms,n,nn)
+     use m_judft
+     implicit none
+     class(t_atoms),INTENT(IN)::atoms
+     integer,intent(in)::n,nn
+
+     if (n>atoms%ntype.or.nn>atoms%ntype) call judft_error("Same species checked for non-existing atom")
+     
+     same_species=atoms%nz(n)==atoms%nz(nn)
+     same_species=same_species.and.atoms%speciesname(n)==atoms%speciesname(nn)
+     same_species=same_species.and.atoms%jri(n)==atoms%jri(nn)
+     same_species=same_species.and.atoms%dx(n)==atoms%dx(nn)
+     same_species=same_species.and.atoms%rmt(n)==atoms%rmt(nn)
+     same_species=same_species.and.atoms%lmax(n)==atoms%lmax(nn)
+     same_species=same_species.and.atoms%lnonsph(n)==atoms%lnonsph(nn)
+     same_species=same_species.and.atoms%nlo(n)==atoms%nlo(nn)
+     if (atoms%nlo(n)==atoms%nlo(nn)) same_species=same_species.and.all(atoms%llo(:,n)==atoms%llo(:,nn))
+     same_species=same_species.and.atoms%lapw_l(n)==atoms%lapw_l(nn)
+     same_species=same_species.and.atoms%l_geo(n)==atoms%l_geo(nn)
+     same_species=same_species.and.trim(atoms%econf(n)%coreconfig)==trim(atoms%econf(nn)%coreconfig)
+     same_species=same_species.and.trim(atoms%econf(n)%valenceconfig)==trim(atoms%econf(nn)%valenceconfig)
+     same_species=same_species.and.trim(atoms%econf(n)%valenceconfig)==trim(atoms%econf(nn)%valenceconfig)
+  end function
 
  END MODULE m_types_atoms

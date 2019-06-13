@@ -48,7 +48,7 @@ MODULE m_types_cell
         cell%area = cell%omtil/cell%amat(3,3)
      ELSE
         cell%vol = cell%omtil
-        cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
+        cell%area =abs(cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1))
         IF (cell%area < 1.0e-7) THEN
            cell%area = 1.
            CALL juDFT_warn("area = 0",calledby ="types_cell")

@@ -85,8 +85,7 @@ CONTAINS
     WHERE ( ABS( atoms%taual ) < eps12 ) atoms%taual = 0.00
     
     !Generate postions in cartesian coordinates
-    ALLOCATE(atoms%pos(3,atoms%nat))
-    atoms%pos(:,n) = MATMUL( cell%amat , atoms%taual(:,n) )
+    atoms%pos(:,:) = MATMUL( cell%amat , atoms%taual(:,:) )
     
   END SUBROUTINE make_atom_groups
 END MODULE m_make_atom_groups

@@ -17,6 +17,7 @@ CONTAINS
     USE m_types_vacuum
     USE m_types_cell
     USE m_types_oneD
+    USE m_constants
     
     TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_input),INTENT(IN)    :: input
@@ -24,10 +25,12 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)     :: cell
       TYPE(t_oneD),INTENT(IN)     :: oneD
       
-      INTEGER :: i,l,id,n
+      INTEGER :: i,l,id,n,nn
+      INTEGER :: element_species(120)
       
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap
+      element_species=0
 
       atoms%nlod=9  ! This fixed dimensioning might have to be made more dynamical!
       ALLOCATE(atoms%nz(atoms%ntype))
@@ -44,7 +47,14 @@ CONTAINS
       ALLOCATE(atoms%econf(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
+      ALLOCATE(atoms%rmt(atoms%ntype))
+      ALLOCATE(atoms%speciesname(atoms%ntype))
+      ALLOCATE(atoms%lapw_l(atoms%ntype))
+
+      atoms%lapw_l=0
+      atoms%speciesname=""
       
+
       atoms%nz(:) = NINT(atoms%zatom(:))
       atoms%rmt(:) = 999.9
       atoms%ulo_der = 0
@@ -92,6 +102,15 @@ CONTAINS
          
          ! rounding
          atoms%dx(:)   = REAL(NINT(atoms%dx(:)   * 1000) / 1000.)
+         !Generate species-names
+         DO nn=1,n
+            if (atoms%same_species(n,nn)) atoms%speciesname(n)=atoms%speciesname(nn)
+         enddo
+         if (len_trim(atoms%speciesname(n))<1) THEN
+            element_species(atoms%nz(n))=element_species(atoms%nz(n))+1
+            write(atoms%speciesname(n),"(a,a,i0)") namat_const(atoms%nz(n)),"-",element_species(atoms%nz(n))
+         endif
+
       END DO
       
 

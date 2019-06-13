@@ -8,7 +8,7 @@ option(INPGEN_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
 #set(JUFDT_COMPILEOPTS "-r8")
 
 
-set(FLEUR_SRC "/home/fleur/")
+set(FLEUR_SRC "/Users/wortmann/eclipse/fleur/")
 
 add_executable(inpgen2
 inpgen_help.f90
@@ -49,21 +49,20 @@ ${FLEUR_SRC}/math/util.F
 
 
 
-${FLEUR_SRC}/types/types_input.F90
+${FLEUR_SRC}/types/types_input.f90
 ${FLEUR_SRC}/types/types_xcpot.F90
 ${FLEUR_SRC}/types/types_xcpot_inbuild_nofunction.F90
 ${FLEUR_SRC}/types/types_xcpot_data.F90
 ${FLEUR_SRC}/types/types_kpts.f90
-${FLEUR_SRC}/types/types_input.F90
-${FLEUR_SRC}/types/types_sym.F90
-${FLEUR_SRC}/types/types_cell.F90
-${FLEUR_SRC}/types/types_oneD.F90
-${FLEUR_SRC}/types/types_noco.F90
+${FLEUR_SRC}/types/types_sym.f90
+${FLEUR_SRC}/types/types_cell.f90
+${FLEUR_SRC}/types/types_oneD.f90
+${FLEUR_SRC}/types/types_noco.f90
 ${FLEUR_SRC}/types/types_atoms.F90
 ${FLEUR_SRC}/types/types_econfig.F90
-${FLEUR_SRC}/types/types_hybrid.F90
-${FLEUR_SRC}/types/types_stars.F90
-${FLEUR_SRC}/types/types_vacuum.F90
+${FLEUR_SRC}/types/types_hybrid.f90
+${FLEUR_SRC}/types/types_stars.f90
+${FLEUR_SRC}/types/types_vacuum.f90
 ${FLEUR_SRC}/types/types_sphhar.f90
 ${FLEUR_SRC}/types/types_banddos.f90
 ${FLEUR_SRC}/types/types_sliceplot.f90
@@ -71,10 +70,10 @@ ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_enpara.F90
 ${FLEUR_SRC}/types/types_mpi.F90
 ${FLEUR_SRC}/types/types_dos.f90
-${FLEUR_SRC}/types/types_forcetheo.f90
+${FLEUR_SRC}/types/types_forcetheo.F90
 ${FLEUR_SRC}/types/types_dimension.f90
 ${FLEUR_SRC}/types/types_regionCharges.f90
-${FLEUR_SRC}/types/types_misc.f90
+${FLEUR_SRC}/types/types_misc.F90
 ${FLEUR_SRC}/io/xmlOutput.F90
 ${FLEUR_SRC}/global/utility.F90
 ${FLEUR_SRC}/global/radsra.f
@@ -84,7 +83,7 @@ ${FLEUR_SRC}/global/ss_sym.f
 ${FLEUR_SRC}/math/inwint.f
 ${FLEUR_SRC}/math/outint.f
 ${FLEUR_SRC}/math/intgr.F90
-${FLEUR_SRC}/global/find_enpara.F90
+${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/mpi/mpi_bc_tool.F90
 ${FLEUR_SRC}/math/d_wigner.F90
 ${FLEUR_SRC}/io/xsf_io.f90

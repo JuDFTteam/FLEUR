@@ -55,7 +55,8 @@ CONTAINS
     INQUIRE(file=filename,exist=l_exist)
     IF (.NOT.l_exist) CALL judft_error("Input file specified is not readable")
     OPEN(97,file=filename)
-    OPEN(98,status='scratch')
+    !OPEN(98,status='scratch')
+    OPEN(98,file="scratch")
     CALL  normalize_file(97,98)
     close(97)
     
@@ -67,7 +68,7 @@ CONTAINS
     endif
 
     aa=0.0
-    DO WHILE(ios.NE.0)
+    DO WHILE(ios==0)
        READ(98,"(a)",iostat=ios) line
        IF (ios.NE.0) EXIT
        IF (line(1:1)=="&") THEN
@@ -123,10 +124,10 @@ CONTAINS
           ELSE
              !the bravais matrix has to follow
              a1(1)=evaluatefirst(line);a1(2)=evaluatefirst(line);a1(3)=evaluatefirst(line)
-             READ(line,*,iostat=ios) line
+             READ(98,"(a)",iostat=ios) line
              IF (ios.NE.0) CALL judft_error(("Error reading bravais matrix"))
              a2(1)=evaluatefirst(line);a2(2)=evaluatefirst(line);a2(3)=evaluatefirst(line)
-             READ(line,*,iostat=ios) line
+             READ(98,"(a)",iostat=ios) line
              IF (ios.NE.0) CALL judft_error(("Error reading bravais matrix"))
              a3(1)=evaluatefirst(line);a3(2)=evaluatefirst(line);a3(3)=evaluatefirst(line)
              vacuum%dvac=evaluatefirst(line)
@@ -135,10 +136,10 @@ CONTAINS
                 WRITE(*,*)'Setting default for dVac'
                 vacuum%dvac = ABS(a3(3)) ! This is later set to the real default by the chkmt result
              END IF
-             READ(line,*,iostat=ios) line
+             READ(98,"(a)",iostat=ios) line
              IF (ios.NE.0) CALL judft_error(("Error reading bravais matrix"))
              aa=evaluatefirst(line)
-             READ(line,*,iostat=ios) line
+             READ(98,"(a)",iostat=ios) line
              IF (ios.NE.0) CALL judft_error(("Error reading bravais matrix"))
              scale(1)=evaluatefirst(line);scale(2)=evaluatefirst(line);scale(3)=evaluatefirst(line)
              mat=0.0

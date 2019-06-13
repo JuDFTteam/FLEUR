@@ -378,9 +378,9 @@ SUBROUTINE w_inpXML(&
          EXIT
       END IF
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
-      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
+      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" flipSpin="',l1,'">')
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
-      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)+1))),atoms%nz(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
+      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)+1))),atoms%nz(iAtomType),atoms%nflip(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
       310 FORMAT('         <mtSphere radius="',f0.8,'" gridPoints="',i0,'" logIncrement="',f0.8,'"/>')
@@ -390,11 +390,12 @@ SUBROUTINE w_inpXML(&
       320 FORMAT('         <atomicCutoffs lmax="',i0,'" lnonsphr="',i0,'"/>')
       WRITE (fileNum,320) atoms%lmax(iAtomType),atoms%lnonsph(iAtomType)
 
-      IF (ALL(enpara%qn_el(0:3,iAtomType,1).ne.0)) THEN
-!         <energyParameters s="3" p="3" d="3" f="4"/>
-         321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
-         WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
-      END IF
+      print *,"enpara IO missing"
+!      IF (ALL(enpara%qn_el(0:3,iAtomType,1).ne.0)) THEN
+!!         <energyParameters s="3" p="3" d="3" f="4"/>
+!         321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
+!         WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
+!      END IF
 
       IF(l_explicit.OR.hybrid%l_hybrid) THEN
          315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
@@ -433,7 +434,7 @@ SUBROUTINE w_inpXML(&
 
       DO ilo = 1, atoms%nlo(iAtomType)
 !         <lo type="HELO" l="0" n="4"/>
-         l = atoms%llo(ilo,iAtomType)
+         l = atoms%llo(ilo,iAtomType)       
          n = enpara%qn_ello(ilo,iAtomType,1)
          loType = 'SCLO'
          IF(n.LT.0) THEN

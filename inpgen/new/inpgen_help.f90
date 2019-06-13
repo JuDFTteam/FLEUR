@@ -26,6 +26,7 @@ CONTAINS
     CALL new_argument(0,"-inp.xml","modify existing inp.xml file","")
     CALL new_argument(0,"-inp","convert old inp file to inp.xml file","")
     CALL new_argument(1,"-f","filename to process","")
+    CALL new_argument(0,"-warn_only","do not stop for warnings","")
     
     CALL new_argument(0,"-h","Print this help message","")
     

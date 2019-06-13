@@ -133,6 +133,7 @@ contains
 
     integer :: n
 
+    call add_atompar() !Make sure we have at least the defaults
     !check if there is an id given
     if (present(id)) then
        DO n=no_of_atompars,1,-1
@@ -158,7 +159,7 @@ contains
     DO n=no_of_atompars,1,-1
        ap=atompar_list(n)
        if (ap%nucnumber==nucnumber) then
-          if (ap%rmt_min<=rmt_max) then
+          IF (ap%rmt_min>5.0.OR.ap%rmt_min<=rmt_max) THEN
              ap%rmt=rmt_max
              return
           endif
