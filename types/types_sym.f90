@@ -55,9 +55,34 @@ MODULE m_types_sym
 
     CONTAINS
       PROCEDURE :: init
+      procedure :: print_xml
    END TYPE t_sym
    PUBLIC t_sym
  CONTAINS
+  SUBROUTINE print_xml(sym,fh,filename)
+     CLASS(t_sym),INTENT(INOUT):: sym
+     integer,intent(in)        ::fh
+     character(len=*),intent(in),optional::filename
+
+     integer::i
+     
+     if (present(filename)) open(fh,file=filename,status='replace',action='write')
+     WRITE(fh,'(a)') '      <symmetryOperations>'
+     DO i = 1, sym%nop
+        WRITE(fileNum,'(a)') '         <symOp>'
+224     FORMAT('            <row-1>',i0,' ',i0,' ',i0,' ',f0.10,'</row-1>')
+        WRITE(fh,224) sym%mrot(1,1,i), sym%mrot(1,2,i), sym%mrot(1,3,i), sym%tau(1,i)
+225     FORMAT('            <row-2>',i0,' ',i0,' ',i0,' ',f0.10,'</row-2>')
+        WRITE(fh,225) sym%mrot(2,1,i), sym%mrot(2,2,i), sym%mrot(2,3,i), sym%tau(2,i)
+226     FORMAT('            <row-3>',i0,' ',i0,' ',i0,' ',f0.10,'</row-3>')
+        WRITE(fh,226) sym%mrot(3,1,i), sym%mrot(3,2,i), sym%mrot(3,3,i), sym%tau(3,i)
+        WRITE(fileNum,'(a)') '         </symOp>'
+     END DO
+     WRITE(fileNum,'(a)') '      </symmetryOperations>'
+     if (present(filename)) close(fh)
+   end SUBROUTINE print_xml
+     
+
    SUBROUTINE init(sym,cell,film)
      !Generates missing symmetry info.
      !tau,mrot and nop have to be specified already

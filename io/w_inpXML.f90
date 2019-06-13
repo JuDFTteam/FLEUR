@@ -20,7 +20,7 @@ SUBROUTINE w_inpXML(&
 &                   atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
 &                   cell,sym,xcpot,noco,oneD,hybrid,kpts,&
 &                   l_outFile,filename,&
-&                   l_explicitIn,enpara)
+&                   l_explicitIn,l_includeIn,enpara)
 
 
    use m_types_input
@@ -63,7 +63,7 @@ SUBROUTINE w_inpXML(&
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_enpara),INTENT(IN)   :: enpara
    CLASS(t_forcetheo),INTENT(IN):: forcetheo !nothing is done here so far....
-   LOGICAL, INTENT (IN)        :: l_outFile, l_explicitIn
+   LOGICAL, INTENT (IN)        :: l_outFile, l_explicitIn,l_includeIn
    CHARACTER(LEN=*),INTENT(IN) :: filename
 
 
@@ -97,7 +97,7 @@ SUBROUTINE w_inpXML(&
    INTEGER  ::nw,idsprs, n1, n2
    INTEGER ieq,i,k,na,n,ilo
    REAL s3,ah,a,hs2,rest
-   LOGICAL l_hyb,l_sym,ldum
+   LOGICAL l_hyb,ldum
    INTEGER :: ierr
 ! ..
 !...  Local Arrays
@@ -116,19 +116,17 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=20) :: mixingScheme
    CHARACTER(len=10) :: loType
    CHARACTER(len=10) :: bzIntMode
-   CHARACTER(len=200) :: symFilename
-   LOGICAL ::   l_explicit, l_nocoOpt
+   LOGICAL ::   l_explicit, l_nocoOpt,l_include
    INTEGER :: iAtomType, startCoreStates, endCoreStates
    CHARACTER(len=100) :: posString(3)
    CHARACTER(len=7) :: str
    REAL :: tempTaual(3,atoms%nat), scpos(3)
    REAL :: amatTemp(3,3), bmatTemp(3,3)
 
-
+   l_include=l_inclueIn.or.l_outfile
    l_explicit = l_explicitIn.OR.l_outFile
    l_nocoOpt = noco%l_noco.OR.juDFT_was_argument("-noco")
 
-   symFilename = 'sym.out'
    band = .false.
    nw=1
   
@@ -231,52 +229,11 @@ SUBROUTINE w_inpXML(&
    200 FORMAT('      <bzIntegration valenceElectrons="',f0.8,'" mode="',a,'" fermiSmearingEnergy="',f0.8,'">')
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
 
-   PRINT *,"KPTS->XML broken"
-   
-!!$   IF(kpts%specificationType.EQ.3) THEN
-!!$      sumWeight = 0.0
-!!$      DO i = 1, kpts%nkpt
-!!$         sumWeight = sumWeight + kpts%wtkpt(i)
-!!$      END DO
-!!$      205 FORMAT('         <kPointList posScale="',f0.8,'" weightScale="',f0.8,'" count="',i0,'">')
-!!$      WRITE (fileNum,205) kpts%posScale, sumWeight, kpts%nkpt
-!!$      DO i = 1, kpts%nkpt
-!!$         206 FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>')
-!!$         WRITE (fileNum,206) kpts%wtkpt(i), kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
-!!$      END DO
-!!$      WRITE (fileNum,'(a)')('         </kPointList>')
-!!$   ELSE IF(kpts%specificationType.EQ.1) THEN
-!!$
-!!$      IF (kpts%numSpecialPoints.GE.2) THEN
-!!$         207 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'">')
-!!$         WRITE (fileNum,207) kpts%nkpt,kptGamma
-!!$         209 FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
-!!$         DO i = 1, kpts%numSpecialPoints
-!!$            WRITE(fileNum,209) TRIM(ADJUSTL(kpts%specialPointNames(i))),&
-!!$                               kpts%specialPoints(1,i),kpts%specialPoints(2,i),kpts%specialPoints(3,i)
-!!$         END DO
-!!$         WRITE (fileNum,'(a)') '         </kPointCount>'
-!!$      ELSE
-!!$!            <kPointCount count="100" gamma="F"/>
-!!$         208 FORMAT('         <kPointCount count="',i0,'" gamma="',l1,'"/>')
-!!$         WRITE (fileNum,208) kpts%nkpt,kptGamma
-!!$      END IF
-!!$
-!!$   ELSE IF (kpts%specificationType.EQ.2) THEN
-!!$!            <kPointMesh nx="10" ny="10" nz="10" gamma="F"/>
-!!$      210 FORMAT('         <kPointMesh nx="',i0,'" ny="',i0,'" nz="',i0,'" gamma="',l1,'"/>')
-!!$      WRITE (fileNum,210) div(1),div(2),div(3),kptGamma
-!!$   ELSE !(kpts%specificationType.EQ.4)
-!!$      212 FORMAT('         <kPointDensity denX="',f0.6,'" denY="',f0.6,'" denZ="',f0.6,'" gamma="',l1,'"/>')
-!!$      WRITE (fileNum,212) kpts%kPointDensity(1),kpts%kPointDensity(2),kpts%kPointDensity(3),kptGamma
-!!$   END IF
-!!$
-!!$   IF(juDFT_was_argument("-kpts_gw")) THEN
-!!$      WRITE(fileNum,'(a)') '         <altKPointSet purpose="GW">'
-!!$      WRITE(fileNum,'(a)') '            <kPointListFile filename="kpts_gw"/>'
-!!$      WRITE(fileNum,'(a)') '         </altKPointSet>'
-!!$   END IF
-
+   if (l_include) THEN
+      call kpts%print_xml(fileNum,"default")
+   else
+      WRITE (fileNum,'(a)')'  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>'
+   end if
    WRITE (fileNum,'(a)') '      </bzIntegration>'
 
 !      <energyParameterLimits ellow="-2.00000" elup="2.00000"/>
@@ -285,29 +242,11 @@ SUBROUTINE w_inpXML(&
 
    WRITE (fileNum,'(a)') '   </calculationSetup>'
    WRITE (fileNum,'(a)') '   <cell>'
-
-   IF(sym%symSpecType.EQ.3) THEN
-      WRITE(fileNum,'(a)') '      <symmetryOperations>'
-      DO i = 1, sym%nop
-      WRITE(fileNum,'(a)') '         <symOp>'
-      224 FORMAT('            <row-1>',i0,' ',i0,' ',i0,' ',f0.10,'</row-1>')
-      WRITE(fileNum,224) sym%mrot(1,1,i), sym%mrot(1,2,i), sym%mrot(1,3,i), sym%tau(1,i)
-      225 FORMAT('            <row-2>',i0,' ',i0,' ',i0,' ',f0.10,'</row-2>')
-      WRITE(fileNum,225) sym%mrot(2,1,i), sym%mrot(2,2,i), sym%mrot(2,3,i), sym%tau(2,i)
-      226 FORMAT('            <row-3>',i0,' ',i0,' ',i0,' ',f0.10,'</row-3>')
-      WRITE(fileNum,226) sym%mrot(3,1,i), sym%mrot(3,2,i), sym%mrot(3,3,i), sym%tau(3,i)
-      WRITE(fileNum,'(a)') '         </symOp>'
-      END DO
-      WRITE(fileNum,'(a)') '      </symmetryOperations>'
-   ELSE IF(sym%symSpecType.EQ.1) THEN
-      228 FORMAT('      <symmetryFile filename="',a,'"/>')
-      WRITE(fileNum,228) TRIM(ADJUSTL(symFilename))
-   ELSE !(sym%symSpecType.EQ.2)
-!      <symmetry spgrp="any" invs="T" zrfs="F"/>
-      230 FORMAT('      <symmetry spgrp="',a,'" invs="',l1,'" zrfs="',l1,'"/>')
-      WRITE (fileNum,230) TRIM(ADJUSTL(sym%namgrp)),sym%invs,sym%zrfs
-
-   END IF
+   if (l_include) THEN
+      call sym%print_xml(fileNum)
+   else
+      WRITE (fileNum,'(a)')'  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>'
+   end if
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Note: Different options for the cell definition!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

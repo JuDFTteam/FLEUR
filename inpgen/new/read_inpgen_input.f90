@@ -190,7 +190,7 @@ CONTAINS
       elseif(nkpt>0) then
          write(kpts_str,"(a,i0)") "nk=",nkpt
       elseif(all([div1,div2,div3]>0)) then
-         write(kpts_str,"(a,i0,a,i0,a,i0)") "grid=",div1,"x",div2,"x",div3
+         write(kpts_str,"(a,i0,a,i0,a,i0)") "grid=",div1,",",div2,",",div3
       end if
     end SUBROUTINE process_kpts
       

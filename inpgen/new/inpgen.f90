@@ -43,7 +43,7 @@ PROGRAM inpgen
     
       REAL,    ALLOCATABLE :: atompos(:, :),atomid(:) 
       CHARACTER(len=20), ALLOCATABLE :: atomLabel(:)
-      LOGICAL               :: l_fullinput,l_explicit,l_inpxml
+      LOGICAL               :: l_fullinput,l_explicit,l_inpxml,l_include
       
       TYPE(t_input)    :: input
       TYPE(t_atoms)    :: atoms
@@ -62,9 +62,12 @@ PROGRAM inpgen
       TYPE(t_stars)    :: stars
       
       CHARACTER(len=40):: kpts_str
+      kpts_str=""
       
       !Start program and greet user
       CALL inpgen_help()
+      l_explicit=judft_was_argument("-explicit")
+      l_include=judft_was_argument("-singlefile")
 
       INQUIRE(file='inp.xml',exist=l_inpxml)
       IF (l_inpxml.AND..NOT.judft_was_argument("-inp.xml")) CALL judft_error("inp.xml exists and can not be overwritten")
@@ -102,25 +105,21 @@ PROGRAM inpgen
       !
       ! k-points can also be modified here
       !
-      !call make_kpoints()
+      call make_kpoints(kpts,cell,sym,input%film,noco%l_ss.or.noco%l_soc,kpts_str)
       !
       !Now the IO-section
       !
       IF (.NOT.l_inpxml) THEN
          !the inp.xml file
-         l_explicit=judft_was_argument("-explicit")
          !CALL dump_FleurInputSchema()
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
               cell,sym,xcpot,noco,oneD,hybrid,kpts,&
               .false.,"inp.xml",&
-              l_explicit,enpara)
-         !the sym.xml file
-         PRINT *,"sym->XML missing"
-         !CALL sym%writeXML(0,"sym.xml")
+              l_explicit,l_include,enpara)
+         if (.not.l_include) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      PRINT *,"kpts->XML missing"
-      !CALL kpts%writeXML(0,"kpts.xml")
+      if (.not.l_include) CALL kpts%print_XML(99,kpts_str,"kpts.xml")
       
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")

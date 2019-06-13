@@ -37,13 +37,59 @@ MODULE m_types_kpts
      procedure :: init_special
      !procedure :: read_xml
      procedure :: add_special_line
+     procedure :: print_xml
   ENDTYPE t_kpts
 
   public :: t_kpts
 CONTAINS
 
-  
-  SUBROUTINE add_special_line(kpts,point,name)
+  subroutine print_xml(fh,name,filename)
+    CLASS(t_kpts),INTENT(in   ):: kpts
+    integer,intent(in)         :: fh
+    CHARACTER(len=*),INTENT(in):: name
+    character(len=*),intent(in),optional::filename
+
+    integer :: n
+    logical :: l_exist
+
+    if (present(filename)) Then
+       inquire(file=filename,exist=l_exist)
+       if (l_exist) THEN
+          open(fh,file=filename,action="write",position="append")
+       else
+          open(fh,file=filename,action="write")
+       end if
+    endif
+    
+205 FORMAT('         <kPointList name="',a,'" count="',i0,'">')
+    if (kpts%numSpecialPoints<2) THEN
+       write(fh,205) name,kpts%nkpt
+206    FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>') 
+       do n=1,kpts%nkpt
+          WRITE (fh,206) kpts%wtkpt(n), kpts%bk(:,n)
+       end do
+       if (kpts%ntet>0) then
+          write(fh,207) kpts%ntet
+          207 format('            <tetraeder ntet="',i0,'">')
+          DO n=1,kpts%ntet
+             208 format('          <tet vol="',f12.6,'">',i0,' ',i0,' ',i0,' ',i0,'</tet>')
+             write(fh,208) kpts%voltet(n),kpts%ntetra(:,n)
+          end DO
+          write(fh,'(a)') '            </tetraeder>'
+    else
+       WRITE (fh,205) name,nkpts%numSpecialPoints
+209    FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
+         DO n = 1, kpts%numSpecialPoints
+            WRITE(fh,209) TRIM(ADJUSTL(kpts%specialPointNames(i))),kpts%specialPoints(:,n)
+         END DO
+      end if
+   end if
+   WRITE (fh,'(a)')('         </kPointList>')
+   if (present(filename)) close(fh)
+ end subroutine print_xml
+
+
+      SUBROUTINE add_special_line(kpts,point,name)
     CLASS(t_kpts),INTENT(inout):: kpts
     CHARACTER(len=*),INTENT(in):: name
     REAL,INTENT(in)            :: point(3)
