@@ -105,12 +105,12 @@ CONTAINS
 
     ! local scalars
     INTEGER :: eig_id,archiveType
-    INTEGER :: n,iter,iterHF,iterHIA
+    INTEGER :: iter,iterHF,iterHIA
     LOGICAL :: l_opti,l_cont,l_qfix,l_real,l_runhia
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER :: ierr(2)
+    INTEGER :: ierr(2),n
 #endif
 
     mpi%mpi_comm = mpi_comm
@@ -425,7 +425,7 @@ CONTAINS
        ! mix input and output densities
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
-            sym,cell,noco,oneD,archiveType,inDen,outDen,results,l_runhia)
+            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,l_runhia)
        
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter

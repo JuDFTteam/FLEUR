@@ -7,7 +7,7 @@ then
     tar xzf libxml2-${libxml2_version}.tar.gz
     cd libxml2-${libxml2_version}
     #Compile&test (This will take a while)
-    ./configure  --disable-shared
+    ./configure  --disable-shared --without-python
     make 
 else
     cd libxml2-${libxml2_version}    

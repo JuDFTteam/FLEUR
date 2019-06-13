@@ -97,8 +97,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
 
    ! Local Arrays
-   REAL,    ALLOCATABLE :: we(:)
-   REAL,    ALLOCATABLE :: eig(:)
+   REAL :: we(MAXVAL(cdnvalJob%noccbd(:kpts%nkpt)))
+   REAL :: eig(MAXVAL(cdnvalJob%noccbd(:kpts%nkpt)))
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
    REAL,    ALLOCATABLE :: tetweights(:,:)
    INTEGER, ALLOCATABLE :: tet_ind(:,:)
@@ -179,8 +179,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
-   ALLOCATE (we(MAXVAL(cdnvalJob%noccbd(:))))
-   ALLOCATE (eig(MAXVAL(cdnvalJob%noccbd(:))))
+
    jsp = MERGE(1,jspin,noco%l_noco)
 
    DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement

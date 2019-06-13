@@ -282,7 +282,7 @@ CONTAINS
        ALLOCATE(tmp_real(d%size_eig))
        tmp_real=1E99
        if (PRESENT(EIG)) THEN
-          tmp_real(:d%size_eig) = eig(:d%size_eig)
+          tmp_real(:SIZE(eig)) = eig(:SIZE(eig))
           CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%eig_handle,e)
           CALL MPI_PUT(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
           CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)

@@ -1,0 +1,8 @@
+$test_name="Fleur Diamond SCAN";
+$test_code="Fleur";
+%test_requirements=("LibXC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Converge diamond for one k-point with scan
+EOF
+;

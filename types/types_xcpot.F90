@@ -18,6 +18,7 @@ MODULE m_types_xcpot
    PUBLIC           :: t_xcpot,t_gradients
 
    TYPE t_kinED
+      logical             :: set
       real, allocatable   :: is(:,:)   ! (nsp*jmtd, jspins)
       real, allocatable   :: mt(:,:,:) ! (nsp*jmtd, jspins, local num of types)
    contains
@@ -26,7 +27,6 @@ MODULE m_types_xcpot
 
    TYPE,ABSTRACT :: t_xcpot
       REAL :: gmaxxc
-      TYPE(t_potden)   :: core_den, val_den
       TYPE(t_kinED)    :: kinED
    CONTAINS
       PROCEDURE        :: vxc_is_LDA => xcpot_vxc_is_LDA
@@ -74,13 +74,13 @@ CONTAINS
       class(t_kinED), intent(inout)   :: kED
       integer, intent(in)            :: nsp_x_jmtd, jspins, n_start, n_types, n_stride
       integer                        :: cnt, n
-
+      
       if(.not. allocated(kED%mt)) then
          cnt = 0
          do n = n_start,n_types,n_stride
             cnt = cnt + 1
          enddo
-         allocate(kED%mt(nsp_x_jmtd, jspins, cnt))
+         allocate(kED%mt(nsp_x_jmtd, jspins, cnt), source=0.0)
       endif
    end subroutine kED_alloc_mt
 
@@ -150,7 +150,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
 
-      xcpot_needs_grad= xcpot%vc_is_gga()
+      xcpot_needs_grad= xcpot%vc_is_gga() .or. xcpot%vx_is_MetaGGA()
    END FUNCTION xcpot_needs_grad
 
    LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
@@ -167,7 +167,7 @@ CONTAINS
       a_ex=-1
    END FUNCTION xcpot_get_exchange_weight
 
-   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad)
+   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh,vxc,vx,grad, kinED_KS)
       USE m_judft
       IMPLICIT NONE
 
@@ -178,13 +178,14 @@ CONTAINS
       !---> xc potential
       REAL, INTENT (OUT)       :: vxc (:,:),vx(:,:)
       TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
+      REAL, INTENT(IN),OPTIONAL:: kinED_KS(:,:)
 
       vxc = 0.0
       vx  = 0.0
       call juDFT_error("Can't use XC-parrent class")
    END SUBROUTINE xcpot_get_vxc
 
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS, mt_call)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinED_KS, mt_call)
       USE m_types_misc
       USE m_judft
       USE, INTRINSIC :: IEEE_ARITHMETIC
@@ -199,7 +200,7 @@ CONTAINS
       REAL, INTENT (OUT)                    :: exc (:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) :: grad
       LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
-      REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
+      REAL, INTENT(IN), OPTIONAL            :: kinED_KS(:,:)
 
       exc = 0.0
       call juDFT_error("Can't use XC-parrent class")
