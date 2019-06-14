@@ -229,7 +229,7 @@ contains
     nz=-1
     IF (element.NE."") THEN
        nz=element_to_z(element)
-       IF (z.NE.0.AND.nz.NE.FLOOR(z)) CALL judft_error("z and z of specified element differ")
+       IF (z>-1.AND.nz.NE.FLOOR(z)) CALL judft_error("z and z of specified element differ")
     ELSE
        nz=FLOOR(z)
     ENDIF
@@ -245,6 +245,12 @@ contains
 
     IF (ncst>-1) CALL judft_warn("ncst is no longer supported as input")
 
+    IF (LEN_TRIM(econfig)==0)THEN
+       ap=find_atompar(nz,rmt)
+       econfig=ap%econfig
+       IF (LEN_TRIM(lo)==0) lo=ap%lo
+    END IF
+        
     ap=t_atompar(id=INT(id),nucnumber=nz,rmt=rmt,dx=dx,jri=jri,lmax=lmax,lnonsph=lnonsph,lo=lo,bmu=bmu,econfig=econfig,desc=name)
     
     
@@ -254,22 +260,24 @@ contains
       IMPLICIT NONE
       CHARACTER(len=*),INTENT(in)::  element
       
-      CHARACTER(len=2)   :: ele
-      INTEGER,parameter  :: adiff=ICHAR('A')-ICHAR('a')
-      INTEGER            :: n
+      CHARACTER(len=2)   :: ele,nam
+      INTEGER,parameter  :: adiff=abs(ICHAR('A')-ICHAR('a'))
+      INTEGER            :: n,diff
       
       ele=ADJUSTL(element)
       
-      IF (ele(1:1)>='A'.AND.ele(1:1)<='Z') ele(1:1)=CHAR(ICHAR(ele(1:1))-adiff)
-      IF (ele(2:2)>='A'.AND.ele(2:2)<='Z') ele(2:2)=CHAR(ICHAR(ele(2:2))-adiff)
-      
       element_to_z = -1
       DO n = 0, SIZE(namat_const)-1
-         IF (TRIM(ele) == TRIM(ADJUSTL(namat_const(n)))) THEN
-            element_to_z = n
-            EXIT
-         ENDIF
-      ENDDO
+         nam=ADJUSTL(namat_const(n))
+         diff=ABS(ICHAR(ele(1:1))-ICHAR(nam(1:1)))
+         IF (diff==0.OR.diff==adiff)THEN
+            diff=ABS(ICHAR(ele(2:2))-ICHAR(nam(2:2)))
+            IF (diff==0.OR.diff==adiff) THEN
+               element_to_z = n
+               EXIT
+            ENDIF
+         END IF
+      END DO
       
     END FUNCTION element_to_z
   END SUBROUTINE read_atom_params_old

@@ -115,9 +115,8 @@ MODULE m_types_atoms
      integer,intent(in)::n,nn
 
      if (n>atoms%ntype.or.nn>atoms%ntype) call judft_error("Same species checked for non-existing atom")
-     
+
      same_species=atoms%nz(n)==atoms%nz(nn)
-     same_species=same_species.and.atoms%speciesname(n)==atoms%speciesname(nn)
      same_species=same_species.and.atoms%jri(n)==atoms%jri(nn)
      same_species=same_species.and.atoms%dx(n)==atoms%dx(nn)
      same_species=same_species.and.atoms%rmt(n)==atoms%rmt(nn)

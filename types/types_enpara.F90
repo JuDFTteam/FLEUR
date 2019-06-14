@@ -35,6 +35,7 @@ MODULE m_types_enpara
      PROCEDURE :: write
      PROCEDURE :: mix
      PROCEDURE :: calcOutParams
+     procedure :: set_quantum_numbers
   END TYPE t_enpara
 
 
@@ -42,6 +43,47 @@ MODULE m_types_enpara
   PUBLIC:: t_enpara
 
 CONTAINS
+  SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,str,lo)
+    use m_types_atoms
+    !sets the energy parameters according to simple electronic config string and lo string
+    CLASS(t_enpara),INTENT(inout):: enpara
+    TYPE(t_atoms),INTENT(IN)     :: atoms
+    INTEGER,INTENT(in)           :: ntype
+    CHARACTER(len=*),INTENT(in)  :: str,lo
+    
+    CHARACTER(len=100):: val_str
+    character         :: ch
+    INTEGER           :: qn,n,i,l
+    
+    !Process lo's
+    DO i=1,LEN_TRIM(lo)/2
+       READ(lo(2*i-1:2*i),"(i1,a1)") qn,ch
+       enpara%qn_ello(i,ntype,:)=qn
+    ENDDO
+    
+    !Valence string
+    val_str=ADJUSTL(str(INDEX(str,"|")+1:))
+    DO WHILE(LEN_TRIM(val_str)>1)
+       READ(val_str,"(i1,a1)") qn,ch
+       l=INDEX("spdf",ch)-1
+       !check if we have an lo for this l-channel
+       DO i=1,atoms%nlo(ntype)
+          IF (l==atoms%llo(i,ntype).AND.qn==enpara%qn_ello(i,ntype,1)) EXIT
+       ENDDO
+       IF (atoms%nlo(ntype)==0.OR.i>atoms%nlo(ntype)) THEN
+          !set the lapw parameter
+          IF (enpara%qn_el(l,ntype,1)<0) CALL judft_error("Electronic configuration needs more LOs")
+          enpara%qn_el(l,ntype,:)=-qn
+       ENDIF
+       IF (LEN_TRIM(val_str)>5) THEN
+          val_str=ADJUSTL(val_str(5:))
+       ELSE
+          val_str=""
+       ENDIF
+    ENDDO
+    enpara%qn_el(:,ntype,:)=ABS(enpara%qn_el(:,ntype,:))
+  END SUBROUTINE set_quantum_numbers
+  
   SUBROUTINE init(this,atoms,jspins,l_defaults)
     USE m_types_atoms
     USE m_constants

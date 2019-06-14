@@ -17,10 +17,9 @@ MODULE m_winpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
 SUBROUTINE w_inpXML(&
-&                   atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-&                   l_outFile,filename,&
-&                   l_explicitIn,l_includeIn,enpara)
+     atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+     cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
+     filenum,l_explicitIn,l_includeIn,filename)
 
 
    use m_types_input
@@ -63,11 +62,12 @@ SUBROUTINE w_inpXML(&
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_enpara),INTENT(IN)   :: enpara
    CLASS(t_forcetheo),INTENT(IN):: forcetheo !nothing is done here so far....
-   LOGICAL, INTENT (IN)        :: l_outFile, l_explicitIn,l_includeIn
-   CHARACTER(LEN=*),INTENT(IN) :: filename
+   LOGICAL, INTENT (IN)        :: l_explicitIn,l_includeIn
+   INTEGER,INTENT(IN)          :: fileNum
+   CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
 
 
-   INTEGER          :: iSpecies, fileNum
+   INTEGER          :: iSpecies
    CHARACTER(len=8) :: name(10)
    INTEGER          :: numSpecies
    INTEGER          :: speciesRepAtomType(atoms%ntype)
@@ -123,8 +123,8 @@ SUBROUTINE w_inpXML(&
    REAL :: tempTaual(3,atoms%nat), scpos(3)
    REAL :: amatTemp(3,3), bmatTemp(3,3)
 
-   l_include=l_inclueIn.or.l_outfile
-   l_explicit = l_explicitIn.OR.l_outFile
+   l_include=l_includeIn.or..not.present(filename)
+   l_explicit = l_explicitIn.OR..not.present(filename)
    l_nocoOpt = noco%l_noco.OR.juDFT_was_argument("-noco")
 
    band = .false.
@@ -132,17 +132,12 @@ SUBROUTINE w_inpXML(&
   
 
 
-   fileNum = -1
-   IF(l_outFile) THEN
-      fileNum = getXMLOutputUnitNumber()
-      CALL openXMLElementNoAttributes('inputData')
-   ELSE
-      fileNum = 5
-      OPEN (fileNum,file=TRIM(ADJUSTL(filename)),form='formatted',status='unknown')
-      REWIND (fileNum)
-
+   IF(PRESENT(filename)) THEN
+      OPEN (fileNum,file=TRIM(ADJUSTL(filename)),form='formatted',status='replace')
       WRITE (fileNum,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.29">'
+   ELSE
+      CALL openXMLElementNoAttributes('inputData')
    END IF
 
    WRITE (fileNum,'(a)') '   <comment>'
@@ -230,9 +225,10 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
 
    if (l_include) THEN
-      call kpts%print_xml(fileNum,"default")
+      call kpts%print_xml(fileNum)
    else
-      WRITE (fileNum,'(a)')'  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>'
+      WRITE (fileNum,'(a)')'         <!-- k-points included here -->'
+      WRITE (fileNum,'(a)')'         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>'
    end if
    WRITE (fileNum,'(a)') '      </bzIntegration>'
 
@@ -245,7 +241,8 @@ SUBROUTINE w_inpXML(&
    if (l_include) THEN
       call sym%print_xml(fileNum)
    else
-      WRITE (fileNum,'(a)')'  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>'
+      WRITE (fileNum,'(a)')'      <!-- symmetry operations included here -->'
+      WRITE (fileNum,'(a)')'      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>'
    end if
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Note: Different options for the cell definition!
@@ -319,7 +316,7 @@ SUBROUTINE w_inpXML(&
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
       300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" flipSpin="',l1,'">')
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
-      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)+1))),atoms%nz(iAtomType),atoms%nflip(iAtomType)
+      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)))),atoms%nz(iAtomType),atoms%nflip(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
       310 FORMAT('         <mtSphere radius="',f0.8,'" gridPoints="',i0,'" logIncrement="',f0.8,'"/>')
@@ -329,12 +326,11 @@ SUBROUTINE w_inpXML(&
       320 FORMAT('         <atomicCutoffs lmax="',i0,'" lnonsphr="',i0,'"/>')
       WRITE (fileNum,320) atoms%lmax(iAtomType),atoms%lnonsph(iAtomType)
 
-      print *,"enpara IO missing"
-!      IF (ALL(enpara%qn_el(0:3,iAtomType,1).ne.0)) THEN
+      IF (ALL(enpara%qn_el(0:3,iAtomType,1).ne.0)) THEN
 !!         <energyParameters s="3" p="3" d="3" f="4"/>
-!         321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
-!         WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
-!      END IF
+         321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
+         WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
+      END IF
 
       IF(l_explicit.OR.hybrid%l_hybrid) THEN
          315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
@@ -503,13 +499,13 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,430) banddos%e_mcd_lo,banddos%e_mcd_up
 
    WRITE (fileNum,'(a)') '   </output>'
-   IF(l_outFile) THEN
-      CALL closeXMLElement('inputData')
-   ELSE
-      WRITE (fileNum,'(a)')' <!-- We include the file relax.inp here to enable relaxations (see documentation) -->'
+   IF(present(filename)) THEN
+      WRITE (fileNum,'(a)')'  <!-- We include the file relax.inp here to enable relaxations (see documentation) -->'
       WRITE (fileNum,'(a)')'  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>'
       WRITE (fileNum,'(a)') '</fleurInput>'
       CLOSE (fileNum)
+   ELSE
+      CALL closeXMLElement('inputData')
    END IF
 
 END SUBROUTINE w_inpXML

@@ -5,14 +5,16 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_kpts
- IMPLICIT NONE
- 
+  USE m_judft
+  IMPLICIT NONE
+
   PRIVATE
-  
+
   TYPE t_kpts
+     character(len=20)     :: name="default"
      INTEGER               :: nkpt=0
      INTEGER               :: ntet=0
-     LOGICAL               :: l_gamma=.false.
+     LOGICAL               :: l_gamma=.FALSE.
      !(3,nkpt) k-vectors internal units
      REAL,ALLOCATABLE      :: bk(:,:)
      !(nkpts) weights
@@ -29,67 +31,93 @@ MODULE m_types_kpts
      INTEGER,ALLOCATABLE           :: ntetra(:,:)
      REAL   ,ALLOCATABLE           :: voltet(:)
      REAL   ,ALLOCATABLE           :: sc_list(:,:) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
-   contains
-     procedure :: init_defaults
-     procedure :: init_by_density
-     procedure :: init_by_number
-     procedure :: init_by_grid
-     procedure :: init_special
+   CONTAINS
+     PROCEDURE :: init_defaults
+     PROCEDURE :: init_by_density
+     PROCEDURE :: init_by_number
+     PROCEDURE :: init_by_grid
+     PROCEDURE :: init_special
+     PROCEDURE :: init_by_kptsfile
      !procedure :: read_xml
-     procedure :: add_special_line
-     procedure :: print_xml
+     PROCEDURE :: add_special_line
+     PROCEDURE :: print_xml
   ENDTYPE t_kpts
 
-  public :: t_kpts
+  PUBLIC :: t_kpts
 CONTAINS
 
-  subroutine print_xml(fh,name,filename)
-    CLASS(t_kpts),INTENT(in   ):: kpts
-    integer,intent(in)         :: fh
-    CHARACTER(len=*),INTENT(in):: name
-    character(len=*),intent(in),optional::filename
-
-    integer :: n
-    logical :: l_exist
-
-    if (present(filename)) Then
-       inquire(file=filename,exist=l_exist)
-       if (l_exist) THEN
-          open(fh,file=filename,action="write",position="append")
-       else
-          open(fh,file=filename,action="write")
-       end if
-    endif
+  SUBROUTINE init_by_kptsfile(kpts,film)
+    CLASS(t_kpts),INTENT(out):: kpts
+    LOGICAL,INTENT(in)       :: film
     
+    LOGICAL :: l_exist
+    REAL    :: scale,wscale
+    INTEGER :: n,ios
+    
+    INQUIRE(file='kpts',exist=l_exist)
+    IF (.NOT.l_exist) CALL judft_error("Could not read 'kpts' file")
+    OPEN(99,file='kpts')
+    READ(99,*,iostat=ios) kpts%nkpt,scale,wscale
+    ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt))
+    DO n=1,kpts%nkpt
+       IF (.NOT.film) THEN
+          READ(99,*,iostat=ios) kpts%bk(:,n),kpts%wtkpt(n)
+       ELSE
+          READ(99,*,iostat=ios) kpts%bk(1:2,n),kpts%wtkpt(n)
+          kpts%bk(3,n)=0.0
+       ENDIF
+    ENDDO
+    CLOSE(99)
+    IF (ios.NE.0) CALL judft_error("Error while reading 'kpts' file")
+    IF (scale>0.0) kpts%bk=kpts%bk/scale
+    IF (wscale>0.0) kpts%wtkpt=kpts%wtkpt/wscale
+  END SUBROUTINE init_by_kptsfile
+
+  SUBROUTINE print_xml(kpts,fh,filename)
+    CLASS(t_kpts),INTENT(in   ):: kpts
+    INTEGER,INTENT(in)         :: fh
+    CHARACTER(len=*),INTENT(in),OPTIONAL::filename
+
+    INTEGER :: n
+    LOGICAL :: l_exist
+
+    IF (PRESENT(filename)) THEN
+       INQUIRE(file=filename,exist=l_exist)
+       IF (l_exist) THEN
+          OPEN(fh,file=filename,action="write",position="append")
+       ELSE
+          OPEN(fh,file=filename,action="write")
+       END IF
+    ENDIF
+
 205 FORMAT('         <kPointList name="',a,'" count="',i0,'">')
-    if (kpts%numSpecialPoints<2) THEN
-       write(fh,205) name,kpts%nkpt
-206    FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>') 
-       do n=1,kpts%nkpt
+    WRITE(fh,205) adjustl(trim(kpts%name)),kpts%nkpt
+    IF (kpts%numSpecialPoints<2) THEN
+       DO n=1,kpts%nkpt
+206       FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>') 
           WRITE (fh,206) kpts%wtkpt(n), kpts%bk(:,n)
-       end do
-       if (kpts%ntet>0) then
-          write(fh,207) kpts%ntet
-          207 format('            <tetraeder ntet="',i0,'">')
+       END DO
+       IF (kpts%ntet>0) THEN
+          WRITE(fh,207) kpts%ntet
+207       FORMAT('            <tetraeder ntet="',i0,'">')
           DO n=1,kpts%ntet
-             208 format('          <tet vol="',f12.6,'">',i0,' ',i0,' ',i0,' ',i0,'</tet>')
-             write(fh,208) kpts%voltet(n),kpts%ntetra(:,n)
-          end DO
-          write(fh,'(a)') '            </tetraeder>'
-    else
-       WRITE (fh,205) name,nkpts%numSpecialPoints
-209    FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
-         DO n = 1, kpts%numSpecialPoints
-            WRITE(fh,209) TRIM(ADJUSTL(kpts%specialPointNames(i))),kpts%specialPoints(:,n)
-         END DO
-      end if
-   end if
-   WRITE (fh,'(a)')('         </kPointList>')
-   if (present(filename)) close(fh)
- end subroutine print_xml
+208          FORMAT('          <tet vol="',f12.6,'">',i0,' ',i0,' ',i0,' ',i0,'</tet>')
+             WRITE(fh,208) kpts%voltet(n),kpts%ntetra(:,n)
+          END DO
+          WRITE(fh,'(a)') '            </tetraeder>'
+       ELSE
+          DO n = 1, kpts%numSpecialPoints
+             WRITE(fh,209) TRIM(ADJUSTL(kpts%specialPointNames(n))),kpts%specialPoints(:,n)
+209          FORMAT('            <specialPoint name="',a,'">', f10.6,' ',f10.6,' ',f10.6,'</specialPoint>')
+          END DO
+       END IF
+    END IF
+    WRITE (fh,'(a)')('         </kPointList>')
+    IF (PRESENT(filename)) CLOSE(fh)
+  END SUBROUTINE print_xml
 
 
-      SUBROUTINE add_special_line(kpts,point,name)
+  SUBROUTINE add_special_line(kpts,point,name)
     CLASS(t_kpts),INTENT(inout):: kpts
     CHARACTER(len=*),INTENT(in):: name
     REAL,INTENT(in)            :: point(3)
@@ -98,8 +126,8 @@ CONTAINS
     REAL,ALLOCATABLE             :: points(:,:)
 
     IF (kpts%numspecialpoints>0) THEN
-       CALL move_ALLOC(kpts%specialPointNames,names)
-       CALL move_ALLOC(kpts%specialPoints,points)
+       CALL MOVE_ALLOC(kpts%specialPointNames,names)
+       CALL MOVE_ALLOC(kpts%specialPoints,points)
        DEALLOCATE(kpts%specialpointindices)
        ALLOCATE(kpts%specialPoints(3,SIZE(names)+1))
        ALLOCATE(kpts%specialPointIndices(SIZE(names)+1))
@@ -115,12 +143,12 @@ CONTAINS
     kpts%specialPoints(:,kpts%numspecialpoints)=point
     kpts%specialPointNames(kpts%numspecialpoints)=name
   END SUBROUTINE add_special_line
-  
+
   SUBROUTINE init_special(kpts,cell,film)
     USE m_types_cell
     CLASS(t_kpts),INTENT(inout):: kpts
     LOGICAL,INTENT(IN)         :: film
-    TYPE(t_cell),intent(IN)    :: cell
+    TYPE(t_cell),INTENT(IN)    :: cell
 
     REAL:: nextp(3),lastp(3),d(MAX(kpts%nkpt,kpts%numSpecialPoints))
     INTEGER:: nk(MAX(kpts%nkpt,kpts%numSpecialPoints)),i,ii
@@ -132,7 +160,7 @@ CONTAINS
     lastp=0
     DO i=1,kpts%numSpecialPoints
        nextp(:)=MATMUL(kpts%specialPoints(:,i),cell%bmat)
-       d(i)=SQRT(dot_PRODUCT(nextp-lastp,nextp-lastp))
+       d(i)=SQRT(DOT_PRODUCT(nextp-lastp,nextp-lastp))
        lastp=nextp
     ENDDO
     d(1)=0.0
@@ -143,7 +171,7 @@ CONTAINS
     ENDDO
 
     ALLOCATE(kpts%bk(3,kpts%numSpecialPoints+SUM(nk)))
-    
+
     !Generate lines
     kpts%nkpt=1
     DO i=1,kpts%numSpecialPoints-1
@@ -161,8 +189,8 @@ CONTAINS
     ALLOCATE(kpts%wtkpt(kpts%nkpt))
     kpts%wtkpt = 1.0
   END SUBROUTINE init_special
-    
-          
+
+
   SUBROUTINE init_defaults(kpts,cell,sym,film,tria,l_soc_or_ss,l_gamma)
     USE m_types_cell
     USE m_types_sym
@@ -171,19 +199,19 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
 
-    integer:: nkpt
+    INTEGER:: nkpt
     IF (film) THEN
-       nkpt = MAX(nint((3600/cell%area)/sym%nop2),1)
+       nkpt = MAX(NINT((3600/cell%area)/sym%nop2),1)
     ELSE
-       nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
+       nkpt = MAX(NINT((216000/cell%omtil)/sym%nop),1)
     ENDIF
-    call kpts%init_by_number(nkpt,cell,sym,film,tria,l_soc_or_ss,l_gamma)
-  end subroutine init_defaults
+    CALL kpts%init_by_number(nkpt,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+  END SUBROUTINE init_defaults
 
   SUBROUTINE init_by_density(kpts,density,cell,sym,film,tria,l_soc_or_ss,l_gamma)
-  USE m_types_cell
-  USE m_types_sym
-  CLASS(t_kpts),INTENT(out):: kpts
+    USE m_types_cell
+    USE m_types_sym
+    CLASS(t_kpts),INTENT(out):: kpts
     REAL,INTENT(in)          :: density
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
@@ -191,24 +219,24 @@ CONTAINS
     REAL    :: length
     INTEGER :: n,grid(3)
 
-    do n=1,3
-       length=sqrt(dot_product(cell%bmat(n,:),cell%bmat(n,:)))  !TODO why not bmat(:,n)???
-       grid(n)=ceiling(density*length)
-    end do
-    call kpts%init_by_grid(grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
-    
-  end subroutine init_by_density
+    DO n=1,3
+       length=SQRT(DOT_PRODUCT(cell%bmat(n,:),cell%bmat(n,:)))  !TODO why not bmat(:,n)???
+       grid(n)=CEILING(density*length)
+    END DO
+    CALL kpts%init_by_grid(grid,cell,sym,film,tria,l_soc_or_ss,l_gamma)
+
+  END SUBROUTINE init_by_density
 
   SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,tria,l_soc_or_ss,l_gamma)
     USE m_divi
-  USE m_types_cell
+    USE m_types_cell
     USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
     INTEGER,INTENT(IN)       :: nkpt
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_sym),INTENT(IN)   :: sym
     LOGICAL,INTENT(IN)             :: film,tria,l_soc_or_ss,l_gamma
-    
+
     INTEGER :: grid(3)
 
     CALL divi(nkpt,cell%bmat,film,sym%nop,sym%nop2,grid)
@@ -294,7 +322,7 @@ CONTAINS
 
     IF (l_gamma) THEN
        IF (tria) CALL judft_error("tria and l_gamma incompatible")
-       call judft_error("l_gamma not supported at present")
+       CALL judft_error("l_gamma not supported at present")
        !CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss)
     ELSE
        !------------------------------------------------------------
@@ -346,8 +374,8 @@ CONTAINS
           ccr(:,:,i)=TRANSPOSE(ccr(:,:,i))
        END DO
 
-       IF ((.not.l_soc_or_ss).AND.(2*nsym<nop48)) THEN
-          IF ((film.AND.(.not.sym%invs2)).OR.((.not.film).AND.(.not.sym%invs))) THEN
+       IF ((.NOT.l_soc_or_ss).AND.(2*nsym<nop48)) THEN
+          IF ((film.AND.(.NOT.sym%invs2)).OR.((.NOT.film).AND.(.NOT.sym%invs))) THEN
              addSym = 0
              ! Note: We have to add the negative of each symmetry operation
              !       to exploit time reversal symmetry. However, if the new
@@ -418,279 +446,267 @@ CONTAINS
   END SUBROUTINE init_by_grid
 
 
-SUBROUTINE add_special_points_default(kpts,film,cell)
-  USE m_judft
-  USE m_bravais
-  use m_types_cell
-  TYPE(t_kpts),INTENT(inout):: kpts
-  LOGICAL,INTENT(in)        :: film
-  TYPE(t_cell),INTENT(in)   :: cell
-    
+  SUBROUTINE add_special_points_default(kpts,film,cell)
+    USE m_judft
+    USE m_bravais
+    USE m_types_cell
+    TYPE(t_kpts),INTENT(inout):: kpts
+    LOGICAL,INTENT(in)        :: film
+    TYPE(t_cell),INTENT(in)   :: cell
+
     REAL, PARAMETER :: f12 = 1./2., f14 = 1./4., zro = 0.0
     REAL, PARAMETER :: f34 = 3./4., f38 = 3./8., one = 1.0
     REAL, PARAMETER :: f13 = 1./3., f23 = 2./3.
 
     INTEGER:: idsyst,idtype
     CALL bravais(cell%amat,idsyst,idtype) 
-    
-      IF (.NOT.film) THEN
-         IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
-            CALL kpts%add_special_line((/f12,f12,one/) ,"X")
-            call kpts%add_special_line((/f38,f38,f34/) ,"K")
-            call kpts%add_special_line((/zro,zro,zro/) ,"g")
-            call kpts%add_special_line((/f12,f12,f12/) ,"L")
-            call kpts%add_special_line((/f12,f14,f34/) ,"W")
-            call kpts%add_special_line((/f12,zro,f12/) ,"X")
-            call kpts%add_special_line((/zro,zro,zro/) ,"g")
-         ENDIF
-         IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
-            CALL kpts%add_special_line((/f12,f12, f12/) ,"Z")
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")
-            call kpts%add_special_line((/f14,f14,-f14/) ,"K")
-            call kpts%add_special_line((/f12,f12,-f12/) ,"Z")
-            call kpts%add_special_line((/f14,f12,-f14/) ,"W")
-            call kpts%add_special_line((/zro,f12, zro/) ,"L")
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")
-            call kpts%add_special_line((/f12,f12, zro/) ,"F")
-         ENDIF
-         IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
-            IF (cell%bmat(1,1)*cell%bmat(2,1)+cell%bmat(1,2)*cell%bmat(2,2) > 0.0) THEN
-               call kpts%add_special_line((/zro,zro, zro/) ,"g")
-               call kpts%add_special_line((/zro,f12, zro/) ,"M")
-               call kpts%add_special_line((/f13,f13, zro/) ,"K")
-               call kpts%add_special_line((/zro,zro, zro/) ,"g")
-               call kpts%add_special_line((/zro,zro, f12/) ,"A")
-               call kpts%add_special_line((/zro,f12, f12/) ,"L")
-               call kpts%add_special_line((/f13,f13, f12/) ,"H")
-               call kpts%add_special_line((/zro,zro, f12/) ,"A")
-            ELSE                                             ! hexagonal (angle = 60)
-               call kpts%add_special_line((/zro,zro, zro/) ,"g")
-               call kpts%add_special_line((/f12,f12, zro/) ,"M")
-               call kpts%add_special_line((/f13,f23, zro/) ,"K")
-               call kpts%add_special_line((/zro,zro, zro/) ,"g")
-               call kpts%add_special_line((/zro,zro, f12/) ,"A")
-               call kpts%add_special_line((/f12,f12, f12/) ,"L")
-               call kpts%add_special_line((/f13,f23, f12/) ,"H")
-               call kpts%add_special_line((/zro,zro, f12/) ,"A")
-            ENDIF
-         ENDIF
-         IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
-            CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")
-            call kpts%add_special_line((/f12,zro, zro/) ,"X")
-            call kpts%add_special_line((/f12,f12, zro/) ,"M")
-            call kpts%add_special_line((/f12,f12, f12/) ,"R")
-            call kpts%add_special_line((/f12,zro, zro/) ,"X")
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")
-            call kpts%add_special_line((/f12,f12, f12/) ,"R")
-         ENDIF
-         IF ( (idsyst == 1).AND.(idtype ==  2) ) THEN       ! body centered cubic
-            CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
-            call kpts%add_special_line((/f12,-f12,f12/) ,"H")
-            call kpts%add_special_line((/zro,zro, f12/) ,"N")
-            call kpts%add_special_line((/f14,f14, f14/) ,"P")
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")
-            call kpts%add_special_line((/zro,zro, f12/) ,"N")
-         ENDIF
-         IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a > c)
-            call kpts%add_special_line((/f12,f12,-f12/) ,"Z")    ! via Lambda and V)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
-            call kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via Y)
-            call kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via Delta)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    
-            call kpts%add_special_line((/zro,f12, zro/) ,"N")    ! via Q)
-            call kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via W)
-            call kpts%add_special_line((/zro,zro, f12/) ,"X")
-         ENDIF
-         IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a < c)
-            CALL kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via F and Sigma)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
-            call kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via W)
-            call kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via Q)
-            call kpts%add_special_line((/zro,f12, zro/) ,"N")
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
-            call kpts%add_special_line((/f12,f12,-f12/) ,"Z")    ! via U and Y)
-            call kpts%add_special_line((/f12,f12, zro/) ,"X")
-            call kpts%add_special_line((/f14,f14, f14/) ,"P")
-         ENDIF
-         IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
-            call kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via Y)
-            call kpts%add_special_line((/f12,f12, zro/) ,"M")    ! via Sigma)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
-            call kpts%add_special_line((/zro,zro, f12/) ,"Z")    ! via U)
-            call kpts%add_special_line((/f12,zro, f12/) ,"R")    ! via T)
-            call kpts%add_special_line((/f12,f12, f12/) ,"A")    ! via S)
-            call kpts%add_special_line((/zro,zro, f12/) ,"Z")
-         ENDIF
-         IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
-            call kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via D)
-            call kpts%add_special_line((/f12,f12, zro/) ,"S")    ! via C)
-            call kpts%add_special_line((/zro,f12, zro/) ,"Y")    ! via Delta)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
-            call kpts%add_special_line((/zro,zro, f12/) ,"Z")    ! via A)
-            call kpts%add_special_line((/f12,zro, f12/) ,"U")    ! via P)
-            call kpts%add_special_line((/f12,f12, f12/) ,"R")    ! via E)
-            call kpts%add_special_line((/zro,f12, f12/) ,"T")    ! via B)
-            CALL kpts%add_special_line((/zro,zro, f12/), "Z")
-         ENDIF
-      ELSE
-         WRITE(*,*) 'Note:'
-         WRITE(*,*) 'Default k point paths for film band structures'
-         WRITE(*,*) 'are experimental. If the generated k point path'
-         WRITE(*,*) 'is not correct please specify it directly.'
-         IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
-            call kpts%add_special_line((/zro,f12, zro/) ,"L")
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")
-            call kpts%add_special_line((/f12,f12, zro/) ,"F")
-         ENDIF
-         IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
-            IF (cell%bmat(1,1)*cell%bmat(2,1)+cell%bmat(1,2)*cell%bmat(2,2) > 0.0) THEN
-               call kpts%add_special_line((/zro,zro, zro/) ,"g")
-               call kpts%add_special_line((/zro,f12, zro/) ,"M")
-               call kpts%add_special_line((/f13,f13, zro/) ,"K")
-               call kpts%add_special_line((/zro,zro, zro/) ,"g")
 
-            ELSE                                             ! hexagonal (angle = 60)
-               call kpts%add_special_line((/zro,zro, zro/) ,"g")
-               call kpts%add_special_line((/f12,f12, zro/) ,"M")
-               call kpts%add_special_line((/f13,f23, zro/) ,"K")
-               call kpts%add_special_line((/zro,zro, zro/) ,"g")
-            ENDIF
-         ENDIF
-         IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
-            call kpts%add_special_line((/f12,f12, zro/) ,"M")
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")
-            call kpts%add_special_line((/f12,zro, zro/) ,"X")
-            call kpts%add_special_line((/f12,f12, zro/) ,"M")
-         ENDIF
-         IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
-            call kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via Y)
-            call kpts%add_special_line((/f12,f12, zro/) ,"M")    ! via Sigma)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
-         ENDIF
-         IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
-            call kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via D)
-            call kpts%add_special_line((/f12,f12, zro/) ,"S")    ! via C)
-            call kpts%add_special_line((/zro,f12, zro/) ,"Y")    ! via Delta)
-            call kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
-         ENDIF
-      END IF
-      IF (kpts%numspecialPoints<2) CALL judft_error("Not enough special points given and no default found")
-    END SUBROUTINE add_special_points_default
-  
+    IF (.NOT.film) THEN
+       IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
+          CALL kpts%add_special_line((/f12,f12,one/) ,"X")
+          CALL kpts%add_special_line((/f38,f38,f34/) ,"K")
+          CALL kpts%add_special_line((/zro,zro,zro/) ,"g")
+          CALL kpts%add_special_line((/f12,f12,f12/) ,"L")
+          CALL kpts%add_special_line((/f12,f14,f34/) ,"W")
+          CALL kpts%add_special_line((/f12,zro,f12/) ,"X")
+          CALL kpts%add_special_line((/zro,zro,zro/) ,"g")
+       ENDIF
+       IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
+          CALL kpts%add_special_line((/f12,f12, f12/) ,"Z")
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          CALL kpts%add_special_line((/f14,f14,-f14/) ,"K")
+          CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")
+          CALL kpts%add_special_line((/f14,f12,-f14/) ,"W")
+          CALL kpts%add_special_line((/zro,f12, zro/) ,"L")
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"F")
+       ENDIF
+       IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
+          IF (cell%bmat(1,1)*cell%bmat(2,1)+cell%bmat(1,2)*cell%bmat(2,2) > 0.0) THEN
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/zro,f12, zro/) ,"M")
+             CALL kpts%add_special_line((/f13,f13, zro/) ,"K")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+             CALL kpts%add_special_line((/zro,f12, f12/) ,"L")
+             CALL kpts%add_special_line((/f13,f13, f12/) ,"H")
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+          ELSE                                             ! hexagonal (angle = 60)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+             CALL kpts%add_special_line((/f13,f23, zro/) ,"K")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+             CALL kpts%add_special_line((/f12,f12, f12/) ,"L")
+             CALL kpts%add_special_line((/f13,f23, f12/) ,"H")
+             CALL kpts%add_special_line((/zro,zro, f12/) ,"A")
+          ENDIF
+       ENDIF
+       IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+          CALL kpts%add_special_line((/f12,f12, f12/) ,"R")
+          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          CALL kpts%add_special_line((/f12,f12, f12/) ,"R")
+       ENDIF
+       IF ( (idsyst == 1).AND.(idtype ==  2) ) THEN       ! body centered cubic
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          CALL kpts%add_special_line((/f12,-f12,f12/) ,"H")
+          CALL kpts%add_special_line((/zro,zro, f12/) ,"N")
+          CALL kpts%add_special_line((/f14,f14, f14/) ,"P")
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          CALL kpts%add_special_line((/zro,zro, f12/) ,"N")
+       ENDIF
+       IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a > c)
+          CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")    ! via Lambda and V)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
+          CALL kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via Y)
+          CALL kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via Delta)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    
+          CALL kpts%add_special_line((/zro,f12, zro/) ,"N")    ! via Q)
+          CALL kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via W)
+          CALL kpts%add_special_line((/zro,zro, f12/) ,"X")
+       ENDIF
+       IF ( (idsyst == 2).AND.(idtype ==  2) ) THEN       ! body centered tetragonal (a < c)
+          CALL kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via F and Sigma)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
+          CALL kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via W)
+          CALL kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via Q)
+          CALL kpts%add_special_line((/zro,f12, zro/) ,"N")
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+          CALL kpts%add_special_line((/f12,f12,-f12/) ,"Z")    ! via U and Y)
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"X")
+          CALL kpts%add_special_line((/f14,f14, f14/) ,"P")
+       ENDIF
+       IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
+          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via Y)
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")    ! via Sigma)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+          CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")    ! via U)
+          CALL kpts%add_special_line((/f12,zro, f12/) ,"R")    ! via T)
+          CALL kpts%add_special_line((/f12,f12, f12/) ,"A")    ! via S)
+          CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")
+       ENDIF
+       IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
+          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via D)
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"S")    ! via C)
+          CALL kpts%add_special_line((/zro,f12, zro/) ,"Y")    ! via Delta)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+          CALL kpts%add_special_line((/zro,zro, f12/) ,"Z")    ! via A)
+          CALL kpts%add_special_line((/f12,zro, f12/) ,"U")    ! via P)
+          CALL kpts%add_special_line((/f12,f12, f12/) ,"R")    ! via E)
+          CALL kpts%add_special_line((/zro,f12, f12/) ,"T")    ! via B)
+          CALL kpts%add_special_line((/zro,zro, f12/), "Z")
+       ENDIF
+    ELSE
+       WRITE(*,*) 'Note:'
+       WRITE(*,*) 'Default k point paths for film band structures'
+       WRITE(*,*) 'are experimental. If the generated k point path'
+       WRITE(*,*) 'is not correct please specify it directly.'
+       IF ( (idsyst == 5).AND.(idtype ==  1) ) THEN       ! rhombohedric (trigonal)
+          CALL kpts%add_special_line((/zro,f12, zro/) ,"L")
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"F")
+       ENDIF
+       IF ( (idsyst == 4).AND.(idtype ==  1) ) THEN       ! hexagonal
+          IF (cell%bmat(1,1)*cell%bmat(2,1)+cell%bmat(1,2)*cell%bmat(2,2) > 0.0) THEN
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/zro,f12, zro/) ,"M")
+             CALL kpts%add_special_line((/f13,f13, zro/) ,"K")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
 
-    SUBROUTINE gen_bz( kpts,sym)
+          ELSE                                             ! hexagonal (angle = 60)
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+             CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+             CALL kpts%add_special_line((/f13,f23, zro/) ,"K")
+             CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          ENDIF
+       ENDIF
+       IF ( (idsyst == 1).AND.(idtype ==  1) ) THEN       ! simple cubic
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
+          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")
+       ENDIF
+       IF ( (idsyst == 2).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Delta)
+          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via Y)
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"M")    ! via Sigma)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+       ENDIF
+       IF ( (idsyst == 3).AND.(idtype ==  1) ) THEN       ! primitive tetragonal (a < c)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
+          CALL kpts%add_special_line((/f12,zro, zro/) ,"X")    ! via D)
+          CALL kpts%add_special_line((/f12,f12, zro/) ,"S")    ! via C)
+          CALL kpts%add_special_line((/zro,f12, zro/) ,"Y")    ! via Delta)
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Lambda)
+       ENDIF
+    END IF
+    IF (kpts%numspecialPoints<2) CALL judft_error("Not enough special points given and no default found")
+  END SUBROUTINE add_special_points_default
 
-   !     bk     ::    irreducible k-points
-   !     nkpt   ::    number of irr. k-points
-   !     bkf    ::    all k-points
-   !     nkptf  ::    number of all k-points
-   !     bkp    ::    k-point parent
-   !     bksym  ::    symmetry operation, that connects the parent
-   !                  k-point with the current one
 
-   USE m_juDFT
-   USE m_util, ONLY: modulo1
-   USE m_types_sym
-   USE m_closure
+  SUBROUTINE gen_bz( kpts,sym)
+    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! gen_bz generates the (whole) Brillouin zone from the          !
+    ! (irreducible) k-points given                                  !
+    !                                     M.Betzinger (09/07)       !
+    !                        Refactored in 2017 by G.M.             !
+    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !     bk     ::    irreducible k-points
+    !     nkpt   ::    number of irr. k-points
+    !     bkf    ::    all k-points
+    !     nkptf  ::    number of all k-points
+    !     bkp    ::    k-point parent
+    !     bksym  ::    symmetry operation, that connects the parent
+    !                  k-point with the current one
+    USE m_juDFT
+    USE m_types_sym
+    TYPE(t_kpts),INTENT(INOUT) :: kpts
+    TYPE(t_sym),INTENT(IN)     :: sym
+    !  - local scalars -
+    INTEGER                 ::  ic,iop,ikpt,ikpt1
+    LOGICAL                 ::  l_found
 
-   IMPLICIT NONE
+    !  - local arrays - 
+    INTEGER,ALLOCATABLE     ::  iarr(:)
+    REAL                    ::  rrot(3,3,2*sym%nop),rotkpt(3)
+    REAL,ALLOCATABLE        ::  rarr1(:,:)
 
-   TYPE(t_kpts),INTENT(INOUT) :: kpts
-   TYPE(t_sym),INTENT(IN)     :: sym
-
-!  - local scalars -
-   INTEGER                 ::  ic,iop,ikpt,ikpt1
-   LOGICAL                 ::  l_found
-      
-!  - local arrays - 
-   INTEGER,ALLOCATABLE     ::  iarr(:)
-   REAL                    ::  rrot(3,3,2*sym%nop),rotkpt(3)
-   REAL,ALLOCATABLE        ::  rarr1(:,:)
-
-   INTEGER:: nsym,ID_mat(3,3)
-
-   !As we might be early in init process, the inverse operation might not be available in sym. Hence
-   !we calculate it here
-   INTEGER                 :: inv_op(sym%nop),optype(sym%nop)
-   INTEGER                 :: multtab(sym%nop,sym%nop)
-
-   CALL check_close(sym%nop,sym%mrot,sym%tau,multtab,inv_op,optype)
-   
-   nsym=sym%nop
-   if (.not.sym%invs) nsym=2*sym%nop
-
-   IF (ANY(kpts%nkpt3==0)) THEN
-      CALL judft_warn("Generating kpoints in full BZ failed. You have to specify nx,ny,nz in the kpoint-grid section of inp.xml")
-      RETURN ! you skipped the error, so you get what you deserve...
-   END IF
-   ALLOCATE (kpts%bkf(3,nsym*kpts%nkpt))
-   ALLOCATE (kpts%bkp(nsym*kpts%nkpt))
-   ALLOCATE (kpts%bksym(nsym*kpts%nkpt))
-      
-   ! Generate symmetry operations in reciprocal space
-   DO iop=1,nsym
-      IF( iop .le. sym%nop ) THEN
-         rrot(:,:,iop) = TRANSPOSE( sym%mrot(:,:,inv_op(iop)) )
-      ELSE
-         rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
-      END IF
-   END DO
+    INTEGER:: nsym,ID_mat(3,3)
 
     
-   !Add existing vectors to list of full vectors
-   id_mat=0
-   ID_mat(1,1)=1;ID_mat(2,2)=1;ID_mat(3,3)=1
-   IF (ANY(sym%mrot(:,:,1).NE.ID_mat)) CALL judft_error("Identity must be first symmetry operation",calledby="gen_bz")
-   
-   ic=0
-   DO iop=1,nsym
-      DO ikpt=1,kpts%nkpt
-         l_found = .FALSE.
-         rotkpt = MATMUL(rrot(:,:,iop), kpts%bk(:,ikpt))
-         !transform back into IBZ
-         rotkpt = modulo1(rotkpt,kpts%nkpt3)
-         DO ikpt1=1,ic
-            IF (MAXVAL(ABS(kpts%bkf(:,ikpt1) - rotkpt)).LE.1e-08) THEN
-               l_found = .TRUE.
-               EXIT
-            END IF
-         END DO
-          
-         IF(.NOT.l_found) THEN
-            ic = ic + 1
-            kpts%bkf(:,ic) = rotkpt
-            kpts%bkp(ic) = ikpt
-            kpts%bksym(ic) = iop
-         END IF
-      END DO
-   END DO
-
-   kpts%nkptf = ic
-
-   ! Reallocate bkf, bkp, bksym
-   ALLOCATE (iarr(kpts%nkptf))
-   iarr = kpts%bkp(:kpts%nkptf)
-   DEALLOCATE(kpts%bkp)
-   ALLOCATE (kpts%bkp(kpts%nkptf))
-   kpts%bkp = iarr
-   iarr= kpts%bksym(:kpts%nkptf)
-   DEALLOCATE (kpts%bksym )
-   ALLOCATE (kpts%bksym(kpts%nkptf))
-   kpts%bksym = iarr
-   DEALLOCATE(iarr)
-   ALLOCATE (rarr1(3,kpts%nkptf))
-   rarr1 = kpts%bkf(:,:kpts%nkptf)
-   DEALLOCATE (kpts%bkf )
-   ALLOCATE (kpts%bkf(3,kpts%nkptf))
-   kpts%bkf = rarr1
-   DEALLOCATE(rarr1)
-      
-END SUBROUTINE gen_bz
+    nsym=sym%nop
+    IF (.NOT.sym%invs) nsym=2*sym%nop
     
-  
+    ALLOCATE (kpts%bkf(3,nsym*kpts%nkpt))
+    ALLOCATE (kpts%bkp(nsym*kpts%nkpt))
+    ALLOCATE (kpts%bksym(nsym*kpts%nkpt))
+
+    ! Generate symmetry operations in reciprocal space
+    DO iop=1,nsym
+       IF( iop .LE. sym%nop ) THEN
+          rrot(:,:,iop) = TRANSPOSE( sym%mrot(:,:,sym%invtab(iop)) )
+       ELSE
+          rrot(:,:,iop) = -rrot(:,:,iop-sym%nop)
+       END IF
+    END DO
+
+
+    !Add existing vectors to list of full vectors
+    id_mat=0
+    ID_mat(1,1)=1;ID_mat(2,2)=1;ID_mat(3,3)=1
+    IF (ANY(sym%mrot(:,:,1).NE.ID_mat)) CALL judft_error("Identity must be first symmetry operation",calledby="gen_bz")
+
+    ic=0
+    DO iop=1,nsym
+       DO ikpt=1,kpts%nkpt
+          rotkpt = MATMUL(rrot(:,:,iop), kpts%bk(:,ikpt))
+          !transform back into 1st-BZ (Do not use nint to deal properly with inaccuracies)
+          do while(any(rotkpt<-0.5))
+             where (rotkpt<-0.5) rotkpt=rotkpt+1.0
+          enddo
+          do while(any(rotkpt>0.5+1E-8))
+             where (rotkpt>0.5+1E-8) rotkpt=rotkpt-1.0
+          enddo
+          DO ikpt1=1,ic
+             IF (MAXVAL(ABS(kpts%bkf(:,ikpt1) - rotkpt)).LE.1e-07) EXIT
+          END DO
+
+          IF(ikpt1>ic) THEN !new point
+             ic = ic + 1
+             kpts%bkf(:,ic) = rotkpt
+             kpts%bkp(ic) = ikpt
+             kpts%bksym(ic) = iop
+          END IF
+       END DO
+    END DO
+
+    kpts%nkptf = ic
+    ! Reallocate bkf, bkp, bksym
+    ALLOCATE (iarr(kpts%nkptf))
+    iarr = kpts%bkp(:kpts%nkptf)
+    DEALLOCATE(kpts%bkp)
+    ALLOCATE (kpts%bkp(kpts%nkptf))
+    kpts%bkp = iarr
+    iarr= kpts%bksym(:kpts%nkptf)
+    DEALLOCATE (kpts%bksym )
+    ALLOCATE (kpts%bksym(kpts%nkptf))
+    kpts%bksym = iarr
+    DEALLOCATE(iarr)
+    ALLOCATE (rarr1(3,kpts%nkptf))
+    rarr1 = kpts%bkf(:,:kpts%nkptf)
+    DEALLOCATE (kpts%bkf )
+    ALLOCATE (kpts%bkf(3,kpts%nkptf))
+    kpts%bkf = rarr1
+    DEALLOCATE(rarr1)
+
+  END SUBROUTINE gen_bz
+
+
 END MODULE m_types_kpts

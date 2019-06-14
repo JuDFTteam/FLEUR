@@ -8,213 +8,213 @@ MODULE m_types_sym
   IMPLICIT NONE
   PRIVATE
   !symmetry information
-   TYPE t_sym
-      !No of sym ops
-      INTEGER ::nop
-      !Rot-matrices (3,3,nop)
-      INTEGER, ALLOCATABLE::mrot(:, :, :)
-      !translation vectors (3,nop)
-      REAL, ALLOCATABLE::tau(:, :)
-      !Symophic group
-      LOGICAL ::symor
-      !2D-inv-sym
-      LOGICAL ::invs2
-      !Inversion-sym
-      LOGICAL ::invs
-      !Z-refls. sym
-      LOGICAL ::zrfs
-      !inverse operation (nop)
-      INTEGER, ALLOCATABLE::invtab(:)
-      !multiplication table
-      INTEGER, ALLOCATABLE :: multab(:,:) !(nop,nop)
-      !No of 2D-sym ops
-      INTEGER ::nop2
-      !Wigner matrix for lda+u
-      COMPLEX, ALLOCATABLE:: d_wgn(:, :, :, :)
-      !
-      ! Atom sepecific stuff
-      !
-      INTEGER, ALLOCATABLE :: invsatnr(:) !(atoms%nat)
-      INTEGER, ALLOCATABLE :: invarop(:,:)!(atoms%nat,nop)
-      INTEGER, ALLOCATABLE :: invarind(:) !(atoms%nat)
+  TYPE t_sym
+     !No of sym ops
+     INTEGER ::nop
+     !Rot-matrices (3,3,nop)
+     INTEGER, ALLOCATABLE::mrot(:, :, :)
+     !translation vectors (3,nop)
+     REAL, ALLOCATABLE::tau(:, :)
+     !Symophic group
+     LOGICAL ::symor
+     !2D-inv-sym
+     LOGICAL ::invs2
+     !Inversion-sym
+     LOGICAL ::invs
+     !Z-refls. sym
+     LOGICAL ::zrfs
+     !inverse operation (nop)
+     INTEGER, ALLOCATABLE::invtab(:)
+     !multiplication table
+     INTEGER, ALLOCATABLE :: multab(:,:) !(nop,nop)
+     !No of 2D-sym ops
+     INTEGER ::nop2
+     !Wigner matrix for lda+u
+     COMPLEX, ALLOCATABLE:: d_wgn(:, :, :, :)
+     !
+     ! Atom sepecific stuff
+     !
+     INTEGER, ALLOCATABLE :: invsatnr(:) !(atoms%nat)
+     INTEGER, ALLOCATABLE :: invarop(:,:)!(atoms%nat,nop)
+     INTEGER, ALLOCATABLE :: invarind(:) !(atoms%nat)
 
-      !
-      ! Hybrid specific stuff TODO
-      !
-      INTEGER ::nsymt
-      INTEGER :: nsym
-      !
-      ! Description of initalization
-      !
-      INTEGER :: symSpecType
-      !Name of lattice type
-      CHARACTER*3   :: latnam
-      !Name of sym
-      CHARACTER*4   :: namgrp
+     !
+     ! Hybrid specific stuff TODO
+     !
+     INTEGER ::nsymt
+     INTEGER :: nsym
+     !
+     ! Description of initalization
+     !
+     INTEGER :: symSpecType
+     !Name of lattice type
+     CHARACTER*3   :: latnam
+     !Name of sym
+     CHARACTER*4   :: namgrp
 
 
-    CONTAINS
-      PROCEDURE :: init
-      procedure :: print_xml
-   END TYPE t_sym
-   PUBLIC t_sym
- CONTAINS
+   CONTAINS
+     PROCEDURE :: init
+     PROCEDURE :: print_xml
+  END TYPE t_sym
+  PUBLIC t_sym
+CONTAINS
   SUBROUTINE print_xml(sym,fh,filename)
-     CLASS(t_sym),INTENT(INOUT):: sym
-     integer,intent(in)        ::fh
-     character(len=*),intent(in),optional::filename
+    CLASS(t_sym),INTENT(IN)   :: sym
+    INTEGER,INTENT(in)        ::fh
+    CHARACTER(len=*),INTENT(in),OPTIONAL::filename
 
-     integer::i
-     
-     if (present(filename)) open(fh,file=filename,status='replace',action='write')
-     WRITE(fh,'(a)') '      <symmetryOperations>'
-     DO i = 1, sym%nop
-        WRITE(fileNum,'(a)') '         <symOp>'
-224     FORMAT('            <row-1>',i0,' ',i0,' ',i0,' ',f0.10,'</row-1>')
-        WRITE(fh,224) sym%mrot(1,1,i), sym%mrot(1,2,i), sym%mrot(1,3,i), sym%tau(1,i)
-225     FORMAT('            <row-2>',i0,' ',i0,' ',i0,' ',f0.10,'</row-2>')
-        WRITE(fh,225) sym%mrot(2,1,i), sym%mrot(2,2,i), sym%mrot(2,3,i), sym%tau(2,i)
-226     FORMAT('            <row-3>',i0,' ',i0,' ',i0,' ',f0.10,'</row-3>')
-        WRITE(fh,226) sym%mrot(3,1,i), sym%mrot(3,2,i), sym%mrot(3,3,i), sym%tau(3,i)
-        WRITE(fileNum,'(a)') '         </symOp>'
-     END DO
-     WRITE(fileNum,'(a)') '      </symmetryOperations>'
-     if (present(filename)) close(fh)
-   end SUBROUTINE print_xml
-     
+    INTEGER::i
 
-   SUBROUTINE init(sym,cell,film)
-     !Generates missing symmetry info.
-     !tau,mrot and nop have to be specified already
-     USE m_closure
-     USE m_dwigner
-     use m_types_cell
-     CLASS(t_sym),INTENT(INOUT):: sym
-     CLASS(t_cell),INTENT(IN)  :: cell
-     LOGICAL,INTENT(in)        :: film
+    IF (PRESENT(filename)) OPEN(fh,file=filename,status='replace',action='write')
+    WRITE(fh,'(a)') '      <symmetryOperations>'
+    DO i = 1, sym%nop
+       WRITE(fh,'(a)') '         <symOp>'
+224    FORMAT('            <row-1>',i0,' ',i0,' ',i0,' ',f0.10,'</row-1>')
+       WRITE(fh,224) sym%mrot(1,1,i), sym%mrot(1,2,i), sym%mrot(1,3,i), sym%tau(1,i)
+225    FORMAT('            <row-2>',i0,' ',i0,' ',i0,' ',f0.10,'</row-2>')
+       WRITE(fh,225) sym%mrot(2,1,i), sym%mrot(2,2,i), sym%mrot(2,3,i), sym%tau(2,i)
+226    FORMAT('            <row-3>',i0,' ',i0,' ',i0,' ',f0.10,'</row-3>')
+       WRITE(fh,226) sym%mrot(3,1,i), sym%mrot(3,2,i), sym%mrot(3,3,i), sym%tau(3,i)
+       WRITE(fh,'(a)') '         </symOp>'
+    END DO
+    WRITE(fh,'(a)') '      </symmetryOperations>'
+    IF (PRESENT(filename)) CLOSE(fh)
+  END SUBROUTINE print_xml
 
 
-     INTEGER :: invsop, zrfsop, invs2op, magicinv,n,i,j,nn
-     INTEGER :: optype(sym%nop),indtwo(sym%nop),usedop(sym%nop)
-     INTEGER :: mrotaux(3,3,sym%nop)
-     REAL    :: tauaux(3,sym%nop)
-     LOGICAL :: zorth           ! true, if z-axis is othorgonal
-     REAL,PARAMETER  :: eps12   = 1.0e-12
-
-     IF (sym%nop==0) CALL judft_error("BUG in calling sym%init. mrot,tau&nop have to be set before")
-
-     IF (ALLOCATED(sym%invtab)) DEALLOCATE(sym%invtab)
-     IF (ALLOCATED(sym%multab)) DEALLOCATE(sym%multab)
-     ALLOCATE ( sym%invtab(sym%nop),sym%multab(sym%nop,sym%nop) )
-     CALL check_close(sym%nop,sym%mrot,sym%tau, sym%multab,sym%invtab,optype)
-
-     !---> determine properties of symmmetry operations, 
-     ! Code previously in symproperties
-     sym%symor=.NOT.(ANY(ABS(sym%tau(:,:sym%nop))>eps12))
-
-     sym%invs    = .FALSE.
-     sym%zrfs    = .FALSE.
-     sym%invs2   = .FALSE.
-     invsop  = 0
-     zrfsop  = 0
-     invs2op = 0
-     
-     DO n = 1, sym%nop
-        IF ( optype(n) == -1 )THEN
-            !--->  check if we have inversion as a symmetry operation
-            IF ( ALL ( ABS( sym%tau(:,n) ) < eps12 ) ) THEN
-               invsop = n
-               sym%invs = .TRUE.
-            ENDIF
-         ENDIF
-         IF ( optype(n) == -2 )THEN
-            !---> check for z-reflection
-            IF ( sym%mrot(3,3,n) == -1 .AND. ALL(ABS(sym%tau(:,n))<eps12) ) THEN
-               zrfsop = n
-               sym%zrfs = .TRUE.
-            ENDIF
-         ENDIF
-         IF ( optype(n) == 2 )THEN
-            !---> check for 2d inversion
-            IF ( sym%mrot(3,3,n) == 1 .AND. ALL(ABS(sym%tau(:,n))<eps12) ) THEN
-               invs2op = n
-               sym%invs2 = .TRUE.
-            ENDIF
-         ENDIF     
-      ENDDO !nops
-
-      !if z-axis is not orthogonal we will not use z-reflect and 2d-invs
-      IF ( cell%amat(3,1)==0.00 .AND. cell%amat(3,2)==0.00 .AND.cell%amat(1,3)==0.00 .AND.cell%amat(2,3)==0.00 ) THEN
-         zorth= .TRUE.
-      ELSE       
-         zorth= .FALSE.
-         ! reset the following...
-         sym%zrfs    = .FALSE.
-         sym%invs2   = .FALSE.
-      ENDIF
-      IF (film.AND.((.NOT.zorth) )) &
-           CALL juDFT_error("film = t and z-axis not orthogonal",calledby ="types_sym")
-
-      IF (film) THEN
-      !---> now we have to sort the ops to find the two-dimensional ops
-      !---> and their 3-dim inverted or z-reflected counterparts
- 
-      mrotaux(:,:,1:sym%nop) = sym%mrot(:,:,1:sym%nop)
-      tauaux(:,1:sym%nop) = sym%tau(:,1:sym%nop)
-
-      DO i=1,sym%nop
-         indtwo(i)= i
-      ENDDO
-
-      !Find number of pure 2D-operations
-      sym%nop2=0
-      DO i = 1, sym%nop
-         IF ( sym%mrot(3,3,i) == 1 ) THEN
-            sym%nop2 = sym%nop2 + 1
-            indtwo(sym%nop2)= i
-         ENDIF
-      ENDDO
+  SUBROUTINE init(sym,cell,film)
+    !Generates missing symmetry info.
+    !tau,mrot and nop have to be specified already
+    USE m_closure
+    USE m_dwigner
+    USE m_types_cell
+    CLASS(t_sym),INTENT(INOUT):: sym
+    CLASS(t_cell),INTENT(IN)  :: cell
+    LOGICAL,INTENT(in)        :: film
 
 
-      magicinv = 0
-      IF (sym%zrfs) magicinv = zrfsop
-      IF (sym%invs) magicinv = invsop
-      usedop = 1
+    INTEGER :: invsop, zrfsop, invs2op, magicinv,n,i,j,nn
+    INTEGER :: optype(sym%nop),indtwo(sym%nop),usedop(sym%nop)
+    INTEGER :: mrotaux(3,3,sym%nop)
+    REAL    :: tauaux(3,sym%nop)
+    LOGICAL :: zorth           ! true, if z-axis is othorgonal
+    REAL,PARAMETER  :: eps12   = 1.0e-12
 
-      IF ( magicinv > 0 ) THEN
-        DO i = 1, sym%nop2
-          j = indtwo(i)
-          sym%mrot(:,:,i) = mrotaux(:,:,j)
-          sym%tau(:,i)    = tauaux(:,j)
-          usedop(j) = usedop(j) - 1
-          j = sym%multab(magicinv,indtwo(i))
-          sym%mrot(:,:,i+sym%nop2) =  mrotaux(:,:,j)
-          sym%tau(:,i+sym%nop2) = tauaux(:,j)
-          usedop(j) = usedop(j) - 1
-        ENDDO
-        IF ( ANY( usedop(1:sym%nop) < 0 ) )  CALL juDFT_error("Fatal Error! #01",calledby="types_sym")
- 
-        IF ( 2*sym%nop2.ne.sym%nop ) THEN
-          n = 0
-          DO i = 1, sym%nop
-            IF ( usedop(i) == 1 ) THEN
-              n = n + 1
-              sym%mrot(:,:,2*sym%nop2+n) =  mrotaux(:,:,i)
-              sym%tau(:,2*sym%nop2+n) = tauaux(:,i)
-            ENDIF
+    IF (sym%nop==0) CALL judft_error("BUG in calling sym%init. mrot,tau&nop have to be set before")
+
+    IF (ALLOCATED(sym%invtab)) DEALLOCATE(sym%invtab)
+    IF (ALLOCATED(sym%multab)) DEALLOCATE(sym%multab)
+    ALLOCATE ( sym%invtab(sym%nop),sym%multab(sym%nop,sym%nop) )
+    CALL check_close(sym%nop,sym%mrot,sym%tau, sym%multab,sym%invtab,optype)
+
+    !---> determine properties of symmmetry operations, 
+    ! Code previously in symproperties
+    sym%symor=.NOT.(ANY(ABS(sym%tau(:,:sym%nop))>eps12))
+
+    sym%invs    = .FALSE.
+    sym%zrfs    = .FALSE.
+    sym%invs2   = .FALSE.
+    invsop  = 0
+    zrfsop  = 0
+    invs2op = 0
+
+    DO n = 1, sym%nop
+       IF ( optype(n) == -1 )THEN
+          !--->  check if we have inversion as a symmetry operation
+          IF ( ALL ( ABS( sym%tau(:,n) ) < eps12 ) ) THEN
+             invsop = n
+             sym%invs = .TRUE.
+          ENDIF
+       ENDIF
+       IF ( optype(n) == -2 )THEN
+          !---> check for z-reflection
+          IF ( sym%mrot(3,3,n) == -1 .AND. ALL(ABS(sym%tau(:,n))<eps12) ) THEN
+             zrfsop = n
+             sym%zrfs = .TRUE.
+          ENDIF
+       ENDIF
+       IF ( optype(n) == 2 )THEN
+          !---> check for 2d inversion
+          IF ( sym%mrot(3,3,n) == 1 .AND. ALL(ABS(sym%tau(:,n))<eps12) ) THEN
+             invs2op = n
+             sym%invs2 = .TRUE.
+          ENDIF
+       ENDIF
+    ENDDO !nops
+
+    !if z-axis is not orthogonal we will not use z-reflect and 2d-invs
+    IF ( cell%amat(3,1)==0.00 .AND. cell%amat(3,2)==0.00 .AND.cell%amat(1,3)==0.00 .AND.cell%amat(2,3)==0.00 ) THEN
+       zorth= .TRUE.
+    ELSE       
+       zorth= .FALSE.
+       ! reset the following...
+       sym%zrfs    = .FALSE.
+       sym%invs2   = .FALSE.
+    ENDIF
+    IF (film.AND.((.NOT.zorth) )) &
+         CALL juDFT_error("film = t and z-axis not orthogonal",calledby ="types_sym")
+
+    IF (film) THEN
+       !---> now we have to sort the ops to find the two-dimensional ops
+       !---> and their 3-dim inverted or z-reflected counterparts
+
+       mrotaux(:,:,1:sym%nop) = sym%mrot(:,:,1:sym%nop)
+       tauaux(:,1:sym%nop) = sym%tau(:,1:sym%nop)
+
+       DO i=1,sym%nop
+          indtwo(i)= i
+       ENDDO
+
+       !Find number of pure 2D-operations
+       sym%nop2=0
+       DO i = 1, sym%nop
+          IF ( sym%mrot(3,3,i) == 1 ) THEN
+             sym%nop2 = sym%nop2 + 1
+             indtwo(sym%nop2)= i
+          ENDIF
+       ENDDO
+
+
+       magicinv = 0
+       IF (sym%zrfs) magicinv = zrfsop
+       IF (sym%invs) magicinv = invsop
+       usedop = 1
+
+       IF ( magicinv > 0 ) THEN
+          DO i = 1, sym%nop2
+             j = indtwo(i)
+             sym%mrot(:,:,i) = mrotaux(:,:,j)
+             sym%tau(:,i)    = tauaux(:,j)
+             usedop(j) = usedop(j) - 1
+             j = sym%multab(magicinv,indtwo(i))
+             sym%mrot(:,:,i+sym%nop2) =  mrotaux(:,:,j)
+             sym%tau(:,i+sym%nop2) = tauaux(:,j)
+             usedop(j) = usedop(j) - 1
           ENDDO
-          IF ( n+2*sym%nop2 /= sym%nop )  CALL juDFT_error("Fatal Error! #02",calledby="types_sym")
-        ENDIF
+          IF ( ANY( usedop(1:sym%nop) < 0 ) )  CALL juDFT_error("Fatal Error! #01",calledby="types_sym")
 
-      ENDIF
+          IF ( 2*sym%nop2.NE.sym%nop ) THEN
+             n = 0
+             DO i = 1, sym%nop
+                IF ( usedop(i) == 1 ) THEN
+                   n = n + 1
+                   sym%mrot(:,:,2*sym%nop2+n) =  mrotaux(:,:,i)
+                   sym%tau(:,2*sym%nop2+n) = tauaux(:,i)
+                ENDIF
+             ENDDO
+             IF ( n+2*sym%nop2 /= sym%nop )  CALL juDFT_error("Fatal Error! #02",calledby="types_sym")
+          ENDIF
 
-!---> check for nonsymmorphic translations in z-direction in
-!---> the film (oldfleur=t) case
-      n = 1
-      DO WHILE (n <= sym%nop)
-         IF (ABS(sym%tau(3,n)) > 0.000001) THEN
-            WRITE(6,'(/," Full space group has",i3," operations.",/)') sym%nop
-            WRITE(6,'(i3,"th operation violate the 2d symmetry in fleur and has been removed.",/)') n
+       ENDIF
+
+       !---> check for nonsymmorphic translations in z-direction in
+       !---> the film (oldfleur=t) case
+       n = 1
+       DO WHILE (n <= sym%nop)
+          IF (ABS(sym%tau(3,n)) > 0.000001) THEN
+             WRITE(6,'(/," Full space group has",i3," operations.",/)') sym%nop
+             WRITE(6,'(i3,"th operation violate the 2d symmetry in fleur and has been removed.",/)') n
              DO nn = n+1, sym%nop
                 sym%mrot(:,:,nn-1) = sym%mrot(:,:,nn)
                 sym%tau(:,nn-1) =sym%tau(:,nn)
@@ -232,7 +232,7 @@ MODULE m_types_sym
     IF (ALLOCATED(sym%d_wgn)) DEALLOCATE(sym%d_wgn)
     ALLOCATE(sym%d_wgn(-3:3,-3:3,3,sym%nop))
     CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
-    
+
     !---> redo to ensure proper mult. table and mapping functions
     CALL check_close(sym%nop,sym%mrot,sym%tau, sym%multab,sym%invtab,optype)
   END SUBROUTINE init

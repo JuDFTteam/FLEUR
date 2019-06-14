@@ -26,6 +26,7 @@ make_atomic_defaults.f90
 read_inpgen_input.f90
 closure.f90
 super_check.f90
+make_kpoints.f90
 
 ${FLEUR_SRC}/init/compile_descr.F90
 ${FLEUR_SRC}/global/constants.f90

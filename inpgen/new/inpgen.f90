@@ -20,7 +20,7 @@ PROGRAM inpgen
   USE m_make_crystal
   USE m_make_atomic_defaults
   USE m_make_defaults
-  !use m_make_kpoints
+  USE m_make_kpoints
   USE m_winpxml
   USE m_xsf_io
   USE m_types_input
@@ -69,8 +69,11 @@ PROGRAM inpgen
       l_explicit=judft_was_argument("-explicit")
       l_include=judft_was_argument("-singlefile")
 
+      OPEN(6,file='out')
+
       INQUIRE(file='inp.xml',exist=l_inpxml)
-      IF (l_inpxml.AND..NOT.judft_was_argument("-inp.xml")) CALL judft_error("inp.xml exists and can not be overwritten")
+      IF (l_inpxml.AND..NOT.(judft_was_argument("-inp.xml").or.judft_was_argument("-overwrite")))&
+           CALL judft_error("inp.xml exists and can not be overwritten")
       
       IF (judft_was_argument("-inp")) THEN
          STOP "not yet"
@@ -96,7 +99,7 @@ PROGRAM inpgen
          
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module
-         CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms)
+         CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms,enpara)
          
          !Set all defaults that have not been specified before or can not be specified in inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
@@ -109,24 +112,23 @@ PROGRAM inpgen
       !
       !Now the IO-section
       !
-      IF (.NOT.l_inpxml) THEN
+      IF (.NOT.l_inpxml.or.judft_was_argument("-overwrite")) THEN
          !the inp.xml file
          !CALL dump_FleurInputSchema()
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-              cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-              .false.,"inp.xml",&
-              l_explicit,l_include,enpara)
+              cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
+              5,l_explicit,l_include,"inp.xml")
          if (.not.l_include) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      if (.not.l_include) CALL kpts%print_XML(99,kpts_str,"kpts.xml")
+      if (.not.l_include) CALL kpts%print_XML(99,"kpts.xml")
       
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
       CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)
       CLOSE (55)
-
+      CLOSE(6)
       
-      CALL juDFT_end("All done",1)
+      CALL juDFT_end("All done")
 
     END PROGRAM inpgen

@@ -29,6 +29,9 @@ CONTAINS
     CALL new_argument(0,"-warn_only","do not stop for warnings","")
     CALL new_argument(0,"-singlefile","include all data in inp.xml, do not create files for kpoints and symmetry","")
     
+    CALL new_argument(1,"-k","String to define k-point set","")
+    call new_argument(0,"-no_send","Do not send usage data","")
+    CALL new_argument(0,"-overwrite","Overwrite inp.xml if present","")
     CALL new_argument(0,"-h","Print this help message","")
     
     IF (.NOT.check_arguments()) CALL judft_warn("Invalid command line arguments",hint="Use -h option to see valid choices")

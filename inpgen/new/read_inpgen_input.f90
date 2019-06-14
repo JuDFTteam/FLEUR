@@ -289,20 +289,22 @@ CONTAINS
      NAMELIST /exco/   xctyp, relxc 
      INTEGER :: ios
      
+     relxc=.false.
+     xctyp='pbe'
      READ(line,exco,iostat=ios) 
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ios.NE.0) CALL judft_error(("Error reading:"//trim(line)))
 
      call xcpot%init(xctyp,relxc,1) !Is it OK to use ntype=1 here??
    END SUBROUTINE process_exco
 
-   SUBROUTINE process_comp(line,jspins,frcor,ctail,kcrel,gmax,gmaxxc,rkmax)
+   SUBROUTINE process_comp(line,jspins,frcor,ctail,kcrel,gmax,gmaxxc,kmax)
      CHARACTER(len=*),INTENT(in)::line
      INTEGER,INTENT(inout):: jspins,kcrel
      LOGICAL,INTENT(inout):: frcor,ctail
-     REAL,intent(inout)   :: gmax,gmaxxc,rkmax
+     REAL,intent(inout)   :: gmax,gmaxxc,kmax
 
      INTEGER :: ios
-     NAMELIST /comp/   jspins, frcor, ctail, kcrel, gmax, gmaxxc, rkmax
+     NAMELIST /comp/   jspins, frcor, ctail, kcrel, gmax, gmaxxc, kmax
      
      READ(line,comp,iostat=ios) 
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))

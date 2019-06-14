@@ -9,7 +9,7 @@ MODULE m_make_atomic_defaults
   IMPLICIT NONE
 
 CONTAINS
-  SUBROUTINE make_atomic_defaults(input,vacuum,cell,oneD,atoms)
+  SUBROUTINE make_atomic_defaults(input,vacuum,cell,oneD,atoms,enpara)
     USE m_check_mt_radii
     USE m_atompar
     USE m_types_atoms
@@ -18,8 +18,10 @@ CONTAINS
     USE m_types_cell
     USE m_types_oneD
     USE m_constants
-    
+    USE m_types_enpara
     TYPE(t_atoms),INTENT(INOUT)   :: atoms
+    TYPE(t_enpara),INTENT(OUT)    :: enpara
+
       TYPE(t_input),INTENT(IN)    :: input
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
       TYPE(t_cell),INTENT(IN)     :: cell
@@ -29,32 +31,28 @@ CONTAINS
       INTEGER :: element_species(120)
       
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
-      TYPE(t_atompar):: ap
+      TYPE(t_atompar):: ap(atoms%ntype)
       element_species=0
 
-      atoms%nlod=9  ! This fixed dimensioning might have to be made more dynamical!
       ALLOCATE(atoms%nz(atoms%ntype))
       ALLOCATE(atoms%jri(atoms%ntype))
       ALLOCATE(atoms%dx(atoms%ntype))
       ALLOCATE(atoms%lmax(atoms%ntype))
       ALLOCATE(atoms%nlo(atoms%ntype))
-      ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
       ALLOCATE(atoms%nflip(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(atoms%ntype))
-      !ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%econf(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
-      ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       ALLOCATE(atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%speciesname(atoms%ntype))
       ALLOCATE(atoms%lapw_l(atoms%ntype))
+      ALLOCATE(atoms%llo(99,atoms%ntype));atoms%llo=-1!will be redone later
 
       atoms%lapw_l=0
       atoms%speciesname=""
       
-
       atoms%nz(:) = NINT(atoms%zatom(:))
       atoms%rmt(:) = 999.9
       atoms%ulo_der = 0
@@ -70,28 +68,28 @@ CONTAINS
       DO n=1,atoms%ntype
          id=NINT(atoms%zatom(n)-atoms%nz(n)*100)
          IF (id>0) THEN
-            ap=find_atompar(atoms%nz(n),atoms%rmt(n),id)
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),id)
             !This specific atom also has a rmt given?
-            IF (ap%id==id.AND.ap%rmt>0.0) atoms%rmt(n)=ap%rmt
+            IF (ap(n)%id==id.AND.ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          ELSE
-            ap=find_atompar(atoms%nz(n),atoms%rmt(n))
+            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n))
          ENDIF
-         CALL ap%add_defaults()
-         atoms%jri(n)=ap%jri
-         atoms%dx(n)=ap%dx
-         atoms%lmax(n)=ap%lmax
-         atoms%lnonsph(n)=ap%lnonsph
-         !atoms%bmu(n))=ap%bmu
+         CALL ap(n)%add_defaults()
+         atoms%jri(n)=ap(n)%jri
+         atoms%dx(n)=ap(n)%dx
+         atoms%lmax(n)=ap(n)%lmax
+         atoms%lnonsph(n)=ap(n)%lnonsph
+         !atoms%bmu(n))=ap(n)%bmu
          !local orbitals
-         atoms%nlo(n)=len_TRIM(ap%lo)/2
+         atoms%nlo(n)=len_TRIM(ap(n)%lo)/2
          DO i=1,atoms%nlo(n)
             DO l = 0, 3
-               IF (ap%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l         
+               !Setting of llo will be redone below 
+               IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l         
             ENDDO
          ENDDO
-         atoms%ulo_der(:,n)=0
-         
-         call atoms%econf(n)%init(ap%econfig)
+         CALL atoms%econf(n)%init(ap(n)%econfig)
+         if (abs(ap(n)%bmu)>1E-8) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
          !atoms%ncst(n)=econfig_count_core(econfig)
          
          
@@ -112,7 +110,23 @@ CONTAINS
          endif
 
       END DO
-      
+      atoms%nlod=MAXVAL(atoms%nlo)
+      atoms%lmaxd=MAXVAL(atoms%lmax)
+      DEALLOCATE(atoms%llo)
+      ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype));atoms%llo=-1
+      ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
+      atoms%ulo_der=0
+         
+      CALL enpara%init(atoms,2,.TRUE.)
+      DO n=1,atoms%ntype
+         DO i=1,atoms%nlo(n)
+            DO l = 0, 3
+               IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l         
+            ENDDO
+         ENDDO
+         CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo)
+      END DO
+         
 
     END SUBROUTINE make_atomic_defaults
   END MODULE m_make_atomic_defaults

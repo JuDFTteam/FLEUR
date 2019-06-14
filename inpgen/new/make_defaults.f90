@@ -40,12 +40,19 @@ CONTAINS
       TYPE(t_hybrid),INTENT(INOUT)::hybrid
       
       
-  
+      integer :: n
       !
       !input
       !
       input%delgau = input%tkb
+      IF (noco%l_ss) noco%l_noco=.TRUE.
       IF (noco%l_noco) input%jspins = 2
+      !check for magnetism
+      DO n=1,atoms%ntype 
+         IF (ANY(atoms%econf(n)%occupation(:,1).NE.atoms%econf(n)%occupation(:,2))) input%jspins=2
+      ENDDO
+     
+
        
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN
         input%ellow = -1.8
@@ -67,9 +74,14 @@ CONTAINS
         input%gw_neigd = 0
       END IF
 
+      IF (input%rkmax==0.0) input%rkmax=MAXVAL(atoms%lmax/atoms%rmt)
+      IF (input%rkmax>4.5) THEN
+         PRINT *,"WARNING, large default rkmax has been reduced. Check input"
+         input%rkmax=4.5
+      ENDIF
       input%rkmax   = real(NINT(input%rkmax   * 10  ) / 10.)
       IF (noco%l_ss) input%ctail = .FALSE.
- 
+      input%zelec=sum(atoms%econf(:)%valence_electrons)
       !
       ! stars
       !

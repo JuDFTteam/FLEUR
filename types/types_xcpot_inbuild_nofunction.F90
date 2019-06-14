@@ -99,7 +99,11 @@ MODULE m_types_xcpot_inbuild_nofunction
          ENDIF
       ENDDO
       if (xcpot%icorr==0) CALL judft_error("Unkown xc-potential:"//namex,calledby="types_xcpot.F90")
-      xcpot%data%krla=MERGE(1,0,relcor)
+      IF (relcor)THEN
+         xcpot%DATA%krla=1
+      ELSE
+         xcpot%DATA%krla=0
+      END IF
 
       !Code from exchpbe to speed up determination of constants
       IF (xcpot%is_name("rpbe")) THEN

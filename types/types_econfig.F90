@@ -123,13 +123,18 @@ CONTAINS
     n=INDEX(str,"|")
     IF (n==0) CALL judft_error(("Invalid econfig:"//TRIM(str)))
     
-
-    CALL convert_to_extended(str(1:n-1),core,core_occ)
+    IF (INDEX(str,"|")==1) THEN
+       ! No core
+       core=""
+       ALLOCATE(core_occ(0))
+    ELSE
+       CALL convert_to_extended(str(1:n-1),core,core_occ)
+    ENDIF
     CALL convert_to_extended(str(INDEX(str,"|")+1:),valence,valence_occ)
 
     CALL econf%init(core,valence)
     !Now set occupations
-    core=econf%coreconfig(INDEX(econf%coreconfig,"("):) !remove noble gas
+    IF (SIZE(core_occ)>0) core=econf%coreconfig(INDEX(econf%coreconfig,"("):) !remove noble gas
     DO n=1,SIZE(core_occ)
        CALL econf%set_occupation(core(:INDEX(core,")")),core_occ(n),-1.)
        core=core(INDEX(core,")")+1:)
@@ -263,8 +268,8 @@ CONTAINS
     
 
   SUBROUTINE set_initial_moment(econf,bmu)
-    CLASS(t_econfig),INTENT(OUT):: econf
-    real            ,INTENT(IN) :: bmu
+    CLASS(t_econfig),INTENT(INOUT):: econf
+    real            ,INTENT(IN  ) :: bmu
 
     INTEGER:: n
     REAL   :: p,el
@@ -358,8 +363,8 @@ CONTAINS
       REAL,ALLOCATABLE,INTENT(OUT) :: occupations(:)
       
       CHARACTER(len=200)::conf
-      REAL :: occ,occupation(100) !this is the tmp local variable (no 's')
-      INTEGER:: n,nn
+      REAL :: occupation(100) !this is the tmp local variable (no 's')
+      INTEGER:: n,nn,occ
       CHARACTER:: n_ch,ch
       extended=""
 
