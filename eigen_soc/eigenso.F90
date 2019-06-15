@@ -21,7 +21,7 @@ MODULE m_eigenso
   !
 CONTAINS
   SUBROUTINE eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                     obsolete,sym,cell,noco,input,kpts,oneD,vTot,enpara,results)
+                     sym,cell,noco,input,kpts,oneD,vTot,enpara,results)
 
     USE m_types
     USE m_eig66_io, ONLY : read_eig,write_eig
@@ -36,7 +36,6 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)        :: mpi
     TYPE(t_dimension),INTENT(IN)  :: DIMENSION
     TYPE(t_oneD),INTENT(IN)       :: oneD
-    TYPE(t_obsolete),INTENT(IN)   :: obsolete
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco

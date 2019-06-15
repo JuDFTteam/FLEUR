@@ -20,7 +20,7 @@ CONTAINS
    !!     TE_EXC :   charge density-ex-corr.energy density integral
 
    SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                   obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul)
+                   cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul)
 
       USE m_types
       USE m_rotate_int_den_to_local
@@ -40,7 +40,6 @@ CONTAINS
       TYPE(t_mpi),       INTENT(IN)     :: mpi
       TYPE(t_dimension), INTENT(IN)     :: dimension
       TYPE(t_oneD),      INTENT(IN)     :: oneD
-      TYPE(t_obsolete),  INTENT(IN)     :: obsolete
       TYPE(t_sliceplot), INTENT(IN)     :: sliceplot
       TYPE(t_input),     INTENT(IN)     :: input
       TYPE(t_field),     INTENT(INOUT)  :: field  !efield can be modified
@@ -90,7 +89,7 @@ CONTAINS
       ENDIF
 
       CALL vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
-                      obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
+                      cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
       CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)

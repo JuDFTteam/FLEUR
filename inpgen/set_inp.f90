@@ -70,7 +70,6 @@
       REAL     scpos ,zc
 
       TYPE(t_banddos)::banddos
-      TYPE(t_obsolete)::obsolete
       TYPE(t_sliceplot)::sliceplot
       TYPE(t_oneD)::oneD
       TYPE(t_stars)::stars
@@ -143,12 +142,12 @@
       sliceplot%slice= .false. ;  input%swsp  = .false.
       input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
       sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
-      input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
+      input%pallst = .false. ;  vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
       input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
       input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
-      input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
+      input%spinf = 2.0 ;  input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
@@ -336,8 +335,8 @@
 !
       CALL lapw_input(&
      &                infh,nline,xl_buffer,bfh,buffer,&
-     &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,kpts%kPointDensity,&
-     &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
+     &                input%jspins,input%kcrel,kpts%nkpt,div,kpts%kPointDensity,&
+     &                input%frcor,input%ctail,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
      &                vacuum%dvac,dtild,input%tkb,namex,relcor)
 
       stars%gmaxInit = stars%gmax
@@ -468,7 +467,7 @@
          filename = 'inp.xml'
 
          CALL w_inpXML(&
-     &                 atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+     &                 atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
      &                 cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
      &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&

@@ -8,7 +8,7 @@ MODULE m_postprocessInput
 
 CONTAINS
 
-SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
+SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
      noco,DIMENSION,enpara,sphhar,l_opti,noel,l_kpts)
 
@@ -49,7 +49,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   TYPE(t_stars),    INTENT(INOUT) :: stars 
   TYPE(t_atoms),    INTENT(INOUT) :: atoms
   TYPE(t_vacuum),   INTENT(INOUT) :: vacuum
-  TYPE(t_obsolete), INTENT(INOUT) :: obsolete
   TYPE(t_kpts),     INTENT(INOUT) :: kpts
   TYPE(t_oneD),     INTENT(INOUT) :: oneD
   TYPE(t_hybrid),   INTENT(INOUT) :: hybrid
@@ -263,7 +262,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         dimension%neigd = dimension%nvd + atoms%nlotot
      END IF
 
-     obsolete%lepr = 0
 
      IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
 

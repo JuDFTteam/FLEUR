@@ -22,13 +22,6 @@ MODULE m_types_setup
   use m_types_dimension
 
   
-
-   TYPE t_obsolete
-      INTEGER:: lepr !floating energy parameters...
-      INTEGER:: ndvgrd !remove
-      REAL   :: chng   !remove
-      LOGICAL :: lwb   !remove
-   END TYPE t_obsolete
   
 
    ! type for the input to the calculation of the core spectrum (EELS)

@@ -7,7 +7,7 @@ MODULE m_optional
   USE m_juDFT
 CONTAINS
   SUBROUTINE OPTIONAL(mpi, atoms,sphhar,vacuum,DIMENSION,&
-       stars,input,sym, cell, sliceplot,obsolete, xcpot, noco, oneD)
+       stars,input,sym, cell, sliceplot, xcpot, noco, oneD)
     !
     !----------------------------------------
     ! this routine is called by: fleur.F90
@@ -72,7 +72,6 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_dimension),INTENT(IN):: DIMENSION
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_obsolete),INTENT(IN) :: obsolete
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_stars),INTENT(IN)    :: stars
     TYPE(t_oneD),INTENT(IN)     :: oneD
@@ -134,7 +133,7 @@ CONTAINS
        !
        CALL timestart("generation of start-density")
        CALL stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
-                  input,cell,xcpot,obsolete,noco,oneD)
+                  input,cell,xcpot,noco,oneD)
        !
        input%total=strho
        CALL timestop("generation of start-density")

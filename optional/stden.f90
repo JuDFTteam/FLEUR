@@ -13,7 +13,7 @@ USE m_juDFT
 CONTAINS
 
 SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
-                 input,cell,xcpot,obsolete,noco,oneD)
+                 input,cell,xcpot,noco,oneD)
 
    USE m_constants
    USE m_qsf
@@ -32,7 +32,6 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    TYPE(t_atoms),INTENT(IN)    :: atoms
    TYPE(t_dimension),INTENT(IN):: DIMENSION
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-   TYPE(t_obsolete),INTENT(IN) :: obsolete
    TYPE(t_sym),INTENT(IN)      :: sym
    TYPE(t_stars),INTENT(IN)    :: stars
    TYPE(t_noco),INTENT(IN)     :: noco
@@ -289,14 +288,6 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                      END IF
                   END IF ! .NOT.l_found(lnum(i,n)).AND.(lnum(i,n).LE.3)
                END DO ! i = nst(n), 1, -1 
-               IF (obsolete%lepr.EQ.1) THEN
-                  DO i = 0, 3
-                     enpara%el0(i,n,ispin) = enpara%el0(i,n,ispin) - vbar(ispin,n)
-                  END DO
-                  DO ilo = 1,atoms%nlo(n)
-                     enpara%ello0(ilo,n,ispin) = enpara%ello0(ilo,n,ispin) - vbar(ispin,n)
-                  END DO
-               END IF
             END DO ! atom types
 
             IF (input%film) THEN
@@ -317,21 +308,12 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                   IF (.NOT.oneD%odi%d1) THEN
                      vacpot = vacpot - fpi_const*vacpar(ivac)
                   END IF
-                  IF (obsolete%lepr.EQ.1) THEN
-                     vacpar(ivac) = -0.2 - vacpot(1,1)
-                     WRITE (6,'(" vacuum",i2," reference energy =",f12.6)') ivac,vacpot
-                  ELSE
-                     vacpar(ivac) = vacpot(1,1)
-                  END IF
+                  vacpar(ivac) = vacpot(1,1)
                END DO
                IF (vacuum%nvac.EQ.1) vacpar(2) = vacpar(1)
             END IF
 
-            IF (obsolete%lepr.EQ.1) THEN
-               enpara%enmix = 0.3
-            ELSE
-               enpara%enmix = 1.0
-            END IF
+            enpara%enmix = 1.0
 
             
             enpara%evac0(:,ispin)=vacpar(:SIZE(enpara%evac0,1))

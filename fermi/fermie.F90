@@ -7,7 +7,7 @@ MODULE m_fermie
   !            or fermi-function                                    p.kurz
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE fermie(eig_id, mpi,kpts,obsolete,&
+  SUBROUTINE fermie(eig_id, mpi,kpts,&
        input, noco,e_min,cell,results)
 
     !---------------------------------------------------f--------------------
@@ -41,7 +41,6 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT)   :: results
     TYPE(t_mpi),INTENT(IN)   :: mpi
-    TYPE(t_obsolete),INTENT(IN)   :: obsolete
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_cell),INTENT(IN)   :: cell

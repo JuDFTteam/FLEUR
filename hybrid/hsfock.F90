@@ -190,7 +190,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       IF (xcpot%is_name("hse").OR.xcpot%is_name("vhse")) THEN
 #ifdef CPP_NEVER           
          CALL exchange_vccvHSE(nk,atoms,hybrid,hybdat,dimension,jsp,lapw,nsymop,nsest,indx_sest,mpi,a_ex,results,mat_ex%core)
-         CALL exchange_ccccHSE(nk,obsolete,atoms,hybdat,ncstd,kpts(:,nk),sym,a_ex,mpi,results%core)
+         CALL exchange_ccccHSE(nk,atoms,hybdat,ncstd,kpts(:,nk),sym,a_ex,mpi,results%core)
 #endif
          STOP "HSE not implemented in hsfock"
       ELSE

@@ -1,5 +1,5 @@
       SUBROUTINE parawrite(&
-     &                     sym,stars,atoms,sphhar,dimension,vacuum,obsolete,&
+     &                     sym,stars,atoms,sphhar,dimension,vacuum,&
      &                     kpts,oneD,input)
 
       USE m_types
@@ -10,7 +10,6 @@
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_dimension),INTENT(IN) :: dimension
       TYPE(t_vacuum),INTENT(INOUT) :: vacuum
-      TYPE(t_obsolete),INTENT(IN)  :: obsolete
       TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_input),INTENT(IN)     :: input

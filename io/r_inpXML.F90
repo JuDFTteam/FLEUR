@@ -14,7 +14,7 @@ MODULE m_rinpXML
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE r_inpXML(&
-      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
+      atoms,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
       cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
       noel,namex,relcor,a1,a2,a3,dtild,&
       l_kpts)
@@ -46,7 +46,6 @@ CONTAINS
       TYPE(t_stars),INTENT(INOUT)   :: stars
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
-      TYPE(t_obsolete),INTENT(INOUT) :: obsolete
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
@@ -1242,16 +1241,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
 
-      obsolete%lwb=.FALSE.
-      IF (xcpot%needs_grad()) THEN
-         obsolete%ndvgrd=6
-         obsolete%chng=-0.1e-11
-      END IF
-
-      IF (xcpot%needs_grad()) THEN
-         obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
-      END IF
-
+  
       hybrid%gcutm1 = input%rkmax - 0.5
       hybrid%tolerance1 = 1.0e-4
       hybrid%ewaldlambda = 3

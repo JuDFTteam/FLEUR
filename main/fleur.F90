@@ -86,7 +86,6 @@ CONTAINS
     TYPE(t_vacuum)                  :: vacuum
     TYPE(t_sliceplot)               :: sliceplot
     TYPE(t_banddos)                 :: banddos
-    TYPE(t_obsolete)                :: obsolete
     TYPE(t_enpara)                  :: enpara
     TYPE(t_results)                 :: results
     TYPE(t_kpts)                    :: kpts
@@ -114,7 +113,7 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
-                    banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
+                    banddos,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
 
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
@@ -122,7 +121,7 @@ CONTAINS
     END IF
 
     IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
-                              stars,input,sym,cell,sliceplot,obsolete,xcpot,noco,oneD)
+                              stars,input,sym,cell,sliceplot,xcpot,noco,oneD)
 
     IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
        IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
@@ -233,7 +232,7 @@ CONTAINS
 
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                 obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
+                 cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
 #ifdef CPP_MPI
@@ -249,7 +248,7 @@ CONTAINS
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
-          CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+          CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -275,7 +274,7 @@ CONTAINS
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
              CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                          obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
+                          sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
           CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI
@@ -289,12 +288,12 @@ CONTAINS
 
              IF (noco%l_soc.AND.(.NOT.noco%l_noco)) THEN
                 input%zelec = input%zelec*2
-                CALL fermie(eig_id,mpi,kpts,obsolete,input,noco,enpara%epara_min,cell,results)
+                CALL fermie(eig_id,mpi,kpts,input,noco,enpara%epara_min,cell,results)
                 results%seigscv = results%seigscv/2
                 results%ts = results%ts/2
                 input%zelec = input%zelec/2
              ELSE
-                CALL fermie(eig_id,mpi,kpts,obsolete,input,noco,enpara%epara_min,cell,results)
+                CALL fermie(eig_id,mpi,kpts,input,noco,enpara%epara_min,cell,results)
              ENDIF
              CALL timestop("determination of fermi energy")
 
@@ -379,12 +378,12 @@ CONTAINS
 
              
 !!$             !----> output potential and potential difference
-!!$             IF (obsolete%disp) THEN
+!!$             IF (disp) THEN
 !!$                reap = .FALSE.
 !!$                input%total = .FALSE.
 !!$                CALL timestart("generation of potential (total)")
 !!$                CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-!!$                     obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
+!!$                     cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
 !!$                CALL timestop("generation of potential (total)")
 !!$
 !!$                CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)

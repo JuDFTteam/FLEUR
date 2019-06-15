@@ -79,7 +79,6 @@ CONTAINS
     TYPE(t_vacuum)                :: vacuum_temp
     TYPE(t_sliceplot)             :: sliceplot_temp
     TYPE(t_banddos)               :: banddos_temp
-    TYPE(t_obsolete)              :: obsolete_temp
     TYPE(t_enpara)                :: enpara_temp
     CLASS(t_xcpot),ALLOCATABLE    :: xcpot_temp
     TYPE(t_results)               :: results_temp
@@ -207,7 +206,7 @@ CONTAINS
           ALLOCATE(xmlElectronStates(1,1),xmlPrintCoreStates(1,1))
           ALLOCATE(xmlCoreOccs(1,1,1))
           CALL initWannierDefaults(wann_temp)
-          CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
+          CALL r_inpXML(atoms_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
                         banddos_temp,dimension_temp,forcetheo,field,cell_temp,sym_temp,xcpot_temp,noco_temp,&
                         oneD_temp,hybrid_temp,kpts_temp,enpara_temp,coreSpecInput_temp,wann_temp,noel_temp,&
                         namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,xmlElectronStates,&
@@ -219,7 +218,7 @@ CONTAINS
           input_temp%gw_neigd = dimension_temp%neigd
           div(:) = MIN(kpts_temp%nkpt3(:),1)
           stars_temp%gmax = stars_temp%gmaxInit
-          CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,forcetheo,&
+          CALL w_inpXML(atoms_new,vacuum_temp,input_temp,stars_temp,sliceplot_temp,forcetheo,&
                         banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,oneD_temp,hybrid_temp,&
                         kpts_temp,kpts_temp%nkpt3,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
                         dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&

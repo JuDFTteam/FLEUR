@@ -18,7 +18,7 @@ CONTAINS
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
                                  dimension,cell,sym,xcpot,noco,oneD,hybrid,&
-                                 kpts,enpara,sphhar,mpi,obsolete)
+                                 kpts,enpara,sphhar,mpi)
 
    USE m_types
 
@@ -41,7 +41,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_dimension),INTENT(INOUT) :: dimension
    TYPE(t_enpara),   INTENT(INOUT) :: enpara
    TYPE(t_sphhar),   INTENT(INOUT) :: sphhar
-   TYPE(t_obsolete), INTENT(INOUT) :: obsolete
 #ifdef CPP_MPI
    INCLUDE 'mpif.h'
 
@@ -96,7 +95,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(oneD%odd%n2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%nop,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(oneD%odd%nn2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   !CALL MPI_BCAST(obsolete%nwdd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
    DO n=1,atoms%ntype
       CALL atoms%econf(n)%broadcast(mpi%mpi_comm)

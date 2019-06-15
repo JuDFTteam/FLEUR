@@ -1,5 +1,11 @@
 MODULE m_vvacxcg
   use m_juDFT
+  private
+  !These used to be inputs for testing...
+  INTEGER,PARAMETER:: fixed_ndvgrd=6
+  REAL,PARAMETER   :: fixed_chng=-0.1e-11
+  
+  public vvacxcg
   !-----------------------------------------------------------------------
   !     calculates 2-d star function coefficients of exchange-correlation*
   !     potential in the vacuum regions and adds them to the corresponding
@@ -7,7 +13,7 @@ MODULE m_vvacxcg
   !     for the gradient contribution.   t.a. 1996
   !-----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE vvacxcg(ifftd2,stars,vacuum,noco,oneD,cell,xcpot,input,obsolete,den, vxc,exc)
+  SUBROUTINE vvacxcg(ifftd2,stars,vacuum,noco,oneD,cell,xcpot,input,den, vxc,exc)
 
     !-----------------------------------------------------------------------
     !     instead of vvacxcor.f: the different exchange-correlation
@@ -30,7 +36,6 @@ CONTAINS
     IMPLICIT NONE
     CLASS(t_xcpot),INTENT(IN)    :: xcpot
     TYPE(t_oneD),INTENT(IN)      :: oneD
-    TYPE(t_obsolete),INTENT(IN)  :: obsolete
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
@@ -146,7 +151,7 @@ CONTAINS
              ! calculate first (rhtdz) & second (rhtdzz) derivative of den%vacz(1:nmz)
              !
              ALLOCATE ( dummy(vacuum%nmz) )
-             CALL grdchlh(0,1,vacuum%nmz,vacuum%delz,dummy,den%vacz(1,ivac,js),obsolete%ndvgrd,&
+             CALL grdchlh(0,1,vacuum%nmz,vacuum%delz,dummy,den%vacz(1,ivac,js),fixed_ndvgrd,&
                   rhtdz(1,js),rhtdzz(1,js))
              DEALLOCATE ( dummy )
              ALLOCATE ( rhtxyr(vacuum%nmzxy), rhtxyi(vacuum%nmzxy),dummy(vacuum%nmzxy) )
@@ -160,12 +165,12 @@ CONTAINS
                 DO ip=1,vacuum%nmzxy
                    rhtxyr(ip)=den%vacxy(ip,iq,ivac,js)
                 ENDDO
-                CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyr,obsolete%ndvgrd, rxydzr,rxydzzr) 
+                CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyr,fixed_ndvgrd, rxydzr,rxydzzr) 
 
                 DO ip=1,vacuum%nmzxy
                    rhtxyi(ip)=aimag(den%vacxy(ip,iq,ivac,js))
                 ENDDO
-                CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyi,obsolete%ndvgrd, rxydzi,rxydzzi)
+                CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyi,fixed_ndvgrd, rxydzi,rxydzzi)
 
                 DO ip=1,vacuum%nmzxy
                    rxydz(ip,iq,js)=cmplx(rxydzr(ip),rxydzi(ip))
@@ -188,7 +193,7 @@ CONTAINS
                 DO ip=1,vacuum%nmzxy
                    rhtxyr(ip)=magmom(i,ip)
                 ENDDO
-                CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyr,obsolete%ndvgrd, rxydzr,rxydzzr)
+                CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyr,fixed_ndvgrd, rxydzr,rxydzzr)
                 DO ip=1,vacuum%nmzxy
                    dzmagmom(i,ip)= rxydzr(ip)
                    ddzmagmom(i,ip)= rxydzzr(ip)
@@ -308,7 +313,7 @@ CONTAINS
                 ! ! in real-space. The derivatives of the charge density, that are 
                 ! ! already calculated in g-space, will be used. 
 
-                CALL grdrsvac(magmom(0,ip),bmat1,3*stars%mx1,3*stars%mx2,obsolete%ndvgrd, dxmagmom,dymagmom) 
+                CALL grdrsvac(magmom(0,ip),bmat1,3*stars%mx1,3*stars%mx2,fixed_ndvgrd, dxmagmom,dymagmom) 
                 DO i=0,9*stars%mx1*stars%mx2-1 
                    chdens= rhdx(i,1)/2.+rhdx(i,2)/2.
                    rhdx(i,1)= chdens + dxmagmom(i) 
@@ -321,10 +326,10 @@ CONTAINS
                    rhdz(i,2)= chdens - dzmagmom(i,ip) 
                 END DO
 
-                CALL grdrsvac(dxmagmom,bmat1,3*stars%mx1,3*stars%mx2,obsolete%ndvgrd, &
+                CALL grdrsvac(dxmagmom,bmat1,3*stars%mx1,3*stars%mx2,fixed_ndvgrd, &
                      ddxmagmom(0,1),ddymagmom(0,1))
                 CALL grdrsvac(&
-                     dymagmom,bmat1,3*stars%mx1,3*stars%mx2,obsolete%ndvgrd,ddxmagmom(0,2),ddymagmom(0,2))
+                     dymagmom,bmat1,3*stars%mx1,3*stars%mx2,fixed_ndvgrd,ddxmagmom(0,2),ddymagmom(0,2))
                 DO i=0,9*stars%mx1*stars%mx2-1
                    chdens= rhdxx(i,1)/2.+rhdxx(i,2)/2. 
                    rhdxx(i,1)= chdens + ddxmagmom(i,1) 
@@ -336,7 +341,7 @@ CONTAINS
                    rhdxy(i,1)= chdens + ( ddxmagmom(i,2) + ddymagmom(i,1) )/2.
                    rhdxy(i,2)= chdens - ( ddxmagmom(i,2) + ddymagmom(i,1) )/2.
                 END DO
-                CALL grdrsvac(dzmagmom(0,ip),bmat1,3*stars%mx1,3*stars%mx2,obsolete%ndvgrd, &
+                CALL grdrsvac(dzmagmom(0,ip),bmat1,3*stars%mx1,3*stars%mx2,fixed_ndvgrd, &
                      ddxmagmom(0,1),ddymagmom(0,1))
                 DO i=0,9*stars%mx1*stars%mx2-1
                    chdens= rhdzx(i,1)/2.+rhdzx(i,2)/2. 
@@ -387,8 +392,8 @@ CONTAINS
              ENDDO
           ENDDO
 
-          IF (rhmnv.LT.obsolete%chng) THEN
-             WRITE(6,'(/'' rhmn.lt.obsolete%chng. rhmn,obsolete%chng='',2d9.2)') rhmnv,obsolete%chng
+          IF (rhmnv.LT.fixed_chng) THEN
+             WRITE(6,'(/'' rhmn.lt.fixed_chng. rhmn,fixed_chng='',2d9.2)') rhmnv,fixed_chng
              !             CALL juDFT_error("vvacxcg: rhmn.lt.chng",calledby="vvacxcg")
           ENDIF
 
@@ -449,8 +454,8 @@ CONTAINS
        ! The non-warping region runs from nmzxy+1 to nmz.
        ! The values from nmz0 to nmzxy are taken into account in order
        ! to get the real-space derivative smooth around nmzxy+1. 
-       nmz0= vacuum%nmzxy+1+(obsolete%ndvgrd/2)-obsolete%ndvgrd
-       IF (nmz0 <= 0) THEN ! usually vacuum%nmzxy>obsolete%ndvgrd 
+       nmz0= vacuum%nmzxy+1+(fixed_ndvgrd/2)-fixed_ndvgrd
+       IF (nmz0 <= 0) THEN ! usually vacuum%nmzxy>fixed_ndvgrd 
           nmz0= 1
        END IF
 
@@ -478,7 +483,7 @@ CONTAINS
           DEALLOCATE ( magmom,mx,my ) 
           ALLOCATE ( dummy(vacuum%nmz) )
           DO js=1,input%jspins
-             CALL grdchlh(0,1,vacuum%nmz-nmz0+1,vacuum%delz,dummy,rhtz(nmz0,js),obsolete%ndvgrd,&
+             CALL grdchlh(0,1,vacuum%nmz-nmz0+1,vacuum%delz,dummy,rhtz(nmz0,js),fixed_ndvgrd,&
                   rhtdz(nmz0,js),rhtdzz(nmz0,js))
           END DO
           DEALLOCATE ( dummy )
@@ -525,8 +530,8 @@ CONTAINS
        ENDDO
 
    
-       IF (rhmnv.lt.obsolete%chng) THEN
-          WRITE (6,'('' rhmn.lt.obsolete%chng. rhmn,obsolete%chng='',2d9.2)') rhmnv,obsolete%chng
+       IF (rhmnv.lt.fixed_chng) THEN
+          WRITE (6,'('' rhmn.lt.fixed_chng. rhmn,fixed_chng='',2d9.2)') rhmnv,fixed_chng
           !           CALL juDFT_error("vvacxcg: rhmn.lt.chng",calledby="vvacxcg")
        ENDIF
 

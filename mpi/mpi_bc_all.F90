@@ -7,7 +7,7 @@
 MODULE m_mpi_bc_all
 CONTAINS
   SUBROUTINE mpi_bc_all(&
-       mpi,stars,sphhar,atoms,obsolete,sym,&
+       mpi,stars,sphhar,atoms,sym,&
        kpts,DIMENSION,input,field,banddos,sliceplot,&
        vacuum,cell,enpara,noco,oneD,&
         hybrid)
@@ -21,7 +21,6 @@ CONTAINS
     TYPE(t_oneD),INTENT(INOUT)       :: oneD
     TYPE(t_hybrid),INTENT(INOUT)     :: hybrid
     TYPE(t_enpara),INTENT(INOUT)     :: enpara
-    TYPE(t_obsolete),INTENT(INOUT)   :: obsolete
     TYPE(t_banddos),INTENT(INOUT)    :: banddos
     TYPE(t_sliceplot),INTENT(INOUT)  :: sliceplot
     TYPE(t_input),INTENT(INOUT)      :: input
@@ -50,7 +49,7 @@ CONTAINS
     
     IF (mpi%irank.EQ.0) THEN
        i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype  ; i(5)=1
-       i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
+       i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy  
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
        i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = stars%kimax ; i(26) = stars%kimax2
@@ -66,7 +65,7 @@ CONTAINS
        r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
        r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=field%efield%vslope
        r(27)=0.0 ; r(28)=0.0!r(27)=aMix_VHSE() ; r(28)=omega_VHSE()
-       r(29)=input%minDistance ; r(30)=obsolete%chng ; r(31)=input%ldauMixParam ; r(32)=input%ldauSpinf
+       r(29)=input%minDistance ;  r(31)=input%ldauMixParam ; r(32)=input%ldauSpinf
        r(33)=banddos%e_mcd_lo ; r(34)=banddos%e_mcd_up
 
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
@@ -89,13 +88,13 @@ CONTAINS
     atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) 
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
-    stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
+    stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10)
      atoms%ntype=i(3) ; banddos%orbCompAtom=i(38);banddos%s_cell_x=i(40);banddos%s_cell_y=i(41);banddos%s_cell_z=i(42)
      input%coretail_lmax=i(2) ; input%kcrel=i(39)
      stars%kimax=i(25);stars%kimax2=i(26)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    input%minDistance=r(29) ; obsolete%chng=r(30)
+    input%minDistance=r(29) 
     input%delgau=r(24) ; input%tkb=r(25) ; field%efield%vslope=r(26)
     cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) 
     input%sigma=r(15) ; field%efield%zsigma=r(16); noco%mix_b=r(17); cell%vol=r(18);

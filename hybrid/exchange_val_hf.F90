@@ -276,7 +276,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
 
          IF (mat_ex%l_real) THEN
 #ifdef CPP_IRAPPROX
-            CALL wavefproducts_inv(1,hybdat,dimension,input,jsp,atoms,lapw,obsolete,kpts,nk,ikpt0,&
+            CALL wavefproducts_inv(1,hybdat,dimension,input,jsp,atoms,lapw,kpts,nk,ikpt0,&
                                    mnobd,hybrid,parent,cell,sym,noco,nkqpt,cprod_vv)
 #else
             CALL wavefproducts_inv5(1,hybrid%nbands(nk),ibando,ibando+psize-1,dimension,input,jsp,atoms,&

@@ -4,7 +4,7 @@ IMPLICIT NONE
 
 CONTAINS
 
-SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
+SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
                               oneD,hybrid,cell,banddos,sliceplot,xcpot,&
                               noco,dimension,enpara,sphhar)
 
@@ -17,7 +17,6 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
    TYPE(t_stars),     INTENT(IN) :: stars 
    TYPE(t_atoms),     INTENT(IN) :: atoms
    TYPE(t_vacuum),    INTENT(IN) :: vacuum
-   TYPE(t_obsolete),  INTENT(IN) :: obsolete
    TYPE(t_kpts),      INTENT(IN) :: kpts
    TYPE(t_oneD),      INTENT(IN) :: oneD
    TYPE(t_hybrid),    INTENT(IN) :: hybrid

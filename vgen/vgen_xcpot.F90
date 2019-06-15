@@ -10,7 +10,7 @@ MODULE m_vgen_xcpot
 CONTAINS
 
    SUBROUTINE vgen_xcpot(hybrid, input, xcpot, dimension, atoms, sphhar, stars, vacuum, sym, &
-                         obsolete, cell, oneD, sliceplot, mpi, noco, den, denRot, EnergyDen, vTot, vx, results)
+                          cell, oneD, sliceplot, mpi, noco, den, denRot, EnergyDen, vTot, vx, results)
 
       !     ***********************************************************
       !     FLAPW potential generator                           *
@@ -40,7 +40,6 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)              :: mpi
       TYPE(t_dimension), INTENT(IN)              :: dimension
       TYPE(t_oneD), INTENT(IN)              :: oneD
-      TYPE(t_obsolete), INTENT(IN)              :: obsolete
       TYPE(t_sliceplot), INTENT(IN)              :: sliceplot
       TYPE(t_input), INTENT(IN)              :: input
       TYPE(t_vacuum), INTENT(IN)              :: vacuum
@@ -98,11 +97,11 @@ CONTAINS
                IF (oneD%odi%d1) THEN
                   CALL judft_error("OneD broken")
                   ! CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-                  !              cell,xcpot,input,obsolete,workDen, ichsmrg,&
+                  !              cell,xcpot,input,workDen, ichsmrg,&
                   !              vTot%vacxy,vTot%vacz,rhmn, exc%vacxy,exc%vacz)
 
                ELSE
-                  CALL vvacxcg(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input, obsolete, Den, vTot, exc)
+                  CALL vvacxcg(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input,  Den, vTot, exc)
                END IF
             END IF
             CALL timestop("Vxc in vacuum")
@@ -110,19 +109,8 @@ CONTAINS
 
          ! interstitial region
          CALL timestart("Vxc in interstitial")
-
-         IF ((.NOT. obsolete%lwb) .OR. (.not. xcpot%needs_grad())) THEN
-            ! no White-Bird-trick
             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen, vTot, vx, exc)
-
-         ELSE
-            ! White-Bird-trick
-            WRITE (6, '(a)') "W+B trick cancelled out. visxcwb uses at present common block cpgft3.", &
-               "visxcwb needs to be reprogrammed according to visxcg.f"
-            CALL juDFT_error("visxcwb", calledby="vgen")
-         END IF
-
-         CALL timestop("Vxc in interstitial")
+      CALL timestop("Vxc in interstitial")
       END IF !irank==0
 
       !
@@ -134,7 +122,7 @@ CONTAINS
       END IF
 
       CALL vmt_xc(DIMENSION, mpi, sphhar, atoms, den, xcpot, input, sym, &
-                  obsolete, EnergyDen, vTot, vx, exc)
+                   EnergyDen, vTot, vx, exc)
 
       !
 
