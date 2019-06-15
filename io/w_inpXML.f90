@@ -19,7 +19,7 @@ CONTAINS
 SUBROUTINE w_inpXML(&
      atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
-     filenum,l_explicitIn,l_includeIn,filename)
+     l_explicitIn,l_includeIn,filename)
 
 
    use m_types_input
@@ -62,12 +62,11 @@ SUBROUTINE w_inpXML(&
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_enpara),INTENT(IN)   :: enpara
    CLASS(t_forcetheo),INTENT(IN):: forcetheo !nothing is done here so far....
-   LOGICAL, INTENT (IN)        :: l_explicitIn,l_includeIn
-   INTEGER,INTENT(IN)          :: fileNum
+   LOGICAL, INTENT (IN)        :: l_explicitIn,l_includeIn(4)
    CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename
 
 
-   INTEGER          :: iSpecies
+   INTEGER          :: iSpecies,fileNum
    CHARACTER(len=8) :: name(10)
    INTEGER          :: numSpecies
    INTEGER          :: speciesRepAtomType(atoms%ntype)
@@ -116,7 +115,7 @@ SUBROUTINE w_inpXML(&
    CHARACTER(len=20) :: mixingScheme
    CHARACTER(len=10) :: loType
    CHARACTER(len=10) :: bzIntMode
-   LOGICAL ::   l_explicit, l_nocoOpt,l_include
+   LOGICAL ::   l_explicit, l_nocoOpt,l_include(4)
    INTEGER :: iAtomType, startCoreStates, endCoreStates
    CHARACTER(len=100) :: posString(3)
    CHARACTER(len=7) :: str
@@ -133,10 +132,12 @@ SUBROUTINE w_inpXML(&
 
 
    IF(PRESENT(filename)) THEN
+      filenum=98
       OPEN (fileNum,file=TRIM(ADJUSTL(filename)),form='formatted',status='replace')
       WRITE (fileNum,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
       WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.29">'
    ELSE
+      fileNum = getXMLOutputUnitNumber()
       CALL openXMLElementNoAttributes('inputData')
    END IF
 
@@ -224,7 +225,7 @@ SUBROUTINE w_inpXML(&
    200 FORMAT('      <bzIntegration valenceElectrons="',f0.8,'" mode="',a,'" fermiSmearingEnergy="',f0.8,'">')
    WRITE (fileNum,200) input%zelec,TRIM(ADJUSTL(bzIntMode)),input%tkb
 
-   if (l_include) THEN
+   if (l_include(1)) THEN
       call kpts%print_xml(fileNum)
    else
       WRITE (fileNum,'(a)')'         <!-- k-points included here -->'
@@ -238,7 +239,7 @@ SUBROUTINE w_inpXML(&
 
    WRITE (fileNum,'(a)') '   </calculationSetup>'
    WRITE (fileNum,'(a)') '   <cell>'
-   if (l_include) THEN
+   if (l_include(2)) THEN
       call sym%print_xml(fileNum)
    else
       WRITE (fileNum,'(a)')'      <!-- symmetry operations included here -->'
@@ -306,7 +307,14 @@ SUBROUTINE w_inpXML(&
          speciesRepAtomType(numSpecies)=n
       end if
    enddo
-   
+
+   if (.not.include(3)) then
+      open(99,file='species.xml')
+      WRITE (fileNum,'(a)')'      <!-- species included here -->'
+      WRITE (fileNum,'(a)')'      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="species.xml"> </xi:include>'
+      fileNum=99
+   endif
+
    WRITE (fileNum,'(a)') '   <atomSpecies>'
    DO iSpecies=1, numSpecies
       iAtomType = speciesRepAtomType(iSpecies)
@@ -383,6 +391,19 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,'(a)') '      </species>'
    END DO
    WRITE (fileNum,'(a)') '   </atomSpecies>'
+
+   if (.not.include(3)) then
+      close(99)
+      fileNum=98
+   endif
+
+   if (.not.include(4)) then
+      open(99,file='atoms.xml')
+      WRITE (fileNum,'(a)')'      <!-- atoms group included here -->'
+      WRITE (fileNum,'(a)')'      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="atoms.xml"> </xi:include>'
+      fileNum=98
+   endif
+
    WRITE (fileNum,'(a)') '   <atomGroups>'
    na = 0
    DO iAtomType=1, atoms%ntype
@@ -466,6 +487,10 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,'(a)') '      </atomGroup>'
    END DO
    WRITE (fileNum,'(a)') '   </atomGroups>'
+   if (.not.include(3)) then
+      close(99)
+      fileNum=98
+   endif
 
    368 FORMAT('   <output dos="',l1,'" band="',l1,'" vacdos="',l1,'" slice="',l1,'" mcd="',l1,'">')
    WRITE (fileNum,368) banddos%dos,band,banddos%vacdos,sliceplot%slice,banddos%l_mcd

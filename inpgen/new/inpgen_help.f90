@@ -27,7 +27,7 @@ CONTAINS
     CALL new_argument(0,"-inp","convert old inp file to inp.xml file","")
     CALL new_argument(1,"-f","filename to process","")
     CALL new_argument(0,"-warn_only","do not stop for warnings","")
-    CALL new_argument(0,"-singlefile","include all data in inp.xml, do not create files for kpoints and symmetry","")
+    CALL new_argument(1,"-inc","which data to include in inp.xml, e.g. +all,-species,+operations,-kpts","")
     
     CALL new_argument(1,"-k","String to define k-point set","")
     call new_argument(0,"-no_send","Do not send usage data","")

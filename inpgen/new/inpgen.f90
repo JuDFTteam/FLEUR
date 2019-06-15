@@ -43,7 +43,7 @@ PROGRAM inpgen
     
       REAL,    ALLOCATABLE :: atompos(:, :),atomid(:) 
       CHARACTER(len=20), ALLOCATABLE :: atomLabel(:)
-      LOGICAL               :: l_fullinput,l_explicit,l_inpxml,l_include
+      LOGICAL               :: l_fullinput,l_explicit,l_inpxml,l_include(4)
       
       TYPE(t_input)    :: input
       TYPE(t_atoms)    :: atoms
@@ -67,8 +67,7 @@ PROGRAM inpgen
       !Start program and greet user
       CALL inpgen_help()
       l_explicit=judft_was_argument("-explicit")
-      l_include=judft_was_argument("-singlefile")
-
+      
       OPEN(6,file='out')
 
       INQUIRE(file='inp.xml',exist=l_inpxml)
@@ -113,6 +112,7 @@ PROGRAM inpgen
       !Now the IO-section
       !
       IF (.NOT.l_inpxml.or.judft_was_argument("-overwrite")) THEN
+         call determine_includes(l_include)
          !the inp.xml file
          !CALL dump_FleurInputSchema()
          CALL w_inpxml(&
@@ -131,4 +131,45 @@ PROGRAM inpgen
       
       CALL juDFT_end("All done")
 
+    contains
+      subroutine determine_includes(l_include)
+        logical,intent(out)::l_include(4)  !kpts,operations,species,position
+
+        l_include=[.false.,.false.,.true.,.true.]
+
+        IF (judft_was_argument("-inc")) THEN
+           str=judft_string_for_argument("-inc")
+           
+           do while(len_trim(str)>0) then
+              if (str(1:1)=='-') then
+                 incl=.false.
+                 str=str(2:)
+              else
+                 incl=.true.
+                 if (str(1:1)=='+') str=str(2:)
+              endif
+              select case(str(1:1))
+              case ('k','K')
+                 l_include(1)=incl
+              case ('o','O')
+                 l_include(2)=incl
+              case ('s','S')
+                 l_include(3)=incl
+              case ('p','P')
+                 l_include(4)=incl
+              case ('a','A')
+                 l_include(:)=incl
+              end select
+              if (index(str,"'")>0) then
+                 str=str(index(str,"'")+1:)
+              else
+                 str=""
+              end if
+           end do
+        endif
+        
+        IF (LEN_TRIM(str)>1) CALL judft_error("Do not specify k-points in file and on command line")
+        str=judft_string_for_argument("-k")
+     END IF
+      
     END PROGRAM inpgen
