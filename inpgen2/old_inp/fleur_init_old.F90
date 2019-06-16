@@ -7,26 +7,19 @@ MODULE m_fleur_init_old
   IMPLICIT NONE
 CONTAINS
   !> Collection of code for old-style inp-file treatment
-  SUBROUTINE fleur_init_old(mpi,&
+  SUBROUTINE fleur_init_old(&
        input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-       sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
-       oneD,coreSpecInput,l_opti)
+       sliceplot,banddos,enpara,xcpot,kpts,hybrid,&
+       oneD,coreSpecInput)
     USE m_types
     USE m_judft
     USE m_dimens
     USE m_inped
     USE m_setup
     USE m_constants
-    USE m_winpXML
-#ifdef CPP_MPI
-#ifndef CPP_OLDINTEL
-    USE m_mpi_dist_forcetheorem
-#endif
-#endif
-
+  
     IMPLICIT NONE
     !     Types, these variables contain a lot of data!
-    TYPE(t_mpi)    ,INTENT(INOUT)  :: mpi
     TYPE(t_input)    ,INTENT(INOUT):: input
     TYPE(t_dimension),INTENT(OUT)  :: DIMENSION
     TYPE(t_atoms)    ,INTENT(OUT)  :: atoms
@@ -38,7 +31,6 @@ CONTAINS
     TYPE(t_vacuum)   ,INTENT(OUT)  :: vacuum
     TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
     TYPE(t_banddos)  ,INTENT(OUT)  :: banddos
-    TYPE(t_obsolete) ,INTENT(OUT)  :: obsolete 
     TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
     CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE  :: xcpot
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
@@ -46,8 +38,7 @@ CONTAINS
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
     TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
     CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT)::forcetheo
-    LOGICAL,          INTENT(OUT):: l_opti
-
+  
 
     !     .. Local Scalars ..
     INTEGER    :: i,n,l,m1,m2,isym,iisym,pc,iAtom,iType
@@ -58,21 +49,15 @@ CONTAINS
     REAL                          :: a1(3),a2(3),a3(3)
     REAL                          :: dtild, phi_add
     LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
-#ifdef CPP_MPI
-    INTEGER:: ierr
-    INCLUDE 'mpif.h'
-#endif
 
     ALLOCATE(t_forcetheo::forcetheo) !default no forcetheorem type
     ALLOCATE(t_xcpot_inbuild::xcpot)
 
-    SELECT TYPE(xcpot)
-    TYPE IS (t_xcpot_inbuild)
     namex = '    '
     relcor = '            '
 
     CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
-         obsolete,kpts,oneD,hybrid)
+         kpts,oneD,hybrid)
     stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
     stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
     !-odim
@@ -135,120 +120,42 @@ CONTAINS
 
 
 
-    IF(.NOT.juDFT_was_argument("-toXML")) THEN
-       PRINT *,"--------------WARNING----------------------"
-       PRINT *,"You are using the old-style FLEUR inp file."
-       PRINT *,"Please be warned that not all features are"
-       PRINT *,"implemented/tested in this mode. Please "
-       PRINT *,"consider switching to xml input. You might"
-       PRINT *,"find the -toXML command line option useful."
-       PRINT *,"--------------WARNING----------------------"
+ 
+    CALL inped(atoms,vacuum,input,banddos,xcpot,sym,&
+         cell,sliceplot,noco,&
+         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
+    !
+    IF (xcpot%needs_grad()) THEN
+       ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
+       ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
+            oneD%pgft1xy(0:oneD%odd%nn2d-1),&
+            oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
     ELSE
-       IF (mpi%isize>1) CALL judft_error("Do not call -toXML with more than a single PE")
+       ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
+       ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
+            oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
     ENDIF
-    CALL timestart("preparation:stars,lattice harmonics,+etc")
+    oneD%odd%nq2 = stars%ng2!oneD%odd%n2d
+    oneD%odi%nq2 = oneD%odd%nq2
+    !-odim
+    namex=xcpot%get_name()
+    l_krla = xcpot%data%krla.EQ.1
 
-    !+t3e
-    IF (mpi%irank.EQ.0) THEN
-       !-t3e
-       CALL inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
-            cell,sliceplot,noco,&
-            stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
-       !
-       IF (xcpot%needs_grad()) THEN
-          ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
-          ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
-               oneD%pgft1xy(0:oneD%odd%nn2d-1),&
-               oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
-       ELSE
-          ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
-          ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
-               oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
-       ENDIF
-       oneD%odd%nq2 = stars%ng2!oneD%odd%n2d
-       oneD%odi%nq2 = oneD%odd%nq2
-       !-odim
-       !+t3e
-       INQUIRE(file="cdn1",exist=l_opti)
-       IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
-       l_opti=.NOT.l_opti
-       IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-            &    (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
-       !
-
-       namex=xcpot%get_name()
-       l_krla = xcpot%data%krla.EQ.1
-    END IF ! mpi%irank.eq.0
-
-#ifdef CPP_MPI
-    CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-#ifndef CPP_OLDINTEL
-    CALL mpi_dist_forcetheorem(mpi,forcetheo)
-#endif
-#endif
     IF (mpi%irank.NE.0) THEN
        CALL xcpot%init(namex,l_krla,atoms%ntype)
     END IF
 
     CALL setup(mpi,atoms,kpts,DIMENSION,sphhar,&
-         obsolete,sym,stars,oneD,input,noco,&
+         sym,stars,oneD,input,noco,&
          vacuum,cell,xcpot,&
-         sliceplot,enpara,l_opti)
+         sliceplot,enpara)
 
-    IF (mpi%irank.EQ.0) THEN
-       banddos%l_orb = .FALSE.
-       banddos%orbCompAtom = 0
-
-       ALLOCATE(noco%socscale(atoms%ntype))
-       xcpot%lda_atom(:) = .FALSE.
-       noco%socscale(:) = 1.0
-
-       IF(juDFT_was_argument("-toXML")) THEN
-          WRITE(*,*) ''
-          WRITE(*,*) 'Please note:'
-          WRITE(*,*) 'The inp to xml input conversion is experimental and'
-          WRITE(*,*) 'only made for basic inp files without sophisticated'
-          WRITE(*,*) 'parametrizations. You might have to adjust the generated'
-          WRITE(*,*) 'file by hand to really obtain an adequate input file.'
-          WRITE(*,*) 'Also the generated XML input file is not meant to be'
-          WRITE(*,*) 'beautiful.'
-          WRITE(*,*) ''
-          ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
-          filename = 'inpConverted.xml'
-          DO i = 1, atoms%nat
-             WRITE(atoms%label(i),'(i0)') i
-          END DO
-          ALLOCATE(atoms%speciesName(atoms%ntype))
-          DO iType = 1, atoms%ntype
-             WRITE(tempNumberString,'(i0)') iType
-             atoms%speciesName(itype) = TRIM(ADJUSTL(namat_const(atoms%nz(iType)))) // '-' // TRIM(ADJUSTL(tempNumberString))
-             hybrid%lcutm1(iType) = 4
-             hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
-             hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
-          END DO
-          hybrid%gcutm1 = input%rkmax - 0.5
-          hybrid%tolerance1 = 1.0e-4
-          hybrid%ewaldlambda = 3
-          hybrid%lexp = 16
-          hybrid%bands1 = max( nint(input%zelec)*10, 60 )
-
-          a1(:) = a1(:) / input%scaleCell
-          a2(:) = a2(:) / input%scaleCell
-          a3(:) = a3(:) / input%scaleCell
-          kpts%specificationType = 3
-          sym%symSpecType = 3
-          CALL w_inpXML(&
-               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
-               namex,relcor,a1,a2,a3,cell%amat(3,3),input%comment,&
-               .FALSE.,filename,&
-               .TRUE.,enpara)
-          CALL juDFT_end("Fleur inp to XML input conversion completed.")
-       END IF
-    END IF ! mpi%irank.eq.0
-    CALL timestop("preparation:stars,lattice harmonics,+etc")
-    END SELECT
+    banddos%l_orb = .FALSE.
+    banddos%orbCompAtom = 0
+    
+    ALLOCATE(noco%socscale(atoms%ntype))
+    xcpot%lda_atom(:) = .FALSE.
+    noco%socscale(:) = 1.0
+    
   END SUBROUTINE fleur_init_old
 END MODULE m_fleur_init_old

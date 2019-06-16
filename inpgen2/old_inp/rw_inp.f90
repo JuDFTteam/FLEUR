@@ -9,7 +9,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE rw_inp(&
-     &                  ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+     &                  ch_rw,atoms,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,dtild_opt)!,name_opt)
 
