@@ -34,7 +34,6 @@
           USE m_inpnoco
           USE m_constants
           USE m_types
-          USE m_inv3
           USE m_setlomap
           IMPLICIT NONE
           !     ..
@@ -169,10 +168,11 @@
           cell%amat(:,1) = a1(:)
           cell%amat(:,2) = a2(:)
           cell%amat(:,3) = a3(:)
-          CALL inv3(cell%amat,cell%bmat,cell%omtil)
-          cell%bmat(:,:) = tpi_const*cell%bmat(:,:)
-          cell%bbmat=MATMUL(cell%bmat,TRANSPOSE(cell%bmat))
-          cell%omtil = ABS(cell%omtil)
+          call cell%init(-1.)
+          !CALL inv3(cell%amat,cell%bmat,cell%omtil)
+          !cell%bmat(:,:) = tpi_const*cell%bmat(:,:)
+          !cell%bbmat=MATMUL(cell%bmat,TRANSPOSE(cell%bmat))
+          !cell%omtil = ABS(cell%omtil)
 
           IF (input%film .AND. .NOT.oneD%odd%d1) THEN
              cell%vol = cell%omtil/cell%amat(3,3)*vacuum%dvac

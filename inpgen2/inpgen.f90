@@ -79,8 +79,8 @@ PROGRAM inpgen
          !CALL read_old_input()
          l_fullinput=.TRUE.
       ELSEIF (judft_was_argument("-inp.xml")) THEN
-         STOP "not yet"
-         !CALL r_inpXML()
+         call read_old_inp(input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+              sliceplot,banddos,enpara,xcpot,kpts,hybrid, oneD)
          l_fullinput=.TRUE.
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input

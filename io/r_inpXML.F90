@@ -33,7 +33,6 @@ CONTAINS
       USE m_calculator
       USE m_constants
       USE m_inpeig
-      USE m_inpnoco
       USE m_sort
       USE m_types_xcpot_inbuild
 #ifdef CPP_LIBXC
@@ -2060,13 +2059,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          CALL enpara%READ(atoms,input%jspins,input%film,.FALSE.)
       END IF
 
-      ! Read in nocoinp file iff available
-      l_nocoinp = .FALSE.
-      INQUIRE (file ='nocoinp',exist= l_nocoinp)
-      IF (l_nocoinp) THEN
-         CALL inpnoco(atoms,input,vacuum,noco)
-      END IF
-
+    
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of non-XML input
