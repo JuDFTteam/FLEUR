@@ -144,6 +144,10 @@
           input%scaleA1 = 1.0
           input%scaleA2 = 1.0
           input%scaleC = 1.0
+          input%forcealpha = 1.0
+          input%forcemix = 0
+          input%epsdisp = 0.00001
+          input%epsforce = 0.00001
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
