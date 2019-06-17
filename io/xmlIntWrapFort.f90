@@ -15,8 +15,22 @@ MODULE m_xmlIntWrapFort
 
 USE m_juDFT
 
+private
 
-PRIVATE :: init_from_command_line
+TYPE t_xml
+   integer:: id
+ contains
+   PROCEDURE,NOPASS :: InitInterface
+   PROCEDURE,NOPASS :: ParseSchema
+   PROCEDURE,NOPASS :: ParseDoc 
+   PROCEDURE,NOPASS :: ValidateDoc 
+   PROCEDURE,NOPASS :: InitXPath
+   PROCEDURE,NOPASS :: GetNumberOfNodes  
+   PROCEDURE,NOPASS :: SetAttributeValue  
+   PROCEDURE,NOPASS :: FreeResources
+end type
+   public t_xml
+
 CONTAINS
 
 SUBROUTINE init_from_command_line()
@@ -31,7 +45,7 @@ SUBROUTINE init_from_command_line()
         ii=INDEX(xpath,":")
         IF (ii==0) ii=LEN(TRIM(xpath))+1
         IF (i>100.OR.ii-i>100) CALL judft_error("Too long xmlXPath argument",calledby="xmlIntWarpFort.f90")
-        CALL xmlSetAttributeValue(xpath(:i-1),xpath(i+1:ii-1))
+        CALL SetAttributeValue(xpath(:i-1),xpath(i+1:ii-1))
         WRITE(*,*) "Set from command line:",TRIM(xpath(:i-1)),"=",TRIM(xpath(i+1:ii-1))
         IF (ii+1<len(xpath))THEN
            xpath=xpath(ii+1:)
@@ -43,7 +57,7 @@ SUBROUTINE init_from_command_line()
 END SUBROUTINE init_from_command_line
      
 
-SUBROUTINE xmlInitInterface()
+SUBROUTINE InitInterface()
 
    USE iso_c_binding
    USE m_types
@@ -65,9 +79,9 @@ SUBROUTINE xmlInitInterface()
       CALL juDFT_error("Could not initialize XML interface.",calledby="xmlInitInterface")
    END IF
 
-END SUBROUTINE xmlInitInterface
+END SUBROUTINE InitInterface
 
-SUBROUTINE xmlParseSchema(schemaFilename)
+SUBROUTINE ParseSchema(schemaFilename)
 
    USE iso_c_binding
    USE m_types
@@ -92,9 +106,9 @@ SUBROUTINE xmlParseSchema(schemaFilename)
       CALL juDFT_error("XML Schema file not parsable: "//TRIM(ADJUSTL(schemaFilename)),calledby="xmlParseSchema")
    END IF
 
-END SUBROUTINE xmlParseSchema
+END SUBROUTINE ParseSchema
 
-SUBROUTINE xmlParseDoc(docFilename)
+SUBROUTINE ParseDoc(docFilename)
 
    USE iso_c_binding
    USE m_types
@@ -119,9 +133,9 @@ SUBROUTINE xmlParseDoc(docFilename)
       CALL juDFT_error("XML document file not parsable: "//TRIM(ADJUSTL(docFilename)),calledby="xmlParseDoc")
    END IF
 
-END SUBROUTINE xmlParseDoc
+END SUBROUTINE ParseDoc
 
-SUBROUTINE xmlValidateDoc()
+SUBROUTINE ValidateDoc()
 
    USE iso_c_binding
    USE m_types
@@ -143,9 +157,9 @@ SUBROUTINE xmlValidateDoc()
       CALL juDFT_error("XML document cannot be validated against Schema.",calledby="xmlValidateDoc")
    END IF
 
-END SUBROUTINE xmlValidateDoc
+END SUBROUTINE ValidateDoc
 
-SUBROUTINE xmlInitXPath()
+SUBROUTINE InitXPath()
 
    USE iso_c_binding
    USE m_types
@@ -164,19 +178,19 @@ SUBROUTINE xmlInitXPath()
    errorStatus = 0
    errorStatus = initializeXPath()
    IF(errorStatus.NE.0) THEN
-      CALL juDFT_error("Could not initialize XPath.",calledby="xmlInitXPath")
+      CALL juDFT_error("Could not initialize XPath.",calledby="InitXPath")
    END IF
    CALL init_from_command_line()
-END SUBROUTINE xmlInitXPath
+END SUBROUTINE InitXPath
 
-FUNCTION xmlGetNumberOfNodes(xPath)
+FUNCTION GetNumberOfNodes(xPath)
 
    USE iso_c_binding
    USE m_types
 
    IMPLICIT NONE
 
-   INTEGER :: xmlGetNumberOfNodes
+   INTEGER :: GetNumberOfNodes
    CHARACTER(LEN=*,KIND=c_char), INTENT(IN) :: xPath
 
    interface
@@ -187,18 +201,18 @@ FUNCTION xmlGetNumberOfNodes(xPath)
       end function getNumberOfXMLNodes
    end interface
 
-   xmlGetNumberOfNodes = getNumberOfXMLNodes(TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
+   GetNumberOfNodes = getNumberOfXMLNodes(TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
 
-END FUNCTION xmlGetNumberOfNodes
+END FUNCTION GetNumberOfNodes
 
-FUNCTION xmlGetAttributeValue(xPath)
+FUNCTION GetAttributeValue(xPath)
 
    USE iso_c_binding
    USE m_types
 
    IMPLICIT NONE
 
-   CHARACTER(LEN=255) :: xmlGetAttributeValue
+   CHARACTER(LEN=:),ALLOCATABLE :: GetAttributeValue
 
    CHARACTER(LEN=*, KIND=c_char), INTENT(IN) :: xPath
 
@@ -234,12 +248,12 @@ FUNCTION xmlGetAttributeValue(xPath)
    END DO
    length = i-1
 
-   xmlGetAttributeValue = value(1:length)
+   GetAttributeValue = trim(adjustl(value(1:length)))
 
-END FUNCTION xmlGetAttributeValue
+END FUNCTION GetAttributeValue
 
 
-SUBROUTINE xmlSetAttributeValue(xPath,VALUE)
+SUBROUTINE SetAttributeValue(xPath,VALUE)
 
    USE iso_c_binding
    USE m_types
@@ -268,9 +282,9 @@ SUBROUTINE xmlSetAttributeValue(xPath,VALUE)
       CALL juDFT_error("Attribute value could not be set.",calledby="xmlSetAttributeValue")
    END IF
 
- END SUBROUTINE xmlSetAttributeValue
+ END SUBROUTINE SetAttributeValue
 
-SUBROUTINE xmlFreeResources()
+SUBROUTINE FreeResources()
 
    USE iso_c_binding
    USE m_types
@@ -293,6 +307,6 @@ SUBROUTINE xmlFreeResources()
       STOP 'Error!'
    END IF
 
-END SUBROUTINE xmlFreeResources
+END SUBROUTINE FreeResources
 
 END MODULE m_xmlIntWrapFort

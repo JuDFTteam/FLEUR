@@ -18,7 +18,7 @@
           USE m_postprocessInput
           USE m_gen_map
           USE m_dwigner
-          USE m_gen_bz
+          !USE m_gen_bz
           USE m_ylm
           USE m_InitParallelProcesses
           USE m_xmlOutput
@@ -32,7 +32,7 @@
           USE m_checks
           USE m_prpqfftmap
           USE m_writeOutHeader
-          USE m_fleur_init_old
+          !USE m_fleur_init_old
           USE m_types_xcpot_inbuild
           USE m_mpi_bc_xcpot
 
@@ -197,10 +197,8 @@
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
                               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-                              cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
-                              namex,relcor,a1,a2,a3,dtild,input%comment,&
-                              .TRUE.,filename,&
-                             .TRUE.,enpara)
+                              cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
+                              .true.,[.true.,.true.,.true.,.true.])
 
                 DEALLOCATE(atomTypeSpecies,speciesRepAtomType)
                 DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
@@ -216,10 +214,10 @@
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
-             CALL fleur_init_old(mpi,&
-                  input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-                  sliceplot,banddos,enpara,xcpot,kpts,hybrid,&
-                  oneD,coreSpecInput,l_opti)
+             !CALL fleur_init_old(mpi,&
+             !     input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+             !     sliceplot,banddos,enpara,xcpot,kpts,hybrid,&
+             !     oneD,coreSpecInput,l_opti)
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
   
@@ -458,7 +456,7 @@
           ELSE
              IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
                 WRITE(*,*) 'Recalculating k point grid to cover the full BZ.'
-                CALL gen_bz(kpts,sym)
+                !CALL gen_bz(kpts,sym)
                 kpts%nkpt = kpts%nkptf
                 DEALLOCATE(kpts%bk,kpts%wtkpt)
                 ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))

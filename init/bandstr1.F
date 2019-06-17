@@ -86,8 +86,7 @@
       bkTemp(:,n) = syp(:,nosyp)
       kpts%specialPointIndices(nosyp) = n
       kpts%nkpt = kpts%nkpt
-      kpts%posScale = 1.0
-
+     
       IF(l_fillArrays) THEN
          IF(ALLOCATED(kpts%bk)) THEN
             DEALLOCATE(kpts%bk)
@@ -101,12 +100,12 @@
       ELSE
          OPEN (41,file='kpts',form='formatted',status='new')
          IF (.NOT.input%film) THEN
-            WRITE(41,'(i5,f20.10)') kpts%nkpt,kpts%posScale
+            WRITE(41,'(i5,f20.10)') kpts%nkpt
             DO n = 1, kpts%nkpt
                WRITE (41,'(4f10.5)') bkTemp(:,n),1.0
             ENDDO
          ELSE
-           WRITE(41,'(i5,f20.10,3x,l1)') kpts%nkpt,kpts%posScale,.false.
+           WRITE(41,'(i5,3x,l1)') kpts%nkpt,.false.
            DO n = 1, kpts%nkpt
               WRITE (41,'(3f10.5)') bkTemp(1:2,n),1.0
            ENDDO

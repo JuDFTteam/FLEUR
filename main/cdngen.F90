@@ -94,7 +94,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    LOGICAL               :: l_error
 
    CALL regCharges%init(input,atoms)
-   CALL dos%init(input,atoms,dimension,kpts,vacuum)
+   CALL dos%init(dimension%neigd,input,atoms,kpts,vacuum)
    CALL moments%init(input,atoms)
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)

@@ -28,11 +28,11 @@ CONTAINS
       USE m_xmlIntWrapFort
       USE m_inv3
       !USE m_spg2set
-      USE m_closure, ONLY : check_close
+      !USE m_closure, ONLY : check_close
       !USE m_symproperties
       USE m_calculator
       USE m_constants
-      USE m_inpeig
+      !USE m_inpeig
       USE m_sort
       USE m_types_xcpot_inbuild
 #ifdef CPP_LIBXC
@@ -438,48 +438,9 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration'
       END IF
 
+      call judft_error("BUG reading of kpts")
       ! Option kPointDensity
-      kpts%kPointDensity(:) = 0.0
-      xPathA = TRIM(ADJUSTL(kPointsPrefix))//'/kPointDensity'
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-      IF (numberNodes.EQ.1) THEN
-         l_kpts = .FALSE.
-         kpts%kPointDensity(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denX'))
-         kpts%kPointDensity(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denY'))
-         kpts%kPointDensity(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@denZ'))
-         kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
-         kpts%specificationType = 4
-      END IF
-
-      ! Option kPointMesh
-      xPathA = TRIM(ADJUSTL(kPointsPrefix))//'/kPointMesh'
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-      IF (numberNodes.EQ.1) THEN
-         l_kpts = .FALSE.
-         kpts%nkpt3(1) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nx'))
-         kpts%nkpt3(2) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ny'))
-         kpts%nkpt3(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nz'))
-         kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
-         kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
-         kpts%specificationType = 2
-      END IF
-
-      ! Option kPointCount
-      xPathA = TRIM(ADJUSTL(kPointsPrefix))//'/kPointCount'
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-      IF (numberNodes.EQ.1) THEN
-         l_kpts = .FALSE.
-         kpts%nkpt = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@count'))
-         kpts%l_gamma = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gamma'))
-         kpts%nkpt = kpts%nkpt
-         kpts%specificationType = 1
-
-         ALLOCATE(kpts%bk(3,kpts%nkpt))
-         ALLOCATE(kpts%wtkpt(kpts%nkpt))
-         kpts%bk = 0.0
-         kpts%wtkpt = 0.0
-         kpts%posScale = 1.0
-
+ 
          numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(kPointsPrefix))//'/kPointCount/specialPoint')
          IF(numberNodes.EQ.1) THEN
             CALL juDFT_error('Error: Single special k point provided. This does not make sense!')
@@ -498,11 +459,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                kpts%specialPointNames(i) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@name')
             END DO
          END IF
-      ELSE
-         DEALLOCATE(kpts%specialPoints)
-         ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
-         ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
-      END IF
 
       ! Option kPointList
       numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(kPointsPrefix))//'/kPointList')
@@ -515,20 +471,17 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          ALLOCATE(kpts%wtkpt(kpts%nkpt))
          kpts%bk = 0.0
          kpts%wtkpt = 0.0
-         kpts%specificationType = 3
-
-         kpts%posScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(kPointsPrefix))//'/kPointList/@posScale'))
-         weightScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(kPointsPrefix))//'/kPointList/@weightScale'))
+ 
+          weightScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(kPointsPrefix))//'/kPointList/@weightScale'))
 
          DO i = 1, kpts%nkpt
             WRITE(xPathA,*) TRIM(ADJUSTL(kPointsPrefix))//'/kPointList/kPoint[',i,']'
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
             READ(valueString,*) kpts%bk(1,i), kpts%bk(2,i), kpts%bk(3,i)
-            kpts%bk(:,i)=kpts%bk(:,i)/kpts%posScale
+            kpts%bk(:,i)=kpts%bk(:,i)
             kpts%wtkpt(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@weight'))
             kpts%wtkpt(i) = kpts%wtkpt(i) / weightScale
          END DO
-         kpts%posScale=1.0
       END IF
 
       ! Option kPointListFile
@@ -545,16 +498,14 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          kpts%wtkpt = 0.0
          kpts%l_gamma = .FALSE.
          l_kpts = .TRUE.
-         kpts%specificationType = 3
-         kpts%posScale=1.0
-
+     
          ! We need to set input%film for inpeig. Unfortunately this is actually initialized at a later stage.
          ! So we do it here additionally.
          input%film = .FALSE.
          numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/filmLattice')
          IF (numberNodes.EQ.1) input%film = .TRUE.
 
-         CALL inpeig(atoms,cell,input,.FALSE.,kpts,kptsFilename=TRIM(ADJUSTL(valueString)))
+         !CALL inpeig(atoms,cell,input,.FALSE.,kpts,kptsFilename=TRIM(ADJUSTL(valueString)))
       END IF
 
       ! Read in optional SOC parameters if present
@@ -760,8 +711,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       latticeType = 'bulkLattice'
       latticeDef = 0
       symmetryDef = 0
-      cell%latnam = 'any'
-
+    
       numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/filmLattice')
 
       IF (numberNodes.EQ.1) THEN
@@ -775,8 +725,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       IF (numberNodes.EQ.1) THEN
          latticeScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@scale'))
          input%scaleCell = latticeScale
-         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@latnam')))
-         READ(valueString,*) cell%latnam
 
          IF(input%film) THEN
             cell%z1 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dVac'))
@@ -890,8 +838,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          IF (sym%namgrp.EQ.'any ') THEN
             sym%nop = 48
             ! Read in sym.out file if sym%namgrp='any' set.
-            CALL rw_symfile('r',94,'sym.out',48,cell%bmat,&
-               &                        mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
+            !CALL rw_symfile('r',94,'sym.out',48,cell%bmat,&
+            !   &                        mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
             IF (ALLOCATED(sym%mrot)) THEN
                DEALLOCATE(sym%mrot)
             END IF
@@ -909,38 +857,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   sym%tau(i,k) = tauTemp(i,k)
                END DO
             END DO
-         ELSE
-            n2spg = 0
-            DO i = 1, 20
-               IF (sym%namgrp.EQ.nammap(i)) n2spg = i
-            END DO
-            IF (n2spg == 0 ) THEN
-               WRITE (*,*) 'Spacegroup ',sym%namgrp,' not known! Choose one of:'
-               WRITE (*,'(20(a4,1x))') (nammap(i),i=1,20)
-               CALL juDFT_error("Could not determine spacegroup!", calledby = "r_inpXML")
-            END IF
-            IF ((n2spg.GE.13).AND.(n2spg.LE.17)) THEN
-               IF (.NOT.((cell%latnam.EQ.'hx3').OR.(cell%latnam.EQ.'hex'))) THEN
-                  CALL juDFT_error("Use only hex or hx3 with p3, p3m1, p31m, p6 or p6m!", calledby ="r_inpXML")
-               END IF
-            END IF
-            sym%nop = ord2(n2spg)
-            IF (sym%invs) THEN
-               sym%nop = 2*sym%nop
-               IF (sym%zrfs.AND.(.NOT.l_c2(n2spg))) sym%nop = 2*sym%nop
-            ELSE
-               IF (sym%zrfs) sym%nop = 2*sym%nop
-            END IF
-            IF (ALLOCATED(sym%mrot)) THEN
-               DEALLOCATE(sym%mrot)
-            END IF
-            ALLOCATE(sym%mrot(3,3,sym%nop))
-            IF (ALLOCATED(sym%tau)) THEN
-               DEALLOCATE(sym%tau)
-            END IF
-            ALLOCATE(sym%tau(3,sym%nop))
-            CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam,&
-               &                     sym%mrot,sym%tau,sym%nop2,sym%symor)
          END IF
       END IF
 
@@ -953,8 +869,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          sym%nop = 48
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@filename')))
 
-         CALL rw_symfile('r',94,TRIM(ADJUSTL(valueString)),48,cell%bmat,&
-            &                     mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
+         !CALL rw_symfile('r',94,TRIM(ADJUSTL(valueString)),48,cell%bmat,&
+         !   &                     mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
 
          IF (ALLOCATED(sym%mrot)) THEN
             DEALLOCATE(sym%mrot)
@@ -1038,62 +954,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       ! Calculate missing symmetry and cell properties and check consistency of parameters.
 
-      ! Construction of amat
-      SELECT CASE (latticeDef)
-      CASE (1)
-         IF (cell%latnam.EQ.'squ') THEN
-            a2(2) = a1(1)
-         ELSE IF (cell%latnam.EQ.'c-b') THEN
-            aTemp = a1(1)
-            a1(1) = aTemp*0.5*SQRT(2.0)
-            a1(2) = -aTemp*0.5
-            a2(1) = aTemp*0.5*SQRT(2.0)
-            a2(2) = aTemp*0.5
-         ELSE IF (cell%latnam.EQ.'hex') THEN
-            aTemp = 0.5*a1(1)
-            a1(1) = aTemp*SQRT(3.0)
-            a1(2) = -aTemp
-            a2(1) = a1(1)
-            a2(2) = aTemp
-         ELSE IF (cell%latnam.EQ.'hx3') THEN
-            aTemp = 0.5*a1(1)
-            a1(1) = aTemp
-            a1(2) = -aTemp*SQRT(3.0)
-            a2(1) = a1(1)
-            a2(2) = -a1(2)
-         ELSE IF (cell%latnam.EQ.'fcc') THEN
-            aTemp = a1(1)
-            a1(1) =       0.0 ; a1(2) = 0.5*aTemp ; a1(3) = 0.5*aTemp
-            a2(1) = 0.5*aTemp ; a2(2) =       0.0 ; a2(3) = 0.5*aTemp
-            a3(1) = 0.5*aTemp ; a3(2) = 0.5*aTemp ; a3(3) =       0.0
-         ELSE IF (cell%latnam.EQ.'bcc') THEN
-            aTemp = a1(1)
-            a1(1) =-0.5*aTemp ; a1(2) = 0.5*aTemp ; a1(3) = 0.5*aTemp
-            a2(1) = 0.5*aTemp ; a2(2) =-0.5*aTemp ; a2(3) = 0.5*aTemp
-            a3(1) = 0.5*aTemp ; a3(2) = 0.5*aTemp ; a3(3) =-0.5*aTemp
-         ELSE
-            CALL juDFT_error("latnam is incompatible to parametrization of lattice (1)", calledby ="r_inpXML")
-         END IF
-      CASE (2)
-         IF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
-            IF (cell%latnam.EQ.'c-r') THEN
-               a1(2) = -a2(2)
-               a2(1) =  a1(1)
-            END IF
-         ELSE
-            CALL juDFT_error("latnam is incompatible to parametrization of lattice (2)", calledby ="r_inpXML")
-         END IF
-      CASE (3)
-         IF (.NOT.(cell%latnam.EQ.'obl')) THEN
-            CALL juDFT_error("latnam is incompatible to parametrization of lattice (3)", calledby ="r_inpXML")
-         END IF
-      CASE (4)
-         IF (.NOT.(cell%latnam.EQ.'any')) THEN
-            CALL juDFT_error("latnam is incompatible to parametrization of lattice (4)", calledby ="r_inpXML")
-         END IF
-      CASE DEFAULT
-         CALL juDFT_error("Illegal lattice definition", calledby ="r_inpXML")
-      END SELECT
 
       IF (latticeScale.EQ.0.0) latticeScale = 1.0
       IF (.NOT.input%film) vacuum%dvac = a3(3)
@@ -1120,11 +980,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          cell%vol = cell%omtil
          cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
          IF (cell%area < 1.0e-7) THEN
-            IF (cell%latnam.EQ.'any') THEN
                cell%area = 1.
-            ELSE
-               CALL juDFT_error("area = 0",calledby ="r_inpXML")
-            END IF
          END IF
       END IF
 

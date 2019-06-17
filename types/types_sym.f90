@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_sym
+  USE m_juDFT
   IMPLICIT NONE
   PRIVATE
   !symmetry information
@@ -56,9 +57,14 @@ MODULE m_types_sym
    CONTAINS
      PROCEDURE :: init
      PROCEDURE :: print_xml
+     PROCEDURE :: closure
+     PROCEDURE,PRIVATE :: check_close
   END TYPE t_sym
   PUBLIC t_sym
 CONTAINS
+
+
+
   SUBROUTINE print_xml(sym,fh,filename)
     CLASS(t_sym),INTENT(IN)   :: sym
     INTEGER,INTENT(in)        ::fh
@@ -86,7 +92,6 @@ CONTAINS
   SUBROUTINE init(sym,cell,film)
     !Generates missing symmetry info.
     !tau,mrot and nop have to be specified already
-    USE m_closure
     USE m_dwigner
     USE m_types_cell
     CLASS(t_sym),INTENT(INOUT):: sym
@@ -106,7 +111,7 @@ CONTAINS
     IF (ALLOCATED(sym%invtab)) DEALLOCATE(sym%invtab)
     IF (ALLOCATED(sym%multab)) DEALLOCATE(sym%multab)
     ALLOCATE ( sym%invtab(sym%nop),sym%multab(sym%nop,sym%nop) )
-    CALL check_close(sym%nop,sym%mrot,sym%tau, sym%multab,sym%invtab,optype)
+    CALL sym%check_close(optype)
 
     !---> determine properties of symmmetry operations, 
     ! Code previously in symproperties
@@ -234,6 +239,116 @@ CONTAINS
     CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
 
     !---> redo to ensure proper mult. table and mapping functions
-    CALL check_close(sym%nop,sym%mrot,sym%tau, sym%multab,sym%invtab,optype)
+    CALL sym%check_close(optype)
   END SUBROUTINE init
+
+
+  FUNCTION closure(sym)RESULT(lclose)
+    CLASS(t_sym),INTENT(IN):: sym
+    LOGICAL                :: lclose
+  
+   !INTEGER, INTENT (IN)  :: mops           ! number of operations of the bravais lattice
+   !INTEGER, INTENT (IN)  :: sym%nop           ! number of operations in space group
+   !INTEGER, INTENT (IN)  :: sym%mrot(3,3,mops) ! refer to the operations of the 
+   !REAL,    INTENT (IN)  :: sym%tau(3,mops)    ! bravais lattice
+    !LOGICAL, INTENT (OUT) :: lclose
+
+   REAL    ttau(3),eps7
+   INTEGER i,j,k,mp(3,3),map(sym%nop)
+
+   eps7 = 1.0e-7
+
+   ! loop over all operations
+   DO j = 1, sym%nop
+    
+      map(1:sym%nop) = 0
+
+      ! multiply {R_j|t_j}{R_i|t_i}
+      DO i = 1, sym%nop
+         mp = matmul( sym%mrot(:,:,j) , sym%mrot(:,:,i) )
+         ttau = sym%tau(:,j) + matmul( sym%mrot(:,:,j) , sym%tau(:,i) )
+         ttau = ttau - anint( ttau - eps7 )
+
+         ! determine which operation this is
+         DO k=1,sym%nop
+            IF ( all( mp(:,:) == sym%mrot(:,:,k) ) .AND. all( abs( ttau(:)-sym%tau(:,k) ) < eps7 ) ) THEN
+               IF ( map(i) .eq. 0 ) THEN
+                  map(i) = k
+               ELSE
+                  write(6,*)'ERROR Closure: Multiplying ', j,' with ',k, ' and with ',map(i)
+                  write(6,*) 'yields the same matrix'
+                  lclose = .false.
+                  RETURN
+               END IF
+            END IF
+         END DO
+
+         IF (map(i).eq.0) THEN
+            write(6,*)'ERROR Closure:',i,' times',j,' leaves group'
+            lclose = .false.
+            RETURN
+         END IF
+      END DO
+   END DO
+
+   lclose = .true.
+   
+ END FUNCTION closure
+
+SUBROUTINE check_close(sym,optype)
+  CLASS(t_sym),INTENT(inout)::sym
+  INTEGER, INTENT (OUT) :: optype(sym%nop)
+
+   REAL    ttau(3)
+   INTEGER i,j,n,k,mp(3,3),mdet,mtr
+
+   REAL,    PARAMETER :: eps=1.0e-7
+   INTEGER, PARAMETER :: cops(-1:3)=(/ 2, 3, 4, 6, 1 /)
+
+   sym%invtab(1:sym%nop) = 0
+
+   sym%multab = 0
+
+   ! loop over all operations
+   DO j = 1, sym%nop
+
+      ! multiply {R_j|t_j}{R_i|t_i}
+      DO i = 1, sym%nop
+         mp = matmul( sym%mrot(:,:,j) , sym%mrot(:,:,i) )
+         ttau = sym%tau(:,j) + matmul( sym%mrot(:,:,j) , sym%tau(:,i) )
+         ttau = ttau - anint( ttau - eps )
+
+         ! determine which operation this is
+         DO k=1,sym%nop
+            IF ( all( mp(:,:) == sym%mrot(:,:,k) ) .and. all( abs( ttau(:)-sym%tau(:,k) ) < eps ) ) THEN
+               IF ( sym%multab(j,i) .eq. 0 ) THEN
+                  sym%multab(j,i) = k
+                  IF (k .eq. 1) sym%invtab(j)=i
+               ELSE
+                  WRITE(6,'(" Symmetry error: multiple ops")')
+                  CALL juDFT_error("check_close: Multiple ops",calledby ="closure")
+               END IF
+            END IF
+         END DO
+
+         IF (sym%multab(j,i).eq.0) THEN
+            WRITE (6,'(" Group not closed")')
+            WRITE (6,'("  j , i =",2i4)') j,i
+            CALL juDFT_error("check_close: Not closed",calledby="closure")
+         END IF
+      END DO
+   END DO
+
+   ! determine the type of each operation
+   DO n = 1, sym%nop
+      mtr = sym%mrot(1,1,n) + sym%mrot(2,2,n) + sym%mrot(3,3,n)
+      mdet = sym%mrot(1,1,n)*(sym%mrot(2,2,n)*sym%mrot(3,3,n)-sym%mrot(3,2,n)*sym%mrot(2,3,n)) +&
+             sym%mrot(1,2,n)*(sym%mrot(3,1,n)*sym%mrot(2,3,n)-sym%mrot(2,1,n)*sym%mrot(3,3,n)) +&
+             sym%mrot(1,3,n)*(sym%mrot(2,1,n)*sym%mrot(3,2,n)-sym%mrot(3,1,n)*sym%mrot(2,2,n))
+
+      optype(n) = mdet*cops(mdet*mtr)
+
+   END DO
+
+END SUBROUTINE check_close
 END MODULE m_types_sym

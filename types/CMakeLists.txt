@@ -5,6 +5,7 @@ types/types.F90
 types/types_mat.F90
 types/types_xcpot.F90
 types/types_xcpot_inbuild.F90
+types/types_xcpot_inbuild_nofunction.F90
 types/types_xcpot_data.F90
 types/types_xcpot_libxc.F90
 types/types_mpi.F90
@@ -37,6 +38,9 @@ types/types_oneD.f90
 types/types_hybrid.f90
 types/types_noco.f90
 types/types_banddos.f90
+types/types_dimension.f90	
+types/types_vacuum.f90
+	
 )
 
 set(inpgen_F90 ${inpgen_F90}

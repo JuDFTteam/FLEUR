@@ -24,7 +24,6 @@ atompar.F90
 film_sym.f90
 make_atomic_defaults.f90
 read_inpgen_input.f90
-closure.f90
 super_check.f90
 make_kpoints.f90
 read_old_inp.f90
@@ -58,7 +57,6 @@ ${FLEUR_SRC}/kpoints/ordstar.f
 ${FLEUR_SRC}/kpoints/fulstar.f
 ${FLEUR_SRC}/kpoints/tetcon.f
 ${FLEUR_SRC}/kpoints/kvecon.f
-${FLEUR_SRC}/kpoints/gen_bz.F90
 ${FLEUR_SRC}/kpoints/kprep.f
 
 ${FLEUR_SRC}/math/util.F

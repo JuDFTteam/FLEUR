@@ -95,7 +95,7 @@ CONTAINS
 
 
       CALL regCharges%init(input, atoms)
-      CALL dos%init(input,        atoms, DIMENSION, kpts, vacuum)
+      CALL dos%init(DIMENSION%neigd,input,atoms,kpts, vacuum)
       CALL moments%init(input,    atoms)
       tmp_results = results
 

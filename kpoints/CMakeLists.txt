@@ -15,9 +15,6 @@ kpoints/tetcon.f
 
 set(fleur_F90 ${fleur_F90}
 kpoints/gkptwgt.f90
-kpoints/julia.f90
-kpoints/kpoints.f90
 kpoints/unfoldBandKPTS.f90
-kpoints/gen_bz.F90
 kpoints/brzone2.f90
 )

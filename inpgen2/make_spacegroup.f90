@@ -2,6 +2,8 @@
 
 MODULE m_make_spacegroup
   USE m_juDFT
+  PRIVATE
+  public make_spacegroup
   !********************************************************************
   !  Generate the spacegroup given the cell and the atomic positions/ids
   !  Takes into account the symmetry reductions needed for films,soc&SSDW
@@ -13,7 +15,6 @@ CONTAINS
   SUBROUTINE make_spacegroup(film,noco,cell,pos,atomid,sym)
 
     USE m_bravaissymm
-    USE m_closure, ONLY : close_pt, closure
     USE m_supercheck
     USE m_types_noco
     USE m_types_cell
@@ -397,7 +398,7 @@ CONTAINS
 
 
     !---> check closure of group
-    CALL closure(mops,mmrot,ttau,nops,index_op, lclose)
+    lclose=sym%closure()
 
     IF ( ( ns==1 ) .AND. ( .NOT. lclose ) ) THEN
        WRITE (6,'(/," Congratulations, you have found a system (not"," a supercell) that breaks the algorithms. Sorry...")')
@@ -527,6 +528,62 @@ CONTAINS
       l_rotmatch = .TRUE.
 
     END FUNCTION l_rotmatch
+
+     SUBROUTINE close_pt(nops,mrot,mtable)
+
+   IMPLICIT NONE
+
+   INTEGER, INTENT (IN)  :: nops,mrot(3,3,nops)
+   INTEGER, INTENT (OUT) :: mtable(nops,nops)   ! table(i,j) = {R_i|0}{R_j|0}
+
+   INTEGER              :: i,j,k,mp(3,3),map(nops)
+
+   ! loop over all operations
+   DO j = 1, nops
+
+      map(1:nops) = 0
+
+      ! multiply {R_j|0}{R_i|0}
+      DO i = 1, nops
+         mp = matmul( mrot(:,:,j) , mrot(:,:,i) )
+
+         ! determine which operation this is
+         DO k = 1, nops
+            IF ( all( mp(:,:)==mrot(:,:,k) ) ) THEN
+               IF ( map(i) .eq. 0 ) THEN
+                  map(i) = k
+               ELSE
+                  WRITE (6,'(" Symmetry error : multiple ops")')
+                  CALL juDFT_error("close_pt: Multiple ops (Bravais)",calledby ="closure")
+               END IF
+            END IF
+         END DO
+
+         IF (map(i).eq.0) THEN
+            WRITE(6,*) 'Symmetry operations:'
+            DO k = 1, nops
+               WRITE(6,*) 'Matrix ', k, ':'
+               WRITE(6,'(3i7)') mrot(:,1,k)
+               WRITE(6,'(3i7)') mrot(:,2,k)
+               WRITE(6,'(3i7)') mrot(:,3,k)
+               WRITE(6,*) ''
+            END DO
+            WRITE (6,'(" Group not closed (Bravais lattice)")')
+            WRITE (6,'(" operation j=",i2,"  map=",12i4,:/,(21x,12i4))')  j, map(1:nops)
+            WRITE(6,*) ''
+            WRITE(6,*) 'Expected product of operations ', j, ' and ', i, ':'
+            WRITE(6,'(3i7)') mp(:,1)
+            WRITE(6,'(3i7)') mp(:,2)
+            WRITE(6,'(3i7)') mp(:,3)
+            WRITE(6,*) ''
+            CALL juDFT_error("close_pt:Not closed",calledby="closure")
+         END IF
+      END DO
+      mtable(j,1:nops) = map(1:nops)
+   END DO
+
+ END SUBROUTINE close_pt
+
 
   END SUBROUTINE make_spacegroup
 END MODULE m_make_spacegroup

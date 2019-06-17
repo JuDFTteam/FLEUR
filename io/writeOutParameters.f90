@@ -79,10 +79,9 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
    CALL closeXMLElement('volumes')
 
    sumWeight = SUM(kpts%wtkpt(:kpts%nkpt))
-   WRITE(attributes(1),'(f0.8)') kpts%posScale
-   WRITE(attributes(2),'(f0.8)') sumWeight
-   WRITE(attributes(3),'(i0)') kpts%nkpt
-   CALL openXMLElementFormPoly('kPointList',(/'posScale   ', 'weightScale', 'count      '/),&
+   WRITE(attributes(1),'(f0.8)') sumWeight
+   WRITE(attributes(2),'(i0)') kpts%nkpt
+   CALL openXMLElementFormPoly('kPointList',(/ 'weightScale', 'count      '/),&
                                attributes(:3),reshape((/8,11,5,10,10,5/),(/3,2/)))
    DO i = 1, kpts%nkpt
       WRITE(attributes(1),'(f12.6)') kpts%wtkpt(i)

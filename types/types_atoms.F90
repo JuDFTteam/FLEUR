@@ -101,9 +101,8 @@ MODULE m_types_atoms
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
-  ! CONTAINS
-  !    procedure :: nsp => calc_nsp_atom
-    contains
+   CONTAINS
+      procedure :: nsp => calc_nsp_atom
       PROCEDURE :: same_species
    END TYPE t_atoms
 
@@ -130,5 +129,11 @@ MODULE m_types_atoms
      same_species=same_species.and.trim(atoms%econf(n)%valenceconfig)==trim(atoms%econf(nn)%valenceconfig)
      same_species=same_species.and.trim(atoms%econf(n)%valenceconfig)==trim(atoms%econf(nn)%valenceconfig)
   end function
-
+  pure function calc_nsp_atom(self) result(nsp)
+    implicit none
+    CLASS(t_atoms),INTENT(IN)      :: self
+    INTEGER                        :: nsp
+      
+    nsp = (self%lmaxd+1+MOD(self%lmaxd+1,2))*(2*self%lmaxd+1)
+   end function
  END MODULE m_types_atoms

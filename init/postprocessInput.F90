@@ -34,9 +34,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   USE m_efield
   USE m_od_mapatom
   USE m_od_kptsgen
-  USE m_gen_bz
   USE m_nocoInputCheck
-  USE m_kpoints   
   USE m_types_forcetheo_extended
   USE m_relaxio
 
@@ -227,8 +225,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
         END IF
      END IF
 
-     ! Calculate missing kpts parameters
-     CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
     
      ! Generate missing general parameters
      
@@ -476,13 +472,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      !adjust positions by displacements
      CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
 
-     !Calculate kpoint in the full BZ
-     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2) THEN
-        CALL gen_bz(kpts,sym)
-     ELSE
-        kpts%nkptf=0
-     ENDIF
-
+  
      ! Missing xc functionals initializations
      IF (xcpot%needs_grad()) THEN
         ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))

@@ -28,7 +28,6 @@ CONTAINS
     END DO
     CALL inv3(p_cell%amat,p_cell%bmat,p_cell%omtil)
     p_cell%bmat=p_cell%bmat*tpi_const
-    p_cell%latnam=cell%latnam
   END SUBROUTINE  build_primitive_cell
 
   SUBROUTINE unfold_band_kpts(banddos,p_cell,cell,p_kpts,kpts)

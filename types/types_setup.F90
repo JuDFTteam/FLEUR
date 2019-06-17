@@ -164,12 +164,4 @@ MODULE m_types_setup
       !---> gwf
 
    END TYPE t_wann
-CONTAINS
-   pure function calc_nsp_atom(self) result(nsp) 
-      implicit none
-      CLASS(t_atoms),INTENT(IN)      :: self
-      INTEGER                        :: nsp
-
-      nsp = (self%lmaxd+1+MOD(self%lmaxd+1,2))*(2*self%lmaxd+1)
-   end function
 END MODULE m_types_setup
