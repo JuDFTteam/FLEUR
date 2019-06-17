@@ -59,4 +59,41 @@ MODULE m_types_cell
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
      cell%aamat=matmul(transpose(cell%amat),cell%amat)
    END SUBROUTINE init
+
+   subroutine  read_xml(cell,xml)
+     use m_types_xml
+     class(t_cell),intent(out)::cell
+     type(t_xml),intent(in)   ::xml
+     
+     ! Read in lattice parameters
+     character(len=200)::valueString,path
+     real:: scale,dvac
+     
+     if (xml%GetNumberOfNodes('')==1) then
+        path= '/fleurInput/cell/filmLattice'
+        dvac=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dvac')
+     else        
+        path = '/fleurInput/cell/bulkLattice'
+     endif
+     
+     scale=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@scale')
+     path=trim(path)//'/bravaisMatrix'
+     valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-1')))
+     cell%amat(1,1) = evaluateFirst(valueString)
+     cell%amat(2,1) = evaluateFirst(valueString)
+     cell%amat(3,1) = evaluateFirst(valueString)
+     valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-2')))
+     cell%amat(1,2) = evaluateFirst(valueString)
+     cell%amat(2,2) = evaluateFirst(valueString)
+     cell%amat(3,2) = evaluateFirst(valueString)
+     valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-2')))
+     cell%amat(1,3) = evaluateFirst(valueString)
+     cell%amat(2,3) = evaluateFirst(valueString)
+     cell%amat(3,4) = evaluateFirst(valueString)
+     
+     cell%amat=cell%amat*scale
+     
+     call cell%init(dvac)
+   end subroutine read_xml
+   
  END MODULE m_types_cell

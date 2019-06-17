@@ -40,16 +40,16 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(INOUT)   :: input
-      TYPE(t_sym),INTENT(INOUT)     :: sym
-      TYPE(t_stars),INTENT(INOUT)   :: stars
+      TYPE(t_sym),INTENT(INOUT)     :: sym !ok
+      TYPE(t_stars),INTENT(INOUT)   :: stars !ok
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
-      TYPE(t_kpts),INTENT(INOUT)     :: kpts
-      TYPE(t_oneD),INTENT(INOUT)     :: oneD
+      TYPE(t_kpts),INTENT(INOUT)     :: kpts!ok
+      TYPE(t_oneD),INTENT(INOUT)     :: oneD !ok
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
-      TYPE(t_cell),INTENT(INOUT)     :: cell
-      TYPE(t_banddos),INTENT(INOUT)  :: banddos
-      TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
+      TYPE(t_cell),INTENT(INOUT)     :: cell!ok
+      TYPE(t_banddos),INTENT(INOUT)  :: banddos!ok
+      TYPE(t_sliceplot),INTENT(INOUT):: sliceplot !ok
       CLASS(t_xcpot),INTENT(INOUT),ALLOCATABLE :: xcpot
       TYPE(t_noco),INTENT(INOUT)     :: noco
       TYPE(t_dimension),INTENT(OUT)  :: dimension
@@ -274,9 +274,6 @@ CONTAINS
       ! Read general cutoff parameters
 
       input%rkmax = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
-      stars%gmax = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
-
-      stars%gmaxInit = stars%gmax
 
       xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
       numberNodes = xmlGetNumberOfNodes(xPathA)
@@ -360,11 +357,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       xPathA = '/fleurInput/output'
       numberNodes = xmlGetNumberOfNodes(xPathA)
-      banddos%band = .FALSE.
-      IF (numberNodes.EQ.1) THEN
-         banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
-      END IF
-
+     
       altKPointSetIndices(:) = -1
       xPathA = '/fleurInput/calculationSetup/bzIntegration/altKPointSet'
       numberNodes = xmlGetNumberOfNodes(xPathA)
@@ -380,17 +373,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          END DO
       END IF
 
-      altKPointSetIndex = -1
-      IF(banddos%band) THEN
-         altKPointSetIndex = altKPointSetIndices(1)
-      ELSE IF (input%gw.EQ.2) THEN
-         altKPointSetIndex = altKPointSetIndices(2)
-      END IF
-
-      IF (altKPointSetIndex.NE.-1) THEN
-         WRITE(kPointsPrefix,*) '/fleurInput/calculationSetup/bzIntegration/altKPointSet[',altKPointSetIndex,']'
-      END IF
-
+   
       ! Read in Brillouin zone integration parameters
 
     
@@ -571,24 +554,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          END IF
       END IF
 
-      ! Read in optional 1D parameters if present
-
-      xPathA = '/fleurInput/calculationSetup/oneDParams'
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-
-      oneD%odd%d1 = .FALSE.
-
-      IF (numberNodes.EQ.1) THEN
-         oneD%odd%d1 = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@d1'))
-         oneD%odd%M = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@MM'))
-         oneD%odd%mb = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vM'))
-         oneD%odd%m_cyl = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@m_cyl'))
-         oneD%odd%chi = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@chi'))
-         oneD%odd%rot = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@rot'))
-         oneD%odd%invs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@invs1'))
-         oneD%odd%zrfs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zrfs1'))
-      END IF
-
       ! Read in optional geometry optimization parameters
 
       xPathA = '/fleurInput/calculationSetup/geometryOptimization'
@@ -701,31 +666,9 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 !!! Start of cell section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      ! Read in lattice parameters
-
-      a1 = 0.0
-      a2 = 0.0
-      a3 = 0.0
-      cell%z1 = 0.0
-      dtild = 0.0
-      input%film = .FALSE.
-      latticeType = 'bulkLattice'
-      latticeDef = 0
-      symmetryDef = 0
-    
-      numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/filmLattice')
-
-      IF (numberNodes.EQ.1) THEN
-         input%film = .TRUE.
-         latticeType = 'filmLattice'
-      END IF
-
-      xPathA = '/fleurInput/cell/'//latticeType
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-
-      IF (numberNodes.EQ.1) THEN
-         latticeScale = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@scale'))
-         input%scaleCell = latticeScale
+   
+      ! Construction of amat requires additional information about the lattice
+      ! and is done later (scroll down)!
 
          IF(input%film) THEN
             cell%z1 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dVac'))
@@ -753,205 +696,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   END IF
                END DO
             END IF
-         END IF
-
-         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/a1')
-         IF (numberNodes.EQ.1) THEN
-            latticeDef = 1
-            input%scaleA1 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a1/@scale'))
-            a1(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a1'))
-            a1(1) = a1(1) * input%scaleA1
-            numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/a2')
-            IF (numberNodes.EQ.1) THEN
-               latticeDef = 2
-               input%scaleA2 = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a2/@scale'))
-               a2(2) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/a2'))
-               a2(2) = a2(2) * input%scaleA2
-            END IF
-            IF(.NOT.input%film) THEN
-               input%scaleC = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c/@scale'))
-               a3(3) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c'))
-               a3(3) = a3(3) * input%scaleC
-            END IF
-         END IF
-
-         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/row-1')
-         IF (numberNodes.EQ.1) THEN
-            latticeDef = 3
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/row-1')))
-            a1(1) = evaluateFirst(valueString)
-            a1(2) = evaluateFirst(valueString)
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/row-2')))
-            a2(1) = evaluateFirst(valueString)
-            a2(2) = evaluateFirst(valueString)
-            IF(.NOT.input%film) THEN
-               input%scaleC = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c/@scale'))
-               a3(3) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/c'))
-               a3(3) = a3(3) * input%scaleC
-            END IF
-         END IF
-
-         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/bravaisMatrix')
-         IF (numberNodes.EQ.1) THEN
-            latticeDef = 4
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/bravaisMatrix/row-1')))
-            a1(1) = evaluateFirst(valueString)
-            a1(2) = evaluateFirst(valueString)
-            IF(.NOT.input%film) THEN
-               a1(3) = evaluateFirst(valueString)
-            END IF
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/bravaisMatrix/row-2')))
-            a2(1) = evaluateFirst(valueString)
-            a2(2) = evaluateFirst(valueString)
-            IF(.NOT.input%film) THEN
-               a2(3) = evaluateFirst(valueString)
-            END IF
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/bravaisMatrix/row-3')))
-            IF(.NOT.input%film) THEN
-               a3(1) = evaluateFirst(valueString)
-               a3(2) = evaluateFirst(valueString)
-               a3(3) = evaluateFirst(valueString)
-            ELSE
-               !WRITE(*,*) 'Note: For film calculations only the upper left 2x2 part of the Bravais matrix is considered.'
-            END IF
-         END IF
-      END IF ! Note: Further ways to define lattices might be added later. (1D lattice,...)
-
-      ! Construction of amat requires additional information about the lattice
-      ! and is done later (scroll down)!
-
-      ! Read in symmetry parameters
-
-      sym%namgrp = 'any'
-
-      xPathA = '/fleurInput/cell/symmetry'
-      numberNodes = xmlGetNumberOfNodes('/fleurInput/cell/symmetry')
-
-      IF (numberNodes.EQ.1) THEN
-         sym%symSpecType = 2
-         symmetryDef = 1
-         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spgrp')))
-         READ(valueString,*) sym%namgrp
-         sym%invs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@invs'))
-         sym%zrfs = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zrfs'))
-         sym%invs2 = sym%invs.AND.sym%zrfs
-
-         IF (sym%namgrp.EQ.'any ') THEN
-            sym%nop = 48
-            ! Read in sym.out file if sym%namgrp='any' set.
-            !CALL rw_symfile('r',94,'sym.out',48,cell%bmat,&
-            !   &                        mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
-            IF (ALLOCATED(sym%mrot)) THEN
-               DEALLOCATE(sym%mrot)
-            END IF
-            ALLOCATE(sym%mrot(3,3,sym%nop))
-            IF (ALLOCATED(sym%tau)) THEN
-               DEALLOCATE(sym%tau)
-            END IF
-            ALLOCATE(sym%tau(3,sym%nop))
-
-            DO k = 1, sym%nop
-               DO i = 1, 3
-                  DO j = 1, 3
-                     sym%mrot(j,i,k) = mrotTemp(j,i,k)
-                  END DO
-                  sym%tau(i,k) = tauTemp(i,k)
-               END DO
-            END DO
-         END IF
-      END IF
-
-      xPathA = '/fleurInput/cell/symmetryFile'
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-
-      IF (numberNodes.EQ.1) THEN
-         symmetryDef = 2
-         sym%symSpecType = 1
-         sym%nop = 48
-         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@filename')))
-
-         !CALL rw_symfile('r',94,TRIM(ADJUSTL(valueString)),48,cell%bmat,&
-         !   &                     mrotTemp,tauTemp,sym%nop,sym%nop2,sym%symor)
-
-         IF (ALLOCATED(sym%mrot)) THEN
-            DEALLOCATE(sym%mrot)
-         END IF
-         ALLOCATE(sym%mrot(3,3,sym%nop))
-         IF (ALLOCATED(sym%tau)) THEN
-            DEALLOCATE(sym%tau)
-         END IF
-         ALLOCATE(sym%tau(3,sym%nop))
-
-         sym%invs = .FALSE.
-         sym%zrfs = .FALSE.
-
-         DO k = 1, sym%nop
-            absSum = 0
-            DO i = 1, 3
-               DO j = 1, 3
-                  sym%mrot(j,i,k) = mrotTemp(j,i,k)
-                  absSum = absSum + ABS(sym%mrot(j,i,k))
-               END DO
-               sym%tau(i,k) = tauTemp(i,k)
-            END DO
-            IF (absSum.EQ.3) THEN
-               IF (ALL(sym%tau(:,k).EQ.0.0)) THEN
-                  IF ((sym%mrot(1,1,k).EQ.-1).AND.(sym%mrot(2,2,k).EQ.-1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%invs = .TRUE.
-                  IF ((sym%mrot(1,1,k).EQ.1).AND.(sym%mrot(2,2,k).EQ.1).AND.(sym%mrot(3,3,k).EQ.-1)) sym%zrfs = .TRUE.
-               END IF
-            END IF
-         END DO
-
-         sym%invs2 = sym%invs.AND.sym%zrfs
-      END IF
-
-      xPathA = '/fleurInput/cell/symmetryOperations'
-      numberNodes = xmlGetNumberOfNodes(xPathA)
-
-      IF (numberNodes.EQ.1) THEN
-         sym%symSpecType = 3
-         symmetryDef = 3
-
-         numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/symOp')
-         sym%nop = numberNodes
-
-         IF (ALLOCATED(sym%mrot)) DEALLOCATE(sym%mrot)
-         ALLOCATE(sym%mrot(3,3,sym%nop))
-         IF (ALLOCATED(sym%tau)) DEALLOCATE(sym%tau)
-         ALLOCATE(sym%tau(3,sym%nop))
-         sym%symor = .TRUE.
-         DO i = 1, sym%nop
-            WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/symOp[',i,']/row-1'
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
-            READ(valueString,*) sym%mrot(1,1,i), sym%mrot(1,2,i), sym%mrot(1,3,i), sym%tau(1,i)
-
-            WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/symOp[',i,']/row-2'
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
-            READ(valueString,*) sym%mrot(2,1,i), sym%mrot(2,2,i), sym%mrot(2,3,i), sym%tau(2,i)
-
-            WRITE(xPathB,*) TRIM(ADJUSTL(xPathA))//'/symOp[',i,']/row-3'
-            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB)))))
-            READ(valueString,*) sym%mrot(3,1,i), sym%mrot(3,2,i), sym%mrot(3,3,i), sym%tau(3,i)
-
-            IF ((sym%tau(1,i)**2 + sym%tau(2,i)**2 + sym%tau(3,i)**2).GT.1.e-8) THEN
-               sym%symor = .FALSE.
-            END IF
-            DO j = 1,3
-               IF (ABS(sym%tau(j,i)-0.33333) < 0.00001) THEN
-                  sym%tau(j,i) = 1./3.
-               ENDIF
-               IF (ABS(sym%tau(j,i)+0.33333) < 0.00001) THEN
-                  sym%tau(j,i) = -1./3.
-               ENDIF
-               IF (ABS(sym%tau(j,i)-0.66667) < 0.00001) THEN
-                  sym%tau(j,i) = 2./3.
-               ENDIF
-               IF (ABS(sym%tau(j,i)+0.66667) < 0.00001) THEN
-                  sym%tau(j,i) = -2./3.
-               ENDIF
-            ENDDO
-         END DO
-      END IF
+      
 
       ! Calculate missing symmetry and cell properties and check consistency of parameters.
 
@@ -961,29 +706,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       vacuum%dvac = latticeScale*vacuum%dvac
       dtild = latticeScale*dtild
 
-      cell%amat(:,1) = a1(:) * latticeScale
-      cell%amat(:,2) = a2(:) * latticeScale
-      cell%amat(:,3) = a3(:) * latticeScale
 
-      CALL inv3(cell%amat,cell%bmat,cell%omtil)
-      cell%bmat(:,:) = tpi_const*cell%bmat(:,:)
-      cell%omtil = ABS(cell%omtil)
-
-      IF (input%film.AND..NOT.oneD%odd%d1) THEN
-         cell%vol = (cell%omtil/cell%amat(3,3))*vacuum%dvac
-         cell%area = cell%omtil/cell%amat(3,3)
-         !-odim
-      ELSE IF (oneD%odd%d1) THEN
-         cell%area = tpi_const*cell%amat(3,3)
-         cell%vol = pi_const*(vacuum%dvac**2)*cell%amat(3,3)/4.0
-         !+odim
-      ELSE
-         cell%vol = cell%omtil
-         cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
-         IF (cell%area < 1.0e-7) THEN
-               cell%area = 1.
-         END IF
-      END IF
 
       ! Construction of missing symmetry information
       IF ((symmetryDef.EQ.2).OR.(symmetryDef.EQ.3)) THEN
@@ -999,7 +722,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1
-      cell%z1 = vacuum%dvac/2
       vacuum%nmz = vacuum%nmzd
       vacuum%delz = 25.0/vacuum%nmz
       IF (oneD%odd%d1) vacuum%delz = 20.0 / vacuum%nmz
@@ -1441,8 +1163,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 !!! Start of atomGroup section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      banddos%l_orb = .FALSE.
-      banddos%orbCompAtom = 0
       atoms%l_geo = .FALSE.
       atoms%relax = 0
       na = 0
@@ -1518,16 +1238,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             atoms%taual(2,na) = evaluatefirst(valueString)
             atoms%taual(3,na) = evaluatefirst(valueString) / cell%amat(3,3)
             atoms%pos(:,na) = MATMUL(cell%amat,atoms%taual(:,na))
-            l_orbcomp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@orbcomp'))
-            IF(l_orbcomp) THEN
-               IF(banddos%l_orb) THEN
-                  CALL juDFT_error("Multiple orbcomp flags set.", calledby = "r_inpXML")
-               END IF
-               banddos%l_orb = .TRUE.
-               banddos%orbCompAtom = na
-               banddos%alpha=0.0;banddos%beta=0.0;banddos%gamma=0.0
-               WRITE(*,*) "Orbcomp-Rotation feature not fully implemented. Please create an issue on gitlab if you need it :-)"
-            END IF
             wannAtomList(na) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@wannier'))
          END DO
 
@@ -1613,20 +1323,14 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 !!! Start of output section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      banddos%dos = .FALSE.
-      banddos%band = .FALSE.
-      banddos%vacdos = .FALSE.
-      sliceplot%slice = .FALSE.
       input%l_coreSpec = .FALSE.
       input%l_wann = .FALSE.
 
       input%vchk = .FALSE.
       input%cdinf = .FALSE.
 
-      sliceplot%iplot = .FALSE.
       input%score = .FALSE.
-      sliceplot%plpot = .FALSE.
-
+     
       input%eonly = .FALSE.
       input%l_bmt = .FALSE.
 
@@ -1636,14 +1340,9 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       IF (numberNodes.EQ.1) THEN
 
          ! Read in general output switches
-         banddos%dos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dos'))
-         banddos%band = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@band'))
-         banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
-         sliceplot%slice = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
          input%l_coreSpec = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
          input%l_wann = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
-         banddos%l_mcd = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mcd'))
-
+     
          ! Read in optional switches for checks
 
          xPathA = '/fleurInput/output/checks'
@@ -1661,9 +1360,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          numberNodes = xmlGetNumberOfNodes(xPathA)
 
          IF (numberNodes.EQ.1) THEN
-            sliceplot%iplot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
             input%score = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
-            sliceplot%plpot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
          END IF
 
          ! Read in optional specialOutput switches
@@ -1678,20 +1375,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
          ! Read in optional densityOfStates output parameters
 
-         xPathA = '/fleurInput/output/densityOfStates'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-
-         IF ((banddos%dos).AND.(numberNodes.EQ.0)) THEN
-            CALL juDFT_error("dos is true but densityOfStates parameters are not set!", calledby = "r_inpXML")
-         END IF
-
-         IF (numberNodes.EQ.1) THEN
-            banddos%ndir = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ndir'))
-            banddos%e2_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minEnergy'))
-            banddos%e1_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxEnergy'))
-            banddos%sig_dos = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sigma'))
-         END IF
-
+     
          ! Read in optional vacuumDOS parameters
 
          xPathA = '/fleurInput/output/vacuumDOS'
@@ -1729,24 +1413,12 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          xPathA = '/fleurInput/output/chargeDensitySlicing'
          numberNodes = xmlGetNumberOfNodes(xPathA)
 
-         IF ((sliceplot%slice).AND.(numberNodes.EQ.0)) THEN
-            CALL juDFT_error("slice is true but chargeDensitySlicing parameters are not set!", calledby = "r_inpXML")
-         END IF
-
+    
          IF (numberNodes.EQ.1) THEN
-            sliceplot%kk = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numkpt'))
-            sliceplot%e1s = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minEigenval'))
-            sliceplot%e2s = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxEigenval'))
-            sliceplot%nnne = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nnne'))
             input%pallst = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@pallst'))
          END IF
 
-         IF (banddos%band) THEN
-            banddos%dos=.TRUE.
-            banddos%ndir = -4
-            WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
-         ENDIF
-
+ 
          ! Read in optional core spectrum (EELS) input parameters
 
          xPathA = '/fleurInput/output/coreSpectrum'
@@ -1849,30 +1521,9 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             END DO
          END IF
 
-         ! Read in optional magnetic circular dichroism parameters
-         xPathA = '/fleurInput/output/magneticCircularDichroism'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
+      
 
-         IF ((banddos%l_mcd).AND.(numberNodes.EQ.0)) THEN
-            CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "r_inpXML")
-         END IF
-
-         IF (numberNodes.EQ.1) THEN
-            banddos%e_mcd_lo = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyLo'))
-            banddos%e_mcd_up = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@energyUp'))
-         END IF
-
-         ! Read in optional parameter for unfolding bandstructure of supercell
-         xPathA = '/fleurInput/output/unfoldingBand'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-
-         IF (numberNodes.EQ.1) THEN
-            banddos%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldband'))
-            banddos%s_cell_x = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellX'))
-            banddos%s_cell_y = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellY'))
-            banddos%s_cell_z = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellZ'))
-         END IF
-
+    
       END IF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

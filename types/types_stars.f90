@@ -73,6 +73,20 @@ MODULE m_types_stars
       REAL, ALLOCATABLE     :: ft2_gfx(:), ft2_gfy(:)
       COMPLEX, ALLOCATABLE :: ustep(:)
       REAL, ALLOCATABLE    :: ufft(:)
-   END TYPE t_stars
+    contains
+     procedure :: read_xml
+  END TYPE t_stars
+
+contains
+  subroutine read_xml(stars,xml)
+    use m_types_xml
+    class(t_stars),INTENT(OUT)::stars
+    type(t_xml),INTENT(IN)::xml
+    
+    
+    stars%gmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
+    
+    stars%gmaxInit = stars%gmax
+  end subroutine read_xml
 
  END MODULE m_types_stars

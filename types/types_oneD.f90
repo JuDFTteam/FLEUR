@@ -72,5 +72,36 @@ MODULE m_types_oneD
       REAL, POINTER :: pgft1xx(:)
       REAL, POINTER :: pgft1yy(:)
       REAL, POINTER :: pgft1xy(:)
+    contains
+      procedure :: read_xml
    END TYPE t_oneD
+ contains
+   subroutine read_xml(oneD,xml)
+     use m_types_xml
+     class(t_oned),intent(out)::oneD
+     type(t_xml),intent(in)   ::xml
+
+     
+      ! Read in optional 1D parameters if present
+     character(len=100):: xpathA
+     integer :: numberNodes
+     
+      xPathA = '/fleurInput/calculationSetup/oneDParams'
+      numberNodes = xml%GetNumberOfNodes(xPathA)
+
+      oneD%odd%d1 = .FALSE.
+
+      IF (numberNodes.EQ.1) THEN
+         oneD%odd%d1 = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@d1'))
+         oneD%odd%M = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@MM'))
+         oneD%odd%mb = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vM'))
+         oneD%odd%m_cyl = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@m_cyl'))
+         oneD%odd%chi = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@chi'))
+         oneD%odd%rot = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@rot'))
+         oneD%odd%invs = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@invs1'))
+         oneD%odd%zrfs = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zrfs1'))
+      END IF
+
+    end subroutine read_xml
+   
  END MODULE m_types_oneD
