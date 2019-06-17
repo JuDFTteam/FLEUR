@@ -16,8 +16,7 @@ CONTAINS
    SUBROUTINE r_inpXML(&
       atoms,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
       cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
-      noel,namex,relcor,a1,a2,a3,dtild,&
-      l_kpts)
+      noel,namex,relcor,a1,a2,a3,dtild)
 
       USE iso_c_binding
       USE m_juDFT
@@ -25,7 +24,7 @@ CONTAINS
       USE m_types_forcetheo_extended
       USE m_symdata , ONLY : nammap, ord2, l_c2
       !USE m_rwsymfile
-      USE m_xmlIntWrapFort
+      !USE m_xmlIntWrapFort
       USE m_inv3
       !USE m_spg2set
       !USE m_closure, ONLY : check_close
@@ -59,7 +58,6 @@ CONTAINS
       CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT):: forcetheo
       TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
       TYPE(t_wann)   ,INTENT(INOUT)  :: wann
-      LOGICAL, INTENT(OUT)           :: l_kpts
       CHARACTER(len=3), ALLOCATABLE, INTENT(INOUT) :: noel(:)
       CHARACTER(len=4), INTENT(OUT)  :: namex
       CHARACTER(len=12), INTENT(OUT) :: relcor
@@ -179,11 +177,17 @@ CONTAINS
       CALL xmlInitXPath()
 
       ! Check version of inp.xml
-      versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
-      IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
-         (TRIM(ADJUSTL(versionString)).NE.'0.29')) THEN
+      versionString = xml%GetAttributeValue('/fleurInput/@fleurInputVersion')
+      IF((TRIM(ADJUSTL(versionString)).NE.'0.30')) THEN
          CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
       END IF
+
+
+      !Some types have their own readers
+      CALL kpts%read_xml(xml)
+      CALL sym%read_sym(xml)
+
+      
 
       ! Get number of atoms, atom types, and atom species
 
@@ -237,7 +241,6 @@ CONTAINS
 
    
     
-      ALLOCATE (kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
 
       ALLOCATE (wannAtomList(atoms%nat))
 
@@ -390,9 +393,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       ! Read in Brillouin zone integration parameters
 
-      kpts%nkpt3 = 0
-      l_kpts = .FALSE.
-
+    
       valueString = TRIM(ADJUSTL(xmlGetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
       SELECT CASE (valueString)
       CASE ('hist')

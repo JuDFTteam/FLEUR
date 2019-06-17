@@ -20,7 +20,6 @@ MODULE m_types_kpts
      !(nkpts) weights
      REAL,ALLOCATABLE      :: wtkpt(:)
      INTEGER               :: nkptf=0   !<k-vectors in full BZ
-     INTEGER               :: nkpt3(3)=[0,0,0]
      REAL   ,ALLOCATABLE   :: bkf(:,:)
      INTEGER,ALLOCATABLE   :: bkp(:)
      INTEGER,ALLOCATABLE   :: bksym(:)
@@ -32,6 +31,7 @@ MODULE m_types_kpts
      REAL   ,ALLOCATABLE           :: voltet(:)
      REAL   ,ALLOCATABLE           :: sc_list(:,:) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
    CONTAINS
+     PROCEDURE :: init
      PROCEDURE :: init_defaults
      PROCEDURE :: init_by_density
      PROCEDURE :: init_by_number
@@ -41,10 +41,31 @@ MODULE m_types_kpts
      !procedure :: read_xml
      PROCEDURE :: add_special_line
      PROCEDURE :: print_xml
+     PROCEDURE :: read_xml
   ENDTYPE t_kpts
 
   PUBLIC :: t_kpts
 CONTAINS
+
+  SUBROUTINE init(kpts,cell,sym,film)
+    USE m_types_cell
+    USE m_types_sym
+    CLASS(t_kpts),INTENT(inout):: kpts
+    TYPE(t_cell),INTENT(IN)    :: cell
+    TYPE(t_sym),INTENT(IN)     :: sym
+    LOGICAL,INTENT(IN)         :: film
+
+    INTEGER :: n
+
+    IF (kpts%numSpecialPoints>2) THEN
+       CALL kpts%init_special(cell,film)
+       return
+    ENDIF
+    DO n=1,kpts%nkpt
+       kpts%l_gamma=kpts%l_gamma.OR.ALL(ABS(kpts%bk(:,n))<1E-9)
+    ENDDO
+    IF (kpts%nkptf==0) CALL gen_bz(kpts,sym)
+  END SUBROUTINE init
 
   SUBROUTINE init_by_kptsfile(kpts,film)
     CLASS(t_kpts),INTENT(out):: kpts
@@ -72,6 +93,65 @@ CONTAINS
     IF (scale>0.0) kpts%bk=kpts%bk/scale
     IF (wscale>0.0) kpts%wtkpt=kpts%wtkpt/wscale
   END SUBROUTINE init_by_kptsfile
+
+  SUBROUTINE read_xml(kpts,xml,name)
+    USE m_types_xml
+    USE m_calculator
+    CLASS(t_kpts),INTENT(out):: kpts
+    TYPE(t_xml)              :: xml
+    CHARACTER(len=*),INTENT(IN)::name
+    
+    INTEGER:: number_sets,n
+    CHARACTER(len=200)::str,path,path2
+    
+
+
+     number_sets = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList')
+
+     DO n=1,number_sets
+        WRITE(path,"(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointList[',n,']'
+        IF(TRIM(ADJUSTL(name))==xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
+     enddo
+     IF (n>number_sets) CALL judft_error(("No kpoints named:"//TRIM(name)//" found"))
+     kpts%nkpt=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
+
+     kpts%numSpecialPoints=xml%GetNumberOfNodes(TRIM(path)//"specialPoint")
+
+     IF (kpts%numSpecialPoints>0) THEN
+        If (kpts%numSpecialPoints<2) CALL judft_error(("Giving less than two sepcial points make no sense:"//TRIM(name)))
+        ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
+        ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
+        DO n=1,kpts%numSpecialPoints
+           WRITE(path2,"(a,a,i0,a)") path,"specialPoint[",n,"]"
+           kpts%specialPointNames(n)=xml%getAttributeValue(path2//"/@name")
+           str=xml%getAttributeValue(path2)
+           kpts%specialPoints(1,n) = evaluatefirst(str)
+           kpts%specialPoints(2,n) = evaluatefirst(str)
+           kpts%specialPoints(3,n) = evaluatefirst(str)
+        ENDDO
+     ELSE
+        n=xml%GetNumberOfNodes(TRIM(path)//'kPoint')
+        IF (n.NE.kpts%nkpt) CALL judft_error(("Inconsistent number of k-points in:"//name))
+        ALLOCATE(kpts%bk(3,kpts%nkpt))
+        ALLOCATE(kpts%wtkpt(kpts%nkpt))
+        DO n=1,kpts%nkpt
+           WRITE(path2,"(a,a,i0,a)") path,"/kPoint[",n,"]"
+           kpts%wtkpt(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@weight'))
+           str= xml%getAttributeValue(path2)
+           kpts%bk(1,n) = evaluatefirst(str)
+           kpts%bk(2,n) = evaluatefirst(str)
+           kpts%bk(3,n) = evaluatefirst(str)
+        ENDDO
+        kpts%ntet=xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
+        ALLOCATE(kpts%voltet(kpts%ntet),kpts%ntetra(4,kpts%ntet))
+        DO n=1,kpts%ntet
+           WRITE(path2,"(a,a,i0,a)") path,"/tetraeder/tet[",n,"]"
+           kpts%voltet(n)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
+           str= xml%getAttributeValue(path2)
+           READ(str,*) kpts%ntetra(:,n)
+        ENDDO
+     END IF
+   END SUBROUTINE read_xml
 
   SUBROUTINE print_xml(kpts,fh,filename)
     CLASS(t_kpts),INTENT(in   ):: kpts

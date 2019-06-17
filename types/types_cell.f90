@@ -31,7 +31,7 @@ MODULE m_types_cell
    PUBLIC t_cell
  CONTAINS
    SUBROUTINE init(cell,dvac)
-     !initialize cell, only input it cell%amat and dvac in case of a film
+     !initialize cell, only input is cell%amat and dvac in case of a film
      USE m_inv3
      USE m_constants,ONLY:tpi_const
      CLASS (t_cell),INTENT(INOUT):: cell

@@ -58,12 +58,37 @@ MODULE m_types_sym
      PROCEDURE :: init
      PROCEDURE :: print_xml
      PROCEDURE :: closure
+     PROCEDURE :: read_xml
      PROCEDURE,PRIVATE :: check_close
   END TYPE t_sym
   PUBLIC t_sym
 CONTAINS
 
+  SUBROUTINE read_xml(sym,xml)
+    USE m_types_xml
+    USE m_calculator
+    CLASS(t_sym),INTENT(out):: sym
+    TYPE(t_xml),INTENT(IN)  :: xml
+    
+    INTEGER:: number_sets,n
+    CHARACTER(len=200)::str,path,path2
+    
 
+
+    sym%nop = xml%GetNumberOfNodes('/fleurInput/calculationSetup/symmetryOperations/symOp')
+    IF (sym%nop<1) CALL judft_error("No symmetries in inp.xml")
+    
+    DO n=1,sym%nop
+       WRITE(path,"(a,i0,a)") '/fleurInput/calculationSetup/symmetryOperations/symOp[',n,']'
+       str=xml%GetAttributeValue(TRIM(path)//'/row-1')
+       READ(str,*) sym%mrot(1,:,n),sym%tau(1,n)
+       str=xml%GetAttributeValue(TRIM(path)//'/row-2')
+       READ(str,*) sym%mrot(2,:,n),sym%tau(2,n)
+       str=xml%GetAttributeValue(TRIM(path)//'/row-3')
+       READ(str,*) sym%mrot(3,:,n),sym%tau(3,n)
+    ENDDO
+  END SUBROUTINE read_xml
+    
 
   SUBROUTINE print_xml(sym,fh,filename)
     CLASS(t_sym),INTENT(IN)   :: sym

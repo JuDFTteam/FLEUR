@@ -26,7 +26,7 @@ io/wrtdop.f90
 io/w_inpXML.f90
 io/writeOutParameters.f90
 io/xsf_io.f90
-io/xmlIntWrapFort.f90
+io/types_xml.f90
 io/xmlOutput.F90
 )
 if (FLEUR_USE_HDF5)

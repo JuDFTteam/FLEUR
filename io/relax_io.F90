@@ -52,7 +52,7 @@ CONTAINS
   END SUBROUTINE write_relax
 
   SUBROUTINE read_relax(positions,forces,energies)
-    USE m_xmlIntWrapFort 
+    USE m_types_xml 
     USE m_calculator
     REAL,INTENT(INOUT),ALLOCATABLE:: positions(:,:,:)
     REAL,INTENT(INOUT),ALLOCATABLE:: forces(:,:,:)
@@ -62,7 +62,10 @@ CONTAINS
     INTEGER:: no_steps
     INTEGER:: ntype,step,n
     CHARACTER(len=100):: path,p,str
-    no_steps=xmlGetNumberOfNodes('/fleurInput/relaxation/relaxation-history/step')
+
+    TYPE(t_xml)::xml
+
+    no_steps=xml%GetNumberOfNodes('/fleurInput/relaxation/relaxation-history/step')
     ntype=SIZE(positions,2)
     IF (no_steps==0) THEN
        IF (.NOT.ALLOCATED(positions)) ALLOCATE(positions(0,0,0),forces(0,0,0),energies(0))
@@ -89,10 +92,10 @@ CONTAINS
     END IF
     DO step=1,no_steps
        WRITE(path,"(a,i0,a)") '/fleurInput/relaxation/relaxation-history/step[',step,']'
-       energies(step)=evaluateFirstOnly(xmlGetAttributeValue(TRIM(path)//"/@energy"))
+       energies(step)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//"/@energy"))
        DO n=1,ntype
           WRITE(p,"(a,a,i0,a)") TRIM(path),"/posforce[",n,"]"
-          str=xmlGetAttributeValue(p)
+          str=xml%GetAttributeValue(p)
           positions(:,n,step)=(/evaluateFirst(str),evaluateFirst(str),evaluateFirst(str)/)
           Forces(:,n,step)=(/evaluateFirst(str),evaluateFirst(str),evaluateFirst(str)/)
        ENDDO
@@ -101,20 +104,23 @@ CONTAINS
 
 
   SUBROUTINE read_displacements(atoms,disp)
-    USE m_xmlIntWrapFort 
+    USE m_types_xml 
     USE m_calculator
     USE m_types
     TYPE(t_atoms),INTENT(in)::atoms
     REAL,INTENT(out)::disp(:,:)
     CHARACTER(len=50):: path,str
     INTEGER :: n
+
+    TYPE(t_xml)::xml
+
     disp=0.0
-    IF (xmlGetNumberOfNodes('/fleurInput/relaxation/displacements')==0) RETURN
+    IF (xml%GetNumberOfNodes('/fleurInput/relaxation/displacements')==0) RETURN
     !read displacements and apply to positions
-    IF (atoms%ntype.NE.xmlGetNumberOfNodes('/fleurInput/relaxation/displacements/displace')) CALL judft_error("Wrong number of displacements in relaxation")
+    IF (atoms%ntype.NE.xml%GetNumberOfNodes('/fleurInput/relaxation/displacements/displace')) CALL judft_error("Wrong number of displacements in relaxation")
     DO n=1,atoms%ntype
        WRITE(path,"(a,i0,a)") '/fleurInput/relaxation/displacements/displace[',n,']'
-       str=xmlGetAttributeValue(path)
+       str=xml%GetAttributeValue(path)
        disp(:,n)=(/evaluateFirst(str),evaluateFirst(str),evaluateFirst(str)/)
     END DO
   END SUBROUTINE read_displacements
