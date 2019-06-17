@@ -20,7 +20,7 @@
           ! p.kurz jul. 1996
           !***********************************************************************
           USE m_juDFT
-          USE m_types
+          USE m_types_atoms
           IMPLICIT NONE
           !     ..
           !     .. Scalar Arguments ..

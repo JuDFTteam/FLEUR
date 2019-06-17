@@ -5,72 +5,82 @@
 !                  m. weinert   jan. 1987
 !*********************************************************************
       CONTAINS
-      SUBROUTINE inpeig_dim(input,obsolete,cell,noco, oneD,kpts,dimension,stars)
+      SUBROUTINE inpeig_dim(input,cell,noco, oneD,kpts,dimension,stars,latnam)
 
       USE m_constants, ONLY : pi_const,tpi_const
-      USE m_types
+      USE m_types_input
+      USE m_types_cell
+      USE m_types_noco
+      USE m_types_oneD
+      USE m_types_kpts
+      USE m_types_dimension
+      USE m_types_stars
       use m_apwsdim
       IMPLICIT NONE
       TYPE(t_input),INTENT(INOUT)     :: input
-      TYPE(t_obsolete),INTENT(INOUT)  :: obsolete
       TYPE(t_cell),INTENT(INOUT)      :: cell
       TYPE(t_noco),INTENT(INOUT)      :: noco
       TYPE(t_stars),INTENT(INOUT)     :: stars
       TYPE(t_dimension),INTENT(INOUT) :: dimension
       TYPE(t_kpts),INTENT(INOUT)      :: kpts
       TYPE(t_oneD),INTENT(INOUT)      :: oneD
+      CHARACTER(len=*),INTENT(IN)     :: latnam
+
       INTEGER nk,i,nv,nv2,j,kq1,kq2,kq3
       REAL  s1,s2,scale,bk(3)
-      LOGICAL xyu
+      LOGICAL xyu,l_k
    !     ..
       kpts%nkpt = 0 ; dimension%nvd = 0 ; dimension%nv2d = 0
       stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
       cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
 !
-      OPEN (41,file='kpts',form='formatted',status='old')
+
+      INQUIRE(file='kpts',exist=l_k)
+      IF (l_k) THEN
+         OPEN (41,file='kpts',form='formatted',status='old')
 
 !--->    k-mesh: given in units of the reciprocal lattice basis vectors
 !--->    scale is a factor to make input easier (default=1.0). k-pt
 !--->    weights can be relative weights since they are renormalized.
 !--->    input: for bulk - k1,k2,k3,wtkpt
 !--->           for film - k1,k2,wtkpt
-!--->    read k-points from file 41='kpts'
+         !--->    read k-points from file 41='kpts'
          IF (input%film) THEN
             READ (41,fmt=8050) kpts%nkpt,scale,xyu
          ELSE
             READ (41,*) kpts%nkpt,scale
          END IF
- 8030    FORMAT (4f10.5)
- 8040    FORMAT (i5,f20.10)
- 8050    FORMAT (i5,f20.10,3x,l1)
-
-         kpts%nkpt = max(kpts%nkpt,kpts%nkpt)
- 8060    FORMAT (i5,f20.10)
+8030     FORMAT (4f10.5)
+8040     FORMAT (i5,f20.10)
+8050     FORMAT (i5,f20.10,3x,l1)
+         
+         kpts%nkpt = MAX(kpts%nkpt,kpts%nkpt)
+8060     FORMAT (i5,f20.10)
          IF (scale.EQ.0.0) scale = 1.0
-      
-           DO nk = 1,kpts%nkpt
-             IF(input%film.and..not.oneD%odd%d1) THEN
-                READ (41,fmt=8080) (bk(i),i=1,2)
- 8080        FORMAT (3f10.5)
-             ELSE
-                READ (41,fmt=8030) (bk(i),i=1,3)
-             ENDIF
-             IF (oneD%odd%d1) THEN
+         
+         DO nk = 1,kpts%nkpt
+            IF(input%film.AND..NOT.oneD%odd%d1) THEN
+               READ (41,fmt=8080) (bk(i),i=1,2)
+8080           FORMAT (3f10.5)
+            ELSE
+               READ (41,fmt=8030) (bk(i),i=1,3)
+            ENDIF
+            IF (oneD%odd%d1) THEN
                bk(1) = 0.
                bk(2) = 0.
-             ELSEIF (input%film .AND. .NOT.oneD%odd%d1) THEN
+            ELSEIF (input%film .AND. .NOT.oneD%odd%d1) THEN
                bk(3) = 0.0
                IF (xyu) THEN
-!            transform to cartesian coordinates
-                  IF (cell%latnam.EQ.'hex') THEN
+                  !            transform to cartesian coordinates
+                  IF (latnam.EQ.'hex') THEN
                      bk(1) = bk(1)*tpi_const/cell%amat(2,2)
                      bk(2) = bk(2)*pi_const/cell%amat(1,1)
                   ELSE
                      bk(1) = bk(1)*pi_const/cell%amat(1,1)
                      bk(2) = bk(2)*pi_const/cell%amat(2,2)
                   END IF
-!            transform to internal coordinates
+                  !            transform to internal coordinates
                   s1 = 0.0
                   s2 = 0.0
                   DO j = 1,2
@@ -80,25 +90,27 @@
                   bk(1) = s1
                   bk(2) = s2
                END IF
-             END IF
-             DO i = 1,3
+            END IF
+            DO i = 1,3
                bk(i) = bk(i)/scale
-             ENDDO
-             CALL apws_dim(&
-     &                     bk(:),cell,input,noco,oneD,&
-     &                     nv,nv2,kq1,kq2,kq3)
-             stars%kq1_fft = max(kq1,stars%kq1_fft)
-             stars%kq2_fft = max(kq2,stars%kq2_fft)
-             stars%kq3_fft = max(kq3,stars%kq3_fft)
-             
-             dimension%nvd = max(dimension%nvd,nv)
-             dimension%nv2d = max(dimension%nv2d,nv2)
-
-           ENDDO ! k=pts
-           REWIND(41)
-           READ (41,*)
-  
-      CLOSE (41)
-
+            ENDDO
+            CALL apws_dim(&
+                 &                     bk(:),cell,input,noco,oneD,&
+                 &                     nv,nv2,kq1,kq2,kq3)
+            stars%kq1_fft = MAX(kq1,stars%kq1_fft)
+            stars%kq2_fft = MAX(kq2,stars%kq2_fft)
+            stars%kq3_fft = MAX(kq3,stars%kq3_fft)
+            
+            DIMENSION%nvd = MAX(DIMENSION%nvd,nv)
+            DIMENSION%nv2d = MAX(DIMENSION%nv2d,nv2)
+            
+         ENDDO ! k=pts
+         REWIND(41)
+         READ (41,*)
+         
+         CLOSE (41)
+      ELSE
+         kpts%nkpt=0
+      END IF
       END SUBROUTINE inpeig_dim
       END MODULE m_inpeigdim

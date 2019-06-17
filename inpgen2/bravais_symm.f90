@@ -25,7 +25,7 @@ CONTAINS
     ! (max occurs for close-packed fcc: 12)
     INTEGER lv1(3,neig12),lv2(3,neig12),lv3(3,neig12)
 
-    REAL, PARAMETER :: eps=1.0e-9
+    REAL, PARAMETER :: eps=1.0e-7
  
 
     !---> distances for the lattice vectors
@@ -42,6 +42,11 @@ CONTAINS
     m1 = nint( dmax * b1 )
     m2 = nint( dmax * b2 )
     m3 = nint( dmax * b3 )
+
+    !Hmm, do not really understand the code below, but IMHO these are the maximal values of entries in mrot...
+    m1=1
+    m2=1
+    m3=1
 
     !---->loop over all possible lattice vectors to find those with the
     !---->length, i.e., ones that could be rotations

@@ -38,6 +38,7 @@ PROGRAM inpgen
   USE m_types_oneD
   USE m_types_sliceplot
   USE m_types_stars
+  use m_read_old_inp
   
       IMPLICIT NONE
     
@@ -75,12 +76,12 @@ PROGRAM inpgen
            CALL judft_error("inp.xml exists and can not be overwritten")
       
       IF (judft_was_argument("-inp")) THEN
-         STOP "not yet"
-         !CALL read_old_input()
+         call read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
+              sliceplot,banddos,enpara,xcpot,kpts,hybrid, oneD)
          l_fullinput=.TRUE.
       ELSEIF (judft_was_argument("-inp.xml")) THEN
-         call read_old_inp(input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-              sliceplot,banddos,enpara,xcpot,kpts,hybrid, oneD)
+         !not yet
+         call judft_error("reading inp.xml not yet possible")
          l_fullinput=.TRUE.
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
@@ -118,10 +119,10 @@ PROGRAM inpgen
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
               cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
-              5,l_explicit,l_include,"inp.xml")
-         if (.not.l_include) CALL sym%print_XML(99,"sym.xml")
+              l_explicit,l_include,"inp.xml")
+         if (.not.l_include(1)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
-      if (.not.l_include) CALL kpts%print_XML(99,"kpts.xml")
+      if (.not.l_include(2)) CALL kpts%print_XML(99,"kpts.xml")
       
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
@@ -131,45 +132,46 @@ PROGRAM inpgen
       
       CALL juDFT_end("All done")
 
-    contains
-      subroutine determine_includes(l_include)
-        logical,intent(out)::l_include(4)  !kpts,operations,species,position
+    CONTAINS
+      SUBROUTINE determine_includes(l_include)
+        LOGICAL,INTENT(out)::l_include(4)  !kpts,operations,species,position
+        
+        CHARACTER(len=100)::str=''
+        LOGICAL           ::incl
 
-        l_include=[.false.,.false.,.true.,.true.]
-
+        l_include=[.FALSE.,.FALSE.,.TRUE.,.TRUE.]
+        
         IF (judft_was_argument("-inc")) THEN
            str=judft_string_for_argument("-inc")
            
-           do while(len_trim(str)>0) then
-              if (str(1:1)=='-') then
-                 incl=.false.
+           DO WHILE(LEN_TRIM(str)>0) 
+              IF (str(1:1)=='-') THEN
+                 incl=.FALSE.
                  str=str(2:)
-              else
-                 incl=.true.
-                 if (str(1:1)=='+') str=str(2:)
-              endif
-              select case(str(1:1))
-              case ('k','K')
+              ELSE
+                 incl=.TRUE.
+                 IF (str(1:1)=='+') str=str(2:)
+              ENDIF
+              SELECT CASE(str(1:1))
+              CASE ('k','K')
                  l_include(1)=incl
-              case ('o','O')
+              CASE ('o','O')
                  l_include(2)=incl
-              case ('s','S')
+              CASE ('s','S')
                  l_include(3)=incl
-              case ('p','P')
+              CASE ('p','P')
                  l_include(4)=incl
-              case ('a','A')
+              CASE ('a','A')
                  l_include(:)=incl
-              end select
-              if (index(str,"'")>0) then
-                 str=str(index(str,"'")+1:)
-              else
+              END SELECT
+              IF (INDEX(str,"'")>0) THEN
+                 str=str(INDEX(str,"'")+1:)
+              ELSE
                  str=""
-              end if
-           end do
-        endif
+              END IF
+           END DO
+        ENDIF
         
-        IF (LEN_TRIM(str)>1) CALL judft_error("Do not specify k-points in file and on command line")
-        str=judft_string_for_argument("-k")
-     END IF
+      END SUBROUTINE determine_includes
       
     END PROGRAM inpgen

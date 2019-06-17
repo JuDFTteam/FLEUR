@@ -7,7 +7,7 @@ MODULE m_types_xcpot_inbuild
    !This module contains the xcpot-type used for the in-build xc-implementations
    USE m_types_xcpot_data
    USE m_types_xcpot
-   USE m_types_xcpot_nofunction
+   USE m_types_xcpot_inbuild_nofunction
    USE m_judft
    IMPLICIT NONE
    PRIVATE

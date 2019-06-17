@@ -5,7 +5,9 @@
 !---------------------------------------------------------------------
       CONTAINS
         SUBROUTINE rw_noco_read(atoms,noco,input)
-          USE m_types
+          USE m_types_atoms
+          USE m_types_noco
+          USE m_types_input
           USE m_constants
           IMPLICIT NONE
           ! ..
@@ -110,7 +112,9 @@
         END SUBROUTINE rw_noco_read
 
       SUBROUTINE rw_noco_write(atoms,noco,input)
-      USE m_types
+      USE m_types_atoms
+      USE m_types_noco
+      USE m_types_input
       IMPLICIT NONE
 ! ..
 ! ..  Arguments ..

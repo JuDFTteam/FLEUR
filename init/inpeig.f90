@@ -1,7 +1,7 @@
       MODULE m_inpeig
       CONTAINS
       SUBROUTINE inpeig(&
-     &                  atoms,cell,input,l_is_oneD,kpts,enpara,kptsFilename)
+     &                  atoms,cell,input,l_is_oneD,kpts,enpara,kptsFilename,latnam)
 !*********************************************************************
 !     inputs the necessary quantities for the eigenvalue part (energy
 !     parameters, k-points, wavefunction cutoffs, etc.).
@@ -16,7 +16,11 @@
 !*********************************************************************
       USE m_gkptwgt
       USE m_constants
-      USE m_types
+      USE m_types_atoms
+      USE m_types_cell
+      USE m_types_input
+      USE m_types_kpts
+      USE m_types_enpara
       USE m_juDFT
      
       IMPLICIT NONE
@@ -27,13 +31,15 @@
       LOGICAL,INTENT(IN)           :: l_is_oneD
       TYPE(t_kpts),INTENT(INOUT)   :: kpts
       TYPE(t_enpara),OPTIONAL,INTENT(INOUT) :: enpara
+      
       CHARACTER(LEN=*),OPTIONAL,INTENT(IN) :: kptsFilename
+      CHARACTER(len=*),INTENT(IN)    :: latnam
 
 !     ..
 !     .. Local Scalars ..
       REAL      :: wt,scale
       INTEGER   :: i,j,nk,jsp,n
-      LOGICAL   :: xyu,l_enpara,l_clf
+      LOGICAL   :: xyu,l_enpara,l_clf,l_k
       CHARACTER(LEN=255) :: fname
 !     ..
 !
@@ -59,6 +65,9 @@
       ELSE
          fname = 'kpts'
       END IF
+
+      INQUIRE(file=TRIM(ADJUSTL(fname)),exist=l_k)
+      if (.not.l_k) return 
 
       OPEN (41,file=TRIM(ADJUSTL(fname)),form='formatted',status='old')
 !
@@ -91,7 +100,7 @@
                kpts%bk(3,nk) = 0.0
                IF (xyu) THEN
 !           transform to cartesian coordinates
-                  IF (cell%latnam.EQ.'hex') THEN
+                  IF (latnam.EQ.'hex') THEN
                      kpts%bk(1,nk) = kpts%bk(1,nk)*tpi_const/cell%amat(2,2)
                      kpts%bk(2,nk) = kpts%bk(2,nk)*pi_const/cell%amat(1,1)
                   ELSE
@@ -131,7 +140,7 @@
 !     determine new wt
 !
                CALL gkptwgt(&
-     &                      kpts,cell)
+     &                      kpts,cell,latnam)
                wt=sum(kpts%wtkpt)
              ELSE
                CALL juDFT_error("wtkpts",calledby ="inpeig",hint&

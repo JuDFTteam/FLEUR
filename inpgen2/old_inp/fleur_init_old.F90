@@ -8,10 +8,27 @@ MODULE m_fleur_init_old
 CONTAINS
   !> Collection of code for old-style inp-file treatment
   SUBROUTINE fleur_init_old(&
-       input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+       input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
        sliceplot,banddos,enpara,xcpot,kpts,hybrid,&
-       oneD,coreSpecInput)
-    USE m_types
+       oneD)
+    USE m_types_input
+    USE m_types_dimension
+    USE m_types_atoms
+    USE m_types_sphhar
+    USE m_types_cell
+    USE m_types_stars
+    USE m_types_sym
+    USE m_types_noco
+    USE m_types_vacuum
+    USE m_types_sliceplot
+    USE m_types_banddos
+    USE m_types_enpara
+    USE m_types_xcpot_inbuild_nofunction
+    USE m_types_kpts
+    USE m_types_hybrid
+    USE m_types_oned
+
+
     USE m_judft
     USE m_dimens
     USE m_inped
@@ -32,13 +49,11 @@ CONTAINS
     TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
     TYPE(t_banddos)  ,INTENT(OUT)  :: banddos
     TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
-    CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE  :: xcpot
+    TYPE(t_xcpot_inbuild_nf),INTENT(OUT)  :: xcpot
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
     TYPE(t_hybrid)   ,INTENT(OUT)  :: hybrid
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
-    TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
-    CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT)::forcetheo
-  
+   
 
     !     .. Local Scalars ..
     INTEGER    :: i,n,l,m1,m2,isym,iisym,pc,iAtom,iType
@@ -49,14 +64,12 @@ CONTAINS
     REAL                          :: a1(3),a2(3),a3(3)
     REAL                          :: dtild, phi_add
     LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
-
-    ALLOCATE(t_forcetheo::forcetheo) !default no forcetheorem type
-    ALLOCATE(t_xcpot_inbuild::xcpot)
+    character(len=4)              :: latnam
 
     namex = '    '
     relcor = '            '
 
-    CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
+    CALL dimens(input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
          kpts,oneD,hybrid)
     stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
     stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
@@ -114,7 +127,6 @@ CONTAINS
     ! HF/hybrid functionals/EXX
     ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
 
-    kpts%specificationType = 0
     input%l_coreSpec = .FALSE.
 
 
@@ -123,7 +135,7 @@ CONTAINS
  
     CALL inped(atoms,vacuum,input,banddos,xcpot,sym,&
          cell,sliceplot,noco,&
-         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
+         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam)
     !
     IF (xcpot%needs_grad()) THEN
        ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
@@ -141,14 +153,11 @@ CONTAINS
     namex=xcpot%get_name()
     l_krla = xcpot%data%krla.EQ.1
 
-    IF (mpi%irank.NE.0) THEN
-       CALL xcpot%init(namex,l_krla,atoms%ntype)
-    END IF
-
-    CALL setup(mpi,atoms,kpts,DIMENSION,sphhar,&
-         sym,stars,oneD,input,noco,&
-         vacuum,cell,xcpot,&
-         sliceplot,enpara)
+    !Call xcpot%init(namex,l_krla,atoms%ntype)
+    
+    CALL setup(atoms,kpts,&
+         sym,oneD,input,cell,&
+         enpara,latnam)
 
     banddos%l_orb = .FALSE.
     banddos%orbCompAtom = 0

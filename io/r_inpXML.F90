@@ -24,10 +24,10 @@ CONTAINS
       USE m_types
       USE m_types_forcetheo_extended
       USE m_symdata , ONLY : nammap, ord2, l_c2
-      USE m_rwsymfile
+      !USE m_rwsymfile
       USE m_xmlIntWrapFort
       USE m_inv3
-      USE m_spg2set
+      !USE m_spg2set
       USE m_closure, ONLY : check_close
       !USE m_symproperties
       USE m_calculator

@@ -26,24 +26,35 @@
 !     *******************************************************
 !
       CONTAINS
-        SUBROUTINE inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
+        SUBROUTINE inped(atoms,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
-                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
+                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam)
           USE m_rwinp
-          USE m_chkmt
+          !USE m_chkmt
           USE m_inpnoco
           USE m_constants
-          USE m_types
+          USE m_types_atoms
+          USE m_types_vacuum
+          USE m_types_input
+          USE m_types_banddos
+          USE m_types_xcpot_inbuild_nofunction
+          USE m_types_sym
+          USE m_types_cell
+          USE m_types_sliceplot
+          USE m_types_noco
+          USE m_types_stars
+          USE m_types_oneD
+          USE m_types_hybrid
+          USE m_types_kpts
           USE m_setlomap
           IMPLICIT NONE
           !     ..
           !     .. Scalar Arguments ..
           TYPE(t_atoms),     INTENT(INOUT) :: atoms
-          TYPE(t_obsolete),  INTENT(INOUT) :: obsolete
           TYPE(t_vacuum),    INTENT(INOUT) :: vacuum
           TYPE(t_input),     INTENT(INOUT) :: input
           TYPE(t_banddos),   INTENT(INOUT) :: banddos
-          TYPE(t_xcpot_inbuild),     INTENT(INOUT) :: xcpot
+          TYPE(t_xcpot_inbuild_nf),     INTENT(INOUT) :: xcpot
           TYPE(t_sym),       INTENT(INOUT) :: sym
           TYPE(t_cell),      INTENT(INOUT) :: cell
           TYPE(t_sliceplot), INTENT(INOUT) :: sliceplot
@@ -57,7 +68,7 @@
           REAL,              INTENT(OUT)   :: a3(3)
           CHARACTER(len=4),  INTENT(OUT)   :: namex 
           CHARACTER(len=12), INTENT(OUT)   :: relcor
-
+          CHARACTER(len=4),INTENT(OUT)     ::latnam
           !     .. Local Scalars ..
           REAL dr,dtild,r,kmax1,dvac1,zp
           INTEGER i,iz,j,n,n1,na,ntst,nn,ios
@@ -74,6 +85,7 @@
           !     ..
           !     .. Data statements ..
           DATA llr(0)/'absolute'/,llr(1)/'floating'/
+          
           !
 
           a1(:) = 0
@@ -82,8 +94,8 @@
 
           na = 0
 
-          CALL rw_inp('r',atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3)
+          CALL rw_inp('r',atoms,vacuum,input,stars,sliceplot,banddos,&
+               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3,latnam)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
@@ -112,7 +124,7 @@
 
 8010      FORMAT (/,/,4x,10a8,/,/)
           !--->    the menu for namgrp can be found in subroutine spgset
-          WRITE (6,FMT=8030) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
+          WRITE (6,FMT=8030) latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
 8030      FORMAT (' lattice=',a3,/,' name of space group=',a4,/,' inversion symmetry=   ',l1&
                ,/,' z-reflection symmetry=',l1,/,' vacuum-inversion symm=',l1,/,' jspins=',i1)
 
@@ -126,7 +138,7 @@
 
 
           IF (ALL(a1.EQ.0.)) THEN
-             WRITE (6,'(a4,3f10.5,a8,a4)') 'a1 =',a1(:),' latnam=',cell%latnam
+             WRITE (6,'(a4,3f10.5,a8,a4)') 'a1 =',a1(:),' latnam=',latnam
              CALL juDFT_error("latnam",calledby ="inped")
           ENDIF
           dtild=a3(3)
@@ -186,7 +198,7 @@
              cell%vol = cell%omtil
              cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
              IF (cell%area.LT.1.0e-7) THEN
-                IF (cell%latnam.EQ.'any') THEN
+                IF (latnam.EQ.'any') THEN
                    cell%area = 1.
                 ELSE
                    CALL juDFT_error("area = 0",calledby ="inped")
@@ -257,21 +269,6 @@
 !!$          !+guta
 !!$          IF ((xcpot%icorr.EQ.-1).OR.(xcpot%icorr.GE.6)) THEN
 
-          IF (xcpot%needs_grad()) THEN
-             obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
-            
-
-             !        iggachk: removed; triggered via idsprs (see below)
-             !                 idsprs-0(mt,l=0),-l(nmt),-i(interstitial),-v(vacuum)
-             !                 enable to make gga partially enactive if corresponding
-             !                 idsprs set to be zero.
-
-
-             WRITE (6,FMT=8122) 1,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
-             WRITE (6,'(/)')
-8122         FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1, ',chng=',d10.3)
-
-          ENDIF
           !-guta
           !     specification of atoms
           
@@ -349,7 +346,7 @@
           !
           l_gga= xcpot%needs_grad()
           l_test = .TRUE.                  ! only checking, dont use new parameters
-          CALL chkmt(atoms,input,vacuum,cell,oneD,l_test,l_gga,noel, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
+          !CALL chkmt(atoms,input,vacuum,cell,oneD,l_test,l_gga,noel, kmax1,dtild,dvac1,lmax1,jri1,rmt1,dx1)
 
           WRITE (6,FMT=8180) cell%volint
 8180      FORMAT (13x,' volume of interstitial region=',f12.6)
@@ -384,8 +381,7 @@
 
           !--->    nwd = number of energy windows; lepr = 0 (1) for energy
           !--->    parameters given on absolute (floating) scale
-          IF (ALL(obsolete%lepr .NE. (/0,1/))) CALL judft_error("Wrong choice of lepr",calledby="inped")
-          WRITE (6,FMT=8320) input%l_f,input%eonly,1,llr(obsolete%lepr)
+          WRITE (6,FMT=8320) input%l_f,input%eonly,1,llr(0)
           WRITE (6,FMT=8330) atoms%ntype, (atoms%lnonsph(n),n=1,atoms%ntype)
 8320      FORMAT (1x,/,/,/,' input of parameters for eigenvalues:',/,t5,&
                &       'calculate Pulay-forces = ',l1,/,t5,'eigenvalues ',&
@@ -396,17 +392,10 @@
           !
           !--->    input information  for each window
           !
-          IF (obsolete%lepr.EQ.1) THEN
-             WRITE ( 6,'(//,''  Floating energy parameters: relative'',                                    '' window(s):'')')
-          ENDIF
           !--->    energy window
 
           !--->    for floating energy parameters, the window will be given relative
           !--->    to the highest/lowest energy parameters. a sanity check is made here
-          IF (obsolete%lepr.EQ.1) THEN
-             input%ellow = MIN( input%ellow , -0.2 )
-             input%elup  = MAX( input%elup  ,  0.15 )
-          ENDIF
           !
           WRITE (6,FMT=8350) input%ellow,input%elup,input%zelec
 8350      FORMAT (1x,/,/,' energy window from',f8.3,' to', f8.3,' hartrees; nr. of electrons=',f6.1)

@@ -308,7 +308,7 @@ SUBROUTINE w_inpXML(&
       end if
    enddo
 
-   if (.not.include(3)) then
+   if (.not.l_include(3)) then
       open(99,file='species.xml')
       WRITE (fileNum,'(a)')'      <!-- species included here -->'
       WRITE (fileNum,'(a)')'      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="species.xml"> </xi:include>'
@@ -392,12 +392,12 @@ SUBROUTINE w_inpXML(&
    END DO
    WRITE (fileNum,'(a)') '   </atomSpecies>'
 
-   if (.not.include(3)) then
+   if (.not.l_include(3)) then
       close(99)
       fileNum=98
    endif
 
-   if (.not.include(4)) then
+   if (.not.l_include(4)) then
       open(99,file='atoms.xml')
       WRITE (fileNum,'(a)')'      <!-- atoms group included here -->'
       WRITE (fileNum,'(a)')'      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="atoms.xml"> </xi:include>'
@@ -487,7 +487,7 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,'(a)') '      </atomGroup>'
    END DO
    WRITE (fileNum,'(a)') '   </atomGroups>'
-   if (.not.include(3)) then
+   if (.not.l_include(4)) then
       close(99)
       fileNum=98
    endif

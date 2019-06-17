@@ -19,7 +19,10 @@
 !*********************************************************************
       USE m_boxdim
       USE m_ifft,     ONLY : ifft235
-      USE m_types
+      USE m_types_cell
+      USE m_types_input
+      USE m_types_noco
+      USE m_types_oned
 
       IMPLICIT NONE
       REAL,INTENT(IN)              :: bkpt(3)

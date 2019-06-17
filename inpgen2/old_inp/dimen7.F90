@@ -4,7 +4,7 @@
       SUBROUTINE dimen7(&
      &                  input,sym,stars,&
      &                  atoms,sphhar,dimension,vacuum,&
-     &                  obsolete,kpts,oneD,hybrid,cell)
+     &                  kpts,oneD,hybrid,cell)
 
 !
 ! This program reads the input files of the flapw-programm (inp & kpts)
@@ -19,9 +19,25 @@
       USE m_constants
       USE m_rwinp
       USE m_inpnoco
-      USE m_julia
-      USE m_od_kptsgen
-      USE m_types
+!      USE m_julia
+!      USE m_od_kptsgen
+      USE m_types_input
+      USE m_types_sym
+      USE m_types_stars
+      USE m_types_atoms
+      USE m_types_sphhar
+      USE m_types_dimension
+      USE m_types_vacuum
+      USE m_types_kpts
+      USE m_types_oneD
+      USE m_types_hybrid
+      USE m_types_cell
+      USE m_types_noco
+      USE m_types_banddos
+      USE m_types_sliceplot
+      USE m_types_xcpot_inbuild_nofunction
+
+
       USE m_firstglance
       USE m_inv3
       USE m_rwsymfile
@@ -40,7 +56,6 @@
       TYPE(t_sphhar),INTENT(INOUT)  :: sphhar
       TYPE(t_dimension),INTENT(INOUT) :: dimension
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
-      TYPE(t_obsolete),INTENT(INOUT) :: obsolete
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
@@ -49,7 +64,7 @@
       TYPE(t_noco)      :: noco
       TYPE(t_sliceplot) :: sliceplot
       TYPE(t_banddos)   :: banddos
-      TYPE(t_xcpot_inbuild)     :: xcpot
+      TYPE(t_xcpot_inbuild_nf)     :: xcpot
 
 !
 !
@@ -77,8 +92,9 @@
 
 !     added for HF and hybrid functionals
       LOGICAL               ::  l_gamma=.false.
+      character(len=4) :: latnam
 
-      EXTERNAL prp_xcfft_box,parawrite
+      EXTERNAL prp_xcfft_box!,parawrite
 !     ..
       
     
@@ -113,9 +129,9 @@
 !---> read complete input and calculate nvacd,llod,lmaxd,jmtd,neigd and 
 !
       CALL rw_inp('r',&
-     &            atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
+     &            atoms,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3)
+     &                  noel,namex,relcor,a1,a2,a3,latnam)
 
 !---> pk non-collinear
 !---> read the angle and spin-spiral information from nocoinp
@@ -211,7 +227,7 @@
          symfh = 94 ; symfn = 'sym.out'
          CALL rw_symfile(rw,symfh,symfn,nopd,cell%bmat,sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
       ELSE
-         CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,cell%latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
+         CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
       ENDIF
       sphhar%ntypsd = 0
       IF (.NOT.oneD%odd%d1) THEN
@@ -305,10 +321,10 @@
           IF(l_gamma .AND. banddos%ndir .EQ. 0) THEN
          call judft_error("gamma swtich not supported in old inp file anymore",calledby="dimen7")
          ELSE
-         CALL julia(sym,cell,input,noco,banddos,kpts,.false.,.FALSE.)
+!         CALL julia(sym,cell,input,noco,banddos,kpts,.false.,.FALSE.)
          ENDIF
        ELSE
-        CALL od_kptsgen (kpts%nkpt)
+!        CALL od_kptsgen (kpts%nkpt)
        ENDIF
       ELSE
         IF(input%gw.eq.2) THEN
@@ -336,19 +352,19 @@
 !
 ! Using the k-point generator also for creation of q-points for the
 ! J-constants calculation:
-      IF(.not.l_qpts)THEN
-        kpts%nkpt3=nmopq
-        l_tmp=(/noco%l_ss,noco%l_soc/)
-        noco%l_ss=.false.
-        noco%l_soc=.false.
-        CALL julia(sym,cell,input,noco,banddos,kpts,.true.,.FALSE.)
-        noco%l_ss=l_tmp(1); noco%l_soc=l_tmp(2)
-      ENDIF
+!      IF(.not.l_qpts)THEN
+!        kpts%nkpt3=nmopq
+!        l_tmp=(/noco%l_ss,noco%l_soc/)
+!        noco%l_ss=.false.
+!        noco%l_soc=.false.
+!        CALL julia(sym,cell,input,noco,banddos,kpts,.true.,.FALSE.)
+!        noco%l_ss=l_tmp(1); noco%l_soc=l_tmp(2)
+!      ENDIF
 
 !
 ! now proceed as usual
 !
-      CALL inpeig_dim(input,obsolete,cell,noco,oneD,kpts,dimension,stars)
+      CALL inpeig_dim(input,cell,noco,oneD,kpts,dimension,stars,latnam)
       vacuum%layerd = max(vacuum%layerd,1)
       dimension%nstd = max(dimension%nstd,30)
       atoms%ntype = atoms%ntype
@@ -356,7 +372,7 @@
 
       atoms%nlod = max(atoms%nlod,2) ! for chkmt
       input%jspins=input%jspins
-      CALL parawrite(sym,stars,atoms,sphhar,DIMENSION,vacuum,obsolete,kpts,oneD,input)
+      !CALL parawrite(sym,stars,atoms,sphhar,DIMENSION,vacuum,kpts,oneD,input)
 
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&

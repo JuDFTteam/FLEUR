@@ -11,7 +11,7 @@
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,dtild_opt)!,name_opt)
+     &                  noel,namex,relcor,a1,a2,a3,latnam,dtild_opt)!,name_opt)
 
 !*********************************************************************
 !* This subroutine reads or writes an inp - file on unit iofile      *
@@ -19,7 +19,20 @@
 !*                                                           Gustav  *
 !*********************************************************************
       USE m_calculator
-      USE m_types
+      USE m_types_input
+      USE m_types_sym
+      USE m_types_stars
+      USE m_types_atoms
+      USE m_types_vacuum
+      USE m_types_kpts
+      USE m_types_oneD
+      USE m_types_hybrid
+      USE m_types_cell
+      USE m_types_banddos
+      USE m_types_sliceplot
+      USE m_types_xcpot_inbuild_nofunction
+      USE m_types_noco
+
   
       IMPLICIT NONE
 ! ..
@@ -31,14 +44,13 @@
       TYPE(t_stars),INTENT(INOUT)   :: stars 
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
-      TYPE(t_obsolete),INTENT(INOUT) :: obsolete
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_banddos),INTENT(INOUT)  :: banddos
       TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
-      TYPE(t_xcpot_inbuild),INTENT(INOUT)    :: xcpot
+      TYPE(t_xcpot_inbuild_nf),INTENT(INOUT)    :: xcpot
       TYPE(t_noco),INTENT(INOUT)     :: noco
     
       REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3)
@@ -46,6 +58,7 @@
       CHARACTER(len=4),INTENT(OUT) :: namex 
       CHARACTER(len=12),INTENT(OUT):: relcor
       REAL,INTENT(IN),OPTIONAL     :: dtild_opt
+      CHARACTER(len=*),INTENT(INOUT)::latnam
       !CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
 
 
@@ -142,14 +155,14 @@
  7000 FORMAT (10a8)
 !
       READ (UNIT=5,FMT=7020,END=99,ERR=99)&
-     &     cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+     &     latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
       WRITE (6,9020)&
-     &     cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+     &     latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
  7020 FORMAT (a3,1x,a4,6x,l1,6x,l1,7x,l1,8x,i1,8x,l1,5x,l1)
 !
-      IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
-     &    (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3').OR.&
-     &    (cell%latnam.EQ.'fcc').OR.(cell%latnam.EQ.'bcc')) THEN
+      IF ((latnam.EQ.'squ').OR.(latnam.EQ.'hex').OR.&
+     &    (latnam.EQ.'c-b').OR.(latnam.EQ.'hx3').OR.&
+     &    (latnam.EQ.'fcc').OR.(latnam.EQ.'bcc')) THEN
          READ (UNIT = 5,FMT =*,iostat = ierr) a1(1)
          IF (ierr /= 0) THEN
             BACKSPACE(5)
@@ -157,7 +170,7 @@
             a1(1)      = evaluatefirst(line)
          ENDIF
          WRITE (6,9030) a1(1)
-      ELSEIF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
+      ELSEIF ((latnam.EQ.'c-r').OR.(latnam.EQ.'p-r')) THEN
          READ (UNIT = 5,FMT=*,iostat=ierr) a1(1),a2(2)
          IF (ierr /= 0) THEN
             BACKSPACE(5)
@@ -166,7 +179,7 @@
             a2(2)      = evaluatefirst(line)
          ENDIF
          WRITE (6,9030) a1(1),a2(2)
-      ELSEIF (cell%latnam.EQ.'obl') THEN
+      ELSEIF (latnam.EQ.'obl') THEN
          READ (UNIT = 5,FMT =*,iostat= ierr) a1(1),a1(2)
          IF (ierr /= 0) THEN
             BACKSPACE(5)
@@ -183,7 +196,7 @@
          ENDIF
          WRITE (6,9030) a1(1),a1(2)
          WRITE (6,9030) a2(1),a2(2)
-      ELSEIF (cell%latnam.EQ.'any') THEN
+      ELSEIF (latnam.EQ.'any') THEN
           READ (UNIT=5,FMT=*,iostat= ierr) a1
           IF (ierr /= 0) THEN
              BACKSPACE(5)
@@ -203,18 +216,18 @@
           WRITE (6,9030) a1(1),a1(2),a1(3)
           WRITE (6,9030) a2(1),a2(2),a2(3)
       ELSE
-          WRITE (6,*) 'rw_inp: cell%latnam ',cell%latnam,' unknown'
+          WRITE (6,*) 'rw_inp: latnam ',latnam,' unknown'
            CALL juDFT_error("Unkown lattice name",calledby="rw_inp")
       ENDIF
 !
 !
-      IF (cell%latnam.EQ.'squ') THEN
+      IF (latnam.EQ.'squ') THEN
          a2(2) = a1(1)
       END IF
 !
 !     Centered rectangular, special case for bcc(110)
 !
-      IF (cell%latnam.EQ.'c-b') THEN
+      IF (latnam.EQ.'c-b') THEN
          a = a1(1)
          hs2 = sqrt(2.)*0.5e0
          a1(1) = a*hs2
@@ -227,11 +240,11 @@
 !     on input: a ---> half of long diagonal
 !               b ---> half of short diagonal
 !
-      IF (cell%latnam.EQ.'c-r') THEN
+      IF (latnam.EQ.'c-r') THEN
          a1(2) = -a2(2)
          a2(1) =  a1(1)
       END IF
-      IF (cell%latnam.EQ.'hex') THEN
+      IF (latnam.EQ.'hex') THEN
          s3 = sqrt(3.)
          ah = a1(1)/2.
          a1(1) = ah*s3
@@ -239,7 +252,7 @@
          a2(1) = a1(1)
          a2(2) = ah
       END IF
-      IF (cell%latnam.EQ.'hx3') THEN
+      IF (latnam.EQ.'hx3') THEN
          s3 = sqrt(3.)
          ah = a1(1)/2.
          a1(1) = ah
@@ -259,7 +272,7 @@
      &       "for namgrp ='any' please provide a sym.out -file !"&
      &       ,calledby ="rw_inp")
       ENDIF
-      IF (cell%latnam.EQ.'any') THEN
+      IF (latnam.EQ.'any') THEN
 !        CALL juDFT_error("please specify lattice type (squ,p-r,c-r,hex,hx3,obl)",calledby="rw_inp")
         READ (UNIT=5,FMT=*,iostat=ierr) a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
         IF (ierr /= 0) THEN
@@ -293,7 +306,7 @@
      &    (namex.EQ.'Rpbe').OR.(namex.EQ.'wc')  .OR.&
      &    (namex.EQ.'pbe0').OR.(namex.EQ.'hse ').OR.&
      &    (namex.EQ.'lhse').OR.(namex.EQ.'vhse')) THEN                    ! some defaults
-         obsolete%lwb=.false. ; obsolete%ndvgrd=6; idsprs=0 ; obsolete%chng=-0.1e-11
+         idsprs=0 
       ENDIF
       ! set mixing and screening for variable HSE functional
       WRITE (6,9040) namex,relcor
@@ -303,11 +316,12 @@
       READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
       IF (ch_test.EQ.'igr') THEN                          ! GGA input
          BACKSPACE (5)
-         READ (UNIT=5,FMT=7121,END=99,ERR=99)&
-     &                   idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
-         IF (idsprs.ne.0)&
-     &        CALL juDFT_warn("idsprs no longer supported in rw_inp")
-         WRITE (6,9121) idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
+         call judft_error("Old input files with explicit GGA parameters no longer supported")
+!         READ (UNIT=5,FMT=7121,END=99,ERR=99)&
+!     &                   idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
+!         IF (idsprs.ne.0)&
+!     &        CALL juDFT_warn("idsprs no longer supported in rw_inp")
+!         WRITE (6,9121) idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
  7121    FORMAT (5x,i1,5x,l1,8x,i1,8x,i1,6x,d10.3)
 
          READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
@@ -496,9 +510,9 @@
       WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
  6010 FORMAT (25i3)
 !
-      READ (UNIT=5,FMT=6010,END=99,ERR=99) nw,obsolete%lepr
+      READ (UNIT=5,FMT=6010,END=99,ERR=99) nw
       IF (nw.ne.1) CALL juDFT_error("Multiple window calculations not supported")
-      WRITE (6,9140) nw,obsolete%lepr
+      WRITE (6,9140) nw,0
 !
       zc=0.0
       READ (UNIT=5,FMT=*,END=99,ERR=99)
@@ -653,8 +667,7 @@
       READ (UNIT=5,FMT='(9x,f10.5,10x,f10.5,9x,f10.5)',&
      &     END=98,ERR=98) banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
 
-      kpts%posScale = 1.0
- 
+      
 ! added for exact-exchange or hybrid functional calculations:
 ! read in the number of k-points and nx,ny and nz given in the last line
 ! of the input file,
@@ -727,38 +740,38 @@
      &        ',ndir=',i2,',secvar=',l1)
       WRITE (5,9010) name
  9010 FORMAT (10a8)
-      WRITE(5,9020) cell%latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+      WRITE(5,9020) latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
  9020 FORMAT (a3,1x,a4,',invs=',l1,',zrfs=',l1,',invs2=',l1,&
      &       ',jspins=',i1,',l_noco=',l1,',l_J=',l1)
 !
-      IF (cell%latnam.EQ.'c-b') THEN
+      IF (latnam.EQ.'c-b') THEN
          a1(1) = sqrt(2.)* a1(1)
       END IF
-      IF (cell%latnam.EQ.'hex') THEN
+      IF (latnam.EQ.'hex') THEN
          s3 = sqrt(3.)
          a1(1) = 2*a1(1)/sqrt(3.)
       END IF
-      IF (cell%latnam.EQ.'hx3') THEN
+      IF (latnam.EQ.'hx3') THEN
          a1(1) = 2*a1(1)
       END IF
 !
-      IF ((cell%latnam.EQ.'squ').OR.(cell%latnam.EQ.'hex').OR.&
-     &    (cell%latnam.EQ.'c-b').OR.(cell%latnam.EQ.'hx3')) THEN
+      IF ((latnam.EQ.'squ').OR.(latnam.EQ.'hex').OR.&
+     &    (latnam.EQ.'c-b').OR.(latnam.EQ.'hx3')) THEN
           WRITE (5,9030) a1(1)
-      ELSEIF ((cell%latnam.EQ.'c-r').OR.(cell%latnam.EQ.'p-r')) THEN
+      ELSEIF ((latnam.EQ.'c-r').OR.(latnam.EQ.'p-r')) THEN
           WRITE (5,9030) a1(1),a2(2)
-      ELSEIF (cell%latnam.EQ.'obl') THEN
+      ELSEIF (latnam.EQ.'obl') THEN
           WRITE (5,9030) a1(1),a1(2)
           WRITE (5,9030) a2(1),a2(2)
-      ELSEIF (cell%latnam.EQ.'any') THEN
+      ELSEIF (latnam.EQ.'any') THEN
           WRITE (5,9030) a1(1),a1(2),a1(3)
           WRITE (5,9030) a2(1),a2(2),a2(3)
       ELSE
-          WRITE (6,*) 'rw_inp: cell%latnam ',cell%latnam,' unknown'
+          WRITE (6,*) 'rw_inp: latnam ',latnam,' unknown'
            CALL juDFT_error("Invalid lattice name",calledby="rw_inp")
       ENDIF
 !
-      IF (cell%latnam.EQ.'any') THEN
+      IF (latnam.EQ.'any') THEN
         WRITE (5,9031)  a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
         dtild = a3(3)
       ELSE
@@ -774,13 +787,13 @@
       ENDIF
  9040 FORMAT (a4,3x,a12)
  9041 FORMAT (a4,3x,a12,2f6.3)
-      IF ((namex.EQ.'pw91').OR.(namex.EQ.'l91').OR.&
-     &    (namex.eq.'pbe').OR.(namex.eq.'rpbe').OR.&
-   &    (namex.EQ.'Rpbe').OR.(namex.eq.'wc') ) THEN
-        WRITE (5,FMT=9121) idum,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
- 9121    FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1,&
-     &           ',chng=',d10.3)
-      ENDIF
+!      IF ((namex.EQ.'pw91').OR.(namex.EQ.'l91').OR.&
+!     &    (namex.eq.'pbe').OR.(namex.eq.'rpbe').OR.&
+!   &    (namex.EQ.'Rpbe').OR.(namex.eq.'wc') ) THEN
+!        WRITE (5,FMT=9121) idum,obsolete%lwb,obsolete%ndvgrd,0,obsolete%chng
+! 9121    FORMAT ('igrd=',i1,',lwb=',l1,',ndvgrd=',i1,',idsprs=',i1,&
+!     &           ',chng=',d10.3)
+!      ENDIF
       IF( namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
      &    .OR. namex.EQ.'vhse' ) THEN
         WRITE (5,9999) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
@@ -890,7 +903,7 @@
          WRITE (5,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)
       END IF
  9140 FORMAT (25i3)
-      WRITE (5,9140) 1,obsolete%lepr
+      WRITE (5,9140) 1,0
 
       WRITE (5,'(a)') 'ellow, elup, valence electrons:'
       

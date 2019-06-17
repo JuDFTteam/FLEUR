@@ -19,8 +19,8 @@ MODULE m_types_setup
   USE m_types_stars
   USE m_types_atoms
   USE m_types_sphhar
-  use m_types_dimension
-
+  USE m_types_dimension
+  USE m_types_vacuum
   
   
 

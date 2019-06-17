@@ -12,9 +12,19 @@ CONTAINS
   SUBROUTINE dimens(&
        &                  input,sym,stars,&
        &                  atoms,sphhar,dimension,vacuum,&
-       &                  obsolete,kpts,oneD,hybrid)
+       &                  kpts,oneD,hybrid)
 
-    USE m_types
+    USE m_types_input
+    USE m_types_sym
+    USE m_types_stars
+    USE m_types_atoms
+    USE m_types_sphhar
+    USE m_types_dimension
+    USE m_types_vacuum
+    USE m_types_kpts
+    USE m_types_oned
+    USE m_types_hybrid
+    USE m_types_cell
     USE m_dimen7
     USE m_firstglance
     IMPLICIT NONE
@@ -25,7 +35,6 @@ CONTAINS
     TYPE(t_sphhar),INTENT(INOUT) :: sphhar
     TYPE(t_dimension),INTENT(INOUT) :: dimension
     TYPE(t_vacuum),INTENT(INOUT) :: vacuum
-    TYPE(t_obsolete),INTENT(INOUT) :: obsolete
     TYPE(t_kpts),INTENT(INOUT) :: kpts
     TYPE(t_oneD),INTENT(INOUT) :: oneD
     TYPE(t_hybrid),INTENT(INOUT) :: hybrid
@@ -45,7 +54,7 @@ CONTAINS
        !call first_glance to generate k-points
        CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n10)
 
-       CALL dimen7(input,sym,stars,atoms,sphhar,dimension,vacuum,obsolete,kpts,&
+       CALL dimen7(input,sym,stars,atoms,sphhar,dimension,vacuum,kpts,&
                    oneD,hybrid,cell)
     !     in case of a parallel calculation we have to broadcast
     dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)

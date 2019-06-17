@@ -20,8 +20,11 @@
 
       USE m_constants, ONLY : tpi_const
       USE m_rwnoco
-      USE m_types
-      USE m_nocoInputCheck
+      USE m_types_atoms
+      USE m_types_input
+      USE m_types_vacuum
+      USE m_types_noco
+      Use m_nocoInputCheck
       IMPLICIT NONE
       TYPE(t_atoms),INTENT(INOUT) ::atoms
       TYPE(t_input),INTENT(INOUT) ::input
