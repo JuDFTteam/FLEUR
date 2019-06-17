@@ -284,6 +284,7 @@ CONTAINS
     IF ( mpi%irank == 0 ) WRITE(6,'(A)',advance='no') 'Preparations...'
     CALL cpu_TIME(time1)
 
+    call timestart("define gmat")
     ! Define gmat (symmetric)
     i = (hybrid%lexp+1)**2
     ALLOCATE ( gmat(i,i) )
@@ -305,7 +306,10 @@ CONTAINS
           END DO LP1
        END DO
     END DO
+    call timestop("define gmat")
+
     ! Calculate moments of MT functions
+    call timestart("calc moments of MT")
     DO itype=1,atoms%ntype
        DO l=0,hybrid%lcutm1(itype)
           DO i=1,hybrid%nindxm1(l,itype)
@@ -319,6 +323,9 @@ CONTAINS
                atoms%jri,atoms%jmtd,atoms%rmsh,atoms%dx,atoms%ntype,itype,gridf)
        END DO
     END DO
+    call timestop("calc moments of MT")
+
+    call timestart("getnorm")
     ! Look for different qnorm = |k+G|, definition of qnrm and pqnrm.
     CALL getnorm(kpts,hybrid%gptm,hybrid%ngptm,hybrid%pgptm, qnrm,nqnrm,pqnrm,cell)
     ALLOCATE ( sphbesmoment(0:hybrid%lexp,atoms%ntype,nqnrm),&
@@ -339,7 +346,9 @@ CONTAINS
 
     iqnrmstart = mpi%irank + 1
     iqnrmstep  = mpi%isize
-
+    call timestop("getnorm")
+    
+    call timestart("Bessel calculation")
     DO iqnrm = iqnrmstart,nqnrm,iqnrmstep
        qnorm = qnrm(iqnrm)
        DO itype = 1,atoms%ntype
@@ -387,6 +396,7 @@ CONTAINS
           END DO
        END DO
     END DO
+    call timestop("Bessel calculation")
 
     IF ( mpi%irank == 0 ) THEN
        WRITE(6,'(18X,A)',advance='no') 'done'
@@ -406,7 +416,7 @@ CONTAINS
     IF ( ANY( calc_mt ) ) THEN
 
        !       (1a) r,r' in same MT
-
+       call timestart("loop 1")
        ix  = 0
        iy  = 0
        iy0 = 0
@@ -452,6 +462,7 @@ CONTAINS
              END DO
           END DO
        END DO
+       call timestop("loop 1")
 
        !       (1b) r,r' in different MT
 
@@ -464,6 +475,7 @@ CONTAINS
     DO ikpt=ikptmin,ikptmax
 
        ! only the first rank handles the MT-MT part
+       call timestart("MT-MT part")
        IF ( calc_mt(ikpt) ) THEN
 
           ix  = 0
@@ -521,6 +533,7 @@ CONTAINS
           coulomb(:hybrid%nbasp*(hybrid%nbasp+1)/2,ikpt) = packmat(coulmat)
 
        END IF
+       call timestop("MT-MT part")
 
     END DO
     IF ( ANY( calc_mt ) ) DEALLOCATE( coulmat )
@@ -550,10 +563,10 @@ CONTAINS
     IF( ok .NE. 0 ) STOP 'coulombmatrix: failure allocation coulmat'
     coulmat = 0
 
+    call timestart("loop over interst.")
     DO ikpt = ikptmin,ikptmax !1,kpts%nkpt
 
        coulmat = 0
-
        ! start to loop over interstitial plane waves
        DO igpt0 = igptmin(ikpt),igptmax(ikpt) !1,hybrid%ngptm1(ikpt)
           igpt  = hybrid%pgptm1(igpt0,ikpt)
@@ -674,6 +687,7 @@ CONTAINS
           END DO
        END DO
     END DO
+    call timestop("loop over interst.")
 
     DEALLOCATE( coulmat,olap,integral )
 
@@ -695,6 +709,7 @@ CONTAINS
 
     CALL cpu_TIME(time1)
     ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
+    call timestart("calc smat")
     ALLOCATE ( smat(hybrid%gptmd,hybrid%gptmd) )
     smat = 0
     DO igpt2=1,hybrid%gptmd
@@ -720,8 +735,10 @@ CONTAINS
           smat(igpt2,igpt1) = CONJG(smat(igpt1,igpt2))
        END DO
     END DO
+    call timestop("calc smat")
 
     ! Coulomb matrix, contribution (3a)
+    call timestart("coulomb matrix")
     DO ikpt=ikptmin,ikptmax
 
        DO igpt0=igptmin(ikpt),igptmax(ikpt)
@@ -758,8 +775,10 @@ CONTAINS
        END DO
 
     END DO
+    call timestop("coulomb matrix")
     !     (3b) r,r' in different MT
-
+   
+    call timestart("loop 4:")
     DO ikpt=ikptmin,ikptmax!1,kpts%nkpt
 
        ! group together quantities which depend only on l,m and igpt -> carr2a
@@ -785,6 +804,7 @@ CONTAINS
        END DO
 
        !finally we can loop over the plane waves (G: igpt1,igpt2)
+       call timestart("loop over plane waves")
        ALLOCATE ( carr2(atoms%nat,(hybrid%lexp+1)**2),&
             structconst1(atoms%nat,(2*hybrid%lexp+1)**2) )
        carr2 = 0 ; structconst1 = 0
@@ -856,9 +876,12 @@ CONTAINS
           END DO
        END DO
        DEALLOCATE( carr2,carr2a,carr2b,structconst1 )
+       call timestop("loop over plane waves")
     END DO !ikpt
+    call timestop("loop 4:")
     !     Add corrections from higher orders in (3b) to coulomb(:,1)
     ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
+    call timestart("add corrections from higher orders")
     rdum = (4*pi_const)**(1.5d0)/cell%vol**2 * gmat(1,1)
     DO igpt0 = 1,hybrid%ngptm1(1)
        igpt2  = hybrid%pgptm1(igpt0,1) ; IF ( igpt2 == 1 ) CYCLE
@@ -945,10 +968,12 @@ CONTAINS
           END DO
        END DO
     END DO
+    call timestop("add corrections from higher orders")
   
     !     (3c) r,r' in same MT
 
     ! Calculate sphbesintegral
+    call timestart("sphbesintegral")
     ALLOCATE ( sphbes0(-1:hybrid%lexp+2,atoms%ntype,nqnrm),&
          &           carr2((hybrid%lexp+1)**2,hybrid%maxgptm) )
     sphbes0 = 0 ; carr2 = 0
@@ -959,8 +984,10 @@ CONTAINS
           IF( rdum.NE.0 ) sphbes0(-1,itype,iqnrm) = COS(rdum)/rdum
        END DO
     END DO
+    call timestop("sphbesintegral")
 
     l_warn = ( mpi%irank == 0 )
+    call timestart("loop 2")
     DO ikpt=ikptmin,ikptmax!1,nkpt
 
        DO igpt = 1,hybrid%ngptm(ikpt)
@@ -1016,6 +1043,7 @@ CONTAINS
        END DO
 
     END DO
+    call timestop("loop 2")
     DEALLOCATE( carr2 )
 
     IF ( mpi%irank == 0 ) THEN
@@ -1038,6 +1066,7 @@ CONTAINS
     ALLOCATE ( nsym_gpt(hybrid%gptmd,kpts%nkpt),&
          sym_gpt(MAXVAL(nsym1),hybrid%gptmd,kpts%nkpt) )
     nsym_gpt = 0 ; sym_gpt = 0
+    call timestart("loop 3")
     DO ikpt = ikptmin,ikptmax
        carr2 = 0 ; iarr = 0
        iarr(hybrid%pgptm1(:hybrid%ngptm1(ikpt),ikpt)) = 1
@@ -1090,6 +1119,8 @@ CONTAINS
           nsym_gpt(igpt0,ikpt) = ic
        END DO ! igpt0
     END DO ! ikpt
+    call timestop("loop 3")
+    call timestart("gap 1:")
     DEALLOCATE ( carr2,iarr,hybrid%pgptm1 )
     IF ( mpi%irank == 0 ) THEN
        WRITE(6,'(2X,A)',advance='no') 'done'
@@ -1131,6 +1162,8 @@ CONTAINS
     ! transform Coulomb matrix to the biorthogonal set
     IF ( mpi%irank == 0 ) WRITE(6,'(A)',advance='no') 'Transform to biorthogonal set...'
     CALL cpu_TIME(time1)
+    call timestop("gap 1:")
+    call timestart("calc eigenvalues olap_pw")
     DO ikpt = ikptmin,ikptmax
 
        !calculate IR overlap-matrix
@@ -1191,6 +1224,7 @@ CONTAINS
        coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt)+1))/2,ikpt) = coulhlp%to_packed()
           
     END DO
+    call timestop("calc eigenvalues olap_pw")
 
     IF ( mpi%irank == 0 ) THEN
        WRITE(6,'(1X,A)',advance='no') 'done'
@@ -1233,6 +1267,7 @@ CONTAINS
        ALLOCATE( coulombp_mtir_c(idum,1) )
 #endif
     endif
+    call timestart("loop bla")
     DO ikpt = ikptmin,ikptmax
        ikpt0 = 1
        ikpt1 = 1
@@ -1255,6 +1290,7 @@ CONTAINS
           ! store m-independent part of Coulomb matrix in MT spheres
           ! in coulomb_mt1(:hybrid%nindxm1(l,itype)-1,:hybrid%nindxm1(l,itype)-1,l,itype)
           !
+          call timestart("m-indep. part of coulomb mtx")
           indx1 = 0
           DO itype = 1,atoms%ntype
              DO ineq = 1,atoms%neq(itype)
@@ -1276,11 +1312,13 @@ CONTAINS
                 END DO
              END DO
           END DO
+          call timestop("m-indep. part of coulomb mtx")
 
           !
           ! store m-dependent and atom-dependent part of Coulomb matrix in MT spheres
           ! in coulomb_mt2(:hybrid%nindxm1(l,itype)-1,-l:l,l,iatom)
           !
+          call timestart("m-dep. part of coulomb mtx")
           indx1 = 0
           iatom = 0
           DO itype = 1,atoms%ntype
@@ -1302,11 +1340,13 @@ CONTAINS
                 END DO
              END DO
           END DO
+          call timestop("m-dep. part of coulomb mtx")
 
           !
           ! due to the subtraction of the divergent part at the Gamma point
           ! additional contributions occur
           !
+          call timestart("gamma point treatment")
           IF ( ikpt .EQ. 1 ) THEN
              !
              ! store the contribution of the G=0 plane wave with the MT l=0 functions in
@@ -1386,6 +1426,7 @@ CONTAINS
                 END DO
              END DO
           END IF
+          call timestop("gamma point treatment")
 
        END IF ! calc_mt
 
@@ -1393,6 +1434,7 @@ CONTAINS
        ! add the residual MT contributions, i.e. those functions with an moment,
        ! to the matrix coulomb_mtir, which is fully occupied
        !
+       call timestart("residual MT contributions")
        ic = 0
        DO itype = 1,atoms%ntype
           DO ineq = 1,atoms%neq(itype)
@@ -1455,6 +1497,7 @@ CONTAINS
              END DO
           END DO
        END DO
+       call timestop("residual MT contributions")
 
        IF( indx1 .NE. ic ) STOP 'coulombmatrix: error index counting'
 
@@ -1474,12 +1517,12 @@ CONTAINS
           coulombp_mtir_c(:ic2*(ic2+1)/2,ikpt0) = packmat(coulomb_mtir_c(:ic2,:ic2,ikpt1))
        end if
 #endif
-
+      call timestart("write coulomb_spm")
        if (sym%invs) THEN
 #ifdef CPP_IRCOULOMBAPPROX
-       call write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulomb_mtir_r(:,1))
+          call write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulomb_mtir_r(:,1))
 #else
-       CALL write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulombp_mtir_r(:,1))
+          CALL write_coulomb_spm_r(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_r(:,:,:,:,1),coulomb_mt3_r(:,:,:,1), coulombp_mtir_r(:,1))
 !!$       print *,"DEBUG"
 !!$       DO n1=1,SIZE(coulomb_mt1,1)
 !!$          DO n2=1,SIZE(coulomb_mt1,2)
@@ -1491,16 +1534,17 @@ CONTAINS
 !!$          ENDDO
 !!$       ENDDO
 #endif
-    else
+       else
 #ifdef CPP_IRCOULOMBAPPROX
-       call write_coulomb_spm_c(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_c(:,:,:,:,1),coulomb_mt3_c(:,:,:,1), coulomb_mtir_c(:,1))
+          call write_coulomb_spm_c(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_c(:,:,:,:,1),coulomb_mt3_c(:,:,:,1), coulomb_mtir_c(:,1))
 #else
-       call write_coulomb_spm_c(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_c(:,:,:,:,1),coulomb_mt3_c(:,:,:,1), coulombp_mtir_c(:,1))
-
+          call write_coulomb_spm_c(ikpt,coulomb_mt1(:,:,:,:,1),coulomb_mt2_c(:,:,:,:,1),coulomb_mt3_c(:,:,:,1), coulombp_mtir_c(:,1))
 #endif
-    endif
+       endif
+       call timestop("write coulomb_spm")
 
     END DO ! ikpt
+    call timestop("loop bla")
 
 
    
