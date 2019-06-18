@@ -544,6 +544,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
 
    ! Returns the spherical harmonics Y_lm(^rvec) for l = 0,...,ll in Y(1,...,(ll+1)**2).
    SUBROUTINE harmonicsr(Y,rvec,ll)
+      use m_judft
       IMPLICIT NONE
       INTEGER,INTENT(IN)    :: ll
       REAL,INTENT(IN)       :: rvec(3)
