@@ -6,10 +6,11 @@
 
 MODULE m_types_sym
   USE m_juDFT
+  use m_types_fleurinput
   IMPLICIT NONE
   PRIVATE
   !symmetry information
-  TYPE t_sym
+  TYPE,extends(t_fleurinput):: t_sym
      !No of sym ops
      INTEGER ::nop
      !Rot-matrices (3,3,nop)

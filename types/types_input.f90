@@ -6,8 +6,10 @@
 
 MODULE m_types_input
   use m_judfT
+  use m_types_fleurinput
   IMPLICIT NONE
-     TYPE t_input
+  private
+     TYPE,extends(t_fleurinput):: t_input
       LOGICAL :: film=.false.
       INTEGER:: jspins=1
       INTEGER:: neig=0
@@ -75,8 +77,9 @@ MODULE m_types_input
       INTEGER :: rdmftFunctional=0
     CONTAINS
       PROCEDURE :: read_xml=>read_xml_input
-
+      procedure :: init
    END TYPE t_input
+   public t_input
  CONTAINS
    SUBROUTINE read_xml_input(input,xml)
      USE m_types_xml
@@ -276,6 +279,8 @@ MODULE m_types_input
       END IF
     END SUBROUTINE read_xml_input
 
-     
+    subroutine init(input)
+      class(t_input),intent(input)::input
+    end subroutine init
 END MODULE m_types_input
   

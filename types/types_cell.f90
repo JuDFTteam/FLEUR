@@ -6,9 +6,10 @@
 
 MODULE m_types_cell
   USE m_judft
+  use m_types_fleurinput
   IMPLICIT NONE
   PRIVATE
-  TYPE t_cell
+  TYPE,extends(t_fleurinput):: t_cell
       !vol of dtilde box
       REAL::omtil
       !2D area
@@ -31,21 +32,20 @@ MODULE m_types_cell
    END TYPE t_cell
    PUBLIC t_cell
  CONTAINS
-   SUBROUTINE init(cell,dvac)
-     !initialize cell, only input is cell%amat and dvac in case of a film
+   SUBROUTINE init(cell)
+     !initialize cell, only input is cell%amat and cell%z1 in case of a film
      USE m_inv3
      USE m_constants,ONLY:tpi_const
      CLASS (t_cell),INTENT(INOUT):: cell
-     REAL,INTENT(IN)             :: dvac
-
+   
 
      CALL inv3(cell%amat,cell%bmat,cell%omtil)
      IF (cell%omtil<0) CALL judft_warn("Negative volume! You are using a left-handed coordinate system")
      cell%omtil=ABS(cell%omtil)
      
      cell%bmat=tpi_const*cell%bmat
-     IF (dvac>0) THEN
-        cell%vol = (cell%omtil/cell%amat(3,3))*dvac
+     IF (cell%z1>0) THEN
+        cell%vol = (cell%omtil/cell%amat(3,3))*cell%z1
         cell%area = cell%omtil/cell%amat(3,3)
      ELSE
         cell%vol = cell%omtil
@@ -55,7 +55,6 @@ MODULE m_types_cell
            CALL juDFT_warn("area = 0",calledby ="types_cell")
         END IF
      END IF
-     cell%z1=dvac/2
 
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
      cell%aamat=matmul(transpose(cell%amat),cell%amat)
@@ -70,10 +69,9 @@ MODULE m_types_cell
      character(len=200)::valueString,path
      REAL:: scale,dvac,dtild
      
-     dvac=0
      if (xml%GetNumberOfNodes('')==1) then
         path= '/fleurInput/cell/filmLattice'
-        dvac=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dvac'))
+        cell%z1=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dvac'))/2
         dtild=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dtilda'))
      else        
         path = '/fleurInput/cell/bulkLattice'
@@ -95,12 +93,10 @@ MODULE m_types_cell
      cell%amat(3,3) = evaluateFirst(valueString)
      
      IF (dvac>0) THEN
-        cell%amat(3,3)=dtild
-        cell%z1=dvac
+        cell%amat(3,3)=2*cell%z1
      ENDIF
      cell%amat=cell%amat*scale
      
-     call cell%init(dvac)
    END SUBROUTINE read_xml_cell
    
  END MODULE m_types_cell
