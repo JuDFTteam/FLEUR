@@ -19,15 +19,10 @@ MODULE m_types_xml
   TYPE t_xml
      INTEGER:: id
    CONTAINS
-     PROCEDURE,NOPASS :: InitInterface
-     PROCEDURE,NOPASS :: ParseSchema
-     PROCEDURE,NOPASS :: ParseDoc 
-     PROCEDURE,NOPASS :: ValidateDoc 
-     PROCEDURE,NOPASS :: InitXPath
+     PROCEDURE        :: init
      PROCEDURE,NOPASS :: GetNumberOfNodes  
      PROCEDURE,NOPASS :: SetAttributeValue  
      PROCEDURE,NOPASS :: GetAttributeValue  
-     PROCEDURE,NOPASS :: FreeResources
      PROCEDURE        :: read_q_list
      PROCEDURE,NOPASS :: popFirstStringToken
      PROCEDURE,NOPASS :: countStringTokens
@@ -42,6 +37,54 @@ MODULE m_types_xml
   PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBool,evaluateFirstBoolOnly,evaluateFirstInt,evaluateFirstIntOnly
 
 CONTAINS
+  SUBROUTINE init(xml)
+    USE iso_c_binding
+    CLASS(t_xml),INTENT(IN)::xml
+   
+    INTEGER                        :: errorStatus
+    CHARACTER(LEN=200,KIND=c_char) :: schemaFilename, docFilename
+    INTEGER                        :: i,numberNodes
+    CHARACTER(LEN=255)             :: xPathA,xPathB,valueString,versionString
+    REAL                           :: tempReal
+    INTERFACE
+       FUNCTION dropInputSchema() BIND(C, name="dropInputSchema")
+         USE iso_c_binding
+         INTEGER(c_int) dropInputSchema
+       END FUNCTION dropInputSchema
+    END INTERFACE
+    
+    errorStatus = 0
+    errorStatus = dropInputSchema()
+    IF(errorStatus.NE.0) THEN
+       CALL juDFT_error('Error: Cannot print out FleurInputSchema.xsd')
+    END IF
+  
+    schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
+    docFilename = "inp.xml"//C_NULL_CHAR
+    CALL xmlInitInterface()
+    CALL xmlParseSchema(schemaFilename)
+    CALL xmlParseDoc(docFilename)
+    CALL xmlValidateDoc()
+    CALL xmlInitXPath()
+    
+    ! Check version of inp.xml
+    versionString = xml%GetAttributeValue('/fleurInput/@fleurInputVersion')
+    IF((TRIM(ADJUSTL(versionString)).NE.'0.30')) THEN
+       CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
+    END IF
+    
+    ! Read in constants
+    xPathA = '/fleurInput/constants/constant'
+    numberNodes = xmlGetNumberOfNodes(xPathA)
+    DO i = 1, numberNodes
+       WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)), '[',i,']'
+       tempReal = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@value'))
+       valueString = xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@name')
+       CALL ASSIGN_var(valueString,tempReal)
+    END DO
+  END SUBROUTINE init
+
+
   INTEGER FUNCTION get_lmaxd(xml)
     CLASS(t_xml),INTENT(IN)::xml
     INTEGER :: n

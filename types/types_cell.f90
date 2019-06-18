@@ -27,6 +27,7 @@ MODULE m_types_cell
       REAL::volint
     CONTAINS
       PROCEDURE :: init
+      procedure :: read_xml=>read_xml_cell
    END TYPE t_cell
    PUBLIC t_cell
  CONTAINS
@@ -60,7 +61,7 @@ MODULE m_types_cell
      cell%aamat=matmul(transpose(cell%amat),cell%amat)
    END SUBROUTINE init
 
-   subroutine  read_xml(cell,xml)
+   SUBROUTINE  read_xml_cell(cell,xml)
      use m_types_xml
      class(t_cell),intent(out)::cell
      type(t_xml),intent(in)   ::xml
@@ -93,11 +94,13 @@ MODULE m_types_cell
      cell%amat(2,3) = evaluateFirst(valueString)
      cell%amat(3,3) = evaluateFirst(valueString)
      
-     IF (dvac>0) cell%amat(3,3)=dtild
-
+     IF (dvac>0) THEN
+        cell%amat(3,3)=dtild
+        cell%z1=dvac
+     ENDIF
      cell%amat=cell%amat*scale
      
      call cell%init(dvac)
-   end subroutine read_xml
+   END SUBROUTINE read_xml_cell
    
  END MODULE m_types_cell

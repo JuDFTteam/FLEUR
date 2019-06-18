@@ -83,6 +83,9 @@ CONTAINS
                enpara%qn_ello(lo,n,:)=-1*enpara%qn_ello(lo,n,:)
        END DO
     END DO
+    !Read vacuum
+    
+
   END SUBROUTINE read_xml_enpara
 
   SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,str,lo)
