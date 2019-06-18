@@ -133,7 +133,6 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
    END DO
-   call val_den%copyPotDen(outDen)
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       IF(atoms%n_gf.GT.0) THEN
@@ -150,7 +149,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       ENDIF
    ENDIF
 
-   call xcpot%val_den%copyPotDen(outDen)
+   call val_den%copyPotDen(outDen)
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
       CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars,&
