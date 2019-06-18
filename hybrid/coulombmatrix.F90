@@ -153,6 +153,7 @@ CONTAINS
 
       nbasm1 = hybrid%nbasp + hybrid%ngptm(:)
 
+
       !     Calculate the structure constant
       CALL structureconstant(structconst, cell, hybrid, atoms, kpts, mpi)
 
@@ -162,11 +163,13 @@ CONTAINS
       !     Matrix allocation
       !
 
+      call timestart("coulomb allocation")
       IF (ALLOCATED(coulomb)) DEALLOCATE (coulomb)
 
       ALLOCATE (coulomb(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
       IF (ok .NE. 0) STOP 'coulombmatrix: failure allocation coulomb matrix'
       coulomb = 0
+      call timestop("coulomb allocation")
 
       IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16d0/1048576*SIZE(coulomb)
 
@@ -343,6 +346,7 @@ CONTAINS
       iqnrmstart = mpi%irank + 1
       iqnrmstep = mpi%isize
       call timestop("getnorm")
+
 
       call timestart("Bessel calculation")
       DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
@@ -561,6 +565,7 @@ CONTAINS
       ALLOCATE (coulmat(hybrid%nbasp, hybrid%maxgptm), stat=ok)
       IF (ok .NE. 0) STOP 'coulombmatrix: failure allocation coulmat'
       coulmat = 0
+      
 
       call timestart("loop over interst.")
       DO ikpt = ikptmin, ikptmax !1,kpts%nkpt
@@ -1720,6 +1725,7 @@ CONTAINS
       USE m_constants, ONLY: pi_const
       USE m_util, ONLY: harmonicsr, rorderp, rorderpf
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
@@ -1760,6 +1766,8 @@ CONTAINS
       COMPLEX                   ::  y((2*hybrid%lexp + 1)**2)
       COMPLEX                   ::  shlp((2*hybrid%lexp + 1)**2, kpts%nkpt)
 
+      call timestart("calc struc_const.")
+
       IF (mpi%irank /= 0) first = .FALSE.
 
       rdum = cell%vol**(1d0/3) ! define "average lattice parameter"
@@ -1783,6 +1791,7 @@ CONTAINS
       !
       !     Determine cutoff radii for real-space and Fourier-space summation
       ! (1) real space
+      call timestart("determine cutoff radii")
       a = 1
 1     rexp = EXP(-a)
       g(0) = rexp/a*(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
@@ -1807,8 +1816,10 @@ CONTAINS
          GOTO 1
       END IF
       rad = a/scale
+      call timestop("determine cutoff radii")
 
       ! (2) Fourier space
+      call timestart("fourier space")
       a = 1
 2     aa = (1 + a**2)**(-1)
       g(0) = pref*aa**4/a**2
@@ -1824,6 +1835,7 @@ CONTAINS
          GOTO 2
       END IF
       rrad = a*scale
+      call timestop("fourier space")
 
       IF (first) THEN
          WRITE (6, '(/A,2F10.5)') 'Cutoff radii: ', rad, rrad
@@ -1832,7 +1844,9 @@ CONTAINS
 
       !
       !     Determine atomic shells
+      call timestart("determine atomic shell")
       CALL getshells(ptsh, nptsh, radsh, nshell, rad, cell%amat, first)
+      call timestop("determine atomic shell")
 
       ALLOCATE (pnt(nptsh))
       structconst = 0
@@ -1842,6 +1856,7 @@ CONTAINS
       !
       CALL cpu_TIME(time1)
 
+      call timestart("realspace sum")
       DO ic2 = 1, atoms%nat
          DO ic1 = 1, atoms%nat
             IF (ic2 .NE. 1 .AND. ic1 .EQ. ic2) CYCLE
@@ -1851,7 +1866,9 @@ CONTAINS
                a = SQRT(SUM(ra**2))
                radsh(i) = a
             END DO
+            call timestart("rorderpf")
             CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001d0)/LOG(2d0))))
+            call timestop("rorderpf")
             ptsh = ptsh(:, pnt)
             radsh = radsh(pnt)
             maxl = 2*hybrid%lexp
@@ -1899,8 +1916,11 @@ CONTAINS
                   END DO
                END IF
                IF (ishell .GT. conv(maxl) .AND. maxl .NE. 0) maxl = maxl - 1
+               call timestart("harmonics")
                CALL harmonicsr(y, ra, maxl)
+               call timestop("harmonics")
                y = CONJG(y)
+               call timestart("kloop")
                DO ikpt = 1, kpts%nkpt
                   rdum = kpts%bk(1, ikpt)*ptsh(1, i) + kpts%bk(2, ikpt)*ptsh(2, i) + kpts%bk(3, ikpt)*ptsh(3, i)
                   cexp = EXP(CMPLX(0.0, 1.0)*2*pi_const*rdum)
@@ -1917,10 +1937,12 @@ CONTAINS
                      END IF
                   END DO
                END DO
+               call timestop("kloop")
             END DO
             structconst(:, ic1, ic2, :) = shlp
          END DO
       END DO
+      call timestop("realspace sum")
 
       DEALLOCATE (ptsh, radsh)
 
@@ -1933,12 +1955,15 @@ CONTAINS
       !
       !     Determine reciprocal shells
       !
+      call timestart("determince reciproc. shell")
       CALL getshells(ptsh, nptsh, radsh, nshell, rrad, cell%bmat, first)
+      call timestop("determince reciproc. shell")
       ! minimum nonzero reciprocal-shell radius (needed in routines concerning the non-local hartree-fock exchange)
       !hybrid%radshmin = radsh(2)
       !
       !     Fourier-space sum
       !
+      call timestart("fourierspace sum")
       DO ikpt = 1, kpts%nkpt
          k = kpts%bk(:, ikpt)
          maxl = MIN(7, hybrid%lexp*2)
@@ -2001,6 +2026,7 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("fourierspace sum")
 
       CALL cpu_TIME(time2)
       IF (first) WRITE (6, '(A,F7.2)') '  Timing: ', time2 - time1
@@ -2046,6 +2072,7 @@ CONTAINS
 
       first = .FALSE.
 
+      call timestop("calc struc_const.")
    END SUBROUTINE structureconstant
 
    !     -----------------
