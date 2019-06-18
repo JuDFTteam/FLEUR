@@ -77,7 +77,8 @@
 
       rkpt    = matmul(rrot,kpts%bk(:,nk))
       rkpthlp = rkpt
-      rkpt    = modulo1(rkpt,kpts%nkpt3)
+      CALL judft_error("Missing function for hybrid code here...")
+      !rkpt    = modulo1(rkpt,kpts%nkpt3)
       g1      = nint(rkpt - rkpthlp)
 
 
@@ -227,7 +228,8 @@
 
       rkpt    = matmul(rrot,kpts%bk(:,nk))
       rkpthlp = rkpt
-      rkpt    = modulo1(rkpt,kpts%nkpt3)
+      CALL judft_error("Missing function for hybrid code here...")
+      !rkpt    = modulo1(rkpt,kpts%nkpt3)
       g1      = nint(rkpt - rkpthlp)
 
       ! MT coefficients
@@ -643,7 +645,8 @@
 
       rkpt    = matmul(rrot,kpts%bkf(:,ikpt0))
       rkpthlp = rkpt
-      rkpt    = modulo1(rkpt,kpts%nkpt3)
+      CALL judft_error("Missing function for hybrid code here...")
+      !rkpt    = modulo1(rkpt,kpts%nkpt3)
       g       = nint(rkpthlp-rkpt)
 
 #ifdef CPP_DEBUG
@@ -854,7 +857,8 @@
         rrot    = transpose( sym%mrot(:,:,sym%invtab(iisym)) )
         invrrot = transpose( sym%mrot(:,:,iisym) )
         rkpt    = matmul(rrot,kpts%bk(:,ikpt0))
-        rkpthlp = modulo1(rkpt,kpts%nkpt3)
+        CALL judft_error("Missing function for hybrid code here...")
+        !rkpthlp = modulo1(rkpt,kpts%nkpt3)
         g       = nint(rkpt - rkpthlp)
 
 
@@ -871,7 +875,8 @@
         rrot    = -transpose( sym%mrot(:,:,sym%invtab(iisym)) )
         invrrot = -transpose( sym%mrot(:,:,iisym) )
         rkpt    = matmul(rrot,kpts%bk(:,ikpt0))
-        rkpthlp = modulo1(rkpt,kpts%nkpt3)
+        CALL judft_error("Missing function for hybrid code here...")
+        !rkpthlp = modulo1(rkpt,kpts%nkpt3)
         g       = nint(rkpt - rkpthlp)
         matin1  = conjg(matin1)
 
@@ -1138,9 +1143,9 @@
         dwgn(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,l) =&
              transpose(hybrid%d_wgn2(-maxlcutm:maxlcutm,-maxlcutm:maxlcutm,l,isym))
       END DO
-
-      rkpt    = matmul(rrot,kpts%bk(:,ikpt0))
-      rkpthlp = modulo1(rkpt,kpts%nkpt3)
+      rkpt    = MATMUL(rrot,kpts%bk(:,ikpt0))
+      CALL judft_error("Missing function for hybrid code here...")
+      !rkpthlp = modulo1(rkpt,kpts%nkpt3)
       g       = nint(rkpt - rkpthlp)
 
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
@@ -1372,7 +1377,8 @@
         rrot    = transpose( sym%mrot(:,:,sym%invtab(iisym)) )
         invrrot = transpose( sym%mrot(:,:,iisym) )
         rkpt    = matmul(rrot,kpts%bk(:,ikpt0))
-        rkpthlp = modulo1(rkpt,kpts%nkpt3)
+        CALL judft_error("Missing function for hybrid code here...")
+        !rkpthlp = modulo1(rkpt,kpts%nkpt3)
         g       = nint(rkpt - rkpthlp)
 
         CALL d_wigner(invrot,cell%bmat,maxlcutm,dwgn(:,:,1:maxlcutm))
@@ -1388,7 +1394,8 @@
         invrot  = sym%mrot(:,:,sym%invtab(iisym))
         invrrot = -transpose( sym%mrot(:,:,iisym) )
         rkpt    = matmul(rrot,kpts%bk(:,ikpt0))
-        rkpthlp = modulo1(rkpt,kpts%nkpt3)
+        CALL judft_error("Missing function for hybrid code here...")
+        !rkpthlp = modulo1(rkpt,kpts%nkpt3)
         g       = nint(rkpt - rkpthlp)
         vecin1  = conjg(vecin1)
 
@@ -1579,7 +1586,8 @@
       END IF
 
       rkpt    = matmul(rrot,kpts%bk(:,ikpt0))
-      rkpthlp = modulo1(rkpt,kpts%nkpt3)
+      CALL judft_error("Missing function for hybrid code here...")
+      !      rkpthlp = modulo1(rkpt,kpts%nkpt3)
       g       = nint(rkpt - rkpthlp)
 
       DO l = 0,maxlcutm
@@ -1763,7 +1771,8 @@
       END IF
 
       rkpthlp = matmul(rrot,kpts%bk(:,ikpt0))
-      rkpt    = modulo1(rkpthlp,kpts%nkpt3)
+      CALL judft_error("Missing function for hybrid code here...")
+      !      rkpt    = modulo1(rkpthlp,kpts%nkpt3)
       g       = nint(rkpthlp-rkpt)
       !
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1

@@ -5,10 +5,11 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_dmi
-
   USE m_types
   USE m_types_forcetheo
   USE m_judft
+  IMPLICIT NONE
+  PRIVATE
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_dmi
      INTEGER :: q_done
      REAL,ALLOCATABLE:: qvec(:,:)
@@ -22,9 +23,23 @@ MODULE m_types_dmi
      PROCEDURE :: postprocess => dmi_postprocess
      PROCEDURE :: init   => dmi_init !not overloaded
      PROCEDURE :: dist   => dmi_dist !not overloaded
+     PROCEDURE :: read_xml=> dmi_read_xml
   END TYPE t_forcetheo_dmi
-
+  PUBLIC t_forcetheo_dmi
 CONTAINS
+
+  SUBROUTINE dmi_read_xml(dmi,xml)
+    USE m_types_xml
+    CLASS(t_forcetheo_dmi),INTENT(OUT):: dmi
+    TYPE(t_xml),INTENT(IN)            :: xml
+    CHARACTER(len=200)::lstring,nstring
+
+    IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI')==1) THEN
+       lString=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@theta')
+       nString=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@phi')
+       CALL dmi%init(xml%read_q_list('/fleurInput/forceTheorem/DMI/qVectors'),lstring,nstring)
+    ENDIF
+  END SUBROUTINE dmi_read_xml
 
   SUBROUTINE dmi_init(this,q,theta_s,phi_s)
     USE m_calculator

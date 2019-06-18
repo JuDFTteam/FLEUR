@@ -5,7 +5,8 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_banddos
-
+  USE m_juDFT
+  IMPLICIT NONE
    TYPE t_banddos
       LOGICAL :: dos =.false. 
       LOGICAL :: band =.false.
@@ -27,24 +28,25 @@ MODULE m_types_banddos
     contains
       procedure :: read_xml
    END TYPE t_banddos
-
+ CONTAINS
    subroutine read_xml(banddos,xml)
      use m_types_xml
      class(t_banddos),INTENT(OUT)::banddos
      type(t_xml),INTENT(IN)::xml
 
      integer::numberNodes
+     
 
      banddos%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
      
-     banddos%dos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dos'))
-     banddos%vacdos = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vacdos'))
-     banddos%l_mcd = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mcd'))
+     banddos%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
+     banddos%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@vacdos'))
+     banddos%l_mcd = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@mcd'))
 
-     numberNodes = xmlGetNumberOfNodes('/fleurInput/output/densityOfStates')
+     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/densityOfStates')
 
      IF ((banddos%dos).AND.(numberNodes.EQ.0)) THEN
-        CALL juDFT_error("dos is true but densityOfStates parameters are not set!", calledby = "r_inpXML")
+        CALL juDFT_error("dos is true but densityOfStates parameters are not set!")
      END IF
      
      IF (numberNodes.EQ.1) THEN

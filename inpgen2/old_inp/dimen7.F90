@@ -87,7 +87,7 @@
       CHARACTER(len=3), ALLOCATABLE :: noel(:)
       LOGICAL, ALLOCATABLE :: error(:) 
      
-      INTEGER ntp1,ii
+      INTEGER ntp1,ii,grid(3)
       INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
 
 !     added for HF and hybrid functionals
@@ -108,7 +108,7 @@
 !---> determine ntype,nop,natd,nwdd,nlod and layerd
 !
       CALL first_glance(atoms%ntype,sym%nop,atoms%nat,atoms%nlod,vacuum%layerd,&
-                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,kpts%nkpt3,nmopq)
+                        input%itmax,l_kpts,l_qpts,l_gamma,kpts%nkpt,grid,nmopq)
       atoms%ntype=atoms%ntype
       atoms%nlod = max(atoms%nlod,1)
 
@@ -131,7 +131,7 @@
       CALL rw_inp('r',&
      &            atoms,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,latnam)
+     &                  noel,namex,relcor,a1,a2,a3,latnam,grid)
 
 !---> pk non-collinear
 !---> read the angle and spin-spiral information from nocoinp

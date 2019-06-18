@@ -8,6 +8,8 @@ MODULE m_types_field
   !*************************************************************
   !     This module contains definitions for electric and magnetic field -types
   !*************************************************************
+  USE m_juDFT
+  IMPLICIT NONE
   PRIVATE
   REAL,TARGET::sigma=0.0
   TYPE t_efield
@@ -35,6 +37,7 @@ MODULE m_types_field
      REAL,ALLOCATABLE :: b_field_mt(:)
    CONTAINS
      PROCEDURE :: init=>init_field
+     PROCEDURE :: read_xml
   END TYPE t_field
 
   PUBLIC t_field,t_efield
@@ -47,4 +50,39 @@ CONTAINS
     input%sigma => sigma
     this%efield%sigma=>sigma
   END SUBROUTINE init_field
+
+  SUBROUTINE read_xml(field,xml)
+    USE m_types_xml
+    CLASS(t_field),INTENT(OUT)::field
+    TYPE(t_xml),INTENT(IN)::xml
+
+    CHARACTER(len=100)::xpatha,xpathb
+    INTEGER:: numberNodes,i
+    
+    xPathA = '/fleurInput/calculationSetup/fields'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF (numberNodes.EQ.1) THEN
+       IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
+          field%b_field=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
+          field%l_b_field=.TRUE.
+       ENDIF
+       field%efield%zsigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
+       field%efield%sig_b(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
+       field%efield%sig_b(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_2'))
+       field%efield%plot_charge = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_charge'))
+       field%efield%plot_rho = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_rho'))
+       field%efield%autocomp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@autocomp'))
+       field%efield%dirichlet = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
+       field%efield%l_eV = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
+       
+       numberNodes=xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/shape')
+       ALLOCATE(field%efield%shapes(numberNodes))
+       DO i=1,numberNodes
+          WRITE(xPathB,"(a,a,i0,a)") TRIM(ADJUSTL(xpathA)),'/shape[',i,']'
+          field%efield%shapes(i)=TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB)))))
+       ENDDO
+    ELSE
+       ALLOCATE(field%efield%shapes(0))
+    END IF
+  END SUBROUTINE read_xml
 END MODULE m_types_field

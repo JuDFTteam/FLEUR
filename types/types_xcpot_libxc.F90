@@ -51,9 +51,82 @@ MODULE m_types_xcpot_libxc
       PROCEDURE,NOPASS :: alloc_gradients     => xcpot_alloc_gradients
       !Not             overloeaded...
       PROCEDURE        :: init                => xcpot_init
+      PROCEDURE        :: read_xml => read_xml_libxc
    END TYPE t_xcpot_libxc
    PUBLIC t_xcpot_libxc
 CONTAINS
+
+  SUBROUTINE read_xml_libxc(xcpot,xml)
+     USE m_types_xml
+     CLASS(t_xcpot_libxc),INTENT(out):: xcpot
+     TYPE(t_xml),INTENT(in)          :: xml
+     
+     CHARACTER(len=10)::xpathA,xpathB
+     INTEGER          :: vxc_id_x,vxc_id_c, exc_id_x,  exc_id_c,jspins
+     
+     IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@GmaxXC')==1)&
+          xcpot%gmaxxc = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
+      ! Read in xc functional parameters
+     !Read in libxc parameters if present
+     xPathA = '/fleurInput/xcFunctional/LibXCID'
+     xPathB = '/fleurInput/xcFunctional/LibXCName'
+
+     IF(xml%GetNumberOfNodes(xPathA) == 1 .AND. xml%GetNumberOfNodes(xPathB) == 1) THEN
+        CALL judft_error("LibXC is given both by Name and ID and is therefore overdetermined")
+     ENDIF
+
+
+     ! LibXCID 
+     IF (xml%GetNumberOfNodes(xPathA) == 1) THEN
+#ifdef CPP_LIBXC
+        vxc_id_x=evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@exchange'))
+        vxc_id_c=evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@correlation'))
+
+        IF(xml%GetNumberOfNodes(TRIM(xPathA) // '/@etot_exchange') == 1) THEN
+           exc_id_x = evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@etot_exchange'))
+        ELSE
+           exc_id_x = vxc_id_x
+        ENDIF
+        
+        IF(xml%GetNumberOfNodes(TRIM(xPathA) // '/@exc_correlation') == 1) THEN
+           exc_id_c = evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@exc_correlation'))
+        ELSE
+           exc_id_c = vxc_id_c
+        ENDIF
+#else
+         CALL judft_error("To use libxc functionals you have to compile with libXC support")
+#endif
+      ! LibXCName 
+      ELSEIF (xml%GetNumberOfNodes(TRIM(xPathB)) == 1) THEN
+#ifdef CPP_LIBXC
+         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@exchange')))
+         vxc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
+         
+         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@correlation')))
+         vxc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
+         
+         IF(xml%GetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
+            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
+            exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
+         ELSE
+            exc_id_x = vxc_id_x
+         ENDIF
+         
+         IF(xml%GetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
+            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
+            exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
+         ELSE
+            exc_id_c = vxc_id_c
+         ENDIF
+#else
+         CALL judft_error("To use libxc functionals you have to compile with libXC support")
+#endif
+      ENDIF
+      jspins=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
+      CALL xcpot%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
+
+    END SUBROUTINE read_xml_libxc
+
 
    SUBROUTINE xcpot_init(xcpot,jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
       USE m_judft

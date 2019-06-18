@@ -40,6 +40,8 @@ types/types_noco.f90
 types/types_banddos.f90
 types/types_dimension.f90	
 types/types_vacuum.f90
+types/types_coreSpecInput.f90
+types/types_wannier.f90
 	
 )
 

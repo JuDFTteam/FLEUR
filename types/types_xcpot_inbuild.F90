@@ -11,14 +11,44 @@ MODULE m_types_xcpot_inbuild
    USE m_judft
    IMPLICIT NONE
    PRIVATE
+   CHARACTER(len=4),PARAMETER:: xc_names(20)=[&
+                                'l91 ','x-a ','wign','mjw ','hl  ','bh  ','vwn ','pz  ', &
+                                'pw91','pbe ','rpbe','Rpbe','wc  ','PBEs', &
+                                'pbe0','hse ','vhse','lhse','exx ','hf  ']
+   
    TYPE, EXTENDS(t_xcpot_inbuild_nf):: t_xcpot_inbuild
    CONTAINS
       !overloading t_xcpot:
       PROCEDURE        :: get_vxc             => xcpot_get_vxc
       PROCEDURE        :: get_exc             => xcpot_get_exc
+      PROCEDURE        :: read_xml_xcpot
    END TYPE t_xcpot_inbuild
    PUBLIC t_xcpot_inbuild
  CONTAINS
+
+   SUBROUTINE read_xml_xcpot(xcpot,xml)
+     USE m_types_xml
+     CLASS(t_xcpot_inbuild),INTENT(out):: xcpot
+     TYPE(t_xml),intent(in)            :: xml
+     
+     CHARACTER(len=10)::str
+     INTEGER:: n
+     IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@GmaxXC')==1)&
+          xcpot%gmaxxc = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
+      ! Read in xc functional parameters
+      str = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
+      DO n=1,SIZE(xc_names)
+         IF (TRIM(ADJUSTL(str))==TRIM(xc_names(n))) THEN
+            xcpot%icorr=n
+         ENDIF
+      ENDDO
+      IF (evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections')))THEN
+         xcpot%DATA%krla=1
+      ELSE
+         xcpot%DATA%krla=0
+      END IF
+
+    END SUBROUTINE read_xml_xcpot
 
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
 !

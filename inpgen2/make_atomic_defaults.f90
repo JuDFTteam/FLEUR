@@ -117,7 +117,7 @@ CONTAINS
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       atoms%ulo_der=0
          
-      CALL enpara%init(atoms,2,.TRUE.)
+      CALL enpara%init(atoms%ntype,atoms%nlod,atoms%lmaxd,2,.TRUE.)
       DO n=1,atoms%ntype
          DO i=1,atoms%nlo(n)
             DO l = 0, 3

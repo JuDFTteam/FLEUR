@@ -12,9 +12,8 @@
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE m_types_xml
-
   USE m_juDFT
-
+  USE m_calculator
   PRIVATE
 
   TYPE t_xml
@@ -29,10 +28,187 @@ MODULE m_types_xml
      PROCEDURE,NOPASS :: SetAttributeValue  
      PROCEDURE,NOPASS :: GetAttributeValue  
      PROCEDURE,NOPASS :: FreeResources
+     PROCEDURE        :: read_q_list
+     PROCEDURE,NOPASS :: popFirstStringToken
+     PROCEDURE,NOPASS :: countStringTokens
+     PROCEDURE        :: speciesPath
+     PROCEDURE,NOPASS :: groupPath
+     PROCEDURE :: get_nat
+     PROCEDURE :: get_lmaxd
+     PROCEDURE :: get_nlo
+     PROCEDURE :: get_ntype
+     PROCEDURE :: posPath
   END TYPE t_xml
-  PUBLIC t_xml
+  PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBool,evaluateFirstBoolOnly,evaluateFirstInt,evaluateFirstIntOnly
 
 CONTAINS
+  INTEGER FUNCTION get_lmaxd(xml)
+    CLASS(t_xml),INTENT(IN)::xml
+    INTEGER :: n
+    get_lmax=0
+    DO n=1,xml%GetNumberOfNodes('/fleurInput/atomSpecies/species')
+       get_lmaxd = MAX(get_lmaxd,evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xml%speciesPath(n))//'/atomicCutoffs/@lmax')))
+    ENDDO
+  END FUNCTION get_lmaxd
+
+
+  FUNCTION get_nlo(xml)
+  CLASS(t_xml),INTENT(IN)::xml
+  INTEGER,ALLOCATABLE::get_nlo(:)
+  
+  INTEGER n
+  ALLOCATE(get_nlo(xml%get_ntype()))
+  DO n=1,xml%get_ntype()
+     get_nlo(n)=xml%GetNumberOfNodes(TRIM(xml%speciesPath(n))//'/lo')
+  ENDDO
+  END FUNCTION get_nlo
+
+  FUNCTION speciesPath(xml,itype)
+    CLASS(t_xml),INTENT(IN)::xml
+    INTEGER::itype
+    CHARACTER(len=:),ALLOCATABLE::speciesPath
+    
+    INTEGER           :: i
+    CHARACTER(len=200)::xpath,species
+    !First determine name of species from group
+    WRITE(xPath,*) '/fleurInput/atomGroups/atomGroup[',itype,']/@species'
+    species=TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPath)))))
+
+    DO i=1,xml%GetNumberOfNodes('/fleurInput/atomSpecies/species')
+       WRITE(xPath,*) '/fleurInput/atomSpecies/species[',i,']'
+       IF (TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@name')))==TRIM(species)) THEN
+          speciesPath=TRIM(xpath)
+          RETURN
+       END IF
+    END DO
+    WRITE(xpath,*) n
+    CALL judft_error("No species found for name "//TRIM(species)//" used in atom group "//TRIM(xpath))
+  END FUNCTION speciesPath
+    
+
+
+  FUNCTION groupPath(itype)
+    IMPLICIT NONE
+    INTEGER,INTENT(in)::itype
+    CHARACTER(len=:),allocatable::groupPath
+    CHARACTER(len=100)::str
+    WRITE(str,"(a,i0,a)") '/fleurInput/atomGroups/atomGroup[',itype,']'
+    groupPath=TRIM(str)
+  END FUNCTION groupPath
+
+  INTEGER FUNCTION get_nat(xml)
+    CLASS(t_xml),INTENT(IN)::xml
+    
+    INTEGER ntype,n
+    CHARACTER(len=100)::xpath
+    get_nat=0
+    DO n=1,xml%get_ntype()
+       xpath=xml%groupPath(n)
+       get_nat=get_nat+xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/relPos')
+       get_nat=get_nat+xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/absPos')
+       get_nat=get_nat+xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/filmPos')
+    END DO
+  END FUNCTION get_nat
+
+  INTEGER FUNCTION get_ntype(xml)
+    CLASS(t_xml),INTENT(IN)::xml
+    
+    get_ntype=xml%getNumberOfNodes('/fleurInput/atomGroups/atomGroup')
+  END FUNCTION get_ntype
+
+  FUNCTION posPath(xml,nat)
+     CLASS(t_xml),INTENT(IN):: xml
+     INTEGER,intent(in)     :: nat
+     CHARACTER(len=:),ALLOCATABLE::posPath
+     
+     INTEGER na,n
+     CHARACTER(len=100)::xpath,xpath2
+     na=nat
+     DO n=1,xml%get_ntype()
+        xpath=xml%groupPath(n)
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/relPos')>0) xpath=TRIM(ADJUSTL(xPath))//'/relPos'
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/absPos')>0) xpath=TRIM(ADJUSTL(xPath))//'/absPos'
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/filmPos')>0) xpath=TRIM(ADJUSTL(xPath))//'/filmPos'
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath)))<na) THEN
+           na=na-xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))) 
+        ELSE
+           WRITE(xpath2,"(a,a,i0,a)") xpath,'[',na,']'
+           posPath=TRIM(xpath2)
+           RETURN
+        END IF
+     END DO
+     CALL judft_error("Not so many positions found in inp.xml")
+   END FUNCTION posPath
+ FUNCTION popFirstStringToken(line) RESULT(firstToken)
+
+      IMPLICIT NONE
+
+      CHARACTER(*), INTENT(INOUT) :: line
+      CHARACTER(LEN = LEN(line)) :: firstToken
+
+      INTEGER separatorIndex
+
+      separatorIndex = 0
+      line = TRIM(ADJUSTL(line))
+
+      separatorIndex = INDEX(line,' ')
+      IF (separatorIndex.LE.1) THEN
+         firstToken = ' '
+      ELSE
+         firstToken = line(1:separatorIndex-1)
+         line = line(separatorIndex+1:)
+      END IF
+
+   END FUNCTION popFirstStringToken
+
+   FUNCTION countStringTokens(line) RESULT(tokenCount)
+
+      IMPLICIT NONE
+
+      CHARACTER(*), INTENT(IN) :: line
+      INTEGER                  :: tokenCount
+
+      CHARACTER(LEN=LEN(line)) :: tempLine
+      INTEGER separatorIndex
+
+      tokenCount = 0
+
+      tempLine = TRIM(ADJUSTL(line))
+
+      DO WHILE (tempLine.NE.'')
+         separatorIndex = 0
+         separatorIndex = INDEX(tempLine,' ')
+         IF (separatorIndex.EQ.0) THEN
+            tempLine = ''
+         ELSE
+            tempLine = TRIM(ADJUSTL(tempLine(separatorIndex+1:)))
+         END IF
+         tokenCount = tokenCount + 1
+      END DO
+
+   END FUNCTION countStringTokens
+
+  
+  FUNCTION read_q_list(xml,path)RESULT(q)
+      IMPLICIT NONE
+      CLASS(t_xml),INTENT(IN)::xml
+      CHARACTER(len=*),INTENT(in):: path
+      REAL,ALLOCATABLE::q(:,:)
+
+      INTEGER:: n,i
+      CHARACTER(len=256):: xpatha,valueString
+
+      n=xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/q')
+      ALLOCATE(q(3,n))
+      DO i = 1, n
+         !PRINT *, path,'/q[',i,']'
+         WRITE(xPathA,"(a,a,i0,a)") TRIM(ADJUSTL(path)),'/q[',i,']'
+         !PRINT *,xpatha
+         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+         !PRINT *,"Q:",valueString
+         READ(valueString,*) q(1,i),q(2,i),q(3,i)
+      END DO
+    END FUNCTION read_q_list
 
   SUBROUTINE init_from_command_line()
     IMPLICIT NONE
@@ -61,8 +237,7 @@ CONTAINS
   SUBROUTINE InitInterface()
 
     USE iso_c_binding
-    USE m_types
-
+ 
     IMPLICIT NONE
 
     INTEGER :: errorStatus
@@ -85,8 +260,7 @@ CONTAINS
   SUBROUTINE ParseSchema(schemaFilename)
 
     USE iso_c_binding
-    USE m_types
-
+  
     IMPLICIT NONE
 
     CHARACTER(LEN=200,KIND=c_char), INTENT(IN) :: schemaFilename
@@ -112,8 +286,7 @@ CONTAINS
   SUBROUTINE ParseDoc(docFilename)
 
     USE iso_c_binding
-    USE m_types
-
+    
     IMPLICIT NONE
 
     CHARACTER(LEN=200,KIND=c_char), INTENT(IN) :: docFilename
@@ -139,8 +312,7 @@ CONTAINS
   SUBROUTINE ValidateDoc()
 
     USE iso_c_binding
-    USE m_types
-
+    
     IMPLICIT NONE
 
     INTEGER :: errorStatus
@@ -163,8 +335,7 @@ CONTAINS
   SUBROUTINE InitXPath()
 
     USE iso_c_binding
-    USE m_types
-
+   
     IMPLICIT NONE
 
     INTEGER :: errorStatus
@@ -187,8 +358,7 @@ CONTAINS
   FUNCTION GetNumberOfNodes(xPath)
 
     USE iso_c_binding
-    USE m_types
-
+  
     IMPLICIT NONE
 
     INTEGER :: GetNumberOfNodes
@@ -209,8 +379,7 @@ CONTAINS
   FUNCTION GetAttributeValue(xPath)
 
     USE iso_c_binding
-    USE m_types
-
+    
     IMPLICIT NONE
 
     CHARACTER(LEN=:),ALLOCATABLE :: GetAttributeValue
@@ -238,7 +407,7 @@ CONTAINS
     IF (.NOT.C_ASSOCIATED(c_string)) THEN
        WRITE(*,*) 'Error in trying to obtain attribute value from XPath:'
        WRITE(*,*) TRIM(ADJUSTL(xPath))
-       CALL juDFT_error("Attribute value could not be obtained.",calledby="xmlGetAttributeValue")
+       CALL juDFT_error("Attribute value could not be obtained.",calledby="xml%getAttributeValue")
     END IF
 
     VALUE = ''
@@ -257,8 +426,7 @@ CONTAINS
   SUBROUTINE SetAttributeValue(xPath,VALUE)
 
     USE iso_c_binding
-    USE m_types
-
+   
     IMPLICIT NONE
 
     CHARACTER(LEN=*, KIND=c_char), INTENT(IN) :: xPath
@@ -288,8 +456,7 @@ CONTAINS
   SUBROUTINE FreeResources()
 
     USE iso_c_binding
-    USE m_types
-
+   
     IMPLICIT NONE
 
     INTEGER :: errorStatus

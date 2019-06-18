@@ -9,10 +9,10 @@ MODULE m_types_dimension
       INTEGER :: nspd
       INTEGER :: nvd
       INTEGER :: nv2d
-      INTEGER :: neigd
+      INTEGER :: neigd !to be removed!!!
       INTEGER :: neigd2
       INTEGER :: ncvd
-      INTEGER :: nstd
+      INTEGER :: nstd=29
       INTEGER :: msh
       INTEGER :: lmd
       INTEGER :: lmplmd

@@ -10,7 +10,7 @@ CONTAINS
   SUBROUTINE fleur_init_old(&
        input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
        sliceplot,banddos,enpara,xcpot,kpts,hybrid,&
-       oneD)
+       oneD,grid)
     USE m_types_input
     USE m_types_dimension
     USE m_types_atoms
@@ -53,6 +53,7 @@ CONTAINS
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
     TYPE(t_hybrid)   ,INTENT(OUT)  :: hybrid
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
+    INTEGER,INTENT(OUT)::grid(3)
    
 
     !     .. Local Scalars ..
@@ -135,7 +136,7 @@ CONTAINS
  
     CALL inped(atoms,vacuum,input,banddos,xcpot,sym,&
          cell,sliceplot,noco,&
-         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam)
+         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam,grid)
     !
     IF (xcpot%needs_grad()) THEN
        ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))

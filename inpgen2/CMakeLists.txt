@@ -64,6 +64,7 @@ ${FLEUR_SRC}/math/matmul.f
 ${FLEUR_SRC}/init/strgn_dim.F
 ${FLEUR_SRC}/init/spgrot.f
 ${FLEUR_SRC}/init/convn_dim.f
+${FLEUR_SRC}/io/types_xml.f90
 
 
 
@@ -83,6 +84,8 @@ ${FLEUR_SRC}/types/types_mpimat.F90
 ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_forcetheo.F90
 ${FLEUR_SRC}/types/types_kpts.f90
+${FLEUR_SRC}/types/types_wannier.f90
+${FLEUR_SRC}/types/types_coreSpecInput.f90
 ${FLEUR_SRC}/types/types_enpara.F90
 ${FLEUR_SRC}/types/types_setup.F90
 ${FLEUR_SRC}/types/types_usdus.F90

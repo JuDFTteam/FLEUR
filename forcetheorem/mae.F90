@@ -8,6 +8,8 @@ MODULE m_types_mae
   USE m_types
   USE m_types_forcetheo
   USE m_judft
+  IMPLICIT NONE
+  PRIVATE
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_mae
      INTEGER :: directions_done
      REAL,ALLOCATABLE:: theta(:)
@@ -20,10 +22,27 @@ MODULE m_types_mae
      PROCEDURE :: postprocess => mae_postprocess
      PROCEDURE :: init   => mae_init !not overloaded
      PROCEDURE :: dist   => mae_dist !not overloaded
+     PROCEDURE :: read_xml => read_xml_mae
   END TYPE t_forcetheo_mae
-
+  PUBLIC t_forcetheo_mae
 CONTAINS
-  SUBROUTINE mae_init(this,cell,sym,theta_s,phi_s)
+  SUBROUTINE read_xml_mae(mae,xml)
+    USE m_types_xml
+    CLASS(t_forcetheo_mae),INTENT(OUT):: mae
+    TYPE(t_xml),INTENT(IN)            :: xml
+ 
+    CHARACTER(len=200)::str
+
+    IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/MAE')==1) THEN
+       str=xml%GetAttributeValue('/fleurInput/forceTheorem/MAE/@theta')
+       CALL evaluateList(mae%theta,str)
+       str=xml%GetAttributeValue('/fleurInput/forceTheorem/MAE/@phi')
+       CALL evaluateList(mae%phi,str)
+    ENDIF
+
+  END SUBROUTINE read_xml_mae
+
+  SUBROUTINE mae_init(this,cell,sym)
     USE m_calculator
     USE m_socsym
     USE m_types
@@ -31,13 +50,10 @@ CONTAINS
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_cell),INTENT(IN)             :: cell
     TYPE(t_sym),INTENT(IN)              :: sym
-    CHARACTER(len=*),INTENT(INOUT)      :: theta_s,phi_s
 
     INTEGER::n
     LOGICAL::error(sym%nop)
     
-    CALL evaluateList(this%theta,theta_s)
-    CALL evaluateList(this%phi,phi_s)
 
     IF (SIZE(this%phi).NE.SIZE(this%theta)) CALL &
          judft_error("Lists for theta/phi must have the same length in MAE force theorem calculations")

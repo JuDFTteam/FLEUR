@@ -52,7 +52,8 @@ SUBROUTINE symm_hf_init(sym,kpts,nk,nsymop,rrot,psym)
       rotkpt = matmul(rrot(:,:,i), kpts%bkf(:,nk))
 
       !transfer rotkpt into BZ
-      rotkpt = modulo1(rotkpt,kpts%nkpt3)
+      CALL judft_error("Missing function for hybrid code here...")
+      !rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
       !check if rotkpt is identical to bk(:,nk)
       IF(maxval(abs(rotkpt - kpts%bkf(:,nk))) .LE. 1E-07) THEN
@@ -162,7 +163,8 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
           rotkpt = matmul( rrot(:,:,psym(iop)), kpts%bkf(:,ikpt) )
 
           !transfer rotkpt into BZ
-          rotkpt = modulo1(rotkpt,kpts%nkpt3)
+          CALL judft_error("Missing function for hybrid code here...")
+          !rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
           !determine number of rotkpt
           nrkpt = 0
@@ -224,7 +226,8 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
             rotkpt = matmul( rrot(:,:,isym), kpts%bkf(:,ikpt) )
 
             !transfer rotkpt into BZ
-            rotkpt = modulo1(rotkpt,kpts%nkpt3)
+            CALL judft_error("Missing function for hybrid code here...")
+            !rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
             !check if rotkpt is identical to bk(:,ikpt)
             IF( maxval( abs( rotkpt - kpts%bkf(:,ikpt) ) ) .le. 1E-06) THEN
@@ -581,7 +584,8 @@ INTEGER FUNCTION symm_hf_nkpt_EIBZ(kpts,nk,sym)
         rotkpt = matmul( rrot(:,:,iop), kpts%bkf(:,nk) )
 
         !transfer rotkpt into BZ
-        rotkpt = modulo1(rotkpt,kpts%nkpt3)
+        CALL judft_error("Missing function for hybrid code here...")
+        !rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
         !check if rotkpt is identical to bk(:,nk)
         IF( maxval( abs( rotkpt - kpts%bkf(:,nk) ) ) .le. 1E-07) THEN
@@ -616,7 +620,8 @@ INTEGER FUNCTION symm_hf_nkpt_EIBZ(kpts,nk,sym)
           rotkpt = matmul( rrot(:,:,psym(iop)), kpts%bkf(:,ikpt) )
 
           !transfer rotkpt into BZ
-          rotkpt = modulo1(rotkpt,kpts%nkpt3)
+          CALL judft_error("Missing function for hybrid code here...")
+          !rotkpt = modulo1(rotkpt,kpts%nkpt3)
 
           !determine number of rotkpt
           nrkpt = 0

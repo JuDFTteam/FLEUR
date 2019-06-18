@@ -36,6 +36,7 @@ MODULE m_types_enpara
      PROCEDURE :: mix
      PROCEDURE :: calcOutParams
      procedure :: set_quantum_numbers
+     PROCEDURE :: read_xml=>read_xml_enpara
   END TYPE t_enpara
 
 
@@ -43,6 +44,47 @@ MODULE m_types_enpara
   PUBLIC:: t_enpara
 
 CONTAINS
+
+  SUBROUTINE read_xml_enpara(enpara,xml)
+    use m_types_xml
+    CLASS(t_enpara),INTENT(OUT):: enpara
+    TYPE(t_xml),INTENT(IN)     :: xml
+
+    LOGICAL :: l_enpara,film
+    INTEGER :: jspins,ntype,lmaxd,n,lo
+    CHARACTER(len=100)::xpath,xpath2
+    INTEGER, ALLOCATABLE :: nlo(:),neq(:)
+
+    ntype=xml%get_ntype()
+    nlo=xml%get_nlo()
+    lmaxd=xml%get_lmaxd()
+    jspins=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
+    film=xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
+    
+    CALL enpara%init(ntype,MAXVAL(nlo),lmaxd,jspins)
+
+    l_enpara = .FALSE.
+    INQUIRE (file ='enpara',exist= l_enpara)
+    IF (l_enpara) THEN
+       CALL enpara%READ(ntype,nlo,jspins,film,.TRUE.)
+       RETURN
+    END IF
+
+    DO n=1,ntype
+       xPath=TRIM(xml%speciesPath(n))//'/energyParameters'
+       enpara%qn_el(0,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@s'))
+       enpara%qn_el(1,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@p'))
+       enpara%qn_el(2,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@d'))
+       enpara%qn_el(3,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@f'))
+       DO lo=1,nlo(n)
+          WRITE(xpath2,"(a,a,i0,a)") TRIM(xml%speciesPath(n)),'/lo[',lo,']'
+          enpara%qn_ello(lo,n,:)=evaluateFirstINTOnly(xml%GetAttributeValue(TRIM(xpath)//'/@n'))
+          IF (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'@type')))=='HELO') &
+               enpara%qn_ello(lo,n,:)=-1*enpara%qn_ello(lo,n,:)
+       END DO
+    END DO
+  END SUBROUTINE read_xml_enpara
+
   SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,str,lo)
     use m_types_atoms
     !sets the energy parameters according to simple electronic config string and lo string
@@ -84,27 +126,26 @@ CONTAINS
     enpara%qn_el(:,ntype,:)=ABS(enpara%qn_el(:,ntype,:))
   END SUBROUTINE set_quantum_numbers
   
-  SUBROUTINE init(this,atoms,jspins,l_defaults)
-    USE m_types_atoms
+  SUBROUTINE init(this,ntype,nlod,lmaxd,jspins,l_defaults,nz)
     USE m_constants
     CLASS(t_enpara),INTENT(inout):: this
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    INTEGER,INTENT(IN)           :: jspins
+    INTEGER,INTENT(IN)           :: jspins,nlod,ntype,lmaxd
     LOGICAL,INTENT(IN),OPTIONAL  :: l_defaults
+    INTEGER,INTENT(IN),OPTIONAL  :: nz(:)
 
     INTEGER :: n,i,jsp,l
 
-    ALLOCATE(this%el0(0:atoms%lmaxd,atoms%ntype,jspins),this%el1(0:atoms%lmaxd,atoms%ntype,jspins))
-    ALLOCATE(this%ello0(atoms%nlod,atoms%ntype,jspins),this%ello1(atoms%nlod,atoms%ntype,jspins))
+    ALLOCATE(this%el0(0:lmaxd,ntype,jspins),this%el1(0:lmaxd,ntype,jspins))
+    ALLOCATE(this%ello0(nlod,ntype,jspins),this%ello1(nlod,ntype,jspins))
     this%el0=-1E99
     this%ello0=-1E99
     this%evac0=-1E99
 
 
-    ALLOCATE(this%llochg(atoms%nlod,atoms%ntype,jspins))
+    ALLOCATE(this%llochg(nlod,ntype,jspins))
     ALLOCATE(this%lchg_v(2,jspins))
-    ALLOCATE(this%skiplo(atoms%ntype,jspins))
-    ALLOCATE(this%lchange(0:atoms%lmaxd,atoms%ntype,jspins))
+    ALLOCATE(this%skiplo(ntype,jspins))
+    ALLOCATE(this%lchange(0:lmaxd,ntype,jspins))
     this%llochg=.FALSE.;this%lchg_v=.FALSE.;this%lchange=.FALSE.
     this%skiplo=0
     ALLOCATE(this%enmix(jspins))
@@ -113,50 +154,41 @@ CONTAINS
     this%ready=.FALSE.
     this%floating=.FALSE.
 
-    ALLOCATE(this%qn_el(0:3,atoms%ntype,jspins))
-    ALLOCATE(this%qn_ello(atoms%nlod,atoms%ntype,jspins))
+    ALLOCATE(this%qn_el(0:3,ntype,jspins))
+    ALLOCATE(this%qn_ello(nlod,ntype,jspins))
 
     IF (PRESENT(l_defaults)) THEN
        IF (.NOT.l_defaults) RETURN
     ENDIF
     !Set most simple defaults
     DO jsp=1,jspins
-       DO n = 1,atoms%ntype
-          IF ( atoms%nz(n) < 3 ) THEN
+       DO n = 1,ntype
+          IF ( nz(n) < 3 ) THEN
              this%qn_el(0:3,n,jsp) =  (/1,2,3,4/) 
-          ELSEIF ( atoms%nz(n) < 11 ) THEN
+          ELSEIF ( nz(n) < 11 ) THEN
              this%qn_el(0:3,n,jsp) =  (/2,2,3,4/) 
-          ELSEIF ( atoms%nz(n) < 19 ) THEN
+          ELSEIF ( nz(n) < 19 ) THEN
              this%qn_el(0:3,n,jsp) =  (/3,3,3,4/) 
-          ELSEIF ( atoms%nz(n) < 31 ) THEN
+          ELSEIF ( nz(n) < 31 ) THEN
              this%qn_el(0:3,n,jsp) =  (/4,4,3,4/) 
-          ELSEIF ( atoms%nz(n) < 37 ) THEN
+          ELSEIF ( nz(n) < 37 ) THEN
              this%qn_el(0:3,n,jsp) =  (/4,4,4,4/) 
-          ELSEIF ( atoms%nz(n) < 49 ) THEN
+          ELSEIF ( nz(n) < 49 ) THEN
              this%qn_el(0:3,n,jsp) =  (/5,5,4,4/) 
-          ELSEIF ( atoms%nz(n) < 55 ) THEN
+          ELSEIF ( nz(n) < 55 ) THEN
              this%qn_el(0:3,n,jsp) =  (/5,5,5,4/) 
-          ELSEIF ( atoms%nz(n) < 72 ) THEN
+          ELSEIF ( nz(n) < 72 ) THEN
              this%qn_el(0:3,n,jsp) =  (/6,6,5,4/) 
-          ELSEIF ( atoms%nz(n) < 81 ) THEN
+          ELSEIF ( nz(n) < 81 ) THEN
              this%qn_el(0:3,n,jsp) =  (/6,6,5,5/) 
-          ELSEIF ( atoms%nz(n) < 87 ) THEN
+          ELSEIF ( nz(n) < 87 ) THEN
              this%qn_el(0:3,n,jsp) =  (/6,6,6,5/) 
           ELSE
              this%qn_el(0:3,n,jsp) =  (/7,7,6,5/) 
           ENDIF
           
-          DO i = 1, atoms%nlo(n)
-             IF (atoms%llo(i,n)<0) THEN
-                !llo might not be initialized
-                !in this case defaults broken
-                this%qn_ello(i,n,jsp) = 0
-                this%skiplo(n,jsp) = 0
-             ELSE
-                this%qn_ello(i,n,jsp) = this%qn_el(atoms%llo(i,n),n,jsp) - 1
-                this%skiplo(n,jsp) = this%skiplo(n,jsp) + (2*atoms%llo(i,n)+1)
-             ENDIF
-          ENDDO
+          this%qn_ello(:,n,jsp) = 0
+          this%skiplo(n,jsp) = 0
        ENDDO
     ENDDO
 
@@ -300,12 +332,10 @@ CONTAINS
     IF (mpi%irank  == 0) CALL closeXMLElement('energyParameters')
   END SUBROUTINE update
 
-  SUBROUTINE READ(enpara,atoms,jspins,film,l_required)
-    USE m_types_atoms
+  SUBROUTINE READ(enpara,ntype,nlo,jspins,film,l_required)
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT):: enpara
-    INTEGER, INTENT (IN)        :: jspins
-    TYPE(t_atoms),INTENT(IN)    :: atoms
+    INTEGER, INTENT (IN)        :: jspins,ntype,nlo(:)
     LOGICAL,INTENT(IN)          :: film,l_required
 
     INTEGER :: n,l,lo,skip_t,io_err,jsp
@@ -327,7 +357,7 @@ CONTAINS
        WRITE (6,FMT=8001) jsp
        WRITE (6,FMT=8000)
        skip_t = 0
-       DO n = 1,atoms%ntype
+       DO n = 1,ntype
           READ (40,FMT=8040,END=200) (enpara%el0(l,n,jsp),l=0,3),&
                (enpara%lchange(l,n,jsp),l=0,3),enpara%skiplo(n,jsp)    
           WRITE (6,FMT=8140) n,(enpara%el0(l,n,jsp),l=0,3),&
@@ -335,12 +365,12 @@ CONTAINS
           !
           !--->    energy parameters for the local orbitals
           !
-          IF (atoms%nlo(n).GE.1) THEN
-             skip_t = skip_t + enpara%skiplo(n,jsp) * atoms%neq(n)
-             READ (40,FMT=8039,END=200)  (enpara%ello0(lo,n,jsp),lo=1,atoms%nlo(n))
-             READ (40,FMT=8038,END=200) (enpara%llochg(lo,n,jsp),lo=1,atoms%nlo(n))
-             WRITE (6,FMT=8139)          (enpara%ello0(lo,n,jsp),lo=1,atoms%nlo(n))
-             WRITE (6,FMT=8138)         (enpara%llochg(lo,n,jsp),lo=1,atoms%nlo(n))
+          IF (nlo(n).GE.1) THEN
+             !skip_t = skip_t + enpara%skiplo(n,jsp) * atoms%neq(n)
+             READ (40,FMT=8039,END=200)  (enpara%ello0(lo,n,jsp),lo=1,nlo(n))
+             READ (40,FMT=8038,END=200) (enpara%llochg(lo,n,jsp),lo=1,nlo(n))
+             WRITE (6,FMT=8139)          (enpara%ello0(lo,n,jsp),lo=1,nlo(n))
+             WRITE (6,FMT=8138)         (enpara%llochg(lo,n,jsp),lo=1,nlo(n))
           ELSEIF (enpara%skiplo(n,jsp).GT.0) THEN
              WRITE (6,*) "for atom",n," no LO's were specified"
              WRITE (6,*) 'but skiplo was set to',enpara%skiplo 
@@ -353,7 +383,7 @@ CONTAINS
              IF (enpara%el0(l,n,jsp)==NINT(enpara%el0(l,n,jsp))) enpara%qn_el(l,n,jsp)=NINT(enpara%el0(l,n,jsp))
           ENDDO
           enpara%qn_ello(:,n,jsp)=0
-          DO l=1,atoms%nlo(n)
+          DO l=1,nlo(n)
              IF (enpara%ello0(l,n,jsp)==NINT(enpara%ello0(l,n,jsp))) enpara%qn_ello(l,n,jsp)=NINT(enpara%ello0(l,n,jsp))
           ENDDO
           !
@@ -367,10 +397,10 @@ CONTAINS
           READ (40,FMT=8050,END=200) enpara%evac0(1,jsp),enpara%lchg_v(1,jsp),enpara%evac0(2,jsp)
           WRITE (6,FMT=8150)         enpara%evac0(1,jsp),enpara%lchg_v(1,jsp),enpara%evac0(2,jsp)
        ENDIF
-       IF (atoms%nlod.GE.1) THEN               
-          WRITE (6,FMT=8090) jsp,skip_t
-          WRITE (6,FMT=8091) 
-       END IF
+      ! IF (atoms%nlod.GE.1) THEN               
+      !    WRITE (6,FMT=8090) jsp,skip_t
+      !    WRITE (6,FMT=8091) 
+      ! END IF
     END DO
 
     enpara%evac(:,:) = enpara%evac0(:,:)
@@ -400,7 +430,7 @@ CONTAINS
     WRITE (6,*) 'reading the energy-parameters.'
     WRITE (6,*) 'possible reason: energy parameters have not been'
     WRITE (6,*) 'specified for all atom types.'
-    WRITE (6,FMT='(a,i4)') 'the actual number of atom-types is: ntype=',atoms%ntype
+    WRITE (6,FMT='(a,i4)') 'the actual number of atom-types is: ntype=',ntype
     CALL juDFT_error ("unexpected end of file enpara reached while reading")
   END SUBROUTINE read
 

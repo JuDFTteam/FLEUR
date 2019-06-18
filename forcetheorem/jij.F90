@@ -16,7 +16,6 @@ MODULE m_types_jij
 
      REAL,ALLOCATABLE:: qvec(:,:)
      REAL            :: thetaj
-     REAL,ALLOCATABLE:: taual_types(:,:)
      REAL,ALLOCATABLE:: evsum(:)
    CONTAINS
      PROCEDURE :: start   =>jij_start
@@ -25,39 +24,42 @@ MODULE m_types_jij
      PROCEDURE :: postprocess => jij_postprocess
      PROCEDURE :: init   => jij_init !not overloaded
      PROCEDURE :: dist   => jij_dist !not overloaded
+     PROCEDURE :: read_xml => read_xml_jij
   END TYPE t_forcetheo_jij
 
 CONTAINS
 
-  SUBROUTINE jij_init(this,q,thetaj,atoms)
+  SUBROUTINE read_xml_jij(jij,xml)
+    USE m_types_xml
+    CLASS(t_forcetheo_jij),INTENT(OUT):: jij
+    TYPE(t_xml),INTENT(IN)            :: xml
+
+    IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/Jij')==1) THEN
+       jij%qvec=xml%read_q_list('/fleurInput/forceTheorem/Jij/qVectors')
+       jij%thetaj=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/forceTheorem/Jij/@thetaj'))      
+    ENDIF
+  END SUBROUTINE read_xml_jij
+
+
+  SUBROUTINE jij_init(this,atoms)
     USE m_types_setup
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
-    REAL,INTENT(in)                     :: q(:,:),thetaj
     TYPE(t_atoms),INTENT(IN)            :: atoms
-
+  
     INTEGER:: n,na,ni,nj,j
     REAL,PARAMETER:: eps=1E-5
 
-    !Store data
-    ALLOCATE(this%taual_types(3,atoms%ntype))
-    na=1
-    DO n=1,atoms%ntype
-       this%taual_types(:,n)=atoms%taual(:,na)
-       na=na+atoms%neq(n)
-    ENDDO
-    ALLOCATE(this%qvec(3,SIZE(q,2)))
-    this%qvec=q
-    this%thetaj=thetaj
     
     !Max no of loops...
-    n=atoms%nat**2*SIZE(q,2)+1
+    n=atoms%nat**2*SIZE(this%qvec,2)+1
     ALLOCATE(this%q_index(n),this%iatom(n),this%jatom(n),this%phase2(n))
+    
 
     !now construct the loops
     this%no_loops=0
-    DO n=1,SIZE(q,2)
+    DO n=1,SIZE(this%qvec,2)
        DO ni=1,atoms%ntype
           IF (ABS(atoms%bmu(ni))<eps) CYCLE !no magnetic atom
           DO nj=ni,atoms%ntype
@@ -73,6 +75,7 @@ CONTAINS
           END DO
        END DO
     END DO
+
     ALLOCATE(this%evsum(this%no_loops))
     this%evsum=0
   END SUBROUTINE jij_init
@@ -143,8 +146,8 @@ CONTAINS
     noco%beta(this%jatom(this%loopindex))=this%thetaj
 
     !rotate according to q-vector
-    DO n = 1,SIZE(this%taual_types,2)
-       noco%alph(n) = noco%alph(n) + tpi_const*dot_PRODUCT(noco%qss,this%taual_types(:,n))
+    DO n = 1,atoms%ntype
+       noco%alph(n) = noco%alph(n) + tpi_const*DOT_PRODUCT(noco%qss,atoms%taual(:,SUM(atoms%neq(:n-1))+1))
     ENDDO
     
     IF (.NOT.this%l_io) RETURN

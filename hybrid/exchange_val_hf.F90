@@ -536,9 +536,10 @@ SUBROUTINE calc_divergence(cell,kpts,divergence)
    cdum       = sqrt(expo)*rrad
    divergence = cell%omtil / (tpi_const**2) * sqrt(pi_const/expo) * cerf(cdum)
    rrad       = rrad**2
-   kv1        = cell%bmat(1,:)/kpts%nkpt3(1)
-   kv2        = cell%bmat(2,:)/kpts%nkpt3(2)
-   kv3        = cell%bmat(3,:)/kpts%nkpt3(3)
+   CALL judft_error("Missing function for hybrid code here...")
+   !   kv1        = cell%bmat(1,:)/kpts%nkpt3(1)
+   !   kv2        = cell%bmat(2,:)/kpts%nkpt3(2)
+   !   kv3        = cell%bmat(3,:)/kpts%nkpt3(3)
    n          = 1
    found      = .true.
 

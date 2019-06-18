@@ -28,7 +28,7 @@
       CONTAINS
         SUBROUTINE inped(atoms,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
-                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam)
+                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam,grid)
           USE m_rwinp
           !USE m_chkmt
           USE m_inpnoco
@@ -69,6 +69,7 @@
           CHARACTER(len=4),  INTENT(OUT)   :: namex 
           CHARACTER(len=12), INTENT(OUT)   :: relcor
           CHARACTER(len=4),INTENT(OUT)     ::latnam
+          INTEGER,INTENT(OUT):: grid(3)
           !     .. Local Scalars ..
           REAL dr,dtild,r,kmax1,dvac1,zp
           INTEGER i,iz,j,n,n1,na,ntst,nn,ios
@@ -95,7 +96,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3,latnam)
+               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3,latnam,grid)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!

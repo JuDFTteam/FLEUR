@@ -11,7 +11,7 @@
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,latnam,dtild_opt)!,name_opt)
+     &                  noel,namex,relcor,a1,a2,a3,latnam,grid)!,name_opt)
 
 !*********************************************************************
 !* This subroutine reads or writes an inp - file on unit iofile      *
@@ -57,8 +57,8 @@
       CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntype)
       CHARACTER(len=4),INTENT(OUT) :: namex 
       CHARACTER(len=12),INTENT(OUT):: relcor
-      REAL,INTENT(IN),OPTIONAL     :: dtild_opt
       CHARACTER(len=*),INTENT(INOUT)::latnam
+      INTEGER,INTENT(OUT)::grid(3)
       !CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
 
 
@@ -99,7 +99,6 @@
       INTEGER               :: idum
       CHARACTER (len=1)     ::  check
 
-      IF (PRESENT(dtild_opt)) dtild=dtild_opt
       !IF (PRESENT(name_opt)) name=name_opt
 
 !     Initialize variables
@@ -675,7 +674,7 @@
 
       IF(namex=='hf  '.OR.namex=='pbe0'.OR.namex=='exx '.OR.namex=='hse '.OR.namex=='vhse'.OR.&
          (banddos%dos.AND.(banddos%ndir == -3))) THEN
-         READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',END=98,ERR=98) idum,kpts%nkpt3(1),kpts%nkpt3(2),kpts%nkpt3(3)
+         READ (UNIT=5,FMT='(5x,i5,4x,i2,4x,i2,4x,i2)',END=98,ERR=98) idum,grid
 
          IF(idum.EQ.0) THEN
             WRITE(*,*) ''
@@ -685,13 +684,13 @@
             CALL juDFT_error("Invalid declaration of k-point set (1)",calledby="rw_inp")
          END IF
       
-         IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum ) THEN
-            WRITE(*,*) ''
-            WRITE(*,*) 'nx*ny*nz is not equal to nkpt.'
-            WRITE(*,*) 'For this fleur mode this is required!'
-            WRITE(*,*) ''
-            CALL juDFT_error("Invalid declaration of k-point set (2)",calledby="rw_inp")
-         END IF
+         !IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum ) THEN
+         !   WRITE(*,*) ''
+         !   WRITE(*,*) 'nx*ny*nz is not equal to nkpt.'
+         !   WRITE(*,*) 'For this fleur mode this is required!'
+         !   WRITE(*,*) ''
+         !   CALL juDFT_error("Invalid declaration of k-point set (2)",calledby="rw_inp")
+         !END IF
       END IF
 
 ! for a exx calcuation a second mixed basis set is needed to

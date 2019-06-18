@@ -67,16 +67,18 @@ MODULE m_types_cell
      
      ! Read in lattice parameters
      character(len=200)::valueString,path
-     real:: scale,dvac
+     REAL:: scale,dvac,dtild
      
+     dvac=0
      if (xml%GetNumberOfNodes('')==1) then
         path= '/fleurInput/cell/filmLattice'
-        dvac=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dvac')
+        dvac=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dvac'))
+        dtild=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dtilda'))
      else        
         path = '/fleurInput/cell/bulkLattice'
      endif
      
-     scale=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@scale')
+     scale=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@scale'))
      path=trim(path)//'/bravaisMatrix'
      valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-1')))
      cell%amat(1,1) = evaluateFirst(valueString)
@@ -89,8 +91,10 @@ MODULE m_types_cell
      valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-2')))
      cell%amat(1,3) = evaluateFirst(valueString)
      cell%amat(2,3) = evaluateFirst(valueString)
-     cell%amat(3,4) = evaluateFirst(valueString)
+     cell%amat(3,3) = evaluateFirst(valueString)
      
+     IF (dvac>0) cell%amat(3,3)=dtild
+
      cell%amat=cell%amat*scale
      
      call cell%init(dvac)
