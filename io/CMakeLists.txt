@@ -18,7 +18,7 @@ io/cdnpot_io_common.F90
 io/cdn_io.F90
 io/pot_io.F90
 io/banddos_io.F90
-io/r_inpXML.F90
+#io/r_inpXML.F90
 io/writeBasis.F90
 io/writeOutHeader.F90
 io/wrtdop.f90
