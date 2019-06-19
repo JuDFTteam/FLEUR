@@ -1054,8 +1054,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attlog0(groupID,'zrfs',sym%zrfs)
       CALL io_write_attint0(groupID,'nop',sym%nop)
       CALL io_write_attint0(groupID,'nop2',sym%nop2)
-      CALL io_write_attchar0(groupID,'latnam',sym%latnam)
-      CALL io_write_attchar0(groupID,'namgrp',sym%namgrp)
 
       dims(:2)=(/3,3/)
       dimsInt = dims
@@ -1356,8 +1354,6 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attlog0(groupID,'zrfs',sym%zrfs)
       CALL io_read_attint0(groupID,'nop',sym%nop)
       CALL io_read_attint0(groupID,'nop2',sym%nop2)
-      CALL io_read_attchar0(groupID,'latnam',sym%latnam)
-      CALL io_read_attchar0(groupID,'namgrp',sym%namgrp)
 
       IF(fileFormatVersion.GE.29) THEN
          CALL io_read_attint0(groupID,'n_u',atoms%n_u)

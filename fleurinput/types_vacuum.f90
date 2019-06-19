@@ -5,9 +5,12 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_vacuum
-  use m_juDFT
+  USE m_juDFT
+  USE m_types_fleurinput_base
   IMPLICIT NONE
-   TYPE t_vacuum
+  PRIVATE
+  PUBLIC:: t_vacuum
+  TYPE,EXTENDS(t_fleurinput_base):: t_vacuum
       !Stuff for the vacuum
       INTEGER ::nmz=250
       INTEGER ::nmzd=250
@@ -30,32 +33,32 @@ MODULE m_types_vacuum
       PROCEDURE :: read_xml
    END TYPE t_vacuum
  CONTAINS
-   SUBROUTINE read_xml(vacuum,xml)
+   SUBROUTINE read_xml(this,xml)
      USE m_types_xml
-     CLASS(t_vacuum),INTENT(OUT)::Vacuum
+     CLASS(t_vacuum),INTENT(OUT)::this
      TYPE(t_xml),INTENT(IN)::xml
      CHARACTER(len=100)::xpatha
      
 
      IF (xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1) THEN
-     vacuum%dvac = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/cell/filmLattice/@dVac'))
-     !vacuum%dtild = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/cell/filmLattice/@dTilda'))
+     this%dvac = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/cell/filmLattice/@dVac'))
+     !this%dtild = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/cell/filmLattice/@dTilda'))
 
      xPathA = '/fleurInput/output/vacuumDOS'
      IF (xml%GetNumberOfNodes(xpathA)==1) THEN
-        vacuum%layers = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
-        vacuum%starcoeff = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@star'))
-        vacuum%nstars = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstars'))
-        vacuum%locx(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx1'))
-        vacuum%locx(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx2'))
-        vacuum%locy(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy1'))
-        vacuum%locy(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy2'))
-        vacuum%nstm = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
-        vacuum%tworkf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
+        this%layers = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@layers'))
+        this%starcoeff = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@star'))
+        this%nstars = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstars'))
+        this%locx(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx1'))
+        this%locx(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locx2'))
+        this%locy(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy1'))
+        this%locy(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@locy2'))
+        this%nstm = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nstm'))
+        this%tworkf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@tworkf'))
         PRINT *,'Reading of layers not implemented '
      END IF
-     vacuum%layerd = vacuum%layers
-     ALLOCATE(vacuum%izlay(vacuum%layerd,2))
+     this%layerd = this%layers
+     ALLOCATE(this%izlay(this%layerd,2))
   ENDIF
    END SUBROUTINE read_xml
  END MODULE m_types_vacuum

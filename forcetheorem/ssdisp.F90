@@ -21,20 +21,10 @@ MODULE m_types_ssdisp
      PROCEDURE :: postprocess => ssdisp_postprocess
      PROCEDURE :: init   => ssdisp_init !not overloaded
      PROCEDURE :: dist   => ssdisp_dist !not overloaded
-     PROCEDURE :: real_xml =>read_xml_ssdisp
   END TYPE t_forcetheo_ssdisp
 
 CONTAINS
 
-  SUBROUTINE read_xml_ssdisp(ssdisp,xml)
-    USE m_types_xml
-    CLASS(t_forcetheo_ssdisp),INTENT(OUT):: ssdisp
-    TYPE(t_xml),INTENT(IN)            :: xml
-
-    IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/spinSpiralDispersion')==1) THEN
-       ssdisp%qvec=xml%read_q_list('/fleurInput/forceTheorem/spinSpiralDispersion')
-    ENDIF
-  END SUBROUTINE read_xml_ssdisp
 
   SUBROUTINE ssdisp_init(this,q)
     USE m_calculator

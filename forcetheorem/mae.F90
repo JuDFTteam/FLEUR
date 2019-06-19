@@ -22,25 +22,10 @@ MODULE m_types_mae
      PROCEDURE :: postprocess => mae_postprocess
      PROCEDURE :: init   => mae_init !not overloaded
      PROCEDURE :: dist   => mae_dist !not overloaded
-     PROCEDURE :: read_xml => read_xml_mae
   END TYPE t_forcetheo_mae
   PUBLIC t_forcetheo_mae
 CONTAINS
-  SUBROUTINE read_xml_mae(mae,xml)
-    USE m_types_xml
-    CLASS(t_forcetheo_mae),INTENT(OUT):: mae
-    TYPE(t_xml),INTENT(IN)            :: xml
  
-    CHARACTER(len=200)::str
-
-    IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/MAE')==1) THEN
-       str=xml%GetAttributeValue('/fleurInput/forceTheorem/MAE/@theta')
-       CALL evaluateList(mae%theta,str)
-       str=xml%GetAttributeValue('/fleurInput/forceTheorem/MAE/@phi')
-       CALL evaluateList(mae%phi,str)
-    ENDIF
-
-  END SUBROUTINE read_xml_mae
 
   SUBROUTINE mae_init(this,cell,sym)
     USE m_calculator

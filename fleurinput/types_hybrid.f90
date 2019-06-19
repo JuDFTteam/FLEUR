@@ -5,11 +5,12 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_hybrid
-  use m_judft
+  USE m_judft
+  USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
-
-     TYPE t_hybrid
+  
+  TYPE,EXTENDS(t_fleurinput_base):: t_hybrid
       LOGICAL               ::  l_hybrid = .false.
       LOGICAL               ::  l_subvxc = .false.
       LOGICAL               ::  l_calhf = .false.
@@ -53,9 +54,9 @@ MODULE m_types_hybrid
    PUBLIC t_hybrid
 
  CONTAINS
-   SUBROUTINE read_xml_hybrid(hybrid,xml)
+   SUBROUTINE read_xml_hybrid(this,xml)
      USE m_types_xml
-     CLASS(t_hybrid),INTENT(out):: hybrid
+     CLASS(t_hybrid),INTENT(out):: this
      TYPE(t_xml),INTENT(in)     :: xml
      
      
@@ -63,29 +64,29 @@ MODULE m_types_hybrid
      CHARACTER(len=100)::xPathA
 
      ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
-     ALLOCATE(hybrid%lcutm1(ntype),hybrid%lcutwf(ntype),hybrid%select1(4,ntype))
+     ALLOCATE(this%lcutm1(ntype),this%lcutwf(ntype),this%select1(4,ntype))
      numberNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
      IF (numberNodes==1) THEN
-         hybrid%gcutm1=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
-         hybrid%tolerance1=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
-         hybrid%ewaldlambda=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
-         hybrid%lexp=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
-         hybrid%bands1=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
+         this%gcutm1=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
+         this%tolerance1=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
+         this%ewaldlambda=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
+         this%lexp=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
+         this%bands1=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
       ENDIF
 
       DO itype=1,ntype
          xpatha=xml%SpeciesPath(itype)//'/prodBasis'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
          IF (numberNodes==1) THEN
-            hybrid%lcutm1(iType) =evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutm'))
-            hybrid%lcutwf(iType) =evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutwf'))
+            this%lcutm1(iType) =evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutm'))
+            this%lcutwf(iType) =evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@lcutwf'))
             xPathA=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@select')
-            hybrid%select1(1,iType) = NINT(evaluateFirst(xPathA))
-            hybrid%select1(2,iType) = NINT(evaluateFirst(xPathA))
-            hybrid%select1(3,iType) = NINT(evaluateFirst(xPathA))
-            hybrid%select1(4,iType) = NINT(evaluateFirst(xPathA))
+            this%select1(1,iType) = NINT(evaluateFirst(xPathA))
+            this%select1(2,iType) = NINT(evaluateFirst(xPathA))
+            this%select1(3,iType) = NINT(evaluateFirst(xPathA))
+            this%select1(4,iType) = NINT(evaluateFirst(xPathA))
          ELSE
-            hybrid%lcutm1(iType) =-1
+            this%lcutm1(iType) =-1
          ENDIF
       END DO
     END SUBROUTINE read_xml_hybrid

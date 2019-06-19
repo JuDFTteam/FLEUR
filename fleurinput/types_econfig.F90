@@ -3,12 +3,11 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-
 MODULE m_types_econfig
   USE m_judft
   IMPLICIT NONE
   PRIVATE
-  
+  !This is used by t_atoms and does not extend t_fleurinput_base by itself
   TYPE:: t_econfig
      CHARACTER(len=100) :: coreconfig 
      CHARACTER(len=100) :: valenceconfig

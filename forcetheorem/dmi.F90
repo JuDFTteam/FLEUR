@@ -23,35 +23,22 @@ MODULE m_types_dmi
      PROCEDURE :: postprocess => dmi_postprocess
      PROCEDURE :: init   => dmi_init !not overloaded
      PROCEDURE :: dist   => dmi_dist !not overloaded
-     PROCEDURE :: read_xml=> dmi_read_xml
   END TYPE t_forcetheo_dmi
   PUBLIC t_forcetheo_dmi
 CONTAINS
 
-  SUBROUTINE dmi_read_xml(dmi,xml)
-    USE m_types_xml
-    CLASS(t_forcetheo_dmi),INTENT(OUT):: dmi
-    TYPE(t_xml),INTENT(IN)            :: xml
-    CHARACTER(len=200)::lstring,nstring
 
-    IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI')==1) THEN
-       lString=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@theta')
-       nString=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@phi')
-       CALL dmi%init(xml%read_q_list('/fleurInput/forceTheorem/DMI/qVectors'),lstring,nstring)
-    ENDIF
-  END SUBROUTINE dmi_read_xml
-
-  SUBROUTINE dmi_init(this,q,theta_s,phi_s)
+  SUBROUTINE dmi_init(this,q,theta,phi)
     USE m_calculator
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     REAL,INTENT(in)                     :: q(:,:)
-    CHARACTER(len=*),INTENT(INOUT)      :: theta_s,phi_s
+    REAL,INTENT(IN)                     :: theta(:),phi(:)
 
-    CALL evaluateList(this%theta,theta_s)
-    CALL evaluateList(this%phi,phi_s)
-
+    this%theta=theta
+    this%phi=phi
+    
     IF (SIZE(this%phi).NE.SIZE(this%theta)) CALL &
          judft_error("Lists for theta/phi must have the same length in DMI force theorem calculations")
 

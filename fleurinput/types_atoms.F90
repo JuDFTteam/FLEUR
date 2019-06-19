@@ -7,8 +7,9 @@
 #define CPP_MANAGED 
 #endif
 MODULE m_types_atoms
-  use m_juDFT
+  USE m_juDFT
   USE m_types_econfig
+  USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
   TYPE t_utype
@@ -19,9 +20,7 @@ MODULE m_types_atoms
       INTEGER :: atomType ! The atom type to which this U parameter belongs
       LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
    END TYPE t_utype
-
-
-   TYPE t_atoms
+   TYPE,EXTENDS(t_fleurinput_base):: t_atoms
       !<no of types
       INTEGER :: ntype
       !<total-no of atoms
@@ -104,48 +103,48 @@ MODULE m_types_atoms
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
    CONTAINS
-      procedure :: nsp => calc_nsp_atom
+      PROCEDURE :: nsp => calc_nsp_atom
       PROCEDURE :: same_species
       PROCEDURE :: read_xml => read_xml_atoms
    END TYPE t_atoms
 
-   public :: t_atoms
+   PUBLIC :: t_atoms
 
- contains
-   LOGICAL function same_species(atoms,n,nn)
-     use m_judft
-     implicit none
-     class(t_atoms),INTENT(IN)::atoms
-     integer,intent(in)::n,nn
+ CONTAINS
+   LOGICAL FUNCTION same_species(atoms,n,nn)
+     USE m_judft
+     IMPLICIT NONE
+     CLASS(t_atoms),INTENT(IN)::atoms
+     INTEGER,INTENT(in)::n,nn
 
-     if (n>atoms%ntype.or.nn>atoms%ntype) call judft_error("Same species checked for non-existing atom")
+     IF (n>atoms%ntype.OR.nn>atoms%ntype) CALL judft_error("Same species checked for non-existing atom")
 
      same_species=atoms%nz(n)==atoms%nz(nn)
-     same_species=same_species.and.atoms%jri(n)==atoms%jri(nn)
-     same_species=same_species.and.atoms%dx(n)==atoms%dx(nn)
-     same_species=same_species.and.atoms%rmt(n)==atoms%rmt(nn)
-     same_species=same_species.and.atoms%lmax(n)==atoms%lmax(nn)
-     same_species=same_species.and.atoms%lnonsph(n)==atoms%lnonsph(nn)
-     same_species=same_species.and.atoms%nlo(n)==atoms%nlo(nn)
-     if (atoms%nlo(n)==atoms%nlo(nn)) same_species=same_species.and.all(atoms%llo(:,n)==atoms%llo(:,nn))
-     same_species=same_species.and.atoms%lapw_l(n)==atoms%lapw_l(nn)
-     same_species=same_species.and.atoms%l_geo(n)==atoms%l_geo(nn)
-     same_species=same_species.and.trim(atoms%econf(n)%coreconfig)==trim(atoms%econf(nn)%coreconfig)
-     same_species=same_species.and.trim(atoms%econf(n)%valenceconfig)==trim(atoms%econf(nn)%valenceconfig)
-     same_species=same_species.and.trim(atoms%econf(n)%valenceconfig)==trim(atoms%econf(nn)%valenceconfig)
-  end function
-  pure function calc_nsp_atom(self) result(nsp)
-    implicit none
+     same_species=same_species.AND.atoms%jri(n)==atoms%jri(nn)
+     same_species=same_species.AND.atoms%dx(n)==atoms%dx(nn)
+     same_species=same_species.AND.atoms%rmt(n)==atoms%rmt(nn)
+     same_species=same_species.AND.atoms%lmax(n)==atoms%lmax(nn)
+     same_species=same_species.AND.atoms%lnonsph(n)==atoms%lnonsph(nn)
+     same_species=same_species.AND.atoms%nlo(n)==atoms%nlo(nn)
+     IF (atoms%nlo(n)==atoms%nlo(nn)) same_species=same_species.AND.ALL(atoms%llo(:,n)==atoms%llo(:,nn))
+     same_species=same_species.AND.atoms%lapw_l(n)==atoms%lapw_l(nn)
+     same_species=same_species.AND.atoms%l_geo(n)==atoms%l_geo(nn)
+     same_species=same_species.AND.TRIM(atoms%econf(n)%coreconfig)==TRIM(atoms%econf(nn)%coreconfig)
+     same_species=same_species.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
+     same_species=same_species.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
+  END FUNCTION
+  PURE FUNCTION calc_nsp_atom(self) RESULT(nsp)
+    IMPLICIT NONE
     CLASS(t_atoms),INTENT(IN)      :: self
     INTEGER                        :: nsp
       
     nsp = (self%lmaxd+1+MOD(self%lmaxd+1,2))*(2*self%lmaxd+1)
-   end function
+   END FUNCTION
 
-   SUBROUTINE read_xml_atoms(atoms,xml)
+   SUBROUTINE read_xml_atoms(this,xml)
     USE m_types_xml
     IMPLICIT NONE
-    CLASS(t_atoms),INTENT(OUT):: atoms
+    CLASS(t_atoms),INTENT(OUT):: this
     TYPE(t_xml),INTENT(IN)    :: xml
 
     CHARACTER(len=200):: xpaths,xpathg,xpath,valueString,lstring,nstring,core,valence
@@ -155,34 +154,34 @@ MODULE m_types_atoms
     INTEGER,ALLOCATABLE :: itmp(:,:)
     REAL                :: down,up
     CHARACTER(len=20)   :: state
-    atoms%ntype= xml%get_ntype()
-    atoms%nat =  xml%get_nat()
-    ALLOCATE(atoms%nz(atoms%ntype))     !nz and zatom have the same content!
-    ALLOCATE(atoms%zatom(atoms%ntype))  !nz and zatom have the same content!
-    ALLOCATE(atoms%jri(atoms%ntype))
-    ALLOCATE(atoms%dx(atoms%ntype))
-    ALLOCATE(atoms%lmax(atoms%ntype))
-    ALLOCATE(atoms%nlo(atoms%ntype))
-    ALLOCATE(atoms%lnonsph(atoms%ntype))
-    ALLOCATE(atoms%nflip(atoms%ntype))
-    ALLOCATE(atoms%l_geo(atoms%ntype))
-    ALLOCATE(atoms%lda_u(4*atoms%ntype))
-    ALLOCATE(atoms%bmu(atoms%ntype))
-    ALLOCATE(atoms%relax(3,atoms%ntype))
-    ALLOCATE(atoms%neq(atoms%ntype))
-    ALLOCATE(atoms%taual(3,atoms%nat))
-    ALLOCATE(atoms%label(atoms%nat))
-    ALLOCATE(atoms%pos(3,atoms%nat))
-    ALLOCATE(atoms%rmt(atoms%ntype))
-    ALLOCATE(atoms%econf(atoms%ntype))
-    ALLOCATE(atoms%ncv(atoms%ntype)) ! For what is this?
-    ALLOCATE(atoms%ngopr(atoms%nat)) ! For what is this?
-    ALLOCATE(atoms%lapw_l(atoms%ntype)) ! Where do I put this?
-    ALLOCATE(atoms%invsat(atoms%nat)) ! Where do I put this?
-    ALLOCATE(atoms%llo(MAXVAL(xml%get_nlo()),atoms%ntype))
-    atoms%lapw_l(:) = -1
-    atoms%n_u = 0
-    DO n = 1, atoms%ntype
+    this%ntype= xml%get_ntype()
+    this%nat =  xml%get_nat()
+    ALLOCATE(this%nz(this%ntype))     !nz and zatom have the same content!
+    ALLOCATE(this%zatom(this%ntype))  !nz and zatom have the same content!
+    ALLOCATE(this%jri(this%ntype))
+    ALLOCATE(this%dx(this%ntype))
+    ALLOCATE(this%lmax(this%ntype))
+    ALLOCATE(this%nlo(this%ntype))
+    ALLOCATE(this%lnonsph(this%ntype))
+    ALLOCATE(this%nflip(this%ntype))
+    ALLOCATE(this%l_geo(this%ntype))
+    ALLOCATE(this%lda_u(4*this%ntype))
+    ALLOCATE(this%bmu(this%ntype))
+    ALLOCATE(this%relax(3,this%ntype))
+    ALLOCATE(this%neq(this%ntype))
+    ALLOCATE(this%taual(3,this%nat))
+    ALLOCATE(this%label(this%nat))
+    ALLOCATE(this%pos(3,this%nat))
+    ALLOCATE(this%rmt(this%ntype))
+    ALLOCATE(this%econf(this%ntype))
+    ALLOCATE(this%ncv(this%ntype)) ! For what is this?
+    ALLOCATE(this%ngopr(this%nat)) ! For what is this?
+    ALLOCATE(this%lapw_l(this%ntype)) ! Where do I put this?
+    ALLOCATE(this%invsat(this%nat)) ! Where do I put this?
+    ALLOCATE(this%llo(MAXVAL(xml%get_nlo()),this%ntype))
+    this%lapw_l(:) = -1
+    this%n_u = 0
+    DO n = 1, this%ntype
        !in Species:
        !@name,element,atomicNumber,coreStates
        !@optional: magMom,flipSpin,magField,vcaAddCharge
@@ -190,48 +189,48 @@ MODULE m_types_atoms
        !optional: energyParameters,prodBasis,special,force,electronConfig,nocoParams,ldaU(up to 4),lo(as many as needed)
        xpathg=xml%groupPath(n)
        xpaths=xml%speciesPath(n)
-       atoms%nz(n)=evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@atomicNumber'))
-       IF (atoms%nz(n).EQ.0) THEN
+       this%nz(n)=evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@atomicNumber'))
+       IF (this%nz(n).EQ.0) THEN
           WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', n
-          atoms%zatom(n) = 1.0e-10
+          this%zatom(n) = 1.0e-10
        END IF
-       atoms%zatom(n) = atoms%nz(n)
+       this%zatom(n) = this%nz(n)
        
        IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@flipSpin'))) THEN
-          atoms%nflip(n) = 1
+          this%nflip(n) = 1
        ELSE
-          atoms%nflip(n) = 0
+          this%nflip(n) = 0
        ENDIF
-       atoms%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
+       this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
        !Now the xml elements
        !mtSphere
        xpath=xpaths
-       atoms%rmt(n) =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@radius'))
-       atoms%jri(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@gridPoints'))
-       atoms%dx(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@logIncrement'))
+       this%rmt(n) =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@radius'))
+       this%jri(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@gridPoints'))
+       this%dx(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/mtSphere/@logIncrement'))
        !atomicCuttoffs
        xpath=xpaths
-       atoms%lmax(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmax'))
-       atoms%lnonsph(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lnonsphr'))
-       atoms%lapw_l(n) = -1
+       this%lmax(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmax'))
+       this%lnonsph(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lnonsphr'))
+       this%lapw_l(n) = -1
        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmaxAPW').EQ.1) &
-            atoms%lapw_l(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmaxAPW'))
+            this%lapw_l(n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/atomicCutoffs/@lmaxAPW'))
        !force type
        xpath=''
        IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/force')==1) xpath=xpaths
        IF (xpath.NE.'') THEN
-          atoms%l_geo(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/force/@calculate'))
+          this%l_geo(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/force/@calculate'))
           valueString = xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'force/@relaxXYZ')
           READ(valueString,'(3l1)') relaxX, relaxY, relaxZ
-          IF (relaxX) atoms%relax(1,n) = 1
-          IF (relaxY) atoms%relax(2,n) = 1
-          IF (relaxZ) atoms%relax(3,n) = 1
+          IF (relaxX) this%relax(1,n) = 1
+          IF (relaxY) this%relax(2,n) = 1
+          IF (relaxZ) this%relax(3,n) = 1
        ELSE
-          atoms%l_geo(n) = .FALSE.
-          atoms%relax(:,n) = 0
+          this%l_geo(n) = .FALSE.
+          this%relax(:,n) = 0
        END IF
        !LO stuff  
-       atoms%nlo(n) = 0
+       this%nlo(n) = 0
         DO ilo = 1,xml%getNumberOfNodes(TRIM(ADJUSTL(xpaths))//'/lo')+xml%getNumberOfNodes(TRIM(ADJUSTL(xpathg))//'/lo')
            IF (ilo>xml%getNumberOfNodes(TRIM(ADJUSTL(xpaths))//'/lo')) THEN
               WRITE(xpath,*) TRIM(ADJUSTL(xpathg))//'/lo[',ilo-xml%getNumberOfNodes(TRIM(ADJUSTL(xpaths))//'/lo'),']'
@@ -245,31 +244,31 @@ MODULE m_types_atoms
           IF(lNumCount.NE.nNumCount) THEN
              CALL judft_error('Error in LO input: l quantum number count does not equal n quantum number count')
           END IF
-          IF (.NOT. ALLOCATED(atoms%llo)) ALLOCATE(atoms%llo(1,atoms%ntype),atoms%ulo_der(1,atoms%ntype))
+          IF (.NOT. ALLOCATED(this%llo)) ALLOCATE(this%llo(1,this%ntype),this%ulo_der(1,this%ntype))
           DO i=1,lNumCount
-             atoms%llo(atoms%nlo(n)+i,n) = lNumbers(i)
-             atoms%ulo_der(atoms%nlo(n)+i,n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@eDeriv'))
+             this%llo(this%nlo(n)+i,n) = lNumbers(i)
+             this%ulo_der(this%nlo(n)+i,n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@eDeriv'))
           ENDDO
-          atoms%nlo(n) = atoms%nlo(n) +lnumcount 
+          this%nlo(n) = this%nlo(n) +lnumcount 
           DEALLOCATE (lNumbers, nNumbers)
        END DO
        !LDA+U
        DO i = 1,xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/ldaU')
           WRITE(xpath,*) TRIM(ADJUSTL(xPaths))//'/ldaU[',i,']'
-          IF (i.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="types_atoms")
-          atoms%n_u = atoms%n_u + 1
-          atoms%lda_u(atoms%n_u)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l'))
+          IF (i.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="types_this")
+          this%n_u = this%n_u + 1
+          this%lda_u(this%n_u)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l'))
           
-          atoms%lda_u(atoms%n_u)%u =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@U'))
-          atoms%lda_u(atoms%n_u)%j = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@J'))
-          atoms%lda_u(atoms%n_u)%l_amf =  evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_amf'))
-          atoms%lda_u(atoms%n_u)%atomType = n
+          this%lda_u(this%n_u)%u =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@U'))
+          this%lda_u(this%n_u)%j = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@J'))
+          this%lda_u(this%n_u)%l_amf =  evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_amf'))
+          this%lda_u(this%n_u)%atomType = n
        END DO
        !electron config
        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xml%getAttributeValue(xPaths)))//'/electronConfig')==1) THEN
           core=xml%getAttributeValue(TRIM(ADJUSTL(xml%getAttributeValue(xPaths)))//'/electronConfig/coreConfig')
           valence=xml%getAttributeValue(TRIM(ADJUSTL(xml%getAttributeValue(xPaths)))//'/electronConfig/valenceConfig')
-          CALL atoms%econf(n)%init(core,valence)
+          CALL this%econf(n)%init(core,valence)
           numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xml%getAttributeValue(xPaths)))//'/electronConfig/stateOccupation')
           IF (numberNodes.GE.1) THEN
              DO i = 1, numberNodes
@@ -277,75 +276,75 @@ MODULE m_types_atoms
                 state=xml%getAttributeValue(TRIM(xpath)//'/@state')
                 up=evaluateFirstOnly(xml%getAttributeValue(TRIM(xpath)//'/@spinUp'))
                 down=evaluateFirstOnly(xml%getAttributeValue(TRIM(xpath)//'/@spinDown'))
-                CALL atoms%econf(n)%set_occupation(state,up,down)
+                CALL this%econf(n)%set_occupation(state,up,down)
              END DO
           END IF
        END IF
      
     END DO
 
-    atoms%nlotot = 0
-    DO n = 1, atoms%ntype
-       DO l = 1,atoms%nlo(n)
-          atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+    this%nlotot = 0
+    DO n = 1, this%ntype
+       DO l = 1,this%nlo(n)
+          this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
        ENDDO
     ENDDO
     
     ! Check the LO stuff and call setlomap (from inped):
     
-    ALLOCATE(atoms%lo1l(0:atoms%llod,atoms%ntype))
-    ALLOCATE(atoms%nlol(0:atoms%llod,atoms%ntype))
+    ALLOCATE(this%lo1l(0:this%llod,this%ntype))
+    ALLOCATE(this%nlol(0:this%llod,this%ntype))
     
     
-    DO n = 1, atoms%ntype
-       IF (atoms%nlo(n).GE.1) THEN
-          IF (atoms%nlo(n).GT.atoms%nlod) THEN
-             WRITE (6,*) 'nlo(n) =',atoms%nlo(n),' > nlod =',atoms%nlod
+    DO n = 1, this%ntype
+       IF (this%nlo(n).GE.1) THEN
+          IF (this%nlo(n).GT.this%nlod) THEN
+             WRITE (6,*) 'nlo(n) =',this%nlo(n),' > nlod =',this%nlod
              CALL juDFT_error("nlo(n)>nlod",calledby ="postprocessInput")
           END IF
-          DO j=1,atoms%nlo(n)
-             IF ( (atoms%llo(j,n).GT.atoms%llod).OR.(MOD(-atoms%llod,10)-1).GT.atoms%llod ) THEN
-                WRITE (6,*) 'llo(j,n) =',atoms%llo(j,n),' > llod =',atoms%llod
+          DO j=1,this%nlo(n)
+             IF ( (this%llo(j,n).GT.this%llod).OR.(MOD(-this%llod,10)-1).GT.this%llod ) THEN
+                WRITE (6,*) 'llo(j,n) =',this%llo(j,n),' > llod =',this%llod
                 CALL juDFT_error("llo(j,n)>llod",calledby ="postprocessInput")
              END IF
           END DO
           
           ! Replace call to setlomap with the following 3 loops (preliminary).
-          ! atoms%nlol and atoms%lo1l arrays are strange. This should be solved differently.
-          DO l = 0,atoms%llod
-             atoms%nlol(l,n) = 0
-             atoms%lo1l(l,n) = 0
+          ! this%nlol and this%lo1l arrays are strange. This should be solved differently.
+          DO l = 0,this%llod
+             this%nlol(l,n) = 0
+             this%lo1l(l,n) = 0
           END DO
           
-          DO ilo = 1,atoms%nlod
-             atoms%l_dulo(ilo,n) = .FALSE.
+          DO ilo = 1,this%nlod
+             this%l_dulo(ilo,n) = .FALSE.
           END DO
           
-          DO ilo = 1,atoms%nlo(n)
-             WRITE(6,'(A,I2,A,I2)') 'I use',atoms%ulo_der(ilo,n),'. derivative of l =',atoms%llo(ilo,n)
-             IF (atoms%llo(ilo,n)>atoms%llod) CALL juDFT_error(" l > llod!!!",calledby="postprocessInput")
-             l = atoms%llo(ilo,n)
+          DO ilo = 1,this%nlo(n)
+             WRITE(6,'(A,I2,A,I2)') 'I use',this%ulo_der(ilo,n),'. derivative of l =',this%llo(ilo,n)
+             IF (this%llo(ilo,n)>this%llod) CALL juDFT_error(" l > llod!!!",calledby="postprocessInput")
+             l = this%llo(ilo,n)
              IF (ilo.EQ.1) THEN
-                atoms%lo1l(l,n) = ilo
+                this%lo1l(l,n) = ilo
              ELSE
-                IF (l.NE.atoms%llo(ilo-1,n)) THEN
-                   atoms%lo1l(l,n) = ilo
+                IF (l.NE.this%llo(ilo-1,n)) THEN
+                   this%lo1l(l,n) = ilo
                 END IF
              END IF
-             atoms%nlol(l,n) = atoms%nlol(l,n) + 1
+             this%nlol(l,n) = this%nlol(l,n) + 1
           END DO
-          WRITE (6,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(n)
+          WRITE (6,*) 'this%lapw_l(n) = ',this%lapw_l(n)
        END IF
        
     END DO
     
     ! Check lda+u stuff (from inped)
     
-    DO i = 1, atoms%n_u
-       n = atoms%lda_u(i)%atomType
-       IF (atoms%nlo(n).GE.1) THEN
-          DO j = 1, atoms%nlo(n)
-             IF ((ABS(atoms%llo(j,n)).EQ.atoms%lda_u(i)%l) .AND. (.NOT.atoms%l_dulo(j,n)) ) &
+    DO i = 1, this%n_u
+       n = this%lda_u(i)%atomType
+       IF (this%nlo(n).GE.1) THEN
+          DO j = 1, this%nlo(n)
+             IF ((ABS(this%llo(j,n)).EQ.this%lda_u(i)%l) .AND. (.NOT.this%l_dulo(j,n)) ) &
                   WRITE (*,*) 'LO and LDA+U for same l not implemented'
           END DO
        END IF

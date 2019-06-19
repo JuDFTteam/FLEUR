@@ -16,37 +16,35 @@ CONTAINS
   !> Function to determine the energy parameter given the quantum number and the potential
   !! Different schemes are implemented. Nqn (main quantum number) is used as a switch.
   !! This code was previously in lodpot.f
-  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
+  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,irank,vr)RESULT(e)
     USE m_types_atoms
-    USE m_types_mpi
     USE m_radsra
     USE m_differ
-    USE m_xmlOutput
+    !Use m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
     TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_mpi),INTENT(IN)  ::mpi
+    INTEGER,INTENT(IN)  ::irank
     REAL,INTENT(IN):: vr(:)
 
-    IF (nqn>0) e=priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr)
-    IF (nqn<0) e=priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr)
+    IF (nqn>0) e=priv_method1(lo,l,n,jsp,nqn,atoms,irank,vr)
+    IF (nqn<0) e=priv_method2(lo,l,n,jsp,nqn,atoms,irank,vr)
   END FUNCTION find_enpara
 
 
-  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
+  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,irank,vr)RESULT(e)
     USE m_types_atoms
-    USE m_types_mpi
     USE m_radsra
     USE m_differ
-    USE m_xmlOutput
+    !USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
     TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_mpi),INTENT(IN)  ::mpi
+    INTEGER,INTENT(IN)  ::irank
     REAL,INTENT(IN):: vr(:)
 
 
@@ -131,7 +129,7 @@ CONTAINS
     ENDIF
  
 
-    IF (mpi%irank  == 0) THEN
+    IF (irank  == 0) THEN
        attributes = ''
        WRITE(attributes(1),'(i0)') n
        WRITE(attributes(2),'(i0)') jsp
@@ -153,18 +151,17 @@ CONTAINS
     ENDIF
   END FUNCTION priv_method1
 
-  REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
+  REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,irank,vr)RESULT(e)
     USE m_types_atoms
-    USE m_types_mpi
     USE m_radsra
     USE m_differ
-    USE m_xmlOutput
+    !USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
     TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_mpi),INTENT(IN)  ::mpi
+    INTEGER,INTENT(IN)  ::irank
     REAL,INTENT(IN):: vr(:)
 
     INTEGER j,ilo,i
@@ -282,7 +279,7 @@ CONTAINS
        END IF
     END DO
 
-    IF (mpi%irank == 0) THEN
+    IF (irank == 0) THEN
        attributes = ''
        WRITE(attributes(1),'(i0)') n
        WRITE(attributes(2),'(i0)') jsp

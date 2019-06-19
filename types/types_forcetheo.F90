@@ -21,7 +21,12 @@
 !! forcetheorem/mae.F90
 
 MODULE m_types_forcetheo
-  TYPE :: t_forcetheo
+  USE m_juDFT
+  USE m_types_fleurinput_base
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC:: t_forcetheo
+  TYPE,EXTENDS(t_fleurinput_base) :: t_forcetheo
      LOGICAL,PRIVATE :: firstloop
      LOGICAL :: l_IO
    CONTAINS

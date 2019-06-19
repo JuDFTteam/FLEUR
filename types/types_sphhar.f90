@@ -5,9 +5,13 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_sphhar
-
+  USE m_juDFT
+  USE m_types_fleurinput_base
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: t_sphhar
    !Data for the spherical harmonics
-   TYPE t_sphhar
+  TYPE,EXTENDS(t_fleurinput_base):: t_sphhar
       !No of symmetry types (must
       !equal maxval(atoms%ntypsy)
       INTEGER ::ntypsd
@@ -26,5 +30,5 @@ MODULE m_types_sphhar
       !phasefactors (max(nmem),0:nlhd
       COMPLEX, ALLOCATABLE ::clnu(:, :, :)
    END TYPE t_sphhar
-
+ CONTAINS
  END MODULE m_types_sphhar

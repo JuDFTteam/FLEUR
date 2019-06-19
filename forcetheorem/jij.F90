@@ -24,21 +24,11 @@ MODULE m_types_jij
      PROCEDURE :: postprocess => jij_postprocess
      PROCEDURE :: init   => jij_init !not overloaded
      PROCEDURE :: dist   => jij_dist !not overloaded
-     PROCEDURE :: read_xml => read_xml_jij
   END TYPE t_forcetheo_jij
 
 CONTAINS
 
-  SUBROUTINE read_xml_jij(jij,xml)
-    USE m_types_xml
-    CLASS(t_forcetheo_jij),INTENT(OUT):: jij
-    TYPE(t_xml),INTENT(IN)            :: xml
-
-    IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/Jij')==1) THEN
-       jij%qvec=xml%read_q_list('/fleurInput/forceTheorem/Jij/qVectors')
-       jij%thetaj=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/forceTheorem/Jij/@thetaj'))      
-    ENDIF
-  END SUBROUTINE read_xml_jij
+  
 
 
   SUBROUTINE jij_init(this,atoms)

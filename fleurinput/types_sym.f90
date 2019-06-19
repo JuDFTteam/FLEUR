@@ -6,11 +6,12 @@
 
 MODULE m_types_sym
   USE m_juDFT
-  use m_types_fleurinput
+  USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
-  !symmetry information
-  TYPE,extends(t_fleurinput):: t_sym
+  PUBLIC :: t_sym
+  !> Type to contain the symmetry information
+  TYPE,EXTENDS(t_fleurinput_base):: t_sym
      !No of sym ops
      INTEGER ::nop
      !Rot-matrices (3,3,nop)
@@ -39,22 +40,11 @@ MODULE m_types_sym
      INTEGER, ALLOCATABLE :: invsatnr(:) !(atoms%nat)
      INTEGER, ALLOCATABLE :: invarop(:,:)!(atoms%nat,nop)
      INTEGER, ALLOCATABLE :: invarind(:) !(atoms%nat)
-
      !
      ! Hybrid specific stuff TODO
      !
      INTEGER ::nsymt
      INTEGER :: nsym
-     !
-     ! Description of initalization
-     !
-     INTEGER :: symSpecType
-     !Name of lattice type
-     CHARACTER*3   :: latnam
-     !Name of sym
-     CHARACTER*4   :: namgrp
-
-
    CONTAINS
      PROCEDURE :: init
      PROCEDURE :: print_xml
@@ -62,13 +52,12 @@ MODULE m_types_sym
      PROCEDURE :: read_xml
      PROCEDURE,PRIVATE :: check_close
   END TYPE t_sym
-  PUBLIC t_sym
 CONTAINS
 
-  SUBROUTINE read_xml(sym,xml)
+  SUBROUTINE read_xml(this,xml)
     USE m_types_xml
     USE m_calculator
-    CLASS(t_sym),INTENT(out):: sym
+    CLASS(t_sym),INTENT(out):: this
     TYPE(t_xml),INTENT(IN)  :: xml
     
     INTEGER:: number_sets,n
@@ -76,17 +65,17 @@ CONTAINS
     
 
 
-    sym%nop = xml%GetNumberOfNodes('/fleurInput/calculationSetup/symmetryOperations/symOp')
-    IF (sym%nop<1) CALL judft_error("No symmetries in inp.xml")
+    this%nop = xml%GetNumberOfNodes('/fleurInput/calculationSetup/symmetryOperations/symOp')
+    IF (this%nop<1) CALL judft_error("No symmetries in inp.xml")
     
-    DO n=1,sym%nop
+    DO n=1,this%nop
        WRITE(path,"(a,i0,a)") '/fleurInput/calculationSetup/symmetryOperations/symOp[',n,']'
        str=xml%GetAttributeValue(TRIM(path)//'/row-1')
-       READ(str,*) sym%mrot(1,:,n),sym%tau(1,n)
+       READ(str,*) this%mrot(1,:,n),this%tau(1,n)
        str=xml%GetAttributeValue(TRIM(path)//'/row-2')
-       READ(str,*) sym%mrot(2,:,n),sym%tau(2,n)
+       READ(str,*) this%mrot(2,:,n),this%tau(2,n)
        str=xml%GetAttributeValue(TRIM(path)//'/row-3')
-       READ(str,*) sym%mrot(3,:,n),sym%tau(3,n)
+       READ(str,*) this%mrot(3,:,n),this%tau(3,n)
     ENDDO
   END SUBROUTINE read_xml
     
@@ -118,7 +107,7 @@ CONTAINS
   SUBROUTINE init(sym,cell,film)
     !Generates missing symmetry info.
     !tau,mrot and nop have to be specified already
-    USE m_dwigner
+    !USE m_dwigner
     USE m_types_cell
     CLASS(t_sym),INTENT(INOUT):: sym
     CLASS(t_cell),INTENT(IN)  :: cell
@@ -262,7 +251,7 @@ CONTAINS
     !Generated wigner symbols for LDA+U
     IF (ALLOCATED(sym%d_wgn)) DEALLOCATE(sym%d_wgn)
     ALLOCATE(sym%d_wgn(-3:3,-3:3,3,sym%nop))
-    CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
+    !CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
 
     !---> redo to ensure proper mult. table and mapping functions
     CALL sym%check_close(optype)

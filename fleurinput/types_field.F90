@@ -9,12 +9,12 @@ MODULE m_types_field
   !     This module contains definitions for electric and magnetic field -types
   !*************************************************************
   USE m_juDFT
+  USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
-  REAL,TARGET::sigma=0.0
-  TYPE t_efield
+  TYPE,EXTENDS(t_fleurinput_base):: t_efield
      REAL    :: zsigma  = 10.0  ! Distance to the charged plates
-     REAL,POINTER    :: sigma   ! charge at the plates
+     REAL    :: sigma   ! charge at the plates
      REAL    :: sig_b(2)=  0.0  ! Extra charge for the top/bottom plate
      COMPLEX :: vslope  =  0.0  ! Dirichlet bnd. cond.: Slope
      REAL,    ALLOCATABLE :: sigEF(:,:,:) ! (nx, ny, nvac)
@@ -42,18 +42,18 @@ MODULE m_types_field
 
   PUBLIC t_field,t_efield
 CONTAINS
-  SUBROUTINE init_field(this,input)
-    USE m_types_setup
+  SUBROUTINE init_field(this)
+    !USE m_types_setup
     IMPLICIT NONE
     CLASS(t_field),INTENT(INOUT)::this
-    TYPE(t_input),INTENT(INOUT) ::input
-    input%sigma => sigma
-    this%efield%sigma=>sigma
+    !TYPE(t_input),INTENT(INOUT) ::input
+    !input%sigma => sigma
+    !this%efield%sigma=>sigma
   END SUBROUTINE init_field
 
-  SUBROUTINE read_xml(field,xml)
+  SUBROUTINE read_xml(this,xml)
     USE m_types_xml
-    CLASS(t_field),INTENT(OUT)::field
+    CLASS(t_field),INTENT(OUT)::this
     TYPE(t_xml),INTENT(IN)::xml
 
     CHARACTER(len=100)::xpatha,xpathb
@@ -63,26 +63,26 @@ CONTAINS
     numberNodes = xml%GetNumberOfNodes(xPathA)
     IF (numberNodes.EQ.1) THEN
        IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
-          field%b_field=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
-          field%l_b_field=.TRUE.
+          this%b_field=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
+          this%l_b_field=.TRUE.
        ENDIF
-       field%efield%zsigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
-       field%efield%sig_b(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
-       field%efield%sig_b(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_2'))
-       field%efield%plot_charge = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_charge'))
-       field%efield%plot_rho = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_rho'))
-       field%efield%autocomp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@autocomp'))
-       field%efield%dirichlet = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
-       field%efield%l_eV = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
+       this%efield%zsigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
+       this%efield%sig_b(1) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
+       this%efield%sig_b(2) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_2'))
+       this%efield%plot_charge = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_charge'))
+       this%efield%plot_rho = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plot_rho'))
+       this%efield%autocomp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@autocomp'))
+       this%efield%dirichlet = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
+       this%efield%l_eV = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
        
        numberNodes=xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/shape')
-       ALLOCATE(field%efield%shapes(numberNodes))
+       ALLOCATE(this%efield%shapes(numberNodes))
        DO i=1,numberNodes
           WRITE(xPathB,"(a,a,i0,a)") TRIM(ADJUSTL(xpathA)),'/shape[',i,']'
-          field%efield%shapes(i)=TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB)))))
+          this%efield%shapes(i)=TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB)))))
        ENDDO
     ELSE
-       ALLOCATE(field%efield%shapes(0))
+       ALLOCATE(this%efield%shapes(0))
     END IF
   END SUBROUTINE read_xml
 END MODULE m_types_field

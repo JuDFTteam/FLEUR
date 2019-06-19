@@ -3,46 +3,25 @@ set(fleur_F77 ${fleur_F77}
 set(fleur_F90 ${fleur_F90}
 types/types.F90
 types/types_mat.F90
-types/types_xcpot.F90
 types/types_xcpot_inbuild.F90
 types/types_xcpot_inbuild_nofunction.F90
 types/types_xcpot_data.F90
 types/types_xcpot_libxc.F90
 types/types_mpi.F90
-types/types_stars.f90
-types/types_atoms.F90
 types/types_lapw.F90
-types/types_sphhar.f90
 types/types_tlmplm.F90
 types/types_misc.F90
 types/types_mpimat.F90
 types/types_potden.F90
-types/types_forcetheo.F90
-types/types_kpts.f90
-types/types_enpara.F90
-types/types_setup.F90
 types/types_usdus.F90
 types/types_cdnval.f90
-types/types_field.F90
 types/types_regionCharges.f90
 types/types_dos.f90
 types/types_denCoeffsOffdiag.f90
 types/types_force.f90
 types/types_gpumat.F90
-types/types_econfig.F90
-types/types_cell.f90
-types/types_sym.f90
-types/types_input.f90
-types/types_sliceplot.f90
-types/types_oneD.f90
-types/types_hybrid.f90
-types/types_noco.f90
-types/types_banddos.f90
 types/types_dimension.f90	
-types/types_vacuum.f90
-types/types_coreSpecInput.f90
-types/types_wannier.f90
-	
+
 )
 
 set(inpgen_F90 ${inpgen_F90}

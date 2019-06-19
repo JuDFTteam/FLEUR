@@ -5,10 +5,12 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_sliceplot
-  USE m_judft
+  USE m_judft 
+  USE m_types_fleurinput_base
   IMPLICIT NONE
-
-  TYPE t_sliceplot
+  PRIVATE
+  PUBLIC:: t_sliceplot
+  TYPE,EXTENDS(t_fleurinput_base) ::t_sliceplot
      LOGICAL :: iplot=.FALSE.
      LOGICAL :: slice=.FALSE.
      LOGICAL :: plpot=.FALSE.
@@ -17,13 +19,13 @@ MODULE m_types_sliceplot
      REAL    :: e1s=0.
      REAL    :: e2s=0.
    CONTAINS
-     PROCEDURE :: read_xml
+     PROCEDURE :: read_xml=>read_xml_sliceplot
   END TYPE t_sliceplot
 
 CONTAINS
-  SUBROUTINE read_xml(sliceplot,xml)
+  SUBROUTINE read_xml_sliceplot(this,xml)
     USE m_types_xml
-    CLASS(t_sliceplot),INTENT(OUT)::sliceplot
+    CLASS(t_sliceplot),INTENT(OUT)::this
     TYPE(t_xml),INTENT(IN)::xml
 
     CHARACTER(len=200)::xpatha
@@ -33,29 +35,29 @@ CONTAINS
     numberNodes = xml%GetNumberOfNodes(xPathA)
 
     IF (numberNodes.EQ.1) THEN
-       sliceplot%slice = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
+       this%slice = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@slice'))
     ENDIF
     xPathA = '/fleurInput/output/plotting'
     numberNodes = xml%GetNumberOfNodes(xPathA)
 
     IF (numberNodes.EQ.1) THEN
-       sliceplot%iplot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
-       sliceplot%plpot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
+       this%iplot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
+       this%plpot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
     END IF
 
     xPathA = '/fleurInput/output/chargeDensitySlicing'
     numberNodes = xml%GetNumberOfNodes(xPathA)
 
-    IF ((sliceplot%slice).AND.(numberNodes.EQ.0)) THEN
+    IF ((this%slice).AND.(numberNodes.EQ.0)) THEN
        CALL juDFT_error("slice is true but chargeDensitySlicing parameters are not set!")
     END IF
 
     IF (numberNodes.EQ.1) THEN
-       sliceplot%kk = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numkpt'))
-       sliceplot%e1s = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minEigenval'))
-       sliceplot%e2s = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxEigenval'))
-       sliceplot%nnne = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nnne'))
+       this%kk = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numkpt'))
+       this%e1s = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minEigenval'))
+       this%e2s = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxEigenval'))
+       this%nnne = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@nnne'))
     END IF
-  END SUBROUTINE read_xml
+  END SUBROUTINE read_xml_sliceplot
 
 END MODULE m_types_sliceplot

@@ -6,11 +6,10 @@
 
 MODULE m_types_kpts
   USE m_judft
+  USE m_types_fleurinput_base
   IMPLICIT NONE
-
   PRIVATE
-
-  TYPE t_kpts
+  TYPE,EXTENDS(t_fleurinput_base):: t_kpts
      character(len=20)     :: name="default"
      INTEGER               :: nkpt=0
      INTEGER               :: ntet=0
@@ -94,12 +93,12 @@ CONTAINS
     IF (wscale>0.0) kpts%wtkpt=kpts%wtkpt/wscale
   END SUBROUTINE init_by_kptsfile
 
-  SUBROUTINE read_xml(kpts,xml,name)
+  SUBROUTINE read_xml(this,xml)
     USE m_types_xml
     USE m_calculator
-    CLASS(t_kpts),INTENT(out):: kpts
+    CLASS(t_kpts),INTENT(out):: this
     TYPE(t_xml)              :: xml
-    CHARACTER(len=*),INTENT(IN)::name
+    CHARACTER(len=*)  ::name !TODO
     
     INTEGER:: number_sets,n
     CHARACTER(len=200)::str,path,path2
@@ -113,42 +112,42 @@ CONTAINS
         IF(TRIM(ADJUSTL(name))==xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
      enddo
      IF (n>number_sets) CALL judft_error(("No kpoints named:"//TRIM(name)//" found"))
-     kpts%nkpt=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
+     this%nkpt=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
 
-     kpts%numSpecialPoints=xml%GetNumberOfNodes(TRIM(path)//"specialPoint")
+     this%numSpecialPoints=xml%GetNumberOfNodes(TRIM(path)//"specialPoint")
 
-     IF (kpts%numSpecialPoints>0) THEN
-        If (kpts%numSpecialPoints<2) CALL judft_error(("Giving less than two sepcial points make no sense:"//TRIM(name)))
-        ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
-        ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
-        DO n=1,kpts%numSpecialPoints
+     IF (this%numSpecialPoints>0) THEN
+        If (this%numSpecialPoints<2) CALL judft_error(("Giving less than two sepcial points make no sense:"//TRIM(name)))
+        ALLOCATE(this%specialPoints(3,this%numSpecialPoints))
+        ALLOCATE(this%specialPointNames(this%numSpecialPoints))
+        DO n=1,this%numSpecialPoints
            WRITE(path2,"(a,a,i0,a)") path,"specialPoint[",n,"]"
-           kpts%specialPointNames(n)=xml%getAttributeValue(path2//"/@name")
+           this%specialPointNames(n)=xml%getAttributeValue(path2//"/@name")
            str=xml%getAttributeValue(path2)
-           kpts%specialPoints(1,n) = evaluatefirst(str)
-           kpts%specialPoints(2,n) = evaluatefirst(str)
-           kpts%specialPoints(3,n) = evaluatefirst(str)
+           this%specialPoints(1,n) = evaluatefirst(str)
+           this%specialPoints(2,n) = evaluatefirst(str)
+           this%specialPoints(3,n) = evaluatefirst(str)
         ENDDO
      ELSE
         n=xml%GetNumberOfNodes(TRIM(path)//'kPoint')
-        IF (n.NE.kpts%nkpt) CALL judft_error(("Inconsistent number of k-points in:"//name))
-        ALLOCATE(kpts%bk(3,kpts%nkpt))
-        ALLOCATE(kpts%wtkpt(kpts%nkpt))
-        DO n=1,kpts%nkpt
+        IF (n.NE.this%nkpt) CALL judft_error(("Inconsistent number of k-points in:"//name))
+        ALLOCATE(this%bk(3,this%nkpt))
+        ALLOCATE(this%wtkpt(this%nkpt))
+        DO n=1,this%nkpt
            WRITE(path2,"(a,a,i0,a)") path,"/kPoint[",n,"]"
-           kpts%wtkpt(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@weight'))
+           this%wtkpt(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@weight'))
            str= xml%getAttributeValue(path2)
-           kpts%bk(1,n) = evaluatefirst(str)
-           kpts%bk(2,n) = evaluatefirst(str)
-           kpts%bk(3,n) = evaluatefirst(str)
+           this%bk(1,n) = evaluatefirst(str)
+           this%bk(2,n) = evaluatefirst(str)
+           this%bk(3,n) = evaluatefirst(str)
         ENDDO
-        kpts%ntet=xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
-        ALLOCATE(kpts%voltet(kpts%ntet),kpts%ntetra(4,kpts%ntet))
-        DO n=1,kpts%ntet
+        this%ntet=xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
+        ALLOCATE(this%voltet(this%ntet),this%ntetra(4,this%ntet))
+        DO n=1,this%ntet
            WRITE(path2,"(a,a,i0,a)") path,"/tetraeder/tet[",n,"]"
-           kpts%voltet(n)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
+           this%voltet(n)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
            str= xml%getAttributeValue(path2)
-           READ(str,*) kpts%ntetra(:,n)
+           READ(str,*) this%ntetra(:,n)
         ENDDO
      END IF
    END SUBROUTINE read_xml

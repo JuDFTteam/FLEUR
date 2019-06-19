@@ -12,22 +12,30 @@
 !! In addition to overloading the t_xcpot datatype also mpi_bc_xcpot must be adjusted
 !! for additional implementations.
 MODULE m_types_xcpot
-   use m_types_potden
+   USE m_juDFT
+   USE m_types_fleurinput_base
    IMPLICIT NONE
    PRIVATE
-   PUBLIC           :: t_xcpot,t_gradients
-
-   TYPE t_kinED
-      real, allocatable   :: is(:,:)   ! (nsp*jmtd, jspins)
-      real, allocatable   :: mt(:,:,:) ! (nsp*jmtd, jspins, local num of types)
-   contains
-      procedure           :: alloc_mt => kED_alloc_mt
-   END TYPE t_kinED
-
-   TYPE,ABSTRACT :: t_xcpot
+   PUBLIC :: t_xcpot,t_gradients
+     TYPE t_gradients
+      !Naming convention:
+      !t,u,d as last letter for total,up,down
+      !agr for absolute value of gradient
+      !g2r for laplacien of gradient
+      !+??
+      REAL,ALLOCATABLE :: agrt(:),agru(:),agrd(:)
+      REAL,ALLOCATABLE :: g2ru(:),g2rd(:),gggrt(:)
+      REAL,ALLOCATABLE :: gggru(:),gzgr(:),g2rt(:)
+      REAL,ALLOCATABLE :: gggrd(:),grgru(:),grgrd(:)
+      !These are the contracted Gradients used in libxc
+      REAL,ALLOCATABLE :: sigma(:,:)
+      REAL,ALLOCATABLE :: vsigma(:,:)
+      REAL,ALLOCATABLE :: gr(:,:,:)
+      REAL,ALLOCATABLE :: laplace(:,:)
+   END TYPE t_gradients
+   
+   TYPE,ABSTRACT,EXTENDS(t_fleurinput_base) :: t_xcpot
       REAL :: gmaxxc
-      TYPE(t_potden)   :: core_den, val_den
-      TYPE(t_kinED)    :: kinED
    CONTAINS
       PROCEDURE        :: vxc_is_LDA => xcpot_vxc_is_LDA
       PROCEDURE        :: vxc_is_GGA => xcpot_vxc_is_GGA
@@ -49,40 +57,9 @@ MODULE m_types_xcpot
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc             => xcpot_get_vxc
       PROCEDURE        :: get_exc             => xcpot_get_exc
-      PROCEDURE,NOPASS :: alloc_gradients     => xcpot_alloc_gradients
    END TYPE t_xcpot
 
-   TYPE t_gradients
-      !Naming convention:
-      !t,u,d as last letter for total,up,down
-      !agr for absolute value of gradient
-      !g2r for laplacien of gradient
-      !+??
-      REAL,ALLOCATABLE :: agrt(:),agru(:),agrd(:)
-      REAL,ALLOCATABLE :: g2ru(:),g2rd(:),gggrt(:)
-      REAL,ALLOCATABLE :: gggru(:),gzgr(:),g2rt(:)
-      REAL,ALLOCATABLE :: gggrd(:),grgru(:),grgrd(:)
-      !These are the contracted Gradients used in libxc
-      REAL,ALLOCATABLE :: sigma(:,:)
-      REAL,ALLOCATABLE :: vsigma(:,:)
-      REAL,ALLOCATABLE :: gr(:,:,:)
-      REAL,ALLOCATABLE :: laplace(:,:)
-   END TYPE t_gradients
-CONTAINS
-   subroutine kED_alloc_mt(kED,nsp_x_jmtd, jspins, n_start, n_types, n_stride)
-      implicit none
-      class(t_kinED), intent(inout)   :: kED
-      integer, intent(in)            :: nsp_x_jmtd, jspins, n_start, n_types, n_stride
-      integer                        :: cnt, n
-
-      if(.not. allocated(kED%mt)) then
-         cnt = 0
-         do n = n_start,n_types,n_stride
-            cnt = cnt + 1
-         enddo
-         allocate(kED%mt(nsp_x_jmtd, jspins, cnt))
-      endif
-   end subroutine kED_alloc_mt
+  CONTAINS
 
    ! LDA
    LOGICAL FUNCTION xcpot_vc_is_LDA(xcpot)
