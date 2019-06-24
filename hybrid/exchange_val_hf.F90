@@ -183,6 +183,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    INTEGER              :: ierr,ierr2,length,rank
    CHARACTER(LEN=MPI_MAX_ERROR_STRING) :: errmsg
 #endif
+   CALL timestart("valence exchange calculation")
      
    IF(initialize) THEN !it .eq. 1 .and. nk .eq. 1) THEN
       call calc_divergence(cell,kpts,divergence)
@@ -508,6 +509,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    ELSE
       mat_ex%data_c=exch_vv
    END IF
+   CALL timestop("valence exchange calculation")
      
 END SUBROUTINE exchange_valence_hf
 

@@ -1726,6 +1726,7 @@ CONTAINS
       USE m_util, ONLY: harmonicsr, rorderp, rorderpf
       USE m_types
       USE m_juDFT
+      use m_ylm
       IMPLICIT NONE
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
@@ -1917,7 +1918,7 @@ CONTAINS
                END IF
                IF (ishell .GT. conv(maxl) .AND. maxl .NE. 0) maxl = maxl - 1
                call timestart("harmonics")
-               CALL harmonicsr(y, ra, maxl)
+               call ylm4(maxl, ra, y)
                call timestop("harmonics")
                y = CONJG(y)
                call timestart("kloop")

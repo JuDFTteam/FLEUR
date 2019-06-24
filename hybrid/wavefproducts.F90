@@ -1587,6 +1587,7 @@
           IF( iatom1 .gt. iatom2 ) CYCLE
 
           IF( iatom1 .ne. iatom2 ) THEN
+            call timestart("iatom1 neq iatom2")
             ! loop over l of mixed basis
             DO l = 0,hybrid%lcutm1(itype)
               ! loop over basis functions products, which belong to l
@@ -1709,8 +1710,9 @@
               lm_0 = lm_0 + hybrid%nindxm1(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
               IF(lm.ne.lm_0) STOP 'wavefproducts_inv5: counting of lm-index incorrect (bug?)'
             END DO !l
-
+            call timestop("iatom1 neq iatom2")
           ELSE !case: iatom1==iatom2
+            call timestart("iatom1 eq iatom2")
 
              ! loop over l of mixed basis
             monepl = -1
@@ -2251,6 +2253,7 @@
               IF(lm.ne.lm_0) STOP 'wavefproducts_inv5: counting of lm-index incorrect (bug?)'
             END DO !l
 
+            call timestop("iatom1 eq iatom2")
           END IF  ! iatom1 .ne. iatom2
 
           lm_0 = lm_00
@@ -2258,10 +2261,6 @@
         iiatom = iiatom + atoms%neq(itype)
         lm_00  = lm_00 + atoms%neq(itype)*ioffset
       END DO  !itype
-
-
-
-      
       CALL timestop("wavefproducts_inv5")
 
      

@@ -266,7 +266,7 @@
           CALL MPI_BCAST(atoms%lmaxd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           call MPI_BCAST( input%preconditioning_param, 1, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
-          CALL ylmnorm_init(atoms%lmaxd)
+          CALL ylmnorm_init(max(atoms%lmaxd, 2*hybrid%lexp))
           !
           !--> determine more dimensions
           !
