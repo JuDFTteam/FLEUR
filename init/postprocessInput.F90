@@ -551,7 +551,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      END IF !(mpi%irank.EQ.0)
   END IF
 
- 
+  !At some point this should be enabled for noco as well
+  IF (.not.noco%l_noco) & 
   CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
