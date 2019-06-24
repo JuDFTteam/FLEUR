@@ -106,11 +106,73 @@ MODULE m_types_atoms
       PROCEDURE :: nsp => calc_nsp_atom
       PROCEDURE :: same_species
       PROCEDURE :: read_xml => read_xml_atoms
+      procedure :: mpi_bc=>mpi_bc_atoms
    END TYPE t_atoms
 
    PUBLIC :: t_atoms
 
  CONTAINS
+   subroutine mpi_bc_atoms(this,mpi_comm,irank)
+     use m_mpi_bc_tool
+     class(t_atoms),INTENT(INOUT)::this
+     integer,INTENT(IN):: mpi_comm
+     INTEGER,INTENT(IN),OPTIONAL::irank
+     INTEGER ::rank
+     if (present(irank)) THEN
+        rank=0
+     else
+        rank=irank
+     end if
+
+     call mpi_bc(this% ntype,rank,mpi_comm)
+     call mpi_bc(this% nat,rank,mpi_comm)
+     call mpi_bc(this%nlod,rank,mpi_comm)
+     call mpi_bc(this%llod,rank,mpi_comm)
+     call mpi_bc(this%nlotot,rank,mpi_comm)
+     call mpi_bc(this% lmaxd,rank,mpi_comm)
+     call mpi_bc(this%n_u,rank,mpi_comm)
+     call mpi_bc(this% jmtd,rank,mpi_comm)
+     call mpi_bc(this%nz,rank,mpi_comm)
+     call mpi_bc(this%neq,rank,mpi_comm)
+     call mpi_bc(this%jri,rank,mpi_comm)
+     call mpi_bc(this%lmax,rank,mpi_comm)
+     call mpi_bc(this%lnonsph,rank,mpi_comm)
+     call mpi_bc(this%ncv,rank,mpi_comm)
+     call mpi_bc(this%nlo,rank,mpi_comm)
+     call mpi_bc(this%llo,rank,mpi_comm)
+     call mpi_bc(this%lapw_l,rank,mpi_comm)
+     call mpi_bc(this%lo1l,rank,mpi_comm)
+     call mpi_bc(this%ulo_der,rank,mpi_comm)
+     call mpi_bc(this%nlol,rank,mpi_comm)
+     call mpi_bc(this%l_dulo,rank,mpi_comm)
+     call mpi_bc(this%ngopr,rank,mpi_comm)
+     call mpi_bc(this%ntypsy,rank,mpi_comm)
+     call mpi_bc(this%nlhtyp,rank,mpi_comm)
+     call mpi_bc(this%invsat,rank,mpi_comm)
+     call mpi_bc(this% l_geo,rank,mpi_comm)
+     call mpi_bc(this%rmt,rank,mpi_comm)
+     call mpi_bc(this%dx,rank,mpi_comm)
+     call mpi_bc(this%volmts,rank,mpi_comm)
+     call mpi_bc(this%rmsh,rank,mpi_comm)
+     call mpi_bc(this%zatom,rank,mpi_comm)
+     call mpi_bc(this%bmu,rank,mpi_comm)
+     call mpi_bc(this%pos,rank,mpi_comm)
+     call mpi_bc(this%taual,rank,mpi_comm)
+     call mpi_bc(this% namex,rank,mpi_comm)
+     call mpi_bc(this% icorr,rank,mpi_comm)
+     call mpi_bc(this% igrd,rank,mpi_comm)
+     call mpi_bc(this% krla,rank,mpi_comm)
+     call mpi_bc(this% relcor,rank,mpi_comm)
+     call mpi_bc(this% relax,rank,mpi_comm)
+     call mpi_bc(this% nflip,rank,mpi_comm)
+
+
+
+     !this needs work
+     !TYPE(t_econfig),ALLOCATABLE::econf(:)
+     !TYPE(t_utype), ALLOCATABLE::lda_u(:)
+   end subroutine mpi_bc_atoms
+
    LOGICAL FUNCTION same_species(atoms,n,nn)
      USE m_judft
      IMPLICIT NONE

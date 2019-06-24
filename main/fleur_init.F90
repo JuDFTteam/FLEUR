@@ -119,7 +119,6 @@
              OPEN (16,status='SCRATCH')
           ENDIF
 
-          CALL initWannierDefaults(wann)
 
           IF (mpi%irank.EQ.0) THEN
              CALL fleur_input_read_xml()
@@ -153,31 +152,48 @@
           DIMENSION%nbasfcn = DIMENSION%nvd + atoms%nat*atoms%nlod*(2*atoms%llod+1)
           DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
           DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
-          
-          ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
-          ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
-
-          ! Set up pointer for backtransformation from g-vector in positive 
-          ! domain of carge density fftibox into stars
-          CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
-
-          atoms%nlotot = 0
-          DO n = 1, atoms%ntype
-             DO l = 1,atoms%nlo(n)
-                atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
-             ENDDO
-          ENDDO
-
           IF (noco%l_noco) DIMENSION%nbasfcn = 2*DIMENSION%nbasfcn
-          
-          IF( sym%invs .OR. noco%l_soc ) THEN
-             sym%nsym = sym%nop
-          ELSE
-             ! combine time reversal symmetry with the spatial symmetry opera
-             ! thus the symmetry operations are doubled
-             sym%nsym = 2*sym%nop
-          END IF
-          
+           
+        
+        IF (mpi%irank.EQ.0) THEN
+           CALL writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
+                oneD,hybrid,cell,banddos,sliceplot,xcpot,&
+                noco,DIMENSION,enpara,sphhar)
+           CALL fleur_info(kpts)
+           CALL deleteDensities()
+        END IF
+
+        !Finalize the MPI setup
+        CALL setupMPI(kpts%nkpt,mpi)
+        
+        !Collect some usage info
+        CALL add_usage_data("A-Types",atoms%ntype)
+        CALL add_usage_data("Atoms",atoms%nat)
+        CALL add_usage_data("Real",sym%invs.AND..NOT.noco%l_noco)
+        CALL add_usage_data("Spins",input%jspins)
+        CALL add_usage_data("Noco",noco%l_noco)
+        CALL add_usage_data("SOC",noco%l_soc)
+        CALL add_usage_data("SpinSpiral",noco%l_ss)
+        CALL add_usage_data("PlaneWaves",DIMENSION%nvd)
+        CALL add_usage_data("LOs",atoms%nlotot)
+        CALL add_usage_data("nkpt", kpts%nkpt)
+        
+#ifdef CPP_GPU
+        CALL add_usage_data("gpu_per_node",1)
+#else
+        CALL add_usage_data("gpu_per_node",0)
+#endif
+        
+        CALL results%init(DIMENSION,input,atoms,kpts,noco)
+        
+        IF (mpi%irank.EQ.0) THEN
+           IF(input%gw.NE.0) CALL mixing_history_reset(mpi)
+           CALL setStartingDensity(noco%l_noco)
+        END IF
+        
+        !new check mode will only run the init-part of FLEUR
+        IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
+      CONTAINS
           SUBROUTINE init_hybrid()
           IF (xcpot%is_hybrid().OR.input%l_rdmft) THEN
              IF (input%film.OR.oneD%odi%d1) THEN
@@ -219,69 +235,6 @@
              END IF
           ENDIF
         END SUBROUTINE init_hybrid
-           
-        IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
-           WRITE(*,*) 'Recalculating k point grid to cover the full BZ.'
-           !CALL gen_bz(kpts,sym)
-           kpts%nkpt = kpts%nkptf
-           DEALLOCATE(kpts%bk,kpts%wtkpt)
-           ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))
-           kpts%bk(:,:) = kpts%bkf(:,:)
-           IF (kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3).NE.kpts%nkptf) THEN
-              IF(kpts%l_gamma) THEN
-                 kpts%wtkpt = 1.0 / (kpts%nkptf-1)
-                 DO i = 1, kpts%nkptf
-                    IF(ALL(kpts%bk(:,i).EQ.0.0)) THEN
-                       kpts%wtkpt(i) = 0.0
-                    END IF
-                 END DO
-              ELSE
-                 CALL juDFT_error("nkptf does not match product of nkpt3(i).",calledby="fleur_init")
-              END IF
-           ELSE
-              kpts%wtkpt = 1.0 / kpts%nkptf
-           END IF
-        END IF
-        
-        IF (mpi%irank.EQ.0) THEN
-           CALL writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
-                oneD,hybrid,cell,banddos,sliceplot,xcpot,&
-                noco,DIMENSION,enpara,sphhar)
-           CALL fleur_info(kpts)
-           CALL deleteDensities()
-        END IF
-
-        !Finalize the MPI setup
-        CALL setupMPI(kpts%nkpt,mpi)
-        
-        !Collect some usage info
-        CALL add_usage_data("A-Types",atoms%ntype)
-        CALL add_usage_data("Atoms",atoms%nat)
-        CALL add_usage_data("Real",sym%invs.AND..NOT.noco%l_noco)
-        CALL add_usage_data("Spins",input%jspins)
-        CALL add_usage_data("Noco",noco%l_noco)
-        CALL add_usage_data("SOC",noco%l_soc)
-        CALL add_usage_data("SpinSpiral",noco%l_ss)
-        CALL add_usage_data("PlaneWaves",DIMENSION%nvd)
-        CALL add_usage_data("LOs",atoms%nlotot)
-        CALL add_usage_data("nkpt", kpts%nkpt)
-        
-#ifdef CPP_GPU
-        CALL add_usage_data("gpu_per_node",1)
-#else
-        CALL add_usage_data("gpu_per_node",0)
-#endif
-        
-        CALL results%init(DIMENSION,input,atoms,kpts,noco)
-        
-        IF (mpi%irank.EQ.0) THEN
-           IF(input%gw.NE.0) CALL mixing_history_reset(mpi)
-           CALL setStartingDensity(noco%l_noco)
-        END IF
-        
-        !new check mode will only run the init-part of FLEUR
-        IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
-      CONTAINS
         
         SUBROUTINE init_wannier()
           ! Initializations for Wannier functions (start)

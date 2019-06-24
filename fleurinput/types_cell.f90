@@ -35,6 +35,29 @@ MODULE m_types_cell
   END TYPE t_cell
   PUBLIC t_cell
 CONTAINS
+  subroutine mpi_bc(this,mpi_comm,irank)
+    use m_mpi_bc_tool
+    class(t_cell),INTENT(INOUT)::this
+    integer,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    if (present(irank)) THEN
+       rank=0
+    else
+       rank=irank
+    end if
+
+    call mpi_bc(this%omtil,rank,mpi_comm)
+    call mpi_bc(this%area,rank,mpi_comm)
+    call mpi_bc(this%amat,rank,mpi_comm)
+    call mpi_bc(this%bmat,rank,mpi_comm)
+    call mpi_bc(this%bbmat,rank,mpi_comm)
+    call mpi_bc(this%aamat,rank,mpi_comm)
+    call mpi_bc(this%z1,rank,mpi_comm)
+    call mpi_bc(this%vol,rank,mpi_comm)
+    call mpi_bc(this%volint,rank,mpi_comm)
+  end subroutine mpi_bc
+    
   SUBROUTINE init(cell)
     !initialize cell, only input is cell%amat and cell%z1 in case of a film
     USE m_constants,ONLY:tpi_const

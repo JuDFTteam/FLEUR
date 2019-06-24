@@ -17,7 +17,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   USE m_constants
   USE m_lapwdim
   USE m_ylm
-  USE m_convndim
   USE m_chkmt
   USE m_localsym
   USE m_strgndim
@@ -269,7 +268,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
      rmtmax = maxval(atoms%rmt(:))
      rmtmax = rmtmax*stars%gmax
-     CALL convn_dim(rmtmax,dimension%ncvd)
      dimension%msh = 0
      ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
      ALLOCATE(atoms%volmts(atoms%ntype))
@@ -502,10 +500,54 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      ELSE
         CALL strgn2(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
      END IF
-     CALL timestop("strgn") 
+   
+     ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
+     ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
+     
+     ! Set up pointer for backtransformation from g-vector in positive 
+     ! domain of carge density fftibox into stars
+     CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
+     CALL timestop("strgn") 
+     
+     !Adjust kpoints in case of DOS
+     
+   IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
+           WRITE(*,*) 'Recalculating k point grid to cover the full BZ.'
+           !CALL gen_bz(kpts,sym)
+           kpts%nkpt = kpts%nkptf
+           DEALLOCATE(kpts%bk,kpts%wtkpt)
+           ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))
+           kpts%bk(:,:) = kpts%bkf(:,:)
+           IF (kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3).NE.kpts%nkptf) THEN
+              IF(kpts%l_gamma) THEN
+                 kpts%wtkpt = 1.0 / (kpts%nkptf-1)
+                 DO i = 1, kpts%nkptf
+                    IF(ALL(kpts%bk(:,i).EQ.0.0)) THEN
+                       kpts%wtkpt(i) = 0.0
+                    END IF
+                 END DO
+              ELSE
+                 CALL juDFT_error("nkptf does not match product of nkpt3(i).",calledby="fleur_init")
+              END IF
+           ELSE
+              kpts%wtkpt = 1.0 / kpts%nkptf
+           END IF
+        END IF
+     
+     
      ! Other small stuff
 
+     IF( sym%invs .OR. noco%l_soc ) THEN
+        sym%nsym = sym%nop
+     ELSE
+        ! combine time reversal symmetry with the spatial symmetry opera
+        ! thus the symmetry operations are doubled
+        sym%nsym = 2*sym%nop
+     END IF
+
+
+     
      input%strho = .FALSE.
 
      INQUIRE(file="cdn1",exist=l_opti)

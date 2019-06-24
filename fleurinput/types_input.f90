@@ -75,210 +75,284 @@ MODULE m_types_input
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_input
      PROCEDURE :: init
+     PROCEDURE ::mpi_bc =>mpi_bc_input
   END TYPE t_input
   
 CONTAINS
-   SUBROUTINE read_xml_input(this,xml)
-     USE m_types_xml
-     use m_constants
-     CLASS(t_input),INTENT(out):: this
-     TYPE(t_xml),intent(in)    :: xml
+  subroutine mpi_bc_input(this,mpi_comm,irank)
+    use m_mpi_bc_tool
+    class(t_input),INTENT(INOUT)::this
+    integer,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    if (present(irank)) THEN
+       rank=0
+    else
+       rank=irank
+    end if
+    call mpi_bc(this%film,rank,mpi_comm)
+    call mpi_bc(this%jspins,rank,mpi_comm)
+    call mpi_bc(this%neig,rank,mpi_comm)
+    call mpi_bc(this%total,rank,mpi_comm)
+    call mpi_bc(this%rkmax,rank,mpi_comm)
+    call mpi_bc(this%gmax,rank,mpi_comm)
+    call mpi_bc(this%zelec,rank,mpi_comm)
+    call mpi_bc(this%strho,rank,mpi_comm)
+    call mpi_bc(this%cdinf,rank,mpi_comm)
+    call mpi_bc(this%vchk,rank,mpi_comm)
+    call mpi_bc(this%l_f,rank,mpi_comm)
+    call mpi_bc(this%eonly,rank,mpi_comm)
+    call mpi_bc(this%ctail,rank,mpi_comm)
+    call mpi_bc(this%coretail,rank,mpi_comm)
+    call mpi_bc(this%itmax,rank,mpi_comm)
+    call mpi_bc(this%minDistance,rank,mpi_comm)
+    call mpi_bc(this%maxiter,rank,mpi_comm)
+    call mpi_bc(this%imix,rank,mpi_comm)
+    call mpi_bc(this%gw,rank,mpi_comm)
+    call mpi_bc(this%gw_neigd,rank,mpi_comm)
+    call mpi_bc(this%qfix,rank,mpi_comm)
+    call mpi_bc(this%forcealpha,rank,mpi_comm)
+    call mpi_bc(this%epsdisp,rank,mpi_comm)
+    call mpi_bc(this%epsforce,rank,mpi_comm)
+    call mpi_bc(this%force_converged,rank,mpi_comm)
+    call mpi_bc(this%forcemix,rank,mpi_comm)
+    call mpi_bc(this%delgau,rank,mpi_comm)
+    call mpi_bc(this%alpha,rank,mpi_comm)
+    call mpi_bc(this%preconditioning_param,rank,mpi_comm)
+    call mpi_bc(this%spinf,rank,mpi_comm)
+    call mpi_bc(this%tkb,rank,mpi_comm)
+    call mpi_bc(this%gauss,rank,mpi_comm)
+    call mpi_bc(this%l_bmt,rank,mpi_comm)
+    call mpi_bc(this%scale,rank,mpi_comm)
+    call mpi_bc(this%kcrel,rank,mpi_comm)
+    call mpi_bc(this%frcor,rank,mpi_comm)
+    call mpi_bc(this%lflip,rank,mpi_comm)
+    call mpi_bc(this%score,rank,mpi_comm)
+    call mpi_bc(this%swsp,rank,mpi_comm)
+    call mpi_bc(this%tria,rank,mpi_comm)
+    call mpi_bc(this%integ,rank,mpi_comm)
+    call mpi_bc(this%pallst,rank,mpi_comm)
+    call mpi_bc(this%l_coreSpec,rank,mpi_comm)
+    call mpi_bc(this%l_wann,rank,mpi_comm)
+    call mpi_bc(this%secvar,rank,mpi_comm)
+    call mpi_bc(this%evonly,rank,mpi_comm)
+    call mpi_bc(this%l_inpXML,rank,mpi_comm)
+    call mpi_bc(this%ellow,rank,mpi_comm)
+    call mpi_bc(this%elup,rank,mpi_comm)
+    call mpi_bc(this%fixed_moment ,rank,mpi_comm)
+    call mpi_bc(this%l_core_confpot,rank,mpi_comm)
+    call mpi_bc(this%l_useapw,rank,mpi_comm)
+    call mpi_bc(this%ldauLinMix,rank,mpi_comm)
+    call mpi_bc(this%ldauMixParam,rank,mpi_comm)
+    call mpi_bc(this%ldauSpinf,rank,mpi_comm)
+    call mpi_bc(this%l_rdmft,rank,mpi_comm)
+    call mpi_bc(this%rdmftOccEps,rank,mpi_comm)
+    call mpi_bc(this%rdmftStatesBelow,rank,mpi_comm)
+    call mpi_bc(this%rdmftStatesAbove,rank,mpi_comm)
+    call mpi_bc(this%rdmftFunctional,rank,mpi_comm)
+  end subroutine mpi_bc_input
 
-     CHARACTER(len=100):: valueString,xpathA,xpathB
-     INTEGER:: numberNodes,nodeSum
-     
-     !TODO! these switches should be in the inp-file
-     this%l_core_confpot=.TRUE. !former CPP_CORE
-     this%l_useapw=.FALSE.   !former CPP_APW
-     this%comment =  xml%GetAttributeValue('/fleurInput/comment')
-     this%rkmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
-     this%gmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
+  SUBROUTINE read_xml_input(this,xml)
+    USE m_types_xml
+    use m_constants
+    CLASS(t_input),INTENT(out):: this
+    TYPE(t_xml),intent(in)    :: xml
 
-     xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     this%neig = 0
-      IF(numberNodes.EQ.1) THEN
-         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))))
-         IF(TRIM(ADJUSTL(valueString)).EQ.'all') THEN
-            this%neig = -1
-         ELSE
-            READ(valueString,*) this%neig
-         END IF
-      END IF
+    CHARACTER(len=100):: valueString,xpathA,xpathB
+    INTEGER:: numberNodes,nodeSum
 
-     ! Read SCF loop parametrization
+    !TODO! these switches should be in the inp-file
+    this%l_core_confpot=.TRUE. !former CPP_CORE
+    this%l_useapw=.FALSE.   !former CPP_APW
+    this%comment =  xml%GetAttributeValue('/fleurInput/comment')
+    this%rkmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
+    this%gmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
 
-     this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
-     this%minDistance = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
-     this%maxiter = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@maxIterBroyd'))
-     valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
-     SELECT CASE (valueString)
-     CASE ('straight')
-        this%imix = 0
-     CASE ('Broyden1')
-        this%imix = 3
-     CASE ('Broyden2')
-        this%imix = 5
-     CASE ('Anderson')
-        this%imix = 7
-     CASE ("Pulay")
-        this%imix = 9
-     CASE ("pPulay")
-        this%imix = 11
-     CASE ("rPulay")
-        this%imix = 13
-     CASE ("aPulay")
-        this%imix = 15
-     CASE DEFAULT
-        CALL juDFT_error('Error: unknown mixing scheme selected!')
-     END SELECT
+    xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    this%neig = 0
+    IF(numberNodes.EQ.1) THEN
+       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+       IF(TRIM(ADJUSTL(valueString)).EQ.'all') THEN
+          this%neig = -1
+       ELSE
+          READ(valueString,*) this%neig
+       END IF
+    END IF
 
-     this%alpha = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
-     this%preconditioning_param = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@preconditioning_param'))
-     this%spinf = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
-     ! Get parameters for core electrons
-     this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
-     this%coretail_lmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
-     this%frcor = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@frcor'))
-     this%kcrel = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@kcrel'))
-     ! Read in magnetism parameters
-     this%jspins = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
-     this%swsp = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
-     this%lflip = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
-     this%fixed_moment=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
-     ! Read in optional expert modes switches
-     xPathA = '/fleurInput/calculationSetup/expertModes'
-     IF (xml%GetNumberOfNodes(xPathA)==1) THEN
-        this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
-        this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
-     END IF
-     ! Read in Brillouin zone integration parameters
-     valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
-     SELECT CASE (valueString)
-     CASE ('hist')
-        this%gauss = .FALSE.
-        this%tria = .FALSE.
-     CASE ('gauss')
-        this%gauss = .TRUE.
-        this%tria = .FALSE.
-     CASE ('tria')
-        this%gauss = .FALSE.
-        this%tria = .TRUE.
-     CASE DEFAULT
-        CALL juDFT_error('Invalid bzIntegration mode selected!')
-     END SELECT
-     nodeSum = 0
-     xPathA = '/fleurInput/calculationSetup/bzIntegration/@fermiSmearingEnergy'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     nodeSum = nodeSum + numberNodes
-     IF (numberNodes.EQ.1) THEN
-        this%tkb = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
-     END IF
-     xPathA = '/fleurInput/calculationSetup/bzIntegration/@fermiSmearingTemp'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     nodeSum = nodeSum + numberNodes
-     IF (numberNodes.EQ.1) THEN
-        this%tkb = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
-        this%tkb = boltzmann_Const * this%tkb
-     END IF
-     IF(nodeSum>1) THEN
-        CALL juDFT_error('Error: Multiple fermi Smearing parameters provided in input file!')
-     END IF
-     xPathA = '/fleurInput/calculationSetup/bzIntegration/@valenceElectrons'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     IF (numberNodes.EQ.1) THEN
-        this%zelec = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
-     ELSE
-        CALL juDFT_error('Error: Optionality of valence electrons in input file not yet implemented!')
-     END IF
-     this%film =  xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
-     ! Read in optional geometry optimization parameters
-     xPathA = '/fleurInput/calculationSetup/geometryOptimization'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     IF (numberNodes.EQ.1) THEN
-        this%l_f = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
-        this%forcealpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
-        this%epsdisp = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
-        this%epsforce = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
-        this%forcemix = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix'))
-        this%force_converged = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@force_converged'))
-        this%qfix = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
-     END IF
-     ! Read in optional general LDA+U parameters
-     xPathA = '/fleurInput/calculationSetup/ldaU'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     IF (numberNodes.EQ.1) THEN
-        this%ldauLinMix = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_linMix'))
-        this%ldauMixParam = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
-        this%ldauSpinf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
-     END IF
-     ! Read in RDMFT parameters
-     xPathA = '/fleurInput/calculationSetup/rdmft'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     IF (numberNodes.EQ.1) THEN
-        this%l_rdmft = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_rdmft'))
-        this%rdmftOccEps = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@occEps'))
-        this%rdmftStatesBelow = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@statesBelow'))
-        this%rdmftStatesAbove = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@statesAbove'))
-        valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@functional')))
-        SELECT CASE (valueString)
-        CASE ('Muller')
-           this%rdmftFunctional = 1
-        CASE DEFAULT
-           STOP 'Error: unknown RDMFT functional selected!'
-        END SELECT
-     END IF
-     ! Read in optional energy parameter limits
-     xPathA = '/fleurInput/calculationSetup/energyParameterLimits'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     IF (numberNodes.EQ.1) THEN
-        this%ellow = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ellow'))
-        this%elup = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@elup'))
-     END IF
-     ! !! Start of output section
-     xPathA = '/fleurInput/output'
-     numberNodes = xml%GetNumberOfNodes(xPathA)
-     IF (numberNodes.EQ.1) THEN
-        ! Read in general output switches
-         this%l_coreSpec = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
-         this%l_wann = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
-         ! Read in optional switches for checks
-         xPathA = '/fleurInput/output/checks'
-         numberNodes = xml%GetNumberOfNodes(xPathA)
-         IF (numberNodes.EQ.1) THEN
-            this%vchk = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vchk'))
-            this%cdinf = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@cdinf'))
-         END IF
-         ! Read in optional plotting parameters
-         xPathA = '/fleurInput/output/plotting'
-         numberNodes = xml%GetNumberOfNodes(xPathA)
-         IF (numberNodes.EQ.1) THEN
-            this%score = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
-         END IF
-         ! Read in optional specialOutput switches
-         xPathA = '/fleurInput/output/specialOutput'
-         numberNodes = xml%GetNumberOfNodes(xPathA)
-         IF (numberNodes.EQ.1) THEN
-            this%eonly = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
-            this%l_bmt = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bmt'))
-         END IF
-         ! Read in optional vacuumDOS parameters
-         xPathA = '/fleurInput/output/vacuumDOS'
-         numberNodes = xml%GetNumberOfNodes(xPathA)
-         IF (numberNodes.EQ.1) THEN
-            this%integ = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@integ'))
-         END IF
-         ! Read in optional chargeDensitySlicing parameters
-         xPathA = '/fleurInput/output/chargeDensitySlicing'
-         numberNodes = xml%GetNumberOfNodes(xPathA)
-         IF (numberNodes.EQ.1) THEN
-            this%pallst = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@pallst'))
-         END IF
-      END IF
-    END SUBROUTINE read_xml_input
+    ! Read SCF loop parametrization
 
-    subroutine init(input)
-      class(t_input),intent(in)::input
-    end subroutine init
+    this%itmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@itmax'))
+    this%minDistance = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@minDistance'))
+    this%maxiter = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@maxIterBroyd'))
+    valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@imix')))
+    SELECT CASE (valueString)
+    CASE ('straight')
+       this%imix = 0
+    CASE ('Broyden1')
+       this%imix = 3
+    CASE ('Broyden2')
+       this%imix = 5
+    CASE ('Anderson')
+       this%imix = 7
+    CASE ("Pulay")
+       this%imix = 9
+    CASE ("pPulay")
+       this%imix = 11
+    CASE ("rPulay")
+       this%imix = 13
+    CASE ("aPulay")
+       this%imix = 15
+    CASE DEFAULT
+       CALL juDFT_error('Error: unknown mixing scheme selected!')
+    END SELECT
+
+    this%alpha = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
+    this%preconditioning_param = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@preconditioning_param'))
+    this%spinf = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
+    ! Get parameters for core electrons
+    this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
+    this%coretail_lmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
+    this%frcor = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@frcor'))
+    this%kcrel = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@kcrel'))
+    ! Read in magnetism parameters
+    this%jspins = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
+    this%swsp = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
+    this%lflip = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
+    this%fixed_moment=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
+    ! Read in optional expert modes switches
+    xPathA = '/fleurInput/calculationSetup/expertModes'
+    IF (xml%GetNumberOfNodes(xPathA)==1) THEN
+       this%gw = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@gw'))
+       this%secvar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@secvar'))
+    END IF
+    ! Read in Brillouin zone integration parameters
+    valueString = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/calculationSetup/bzIntegration/@mode')))
+    SELECT CASE (valueString)
+    CASE ('hist')
+       this%gauss = .FALSE.
+       this%tria = .FALSE.
+    CASE ('gauss')
+       this%gauss = .TRUE.
+       this%tria = .FALSE.
+    CASE ('tria')
+       this%gauss = .FALSE.
+       this%tria = .TRUE.
+    CASE DEFAULT
+       CALL juDFT_error('Invalid bzIntegration mode selected!')
+    END SELECT
+    nodeSum = 0
+    xPathA = '/fleurInput/calculationSetup/bzIntegration/@fermiSmearingEnergy'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    nodeSum = nodeSum + numberNodes
+    IF (numberNodes.EQ.1) THEN
+       this%tkb = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+    END IF
+    xPathA = '/fleurInput/calculationSetup/bzIntegration/@fermiSmearingTemp'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    nodeSum = nodeSum + numberNodes
+    IF (numberNodes.EQ.1) THEN
+       this%tkb = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+       this%tkb = boltzmann_Const * this%tkb
+    END IF
+    IF(nodeSum>1) THEN
+       CALL juDFT_error('Error: Multiple fermi Smearing parameters provided in input file!')
+    END IF
+    xPathA = '/fleurInput/calculationSetup/bzIntegration/@valenceElectrons'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF (numberNodes.EQ.1) THEN
+       this%zelec = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+    ELSE
+       CALL juDFT_error('Error: Optionality of valence electrons in input file not yet implemented!')
+    END IF
+    this%film =  xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
+    ! Read in optional geometry optimization parameters
+    xPathA = '/fleurInput/calculationSetup/geometryOptimization'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF (numberNodes.EQ.1) THEN
+       this%l_f = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
+       this%forcealpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
+       this%epsdisp = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
+       this%epsforce = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
+       this%forcemix = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix'))
+       this%force_converged = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@force_converged'))
+       this%qfix = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
+    END IF
+    ! Read in optional general LDA+U parameters
+    xPathA = '/fleurInput/calculationSetup/ldaU'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF (numberNodes.EQ.1) THEN
+       this%ldauLinMix = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_linMix'))
+       this%ldauMixParam = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
+       this%ldauSpinf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
+    END IF
+    ! Read in RDMFT parameters
+    xPathA = '/fleurInput/calculationSetup/rdmft'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF (numberNodes.EQ.1) THEN
+       this%l_rdmft = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_rdmft'))
+       this%rdmftOccEps = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@occEps'))
+       this%rdmftStatesBelow = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@statesBelow'))
+       this%rdmftStatesAbove = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@statesAbove'))
+       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@functional')))
+       SELECT CASE (valueString)
+       CASE ('Muller')
+          this%rdmftFunctional = 1
+       CASE DEFAULT
+          STOP 'Error: unknown RDMFT functional selected!'
+       END SELECT
+    END IF
+    ! Read in optional energy parameter limits
+    xPathA = '/fleurInput/calculationSetup/energyParameterLimits'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF (numberNodes.EQ.1) THEN
+       this%ellow = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@ellow'))
+       this%elup = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@elup'))
+    END IF
+    ! !! Start of output section
+    xPathA = '/fleurInput/output'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF (numberNodes.EQ.1) THEN
+       ! Read in general output switches
+       this%l_coreSpec = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
+       this%l_wann = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
+       ! Read in optional switches for checks
+       xPathA = '/fleurInput/output/checks'
+       numberNodes = xml%GetNumberOfNodes(xPathA)
+       IF (numberNodes.EQ.1) THEN
+          this%vchk = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vchk'))
+          this%cdinf = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@cdinf'))
+       END IF
+       ! Read in optional plotting parameters
+       xPathA = '/fleurInput/output/plotting'
+       numberNodes = xml%GetNumberOfNodes(xPathA)
+       IF (numberNodes.EQ.1) THEN
+          this%score = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
+       END IF
+       ! Read in optional specialOutput switches
+       xPathA = '/fleurInput/output/specialOutput'
+       numberNodes = xml%GetNumberOfNodes(xPathA)
+       IF (numberNodes.EQ.1) THEN
+          this%eonly = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
+          this%l_bmt = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bmt'))
+       END IF
+       ! Read in optional vacuumDOS parameters
+       xPathA = '/fleurInput/output/vacuumDOS'
+       numberNodes = xml%GetNumberOfNodes(xPathA)
+       IF (numberNodes.EQ.1) THEN
+          this%integ = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@integ'))
+       END IF
+       ! Read in optional chargeDensitySlicing parameters
+       xPathA = '/fleurInput/output/chargeDensitySlicing'
+       numberNodes = xml%GetNumberOfNodes(xPathA)
+       IF (numberNodes.EQ.1) THEN
+          this%pallst = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@pallst'))
+       END IF
+    END IF
+  END SUBROUTINE read_xml_input
+
+  subroutine init(input)
+    class(t_input),intent(in)::input
+  end subroutine init
 END MODULE m_types_input
   

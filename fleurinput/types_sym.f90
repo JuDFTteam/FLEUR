@@ -50,10 +50,43 @@ MODULE m_types_sym
      PROCEDURE :: print_xml
      PROCEDURE :: closure
      PROCEDURE :: read_xml
+     PROCEDURE :: mpi_bc => mpi_bc_sym
      PROCEDURE,PRIVATE :: check_close
   END TYPE t_sym
 CONTAINS
 
+    subroutine mpi_bc(this,mpi_comm,irank)
+      use m_mpi_bc_tool
+      class(t_sym),INTENT(INOUT)::this
+      integer,INTENT(IN):: mpi_comm
+      INTEGER,INTENT(IN),OPTIONAL::irank
+      INTEGER ::rank
+      if (present(irank)) THEN
+         rank=0
+      else
+         rank=irank
+      end if
+
+      call mpi_bc(this%nop,rank,mpi_comm)
+      call mpi_bc(this%mrot,rank,mpi_comm)
+      call mpi_bc(this%tau,rank,mpi_comm)
+      call mpi_bc(this%symor,rank,mpi_comm)
+      call mpi_bc(this%invs2,rank,mpi_comm)
+      call mpi_bc(this%invs,rank,mpi_comm)
+      call mpi_bc(this%zrfs,rank,mpi_comm)
+      call mpi_bc(this%invtab,rank,mpi_comm)
+      call mpi_bc(this%multab,rank,mpi_comm)
+      call mpi_bc(this%nop2,rank,mpi_comm)
+      call mpi_bc(this%d_wgn,rank,mpi_comm)
+      call mpi_bc(this%invsatnr,rank,mpi_comm)
+      call mpi_bc(this%invarop,rank,mpi_comm)
+      call mpi_bc(this%invarind,rank,mpi_comm)
+      call mpi_bc(this%nsymt,rank,mpi_comm)
+      call mpi_bc(this%nsym,rank,mpi_comm)
+   
+
+    end subroutine mpi_bc
+  
   SUBROUTINE read_xml(this,xml)
     USE m_types_xml
     USE m_calculator
@@ -248,6 +281,8 @@ CONTAINS
        sym%nop2 = 0
     ENDIF
 
+    
+    
     !Generated wigner symbols for LDA+U
     IF (ALLOCATED(sym%d_wgn)) DEALLOCATE(sym%d_wgn)
     ALLOCATE(sym%d_wgn(-3:3,-3:3,3,sym%nop))

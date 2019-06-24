@@ -42,7 +42,6 @@
       USE m_inv3
       USE m_rwsymfile
       USE m_strgndim
-      USE m_convndim
       USE m_inpeigdim
       USE m_ylm
       IMPLICIT NONE
@@ -184,7 +183,6 @@
        ! not as accurate, but saves much time
 
       rmtmax = rmtmax*stars%gmax
-      CALL convn_dim(rmtmax,dimension%ncvd)
 !
 ! determine core mesh
 !
