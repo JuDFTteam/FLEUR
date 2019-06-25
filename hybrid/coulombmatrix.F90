@@ -42,12 +42,12 @@ CONTAINS
       USE m_constants, ONLY: pi_const
       USE m_olap, ONLY: olap_pw, gptnorm
       USE m_trafo, ONLY: symmetrize, bramat_trafo
-      USE m_util, ONLY: sphbessel, intgrf, intgrf_init, primitivef
+      USE m_util, ONLY: intgrf, intgrf_init, primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
       USE m_io_hybrid
       use m_ylm
-
+      use m_sphbes, only: sphbes
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN)     :: xcpot
@@ -100,7 +100,7 @@ CONTAINS
       REAL                       :: mat(hybrid%maxindxm1*(hybrid%maxindxm1 + 1)/2)
       REAL                       :: moment(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype), &
                                     moment2(hybrid%maxindxm1, atoms%ntype)
-      REAL                       :: sphbes(atoms%jmtd, 0:hybrid%maxlcutm1)
+      REAL                       :: sphbes_var(atoms%jmtd, 0:hybrid%maxlcutm1)
       REAL                       :: sphbesmoment1(atoms%jmtd, 0:hybrid%maxlcutm1)
       REAL                       :: rarr(0:hybrid%lexp + 1), rarr1(0:hybrid%maxlcutm1)
       REAL, ALLOCATABLE   :: gmat(:, :), qnrm(:)
@@ -331,7 +331,7 @@ CONTAINS
       ALLOCATE (sphbesmoment(0:hybrid%lexp, atoms%ntype, nqnrm), &
                 olap(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype, nqnrm), &
                 integral(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype, nqnrm))
-      sphbes = 0
+      sphbes_var = 0
       sphbesmoment = 0
       sphbesmoment1 = 0
       olap = 0
@@ -355,25 +355,24 @@ CONTAINS
          DO itype = 1, atoms%ntype
             ng = atoms%jri(itype)
             rdum = atoms%rmt(itype)
-            sphbes = 0
+            sphbes_var = 0
             sphbesmoment1 = 0
             IF (qnorm .EQ. 0) THEN
                sphbesmoment(0, itype, iqnrm) = rdum**3/3
                DO i = 1, ng
-                  sphbes(i, 0) = 1
+                  sphbes_var(i, 0) = 1
                   sphbesmoment1(i, 0) = atoms%rmsh(i, itype)**2/3 + (rdum**2 - atoms%rmsh(i, itype)**2)/2
                END DO
             ELSE
-               CALL sphbessel(rarr, qnorm*rdum, hybrid%lexp + 1)
+               call sphbes(hybrid%lexp+1, qnorm*rdum, rarr)
                DO l = 0, hybrid%lexp
                   sphbesmoment(l, itype, iqnrm) = rdum**(l + 2)*rarr(l + 1)/qnorm
                END DO
                DO i = ng, 1, -1
                   rdum = atoms%rmsh(i, itype)
-                  CALL sphbessel(rarr, qnorm*rdum, hybrid%lcutm1(itype) + 1)
-                  !call sphbes(hybrid%lcutm1(itype)+1, qnorm*rdum, rarr)
+                  call sphbes(hybrid%lcutm1(itype)+1, qnorm*rdum, rarr)
                   DO l = 0, hybrid%lcutm1(itype)
-                     sphbes(i, l) = rarr(l)
+                     sphbes_var(i, l) = rarr(l)
                      IF (l .NE. 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
                      ELSE; rdum1 = -COS(qnorm*rdum)/qnorm
                      ENDIF
@@ -387,7 +386,7 @@ CONTAINS
                DO n = 1, hybrid%nindxm1(l, itype)
                   ! note that hybrid%basm1 already contains one factor rgrid
                   olap(n, l, itype, iqnrm) = &
-                     intgrf(atoms%rmsh(:, itype)*hybrid%basm1(:, n, l, itype)*sphbes(:, l), &
+                     intgrf(atoms%rmsh(:, itype)*hybrid%basm1(:, n, l, itype)*sphbes_var(:, l), &
                             atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
 
                   integral(n, l, itype, iqnrm) = &
@@ -995,7 +994,7 @@ CONTAINS
       DO iqnrm = 1, nqnrm
          DO itype = 1, atoms%ntype
             rdum = qnrm(iqnrm)*atoms%rmt(itype)
-            CALL sphbessel(sphbes0(0, itype, iqnrm), rdum, hybrid%lexp + 2)
+            call sphbes(hybrid%lexp+2, rdum, sphbes0(0, itype, iqnrm))
             IF (rdum .NE. 0) sphbes0(-1, itype, iqnrm) = COS(rdum)/rdum
          END DO
       END DO
