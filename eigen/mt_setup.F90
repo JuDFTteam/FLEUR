@@ -7,7 +7,7 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,hub1,inden,vTot,mpi,results,DIMENSION,td,ud,iterHIA,l_runhia)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,hub1,inden,vTot,mpi,results,DIMENSION,td,ud,iterHIA)
     USE m_types
     USE m_usetup
     USE m_tlmplm_cholesky
@@ -31,7 +31,6 @@ CONTAINS
     TYPE(t_usdus),INTENT(INOUT)  :: ud
     TYPE(t_hub1ham),INTENT(IN)   :: hub1
     INTEGER,INTENT(INOUT)        :: iterHIA
-    LOGICAL,INTENT(IN)           :: l_runhia
 
     INTEGER:: jsp
 
@@ -39,7 +38,7 @@ CONTAINS
        CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
     IF((atoms%n_hia.GT.0)) THEN
-      CALL hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,ud,vTot,gOnsite,l_runhia,results)
+      CALL hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,ud,vTot,gOnsite,results)
     END IF
 
     CALL timestart("tlmplm")

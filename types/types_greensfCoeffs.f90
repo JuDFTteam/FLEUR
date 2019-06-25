@@ -36,7 +36,6 @@ MODULE m_types_greensfCoeffs
          REAL     :: e_top    !Cutoff energies
          REAL     :: e_bot
          REAL     :: del
-         REAL     :: sigma       !Smoothing parameter(not used at the moment)
 
          INTEGER, ALLOCATABLE :: kkintgr_cutoff(:,:)
 
@@ -80,8 +79,7 @@ MODULE m_types_greensfCoeffs
          LOGICAL,                INTENT(IN)     :: l_onsite
          LOGICAL,                INTENT(IN)     :: l_intersite
 
-         INTEGER i,j,l_dim
-         INTEGER n_spins
+         INTEGER i,j,l_dim,spin_dim
 
          thisGREENSFCOEFFS%l_onsite = l_onsite
          thisGREENSFCOEFFS%l_intersite = l_intersite
@@ -94,16 +92,20 @@ MODULE m_types_greensfCoeffs
          !Set up general parameters for the Green's function (intersite and onsite)
          !
          !Parameters for calculation of the imaginary part
-         thisGREENSFCOEFFS%ne       = input%onsite_ne
+         thisGREENSFCOEFFS%ne       = input%gf_ne
          !take the energyParameterLimits from inp.xml if they are set, otherwise use default values
-         
-         thisGREENSFCOEFFS%e_top    = input%elup
-         thisGREENSFCOEFFS%e_bot    = input%ellow
-
-         thisGREENSFCOEFFS%sigma    = input%onsite_sigma
+         IF(input%gf_ellow.NE.0.0.OR.input%gf_elup.NE.0.0) THEN
+            thisGREENSFCOEFFS%e_top    = input%gf_elup
+            thisGREENSFCOEFFS%e_bot    = input%gf_ellow
+         ELSE
+            thisGREENSFCOEFFS%e_top    = input%elup
+            thisGREENSFCOEFFS%e_bot    = input%ellow
+         ENDIF
 
          !set up energy grid for imaginary part
-         thisGREENSFCOEFFS%del      = (thisGREENSFCOEFFS%e_top-thisGREENSFCOEFFS%e_bot)/REAL(thisGREENSFCOEFFS%ne-1)
+         thisGREENSFCOEFFS%del = (thisGREENSFCOEFFS%e_top-thisGREENSFCOEFFS%e_bot)/REAL(thisGREENSFCOEFFS%ne-1)
+
+         spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
 
          IF(thisGREENSFCOEFFS%l_onsite.AND.atoms%n_gf.GT.0) THEN
             !
@@ -111,14 +113,13 @@ MODULE m_types_greensfCoeffs
             !
             !Do we need the off-diagonal elements
             ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,2))
-            n_spins = MERGE(4,input%jspins,noco%l_mperp)
-            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
+            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
             thisGREENSFCOEFFS%projdos     = 0.0
-            IF(.NOT.input%onsite_sphavg) THEN
-               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
-               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
-               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
-               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_spins))
+            IF(.NOT.input%l_gfsphavg) THEN
+               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
                
                thisGREENSFCOEFFS%uu      = 0.0
                thisGREENSFCOEFFS%dd      = 0.0
@@ -135,17 +136,16 @@ MODULE m_types_greensfCoeffs
             !We have one site index defining the atom we want to look at 
             !The second can run over all atoms and is filled with the nearest neighbours of the atom in question
 
-            ALLOCATE (thisGREENSFCOEFFS%uu_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,n_spins))
-            ALLOCATE (thisGREENSFCOEFFS%dd_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,n_spins))
-            ALLOCATE (thisGREENSFCOEFFS%du_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,n_spins))
-            ALLOCATE (thisGREENSFCOEFFS%ud_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,n_spins))
+            ALLOCATE (thisGREENSFCOEFFS%uu_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,spin_dim))
+            ALLOCATE (thisGREENSFCOEFFS%dd_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,spin_dim))
+            ALLOCATE (thisGREENSFCOEFFS%du_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,spin_dim))
+            ALLOCATE (thisGREENSFCOEFFS%ud_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,spin_dim))
 
             thisGREENSFCOEFFS%uu_int = 0.0
             thisGREENSFCOEFFS%dd_int = 0.0
             thisGREENSFCOEFFS%du_int = 0.0
             thisGREENSFCOEFFS%ud_int = 0.0
          ENDIF 
-         !ENDIF !l_calc
 
       END SUBROUTINE greensfCoeffs_init
 

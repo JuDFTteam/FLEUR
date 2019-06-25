@@ -19,7 +19,8 @@ USE m_juDFT
 USE m_types
 USE m_constants
 
-LOGICAL, PARAMETER :: l_debug = .FALSE.
+LOGICAL, PARAMETER :: l_debug = .TRUE.
+INTEGER, PARAMETER :: int_method(2) = (/3,3/)
 
 CONTAINS
 
@@ -101,7 +102,7 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
                                                                REAL(conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) +&
                                                                      conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin) *&
                                                                      SUM(usdus%ddn(l,nType,:)/input%jspins))
-                     IF(.NOT.input%onsite_sphavg) THEN
+                     IF(.NOT.input%l_gfsphavg) THEN
                         greensfCoeffs%uu(ie,i_gf,m,mp,ispin) = greensfCoeffs%uu(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
                                                                conjg(eigVecCoeffs%acof(ib,lm,natom,ispin))*eigVecCoeffs%acof(ib,lmp,natom,ispin)
                         greensfCoeffs%dd(ie,i_gf,m,mp,ispin) = greensfCoeffs%dd(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
@@ -124,14 +125,14 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
                                                                conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%ccof(m,ib,ilo,natom,ispin) +&
                                                                conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)))
                         ENDIF
-                     ENDDO
-                     DO ilop = 1, atoms%nlo(nType)
-                        IF (atoms%llo(ilop,nType).EQ.l) THEN
-                           greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) &
-                                                               - pi_const * weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
-                                                               conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
-
-                        ENDIF
+                        DO ilop = 1, atoms%nlo(nType)
+                           IF (atoms%llo(ilop,nType).EQ.l) THEN
+                              greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) &
+                                                                  - pi_const * weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
+                                                                  conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
+   
+                           ENDIF
+                        ENDDO
                      ENDDO
                   ENDDO! ie
                ENDDO !mp
@@ -163,7 +164,7 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
 
    !-Local Scalars
    INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm
-   REAL    fac
+   REAL    fac, n_occ
 
    COMPLEX mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,input%jspins)
 
@@ -176,7 +177,7 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
       DO ie = 1, greensfCoeffs%ne
          DO jspin = 1, input%jspins
             CALL local_sym(greensfCoeffs%projdos(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
-            IF(.NOT.input%onsite_sphavg) THEN
+            IF(.NOT.input%l_gfsphavg) THEN
                CALL local_sym(greensfCoeffs%uu(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
                CALL local_sym(greensfCoeffs%dd(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
                CALL local_sym(greensfCoeffs%du(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
@@ -187,7 +188,7 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
       !
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
       !
-      CALL greensf_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,:),atoms,l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del&
+      CALL greensf_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,:input%jspins),atoms,l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del&
                           ,greensfCoeffs%e_bot,greensfCoeffs%e_top,greensfCoeffs%kkintgr_cutoff(i_gf,:))
       !
       ! Set the imaginary part to 0 outside the energy cutoffs
@@ -197,7 +198,7 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
          DO jspin = 1, input%jspins
             DO m= -l,l
                DO mp= -l,l
-                  IF(input%onsite_sphavg) THEN
+                  IF(input%l_gfsphavg) THEN
                      greensfCoeffs%projdos(ie,i_gf,m,mp,jspin) = 0.0
                   ELSE
                      greensfCoeffs%uu(ie,i_gf,m,mp,jspin) = 0.0
@@ -217,20 +218,20 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
          DO m= -l,l
             DO mp= -l,l
                DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
-                  IF(input%onsite_sphavg) THEN
+                  IF(input%l_gfsphavg) THEN
                      CALL kkintgr(greensfCoeffs%projdos(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
-                                 gOnsite%gmmpMat(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,1)
+                                 gOnsite%gmmpMat(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
                   ELSE
                   ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
                   ! We can do this because the radial functions are independent of E
                      CALL kkintgr(greensfCoeffs%uu(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
-                                 gOnsite%uu(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,1)
+                                 gOnsite%uu(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
                      CALL kkintgr(greensfCoeffs%dd(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
-                                 gOnsite%dd(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,1)
+                                 gOnsite%dd(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
                      CALL kkintgr(greensfCoeffs%du(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
-                                 gOnsite%du(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,1)
+                                 gOnsite%du(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
                      CALL kkintgr(greensfCoeffs%ud(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
-                                 gOnsite%ud(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,1)
+                                 gOnsite%ud(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
                   ENDIF
                ENDDO
             ENDDO
@@ -238,19 +239,10 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
       !TODO: Add checks for the Green's function
-      IF(l_debug) THEN
-         CALL occmtx(gOnsite,i_gf,atoms,sym,input,ef,mmpMat(:,:,i_gf,:))
-         DO jspin = 1, input%jspins
-            DO m = -l, l
-               WRITE(*,*) jspin, m, REAL(mmpMat(m,m,i_gf,jspin))
-            ENDDO
-         ENDDO
-         CALL ldosmtx("g",gOnsite,1,atoms,sym,input)
-      ENDIF
    ENDDO
 
    !In the noco case we need to rotate into the global frame
-   IF(input%onsite_sphavg.AND.noco%l_mperp) CALL rot_onsite(atoms,noco,gOnsite)
+   IF(input%l_gfsphavg.AND.noco%l_mperp) CALL rot_onsite(atoms,noco,gOnsite)
 
 END SUBROUTINE calc_onsite
 
@@ -280,11 +272,9 @@ SUBROUTINE greensf_cutoff(im,atoms,l,jspins,ne,del,e_bot,e_top,cutoff)
    INTEGER i,m,n_c,ispin
    REAL integral
    REAL a,b, n_states
-   LOGICAL l_write
 
    REAL :: fDOS(ne,jspins)
 
-   l_write=.false.  !Debugging Output
    fDOS = 0.0
 
    !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS 
@@ -299,7 +289,7 @@ SUBROUTINE greensf_cutoff(im,atoms,l,jspins,ne,del,e_bot,e_top,cutoff)
    fDOS(:,:) = -1/pi_const*fDOS(:,:)
 
    !For Debugging:
-   IF(l_write) THEN
+   IF(l_debug) THEN
       
       OPEN(1337,file="fDOS_up.txt",action="write",status="replace")
 
@@ -326,7 +316,7 @@ SUBROUTINE greensf_cutoff(im,atoms,l,jspins,ne,del,e_bot,e_top,cutoff)
 
    n_states = 2*(2*l+1)
    
-   IF(l_write) WRITE(*,*) "Integral over DOS: ", integral
+   IF(l_debug) WRITE(*,*) "Integral over DOS: ", integral
 
    cutoff(1) = 1   !at the moment we don't modify the lower bound
    cutoff(2) = ne
@@ -359,7 +349,7 @@ SUBROUTINE greensf_cutoff(im,atoms,l,jspins,ne,del,e_bot,e_top,cutoff)
 
       ENDDO
 
-      IF(l_write) THEN
+      IF(l_debug) THEN
          WRITE(*,*) "CALCULATED CUTOFF: ", cutoff(2)
          WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
       ENDIF
@@ -389,6 +379,8 @@ SUBROUTINE local_sym(mat,l,nType,sym,atoms)
    mat = 0.0
    nop = 0
    DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
+      fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
+      IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="local_sym")
       DO it = 1, sym%invarind(natom)
          is = sym%invarop(natom,it)
          isi = sym%invtab(is)
@@ -398,28 +390,15 @@ SUBROUTINE local_sym(mat,l,nType,sym,atoms)
                d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
             ENDDO
          ENDDO
-         DO m = -l,l
-            diag(m) = d_mat(m,m)
-            d_mat(m,m) = 0.0
-         ENDDO
-         !Exclude all symmetries that would prevent splitting of the levels
-         IF(ANY(d_mat(:,:).NE.0.0)) CYCLE
-         nop = nop + 1
-         DO m = -l,l
-            d_mat(m,m) = diag(m)
-         ENDDO
          calc_mat = matmul( transpose( conjg(d_mat) ) , orig_mat)
          calc_mat =  matmul( calc_mat, d_mat )
          DO m = -l,l
             DO mp = -l,l
-               mat(m,mp) = mat(m,mp) + conjg(calc_mat(m,mp))
+               mat(m,mp) = mat(m,mp) + fac * conjg(calc_mat(m,mp))
             ENDDO
          ENDDO
       ENDDO
    ENDDO
-   IF(nop.EQ.0) CALL juDFT_error("No symmetry operations found",calledby="local_sym")
-   fac = 1.0/(REAL(nop))
-   mat = mat * fac
 
 END SUBROUTINE local_sym
 

@@ -52,8 +52,8 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="expertModes" type="ExpertModeType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="geometryOptimization" type="GeometryOptimizerType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaU" type="LdaUGeneralType"/>
-	 <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAGeneralType"/>
-	 <xsd:element maxOccurs="1" minOccurs="0" name="onsiteGF" type="OnsiteGFGeneralType"/>
+	      <xsd:element maxOccurs="1" minOccurs="0" name="ldaHIA" type="LdaHIAGeneralType"/>
+	      <xsd:element maxOccurs="1" minOccurs="0" name="greensFunction" type="GFGeneralType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="spinSpiralQPointMesh" type="SpinSpiralQPointMeshType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="fields" type="FieldType"/>
@@ -411,7 +411,7 @@
             <xsd:element name="relPos" type="AtomPosType"/>
             <xsd:element name="absPos" type="AtomPosType"/>
             <xsd:element name="filmPos" type="AtomPosType"/>
-         </xsd:choice>
+         </xsd:choice> 
          <xsd:element maxOccurs="1" minOccurs="0" name="mtSphere" type="MTSphereType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="atomicCutoffs" type="AtomicCutoffsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="EnergyParametersType"/>
@@ -487,6 +487,11 @@
 
    <xsd:complexType name="OnsiteGFType">
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="J0Type">
+      <xsd:attribute name="l_min" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="l_max" type="xsd:nonNegativeInteger" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="ForceType">
@@ -633,14 +638,35 @@
       <xsd:attribute default="0.001" name="minmatDistance" type="xsd:double" use="optional"/>
    </xsd:complexType>
 
-   <xsd:complexType name="OnsiteGFGeneralType">
-      <xsd:attribute default="T" name="l_sphavg" type="FleurBool" use="optional"/>
-      <xsd:attribute default="1301" name="ne" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute default="0.0314" name="sigma" type="xsd:string" use="optional"/>
-      <xsd:attribute default="1" name="mode" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute default="1301" name="nz" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute default="100" name="nmatsub" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute default="1.0" name="ecut" type="xsd:string" use="optional"/>
+   <xsd:complexType name="GFGeneralType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="1" minOccurs="0" name="realAxis" type="ERealAxisType"/>
+         <xsd:choice>
+            <xsd:element name="contourRectangle" type="EContourRectangleType"/>
+            <xsd:element name="contourSemicircle" type="EContourSemicircleType"/>
+         </xsd:choice>
+      </xsd:sequence>
+      <xsd:attribute default="T" name="l_sphavg" type="FleurBool"/>
+      <xsd:attribute default="T" name="l_mperp" type="FleurBool"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="ERealAxisType">
+      <xsd:attribute default="1300" name="ne" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="-2.0" name="ellow" type="xsd:double"/>
+      <xsd:attribute default="2.0" name="elup" type="xsd:double"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="EContourRectangleType">
+      <xsd:attribute default="5" name="n1" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="128" name="n2" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="5" name="n3" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="5" name="nmatsub" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="0.0314" name="sigma" type="xsd:double"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="EContourSemicircleType">
+      <xsd:attribute default="128" name="n" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="0.25" name="alpha" type="xsd:double"/>
    </xsd:complexType>
 
    <xsd:complexType name="RDMFTType">

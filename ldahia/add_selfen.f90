@@ -1,5 +1,7 @@
 MODULE m_add_selfen
 
+   LOGICAL, PARAMETER :: l_debug = .TRUE.
+
    CONTAINS
 
    SUBROUTINE add_selfen(g,gp,selfen,atoms,hub1,sym,input,ef,n_occ,mu_dc,vmmp,mmpMat)
@@ -20,6 +22,8 @@ MODULE m_add_selfen
       USE m_types
       USE m_constants
       USE m_gfcalc
+
+      IMPLICIT NONE
 
       TYPE(t_greensf),  INTENT(IN)     :: g
       TYPE(t_greensf),  INTENT(INOUT)  :: gp
@@ -46,7 +50,7 @@ MODULE m_add_selfen
       !replace with noco%l_mperp
       l_mperp = .true.
       !Interval where we expect the correct mu
-      mu_a = 0.0
+      mu_a = -4.0
       mu_b = 4.0
       mu_step = 0.05
       mu_max = 0.0

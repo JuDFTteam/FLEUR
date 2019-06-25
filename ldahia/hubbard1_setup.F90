@@ -4,11 +4,11 @@ MODULE m_hubbard1_setup
 
    IMPLICIT NONE
 
-   LOGICAL, PARAMETER :: l_debug = .FALSE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
+   LOGICAL, PARAMETER :: l_debug = .TRUE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,usdus,pot,gdft,l_runhia,results)
+   SUBROUTINE hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,usdus,pot,gdft,results)
 
       USE m_types
       USE m_hubbard1_io
@@ -35,7 +35,6 @@ MODULE m_hubbard1_setup
       TYPE(t_potden),   INTENT(INOUT)  :: pot
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_greensf),  INTENT(IN)     :: gdft !green's function calculated from the Kohn-Sham system
-      LOGICAL,          INTENT(IN)     :: l_runhia
       
 #ifdef CPP_MPI
       EXTERNAL MPI_BCAST
@@ -75,7 +74,7 @@ MODULE m_hubbard1_setup
         mmpMat(:,:,:,:) = 0.0
       ENDIF
 
-      IF(ANY(mmpMat(:,:,:,:).NE.0.0).OR.l_runhia) THEN
+      IF(ANY(mmpMat(:,:,:,:).NE.0.0).OR.hub1%l_runthisiter) THEN
          !Get the slater integrals from the U and J parameters
          CALL uj2f(input%jspins,hub1%lda_u(:),hub1%n_hia,f0,f2,f4,f6)
          f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
@@ -87,8 +86,8 @@ MODULE m_hubbard1_setup
          CALL v_mmp(sym,atoms,hub1%lda_u(:),hub1%n_hia,input%jspins,.true.,mmpMat,&
          u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+hub1%n_hia,:),e_lda_hia)
 
-         IF(l_runhia.AND.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) THEN 
-            IF(gdft%mode.EQ.2) CALL juDFT_error("This energy contour is not supported at the moment for DFT+Hubbard1",calledby="hubbard1_setup")
+         IF(hub1%l_runthisiter.AND.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) THEN 
+            !IF(gdft%mode.EQ.2) CALL juDFT_error("This energy contour is not supported at the moment for DFT+Hubbard1",calledby="hubbard1_setup")
             !The onsite green's function was calculated but the solver 
             !was not yet run
             !--> write out the configuration for the hubbard 1 solver 
@@ -195,7 +194,7 @@ MODULE m_hubbard1_setup
                ELSE
                   mmpMat_in = 0.0
                ENDIF
-               CALL n_mmp_dist(mmpMat_in,mmpMat,hub1,results,input%jspins)
+               CALL n_mmp_dist(mmpMat_in,mmpMat,atoms%n_hia,results,input%jspins)
 
                IF(mpi%irank.EQ.0) THEN
                   !Write out the density matrix and the additional inforamtion (current iteration, distances)

@@ -106,7 +106,7 @@ MODULE m_hubbard1_io
 
       IF(l_ccf) THEN
          WRITE(io_unit,"(A)") "#  Is the crystal field splitting given in ccf.dat"
-         WRITE(io_unit,9080) l_ccf
+         WRITE(io_unit,9080) 1.0
 9080     FORMAT(TR3,'ccf',f4.1)
       ENDIF
 

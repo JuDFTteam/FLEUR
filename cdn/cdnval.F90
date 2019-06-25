@@ -233,21 +233,20 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
+      IF (atoms%n_gf.GT.0.AND.input%tria) THEN
+            CALL timestart("TetrahedronWeights")
+            tetweights = 0.0
+            CALL tetra_weights(ikpt,kpts,results%neig(:,jsp),results%eig(:,:,jsp),greensfCoeffs,tetweights,tet_ind,results%ef)
+            CALL timestop("TetrahedronWeights")
+      ENDIF
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
-         !Shouldn't this be ispin??
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
          IF (atoms%n_gf.GT.0) THEN
-            IF(input%tria) THEN
-               CALL timestart("OnSite: TetWeights")
-               tetweights = 0.0
-               CALL tetra_weights(ikpt,kpts,results%neig(:,ispin),results%eig(:,:,ispin),greensfCoeffs,tetweights,tet_ind,results%ef)
-               CALL timestop("OnSite: TetWeights")
-            ENDIF
             CALL timestart("On-Site: Setup")
                CALL onsite_coeffs(atoms,input,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
             CALL timestop("On-Site: Setup")

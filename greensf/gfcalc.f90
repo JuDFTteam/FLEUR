@@ -35,27 +35,25 @@ MODULE m_gfcalc
 
       TYPE(t_greensf),        INTENT(IN)  :: g0
       TYPE(t_atoms),          INTENT(IN)  :: atoms
-      TYPE(t_greensfCoeffs),  INTENT(IN)  :: g0Coeffs !For determining the onsite exchange splitting from the difference in the COM of the d-bands
+      TYPE(t_greensfCoeffs),  INTENT(IN)  :: g0Coeffs !For determining the onsite exchange splitting from the difference in the COM of the bands
       REAL,                   INTENT(IN)  :: ef
       TYPE(t_input),          INTENT(IN)  :: input
 
-      COMPLEX integrand
+      COMPLEX integrand, sumup, sumdwn, sumupdwn
       INTEGER i,iz,m,l,mp,ispin,n,i_gf,matsize,ipm,ie,n_cut
-      REAL beta,j0,exc_split
+      REAL beta,j0,exc_split,tmp
       LOGICAL l_matinv
       TYPE(t_mat) :: calcup,calcdwn
       TYPE(t_mat) :: delta
       TYPE(t_mat) :: calc
 
       REAL :: int_norm(g0Coeffs%ne,input%jspins), int_com(g0Coeffs%ne,input%jspins)
+      REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
-      l_matinv = .false. !Determines how the onsite exchange splitting is calculated
-      IF(ANY(atoms%onsiteGF(:)%l.EQ.2)) WRITE(6,9000)
+      l_matinv = .FALSE. !Determines how the onsite exchange splitting is calculated
       DO i_gf = 1, atoms%n_gf
          j0 = 0.0
          l = atoms%onsiteGF(i_gf)%l
-         !We want to calculate j0 from the d-bands
-         IF(l.NE.2) CYCLE
 
          n = atoms%onsiteGF(i_gf)%atomType
          matsize = 2*l+1
@@ -63,7 +61,7 @@ MODULE m_gfcalc
          CALL calcdwn%init(.false.,matsize,matsize)
          CALL delta%init(.false.,matsize,matsize)
          CALL calc%init(.false.,matsize,matsize)
-         IF(.NOT.l_matinv) THEN
+         IF(.TRUE.) THEN
             !Determine the difference in the center of mass of the bands
             n_cut = g0Coeffs%kkintgr_cutoff(i_gf,2)
             int_com = 0.0
@@ -78,12 +76,13 @@ MODULE m_gfcalc
             ENDDO
             exc_split = trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,2),g0Coeffs%del,n_cut)&
                         -trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,1),g0Coeffs%del,n_cut)
-
-            !WRITE(*,*) exc_split
+            WRITE(*,*) exc_split, (trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)-trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut))/(14)
             DO i = 1, matsize
                delta%data_c(i,i) = exc_split
             ENDDO
          ENDIF
+         OPEN(unit=1337,file="j0",status="replace")
+         OPEN(unit=1338,file="delta",status="replace")
          DO iz = 1, g0%nz
             !
             !calculate the onsite exchange matrix if we use matrix inversion
@@ -107,12 +106,20 @@ MODULE m_gfcalc
                      delta%data_c = delta%data_c + 1/2.0 * (-1)**(ispin-1) * calc%data_c
                   ENDDO
                ENDDO
+               tmp = 0.0
+               DO i=1, matsize
+                  tmp = tmp + REAL(delta%data_c(i,i))/matsize
+               ENDDO
+               WRITE(1338,"(2f14.8)") REAL(g0%e(iz)), tmp
             ENDIF
             !
             !  Tr[\Delta (G_up-G_down) + \Delta G_up \Delta G_down]
             !
             ! calculated for G^+/- and then substract to obtain imaginary part
             integrand = 0.0
+            sumup = 0.0
+            sumdwn = 0.0
+            sumupdwn = 0.0
             DO ipm = 1, 2
                CALL to_tmat(calcup,g0%gmmpMat(iz,i_gf,:,:,1,ipm),1,1,l)
                CALL to_tmat(calcdwn,g0%gmmpMat(iz,i_gf,:,:,2,ipm),1,1,l)
@@ -120,18 +127,27 @@ MODULE m_gfcalc
                calcup%data_c  = matmul(delta%data_c,calcup%data_c)
                calcdwn%data_c = matmul(delta%data_c,calcdwn%data_c)
 
-               calc%data_c = calcup%data_c - calcdwn%data_c + matmul(calcup%data_c,calcdwn%data_c)
+               calc%data_c =  matmul(calcup%data_c,calcdwn%data_c)
 
                !Calculate the trace
                DO i = 1,matsize
-                  integrand = integrand + (-1)**(ipm-1) * calc%data_c(i,i)
+                  sumup    = sumup + (-1)**(ipm-1) * calcup%data_c(i,i) * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
+                  sumdwn   = sumdwn + (-1)**(ipm-1) * calcdwn%data_c(i,i) * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
+                  sumupdwn = sumupdwn + (-1)**(ipm-1) * calc%data_c(i,i) * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
+                  integrand = integrand + (-1)**(ipm-1) * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1) *&
+                                          (calcup%data_c(i,i)-calcdwn%data_c(i,i)+calc%data_c(i,i))
                ENDDO
             ENDDO
-            j0 = j0 + AIMAG(integrand*MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1))
+            IF(ABS(REAL(integrand)) > 1e-5) THEN
+               CALL juDFT_error("integrand still has a Real part", calledby="eff_excinteraction")
+            ENDIF
+            WRITE(1337,"(7f15.8)") REAL(g0%e(iz)),AIMAG(integrand), AIMAG(sumup), AIMAG(sumdwn), AIMAG(sumupdwn)
+            j0 = j0 + AIMAG(integrand)
          ENDDO
          j0 = -1/(2.0*fpi_const)*hartree_to_ev_const * j0
-         WRITE(6,9010) n,j0
-
+         WRITE(6,9010) n,j0,ABS(j0)*2/3 * 1/(boltzmannConst*hartree_to_ev_const)
+         CLOSE(unit=1337)
+         CLOSE(unit=1338)
 
          CALL calcup%free()
          CALL calcdwn%free()
@@ -139,7 +155,7 @@ MODULE m_gfcalc
          CALL delta%free()
       ENDDO
 9000  FORMAT("Effective Magnetic Exchange Interaction J0 (Compare Condens. Matter 26, 476003 (2014) EQ.1)")
-9010  FORMAT("J0 for atom ", I3, ": " f14.8 " eV")
+9010  FORMAT("J0 for atom ", I3, ": " f14.8 " eV", "Tc: " f14.8)
    END SUBROUTINE eff_excinteraction
 
    SUBROUTINE occmtx(g,i_gf,atoms,sym,input,ef,mmpMat,el0,vr)
@@ -176,10 +192,10 @@ MODULE m_gfcalc
       REAL, ALLOCATABLE :: u(:,:),udot(:,:)
       COMPLEX, ALLOCATABLE :: gr(:)
 
-      IF(.NOT.input%onsite_sphavg.AND.(.NOT.PRESENT(el0).OR..NOT.PRESENT(vr))) THEN
+      IF(.NOT.input%l_gfsphavg.AND.(.NOT.PRESENT(el0).OR..NOT.PRESENT(vr))) THEN
          CALL juDFT_error("Cannot calculate radial dependence for green's function", calledby="occmtx")
       ENDIF
-      IF(.NOT.input%onsite_sphavg) THEN
+      IF(.NOT.input%l_gfsphavg) THEN
          ALLOCATE(u(atoms%jmtd,2))
          ALLOCATE(udot(atoms%jmtd,2))
          ALLOCATE(gr(atoms%jmtd))
@@ -195,7 +211,7 @@ MODULE m_gfcalc
 
 
       DO ispin = 1, input%jspins
-         IF(.NOT.input%onsite_sphavg) THEN
+         IF(.NOT.input%l_gfsphavg) THEN
             !If we have the radial dependence of the greens function calculate the radial functions here
             CALL radfun(l,nType,ispin,el0(ispin),vr(:,ispin),atoms,u,udot,usdus,nodeu,noded,wronk)
          ENDIF
@@ -207,7 +223,7 @@ MODULE m_gfcalc
                   DO iz = 1, g%nz
                      !weight for the energy integration
                      !If necessary here the radial averaging is performed
-                     IF(input%onsite_sphavg) THEN
+                     IF(input%l_gfsphavg) THEN
                         g_int = g%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
                      ELSE
                         gr = onsite_radial(g%uu(iz,i_gf,m,mp,ispin,ipm),g%dd(iz,i_gf,m,mp,ispin,ipm),g%du(iz,i_gf,m,mp,ispin,ipm),&
@@ -433,7 +449,7 @@ MODULE m_gfcalc
       dos = 0.0
       re = 0.0
 
-      IF(.NOT.input%onsite_sphavg) CALL juDFT_warn("Not implemented for radial dependence",calledby="ldosmtx")
+      IF(.NOT.input%l_gfsphavg) CALL juDFT_warn("Not implemented for radial dependence",calledby="ldosmtx")
       !n(E) = 1/2pii * Tr(G^+-G^-)
       l = atoms%onsiteGF(i_gf)%l
       n = atoms%onsiteGF(i_gf)%atomType

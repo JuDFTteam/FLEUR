@@ -230,12 +230,11 @@ CONTAINS
     CALL MPI_BCAST(atoms%onsiteGF(:)%atomType,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     
     CALL MPI_BCAST(input%onsite_mode,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(input%onsite_ne,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(input%onsite_nz,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(input%onsite_nmatsub,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(input%onsite_sigma,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
+    CALL MPI_BCAST(input%gf_ne,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_sigma,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%l_gf,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(input%onsite_sphavg,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_gfsphavg,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_gfmperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 
     CALL MPI_BCAST(hub1%lda_u(:)%l,atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(hub1%lda_u(:)%atomType,atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)

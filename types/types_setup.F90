@@ -444,13 +444,19 @@ MODULE m_types_setup
       LOGICAL :: ldauLinMix
       REAL    :: ldauMixParam
       REAL    :: ldauSpinf
-      REAL    :: greensf_ecut
-      REAL    :: onsite_sigma
-      INTEGER :: onsite_ne
-      LOGICAL :: onsite_sphavg
-      INTEGER :: onsite_mode
-      INTEGER :: onsite_nz
-      INTEGER :: onsite_nmatsub
+      LOGICAL :: l_gfsphavg
+      LOGICAL :: l_gfmperp
+      INTEGER :: gf_ne
+      REAL    :: gf_ellow
+      REAL    :: gf_elup
+      INTEGER :: gf_mode
+      INTEGER :: gf_n
+      REAL    :: gf_alpha
+      INTEGER :: gf_n1
+      INTEGER :: gf_n2
+      INTEGER :: gf_n3
+      INTEGER :: gf_nmatsub
+      REAL    :: gf_sigma
       LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps

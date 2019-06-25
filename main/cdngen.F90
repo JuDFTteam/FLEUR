@@ -39,6 +39,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_gfcalc
    USE m_onsite
    USE m_hubbard1_io
+   USE m_denmat_dist
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -95,6 +96,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER               :: jspin, jspmax, ierr
    INTEGER               :: dim_idx
 
+   INTEGER               :: i_gf,m,l
+   REAL                  :: n_occ
+   COMPLEX               :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,input%jspins)
+
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
@@ -112,8 +117,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       !Only calculate the greens function when needed
       greensfCoeffs%l_calc = (atoms%n_intergf>0).OR.hub1%l_runthisiter
       CALL greensfCoeffs%init(input,3,atoms,noco,atoms%n_gf>0,atoms%n_intergf>0)
-      CALL gOnsite%init_e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef,greensfCoeffs%sigma,&
-                                 0,gOnsite%nz-gOnsite%nmatsub,0,gOnsite%nmatsub,hub1%beta)
+      CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
    ENDIF
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
@@ -142,10 +146,25 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          IF(atoms%n_hia.GT.0.AND.ANY(hub1%l_ccf(:))) THEN
             CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:))
          ENDIF
-         IF(input%jspins.EQ.2.AND.ANY(atoms%onsiteGF(:)%l.EQ.2)) THEN
+         IF(input%jspins.EQ.2) THEN
             CALL eff_excinteraction(gOnsite,atoms,input,results%ef,greensfCoeffs)
          ENDIF
-      
+         IF(l_debug) THEN
+            DO i_gf = 1, atoms%n_gf
+               l = atoms%onsiteGF(i_gf)%l
+               CALL occmtx(gOnsite,i_gf,atoms,sym,input,results%ef,mmpMat(:,:,i_gf,:))
+               n_occ = 0.0
+               DO jspin = 1, input%jspins
+                  DO m = -l, l
+                     n_occ = n_occ + REAL(mmpMat(m,m,i_gf,jspin))
+                     WRITE(*,*) jspin, m, REAL(mmpMat(m,m,i_gf,jspin))
+                  ENDDO
+               ENDDO
+               !WRITE(*,"(7f15.8)") REAL(mmpMat)-REAL(outDen%mmpMat)
+               !CALL n_mmp_dist(mmpmat,outDen%mmpMat,1,results,input%jspins)
+               CALL ldosmtx("g",gOnsite,i_gf,atoms,sym,input)
+            ENDDO
+         ENDIF
       ENDIF
    ENDIF
 

@@ -428,7 +428,7 @@ CONTAINS
        ALLOCATE(r_b(n))
        CALL MPI_REDUCE(greensfCoeffs%projdos(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
        IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,greensfCoeffs%projdos(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspin),1)
-       IF(.NOT.input%onsite_sphavg) THEN
+       IF(.NOT.input%l_gfsphavg) THEN
          CALL MPI_REDUCE(greensfCoeffs%uu(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
          IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,greensfCoeffs%uu(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspin),1)
          CALL MPI_REDUCE(greensfCoeffs%du(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspin),r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)

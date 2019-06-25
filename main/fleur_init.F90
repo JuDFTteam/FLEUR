@@ -146,15 +146,23 @@
           input%scaleA2 = 1.0
           input%scaleC = 1.0
 
-          !Many of these can probably be eliminated
-          input%onsite_ne = 1301 !same as for dos calculations
-          input%onsite_sigma = 0.00314
-          input%greensf_ecut = 1.0
-          input%onsite_sphavg = .true.
-          input%onsite_mode = 1
-          input%onsite_nz = 1301
-          input%onsite_nmatsub = 0
-          input%l_gf = .false.
+          input%l_gfsphavg = .TRUE.
+          input%l_gfmperp = .FALSE.
+          input%l_gf = .FALSE.
+          input%gf_ne = 1300
+          input%gf_ellow = 0.0
+          input%gf_elup = 0.0
+          input%gf_mode = 0
+          input%gf_n1 = 5
+          input%gf_n2 = 128
+          input%gf_n3 = 5
+          input%gf_sigma = 0.0314
+          input%gf_nmatsub = 5
+          input%gf_n = 128
+          input%gf_alpha = 0.25
+          hub1%beta = 100.0
+          input%minoccDistance = 0.01
+          input%minmatDistance = 0.001
           hub1%n_hia = 0
           hub1%l_runthisiter = .FALSE.
           atoms%n_hia = 0

@@ -709,39 +709,42 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          hub1%beta            = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@beta'))
       END IF
 
-      xPathA = '/fleurInput/calculationSetup/onsiteGF'
+      xPathA = '/fleurInput/calculationSetup/greensFunction'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@sigma'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_sigma = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
+         !General Switches
+         input%l_gfsphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
+         input%l_gfmperp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
+         !Information about the energy mesh on the real axis
+         xPathB = TRIM(ADJUSTL(xPathA)) // '/realAxis'
+         numberNodes = xmlGetNumberOfNodes(xPathB)
+         IF(numberNodes.EQ.1) THEN
+            input%gf_ne = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@ne'))
+            input%gf_ellow = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@ellow'))
+            input%gf_elup = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@elup'))
+         ENDIF
+         !Information on the complex energy contour
+         xPathB = TRIM(ADJUSTL(xPathA)) // '/contourRectangle'
+         numberNodes = xmlGetNumberOfNodes(xPathB)
+         IF(numberNodes.EQ.1) THEN
+            input%gf_mode = 1
+            input%gf_n1 = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n1'))
+            input%gf_n2 = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n2'))
+            input%gf_n3 = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n3'))
+            input%gf_nmatsub = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@nmatsub'))
+            input%gf_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@sigma'))
+         ENDIF
 
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@ne'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_ne = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
+         xPathB = TRIM(ADJUSTL(xPathA)) // '/contourSemicircle'
+         numberNodes = xmlGetNumberOfNodes(xPathB)
+         IF(numberNodes.EQ.1) THEN
+            input%gf_mode = 2
+            input%gf_n = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n'))
+            input%gf_alpha = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
+         ENDIF
 
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@mode'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_mode = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
-
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@nz'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_nz = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
-
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@nmatsub'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_nmatsub = evaluateFirstIntOnly(xmlGetAttributeValue(xPathA))
-      
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@l_sphavg'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%onsite_sphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
-
-         xPathA = '/fleurInput/calculationSetup/onsiteGF/@ecut'
-         numberNodes = xmlGetNumberOfNodes(xPathA)
-         IF(numberNodes.EQ.1) input%greensf_ecut = evaluateFirstBoolOnly(xmlGetAttributeValue(xPathA))
+         IF(input%gf_mode.EQ.0) CALL juDFT_error("No energy contour read", calledby="r_inpXML")
       END IF
-
-      IF(input%onsite_mode.GT.2) CALL juDFT_error("No valid mode for the energy contour of Green's function", calledby="r_inpXML")
 
 
       ! Read in RDMFT parameters
@@ -1443,6 +1446,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             hub1_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@J'))
             hub1_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
             hub1_xi(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@soc'))
+            !Replace no soc with a small ficticious soc
+            IF(hub1_xi(i).EQ.0.0) hub1_xi(i) = 0.001 
             hub1_bz(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@exc'))
             l_ccf(i)   = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@lcrystfield'))
          ENDDO

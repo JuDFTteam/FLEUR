@@ -106,7 +106,7 @@ CONTAINS
     ! local scalars
     INTEGER :: eig_id,archiveType
     INTEGER :: iter,iterHF,iterHIA
-    LOGICAL :: l_opti,l_cont,l_qfix,l_real,l_runhia
+    LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -135,7 +135,7 @@ CONTAINS
     iter     = 0
     iterHF   = 0
     iterHIA  = 0
-    l_runhia = .FALSE.
+    hub1%l_runthisiter = .FALSE.
     l_cont = (iter < input%itmax)
     
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
@@ -260,7 +260,7 @@ CONTAINS
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
           CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,hybrid,iter,iterHIA,eig_id,results,inDen,vTemp,vx,gOnsite,hub1,l_runhia)
+                     cell,enpara,banddos,noco,oneD,hybrid,iter,iterHIA,eig_id,results,inDen,vTemp,vx,gOnsite,hub1)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -425,7 +425,7 @@ CONTAINS
        ! mix input and output densities
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
-            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,l_runhia)
+            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1%l_runthisiter)
        
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
