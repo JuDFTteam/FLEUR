@@ -42,10 +42,11 @@ CONTAINS
       USE m_constants, ONLY: pi_const
       USE m_olap, ONLY: olap_pw, gptnorm
       USE m_trafo, ONLY: symmetrize, bramat_trafo
-      USE m_util, ONLY: sphbessel, intgrf, intgrf_init, harmonicsr, primitivef
+      USE m_util, ONLY: sphbessel, intgrf, intgrf_init, primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
       USE m_io_hybrid
+      use m_ylm
 
       IMPLICIT NONE
 
@@ -370,6 +371,7 @@ CONTAINS
                DO i = ng, 1, -1
                   rdum = atoms%rmsh(i, itype)
                   CALL sphbessel(rarr, qnorm*rdum, hybrid%lcutm1(itype) + 1)
+                  !call sphbes(hybrid%lcutm1(itype)+1, qnorm*rdum, rarr)
                   DO l = 0, hybrid%lcutm1(itype)
                      sphbes(i, l) = rarr(l)
                      IF (l .NE. 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
@@ -583,9 +585,11 @@ CONTAINS
                STOP 'coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)' ! We shouldn't stop here!
             endif
 
-            CALL harmonicsr(y1, MATMUL(kpts%bk(:, kpts%nkpt), cell%bmat), 2)
-            CALL harmonicsr(y2, MATMUL(hybrid%gptm(:, igptp), cell%bmat), 2)
-            CALL harmonicsr(y, q, hybrid%lexp)
+            call timestart("harmonics")
+            call ylm4(2,  MATMUL(kpts%bk(:, kpts%nkpt), cell%bmat), y1) 
+            call ylm4(2,  MATMUL(hybrid%gptm(:, igptp), cell%bmat), y2) 
+            call ylm4(hybrid%lexp, q, y)
+            call timestop("harmonics")
             y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
             iy = 0
@@ -795,7 +799,11 @@ CONTAINS
             igptp = hybrid%pgptm(igpt, ikpt)
             iqnrm = pqnrm(igpt, ikpt)
             q = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp), cell%bmat)
-            CALL harmonicsr(y, q, hybrid%lexp)
+
+            call timestart("harmonics")
+            call ylm4(hybrid%lexp, q, y)
+            call timestop("harmonics")
+
             y = CONJG(y)
             lm = 0
             DO l = 0, hybrid%lexp
@@ -1000,7 +1008,9 @@ CONTAINS
          DO igpt = 1, hybrid%ngptm(ikpt)
             igptp = hybrid%pgptm(igpt, ikpt)
             q = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp), cell%bmat)
-            CALL harmonicsr(carr2(:, igpt), q, hybrid%lexp)
+            call timestart("harmonics")
+            call ylm4(hybrid%lexp, q, carr2(:, igpt))
+            call timestop("harmonics")
          END DO
 
          DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,hybrid%ngptm1(ikpt)
@@ -1723,7 +1733,7 @@ CONTAINS
    SUBROUTINE structureconstant(structconst, cell, hybrid, atoms, kpts, mpi)
 
       USE m_constants, ONLY: pi_const
-      USE m_util, ONLY: harmonicsr, rorderp, rorderpf
+      USE m_util, ONLY: rorderp, rorderpf
       USE m_types
       USE m_juDFT
       use m_ylm
@@ -2001,7 +2011,9 @@ CONTAINS
             END IF
 
             IF (ishell .GT. conv(maxl) .AND. maxl .NE. 0) maxl = maxl - 1
-            CALL harmonicsr(y, ka, maxl)
+            call timestart("harmonics")
+            call ylm4(maxl, ka, y)
+            call timestop("harmonics")
             cdum = 1d0
             lm = 0
             DO l = 0, maxl

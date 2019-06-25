@@ -70,6 +70,7 @@ CONTAINS
     USE m_eig66_io
     USE m_chase_diag
     USE m_writeBasis
+    !$ USE omp_lib
     IMPLICIT NONE
 
     INTEGER, INTENT(IN)             :: mpi_comm
@@ -101,7 +102,7 @@ CONTAINS
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
     ! local scalars
-    INTEGER :: eig_id,archiveType
+    INTEGER :: eig_id,archiveType, num_threads
     INTEGER :: iter,iterHF
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
@@ -200,6 +201,8 @@ CONTAINS
        IF (noco%l_soc) dimension%neigd2 = dimension%neigd*2
 
        !HF
+       !$ num_threads = omp_get_num_threads()
+       !$ call omp_set_num_threads(1)
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
@@ -217,6 +220,7 @@ CONTAINS
        END IF
 
        CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+       !$ call omp_set_num_threads(num_threads)
 
        !#endif
 

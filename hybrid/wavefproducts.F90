@@ -2439,7 +2439,7 @@
              END DO
            END DO
          END DO
-         call timestart("setup stepfunc")
+         call timestop("setup stepfunc")
       endif
 
       !
