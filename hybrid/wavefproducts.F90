@@ -1707,10 +1707,8 @@
                       add2 = rdum2*rfac2 - rdum1*rfac1
                       DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
-            IF ((j.LE.20).AND.(ibando.LE.2).AND.(iband.LE.1)) WRITE(2030,'(3i7,3f15.8)') j, ibando, iband, cprod(j,ibando,iband), hybdat%prodm(i,n,l,itype), add1
                         cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add1!( cos1 + sin2 )
                         j = lm2 + i
-            IF ((j.LE.20).AND.(ibando.LE.2).AND.(iband.LE.1)) WRITE(2030,'(3i7,3f15.8)') j, ibando, iband, cprod(j,ibando,iband), hybdat%prodm(i,n,l,itype), add2
                         cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add2!( cos2 - sin1 )
 
                       END DO  !i -> loop over mixed basis functions
