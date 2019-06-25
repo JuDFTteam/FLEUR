@@ -11,6 +11,7 @@
              sliceplot,banddos,enpara,xcpot,results,kpts,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
           USE m_types
+          USE m_fleurinput_read_xml
           USE m_judft
           USE m_juDFT_init
           USE m_init_wannier_defaults
@@ -71,6 +72,9 @@
           CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT)::forcetheo
           LOGICAL,          INTENT(OUT):: l_opti
 
+          type(t_enparaXML)::enparaXML
+          TYPE(t_forcetheo_data)::forcetheo_data
+
 
           INTEGER, ALLOCATABLE          :: xmlElectronStates(:,:)
           INTEGER, ALLOCATABLE          :: atomTypeSpecies(:)
@@ -121,7 +125,9 @@
 
 
           IF (mpi%irank.EQ.0) THEN
-             CALL fleur_input_read_xml()
+             CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
+       sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
+       xcpot,forcetheo_data,kpts,enparaXML)
           END IF
             
           CALL timestart("postprocessInput") 

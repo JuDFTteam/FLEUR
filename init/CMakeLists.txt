@@ -1,7 +1,7 @@
 set(fleur_F77 ${fleur_F77}
 init/bandstr1.F
 init/boxdim.f
-init/convn_dim.f
+#init/convn_dim.f
 init/gtest.f
 init/ifft235.f
 init/lhcal.f

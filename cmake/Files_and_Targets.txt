@@ -1,6 +1,5 @@
 include_directories(include)
 
-add_subdirectory(fleurinput)
 
 set(c_filesInpgen io/xml/inputSchema.h io/xml/dropInputSchema.c)
 set(c_filesFleur io/xml/inputSchema.h io/xml/dropInputSchema.c io/xml/xmlInterfaceWrapper.c)
@@ -56,8 +55,8 @@ set_source_files_properties(${fleur_F77} PROPERTIES Fortran_FORMAT FIXED)
 string(REPLACE ";" " " CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FLEUR_PRECISION_OPTION}")
 message("Flags: ${CMAKE_Fortran_FLAGS}")
 
-set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};juDFT")
-
+set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};juDFT;fleurinput")
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/fleurinput/modules/fleurinput")
 if (${FLEUR_USE_SERIAL})
    #Serial executables
    add_executable(fleur ${fleur_SRC} ${c_filesFleur})

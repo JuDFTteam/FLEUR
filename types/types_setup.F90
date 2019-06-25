@@ -8,19 +8,8 @@ MODULE m_types_setup
    !*************************************************************
    !     This module contains definitions for all kind of types
    !*************************************************************
-  USE m_types_cell
-  USE m_types_sym
-  USE m_types_banddos
-  USE m_types_input
-  USE m_types_sliceplot
-  USE m_types_oneD
-  USE m_types_hybrid
-  USE m_types_noco
+  use m_types_fleurinput
   USE m_types_stars
-  USE m_types_atoms
   USE m_types_sphhar
   USE m_types_dimension
-  USE m_types_vacuum
-  USE m_types_coreSpecInput
-  USE m_types_wannier
 END MODULE m_types_setup

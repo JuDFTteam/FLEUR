@@ -519,20 +519,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
            DEALLOCATE(kpts%bk,kpts%wtkpt)
            ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))
            kpts%bk(:,:) = kpts%bkf(:,:)
-           IF (kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3).NE.kpts%nkptf) THEN
-              IF(kpts%l_gamma) THEN
-                 kpts%wtkpt = 1.0 / (kpts%nkptf-1)
-                 DO i = 1, kpts%nkptf
-                    IF(ALL(kpts%bk(:,i).EQ.0.0)) THEN
-                       kpts%wtkpt(i) = 0.0
-                    END IF
-                 END DO
-              ELSE
-                 CALL juDFT_error("nkptf does not match product of nkpt3(i).",calledby="fleur_init")
-              END IF
-           ELSE
-              kpts%wtkpt = 1.0 / kpts%nkptf
-           END IF
+           kpts%wtkpt = 1.0 / kpts%nkptf
         END IF
      
      
@@ -576,7 +563,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   CALL timestop("stepf") 
   IF (.NOT.sliceplot%iplot) THEN   
      IF (mpi%irank.EQ.0) THEN
-        CALL convn(DIMENSION,atoms,stars)
+        CALL convn(atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
      END IF !(mpi%irank.EQ.0)
   END IF

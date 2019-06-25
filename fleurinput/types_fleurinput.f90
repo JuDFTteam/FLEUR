@@ -27,7 +27,7 @@ MODULE m_types_fleurinput
 
 CONTAINS
   !Subroutine does nothing, only here for copy-paste code...
-  SUBROUTINE dummy(cell,sym,atoms,input,noco,vacuum,field,&
+  SUBROUTINE dummy_subroutine_that_should_never_be_used(cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
        xcpot,forcetheo_data,kpts,enparaXML)
     TYPE(t_cell),INTENT(IN)::cell
@@ -47,6 +47,6 @@ CONTAINS
     TYPE(t_forcetheo_data),INTENT(IN)::forcetheo_data
     TYPE(t_enparaXML),INTENT(IN)::enparaXML
     TYPE(t_kpts),INTENT(IN)::kpts
-  END SUBROUTINE dummy
+  END SUBROUTINE 
 END MODULE m_types_fleurinput
 

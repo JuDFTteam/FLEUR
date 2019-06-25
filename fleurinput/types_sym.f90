@@ -55,7 +55,7 @@ MODULE m_types_sym
   END TYPE t_sym
 CONTAINS
 
-    subroutine mpi_bc(this,mpi_comm,irank)
+    subroutine mpi_bc_sym(this,mpi_comm,irank)
       use m_mpi_bc_tool
       class(t_sym),INTENT(INOUT)::this
       integer,INTENT(IN):: mpi_comm
@@ -85,7 +85,7 @@ CONTAINS
       call mpi_bc(this%nsym,rank,mpi_comm)
    
 
-    end subroutine mpi_bc
+    end subroutine mpi_bc_sym
   
   SUBROUTINE read_xml(this,xml)
     USE m_types_xml

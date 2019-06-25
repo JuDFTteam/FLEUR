@@ -14,6 +14,7 @@ CONTAINS
 
     USE m_sort
     USE m_types_setup
+
     USE m_types_lapw
     USE m_types_kpts
     IMPLICIT NONE

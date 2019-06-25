@@ -2,6 +2,7 @@ set(fleur_F77 ${fleur_F77}
 ) 
 set(fleur_F90 ${fleur_F90}
 types/types.F90
+types/types_setup.F90
 types/types_mat.F90
 types/types_xcpot_inbuild.F90
 types/types_xcpot_inbuild_nofunction.F90
@@ -9,6 +10,7 @@ types/types_xcpot_data.F90
 types/types_xcpot_libxc.F90
 types/types_mpi.F90
 types/types_lapw.F90
+types/types_enpara.F90
 types/types_tlmplm.F90
 types/types_misc.F90
 types/types_mpimat.F90

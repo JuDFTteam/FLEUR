@@ -12,6 +12,8 @@ include("cmake/CompilerConfig.txt")
 
 include("cmake/Generate_Schema.cmake")
 
+add_subdirectory("fleurinput")
+
 include("cmake/Files_and_Targets.txt")
 
 include("cmake/filespecific.cmake")
@@ -19,7 +21,6 @@ include("cmake/filespecific.cmake")
 include("cmake/ReportConfig.txt")
 
 #add_subdirectory("inpgen2")
-
 
 
 #install(TARGETS fleur inpgen DESTINATION bin)

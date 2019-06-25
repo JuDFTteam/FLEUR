@@ -246,7 +246,7 @@ CONTAINS
           CALL timestart("eigen")
           vTemp = vTot
           CALL timestart("Updating energy parameters")
-          CALL enpara%update(mpi,atoms,vacuum,input,vToT)
+          CALL enpara%update(mpi%mpi_comm,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
           CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
@@ -408,7 +408,7 @@ CONTAINS
           CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
        END IF
 
-       CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
+       CALL enpara%mix(mpi%mpi_comm,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field
 
        ! mix input and output densities

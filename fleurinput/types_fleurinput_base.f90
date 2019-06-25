@@ -23,10 +23,11 @@ CONTAINS
     CLASS(t_fleurinput_base),INTENT(OUT):: this
     TYPE(t_xml),INTENT(IN)              :: xml
   END SUBROUTINE read_xml
-  SUBROUTINE mpi_bc(this,mpi_comm)
+  SUBROUTINE mpi_bc(this,mpi_comm,irank)
     USE m_types_xml
     CLASS(t_fleurinput_base),INTENT(INOUT):: this
     INTEGER,INTENT(IN)                    :: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
   END SUBROUTINE mpi_bc
   
 END MODULE m_types_fleurinput_base

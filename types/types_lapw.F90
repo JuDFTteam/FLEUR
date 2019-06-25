@@ -42,7 +42,7 @@ CONTAINS
     !     bkpt is the k-point given in internal units
     !*********************************************************************
     USE m_boxdim
-    USE m_types_setup
+    USE m_types_fleurinput
 
     IMPLICIT NONE
     TYPE(t_cell),INTENT(IN)      :: cell
@@ -125,7 +125,7 @@ CONTAINS
     USE m_types_mpi
     USE m_sort
     USE m_boxdim
-    USE m_types_setup
+    USE m_types_fleurinput
     USE m_types_kpts
     IMPLICIT NONE
 
@@ -323,7 +323,7 @@ CONTAINS
   CONTAINS
 
     SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
-      USE m_types_setup
+      USE m_types_fleurinput
 
       IMPLICIT NONE
       TYPE(t_lapw),INTENT(INOUT):: lapw
@@ -362,7 +362,7 @@ CONTAINS
 
   SUBROUTINE lapw_phase_factors(lapw,iintsp,tau,qss,cph)
     USE m_constants
-    USE m_types_setup
+    USE m_types_fleurinput
     IMPLICIT NONE
     CLASS(t_lapw),INTENT(in):: lapw
     INTEGER,INTENT(IN)     :: iintsp
@@ -383,7 +383,7 @@ CONTAINS
     USE m_constants,ONLY: tpi_const,fpi_const
     USE m_orthoglo
     USE m_ylm
-    USE m_types_setup
+    USE m_types_fleurinput
     IMPLICIT NONE
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_sym),INTENT(IN)    :: sym

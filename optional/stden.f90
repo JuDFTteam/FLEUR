@@ -225,7 +225,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
       ! set up parameters for enpara-file
       IF ((juDFT_was_argument("-genEnpara")).AND..NOT.l_enpara) THEN
-         CALL enpara%init(atoms,input%jspins)
+         CALL enpara%init(atoms%ntype,atoms%nlod,atoms%lmaxd,input%jspins)
 
          enpara%lchange = .TRUE.
          enpara%llochg = .TRUE.

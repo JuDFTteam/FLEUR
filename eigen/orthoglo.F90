@@ -25,7 +25,7 @@ CONTAINS
     !
 #include"cpp_double.h"
     !
-    USE m_types_setup
+    USE m_types_fleurinput
     IMPLICIT NONE
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     ..

@@ -32,10 +32,11 @@ MODULE m_types_cell
    CONTAINS
      PROCEDURE :: init
      PROCEDURE :: read_xml=>read_xml_cell
+     PROCEDURE :: mpi_bc=>mpi_bc_cell
   END TYPE t_cell
   PUBLIC t_cell
 CONTAINS
-  subroutine mpi_bc(this,mpi_comm,irank)
+  subroutine mpi_bc_cell(this,mpi_comm,irank)
     use m_mpi_bc_tool
     class(t_cell),INTENT(INOUT)::this
     integer,INTENT(IN):: mpi_comm
@@ -49,14 +50,14 @@ CONTAINS
 
     call mpi_bc(this%omtil,rank,mpi_comm)
     call mpi_bc(this%area,rank,mpi_comm)
-    call mpi_bc(this%amat,rank,mpi_comm)
-    call mpi_bc(this%bmat,rank,mpi_comm)
-    call mpi_bc(this%bbmat,rank,mpi_comm)
-    call mpi_bc(this%aamat,rank,mpi_comm)
+    call mpi_bc(rank,mpi_comm,this%amat)
+    call mpi_bc(rank,mpi_comm,this%bmat)
+    call mpi_bc(rank,mpi_comm,this%bbmat)
+    call mpi_bc(rank,mpi_comm,this%aamat)
     call mpi_bc(this%z1,rank,mpi_comm)
     call mpi_bc(this%vol,rank,mpi_comm)
     call mpi_bc(this%volint,rank,mpi_comm)
-  end subroutine mpi_bc
+  end subroutine mpi_bc_cell
     
   SUBROUTINE init(cell)
     !initialize cell, only input is cell%amat and cell%z1 in case of a film

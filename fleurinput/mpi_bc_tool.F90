@@ -15,11 +15,78 @@ MODULE m_mpi_bc_tool
   !have the same shape as the one on irank
   INTERFACE mpi_bc
      MODULE PROCEDURE  mpi_bc_int,mpi_bc_int1,mpi_bc_int2,mpi_bc_int3,mpi_bc_int4,mpi_bc_int5
-     MODULE PROCEDURE  mpi_bc_real,mpi_bc_real1,mpi_bc_real2,mpi_bc_real3,mpi_bc_real4,mpi_bc_real5
+     MODULE PROCEDURE  mpi_bc_real33,mpi_bc_real,mpi_bc_real1,mpi_bc_real2,mpi_bc_real3,mpi_bc_real4,mpi_bc_real5
      MODULE PROCEDURE  mpi_bc_complex,mpi_bc_complex1,mpi_bc_complex2,mpi_bc_complex3,mpi_bc_complex4,mpi_bc_complex5
+     MODULE PROCEDURE  mpi_bc_logical,mpi_bc_logical1,mpi_bc_logical2
   END INTERFACE mpi_bc
   PUBLIC :: mpi_bc
 CONTAINS
+  SUBROUTINE mpi_bc_logical(i,irank,mpi_comm)
+    IMPLICIT NONE
+    LOGICAL,INTENT(INOUT):: i
+    INTEGER,INTENT(IN)   :: mpi_comm,irank
+
+    INTEGER:: ierr
+
+#ifdef CPP_MPI  
+    CALL MPI_BCAST(i,1,MPI_LOGICAL,irank,mpi_comm,ierr)
+#endif
+    IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+  END SUBROUTINE mpi_bc_logical
+
+  SUBROUTINE mpi_bc_logical1(i,irank,mpi_comm)
+    IMPLICIT NONE
+    LOGICAL,ALLOCATABLE,INTENT(INOUT) :: i(:)
+    INTEGER,INTENT(IN)                :: irank,mpi_comm
+
+    INTEGER:: ierr,ilow(1),iup(1),myrank
+
+#ifdef CPP_MPI  
+
+    CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
+    IF (myrank==irank) THEN
+       ilow=LBOUND(i)
+       iup=UBOUND(i)
+    END IF
+    CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    IF (myrank.NE.irank) THEN
+       IF (ALLOCATED(i)) DEALLOCATE(i)
+       ALLOCATE(i(ilow(1):iup(1)))
+    ENDIF
+
+    CALL MPI_BCAST(i,SIZE(i),MPI_LOGICAL,irank,mpi_comm,ierr)
+
+    IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+#endif
+  END SUBROUTINE mpi_bc_logical1
+
+  SUBROUTINE mpi_bc_logical2(i,irank,mpi_comm)
+    IMPLICIT NONE
+    LOGICAL,ALLOCATABLE,INTENT(INOUT) :: i(:,:)
+    INTEGER,INTENT(IN)                :: irank,mpi_comm
+
+    INTEGER:: ierr,ilow(2),iup(2),myrank
+
+#ifdef CPP_MPI  
+
+    CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
+    IF (myrank==irank) THEN
+       ilow=LBOUND(i)
+       iup=UBOUND(i)
+    END IF
+    CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
+    CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    IF (myrank.NE.irank) THEN
+       IF (ALLOCATED(i)) DEALLOCATE(i)
+       ALLOCATE(i(ilow(1):iup(1),ilow(2):iup(2)))
+    ENDIF
+
+    CALL MPI_BCAST(i,SIZE(i),MPI_LOGICAL,irank,mpi_comm,ierr)
+#endif
+    IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+  END SUBROUTINE mpi_bc_logical2
+
   SUBROUTINE mpi_bc_int(i,irank,mpi_comm)
     IMPLICIT NONE
     INTEGER,INTENT(INOUT):: i
@@ -85,6 +152,8 @@ CONTAINS
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_int2
+
+
 
   SUBROUTINE mpi_bc_int3(i,irank,mpi_comm)
     IMPLICIT NONE
@@ -168,6 +237,18 @@ CONTAINS
   ! now the same for reals
   !
 
+  SUBROUTINE mpi_bc_real33(irank,mpi_comm,r)!Special routine for non-allocatable 3x3 arrays
+    IMPLICIT NONE
+    REAL,INTENT(INOUT)   :: r(3,3)
+    INTEGER,INTENT(IN)   :: mpi_comm,irank
+
+    INTEGER:: ierr
+#ifdef CPP_MPI  
+
+    CALL MPI_BCAST(r,9,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
+#endif
+    IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+  END SUBROUTINE mpi_bc_real33
 
   SUBROUTINE mpi_bc_real(r,irank,mpi_comm)
     IMPLICIT NONE
@@ -181,6 +262,7 @@ CONTAINS
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real
+
 
   SUBROUTINE mpi_bc_real1(r,irank,mpi_comm)
     IMPLICIT NONE
