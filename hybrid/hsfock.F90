@@ -59,12 +59,9 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
 
    IMPLICIT NONE
 
-   TYPE(t_hybdat),        INTENT(IN)    :: hybdat
-   TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
    TYPE(t_mpi),           INTENT(IN)    :: mpi
    TYPE(t_dimension),     INTENT(IN)    :: dimension
-   TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_sym),           INTENT(IN)    :: sym
@@ -72,6 +69,9 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    TYPE(t_kpts),          INTENT(IN)    :: kpts
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_lapw),          INTENT(IN)    :: lapw
+   TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
+   TYPE(t_hybdat),        INTENT(INOUT) :: hybdat
+   TYPE(t_results),       INTENT(INOUT) :: results
 
    ! scalars
    INTEGER,               INTENT(IN)    :: jsp 

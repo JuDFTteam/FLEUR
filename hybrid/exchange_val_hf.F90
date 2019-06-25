@@ -77,7 +77,6 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
 
    IMPLICIT NONE
 
-   TYPE(t_hybdat),        INTENT(IN)    :: hybdat
    TYPE(t_results),       INTENT(IN)    :: results
    TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
    TYPE(t_mpi),           INTENT(IN)    :: mpi
@@ -91,6 +90,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_lapw),          INTENT(IN)    :: lapw
    TYPE(t_mat),           INTENT(INOUT) :: mat_ex
+   TYPE(t_hybdat),        INTENT(INOUT) :: hybdat
 
    ! scalars
    INTEGER,               INTENT(IN)    :: it
@@ -332,7 +332,8 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
          END IF
 
          ! calculate exchange matrix at ikpt0
-
+   
+         call timestart("exchange matrix")
          DO n1=1,hybrid%nbands(nk)
             DO iband = 1,psize
                IF((ibando+iband-1).gt.hybrid%nobd(nkqpt)) CYCLE
@@ -372,6 +373,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
                END IF
             END DO
          END DO  !n1
+         call timestop("exchange matrix")
       END DO !ibando
    END DO  !ikpt
 
