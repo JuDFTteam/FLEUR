@@ -197,11 +197,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
    ! the contribution of the Gamma-point is treated separately (see below)
 
    ! determine package size loop over the occupied bands
-   if (mat_ex%l_real) THEn
-      rdum  = hybrid%maxbasm1*hybrid%nbands(nk)*4/1048576.
-   else
-      rdum  = hybrid%maxbasm1*hybrid%nbands(nk)*4/1048576.
-   endif
+   rdum  = hybrid%maxbasm1*hybrid%nbands(nk)*4/1048576.
    psize = 1
    DO iband = mnobd,1,-1
       ! ensure that the packages have equal size
