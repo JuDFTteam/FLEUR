@@ -122,17 +122,19 @@
              OPEN (16,status='SCRATCH')
           ENDIF
 
-
+          ALLOCATE(t_xcpot_inbuild::xcpot)
+          
           IF (mpi%irank.EQ.0) THEN
              CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML)
+                  sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
+                  xcpot,forcetheo_data,kpts,enparaXML)
           END IF
-
+          
           CALL fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML,mpi%mpi_comm)
-            
+               sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
+               xcpot,forcetheo_data,kpts,enparaXML,mpi%mpi_comm)
+          
+          
           CALL timestart("postprocessInput") 
           CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
                oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
@@ -146,14 +148,7 @@
                   .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])           
           END IF
 
-
-#ifdef CPP_MPI
-          CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
-               DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
-               kpts,enpara,sphhar,mpi)
           
-#endif
-
           CALL ylmnorm_init(atoms%lmaxd)
           !
           !--> determine more dimensions
