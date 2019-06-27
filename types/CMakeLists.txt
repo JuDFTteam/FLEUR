@@ -4,6 +4,9 @@ set(fleur_F90 ${fleur_F90}
 types/types.F90
 types/types_setup.F90
 types/types_mat.F90
+types/types_stars.f90
+types/types_sphhar.f90
+types/types_forcetheo.F90
 types/types_xcpot_inbuild.F90
 types/types_xcpot_inbuild_nofunction.F90
 types/types_xcpot_data.F90

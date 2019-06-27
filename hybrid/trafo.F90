@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
       MODULE m_trafo
-
+        use m_judft
       CONTAINS
 
       SUBROUTINE waveftrafo_symm(cmt_out,z_out,cmt,l_real,z_r,z_c,bandi,ndb,&

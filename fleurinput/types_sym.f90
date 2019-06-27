@@ -49,7 +49,7 @@ MODULE m_types_sym
      PROCEDURE :: init
      PROCEDURE :: print_xml
      PROCEDURE :: closure
-     PROCEDURE :: read_xml
+     PROCEDURE :: read_xml=>read_xml_sym
      PROCEDURE :: mpi_bc => mpi_bc_sym
      PROCEDURE,PRIVATE :: check_close
   END TYPE t_sym
@@ -87,10 +87,10 @@ CONTAINS
 
     end subroutine mpi_bc_sym
   
-  SUBROUTINE read_xml(this,xml)
+  SUBROUTINE read_xml_sym(this,xml)
     USE m_types_xml
     USE m_calculator
-    CLASS(t_sym),INTENT(out):: this
+    CLASS(t_sym),INTENT(inout):: this
     TYPE(t_xml),INTENT(IN)  :: xml
     
     INTEGER:: number_sets,n
@@ -110,7 +110,7 @@ CONTAINS
        str=xml%GetAttributeValue(TRIM(path)//'/row-3')
        READ(str,*) this%mrot(3,:,n),this%tau(3,n)
     ENDDO
-  END SUBROUTINE read_xml
+  END SUBROUTINE read_xml_sym
     
 
   SUBROUTINE print_xml(sym,fh,filename)
@@ -139,7 +139,7 @@ CONTAINS
 
   SUBROUTINE init(sym,cell,film)
     !Generates missing symmetry info.
-    !tau,mrot and nop have to be specified already
+    !tau,mrot and nop have to be specified alread
     !USE m_dwigner
     USE m_types_cell
     CLASS(t_sym),INTENT(INOUT):: sym

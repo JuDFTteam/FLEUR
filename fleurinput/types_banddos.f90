@@ -34,7 +34,7 @@ MODULE m_types_banddos
 CONTAINS
   SUBROUTINE read_xml(this,xml)
     USE m_types_xml
-    CLASS(t_banddos),INTENT(OUT)::this
+    CLASS(t_banddos),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(IN)::xml
     
     INTEGER::numberNodes

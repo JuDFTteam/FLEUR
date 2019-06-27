@@ -25,7 +25,7 @@ MODULE m_types_sliceplot
 CONTAINS
   SUBROUTINE read_xml_sliceplot(this,xml)
     USE m_types_xml
-    CLASS(t_sliceplot),INTENT(OUT)::this
+    CLASS(t_sliceplot),INTENT(inOUT)::this
     TYPE(t_xml),INTENT(IN)::xml
 
     CHARACTER(len=200)::xpatha

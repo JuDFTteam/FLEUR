@@ -35,7 +35,7 @@ MODULE m_types_vacuum
  CONTAINS
    SUBROUTINE read_xml(this,xml)
      USE m_types_xml
-     CLASS(t_vacuum),INTENT(OUT)::this
+     CLASS(t_vacuum),INTENT(INOUT)::this
      TYPE(t_xml),INTENT(IN)::xml
      CHARACTER(len=100)::xpatha
      

@@ -57,6 +57,8 @@ MODULE m_types_xcpot
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc             => xcpot_get_vxc
       PROCEDURE        :: get_exc             => xcpot_get_exc
+
+      PROCEDURE,NOPASS :: alloc_gradients => xcpot_alloc_gradients
    END TYPE t_xcpot
 
   CONTAINS
@@ -201,4 +203,4 @@ MODULE m_types_xcpot
       ALLOCATE(grad%gggrd(ngrid),grad%grgru(ngrid),grad%grgrd(ngrid))
   END SUBROUTINE xcpot_alloc_gradients
 
-END MODULE m_types_xcpot
+End MODULE m_types_xcpot

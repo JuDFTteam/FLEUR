@@ -15,7 +15,6 @@
           USE m_judft
           USE m_juDFT_init
           USE m_init_wannier_defaults
-          USE m_rinpXML
           USE m_postprocessInput
           USE m_gen_map
           USE m_dwigner
@@ -31,7 +30,6 @@
           USE m_fleur_info
           USE m_mixing_history
           USE m_checks
-          USE m_prpqfftmap
           USE m_writeOutHeader
           !USE m_fleur_init_old
           USE m_types_xcpot_inbuild

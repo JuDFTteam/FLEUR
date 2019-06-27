@@ -20,7 +20,7 @@ MODULE m_types_fleurinput_base
 CONTAINS
   SUBROUTINE read_xml(this,xml)
     USE m_types_xml
-    CLASS(t_fleurinput_base),INTENT(OUT):: this
+    CLASS(t_fleurinput_base),INTENT(INOUT):: this
     TYPE(t_xml),INTENT(IN)              :: xml
   END SUBROUTINE read_xml
   SUBROUTINE mpi_bc(this,mpi_comm,irank)

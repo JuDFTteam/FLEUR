@@ -117,7 +117,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
-   call xcpot%val_den%copyPotDen(outDen)
+   !TODO: change storage of META-GGA data
+   !call xcpot%val_den%copyPotDen(outDen)
 
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
@@ -170,7 +171,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results)
    endif
-   call xcpot%core_den%subPotDen(outDen, xcpot%val_den)
+   !call xcpot%core_den%subPotDen(outDen, xcpot%val_den)
    CALL timestop("cdngen: cdncore")
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)

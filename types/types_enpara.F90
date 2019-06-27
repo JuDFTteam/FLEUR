@@ -11,7 +11,7 @@ MODULE m_types_enpara
   USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
-  TYPE,EXTENDS(t_fleurinput_base):: t_enpara
+  TYPE:: t_enpara
      REAL, ALLOCATABLE CPP_MANAGED   :: el0(:,:,:)
      REAL                 :: evac0(2,2)
      REAL                 :: evac(2,2)
@@ -37,7 +37,6 @@ MODULE m_types_enpara
      PROCEDURE :: mix
      PROCEDURE :: calcOutParams
      procedure :: set_quantum_numbers
-     PROCEDURE :: read_xml=>read_xml_enpara
   END TYPE t_enpara
 
 
@@ -46,48 +45,6 @@ MODULE m_types_enpara
 
 CONTAINS
 
-  SUBROUTINE read_xml_enpara(this,xml)
-    use m_types_xml
-    CLASS(t_enpara),INTENT(OUT):: this
-    TYPE(t_xml),INTENT(IN)     :: xml
-
-    LOGICAL :: l_enpara,film
-    INTEGER :: jspins,ntype,lmaxd,n,lo
-    CHARACTER(len=100)::xpath,xpath2
-    INTEGER, ALLOCATABLE :: nlo(:),neq(:)
-
-    ntype=xml%get_ntype()
-    nlo=xml%get_nlo()
-    lmaxd=xml%get_lmaxd()
-    jspins=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
-    film=xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
-    
-    CALL this%init(ntype,MAXVAL(nlo),lmaxd,jspins)
-
-    l_enpara = .FALSE.
-    INQUIRE (file ='enpara',exist= l_enpara)
-    IF (l_enpara) THEN
-       CALL this%READ(ntype,nlo,jspins,film,.TRUE.)
-       RETURN
-    END IF
-
-    DO n=1,ntype
-       xPath=TRIM(xml%speciesPath(n))//'/energyParameters'
-       this%qn_el(0,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@s'))
-       this%qn_el(1,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@p'))
-       this%qn_el(2,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@d'))
-       this%qn_el(3,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@f'))
-       DO lo=1,nlo(n)
-          WRITE(xpath2,"(a,a,i0,a)") TRIM(xml%speciesPath(n)),'/lo[',lo,']'
-          this%qn_ello(lo,n,:)=evaluateFirstINTOnly(xml%GetAttributeValue(TRIM(xpath)//'/@n'))
-          IF (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'@type')))=='HELO') &
-               this%qn_ello(lo,n,:)=-1*this%qn_ello(lo,n,:)
-       END DO
-    END DO
-    !Read vacuum
-    
-
-  END SUBROUTINE read_xml_enpara
 
   SUBROUTINE set_quantum_numbers(enpara,ntype,atoms,str,lo)
     use m_types_atoms
@@ -207,7 +164,7 @@ CONTAINS
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_input
-    !USE m_xmlOutput
+    USE m_xmlOutput
     USE m_types_potden
     USE m_find_enpara
     CLASS(t_enpara),INTENT(inout):: enpara

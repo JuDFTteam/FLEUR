@@ -36,7 +36,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   USE m_nocoInputCheck
   USE m_types_forcetheo_extended
   USE m_relaxio
-
+  USE m_prpqfftmap
+         
   IMPLICIT NONE
 
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi
@@ -357,7 +358,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 
      ! Dimensioning of stars
 
-     IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
+     IF (input%film) THEN
         CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                         sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
                         stars%ng3,stars%ng2,oneD%odd)
@@ -492,7 +493,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      ! Generate stars
 
      CALL timestart("strgn") 
-     IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
+     IF (input%film) THEN
         CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
         IF (oneD%odd%d1) THEN
            CALL od_strgn1(xcpot,cell,sym,oneD)

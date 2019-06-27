@@ -149,7 +149,7 @@ SUBROUTINE w_inpXML(&
 
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
    110 FORMAT('      <cutoffs Kmax="',f0.8,'" Gmax="',f0.8,'" GmaxXC="',f0.8,'" numbands="',i0,'"/>')
-   WRITE (fileNum,110) input%rkmax,stars%gmaxInit,xcpot%gmaxxc,input%gw_neigd
+   WRITE (fileNum,110) input%rkmax,input%gmax,xcpot%gmaxxc,input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" preconditioning_param="0.0" spinf="2.00"/>
    120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" preconditioning_param="',f3.1,'" spinf="',f0.8,'"/>')
@@ -433,7 +433,7 @@ SUBROUTINE w_inpXML(&
          END DO
          IF (.not.input%film) tempTaual(3,na) = tempTaual(3,na)*scpos(3)
          IF (input%film) THEN
-            tempTaual(3,na) = cell%amat(3,3)*tempTaual(3,na)/input%scaleCell
+            tempTaual(3,na) = cell%amat(3,3)*tempTaual(3,na)
          END IF
 !+odim in 1D case all the coordinates are given in cartesian YM
          IF (oneD%odd%d1) THEN

@@ -10,7 +10,7 @@
 !                                             M.Betzinger (09/07)     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE m_symm_hf
-
+  use m_juDFT
 #define irreps .false.
 
 CONTAINS
@@ -19,7 +19,7 @@ SUBROUTINE symm_hf_init(sym,kpts,nk,nsymop,rrot,psym)
 
    USE m_types
    USE m_util   ,ONLY: modulo1
-
+   USE m_juDFT
    IMPLICIT NONE
 
    TYPE(t_sym),  INTENT(IN)    :: sym

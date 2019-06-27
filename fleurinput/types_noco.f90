@@ -38,7 +38,7 @@ MODULE m_types_noco
  CONTAINS
    SUBROUTINE read_xml_noco(this,xml)
      USE m_types_xml
-     CLASS(t_noco),INTENT(out):: this
+     CLASS(t_noco),INTENT(inout):: this
      TYPE(t_xml),INTENT(IN)   :: xml
      
      INTEGER:: numberNodes,ntype,itype

@@ -56,16 +56,16 @@ MODULE m_types_xcpot_libxc
    PUBLIC t_xcpot_libxc
 CONTAINS
 
-  SUBROUTINE read_xml_libxc(xcpot,xml)
+  SUBROUTINE read_xml_libxc(this,xml)
      USE m_types_xml
-     CLASS(t_xcpot_libxc),INTENT(out):: xcpot
+     CLASS(t_xcpot_libxc),INTENT(INOUT):: this
      TYPE(t_xml),INTENT(in)          :: xml
      
      CHARACTER(len=10)::xpathA,xpathB
      INTEGER          :: vxc_id_x,vxc_id_c, exc_id_x,  exc_id_c,jspins
      
      IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@GmaxXC')==1)&
-          xcpot%gmaxxc = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
+          this%gmaxxc = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
       ! Read in xc functional parameters
      !Read in libxc parameters if present
      xPathA = '/fleurInput/xcFunctional/LibXCID'
@@ -123,7 +123,7 @@ CONTAINS
 #endif
       ENDIF
       jspins=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
-      CALL xcpot%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
+      CALL this%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
 
     END SUBROUTINE read_xml_libxc
 

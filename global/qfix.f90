@@ -54,7 +54,7 @@ CONTAINS
 
     !The total nucleii charge
     zc=SUM(atoms%neq(:)*atoms%zatom(:))
-    zc = zc + 2*input%sigma
+    !zc = zc + 2*input%sigma !TODO : reactivate fields
 
     IF (fixtotal) THEN
        !-roa

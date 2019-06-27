@@ -38,7 +38,7 @@ MODULE m_types_forcetheo_data
 CONTAINS
   SUBROUTINE read_xml_forcetheo_data(this,xml)
     USE m_types_xml
-    CLASS(t_forcetheo_data),INTENT(OUT):: this
+    CLASS(t_forcetheo_data),INTENT(INOUT):: this
     TYPE(t_xml),INTENT(IN)             :: xml
     CHARACTER(len=200)::str
     

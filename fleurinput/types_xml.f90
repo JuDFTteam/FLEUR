@@ -23,6 +23,7 @@ MODULE m_types_xml
      PROCEDURE,NOPASS :: GetNumberOfNodes  
      PROCEDURE,NOPASS :: SetAttributeValue  
      PROCEDURE,NOPASS :: GetAttributeValue  
+     PROCEDURE,NOPASS :: getIntegerSequenceFromString
      PROCEDURE        :: read_q_list
      PROCEDURE,NOPASS :: popFirstStringToken
      PROCEDURE,NOPASS :: countStringTokens
@@ -34,7 +35,8 @@ MODULE m_types_xml
      PROCEDURE :: get_ntype
      PROCEDURE :: posPath
   END TYPE t_xml
-  PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBool,evaluateFirstBoolOnly,evaluateFirstInt,evaluateFirstIntOnly
+  PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBool,evaluateFirstBoolOnly,evaluateFirstInt,evaluateFirstIntOnly,&
+       evaluateList
 
 CONTAINS
   SUBROUTINE init(xml)
@@ -61,11 +63,11 @@ CONTAINS
   
     schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
     docFilename = "inp.xml"//C_NULL_CHAR
-    CALL xmlInitInterface()
-    CALL xmlParseSchema(schemaFilename)
-    CALL xmlParseDoc(docFilename)
-    CALL xmlValidateDoc()
-    CALL xmlInitXPath()
+    CALL InitInterface()
+    CALL ParseSchema(schemaFilename)
+    CALL ParseDoc(docFilename)
+    CALL ValidateDoc()
+    CALL InitXPath()
     
     ! Check version of inp.xml
     versionString = xml%GetAttributeValue('/fleurInput/@fleurInputVersion')
@@ -75,7 +77,7 @@ CONTAINS
     
     ! Read in constants
     xPathA = '/fleurInput/constants/constant'
-    numberNodes = xmlGetNumberOfNodes(xPathA)
+    numberNodes = xml%GetNumberOfNodes(xPathA)
     DO i = 1, numberNodes
        WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)), '[',i,']'
        tempReal = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@value'))
@@ -203,6 +205,99 @@ CONTAINS
       END IF
 
    END FUNCTION popFirstStringToken
+
+
+   SUBROUTINE getIntegerSequenceFromString(string, sequence, count)
+
+      IMPLICIT NONE
+
+      CHARACTER(*),         INTENT(IN)  :: string
+      INTEGER, ALLOCATABLE, INTENT(OUT) :: sequence(:)
+      INTEGER,              INTENT(OUT) :: count
+
+      INTEGER :: i, length, start, lastNumber, currentNumber, index
+      LOGICAL singleNumber, comma, dash
+
+      ! 3 cases: 1. a single number
+      !          2. number - number
+      !          3. comma separated numbers
+
+      length = LEN(string)
+      count = 0
+      start = 1
+      singleNumber = .TRUE.
+      comma = .FALSE.
+      dash = .FALSE.
+      lastNumber = 0
+      count = 0
+
+      ! 1. Determine number count
+
+      DO i = 1, length
+         SELECT CASE (string(i:i))
+         CASE ('0':'9')
+         CASE (',')
+            IF ((start.EQ.i).OR.(dash)) THEN
+               STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
+            END IF
+            singleNumber = .FALSE.
+            comma = .TRUE.
+            READ(string(start:i-1),*) lastNumber
+            count = count + 1
+            start = i+1
+         CASE ('-')
+            IF ((start.EQ.i).OR.(dash).OR.(comma)) THEN
+               STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
+            END IF
+            singleNumber = .FALSE.
+            dash = .TRUE.
+            READ(string(start:i-1),*) lastNumber
+            start = i+1
+         CASE DEFAULT
+            STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
+         END SELECT
+      END DO
+      IF(start.GT.length) THEN
+         STOP 'String has wrong syntax (in getIntegerSequenceFromString)'
+      END IF
+      READ(string(start:length),*) currentNumber
+      IF (dash) THEN
+         count = currentNumber - lastNumber + 1
+      ELSE
+         count = count + 1
+      END IF
+
+      IF (ALLOCATED(sequence)) THEN
+         DEALLOCATE(sequence)
+      END IF
+      ALLOCATE(sequence(count))
+
+      ! 2. Read in numbers iff comma separation ...and store numbers in any case
+
+      IF (singleNumber) THEN
+         sequence(1) = currentNumber
+      ELSE IF (dash) THEN
+         DO i = 1, count
+            sequence(i) = lastNumber + i - 1
+         END DO
+      ELSE
+         index = 1
+         start = 1
+         DO i = 1, length
+            SELECT CASE (string(i:i))
+            CASE (',')
+               comma = .TRUE.
+               READ(string(start:i-1),*) lastNumber
+               start = i+1
+               sequence(index) = lastNumber
+               index = index + 1
+            END SELECT
+         END DO
+         sequence(index) = currentNumber
+      END IF
+
+   END SUBROUTINE getIntegerSequenceFromString
+
 
    FUNCTION countStringTokens(line) RESULT(tokenCount)
 

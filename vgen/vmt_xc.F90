@@ -113,7 +113,8 @@
          n_stride=1
 #endif
          loc_n = 0
-         call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
+         !TODO: MetaGGA
+         !call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
             loc_n = loc_n + 1
             CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
@@ -160,12 +161,13 @@
                tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
                CALL mt_to_grid(xcpot, input%jspins, atoms, tmp_sphhar, vTot_tmp%mt(:,0:0,n,:), &
                                n,            tmp_grad, vTot0_rs)
-               CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
-                               xcpot%core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
-               CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
-                               xcpot%val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
-               CALL calc_kinEnergyDen_mt(ED_rs, vTot_rs, vTot0_rs, &
-                                      core_den_rs, val_den_rs, n, nsp, xcpot%kinED%mt(:,:,loc_n))
+               !TODO: metaGGA
+               !CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
+               !                xcpot%core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
+               !CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
+               !                xcpot%val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
+               !CALL calc_kinEnergyDen_mt(ED_rs, vTot_rs, vTot0_rs, &
+               !                       core_den_rs, val_den_rs, n, nsp, xcpot%kinED%mt(:,:,loc_n))
             ENDIF
 
             IF (ALLOCATED(exc%mt)) THEN
@@ -174,8 +176,9 @@
                !
                
                IF(perform_MetaGGA) THEN
-                  CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
-                     e_xc(:nsp*atoms%jri(n),1),grad, xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
+                  !TODO: METAGGA
+                  !CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
+                  !   e_xc(:nsp*atoms%jri(n),1),grad, xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)

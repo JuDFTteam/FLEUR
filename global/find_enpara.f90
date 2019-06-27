@@ -20,7 +20,7 @@ CONTAINS
     USE m_types_atoms
     USE m_radsra
     USE m_differ
-    !Use m_xmlOutput
+    Use m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
@@ -38,7 +38,7 @@ CONTAINS
     USE m_types_atoms
     USE m_radsra
     USE m_differ
-    !USE m_xmlOutput
+    USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
@@ -155,7 +155,7 @@ CONTAINS
     USE m_types_atoms
     USE m_radsra
     USE m_differ
-    !USE m_xmlOutput
+    USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo

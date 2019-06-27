@@ -6,12 +6,11 @@
 
 MODULE m_types_stars
   USE m_juDFT
-  USE m_fleurinput_base
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_stars
   !The stars
-  TYPE,EXTENDS(t_fleurinput_base):: t_stars
+  TYPE:: t_stars
       !max-length of star
       REAL :: gmax
       !no of 3d-stars

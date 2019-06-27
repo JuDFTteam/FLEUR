@@ -79,11 +79,11 @@ MODULE m_types_oneD
     contains
       procedure :: read_xml=>read_xml_oneD
    END TYPE t_oneD
-   PUBLIC::t_oneD
+   PUBLIC::t_oneD,od_dim,od_inp,od_gga,od_lda,od_sym
  CONTAINS
    SUBROUTINE read_xml_oneD(this,xml)
      use m_types_xml
-     class(t_oned),intent(out)::this
+     class(t_oned),intent(inout)::this
      type(t_xml),intent(in)   ::xml
 
      

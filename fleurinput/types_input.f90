@@ -154,7 +154,7 @@ CONTAINS
   SUBROUTINE read_xml_input(this,xml)
     USE m_types_xml
     use m_constants
-    CLASS(t_input),INTENT(out):: this
+    CLASS(t_input),INTENT(inout):: this
     TYPE(t_xml),intent(in)    :: xml
 
     CHARACTER(len=100):: valueString,xpathA,xpathB

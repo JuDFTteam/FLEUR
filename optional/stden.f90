@@ -79,14 +79,16 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    IF (mpi%irank == 0) THEN
       ! if sigma is not 0.0, then divide this charge among all atoms
-      IF ( ABS(input%sigma).LT. 1.e-6) THEN
+      !TODO: reactivate efields
+      !IF ( ABS(input%sigma).LT. 1.e-6) THEN
+      IF (1==1) THEN
          qdel = 0.0
       ELSE
          natot = 0
          DO n = 1, atoms%ntype
             IF (atoms%zatom(n).GE.1.0) natot = natot + atoms%neq(n)
          END DO
-         qdel = 2.*input%sigma/natot
+         !qdel = 2.*input%sigma/natot
       END IF
 
       WRITE (6,FMT=8000)

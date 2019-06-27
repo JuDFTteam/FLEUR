@@ -42,7 +42,7 @@ CONTAINS
   SUBROUTINE read_xml_kpts(this,xml)
     USE m_types_xml
     USE m_calculator
-    CLASS(t_kpts),INTENT(out):: this
+    CLASS(t_kpts),INTENT(inout):: this
     TYPE(t_xml),INTENT(IN)   :: xml
     
     CHARACTER(len=10)  ::name !TODO
@@ -54,11 +54,11 @@ CONTAINS
 
      number_sets = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList')
 
-     DO n=1,number_sets
+     DO n=number_sets,1,-1
         WRITE(path,"(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointList[',n,']'
         IF(TRIM(ADJUSTL(name))==xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
      enddo
-     IF (n>number_sets) CALL judft_error(("No kpoints named:"//TRIM(name)//" found"))
+     IF (n==0) CALL judft_error(("No kpoints named:"//TRIM(name)//" found"))
      this%nkpt=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
 
      this%numSpecialPoints=xml%GetNumberOfNodes(TRIM(path)//"specialPoint")

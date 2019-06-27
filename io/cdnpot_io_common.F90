@@ -35,7 +35,7 @@ MODULE m_cdnpot_io_common
 
       l_same = .TRUE.
 
-      IF(ABS(stars%gmaxInit-refStars%gmaxInit).GT.1e-10) l_same = .FALSE.
+      !IF(ABS(stars%gmaxInit-refStars%gmaxInit).GT.1e-10) l_same = .FALSE.
       IF(stars%ng3.NE.refStars%ng3) l_same = .FALSE.
       IF(stars%ng2.NE.refStars%ng2) l_same = .FALSE.
       IF(stars%mx1.NE.refStars%mx1) l_same = .FALSE.

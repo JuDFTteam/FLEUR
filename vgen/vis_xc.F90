@@ -84,7 +84,8 @@ CONTAINS
 
          CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
                          cell,  vTot%pw, tmp_grad,    vTot_rs)
-         CALL calc_kinEnergyDen_pw(ED_rs, vTot_rs, rho, xcpot%kinED%is)
+         !TODO:METAGGA
+         !CALL calc_kinEnergyDen_pw(ED_rs, vTot_rs, rho, xcpot%kinED%is)
       ENDIF
 
       !calculate the ex.-cor energy density
@@ -92,7 +93,8 @@ CONTAINS
          ALLOCATE ( e_xc(SIZE(rho,1),1) ); e_xc=0.0
 
          IF(ALLOCATED(EnergyDen%pw) .AND. xcpot%exc_is_MetaGGA()) THEN
-            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, xcpot%kinED%is, mt_call=.False.)
+            !TODO:
+            !CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, xcpot%kinED%is, mt_call=.False.)
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
          ENDIF

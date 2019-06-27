@@ -206,7 +206,7 @@ MODULE m_types_atoms
    SUBROUTINE read_xml_atoms(this,xml)
     USE m_types_xml
     IMPLICIT NONE
-    CLASS(t_atoms),INTENT(OUT):: this
+    CLASS(t_atoms),INTENT(INOUT):: this
     TYPE(t_xml),INTENT(IN)    :: xml
 
     CHARACTER(len=200):: xpaths,xpathg,xpath,valueString,lstring,nstring,core,valence
@@ -301,8 +301,8 @@ MODULE m_types_atoms
            END IF
           lString = xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l')
           nString = xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@n')
-          CALL getIntegerSequenceFromString(TRIM(ADJUSTL(lString)), lNumbers, lNumCount)
-          CALL getIntegerSequenceFromString(TRIM(ADJUSTL(nString)), nNumbers, nNumCount)
+          CALL xml%getIntegerSequenceFromString(TRIM(ADJUSTL(lString)), lNumbers, lNumCount)
+          CALL xml%getIntegerSequenceFromString(TRIM(ADJUSTL(nString)), nNumbers, nNumCount)
           IF(lNumCount.NE.nNumCount) THEN
              CALL judft_error('Error in LO input: l quantum number count does not equal n quantum number count')
           END IF

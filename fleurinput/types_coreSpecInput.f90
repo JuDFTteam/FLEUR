@@ -32,7 +32,7 @@ MODULE m_types_coreSpecInput
 CONTAINS
   SUBROUTINE read_xml_corespecinput(This,xml)
     USE m_types_xml
-    CLASS(t_coreSpecInput),INTENT(OUT)::this
+    CLASS(t_coreSpecInput),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(IN)::xml
     
     

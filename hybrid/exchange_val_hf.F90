@@ -74,7 +74,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
 #endif
    USE m_io_hybrid
    USE m_kp_perturbation
-
+   use m_juDFT
    IMPLICIT NONE
 
    TYPE(t_hybdat),        INTENT(IN)    :: hybdat
@@ -519,7 +519,7 @@ SUBROUTINE calc_divergence(cell,kpts,divergence)
    USE m_util, ONLY: cerf
    USE m_types
    USE m_constants
-
+   USE m_juDFT
    IMPLICIT NONE
 
    TYPE(t_cell), INTENT(IN)  :: cell

@@ -137,7 +137,7 @@ MODULE m_types_wannier
 CONTAINS
   SUBROUTINE read_xml_wannier(this,xml)
     USE m_types_xml
-    CLASS(t_wann),INTENT(out):: this
+    CLASS(t_wann),INTENT(inout):: this
     TYPE(t_xml),INTENT(in)   :: xml
     ! Read in optional Wannier functions parameters
 

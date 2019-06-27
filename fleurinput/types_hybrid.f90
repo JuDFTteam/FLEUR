@@ -56,7 +56,7 @@ MODULE m_types_hybrid
  CONTAINS
    SUBROUTINE read_xml_hybrid(this,xml)
      USE m_types_xml
-     CLASS(t_hybrid),INTENT(out):: this
+     CLASS(t_hybrid),INTENT(INout):: this
      TYPE(t_xml),INTENT(in)     :: xml
      
      
