@@ -12,6 +12,7 @@
              oneD,coreSpecInput,wann,l_opti)
           USE m_types
           USE m_fleurinput_read_xml
+          USE m_fleurinput_mpi_bc
           USE m_judft
           USE m_juDFT_init
           USE m_init_wannier_defaults
@@ -127,6 +128,10 @@
        sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
        xcpot,forcetheo_data,kpts,enparaXML)
           END IF
+
+          CALL fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
+       sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
+       xcpot,forcetheo_data,kpts,enparaXML,mpi%mpi_comm)
             
           CALL timestart("postprocessInput") 
           CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&

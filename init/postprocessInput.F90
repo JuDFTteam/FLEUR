@@ -41,7 +41,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   IMPLICIT NONE
 
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi
-  CLASS(t_forcetheo),INTENT(IN)   :: forcetheo
+  CLASS(t_forcetheo),INTENT(OUT):: forcetheo
+  TYPE(t_forcetheo_data),INTENT(OUT):: forcetheo_data
   TYPE(t_input),    INTENT(INOUT) :: input
   TYPE(t_sym),      INTENT(INOUT) :: sym
   TYPE(t_stars),    INTENT(INOUT) :: stars 
@@ -53,10 +54,11 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   TYPE(t_cell),     INTENT(INOUT) :: cell
   TYPE(t_banddos),  INTENT(INOUT) :: banddos
   TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
-  CLASS(t_xcpot),   INTENT(INOUT) :: xcpot
+  CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT) :: xcpot
   TYPE(t_noco),     INTENT(INOUT) :: noco
   TYPE(t_dimension),INTENT(INOUT) :: dimension
-  TYPE(t_enpara)   ,INTENT(INOUT) :: enpara
+  TYPE(t_enparaXML)   ,INTENT(OUT):: enparaXML
+  TYPE(t_enpara)   ,INTENT(OUT)   :: enpara
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   TYPE(t_field),    INTENT(INOUT) :: field
   LOGICAL,          INTENT  (OUT) :: l_opti
@@ -82,6 +84,42 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of input postprocessing (calculate missing parameters)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !Finish setup of xcpot
+  IF (xcpot%l_libxc) THEN
+     func_vxc_id_c=xcpot%func_vxc_id_c
+     func_vxc_id_x=xcpot%func_vxc_id_x
+     func_exc_id_c=xcpot%func_exc_id_c
+     func_exc_id_x=xcpot%func_exc_id_x
+     DEALLOCATE(xcpot)
+     ALLOCATE(t_xcpot_libxc::xcpot)
+     CALL xcpot%init(func_vxc_id_x,func_vxc_id_c,func_exc_id_x,func_exc_id_c,input%jspins)
+  ELSE
+     SELECT TYPE(xcpot)
+     CLASS is (t_xcpot_inbuild_nf)
+        CALL xcpot%init(atoms%ntype)
+     CLASS DEFAULT
+        CALL judft_error("Error in setup xcpot")
+     END SELECT
+  END IF
+
+  !Finish setup of forcetheorem
+  SELECT CASE (forcetheo_data%mode)
+  CASE(1)
+     ALLOCATE(t_forcetheo_mae::forcetheo)
+     CALL forcetheo%init(forcetheo_data%theta,forcetheo_data%phi,cell,sym)
+  CASE(2)
+     ALLOCATE(t_forcetheo_dmi::forcetheo)
+     CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta,forcetheo_data%phi)
+  CASE(3)
+     ALLOCATE(t_forcetheo_jij::forcetheo)
+     CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta(1),atoms)
+  CASE(4)
+     ALLOCATE(t_forcetheo_ssdisp::forcetheo)
+     CALL forcetheo%init(forcetheo_data%qvec)
+  END SELECT
+     
+  !Generate enpara datatype
+  CALL enpara%init(enparaXML)
 
   IF (mpi%irank.EQ.0) THEN
 
@@ -555,9 +593,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      CALL prp_xcfft(stars,input,cell,xcpot)
  
   END IF !(mpi%irank.EQ.0)
-#ifdef CPP_MPI
-  CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-#endif
 
   CALL timestart("stepf") 
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)

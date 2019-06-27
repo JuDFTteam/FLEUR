@@ -31,11 +31,46 @@ MODULE m_types_noco
 
   CONTAINS
     PROCEDURE :: read_xml=>read_xml_noco
+    PROCEDURE :: mpi_bc =>mpi_bc_noco
    END TYPE t_noco
 
    PUBLIC t_noco
 
  CONTAINS
+   SUBROUTINE mpi_bc_noco(this,mpi_comm,irank)
+     USE m_mpi_bc_tool
+     CLASS(t_noco),INTENT(INOUT)::this
+     INTEGER,INTENT(IN):: mpi_comm
+     INTEGER,INTENT(IN),OPTIONAL::irank
+     INTEGER ::rank
+     IF (PRESENT(irank)) THEN
+        rank=0
+     ELSE
+        rank=irank
+     END IF
+     
+     CALL mpi_bc(this%l_ss,rank,mpi_comm)
+     CALL mpi_bc(this%l_soc,rank,mpi_comm)
+     CALL mpi_bc(this%l_noco ,rank,mpi_comm)
+     CALL mpi_bc(this%l_mperp ,rank,mpi_comm)
+     CALL mpi_bc(this%l_constr ,rank,mpi_comm)
+     CALL mpi_bc(this%l_mtNocoPot ,rank,mpi_comm)
+     CALL mpi_bc(rank,mpi_comm,this%qss)
+     CALL mpi_bc(this%mix_b,rank,mpi_comm)
+     CALL mpi_bc(this%l_spav,rank,mpi_comm)
+     CALL mpi_bc(this%theta,rank,mpi_comm)
+     CALL mpi_bc(this%phi,rank,mpi_comm)
+     
+     CALL mpi_bc(this%l_relax,rank,mpi_comm)
+     CALL mpi_bc(this%alphInit,rank,mpi_comm)
+     CALL mpi_bc(this%alph,rank,mpi_comm)
+     CALL mpi_bc(this%beta,rank,mpi_comm)
+     CALL mpi_bc(this%b_con,rank,mpi_comm)
+     CALL mpi_bc(this%socscale,rank,mpi_comm)
+     
+     
+   END SUBROUTINE mpi_bc_noco
+
    SUBROUTINE read_xml_noco(this,xml)
      USE m_types_xml
      CLASS(t_noco),INTENT(inout):: this

@@ -29,10 +29,43 @@ MODULE m_types_banddos
      INTEGER :: s_cell_z
      REAL    :: alpha,beta,gamma !For orbital decomp. (was orbcomprot)
    CONTAINS
-     PROCEDURE :: read_xml
+     PROCEDURE :: read_xml=>read_xml_banddos
+     PROCEDURE :: mpi_bc=>mpi_bc_banddos
   END TYPE t_banddos
 CONTAINS
-  SUBROUTINE read_xml(this,xml)
+  SUBROUTINE mpi_bc_banddos(this,mpi_comm,irank)
+    USE m_mpi_bc_tool
+    CLASS(t_banddos),INTENT(INOUT)::this
+    integer,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    if (present(irank)) THEN
+       rank=0
+    else
+       rank=irank
+    end if
+    CALL mpi_bc(this%dos ,rank,mpi_comm)
+    CALL mpi_bc(this%band ,rank,mpi_comm)
+    CALL mpi_bc(this%l_mcd ,rank,mpi_comm)
+    CALL mpi_bc(this%l_orb ,rank,mpi_comm)
+    CALL mpi_bc(this%vacdos ,rank,mpi_comm)
+    CALL mpi_bc(this%ndir ,rank,mpi_comm)
+    CALL mpi_bc(this%orbCompAtom,rank,mpi_comm)
+    CALL mpi_bc(this%e1_dos,rank,mpi_comm)
+    CALL mpi_bc(this%e2_dos,rank,mpi_comm)
+    CALL mpi_bc(this%sig_dos,rank,mpi_comm)
+    CALL mpi_bc(this%e_mcd_lo ,rank,mpi_comm)
+    CALL mpi_bc(this%e_mcd_up,rank,mpi_comm)
+    CALL mpi_bc(this%unfoldband ,rank,mpi_comm)
+    CALL mpi_bc(this%s_cell_x,rank,mpi_comm)
+    CALL mpi_bc(this%s_cell_y,rank,mpi_comm)
+    CALL mpi_bc(this%s_cell_z,rank,mpi_comm)
+    CALL mpi_bc(this%alpha,rank,mpi_comm)
+    CALL mpi_bc(this%beta,rank,mpi_comm)
+    CALL mpi_bc(this%gamma,rank,mpi_comm)
+
+  END SUBROUTINE mpi_bc_banddos
+  SUBROUTINE read_xml_banddos(this,xml)
     USE m_types_xml
     CLASS(t_banddos),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(IN)::xml
@@ -82,7 +115,7 @@ CONTAINS
        this%s_cell_y = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellY'))
        this%s_cell_z = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellZ'))
     END IF
-  END SUBROUTINE read_xml
+  END SUBROUTINE read_xml_banddos
   
 END MODULE m_types_banddos
 

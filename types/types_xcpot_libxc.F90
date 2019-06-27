@@ -24,8 +24,6 @@ MODULE m_types_xcpot_libxc
       TYPE(xc_f03_func_t)      :: vxc_func_x, vxc_func_c
       TYPE(xc_f03_func_t)      :: exc_func_x, exc_func_c
 #endif
-      INTEGER                  :: func_vxc_id_c, func_vxc_id_x !> functionals to be used for potential & density convergence
-      INTEGER                  :: func_exc_id_c, func_exc_id_x !> functionals to be used in exc- & totale-calculations
       INTEGER                  :: jspins
 
 
@@ -51,159 +49,86 @@ MODULE m_types_xcpot_libxc
       PROCEDURE,NOPASS :: alloc_gradients     => xcpot_alloc_gradients
       !Not             overloeaded...
       PROCEDURE        :: init                => xcpot_init
-      PROCEDURE        :: read_xml => read_xml_libxc
    END TYPE t_xcpot_libxc
    PUBLIC t_xcpot_libxc
 CONTAINS
 
-  SUBROUTINE read_xml_libxc(this,xml)
-     USE m_types_xml
-     CLASS(t_xcpot_libxc),INTENT(INOUT):: this
-     TYPE(t_xml),INTENT(in)          :: xml
-     
-     CHARACTER(len=10)::xpathA,xpathB
-     INTEGER          :: vxc_id_x,vxc_id_c, exc_id_x,  exc_id_c,jspins
-     
-     IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@GmaxXC')==1)&
-          this%gmaxxc = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@GmaxXC'))
-      ! Read in xc functional parameters
-     !Read in libxc parameters if present
-     xPathA = '/fleurInput/xcFunctional/LibXCID'
-     xPathB = '/fleurInput/xcFunctional/LibXCName'
-
-     IF(xml%GetNumberOfNodes(xPathA) == 1 .AND. xml%GetNumberOfNodes(xPathB) == 1) THEN
-        CALL judft_error("LibXC is given both by Name and ID and is therefore overdetermined")
-     ENDIF
+  
 
 
-     ! LibXCID 
-     IF (xml%GetNumberOfNodes(xPathA) == 1) THEN
-#ifdef CPP_LIBXC
-        vxc_id_x=evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@exchange'))
-        vxc_id_c=evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@correlation'))
-
-        IF(xml%GetNumberOfNodes(TRIM(xPathA) // '/@etot_exchange') == 1) THEN
-           exc_id_x = evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@etot_exchange'))
-        ELSE
-           exc_id_x = vxc_id_x
-        ENDIF
-        
-        IF(xml%GetNumberOfNodes(TRIM(xPathA) // '/@exc_correlation') == 1) THEN
-           exc_id_c = evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@exc_correlation'))
-        ELSE
-           exc_id_c = vxc_id_c
-        ENDIF
-#else
-         CALL judft_error("To use libxc functionals you have to compile with libXC support")
-#endif
-      ! LibXCName 
-      ELSEIF (xml%GetNumberOfNodes(TRIM(xPathB)) == 1) THEN
-#ifdef CPP_LIBXC
-         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@exchange')))
-         vxc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
-         
-         valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@correlation')))
-         vxc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
-         
-         IF(xml%GetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
-            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
-            exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
-         ELSE
-            exc_id_x = vxc_id_x
-         ENDIF
-         
-         IF(xml%GetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
-            valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
-            exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
-         ELSE
-            exc_id_c = vxc_id_c
-         ENDIF
-#else
-         CALL judft_error("To use libxc functionals you have to compile with libXC support")
-#endif
-      ENDIF
-      jspins=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
-      CALL this%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
-
-    END SUBROUTINE read_xml_libxc
-
-
-   SUBROUTINE xcpot_init(xcpot,jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
+  SUBROUTINE xcpot_init(xcpot,func_vxc_id_x,func_vxc_id_c,func_exc_id_x,func_exc_id_c,jspins)
       USE m_judft
       IMPLICIT NONE
-   CLASS(t_xcpot_libxc),INTENT(OUT)    :: xcpot
-      INTEGER, INTENT(IN)                 :: jspins
-      INTEGER, INTENT(IN)                 :: vxc_id_x, vxc_id_c ! potential functional
-      INTEGER, INTENT(IN)                 :: exc_id_x, exc_id_c ! energy functionals
+      CLASS(t_xcpot_libxc),INTENT(INOUT)    :: xcpot
+      TYPE(t_xcpot_inbuild),INTENT(IN)      :: xcpot_ib
+      INTEGER, INTENT(IN)                 :: jspins,func_vxc_id_x,func_vxc_id_c,func_exc_id_x,func_exc_id_c
       LOGICAL                             :: same_functionals   ! are vxc and exc equal
       INTEGER                             :: errors(4)
 
 #ifdef CPP_LIBXC
       INTEGER :: err
       xcpot%jspins = jspins
+      xcpot%l_libxc=.TRUE.
+      xcpot%func_vxc_id_x=func_vxc_id_x
+      xcpot%func_exc_id_x=func_exc_id_x
+      xcpot%func_vxc_id_c=func_vxc_id_c
+      xcpot%func_exc_id_c=func_exc_id_c
 
-      xcpot%func_vxc_id_x = vxc_id_x
-      xcpot%func_vxc_id_c = vxc_id_c
-      
-      xcpot%func_exc_id_x = exc_id_x
-      xcpot%func_exc_id_c = exc_id_c
-
-      if(xcpot%func_vxc_id_x == 0 .or. xcpot%func_exc_id_x == 0 ) then
+      IF(xcpot%func_vxc_id_x == 0 .OR. xcpot%func_exc_id_x == 0 ) THEN
          CALL judft_error("LibXC exchange- and correlation-function indicies need to be set"&
-            ,hint='Try this: ' // ACHAR(10) //&
-            '<xcFunctional name="libxc" relativisticCorrections="F">' // ACHAR(10) //& 
-            '  <libXC  exchange="1" correlation="1" /> ' // ACHAR(10) //& 
-            '</xcFunctional> ')
-      endif 
-
+              ,hint='Try this: ' // ACHAR(10) //&
+              '<xcFunctional name="libxc" relativisticCorrections="F">' // ACHAR(10) //& 
+              '  <libXC  exchange="1" correlation="1" /> ' // ACHAR(10) //& 
+              '</xcFunctional> ')
+      ENDIF
+      
       IF (jspins==1) THEN
          ! potential functionals      
          CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_UNPOLARIZED, err=errors(1))
          IF (xcpot%func_vxc_id_c>0) CALL xc_f03_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, &
-                                                                 XC_UNPOLARIZED, err=errors(2))
-
+              XC_UNPOLARIZED, err=errors(2))
          ! energy functionals
          CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_UNPOLARIZED, err=errors(3))
          IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, &
-                                                                  XC_UNPOLARIZED, err=errors(4))
+              XC_UNPOLARIZED, err=errors(4))
          
       ELSE
          ! potential functionals  
          CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_POLARIZED, err=errors(1))
          IF (xcpot%func_vxc_id_c>0) CALL xc_f03_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, &
-                                                                  XC_POLARIZED, err=errors(2))
-
+              XC_POLARIZED, err=errors(2))
+         
          !energy functionals
          CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_POLARIZED, err=errors(3))
          IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, &
-                                                                  XC_POLARIZED, err=errors(4))
+              XC_POLARIZED, err=errors(4))
       END IF
-
-      IF(errors(1) /= 0) call juDFT_error("Exchange potential functional not in LibXC")
-      IF(errors(2) /= 0) call juDFT_error("Correlation potential functional not in LibXC")
-      IF(errors(3) /= 0) call juDFT_error("Exchange energy functional not in LibXC")
-      IF(errors(4) /= 0) call juDFT_error("Correlation energy functional not in LibXC")
-
+      
+      IF(errors(1) /= 0) CALL juDFT_error("Exchange potential functional not in LibXC")
+      IF(errors(2) /= 0) CALL juDFT_error("Correlation potential functional not in LibXC")
+      IF(errors(3) /= 0) CALL juDFT_error("Exchange energy functional not in LibXC")
+      IF(errors(4) /= 0) CALL juDFT_error("Correlation energy functional not in LibXC")
+      
       !check if any potental is a MetaGGA
       IF(ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_x))) THEN
-         call juDFT_error("vxc_x: MetaGGA is not implemented for potentials")
+         CALL juDFT_error("vxc_x: MetaGGA is not implemented for potentials")
       ELSEIF(xcpot%func_vxc_id_c>0) THEN
          IF(ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_c))) THEN
-            call juDFT_error("vxc_x: MetaGGA is not implemented for potentials")
+            CALL juDFT_error("vxc_x: MetaGGA is not implemented for potentials")
          ENDIF
       ENDIF
-
+      
       CALL write_xc_info(xcpot%vxc_func_x)
-
+      
       IF (xcpot%func_vxc_id_c>0) THEN
          CALL write_xc_info(xcpot%vxc_func_c)
       ELSE
          WRITE(*,*) "No Correlation functional"
       END IF
-
+      
       same_functionals =     (xcpot%func_vxc_id_x == xcpot%func_exc_id_x) &
-                       .and. (xcpot%func_vxc_id_c == xcpot%func_exc_id_c)
-      IF(.not. same_functionals) THEN
+           .AND. (xcpot%func_vxc_id_c == xcpot%func_exc_id_c)
+      IF(.NOT. same_functionals) THEN
          CALL write_xc_info(xcpot%exc_func_x)
          IF (xcpot%func_exc_id_c>0) THEN
             CALL write_xc_info(xcpot%exc_func_c)
@@ -211,16 +136,16 @@ CONTAINS
             WRITE(*,*) "No Correlation functional for TotalE"
          ENDIF
       ELSE
-         write (*,*) "Using same functional for VXC and EXC"
+         WRITE (*,*) "Using same functional for VXC and EXC"
       END IF
 #else
       CALL judft_error("You specified a libxc-exchange correlation potential but FLEUR is not linked against libxc", &
-         hint="Please recompile FLEUR with libxc support")
+           hint="Please recompile FLEUR with libxc support")
 #endif
-   END SUBROUTINE xcpot_init
-
-   ! LDA
-   LOGICAL FUNCTION xcpot_vx_is_LDA(xcpot)
+    END SUBROUTINE xcpot_init
+    
+    ! LDA
+    LOGICAL FUNCTION xcpot_vx_is_LDA(xcpot)
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC

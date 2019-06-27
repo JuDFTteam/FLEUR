@@ -16,6 +16,7 @@ MODULE m_types_enparaXML
      PROCEDURE :: init
      procedure :: set_quantum_numbers
      PROCEDURE :: read_xml=>read_xml_enpara
+     procedure :: mpi_bc => mpi_bc_enpara
   END TYPE t_enparaXML
 
 
@@ -23,6 +24,24 @@ MODULE m_types_enparaXML
   PUBLIC:: t_enparaXML
 
 CONTAINS
+
+  SUBROUTINE mpi_bc_enpara(this,mpi_comm,irank)
+    USE m_mpi_bc_tool
+    CLASS(t_enparaXML),INTENT(INOUT)::this
+    INTEGER,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    IF (PRESENT(irank)) THEN
+       rank=0
+    ELSE
+       rank=irank
+    END IF
+    
+    CALL mpi_bc(this%qn_el,rank,mpi_comm)
+    CALL mpi_bc(this%qn_ello,rank,mpi_comm)
+    CALL mpi_bc(rank,mpi_comm,this%evac0)
+
+  END SUBROUTINE mpi_bc_enpara
 
   SUBROUTINE read_xml_enpara(this,xml)
     use m_types_xml

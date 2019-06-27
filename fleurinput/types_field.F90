@@ -32,16 +32,55 @@ MODULE m_types_field
 
   TYPE t_field
      TYPE(t_efield)   :: efield
-     LOGICAL          :: l_b_field=.false.
+     LOGICAL          :: l_b_field=.FALSE.
      REAL             :: b_field
      REAL,ALLOCATABLE :: b_field_mt(:)
    CONTAINS
      PROCEDURE :: init=>init_field
-     PROCEDURE :: read_xml
+     PROCEDURE :: read_xml=>read_xml_field
+     PROCEDURE :: mpi_bc=>mpi_bc_field
   END TYPE t_field
 
   PUBLIC t_field,t_efield
 CONTAINS
+
+  SUBROUTINE mpi_bc_field(this,mpi_comm,irank)
+    USE m_mpi_bc_tool
+    CLASS(t_field),INTENT(INOUT)::this
+    INTEGER,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    IF (PRESENT(irank)) THEN
+       rank=0
+    ELSE
+       rank=irank
+    END IF
+
+    CALL mpi_bc(this%l_b_field,rank,mpi_comm)
+    CALL mpi_bc(this%b_field,rank,mpi_comm)
+    CALL mpi_bc(this%b_field_mt,rank,mpi_comm)
+
+    CALL mpi_bc(this%efield%zsigma  ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%sigma   ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%sig_b(1),rank,mpi_comm)
+    CALL mpi_bc(this%efield%sig_b(2),rank,mpi_comm)
+    CALL mpi_bc(this%efield%vslope  ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%sigEF ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%rhoEF   ,rank,mpi_comm)
+    CALL MPI_BC(THIS%EFIELD%C1,RANK,MPI_COMM)
+    CALL mpi_bc(this%efield%C2 ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%l_segmented ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%plot_charge ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%plot_rho    ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%autocomp    ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%dirichlet ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%l_dirichlet_coeff ,rank,mpi_comm)
+    CALL mpi_bc(this%efield%l_eV ,rank,mpi_comm)
+
+
+
+  END SUBROUTINE mpi_bc_field
+
   SUBROUTINE init_field(this)
     !USE m_types_setup
     IMPLICIT NONE
@@ -51,7 +90,7 @@ CONTAINS
     !this%efield%sigma=>sigma
   END SUBROUTINE init_field
 
-  SUBROUTINE read_xml(this,xml)
+  SUBROUTINE read_xml_field(this,xml)
     USE m_types_xml
     CLASS(t_field),INTENT(OUT)::this
     TYPE(t_xml),INTENT(IN)::xml
@@ -84,5 +123,5 @@ CONTAINS
     ELSE
        ALLOCATE(this%efield%shapes(0))
     END IF
-  END SUBROUTINE read_xml
+  END SUBROUTINE read_xml_field
 END MODULE m_types_field

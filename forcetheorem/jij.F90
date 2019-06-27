@@ -31,17 +31,20 @@ CONTAINS
   
 
 
-  SUBROUTINE jij_init(this,atoms)
+  SUBROUTINE jij_init(this,qvec,thetaj,atoms)
     USE m_types_setup
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
+    REAL,INTENT(in)                     :: qvec(:,:),thetaj
     TYPE(t_atoms),INTENT(IN)            :: atoms
   
     INTEGER:: n,na,ni,nj,j
     REAL,PARAMETER:: eps=1E-5
 
-    
+    this%qvec=qvec
+    this%thetaj=thetaj
+
     !Max no of loops...
     n=atoms%nat**2*SIZE(this%qvec,2)+1
     ALLOCATE(this%q_index(n),this%iatom(n),this%jatom(n),this%phase2(n))

@@ -78,7 +78,10 @@
             IF (ANY(lda_atom)) THEN
                IF((.NOT.xcpot%is_name("pw91"))) &
                   CALL judft_warn("Using locally LDA only possible with pw91 functional")
-               CALL xcpot_tmp%init("l91",.FALSE.,atoms%ntype)
+               !TODO: check this code and the functionality
+               !xcpot_tmp%inbuild_name="l91"
+               !xcpot_tmp%l_relativistic=.FALSE.
+               CALL xcpot_tmp%init(atoms%ntype)
                ALLOCATE(xcl(SIZE(v_xc,1),SIZE(v_xc,2)))
             ENDIF
          CLASS DEFAULT

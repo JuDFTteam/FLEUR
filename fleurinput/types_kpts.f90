@@ -33,12 +33,42 @@ MODULE m_types_kpts
      PROCEDURE :: add_special_line
      PROCEDURE :: print_xml
      PROCEDURE :: read_xml=>read_xml_kpts
+     PROCEDURE :: mpi_bc => mpi_bc_kpts
   ENDTYPE t_kpts
 
   PUBLIC :: t_kpts
 CONTAINS
 
 
+  SUBROUTINE mpi_bc_kpts(this,mpi_comm,irank)
+    USE m_mpi_bc_tool
+    CLASS(t_kpts),INTENT(INOUT)::this
+    INTEGER,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    IF (PRESENT(irank)) THEN
+       rank=0
+    ELSE
+       rank=irank
+    END IF
+
+    CALL mpi_bc(this%nkpt,rank,mpi_comm)
+    CALL mpi_bc(this%ntet,rank,mpi_comm)
+    CALL mpi_bc(this%l_gamma,rank,mpi_comm)
+    CALL mpi_bc(this%bk,rank,mpi_comm)
+    CALL mpi_bc(this%wtkpt,rank,mpi_comm)
+    CALL mpi_bc(this%nkptf,rank,mpi_comm)
+    CALL mpi_bc(this%bkf,rank,mpi_comm)
+    CALL mpi_bc(this%bkp,rank,mpi_comm)
+    CALL mpi_bc(this%bksym,rank,mpi_comm)
+    CALL mpi_bc(this%numSpecialPoints,rank,mpi_comm)
+    CALL mpi_bc(this%specialPointIndices,rank,mpi_comm)
+    CALL mpi_bc(this%specialPoints,rank,mpi_comm)
+    CALL mpi_bc(this%ntetra,rank,mpi_comm)
+    CALL mpi_bc(this%voltet,rank,mpi_comm)
+    CALL mpi_bc(this%sc_list ,rank,mpi_comm)
+  END SUBROUTINE mpi_bc_kpts
+  
   SUBROUTINE read_xml_kpts(this,xml)
     USE m_types_xml
     USE m_calculator

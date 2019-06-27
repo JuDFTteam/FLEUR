@@ -27,7 +27,7 @@ MODULE m_types_mae
 CONTAINS
  
 
-  SUBROUTINE mae_init(this,cell,sym)
+  SUBROUTINE mae_init(this,theta,phi,cell,sym)
     USE m_calculator
     USE m_socsym
     USE m_types
@@ -35,10 +35,13 @@ CONTAINS
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_cell),INTENT(IN)             :: cell
     TYPE(t_sym),INTENT(IN)              :: sym
+    REAL,INTENT(in)                     :: theta(:),phi(:)
 
     INTEGER::n
     LOGICAL::error(sym%nop)
     
+    this%phi=phi
+    this%theta=theta
 
     IF (SIZE(this%phi).NE.SIZE(this%theta)) CALL &
          judft_error("Lists for theta/phi must have the same length in MAE force theorem calculations")

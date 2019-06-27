@@ -34,8 +34,27 @@ MODULE m_types_forcetheo_data
     
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_forcetheo_data
+     PROCEDURE :: mpi_bc=>mpi_bc_forcetheo_data
   END TYPE t_forcetheo_data
 CONTAINS
+   SUBROUTINE mpi_bc_forcetheo_data(this,mpi_comm,irank)
+    use m_mpi_bc_tool
+    CLASS(t_forcetheo_data),INTENT(INOUT)::this
+    integer,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    if (present(irank)) THEN
+       rank=0
+    else
+       rank=irank
+    end if
+    CALL mpi_bc(this%mode,rank,mpi_comm)
+    CALL mpi_bc(this%qvec,rank,mpi_comm)
+    CALL mpi_bc(this%theta,rank,mpi_comm)
+    CALL mpi_bc(this%phi ,rank,mpi_comm)
+
+  END SUBROUTINE mpi_bc_forcetheo_data
+
   SUBROUTINE read_xml_forcetheo_data(this,xml)
     USE m_types_xml
     CLASS(t_forcetheo_data),INTENT(INOUT):: this

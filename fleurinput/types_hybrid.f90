@@ -49,11 +49,64 @@ MODULE m_types_hybrid
       REAL, ALLOCATABLE   ::  div_vv(:, :, :)
     CONTAINS
       PROCEDURE :: read_xml =>read_xml_hybrid
-
+      PROCEDURE :: mpi_bc =>mpi_bc_hybrid
    END TYPE t_hybrid
    PUBLIC t_hybrid
 
  CONTAINS
+
+   SUBROUTINE mpi_bc_hybrid(this,mpi_comm,irank)
+     USE m_mpi_bc_tool
+     CLASS(t_hybrid),INTENT(INOUT)::this
+     INTEGER,INTENT(IN):: mpi_comm
+     INTEGER,INTENT(IN),OPTIONAL::irank
+     INTEGER ::rank
+     IF (PRESENT(irank)) THEN
+        rank=0
+     ELSE
+        rank=irank
+     END IF
+     CALL mpi_bc(this%l_hybrid,rank,mpi_comm)
+     CALL mpi_bc(this%l_subvxc ,rank,mpi_comm)
+     CALL mpi_bc(this%l_calhf ,rank,mpi_comm)
+     CALL mpi_bc(this%l_addhf ,rank,mpi_comm)
+     CALL mpi_bc(this%ewaldlambda ,rank,mpi_comm)
+     CALL mpi_bc(this%lexp ,rank,mpi_comm)
+     CALL mpi_bc(this%bands1,rank,mpi_comm)
+     CALL mpi_bc(this%nbasp,rank,mpi_comm)
+     CALL mpi_bc(this%maxlcutm1,rank,mpi_comm)
+     CALL mpi_bc(this%maxindxm1,rank,mpi_comm)
+     CALL mpi_bc(this%maxbasm1,rank,mpi_comm)
+     CALL mpi_bc(this%maxindxp1,rank,mpi_comm)
+     CALL mpi_bc(this%maxgptm,rank,mpi_comm)
+     CALL mpi_bc(this%maxgptm1,rank,mpi_comm)
+     CALL mpi_bc(this%maxindx,rank,mpi_comm)
+     CALL mpi_bc(this%maxlmindx,rank,mpi_comm)
+     CALL mpi_bc(this%gptmd,rank,mpi_comm)
+     CALL mpi_bc(this%nindx,rank,mpi_comm)
+     CALL mpi_bc(this%select1,rank,mpi_comm)
+     CALL mpi_bc(this%lcutm1,rank,mpi_comm)
+     CALL mpi_bc(this%nindxm1,rank,mpi_comm)
+     CALL mpi_bc(this%gptm,rank,mpi_comm)
+     CALL mpi_bc(this%ngptm1,rank,mpi_comm)
+     CALL mpi_bc(this%pgptm1,rank,mpi_comm)
+     CALL mpi_bc(this%ngptm,rank,mpi_comm)
+     CALL mpi_bc(this%pgptm,rank,mpi_comm)
+     CALL mpi_bc(this%lcutwf,rank,mpi_comm)
+     CALL mpi_bc(this%map,rank,mpi_comm)
+     CALL mpi_bc(this%tvec,rank,mpi_comm)
+     CALL mpi_bc(this%nbasm,rank,mpi_comm)
+     CALL mpi_bc(this%gcutm1,rank,mpi_comm)
+     CALL mpi_bc(this%tolerance1 ,rank,mpi_comm)
+     CALL mpi_bc(this%basm1,rank,mpi_comm)
+     CALL mpi_bc(this%d_wgn2,rank,mpi_comm)
+     CALL mpi_bc(this%ne_eig,rank,mpi_comm)
+     CALL mpi_bc(this%nbands,rank,mpi_comm)
+     CALL mpi_bc(this%nobd,rank,mpi_comm)
+     CALL mpi_bc(this%div_vv,rank,mpi_comm)
+
+
+   END SUBROUTINE mpi_bc_hybrid
    SUBROUTINE read_xml_hybrid(this,xml)
      USE m_types_xml
      CLASS(t_hybrid),INTENT(INout):: this

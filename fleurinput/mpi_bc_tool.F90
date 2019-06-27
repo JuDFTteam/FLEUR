@@ -15,9 +15,10 @@ MODULE m_mpi_bc_tool
   !have the same shape as the one on irank
   INTERFACE mpi_bc
      MODULE PROCEDURE  mpi_bc_int,mpi_bc_int1,mpi_bc_int2,mpi_bc_int3,mpi_bc_int4,mpi_bc_int5
-     MODULE PROCEDURE  mpi_bc_real33,mpi_bc_real,mpi_bc_real1,mpi_bc_real2,mpi_bc_real3,mpi_bc_real4,mpi_bc_real5
+     MODULE PROCEDURE  mpi_bc_real_3,mpi_bc_real_fixed2,mpi_bc_real,mpi_bc_real1,mpi_bc_real2,mpi_bc_real3,mpi_bc_real4,mpi_bc_real5
      MODULE PROCEDURE  mpi_bc_complex,mpi_bc_complex1,mpi_bc_complex2,mpi_bc_complex3,mpi_bc_complex4,mpi_bc_complex5
      MODULE PROCEDURE  mpi_bc_logical,mpi_bc_logical1,mpi_bc_logical2
+     MODULE PROCEDURE  mpi_bc_character_fixed1
   END INTERFACE mpi_bc
   PUBLIC :: mpi_bc
 CONTAINS
@@ -237,9 +238,22 @@ CONTAINS
   ! now the same for reals
   !
 
-  SUBROUTINE mpi_bc_real33(irank,mpi_comm,r)!Special routine for non-allocatable 3x3 arrays
+  SUBROUTINE mpi_bc_real_fixed2(irank,mpi_comm,r)!Special routine for non-allocatable 2d arrays
     IMPLICIT NONE
-    REAL,INTENT(INOUT)   :: r(3,3)
+    REAL,INTENT(INOUT)   :: r(:,:)
+    INTEGER,INTENT(IN)   :: mpi_comm,irank
+
+    INTEGER:: ierr
+#ifdef CPP_MPI  
+
+    CALL MPI_BCAST(r,size(r),MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
+#endif
+    IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+  END SUBROUTINE mpi_bc_real_fixed2
+
+  SUBROUTINE mpi_bc_real_3(irank,mpi_comm,r)!Special routine for non-allocatable 3x3 arrays
+    IMPLICIT NONE
+    REAL,INTENT(INOUT)   :: r(3)
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
     INTEGER:: ierr
@@ -248,7 +262,7 @@ CONTAINS
     CALL MPI_BCAST(r,9,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
-  END SUBROUTINE mpi_bc_real33
+  END SUBROUTINE mpi_bc_real_3
 
   SUBROUTINE mpi_bc_real(r,irank,mpi_comm)
     IMPLICIT NONE
@@ -549,4 +563,20 @@ CONTAINS
 #endif  
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_complex5
+
+
+  SUBROUTINE mpi_bc_character_fixed1(irank,mpi_comm,c)
+    IMPLICIT NONE
+    CHARACTER(len=*),INTENT(INOUT)   :: c
+    INTEGER,INTENT(IN)   :: mpi_comm,irank
+
+    INTEGER:: ierr
+#ifdef CPP_MPI  
+
+    CALL MPI_BCAST(c,len_trim(c),MPI_CHARACTER,irank,mpi_comm,ierr)
+#endif
+    IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
+  END SUBROUTINE mpi_bc_character_fixed1
+
+
 END MODULE m_mpi_bc_tool

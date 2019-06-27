@@ -78,9 +78,33 @@ MODULE m_types_oneD
       REAL, POINTER :: pgft1xy(:)
     contains
       procedure :: read_xml=>read_xml_oneD
+      PROCEDURE :: mpi_bc=>mpi_bc_oneD
    END TYPE t_oneD
    PUBLIC::t_oneD,od_dim,od_inp,od_gga,od_lda,od_sym
  CONTAINS
+   SUBROUTINE mpi_bc_oneD(this,mpi_comm,irank)
+    use m_mpi_bc_tool
+    class(t_oneD),INTENT(INOUT)::this
+    integer,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    if (present(irank)) THEN
+       rank=0
+    else
+       rank=irank
+    end if
+    !Attention only few variables are broadcasted
+    CALL mpi_bc(this%odd%d1 ,rank,mpi_comm)
+    CALL mpi_bc(this%odd%M ,rank,mpi_comm)
+    CALL mpi_bc(this%odd%mb ,rank,mpi_comm)
+    CALL mpi_bc(this%odd%m_cyl ,rank,mpi_comm)
+    CALL mpi_bc(this%odd%chi ,rank,mpi_comm)
+    CALL mpi_bc(this%odd%rot ,rank,mpi_comm)
+    CALL mpi_bc(this%odd%invs ,rank,mpi_comm)
+    CALL mpi_bc(this%odd%zrfs ,rank,mpi_comm)
+
+
+  END SUBROUTINE mpi_bc_oneD
    SUBROUTINE read_xml_oneD(this,xml)
      use m_types_xml
      class(t_oned),intent(inout)::this

@@ -80,26 +80,26 @@ MODULE m_types_xcpot_inbuild_nofunction
       xcpot_get_name=xc_names(xcpot%icorr)
    END FUNCTION xcpot_get_name
 
-   SUBROUTINE xcpot_init(xcpot,namex,relcor,ntype)
+   SUBROUTINE xcpot_init(xcpot,ntype)
       USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot_inbuild_nf),INTENT(INOUT)    :: xcpot
-      CHARACTER(len=*),INTENT(IN)  :: namex
-      LOGICAL,INTENT(IN)           :: relcor
       INTEGER,INTENT(IN)           :: ntype
       INTEGER:: n
       !Determine icorr from name
+
+      IF (.NOT.xcpot%l_inbuild) CALL judft_error("Could not initialize inbuild xcpot")
 
       ALLOCATE(xcpot%lda_atom(ntype))
       xcpot%lda_atom=.FALSE.
       xcpot%icorr=0
       DO n=1,SIZE(xc_names)
-         IF (TRIM(ADJUSTL(namex))==TRIM(xc_names(n))) THEN
+         IF (TRIM(ADJUSTL(xcpot%inbuild_name))==TRIM(xc_names(n))) THEN
             xcpot%icorr=n
          ENDIF
       ENDDO
-      if (xcpot%icorr==0) CALL judft_error("Unkown xc-potential:"//namex,calledby="types_xcpot.F90")
-      IF (relcor)THEN
+      if (xcpot%icorr==0) CALL judft_error("Unkown xc-potential:"//xcpot%inbuild_name,calledby="types_xcpot.F90")
+      IF (xcpot%l_relativistic)THEN
          xcpot%DATA%krla=1
       ELSE
          xcpot%DATA%krla=0

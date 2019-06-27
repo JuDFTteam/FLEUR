@@ -30,7 +30,8 @@ CONTAINS
     ALLOCATE(ch(nsp*atoms%jmtd,4),&
              den%theta_mt(nsp*atoms%jmtd,atoms%ntype),&
              den%phi_mt(nsp*atoms%jmtd,atoms%ntype))
-    CALL xcpot%init("vwn",.FALSE.,1)
+    xcpot%l_inbuild=.TRUE.
+    CALL xcpot%init(1)
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
@@ -107,7 +108,8 @@ CONTAINS
     
     nsp=atoms%nsp()
     ALLOCATE(ch(nsp*atoms%jmtd,4))
-    CALL xcpot%init("vwn",.FALSE.,1)
+    xcpot%l_inbuild=.TRUE.
+    CALL xcpot%init(1)
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype

@@ -20,9 +20,32 @@ MODULE m_types_sliceplot
      REAL    :: e2s=0.
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_sliceplot
+     PROCEDURE :: mpi_bc=>mpi_bc_sliceplot
   END TYPE t_sliceplot
 
 CONTAINS
+  SUBROUTINE mpi_bc_sliceplot(this,mpi_comm,irank)
+    USE m_mpi_bc_tool
+    CLASS(t_sliceplot),INTENT(INOUT)::this
+    INTEGER,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    IF (PRESENT(irank)) THEN
+       rank=0
+    ELSE
+       rank=irank
+    END IF
+
+    CALL mpi_bc(this%iplot,rank,mpi_comm)
+    CALL mpi_bc(this%slice,rank,mpi_comm)
+    CALL mpi_bc(this%plpot,rank,mpi_comm)
+    CALL mpi_bc(this%kk,rank,mpi_comm)
+    CALL mpi_bc(this%nnne,rank,mpi_comm)
+    CALL mpi_bc(this%e1s,rank,mpi_comm)
+    CALL mpi_bc(this%e2s,rank,mpi_comm)
+
+  END SUBROUTINE mpi_bc_sliceplot
+
   SUBROUTINE read_xml_sliceplot(this,xml)
     USE m_types_xml
     CLASS(t_sliceplot),INTENT(inOUT)::this

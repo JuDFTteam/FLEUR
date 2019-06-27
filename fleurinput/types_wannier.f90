@@ -16,91 +16,91 @@ MODULE m_types_wannier
      INTEGER :: wan90version =3
      INTEGER :: oc_num_orbs =0
      INTEGER, ALLOCATABLE :: oc_orbs(:)
-     LOGICAL :: l_unformatted =.false.
-     LOGICAL :: l_oc_f=.false.
-     LOGICAL :: l_ndegen=.false.
-     LOGICAL :: l_orbitalmom=.false.
-     LOGICAL :: l_orbcomp=.false.
-     LOGICAL :: l_orbcomprs=.false.
-     LOGICAL :: l_denmat=.false.
-     LOGICAL :: l_perturbrs=.false.
-     LOGICAL :: l_perturb=.false.
-     LOGICAL :: l_nedrho=.false.
-     LOGICAL :: l_anglmomrs=.false.
-     LOGICAL :: l_anglmom=.false.
-     LOGICAL :: l_spindisp=.false.
-     LOGICAL :: l_spindisprs=.false.
-     LOGICAL :: l_socspicom=.false.
-     LOGICAL :: l_socspicomrs=.false.
-     LOGICAL :: l_offdiposoprs=.false.
-     LOGICAL :: l_offdiposop=.false.
-     LOGICAL :: l_torque=.false.
-     LOGICAL :: l_torquers=.false.
-     LOGICAL :: l_atomlist=.false.
+     LOGICAL :: l_unformatted =.FALSE.
+     LOGICAL :: l_oc_f=.FALSE.
+     LOGICAL :: l_ndegen=.FALSE.
+     LOGICAL :: l_orbitalmom=.FALSE.
+     LOGICAL :: l_orbcomp=.FALSE.
+     LOGICAL :: l_orbcomprs=.FALSE.
+     LOGICAL :: l_denmat=.FALSE.
+     LOGICAL :: l_perturbrs=.FALSE.
+     LOGICAL :: l_perturb=.FALSE.
+     LOGICAL :: l_nedrho=.FALSE.
+     LOGICAL :: l_anglmomrs=.FALSE.
+     LOGICAL :: l_anglmom=.FALSE.
+     LOGICAL :: l_spindisp=.FALSE.
+     LOGICAL :: l_spindisprs=.FALSE.
+     LOGICAL :: l_socspicom=.FALSE.
+     LOGICAL :: l_socspicomrs=.FALSE.
+     LOGICAL :: l_offdiposoprs=.FALSE.
+     LOGICAL :: l_offdiposop=.FALSE.
+     LOGICAL :: l_torque=.FALSE.
+     LOGICAL :: l_torquers=.FALSE.
+     LOGICAL :: l_atomlist=.FALSE.
      INTEGER :: atomlist_num=0
      INTEGER, ALLOCATABLE :: atomlist(:)
-     LOGICAL :: l_berry=.false.
-     LOGICAL :: l_perpmagrs=.false.
-     LOGICAL :: l_perpmag=.false.
-     LOGICAL :: l_perpmagat=.false.
-     LOGICAL :: l_perpmagatrs=.false.
-     LOGICAL :: l_socmatrs=.false.
-     LOGICAL :: l_socmat=.false.
-     LOGICAL :: l_soctomom=.false.
-     LOGICAL :: l_kptsreduc2=.false.
-     LOGICAL :: l_nablapaulirs=.false.
-     LOGICAL :: l_nablars=.false.
-     LOGICAL :: l_surfcurr=.false.
-     LOGICAL :: l_updown=.false.
-     LOGICAL :: l_ahe=.false.
-     LOGICAL :: l_she=.false.
-     LOGICAL :: l_rmat=.false.
-     LOGICAL :: l_nabla=.false.
-     LOGICAL :: l_socodi=.false.
-     LOGICAL :: l_pauli=.false.
-     LOGICAL :: l_pauliat=.false.
-     LOGICAL :: l_potmat=.false.
-     LOGICAL :: l_projgen=.false.
-     LOGICAL :: l_plot_symm=.false.
-     LOGICAL :: l_socmmn0=.false.
-     LOGICAL :: l_bzsym=.false.
-     LOGICAL :: l_hopping=.false.
-     LOGICAL :: l_kptsreduc=.false.
-     LOGICAL :: l_prepwan90=.false.
-     LOGICAL :: l_plot_umdat=.false.
-     LOGICAL :: l_wann_plot=.false.
-     LOGICAL :: l_bynumber=.false.
-     LOGICAL :: l_stopopt=.false.
-     LOGICAL :: l_matrixmmn=.false.
-     LOGICAL :: l_matrixamn=.false.
-     LOGICAL :: l_projmethod=.false.
-     LOGICAL :: l_wannierize=.false.
-     LOGICAL :: l_plotw90=.false.
-     LOGICAL :: l_byindex=.false.
-     LOGICAL :: l_byenergy=.false.
-     LOGICAL :: l_proj_plot=.false.
-     LOGICAL :: l_bestproj=.false.
-     LOGICAL :: l_ikptstart=.false.
-     LOGICAL :: l_lapw=.false.
-     LOGICAL :: l_plot_lapw=.false.
-     LOGICAL :: l_fermi=.false.
-     LOGICAL :: l_dipole=.false.
-     LOGICAL :: l_dipole2=.false.
-     LOGICAL :: l_dipole3=.false.
-     LOGICAL :: l_mmn0=.false.
-     LOGICAL :: l_mmn0at=.false.
-     LOGICAL :: l_manyfiles=.false.
-     LOGICAL :: l_collectmanyfiles=.false.
-     LOGICAL :: l_ldauwan=.false.
-     LOGICAL :: l_lapw_kpts=.false.
-     LOGICAL :: l_lapw_gfleur=.false.
-     LOGICAL :: l_kpointgen=.false.
-     LOGICAL :: l_w90kpointgen=.false.
-     LOGICAL :: l_finishnocoplot=.false.
-     LOGICAL :: l_finishgwf=.false.
-     LOGICAL :: l_skipkov=.false.
-     LOGICAL :: l_matrixuHu=.false.
-     LOGICAL :: l_matrixuHu_dmi=.false.
+     LOGICAL :: l_berry=.FALSE.
+     LOGICAL :: l_perpmagrs=.FALSE.
+     LOGICAL :: l_perpmag=.FALSE.
+     LOGICAL :: l_perpmagat=.FALSE.
+     LOGICAL :: l_perpmagatrs=.FALSE.
+     LOGICAL :: l_socmatrs=.FALSE.
+     LOGICAL :: l_socmat=.FALSE.
+     LOGICAL :: l_soctomom=.FALSE.
+     LOGICAL :: l_kptsreduc2=.FALSE.
+     LOGICAL :: l_nablapaulirs=.FALSE.
+     LOGICAL :: l_nablars=.FALSE.
+     LOGICAL :: l_surfcurr=.FALSE.
+     LOGICAL :: l_updown=.FALSE.
+     LOGICAL :: l_ahe=.FALSE.
+     LOGICAL :: l_she=.FALSE.
+     LOGICAL :: l_rmat=.FALSE.
+     LOGICAL :: l_nabla=.FALSE.
+     LOGICAL :: l_socodi=.FALSE.
+     LOGICAL :: l_pauli=.FALSE.
+     LOGICAL :: l_pauliat=.FALSE.
+     LOGICAL :: l_potmat=.FALSE.
+     LOGICAL :: l_projgen=.FALSE.
+     LOGICAL :: l_plot_symm=.FALSE.
+     LOGICAL :: l_socmmn0=.FALSE.
+     LOGICAL :: l_bzsym=.FALSE.
+     LOGICAL :: l_hopping=.FALSE.
+     LOGICAL :: l_kptsreduc=.FALSE.
+     LOGICAL :: l_prepwan90=.FALSE.
+     LOGICAL :: l_plot_umdat=.FALSE.
+     LOGICAL :: l_wann_plot=.FALSE.
+     LOGICAL :: l_bynumber=.FALSE.
+     LOGICAL :: l_stopopt=.FALSE.
+     LOGICAL :: l_matrixmmn=.FALSE.
+     LOGICAL :: l_matrixamn=.FALSE.
+     LOGICAL :: l_projmethod=.FALSE.
+     LOGICAL :: l_wannierize=.FALSE.
+     LOGICAL :: l_plotw90=.FALSE.
+     LOGICAL :: l_byindex=.FALSE.
+     LOGICAL :: l_byenergy=.FALSE.
+     LOGICAL :: l_proj_plot=.FALSE.
+     LOGICAL :: l_bestproj=.FALSE.
+     LOGICAL :: l_ikptstart=.FALSE.
+     LOGICAL :: l_lapw=.FALSE.
+     LOGICAL :: l_plot_lapw=.FALSE.
+     LOGICAL :: l_fermi=.FALSE.
+     LOGICAL :: l_dipole=.FALSE.
+     LOGICAL :: l_dipole2=.FALSE.
+     LOGICAL :: l_dipole3=.FALSE.
+     LOGICAL :: l_mmn0=.FALSE.
+     LOGICAL :: l_mmn0at=.FALSE.
+     LOGICAL :: l_manyfiles=.FALSE.
+     LOGICAL :: l_collectmanyfiles=.FALSE.
+     LOGICAL :: l_ldauwan=.FALSE.
+     LOGICAL :: l_lapw_kpts=.FALSE.
+     LOGICAL :: l_lapw_gfleur=.FALSE.
+     LOGICAL :: l_kpointgen=.FALSE.
+     LOGICAL :: l_w90kpointgen=.FALSE.
+     LOGICAL :: l_finishnocoplot=.FALSE.
+     LOGICAL :: l_finishgwf=.FALSE.
+     LOGICAL :: l_skipkov=.FALSE.
+     LOGICAL :: l_matrixuHu=.FALSE.
+     LOGICAL :: l_matrixuHu_dmi=.FALSE.
      INTEGER :: ikptstart=1
      INTEGER :: band_min(1:2)=-1
      INTEGER :: band_max(1:2)=-1
@@ -109,15 +109,15 @@ MODULE m_types_wannier
      INTEGER :: unigrid(6)=0
      INTEGER :: mhp(3)=0
      !---> gwf
-     LOGICAL :: l_ms=.false.
-     LOGICAL :: l_sgwf=.false.
-     LOGICAL :: l_socgwf=.false.
-     LOGICAL :: l_gwf=.false.
-     LOGICAL :: l_bs_comf=.false.
-     LOGICAL :: l_exist=.false.
-     LOGICAL :: l_opened=.false.
-     LOGICAL :: l_cleverskip=.false.
-     LOGICAL :: l_dim(3)=.false.
+     LOGICAL :: l_ms=.FALSE.
+     LOGICAL :: l_sgwf=.FALSE.
+     LOGICAL :: l_socgwf=.FALSE.
+     LOGICAL :: l_gwf=.FALSE.
+     LOGICAL :: l_bs_comf=.FALSE.
+     LOGICAL :: l_exist=.FALSE.
+     LOGICAL :: l_opened=.FALSE.
+     LOGICAL :: l_cleverskip=.FALSE.
+     LOGICAL :: l_dim(3)=.FALSE.
      REAL    :: scale_param=1.0
      REAL    :: aux_latt_const=8.0
      REAL    :: hdwf_t1=0.0
@@ -131,10 +131,156 @@ MODULE m_types_wannier
      !---> gwf
    CONTAINS
      PROCEDURE :: read_xml => read_xml_wannier
+     PROCEDURE :: mpi_bc => mpi_bc_wannier
   END TYPE t_wann
   
   PUBLIC t_wann
 CONTAINS
+
+  SUBROUTINE mpi_bc_wannier(this,mpi_comm,irank)
+    USE m_mpi_bc_tool
+    CLASS(t_wann),INTENT(INOUT)::this
+    INTEGER,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    IF (PRESENT(irank)) THEN
+       rank=0
+    ELSE
+       rank=irank
+    END IF
+
+    CALL mpi_bc(this%wan90version ,rank,mpi_comm)
+    CALL mpi_bc(this%oc_num_orbs ,rank,mpi_comm)
+    CALL mpi_bc(this%oc_orbs,rank,mpi_comm)
+    CALL mpi_bc(this%l_unformatted ,rank,mpi_comm)
+    CALL mpi_bc(this%l_oc_f,rank,mpi_comm)
+    CALL mpi_bc(this%l_ndegen,rank,mpi_comm)
+    CALL mpi_bc(this%l_orbitalmom,rank,mpi_comm)
+    CALL mpi_bc(this%l_orbcomp,rank,mpi_comm)
+    CALL mpi_bc(this%l_orbcomprs,rank,mpi_comm)
+    CALL mpi_bc(this%l_denmat,rank,mpi_comm)
+    CALL mpi_bc(this%l_perturbrs,rank,mpi_comm)
+    CALL mpi_bc(this%l_perturb,rank,mpi_comm)
+    CALL mpi_bc(this%l_nedrho,rank,mpi_comm)
+    CALL mpi_bc(this%l_anglmomrs,rank,mpi_comm)
+    CALL mpi_bc(this%l_anglmom,rank,mpi_comm)
+    CALL mpi_bc(this%l_spindisp,rank,mpi_comm)
+    CALL mpi_bc(this%l_spindisprs,rank,mpi_comm)
+    CALL mpi_bc(this%l_socspicom,rank,mpi_comm)
+    CALL mpi_bc(this%l_socspicomrs,rank,mpi_comm)
+    CALL mpi_bc(this%l_offdiposoprs,rank,mpi_comm)
+    CALL mpi_bc(this%l_offdiposop,rank,mpi_comm)
+    CALL mpi_bc(this%l_torque,rank,mpi_comm)
+    CALL mpi_bc(this%l_torquers,rank,mpi_comm)
+    CALL mpi_bc(this%l_atomlist,rank,mpi_comm)
+    CALL mpi_bc(this%atomlist_num,rank,mpi_comm)
+    CALL mpi_bc(this%atomlist,rank,mpi_comm)
+    CALL mpi_bc(this%l_berry,rank,mpi_comm)
+    CALL mpi_bc(this%l_perpmagrs,rank,mpi_comm)
+    CALL mpi_bc(this%l_perpmag,rank,mpi_comm)
+    CALL mpi_bc(this%l_perpmagat,rank,mpi_comm)
+    CALL mpi_bc(this%l_perpmagatrs,rank,mpi_comm)
+    CALL mpi_bc(this%l_socmatrs,rank,mpi_comm)
+    CALL mpi_bc(this%l_socmat,rank,mpi_comm)
+    CALL mpi_bc(this%l_soctomom,rank,mpi_comm)
+    CALL mpi_bc(this%l_kptsreduc2,rank,mpi_comm)
+    CALL mpi_bc(this%l_nablapaulirs,rank,mpi_comm)
+    CALL mpi_bc(this%l_nablars,rank,mpi_comm)
+    CALL mpi_bc(this%l_surfcurr,rank,mpi_comm)
+    CALL mpi_bc(this%l_updown,rank,mpi_comm)
+    CALL mpi_bc(this%l_ahe,rank,mpi_comm)
+    CALL mpi_bc(this%l_she,rank,mpi_comm)
+    CALL mpi_bc(this%l_rmat,rank,mpi_comm)
+    CALL mpi_bc(this%l_nabla,rank,mpi_comm)
+    CALL mpi_bc(this%l_socodi,rank,mpi_comm)
+    CALL mpi_bc(this%l_pauli,rank,mpi_comm)
+    CALL mpi_bc(this%l_pauliat,rank,mpi_comm)
+    CALL mpi_bc(this%l_potmat,rank,mpi_comm)
+    CALL mpi_bc(this%l_projgen,rank,mpi_comm)
+    CALL mpi_bc(this%l_plot_symm,rank,mpi_comm)
+    CALL mpi_bc(this%l_socmmn0,rank,mpi_comm)
+    CALL mpi_bc(this%l_bzsym,rank,mpi_comm)
+    CALL mpi_bc(this%l_hopping,rank,mpi_comm)
+    CALL mpi_bc(this%l_kptsreduc,rank,mpi_comm)
+    CALL mpi_bc(this%l_prepwan90,rank,mpi_comm)
+    CALL mpi_bc(this%l_plot_umdat,rank,mpi_comm)
+    CALL mpi_bc(this%l_wann_plot,rank,mpi_comm)
+    CALL mpi_bc(this%l_bynumber,rank,mpi_comm)
+    CALL mpi_bc(this%l_stopopt,rank,mpi_comm)
+    CALL mpi_bc(this%l_matrixmmn,rank,mpi_comm)
+    CALL mpi_bc(this%l_matrixamn,rank,mpi_comm)
+    CALL mpi_bc(this%l_projmethod,rank,mpi_comm)
+    CALL mpi_bc(this%l_wannierize,rank,mpi_comm)
+    CALL mpi_bc(this%l_plotw90,rank,mpi_comm)
+    CALL mpi_bc(this%l_byindex,rank,mpi_comm)
+    CALL mpi_bc(this%l_byenergy,rank,mpi_comm)
+    CALL mpi_bc(this%l_proj_plot,rank,mpi_comm)
+    CALL mpi_bc(this%l_bestproj,rank,mpi_comm)
+    CALL mpi_bc(this%l_ikptstart,rank,mpi_comm)
+    CALL mpi_bc(this%l_lapw,rank,mpi_comm)
+    CALL mpi_bc(this%l_plot_lapw,rank,mpi_comm)
+    CALL mpi_bc(this%l_fermi,rank,mpi_comm)
+    CALL mpi_bc(this%l_dipole,rank,mpi_comm)
+    CALL mpi_bc(this%l_dipole2,rank,mpi_comm)
+    CALL mpi_bc(this%l_dipole3,rank,mpi_comm)
+    CALL mpi_bc(this%l_mmn0,rank,mpi_comm)
+    CALL mpi_bc(this%l_mmn0at,rank,mpi_comm)
+    CALL mpi_bc(this%l_manyfiles,rank,mpi_comm)
+    CALL mpi_bc(this%l_collectmanyfiles,rank,mpi_comm)
+    CALL mpi_bc(this%l_ldauwan,rank,mpi_comm)
+    CALL mpi_bc(this%l_lapw_kpts,rank,mpi_comm)
+    CALL mpi_bc(this%l_lapw_gfleur,rank,mpi_comm)
+    CALL mpi_bc(this%l_kpointgen,rank,mpi_comm)
+    CALL mpi_bc(this%l_w90kpointgen,rank,mpi_comm)
+    CALL mpi_bc(this%l_finishnocoplot,rank,mpi_comm)
+    CALL mpi_bc(this%l_finishgwf,rank,mpi_comm)
+    CALL mpi_bc(this%l_skipkov,rank,mpi_comm)
+    CALL mpi_bc(this%l_matrixuHu,rank,mpi_comm)
+    CALL mpi_bc(this%l_matrixuHu_dmi,rank,mpi_comm)
+    CALL mpi_bc(this%ikptstart,rank,mpi_comm)
+    CALL mpi_bc(this%band_min(1),rank,mpi_comm)
+    CALL mpi_bc(this%band_max(1),rank,mpi_comm)
+    CALL mpi_bc(this%band_min(2),rank,mpi_comm)
+    CALL mpi_bc(this%band_max(2),rank,mpi_comm)
+    CALL mpi_bc(this%gfthick,rank,mpi_comm)
+    CALL mpi_bc(this%gfcut,rank,mpi_comm)
+    CALL mpi_bc(this%unigrid(1),rank,mpi_comm)
+    CALL mpi_bc(this%unigrid(2),rank,mpi_comm)
+    CALL mpi_bc(this%unigrid(3),rank,mpi_comm)
+    CALL mpi_bc(this%unigrid(4),rank,mpi_comm)
+    CALL mpi_bc(this%unigrid(5),rank,mpi_comm)
+    CALL mpi_bc(this%unigrid(6),rank,mpi_comm)
+    CALL mpi_bc(this%mhp(1),rank,mpi_comm)
+    CALL mpi_bc(this%mhp(2),rank,mpi_comm)
+    CALL mpi_bc(this%mhp(3),rank,mpi_comm)
+    CALL mpi_bc(this%l_ms,rank,mpi_comm)
+    CALL mpi_bc(this%l_sgwf,rank,mpi_comm)
+    CALL mpi_bc(this%l_socgwf,rank,mpi_comm)
+    CALL mpi_bc(this%l_gwf,rank,mpi_comm)
+    CALL mpi_bc(this%l_bs_comf,rank,mpi_comm)
+    CALL mpi_bc(this%l_exist,rank,mpi_comm)
+    CALL mpi_bc(this%l_opened,rank,mpi_comm)
+    CALL mpi_bc(this%l_cleverskip,rank,mpi_comm)
+    CALL mpi_bc(this%l_dim(1),rank,mpi_comm)
+    CALL mpi_bc(this%l_dim(2),rank,mpi_comm)
+    CALL mpi_bc(this%l_dim(3),rank,mpi_comm)
+    CALL mpi_bc(this%scale_param,rank,mpi_comm)
+    CALL mpi_bc(this%aux_latt_const,rank,mpi_comm)
+    CALL mpi_bc(this%hdwf_t1,rank,mpi_comm)
+    CALL mpi_bc(this%hdwf_t2,rank,mpi_comm)
+    CALL mpi_bc(this%nparampts,rank,mpi_comm)
+    CALL mpi_bc(this%param_vec,rank,mpi_comm)
+    CALL mpi_bc(this%param_alpha,rank,mpi_comm)
+
+    !Not done
+    !CHARACTER(len=20) :: fn_eig=''
+    !CHARACTER(len=20) :: param_file='qpts'
+    !CHARACTER(LEN=20), ALLOCATABLE :: jobList(:)
+
+
+
+  END SUBROUTINE mpi_bc_wannier
+
   SUBROUTINE read_xml_wannier(this,xml)
     USE m_types_xml
     CLASS(t_wann),INTENT(inout):: this

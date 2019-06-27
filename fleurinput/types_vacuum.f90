@@ -31,8 +31,42 @@ MODULE m_types_vacuum
       INTEGER, ALLOCATABLE :: izlay(:, :)
     CONTAINS
       PROCEDURE :: read_xml
+      PROCEDURE :: mpi_bc => mpi_bc_vacuum
    END TYPE t_vacuum
  CONTAINS
+
+   SUBROUTINE mpi_bc_vacuum(this,mpi_comm,irank)
+    use m_mpi_bc_tool
+    CLASS(t_vacuum),INTENT(INOUT)::this
+    INTEGER,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank
+    IF (PRESENT(irank)) THEN
+       rank=0
+    else
+       rank=irank
+    END IF
+    CALL mpi_bc(this%nmz,rank,mpi_comm)
+    CALL mpi_bc(this%nmzd,rank,mpi_comm)
+    CALL mpi_bc(this%nmzxy,rank,mpi_comm)
+    CALL mpi_bc(this%nmzxyd,rank,mpi_comm)
+    CALL mpi_bc(this%layerd,rank,mpi_comm)
+    CALL mpi_bc(this%layers,rank,mpi_comm)
+    CALL mpi_bc(this%nvac,rank,mpi_comm)
+    CALL mpi_bc(this%nvacd,rank,mpi_comm)
+    CALL mpi_bc(this%delz,rank,mpi_comm)
+    CALL mpi_bc(this%dvac,rank,mpi_comm)
+    CALL mpi_bc(this%nstars,rank,mpi_comm)
+    CALL mpi_bc(this%nstm,rank,mpi_comm)
+    CALL mpi_bc(this%tworkf,rank,mpi_comm)
+    CALL mpi_bc(this%locx(1),rank,mpi_comm)
+    CALL mpi_bc(this%locy(1),rank,mpi_comm)
+    CALL mpi_bc(this%locx(2),rank,mpi_comm)
+    CALL mpi_bc(this%locy(2),rank,mpi_comm)
+    CALL mpi_bc(this%starcoeff,rank,mpi_comm)
+    CALL mpi_bc(this%izlay,rank,mpi_comm)
+    
+  END SUBROUTINE mpi_bc_vacuum
    SUBROUTINE read_xml(this,xml)
      USE m_types_xml
      CLASS(t_vacuum),INTENT(INOUT)::this

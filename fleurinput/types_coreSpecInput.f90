@@ -27,9 +27,42 @@ MODULE m_types_coreSpecInput
      REAL :: beta_ex   ! maximal (measured) angle of outcoming electrons
      REAL :: I0        ! incoming intensity
    CONTAINS
-     PROCEDURE read_xml=>read_xml_corespecinput
+     PROCEDURE :: read_xml=>read_xml_corespecinput
+     PROCEDURE :: mpi_bc=>mpi_bc_corespecinput
   END TYPE t_coreSpecInput
 CONTAINS
+
+  SUBROUTINE mpi_bc_corespecinput(this,mpi_comm,irank)
+    use m_mpi_bc_tool
+    class(t_corespecinput),INTENT(INOUT)::this
+    integer,INTENT(IN):: mpi_comm
+    INTEGER,INTENT(IN),OPTIONAL::irank
+    INTEGER ::rank,n
+    if (present(irank)) THEN
+       rank=0
+    else
+       rank=irank
+    end if
+    CALL mpi_bc(this%verb,rank,mpi_comm)
+    CALL mpi_bc(this%atomType  ,rank,mpi_comm)
+    CALL mpi_bc(this%lx  ,rank,mpi_comm)
+    CALL mpi_bc(this%ek0  ,rank,mpi_comm)
+    CALL mpi_bc(this%emn  ,rank,mpi_comm)
+    CALL mpi_bc(this%emx  ,rank,mpi_comm)
+    CALL mpi_bc(this%ein  ,rank,mpi_comm)
+    CALL mpi_bc(this%nqphi ,rank,mpi_comm)
+    CALL mpi_bc(this%nqr   ,rank,mpi_comm)
+    CALL mpi_bc(this%alpha_ex  ,rank,mpi_comm)
+    CALL mpi_bc(this%beta_ex   ,rank,mpi_comm)
+    CALL MPI_BC(THIS%I0        ,RANK,MPI_COMM)
+    !CALL MPI_BC(THIS%edge,RANK,MPI_COMM)
+    
+    DO n=1,SIZE(this%edgeidx)
+       CALL MPI_BC(THIS%edgeidx(n),RANK,MPI_COMM)
+    END DO
+   
+  END SUBROUTINE mpi_bc_corespecinput
+
   SUBROUTINE read_xml_corespecinput(This,xml)
     USE m_types_xml
     CLASS(t_coreSpecInput),INTENT(INOUT)::this

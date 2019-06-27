@@ -10,7 +10,7 @@ CONTAINS
     TYPE(t_cell),INTENT(OUT)::cell
     TYPE(t_sym),INTENT(OUT)::sym
     TYPE(t_atoms),INTENT(OUT)::atoms
-    TYPE(t_input),INTENT(OUT)::input !mpi_bc done
+    TYPE(t_input),INTENT(OUT)::input 
     TYPE(t_noco),INTENT(OUT)::noco
     TYPE(t_vacuum),INTENT(OUT)::vacuum
     TYPE(t_field),INTENT(OUT)::field
