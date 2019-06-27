@@ -2466,6 +2466,7 @@
       
       !(2) calculate convolution
       call timestart("calc convolution")
+      call timestart("step function")
       ALLOCATE ( z0(bandoi:bandof,ngpt0) )
       z0 = 0
       DO ig2 = 1,lapw_nkqpt%nv(jsp)
@@ -2480,7 +2481,9 @@
           END DO
         END DO
       END DO
+      call timestop("step function")
       
+      call timestart("hybrid gptm")
       ic   = nbasm_mt
       DO igptm = 1,hybrid%ngptm(iq)
         carr2  = 0
@@ -2508,6 +2511,7 @@
         END DO
         cprod(ic,:,:) = carr2(:,:)
       END DO    
+      call timestop("hybrid gptm")
       DEALLOCATE(z0,pointer,gpt0)     
       call timestop("calc convolution")
      
