@@ -60,7 +60,6 @@ CONTAINS
       USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot_libxc),INTENT(INOUT)    :: xcpot
-      TYPE(t_xcpot_inbuild),INTENT(IN)      :: xcpot_ib
       INTEGER, INTENT(IN)                 :: jspins,func_vxc_id_x,func_vxc_id_c,func_exc_id_x,func_exc_id_c
       LOGICAL                             :: same_functionals   ! are vxc and exc equal
       INTEGER                             :: errors(4)

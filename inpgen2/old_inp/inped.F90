@@ -82,7 +82,8 @@
           CHARACTER(8) llr(0:1)
           INTEGER  jri1(atoms%ntype),lmax1(atoms%ntype)
           REAL    rmt1(atoms%ntype),dx1(atoms%ntype)
-
+          character(len=5)::namgrp
+          real     ::scalecell
           !     ..
           !     .. Data statements ..
           DATA llr(0)/'absolute'/,llr(1)/'floating'/
@@ -96,7 +97,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3,latnam,grid)
+               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
@@ -125,7 +126,7 @@
 
 8010      FORMAT (/,/,4x,10a8,/,/)
           !--->    the menu for namgrp can be found in subroutine spgset
-          WRITE (6,FMT=8030) latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
+          WRITE (6,FMT=8030) latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins
 8030      FORMAT (' lattice=',a3,/,' name of space group=',a4,/,' inversion symmetry=   ',l1&
                ,/,' z-reflection symmetry=',l1,/,' vacuum-inversion symm=',l1,/,' jspins=',i1)
 
@@ -143,9 +144,9 @@
              CALL juDFT_error("latnam",calledby ="inped")
           ENDIF
           dtild=a3(3)
-          IF (input%scaleCell.EQ.0.0) input%scaleCell = 1.0
-          vacuum%dvac = input%scaleCell*vacuum%dvac
-          dtild = input%scaleCell*dtild
+          IF (scaleCell.EQ.0.0) scaleCell = 1.0
+          vacuum%dvac = scaleCell*vacuum%dvac
+          dtild = scaleCell*dtild
           !+odim
           IF (.NOT.oneD%odd%d1) THEN
              IF ((dtild-vacuum%dvac.LT.0.0).AND.input%film) THEN
@@ -168,10 +169,10 @@
           IF (vacuum%nmz>vacuum%nmzd)  CALL juDFT_error("nmzd",calledby ="inped")
           vacuum%nmzxy = vacuum%nmzxyd
           IF (vacuum%nmzxy>vacuum%nmzxyd)  CALL juDFT_error("nmzxyd",calledby ="inped")
-          a1(:) = input%scaleCell*a1(:)
-          a2(:) = input%scaleCell*a2(:)
-          a3(:) = input%scaleCell*a3(:)
-          WRITE (6,FMT=8050) input%scaleCell
+          a1(:) = scaleCell*a1(:)
+          a2(:) = scaleCell*a2(:)
+          a3(:) = scaleCell*a3(:)
+          WRITE (6,FMT=8050) scaleCell
 8050      FORMAT (' unit cell scaled by    ',f10.6)
           WRITE (6,FMT=8060) cell%z1
 8060      FORMAT (' the vacuum begins at z=',f10.6)
@@ -181,7 +182,7 @@
           cell%amat(:,1) = a1(:)
           cell%amat(:,2) = a2(:)
           cell%amat(:,3) = a3(:)
-          call cell%init(-1.)
+          call cell%init()
           !CALL inv3(cell%amat,cell%bmat,cell%omtil)
           !cell%bmat(:,:) = tpi_const*cell%bmat(:,:)
           !cell%bbmat=MATMUL(cell%bmat,TRANSPOSE(cell%bmat))
@@ -219,8 +220,10 @@
                f12.6,/,2x, 'the area of the two-dimensional unit cell=',f12.6)
           WRITE (6,FMT=8120) namex,relcor
 8120      FORMAT (1x,'exchange-correlation: ',a4,2x,a12,1x,'correction')
-
-          CALL xcpot%init(namex,relcor.EQ.'relativistic',atoms%ntype)
+          xcpot%l_inbuild=.true.
+          xcpot%inbuild_name=namex
+          xcpot%l_relativistic=relcor.EQ.'relativistic'
+          CALL xcpot%init(atoms%ntype)
 !!$          xcpot%icorr = -99
 !!$
 !!$          !     l91: lsd(igrd=0) with dsprs=1.d-19 in pw91.
@@ -327,7 +330,7 @@
                 !
                 !--->   for films, the z-coordinates are given in absolute values:
                 !
-                IF (input%film) atoms%taual(3,na) = input%scaleCell*atoms%taual(3,na)/a3(3)
+                IF (input%film) atoms%taual(3,na) = scaleCell*atoms%taual(3,na)/a3(3)
                 !
                 ! Transform intern coordinates to cartesian:
                 !

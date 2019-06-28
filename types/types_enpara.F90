@@ -6,11 +6,11 @@
 
 MODULE m_types_enpara
   USE m_judft
+  use m_types_enparaxml
   IMPLICIT NONE
   PRIVATE
-  TYPE:: t_enpara
+  TYPE,extends(t_enparaxml):: t_enpara
      REAL, ALLOCATABLE CPP_MANAGED   :: el0(:,:,:)
-     REAL                 :: evac0(2,2)
      REAL                 :: evac(2,2)
      REAL, ALLOCATABLE    :: ello0(:,:,:)
      REAL, ALLOCATABLE    :: el1(:,:,:)
@@ -24,10 +24,8 @@ MODULE m_types_enpara
      REAL                 :: epara_min
      LOGICAL              :: ready ! are the enpara's ok for calculation?
      LOGICAL              :: floating !floating energy parameters are relative to potential
-     INTEGER,ALLOCATABLE  :: qn_el(:,:,:)    !>if these are .ne.0 they are understood as
-     INTEGER,ALLOCATABLE  :: qn_ello(:,:,:)  !>quantum numbers
    CONTAINS
-     PROCEDURE :: init
+     PROCEDURE :: init_enpara
      PROCEDURE :: update
      PROCEDURE :: read
      PROCEDURE :: write
@@ -40,14 +38,14 @@ MODULE m_types_enpara
   PUBLIC:: t_enpara
 
 CONTAINS
-  SUBROUTINE init(this,atoms,jspins,film,enparaXML)
+  SUBROUTINE init_enpara(this,atoms,jspins,film,enparaXML)
     USE m_types_setup
     USE m_constants
     CLASS(t_enpara),INTENT(inout):: this
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER,INTENT(IN)           :: jspins
     LOGICAL,INTENT(IN)           :: film
-    type(t_enparaxml)            :: enparaxml
+    TYPE(t_enparaxml),OPTIONAL   :: enparaxml
  
     LOGICAL :: l_enpara
     
@@ -75,17 +73,19 @@ CONTAINS
 
     this%evac0=eVac0Default_const
 
-    inquire(file="enpara",exist=l_exist)
-    if (l_exist) then
-       call enpara%read(atoms,jspins,film,.true.)
+    inquire(file="enpara",exist=l_enpara)
+    if (l_enpara) then
+       call this%read(atoms,jspins,film,.true.)
     else
-       enpara%qn_el=enparaxml%qn_el
-       enpara%qn_ello=enparaxml%qn_ello
-       enpara%evac0=enparaxml%evac0
+       IF (PRESENT(enparaxml)) THEN
+          this%qn_el=enparaxml%qn_el
+          this%qn_ello=enparaxml%qn_ello
+          this%evac0=enparaxml%evac0
+       END IF
     endif
     
     
-  END SUBROUTINE init
+  END SUBROUTINE init_enpara
 
   !> This subroutine adjusts the energy parameters to the potential. In particular, it
   !! calculated them in case of qn_el>-1,qn_ello>-1

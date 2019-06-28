@@ -43,10 +43,8 @@ old_inp/rw_symfile.f
 old_inp/spg2set.f
 
 ${FLEUR_SRC}/init/compile_descr.F90
-${FLEUR_SRC}/global/constants.f90
 ${FLEUR_SRC}/global/sort.f90
 ${FLEUR_SRC}/math/inv3.f90
-${FLEUR_SRC}/io/calculator.f
 ${FLEUR_SRC}/io/w_inpXML.f90
 ${FLEUR_SRC}/kpoints/divi.f
 ${FLEUR_SRC}/kpoints/bravais.f
@@ -63,48 +61,30 @@ ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/matmul.f
 ${FLEUR_SRC}/init/strgn_dim.F
 ${FLEUR_SRC}/init/spgrot.f
-${FLEUR_SRC}/init/convn_dim.f
-${FLEUR_SRC}/io/types_xml.f90
-
-
+#${FLEUR_SRC}/init/convn_dim.f
 
 ${FLEUR_SRC}/types/types_mat.F90
 ${FLEUR_SRC}/types/types_xcpot_inbuild_nofunction.F90
-${FLEUR_SRC}/types/types_xcpot.F90
 ${FLEUR_SRC}/types/types_xcpot_data.F90
 ${FLEUR_SRC}/types/types_xcpot_libxc.F90
 ${FLEUR_SRC}/types/types_mpi.F90
+${FLEUR_SRC}/types/types_forcetheo.F90
 ${FLEUR_SRC}/types/types_stars.f90
-${FLEUR_SRC}/types/types_atoms.F90
 ${FLEUR_SRC}/types/types_lapw.F90
 ${FLEUR_SRC}/types/types_sphhar.f90
 ${FLEUR_SRC}/types/types_tlmplm.F90
 ${FLEUR_SRC}/types/types_misc.F90
 ${FLEUR_SRC}/types/types_mpimat.F90
 ${FLEUR_SRC}/types/types_potden.F90
-${FLEUR_SRC}/types/types_forcetheo.F90
-${FLEUR_SRC}/types/types_kpts.f90
-${FLEUR_SRC}/types/types_wannier.f90
-${FLEUR_SRC}/types/types_coreSpecInput.f90
 ${FLEUR_SRC}/types/types_enpara.F90
 ${FLEUR_SRC}/types/types_setup.F90
 ${FLEUR_SRC}/types/types_usdus.F90
 ${FLEUR_SRC}/types/types_cdnval.f90
-${FLEUR_SRC}/types/types_field.F90
 ${FLEUR_SRC}/types/types_regionCharges.f90
 ${FLEUR_SRC}/types/types_dos.f90
 ${FLEUR_SRC}/types/types_denCoeffsOffdiag.f90
 ${FLEUR_SRC}/types/types_gpumat.F90
-${FLEUR_SRC}/types/types_econfig.F90
-${FLEUR_SRC}/types/types_cell.f90
-${FLEUR_SRC}/types/types_sym.f90
-${FLEUR_SRC}/types/types_input.f90
-${FLEUR_SRC}/types/types_sliceplot.f90
-${FLEUR_SRC}/types/types_oneD.f90
-${FLEUR_SRC}/types/types_hybrid.f90
-${FLEUR_SRC}/types/types_noco.f90
-${FLEUR_SRC}/types/types_banddos.f90
-${FLEUR_SRC}/types/types_vacuum.f90
+${FLEUR_SRC}/types/types_dimension.f90
 
 ${FLEUR_SRC}/io/nocoInputCheck.F90
 ${FLEUR_SRC}/eigen/orthoglo.F90
@@ -138,7 +118,6 @@ ${FLEUR_SRC}/math/inwint.f
 ${FLEUR_SRC}/math/outint.f
 ${FLEUR_SRC}/math/intgr.F90
 ${FLEUR_SRC}/global/find_enpara.f90
-${FLEUR_SRC}/mpi/mpi_bc_tool.F90
 ${FLEUR_SRC}/math/d_wigner.F90
 ${FLEUR_SRC}/io/xsf_io.f90
 ${FLEUR_SRC}/init/boxdim.f
@@ -151,3 +130,4 @@ target_compile_definitions(inpgen2 PUBLIC ${FLEUR_DEFINITIONS})
 target_link_libraries(inpgen2 ${FLEUR_LIBRARIES})
 target_link_libraries(inpgen2 ${FLEUR_LINK_LIBRARIES})
 target_link_libraries(inpgen2 juDFT)
+target_link_libraries(inpgen2 fleurinput)

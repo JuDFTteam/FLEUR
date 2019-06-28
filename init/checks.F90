@@ -42,14 +42,17 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    subroutine check_input_switches(banddos,vacuum,noco,atoms,input)
-      use m_types
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input)
+      USE m_nocoInputCheck
+      USE m_types
       type(t_banddos),INTENT(IN)::banddos
       type(t_vacuum),INTENT(IN) ::vacuum
       type(t_noco),INTENT(IN)   ::noco
       type(t_atoms),INTENT(IN)  ::atoms
       type(t_input),INTENT(IN)  ::input
       
+      integer :: i
+
            ! Check DOS related stuff (from inped)
 
      IF ((banddos%ndir.LT.0).AND..NOT.banddos%dos) THEN
@@ -85,6 +88,6 @@ MODULE m_checks
         END DO
      END IF
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,vacuum,noco)
-
+   END SUBROUTINE check_input_switches
     
   END MODULE m_checks

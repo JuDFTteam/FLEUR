@@ -65,7 +65,7 @@ CONTAINS
     REAL                          :: a1(3),a2(3),a3(3)
     REAL                          :: dtild, phi_add
     LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
-    character(len=4)              :: latnam
+    character(len=4)              :: latnam,namgrp
 
     namex = '    '
     relcor = '            '
@@ -158,7 +158,7 @@ CONTAINS
     
     CALL setup(atoms,kpts,&
          sym,oneD,input,cell,&
-         enpara,latnam)
+         enpara,latnam,namgrp)
 
     banddos%l_orb = .FALSE.
     banddos%orbCompAtom = 0

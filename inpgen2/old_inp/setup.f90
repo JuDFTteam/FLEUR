@@ -2,7 +2,7 @@
       USE m_juDFT
       CONTAINS
         SUBROUTINE setup(atoms,kpts,&
-             sym,oneD, input,cell,enpara,latnam)
+             sym,oneD, input,cell,enpara,latnam,namgrp)
           !stripped down version    
           !
           !----------------------------------------
@@ -65,17 +65,17 @@
           TYPE(t_input),INTENT(INOUT)    :: input
           TYPE(t_cell),INTENT(INOUT)     :: cell
           TYPE(t_enpara),INTENT(INOUT)   :: enpara
-          CHARACTER(len=*),intent(in)    :: latnam
+          CHARACTER(len=*),intent(in)    :: latnam,namgrp
           !     ..
           !     .. Local Scalars ..
           REAL       :: rkmaxx
           INTEGER    :: ntp1,ii,i,j,n1,n2,na,np1,n
           INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
           !
-          IF (sym%namgrp.EQ.'any ') THEN
+          IF (namgrp.EQ.'any ') THEN
              CALL rw_symfile('R',94,'sym.out',sym%nop,cell%bmat, sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
           ELSE
-             CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,latnam, sym%mrot,sym%tau,sym%nop2,sym%symor)
+             CALL spg2set(sym%nop,sym%zrfs,sym%invs,namgrp,latnam, sym%mrot,sym%tau,sym%nop2,sym%symor)
           ENDIF
           IF (input%film.AND..NOT.sym%symor) CALL juDFT_warn("Films&Symor",hint&
                &     ="Films should be symmorphic",calledby ='setup')

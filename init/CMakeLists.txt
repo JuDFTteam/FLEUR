@@ -18,7 +18,9 @@ init/compile_descr.F90
 init/checks.F90
 init/efield.f90
 init/gen_map.f90
-init/inpeig.f90
+init/make_stars.f90
+init/make_sphhar.f90
+#init/inpeig.f90
 init/mapatom.F90
 init/od_mapatom.F90
 init/od_strgn1.f90

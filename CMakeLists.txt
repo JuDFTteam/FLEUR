@@ -20,7 +20,7 @@ include("cmake/filespecific.cmake")
 
 include("cmake/ReportConfig.txt")
 
-#add_subdirectory("inpgen2")
+add_subdirectory("inpgen2")
 
 
 #install(TARGETS fleur inpgen DESTINATION bin)

@@ -87,14 +87,14 @@ CONTAINS
       !
       stars%gmax     = merge(stars%gmax,3.0*input%rkmax,stars%gmax>0)
       stars%gmax     = real(NINT(stars%gmax    * 10  ) / 10.)
-      stars%gmaxInit = stars%gmax
+      input%gmax     = stars%gmax
 
       !
       !xcpot
       !
       xcpot%gmaxxc  = merge(xcpot%gmaxxc,3.0*input%rkmax,xcpot%gmaxxc>0)
       xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
-      if (xcpot%icorr==0) call xcpot%init("pbe ",.false.,atoms%ntype) 
+      if (xcpot%icorr==0) call xcpot%init(atoms%ntype) 
 
       !
       !vacuum

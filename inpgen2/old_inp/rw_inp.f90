@@ -11,7 +11,7 @@
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,latnam,grid)!,name_opt)
+     &                  noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)!,name_opt)
 
 !*********************************************************************
 !* This subroutine reads or writes an inp - file on unit iofile      *
@@ -53,11 +53,11 @@
       TYPE(t_xcpot_inbuild_nf),INTENT(INOUT)    :: xcpot
       TYPE(t_noco),INTENT(INOUT)     :: noco
     
-      REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3)
+      REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3),scalecell
       CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntype)
       CHARACTER(len=4),INTENT(OUT) :: namex 
       CHARACTER(len=12),INTENT(OUT):: relcor
-      CHARACTER(len=*),INTENT(INOUT)::latnam
+      CHARACTER(len=*),INTENT(INOUT)::latnam,namgrp
       INTEGER,INTENT(OUT)::grid(3)
       !CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
 
@@ -154,9 +154,9 @@
  7000 FORMAT (10a8)
 !
       READ (UNIT=5,FMT=7020,END=99,ERR=99)&
-     &     latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+     &     latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
       WRITE (6,9020)&
-     &     latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+     &     latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
  7020 FORMAT (a3,1x,a4,6x,l1,6x,l1,7x,l1,8x,i1,8x,l1,5x,l1)
 !
       IF ((latnam.EQ.'squ').OR.(latnam.EQ.'hex').OR.&
@@ -260,11 +260,8 @@
          a2(2) = -a1(2)
       END IF
 
-      input%scaleA1 = 1.0
-      input%scaleA2 = 1.0
-      input%scaleC  = 1.0
-
-      IF (sym%namgrp.EQ.'any ') THEN
+      
+      IF (namgrp.EQ.'any ') THEN
         INQUIRE (file='sym.out',exist=l_sym)
         IF (.not.l_sym)&
      &       CALL juDFT_error(&
@@ -273,7 +270,7 @@
       ENDIF
       IF (latnam.EQ.'any') THEN
 !        CALL juDFT_error("please specify lattice type (squ,p-r,c-r,hex,hx3,obl)",calledby="rw_inp")
-        READ (UNIT=5,FMT=*,iostat=ierr) a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
+        READ (UNIT=5,FMT=*,iostat=ierr) a3(1),a3(2),a3(3),vacuum%dvac,scaleCell
         IF (ierr /= 0) THEN
            BACKSPACE(5)
            READ (UNIT = 5,FMT ="(a)",END = 99,ERR = 99) line
@@ -281,19 +278,19 @@
            a3(2)           = evaluatefirst(line)
            a3(3)           = evaluatefirst(line)
            vacuum%dvac     = evaluatefirst(line)
-           input%scaleCell = evaluatefirst(line)
+           scaleCell = evaluatefirst(line)
         ENDIF
-        WRITE (6,9031) a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
+        WRITE (6,9031) a3(1),a3(2),a3(3),vacuum%dvac,scaleCell
       ELSE
-         READ (UNIT = 5,FMT =*,iostat= ierr) vacuum%dvac,dtild,input%scaleCell
+         READ (UNIT = 5,FMT =*,iostat= ierr) vacuum%dvac,dtild,scaleCell
          IF (ierr /= 0) THEN
             BACKSPACE(5)
             READ (UNIT = 5,FMT ="(a)",END = 99,ERR = 99) line
             vacuum%dvac     = evaluatefirst(line)
             dtild           = evaluatefirst(line)
-            input%scaleCell = evaluatefirst(line)
+            scaleCell = evaluatefirst(line)
         ENDIF
-        WRITE (6,9030) vacuum%dvac,dtild,input%scaleCell
+        WRITE (6,9030) vacuum%dvac,dtild,scaleCell
         a3(3) = dtild
       ENDIF
 !
@@ -462,7 +459,7 @@
 !
       READ (UNIT=5,FMT=7210,END=99,ERR=99) stars%gmax,xcpot%gmaxxc
       WRITE (6,9110) stars%gmax,xcpot%gmaxxc
-      stars%gmaxInit = stars%gmax
+      input%gmax = stars%gmax
  7210 FORMAT (2f10.6)
 !
       INQUIRE(file='fl7para',exist=ldum)  ! fl7para must not exist for input%gw=2
@@ -739,7 +736,7 @@
      &        ',ndir=',i2,',secvar=',l1)
       WRITE (5,9010) name
  9010 FORMAT (10a8)
-      WRITE(5,9020) latnam,sym%namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
+      WRITE(5,9020) latnam,namgrp,sym%invs,sym%zrfs,sym%invs2,input%jspins,noco%l_noco
  9020 FORMAT (a3,1x,a4,',invs=',l1,',zrfs=',l1,',invs2=',l1,&
      &       ',jspins=',i1,',l_noco=',l1,',l_J=',l1)
 !
@@ -771,11 +768,11 @@
       ENDIF
 !
       IF (latnam.EQ.'any') THEN
-        WRITE (5,9031)  a3(1),a3(2),a3(3),vacuum%dvac,input%scaleCell
+        WRITE (5,9031)  a3(1),a3(2),a3(3),vacuum%dvac,scaleCell
         dtild = a3(3)
       ELSE
-        WRITE (5,9030) vacuum%dvac,dtild,input%scaleCell
-        a3(3) = input%scaleCell * dtild
+        WRITE (5,9030) vacuum%dvac,dtild,scaleCell
+        a3(3) = scaleCell * dtild
       ENDIF
  9030 FORMAT (3f15.8)
  9031 FORMAT (5f15.8)
@@ -871,7 +868,7 @@
                atoms%taual(i,na) = atoms%taual(i,na)*scpos
             ENDDO
             IF (.NOT.input%film) atoms%taual(3,na) = atoms%taual(3,na)*scpos
-            IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/input%scaleCell
+            IF (input%film) atoms%taual(3,na) = a3(3)*atoms%taual(3,na)/scaleCell
 !+odim in 1D case all the coordinates are given in cartesian YM
             IF (oneD%odd%d1) THEN
                atoms%taual(1,na) = atoms%taual(1,na)*a1(1)

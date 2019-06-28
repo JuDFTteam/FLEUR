@@ -22,10 +22,10 @@
           !     ..
           TYPE(t_sym),INTENT(IN)        :: sym
           TYPE(t_stars),INTENT(INOUT)   :: stars
-          TYPE(t_atoms),INTENT(INOUT)   :: atoms
+          TYPE(t_atoms),INTENT(IN)      :: atoms
           TYPE(t_oneD),INTENT(IN)       :: oneD
           TYPE(t_input),INTENT(IN)      :: input
-          TYPE(t_cell),INTENT(INOUT)    :: cell
+          TYPE(t_cell),INTENT(IN)       :: cell
           TYPE(t_vacuum),INTENT(IN)     :: vacuum
           TYPE(t_mpi),INTENT(IN)        :: mpi
           !     ..
@@ -140,29 +140,6 @@
         !
         ! --> set up stepfunction on fft-grid:
         !
-#ifdef CPP_MPI
-        CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(cell%omtil,1,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(cell%bmat,9,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(sym%invs,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(oneD%odd%d1,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(input%film,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(cell%z1,1,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(cell%vol,1,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
-        IF(.NOT.ALLOCATED(atoms%neq)) ALLOCATE(atoms%neq(atoms%ntype))
-        IF(.NOT.ALLOCATED(atoms%volmts)) ALLOCATE(atoms%volmts(atoms%ntype))
-        IF(.NOT.ALLOCATED(atoms%taual)) ALLOCATE(atoms%taual(3,atoms%nat))
-        IF(.NOT.ALLOCATED(atoms%rmt)) ALLOCATE(atoms%rmt(atoms%ntype))
-        IF(.NOT.ALLOCATED(stars%ufft)) ALLOCATE(stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
-        CALL MPI_BCAST(atoms%neq,size(atoms%neq),MPI_INTEGER,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(atoms%volmts,size(atoms%volmts),CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(atoms%taual,size(atoms%taual),CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
-        CALL MPI_BCAST(atoms%rmt,size(atoms%rmt),CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
-        ALLOCATE ( bfft_local(0:ifftd-1), ufft_local(0:ifftd-1) )
-        bfft_local = 0.0
-        ufft_local = 0.0
-#endif
        
         ALLOCATE (  bfft(0:ifftd-1) )
         im1=CEILING(1.5*stars%mx1); im2=CEILING(1.5*stars%mx2); im3=CEILING(1.5*stars%mx3) 

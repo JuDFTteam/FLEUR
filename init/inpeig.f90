@@ -52,8 +52,7 @@
       IF(PRESENT(enpara)) THEN
          IF (.NOT.input%l_inpXML) THEN
             !read enpara file if present!
-            CALL enpara%init(atoms%ntype,atoms%nlod,atoms%lmaxd,input%jspins)
-            CALL enpara%READ(atoms%ntype,atoms%nlo,input%jspins,input%film,.false.)        
+            CALL enpara%init_enpara(atoms,input%jspins,input%film)
          END IF
       END IF
 !

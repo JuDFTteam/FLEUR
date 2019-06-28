@@ -163,11 +163,7 @@ CONTAINS
     cell%amat(:,1) = aa*scale(:)*a1(:)
     cell%amat(:,2) = aa*scale(:)*a2(:)
     cell%amat(:,3) = aa*scale(:)*a3(:)
-    IF (input%film) THEN
-       CALL cell%init(vacuum%dvac)
-    ELSE
-       CALL cell%init(-1.0)
-    ENDIF
+    CALL cell%init()
     
   END SUBROUTINE read_inpgen_input
 
@@ -294,7 +290,10 @@ CONTAINS
      READ(line,exco,iostat=ios) 
      IF (ios.NE.0) CALL judft_error(("Error reading:"//trim(line)))
 
-     call xcpot%init(xctyp,relxc,1) !Is it OK to use ntype=1 here??
+     xcpot%l_inbuild=.true.
+     xcpot%inbuild_name=xctyp
+     xcpot%l_relativistic=relxc
+     call xcpot%init(1) !Is it OK to use ntype=1 here??
    END SUBROUTINE process_exco
 
    SUBROUTINE process_comp(line,jspins,frcor,ctail,kcrel,gmax,gmaxxc,kmax)

@@ -205,16 +205,17 @@ MODULE m_types_atoms
 
    SUBROUTINE read_xml_atoms(this,xml)
     USE m_types_xml
+    use m_constants
     IMPLICIT NONE
     CLASS(t_atoms),INTENT(INOUT):: this
     TYPE(t_xml),INTENT(IN)    :: xml
 
     CHARACTER(len=200):: xpaths,xpathg,xpath,valueString,lstring,nstring,core,valence
-    INTEGER           :: i,j,numberNodes,ilo,lNumCount,nNumCount,l,n
+    INTEGER           :: i,j,numberNodes,ilo,lNumCount,nNumCount,l,n,itype,na,jrc
     INTEGER,ALLOCATABLE::lNumbers(:),nNumbers(:)
     LOGICAL           :: relaxx,relaxy,relaxz
     INTEGER,ALLOCATABLE :: itmp(:,:)
-    REAL                :: down,up
+    REAL                :: down,up,dr,radius
     CHARACTER(len=20)   :: state
     this%ntype= xml%get_ntype()
     this%nat =  xml%get_nat()
@@ -412,33 +413,32 @@ MODULE m_types_atoms
        END IF
     END DO
     
-    atoms%jmtd = maxval(atoms%jri(:))
-    ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
-    ALLOCATE(atoms%volmts(atoms%ntype))
+    this%jmtd = maxval(this%jri(:))
+    ALLOCATE(this%rmsh(this%jmtd,this%ntype))
+    ALLOCATE(this%volmts(this%ntype))
     na = 0
-    DO iType = 1, atoms%ntype
+    DO iType = 1, this%ntype
        ! Calculate mesh for valence states
-       radius = atoms%rmt(iType)*exp(atoms%dx(iType)*(1-atoms%jri(iType)))
-       dr = exp(atoms%dx(iType))
-       DO i = 1, atoms%jri(iType)
-          atoms%rmsh(i,iType) = radius
+       radius = this%rmt(iType)*exp(this%dx(iType)*(1-this%jri(iType)))
+       dr = exp(this%dx(iType))
+       DO i = 1, this%jri(iType)
+          this%rmsh(i,iType) = radius
           radius = radius*dr
        END DO
        ! Calculate mesh dimension for core states
-       radius = atoms%rmt(iType)
-       jrc = atoms%jri(iType)
-       DO WHILE (radius < atoms%rmt(iType) + 20.0)
+       radius = this%rmt(iType)
+       jrc = this%jri(iType)
+       DO WHILE (radius < this%rmt(iType) + 20.0)
           jrc = jrc + 1
           radius = radius*dr
        END DO
-       dimension%msh = max(dimension%msh,jrc)
        
-       atoms%volmts(iType) = (fpi_const/3.0)*atoms%rmt(iType)**3
+       this%volmts(iType) = (fpi_const/3.0)*this%rmt(iType)**3
     END DO
-    atoms%nlotot = 0
-    DO n = 1, atoms%ntype
-       DO l = 1,atoms%nlo(n)
-          atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+    this%nlotot = 0
+    DO n = 1, this%ntype
+       DO l = 1,this%nlo(n)
+          this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
        END DO
     END DO
 

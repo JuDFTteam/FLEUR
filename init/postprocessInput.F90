@@ -9,8 +9,8 @@ MODULE m_postprocessInput
 CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
-     oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
-     noco,DIMENSION,enpara,sphhar,l_opti,noel,l_kpts)
+     oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,forcetheo_data,&
+     noco,DIMENSION,enpara,enparaxml,sphhar,l_opti,noel,l_kpts)
 
   USE m_juDFT
   USE m_types
@@ -18,31 +18,29 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   USE m_lapwdim
   USE m_ylm
   USE m_chkmt
-  USE m_localsym
-  USE m_strgndim
-  USE m_od_chisym
   USE m_dwigner
   USE m_mapatom
   USE m_cdn_io
-  USE m_strgn
-  USE m_od_strgn1
-  USE m_prpqfft
   USE m_prpxcfft
-  USE m_stepf
+  use m_checks
+  use m_make_stars
+  use m_make_sphhar
   USE m_convn
   USE m_efield
   USE m_od_mapatom
   USE m_od_kptsgen
-  USE m_nocoInputCheck
   USE m_types_forcetheo_extended
+  USE m_types_xcpot_libxc
+  USE m_types_xcpot_inbuild
+  USE m_types_xcpot_inbuild_nofunction
   USE m_relaxio
-  USE m_prpqfftmap
+ 
          
   IMPLICIT NONE
 
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi
-  CLASS(t_forcetheo),INTENT(OUT):: forcetheo
-  TYPE(t_forcetheo_data),INTENT(OUT):: forcetheo_data
+  CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT):: forcetheo
+  TYPE(t_forcetheo_data),INTENT(IN):: forcetheo_data
   TYPE(t_input),    INTENT(INOUT) :: input
   TYPE(t_sym),      INTENT(INOUT) :: sym
   TYPE(t_stars),    INTENT(INOUT) :: stars 
@@ -57,7 +55,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT) :: xcpot
   TYPE(t_noco),     INTENT(INOUT) :: noco
   TYPE(t_dimension),INTENT(INOUT) :: dimension
-  TYPE(t_enparaXML)   ,INTENT(OUT):: enparaXML
+  TYPE(t_enparaXML)   ,INTENT(IN):: enparaXML
   TYPE(t_enpara)   ,INTENT(OUT)   :: enpara
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   TYPE(t_field),    INTENT(INOUT) :: field
@@ -73,9 +71,10 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   REAL                 :: bk(3)
   LOGICAL              :: l_vca, l_test,l_gga
  
-  INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
+  
   INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
   REAL,    ALLOCATABLE :: rmt1(:), dx1(:)
+  INTEGER              ::func_vxc_id_c,func_vxc_id_x,func_exc_id_c,func_exc_id_x
 
 #ifdef CPP_MPI
   INCLUDE 'mpif.h'
@@ -92,7 +91,10 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      func_exc_id_x=xcpot%func_exc_id_x
      DEALLOCATE(xcpot)
      ALLOCATE(t_xcpot_libxc::xcpot)
-     CALL xcpot%init(func_vxc_id_x,func_vxc_id_c,func_exc_id_x,func_exc_id_c,input%jspins)
+     SELECT TYPE(xcpot)
+     CLASS is (t_xcpot_libxc)!just allocated like this
+        CALL xcpot%init(func_vxc_id_x,func_vxc_id_c,func_exc_id_x,func_exc_id_c,input%jspins)
+     END SELECT
   ELSE
      SELECT TYPE(xcpot)
      CLASS is (t_xcpot_inbuild_nf)
@@ -106,20 +108,28 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   SELECT CASE (forcetheo_data%mode)
   CASE(1)
      ALLOCATE(t_forcetheo_mae::forcetheo)
-     CALL forcetheo%init(forcetheo_data%theta,forcetheo_data%phi,cell,sym)
   CASE(2)
      ALLOCATE(t_forcetheo_dmi::forcetheo)
-     CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta,forcetheo_data%phi)
   CASE(3)
      ALLOCATE(t_forcetheo_jij::forcetheo)
-     CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta(1),atoms)
   CASE(4)
      ALLOCATE(t_forcetheo_ssdisp::forcetheo)
+  END SELECT
+
+  SELECT TYPE(forcetheo)
+  TYPE IS(t_forcetheo_mae)
+     CALL forcetheo%init(forcetheo_data%theta,forcetheo_data%phi,cell,sym)
+  TYPE IS(t_forcetheo_dmi)
+     CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta,forcetheo_data%phi)
+  TYPE IS(t_forcetheo_jij)
+     CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta(1),atoms)
+  TYPE IS(t_forcetheo_ssdisp)
      CALL forcetheo%init(forcetheo_data%qvec)
   END SELECT
-     
+  
+
   !Generate enpara datatype
-  CALL enpara%init(atoms,input%jspins,input%film,enparaXML)
+  CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
 
   IF (mpi%irank.EQ.0) call check_input_switches(banddos,vacuum,noco,atoms,input)
 
@@ -182,91 +192,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   cell%volint = cell%volint - atoms%volmts(iType)*atoms%neq(iType)
 
 
-  ! Dimensioning of lattice harmonics
-
-  ALLOCATE(atoms%nlhtyp(atoms%ntype),atoms%ntypsy(atoms%nat))
-  ALLOCATE(sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1))
-  sphhar%ntypsd = 0
-  IF (.NOT.oneD%odd%d1) THEN
-     CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-          atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
-          atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
-          atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,&
-          sphhar%nmem,sphhar%mlh,sphhar%clnu)
-  ELSE IF (oneD%odd%d1) THEN
-     WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
-     WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
-     ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
-     ii = 1
-     nq1=1
-     DO i = 1,atoms%ntype
-        DO j = 1,atoms%neq(i)
-           lmx1(ii) = atoms%lmax(i)
-           ii = ii + 1
-        END DO
-     END DO
-     CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-          atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
-          sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
-          atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
-          sphhar%mlh,sphhar%clnu)        
-     ii = 1
-     DO i = 1,atoms%ntype
-        atoms%nlhtyp(i) = nlhtp1(ii)
-        ii = ii + atoms%neq(i)
-     END DO
-     DEALLOCATE (nq1,lmx1,nlhtp1)
-  END IF
-  DEALLOCATE(sphhar%clnu,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh)
   
-  ALLOCATE(sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
-  ALLOCATE(sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd))
-  ALLOCATE(sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
-  ALLOCATE(sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd))
-  
-  ! Dimensioning of stars
-  
-  IF (input%film) THEN
-     CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-          sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
-          stars%ng3,stars%ng2,oneD%odd)
-     
-  ELSE
-     CALL strgn2_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
-          sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
-          stars%ng3,stars%ng2)
-     oneD%odd%n2d = stars%ng2
-     oneD%odd%nq2 = stars%ng2
-     oneD%odd%nop = sym%nop
-  END IF
-  
-  stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
-  stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
-  IF (oneD%odd%d1) THEN
-     oneD%odd%k3 = stars%mx3
-     oneD%odd%nn2d = (2*(oneD%odd%k3)+1)*(2*(oneD%odd%M)+1)
-  ELSE
-     oneD%odd%k3 = 0
-     oneD%odd%M = 0
-     oneD%odd%nn2d = 1
-     oneD%odd%mb = 0
-  END IF
-  ALLOCATE (stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-  ALLOCATE (stars%ig2(stars%ng3))
-  ALLOCATE (stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
-  ALLOCATE (stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
-  ALLOCATE (stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
-  ALLOCATE (stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2))
-  ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-  ALLOCATE (stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2))
-  ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-  
-  stars%sk2(:) = 0.0
-  stars%phi2(:) = 0.0
-
-  ! Initialize xc fft box
-  
-  CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
      
   ! Initialize missing 1D code arrays
 
@@ -279,43 +205,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   ! Initialize missing hybrid functionals arrays
 
   ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
-   
-  ! Generate lattice harmonics
-
-  IF (.NOT.oneD%odd%d1) THEN
-     CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
-          atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
-          sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-          atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
-     sym%nsymt = sphhar%ntypsd
-     oneD%mrot1(:,:,:) = sym%mrot(:,:,:)
-     oneD%tau1(:,:) = sym%tau(:,:)
-  ELSE IF (oneD%odd%d1) THEN
-     WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
-     WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
-     CALL od_chisym(oneD%odd,oneD%mrot1,oneD%tau1,sym%zrfs,sym%invs,sym%invs2,cell%amat)
-     ALLOCATE (nq1(atoms%nat),lmx1(atoms%nat),nlhtp1(atoms%nat))
-     ii = 1
-     DO i = 1,atoms%ntype
-        DO j = 1,atoms%neq(i)
-           nq1(ii) = 1
-           lmx1(ii) = atoms%lmax(i)
-           ii = ii + 1
-        END DO
-     END DO
-     CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
-          atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
-          sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-          nlhtp1,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
-     sym%nsymt = sphhar%ntypsd
-     ii = 1
-     DO i = 1,atoms%ntype
-        atoms%nlhtyp(i) = nlhtp1(ii)
-        ii = ii + atoms%neq(i)
-     END DO
-     DEALLOCATE (lmx1,nlhtp1)
-  END IF
-  
+    
   ! Calculate additional symmetry information
   
   IF (atoms%n_u.GT.0) THEN
@@ -340,28 +230,16 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
   
   
-  ! Missing xc functionals initializations
-  IF (xcpot%needs_grad()) THEN
-     ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
-     ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
-          oneD%pgft1xy(0:oneD%odd%nn2d-1),&
-          oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
-  ELSE
-     ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
-     ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
-          oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
-  END IF
-  oneD%odd%nq2 = oneD%odd%n2d
-  oneD%odi%nq2 = oneD%odd%nq2
-  
-  call stars%init(sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,mpi)
+
+  call make_sphhar(atoms,sphhar,sym,cell,oneD)
+  CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
 
   ! Store structure data
   
   CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
   
- 
-  
+  !DIMENSION%msh = MAXVAL(DIMENSION%msh,jrc)
+   
   !Adjust kpoints in case of DOS
   
   IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN

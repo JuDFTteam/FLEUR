@@ -36,7 +36,7 @@ SUBROUTINE w_inpXML(&
    USE m_types_xcpot
    USE m_types_xcpot_inbuild_nofunction
    USE m_types_noco
-   use m_types_enpara
+   use m_types_enparaxml
    USE m_types_forcetheo 
   
    USE m_juDFT
@@ -60,7 +60,7 @@ SUBROUTINE w_inpXML(&
    TYPE(t_sliceplot),INTENT(IN):: sliceplot
    CLASS(t_xcpot),INTENT(IN)   :: xcpot
    TYPE(t_noco),INTENT(IN)     :: noco
-   TYPE(t_enpara),INTENT(IN)   :: enpara
+   CLASS(t_enparaxml),INTENT(IN)   :: enpara
    CLASS(t_forcetheo),INTENT(IN):: forcetheo !nothing is done here so far....
    LOGICAL, INTENT (IN)        :: l_explicitIn,l_includeIn(4)
    CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: filename

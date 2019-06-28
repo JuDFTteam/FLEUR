@@ -19,6 +19,7 @@ CONTAINS
     USE m_types_oneD
     USE m_types_sliceplot
     USE m_types_stars
+    USE m_types_sphhar
     USE m_fleur_init_old
     USE m_atompar
     USE m_constants

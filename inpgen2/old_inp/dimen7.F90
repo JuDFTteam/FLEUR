@@ -90,9 +90,9 @@
       INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
 
 !     added for HF and hybrid functionals
-      LOGICAL               ::  l_gamma=.false.
-      character(len=4) :: latnam
-
+      LOGICAL          ::  l_gamma=.false.
+      character(len=4) :: latnam,namgrp
+      real             :: scalecell
       EXTERNAL prp_xcfft_box!,parawrite
 !     ..
       
@@ -130,7 +130,7 @@
       CALL rw_inp('r',&
      &            atoms,vacuum,input,stars,sliceplot,banddos,&
      &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,latnam,grid)
+     &                  noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)
 
 !---> pk non-collinear
 !---> read the angle and spin-spiral information from nocoinp
@@ -200,9 +200,9 @@
 !
 ! ---> now, set the lattice harmonics, determine nlhd
 !
-      cell%amat(:,1) = a1(:)*input%scaleCell
-      cell%amat(:,2) = a2(:)*input%scaleCell
-      cell%amat(:,3) = a3(:)*input%scaleCell
+      cell%amat(:,1) = a1(:)*scaleCell
+      cell%amat(:,2) = a2(:)*scaleCell
+      cell%amat(:,3) = a3(:)*scaleCell
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       IF (input%film) cell%omtil = cell%omtil/cell%amat(3,3)*vacuum%dvac
 !-odim
@@ -220,12 +220,12 @@
         atoms%zatom(n) = real( atoms%nz(n) )
       ENDDO
       ALLOCATE (sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
-      IF (sym%namgrp.EQ.'any ') THEN
+      IF (namgrp.EQ.'any ') THEN
          nopd = sym%nop ; rw = 'R'
          symfh = 94 ; symfn = 'sym.out'
          CALL rw_symfile(rw,symfh,symfn,nopd,cell%bmat,sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
       ELSE
-         CALL spg2set(sym%nop,sym%zrfs,sym%invs,sym%namgrp,latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
+         CALL spg2set(sym%nop,sym%zrfs,sym%invs,namgrp,latnam,sym%mrot,sym%tau,sym%nop2,sym%symor)
       ENDIF
       sphhar%ntypsd = 0
       IF (.NOT.oneD%odd%d1) THEN
@@ -290,7 +290,7 @@
 !
 ! Dimensioning of the stars
 !
-      IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
+      IF (input%film.OR.(namgrp.ne.'any ')) THEN
          CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
                     sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
                     stars%ng3,stars%ng2,oneD%odd)
@@ -336,7 +336,7 @@
             WRITE (41,'(i5,f20.10)') kpts%nkpt,1.0
             DO n = 1, kpts%nkpt
               READ (15) q
-              WRITE (41,'(4f10.5)') MATMUL(TRANSPOSE(cell%amat),q)/input%scaleCell,1.0
+              WRITE (41,'(4f10.5)') MATMUL(TRANSPOSE(cell%amat),q)/scaleCell,1.0
               READ (15)
             ENDDO
             CLOSE (15)
