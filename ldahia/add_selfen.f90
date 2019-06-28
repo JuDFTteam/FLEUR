@@ -31,12 +31,12 @@ MODULE m_add_selfen
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_input),    INTENT(IN)     :: input
-      COMPLEX,          INTENT(IN)     :: selfen(hub1%n_hia,g%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
+      COMPLEX,          INTENT(IN)     :: selfen(atoms%n_hia,g%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
       REAL,             INTENT(IN)     :: ef
-      REAL,             INTENT(IN)     :: n_occ(hub1%n_hia)
+      REAL,             INTENT(IN)     :: n_occ(atoms%n_hia)
       REAL,             INTENT(IN)     :: mu_dc
-      COMPLEX,          INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,input%jspins)
-      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,input%jspins)
+      COMPLEX,          INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
+      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
 
       INTEGER i_hia,l,nType,i_gf,ns,ispin,m,iz,ipm
       CHARACTER(len=6) app
@@ -56,9 +56,9 @@ MODULE m_add_selfen
       mu_max = 0.0
       n_max = 0.0
 
-      DO i_hia = 1, hub1%n_hia
-         l = hub1%lda_u(i_hia)%l
-         nType = hub1%lda_u(i_hia)%atomType
+      DO i_hia = 1, atoms%n_hia
+         l = atoms%lda_hia(i_hia)%l
+         nType = atoms%lda_hia(i_hia)%atomType
          ns = 2*l+1
          CALL indexgf(atoms,l,nType,i_gf)
          !intialize the matrices

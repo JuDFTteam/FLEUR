@@ -33,7 +33,9 @@ CONTAINS
     REAL                          :: wronk
 
 
-    LOGICAL    :: l_write
+    LOGICAL    :: l_write,l_hia
+    REAL vrav(atoms%jmtd)
+    INTEGER    :: i
     l_write=mpi%irank==0 
     !$ l_write = l_write .and. omp_get_num_threads()==1
 
@@ -41,8 +43,24 @@ CONTAINS
     IF (l_write) WRITE (6,FMT=8000) iType
 
     DO l = 0,atoms%lmax(iType)
-       CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),vTot%mt(:,0,iType,jspin),atoms,&
-            f(1,1,l),g(1,1,l),usdus,nodeu,noded,wronk)
+       !Check if the orbital is to be treated with Hubbard 1
+       l_hia=.FALSE.
+       DO i = 1, atoms%n_hia
+          IF(atoms%lda_hia(i)%atomType.EQ.itype.AND.atoms%lda_hia(i)%l.EQ.l) THEN
+             l_hia=.TRUE.
+          ENDIF
+       ENDDO
+       IF(l_hia.AND.SIZE(vTot%mt,4).GT.1) THEN
+          !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
+          !the correlated orbitals with a non-spin-polarized basis
+         
+          vrav(1:atoms%jri(iType)) = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,1))/2.0
+          CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),vrav,atoms,&
+                     f(1,1,l),g(1,1,l),usdus, nodeu,noded,wronk)  
+       ELSE
+          CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),vTot%mt(:,0,iType,jspin),atoms,&
+               f(1,1,l),g(1,1,l),usdus,nodeu,noded,wronk)
+       ENDIF       
        IF (l_write) THEN
           WRITE (6,FMT=8010) l,enpara%el0(l,iType,jspin),usdus%us(l,iType,jspin),usdus%dus(l,iType,jspin),&
                nodeu,usdus%uds(l,iType,jspin),usdus%duds(l,iType,jspin),noded,usdus%ddn(l,iType,jspin),wronk

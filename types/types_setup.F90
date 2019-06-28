@@ -72,9 +72,7 @@ MODULE m_types_setup
    TYPE t_hub1ham
       !Contains the u_type for use in the LDA+U routines and the additional 
       !information for the atomic hamiltonian
-      INTEGER                    :: n_hia
       LOGICAL                    :: l_runthisiter   !switch which determines wether Hubbard 1 will be run in the current iteration 
-      TYPE(t_utype), ALLOCATABLE :: lda_u(:)         !Information for the interaction term
       REAL, ALLOCATABLE          :: xi(:)           !Spin-orbit coupling parameter
       LOGICAL, ALLOCATABLE       :: l_ccf(:)
       REAL, ALLOCATABLE          :: ccfmat(:,:,:)   !crystal field splitting matrix
@@ -195,6 +193,7 @@ MODULE m_types_setup
       LOGICAL, ALLOCATABLE :: relcor(:)
       !lda_u information(ntype)
       TYPE(t_utype),ALLOCATABLE::lda_u(:)
+      TYPE(t_utype),ALLOCATABLE::lda_hia(:)
       !j0 calc information
       TYPE(t_onsitegftype), ALLOCATABLE::onsiteGF(:)
       TYPE(t_j0calctype), ALLOCATABLE::j0(:)

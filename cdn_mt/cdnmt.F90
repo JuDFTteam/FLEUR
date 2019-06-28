@@ -42,9 +42,10 @@ CONTAINS
     INTEGER ilo,ilop,i
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
+    LOGICAL l_hia
     !     ..
     !     .. Local Arrays ..
-    REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd)
+    REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd),vrav(atoms%jmtd)
     CHARACTER(LEN=20) :: attributes(6)
 
     !     ..
@@ -67,7 +68,7 @@ CONTAINS
     !$OMP SHARED(usdus,rho,moments,qmtl) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
     !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
-    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
+    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs,l_hia,vrav)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
     ELSE
@@ -86,8 +87,24 @@ CONTAINS
        !--->    spherical component
        DO ispin = jsp_start,jsp_end
           DO l = 0,atoms%lmax(itype)
-             CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr(1,itype,ispin),atoms,&
-                  f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
+             !Check if the orbital is to be treated with Hubbard 1
+             l_hia=.FALSE.
+             DO i = 1, atoms%n_hia
+                IF(atoms%lda_hia(i)%atomType.EQ.itype.AND.atoms%lda_hia(i)%l.EQ.l) THEN
+                   l_hia=.TRUE.
+                ENDIF
+             ENDDO
+             IF(l_hia.AND.jspd.EQ.2) THEN
+                !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
+                !the correlated orbitals with a non-spin-polarized basis
+               
+                vrav(1:atoms%jri(itype)) = (vr(1,itype,1) + vr(1,itype,2))/2.0
+                CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vrav,atoms,&
+                f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)  
+             ELSE
+               CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr(1,itype,ispin),atoms,&
+                     f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
+             ENDIF
              DO j = 1,atoms%jri(itype)
                 s = denCoeffs%uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
                      +   denCoeffs%dd(l,itype,ispin)*( g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin) )&

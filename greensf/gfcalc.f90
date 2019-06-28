@@ -53,11 +53,12 @@ MODULE m_gfcalc
 
       INTEGER i, m,mp, l, ispin, nType,ipm,iz
       INTEGER nodeu,noded
-      LOGICAL l_vertcorr
+      LOGICAL l_vertcorr,l_hia
       COMPLEX g_int,nmmp,weight
       REAL    wronk,re,imag,beta
       TYPE(t_usdus) :: usdus
 
+      REAL vrav(atoms%jmtd)
       REAL, ALLOCATABLE :: u(:,:),udot(:,:)
       COMPLEX, ALLOCATABLE :: gr(:)
 
@@ -82,7 +83,22 @@ MODULE m_gfcalc
       DO ispin = 1, input%jspins
          IF(.NOT.input%l_gfsphavg) THEN
             !If we have the radial dependence of the greens function calculate the radial functions here
-            CALL radfun(l,nType,ispin,el0(ispin),vr(:,ispin),atoms,u,udot,usdus,nodeu,noded,wronk)
+            !Check if the orbital is to be treated with Hubbard 1
+            l_hia=.FALSE.
+            DO i = 1, atoms%n_hia
+               IF(atoms%lda_hia(i)%atomType.EQ.nType.AND.atoms%lda_hia(i)%l.EQ.l) THEN
+                  l_hia=.TRUE.
+               ENDIF
+            ENDDO
+            IF(l_hia.AND.input%jspins.EQ.2) THEN
+               !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
+               !the correlated orbitals with a non-spin-polarized basis
+              
+               vrav(1:atoms%jri(nType)) = (vr(1:atoms%jri(nType),1) + vr(1:atoms%jri(nType),2))/2.0
+               CALL radfun(l,nType,ispin,el0(ispin),vrav,atoms,u,udot,usdus, nodeu,noded,wronk)  
+            ELSE
+               CALL radfun(l,nType,ispin,el0(ispin),vr(:,ispin),atoms,u,udot,usdus,nodeu,noded,wronk)
+            ENDIF
          ENDIF
          DO m = -l, l
             DO mp = -l, l
@@ -237,8 +253,8 @@ MODULE m_gfcalc
       tr_hloc = 0.0
       DO i_hia = 1, atoms%n_hia
 
-         l     = hub1%lda_u(i_hia)%l
-         nType = hub1%lda_u(i_hia)%atomType
+         l     = atoms%lda_hia(i_hia)%l
+         nType = atoms%lda_hia(i_hia)%atomType
          CALL indexgf(atoms,l,nType,i_gf)
          !Perform the integration 
          !

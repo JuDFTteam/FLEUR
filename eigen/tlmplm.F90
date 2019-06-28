@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,enpara,&
-       jspin,jsp,mpi,v,input,hub1,td,ud)
+       jspin,jsp,mpi,v,input,td,ud)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
@@ -22,7 +22,6 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)   :: enpara
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_potden),INTENT(IN)    :: v
-    TYPE(t_hub1ham),INTENT(IN)   :: hub1
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
@@ -77,18 +76,6 @@ CONTAINS
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)
-
-          !Remove the nonspherical contribution to the non-spherical potential
-          !In LDA+HIA case
-          l_remove = .FALSE.
-          IF(atoms%n_hia>0.AND.l.EQ.lp) THEN
-            DO i = 1, atoms%n_hia
-               IF(hub1%lda_u(i)%atomType.EQ.n.AND.hub1%lda_u(i)%l.EQ.l) THEN
-                  l_remove = .TRUE.
-               ENDIF
-            ENDDO
-          ENDIF
-
           DO lh = MERGE(1,0,jspin<3), nh
              lamda = sphhar%llh(lh,nsym)
              lmin = lp - l
@@ -120,6 +107,18 @@ CONTAINS
                 CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                 dvd(lpl,lh) = temp
              END IF
+             l_remove=.FALSE.
+             DO i = 1, atoms%n_hia
+                IF(atoms%lda_hia(i)%atomType.EQ.n.AND.atoms%lda_hia(i)%l.EQ.l.AND.lp) THEN
+                   l_remove=.TRUE.
+                ENDIF
+             ENDDO
+             IF(l_remove) THEN
+                uvu(lpl,lh) = 0.0
+                dvd(lpl,lh) = 0.0
+                uvd(lpl,lh) = 0.0
+                dvu(lpl,lh) = 0.0
+             ENDIF
           END DO
        END DO
     END DO

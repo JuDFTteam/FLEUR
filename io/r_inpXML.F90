@@ -268,7 +268,7 @@ CONTAINS
 
       ALLOCATE (wannAtomList(atoms%nat))
 
-      ALLOCATE(hub1%lda_u(4*atoms%ntype))
+      ALLOCATE(atoms%lda_hia(4*atoms%ntype))
       ALLOCATE(hub1%xi(4*atoms%ntype))
       ALLOCATE(hub1%l_ccf(4*atoms%ntype))
       ALLOCATE(hub1%ccfmat(4*atoms%ntype,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
@@ -1394,7 +1394,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       atoms%lapw_l(:) = -1
       atoms%n_u = 0
       atoms%n_j0 = 0
-      hub1%n_hia = 0
+      atoms%n_hia = 0
       atoms%n_hia = 0
       atoms%n_gf = 0
 
@@ -1542,19 +1542,19 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                ENDDO
                DO i = 1, numHIA
                   input%l_gf  = .true. 
-                  hub1%n_hia = hub1%n_hia + 1
+                  atoms%n_hia = atoms%n_hia + 1
                   atoms%n_hia = atoms%n_hia + 1
                   atoms%n_gf  = atoms%n_gf + 1
                   atoms%onsiteGF(atoms%n_gf)%l        = hub1_l(i)
                   atoms%onsiteGF(atoms%n_gf)%atomType = iType
-                  hub1%lda_u(hub1%n_hia)%l        = hub1_l(i)
-                  hub1%lda_u(hub1%n_hia)%u        = hub1_u(i)
-                  hub1%lda_u(hub1%n_hia)%j        = hub1_j(i)
-                  hub1%lda_u(hub1%n_hia)%l_amf    = hub1_amf(i)
-                  hub1%lda_u(hub1%n_hia)%atomType = iType
-                  hub1%xi(hub1%n_hia) = hub1_xi(i)
-                  hub1%bz(hub1%n_hia) = hub1_bz(i)
-                  hub1%l_ccf(hub1%n_hia) = l_ccf(i)
+                  atoms%lda_hia(atoms%n_hia)%l        = hub1_l(i)
+                  atoms%lda_hia(atoms%n_hia)%u        = hub1_u(i)
+                  atoms%lda_hia(atoms%n_hia)%j        = hub1_j(i)
+                  atoms%lda_hia(atoms%n_hia)%l_amf    = hub1_amf(i)
+                  atoms%lda_hia(atoms%n_hia)%atomType = iType
+                  hub1%xi(atoms%n_hia) = hub1_xi(i)
+                  hub1%bz(atoms%n_hia) = hub1_bz(i)
+                  hub1%l_ccf(atoms%n_hia) = l_ccf(i)
                ENDDO
                DO i = 1, numOnsite
                   !Is the green's function already being calculated

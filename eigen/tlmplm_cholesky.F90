@@ -9,7 +9,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,noco,enpara,&
-       jspin,jsp,mpi,v,input,td,ud,hub1)
+       jspin,jsp,mpi,v,input,td,ud)
     USE m_tlmplm
     USE m_types
     USE m_gaunt, ONLY: gaunt2
@@ -21,7 +21,6 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_enpara),INTENT(IN)   :: enpara
-    TYPE(t_hub1ham),INTENT(IN)  :: hub1
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
@@ -54,16 +53,15 @@ CONTAINS
     td%tuloulo(:,:,:,jsp) = CMPLX(0.0,0.0)
 
 
-
     td%h_off=0.0
     !$    call gaunt2(atoms%lmaxd)
     !$OMP PARALLEL DO DEFAULT(NONE)&
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input,hub1)
+    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input)
     DO  n = 1,atoms%ntype
-       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,hub1,td,ud)
+       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,td,ud)
        OK=.FALSE.
        cholesky_loop:DO WHILE(.NOT.OK)
           td%h_loc(:,:,n,jsp)=0.0
@@ -100,10 +98,10 @@ CONTAINS
           ENDDO
           !Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
           DO i_u=1,atoms%n_u+atoms%n_hia
-             IF (n.NE.MERGE(atoms%lda_u(i_u)%atomType,hub1%lda_u(i_u)%atomType,i_u.LE.atoms%n_u)) CYCLE
+             IF (n.NE.MERGE(atoms%lda_u(i_u)%atomType,atoms%lda_hia(i_u)%atomType,i_u.LE.atoms%n_u)) CYCLE
              !Found a "U" for this atom type
-             l=MERGE(atoms%lda_u(i_u)%l,hub1%lda_u(i_u)%l,i_u.LE.atoms%n_u)
-             lp=MERGE(atoms%lda_u(i_u)%l,hub1%lda_u(i_u)%l,i_u.LE.atoms%n_u)
+             l=MERGE(atoms%lda_u(i_u)%l,atoms%lda_hia(i_u)%l,i_u.LE.atoms%n_u)
+             lp=MERGE(atoms%lda_u(i_u)%l,atoms%lda_hia(i_u)%l,i_u.LE.atoms%n_u)
              DO m = -l,l
                 lm = l* (l+1) + m
                 DO mp = -lp,lp

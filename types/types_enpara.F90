@@ -248,6 +248,15 @@ CONTAINS
        END IF
     END DO
 
+    IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2) THEN
+       !Set the energy parameters to the same value
+       DO j = 1, atoms%n_hia
+          l = atoms%lda_hia(j)%l
+          n = atoms%lda_hia(j)%atomType
+          enpara%el0(l,n,1) = (enpara%el0(l,n,1)+enpara%el0(l,n,2))/2.0
+       ENDDO
+    ENDIF
+
 !    enpara%ready=(ALL(enpara%el0>-1E99).AND.ALL(enpara%ello0>-1E99))
     enpara%epara_min=MIN(MINVAL(enpara%el0),MINVAL(enpara%ello0))
     

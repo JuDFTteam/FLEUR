@@ -49,15 +49,15 @@ MODULE m_hubbard1_setup
 
       TYPE(t_greensf)    :: gu 
 
-      REAL     f0(hub1%n_hia,input%jspins),f2(hub1%n_hia,input%jspins)
-      REAL     f4(hub1%n_hia,input%jspins),f6(hub1%n_hia,input%jspins)
+      REAL     f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
+      REAL     f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
       REAL     u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-               -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia)
+               -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia)
 
-      COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,input%jspins)
-      COMPLEX  mmpMat_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,hub1%n_hia,input%jspins)
-      COMPLEX  selfen(hub1%n_hia,gdft%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
-      REAL     n_l(hub1%n_hia,input%jspins)
+      COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
+      COMPLEX  mmpMat_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
+      COMPLEX  selfen(atoms%n_hia,gdft%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
+      REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_exist
 
       !TODO: We don't need to calculate the green's function in every iteration
@@ -76,15 +76,15 @@ MODULE m_hubbard1_setup
 
       IF(ANY(mmpMat(:,:,:,:).NE.0.0).OR.hub1%l_runthisiter) THEN
          !Get the slater integrals from the U and J parameters
-         CALL uj2f(input%jspins,hub1%lda_u(:),hub1%n_hia,f0,f2,f4,f6)
+         CALL uj2f(input%jspins,atoms%lda_hia(:),atoms%n_hia,f0,f2,f4,f6)
          f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
          f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
          f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
          f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-         CALL umtx(hub1%lda_u(:),hub1%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
+         CALL umtx(atoms%lda_hia(:),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
 
-         CALL v_mmp(sym,atoms,hub1%lda_u(:),hub1%n_hia,input%jspins,.true.,mmpMat,&
-         u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+hub1%n_hia,:),e_lda_hia)
+         CALL v_mmp(sym,atoms,atoms%lda_hia(:),atoms%n_hia,input%jspins,.true.,mmpMat,&
+         u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),e_lda_hia)
 
          IF(hub1%l_runthisiter.AND.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) THEN 
             !IF(gdft%mode.EQ.2) CALL juDFT_error("This energy contour is not supported at the moment for DFT+Hubbard1",calledby="hubbard1_setup")
@@ -102,9 +102,9 @@ MODULE m_hubbard1_setup
             path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)))
 
-            DO i_hia = 1, hub1%n_hia
-               n = hub1%lda_u(i_hia)%atomType
-               l = hub1%lda_u(i_hia)%l
+            DO i_hia = 1, atoms%n_hia
+               n = atoms%lda_hia(i_hia)%atomType
+               l = atoms%lda_hia(i_hia)%l
                CALL indexgf(atoms,l,n,i_gf)
                !Create a subdirectory for the atomType and shell
                WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
@@ -126,7 +126,7 @@ MODULE m_hubbard1_setup
                WRITE(6,9020) 'spin-up','spin-dn'
                WRITE(6,9030) n_l(i_hia,:)
                !calculate the chemical potential
-               CALL mudc(hub1%lda_u(i_hia)%U,hub1%lda_u(i_hia)%J,l,n_l(i_hia,:),hub1%lda_u(i_hia)%l_amf,mu_dc,input%jspins)
+               CALL mudc(atoms%lda_hia(i_hia)%U,atoms%lda_hia(i_hia)%J,l,n_l(i_hia,:),atoms%lda_hia(i_hia)%l_amf,mu_dc,input%jspins)
                
                n_occ = ANINT(SUM(n_l(i_hia,:)))
                n_l(i_hia,1) = SUM(n_l(i_hia,:))
@@ -160,17 +160,17 @@ MODULE m_hubbard1_setup
 
             IF(l_exist) THEN
                CALL add_selfen(gdft,gu,selfen,atoms,hub1,sym,input,results%ef,n_l(:,1),mu_dc/hartree_to_ev_const,&
-                              pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+hub1%n_hia,:),mmpMat)
+                              pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),mmpMat)
                ! calculate potential matrix and total energy correction
-               CALL v_mmp(sym,atoms,hub1%lda_u,hub1%n_hia,input%jspins,.true.,mmpMat,&
-                     u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+hub1%n_hia,:),results%e_ldau)
+               CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,.true.,mmpMat,&
+                     u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),results%e_ldau)
                !
                ! Output the density of states from the two green's functions (DEBUG)
                !
                IF(l_debug) THEN
-                  DO i_hia = 1, hub1%n_hia
-                     n = hub1%lda_u(i_hia)%atomType
-                     l = hub1%lda_u(i_hia)%l
+                  DO i_hia = 1, atoms%n_hia
+                     n = atoms%lda_hia(i_hia)%atomType
+                     l = atoms%lda_hia(i_hia)%l
                      WRITE(folder,"(A5,I3.3)") "hub1_" , iterHIA
                      path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
                      WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
@@ -221,14 +221,14 @@ MODULE m_hubbard1_setup
             DO ispin = 1,input%jspins
                WRITE (6,'(a7,i3)') 'spin #',ispin
                DO i_hia = 1, atoms%n_hia
-                  n = hub1%lda_u(i_hia)%atomType
-                  l = hub1%lda_u(i_hia)%l
+                  n = atoms%lda_hia(i_hia)%atomType
+                  l = atoms%lda_hia(i_hia)%l
                   WRITE (l_type,'(i2)') 2*(2*l+1)
                   l_form = '('//l_type//'f12.7)'
                   WRITE (6,'(a20,i3)') 'n-matrix for atom # ',n
                   WRITE (6,l_form) ((mmpMat(k,j,atoms%n_u+i_hia,ispin),k=-l,l),j=-l,l)
                   WRITE (6,'(a20,i3)') 'V-matrix for atom # ',n
-                  IF (hub1%lda_u(i_hia)%l_amf) THEN
+                  IF (atoms%lda_hia(i_hia)%l_amf) THEN
                      WRITE (6,*) 'using the around-mean-field limit '
                   ELSE
                      WRITE (6,*) 'using the atomic limit of LDA+U '
@@ -242,7 +242,7 @@ MODULE m_hubbard1_setup
       ELSE
          !occupation matrix is zero and LDA+Hubbard 1 shouldn't be run yet
          !There is nothing to be done yet just set the potential correction to 0
-         pot%mmpMat(:,:,atoms%n_u+1:hub1%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
+         pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
       ENDIF
       
       !FORMAT Statements:
