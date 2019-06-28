@@ -195,6 +195,19 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         IF (noco%l_mperp) CALL juDFT_error("LDA+Hubbard1 and l_mperp not implemented",calledby ="postprocessInput")
      END IF
 
+     !greens function
+     IF(input%gf_elup.GT.1.0) CALL juDFT_warn("Cutoff for the Greens function calculation should never be higher"//&
+                                              "than 1htr above efermi",calledby="postprocessInput")
+     IF(input%gf_elup.LT.input%gf_ellow) CALL juDFT_error("Not a valid energy grid elup<ellow",calledby="postprocessInput")
+     !Maybe add check for dense enough grid
+     IF(ANY(atoms%onsiteGF(:atoms%n_gf)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",calledby="postprocessInput")
+     IF(ANY(atoms%onsiteGF(:atoms%n_gf)%l.GT.3)) CALL juDFT_warn("Green's function only implemented for l<3",calledby="postprocessInput")
+
+     DO i = 1, atoms%n_j0
+        IF(atoms%j0(i)%l_min.GT.atoms%j0(i)%l_max) CALL juDFT_error("Not a valid configuration for J0-calculation l_min>l_max", &
+                                                                  calledby="postprocessInput")
+     ENDDO
+
      ! Check DOS related stuff (from inped)
 
      IF ((banddos%ndir.LT.0).AND..NOT.banddos%dos) THEN

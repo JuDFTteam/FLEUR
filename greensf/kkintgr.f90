@@ -75,7 +75,6 @@ MODULE m_kkintgr
       !!$OMP DO
       DO iz = 1, nz
          IF(method.EQ.3) THEN
-            !Rather unprecise treatment by orders of magnitude faster than smoothing beforehand everytime
             g(iz) = g_circle(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
          ELSE
             IF(AIMAG(ez(iz)).NE.0.0.AND.AIMAG(ez(iz)).NE.sigma) THEN

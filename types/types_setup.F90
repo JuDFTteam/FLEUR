@@ -90,6 +90,13 @@ MODULE m_types_setup
       INTEGER atomType ! The atom type to which this U parameter belongs
    END TYPE t_onsitegftype
 
+   TYPE t_j0calctype
+      INTEGER atomType  !atom Type for which to calculate J0
+      INTEGER l_min     !Minimum l considered
+      INTEGER l_max     !Maximum l considered
+      LOGICAL l_avgexc  !Determines wether we average over the exchange splittings for all l
+   END TYPE
+
    !
    ! Type for the electric field
    !
@@ -108,6 +115,7 @@ MODULE m_types_setup
       ! no of lda+us
       INTEGER :: n_u
       INTEGER :: n_hia
+      INTEGER :: n_j0
       ! no of greens function calculations (includes n_hia)
       INTEGER :: n_gf
       ! how many intersite gf
@@ -189,6 +197,7 @@ MODULE m_types_setup
       TYPE(t_utype),ALLOCATABLE::lda_u(:)
       !j0 calc information
       TYPE(t_onsitegftype), ALLOCATABLE::onsiteGF(:)
+      TYPE(t_j0calctype), ALLOCATABLE::j0(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
    CONTAINS
@@ -457,6 +466,7 @@ MODULE m_types_setup
       INTEGER :: gf_n3
       INTEGER :: gf_nmatsub
       REAL    :: gf_sigma
+      LOGICAL :: gf_anacont
       LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps

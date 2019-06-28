@@ -37,7 +37,7 @@ MODULE m_types_greensfCoeffs
          REAL     :: e_bot
          REAL     :: del
 
-         INTEGER, ALLOCATABLE :: kkintgr_cutoff(:,:)
+         INTEGER, ALLOCATABLE :: kkintgr_cutoff(:,:,:)
 
          !Array declarations 
          !If we look at the Green's function that only depends on Energy and not on spatial arguments
@@ -64,7 +64,7 @@ MODULE m_types_greensfCoeffs
 
    CONTAINS
 
-      SUBROUTINE greensfCoeffs_init(thisGREENSFCOEFFS,input,lmax,atoms,noco,l_onsite,l_intersite)
+      SUBROUTINE greensfCoeffs_init(thisGREENSFCOEFFS,input,lmax,atoms,noco,ef,l_onsite,l_intersite)
 
          USE m_juDFT
          USE m_types_setup
@@ -75,7 +75,8 @@ MODULE m_types_greensfCoeffs
          TYPE(t_atoms),          INTENT(IN)     :: atoms
          TYPE(t_input),          INTENT(IN)     :: input
          INTEGER,                INTENT(IN)     :: lmax
-         TYPE(t_noco), OPTIONAL, INTENT(IN)     :: noco
+         REAL,                   INTENT(IN)     :: ef
+         TYPE(t_noco),           INTENT(IN)     :: noco
          LOGICAL,                INTENT(IN)     :: l_onsite
          LOGICAL,                INTENT(IN)     :: l_intersite
 
@@ -95,8 +96,8 @@ MODULE m_types_greensfCoeffs
          thisGREENSFCOEFFS%ne       = input%gf_ne
          !take the energyParameterLimits from inp.xml if they are set, otherwise use default values
          IF(input%gf_ellow.NE.0.0.OR.input%gf_elup.NE.0.0) THEN
-            thisGREENSFCOEFFS%e_top    = input%gf_elup
-            thisGREENSFCOEFFS%e_bot    = input%gf_ellow
+            thisGREENSFCOEFFS%e_top    = ef+input%gf_elup
+            thisGREENSFCOEFFS%e_bot    = ef+input%gf_ellow
          ELSE
             thisGREENSFCOEFFS%e_top    = input%elup
             thisGREENSFCOEFFS%e_bot    = input%ellow
@@ -112,7 +113,7 @@ MODULE m_types_greensfCoeffs
             !In the case of an onsite gf we look at the case l=l' and r=r' on one site
             !
             !Do we need the off-diagonal elements
-            ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,2))
+            ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2))
             ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
             thisGREENSFCOEFFS%projdos     = 0.0
             IF(.NOT.input%l_gfsphavg) THEN

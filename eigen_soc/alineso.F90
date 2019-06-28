@@ -67,7 +67,7 @@ CONTAINS
     !     read from eigenvalue and -vector file
     !
 
-    l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u>0)
+    l_real=sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_u+atoms%n_hia>0)
     zmat%l_real=l_real
     zMat(1:input%jspins)%matsize1=lapw%nv(1:input%jspins)+atoms%nlotot
     zmat%matsize2=dimension%neigd

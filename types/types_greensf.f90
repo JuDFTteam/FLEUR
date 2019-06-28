@@ -104,7 +104,7 @@ MODULE m_types_greensf
             IF(thisGREENSF%mode.EQ.1) THEN
                   thisGREENSF%nz = input%gf_n1+input%gf_n2+input%gf_n3+input%gf_nmatsub
                   thisGREENSF%nmatsub = input%gf_nmatsub
-            ELSE IF(thisGREENSF%mode.EQ.2) THEN
+            ELSE IF(thisGREENSF%mode.GE.2) THEN
                thisGREENSF%nz = input%gf_n
                thisGREENSF%nmatsub = 0
             ENDIF
@@ -182,16 +182,7 @@ MODULE m_types_greensf
             
             sigma = input%gf_sigma * pi_const
 
-            IF(this%nmatsub.EQ.0) THEN
-               !Equidistant contour (without vertical edges)
-      
-               de = (et-eb)/REAL(this%nz-1)
-               DO iz = 1, this%nz
-                  this%e(iz) = (iz-1) * del + eb + ImagUnit * sigma
-                  this%de(iz) = de
-               ENDDO
-
-            ELSE IF(this%nmatsub > 0) THEN
+            IF(this%nmatsub > 0) THEN
 
                nz = 0
                !Left Vertical part (eb,0) -> (eb,sigma)
@@ -247,8 +238,6 @@ MODULE m_types_greensf
                   this%de(nz) =  -2 *ImagUnit * sigma
                ENDDO 
                WRITE(*,1000) this%nz, this%nmatsub,input%gf_n1,input%gf_n2,input%gf_n3
-            ELSE
-               !DOES NOTHING ATM
             ENDIF
 1000     FORMAT("Energy Contour for Green's Function Integration with nz: ", I5.1,"; nmatsub: ", I5.1,"; n1: ", I5.1,"; n2: ", I5.1,"; n3: ", I5.1)
          ELSE IF(this%mode.EQ.2) THEN
@@ -272,6 +261,15 @@ MODULE m_types_greensf
             DO i = 1, this%nz
                this%e(i) = xr + ImagUnit * r * EXP(-ImagUnit*pi_const/2.0 * x(this%nz-i+1))
                this%de(i) = pi_const/2.0 * r * EXP(-ImagUnit*pi_const/2.0 * x(this%nz-i+1)) * w(this%nz-i+1)
+            ENDDO
+
+         ELSE IF(this%mode.EQ.3) THEN
+            !Equidistant contour (without vertical edges)
+   
+            de = (et-eb)/REAL(this%nz-1)
+            DO iz = 1, this%nz
+               this%e(iz) = (iz-1) * de + eb + ImagUnit * input%gf_sigma
+               this%de(iz) = de
             ENDDO
 
          ELSE

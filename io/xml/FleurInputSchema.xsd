@@ -387,6 +387,7 @@
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaHIA" type="LdaHubbard1Type"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="onsiteGF" type="OnsiteGFType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="J0" type="J0Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
       </xsd:sequence>
       <xsd:attribute name="name" type="xsd:string" use="required"/>
@@ -419,6 +420,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="AtomicNocoParamsType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="ldaU" type="LdaUType"/>
          <xsd:element maxOccurs="4" minOccurs="0" name="onsiteGF" type="OnsiteGFType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="J0" type="J0Type"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="lo" type="LOType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbcomprot" type="Double3DVecType"/>
       </xsd:sequence>
@@ -492,6 +494,7 @@
    <xsd:complexType name="J0Type">
       <xsd:attribute name="l_min" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="l_max" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="l_avgexc" type="FleurBool" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="ForceType">
@@ -644,6 +647,7 @@
          <xsd:choice>
             <xsd:element name="contourRectangle" type="EContourRectangleType"/>
             <xsd:element name="contourSemicircle" type="EContourSemicircleType"/>
+            <xsd:element name="contourDOS" type="EContourDOSType"/>
          </xsd:choice>
       </xsd:sequence>
       <xsd:attribute default="T" name="l_sphavg" type="FleurBool"/>
@@ -667,6 +671,12 @@
    <xsd:complexType name="EContourSemicircleType">
       <xsd:attribute default="128" name="n" type="xsd:nonNegativeInteger"/>
       <xsd:attribute default="0.25" name="alpha" type="xsd:double"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="EContourDOSType">
+      <xsd:attribute default="1300" name="n" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="0.0314" name="sigma" type="xsd:double"/>
+      <xsd:attribute default="T" name="analytical_cont" type="FleurBool"/>
    </xsd:complexType>
 
    <xsd:complexType name="RDMFTType">

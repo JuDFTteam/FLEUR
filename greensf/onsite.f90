@@ -20,7 +20,7 @@ USE m_types
 USE m_constants
 
 LOGICAL, PARAMETER :: l_debug = .TRUE.
-INTEGER, PARAMETER :: int_method(2) = (/3,3/)
+INTEGER, PARAMETER :: int_method(3) = (/3,3,3/)
 
 CONTAINS
 
@@ -148,8 +148,8 @@ END SUBROUTINE onsite_coeffs
 SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
 
    USE m_kkintgr
-   USE m_onsite21
    USE m_gfcalc
+   USE m_kk_cutoff
 
    IMPLICIT NONE
 
@@ -188,14 +188,15 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
       !
       !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
       !
-      CALL greensf_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,:input%jspins),atoms,l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del&
-                          ,greensfCoeffs%e_bot,greensfCoeffs%e_top,greensfCoeffs%kkintgr_cutoff(i_gf,:))
+      CALL kk_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,:),atoms,l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del&
+                          ,greensfCoeffs%e_bot,greensfCoeffs%e_top,greensfCoeffs%kkintgr_cutoff(i_gf,:,:))
       !
       ! Set the imaginary part to 0 outside the energy cutoffs
       !
-      DO ie = 1, greensfCoeffs%ne
-         IF( ie.GE.greensfCoeffs%kkintgr_cutoff(i_gf,1).AND.ie.LE.greensfCoeffs%kkintgr_cutoff(i_gf,2) ) CYCLE
-         DO jspin = 1, input%jspins
+     
+      DO jspin = 1, input%jspins
+         DO ie = 1, greensfCoeffs%ne
+            IF( ie.GE.greensfCoeffs%kkintgr_cutoff(i_gf,jspin,1).AND.ie.LE.greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2) ) CYCLE
             DO m= -l,l
                DO mp= -l,l
                   IF(input%l_gfsphavg) THEN
@@ -241,121 +242,7 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
       !TODO: Add checks for the Green's function
    ENDDO
 
-   !In the noco case we need to rotate into the global frame
-   IF(input%l_gfsphavg.AND.noco%l_mperp) CALL rot_onsite(atoms,noco,gOnsite)
-
 END SUBROUTINE calc_onsite
-
-
-SUBROUTINE greensf_cutoff(im,atoms,l,jspins,ne,del,e_bot,e_top,cutoff)
-   !This Subroutine determines the cutoff energy for the kramers-kronig-integration
-   !This cutoff energy is defined so that the integral over the fDOS up to this cutoff 
-   !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
-   
-   USE m_kkintgr
-   
-   IMPLICIT NONE
-
-   REAL,                INTENT(INOUT)  :: im(ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
-   TYPE(t_atoms),       INTENT(IN)     :: atoms
-
-   INTEGER,             INTENT(IN)     :: l
-   INTEGER,             INTENT(IN)     :: jspins
-   INTEGER,             INTENT(IN)     :: ne
-   REAL,                INTENT(IN)     :: del
-   REAL,                INTENT(IN)     :: e_bot
-   REAL,                INTENT(IN)     :: e_top
-
-   INTEGER,             INTENT(OUT)    :: cutoff(2)
-
-
-   INTEGER i,m,n_c,ispin
-   REAL integral
-   REAL a,b, n_states
-
-   REAL :: fDOS(ne,jspins)
-
-   fDOS = 0.0
-
-   !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS 
-   !n_f(e) = -1/pi * TR[Im(G_f(e))]
-   DO ispin = 1, jspins
-      DO m = -l , l
-         DO i = 1, ne
-            fDOS(i,ispin) = fDOS(i,ispin) + im(i,m,m,ispin)
-         ENDDO
-      ENDDO
-   ENDDO
-   fDOS(:,:) = -1/pi_const*fDOS(:,:)
-
-   !For Debugging:
-   IF(l_debug) THEN
-      
-      OPEN(1337,file="fDOS_up.txt",action="write",status="replace")
-
-      DO i = 1, ne
-         WRITE(1337,*) ((i-1)*del + e_bot)*hartree_to_ev_const, fDOS(i,1)/hartree_to_ev_const
-      ENDDO
-
-      CLOSE(unit = 1337)
-
-      IF(jspins.EQ.2) THEN
-         OPEN(1337,file="fDOS_dwn.txt",action="write",status="replace")
-
-         DO i = 1, ne
-            WRITE(1337,*) ((i-1)*del + e_bot)*hartree_to_ev_const, -fDOS(i,2)/hartree_to_ev_const
-         ENDDO
-
-         CLOSE(unit = 1337)
-      ENDIF
-   ENDIF
-   
-   IF(jspins.EQ.2) fDOS(:,1) = fDOS(:,1) + fDOS(:,2)
-
-   integral =  trapz(fDOS(1:ne,1), del, ne)
-
-   n_states = 2*(2*l+1)
-   
-   IF(l_debug) WRITE(*,*) "Integral over DOS: ", integral
-
-   cutoff(1) = 1   !at the moment we don't modify the lower bound
-   cutoff(2) = ne
-
-   IF(integral.LT.n_states-0.1) THEN
-      ! If the integral is to small we stop here to avoid problems
-      CALL juDFT_error("integral over DOS too small", calledby="greensf_cutoff")
-      
-   ELSE IF((integral.GT.n_states).AND.((integral-n_states).GT.0.001)) THEN
-      !IF the integral is bigger than 14, search for the cutoff using the bisection method   
-
-      a = e_bot
-      b = e_top
-
-      DO
-
-         cutoff(2) = INT(((a+b)/2.0-e_bot)/del)+1
-         integral =  trapz(fDOS(1:cutoff(2),1),del,cutoff(2))
-
-         IF((ABS(integral-n_states).LT.0.001).OR.(ABS(a-b)/2.0.LT.del)) THEN
-            !The integral is inside the desired accuracy
-            EXIT
-         ELSE IF((integral-n_states).LT.0) THEN
-            !integral to small -> choose the right interval
-            a = (a+b)/2.0
-         ELSE IF((integral-n_states).GT.0) THEN
-            !integral to big   -> choose the left interval
-            b = (a+b)/2.0
-         END IF
-
-      ENDDO
-
-      IF(l_debug) THEN
-         WRITE(*,*) "CALCULATED CUTOFF: ", cutoff(2)
-         WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
-      ENDIF
-   ENDIF
-
-END SUBROUTINE greensf_cutoff
 
 SUBROUTINE local_sym(mat,l,nType,sym,atoms)
 

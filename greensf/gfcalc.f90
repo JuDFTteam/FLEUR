@@ -19,7 +19,6 @@ MODULE m_gfcalc
    ! February 2019 - Initial Version
    ! March    2019 - Changed calculation of the onsite exchange matrix
    !------------------------------------------------------------------------------
-
    USE m_juDFT
    USE m_types
    USE m_constants
@@ -27,136 +26,6 @@ MODULE m_gfcalc
    IMPLICIT NONE
 
    CONTAINS
-
-   SUBROUTINE eff_excinteraction(g0,atoms,input,ef,g0Coeffs)
-
-      USE m_ExpSave
-      USE m_kkintgr
-
-      TYPE(t_greensf),        INTENT(IN)  :: g0
-      TYPE(t_atoms),          INTENT(IN)  :: atoms
-      TYPE(t_greensfCoeffs),  INTENT(IN)  :: g0Coeffs !For determining the onsite exchange splitting from the difference in the COM of the bands
-      REAL,                   INTENT(IN)  :: ef
-      TYPE(t_input),          INTENT(IN)  :: input
-
-      COMPLEX integrand, sumup, sumdwn, sumupdwn
-      INTEGER i,iz,m,l,mp,ispin,n,i_gf,matsize,ipm,ie,n_cut
-      REAL beta,j0,exc_split,tmp
-      LOGICAL l_matinv
-      TYPE(t_mat) :: calcup,calcdwn
-      TYPE(t_mat) :: delta
-      TYPE(t_mat) :: calc
-
-      REAL :: int_norm(g0Coeffs%ne,input%jspins), int_com(g0Coeffs%ne,input%jspins)
-      REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
-
-      l_matinv = .FALSE. !Determines how the onsite exchange splitting is calculated
-      DO i_gf = 1, atoms%n_gf
-         j0 = 0.0
-         l = atoms%onsiteGF(i_gf)%l
-
-         n = atoms%onsiteGF(i_gf)%atomType
-         matsize = 2*l+1
-         CALL calcup%init(.false.,matsize,matsize)
-         CALL calcdwn%init(.false.,matsize,matsize)
-         CALL delta%init(.false.,matsize,matsize)
-         CALL calc%init(.false.,matsize,matsize)
-         IF(.TRUE.) THEN
-            !Determine the difference in the center of mass of the bands
-            n_cut = g0Coeffs%kkintgr_cutoff(i_gf,2)
-            int_com = 0.0
-            int_norm = 0.0
-            DO ispin = 1, input%jspins
-               DO ie = 1, n_cut
-                  DO m = -l, l
-                     int_com(ie,ispin) = int_com(ie,ispin) + ((ie-1)*g0Coeffs%del+g0Coeffs%e_bot)*g0Coeffs%projdos(ie,i_gf,m,m,ispin)
-                     int_norm(ie,ispin) = int_norm(ie,ispin) + g0Coeffs%projdos(ie,i_gf,m,m,ispin)
-                  ENDDO
-               ENDDO
-            ENDDO
-            exc_split = trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,2),g0Coeffs%del,n_cut)&
-                        -trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut)/trapz(int_norm(:n_cut,1),g0Coeffs%del,n_cut)
-            WRITE(*,*) exc_split, (trapz(int_com(:n_cut,2),g0Coeffs%del,n_cut)-trapz(int_com(:n_cut,1),g0Coeffs%del,n_cut))/(14)
-            DO i = 1, matsize
-               delta%data_c(i,i) = exc_split
-            ENDDO
-         ENDIF
-         OPEN(unit=1337,file="j0",status="replace")
-         OPEN(unit=1338,file="delta",status="replace")
-         DO iz = 1, g0%nz
-            !
-            !calculate the onsite exchange matrix if we use matrix inversion
-            !
-            IF(l_matinv) THEN
-               !---------------------------------------------
-               !\Delta = (G_up)^-1-(G_down)^-1
-               !---------------------------------------------
-               !Symmetrize the green's function for up/down 
-               !spin with respect to the complex plane
-               !Here we assume that the onsite Hamiltonian
-               !is real
-               !---------------------------------------------
-               !G^(up/down)^-1 = 1/2 * (G+^(up/down)^-1 + G-^(up/down)^-1)
-               !---------------------------------------------
-               delta%data_c = 0.0
-               DO ispin = 1, input%jspins
-                  DO ipm = 1, 2
-                     CALL to_tmat(calc,g0%gmmpMat(iz,i_gf,:,:,ispin,ipm),1,1,l)
-                     CALL calc%inverse()
-                     delta%data_c = delta%data_c + 1/2.0 * (-1)**(ispin-1) * calc%data_c
-                  ENDDO
-               ENDDO
-               tmp = 0.0
-               DO i=1, matsize
-                  tmp = tmp + REAL(delta%data_c(i,i))/matsize
-               ENDDO
-               WRITE(1338,"(2f14.8)") REAL(g0%e(iz)), tmp
-            ENDIF
-            !
-            !  Tr[\Delta (G_up-G_down) + \Delta G_up \Delta G_down]
-            !
-            ! calculated for G^+/- and then substract to obtain imaginary part
-            integrand = 0.0
-            sumup = 0.0
-            sumdwn = 0.0
-            sumupdwn = 0.0
-            DO ipm = 1, 2
-               CALL to_tmat(calcup,g0%gmmpMat(iz,i_gf,:,:,1,ipm),1,1,l)
-               CALL to_tmat(calcdwn,g0%gmmpMat(iz,i_gf,:,:,2,ipm),1,1,l)
-               
-               calcup%data_c  = matmul(delta%data_c,calcup%data_c)
-               calcdwn%data_c = matmul(delta%data_c,calcdwn%data_c)
-
-               calc%data_c =  matmul(calcup%data_c,calcdwn%data_c)
-
-               !Calculate the trace
-               DO i = 1,matsize
-                  sumup    = sumup + (-1)**(ipm-1) * calcup%data_c(i,i) * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
-                  sumdwn   = sumdwn + (-1)**(ipm-1) * calcdwn%data_c(i,i) * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
-                  sumupdwn = sumupdwn + (-1)**(ipm-1) * calc%data_c(i,i) * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
-                  integrand = integrand + (-1)**(ipm-1) * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1) *&
-                                          (calcup%data_c(i,i)-calcdwn%data_c(i,i)+calc%data_c(i,i))
-               ENDDO
-            ENDDO
-            IF(ABS(REAL(integrand)) > 1e-5) THEN
-               CALL juDFT_error("integrand still has a Real part", calledby="eff_excinteraction")
-            ENDIF
-            WRITE(1337,"(7f15.8)") REAL(g0%e(iz)),AIMAG(integrand), AIMAG(sumup), AIMAG(sumdwn), AIMAG(sumupdwn)
-            j0 = j0 + AIMAG(integrand)
-         ENDDO
-         j0 = -1/(2.0*fpi_const)*hartree_to_ev_const * j0
-         WRITE(6,9010) n,j0,ABS(j0)*2/3 * 1/(boltzmannConst*hartree_to_ev_const)
-         CLOSE(unit=1337)
-         CLOSE(unit=1338)
-
-         CALL calcup%free()
-         CALL calcdwn%free()
-         CALL calc%free()
-         CALL delta%free()
-      ENDDO
-9000  FORMAT("Effective Magnetic Exchange Interaction J0 (Compare Condens. Matter 26, 476003 (2014) EQ.1)")
-9010  FORMAT("J0 for atom ", I3, ": " f14.8 " eV", "Tc: " f14.8)
-   END SUBROUTINE eff_excinteraction
 
    SUBROUTINE occmtx(g,i_gf,atoms,sym,input,ef,mmpMat,el0,vr)
 
@@ -380,7 +249,7 @@ MODULE m_gfcalc
             DO m = -l, l
                DO mp = -l, l
                   integrand = 0.0
-                  DO ie = greensfCoeffs%kkintgr_cutoff(i_gf,1), greensfCoeffs%kkintgr_cutoff(i_gf,2)
+                  DO ie = greensfCoeffs%kkintgr_cutoff(i_gf,jspin,1), greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2)
                      integrand(ie) = ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) * greensfCoeffs%projdos(ie,i_gf,m,mp,jspin)
                   ENDDO
                   h_loc(m,mp,i_gf,jspin) = trapz(integrand,greensfCoeffs%del,greensfCoeffs%ne)

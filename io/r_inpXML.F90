@@ -119,7 +119,7 @@ CONTAINS
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
-      INTEGER            :: ldau_l(4), hub1_l(4), onsiteGF_l(4), numVac, numU, numOnsite, numHIA
+      INTEGER            :: ldau_l(4), hub1_l(4), onsiteGF_l(4), numVac, numU, numOnsite, numHIA, numJ0, j0_min, j0_max  
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -130,7 +130,7 @@ CONTAINS
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_xi(4), hub1_bz(4), tempReal
       REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
-      LOGICAL            :: l_amf(4), hub1_amf(4), l_ccf(4),l_found
+      LOGICAL            :: l_amf(4), hub1_amf(4), l_ccf(4),l_found, j0_avgexc
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
@@ -222,6 +222,7 @@ CONTAINS
       ALLOCATE(atoms%nflip(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
+      ALLOCATE(atoms%j0(atoms%ntype))
       ALLOCATE(atoms%onsiteGF(4*atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
@@ -740,7 +741,16 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          IF(numberNodes.EQ.1) THEN
             input%gf_mode = 2
             input%gf_n = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n'))
-            input%gf_alpha = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
+            input%gf_alpha = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
+         ENDIF
+
+         xPathB = TRIM(ADJUSTL(xPathA)) // '/contourDOS'
+         numberNodes = xmlGetNumberOfNodes(xPathB)
+         IF(numberNodes.EQ.1) THEN
+            input%gf_mode = 3
+            input%gf_n = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n'))
+            input%gf_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@sigma'))
+            input%gf_anacont = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@analytical_cont'))
          ENDIF
 
          IF(input%gf_mode.EQ.0) CALL juDFT_error("No energy contour read", calledby="r_inpXML")
@@ -1383,6 +1393,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       atoms%numStatesProvided = 0
       atoms%lapw_l(:) = -1
       atoms%n_u = 0
+      atoms%n_j0 = 0
       hub1%n_hia = 0
       atoms%n_hia = 0
       atoms%n_gf = 0
@@ -1461,6 +1472,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             onsiteGF_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/onsiteGF['//TRIM(ADJUSTL(xPathB))//']/@l'))
          ENDDO
 
+         !Special element for J0 calculations with multiple l-blocks
+         numJ0 = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/J0')
+         IF(numJ0.EQ.1) THEN
+            j0_min = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_min'))
+            j0_max = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_max'))
+            j0_avgexc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_avgexc'))
+         ENDIF
 
          speciesNLO(iSpecies) = 0
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/lo'
@@ -1552,6 +1570,27 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%onsiteGF(atoms%n_gf)%l = onsiteGF_l(i)
                   atoms%onsiteGF(atoms%n_gf)%atomType = iType
                ENDDO
+               IF(numJ0.EQ.1) THEN
+                  atoms%n_j0 = atoms%n_j0 + 1
+                  atoms%j0(atoms%n_j0)%atomType = iType
+                  atoms%j0(atoms%n_j0)%l_min = j0_min
+                  atoms%j0(atoms%n_j0)%l_max = j0_max
+                  atoms%j0(atoms%n_j0)%l_avgexc = j0_avgexc
+                  !Add the l-blocks to the greens functions
+                  DO l = j0_min, j0_max
+                     l_found = .false.
+                     DO j = 1, atoms%n_gf
+                        IF(atoms%onsiteGF(j)%l.EQ.l.AND.atoms%onsiteGF(j)%atomType.EQ.iType) THEN 
+                           l_found = .true.
+                        ENDIF
+                     ENDDO
+                     IF(l_found) CYCLE
+                     input%l_gf = .true. 
+                     atoms%n_gf = atoms%n_gf + 1
+                     atoms%onsiteGF(atoms%n_gf)%l = l
+                     atoms%onsiteGF(atoms%n_gf)%atomType = iType
+                  ENDDO
+               ENDIF
                atomTypeSpecies(iType) = iSpecies
                IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
             END IF

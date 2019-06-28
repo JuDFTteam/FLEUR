@@ -37,6 +37,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_metagga
    USE m_unfold_band_kpts
    USE m_gfcalc
+   USE m_j0
    USE m_onsite
    USE m_hubbard1_io
    USE m_denmat_dist
@@ -116,7 +117,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       !Only calculate the greens function when needed
       greensfCoeffs%l_calc = (atoms%n_intergf>0).OR.hub1%l_runthisiter
-      CALL greensfCoeffs%init(input,3,atoms,noco,atoms%n_gf>0,atoms%n_intergf>0)
+      CALL greensfCoeffs%init(input,3,atoms,noco,results%ef,atoms%n_gf>0,atoms%n_intergf>0)
       CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
    ENDIF
 
@@ -147,7 +148,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
             CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:))
          ENDIF
          IF(input%jspins.EQ.2) THEN
-            CALL eff_excinteraction(gOnsite,atoms,input,results%ef,greensfCoeffs)
+            CALL eff_excinteraction(gOnsite,atoms,input,greensfCoeffs)
          ENDIF
          IF(l_debug) THEN
             DO i_gf = 1, atoms%n_gf
