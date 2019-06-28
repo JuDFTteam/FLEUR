@@ -5,7 +5,7 @@ MODULE m_kk_cutoff
 
    CONTAINS
 
-   SUBROUTINE kk_cutoff(im,atoms,l,jspins,ne,del,e_bot,e_top,cutoff)
+   SUBROUTINE kk_cutoff(im,atoms,noco,l,jspins,ne,del,e_bot,e_top,cutoff)
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
       !This cutoff energy is defined so that the integral over the fDOS up to this cutoff 
       !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
@@ -17,6 +17,7 @@ MODULE m_kk_cutoff
 
       REAL,                INTENT(INOUT)  :: im(ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
       TYPE(t_atoms),       INTENT(IN)     :: atoms
+      TYPE(t_noco),        INTENT(IN)     :: noco
 
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: jspins
@@ -28,7 +29,7 @@ MODULE m_kk_cutoff
       INTEGER,             INTENT(OUT)    :: cutoff(jspins,2)
 
 
-      INTEGER i,m,n_c,ispin
+      INTEGER i,m,n_c,ispin,spins_cut
       REAL integral
       REAL a,b, n_states, scale
 
@@ -45,18 +46,17 @@ MODULE m_kk_cutoff
             ENDDO
          ENDDO
       ENDDO
-      DO ispin = 1, jspins
-         fDOS(:,ispin) = -1/pi_const*fDOS(:,ispin)
 
-         integral =  trapz(fDOS(1:ne,ispin), del, ne)
+      fDOS = -1/pi_const*fDOS
+      spins_cut = MERGE(1,jspins,noco%l_soc.OR.noco%l_noco)
+      n_states = (2*l+1) * MERGE(2,1,noco%l_soc.OR.noco%l_noco)
 
-         n_states = (2*l+1)
-      
+      DO ispin = 1, spins_cut
+         IF(spins_cut.EQ.1.AND.jspins.EQ.2) fDOS(:,1) = fDOS(:,1) + fDOS(:,2) 
+         integral =  trapz(fDOS(1:ne,ispin), del, ne)      
          IF(l_debug) WRITE(*,*) "Integral over DOS: ", integral
-
          cutoff(ispin,1) = 1   !we don't modify the lower bound
          cutoff(ispin,2) = ne
-
          IF(integral.LT.n_states) THEN
             !If we are calculating the greens function for a d-band this is expected
             IF(l.EQ.2) THEN
@@ -96,6 +96,8 @@ MODULE m_kk_cutoff
                WRITE(*,*) "CALCULATED CUTOFF: ", cutoff(ispin,2)
                WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
             ENDIF
+
+            IF(spins_cut.EQ.1.AND.jspins.EQ.2) cutoff(2,2) = cutoff(1,2)
          ENDIF
       ENDDO
 
