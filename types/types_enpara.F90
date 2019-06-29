@@ -250,10 +250,13 @@ CONTAINS
 
     IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2) THEN
        !Set the energy parameters to the same value
+       !We want the shell where Hubbard 1 is applied to 
+       !be non spin-polarized
        DO j = 1, atoms%n_hia
           l = atoms%lda_hia(j)%l
           n = atoms%lda_hia(j)%atomType
           enpara%el0(l,n,1) = (enpara%el0(l,n,1)+enpara%el0(l,n,2))/2.0
+          enpara%el0(l,n,2) = enpara%el0(l,n,1)
        ENDDO
     ENDIF
 

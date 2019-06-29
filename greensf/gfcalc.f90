@@ -195,11 +195,11 @@ MODULE m_gfcalc
       USE m_constants
       !Writes the array consisting of (m,mp,ispin) into a 2d matrix of type(t_mat)
 
-      TYPE(t_mat),   INTENT(IN)  :: gmat 
-      COMPLEX,       INTENT(INOUT) :: g(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jsp_out)
+      TYPE(t_mat),   INTENT(IN)     :: gmat 
+      COMPLEX,       INTENT(INOUT)  :: g(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jsp_out)
       INTEGER,       INTENT(IN)     :: jsp_in
       INTEGER,       INTENT(IN)     :: jsp_out
-      INTEGER,       INTENT(IN)  :: l
+      INTEGER,       INTENT(IN)     :: l
 
       INTEGER ns,ind1,ind2,i,j,spin
 

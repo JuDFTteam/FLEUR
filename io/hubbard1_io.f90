@@ -27,15 +27,11 @@ MODULE m_hubbard1_io
    !------------------------------------------------------------------
 
    CHARACTER(len=300), PARAMETER :: input_filename ="hubbard1.cfg"
-   INTEGER, PARAMETER            :: indent_before_key=3
-   INTEGER, PARAMETER            :: space_after_key =2
-   CHARACTER(len=30), PARAMETER  :: orbital_key    ="Lorb"
-   CHARACTER(len=30), PARAMETER  :: slater_key     ="Fk"
-   CHARACTER(len=30), PARAMETER  :: soc_key        ="gfact"
-   CHARACTER(len=30), PARAMETER  :: bz_key         ="Bz"
-   CHARACTER(len=30), PARAMETER  :: bx_key         ="Bx"
-   CHARACTER(len=30), PARAMETER  :: beta_key       ="beta"
-   CHARACTER(len=30), PARAMETER  :: chempot_key    ="mu"
+
+   !Format specifiers:
+   INTEGER, PARAMETER            :: indent_before_key = 3
+   INTEGER, PARAMETER            :: pos_numbers       = 10
+   CHARACTER(len=30), PARAMETER  :: float_fmt         = "f15.8"
 
    CONTAINS
 
@@ -100,9 +96,6 @@ MODULE m_hubbard1_io
       WRITE(io_unit,"(A)") "#  Chemical potential"
       WRITE(io_unit,9070) mu
 9070  FORMAT(TR3,'mu',f15.8)
-      !WRITE(io_unit,"(A)") "#  Chemical potential"
-      !WRITE(io_unit,9070) -mu
-9200  FORMAT(TR3,'ea',f15.8)
 
       IF(l_ccf) THEN
          WRITE(io_unit,"(A)") "#  Is the crystal field splitting given in ccf.dat"
@@ -250,11 +243,16 @@ MODULE m_hubbard1_io
          IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
          
          DO i = 1, ne
+            !The spin-directions are reversed with respect to FLEUR
+            !So we switch the two
             READ(io_unit,9010) 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(i,1:matsize,1:matsize) = tmp(1:matsize,1:matsize)/hartree_to_ev_const 
+            selfen(i,matsize/2.0+1:matsize,matsize/2.0+1:matsize) = tmp(1:matsize/2.0,1:matsize/2.0)/hartree_to_ev_const 
+            selfen(i,1:matsize/2.0,1:matsize/2.0) = tmp(matsize/2.0+1:matsize,matsize/2.0+1:matsize)/hartree_to_ev_const 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(i,1:matsize,1:matsize) = selfen(i,1:matsize,1:matsize) + ImagUnit * tmp(1:matsize,1:matsize)/hartree_to_ev_const 
+            selfen(i,matsize/2.0+1:matsize,matsize/2.0+1:matsize) = selfen(i,matsize/2.0+1:matsize,matsize/2.0+1:matsize)+ImagUnit * tmp(1:matsize/2.0,1:matsize/2.0)/hartree_to_ev_const 
+            selfen(i,1:matsize/2.0,1:matsize/2.0) = selfen(i,1:matsize/2.0,1:matsize/2.0)+ImagUnit *tmp(matsize/2.0+1:matsize,matsize/2.0+1:matsize)/hartree_to_ev_const 
+
          ENDDO
       ENDIF
 
@@ -264,6 +262,28 @@ MODULE m_hubbard1_io
 9010  FORMAT(f10.5)
 9020  FORMAT(7f11.5)
    END SUBROUTINE
+
+   !SUBROUTINE writeReal(iounit,key,n_values,value)
+!
+   !   IMPLICIT NONE 
+!
+   !   INTEGER,          INTENT(IN) :: iounit
+   !   CHARACTER(len=*), INTENT(IN) :: key 
+   !   INTEGER,          INTENT(IN) :: n_values
+   !   REAL,             INTENT(IN) :: value()
+!
+!9000  FORMAT
+   !END SUBROUTINE
+!
+   !SUBROUTINE writeInt(iounit,key,value)
+!
+   !   IMPLICIT NONE 
+!
+   !   INTEGER,          INTENT(IN) :: iounit
+   !   CHARACTER(len=*), INTENT(IN) :: 
+   !END SUBROUTINE
+
+
 
 
 END MODULE m_hubbard1_io

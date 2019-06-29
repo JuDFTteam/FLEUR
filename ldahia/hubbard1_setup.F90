@@ -129,7 +129,6 @@ MODULE m_hubbard1_setup
                CALL mudc(atoms%lda_hia(i_hia)%U,atoms%lda_hia(i_hia)%J,l,n_l(i_hia,:),atoms%lda_hia(i_hia)%l_amf,mu_dc,input%jspins)
                
                n_occ = ANINT(SUM(n_l(i_hia,:)))
-               n_l(i_hia,1) = SUM(n_l(i_hia,:))
                !Check wether the hubbard 1 solver was run:
                INQUIRE(file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/" // "se.atom",exist=l_exist)
                IF(mpi%irank.EQ.0) THEN
@@ -159,7 +158,7 @@ MODULE m_hubbard1_setup
             IF(mpi%irank.EQ.0) CALL CHDIR(TRIM(ADJUSTL(cwd)))
 
             IF(l_exist) THEN
-               CALL add_selfen(gdft,gu,selfen,atoms,hub1,sym,input,results%ef,n_l(:,1),mu_dc/hartree_to_ev_const,&
+               CALL add_selfen(gdft,gu,selfen,atoms,noco,hub1,sym,input,results%ef,n_l,mu_dc/hartree_to_ev_const,&
                               pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),mmpMat)
                ! calculate potential matrix and total energy correction
                CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,.true.,mmpMat,&

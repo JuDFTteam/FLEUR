@@ -97,11 +97,10 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
                      !
                      !Contribution from states
                      !
-                     !CHANGE: We drop the dependency of u/u_dot on spin and average over the two 
                      greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
                                                                REAL(conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) +&
                                                                      conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin) *&
-                                                                     SUM(usdus%ddn(l,nType,:)/input%jspins))
+                                                                     usdus%ddn(l,nType,ispin))
                      IF(.NOT.input%l_gfsphavg) THEN
                         greensfCoeffs%uu(ie,i_gf,m,mp,ispin) = greensfCoeffs%uu(ie,i_gf,m,mp,ispin) -  pi_const * weight *&
                                                                conjg(eigVecCoeffs%acof(ib,lm,natom,ispin))*eigVecCoeffs%acof(ib,lmp,natom,ispin)

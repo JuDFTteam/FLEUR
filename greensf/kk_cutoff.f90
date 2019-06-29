@@ -32,6 +32,7 @@ MODULE m_kk_cutoff
       INTEGER i,m,n_c,ispin,spins_cut
       REAL integral
       REAL a,b, n_states, scale
+      CHARACTER(len=5) :: filename
 
       REAL :: fDOS(ne,jspins)
 
@@ -48,6 +49,18 @@ MODULE m_kk_cutoff
       ENDDO
 
       fDOS = -1/pi_const*fDOS
+
+      IF(l_debug) THEN
+         DO ispin = 1, jspins
+            WRITE(filename,9010) ispin
+            OPEN(unit=1337,file=filename,status="replace")
+            DO i = 1, ne
+               WRITE(1337,"(2f14.8)") (i-1)*del+e_bot,fDOS(i,ispin)
+            ENDDO
+            CLOSE(unit=1337)
+         ENDDO
+      ENDIF
+
       spins_cut = MERGE(1,jspins,noco%l_soc.OR.noco%l_noco)
       n_states = (2*l+1) * MERGE(2,1,noco%l_soc.OR.noco%l_noco)
 
@@ -102,6 +115,7 @@ MODULE m_kk_cutoff
       ENDDO
 
 9000  FORMAT("Scaling the DOS for l=",I1," and spin ",I1,"   factor: ",f14.8)
+9010  FORMAT("fDOS",I1)
 
    END SUBROUTINE kk_cutoff
 END MODULE m_kk_cutoff

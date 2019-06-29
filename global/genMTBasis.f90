@@ -54,7 +54,7 @@ CONTAINS
           !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
           !the correlated orbitals with a non-spin-polarized basis
          
-          vrav(1:atoms%jri(iType)) = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,1))/2.0
+          vrav = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,2))/2.0
           CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),vrav,atoms,&
                      f(1,1,l),g(1,1,l),usdus, nodeu,noded,wronk)  
        ELSE

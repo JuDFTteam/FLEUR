@@ -1543,7 +1543,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                DO i = 1, numHIA
                   input%l_gf  = .true. 
                   atoms%n_hia = atoms%n_hia + 1
-                  atoms%n_hia = atoms%n_hia + 1
                   atoms%n_gf  = atoms%n_gf + 1
                   atoms%onsiteGF(atoms%n_gf)%l        = hub1_l(i)
                   atoms%onsiteGF(atoms%n_gf)%atomType = iType
