@@ -43,6 +43,15 @@ CONTAINS
        ALLOCATE(energies(1));energies(1)=energies_new
        ALLOCATE(displace(3,atoms%ntype),old_displace(3,atoms%ntype))
 
+       !Remove force components that are not selected for relaxation
+       DO n=1,atoms%ntype
+          IF (atoms%l_geo(n)) THEN
+             force(:,n,1)=force(:,n,1)*REAL(atoms%relax(:,n))
+          ELSE
+             force(:,n,1)=0.0
+          ENDIF
+       ENDDO
+       
        ! add history 
        CALL read_relax(pos,force,energies)
 
