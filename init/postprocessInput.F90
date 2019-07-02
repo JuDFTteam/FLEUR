@@ -540,6 +540,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 #ifdef CPP_MPI
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
   CALL MPI_BCAST(input%qfix,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+  CALL MPI_BCAST(noco%l_noco,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
   CALL timestart("stepf") 
