@@ -11,8 +11,7 @@ build-gfortran-hdf5:
   artifacts:
      paths:
        - build
-     expire_in:
-       - 1h
+     expire_in: 1h
   script:
     - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make -j 4
 #  only:
