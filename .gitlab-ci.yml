@@ -37,10 +37,6 @@ test-gfortran-hdf5:
 pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: deploy
-  cache:
-     paths:
-        - build
-        - public
   script:
     - echo "HTML should be ready from cache..."
     - mv /builds/fleur/fleur/docs/Docu_main.html /builds/fleur/fleur/public/index.html
@@ -58,10 +54,6 @@ pages:
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
-  cache:
-     paths:
-       - build
-       - public
   script:
     - cd /builds/fleur/fleur/build ; make doc
     - mkdir ../public
@@ -81,9 +73,10 @@ doxygen:
 build-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:pgi
   stage: build
-  cache: 
+  artifacts: 
      paths:
        - build.pgi
+     expire_in: 1h
   script:
     - cd /builds/fleur/fleur; ./configure.sh -l pgi ; cd build.pgi; make 
   allow_failure: true
@@ -98,9 +91,6 @@ test-pgi:
   stage: test
   dependencies:
     - build-pgi
-  cache:
-     paths:
-       - build.pgi
   script:
     - cd /builds/fleur/fleur/build.pgi;ctest
   allow_failure: true
@@ -113,9 +103,10 @@ test-pgi:
 build-intel-static:
   image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: build
-  cache: 
+  artifacts: 
      paths:
        - build.intel-static
+     expire_in: 1h
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
     - cd /builds/fleur/fleur; ./configure.sh -l intel-static INTEL_DOCKER_STATIC ; cd build.intel-static; make -j 4
@@ -135,9 +126,10 @@ build-intel-static:
 build-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: build
-  cache: 
+  artifacts: 
      paths:
        - build.intel.debug
+     expire_in: 1h
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
     - cd /builds/fleur/fleur; CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -d -l intel INTEL_MPI ; cd build.intel.debug; make -j 4
@@ -153,9 +145,6 @@ test-intel:
   stage: test
   dependencies:
      - build-intel
-  cache:
-     paths:
-       - build.intel.debug
   script:
     - set +e && source compilervars.sh intel64 && set -e; ulimit -s unlimited
     - cd /builds/fleur/fleur/build.intel.debug;ctest
@@ -173,9 +162,6 @@ test-intel:
 gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
-  cache: 
-     paths:
-        - build
   script:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
