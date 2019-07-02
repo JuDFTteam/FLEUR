@@ -8,7 +8,8 @@ stages:
 build-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
-  cache: 
+  cache:
+     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
      paths:
        - build
   script:
@@ -22,6 +23,7 @@ test-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
   cache:
+     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
      paths:
        - build
   script:
