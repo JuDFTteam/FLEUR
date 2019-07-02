@@ -8,10 +8,11 @@ stages:
 build-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: build
-  cache:
-     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+  artifacts:
      paths:
        - build
+     expire_in:
+       - 1h
   script:
     - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make -j 4
 #  only:
@@ -22,10 +23,6 @@ build-gfortran-hdf5:
 test-gfortran-hdf5:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: test
-  cache:
-     key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-     paths:
-       - build
   script:
     - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";export OMP_NUM_THREADS=4;cd /builds/fleur/fleur/build;ctest
   artifacts:
