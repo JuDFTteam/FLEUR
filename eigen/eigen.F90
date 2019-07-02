@@ -82,14 +82,14 @@ CONTAINS
       LOGICAL l_wu,l_file,l_real,l_zref
       INTEGER :: solver=0
       ! Local Arrays
-      INTEGER              :: ierr(3)
+      INTEGER              :: ierr
       INTEGER              :: neigBuffer(kpts%nkpt,input%jspins)
 
       COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),kpts%nkpt,input%jspins) ! needed for unfolding bandstructure mpi case
 
       INTEGER, PARAMETER   :: lmaxb = 3
       REAL,    ALLOCATABLE :: bkpt(:)
-      REAL,    ALLOCATABLE :: eig(:)
+      REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
       COMPLEX, ALLOCATABLE :: vs_mmp(:,:,:,:)
 
       INTEGER                   :: jsp_m, i_kpt_m, i_m
@@ -107,6 +107,7 @@ CONTAINS
 
       call ud%init(atoms,input%jspins)
       ALLOCATE (eig(DIMENSION%neigd),bkpt(3))
+      ALLOCATE (eigBuffer(DIMENSION%neigd,kpts%nkpt,input%jspins))
 
       l_real=sym%invs.AND..NOT.noco%l_noco
 
@@ -129,6 +130,7 @@ CONTAINS
       neigBuffer = 0
       results%neig = 0
       results%eig = 1.0e300
+      eigBuffer = 1.0e300
       unfoldingBuffer = CMPLX(0.0,0.0)
 
       DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
@@ -234,6 +236,7 @@ CONTAINS
                 !        Mai 2019                 U. Alekseeva      
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                            eig(:ne_all),n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
+                eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
             ELSE
                 CALL write_eig(eig_id, nk,jsp,ne_found,&
                            n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
@@ -264,23 +267,14 @@ CONTAINS
        CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,mpi%mpi_comm,ierr)
       END IF
       CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(eigBuffer,results%eig,SIZE(results%eig,1)*kpts%nkpt*input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
       CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+
 #else
       results%neig(:,:) = neigBuffer(:,:)
+      results%eig(:,:,:) = eigBuffer(:,:,:)
       results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
 #endif
-
-      ! Sorry for the following strange workaround to fill the results%eig array.
-      ! At some point someone should have a closer look at how the eigenvalues are
-      ! distributed and fill the array without using the eigenvalue-IO.
-      DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
-         DO nk = 1,kpts%nkpt
-            CALL read_eig(eig_id,nk,jsp,results%neig(nk,jsp),results%eig(:,nk,jsp))
-#ifdef CPP_MPI
-            CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
-#endif
-         END DO
-      END DO
 
       !IF (hybrid%l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id)
 
