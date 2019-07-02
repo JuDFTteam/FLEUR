@@ -539,6 +539,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   END IF !(mpi%irank.EQ.0)
 #ifdef CPP_MPI
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+  CALL MPI_BCAST(input%qfix,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 #endif
 
   CALL timestart("stepf") 
