@@ -2728,7 +2728,7 @@ MODULE m_cdnpot_io_hdf
       TYPE(t_dimension),INTENT(IN) :: DIMENSION
 
       INTEGER(HID_T), INTENT(IN) :: fileID
-      REAL,           INTENT(IN) :: rhcs(:,:,:)!(dimension%msh,atoms%ntype,input%jspins)
+      REAL,           INTENT(IN) :: rhcs(:,:,:)!(atoms%msh,atoms%ntype,input%jspins)
       REAL,           INTENT(IN) :: tecs(:,:)!(atoms%ntype,input%jspins)
       REAL,           INTENT(IN) :: qints(:,:)!(atoms%ntype,input%jspins)
 

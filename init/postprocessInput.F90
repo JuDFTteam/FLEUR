@@ -83,6 +83,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 !!! Start of input postprocessing (calculate missing parameters)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   call cell%init()
+  call atoms%init(cell)
   cell%volint = cell%vol
   cell%volint = cell%volint - DOT_PRODUCT(atoms%volmts(:),atoms%neq(:))
   CALL sym%init(cell,input%film)
@@ -191,8 +192,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   ! Generate missing parameters for atoms and calculate volume of the different regions
   CALL ylmnorm_init(atoms%lmaxd)
   dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
-  dimension%msh = 0
-
+  
 
 
   
@@ -226,8 +226,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   ! Store structure data
   
   CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
-  
-  !DIMENSION%msh = MAXVAL(DIMENSION%msh,jrc)
    
   !Adjust kpoints in case of DOS
   

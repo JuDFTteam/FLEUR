@@ -12,7 +12,6 @@ MODULE m_types_dimension
       INTEGER :: neigd !to be removed!!!
       INTEGER :: neigd2
       INTEGER :: nstd=29
-      INTEGER :: msh
       INTEGER :: lmd
       INTEGER :: lmplmd
       INTEGER :: nbasfcn

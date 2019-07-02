@@ -67,10 +67,10 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
-   ALLOCATE ( rat(DIMENSION%msh,atoms%ntype),eig(DIMENSION%nstd,input%jspins,atoms%ntype) )
-   ALLOCATE ( rh(DIMENSION%msh,atoms%ntype,input%jspins),rh1(DIMENSION%msh,atoms%ntype,input%jspins) )
+   ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(DIMENSION%nstd,input%jspins,atoms%ntype) )
+   ALLOCATE ( rh(atoms%msh,atoms%ntype,input%jspins),rh1(atoms%msh,atoms%ntype,input%jspins) )
    ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
-   ALLOCATE ( rhoss(DIMENSION%msh,input%jspins) )
+   ALLOCATE ( rhoss(atoms%msh,input%jspins) )
 
    rh = 0.0
    rhoss = 0.0
@@ -96,7 +96,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          d = EXP(atoms%dx(n))
          jrc(n) = 0
          DO WHILE (r < atoms%rmt(n) + 20.0) 
-            IF (jrc(n) > DIMENSION%msh) CALL juDFT_error("increase msh in fl7para!",calledby ="stden")
+            IF (jrc(n) > atoms%msh) CALL juDFT_error("increase msh in fl7para!",calledby ="stden")
             jrc(n) = jrc(n) + 1
             rat(jrc(n),n) = r
             r = r*d
@@ -124,7 +124,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
             IF (ANY(ABS(occ(:,:)-atoms%econf(n1)%Occupation(:,:))>del)) CYCLE
             IF (jr.NE.atoms%jri(n1)) CYCLE
             DO ispin = 1, input%jspins
-               DO i = 1,jrc(n) ! dimension%msh
+               DO i = 1,jrc(n) ! atoms%msh
                   rh(i,n,ispin) = rh(i,n1,ispin)
                END DO
             END DO
@@ -143,15 +143,15 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          IF (z.LT.1.0) THEN
             va = max(z,1.e-8)/(input%jspins*sfp_const*atoms%volmts(n))
             DO ispin = 1, input%jspins
-               DO i = 1,jrc(n) ! dimension%msh
+               DO i = 1,jrc(n) ! atoms%msh
                   rh(i,n,ispin) = va/rat(i,n)**2
                END DO
             END DO
          ELSE
             CALL atom2(DIMENSION,atoms,xcpot,input,n,jrc(n),rnot,qdel,&
-                       rhoss,nst(n),lnum(1,n),eig(1,1,n),vbar(1,n))
+                       rhoss,nst(n),lnum(1,n),eig(1,1,n),vbar(1,n),.true.)
             DO ispin = 1, input%jspins
-               DO i = 1, jrc(n) ! dimension%msh
+               DO i = 1, jrc(n) ! atoms%msh
                   rh(i,n,ispin) = rhoss(i,ispin)
                END DO
             END DO
@@ -172,7 +172,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
             DO i = 1, jrc(n)
                rh1(i,n,ispin) = rh(i,n,ispin)*fpi_const*rat(i,n)**2
             END DO
-            rh1(jrc(n):DIMENSION%msh,n,ispin) = 0.0
+            rh1(jrc(n):atoms%msh,n,ispin) = 0.0
             ! prepare spherical mt charge
             DO i = 1,atoms%jri(n)
                den%mt(i,0,n,ispin) = rh(i,n,ispin)*sfp_const*atoms%rmsh(i,n)**2

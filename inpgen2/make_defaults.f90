@@ -81,7 +81,7 @@ CONTAINS
       ENDIF
       input%rkmax   = real(NINT(input%rkmax   * 10  ) / 10.)
       IF (noco%l_ss) input%ctail = .FALSE.
-      input%zelec=sum(atoms%econf(:)%valence_electrons)
+      input%zelec=dot_product(atoms%econf(:)%valence_electrons,atoms%neq(:))
       !
       ! stars
       !

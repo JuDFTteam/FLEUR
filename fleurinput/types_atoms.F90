@@ -35,6 +35,7 @@ MODULE m_types_atoms
       INTEGER ::n_u
       ! dimensions
       INTEGER :: jmtd
+      INTEGER :: msh=0 !core state mesh was in dimension
       !No of element
       INTEGER, ALLOCATABLE ::nz(:)
       !atoms per type
@@ -97,6 +98,7 @@ MODULE m_types_atoms
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
    CONTAINS
+      PROCEDURE :: init=>init_atoms
       PROCEDURE :: nsp => calc_nsp_atom
       PROCEDURE :: same_species
       PROCEDURE :: read_xml => read_xml_atoms
@@ -118,14 +120,15 @@ MODULE m_types_atoms
         rank=0
      end if
 
-     call mpi_bc(this% ntype,rank,mpi_comm)
-     call mpi_bc(this% nat,rank,mpi_comm)
+     call mpi_bc(this%ntype,rank,mpi_comm)
+     call mpi_bc(this%nat,rank,mpi_comm)
      call mpi_bc(this%nlod,rank,mpi_comm)
      call mpi_bc(this%llod,rank,mpi_comm)
      call mpi_bc(this%nlotot,rank,mpi_comm)
-     call mpi_bc(this% lmaxd,rank,mpi_comm)
+     call mpi_bc(this%lmaxd,rank,mpi_comm)
      call mpi_bc(this%n_u,rank,mpi_comm)
-     call mpi_bc(this% jmtd,rank,mpi_comm)
+     call mpi_bc(this%jmtd,rank,mpi_comm)
+     call mpi_bc(this%msh,rank,mpi_comm)
      call mpi_bc(this%nz,rank,mpi_comm)
      call mpi_bc(this%neq,rank,mpi_comm)
      call mpi_bc(this%jri,rank,mpi_comm)
@@ -222,7 +225,7 @@ MODULE m_types_atoms
     ALLOCATE(this%lda_u(4*this%ntype))
     ALLOCATE(this%bmu(this%ntype))
     ALLOCATE(this%relax(3,this%ntype))
-    ALLOCATE(this%neq(this%ntype))
+    ALLOCATE(this%neq(this%ntype));this%neq=0
     ALLOCATE(this%taual(3,this%nat))
     ALLOCATE(this%label(this%nat))
     ALLOCATE(this%pos(3,this%nat))
@@ -231,8 +234,10 @@ MODULE m_types_atoms
     ALLOCATE(this%ncv(this%ntype)) ! For what is this?
     ALLOCATE(this%lapw_l(this%ntype)) ! Where do I put this?
     ALLOCATE(this%llo(MAXVAL(xml%get_nlo()),this%ntype))
+    ALLOCATE(this%speciesname(this%ntype))
     this%lapw_l(:) = -1
     this%n_u = 0
+    na=0
     DO n = 1, this%ntype
        !in Species:
        !@name,element,atomicNumber,coreStates
@@ -241,6 +246,7 @@ MODULE m_types_atoms
        !optional: energyParameters,prodBasis,special,force,electronConfig,nocoParams,ldaU(up to 4),lo(as many as needed)
        xpathg=xml%groupPath(n)
        xpaths=xml%speciesPath(n)
+       this%speciesname(n)=trim(adjustl(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/@species')))
        this%nz(n)=evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@atomicNumber'))
        IF (this%nz(n).EQ.0) THEN
           WRITE(*,*) 'Note: Replacing atomic number 0 by 1.0e-10 on atom type ', n
@@ -332,7 +338,51 @@ MODULE m_types_atoms
              END DO
           END IF
        END IF
-     
+       ! Read in atom positions
+       numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/relPos')
+       DO i = 1, numberNodes
+          this%neq(n)=this%neq(n)+1
+          na = na + 1
+          WRITE(xPath,*) TRIM(ADJUSTL(xPathg)),'/relPos[',i,']'
+          IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/@label').NE.0) THEN
+             this%label(na) = xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@label')
+          ELSE
+             WRITE(this%label(na),'(i0)') na
+            END IF
+            valueString = xml%getAttributeValue(TRIM(ADJUSTL(xPath)))
+            this%taual(1,na) = evaluatefirst(valueString)
+            this%taual(2,na) = evaluatefirst(valueString)
+            this%taual(3,na) = evaluatefirst(valueString)
+            this%pos(:,na)=this%taual(:,na) !Use as flag that no rescaling is needed in init
+         END DO
+
+         numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/absPos')
+         DO i = 1, numberNodes
+            na = na + 1
+            STOP 'absPos not yet implemented!'
+         END DO
+
+         numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/filmPos')
+         DO i = 1, numberNodes
+            this%neq(n)=this%neq(n)+1
+            na = na + 1
+            WRITE(xPath,*) TRIM(ADJUSTL(xPathg)),'/filmPos[',i,']'
+            IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/@label').NE.0) THEN
+               this%label(na) = xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@label')
+            ELSE
+               WRITE(this%label(na),'(i0)') na
+            END IF
+            valueString = xml%getAttributeValue(TRIM(ADJUSTL(xPath)))
+            this%taual(1,na) = evaluatefirst(valueString)
+            this%taual(2,na) = evaluatefirst(valueString)
+            this%taual(3,na) = evaluatefirst(valueString)
+            this%pos(1:2,na)=this%taual(1:2,na) !Use as flag that no rescaling is needed in init
+            this%pos(3,na)=this%taual(3,na)+1
+            END DO
+
+
+
+ 
     END DO
 
     this%nlotot = 0
@@ -346,7 +396,7 @@ MODULE m_types_atoms
     
     ALLOCATE(this%lo1l(0:this%llod,this%ntype))
     ALLOCATE(this%nlol(0:this%llod,this%ntype))
-    
+    ALLOCATE(this%l_dulo(this%nlod,this%ntype))
     
     DO n = 1, this%ntype
        IF (this%nlo(n).GE.1) THEN
@@ -421,7 +471,8 @@ MODULE m_types_atoms
           jrc = jrc + 1
           radius = radius*dr
        END DO
-       
+       this%msh=max(this%msh,jrc)
+
        this%volmts(iType) = (fpi_const/3.0)*this%rmt(iType)**3
     END DO
     this%nlotot = 0
@@ -431,10 +482,18 @@ MODULE m_types_atoms
        END DO
     END DO
 
-    
+    this%lmaxd=maxval(this%lmax)
     
     
   END SUBROUTINE read_xml_atoms
   
+  subroutine init_atoms(this,cell)
+    use m_types_cell
+    class(t_atoms),intent(inout):: this
+    type(t_cell),INTENT(IN)   :: cell
+    
+    where (abs(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
+    this%pos(:,:) = matmul(cell%amat,this%taual(:,:))
+  end subroutine init_atoms
 
  END MODULE m_types_atoms

@@ -313,8 +313,8 @@
 
       !  - local arrays -
       INTEGER              :: kappa(dimension%nstd),nprnc(dimension%nstd)
-      REAL                 :: vrd(dimension%msh)
-      REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(dimension%msh),b(dimension%msh)
+      REAL                 :: vrd(atoms%msh)
+      REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(atoms%msh),b(atoms%msh)
       REAL,ALLOCATABLE,SAVE:: vr0(:,:,:)
 
       !   - intrinsic functions -
@@ -357,7 +357,7 @@
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))
         ncmsh = nint( log( (atoms%rmt(itype)+10.0)/rnot ) / dxx + 1 )
-        ncmsh = min( ncmsh, dimension%msh )
+        ncmsh = min( ncmsh, atoms%msh )
         rn = rnot* (d** (ncmsh-1))
 
         nst = atoms%econf(itype)%num_core_states
@@ -400,7 +400,7 @@
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))
         ncmsh = nint( log( (atoms%rmt(itype)+10.0)/rnot ) / dxx + 1 )
-        ncmsh = min( ncmsh, dimension%msh )
+        ncmsh = min( ncmsh, atoms%msh )
         rn = rnot* (d** (ncmsh-1))
         IF ( mpi%irank == 0 ) THEN
           WRITE(6 ,FMT=8000) z,rnot,dxx,atoms%jri(itype)
@@ -495,7 +495,7 @@
       !  - local arrays -
       INTEGER              :: kappa(dimension%nstd),nprnc(dimension%nstd)
       INTEGER              :: nindxcr(0:dimension%nstd,atoms%ntype) 
-      REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(dimension%msh),b(dimension%msh)
+      REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(atoms%msh),b(atoms%msh)
       INTEGER              :: lmaxc(atoms%ntype)
 
 
@@ -520,7 +520,7 @@
         rnot  = atoms%rmsh(1,itype)
         d     = exp(atoms%dx(itype))
         ncmsh = nint( log( (atoms%rmt(itype)+10.0)/rnot ) / dxx + 1 )
-        ncmsh = min( ncmsh, dimension%msh )
+        ncmsh = min( ncmsh, atoms%msh )
         rn = rnot* (d** (ncmsh-1))
 
         nst = atoms%econf(itype)%num_core_states

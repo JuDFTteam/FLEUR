@@ -49,10 +49,10 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
    REAL                             :: seig, rhoint, momint
    LOGICAL, PARAMETER               :: l_st=.FALSE.
 
-   REAL                             :: rh(dimension%msh,atoms%ntype,input%jspins)
+   REAL                             :: rh(atoms%msh,atoms%ntype,input%jspins)
    REAL                             :: qint(atoms%ntype,input%jspins)
    REAL                             :: tec(atoms%ntype,input%jspins)
-   REAL                             :: rhTemp(dimension%msh,atoms%ntype,input%jspins)
+   REAL                             :: rhTemp(atoms%msh,atoms%ntype,input%jspins)
 
 
    results%seigc = 0.0

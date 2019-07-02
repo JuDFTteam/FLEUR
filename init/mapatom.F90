@@ -57,12 +57,11 @@
       aamat=matmul(transpose(cell%amat),cell%amat)
     
       IF (ALLOCATED(sym%ngopr)) &
-           DEALLOCATE(sym%invsatnr,sym%invarop,sym%invarind,sym%ngopr,sym%ntypsy,sym%invsat)
+           DEALLOCATE(sym%invsatnr,sym%invarop,sym%invarind,sym%ngopr,sym%invsat)
       ALLOCATE(sym%invsatnr(atoms%nat))
       ALLOCATE(sym%invarop(atoms%nat,sym%nop))
       ALLOCATE(sym%invarind(atoms%nat))
       ALLOCATE(sym%ngopr(atoms%nat))
-      ALLOCATE(sym%ntypsy(atoms%nat))
       ALLOCATE(sym%invsat(atoms%nat))
    
 

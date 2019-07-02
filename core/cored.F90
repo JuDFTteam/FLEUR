@@ -25,7 +25,7 @@ CONTAINS
       !     .. Array Arguments ..
       REAL, INTENT(IN)              :: vr(atoms%jmtd,atoms%ntype)
       REAL, INTENT(INOUT)           :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-      REAL, INTENT(INOUT)           :: rhc(DIMENSION%msh,atoms%ntype,input%jspins)
+      REAL, INTENT(INOUT)           :: rhc(atoms%msh,atoms%ntype,input%jspins)
       REAL, INTENT(INOUT)           :: qint(atoms%ntype,input%jspins)
       REAL, INTENT(INOUT)           :: tec(atoms%ntype,input%jspins)
       REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
@@ -37,9 +37,9 @@ CONTAINS
       !     ..
       !     .. Local Arrays ..
 
-      REAL rhcs(DIMENSION%msh),rhoc(DIMENSION%msh),rhoss(DIMENSION%msh),vrd(DIMENSION%msh),f(0:3)
-      REAL rhcs_aux(DIMENSION%msh), rhoss_aux(DIMENSION%msh) !> quantities for energy density calculations
-      REAL occ(maxval(atoms%econf%num_states)),a(DIMENSION%msh),b(DIMENSION%msh),ain(DIMENSION%msh),ahelp(DIMENSION%msh)
+      REAL rhcs(atoms%msh),rhoc(atoms%msh),rhoss(atoms%msh),vrd(atoms%msh),f(0:3)
+      REAL rhcs_aux(atoms%msh), rhoss_aux(atoms%msh) !> quantities for energy density calculations
+      REAL occ(maxval(atoms%econf%num_states)),a(atoms%msh),b(atoms%msh),ain(atoms%msh),ahelp(atoms%msh)
       REAL occ_h(maxval(atoms%econf%num_states),2)
       INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
       CHARACTER(LEN=20) :: attributes(6)
@@ -53,7 +53,7 @@ CONTAINS
          DO  n = 1,atoms%ntype
             rnot = atoms%rmsh(1,n) ; dxx = atoms%dx(n)
             ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/rnot ) / dxx + 1 )
-            ncmsh = MIN( ncmsh, DIMENSION%msh )
+            ncmsh = MIN( ncmsh, atoms%msh )
             !     --->    update spherical charge density
             DO  i = 1,atoms%jri(n)
                rhoc(i) = rhc(i,n,jspin)
@@ -93,7 +93,7 @@ CONTAINS
          rnot = atoms%rmsh(1,jatom)
          d = EXP(atoms%dx(jatom))
          ncmsh = NINT( LOG( (atoms%rmt(jatom)+10.0)/rnot ) / dxx + 1 )
-         ncmsh = MIN( ncmsh, DIMENSION%msh )
+         ncmsh = MIN( ncmsh, atoms%msh )
          rn = rnot* (d** (ncmsh-1))
          WRITE (6,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
          DO  j = 1,atoms%jri(jatom)
@@ -186,7 +186,7 @@ CONTAINS
          ENDIF
 
          rhc(1:ncmsh,jatom,jspin)   = rhoss(1:ncmsh) / input%jspins
-         rhc(ncmsh+1:DIMENSION%msh,jatom,jspin) = 0.0
+         rhc(ncmsh+1:atoms%msh,jatom,jspin) = 0.0
 
          seig = seig + atoms%neq(jatom)*sume
          DO  i = 1,nm

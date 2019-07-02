@@ -39,14 +39,14 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
-    REAL eig(maxval(atoms%econf%num_states)),occ(maxval(atoms%econf%num_states),1),vrd(DIMENSION%msh),a(DIMENSION%msh),b(DIMENSION%msh)
+    REAL eig(maxval(atoms%econf%num_states)),occ(maxval(atoms%econf%num_states),1),vrd(atoms%msh),a(atoms%msh),b(atoms%msh)
     !     ..
     !
     c = c_light(1.0)
     !
     WRITE (6,FMT=8020)
     !
-    ncmsh = DIMENSION%msh
+    ncmsh = atoms%msh
     !     ---> set up densities
     DO  jatom = 1,atoms%ntype
        z = atoms%zatom(jatom)
@@ -68,10 +68,10 @@ CONTAINS
           rr = atoms%rmt(jatom)
           d = EXP(atoms%dx(jatom))
        ELSE
-          t2 = vrd(atoms%jri(jatom))/ (atoms%jri(jatom)-DIMENSION%msh)
+          t2 = vrd(atoms%jri(jatom))/ (atoms%jri(jatom)-atoms%msh)
        ENDIF
-       IF (atoms%jri(jatom).LT.DIMENSION%msh) THEN
-          DO i = atoms%jri(jatom) + 1,DIMENSION%msh
+       IF (atoms%jri(jatom).LT.atoms%msh) THEN
+          DO i = atoms%jri(jatom) + 1,atoms%msh
              if (input%l_core_confpot) THEN
                 rr = d*rr
                 vrd(i) = rr*( t2 + rr*t1 )
@@ -89,7 +89,7 @@ CONTAINS
           weight = 2*fj + 1.e0
           fl = fj + (.5e0)*isign(1,kappa(korb))
           e = -2* (z/ (fn+fl))**2
-          CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,DIMENSION%msh,vrd,&
+          CALL differ(fn,fl,fj,c,z,dxx,rnot,rn,d,atoms%msh,vrd,&
                e, a,b,ierr)
           IF (ierr/=0)  CALL juDFT_error("error in core-levels",calledby="etabinit")
           WRITE (6,FMT=8010) fn,fl,fj,e,weight

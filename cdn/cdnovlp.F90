@@ -113,7 +113,7 @@
           COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
           REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
           REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
-          REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntype)
+          REAL,   INTENT (INOUT) :: rh(atoms%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
           COMPLEX czero,carg,VALUE,slope,c_ph
@@ -127,7 +127,7 @@
           !     .. Local Arrays ..
           COMPLEX, ALLOCATABLE :: qpwc(:)
           REAL    acoff(atoms%ntype),alpha(atoms%ntype),rho_out(2)
-          REAL    rat(DIMENSION%msh,atoms%ntype)
+          REAL    rat(atoms%msh,atoms%ntype)
           INTEGER mshc(atoms%ntype)
           REAL    fJ(-oneD%odi%M:oneD%odi%M),dfJ(-oneD%odi%M:oneD%odi%M)
           !     ..
@@ -174,7 +174,7 @@
           !      (2) cut_off core tails from noise 
           !
 #ifdef CPP_MPI
-          CALL MPI_BCAST(rh,DIMENSION%msh*atoms%ntype,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
+          CALL MPI_BCAST(rh,atoms%msh*atoms%ntype,CPP_MPI_REAL,0,mpi%mpi_comm,ierr)
 #endif
           nloop: DO  n = 1 , atoms%ntype
               IF ((atoms%econf(n)%num_core_states.GT.0).OR.l_st) THEN
@@ -182,13 +182,13 @@
                       rat(j,n) = atoms%rmsh(j,n)
                    ENDDO
                    dxx = EXP(atoms%dx(n))
-                   DO j = atoms%jri(n) + 1 , DIMENSION%msh
+                   DO j = atoms%jri(n) + 1 , atoms%msh
                       rat(j,n) = rat(j-1,n)*dxx
                    ENDDO
-                   DO j = atoms%jri(n) - 1 , DIMENSION%msh
+                   DO j = atoms%jri(n) - 1 , atoms%msh
                       rh(j,n) = rh(j,n)/ (fpi_const*rat(j,n)*rat(j,n))
                    ENDDO
-                   DO j = DIMENSION%msh , atoms%jri(n) , -1
+                   DO j = atoms%msh , atoms%jri(n) , -1
                       IF ( rh(j,n) .GT. tol_14 ) THEN
                          mshc(n) = j
                          CYCLE nloop
@@ -493,11 +493,11 @@
       type(t_atoms)    ,intent(in) :: atoms
       integer          ,intent(in) :: mshc(atoms%ntype)
       real             ,intent(in) :: alpha(atoms%ntype), tol_14
-      real             ,intent(in) :: rh(DIMENSION%msh,atoms%ntype)
+      real             ,intent(in) :: rh(atoms%msh,atoms%ntype)
       real             ,intent(in) :: acoff(atoms%ntype)
       type(t_stars)    ,intent(in) :: stars
       integer          ,intent(in) :: method2
-      real             ,intent(in) :: rat(DIMENSION%msh,atoms%ntype)
+      real             ,intent(in) :: rat(atoms%msh,atoms%ntype)
       type(t_cell)     ,intent(in) :: cell
       type(t_oneD)     ,intent(in) :: oneD
       type(t_sym)      ,intent(in) :: sym
@@ -539,7 +539,7 @@
               
               ! (1) Form factor for each atom type
              
-              CALL FormFactor_forAtomType(DIMENSION,method2,n_out_p,&
+              CALL FormFactor_forAtomType(atoms%msh,method2,n_out_p,&
                                  atoms%rmt(n),atoms%jri(n),atoms%dx(n),mshc(n),rat(:,n), &
                                  rh(:,n),alpha(n),stars,cell,acoff(n),qf)
 
@@ -668,7 +668,7 @@
       end subroutine StructureConst_forAtom
 
 !----------------------------------------------------------------------
-      subroutine FormFactor_forAtomType(DIMENSION,method2,n_out_p,&
+      subroutine FormFactor_forAtomType(msh,method2,n_out_p,&
                        rmt,jri,dx,mshc,rat,&
                        rh,alpha,stars,cell,acoff,qf)
 
@@ -677,14 +677,14 @@
       USE m_rcerf
       USE m_intgr, ONLY : intgr3,intgz0
 
-      type(t_dimension),intent(in) :: DIMENSION
-      integer          ,intent(in) :: method2, n_out_p
+      
+      integer          ,intent(in) :: msh,method2, n_out_p
       real             ,intent(in) :: rmt
       integer          ,intent(in) :: jri
       real             ,intent(in) :: dx
       integer          ,intent(in) :: mshc
-      real             ,intent(in) :: rat(DIMENSION%msh)
-      real             ,intent(in) :: rh(DIMENSION%msh)
+      real             ,intent(in) :: rat(msh)
+      real             ,intent(in) :: rh(msh)
       real             ,intent(in) :: alpha
       type(t_stars)    ,intent(in) :: stars
       type(t_cell)     ,intent(in) :: cell
@@ -698,7 +698,7 @@
       logical tail
 
 !     ..Local arrays
-      real rhohelp(DIMENSION%msh)
+      real rhohelp(msh)
 
       zero = 0.0
       DO k = 1,stars%ng3

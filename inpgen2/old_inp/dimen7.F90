@@ -186,7 +186,7 @@
 !
 ! determine core mesh
 !
-      dimension%msh = 0
+      atoms%msh = 0
       DO n = 1,atoms%ntype
          r = atoms%rmt(n)
          d = exp(atoms%dx(n))
@@ -195,7 +195,7 @@
             jrc = jrc + 1
             r = r*d
          ENDDO
-         dimension%msh = max( dimension%msh, jrc ) 
+         atoms%msh = max( atoms%msh, jrc ) 
       ENDDO
 !
 ! ---> now, set the lattice harmonics, determine nlhd
@@ -232,7 +232,7 @@
         CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
                        atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
                        atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
-                       atoms%nlhtyp,sym%ntypsy,sphhar%nlh,sphhar%llh,&
+                       atoms%nlhtyp,sphhar%nlh,sphhar%llh,&
                        sphhar%nmem,sphhar%mlh,sphhar%clnu)
 !-odim
       ELSEIF (oneD%odd%d1) THEN
@@ -249,7 +249,7 @@
         CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
               atoms%nat,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
               sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
-              sym%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
+              sphhar%nlh,sphhar%llh,sphhar%nmem,&
               sphhar%mlh,sphhar%clnu)        
         ii = 1
         DO i = 1,atoms%ntype

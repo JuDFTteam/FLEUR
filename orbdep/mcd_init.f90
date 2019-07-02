@@ -38,7 +38,7 @@ CONTAINS
     INTEGER kap,mue,iri,l,ispin,i,icore,korb,nst,n_core,ierr
     REAL  c,t2,e,fj,fl,fn ,d,ms,rn 
     INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states)),l_core(maxval(atoms%econf%num_states))
-    REAL vrd(DIMENSION%msh),occ(maxval(atoms%econf%num_states),2),a(DIMENSION%msh),b(DIMENSION%msh),j_core(maxval(atoms%econf%num_states)),e_mcd1(maxval(atoms%econf%num_states))
+    REAL vrd(atoms%msh),occ(maxval(atoms%econf%num_states),2),a(atoms%msh),b(atoms%msh),j_core(maxval(atoms%econf%num_states)),e_mcd1(maxval(atoms%econf%num_states))
     REAL gv1(atoms%jmtd)
     REAL, ALLOCATABLE :: gc(:,:,:),fc(:,:,:)
     REAL, ALLOCATABLE :: gv(:,:,:,:),fv(:,:,:,:),dgv(:,:,:,:)
@@ -61,8 +61,8 @@ CONTAINS
        DO iri = 1, atoms%jri(itype)
           vrd(iri) = vr(iri,itype,ispin)
        ENDDO
-       t2 = vrd(atoms%jri(itype)) / (atoms%jri(itype) - DIMENSION%msh)
-       DO iri = atoms%jri(itype) + 1, DIMENSION%msh
+       t2 = vrd(atoms%jri(itype)) / (atoms%jri(itype) - atoms%msh)
+       DO iri = atoms%jri(itype) + 1, atoms%msh
           vrd(iri) =  vrd(atoms%jri(itype))  + t2* ( iri-atoms%jri(itype) )
        ENDDO
 
@@ -76,9 +76,9 @@ CONTAINS
              fl = fj + (.5e0)*isign(1,kappa(korb))
              e = -2* (atoms%zatom(itype)/ (fn+fl))**2
              d = EXP(atoms%dx(itype))
-             rn = atoms%rmsh(1,itype)*( d**(DIMENSION%msh-1) )
+             rn = atoms%rmsh(1,itype)*( d**(atoms%msh-1) )
              CALL differ(fn,fl,fj,c,atoms%zatom(itype),atoms%dx(itype),atoms%rmsh(1,itype),&
-                  rn,d,DIMENSION%msh,vrd, e, a,b,ierr)
+                  rn,d,atoms%msh,vrd, e, a,b,ierr)
              IF (ierr/=0)  CALL juDFT_error("error in core-levels", calledby="mcd_init")
              IF ( (e.LE.mcd%emcd_up).AND.(e.GE.mcd%emcd_lo) ) THEN
                 WRITE(*,*) 'good    ev = ',e

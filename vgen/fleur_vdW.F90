@@ -59,7 +59,7 @@ CONTAINS
        DO j=1,input%jspins
           DO n=1,atoms%ntype
              ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/atoms%rmsh(1,n) ) / atoms%dx(n) + 1 )
-             ncmsh = MIN( ncmsh, DIMENSION%msh )
+             ncmsh = MIN( ncmsh, atoms%msh )
              rho(:,1,n) = rho(:,1,n) - rhc(:SIZE(rho,1),n,j)/(4. * SQRT( ATAN (1.) ))
           ENDDO
        ENDDO

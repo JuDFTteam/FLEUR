@@ -30,16 +30,21 @@ MODULE m_types_econfig
   PUBLIC :: t_econfig
 CONTAINS
   
-  SUBROUTINE get_core(econf,nst,nprnc,kappa,occupation)
+  SUBROUTINE get_core(econf,nst,nprnc,kappa,occupation,l_valence)
     CLASS(t_econfig),INTENT(IN)  :: econf
     INTEGER         ,INTENT(out) :: nst
     INTEGER         ,INTENT(out) :: nprnc(:),kappa(:)
     REAL            ,INTENT(out) :: occupation(:,:)
+    LOGICAL,OPTIONAL,INTENT(IN)  :: l_valence
 
     nst=econf%num_core_states
+    if (present(l_valence)) then
+       if (l_valence) nst=econf%num_states
+    endif
     nprnc(:nst)=econf%nprnc(:nst)
     kappa(:nst)=econf%kappa(:nst)
     occupation(:nst,:)=econf%occupation(:nst,:)
+    if (size(occupation,2)==1) occupation=occupation*2
   END SUBROUTINE get_core
     
    
@@ -242,7 +247,7 @@ CONTAINS
     IF (up==-1. .AND. down==-1) THEN
        !Set all defaults
        econf%occupation=0.0
-       DO n=1,econf%num_core_states
+       DO n=1,econf%num_states
           econf%occupation(n,:)=ABS(econf%kappa(n))
        END DO
     ELSE

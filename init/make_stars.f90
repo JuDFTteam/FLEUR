@@ -46,19 +46,19 @@ MODULE m_make_stars
     ! Dimensioning of stars
   
   IF (input%film) THEN
-     CALL strgn1_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+     CALL strgn1_dim(input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
           sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
           stars%ng3,stars%ng2,oneD%odd)
      
   ELSE
-     CALL strgn2_dim(stars%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
+     CALL strgn2_dim(input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
           sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
           stars%ng3,stars%ng2)
      oneD%odd%n2d = stars%ng2
      oneD%odd%nq2 = stars%ng2
      oneD%odd%nop = sym%nop
   END IF
-  
+  stars%gmax=input%gmax
   stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
   stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
   IF (oneD%odd%d1) THEN

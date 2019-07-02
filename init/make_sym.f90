@@ -15,6 +15,7 @@ CONTAINS
     USE m_dwigner
     USE m_mapatom
     USE m_od_mapatom
+    use m_ptsym
     USE m_types_sym
     USE m_types_cell
     USE m_types_atoms
@@ -27,7 +28,9 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_input),INTENT(IN)  :: input
-   
+    
+    integer :: nsymt
+    integer,allocatable::nrot(:),locops(:,:)
 
     !Check for additional time-reversal symmetry
     IF( sym%invs .OR. noco%l_soc ) THEN
@@ -46,8 +49,16 @@ CONTAINS
     END IF
 
     !Atom specific symmetries
+
+    allocate(locops(sym%nop,atoms%nat),nrot(atoms%nat))
+    allocate(sym%ntypsy(atoms%nat))
+    call ptsym(atoms%ntype,atoms%nat,atoms%neq,atoms%taual,sym%nop,sym%mrot,sym%tau,atoms%lmax,&
+         nsymt,sym%ntypsy,nrot,locops)
+
+
     IF (.NOT.oneD%odd%d1) THEN
      CALL mapatom(sym,atoms,cell,input,noco)
+     allocate(oneD%ngopr1(atoms%nat))
      oneD%ngopr1 = sym%ngopr
   ELSE
      CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")

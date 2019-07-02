@@ -11,7 +11,7 @@ CONTAINS
    SUBROUTINE atom2(&
   &                 dimension, atoms, xcpot, input, ntyp, jrc, rnot1,&
   &                 qdel,&
-  &                 rhoss, nst, lnum, eig, vbar)
+  &                 rhoss, nst, lnum, eig, vbar,l_valence)
 
       USE m_intgr, ONLY: intgr1, intgr0
       USE m_constants
@@ -32,6 +32,7 @@ CONTAINS
       REAL, INTENT(OUT) :: rhoss(:, :) !(mshd,input%jspins),
       REAL, INTENT(OUT) :: eig(dimension%nstd, input%jspins), vbar(input%jspins)
       INTEGER, INTENT(OUT) :: nst, lnum(dimension%nstd)
+      LOGICAL,OPTIONAL,INTENT(IN)::l_valence
 !     ..
 !     .. Local Scalars ..
       REAL c, d, delrv, dist, distol, e, fisr, fj, fl, fn, h,&
@@ -43,7 +44,7 @@ CONTAINS
       REAL a(jrc), b(jrc), dens(jrc), occ(dimension%nstd, input%jspins)
       REAL rad(jrc), rev(dimension%nstd, input%jspins), ahelp(jrc), ain(jrc),&
      &     rh(jrc), vr(jrc), f(0:3),&
-     &     vr1(jrc, input%jspins), vr2(jrc, input%jspins), vx(dimension%msh, input%jspins), vxc(dimension%msh, input%jspins)
+     &     vr1(jrc, input%jspins), vr2(jrc, input%jspins), vx(atoms%msh, input%jspins), vxc(atoms%msh, input%jspins)
       INTEGER kappa(dimension%nstd), nprnc(dimension%nstd)
 !     ..
 !     ..
@@ -76,7 +77,7 @@ CONTAINS
       !   judft_warn("You specified both: inital moment and occupation numbers.", &
       !              hint="The inital moment will be ignored, set magMom=0.0", calledby="atom2.f90")
       !CALL setcor(ntyp, input%jspins, atoms, input, bmu_l, nst, kappa, nprnc, occ)
-      CALL atoms%econf(ntyp)%get_core(nst,nprnc,kappa,occ)
+      CALL atoms%econf(ntyp)%get_core(nst,nprnc,kappa,occ,l_valence)
 
 !
 !--->   for electric field case (sigma.ne.0), add the extra charge
