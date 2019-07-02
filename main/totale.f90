@@ -137,11 +137,11 @@ CONTAINS
 
 
        ! CLASSICAL HELLMAN-FEYNMAN FORCE
-       CALL force_a3(atoms,sphhar, input, den%mt,vCoul%mt, results%force)
+       CALL force_a3(atoms,sym,sphhar, input, den%mt,vCoul%mt, results%force)
 
        IF (input%l_f) THEN
           ! core contribution to force: needs TOTAL POTENTIAL and core charge
-          CALL force_a4(atoms,sphhar,input,dimension, vTot%mt, results%force)
+          CALL force_a4(atoms,sym,sphhar,input,DIMENSION, vTot%mt, results%force)
 
        ENDIF
 

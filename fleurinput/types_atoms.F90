@@ -63,14 +63,8 @@ MODULE m_types_atoms
       INTEGER, ALLOCATABLE::nlol(:, :)
       !true if LO is formed by \dot u (
       LOGICAL, ALLOCATABLE::l_dulo(:, :)
-      !no of op that maps atom into
-      INTEGER, ALLOCATABLE::ngopr(:)
-      !symetry of atoms(nat)
-      INTEGER, ALLOCATABLE::ntypsy(:)
       !no of sphhar for atom type(ntype
       INTEGER, ALLOCATABLE ::nlhtyp(:)
-      !atom mapped to by inversion (nat
-      INTEGER, ALLOCATABLE ::invsat(:)
       !Calaculate forces for this atom?
       LOGICAL, ALLOCATABLE :: l_geo(:)
       !MT-Radius (ntype)
@@ -119,9 +113,9 @@ MODULE m_types_atoms
      INTEGER,INTENT(IN),OPTIONAL::irank
      INTEGER ::rank
      if (present(irank)) THEN
-        rank=0
-     else
         rank=irank
+     else
+        rank=0
      end if
 
      call mpi_bc(this% ntype,rank,mpi_comm)
@@ -145,10 +139,7 @@ MODULE m_types_atoms
      call mpi_bc(this%ulo_der,rank,mpi_comm)
      call mpi_bc(this%nlol,rank,mpi_comm)
      call mpi_bc(this%l_dulo,rank,mpi_comm)
-     call mpi_bc(this%ngopr,rank,mpi_comm)
-     call mpi_bc(this%ntypsy,rank,mpi_comm)
      call mpi_bc(this%nlhtyp,rank,mpi_comm)
-     call mpi_bc(this%invsat,rank,mpi_comm)
      call mpi_bc(this%l_geo,rank,mpi_comm)
      call mpi_bc(this%rmt,rank,mpi_comm)
      call mpi_bc(this%dx,rank,mpi_comm)
@@ -238,9 +229,7 @@ MODULE m_types_atoms
     ALLOCATE(this%rmt(this%ntype))
     ALLOCATE(this%econf(this%ntype))
     ALLOCATE(this%ncv(this%ntype)) ! For what is this?
-    ALLOCATE(this%ngopr(this%nat)) ! For what is this?
     ALLOCATE(this%lapw_l(this%ntype)) ! Where do I put this?
-    ALLOCATE(this%invsat(this%nat)) ! Where do I put this?
     ALLOCATE(this%llo(MAXVAL(xml%get_nlo()),this%ntype))
     this%lapw_l(:) = -1
     this%n_u = 0
@@ -328,14 +317,14 @@ MODULE m_types_atoms
           this%lda_u(this%n_u)%atomType = n
        END DO
        !electron config
-       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xml%getAttributeValue(xPaths)))//'/electronConfig')==1) THEN
-          core=xml%getAttributeValue(TRIM(ADJUSTL(xml%getAttributeValue(xPaths)))//'/electronConfig/coreConfig')
-          valence=xml%getAttributeValue(TRIM(ADJUSTL(xml%getAttributeValue(xPaths)))//'/electronConfig/valenceConfig')
+       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/electronConfig')==1) THEN
+          core=xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/coreConfig')
+          valence=xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/electronConfig/valenceConfig')
           CALL this%econf(n)%init(core,valence)
-          numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xml%getAttributeValue(xPaths)))//'/electronConfig/stateOccupation')
+          numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/electronConfig/stateOccupation')
           IF (numberNodes.GE.1) THEN
              DO i = 1, numberNodes
-                WRITE(xpath,"(a,a,i0,a)") TRIM(ADJUSTL(xPath)),'/electronConfig/stateOccupation[',i,']'
+                WRITE(xpath,"(a,a,i0,a)") TRIM(ADJUSTL(xPaths)),'/electronConfig/stateOccupation[',i,']'
                 state=xml%getAttributeValue(TRIM(xpath)//'/@state')
                 up=evaluateFirstOnly(xml%getAttributeValue(TRIM(xpath)//'/@spinUp'))
                 down=evaluateFirstOnly(xml%getAttributeValue(TRIM(xpath)//'/@spinDown'))

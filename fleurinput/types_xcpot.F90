@@ -80,9 +80,9 @@ MODULE m_types_xcpot
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     IF (PRESENT(irank)) THEN
-       rank=0
-    ELSE
        rank=irank
+    ELSE
+       rank=0
     END IF
     
     CALL mpi_bc(this%l_libxc,rank,mpi_comm)

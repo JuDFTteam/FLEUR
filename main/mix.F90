@@ -39,7 +39,7 @@ contains
     type(t_input),     intent(in)    :: input
     type(t_vacuum),    intent(in)    :: vacuum
     type(t_noco),      intent(in)    :: noco
-    type(t_sym),       intent(in)    :: sym
+    TYPE(t_sym),TARGET,INTENT(in)    :: sym
     TYPE(t_stars),TARGET,INTENT(in)  :: stars
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
@@ -74,7 +74,7 @@ contains
     ENDIF
 
     CALL timestart("Reading of distances")
-    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
+    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,stars,cell,sphhar,atoms,sym)
 
     CALL mixing_history_open(mpi,input%maxiter)
 

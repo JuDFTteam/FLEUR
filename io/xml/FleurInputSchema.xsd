@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.28">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.30">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
    
@@ -21,9 +21,7 @@
 
    <xsd:simpleType name="FleurVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.27"/>
-         <xsd:enumeration value="0.28"/>
-         <xsd:enumeration value="0.29"/>
+         <xsd:enumeration value="0.30"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -45,7 +43,8 @@
          <xsd:element name="coreElectrons" type="CoreElectronsType"/>
          <xsd:element name="magnetism" type="MagnetismType"/>
          <xsd:element name="bzIntegration" type="BZIntegrationType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisIRType"/>
+	 <xsd:element name="symmetryOperations" type="SymmetryOperationsType"/>
+          <xsd:element maxOccurs="1" minOccurs="0" name="prodBasis" type="ProdBasisIRType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="soc" type="SOCType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="nocoParams" type="NocoParamsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="oneDParams" type="OneDParamType"/>
@@ -116,26 +115,12 @@
    <xsd:complexType name="CellType">
       <xsd:sequence>
          <xsd:choice>
-            <xsd:element name="symmetry" type="SymmetryType"/>
-            <xsd:element name="symmetryFile" type="SymmetryFileType"/>
-            <xsd:element name="symmetryOperations" type="SymmetryOperationsType"/>
-         </xsd:choice>
-         <xsd:choice>
             <xsd:element name="bulkLattice" type="BulkLatticeType"/>
             <xsd:element name="filmLattice" type="FilmLatticeType"/>
          </xsd:choice>
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="SymmetryType">
-      <xsd:attribute name="spgrp" type="SpgrpEnum" use="required"/>
-      <xsd:attribute name="invs" type="FleurBool" use="required"/>
-      <xsd:attribute name="zrfs" type="FleurBool" use="required"/>
-   </xsd:complexType>
-
-   <xsd:complexType name="SymmetryFileType">
-      <xsd:attribute name="filename" type="xsd:string" use="required"/>
-   </xsd:complexType>
    
    <xsd:complexType name="SymmetryOperationsType">
       <xsd:sequence>
@@ -176,7 +161,6 @@
          </xsd:choice>
       </xsd:sequence>
       <xsd:attribute name="scale" type="xsd:string" use="required"/>
-      <xsd:attribute name="latnam" type="LatnamEnum" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="FilmLatticeType">
@@ -195,7 +179,6 @@
          <xsd:element minOccurs="0" maxOccurs="2" name="vacuumEnergyParameters" type="VacuumEnergyParameterType"/>
       </xsd:sequence>
       <xsd:attribute name="scale" type="xsd:string" use="required"/>
-      <xsd:attribute name="latnam" type="LatnamEnum" use="required"/>
       <xsd:attribute name="dVac" type="xsd:string" use="required"/>
       <xsd:attribute name="dTilda" type="xsd:string" use="required"/>
    </xsd:complexType>
@@ -654,8 +637,7 @@
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="1" name="kPoint" type="KPointType"/>
       </xsd:sequence>
-      <xsd:attribute name="posScale" type="xsd:string" use="required"/>
-      <xsd:attribute name="weightScale" type="xsd:string" use="required"/>
+      <xsd:attribute name="name" type="xsd:string" use="required"/>
       <xsd:attribute name="count" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
@@ -699,6 +681,7 @@
       <xsd:attribute default="0" name="lpr" type="xsd:integer" use="optional"/>
       <xsd:attribute default="99" name="isec1" type="xsd:integer" use="optional"/>
       <xsd:attribute default="F" name="secvar" type="FleurBool" use="optional"/>
+      <xsd:attribute default="1.0" name="warp_factor" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ChecksType">
@@ -889,47 +872,7 @@
       </xsd:restriction>
    </xsd:simpleType>
 
-   <xsd:simpleType name="LatnamEnum">
-      <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="any"/>
-         <xsd:enumeration value="squ"/>
-         <xsd:enumeration value="c-b"/>
-         <xsd:enumeration value="fcc"/>
-         <xsd:enumeration value="hex"/>
-         <xsd:enumeration value="hx3"/>
-         <xsd:enumeration value="bcc"/>
-         <xsd:enumeration value="c-r"/>
-         <xsd:enumeration value="p-r"/>
-         <xsd:enumeration value="obl"/>
-      </xsd:restriction>
-   </xsd:simpleType>
-
-   <xsd:simpleType name="SpgrpEnum">
-      <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="any"/>
-         <xsd:enumeration value="p1"/>
-         <xsd:enumeration value="p2"/>
-         <xsd:enumeration value="pmy"/>
-         <xsd:enumeration value="pgy"/>
-         <xsd:enumeration value="cmy"/>
-         <xsd:enumeration value="pmm"/>
-         <xsd:enumeration value="pmg"/>
-         <xsd:enumeration value="pgg"/>
-         <xsd:enumeration value="cmm"/>
-         <xsd:enumeration value="p4"/>
-         <xsd:enumeration value="p4m"/>
-         <xsd:enumeration value="p4g"/>
-         <xsd:enumeration value="p3"/>
-         <xsd:enumeration value="p3m1"/>
-         <xsd:enumeration value="p31m"/>
-         <xsd:enumeration value="p6"/>
-         <xsd:enumeration value="p6m"/>
-         <xsd:enumeration value="pm"/>
-         <xsd:enumeration value="pg"/>
-         <xsd:enumeration value="cm"/>
-      </xsd:restriction>
-   </xsd:simpleType>
-
+ 
    <xsd:simpleType name="MixingEnum">
       <xsd:restriction base="xsd:string">
          <xsd:enumeration value="straight"/>

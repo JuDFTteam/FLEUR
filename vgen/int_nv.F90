@@ -53,7 +53,7 @@ CONTAINS
     tmt = 0.
     nat = 1
     DO n = 1,atoms%ntype
-       DO lh = 0,sphhar%nlh(atoms%ntypsy(nat))
+       DO lh = 0,sphhar%nlh(sym%ntypsy(nat))
           DO j = 1,atoms%jri(n)
              dpj(j) = den%mt(j,lh,n,ispin)*vpot%mt(j,lh,n,ispin)
           ENDDO

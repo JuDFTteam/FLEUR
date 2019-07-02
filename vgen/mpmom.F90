@@ -46,7 +46,7 @@ contains
 
     ! multipole moments of original charge density
     if ( mpi%irank == 0 ) then
-      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
+      CALL mt_moments( input, atoms, sym, sphhar, rho(:,:,:), potdenType, qlmo )
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
@@ -59,7 +59,7 @@ contains
       nat = 1
       do n = 1, atoms%ntype
         write( 6, fmt=8000 ) n
-        nd = atoms%ntypsy(nat)
+        nd = sym%ntypsy(nat)
         do lh = 0, sphhar%nlh(nd)
           l = sphhar%llh(lh,nd)
           mems = sphhar%nmem(lh,nd)
@@ -80,7 +80,7 @@ contains
   end subroutine mpmom
 
 
-  subroutine mt_moments( input, atoms, sphhar, rho, potdenType, qlmo )
+  SUBROUTINE mt_moments( input, atoms, sym, sphhar, rho, potdenType, qlmo )
     ! multipole moments of original charge density
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
@@ -94,6 +94,7 @@ contains
     type(t_input),  intent(in)        :: input
     type(t_sphhar), intent(in)        :: sphhar
     type(t_atoms),  intent(in)        :: atoms
+    type(t_sym),    intent(in)        :: sym
     real,           intent(in)        :: rho(: ,0:, :)
     integer,        intent(in)        :: potdenType
     complex,        intent(out)       :: qlmo(-atoms%lmaxd:,0:,:)
@@ -110,7 +111,7 @@ contains
     qlmo = 0.0
     nat = 1
     do n = 1, atoms%ntype
-      ns = atoms%ntypsy(nat)
+      ns = sym%ntypsy(nat)
       jm = atoms%jri(n)
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(ns), ns)

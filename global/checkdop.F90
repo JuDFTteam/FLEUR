@@ -147,8 +147,8 @@
           ENDIF
           ir2 = 1.0
           IF (l_cdn) ir2 = 1.0 / ( atoms%rmt(n)*atoms%rmt(n) )
-          nd = atoms%ntypsy(na)
-          nopa = atoms%ngopr(na)
+          nd = sym%ntypsy(na)
+          nopa = sym%ngopr(na)
           IF (oneD%odi%d1) THEN
              nopa = oneD%ods%ngopr(na)
              nopa = oneD%ods%invtab(nopa)

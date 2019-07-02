@@ -71,7 +71,7 @@ CONTAINS
     DO lo = 1,atoms%nlo(ntyp)
        l = atoms%llo(lo,ntyp)
        IF (.NOT.((s.LE.eps).AND.(l.GE.1))) THEN
-          IF (atoms%invsat(na).EQ.0) THEN
+          IF (sym%invsat(na).EQ.0) THEN
              IF ((nkvec(lo,na)).LT. (2*atoms%llo(lo,ntyp)+1)) THEN
                 enough(na) = .FALSE.
                 nkvec(lo,na) = nkvec(lo,na) + 1
@@ -118,7 +118,7 @@ CONTAINS
                    nkvec(lo,na) = nkvec(lo,na) - 1
                 END IF
              END IF
-          ELSEIF (atoms%invsat(na).EQ.1) THEN
+          ELSEIF (sym%invsat(na).EQ.1) THEN
              IF ((nkvec(lo,na)).LT. (2* (2*atoms%llo(lo,ntyp)+1))) THEN
                 enough(na) = .FALSE.
                 nkvec(lo,na) = nkvec(lo,na) + 1

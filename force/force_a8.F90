@@ -4,7 +4,7 @@ MODULE m_forcea8
   !
   ! ************************************************************
 CONTAINS
-  SUBROUTINE force_a8(input,atoms,sphhar,jsp,vr,rho,force,results)
+  SUBROUTINE force_a8(input,atoms,sym,sphhar,jsp,vr,rho,force,results)
     !
     USE m_intgr, ONLY : intgr3
     USE m_constants, ONLY: pi_const, sfp_const, ImagUnit
@@ -16,6 +16,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_force),INTENT(IN)       :: force
     TYPE(t_results),INTENT(INOUT)  :: results
     !     ..
@@ -63,7 +64,7 @@ CONTAINS
           END DO
           !
           !
-          nd = atoms%ntypsy(na)
+          nd = sym%ntypsy(na)
           !
           CALL intgr3(rho(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),qval)
 

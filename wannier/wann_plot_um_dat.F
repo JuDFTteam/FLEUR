@@ -615,7 +615,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
      >           noco,jspin,oneD,acof,bcof,ccof,zMat)
 
-      call wann_abinv(atoms,
+      call wann_abinv(atoms,sym,
      X        acof,bcof,ccof)
 
 

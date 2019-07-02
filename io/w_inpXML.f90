@@ -135,7 +135,7 @@ SUBROUTINE w_inpXML(&
       filenum=98
       OPEN (fileNum,file=TRIM(ADJUSTL(filename)),form='formatted',status='replace')
       WRITE (fileNum,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.29">'
+      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.30">'
    ELSE
       fileNum = getXMLOutputUnitNumber()
       CALL openXMLElementNoAttributes('inputData')
@@ -236,15 +236,14 @@ SUBROUTINE w_inpXML(&
 !      <energyParameterLimits ellow="-2.00000" elup="2.00000"/>
    220 FORMAT('      <energyParameterLimits ellow="',f0.8,'" elup="',f0.8,'"/>')
    WRITE (fileNum,220) input%ellow,input%elup
-
-   WRITE (fileNum,'(a)') '   </calculationSetup>'
-   WRITE (fileNum,'(a)') '   <cell>'
    if (l_include(2)) THEN
       call sym%print_xml(fileNum)
    else
       WRITE (fileNum,'(a)')'      <!-- symmetry operations included here -->'
       WRITE (fileNum,'(a)')'      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>'
    end if
+   WRITE (fileNum,'(a)') '   </calculationSetup>'
+   WRITE (fileNum,'(a)') '   <cell>'
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Note: Different options for the cell definition!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -287,7 +286,7 @@ SUBROUTINE w_inpXML(&
    CLASS IS (t_xcpot_inbuild_nf)
       !   <xcFunctional name="pbe" relativisticCorrections="F">
       280 FORMAT('   <xcFunctional name="',a,'" relativisticCorrections="',l1,'"/>')
-      WRITE (fileNum,280) xcpot%get_name(),xcpot%relativistic_correction()
+      WRITE (fileNum,280) trim(xcpot%get_name()),xcpot%relativistic_correction()
    END SELECT
 
    uIndices = -1
@@ -334,11 +333,6 @@ SUBROUTINE w_inpXML(&
       320 FORMAT('         <atomicCutoffs lmax="',i0,'" lnonsphr="',i0,'"/>')
       WRITE (fileNum,320) atoms%lmax(iAtomType),atoms%lnonsph(iAtomType)
 
-      IF (ALL(enpara%qn_el(0:3,iAtomType,1).ne.0)) THEN
-!!         <energyParameters s="3" p="3" d="3" f="4"/>
-         321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
-         WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
-      END IF
 
       IF(l_explicit.OR.hybrid%l_hybrid) THEN
          315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
@@ -366,6 +360,13 @@ SUBROUTINE w_inpXML(&
             END IF
          END DO
          WRITE (fileNum,'(a)') '         </electronConfig>'
+
+      !IF (ALL(enpara%qn_el(0:3,iAtomType,1).ne.0)) THEN
+!!         <energyParameters s="3" p="3" d="3" f="4"/>
+         321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
+         WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
+      !END IF
+
 
       IF (uIndices(1,iAtomType).NE.-1) THEN
 !         <ldaU l="2" U="5.5" J="0.9" l_amf="F"/>

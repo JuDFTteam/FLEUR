@@ -12,7 +12,7 @@ MODULE m_slomat
   !***********************************************************************
 CONTAINS
   SUBROUTINE slomat(&
-       input,atoms,mpi,lapw,cell,noco,ntyp,na,&
+       input,atoms,sym,mpi,lapw,cell,noco,ntyp,na,&
        isp,ud, alo1,blo1,clo1,fj,gj,&
        iintsp,jintsp,chi,smat)
     !***********************************************************************
@@ -27,6 +27,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_atoms),INTENT(IN)  :: atoms
+    TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_lapw),INTENT(IN)   :: lapw
     TYPE(t_mpi),INTENT(IN)    :: mpi
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -58,15 +59,15 @@ CONTAINS
        CALL lapw%phase_factors(i,atoms%taual(:,na),noco%qss,cph(:,i))
     ENDDO
 
-    IF ((atoms%invsat(na) == 0) .OR. (atoms%invsat(na) == 1)) THEN
+    IF ((sym%invsat(na) == 0) .OR. (sym%invsat(na) == 1)) THEN
        !--->    if this atom is the first of two atoms related by inversion,
        !--->    the contributions to the overlap matrix of both atoms are added
        !--->    at once. where it is made use of the fact, that the sum of
        !--->    these contributions is twice the real part of the contribution
        !--->    of each atom. note, that in this case there are twice as many
        !--->    (2*(2*l+1)) k-vectors (compare abccoflo and comments there).
-       IF (atoms%invsat(na) == 0) invsfct = 1
-       IF (atoms%invsat(na) == 1) invsfct = 2
+       IF (sym%invsat(na) == 0) invsfct = 1
+       IF (sym%invsat(na) == 1) invsfct = 2
 
        con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 

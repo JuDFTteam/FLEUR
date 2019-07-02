@@ -6,7 +6,7 @@
 MODULE m_libxc_postprocess_gga
 CONTAINS
 
-   SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num)
+   SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,n,v_xc,grad, atom_num)
       USE m_mt_tofrom_grid
       USE m_types
       use m_judft_string
@@ -14,6 +14,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_atoms),INTENT(IN)    :: atoms
+      TYPE(t_sym),INTENT(IN)      :: sym
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
       INTEGER,INTENT(IN)          :: n
       REAL,INTENT(INOUT)          :: v_xc(:,:)
@@ -30,12 +31,12 @@ CONTAINS
       ALLOCATE(vsigma(nsp,n_sigma),vsigma_mt(atoms%jri(n),0:sphhar%nlhd,n_sigma))
       vsigma_mt=0.0
       vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-      CALL mt_from_grid(atoms,sphhar,n,n_sigma,vsigma,vsigma_mt)
+      CALL mt_from_grid(atoms,sym,sphhar,n,n_sigma,vsigma,vsigma_mt)
       DO i=1,atoms%jri(n)
          vsigma_mt(i,:,:)=vsigma_mt(i,:,:)*atoms%rmsh(i,n)**2
       ENDDO
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
-      CALL mt_to_grid(xcpot,n_sigma,atoms,sphhar,vsigma_mt,n,grad=grad_vsigma)
+      CALL mt_to_grid(xcpot,n_sigma,atoms,sym,sphhar,vsigma_mt,n,grad=grad_vsigma)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_mt

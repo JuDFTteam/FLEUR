@@ -95,10 +95,10 @@ CONTAINS
 	  b=0.0
           na = SUM(atoms%neq(:n-1))+nn
           IF (atoms%lnonsph(n)<0) CYCLE ntyploop
-          IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-             IF (atoms%invsat(na)==0) invsfct = 1
-             IF (atoms%invsat(na)==1) invsfct = 2
-             np = sym%invtab(atoms%ngopr(na))
+          IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
+             IF (sym%invsat(na)==0) invsfct = 1
+             IF (sym%invsat(na)==1) invsfct = 2
+             np = sym%invtab(sym%ngopr(na))
              IF (oneD%odi%d1) np = oneD%ods%ngopr(na)
              !--->       loop over interstitial spins
              DO iintsp = 1,nintsp
@@ -277,7 +277,7 @@ CONTAINS
                    !--->       end loops over interstitial spin
                 ENDDO
              ENDDO
-          ENDIF              ! atoms%invsat(na) = 0 or 1
+          ENDIF              ! sym%invsat(na) = 0 or 1
           !--->    end loop over equivalent atoms
        END DO
        IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) CALL hsmt_hlptomat(atoms%nlotot,lapw%nv,sub_comm,chi11,chi21,chi22,aahlp,aa_c)

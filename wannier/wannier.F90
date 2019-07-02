@@ -366,15 +366,15 @@ CONTAINS
             atoms%lmaxd,atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,&
             DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,&
             atoms%nlod,atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
-            atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,&
-            atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,&
+            atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
+            atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
             atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,&                    ! TODO: adapt if needed&
             stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,&
             stars%ng3,&
             vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,sphhar%nlhd,stars%ng3,&
             vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,&
-            atoms%jri,sphhar%ntypsd,atoms%ntypsy,input%jspins,nkpt,&
+            atoms%jri,sphhar%ntypsd,sym%ntypsy,input%jspins,nkpt,&
             atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,&
             atoms%ulo_der,stars%ustep,stars%ig,stars%mx1,&
             stars%mx2,stars%mx3,stars%rgphs,&
@@ -406,14 +406,14 @@ CONTAINS
             atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,&
             input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,&
             atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
-            atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,&
-            atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,&
+            atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
+            atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
             atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,&
             mpi%irank,&
             mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
             sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,&
-            input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,atoms%ntypsy,&
+            input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,sym%ntypsy,&
             input%jspins,nkpt,atoms%dx,stars%ng2,atoms%rmsh,&
             sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,stars%ustep,&
             stars%ig,stars%mx1,stars%mx2,stars%mx3,&
@@ -449,14 +449,14 @@ CONTAINS
             atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,&
             input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,&
             atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
-            atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,&
-            atoms%lmax,atoms%invsat,sym%invsatnr,nkpt,atoms%taual,&
+            atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
+            atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
             atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,&
             mpi%irank,&
             mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
             sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,&
-            input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,atoms%ntypsy,&
+            input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,sym%ntypsy,&
             input%jspins,nkpt,atoms%dx,stars%ng2,atoms%rmsh,&
             sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,stars%ustep,&
             stars%ig,stars%mx1,stars%mx2,stars%mx3,&
@@ -1226,7 +1226,7 @@ CONTAINS
                 IF (wann%l_bzsym.AND.oper.NE.1) THEN  !rotate bkpt
                    !         call wann_kptsrotate(
                    !     >            atoms%nat,atoms%nlod,atoms%llod,
-                   !     >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
+                   !     >            atoms%ntype,atoms%nlo,atoms%llo,sym%invsat,
                    !     >            noco%l_noco,noco%l_soc,
                    !     >            atoms%ntype,atoms%neq,atoms%nlotot,
                    !     >            kveclo,jspin,
@@ -1260,7 +1260,7 @@ CONTAINS
                      noco,jspin,oneD,acof,bcof,ccof,zMat)
 
 
-                CALL wann_abinv(atoms, acof,bcof,ccof)
+                CALL wann_abinv(atoms,sym, acof,bcof,ccof)
 
 
                 IF((doublespin.EQ.3).OR.(doublespin.EQ.4)) GOTO 9900
@@ -1281,7 +1281,7 @@ CONTAINS
                    !     >        DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,vacuum%nmzxyd,stars%ng2,sphhar%ntypsd,
                    !     >        atoms%ntype,atoms%lmaxd,atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,stars%ng3,vacuum%nvac,
                    !     >        vacuum%nmz,vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,sym%symor,
-                   !     >        sym%invs,sym%invs2,cell%z1,vacuum%delz,atoms%ngopr,atoms%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
+                   !     >        sym%invs,sym%invs2,cell%z1,vacuum%delz,sym%ngopr,sym%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
                    !     >        atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,sliceplot%kk,
                    !     >        DIMENSION%nvd,atoms%nlod,atoms%llod,nv(jspin),lmd,lapw%bkpt,cell%omtil,atoms%nlo,atoms%llo,
                    !     >        k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
@@ -1297,8 +1297,8 @@ CONTAINS
                         atoms%neq,stars%ng3,vacuum%nvac,vacuum%nmz,&
                         vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,&
                         input%film,sliceplot%slice,sym%symor,&
-                        sym%invs,sym%invs2,cell%z1,vacuum%delz,atoms%ngopr,&
-                        atoms%ntypsy,atoms%jri,atoms%pos,atoms%taual,&
+                        sym%invs,sym%invs2,cell%z1,vacuum%delz,sym%ngopr,&
+                        sym%ntypsy,atoms%jri,atoms%pos,atoms%taual,&
                         atoms%zatom,atoms%rmt,atoms%lmax,sym%mrot,sym%tau,&
                         atoms%rmsh,sym%invtab,cell%amat,cell%bmat,cell%bbmat,&
                         ikpt,DIMENSION%nvd,lapw%nv(jspin),lapw%bkpt,cell%omtil,&
@@ -1560,7 +1560,7 @@ CONTAINS
                       IF (wann%l_bzsym .AND. (oper_b.NE.1)  ) THEN
                          !         call wann_kptsrotate(
                          !     >            atoms%nat,atoms%nlod,atoms%llod,
-                         !     >            atoms%ntype,atoms%nlo,atoms%llo,atoms%invsat,
+                         !     >            atoms%ntype,atoms%nlo,atoms%llo,sym%invsat,
                          !     >            noco%l_noco,noco%l_soc,
                          !     >            atoms%ntype,atoms%neq,atoms%nlotot,
                          !     >            kveclo_b,jspin,
@@ -1599,7 +1599,7 @@ CONTAINS
                            acof_b,bcof_b,ccof_b,zMat_b)
 
 
-                      CALL wann_abinv(atoms,&
+                      CALL wann_abinv(atoms,sym,&
                            acof_b,bcof_b,ccof_b)
 
                       !cccccccc  Interstitial  ccccccccccccccccccccccccc
@@ -1826,7 +1826,7 @@ CONTAINS
                            noccbd_qb,usdus,noco,jspin_b,oneD,&
                            acof_qb,bcof_qb,ccof_qb,zMat_qb)
 
-                      CALL wann_abinv(atoms,&
+                      CALL wann_abinv(atoms,sym,&
                            acof_qb,bcof_qb,ccof_qb)
 
                       ! check that A,B,C coefficients are the same if q+b = q
@@ -2095,7 +2095,7 @@ CONTAINS
                                  stars%ng3,vacuum%nvac,vacuum%nmz,vacuum%nmzxy,stars%ng2,&
                                  sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,&
                                  sym%symor,sym%invs,sym%invs2,cell%z1,vacuum%delz,&
-                                 atoms%ngopr,atoms%ntypsy,atoms%jri,atoms%pos,atoms%zatom,&
+                                 sym%ngopr,sym%ntypsy,atoms%jri,atoms%pos,atoms%zatom,&
                                  atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,&
                                  cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,&
                                  sliceplot%kk,DIMENSION%nvd,atoms%nlod,atoms%llod,&
@@ -2122,7 +2122,7 @@ CONTAINS
                               stars%ng3,vacuum%nvac,vacuum%nmz,vacuum%nmzxy,stars%ng2,&
                               sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,&
                               sym%symor,sym%invs,sym%invs2,cell%z1,vacuum%delz,&
-                              atoms%ngopr,atoms%ntypsy,atoms%jri,atoms%pos,atoms%zatom,&
+                              sym%ngopr,sym%ntypsy,atoms%jri,atoms%pos,atoms%zatom,&
                               atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,&
                               cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,&
                               sliceplot%kk,DIMENSION%nvd,atoms%nlod,atoms%llod,&

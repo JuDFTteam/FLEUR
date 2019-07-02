@@ -42,9 +42,9 @@ MODULE m_types_vacuum
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     IF (PRESENT(irank)) THEN
-       rank=0
-    else
        rank=irank
+    else
+       rank=0
     END IF
     CALL mpi_bc(this%nmz,rank,mpi_comm)
     CALL mpi_bc(this%nmzd,rank,mpi_comm)

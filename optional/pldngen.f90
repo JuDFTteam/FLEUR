@@ -178,7 +178,7 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
 
    !---> calculate the charge and magnetization density in the muffin tins
    DO ityp = 1,atoms%ntype
-      DO ilh = 0,sphhar%nlh(atoms%ntypsy(ityp))
+      DO ilh = 0,sphhar%nlh(sym%ntypsy(ityp))
          DO iri = 1,atoms%jri(ityp)
             IF (.NOT. l_fmpl2) THEN 
                cdnup   = rho(iri,ilh,ityp,1)

@@ -12,23 +12,28 @@ MODULE m_types_fleurinput_base
 
   TYPE,ABSTRACT:: t_fleurinput_base
    CONTAINS
-     PROCEDURE :: read_xml
-     PROCEDURE :: mpi_bc
+     PROCEDURE(read_xml_abstract),DEFERRED :: read_xml
+     PROCEDURE(mpi_bc_abstract),DEFERRED :: mpi_bc
   END TYPE t_fleurinput_base
   PUBLIC t_fleurinput_base
-
-CONTAINS
-  SUBROUTINE read_xml(this,xml)
-    USE m_types_xml
-    CLASS(t_fleurinput_base),INTENT(INOUT):: this
-    TYPE(t_xml),INTENT(IN)              :: xml
-  END SUBROUTINE read_xml
-  SUBROUTINE mpi_bc(this,mpi_comm,irank)
-    USE m_types_xml
-    CLASS(t_fleurinput_base),INTENT(INOUT):: this
-    INTEGER,INTENT(IN)                    :: mpi_comm
-    INTEGER,INTENT(IN),OPTIONAL::irank
-  END SUBROUTINE mpi_bc
   
+  INTERFACE
+     SUBROUTINE read_xml_abstract(this,xml)
+       USE m_types_xml
+       IMPORT t_fleurinput_base
+       CLASS(t_fleurinput_base),INTENT(INOUT):: this
+       TYPE(t_xml),INTENT(IN)              :: xml
+     END SUBROUTINE read_xml_abstract
+  END INTERFACE
+
+  INTERFACE
+     SUBROUTINE mpi_bc_abstract(this,mpi_comm,irank)
+       USE m_types_xml
+       IMPORT t_fleurinput_base
+       CLASS(t_fleurinput_base),INTENT(INOUT):: this
+       INTEGER,INTENT(IN)                    :: mpi_comm
+       INTEGER,INTENT(IN),OPTIONAL::irank
+     END SUBROUTINE mpi_bc_abstract
+  END INTERFACE
 END MODULE m_types_fleurinput_base
 

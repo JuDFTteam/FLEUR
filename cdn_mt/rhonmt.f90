@@ -68,7 +68,7 @@ CONTAINS
                             nt = natom
                             DO  na = 1,atoms%neq(nn)
                                nt = nt + 1
-                               IF (atoms%ntypsy(nt).EQ.ns) THEN
+                               IF (sym%ntypsy(nt).EQ.ns) THEN
                                   DO nb = 1,ne
                                      denCoeffs%uunmt(llp,lh,nn,ispin) = denCoeffs%uunmt(llp,lh,nn,ispin)&
                                           +we(nb)*real(cconst*eigVecCoeffs%acof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%acof(nb,lmp,nt,ispin)))

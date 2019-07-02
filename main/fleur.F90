@@ -77,11 +77,11 @@ CONTAINS
     TYPE(t_input)                   :: input
     TYPE(t_field)                   :: field, field2
     TYPE(t_dimension)               :: DIMENSION
-    TYPE(t_atoms)                   :: atoms
-    TYPE(t_sphhar)                  :: sphhar
-    TYPE(t_cell)                    :: cell
-    TYPE(t_stars)                   :: stars
-    TYPE(t_sym)                     :: sym
+    TYPE(t_atoms) ,TARGET           :: atoms
+    TYPE(t_sphhar),TARGET           :: sphhar
+    TYPE(t_cell) ,TARGET            :: cell
+    TYPE(t_stars),TARGET            :: stars
+    TYPE(t_sym),TARGET              :: sym
     TYPE(t_noco)                    :: noco
     TYPE(t_vacuum)                  :: vacuum
     TYPE(t_sliceplot)               :: sliceplot

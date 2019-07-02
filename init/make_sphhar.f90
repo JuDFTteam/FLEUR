@@ -24,14 +24,14 @@ contains
 
     ! Dimensioning of lattice harmonics
 
-  ALLOCATE(atoms%nlhtyp(atoms%ntype),atoms%ntypsy(atoms%nat))
+  ALLOCATE(atoms%nlhtyp(atoms%ntype),sym%ntypsy(atoms%nat))
   ALLOCATE(sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1))
   sphhar%ntypsd = 0
   IF (.NOT.oneD%odd%d1) THEN
      CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
           atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
           atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
-          atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,&
+          atoms%nlhtyp,sym%ntypsy,sphhar%nlh,sphhar%llh,&
           sphhar%nmem,sphhar%mlh,sphhar%clnu)
   ELSE IF (oneD%odd%d1) THEN
      WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
@@ -48,7 +48,7 @@ contains
      CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
           atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
-          atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
+          sym%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
           sphhar%mlh,sphhar%clnu)        
      ii = 1
      DO i = 1,atoms%ntype
@@ -69,7 +69,7 @@ contains
      CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
           atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-          atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
+          atoms%nlhtyp,sym%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
      sym%nsymt = sphhar%ntypsd
      oneD%mrot1(:,:,:) = sym%mrot(:,:,:)
      oneD%tau1(:,:) = sym%tau(:,:)
@@ -89,7 +89,7 @@ contains
      CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
           atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
-          nlhtp1,atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
+          nlhtp1,sym%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
      sym%nsymt = sphhar%ntypsd
      ii = 1
      DO i = 1,atoms%ntype

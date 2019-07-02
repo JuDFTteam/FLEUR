@@ -52,8 +52,8 @@
              DO  n = 1,atoms%ntype
                 izn = atoms%zatom(n) + 0.01
                 WRITE (nu) namat_const(izn),n,atoms%jri(n),atoms%rmt(n),atoms%dx(n)
-                WRITE (nu) atoms%ntypsy(na),sphhar%nlh(atoms%ntypsy(na))
-                DO  lh = 0,sphhar%nlh(atoms%ntypsy(na))
+                WRITE (nu) sym%ntypsy(na),sphhar%nlh(sym%ntypsy(na))
+                DO  lh = 0,sphhar%nlh(sym%ntypsy(na))
                    WRITE (nu) lh
                    WRITE (nu) (fr(i,lh,n,jsp),i=1,atoms%jri(n))
                 ENDDO

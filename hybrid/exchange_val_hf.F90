@@ -308,7 +308,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
                                              hybrid%lcutm1,hybrid%maxlcutm1,hybrid%nindxm1,hybrid%maxindxm1,hybrid%gptm,&
                                              hybrid%ngptm(ikpt0),hybrid%pgptm(:,ikpt0),hybrid%gptmd,hybrid%basm1,&
                                              hybrid%nbasm(ikpt0),iband1,hybrid%nbands(nk),nsest,ibando,psize,indx_sest,&
-                                             atoms%invsat,sym%invsatnr,mpi%irank,cprod_vv_r(:hybrid%nbasm(ikpt0),:,:),&
+                                             sym%invsat,sym%invsatnr,mpi%irank,cprod_vv_r(:hybrid%nbasm(ikpt0),:,:),&
                                              cprod_vv_c(:hybrid%nbasm(ikpt0),:,:),mat_ex%l_real,wl_iks(:iband1,nkqpt),n_q(ikpt))
          END IF
 #endif

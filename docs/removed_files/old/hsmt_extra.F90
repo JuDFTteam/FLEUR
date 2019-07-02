@@ -136,10 +136,10 @@ CONTAINS
        DO nn = 1,atoms%neq(n)
           na = na + 1
           IF (atoms%lnonsph(n).LT.0) CYCLE ntype_loop
-          IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
-             IF (atoms%invsat(na).EQ.0) invsfct = 1
-             IF (atoms%invsat(na).EQ.1) invsfct = 2
-             np = sym%invtab(atoms%ngopr(na))
+          IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
+             IF (sym%invsat(na).EQ.0) invsfct = 1
+             IF (sym%invsat(na).EQ.1) invsfct = 2
+             np = sym%invtab(sym%ngopr(na))
              IF (oneD%odi%d1) THEN
                 np = oneD%ods%ngopr(na)
              END IF
@@ -308,7 +308,7 @@ CONTAINS
                 locolu = locoluTemp
              END IF
 
-          ENDIF                                ! atoms%invsat(na) = 0 or 1
+          ENDIF                                ! sym%invsat(na) = 0 or 1
           !--->    end loop over equivalent atoms
        END DO
        IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) CALL hsmt_hlptomat(atoms%nlotot,lapw%nv,sub_comm,chi11,chi21,chi22,aahlp,aa_c,bbhlp,bb_c)

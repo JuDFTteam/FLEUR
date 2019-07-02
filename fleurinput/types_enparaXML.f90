@@ -32,9 +32,9 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     IF (PRESENT(irank)) THEN
-       rank=0
-    ELSE
        rank=irank
+    ELSE
+       rank=0
     END IF
     
     CALL mpi_bc(this%qn_el,rank,mpi_comm)
@@ -146,6 +146,8 @@ CONTAINS
 
     IF (PRESENT(l_defaults)) THEN
        IF (.NOT.l_defaults) RETURN
+    ELSE
+       RETURN
     ENDIF
     !Set most simple defaults
     DO jsp=1,jspins

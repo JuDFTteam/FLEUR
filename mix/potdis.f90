@@ -81,7 +81,7 @@ CONTAINS
           rh(:atoms%jri(n))=rhsp(:atoms%jri(n),0,n,num,1)*rhsp(:atoms%jri(n),0,n,num,1) *fpi_const
           CALL intgr3(rh,atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),pdis(0,n,num))
           pdis(4,n,num)=pdis(0,n,num)
-          DO lh = 1,sphhar%nlh(atoms%ntypsy(na))
+          DO lh = 1,sphhar%nlh(sym%ntypsy(na))
              rh(:atoms%jri(n))=rh(:atoms%jri(n))+rhsp(:atoms%jri(n),lh,n,num,1)*&
                   rhsp(:atoms%jri(n),lh,n,num,1)* atoms%rmsh(:atoms%jri(n),n)*atoms%rmsh(:atoms%jri(n),n)
              CALL intgr3(rh,atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),rhs)

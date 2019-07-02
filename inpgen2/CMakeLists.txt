@@ -11,6 +11,7 @@ option(INPGEN_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
 set(FLEUR_SRC "/Users/wortmann/eclipse/fleur/")
 
 add_executable(inpgen2
+dropDefaults.c
 inpgen_help.f90
 inpgen.f90
 bravais_symm.f90
@@ -117,8 +118,8 @@ ${FLEUR_SRC}/global/ss_sym.f
 ${FLEUR_SRC}/math/inwint.f
 ${FLEUR_SRC}/math/outint.f
 ${FLEUR_SRC}/math/intgr.F90
-${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/math/d_wigner.F90
+${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
 ${FLEUR_SRC}/init/boxdim.f
 )

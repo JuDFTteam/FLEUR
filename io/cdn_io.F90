@@ -540,8 +540,8 @@ MODULE m_cdn_io
             atomsTemp%ntype = atoms%ntype
             ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
             sphharTemp%nlh(:) = sphhar%nlh(:)
-            ALLOCATE (atomsTemp%ntypsy(SIZE(atoms%ntypsy)))
-            atomsTemp%ntypsy(:) = atoms%ntypsy(:)
+            ALLOCATE (symTemp%ntypsy(SIZE(sym%ntypsy)))
+            symTemp%ntypsy(:) = sym%ntypsy(:)
             ALLOCATE (atomsTemp%jri(SIZE(atoms%jri)))
             atomsTemp%jri(:) = atoms%jri(:)
             ALLOCATE (atomsTemp%neq(SIZE(atoms%neq)))
@@ -587,7 +587,7 @@ MODULE m_cdn_io
             REWIND iUnit
 
             DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp)
-            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%zatom, atomsTemp%ntypsy, sphharTemp%nlh)
+            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%zatom, symTemp%ntypsy, sphharTemp%nlh)
             DEALLOCATE (atomsTemp%rmt, atomsTemp%dx)
          END IF
 
@@ -603,8 +603,8 @@ MODULE m_cdn_io
             atomsTemp%ntype = atoms%ntype
             ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
             sphharTemp%nlh(:) = sphhar%nlh(:)
-            ALLOCATE (atomsTemp%ntypsy(SIZE(atoms%ntypsy)))
-            atomsTemp%ntypsy(:) = atoms%ntypsy(:)
+            ALLOCATE (symTemp%ntypsy(SIZE(sym%ntypsy)))
+            symTemp%ntypsy(:) = sym%ntypsy(:)
             ALLOCATE (atomsTemp%jri(SIZE(atoms%jri)))
             atomsTemp%jri(:) = atoms%jri(:)
             ALLOCATE (atomsTemp%neq(SIZE(atoms%neq)))
@@ -628,7 +628,7 @@ MODULE m_cdn_io
                         iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
 
             DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp)
-            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%ntypsy, sphharTemp%nlh)
+            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, symTemp%ntypsy, sphharTemp%nlh)
          END IF
 
          ! Write the density

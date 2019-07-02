@@ -68,10 +68,10 @@
                 READ (nu,END=200,ERR=200) namaux,ndum,jrin,rmtn,dxn
                 READ (nu,END=200,ERR=200) ntydum,nlhn
                 !+gu
-                IF ( nlhn.GT.sphhar%nlh(atoms%ntypsy(na)) ) THEN
-                   WRITE (*,*) 'nlh (',nlhn,') set to (',sphhar%nlh(atoms%ntypsy(na)),')'
-                   n_diff = nlhn - sphhar%nlh(atoms%ntypsy(na))
-                   nlhn = sphhar%nlh(atoms%ntypsy(na))
+                IF ( nlhn.GT.sphhar%nlh(sym%ntypsy(na)) ) THEN
+                   WRITE (*,*) 'nlh (',nlhn,') set to (',sphhar%nlh(sym%ntypsy(na)),')'
+                   n_diff = nlhn - sphhar%nlh(sym%ntypsy(na))
+                   nlhn = sphhar%nlh(sym%ntypsy(na))
                 ELSE
                    n_diff = 0 
                 ENDIF
@@ -80,8 +80,8 @@
                    READ (nu,END=200,ERR=200) lhdummy
                    READ (nu,END=200,ERR=200) (fr(i,lh,n,jsp),i=1,jrin)
                 ENDDO
-                IF (nlhn.LT.sphhar%nlh(atoms%ntypsy(na))) THEN
-                   DO lh = nlhn + 1,sphhar%nlh(atoms%ntypsy(na))
+                IF (nlhn.LT.sphhar%nlh(sym%ntypsy(na))) THEN
+                   DO lh = nlhn + 1,sphhar%nlh(sym%ntypsy(na))
                       DO i = 1,atoms%jri(n)
                          fr(i,lh,n,jsp) = 0.
                       ENDDO

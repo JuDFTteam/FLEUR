@@ -12,7 +12,7 @@ MODULE m_rhosphnlo
   ! Philipp Kurz 99/04
   !***********************************************************************
 CONTAINS
-  SUBROUTINE rhosphnlo(itype,atoms,sphhar, uloulopn,dulon,uulon,&
+  SUBROUTINE rhosphnlo(itype,atoms,sphhar,sym, uloulopn,dulon,uulon,&
        ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,qmtllo)
 
     USE m_constants, ONLY : c_light,sfp_const
@@ -22,6 +22,8 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_sym),INTENT(IN)      :: sym
+
     !     ..
     !     .. Scalar Arguments ..
     INTEGER,    INTENT (IN) :: itype 
@@ -108,7 +110,7 @@ CONTAINS
     !---> add the contribution of the local orbitals and flapw - lo cross-
     !---> terms to the non-spherical chargedensity inside the muffin tins.
 
-    DO lh = 1,sphhar%nlh(atoms%ntypsy(atoms%nat))
+    DO lh = 1,sphhar%nlh(sym%ntypsy(atoms%nat))
        DO lp = 0,atoms%lmax(itype)
           DO lo = 1,atoms%nlo(itype)
              DO j = 1,atoms%jri(itype)

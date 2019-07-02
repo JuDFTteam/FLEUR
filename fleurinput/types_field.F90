@@ -12,7 +12,7 @@ MODULE m_types_field
   USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
-  TYPE,EXTENDS(t_fleurinput_base):: t_efield
+  TYPE:: t_efield
      REAL    :: zsigma  = 10.0  ! Distance to the charged plates
      REAL    :: sigma   ! charge at the plates
      REAL    :: sig_b(2)=  0.0  ! Extra charge for the top/bottom plate
@@ -30,7 +30,7 @@ MODULE m_types_field
      CHARACTER(len=50),ALLOCATABLE :: shapes(:)
   END TYPE t_efield
 
-  TYPE t_field
+  TYPE,EXTENDS(t_fleurinput_base):: t_field
      TYPE(t_efield)   :: efield
      LOGICAL          :: l_b_field=.FALSE.
      REAL             :: b_field
@@ -51,9 +51,9 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     IF (PRESENT(irank)) THEN
-       rank=0
-    ELSE
        rank=irank
+    ELSE
+       rank=0
     END IF
 
     CALL mpi_bc(this%l_b_field,rank,mpi_comm)
@@ -92,7 +92,7 @@ CONTAINS
 
   SUBROUTINE read_xml_field(this,xml)
     USE m_types_xml
-    CLASS(t_field),INTENT(OUT)::this
+    CLASS(t_field),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(IN)::xml
 
     CHARACTER(len=100)::xpatha,xpathb

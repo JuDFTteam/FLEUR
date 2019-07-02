@@ -178,7 +178,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                den%mt(i,0,n,ispin) = rh(i,n,ispin)*sfp_const*atoms%rmsh(i,n)**2
             END DO
             ! reset nonspherical mt charge
-            DO k = 1,sphhar%nlh(atoms%ntypsy(nat))
+            DO k = 1,sphhar%nlh(sym%ntypsy(nat))
                DO j = 1,atoms%jri(n)
                   den%mt(j,k,n,ispin) = 0.e0
                END DO

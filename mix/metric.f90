@@ -66,7 +66,7 @@ CONTAINS
        dxn2 =2.0e0 * dxn
        dxn4 =4.0e0 * dxn
 
-       DO l = 0, sphhar%nlh(atoms%ntypsy(na))
+       DO l = 0, sphhar%nlh(sym%ntypsy(na))
           imap = imap + 1
           g(imap) = dxn / atoms%rmsh(1,n)
           IF (.NOT.l_pot) THEN
@@ -205,7 +205,7 @@ CONTAINS
        IF (noco%l_mtnocopot) THEN
           na = 1
           DO n = 1,atoms%ntype
-             DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+             DO l = 0,sphhar%nlh(sym%ntypsy(na))
                 DO i = 1,atoms%jri(n)
                    j = j + 1
                    sout(imap+j) = g(ioff+(j-1)/2)*s_in(imap+j)

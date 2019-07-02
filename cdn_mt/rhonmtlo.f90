@@ -15,7 +15,7 @@ MODULE m_rhonmtlo
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE rhonmtlo(atoms,sphhar,ne,we,eigVecCoeffs,denCoeffs,ispin)
+  SUBROUTINE rhonmtlo(atoms,sphhar,sym,ne,we,eigVecCoeffs,denCoeffs,ispin)
     USE m_gaunt,ONLY:gaunt1
     USE m_types
     use m_constants
@@ -24,6 +24,7 @@ CONTAINS
 
     TYPE(t_sphhar),       INTENT(IN)    :: sphhar
     TYPE(t_atoms),        INTENT(IN)    :: atoms
+    TYPE(t_sym),          INTENT(IN)    :: sym
     TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
     TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
@@ -46,11 +47,11 @@ CONTAINS
     neqat0 = 0
     DO ntyp = 1,atoms%ntype
        !--->    loop over the lattice harmonics
-       DO lh = 1,sphhar%nlh(atoms%ntypsy(neqat0+1))
-          lpp = sphhar%llh(lh,atoms%ntypsy(neqat0+1))
-          DO jmem = 1,sphhar%nmem(lh,atoms%ntypsy(neqat0+1))
-             mpp = sphhar%mlh(jmem,lh,atoms%ntypsy(neqat0+1))
-             cmv = CONJG(sphhar%clnu(jmem,lh,atoms%ntypsy(neqat0+1)))
+       DO lh = 1,sphhar%nlh(sym%ntypsy(neqat0+1))
+          lpp = sphhar%llh(lh,sym%ntypsy(neqat0+1))
+          DO jmem = 1,sphhar%nmem(lh,sym%ntypsy(neqat0+1))
+             mpp = sphhar%mlh(jmem,lh,sym%ntypsy(neqat0+1))
+             cmv = CONJG(sphhar%clnu(jmem,lh,sym%ntypsy(neqat0+1)))
              DO lo = 1,atoms%nlo(ntyp)
                 l = atoms%llo(lo,ntyp)
                 lpmin0 = ABS(l-lpp)

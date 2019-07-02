@@ -15,19 +15,18 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   USE m_juDFT
   USE m_types
   USE m_constants
-  USE m_lapwdim
   USE m_ylm
   USE m_chkmt
   USE m_dwigner
-  USE m_mapatom
   USE m_cdn_io
   USE m_prpxcfft
   use m_checks
+  use m_lapwdim
   use m_make_stars
   use m_make_sphhar
+  use m_make_sym
   USE m_convn
   USE m_efield
-  USE m_od_mapatom
   USE m_od_kptsgen
   USE m_types_forcetheo_extended
   USE m_types_xcpot_libxc
@@ -83,6 +82,11 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of input postprocessing (calculate missing parameters)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  call cell%init()
+  cell%volint = cell%vol
+  cell%volint = cell%volint - DOT_PRODUCT(atoms%volmts(:),atoms%neq(:))
+  CALL sym%init(cell,input%film)
+  CALL make_sym(sym,cell,atoms,noco,oneD,input) 
   !Finish setup of xcpot
   IF (xcpot%l_libxc) THEN
      func_vxc_id_c=xcpot%func_vxc_id_c
@@ -114,6 +118,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      ALLOCATE(t_forcetheo_jij::forcetheo)
   CASE(4)
      ALLOCATE(t_forcetheo_ssdisp::forcetheo)
+  CASE default
+     ALLOCATE(t_forcetheo::forcetheo)
   END SELECT
 
   SELECT TYPE(forcetheo)
@@ -173,7 +179,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   
   CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
 
-  CALL lapw_fft_dim(cell,input,noco,stars)
 
    
   IF(dimension%neigd.EQ.-1) THEN
@@ -184,12 +189,10 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
 
   ! Generate missing parameters for atoms and calculate volume of the different regions
-  cell%volint = cell%vol
   CALL ylmnorm_init(atoms%lmaxd)
   dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
   dimension%msh = 0
 
-  cell%volint = cell%volint - atoms%volmts(iType)*atoms%neq(iType)
 
 
   
@@ -206,21 +209,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 
   ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
     
-  ! Calculate additional symmetry information
   
-  IF (atoms%n_u.GT.0) THEN
-     CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
-  END IF
   
-  IF (.NOT.oneD%odd%d1) THEN
-     CALL mapatom(sym,atoms,cell,input,noco)
-     oneD%ngopr1(1:atoms%nat) = atoms%ngopr(1:atoms%nat)
-     !     DEALLOCATE ( nq1 )
-  ELSE
-     CALL juDFT_error("The oneD version is broken here. Compare call to mapatom with old version")
-     CALL mapatom(sym,atoms,cell,input,noco)
-     CALL od_mapatom(oneD,atoms,sym,cell)
-  END IF
   ! Check muffin tin radii
   
   l_test = .TRUE. ! only checking, dont use new parameters
@@ -228,7 +218,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   
   !adjust positions by displacements
   CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
-  
   
 
   call make_sphhar(atoms,sphhar,sym,cell,oneD)
@@ -255,13 +244,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   
   ! Other small stuff
   
-  IF( sym%invs .OR. noco%l_soc ) THEN
-     sym%nsym = sym%nop
-  ELSE
-     ! combine time reversal symmetry with the spatial symmetry opera
-     ! thus the symmetry operations are doubled
-     sym%nsym = 2*sym%nop
-  END IF
   
   
   

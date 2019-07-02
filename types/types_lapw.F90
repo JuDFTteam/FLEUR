@@ -345,9 +345,9 @@ CONTAINS
       DO n=1,atoms%ntype
          DO nn=1,atoms%neq(n)
             na=na+1
-            if (atoms%invsat(na)>1) cycle
-            !np = MERGE(oneD%ods%ngopr(na),sym%invtab(atoms%ngopr(na)),oneD%odi%d1)
-            np=sym%invtab(atoms%ngopr(na))
+            if (sym%invsat(na)>1) cycle
+            !np = MERGE(oneD%ods%ngopr(na),sym%invtab(sym%ngopr(na)),oneD%odi%d1)
+            np=sym%invtab(sym%ngopr(na))
             CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell)
             DO lo = 1,atoms%nlo(n)
                lapw%index_lo(lo,na)=iindex
@@ -461,7 +461,7 @@ CONTAINS
                 enough = .TRUE.
                 term1 = con1* ((atoms%rmt(ntyp)**2)/2)* CMPLX(rph(k,iintsp),cph(k,iintsp))
                 DO lo = 1,atoms%nlo(ntyp)
-                   IF (atoms%invsat(na).EQ.0) THEN
+                   IF (sym%invsat(na).EQ.0) THEN
                       IF ((nkvec(lo,iintsp)).LT. (2*atoms%llo(lo,ntyp)+1)) THEN
                          enough = .FALSE.
                          nkvec(lo,iintsp) = nkvec(lo,iintsp) + 1
@@ -480,7 +480,7 @@ CONTAINS
                          ENDIF
                       ENDIF
                    ELSE
-                      IF ((atoms%invsat(na).EQ.1) .OR. (atoms%invsat(na).EQ.2)) THEN
+                      IF ((sym%invsat(na).EQ.1) .OR. (sym%invsat(na).EQ.2)) THEN
                          IF (nkvec(lo,iintsp).LT.2*(2*atoms%llo(lo,ntyp)+1)) THEN
                             enough = .FALSE.
                             nkvec(lo,iintsp) = nkvec(lo,iintsp) + 1
@@ -522,7 +522,7 @@ CONTAINS
        enough=.TRUE.
        DO lo = 1,atoms%nlo(ntyp)
           IF (nkvec(lo,1).EQ.nkvec(lo,nintsp)) THEN   ! k-vec accepted by both spin channels
-             IF (atoms%invsat(na).EQ.0) THEN
+             IF (sym%invsat(na).EQ.0) THEN
                 IF ( nkvec(lo,1).LT.(2*atoms%llo(lo,ntyp)+1) ) THEN 
                    enough=.FALSE.
                 ENDIF

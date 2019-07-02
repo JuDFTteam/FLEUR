@@ -112,7 +112,7 @@
       atoms%nlod = max(atoms%nlod,1)
 
       ALLOCATE (&
-     & atoms%lmax(atoms%ntype),atoms%ntypsy(atoms%nat),atoms%neq(atoms%ntype),atoms%nlhtyp(atoms%ntype),&
+     & atoms%lmax(atoms%ntype),sym%ntypsy(atoms%nat),atoms%neq(atoms%ntype),atoms%nlhtyp(atoms%ntype),&
      & atoms%rmt(atoms%ntype),atoms%zatom(atoms%ntype),atoms%jri(atoms%ntype),atoms%dx(atoms%ntype), &
      & atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),&
      & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%econf(atoms%ntype),atoms%lnonsph(atoms%ntype),&
@@ -232,7 +232,7 @@
         CALL local_sym(atoms%lmaxd,atoms%lmax,sym%nop,sym%mrot,sym%tau,&
                        atoms%nat,atoms%ntype,atoms%neq,cell%amat,cell%bmat,&
                        atoms%taual,sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,&
-                       atoms%nlhtyp,atoms%ntypsy,sphhar%nlh,sphhar%llh,&
+                       atoms%nlhtyp,sym%ntypsy,sphhar%nlh,sphhar%llh,&
                        sphhar%nmem,sphhar%mlh,sphhar%clnu)
 !-odim
       ELSEIF (oneD%odd%d1) THEN
@@ -249,7 +249,7 @@
         CALL local_sym(atoms%lmaxd,lmx1,sym%nop,sym%mrot,sym%tau,&
               atoms%nat,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
               sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
-              atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
+              sym%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
               sphhar%mlh,sphhar%clnu)        
         ii = 1
         DO i = 1,atoms%ntype
@@ -373,7 +373,7 @@
       !CALL parawrite(sym,stars,atoms,sphhar,DIMENSION,vacuum,kpts,oneD,input)
 
       DEALLOCATE( sym%mrot,sym%tau,&
-     & atoms%lmax,atoms%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
+     & atoms%lmax,sym%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
      & vacuum%izlay,atoms%econf,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & atoms%l_geo,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,noco%b_con,sphhar%clnu,sphhar%nlh,&
      & sphhar%llh,sphhar%nmem,sphhar%mlh,hybrid%select1,hybrid%lcutm1,&

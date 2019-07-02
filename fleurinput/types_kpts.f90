@@ -47,9 +47,9 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     IF (PRESENT(irank)) THEN
-       rank=0
-    ELSE
        rank=irank
+    ELSE
+       rank=0
     END IF
 
     CALL mpi_bc(this%nkpt,rank,mpi_comm)
@@ -75,7 +75,6 @@ CONTAINS
     CLASS(t_kpts),INTENT(inout):: this
     TYPE(t_xml),INTENT(IN)   :: xml
     
-    CHARACTER(len=10)  ::name !TODO
     
     INTEGER:: number_sets,n
     CHARACTER(len=200)::str,path,path2
@@ -86,19 +85,19 @@ CONTAINS
 
      DO n=number_sets,1,-1
         WRITE(path,"(a,i0,a)") '/fleurInput/calculationSetup/bzIntegration/kPointList[',n,']'
-        IF(TRIM(ADJUSTL(name))==xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
+        IF(TRIM(ADJUSTL(this%name))==xml%GetAttributeValue(TRIM(path)//'/@name')) EXIT
      enddo
-     IF (n==0) CALL judft_error(("No kpoints named:"//TRIM(name)//" found"))
+     IF (n==0) CALL judft_error(("No kpoints named:"//TRIM(this%name)//" found"))
      this%nkpt=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
 
-     this%numSpecialPoints=xml%GetNumberOfNodes(TRIM(path)//"specialPoint")
+     this%numSpecialPoints=xml%GetNumberOfNodes(TRIM(path)//"/specialPoint")
 
      IF (this%numSpecialPoints>0) THEN
-        If (this%numSpecialPoints<2) CALL judft_error(("Giving less than two sepcial points make no sense:"//TRIM(name)))
+        If (this%numSpecialPoints<2) CALL judft_error(("Giving less than two sepcial points make no sense:"//TRIM(this%name)))
         ALLOCATE(this%specialPoints(3,this%numSpecialPoints))
         ALLOCATE(this%specialPointNames(this%numSpecialPoints))
         DO n=1,this%numSpecialPoints
-           WRITE(path2,"(a,a,i0,a)") path,"specialPoint[",n,"]"
+           WRITE(path2,"(a,a,i0,a)") trim(path),"/specialPoint[",n,"]"
            this%specialPointNames(n)=xml%getAttributeValue(path2//"/@name")
            str=xml%getAttributeValue(path2)
            this%specialPoints(1,n) = evaluatefirst(str)
@@ -106,12 +105,12 @@ CONTAINS
            this%specialPoints(3,n) = evaluatefirst(str)
         ENDDO
      ELSE
-        n=xml%GetNumberOfNodes(TRIM(path)//'kPoint')
-        IF (n.NE.this%nkpt) CALL judft_error(("Inconsistent number of k-points in:"//name))
+        n=xml%GetNumberOfNodes(TRIM(path)//'/kPoint')
+        IF (n.NE.this%nkpt) CALL judft_error(("Inconsistent number of k-points in:"//this%name))
         ALLOCATE(this%bk(3,this%nkpt))
         ALLOCATE(this%wtkpt(this%nkpt))
         DO n=1,this%nkpt
-           WRITE(path2,"(a,a,i0,a)") path,"/kPoint[",n,"]"
+           WRITE(path2,"(a,a,i0,a)") trim(adjustl(path)),"/kPoint[",n,"]"
            this%wtkpt(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@weight'))
            str= xml%getAttributeValue(path2)
            this%bk(1,n) = evaluatefirst(str)
@@ -121,7 +120,7 @@ CONTAINS
         this%ntet=xml%GetNumberOfNodes(TRIM(path)//'/tetraeder/tet')
         ALLOCATE(this%voltet(this%ntet),this%ntetra(4,this%ntet))
         DO n=1,this%ntet
-           WRITE(path2,"(a,a,i0,a)") path,"/tetraeder/tet[",n,"]"
+           WRITE(path2,"(a,a,i0,a)") trim(path),"/tetraeder/tet[",n,"]"
            this%voltet(n)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(path2)//'/@vol'))
            str= xml%getAttributeValue(path2)
            READ(str,*) this%ntetra(:,n)

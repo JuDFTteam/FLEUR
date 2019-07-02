@@ -106,8 +106,8 @@ CONTAINS
 
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
-       IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-          rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
+       IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
+          rchi=MERGE(REAL(chi),REAL(chi)*2,(sym%invsat(na)==0))
 
           CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj_dev,gj_dev,ab_dev,ab_size,.TRUE.)
 
@@ -188,8 +188,8 @@ CONTAINS
     
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
-       IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-          rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
+       IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
+          rchi=MERGE(REAL(chi),REAL(chi)*2,(sym%invsat(na)==0))
 
           CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
           !Calculate Hamiltonian
@@ -265,8 +265,8 @@ CONTAINS
     
     DO nn = 1,atoms%neq(n)
        na = SUM(atoms%neq(:n-1))+nn
-       IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-          rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
+       IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
+          rchi=MERGE(REAL(chi),REAL(chi)*2,(sym%invsat(na)==0))
           
           CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
           !Calculate Hamiltonian

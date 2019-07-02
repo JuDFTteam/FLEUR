@@ -120,7 +120,7 @@
          !call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
             loc_n = loc_n + 1
-            CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
+            CALL mt_to_grid(xcpot, input%jspins, atoms,sym,sphhar,den%mt(:,0:,n,:),n,grad,ch)
 
             !
             !         calculate the ex.-cor. potential
@@ -142,14 +142,14 @@
             ENDIF
 
             !Add postprocessing for libxc
-            IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num=n)
+            IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,n,v_xc,grad, atom_num=n)
 
-            CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
-            CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
             IF(perform_MetaGGA) THEN
 
-               CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, EnergyDen%mt(:,0:,n,:), &
+               CALL mt_to_grid(xcpot, input%jspins, atoms,sym, sphhar, EnergyDen%mt(:,0:,n,:), &
                                n,            tmp_grad, ED_rs)
 
                ! multiply potentials with r^2, because mt_to_grid is made for densities,
@@ -158,11 +158,11 @@
                DO jr=1,atoms%jri(n)
                   vTot_tmp%mt(jr,0:,n,:) = vTot_tmp%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
                ENDDO
-               CALL mt_to_grid(xcpot, input%jspins, atoms,    sphhar, vTot_tmp%mt(:,0:,n,:), &
+               CALL mt_to_grid(xcpot, input%jspins, atoms,sym, sphhar, vTot_tmp%mt(:,0:,n,:), &
                                n,            tmp_grad, vTot_rs)
                tmp_sphhar%nlhd = sphhar%nlhd
                tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
-               CALL mt_to_grid(xcpot, input%jspins, atoms, tmp_sphhar, vTot_tmp%mt(:,0:0,n,:), &
+               CALL mt_to_grid(xcpot, input%jspins, atoms, sym,tmp_sphhar, vTot_tmp%mt(:,0:0,n,:), &
                                n,            tmp_grad, vTot0_rs)
                !TODO: metaGGA
                !CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
@@ -201,7 +201,7 @@
                      nt=nt+nsp
                   END DO
                ENDIF
-               CALL mt_from_grid(atoms,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
+               CALL mt_from_grid(atoms,sym,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
          ENDDO
 

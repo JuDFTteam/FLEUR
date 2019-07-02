@@ -11,9 +11,9 @@ MODULE m_types_sphhar
   PRIVATE
   PUBLIC :: t_sphhar
    !Data for the spherical harmonics
-  TYPE,EXTENDS(t_fleurinput_base):: t_sphhar
+  TYPE:: t_sphhar
       !No of symmetry types (must
-      !equal maxval(atoms%ntypsy)
+      !equal maxval(sym%ntypsy)
       INTEGER ::ntypsd
       !Max no of members of sphhar
       INTEGER ::memd

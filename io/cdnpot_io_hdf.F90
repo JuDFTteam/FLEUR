@@ -1100,7 +1100,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5screate_simple_f(1,dims(:1),ngoprSpaceID,hdfError)
       CALL h5dcreate_f(groupID, "ngopr", H5T_NATIVE_INTEGER, ngoprSpaceID, ngoprSetID, hdfError)
       CALL h5sclose_f(ngoprSpaceID,hdfError)
-      CALL io_write_integer1(ngoprSetID,(/1/),dimsInt(:1),atoms%ngopr)
+      CALL io_write_integer1(ngoprSetID,(/1/),dimsInt(:1),sym%ngopr)
       CALL h5dclose_f(ngoprSetID, hdfError)
 
       dims(:1)=(/atoms%nat/)
@@ -1108,7 +1108,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5screate_simple_f(1,dims(:1),ntypsySpaceID,hdfError)
       CALL h5dcreate_f(groupID, "ntypsy", H5T_NATIVE_INTEGER, ntypsySpaceID, ntypsySetID, hdfError)
       CALL h5sclose_f(ntypsySpaceID,hdfError)
-      CALL io_write_integer1(ntypsySetID,(/1/),dimsInt(:1),atoms%ntypsy)
+      CALL io_write_integer1(ntypsySetID,(/1/),dimsInt(:1),sym%ntypsy)
       CALL h5dclose_f(ntypsySetID, hdfError)
 
       dims(:1)=(/atoms%ntype/)
@@ -1124,7 +1124,7 @@ MODULE m_cdnpot_io_hdf
       CALL h5screate_simple_f(1,dims(:1),invsatSpaceID,hdfError)
       CALL h5dcreate_f(groupID, "invsat", H5T_NATIVE_INTEGER, invsatSpaceID, invsatSetID, hdfError)
       CALL h5sclose_f(invsatSpaceID,hdfError)
-      CALL io_write_integer1(invsatSetID,(/1/),dimsInt(:1),atoms%invsat)
+      CALL io_write_integer1(invsatSetID,(/1/),dimsInt(:1),sym%invsat)
       CALL h5dclose_f(invsatSetID, hdfError)
 
       dims(:1)=(/atoms%ntype/)
@@ -1365,10 +1365,10 @@ MODULE m_cdnpot_io_hdf
       IF(ALLOCATED(atoms%neq)) DEALLOCATE(atoms%neq)
       IF(ALLOCATED(atoms%jri)) DEALLOCATE(atoms%jri)
       IF(ALLOCATED(atoms%lmax)) DEALLOCATE(atoms%lmax)
-      IF(ALLOCATED(atoms%ngopr)) DEALLOCATE(atoms%ngopr)
-      IF(ALLOCATED(atoms%ntypsy)) DEALLOCATE(atoms%ntypsy)
+      IF(ALLOCATED(sym%ngopr)) DEALLOCATE(sym%ngopr)
+      IF(ALLOCATED(sym%ntypsy)) DEALLOCATE(sym%ntypsy)
       IF(ALLOCATED(atoms%nlhtyp)) DEALLOCATE(atoms%nlhtyp)
-      IF(ALLOCATED(atoms%invsat)) DEALLOCATE(atoms%invsat)
+      IF(ALLOCATED(sym%invsat)) DEALLOCATE(sym%invsat)
       IF(ALLOCATED(atoms%rmt)) DEALLOCATE(atoms%rmt)
       IF(ALLOCATED(atoms%dx)) DEALLOCATE(atoms%dx)
       IF(ALLOCATED(atoms%volmts)) DEALLOCATE(atoms%volmts)
@@ -1383,10 +1383,10 @@ MODULE m_cdnpot_io_hdf
       ALLOCATE(atoms%neq(atoms%ntype))
       ALLOCATE(atoms%jri(atoms%ntype))
       ALLOCATE(atoms%lmax(atoms%ntype))
-      ALLOCATE(atoms%ngopr(atoms%nat))
-      ALLOCATE(atoms%ntypsy(atoms%nat))
+      ALLOCATE(sym%ngopr(atoms%nat))
+      ALLOCATE(sym%ntypsy(atoms%nat))
       ALLOCATE(atoms%nlhtyp(atoms%ntype))
-      ALLOCATE(atoms%invsat(atoms%nat))
+      ALLOCATE(sym%invsat(atoms%nat))
       ALLOCATE(atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%dx(atoms%ntype))
       ALLOCATE(atoms%volmts(atoms%ntype))
@@ -1424,12 +1424,12 @@ MODULE m_cdnpot_io_hdf
 
       dimsInt(:1)=(/atoms%nat/)
       CALL h5dopen_f(groupID, 'ngopr', ngoprSetID, hdfError)
-      CALL io_read_integer1(ngoprSetID,(/1/),dimsInt(:1),atoms%ngopr)
+      CALL io_read_integer1(ngoprSetID,(/1/),dimsInt(:1),sym%ngopr)
       CALL h5dclose_f(ngoprSetID, hdfError)
 
       dimsInt(:1)=(/atoms%nat/)
       CALL h5dopen_f(groupID, 'ntypsy', ntypsySetID, hdfError)
-      CALL io_read_integer1(ntypsySetID,(/1/),dimsInt(:1),atoms%ntypsy)
+      CALL io_read_integer1(ntypsySetID,(/1/),dimsInt(:1),sym%ntypsy)
       CALL h5dclose_f(ntypsySetID, hdfError)
 
       dimsInt(:1)=(/atoms%ntype/)
@@ -1439,7 +1439,7 @@ MODULE m_cdnpot_io_hdf
 
       dimsInt(:1)=(/atoms%nat/)
       CALL h5dopen_f(groupID, 'invsat', invsatSetID, hdfError)
-      CALL io_read_integer1(invsatSetID,(/1/),dimsInt(:1),atoms%invsat)
+      CALL io_read_integer1(invsatSetID,(/1/),dimsInt(:1),sym%invsat)
       CALL h5dclose_f(invsatSetID, hdfError)
 
       dimsInt(:1)=(/atoms%ntype/)

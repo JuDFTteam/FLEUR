@@ -29,8 +29,8 @@
       USE m_socsym
       USE m_types
       IMPLICIT NONE
-      TYPE(t_sym),INTENT(INOUT)   :: sym
-      TYPE(t_atoms),INTENT(INOUT) :: atoms
+      TYPE(t_sym),INTENT(INOUT):: sym
+      TYPE(t_atoms),INTENT(IN) :: atoms
       TYPE(t_cell),INTENT(IN)  :: cell
       TYPE(t_input),INTENT(IN) :: input
       TYPE(t_noco),INTENT(IN)  :: noco
@@ -56,6 +56,16 @@
     ! &            aamat, )
       aamat=matmul(transpose(cell%amat),cell%amat)
     
+      IF (ALLOCATED(sym%ngopr)) &
+           DEALLOCATE(sym%invsatnr,sym%invarop,sym%invarind,sym%ngopr,sym%ntypsy,sym%invsat)
+      ALLOCATE(sym%invsatnr(atoms%nat))
+      ALLOCATE(sym%invarop(atoms%nat,sym%nop))
+      ALLOCATE(sym%invarind(atoms%nat))
+      ALLOCATE(sym%ngopr(atoms%nat))
+      ALLOCATE(sym%ntypsy(atoms%nat))
+      ALLOCATE(sym%invsat(atoms%nat))
+   
+
       IF (noco%l_soc) THEN  ! check once more here...
         CALL soc_sym(&
      &               sym%nop,sym%mrot,noco%theta,noco%phi,cell%amat,&
@@ -69,11 +79,11 @@
       nat1 = 1
       DO n = 1,atoms%ntype
          nat2 = nat1 + atoms%neq(n) - 1
-         atoms%ngopr(nat1) = 1
+         sym%ngopr(nat1) = 1
 !+gu
          na_r = nat1
          DO na = nat1,nat2
-            IF (atoms%ntypsy(na).NE.atoms%ntypsy(na_r)) na_r = na
+            IF (sym%ntypsy(na).NE.sym%ntypsy(na_r)) na_r = na
 !-gu
             DO i = 1,3
                gam(i) = atoms%taual(i,na)
@@ -102,7 +112,7 @@
                            s3 = sqrt(dot_product(matmul(sr,aamat),sr))
                            IF ((s3.LT.del).AND.(.not.error(jop))) THEN
                               icount = icount + 1
-                              atoms%ngopr(na) = jop
+                              sym%ngopr(na) = jop
                            END IF
                         END DO
                      END DO
@@ -135,7 +145,7 @@
              write(6,*) "No of symmetries tested:",sym%nop
              CALL juDFT_error("mapatom",calledby="mapatom")
            ENDIF
-            WRITE (6,FMT=8010) nat1,na,atoms%ngopr(na)
+            WRITE (6,FMT=8010) nat1,na,sym%ngopr(na)
  8010       FORMAT (5x,'atom',i5,' can be mapped into atom',i5,&
      &             ' through group  operation',i4)
 !
@@ -210,7 +220,7 @@
       END DO
 
       DO na = 1,atoms%nat
-         atoms%invsat(na) = 0
+         sym%invsat(na) = 0
          sym%invsatnr(na) = 0
       END DO
 
@@ -221,7 +231,7 @@
          DO n = 1,atoms%ntype
             nat2 = nat1 + atoms%neq(n) - 1
             DO na = nat1,nat2 - 1
-               IF (atoms%invsat(na).EQ.0.AND..NOT.noco%l_noco) THEN
+               IF (sym%invsat(na).EQ.0.AND..NOT.noco%l_noco) THEN
                   naloop:DO na2 = na + 1,nat2
                      DO i = 1,3
                         sum_taual(i) = atoms%taual(i,na) + atoms%taual(i,na2)
@@ -234,8 +244,8 @@
                            sum_tau_lat(3) = sum_taual(3) + real(iz)
                            norm = sqrt(dot_product(matmul(sum_tau_lat,aamat),sum_tau_lat))
                            IF (norm.LT.del) THEN
-                              atoms%invsat(na) = 1
-                              atoms%invsat(na2) = 2
+                              sym%invsat(na) = 1
+                              sym%invsat(na2) = 2
                               sym%invsatnr(na)  = na2
                               sym%invsatnr(na2) = na
                               WRITE (6,FMT=9000) n,na,na2
@@ -249,7 +259,7 @@
             END DO
             nat1 = nat1 + atoms%neq(n)
          END DO
-      WRITE (6,FMT=*) atoms%invsat
+      WRITE (6,FMT=*) sym%invsat
  9000 FORMAT ('atom type',i3,': atom',i3,' can be mapped into atom',i3,&
      &       ' via 3d inversion')
       END IF

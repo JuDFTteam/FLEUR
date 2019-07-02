@@ -43,9 +43,9 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     if (present(irank)) THEN
-       rank=0
-    else
        rank=irank
+    else
+       rank=0
     end if
 
     call mpi_bc(this%omtil,rank,mpi_comm)
@@ -121,11 +121,12 @@ CONTAINS
      character(len=200)::valueString,path
      REAL:: scale,dvac,dtild
      
-     if (xml%GetNumberOfNodes('')==1) then
+     if (xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1) then
         path= '/fleurInput/cell/filmLattice'
         this%z1=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dvac'))/2
         dtild=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dtilda'))
      else        
+        dvac=0.0
         path = '/fleurInput/cell/bulkLattice'
      endif
      
@@ -139,7 +140,7 @@ CONTAINS
      this%amat(1,2) = evaluateFirst(valueString)
      this%amat(2,2) = evaluateFirst(valueString)
      this%amat(3,2) = evaluateFirst(valueString)
-     valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-2')))
+     valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-3')))
      this%amat(1,3) = evaluateFirst(valueString)
      this%amat(2,3) = evaluateFirst(valueString)
      this%amat(3,3) = evaluateFirst(valueString)

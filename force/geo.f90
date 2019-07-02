@@ -147,7 +147,7 @@ CONTAINS
        forcetot(:,itype)=MATMUL(cell%bmat,forcetot(:,itype))/tpi_const ! to inner coordinates
        DO ieq = 1,atoms%neq(itype)
           na = na + 1
-          jop = sym%invtab(atoms%ngopr(na))
+          jop = sym%invtab(sym%ngopr(na))
           IF (oneD%odi%d1) jop = oneD%ods%ngopr(na)
           DO i = 1,3
              DO j = 1,3
@@ -174,7 +174,7 @@ CONTAINS
           tau0_i(:,itype)=MATMUL(cell%bmat,tau0(:,itype))/tpi_const
           DO ieq = 1,atoms%neq(itype)
              na = na + 1
-             jop = sym%invtab(atoms%ngopr(na))
+             jop = sym%invtab(sym%ngopr(na))
              IF (oneD%odi%d1) jop = oneD%ods%ngopr(na)
              DO i = 1,3
                 atoms_new%taual(i,na) = 0.0

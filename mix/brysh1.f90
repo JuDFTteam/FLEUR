@@ -51,7 +51,7 @@ CONTAINS
        mapmt=0
        na = 1
        DO n = 1,atoms%ntype
-          DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+          DO l = 0,sphhar%nlh(sym%ntypsy(na))
              DO i = 1,atoms%jri(n)
                 mapmt = mapmt +1
                 j = j + 1
@@ -144,7 +144,7 @@ CONTAINS
        IF (noco%l_mtnocopot) THEN
           na = 1
           DO n = 1,atoms%ntype
-             DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+             DO l = 0,sphhar%nlh(sym%ntypsy(na))
                 DO i = 1,atoms%jri(n)
                    j = j + 1
                    sout(j) = den%mt(i,l,n,3)

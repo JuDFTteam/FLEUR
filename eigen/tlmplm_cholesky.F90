@@ -8,7 +8,7 @@ MODULE m_tlmplm_cholesky
   !     and does a cholesky decomposition
   !*********************************************************************
 CONTAINS
-  SUBROUTINE tlmplm_cholesky(sphhar,atoms,noco,enpara,&
+  SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,enpara,&
        jspin,jsp,mpi,v,input,td,ud)
     USE m_tlmplm
     USE m_types
@@ -19,6 +19,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_enpara),INTENT(IN)   :: enpara
     !     ..
     !     .. Scalar Arguments ..
@@ -59,9 +60,9 @@ CONTAINS
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input)
+    !$OMP SHARED(atoms,sym,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input)
     DO  n = 1,atoms%ntype
-       CALL tlmplm(n,sphhar,atoms,enpara,jspin,jsp,mpi,v,input,td,ud)
+       CALL tlmplm(n,sphhar,atoms,sym,enpara,jspin,jsp,mpi,v,input,td,ud)
        OK=.FALSE.
        cholesky_loop:DO WHILE(.NOT.OK)
           td%h_loc(:,:,n,jsp)=0.0

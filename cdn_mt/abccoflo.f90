@@ -12,7 +12,7 @@ MODULE m_abccoflo
   ! Philipp Kurz 99/04
   !*********************************************************************
 CONTAINS
-  SUBROUTINE abccoflo(atoms, con1,rph,cph,ylm,ntyp,na,k,nv, l_lo1,alo1,blo1,&
+  SUBROUTINE abccoflo(atoms,sym, con1,rph,cph,ylm,ntyp,na,k,nv, l_lo1,alo1,blo1,&
        clo1, nkvec, enough,alo,blo,clo,kvec)
     !
     !*************** ABBREVIATIONS ***************************************
@@ -33,6 +33,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_sym),INTENT(IN)     :: sym
     !     .. 
     !     .. Scalar Arguments ..
     REAL,    INTENT (IN) :: con1,cph ,rph
@@ -81,7 +82,7 @@ CONTAINS
        enough = .TRUE.
        term1 = con1* ((atoms%rmt(ntyp)**2)/2)*CMPLX(rph,cph)
        DO lo = 1,atoms%nlo(ntyp)
-          IF (atoms%invsat(na).EQ.0) THEN
+          IF (sym%invsat(na).EQ.0) THEN
              IF ((nkvec(lo)).LT. (2*atoms%llo(lo,ntyp)+1)) THEN
                 enough = .FALSE.
                 nkvec(lo) = nkvec(lo) + 1
@@ -105,7 +106,7 @@ CONTAINS
                 ENDIF
              ENDIF
           ELSE
-             IF ((atoms%invsat(na).EQ.1) .OR. (atoms%invsat(na).EQ.2)) THEN
+             IF ((sym%invsat(na).EQ.1) .OR. (sym%invsat(na).EQ.2)) THEN
                 !           only invsat=1 is needed invsat=2 for testing
                 IF ((nkvec(lo)).LT. (2* (2*atoms%llo(lo,ntyp)+1))) THEN
                    enough = .FALSE.

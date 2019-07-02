@@ -14,6 +14,7 @@
 MODULE m_types_xml
   USE m_juDFT
   USE m_calculator
+  IMPLICIT NONE
   PRIVATE
 
   TYPE t_xml
@@ -35,7 +36,7 @@ MODULE m_types_xml
      PROCEDURE :: get_ntype
      PROCEDURE :: posPath
   END TYPE t_xml
-  PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBool,evaluateFirstBoolOnly,evaluateFirstInt,evaluateFirstIntOnly,&
+  PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBoolOnly,evaluateFirstIntOnly,&
        evaluateList
 
 CONTAINS
@@ -79,7 +80,7 @@ CONTAINS
     xPathA = '/fleurInput/constants/constant'
     numberNodes = xml%GetNumberOfNodes(xPathA)
     DO i = 1, numberNodes
-       WRITE(xPathB,*) TRIM(ADJUSTL(xPathA)), '[',i,']'
+       WRITE(xPathB,'(a,a,i0,a)') TRIM(ADJUSTL(xPathA)), '[',i,']'
        tempReal = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@value'))
        valueString = xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@name')
        CALL ASSIGN_var(valueString,tempReal)
@@ -90,7 +91,7 @@ CONTAINS
   INTEGER FUNCTION get_lmaxd(xml)
     CLASS(t_xml),INTENT(IN)::xml
     INTEGER :: n
-    get_lmax=0
+    get_lmaxd=0
     DO n=1,xml%GetNumberOfNodes('/fleurInput/atomSpecies/species')
        get_lmaxd = MAX(get_lmaxd,evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xml%speciesPath(n))//'/atomicCutoffs/@lmax')))
     ENDDO
@@ -116,17 +117,17 @@ CONTAINS
     INTEGER           :: i
     CHARACTER(len=200)::xpath,species
     !First determine name of species from group
-    WRITE(xPath,*) '/fleurInput/atomGroups/atomGroup[',itype,']/@species'
+    WRITE(xPath,'(a,i0,a)') '/fleurInput/atomGroups/atomGroup[',itype,']/@species'
     species=TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPath)))))
 
     DO i=1,xml%GetNumberOfNodes('/fleurInput/atomSpecies/species')
-       WRITE(xPath,*) '/fleurInput/atomSpecies/species[',i,']'
+       WRITE(xPath,'(a,i0,a)') '/fleurInput/atomSpecies/species[',i,']'
        IF (TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPath))//'/@name')))==TRIM(species)) THEN
           speciesPath=TRIM(xpath)
           RETURN
        END IF
     END DO
-    WRITE(xpath,*) n
+    WRITE(xpath,*) itype
     CALL judft_error("No species found for name "//TRIM(species)//" used in atom group "//TRIM(xpath))
   END FUNCTION speciesPath
     
@@ -177,7 +178,7 @@ CONTAINS
         IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath)))<na) THEN
            na=na-xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))) 
         ELSE
-           WRITE(xpath2,"(a,a,i0,a)") xpath,'[',na,']'
+           WRITE(xpath2,"(a,a,i0,a)") TRIM(ADJUSTL(xpath)),'[',na,']'
            posPath=TRIM(xpath2)
            RETURN
         END IF

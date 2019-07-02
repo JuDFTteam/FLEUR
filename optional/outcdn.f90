@@ -137,8 +137,8 @@
       ENDIF
 !     ----> m.t. part
       
-      nd = atoms%ntypsy(na)
-      nopa = atoms%ngopr(na)
+      nd = sym%ntypsy(na)
+      nopa = sym%ngopr(na)
       IF (oneD%odi%d1) nopa = oneD%ods%ngopr(na)
       sx = 0.0
       DO  i = 1,3

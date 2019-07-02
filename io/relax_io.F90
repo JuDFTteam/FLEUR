@@ -193,7 +193,7 @@ CONTAINS
     DO n=1,atoms%ntype
        tau0=atoms%taual(:,n)
        DO na=SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
-          jop = sym%invtab(atoms%ngopr(na))
+          jop = sym%invtab(sym%ngopr(na))
           tau0_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0)+sym%tau(:,jop) !translation will cancel, included for clarity
           tau_rot=MATMUL(1.*sym%mrot(:,:,jop),tau0+disp(:,n))+sym%tau(:,jop)
           disp_all(:,na)=tau_rot-tau0_rot

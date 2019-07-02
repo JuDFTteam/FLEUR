@@ -10,7 +10,7 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(mpi,jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
+  SUBROUTINE cdnmt(mpi,jspd,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,&
                    vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
@@ -24,6 +24,7 @@ CONTAINS
     TYPE(t_noco),    INTENT(IN)    :: noco
     TYPE(t_sphhar),  INTENT(IN)    :: sphhar
     TYPE(t_atoms),   INTENT(IN)    :: atoms
+    TYPE(t_sym),   INTENT(IN)      :: sym
     TYPE(t_enpara),  INTENT(IN)    :: enpara
     TYPE(t_moments), INTENT(INOUT) :: moments
 
@@ -65,7 +66,7 @@ CONTAINS
 
     !$OMP PARALLEL DEFAULT(none) &
     !$OMP SHARED(usdus,rho,moments,qmtl) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
+    !$OMP SHARED(atoms,sym,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
     !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
     IF (noco%l_mperp) THEN
@@ -103,7 +104,7 @@ CONTAINS
              qmtllo(l) = 0.0
           END DO
 
-          CALL rhosphnlo(itype,atoms,sphhar,&
+          CALL rhosphnlo(itype,atoms,sphhar,sym,&
                usdus%uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
                usdus%uulon(1,itype,ispin),enpara%ello0(1,itype,ispin),&
                vr(1,itype,ispin),denCoeffs%aclo(1,itype,ispin),denCoeffs%bclo(1,itype,ispin),&
@@ -131,7 +132,7 @@ CONTAINS
           ENDIF
           !-soc
           !--->       non-spherical components
-          nd = atoms%ntypsy(na)
+          nd = sym%ntypsy(na)
           DO lh = 1,sphhar%nlh(nd)
              DO l = 0,atoms%lmax(itype)
                 DO lp = 0,l
@@ -196,7 +197,7 @@ CONTAINS
              ENDDO
 
              !--->        non-spherical components
-             nd = atoms%ntypsy(na)
+             nd = sym%ntypsy(na)
              DO lh = 1,sphhar%nlh(nd)
                 DO l = 0,atoms%lmax(itype)
                    DO lp = 0,atoms%lmax(itype)

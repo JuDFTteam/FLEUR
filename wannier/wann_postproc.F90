@@ -163,11 +163,11 @@ CONTAINS
        !         call wann_plotw90(i,wann%band_min,wann%band_max,numbands,nwfs,
        !     >   atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,
        !     >      dimension%neigd,atoms%nat,sym%nop,dimension%nvd,jspd,dimension%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,
-       !     >      nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,atoms%lmax,
-       !     >      atoms%invsat,atoms%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
+       !     >      nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,
+       !     >      sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
        !     >      noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,
        !     >      size(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,
-       !     >      atoms%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,
+       !     >      sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,
        !     >      stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,
        !     >      cell%z1,dimension%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,
        !     >      cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,irecl)
@@ -396,11 +396,11 @@ CONTAINS
             mpi%mpi_comm,i,wann%band_min,wann%band_max,noco%l_soc,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,&
-            cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,atoms%lmax,&
-            atoms%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
+            cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
+            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
-            atoms%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
+            sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
             cell%z1,DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,wann%l_proj_plot,&
@@ -417,11 +417,11 @@ CONTAINS
             noco%l_soc,wann%unigrid,i,wann%band_min,wann%band_max,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,&
-            cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,atoms%lmax,&
-            atoms%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
+            cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
+            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
-            atoms%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
+            sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
             cell%z1,DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,wann%l_proj_plot,&
@@ -434,11 +434,11 @@ CONTAINS
             unigrid,i,wann%band_min,wann%band_max,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,&
-            nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,atoms%lmax,&
-            atoms%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
+            nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
+            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
-            atoms%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
+            sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
             cell%z1,DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,wann%l_proj_plot,irecl)
@@ -453,11 +453,11 @@ CONTAINS
             gfthick,gfcut,i,wann%band_min,wann%band_max,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
             DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,&
-            nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,atoms%ngopr,atoms%neq,atoms%lmax,&
-            atoms%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
+            nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
+            sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
-            atoms%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
+            sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
             cell%z1,DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,wann%l_proj_plot,irecl)
@@ -479,7 +479,7 @@ CONTAINS
        !     >     sphhar%ntypsd,
        !     >     atoms%ntype,atoms%lmaxd,size(atoms%rmsh,1),atoms%nat,vacuum%nmzd,atoms%neq,stars%ng3,vacuum%nvac,
        !     >     vacuum%nmz,vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,sym%symor,
-       !     >     sym%invs,sym%invs2,cell%z1,vacuum%delz,atoms%ngopr,atoms%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
+       !     >     sym%invs,sym%invs2,cell%z1,vacuum%delz,sym%ngopr,sym%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
        !     >     atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,cell%amat,cell%bmat,cell%bbmat,sliceplot%nnne,sliceplot%kk,
        !     >     atoms%nlod,atoms%llod,lmd,cell%omtil,atoms%nlo,atoms%llo)
     ENDIF

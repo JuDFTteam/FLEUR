@@ -17,6 +17,7 @@ MODULE m_make_stars
      USE m_prpqfftmap
      USE m_prpqfft
      USE m_strgndim
+     use m_lapwdim
      use m_types_sym
      use m_types_atoms
      use m_types_vacuum
@@ -110,6 +111,9 @@ MODULE m_make_stars
   ELSE
      CALL strgn2(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
   END IF
+
+  CALL lapw_fft_dim(cell,input,noco,stars)
+
   
   ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
   ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
@@ -125,5 +129,7 @@ MODULE m_make_stars
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
   CALL timestop("stepf") 
   
+
+
 END SUBROUTINE make_stars
 END MODULE m_make_stars

@@ -35,7 +35,7 @@ CONTAINS
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot,4,atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
+       CALL mt_to_grid(xcpot,4,atoms,sym,sphhar,den%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
     
           rho_11  = ch(imesh,1)
@@ -82,7 +82,7 @@ CONTAINS
           den%phi_mt(imesh,n) = phi
        ENDDO
        den%mt(:,0:,n,:)=0.0
-       CALL mt_from_grid(atoms,sphhar,n,2,ch,den%mt(:,0:,n,:))
+       CALL mt_from_grid(atoms,sym,sphhar,n,2,ch,den%mt(:,0:,n,:))
        DO i=1,atoms%jri(n)
           den%mt(i,:,n,:)=den%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO
@@ -113,7 +113,7 @@ CONTAINS
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot,4,atoms,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
+       CALL mt_to_grid(xcpot,4,atoms,sym,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
           vup   = ch(imesh,1)
           vdown = ch(imesh,2)
@@ -127,7 +127,7 @@ CONTAINS
           ch(imesh,4) = beff*SIN(theta)*SIN(phi)
        ENDDO
        vtot%mt(:,0:,n,:)=0.0
-       CALL mt_from_grid(atoms,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
+       CALL mt_from_grid(atoms,sym,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
        DO i=1,atoms%jri(n)
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO

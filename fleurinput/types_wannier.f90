@@ -144,9 +144,9 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     IF (PRESENT(irank)) THEN
-       rank=0
-    ELSE
        rank=irank
+    ELSE
+       rank=0
     END IF
 
     CALL mpi_bc(this%wan90version ,rank,mpi_comm)
@@ -345,7 +345,7 @@ CONTAINS
 
     ALLOCATE(wannAtomList(xml%get_nat()))
     DO i=1,xml%get_nat()
-       wannAtomList(i)= evaluateFirstBoolOnly(xml%getAttributeValue(xml%posPath(i))//'/@wannier')
+       wannAtomList(i)= evaluateFirstBoolOnly(xml%getAttributeValue(xml%posPath(i)//'/@wannier'))
     ENDDO
     this%atomlist_num = COUNT(wannAtomList)
     n=0

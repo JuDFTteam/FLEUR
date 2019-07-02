@@ -39,9 +39,9 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank,n
     if (present(irank)) THEN
-       rank=0
-    else
        rank=irank
+    else
+       rank=0
     end if
     CALL mpi_bc(this%verb,rank,mpi_comm)
     CALL mpi_bc(this%atomType  ,rank,mpi_comm)

@@ -63,12 +63,24 @@ PROGRAM inpgen
       TYPE(t_stars)    :: stars
       
       CHARACTER(len=40):: kpts_str
+      LOGICAL          :: l_exist
+      INTEGER          :: idum
+       INTERFACE
+       FUNCTION dropDefaultEConfig() BIND(C, name="dropDefaultEconfig")
+         USE iso_c_binding
+         INTEGER(c_int) dropDefaultEConfig
+       END FUNCTION dropDefaultEConfig
+    END INTERFACE
+
       kpts_str=""
       
       !Start program and greet user
       CALL inpgen_help()
       l_explicit=judft_was_argument("-explicit")
       
+      INQUIRE(file='default.econfig',exist=l_exist)
+      IF (.NOT.l_exist) idum=dropDefaultEconfig()
+
       OPEN(6,file='out')
 
       INQUIRE(file='inp.xml',exist=l_inpxml)

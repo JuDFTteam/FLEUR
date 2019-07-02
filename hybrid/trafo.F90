@@ -378,7 +378,7 @@
          nn  = sum( (/ ((2*l+1)*nindxm(l,itype),l=0,lcutm(itype)) /) )
          DO ieq = 1,atoms%neq(itype)
             ic  = ic + 1
-            IF( atoms%invsat(ic) .eq. 0) THEN
+            IF( sym%invsat(ic) .eq. 0) THEN
 ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
 ! invsat(atom) = 0, invsatnr(atom) = 0
 ! but we need invsatnr(atom) = natom
@@ -490,7 +490,7 @@
         nn  = sum( (/ ((2*l+1)*nindxm(l,itype),l=0,lcutm(itype)) /) )
         DO ieq = 1,atoms%neq(itype)
           ic  = ic + 1
-          IF( atoms%invsat(ic) .eq. 0) THEN
+          IF( sym%invsat(ic) .eq. 0) THEN
             ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
             ! invsat(atom) = 0, invsatnr(atom) =0
             ! but we need invsatnr(atom) = natom

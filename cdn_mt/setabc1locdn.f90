@@ -103,11 +103,11 @@ MODULE m_setabc1locdn
             DO lo = 1,atoms%nlo(ntyp)
                enough(natom) = .false.
                l = atoms%llo(lo,ntyp)
-               IF (atoms%invsat(natom).EQ.0) THEN
+               IF (sym%invsat(natom).EQ.0) THEN
                   nbasf0(lo,natom) = nbasf
                   nbasf = nbasf + 2*l + 1
                END IF
-               IF (atoms%invsat(natom).EQ.1) THEN
+               IF (sym%invsat(natom).EQ.1) THEN
                   nbasf0(lo,natom) = nbasf
                   nbasf0(lo,sym%invsatnr(natom)) = nbasf
                   nbasf = nbasf + 2* (2*l+1)

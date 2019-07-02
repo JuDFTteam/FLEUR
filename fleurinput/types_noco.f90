@@ -44,9 +44,9 @@ MODULE m_types_noco
      INTEGER,INTENT(IN),OPTIONAL::irank
      INTEGER ::rank
      IF (PRESENT(irank)) THEN
-        rank=0
-     ELSE
         rank=irank
+     ELSE
+        rank=0
      END IF
      
      CALL mpi_bc(this%l_ss,rank,mpi_comm)
@@ -114,7 +114,8 @@ MODULE m_types_noco
       ALLOCATE(this%socscale(ntype))
 
       DO itype=1,ntype
-         this%socscale(iType)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xml%speciesPath(itype)))//'/special/@socscale'))
+         IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xml%speciesPath(itype)))//'/special/@socscale')>0) &
+              this%socscale(iType)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xml%speciesPath(itype)))//'/special/@socscale'))
          !Read in atom group specific noco parameters
          xPathB = TRIM(ADJUSTL(xml%groupPath(itype)))//'/nocoParams'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB)))

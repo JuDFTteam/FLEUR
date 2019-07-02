@@ -1100,7 +1100,7 @@ c***********************************************************
 
       DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
 
-      call wann_abinv(atoms,
+      call wann_abinv(atoms,sym,
      X        acof_b,bcof_b,ccof_b)
       call cpu_time(t1)
       t_abcof = t_abcof + t1 - t0
@@ -1220,7 +1220,7 @@ c***********************************************************
 
       DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
 
-      call wann_abinv(atoms,
+      call wann_abinv(atoms,sym,
      X        acof_b2,bcof_b2,ccof_b2)
       call cpu_time(t1)
       t_abcof = t_abcof + t1 - t0

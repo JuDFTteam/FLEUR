@@ -376,7 +376,7 @@
       natom = 1
       DO itype = 1,atoms%ntype
 
-        nd = atoms%ntypsy(natom)
+        nd = sym%ntypsy(natom)
 
         DO lh = 0,sphhar%nlh(nd)
           l = sphhar%llh(lh,nd)

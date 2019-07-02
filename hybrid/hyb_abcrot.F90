@@ -54,7 +54,7 @@ MODULE m_hyb_abcrot
         DO ineq=1,atoms%neq(itype)
           iatom=iatom+1
           IF (.NOT.oneD%odi%d1) THEN
-             iop=atoms%ngopr(iatom)
+             iop=sym%ngopr(iatom)
           ELSE
              iop=oneD%ods%ngopr(iatom)
           ENDIF
@@ -62,9 +62,9 @@ MODULE m_hyb_abcrot
 ! inversion of spherical harmonics: Y (pi-theta,pi+phi) = (-1)  * Y (theta,phi)
 !                                    m                             m
           ifac = 1
-          IF(atoms%invsat(iatom).EQ.2) THEN
+          IF(sym%invsat(iatom).EQ.2) THEN
             IF (.NOT.oneD%odi%d1) THEN
-               iop=atoms%ngopr(sym%invsatnr(iatom))
+               iop=sym%ngopr(sym%invsatnr(iatom))
             ELSE
                iop=oneD%ods%ngopr(sym%invsatnr(iatom))
             ENDIF

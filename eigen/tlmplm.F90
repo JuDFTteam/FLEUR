@@ -6,7 +6,7 @@ MODULE m_tlmplm
   !     l',m',l,m,u- basis which is independent from k!
   !*********************************************************************
 CONTAINS
-  SUBROUTINE tlmplm(n,sphhar,atoms,enpara,&
+  SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,&
        jspin,jsp,mpi,v,input,td,ud)
     USE m_constants
     USE m_intgr, ONLY : intgr3
@@ -19,6 +19,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_enpara),INTENT(IN)   :: enpara
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_potden),INTENT(IN)    :: v
@@ -62,7 +63,7 @@ CONTAINS
        jspin1=jspin;jspin2=jspin
     END IF
     na=SUM(atoms%neq(:n-1))+1
-    nsym = atoms%ntypsy(na)
+    nsym = sym%ntypsy(na)
     nh = sphhar%nlh(nsym)
     !
     !--->    generate the irreducible integrals (u(l'):v(lamda,nu:u(l))
@@ -184,7 +185,7 @@ CONTAINS
     !--->   set up the t-matrices for the local orbitals,
     !--->   if there are any
     IF (atoms%nlo(n).GE.1) THEN
-       CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
+       CALL tlo(atoms,sym,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
             na,flo,f(:,:,:,jspin),g(:,:,:,jspin),ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
 
     ENDIF

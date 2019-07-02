@@ -350,8 +350,8 @@ CONTAINS
 	  a=0.0
           b=0.0
           na = SUM(atoms%neq(:n-1))+nn
-          IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-             np = sym%invtab(atoms%ngopr(na))
+          IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
+             np = sym%invtab(sym%ngopr(na))
              !--->       loop over interstitial spins
              DO iintsp = 1,nintsp
                 IF (noco%l_constr.OR.l_socfirst) THEN

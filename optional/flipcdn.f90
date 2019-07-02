@@ -65,7 +65,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    DO itype = 1, atoms%ntype
       IF (atoms%nflip(itype).EQ.-1) THEN
          ! spherical and non-spherical m.t. charge density
-         DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
+         DO lh = 0,sphhar%nlh(sym%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                rhodummy = den%mt(j,lh,itype,1)
                den%mt(j,lh,itype,1) = den%mt(j,lh,itype,input%jspins)
@@ -73,7 +73,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
             END DO
          END DO
       ELSE IF (atoms%nflip(itype).EQ.-2) THEN
-         DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
+         DO lh = 0,sphhar%nlh(sym%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
                rhodumms = den%mt(j,lh,itype,1) - den%mt(j,lh,itype,input%jspins)

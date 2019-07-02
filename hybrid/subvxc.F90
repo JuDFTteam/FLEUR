@@ -170,7 +170,7 @@ CONTAINS
       iatom = 0
       DO itype = 1, atoms%ntype
 
-         typsym = atoms%ntypsy(SUM(atoms%neq(:itype-1))+1)
+         typsym = sym%ntypsy(SUM(atoms%neq(:itype-1))+1)
          nlharm = sphhar%nlh(typsym)
 
          ! Calculate vxc = vtot - vcoul
@@ -300,7 +300,7 @@ CONTAINS
 
          DO itype = 1, atoms%ntype
 
-            typsym = atoms%ntypsy(SUM(atoms%neq(:itype-1))+1)
+            typsym = sym%ntypsy(SUM(atoms%neq(:itype-1))+1)
             nlharm = sphhar%nlh(typsym)
 
             ! Calculate vxc = vtot - vcoul
@@ -343,10 +343,10 @@ CONTAINS
 
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
-               IF((atoms%invsat(iatom).EQ.0).OR.(atoms%invsat(iatom).EQ.1)) THEN
+               IF((sym%invsat(iatom).EQ.0).OR.(sym%invsat(iatom).EQ.1)) THEN
 
-                  IF(atoms%invsat(iatom).EQ.0) invsfct = 1
-                  IF(atoms%invsat(iatom).EQ.1) invsfct = 2
+                  IF(sym%invsat(iatom).EQ.0) invsfct = 1
+                  IF(sym%invsat(iatom).EQ.1) invsfct = 2
 
                   DO ilo = 1, atoms%nlo(itype)
 #ifdef CPP_OLDINTEL
@@ -487,7 +487,7 @@ CONTAINS
                   END DO  ! ilo
                   ikvecprevat = ikvecprevat + ikvecat
                   ikvecat = 0
-               END IF ! atoms%invsat(iatom)
+               END IF ! sym%invsat(iatom)
             END DO ! ieq
          END DO !itype
       END IF ! if any atoms%llo

@@ -79,7 +79,7 @@
                 den%mt(j,0,n,jsp_new) = pp*den%mt(j,0,n,1) + rhoc(j,n,1)/ (2.*sfp)
                 den%mt(j,0,n,1)       =  p*den%mt(j,0,n,1) + rhoc(j,n,1)/ (2.*sfp)
              ENDDO
-             DO lh = 1,sphhar%nlh(atoms%ntypsy(na))
+             DO lh = 1,sphhar%nlh(sym%ntypsy(na))
                 DO j = 1,atoms%jri(n)
                    den%mt(j,lh,n,jsp_new) = pp*den%mt(j,lh,n,1)
                    den%mt(j,lh,n,1)       =  p*den%mt(j,lh,n,1)

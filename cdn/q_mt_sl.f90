@@ -8,13 +8,14 @@ CONTAINS
   !
   !***********************************************************************
   !
-  SUBROUTINE q_mt_sl(jsp,atoms,nobd,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
+  SUBROUTINE q_mt_sl(jsp,atoms,sym,nobd,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
     USE m_types_setup
     USE m_types_usdus
     USE m_types_cdnval, ONLY: t_eigVecCoeffs, t_slab
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(IN)        :: usdus
     TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
     TYPE(t_slab), INTENT(INOUT)     :: slab
     !     ..
@@ -101,7 +102,7 @@ CONTAINS
     ENDDO
     natom = 1
     DO ntyp = 1,atoms%ntype
-       IF (atoms%invsat(natom).EQ.1) THEN
+       IF (sym%invsat(natom).EQ.1) THEN
           DO lo = 1,atoms%nlo(ntyp)
              DO i = 1,ne
                 qlo(i,lo,ntyp) = 2*qlo(i,lo,ntyp)

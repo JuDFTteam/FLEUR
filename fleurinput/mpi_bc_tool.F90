@@ -27,7 +27,7 @@ CONTAINS
     LOGICAL,INTENT(INOUT):: i
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
-    INTEGER:: ierr
+    INTEGER:: ierr=0
 
 #ifdef CPP_MPI  
     CALL MPI_BCAST(i,1,MPI_LOGICAL,irank,mpi_comm,ierr)
@@ -40,7 +40,7 @@ CONTAINS
     LOGICAL,ALLOCATABLE,INTENT(INOUT) :: i(:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(1),iup(1),myrank
+    INTEGER:: ierr=0,ilow(1),iup(1),myrank
 
 #ifdef CPP_MPI  
 
@@ -67,7 +67,7 @@ CONTAINS
     LOGICAL,ALLOCATABLE,INTENT(INOUT) :: i(:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(2),iup(2),myrank
+    INTEGER:: ierr=0,ilow(2),iup(2),myrank
 
 #ifdef CPP_MPI  
 
@@ -93,7 +93,7 @@ CONTAINS
     INTEGER,INTENT(INOUT):: i
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
-    INTEGER:: ierr
+    INTEGER:: ierr=0
 
 #ifdef CPP_MPI  
     CALL MPI_BCAST(i,1,MPI_INTEGER,irank,mpi_comm,ierr)
@@ -106,7 +106,7 @@ CONTAINS
     INTEGER,ALLOCATABLE,INTENT(INOUT) :: i(:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(1),iup(1),myrank
+    INTEGER:: ierr=0,ilow(1),iup(1),myrank
 
 #ifdef CPP_MPI  
 
@@ -133,7 +133,7 @@ CONTAINS
     INTEGER,ALLOCATABLE,INTENT(INOUT) :: i(:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(2),iup(2),myrank
+    INTEGER:: ierr=0,ilow(2),iup(2),myrank
 
 #ifdef CPP_MPI  
 
@@ -161,7 +161,7 @@ CONTAINS
     INTEGER,ALLOCATABLE,INTENT(INOUT) :: i(:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(3),iup(3),myrank
+    INTEGER:: ierr=0,ilow(3),iup(3),myrank
 
 #ifdef CPP_MPI  
 
@@ -187,7 +187,7 @@ CONTAINS
     INTEGER,ALLOCATABLE,INTENT(INOUT) :: i(:,:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(4),iup(4),myrank
+    INTEGER:: ierr=0,ilow(4),iup(4),myrank
 
 #ifdef CPP_MPI  
 
@@ -213,7 +213,7 @@ CONTAINS
     INTEGER,ALLOCATABLE,INTENT(INOUT) :: i(:,:,:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(5),iup(5),myrank
+    INTEGER:: ierr=0,ilow(5),iup(5),myrank
 
 #ifdef CPP_MPI  
 
@@ -243,7 +243,7 @@ CONTAINS
     REAL,INTENT(INOUT)   :: r(:,:)
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
-    INTEGER:: ierr
+    INTEGER:: ierr=0
 #ifdef CPP_MPI  
 
     CALL MPI_BCAST(r,size(r),MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
@@ -256,7 +256,7 @@ CONTAINS
     REAL,INTENT(INOUT)   :: r(3)
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
-    INTEGER:: ierr
+    INTEGER:: ierr=0
 #ifdef CPP_MPI  
 
     CALL MPI_BCAST(r,9,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
@@ -269,7 +269,7 @@ CONTAINS
     REAL,INTENT(INOUT)   :: r
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
-    INTEGER:: ierr
+    INTEGER:: ierr=0
 #ifdef CPP_MPI  
 
     CALL MPI_BCAST(r,1,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
@@ -283,7 +283,7 @@ CONTAINS
     REAL   ,ALLOCATABLE,INTENT(INOUT) :: r(:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(1),iup(1),myrank
+    INTEGER:: ierr=0,ilow(1),iup(1),myrank
 
 #ifdef CPP_MPI
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
@@ -308,7 +308,7 @@ CONTAINS
     REAL   ,ALLOCATABLE,INTENT(INOUT) :: r(:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(2),iup(2),myrank
+    INTEGER:: ierr=0,ilow(2),iup(2),myrank
 
 #ifdef CPP_MPI  
 
@@ -335,7 +335,7 @@ CONTAINS
     REAL   ,ALLOCATABLE,INTENT(INOUT) :: r(:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(3),iup(3),myrank
+    INTEGER:: ierr=0,ilow(3),iup(3),myrank
 
 #ifdef CPP_MPI  
 
@@ -362,7 +362,7 @@ CONTAINS
     REAL   ,ALLOCATABLE,INTENT(INOUT) :: r(:,:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(4),iup(4),myrank
+    INTEGER:: ierr=0,ilow(4),iup(4),myrank
 #ifdef CPP_MPI  
 
 
@@ -389,7 +389,7 @@ CONTAINS
     REAL   ,ALLOCATABLE,INTENT(INOUT) :: r(:,:,:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(5),iup(5),myrank
+    INTEGER:: ierr=0,ilow(5),iup(5),myrank
 #ifdef CPP_MPI  
 
 
@@ -420,7 +420,7 @@ CONTAINS
     COMPLEX,INTENT(INOUT)   :: c
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
-    INTEGER:: ierr
+    INTEGER:: ierr=0
 #ifdef CPP_MPI  
 
     CALL MPI_BCAST(c,1,MPI_DOUBLE_COMPLEX,irank,mpi_comm,ierr)
@@ -434,7 +434,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE,INTENT(INOUT) :: c(:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(1),iup(1),myrank
+    INTEGER:: ierr=0,ilow(1),iup(1),myrank
 
 #ifdef CPP_MPI  
 
@@ -461,7 +461,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE,INTENT(INOUT) :: c(:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(2),iup(2),myrank
+    INTEGER:: ierr=0,ilow(2),iup(2),myrank
 #ifdef CPP_MPI  
 
 
@@ -488,7 +488,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE,INTENT(INOUT) :: c(:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(3),iup(3),myrank
+    INTEGER:: ierr=0,ilow(3),iup(3),myrank
 #ifdef CPP_MPI  
 
 
@@ -515,7 +515,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE,INTENT(INOUT) :: c(:,:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(4),iup(4),myrank
+    INTEGER:: ierr=0,ilow(4),iup(4),myrank
 #ifdef CPP_MPI  
 
 
@@ -542,7 +542,7 @@ CONTAINS
     COMPLEX,ALLOCATABLE,INTENT(INOUT) :: c(:,:,:,:,:)
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
-    INTEGER:: ierr,ilow(5),iup(5),myrank
+    INTEGER:: ierr=0,ilow(5),iup(5),myrank
 #ifdef CPP_MPI  
 
 
@@ -570,7 +570,7 @@ CONTAINS
     CHARACTER(len=*),INTENT(INOUT)   :: c
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
-    INTEGER:: ierr
+    INTEGER:: ierr=0
 #ifdef CPP_MPI  
 
     CALL MPI_BCAST(c,len_trim(c),MPI_CHARACTER,irank,mpi_comm,ierr)

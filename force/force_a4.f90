@@ -1,6 +1,6 @@
 MODULE m_force_a4
 CONTAINS
-  SUBROUTINE force_a4(atoms,sphhar,input,dimension,&
+  SUBROUTINE force_a4(atoms,sym,sphhar,input,DIMENSION,&
        &                    vr,&
        &                    force)
     !
@@ -18,6 +18,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
+    TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_dimension),INTENT(IN) :: dimension
     !     ..
     !     .. Array Arguments ..
@@ -65,7 +66,7 @@ CONTAINS
 8000         FORMAT (' FORCE_A4: core charge=',1p,e16.8)
              !
              !
-             nd = atoms%ntypsy(na)
+             nd = sym%ntypsy(na)
              !
              !
              lh_loop: DO  lh = 1,sphhar%nlh(nd)

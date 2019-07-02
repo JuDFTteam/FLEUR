@@ -40,9 +40,9 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     if (present(irank)) THEN
-       rank=0
-    else
        rank=irank
+    else
+       rank=0
     end if
     CALL mpi_bc(this%dos ,rank,mpi_comm)
     CALL mpi_bc(this%band ,rank,mpi_comm)

@@ -96,7 +96,7 @@ CONTAINS
              natom = SUM(atoms%neq(:n-1)) + nn
              IF ((natom.GE.nat_start).AND.(natom.LE.nat_stop)) THEN
                 natom_l = natom_l + 1
-                IF (atoms%invsat(natom).EQ.2) THEN
+                IF (sym%invsat(natom).EQ.2) THEN
                    jatom = sym%invsatnr(natom)
                 ELSE
                    jatom = natom
@@ -160,7 +160,7 @@ CONTAINS
                          c_0 = CONJG(ylm(lm+1))*phase
                          c_1 = c_0 *  fj(l)
                          c_2 = c_0 * dfj(l)
-                         IF (atoms%invsat(natom).EQ.2) THEN
+                         IF (sym%invsat(natom).EQ.2) THEN
                            lmp = ll1 - m
                            inv_f = (-1)**(l-m)
                            c_1 =  conjg(c_1) * inv_f
@@ -204,7 +204,7 @@ CONTAINS
                       DO nkvec=1,lapw%nkvec(lo,jatom) 
                          IF (k==lapw%kvec(nkvec,lo,jatom)) THEN !check if this k-vector has LO attached
                             term1 = 2 * tpi_const/SQRT(cell%omtil) * ((atoms%rmt(n)**2)/2) * phase
-                            IF ((atoms%invsat(natom)==0).OR.(atoms%invsat(natom)==1)) THEN
+                            IF ((sym%invsat(natom)==0).OR.(sym%invsat(natom)==1)) THEN
                                na2=natom
                             ELSE
                                na2 = sym%invsatnr(natom)
@@ -216,7 +216,7 @@ CONTAINS
                                DO m = -l,l
                                   lm = ll1 + m
                                   !+gu_con
-                                  IF ((atoms%invsat(natom)==0).OR.(atoms%invsat(natom)==1)) THEN
+                                  IF ((sym%invsat(natom)==0).OR.(sym%invsat(natom)==1)) THEN
                                      IF (zMat%l_real) THEN
                                         ctmp = zMat%data_r(nbasf,i)*term1*CONJG(ylm(ll1+m+1))
                                      ELSE

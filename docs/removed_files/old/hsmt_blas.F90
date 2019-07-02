@@ -43,7 +43,7 @@ CONTAINS
     ntyploop: DO n=1,atoms%ntype
        DO nn = 1,atoms%neq(n)
           na = SUM(atoms%neq(:n-1))+nn
-          IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
+          IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
              
              !--->   Calculate Overlapp matrix
              CALL timestart("ab-coefficients")
@@ -84,7 +84,7 @@ CONTAINS
     ntyploop: DO n=1,atoms%ntype
        DO nn = 1,atoms%neq(n)
           na = SUM(atoms%neq(:n-1))+nn
-          IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
+          IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
              
              !--->   Calculate Overlapp matrix
              CALL timestart("ab-coefficients")

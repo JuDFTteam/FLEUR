@@ -86,9 +86,9 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     if (present(irank)) THEN
-       rank=0
-    else
        rank=irank
+    else
+       rank=0
     end if
     call mpi_bc(this%film,rank,mpi_comm)
     call mpi_bc(this%jspins,rank,mpi_comm)

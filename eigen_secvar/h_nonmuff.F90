@@ -76,10 +76,10 @@ CONTAINS
        DO  nn = 1,atoms%neq(n)
           na = na + 1
           !+inv
-          IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
-             IF (atoms%invsat(na).EQ.0) invsfct = 1
-             IF (atoms%invsat(na).EQ.1) invsfct = 2
-             np = atoms%ngopr(na)
+          IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
+             IF (sym%invsat(na).EQ.0) invsfct = 1
+             IF (sym%invsat(na).EQ.1) invsfct = 2
+             np = sym%ngopr(na)
              !---> a and b
              a(:ne,:) = CMPLX(0.0,0.0)
              b(:ne,:) = CMPLX(0.0,0.0)

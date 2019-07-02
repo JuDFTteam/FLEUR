@@ -58,10 +58,10 @@ CONTAINS
        DO nn = 1,atoms%neq(n)    ! loop over atoms
           na = na + 1
           !+inv
-          IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
+          IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
              CALL timestart("hssr_wu: spherical")
-             IF (atoms%invsat(na).EQ.0) invsfct = 1.0
-             IF (atoms%invsat(na).EQ.1) invsfct = SQRT(2.0)
+             IF (sym%invsat(na).EQ.0) invsfct = 1.0
+             IF (sym%invsat(na).EQ.1) invsfct = SQRT(2.0)
              DO lm = 0, DIMENSION%lmd
                 DO ke = 1, ne
                    a(ke,lm) = invsfct*acof(ke,lm,na)

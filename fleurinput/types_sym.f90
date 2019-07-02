@@ -40,6 +40,13 @@ MODULE m_types_sym
      INTEGER, ALLOCATABLE :: invsatnr(:) !(atoms%nat)
      INTEGER, ALLOCATABLE :: invarop(:,:)!(atoms%nat,nop)
      INTEGER, ALLOCATABLE :: invarind(:) !(atoms%nat)
+        !no of op that maps atom into
+      INTEGER, ALLOCATABLE::ngopr(:)
+      !symetry of atoms(nat)
+      INTEGER, ALLOCATABLE::ntypsy(:)
+      !atom mapped to by inversion (nat
+      INTEGER, ALLOCATABLE ::invsat(:)
+   
      !
      ! Hybrid specific stuff TODO
      !
@@ -62,9 +69,9 @@ CONTAINS
       INTEGER,INTENT(IN),OPTIONAL::irank
       INTEGER ::rank
       if (present(irank)) THEN
-         rank=0
-      else
          rank=irank
+      else
+         rank=0
       end if
 
       call mpi_bc(this%nop,rank,mpi_comm)
@@ -83,8 +90,9 @@ CONTAINS
       call mpi_bc(this%invarind,rank,mpi_comm)
       call mpi_bc(this%nsymt,rank,mpi_comm)
       call mpi_bc(this%nsym,rank,mpi_comm)
-   
-
+      call mpi_bc(this%invsat,rank,mpi_comm)
+      CALL mpi_bc(this%ngopr,rank,mpi_comm)
+     call mpi_bc(this%ntypsy,rank,mpi_comm)
     end subroutine mpi_bc_sym
   
   SUBROUTINE read_xml_sym(this,xml)
@@ -99,6 +107,9 @@ CONTAINS
 
 
     this%nop = xml%GetNumberOfNodes('/fleurInput/calculationSetup/symmetryOperations/symOp')
+    ALLOCATE(this%mrot(3,3,this%nop))
+    ALLOCATE(this%tau(3,this%nop))
+
     IF (this%nop<1) CALL judft_error("No symmetries in inp.xml")
     
     DO n=1,this%nop
@@ -121,6 +132,7 @@ CONTAINS
     INTEGER::i
 
     IF (PRESENT(filename)) OPEN(fh,file=filename,status='replace',action='write')
+    
     WRITE(fh,'(a)') '      <symmetryOperations>'
     DO i = 1, sym%nop
        WRITE(fh,'(a)') '         <symOp>'
@@ -137,14 +149,16 @@ CONTAINS
   END SUBROUTINE print_xml
 
 
+
   SUBROUTINE init(sym,cell,film)
     !Generates missing symmetry info.
     !tau,mrot and nop have to be specified alread
-    !USE m_dwigner
     USE m_types_cell
+    use m_types_input
     CLASS(t_sym),INTENT(INOUT):: sym
-    CLASS(t_cell),INTENT(IN)  :: cell
-    LOGICAL,INTENT(in)        :: film
+    TYPE(t_cell),INTENT(IN)   :: cell
+    LOGICAL,INTENT(IN)        :: film
+   
 
 
     INTEGER :: invsop, zrfsop, invs2op, magicinv,n,i,j,nn
@@ -281,17 +295,12 @@ CONTAINS
        sym%nop2 = 0
     ENDIF
 
-    
-    
-    !Generated wigner symbols for LDA+U
-    IF (ALLOCATED(sym%d_wgn)) DEALLOCATE(sym%d_wgn)
-    ALLOCATE(sym%d_wgn(-3:3,-3:3,3,sym%nop))
-    !CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
-
+       
     !---> redo to ensure proper mult. table and mapping functions
     CALL sym%check_close(optype)
-  END SUBROUTINE init
+ 
 
+  END SUBROUTINE init
 
   FUNCTION closure(sym)RESULT(lclose)
     CLASS(t_sym),INTENT(IN):: sym

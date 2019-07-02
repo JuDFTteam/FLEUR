@@ -46,12 +46,13 @@ CONTAINS
       !ENDIF
    END SUBROUTINE init_mt_grid
 
-   SUBROUTINE mt_to_grid(xcpot, jspins, atoms, sphhar, den_mt, n, grad, ch)
+   SUBROUTINE mt_to_grid(xcpot, jspins, atoms, sym, sphhar, den_mt, n, grad, ch)
       USE m_grdchlh
       USE m_mkgylm
       IMPLICIT NONE
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
       TYPE(t_atoms), INTENT(IN)    :: atoms
+      TYPE(t_sym), INTENT(IN)      :: sym
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       REAL, INTENT(IN)             :: den_mt(:, 0:, :)
       INTEGER, INTENT(IN)          :: n, jspins
@@ -64,7 +65,7 @@ CONTAINS
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
       INTEGER:: nd, lh, js, jr, kt, k, nsp
 
-      nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
       nsp = atoms%nsp()
 
       ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspins))
@@ -150,9 +151,10 @@ CONTAINS
 
    END SUBROUTINE mt_to_grid
 
-   SUBROUTINE mt_from_grid(atoms, sphhar, n, jspins, v_in, vr)
+   SUBROUTINE mt_from_grid(atoms, sym, sphhar, n, jspins, v_in, vr)
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_sphhar), INTENT(IN):: sphhar
       INTEGER, INTENT(IN)       :: jspins, n
       REAL, INTENT(IN)          :: v_in(:, :)
@@ -162,7 +164,7 @@ CONTAINS
       INTEGER :: js, kt, lh, jr, nd, nsp
 
       nsp = atoms%nsp()
-      nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
 
       DO js = 1, jspins
          !

@@ -113,10 +113,10 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%volmts(atoms%ntype))
    
       ALLOCATE(atoms%ncv(atoms%ntype))
-      ALLOCATE(atoms%ngopr(atoms%nat))
+      ALLOCATE(sym%ngopr(atoms%nat))
       ALLOCATE(atoms%lapw_l(atoms%ntype))
-      ALLOCATE(atoms%invsat(atoms%nat))
-      ALLOCATE(atoms%nlhtyp(atoms%ntype),atoms%ntypsy(atoms%nat))
+      ALLOCATE(sym%invsat(atoms%nat))
+      ALLOCATE(atoms%nlhtyp(atoms%ntype),sym%ntypsy(atoms%nat))
 
       ALLOCATE(sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
       ALLOCATE(sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd))

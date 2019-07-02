@@ -89,9 +89,9 @@ MODULE m_types_oneD
     INTEGER,INTENT(IN),OPTIONAL::irank
     INTEGER ::rank
     if (present(irank)) THEN
-       rank=0
-    else
        rank=irank
+    else
+       rank=0
     end if
     !Attention only few variables are broadcasted
     CALL mpi_bc(this%odd%d1 ,rank,mpi_comm)
