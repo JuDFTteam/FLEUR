@@ -991,13 +991,13 @@ MODULE m_cdn_io
          SELECT CASE(input%qfix)
          CASE (0,1) !just qfix the density
             IF (mpi%irank==0) WRITE(6,*) "Using qfix to adjust density"
-            CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+            if (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
                  den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix)
          CASE(2,3)
-            CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
+            if (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,&
                  den,noco%l_noco,mpi%isize==1,force_fix=.TRUE.,fix=fix,fix_pw_only=.true.)
          CASE(4,5)
-            CALL fix_by_gaussian(shifts,atoms,stars,mpi,sym,vacuum,sphhar,input,oned,cell,noco,den)
+            if (mpi%irank==0) CALL fix_by_gaussian(shifts,atoms,stars,mpi,sym,vacuum,sphhar,input,oned,cell,noco,den)
          CASE default
             CALL judft_error("Wrong choice of qfix in input")
          END SELECT
