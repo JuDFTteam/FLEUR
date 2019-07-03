@@ -272,7 +272,7 @@ CONTAINS
 
 #else
       results%neig(:,:) = neigBuffer(:,:)
-      results%eig(:,:,:) = eigBuffer(:,:,:)
+      results%eig(:dimension%neigd,:,:) = eigBuffer(:dimension%neigd,:,:)
       results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
 #endif
 

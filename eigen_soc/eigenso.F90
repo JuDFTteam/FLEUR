@@ -49,6 +49,11 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)     :: vTot
     TYPE(t_enpara),INTENT(IN)     :: enpara
     TYPE(t_results),INTENT(INOUT) :: results
+
+#ifdef CPP_MPI
+    INCLUDE 'mpif.h'
+#endif
+
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id       
@@ -60,13 +65,14 @@ CONTAINS
     INTEGER n_end,nsz,nmat,n_stride
     LOGICAL l_socvec   !,l_all
     INTEGER wannierspin
-    TYPE(t_usdus):: usdus
+    TYPE(t_usdus)        :: usdus
     !     ..
     !     .. Local Arrays..
     CHARACTER*3 chntype
 
     TYPE(t_rsoc) :: rsoc
-    REAL,    ALLOCATABLE :: eig_so(:) 
+    INTEGER, ALLOCATABLE :: neigBuffer(:,:)
+    REAL,    ALLOCATABLE :: eig_so(:), eigBuffer(:,:,:)
     COMPLEX, ALLOCATABLE :: zso(:,:,:)
 
     TYPE(t_mat)::zmat
@@ -112,7 +118,13 @@ CONTAINS
     !
 
 
-    ALLOCATE( eig_so(2*DIMENSION%neigd) )
+    ALLOCATE (eig_so(2*DIMENSION%neigd))
+    ALLOCATE (eigBuffer(2*DIMENSION%neigd,kpts%nkpt,wannierspin))
+    ALLOCATE (neigBuffer(kpts%nkpt,wannierspin))
+    results%eig = 1.0e300
+    eigBuffer = 1.0e300
+    results%neig = 0
+    neigBuffer = 0
     rsoc%soangl(:,:,:,:,:,:) = CONJG(rsoc%soangl(:,:,:,:,:,:))
     CALL timestop("eigenso: spnorb")
     !
@@ -154,31 +166,33 @@ CONTAINS
        IF (mpi%n_rank==0) THEN
           IF (input%eonly) THEN
              CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
-          ELSE          
+             STOP 'jspin is undefined here (eigenso - eonly branch)'
+             eigBuffer(:nsz,nk,jspin) = eig_so(:nsz)
+             neigBuffer(nk,jspin) = nsz
+          ELSE
              CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
              DO jspin = 1,wannierspin
                 CALL timestart("eigenso: write_eig")  
                 zmat%data_c=zso(:,:nsz,jspin)
                 CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz),zmat=zmat)
-   
-                CALL timestop("eigenso: write_eig")  
+                eigBuffer(:nsz,nk,jspin) = eig_so(:nsz)
+                neigBuffer(nk,jspin) = nsz
+                CALL timestop("eigenso: write_eig")
              ENDDO
           ENDIF ! (input%eonly) ELSE
        ENDIF ! n_rank == 0
        DEALLOCATE (zso)
     ENDDO ! DO nk 
 
-    ! Sorry for the following strange workaround to fill the results%neig and results%eig arrays.
-    ! At some point someone should have a closer look at how the eigenvalues are
-    ! distributed and fill the arrays without using the eigenvalue-IO.
-    DO jspin = 1, wannierspin
-       DO nk = 1,kpts%nkpt
-          CALL read_eig(eig_id,nk,jspin,results%neig(nk,jspin),results%eig(:,nk,jspin))
 #ifdef CPP_MPI
-          CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
+    CALL MPI_ALLREDUCE(eigBuffer(:2*dimension%neigd,:,:),results%eig(:2*dimension%neigd,:,:),&
+                       2*dimension%neigd*kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
+    CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
+#else
+    results%neig(:,:) = neigBuffer(:,:)
+    results%eig(:2*dimension%neigd,:,:) = eigBuffer(:2*dimension%neigd,:,:)
 #endif
-       END DO
-    END DO
 
     RETURN
   END SUBROUTINE eigenso
