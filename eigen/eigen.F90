@@ -267,7 +267,7 @@ CONTAINS
        CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),CPP_MPI_COMPLEX,MPI_SUM,mpi%mpi_comm,ierr)
       END IF
       CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(eigBuffer,results%eig,SIZE(results%eig,1)*kpts%nkpt*input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(eigBuffer(:dimension%neigd,:,:),results%eig(:dimension%neigd,:,:),dimension%neigd*kpts%nkpt*input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
       CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 
 #else
