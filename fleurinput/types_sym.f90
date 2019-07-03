@@ -107,6 +107,7 @@ CONTAINS
 
 
     this%nop = xml%GetNumberOfNodes('/fleurInput/calculationSetup/symmetryOperations/symOp')
+    this%nop2=this%nop !might be changed later in film case
     ALLOCATE(this%mrot(3,3,this%nop))
     ALLOCATE(this%tau(3,this%nop))
 
@@ -291,8 +292,6 @@ CONTAINS
              n = n + 1
           ENDIF
        ENDDO
-    ELSE !film
-       sym%nop2 = 0
     ENDIF
 
        
