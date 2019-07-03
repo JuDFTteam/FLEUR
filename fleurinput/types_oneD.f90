@@ -79,6 +79,7 @@ MODULE m_types_oneD
     contains
       procedure :: read_xml=>read_xml_oneD
       PROCEDURE :: mpi_bc=>mpi_bc_oneD
+      procedure :: init=>init_oneD
    END TYPE t_oneD
    PUBLIC::t_oneD,od_dim,od_inp,od_gga,od_lda,od_sym
  CONTAINS
@@ -132,5 +133,17 @@ MODULE m_types_oneD
       END IF
 
     END SUBROUTINE read_xml_oneD
-   
+
+    subroutine init_oneD(oneD)
+      class(t_oned),intent(inout)::this
+
+
+      ! Initialize missing 1D code arrays
+      
+      ALLOCATE (oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
+      ALLOCATE (oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
+      ALLOCATE (oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
+      ALLOCATE (oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop))
+      ALLOCATE (oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1))
+    end subroutine init_oneD
  END MODULE m_types_oneD

@@ -102,7 +102,7 @@ CONTAINS
     ! local scalars
     INTEGER :: eig_id,archiveType
     INTEGER :: n,iter,iterHF
-    LOGICAL :: l_opti,l_cont,l_qfix,l_real
+    LOGICAL :: l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -113,14 +113,14 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
-                    banddos,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
+                    banddos,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann)
     CALL timestop("Initialization")
 
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
       CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
     END IF
 
-    IF (l_opti) CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
+    CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
                               stars,input,sym,cell,sliceplot,xcpot,noco,oneD)
 
     IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN

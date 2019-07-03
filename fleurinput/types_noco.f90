@@ -32,6 +32,7 @@ MODULE m_types_noco
   CONTAINS
     PROCEDURE :: read_xml=>read_xml_noco
     PROCEDURE :: mpi_bc =>mpi_bc_noco
+    PROCEDURE :: init => init_noco
    END TYPE t_noco
 
    PUBLIC t_noco
@@ -129,4 +130,41 @@ MODULE m_types_noco
          END IF
       ENDDO
     END SUBROUTINE read_xml_noco
+
+    subroutine init_noco(this,atoms)
+      use m_types_atoms
+      use m_constants
+      CLASS(t_noco),INTENT(inout):: noco
+      types(t_atoms),INTENT(IN)::atoms
+
+
+      integer :: na,itype
+      
+      ! Check noco stuff and calculate missing noco parameters
+      IF (noco%l_noco) THEN
+         IF (noco%l_ss) THEN
+            !--->    the angle beta is relative to the spiral in a spin-spiral
+            !--->    calculation, i.e. if beta = 0 for all atoms in the unit cell
+            !--->    that means that the moments are "in line" with the spin-spiral
+            !--->    (beta = qss * taual). note: this means that only atoms within
+            !--->    a plane perpendicular to qss can be equivalent!
+            na = 1
+            DO iType = 1,atoms%ntype
+               noco%alph(iType) = noco%alphInit(iType) + tpi_const*dot_product(noco%qss,atoms%taual(:,na))
+               na = na + atoms%neq(iType)
+            END DO
+         END IF
+      ELSE
+         IF (noco%l_ss) THEN
+            CALL judft_warn("l_noco=F and l_ss=T is meaningless. Setting l_ss to F.")
+            noco%l_ss = .FALSE.
+         END IF
+      END IF
+
+
+      
+    end subroutine init_noco
+
+      
+     
  END MODULE m_types_noco

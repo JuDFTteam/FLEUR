@@ -10,7 +10,7 @@ CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,forcetheo_data,&
-     noco,DIMENSION,enpara,enparaxml,sphhar,l_opti,noel,l_kpts)
+     noco,DIMENSION,enpara,enparaxml,sphhar,l_kpts)
 
   USE m_juDFT
   USE m_types
@@ -24,16 +24,14 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   use m_lapwdim
   use m_make_stars
   use m_make_sphhar
+  use m_make_forectheo
+  use m_make_xcpot
   use m_make_sym
   USE m_convn
   USE m_efield
   USE m_od_kptsgen
-  USE m_types_forcetheo_extended
-  USE m_types_xcpot_libxc
-  USE m_types_xcpot_inbuild
-  USE m_types_xcpot_inbuild_nofunction
   USE m_relaxio
- 
+
          
   IMPLICIT NONE
 
@@ -60,8 +58,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   TYPE(t_field),    INTENT(INOUT) :: field
   LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
-  CHARACTER(len=3), ALLOCATABLE, INTENT(IN) :: noel(:)
-
+  
   INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt
   INTEGER              :: minNeigd, nv, nv2, kq1, kq2, kq3, jrc, jsp, ii
   INTEGER              :: ios, ntst, ierr
@@ -73,8 +70,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   
   INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
   REAL,    ALLOCATABLE :: rmt1(:), dx1(:)
-  INTEGER              ::func_vxc_id_c,func_vxc_id_x,func_exc_id_c,func_exc_id_x
-
+ 
 #ifdef CPP_MPI
   INCLUDE 'mpif.h'
 #endif
@@ -82,87 +78,18 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of input postprocessing (calculate missing parameters)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  call cell%init()
+  call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:))
   call atoms%init(cell)
-  cell%volint = cell%vol
-  cell%volint = cell%volint - DOT_PRODUCT(atoms%volmts(:),atoms%neq(:))
   CALL sym%init(cell,input%film)
-  CALL make_sym(sym,cell,atoms,noco,oneD,input) 
-  !Finish setup of xcpot
-  IF (xcpot%l_libxc) THEN
-     func_vxc_id_c=xcpot%func_vxc_id_c
-     func_vxc_id_x=xcpot%func_vxc_id_x
-     func_exc_id_c=xcpot%func_exc_id_c
-     func_exc_id_x=xcpot%func_exc_id_x
-     DEALLOCATE(xcpot)
-     ALLOCATE(t_xcpot_libxc::xcpot)
-     SELECT TYPE(xcpot)
-     CLASS is (t_xcpot_libxc)!just allocated like this
-        CALL xcpot%init(func_vxc_id_x,func_vxc_id_c,func_exc_id_x,func_exc_id_c,input%jspins)
-     END SELECT
-  ELSE
-     SELECT TYPE(xcpot)
-     CLASS is (t_xcpot_inbuild_nf)
-        CALL xcpot%init(atoms%ntype)
-     CLASS DEFAULT
-        CALL judft_error("Error in setup xcpot")
-     END SELECT
-  END IF
 
-  !Finish setup of forcetheorem
-  SELECT CASE (forcetheo_data%mode)
-  CASE(1)
-     ALLOCATE(t_forcetheo_mae::forcetheo)
-  CASE(2)
-     ALLOCATE(t_forcetheo_dmi::forcetheo)
-  CASE(3)
-     ALLOCATE(t_forcetheo_jij::forcetheo)
-  CASE(4)
-     ALLOCATE(t_forcetheo_ssdisp::forcetheo)
-  CASE default
-     ALLOCATE(t_forcetheo::forcetheo)
-  END SELECT
 
-  SELECT TYPE(forcetheo)
-  TYPE IS(t_forcetheo_mae)
-     CALL forcetheo%init(forcetheo_data%theta,forcetheo_data%phi,cell,sym)
-  TYPE IS(t_forcetheo_dmi)
-     CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta,forcetheo_data%phi)
-  TYPE IS(t_forcetheo_jij)
-     CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta(1),atoms)
-  TYPE IS(t_forcetheo_ssdisp)
-     CALL forcetheo%init(forcetheo_data%qvec)
-  END SELECT
-  
-
-  !Generate enpara datatype
   CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
-
+  CALL make_sym(sym,cell,atoms,noco,oneD,input) 
+  call make_forectheo(forcetheo_data,cell,sym,atoms,forcetheo)
+  call make_xcpot(xcpot,atoms,input)
+  
   IF (mpi%irank.EQ.0) call check_input_switches(banddos,vacuum,noco,atoms,input)
 
-
-  ! Check noco stuff and calculate missing noco parameters
-  IF (noco%l_noco) THEN
-     IF (noco%l_ss) THEN
-        !--->    the angle beta is relative to the spiral in a spin-spiral
-        !--->    calculation, i.e. if beta = 0 for all atoms in the unit cell
-        !--->    that means that the moments are "in line" with the spin-spiral
-        !--->    (beta = qss * taual). note: this means that only atoms within
-        !--->    a plane perpendicular to qss can be equivalent!
-        na = 1
-        DO iType = 1,atoms%ntype
-           noco%alph(iType) = noco%alphInit(iType) + tpi_const*dot_product(noco%qss,atoms%taual(:,na))
-           na = na + atoms%neq(iType)
-        END DO
-     END IF
-  ELSE
-     IF (noco%l_ss) THEN
-        CALL judft_warn("l_noco=F and l_ss=T is meaningless. Setting l_ss to F.")
-        noco%l_ss = .FALSE.
-     END IF
-  END IF
-  
-    
   ! Generate missing general parameters
   
   minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
@@ -176,55 +103,33 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      dimension%neigd = minNeigd
   END IF
   
-   
-  
   CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
-
-
    
   IF(dimension%neigd.EQ.-1) THEN
      dimension%neigd = dimension%nvd + atoms%nlotot
   END IF
 
-
   IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
 
-  ! Generate missing parameters for atoms and calculate volume of the different regions
   CALL ylmnorm_init(atoms%lmaxd)
   dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
   
 
 
-  
-     
-  ! Initialize missing 1D code arrays
-
-  ALLOCATE (oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
-  ALLOCATE (oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
-  ALLOCATE (oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))
-  ALLOCATE (oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop))
-  ALLOCATE (oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1))
-  
+  call oneD%init()
   ! Initialize missing hybrid functionals arrays
-
   ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
-    
-  
-  
   ! Check muffin tin radii
-  
   l_test = .TRUE. ! only checking, dont use new parameters
   CALL chkmt(atoms,input,vacuum,cell,oneD,l_test)
   
   !adjust positions by displacements
   CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
   
-
   call make_sphhar(atoms,sphhar,sym,cell,oneD)
   CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
 
   ! Store structure data
-  
   CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
    
   !Adjust kpoints in case of DOS
@@ -240,20 +145,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   END IF
   
   
-  ! Other small stuff
-  
-  
-  
-  
-  input%strho = .FALSE.
-  
-  INQUIRE(file="cdn1",exist=l_opti)
-  if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
-  l_opti=.not.l_opti
-  IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-       (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
-  
-  kpts%wtkpt=kpts%wtkpt/sum(kpts%wtkpt) !Normalize k-point weight
   
   
   CALL prp_xcfft(stars,input,cell,xcpot)

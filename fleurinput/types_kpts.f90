@@ -126,6 +126,7 @@ CONTAINS
            READ(str,*) this%ntetra(:,n)
         ENDDO
      END IF
+     kpts%wtkpt=kpts%wtkpt/sum(kpts%wtkpt) !Normalize k-point weight
    END SUBROUTINE read_xml_kpts
 
   SUBROUTINE print_xml(kpts,fh,filename)

@@ -59,11 +59,11 @@ CONTAINS
     call mpi_bc(this%volint,rank,mpi_comm)
   end subroutine mpi_bc_cell
     
-  SUBROUTINE init(cell)
+  SUBROUTINE init(cell,volmts)
     !initialize cell, only input is cell%amat and cell%z1 in case of a film
     USE m_constants,ONLY:tpi_const
     CLASS (t_cell),INTENT(INOUT):: cell
-    
+    real,intent(in):: volmts !Volume of all MT-spheres
     
     CALL inv3(cell%amat,cell%bmat,cell%omtil)
     IF (cell%omtil<0) CALL judft_warn("Negative volume! You are using a left-handed coordinate system")
@@ -84,6 +84,8 @@ CONTAINS
 
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
      cell%aamat=matmul(transpose(cell%amat),cell%amat)
+     cell%volint = cell%vol
+  cell%volint = cell%volint-volmts
    CONTAINS
      !This is a copy of the code in math/inv3
      !Put here to make library independent
