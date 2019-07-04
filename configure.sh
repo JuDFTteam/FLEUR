@@ -23,7 +23,8 @@ echo "------------ Welcome to the FLEUR configuration script -------------"
 
 
 #Check if we are using the git version and update if pull was used as an argument
-if test -d $DIR/.git 
+if test -d $DIR/.git
+then
     #Check if hook is installed and install it if needed
     if test -h $DIR/.git/hooks/pre-commit
     then
@@ -33,13 +34,12 @@ if test -d $DIR/.git
         ln -s $DIR/tests/git-hooks/pre-commit $DIR/.git/hooks
         echo "Git version found, hook installed"
     fi
-then
-   if [ $gitupdate -gt 0 ] 
-   then
+    if [ $gitupdate -gt 0 ] 
+    then
        cd $DIR 
        git pull
        cd -
-   fi
+    fi
 fi
 
 
