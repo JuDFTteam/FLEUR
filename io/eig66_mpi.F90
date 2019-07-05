@@ -72,7 +72,6 @@ CONTAINS
     !The eigenvectors
     local_slots=COUNT(d%pe_ev==d%irank)
     slot_size=nmat
-
     IF (l_real.AND..NOT.l_soc) THEN
        CALL priv_create_memory(slot_size,local_slots,d%zr_handle,real_data_ptr=d%zr_data)
     else
@@ -169,9 +168,9 @@ CONTAINS
     INTEGER                   :: pe,tmp_size,e
     INTEGER(MPI_ADDRESS_KIND) :: slot
     INTEGER                   :: n1,n2,n3,n
-    INTEGER,ALLOCATABLE       :: tmp_int(:)
-    REAL,ALLOCATABLE          :: tmp_real(:)
-    COMPLEX,ALLOCATABLE       :: tmp_cmplx(:)
+    INTEGER,ALLOCATABLE,ASYNCHRONOUS       :: tmp_int(:)
+    REAL,ALLOCATABLE,ASYNCHRONOUS          :: tmp_real(:)
+    COMPLEX,ALLOCATABLE,ASYNCHRONOUS       :: tmp_cmplx(:)
     TYPE(t_data_MPI),POINTER,ASYNCHRONOUS :: d
     CALL priv_find_data(id,d)
     pe=d%pe_basis(nk,jspin)
@@ -255,13 +254,17 @@ CONTAINS
     INTEGER                   :: pe,tmp_size,e
     INTEGER(MPI_ADDRESS_KIND) :: slot
     INTEGER                   :: n1,n2,n3,n,nn
-    INTEGER,ALLOCATABLE       :: tmp_int(:)
-    REAL,ALLOCATABLE          :: tmp_real(:)
-    COMPLEX,ALLOCATABLE       :: tmp_cmplx(:)
+    INTEGER,ALLOCATABLE,ASYNCHRONOUS       :: tmp_int(:)
+    REAL,ALLOCATABLE,ASYNCHRONOUS          :: tmp_real(:)
+    COMPLEX,ALLOCATABLE,ASYNCHRONOUS       :: tmp_cmplx(:)
     LOGICAL                   :: acc
     TYPE(t_data_MPI),POINTER,ASYNCHRONOUS :: d
 
+    INTEGER:: irank,ierr
+
     CALL priv_find_data(id,d)
+
+    CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 
     pe=d%pe_basis(nk,jspin)
     slot=d%slot_basis(nk,jspin)
@@ -309,14 +312,13 @@ CONTAINS
           IF (n1+1>size(d%slot_ev,3)) EXIT
           slot=d%slot_ev(nk,jspin,n1+1)
           pe=d%pe_ev(nk,jspin,n1+1)
-          !print *, "PE:",pe," Slot: ",slot," Size:",tmp_size,tmp_real(1)
           IF (zmat%l_real) THEN
              if (.not.d%l_real) THEN
                 tmp_cmplx=zmat%data_r(:,n)
                 CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%zc_handle,e)
                 CALL MPI_PUT(tmp_cmplx,tmp_size,MPI_DOUBLE_COMPLEX,pe,slot,tmp_size,MPI_DOUBLE_COMPLEX,d%zc_handle,e)
                 CALL MPI_WIN_UNLOCK(pe,d%zc_handle,e)
-             else
+               else
                 tmp_real=zmat%data_r(:,n)
                 CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,pe,0,d%zr_handle,e)
                 CALL MPI_PUT(tmp_real,tmp_size,MPI_DOUBLE_PRECISION,pe,slot,tmp_size,MPI_DOUBLE_PRECISION,d%zr_handle,e)
