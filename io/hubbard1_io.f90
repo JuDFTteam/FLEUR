@@ -30,21 +30,19 @@ MODULE m_hubbard1_io
 
    CONTAINS
 
-   SUBROUTINE write_hubbard1_input(path,l,f0,f2,f4,f6,xi,bz,n_min,n_max,beta,mu,ccf,ne,nmatsub,e_min,e_max,sigma)
+   SUBROUTINE write_hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,ne,nmatsub,e_min,e_max,sigma)
 
       USE m_generic_txtio
 
       IMPLICIT NONE
 
       CHARACTER(len=*), INTENT(IN)  :: path
+      INTEGER,          INTENT(IN)  :: i_hia
       INTEGER,          INTENT(IN)  :: l
       REAL,             INTENT(IN)  :: f0,f2,f4,f6
-      REAL,             INTENT(IN)  :: xi
-      REAL,             INTENT(IN)  :: bz 
-      INTEGER,          INTENT(IN)  :: n_min,n_max
-      REAL,             INTENT(IN)  :: beta
-      REAL,             INTENT(IN)  :: mu 
-      REAL,             INTENT(IN)  :: ccf
+      TYPE(t_hub1ham),  INTENT(IN)  :: hub1
+      REAL,             INTENT(IN)  :: mu
+      INTEGER,          INTENT(IN)  :: n
       INTEGER,          INTENT(IN)  :: ne
       INTEGER,          INTENT(IN)  :: nmatsub
       REAL,             INTENT(IN)  :: e_min
@@ -67,26 +65,26 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit,"Fk",(/f0,f2,f4,f6/))
 
       CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
-      CALL writeValue(input_iounit,"gfact",xi)
+      CALL writeValue(input_iounit,"gfact",hub1%xi(i_hia))
 
       CALL comment(input_iounit,"External field",1)
-      CALL writeValue(input_iounit,"Bz",bz)
+      CALL writeValue(input_iounit,"Bz",hub1%bz(i_hia))
 
       CALL comment(input_iounit,"Inverse temperature",1)
-      CALL writeValue(input_iounit,"beta",beta)
+      CALL writeValue(input_iounit,"beta",hub1%beta)
 
       CALL comment(input_iounit,"Chemical potential",1)
       CALL writeValue(input_iounit,"mu",mu)
 
       CALL comment(input_iounit,"Crystal field factor",1)
-      CALL writeValue(input_iounit,"ccf",ccf)
+      CALL writeValue(input_iounit,"ccf",1.0)
 
 
       CALL header(input_iounit,"Parameters for the Solver",1)
 
       CALL comment(input_iounit,"Minimum and maximum occupation of the orbital",1)
-      CALL writeValue(input_iounit,"Nap_min",n_min)
-      CALL writeValue(input_iounit,"Nap_max",n_max)
+      CALL writeValue(input_iounit,"Nap_min",n-hub1%n_exc)
+      CALL writeValue(input_iounit,"Nap_max",n+hub1%n_exc)
 
       CALL comment(input_iounit,"Setting the solver to use the power lanczos method",1)
       WRITE(input_iounit,"(TR3,A12)") "method_lancz"

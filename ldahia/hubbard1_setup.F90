@@ -136,9 +136,8 @@ MODULE m_hubbard1_setup
                      CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,1:gdft%nz-gdft%nmatsub,1:2*(2*l+1),1:2*(2*l+1)),gdft%nz-gdft%nmatsub,2*(2*l+1),.false.)
                      IF(gdft%nmatsub.GT.0) CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",selfen(i_hia,gdft%nz-gdft%nmatsub:gdft%nz,1:2*(2*l+1),1:2*(2*l+1)),gdft%nmatsub,2*(2*l+1),.true.)
                   ELSE
-                     CALL write_hubbard1_input(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
-                                                hub1%xi(i_hia),-hub1%bz(i_hia),MAX(1,n_occ-hub1%n_exc),MIN(2*(2*l+1),n_occ+hub1%n_exc),hub1%beta,mu_dc,hub1%l_ccf(i_hia),&
-                                                gdft%nz-gdft%nmatsub,gdft%nmatsub,REAL(gdft%e(1)),REAL(gdft%e(gdft%nz-gdft%nmatsub)),AIMAG(gdft%e(1)))
+                     CALL write_hubbard1_input(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
+                                               hub1,mu_dc,n_occ,gdft%nz-gdft%nmatsub,gdft%nmatsub,REAL(gdft%e(1)),REAL(gdft%e(gdft%nz-gdft%nmatsub)),AIMAG(gdft%e(1)))
                      
                      !WRITE(*,"(7f14.8)") hub1%ccfmat(i_hia,:,:)
                      IF(hub1%l_ccf(i_hia)) THEN
