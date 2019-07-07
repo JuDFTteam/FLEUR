@@ -162,7 +162,7 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
    TYPE(t_input),          INTENT(IN)     :: input
 
    !-Local Scalars
-   INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm
+   INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm,kkcut
    REAL    fac, n_occ
 
    COMPLEX mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,input%jspins)
@@ -191,47 +191,27 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
                      l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,&
                      greensfCoeffs%kkintgr_cutoff(i_gf,:,:))
       !
-      ! Set the imaginary part to 0 outside the energy cutoffs
-      !
-     
-      DO jspin = 1, input%jspins
-         DO ie = 1, greensfCoeffs%ne
-            IF( ie.GE.greensfCoeffs%kkintgr_cutoff(i_gf,jspin,1).AND.ie.LE.greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2) ) CYCLE
-            DO m= -l,l
-               DO mp= -l,l
-                  IF(input%l_gfsphavg) THEN
-                     greensfCoeffs%projdos(ie,i_gf,m,mp,jspin) = 0.0
-                  ELSE
-                     greensfCoeffs%uu(ie,i_gf,m,mp,jspin) = 0.0
-                     greensfCoeffs%dd(ie,i_gf,m,mp,jspin) = 0.0
-                     greensfCoeffs%du(ie,i_gf,m,mp,jspin) = 0.0
-                     greensfCoeffs%ud(ie,i_gf,m,mp,jspin) = 0.0
-                  ENDIF
-               ENDDO
-            ENDDO
-         ENDDO
-      ENDDO
-      !
       !Perform the Kramers-Kronig-Integration
       !
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
       DO jspin = 1, input%jspins
+         kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2)
          DO m= -l,l
             DO mp= -l,l
                DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
                   IF(input%l_gfsphavg) THEN
-                     CALL kkintgr(greensfCoeffs%projdos(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
+                     CALL kkintgr(greensfCoeffs%projdos(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  gOnsite%gmmpMat(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
                   ELSE
                   ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
                   ! We can do this because the radial functions are independent of E
-                     CALL kkintgr(greensfCoeffs%uu(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
+                     CALL kkintgr(greensfCoeffs%uu(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  gOnsite%uu(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
-                     CALL kkintgr(greensfCoeffs%dd(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
+                     CALL kkintgr(greensfCoeffs%dd(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  gOnsite%dd(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
-                     CALL kkintgr(greensfCoeffs%du(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
+                     CALL kkintgr(greensfCoeffs%du(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  gOnsite%du(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
-                     CALL kkintgr(greensfCoeffs%ud(:,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,greensfCoeffs%ne,&
+                     CALL kkintgr(greensfCoeffs%ud(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  gOnsite%ud(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
                   ENDIF
                ENDDO

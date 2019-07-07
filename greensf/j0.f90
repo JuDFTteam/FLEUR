@@ -22,14 +22,14 @@ MODULE m_j0
       INTEGER i,iz,m,l,mp,ispin,n,i_gf,matsize,ipm,ie,n_cut
       REAL beta,j0(0:lmaxU_const),exc_split(0:lmaxU_const),tmp,avgexc
       INTEGER nType,l_min,l_max,i_j0
-      CHARACTER(len=4) :: filename
+      CHARACTER(len=30) :: filename
    
       LOGICAL l_matinv,l_enerdepend
       TYPE(t_mat) :: calcup,calcdwn
       TYPE(t_mat) :: delta
       TYPE(t_mat) :: calc
 
-      REAL :: int_com(g0Coeffs%ne,input%jspins)
+      REAL :: int_com(g0Coeffs%ne,input%jspins),int_norm(g0Coeffs%ne,input%jspins)
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
       l_matinv = .FALSE. !Determines how the onsite exchange splitting is calculated
@@ -57,6 +57,7 @@ MODULE m_j0
                   DO ie = 1, n_cut
                      DO m = -l, l
                         int_com(ie,ispin) = int_com(ie,ispin) + ((ie-1)*g0Coeffs%del+g0Coeffs%e_bot)*g0Coeffs%projdos(ie,i_gf,m,m,ispin)
+                        int_norm(ie,ispin) = int_norm(ie,ispin) + g0Coeffs%projdos(ie,i_gf,m,m,ispin)
                      ENDDO
                   ENDDO
                   exc_split(l) = exc_split(l) + (-1)**(ispin-1) * 1.0/((2*l+1)*pi_const) * trapz(int_com(:n_cut,ispin),g0Coeffs%del,n_cut) 
@@ -137,8 +138,10 @@ MODULE m_j0
                CALL juDFT_error("integrand still has a Real part", calledby="eff_excinteraction")
             ENDIF
             j0(l) = j0(l) + AIMAG(integrand)
+            IF(l_enerdepend) THEN
             WRITE(1337,"(5f14.8)") REAL(g0%e(iz)), -1/(2.0*fpi_const)*hartree_to_ev_const *j0(l),&
                                    AIMAG(sumup),AIMAG(sumdwn),AIMAG(sumupdwn)
+            ENDIF
          ENDDO
          j0(l) = -1/(2.0*fpi_const)*hartree_to_ev_const * j0(l)
          WRITE(6,9040) l,j0(l),ABS(j0(l))*2/3*1/(boltzmannConst*hartree_to_ev_const)
@@ -147,7 +150,7 @@ MODULE m_j0
          CALL calcdwn%free()
          CALL calc%free()
          CALL delta%free()
-         CLOSE(unit=1337)
+         IF(l_enerdepend) CLOSE(unit=1337)
       ENDDO
       WRITE(6,9050) SUM(j0(l_min:l_max)), ABS(SUM(j0(l_min:l_max)))*2/3 * 1/(boltzmannConst*hartree_to_ev_const)
    ENDDO

@@ -229,7 +229,7 @@ CONTAINS
     CALL MPI_BCAST(atoms%onsiteGF(:)%l,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%onsiteGF(:)%atomType,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     
-    CALL MPI_BCAST(input%onsite_mode,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_mode,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%gf_ne,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%gf_sigma,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%l_gf,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
