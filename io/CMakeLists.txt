@@ -33,6 +33,7 @@ io/xsf_io.f90
 io/xmlIntWrapFort.f90
 io/xmlOutput.F90
 io/hubbard1_io.f90
+io/generic_txtio.f90
 )
 if (FLEUR_USE_HDF5)
 set(fleur_F90 ${fleur_F90}

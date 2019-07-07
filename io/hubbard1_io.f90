@@ -21,123 +21,95 @@ MODULE m_hubbard1_io
    USE m_constants
 
    IMPLICIT NONE
-
    !------------------------------------------------------------------
    !Here the keywords for the hubbard 1 solver input file are defined
    !------------------------------------------------------------------
 
    CHARACTER(len=300), PARAMETER :: input_filename ="hubbard1.cfg"
-
-   !Format specifiers:
-   INTEGER, PARAMETER            :: indent_before_key = 3
-   INTEGER, PARAMETER            :: pos_numbers       = 10
-   CHARACTER(len=30), PARAMETER  :: float_fmt         = "f15.8"
+   INTEGER, PARAMETER            :: input_iounit = 17
 
    CONTAINS
 
-   SUBROUTINE write_hubbard1_input(path,l,f0,f2,f4,f6,xi,bz,n_min,n_max,beta,mu,l_ccf,ne,nmatsub,e_min,e_max,sigma)
+   SUBROUTINE write_hubbard1_input(path,l,f0,f2,f4,f6,xi,bz,n_min,n_max,beta,mu,ccf,ne,nmatsub,e_min,e_max,sigma)
+
+      USE m_generic_txtio
+
+      IMPLICIT NONE
 
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: l
-      REAL,             INTENT(IN)  :: f0, f2, f4, f6
+      REAL,             INTENT(IN)  :: f0,f2,f4,f6
       REAL,             INTENT(IN)  :: xi
       REAL,             INTENT(IN)  :: bz 
       INTEGER,          INTENT(IN)  :: n_min,n_max
       REAL,             INTENT(IN)  :: beta
       REAL,             INTENT(IN)  :: mu 
-      LOGICAL,          INTENT(IN)  :: l_ccf
+      REAL,             INTENT(IN)  :: ccf
       INTEGER,          INTENT(IN)  :: ne
       INTEGER,          INTENT(IN)  :: nmatsub
       REAL,             INTENT(IN)  :: e_min
       REAL,             INTENT(IN)  :: e_max
       REAL,             INTENT(IN)  :: sigma 
       
-      CHARACTER(len=300) :: fname
-      INTEGER :: info, io_error,io_unit
+      INTEGER :: info, io_error
 
-      io_unit = 17
+      !Main input file
+      OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(input_filename)),&
+          status="replace", action="write", iostat=io_error)
+      !IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input")
 
-      fname = "hubbard1.cfg"
+      CALL header(input_iounit,"Parameters for the atomic Hamiltonian in eV",1)
 
-      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(fname)), status="replace", action="write", iostat=io_error)
+      CALL comment(input_iounit,"Orbital quantum number",1)
+      CALL writeValue(input_iounit,"Lorb",l)
 
-      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input")
+      CALL comment(input_iounit,"Slater Integrals",1)
+      CALL writeValue(input_iounit,"Fk",(/f0,f2,f4,f6/))
 
-      WRITE(io_unit,"(A)") "#**********************************************************",&
-                           "#  Parameters for the atomic Hamiltonian in eV"                   ,&                   
-                           "#**********************************************************"
-      
-      WRITE(io_unit,"(A)") "#  Orbital quantum number"
-      WRITE(io_unit,9010)  l
-9010  FORMAT(TR3,'Lorb',I4.1)
+      CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
+      CALL writeValue(input_iounit,"gfact",xi)
 
-      WRITE(io_unit,"(A)") "#  Slater Integrals"
-      SELECT CASE(l)
-      CASE(3) 
-         WRITE(io_unit,9020) f0, f2, f4, f6
-9020     FORMAT(TR3,'Fk',TR2,4f7.2)
-      CASE(2)
-         WRITE(io_unit,9030) f0, f2, f4
-9030     FORMAT(TR3,'Fk',TR2,3f7.2)
-      END SELECT
+      CALL comment(input_iounit,"External field",1)
+      CALL writeValue(input_iounit,"Bz",bz)
 
-      WRITE(io_unit,"(A)") "#  Spin-orbit-coupling parameter"
-      WRITE(io_unit,9040) xi  
-9040  FORMAT(TR3,'gfact',f7.3)
+      CALL comment(input_iounit,"Inverse temperature",1)
+      CALL writeValue(input_iounit,"beta",beta)
 
-      WRITE(io_unit,"(A)") "#  External field"
-      WRITE(io_unit,9050) bz 
-9050  FORMAT(TR3,'Bz',f15.8)
+      CALL comment(input_iounit,"Chemical potential",1)
+      CALL writeValue(input_iounit,"mu",mu)
 
-      WRITE(io_unit,"(A)") "#  Inverse Temperature"
-      WRITE(io_unit,9060) beta
-9060  FORMAT(TR3,'beta',f10.3)
+      CALL comment(input_iounit,"Crystal field factor",1)
+      CALL writeValue(input_iounit,"ccf",ccf)
 
-      WRITE(io_unit,"(A)") "#  Chemical potential"
-      WRITE(io_unit,9070) mu
-9070  FORMAT(TR3,'mu',f15.8)
 
-      IF(l_ccf) THEN
-         WRITE(io_unit,"(A)") "#  Is the crystal field splitting given in ccf.dat"
-         WRITE(io_unit,9080) 1.0
-9080     FORMAT(TR3,'ccf',f4.1)
-      ENDIF
+      CALL header(input_iounit,"Parameters for the Solver",1)
 
-      WRITE(io_unit,"(A)") "#**********************************************************",&
-                           "#  Parameters for the Solver"                               ,&                   
-                           "#**********************************************************"
-      WRITE(io_unit,"(A)") "#  Minimum and maximum occupation of the orbital"
-      WRITE(io_unit,9090) n_min
-9090  FORMAT(TR3,'Nap_min',I4.1)
-      WRITE(io_unit,9100) n_max
-9100  FORMAT(TR3,'Nap_max',I4.1)
+      CALL comment(input_iounit,"Minimum and maximum occupation of the orbital",1)
+      CALL writeValue(input_iounit,"Nap_min",n_min)
+      CALL writeValue(input_iounit,"Nap_max",n_max)
 
-      WRITE(io_unit,"(A)") "#  Setting the solver to use the power lanczos method"
-      WRITE(io_unit,"(TR3,A12)") "method_lancz"
+      CALL comment(input_iounit,"Setting the solver to use the power lanczos method",1)
+      WRITE(input_iounit,"(TR3,A12)") "method_lancz"
 
-      WRITE(io_unit,"(A)") "#  Number of iterations"
-      WRITE(io_unit,9110)  100
-9110  FORMAT(TR3,'N_lancz_iter',I4.1)
+      CALL comment(input_iounit,"Number of iterations",1)
+      CALL writeValue(input_iounit,"N_lancz_iter",100)
 
-      WRITE(io_unit,"(A)") "#  Number of eigenstates calculated"
-      WRITE(io_unit,9120) 35
-9120  FORMAT(TR3,'N_lancz_states',I3.1)
+      CALL comment(input_iounit,"Number of eigenstates calculated",1)
+      CALL writeValue(input_iounit,"N_lancz_states",35)
 
-      WRITE(io_unit,"(A)") "#**********************************************************",&
-                           "#  Parameters for the frequency/energy axis"                ,&                   
-                           "#**********************************************************"
-      WRITE(io_unit,*) "real_freq_axis {"
-      WRITE(io_unit,*) "omegamin", e_min*hartree_to_ev_const
-      WRITE(io_unit,*) "omegamax", e_max*hartree_to_ev_const
-      WRITE(io_unit,*) "Nomega",   ne
-      WRITE(io_unit,*) "eps",      sigma*hartree_to_ev_const
-      WRITE(io_unit,*) "}"
+      CALL comment(input_iounit,"Parameters for the frequency/energy axis",1)
+      WRITE(input_iounit,*) "real_freq_axis {"
+      WRITE(input_iounit,*) "omegamin", e_min*hartree_to_ev_const
+      WRITE(input_iounit,*) "omegamax", e_max*hartree_to_ev_const
+      WRITE(input_iounit,*) "Nomega",   ne
+      WRITE(input_iounit,*) "eps",      sigma*hartree_to_ev_const
+      WRITE(input_iounit,*) "}"
 
-      WRITE(io_unit,*) "matsub_freq_axis {"
-      WRITE(io_unit,*) "Nmatsub",     nmatsub
-      WRITE(io_unit,*) "}"
+      WRITE(input_iounit,*) "matsub_freq_axis {"
+      WRITE(input_iounit,*) "Nmatsub",     nmatsub
+      WRITE(input_iounit,*) "}"
 
-      CLOSE(unit=io_unit)
+      CLOSE(unit=input_iounit)
    END SUBROUTINE write_hubbard1_input
 
    SUBROUTINE write_gf(app,gOnsite,i_gf)
@@ -243,16 +215,11 @@ MODULE m_hubbard1_io
          IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
          
          DO i = 1, ne
-            !The spin-directions are reversed with respect to FLEUR
-            !So we switch the two
             READ(io_unit,9010) 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(i,matsize/2.0+1:matsize,matsize/2.0+1:matsize) = tmp(1:matsize/2.0,1:matsize/2.0)/hartree_to_ev_const 
-            selfen(i,1:matsize/2.0,1:matsize/2.0) = tmp(matsize/2.0+1:matsize,matsize/2.0+1:matsize)/hartree_to_ev_const 
+            selfen(i,1:matsize,1:matsize) = tmp(1:matsize,1:matsize)/hartree_to_ev_const 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(i,matsize/2.0+1:matsize,matsize/2.0+1:matsize) = selfen(i,matsize/2.0+1:matsize,matsize/2.0+1:matsize)+ImagUnit * tmp(1:matsize/2.0,1:matsize/2.0)/hartree_to_ev_const 
-            selfen(i,1:matsize/2.0,1:matsize/2.0) = selfen(i,1:matsize/2.0,1:matsize/2.0)+ImagUnit *tmp(matsize/2.0+1:matsize,matsize/2.0+1:matsize)/hartree_to_ev_const 
-
+            selfen(i,1:matsize,1:matsize) = selfen(i,1:matsize,1:matsize) + ImagUnit * tmp(1:matsize,1:matsize)/hartree_to_ev_const 
          ENDDO
       ENDIF
 
@@ -261,29 +228,7 @@ MODULE m_hubbard1_io
 
 9010  FORMAT(f10.5)
 9020  FORMAT(7f11.5)
-   END SUBROUTINE
-
-   !SUBROUTINE writeReal(iounit,key,n_values,value)
-!
-   !   IMPLICIT NONE 
-!
-   !   INTEGER,          INTENT(IN) :: iounit
-   !   CHARACTER(len=*), INTENT(IN) :: key 
-   !   INTEGER,          INTENT(IN) :: n_values
-   !   REAL,             INTENT(IN) :: value()
-!
-!9000  FORMAT
-   !END SUBROUTINE
-!
-   !SUBROUTINE writeInt(iounit,key,value)
-!
-   !   IMPLICIT NONE 
-!
-   !   INTEGER,          INTENT(IN) :: iounit
-   !   CHARACTER(len=*), INTENT(IN) :: 
-   !END SUBROUTINE
-
-
+   END SUBROUTINE read_selfen
 
 
 END MODULE m_hubbard1_io
