@@ -18,7 +18,7 @@ if (DEFINED CLI_FLEUR_USE_MPI)
    endif()	   
 endif()
 
-if (${I_MPI_ROOT} MATCHES "_2019")
+if ( "$ENV{I_MPI_ROOT}" MATCHES ".*_2019.*")
    message("It looks like you are using the IntelMPI2019 library. This is buggy. \n You might want to do 'export MPIR_CVAR_CH4_OFI_ENABLE_RMA=0' to enable running FLEUR")
 endif()
 
