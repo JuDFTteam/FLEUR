@@ -183,6 +183,7 @@ CONTAINS
     CALL MPI_BCAST(atoms%rmsh,atoms%jmtd*atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     !
     CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(kpts%nkptf,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%bk,3*kpts%nkpt,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%wtkpt,kpts%nkpt,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%ntetra,kpts%ntet,MPI_INTEGER,0,mpi%mpi_comm,ierr)
