@@ -374,12 +374,12 @@ SUBROUTINE mcd_init1(thisMCD,banddos,dimension,input,atoms,kpts)
    TYPE(t_kpts),          INTENT(IN)    :: kpts
 
    ALLOCATE (thisMCD%ncore(atoms%ntype))
-   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,dimension%nstd))
+   ALLOCATE (thisMCD%e_mcd(atoms%ntype,input%jspins,29))
    IF (banddos%l_mcd) THEN
       thisMCD%emcd_lo = banddos%e_mcd_lo
       thisMCD%emcd_up = banddos%e_mcd_up
-      ALLOCATE (thisMCD%m_mcd(dimension%nstd,(3+1)**2,3*atoms%ntype,2))
-      ALLOCATE (thisMCD%mcd(3*atoms%ntype,dimension%nstd,dimension%neigd,kpts%nkpt,input%jspins) )
+      ALLOCATE (thisMCD%m_mcd(29,(3+1)**2,3*atoms%ntype,2))
+      ALLOCATE (thisMCD%mcd(3*atoms%ntype,29,dimension%neigd,kpts%nkpt,input%jspins) )
       IF (.NOT.banddos%dos) WRITE (*,*) 'For mcd-spectra set banddos%dos=T!'
    ELSE
       ALLOCATE (thisMCD%m_mcd(1,1,1,1))

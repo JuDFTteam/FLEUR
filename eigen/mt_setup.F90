@@ -35,7 +35,7 @@ CONTAINS
     END IF
 
     CALL timestart("tlmplm")
-    CALL td%init(DIMENSION%lmplmd,DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),&
+    CALL td%init(DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),&
          DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2,MERGE(4,input%jspins,noco%l_mtNocoPot),&
          (noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.noco%l_constr)!l_offdiag
 

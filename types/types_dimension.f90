@@ -6,14 +6,10 @@
 
 MODULE m_types_dimension
    TYPE t_dimension
-      INTEGER :: nspd
       INTEGER :: nvd
       INTEGER :: nv2d
       INTEGER :: neigd !to be removed!!!
-      INTEGER :: neigd2
-      INTEGER :: nstd=29
       INTEGER :: lmd
-      INTEGER :: lmplmd
       INTEGER :: nbasfcn
    END TYPE t_dimension
  END MODULE m_types_dimension

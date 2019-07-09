@@ -265,7 +265,7 @@ CONTAINS
     INTEGER :: doublespin,jspin_b,jspin3,jspin4,jspin5
     INTEGER :: doublespin_max,nrec5
     INTEGER :: count_i,count_j
-    INTEGER :: n1,n2,ii,jj
+    INTEGER :: n1,n2,ii,jj,lmplmd
 
     COMPLEX :: interchi,vacchi,amnchi
     COMPLEX :: phasfac,phasfac2,cmplx_1                                 
@@ -299,6 +299,7 @@ CONTAINS
 
     !----<gwf
 
+    lmplmd = (dimension%lmd* (dimension%lmd+3))/2
 
 
     !-----initializations
@@ -382,7 +383,7 @@ CONTAINS
             DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,&
             stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
-            sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,&
+            sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
             sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,&
             noco%theta,noco%phi)
 
@@ -422,7 +423,7 @@ CONTAINS
             vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,&
             cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
-            sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,&
+            sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
             sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,&
             noco%theta,noco%phi,&
             wann%l_ms,wann%l_sgwf,wann%l_socgwf,wann%aux_latt_const,&
@@ -465,7 +466,7 @@ CONTAINS
             vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,&
             cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
-            sphhar%memd,atoms%lnonsph,sphhar%clnu,DIMENSION%lmplmd,&
+            sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
             sphhar%mlh,sphhar%nmem,sphhar%llh,atoms%lo1l,&
             noco%theta,noco%phi,&
             wann%l_ms,wann%l_sgwf,wann%l_socgwf,wann%aux_latt_const,&
@@ -771,7 +772,7 @@ CONTAINS
                 !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
                 !     +                  mpi%n_size,filename=trim(fstart)//fending,
                 !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-                !     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+                !     +                  ncored=29,nsld=atoms%nat,
                 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
                 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
@@ -787,7 +788,7 @@ CONTAINS
           !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
           !     +                  mpi%n_size,filename=trim(fstart)//fending,
           !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-          !     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+          !     +                  ncored=29,nsld=atoms%nat,
           !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
           !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 
@@ -802,7 +803,7 @@ CONTAINS
           !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
           !     +                  mpi%n_size,filename=trim(fstart)//fending,
           !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-          !     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+          !     +                  ncored=29,nsld=atoms%nat,
           !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
           !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
 

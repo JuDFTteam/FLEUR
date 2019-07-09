@@ -153,7 +153,6 @@ CONTAINS
     !
     DIMENSION%nbasfcn = DIMENSION%nvd + atoms%nat*atoms%nlod*(2*atoms%llod+1)
     DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
-    DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
     IF (noco%l_noco) DIMENSION%nbasfcn = 2*DIMENSION%nbasfcn
 
 

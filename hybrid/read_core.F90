@@ -312,9 +312,9 @@
       LOGICAL, SAVE        :: first = .true.
 
       !  - local arrays -
-      INTEGER              :: kappa(dimension%nstd),nprnc(dimension%nstd)
+      INTEGER              :: kappa(29),nprnc(29)
       REAL                 :: vrd(atoms%msh)
-      REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(atoms%msh),b(atoms%msh)
+      REAL                 :: occ(29),occ_h(29,2),a(atoms%msh),b(atoms%msh)
       REAL,ALLOCATABLE,SAVE:: vr0(:,:,:)
 
       !   - intrinsic functions -
@@ -493,9 +493,9 @@
       REAL                 :: d,dxx,rn,rnot,z,t1,rr 
 
       !  - local arrays -
-      INTEGER              :: kappa(dimension%nstd),nprnc(dimension%nstd)
-      INTEGER              :: nindxcr(0:dimension%nstd,atoms%ntype) 
-      REAL                 :: occ(dimension%nstd),occ_h(dimension%nstd,2),a(atoms%msh),b(atoms%msh)
+      INTEGER              :: kappa(29),nprnc(29)
+      INTEGER              :: nindxcr(0:29,atoms%ntype) 
+      REAL                 :: occ(29),occ_h(29,2),a(atoms%msh),b(atoms%msh)
       INTEGER              :: lmaxc(atoms%ntype)
 
 

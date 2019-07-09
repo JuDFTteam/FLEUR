@@ -55,7 +55,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    REAL,    ALLOCATABLE :: rat(:,:),eig(:,:,:),sigm(:)
    REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
    REAL,    ALLOCATABLE :: vacpar(:)
-   INTEGER lnum(DIMENSION%nstd,atoms%ntype),nst(atoms%ntype) 
+   INTEGER lnum(29,atoms%ntype),nst(atoms%ntype) 
    INTEGER jrc(atoms%ntype)
    LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
    REAL                 :: occ(MAXVAL(atoms%econf%num_states),2)
@@ -67,7 +67,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
-   ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(DIMENSION%nstd,input%jspins,atoms%ntype) )
+   ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(29,input%jspins,atoms%ntype) )
    ALLOCATE ( rh(atoms%msh,atoms%ntype,input%jspins),rh1(atoms%msh,atoms%ntype,input%jspins) )
    ALLOCATE ( vbar(2,atoms%ntype),sigm(vacuum%nmzd) )
    ALLOCATE ( rhoss(atoms%msh,input%jspins) )

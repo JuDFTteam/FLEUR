@@ -1,4 +1,4 @@
-!--------------------------------------------------------------------------------
+pd--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -57,7 +57,6 @@ CONTAINS
        CALL dimen7(input,sym,stars,atoms,sphhar,dimension,vacuum,kpts,&
                    oneD,hybrid,cell)
     !     in case of a parallel calculation we have to broadcast
-    dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
     vacuum%nmzd = 250
     vacuum%nmzxyd = 100
 

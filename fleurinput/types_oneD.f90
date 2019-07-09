@@ -134,8 +134,10 @@ MODULE m_types_oneD
 
     END SUBROUTINE read_xml_oneD
 
-    subroutine init_oneD(oneD)
-      class(t_oned),intent(inout)::this
+    SUBROUTINE init_oneD(oneD,atoms)
+      USE m_types_atoms
+      CLASS(t_oned),INTENT(inout)::oneD
+      TYPE(t_atoms),INTENT(in)::atoms
 
 
       ! Initialize missing 1D code arrays

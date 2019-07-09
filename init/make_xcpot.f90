@@ -5,8 +5,8 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_make_xcpot
-  implicit none
   use m_juDFT
+  implicit none
   private
   public make_xcpot
  

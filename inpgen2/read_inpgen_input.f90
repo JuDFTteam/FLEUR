@@ -163,7 +163,7 @@ CONTAINS
     cell%amat(:,1) = aa*scale(:)*a1(:)
     cell%amat(:,2) = aa*scale(:)*a2(:)
     cell%amat(:,3) = aa*scale(:)*a3(:)
-    CALL cell%init()
+    CALL cell%init(0.0)
     
   END SUBROUTINE read_inpgen_input
 

@@ -24,7 +24,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   use m_lapwdim
   use m_make_stars
   use m_make_sphhar
-  use m_make_forectheo
+  use m_make_forcetheo
   use m_make_xcpot
   use m_make_sym
   USE m_convn
@@ -56,7 +56,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   TYPE(t_enpara)   ,INTENT(OUT)   :: enpara
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   TYPE(t_field),    INTENT(INOUT) :: field
-  LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
   
   INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt
@@ -78,14 +77,14 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Start of input postprocessing (calculate missing parameters)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:))
+  call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:)))
   call atoms%init(cell)
   CALL sym%init(cell,input%film)
 
 
   CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
   CALL make_sym(sym,cell,atoms,noco,oneD,input) 
-  call make_forectheo(forcetheo_data,cell,sym,atoms,forcetheo)
+  call make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
   call make_xcpot(xcpot,atoms,input)
   
   IF (mpi%irank.EQ.0) call check_input_switches(banddos,vacuum,noco,atoms,input)
@@ -111,12 +110,13 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 
   IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
 
+
+
   CALL ylmnorm_init(atoms%lmaxd)
-  dimension%nspd=(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)
   
 
 
-  call oneD%init()
+  call oneD%init(atoms)
   ! Initialize missing hybrid functionals arrays
   ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
   ! Check muffin tin radii

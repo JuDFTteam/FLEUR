@@ -207,7 +207,8 @@ CONTAINS
 !
 ! some basic arrays allocated in eigen()
 !
-      mem = (dimension%lmplmd+1)*atoms%ntype*4                       ! tlmplm%tuu,tlmplm%tdd etc.
+      
+      mem = ((dimension%lmd* (dimension%lmd+3))/2+1)*atoms%ntype*4                       ! tlmplm%tuu,tlmplm%tdd etc.
       mem = mem + (dimension%lmd+1)*(2*atoms%llod+1)*max(mlotot,1)*2 ! tlmplm%tuulo ...
       mem = mem + (2*atoms%llod+1)**2 * max(mlolotot,1)    ! tlmplm%tuloulo
       IF (noco%l_noco) mem = mem * 2                      ! both spins

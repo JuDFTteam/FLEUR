@@ -195,9 +195,7 @@ CONTAINS
        CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,inDen)
 #endif
 
-       dimension%neigd2 = dimension%neigd
-       IF (noco%l_soc) dimension%neigd2 = dimension%neigd*2
-
+ 
        !HF
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)

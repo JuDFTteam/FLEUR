@@ -30,8 +30,8 @@ CONTAINS
       INTEGER, INTENT(IN)  :: jrc, ntyp
       REAL, INTENT(IN)  :: rnot1, qdel
       REAL, INTENT(OUT) :: rhoss(:, :) !(mshd,input%jspins),
-      REAL, INTENT(OUT) :: eig(dimension%nstd, input%jspins), vbar(input%jspins)
-      INTEGER, INTENT(OUT) :: nst, lnum(dimension%nstd)
+      REAL, INTENT(OUT) :: eig(29, input%jspins), vbar(input%jspins)
+      INTEGER, INTENT(OUT) :: nst, lnum(29)
       LOGICAL,OPTIONAL,INTENT(IN)::l_valence
 !     ..
 !     .. Local Scalars ..
@@ -41,11 +41,11 @@ CONTAINS
       LOGICAL conv, lastit, l_start
 !     ..
 !     .. Local Arrays ..
-      REAL a(jrc), b(jrc), dens(jrc), occ(dimension%nstd, input%jspins)
-      REAL rad(jrc), rev(dimension%nstd, input%jspins), ahelp(jrc), ain(jrc),&
+      REAL a(jrc), b(jrc), dens(jrc), occ(29, input%jspins)
+      REAL rad(jrc), rev(29, input%jspins), ahelp(jrc), ain(jrc),&
      &     rh(jrc), vr(jrc), f(0:3),&
      &     vr1(jrc, input%jspins), vr2(jrc, input%jspins), vx(atoms%msh, input%jspins), vxc(atoms%msh, input%jspins)
-      INTEGER kappa(dimension%nstd), nprnc(dimension%nstd)
+      INTEGER kappa(29), nprnc(29)
 !     ..
 !     ..
 !     .. Data statements ..

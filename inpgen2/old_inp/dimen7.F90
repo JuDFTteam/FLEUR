@@ -147,7 +147,7 @@
       atoms%jmtd  = 0
       rmtmax      = 0.0
       dimension%neigd = 0
-      dimension%nstd  = maxval(atoms%econf%num_core_states)
+      29  = maxval(atoms%econf%num_core_states)
       atoms%lmaxd = maxval(atoms%lmax)
       atoms%jmtd  = maxval(atoms%jri)
       rmtmax      = maxval(atoms%rmt)
@@ -364,7 +364,7 @@
 !
       CALL inpeig_dim(input,cell,noco,oneD,kpts,dimension,stars,latnam)
       vacuum%layerd = max(vacuum%layerd,1)
-      dimension%nstd = max(dimension%nstd,30)
+      29 = max(29,30)
       atoms%ntype = atoms%ntype
       IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
 

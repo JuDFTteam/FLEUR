@@ -182,7 +182,7 @@
           cell%amat(:,1) = a1(:)
           cell%amat(:,2) = a2(:)
           cell%amat(:,3) = a3(:)
-          call cell%init()
+          call cell%init(dot_product(atoms%volmts(:),atoms%neq(:)))
           !CALL inv3(cell%amat,cell%bmat,cell%omtil)
           !cell%bmat(:,:) = tpi_const*cell%bmat(:,:)
           !cell%bbmat=MATMUL(cell%bmat,TRANSPOSE(cell%bmat))

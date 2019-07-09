@@ -131,11 +131,11 @@ MODULE m_types_noco
       ENDDO
     END SUBROUTINE read_xml_noco
 
-    subroutine init_noco(this,atoms)
+    subroutine init_noco(noco,atoms)
       use m_types_atoms
       use m_constants
       CLASS(t_noco),INTENT(inout):: noco
-      types(t_atoms),INTENT(IN)::atoms
+      TYPE(t_atoms),INTENT(IN)::atoms
 
 
       integer :: na,itype

@@ -672,7 +672,7 @@ c*****************************************************************c
 !     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
 !     +                  mpi%n_size,filename=trim(fstart)//fending,
 !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  ncored=29,nsld=atoms%nat,
 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
           enddo
@@ -686,7 +686,7 @@ c*****************************************************************c
 !     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
 !     +                  mpi%n_size,filename=trim(fstart)//fending,
 !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  ncored=29,nsld=atoms%nat,
 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
        ELSEIF(l_ms) THEN
@@ -700,7 +700,7 @@ c*****************************************************************c
 !     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
 !     +                  mpi%n_size,filename=trim(fstart)//fending,
 !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  ncored=29,nsld=atoms%nat,
 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
        ELSE
