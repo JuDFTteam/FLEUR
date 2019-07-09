@@ -21,7 +21,7 @@ MODULE m_types_kpts
      REAL,ALLOCATABLE      :: bk(:,:)
      !(nkpts) weights
      REAL,ALLOCATABLE      :: wtkpt(:)
-     INTEGER               :: nkptf !<k-vectors in full BZ
+     INTEGER               :: nkptf = 0!<k-vectors in full BZ
      INTEGER               :: nkpt3(3)
      REAL                  :: kPointDensity(3) ! only used if k point set is defined as density
      REAL   ,ALLOCATABLE   :: bkf(:,:)
