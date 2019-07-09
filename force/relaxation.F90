@@ -37,7 +37,7 @@ CONTAINS
     IF (mpi%irank==0) THEN
        ALLOCATE(pos(3,atoms%ntype,1)); 
        DO n=1,atoms%ntype
-          pos(:,n,1)=atoms%taual(:,SUM(atoms%neq(:n-1))+1)
+          pos(:,n,1)=atoms%pos(:,SUM(atoms%neq(:n-1))+1)
        END DO
        ALLOCATE(force(3,atoms%ntype,1)); force(:,:,1)=force_new
        ALLOCATE(energies(1));energies(1)=energies_new
@@ -62,7 +62,7 @@ CONTAINS
           ! this choice is based on a Debye temperature of 330K;
           ! modify as needed
           !alpha = (250.0/(MAXVAL(atoms%zatom)*input%xa))*((330./input%thetad)**2)
-          CALL simple_step(input%forcealpha,force,displace)
+          CALL simple_step(input%forcealpha,0.25,force,displace)
        ELSEIF (input%forcemix==1) THEN
           CALL simple_cg(pos,force,displace)
        ELSE
@@ -73,7 +73,7 @@ CONTAINS
        l_conv=.TRUE.
        DO n=1,atoms%ntype
           IF (DOT_PRODUCT(force(:,n,SIZE(force,3)),force(:,n,SIZE(force,3)))>input%epsforce**2) l_conv=.FALSE.
-          IF (DOT_PRODUCT(displace(:,n),displace(:,n))>input%epsforce**2) l_conv=.FALSE.
+          IF (DOT_PRODUCT(displace(:,n),displace(:,n))>input%epsdisp**2) l_conv=.FALSE.
        ENDDO
 
        !New displacements relative to positions in inp.xml
@@ -98,15 +98,19 @@ CONTAINS
 
 
 
-  SUBROUTINE simple_step(alpha,force,displace)
+  SUBROUTINE simple_step(alpha,maxdisp,force,displace)
     !-----------------------------------------------
     IMPLICIT NONE
-    REAL,INTENT(in)  :: alpha
+    REAL,INTENT(in)  :: alpha,maxdisp
     REAL,INTENT(in)  :: force(:,:,:)
     REAL,INTENT(OUT) :: displace(:,:)
 
-
+    real :: corr
+    
     displace = alpha*force(:,:,SIZE(force,3))
+    corr=maxdisp/maxval(abs(displace))
+    if (corr<1.0) displace = corr*alpha*force(:,:,size(force,3))
+    
   END SUBROUTINE simple_step
 
   SUBROUTINE simple_bfgs(pos,force,shift)
