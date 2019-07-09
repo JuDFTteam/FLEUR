@@ -62,14 +62,18 @@ MODULE m_kk_cutoff
       ENDIF
 
       spins_cut = MERGE(1,jspins,noco%l_soc.OR.noco%l_noco)
-      n_states = (2*l+1) * MERGE(2,1,noco%l_soc.OR.noco%l_noco)
+      n_states = (2*l+1) * MERGE(2.0,2.0/jspins,noco%l_soc.OR.noco%l_noco)
+
+      spins_cut=jspins
+      n_states = (2*l+1) * 2.0/jspins
+
+      cutoff(:,1) = 1   !we don't modify the lower bound
+      cutoff(:,2) = ne
 
       DO ispin = 1, spins_cut
          IF(spins_cut.EQ.1.AND.jspins.EQ.2) fDOS(:,1) = fDOS(:,1) + fDOS(:,2) 
          integral =  trapz(fDOS(1:ne,ispin), del, ne)      
          IF(l_debug) WRITE(*,*) "Integral over DOS: ", integral
-         cutoff(ispin,1) = 1   !we don't modify the lower bound
-         cutoff(ispin,2) = ne
          IF(integral.LT.n_states) THEN
             !If we are calculating the greens function for a d-band this is expected
             IF(l.EQ.2) THEN
@@ -109,7 +113,6 @@ MODULE m_kk_cutoff
                WRITE(*,*) "CALCULATED CUTOFF: ", cutoff(ispin,2)
                WRITE(*,*) "INTEGRAL OVER fDOS with cutoff: ", integral
             ENDIF
-
             IF(spins_cut.EQ.1.AND.jspins.EQ.2) cutoff(2,2) = cutoff(1,2)
          ENDIF
       ENDDO

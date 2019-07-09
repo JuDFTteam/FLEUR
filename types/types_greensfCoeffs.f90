@@ -64,7 +64,7 @@ MODULE m_types_greensfCoeffs
 
    CONTAINS
 
-      SUBROUTINE greensfCoeffs_init(thisGREENSFCOEFFS,input,lmax,atoms,noco,ef,l_onsite,l_intersite)
+      SUBROUTINE greensfCoeffs_init(thisGREENSFCOEFFS,input,lmax,atoms,noco,ef)
 
          USE m_juDFT
          USE m_types_setup
@@ -77,17 +77,9 @@ MODULE m_types_greensfCoeffs
          INTEGER,                INTENT(IN)     :: lmax
          REAL,                   INTENT(IN)     :: ef
          TYPE(t_noco),           INTENT(IN)     :: noco
-         LOGICAL,                INTENT(IN)     :: l_onsite
-         LOGICAL,                INTENT(IN)     :: l_intersite
 
          INTEGER i,j,l_dim,spin_dim
 
-         thisGREENSFCOEFFS%l_onsite = l_onsite
-         thisGREENSFCOEFFS%l_intersite = l_intersite
-
-         IF(.NOT.l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + intersite gf not implented",calledby="greensf_init")
-         IF(l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + onsite gf not implented",calledby="greensf_init")
-         
          !IF(thisGREENSFCOEFFS%l_calc) THEN 
          !
          !Set up general parameters for the Green's function (intersite and onsite)
@@ -106,13 +98,9 @@ MODULE m_types_greensfCoeffs
          !set up energy grid for imaginary part
          thisGREENSFCOEFFS%del = (thisGREENSFCOEFFS%e_top-thisGREENSFCOEFFS%e_bot)/REAL(thisGREENSFCOEFFS%ne-1)
 
-         spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
+         spin_dim = MERGE(4,input%jspins,input%l_gfmperp)
 
-         IF(thisGREENSFCOEFFS%l_onsite.AND.atoms%n_gf.GT.0) THEN
-            !
-            !In the case of an onsite gf we look at the case l=l' and r=r' on one site
-            !
-            !Do we need the off-diagonal elements
+         IF(atoms%n_gf.GT.0) THEN
             ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2))
             ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
             thisGREENSFCOEFFS%projdos     = 0.0
@@ -128,25 +116,6 @@ MODULE m_types_greensfCoeffs
                thisGREENSFCOEFFS%ud      = 0.0  
             ENDIF
          END IF
-
-         IF(thisGREENSFCOEFFS%l_intersite.AND.atoms%n_intergf.GT.0) THEN
-            !
-            !intersite case; Here we look at l/=l' r/=r' and multiple sites
-            !
-            l_dim = lmax**2 + lmax
-            !We have one site index defining the atom we want to look at 
-            !The second can run over all atoms and is filled with the nearest neighbours of the atom in question
-
-            ALLOCATE (thisGREENSFCOEFFS%uu_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,spin_dim))
-            ALLOCATE (thisGREENSFCOEFFS%dd_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,spin_dim))
-            ALLOCATE (thisGREENSFCOEFFS%du_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,spin_dim))
-            ALLOCATE (thisGREENSFCOEFFS%ud_int(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_intergf),atoms%nat,l_dim,l_dim,spin_dim))
-
-            thisGREENSFCOEFFS%uu_int = 0.0
-            thisGREENSFCOEFFS%dd_int = 0.0
-            thisGREENSFCOEFFS%du_int = 0.0
-            thisGREENSFCOEFFS%ud_int = 0.0
-         ENDIF 
 
       END SUBROUTINE greensfCoeffs_init
 

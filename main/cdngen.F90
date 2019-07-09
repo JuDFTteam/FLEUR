@@ -116,8 +116,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       !Only calculate the greens function when needed
-      greensfCoeffs%l_calc = (atoms%n_intergf>0).OR.hub1%l_runthisiter
-      CALL greensfCoeffs%init(input,3,atoms,noco,results%ef,atoms%n_gf>0,atoms%n_intergf>0)
+      CALL greensfCoeffs%init(input,3,atoms,noco,results%ef)
       CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
    ENDIF
 
@@ -144,27 +143,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          !Perform the Kramer-Kronigs-Integration
          CALL calc_onsite(atoms,input,noco,results%ef,greensfCoeffs,gOnsite,sym)
          !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
-         IF(atoms%n_hia.GT.0.AND.ANY(hub1%l_ccf(:))) THEN
+         IF(atoms%n_hia.GT.0.AND.ANY(hub1%ccf(:).NE.0.0)) THEN
             CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:))
          ENDIF
          IF(input%jspins.EQ.2) THEN
             CALL eff_excinteraction(gOnsite,atoms,input,greensfCoeffs)
-         ENDIF
-         IF(l_debug) THEN
-            DO i_gf = 1, atoms%n_gf
-               l = atoms%onsiteGF(i_gf)%l
-               CALL occmtx(gOnsite,i_gf,atoms,sym,input,results%ef,mmpMat(:,:,i_gf,:))
-               n_occ = 0.0
-               DO jspin = 1, input%jspins
-                  DO m = -l, l
-                     n_occ = n_occ + REAL(mmpMat(m,m,i_gf,jspin))
-                     WRITE(*,*) jspin, m, REAL(mmpMat(m,m,i_gf,jspin))
-                  ENDDO
-               ENDDO
-               !WRITE(*,"(7f15.8)") REAL(mmpMat)-REAL(outDen%mmpMat)
-               !CALL n_mmp_dist(mmpmat,outDen%mmpMat,1,results,input%jspins)
-               CALL ldosmtx("g",gOnsite,i_gf,atoms,sym,input)
-            ENDDO
          ENDIF
       ENDIF
    ENDIF

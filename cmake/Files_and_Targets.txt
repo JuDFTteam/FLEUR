@@ -66,7 +66,7 @@ inpgen/closure.f90  math/intgr.F90
 io/w_inpXML.f90 kpoints/julia.f90 global/utility.F90 
 init/compile_descr.F90 kpoints/kpoints.f90 io/xmlOutput.F90 kpoints/brzone2.f90 cdn/slab_dim.f90 cdn/slabgeom.f90 dos/nstm3.f90 cdn/int_21.f90
 cdn/int_21lo.f90 cdn_mt/rhomt21.f90 cdn_mt/rhonmt21.f90 force/force_a21.F90 force/force_a21_lo.f90 force/force_a21_U.f90 force/force_a12.f90
-eigen/tlmplm_store.F90 xc-pot/gaunt.f90 kpoints/unfoldBandKPTS.f90 math/ExpSave.f90)
+eigen/tlmplm_store.F90 xc-pot/gaunt.f90 kpoints/unfoldBandKPTS.f90 math/ExpSave.f90 greensf/ind_greensf.f90)
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 

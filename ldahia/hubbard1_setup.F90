@@ -40,7 +40,7 @@ MODULE m_hubbard1_setup
       EXTERNAL MPI_BCAST
 #endif
 
-      INTEGER i_hia,i_gf,n,l,n_occ,ispin,m,iz,k,j
+      INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j
       INTEGER io_error,ierr
       REAL    mu_dc,e_lda_hia
 
@@ -83,7 +83,7 @@ MODULE m_hubbard1_setup
          f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
          CALL umtx(atoms%lda_hia(:),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
 
-         CALL v_mmp(sym,atoms,atoms%lda_hia(:),atoms%n_hia,input%jspins,.true.,mmpMat,&
+         CALL v_mmp(sym,atoms,atoms%lda_hia(:),atoms%n_hia,input%jspins,.FALSE.,mmpMat,&
          u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),e_lda_hia)
 
          IF(hub1%l_runthisiter.AND.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) THEN 
@@ -91,7 +91,7 @@ MODULE m_hubbard1_setup
             !The onsite green's function was calculated but the solver 
             !was not yet run
             !--> write out the configuration for the hubbard 1 solver 
-            CALL gu%init(input,lmaxU_const,atoms,.true.,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de,matsub_in=gdft%nmatsub)
+            CALL gu%init(input,lmaxU_const,atoms,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de,matsub_in=gdft%nmatsub)
 
             !Get the working directory
             CALL get_environment_variable('PWD',cwd)
@@ -103,15 +103,15 @@ MODULE m_hubbard1_setup
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)))
 
             DO i_hia = 1, atoms%n_hia
-               n = atoms%lda_hia(i_hia)%atomType
+               nType = atoms%lda_hia(i_hia)%atomType
                l = atoms%lda_hia(i_hia)%l
-               CALL indexgf(atoms,l,n,i_gf)
+
                !Create a subdirectory for the atomType and shell
-               WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
+               WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",nType,"_l",l
                CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
             
                !calculate the occupation of the correlated shell
-               CALL occmtx(gdft,i_gf,atoms,sym,input,results%ef,mmpMat(:,:,i_hia,:))
+               CALL occmtx(gdft,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
                n_l(i_hia,:) = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
@@ -119,7 +119,7 @@ MODULE m_hubbard1_setup
                   ENDDO
                ENDDO
                WRITE(6,*)
-               WRITE(6,9010) n
+               WRITE(6,9010) nType
                WRITE(6,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
                WRITE(6,*)
                WRITE(6,"(A)") "Occupation from DFT-Green's function:"
@@ -140,7 +140,7 @@ MODULE m_hubbard1_setup
                                                hub1,mu_dc,n_occ,gdft%nz-gdft%nmatsub,gdft%nmatsub,REAL(gdft%e(1)),REAL(gdft%e(gdft%nz-gdft%nmatsub)),AIMAG(gdft%e(1)))
                      
                      !WRITE(*,"(7f14.8)") hub1%ccfmat(i_hia,:,:)
-                     IF(hub1%l_ccf(i_hia)) THEN
+                     IF(hub1%ccf(i_hia).NE.0.0) THEN
                         CALL write_ccfmat(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",hub1%ccfmat(i_hia,-l:l,-l:l),l)
                      ENDIF
 
@@ -160,24 +160,24 @@ MODULE m_hubbard1_setup
                CALL add_selfen(gdft,gu,selfen,atoms,noco,hub1,sym,input,results%ef,n_l,mu_dc/hartree_to_ev_const,&
                               pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),mmpMat)
                ! calculate potential matrix and total energy correction
-               CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,.true.,mmpMat,&
+               CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,.FALSE.,mmpMat,&
                      u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),results%e_ldau)
                !
                ! Output the density of states from the two green's functions (DEBUG)
                !
-               IF(l_debug) THEN
-                  DO i_hia = 1, atoms%n_hia
-                     n = atoms%lda_hia(i_hia)%atomType
-                     l = atoms%lda_hia(i_hia)%l
-                     WRITE(folder,"(A5,I3.3)") "hub1_" , iterHIA
-                     path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
-                     WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",n,"_l",l
-                     CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/")
-                     CALL indexgf(atoms,l,n,i_gf)
-                     CALL ldosmtx("gdft",gdft,i_gf,atoms,sym,input)
-                     CALL ldosmtx("g",gu,i_gf,atoms,sym,input)
-                  ENDDO
-               ENDIF
+               !IF(l_debug) THEN
+               !   DO i_hia = 1, atoms%n_hia
+               !      nType = atoms%lda_hia(i_hia)%atomType
+               !      l = atoms%lda_hia(i_hia)%l
+               !      WRITE(folder,"(A5,I3.3)") "hub1_" , iterHIA
+               !      path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
+               !      WRITE(folder,"(A4,I2.2,A2,I1.1)") "atom",nType,"_l",l
+               !      CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/")
+               !      CALL indexgf(atoms,l,nType,i_gf)
+               !      CALL ldosmtx("gdft",gdft,i_gf,atoms,sym,input)
+               !      CALL ldosmtx("g",gu,i_gf,atoms,sym,input)
+               !   ENDDO
+               !ENDIF
                !
                !Read in the last density matrix
                !
@@ -219,13 +219,13 @@ MODULE m_hubbard1_setup
             DO ispin = 1,input%jspins
                WRITE (6,'(a7,i3)') 'spin #',ispin
                DO i_hia = 1, atoms%n_hia
-                  n = atoms%lda_hia(i_hia)%atomType
+                  nType = atoms%lda_hia(i_hia)%atomType
                   l = atoms%lda_hia(i_hia)%l
                   WRITE (l_type,'(i2)') 2*(2*l+1)
                   l_form = '('//l_type//'f12.7)'
-                  WRITE (6,'(a20,i3)') 'n-matrix for atom # ',n
+                  WRITE (6,'(a20,i3)') 'n-matrix for atom # ',nType
                   WRITE (6,l_form) ((mmpMat(k,j,atoms%n_u+i_hia,ispin),k=-l,l),j=-l,l)
-                  WRITE (6,'(a20,i3)') 'V-matrix for atom # ',n
+                  WRITE (6,'(a20,i3)') 'V-matrix for atom # ',nType
                   IF (atoms%lda_hia(i_hia)%l_amf) THEN
                      WRITE (6,*) 'using the around-mean-field limit '
                   ELSE

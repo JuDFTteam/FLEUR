@@ -74,7 +74,7 @@ MODULE m_types_setup
       !information for the atomic hamiltonian
       LOGICAL                    :: l_runthisiter   !switch which determines wether Hubbard 1 will be run in the current iteration 
       REAL, ALLOCATABLE          :: xi(:)           !Spin-orbit coupling parameter
-      LOGICAL, ALLOCATABLE       :: l_ccf(:)
+      REAL, ALLOCATABLE          :: ccf(:)
       REAL, ALLOCATABLE          :: ccfmat(:,:,:)   !crystal field splitting matrix
       REAL, ALLOCATABLE          :: bz(:)           !external magnet field
       REAL                       :: beta            !inverse Temperature
@@ -82,11 +82,14 @@ MODULE m_types_setup
 
    END TYPE t_hub1ham
 
-   TYPE t_onsitegftype
+   TYPE t_gfelementtype
       SEQUENCE
-      INTEGER l        ! the l quantum number to which this U parameter belongs
-      INTEGER atomType ! The atom type to which this U parameter belongs
-   END TYPE t_onsitegftype
+      !defines the l and atomType elements for given greens function element (used for mapping index in types_greensf)
+      INTEGER l        
+      INTEGER lp
+      INTEGER atomType
+      INTEGER atomTypep
+   END TYPE t_gfelementtype
 
    TYPE t_j0calctype
       INTEGER atomType  !atom Type for which to calculate J0
@@ -114,10 +117,8 @@ MODULE m_types_setup
       INTEGER :: n_u
       INTEGER :: n_hia
       INTEGER :: n_j0
-      ! no of greens function calculations (includes n_hia)
+      ! no of greens function calculations (in total)
       INTEGER :: n_gf
-      ! how many intersite gf
-      INTEGER :: n_intergf
       ! dimensions
       INTEGER :: jmtd
       !No of element
@@ -195,7 +196,7 @@ MODULE m_types_setup
       TYPE(t_utype),ALLOCATABLE::lda_u(:)
       TYPE(t_utype),ALLOCATABLE::lda_hia(:)
       !j0 calc information
-      TYPE(t_onsitegftype), ALLOCATABLE::onsiteGF(:)
+      TYPE(t_gfelementtype), ALLOCATABLE::gfelem(:)
       TYPE(t_j0calctype), ALLOCATABLE::j0(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom

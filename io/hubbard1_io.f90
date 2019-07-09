@@ -77,7 +77,7 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit,"mu",mu)
 
       CALL comment(input_iounit,"Crystal field factor",1)
-      CALL writeValue(input_iounit,"ccf",1.0)
+      CALL writeValue(input_iounit,"ccf",hub1%ccf(i_hia))
 
 
       CALL header(input_iounit,"Parameters for the Solver",1)
@@ -87,7 +87,7 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit,"Nap_max",n+hub1%n_exc)
 
       CALL comment(input_iounit,"Setting the solver to use the power lanczos method",1)
-      WRITE(input_iounit,"(TR3,A12)") "method_lancz"
+      CALL writeValue(input_iounit, "method_lancz")
 
       CALL comment(input_iounit,"Number of iterations",1)
       CALL writeValue(input_iounit,"N_lancz_iter",100)
@@ -95,17 +95,18 @@ MODULE m_hubbard1_io
       CALL comment(input_iounit,"Number of eigenstates calculated",1)
       CALL writeValue(input_iounit,"N_lancz_states",35)
 
-      CALL comment(input_iounit,"Parameters for the frequency/energy axis",1)
-      WRITE(input_iounit,*) "real_freq_axis {"
-      WRITE(input_iounit,*) "omegamin", e_min*hartree_to_ev_const
-      WRITE(input_iounit,*) "omegamax", e_max*hartree_to_ev_const
-      WRITE(input_iounit,*) "Nomega",   ne
-      WRITE(input_iounit,*) "eps",      sigma*hartree_to_ev_const
-      WRITE(input_iounit,*) "}"
+      CALL header(input_iounit,"Parameters for the frequency/energy axis",1)
 
-      WRITE(input_iounit,*) "matsub_freq_axis {"
-      WRITE(input_iounit,*) "Nmatsub",     nmatsub
-      WRITE(input_iounit,*) "}"
+      CALL startSection(input_iounit,"real_freq_axis")
+         CALL writeValue(input_iounit, "omegamin", e_min*hartree_to_ev_const)
+         CALL writeValue(input_iounit, "omegamax", e_max*hartree_to_ev_const)
+         CALL writeValue(input_iounit, "Nomega", ne)
+         CALL writeValue(input_iounit, "eps", sigma*hartree_to_ev_const)
+      CALL endSection(input_iounit)
+
+      CALL startSection(input_iounit,"matsub_freq_axis")
+         CALL writeValue(input_iounit, "Nmatsub", nmatsub)
+      CALL endSection(input_iounit)
 
       CLOSE(unit=input_iounit)
    END SUBROUTINE write_hubbard1_input

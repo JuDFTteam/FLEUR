@@ -27,8 +27,6 @@ MODULE m_types_greensf
 
       TYPE t_greensf
 
-         LOGICAL  :: l_onsite !This switch determines wether we look at a intersite or an onsite gf
-
          !Energy contour parameters
          INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
          INTEGER  :: nz    !number of points in the contour
@@ -40,8 +38,6 @@ MODULE m_types_greensf
 
          !Arrays for Green's function
          COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:) 
-         !Off-diagonal elements for noco calculations
-         COMPLEX, ALLOCATABLE :: gmmpMat21(:,:,:,:,:)
 
          !for radial dependence
          COMPLEX, ALLOCATABLE :: uu(:,:,:,:,:,:)
@@ -54,6 +50,8 @@ MODULE m_types_greensf
          CONTAINS
             PROCEDURE, PASS :: init => greensf_init
             PROCEDURE       :: e_contour
+            PROCEDURE       :: get_gf
+            PROCEDURE       :: set_gf
       END TYPE t_greensf
 
 
@@ -61,19 +59,17 @@ MODULE m_types_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(thisGREENSF,input,lmax,atoms,l_onsite,noco,nz_in,e_in,de_in,matsub_in)
+      SUBROUTINE greensf_init(thisGREENSF,input,lmax,atoms,noco,nz_in,e_in,de_in,matsub_in)
 
          USE m_juDFT
          USE m_types_setup
-         USE m_constants, only : lmaxU_const
 
          CLASS(t_greensf),    INTENT(INOUT)  :: thisGREENSF
          TYPE(t_atoms),       INTENT(IN)     :: atoms
          TYPE(t_input),       INTENT(IN)     :: input
          INTEGER,             INTENT(IN)     :: lmax
          TYPE(t_noco),        INTENT(IN)     :: noco
-         LOGICAL,             INTENT(IN)     :: l_onsite
-         !Pass a already calculated energy contour to the type (not used)
+         !Pass a already calculated energy contour to the type 
          INTEGER, OPTIONAL,   INTENT(IN)     :: nz_in
          INTEGER, OPTIONAL,   INTENT(IN)     :: matsub_in
          COMPLEX, OPTIONAL,   INTENT(IN)     :: e_in(:)
@@ -83,13 +79,11 @@ MODULE m_types_greensf
          REAL    tol,n
          LOGICAL l_new
 
-         thisGREENSF%l_onsite = l_onsite
 
-         IF(.NOT.l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + intersite gf not implemented",calledby="greensf_init")
-         IF(l_onsite.AND.noco%l_mperp) CALL juDFT_error("NOCO + onsite gf not implemented",calledby="greensf_init")
+         IF(noco%l_mperp) CALL juDFT_error("NOCO + gf not implemented",calledby="greensf_init")
 
          !
-         !Set up general parameters for the Green's function (intersite and onsite)
+         !Set up general parameters for the Green's function
          !
          !
          !Setting up parameters for the energy contour
@@ -123,32 +117,22 @@ MODULE m_types_greensf
          END IF
 
 
-         IF(thisGREENSF%l_onsite) THEN
-            IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
-
-               IF(input%l_gfsphavg) THEN
-                  spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
-                  ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim,2))
-                  thisGREENSF%gmmpMat = 0.0
-               ELSE
-                  ALLOCATE (thisGREENSF%uu(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
-                  ALLOCATE (thisGREENSF%dd(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
-                  ALLOCATE (thisGREENSF%du(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
-                  ALLOCATE (thisGREENSF%ud(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins,2))
-
-                  thisGREENSF%uu = 0.0
-                  thisGREENSF%dd = 0.0
-                  thisGREENSF%du = 0.0
-                  thisGREENSF%ud = 0.0
-               ENDIF
+         IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
+            IF(input%l_gfsphavg) THEN
+               spin_dim = MERGE(4,input%jspins,input%l_gfmperp)
+               ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
+               thisGREENSF%gmmpMat = 0.0
+            ELSE
+               ALLOCATE (thisGREENSF%uu(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins,2))
+               ALLOCATE (thisGREENSF%dd(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins,2))
+               ALLOCATE (thisGREENSF%du(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins,2))
+               ALLOCATE (thisGREENSF%ud(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins,2))
+               thisGREENSF%uu = 0.0
+               thisGREENSF%dd = 0.0
+               thisGREENSF%du = 0.0
+               thisGREENSF%ud = 0.0
             ENDIF
-         ELSE
-            !
-            !intersite case; Here we look at l/=l' r/=r' and multiple sites
-            r_dim = MAXVAL(atoms%jri(:)) 
-            l_dim = lmax**2 + lmax
-
-         ENDIF 
+         ENDIF
 
       END SUBROUTINE greensf_init
 
@@ -280,5 +264,177 @@ MODULE m_types_greensf
 
       END SUBROUTINE e_contour
 
+      SUBROUTINE get_gf(this,gmat,atoms,input,iz,l,nType,l_conjg,spin,lp,nTypep,jr,jrp)
+
+         USE m_types_mat
+         USE m_types_setup
+         USE m_juDFT
+         USE m_ind_greensf
+
+         !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
+         !when jr (and jrp) are given return for that radial point
+
+         IMPLICIT NONE
+
+         CLASS(t_greensf),    INTENT(IN)  :: this
+         TYPE(t_atoms),       INTENT(IN)  :: atoms 
+         TYPE(t_input),       INTENT(IN)  :: input
+         TYPE(t_mat),         INTENT(OUT) :: gmat !Return matrix 
+
+         INTEGER,             INTENT(IN)  :: iz
+         INTEGER,             INTENT(IN)  :: nType
+         INTEGER,             INTENT(IN)  :: l 
+         LOGICAL,             INTENT(IN)  :: l_conjg
+         INTEGER, OPTIONAL,   INTENT(IN)  :: spin
+         INTEGER, OPTIONAL,   INTENT(IN)  :: nTypep
+         INTEGER, OPTIONAL,   INTENT(IN)  :: lp 
+         INTEGER, OPTIONAL,   INTENT(IN)  :: jr
+         INTEGER, OPTIONAL,   INTENT(IN)  :: jrp
+
+         INTEGER matsize1,matsize2,i_gf,i,j,ind1,ind2,ind1_start,ind2_start
+         INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end
+         INTEGER lp_loop
+
+         IF(PRESENT(jr).OR.PRESENT(jrp).AND.input%l_gfsphavg) THEN
+            CALL juDFT_error("Greens function not calculated for radial dependence", calledby="get_gf")
+         ENDIF
+         IF(PRESENT(spin)) THEN
+            IF(spin.GT.4.OR.spin.LT.1) THEN
+               CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
+            ENDIF
+         ENDIF
+         
+         !Determine matsize for the result gmat (if spin is given only return this digonal element)
+         matsize1 = (2*l+1) * MERGE(1,input%jspins,PRESENT(spin))
+         IF(PRESENT(lp)) THEN
+            matsize2 = (2*lp+1) * MERGE(1,input%jspins,PRESENT(spin))
+         ELSE
+            matsize2 = matsize1
+         ENDIF 
+         CALL gmat%init(.FALSE.,matsize1,matsize2)
+
+         IF(.NOT.PRESENT(lp)) THEN
+            lp_loop = l 
+         ELSE 
+            lp_loop = lp
+         ENDIF
+
+         !Find the index i_gf corresponding to l,lp,nType,nTypep
+         i_gf = ind_greensf(atoms,l,nType,lp,nTypep)
+         ipm = MERGE(2,1,l_conjg)
+
+         ispin_end = MERGE(4,input%jspins,input%l_gfmperp)
+
+         DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
+            !Find the right quadrant in gmat according to the spin index
+            IF(.NOT.PRESENT(spin)) THEN
+               spin1 = MERGE(ispin,1,ispin.NE.3)
+               spin1 = MERGE(spin1,2,ispin.NE.4)
+               spin2 = MERGE(ispin,2,ispin.NE.3)
+               spin2 = MERGE(spin2,1,ispin.NE.4)
+               ind1_start = (spin1-1)*(2*l+1) 
+               ind2_start = (spin2-1)*(2*lp+1) 
+            ELSE 
+               ind1_start = 0
+               ind2_start = 0
+            ENDIF
+            ind1 = ind1_start
+            DO m = -l,l 
+               ind1 = ind1 + 1 
+               ind2 = ind2_start
+               DO mp = -lp_loop,lp_loop
+                  ind2 = ind2 + 1
+                  gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
+               ENDDO
+            ENDDO
+         ENDDO
+
+      END SUBROUTINE get_gf
+
+      SUBROUTINE set_gf(this,gmat,atoms,input,iz,l,nType,l_conjg,spin,lp,nTypep) 
+
+         USE m_types_mat
+         USE m_types_setup
+         USE m_juDFT
+         USE m_ind_greensf
+
+         !Sets the spherically averaged greens function matrix belonging to energy point iz with l,lp,nType,nTypep
+         !equal to gmat 
+
+         IMPLICIT NONE
+
+         CLASS(t_greensf),    INTENT(INOUT)  :: this
+         TYPE(t_atoms),       INTENT(IN)     :: atoms 
+         TYPE(t_input),       INTENT(IN)     :: input
+         TYPE(t_mat),         INTENT(IN)     :: gmat  
+
+         INTEGER,             INTENT(IN)     :: iz
+         INTEGER,             INTENT(IN)     :: nType
+         INTEGER,             INTENT(IN)     :: l 
+         LOGICAL,             INTENT(IN)     :: l_conjg
+         INTEGER, OPTIONAL,   INTENT(IN)     :: spin
+         INTEGER, OPTIONAL,   INTENT(IN)     :: nTypep
+         INTEGER, OPTIONAL,   INTENT(IN)     :: lp 
+
+         INTEGER matsize1,matsize2,i_gf,i,j,ind1,ind2,ind1_start,ind2_start
+         INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end
+         INTEGER lp_loop
+
+         IF(PRESENT(spin)) THEN
+            IF(spin.GT.4.OR.spin.LT.1) THEN
+               CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
+            ENDIF
+         ENDIF
+         
+         !Determine matsize for the result gmat (if spin is given only return this digonal element)
+         matsize1 = (2*l+1) * MERGE(1,input%jspins,PRESENT(spin))
+         IF(PRESENT(lp)) THEN
+            matsize2 = (2*lp+1) * MERGE(1,input%jspins,PRESENT(spin))
+         ELSE
+            matsize2 = matsize1
+         ENDIF 
+         
+         !Check the expected matsizes against the actual
+         IF(matsize1.NE.gmat%matsize1.OR.matsize2.NE.gmat%matsize2) THEN
+            CALL juDFT_error("Mismatch in matsizes", calledby="set_gf")
+         ENDIF
+
+         IF(.NOT.PRESENT(lp)) THEN
+            lp_loop = l 
+         ELSE 
+            lp_loop = lp
+         ENDIF
+
+         !Find the index i_gf corresponding to l,lp,nType,nTypep
+         i_gf = ind_greensf(atoms,l,nType,lp,nTypep)
+         ipm = MERGE(2,1,l_conjg)
+
+         ispin_end = MERGE(input%jspins,4,input%l_gfmperp)
+
+         DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
+            !Find the right quadrant in gmat according to the spin index
+            IF(.NOT.PRESENT(spin)) THEN
+               spin1 = MERGE(ispin,1,ispin.NE.3)
+               spin1 = MERGE(spin1,2,ispin.NE.4)
+               spin2 = MERGE(ispin,2,ispin.NE.3)
+               spin2 = MERGE(spin2,1,ispin.NE.4)
+               ind1_start = (spin1-1)*(2*l+1) 
+               ind2_start = (spin2-1)*(2*lp+1) 
+            ELSE 
+               ind1_start = 0
+               ind2_start = 0
+            ENDIF
+
+            ind1 = ind1_start
+            DO m = -l,l 
+               ind1 = ind1 + 1 
+               ind2 = ind2_start
+               DO mp = -lp_loop,lp_loop
+                  this%gmmpMat(iz,i_gf,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2) 
+               ENDDO
+            ENDDO
+         ENDDO
+
+      END SUBROUTINE set_gf
 
 END MODULE m_types_greensf

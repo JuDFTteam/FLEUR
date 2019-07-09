@@ -39,7 +39,7 @@ MODULE m_add_selfen
       COMPLEX,          INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
 
-      INTEGER i_hia,l,nType,i_gf,ns,ispin,m,iz,ipm,spin_match,matsize,start,end,i_match
+      INTEGER i_hia,l,nType,ns,ispin,m,iz,ipm,spin_match,matsize,start,end,i_match
       CHARACTER(len=6) app,filename
 
       REAL mu_a,mu_b,mu_step,mu_max,n_max
@@ -62,9 +62,6 @@ MODULE m_add_selfen
          nType = atoms%lda_hia(i_hia)%atomType
          ns = 2*l+1
          matsize = ns*MERGE(2,1,spin_match.EQ.1)
-         CALL indexgf(atoms,l,nType,i_gf)
-         !intialize the matrices
-         CALL gmat%init(.false.,matsize,matsize)
          CALL vmat%init(.false.,matsize,matsize)
          !Search for the maximum of occupation
          DO i_match = 1, spin_match
@@ -85,15 +82,16 @@ MODULE m_add_selfen
                   ENDIF
                   DO ipm = 1, 2
                      IF(spin_match.EQ.2) THEN
-                        CALL to_tmat(gmat,g%gmmpMat(iz,i_gf,:,:,i_match,ipm),1,1,l)
+                        CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ELSE
-                        CALL to_tmat(gmat,g%gmmpMat(iz,i_gf,:,:,:,ipm),input%jspins,2,l)
+                        CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ENDIF
                      CALL add_pot(gmat,vmat,mu-mu_dc,(ipm.EQ.1))
-                     CALL to_g(gmat,gp%gmmpMat(iz,i_gf,:,:,:,ipm),2,input%jspins,l)
+                     CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                   ENDDO
+                  CALL gmat%free()
                ENDDO
-               CALL occmtx(gp,i_gf,atoms,sym,input,ef,mmpMat(:,:,i_hia,:))
+               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
@@ -127,12 +125,13 @@ MODULE m_add_selfen
                      vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                   ENDIF
                   DO ipm = 1, 2
-                     CALL to_tmat(gmat,g%gmmpMat(iz,i_gf,:,:,:,ipm),input%jspins,2,l)
+                     CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      CALL add_pot(gmat,vmat,mu-mu_dc,(ipm.EQ.1))
-                     CALL to_g(gmat,gp%gmmpMat(iz,i_gf,:,:,:,ipm),2,input%jspins,l)
+                     CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                   ENDDO
+                  CALL gmat%free()
                ENDDO
-               CALL occmtx(gp,i_gf,atoms,sym,input,ef,mmpMat(:,:,i_hia,:))
+               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
@@ -154,7 +153,6 @@ MODULE m_add_selfen
                ENDIF
             ENDDO
          ENDDO
-         CALL gmat%free()
          CALL vmat%free()
       ENDDO
 

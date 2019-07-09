@@ -127,10 +127,10 @@ CONTAINS
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
       LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
-      REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_xi(4), hub1_bz(4), tempReal
+      REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4),hub1_ccf(4), hub1_u(4), hub1_j(4), hub1_xi(4), hub1_bz(4), tempReal
       REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
-      LOGICAL            :: l_amf(4), hub1_amf(4), l_ccf(4),l_found, j0_avgexc
+      LOGICAL            :: l_amf(4), hub1_amf(4),l_found, j0_avgexc
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
@@ -223,7 +223,7 @@ CONTAINS
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%j0(atoms%ntype))
-      ALLOCATE(atoms%onsiteGF(4*atoms%ntype))
+      ALLOCATE(atoms%gfelem(4*atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%neq(atoms%ntype))
@@ -270,7 +270,7 @@ CONTAINS
 
       ALLOCATE(atoms%lda_hia(4*atoms%ntype))
       ALLOCATE(hub1%xi(4*atoms%ntype))
-      ALLOCATE(hub1%l_ccf(4*atoms%ntype))
+      ALLOCATE(hub1%ccf(4*atoms%ntype))
       ALLOCATE(hub1%ccfmat(4*atoms%ntype,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
       ALLOCATE(hub1%bz(4*atoms%ntype))
 
@@ -1449,7 +1449,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          hub1_amf = .FALSE.
          hub1_xi = 0.0
          hub1_bz = 0.0
-         l_ccf = .FALSE.
+         hub1_ccf = 0.0
          DO i = 1, numHIA
             WRITE(xPathB,*) i
             hub1_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l'))
@@ -1460,7 +1460,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             !Replace no soc with a small ficticious soc
             IF(hub1_xi(i).EQ.0.0) hub1_xi(i) = 0.001 
             hub1_bz(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@exc'))
-            l_ccf(i)   = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@lcrystfield'))
+            hub1_ccf(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@ccf'))
          ENDDO
          
          !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
@@ -1544,8 +1544,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   input%l_gf  = .true. 
                   atoms%n_hia = atoms%n_hia + 1
                   atoms%n_gf  = atoms%n_gf + 1
-                  atoms%onsiteGF(atoms%n_gf)%l        = hub1_l(i)
-                  atoms%onsiteGF(atoms%n_gf)%atomType = iType
+                  atoms%gfelem(atoms%n_gf)%l        = hub1_l(i)
+                  atoms%gfelem(atoms%n_gf)%atomType = iType
                   atoms%lda_hia(atoms%n_hia)%l        = hub1_l(i)
                   atoms%lda_hia(atoms%n_hia)%u        = hub1_u(i)
                   atoms%lda_hia(atoms%n_hia)%j        = hub1_j(i)
@@ -1553,21 +1553,21 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%lda_hia(atoms%n_hia)%atomType = iType
                   hub1%xi(atoms%n_hia) = hub1_xi(i)
                   hub1%bz(atoms%n_hia) = hub1_bz(i)
-                  hub1%l_ccf(atoms%n_hia) = l_ccf(i)
+                  hub1%ccf(atoms%n_hia) = hub1_ccf(i)
                ENDDO
                DO i = 1, numOnsite
                   !Is the green's function already being calculated
                   l_found = .false.
                   DO j = 1, atoms%n_gf
-                     IF(atoms%onsiteGF(j)%l.EQ.onsiteGF_l(i).AND.atoms%onsiteGF(j)%atomType.EQ.iType) THEN 
+                     IF(atoms%gfelem(j)%l.EQ.onsiteGF_l(i).AND.atoms%gfelem(j)%atomType.EQ.iType) THEN 
                         l_found = .true.
                      ENDIF
                   ENDDO
                   IF(l_found) CYCLE
                   input%l_gf = .true. 
                   atoms%n_gf = atoms%n_gf + 1
-                  atoms%onsiteGF(atoms%n_gf)%l = onsiteGF_l(i)
-                  atoms%onsiteGF(atoms%n_gf)%atomType = iType
+                  atoms%gfelem(atoms%n_gf)%l = onsiteGF_l(i)
+                  atoms%gfelem(atoms%n_gf)%atomType = iType
                ENDDO
                IF(numJ0.EQ.1) THEN
                   atoms%n_j0 = atoms%n_j0 + 1
@@ -1579,15 +1579,15 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   DO l = j0_min, j0_max
                      l_found = .false.
                      DO j = 1, atoms%n_gf
-                        IF(atoms%onsiteGF(j)%l.EQ.l.AND.atoms%onsiteGF(j)%atomType.EQ.iType) THEN 
+                        IF(atoms%gfelem(j)%l.EQ.l.AND.atoms%gfelem(j)%atomType.EQ.iType) THEN 
                            l_found = .true.
                         ENDIF
                      ENDDO
                      IF(l_found) CYCLE
                      input%l_gf = .true. 
                      atoms%n_gf = atoms%n_gf + 1
-                     atoms%onsiteGF(atoms%n_gf)%l = l
-                     atoms%onsiteGF(atoms%n_gf)%atomType = iType
+                     atoms%gfelem(atoms%n_gf)%l = l
+                     atoms%gfelem(atoms%n_gf)%atomType = iType
                   ENDDO
                ENDIF
                atomTypeSpecies(iType) = iSpecies

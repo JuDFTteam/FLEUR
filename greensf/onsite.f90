@@ -59,8 +59,8 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
    !Loop through the gf elements to be calculated
    DO i_gf = 1, atoms%n_gf
 
-      l     = atoms%onsiteGF(i_gf)%l
-      nType = atoms%onsiteGF(i_gf)%atomType
+      l     = atoms%gfelem(i_gf)%l
+      nType = atoms%gfelem(i_gf)%atomType
 
       !Loop through equivalent atoms
       DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
@@ -168,8 +168,8 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
    COMPLEX mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,input%jspins)
 
    DO i_gf = 1, atoms%n_gf
-      l =     atoms%onsiteGF(i_gf)%l
-      nType = atoms%onsiteGF(i_gf)%atomType
+      l =     atoms%gfelem(i_gf)%l
+      nType = atoms%gfelem(i_gf)%atomType
       !
       !Enforcing that the projected density of states follows the local symmetries
       !

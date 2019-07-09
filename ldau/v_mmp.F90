@@ -19,7 +19,7 @@ MODULE m_vmmp
   !     Extension to multiple U per atom type  G.M. 2017
   !     ************************************************************
 CONTAINS
-  SUBROUTINE v_mmp(sym,atoms,u_in,n_u,jspins,spin_avg,ns_mmp,u,f0,f2, vs_mmp,e)
+  SUBROUTINE v_mmp(sym,atoms,u_in,n_u,jspins,spin_pol,ns_mmp,u,f0,f2, vs_mmp,e)
 
     USE m_types
     USE m_constants
@@ -38,7 +38,8 @@ CONTAINS
     COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
 
     COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
-    LOGICAL, INTENT(IN)    :: spin_avg
+    LOGICAL, INTENT(IN)    :: spin_pol !Is the double-counting spin-polarised (reason for spin-polarized calclations 
+                                       !with DFT+Hubbard1 we use a non-spin polarized f-orbital in DFT)
 
     ! ..  Local Variables ..
     INTEGER ispin,jspin,l ,mp,p,q,itype,m,i_u
@@ -78,6 +79,10 @@ CONTAINS
           rho_tot = rho_tot + rho_sig(ispin)
        END DO
        rho_sig(1) = rho_sig(1) * spin_deg  ! if jspins = 1, divide by 2
+       IF(jspins.EQ.2.AND..NOT.spin_pol) THEN
+         rho_sig(1)      = rho_tot/jspins
+         rho_sig(jspins) = rho_tot/jspins
+       ENDIF
        IF (u_in(i_u)%l_amf) THEN
           eta(1) = rho_sig(1) / (2*l + 1) 
           eta(jspins) = rho_sig(jspins) / (2*l + 1) 
@@ -87,6 +92,7 @@ CONTAINS
           eta(1) = 1.0
           eta(jspins) = 1.0
        END IF
+
        !
        !--------------------------------------------------------------------------------------------+
        !  s       --                                        s'                    1        s   1    |
@@ -140,21 +146,14 @@ CONTAINS
        !
        DO ispin = 1,jspins
           v_diag(ispin) = - u_htr * ( rho_tot - 0.5*eta(0) ) + j_htr * ( rho_sig(ispin) - 0.5*eta(ispin) )
+          WRITE(*,*) v_diag(ispin)
           DO m = -l,l
              DO mp = -l,l
                 vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) * spin_deg
              END DO
-             IF(.NOT.spin_avg) vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + v_diag(ispin)
+             vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + v_diag(ispin)
           END DO
        END DO
-      !Spin-averaged double-counting (for LDA+HIA)
-      IF(spin_avg) THEN
-         DO ispin = 1, jspins
-            DO m = -l,l
-               vs_mmp(m,m,i_u,ispin) = vs_mmp(m,m,i_u,ispin) + SUM(v_diag(:))/jspins
-            END DO
-         ENDDO
-      ENDIF
 
        !----------------------------------------------------------------------+
        !              s                                                       !

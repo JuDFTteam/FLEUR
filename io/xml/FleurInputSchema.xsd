@@ -484,7 +484,7 @@
       <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
       <xsd:attribute name="soc" type="xsd:string" use="required"/>
       <xsd:attribute name="exc" type="xsd:string" use="required"/>
-      <xsd:attribute name="lcrystfield" type="FleurBool" use="required"/>
+      <xsd:attribute name="ccf" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="OnsiteGFType">

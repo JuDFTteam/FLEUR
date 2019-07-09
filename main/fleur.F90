@@ -64,6 +64,7 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
+    USE m_calc_tetra
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -132,6 +133,9 @@ CONTAINS
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
   
+    !Temporary
+    !IF(atoms%n_gf>0) CALL calc_tetra(kpts,input,sym,oneD)
+
     iter     = 0
     iterHF   = 0
     iterHIA  = 0
@@ -163,8 +167,7 @@ CONTAINS
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
-    CALL gOnsite%init(input,lmaxU_const,atoms,.true.,noco)
-    CALL gIntersite%init(input,lmaxU_const,atoms,.false.,noco)
+    CALL gOnsite%init(input,lmaxU_const,atoms,noco)
     ! Initialize Green's function (end)
 
     ! Open/allocate eigenvector storage (start)
@@ -477,7 +480,7 @@ CONTAINS
        END IF
 
     END DO scfloop ! DO WHILE (l_cont)
-   
+
     CALL add_usage_data("Iterations",iter)
 
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')

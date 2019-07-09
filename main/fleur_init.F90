@@ -167,7 +167,6 @@
           hub1%l_runthisiter = .FALSE.
           atoms%n_gf = 0
           atoms%n_j0 = 0
-          atoms%n_intergf = 0
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1

@@ -47,8 +47,8 @@ MODULE m_onsite21
                                                    onsite-GF not implemented",calledby="onsite21")
 
       DO i_gf = 1, atoms%n_gf
-         nType = atoms%onsiteGF(i_gf)%atomType
-         l = atoms%onsiteGF(i_gf)%l
+         nType = atoms%gfelem(i_gf)%atomType
+         l = atoms%gfelem(i_gf)%l
 
 
          DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
@@ -103,8 +103,8 @@ MODULE m_onsite21
       COMPLEX  gf21re,gf21imag
 
       DO i_gf = 1, atoms%n_gf
-         nType = atoms%onsiteGF(i_gf)%atomType
-         l = atoms%onsiteGF(i_gf)%l
+         nType = atoms%gfelem(i_gf)%atomType
+         l = atoms%gfelem(i_gf)%l
 
          !$OMP PARALLEL DEFAULT(none) &
          !$OMP SHARED(i_gf,nType,l) &

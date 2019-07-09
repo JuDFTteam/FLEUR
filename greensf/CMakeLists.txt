@@ -9,4 +9,5 @@ greensf/tetra_weights.f90
 greensf/gfcalc.f90
 greensf/j0.f90
 greensf/kk_cutoff.f90
+greensf/ind_greensf.f90
 )
