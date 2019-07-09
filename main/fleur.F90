@@ -410,7 +410,9 @@ CONTAINS
              CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
                              results,eig_id,oneD,sphhar,stars,vacuum)
           END IF
-          CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+          IF (input%gw.EQ.2) THEN
+             CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+          END IF
        END IF
 
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
