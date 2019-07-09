@@ -178,12 +178,14 @@
                 a1 = 0.0
                 a2 = 0.0
                 a3 = 0.0
+                CALL timestart("r_inpXML") 
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
+                CALL timestop("r_inpXML") 
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
 #ifdef CPP_MPI
