@@ -90,7 +90,6 @@ CONTAINS
       INTEGER, PARAMETER   :: lmaxb = 3
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
-      COMPLEX, ALLOCATABLE :: vs_mmp(:,:,:,:)
 
       INTEGER                   :: jsp_m, i_kpt_m, i_m
 
