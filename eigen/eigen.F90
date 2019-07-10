@@ -18,11 +18,10 @@ CONTAINS
    !>
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
-   SUBROUTINE eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+   SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx)
 
 #include"cpp_double.h"
-      USE m_constants, ONLY : pi_const,sfp_const
       USE m_types
       USE m_eigen_hssetup
       USE m_pot_io
@@ -51,7 +50,6 @@ CONTAINS
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_hybrid),INTENT(INOUT) :: hybrid
       TYPE(t_enpara),INTENT(INOUT) :: enpara
-      TYPE(t_obsolete),INTENT(IN)  :: obsolete
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_noco),INTENT(IN)      :: noco
