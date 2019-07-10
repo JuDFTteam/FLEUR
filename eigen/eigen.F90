@@ -249,6 +249,8 @@ CONTAINS
             CALL timestop("EV output")
 
             IF (banddos%unfoldband) THEN
+               IF(modulo (kpts%nkpt,mpi%n_size).NE.0) call juDFT_error("number kpts needs to be multiple of number mpi threads",& 
+                   hint=errmsg, calledby="eigen.F90")
                CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
                CALL smat_unfold%free()
                DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)
