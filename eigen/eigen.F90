@@ -106,8 +106,9 @@ CONTAINS
       character(len=300)        :: errmsg
 
       call ud%init(atoms,input%jspins)
-      ALLOCATE (eig(DIMENSION%neigd),bkpt(3))
-      ALLOCATE (eigBuffer(DIMENSION%neigd,kpts%nkpt,input%jspins))
+      ALLOCATE(eig(DIMENSION%neigd))
+      ALLOCATE(bkpt(3))
+      ALLOCATE(eigBuffer(DIMENSION%neigd,kpts%nkpt,input%jspins))
 
       l_real=sym%invs.AND..NOT.noco%l_noco
 
