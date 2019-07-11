@@ -138,13 +138,13 @@ CONTAINS
                   &              *usdus%ddn(l,itype,ispin) )/atoms%neq(itype) + qmtllo(l)
              qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
+          moments%chmom(itype,ispin) = qmtt
           IF(PRESENT(hub1)) THEN
             DO i_hia = 1, atoms%n_hia 
                IF(atoms%lda_hia(i_hia)%atomType.NE.itype) CYCLE
-               hub1%mom = qmtl(2,1,itype) - qmtl(2,2,itype)
+               hub1%mom = hub1%mom + (-1)**(ispin-1) *  qmtl(2,ispin,itype)
             ENDDO
           ENDIF
-          moments%chmom(itype,ispin) = qmtt
 
           !+soc
           !--->       spherical angular component
@@ -175,6 +175,7 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO ! end of spin loop (ispin = jsp_start,jsp_end)
+
 
        IF (noco%l_mperp) THEN
 

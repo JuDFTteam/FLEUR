@@ -137,7 +137,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          write(*,*) as,sym%nop2,l_tria
          IF(.NOT.l_tria) CALL juDFT_warn("l_tria=F",calledby="cdngen")
       ENDIF
-      IF(mpi%irank==0) CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
+      IF(mpi%irank==0) THEN
+         CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
+         IF(atoms%n_hia.GT.0) hub1%mom = 0.0
+      ENDIF
    ENDIF
 
 
