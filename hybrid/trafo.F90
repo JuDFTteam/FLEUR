@@ -596,6 +596,9 @@
 !       COMPLEX                 ::  vecin1(dim,nobd,nbands),vecout1(dim,nobd,nbands)
       COMPLEX, ALLOCATABLE    ::  vecin1(:,:,:),vecout1(:,:,:)
 
+
+      call timestart("bra trafo")
+
       ALLOCATE ( vecin1( dim,nobd,nbands), &
      &           vecout1(dim,nobd,nbands), stat=ok )
       IF ( ok /= 0 ) &
@@ -773,7 +776,7 @@
          vecout_c = vecout1
       endif
       DEALLOCATE ( vecout1 )
-
+      call timestop("bra trafo")
       END SUBROUTINE bra_trafo2
 
 

@@ -115,9 +115,7 @@ CONTAINS
 
        CALL open_hybrid_io2(hybrid,DIMENSION,atoms,sym%invs)
 
-       CALL timestart("generation of coulomb matrix")
        CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot,l_restart)
-       CALL timestop("generation of coulomb matrix")
 
        CALL hf_init(hybrid,kpts,atoms,input,DIMENSION,hybdat,sym%invs)
        CALL timestop("Preparation for Hybrid functionals")

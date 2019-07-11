@@ -27,7 +27,7 @@ elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
    message("PGI Fortran detected")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake
    #CPU   
-   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp")
+   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp -Mr8 -Mr8intrinsics")
    #GPU
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp  -Mcuda=cuda9.0,cc60 -Mcudalib=cublas")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp  -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")

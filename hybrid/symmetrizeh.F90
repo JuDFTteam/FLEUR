@@ -544,6 +544,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
 
    ! Returns the spherical harmonics Y_lm(^rvec) for l = 0,...,ll in Y(1,...,(ll+1)**2).
    SUBROUTINE harmonicsr(Y,rvec,ll)
+      use m_judft
       IMPLICIT NONE
       INTEGER,INTENT(IN)    :: ll
       REAL,INTENT(IN)       :: rvec(3)
@@ -553,6 +554,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
       COMPLEX               :: c
       COMPLEX,PARAMETER     :: img=(0d0,1d0)
 
+      call timestart("symm harmonics")
       Y(1) = 0.282094791773878d0
       IF(ll.EQ.0) RETURN
 
@@ -600,6 +602,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
             Y(lm) = SQRT((2d0*l+1)/(l+m)/(l-m)) * (SQRT(2d0*l-1)*ctheta*Y(lm-2*l)- SQRT((l+m-1d0)*(l-m-1)/(2*l-3))*Y(lm-4*l+2) )
          END DO
       END DO
+      call timestop("symm harmonics")
    END SUBROUTINE harmonicsr
 
 END SUBROUTINE symmetrizeh

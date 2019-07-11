@@ -59,12 +59,9 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
 
    IMPLICIT NONE
 
-   TYPE(t_hybdat),        INTENT(IN)    :: hybdat
-   TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
    TYPE(t_mpi),           INTENT(IN)    :: mpi
    TYPE(t_dimension),     INTENT(IN)    :: dimension
-   TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_sym),           INTENT(IN)    :: sym
@@ -72,6 +69,9 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    TYPE(t_kpts),          INTENT(IN)    :: kpts
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_lapw),          INTENT(IN)    :: lapw
+   TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
+   TYPE(t_hybdat),        INTENT(INOUT) :: hybdat
+   TYPE(t_results),       INTENT(INOUT) :: results
 
    ! scalars
    INTEGER,               INTENT(IN)    :: jsp 
@@ -121,6 +121,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
    a_ex=xcpot%get_exchange_weight()
 
    ! read in lower triangle part of overlap matrix from direct acces file olap
+   call timestart("read in olap")
    nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
    call olap%alloc(sym%invs,nbasfcn)
    call read_olap(olap, kpts%nkpt*(jsp-1)+nk)
@@ -138,6 +139,7 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
       END DO
       olap%data_c=conjg(olap%data_c)
    END IF
+   call timestop("read in olap")
 
    IF(hybrid%l_calhf) THEN
       ncstd = sum( (/ ( (hybdat%nindxc(l,itype)*(2*l+1)*atoms%neq(itype),l=0,hybdat%lmaxc(itype)), itype = 1,atoms%ntype) /) )
@@ -166,12 +168,10 @@ SUBROUTINE hsfock(nk,atoms,hybrid,lapw,dimension,kpts,jsp,input,hybdat,eig_irr,s
 
       ! calculate contribution from valence electrons to the
       ! HF exchange
-      CALL timestart("valence exchange calculation")
       ex%l_real=sym%invs
       CALL exchange_valence_hf(nk,kpts,nkpt_EIBZ, sym,atoms,hybrid,cell,dimension,input,jsp,hybdat,mnobd,lapw,&
                                eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,it,xcpot,noco,nsest,indx_sest,&
                                mpi,ex)
-      CALL timestop("valence exchange calculation")
    
       CALL timestart("core exchange calculation")
 

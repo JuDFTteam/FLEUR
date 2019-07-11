@@ -2415,12 +2415,12 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          ALLOCATE(t_xcpot_inbuild::xcpot)
       ENDIF
 
+      xcpot%kinED%set = .FALSE.
       SELECT TYPE(xcpot)
       TYPE IS(t_xcpot_inbuild)
          CALL xcpot%init(namex(1:4),relcor,atoms%ntype)
       TYPE IS(t_xcpot_libxc)
          CALL xcpot%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
-
       END SELECT
 
       CALL set_xcpot_usage(xcpot)

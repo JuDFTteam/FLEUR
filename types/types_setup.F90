@@ -327,7 +327,7 @@ MODULE m_types_setup
       LOGICAL               ::  l_calhf = .false.
       LOGICAL               ::  l_addhf = .false.
       INTEGER               ::  ewaldlambda
-      INTEGER               ::  lexp
+      INTEGER               ::  lexp = 0
       INTEGER               ::  bands1 !Only read in
       INTEGER               ::  nbasp
       INTEGER               ::  maxlcutm1

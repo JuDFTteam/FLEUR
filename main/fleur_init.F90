@@ -145,6 +145,10 @@
           input%scaleA1 = 1.0
           input%scaleA2 = 1.0
           input%scaleC = 1.0
+          input%forcealpha = 1.0
+          input%forcemix = 0
+          input%epsdisp = 0.00001
+          input%epsforce = 0.00001
 
           input%l_gfsphavg = .TRUE.
           input%l_gfmperp = .FALSE.
@@ -197,12 +201,14 @@
                 a1 = 0.0
                 a2 = 0.0
                 a3 = 0.0
+                CALL timestart("r_inpXML") 
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts,hub1)
+                CALL timestop("r_inpXML") 
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
 #ifdef CPP_MPI
@@ -287,7 +293,7 @@
           CALL MPI_BCAST(atoms%lmaxd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           call MPI_BCAST( input%preconditioning_param, 1, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
-          CALL ylmnorm_init(atoms%lmaxd)
+          CALL ylmnorm_init(max(atoms%lmaxd, 2*hybrid%lexp))
           !
           !--> determine more dimensions
           !

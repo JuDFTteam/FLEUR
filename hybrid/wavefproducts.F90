@@ -24,16 +24,16 @@
       USE m_io_hybrid
       IMPLICIT NONE
 
-      TYPE(t_input),INTENT(IN)   :: input
-      TYPE(t_hybdat),INTENT(IN)   :: hybdat
+      TYPE(t_input),INTENT(IN)       :: input
       TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_sym),INTENT(IN)   :: sym
-      TYPE(t_noco),INTENT(IN)   :: noco
-      TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_kpts),INTENT(IN)   :: kpts
-      TYPE(t_atoms),INTENT(IN)   :: atoms
-      TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_hybrid),INTENT(IN)      :: hybrid
+      TYPE(t_sym),INTENT(IN)         :: sym
+      TYPE(t_noco),INTENT(IN)        :: noco
+      TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_kpts),INTENT(IN)        :: kpts
+      TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_lapw),INTENT(IN)        :: lapw
+      TYPE(t_hybdat),INTENT(INOUT)   :: hybdat
 
 !     - scalars -
       INTEGER,INTENT(IN)      ::  nk,iq ,jsp
@@ -1254,16 +1254,16 @@
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
-      TYPE(t_hybdat),INTENT(IN)   :: hybdat
-      TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_input),INTENT(IN)   :: input
-      TYPE(t_noco),INTENT(IN)   :: noco
-      TYPE(t_sym),INTENT(IN)   :: sym
-      TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_kpts),INTENT(IN)   :: kpts
-      TYPE(t_atoms),INTENT(IN)   :: atoms
-      TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_dimension),INTENT(IN) :: dimension
+      TYPE(t_hybrid),INTENT(IN)    :: hybrid
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_sym),INTENT(IN)       :: sym
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_kpts),INTENT(IN)      :: kpts
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_lapw),INTENT(IN)      :: lapw
+      TYPE(t_hybdat),INTENT(INOUT) :: hybdat
 
       ! - scalars -
       INTEGER,INTENT(IN)      :: bandi,bandf,bandoi,bandof
@@ -1315,7 +1315,6 @@
       REAL                    ::    rarr1(bandoi:bandof)
       REAL                    ::    rarr2(bandoi:bandof,bandf-bandi+1)
       REAL                    ::    rarr3(2,bandoi:bandof,bandf-bandi+1)
-      REAL, ALLOCATABLE       ::    stepfunc(:,:,:)
       REAL, ALLOCATABLE       ::    z0(:,:)
 
       COMPLEX                 ::    cexp(atoms%nat),cexp_nk(atoms%nat)
@@ -1365,8 +1364,10 @@
       call z_kqpt%alloc(.true.,nbasfcn,dimension%neigd)
 
       ! read in z at k-point nk and nkqpt
+      call timestart("read_z")
       CALL read_z(z_nk,nk)
       call read_z(z_kqpt,nkqpt)
+      call timestop("read_z")
 
       g(1) = maxval(abs(lapw%k1      (:lapw%nv(jsp)      ,jsp))) &
      &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp),jsp)))&
@@ -1379,20 +1380,27 @@
      &     + maxval(abs(hybrid%gptm(3,hybrid%pgptm(:hybrid%ngptm(iq),iq) ))) + 1
 
 
-      ALLOCATE ( stepfunc(-g(1):g(1),-g(2):g(2),-g(3):g(3)),stat=ok)
-      IF( ok .ne. 0 ) STOP 'wavefproducts_inv5: error allocation stepfunc'
       ALLOCATE ( pointer(-g(1):g(1),-g(2):g(2),-g(3):g(3)),stat=ok )
       IF( ok .ne. 0 ) STOP 'wavefproducts_inv5: error allocation pointer'
       ALLOCATE ( gpt0(3,size(pointer)),stat=ok )
       IF( ok .ne. 0 ) STOP 'wavefproducts_inv5: error allocation gpt0'
                   
-      DO i = -g(1),g(1)
-        DO j = -g(2),g(2)
-          DO k = -g(3),g(3)
-            stepfunc(i,j,k) = stepfunction(cell,atoms,(/i,j,k/))
-          END DO
-        END DO
-      END DO
+      if(.not. allocated(hybdat%stepfunc_r)) then
+         call timestart("setup stepfunction")
+         ALLOCATE (hybdat%stepfunc_r(-g(1):g(1),-g(2):g(2),-g(3):g(3)),stat=ok)
+         IF(ok /= 0) then
+            call juDFT_error('wavefproducts_inv5: error allocation stepfunc_r')
+         endif
+
+         DO i = -g(1),g(1)
+           DO j = -g(2),g(2)
+             DO k = -g(3),g(3)
+               hybdat%stepfunc_r(i,j,k) = stepfunction(cell,atoms,(/i,j,k/))
+             END DO
+           END DO
+         END DO
+         call timestop("setup stepfunction")
+      endif
 
       
 
@@ -1401,6 +1409,7 @@
       !
       
       !(1) prepare list of G vectors
+      call timestart("prep list of Gvec")
       pointer = 0
       ic      = 0
       DO ig1 = 1,lapw%nv(jsp)
@@ -1417,24 +1426,29 @@
         END DO
       END DO
       ngpt0 = ic
+      call timestop("prep list of Gvec")
 
       !(2) calculate convolution
+      call timestart("calc convolution")
       ALLOCATE ( z0(bandoi:bandof,ngpt0), stat=ok )
       IF( ok .ne. 0 ) STOP 'wavefproducts_inv5: error allocation z0'
       z0 = 0
+      call timestart("step function")
       DO ig2 = 1,lapw_nkqpt%nv(jsp)
         rarr1 = z_kqpt%data_r(ig2,bandoi:bandof)
         DO ig = 1,ngpt0
           g(1)    = gpt0(1,ig) - lapw_nkqpt%k1(ig2,jsp)
           g(2)    = gpt0(2,ig) - lapw_nkqpt%k2(ig2,jsp)
           g(3)    = gpt0(3,ig) - lapw_nkqpt%k3(ig2,jsp)
-          rdum    = stepfunc(g(1),g(2),g(3)) / svol
+          rdum    = hybdat%stepfunc_r(g(1),g(2),g(3)) / svol
           DO n2 = bandoi,bandof
             z0(n2,ig) = z0(n2,ig) + rarr1(n2)*rdum
           END DO
         END DO
       END DO
+      call timestop("step function")
       
+      call timestart("hybrid gptm")
       ic   = nbasm_mt
       DO igptm = 1,hybrid%ngptm(iq)
         rarr2  = 0 
@@ -1464,6 +1478,8 @@
         END DO
         cprod(ic,:,:) = rarr2(:,:)
       END DO
+      call timestop("hybrid gptm")
+      call timestop("calc convolution")
 
       WRITE(2005,*) 'Point B'
       DO n2 = 1, 1
@@ -1474,7 +1490,7 @@
          END DO
       END DO
 
-      DEALLOCATE(z0,stepfunc,pointer,gpt0)
+      DEALLOCATE(z0,pointer,gpt0)
       CALL timestop("wavefproducts_inv5 IR")
 
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
@@ -1587,6 +1603,7 @@
           IF( iatom1 .gt. iatom2 ) CYCLE
 
           IF( iatom1 .ne. iatom2 ) THEN
+            call timestart("iatom1 neq iatom2")
             ! loop over l of mixed basis
             DO l = 0,hybrid%lcutm1(itype)
               ! loop over basis functions products, which belong to l
@@ -1690,10 +1707,8 @@
                       add2 = rdum2*rfac2 - rdum1*rfac1
                       DO i = 1,hybrid%nindxm1(l,itype)
                         j = lm1 + i
-            IF ((j.LE.20).AND.(ibando.LE.2).AND.(iband.LE.1)) WRITE(2030,'(3i7,3f15.8)') j, ibando, iband, cprod(j,ibando,iband), hybdat%prodm(i,n,l,itype), add1
                         cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add1!( cos1 + sin2 )
                         j = lm2 + i
-            IF ((j.LE.20).AND.(ibando.LE.2).AND.(iband.LE.1)) WRITE(2030,'(3i7,3f15.8)') j, ibando, iband, cprod(j,ibando,iband), hybdat%prodm(i,n,l,itype), add2
                         cprod(j,ibando,iband) = cprod(j,ibando,iband) + hybdat%prodm(i,n,l,itype)*add2!( cos2 - sin1 )
 
                       END DO  !i -> loop over mixed basis functions
@@ -1709,8 +1724,9 @@
               lm_0 = lm_0 + hybrid%nindxm1(l,itype) * (2*l+1) ! go to the lm start index of the next l-quantum number
               IF(lm.ne.lm_0) STOP 'wavefproducts_inv5: counting of lm-index incorrect (bug?)'
             END DO !l
-
+            call timestop("iatom1 neq iatom2")
           ELSE !case: iatom1==iatom2
+            call timestart("iatom1 eq iatom2")
 
              ! loop over l of mixed basis
             monepl = -1
@@ -2251,6 +2267,7 @@
               IF(lm.ne.lm_0) STOP 'wavefproducts_inv5: counting of lm-index incorrect (bug?)'
             END DO !l
 
+            call timestop("iatom1 eq iatom2")
           END IF  ! iatom1 .ne. iatom2
 
           lm_0 = lm_00
@@ -2258,10 +2275,6 @@
         iiatom = iiatom + atoms%neq(itype)
         lm_00  = lm_00 + atoms%neq(itype)*ioffset
       END DO  !itype
-
-
-
-      
       CALL timestop("wavefproducts_inv5")
 
      
@@ -2288,16 +2301,16 @@
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
-      TYPE(t_hybdat),INTENT(IN)   :: hybdat
       TYPE(t_dimension),INTENT(IN)   :: dimension
-      TYPE(t_hybrid),INTENT(IN)   :: hybrid
-      TYPE(t_input),INTENT(IN)   :: input
-      TYPE(t_noco),INTENT(IN)   :: noco
-      TYPE(t_sym),INTENT(IN)   :: sym
-      TYPE(t_cell),INTENT(IN)   :: cell
-      TYPE(t_kpts),INTENT(IN)   :: kpts
-      TYPE(t_atoms),INTENT(IN)   :: atoms
-      TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_input),INTENT(IN)       :: input
+      TYPE(t_noco),INTENT(IN)        :: noco
+      TYPE(t_sym),INTENT(IN)         :: sym
+      TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_kpts),INTENT(IN)        :: kpts
+      TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_lapw),INTENT(IN)        :: lapw
+      TYPE(t_hybrid),INTENT(IN)      :: hybrid
+      TYPE(t_hybdat),INTENT(INOUT)   :: hybdat
 
 !     - scalars -
       INTEGER,INTENT(IN)      ::  bandi,bandf,bandoi,bandof
@@ -2345,7 +2358,6 @@
       TYPE(t_mat)             ::  z_nk,z_kqpt
       COMPLEX                 ::  cmt   (dimension%neigd,hybrid%maxlmindx,atoms%nat)
       COMPLEX                 ::  cmt_nk(dimension%neigd,hybrid%maxlmindx,atoms%nat)
-      COMPLEX,ALLOCATABLE     ::  stepfunc(:,:,:)
       COMPLEX,ALLOCATABLE     ::  z0(:,:)
 
       call timestart("wavefproducts_noinv5")
@@ -2390,9 +2402,10 @@
       call z_kqpt%alloc(.false.,nbasfcn,dimension%neigd)
 
       ! read in z at k-point nk and nkqpt
-
+      call timestart("read_z")
       call read_z(z_nk,nk)
       call read_z(z_kqpt,nkqpt)
+      call timestop("read_z")
       
       g(1) = maxval(abs(lapw%k1      (:lapw%nv(jsp)      ,jsp))) &
      &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp),jsp)))&
@@ -2406,26 +2419,33 @@
 
 
 
-      ALLOCATE ( stepfunc(-g(1):g(1),-g(2):g(2),-g(3):g(3)), stat= ok)
-      IF( ok .ne. 0 ) STOP 'wavefproducts_noinv2: error allocation stepfunc'
       ALLOCATE ( pointer(-g(1):g(1),-g(2):g(2),-g(3):g(3)), stat= ok )
       IF( ok .ne. 0 ) STOP 'wavefproducts_noinv2: error allocation pointer'
       ALLOCATE ( gpt0(3,size(pointer)),stat=ok )
       IF( ok .ne. 0 ) STOP 'wavefproducts_noinv2: error allocation gpt0'
                   
-      DO i = -g(1),g(1)
-        DO j = -g(2),g(2)
-          DO k = -g(3),g(3)
-            stepfunc(i,j,k) = stepfunction(cell,atoms,(/i,j,k/))
-          END DO
-        END DO
-      END DO
+      if(.not. allocated(hybdat%stepfunc_c)) then
+         call timestart("setup stepfunc")
+         ALLOCATE (hybdat%stepfunc_c(-g(1):g(1),-g(2):g(2),-g(3):g(3)), stat= ok)
+         IF(ok/=0) then
+            call juDFT_error('wavefproducts_noinv2: error allocation stepfunc')
+         endif
+         DO i = -g(1),g(1)
+           DO j = -g(2),g(2)
+             DO k = -g(3),g(3)
+               hybdat%stepfunc_c(i,j,k) = stepfunction(cell,atoms,(/i,j,k/))
+             END DO
+           END DO
+         END DO
+         call timestop("setup stepfunc")
+      endif
 
       !
       ! convolute phi(n,k) with the step function and store in cpw0
       !
       
       !(1) prepare list of G vectors
+      call timestart("prep list of Gvec")
       pointer = 0
       ic      = 0
       DO ig1 = 1,lapw%nv(jsp)
@@ -2442,8 +2462,11 @@
         END DO
       END DO
       ngpt0 = ic
+      call timestop("prep list of Gvec")
       
       !(2) calculate convolution
+      call timestart("calc convolution")
+      call timestart("step function")
       ALLOCATE ( z0(bandoi:bandof,ngpt0) )
       z0 = 0
       DO ig2 = 1,lapw_nkqpt%nv(jsp)
@@ -2452,13 +2475,15 @@
           g(1)    = gpt0(1,ig) - lapw_nkqpt%k1(ig2,jsp)
           g(2)    = gpt0(2,ig) - lapw_nkqpt%k2(ig2,jsp)
           g(3)    = gpt0(3,ig) - lapw_nkqpt%k3(ig2,jsp)
-          cdum    = stepfunc(g(1),g(2),g(3)) / svol
+          cdum    = hybdat%stepfunc_c(g(1),g(2),g(3)) / svol
           DO n2 = bandoi,bandof
             z0(n2,ig) = z0(n2,ig) + carr1(n2)*cdum
           END DO
         END DO
       END DO
+      call timestop("step function")
       
+      call timestart("hybrid gptm")
       ic   = nbasm_mt
       DO igptm = 1,hybrid%ngptm(iq)
         carr2  = 0
@@ -2486,7 +2511,9 @@
         END DO
         cprod(ic,:,:) = carr2(:,:)
       END DO    
-      DEALLOCATE(z0,stepfunc,pointer,gpt0)     
+      call timestop("hybrid gptm")
+      DEALLOCATE(z0,pointer,gpt0)     
+      call timestop("calc convolution")
      
 
       call timestop("wavefproducts_noinv5 IR")

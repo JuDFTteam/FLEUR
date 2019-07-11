@@ -71,6 +71,7 @@ CONTAINS
     USE m_eig66_io
     USE m_chase_diag
     USE m_writeBasis
+    !$ USE omp_lib
     IMPLICIT NONE
 
     INTEGER, INTENT(IN)             :: mpi_comm
@@ -105,7 +106,7 @@ CONTAINS
     TYPE(t_hub1ham)                 :: hub1
 
     ! local scalars
-    INTEGER :: eig_id,archiveType
+    INTEGER :: eig_id,archiveType, num_threads
     INTEGER :: iter,iterHF,iterHIA
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
@@ -213,6 +214,8 @@ CONTAINS
        IF (noco%l_soc) dimension%neigd2 = dimension%neigd*2
 
        !HF
+       !$ num_threads = omp_get_max_threads()
+       !$ call omp_set_num_threads(1)
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
@@ -230,6 +233,7 @@ CONTAINS
        END IF
 
        CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+       !$ call omp_set_num_threads(num_threads)
 
        !#endif
 
@@ -262,7 +266,7 @@ CONTAINS
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
-          CALL eigen(mpi,stars,sphhar,atoms,obsolete,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+          CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,iterHIA,eig_id,results,inDen,vTemp,vx,gOnsite,hub1)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -419,7 +423,9 @@ CONTAINS
              CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
                              results,eig_id,oneD,sphhar,stars,vacuum)
           END IF
-          CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+          IF (input%gw.EQ.2) THEN
+             CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+          END IF
        END IF
 
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
