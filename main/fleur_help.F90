@@ -125,7 +125,7 @@ CONTAINS
     CALL new_argument(0,"-mix_io","Do not store mixing history in memory but do IO in each iteration","") 
     CALL new_argument(0,"-no_out","Do not open the 'out' file but write to stdout","") 
     CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","") 
-    CALL new_argument(0,"-kpts_gw","add alternative k point set for GW in all outputs for the XML input file","") 
+    CALL new_argument(0,"-gw","Add alternative k point set for GW in all outputs for the XML input file","") 
     CALL new_argument(0,"-noco","write out noco parameters in all outputs for inp.xml","") 
     CALL new_argument(0,"-h","Print this message","")
     CALL new_argument(0,"-no_send","Do not send usage data","")

@@ -355,6 +355,7 @@
 
       nu = 8 
       input%gw = 0
+      IF(juDFT_was_argument("-gw")) input%gw = 1
 
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN

@@ -22,7 +22,7 @@ MODULE m_fleur_arguments
        t_fleur_param(0,"-genEnpara","generate an 'enpara' file",""),&
        t_fleur_param(0,"-electronConfig","explicitely write the electron configuration into inp.xml",""),&
        t_fleur_param(0,"-fast_defaults","generate more aggressive (and less stable) input parameters for faster calculations",""),&
-       t_fleur_param(0,"-kpts_gw","add alternative k point set for GW",""),&
+       t_fleur_param(0,"-gw","Set GW mode 1 and add alternative k point set for GW",""),&
        t_fleur_param(0,"-h","print this help message","")&
        /)
 
