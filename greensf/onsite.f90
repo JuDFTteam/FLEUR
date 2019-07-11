@@ -65,6 +65,12 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
       !Loop through equivalent atoms
       DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
          !Loop through bands
+         !$OMP PARALLEL DEFAULT(none) &
+         !$OMP SHARED(natom,l,nType,ispin,wtkpt,i_gf,nbands) &
+         !$OMP SHARED(atoms,input,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
+         !$OMP PRIVATE(ie,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero)
+         !$OMP DO
+
          DO ib = 1, nbands
 
             !Check wether there is a non-zero weight for the energy window
@@ -80,12 +86,6 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
 
             IF(l_zero) CYCLE 
 
-            !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(j,ib,natom,l,nType,ispin,wtkpt,i_gf) &
-            !$OMP SHARED(atoms,input,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
-            !$OMP PRIVATE(ie,m,mp,lm,lmp,ilo,ilop,weight)
-
-            !$OMP DO
             DO m = -l, l
                lm = l*(l+1)+m
                DO mp = -l,l
@@ -136,9 +136,9 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
                   ENDDO! ie
                ENDDO !mp
             ENDDO !m
-            !$OMP END DO
-            !$OMP END PARALLEL
          ENDDO !ib
+         !$OMP END DO
+         !$OMP END PARALLEL
       ENDDO !natom
    ENDDO !i_gf
 
