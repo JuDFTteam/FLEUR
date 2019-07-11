@@ -64,7 +64,7 @@ MODULE m_gfcalc
       ENDIF
 
       !REPLACE: input%jspins --> MERGE(4,input%jspins,input%l_gfmperp)
-      DO ispin = 1, input%jspins
+      DO ispin = 1, MERGE(4,input%jspins,input%l_gfmperp)
          DO ipm = 1, 2
             !Integrate over the contour:
             DO iz = 1, g%nz
@@ -108,7 +108,7 @@ MODULE m_gfcalc
       COMPLEX,               INTENT(IN)    :: vu(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins) !LDA+U potential (should be removed from h_loc)
 
       !-Local Scalars
-      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,spin_cut
 
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)

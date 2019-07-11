@@ -77,6 +77,9 @@ MODULE m_types_setup
       REAL, ALLOCATABLE          :: ccf(:)
       REAL, ALLOCATABLE          :: ccfmat(:,:,:)   !crystal field splitting matrix
       REAL, ALLOCATABLE          :: bz(:)           !external magnet field
+      REAL, ALLOCATABLE          :: init_occ(:)
+      REAL, ALLOCATABLE          :: init_mom(:)
+      REAL          :: mom          !magnetic moment (for exchange splitting)
       REAL                       :: beta            !inverse Temperature
       INTEGER                    :: n_exc = 2       !number of excitations considered 
 

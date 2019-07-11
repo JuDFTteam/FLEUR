@@ -88,8 +88,8 @@ MODULE m_add_selfen
                      ENDIF
                      CALL add_pot(gmat,vmat,mu-mu_dc,(ipm.EQ.1))
                      CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                     CALL gmat%free()
                   ENDDO
-                  CALL gmat%free()
                ENDDO
                CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
                !Calculate the trace
@@ -128,8 +128,8 @@ MODULE m_add_selfen
                      CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      CALL add_pot(gmat,vmat,mu-mu_dc,(ipm.EQ.1))
                      CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                     CALL gmat%free()
                   ENDDO
-                  CALL gmat%free()
                ENDDO
                CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
                !Calculate the trace

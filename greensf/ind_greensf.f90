@@ -30,21 +30,31 @@ CONTAINS
          i_gf = i_gf + 1
          IF(atoms%gfelem(i_gf)%l.EQ.l.AND.atoms%gfelem(i_gf)%atomType.EQ.nType) THEN
             IF(PRESENT(lp).OR.PRESENT(nTypep)) THEN
+               !Check second l-argument
                IF(PRESENT(lp)) THEN
                   IF(atoms%gfelem(i_gf)%lp.EQ.lp) THEN
                      search = .FALSE.
                   ELSE
                      search = .TRUE.
                   ENDIF
-               ENDIF 
+               ELSE IF(atoms%gfelem(i_gf)%lp.EQ.l) THEN
+                  search = .FALSE.
+               ELSE
+                  search = .TRUE.
+               ENDIF
+               !check second type argument
                IF(PRESENT(nTypep)) THEN
                   IF(atoms%gfelem(i_gf)%atomTypep.EQ.nTypep) THEN
                      search = .FALSE.
                   ELSE
                      search = .TRUE.
                   ENDIF
+               ELSE IF(atoms%gfelem(i_gf)%atomTypep.EQ.nType) THEN
+                  search = .FALSE.
+               ELSE
+                  search = .TRUE.
                ENDIF
-            ELSE 
+            ELSE IF(atoms%gfelem(i_gf)%lp.EQ.l.AND.atoms%gfelem(i_gf)%atomTypep.EQ.nType) THEN
                search = .FALSE.
             ENDIF
          ENDIF

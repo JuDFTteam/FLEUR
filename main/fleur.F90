@@ -64,7 +64,7 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
-    USE m_calc_tetra
+    !USE m_calc_tetra
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif

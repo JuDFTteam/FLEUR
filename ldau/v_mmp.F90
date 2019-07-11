@@ -146,7 +146,6 @@ CONTAINS
        !
        DO ispin = 1,jspins
           v_diag(ispin) = - u_htr * ( rho_tot - 0.5*eta(0) ) + j_htr * ( rho_sig(ispin) - 0.5*eta(ispin) )
-          WRITE(*,*) v_diag(ispin)
           DO m = -l,l
              DO mp = -l,l
                 vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) * spin_deg

@@ -65,7 +65,7 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)    :: inden,vx
       TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
       TYPE(t_greensf),INTENT(INOUT):: gOnsite
-      TYPE(t_hub1ham),INTENT(IN)   :: hub1
+      TYPE(t_hub1ham),INTENT(INOUT)   :: hub1
 
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'

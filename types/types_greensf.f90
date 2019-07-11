@@ -80,7 +80,7 @@ MODULE m_types_greensf
          LOGICAL l_new
 
 
-         IF(noco%l_mperp) CALL juDFT_error("NOCO + gf not implemented",calledby="greensf_init")
+         !IF(noco%l_mperp) CALL juDFT_error("NOCO + gf not implemented",calledby="greensf_init")
 
          !
          !Set up general parameters for the Green's function
@@ -123,10 +123,10 @@ MODULE m_types_greensf
                ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
                thisGREENSF%gmmpMat = 0.0
             ELSE
-               ALLOCATE (thisGREENSF%uu(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins,2))
-               ALLOCATE (thisGREENSF%dd(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins,2))
-               ALLOCATE (thisGREENSF%du(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins,2))
-               ALLOCATE (thisGREENSF%ud(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins,2))
+               ALLOCATE (thisGREENSF%uu(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
+               ALLOCATE (thisGREENSF%dd(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
+               ALLOCATE (thisGREENSF%du(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
+               ALLOCATE (thisGREENSF%ud(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
                thisGREENSF%uu = 0.0
                thisGREENSF%dd = 0.0
                thisGREENSF%du = 0.0
@@ -264,7 +264,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE e_contour
 
-      SUBROUTINE get_gf(this,gmat,atoms,input,iz,l,nType,l_conjg,spin,lp,nTypep,jr,jrp)
+      SUBROUTINE get_gf(this,gmat,atoms,input,iz,l,nType,l_conjg,spin,lp,nTypep,u,udot)
 
          USE m_types_mat
          USE m_types_setup
@@ -288,16 +288,25 @@ MODULE m_types_greensf
          INTEGER, OPTIONAL,   INTENT(IN)  :: spin
          INTEGER, OPTIONAL,   INTENT(IN)  :: nTypep
          INTEGER, OPTIONAL,   INTENT(IN)  :: lp 
-         INTEGER, OPTIONAL,   INTENT(IN)  :: jr
-         INTEGER, OPTIONAL,   INTENT(IN)  :: jrp
+         REAL   , OPTIONAL,   INTENT(IN)  :: u(2,input%jspins)       !Radial functions at the point where you want to evaluate the greens function 
+         REAL   , OPTIONAL,   INTENT(IN)  :: udot(2,input%jspins)
 
          INTEGER matsize1,matsize2,i_gf,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end
          INTEGER lp_loop
+         LOGICAL l_radial
 
-         IF(PRESENT(jr).OR.PRESENT(jrp).AND.input%l_gfsphavg) THEN
+         IF(PRESENT(u).OR.PRESENT(udot).AND.input%l_gfsphavg) THEN
             CALL juDFT_error("Greens function not calculated for radial dependence", calledby="get_gf")
          ENDIF
+
+         IF((PRESENT(u).AND..NOT.PRESENT(udot)).OR.&
+            (PRESENT(udot).AND..NOT.PRESENT(u))) THEN
+            CALL juDFT_error("Not a valid input: Either provide both u and udot or neither of them", calledby="get_gf")
+         ENDIF
+
+         l_radial = PRESENT(u).AND.PRESENT(udot)
+
          IF(PRESENT(spin)) THEN
             IF(spin.GT.4.OR.spin.LT.1) THEN
                CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
@@ -323,17 +332,19 @@ MODULE m_types_greensf
          i_gf = ind_greensf(atoms,l,nType,lp,nTypep)
          ipm = MERGE(2,1,l_conjg)
 
+         gmat%data_c = 0.0
          ispin_end = MERGE(4,input%jspins,input%l_gfmperp)
 
          DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
             !Find the right quadrant in gmat according to the spin index
+            spin1 = MERGE(ispin,1,ispin.NE.3)
+            spin1 = MERGE(spin1,2,ispin.NE.4)
+            spin2 = MERGE(ispin,2,ispin.NE.3)
+            spin2 = MERGE(spin2,1,ispin.NE.4)
+            
             IF(.NOT.PRESENT(spin)) THEN
-               spin1 = MERGE(ispin,1,ispin.NE.3)
-               spin1 = MERGE(spin1,2,ispin.NE.4)
-               spin2 = MERGE(ispin,2,ispin.NE.3)
-               spin2 = MERGE(spin2,1,ispin.NE.4)
                ind1_start = (spin1-1)*(2*l+1) 
-               ind2_start = (spin2-1)*(2*lp+1) 
+               ind2_start = (spin2-1)*(2*lp_loop+1) 
             ELSE 
                ind1_start = 0
                ind2_start = 0
@@ -344,7 +355,14 @@ MODULE m_types_greensf
                ind2 = ind2_start
                DO mp = -lp_loop,lp_loop
                   ind2 = ind2 + 1
-                  gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
+                  IF(l_radial) THEN
+                     gmat%data_c(ind1,ind2) = this%uu(iz,i_gf,m,mp,ispin,ipm) * u(1,spin1)*u(2,spin2) + &
+                                              this%dd(iz,i_gf,m,mp,ispin,ipm) * udot(1,spin1)*udot(2,spin2) + &
+                                              this%du(iz,i_gf,m,mp,ispin,ipm) * udot(1,spin1)*u(2,spin2) + &
+                                              this%ud(iz,i_gf,m,mp,ispin,ipm) * u(1,spin1)*udot(2,spin2) 
+                  ELSE        
+                     gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
+                  ENDIF
                ENDDO
             ENDDO
          ENDDO
@@ -409,7 +427,7 @@ MODULE m_types_greensf
          i_gf = ind_greensf(atoms,l,nType,lp,nTypep)
          ipm = MERGE(2,1,l_conjg)
 
-         ispin_end = MERGE(input%jspins,4,input%l_gfmperp)
+         ispin_end = MERGE(4,input%jspins,input%l_gfmperp)
 
          DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
             !Find the right quadrant in gmat according to the spin index
@@ -419,7 +437,7 @@ MODULE m_types_greensf
                spin2 = MERGE(ispin,2,ispin.NE.3)
                spin2 = MERGE(spin2,1,ispin.NE.4)
                ind1_start = (spin1-1)*(2*l+1) 
-               ind2_start = (spin2-1)*(2*lp+1) 
+               ind2_start = (spin2-1)*(2*lp_loop+1) 
             ELSE 
                ind1_start = 0
                ind2_start = 0
@@ -430,6 +448,7 @@ MODULE m_types_greensf
                ind1 = ind1 + 1 
                ind2 = ind2_start
                DO mp = -lp_loop,lp_loop
+                  ind2 = ind2 + 1
                   this%gmmpMat(iz,i_gf,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2) 
                ENDDO
             ENDDO

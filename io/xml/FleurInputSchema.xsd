@@ -485,6 +485,8 @@
       <xsd:attribute name="soc" type="xsd:string" use="required"/>
       <xsd:attribute name="exc" type="xsd:string" use="required"/>
       <xsd:attribute name="ccf" type="xsd:string" use="required"/>
+      <xsd:attribute name="init_occ" type="xsd:string" use="required"/>
+      <xsd:attribute name="init_mom" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="OnsiteGFType">

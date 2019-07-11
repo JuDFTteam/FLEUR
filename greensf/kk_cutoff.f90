@@ -64,8 +64,8 @@ MODULE m_kk_cutoff
       spins_cut = MERGE(1,jspins,noco%l_soc.OR.noco%l_noco)
       n_states = (2*l+1) * MERGE(2.0,2.0/jspins,noco%l_soc.OR.noco%l_noco)
 
-      spins_cut=jspins
-      n_states = (2*l+1) * 2.0/jspins
+      !spins_cut=jspins
+      !n_states = (2*l+1) * 2.0/jspins
 
       cutoff(:,1) = 1   !we don't modify the lower bound
       cutoff(:,2) = ne

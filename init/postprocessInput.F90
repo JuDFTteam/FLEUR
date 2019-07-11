@@ -202,6 +202,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      !Maybe add check for dense enough grid
      IF(ANY(atoms%gfelem(:atoms%n_gf)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",calledby="postprocessInput")
      IF(ANY(atoms%gfelem(:atoms%n_gf)%l.GT.3)) CALL juDFT_warn("Green's function only implemented for l<3",calledby="postprocessInput")
+     IF(input%l_gfmperp.AND..NOT.(noco%l_noco)) CALL juDFT_error("Off-diagonal elements only in noco calculations",calledby="postprocessInput")
 
      DO i = 1, atoms%n_j0
         IF(atoms%j0(i)%l_min.GT.atoms%j0(i)%l_max) CALL juDFT_error("Not a valid configuration for J0-calculation l_min>l_max", &

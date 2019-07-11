@@ -68,7 +68,7 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit,"gfact",hub1%xi(i_hia))
 
       CALL comment(input_iounit,"External field",1)
-      CALL writeValue(input_iounit,"Bz",hub1%bz(i_hia))
+      CALL writeValue(input_iounit,"Bz",hub1%bz(i_hia)*hub1%mom)
 
       CALL comment(input_iounit,"Inverse temperature",1)
       CALL writeValue(input_iounit,"beta",hub1%beta)
@@ -76,9 +76,10 @@ MODULE m_hubbard1_io
       CALL comment(input_iounit,"Chemical potential",1)
       CALL writeValue(input_iounit,"mu",mu)
 
-      CALL comment(input_iounit,"Crystal field factor",1)
-      CALL writeValue(input_iounit,"ccf",hub1%ccf(i_hia))
-
+      IF(hub1%ccf(i_hia).NE.0.0) THEN
+         CALL comment(input_iounit,"Crystal field factor",1)
+         CALL writeValue(input_iounit,"ccf",hub1%ccf(i_hia))
+      ENDIF
 
       CALL header(input_iounit,"Parameters for the Solver",1)
 

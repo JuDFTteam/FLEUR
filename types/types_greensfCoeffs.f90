@@ -27,8 +27,6 @@ MODULE m_types_greensfCoeffs
 
       TYPE t_greensfCoeffs
 
-         LOGICAL  :: l_onsite !Are the arrays for onsite calculations allocated
-         LOGICAL  :: l_intersite !Are the arrays for intersite calculations allocated#
          LOGICAL  :: l_calc   !Should the greens function be calculated in this iteration
 
          !Energy grid for Imaginary part
@@ -50,12 +48,6 @@ MODULE m_types_greensfCoeffs
          REAL, ALLOCATABLE :: du(:,:,:,:,:)
          REAL, ALLOCATABLE :: ud(:,:,:,:,:)
 
-         !These are the arrays for the interstitial case (additional site index and l != l')
-         REAL, ALLOCATABLE :: uu_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: dd_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: du_int(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: ud_int(:,:,:,:,:,:)
-
          CONTAINS
             PROCEDURE, PASS :: init => greensfCoeffs_init
       END TYPE t_greensfCoeffs
@@ -68,8 +60,6 @@ MODULE m_types_greensfCoeffs
 
          USE m_juDFT
          USE m_types_setup
-         USE m_types_kpts
-         USE m_constants, only : lmaxU_const
 
          CLASS(t_greensfCoeffs), INTENT(INOUT)  :: thisGREENSFCOEFFS
          TYPE(t_atoms),          INTENT(IN)     :: atoms
@@ -102,13 +92,13 @@ MODULE m_types_greensfCoeffs
 
          IF(atoms%n_gf.GT.0) THEN
             ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2))
-            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
+            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
             thisGREENSFCOEFFS%projdos     = 0.0
             IF(.NOT.input%l_gfsphavg) THEN
-               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
                
                thisGREENSFCOEFFS%uu      = 0.0
                thisGREENSFCOEFFS%dd      = 0.0

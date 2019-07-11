@@ -37,14 +37,13 @@ MODULE m_onsite21
       REAL,                      INTENT(IN)     :: wtkpt
       REAL,                      INTENT(IN)     :: tetweights(greensfCoeffs%ne,nbands)
       INTEGER,                   INTENT(IN)     :: ind(nbands,2)
-      REAL,                      INTENT(IN)     :: eig(nbands) !Spin-quantum number isn't a good quantum number in noco/soc case
+      REAL,                      INTENT(IN)     :: eig(nbands) 
 
-      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp
+      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,ispin,spin1,spin2
       REAL     weight
       LOGICAL  l_zero
 
-      IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of&
-                                                   onsite-GF not implemented",calledby="onsite21")
+      IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
       DO i_gf = 1, atoms%n_gf
          nType = atoms%gfelem(i_gf)%atomType
@@ -70,16 +69,24 @@ MODULE m_onsite21
                DO ie = MERGE(ind(ib,1),j,input%tria), MERGE(ind(ib,2),j,input%tria)
 
                   weight = 1.0/atoms%neq(nType) * MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,input%tria)
-
-                  DO m = -l, l 
-                     lm = l*(l+1) + m 
-                     DO mp = -l, l 
-                        lmp = l*(l+1) + mp 
-                        greensfCoeffs%projdos(ie,i_gf,m,mp,3) = greensfCoeffs%projdos(ie,i_gf,m,mp,3) - pi_const * weight * &
-                                                                  ( eigVecCoeffs%acof(ib,lm,natom,1) * CONJG(eigVecCoeffs%acof(ib,lmp,natom,input%jspins)) * denCoeffsOffdiag%uu21n(l,nType)&
-                                                                  + eigVecCoeffs%bcof(ib,lm,natom,1) * CONJG(eigVecCoeffs%bcof(ib,lmp,natom,input%jspins)) * denCoeffsOffdiag%dd21n(l,nType)&
-                                                                  + eigVecCoeffs%acof(ib,lm,natom,1) * CONJG(eigVecCoeffs%bcof(ib,lmp,natom,input%jspins)) * denCoeffsOffdiag%du21n(l,nType)&
-                                                                  + eigVecCoeffs%bcof(ib,lm,natom,1) * CONJG(eigVecCoeffs%acof(ib,lmp,natom,input%jspins)) * denCoeffsOffdiag%ud21n(l,nType))                     
+                  DO ispin = 3, 4
+                     IF(ispin.EQ.3) THEN
+                        spin1 = 2
+                        spin2 = 1
+                     ELSE
+                        spin1 = 1
+                        spin2 = 2
+                     ENDIF
+                     DO m = -l, l 
+                        lm = l*(l+1) + m 
+                        DO mp = -l, l 
+                           lmp = l*(l+1) + mp 
+                           greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) - pi_const * weight * &
+                                                                     AIMAG( eigVecCoeffs%acof(ib,lm,natom,spin1) * CONJG(eigVecCoeffs%acof(ib,lmp,natom,spin2)) * denCoeffsOffdiag%uu21n(l,nType)&
+                                                                     + eigVecCoeffs%bcof(ib,lm,natom,spin1) * CONJG(eigVecCoeffs%bcof(ib,lmp,natom,spin2)) * denCoeffsOffdiag%dd21n(l,nType)&
+                                                                     + eigVecCoeffs%acof(ib,lm,natom,spin1) * CONJG(eigVecCoeffs%bcof(ib,lmp,natom,spin2)) * denCoeffsOffdiag%du21n(l,nType)&
+                                                                     + eigVecCoeffs%bcof(ib,lm,natom,spin1) * CONJG(eigVecCoeffs%acof(ib,lmp,natom,spin2)) * denCoeffsOffdiag%ud21n(l,nType))                 
+                        ENDDO
                      ENDDO
                   ENDDO
                ENDDO !ie

@@ -144,7 +144,7 @@ SUBROUTINE onsite_coeffs(atoms,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus
 
 END SUBROUTINE onsite_coeffs
 
-SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
+SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,g,sym)
 
    USE m_kkintgr
    USE m_gfcalc
@@ -155,71 +155,80 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,gOnsite,sym)
    !-Type Arguments
    TYPE(t_atoms),          INTENT(IN)     :: atoms
    TYPE(t_greensfCoeffs),  INTENT(INOUT)  :: greensfCoeffs     !This is INTENT(INOUT) because the projected dos is useful for other things 
-   TYPE(t_greensf),        INTENT(INOUT)  :: gOnsite
+   TYPE(t_greensf),        INTENT(INOUT)  :: g
    TYPE(t_sym),            INTENT(IN)     :: sym
    TYPE(t_noco),           INTENT(IN)     :: noco
    REAL,                   INTENT(IN)     :: ef
    TYPE(t_input),          INTENT(IN)     :: input
 
    !-Local Scalars
-   INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm,kkcut
-   REAL    fac, n_occ
-
-   COMPLEX mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,input%jspins)
+   INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm,kkcut,lp,nTypep,spin_cut
+   REAL    fac
 
    DO i_gf = 1, atoms%n_gf
       l =     atoms%gfelem(i_gf)%l
+      lp =     atoms%gfelem(i_gf)%lp
       nType = atoms%gfelem(i_gf)%atomType
+      nTypep = atoms%gfelem(i_gf)%atomTypep
       !
       !Enforcing that the projected density of states follows the local symmetries
       !
-      DO ie = 1, greensfCoeffs%ne
-         DO jspin = 1, input%jspins
-            CALL local_sym(greensfCoeffs%projdos(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
-            IF(.NOT.input%l_gfsphavg) THEN
-               CALL local_sym(greensfCoeffs%uu(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
-               CALL local_sym(greensfCoeffs%dd(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
-               CALL local_sym(greensfCoeffs%du(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
-               CALL local_sym(greensfCoeffs%ud(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
-            ENDIF
-         ENDDO
-      ENDDO     
-      !
-      !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
-      !
-      CALL kk_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,:),atoms,noco,&
-                     l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,&
-                     greensfCoeffs%kkintgr_cutoff(i_gf,:,:))
+      IF(nType.EQ.nTypep.AND.l.EQ.lp) THEN
+         DO ie = 1, greensfCoeffs%ne
+            !MERGE(4,input%jspins,input%l_gfmperp)
+            DO jspin = 1, input%jspins
+               CALL local_sym(greensfCoeffs%projdos(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
+               IF(.NOT.input%l_gfsphavg) THEN
+                  CALL local_sym(greensfCoeffs%uu(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
+                  CALL local_sym(greensfCoeffs%dd(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
+                  CALL local_sym(greensfCoeffs%du(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
+                  CALL local_sym(greensfCoeffs%ud(ie,i_gf,-l:l,-l:l,jspin),l,nType,sym,atoms)
+               ENDIF
+            ENDDO
+         ENDDO     
+         !
+         !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
+         !
+         CALL kk_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,:),atoms,noco,&
+                        l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,&
+                        greensfCoeffs%kkintgr_cutoff(i_gf,:,:))
+      ELSE 
+         !For all other elements we just use ef+elup as a hard cutoff
+         greensfCoeffs%kkintgr_cutoff(i_gf,:,1) = 1
+         greensfCoeffs%kkintgr_cutoff(i_gf,:,2) = greensfCoeffs%ne
+      ENDIF
       !
       !Perform the Kramers-Kronig-Integration
       !
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
-      DO jspin = 1, input%jspins
-         kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2)
+      DO jspin = 1, MERGE(4,input%jspins,input%l_gfmperp)
+         spin_cut = MERGE(1,jspin,jspin.GT.2)
+         kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,spin_cut,2)
          DO m= -l,l
-            DO mp= -l,l
+            DO mp= -lp,lp
                DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
-                  IF(input%l_gfsphavg) THEN
-                     CALL kkintgr(greensfCoeffs%projdos(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 gOnsite%gmmpMat(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
-                  ELSE
-                  ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
-                  ! We can do this because the radial functions are independent of E
+                  CALL kkintgr(greensfCoeffs%projdos(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                              g%gmmpMat(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
+                  IF(.NOT.input%l_gfsphavg) THEN
+                     ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
+                     ! We can do this because the radial functions are independent of E
                      CALL kkintgr(greensfCoeffs%uu(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 gOnsite%uu(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
+                                 g%uu(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                      CALL kkintgr(greensfCoeffs%dd(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 gOnsite%dd(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
+                                 g%dd(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                      CALL kkintgr(greensfCoeffs%du(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 gOnsite%du(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
+                                 g%du(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                      CALL kkintgr(greensfCoeffs%ud(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 gOnsite%ud(:,i_gf,m,mp,jspin,ipm),gOnsite%e,(ipm.EQ.2),gOnsite%mode,gOnsite%nz,int_method(gOnsite%mode))
+                                 g%ud(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   ENDIF
                ENDDO
             ENDDO
          ENDDO
       ENDDO
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
-      !TODO: Add checks for the Green's function
+      !IF(input%l_gfmperp) THEN
+      !   CALL rot_gf_mat(g,noco)
+      !ENDIF
    ENDDO
 
 END SUBROUTINE calc_onsite
@@ -268,5 +277,23 @@ SUBROUTINE local_sym(mat,l,nType,sym,atoms)
    ENDDO
 
 END SUBROUTINE local_sym
+
+!SUBROUTINE rot_gf_mat(g,noco,i_gf,nType)
+!
+!   USE m_rotdenmat
+!
+!   IMPLICIT NONE 
+!
+!   TYPE(t_greensf),     INTENT(INOUT)  :: g 
+!   TYPE(t_noco),        INTENT(IN)     :: noco
+!   INTEGER,             INTENT(IN)     :: i_gf  
+!   INTEGER,             INTENT(IN)     :: nType
+!
+!   CALL rot_den_mat(noco%alph(nType),noco%beta(nType),&
+!        g%gmmpMat(iz,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1,ipm),&
+!        g%gmmpMat(iz,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,2,ipm),&
+!        g%gmmpMat(iz,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3,ipm))
+!
+!END SUBROUTINE
 
 END MODULE m_onsite

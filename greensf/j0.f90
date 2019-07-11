@@ -142,6 +142,8 @@ MODULE m_j0
                   integrand = integrand + (-1)**(ipm-1) * (calcup%data_c(i,i)-calcdwn%data_c(i,i)+calc%data_c(i,i)) &
                                                       * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)                        
                ENDDO
+               CALL calcup%free()
+               CALL calcdwn%free()
             ENDDO
 
             IF(ABS(REAL(integrand)) > 1e-5) THEN
@@ -154,9 +156,7 @@ MODULE m_j0
                                    AIMAG(sumup),AIMAG(sumdwn),AIMAG(sumupdwn)
             ENDIF
 
-            
-            CALL calcup%free()
-            CALL calcdwn%free()
+         
             CALL calc%free()
          
          ENDDO

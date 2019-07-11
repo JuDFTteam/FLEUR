@@ -127,7 +127,7 @@ CONTAINS
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
       LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
-      REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4),hub1_ccf(4), hub1_u(4), hub1_j(4), hub1_xi(4), hub1_bz(4), tempReal
+      REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4),hub1_ccf(4), hub1_u(4), hub1_j(4), hub1_xi(4), hub1_occ(4),hub1_mom(4),hub1_bz(4), tempReal
       REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
       LOGICAL            :: l_amf(4), hub1_amf(4),l_found, j0_avgexc
@@ -273,6 +273,8 @@ CONTAINS
       ALLOCATE(hub1%ccf(4*atoms%ntype))
       ALLOCATE(hub1%ccfmat(4*atoms%ntype,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
       ALLOCATE(hub1%bz(4*atoms%ntype))
+      ALLOCATE(hub1%init_occ(4*atoms%ntype))
+      ALLOCATE(hub1%init_mom(4*atoms%ntype))
 
       ! Read in constants
 
@@ -1450,6 +1452,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          hub1_xi = 0.0
          hub1_bz = 0.0
          hub1_ccf = 0.0
+         hub1_occ = 0.0
+         hub1_mom = 0.0
          DO i = 1, numHIA
             WRITE(xPathB,*) i
             hub1_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l'))
@@ -1461,6 +1465,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             IF(hub1_xi(i).EQ.0.0) hub1_xi(i) = 0.001 
             hub1_bz(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@exc'))
             hub1_ccf(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@ccf'))
+            hub1_occ(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@init_occ'))
+            hub1_mom(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@init_mom'))
          ENDDO
          
          !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
@@ -1546,6 +1552,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%n_gf  = atoms%n_gf + 1
                   atoms%gfelem(atoms%n_gf)%l        = hub1_l(i)
                   atoms%gfelem(atoms%n_gf)%atomType = iType
+                  atoms%gfelem(atoms%n_gf)%lp        = hub1_l(i)
+                  atoms%gfelem(atoms%n_gf)%atomTypep = iType
                   atoms%lda_hia(atoms%n_hia)%l        = hub1_l(i)
                   atoms%lda_hia(atoms%n_hia)%u        = hub1_u(i)
                   atoms%lda_hia(atoms%n_hia)%j        = hub1_j(i)
@@ -1554,6 +1562,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   hub1%xi(atoms%n_hia) = hub1_xi(i)
                   hub1%bz(atoms%n_hia) = hub1_bz(i)
                   hub1%ccf(atoms%n_hia) = hub1_ccf(i)
+                  hub1%init_occ(atoms%n_hia) = hub1_occ(i)
+                  hub1%init_mom(atoms%n_hia) = hub1_mom(i)
                ENDDO
                DO i = 1, numOnsite
                   !Is the green's function already being calculated
@@ -1568,6 +1578,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%n_gf = atoms%n_gf + 1
                   atoms%gfelem(atoms%n_gf)%l = onsiteGF_l(i)
                   atoms%gfelem(atoms%n_gf)%atomType = iType
+                  atoms%gfelem(atoms%n_gf)%lp = onsiteGF_l(i)
+                  atoms%gfelem(atoms%n_gf)%atomTypep = iType
                ENDDO
                IF(numJ0.EQ.1) THEN
                   atoms%n_j0 = atoms%n_j0 + 1
@@ -1588,6 +1600,8 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      atoms%n_gf = atoms%n_gf + 1
                      atoms%gfelem(atoms%n_gf)%l = l
                      atoms%gfelem(atoms%n_gf)%atomType = iType
+                     atoms%gfelem(atoms%n_gf)%lp = l
+                     atoms%gfelem(atoms%n_gf)%atomTypep = iType
                   ENDDO
                ENDIF
                atomTypeSpecies(iType) = iSpecies

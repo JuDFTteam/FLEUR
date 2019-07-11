@@ -343,7 +343,7 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,DIMENSION,atoms,noco,jspin,n
    IF(ALLOCATED(thisEigVecCoeffs%bcof)) DEALLOCATE(thisEigVecCoeffs%bcof)
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
 
-   IF (noco%l_mperp) THEN
+   IF (noco%l_mperp.OR.input%l_gfmperp) THEN
       ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))

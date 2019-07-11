@@ -11,7 +11,7 @@ MODULE m_cdnmt
   !***********************************************************************
 CONTAINS
   SUBROUTINE cdnmt(mpi,jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
-                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -26,6 +26,7 @@ CONTAINS
     TYPE(t_atoms),   INTENT(IN)    :: atoms
     TYPE(t_enpara),  INTENT(IN)    :: enpara
     TYPE(t_moments), INTENT(INOUT) :: moments
+    TYPE(t_hub1ham), OPTIONAL, INTENT(INOUT) :: hub1
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
@@ -39,7 +40,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu
-    INTEGER ilo,ilop,i
+    INTEGER ilo,ilop,i,i_hia
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
     LOGICAL l_hia
@@ -65,10 +66,10 @@ CONTAINS
     ENDIF
 
     !$OMP PARALLEL DEFAULT(none) &
-    !$OMP SHARED(usdus,rho,moments,qmtl) &
+    !$OMP SHARED(usdus,rho,moments,qmtl,hub1) &
     !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
     !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
-    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs,l_hia,vrav)
+    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs,l_hia,vrav,i_hia)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
     ELSE
@@ -137,6 +138,12 @@ CONTAINS
                   &              *usdus%ddn(l,itype,ispin) )/atoms%neq(itype) + qmtllo(l)
              qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
+          IF(PRESENT(hub1)) THEN
+            DO i_hia = 1, atoms%n_hia 
+               IF(atoms%lda_hia(i_hia)%atomType.NE.itype) CYCLE
+               hub1%mom = qmtl(2,1,itype) - qmtl(2,2,itype)
+            ENDDO
+          ENDIF
           moments%chmom(itype,ispin) = qmtt
 
           !+soc

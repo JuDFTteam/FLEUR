@@ -29,7 +29,7 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT) :: vTot
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
-    TYPE(t_hub1ham),INTENT(IN)   :: hub1
+    TYPE(t_hub1ham),INTENT(INOUT)   :: hub1
     INTEGER,INTENT(INOUT)        :: iterHIA
 
     INTEGER:: jsp

@@ -26,7 +26,7 @@ MODULE m_hubbard1_setup
 
       INTEGER,          INTENT(INOUT)  :: iterHIA !number of iteration 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
-      TYPE(t_hub1ham),  INTENT(IN)     :: hub1
+      TYPE(t_hub1ham),  INTENT(INOUT)     :: hub1
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_mpi),      INTENT(IN)     :: mpi
       TYPE(t_noco),     INTENT(IN)     :: noco
@@ -42,7 +42,7 @@ MODULE m_hubbard1_setup
 
       INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j
       INTEGER io_error,ierr
-      REAL    mu_dc,e_lda_hia
+      REAL    mu_dc,e_lda_hia,exc
 
       CHARACTER(len=300) :: cwd,path,folder,message
       CHARACTER(len=8)   :: l_type*2,l_form*9
@@ -87,7 +87,6 @@ MODULE m_hubbard1_setup
          u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),e_lda_hia)
 
          IF(hub1%l_runthisiter.AND.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) THEN 
-            !IF(gdft%mode.EQ.2) CALL juDFT_error("This energy contour is not supported at the moment for DFT+Hubbard1",calledby="hubbard1_setup")
             !The onsite green's function was calculated but the solver 
             !was not yet run
             !--> write out the configuration for the hubbard 1 solver 
@@ -112,12 +111,19 @@ MODULE m_hubbard1_setup
             
                !calculate the occupation of the correlated shell
                CALL occmtx(gdft,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
+               WRITE(*,"(14f14.8)") mmpMat(-3:3,-3:3,i_hia,1)
+               WRITE(*,"(14f14.8)") mmpMat(-3:3,-3:3,i_hia,2)
                n_l(i_hia,:) = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
                      n_l(i_hia,ispin) = n_l(i_hia,ispin) + mmpMat(m,m,i_hia,ispin)
                   ENDDO
                ENDDO
+               IF(iterHIA.EQ.1) THEN
+                  n_l(i_hia,1) = hub1%init_occ(i_hia)/2.0
+                  n_l(i_hia,2) = hub1%init_occ(i_hia)/2.0
+                  hub1%mom = hub1%init_mom(i_hia)
+               ENDIF
                WRITE(6,*)
                WRITE(6,9010) nType
                WRITE(6,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
@@ -139,7 +145,6 @@ MODULE m_hubbard1_setup
                      CALL write_hubbard1_input(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),&
                                                hub1,mu_dc,n_occ,gdft%nz-gdft%nmatsub,gdft%nmatsub,REAL(gdft%e(1)),REAL(gdft%e(gdft%nz-gdft%nmatsub)),AIMAG(gdft%e(1)))
                      
-                     !WRITE(*,"(7f14.8)") hub1%ccfmat(i_hia,:,:)
                      IF(hub1%ccf(i_hia).NE.0.0) THEN
                         CALL write_ccfmat(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",hub1%ccfmat(i_hia,-l:l,-l:l),l)
                      ENDIF

@@ -41,6 +41,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_onsite
    USE m_hubbard1_io
    USE m_denmat_dist
+   USE m_triang
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -99,12 +100,20 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    INTEGER               :: i_gf,m,l
    REAL                  :: n_occ
-   COMPLEX               :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,input%jspins)
+   COMPLEX               :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,4)
 
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error, perform_MetaGGA
+   
+   LOGICAL l_tria
+   INTEGER ntria
+   REAL    as
+   INTEGER itria(3,2*kpts%nkpt)
+   REAL    atr(2*kpts%nkpt)
+
+
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
@@ -114,11 +123,23 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
    
 
-   IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
+   IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) THEN
       !Only calculate the greens function when needed
-      CALL greensfCoeffs%init(input,3,atoms,noco,results%ef)
-      CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
+      CALL greensfCoeffs%init(input,lmaxU_const,atoms,noco,results%ef)
+      IF(input%tria.AND.input%film) THEN
+         l_tria = .true.
+         CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
+         IF (sym%invs) THEN
+           IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
+         ELSE
+           IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
+         ENDIF
+         write(*,*) as,sym%nop2,l_tria
+         IF(.NOT.l_tria) CALL juDFT_warn("l_tria=F",calledby="cdngen")
+      ENDIF
+      IF(mpi%irank==0) CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
    ENDIF
+
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
@@ -131,11 +152,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !called once and both spin directions are calculated in a single run.
    results%force=0.0
    jspmax = input%jspins
-   IF (noco%l_mperp) jspmax = 1
+   IF (noco%l_mperp.OR.input%l_gfmperp) jspmax = 1
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs)
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,&
+                  ntria,as,itria,atr)
    END DO
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
@@ -143,12 +165,21 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          !Perform the Kramer-Kronigs-Integration
          CALL calc_onsite(atoms,input,noco,results%ef,greensfCoeffs,gOnsite,sym)
          !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
-         IF(atoms%n_hia.GT.0.AND.ANY(hub1%ccf(:).NE.0.0)) THEN
+         !IF(atoms%n_hia.GT.0.AND.ANY(hub1%ccf(:).NE.0.0)) THEN
             CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:))
-         ENDIF
+         !ENDIF
          IF(input%jspins.EQ.2) THEN
             CALL eff_excinteraction(gOnsite,atoms,input,greensfCoeffs)
          ENDIF
+         !CALL occmtx(gOnsite,3,1,atoms,sym,input,mmpmat(:,:,1,:))
+         !WRITE(*,*) "spin-up"
+         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,1)
+         !WRITE(*,*) "spin-dwn"
+         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,2)
+         !WRITE(*,*) "21"
+         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,3)
+         !WRITE(*,*) "12"
+         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,4)
       ENDIF
    ENDIF
 
