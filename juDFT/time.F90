@@ -345,7 +345,8 @@ CONTAINS
 
    ! writes all times to file
    SUBROUTINE writetimes(stdout)
-      USE m_judft_usage
+     USE m_judft_usage
+     USE m_judft_args
       IMPLICIT NONE
       LOGICAL, INTENT(IN), OPTIONAL::stdout
       INTEGER :: irank = 0
