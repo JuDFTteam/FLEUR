@@ -127,10 +127,12 @@ MODULE m_gfcalc
          !
          norm = 0.0
          DO jspin = 1, input%jspins
+            spin_cut = MERGE(1,jspin,jspin.GT.2)
+            kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,spin_cut,2)
             DO m = -l, l
                DO mp = -l, l
                   integrand = 0.0
-                  DO ie = greensfCoeffs%kkintgr_cutoff(i_gf,jspin,1), greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2)
+                  DO ie = 1, kkcut
                      integrand(ie) = ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) * greensfCoeffs%projdos(ie,i_gf,m,mp,jspin)
                   ENDDO
                   h_loc(m,mp,i_hia,jspin) = trapz(integrand,greensfCoeffs%del,greensfCoeffs%ne)

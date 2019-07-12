@@ -61,8 +61,8 @@ MODULE m_kk_cutoff
          ENDDO
       ENDIF
 
-      spins_cut = MERGE(1,jspins,noco%l_soc.OR.noco%l_noco)
-      n_states = (2*l+1) * MERGE(2.0,2.0/jspins,noco%l_soc.OR.noco%l_noco)
+      spins_cut = MERGE(1,jspins,noco%l_noco)
+      n_states = (2*l+1) * MERGE(2.0,2.0/jspins,noco%l_noco)
 
       !spins_cut=jspins
       !n_states = (2*l+1) * 2.0/jspins
@@ -83,7 +83,7 @@ MODULE m_kk_cutoff
                im(:,-l:l,-l:l,ispin) = scale * im(:,-l:l,-l:l,ispin)
             ELSE IF(integral.LT.n_states-0.1) THEN
             ! If the integral is to small we stop here to avoid problems
-               CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
+               !CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
             ENDIF
          ELSE IF((integral.GT.n_states).AND.((integral-n_states).GT.0.001)) THEN
             !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method   
