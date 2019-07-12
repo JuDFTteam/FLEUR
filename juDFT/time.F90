@@ -380,7 +380,7 @@ CONTAINS
          ENDIF
 #endif
       END IF
-      IF (irank==0.OR.judft_was_argument("-all_times"))
+      IF (irank==0.OR.judft_was_argument("-all_times")) THEN
          json_str = ""
          CALL priv_genjson(globaltimer, 1, json_str)
          IF (irank==0) THEN
