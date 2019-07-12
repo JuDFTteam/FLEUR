@@ -122,7 +122,7 @@ CONTAINS
     CALL new_argument(0,"-warn_only","Continue execution after a warning message","") 
     CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","") 
     CALL new_argument(0,"-debugtime","Write the start/stop of all timers to the console","")
-    CALL new_argument(0,"-all_times","Write json files of timing for all PE, not only for PE=0")
+    CALL new_argument(0,"-all_times","Write json files of timing for all PE, not only for PE=0","")
     !Output
     CALL new_argument(0,"-mix_io","Do not store mixing history in memory but do IO in each iteration","") 
     CALL new_argument(0,"-no_out","Do not open the 'out' file but write to stdout","") 
