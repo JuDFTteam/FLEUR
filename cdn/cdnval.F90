@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,ntria,as,itria,atr)
+                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle,ntria,as,itria,atr)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -39,7 +39,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_forcea8
    USE m_checkdopall
    USE m_onsite     ! calculates the on-site green's function
-   USE m_onsite21
+   USE m_greensfImag
+   USE m_greensfImag21
    USE m_tetra_weights
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
@@ -88,6 +89,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    REAL,                  OPTIONAL, INTENT(IN)    :: as 
    INTEGER,               OPTIONAL, INTENT(IN)    :: itria(3,2*kpts%nkpt)
    REAL,                  OPTIONAL, INTENT(IN)    :: atr(2*kpts%nkpt)
+   REAL,                  OPTIONAL, INTENT(IN)    :: angle(sym%nop)
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -260,12 +262,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
          IF (atoms%n_gf.GT.0) THEN
-            CALL timestart("On-Site: Setup")
-               CALL onsite_coeffs(atoms,input,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
-            CALL timestop("On-Site: Setup")
+            CALL timestart("Greens Function: Imaginary Part")
+               !CALL onsite_coeffs(atoms,input,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
+               CALL greensfImag(atoms,sym,input,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
             IF(input%l_gfmperp.AND.ispin==jsp_end) THEN
-               CALL onsite21(atoms,input,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
+               CALL greensfImag21(atoms,sym,angle,input,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
             ENDIF
+            CALL timestop("Greens Function: Imaginary Part")
          ENDIF
 
          

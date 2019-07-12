@@ -119,7 +119,7 @@ MODULE m_types_greensf
 
          IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
             IF(input%l_gfsphavg) THEN
-               spin_dim = MERGE(4,input%jspins,input%l_gfmperp)
+               spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
                ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
                thisGREENSF%gmmpMat = 0.0
             ELSE
@@ -333,7 +333,7 @@ MODULE m_types_greensf
          ipm = MERGE(2,1,l_conjg)
 
          gmat%data_c = 0.0
-         ispin_end = MERGE(4,input%jspins,input%l_gfmperp)
+         ispin_end = MERGE(3,input%jspins,input%l_gfmperp)
 
          DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
             !Find the right quadrant in gmat according to the spin index
@@ -427,7 +427,7 @@ MODULE m_types_greensf
          i_gf = ind_greensf(atoms,l,nType,lp,nTypep)
          ipm = MERGE(2,1,l_conjg)
 
-         ispin_end = MERGE(4,input%jspins,input%l_gfmperp)
+         ispin_end = MERGE(3,input%jspins,input%l_gfmperp)
 
          DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
             !Find the right quadrant in gmat according to the spin index

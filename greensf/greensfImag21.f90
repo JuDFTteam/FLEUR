@@ -1,0 +1,190 @@
+MODULE m_greensfImag21
+   !------------------------------------------------------------------------------
+   !
+   ! MODULE:  m_onsite21
+   !
+   !> @author
+   !> Henning Janßen
+   !
+   ! DESCRIPTION: 
+   !>  This module handles the spin-offdiagonal part of the imaginary part of the onsite
+   !>  Green's function in the noco
+   !
+   !> In the non-collinear case spin isn't a good quantum number anymore so we get a 2x2 blockmatrix
+   !
+   ! REVISION HISTORY:
+   ! 14 March 2019 - Initial Version
+   !------------------------------------------------------------------------------
+
+   USE m_types
+   USE m_juDFT
+   USE m_constants
+
+   CONTAINS
+
+   SUBROUTINE greensfImag21(atoms,sym,angle,input,nbands,tetweights,ind,wtkpt,eig,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
+
+
+      IMPLICIT NONE
+
+      TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_sym),               INTENT(IN)     :: sym 
+      REAL,                      INTENT(IN)     :: angle(sym%nop)
+      TYPE(t_input),             INTENT(IN)     :: input
+      TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
+      TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
+      TYPE(t_greensfCoeffs),     INTENT(INOUT)  :: greensfCoeffs
+
+      INTEGER,                   INTENT(IN)     :: nbands   
+      REAL,                      INTENT(IN)     :: wtkpt
+      REAL,                      INTENT(IN)     :: tetweights(greensfCoeffs%ne,nbands)
+      INTEGER,                   INTENT(IN)     :: ind(nbands,2)
+      REAL,                      INTENT(IN)     :: eig(nbands) 
+
+      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,imat,it,is,isi
+      REAL     weight,fac
+      COMPLEX phase
+      LOGICAL  l_zero
+      COMPLEX im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg))
+      COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+
+      IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
+
+      DO i_gf = 1, atoms%n_gf
+         nType = atoms%gfelem(i_gf)%atomType
+         l = atoms%gfelem(i_gf)%l
+
+
+         DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
+            
+            im = 0.0
+            !Loop through bands
+            !$OMP PARALLEL DEFAULT(none) &
+            !$OMP SHARED(natom,l,nType,wtkpt,i_gf,nbands) &
+            !$OMP SHARED(atoms,im,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig,tetweights,ind) &
+            !$OMP PRIVATE(ie,m,mp,lm,lmp,weight,ib,j,l_zero)
+            !$OMP DO
+            DO ib = 1, nbands
+
+               l_zero = .true.
+               IF(input%tria) THEN
+                  !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
+                  IF(ANY(tetweights(:,ib).NE.0.0)) l_zero = .false.
+               ELSE
+                  !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
+                  j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
+                  IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) ) l_zero = .false.
+               END IF
+
+               IF(l_zero) CYCLE
+
+               DO ie = MERGE(ind(ib,1),j,input%tria), MERGE(ind(ib,2),j,input%tria)
+
+                  weight =  MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,input%tria)
+                  DO m = -l, l 
+                     lm = l*(l+1) + m 
+                     DO mp = -l, l 
+                        lmp = l*(l+1) + mp 
+                        im(ie,m,mp,1) = im(ie,m,mp,1) - pi_const * weight * &
+                                        REAL( eigVecCoeffs%acof(ib,lm,natom,2) * CONJG(eigVecCoeffs%acof(ib,lmp,natom,1)) * denCoeffsOffdiag%uu21n(l,nType)&
+                                        + eigVecCoeffs%bcof(ib,lm,natom,2) * CONJG(eigVecCoeffs%bcof(ib,lmp,natom,1)) * denCoeffsOffdiag%dd21n(l,nType)&
+                                        + eigVecCoeffs%acof(ib,lm,natom,2) * CONJG(eigVecCoeffs%bcof(ib,lmp,natom,1)) * denCoeffsOffdiag%du21n(l,nType)&
+                                        + eigVecCoeffs%bcof(ib,lm,natom,2) * CONJG(eigVecCoeffs%acof(ib,lmp,natom,1)) * denCoeffsOffdiag%ud21n(l,nType))                 
+                     ENDDO
+                  ENDDO
+               ENDDO !ie
+            ENDDO !ib
+            !$OMP END DO
+            !$OMP END PARALLEL
+
+            !Rotate the eqivalent atom into the irreducible brillouin zone
+            fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
+            IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="greensfImag")
+            DO imat = 1, 1
+               DO ie = 1, greensfCoeffs%ne 
+                  DO it = 1, sym%invarind(natom)
+                     is = sym%invarop(natom,it)
+                     isi = sym%invtab(is)
+                     d_mat(:,:) = cmplx(0.0,0.0)
+                     DO m = -l,l
+                        DO mp = -l,l
+                           d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
+                        ENDDO
+                     ENDDO
+                     calc_mat = matmul( transpose( conjg(d_mat) ) , &
+                                 im(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,imat))
+                     calc_mat =  matmul( calc_mat, d_mat )
+                     phase = exp(ImagUnit * angle(isi))
+                     DO m = -l,l
+                        DO mp = -l,l
+                           IF(imat.EQ.1) THEN
+                              greensfCoeffs%projdos(ie,i_gf,m,mp,3) = greensfCoeffs%projdos(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
+                           ELSE IF(imat.EQ.2) THEN
+                              greensfCoeffs%uu(ie,i_gf,m,mp,3) = greensfCoeffs%uu(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
+                           ELSE IF(imat.EQ.3) THEN
+                              greensfCoeffs%dd(ie,i_gf,m,mp,3) = greensfCoeffs%dd(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
+                           ELSE IF(imat.EQ.4) THEN
+                              greensfCoeffs%ud(ie,i_gf,m,mp,3) = greensfCoeffs%ud(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
+                           ELSE IF(imat.EQ.5) THEN
+                              greensfCoeffs%du(ie,i_gf,m,mp,3) = greensfCoeffs%du(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
+                           ENDIF
+                        ENDDO
+                     ENDDO
+                  ENDDO!it
+               ENDDO!ie
+            ENDDO!imat
+
+         ENDDO !natom
+      ENDDO !i_gf
+
+   END SUBROUTINE greensfImag21
+
+   SUBROUTINE rot_onsite(atoms,noco,gf)
+
+      USE m_rotdenmat
+
+      IMPLICIT NONE
+       
+      TYPE(t_atoms),          INTENT(IN)     :: atoms
+      TYPE(t_noco),           INTENT(IN)     :: noco
+      TYPE(t_greensf),        INTENT(INOUT)  :: gf
+
+      INTEGER  i_gf,nType,l,m,mp,ie,ipm
+      REAL     gf11re,gf22re,gf11imag,gf22imag
+      COMPLEX  gf21re,gf21imag
+
+      DO i_gf = 1, atoms%n_gf
+         nType = atoms%gfelem(i_gf)%atomType
+         l = atoms%gfelem(i_gf)%l
+
+         !$OMP PARALLEL DEFAULT(none) &
+         !$OMP SHARED(i_gf,nType,l) &
+         !$OMP SHARED(atoms,noco,gf) &
+         !$OMP PRIVATE(ie,m,mp,ipm)&
+         !$OMP PRIVATE(gf11re,gf22re,gf11imag,gf22imag,gf21re,gf21imag)
+         !$OMP DO
+         DO ie = 1, gf%nz
+            DO m = -l, l 
+               DO mp = -l, l
+                  DO ipm = 1, 2 
+                     !We need to call rot_den_mat two times for real and imaginary part
+                     gf11re = REAL(gf%gmmpMat(ie,i_gf,m,mp,1,ipm))
+                     gf22re = REAL(gf%gmmpMat(ie,i_gf,m,mp,2,ipm))
+                     CALL rot_den_mat(noco%alph(nType),noco%beta(nType),gf11re,gf22re,gf21re)
+                     gf11imag = AIMAG(gf%gmmpMat(ie,i_gf,m,mp,1,ipm))
+                     gf22imag = AIMAG(gf%gmmpMat(ie,i_gf,m,mp,2,ipm))
+                     CALL rot_den_mat(noco%alph(nType),noco%beta(nType),gf11imag,gf22imag,gf21imag)
+
+                     gf%gmmpMat(ie,i_gf,m,mp,1,ipm) = gf11re + ImagUnit * gf11imag 
+                     gf%gmmpMat(ie,i_gf,m,mp,2,ipm) = gf22re + ImagUnit * gf22imag
+                     gf%gmmpMat(ie,i_gf,m,mp,3,ipm) = gf21re + ImagUnit * gf21imag
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDDO
+         !$OMP END DO
+         !$OMP END PARALLEL
+      ENDDO
+   END SUBROUTINE rot_onsite
+
+END MODULE m_greensfImag21

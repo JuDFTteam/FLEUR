@@ -39,6 +39,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_gfcalc
    USE m_j0
    USE m_onsite
+   USE m_angles
    USE m_hubbard1_io
    USE m_denmat_dist
    USE m_triang
@@ -112,6 +113,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    REAL    as
    INTEGER itria(3,2*kpts%nkpt)
    REAL    atr(2*kpts%nkpt)
+   REAL    angle(sym%nop)
 
 
 
@@ -143,6 +145,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       ENDIF
    ENDIF
 
+   IF(atoms%n_gf+atoms%n_u.GT.0.AND.noco%l_mperp) THEN
+      CALL angles(sym,angle)
+   ENDIF
+
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
@@ -159,8 +165,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
-                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,&
-                  ntria,as,itria,atr)
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,hub1,coreSpecInput,&
+                  mcd,slab,orbcomp,greensfCoeffs,angle,ntria,as,itria,atr)
    END DO
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
@@ -174,15 +180,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          IF(input%jspins.EQ.2) THEN
             CALL eff_excinteraction(gOnsite,atoms,input,greensfCoeffs)
          ENDIF
-         !CALL occmtx(gOnsite,3,1,atoms,sym,input,mmpmat(:,:,1,:))
-         !WRITE(*,*) "spin-up"
-         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,1)
-         !WRITE(*,*) "spin-dwn"
-         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,2)
-         !WRITE(*,*) "21"
-         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,3)
-         !WRITE(*,*) "12"
-         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,4)
+         CALL occmtx(gOnsite,3,1,atoms,sym,input,mmpmat(:,:,1,:))
+         WRITE(*,*) "spin-up"
+         WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,1)
+         WRITE(*,*) "spin-dwn"
+         WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,2)
+         WRITE(*,*) "21"
+         WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,3)
       ENDIF
    ENDIF
 

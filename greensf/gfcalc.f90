@@ -42,7 +42,7 @@ MODULE m_gfcalc
       TYPE(t_atoms),          INTENT(IN)  :: atoms
       TYPE(t_sym),            INTENT(IN)  :: sym
       TYPE(t_input),          INTENT(IN)  :: input
-      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,input%jspins)
+      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(3,input%jspins,input%l_gfmperp))
       INTEGER,                INTENT(IN)  :: l
       INTEGER,                INTENT(IN)  :: nType
       INTEGER, OPTIONAL,      INTENT(IN)  :: lp
@@ -63,8 +63,8 @@ MODULE m_gfcalc
          lp_loop = lp 
       ENDIF
 
-      !REPLACE: input%jspins --> MERGE(4,input%jspins,input%l_gfmperp)
-      DO ispin = 1, MERGE(4,input%jspins,input%l_gfmperp)
+      !REPLACE: input%jspins --> MERGE(3,input%jspins,input%l_gfmperp)
+      DO ispin = 1, MERGE(3,input%jspins,input%l_gfmperp)
          DO ipm = 1, 2
             !Integrate over the contour:
             DO iz = 1, g%nz

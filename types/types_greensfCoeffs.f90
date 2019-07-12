@@ -88,7 +88,7 @@ MODULE m_types_greensfCoeffs
          !set up energy grid for imaginary part
          thisGREENSFCOEFFS%del = (thisGREENSFCOEFFS%e_top-thisGREENSFCOEFFS%e_bot)/REAL(thisGREENSFCOEFFS%ne-1)
 
-         spin_dim = MERGE(4,input%jspins,input%l_gfmperp)
+         spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
 
          IF(atoms%n_gf.GT.0) THEN
             ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2))
