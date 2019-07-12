@@ -41,7 +41,7 @@ MODULE m_greensfImag21
       INTEGER,                   INTENT(IN)     :: ind(nbands,2)
       REAL,                      INTENT(IN)     :: eig(nbands) 
 
-      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,imat,it,is,isi
+      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,imat,it,is,isi,ilo,ilop
       REAL     weight,fac
       COMPLEX phase
       LOGICAL  l_zero
@@ -62,7 +62,7 @@ MODULE m_greensfImag21
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(natom,l,nType,wtkpt,i_gf,nbands) &
             !$OMP SHARED(atoms,im,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig,tetweights,ind) &
-            !$OMP PRIVATE(ie,m,mp,lm,lmp,weight,ib,j,l_zero)
+            !$OMP PRIVATE(ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop)
             !$OMP DO
             DO ib = 1, nbands
 
@@ -78,21 +78,47 @@ MODULE m_greensfImag21
 
                IF(l_zero) CYCLE
 
-               DO ie = MERGE(ind(ib,1),j,input%tria), MERGE(ind(ib,2),j,input%tria)
-
-                  weight =  MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,input%tria)
-                  DO m = -l, l 
-                     lm = l*(l+1) + m 
-                     DO mp = -l, l 
-                        lmp = l*(l+1) + mp 
+               DO m = -l, l 
+                  lm = l*(l+1) + m 
+                  DO mp = -l, l 
+                     lmp = l*(l+1) + mp 
+                     DO ie = MERGE(ind(ib,1),j,input%tria), MERGE(ind(ib,2),j,input%tria)
+                     
+                        weight =  MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,input%tria)
+                        !
+                        !Contribution from states
+                        !
                         im(ie,m,mp,1) = im(ie,m,mp,1) - pi_const * weight * &
-                                        REAL( eigVecCoeffs%acof(ib,lm,natom,2) * CONJG(eigVecCoeffs%acof(ib,lmp,natom,1)) * denCoeffsOffdiag%uu21n(l,nType)&
-                                        + eigVecCoeffs%bcof(ib,lm,natom,2) * CONJG(eigVecCoeffs%bcof(ib,lmp,natom,1)) * denCoeffsOffdiag%dd21n(l,nType)&
-                                        + eigVecCoeffs%acof(ib,lm,natom,2) * CONJG(eigVecCoeffs%bcof(ib,lmp,natom,1)) * denCoeffsOffdiag%du21n(l,nType)&
-                                        + eigVecCoeffs%bcof(ib,lm,natom,2) * CONJG(eigVecCoeffs%acof(ib,lmp,natom,1)) * denCoeffsOffdiag%ud21n(l,nType))                 
-                     ENDDO
-                  ENDDO
-               ENDDO !ie
+                                       REAL( CONJG(eigVecCoeffs%acof(ib,lm,natom,2)) * eigVecCoeffs%acof(ib,lmp,natom,1) * denCoeffsOffdiag%uu21n(l,nType)&
+                                           + CONJG(eigVecCoeffs%bcof(ib,lm,natom,2)) * eigVecCoeffs%bcof(ib,lmp,natom,1) * denCoeffsOffdiag%dd21n(l,nType)&
+                                           + CONJG(eigVecCoeffs%acof(ib,lm,natom,2)) * eigVecCoeffs%bcof(ib,lmp,natom,1) * denCoeffsOffdiag%ud21n(l,nType)&
+                                           + CONJG(eigVecCoeffs%bcof(ib,lm,natom,2)) * eigVecCoeffs%acof(ib,lmp,natom,1) * denCoeffsOffdiag%du21n(l,nType)) 
+                        !
+                        !Contribution from local Orbitals
+                        !
+                        DO ilo = 1, atoms%nlo(nType)
+                           IF(atoms%llo(ilo,nType).EQ.l) THEN
+                              !TODO: Something is wrong here for noco%l_soc and noco%l_mperp with a local orbital on the same l
+                              im(ie,m,mp,1) = im(ie,m,mp,1) - pi_const * weight * &
+                              (conjg(eigVecCoeffs%acof(ib,lmp,natom,2))*eigVecCoeffs%ccof(m,ib,ilo,natom,1) *&
+                               denCoeffsOffDiag%uulo21n(ilo,nType) +&
+                               conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,2))*eigVecCoeffs%acof(ib,lm,natom,1) *&
+                               denCoeffsOffDiag%ulou21n(ilo,nType) +&
+                               conjg(eigVecCoeffs%bcof(ib,lmp,natom,2))*eigVecCoeffs%ccof(m,ib,ilo,natom,1) *&
+                               denCoeffsOffDiag%dulo21n(ilo,nType) +&
+                               conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,2))*eigVecCoeffs%bcof(ib,lm,natom,1) *&
+                               denCoeffsOffDiag%ulod21n(ilo,nType))
+                              DO ilop = 1, atoms%nlo(nType)
+                                 IF(atoms%llo(ilop,nType).EQ.l) THEN
+                                    im(ie,m,mp,1) = im(ie,m,mp,1) - pi_const * weight * denCoeffsOffDiag%uloulop21n(ilo,ilop,nType) *&
+                                    conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,2)) *eigVecCoeffs%ccof(m,ib,ilo,natom,1)
+                                 ENDIF
+                              ENDDO
+                           ENDIF
+                        ENDDO!local orbitals
+                     ENDDO!ie                
+                  ENDDO!mp
+               ENDDO!m
             ENDDO !ib
             !$OMP END DO
             !$OMP END PARALLEL

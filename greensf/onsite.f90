@@ -101,51 +101,6 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,g,sym)
 
 END SUBROUTINE calc_onsite
 
-SUBROUTINE local_sym(mat,l,nType,sym,atoms)
-
-   IMPLICIT NONE
-
-   TYPE(t_sym),   INTENT(IN)    :: sym 
-   TYPE(t_atoms), INTENT(IN)    :: atoms
-   INTEGER,       INTENT(IN)    :: l 
-   INTEGER,       INTENT(IN)    :: nType
-   REAL,          INTENT(INOUT) :: mat(-l:l,-l:l)
-
-   !-Local Scalars
-   INTEGER natom,it,is,isi,m,mp,nop
-   REAL    fac
-
-   !-Local Arrays
-   COMPLEX orig_mat(-l:l,-l:l), calc_mat(-l:l,-l:l), d_mat(-l:l,-l:l), diag(-l:l)
-
-   orig_mat(-l:l,-l:l) = mat(-l:l,-l:l)
-
-   mat = 0.0
-   nop = 0
-   DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
-      fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
-      IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="local_sym")
-      DO it = 1, sym%invarind(natom)
-         is = sym%invarop(natom,it)
-         isi = sym%invtab(is)
-         d_mat(:,:) = cmplx(0.0,0.0)
-         DO m = -l,l
-            DO mp = -l,l
-               d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
-            ENDDO
-         ENDDO
-         calc_mat = matmul( transpose( conjg(d_mat) ) , orig_mat)
-         calc_mat =  matmul( calc_mat, d_mat )
-         DO m = -l,l
-            DO mp = -l,l
-               mat(m,mp) = mat(m,mp) + fac * conjg(calc_mat(m,mp))
-            ENDDO
-         ENDDO
-      ENDDO
-   ENDDO
-
-END SUBROUTINE local_sym
-
 !SUBROUTINE rot_gf_mat(g,noco,i_gf,nType)
 !
 !   USE m_rotdenmat

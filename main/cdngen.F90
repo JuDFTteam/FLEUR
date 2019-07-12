@@ -185,8 +185,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,1)
          WRITE(*,*) "spin-dwn"
          WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,2)
-         WRITE(*,*) "21"
-         WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,3)
+         !WRITE(*,*) "21"
+         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,3)
       ENDIF
    ENDIF
 

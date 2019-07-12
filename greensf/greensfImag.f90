@@ -108,14 +108,14 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
                                           + usdus%dulon(ilo,nType,ispin) * (&
                                           conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%ccof(m,ib,ilo,natom,ispin) +&
                                           conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)))
+                           DO ilop = 1, atoms%nlo(nType)
+                              IF (atoms%llo(ilop,nType).EQ.l) THEN
+                                 im(ie,m,mp,1) = im(ie,m,mp,1) - pi_const * weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
+                                                conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
+                              
+                              ENDIF
+                           ENDDO
                         ENDIF
-                        DO ilop = 1, atoms%nlo(nType)
-                           IF (atoms%llo(ilop,nType).EQ.l) THEN
-                              im(ie,m,mp,1) = im(ie,m,mp,1) - pi_const * weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
-                                             conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
-   
-                           ENDIF
-                        ENDDO
                      ENDDO
                   ENDDO! ie
                ENDDO !mp
