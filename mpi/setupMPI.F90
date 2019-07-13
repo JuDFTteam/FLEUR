@@ -16,7 +16,7 @@ CONTAINS
     INTEGER,INTENT(in)           :: nkpt
     TYPE(t_mpi),INTENT(inout)    :: mpi
 
-    integer :: omp=-1
+    INTEGER :: omp=-1,i
 
     !$ omp=omp_get_max_threads()
     if (mpi%irank==0) THEN
@@ -39,12 +39,14 @@ CONTAINS
     IF (mpi%isize==1) THEN
        !give some info on available parallelisation
        CALL priv_dist_info(nkpt)
-       mpi%n_start=1
-       mpi%n_stride=1
        mpi%n_rank=0
        mpi%n_size=1
-       mpi%n_groups=1
        mpi%sub_comm=mpi%mpi_comm
+       IF (ALLOCATED(kpts%k_list)) DEALLOCATE(mpi%k_List,mpi%ev_list))
+       ALLOCATE(mpi%k_list(kpts%nkpts))
+       mpi%k_list=[(i,i=1,kpts%nkpts)]
+       ALLOCATE(mpi%ev_list(neigd))
+       mpi%ev_list=[(i,i=1,neigd)]
     END IF
 #ifdef CPP_MPI
     !Distribute the work
@@ -107,13 +109,16 @@ CONTAINS
        IF ((MOD(mpi%isize,n_members) == 0).AND.(MOD(nkpt,n_members) == 0) ) EXIT
        n_members = n_members - 1
     ENDDO
-    mpi%n_groups = nkpt/n_members
+    ALLOCATE(mpi%k_list(nkpt/n_members))
+    mpi%k_list=[(nk, nk=nkpt/n_members,nkpt,n_members )]
+
+    !mpi%n_groups = nkpt/n_members
     mpi%n_size   = mpi%isize/n_members
-    mpi%n_stride = n_members
+    !mpi%n_stride = n_members
     IF (mpi%irank == 0) THEN
        WRITE(*,*) 'k-points in parallel: ',n_members
        WRITE(*,*) "pe's per k-point:     ",mpi%n_size
-       WRITE(*,*) '# of k-point loops:   ',mpi%n_groups
+       WRITE(*,*) '# of k-point loops:   ',nkpt/n_members
     ENDIF
   END SUBROUTINE priv_distribute_k
 
@@ -128,7 +133,7 @@ CONTAINS
     LOGICAL :: compact ! Deside how to distribute k-points
 
     compact = .true.
-    n_members = nkpt/mpi%n_groups
+    n_members = mpi%isize/mpi%n_size
     
     ! now, we make the groups
     
@@ -188,6 +193,9 @@ CONTAINS
     !write (*,"(a,i0,100i4)") "MPI:",mpi%sub_comm,mpi%irank,mpi%n_groups,mpi%n_size,n,i_mygroup
 
     CALL MPI_COMM_RANK (mpi%SUB_COMM,mpi%n_rank,ierr)
+    ALLOCATE(mpi%ev_list(neig/mpi%n_size+1))
+    mpi%ev_list=[(i,i=mpi%irank+1,neig,mpi%n_size)]
+    
 #endif
   END SUBROUTINE priv_create_comm
 
