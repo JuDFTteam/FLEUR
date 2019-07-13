@@ -86,6 +86,11 @@ then
     echo "set(CLI_FLEUR_USE_WANNIER $CLI_USE_WANNIER)"  >>config.cmake
 fi
 
+if [ "$CLI_USE_EDSOLVER" ]
+then
+    echo "set(CLI_FLEUR_USE_EDSOLVER $CLI_USE_EDSOLVER)"  >>config.cmake
+fi
+
 if [ "$CLI_USE_CHASE" ]
 then
     echo "set(CLI_FLEUR_USE_CHASE $CLI_USE_CHASE)"  >>config.cmake
