@@ -32,7 +32,7 @@ MODULE m_add_selfen
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_input),    INTENT(IN)     :: input
-      COMPLEX,          INTENT(IN)     :: selfen(atoms%n_hia,g%nz,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1))
+      COMPLEX,          INTENT(IN)     :: selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),g%nz)
       REAL,             INTENT(IN)     :: ef
       REAL,             INTENT(IN)     :: n_occ(atoms%n_hia,input%jspins)
       REAL,             INTENT(IN)     :: mu_dc
@@ -55,7 +55,6 @@ MODULE m_add_selfen
 
       spin_match = MERGE(1,2,noco%l_soc.OR.noco%l_noco)
       spin_match=1
-      
 
       DO i_hia = 1, atoms%n_hia
          l = atoms%lda_hia(i_hia)%l
@@ -74,7 +73,7 @@ MODULE m_add_selfen
                DO iz = 1, g%nz
                   start = MERGE(1,1+(i_match-1)*ns,spin_match.EQ.1)
                   end   = MERGE(2*ns,i_match*ns,spin_match.EQ.1)
-                  vmat%data_c = selfen(i_hia,iz,start:end,start:end)
+                  vmat%data_c = selfen(i_hia,start:end,start:end,iz)
                   IF(.NOT.input%l_gfmperp.AND.spin_match.EQ.1) THEN
                      !Dismiss spin-off-diagonal elements
                      vmat%data_c(1:ns,ns+1:2*ns) = 0.0
@@ -118,7 +117,7 @@ MODULE m_add_selfen
             DO 
                mu = (mu_a + mu_b)/2.0
                DO iz = 1, g%nz
-                  vmat%data_c = selfen(i_hia,iz,1:2*ns,1:2*ns)
+                  vmat%data_c = selfen(i_hia,start:end,start:end,iz)
                   IF(.NOT.input%l_gfmperp) THEN
                      !Dismiss spin-off-diagonal elements
                      vmat%data_c(1:ns,ns+1:2*ns) = 0.0

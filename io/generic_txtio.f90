@@ -21,7 +21,7 @@ MODULE m_generic_txtio
    PRIVATE
 
    INTERFACE writeValue
-      PROCEDURE writeInt, writeReal, writeRealArray, writeKeyword, writeCharacter
+      PROCEDURE writeInt, writeReal, writeRealArray, writeKeyword, writeCharacter, write_tmat
    END INTERFACE
 
    INTERFACE comment 
@@ -36,8 +36,8 @@ MODULE m_generic_txtio
    !Format specifiers:
    INTEGER, PARAMETER            :: indent_before_key = 3
    INTEGER, PARAMETER            :: pos_numbers       = 18
-   INTEGER, PARAMETER            :: float_width       = 15
-   INTEGER, PARAMETER            :: decimal_places    = 8
+   INTEGER, PARAMETER            :: float_width       = 10
+   INTEGER, PARAMETER            :: decimal_places    = 5
    INTEGER, PARAMETER            :: int_width         = 6
 
 CONTAINS
@@ -140,6 +140,8 @@ CONTAINS
 
    SUBROUTINE writeKeyword(iounit,key)
 
+      IMPLICIT NONE
+
       INTEGER,          INTENT(IN)  :: iounit
       CHARACTER(len=*), INTENT(IN)  :: key
 
@@ -152,6 +154,8 @@ CONTAINS
    END SUBROUTINE writeKeyword
 
    SUBROUTINE writeCharacter(iounit,key,value)
+
+      IMPLICIT NONE
 
       INTEGER,          INTENT(IN)  :: iounit
       CHARACTER(len=*), INTENT(IN)  :: key
@@ -167,6 +171,27 @@ CONTAINS
          
       WRITE(iounit,fmt) TRIM(ADJUSTL(key)),TRIM(ADJUSTL(value))
    END SUBROUTINE writeCharacter
+
+   SUBROUTINE write_tmat(iounit,mat)
+
+      USE m_types
+      IMPLICIT NONE
+
+      INTEGER,          INTENT(IN)  :: iounit
+      TYPE(t_mat),      INTENT(IN)  :: mat
+
+      INTEGER i
+      CHARACTER(len=300) fmt
+      !Define Format specifier
+      WRITE(fmt,'("(TR",I2.2,",",I2.2,"f",I2.2,".",I2.2,")")') &
+            indent_before_key,mat%matsize2,float_width,decimal_places
+
+      DO i = 1, mat%matsize1
+         WRITE(iounit,fmt) mat%data_r(i,:)
+      ENDDO
+
+
+   END SUBROUTINE write_tmat
       
    SUBROUTINE startSection(iounit,sectionname)
 

@@ -25,12 +25,48 @@ MODULE m_hubbard1_io
    !Here the keywords for the hubbard 1 solver input file are defined
    !------------------------------------------------------------------
 
-   CHARACTER(len=300), PARAMETER :: input_filename ="hubbard1.cfg"
-   INTEGER, PARAMETER            :: input_iounit = 17
+   !Filenames for input
+   CHARACTER(*), PARAMETER :: cfg_file_main ="hubbard1.cfg"
+   CHARACTER(*), PARAMETER :: cfg_file_bath ="bath.cfg"
+   CHARACTER(*), PARAMETER :: cfg_file_hloc ="hloc.cfg"
+   CHARACTER(*), PARAMETER :: file_G0_fits  ="G0_fit_monitor.dat"
+   CHARACTER(*), PARAMETER :: file_hybr_fits ="hyb_fit_monitor.dat"
+   INTEGER, PARAMETER      :: input_iounit  = 17
+
+   !Real freq axis parameters
+   REAL, PARAMETER    :: emin = -13.0
+   REAL, PARAMETER    :: emax =  13.0
+   INTEGER, PARAMETER :: ne   =  2600
+   REAL, PARAMETER    :: sigma = 0.0314
+   INTEGER, PARAMETER :: nmats = 0
+
 
    CONTAINS
 
-   SUBROUTINE write_hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,ne,nmatsub,e_min,e_max,sigma)
+   SUBROUTINE hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_new)
+
+      IMPLICIT NONE
+
+      CHARACTER(len=*), INTENT(IN)  :: path
+      INTEGER,          INTENT(IN)  :: i_hia
+      INTEGER,          INTENT(IN)  :: l
+      REAL,             INTENT(IN)  :: f0,f2,f4,f6
+      TYPE(t_hub1ham),  INTENT(IN)  :: hub1
+      REAL,             INTENT(IN)  :: mu
+      INTEGER,          INTENT(IN)  :: n
+      LOGICAL,          INTENT(IN)  :: l_new
+
+      !Old or new input format
+      IF(l_new) THEN
+         CALL write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
+      ELSE
+         CALL write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
+      ENDIF
+
+   END SUBROUTINE hubbard1_input
+
+
+   SUBROUTINE write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
 
       USE m_generic_txtio
 
@@ -43,18 +79,103 @@ MODULE m_hubbard1_io
       TYPE(t_hub1ham),  INTENT(IN)  :: hub1
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
-      INTEGER,          INTENT(IN)  :: ne
-      INTEGER,          INTENT(IN)  :: nmatsub
-      REAL,             INTENT(IN)  :: e_min
-      REAL,             INTENT(IN)  :: e_max
-      REAL,             INTENT(IN)  :: sigma 
+      
+      INTEGER :: info, io_error,i,j,k,ind1,ind2
+      TYPE(t_mat) :: cfmat
+
+      !Main input file
+      OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_main)),&
+          status="replace", action="write", iostat=io_error)
+      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_new")
+
+      CALL startSection(input_iounit,"hamiltonian")
+      CALL comment(input_iounit,"Slater Integrals",1)
+      CALL writeValue(input_iounit,"Fk",(/f0,f2,f4,f6/))
+      CALL writeValue(input_iounit, "include", cfg_file_hloc)
+      CALL endSection(input_iounit)
+
+      CALL startSection(input_iounit,"fock_space")
+      CALL comment(input_iounit,"Min/Max Occupation",1)
+      CALL writeValue(input_iounit,"Np_min",n-hub1%n_exc)
+      CALL writeValue(input_iounit,"Np_max",n+hub1%n_exc)
+      CALL endSection(input_iounit)
+
+      CALL startSection(input_iounit,"GC_ensemble")
+      CALL comment(input_iounit,"Inverse temperature",1)
+      CALL writeValue(input_iounit,"beta",hub1%beta)
+      CALL comment(input_iounit,"States with smaller weight are dropped",1)
+      CALL writeValue(input_iounit, "weight_limit",1.0e-4)
+      CALL endSection(input_iounit)
+
+      CALL startSection(input_iounit,"method")
+      CALL writeValue(input_iounit, "lancz")
+      CALL comment(input_iounit,"Number of iterations",1)
+      CALL writeValue(input_iounit,"N_lancz_iter",100)
+      CALL comment(input_iounit,"Number of eigenstates calculated",1)
+      CALL writeValue(input_iounit,"N_lancz_states",35)
+      CALL endSection(input_iounit)
+
+      CALL startSection(input_iounit,"real_freq_axis")
+      CALL writeValue(input_iounit, "omegamin", emin)
+      CALL writeValue(input_iounit, "omegamax", emax)
+      CALL writeValue(input_iounit, "Nomega", ne)
+      CALL writeValue(input_iounit, "eps", sigma)
+      CALL endSection(input_iounit)
+
+      CLOSE(input_iounit)
+
+
+      !local hamiltonian
+      OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_hloc)),&
+      status="replace", action="write", iostat=io_error)
+      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_new")
+
+      CALL comment(input_iounit,"Orbital quantum number",1)
+      CALL writeValue(input_iounit,"Lorb",l)
+      CALL comment(input_iounit,"Energy level of the atomic level",1)
+      CALL writeValue(input_iounit,"ea",-mu)
+      CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
+      CALL writeValue(input_iounit,"xiSOC",hub1%xi(i_hia))
+      CALL comment(input_iounit,"Exchange splitting",1)
+      CALL writeValue(input_iounit,"Exc",hub1%bz(i_hia)*hub1%mom)
+      CALL writeValue(input_iounit, "cf")
+
+      CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))
+      cfmat%data_r= 0.0
+      DO i = 1, 2
+         DO j = 1, (2*l+1)
+            DO k = 1, (2*l+1)
+               ind1 = (i-1)*(2*l+1) + j
+               ind2 = (i-1)*(2*l+1) + k
+               cfmat%data_r(ind1,ind2) = hub1%ccfmat(i_hia,j-l-1,k-l-1)*hartree_to_ev_const*hub1%ccf(i_hia)
+            ENDDO
+         ENDDO
+      ENDDO
+      CALL writeValue(input_iounit, cfmat)
+
+   END SUBROUTINE write_hubbard1_input_new
+   
+
+   SUBROUTINE write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
+
+      USE m_generic_txtio
+
+      IMPLICIT NONE
+
+      CHARACTER(len=*), INTENT(IN)  :: path
+      INTEGER,          INTENT(IN)  :: i_hia
+      INTEGER,          INTENT(IN)  :: l
+      REAL,             INTENT(IN)  :: f0,f2,f4,f6
+      TYPE(t_hub1ham),  INTENT(IN)  :: hub1
+      REAL,             INTENT(IN)  :: mu
+      INTEGER,          INTENT(IN)  :: n
       
       INTEGER :: info, io_error
 
       !Main input file
-      OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(input_filename)),&
+      OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_main)),&
           status="replace", action="write", iostat=io_error)
-      !IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input")
+      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_old")
 
       CALL header(input_iounit,"Parameters for the atomic Hamiltonian in eV",1)
 
@@ -99,18 +220,18 @@ MODULE m_hubbard1_io
       CALL header(input_iounit,"Parameters for the frequency/energy axis",1)
 
       CALL startSection(input_iounit,"real_freq_axis")
-         CALL writeValue(input_iounit, "omegamin", e_min*hartree_to_ev_const)
-         CALL writeValue(input_iounit, "omegamax", e_max*hartree_to_ev_const)
+         CALL writeValue(input_iounit, "omegamin", emin)
+         CALL writeValue(input_iounit, "omegamax", emax)
          CALL writeValue(input_iounit, "Nomega", ne)
-         CALL writeValue(input_iounit, "eps", sigma*hartree_to_ev_const)
+         CALL writeValue(input_iounit, "eps", sigma)
       CALL endSection(input_iounit)
 
       CALL startSection(input_iounit,"matsub_freq_axis")
-         CALL writeValue(input_iounit, "Nmatsub", nmatsub)
+         CALL writeValue(input_iounit, "Nmatsub", nmats)
       CALL endSection(input_iounit)
 
       CLOSE(unit=input_iounit)
-   END SUBROUTINE write_hubbard1_input
+   END SUBROUTINE write_hubbard1_input_old
 
    SUBROUTINE write_gf(app,gOnsite,i_gf)
 
@@ -206,7 +327,7 @@ MODULE m_hubbard1_io
          DO i = 1, ne
             READ(io_unit,*) 
             DO m = 1, matsize
-               READ(io_unit,*) selfen(i,1:matsize,m)
+               READ(io_unit,*) selfen(1:matsize,m,i)
             ENDDO
          ENDDO
       ELSE
@@ -217,9 +338,9 @@ MODULE m_hubbard1_io
          DO i = 1, ne
             READ(io_unit,9010) 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(i,1:matsize,1:matsize) = tmp(1:matsize,1:matsize)/hartree_to_ev_const 
+            selfen(1:matsize,1:matsize,i) = tmp(1:matsize,1:matsize)/hartree_to_ev_const 
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(i,1:matsize,1:matsize) = selfen(i,1:matsize,1:matsize) + ImagUnit * tmp(1:matsize,1:matsize)/hartree_to_ev_const 
+            selfen(1:matsize,1:matsize,i) = selfen(1:matsize,1:matsize,i) + ImagUnit * tmp(1:matsize,1:matsize)/hartree_to_ev_const 
          ENDDO
       ENDIF
 
