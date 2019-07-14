@@ -107,7 +107,7 @@ CONTAINS
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
-    INTEGER :: iter,iterHF,iterHIA
+    INTEGER :: iter,iterHF
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
@@ -139,7 +139,7 @@ CONTAINS
 
     iter     = 0
     iterHF   = 0
-    iterHIA  = 0
+    hub1%iter  = 0
     hub1%l_runthisiter = .FALSE.
     l_cont = (iter < input%itmax)
     
@@ -184,6 +184,7 @@ CONTAINS
     scfloop:DO WHILE (l_cont)
 
        iter = iter + 1
+       IF(hub1%l_runthisiter) hub1%iter = hub1%iter + 1
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
 
@@ -256,7 +257,6 @@ CONTAINS
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
-
        CALL forcetheo%start(vtot,mpi%irank==0)
        forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,atoms,noco))
 
@@ -267,10 +267,16 @@ CONTAINS
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
           CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,hybrid,iter,iterHIA,eig_id,results,inDen,vTemp,vx,gOnsite,hub1)
+                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx,gOnsite,hub1)
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
+
+          IF(hub1%l_runthisiter.AND.mpi%irank.EQ.0)  THEN
+             WRITE(*,*) "Hubbard 1 Iteration: ", hub1%iter
+             WRITE(*,*) "Occ. Distance: ", results%last_occdistance, &
+                        "Mat. Distance: ", results%last_mmpMatdistance
+          ENDIF
 
           ! add all contributions to total energy
 #ifdef CPP_MPI
@@ -292,7 +298,7 @@ CONTAINS
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
              CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                          obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
+                          obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results,hub1)
           CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI
@@ -472,7 +478,7 @@ CONTAINS
           IF(atoms%n_hia>0) THEN
              hub1%l_runthisiter = .NOT.l_cont.AND.(iter < input%itmax).AND.(0.01<=results%last_occdistance.OR.0.001<=results%last_mmpMatdistance)
              !Run after first overall iteration to generate a starting density matrix
-             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.iterHIA==0)
+             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.(hub1%iter==0.AND.ALL(vTot%mmpMat(:,:,atoms%n_u+atoms%n_hia,:).EQ.0.0)))
              !Prevent that the scf loop terminates
              l_cont = l_cont.OR.hub1%l_runthisiter
           ENDIF

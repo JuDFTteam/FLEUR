@@ -7,7 +7,7 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,hub1,inden,vTot,mpi,results,DIMENSION,td,ud,iterHIA)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,hub1,inden,vTot,mpi,results,DIMENSION,td,ud)
     USE m_types
     USE m_usetup
     USE m_tlmplm_cholesky
@@ -30,7 +30,6 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
     TYPE(t_hub1ham),INTENT(INOUT)   :: hub1
-    INTEGER,INTENT(INOUT)        :: iterHIA
 
     INTEGER:: jsp
 
@@ -38,7 +37,7 @@ CONTAINS
        CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
     IF((atoms%n_hia.GT.0)) THEN
-      CALL hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,ud,vTot,gOnsite,results)
+      CALL hubbard1_setup(atoms,hub1,sym,mpi,noco,input,ud,vTot,gOnsite,results)
     END IF
 
     CALL timestart("tlmplm")
@@ -55,7 +54,7 @@ CONTAINS
 
     !Setup of soc parameters for first-variation SOC
     IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) THEN
-       CALL spnorb(atoms,noco,input,mpi,enpara,vTot%mt,ud,td%rsoc,.FALSE.)
+       CALL spnorb(atoms,noco,input,mpi,enpara,vTot%mt,ud,td%rsoc,.FALSE.,hub1)
     END IF
 
   END SUBROUTINE mt_setup

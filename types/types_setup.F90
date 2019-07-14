@@ -68,23 +68,6 @@ MODULE m_types_setup
       LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
    END TYPE t_utype
 
-
-   TYPE t_hub1ham
-      !Contains the u_type for use in the LDA+U routines and the additional 
-      !information for the atomic hamiltonian
-      LOGICAL                    :: l_runthisiter   !switch which determines wether Hubbard 1 will be run in the current iteration 
-      REAL, ALLOCATABLE          :: xi(:)           !Spin-orbit coupling parameter
-      REAL, ALLOCATABLE          :: ccf(:)
-      REAL, ALLOCATABLE          :: ccfmat(:,:,:)   !crystal field splitting matrix
-      REAL, ALLOCATABLE          :: bz(:)           !external magnet field
-      REAL, ALLOCATABLE          :: init_occ(:)
-      REAL, ALLOCATABLE          :: init_mom(:)
-      REAL          :: mom          !magnetic moment (for exchange splitting)
-      REAL                       :: beta            !inverse Temperature
-      INTEGER                    :: n_exc = 2       !number of excitations considered 
-
-   END TYPE t_hub1ham
-
    TYPE t_gfelementtype
       SEQUENCE
       !defines the l and atomType elements for given greens function element (used for mapping index in types_greensf)

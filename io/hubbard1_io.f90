@@ -80,7 +80,8 @@ MODULE m_hubbard1_io
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
       
-      INTEGER :: info, io_error,i,j,k,ind1,ind2
+      INTEGER :: info, io_error,i,j,k,ind1,ind2,i_exc,i_arg
+      REAL exc
       TYPE(t_mat) :: cfmat
 
       !Main input file
@@ -136,8 +137,17 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit,"ea",-mu)
       CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
       CALL writeValue(input_iounit,"xiSOC",hub1%xi(i_hia))
+      !calculate the additional exchange splitting
+      exc = 0.0
+      DO i_exc = 1, hub1%n_exc_given(i_hia)
+         exc = exc + hub1%exc(i_hia,i_exc)*hub1%mag_mom(i_hia,i_exc)
+      ENDDO
       CALL comment(input_iounit,"Exchange splitting",1)
-      CALL writeValue(input_iounit,"Exc",hub1%bz(i_hia)*hub1%mom)
+      CALL writeValue(input_iounit,"Exc",exc)
+      CALL comment(input_iounit,"Additional arguments",1)
+      DO i_arg = 1, hub1%n_addArgs(i_hia)
+         CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))),hub1%arg_vals(i_hia,i_arg))
+      ENDDO
       CALL writeValue(input_iounit, "cf")
 
       CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))
@@ -170,7 +180,8 @@ MODULE m_hubbard1_io
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
       
-      INTEGER :: info, io_error
+      INTEGER :: info, io_error,i_exc
+      REAL exc
 
       !Main input file
       OPEN(unit=input_iounit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_main)),&
@@ -188,8 +199,14 @@ MODULE m_hubbard1_io
       CALL comment(input_iounit,"Spin-orbit-coupling parameter",1)
       CALL writeValue(input_iounit,"gfact",hub1%xi(i_hia))
 
+      !calculate the additional exchange splitting
+      exc = 0.0
+      DO i_exc = 1, hub1%n_exc_given(i_hia)
+         exc = exc + hub1%exc(i_hia,i_exc)*hub1%mag_mom(i_hia,i_exc)
+      ENDDO
+
       CALL comment(input_iounit,"External field",1)
-      CALL writeValue(input_iounit,"Bz",hub1%bz(i_hia)*hub1%mom)
+      CALL writeValue(input_iounit,"Bz",exc)
 
       CALL comment(input_iounit,"Inverse temperature",1)
       CALL writeValue(input_iounit,"beta",hub1%beta)
@@ -205,8 +222,8 @@ MODULE m_hubbard1_io
       CALL header(input_iounit,"Parameters for the Solver",1)
 
       CALL comment(input_iounit,"Minimum and maximum occupation of the orbital",1)
-      CALL writeValue(input_iounit,"Nap_min",n-hub1%n_exc)
-      CALL writeValue(input_iounit,"Nap_max",n+hub1%n_exc)
+      CALL writeValue(input_iounit,"Nap_min",MAX(0,n-hub1%n_exc))
+      CALL writeValue(input_iounit,"Nap_max",MIN(2*(2*l+1),n+hub1%n_exc))
 
       CALL comment(input_iounit,"Setting the solver to use the power lanczos method",1)
       CALL writeValue(input_iounit, "method_lancz")
@@ -231,6 +248,8 @@ MODULE m_hubbard1_io
       CALL endSection(input_iounit)
 
       CLOSE(unit=input_iounit)
+
+      WRITE(*,"(A)") "You are using an old input file format. This does not support the additional arguments"
    END SUBROUTINE write_hubbard1_input_old
 
    SUBROUTINE write_gf(app,gOnsite,i_gf)

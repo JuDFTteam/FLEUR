@@ -478,15 +478,26 @@
    </xsd:complexType>
 
    <xsd:complexType name="LdaHubbard1Type">
+      <xsd:sequence>
+         <xsd:element maxOccurs="3" minOccurs="0" name="exc" type="ExcType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="addArg" type="SolverArgType"/>
+      </xsd:sequence>
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="U" type="xsd:string" use="required"/>
       <xsd:attribute name="J" type="xsd:string" use="required"/>
       <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
-      <xsd:attribute name="soc" type="xsd:string" use="required"/>
-      <xsd:attribute name="exc" type="xsd:string" use="required"/>
-      <xsd:attribute name="ccf" type="xsd:string" use="required"/>
       <xsd:attribute name="init_occ" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="ExcType">
+      <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="J" type="xsd:string" use="required"/>
       <xsd:attribute name="init_mom" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="SolverArgType">
+      <xsd:attribute name="key" type="xsd:string" use="required"/>
+      <xsd:attribute name="value" type="xsd:string" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="OnsiteGFType">

@@ -141,7 +141,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       ENDIF
       IF(mpi%irank==0) THEN
          CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
-         IF(atoms%n_hia.GT.0) hub1%mom = 0.0
+         IF(atoms%n_hia.GT.0) hub1%mag_mom = 0.0
       ENDIF
    ENDIF
 

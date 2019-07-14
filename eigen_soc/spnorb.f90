@@ -12,8 +12,9 @@ MODULE m_spnorb
   !     using the functions anglso and sgml.
   !*********************************************************************
 CONTAINS
-  SUBROUTINE spnorb(atoms,noco,input,mpi, enpara, vr, usdus, rsoc,l_angles)
+  SUBROUTINE spnorb(atoms,noco,input,mpi, enpara, vr, usdus, rsoc,l_angles,hub1)
     USE m_sorad 
+    USE m_constants, only : hartree_to_ev_const
     USE m_types
     IMPLICIT NONE
 
@@ -25,13 +26,14 @@ CONTAINS
     TYPE(t_usdus),INTENT(INOUT) :: usdus
     TYPE(t_rsoc),INTENT(OUT)    :: rsoc
     LOGICAL,INTENT(IN)          :: l_angles
+    TYPE(t_hub1ham),OPTIONAL,INTENT(INOUT) :: hub1
     !     ..
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: vr(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !     ..
     !     .. Local Scalars ..
-    INTEGER is1,is2,jspin1,jspin2,l,l1,l2,m1,m2,n
+    INTEGER is1,is2,jspin1,jspin2,l,l1,l2,m1,m2,n,i_hia
     LOGICAL, SAVE :: first_k = .TRUE.
     !     ..
   
@@ -79,6 +81,15 @@ CONTAINS
           WRITE (6,FMT=8001) (2*rsoc%rsopp(n,l,2,2),l=1,3)
           WRITE (6,FMT=8001) (2*rsoc%rsopp(n,l,2,1),l=1,3)
        ENDDO
+       !Read in SOC-parameter for shell with hubbard 1
+       IF(PRESENT(hub1)) THEN
+          DO i_hia = 1, atoms%n_hia
+             IF(hub1%l_soc_given(i_hia)) CYCLE
+             n = atoms%lda_hia(i_hia)%atomType
+             l = atoms%lda_hia(i_hia)%l
+             hub1%xi(i_hia) = (rsoc%rsopp(n,l,1,1)+rsoc%rsopp(n,l,2,2))*hartree_to_ev_const
+          ENDDO
+       ENDIF
        IF (noco%l_spav) THEN
           WRITE(6,fmt='(A)') 'SOC Hamiltonian is constructed by neglecting B_xc.'
        ENDIF

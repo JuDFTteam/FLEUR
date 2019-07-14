@@ -164,11 +164,9 @@
           input%gf_nmatsub = 5
           input%gf_n = 128
           input%gf_alpha = 0.25
-          hub1%beta = 100.0
           input%minoccDistance = 0.01
           input%minmatDistance = 0.001
           atoms%n_hia = 0
-          hub1%l_runthisiter = .FALSE.
           atoms%n_gf = 0
           atoms%n_j0 = 0
 

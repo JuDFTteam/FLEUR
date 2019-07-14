@@ -19,7 +19,7 @@ CONTAINS
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                    cell,enpara,banddos,noco,oneD,hybrid,iter,iterHIA,eig_id,results,inden,v,vx,gOnsite,hub1)
+                    cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx,gOnsite,hub1)
 
 
 #include"cpp_double.h"
@@ -74,7 +74,6 @@ CONTAINS
 
       ! Scalar Arguments
       INTEGER,INTENT(IN)    :: iter
-      INTEGER,INTENT(INOUT) :: iterHIA
       INTEGER,INTENT(IN)    :: eig_id
 
       ! Local Scalars
@@ -127,7 +126,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,hub1,inden,v,mpi,results,DIMENSION,td,ud,iterHIA)
+      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,hub1,inden,v,mpi,results,DIMENSION,td,ud)
 
       neigBuffer = 0
       results%neig = 0

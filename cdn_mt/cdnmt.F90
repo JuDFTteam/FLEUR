@@ -40,7 +40,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu
-    INTEGER ilo,ilop,i,i_hia
+    INTEGER ilo,ilop,i,i_hia,i_exc
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
     LOGICAL l_hia
@@ -139,10 +139,14 @@ CONTAINS
              qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
           moments%chmom(itype,ispin) = qmtt
+
+          !Get the magnetic moment for the shells where we defined additional exchange splittings for DFT+Hubbard 1
           IF(PRESENT(hub1)) THEN
             DO i_hia = 1, atoms%n_hia 
                IF(atoms%lda_hia(i_hia)%atomType.NE.itype) CYCLE
-               hub1%mom = hub1%mom + (-1)**(ispin-1) *  qmtl(2,ispin,itype)
+               DO i_exc = 1, hub1%n_exc_given(i_hia)
+                  hub1%mag_mom(i_hia,i_exc) = hub1%mag_mom(i_hia,i_exc) + (-1)**(ispin-1) *  qmtl(hub1%exc_l(i_hia,i_exc),ispin,itype)
+               ENDDO
             ENDDO
           ENDIF
 

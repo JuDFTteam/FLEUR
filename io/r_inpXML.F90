@@ -106,6 +106,7 @@ CONTAINS
       INTEGER :: iAtomType, startCoreStates, endCoreStates
       CHARACTER(len=100) :: xPosString, yPosString, zPosString
       CHARACTER(len=200) :: coreStatesString
+      CHARACTER(len=50)  :: hub1_key(4,5)
       !   REAL :: tempTaual(3,atoms%nat)
       REAL             :: coreStateOccs(29,2)
       INTEGER          :: coreStateNprnc(29), coreStateKappa(29)
@@ -119,7 +120,7 @@ CONTAINS
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
-      INTEGER            :: ldau_l(4), hub1_l(4), onsiteGF_l(4), numVac, numU, numOnsite, numHIA, numJ0, j0_min, j0_max  
+      INTEGER            :: ldau_l(4), hub1_l(4),hub1_excl(4,3), onsiteGF_l(4), numVac, numU, numOnsite, numHIA, numaddArgs(4), numaddExc(4), numJ0, j0_min, j0_max  
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -127,7 +128,7 @@ CONTAINS
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
       LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
-      REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4),hub1_ccf(4), hub1_u(4), hub1_j(4), hub1_xi(4), hub1_occ(4),hub1_mom(4),hub1_bz(4), tempReal
+      REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_occ(4),hub1_val(4,5),hub1_exc(4,3),hub1_mom(4,3), tempReal
       REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
       LOGICAL            :: l_amf(4), hub1_amf(4),l_found, j0_avgexc
@@ -269,12 +270,7 @@ CONTAINS
       ALLOCATE (wannAtomList(atoms%nat))
 
       ALLOCATE(atoms%lda_hia(4*atoms%ntype))
-      ALLOCATE(hub1%xi(4*atoms%ntype))
-      ALLOCATE(hub1%ccf(4*atoms%ntype))
-      ALLOCATE(hub1%ccfmat(4*atoms%ntype,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-      ALLOCATE(hub1%bz(4*atoms%ntype))
-      ALLOCATE(hub1%init_occ(4*atoms%ntype))
-      ALLOCATE(hub1%init_mom(4*atoms%ntype))
+      CALL hub1%init(4*atoms%ntype,5)
 
       ! Read in constants
 
@@ -1397,7 +1393,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       atoms%n_u = 0
       atoms%n_j0 = 0
       atoms%n_hia = 0
-      atoms%n_hia = 0
       atoms%n_gf = 0
 
       DEALLOCATE(noel)
@@ -1449,24 +1444,37 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          hub1_u = 0.0
          hub1_j = 0.0
          hub1_amf = .FALSE.
-         hub1_xi = 0.0
-         hub1_bz = 0.0
-         hub1_ccf = 0.0
          hub1_occ = 0.0
+         hub1_exc = 0.0
+         hub1_excl = -1
          hub1_mom = 0.0
+         hub1_val = 0.0
+         numaddArgs = 0
+         numaddExc = 0
          DO i = 1, numHIA
             WRITE(xPathB,*) i
             hub1_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l'))
             hub1_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@U'))
             hub1_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@J'))
             hub1_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
-            hub1_xi(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@soc'))
-            !Replace no soc with a small ficticious soc
-            IF(hub1_xi(i).EQ.0.0) hub1_xi(i) = 0.001 
-            hub1_bz(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@exc'))
-            hub1_ccf(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@ccf'))
             hub1_occ(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@init_occ'))
-            hub1_mom(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@init_mom'))
+
+            numaddArgs(i) = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg')
+            IF (numaddArgs(i).GT.5) CALL juDFT_error("Too many additional arguments (maximum is 5).",calledby ="r_inpXML")
+            DO j = 1, numaddArgs(i)
+               WRITE(xPathC,*) j
+               hub1_key(i,j) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg['//TRIM(ADJUSTL(xPathC))//']/@key')
+               hub1_val(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg['//TRIM(ADJUSTL(xPathC))//']/@value'))
+            ENDDO
+
+            numaddExc(i) = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc')
+            IF (numaddExc(i).GT.3) CALL juDFT_error("Too many additional exchange splittings (maximum is 3).",calledby ="r_inpXML")
+            DO j = 1, numaddExc(i)
+               WRITE(xPathC,*) j
+               hub1_excl(i,j) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@l'))
+               hub1_exc(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@J'))
+               hub1_mom(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@init_mom'))        
+            ENDDO
          ENDDO
          
          !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
@@ -1550,20 +1558,60 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   input%l_gf  = .true. 
                   atoms%n_hia = atoms%n_hia + 1
                   atoms%n_gf  = atoms%n_gf + 1
+
+                  !Add Greens functions
                   atoms%gfelem(atoms%n_gf)%l        = hub1_l(i)
                   atoms%gfelem(atoms%n_gf)%atomType = iType
                   atoms%gfelem(atoms%n_gf)%lp        = hub1_l(i)
                   atoms%gfelem(atoms%n_gf)%atomTypep = iType
+
+                  !Hubbard 1 U-information
                   atoms%lda_hia(atoms%n_hia)%l        = hub1_l(i)
                   atoms%lda_hia(atoms%n_hia)%u        = hub1_u(i)
                   atoms%lda_hia(atoms%n_hia)%j        = hub1_j(i)
                   atoms%lda_hia(atoms%n_hia)%l_amf    = hub1_amf(i)
                   atoms%lda_hia(atoms%n_hia)%atomType = iType
-                  hub1%xi(atoms%n_hia) = hub1_xi(i)
-                  hub1%bz(atoms%n_hia) = hub1_bz(i)
-                  hub1%ccf(atoms%n_hia) = hub1_ccf(i)
-                  hub1%init_occ(atoms%n_hia) = hub1_occ(i)
-                  hub1%init_mom(atoms%n_hia) = hub1_mom(i)
+                  hub1%init_occ(atoms%n_hia)          = hub1_occ(i)
+
+                  !Additional exchange splitting
+                  DO j = 1, numaddExc(i)
+                     IF(ANY(hub1_excl(i,j).EQ.hub1%exc_l(atoms%n_hia,:))) CALL juDFT_error("Two exchange splittings with equal l",calledby="r_inpXML")
+                     IF(hub1_excl(i,j).EQ.hub1_l(i).OR.hub1_excl(i,j).GT.3) CALL juDFT_error("Additional exchange splitting: Not a valid l",calledby="r_inpXML")
+                     hub1%n_exc_given(atoms%n_hia) = hub1%n_exc_given(atoms%n_hia) + 1
+                     hub1%exc_l(atoms%n_hia,hub1%n_exc_given(atoms%n_hia)) = hub1_excl(i,j)
+                     hub1%exc(atoms%n_hia,hub1%n_exc_given(atoms%n_hia)) = hub1_exc(i,j)
+                     hub1%init_mom(atoms%n_hia,hub1%n_exc_given(atoms%n_hia)) = hub1_mom(i,j) 
+                  ENDDO
+
+                  !Additional Arguments
+
+                  DO j = 1, numaddArgs(i)
+                     DO k = 1, hub1%n_addArgs(atoms%n_hia)
+                        IF(TRIM(ADJUSTL(hub1_key(i,j))).EQ.TRIM(ADJUSTL(hub1%arg_keys(atoms%n_hia,k)))) THEN
+                           CALL juDFT_error("Ambigous additional arguments",calledby="r_inpXML")
+                        ENDIF 
+                     ENDDO
+                     SELECT CASE (hub1_key(i,j))
+                     CASE('xiSOC') 
+                        !Do not get soc from DFT and use provided value
+                        IF(hub1%l_soc_given(atoms%n_hia)) CALL juDFT_error("Two soc parameters provided",calledby="r_inpXML")
+                        hub1%l_soc_given(atoms%n_hia) = .TRUE.
+                        hub1%xi(atoms%n_hia) = hub1_val(i,j)
+                        IF( hub1%xi(atoms%n_hia).EQ.0.0)  hub1%xi(atoms%n_hia) = 0.001
+                     CASE('ccf') 
+                        IF(hub1%l_ccf_given(atoms%n_hia)) CALL juDFT_error("Two crystal field parameters provided",calledby="r_inpXML")
+                        hub1%l_ccf_given(atoms%n_hia) = .TRUE.
+                        hub1%ccf(atoms%n_hia) = hub1_val(i,j)
+                     CASE DEFAULT
+                        !Additional argument -> simply pass on to solver
+                        hub1%n_addArgs(atoms%n_hia) = hub1%n_addArgs(atoms%n_hia) + 1
+                        hub1%arg_keys(atoms%n_hia,hub1%n_addArgs(atoms%n_hia)) = TRIM(ADJUSTL(hub1_key(i,j)))
+                        hub1%arg_vals(atoms%n_hia,hub1%n_addArgs(atoms%n_hia)) = hub1_val(i,j)
+                     END SELECT
+                  ENDDO
+                  IF(.NOT.hub1%l_ccf_given(atoms%n_hia)) THEN
+                     hub1%ccf(atoms%n_hia) = 1.0
+                  ENDIF
                ENDDO
                DO i = 1, numOnsite
                   !Is the green's function already being calculated

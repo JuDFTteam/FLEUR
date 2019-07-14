@@ -21,7 +21,7 @@ MODULE m_eigenso
   !
 CONTAINS
   SUBROUTINE eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                     obsolete,sym,cell,noco,input,kpts,oneD,vTot,enpara,results)
+                     obsolete,sym,cell,noco,input,kpts,oneD,vTot,enpara,results,hub1)
 
     USE m_types
     USE m_eig66_io, ONLY : read_eig,write_eig
@@ -49,6 +49,7 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)     :: vTot
     TYPE(t_enpara),INTENT(IN)     :: enpara
     TYPE(t_results),INTENT(INOUT) :: results
+    TYPE(t_hub1ham),OPTIONAL,INTENT(INOUT) :: hub1
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -114,7 +115,7 @@ CONTAINS
     !  ..
 
     !Get spin-orbit coupling matrix elements
-    CALL spnorb( atoms,noco,input,mpi, enpara,vTot%mt,usdus,rsoc,.TRUE.)
+    CALL spnorb( atoms,noco,input,mpi, enpara,vTot%mt,usdus,rsoc,.TRUE.,hub1)
     !
 
 

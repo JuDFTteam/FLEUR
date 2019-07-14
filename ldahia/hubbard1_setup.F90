@@ -11,7 +11,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(iterHIA,atoms,hub1,sym,mpi,noco,input,usdus,pot,gdft,results)
+   SUBROUTINE hubbard1_setup(atoms,hub1,sym,mpi,noco,input,usdus,pot,gdft,results)
 
       USE m_types
       USE m_hubbard1_io
@@ -31,7 +31,6 @@ MODULE m_hubbard1_setup
 #endif
 
 
-      INTEGER,          INTENT(INOUT)  :: iterHIA !number of iteration 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_hub1ham),  INTENT(INOUT)  :: hub1
       TYPE(t_sym),      INTENT(IN)     :: sym
@@ -47,7 +46,7 @@ MODULE m_hubbard1_setup
       EXTERNAL MPI_BCAST
 #endif
 
-      INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j
+      INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc
       INTEGER io_error,ierr
       REAL    mu_dc,e_lda_hia,exc
 
@@ -78,7 +77,6 @@ MODULE m_hubbard1_setup
       INQUIRE(file="n_mmpmat_hubbard1",exist=l_exist)
       IF(l_exist) THEN
          OPEN(unit = 1337, file="n_mmpmat_hubbard1",status="old",form="formatted",action="read")
-         READ(1337,9110) iterHIA,results%last_occdistance,results%last_mmpMatdistance
          READ(1337,"(7f14.8)") mmpMat(:,:,:,:)
          CLOSE(unit=1337)
       ELSE
@@ -97,7 +95,7 @@ MODULE m_hubbard1_setup
          CALL v_mmp(sym,atoms,atoms%lda_hia(:),atoms%n_hia,input%jspins,.FALSE.,mmpMat,&
          u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),e_lda_hia)
 
-         IF(hub1%l_runthisiter.AND.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) THEN 
+         IF(hub1%l_runthisiter.AND.(ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0))) THEN 
             !The onsite green's function was calculated but the solver 
             !was not yet run
             !--> write out the configuration for the hubbard 1 solver 
@@ -105,7 +103,6 @@ MODULE m_hubbard1_setup
 
             !Get the working directory
             CALL get_environment_variable('PWD',cwd)
-            iterHIA = iterHIA + 1
             path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(main_folder))
             CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)))
             !Remove everything from the last iteration (Good Idea??)
@@ -123,22 +120,22 @@ MODULE m_hubbard1_setup
                ELSE 
                   folder=""
                ENDIF
-            
-               !calculate the occupation of the correlated shell
-               CALL occmtx(gdft,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
-               WRITE(*,"(14f14.8)") mmpMat(-3:3,-3:3,i_hia,1)
-               WRITE(*,"(14f14.8)") mmpMat(-3:3,-3:3,i_hia,2)
-               n_l(i_hia,:) = 0.0
-               DO ispin = 1, input%jspins
-                  DO m = -l, l
-                     n_l(i_hia,ispin) = n_l(i_hia,ispin) + mmpMat(m,m,i_hia,ispin)
+               IF(hub1%iter.EQ.1.AND.ALL(mmpMat.EQ.0.0)) THEN
+                  n_l(i_hia,:) = hub1%init_occ(i_hia)/input%jspins
+                  DO i_exc = 1, hub1%n_exc_given(i_hia)
+                     hub1%mag_mom(i_hia,i_exc) = hub1%init_mom(i_hia,i_exc)
+                  ENDDo
+               ELSE
+                  !calculate the occupation of the correlated shell
+                  CALL occmtx(gdft,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
+                  n_l(i_hia,:) = 0.0
+                  DO ispin = 1, input%jspins
+                     DO m = -l, l
+                        n_l(i_hia,ispin) = n_l(i_hia,ispin) + mmpMat(m,m,i_hia,ispin)
+                     ENDDO
                   ENDDO
-               ENDDO
-               IF(iterHIA.EQ.1) THEN
-                  n_l(i_hia,1) = hub1%init_occ(i_hia)/2.0
-                  n_l(i_hia,2) = hub1%init_occ(i_hia)/2.0
-                  hub1%mom = hub1%init_mom(i_hia)
                ENDIF
+
                WRITE(6,*)
                WRITE(6,9010) nType
                WRITE(6,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
@@ -219,7 +216,6 @@ MODULE m_hubbard1_setup
                IF(l_exist) THEN
                   OPEN(unit=1337,file="n_mmpmat_hubbard1",status="old",action="read",iostat=io_error)
                   IF(io_error.NE.0) CALL juDFT_error("IO-error in density matrix",calledby="hubbard1_setup")
-                  READ(1337,9110)
                   READ(1337,"(7f14.8)") mmpMat_in(:,:,:,:)
                   CLOSE(unit=1337)
                ELSE
@@ -230,12 +226,8 @@ MODULE m_hubbard1_setup
                   !Write out the density matrix and the additional inforamtion (current iteration, distances)
                   OPEN(unit=1337,file="n_mmpmat_hubbard1",status="replace",action="write",iostat=io_error)
                   IF(io_error.NE.0) CALL juDFT_error("IO-error in density matrix",calledby="hubbard1_setup")
-                     WRITE(1337,9110) iterHIA,results%last_occdistance,results%last_mmpMatdistance
                   WRITE(1337,"(7f14.8)") mmpMat(:,:,:,:)
                   CLOSE(unit=1337)
-                  WRITE(*,*) "Hubbard 1 Iteration: ", iterHIA
-                  WRITE(*,*)  "Occ. Distance: ", results%last_occdistance, &
-                              "Mat. Distance: ", results%last_mmpMatdistance
                ENDIF
             ENDIF
             !Write out the density matrix and potential matrix (compare u_setup.f90)
@@ -261,6 +253,30 @@ MODULE m_hubbard1_setup
                WRITE (6,*) results%e_ldau
             ENDIF
          ENDIF
+      ELSE IF(mpi%irank.NE.0) THEN
+         pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
+         !If we are on a different mpi%irank and no solver is linked we need to call juDFT_end here if the solver was not run
+         !kind of a weird workaround (replace with something better)
+#ifdef CPP_EDSOLVER 
+         !Do nothing and go to the MPI_BCAST
+#else 
+         CALL get_environment_variable('PWD',cwd)
+         path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(main_folder))
+         DO i_hia = 1, atoms%n_hia 
+            nType = atoms%lda_hia(i_hia)%atomType
+            l = atoms%lda_hia(i_hia)%l
+            IF(atoms%n_hia>1) THEN
+               WRITE(fmt,'("(A",I2.2,",A1,A1,A1")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
+               WRITE(folder,fmt) atoms%label(nType),"_",l_name(l),"/"
+               CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
+            ELSE
+               folder=""
+            ENDIF
+            INQUIRE(file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "se.atom",exist=l_selfenexist)
+            IF(.NOT.l_selfenexist) CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
+         ENDDO
+         !If we are here the solver was run and we go to MPI_BCAST
+#endif
       ELSE
          !occupation matrix is zero and LDA+Hubbard 1 shouldn't be run yet
          !There is nothing to be done yet just set the potential correction to 0
@@ -275,7 +291,6 @@ MODULE m_hubbard1_setup
 9010  FORMAT("Setup for Hubbard 1 solver for atom ", I3, ": ")
 9020  FORMAT(TR8,A7,TR3,A7)
 9030  FORMAT(TR7,f8.4,TR2,f8.4)
-9110  FORMAT("Hubbard 1 Iteration ", I3, " Last Distance in Occupation: ",f14.8," Last density matrix Distance: ", f14.8)
 
    END SUBROUTINE hubbard1_setup
 
