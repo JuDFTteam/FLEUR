@@ -9,11 +9,11 @@ MODULE m_setupMPI
   IMPLICIT NONE
 
 CONTAINS
-  SUBROUTINE setupMPI(nkpt,mpi)
+  SUBROUTINE setupMPI(nkpt,neigd,mpi)
 !$  use omp_lib
     USE m_types  
     USE m_available_solvers,ONLY:parallel_solver_available
-    INTEGER,INTENT(in)           :: nkpt
+    INTEGER,INTENT(in)           :: nkpt,neigd
     TYPE(t_mpi),INTENT(inout)    :: mpi
 
     INTEGER :: omp=-1,i
@@ -42,9 +42,9 @@ CONTAINS
        mpi%n_rank=0
        mpi%n_size=1
        mpi%sub_comm=mpi%mpi_comm
-       IF (ALLOCATED(kpts%k_list)) DEALLOCATE(mpi%k_List,mpi%ev_list))
-       ALLOCATE(mpi%k_list(kpts%nkpts))
-       mpi%k_list=[(i,i=1,kpts%nkpts)]
+       IF (ALLOCATED(mpi%k_list)) DEALLOCATE(mpi%k_List,mpi%ev_list)
+       ALLOCATE(mpi%k_list(nkpt))
+       mpi%k_list=[(i,i=1,nkpt)]
        ALLOCATE(mpi%ev_list(neigd))
        mpi%ev_list=[(i,i=1,neigd)]
     END IF
@@ -58,7 +58,7 @@ CONTAINS
 #endif
 
     !generate the MPI communicators
-    CALL priv_create_comm(nkpt,mpi)
+    CALL priv_create_comm(nkpt,neigd,mpi)
     if (mpi%irank==0) WRITE(*,*) "--------------------------------------------------------"
 
   END SUBROUTINE setupMPI
@@ -95,7 +95,7 @@ CONTAINS
     !          G.B. `99
     !
     !-------------------------------------------------------------------------------------------
-    INTEGER:: n_members,n_size_min
+    INTEGER:: n_members,n_size_min,nk
     CHARACTER(len=1000)::txt
 
     n_members = MIN(nkpt,mpi%isize)
@@ -122,13 +122,13 @@ CONTAINS
     ENDIF
   END SUBROUTINE priv_distribute_k
 
-  SUBROUTINE priv_create_comm(nkpt,mpi)
+  SUBROUTINE priv_create_comm(nkpt,neigd,mpi)
     use m_types
     implicit none
-    INTEGER,INTENT(in)      :: nkpt
+    INTEGER,INTENT(in)      :: nkpt,neigd
     TYPE(t_mpi),INTENT(inout)    :: mpi
 #ifdef CPP_MPI
-    INTEGER :: n_members,n,i,ierr,sub_group,world_group
+    INTEGER :: n_members,n,i,ierr,sub_group,world_group,n_start
     INTEGER :: i_mygroup(mpi%n_size)
     LOGICAL :: compact ! Deside how to distribute k-points
 
@@ -154,8 +154,8 @@ CONTAINS
         ! |        7        |        8        |
         !  -----------------------------------
     
-        mpi%n_start = INT(mpi%irank/mpi%n_size) + 1
-        i_mygroup(1) = (mpi%n_start-1) * mpi%n_size
+        n_start = INT(mpi%irank/mpi%n_size) + 1
+        i_mygroup(1) = (n_start-1) * mpi%n_size
         do i = 2, mpi%n_size
            i_mygroup(i) = i_mygroup(i-1) + 1
         enddo
@@ -176,10 +176,10 @@ CONTAINS
         ! |  7  |  8  |  7  |  8  |  7  |  8  |
         !  -----------------------------------
 
-        mpi%n_start = MOD(mpi%irank,n_members) + 1
+        n_start = MOD(mpi%irank,n_members) + 1
         !!      n_start = INT(irank/n_size) * n_size
         n = 0
-        DO i = mpi%n_start,mpi%isize,n_members
+        DO i = n_start,mpi%isize,n_members
         !!      DO i = n_start+1,n_start+n_size
            n = n+1
            i_mygroup(n) = i-1
@@ -193,8 +193,8 @@ CONTAINS
     !write (*,"(a,i0,100i4)") "MPI:",mpi%sub_comm,mpi%irank,mpi%n_groups,mpi%n_size,n,i_mygroup
 
     CALL MPI_COMM_RANK (mpi%SUB_COMM,mpi%n_rank,ierr)
-    ALLOCATE(mpi%ev_list(neig/mpi%n_size+1))
-    mpi%ev_list=[(i,i=mpi%irank+1,neig,mpi%n_size)]
+    ALLOCATE(mpi%ev_list(neigd/mpi%n_size+1))
+    mpi%ev_list=[(i,i=mpi%irank+1,neigd,mpi%n_size)]
     
 #endif
   END SUBROUTINE priv_create_comm

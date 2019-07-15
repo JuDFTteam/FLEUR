@@ -129,7 +129,7 @@ CONTAINS
     CALL timestop("eigenso: spnorb")
     !
     !--->    loop over k-points: each can be a separate task
-    !DO nk_i=1,SIZE(mpi%k_list)
+    DO nk_i=1,SIZE(mpi%k_list)
         nk=mpi%k_list(nk_i)
      !DO nk = mpi%n_start,n_end,n_stride
        CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)

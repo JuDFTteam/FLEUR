@@ -504,7 +504,7 @@
           END IF
 
           !Finalize the MPI setup
-          CALL setupMPI(kpts%nkpt,mpi)
+          CALL setupMPI(kpts%nkpt,DIMENSION%neigd,mpi)
 
           !Collect some usage info
           CALL add_usage_data("A-Types",atoms%ntype)
