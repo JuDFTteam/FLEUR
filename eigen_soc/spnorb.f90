@@ -72,6 +72,16 @@ CONTAINS
        ENDIF
     ENDDO
     
+    !Read in SOC-parameter for shell with hubbard 1
+    IF(PRESENT(hub1).AND.mpi%irank.EQ.0) THEN
+      DO i_hia = 1, atoms%n_hia
+         IF(hub1%l_soc_given(i_hia)) CYCLE
+         n = atoms%lda_hia(i_hia)%atomType
+         l = atoms%lda_hia(i_hia)%l
+         hub1%xi(i_hia) = (rsoc%rsopp(n,l,1,1)+rsoc%rsopp(n,l,2,2))*hartree_to_ev_const
+      ENDDO
+    ENDIF
+
     !DO some IO into out file
       IF ((first_k).AND.(mpi%irank.EQ.0)) THEN
        DO n = 1,atoms%ntype
@@ -81,15 +91,6 @@ CONTAINS
           WRITE (6,FMT=8001) (2*rsoc%rsopp(n,l,2,2),l=1,3)
           WRITE (6,FMT=8001) (2*rsoc%rsopp(n,l,2,1),l=1,3)
        ENDDO
-       !Read in SOC-parameter for shell with hubbard 1
-       IF(PRESENT(hub1)) THEN
-          DO i_hia = 1, atoms%n_hia
-             IF(hub1%l_soc_given(i_hia)) CYCLE
-             n = atoms%lda_hia(i_hia)%atomType
-             l = atoms%lda_hia(i_hia)%l
-             hub1%xi(i_hia) = (rsoc%rsopp(n,l,1,1)+rsoc%rsopp(n,l,2,2))*hartree_to_ev_const
-          ENDDO
-       ENDIF
        IF (noco%l_spav) THEN
           WRITE(6,fmt='(A)') 'SOC Hamiltonian is constructed by neglecting B_xc.'
        ENDIF
