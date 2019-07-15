@@ -132,7 +132,7 @@ CONTAINS
 
       DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
          k_loop:DO nk_i = 1,size(mpi%k_list)
-            nk=mpi%k_list(i)
+            nk=mpi%k_list(nk_i)
             ! Set up lapw list
             CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
             call timestart("Setup of H&S matrices")
