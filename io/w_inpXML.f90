@@ -280,7 +280,7 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,212) kpts%kPointDensity(1),kpts%kPointDensity(2),kpts%kPointDensity(3),kptGamma
    END IF
 
-   IF(juDFT_was_argument("-kpts_gw")) THEN
+   IF(juDFT_was_argument("-gw")) THEN
       WRITE(fileNum,'(a)') '         <altKPointSet purpose="GW">'
       WRITE(fileNum,'(a)') '            <kPointListFile filename="kpts_gw"/>'
       WRITE(fileNum,'(a)') '         </altKPointSet>'

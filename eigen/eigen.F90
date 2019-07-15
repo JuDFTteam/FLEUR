@@ -75,7 +75,7 @@ CONTAINS
 
       ! Local Scalars
       INTEGER jsp,nk,nred,ne_all,ne_found
-      INTEGER ne
+      INTEGER ne, nk_i
       INTEGER isp,i,j,err
       LOGICAL l_wu,l_file,l_real,l_zref
       INTEGER :: solver=0
@@ -131,8 +131,8 @@ CONTAINS
       unfoldingBuffer = CMPLX(0.0,0.0)
 
       DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
-         k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
-
+         k_loop:DO nk_i = 1,size(mpi%k_list)
+            nk=mpi%k_list(i)
             ! Set up lapw list
             CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
             call timestart("Setup of H&S matrices")
@@ -246,6 +246,8 @@ CONTAINS
             CALL timestop("EV output")
 
             IF (banddos%unfoldband) THEN
+               IF(modulo (kpts%nkpt,mpi%n_size).NE.0) call juDFT_error("number kpts needs to be multiple of number mpi threads",& 
+                   hint=errmsg, calledby="eigen.F90")
                CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
                CALL smat_unfold%free()
                DEALLOCATE(smat_unfold, stat=dealloc_stat, errmsg=errmsg)

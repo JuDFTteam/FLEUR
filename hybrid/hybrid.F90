@@ -127,8 +127,8 @@ CONTAINS
           call timestop("HF_setup")
       
       
-
-          DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
+          DO nk = 1,kpts%nkpt
+          !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
              CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref)
              CALL hsfock(nk,atoms,hybrid,lapw,DIMENSION,kpts,jsp,input,hybdat,eig_irr,sym,cell,&
                          noco,results,iterHF,MAXVAL(hybrid%nobd),xcpot,mpi)

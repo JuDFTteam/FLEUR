@@ -345,11 +345,13 @@ CONTAINS
 
    ! writes all times to file
    SUBROUTINE writetimes(stdout)
-      USE m_judft_usage
+     USE m_judft_usage
+     USE m_judft_args
       IMPLICIT NONE
       LOGICAL, INTENT(IN), OPTIONAL::stdout
       INTEGER :: irank = 0
       CHARACTER(len=:), allocatable :: json_str
+      CHARACTER(len=30)::filename
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err,isize
@@ -372,14 +374,21 @@ CONTAINS
 
          CALL priv_writetimes(globaltimer, 1, 6)
 #ifdef CPP_MPI
-      IF (l_mpi) THEN
-         CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
-         WRITE (6, *) "Program used ", isize, " PE"
-      ENDIF
+         IF (l_mpi) THEN
+            CALL MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
+            WRITE (6, *) "Program used ", isize, " PE"
+         ENDIF
 #endif
+      END IF
+      IF (irank==0.OR.judft_was_argument("-all_times")) THEN
          json_str = ""
-         call priv_genjson(globaltimer, 1, json_str)
-         open(32, file="juDFT_times.json")
+         CALL priv_genjson(globaltimer, 1, json_str)
+         IF (irank==0) THEN
+            OPEN(32, file="juDFT_times.json")
+         ELSE
+            WRITE(filename,"(a,i0,a)") "juDFT_times.",irank,".json"
+            OPEN(32, file=trim(filename))
+         END IF
          write (32,"(A)") json_str
          close(32)
       ENDIF

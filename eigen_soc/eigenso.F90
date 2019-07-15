@@ -60,9 +60,9 @@ CONTAINS
     !     ..
     !     ..
     !     .. Local Scalars ..
-    INTEGER i,j,nk,jspin,n ,l
+    INTEGER i,j,nk,nk_i,jspin,n ,l
     ! INTEGER n_loc,n_plus,i_plus,
-    INTEGER n_end,nsz,nmat,n_stride
+    INTEGER nsz,nmat,n_stride
     LOGICAL l_socvec   !,l_all
     INTEGER wannierspin
     TYPE(t_usdus)        :: usdus
@@ -129,25 +129,9 @@ CONTAINS
     CALL timestop("eigenso: spnorb")
     !
     !--->    loop over k-points: each can be a separate task
-    !
-    !n_loc = INT(kpts%nkpt/mpi%isize)
-    !n_plus = kpts%nkpt - mpi%isize*n_loc
-    !i_plus = -1
-    !IF (mpi%irank.LT.n_plus) i_plus = 0
-    !n_end = (mpi%irank+1)+(n_loc+i_plus)*mpi%isize
-    !
-#if defined(CPP_MPI)
-     n_stride = kpts%nkpt/mpi%n_groups
-#else
-     n_stride = 1
-#endif
-     n_end = kpts%nkpt
-    !write(*,'(4i12)') mpi%irank, mpi%n_groups, n_stride, mpi%n_start
-    !
-    !--->  start loop k-pts
-    !
-    ! DO  nk = mpi%irank+1,n_end,mpi%isize
-     DO nk = mpi%n_start,n_end,n_stride
+    DO nk_i=1,SIZE(mpi%k_list)
+        nk=mpi%k_list(nk_i)
+     !DO nk = mpi%n_start,n_end,n_stride
        CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)
        ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*DIMENSION%neigd,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
