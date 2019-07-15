@@ -107,7 +107,7 @@ CONTAINS
                rtaual = MATMUL(rot(:, :, isym), atoms%taual(:, iatom)) + trans(:, isym)
                iatom1 = 0
                DO ieq1 = 1, atoms%neq(itype)
-                  IF (ALL(ABS(MODULO(rtaual - atoms%taual(:, iiatom + ieq1) + 10.0**-12, 1.0)) < 10.0**-10)) THEN  !The 10.0**-12 is a dirty fix.
+                  IF (ALL(ABS(MODULO(rtaual - atoms%taual(:, iiatom + ieq1) + 1e-12, 1.0)) < 1e-10)) THEN  !The 1e-12 is a dirty fix.
                      iatom1 = iiatom + ieq1
                   END IF
                END DO
