@@ -85,6 +85,9 @@ MODULE m_add_selfen
                      vmat%data_c(1:ns,ns+1:2*ns) = 0.0
                      vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                   ENDIF
+                  !Remove +U potential
+                  vmat%data_c(1:ns,1:ns) = vmat%data_c(1:ns,1:ns) - vmmp(-l:l,-l:l,i_hia,i_match)
+                  IF(l_match_both_spins) vmat%data_c(ns+1:2*ns,ns+1:2*ns) = vmat%data_c(ns+1:2*ns,ns+1:2*ns) - vmmp(-l:l,-l:l,i_hia,2)
                   DO ipm = 1, 2
                      IF(l_match_both_spins) THEN
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
@@ -136,6 +139,9 @@ MODULE m_add_selfen
                      vmat%data_c(1:ns,ns+1:2*ns) = 0.0
                      vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                   ENDIF
+                  !Remove +U potential
+                  vmat%data_c(1:ns,1:ns) = vmat%data_c(1:ns,1:ns) - vmmp(-l:l,-l:l,i_hia,i_match)
+                  IF(l_match_both_spins) vmat%data_c(ns+1:2*ns,ns+1:2*ns) = vmat%data_c(ns+1:2*ns,ns+1:2*ns) - vmmp(-l:l,-l:l,i_hia,2)
                   DO ipm = 1, 2
                      IF(l_match_both_spins) THEN
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
