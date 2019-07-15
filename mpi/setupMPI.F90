@@ -47,6 +47,8 @@ CONTAINS
        mpi%k_list=[(i,i=1,nkpt)]
        ALLOCATE(mpi%ev_list(neigd))
        mpi%ev_list=[(i,i=1,neigd)]
+       WRITE(*,*) "--------------------------------------------------------"
+       RETURN
     END IF
 #ifdef CPP_MPI
     !Distribute the work
