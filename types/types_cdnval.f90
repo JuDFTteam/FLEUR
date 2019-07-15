@@ -119,15 +119,10 @@ PRIVATE
    END TYPE t_orbcomp
 
    TYPE t_cdnvalJob
-
-      INTEGER              :: ikptIncrement
-      INTEGER              :: ikptStart
-      INTEGER              :: nkptExtended
       LOGICAL              :: l_evp
-
+      INTEGER, ALLOCATABLE :: k_list(:)
+      INTEGER, ALLOCATABLE :: ev_list(:)
       INTEGER, ALLOCATABLE :: noccbd(:)
-      INTEGER, ALLOCATABLE :: nStart(:)
-      INTEGER, ALLOCATABLE :: nEnd(:)
       REAL,    ALLOCATABLE :: weights(:,:) ! weights(band_idx, kpt_idx)
 
       CONTAINS
@@ -466,142 +461,69 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin,slicep
 
    INTEGER,                        INTENT(IN)    :: jspin
 
-   INTEGER :: jsp, iBand, ikpt, nslibd, noccbd_l, noccbd, nStart, nEnd
+   INTEGER :: jsp, iBand, ikpt, nslibd, noccbd_l, noccbd, ikpt_i
 
-   thisCdnvalJob%l_evp = .FALSE.
-   IF (kpts%nkpt < mpi%isize) THEN
-      thisCdnvalJob%l_evp = .TRUE.
-      thisCdnvalJob%nkptExtended = kpts%nkpt
-      thisCdnvalJob%ikptStart = 1
-      thisCdnvalJob%ikptIncrement = 1
-   ELSE
-      ! the number of iterations is adjusted to the number of MPI processes to synchronize RMA operations
-      thisCdnvalJob%nkptExtended = (kpts%nkpt / mpi%isize + 1) * mpi%isize
-      thisCdnvalJob%ikptStart = mpi%irank + 1
-      thisCdnvalJob%ikptIncrement = mpi%isize
-   END IF
-
+   thisCdnvalJob%l_evp = mpi%n_size>1
+   IF (ALLOCATED(thisCdnvalJob%k_list))DEALLOCATE (thisCdnvalJob%k_list)
+   IF (ALLOCATED(thisCdnvalJob%ev_list)) DEALLOCATE (thisCdnvalJob%ev_list)
+   thisCdnvalJob%k_list=mpi%k_list !includes allocate
+   thisCdnvalJob%ev_list=mpi%ev_list
+   
    IF (ALLOCATED(thisCdnvalJob%noccbd)) DEALLOCATE (thisCdnvalJob%noccbd)
-   IF (ALLOCATED(thisCdnvalJob%nStart)) DEALLOCATE (thisCdnvalJob%nStart)
-   IF (ALLOCATED(thisCdnvalJob%nEnd)) DEALLOCATE (thisCdnvalJob%nEnd)
+   IF (ALLOCATED(thisCdnvalJob%weights)) DEALLOCATE (thisCdnvalJob%weights)
 
-   ALLOCATE(thisCdnvalJob%noccbd(kpts%nkpt))
-   ALLOCATE(thisCdnvalJob%nStart(kpts%nkpt))
-   ALLOCATE(thisCdnvalJob%nEnd(kpts%nkpt))
+   ALLOCATE(thisCdnvalJob%noccbd(size(thiscdnvaljob%k_list)))
+   ALLOCATE(thisCdnvalJob%weights(size(thiscdnvaljob%ev_list),size(thiscdnvalJob%k_list)))
+   thisCdnvalJob%weights(:,:) = results%w_iks(thiscdnvaljob%ev_list,:,jsp)*2.0/input%jspins
 
    thisCdnvalJob%noccbd = 0
-   thisCdnvalJob%nStart = 1
-   thisCdnvalJob%nEnd = -1
 
    jsp = MERGE(1,jspin,noco%l_noco)
 
    ! determine bands to be used for each k point, MPI process
-   DO ikpt = thisCdnvalJob%ikptStart, kpts%nkpt, thisCdnvalJob%ikptIncrement
-
-      iBand = results%neig(ikpt,jsp)
-      DO WHILE (results%w_iks(iBand,ikpt,jsp).LT.1.e-8)
-         iBand = iBand - 1
-      END DO
-      thisCdnvalJob%noccbd(ikpt) = iBand
-
-!      DO iBand = 1,results%neig(ikpt,jsp)
-!         IF ((results%w_iks(iBand,ikpt,jsp).GE.1.e-8).OR.input%pallst) THEN
-!            thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%noccbd(ikpt) + 1
-!         END IF
-!      END DO
-
-      IF(PRESENT(banddos)) THEN
-            IF (banddos%dos) thisCdnvalJob%noccbd(ikpt) = results%neig(ikpt,jsp)
-      END IF 
-
-      thisCdnvalJob%nStart(ikpt) = 1
-      thisCdnvalJob%nEnd(ikpt)   = thisCdnvalJob%noccbd(ikpt)
+   DO ikpt_i = 1,size(thisCdnvalJob%k_list)
+      ikpt=thisCdnvalJob%k_list(ikpt_i)
+      IF(PRESENT(sliceplot)) THEN
+         IF (sliceplot%slice.AND.input%pallst) thisCdnvalJob%weights(:,ikpt) = kpts%wtkpt(ikpt)
+      END IF
+      !Max number of bands
+      thisCdnvalJob%noccbd(ikpt)= count(thiscdnvaljob%ev_list<=results%neig(ikpt,jsp))
 
       !--->    if slice, only certain bands are taken into account
       IF(PRESENT(sliceplot)) THEN
          IF (sliceplot%slice.AND.thisCdnvalJob%noccbd(ikpt).GT.0) THEN
-            thisCdnvalJob%nStart(ikpt) = 1
-            thisCdnvalJob%nEnd(ikpt)   = -1
-            IF (mpi%irank==0) WRITE (6,FMT=*) 'NNNE',sliceplot%nnne
-            IF (mpi%irank==0) WRITE (6,FMT=*) 'sliceplot%kk',sliceplot%kk
-            nslibd = 0
             IF (sliceplot%kk.EQ.0) THEN
-               IF (mpi%irank==0) THEN
-                  WRITE (6,FMT='(a)') 'ALL K-POINTS ARE TAKEN IN SLICE'
-                  WRITE (6,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
-               END IF
-
-               iBand = 1
-               DO WHILE (results%eig(iBand,ikpt,jsp).LT.sliceplot%e1s)
-                  iBand = iBand + 1
-                  IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
-               END DO
-               thisCdnvalJob%nStart(ikpt) = iBand
-               IF(iBand.LE.results%neig(ikpt,jsp)) THEN
-                  DO WHILE (results%eig(iBand,ikpt,jsp).LE.sliceplot%e2s)
-                     iBand = iBand + 1
-                     IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
-                  END DO
-                  iBand = iBand - 1
-               END IF
-               thisCdnvalJob%nEnd(ikpt) = iBand
-               nslibd = MAX(0,thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1)
-               IF (mpi%irank==0) WRITE (6,'(a,i3)') ' eigenvalues in sliceplot%slice:', nslibd
+               do iband=1,thisCdnvalJob%noccbd(ikpt)
+                  if (results%eig(thiscdnvaljob%ev_list(iBand),ikpt,jsp).LT.sliceplot%e1s) thisCdnvalJob%weights(iband,ikpt)=0.0
+                  if (results%eig(thiscdnvaljob%ev_list(iBand),ikpt,jsp).GT.sliceplot%e2s) thisCdnvalJob%weights(iband,ikpt)=0.0
+               end do
             ELSE IF (sliceplot%kk.EQ.ikpt) THEN
-               IF (mpi%irank==0) WRITE (6,FMT='(a,i2)') ' sliceplot%slice: k-point nr.',ikpt
                IF ((sliceplot%e1s.EQ.0.0) .AND. (sliceplot%e2s.EQ.0.0)) THEN
-                  IF (mpi%irank==0) WRITE (6,FMT='(a,i5,f10.5)') 'slice: eigenvalue nr.',&
-                       sliceplot%nnne,results%eig(sliceplot%nnne,ikpt,jsp)
-                  nslibd = 1
-                  thisCdnvalJob%nStart(ikpt) = sliceplot%nnne
-                  thisCdnvalJob%nEnd(ikpt) = sliceplot%nnne
+                  do iband=1,thisCdnvalJob%noccbd(ikpt)
+                     if (thiscdnvaljob%ev_list(iBand).ne.sliceplot%nnne) thisCdnvalJob%weights(iband,ikpt)=0.0
+                  enddo
                ELSE
-                  iBand = 1
-                  DO WHILE (results%eig(iBand,ikpt,jsp).LT.sliceplot%e1s)
-                     iBand = iBand + 1
-                     IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
-                  END DO
-                  thisCdnvalJob%nStart(ikpt) = iBand
-                  IF(iBand.LE.results%neig(ikpt,jsp)) THEN
-                     DO WHILE (results%eig(iBand,ikpt,jsp).LE.sliceplot%e2s)
-                        iBand = iBand + 1
-                        IF(iBand.GT.results%neig(ikpt,jsp)) EXIT
-                     END DO
-                     iBand = iBand - 1
-                  END IF
-                  thisCdnvalJob%nEnd(ikpt) = iBand
-                  nslibd = MAX(0,thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1)
-                  IF (mpi%irank==0) WRITE (6,FMT='(a,i3)')' eigenvalues in sliceplot%slice:',nslibd
+                  do iband=1,thisCdnvalJob%noccbd(ikpt)
+                     if (results%eig(thiscdnvaljob%ev_list(iBand),ikpt,jsp).LT.sliceplot%e1s) thisCdnvalJob%weights(iband,ikpt)=0.0
+                     if (results%eig(thiscdnvaljob%ev_list(iBand),ikpt,jsp).GT.sliceplot%e2s) thisCdnvalJob%weights(iband,ikpt)=0.0
+                  end do
                END IF
+            else
+               thisCdnvalJob%weights(:,ikpt)=0.0
             END IF
-            thisCdnvalJob%noccbd(ikpt) = nslibd
          END IF ! sliceplot%slice
       END IF
-
-      IF (thisCdnvalJob%l_evp) THEN
-         noccbd_l = CEILING(REAL(thisCdnvalJob%noccbd(ikpt)) / mpi%isize)
-         thisCdnvalJob%nEnd(ikpt)   = min(thisCdnvalJob%nStart(ikpt)+(mpi%irank+1)*noccbd_l-1, thisCdnvalJob%noccbd(ikpt))
-         thisCdnvalJob%nStart(ikpt) = thisCdnvalJob%nStart(ikpt) + mpi%irank*noccbd_l
-         thisCdnvalJob%noccbd(ikpt) = thisCdnvalJob%nEnd(ikpt) - thisCdnvalJob%nStart(ikpt) + 1
-         IF (thisCdnvalJob%noccbd(ikpt).LT.1) thisCdnvalJob%noccbd(ikpt) = 0
-      END IF
-
-   END DO
-
-   IF (ALLOCATED(thisCdnvalJob%weights)) DEALLOCATE (thisCdnvalJob%weights)
-   ALLOCATE(thisCdnvalJob%weights(MAXVAL(thisCdnvalJob%noccbd(:)),kpts%nkpt))
-
-   thisCdnvalJob%weights = 0.0
-   DO ikpt = thisCdnvalJob%ikptStart, kpts%nkpt, thisCdnvalJob%ikptIncrement
-      noccbd = thisCdnvalJob%noccbd(ikpt)
-      nStart = thisCdnvalJob%nStart(ikpt)
-      nEnd = thisCdnvalJob%nEnd(ikpt)
-
-      thisCdnvalJob%weights(1:noccbd,ikpt) = results%w_iks(nStart:nEnd,ikpt,jsp)
-      IF(PRESENT(sliceplot)) THEN
-         IF (sliceplot%slice.AND.input%pallst) thisCdnvalJob%weights(:,ikpt) = kpts%wtkpt(ikpt)
-      END IF
-      thisCdnvalJob%weights(:noccbd,ikpt) = 2.0 * thisCdnvalJob%weights(:noccbd,ikpt) / input%jspins ! add in spin-doubling factor
+      !remove unoccupied states
+      iband=thisCdnvalJob%noccbd(ikpt)
+      IF(PRESENT(banddos)) THEN
+         IF (.NOT.banddos%dos)THEN
+            DO WHILE (thisCdnvalJob%weights(iBand,ikpt).LT.1.e-8)
+               iBand = iBand - 1
+            END DO
+         ENDIF
+      ENDIF
+      thisCdnvalJob%noccbd(ikpt) = iBand
+      
    END DO
 
 END SUBROUTINE cdnvalJob_init
