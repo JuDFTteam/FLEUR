@@ -12,11 +12,11 @@ module m_corespec
 
 ! PARAMETERS
 
-  complex, parameter :: cone = cmplx(1.d0,0.d0)
-  complex, parameter :: cimu = cmplx(0.d0,1.d0)
-  real, parameter :: alpha = 7.29735257d-3
-  real, parameter :: mec2 = 0.51099891d6
-  real, parameter :: ecoredeep = 0.5d0
+  complex, parameter :: cone = cmplx(1.0,0.0)
+  complex, parameter :: cimu = cmplx(0.0,1.0)
+  real, parameter :: alpha = 7.29735257*10.0**-3
+  real, parameter :: mec2 = 0.51099891*10.0**6
+  real, parameter :: ecoredeep = 0.5
 
   integer, parameter :: edgel(11) = (/0,1,1,2,2,3,3,4,4,5,5/)
   integer, parameter :: edgej(11) = (/1,1,3,3,5,5,7,7,9,9,11/)

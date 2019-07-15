@@ -88,7 +88,7 @@ CONTAINS
                 gg = lapw%rk(k,iintsp)*gb(l)
         !        IF ( apw(l) ) THEN
         !           fj(k,l,n,iintsp) = 1.0*con1 * ff / usdus%us(l,n,isp)
-        !           gj(k,l,n,iintsp) = 0.0d0
+        !           gj(k,l,n,iintsp) = 0.0
         !        ELSE
                    !--->                 in a spin-spiral calculation fj and gj are needed
                    !--->                 both interstitial spin directions at the same time

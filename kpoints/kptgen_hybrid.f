@@ -96,7 +96,7 @@
           IF(    all(    matmul(rot(:,:,i),rot(:,:,j))
      &               .eq.reshape((/1,0,0,0,1,0,0,0,1/),(/3,3/)))
      &     .and.all(modulo(matmul(rot(:,:,i),rtau(:,j))+rtau(:,i),1.0)
-     &               .lt.1d-10)                                  )THEN
+     &               .lt.10.0**-10)                                  )THEN
             IF(invtab(i).ne.0) STOP 'kptgen: inverse operation
      &                              & already defined.'
             invtab(i)   = j
@@ -137,7 +137,7 @@
         DO k = 2,nsym
           rarr  = matmul(rrot(:,:,k),bk(:,i)) * kpts%nkpt3
           iarr2 = nint(rarr)
-          IF(any(abs(iarr2-rarr).gt.1d-10)) THEN
+          IF(any(abs(iarr2-rarr).gt.10.0**-10)) THEN
             WRITE(6,'(A,I3,A)') 'kptgen: Symmetry operation',k,
      &                        ' incompatible with k-point set.'
             ldum = .true.
@@ -280,7 +280,7 @@ c     function modulo1 maps kpoint into first BZ
       nkpt3 = (/a,b,c/)
       modulo1 = kpoint*nkpt3
       help    = nint(modulo1)
-      IF(any(abs(help-modulo1).gt.1d-8)) THEN
+      IF(any(abs(help-modulo1).gt.10.0**-8)) THEN
         modulo1 = kpoint*nkpt3
         WRITE(*,*) modulo1
         help    = nint(modulo1)
@@ -291,7 +291,7 @@ c     function modulo1 maps kpoint into first BZ
      +     'modulo1: argument not an element of k-point set.', 
      +     calledby = 'kptgen_hybrid:modulo1')
       END IF
-      modulo1 = modulo(help,nkpt3)*1d0/nkpt3
+      modulo1 = modulo(help,nkpt3)*1.0/nkpt3
 
       END FUNCTION modulo1
 

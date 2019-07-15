@@ -188,7 +188,7 @@ CONTAINS
                       wronk = usdus%uds(l,n,jspin)*usdus%dus(l,n,jspin) - usdus%us(l,n,jspin)*usdus%duds(l,n,jspin)
                       IF (apw(l,n)) THEN
                          fj(l) = 1.0*const * fj(l)/usdus%us(l,n,jspin)
-                         dfj(l) = 0.0d0
+                         dfj(l) = 0.0
                       ELSE
                          dfj(l) = const* (usdus%dus(l,n,jspin)*fj(l)-df*usdus%us(l,n,jspin))/wronk
                          fj(l) = const* (df*usdus%uds(l,n,jspin)-fj(l)*usdus%duds(l,n,jspin))/wronk

@@ -138,9 +138,9 @@ C
       do 2200 i=1,3
       dist=dist+(kvc(i,j)-kvc(i,l))**2
  2200 continue
-      if ( dist.lt.(dm*(1.0d0-1.0d-6))  ) dm=dist
+      if ( dist.lt.(dm*(1.0-10.0**-6))  ) dm=dist
  2100 continue
-      if ( d.lt.(dm*(1.0d0+1.0d-6))  ) goto 2000
+      if ( d.lt.(dm*(1.0+10.0**-6))  ) goto 2000
       d=dm
       lmin=l
  2000 continue
@@ -164,9 +164,9 @@ C
       do 3300 i=1,3
       dist=dist+(kvc(i,j)-knew(i))**2
  3300 continue
-      if ( dist.lt.(dm*(1.0d0-1.0d-6))  ) dm=dist
+      if ( dist.lt.(dm*(1.0-10.0**-6))  ) dm=dist
  3200 continue
-      if ( dm.lt.(dmax*(1.0d0+1.0d-6)) ) goto 3000
+      if ( dm.lt.(dmax*(1.0+10.0**-6)) ) goto 3000
       dmax=dm
       do 3400 i=1,3
       kc(i)=knew(i)
@@ -177,7 +177,7 @@ C WE HAVE FOUND A NEW POINT KC . IF THE MINIMAL DISTANCE OF
 C THIS POINT IS LESS THAN THE DISTANCE D WE ALREADY HAVE ,
 C WE STOP THE DYNAMIC CYCLE .
 C
-      if ( dmax.lt.1.0001d0*d ) goto 4000
+      if ( dmax.lt.1.0001*d ) goto 4000
       do 3500 i=1,3
       kvc(i,lmin)=kc(i)
  3500 continue
@@ -188,7 +188,7 @@ C WE HAVE FOUND A REASONABLE DISTRIBUTION . TO AVOID TETRAHEDRA
 C WITH A FUNNY SHAPE , WE PUT ALL THE POINTS WHICH ARE NEAR A
 C SIDE ON THIS SIDE .
 C
-      d=0.49d0*sqrt(d)
+      d=0.49*sqrt(d)
       do 4100 l=ncorn+1,nkpt
       xmin=1.0e6
       do n1=1,ncorn-2

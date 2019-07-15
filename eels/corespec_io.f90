@@ -42,10 +42,10 @@ MODULE m_corespec_io
     csi%edge = ""
     csi%edgeidx = 0
     csi%lx = -1
-    csi%ek0 = 0.d0
-    csi%emn = -2.d0
-    csi%emx = 20.d0
-    csi%ein = 0.1d0
+    csi%ek0 = 0.0
+    csi%emn = -2.0
+    csi%emx = 20.0
+    csi%ein = 0.1
 
     csi%nqphi = 12
     csi%nqr = 20
@@ -182,12 +182,12 @@ MODULE m_corespec_io
            &"maximum l: ","csi%lx = ",csi%lx,"will be used"
 
 ! csi%ek0
-    if(csi%ek0.le.0.d0) then
+    if(csi%ek0.le.0.0) then
       write(*,csmsgs)  trim(smeno),"found csi%ek0 <= 0.0 !"//csmsgerr ; stop
     endif
-    csi%ek0 = csi%ek0*1000.d0 ! conversion from keV to eV
-    csv%gamma = 1.d0+csi%ek0/mec2
-    csv%beta = sqrt(1.d0-1.d0/(csv%gamma**2))
+    csi%ek0 = csi%ek0*1000.0 ! conversion from keV to eV
+    csv%gamma = 1.0+csi%ek0/mec2
+    csv%beta = sqrt(1.0-1.0/(csv%gamma**2))
     if(csi%verb.eq.1) then
       write(*,csmsgses)  trim(smeno),&
            &"kinetic energy of incoming electrons: ","csi%ek0 = ",csi%ek0,&
@@ -204,8 +204,8 @@ MODULE m_corespec_io
     if(csi%emn.gt.csi%emx) then
       write(*,csmsgs)  trim(smeno),"found csi%emn > csi%emx !"//csmsgerr ; stop
     endif
-    if(csi%ein.le.0.d0) then
-      write(*,csmsgs)  trim(smeno),"found csi%ein <= 0.d0 !"//csmsgerr ; stop
+    if(csi%ein.le.0.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%ein <= 0.0 !"//csmsgerr ; stop
     endif
     if(((csi%emx-csi%emn)/csi%ein)-int((csi%emx-csi%emn)/csi%ein).ne.0) then
       write(*,csmsgs)  trim(smeno),&
@@ -216,7 +216,7 @@ MODULE m_corespec_io
     csv%egrid = (/(csi%emn+csi%ein*dble(i), i = 0,csv%nex)/)
     csv%nen = 0
 !!$    do i = 0,csv%nex
-!!$      if(csv%egrid(i).ge.0.d0) then
+!!$      if(csv%egrid(i).ge.0.0) then
 !!$        csv%nen = i
 !!$        exit
 !!$      endif
@@ -240,9 +240,9 @@ MODULE m_corespec_io
            &csv%nen,"will be used"
 
     if(.not.allocated(csv%eedge)) allocate(csv%eedge(csv%nljc))
-    csv%eedge = 0.d0
+    csv%eedge = 0.0
     if(.not.allocated(csv%occ)) allocate(csv%occ(csv%nljc))
-    csv%occ = 0.d0
+    csv%occ = 0.0
 
     l_cs = .true.
 

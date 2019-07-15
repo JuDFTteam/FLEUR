@@ -297,7 +297,7 @@ else
           IF (i1.EQ.1) nn = 0
           IF (i1.EQ.2) nn = nsz(1)
 
-          zhelp2(:,:) = 0.d0
+          zhelp2(:,:) = 0.0
           DO j = 1,nsize
              DO i = 1,nsz(jsp)
                 zhelp2(i,j) =  CONJG(hso(i+nn,j))
@@ -305,11 +305,11 @@ else
           ENDDO  ! j
 
           if (l_real) THEN
-             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*dimension%neigd,dimension%neigd,CMPLX(1.d0,0.d0),CMPLX(zmat(jsp)%data_r(:,:)),&
-                  zmat(1)%matsize1, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(1,1,jsp2),zmat(1)%matsize1)
+             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*dimension%neigd,dimension%neigd,CMPLX(1.0,0.0),CMPLX(zmat(jsp)%data_r(:,:)),&
+                  zmat(1)%matsize1, zhelp2,DIMENSION%neigd,CMPLX(0.0,0.0), zso(1,1,jsp2),zmat(1)%matsize1)
           else
-             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*dimension%neigd,dimension%neigd, CMPLX(1.d0,0.d0),zmat(jsp)%data_c(:,:),&
-                  zmat(1)%matsize1, zhelp2,DIMENSION%neigd,CMPLX(0.d0,0.d0), zso(:,:,jsp2),zmat(1)%matsize1)
+             CALL CPP_BLAS_cgemm("N","N",zmat(1)%matsize1,2*dimension%neigd,dimension%neigd, CMPLX(1.0,0.0),zmat(jsp)%data_c(:,:),&
+                  zmat(1)%matsize1, zhelp2,DIMENSION%neigd,CMPLX(0.0,0.0), zso(:,:,jsp2),zmat(1)%matsize1)
           endif
 
        ENDDO    !isp
