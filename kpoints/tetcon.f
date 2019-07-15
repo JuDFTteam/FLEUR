@@ -43,8 +43,8 @@ C                                                   Fred Hutson
 C
 C*************************************************************************
 C
-      data eps/10.0**-10/
-      data eps1/10.0**-5/
+      data eps/1e-10/
+      data eps1/1e-5/
       pi = 4.0*atan(1.0)
 C
 C CONSTRUCT THE FIRST TETRAHEDRON

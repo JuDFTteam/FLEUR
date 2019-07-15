@@ -83,7 +83,7 @@ C --->  save and data statements
 c
       save     one,zero,half,eps,eps1
       data     zero/0.0/,one/1.0/,half/0.5/,
-     +         eps/1.0*10.0**-8/,eps1/1.0*10.0**-5/
+     +         eps/1e-8/,eps1/1e-5/
 c
 c-----------------------------------------------------------------------
       if (kpri .ge. 3) then

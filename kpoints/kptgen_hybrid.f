@@ -96,7 +96,7 @@
           IF(    all(    matmul(rot(:,:,i),rot(:,:,j))
      &               .eq.reshape((/1,0,0,0,1,0,0,0,1/),(/3,3/)))
      &     .and.all(modulo(matmul(rot(:,:,i),rtau(:,j))+rtau(:,i),1.0)
-     &               .lt.10.0**-10)                                  )THEN
+     &               .lt.1e-10)                                  )THEN
             IF(invtab(i).ne.0) STOP 'kptgen: inverse operation
      &                              & already defined.'
             invtab(i)   = j
