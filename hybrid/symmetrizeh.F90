@@ -562,11 +562,11 @@ CONTAINS
          sphi = 0
          cphi = 0
          r = SQRT(SUM(rvec**2))
-         IF (r > 10.0**-16) THEN
+         IF (r > 1e-16) THEN
             rvec1 = rvec/r
             ctheta = rvec1(3)
             stheta = SQRT(rvec1(1)**2 + rvec1(2)**2)
-            IF (stheta > 10.0**-16) THEN
+            IF (stheta > 1e-16) THEN
                cphi = rvec1(1)/stheta
                sphi = rvec1(2)/stheta
             END IF

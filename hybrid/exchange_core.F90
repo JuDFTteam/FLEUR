@@ -199,7 +199,7 @@ CONTAINS
       END DO
 
       IF (l_real) THEN
-         IF (ANY(ABS(AIMAG(exchange)) > 10.0**-10)) THEN
+         IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
             IF (mpi%irank == 0) WRITE (6, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
             WRITE (*, *) MAXVAL(ABS(AIMAG(exchange)))
             STOP 'exchangeCore: Unusually large imaginary component.'
@@ -384,7 +384,7 @@ CONTAINS
       END DO
 
       IF (mat_ex%l_real) THEN
-         IF (ANY(ABS(AIMAG(exchange)) > 10.0**-10)) THEN
+         IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
             IF (mpi%irank == 0) WRITE (6, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
             WRITE (*, *) MAXVAL(ABS(AIMAG(exchange)))
             STOP 'exchangeCore: Unusually large imaginary component.'

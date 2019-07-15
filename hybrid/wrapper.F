@@ -135,7 +135,7 @@ c     --------
           k            = k + 1
           packmat_d(k) = mat(i,j)
 # ifdef test
-          if(abs(mat(j,i)-mat(i,j)).gt.10.0**-8)
+          if(abs(mat(j,i)-mat(i,j)).gt.1e-8)
      +       STOP 'packmat_d: input matrix not symmetric'
 # endif
         enddo
@@ -157,7 +157,7 @@ c     --------
 
           packmatcoul_d(k) = (mat(i,j)+mat(j,i))/2.
 
-!           if(abs(mat(j,i)-mat(i,j)).gt.10.0**-6) then
+!           if(abs(mat(j,i)-mat(i,j)).gt.1e-6) then
 !             write(*,*) 'packmatcoul_d: input matrix not symmetric; deviation .gt. 1E-06'         
 !           endif
         enddo
@@ -198,7 +198,7 @@ c     --------
           k            = k + 1
           packmat_z(k) = mat(i,j)
 # ifdef test
-          if(abs(conjg(mat(j,i))-mat(i,j)).gt.10.0**-8) 
+          if(abs(conjg(mat(j,i))-mat(i,j)).gt.1e-8) 
      +                    stop 'packmat_z: input matrix not Hermitian.'
 # endif
         enddo
@@ -219,7 +219,7 @@ c     --------
           k            = k + 1
           packmatcoul_z(k) = (mat(i,j) + conjg(mat(j,i)))/2.
 
-          if(abs(conjg(mat(j,i))-mat(i,j)).gt.10.0**-4) then
+          if(abs(conjg(mat(j,i))-mat(i,j)).gt.1e-4) then
             stop 'packmatcoul_z: input matrix not Hermitian; &
      & deviation .gt. 1E-04.'
           endif

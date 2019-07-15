@@ -513,8 +513,8 @@ CONTAINS
       REAL    :: expo, rrad, k(3), kv1(3), kv2(3), kv3(3), knorm2
       COMPLEX :: cdum
 
-      expo = 5*10.0**-3
-      rrad = sqrt(-log(5*10.0**-3)/expo)
+      expo = 5e-3
+      rrad = sqrt(-log(5e-3)/expo)
       cdum = sqrt(expo)*rrad
       divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
       rrad = rrad**2

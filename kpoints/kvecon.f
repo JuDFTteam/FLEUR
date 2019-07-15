@@ -138,9 +138,9 @@ C
       do 2200 i=1,3
       dist=dist+(kvc(i,j)-kvc(i,l))**2
  2200 continue
-      if ( dist.lt.(dm*(1.0-10.0**-6))  ) dm=dist
+      if ( dist.lt.(dm*(1.0-1e-6))  ) dm=dist
  2100 continue
-      if ( d.lt.(dm*(1.0+10.0**-6))  ) goto 2000
+      if ( d.lt.(dm*(1.0+1e-6))  ) goto 2000
       d=dm
       lmin=l
  2000 continue
@@ -164,9 +164,9 @@ C
       do 3300 i=1,3
       dist=dist+(kvc(i,j)-knew(i))**2
  3300 continue
-      if ( dist.lt.(dm*(1.0-10.0**-6))  ) dm=dist
+      if ( dist.lt.(dm*(1.0-1e-6))  ) dm=dist
  3200 continue
-      if ( dm.lt.(dmax*(1.0+10.0**-6)) ) goto 3000
+      if ( dm.lt.(dmax*(1.0+1e-6)) ) goto 3000
       dmax=dm
       do 3400 i=1,3
       kc(i)=knew(i)

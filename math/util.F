@@ -161,7 +161,7 @@ c     - local -
       pure_intgrf%ierror = NO_ERROR
 
       ! integral from 0 to r1 approximated by leading term in power series expansion
-      IF (f(1)*f(2).gt.10.0**-10.and.h.gt.0) THEN
+      IF (f(1)*f(2).gt.1e-10.and.h.gt.0) THEN
         IF(f(2).eq.f(1)) THEN
           pure_intgrf%value = r1*f(1)
         ELSE
@@ -349,7 +349,7 @@ c     - local arrays -
       END IF
       
       ! integral from 0 to r1 approximated by leading term in power series expansion (only if h>0)
-      IF(h.gt.0.and.f(1)*f(2).gt.10.0**-10) THEN
+      IF(h.gt.0.and.f(1)*f(2).gt.1e-10) THEN
         IF(f(2).eq.f(1)) THEN
           intgr = r1*f(1)
         ELSE
@@ -416,7 +416,7 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
       modulo1 = kpoint*nkpt3
       help    = nint(modulo1)
-      IF(any(abs(help-modulo1).gt.10.0**-10)) THEN
+      IF(any(abs(help-modulo1).gt.1e-10)) THEN
         WRITE(6,'(A,F5.3,2('','',F5.3),A)')'modulo1: argument (',kpoint,
      +                         ') is not an element of the k-point set.'
         CALL juDFT_error(
@@ -645,7 +645,7 @@ c      "Computation of Special Functions".)
         lsta = lsta2(x,l,15)   ! 
       END IF                    !
       f0 = 0.0                                                      !
-      f1 = 10.0**-100                                                   !
+      f1 = 1e-100                                                   !
       DO ll = lsta,0,-1                                             ! backward recurrence
         f  = f1 / x * (2*ll+3) - f0 ; IF(ll.le.lmax) sphbes(ll) = f ! with arbitrary start values
         f0 = f1                                                     !
@@ -779,11 +779,11 @@ c     for l = 0,...,ll in Y(1,...,(ll+1)**2).
       sphi   = 0
       cphi   = 0
       r      = sqrt(sum(rvec**2))
-      IF(r.gt.10.0**-16) THEN
+      IF(r.gt.1e-16) THEN
         rvec1  = rvec / r
         ctheta = rvec1(3)
         stheta = sqrt(rvec1(1)**2+rvec1(2)**2)
-        IF(stheta.gt.10.0**-16) THEN
+        IF(stheta.gt.1e-16) THEN
           cphi = rvec1(1) / stheta
           sphi = rvec1(2) / stheta
         END IF
@@ -848,7 +848,7 @@ c     Returns the complex error function.
           i    = i + 1
           c    = -c * z2 / i
           cerf = cerf + c/(2*i+1)
-          IF(abs(c/(2*i+1)).lt.10.0**-20) EXIT
+          IF(abs(c/(2*i+1)).lt.1e-20) EXIT
         END DO
         cerf = cerf * 2/sqrt(pi)
       ELSE ! continued fraction using Lentz's method
@@ -862,13 +862,13 @@ c     Returns the complex error function.
           d     = ( 2*z1 + i*d )**(-1)
           delta = c*d
           cerf  = cerf * delta
-          IF(abs(1-delta).lt.10.0**-15) EXIT
+          IF(abs(1-delta).lt.1e-15) EXIT
           i     = i + 1
           c     =   z1 + i/c
           d     = ( z1 + i*d )**(-1)
           delta = c*d
           cerf  = cerf * delta
-          IF(abs(1-delta).lt.10.0**-15) EXIT
+          IF(abs(1-delta).lt.1e-15) EXIT
           IF(i.eq.10000) 
      &        STOP 'cerf: Lentz method not converged after 10000 steps.'
         END DO

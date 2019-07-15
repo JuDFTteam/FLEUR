@@ -222,7 +222,7 @@ CONTAINS
             END IF
             IF (ANY(sym%tau(:, isym2) /= 0)) CYCLE
 
-            IF (ALL(ABS(MATMUL(rrot(:, :, isym), kpts%bk(:, ikpt)) - kpts%bk(:, ikpt)) < 10.0**-12)) THEN
+            IF (ALL(ABS(MATMUL(rrot(:, :, isym), kpts%bk(:, ikpt)) - kpts%bk(:, ikpt)) < 1e-12)) THEN
                isym1 = isym1 + 1
                sym1(isym1, ikpt) = isym
             END IF
@@ -577,7 +577,7 @@ CONTAINS
             q = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp), cell%bmat)
             qnorm = SQRT(SUM(q**2))
             iqnrm = pqnrm(igpt, ikpt)
-            IF (ABS(qnrm(iqnrm) - qnorm) > 10.0**-12) then
+            IF (ABS(qnrm(iqnrm) - qnorm) > 1e-12) then
                STOP 'coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)' ! We shouldn't stop here!
             endif
 
@@ -1721,7 +1721,7 @@ CONTAINS
    !
 
    ! Convergence parameter
-#define CONVPARAM 10.0**-18
+#define CONVPARAM 1e-18
    ! Do some additional shells ( real-space and Fourier-space sum )
 #define ADDSHELL1 40
 #define ADDSHELL2 0
@@ -1886,13 +1886,13 @@ CONTAINS
             DO i = 1, nptsh
                IF (ALL(conv /= HUGE(i))) EXIT
                IF (i /= 1) THEN
-                  IF (ABS(radsh(i) - radsh(i - 1)) > 10.0**-10) ishell = ishell + 1
+                  IF (ABS(radsh(i) - radsh(i - 1)) > 1e-10) ishell = ishell + 1
                ENDIF
                ra = MATMUL(cell%amat, ptsh(:, i)) + rc
                a = scale*SQRT(SUM(ra**2))
                IF (a == 0) THEN
                   CYCLE
-               ELSE IF (ABS(a - a1) > 10.0**-10) THEN
+               ELSE IF (ABS(a - a1) > 1e-10) THEN
                   a1 = a
                   rexp = EXP(-a)
                   IF (ishell <= conv(0)) g(0) = rexp/a &
@@ -1978,13 +1978,13 @@ CONTAINS
          conv = HUGE(i)
          DO i = 1, nptsh
             IF (i > 1) THEN
-               IF (ABS(radsh(i) - radsh(i - 1)) > 10.0**-10) ishell = ishell + 1
+               IF (ABS(radsh(i) - radsh(i - 1)) > 1e-10) ishell = ishell + 1
             ENDIF
             ki = ptsh(:, i) + k - NINT(k) ! -nint(...) transforms to Wigner-Seitz cell ( i.e. -0.5 <= x,y,z < 0.5 )
             ka = MATMUL(ki, cell%bmat)
             a = SQRT(SUM(ka**2))/scale
             aa = (1 + a**2)**(-1)
-            IF (ABS(a - a1) > 10.0**-10) THEN
+            IF (ABS(a - a1) > 1e-10) THEN
                a1 = a
                IF (a == 0) THEN
                   g(0) = pref*(-4)
@@ -2055,7 +2055,7 @@ CONTAINS
 
       !     Calculate accuracy of Gamma-decomposition
       IF (ALL(kpts%bk == 0)) GOTO 4
-      a = 10.0**30 ! ikpt = index of shortest non-zero k-point
+      a = 1e30 ! ikpt = index of shortest non-zero k-point
       DO i = 2, kpts%nkpt
          rdum = SUM(MATMUL(kpts%bk(:, i), cell%bmat)**2)
          IF (rdum < a) THEN
@@ -2165,7 +2165,7 @@ CONTAINS
       ptsh = ptsh(:, pnt)
       nshell = 1
       DO i = 2, nptsh
-         IF (radsh(i) - radsh(i - 1) > 10.0**-10) nshell = nshell + 1
+         IF (radsh(i) - radsh(i - 1) > 1e-10) nshell = nshell + 1
       END DO
 
       IF (lwrite) &
@@ -2200,7 +2200,7 @@ CONTAINS
             q = MATMUL(kpts%bk(:, ikpt) + gpt(:, igptp), cell%bmat)
             qnorm = SQRT(SUM(q**2))
             DO j = 1, i
-               IF (ABS(qnrm(j) - qnorm) < 10.0**-12) THEN
+               IF (ABS(qnrm(j) - qnorm) < 1e-12) THEN
                   pqnrm(igpt, ikpt) = j
                   CYCLE igptloop
                END IF
@@ -2289,7 +2289,7 @@ CONTAINS
          r2 = MIN(ABS(db/b1), ABS(dc/c1))
          ! Ensure numerical stability. If both formulas are not sufficiently stable, the program stops.
          IF (r1 > r2) THEN
-            IF (r1 < 10.0**-6 .AND. l_warn) THEN
+            IF (r1 < 1e-6 .AND. l_warn) THEN
                WRITE (6, '(A,E12.5,A,E12.5,A)') 'sphbessel_integral: Warning! Formula One possibly unstable. Ratios:', &
                   r1, '(', r2, ')'
                WRITE (6, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', q1, q2, itype
@@ -2297,7 +2297,7 @@ CONTAINS
             END IF
             sphbessel_integral = s**3/dq*da
          ELSE
-            IF (r2 < 10.0**-6 .AND. l_warn) THEN
+            IF (r2 < 1e-6 .AND. l_warn) THEN
                WRITE (6, '(A,E13.5,A,E13.5,A)') 'sphbessel_integral: Warning! Formula Two possibly unstable. Ratios:', &
                   r2, '(', r1, ')'
                WRITE (6, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', &

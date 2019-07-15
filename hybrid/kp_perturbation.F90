@@ -755,7 +755,7 @@ MODULE m_kp_perturbation
             DO iband1 = bandi1, bandf1
                DO iband2 = bandi2, bandf2
                   rdum = eig_irr(iband2, nk) - eig_irr(iband1, nk)
-                  IF (abs(rdum) > 10.0**-6) THEN !10.0**-6
+                  IF (abs(rdum) > 1e-6) THEN !10.0**-6
                      dcprod(iband2, iband1, :) = dcprod(iband2, iband1, :)/rdum
                   ELSE
                      dcprod(iband2, iband1, :) = 0.0

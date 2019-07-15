@@ -137,7 +137,7 @@
         DO k = 2,nsym
           rarr  = matmul(rrot(:,:,k),bk(:,i)) * kpts%nkpt3
           iarr2 = nint(rarr)
-          IF(any(abs(iarr2-rarr).gt.10.0**-10)) THEN
+          IF(any(abs(iarr2-rarr).gt.1e-10)) THEN
             WRITE(6,'(A,I3,A)') 'kptgen: Symmetry operation',k,
      &                        ' incompatible with k-point set.'
             ldum = .true.
@@ -280,7 +280,7 @@ c     function modulo1 maps kpoint into first BZ
       nkpt3 = (/a,b,c/)
       modulo1 = kpoint*nkpt3
       help    = nint(modulo1)
-      IF(any(abs(help-modulo1).gt.10.0**-8)) THEN
+      IF(any(abs(help-modulo1).gt.1e-8)) THEN
         modulo1 = kpoint*nkpt3
         WRITE(*,*) modulo1
         help    = nint(modulo1)

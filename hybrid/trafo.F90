@@ -302,7 +302,7 @@ CONTAINS
             if (l_real) THEN
                CALL commonphase(cdum, zhlp(:, i), dimension%nbasfcn)
 
-               IF (any(abs(aimag(zhlp(:, i)/cdum)) > 10.0**-8)) THEN
+               IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                   WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
                   WRITE (*, *) zhlp
                   STOP 'waveftrafo1: Residual imaginary part.'
@@ -422,7 +422,7 @@ CONTAINS
 !     DO i = 1,dim1
 !     DO j = 1,dim2
 !     rdum = abs(real(mat(i,j)))+abs(aimag(mat(i,j)))
-!     IF(rdum.gt.10.0**-6) THEN
+!     IF(rdum.gt.1e-6) THEN
 !     cfac = mat(i,j)/abs(mat(i,j))
 !     GOTO 1
 !     ELSE IF(rdum.gt.rmax) THEN
@@ -431,17 +431,17 @@ CONTAINS
 !     END IF
 !     END DO
 !     END DO
-!     IF(1-abs(cfac)   .gt.10.0**-8) THEN ; mat = 0 ; RETURN ; END IF
-!     1      IF(abs(1-cfac**2).gt.10.0**-8) mat = mat/cfac
+!     IF(1-abs(cfac)   .gt.1e-8) THEN ; mat = 0 ; RETURN ; END IF
+!     1      IF(abs(1-cfac**2).gt.1e-8) mat = mat/cfac
 !
-!     IF(any(abs(aimag(mat)).gt.10.0**-8)) THEN
+!     IF(any(abs(aimag(mat)).gt.1e-8)) THEN
 !     WRITE(*,*) maxval(aimag(mat))
 !     STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
 
 ! Determine common phase factor and divide by it to make the output matrix real.
          CALL commonphase(cfac, mat, dim1*dim2)
          mat = mat/cfac
-         IF (any(abs(aimag(mat)) > 10.0**-8)) &
+         IF (any(abs(aimag(mat)) > 1e-8)) &
      &STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
       END IF
 
@@ -745,7 +745,7 @@ CONTAINS
 
                CALL commonphase(phase(j, i), vecout1(:, j, i), dim)
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
-               IF (any(abs(aimag(vecout1(:, j, i))) > 10.0**-8)) THEN
+               IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
                   WRITE (*, *) vecout1(:, j, i)
                   STOP 'bra_trafo2: Residual imaginary part.'
                END IF
@@ -918,8 +918,8 @@ CONTAINS
 !           rtaual = matmul(invrot,taual(:,iatom)) + tau(:,invtab(iisym))
 !           iatom1 = 0
 !           DO ieq1 = 1,neq(itype)
-!             IF( all(abs(modulo(rtaual-taual(:,iiatom+ieq1)+10.0**-12,1.0))
-!      &                                               .lt. 10.0**-10) ) THEN ! The 10.0**-12 is a dirty fix.
+!             IF( all(abs(modulo(rtaual-taual(:,iiatom+ieq1)+1e-12,1.0))
+!      &                                               .lt. 1e-10) ) THEN ! The 1e-12 is a dirty fix.
 !               iatom1 = iiatom + ieq1
 !             END IF
 !           END DO
@@ -1412,8 +1412,8 @@ CONTAINS
             rtaual = matmul(rot, atoms%taual(:, iatom)) + sym%tau(:, iisym)
             iatom1 = 0
             DO ieq1 = 1, atoms%neq(itype)
-               IF (all(abs(modulo(rtaual - atoms%taual(:, iiatom + ieq1) + 10.0**-12, 1.0))&
-        &                                               < 10.0**-10)) THEN ! The 10.0**-12 is a dirty fix.
+               IF (all(abs(modulo(rtaual - atoms%taual(:, iiatom + ieq1) + 1e-12, 1.0))&
+        &                                               < 1e-10)) THEN ! The 1e-12 is a dirty fix.
                   iatom1 = iiatom + ieq1
                END IF
             END DO
@@ -1646,7 +1646,7 @@ CONTAINS
       rmax = 0
       DO i = 1, n
          rdum = abs(carr(i))
-         IF (rdum > 10.0**-6) THEN; cfac = carr(i)/rdum; EXIT
+         IF (rdum > 1e-6) THEN; cfac = carr(i)/rdum; EXIT
          ELSE IF (rdum > rmax) THEN; cfac = carr(i)/rdum; rmax = rdum
          END IF
       END DO
