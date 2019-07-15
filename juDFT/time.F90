@@ -351,11 +351,11 @@ CONTAINS
       LOGICAL, INTENT(IN), OPTIONAL::stdout
       INTEGER :: irank = 0
       CHARACTER(len=:), allocatable :: json_str
+      CHARACTER(len=30)::filename
 #ifdef CPP_MPI
       INCLUDE "mpif.h"
       INTEGER::err,isize
       LOGICAL:: l_mpi
-      CHARACTER(len=30)::filename
       CALL mpi_initialized(l_mpi,err)
       if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
