@@ -44,7 +44,7 @@
 !     the "tail" is
 !     vol/(8*pi**3) INT F(k) d^3k - P SUM(k) F(k)  ( P = principal value ) .
 !     For expo->0 the two terms diverge. Therefore a cutoff radius q0 is introduced and related to
-!     expo by exp(-expo*q0**2)=delta  ( delta = small value, e.g., delta = 1d-10 ) .
+!     expo by exp(-expo*q0**2)=delta  ( delta = small value, e.g., delta = 1*10.0**-10 ) .
 !     The resulting formula
 !     vol/(4*pi**1.5*sqrt(expo)) * erf(sqrt(a)*q0) - sum(q,0<q<q0) exp(-expo*q**2)/q**2
 !     converges well with q0. (Should be the default.)
@@ -320,7 +320,7 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
                cprod_vv_c(:hybrid%nbasm(ikpt0),:,:) = carr3_vv_c(:hybrid%nbasm(ikpt0),:,:)
             ENDIF
          ELSE
-            phase_vv(:,:) = (1d0,0d0)
+            phase_vv(:,:) = (1.0,0.0)
          END IF
 
          ! calculate exchange matrix at ikpt0
@@ -519,8 +519,8 @@ SUBROUTINE calc_divergence(cell,kpts,divergence)
    REAL    :: expo,rrad,k(3),kv1(3),kv2(3),kv3(3),knorm2
    COMPLEX :: cdum
         
-   expo       = 5d-3
-   rrad       = sqrt(-log(5d-3)/expo)
+   expo       = 5*10.0**-3
+   rrad       = sqrt(-log(5*10.0**-3)/expo)
    cdum       = sqrt(expo)*rrad
    divergence = cell%omtil / (tpi_const**2) * sqrt(pi_const/expo) * cerf(cdum)
    rrad       = rrad**2

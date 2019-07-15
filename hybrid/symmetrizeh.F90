@@ -41,7 +41,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
    INTEGER               ::  igpt,igpt1,igpt2,igpt3
    INTEGER               ::  invsfct,invsfct1,idum
    INTEGER               ::  l ,l1,lm,j,ok,ratom,ratom1,nrgpt
-   COMPLEX,PARAMETER     ::  img=(0d0,1d0)
+   COMPLEX,PARAMETER     ::  img=(0.0,1.0)
    COMPLEX               ::  cdum,cdum2
 
    ! local arrays
@@ -107,7 +107,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
             rtaual = MATMUL(rot(:,:,isym),atoms%taual(:,iatom))+trans(:,isym)
             iatom1 = 0
             DO ieq1 = 1,atoms%neq(itype)
-               IF(ALL(ABS(MODULO(rtaual-atoms%taual(:,iiatom + ieq1)+1d-12,1d0)).LT.1d-10)) THEN  !The 1d-12 is a dirty fix.
+               IF(ALL(ABS(MODULO(rtaual-atoms%taual(:,iiatom + ieq1)+10.0**-12,1.0)).LT.10.0**-10)) THEN  !The 10.0**-12 is a dirty fix.
                   iatom1 = iiatom + ieq1
                END IF
             END DO
@@ -552,10 +552,10 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
       REAL                  :: stheta,ctheta,sphi,cphi,r,rvec1(3)
       INTEGER               :: l ,lm
       COMPLEX               :: c
-      COMPLEX,PARAMETER     :: img=(0d0,1d0)
+      COMPLEX,PARAMETER     :: img=(0.0,1.0)
 
       call timestart("symm harmonics")
-      Y(1) = 0.282094791773878d0
+      Y(1) = 0.282094791773878
       IF(ll.EQ.0) RETURN
 
       stheta = 0
@@ -563,16 +563,16 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
       sphi = 0
       cphi = 0
       r = SQRT(SUM(rvec**2))
-      IF (r.GT.1d-16) THEN
+      IF (r.GT.10.0**-16) THEN
          rvec1  = rvec / r
          ctheta = rvec1(3)
          stheta = SQRT(rvec1(1)**2+rvec1(2)**2)
-         IF (stheta.GT.1d-16) THEN
+         IF (stheta.GT.10.0**-16) THEN
             cphi = rvec1(1) / stheta
             sphi = rvec1(2) / stheta
          END IF
       ELSE
-         Y(2:) = 0d0
+         Y(2:) = 0.0
          RETURN
       END IF
 
@@ -580,16 +580,16 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
       r = Y(1)
       c = 1
       DO l = 1, ll
-         r = r*stheta*SQRT(1d0+1d0/(2*l))
+         r = r*stheta*SQRT(1.0+1.0/(2*l))
          c = c * (cphi + img*sphi)
          Y(l**2+1) = r*CONJG(c)  ! l,-l
          Y((l+1)**2) = r*c*(-1)**l ! l,l
       END DO
 
       ! define Y,l,-l+1 and Y,l,l-1
-      Y(3) = 0.48860251190292d0*ctheta
+      Y(3) = 0.48860251190292*ctheta
       DO l = 2, ll
-         r = SQRT(2D0*l+1) * ctheta
+         r = SQRT(2.0*l+1) * ctheta
          Y(l**2+2) = r*Y((l-1)**2+1) ! l,-l+1
          Y(l*(l+2)) = r*Y(l**2)       ! l,l-1
       END DO
@@ -599,7 +599,7 @@ SUBROUTINE symmetrizeh(atoms,bk,DIMENSION,jsp,lapw,sym,kveclo,cell,nsymop,psym,h
          lm = l**2 + 2
          DO m = -l+2, l-2
             lm = lm + 1
-            Y(lm) = SQRT((2d0*l+1)/(l+m)/(l-m)) * (SQRT(2d0*l-1)*ctheta*Y(lm-2*l)- SQRT((l+m-1d0)*(l-m-1)/(2*l-3))*Y(lm-4*l+2) )
+            Y(lm) = SQRT((2.0*l+1)/(l+m)/(l-m)) * (SQRT(2.0*l-1)*ctheta*Y(lm-2*l)- SQRT((l+m-1.0)*(l-m-1)/(2*l-3))*Y(lm-4*l+2) )
          END DO
       END DO
       call timestop("symm harmonics")

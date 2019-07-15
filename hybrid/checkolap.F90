@@ -47,7 +47,7 @@
       REAL                    ::  qnorm
 
       COMPLEX                 ::  cexp,cdum
-      COMPLEX , PARAMETER     ::  img = (0d0,1d0)
+      COMPLEX , PARAMETER     ::  img = (0.0,1.0)
 
       ! -local arrays -
       INTEGER                 ::  iarr(2),gpt(3)
@@ -315,7 +315,7 @@
  !    &              ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
  !             CALL writeout(outtext,mpi%irank)
 !             IF( iatom .eq. 6 ) THEN
-!               cdum = exp(2*pi*img*dot_product(bkf(:,ikpt),(/0d0,0d0,1d0/) ))
+!               cdum = exp(2*pi*img*dot_product(bkf(:,ikpt),(/0.0,0.0,1.0/) ))
 !               lm = 0 
 !               DO l = 0,lmax(itype)
 !                 DO m = -l,l

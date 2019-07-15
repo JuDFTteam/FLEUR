@@ -48,7 +48,7 @@
       
       REAL                ::  gnorm
       
-      COMPLEX, PARAMETER  ::  img = (0d0,1d0)
+      COMPLEX, PARAMETER  ::  img = (0.0,1.0)
       ! - local arrays -
       
       REAL                ::  vecinhlp (hybrid%nbasm(ikpt))
@@ -150,11 +150,11 @@
       indx0 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)), itype=1,atoms%ntype ) /) )+ hybrid%ngptm
       indx1 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)), itype=1,atoms%ntype ) /) )
 
-      CALL DGEMV('N',indx1,indx0,1d0,coulomb_mtir,(hybrid%maxlcutm1+1)**2*atoms,&
-     &          vecinhlp(ibasm+1:),1,0d0,vecout(ibasm+1:),1)
+      CALL DGEMV('N',indx1,indx0,1.0,coulomb_mtir,(hybrid%maxlcutm1+1)**2*atoms,&
+     &          vecinhlp(ibasm+1:),1,0.0,vecout(ibasm+1:),1)
       
-      CALL DGEMV('T',indx1,hybrid,1d0,coulomb_mtir(:indx1,indx1+1:),&
-     &          indx1,vecinhlp(ibasm+1:),1,0d0,vecout(ibasm+indx1+1:),1)
+      CALL DGEMV('T',indx1,hybrid,1.0,coulomb_mtir(:indx1,indx1+1:),&
+     &          indx1,vecinhlp(ibasm+1:),1,0.0,vecout(ibasm+indx1+1:),1)
 
 !       vecout(ibasm+1:ibasm+indx1) = matmul( coulomb_mtir(:indx1,:indx0),vecinhlp(ibasm+1:ibasm+indx0) )
 !       vecout(ibasm+indx1+1:ibasm+indx0) = matmul( conjg(transpose(coulomb_mtir(:indx1,indx1+1:indx0))),
@@ -295,7 +295,7 @@
       
       REAL                ::  gnorm
       
-      COMPLEX, PARAMETER  ::  img = (0d0,1d0)
+      COMPLEX, PARAMETER  ::  img = (0.0,1.0)
       ! - local arrays -
       
       REAL                ::  vecr(hybrid%maxindxm1-1),veci(hybrid%maxindxm1-1)
@@ -399,12 +399,12 @@
       indx0 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)), itype=1,atoms%ntype ) /) )+ hybrid%ngptm
       indx1 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)), itype=1,atoms%ntype ) /) )
 
-      CALL ZGEMV('N',indx1,indx0,(1d0,0d0),coulomb_mtir,&
+      CALL ZGEMV('N',indx1,indx0,(1.0,0.0),coulomb_mtir,&
      &          (hybrid%maxlcutm1+1)**2*atoms,vecinhlp(ibasm+1:),&
-     &          1,(0d0,0d0),vecout(ibasm+1:),1)
+     &          1,(0.0,0.0),vecout(ibasm+1:),1)
       
-      CALL ZGEMV('C',indx1,hybrid,(1d0,0d0),coulomb_mtir(:indx1,indx1+1:)&
-     &          ,indx1,vecinhlp(ibasm+1:),1,(0d0,0d0),&
+      CALL ZGEMV('C',indx1,hybrid,(1.0,0.0),coulomb_mtir(:indx1,indx1+1:)&
+     &          ,indx1,vecinhlp(ibasm+1:),1,(0.0,0.0),&
      &          vecout(ibasm+indx1+1:),1)
 
 !       vecout(ibasm+1:ibasm+indx1) = matmul( coulomb_mtir(:indx1,:indx0),vecinhlp(ibasm+1:ibasm+indx0) )
@@ -426,7 +426,7 @@
 
       indx1 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)),&
      &                                      itype=1,atoms%ntype ) /) )+ hybrid%ngptm(ikpt)
-      call zhpmv('U',indx1,(1d0,0d0),coulomb_mtir,vecinhlp(ibasm+1), 1,(0d0,0d0),vecout(ibasm+1),1)
+      call zhpmv('U',indx1,(1.0,0.0),coulomb_mtir,vecinhlp(ibasm+1), 1,(0.0,0.0),vecout(ibasm+1),1)
 
 #endif
       iatom = 0

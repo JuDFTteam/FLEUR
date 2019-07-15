@@ -58,7 +58,7 @@ CONTAINS
     hybdat%sfac(0)  = 1
     DO i=1,hybdat%maxfac
        hybdat%fac(i)    = hybdat%fac(i-1)*i            ! hybdat%fac(i)    = i!
-       hybdat%sfac(i)   = hybdat%sfac(i-1)*sqrt(i*1d0) ! hybdat%sfac(i)   = sqrt(i!)
+       hybdat%sfac(i)   = hybdat%sfac(i-1)*sqrt(i*1.0) ! hybdat%sfac(i)   = sqrt(i!)
     END DO
 
 

@@ -22,7 +22,7 @@
 !     - local -
       INTEGER                  :: i,j,itype,icent,ineq
       REAL                     :: g,r,fgr
-      COMPLEX,PARAMETER        :: img=(0d0,1d0)
+      COMPLEX,PARAMETER        :: img=(0.0,1.0)
       INTEGER                  :: dg(3)
       
      
@@ -90,7 +90,7 @@
 !     - local -
       INTEGER                  :: i,j,k,itype,icent,ineq
       REAL                     :: g,r,fgr
-      COMPLEX,PARAMETER        :: img=(0d0,1d0)
+      COMPLEX,PARAMETER        :: img=(0.0,1.0)
       INTEGER                  :: dg(3)
 
       if (l_real) THEN
@@ -263,8 +263,8 @@ else
        
       wfolap_inv = wfolap_inv + dot_product(cpw1,matmul(olappw,cpw2))
 
-!       CALL dgemv('N',ngpt1,ngpt2,1d0,olappw,ngpt1,real(cpw2),1,0d0,rarr1,1)
-!       CALL dgemv('N',ngpt1,ngpt2,1d0,olappw,ngpt1,aimag(cpw2),1,0d0,rarr2,1)
+!       CALL dgemv('N',ngpt1,ngpt2,1.0,olappw,ngpt1,real(cpw2),1,0.0,rarr1,1)
+!       CALL dgemv('N',ngpt1,ngpt2,1.0,olappw,ngpt1,aimag(cpw2),1,0.0,rarr2,1)
 ! 
 !       rdum1 = dotprod(cpw1,rarr1)
 !       rdum2 = dotprod(cpw1,rarr2)
@@ -319,8 +319,8 @@ else
        
       wfolap_noinv = wfolap_noinv + dot_product(cpw1,matmul(olappw,cpw2))
 
-!       CALL dgemv('N',ngpt1,ngpt2,1d0,olappw,ngpt1,real(cpw2),1,0d0,rarr1,1)
-!       CALL dgemv('N',ngpt1,ngpt2,1d0,olappw,ngpt1,aimag(cpw2),1,0d0,rarr2,1)
+!       CALL dgemv('N',ngpt1,ngpt2,1.0,olappw,ngpt1,real(cpw2),1,0.0,rarr1,1)
+!       CALL dgemv('N',ngpt1,ngpt2,1.0,olappw,ngpt1,aimag(cpw2),1,0.0,rarr2,1)
 ! 
 !       rdum1 = dotprod(cpw1,rarr1)
 !       rdum2 = dotprod(cpw1,rarr2)

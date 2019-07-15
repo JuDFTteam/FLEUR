@@ -382,7 +382,7 @@ CONTAINS
                                           END DO
                                        END DO
 
-                                       rc = CMPLX(0d0,1d0)**(l2-l1) ! adjusts to a/b/ccof-scaling
+                                       rc = CMPLX(0.0,1.0)**(l2-l1) ! adjusts to a/b/ccof-scaling
 
                                        ! ic counts the entry in vxc
                                        ic = icentry
@@ -427,7 +427,7 @@ CONTAINS
                                              END DO
                                           END DO
 
-                                          rc = CMPLX(0d0,1d0)**(lp-l1) ! adjusts to a/b/ccof-scaling
+                                          rc = CMPLX(0.0,1.0)**(lp-l1) ! adjusts to a/b/ccof-scaling
 
                                           IF (hmat%l_real) THEN
                                              vxc(ic) = vxc(ic) + invsfct * REAL(rr * rc * bascof_lo(pp,mp,ikvecp,ilop,iatom) *&
@@ -466,7 +466,7 @@ CONTAINS
                                           END DO
                                        END DO
 
-                                       rc = CMPLX(0d0,1d0)**(lp-l1) ! adjusts to a/b/ccof-scaling
+                                       rc = CMPLX(0.0,1.0)**(lp-l1) ! adjusts to a/b/ccof-scaling
 
                                        IF (hmat%l_real) THEN
                                           vxc(ic) = vxc(ic) + invsfct*REAL(rr * rc * bascof_lo(pp,mp,ikvecp,ilop,iatom) *&

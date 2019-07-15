@@ -44,7 +44,7 @@
       INTEGER                 ::  iatom,iatom1,iiatom,itype,igpt,igpt1,ieq,ieq1,iiop
       INTEGER                 ::  i,l,n,nn,lm0,lm1,lm2,m1,m2
       COMPLEX                 ::  cdum,tpiimg
-      COMPLEX,PARAMETER       ::  img=(0d0,1d0)
+      COMPLEX,PARAMETER       ::  img=(0.0,1.0)
 
 !     - arrays -
       INTEGER                 ::  rrot(3,3),invrrot(3,3)
@@ -192,7 +192,7 @@
       INTEGER                 ::  itype,iatom,iatom1,iiatom,igpt,igpt1, ieq,ieq1,iiop
       INTEGER                 ::  i,l,n,nn,lm0,lm1,lm2,m1,m2
       COMPLEX                 ::  cdum,tpiimg
-      COMPLEX,PARAMETER       ::  img=(0d0,1d0)
+      COMPLEX,PARAMETER       ::  img=(0.0,1.0)
       LOGICAL                 ::  trs
 
 !     - arrays -
@@ -307,7 +307,7 @@
            if (l_real) THEN
               CALL commonphase(cdum,zhlp(:,i),dimension%nbasfcn)
 
-              IF(any(abs(aimag(zhlp(:,i)/cdum)).gt.1d-8)) THEN
+              IF(any(abs(aimag(zhlp(:,i)/cdum)).gt.10.0**-8)) THEN
                  WRITE(*,*) maxval(abs(aimag(zhlp(:,i)/cdum)))
                  WRITE(*,*) zhlp
                  STOP 'waveftrafo1: Residual imaginary part.'
@@ -362,13 +362,13 @@
 !     -local scalars -
       INTEGER               ::  i,j,itype,ieq,ic,ic1,i1,i2,l,m,n,nn,ifac,ishift
       REAL                  ::  rfac,rdum,rmax
-      COMPLEX               ::  img = (0d0,1d0)
+      COMPLEX               ::  img = (0.0,1.0)
 
 !     - local arrays -
       COMPLEX               ::  carr(max(dim1,dim2)),cfac
 
-      rfac = sqrt(0.5d0)
-      cfac = sqrt(0.5d0)*img
+      rfac = sqrt(0.5)
+      cfac = sqrt(0.5)*img
       ic   = 0
       i    = 0
 
@@ -429,7 +429,7 @@
 !     DO i = 1,dim1
 !     DO j = 1,dim2 
 !     rdum = abs(real(mat(i,j)))+abs(aimag(mat(i,j)))
-!     IF(rdum.gt.1d-6) THEN
+!     IF(rdum.gt.10.0**-6) THEN
 !     cfac = mat(i,j)/abs(mat(i,j))
 !     GOTO 1
 !     ELSE IF(rdum.gt.rmax) THEN
@@ -438,17 +438,17 @@
 !     END IF
 !     END DO
 !     END DO
-!     IF(1-abs(cfac)   .gt.1d-8) THEN ; mat = 0 ; RETURN ; END IF
-!     1      IF(abs(1-cfac**2).gt.1d-8) mat = mat/cfac
+!     IF(1-abs(cfac)   .gt.10.0**-8) THEN ; mat = 0 ; RETURN ; END IF
+!     1      IF(abs(1-cfac**2).gt.10.0**-8) mat = mat/cfac
 !     
-!     IF(any(abs(aimag(mat)).gt.1d-8)) THEN
+!     IF(any(abs(aimag(mat)).gt.10.0**-8)) THEN
 !     WRITE(*,*) maxval(aimag(mat))
 !     STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
 
 ! Determine common phase factor and divide by it to make the output matrix real.
          CALL commonphase(cfac,mat,dim1*dim2)
          mat = mat / cfac
-         IF(any(abs(aimag(mat)).gt.1d-8)) &
+         IF(any(abs(aimag(mat)).gt.10.0**-8)) &
      &STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
       END IF
 
@@ -477,11 +477,11 @@
 !     - local scalars -
       INTEGER                 ::  ifac,i,j,itype,ieq,ic,ic1,i1,i2,l,m,n, nn,ishift
       REAL                    ::  rfac1,rfac2
-      COMPLEX                 ::  img = (0d0,1d0)
+      COMPLEX                 ::  img = (0.0,1.0)
 !     - local arrays -
       COMPLEX                 ::  carr(max(dim1,dim2))
 
-      rfac1 = sqrt(0.5d0)
+      rfac1 = sqrt(0.5)
       ic    = 0
       i     = 0
       DO itype = 1,atoms%ntype
@@ -583,7 +583,7 @@
       INTEGER                 ::  nrkpt,rcent,itype,ieq,ic,l,n,i,j,nn, i1,i2,j1,j2,m1,m2,ok
       INTEGER                 ::  igptm,igptm2,igptp,icent1,iiatom,iiop, inviop
       COMPLEX                 ::  cexp,cdum
-      COMPLEX,PARAMETER       ::  img=(0d0,1d0)
+      COMPLEX,PARAMETER       ::  img=(0.0,1.0)
 !     - arrays - 
 
       INTEGER                 ::  rrot(3,3),invrot(3,3)
@@ -759,7 +759,7 @@
 
                CALL commonphase(phase(j,i),vecout1(:,j,i),dim)
                vecout1(:,j,i) = vecout1(:,j,i) / phase(j,i)
-               IF(any(abs(aimag(vecout1(:,j,i))).gt.1d-8)) THEN
+               IF(any(abs(aimag(vecout1(:,j,i))).gt.10.0**-8)) THEN
                   WRITE(*,*) vecout1(:,j,i)
                   STOP 'bra_trafo2: Residual imaginary part.'
                END IF
@@ -767,7 +767,7 @@
             END DO
          END DO 
       else
-         phase = (1d0,0d0)
+         phase = (1.0,0.0)
       endif
 
       if (l_real) THEN
@@ -821,7 +821,7 @@
       INTEGER               ::  m1,m2
 
       COMPLEX               ::  cexp,cdum 
-      COMPLEX , PARAMETER   ::  img=(0d0,1d0)
+      COMPLEX , PARAMETER   ::  img=(0.0,1.0)
 
        ! - local arrays -
       INTEGER               ::  pnt(maxindxm,0:maxlcutm,atoms%nat),&
@@ -941,8 +941,8 @@
 !           rtaual = matmul(invrot,taual(:,iatom)) + tau(:,invtab(iisym)) 
 !           iatom1 = 0
 !           DO ieq1 = 1,neq(itype)
-!             IF( all(abs(modulo(rtaual-taual(:,iiatom+ieq1)+1d-12,1d0))
-!      &                                               .lt. 1d-10) ) THEN ! The 1d-12 is a dirty fix.
+!             IF( all(abs(modulo(rtaual-taual(:,iiatom+ieq1)+10.0**-12,1.0))
+!      &                                               .lt. 10.0**-10) ) THEN ! The 10.0**-12 is a dirty fix.
 !               iatom1 = iiatom + ieq1
 !             END IF
 !           END DO
@@ -1098,7 +1098,7 @@
       INTEGER               ::  m1,m2
 
       COMPLEX               ::  cexp,cdum 
-      COMPLEX , PARAMETER   ::  img=(0d0,1d0)
+      COMPLEX , PARAMETER   ::  img=(0.0,1.0)
 
        ! - local arrays -
       INTEGER               ::  pnt(maxindxm,0:maxlcutm,atoms%nat),g(3),&
@@ -1341,7 +1341,7 @@
       INTEGER               ::  m1,m2
 
       COMPLEX               ::  cexp,cdum 
-      COMPLEX , PARAMETER   ::  img=(0d0,1d0)
+      COMPLEX , PARAMETER   ::  img=(0.0,1.0)
 
       ! - local arrays -
       INTEGER               ::  pnt(maxindxm,0:maxlcutm,atoms%nat),g(3),g1(3)
@@ -1457,8 +1457,8 @@
           rtaual = matmul(rot,atoms%taual(:,iatom)) + sym%tau(:,iisym)
           iatom1 = 0
           DO ieq1 = 1,atoms%neq(itype)
-            IF( all(abs(modulo(rtaual-atoms%taual(:,iiatom+ieq1)+1d-12,1d0))&
-     &                                               .lt. 1d-10) ) THEN ! The 1d-12 is a dirty fix.
+            IF( all(abs(modulo(rtaual-atoms%taual(:,iiatom+ieq1)+10.0**-12,1.0))&
+     &                                               .lt. 10.0**-10) ) THEN ! The 10.0**-12 is a dirty fix.
               iatom1 = iiatom + ieq1
             END IF
           END DO
@@ -1550,7 +1550,7 @@
       INTEGER               ::  m1,m2
 
       COMPLEX               ::  cexp,cdum 
-      COMPLEX , PARAMETER   ::  img=(0d0,1d0)
+      COMPLEX , PARAMETER   ::  img=(0.0,1.0)
 
       ! - local arrays -
       INTEGER               ::  pnt(maxindxm,0:maxlcutm,atoms%nat),g(3),g1(3)
@@ -1695,7 +1695,7 @@
       rmax = 0
       DO i = 1,n
         rdum = abs(carr(i))
-        IF     (rdum.gt.1d-6) THEN ; cfac = carr(i) / rdum ; EXIT
+        IF     (rdum.gt.10.0**-6) THEN ; cfac = carr(i) / rdum ; EXIT
         ELSE IF(rdum.gt.rmax) THEN ; cfac = carr(i) / rdum ; rmax = rdum
         END IF
       END DO
@@ -1745,7 +1745,7 @@
       INTEGER                 ::  m2,igptm,igptm2,igptp,iiop,isym
       INTEGER                 ::  ikpt1,isymi,rcent
       LOGICAL                 ::  trs
-      COMPLEX,PARAMETER       ::  img=(0d0,1d0)
+      COMPLEX,PARAMETER       ::  img=(0.0,1.0)
       COMPLEX                 ::  cexp,cdum
 !     - private arrays -
       INTEGER                 ::  pnt(maxindxm,0:maxlcutm,atoms%nat),g(3),&

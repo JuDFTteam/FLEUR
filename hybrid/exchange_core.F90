@@ -203,7 +203,7 @@ CONTAINS
 
 
     IF (l_real) THEN
-       IF( ANY(ABS(AIMAG(exchange)).GT.1d-10) ) THEN
+       IF( ANY(ABS(AIMAG(exchange)).GT.10.0**-10) ) THEN
           IF ( mpi%irank == 0 ) WRITE(6,'(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
           WRITE(*,*) MAXVAL(ABS(AIMAG(exchange)))
           STOP 'exchangeCore: Unusually large imaginary component.'
@@ -394,7 +394,7 @@ CONTAINS
 
 
     IF (mat_ex%l_real) THEN
-       IF( ANY(ABS(AIMAG(exchange)).GT.1d-10) ) THEN
+       IF( ANY(ABS(AIMAG(exchange)).GT.10.0**-10) ) THEN
           IF (mpi%irank == 0) WRITE(6,'(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
           WRITE(*,*) MAXVAL(ABS(AIMAG(exchange)))
           STOP 'exchangeCore: Unusually large imaginary component.'
@@ -600,7 +600,7 @@ CONTAINS
 
     REAL                  ::  rdum0,rdum1,rdum2,rdum3,rdum4
     COMPLEX               ::  cdum
-    COMPLEX,PARAMETER     ::  img=(0d0,1d0)
+    COMPLEX,PARAMETER     ::  img=(0.0,1.0)
     ! - local arrays -
     INTEGER               ::  point(hybdat%maxindxc,-hybdat%lmaxcd:hybdat%lmaxcd, 0:hybdat%lmaxcd,atoms%nat)
     INTEGER               ::  lmstart(0:atoms%lmaxd,atoms%ntype)

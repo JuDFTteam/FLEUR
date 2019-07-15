@@ -122,7 +122,7 @@ SUBROUTINE symm_hf(kpts,nk,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,&
       REAL                            :: tolerance,pi
 
       COMPLEX                         :: cdum
-      COMPLEX , PARAMETER             :: img = (0d0,1d0)
+      COMPLEX , PARAMETER             :: img = (0.0,1.0)
 
 !     - local arrays -
       INTEGER                         :: neqvkpt(kpts%nkptf)

@@ -1013,7 +1013,7 @@ CONTAINS
 !     REAL,    PARAMETER     :: omega = omega_VHSE()                        ! omega of the HSE functional
 !     REAL,    PARAMETER     :: r1_omega2  = 1.0 / omega**2                 ! 1/omega^2
 !     REAL,    PARAMETER     :: r1_4omega2 = 0.25 * r1_omega2               ! 1/(4 omega^2)
-    COMPLEX, PARAMETER     :: img = (0d0,1d0)                             ! i
+    COMPLEX, PARAMETER     :: img = (0.0,1.0)                             ! i
 
     ! private arrays
     INTEGER                :: gPts(3,noGPts)                              ! g vectors (internal units)
@@ -1349,7 +1349,7 @@ CONTAINS
 !     REAL,    PARAMETER     :: omega = omega_VHSE()                        ! omega of the HSE functional
 !     REAL,    PARAMETER     :: r1_omega2  = 1.0 / omega**2                 ! 1/omega^2
 !     REAL,    PARAMETER     :: r1_4omega2 = 0.25 * r1_omega2               ! 1/(4 omega^2)
-    COMPLEX, PARAMETER     :: img = (0d0,1d0)                             ! i
+    COMPLEX, PARAMETER     :: img = (0.0,1.0)                             ! i
 
     ! private arrays
     INTEGER                :: gPts(3,noGPts)                              ! g vectors (internal units)
@@ -2326,7 +2326,7 @@ CONTAINS
     END DO
 
 #ifdef CPP_INVERSION
-    IF( ANY(ABS(aimag(exchange)).GT.1d-10) ) THEN
+    IF( ANY(ABS(aimag(exchange)).GT.10.0**-10) ) THEN
        IF ( irank == 0 ) WRITE(6,'(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
        WRITE(*,*) MAXVAL(ABS(aimag(exchange)))
        STOP 'exchangeCore: Unusually large imaginary component.'

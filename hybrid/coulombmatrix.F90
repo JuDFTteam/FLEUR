@@ -146,7 +146,7 @@ CONTAINS
       facC(-1:0) = 1                    ! facA(i)    = i!
       DO i = 1, maxfac                       ! facB(i)   = sqrt(i!)
          facA(i) = facA(i - 1)*i            ! facC(i) = (2i+1)!!
-         facB(i) = facB(i - 1)*SQRT(i*1d0) !
+         facB(i) = facB(i - 1)*SQRT(i*1.0) !
          facC(i) = facC(i - 1)*(2*i + 1)   !
       END DO
 
@@ -172,7 +172,7 @@ CONTAINS
       coulomb = 0
       call timestop("coulomb allocation")
 
-      IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16d0/1048576*SIZE(coulomb)
+      IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16.0/1048576*SIZE(coulomb)
 
       !     Generate Symmetry:
       !     Reduce list of g-Points so that only one of each symm-equivalent is calculated
@@ -223,7 +223,7 @@ CONTAINS
             END IF
             IF (ANY(sym%tau(:, isym2) /= 0)) CYCLE
 
-            IF (ALL(ABS(MATMUL(rrot(:, :, isym), kpts%bk(:, ikpt)) - kpts%bk(:, ikpt)) .LT. 1d-12)) THEN
+            IF (ALL(ABS(MATMUL(rrot(:, :, isym), kpts%bk(:, ikpt)) - kpts%bk(:, ikpt)) .LT. 10.0**-12)) THEN
                isym1 = isym1 + 1
                sym1(isym1, ikpt) = isym
             END IF
@@ -300,7 +300,7 @@ CONTAINS
                   IF (lm2 .GT. lm1) EXIT lp1 ! Don't cross the diagonal!
                   gmat(lm1, lm2) = facB(l1 + l2 + m2 - m1)*facB(l1 + l2 + m1 - m2)/ &
                                    (facB(l1 + m1)*facB(l1 - m1)*facB(l2 + m2)*facB(l2 - m2))/ &
-                                   SQRT(1d0*(2*l1 + 1)*(2*l2 + 1)*(2*(l1 + l2) + 1))*(4*pi_const)**1.5d0
+                                   SQRT(1.0*(2*l1 + 1)*(2*l2 + 1)*(2*(l1 + l2) + 1))*(4*pi_const)**1.5
                   gmat(lm2, lm1) = gmat(lm1, lm2)
                END DO
             END DO LP1
@@ -580,7 +580,7 @@ CONTAINS
             q = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp), cell%bmat)
             qnorm = SQRT(SUM(q**2))
             iqnrm = pqnrm(igpt, ikpt)
-            IF (ABS(qnrm(iqnrm) - qnorm) .GT. 1d-12) then
+            IF (ABS(qnrm(iqnrm) - qnorm) .GT. 10.0**-12) then
                STOP 'coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)' ! We shouldn't stop here!
             endif
 
@@ -896,7 +896,7 @@ CONTAINS
       !     Add corrections from higher orders in (3b) to coulomb(:,1)
       ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
       call timestart("add corrections from higher orders")
-      rdum = (4*pi_const)**(1.5d0)/cell%vol**2*gmat(1, 1)
+      rdum = (4*pi_const)**(1.5)/cell%vol**2*gmat(1, 1)
       DO igpt0 = 1, hybrid%ngptm1(1)
          igpt2 = hybrid%pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
          ix = hybrid%nbasp + igpt2
@@ -1692,8 +1692,8 @@ CONTAINS
                                  + CONJG(claplace(i))*coeff(j))/2)
          END DO
       END DO
-      coeff(hybrid%nbasp + 1) = 1d0
-      coeff(hybrid%nbasp + 2:) = 0d0
+      coeff(hybrid%nbasp + 1) = 1.0
+      coeff(hybrid%nbasp + 2:) = 0.0
       IF (sym%invs) THEN
 
          CALL desymmetrize(coeff, 1, nbasm1(1), 2, &
@@ -1724,7 +1724,7 @@ CONTAINS
    !
 
    ! Convergence parameter
-#define CONVPARAM 1d-18
+#define CONVPARAM 10.0**-18
    ! Do some additional shells ( real-space and Fourier-space sum )
 #define ADDSHELL1 40
 #define ADDSHELL2 0
@@ -1780,7 +1780,7 @@ CONTAINS
 
       IF (mpi%irank /= 0) first = .FALSE.
 
-      rdum = cell%vol**(1d0/3) ! define "average lattice parameter"
+      rdum = cell%vol**(1.0/3) ! define "average lattice parameter"
 
       ! ewaldlambda = ewaldscale
       scale = hybrid%ewaldlambda/rdum
@@ -1877,7 +1877,7 @@ CONTAINS
                radsh(i) = a
             END DO
             call timestart("rorderpf")
-            CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001d0)/LOG(2d0))))
+            CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
             call timestop("rorderpf")
             ptsh = ptsh(:, pnt)
             radsh = radsh(pnt)
@@ -1889,13 +1889,13 @@ CONTAINS
             DO i = 1, nptsh
                IF (ALL(conv .NE. HUGE(i))) EXIT
                IF (i .NE. 1) THEN
-                  IF (ABS(radsh(i) - radsh(i - 1)) .GT. 1d-10) ishell = ishell + 1
+                  IF (ABS(radsh(i) - radsh(i - 1)) .GT. 10.0**-10) ishell = ishell + 1
                ENDIF
                ra = MATMUL(cell%amat, ptsh(:, i)) + rc
                a = scale*SQRT(SUM(ra**2))
                IF (a .EQ. 0) THEN
                   CYCLE
-               ELSE IF (ABS(a - a1) .GT. 1d-10) THEN
+               ELSE IF (ABS(a - a1) .GT. 10.0**-10) THEN
                   a1 = a
                   rexp = EXP(-a)
                   IF (ishell .LE. conv(0)) g(0) = rexp/a &
@@ -1981,13 +1981,13 @@ CONTAINS
          conv = HUGE(i)
          DO i = 1, nptsh
             IF (i .GT. 1) THEN
-               IF (ABS(radsh(i) - radsh(i - 1)) .GT. 1d-10) ishell = ishell + 1
+               IF (ABS(radsh(i) - radsh(i - 1)) .GT. 10.0**-10) ishell = ishell + 1
             ENDIF
             ki = ptsh(:, i) + k - NINT(k) ! -nint(...) transforms to Wigner-Seitz cell ( i.e. -0.5 <= x,y,z < 0.5 )
             ka = MATMUL(ki, cell%bmat)
             a = SQRT(SUM(ka**2))/scale
             aa = (1 + a**2)**(-1)
-            IF (ABS(a - a1) .GT. 1d-10) THEN
+            IF (ABS(a - a1) .GT. 10.0**-10) THEN
                a1 = a
                IF (a .EQ. 0) THEN
                   g(0) = pref*(-4)
@@ -2013,7 +2013,7 @@ CONTAINS
             call timestart("harmonics")
             call ylm4(maxl, ka, y)
             call timestop("harmonics")
-            cdum = 1d0
+            cdum = 1.0
             lm = 0
             DO l = 0, maxl
                IF (ishell .LE. conv(l)) THEN
@@ -2046,7 +2046,7 @@ CONTAINS
       !
       !     Add contribution for l=0 to diagonal elements and rescale structure constants
       !
-      structconst(1, 1, 1, :) = structconst(1, 1, 1, :) - 5d0/16/SQRT(4*pi_const)
+      structconst(1, 1, 1, :) = structconst(1, 1, 1, :) - 5.0/16/SQRT(4*pi_const)
       DO i = 2, atoms%nat
          structconst(:, i, i, :) = structconst(:, 1, 1, :)
       END DO
@@ -2054,11 +2054,11 @@ CONTAINS
          structconst(l**2 + 1:(l + 1)**2, :, :, :) = structconst(l**2 + 1:(l + 1)**2, :, :, :)*scale**(l + 1)
       END DO
 
-      rad = (cell%vol*3/4/pi_const)**(1d0/3) ! Wigner-Seitz radius (rad is recycled)
+      rad = (cell%vol*3/4/pi_const)**(1.0/3) ! Wigner-Seitz radius (rad is recycled)
 
       !     Calculate accuracy of Gamma-decomposition
       IF (ALL(kpts%bk .EQ. 0)) GOTO 4
-      a = 1d30 ! ikpt = index of shortest non-zero k-point
+      a = 10.0**30 ! ikpt = index of shortest non-zero k-point
       DO i = 2, kpts%nkpt
          rdum = SUM(MATMUL(kpts%bk(:, i), cell%bmat)**2)
          IF (rdum .LT. a) THEN
@@ -2163,12 +2163,12 @@ CONTAINS
       ptsh = ihelp
       DEALLOCATE (rhelp, ihelp)
 
-      CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001d0)/LOG(2d0))))
+      CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
       radsh = radsh(pnt)
       ptsh = ptsh(:, pnt)
       nshell = 1
       DO i = 2, nptsh
-         IF (radsh(i) - radsh(i - 1) .GT. 1d-10) nshell = nshell + 1
+         IF (radsh(i) - radsh(i - 1) .GT. 10.0**-10) nshell = nshell + 1
       END DO
 
       IF (lwrite) &
@@ -2203,7 +2203,7 @@ CONTAINS
             q = MATMUL(kpts%bk(:, ikpt) + gpt(:, igptp), cell%bmat)
             qnorm = SQRT(SUM(q**2))
             DO j = 1, i
-               IF (ABS(qnrm(j) - qnorm) .LT. 1d-12) THEN
+               IF (ABS(qnrm(j) - qnorm) .LT. 10.0**-12) THEN
                   pqnrm(igpt, ikpt) = j
                   CYCLE igptloop
                END IF
@@ -2292,7 +2292,7 @@ CONTAINS
          r2 = MIN(ABS(db/b1), ABS(dc/c1))
          ! Ensure numerical stability. If both formulas are not sufficiently stable, the program stops.
          IF (r1 .GT. r2) THEN
-            IF (r1 .LT. 1d-6 .AND. l_warn) THEN
+            IF (r1 .LT. 10.0**-6 .AND. l_warn) THEN
                WRITE (6, '(A,E12.5,A,E12.5,A)') 'sphbessel_integral: Warning! Formula One possibly unstable. Ratios:', &
                   r1, '(', r2, ')'
                WRITE (6, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', q1, q2, itype
@@ -2300,7 +2300,7 @@ CONTAINS
             END IF
             sphbessel_integral = s**3/dq*da
          ELSE
-            IF (r2 .LT. 1d-6 .AND. l_warn) THEN
+            IF (r2 .LT. 10.0**-6 .AND. l_warn) THEN
                WRITE (6, '(A,E13.5,A,E13.5,A)') 'sphbessel_integral: Warning! Formula Two possibly unstable. Ratios:', &
                   r2, '(', r1, ')'
                WRITE (6, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', &

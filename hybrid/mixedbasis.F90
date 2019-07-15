@@ -648,7 +648,7 @@ SUBROUTINE mixedbasis(atoms,kpts,DIMENSION,input,cell,sym,xcpot,hybrid,enpara,mp
                    rdum  = rdum + 2*rdum1**2
                 END IF
 
-                IF(rdum1.GT.1d-6) THEN
+                IF(rdum1.GT.10.0**-6) THEN
                    IF ( mpi%irank == 0 ) THEN
                       WRITE(6,'(A)') 'mixedbasis: Bad orthonormality of ' &
                            //lchar(l)//'-product basis. Increase tolerance.'

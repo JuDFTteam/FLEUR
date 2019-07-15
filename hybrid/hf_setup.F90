@@ -150,7 +150,7 @@ SUBROUTINE hf_setup(hybrid,input,sym,kpts,DIMENSION,atoms,mpi,noco,cell,oneD,res
          END DO
 
          DO i = 1,hybrid%ne_eig(nk)
-            IF(results%w_iks(i,nk,jsp).GT.0d0) hybrid%nobd(nk) = hybrid%nobd(nk) + 1
+            IF(results%w_iks(i,nk,jsp).GT.0.0) hybrid%nobd(nk) = hybrid%nobd(nk) + 1
          END DO
 
          IF (hybrid%nobd(nk)>hybrid%nbands(nk)) THEN

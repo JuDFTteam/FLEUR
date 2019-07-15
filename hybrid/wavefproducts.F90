@@ -62,7 +62,7 @@
       REAL                    ::  rdum,svol,s2,pi
       REAL                    ::  mtthr= 0
       COMPLEX                 ::  cdum,cdum0
-      COMPLEX,PARAMETER       ::  img = (0d0,1d0)  
+      COMPLEX,PARAMETER       ::  img = (0.0,1.0)  
 
       LOGICAL                 ::  offdiag      
 !      - local arrays -
@@ -89,7 +89,7 @@
       ! preparations
 
       svol = sqrt(cell%omtil)
-      s2   = sqrt(2d0)
+      s2   = sqrt(2.0)
 
       gpt_nk(1,:) = lapw%k1(:lapw%nv(jsp),jsp)
       gpt_nk(2,:) = lapw%k2(:lapw%nv(jsp),jsp)
@@ -212,7 +212,7 @@
               lm = lm_0
               DO m = -l,l
 
-                carr = 0d0 
+                carr = 0.0 
 
                 lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
                 DO m1 = -l1,l1
@@ -342,7 +342,7 @@
       REAL                    ::    sin1,sin2,cos1,cos2,add1,add2
       REAL                    ::    fac,fac1,fac2
       REAL                    ::    monepl1,monepl2,monepl,monepm1, monepm,moneplm,monepl1m1
-      COMPLEX,PARAMETER       ::    img=(0d0,1d0)
+      COMPLEX,PARAMETER       ::    img=(0.0,1.0)
       COMPLEX                 ::    fexp
       COMPLEX                 ::    cdum,cconst,cfac
       LOGICAL                 ::    offdiag
@@ -378,7 +378,7 @@
       CALL timestart("wavefproducts_inv")
       CALL timestart("wavefproducts_inv IR")
       svol  = sqrt(cell%omtil)
-      sr2   = sqrt(2d0)
+      sr2   = sqrt(2.0)
       
       nbasm_ir = maxval(hybrid%ngptm)
       ALLOCATE( cprod_ir(bandf-bandi+1,mnobd,nbasm_ir) )
@@ -535,7 +535,7 @@
 
 
 
-      cprod  = 0d0
+      cprod  = 0.0
 
       lm_0   = 0
       lm_00  = 0
@@ -582,7 +582,7 @@
 
                 ! sum over different m of mixed basis functions with qn l
                 DO m = -l,l
-                  rarr = 0d0 
+                  rarr = 0.0 
 
                   ! go to lm index for m1=-l1
                   lmp1 = lm1_0 + p1 
@@ -717,7 +717,7 @@
                   moneplm =  monepl*monepm 
 
                   ! calculate the contributions which are identical for m>0 and m <0
-                  rarr1 = 0d0
+                  rarr1 = 0.0
                   IF( abs(m) .le. l2) THEN
                     lmp1 = lp1 + l1*hybrid%nindx(l1,itype)
                     IF( mod(l1,2) .eq. 0 ) THEN
@@ -915,7 +915,7 @@
                 !
 
                 m = 0
-                rarr1 = 0d0
+                rarr1 = 0.0
                 lmp1  = lp1
 
                 monepm1 = - monepl1
@@ -997,14 +997,14 @@
                 ! case: m>0
                 !
 
-                rarr1 = 0d0
+                rarr1 = 0.0
                 monepm = 1
                 DO m= 1,l
                   monepm  = -monepm
                   moneplm =  monepl*monepm 
 
                   ! calculate the contributions which are identical for m>0 and m <0
-                  rarr1 = 0d0
+                  rarr1 = 0.0
                   IF( abs(m) .le. l2) THEN
                     lmp1 = lp1 + l1*hybrid%nindx(l1,itype)
                     IF( mod(l1,2) .eq. 0 ) THEN
@@ -1298,7 +1298,7 @@
       REAL                    ::    monepl1,monepl2,monepl,monepm1, monepm,moneplm,monepl1m1
       COMPLEX                 ::    fexp
       COMPLEX                 ::    cdum,cconst,cfac
-      COMPLEX,PARAMETER       ::    img=(0d0,1d0)
+      COMPLEX,PARAMETER       ::    img=(0.0,1.0)
       LOGICAL                 ::    offdiag
       TYPE(t_lapw)            ::    lapw_nkqpt
       
@@ -1328,7 +1328,7 @@
       
       cprod = 0
       svol  = sqrt(cell%omtil)
-      sr2   = sqrt(2d0)
+      sr2   = sqrt(2.0)
       
       
       
@@ -1631,7 +1631,7 @@
 
                 ! sum over different m of mixed basis functions with qn l
                 DO m = -l,l
-                  rarr3 = 0d0 
+                  rarr3 = 0.0 
 
                   ! go to lm index for m1=-l1
                   lmp1 = lm1_0 + p1 
@@ -1771,7 +1771,7 @@
                   moneplm =  monepl*monepm 
 
                   ! calculate the contributions which are identical for m>0 and m <0
-                  rarr2 = 0d0
+                  rarr2 = 0.0
                   IF( abs(m) .le. l2) THEN
                     lmp1 = lp1 + l1*hybrid%nindx(l1,itype)
                     IF( mod(l1,2) .eq. 0 ) THEN
@@ -1969,7 +1969,7 @@
                 !
 
                 m = 0
-                rarr2 = 0d0
+                rarr2 = 0.0
                 lmp1  = lp1
 
                 monepm1 = - monepl1
@@ -2051,14 +2051,14 @@
                 ! case: m>0
                 !
 
-                rarr2 = 0d0
+                rarr2 = 0.0
                 monepm = 1
                 DO m= 1,l
                   monepm  = -monepm
                   moneplm =  monepl*monepm 
 
                   ! calculate the contributions which are identical for m>0 and m <0
-                  rarr2 = 0d0
+                  rarr2 = 0.0
                   IF( abs(m) .le. l2) THEN
                     lmp1 = lp1 + l1*hybrid%nindx(l1,itype)
                     IF( mod(l1,2) .eq. 0 ) THEN
@@ -2339,7 +2339,7 @@
    
       COMPLEX                 ::  cdum,cdum0,cdum1
       COMPLEX                 ::  cexp
-      COMPLEX,PARAMETER       ::  img = (0d0,1d0) 
+      COMPLEX,PARAMETER       ::  img = (0.0,1.0) 
        
       LOGICAL                 ::  offdiag
       TYPE(t_lapw)            ::    lapw_nkqpt
@@ -2364,7 +2364,7 @@
       call timestart("wavefproducts_noinv5 IR")
       cprod = 0
       svol  = sqrt(cell%omtil)
-      s2    = sqrt(2d0)
+      s2    = sqrt(2.0)
 
 
       nbasm_ir = maxval(hybrid%ngptm)
@@ -2570,7 +2570,7 @@
               lm = lm_0
               DO m = -l,l
 
-                carr2 = 0d0 
+                carr2 = 0.0 
 
                 lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
                 DO m1 = -l1,l1

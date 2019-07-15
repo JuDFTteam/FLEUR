@@ -65,7 +65,7 @@
       COMPLEX               ::  cj,cdj
       COMPLEX               ::  denom,enum
       COMPLEX               ::  cdum,cdum1,cdum2
-      COMPLEX, PARAMETER    ::  img = (0d0,1d0)
+      COMPLEX, PARAMETER    ::  img = (0.0,1.0)
       ! - local arrays -
       INTEGER               ::  lmp_start(atoms%ntype)
       REAL                  ::  alo(atoms%nlod,atoms%ntype),blo(atoms%nlod,atoms%ntype),&
@@ -647,7 +647,7 @@
       INTEGER               ::  point(-1:1)
       REAL                  ::  rfac
       COMPLEX               ::  cfac
-      COMPLEX , PARAMETER   ::  img = (0d0,1d0)
+      COMPLEX , PARAMETER   ::  img = (0.0,1.0)
       
       rfac = sqrt(tpi_const/3)
       DO j = -1,1
@@ -781,10 +781,10 @@
       DO iband1 = bandi1,bandf1
         DO iband2 = bandi2,bandf2
           rdum = eig_irr(iband2,nk) - eig_irr(iband1,nk)
-          IF(abs(rdum).gt.1d-6) THEN !1d-6
+          IF(abs(rdum).gt.10.0**-6) THEN !10.0**-6
             dcprod(iband2,iband1,:) = dcprod(iband2,iband1,:) / rdum
           ELSE
-            dcprod(iband2,iband1,:) = 0d0
+            dcprod(iband2,iband1,:) = 0.0
           END IF
         END DO
       END DO
@@ -846,7 +846,7 @@
       INTEGER                 ::  lm_0,lm_1,lm0,lm1,lm2,lm3,n0,nn,n, l1,l2,m1,m2,ikpt1
       INTEGER                 ::  irecl_cmt,irecl_z,m
       COMPLEX                 ::  cdum
-      COMPLEX                 ::  img=(0d0,1d0)
+      COMPLEX                 ::  img=(0.0,1.0)
 
 !     - local arrays -
       INTEGER                 ::  gpt(3,lapw%nv(jsp))
@@ -886,12 +886,12 @@
       DO l = 0,atoms%lmaxd
         DO M = -l,l
           lm = lm + 1
-          fcoeff(lm,-1) = - sqrt( 1d0 * (l+M+1)*(l+M+2) / (2*(2*l+1)*(2*l+3)) )
-          fcoeff(lm, 0) =   sqrt( 1d0 * (l-M+1)*(l+M+1) /   ((2*l+1)*(2*l+3)) )
-          fcoeff(lm, 1) = - sqrt( 1d0 * (l-M+1)*(l-M+2) / (2*(2*l+1)*(2*l+3)) )
-          gcoeff(lm,-1) =   sqrt( 1d0 * (l-M)*(l-M-1) / (2*(2*l-1)*(2*l+1)) )
-          gcoeff(lm, 0) =   sqrt( 1d0 * (l-M)*(l+M) /   ((2*l-1)*(2*l+1)) )
-          gcoeff(lm, 1) =   sqrt( 1d0 * (l+M)*(l+M-1) / (2*(2*l-1)*(2*l+1)) )
+          fcoeff(lm,-1) = - sqrt( 1.0 * (l+M+1)*(l+M+2) / (2*(2*l+1)*(2*l+3)) )
+          fcoeff(lm, 0) =   sqrt( 1.0 * (l-M+1)*(l+M+1) /   ((2*l+1)*(2*l+3)) )
+          fcoeff(lm, 1) = - sqrt( 1.0 * (l-M+1)*(l-M+2) / (2*(2*l+1)*(2*l+3)) )
+          gcoeff(lm,-1) =   sqrt( 1.0 * (l-M)*(l-M-1) / (2*(2*l-1)*(2*l+1)) )
+          gcoeff(lm, 0) =   sqrt( 1.0 * (l-M)*(l+M) /   ((2*l-1)*(2*l+1)) )
+          gcoeff(lm, 1) =   sqrt( 1.0 * (l+M)*(l+M-1) / (2*(2*l-1)*(2*l+1)) )
         END DO
       END DO
 
@@ -1014,11 +1014,11 @@
 
       ! Transform to cartesian coordinates
       hlp        =  0
-      hlp( 1, 1) =  1d0/sqrt(2d0)
-      hlp( 1, 3) = -1d0/sqrt(2d0)
-      hlp( 2, 1) = -img/sqrt(2d0) 
-      hlp( 2, 3) = -img/sqrt(2d0)
-      hlp( 3, 2) =  1d0
+      hlp( 1, 1) =  1.0/sqrt(2.0)
+      hlp( 1, 3) = -1.0/sqrt(2.0)
+      hlp( 2, 1) = -img/sqrt(2.0) 
+      hlp( 2, 3) = -img/sqrt(2.0)
+      hlp( 3, 2) =  1.0
       DO iband1 = bandi1,bandf1
         DO iband2 = bandi2,bandf2
           momentum(iband2,iband1,:) = -img*matmul(momentum(iband2,iband1,:),transpose(hlp))
