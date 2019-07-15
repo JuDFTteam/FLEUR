@@ -246,15 +246,11 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
       nn = n*(n+1)/2
 
       ! read in coulomb matrix from direct access file coulomb
-#if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
       IF (mat_ex%l_real) THEN
          CALL read_coulomb_spm_r(kpts%bkp(ikpt0),coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,coulomb_mtir_r)
       ELSE
          CALL read_coulomb_spm_c(kpts%bkp(ikpt0),coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,coulomb_mtir_c)
       END IF
-#else
-	   call read_coulomb(kpts%bkp(ikpt0),coulomb)
-#endif
 
       IF(kpts%bkp(ikpt0).ne.ikpt0) THEN
 #if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
@@ -336,7 +332,6 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
 
                cdum  = wl_iks(ibando+iband-1,nkqpt) * conjg(phase_vv(iband,n1))/n_q(ikpt)
 
-#if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
                IF (mat_ex%l_real) THEN
                   carr1_v_r(:n) = 0 
                   CALL spmvec_invs(atoms,hybrid,hybdat,ikpt0,kpts,cell,coulomb_mt1,coulomb_mt2_r,coulomb_mt3_r,&
@@ -346,13 +341,6 @@ SUBROUTINE exchange_valence_hf(nk,kpts,nkpt_EIBZ,sym,atoms,hybrid,cell,dimension
                   CALL spmvec_noinvs(atoms,hybrid,hybdat,ikpt0,kpts,cell,coulomb_mt1,coulomb_mt2_c,coulomb_mt3_c,&
                                      coulomb_mtir_c,cprod_vv_c(:n,iband,n1),carr1_v_c(:n))
                END IF
-#else
-               IF (mat_ex%l_real) THEN
-                  carr1_v_r(:n) = matvec( coulomb_r(:nn),cprod_vv_r(:n,iband,n1) )
-               ELSE
-                  carr1_v_c(:n) = matvec( coulomb_c(:nn),cprod_vv_c(:n,iband,n1) )
-               END IF
-#endif
 
                IF (mat_ex%l_real) THEN
                   DO n2=1,nsest(n1)!n1

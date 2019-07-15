@@ -75,7 +75,7 @@ CONTAINS
 
       ! Local Scalars
       INTEGER jsp,nk,nred,ne_all,ne_found
-      INTEGER ne,lh0
+      INTEGER ne
       INTEGER isp,i,j,err
       LOGICAL l_wu,l_file,l_real,l_zref
       INTEGER :: solver=0
@@ -85,7 +85,6 @@ CONTAINS
 
       COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),kpts%nkpt,input%jspins) ! needed for unfolding bandstructure mpi case
 
-      INTEGER, PARAMETER   :: lmaxb = 3
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 

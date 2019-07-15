@@ -36,7 +36,7 @@
       REAL   , INTENT(IN) ::  coulomb_mtir(:)
 #endif
       REAL   , INTENT(IN) ::  vecin (:)!(hybrid%nbasm)
-      REAL   , INTENT(OUT)::  vecout(:)!(hybrid%nbasm)
+      REAL   , INTENT(INOUT)::  vecout(:)!(hybrid%nbasm)
       
       ! - local scalars -
       INTEGER             ::  itype,ieq,iatom,ishift
@@ -175,7 +175,7 @@
 
       indx1 = sum( (/ ( ((2*l+1)*atoms%neq(itype),l=0,hybrid%lcutm1(itype)),&
      &                                      itype=1,atoms%ntype ) /) )+ hybrid%ngptm(ikpt)
-      CALL dspmv('U',indx1,1d0,coulomb_mtir,vecinhlp(ibasm+1),1,0d0, vecout(ibasm+1),1)
+      CALL dspmv('U',indx1,1.0,coulomb_mtir,vecinhlp(ibasm+1:),1,0.0, vecout(ibasm+1:),1)
 
 #endif
       iatom = 0
