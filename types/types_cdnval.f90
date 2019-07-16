@@ -504,7 +504,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
    DO ikpt_i=1,SIZE(thiscdnvalJob%k_list)
       ikpt=thiscdnvalJob%k_list(ikpt_i)
       !--->    if slice, only certain bands are taken into account
-      IF (sliceplot%slice.AND.input%pallst) thisCdnvalJob%weights(:,ikpt) = kpts%wtkpt(ikpt)
+      IF (sliceplot%slice.AND.input%pallst) thisCdnvalJob%weights(:,ikpt) = kpts%wtkpt(ikpt)*2.0/input%jspins
       IF (sliceplot%slice.AND.thisCdnvalJob%noccbd(ikpt).GT.0) THEN
          IF (sliceplot%kk.EQ.0) THEN
             DO iband_i=1,thisCdnvalJob%noccbd(ikpt)

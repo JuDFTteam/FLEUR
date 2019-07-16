@@ -186,13 +186,13 @@ CONTAINS
        ALLOCATE(tmp_real(MIN(SIZE(eig),d%size_eig)))
        IF (PRESENT(eig)) THEN
           CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%eig_handle,e)
-          CALL MPI_GET(tmp_real,SIZE(tmp_real),MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
+          CALL MPI_GET(tmp_real,SIZE(tmp_real),MPI_DOUBLE_PRECISION,pe,slot,size(tmp_real),MPI_DOUBLE_PRECISION,d%eig_handle,e)
           CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
           eig(:size(tmp_real))=tmp_real
        END IF
        IF (PRESENT(w_iks)) THEN
           CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%w_iks_handle,e)
-          CALL MPI_GET(tmp_real,size(tmp_real),MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%w_iks_handle,e)
+          CALL MPI_GET(tmp_real,size(tmp_real),MPI_DOUBLE_PRECISION,pe,slot,size(tmp_real),MPI_DOUBLE_PRECISION,d%w_iks_handle,e)
           CALL MPI_WIN_UNLOCK(pe,d%w_iks_handle,e)
           w_iks(:SIZE(tmp_real))=tmp_real
        END IF
