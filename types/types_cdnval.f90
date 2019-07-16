@@ -488,7 +488,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
  SUBROUTINE select_slice(thiscdnvalJob,sliceplot,results,input,kpts,noco,jspin)
    USE m_types_setup
    USE m_types_misc
-   
+   USE m_types_kpts
    IMPLICIT NONE
    CLASS(t_cdnvalJob),INTENT(INOUT)  :: thisCdnvalJob
    TYPE(t_sliceplot), INTENT(IN)     :: sliceplot
