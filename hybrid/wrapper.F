@@ -99,7 +99,7 @@ c     --------
      +  stop 'blockmat_d: dimensions of first array differ.'
       if(size(b,2).ne.nb)
      +  stop 'blockmat_d: dimensions of second array differ.'
-      blockmat_d              = 0d0
+      blockmat_d              = 0.0
       blockmat_d(  :na,  :na) = a
       blockmat_d(na+1:,na+1:) = b
       end function blockmat_d
@@ -115,7 +115,7 @@ c     --------
      +  stop 'blockmat_z: dimensions of first array differ.'
       if(size(b,2).ne.nb)
      +  stop 'blockmat_z: dimensions of second array differ.'
-      blockmat_z              = 0d0
+      blockmat_z              = 0.0
       blockmat_z(  :na,  :na) = a
       blockmat_z(na+1:,na+1:) = b
       end function blockmat_z
@@ -135,7 +135,7 @@ c     --------
           k            = k + 1
           packmat_d(k) = mat(i,j)
 # ifdef test
-          if(abs(mat(j,i)-mat(i,j)).gt.1d-8)
+          if(abs(mat(j,i)-mat(i,j)).gt.1e-8)
      +       STOP 'packmat_d: input matrix not symmetric'
 # endif
         enddo
@@ -157,7 +157,7 @@ c     --------
 
           packmatcoul_d(k) = (mat(i,j)+mat(j,i))/2.
 
-!           if(abs(mat(j,i)-mat(i,j)).gt.1d-6) then
+!           if(abs(mat(j,i)-mat(i,j)).gt.1e-6) then
 !             write(*,*) 'packmatcoul_d: input matrix not symmetric; deviation .gt. 1E-06'         
 !           endif
         enddo
@@ -169,10 +169,10 @@ c     --------
       implicit none
       real, intent(in)  :: mat(:)
       real              :: unpackmat_d(
-     +                             nint(sqrt(0.25d0+2*size(mat))-0.5d0),
-     &                             nint(sqrt(0.25d0+2*size(mat))-0.5d0))
+     +                             nint(sqrt(0.25+2*size(mat))-0.5),
+     &                             nint(sqrt(0.25+2*size(mat))-0.5))
       integer              :: n,nn,i,j,k
-      nn = size(mat) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
+      nn = size(mat) ; n = nint(sqrt(0.25+2*nn)-0.5)
       k  = 0
       do j = 1,n
         do i = 1,j
@@ -198,7 +198,7 @@ c     --------
           k            = k + 1
           packmat_z(k) = mat(i,j)
 # ifdef test
-          if(abs(conjg(mat(j,i))-mat(i,j)).gt.1d-8) 
+          if(abs(conjg(mat(j,i))-mat(i,j)).gt.1e-8) 
      +                    stop 'packmat_z: input matrix not Hermitian.'
 # endif
         enddo
@@ -219,7 +219,7 @@ c     --------
           k            = k + 1
           packmatcoul_z(k) = (mat(i,j) + conjg(mat(j,i)))/2.
 
-          if(abs(conjg(mat(j,i))-mat(i,j)).gt.1d-4) then
+          if(abs(conjg(mat(j,i))-mat(i,j)).gt.1e-4) then
             stop 'packmatcoul_z: input matrix not Hermitian; &
      & deviation .gt. 1E-04.'
           endif
@@ -231,10 +231,10 @@ c     --------
       implicit none
       complex, intent(in)  :: mat(:)
       complex              :: unpackmat_z(
-     +                             nint(sqrt(0.25d0+2*size(mat))-0.5d0),
-     &                             nint(sqrt(0.25d0+2*size(mat))-0.5d0))
+     +                             nint(sqrt(0.25+2*size(mat))-0.5),
+     &                             nint(sqrt(0.25+2*size(mat))-0.5))
       integer                 :: n,nn,i,j,k
-      nn = size(mat) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
+      nn = size(mat) ; n = nint(sqrt(0.25+2*nn)-0.5)
       k  = 0
       do j = 1,n
         do i = 1,j
@@ -270,7 +270,7 @@ c     --------
       if(size(vec2).ne.n) 
      +  stop 'dotprod_dz: sizes of input vectors differ.'
       dotprod_dz = ddot(n,vec1,1,real(vec2),1)
-     +             +(0d0,1d0)*ddot(n,vec1,1,aimag(vec2),1)
+     +             +(0.0,1.0)*ddot(n,vec1,1,aimag(vec2),1)
       end function dotprod_dz
 
       function dotprod_zd(vec1,vec2)
@@ -284,7 +284,7 @@ c     --------
       if(size(vec2).ne.n)
      +  stop 'dotprod_zd: sizes of input vectors differ.'
       dotprod_zd = ddot(n,real(vec1),1,vec2,1)
-     +             -(0d0,1d0)*ddot(n,aimag(vec1),1,vec2,1)
+     +             -(0.0,1.0)*ddot(n,aimag(vec1),1,vec2,1)
       end function dotprod_zd
 
       function dotprod_zz(vec1,vec2)
@@ -309,7 +309,7 @@ c     --------
       n  = size(vec)
       nn = n*(n+1)/2 
       if(size(mat).ne.nn) stop 'matvec_dpd: input array has wrong size.'
-      call dspmv('U',n,1d0,mat,vec,1,0d0,matvec_dpd,1)
+      call dspmv('U',n,1.0,mat,vec,1,0.0,matvec_dpd,1)
       end function matvec_dpd
 
       function matvec_dpz(mat,vec)
@@ -322,9 +322,9 @@ c     --------
       n  = size(vec) ; allocate ( vecr(n),veci(n) )
       nn = n*(n+1)/2 
       if(size(mat).ne.nn) stop 'matvec_dpz: input array has wrong size.'
-      call dspmv('U',n,1d0,mat,real(vec),1,0d0,vecr,1)
-      call dspmv('U',n,1d0,mat,aimag(vec),1,0d0,veci,1)
-      matvec_dpz = vecr + (0d0,1d0) * veci
+      call dspmv('U',n,1.0,mat,real(vec),1,0.0,vecr,1)
+      call dspmv('U',n,1.0,mat,aimag(vec),1,0.0,veci,1)
+      matvec_dpz = vecr + (0.0,1.0) * veci
       deallocate ( vecr,veci )
       end function matvec_dpz
 
@@ -338,9 +338,9 @@ c     --------
       n  = size(vec) ; allocate ( vecr(n),veci(n) )
       nn = n*(n+1)/2 
       if(size(mat).ne.nn) stop 'matvec_zpd: input array has wrong size.'
-      call dspmv('U',n,1d0,real(mat),vec,1,0d0,vecr,1)
-      call dspmv('U',n,1d0,aimag(mat),vec,1,0d0,veci,1)
-      matvec_zpd = vecr + (0d0,1d0) * veci
+      call dspmv('U',n,1.0,real(mat),vec,1,0.0,vecr,1)
+      call dspmv('U',n,1.0,aimag(mat),vec,1,0.0,veci,1)
+      matvec_zpd = vecr + (0.0,1.0) * veci
       deallocate ( vecr,veci )
       end function matvec_zpd
       
@@ -352,7 +352,7 @@ c     --------
       n  = size(vec)
       nn = n*(n+1)/2 
       if(size(mat).ne.nn) stop 'matvec_zpz: input array has wrong size.'
-      call zhpmv('U',n,(1d0,0d0),mat,vec,1,(0d0,0d0),matvec_zpz,1)
+      call zhpmv('U',n,(1.0,0.0),mat,vec,1,(0.0,0.0),matvec_zpz,1)
       end function matvec_zpz
 
 c     --------
@@ -361,12 +361,12 @@ c     --------
       implicit none
       real, intent(in)  :: mat1(:),mat2(:)
       real              :: matmat_dpdp(
-     +                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0),
-     &                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0))
+     +                            nint(sqrt(0.25+2*size(mat1))-0.5),
+     &                            nint(sqrt(0.25+2*size(mat1))-0.5))
       real, allocatable :: vec(:),vec2(:)
       integer              :: nn,n,k1,i,j,k
       nn = size(mat1)
-      n  = nint(sqrt(0.25d0+2*nn)-0.5d0) ; allocate ( vec(n),vec2(n) )
+      n  = nint(sqrt(0.25+2*nn)-0.5) ; allocate ( vec(n),vec2(n) )
       if(size(mat2).ne.nn)
      +  stop 'matmat_dpdp: second input array has wrong size.'
       k  = 0
@@ -377,7 +377,7 @@ c     --------
           vec2(j) = mat2(k1)
           k1      = k1 + j
         enddo
-        call dspmv('U',n,1d0,mat1,vec2,1,0d0,vec,1)
+        call dspmv('U',n,1.0,mat1,vec2,1,0.0,vec,1)
         matmat_dpdp(:,i) = vec
         k = k + i
       enddo
@@ -389,13 +389,13 @@ c     --------
       real,    intent(in)  :: mat1(:)
       complex, intent(in)  :: mat2(:)
       complex              :: matmat_dpzp(
-     +                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0),
-     &                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0))
+     +                            nint(sqrt(0.25+2*size(mat1))-0.5),
+     &                            nint(sqrt(0.25+2*size(mat1))-0.5))
       real,    allocatable :: vecr(:),veci(:)
       complex, allocatable :: vec2(:)
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
-      n  = nint(sqrt(0.25d0+2*nn)-0.5d0) 
+      n  = nint(sqrt(0.25+2*nn)-0.5) 
       allocate ( vecr(n),veci(n),vec2(n) )
       if(size(mat2).ne.nn)
      +  stop 'matmat_dpzp: second input array has wrong size.'
@@ -407,9 +407,9 @@ c     --------
           vec2(j) = conjg(mat2(k1))
           k1      = k1 + j
         enddo
-        call dspmv('U',n,1d0,mat1,real(vec2),1,0d0,vecr,1)
-        call dspmv('U',n,1d0,mat1,aimag(vec2),1,0d0,veci,1)
-        matmat_dpzp(:,i) = vecr + (0d0,1d0) * veci
+        call dspmv('U',n,1.0,mat1,real(vec2),1,0.0,vecr,1)
+        call dspmv('U',n,1.0,mat1,aimag(vec2),1,0.0,veci,1)
+        matmat_dpzp(:,i) = vecr + (0.0,1.0) * veci
         k = k + i
       enddo
       deallocate ( vecr,veci,vec2 )
@@ -420,13 +420,13 @@ c     --------
       complex, intent(in)  :: mat1(:)
       real,    intent(in)  :: mat2(:)
       complex              :: matmat_zpdp(
-     +                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0),
-     &                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0))
+     +                            nint(sqrt(0.25+2*size(mat1))-0.5),
+     &                            nint(sqrt(0.25+2*size(mat1))-0.5))
       real,    allocatable :: vecr(:),veci(:)
       complex, allocatable :: vec1(:)
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
-      n  = nint(sqrt(0.25d0+2*nn)-0.5d0) 
+      n  = nint(sqrt(0.25+2*nn)-0.5) 
       allocate ( vecr(n),veci(n),vec1(n) )
       if(size(mat2).ne.nn)
      +  stop 'matmat_zpdp: second input array has wrong size.'
@@ -438,9 +438,9 @@ c     --------
           vec1(j) = mat1(k1)
           k1      = k1 + j
         enddo
-        call dspmv('U',n,1d0,mat2,real(vec1),1,0d0,vecr,1)
-        call dspmv('U',n,1d0,mat2,aimag(vec1),1,0d0,veci,1)
-        matmat_zpdp(i,:) = vecr + (0d0,1d0) * veci
+        call dspmv('U',n,1.0,mat2,real(vec1),1,0.0,vecr,1)
+        call dspmv('U',n,1.0,mat2,aimag(vec1),1,0.0,veci,1)
+        matmat_zpdp(i,:) = vecr + (0.0,1.0) * veci
         k = k + i
       enddo
       deallocate ( vecr,veci,vec1 )
@@ -450,12 +450,12 @@ c     --------
       implicit none
       complex, intent(in)  :: mat1(:),mat2(:)
       complex              :: matmat_zpzp(
-     +                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0),
-     &                            nint(sqrt(0.25d0+2*size(mat1))-0.5d0))
+     +                            nint(sqrt(0.25+2*size(mat1))-0.5),
+     &                            nint(sqrt(0.25+2*size(mat1))-0.5))
       complex, allocatable :: vec(:),vec2(:)
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
-      n  = nint(sqrt(0.25d0+2*nn)-0.5d0) ; allocate ( vec(n),vec2(n) )
+      n  = nint(sqrt(0.25+2*nn)-0.5) ; allocate ( vec(n),vec2(n) )
       if(size(mat2).ne.nn) 
      +  stop 'matmat_zpzp: second input array has wrong size.'
       k  = 0
@@ -466,7 +466,7 @@ c     --------
           vec2(j) = conjg(mat2(k1))
           k1      = k1 + j
         enddo
-        call zhpmv('U',n,(1d0,0d0),mat1,vec2,1,(0d0,0d0),vec,1)
+        call zhpmv('U',n,(1.0,0.0),mat1,vec2,1,(0.0,0.0),vec,1)
         matmat_zpzp(:,i) = vec
         k = k + i
       enddo
@@ -486,7 +486,7 @@ c     --------
      +  stop 'matmat_dpdm: first input array has wrong size.'
       do i = 1,n
         vec2 = mat2(:,i)
-        call dspmv('U',n,1d0,mat1,vec2,1,0d0,vec,1)
+        call dspmv('U',n,1.0,mat1,vec2,1,0.0,vec,1)
         matmat_dpdm(:,i) = vec
       enddo
       deallocate ( vec,vec2 )
@@ -505,7 +505,7 @@ c     --------
      +  stop 'matmat_dmdp: second input array has wrong size.'
       do i = 1,n
         vec2 = mat1(i,:)
-        call dspmv('U',n,1d0,mat2,vec2,1,0d0,vec,1)
+        call dspmv('U',n,1.0,mat2,vec2,1,0.0,vec,1)
         matmat_dmdp(i,:) = vec
       enddo
       deallocate ( vec,vec2 )
@@ -523,7 +523,7 @@ c     --------
      +  stop 'matmat_dmdm: second input array has wrong dimensions.'
       if(size(mat2,2).ne.n)
      +  stop 'matmat_dmdm: dimensions of second input array differ.'
-      call dgemm('N','N',n,n,n,1d0,mat1,n,mat2,n,0d0,matmat_dmdm,n)
+      call dgemm('N','N',n,n,n,1.0,mat1,n,mat2,n,0.0,matmat_dmdm,n)
       end function matmat_dmdm
 
       function matmat_dpzm(mat1,mat2)
@@ -542,9 +542,9 @@ c     --------
      +  stop 'matmat_dpzm: first input array has wrong size.'
       do i = 1,n
         vec2 = mat2(:,i)
-        call dspmv('U',n,1d0,mat1,real(vec2),1,0d0,vecr,1)
-        call dspmv('U',n,1d0,mat1,aimag(vec2),1,0d0,veci,1)
-        matmat_dpzm(:,i) = vecr + (0d0,1d0) * veci
+        call dspmv('U',n,1.0,mat1,real(vec2),1,0.0,vecr,1)
+        call dspmv('U',n,1.0,mat1,aimag(vec2),1,0.0,veci,1)
+        matmat_dpzm(:,i) = vecr + (0.0,1.0) * veci
       enddo
       deallocate ( vecr,veci,vec2 )
       end function matmat_dpzm
@@ -563,7 +563,7 @@ c     --------
      +  stop 'matmat_dmzp: second input array has wrong size.'
       do i = 1,n
         vec1 = mat1(i,:)
-        call zhpmv('U',n,(1d0,0d0),mat2,vec1,1,(0d0,0d0),vec,1)
+        call zhpmv('U',n,(1.0,0.0),mat2,vec1,1,(0.0,0.0),vec,1)
         matmat_dmzp(i,:) = conjg(vec)
       enddo
       deallocate ( vec,vec1 )
@@ -582,9 +582,9 @@ c     --------
       n2 = size(mat2,2)
       if(size(mat2,1).ne.n)
      +  stop 'matmat_dmzm: dimensions of matrices are inconsistent.'
-      call dgemm('N','N',n1,n2,n,1d0,mat1,n1,real(mat2),n,0d0,matr,n1)
-      call dgemm('N','N',n1,n2,n,1d0,mat1,n1,aimag(mat2),n,0d0,mati,n1)
-      matmat_dmzm = matr + (0d0,1d0) * mati
+      call dgemm('N','N',n1,n2,n,1.0,mat1,n1,real(mat2),n,0.0,matr,n1)
+      call dgemm('N','N',n1,n2,n,1.0,mat1,n1,aimag(mat2),n,0.0,mati,n1)
+      matmat_dmzm = matr + (0.0,1.0) * mati
       end function matmat_dmzm
 
       function matmat_zpdm(mat1,mat2)
@@ -601,7 +601,7 @@ c     --------
      +  stop 'matmat_zpdm: first input array has wrong size.'
       do i = 1,n
         vec2 = mat2(:,i)
-        call zhpmv('U',n,(1d0,0d0),mat1,vec2,1,(0d0,0d0),vec,1)
+        call zhpmv('U',n,(1.0,0.0),mat1,vec2,1,(0.0,0.0),vec,1)
         matmat_zpdm(:,i) = vec
       enddo
       deallocate ( vec,vec2 )
@@ -623,9 +623,9 @@ c     --------
      +  stop 'matmat_zmdp: second input array has wrong size.'
       do i = 1,n
         vec1 = conjg(mat1(i,:))
-        call dspmv('U',n,1d0,mat2,real(vec1),1,0d0,vecr,1)
-        call dspmv('U',n,1d0,mat2,aimag(vec1),1,0d0,veci,1)
-        matmat_zmdp(i,:) = vecr - (0d0,1d0) * veci
+        call dspmv('U',n,1.0,mat2,real(vec1),1,0.0,vecr,1)
+        call dspmv('U',n,1.0,mat2,aimag(vec1),1,0.0,veci,1)
+        matmat_zmdp(i,:) = vecr - (0.0,1.0) * veci
       enddo
       deallocate ( vecr,veci,vec1 )
       end function matmat_zmdp
@@ -643,9 +643,9 @@ c     --------
       n2 = size(mat2,2)
       if(size(mat2,1).ne.n)
      +  stop 'matmat_zmdm: dimensions of matrices are inconsistent.'
-      call dgemm('N','N',n1,n2,n,1d0,real(mat1),n1,mat2,n,0d0,matr,n1)
-      call dgemm('N','N',n1,n2,n,1d0,aimag(mat1),n1,mat2,n,0d0,mati,n1)
-      matmat_zmdm = matr + (0d0,1d0) * mati
+      call dgemm('N','N',n1,n2,n,1.0,real(mat1),n1,mat2,n,0.0,matr,n1)
+      call dgemm('N','N',n1,n2,n,1.0,aimag(mat1),n1,mat2,n,0.0,mati,n1)
+      matmat_zmdm = matr + (0.0,1.0) * mati
       end function matmat_zmdm
 
       function matmat_zpzm(mat1,mat2)
@@ -660,7 +660,7 @@ c     --------
      +  stop 'matmat_zpzm: first input array has wrong size.'
       do i = 1,n2
         vec2 = mat2(:,i)
-        call zhpmv('U',n,(1d0,0d0),mat1,vec2,1,(0d0,0d0),vec,1)
+        call zhpmv('U',n,(1.0,0.0),mat1,vec2,1,(0.0,0.0),vec,1)
         matmat_zpzm(:,i) = vec
       enddo
       deallocate ( vec,vec2 )
@@ -679,7 +679,7 @@ c     --------
      +  stop 'matmat_zmzp: second input array has wrong size.'
       do i = 1,n
         vec2 = conjg(mat1(i,:))
-        call zhpmv('U',n,(1d0,0d0),mat2,vec2,1,(0d0,0d0),vec,1)
+        call zhpmv('U',n,(1.0,0.0),mat2,vec2,1,(0.0,0.0),vec,1)
         matmat_zmzp(i,:) = conjg(vec)
       enddo
       deallocate ( vec,vec2 )
@@ -1133,10 +1133,10 @@ c     --------
       allocate ( work(8*n),iwork(5*n),mat1(n,n),ifail(n) ) ; mat1 = mat
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
-        call dsyevx('V','I','U',n,mat1,n,0d0,0d0,n-ma+1,n,abstol,idum,
+        call dsyevx('V','I','U',n,mat1,n,0.0,0.0,n-ma+1,n,abstol,idum,
      +              eval,evec,n,work,8*n,iwork,ifail,info)
       else
-        call dsyevx('V','I','U',n,mat1,n,0d0,0d0,    1,ma,abstol,idum,
+        call dsyevx('V','I','U',n,mat1,n,0.0,0.0,    1,ma,abstol,idum,
      +              eval,evec,n,work,8*n,iwork,ifail,info)
       endif
       if(info.ne.0) stop 'diagonalize_dvs: dsyevx failed.'
@@ -1174,10 +1174,10 @@ c     --------
       mat1 = mat ; olap1 = olap
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
-        call dsygvx(1,'V','I','U',n,mat1,n,olap1,n,0d0,0d0,n-ma+1,n,
+        call dsygvx(1,'V','I','U',n,mat1,n,olap1,n,0.0,0.0,n-ma+1,n,
      +              abstol,idum,eval,evec,n,work,8*n,iwork,ifail,info)
       else
-        call dsygvx(1,'V','I','U',n,mat1,n,olap1,n,0d0,0d0,    1,ma,
+        call dsygvx(1,'V','I','U',n,mat1,n,olap1,n,0.0,0.0,    1,ma,
      +              abstol,idum,eval,evec,n,work,8*n,iwork,ifail,info)
       endif
       if(info.ne.0) stop 'diagonalize_dvos: dsygvx failed.'
@@ -1209,10 +1209,10 @@ c     --------
       allocate ( work(8*n),iwork(5*n),mat1(nn),ifail(n) ) ; mat1 = mat
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
-        call dspevx('V','I','U',n,mat1,0d0,0d0,n-ma+1,n,abstol,idum,
+        call dspevx('V','I','U',n,mat1,0.0,0.0,n-ma+1,n,abstol,idum,
      +              eval,evec,n,work,iwork,ifail,info)
       else
-        call dspevx('V','I','U',n,mat1,0d0,0d0,    1,ma,abstol,idum,
+        call dspevx('V','I','U',n,mat1,0.0,0.0,    1,ma,abstol,idum,
      +              eval,evec,n,work,iwork,ifail,info)
       endif
       if(info.ne.0) stop 'diagonalize_dpvs: dspevx failed.'
@@ -1247,10 +1247,10 @@ c     --------
       mat1 = mat ; olap1 = olap
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
-        call dspgvx(1,'V','I','U',n,mat1,olap1,0d0,0d0,n-ma+1,n,abstol,
+        call dspgvx(1,'V','I','U',n,mat1,olap1,0.0,0.0,n-ma+1,n,abstol,
      +              idum,eval,evec,n,work,iwork,ifail,info)
       else
-        call dspgvx(1,'V','I','U',n,mat1,olap1,0d0,0d0,    1,ma,abstol,
+        call dspgvx(1,'V','I','U',n,mat1,olap1,0.0,0.0,    1,ma,abstol,
      +              idum,eval,evec,n,work,iwork,ifail,info)
       endif
       if(info.ne.0) stop 'diagonalize_dpvos: dspgvx failed.'
@@ -1286,10 +1286,10 @@ c     --------
       mat1 = mat
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
-        call zheevx('V','I','U',n,mat1,n,0d0,0d0,n-ma+1,n,abstol,idum,
+        call zheevx('V','I','U',n,mat1,n,00.,0.0,n-ma+1,n,abstol,idum,
      +              eval,evec,n,work,2*n,rwork,iwork,ifail,info)
       else
-        call zheevx('V','I','U',n,mat1,n,0d0,0d0,    1,ma,abstol,idum,
+        call zheevx('V','I','U',n,mat1,n,0.0,0.0,    1,ma,abstol,idum,
      +              eval,evec,n,work,2*n,rwork,iwork,ifail,info)
       endif
       if(info.ne.0) stop 'diagonalize_zvs: zheevx failed.'
@@ -1329,10 +1329,10 @@ c     --------
      +           ifail(n) ) ; mat1 = mat ; olap1 = olap
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
-        call zhegvx(1,'V','I','U',n,mat1,n,olap1,n,0d0,0d0,n-ma+1,n,
+        call zhegvx(1,'V','I','U',n,mat1,n,olap1,n,0.0,0.0,n-ma+1,n,
      +          abstol,idum,eval,evec,n,work,2*n,rwork,iwork,ifail,info)
       else
-        call zhegvx(1,'V','I','U',n,mat1,n,olap1,n,0d0,0d0,    1,ma,
+        call zhegvx(1,'V','I','U',n,mat1,n,olap1,n,0.0,0.0,    1,ma,
      +          abstol,idum,eval,evec,n,work,2*n,rwork,iwork,ifail,info)
       endif
       if(info.ne.0) stop 'diagonalize_zvos: zhegvx failed.'
@@ -1367,10 +1367,10 @@ c     --------
       mat1 = mat
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
-        call zhpevx('V','I','U',n,mat1,0d0,0d0,n-ma+1,n,abstol,idum,
+        call zhpevx('V','I','U',n,mat1,0.0,0.0,n-ma+1,n,abstol,idum,
      +              eval,evec,n,work,iwork,ifail,info)
       else
-        call zhpevx('V','I','U',n,mat1,0d0,0d0,    1,ma,abstol,idum,
+        call zhpevx('V','I','U',n,mat1,0.0,0.0,    1,ma,abstol,idum,
      +              eval,evec,n,work,iwork,ifail,info)
       endif
       if(info.ne.0) stop 'diagonalize_zpvs: zhpevx failed.'
@@ -1407,10 +1407,10 @@ c     --------
      +           ifail(n) ) ; mat1 = mat ; olap1 = olap
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
-        call zhpgvx(1,'V','I','U',n,mat1,olap1,0d0,0d0,n-ma+1,n,abstol,
+        call zhpgvx(1,'V','I','U',n,mat1,olap1,0.0,0.0,n-ma+1,n,abstol,
      +              idum,eval,evec,n,work,rwork,iwork,ifail,info)
       else
-        call zhpgvx(1,'V','I','U',n,mat1,olap1,0d0,0d0,    1,ma,abstol,
+        call zhpgvx(1,'V','I','U',n,mat1,olap1,0.0,0.0,    1,ma,abstol,
      +              idum,eval,evec,n,work,rwork,iwork,ifail,info)
       endif
       if(info.ne.0) stop 'diagonalize_zpvos: zhpgvx failed.'
@@ -1453,7 +1453,7 @@ c     --------
         call dsyevx('V','V','U',n,mat1,n,r1,r2,0,0,      abstol,idum,
      +              eval,evec,n,work,8*n,iwork,ifail,info)
       else
-        call dsyevx('V','I','U',n,mat1,n,0d0,0d0,ir1,ir2,abstol,idum,
+        call dsyevx('V','I','U',n,mat1,n,0.0,0.0,ir1,ir2,abstol,idum,
      +              eval,evec,n,work,8*n,iwork,ifail,info)
       endif
       ir2 = idum
@@ -1499,7 +1499,7 @@ c     --------
         call dsygvx(1,'V','V','U',n,mat1,n,olap1,n,r1,r2,0,0,
      +              abstol,idum,eval,evec,n,work,8*n,iwork,ifail,info)
       else
-        call dsygvx(1,'V','I','U',n,mat1,n,olap1,n,0d0,0d0,ir1,ir2,
+        call dsygvx(1,'V','I','U',n,mat1,n,olap1,n,0.0,0.0,ir1,ir2,
      +              abstol,idum,eval,evec,n,work,8*n,iwork,ifail,info)
       endif
       ir2 = idum
@@ -1539,7 +1539,7 @@ c     --------
         call dspevx('V','V','U',n,mat1,r1,r2,0,0,      abstol,idum,eval,
      +              evec,n,work,iwork,ifail,info)
       else
-        call dspevx('V','I','U',n,mat1,0d0,0d0,ir1,ir2,abstol,idum,eval,
+        call dspevx('V','I','U',n,mat1,0.0,0.0,ir1,ir2,abstol,idum,eval,
      +              evec,n,work,iwork,ifail,info)
       endif
       ir2 = idum
@@ -1582,7 +1582,7 @@ c     --------
         call dspgvx(1,'V','V','U',n,mat1,olap1,r1,r2,0,0,      abstol,
      +              idum,eval,evec,n,work,iwork,ifail,info)
       else
-        call dspgvx(1,'V','I','U',n,mat1,olap1,0d0,0d0,ir1,ir2,abstol,
+        call dspgvx(1,'V','I','U',n,mat1,olap1,0.0,0.0,ir1,ir2,abstol,
      +              idum,eval,evec,n,work,iwork,ifail,info)
       endif
       ir2 = idum
@@ -1625,7 +1625,7 @@ c     --------
         call zheevx('V','V','U',n,mat1,n,r1,r2,0,0,      abstol,idum,
      +              eval,evec,n,work,2*n,rwork,iwork,ifail,info)
       else
-        call zheevx('V','I','U',n,mat1,n,0d0,0d0,ir1,ir2,abstol,idum,
+        call zheevx('V','I','U',n,mat1,n,0.0,0.0,ir1,ir2,abstol,idum,
      +              eval,evec,n,work,2*n,rwork,iwork,ifail,info)
       endif
       ir2 = idum
@@ -1673,7 +1673,7 @@ c     --------
         call zhegvx(1,'V','V','U',n,mat1,n,olap1,n,r1,r2,0,0,
      +          abstol,idum,eval,evec,n,work,2*n,rwork,iwork,ifail,info)
       else
-        call zhegvx(1,'V','I','U',n,mat1,n,olap1,n,0d0,0d0,ir1,ir2,
+        call zhegvx(1,'V','I','U',n,mat1,n,olap1,n,0.0,0.0,ir1,ir2,
      +          abstol,idum,eval,evec,n,work,2*n,rwork,iwork,ifail,info)
       endif
       ir2 = idum
@@ -1716,7 +1716,7 @@ c     --------
         call zhpevx('V','V','U',n,mat1,r1,r2,0,0,      abstol,idum,
      +              eval,evec,n,work,iwork,ifail,info)
       else
-        call zhpevx('V','I','U',n,mat1,0d0,0d0,ir1,ir2,abstol,idum,
+        call zhpevx('V','I','U',n,mat1,0.0,0.0,ir1,ir2,abstol,idum,
      +              eval,evec,n,work,iwork,ifail,info)
       endif
       ir2 = idum
@@ -1761,7 +1761,7 @@ c     --------
         call zhpgvx(1,'V','V','U',n,mat1,olap1,r1,r2,0,0,      abstol,
      +              idum,eval,evec,n,work,rwork,iwork,ifail,info)
       else
-        call zhpgvx(1,'V','I','U',n,mat1,olap1,0d0,0d0,ir1,ir2,abstol,
+        call zhpgvx(1,'V','I','U',n,mat1,olap1,0.0,0.0,ir1,ir2,abstol,
      +              idum,eval,evec,n,work,rwork,iwork,ifail,info)
       endif
       ir2 = idum
@@ -1790,7 +1790,7 @@ c     --------
       allocate ( mat1(nn),olap1(nn),eval1(n),evec1(n,n),work(2*n),
      +           rwork(7*n),iwork(5*n),ifail(n) ) 
       mat1 = mat ; olap1 = olap
-c      call zhpgvx(1,'V','I','U',n,mat1,olap1,0d0,0d0,n,n,2*dlamch('S'),1,eval1,evec1,n,work,rwork,iwork,ifail,info)
+c      call zhpgvx(1,'V','I','U',n,mat1,olap1,0.0,0.0,n,n,2*dlamch('S'),1,eval1,evec1,n,work,rwork,iwork,ifail,info)
       if(info.ne.0) stop 'geteigen_zpvo: zhpgvx failed.'
       evec = evec1(:,1)
       eval = eval1(1)
@@ -1824,7 +1824,7 @@ c     --------
       real, intent(out) :: mati(:)
       real, intent(in)  :: mat(:)
       integer              :: n,nn,info
-      nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
+      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       if(size(mati).ne.nn)
      +  stop 'inverse_dp: output array has wrong size.'
       mati = mat
@@ -1866,7 +1866,7 @@ c     --------
       complex, intent(out) :: mati(:)
       complex, intent(in)  :: mat(:)
       integer                 :: n,nn,info
-      nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
+      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       if(size(mati).ne.nn)
      +  stop 'inverse_zp: output array has wrong size.'
       mati = mat
@@ -1895,7 +1895,7 @@ c     --------
       implicit none
       real, intent(inout) :: mat(:)
       integer                :: n,nn,info
-      nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
+      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       call dpptrf('U',n,mat,info)
       if(info.ne.0) stop 'inverse_dp1: dpptrf failed.'
       call dpptri('U',n,mat,info) 
@@ -1923,7 +1923,7 @@ c     --------
       complex, allocatable   :: work(:)
       integer,    allocatable   :: ipiv(:)
       integer                   :: n,nn,info
-      nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0) 
+      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5) 
       allocate(ipiv(n),work(n))
       call zsptrf('U',n,mat,ipiv,info)
       if(info.ne.0) stop 'inverse_zp1: zpptrf failed.'
@@ -1944,7 +1944,7 @@ c     --------
      +  stop 'sqrtmat_d: dimensions of input array differ.'
       allocate ( evec(n,n),eval(n) )
       call diagonalize(evec,eval,matin) 
-      if(any(eval.lt.0d0)) stop 'sqrtmat_d: negative eigenvalue.'
+      if(any(eval.lt.0.0)) stop 'sqrtmat_d: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
       enddo
@@ -1958,12 +1958,12 @@ c     --------
       real, intent(in)  :: matin(:)
       real, allocatable :: eval(:),evec(:,:)
       integer              :: nn,n,i,j
-      nn = size(matin,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
+      nn = size(matin,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       if(size(matout).ne.nn)
      +  stop 'sqrtmat_dp: output array has wrong size.'
       allocate ( evec(n,n),eval(n) )
       call diagonalize(evec,eval,matin) 
-      if(any(eval.lt.0d0)) stop 'sqrtmat_dp: negative eigenvalue.'
+      if(any(eval.lt.0.0)) stop 'sqrtmat_dp: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
       enddo
@@ -1983,7 +1983,7 @@ c     --------
      +  stop 'sqrtmat_z: dimensions of input array differ.'
       allocate ( evec(n,n),eval(n) )
       call diagonalize(evec,eval,matin) 
-      if(any(eval.lt.0d0)) stop 'sqrtmat_z: negative eigenvalue.'
+      if(any(eval.lt.0.0)) stop 'sqrtmat_z: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
       enddo
@@ -1998,12 +1998,12 @@ c     --------
       complex, allocatable :: evec(:,:)
       real,    allocatable :: eval(:)
       integer                 :: nn,n,i,j
-      nn = size(matin,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
+      nn = size(matin,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       if(size(matout).ne.nn)
      +  stop 'sqrtmat_zp: output array has wrong size.'
       allocate ( eval(n),evec(n,n) )
       call diagonalize(evec,eval,matin) 
-      if(any(eval.lt.0d0)) stop 'sqrtmat_zp: negative eigenvalue.'
+      if(any(eval.lt.0.0)) stop 'sqrtmat_zp: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i) !sqrt(sqrt(eval(i))) * evec(:,i)
       enddo
@@ -2020,7 +2020,7 @@ c     --------
       if(size(mat,2).ne.n) stop 'sqrtmat_d1: array dimensions differ.'
       allocate ( evec(n,n),eval(n) )
       call diagonalize(evec,eval,mat) 
-      if(any(eval.lt.0d0)) stop 'sqrtmat_d1: negative eigenvalue.'
+      if(any(eval.lt.0.0)) stop 'sqrtmat_d1: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
       enddo
@@ -2033,10 +2033,10 @@ c     --------
       real, intent(inout) :: mat(:)
       real, allocatable   :: eval(:),evec(:,:)
       integer                :: nn,n,i,j
-      nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0)
+      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       allocate ( evec(n,n),eval(n) )
       call diagonalize(evec,eval,mat) 
-      if(any(eval.lt.0d0)) stop 'sqrtmat_dp1: negative eigenvalue.'
+      if(any(eval.lt.0.0)) stop 'sqrtmat_dp1: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
       enddo
@@ -2054,7 +2054,7 @@ c     --------
       if(size(mat,2).ne.n) stop 'sqrtmat_z1: array dimensions differ.'
       allocate ( evec(n,n),eval(n) )
       call diagonalize(evec,eval,mat) 
-      if(any(eval.lt.0d0)) stop 'sqrtmat_z1: negative eigenvalue.'
+      if(any(eval.lt.0.0)) stop 'sqrtmat_z1: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
       enddo
@@ -2068,10 +2068,10 @@ c     --------
       complex, allocatable   :: evec(:,:)
       real,    allocatable   :: eval(:)
       integer                   :: nn,n,i,j
-      nn = size(mat,1) ; n = nint(sqrt(0.25d0+2*nn)-0.5d0) 
+      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5) 
       allocate ( eval(n),evec(n,n) )
       call diagonalize(evec,eval,mat) 
-      if(any(eval.lt.0d0)) stop 'sqrtmat_zp1: negative eigenvalue.'
+      if(any(eval.lt.0.0)) stop 'sqrtmat_zp1: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
       enddo

@@ -44,7 +44,7 @@ SUBROUTINE gen_map(atoms,sym,oneD,hybrid)
 
         ratom = 0
         DO ieq1 = 1,atoms%neq(itype)
-          IF( all(abs(modulo(rtaual-atoms%taual(:,iatom0 + ieq1)+1d-12,1d0)).lt. 1d-10) ) THEN
+          IF( all(abs(modulo(rtaual-atoms%taual(:,iatom0 + ieq1)+1e-12,1.0)).lt. 1e-10) ) THEN
             ratom              = iatom0 + ieq1
             hybrid%map (  iatom,isym) = ratom
             hybrid%tvec(:,iatom,isym) = nint ( rtaual-atoms%taual(:,ratom) )

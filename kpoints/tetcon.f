@@ -43,9 +43,9 @@ C                                                   Fred Hutson
 C
 C*************************************************************************
 C
-      data eps/1.0d-10/
-      data eps1/1.0d-5/
-      pi = 4.0d0*atan(1.0d0)
+      data eps/1e-10/
+      data eps1/1e-5/
+      pi = 4.0*atan(1.0)
 C
 C CONSTRUCT THE FIRST TETRAHEDRON
 C
@@ -53,10 +53,10 @@ C
 C
 C FIND K-POINT NEAREST TO 1
 C
-      dm=1.0d9
+      dm=10.0**9
       i2=0
       do 100 i=2,nkpt
-      dist=0.0d0
+      dist=0.0
       do 110 icom=1,3
       dist=dist+(kvc(icom,1)-kvc(icom,i))**2
   110 continue
@@ -71,19 +71,19 @@ C
 C FIND POINT NEAREST TO (1+I2)/2 , NOT ON THE LINE
 C CONNECTING 1 AND I2
 C
-      dm=1.0d9
+      dm=10.0**9
       i3=0
       do 200 i=2,nkpt
       if ( i.eq.i2 ) goto 200
-      dl=0.0d0
-      dist=0.0d0
+      dl=0.0
+      dist=0.0
       do 210 icom=1,3
-      vect=kvc(icom,i)-0.5d0*(kvc(icom,1)+kvc(icom,i2))
+      vect=kvc(icom,i)-0.5*(kvc(icom,1)+kvc(icom,i2))
       dist=dist+vect*vect
       dl=dl+vect*(kvc(icom,1)-kvc(icom,i2))
   210 continue
       dl=dl/dnorm
-      if ( abs(dist-dl*dl).lt.0.01d0*dist ) goto 200
+      if ( abs(dist-dl*dl).lt.0.01*dist ) goto 200
       if ( dist.gt.dm ) goto 200
       dm=dist
       i3=i
@@ -100,31 +100,31 @@ C
      $      (kvc(1,1)-kvc(1,i2))*(kvc(3,i2)-kvc(3,i3))
       cn(3)=(kvc(1,1)-kvc(1,i2))*(kvc(2,i2)-kvc(2,i3))-
      $      (kvc(2,1)-kvc(2,i2))*(kvc(1,i2)-kvc(1,i3))
-      dnorm=0.0d0
+      dnorm=0.0
       do 300 icom=1,3
       dnorm=dnorm+cn(icom)**2
   300 continue
-      dnorm=1.0d0/sqrt(dnorm)
+      dnorm=1.0/sqrt(dnorm)
       do 310 icom=1,3
       cn(icom)=cn(icom)*dnorm
   310 continue
       i4=0
-      dm=1.0d9
+      dm=10.0**9
       do 400 i=2,nkpt
       if ( (i.eq.i2).or.(i.eq.i3) ) goto 400
-      dist=0.0d0
-      dl=0.0d0
+      dist=0.0
+      dl=0.0
       do 410 icom=1,3
       vect=kvc(icom,i)-(kvc(icom,1)+kvc(icom,i2)+
-     $     kvc(icom,i3))/3.0d0
+     $     kvc(icom,i3))/3.0
       dist=dist+vect**2
       dl=dl+vect*cn(icom)
   410 continue
-      if ( dl*dl.lt.0.01d0*dist ) goto 400
+      if ( dl*dl.lt.0.01*dist ) goto 400
       if ( dist.gt.dm ) goto 400
       i4=i
       dm=dist
-      vt=dl/(dnorm*6.0d0)
+      vt=dl/(dnorm*6.0)
   400 continue
       IF ( i4==0 )  CALL juDFT_error(" tetcon3 ",calledby ="tetcon")
       ntetra(4,1)=i4
@@ -185,12 +185,12 @@ C
      $        (kcorn(1,2)-kcorn(1,1))*(kcorn(3,3)-kcorn(3,1))
       norm(3)=(kcorn(1,2)-kcorn(1,1))*(kcorn(2,3)-kcorn(2,1))-
      $        (kcorn(2,2)-kcorn(2,1))*(kcorn(1,3)-kcorn(1,1))
-      vol=0.0d0
+      vol=0.0
       do 1400 i=1,3
       vol=vol+norm(i)*(kvc(i,ntetra(j,it))-kcorn(i,1))
  1400 continue
-      vol=vol/6.0d0
-      if ( vol.lt.0.0d0 ) goto 1500
+      vol=vol/6.0
+      if ( vol.lt.0.0 ) goto 1500
       do 1600 i=1,3
       norm(i)=-norm(i)
  1600 continue
@@ -201,10 +201,10 @@ C STORE THE K-POINT ADDRESS IN NKADD ARRAY ACCORDING TO THE
 C ORDER OF DISTANCE BETWEEN THE K-POINT AND THIS FACE.
 C
       do 1800 nkp=1,nkpt
-      length=0.0d0
+      length=0.0
       do 1850 i=1,3
       length=length+(kvc(i,nkp)
-     &     -(kcorn(i,1)+kcorn(i,2)+kcorn(i,3))/3.0d0)**2
+     &     -(kcorn(i,1)+kcorn(i,2)+kcorn(i,3))/3.0)**2
  1850 continue
       ddist(nkp)=length
       nkadd(nkp)=nkp
@@ -235,11 +235,11 @@ C
       kcorn(i,4)=kvc(i,nkadd(nkp))
  2050 continue
       nside(4)=nkadd(nkp)
-      vt=0.0d0
+      vt=0.0
       do 2100 i=1,3
       vt=vt+norm(i)*(kcorn(i,4)-kcorn(i,1))
  2100 continue
-      vt=vt/6.0d0
+      vt=vt/6.0
 C
 C REJECT POINT NKP IF IT IS ON THE WRONG SIDE .
 C
@@ -253,7 +253,7 @@ C
 C FIRST CHECK IF TETRAHEDRON NK2 IS ON THE DANGEROUS SIDE
 C
       do 3150 i=1,4
-      sum=0.0d0
+      sum=0.0
       do 3160 jj=1,3
       sum=sum+norm(jj)*(kvc(jj,ntetra(i,nk2))-kcorn(jj,1))
  3160 continue
@@ -268,7 +268,7 @@ C
       do i=1,4
         do 3200 jj=1,4
           if(ntetra(i,nk2).eq.nside(jj)) goto 3200
-          sum=0.0d0
+          sum=0.0
           do icom=1,3
             cn(icom)=kvc(icom,ntetra(i,nk2))-kcorn(icom,jj)
             sum=sum+cn(icom)*cn(icom)
@@ -277,11 +277,11 @@ C
             cn(icom)=cn(icom)/sqrt(sum)
           end do
           do k=1,l
-            sum=0.0d0
+            sum=0.0
             do icom=1,3
               sum=sum+cn(icom)*d(icom,k)
             end do
-            if((1.0d0-sum).lt.eps) goto 3200
+            if((1.0-sum).lt.eps) goto 3200
 C
 C EXCLUDE THE VECTOR WHICH HAS THE SAME DIRECTION AS AN EXISTING ONE.
 C
@@ -312,19 +312,19 @@ C
      &       .and.(abs(dnm(3)).lt.eps)) goto 3500
           do 3600 k=1,l
             if((k.eq.i).or.(k.eq.jj)) goto 3600
-            sum=0.0d0
+            sum=0.0
             do icom=1,3
               sum=sum+d(icom,k)*dnm(icom)
             end do
             if(abs(sum).lt.eps) goto 3600
             do 3700 kk=1,l
               if((kk.eq.i).or.(kk.eq.jj).or.(kk.eq.k)) goto 3700
-              sss=0.0d0
+              sss=0.0
               do icom=1,3
                 sss=sss+d(icom,kk)*dnm(icom)
               end do
               if(abs(sss).lt.eps) goto 3700
-              if(sss*sum.lt.0.0d0) goto 3500
+              if(sss*sum.lt.0.0) goto 3500
 C
 C IF K-TH AND KK-TH D-VECTORS EXIST IN OPPOSITE SIDE WITH
 C RESPECT TO THE PLANE GIVEN BY I-TH AND JJ-TH D-VECTORS,
@@ -374,11 +374,11 @@ C
 C DETERMINE THE CHARACTERISTICS OF THIS DIVISION INTO
 C TETRAHEDRA .
 C
-      vav=0.0d0
-      vsq=0.0d0
-      sav=0.0d0
-      ssq=0.0d0
-      vmin=1.0d9
+      vav=0.0
+      vsq=0.0
+      sav=0.0
+      ssq=0.0
+      vmin=10.0**9
       vmax=-vmin
       smin=vmin
       smax=vmax
@@ -390,7 +390,7 @@ C
         if ( vt.lt.vmin ) vmin=vt
         do i=1,3
           do j=i+1,4
-            dist=0.0d0
+            dist=0.0
             do icom=1,3
               dist=dist+(kvc(icom,ntetra(i,it))-
      $             kvc(icom,ntetra(j,it)))**2
@@ -419,7 +419,7 @@ c     write(ibfile,5000) nt,vav,vsq,vmin,vmax,sav,ssq,smin,smax
  5100 format(4(4x,4i4))
 c     write(ibfile,5100) ((ntetra(j,i),j=1,4),i=1,nt)
 C CHECK IF WE HAVE THE CORRECT TOTAL VOLUME
-      vt=omega*vav*nt*nsym/(2*pi)**3-1.0d0
+      vt=omega*vav*nt*nsym/(2*pi)**3-1.0
       write(iofile,5200) vt
 c     write(ibfile,5200) vt
       do 5300 i =1,nt

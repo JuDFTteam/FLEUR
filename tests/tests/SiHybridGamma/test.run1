@@ -19,17 +19,17 @@ jt::copyfile("files/cdn13",$workdir);
 jt::copyfile("files/cdn14",$workdir);
 jt::copyfile("files/cdnc",$workdir);
 
-jt::testrun("$executable ",$workdir);
+jt::testrun_seq("$executable ",$workdir);
 
 #now test output
 $result=jt::test_grepexists("$workdir/out","it=  1  is completed");
 
-$result+=jt::test_grepnumber("$workdir/out", "    total energy=", ".*= *([^ ]*)", -591.4073268837, 0.0001);
-$result+=jt::test_grepnumber("$workdir/out", "HF total energy=",  ".*= *([^ ]*)", -591.4094320551, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "    total energy=", ".*= *([^ ]*)", -591.5774525207, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "HF total energy=",  ".*= *([^ ]*)", -591.5785933851 , 0.0001);
 
 $result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "23: *([^ ]*)", 0.0,      0.0001);
-$result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "24: *([^ ]*)", 0.154412, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "24: *([^ ]*)", 0.051722, 0.0001);
 
-$result+=jt::test_grepnumber("$workdir/out", "bandgap",  ".*: *([^ ]*)", 0.177962, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "bandgap",  ".*: *([^ ]*)", 0.191663, 0.0001);
 
 jt::stageresult($workdir,$result,"1");

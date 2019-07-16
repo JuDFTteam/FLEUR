@@ -177,11 +177,11 @@
           END IF
       ELSE IF(l3 == l1 -1) THEN
           IF (m2 == 1) then
-           cgc = sqrt( (l1mm3 * l1mm3p1) / (2.d0 * l1 * two_l1p1))   
+           cgc = sqrt( (l1mm3 * l1mm3p1) / (2.0 * l1 * two_l1p1))   
           ELSEIF (m2 == 0) THEN
            cgc = -sqrt( (l1mm3 * l1pm3) / (l1 * (two_l1p1)))   
           ELSEIF (m2 == -1) THEN
-           cgc = sqrt( (l1pm3p1 * l1pm3) / (2.0d0 * l1 * two_l1p1))   
+           cgc = sqrt( (l1pm3p1 * l1pm3) / (2.0 * l1 * two_l1p1))   
           END IF
       END IF
       END FUNCTION cgc

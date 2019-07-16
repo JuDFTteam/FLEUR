@@ -108,8 +108,8 @@ C
 C --->  save and data statements
 c
       save     one,zero,half,eps,eps1,iplus,iminus
-      data     zero/0.0d0/,one/1.0d0/,half/0.5d0/,
-     +         eps/1.0d-8/,eps1/1.0d-5/,iplus/1/,iminus/-1/
+      data     zero/0.0/,one/1.0/,half/0.5/,
+     +         eps/1e-8/,eps1/1e-5/,iplus/1/,iminus/-1/
 c
 c-----------------------------------------------------------------------
 c
