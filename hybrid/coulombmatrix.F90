@@ -1249,7 +1249,6 @@ CONTAINS
 
       IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Writing of data to file...'
       CALL cpu_TIME(time1)
-#if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
       !
       ! rearrange coulomb matrix
       !
@@ -1569,12 +1568,6 @@ CONTAINS
       else
          DEALLOCATE (coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c, coulombp_mtir_c)
       end if
-#else
-      !write coulomb matrix to direct access file coulomb
-      DO i = 1, kpts%nkpt
-         call write_coulomb(i, sym%invs, coulomb(:, i))
-      END DO
-#endif
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(7X,A)', advance='no') 'done'

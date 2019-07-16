@@ -140,17 +140,11 @@ CONTAINS
       REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), cprod_cv_r(:, :, :), carr3_vv_r(:, :, :), carr3_cv_r(:, :, :)
       COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), cprod_cv_c(:, :, :), carr3_vv_c(:, :, :), carr3_cv_c(:, :, :)
 
-
-#if ( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
       REAL                 :: coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1, 0:hybrid%maxlcutm1, atoms%ntype)
       REAL                 :: coulomb_mt2_r(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
       REAL                 :: coulomb_mt3_r(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
       COMPLEX              :: coulomb_mt2_c(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
       COMPLEX              :: coulomb_mt3_c(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
-#else
-      REAL                 :: coulomb_r(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2)
-      COMPLEX              :: coulomb_c(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2)
-#endif
 
 #ifdef CPP_IRCOULOMBAPPROX
       REAL                 :: coulomb_mtir_r((hybrid%maxlcutm1 + 1)**2*atoms%nat, &
@@ -239,37 +233,21 @@ CONTAINS
          END IF
 
          IF (kpts%bkp(ikpt0) /= ikpt0) THEN
-#if( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
             IF ((kpts%bksym(ikpt0) > sym%nop) .and. (.not. mat_ex%l_real)) THEN
                coulomb_mt2_c = conjg(coulomb_mt2_c)
                coulomb_mtir_c = conjg(coulomb_mtir_c)
             END IF
-#else
-            if (.not. mat_ex%l_real) THEN
-               IF (kpts%bksym(ikpt0) > sym%nop) coulomb = conjg(coulomb)
-            endif
-#endif
          END IF
 
          DO ibando = 1, mnobd, psize
 
             IF (mat_ex%l_real) THEN
-#ifdef CPP_IRAPPROX
-               CALL wavefproducts_inv(1, hybdat, dimension, input, jsp, atoms, lapw, obsolete, kpts, nk, ikpt0, &
-                                      mnobd, hybrid, parent, cell, sym, noco, nkqpt, cprod_vv)
-#else
                CALL wavefproducts_inv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, dimension, input, jsp, atoms, &
                                        lapw, kpts, nk, ikpt0, hybdat, mnobd, hybrid, parent, cell, hybrid%nbasp, sym, &
                                        noco, nkqpt, cprod_vv_r)
-#endif
             ELSE
-#ifdef CPP_IRAPPROX
-               CALL wavefproducts_noinv(1, hybdat, nk, ikpt0, dimension, input, jsp, cell, atoms, hybrid,
-               kpts, mnobd, lapw, sym, noco, nkqpt, cprod_vv)
-#else
                CALL wavefproducts_noinv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, dimension, input, jsp, &!jsp,&
                                          cell, atoms, hybrid, hybdat, kpts, mnobd, lapw, sym, hybrid%nbasp, noco, nkqpt, cprod_vv_c)
-#endif
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
