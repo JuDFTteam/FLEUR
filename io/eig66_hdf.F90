@@ -188,7 +188,7 @@ CONTAINS
        IMPLICIT NONE
        TYPE(t_data_HDF),INTENT(IN)::d
        INTEGER, INTENT(IN)  :: nk,jspin
-       INTEGER, INTENT(IN)  :: list(:)
+       INTEGER, OPTIONAL,INTENT(IN)  :: list(:)
        REAL,    INTENT(OUT) :: z(:,:)
 
        INTEGER :: nmat
@@ -203,7 +203,7 @@ CONTAINS
                (/1,nmat,SIZE(z,2),1,1/),z(:nmat,:) )
        ELSE
           DO i=1,SIZE(list)
-             CALL io_read_real2(d%evsetid,(/1,1,list(i),nk,jspin/),&
+             CALL io_read_real1(d%evsetid,(/1,1,list(i),nk,jspin/),&
                   &                      (/1,nmat,1,1,1/),z(:nmat,i))
           ENDDO
        END IF
