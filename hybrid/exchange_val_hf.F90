@@ -244,7 +244,6 @@ CONTAINS
             ! The mixed basis functions and the potential difference
             ! are Fourier transformed, so that the exchange can be calculated
             ! in Fourier space
-#ifndef CPP_NOSPMVEC
             IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
                iband1 = hybrid%nobd(nkqpt)
 
@@ -257,7 +256,6 @@ CONTAINS
                                                 atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
                                                 cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
             END IF
-#endif
 
             ! the Coulomb matrix is only evaluated at the irrecuible k-points
             ! bra_trafo transforms cprod instead of rotating the Coulomb matrix

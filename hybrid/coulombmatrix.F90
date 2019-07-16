@@ -1160,14 +1160,6 @@ CONTAINS
          ! The HSE functional is realized subtracting erf/r from
          ! the normal Coulomb matrix
          !
-#ifdef CPP_NOSPMVEC
-         CALL change_coulombmatrix( &
-            atoms, kpts, kpts, kpts%nkpt, &
-            cell, cell, hybrid%lcutm1, hybrid%maxlcutm1, &
-            hybrid%nindxm1, hybrid%maxindxm1, hybrid, &
-            hybrid%basm1, hybrid%maxbasm1, nbasm1, sym, mpi, &
-            coulomb)
-#endif
       ELSE
          IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, kpts, hybrid, nbasm1, gridf, coulomb)
       END IF
