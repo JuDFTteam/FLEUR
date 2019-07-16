@@ -68,10 +68,6 @@ CONTAINS
       USE m_olap
       USE m_spmvec
       USE m_hsefunctional, ONLY: dynamic_hse_adjustment
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-      USE m_mpi_work_dist
-      USE m_mpi_tags
-#endif
       USE m_io_hybrid
       USE m_kp_perturbation
 
@@ -144,9 +140,6 @@ CONTAINS
       REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), cprod_cv_r(:, :, :), carr3_vv_r(:, :, :), carr3_cv_r(:, :, :)
       COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), cprod_cv_c(:, :, :), carr3_vv_c(:, :, :), carr3_cv_c(:, :, :)
 
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-      COMPLEX             :: buf_vv(hybrid%nbands(nk), nbands(nk))
-#endif
 
 #if ( !defined CPP_NOSPMVEC && !defined CPP_IRAPPROX )
       REAL                 :: coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1, 0:hybrid%maxlcutm1, atoms%ntype)
@@ -176,11 +169,6 @@ CONTAINS
 #endif
 
       LOGICAL              :: occup(dimension%neigd)
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-      INCLUDE "mpif.h"
-      INTEGER              :: ierr, ierr2, length, rank
-      CHARACTER(LEN=MPI_MAX_ERROR_STRING) :: errmsg
-#endif
       CALL timestart("valence exchange calculation")
 
       IF (initialize) THEN !it .eq. 1 .and. nk .eq. 1) THEN

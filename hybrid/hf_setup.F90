@@ -55,13 +55,6 @@ CONTAINS
       LOGICAL              :: skip_kpt(kpts%nkpt)
       INTEGER              :: g(3)
 
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-      INTEGER :: sndreqd, rcvreqd, rcvreq(kpts%nkpt)
-      INTEGER(KIND=MPI_ADDRESS_KIND) :: addr
-      INTEGER :: ierr(3)
-      INCLUDE 'mpif.h'
-#endif
-
       skip_kpt = .FALSE.
 
       IF (hybrid%l_calhf) THEN
@@ -79,12 +72,6 @@ CONTAINS
 
          ! Reading the eig file
          DO nk = 1, kpts%nkpt
-
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-            ! jump to next k-point if this process is not present in communicator
-            IF (skip_kpt(nk)) CYCLE
-#endif
-
             nrec1 = kpts%nkpt*(jsp - 1) + nk
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
@@ -112,12 +99,6 @@ CONTAINS
          degenerat = 1
          hybrid%nobd = 0
          DO nk = 1, kpts%nkpt
-
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-            ! jump to next k-point if this k-point is not treated at this process
-            IF (skip_kpt(nk)) CYCLE
-#endif
-
             DO i = 1, hybrid%ne_eig(nk)
                DO j = i + 1, hybrid%ne_eig(nk)
                   IF (ABS(results%eig(i, nk, jsp) - results%eig(j, nk, jsp)) < 1E-07) THEN !0.015
@@ -163,29 +144,6 @@ CONTAINS
             PRINT *, "bands:", nk, hybrid%nobd(nk), hybrid%nbands(nk), hybrid%ne_eig(nk)
          END DO
 
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-         ! send results for occupied bands to all processes
-         sndreqd = 0; rcvreqd = 0
-         DO nk = 1, kpts%nkpt
-            IF (skip_kpt(nk)) THEN
-               rcvreqd = rcvreqd + 1
-               CALL MPI_IRECV(hybrid%nobd(nk), 1, MPI_INTEGER4, MPI_ANY_SOURCE, TAG_SNDRCV_HYBDAT%NOBD + nk, mpi, rcvreq(rcvreqd), ierr(1))
-            ELSE
-               i = MOD(mpi%irank + 1, mpi%isize)
-               DO WHILE (i < mpi%irank .OR. i >= mpi%irank + 1)
-                  sndreqd = sndreqd + 1
-                  CALL MPI_ISSEND(hybrid%nobd(nk), 1, MPI_INTEGER4, i, TAG_SNDRCV_HYBDAT%NOBD + nk, mpi, sndreq(sndreqd), ierr(1))
-                  i = MOD(i + 1, mpi%isize)
-               END DO
-            END IF
-         END DO
-         CALL MPI_WAITALL(rcvreqd, rcvreq, MPI_STATUSES_IGNORE, ierr(1))
-         ! Necessary to avoid compiler optimization
-         ! Compiler does not know that hybrid%nobd is modified in mpi_waitall
-         CALL MPI_GET_ADDRESS(hybrid%nobd, addr, ierr(1))
-         rcvreqd = 0
-#endif
-
          ! spread hybrid%nobd from IBZ to whole BZ
          DO nk = 1, kpts%nkptf
             i = kpts%bkp(nk)
@@ -199,11 +157,6 @@ CONTAINS
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
          CALL corewf(atoms, jsp, input, DIMENSION, vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
-
-#if defined(CPP_MPI)&&defined(CPP_NEVER)
-         ! wait until all files are written in gen_wavf
-         CALL MPI_BARRIER(mpi%mpi_comm, ierr)
-#endif
 
          ! check olap between core-basis/core-valence/basis-basis
          CALL checkolap(atoms, hybdat, hybrid, kpts%nkpt, kpts, dimension, mpi, skip_kpt, &
