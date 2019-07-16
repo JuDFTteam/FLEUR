@@ -89,9 +89,6 @@
 
             ! read in cmt
             DO ikpt = 1, nkpti
-#ifdef CPP_MPI
-               IF (skip_kpt(ikpt)) CYCLE
-#endif
                call read_cmt(cmt(:, :, :, ikpt), ikpt)
             END DO
 
@@ -246,9 +243,6 @@
                   END IF
 
                   DO ikpt = 1, nkpti
-#ifdef CPP_MPI
-                     IF (skip_kpt(ikpt)) CYCLE
-#endif
                      carr1 = 0; carr2 = 0; carr3 = 0
 
                      ! calculate k1,k2,k3

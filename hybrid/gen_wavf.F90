@@ -171,17 +171,8 @@ CONTAINS
       ! determine boundaries for parallel calculations
       lower = 1
       upper = nkpti
-      found = .false.
-#ifdef CPP_MPI
-      DO ikpt = 1, nkpti
-         IF (.NOT. found) THEN
-            lower = ikpt
-            found = .true.
-         END IF
-      END DO
-#else
       found = .true.
-#endif
+      
       IF (.NOT. found) THEN
          upper = 0
       END IF

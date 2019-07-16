@@ -36,9 +36,7 @@ CONTAINS
 !
 
       IF (.NOT. ALLOCATED(hybrid%d_wgn2)) THEN    !calculate sym%d_wgn only once
-#ifndef CPP_MPI
          PRINT *, "calculate wigner-matrix"
-#endif
          STOP "WIGNER MATRIX should be available in hybrid part"
          !IF (.NOT.oneD%odi%d1) THEN
          !  ALLOCATE (sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,sym%nop))
