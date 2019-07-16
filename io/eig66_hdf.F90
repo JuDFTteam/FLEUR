@@ -182,13 +182,13 @@ CONTAINS
      END SUBROUTINE close_eig
 #ifdef CPP_HDF
      !----------------------------------------------------------------------
-     SUBROUTINE priv_r_vec(d,nk,jspin,n_start,n_end,z)
+     SUBROUTINE priv_r_vec(d,nk,jspin,list,z)
 
        USE m_hdf_tools
        IMPLICIT NONE
        TYPE(t_data_HDF),INTENT(IN)::d
        INTEGER, INTENT(IN)  :: nk,jspin
-       INTEGER, INTENT(IN)  :: n_start,n_end
+       INTEGER, INTENT(IN)  :: list(:)
        REAL,    INTENT(OUT) :: z(:,:)
 
        INTEGER :: nmat
@@ -317,7 +317,7 @@ CONTAINS
           ALLOCATE (z1(2,nmat,1))
           DO i=1,SIZE(list)
               CALL io_read_real3(d%evsetid,(/1,1,list(i),nk,jspin/),&
-               &                      (/2,nmat,1,1,1/),z1
+               &                      (/2,nmat,1,1,1/),z1)
               z(:,i) = CMPLX( z1(1,:,i) ,z1(2,:,i) )
            ENDDO
         END IF
