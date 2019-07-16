@@ -94,8 +94,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
 
    ! Local Arrays
-   REAL :: we(MAXVAL(cdnvalJob%noccbd(:)))
-   REAL :: eig(MAXVAL(cdnvalJob%noccbd(:)))
+   REAL,ALLOCATABLE :: we(:),eig(:)
+   INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
    TYPE (t_lapw)             :: lapw
@@ -179,19 +179,20 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      noccbd = cdnvalJob%noccbd(ikpt)
-      we(1:noccbd) = cdnvalJob%weights(1:noccbd,ikpt)
-      eig(1:noccbd) = results%eig(cdnvalJob%ev_list(1:noccbd),ikpt,jsp)
+      ev_list=cdnvaljob%compact_ev_list(ikpt_i,.not.banddos%dos)
+      noccbd = SIZE(ev_list)
+      we  = cdnvalJob%weights(ev_list,ikpt)
+      eig = results%eig(ev_list,ikpt,jsp)
 
       IF (cdnvalJob%l_evp) THEN
-         IF (minval(cdnvalJob%ev_list(1:noccbd)) > skip_tt) skip_t = 0
-         IF (maxval(cdnvalJob%ev_list(1:noccbd)) <= skip_tt) skip_t = noccbd
-         IF ((minval(cdnvalJob%ev_list(1:noccbd)) <= skip_tt).AND.(maxval(cdnvalJob%ev_list(1:noccbd)) > skip_tt)) skip_t = mod(skip_tt,noccbd)
+         IF (minval(ev_list) > skip_tt) skip_t = 0
+         IF (maxval(ev_list) <= skip_tt) skip_t = noccbd
+         IF ((minval(ev_list) <= skip_tt).AND.(maxval(ev_list) > skip_tt)) skip_t = mod(skip_tt,noccbd)
       END IF
 
       nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
       CALL zMat%init(l_real,nbasfcn,noccbd)
-      CALL read_eig(eig_id,ikpt,jsp,list=cdnvaljob%ev_list(1:noccbd),neig=nbands,zmat=zMat)
+      CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat)
 #ifdef CPP_MPI
       CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif

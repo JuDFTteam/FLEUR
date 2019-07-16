@@ -97,7 +97,7 @@ CONTAINS
           WRITE(6,*) "Non-SOC ev for nk,jsp:",nk,jsp
           WRITE(6,"(6(f10.6,1x))") eig(:ne,jsp)
        ENDIF
-       CALL read_eig(eig_id,nk,jsp,n_start=1,n_end=ne,zmat=zmat(jsp))
+       CALL read_eig(eig_id,nk,jsp,list=[(i,i=1,ne)],zmat=zmat(jsp))
 
        ! write(*,*) 'process',irank,' reads ',nk
 

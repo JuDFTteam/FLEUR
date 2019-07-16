@@ -42,10 +42,7 @@ CONTAINS
        mpi%n_rank=0
        mpi%n_size=1
        mpi%sub_comm=mpi%mpi_comm
-       IF (ALLOCATED(mpi%k_list)) DEALLOCATE(mpi%k_List,mpi%ev_list)
-       ALLOCATE(mpi%k_list(nkpt))
        mpi%k_list=[(i,i=1,nkpt)]
-       ALLOCATE(mpi%ev_list(neigd))
        mpi%ev_list=[(i,i=1,neigd)]
        WRITE(*,*) "--------------------------------------------------------"
        RETURN
@@ -58,9 +55,10 @@ CONTAINS
     IF (mpi%n_size>1.AND..NOT.parallel_solver_available()) &
          CALL juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")       
 #endif
-
     !generate the MPI communicators
     CALL priv_create_comm(nkpt,neigd,mpi)
+    mpi%k_list=[(i, i=INT(mpi%irank/mpi%n_size)+1,nkpt,mpi%isize/mpi%n_size )]
+
     if (mpi%irank==0) WRITE(*,*) "--------------------------------------------------------"
 
   END SUBROUTINE setupMPI
@@ -111,9 +109,7 @@ CONTAINS
        IF ((MOD(mpi%isize,n_members) == 0).AND.(MOD(nkpt,n_members) == 0) ) EXIT
        n_members = n_members - 1
     ENDDO
-    ALLOCATE(mpi%k_list(nkpt/n_members))
-    mpi%k_list=[(nk, nk=nkpt/n_members,nkpt,n_members )]
-
+ 
     !mpi%n_groups = nkpt/n_members
     mpi%n_size   = mpi%isize/n_members
     !mpi%n_stride = n_members
@@ -196,7 +192,7 @@ CONTAINS
 
     CALL MPI_COMM_RANK (mpi%SUB_COMM,mpi%n_rank,ierr)
     ALLOCATE(mpi%ev_list(neigd/mpi%n_size+1))
-    mpi%ev_list=[(i,i=mpi%irank+1,neigd,mpi%n_size)]
+    mpi%ev_list=[(i,i=mpi%n_rank+1,neigd,mpi%n_size)]
     
 #endif
   END SUBROUTINE priv_create_comm

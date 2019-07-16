@@ -80,7 +80,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_mat)                          :: exMat, zMat, olap, trafo, invtrafo, tmpMat, exMatLAPW
    TYPE(t_lapw)                         :: lapw
    TYPE(t_hybdat)                       :: hybdat
-   INTEGER                              :: ikpt, iBand, jkpt, jBand, iAtom, i, na, itype, lh, j
+   INTEGER                              :: ikpt,ikpt_i,iband_i, iBand, jkpt, jBand, iAtom, i, na, itype, lh, j
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
    INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF, mnobd
    INTEGER                              :: iState, iStep, numStates, maxHistoryLength, numRelevantStates
@@ -279,35 +279,23 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    vTotSSDen = 0.0
 
    ! Calculate all single state densities
-   cdnvalJob%l_evp = .FALSE.
-   cdnvalJob%nkptExtended = kpts%nkpt
-   ALLOCATE(cdnvalJob%noccbd(kpts%nkpt))
-   ALLOCATE(cdnvalJob%nStart(kpts%nkpt))
-   ALLOCATE(cdnvalJob%nEnd(kpts%nkpt))
-   ALLOCATE(cdnvalJob%weights(1,kpts%nkpt))
+   CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
+
    numStates = 0
    DO jspin = 1, input%jspins
       jsp = MERGE(1,jspin,noco%l_noco)
-      DO ikpt = 1, kpts%nkpt
-         DO iBand = 1, highestState(ikpt,jsp)
+      DO ikpt_i = 1, SIZE(mpi%k_list)
+         ikpt= mpi%k_list(ikpt_i)
+         DO iBand_i = 1,size(cdnvalJOB%ev_list)
+            iband=mpi%ev_list(iband_i)
+            IF (iband>highestState(ikpt,jsp)) CYCLE
             numStates = numStates + 1
             ! Construct cdnvalJob object for this state
             ! (Reasonable parallelization is not yet done - should be placed over the loops enclosing this section)
-            cdnvalJob%ikptStart = ikpt
-            cdnvalJob%ikptIncrement = kpts%nkpt
-            IF(mpi%irank.EQ.0) THEN
-               cdnvalJob%noccbd = 1
-               cdnvalJob%nStart = iBand
-               cdnvalJob%nEnd = iBand
-               cdnvalJob%weights = 0.0
-               cdnvalJob%weights(1,ikpt) = spinDegenFac ! Note the doubling of the weight for non-spinpolarized calculations.
-            ELSE
-               cdnvalJob%noccbd = 0
-               cdnvalJob%nStart = 1
-               cdnvalJob%nEnd = 0
-               cdnvalJob%weights = 0.0
-            END IF
-
+            cdnvalJob%k_list=[ikpt]
+            cdnvalJob%ev_list=[iband]
+            cdnvalJob%weights(iBand,ikpt) = spinDegenFac
+     
             ! Call cdnval to construct density
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
@@ -394,7 +382,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       jspmax = input%jspins
       IF (noco%l_mperp) jspmax = 1
       DO jspin = 1,jspmax
-         CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,banddos=banddos)
+         CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
          CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                      sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments)
       END DO
@@ -515,7 +503,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             CALL zMat%init(olap%l_real,nbasfcn,dimension%neigd)
 
-            CALL read_eig(eig_id,ikpt,jspin,n_start=1,n_end=hybrid%nbands(ikpt),neig=nbands,zmat=zMat)
+            CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybrid%nbands(ikpt))],neig=nbands,zmat=zMat)
 
 !            CALL read_z(zMat,kpts%nkpt*(jspin-1)+ikpt)
             zMat%matsize2 = hybrid%nbands(ikpt) ! reduce "visible matsize" for the following computations

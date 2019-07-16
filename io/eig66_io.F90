@@ -109,7 +109,7 @@ CONTAINS
 
   END SUBROUTINE close_eig
 
-  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,list,zmat)
     USE m_eig66_hdf,ONLY:read_eig_hdf=>read_eig
     USE m_eig66_DA ,ONLY:read_eig_DA=>read_eig
     USE m_eig66_mem,ONLY:read_eig_mem=>read_eig
@@ -118,19 +118,19 @@ CONTAINS
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
+    INTEGER, INTENT(IN),OPTIONAL   :: list(:)
     TYPE(t_mat),INTENT(INOUT),OPTIONAL  :: zmat
     INTEGER::n
     CALL timestart("IO (read)")
     SELECT CASE (eig66_data_mode(id))
     CASE (DA_mode)
-       CALL read_eig_DA(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
+       CALL read_eig_DA(id,nk,jspin,neig,eig,w_iks,list,zmat)
     CASE (hdf_mode)
-       CALL read_eig_hdf(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
+       CALL read_eig_hdf(id,nk,jspin,neig,eig,w_iks,list,zmat)
     CASE (mem_mode)
-       CALL read_eig_mem(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
+       CALL read_eig_mem(id,nk,jspin,neig,eig,w_iks,list,zmat)
     CASE (mpi_mode)
-       CALL read_eig_mpi(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
+       CALL read_eig_mpi(id,nk,jspin,neig,eig,w_iks,list,zmat)
     CASE (-1)
        CALL juDFT_error("Could not read eig-file before opening", calledby = "eig66_io")
     END SELECT
