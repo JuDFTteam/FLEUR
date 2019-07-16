@@ -146,21 +146,10 @@ CONTAINS
       COMPLEX              :: coulomb_mt2_c(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
       COMPLEX              :: coulomb_mt3_c(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
 
-#ifdef CPP_IRCOULOMBAPPROX
-      REAL                 :: coulomb_mtir_r((hybrid%maxlcutm1 + 1)**2*atoms%nat, &
-                                             (hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))
-#else
       REAL                 :: coulomb_mtir_r(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))* &
                                              ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm) + 1)/2)
-#endif
-
-#ifdef CPP_IRCOULOMBAPPROX
-      COMPLEX              :: coulomb_mtir_c((hybrid%maxlcutm1 + 1)**2*atoms%nat, &
-                                             (hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))
-#else
       COMPLEX              :: coulomb_mtir_c(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))* &
                                              ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm) + 1)/2)
-#endif
 
       LOGICAL              :: occup(dimension%neigd)
       CALL timestart("valence exchange calculation")

@@ -29,11 +29,7 @@ MODULE m_spmvec
             REAL, INTENT(IN) ::  coulomb_mt2(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1,&
            &                                    0:hybrid%maxlcutm1 + 1, atoms%nat)
             REAL, INTENT(IN) ::  coulomb_mt3(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
-#ifdef CPP_IRCOULOMBAPPROX
-            REAL, INTENT(IN) ::  coulomb_mtir(:, :)
-#else
             REAL, INTENT(IN) ::  coulomb_mtir(:)
-#endif
             REAL, INTENT(IN) ::  vecin(:)!(hybrid%nbasm)
             REAL, INTENT(INOUT)::  vecout(:)!(hybrid%nbasm)
 
@@ -136,38 +132,10 @@ MODULE m_spmvec
 
             ! compute vecout for the index-range from ibasm+1:nbasm
 
-#ifdef CPP_IRCOULOMBAPPROX
-
-            indx0 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)), itype=1, atoms%ntype)/)) + hybrid%ngptm
-            indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)), itype=1, atoms%ntype)/))
-
-            CALL DGEMV('N', indx1, indx0, 1.0, coulomb_mtir, (hybrid%maxlcutm1 + 1)**2*atoms,&
-           &          vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + 1:), 1)
-
-            CALL DGEMV('T', indx1, hybrid, 1.0, coulomb_mtir(:indx1, indx1 + 1:),&
-           &          indx1, vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + indx1 + 1:), 1)
-
-!       vecout(ibasm+1:ibasm+indx1) = matmul( coulomb_mtir(:indx1,:indx0),vecinhlp(ibasm+1:ibasm+indx0) )
-!       vecout(ibasm+indx1+1:ibasm+indx0) = matmul( conjg(transpose(coulomb_mtir(:indx1,indx1+1:indx0))),
-!      &                                            vecinhlp(ibasm+1:ibasm+indx1) )
-
-            indx0 = ibasm + indx1
-            IF (indx0 /= hybrid%nbasp) STOP 'spmvec: error indx0'
-            DO i = 1, hybrid%ngptm
-               indx0 = indx0 + 1
-               igptm = hybrid%pgptm(i)
-               gnorm = sqrt(sum(matmul(kpts%bk(:) + hybrid%gptm(:, igptm), cell%bmat)**2))
-               IF (gnorm == 0) CYCLE
-               vecout(indx0) = vecout(indx0) + fpi*vecinhlp(indx0)/gnorm
-            END DO
-
-#else
-
             indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
            &                                      itype=1, atoms%ntype)/)) + hybrid%ngptm(ikpt)
             CALL dspmv('U', indx1, 1.0, coulomb_mtir, vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + 1:), 1)
-
-#endif
+            
             iatom = 0
             indx1 = ibasm; indx2 = 0; indx3 = 0
             DO itype = 1, atoms%ntype
@@ -265,11 +233,7 @@ MODULE m_spmvec
             COMPLEX, INTENT(IN) ::  coulomb_mt2(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1,&
            &                                    0:hybrid%maxlcutm1 + 1, atoms%nat)
             COMPLEX, INTENT(IN) ::  coulomb_mt3(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
-#ifdef CPP_IRCOULOMBAPPROX
-            COMPLEX, INTENT(IN) ::  coulomb_mtir(:, :)
-#else
             COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
-#endif
             COMPLEX, INTENT(IN) ::  vecin(:)!(hybrid%nbasm)
             COMPLEX, INTENT(OUT)::  vecout(:)!(hybrid%nbasm)
 
@@ -375,40 +339,11 @@ MODULE m_spmvec
 
             ! compute vecout for the index-range from ibasm+1:nbasm
 
-#ifdef CPP_IRCOULOMBAPPROX
-
-            indx0 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)), itype=1, atoms%ntype)/)) + hybrid%ngptm
-            indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)), itype=1, atoms%ntype)/))
-
-            CALL ZGEMV('N', indx1, indx0, (1.0, 0.0), coulomb_mtir,&
-           &          (hybrid%maxlcutm1 + 1)**2*atoms, vecinhlp(ibasm + 1:),&
-           &          1, (0.0, 0.0), vecout(ibasm + 1:), 1)
-
-            CALL ZGEMV('C', indx1, hybrid, (1.0, 0.0), coulomb_mtir(:indx1, indx1 + 1:)&
-           &          , indx1, vecinhlp(ibasm + 1:), 1, (0.0, 0.0),&
-           &          vecout(ibasm + indx1 + 1:), 1)
-
-!       vecout(ibasm+1:ibasm+indx1) = matmul( coulomb_mtir(:indx1,:indx0),vecinhlp(ibasm+1:ibasm+indx0) )
-!       vecout(ibasm+indx1+1:ibasm+indx0) = matmul( conjg(transpose(coulomb_mtir(:indx1,indx1+1:indx0))),
-!      &                                            vecinhlp(ibasm+1:ibasm+indx1) )
-
-            indx0 = ibasm + indx1
-            IF (indx0 /= hybrid%nbasp) STOP 'spmvec: error indx0'
-            DO i = 1, hybrid%ngptm
-               indx0 = indx0 + 1
-               igptm = hybrid%pgptm(i)
-               gnorm = sqrt(sum(matmul(kpts%bk(:) + hybrid%gptm(:, igptm), cell%bmat)**2))
-               IF (gnorm == 0) CYCLE
-               vecout(indx0) = vecout(indx0) + fpi*vecinhlp(indx0)/gnorm
-            END DO
-
-#else
 
             indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
            &                                      itype=1, atoms%ntype)/)) + hybrid%ngptm(ikpt)
             call zhpmv('U', indx1, (1.0, 0.0), coulomb_mtir, vecinhlp(ibasm + 1), 1, (0.0, 0.0), vecout(ibasm + 1), 1)
 
-#endif
             iatom = 0
             indx1 = ibasm; indx2 = 0; indx3 = 0
             DO itype = 1, atoms%ntype
