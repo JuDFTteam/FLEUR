@@ -1260,24 +1260,13 @@ CONTAINS
       if (sym%invs) THEN
          ALLOCATE (coulomb_mt2_r(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
          ALLOCATE (coulomb_mt3_r(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat, 1))
-#ifdef CPP_IRCOULOMBAPPROX
-         ALLOCATE (coulomb_mtir_r(ic, ic + hybrid%maxgptm, 1))
-         coulomb_mtir_r = 0
-         ALLOCATE (coulombp_mtir_r(0, 0))
-#else
          ALLOCATE (coulomb_mtir_r(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
          ALLOCATE (coulombp_mtir_r(idum, 1))
-#endif
       else
          ALLOCATE (coulomb_mt2_c(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
          ALLOCATE (coulomb_mt3_c(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat, 1))
-#ifdef CPP_IRCOULOMBAPPROX
-         ALLOCATE (coulomb_mtir_c(ic, ic + hybrid%maxgptm, 1))
-         ALLOCATE (coulombp_mtir_c(0, 0))
-#else
          ALLOCATE (coulomb_mtir_c(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
          ALLOCATE (coulombp_mtir_c(idum, 1))
-#endif
       endif
       call timestart("loop bla")
       DO ikpt = ikptmin, ikptmax
@@ -1494,14 +1483,10 @@ CONTAINS
                         indx2 = indx2 + 1
                         IF (sym%invs) THEN
                            coulomb_mtir_r(indx1, indx2, ikpt1) = coulhlp%data_r(indx3, hybrid%nbasp + igpt)
-#if !defined CPP_IRCOULOMBAPPROX
                            coulomb_mtir_r(indx2, indx1, ikpt1) = coulomb_mtir_r(indx1, indx2, ikpt1)
-#endif
                         ELSE
                            coulomb_mtir_c(indx1, indx2, ikpt1) = coulhlp%data_c(indx3, hybrid%nbasp + igpt)
-#if !defined CPP_IRCOULOMBAPPROX
                            coulomb_mtir_c(indx2, indx1, ikpt1) = CONJG(coulomb_mtir_c(indx1, indx2, ikpt1))
-#endif
                         ENDIF
 
                      END DO
@@ -1517,7 +1502,6 @@ CONTAINS
          !
          ! add ir part to the matrix coulomb_mtir
          !
-#ifndef CPP_IRCOULOMBAPPROX
          if (sym%invs) THEN
             coulomb_mtir_r(ic + 1:ic + hybrid%ngptm(ikpt), ic + 1:ic + hybrid%ngptm(ikpt), ikpt1) &
                = coulhlp%data_r(hybrid%nbasp + 1:nbasm1(ikpt), hybrid%nbasp + 1:nbasm1(ikpt))
@@ -1529,13 +1513,8 @@ CONTAINS
             ic2 = indx1 + hybrid%ngptm(ikpt)
             coulombp_mtir_c(:ic2*(ic2 + 1)/2, ikpt0) = packmat(coulomb_mtir_c(:ic2, :ic2, ikpt1))
          end if
-#endif
          call timestart("write coulomb_spm")
          if (sym%invs) THEN
-#ifdef CPP_IRCOULOMBAPPROX
-            call write_coulomb_spm_r(ikpt, coulomb_mt1(:, :, :, :, 1), coulomb_mt2_r(:, :, :, :, 1), &
-                                     coulomb_mt3_r(:, :, :, 1), coulomb_mtir_r(:, 1))
-#else
             CALL write_coulomb_spm_r(ikpt, coulomb_mt1(:, :, :, :, 1), coulomb_mt2_r(:, :, :, :, 1), &
                                      coulomb_mt3_r(:, :, :, 1), coulombp_mtir_r(:, 1))
 !!$       print *,"DEBUG"
@@ -1548,15 +1527,9 @@ CONTAINS
 !!$             ENDDO
 !!$          ENDDO
 !!$       ENDDO
-#endif
          else
-#ifdef CPP_IRCOULOMBAPPROX
-            call write_coulomb_spm_c(ikpt, coulomb_mt1(:, :, :, :, 1), coulomb_mt2_c(:, :, :, :, 1), &
-                                     coulomb_mt3_c(:, :, :, 1), coulomb_mtir_c(:, 1))
-#else
             call write_coulomb_spm_c(ikpt, coulomb_mt1(:, :, :, :, 1), coulomb_mt2_c(:, :, :, :, 1), &
                                      coulomb_mt3_c(:, :, :, 1), coulombp_mtir_c(:, 1))
-#endif
          endif
          call timestop("write coulomb_spm")
 
