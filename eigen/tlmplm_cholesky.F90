@@ -98,10 +98,10 @@ CONTAINS
           ENDDO
           !Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
           DO i_u=1,atoms%n_u+atoms%n_hia
-             IF (n.NE.MERGE(atoms%lda_u(i_u)%atomType,atoms%lda_hia(i_u)%atomType,i_u.LE.atoms%n_u)) CYCLE
+             IF (n.NE.atoms%lda_u(i_u)%atomType) CYCLE
              !Found a "U" for this atom type
-             l=MERGE(atoms%lda_u(i_u)%l,atoms%lda_hia(i_u)%l,i_u.LE.atoms%n_u)
-             lp=MERGE(atoms%lda_u(i_u)%l,atoms%lda_hia(i_u)%l,i_u.LE.atoms%n_u)
+             l=atoms%lda_u(i_u)%l
+             lp=atoms%lda_u(i_u)%l
              DO m = -l,l
                 lm = l* (l+1) + m
                 DO mp = -lp,lp

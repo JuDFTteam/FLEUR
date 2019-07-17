@@ -272,12 +272,6 @@ CONTAINS
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
 
-          IF(hub1%l_runthisiter.AND.mpi%irank.EQ.0)  THEN
-             WRITE(*,*) "Hubbard 1 Iteration: ", hub1%iter
-             WRITE(*,*) "Occ. Distance: ", results%last_occdistance, &
-                        "Mat. Distance: ", results%last_mmpMatdistance
-          ENDIF
-
           ! add all contributions to total energy
 #ifdef CPP_MPI
           ! send all result of local total energies to the r
@@ -446,6 +440,14 @@ CONTAINS
          WRITE (6,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
          WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
+         !Write out information if a hubbard 1 Iteration was performed
+         IF(hub1%l_runthisiter)  THEN
+            WRITE(*,*) "Hubbard 1 Iteration: ", hub1%iter," Distance: ", results%last_mmpMatdistance
+            WRITE(6,*) "nmmp occupation distance: ", results%last_occdistance
+            WRITE(6,*) "nmmp element distance: ", results%last_mmpMatdistance
+            WRITE(6,FMT=8140) hub1%iter
+8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
+         ENDIF
          CALL timestop("Iteration")
        END IF ! mpi%irank.EQ.0
           
@@ -498,10 +500,6 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
 
     CALL close_eig(eig_id)
-    !Keyword for terminating a bash script for LDA+HIA
-    IF(mpi%irank.EQ.0.AND.atoms%n_hia>0) THEN
-      IF(results%last_occdistance<0.01.AND.results%last_mmpMatdistance<0.001) WRITE(6,"(A)") "Density matrix converged"
-    ENDIF
     CALL juDFT_end("all done",mpi%irank)
     
   CONTAINS

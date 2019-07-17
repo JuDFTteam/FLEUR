@@ -269,7 +269,6 @@ CONTAINS
 
       ALLOCATE (wannAtomList(atoms%nat))
 
-      ALLOCATE(atoms%lda_hia(4*atoms%ntype))
       CALL hub1%init(4*atoms%ntype,5)
 
       ! Read in constants
@@ -1437,63 +1436,6 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             l_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaU['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
          END DO
 
-         !Parameters for LDA+Hubbard1
-         numHIA = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA')
-         IF (numHIA.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
-         hub1_l = -1
-         hub1_u = 0.0
-         hub1_j = 0.0
-         hub1_amf = .FALSE.
-         hub1_occ = 0.0
-         hub1_exc = 0.0
-         hub1_excl = -1
-         hub1_mom = 0.0
-         hub1_val = 0.0
-         numaddArgs = 0
-         numaddExc = 0
-         DO i = 1, numHIA
-            WRITE(xPathB,*) i
-            hub1_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l'))
-            hub1_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@U'))
-            hub1_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@J'))
-            hub1_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
-            hub1_occ(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@init_occ'))
-
-            numaddArgs(i) = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg')
-            IF (numaddArgs(i).GT.5) CALL juDFT_error("Too many additional arguments (maximum is 5).",calledby ="r_inpXML")
-            DO j = 1, numaddArgs(i)
-               WRITE(xPathC,*) j
-               hub1_key(i,j) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg['//TRIM(ADJUSTL(xPathC))//']/@key')
-               hub1_val(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg['//TRIM(ADJUSTL(xPathC))//']/@value'))
-            ENDDO
-
-            numaddExc(i) = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc')
-            IF (numaddExc(i).GT.3) CALL juDFT_error("Too many additional exchange splittings (maximum is 3).",calledby ="r_inpXML")
-            DO j = 1, numaddExc(i)
-               WRITE(xPathC,*) j
-               hub1_excl(i,j) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@l'))
-               hub1_exc(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@J'))
-               hub1_mom(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@init_mom'))        
-            ENDDO
-         ENDDO
-         
-         !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
-         numOnsite = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/onsiteGF')
-         IF (numOnsite.GT.4) CALL juDFT_error("Too many l parameters for onsite GF provided for a certain species (maximum is 4).",calledby ="r_inpXML")
-         onsiteGF_l = -1
-         DO i = 1, numOnsite
-            WRITE(xPathB,*) i
-            onsiteGF_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/onsiteGF['//TRIM(ADJUSTL(xPathB))//']/@l'))
-         ENDDO
-
-         !Special element for J0 calculations with multiple l-blocks
-         numJ0 = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/J0')
-         IF(numJ0.EQ.1) THEN
-            j0_min = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_min'))
-            j0_max = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_max'))
-            j0_avgexc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_avgexc'))
-         ENDIF
-
          speciesNLO(iSpecies) = 0
          WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/lo'
          numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
@@ -1554,6 +1496,76 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
                   atoms%lda_u(atoms%n_u)%atomType = iType 
                ENDDO
+               atomTypeSpecies(iType) = iSpecies
+               IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
+            END IF
+         END DO
+      END DO
+
+      !Read in information about Greens function (extra loop because we want to attach the lda+hia information behind the lda+u informatio n atoms%lda_u)
+      DO iSpecies = 1, numSpecies
+         WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']'
+         !Parameters for LDA+Hubbard1
+         numHIA = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA')
+         IF (numHIA.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="r_inpXML")
+         hub1_l = -1
+         hub1_u = 0.0
+         hub1_j = 0.0
+         hub1_amf = .FALSE.
+         hub1_occ = 0.0
+         hub1_exc = 0.0
+         hub1_excl = -1
+         hub1_mom = 0.0
+         hub1_val = 0.0
+         numaddArgs = 0
+         numaddExc = 0
+         DO i = 1, numHIA
+            WRITE(xPathB,*) i
+            hub1_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l'))
+            hub1_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@U'))
+            hub1_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@J'))
+            hub1_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
+            hub1_occ(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@init_occ'))
+
+            numaddArgs(i) = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg')
+            IF (numaddArgs(i).GT.5) CALL juDFT_error("Too many additional arguments (maximum is 5).",calledby ="r_inpXML")
+            DO j = 1, numaddArgs(i)
+               WRITE(xPathC,*) j
+               hub1_key(i,j) = xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg['//TRIM(ADJUSTL(xPathC))//']/@key')
+               hub1_val(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/addArg['//TRIM(ADJUSTL(xPathC))//']/@value'))
+            ENDDO
+
+            numaddExc(i) = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc')
+            IF (numaddExc(i).GT.3) CALL juDFT_error("Too many additional exchange splittings (maximum is 3).",calledby ="r_inpXML")
+            DO j = 1, numaddExc(i)
+               WRITE(xPathC,*) j
+               hub1_excl(i,j) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@l'))
+               hub1_exc(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@J'))
+               hub1_mom(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@init_mom'))        
+            ENDDO
+         ENDDO
+         
+         !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
+         numOnsite = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/onsiteGF')
+         IF (numOnsite.GT.4) CALL juDFT_error("Too many l parameters for onsite GF provided for a certain species (maximum is 4).",calledby ="r_inpXML")
+         onsiteGF_l = -1
+         DO i = 1, numOnsite
+            WRITE(xPathB,*) i
+            onsiteGF_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/onsiteGF['//TRIM(ADJUSTL(xPathB))//']/@l'))
+         ENDDO
+
+         !Special element for J0 calculations with multiple l-blocks
+         numJ0 = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/J0')
+         IF(numJ0.EQ.1) THEN
+            j0_min = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_min'))
+            j0_max = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_max'))
+            j0_avgexc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_avgexc'))
+         ENDIF
+
+         DO iType = 1, atoms%ntype
+            WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
+            valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
+            IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
                DO i = 1, numHIA
                   input%l_gf  = .true. 
                   atoms%n_hia = atoms%n_hia + 1
@@ -1564,13 +1576,13 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                   atoms%gfelem(atoms%n_gf)%atomType = iType
                   atoms%gfelem(atoms%n_gf)%lp        = hub1_l(i)
                   atoms%gfelem(atoms%n_gf)%atomTypep = iType
-
+                  IF(atoms%n_hia+atoms%n_u.GT.4*atoms%ntype) CALL juDFT_error("Too many U-parameters",calledby="r_inpXML")
                   !Hubbard 1 U-information
-                  atoms%lda_hia(atoms%n_hia)%l        = hub1_l(i)
-                  atoms%lda_hia(atoms%n_hia)%u        = hub1_u(i)
-                  atoms%lda_hia(atoms%n_hia)%j        = hub1_j(i)
-                  atoms%lda_hia(atoms%n_hia)%l_amf    = hub1_amf(i)
-                  atoms%lda_hia(atoms%n_hia)%atomType = iType
+                  atoms%lda_u(atoms%n_u+atoms%n_hia)%l        = hub1_l(i)
+                  atoms%lda_u(atoms%n_u+atoms%n_hia)%u        = hub1_u(i)
+                  atoms%lda_u(atoms%n_u+atoms%n_hia)%j        = hub1_j(i)
+                  atoms%lda_u(atoms%n_u+atoms%n_hia)%l_amf    = hub1_amf(i)
+                  atoms%lda_u(atoms%n_u+atoms%n_hia)%atomType = iType
                   hub1%init_occ(atoms%n_hia)          = hub1_occ(i)
 
                   !Additional exchange splitting
@@ -1652,11 +1664,9 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      atoms%gfelem(atoms%n_gf)%atomTypep = iType
                   ENDDO
                ENDIF
-               atomTypeSpecies(iType) = iSpecies
-               IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
-            END IF
-         END DO
-      END DO
+            ENDIF 
+         ENDDO
+      ENDDO
 
       atoms%lmaxd = MAXVAL(atoms%lmax(:))
       atoms%llod  = 0

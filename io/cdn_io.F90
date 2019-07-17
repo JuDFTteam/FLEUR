@@ -341,7 +341,7 @@ MODULE m_cdn_io
       END IF
 
       INQUIRE(FILE='n_mmp_mat',EXIST=l_exist)
-      IF(l_exist.AND.atoms%n_u.GT.0) THEN
+      IF(l_exist.AND.atoms%n_u+atoms%n_hia.GT.0) THEN
          OPEN (69,file='n_mmp_mat',status='unknown',form='formatted')
          READ (69,'(7f20.13)',IOSTAT=ioStatus) den%mmpMat
          REWIND(69)
@@ -657,7 +657,7 @@ MODULE m_cdn_io
       !write density matrix to n_mmp_mat_out file
       IF((inOrOutCDN.EQ.CDN_INPUT_DEN_const).AND.(relCdnIndex.EQ.1).AND.&
          ((archiveType.EQ.CDN_ARCHIVE_TYPE_CDN1_const).OR.(archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const))) THEN
-         IF(atoms%n_u.GT.0) THEN
+         IF(atoms%n_u+atoms%n_hia.GT.0) THEN
             filename = 'n_mmp_mat'
             IF (mode.EQ.CDN_HDF5_MODE) THEN
                filename = 'n_mmp_mat_out'

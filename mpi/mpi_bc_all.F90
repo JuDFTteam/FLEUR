@@ -220,11 +220,11 @@ CONTAINS
     CALL MPI_BCAST(noco%l_relax,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%l_geo,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%qss,3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%l,atoms%n_u,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%u,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%j,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%l_amf,atoms%n_u,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%atomType,atoms%n_u,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%l,atoms%n_u+atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%u,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%j,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%l_amf,atoms%n_u+atoms%n_hia,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%atomType,atoms%n_u+atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lapw_l,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
     CALL MPI_BCAST(atoms%gfelem(:)%l,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -240,12 +240,6 @@ CONTAINS
     CALL MPI_BCAST(input%l_gfmperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%gf_ellow,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%gf_elup,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
-
-    CALL MPI_BCAST(atoms%lda_hia(:)%l,atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_hia(:)%atomType,atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_hia(:)%u,atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_hia(:)%j,atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_hia(:)%l_amf,atoms%n_hia,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 
     n = 7*7*3*sym%nop
     CALL MPI_BCAST(sym%d_wgn,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)

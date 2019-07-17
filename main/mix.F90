@@ -61,23 +61,31 @@ contains
     TYPE(t_mixvector)                :: fsm_mag
     LOGICAL                          :: l_densitymatrix
     INTEGER                          :: it,maxiter
+    INTEGER                          :: indStartHIA, indEndHIA
 
 
     CALL timestart("Charge Density Mixing")
     l_densitymatrix=.FALSE.
+    !The density/potential matrices for DFT+U are split into two parts
+    ! 1:atoms%n_u Are the elements for normal DFT+U 
+    ! atoms%n_u+1:atoms%n_u+atoms%n_hia are the elements for DFT+Hubbard 1
+    !The latter are never mixed and held constant
+    indStartHIA = atoms%n_u + 1 
+    indEndHIA = atoms%n_u + atoms%n_hia
+
     IF (atoms%n_u>0) THEN
        l_densitymatrix=.NOT.input%ldaulinmix
        IF (mpi%irank==0) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
-       IF (ALL(inDen%mmpMat==0.0)) THEN
+       IF (ALL(inDen%mmpMat(:,:,1:atoms%n_u,:)==0.0)) THEN
           l_densitymatrix=.FALSE.
-          inDen%mmpMat=outDen%mmpMat
-          if (mpi%irank.ne.0) inden%mmpmat=0.0 
+          inDen%mmpMat(:,:,1:atoms%n_u,:)=outDen%mmpMat(:,:,1:atoms%n_u,:)
+          if (mpi%irank.ne.0) inDen%mmpMat(:,:,:,:) = 0.0 
        ENDIF
     ENDIF
 
-    IF(atoms%n_hia>0) THEN
+    IF(atoms%n_hia>0.AND.mpi%irank==0) THEN
       !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
-      inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:) = outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_hia,:)
+      inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
     ENDIF 
 
     CALL timestart("Reading of distances")
@@ -143,12 +151,12 @@ contains
     inDen%pw=0.0;inDen%mt=0.0
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
     IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
-    IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat=0.0
+    IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,1:atoms%n_u,:)=0.0
     CALL sm(it)%to_density(inDen)
     IF (atoms%n_u>0.AND..NOT.l_densitymatrix.AND..NOT.input%ldaulinmix) THEN
        !No density matrix was present 
        !but is now created...
-       inden%mmpMAT=outden%mmpMat
+       inden%mmpMAT(:,:,1:atoms%n_u,:)=outden%mmpMat(:,:,1:atoms%n_u,:)
        CALL mixing_history_reset(mpi)
        CALL mixvector_reset()
     ENDIF
@@ -176,6 +184,7 @@ contains
           inDen%vacxy(:,:,2,:) = inDen%vacxy(:,:,1,:)
        END IF
     END IF
+
 
 
     !write out mixed density

@@ -972,11 +972,11 @@ MODULE m_cdnpot_io_hdf
       LOGICAL                   :: l_exist
 
       !LDA+U arrays (start)
-      INTEGER                   :: ldau_AtomType(MAX(1,atoms%n_u))
-      INTEGER                   :: ldau_l(MAX(1,atoms%n_u))
-      INTEGER                   :: ldau_l_amf(MAX(1,atoms%n_u)) ! 1 = true, 0 = false
-      REAL                      :: ldau_U(MAX(1,atoms%n_u))
-      REAL                      :: ldau_J(MAX(1,atoms%n_u))
+      INTEGER                   :: ldau_AtomType(MAX(1,atoms%n_u+atoms%n_hia))
+      INTEGER                   :: ldau_l(MAX(1,atoms%n_u+atoms%n_hia))
+      INTEGER                   :: ldau_l_amf(MAX(1,atoms%n_u+atoms%n_hia)) ! 1 = true, 0 = false
+      REAL                      :: ldau_U(MAX(1,atoms%n_u+atoms%n_hia))
+      REAL                      :: ldau_J(MAX(1,atoms%n_u+atoms%n_hia))
       !LDA+U arrays (end)
 
       INTEGER(HID_T)                   :: amatSpaceID, amatSetID
@@ -1032,7 +1032,7 @@ MODULE m_cdnpot_io_hdf
       CALL io_write_attint0(groupID,'nat',atoms%nat)
       CALL io_write_attint0(groupID,'lmaxd',atoms%lmaxd)
       CALL io_write_attint0(groupID,'jmtd',atoms%jmtd)
-      CALL io_write_attint0(groupID,'n_u',atoms%n_u)
+      CALL io_write_attint0(groupID,'n_u',atoms%n_u+atoms%n_hia)
 
       CALL io_write_attint0(groupID,'nmz',vacuum%nmz)
       CALL io_write_attint0(groupID,'nmzd',vacuum%nmzd)
@@ -1202,9 +1202,9 @@ MODULE m_cdnpot_io_hdf
       CALL h5dclose_f(tauSetID, hdfError)
 
       !LDA+U data (start)
-      IF(atoms%n_u.GT.0) THEN
+      IF(atoms%n_u+atoms%n_hia.GT.0) THEN
          ldau_l_amf = 0
-         DO i = 1, atoms%n_u
+         DO i = 1, atoms%n_u+atoms%n_hia
             ldau_AtomType(i) = atoms%lda_u(i)%atomType
             ldau_l(i) = atoms%lda_u(i)%l
             ldau_U(i) = atoms%lda_u(i)%u
@@ -1212,44 +1212,44 @@ MODULE m_cdnpot_io_hdf
             IF(atoms%lda_u(i)%l_amf) ldau_l_amf(i) = 1
          END DO
 
-         dims(:1)=(/atoms%n_u/)
+         dims(:1)=(/atoms%n_u+atoms%n_hia/)
          dimsInt = dims
          CALL h5screate_simple_f(1,dims(:1),ldau_AtomTypeSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "ldau_AtomType", H5T_NATIVE_INTEGER, ldau_AtomTypeSpaceID, ldau_AtomTypeSetID, hdfError)
          CALL h5sclose_f(ldau_AtomTypeSpaceID,hdfError)
-         CALL io_write_integer1(ldau_AtomTypeSetID,(/1/),dimsInt(:1),ldau_AtomType(:atoms%n_u))
+         CALL io_write_integer1(ldau_AtomTypeSetID,(/1/),dimsInt(:1),ldau_AtomType(:atoms%n_u+atoms%n_hia))
          CALL h5dclose_f(ldau_AtomTypeSetID, hdfError)
 
-         dims(:1)=(/atoms%n_u/)
+         dims(:1)=(/atoms%n_u+atoms%n_hia/)
          dimsInt = dims
          CALL h5screate_simple_f(1,dims(:1),ldau_lSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "ldau_l", H5T_NATIVE_INTEGER, ldau_lSpaceID, ldau_lSetID, hdfError)
          CALL h5sclose_f(ldau_lSpaceID,hdfError)
-         CALL io_write_integer1(ldau_lSetID,(/1/),dimsInt(:1),ldau_l(:atoms%n_u))
+         CALL io_write_integer1(ldau_lSetID,(/1/),dimsInt(:1),ldau_l(:atoms%n_u+atoms%n_hia))
          CALL h5dclose_f(ldau_lSetID, hdfError)
 
-         dims(:1)=(/atoms%n_u/)
+         dims(:1)=(/atoms%n_u+atoms%n_hia/)
          dimsInt = dims
          CALL h5screate_simple_f(1,dims(:1),ldau_l_amfSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "ldau_l_amf", H5T_NATIVE_INTEGER, ldau_l_amfSpaceID, ldau_l_amfSetID, hdfError)
          CALL h5sclose_f(ldau_l_amfSpaceID,hdfError)
-         CALL io_write_integer1(ldau_l_amfSetID,(/1/),dimsInt(:1),ldau_l_amf(:atoms%n_u))
+         CALL io_write_integer1(ldau_l_amfSetID,(/1/),dimsInt(:1),ldau_l_amf(:atoms%n_u+atoms%n_hia))
          CALL h5dclose_f(ldau_l_amfSetID, hdfError)
 
-         dims(:1)=(/atoms%n_u/)
+         dims(:1)=(/atoms%n_u+atoms%n_hia/)
          dimsInt = dims
          CALL h5screate_simple_f(1,dims(:1),ldau_USpaceID,hdfError)
          CALL h5dcreate_f(groupID, "ldau_U", H5T_NATIVE_DOUBLE, ldau_USpaceID, ldau_USetID, hdfError)
          CALL h5sclose_f(ldau_USpaceID,hdfError)
-         CALL io_write_real1(ldau_USetID,(/1/),dimsInt(:1),ldau_U(:atoms%n_u))
+         CALL io_write_real1(ldau_USetID,(/1/),dimsInt(:1),ldau_U(:atoms%n_u+atoms%n_hia))
          CALL h5dclose_f(ldau_USetID, hdfError)
 
-         dims(:1)=(/atoms%n_u/)
+         dims(:1)=(/atoms%n_u+atoms%n_hia/)
          dimsInt = dims
          CALL h5screate_simple_f(1,dims(:1),ldau_JSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "ldau_J", H5T_NATIVE_DOUBLE, ldau_JSpaceID, ldau_JSetID, hdfError)
          CALL h5sclose_f(ldau_JSpaceID,hdfError)
-         CALL io_write_real1(ldau_JSetID,(/1/),dimsInt(:1),ldau_J(:atoms%n_u))
+         CALL io_write_real1(ldau_JSetID,(/1/),dimsInt(:1),ldau_J(:atoms%n_u+atoms%n_hia))
          CALL h5dclose_f(ldau_JSetID, hdfError)
       END IF
       !LDA+U data (end)
@@ -2395,7 +2395,7 @@ MODULE m_cdnpot_io_hdf
 
       l_mmpMatDimEquals = .TRUE.
       IF(fileFormatVersion.GE.29) THEN
-         IF(atoms%n_u.NE.n_u) THEN
+         IF(atoms%n_u+atoms%n_hia.NE.n_u) THEN
             l_DimChange = .TRUE.
             l_mmpMatDimEquals = .FALSE.
          ELSE
@@ -2500,7 +2500,7 @@ MODULE m_cdnpot_io_hdf
             den%mmpMat(:,:,:,1:jspinsOut) = mmpMatTemp(:,:,:,1:jspinsOut)
          ELSE
             DO i = 1, n_u
-               DO j = 1, atoms%n_u
+               DO j = 1, atoms%n_u+atoms%n_hia
                   IF (atoms%lda_u(j)%atomType.NE.ldau_AtomType(i)) CYCLE
                   IF (atoms%lda_u(j)%l.NE.ldau_l(i)) CYCLE
                   den%mmpMat(:,:,j,1:jspinsOut) = mmpMatTemp(:,:,i,1:jspinsOut)

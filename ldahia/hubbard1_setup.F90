@@ -11,7 +11,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,hub1,sym,mpi,noco,input,usdus,pot,gdft,results)
+   SUBROUTINE hubbard1_setup(atoms,hub1,sym,mpi,noco,input,usdus,den,pot,gdft,results)
 
       USE m_types
       USE m_hubbard1_io
@@ -38,6 +38,7 @@ MODULE m_hubbard1_setup
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_usdus),    INTENT(IN)     :: usdus
+      TYPE(t_potden),   INTENT(INOUT)  :: den
       TYPE(t_potden),   INTENT(INOUT)  :: pot
       TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_greensf),  INTENT(IN)     :: gdft !green's function calculated from the Kohn-Sham system
@@ -48,9 +49,10 @@ MODULE m_hubbard1_setup
 
       INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc
       INTEGER io_error,ierr
+      INTEGER indStart,indEnd
       REAL    mu_dc,e_lda_hia,exc
 
-      CHARACTER(len=300) :: cwd,path,folder,message
+      CHARACTER(len=300) :: cwd,path,folder,message,xPath
       CHARACTER(len=8)   :: l_type*2,l_form*9
       CHARACTER(len=1)   :: l_name(0:3)
       CHARACTER(len=30)  :: fmt
@@ -68,32 +70,26 @@ MODULE m_hubbard1_setup
       REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_selfenexist,l_exist,l_linkedsolver
 
+      !Positions of the DFT+HIA elements in all DFT+U related arrays
+      indStart = atoms%n_u+1
+      indEnd   = atoms%n_u+atoms%n_hia 
+
       l_name(0:3) = (/"s","p","d","f"/)
 
-      !TODO: We don't need to calculate the green's function in every iteration
+      !TODO: We don't need to calculate the green's function in every iteration 
+      !(what is an appropriate cutoff for the distance under which we calculate the greens function)
 
-      !Read in density matrix from n_mmpmat_hubbard1
-      !We use a separate file because we need to keep track of the distances and the iteration between different runs of fleur
-      INQUIRE(file="n_mmpmat_hubbard1",exist=l_exist)
-      IF(l_exist) THEN
-         OPEN(unit = 1337, file="n_mmpmat_hubbard1",status="old",form="formatted",action="read")
-         READ(1337,"(7f14.8)") mmpMat(:,:,:,:)
-         CLOSE(unit=1337)
-      ELSE
-        mmpMat(:,:,:,:) = 0.0
-      ENDIF
-
-      IF(ANY(mmpMat(:,:,:,:).NE.0.0).OR.hub1%l_runthisiter) THEN
+      IF(ANY(den%mmpMat(:,:,indStart:indEnd,:).NE.0.0).OR.hub1%l_runthisiter) THEN
          !Get the slater integrals from the U and J parameters
-         CALL uj2f(input%jspins,atoms%lda_hia(:),atoms%n_hia,f0,f2,f4,f6)
+         CALL uj2f(input%jspins,atoms%lda_u(indStart:indEnd),atoms%n_hia,f0,f2,f4,f6)
          f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
          f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
          f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
          f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-         CALL umtx(atoms%lda_hia(:),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
+         CALL umtx(atoms%lda_u(:),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
 
-         CALL v_mmp(sym,atoms,atoms%lda_hia(:),atoms%n_hia,input%jspins,.FALSE.,mmpMat,&
-         u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),e_lda_hia)
+         CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,.FALSE.,den%mmpMat(:,:,indStart:indEnd,:),&
+         u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),e_lda_hia)
 
          IF(hub1%l_runthisiter.AND.(ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0))) THEN 
             !The onsite green's function was calculated but the solver 
@@ -109,8 +105,8 @@ MODULE m_hubbard1_setup
             CALL SYSTEM('rm -rf ' // TRIM(ADJUSTL(path)) // "/*")
 
             DO i_hia = 1, atoms%n_hia
-               nType = atoms%lda_hia(i_hia)%atomType
-               l = atoms%lda_hia(i_hia)%l
+               nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+               l = atoms%lda_u(atoms%n_u+i_hia)%l
 
                !Create a subdirectory for the atomType and shell
                IF(atoms%n_hia>1) THEN
@@ -120,6 +116,10 @@ MODULE m_hubbard1_setup
                ELSE 
                   folder=""
                ENDIF
+               WRITE(xPath,*) TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/"
+
+
+               !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
                IF(hub1%iter.EQ.1.AND.ALL(mmpMat.EQ.0.0)) THEN
                   n_l(i_hia,:) = hub1%init_occ(i_hia)/input%jspins
                   DO i_exc = 1, hub1%n_exc_given(i_hia)
@@ -136,6 +136,7 @@ MODULE m_hubbard1_setup
                   ENDDO
                ENDIF
 
+               !Initial Information
                WRITE(6,*)
                WRITE(6,9010) nType
                WRITE(6,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
@@ -144,25 +145,34 @@ MODULE m_hubbard1_setup
                WRITE(6,9020) 'spin-up','spin-dn'
                WRITE(6,9030) n_l(i_hia,:)
 
-               !calculate the chemical potential
-               CALL mudc(atoms%lda_hia(i_hia)%U,atoms%lda_hia(i_hia)%J,l,n_l(i_hia,:),atoms%lda_hia(i_hia)%l_amf,mu_dc,input%jspins)
-               n_occ = ANINT(SUM(n_l(i_hia,:)))
+               !--------------------------------------------------------------------------
+               ! Calculate the chemical potential for te solver 
+               ! This is equal to the double-counting correction used in DFT+U
+               !--------------------------------------------------------------------------
+               ! V_FLL = U (n - 1/2) - J (n - 1) / 2
+               ! V_AMF = U n/2 + l/(2l+1) (U-J) n
+               !--------------------------------------------------------------------------
+               CALL mudc(atoms%lda_u(atoms%n_u+i_hia),n_l(i_hia,:),mu_dc,input%jspins)
 
                !Check wether the hubbard 1 solver was run:(old version)
-               INQUIRE(file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "se.atom",exist=l_selfenexist)
+               INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
+
                IF(mpi%irank.EQ.0.AND..NOT.l_selfenexist) THEN
+                  !Nearest Integer occupation
+                  n_occ = ANINT(SUM(n_l(i_hia,:)))
 #ifdef CPP_EDSOLVER
-                  CALL hubbard1_input(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",i_hia,l,&
-                                            f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.true.)
+                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.true.)
 #else
-                  CALL hubbard1_input(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",i_hia,l,&
-                                            f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.)
+                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.)
+
                   !If no Solver is linked we assume that the old solver is used and we write out some additional files
+                  !Crystal field matrix (old version)
                   IF(hub1%ccf(i_hia).NE.0.0) THEN
-                     CALL write_ccfmat(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",hub1%ccfmat(i_hia,-l:l,-l:l),l)
+                     CALL write_ccfmat(xPath,hub1%ccfmat(i_hia,-l:l,-l:l),l)
                   ENDIF
+                  !Energy contour (old version)
                   IF(gdft%mode.NE.1) THEN
-                     OPEN(unit=1337,file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/" // "contour.dat",status="replace",action="write")
+                     OPEN(unit=1337,file=TRIM(ADJUSTL(xPath)) // "contour.dat",status="replace",action="write")
                      DO iz = 1, gdft%nz
                         WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
                      ENDDO
@@ -172,10 +182,13 @@ MODULE m_hubbard1_setup
                ENDIF
             ENDDO
 
-            
+            !------------------------------------------------------------
+            ! This loop runs the solver if it is available
+            ! If not the program terminates here
+            !------------------------------------------------------------
             DO i_hia = 1, atoms%n_hia 
-               nType = atoms%lda_hia(i_hia)%atomType
-               l = atoms%lda_hia(i_hia)%l
+               nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+               l = atoms%lda_u(atoms%n_u+i_hia)%l
                IF(atoms%n_hia>1) THEN
                   WRITE(fmt,'("(A",I2.2,",A1,A1,A1")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
                   WRITE(folder,fmt) atoms%label(nType),"_",l_name(l),"/"
@@ -183,13 +196,15 @@ MODULE m_hubbard1_setup
                ELSE
                   folder=""
                ENDIF
-               INQUIRE(file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "se.atom",exist=l_selfenexist)
+               WRITE(xPath,*) TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/"
+               INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
                IF(.NOT.l_selfenexist.AND.mpi%irank.EQ.0) THEN
 #ifdef CPP_EDSOLVER
                   l_linkedsolver=.TRUE.
                   CALL timestart("Hubbard 1: EDsolver")
-                  CALL CHDIR(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
+                  CALL CHDIR(xPath)
                   CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,gdft%e(1:gdft%nz)*hartree_to_ev_const,selfen(i_hia,:,:,1:gdft%nz),1)
+                  !The solver is given everything in eV by default, so we need to convert back to htr
                   selfen(i_hia,:,:,:) = selfen(i_hia,:,:,:)/hartree_to_ev_const
                   CALL CHDIR(cwd)
                   CALL timestop("Hubbard 1: EDsolver")
@@ -200,58 +215,59 @@ MODULE m_hubbard1_setup
             ENDDO
 
             IF(l_selfenexist.OR.l_linkedsolver) THEN
+               !----------------------------------------------------------------------
+               ! Solution of the Dyson Equation
+               !----------------------------------------------------------------------
+               ! G(z)^(-1) = G_0(z)^(-1) - mu - Sigma(z)
+               !----------------------------------------------------------------------
+               ! Sigma(z) is the self-energy from the impurity solver 
+               ! We introduce an additional chemical potential mu, which is determined
+               ! so that the occupation of the correlated orbital does not change
+               !----------------------------------------------------------------------
                CALL timestart("Hubbard 1: Add Selfenenergy")
+               !If there is no linked solver library we read in the selfenergy here
                IF(l_selfenexist) CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",&
                                                 selfen(i_hia,1:2*(2*l+1),1:2*(2*l+1),1:gdft%nz),gdft%nz,2*(2*l+1),.false.)
                CALL add_selfen(gdft,gu,selfen,atoms,noco,hub1,sym,input,results%ef,n_l,mu_dc/hartree_to_ev_const,&
-                              pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),mmpMat)
+                              pot%mmpMat(:,:,indStart:indEnd,:),mmpMat)
                CALL timestop("Hubbard 1: Add Selfenenergy")
-               ! calculate potential matrix and total energy correction
-               CALL v_mmp(sym,atoms,atoms%lda_hia,atoms%n_hia,input%jspins,.FALSE.,mmpMat,&
-                     u,f0,f2,pot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),results%e_ldau)
-               !
-               !Read in the last density matrix
-               !
-               INQUIRE(file="n_mmpmat_hubbard1",exist = l_exist)
-               IF(l_exist) THEN
-                  OPEN(unit=1337,file="n_mmpmat_hubbard1",status="old",action="read",iostat=io_error)
-                  IF(io_error.NE.0) CALL juDFT_error("IO-error in density matrix",calledby="hubbard1_setup")
-                  READ(1337,"(7f14.8)") mmpMat_in(:,:,:,:)
-                  CLOSE(unit=1337)
-               ELSE
-                  mmpMat_in = 0.0
-               ENDIF
-               CALL n_mmp_dist(mmpMat_in,mmpMat,atoms%n_hia,results,input%jspins)
-               IF(mpi%irank.EQ.0) THEN
-                  !Write out the density matrix and the additional inforamtion (current iteration, distances)
-                  OPEN(unit=1337,file="n_mmpmat_hubbard1",status="replace",action="write",iostat=io_error)
-                  IF(io_error.NE.0) CALL juDFT_error("IO-error in density matrix",calledby="hubbard1_setup")
-                  WRITE(1337,"(7f14.8)") mmpMat(:,:,:,:)
-                  CLOSE(unit=1337)
-               ENDIF
+               !----------------------------------------------------------------------
+               ! Calculate DFT+U potential correction
+               !----------------------------------------------------------------------
+               CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,.FALSE.,mmpMat,&
+                     u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),results%e_ldau)
+               !----------------------------------------------------------------------
+               ! Calculate the distance and update the density matrix 
+               !----------------------------------------------------------------------
+               CALL n_mmp_dist(den%mmpMat(:,:,indStart:indEnd,:),mmpMat,atoms%n_hia,results,input%jspins)
+
+               den%mmpMat(:,:,indStart:indEnd,:) = mmpMat
             ENDIF
-            !Write out the density matrix and potential matrix (compare u_setup.f90)
-            IF (mpi%irank.EQ.0) THEN
-               DO ispin = 1,input%jspins
-                  WRITE (6,'(a7,i3)') 'spin #',ispin
-                  DO i_hia = 1, atoms%n_hia
-                     nType = atoms%lda_hia(i_hia)%atomType
-                     l = atoms%lda_hia(i_hia)%l
-                     WRITE (l_type,'(i2)') 2*(2*l+1)
-                     l_form = '('//l_type//'f12.7)'
-                     WRITE (6,'(a20,i3)') 'n-matrix for atom # ',nType
-                     WRITE (6,l_form) ((mmpMat(k,j,atoms%n_u+i_hia,ispin),k=-l,l),j=-l,l)
-                     WRITE (6,'(a20,i3)') 'V-matrix for atom # ',nType
-                     IF (atoms%lda_hia(i_hia)%l_amf) THEN
-                        WRITE (6,*) 'using the around-mean-field limit '
-                     ELSE
-                        WRITE (6,*) 'using the atomic limit of LDA+U '
-                     ENDIF
-                     WRITE (6,l_form) ((pot%mmpMat(k,j,atoms%n_u+i_hia,ispin),k=-l,l),j=-l,l)
-                  END DO
+         ELSE 
+            !The solver does not need to be run so we just add the current energy correction from LDA+HIA 
+            results%e_ldau = results%e_ldau + e_lda_hia 
+         ENDIF
+         !Write out the density matrix and potential matrix (compare u_setup.f90)
+         IF (mpi%irank.EQ.0) THEN
+            DO ispin = 1,input%jspins
+               WRITE (6,'(a7,i3)') 'spin #',ispin
+               DO i_hia = atoms%n_u+1, atoms%n_u+atoms%n_hia
+                  nType = atoms%lda_u(i_hia)%atomType
+                  l = atoms%lda_u(i_hia)%l
+                  WRITE (l_type,'(i2)') 2*(2*l+1)
+                  l_form = '('//l_type//'f12.7)'
+                  WRITE (6,'(a20,i3)') 'n-matrix for atom # ',nType
+                  WRITE (6,l_form) ((mmpMat(k,j,i_hia,ispin),k=-l,l),j=-l,l)
+                  WRITE (6,'(a20,i3)') 'V-matrix for atom # ',nType
+                  IF (atoms%lda_u(i_hia)%l_amf) THEN
+                     WRITE (6,*) 'using the around-mean-field limit '
+                  ELSE
+                     WRITE (6,*) 'using the atomic limit of LDA+U '
+                  ENDIF
+                  WRITE (6,l_form) ((pot%mmpMat(k,j,i_hia,ispin),k=-l,l),j=-l,l)
                END DO
-               WRITE (6,*) results%e_ldau
-            ENDIF
+            END DO
+            WRITE (6,*) results%e_ldau
          ENDIF
       ELSE IF(mpi%irank.NE.0) THEN
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
@@ -262,9 +278,9 @@ MODULE m_hubbard1_setup
 #else 
          CALL get_environment_variable('PWD',cwd)
          path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(main_folder))
-         DO i_hia = 1, atoms%n_hia 
-            nType = atoms%lda_hia(i_hia)%atomType
-            l = atoms%lda_hia(i_hia)%l
+         DO i_hia = atoms%n_u+1, atoms%n_u+atoms%n_hia
+            nType = atoms%lda_u(i_hia)%atomType
+            l = atoms%lda_u(i_hia)%l
             IF(atoms%n_hia>1) THEN
                WRITE(fmt,'("(A",I2.2,",A1,A1,A1")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
                WRITE(folder,fmt) atoms%label(nType),"_",l_name(l),"/"
@@ -272,7 +288,8 @@ MODULE m_hubbard1_setup
             ELSE
                folder=""
             ENDIF
-            INQUIRE(file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "se.atom",exist=l_selfenexist)
+            WRITE(xPath,*) TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/"
+            INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
             IF(.NOT.l_selfenexist) CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
          ENDDO
          !If we are here the solver was run and we go to MPI_BCAST
@@ -281,9 +298,13 @@ MODULE m_hubbard1_setup
          !occupation matrix is zero and LDA+Hubbard 1 shouldn't be run yet
          !There is nothing to be done yet just set the potential correction to 0
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
+         results%e_ldau = 0.0
       ENDIF
 #ifdef CPP_MPI
-      CALL MPI_BCAST(pot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u+1:atoms%n_u+atoms%n_hia,:),&
+      !Broadcast both the potential and the density matrix here
+      CALL MPI_BCAST(pot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,indStart:indEnd,:),&
+                     49*atoms%n_hia*input%jspins,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,indStart:indEnd,:),&
                      49*atoms%n_hia*input%jspins,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
 #endif 
       

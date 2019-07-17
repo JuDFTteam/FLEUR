@@ -173,9 +173,9 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      !      LO+LDA+HIA? 
      !      LDA+U and LDA+HIA not on the same orbital
      
-     DO i = 1, atoms%n_hia
-        n = atoms%lda_hia(i)%atomType
-        l = atoms%lda_hia(i)%l
+     DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+        n = atoms%lda_u(i)%atomType
+        l = atoms%lda_u(i)%l
         IF(atoms%n_u.GE.1) THEN
            DO j = 1, atoms%n_u
               IF(atoms%lda_u(j)%atomType.EQ.n.AND.atoms%lda_u(j)%l.EQ.l) &

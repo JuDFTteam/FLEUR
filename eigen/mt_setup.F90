@@ -25,7 +25,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_greensf),INTENT(IN)   :: gOnsite
-    TYPE(t_potden),INTENT(IN)    :: inDen
+    TYPE(t_potden),INTENT(INOUT) :: inDen
     TYPE(t_potden),INTENT(INOUT) :: vTot
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
@@ -33,11 +33,11 @@ CONTAINS
 
     INTEGER:: jsp
 
-    IF ((atoms%n_u.GT.0)) THEN
+    IF (atoms%n_u>0) THEN
        CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
-    IF((atoms%n_hia.GT.0)) THEN
-      CALL hubbard1_setup(atoms,hub1,sym,mpi,noco,input,ud,vTot,gOnsite,results)
+    IF(atoms%n_hia>0) THEN
+      CALL hubbard1_setup(atoms,hub1,sym,mpi,noco,input,ud,inDen,vTot,gOnsite,results)
     END IF
 
     CALL timestart("tlmplm")

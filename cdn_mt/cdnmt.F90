@@ -90,8 +90,8 @@ CONTAINS
           DO l = 0,atoms%lmax(itype)
              !Check if the orbital is to be treated with Hubbard 1
              l_hia=.FALSE.
-             DO i = 1, atoms%n_hia
-                IF(atoms%lda_hia(i)%atomType.EQ.itype.AND.atoms%lda_hia(i)%l.EQ.l) THEN
+             DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+                IF(atoms%lda_u(i)%atomType.EQ.itype.AND.atoms%lda_u(i)%l.EQ.l) THEN
                    l_hia=.TRUE.
                 ENDIF
              ENDDO
@@ -143,7 +143,7 @@ CONTAINS
           !Get the magnetic moment for the shells where we defined additional exchange splittings for DFT+Hubbard 1
           IF(PRESENT(hub1)) THEN
             DO i_hia = 1, atoms%n_hia 
-               IF(atoms%lda_hia(i_hia)%atomType.NE.itype) CYCLE
+               IF(atoms%lda_u(atoms%n_u+i_hia)%atomType.NE.itype) CYCLE
                DO i_exc = 1, hub1%n_exc_given(i_hia)
                   hub1%mag_mom(i_hia,i_exc) = hub1%mag_mom(i_hia,i_exc) + (-1)**(ispin-1) *  qmtl(hub1%exc_l(i_hia,i_exc),ispin,itype)
                ENDDO

@@ -45,8 +45,8 @@ CONTAINS
     DO l = 0,atoms%lmax(iType)
        !Check if the orbital is to be treated with Hubbard 1
        l_hia=.FALSE.
-       DO i = 1, atoms%n_hia
-          IF(atoms%lda_hia(i)%atomType.EQ.itype.AND.atoms%lda_hia(i)%l.EQ.l) THEN
+       DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+          IF(atoms%lda_u(i)%atomType.EQ.itype.AND.atoms%lda_u(i)%l.EQ.l) THEN
              l_hia=.TRUE.
           ENDIF
        ENDDO

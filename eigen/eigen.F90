@@ -61,7 +61,8 @@ CONTAINS
       TYPE(t_kpts),INTENT(INOUT)   :: kpts
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
-      TYPE(t_potden),INTENT(IN)    :: inden,vx
+      TYPE(t_potden),INTENT(INOUT) :: inden !hubbard1_setup will modify the density matrix
+      TYPE(t_potden), INTENT(IN)   :: vx
       TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
       TYPE(t_greensf),INTENT(INOUT):: gOnsite
       TYPE(t_hub1ham),INTENT(INOUT)   :: hub1

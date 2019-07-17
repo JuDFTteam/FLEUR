@@ -121,7 +121,7 @@ CONTAINS
     ALLOCATE ( atoms%lo1l(0:atoms%llod,atoms%ntype),atoms%nlol(0:atoms%llod,atoms%ntype),atoms%lapw_l(atoms%ntype) )
     ALLOCATE ( noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),noco%l_relax(atoms%ntype) )
     ALLOCATE ( noco%b_con(2,atoms%ntype),atoms%lda_u(atoms%ntype),atoms%l_dulo(atoms%nlod,atoms%ntype) )
-    ALLOCATE ( atoms%lda_hia(atoms%ntype),atoms%gfelem(atoms%ntype),atoms%j0(atoms%ntype))
+    ALLOCATE ( atoms%gfelem(atoms%ntype),atoms%j0(atoms%ntype))
     ALLOCATE ( sym%d_wgn(-3:3,-3:3,3,sym%nop) )
     ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntype) )
     ALLOCATE ( atoms%numStatesProvided(atoms%ntype))

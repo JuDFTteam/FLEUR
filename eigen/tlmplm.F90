@@ -108,8 +108,8 @@ CONTAINS
                 dvd(lpl,lh) = temp
              END IF
              l_remove=.FALSE.
-             DO i = 1, atoms%n_hia
-                IF(atoms%lda_hia(i)%atomType.EQ.n.AND.atoms%lda_hia(i)%l.EQ.l.AND.lp.EQ.l) THEN
+             DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+                IF(atoms%lda_u(i)%atomType.EQ.n.AND.atoms%lda_u(i)%l.EQ.l.AND.lp.EQ.l) THEN
                    l_remove=.TRUE.
                 ENDIF
              ENDDO

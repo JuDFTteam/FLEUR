@@ -61,8 +61,8 @@ MODULE m_add_selfen
       l_match_both_spins = spin_match.EQ.1.AND.input%jspins.EQ.2 
 
       DO i_hia = 1, atoms%n_hia
-         l = atoms%lda_hia(i_hia)%l
-         nType = atoms%lda_hia(i_hia)%atomType
+         l = atoms%lda_u(atoms%n_u+i_hia)%l
+         nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
          ns = 2*l+1
          matsize = ns*MERGE(2,1,l_match_both_spins)
          CALL vmat%init(.false.,matsize,matsize)

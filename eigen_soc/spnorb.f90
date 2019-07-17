@@ -76,8 +76,8 @@ CONTAINS
     IF(PRESENT(hub1).AND.mpi%irank.EQ.0) THEN
       DO i_hia = 1, atoms%n_hia
          IF(hub1%l_soc_given(i_hia)) CYCLE
-         n = atoms%lda_hia(i_hia)%atomType
-         l = atoms%lda_hia(i_hia)%l
+         n = atoms%lda_u(atoms%n_u+i_hia)%atomType
+         l = atoms%lda_u(atoms%n_u+i_hia)%l
          hub1%xi(i_hia) = (rsoc%rsopp(n,l,1,1)+rsoc%rsopp(n,l,2,2))*hartree_to_ev_const
       ENDDO
     ENDIF

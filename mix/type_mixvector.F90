@@ -174,8 +174,8 @@ CONTAINS
           ENDIF
           IF (js>2) RETURN
           IF (misc_here) THEN
-             vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,j))-1)=RESHAPE(REAL(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
-             vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,j)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,j))-1)=RESHAPE(AIMAG(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
+             vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,1:atoms%n_u,j))-1)=RESHAPE(REAL(den%mmpMat(:,:,1:atoms%n_u,j)),(/SIZE(den%mmpMat(:,:,1:atoms%n_u,j))/))
+             vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,1:atoms%n_u,j)):misc_start(js)+2*SIZE(den%mmpMat(:,:,1:atoms%n_u,j))-1)=RESHAPE(AIMAG(den%mmpMat(:,:,1:atoms%n_u,j)),(/SIZE(den%mmpMat(:,:,1:atoms%n_u,j))/))
           END IF
        END IF
     END DO
@@ -239,7 +239,7 @@ CONTAINS
               ENDDO
            ENDIF
            IF (misc_here.AND.js<3) THEN
-              den%mmpMat(:,:,:,js)=RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,js))-1),vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,js)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,js))-1)),SHAPE(den%mmpMat(:,:,:,js)))
+              den%mmpMat(:,:,1:atoms%n_u,js)=RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,1:atoms%n_u,js))-1),vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,1:atoms%n_u,js)):misc_start(js)+2*SIZE(den%mmpMat(:,:,1:atoms%n_u,js))-1)),SHAPE(den%mmpMat(:,:,1:atoms%n_u,js)))
            END IF
         END IF
      ENDDO

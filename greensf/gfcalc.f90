@@ -118,8 +118,8 @@ MODULE m_gfcalc
       tr_hloc = 0.0
       DO i_hia = 1, atoms%n_hia
 
-         l     = atoms%lda_hia(i_hia)%l
-         nType = atoms%lda_hia(i_hia)%atomType
+         l     = atoms%lda_u(atoms%n_u+i_hia)%l
+         nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
          i_gf = ind_greensf(atoms,l,nType)
          !Perform the integration 
          !

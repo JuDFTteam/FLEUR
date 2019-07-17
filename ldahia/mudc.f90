@@ -2,19 +2,26 @@ MODULE m_mudc
 
    CONTAINS
 
-   SUBROUTINE mudc(U,J,l,n,l_amf,mu,jspins)
+   SUBROUTINE mudc(lda_u,n,mu,jspins)
 
-      REAL,    INTENT(IN)  :: U
-      REAL,    INTENT(IN)  :: J 
-      INTEGER, INTENT(IN)  :: l
+      USE m_types
+
+      IMPLICIT NONE
+
+      TYPE(t_utype), INTENT(IN)  :: lda_u
       REAL,    INTENT(IN)  :: n(jspins)
-      LOGICAL, INTENT(IN)  :: l_amf
       REAL,    INTENT(OUT) :: mu
       INTEGER, INTENT(IN)  :: jspins
 
       REAL vdcfll1,vdcfll2
       REAL vdcamf1,vdcamf2
       REAL nup,ndn
+      REAL u,j
+      INTEGER l 
+
+      u = lda_u%U
+      j = lda_u%J 
+      l = lda_u%l 
 
       IF(jspins.EQ.2) THEN
          nup = n(1)
@@ -34,7 +41,7 @@ MODULE m_mudc
       WRITE(6,9040) 'AMF: ','spin-up','spin-dn','(up+dn)/2','up-dn'
       WRITE(6,9050)  vdcamf1,vdcamf2,(vdcamf1+vdcamf2)/2,vdcamf1-vdcamf2
 
-      IF(l_amf) THEN
+      IF(lda_u%l_amf) THEN
          WRITE(6,"(A)") "Using the around-mean-field limit"
          mu = (vdcamf1+vdcamf2)/2
       ELSE
