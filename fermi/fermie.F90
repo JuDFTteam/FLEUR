@@ -261,11 +261,13 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
 
     !Put w_iks into eig-file
-    DO jsp = 1,nspins
-       DO  k = 1,kpts%nkpt
-          CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
+    IF (mpi%n_rank == 0) THEN
+       DO jsp = 1,nspins
+          DO  k = 1,kpts%nkpt
+             CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
+          ENDDO
        ENDDO
-    ENDDO
+    ENDIF
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&
