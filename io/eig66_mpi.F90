@@ -384,7 +384,8 @@ CONTAINS
           DO nk=1,nkpts
              n1=nk+(j-1)*nkpts-1
              !eigenvectors have more entries
-             pe=MOD(n1,n_members)*n_size+MOD(n,n_size)
+             !pe=MOD(n1,n_members)*n_size+MOD(n,n_size)
+             pe=MOD(n1,n_members)*n_size+MOD(n-1,n_size)
              d%pe_ev(nk,j,n)=pe
              d%slot_ev(nk,j,n)=used(pe)
              used(pe)=used(pe)+1
