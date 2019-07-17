@@ -176,13 +176,13 @@ CONTAINS
              IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read real/complex vectors from memory")
              DO i=1,SIZE(ind)
                 arrayStart=(ind(i)-1)*zMat%matsize1+1
-                arrayStop=ind(i)*zMat%matsize1+1
+                arrayStop=ind(i)*zMat%matsize1
                 zmat%data_r(:,i)=REAL(d%eig_vecc(arrayStart:arrayStop,nrec))
              ENDDO
           ELSE
              DO i=1,SIZE(ind)
                 arrayStart=(ind(i)-1)*zMat%matsize1+1
-                arrayStop=ind(i)*zMat%matsize1+1
+                arrayStop=ind(i)*zMat%matsize1
                 zmat%data_r(:,i)=d%eig_vecr(arrayStart:arrayStop,nrec)
              ENDDO
           ENDIF
@@ -190,7 +190,7 @@ CONTAINS
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory", calledby = "eig66_mem")
           DO i=1,SIZE(ind)
              arrayStart=(ind(i)-1)*zMat%matsize1+1
-             arrayStop=ind(i)*zMat%matsize1+1
+             arrayStop=ind(i)*zMat%matsize1
              zmat%data_c(:,i)=d%eig_vecc(arrayStart:arrayStop,nrec)
           END DO
        END IF
