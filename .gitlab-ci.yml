@@ -13,7 +13,7 @@ build-gfortran-hdf5:
        - build
      expire_in: 1h
   script:
-    - cd /builds/fleur/fleur; ./configure.sh GITLAB; cd build; make -j 4
+    - cd /builds/fleur/fleur; FC=gfortran ./configure.sh; cd build; make -j 4
 #  only:
 #    - schedules
 #    - triggers
