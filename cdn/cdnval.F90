@@ -88,14 +88,14 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #endif
 
    ! Local Scalars
-   INTEGER :: ikpt,jsp_start,jsp_end,ispin,jsp
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
-   INTEGER :: skip_t,skip_tt,nStart,nEnd,nbasfcn
+   INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
 
    ! Local Arrays
-   REAL :: we(MAXVAL(cdnvalJob%noccbd(:kpts%nkpt)))
-   REAL :: eig(MAXVAL(cdnvalJob%noccbd(:kpts%nkpt)))
+   REAL,ALLOCATABLE :: we(:),eig(:)
+   INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
    TYPE (t_lapw)             :: lapw
@@ -174,32 +174,25 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    jsp = MERGE(1,jspin,noco%l_noco)
 
-   DO ikpt = cdnvalJob%ikptStart, cdnvalJob%nkptExtended, cdnvalJob%ikptIncrement
-
-      IF (ikpt.GT.kpts%nkpt) THEN
-#ifdef CPP_MPI
-         CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
-#endif
-         EXIT
-      END IF
+   DO ikpt_i = 1,size(cdnvalJob%k_list)
+      ikpt=cdnvalJob%k_list(ikpt_i)
 
       CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      noccbd = cdnvalJob%noccbd(ikpt)
-      nStart = cdnvalJob%nStart(ikpt)
-      nEnd = cdnvalJob%nEnd(ikpt)
-      we(1:noccbd) = cdnvalJob%weights(1:noccbd,ikpt)
-      eig(1:noccbd) = results%eig(nStart:nEnd,ikpt,jsp)
+      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos)
+      noccbd = SIZE(ev_list)
+      we  = cdnvalJob%weights(ev_list,ikpt)
+      eig = results%eig(ev_list,ikpt,jsp)
 
       IF (cdnvalJob%l_evp) THEN
-         IF (nStart > skip_tt) skip_t = 0
-         IF (nEnd <= skip_tt) skip_t = noccbd
-         IF ((nStart <= skip_tt).AND.(nEnd > skip_tt)) skip_t = mod(skip_tt,noccbd)
+         IF (minval(ev_list) > skip_tt) skip_t = 0
+         IF (maxval(ev_list) <= skip_tt) skip_t = noccbd
+         IF ((minval(ev_list) <= skip_tt).AND.(maxval(ev_list) > skip_tt)) skip_t = mod(skip_tt,noccbd)
       END IF
 
       nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
       CALL zMat%init(l_real,nbasfcn,noccbd)
-      CALL read_eig(eig_id,ikpt,jsp,n_start=nStart,n_end=nEnd,neig=nbands,zmat=zMat)
+      CALL read_eig(eig_id,ikpt,jsp,list=ev_list,neig=nbands,zmat=zMat)
 #ifdef CPP_MPI
       CALL MPI_BARRIER(mpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 #endif

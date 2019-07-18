@@ -156,12 +156,12 @@ CONTAINS
     IF (PRESENT(filename)) CALL judft_error("Storing of data not implemented for MPI case",calledby="eig66_mpi.F")
   END SUBROUTINE close_eig
 
-  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,list,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
+    INTEGER, INTENT(IN),OPTIONAL   :: list(:)
     TYPE(t_mat),OPTIONAL  :: zmat
 
 #ifdef CPP_MPI
@@ -183,21 +183,18 @@ CONTAINS
 
     ENDIF
     IF (PRESENT(eig).or.PRESENT(w_iks)) THEN
-       ALLOCATE(tmp_real(d%size_eig))
+       ALLOCATE(tmp_real(MIN(SIZE(eig),d%size_eig)))
        IF (PRESENT(eig)) THEN
           CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%eig_handle,e)
-          CALL MPI_GET(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%eig_handle,e)
+          CALL MPI_GET(tmp_real,SIZE(tmp_real),MPI_DOUBLE_PRECISION,pe,slot,size(tmp_real),MPI_DOUBLE_PRECISION,d%eig_handle,e)
           CALL MPI_WIN_UNLOCK(pe,d%eig_handle,e)
-          n1=1;n3=1;n2=SIZE(eig)
-          IF (PRESENT(n_start)) n1=n_start
-          IF (PRESENT(n_end)) n2=n_end
-          eig(:n2-n1+1)=tmp_real(n1:n2)
+          eig(:size(tmp_real))=tmp_real
        END IF
        IF (PRESENT(w_iks)) THEN
           CALL MPI_WIN_LOCK(MPI_LOCK_SHARED,pe,0,d%w_iks_handle,e)
-          CALL MPI_GET(tmp_real,d%size_eig,MPI_DOUBLE_PRECISION,pe,slot,d%size_eig,MPI_DOUBLE_PRECISION,d%w_iks_handle,e)
+          CALL MPI_GET(tmp_real,size(tmp_real),MPI_DOUBLE_PRECISION,pe,slot,size(tmp_real),MPI_DOUBLE_PRECISION,d%w_iks_handle,e)
           CALL MPI_WIN_UNLOCK(pe,d%w_iks_handle,e)
-          w_iks=tmp_real(:size(w_iks))
+          w_iks(:SIZE(tmp_real))=tmp_real
        END IF
        DEALLOCATE(tmp_real)
     ENDIF
@@ -207,11 +204,10 @@ CONTAINS
        ALLOCATE(tmp_real(tmp_size))
        ALLOCATE(tmp_cmplx(tmp_size))
        DO n=1,zmat%matsize2
-          n1=n
-          IF (PRESENT(n_start)) n1=n_start+n-1
-          IF (PRESENT(n_end)) THEN
-             IF (n1>n_end) CYCLE
-          ENDIF
+          IF (PRESENT(list)) THEN
+             IF (n>SIZE(list)) CYCLE
+             n1=list(n)
+          END IF
           slot=d%slot_ev(nk,jspin,n1)
           pe=d%pe_ev(nk,jspin,n1)
           
@@ -388,7 +384,8 @@ CONTAINS
           DO nk=1,nkpts
              n1=nk+(j-1)*nkpts-1
              !eigenvectors have more entries
-             pe=MOD(n1,n_members)*n_size+MOD(n,n_size)
+             !pe=MOD(n1,n_members)*n_size+MOD(n,n_size)
+             pe=MOD(n1,n_members)*n_size+MOD(n-1,n_size)
              d%pe_ev(nk,j,n)=pe
              d%slot_ev(nk,j,n)=used(pe)
              used(pe)=used(pe)+1

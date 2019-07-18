@@ -376,9 +376,9 @@ CONTAINS
     mat%global_size2=matsize2
     ALLOCATE(mat%blacsdata)
     mat%blacsdata%no_use=1
-    mat%blacsdata%mpi_com=mpi_subcom
-    CALL priv_create_blacsgrid(mat%blacsdata%mpi_com,l_2d,matsize1,matsize2,nbx,nby,&
+    CALL priv_create_blacsgrid(mpi_subcom,l_2d,matsize1,matsize2,nbx,nby,&
          mat%blacsdata,mat%matsize1,mat%matsize2)
+    mat%blacsdata%mpi_com=mpi_subcom
     CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
     !check if this matrix is actually distributed over MPI_COMM_SELF
     IF (mpi_subcom==MPI_COMM_SELF) THEN
@@ -473,7 +473,7 @@ CONTAINS
     ENDIF
     ALLOCATE(iblacsnums(np),ihelp(np),iusermap(blacsdata%nprow,blacsdata%npcol))
 
-    !   An blacsdata%nprow*blacsdata%npcol processor grid will be created
+    !   A blacsdata%nprow*blacsdata%npcol processor grid will be created
     !   Row and column index myrow, mycol of this processor in the grid
     !   and distribution of A and B in ScaLAPACK
     !   The local processor will get myrowssca rows and mycolssca columns
@@ -501,8 +501,8 @@ CONTAINS
 
     !     iblacsnums(i) is the BLACS-process number of MPI-process i-1
     k = 1
-    DO i = 1, blacsdata%nprow
-       DO j = 1, blacsdata%npcol
+    DO i = 1, blacsdata%nprow 
+       DO j = 1, blacsdata%npcol  
           iusermap(i,j) = iblacsnums(k)
           k = k + 1
        ENDDO
