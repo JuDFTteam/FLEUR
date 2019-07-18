@@ -81,11 +81,6 @@ contains
           inDen%mmpMat(:,:,1:atoms%n_u,:)=outDen%mmpMat(:,:,1:atoms%n_u,:)
           if (mpi%irank.ne.0) inDen%mmpMat(:,:,:,:) = 0.0 
        ENDIF
-    ENDIF
-
-    IF(atoms%n_hia>0.AND.mpi%irank==0) THEN
-      !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
-      inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
     ENDIF 
 
     CALL timestart("Reading of distances")
@@ -159,6 +154,11 @@ contains
        inden%mmpMAT(:,:,1:atoms%n_u,:)=outden%mmpMat(:,:,1:atoms%n_u,:)
        CALL mixing_history_reset(mpi)
        CALL mixvector_reset()
+    ENDIF
+
+    IF(atoms%n_hia>0) THEN
+      !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
+      inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
     ENDIF
 
     IF (atoms%n_hia>0.AND.l_runhia) THEN

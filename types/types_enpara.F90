@@ -252,13 +252,13 @@ CONTAINS
        !Set the energy parameters to the same value
        !We want the shell where Hubbard 1 is applied to 
        !be non spin-polarized
-       WRITE(6,"(A)") "For Hubbard 1 we treat the correlated shell to be non spin-polarized"
+       IF(mpi%irank.EQ.0) WRITE(6,"(A)") "For Hubbard 1 we treat the correlated shell to be non spin-polarized"
        DO j = atoms%n_u+1, atoms%n_u+atoms%n_hia
           l = atoms%lda_u(j)%l
           n = atoms%lda_u(j)%atomType
           enpara%el0(l,n,1) = (enpara%el0(l,n,1)+enpara%el0(l,n,2))/2.0
           enpara%el0(l,n,2) = enpara%el0(l,n,1)
-          WRITE(6,"(A27,I3,A3,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1) 
+          IF(mpi%irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1) 
        ENDDO
     ENDIF
 

@@ -52,10 +52,8 @@ MODULE m_hubbard1_setup
       INTEGER indStart,indEnd
       REAL    mu_dc,e_lda_hia,exc
 
-      CHARACTER(len=300) :: cwd,path,folder,message,xPath
+      CHARACTER(len=300) :: cwd,path,folder,xPath
       CHARACTER(len=8)   :: l_type*2,l_form*9
-      CHARACTER(len=1)   :: l_name(0:3)
-      CHARACTER(len=30)  :: fmt
 
       TYPE(t_greensf)    :: gu 
 
@@ -65,7 +63,6 @@ MODULE m_hubbard1_setup
                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia)
 
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
-      COMPLEX  mmpMat_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz)
       REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_selfenexist,l_exist,l_linkedsolver
@@ -74,7 +71,6 @@ MODULE m_hubbard1_setup
       indStart = atoms%n_u+1
       indEnd   = atoms%n_u+atoms%n_hia 
 
-      l_name(0:3) = (/"s","p","d","f"/)
 
       !TODO: We don't need to calculate the green's function in every iteration 
       !(what is an appropriate cutoff for the distance under which we calculate the greens function)
@@ -108,23 +104,16 @@ MODULE m_hubbard1_setup
                nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                l = atoms%lda_u(atoms%n_u+i_hia)%l
 
-               !Create a subdirectory for the atomType and shell
-               IF(atoms%n_hia>1) THEN
-                  WRITE(fmt,'("(A",I2.2,",A1,A1,A1")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
-                  WRITE(folder,fmt) atoms%label(nType),"_",l_name(l),"/"
-                  CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
-               ELSE 
-                  folder=""
-               ENDIF
-               WRITE(xPath,*) TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/"
-
+               CALL hubbard1_path(atoms,i_hia,folder)
+               WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder)) 
+               CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
 
                !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
-               IF(hub1%iter.EQ.1.AND.ALL(mmpMat.EQ.0.0)) THEN
+               IF(hub1%iter.EQ.1.AND.ALL(den%mmpMat(:,:,indStart:indEnd,:).EQ.0.0)) THEN
                   n_l(i_hia,:) = hub1%init_occ(i_hia)/input%jspins
                   DO i_exc = 1, hub1%n_exc_given(i_hia)
                      hub1%mag_mom(i_hia,i_exc) = hub1%init_mom(i_hia,i_exc)
-                  ENDDo
+                  ENDDO
                ELSE
                   !calculate the occupation of the correlated shell
                   CALL occmtx(gdft,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
@@ -189,28 +178,28 @@ MODULE m_hubbard1_setup
             DO i_hia = 1, atoms%n_hia 
                nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                l = atoms%lda_u(atoms%n_u+i_hia)%l
-               IF(atoms%n_hia>1) THEN
-                  WRITE(fmt,'("(A",I2.2,",A1,A1,A1")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
-                  WRITE(folder,fmt) atoms%label(nType),"_",l_name(l),"/"
-                  CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
-               ELSE
-                  folder=""
-               ENDIF
-               WRITE(xPath,*) TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/"
+
+               CALL hubbard1_path(atoms,i_hia,folder)
+               WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder)) 
                INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
-               IF(.NOT.l_selfenexist.AND.mpi%irank.EQ.0) THEN
+               IF(mpi%irank.EQ.0) THEN
+                  IF(.NOT.l_selfenexist) THEN
 #ifdef CPP_EDSOLVER
-                  l_linkedsolver=.TRUE.
-                  CALL timestart("Hubbard 1: EDsolver")
-                  CALL CHDIR(xPath)
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,gdft%e(1:gdft%nz)*hartree_to_ev_const,selfen(i_hia,:,:,1:gdft%nz),1)
-                  !The solver is given everything in eV by default, so we need to convert back to htr
-                  selfen(i_hia,:,:,:) = selfen(i_hia,:,:,:)/hartree_to_ev_const
-                  CALL CHDIR(cwd)
-                  CALL timestop("Hubbard 1: EDsolver")
+                     l_linkedsolver=.TRUE.
+                     CALL timestart("Hubbard 1: EDsolver")
+                     CALL CHDIR(TRIM(ADJUSTL(xPath)))                  
+                     CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,gdft%e(1:gdft%nz)*hartree_to_ev_const,selfen(i_hia,:,:,1:gdft%nz),1)
+                     !The solver is given everything in eV by default, so we need to convert back to htr
+                     selfen(i_hia,:,:,:) = selfen(i_hia,:,:,:)/hartree_to_ev_const
+                     CALL CHDIR(TRIM(ADJUSTL(cwd)))
+                     CALL timestop("Hubbard 1: EDsolver")
 #else 
-                  CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
+                     CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
 #endif
+                  ELSE               
+                     !If there is no linked solver library we read in the selfenergy here
+                     CALL read_selfen(xPath,selfen(i_hia,1:2*(2*l+1),1:2*(2*l+1),1:gdft%nz),gdft%nz,2*(2*l+1),.false.)
+                  ENDIF
                ENDIF
             ENDDO
 
@@ -225,9 +214,6 @@ MODULE m_hubbard1_setup
                ! so that the occupation of the correlated orbital does not change
                !----------------------------------------------------------------------
                CALL timestart("Hubbard 1: Add Selfenenergy")
-               !If there is no linked solver library we read in the selfenergy here
-               IF(l_selfenexist) CALL read_selfen(TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/",&
-                                                selfen(i_hia,1:2*(2*l+1),1:2*(2*l+1),1:gdft%nz),gdft%nz,2*(2*l+1),.false.)
                CALL add_selfen(gdft,gu,selfen,atoms,noco,hub1,sym,input,results%ef,n_l,mu_dc/hartree_to_ev_const,&
                               pot%mmpMat(:,:,indStart:indEnd,:),mmpMat)
                CALL timestop("Hubbard 1: Add Selfenenergy")
@@ -277,18 +263,9 @@ MODULE m_hubbard1_setup
          !Do nothing and go to the MPI_BCAST
 #else 
          CALL get_environment_variable('PWD',cwd)
-         path = TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(main_folder))
          DO i_hia = atoms%n_u+1, atoms%n_u+atoms%n_hia
-            nType = atoms%lda_u(i_hia)%atomType
-            l = atoms%lda_u(i_hia)%l
-            IF(atoms%n_hia>1) THEN
-               WRITE(fmt,'("(A",I2.2,",A1,A1,A1")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
-               WRITE(folder,fmt) atoms%label(nType),"_",l_name(l),"/"
-               CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)))
-            ELSE
-               folder=""
-            ENDIF
-            WRITE(xPath,*) TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(folder)) // "/"
+            CALL hubbard1_path(atoms,i_hia,folder)
+            WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder)) 
             INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
             IF(.NOT.l_selfenexist) CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
          ENDDO
@@ -314,5 +291,39 @@ MODULE m_hubbard1_setup
 9030  FORMAT(TR7,f8.4,TR2,f8.4)
 
    END SUBROUTINE hubbard1_setup
+
+   SUBROUTINE hubbard1_path(atoms,i_hia,xPath)
+
+      !Defines the folder structure
+      ! The Solver is run in the subdirectories
+      ! Hubbard1/ if only one Hubbard1 prodcedure is run 
+      ! Hubbard1/atom_label_l if there are more
+
+      USE m_types
+
+      IMPLICIT NONE 
+
+      TYPE(t_atoms),       INTENT(IN)  :: atoms 
+      INTEGER,             INTENT(IN)  :: i_hia
+      CHARACTER(len=300),  INTENT(OUT) :: xPath
+
+      CHARACTER(len=300) :: folder,fmt
+      CHARACTER(len=1)   :: l_name(0:3)
+      INTEGER nType,l
+
+      l_name(0:3) = (/"s","p","d","f"/)
+
+      nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+      l = atoms%lda_u(atoms%n_u+i_hia)%l
+      xPath = TRIM(ADJUSTL(main_folder))
+      IF(atoms%n_hia>1) THEN
+         WRITE(fmt,'("(A",I2.2,",A1,A1,A1")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
+         WRITE(folder,fmt) atoms%label(nType),"_",l_name(l),"/"
+      ELSE
+         folder=""
+      ENDIF
+      xPath = TRIM(ADJUSTL(xPath)) // "/" // folder
+
+   END SUBROUTINE hubbard1_path
 
 END MODULE m_hubbard1_setup

@@ -97,8 +97,8 @@ MODULE m_hubbard1_io
 
       CALL startSection(input_iounit,"fock_space")
       CALL comment(input_iounit,"Min/Max Occupation",1)
-      CALL writeValue(input_iounit,"Np_min",n-hub1%n_exc)
-      CALL writeValue(input_iounit,"Np_max",n+hub1%n_exc)
+      CALL writeValue(input_iounit,"Np_min",MAX(0,n-hub1%n_exc))
+      CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),n+hub1%n_exc))
       CALL endSection(input_iounit)
 
       CALL startSection(input_iounit,"GC_ensemble")

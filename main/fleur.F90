@@ -363,7 +363,7 @@ CONTAINS
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1)
-
+          outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:) = inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:)
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
@@ -430,7 +430,6 @@ CONTAINS
 
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field
-
        ! mix input and output densities
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
@@ -480,7 +479,7 @@ CONTAINS
           IF(atoms%n_hia>0) THEN
              hub1%l_runthisiter = .NOT.l_cont.AND.(iter < input%itmax).AND.(0.01<=results%last_occdistance.OR.0.001<=results%last_mmpMatdistance)
              !Run after first overall iteration to generate a starting density matrix
-             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.(hub1%iter==0.AND.ALL(vTot%mmpMat(:,:,atoms%n_u+atoms%n_hia,:).EQ.0.0)))
+             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.(hub1%iter==0.AND.ALL(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:).EQ.0.0)))
              !Prevent that the scf loop terminates
              l_cont = l_cont.OR.hub1%l_runthisiter
           ENDIF
