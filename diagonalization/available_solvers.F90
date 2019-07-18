@@ -48,8 +48,11 @@ MODULE m_available_solvers
 #else
   INTEGER,PARAMETER:: diag_elpa_1node=-14
 #endif 
+#ifdef CPP_SCALAPACK
   INTEGER,PARAMETER:: diag_debugout=201
-  
+#else
+  INTEGER,PARAMETER:: diag_debugout=20
+#endif  
   INTEGER,PARAMETER::diag_all_solver(9)=(/diag_elpa,diag_elemental,diag_scalapack,diag_magma,diag_chase,diag_cusolver,diag_lapack,diag_elpa_1node,diag_debugout/)
   
 CONTAINS
