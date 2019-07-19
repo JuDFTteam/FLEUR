@@ -8,7 +8,6 @@ MODULE m_find_enpara
   USE m_judft
   IMPLICIT NONE
   PRIVATE
-  CHARACTER(len=1),PARAMETER,DIMENSION(0:9):: ch=(/'s','p','d','f','g','h','i','j','k','l'/)
   PUBLIC:: find_enpara
 
 CONTAINS
@@ -16,35 +15,35 @@ CONTAINS
   !> Function to determine the energy parameter given the quantum number and the potential
   !! Different schemes are implemented. Nqn (main quantum number) is used as a switch.
   !! This code was previously in lodpot.f
-  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
+  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)RESULT(e)
     USE m_types_setup
     USE m_types_mpi
     USE m_radsra
     USE m_differ
-    USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
+    REAL,INTENT(OUT) :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
     TYPE(t_mpi),INTENT(IN)  ::mpi
     REAL,INTENT(IN):: vr(:)
 
-    IF (nqn>0) e=priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr)
-    IF (nqn<0) e=priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr)
+    IF (nqn>0) e=priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)
+    IF (nqn<0) e=priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)
   END FUNCTION find_enpara
 
 
-  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
+  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)RESULT(e)
     USE m_types_setup
     USE m_types_mpi
     USE m_radsra
     USE m_differ
-    USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
+    REAL,INTENT(OUT)  :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
     TYPE(t_mpi),INTENT(IN)  ::mpi
     REAL,INTENT(IN):: vr(:)
@@ -52,7 +51,7 @@ CONTAINS
 
     INTEGER j,ilo,i
     INTEGER nodeu,node,ierr,msh
-    REAL   e_up,e_lo,lnd,e1
+    REAL   lnd,e1
     REAL   d,rn,fl,fn,fj,t2,rr,t1,ldmt,us,dus,c
     LOGICAL start
     !     ..
@@ -129,47 +128,28 @@ CONTAINS
             rn,d,msh,vrd, e1, f(:,1),f(:,2),ierr)
        e = (2.0*e + e1 ) / 3.0      
     ENDIF
- 
+    
 
-    IF (mpi%irank  == 0) THEN
-       attributes = ''
-       WRITE(attributes(1),'(i0)') n
-       WRITE(attributes(2),'(i0)') jsp
-       WRITE(attributes(3),'(i0,a1)') nqn, ch(l)
-       WRITE(attributes(4),'(f8.2)') e_lo
-       WRITE(attributes(5),'(f8.2)') e_up
-       WRITE(attributes(6),'(f16.10)') e
-       IF (lo) THEN
-          CALL writeXMLElementForm('loAtomicEP',(/'atomType     ','spin         ','branch       ',&
-               'branchLowest ','branchHighest','value        '/),&
-               attributes,RESHAPE((/10,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
-       ELSE
-          CALL writeXMLElementForm('atomicEP',(/'atomType     ','spin         ','branch       ',&
-               'branchLowest ','branchHighest','value        '/),&
-               attributes,RESHAPE((/12,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
-       ENDIF
-       WRITE(6,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
-            e_lo, ' to',e_up,' htr. ; e_l =',e
-    ENDIF
+   
   END FUNCTION priv_method1
 
-  REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr)RESULT(e)
+  REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)RESULT(e)
     USE m_types_setup
     USE m_types_mpi
     USE m_radsra
     USE m_differ
-    USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
+    REAL,INTENT(OUT)  :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
     TYPE(t_mpi),INTENT(IN)  ::mpi
     REAL,INTENT(IN):: vr(:)
 
     INTEGER j,ilo,i
     INTEGER nodeu,node,ierr,msh
-    REAL   e_up,e_lo,lnd,e_up_temp,e_lo_temp,large_e_step
+    REAL   lnd,e_up_temp,e_lo_temp,large_e_step
     REAL   d,rn,fl,fn,fj,t2,rr,t1,ldmt,us,dus,c
     LOGICAL start
     !     ..
@@ -282,25 +262,6 @@ CONTAINS
        END IF
     END DO
 
-    IF (mpi%irank == 0) THEN
-       attributes = ''
-       WRITE(attributes(1),'(i0)') n
-       WRITE(attributes(2),'(i0)') jsp
-       WRITE(attributes(3),'(i0,a1)') ABS(nqn), ch(l)
-       WRITE(attributes(4),'(f16.10)') ldmt
-       WRITE(attributes(5),'(f16.10)') e
-       IF (lo) THEN
-          CALL writeXMLElementForm('heloAtomicEP',(/'atomType      ','spin          ','branch        ',&
-               'logDerivMT    ','value         '/),&
-               attributes(1:5),reshape((/8,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
-       ELSE
-          CALL writeXMLElementForm('heAtomicEP',(/'atomType      ','spin          ','branch        ',&
-               'logDerivMT    ','value         '/),&
-               attributes(1:5),reshape((/10,4,6,12,5+17,6,1,3,16,16/),(/5,2/)))
-       ENDIF
-       WRITE (6,'(a7,i3,i2,a1,a12,f7.2,a4,f7.2,a5)') "  Atom ",n,nqn,ch(l)," branch, D = ",&
-            ldmt, " at ",e," htr."
-    ENDIF
-  END FUNCTION priv_method2
+     END FUNCTION priv_method2
   
 END MODULE m_find_enpara
