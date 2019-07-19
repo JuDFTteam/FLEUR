@@ -313,6 +313,7 @@
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
          input%gw_neigd = bands
+         hybrid%bands1 = ceiling(0.75*bands)
          l_gamma = .true.
          input%minDistance = 1.0e-5
       ELSE
