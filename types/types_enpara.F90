@@ -193,7 +193,7 @@ CONTAINS
              ! Now for the lo's
              DO ilo = 1, atoms%nlo(n)
                 l = atoms%llo(ilo,n)
-                IF( lo_done(ilo,n,jsp)) CALL priv_write(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),elo_lo(l,n),elo_up(l,n),enpara%ello0(ilo,n,jsp))
+                IF( lo_done(ilo,n,jsp)) CALL priv_write(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),elo_lo(ilo,n),elo_up(ilo,n),enpara%ello0(ilo,n,jsp))
              END DO
           END DO
        ENDIF
