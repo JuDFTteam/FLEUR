@@ -738,7 +738,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       IF (numberNodes.EQ.1) THEN
          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
             field%b_field=evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
-            field%l_b_field=.true.
+            IF (ABS(field%b_field)>1.E-15) field%l_b_field=.true.
          ENDIF
          field%efield%zsigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
          field%efield%sig_b(1) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sig_b_1'))
@@ -1494,7 +1494,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             socscaleSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@socscale'))))
             IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field_mt')>0) THEN
                b_field_mtSpecies=evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@b_field_mt'))))
-               field%l_b_field=.TRUE.
+               IF (ABS(b_field_mtSpecies)>1E-15) field%l_b_field=.TRUE.
             ENDIF
          ENDIF
          ! Explicitely provided core configurations
