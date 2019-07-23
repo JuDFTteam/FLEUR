@@ -186,7 +186,7 @@ CONTAINS
          iigptm = hybrid%pgptm(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g = lapw%gvec(:,ig1,jsp) + hybird%gptm(:, iigptm) - g_t
+            g = lapw%gvec(:,ig1,jsp) + hybrid%gptm(:, iigptm) - g_t
             ig2 = pointer(g(1), g(2), g(3))
 
             IF (ig2 == 0) THEN
