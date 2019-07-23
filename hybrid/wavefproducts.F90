@@ -80,7 +80,7 @@ CONTAINS
       REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
       REAL, ALLOCATABLE       ::    z0(:, :)
 
-      COMPLEX                 ::    cexp(atoms%nat), cexp_nk(atoms%nat)
+      COMPLEX                 ::    cmplx_exp(atoms%nat), cexp_nk(atoms%nat)
       COMPLEX, ALLOCATABLE     ::    ccmt_nk(:, :, :)
       COMPLEX, ALLOCATABLE     ::    ccmt(:, :, :)
       TYPE(t_mat)             :: z_nk, z_kqpt
@@ -267,7 +267,7 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
-            cexp(iatom) = exp((-img)*tpi_const*dotprod(kpts%bkf(:, iq) + kpts%bkf(:, nk), atoms%taual(:, iatom)))
+            cmplx_exp(iatom) = exp((-img)*tpi_const*dotprod(kpts%bkf(:, iq) + kpts%bkf(:, nk), atoms%taual(:, iatom)))
 
             cexp_nk(iatom) = exp((-img)*tpi_const*dotprod(kpts%bkf(:, nk), atoms%taual(:, iatom)))
          END DO
@@ -298,25 +298,25 @@ CONTAINS
 
                      IF (iatom == iiatom) THEN
                         IF (m < 0) THEN
-                           cmt(:, lm1, iatom) = (ccmt(:, lm1, iatom) + rdum*ccmt(:, lm2, iiatom))*cexp(iatom)*rfac
+                           cmt(:, lm1, iatom) = (ccmt(:, lm1, iatom) + rdum*ccmt(:, lm2, iiatom))*cmplx_exp(iatom)*rfac
 
                            cmt_nk(:, lm1, iatom) = (ccmt_nk(:, lm1, iatom) + rdum*ccmt_nk(:, lm2, iiatom))*cexp_nk(iatom)*rfac
                         ELSE IF (m > 0) THEN
 
-                           cmt(:, lm1, iatom) = (ccmt(:, lm1, iatom) - rdum*ccmt(:, lm2, iiatom))*cexp(iatom)*cfac
+                           cmt(:, lm1, iatom) = (ccmt(:, lm1, iatom) - rdum*ccmt(:, lm2, iiatom))*cmplx_exp(iatom)*cfac
 
                            cmt_nk(:, lm1, iatom) = (ccmt_nk(:, lm1, iatom) - rdum*ccmt_nk(:, lm2, iiatom))*cexp_nk(iatom)*cfac
                         ELSE
                            IF (mod(l, 2) == 0) THEN
-                              cmt(:, lm1, iatom) = ccmt(:, lm1, iatom)*cexp(iatom)
+                              cmt(:, lm1, iatom) = ccmt(:, lm1, iatom)*cmplx_exp(iatom)
                               cmt_nk(:, lm1, iatom) = ccmt_nk(:, lm1, iatom)*cexp_nk(iatom)
                            ELSE
-                              cmt(:, lm1, iatom) = ccmt(:, lm1, iatom)*(-img)*cexp(iatom)
+                              cmt(:, lm1, iatom) = ccmt(:, lm1, iatom)*(-img)*cmplx_exp(iatom)
                               cmt_nk(:, lm1, iatom) = ccmt_nk(:, lm1, iatom)*(-img)*cexp_nk(iatom)
                            END IF
                         END IF
                      ELSE
-                        cdum = rdum*cexp(iatom)*cexp(iiatom)
+                        cdum = rdum*cmplx_exp(iatom)*cmplx_exp(iiatom)
                         cmt(:, lm1, iatom) = (ccmt(:, lm1, iatom) + cdum*ccmt(:, lm2, iiatom))*rfac
 
                         cmt(:, lm1, iiatom) = (ccmt(:, lm1, iatom) - cdum*ccmt(:, lm2, iiatom))*cfac
@@ -1067,7 +1067,7 @@ CONTAINS
       REAL                    ::  rdum, svol, s2
 
       COMPLEX                 ::  cdum, cdum1
-      COMPLEX                 ::  cexp
+      COMPLEX                 ::  cmplx_exp
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
 
       LOGICAL                 ::  offdiag
@@ -1262,7 +1262,7 @@ CONTAINS
             ic = ic + 1
             ic1 = 0
 
-            cexp = exp(-img*tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, ic)))
+            cmplx_exp = exp(-img*tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, ic)))
 
             DO l = 0, hybrid%lcutm1(itype)
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
@@ -1322,7 +1322,7 @@ CONTAINS
 
                      DO iband = bandi, bandf
                         DO iband1 = bandoi, bandof
-                           cdum = carr2(iband1, iband)*cexp
+                           cdum = carr2(iband1, iband)*cmplx_exp
                            DO i = 1, hybrid%nindxm1(l, itype)
                               j = lm + i
                               cprod(j, iband1, iband) = cprod(j, iband1, iband) + hybdat%prodm(i, n, l, itype)*cdum
