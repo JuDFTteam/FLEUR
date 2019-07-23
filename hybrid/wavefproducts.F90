@@ -169,9 +169,7 @@ CONTAINS
       DO ig2 = 1, lapw_nkqpt%nv(jsp)
          rarr1 = z_kqpt%data_r(ig2, bandoi:bandof)
          DO ig = 1, ngpt0
-            g(1) = gpt0(1, ig) - lapw_nkqpt%k1(ig2, jsp)
-            g(2) = gpt0(2, ig) - lapw_nkqpt%k2(ig2, jsp)
-            g(3) = gpt0(3, ig) - lapw_nkqpt%k3(ig2, jsp)
+            g = gpt0(:,ig) - lapw_nkqpt%gvec(:,ig2,jsp)
             rdum = hybdat%stepfunc(g(1), g(2), g(3))/svol
             DO n2 = bandoi, bandof
                z0(n2, ig) = z0(n2, ig) + rarr1(n2)*rdum
@@ -188,10 +186,7 @@ CONTAINS
          iigptm = hybrid%pgptm(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g(1) = lapw%k1(ig1, jsp) + hybrid%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + hybrid%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + hybrid%gptm(3, iigptm) - g_t(3)
-
+            g = lapw%gvec(:,ig1,jsp) + hybird%gptm(:, iigptm) - g_t
             ig2 = pointer(g(1), g(2), g(3))
 
             IF (ig2 == 0) THEN
