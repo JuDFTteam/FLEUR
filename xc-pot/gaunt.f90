@@ -88,7 +88,7 @@ CONTAINS
       INTRINSIC sqrt
 !     ..
       if (allocated(w)) return
-!$    if (omp_in_parallel()) call juDFT_error("BUG IN GAUNT!!")
+!$    if (omp_in_parallel() .and. omp_get_num_threads() > 1) call juDFT_error("BUG IN GAUNT!!")
       ALLOCATE(w((3*lmaxd)/4+1),yr((3*lmaxd)/4+1,(lmaxd+1)**2))
 
       n = (3*lmaxd)/4+1
