@@ -1060,17 +1060,13 @@ CONTAINS
 
 !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
-      INTEGER                 ::  itype, ieq, ikpt, ikpt1, ikpt2, iband, iband1
+      INTEGER                 ::  itype, ieq, ikpt, iband, iband1
       INTEGER                 ::  k, ic1, ig1, ig2, ig
-      INTEGER                 ::  igptm, iigptm
-      INTEGER                 ::  q
-      INTEGER                 ::  nbasm_ir, ngpt0
-      INTEGER                 ::  nbasfcn
-      INTEGER                 ::  ok, m
+      INTEGER                 ::  igptm, iigptm, nbasm_ir, ngpt0, nbasfcn, ok, m
 
       REAL                    ::  rdum, svol, s2
 
-      COMPLEX                 ::  cdum, cdum0, cdum1
+      COMPLEX                 ::  cdum, cdum1
       COMPLEX                 ::  cexp
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
 
