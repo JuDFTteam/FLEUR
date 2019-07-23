@@ -128,15 +128,9 @@ CONTAINS
       call read_z(z_kqpt, nkqpt)
       call timestop("read_z")
 
-      g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
-     &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(1, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
-      g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
-     &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(2, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
-      g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
-     &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(3, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
+      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
+     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+     &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation pointer'
