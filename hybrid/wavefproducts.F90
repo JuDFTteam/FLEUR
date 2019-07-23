@@ -13,8 +13,8 @@ CONTAINS
   &                    bandi, bandf, bandoi, bandof,&
   &                    dimension, input, jsp, atoms,&
   &                    lapw, kpts,&
-  &                    nk, iq, hybdat, mnobd, hybrid,&
-  &                    parent, cell,&
+  &                    nk, iq, hybdat, hybrid,&
+  &                    cell,&
   &                    nbasm_mt, sym,&
   &                    noco,&
   &                    nkqpt, cprod)
@@ -40,13 +40,10 @@ CONTAINS
       ! - scalars -
       INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
       INTEGER, INTENT(IN)      :: jsp, nk, iq
-      INTEGER, INTENT(IN)      :: mnobd
       INTEGER, INTENT(IN)      :: nbasm_mt
       INTEGER, INTENT(OUT)     :: nkqpt
 
       ! - arrays -
-      INTEGER, INTENT(IN)      ::    parent(kpts%nkptf)
-
       REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       ! - local scalars -
@@ -61,7 +58,7 @@ CONTAINS
       INTEGER                 ::    n1, n2, nbasfcn
       REAL                    ::    svol, sr2
       REAL                    ::    rdum, rfac, rfac1, rfac2, rdum1, rdum2
-      REAL                    ::    sin1, sin2, cos1, cos2, add1, add2
+      REAL                    ::    add1, add2
       REAL                    ::    fac, fac1, fac2
       REAL                    ::    monepl1, monepl2, monepl, monepm1, monepm, moneplm, monepl1m1
       COMPLEX                 ::    fexp
@@ -453,17 +450,13 @@ CONTAINS
                            DO ibando = bandoi, bandof
                               rdum1 = rarr3(1, ibando, iband)
                               rdum2 = rarr3(2, ibando, iband)
-!                       sin1  = rdum1*rfac1
-!                       cos1  = rdum1*rfac2
-!                       sin2  = rdum2*rfac1
-!                       cos2  = rdum2*rfac2
                               add1 = rdum1*rfac2 + rdum2*rfac1
                               add2 = rdum2*rfac2 - rdum1*rfac1
                               DO i = 1, hybrid%nindxm1(l, itype)
                                  j = lm1 + i
-                                 cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*add1!( cos1 + sin2 )
+                                 cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*add1
                                  j = lm2 + i
-                                 cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*add2!( cos2 - sin1 )
+                                 cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*add2
 
                               END DO  !i -> loop over mixed basis functions
                            END DO  !ibando
@@ -1033,7 +1026,6 @@ CONTAINS
   &                      cell, atoms, hybrid,&
   &                      hybdat,&
   &                      kpts,&
-  &                      mnobd,&
   &                      lapw, sym,&
   &                      nbasm_mt,&
   &                      noco,&
@@ -1061,7 +1053,7 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
       INTEGER, INTENT(IN)      ::  nk, iq, jsp
-      INTEGER, INTENT(IN)      :: mnobd, nbasm_mt
+      INTEGER, INTENT(IN)      ::  nbasm_mt
       INTEGER, INTENT(OUT)     ::  nkqpt
 
 !     - arrays -

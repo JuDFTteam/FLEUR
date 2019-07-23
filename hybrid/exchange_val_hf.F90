@@ -232,11 +232,11 @@ CONTAINS
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, dimension, input, jsp, atoms, &
-                                       lapw, kpts, nk, ikpt0, hybdat, mnobd, hybrid, parent, cell, hybrid%nbasp, sym, &
+                                       lapw, kpts, nk, ikpt0, hybdat, hybrid, cell, hybrid%nbasp, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, dimension, input, jsp, &!jsp,&
-                                         cell, atoms, hybrid, hybdat, kpts, mnobd, lapw, sym, hybrid%nbasp, noco, nkqpt, cprod_vv_c)
+                                         cell, atoms, hybrid, hybdat, kpts, lapw, sym, hybrid%nbasp, noco, nkqpt, cprod_vv_c)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
