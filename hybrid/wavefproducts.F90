@@ -20,7 +20,7 @@ CONTAINS
   &                    nkqpt, cprod)
 
       USE m_util, ONLY: modulo1
-      USE m_olap, ONLY: gptnorm
+      USE m_types_hybrid, ONLY: gptnorm
       USE m_wrapper
       USE m_constants
       USE m_types
@@ -143,23 +143,7 @@ CONTAINS
       ALLOCATE (gpt0(3, size(pointer)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation gpt0'
 
-      if (.not. allocated(hybdat%stepfunc_r)) then
-         call timestart("setup stepfunction")
-         ALLOCATE (hybdat%stepfunc_r(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
-         IF (ok /= 0) then
-            call juDFT_error('wavefproducts_inv5: error allocation stepfunc_r')
-         endif
-
-         DO i = -g(1), g(1)
-            DO j = -g(2), g(2)
-               DO k = -g(3), g(3)
-                  hybdat%stepfunc_r(i, j, k) = stepfunction(cell, atoms, (/i, j, k/))
-               END DO
-            END DO
-         END DO
-         call timestop("setup stepfunction")
-      endif
-
+      call hybdat%set_stepfunction(cell, atoms,g)
       !
       ! convolute phi(n,k) with the step function and store in cpw0
       !
@@ -196,7 +180,7 @@ CONTAINS
             g(1) = gpt0(1, ig) - lapw_nkqpt%k1(ig2, jsp)
             g(2) = gpt0(2, ig) - lapw_nkqpt%k2(ig2, jsp)
             g(3) = gpt0(3, ig) - lapw_nkqpt%k3(ig2, jsp)
-            rdum = hybdat%stepfunc_r(g(1), g(2), g(3))/svol
+            rdum = hybdat%stepfunc(g(1), g(2), g(3))/svol
             DO n2 = bandoi, bandof
                z0(n2, ig) = z0(n2, ig) + rarr1(n2)*rdum
             END DO
@@ -1031,7 +1015,7 @@ CONTAINS
 
       USE m_constants
       USE m_util, ONLY: modulo1
-      USE m_olap, ONLY: gptnorm
+      USE m_types_hybrid, ONLY: gptnorm
       USE m_trafo
       USE m_wrapper
       USE m_types
@@ -1144,21 +1128,7 @@ CONTAINS
       ALLOCATE (gpt0(3, size(pointer)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_noinv2: error allocation gpt0'
 
-      if (.not. allocated(hybdat%stepfunc_c)) then
-         call timestart("setup stepfunc")
-         ALLOCATE (hybdat%stepfunc_c(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
-         IF (ok /= 0) then
-            call juDFT_error('wavefproducts_noinv2: error allocation stepfunc')
-         endif
-         DO i = -g(1), g(1)
-            DO j = -g(2), g(2)
-               DO k = -g(3), g(3)
-                  hybdat%stepfunc_c(i, j, k) = stepfunction(cell, atoms, (/i, j, k/))
-               END DO
-            END DO
-         END DO
-         call timestop("setup stepfunc")
-      endif
+      call hybdat%set_stepfunction(cell, atoms,g)
 
       !
       ! convolute phi(n,k) with the step function and store in cpw0
@@ -1195,7 +1165,7 @@ CONTAINS
             g(1) = gpt0(1, ig) - lapw_nkqpt%k1(ig2, jsp)
             g(2) = gpt0(2, ig) - lapw_nkqpt%k2(ig2, jsp)
             g(3) = gpt0(3, ig) - lapw_nkqpt%k3(ig2, jsp)
-            cdum = hybdat%stepfunc_c(g(1), g(2), g(3))/svol
+            cdum = hybdat%stepfunc(g(1), g(2), g(3))/svol
             DO n2 = bandoi, bandof
                z0(n2, ig) = z0(n2, ig) + carr1(n2)*cdum
             END DO
@@ -1345,42 +1315,4 @@ CONTAINS
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
-
-   !private subroutine
-   FUNCTION stepfunction(cell, atoms, g)
-      USE m_types
-      USE m_constants
-      USE m_olap
-      IMPLICIT NONE
-
-      TYPE(t_cell), INTENT(IN)    :: cell
-      TYPE(t_atoms), INTENT(IN)   :: atoms
-
-      INTEGER, INTENT(IN) :: g(3)
-      COMPLEX             :: stepfunction  !Is real in inversion case
-      REAL                :: gnorm, gnorm3, r, fgr
-      INTEGER             :: itype, ieq, icent
-
-      gnorm = gptnorm(g, cell%bmat)
-      gnorm3 = gnorm**3
-      IF (gnorm == 0) THEN
-         stepfunction = 1
-         DO itype = 1, atoms%ntype
-            stepfunction = stepfunction - atoms%neq(itype)*atoms%volmts(itype)/cell%omtil
-         END DO
-      ELSE
-         stepfunction = 0
-         icent = 0
-         DO itype = 1, atoms%ntype
-            r = gnorm*atoms%rmt(itype)
-            fgr = fpi_const*(sin(r) - r*cos(r))/gnorm3/cell%omtil
-            DO ieq = 1, atoms%neq(itype)
-               icent = icent + 1
-               stepfunction = stepfunction - fgr*exp(-cmplx(0., tpi_const*dot_product(atoms%taual(:, icent), g)))
-            ENDDO
-         ENDDO
-      ENDIF
-
-   END FUNCTION stepfunction
-
 END MODULE m_wavefproducts

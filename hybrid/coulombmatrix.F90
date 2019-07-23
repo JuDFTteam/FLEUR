@@ -40,7 +40,8 @@ CONTAINS
       USE m_types
       USE m_juDFT
       USE m_constants, ONLY: pi_const
-      USE m_olap, ONLY: olap_pw, gptnorm
+      USE m_olap, ONLY: olap_pw
+      use m_types_hybrid, only: gptnorm
       USE m_trafo, ONLY: symmetrize, bramat_trafo
       USE m_util, ONLY: intgrf, intgrf_init, primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix

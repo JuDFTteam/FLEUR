@@ -151,16 +151,6 @@ CONTAINS
       endif
    END SUBROUTINE olap_pwp
 
-   PURE FUNCTION gptnorm(gpt, bmat)
-      IMPLICIT NONE
-      REAL                :: gptnorm
-      INTEGER, INTENT(IN)  :: gpt(3)
-      REAL, INTENT(IN)     :: bmat(3, 3)
-
-      gptnorm = sqrt(sum(matmul(gpt(:), bmat(:, :))**2))
-
-   END FUNCTION gptnorm
-
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
    SUBROUTINE wfolap_init(olappw, olapmt, gpt,&

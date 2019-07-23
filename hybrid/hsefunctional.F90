@@ -971,7 +971,7 @@ CONTAINS
       potential, muffintin, interstitial)
 
       USE m_constants
-      USE m_olap, ONLY: gptnorm
+      USE m_types_hybrid, ONLY: gptnorm
       USE m_util, ONLY: sphbessel, pure_intgrf, intgrf_init, intgrf_out, NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
 
       IMPLICIT NONE
