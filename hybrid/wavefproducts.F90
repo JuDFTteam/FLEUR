@@ -50,7 +50,7 @@ CONTAINS
       INTEGER                 ::    i, ikpt, ic, iband, ig, ig2, ig1
       INTEGER                 ::    iatom, iiatom, itype, ieq, ishift
       INTEGER                 ::    ibando, iatom1, iatom2, ioffset
-      INTEGER                 ::    k, l, p, l1, m1, l2, m2, p1, p2, n, ok
+      INTEGER                 ::    l, p, l1, m1, l2, m2, p1, p2, n, ok
       INTEGER                 ::    igptm, iigptm
       INTEGER                 ::    lm, lm1, lm2, lm_0, lm_00, lm1_0, lm2_0, lmp1, lmp2, lmp3, lmp4, lp1, lp2
       INTEGER                 ::    j, ll, m
@@ -1045,7 +1045,7 @@ CONTAINS
 !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
       INTEGER                 ::  itype, ieq, ikpt, iband, iband1
-      INTEGER                 ::  k, ic1, ig1, ig2, ig
+      INTEGER                 ::  ic1, ig1, ig2, ig
       INTEGER                 ::  igptm, iigptm, nbasm_ir, ngpt0, nbasfcn, ok, m
 
       REAL                    ::  rdum, svol, s2
