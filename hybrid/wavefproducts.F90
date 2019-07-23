@@ -155,9 +155,7 @@ CONTAINS
       DO ig1 = 1, lapw%nv(jsp)
          DO igptm = 1, hybrid%ngptm(iq)
             iigptm = hybrid%pgptm(igptm, iq)
-            g(1) = lapw%k1(ig1, jsp) + hybrid%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + hybrid%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + hybrid%gptm(3, iigptm) - g_t(3)
+            g = lapw%gvec(:,ig1,jsp) + hybrid%gptm(:, iigptm) - g_t
             IF (pointer(g(1), g(2), g(3)) == 0) THEN
                ic = ic + 1
                gpt0(:, ic) = g
