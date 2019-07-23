@@ -18,32 +18,6 @@ MODULE m_types_misc
       REAL :: core
    END TYPE t_energy_hf
 
-   TYPE prodtype
-      INTEGER :: l1,l2,n1,n2
-   END TYPE prodtype
-
-   TYPE t_hybdat
-      INTEGER              :: lmaxcd,maxindxc
-      REAL,  ALLOCATABLE   ::  gridf(:,:)                                    !alloc in util.F
-      INTEGER , ALLOCATABLE::  nindxc(:,:)                                   !alloc in eigen_HF_init
-      INTEGER,ALLOCATABLE  :: lmaxc(:)                                       !alloc in eigen_HF_init
-      REAL,    ALLOCATABLE ::  core1(:,:,:,:),core2(:,:,:,:)                 !alloc in eigen_HF_init
-      REAL,    ALLOCATABLE ::  eig_c(:,:,:)                                  !alloc in eigen_HF_init
-      INTEGER , ALLOCATABLE::  kveclo_eig(:,:)                               !alloc in eigen_HF_setup
-      INTEGER              ::  maxfac
-      REAL,    ALLOCATABLE ::  sfac(:),fac(:)                                !alloc in eigen_HF_init
-      REAL,    ALLOCATABLE ::  gauntarr(:,:,:,:,:,:)                         !alloc in eigen_HF_init
-      REAL,    ALLOCATABLE ::  bas1(:,:,:,:),bas2(:,:,:,:)                   !alloc in eigen_HF_init
-      REAL ,   ALLOCATABLE ::  bas1_MT(:,:,:),drbas1_MT(:,:,:)               !alloc in eigen_HF_init
-      REAL, ALLOCATABLE    ::  prodm(:,:,:,:)                                !alloc in eigen_HF_setup
-      TYPE(PRODTYPE),ALLOCATABLE :: prod(:,:,:)                              !alloc in eigen_HF_setup
-      INTEGER, ALLOCATABLE :: pntgptd(:)                                     !alloc in eigen_HF_setup
-      INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:)                                !alloc in eigen_HF_setup
-      INTEGER,ALLOCATABLE   ::  nindxp1(:,:)
-      REAL, ALLOCATABLE   ::  stepfunc_r(:,:,:)
-      COMPLEX,ALLOCATABLE ::  stepfunc_c(:,:,:)
-   END TYPE t_hybdat
-
    TYPE t_results
       REAL, ALLOCATABLE    :: force(:,:,:)   !< Forces calculated on all atoms (for each spin)
       REAL, ALLOCATABLE    :: force_old(:,:) !< Forces on all atoms from last iteration
@@ -95,7 +69,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      CLASS(t_zMat),      INTENT(INOUT) :: thisZMat
+   CLASS(t_zMat),      INTENT(INOUT) :: thisZMat
       LOGICAL,            INTENT(IN)    :: l_real
       INTEGER,            INTENT(IN)    :: nbasfcn,nbands
 
@@ -122,7 +96,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      CLASS(t_results),      INTENT(INOUT) :: thisResults
+   CLASS(t_results),      INTENT(INOUT) :: thisResults
       TYPE(t_dimension),     INTENT(IN)    :: dimension
       TYPE(t_input),         INTENT(IN)    :: input
       TYPE(t_atoms),         INTENT(IN)    :: atoms
@@ -151,7 +125,7 @@ CONTAINS
       thisResults%ef              = 0.0
 
       neigd2 = MIN(dimension%neigd,dimension%nbasfcn)
-!   neigd2 = dimension%neigd
+      !   neigd2 = dimension%neigd
       IF (noco%l_soc.AND.(.NOT.noco%l_noco)) neigd2 = 2*neigd2
 
       ALLOCATE (thisResults%force(3,atoms%ntype,input%jspins));thisResults%force=0.0
