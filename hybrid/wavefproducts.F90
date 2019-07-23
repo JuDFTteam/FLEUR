@@ -62,7 +62,7 @@ CONTAINS
       REAL                    ::    fac, fac1, fac2
       REAL                    ::    monepl1, monepl2, monepl, monepm1, monepm, moneplm, monepl1m1
       COMPLEX                 ::    cdum, cfac
-      COMPLEX, PARAMETER       ::    img = (0.0, 1.0)
+      COMPLEX, PARAMETER      ::    img = (0.0, 1.0)
       LOGICAL                 ::    offdiag
       TYPE(t_lapw)            ::    lapw_nkqpt
 
