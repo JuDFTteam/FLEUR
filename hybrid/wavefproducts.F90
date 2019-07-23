@@ -47,7 +47,7 @@ CONTAINS
       REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       ! - local scalars -
-      INTEGER                 ::    i, ikpt, ic, iband, iband1, igpt, igptp, ig, ig2, ig1
+      INTEGER                 ::    i, ikpt, ic, iband, ig, ig2, ig1
       INTEGER                 ::    iatom, iiatom, itype, ieq, ishift
       INTEGER                 ::    ibando, iatom1, iatom2, ioffset
       INTEGER                 ::    k, l, p, l1, m1, l2, m2, p1, p2, n, ok
@@ -61,8 +61,7 @@ CONTAINS
       REAL                    ::    add1, add2
       REAL                    ::    fac, fac1, fac2
       REAL                    ::    monepl1, monepl2, monepl, monepm1, monepm, moneplm, monepl1m1
-      COMPLEX                 ::    fexp
-      COMPLEX                 ::    cdum, cconst, cfac
+      COMPLEX                 ::    cdum, cfac
       COMPLEX, PARAMETER       ::    img = (0.0, 1.0)
       LOGICAL                 ::    offdiag
       TYPE(t_lapw)            ::    lapw_nkqpt
@@ -74,7 +73,6 @@ CONTAINS
       INTEGER, ALLOCATABLE    ::    pointer(:, :, :)
 
       REAL                    ::    kqpt(3), kqpthlp(3)
-      REAL                    ::    bkpt(3)
       REAL                    ::    cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       REAL                    ::    cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       REAL                    ::    rarr1(bandoi:bandof)
@@ -1063,11 +1061,11 @@ CONTAINS
 !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
       INTEGER                 ::  itype, ieq, ikpt, ikpt1, ikpt2, iband, iband1
-      INTEGER                 ::  k, ic1, ioffset, ig1, ig2, ig
+      INTEGER                 ::  k, ic1, ig1, ig2, ig
       INTEGER                 ::  igptm, iigptm
       INTEGER                 ::  q
       INTEGER                 ::  nbasm_ir, ngpt0
-      INTEGER                 ::  nbasmmt, nbasfcn
+      INTEGER                 ::  nbasfcn
       INTEGER                 ::  ok, m
 
       REAL                    ::  rdum, svol, s2
@@ -1085,7 +1083,6 @@ CONTAINS
       INTEGER, ALLOCATABLE    ::  gpt0(:, :)
       INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
 
-      REAL                    ::  bkpt(3)
       REAL                    ::  kqpt(3), kqpthlp(3)
 
       COMPLEX                 ::  carr1(bandoi:bandof)
