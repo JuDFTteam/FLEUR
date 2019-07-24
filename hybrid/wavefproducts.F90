@@ -132,7 +132,7 @@ CONTAINS
      &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
      &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
-      call hybdat%set_stepfunction(cell, atoms,g)
+      call hybdat%set_stepfunction(cell, atoms,g, svol)
       !
       ! convolute phi(n,k) with the step function and store in cpw0
       !
@@ -150,7 +150,7 @@ CONTAINS
          rarr1 = z_kqpt%data_r(ig2, bandoi:bandof)
          DO ig = 1, ngpt0
             g = gpt0(:,ig) - lapw_nkqpt%gvec(:,ig2,jsp)
-            rdum = hybdat%stepfunc(g(1), g(2), g(3))/svol
+            rdum = hybdat%stepfunc(g(1), g(2), g(3))
             DO n2 = bandoi, bandof
                z0(n2, ig) = z0(n2, ig) + rarr1(n2)*rdum
             END DO
@@ -1084,7 +1084,7 @@ CONTAINS
      &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
      &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
-      call hybdat%set_stepfunction(cell, atoms,g)
+      call hybdat%set_stepfunction(cell, atoms,g, svol)
 
       !
       ! convolute phi(n,k) with the step function and store in cpw0
@@ -1102,7 +1102,7 @@ CONTAINS
          carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
          DO ig = 1, ngpt0
             g = gpt0(:, ig) - lapw_nkqpt%gvec(:,ig2, jsp)
-            cdum = hybdat%stepfunc(g(1), g(2), g(3))/svol
+            cdum = hybdat%stepfunc(g(1), g(2), g(3))
             DO n2 = bandoi, bandof
                z0(n2, ig) = z0(n2, ig) + carr1(n2)*cdum
             END DO

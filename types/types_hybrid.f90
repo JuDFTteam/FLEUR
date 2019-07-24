@@ -68,7 +68,7 @@ MODULE m_types_hybrid
    END TYPE t_hybdat
 
 contains
-   subroutine set_stepfunction(hybdat, cell, atoms, g)
+   subroutine set_stepfunction(hybdat, cell, atoms, g, svol)
       use m_types_setup
       use m_judft
       implicit none
@@ -76,6 +76,7 @@ contains
       type(t_cell),  INTENT(in)    :: cell
       type(t_atoms), INTENT(in)    :: atoms
       integer,       INTENT(in)    :: g(3)
+      real,          INTENT(in)    :: svol
       integer :: i, j, k, ok
 
       if (.not. allocated(hybdat%stepfunc)) then
@@ -88,7 +89,7 @@ contains
          DO i = -g(1), g(1)
             DO j = -g(2), g(2)
                DO k = -g(3), g(3)
-                  hybdat%stepfunc(i, j, k) = stepfunction(cell, atoms, [i, j, k])
+                  hybdat%stepfunc(i, j, k) = stepfunction(cell, atoms, [i, j, k])/svol
                END DO
             END DO
          END DO
