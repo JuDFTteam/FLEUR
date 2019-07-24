@@ -1080,11 +1080,6 @@ CONTAINS
      &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
      &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
-      ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
-      IF (ok /= 0) STOP 'wavefproducts_noinv2: error allocation pointer'
-      ALLOCATE (gpt0(3, size(pointer)), stat=ok)
-      IF (ok /= 0) STOP 'wavefproducts_noinv2: error allocation gpt0'
-
       call hybdat%set_stepfunction(cell, atoms,g)
 
       !
