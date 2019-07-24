@@ -226,6 +226,10 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
            CALL judft_warn("l_noco=F and l_ss=T is meaningless. Setting l_ss to F.")
            noco%l_ss = .FALSE.
         END IF
+        IF (noco%l_mperp) THEN
+           CALL judft_warn("l_noco=F and l_mperp=T is meaningless. Setting l_mperp to F.")
+           noco%l_mperp = .FALSE.
+        END IF
      END IF
 
      ! Calculate missing kpts parameters
