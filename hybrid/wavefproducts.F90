@@ -128,6 +128,10 @@ CONTAINS
       call read_z(z_kqpt, nkqpt)
       call timestop("read_z")
 
+      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
+     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+     &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
+
       call hybdat%set_stepfunction(cell, atoms,g)
       !
       ! convolute phi(n,k) with the step function and store in cpw0
