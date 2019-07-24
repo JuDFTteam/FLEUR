@@ -128,37 +128,13 @@ CONTAINS
       call read_z(z_kqpt, nkqpt)
       call timestop("read_z")
 
-      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
-     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-     &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
-
-      ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
-      IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation pointer'
-      ALLOCATE (gpt0(3, size(pointer)), stat=ok)
-      IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation gpt0'
-
       call hybdat%set_stepfunction(cell, atoms,g)
       !
       ! convolute phi(n,k) with the step function and store in cpw0
       !
 
       !(1) prepare list of G vectors
-      call timestart("prep list of Gvec")
-      pointer = 0
-      ic = 0
-      DO ig1 = 1, lapw%nv(jsp)
-         DO igptm = 1, hybrid%ngptm(iq)
-            iigptm = hybrid%pgptm(igptm, iq)
-            g = lapw%gvec(:,ig1,jsp) + hybrid%gptm(:, iigptm) - g_t
-            IF (pointer(g(1), g(2), g(3)) == 0) THEN
-               ic = ic + 1
-               gpt0(:, ic) = g
-               pointer(g(1), g(2), g(3)) = ic
-            END IF
-         END DO
-      END DO
-      ngpt0 = ic
-      call timestop("prep list of Gvec")
+      call prep_list_of_gvec(lapw, lapw_nkqpt, hybrid, g_t, iq, jsp, pointer, gpt0, ngpt0)
 
       !(2) calculate convolution
       call timestart("calc convolution")
@@ -1048,7 +1024,7 @@ CONTAINS
       INTEGER                 ::  g(3), g_t(3)
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
       INTEGER, ALLOCATABLE    ::  gpt0(:, :)
-      INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
+      INTEGER, ALLOCATABLE    ::  pointer(:,:,:)
 
       REAL                    ::  kqpt(3), kqpthlp(3)
 
@@ -1116,22 +1092,7 @@ CONTAINS
       !
 
       !(1) prepare list of G vectors
-      call timestart("prep list of Gvec")
-      pointer = 0
-      ic = 0
-      DO ig1 = 1, lapw%nv(jsp)
-         DO igptm = 1, hybrid%ngptm(iq)
-            iigptm = hybrid%pgptm(igptm, iq)
-            g = lapw%gvec(:,ig1,jsp) + hybrid%gptm(:, iigptm) - g_t
-            IF (pointer(g(1), g(2), g(3)) == 0) THEN
-               ic = ic + 1
-               gpt0(:, ic) = g
-               pointer(g(1), g(2), g(3)) = ic
-            END IF
-         END DO
-      END DO
-      ngpt0 = ic
-      call timestop("prep list of Gvec")
+      call prep_list_of_gvec(lapw, lapw_nkqpt, hybrid, g_t, iq, jsp, pointer, gpt0, ngpt0)
 
       !(2) calculate convolution
       call timestart("calc convolution")
@@ -1289,4 +1250,43 @@ CONTAINS
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
+
+   subroutine prep_list_of_gvec(lapw, lapw_nkqpt, hybrid, g_t, iq,jsp, pointer,gpt0, ngpt0)
+      use m_types
+      use m_juDFT
+      implicit none
+      type(t_lapw),         intent(in)    :: lapw, lapw_nkqpt
+      type(t_hybrid),       intent(in)    :: hybrid
+      integer,              intent(in)    ::  g_t(3), iq, jsp
+      integer, allocatable, intent(inout) :: pointer(:,:,:), gpt0(:,:)
+      integer,              intent(inout) :: ngpt0
+
+      integer :: g(3), ic, ig1, igptm, iigptm, ok
+
+      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
+        + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+        + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
+
+      ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
+      IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation pointer')
+      ALLOCATE (gpt0(3, size(pointer)), stat=ok)
+      IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation gpt0')
+
+      call timestart("prep list of Gvec")
+      pointer = 0
+      ic = 0
+      DO ig1 = 1, lapw%nv(jsp)
+         DO igptm = 1, hybrid%ngptm(iq)
+            iigptm = hybrid%pgptm(igptm, iq)
+            g = lapw%gvec(:,ig1,jsp) + hybrid%gptm(:, iigptm) - g_t
+            IF (pointer(g(1), g(2), g(3)) == 0) THEN
+               ic = ic + 1
+               gpt0(:, ic) = g
+               pointer(g(1), g(2), g(3)) = ic
+            END IF
+         END DO
+      END DO
+      ngpt0 = ic
+      call timestop("prep list of Gvec")
+   end subroutine prep_list_of_gvec
 END MODULE m_wavefproducts
