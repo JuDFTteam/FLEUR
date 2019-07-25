@@ -8,9 +8,10 @@ greensf/angles.f90
 greensf/onsite.f90
 greensf/kkintgr.f90
 greensf/tetra_weights.f90
-greensf/gfcalc.f90
-greensf/j0.f90
 greensf/kk_cutoff.f90
+greensf/gfcalc.f90
+greensf/crystalfield.f90
+greensf/j0.f90
 greensf/ind_greensf.f90
 greensf/hybridization.f90
 greensf/occmtx.f90

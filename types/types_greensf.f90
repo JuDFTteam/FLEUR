@@ -253,7 +253,11 @@ MODULE m_types_greensf
             de = (et-eb)/REAL(this%nz-1)
             DO iz = 1, this%nz
                this%e(iz) = (iz-1) * de + eb + ImagUnit * input%gf_sigma
-               this%de(iz) = de
+               IF(input%gf_dosfermi) THEN
+                  this%de(iz) = de * 1.0/(1.0+exp_save((REAL(this%e(iz))-ef)/input%gf_sigma))
+               ELSE
+                  this%de(iz) = de
+               ENDIF
             ENDDO
 
          ELSE
@@ -292,9 +296,9 @@ MODULE m_types_greensf
          REAL   , OPTIONAL,   INTENT(IN)  :: udot(2,input%jspins)
 
          INTEGER matsize1,matsize2,i_gf,i,j,ind1,ind2,ind1_start,ind2_start
-         INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end
+         INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end,spin_ind
          INTEGER lp_loop
-         LOGICAL l_radial
+         LOGICAL l_radial,l_full
 
          IF(PRESENT(u).OR.PRESENT(udot).AND.input%l_gfsphavg) THEN
             CALL juDFT_error("Greens function not calculated for radial dependence", calledby="get_gf")
@@ -311,15 +315,20 @@ MODULE m_types_greensf
             IF(spin.GT.4.OR.spin.LT.1) THEN
                CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
             ENDIF
-         ENDIF
+         END IF
          
          !Determine matsize for the result gmat (if spin is given only return this digonal element)
-         matsize1 = (2*l+1) * MERGE(1,input%jspins,PRESENT(spin))
+         l_full = .NOT.PRESENT(spin)
+         matsize1 = (2*l+1) * MERGE(2,1,l_full)
+         
          IF(PRESENT(lp)) THEN
-            matsize2 = (2*lp+1) * MERGE(1,input%jspins,PRESENT(spin))
+            matsize2 = (2*lp+1) * MERGE(2,1,l_full)
          ELSE
             matsize2 = matsize1
          ENDIF 
+         !If we give no spin argument and we have only one spin in the 
+         !calculation we blow up the one spin to the full matrix
+
          CALL gmat%init(.FALSE.,matsize1,matsize2)
 
          IF(.NOT.PRESENT(lp)) THEN
@@ -333,16 +342,17 @@ MODULE m_types_greensf
          ipm = MERGE(2,1,l_conjg)
 
          gmat%data_c = 0.0
-         ispin_end = MERGE(3,input%jspins,input%l_gfmperp)
+         ispin_end = MERGE(3,2,input%l_gfmperp)
 
-         DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
+         DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
             !Find the right quadrant in gmat according to the spin index
             spin1 = MERGE(ispin,1,ispin.NE.3)
             spin1 = MERGE(spin1,2,ispin.NE.4)
             spin2 = MERGE(ispin,2,ispin.NE.3)
             spin2 = MERGE(spin2,1,ispin.NE.4)
-            
-            IF(.NOT.PRESENT(spin)) THEN
+
+            spin_ind = MERGE(ispin,1,input%jspins.EQ.2)
+            IF(l_full) THEN
                ind1_start = (spin1-1)*(2*l+1) 
                ind2_start = (spin2-1)*(2*lp_loop+1) 
             ELSE 
@@ -356,12 +366,17 @@ MODULE m_types_greensf
                DO mp = -lp_loop,lp_loop
                   ind2 = ind2 + 1
                   IF(l_radial) THEN
-                     gmat%data_c(ind1,ind2) = this%uu(iz,i_gf,m,mp,ispin,ipm) * u(1,spin1)*u(2,spin2) + &
-                                              this%dd(iz,i_gf,m,mp,ispin,ipm) * udot(1,spin1)*udot(2,spin2) + &
-                                              this%du(iz,i_gf,m,mp,ispin,ipm) * udot(1,spin1)*u(2,spin2) + &
-                                              this%ud(iz,i_gf,m,mp,ispin,ipm) * u(1,spin1)*udot(2,spin2) 
+                     gmat%data_c(ind1,ind2) = this%uu(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*u(2,spin2) + &
+                                              this%dd(iz,i_gf,m,mp,spin_ind,ipm) * udot(1,spin1)*udot(2,spin2) + &
+                                              this%du(iz,i_gf,m,mp,spin_ind,ipm) * udot(1,spin1)*u(2,spin2) + &
+                                              this%ud(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*udot(2,spin2) 
                   ELSE        
-                     gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,ispin,ipm)
+                     IF(l_full.AND.ispin.EQ.2.AND.input%jspins.EQ.1) THEN
+                        !In this case the ordering of m and mp has to be reversed
+                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,-m,-mp,spin_ind,ipm)/2.0
+                     ELSE
+                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,spin_ind,ipm)/(3-input%jspins)
+                     ENDIF
                   ENDIF
                ENDDO
             ENDDO

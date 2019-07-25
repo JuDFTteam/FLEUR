@@ -120,13 +120,13 @@ CONTAINS
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
-      INTEGER            :: ldau_l(4), hub1_l(4),hub1_excl(4,3), onsiteGF_l(4), numVac, numU, numOnsite, numHIA, numaddArgs(4), numaddExc(4), numJ0, j0_min, j0_max  
+      INTEGER            :: ldau_l(4), hub1_l(4),hub1_excl(4,3), onsiteGF_lmin,onsiteGF_lmax,intersiteGF_lmin,intersiteGF_lmax, numVac, numU, numOnsite, numIntersite, numHIA, numaddArgs(4), numaddExc(4), numJ0, j0_min, j0_max  
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
       REAL               :: bk(3)
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
-      LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
+      LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp,onsiteGF_loff,intersiteGF_loff,intersiteGF_lnn
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_occ(4),hub1_val(4,5),hub1_exc(4,3),hub1_mom(4,3), tempReal
       REAL               :: ldau_phi(4),ldau_theta(4)
@@ -748,6 +748,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             input%gf_n = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n'))
             input%gf_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@sigma'))
             input%gf_anacont = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@analytical_cont'))
+            input%gf_dosfermi = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_fermi'))
          ENDIF
 
          IF(input%gf_mode.EQ.0) CALL juDFT_error("No energy contour read", calledby="r_inpXML")
@@ -1547,12 +1548,12 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          
          !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
          numOnsite = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/onsiteGF')
-         IF (numOnsite.GT.4) CALL juDFT_error("Too many l parameters for onsite GF provided for a certain species (maximum is 4).",calledby ="r_inpXML")
-         onsiteGF_l = -1
-         DO i = 1, numOnsite
+         IF(numOnsite.EQ.1) THEN
             WRITE(xPathB,*) i
-            onsiteGF_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/onsiteGF['//TRIM(ADJUSTL(xPathB))//']/@l'))
-         ENDDO
+            onsiteGF_lmin = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/onsiteGF/@l_min'))
+            onsiteGF_lmax = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/onsiteGF/@l_max'))
+            onsiteGF_loff = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/onsiteGF/@l_offdiag'))
+         ENDIF
 
          !Special element for J0 calculations with multiple l-blocks
          numJ0 = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/J0')
@@ -1562,20 +1563,24 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
             j0_avgexc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_avgexc'))
          ENDIF
 
+         numIntersite = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/intersiteGF')
+         IF(numIntersite.EQ.1) THEN
+            WRITE(xPathB,*) i
+            intersiteGF_lmin = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/intersiteGF/@l_min'))
+            intersiteGF_lmax = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/intersiteGF/@l_max'))
+            intersiteGF_loff = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/intersiteGF/@l_offdiag'))
+            intersiteGF_lnn  = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/intersiteGF/@l_nearestn'))
+         ENDIF
+
          DO iType = 1, atoms%ntype
             WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
             IF(TRIM(ADJUSTL(atoms%speciesName(iSpecies))).EQ.TRIM(ADJUSTL(valueString))) THEN
                DO i = 1, numHIA
-                  input%l_gf  = .true. 
                   atoms%n_hia = atoms%n_hia + 1
-                  atoms%n_gf  = atoms%n_gf + 1
 
                   !Add Greens functions
-                  atoms%gfelem(atoms%n_gf)%l        = hub1_l(i)
-                  atoms%gfelem(atoms%n_gf)%atomType = iType
-                  atoms%gfelem(atoms%n_gf)%lp        = hub1_l(i)
-                  atoms%gfelem(atoms%n_gf)%atomTypep = iType
+                  CALL add_gfjob(iType,hub1_l(i),hub1_l(i),atoms,.FALSE.,.FALSE.,.FALSE.)
                   IF(atoms%n_hia+atoms%n_u.GT.4*atoms%ntype) CALL juDFT_error("Too many U-parameters",calledby="r_inpXML")
                   !Hubbard 1 U-information
                   atoms%lda_u(atoms%n_u+atoms%n_hia)%l        = hub1_l(i)
@@ -1625,48 +1630,21 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                      hub1%ccf(atoms%n_hia) = 1.0
                   ENDIF
                ENDDO
-               DO i = 1, numOnsite
-                  !Is the green's function already being calculated
-                  l_found = .false.
-                  DO j = 1, atoms%n_gf
-                     IF(atoms%gfelem(j)%l.EQ.onsiteGF_l(i).AND.atoms%gfelem(j)%atomType.EQ.iType) THEN 
-                        l_found = .true.
-                     ENDIF
-                  ENDDO
-                  IF(l_found) CYCLE
-                  input%l_gf = .true. 
-                  atoms%n_gf = atoms%n_gf + 1
-                  atoms%gfelem(atoms%n_gf)%l = onsiteGF_l(i)
-                  atoms%gfelem(atoms%n_gf)%atomType = iType
-                  atoms%gfelem(atoms%n_gf)%lp = onsiteGF_l(i)
-                  atoms%gfelem(atoms%n_gf)%atomTypep = iType
-               ENDDO
+               IF(numOnsite.EQ.1) CALL add_gfjob(iType,onsiteGF_lmin,onsiteGF_lmax,atoms,onsiteGF_loff,.FALSE.,.FALSE.)
                IF(numJ0.EQ.1) THEN
                   atoms%n_j0 = atoms%n_j0 + 1
                   atoms%j0(atoms%n_j0)%atomType = iType
                   atoms%j0(atoms%n_j0)%l_min = j0_min
                   atoms%j0(atoms%n_j0)%l_max = j0_max
                   atoms%j0(atoms%n_j0)%l_avgexc = j0_avgexc
-                  !Add the l-blocks to the greens functions
-                  DO l = j0_min, j0_max
-                     l_found = .false.
-                     DO j = 1, atoms%n_gf
-                        IF(atoms%gfelem(j)%l.EQ.l.AND.atoms%gfelem(j)%atomType.EQ.iType) THEN 
-                           l_found = .true.
-                        ENDIF
-                     ENDDO
-                     IF(l_found) CYCLE
-                     input%l_gf = .true. 
-                     atoms%n_gf = atoms%n_gf + 1
-                     atoms%gfelem(atoms%n_gf)%l = l
-                     atoms%gfelem(atoms%n_gf)%atomType = iType
-                     atoms%gfelem(atoms%n_gf)%lp = l
-                     atoms%gfelem(atoms%n_gf)%atomTypep = iType
-                  ENDDO
+                  !Add the greens functions
+                  CALL add_gfjob(iType,j0_min,j0_max,atoms,.FALSE.,.FALSE.,.FALSE.)
                ENDIF
+               IF(numIntersite.EQ.1) CALL add_gfjob(iType,intersiteGF_lmin,intersiteGF_lmax,atoms,intersiteGF_loff,.TRUE.,intersiteGF_lnn)
             ENDIF 
          ENDDO
       ENDDO
+      IF(atoms%n_gf>0) input%l_gf = .true.
 
       atoms%lmaxd = MAXVAL(atoms%lmax(:))
       atoms%llod  = 0

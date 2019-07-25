@@ -80,9 +80,9 @@ CONTAINS
          CALL gmat%init(.TRUE.,2*ns,2*ns)
          CALL jmat%init(.TRUE.,2*ns,2*ns)
          !spin-up
-         gmat%data_r(1:ns,1:ns) = REAL(mmpmat(-l:l,-l:l,1))
+         gmat%data_r(1:ns,1:ns) = REAL(mmpmat(-l:l,-l:l,1))/input%jspins
          !spin-down
-         gmat%data_r(ns+1:2*ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,2))
+         gmat%data_r(ns+1:2*ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,MIN(2,input%jspins)))/input%jspins
          !spin-offdiagonal
          IF(input%l_gfmperp) THEN
             gmat%data_r(1:ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,3))
@@ -98,12 +98,13 @@ CONTAINS
             ndwn = ndwn + gmat%data_r(i,i)
          ENDDO
          !Write to file
+         WRITE(6,*)
 9000     FORMAT("Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
          WRITE(6,9000) nType, l
          WRITE(6,"(A)") "In the |L,S> basis:"
-         WRITE(6,"(14f8.5)") gmat%data_r
-         WRITE(6,"(1x,A,f8.5)") "Spin-Up trace: ", nup
-         WRITE(6,"(1x,A,f8.5)") "Spin-Down trace: ", ndwn
+         WRITE(6,"(14f8.4)") gmat%data_r
+         WRITE(6,"(1x,A,f8.4)") "Spin-Up trace: ", nup
+         WRITE(6,"(1x,A,f8.4)") "Spin-Down trace: ", ndwn
 
          !Obtain the conversion matrix to the |J,mj> basis
          CALL cmat%init(.TRUE.,2*ns,2*ns)
@@ -114,17 +115,19 @@ CONTAINS
          !Calculate the low/high j trace
          nlow = 0.0
          DO i = 1, ns-1
-            nlow = nlow + gmat%data_r(i,i)
+            nlow = nlow + jmat%data_r(i,i)
          ENDDO
          nhi = 0.0
          DO i = ns, 2*ns
-            nhi = nhi + gmat%data_r(i,i)
+            nhi = nhi + jmat%data_r(i,i)
          ENDDO
-
+         
+         !Write to file
          WRITE(6,"(A)") "In the |J,mj> basis:"
-         WRITE(6,"(14f8.5)") jmat%data_r
-         WRITE(6,"(1x,A,f8.5)") "Low J trace: ", nlow
-         WRITE(6,"(1x,A,f8.5)") "High J trace: ", nhi
+         WRITE(6,"(14f8.4)") jmat%data_r
+         WRITE(6,"(1x,A,f8.4)") "Low J trace: ", nlow
+         WRITE(6,"(1x,A,f8.4)") "High J trace: ", nhi
+         WRITE(6,*)
       ENDIF
 
    END SUBROUTINE occmtx

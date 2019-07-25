@@ -4,6 +4,8 @@ MODULE m_gfDOS
    USE m_lsTOjmj
    USE m_constants
 
+   IMPLICIT NONE
+
    CONTAINS
 
 
@@ -19,10 +21,11 @@ MODULE m_gfDOS
       INTEGER,             INTENT(IN)  :: nType
       INTEGER,             INTENT(IN)  :: jobID
 
-      INTEGER iz,ipm,i
+      INTEGER iz,ipm,i,ns
       INTEGER io_error
       COMPLEX dos(4) !up,down,low,high (only at the current energy point)
       TYPE(t_mat) :: gmat,cmat,jmat
+      CHARACTER(len=10) :: filename
 
 
       IF(g%mode.NE.3) WRITE(*,*) "You are using an energy contour where the gfDOS might not be very informative"
@@ -56,10 +59,10 @@ MODULE m_gfDOS
             jmat%data_c = matmul(transpose(cmat%data_r),jmat%data_c)
             !Calculate low/high dos
             DO i = 1, ns-1
-               dos(3) = dos(3) - 1/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
+               dos(3) = dos(3) - 1/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
             ENDDO
             DO i = ns, 2*ns
-               dos(4) = dos(4) - 1/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
+               dos(4) = dos(4) - 1/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
             ENDDO
             CALL gmat%free()
          ENDDO 

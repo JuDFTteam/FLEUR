@@ -3,7 +3,6 @@ MODULE m_j0
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_gfcalc
    USE m_kkintgr
    USE m_ind_greensf
 

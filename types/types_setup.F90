@@ -453,6 +453,7 @@ MODULE m_types_setup
       INTEGER :: gf_nmatsub
       REAL    :: gf_sigma
       LOGICAL :: gf_anacont
+      LOGICAL :: gf_dosfermi
       LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps
@@ -723,4 +724,48 @@ CONTAINS
 
       nsp = (self%lmaxd+1+MOD(self%lmaxd+1,2))*(2*self%lmaxd+1)
    end function
+
+
+   SUBROUTINE add_gfjob(nType,lmin,lmax,atoms,l_off,l_inter,l_nn)
+
+         USE m_juDFT
+
+         INTEGER,          INTENT(IN)     :: nType
+         INTEGER,          INTENT(IN)     :: lmin
+         INTEGER,          INTENT(IN)     :: lmax
+         TYPE(t_atoms),    INTENT(INOUT)  :: atoms
+         LOGICAL,          INTENT(IN)     :: l_off !l!=lp
+         LOGICAL,          INTENT(IN)     :: l_inter
+         LOGICAL,          INTENT(IN)     :: l_nn
+
+         INTEGER l,lp,i_gf
+         LOGICAL l_found
+
+         IF(l_inter.AND..NOT.l_nn) CALL juDFT_error("Intersite greens function for not nearest neighbours not implemented",calledby="add_gfjob")
+
+         !TODO: add the nearest neighbours jobs
+
+         DO l = lmin, lmax
+            DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
+               !Check if this job has already been added
+               l_found = .FALSE.
+               DO i_gf = 1, atoms%n_gf
+                  IF(atoms%gfelem(i_gf)%l.NE.l) CYCLE
+                  IF(atoms%gfelem(i_gf)%lp.NE.lp) CYCLE
+                  IF(atoms%gfelem(i_gf)%atomType.NE.nType) CYCLE
+                  IF(atoms%gfelem(i_gf)%atomTypep.NE.nType) CYCLE
+                  l_found = .TRUE.
+               ENDDO
+               IF(l_found) CYCLE !This job is already in the array 
+
+               atoms%n_gf = atoms%n_gf + 1
+               atoms%gfelem(atoms%n_gf)%l = l
+               atoms%gfelem(atoms%n_gf)%atomType = nType
+               atoms%gfelem(atoms%n_gf)%lp = lp
+               atoms%gfelem(atoms%n_gf)%atomTypep = nType !For now
+
+            ENDDO
+         ENDDO
+
+      END SUBROUTINE add_gfjob
 END MODULE m_types_setup

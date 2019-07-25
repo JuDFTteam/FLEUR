@@ -37,13 +37,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_metagga
    USE m_unfold_band_kpts
    USE m_gfcalc
-   USE m_j0
    USE m_onsite
    USE m_angles
    USE m_hubbard1_io
-   USE m_gfDOS
-   USE m_occmtx
-   USE m_hybridization
    USE m_denmat_dist
    USE m_triang
 #ifdef CPP_MPI
