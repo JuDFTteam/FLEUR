@@ -98,6 +98,7 @@ CONTAINS
           WRITE(6,"(6(f10.6,1x))") eig(:ne,jsp)
        ENDIF
        CALL read_eig(eig_id,nk,jsp,list=[(i,i=1,ne)],zmat=zmat(jsp))
+       IF (.NOT.l_real) zmat(jsp)%data_c(:,:)=CONJG(zmat(jsp)%data_c(:,:))
 
        ! write(*,*) 'process',irank,' reads ',nk
 

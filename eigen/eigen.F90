@@ -222,9 +222,9 @@ CONTAINS
 #else
             ne_found=ne_all
 #endif
-            IF (.NOT.zMat%l_real) THEN
-               zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
-            END IF
+            !IF (.NOT.zMat%l_real) THEN
+            !   zMat%data_c(:lapw%nmat,:ne_found) = CONJG(zMat%data_c(:lapw%nmat,:ne_found))
+            !END IF
             IF (mpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
                 ! eigenvalues. 
