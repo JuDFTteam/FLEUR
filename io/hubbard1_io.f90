@@ -166,6 +166,9 @@ MODULE m_hubbard1_io
       ENDDO
       CALL writeValue(input_iounit, cfmat)
 
+      CLOSE(unit=input_iounit,iostat=io_error)
+      IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_new")
+
    END SUBROUTINE write_hubbard1_input_new
    
 

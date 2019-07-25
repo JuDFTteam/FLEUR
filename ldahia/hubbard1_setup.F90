@@ -22,6 +22,7 @@ MODULE m_hubbard1_setup
       USE m_vmmp
       USE m_add_selfen
       USE m_mudc
+      USE m_occmtx
       USE m_denmat_dist
 #ifdef CPP_EDSOLVER
       USE EDsolver, only: EDsolver_from_cfg

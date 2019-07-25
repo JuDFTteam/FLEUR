@@ -41,6 +41,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_onsite
    USE m_angles
    USE m_hubbard1_io
+   USE m_gfDOS
+   USE m_occmtx
+   USE m_hybridization
    USE m_denmat_dist
    USE m_triang
 #ifdef CPP_MPI
@@ -177,16 +180,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          IF(atoms%n_hia.GT.0.AND.ANY(hub1%ccf(:).NE.0.0)) THEN
            CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:))
          ENDIF
+         CALL hybridization(3,1,gOnsite,atoms,input)
+         CALL gfDOS(gOnsite,3,1,1,atoms,input)
          IF(input%jspins.EQ.2) THEN
             CALL eff_excinteraction(gOnsite,atoms,input,greensfCoeffs)
          ENDIF
-         CALL occmtx(gOnsite,3,1,atoms,sym,input,mmpmat(:,:,1,:))
-         WRITE(*,*) "spin-up"
-         WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,1)
-         WRITE(*,*) "spin-dwn"
-         WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,2)
-         !WRITE(*,*) "21"
-         !WRITE(*,"(14f14.8)") mmpmat(-3:3,-3:3,1,3)
+         CALL occmtx(gOnsite,3,1,atoms,sym,input,mmpmat(:,:,1,:),l_write=.TRUE.)
       ENDIF
    ENDIF
 

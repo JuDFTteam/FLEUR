@@ -27,66 +27,6 @@ MODULE m_gfcalc
 
    CONTAINS
 
-   SUBROUTINE occmtx(g,l,nType,atoms,sym,input,mmpMat,lp,nTypep)
-
-      USE m_ind_greensf
-      !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
-      !The Greens-function should already be prepared on a energy contour ending at e_fermi
-      !The occupation is calculated with:
-      !
-      ! n^sigma_mm' = -1/2pi int^Ef dz (G^+(z)^sigma_mm'-G^-(z)^sigma_mm')
-
-      IMPLICIT NONE
-
-      TYPE(t_greensf),        INTENT(IN)  :: g
-      TYPE(t_atoms),          INTENT(IN)  :: atoms
-      TYPE(t_sym),            INTENT(IN)  :: sym
-      TYPE(t_input),          INTENT(IN)  :: input
-      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(3,input%jspins,input%l_gfmperp))
-      INTEGER,                INTENT(IN)  :: l
-      INTEGER,                INTENT(IN)  :: nType
-      INTEGER, OPTIONAL,      INTENT(IN)  :: lp
-      INTEGER, OPTIONAL,      INTENT(IN)  :: nTypep
-
-      INTEGER ind1,ind2,ipm,iz,ispin,m,mp,lp_loop
-      LOGICAL l_vertcorr
-      REAL    re,imag
-      TYPE(t_mat) :: gmat
-
-      l_vertcorr = .false. !Enables/Disables a correction for the vertical parts of the rectangular contour
-
-      mmpMat(:,:,:) = CMPLX(0.0,0.0)
-
-      IF(.NOT.PRESENT(lp)) THEN
-         lp_loop = l 
-      ELSE 
-         lp_loop = lp 
-      ENDIF
-
-      !REPLACE: input%jspins --> MERGE(3,input%jspins,input%l_gfmperp)
-      DO ispin = 1, MERGE(3,input%jspins,input%l_gfmperp)
-         DO ipm = 1, 2
-            !Integrate over the contour:
-            DO iz = 1, g%nz
-               !get the corresponding gf-matrix
-               CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
-               ind1 = 0
-               DO m = -l, l
-                  ind1 = ind1 + 1
-                  ind2 = 0 
-                  DO mp = -lp_loop,lp_loop
-                     ind2 = ind2 + 1 
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) - 1/(2.0*pi_const*ImagUnit) * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
-                                                             * MERGE(g%de(iz),conjg(g%de(iz)),ipm.EQ.1)
-                  ENDDO
-               ENDDO
-               CALL gmat%free()
-            ENDDO
-         ENDDO
-      ENDDO
-
-   END SUBROUTINE occmtx
-
    SUBROUTINE crystal_field(atoms,input,greensfCoeffs,hub1,vu)
 
       !calculates the crystal-field matrix for the local hamiltonian

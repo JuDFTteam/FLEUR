@@ -22,6 +22,7 @@ MODULE m_add_selfen
       USE m_types
       USE m_constants
       USE m_gfcalc
+      USE m_occmtx
 
       IMPLICIT NONE
 

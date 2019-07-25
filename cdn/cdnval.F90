@@ -263,7 +263,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
          IF (atoms%n_gf.GT.0) THEN
             CALL timestart("Greens Function: Imaginary Part")
-               !CALL onsite_coeffs(atoms,input,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
                CALL greensfImag(atoms,sym,input,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
             IF(input%l_gfmperp.AND.ispin==jsp_end) THEN
                CALL greensfImag21(atoms,sym,angle,input,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)

@@ -34,7 +34,7 @@ CONTAINS
 
 
     LOGICAL    :: l_write,l_hia
-    REAL vrav(atoms%jmtd)
+    REAL       :: vrav(atoms%jmtd)
     INTEGER    :: i
     l_write=mpi%irank==0 
     !$ l_write = l_write .and. omp_get_num_threads()==1
