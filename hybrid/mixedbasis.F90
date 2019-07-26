@@ -295,7 +295,8 @@ CONTAINS
       length_kG = 0
       unsrt_pgptm = 0
 
-      DO
+      ldum = .FALSE.
+      DO WHILE(.not. ldum)
          n = n + 1
          ldum = .FALSE.
          DO x = -n, n
@@ -330,7 +331,6 @@ CONTAINS
                END DO
             END DO
          END DO
-         IF (.NOT. ldum) EXIT
       END DO
 
       ! Sort pointers in array, so that shortest |k+G| comes first

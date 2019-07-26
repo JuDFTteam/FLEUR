@@ -89,7 +89,7 @@ contains
          DO i = -g(1), g(1)
             DO j = -g(2), g(2)
                DO k = -g(3), g(3)
-                  hybdat%stepfunc(i, j, k) = stepfunction(cell, atoms, [i, j, k])/svol
+                  hybdat%stepfunc(i,j,k) = stepfunction(cell, atoms, [i, j, k])/svol
                END DO
             END DO
          END DO
