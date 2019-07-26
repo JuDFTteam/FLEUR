@@ -31,15 +31,20 @@ SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
    WRITE (6,FMT=9020)
    CALL openXMLElement('orbitalMagneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
    DO iType = 1, atoms%ntype
-      IF (noco%l_noco) THEN
-         thetai = noco%beta(iType)
-         phii   = noco%alph(iType)
-      END IF
-
       ! magn. moment(-)
       slxmom = clmom(1,iType,1)+clmom(1,iType,2)
       slymom = clmom(2,iType,1)+clmom(2,iType,2)
       slmom =  clmom(3,iType,1)+clmom(3,iType,2)
+
+      IF (noco%l_noco) THEN
+         thetai = noco%beta(iType)
+         phii   = noco%alph(iType)
+
+         !Fix of sign of moment in first variation calculations. Perhaps it would be better to understand this :-(
+         slxmom=-1*slxmom
+         slymom=-1*slymom
+         slmom=-1*slmom
+      END IF
 
       ! rotation: orbital moment || spin moment (extended to incude phi - hopefully)
       slmom   = cos(thetai)*slmom + sin(thetai)*(cos(phii)*slxmom + sin(phii)*slymom)
