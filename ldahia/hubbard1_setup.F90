@@ -244,7 +244,7 @@ MODULE m_hubbard1_setup
                   WRITE (l_type,'(i2)') 2*(2*l+1)
                   l_form = '('//l_type//'f12.7)'
                   WRITE (6,'(a20,i3)') 'n-matrix for atom # ',nType
-                  WRITE (6,l_form) ((mmpMat(k,j,i_hia,ispin),k=-l,l),j=-l,l)
+                  WRITE (6,l_form) ((den%mmpMat(k,j,i_hia,ispin),k=-l,l),j=-l,l)
                   WRITE (6,'(a20,i3)') 'V-matrix for atom # ',nType
                   IF (atoms%lda_u(i_hia)%l_amf) THEN
                      WRITE (6,*) 'using the around-mean-field limit '

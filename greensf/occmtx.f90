@@ -74,60 +74,62 @@ CONTAINS
       ENDDO
 
       !Io-part (ATM this subroutine is only called from rank 0)
-      IF(l_write.AND.lp_loop.EQ.l.AND.(.NOT.PRESENT(nTypep).OR.(PRESENT(nTypep).AND.nTypep.EQ.nType))) THEN
-         !Construct the full matrix in the |L,ml,ms> basis (real)
-         ns = 2*l+1
-         CALL gmat%init(.TRUE.,2*ns,2*ns)
-         CALL jmat%init(.TRUE.,2*ns,2*ns)
-         !spin-up
-         gmat%data_r(1:ns,1:ns) = REAL(mmpmat(-l:l,-l:l,1))/input%jspins
-         !spin-down
-         gmat%data_r(ns+1:2*ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,MIN(2,input%jspins)))/input%jspins
-         !spin-offdiagonal
-         IF(input%l_gfmperp) THEN
-            gmat%data_r(1:ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,3))
-            gmat%data_r(ns+1:2*ns,1:ns) = REAL(transpose(mmpmat(-l:l,-l:l,3)))
-         ENDIF
-         !Calculate the spin-up/down occupation
-         nup = 0.0
-         DO i = 1, ns
-            nup = nup + gmat%data_r(i,i)
-         ENDDO
-         ndwn = 0.0
-         DO i = ns+1, 2*ns
-            ndwn = ndwn + gmat%data_r(i,i)
-         ENDDO
-         !Write to file
-         WRITE(6,*)
-9000     FORMAT("Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
-         WRITE(6,9000) nType, l
-         WRITE(6,"(A)") "In the |L,S> basis:"
-         WRITE(6,"(14f8.4)") gmat%data_r
-         WRITE(6,"(1x,A,f8.4)") "Spin-Up trace: ", nup
-         WRITE(6,"(1x,A,f8.4)") "Spin-Down trace: ", ndwn
+      IF(PRESENT(l_write)) THEN
+         IF(l_write.AND.lp_loop.EQ.l.AND.(.NOT.PRESENT(nTypep).OR.(PRESENT(nTypep).AND.nTypep.EQ.nType))) THEN
+            !Construct the full matrix in the |L,ml,ms> basis (real)
+            ns = 2*l+1
+            CALL gmat%init(.TRUE.,2*ns,2*ns)
+            CALL jmat%init(.TRUE.,2*ns,2*ns)
+            !spin-up
+            gmat%data_r(1:ns,1:ns) = REAL(mmpmat(-l:l,-l:l,1))/(3-input%jspins)
+            !spin-down
+            gmat%data_r(ns+1:2*ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,MIN(2,input%jspins)))/(3-input%jspins)
+            !spin-offdiagonal
+            IF(input%l_gfmperp) THEN
+               gmat%data_r(1:ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,3))
+               gmat%data_r(ns+1:2*ns,1:ns) = REAL(transpose(mmpmat(-l:l,-l:l,3)))
+            ENDIF
+            !Calculate the spin-up/down occupation
+            nup = 0.0
+            DO i = 1, ns
+               nup = nup + gmat%data_r(i,i)
+            ENDDO
+            ndwn = 0.0
+            DO i = ns+1, 2*ns
+               ndwn = ndwn + gmat%data_r(i,i)
+            ENDDO
+            !Write to file
+            WRITE(6,*)
+9000        FORMAT("Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
+            WRITE(6,9000) nType, l
+            WRITE(6,"(A)") "In the |L,S> basis:"
+            WRITE(6,"(14f8.4)") gmat%data_r
+            WRITE(6,"(1x,A,f8.4)") "Spin-Up trace: ", nup
+            WRITE(6,"(1x,A,f8.4)") "Spin-Down trace: ", ndwn
 
-         !Obtain the conversion matrix to the |J,mj> basis
-         CALL cmat%init(.TRUE.,2*ns,2*ns)
-         CALL lsTOjmj(cmat,l)
-         !Perform the transformation
-         jmat%data_r = matmul(gmat%data_r,cmat%data_r)
-         jmat%data_r = matmul(transpose(cmat%data_r),jmat%data_r)
-         !Calculate the low/high j trace
-         nlow = 0.0
-         DO i = 1, ns-1
-            nlow = nlow + jmat%data_r(i,i)
-         ENDDO
-         nhi = 0.0
-         DO i = ns, 2*ns
-            nhi = nhi + jmat%data_r(i,i)
-         ENDDO
-         
-         !Write to file
-         WRITE(6,"(A)") "In the |J,mj> basis:"
-         WRITE(6,"(14f8.4)") jmat%data_r
-         WRITE(6,"(1x,A,f8.4)") "Low J trace: ", nlow
-         WRITE(6,"(1x,A,f8.4)") "High J trace: ", nhi
-         WRITE(6,*)
+            !Obtain the conversion matrix to the |J,mj> basis
+            CALL cmat%init(.TRUE.,2*ns,2*ns)
+            CALL lsTOjmj(cmat,l)
+            !Perform the transformation
+            jmat%data_r = matmul(gmat%data_r,cmat%data_r)
+            jmat%data_r = matmul(transpose(cmat%data_r),jmat%data_r)
+            !Calculate the low/high j trace
+            nlow = 0.0
+            DO i = 1, ns-1
+               nlow = nlow + jmat%data_r(i,i)
+            ENDDO
+            nhi = 0.0
+            DO i = ns, 2*ns
+               nhi = nhi + jmat%data_r(i,i)
+            ENDDO
+            
+            !Write to file
+            WRITE(6,"(A)") "In the |J,mj> basis:"
+            WRITE(6,"(14f8.4)") jmat%data_r
+            WRITE(6,"(1x,A,f8.4)") "Low J trace: ", nlow
+            WRITE(6,"(1x,A,f8.4)") "High J trace: ", nhi
+            WRITE(6,*)
+         ENDIF
       ENDIF
 
    END SUBROUTINE occmtx

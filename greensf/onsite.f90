@@ -24,7 +24,7 @@ INTEGER, PARAMETER :: int_method(3) = (/3,3,3/)
 
 CONTAINS
 
-SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,g,sym)
+SUBROUTINE calc_onsite(atoms,input,noco,greensfCoeffs,g,sym)
 
    USE m_kkintgr
    USE m_gfcalc
@@ -38,7 +38,6 @@ SUBROUTINE calc_onsite(atoms,input,noco,ef,greensfCoeffs,g,sym)
    TYPE(t_greensf),        INTENT(INOUT)  :: g
    TYPE(t_sym),            INTENT(IN)     :: sym
    TYPE(t_noco),           INTENT(IN)     :: noco
-   REAL,                   INTENT(IN)     :: ef
    TYPE(t_input),          INTENT(IN)     :: input
 
    !-Local Scalars

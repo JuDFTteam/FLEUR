@@ -19,9 +19,11 @@ MODULE m_crystalfield
 
    IMPLICIT NONE
 
+   LOGICAL, PARAMETER :: l_debug = .TRUE.
+
    CONTAINS
 
-   SUBROUTINE crystal_field(atoms,input,greensfCoeffs,hub1,vu)
+   SUBROUTINE crystal_field(atoms,input,greensfCoeffs,hub1,v)
 
       !calculates the crystal-field matrix for the local hamiltonian
 
@@ -34,55 +36,104 @@ MODULE m_crystalfield
       TYPE(t_hub1ham),       INTENT(INOUT) :: hub1
 
       !-Array Arguments
-      COMPLEX,               INTENT(IN)    :: vu(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins) !LDA+U potential (should be removed from h_loc)
+      TYPE(t_potden),        INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
 
       !-Local Scalars
-      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,spin_cut
-
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,spin_cut,i_u
+      REAL    tr,xiSOC
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
-      REAL :: integrand(greensfCoeffs%ne), norm(input%jspins),tr_hloc(atoms%n_hia,input%jspins)
+      REAL :: integrand(greensfCoeffs%ne)
 
       h_loc = 0.0
-      tr_hloc = 0.0
       DO i_hia = 1, atoms%n_hia
 
          l     = atoms%lda_u(atoms%n_u+i_hia)%l
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
          i_gf = ind_greensf(atoms,l,nType)
-         !Perform the integration 
-         !
+         !---------------------------------------------------------
+         ! Perform the integration 
+         !---------------------------------------------------------
          ! \int_{E_b}^{E_c} dE E * N_LL'(E)
-         !
-         norm = 0.0
+         !---------------------------------------------------------
+         ! N_LL' is the l projected density of states and 
+         ! connected to the imaginary part of the greens function 
+         ! with a factor -1/pi
+         !---------------------------------------------------------
          DO jspin = 1, input%jspins
+            !Use the same cutoffs as in the kramer kronigs integration
             spin_cut = MERGE(1,jspin,jspin.GT.2)
             kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,spin_cut,2)
             DO m = -l, l
                DO mp = -l, l
                   integrand = 0.0
                   DO ie = 1, kkcut
-                     integrand(ie) = ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) * greensfCoeffs%projdos(ie,i_gf,m,mp,jspin)
+                     integrand(ie) = -1.0/pi_const * ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) &
+                                     * greensfCoeffs%projdos(ie,i_gf,m,mp,jspin)
                   ENDDO
-                  h_loc(m,mp,i_hia,jspin) = trapz(integrand,greensfCoeffs%del,greensfCoeffs%ne)
+                  h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),greensfCoeffs%del,kkcut)
                ENDDO
-               !trace of the integrated E*projdos
-               tr_hloc(i_hia,jspin) = tr_hloc(i_hia,jspin) + h_loc(m,m,i_hia,jspin) - REAL(vu(m,m,i_hia,jspin))
             ENDDO
          ENDDO
-
+         IF(l_debug) THEN
+            WRITE(*,*) "UP"
+            WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,1)
+            WRITE(*,*) "DOWN"
+            WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
+         ENDIF
+         !Remove LDA+U and SOC potential 
+         i_u = atoms%n_u+i_hia !position in the v%mmpmat array 
+         DO jspin = 1, input%jspins
+            DO m = -l, l
+               DO mp = -l, l
+                  !LDA+U potential
+                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
+               ENDDO
+            ENDDO
+         ENDDO
+         !Determine the SOC splitting from the outermost elements (Better way??)
+         DO jspin = 1, input%jspins
+            xiSOC = ABS(h_loc(l,l,i_hia,jspin)-h_loc(-l,-l,i_hia,jspin))/(2.0*l)
+            WRITE(*,*) xiSOC
+            DO m = -l, l
+               h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - xiSOC * m * 2*(1.5-jspin)
+            ENDDO
+         ENDDO
+         IF(l_debug) THEN
+            WRITE(*,*) "UP-REMOVED"
+            WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,1)
+            WRITE(*,*) "DOWN-REMOVED"
+            WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
+         ENDIF
          !Average over spins
          hub1%ccfmat(i_hia,:,:) = 0.0
          DO m = -l, l
             DO mp = -l, l
-               hub1%ccfmat(i_hia,m,mp) = SUM(h_loc(m,mp,i_hia,:))/REAL(input%jspins) &
-                                       - SUM(vu(m,mp,i_hia,:))/REAL(input%jspins)
+               hub1%ccfmat(i_hia,m,mp) = SUM(h_loc(m,mp,i_hia,:))/2.0
             ENDDO
-            hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - SUM(tr_hloc(i_hia,:))/REAL(input%jspins*(2*l+1))
          ENDDO
+         IF(l_debug) THEN
+            WRITE(*,*) "Average"
+            WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)
+         ENDIF
+         tr = 0.0
+         !calculate the trace
+         DO m = -l, l 
+            tr = tr + hub1%ccfmat(i_hia,m,m)
+         ENDDO
+         IF(l_debug) THEN
+            WRITE(*,*) "TRACE"
+            WRITE(*,"(2f7.3)") tr, tr/(2*l+1)
+         ENDIF
+         !Remove trace 
+         DO m = -l, l 
+            hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - tr/(2*l+1) 
+         ENDDO
+         IF(l_debug) THEN
+            WRITE(*,*) "TRACELESS (eV)"
+            WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const
+         ENDIF
       ENDDO
-
-
    END SUBROUTINE crystal_field
 
 END MODULE m_crystalfield

@@ -98,8 +98,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER               :: jspin, jspmax, ierr
    INTEGER               :: dim_idx
 
-   INTEGER               :: i_gf,m,l
-   REAL                  :: n_occ
+   INTEGER               :: i_gf,l,nType
    COMPLEX               :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,4)
 
 #ifdef CPP_HDF
@@ -171,17 +170,30 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       IF(atoms%n_gf.GT.0) THEN
          !Perform the Kramer-Kronigs-Integration
-         CALL calc_onsite(atoms,input,noco,results%ef,greensfCoeffs,gOnsite,sym)
+         CALL calc_onsite(atoms,input,noco,greensfCoeffs,gOnsite,sym)
+         !-------------------------------------------------------------
+         ! Calculate various properties from the greens function (TODO move to subroutine)
+         !-------------------------------------------------------------
+
          !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
          IF(atoms%n_hia.GT.0.AND.ANY(hub1%ccf(:).NE.0.0)) THEN
-           CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:))
+           CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot)
          ENDIF
-         CALL hybridization(3,1,gOnsite,atoms,input)
-         CALL gfDOS(gOnsite,3,1,1,atoms,input)
          IF(input%jspins.EQ.2) THEN
             CALL eff_excinteraction(gOnsite,atoms,input,greensfCoeffs)
          ENDIF
-         CALL occmtx(gOnsite,3,1,atoms,sym,input,mmpmat(:,:,1,:),l_write=.TRUE.)
+         DO i_gf = 1, atoms%n_gf
+            l = atoms%gfelem(i_gf)%l
+            nType = atoms%gfelem(i_gf)%atomType
+            IF(l.NE.atoms%gfelem(i_gf)%lp) CYCLE
+            IF(nType.NE.atoms%gfelem(i_gf)%atomTypep) CYCLE
+            !Occupation matrix
+            CALL occmtx(gOnsite,l,nType,atoms,sym,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.)
+            !Hybridization function
+            CALL hybridization(gOnsite,l,nType,atoms,input,results%ef)
+            !Density of states from Greens function
+            CALL gfDOS(gOnsite,l,nType,i_gf,atoms,input)
+         ENDDO
       ENDIF
    ENDIF
 

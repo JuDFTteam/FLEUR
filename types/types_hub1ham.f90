@@ -84,7 +84,7 @@ MODULE m_types_hub1ham
       ALLOCATE (this%xi(n_maxhub))
       ALLOCATE (this%ccf(n_maxhub))
       ALLOCATE (this%ccfmat(n_maxhub,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
-      this%xi = 0.001
+      this%xi = 0.0
       this%ccf = 0.0
       this%ccfmat = 0.0
 
