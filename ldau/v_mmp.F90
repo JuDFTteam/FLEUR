@@ -38,8 +38,8 @@ CONTAINS
     COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
 
     COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
-    LOGICAL, INTENT(IN)    :: spin_pol !Is the double-counting spin-polarised (reason for spin-polarized calclations 
-                                       !with DFT+Hubbard1 we use a non-spin polarized f-orbital in DFT)
+    LOGICAL, INTENT(IN)    :: spin_pol !Is the double-counting spin-polarised (reason: for spin-polarized calculations 
+                                       !with DFT+Hubbard1 we use a non-spin polarized orbital in DFT)
 
     ! ..  Local Variables ..
     INTEGER ispin,jspin,l ,mp,p,q,itype,m,i_u
@@ -87,6 +87,8 @@ CONTAINS
           eta(1) = rho_sig(1) / (2*l + 1) 
           eta(jspins) = rho_sig(jspins) / (2*l + 1) 
           eta(0) = (eta(1) + eta(jspins) ) / 2
+          !In comparison to mudc.f90 there seems to be a missing factor 2 if we use the averaged double counting
+          IF(jspins.EQ.2.AND..NOT.spin_pol) eta = 2*eta
        ELSE
           eta(0) = 1.0
           eta(1) = 1.0
