@@ -37,8 +37,7 @@ CONTAINS
     COMPLEX:: chi(2,2,2,2),angso(lapw%nv(1),2,2)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
-  
-    
+   
     CALL timestart("offdiagonal soc-setup")
     
     DO l = 0,atoms%lmaxd
@@ -87,6 +86,7 @@ CONTAINS
        DO  l = 1,atoms%lmax(n)
           DO j1=1,2
              DO j2=1,2
+             !DO j2=j1,j1
                 DO kj = 1,ki
                    fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
                         fj(ki,l,j1)*fj(kj,l,j2) *td%rsoc%rsopp(n,l,j1,j2) + &

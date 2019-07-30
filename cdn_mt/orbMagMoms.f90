@@ -41,9 +41,9 @@ SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
          phii   = noco%alph(iType)
 
          !Fix of sign of moment in first variation calculations. Perhaps it would be better to understand this :-(
-         slxmom=-1*slxmom
-         slymom=-1*slymom
-         slmom=-1*slmom
+         !slxmom=-1*slxmom
+         !slymom=-1*slymom
+         !slmom=-1*slmom
       END IF
 
       ! rotation: orbital moment || spin moment (extended to incude phi - hopefully)
