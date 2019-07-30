@@ -42,7 +42,7 @@ SUBROUTINE orbMagMoms(input,atoms,noco,clmom)
 
          !Fix of sign of moment in first variation calculations. Perhaps it would be better to understand this :-(
          !slxmom=-1*slxmom
-         !slymom=-1*slymom
+         slymom=-1*slymom
          !slmom=-1*slmom
       END IF
 

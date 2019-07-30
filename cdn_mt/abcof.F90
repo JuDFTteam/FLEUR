@@ -144,11 +144,11 @@ CONTAINS
                    ENDIF
 
                    IF (noco%l_noco) THEN
-                      !--->            generate the complex conjgates of the spinors (chi)
-                      ccchi(1,1) = CONJG( EXP(-ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2))
-                      ccchi(1,2) = CONJG(-EXP(-ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2))
-                      ccchi(2,1) = CONJG( EXP( ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2))
-                      ccchi(2,2) = CONJG( EXP( ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2))
+                      !--->            generate the spinors (chi)
+                      ccchi(1,1) =  EXP(ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
+                      ccchi(1,2) = -EXP(ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
+                      ccchi(2,1) =  EXP(-ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
+                      ccchi(2,2) =  EXP(-ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
                       IF (noco%l_ss) THEN
                          !--->              the coefficients of the spin-down basis functions are
                          !--->              stored in the second half of the eigenvector
