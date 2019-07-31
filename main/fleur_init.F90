@@ -149,6 +149,7 @@
           input%forcemix = 0
           input%epsdisp = 0.00001
           input%epsforce = 0.00001
+          input%numBandsKPoints = -1
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
