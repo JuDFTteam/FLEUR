@@ -193,8 +193,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      IF (atoms%n_hia.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+Hubbard1 and sevcar not implemented",calledby ="postprocessInput")
         IF (noco%l_mperp) CALL juDFT_error("LDA+Hubbard1 and l_mperp not implemented",calledby ="postprocessInput")
+        IF (noco%l_soc.AND..NOT.noco%l_spav) CALL juDFT_warn("LDA+Hubbard1 with SOC and non averaged SOC potential not tested",calledby ="postprocessInput")
      END IF
-
      !greens function
      IF(input%gf_elup.GT.1.0) CALL juDFT_warn("Cutoff for the Greens function calculation should never be higher"//&
                                               "than 1htr above efermi",calledby="postprocessInput")

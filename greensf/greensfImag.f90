@@ -126,7 +126,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
 
          !Rotate the eqivalent atom into the irreducible brillouin zone
          fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
-         IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="greensfImag")
+         IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations available",calledby="greensfImag")
          DO imat = 1, MERGE(1,5,input%l_gfsphavg)
             DO ie = 1, greensfCoeffs%ne 
                DO it = 1, sym%invarind(natom)

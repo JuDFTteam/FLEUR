@@ -89,10 +89,11 @@ MODULE m_greensfImag21
                         !Contribution from states
                         !
                         im(ie,m,mp,1) = im(ie,m,mp,1) - pi_const * weight * &
-                                       REAL( CONJG(eigVecCoeffs%acof(ib,lm,natom,2)) * eigVecCoeffs%acof(ib,lmp,natom,1) * denCoeffsOffdiag%uu21n(l,nType)&
-                                           + CONJG(eigVecCoeffs%bcof(ib,lm,natom,2)) * eigVecCoeffs%bcof(ib,lmp,natom,1) * denCoeffsOffdiag%dd21n(l,nType)&
-                                           + CONJG(eigVecCoeffs%acof(ib,lm,natom,2)) * eigVecCoeffs%bcof(ib,lmp,natom,1) * denCoeffsOffdiag%ud21n(l,nType)&
-                                           + CONJG(eigVecCoeffs%bcof(ib,lm,natom,2)) * eigVecCoeffs%acof(ib,lmp,natom,1) * denCoeffsOffdiag%du21n(l,nType)) 
+                                          REAL( CONJG(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%uu21n(l,nType)&
+                                           + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)&
+                                           + CONJG(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)&
+                                           + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%du21n(l,nType))
+
                         !
                         !Contribution from local Orbitals
                         !
@@ -144,7 +145,7 @@ MODULE m_greensfImag21
                      DO m = -l,l
                         DO mp = -l,l
                            IF(imat.EQ.1) THEN
-                              greensfCoeffs%projdos(ie,i_gf,m,mp,3) = greensfCoeffs%projdos(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
+                              greensfCoeffs%projdos(ie,i_gf,m,mp,3) = greensfCoeffs%projdos(ie,i_gf,m,mp,3) + AIMAG(fac * phase * ImagUnit*conjg(calc_mat(m,mp)))
                            ELSE IF(imat.EQ.2) THEN
                               greensfCoeffs%uu(ie,i_gf,m,mp,3) = greensfCoeffs%uu(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
                            ELSE IF(imat.EQ.3) THEN

@@ -20,7 +20,7 @@ USE m_types
 USE m_constants
 
 LOGICAL, PARAMETER :: l_debug = .TRUE.
-INTEGER, PARAMETER :: int_method(3) = (/3,3,3/)
+INTEGER, PARAMETER :: int_method(3) = (/3,3,1/)
 
 CONTAINS
 

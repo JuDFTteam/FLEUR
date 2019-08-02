@@ -223,13 +223,31 @@ MODULE m_tetra_weights
       !
       tol = 1E-14
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(weights,g,e_ind,tol,max_ib) &
+      !$OMP SHARED(weights,g,e_ind,eig,ikpt,tol,max_ib) &
       !$OMP PRIVATE(ib,i,dos_weights) 
 
       !$OMP DO
       DO ib = 1, max_ib
          dos_weights = 0.0
+         !Imaginary part of the weights
          CALL diff3(weights(:,ib),g%del,dos_weights(:))
+ 
+         IF(.FALSE.) THEN
+            !Weights for spin-offdiagonal part 
+            !-----------------------------------------------------
+            ! Here we have two things contributing to the imaginary part of the GF:
+            !    1. Imaginary Part of the denominator * Real part of the coefficients
+            !        This corresponds to the weights calculated above
+            !    2. Real Part of the denominator * Imaginary part of the coefficients
+            !------------------------------------------------------
+            ! For the second part we need to multiply the integration weights with 
+            !  1/(E-E_kv)
+            !------------------------------------------------------
+            DO ie = 1, g%ne
+               weights(ie,ib) = weights(ie,ib) / ((ie-1)*g%del+g%e_bot-eig(ib,ikpt)) +ImagUnit * dos_weights(ie)
+            ENDDO
+         ENDIF
+
          !
          !Find the range where the weights are not equal to 0
          !
