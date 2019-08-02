@@ -204,6 +204,7 @@ CONTAINS
        ALLOCATE(tmp_real(tmp_size))
        ALLOCATE(tmp_cmplx(tmp_size))
        DO n=1,zmat%matsize2
+          n1=n
           IF (PRESENT(list)) THEN
              IF (n>SIZE(list)) CYCLE
              n1=list(n)
