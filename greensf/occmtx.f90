@@ -70,6 +70,33 @@ CONTAINS
                ENDDO
                CALL gmat%free()
             ENDDO
+            !For the contour 3 we can add the tails on both ends
+            IF(g%mode.EQ.3.AND.input%gf_anacont) THEN
+               !left tail
+               CALL g%get_gf(gmat,atoms,input,1,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
+               DO m = -l, l 
+                  ind1 = ind1 + 1
+                  ind2 = 0 
+                  DO mp = -lp_loop,lp_loop
+                     ind2 = ind2 + 1 
+                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) - 1/(2.0*pi_const*ImagUnit) * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
+                                                             * MERGE(g%de(1),conjg(g%de(1)),ipm.EQ.1)
+                  ENDDO
+               ENDDO
+               CALL gmat%free()
+               !right tail
+               CALL g%get_gf(gmat,atoms,input,g%nz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
+               DO m = -l, l 
+                  ind1 = ind1 + 1
+                  ind2 = 0 
+                  DO mp = -lp_loop,lp_loop
+                     ind2 = ind2 + 1 
+                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + 1/(2.0*pi_const*ImagUnit) * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
+                                                             * MERGE(g%de(g%nz),conjg(g%de(g%nz)),ipm.EQ.1)
+                  ENDDO
+               ENDDO
+               CALL gmat%free()
+            ENDIF
          ENDDO
       ENDDO
 
@@ -80,10 +107,16 @@ CONTAINS
             ns = 2*l+1
             CALL gmat%init(.TRUE.,2*ns,2*ns)
             CALL jmat%init(.TRUE.,2*ns,2*ns)
-            !spin-up
-            gmat%data_r(1:ns,1:ns) = REAL(mmpmat(-l:l,-l:l,1))/(3-input%jspins)
-            !spin-down
-            gmat%data_r(ns+1:2*ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,MIN(2,input%jspins)))/(3-input%jspins)
+            DO m = -l, l 
+               DO mp = -l, l
+                  IF(input%jspins.EQ.1) THEN
+                     gmat%data_r(m+l+1,mp+l+1) = REAL(mmpmat(-m,-mp,1))/(3-input%jspins)
+                  ELSE
+                     gmat%data_r(m+l+1,mp+l+1) = REAL(mmpmat(m,mp,1))/(3-input%jspins)
+                  ENDIF
+                  gmat%data_r(m+l+1+ns,mp+l+1+ns) = REAL(mmpmat(m,mp,MIN(2,input%jspins)))/(3-input%jspins)
+               ENDDO
+            ENDDO
             !spin-offdiagonal
             IF(input%l_gfmperp) THEN
                gmat%data_r(1:ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,3))
