@@ -88,7 +88,7 @@ CONTAINS
           eta(jspins) = rho_sig(jspins) / (2*l + 1) 
           eta(0) = (eta(1) + eta(jspins) ) / 2
           !In comparison to mudc.f90 there seems to be a missing factor 2 if we use the averaged double counting
-          IF(jspins.EQ.2.AND..NOT.spin_pol) eta = 2*eta
+          eta = 2*eta
        ELSE
           eta(0) = 1.0
           eta(1) = 1.0
