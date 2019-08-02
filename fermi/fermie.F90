@@ -59,8 +59,9 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     !
-    INTEGER, ALLOCATABLE :: idxeig(:),idxjsp(:),idxkpt(:),INDEX(:)
-    REAL,    ALLOCATABLE :: e(:),eig(:,:,:),we(:)
+    INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
+    REAL    :: e(SIZE(results%w_iks)),we(SIZE(results%w_iks))
+    REAL,    ALLOCATABLE :: eig(:,:,:)
     INTEGER ne(kpts%nkpt,SIZE(results%w_iks,3))
     CHARACTER(LEN=20)    :: attributes(5)
 
@@ -92,14 +93,11 @@ CONTAINS
     !***********************************************************************
     !     .. Data statements ..
     DATA del/1.0e-6/
-    !     ..
-    n=SIZE(results%w_iks) !size of list of all eigenvalues
-    ALLOCATE (idxeig(n),idxjsp(n),idxkpt(n),INDEX(n),e(n),we(n) )
+
     ALLOCATE (eig(SIZE(results%w_iks,1),SIZE(results%w_iks,2),SIZE(results%w_iks,3)))
 
     ! initiliaze e
     e = 0
-
 
     IF ( mpi%irank == 0 ) WRITE (6,FMT=8000)
 8000 FORMAT (/,/,1x,'fermi energy and band-weighting factors:')
@@ -251,7 +249,7 @@ CONTAINS
        ENDIF
        efermi = results%ef
     enddo
-    DEALLOCATE ( idxeig,idxjsp,idxkpt,index,e,eig,we )
+    DEALLOCATE (eig)
 
     attributes = ''
     WRITE(attributes(1),'(f20.10)') results%ef
