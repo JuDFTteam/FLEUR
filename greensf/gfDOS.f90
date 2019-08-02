@@ -23,18 +23,20 @@ MODULE m_gfDOS
 
       INTEGER iz,ipm,i,ns
       INTEGER io_error
-      COMPLEX dos(4) !up,down,low,high (only at the current energy point)
+      COMPLEX dos(4,2*l+2),re(2) !up,down,low,high (only at the current energy point)
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=10) :: filename
 
 
       IF(g%mode.NE.3) WRITE(*,*) "You are using an energy contour where the gfDOS might not be very informative"
-
-9000  FORMAT("gfDOS."I1)
+9000  FORMAT("gfDOS.",I3.3)
+9001  FORMAT("mgfDOS.",I3.3)
       WRITE(filename,9000) jobID
 
       OPEN(unit=3456,file=filename,status="replace",action="write",iostat=io_error)
-      IF(io_error) CALL juDFT_error("IO-error",calledby="gfDOS")
+      WRITE(filename,9001) jobID
+      OPEN(unit=3457,file=filename,status="replace",action="write",iostat=io_error)
+      IF(io_error.NE.0) CALL juDFT_error("IO-error",calledby="gfDOS")
 
       !Calculate the transformation between |L,S> and |J,mj> basis
       ns = 2*l+1
@@ -44,32 +46,46 @@ MODULE m_gfDOS
 
       DO iz = 1, g%nz
          dos = 0.0
+         re = 0.0
          DO ipm = 1, 2  !Sum over G^+ and G^-
             !Get the full gf matrix at the energy point
             CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
             !Calculate up/down dos
             DO i = 1, ns
-               dos(1) = dos(1) - 1/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
+               dos(1,i) = dos(1,i) - 1/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
             ENDDO
             DO i = ns+1, 2*ns
-               dos(2) = dos(2) - 1/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
+               dos(2,i-ns) = dos(2,i-ns) - 1/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
             ENDDO
             !Transform to |J,mj> basis
             jmat%data_c = matmul(gmat%data_c,cmat%data_r)
             jmat%data_c = matmul(transpose(cmat%data_r),jmat%data_c)
             !Calculate low/high dos
             DO i = 1, ns-1
-               dos(3) = dos(3) - 1/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
+               dos(3,i) = dos(3,i) - 1/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
             ENDDO
             DO i = ns, 2*ns
-               dos(4) = dos(4) - 1/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
+               dos(4,i-ns+1) = dos(4,i-ns+1) - 1/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
+            ENDDO
+            !Real part
+            DO i = 1, ns
+               re(1) = re(1) - 1/(2*pi_const)  * gmat%data_c(i,i)
+            ENDDO
+            DO i = ns+1, 2*ns
+               re(2) = re(2) - 1/(2*pi_const) * gmat%data_c(i,i)
             ENDDO
             CALL gmat%free()
          ENDDO 
-         WRITE(3456,"(5f14.8)") REAL(g%e(iz)), (AIMAG(dos(i)),i=1,4)
+         WRITE(3456,"(7f14.8)") REAL(g%e(iz)), &
+                                SUM(AIMAG(dos(1,1:ns))),SUM(AIMAG(dos(2,1:ns))),&
+                                SUM(AIMAG(dos(3,1:ns-1))),SUM(AIMAG(dos(4,1:ns+1))), REAL(re(1)), REAL(re(2))
+         WRITE(3457,"(15f10.5)") REAL(g%e(iz)), (AIMAG(dos(1,i)),i=1, ns),(AIMAG(dos(2,i)),i=1, ns) 
+
+
       ENDDO
       CLOSE(3456,iostat=io_error)
-      IF(io_error) CALL juDFT_error("IO-error",calledby="gfDOS")
+      CLOSE(3457)
+      IF(io_error.NE.0) CALL juDFT_error("IO-error",calledby="gfDOS")
 
       CALL cmat%free()
       CALL jmat%free()

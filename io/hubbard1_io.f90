@@ -113,7 +113,7 @@ MODULE m_hubbard1_io
       CALL comment(input_iounit,"Number of iterations",1)
       CALL writeValue(input_iounit,"N_lancz_iter",100)
       CALL comment(input_iounit,"Number of eigenstates calculated",1)
-      CALL writeValue(input_iounit,"N_lancz_states",35)
+      CALL writeValue(input_iounit,"N_lancz_states",80)
       CALL endSection(input_iounit)
 
       CALL startSection(input_iounit,"real_freq_axis")
@@ -145,7 +145,8 @@ MODULE m_hubbard1_io
       !Only write the exchange splitting her if its not zero to not conflict with possible additional args
       IF(exc.NE.0.0) THEN
          CALL comment(input_iounit,"Exchange splitting",1)
-         CALL writeValue(input_iounit,"Exc",exc)
+         !Sign??
+         CALL writeValue(input_iounit,"Exc",-exc)
       ENDIF
       CALL comment(input_iounit,"Additional arguments",1)
       DO i_arg = 1, hub1%n_addArgs(i_hia)

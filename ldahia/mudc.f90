@@ -21,7 +21,7 @@ MODULE m_mudc
 
       u = lda_u%U
       j = lda_u%J 
-      l = lda_u%l 
+      l = lda_u%l
 
       IF(jspins.EQ.2) THEN
          nup = n(1)

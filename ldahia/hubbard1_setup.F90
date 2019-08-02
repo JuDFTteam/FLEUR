@@ -48,7 +48,7 @@ MODULE m_hubbard1_setup
       EXTERNAL MPI_BCAST
 #endif
 
-      INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc
+      INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i
       INTEGER io_error,ierr
       INTEGER indStart,indEnd
       REAL    mu_dc,e_lda_hia,exc
@@ -136,11 +136,11 @@ MODULE m_hubbard1_setup
                WRITE(6,9030) n_l(i_hia,:)
 
                !--------------------------------------------------------------------------
-               ! Calculate the chemical potential for te solver 
+               ! Calculate the chemical potential for the solver 
                ! This is equal to the double-counting correction used in DFT+U
                !--------------------------------------------------------------------------
                ! V_FLL = U (n - 1/2) - J (n - 1) / 2
-               ! V_AMF = U n/2 + l/(2l+1) (U-J) n
+               ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
                !--------------------------------------------------------------------------
                CALL mudc(atoms%lda_u(atoms%n_u+i_hia),n_l(i_hia,:),mu_dc,input%jspins)
 
@@ -205,6 +205,13 @@ MODULE m_hubbard1_setup
             ENDDO
 
             IF(l_selfenexist.OR.l_linkedsolver) THEN
+               DO i_hia = 1, atoms%n_hia
+                  nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+                  l = atoms%lda_u(atoms%n_u+i_hia)%l
+                  DO iz = 1, gdft%nz
+                     CALL swapSpin(selfen(i_hia,:,:,iz),2*l+1)
+                  ENDDO
+               ENDDO
                !----------------------------------------------------------------------
                ! Solution of the Dyson Equation
                !----------------------------------------------------------------------
@@ -293,6 +300,27 @@ MODULE m_hubbard1_setup
 
    END SUBROUTINE hubbard1_setup
 
+   SUBROUTINE swapSpin(mat,ns)
+
+      IMPLICIT NONE
+
+      COMPLEX,       INTENT(INOUT) :: mat(2*ns,2*ns)
+      INTEGER,       INTENT(IN)    :: ns
+
+      COMPLEX tmp(ns,ns)
+
+      !Spin-diagonal
+      tmp = mat(1:ns,1:ns)
+      mat(1:ns,1:ns) = mat(ns+1:2*ns,ns+1:2*ns)
+      mat(ns+1:2*ns,ns+1:2*ns) = tmp
+      !Spin-offdiagonal
+      tmp = mat(ns+1:2*ns,1:ns)
+      mat(ns+1:2*ns,1:ns) = transpose(conjg(mat(1:ns,ns+1:2*ns)))
+      mat(1:ns,ns+1:2*ns) = transpose(conjg(tmp))
+
+   END SUBROUTINE
+
+
    SUBROUTINE hubbard1_path(atoms,i_hia,xPath)
 
       !Defines the folder structure
@@ -326,5 +354,30 @@ MODULE m_hubbard1_setup
       xPath = TRIM(ADJUSTL(xPath)) // "/" // folder
 
    END SUBROUTINE hubbard1_path
+
+   SUBROUTINE writeSelfenElement(selfen,e,nz,matsize,i)
+
+      IMPLICIT NONE
+
+      INTEGER,       INTENT(IN)  :: nz,matsize,i
+      COMPLEX,       INTENT(IN)  :: selfen(matsize,matsize,nz)
+      COMPLEX,       INTENT(IN)  :: e(nz)
+
+      INTEGER iz
+      CHARACTER(len=300) file
+
+3456  FORMAT("selfen.",I3)
+      WRITE(file,3456) i
+
+      OPEN(unit=3456,file=file,status="replace")
+
+      DO iz = 1, nz
+         WRITE(3456,"(3f14.8)") REAL(e(iz)), REAL(selfen(i,i,iz)), AIMAG(selfen(i,i,iz))
+      ENDDO
+
+      CLOSE(unit=3456)
+
+
+   END SUBROUTINE writeSelfenElement
 
 END MODULE m_hubbard1_setup

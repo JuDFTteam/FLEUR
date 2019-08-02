@@ -69,7 +69,7 @@ MODULE m_crystalfield
                   integrand = 0.0
                   DO ie = 1, kkcut
                      integrand(ie) = -1.0/pi_const * ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) &
-                                     * greensfCoeffs%projdos(ie,i_gf,m,mp,jspin)
+                                     * greensfCoeffs%projdos(ie,i_gf,m,mp,jspin)/(3.0-input%jspins)
                   ENDDO
                   h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),greensfCoeffs%del,kkcut)
                ENDDO
@@ -89,14 +89,7 @@ MODULE m_crystalfield
                   !LDA+U potential
                   h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
                ENDDO
-            ENDDO
-         ENDDO
-         !Determine the SOC splitting from the outermost elements (Better way??)
-         DO jspin = 1, input%jspins
-            xiSOC = ABS(h_loc(l,l,i_hia,jspin)-h_loc(-l,-l,i_hia,jspin))/(2.0*l)
-            WRITE(*,*) xiSOC
-            DO m = -l, l
-               h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - xiSOC * m * 2*(1.5-jspin)
+               h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - hub1%xi(i_hia)/hartree_to_ev_const * m * (1.5-jspin) * MERGE(-1,1,input%jspins.EQ.1)
             ENDDO
          ENDDO
          IF(l_debug) THEN
@@ -110,6 +103,7 @@ MODULE m_crystalfield
          DO m = -l, l
             DO mp = -l, l
                hub1%ccfmat(i_hia,m,mp) = SUM(h_loc(m,mp,i_hia,:))/2.0
+               IF(input%jspins.EQ.1) hub1%ccfmat(i_hia,m,mp) = (h_loc(m,mp,i_hia,1)+h_loc(-m,-mp,i_hia,1))/2.0
             ENDDO
          ENDDO
          IF(l_debug) THEN
@@ -128,6 +122,12 @@ MODULE m_crystalfield
          !Remove trace 
          DO m = -l, l 
             hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - tr/(2*l+1) 
+         ENDDO
+          DO m = -l, l
+            DO mp = -l, l
+               hub1%ccfmat(i_hia,m,mp) = (hub1%ccfmat(i_hia,m,mp)+hub1%ccfmat(i_hia,-m,-mp))/2.0
+               hub1%ccfmat(i_hia,-m,-mp) = hub1%ccfmat(i_hia,m,mp)
+            ENDDO
          ENDDO
          IF(l_debug) THEN
             WRITE(*,*) "TRACELESS (eV)"

@@ -8,7 +8,7 @@ MODULE m_add_selfen
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
-      ! (G)^-1 = (G_0)^-1 - mu 1 + V_dc - selfen
+      ! (G)^-1 = (G_0)^-1 - mu 1 + V_dc - selfen + V_U
       !
       !The term mu * unity is there to ensure that the number of particles 
       !doesn't change and is determined by a two-step process
@@ -50,15 +50,15 @@ MODULE m_add_selfen
       !Interval where we expect the correct mu
       mu_a = -4.0
       mu_b = 4.0
-      mu_step = 0.05
+      mu_step = 0.01
       mu_max = 0.0
       n_max = 0.0
 
-      spin_match = MERGE(1,input%jspins,noco%l_soc.OR.noco%l_noco)
+      spin_match = MERGE(1,input%jspins,noco%l_soc.AND.noco%l_noco)
       !Not tested yet for two chemical potentials, so we just take one
       spin_match=1
       !Are we matching the spin polarized self-energy with one chemical potential
-      l_match_both_spins = spin_match.EQ.1.AND.input%jspins.EQ.2 
+      l_match_both_spins = spin_match.EQ.1.AND.input%jspins.EQ.2
 
       DO i_hia = 1, atoms%n_hia
          l = atoms%lda_u(atoms%n_u+i_hia)%l
@@ -94,7 +94,7 @@ MODULE m_add_selfen
                      ELSE
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
-                     CALL add_pot(gmat,vmat,mu-mu_dc,(ipm.EQ.2))
+                     CALL add_pot(gmat,vmat,mu,(ipm.EQ.2))
                      IF(l_match_both_spins) THEN
                         CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
@@ -120,7 +120,7 @@ MODULE m_add_selfen
             IF(l_debug) CLOSE(1337)
 
             !Sanity check for the maximum occupation
-            IF(n_max.GT.2*ns+0.5) THEN
+            IF(ABS(n_max-2*ns).GT.1) THEN
                !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
                CALL juDFT_error("Something went wrong with the addition of the selfenergy",calledby="add_selfen")
             ENDIF
@@ -148,7 +148,7 @@ MODULE m_add_selfen
                      ELSE
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
-                     CALL add_pot(gmat,vmat,mu-mu_dc,(ipm.EQ.2))
+                     CALL add_pot(gmat,vmat,mu,(ipm.EQ.2))
                      IF(l_match_both_spins) THEN
                         CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
@@ -171,10 +171,10 @@ MODULE m_add_selfen
                   WRITE(6,"(TR3,A4,f8.4)") "mu = ", mu
                   EXIT
                ELSE IF((n - n_target).GT.0) THEN
-                  !The occupation is to small --> choose the left interval
+                  !The occupation is to big --> choose the right interval
                   mu_a = mu
                ELSE IF((n - n_target).LT.0) THEN
-                  !The occupation is to big --> choose the right interval
+                  !The occupation is to small --> choose the left interval
                   mu_b = mu
                ENDIF
             ENDDO
@@ -196,7 +196,7 @@ MODULE m_add_selfen
       LOGICAL,          INTENT(IN)     :: l_conjg !Are we in the upper half of the complex plane
 
       INTEGER i,j
-      
+
       CALL gmat%inverse()
       gmat%data_c = gmat%data_c - MERGE(conjg(vmat%data_c),vmat%data_c,l_conjg)
       DO i = 1, gmat%matsize1
