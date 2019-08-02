@@ -75,6 +75,26 @@ sub testrun($$){
     print LOG "Finished execution\n";
 }
 
+sub testrun_seq($$){
+    my $ex=shift;
+    my $dir=shift;
+
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Running $ex:";
+    
+    my $omps=$ENV{'OMP_NUM_THREADS'};
+    $ENV{'OMP_NUM_THREADS'}=1;
+    if (system("cd $dir;$ex")==0){
+      print LOG "Done\n";}
+    else {
+      print LOG "Failed\n";
+    }
+    $ENV{'OMP_NUM_THREADS'}=$omps;
+
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Finished execution\n";
+}
+
 sub test_fileexists($){
     my $file=shift;
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);

@@ -79,7 +79,7 @@ CONTAINS
 
       ! Local Scalars
       INTEGER jsp,nk,nred,ne_all,ne_found
-      INTEGER ne,lh0
+      INTEGER ne, nk_i
       INTEGER isp,i,j,err
       LOGICAL l_wu,l_file,l_real,l_zref
       INTEGER :: solver=0
@@ -89,7 +89,6 @@ CONTAINS
 
       COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),kpts%nkpt,input%jspins) ! needed for unfolding bandstructure mpi case
 
-      INTEGER, PARAMETER   :: lmaxb = 3
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
@@ -136,8 +135,8 @@ CONTAINS
       unfoldingBuffer = CMPLX(0.0,0.0)
 
       DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
-         k_loop:DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
-
+         k_loop:DO nk_i = 1,size(mpi%k_list)
+            nk=mpi%k_list(nk_i)
             ! Set up lapw list
             CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
             call timestart("Setup of H&S matrices")

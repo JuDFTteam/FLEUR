@@ -395,6 +395,7 @@ MODULE m_types_setup
       INTEGER :: gw
       INTEGER :: gw_neigd
       INTEGER :: qfix
+      INTEGER :: numBandsKPoints
       REAL    :: forcealpha !< mixing parameter for geometry optimzer
       REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
       REAL    :: epsforce !< minimal force. If all forces <epsforce stop

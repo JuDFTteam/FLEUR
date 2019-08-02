@@ -17,6 +17,7 @@ if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mkl -qopenmp -assume byterecl")
    endif()     
    set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -xHost -O2 -g")
+   #set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -xMIC-AVX512 -O2")
    if (${CMAKE_Fortran_COMPILER_VERSION} VERSION_LESS "19.0.0.0")
        set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -ftrapuv -check uninit -check pointers -DCPP_DEBUG -warn all")
    else()
@@ -27,7 +28,7 @@ elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
    message("PGI Fortran detected")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake
    #CPU   
-   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp -Mr8 -Mr8intrinsics")
+   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -mp")
    #GPU
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp  -Mcuda=cuda9.0,cc60 -Mcudalib=cublas")
    #set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -mp  -Mcuda:kepler+ -ta:tesla:cuda7.5 -DUSE_STREAMS -DNUM_STREAMS=${N_STREAMS} -Minfo=accel -acc")

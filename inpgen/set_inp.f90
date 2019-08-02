@@ -163,6 +163,7 @@
       kpts%numSpecialPoints = 0
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
       input%l_wann = .FALSE.
+      input%numBandsKPoints = 240
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
@@ -313,6 +314,7 @@
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
          input%gw_neigd = bands
+         hybrid%bands1 = ceiling(0.75*bands)
          l_gamma = .true.
          input%minDistance = 1.0e-5
       ELSE
@@ -355,6 +357,7 @@
 
       nu = 8 
       input%gw = 0
+      IF(juDFT_was_argument("-gw")) input%gw = 1
 
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN

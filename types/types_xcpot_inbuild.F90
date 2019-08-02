@@ -105,9 +105,9 @@ CONTAINS
          xcpot%data%uk=0.8040
       ENDIF
       IF (xcpot%is_name("PBEs")) THEN     ! pbe_sol
-         xcpot%data%um=0.123456790123456d0
+         xcpot%data%um=0.123456790123456
       ELSE
-         xcpot%data%um=0.2195149727645171e0
+         xcpot%data%um=0.2195149727645171
       ENDIF
       xcpot%data%is_hse=xcpot%is_name("hse").OR.xcpot%is_name("lhse").OR.xcpot%is_name("vhse")
       xcpot%data%is_rpbe=xcpot%is_name("Rpbe") !Rpbe

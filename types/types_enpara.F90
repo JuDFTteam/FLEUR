@@ -143,13 +143,17 @@ CONTAINS
     REAL    ::  vbar,vz0,rj
     INTEGER ::  n,jsp,l,ilo,j,ivac
     CHARACTER(LEN=20)    :: attributes(5)
+    REAL ::  e_lo(0:3,atoms%ntype)!Store info on branches to do IO after OMP
+    REAL ::  e_up(0:3,atoms%ntype)
+    REAL ::  elo_lo(atoms%nlod,atoms%ntype)
+    REAL ::  elo_up(atoms%nlod,atoms%ntype)
 
     IF (mpi%irank  == 0) CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
 
     l_done = .FALSE.;lo_done=.FALSE.
     DO jsp = 1,input%jspins
        !$OMP PARALLEL DO DEFAULT(none) &
-       !$OMP SHARED(atoms,enpara,jsp,l_done,mpi,v,lo_done) &
+       !$OMP SHARED(atoms,enpara,jsp,l_done,mpi,v,lo_done,e_lo,e_up,elo_lo,elo_up) &
        !$OMP PRIVATE(n,l,ilo)
        !! First calculate energy paramter from quantum numbers if these are given...
        !! l_done stores the index of those energy parameter updated
@@ -157,7 +161,7 @@ CONTAINS
           DO l = 0,3
              IF( enpara%qn_el(l,n,jsp).ne.0)THEN 
                 l_done(l,n,jsp) = .TRUE.
-                enpara%el0(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,mpi,v%mt(:,0,n,jsp))
+                enpara%el0(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,mpi,v%mt(:,0,n,jsp),e_lo(l,n),e_up(l,n))
                 IF( l .EQ. 3 ) THEN
                    enpara%el0(4:,n,jsp) = enpara%el0(3,n,jsp)
                    l_done(4:,n,jsp) = .TRUE.
@@ -171,13 +175,28 @@ CONTAINS
              l = atoms%llo(ilo,n)
              IF( enpara%qn_ello(ilo,n,jsp).NE.0) THEN
                 lo_done(ilo,n,jsp) = .TRUE.
-                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,mpi,v%mt(:,0,n,jsp))
+                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,mpi,v%mt(:,0,n,jsp),elo_lo(ilo,n),elo_up(ilo,n))
              ELSE
                 lo_done(ilo,n,jsp) = .FALSE.
              ENDIF
           ENDDO
        ENDDO ! n
        !$OMP END PARALLEL DO
+       IF (mpi%irank==0) THEN
+          WRITE(6,*)
+          WRITE(6,*) "Updated energy parameters for spin:",jsp
+          !Same loop for IO
+          DO n = 1, atoms%ntype
+             DO l = 0,3
+                IF( l_done(l,n,jsp)) CALL priv_write(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),e_lo(l,n),e_up(l,n),enpara%el0(l,n,jsp))
+             ENDDO ! l
+             ! Now for the lo's
+             DO ilo = 1, atoms%nlo(n)
+                l = atoms%llo(ilo,n)
+                IF( lo_done(ilo,n,jsp)) CALL priv_write(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),elo_lo(ilo,n),elo_up(ilo,n),enpara%ello0(ilo,n,jsp))
+             END DO
+          END DO
+       ENDIF
 
        !!   Now check for floating energy parameters (not for those with l_done=T)
        IF (enpara%floating) THEN
@@ -577,5 +596,51 @@ CONTAINS
        IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=regCharges%pvac(:vacuum%nvac,ispin)/regCharges%svac(:vacuum%nvac,ispin)
     END DO
   END SUBROUTINE calcOutParams
+
+  SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
+    !subroutine to write energy parameters to output
+    USE m_xmlOutput
+    IMPLICIT NONE
+    LOGICAL,INTENT(IN):: lo
+    INTEGER,INTENT(IN):: l,n,jsp,nqn
+    REAL,INTENT(IN)   :: e_lo,e_up,e
+
+    CHARACTER(LEN=20)    :: attributes(6)
+    CHARACTER(len=:),ALLOCATABLE:: label
+    CHARACTER(len=1),PARAMETER,DIMENSION(0:9):: ch=(/'s','p','d','f','g','h','i','j','k','l'/)
+
+    attributes = ''
+    WRITE(attributes(1),'(i0)') n
+    WRITE(attributes(2),'(i0)') jsp
+    WRITE(attributes(3),'(i0,a1)') abs(nqn), ch(l)
+    WRITE(attributes(4),'(f8.2)') e_lo
+    WRITE(attributes(5),'(f8.2)') e_up
+    WRITE(attributes(6),'(f16.10)') e
+    IF (nqn>0) THEN
+       IF (lo) THEN
+          label='loAtomicEP'
+       ELSE
+          label='atomicEP'
+       ENDIF
+    ELSE
+       IF (lo) THEN
+          label='heloAtomicEP'
+       ELSE
+          label='heAtomicEP'
+       ENDIF
+    END IF
+
+    CALL writeXMLElementForm(label,(/'atomType     ','spin         ','branch       ',&
+         'branchLowest ','branchHighest','value        '/),&
+         attributes,RESHAPE((/10,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
+    IF (lo) THEN
+       WRITE(6,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
+         e_lo, ' to',e_up,' htr. ; e_l(lo) =',e
+    ELSE
+       WRITE(6,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
+         e_lo, ' to',e_up,' htr. ; e_l =',e
+    END IF
+  END SUBROUTINE priv_write
+
 
 END MODULE m_types_enpara

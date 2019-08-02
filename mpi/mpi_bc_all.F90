@@ -220,11 +220,14 @@ CONTAINS
     CALL MPI_BCAST(noco%l_relax,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%l_geo,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%qss,3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+
     CALL MPI_BCAST(atoms%lda_u(:)%l,atoms%n_u+atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%u,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%j,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%l_amf,atoms%n_u+atoms%n_hia,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%atomType,atoms%n_u+atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%phi,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%theta,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lapw_l,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
     CALL MPI_BCAST(atoms%gfelem(:)%l,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)

@@ -146,14 +146,13 @@ CONTAINS
       facC(-1:0) = 1                    ! facA(i)    = i!
       DO i = 1, maxfac                       ! facB(i)   = sqrt(i!)
          facA(i) = facA(i - 1)*i            ! facC(i) = (2i+1)!!
-         facB(i) = facB(i - 1)*SQRT(i*1d0) !
+         facB(i) = facB(i - 1)*SQRT(i*1.0) !
          facC(i) = facC(i - 1)*(2*i + 1)   !
       END DO
 
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
       nbasm1 = hybrid%nbasp + hybrid%ngptm(:)
-
 
       !     Calculate the structure constant
       CALL structureconstant(structconst, cell, hybrid, atoms, kpts, mpi)
@@ -168,11 +167,11 @@ CONTAINS
       IF (ALLOCATED(coulomb)) DEALLOCATE (coulomb)
 
       ALLOCATE (coulomb(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
-      IF (ok .NE. 0) STOP 'coulombmatrix: failure allocation coulomb matrix'
+      IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulomb matrix'
       coulomb = 0
       call timestop("coulomb allocation")
 
-      IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16d0/1048576*SIZE(coulomb)
+      IF (mpi%irank == 0) WRITE (6, '(/A,F6.1," MB")') 'Size of coulomb matrix:', 16.0/1048576*SIZE(coulomb)
 
       !     Generate Symmetry:
       !     Reduce list of g-Points so that only one of each symm-equivalent is calculated
@@ -182,7 +181,7 @@ CONTAINS
       CALL cpu_TIME(time1)
       ! calculate rotations in reciprocal space
       DO isym = 1, sym%nsym
-         IF (isym .LE. sym%nop) THEN
+         IF (isym <= sym%nop) THEN
             inviop = sym%invtab(isym)
             rrot(:, :, isym) = TRANSPOSE(sym%mrot(:, :, inviop))
             DO l = 0, hybrid%maxlcutm1
@@ -223,7 +222,7 @@ CONTAINS
             END IF
             IF (ANY(sym%tau(:, isym2) /= 0)) CYCLE
 
-            IF (ALL(ABS(MATMUL(rrot(:, :, isym), kpts%bk(:, ikpt)) - kpts%bk(:, ikpt)) .LT. 1d-12)) THEN
+            IF (ALL(ABS(MATMUL(rrot(:, :, isym), kpts%bk(:, ikpt)) - kpts%bk(:, ikpt)) < 1e-12)) THEN
                isym1 = isym1 + 1
                sym1(isym1, ikpt) = isym
             END IF
@@ -245,13 +244,13 @@ CONTAINS
          iarr = 0
          j = 0
          DO igpt = hybrid%ngptm(ikpt), 1, -1
-            IF (iarr(igpt) .EQ. 0) THEN
+            IF (iarr(igpt) == 0) THEN
                j = j + 1
                hybrid%pgptm1(j, ikpt) = igpt
                DO isym1 = 1, nsym1(ikpt)
                   g = MATMUL(rrot(:, :, sym1(isym1, ikpt)), hybrid%gptm(:, hybrid%pgptm(igpt, ikpt)))
                   i = POINTER(ikpt, g(1), g(2), g(3))
-                  IF (i .EQ. 0) STOP 'coulombmatrix: zero pointer (bug?)'
+                  IF (i == 0) STOP 'coulombmatrix: zero pointer (bug?)'
                   iarr(i) = 1
                END DO
             END IF
@@ -297,10 +296,10 @@ CONTAINS
             lp1: DO l2 = 0, l1
                DO m2 = -l2, l2
                   lm2 = lm2 + 1
-                  IF (lm2 .GT. lm1) EXIT lp1 ! Don't cross the diagonal!
+                  IF (lm2 > lm1) EXIT lp1 ! Don't cross the diagonal!
                   gmat(lm1, lm2) = facB(l1 + l2 + m2 - m1)*facB(l1 + l2 + m1 - m2)/ &
                                    (facB(l1 + m1)*facB(l1 - m1)*facB(l2 + m2)*facB(l2 - m2))/ &
-                                   SQRT(1d0*(2*l1 + 1)*(2*l2 + 1)*(2*(l1 + l2) + 1))*(4*pi_const)**1.5d0
+                                   SQRT(1.0*(2*l1 + 1)*(2*l2 + 1)*(2*(l1 + l2) + 1))*(4*pi_const)**1.5
                   gmat(lm2, lm1) = gmat(lm1, lm2)
                END DO
             END DO LP1
@@ -348,7 +347,6 @@ CONTAINS
       iqnrmstep = mpi%isize
       call timestop("getnorm")
 
-
       call timestart("Bessel calculation")
       DO iqnrm = iqnrmstart, nqnrm, iqnrmstep
          qnorm = qnrm(iqnrm)
@@ -357,26 +355,26 @@ CONTAINS
             rdum = atoms%rmt(itype)
             sphbes_var = 0
             sphbesmoment1 = 0
-            IF (qnorm .EQ. 0) THEN
+            IF (qnorm == 0) THEN
                sphbesmoment(0, itype, iqnrm) = rdum**3/3
                DO i = 1, ng
                   sphbes_var(i, 0) = 1
                   sphbesmoment1(i, 0) = atoms%rmsh(i, itype)**2/3 + (rdum**2 - atoms%rmsh(i, itype)**2)/2
                END DO
             ELSE
-               call sphbes(hybrid%lexp+1, qnorm*rdum, rarr)
+               call sphbes(hybrid%lexp + 1, qnorm*rdum, rarr)
                DO l = 0, hybrid%lexp
                   sphbesmoment(l, itype, iqnrm) = rdum**(l + 2)*rarr(l + 1)/qnorm
                END DO
                DO i = ng, 1, -1
                   rdum = atoms%rmsh(i, itype)
-                  call sphbes(hybrid%lcutm1(itype)+1, qnorm*rdum, rarr)
+                  call sphbes(hybrid%lcutm1(itype) + 1, qnorm*rdum, rarr)
                   DO l = 0, hybrid%lcutm1(itype)
                      sphbes_var(i, l) = rarr(l)
-                     IF (l .NE. 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
+                     IF (l /= 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
                      ELSE; rdum1 = -COS(qnorm*rdum)/qnorm
                      ENDIF
-                     IF (i .EQ. ng) rarr1(l) = rdum1
+                     IF (i == ng) rarr1(l) = rdum1
                      sphbesmoment1(i, l) = (rdum**(l + 2)*rarr(l + 1)/rdum**(l + 1) &
                                             + (rarr1(l) - rdum1)*rdum**l)/qnorm
                   END DO
@@ -470,7 +468,7 @@ CONTAINS
          !       (1b) r,r' in different MT
 
          ALLOCATE (coulmat(hybrid%nbasp, hybrid%nbasp), stat=ok)
-         IF (ok .NE. 0) STOP 'coulombmatrix: failure allocation coulmat'
+         IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulmat'
          coulmat = 0
 
       END IF
@@ -504,7 +502,7 @@ CONTAINS
                                        lm1 = lm1 + 1
                                        DO n1 = 1, hybrid%nindxm1(l1, itype1)
                                           iy = iy + 1
-                                          IF (iy .GT. ix) EXIT lp2 ! Don't cross the diagonal!
+                                          IF (iy > ix) EXIT lp2 ! Don't cross the diagonal!
                                           rdum = (-1)**(l2 + m2)*moment(n1, l1, itype1)*moment(n2, l2, itype2)*gmat(lm1, lm2)
                                           l = l1 + l2
                                           lm = l**2 + l + m1 - m2 + 1
@@ -549,7 +547,7 @@ CONTAINS
          WRITE (6, *)
       END IF
 
-      IF (hybrid%maxgptm .EQ. 0) GOTO 1 ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
+      IF (hybrid%maxgptm == 0) GOTO 1 ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
       !
       !     (2) Case < MT | v | PW >
@@ -564,9 +562,8 @@ CONTAINS
       !     (2c) r,r' in different MT
 
       ALLOCATE (coulmat(hybrid%nbasp, hybrid%maxgptm), stat=ok)
-      IF (ok .NE. 0) STOP 'coulombmatrix: failure allocation coulmat'
+      IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulmat'
       coulmat = 0
-      
 
       call timestart("loop over interst.")
       DO ikpt = ikptmin, ikptmax !1,kpts%nkpt
@@ -580,13 +577,13 @@ CONTAINS
             q = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp), cell%bmat)
             qnorm = SQRT(SUM(q**2))
             iqnrm = pqnrm(igpt, ikpt)
-            IF (ABS(qnrm(iqnrm) - qnorm) .GT. 1d-12) then
+            IF (ABS(qnrm(iqnrm) - qnorm) > 1e-12) then
                STOP 'coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)' ! We shouldn't stop here!
             endif
 
             call timestart("harmonics")
-            call ylm4(2,  MATMUL(kpts%bk(:, kpts%nkpt), cell%bmat), y1) 
-            call ylm4(2,  MATMUL(hybrid%gptm(:, igptp), cell%bmat), y2) 
+            call ylm4(2, MATMUL(kpts%bk(:, kpts%nkpt), cell%bmat), y1)
+            call ylm4(2, MATMUL(hybrid%gptm(:, igptp), cell%bmat), y2)
             call ylm4(hybrid%lexp, q, y)
             call timestop("harmonics")
             y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
@@ -627,19 +624,19 @@ CONTAINS
                               END DO
 
                               ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
-                              IF (ikpt .EQ. 1 .AND. l .LE. 2) THEN
+                              IF (ikpt == 1 .AND. l <= 2) THEN
                                  cexp = EXP(CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT(hybrid%gptm(:, igptp), atoms%taual(:, ic1))) &
                                         *gmat(lm, 1)*4*pi_const/cell%vol
                                  csumf(lm) = csumf(lm) - cexp*SQRT(4*pi_const)* &
                                              CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
-                                 IF (l .EQ. 0) THEN
-                                    IF (igpt .NE. 1) THEN
+                                 IF (l == 0) THEN
+                                    IF (igpt /= 1) THEN
                                        csum = csum - cexp*(sphbesmoment(0, itype1, iqnrm)*atoms%rmt(itype1)**2 - &
                                                            sphbesmoment(2, itype1, iqnrm)*2.0/3)/10
                                     ELSE
                                        csum = csum - cexp*atoms%rmt(itype1)**5/30
                                     END IF
-                                 ELSE IF (l .EQ. 1) THEN
+                                 ELSE IF (l == 1) THEN
                                     csum = csum + cexp*CMPLX(0.0, 1.0)*SQRT(4*pi_const) &
                                            *sphbesmoment(1, itype1, iqnrm)*y(lm)/3
                                  END IF
@@ -649,7 +646,7 @@ CONTAINS
                         END DO
 
                         ! add contribution of (2a) to csumf
-                        IF (ikpt .EQ. 1 .AND. igpt .EQ. 1 .AND. l .LE. 2) THEN
+                        IF (ikpt == 1 .AND. igpt == 1 .AND. l <= 2) THEN
                            csumf(lm) = csumf(lm) + (4*pi_const)**2*CMPLX(0.0, 1.0)**l/facC(l)
                         END IF
 
@@ -661,8 +658,8 @@ CONTAINS
                         DO n = 1, hybrid%nindxm1(l, itype)
                            iy = iy + 1
 
-                           IF (ikpt .EQ. 1 .AND. igpt .EQ. 1) THEN
-                              IF (l .EQ. 0) coulmat(iy, ix - hybrid%nbasp) = &
+                           IF (ikpt == 1 .AND. igpt == 1) THEN
+                              IF (l == 0) coulmat(iy, ix - hybrid%nbasp) = &
                                  -cdum*moment2(n, itype)/6/svol         ! (2a)
                               coulmat(iy, ix - hybrid%nbasp) = coulmat(iy, ix - hybrid%nbasp) &
                                                                + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
@@ -693,7 +690,7 @@ CONTAINS
          DO i = 1, hybrid%ngptm(ikpt)
             DO j = 1, hybrid%nbasp + i
                M = M + 1
-               IF (j .LE. hybrid%nbasp) coulomb(M, ikpt) = coulmat(j, i)
+               IF (j <= hybrid%nbasp) coulomb(M, ikpt) = coulmat(j, i)
             END DO
          END DO
       END DO
@@ -726,7 +723,7 @@ CONTAINS
          DO igpt1 = 1, igpt2
             g = hybrid%gptm(:, igpt2) - hybrid%gptm(:, igpt1)
             gnorm = gptnorm(g, cell%bmat)
-            IF (gnorm .EQ. 0) THEN
+            IF (gnorm == 0) THEN
                DO itype = 1, atoms%ntype
                   smat(igpt1, igpt2) = smat(igpt1, igpt2) + atoms%neq(itype)*4*pi_const*atoms%rmt(itype)**3/3
                END DO
@@ -758,7 +755,7 @@ CONTAINS
             iy = hybrid%nbasp
             q2 = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp2), cell%bmat)
             rdum2 = SUM(q2**2)
-            IF (rdum2 .NE. 0) rdum2 = 4*pi_const/rdum2
+            IF (rdum2 /= 0) rdum2 = 4*pi_const/rdum2
 
             DO igpt1 = 1, igpt2
                igptp1 = hybrid%pgptm(igpt1, ikpt)
@@ -766,20 +763,20 @@ CONTAINS
                q1 = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp1), cell%bmat)
                idum = ix*(ix - 1)/2 + iy
                rdum1 = SUM(q1**2)
-               IF (rdum1 .NE. 0) rdum1 = 4*pi_const/rdum1
+               IF (rdum1 /= 0) rdum1 = 4*pi_const/rdum1
 
-               IF (ikpt .EQ. 1) THEN
-                  IF (igpt1 .NE. 1) THEN
+               IF (ikpt == 1) THEN
+                  IF (igpt1 /= 1) THEN
                      coulomb(idum, 1) = -smat(igptp1, igptp2)*rdum1/cell%vol
                   END IF
-                  IF (igpt2 .NE. 1) THEN
+                  IF (igpt2 /= 1) THEN
                      coulomb(idum, 1) = coulomb(idum, 1) - smat(igptp1, igptp2)*rdum2/cell%vol
                   END IF
                ELSE
                   coulomb(idum, ikpt) = -smat(igptp1, igptp2)*(rdum1 + rdum2)/cell%vol
                END IF
             END DO
-            IF (ikpt .NE. 1 .OR. igpt2 .NE. 1) THEN                  !
+            IF (ikpt /= 1 .OR. igpt2 /= 1) THEN                  !
                coulomb(idum, ikpt) = coulomb(idum, ikpt) + rdum2 ! diagonal term
             END IF                                            !
          END DO
@@ -842,7 +839,7 @@ CONTAINS
                      DO m2 = -l2, l2
                         lm2 = lm2 + 1
                         cdum = idum*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
-                        IF (cdum .NE. 0) THEN
+                        IF (cdum /= 0) THEN
                            lm1 = 0
                            DO l1 = 0, hybrid%lexp
                               l = l1 + l2
@@ -896,7 +893,7 @@ CONTAINS
       !     Add corrections from higher orders in (3b) to coulomb(:,1)
       ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
       call timestart("add corrections from higher orders")
-      rdum = (4*pi_const)**(1.5d0)/cell%vol**2*gmat(1, 1)
+      rdum = (4*pi_const)**(1.5)/cell%vol**2*gmat(1, 1)
       DO igpt0 = 1, hybrid%ngptm1(1)
          igpt2 = hybrid%pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
          ix = hybrid%nbasp + igpt2
@@ -994,8 +991,8 @@ CONTAINS
       DO iqnrm = 1, nqnrm
          DO itype = 1, atoms%ntype
             rdum = qnrm(iqnrm)*atoms%rmt(itype)
-            call sphbes(hybrid%lexp+2, rdum, sphbes0(0, itype, iqnrm))
-            IF (rdum .NE. 0) sphbes0(-1, itype, iqnrm) = COS(rdum)/rdum
+            call sphbes(hybrid%lexp + 2, rdum, sphbes0(0, itype, iqnrm))
+            IF (rdum /= 0) sphbes0(-1, itype, iqnrm) = COS(rdum)/rdum
          END DO
       END DO
       call timestop("sphbesintegral")
@@ -1115,7 +1112,7 @@ CONTAINS
                   kpts, hybrid%maxlcutm1, atoms, hybrid%lcutm1, &
                   hybrid%nindxm1, hybrid%maxindxm1, dwgn(:, :, :, isym), &
                   hybrid%nbasp, nbasm1)
-               IF (iarr(igpt1) .EQ. 0) THEN
+               IF (iarr(igpt1) == 0) THEN
                   CALL bramat_trafo( &
                      carr2(:, 1), igpt1, &
                      carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
@@ -1363,7 +1360,7 @@ CONTAINS
             ! additional contributions occur
             !
             call timestart("gamma point treatment")
-            IF (ikpt .EQ. 1) THEN
+            IF (ikpt == 1) THEN
                !
                ! store the contribution of the G=0 plane wave with the MT l=0 functions in
                ! coulomb_mt2(:hybrid%nindxm1(l=0,itype),0,hybrid%maxlcutm1+1,iatom)
@@ -1429,7 +1426,7 @@ CONTAINS
                                                      iatom, ikpt0) &
                                        - coulomb_mt3_r(:hybrid%nindxm1(0, itype) - 1, iatom, &
                                                        iatom, ikpt0))) &
-                            .GT. 1E-08) &
+                            > 1E-08) &
                            call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
 
                      else
@@ -1437,7 +1434,7 @@ CONTAINS
                                                      iatom, ikpt0) &
                                        - coulomb_mt3_c(:hybrid%nindxm1(0, itype) - 1, iatom, &
                                                        iatom, ikpt0))) &
-                            .GT. 1E-08) &
+                            > 1E-08) &
                            call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
                      endif
                   END DO
@@ -1479,7 +1476,7 @@ CONTAINS
                               DO m1 = -l1, l1
                                  indx2 = indx2 + 1
                                  indx4 = indx4 + hybrid%nindxm1(l1, itype1)
-                                 IF (indx4 .LT. indx3) CYCLE
+                                 IF (indx4 < indx3) CYCLE
                                  IF (calc_mt(ikpt)) THEN
                                     IF (sym%invs) THEN
                                        coulomb_mtir_r(indx1, indx2, ikpt1) = coulhlp%data_r(indx3, indx4)
@@ -1516,7 +1513,7 @@ CONTAINS
          END DO
          call timestop("residual MT contributions")
 
-         IF (indx1 .NE. ic) STOP 'coulombmatrix: error index counting'
+         IF (indx1 /= ic) STOP 'coulombmatrix: error index counting'
 
          !
          ! add ir part to the matrix coulomb_mtir
@@ -1637,7 +1634,7 @@ CONTAINS
                DO M = -l, l
                   DO i = 1, hybrid%nindxm1(l, itype)
                      j = j + 1
-                     IF (l .EQ. 0) THEN
+                     IF (l == 0) THEN
                         coeff(j) = SQRT(4*pi_const) &
                                    *intgrf(atoms%rmsh(:, itype)*hybrid%basm1(:, i, 0, itype), &
                                            atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
@@ -1648,7 +1645,7 @@ CONTAINS
                                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
                                       /SQRT(cell%vol)
 
-                     ELSE IF (l .EQ. 1) THEN
+                     ELSE IF (l == 1) THEN
                         cderiv(j, M) = -SQRT(4*pi_const/3)*CMPLX(0.0, 1.0) &
                                        *intgrf(atoms%rmsh(:, itype)**2*hybrid%basm1(:, i, 1, itype), &
                                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
@@ -1692,8 +1689,8 @@ CONTAINS
                                  + CONJG(claplace(i))*coeff(j))/2)
          END DO
       END DO
-      coeff(hybrid%nbasp + 1) = 1d0
-      coeff(hybrid%nbasp + 2:) = 0d0
+      coeff(hybrid%nbasp + 1) = 1.0
+      coeff(hybrid%nbasp + 2:) = 0.0
       IF (sym%invs) THEN
 
          CALL desymmetrize(coeff, 1, nbasm1(1), 2, &
@@ -1724,7 +1721,7 @@ CONTAINS
    !
 
    ! Convergence parameter
-#define CONVPARAM 1d-18
+#define CONVPARAM 1e-18
    ! Do some additional shells ( real-space and Fourier-space sum )
 #define ADDSHELL1 40
 #define ADDSHELL2 0
@@ -1780,7 +1777,7 @@ CONTAINS
 
       IF (mpi%irank /= 0) first = .FALSE.
 
-      rdum = cell%vol**(1d0/3) ! define "average lattice parameter"
+      rdum = cell%vol**(1.0/3) ! define "average lattice parameter"
 
       ! ewaldlambda = ewaldscale
       scale = hybrid%ewaldlambda/rdum
@@ -1815,13 +1812,13 @@ CONTAINS
       g(5) = rexp/a**6*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
                                                                    *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10))))))))))
       g(6) = rexp/a**7*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
-                                                               *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
+                                                                   *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
       g(7) = rexp/a**8*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
-                                                    *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
+                                                                   *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
       DO l = 8, 2*hybrid%lexp
          g(l) = a**(-l - 1)
       END DO
-      IF (ANY(g .GT. convpar/10)) THEN ! one digit more accuracy for real-space sum
+      IF (ANY(g > convpar/10)) THEN ! one digit more accuracy for real-space sum
          a = a + 1
          GOTO 1
       END IF
@@ -1840,7 +1837,7 @@ CONTAINS
       g(5) = pref*aa**6*a**3/945
       g(6) = pref*aa**7*a**4/10395
       g(7) = pref*aa**7*a**5/135135
-      IF (ANY(g .GT. convpar)) THEN
+      IF (ANY(g > convpar)) THEN
          a = a + 1
          GOTO 2
       END IF
@@ -1869,7 +1866,7 @@ CONTAINS
       call timestart("realspace sum")
       DO ic2 = 1, atoms%nat
          DO ic1 = 1, atoms%nat
-            IF (ic2 .NE. 1 .AND. ic1 .EQ. ic2) CYCLE
+            IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
             rc = MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
             DO i = 1, nptsh
                ra = MATMUL(cell%amat, ptsh(:, i)) + rc
@@ -1877,7 +1874,7 @@ CONTAINS
                radsh(i) = a
             END DO
             call timestart("rorderpf")
-            CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001d0)/LOG(2d0))))
+            CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
             call timestop("rorderpf")
             ptsh = ptsh(:, pnt)
             radsh = radsh(pnt)
@@ -1887,45 +1884,45 @@ CONTAINS
             conv = HUGE(i)
             shlp = 0
             DO i = 1, nptsh
-               IF (ALL(conv .NE. HUGE(i))) EXIT
-               IF (i .NE. 1) THEN
-                  IF (ABS(radsh(i) - radsh(i - 1)) .GT. 1d-10) ishell = ishell + 1
+               IF (ALL(conv /= HUGE(i))) EXIT
+               IF (i /= 1) THEN
+                  IF (ABS(radsh(i) - radsh(i - 1)) > 1e-10) ishell = ishell + 1
                ENDIF
                ra = MATMUL(cell%amat, ptsh(:, i)) + rc
                a = scale*SQRT(SUM(ra**2))
-               IF (a .EQ. 0) THEN
+               IF (a == 0) THEN
                   CYCLE
-               ELSE IF (ABS(a - a1) .GT. 1d-10) THEN
+               ELSE IF (ABS(a - a1) > 1e-10) THEN
                   a1 = a
                   rexp = EXP(-a)
-                  IF (ishell .LE. conv(0)) g(0) = rexp/a &
-                                                  *(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
-                  IF (ishell .LE. conv(1)) g(1) = rexp/a**2 &
-                                                  *(1 + a*(1 + a/2*(1 + a*7/24*(1 + a/7))))
-                  IF (ishell .LE. conv(2)) g(2) = rexp/a**3 &
-                                                  *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a*3/16*(1 + a/9))))))
-                  IF (ishell .LE. conv(3)) g(3) = rexp/a**4 &
-                                                  *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/8)))))))
-                  IF (ishell .LE. conv(4)) g(4) = rexp/a**5 &
-                                                  *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8 &
-                                                                                                                 *(1 + a/10)))))))))
-                  IF (ishell .LE. conv(5)) g(5) = rexp/a**6 &
-                                                  *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
-                                                                                                                *(1 + a/10))))))))))
-                  IF (ishell .LE. conv(6)) g(6) = rexp/a**7 &
-                                                  *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
-                                                                                          *(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
-                  IF (ishell .LE. conv(7)) g(7) = rexp/a**8 &
-                                                  *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
-                                                                               *(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
+                  IF (ishell <= conv(0)) g(0) = rexp/a &
+                                                *(1 + a*11/16*(1 + a*3/11*(1 + a/9)))
+                  IF (ishell <= conv(1)) g(1) = rexp/a**2 &
+                                                *(1 + a*(1 + a/2*(1 + a*7/24*(1 + a/7))))
+                  IF (ishell <= conv(2)) g(2) = rexp/a**3 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a*3/16*(1 + a/9))))))
+                  IF (ishell <= conv(3)) g(3) = rexp/a**4 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/8)))))))
+                  IF (ishell <= conv(4)) g(4) = rexp/a**5 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8 &
+                                                                                                               *(1 + a/10)))))))))
+                  IF (ishell <= conv(5)) g(5) = rexp/a**6 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
+                                                                                                                        *(1 + a/10))))))))))
+                  IF (ishell <= conv(6)) g(6) = rexp/a**7 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
+                                                                                                                        *(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
+                  IF (ishell <= conv(7)) g(7) = rexp/a**8 &
+                                                *(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6*(1 + a/7*(1 + a/8*(1 + a/9 &
+                                                                                                                        *(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
                   DO l = 8, maxl
-                     IF (ishell .LE. conv(l)) g(l) = a**(-l - 1)
+                     IF (ishell <= conv(l)) g(l) = a**(-l - 1)
                   END DO
                   DO l = 0, maxl
-                     IF (conv(l) .EQ. HUGE(i) .AND. g(l) .LT. convpar(l)/10) conv(l) = ishell + ADDSHELL1
+                     IF (conv(l) == HUGE(i) .AND. g(l) < convpar(l)/10) conv(l) = ishell + ADDSHELL1
                   END DO
                END IF
-               IF (ishell .GT. conv(maxl) .AND. maxl .NE. 0) maxl = maxl - 1
+               IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
                call timestart("harmonics")
                call ylm4(maxl, ra, y)
                call timestop("harmonics")
@@ -1936,7 +1933,7 @@ CONTAINS
                   cexp = EXP(CMPLX(0.0, 1.0)*2*pi_const*rdum)
                   lm = 0
                   DO l = 0, maxl
-                     IF (ishell .LE. conv(l)) THEN
+                     IF (ishell <= conv(l)) THEN
                         cdum = cexp*g(l)
                         DO M = -l, l
                            lm = lm + 1
@@ -1980,43 +1977,43 @@ CONTAINS
          ishell = 1
          conv = HUGE(i)
          DO i = 1, nptsh
-            IF (i .GT. 1) THEN
-               IF (ABS(radsh(i) - radsh(i - 1)) .GT. 1d-10) ishell = ishell + 1
+            IF (i > 1) THEN
+               IF (ABS(radsh(i) - radsh(i - 1)) > 1e-10) ishell = ishell + 1
             ENDIF
             ki = ptsh(:, i) + k - NINT(k) ! -nint(...) transforms to Wigner-Seitz cell ( i.e. -0.5 <= x,y,z < 0.5 )
             ka = MATMUL(ki, cell%bmat)
             a = SQRT(SUM(ka**2))/scale
             aa = (1 + a**2)**(-1)
-            IF (ABS(a - a1) .GT. 1d-10) THEN
+            IF (ABS(a - a1) > 1e-10) THEN
                a1 = a
-               IF (a .EQ. 0) THEN
+               IF (a == 0) THEN
                   g(0) = pref*(-4)
                   g(1) = 0
                ELSE
-                  IF (ishell .LE. conv(0)) g(0) = pref*aa**4/a**2
-                  IF (ishell .LE. conv(1)) g(1) = pref*aa**4/a
+                  IF (ishell <= conv(0)) g(0) = pref*aa**4/a**2
+                  IF (ishell <= conv(1)) g(1) = pref*aa**4/a
                END IF
-               IF (ishell .LE. conv(2)) g(2) = pref*aa**5/3
-               IF (ishell .LE. conv(3)) g(3) = pref*aa**5*a/15
-               IF (ishell .LE. conv(4)) g(4) = pref*aa**6*a**2/105
-               IF (ishell .LE. conv(5)) g(5) = pref*aa**6*a**3/945
-               IF (ishell .LE. conv(6)) g(6) = pref*aa**7*a**4/10395
-               IF (ishell .LE. conv(7)) g(7) = pref*aa**7*a**5/135135
-               IF (ishell .GT. 1) THEN
+               IF (ishell <= conv(2)) g(2) = pref*aa**5/3
+               IF (ishell <= conv(3)) g(3) = pref*aa**5*a/15
+               IF (ishell <= conv(4)) g(4) = pref*aa**6*a**2/105
+               IF (ishell <= conv(5)) g(5) = pref*aa**6*a**3/945
+               IF (ishell <= conv(6)) g(6) = pref*aa**7*a**4/10395
+               IF (ishell <= conv(7)) g(7) = pref*aa**7*a**5/135135
+               IF (ishell > 1) THEN
                   DO l = 0, 7
-                     IF (conv(l) .EQ. HUGE(i) .AND. g(l) .LT. convpar(l)) conv(l) = ishell + ADDSHELL2
+                     IF (conv(l) == HUGE(i) .AND. g(l) < convpar(l)) conv(l) = ishell + ADDSHELL2
                   END DO
                END IF
             END IF
 
-            IF (ishell .GT. conv(maxl) .AND. maxl .NE. 0) maxl = maxl - 1
+            IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
             call timestart("harmonics")
             call ylm4(maxl, ka, y)
             call timestop("harmonics")
-            cdum = 1d0
+            cdum = 1.0
             lm = 0
             DO l = 0, maxl
-               IF (ishell .LE. conv(l)) THEN
+               IF (ishell <= conv(l)) THEN
                   DO M = -l, l
                      lm = lm + 1
                      y(lm) = CONJG(y(lm))*cdum*g(l)
@@ -2029,7 +2026,7 @@ CONTAINS
             END DO
             DO ic2 = 1, atoms%nat
                DO ic1 = 1, atoms%nat
-                  IF (ic2 .NE. 1 .AND. ic1 .EQ. ic2) CYCLE
+                  IF (ic2 /= 1 .AND. ic1 == ic2) CYCLE
                   cexp = EXP(CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT(ki, atoms%taual(:, ic1) - atoms%taual(:, ic2)))
                   DO lm = 1, (maxl + 1)**2
                      structconst(lm, ic1, ic2, ikpt) = structconst(lm, ic1, ic2, ikpt) + cexp*y(lm)
@@ -2046,7 +2043,7 @@ CONTAINS
       !
       !     Add contribution for l=0 to diagonal elements and rescale structure constants
       !
-      structconst(1, 1, 1, :) = structconst(1, 1, 1, :) - 5d0/16/SQRT(4*pi_const)
+      structconst(1, 1, 1, :) = structconst(1, 1, 1, :) - 5.0/16/SQRT(4*pi_const)
       DO i = 2, atoms%nat
          structconst(:, i, i, :) = structconst(:, 1, 1, :)
       END DO
@@ -2054,14 +2051,14 @@ CONTAINS
          structconst(l**2 + 1:(l + 1)**2, :, :, :) = structconst(l**2 + 1:(l + 1)**2, :, :, :)*scale**(l + 1)
       END DO
 
-      rad = (cell%vol*3/4/pi_const)**(1d0/3) ! Wigner-Seitz radius (rad is recycled)
+      rad = (cell%vol*3/4/pi_const)**(1.0/3) ! Wigner-Seitz radius (rad is recycled)
 
       !     Calculate accuracy of Gamma-decomposition
-      IF (ALL(kpts%bk .EQ. 0)) GOTO 4
-      a = 1d30 ! ikpt = index of shortest non-zero k-point
+      IF (ALL(kpts%bk == 0)) GOTO 4
+      a = 1e30 ! ikpt = index of shortest non-zero k-point
       DO i = 2, kpts%nkpt
          rdum = SUM(MATMUL(kpts%bk(:, i), cell%bmat)**2)
-         IF (rdum .LT. a) THEN
+         IF (rdum < a) THEN
             ikpt = i
             a = rdum
          END IF
@@ -2108,7 +2105,7 @@ CONTAINS
       REAL, ALLOCATABLE   :: rhelp(:)
 
       ALLOCATE (ptsh(3, 100000), radsh(100000), stat=ok)
-      IF (ok .NE. 0) STOP 'getshells: failure allocation ptsh/radsh'
+      IF (ok /= 0) STOP 'getshells: failure allocation ptsh/radsh'
 
       ptsh = 0
       radsh = 0
@@ -2122,17 +2119,17 @@ CONTAINS
                iz = n - ABS(ix) - ABS(iy)
 1              r = ix*lat(:, 1) + iy*lat(:, 2) + iz*lat(:, 3)
                rdum = SUM(r**2)
-               IF (rdum .LT. rad**2) THEN
+               IF (rdum < rad**2) THEN
                   found = .TRUE.
                   i = i + 1
-                  IF (i .GT. SIZE(radsh)) THEN
+                  IF (i > SIZE(radsh)) THEN
                      ALLOCATE (rhelp(SIZE(radsh)), ihelp(3, SIZE(ptsh, 2)), stat=ok)
-                     IF (ok .NE. 0) STOP 'getshells: failure allocation rhelp/ihelp'
+                     IF (ok /= 0) STOP 'getshells: failure allocation rhelp/ihelp'
                      rhelp = radsh
                      ihelp = ptsh
                      DEALLOCATE (radsh, ptsh)
                      ALLOCATE (radsh(SIZE(rhelp) + 100000), ptsh(3, SIZE(ihelp, 2) + 100000), stat=ok)
-                     IF (ok .NE. 0) STOP 'getshells: failure re-allocation ptsh/radsh'
+                     IF (ok /= 0) STOP 'getshells: failure re-allocation ptsh/radsh'
                      radsh(1:SIZE(rhelp)) = rhelp
                      ptsh(:, 1:SIZE(ihelp, 2)) = ihelp
                      DEALLOCATE (rhelp, ihelp)
@@ -2140,7 +2137,7 @@ CONTAINS
                   ptsh(:, i) = (/ix, iy, iz/)
                   radsh(i) = SQRT(rdum)
                END IF
-               IF (iz .GT. 0) THEN
+               IF (iz > 0) THEN
                   iz = -iz
                   GOTO 1
                END IF
@@ -2163,12 +2160,12 @@ CONTAINS
       ptsh = ihelp
       DEALLOCATE (rhelp, ihelp)
 
-      CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001d0)/LOG(2d0))))
+      CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
       radsh = radsh(pnt)
       ptsh = ptsh(:, pnt)
       nshell = 1
       DO i = 2, nptsh
-         IF (radsh(i) - radsh(i - 1) .GT. 1d-10) nshell = nshell + 1
+         IF (radsh(i) - radsh(i - 1) > 1e-10) nshell = nshell + 1
       END DO
 
       IF (lwrite) &
@@ -2199,11 +2196,11 @@ CONTAINS
       DO ikpt = 1, kpts%nkpt
          igptloop: DO igpt = 1, ngpt(ikpt)
             igptp = pgpt(igpt, ikpt)
-            IF (igptp .EQ. 0) STOP 'getnorm: zero pointer (bug?)'
+            IF (igptp == 0) STOP 'getnorm: zero pointer (bug?)'
             q = MATMUL(kpts%bk(:, ikpt) + gpt(:, igptp), cell%bmat)
             qnorm = SQRT(SUM(q**2))
             DO j = 1, i
-               IF (ABS(qnrm(j) - qnorm) .LT. 1d-12) THEN
+               IF (ABS(qnrm(j) - qnorm) < 1e-12) THEN
                   pqnrm(igpt, ikpt) = j
                   CYCLE igptloop
                END IF
@@ -2250,23 +2247,23 @@ CONTAINS
       q1 = qnrm(iqnrm1)
       q2 = qnrm(iqnrm2)
       s = atoms%rmt(itype)
-      IF (q1 .EQ. 0 .AND. q2 .EQ. 0) THEN
-         IF (l .GT. 0) THEN
+      IF (q1 == 0 .AND. q2 == 0) THEN
+         IF (l > 0) THEN
             sphbessel_integral = 0
          ELSE
             sphbessel_integral = 2*s**5/15
          ENDIF
-      ELSE IF (q1 .EQ. 0 .OR. q2 .EQ. 0) THEN
-         IF (l .GT. 0) THEN
+      ELSE IF (q1 == 0 .OR. q2 == 0) THEN
+         IF (l > 0) THEN
             sphbessel_integral = 0
-         ELSE IF (q1 .EQ. 0) THEN
+         ELSE IF (q1 == 0) THEN
             sphbessel_integral = s**3/(3*q2**2)*(q2*s*sphbes0(1, itype, iqnrm2) &
                                                  + sphbes0(2, itype, iqnrm2))
          ELSE
             sphbessel_integral = s**3/(3*q1**2)*(q1*s*sphbes0(1, itype, iqnrm1) &
                                                  + sphbes0(2, itype, iqnrm1))
          ENDIF
-      ELSE IF (q1 .EQ. q2) THEN
+      ELSE IF (q1 == q2) THEN
          sphbessel_integral = s**3/(2*q1**2)*((2*l + 3)*sphbes0(l + 1, itype, iqnrm1)**2 - &
                                               (2*l + 1)*sphbes0(l, itype, iqnrm1)*sphbes0(l + 2, itype, iqnrm1))
       ELSE ! We use either if two fromulas that are stable for high and small q1/q2 respectively
@@ -2291,8 +2288,8 @@ CONTAINS
          r1 = ABS(da/a1)
          r2 = MIN(ABS(db/b1), ABS(dc/c1))
          ! Ensure numerical stability. If both formulas are not sufficiently stable, the program stops.
-         IF (r1 .GT. r2) THEN
-            IF (r1 .LT. 1d-6 .AND. l_warn) THEN
+         IF (r1 > r2) THEN
+            IF (r1 < 1e-6 .AND. l_warn) THEN
                WRITE (6, '(A,E12.5,A,E12.5,A)') 'sphbessel_integral: Warning! Formula One possibly unstable. Ratios:', &
                   r1, '(', r2, ')'
                WRITE (6, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', q1, q2, itype
@@ -2300,7 +2297,7 @@ CONTAINS
             END IF
             sphbessel_integral = s**3/dq*da
          ELSE
-            IF (r2 .LT. 1d-6 .AND. l_warn) THEN
+            IF (r2 < 1e-6 .AND. l_warn) THEN
                WRITE (6, '(A,E13.5,A,E13.5,A)') 'sphbessel_integral: Warning! Formula Two possibly unstable. Ratios:', &
                   r2, '(', r1, ')'
                WRITE (6, '(A,2F15.10,I4)') '                    Current qnorms and atom type:', &

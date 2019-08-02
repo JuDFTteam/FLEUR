@@ -398,8 +398,8 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
 
       !--->          update overlap and l-diagonal hamiltonian matrix
       kj_end = MIN(ki,lapw%nv(iintsp))
-      VecHelpS = 0.d0
-      VecHelpH = 0.d0
+      VecHelpS = 0.0
+      VecHelpH = 0.0
       DO  l = 0,atoms%lmax(n)
          fjkiln = fj(ki,l,jintsp)
          gjkiln = gj(ki,l,jintsp)

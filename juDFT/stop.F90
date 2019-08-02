@@ -235,6 +235,7 @@ CONTAINS
     IF (l_mpi) THEN
        IF(PRESENT(irank)) THEN
           CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+          CALL MPI_ERRHANDLER_SET(MPI_COMM_WORLD,MPI_ERRORS_RETURN,ierr)
           CALL MPI_FINALIZE(ierr)
        ELSE
           CALL juDFT_STOP(0)
@@ -292,6 +293,7 @@ CONTAINS
           WRITE(0,*) "      Error messages in the following lines can be ignored."
           WRITE(0,*) ""
        END IF
+       CALL MPI_ERRHANDLER_SET(MPI_COMM_WORLD,MPI_ERRORS_RETURN,ierr)
        CALL MPI_ABORT(MPI_COMM_WORLD,error,ierr)
     ENDIF
 #endif
