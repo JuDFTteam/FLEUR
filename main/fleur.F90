@@ -293,12 +293,12 @@ CONTAINS
 
              IF (noco%l_soc.AND.(.NOT.noco%l_noco)) THEN
                 input%zelec = input%zelec*2
-                CALL fermie(eig_id,mpi,kpts,obsolete,input,noco,enpara%epara_min,cell,results)
+                CALL fermie(eig_id,mpi,kpts,input,noco,enpara%epara_min,cell,results)
                 results%seigscv = results%seigscv/2
                 results%ts = results%ts/2
                 input%zelec = input%zelec/2
              ELSE
-                CALL fermie(eig_id,mpi,kpts,obsolete,input,noco,enpara%epara_min,cell,results)
+                CALL fermie(eig_id,mpi,kpts,input,noco,enpara%epara_min,cell,results)
              ENDIF
              CALL timestop("determination of fermi energy")
 

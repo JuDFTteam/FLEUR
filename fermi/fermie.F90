@@ -7,8 +7,7 @@ MODULE m_fermie
   !            or fermi-function                                    p.kurz
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE fermie(eig_id, mpi,kpts,obsolete,&
-       input, noco,e_min,cell,results)
+  SUBROUTINE fermie(eig_id,mpi,kpts,input,noco,e_min,cell,results)
 
     !---------------------------------------------------f--------------------
     !
@@ -39,13 +38,12 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
-    TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_mpi),INTENT(IN)   :: mpi
-    TYPE(t_obsolete),INTENT(IN)   :: obsolete
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_kpts),INTENT(IN)   :: kpts
+    TYPE(t_results), INTENT(INOUT) :: results
+    TYPE(t_mpi),     INTENT(IN)    :: mpi
+    TYPE(t_input),   INTENT(IN)    :: input
+    TYPE(t_noco),    INTENT(IN)    :: noco
+    TYPE(t_cell),    INTENT(IN)    :: cell
+    TYPE(t_kpts),    INTENT(IN)    :: kpts
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id
