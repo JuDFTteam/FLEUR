@@ -371,12 +371,13 @@ MODULE m_types_greensf
                                               this%du(iz,i_gf,m,mp,spin_ind,ipm) * udot(1,spin1)*u(2,spin2) + &
                                               this%ud(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*udot(2,spin2) 
                   ELSE        
-                     IF(l_full.AND.ispin.EQ.2.AND.input%jspins.EQ.1) THEN
+                     IF(ispin.EQ.1.AND.input%jspins.EQ.1) THEN
                         !In this case the ordering of m and mp has to be reversed
-                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,-m,-mp,spin_ind,ipm)/2.0
+                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,-m,-mp,spin_ind,ipm)
                      ELSE
-                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,spin_ind,ipm)/(3-input%jspins)
+                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,spin_ind,ipm)
                      ENDIF
+                     IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3-input%jspins) 
                   ENDIF
                ENDDO
             ENDDO
