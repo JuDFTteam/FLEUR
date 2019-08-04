@@ -456,6 +456,7 @@ MODULE m_types_setup
       LOGICAL :: gf_anacont
       LOGICAL :: gf_dosfermi
       LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
+      LOGICAL :: gfTet !This switch will be true iff the tetrahedron were calculated from the equdistant grid
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps
       INTEGER :: rdmftStatesBelow

@@ -234,7 +234,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
-      IF (atoms%n_gf.GT.0.AND.input%tria) THEN
+      IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
          IF(input%film) THEN
             CALL timestart("TriangularWeights")
             tetweights = 0.0

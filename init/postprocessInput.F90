@@ -37,6 +37,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_gen_bz
   USE m_nocoInputCheck
   USE m_kpoints   
+  USE m_calc_tetra
   USE m_types_forcetheo_extended
   USE m_relaxio
 
@@ -529,6 +530,11 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         CALL gen_bz(kpts,sym)
      ELSE
         kpts%nkptf=0
+     ENDIF
+     
+     !Calculate tetrahedra from the full k-point set
+     IF(atoms%n_gf>0.AND..NOT.input%tria) THEN
+        CALL calc_tetra(kpts,cell,input,sym)
      ENDIF
 
      ! Missing xc functionals initializations

@@ -166,6 +166,7 @@
           input%gf_nmatsub = 5
           input%gf_n = 128
           input%gf_alpha = 0.25
+          input%gfTet = .FALSE.
           input%minoccDistance = 0.01
           input%minmatDistance = 0.001
           atoms%n_hia = 0

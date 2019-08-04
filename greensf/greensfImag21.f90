@@ -44,12 +44,13 @@ MODULE m_greensfImag21
       INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,imat,it,is,isi,ilo,ilop
       REAL     weight,fac
       COMPLEX phase
-      LOGICAL  l_zero
+      LOGICAL  l_zero,l_tria
       COMPLEX im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg))
       COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
       IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
+      l_tria = input%tria.OR.input%gfTet
       DO i_gf = 1, atoms%n_gf
          nType = atoms%gfelem(i_gf)%atomType
          l = atoms%gfelem(i_gf)%l
@@ -67,7 +68,7 @@ MODULE m_greensfImag21
             DO ib = 1, nbands
 
                l_zero = .true.
-               IF(input%tria) THEN
+               IF(l_tria) THEN
                   !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
                   IF(ANY(tetweights(:,ib).NE.0.0)) l_zero = .false.
                ELSE
@@ -82,9 +83,9 @@ MODULE m_greensfImag21
                   lm = l*(l+1) + m 
                   DO mp = -l, l 
                      lmp = l*(l+1) + mp 
-                     DO ie = MERGE(ind(ib,1),j,input%tria), MERGE(ind(ib,2),j,input%tria)
+                     DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
                      
-                        weight =  MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,input%tria)
+                        weight =  MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,l_tria)
                         !
                         !Contribution from states
                         !

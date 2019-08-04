@@ -35,13 +35,13 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
    REAL,                  INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
 
    !-Local Scalars
-   LOGICAL l_zero
+   LOGICAL l_zero,l_tria
    INTEGER i_gf,ib,ie,j,nType,natom,l,m,mp,lm,lmp,ilo,ilop,imat,it,is,isi
    REAL    weight,fac
    COMPLEX im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg))
    COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
-
+   l_tria = input%tria.OR.input%gfTet
    !Loop through the gf elements to be calculated
    DO i_gf = 1, atoms%n_gf
 
@@ -53,7 +53,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
          im = 0.0
          !Loop through bands
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(natom,l,nType,ispin,wtkpt,i_gf,nbands) &
+         !$OMP SHARED(natom,l,nType,ispin,wtkpt,i_gf,nbands,l_tria) &
          !$OMP SHARED(atoms,im,input,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
          !$OMP PRIVATE(ie,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero)
          !$OMP DO
@@ -61,7 +61,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
 
             !Check wether there is a non-zero weight for the energy window
             l_zero = .true.
-            IF(input%tria) THEN
+            IF(l_tria) THEN
                !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
                IF(ANY(tetweights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
             ELSE
@@ -77,9 +77,9 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
                DO mp = -l,l
                   lmp = l*(l+1)+mp
                   !Choose the relevant energy points depending on the bz-integration method
-                  DO ie = MERGE(ind(ib,1),j,input%tria), MERGE(ind(ib,2),j,input%tria)
+                  DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
                      !weight for the bz-integration including spin-degeneracy
-                     weight = 2.0/input%jspins * MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,input%tria)  
+                     weight = 2.0/input%jspins * MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,l_tria)  
                      !
                      !Contribution from states
                      !
