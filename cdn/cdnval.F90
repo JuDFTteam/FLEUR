@@ -195,7 +195,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos)
+      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos.OR.input%l_gf)
       noccbd = SIZE(ev_list)
       we  = cdnvalJob%weights(ev_list,ikpt)
       eig = results%eig(ev_list,ikpt,jsp)
@@ -238,12 +238,12 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF(input%film) THEN
             CALL timestart("TriangularWeights")
             tetweights = 0.0
-            CALL tria_weights(ikpt,kpts,ntria,as,itria,atr,results%neig(:,jsp),results%eig(:,:,jsp),greensfCoeffs,tetweights,tet_ind,results%ef)
+            CALL tria_weights(ikpt,kpts,ntria,as,itria,atr,SIZE(ev_list),results%eig(ev_list,:,jsp),greensfCoeffs,tetweights,tet_ind,results%ef)
             CALL timestop("TriangularWeights")
          ELSE
             CALL timestart("TetrahedronWeights")
             tetweights = 0.0
-            CALL tetra_weights(ikpt,kpts,results%neig(:,jsp),results%eig(:,:,jsp),greensfCoeffs,tetweights,tet_ind,results%ef)
+            CALL tetra_weights(ikpt,kpts,SIZE(ev_list),results%eig(ev_list,:,jsp),greensfCoeffs,tetweights,tet_ind,results%ef)
             CALL timestop("TetrahedronWeights")
          ENDIF
       ENDIF

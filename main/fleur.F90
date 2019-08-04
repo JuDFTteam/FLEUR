@@ -64,7 +64,6 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
-    !USE m_calc_tetra
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -134,8 +133,6 @@ CONTAINS
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
   
-    !Temporary
-    !IF(atoms%n_gf>0) CALL calc_tetra(kpts,input,sym,oneD)
 
     iter     = 0
     iterHF   = 0

@@ -29,7 +29,7 @@ MODULE m_tetra_weights
       INTEGER,                INTENT(IN)     :: itria(3,2*kpts%nkpt)
       REAL,                   INTENT(IN)     :: vol 
       REAL,                   INTENT(IN)     :: voltria(2*kpts%nkpt)
-      INTEGER,                INTENT(IN)     :: neig(:)
+      INTEGER,                INTENT(IN)     :: neig
       REAL,                   INTENT(IN)     :: eig(:,:)
       TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
 
@@ -124,7 +124,7 @@ MODULE m_tetra_weights
 
       INTEGER,                INTENT(IN)     :: ikpt
       TYPE(t_kpts),           INTENT(IN)     :: kpts
-      INTEGER,                INTENT(IN)     :: neig(:)
+      INTEGER,                INTENT(IN)     :: neig
       REAL,                   INTENT(IN)     :: eig(:,:)
       TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
 
@@ -133,7 +133,7 @@ MODULE m_tetra_weights
       REAL,                   INTENT(IN)     :: ef
 
       !Local Scalars
-      INTEGER itet, ie, ib,i, j,icorn, nstart,nend,max_ib,max_ib_tet,tmp
+      INTEGER itet, ie, ib,i, j,icorn, nstart,nend,tmp
       REAL    weight,dweight,tol,vol
       LOGICAL l_bloechl
 
@@ -142,27 +142,25 @@ MODULE m_tetra_weights
       REAL             :: e(4)
       INTEGER          :: ind(4)
 
-      l_bloechl = .true.
+      l_bloechl = .TRUE.
       ALLOCATE( dos_weights(g%ne) )
       dos_weights = 0.0
-      e_ind(:,1) = g%ne
+      e_ind(:,1) = g%ne+1
       e_ind(:,2) = 0
       max_ib = 0
       weights = 0.0
       DO itet = 1, kpts%ntet
 
          IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE !search for the tetrahedra containing ikpt
-         
-         max_ib_tet = MINVAL(neig(kpts%ntetra(1:4,itet))) 
-         IF(max_ib_tet.GT.max_ib) max_ib = max_ib_tet
+
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(ikpt,itet,ef,l_bloechl,max_ib_tet) &
+         !$OMP SHARED(ikpt,itet,ef,l_bloechl,neig) &
          !$OMP SHARED(kpts,eig,g,weights) &
          !$OMP PRIVATE(ib,ie,i,j,nstart,nend,icorn,weight,dweight,tmp,vol) &
          !$OMP PRIVATE(ind,e)
 
          !$OMP DO
-         DO ib = 1, max_ib_tet!Only go up to the band index which exists at all 
+         DO ib = 1, neig!Only go up to the band index which exists at all 
             
             !check if the band is inside the energy window
             IF((MINVAL(eig(ib,kpts%ntetra(1:4,itet))).GT.g%e_top).OR.(MAXVAL(eig(ib,kpts%ntetra(1:4,itet))).LT.g%e_bot)) CYCLE !Maybe cancel the band loop completely if we go above top
@@ -200,7 +198,6 @@ MODULE m_tetra_weights
             nstart = INT((e(ind(1))-g%e_bot)/g%del)+1
             vol = kpts%voltet(itet)/kpts%ntet
             nend = g%ne
-
             IF(l_bloechl) CALL bloechl_corrections(ef,vol,e(ind(:)),dweight,icorn)
             DO ie = MAX(1,nstart), g%ne
                CALL contrib_singletetra((ie-1)*g%del+g%e_bot,vol,e(ind(:)),weight,icorn)
@@ -213,9 +210,8 @@ MODULE m_tetra_weights
                ENDIF
             ENDDO 
             IF(nend.NE.g%ne) weights(nend+1:g%ne,ib) = weights(nend+1:g%ne,ib) + 1/4.0*vol
-
          ENDDO
-         !$OMP ENDDO
+         !$OMP END DO
          !$OMP END PARALLEL
       ENDDO
       !
@@ -223,11 +219,11 @@ MODULE m_tetra_weights
       !
       tol = 1E-14
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(weights,g,e_ind,eig,ikpt,tol,max_ib) &
+      !$OMP SHARED(weights,g,e_ind,eig,ikpt,tol,neig) &
       !$OMP PRIVATE(ib,i,dos_weights) 
 
       !$OMP DO
-      DO ib = 1, max_ib
+      DO ib = 1, neig
          dos_weights = 0.0
          !Imaginary part of the weights
          CALL diff3(weights(:,ib),g%del,dos_weights(:))
@@ -281,8 +277,12 @@ MODULE m_tetra_weights
                ENDIF
             ENDIF
          ENDDO
-         IF(ANY(dos_weights(:).LT.0)) THEN 
+         IF(ANY(dos_weights(:).LT.0)) THEN
             CALL juDFT_error("Negative tetra weight",calledby="tetra_weights")
+         ENDIF
+         IF(e_ind(ib,1).GT.e_ind(ib,2)) THEN
+            e_ind(ib,1) = 1
+            e_ind(ib,2) = 1
          ENDIF
          weights(:,ib) = dos_weights(:)
       ENDDO
