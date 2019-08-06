@@ -53,7 +53,7 @@ CONTAINS
     REAL u(vacuum%nmzd,size(duz,1),input%jspins),ud(vacuum%nmzd,size(duz,1),input%jspins)
     REAL v(3),x(vacuum%nmzd), qssbti(2,2)
     !     ..
-    fac=MERGE(1.0,-1.0,jspin1<=jspin2)
+    fac=MERGE(1.0,-1.0,jspin1>=jspin2)
     ipot=MERGE(jspin1,3,jspin1==jspin2)
 
     tuuv=0.0;tudv=0.0;tddv=0.0;tduv=0.0

@@ -24,21 +24,21 @@ CONTAINS
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    chi(1,1) =  exp(-ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
-    chi(1,2) = -exp(-ImagUnit*noco%alph(n)/2)*sin(noco%beta(n)/2)
-    chi(2,1) =  exp(ImagUnit*noco%alph(n)/2)*sin(noco%beta(n)/2)
-    chi(2,2) =  exp(ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
+    chi(1,1) =  exp(ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
+    chi(1,2) = -EXP(ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
+    chi(2,1) =  EXP(-ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
+    chi(2,2) =  EXP(-ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
     !--->       and determine the prefactors for the Hamitonian- and
     !--->       overlapp-matrix elements
     IF (isp<3) THEN
        isp1=isp
        isp2=isp
     ELSEIF(isp==3) THEN
-       isp1=1
-       isp2=2
-    ELSE
        isp1=2
        isp2=1
+    ELSE
+       isp1=1
+       isp2=2
     ENDIF
     
     chi_mat(1,1) = chi(1,isp1)*CONJG(chi(1,isp2))
@@ -77,10 +77,10 @@ CONTAINS
     
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    chi(1,1) =  exp(-ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
-    chi(1,2) = -exp(-ImagUnit*noco%alph(n)/2)*sin(noco%beta(n)/2)
-    chi(2,1) =  exp(ImagUnit*noco%alph(n)/2)*sin(noco%beta(n)/2)
-    chi(2,2) =  EXP(ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
+    chi(1,1) =  exp(ImagUnit*noco%alph(n)/2)*cos(noco%beta(n)/2)
+    chi(1,2) = -EXP(ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
+    chi(2,1) =  EXP(-ImagUnit*noco%alph(n)/2)*SIN(noco%beta(n)/2)
+    chi(2,2) =  EXP(-ImagUnit*noco%alph(n)/2)*COS(noco%beta(n)/2)
 
     isigma_x=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(isigma(:,:,1),chi))
     isigma_y=MATMUL(CONJG(TRANSPOSE(chi)), MATMUL(isigma(:,:,2),chi))

@@ -21,6 +21,7 @@
           USE m_gen_bz
           USE m_ylm
           USE m_InitParallelProcesses
+          USE m_checkInputParams
           USE m_xmlOutput
           USE m_constants
           USE m_winpXML
@@ -148,6 +149,7 @@
           input%forcemix = 0
           input%epsdisp = 0.00001
           input%epsforce = 0.00001
+          input%numBandsKPoints = -1
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
@@ -276,16 +278,11 @@
           DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
           DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
 
-          
-
           ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
           ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
 #ifdef CPP_MPI
-          CALL mpi_bc_all(&
-               &           mpi,stars,sphhar,atoms,obsolete,&
-               &           sym,kpts,DIMENSION,input,field,&
-               &           banddos,sliceplot,vacuum,cell,enpara,&
-               &           noco,oneD,hybrid)
+          CALL mpi_bc_all(mpi,stars,sphhar,atoms,obsolete,sym,kpts,DIMENSION,input,field,&
+                          banddos,sliceplot,vacuum,cell,enpara,noco,oneD,hybrid)
 #endif
 
           ! Set up pointer for backtransformation from g-vector in positive 
@@ -332,6 +329,8 @@
              ! thus the symmetry operations are doubled
              sym%nsym = 2*sym%nop
           END IF
+
+          CALL checkInputParams(mpi,input,dimension,atoms,noco,xcpot,oneD)
 
           ! Initializations for Wannier functions (start)
           IF (mpi%irank.EQ.0) THEN
@@ -433,10 +432,6 @@
           ! Initializations for Wannier functions (end)
 
           IF (xcpot%is_hybrid().OR.input%l_rdmft) THEN
-             IF (input%film.OR.oneD%odi%d1) THEN
-                CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
-                                 calledby ="fleur", hint="Use a supercell or a different functional")
-             END IF
 
 !             IF( ANY( atoms%l_geo  ) )&
 !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&

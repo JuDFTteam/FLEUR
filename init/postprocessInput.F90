@@ -226,6 +226,10 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
            CALL judft_warn("l_noco=F and l_ss=T is meaningless. Setting l_ss to F.")
            noco%l_ss = .FALSE.
         END IF
+        IF (noco%l_mperp) THEN
+           CALL judft_warn("l_noco=F and l_mperp=T is meaningless. Setting l_mperp to F.")
+           noco%l_mperp = .FALSE.
+        END IF
      END IF
 
      ! Calculate missing kpts parameters
@@ -554,6 +558,9 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   END IF
 
   !At some point this should be enabled for noco as well
+#ifdef CPP_MPI
+  CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+#endif
   IF (.not.noco%l_noco) & 
   CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 

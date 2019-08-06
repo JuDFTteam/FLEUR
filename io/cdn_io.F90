@@ -926,7 +926,7 @@ MODULE m_cdn_io
      INTEGER :: archiveType
      LOGICAL :: l_qfix
      REAL    :: fermiEnergy,fix
-     REAL    :: shifts(3,SIZE(atoms%taual,2))
+     REAL    :: shifts(3,atoms%nat)
 
      TYPE(t_potden):: den
 

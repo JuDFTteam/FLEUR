@@ -112,13 +112,13 @@ CONTAINS
              CALL hsmt_spinor(ispin,n,noco,chi)
              DO iintsp=1,2
                 DO jintsp=1,2
-                   CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,iintsp,jintsp,chi(jintsp,iintsp),&
+                   CALL hsmt_sph(n,atoms,mpi,ispin,input,noco,iintsp,jintsp,chi(iintsp,jintsp),&
                                  lapw,enpara%el0,td%e_shift(n,ispin),usdus,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
                                  smat(iintsp,jintsp),hmat(iintsp,jintsp))
-                   CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(jintsp,iintsp),noco,cell,&
+                   CALL hsmt_nonsph(n,mpi,sym,atoms,ispin,iintsp,jintsp,chi(iintsp,jintsp),noco,cell,&
                                     lapw,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),hmat(iintsp,jintsp))
                    CALL hsmt_lo(input,atoms,sym,cell,mpi,noco,lapw,usdus,td,fj(:,0:,ispin,:),gj(:,0:,ispin,:),&
-                          n,chi(jintsp,iintsp),ispin,iintsp,jintsp,hmat(iintsp,jintsp),smat(iintsp,jintsp))
+                          n,chi(iintsp,jintsp),ispin,iintsp,jintsp,hmat(iintsp,jintsp),smat(iintsp,jintsp))
                 ENDDO
              ENDDO
           ENDIF

@@ -280,6 +280,13 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,212) kpts%kPointDensity(1),kpts%kPointDensity(2),kpts%kPointDensity(3),kptGamma
    END IF
 
+   IF(input%numBandsKPoints.GT.0) THEN
+      WRITE(fileNum,'(a)') '         <altKPointSet purpose="bands">'
+      WRITE(fileNum,217) input%numBandsKPoints
+      WRITE(fileNum,'(a)') '         </altKPointSet>'
+      217 FORMAT('            <kPointCount count="',i6,'" gamma="F"/>')
+   END IF
+
    IF(juDFT_was_argument("-gw")) THEN
       WRITE(fileNum,'(a)') '         <altKPointSet purpose="GW">'
       WRITE(fileNum,'(a)') '            <kPointListFile filename="kpts_gw"/>'
