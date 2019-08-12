@@ -10,7 +10,7 @@ CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
      oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
-     noco,DIMENSION,enpara,sphhar,l_opti,noel,l_kpts)
+     noco,DIMENSION,enpara,sphhar,l_opti,l_kpts)
 
   USE m_juDFT
   USE m_types
@@ -64,19 +64,15 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   TYPE(t_field),    INTENT(INOUT) :: field
   LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
-  CHARACTER(len=3), ALLOCATABLE, INTENT(IN) :: noel(:)
 
-  INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt
-  INTEGER              :: minNeigd, nv, nv2, kq1, kq2, kq3, jrc, jsp, ii
+  INTEGER              :: i, j, n, na, iType, l, ilo
+  INTEGER              :: minNeigd, jrc, ii
   INTEGER              :: ios, ntst, ierr
-  REAL                 :: sumWeight, rmtmax, zp, radius, dr
-  REAL                 :: kmax1, dtild1, dvac1
-  REAL                 :: bk(3)
-  LOGICAL              :: l_vca, l_test,l_gga
+  REAL                 :: rmtmax, zp, radius, dr
+  LOGICAL              :: l_vca, l_test
  
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
-  INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
-  REAL,    ALLOCATABLE :: rmt1(:), dx1(:)
+  REAL,    ALLOCATABLE :: rmt1(:)
 
 #ifdef CPP_MPI
   INCLUDE 'mpif.h'
