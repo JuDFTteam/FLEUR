@@ -163,7 +163,11 @@
           banddos%l_mcd = .FALSE.
           banddos%e_mcd_lo = -10.0
           banddos%e_mcd_up = 0.0
+
           banddos%unfoldband = .FALSE.
+          banddos%s_cell_x = 1
+          banddos%s_cell_y = 1
+          banddos%s_cell_z = 1
 
           noco%l_mtNocoPot = .FALSE.
 
