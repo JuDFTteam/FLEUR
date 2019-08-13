@@ -122,17 +122,19 @@ CONTAINS
     DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
           CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
-          IF ( mpi%irank == 0 ) THEN
+          IF (mpi%irank == 0) THEN
              WRITE (6,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
              WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :' 
              WRITE (6,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
-             attributes = ''
-             WRITE(attributes(1),'(i0)') jsp
-             WRITE(attributes(2),'(i0)') k
-             WRITE(attributes(3),'(f15.8)') kpts%bk(1,k)
-             WRITE(attributes(4),'(f15.8)') kpts%bk(2,k)
-             WRITE(attributes(5),'(f15.8)') kpts%bk(3,k)
-             CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,eig(1:ne(k,jsp),k,jsp))
+             IF(.NOT.judft_was_argument("-minimalOutput")) THEN
+                attributes = ''
+                WRITE(attributes(1),'(i0)') jsp
+                WRITE(attributes(2),'(i0)') k
+                WRITE(attributes(3),'(f15.8)') kpts%bk(1,k)
+                WRITE(attributes(4),'(f15.8)') kpts%bk(2,k)
+                WRITE(attributes(5),'(f15.8)') kpts%bk(3,k)
+                CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,eig(1:ne(k,jsp),k,jsp))
+             END IF
           END IF
        END DO
     ENDDO
