@@ -665,8 +665,8 @@ SUBROUTINE w_inpXML(&
    390 FORMAT('      <vacuumDOS layers="',i0,'" integ="',l1,'" star="',l1,'" nstars="',i0,'" locx1="',f0.5,'" locy1="',f0.5,'" locx2="',f0.5,'" locy2="',f0.5,'" nstm="',i0,'" tworkf="',f0.5,'"/>')
    WRITE (fileNum,390) vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
 
-!      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
-   395 FORMAT('      <unfoldingBand unfoldBand="',l1,'" supercellX="',i0,'" supercellY="',i0,'" supercellZ="',i0,'"/>')
+!      <unfoldingBand unfoldband="F" supercellX="1" supercellY="1" supercellZ="1"/>
+   395 FORMAT('      <unfoldingBand unfoldband="',l1,'" supercellX="',i0,'" supercellY="',i0,'" supercellZ="',i0,'"/>')
    WRITE (fileNum,395) banddos%unfoldband, banddos%s_cell_x, banddos%s_cell_y, banddos%s_cell_z
 
 !      <plotting iplot="F" score="F" plplot="F"/>
