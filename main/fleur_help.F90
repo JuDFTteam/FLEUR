@@ -35,11 +35,12 @@ CONTAINS
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control the input:"
     CALL print_argument("-toXML")
-    CALL print_argument("-xmlXpath")
+    CALL print_argument("-xmlXPath")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Output options:"
     CALL print_argument("-no_out")
-    CALL print_argument("-gen_enpara")
+    CALL print_argument("-minimalOutput")
+    CALL print_argument("-genEnpara")
     CALL print_argument("-h")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control FLEUR job:"
