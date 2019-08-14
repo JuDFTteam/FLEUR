@@ -3,7 +3,7 @@ MODULE m_gfcalc
    !Contains the main routines called from cdnval and cdngen
    USE m_juDFT
    USE m_constants
-   !These dependencies are here so that all these subroutines can be called by simply adding USE m_gfcalc tot hte file
+   !These dependencies are here so that all these subroutines can be called by simply adding USE m_gfcalc to the file
    USE m_j0
    USE m_gfDOS
    USE m_occmtx

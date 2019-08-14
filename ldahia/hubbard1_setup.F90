@@ -63,7 +63,7 @@ MODULE m_hubbard1_setup
       REAL     u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia)
 
-      COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
+      COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz)
       REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_selfenexist,l_exist,l_linkedsolver
@@ -234,8 +234,7 @@ MODULE m_hubbard1_setup
                ! Calculate the distance and update the density matrix 
                !----------------------------------------------------------------------
                CALL n_mmp_dist(den%mmpMat(:,:,indStart:indEnd,:),mmpMat,atoms%n_hia,results,input%jspins)
-
-               den%mmpMat(:,:,indStart:indEnd,:) = mmpMat
+               den%mmpMat(:,:,indStart:indEnd,:) = mmpMat(:,:,:,1:input%jspins) !For now LDA+U in FLEUR ignores spin offdiagonal elements
             ENDIF
          ELSE 
             !The solver does not need to be run so we just add the current energy correction from LDA+HIA 

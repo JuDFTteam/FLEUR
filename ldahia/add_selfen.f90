@@ -37,7 +37,7 @@ MODULE m_add_selfen
       REAL,             INTENT(IN)     :: n_occ(atoms%n_hia,input%jspins)
       REAL,             INTENT(IN)     :: mu_dc
       COMPLEX,          INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
-      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
+      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
 
       INTEGER i_hia,l,nType,ns,ispin,m,iz,ipm,spin_match,matsize,start,end,i_match
       CHARACTER(len=6) app,filename
@@ -73,12 +73,12 @@ MODULE m_add_selfen
             WRITE(filename,9000) i_match
             IF(l_debug) OPEN(unit=1337,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
             mu = mu_a
+            start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
+            end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
             DO WHILE(mu.LE.mu_b)
                mu = mu + mu_step
                DO iz = 1, g%nz
                   !Read selfenergy
-                  start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
-                  end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
                   vmat%data_c = selfen(i_hia,start:end,start:end,iz)
                   IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
                      !Dismiss spin-off-diagonal elements
@@ -120,7 +120,7 @@ MODULE m_add_selfen
             IF(l_debug) CLOSE(1337)
 
             !Sanity check for the maximum occupation
-            IF(ABS(n_max-2*ns).GT.1) THEN
+            IF(n_max-2*ns.GT.1) THEN
                !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
                CALL juDFT_error("Something went wrong with the addition of the selfenergy",calledby="add_selfen")
             ENDIF
@@ -131,8 +131,6 @@ MODULE m_add_selfen
                mu = (mu_a + mu_b)/2.0
                DO iz = 1, g%nz
                   !Read selfenergy
-                  start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
-                  end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
                   vmat%data_c = selfen(i_hia,start:end,start:end,iz)
                   IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
                      !Dismiss spin-off-diagonal elements
