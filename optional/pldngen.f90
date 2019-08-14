@@ -69,13 +69,11 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
    TYPE(t_potden) :: den
 
    ! Local Scalars
-   INTEGER :: nrhomfile=26   
    INTEGER iden,ivac,ifft2,ifft3,archiveType
-   INTEGER imz,ityp,iri,ilh,imesh,lh,iq2,iq3,iter
+   INTEGER imz,ityp,iri,ilh,imesh,iter
    REAL cdnup,cdndown,chden,mgden,theta,phi,zero,rho_11,rziw,fermiEnergyTemp
    REAL rho_22,rho_21r,rho_21i,rhotot,mx,my,mz,fix,vz_r,vz_i
    COMPLEX czero
-   CHARACTER*8 dop,iop,name(10)
 
    ! Local Arrays
    !---> off-diagonal part of the density matrix
@@ -91,6 +89,8 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
    REAL    :: cdn11, cdn22
    COMPLEX :: cdn21
    !---> end of test part
+
+   iter = 0 ! This is not clean!
 
    zero = 0.0 ; czero = CMPLX(0.0,0.0)
    ifft3 = 27*stars%mx1*stars%mx2*stars%mx3

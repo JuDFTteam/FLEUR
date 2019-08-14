@@ -19,6 +19,7 @@
           USE m_gen_map
           USE m_dwigner
           USE m_gen_bz
+          USE m_calc_tetra
           USE m_ylm
           USE m_InitParallelProcesses
           USE m_checkInputParams
@@ -85,11 +86,11 @@
           INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType
           COMPLEX    :: cdum
           CHARACTER(len=4)              :: namex
-          CHARACTER(len=12)             :: relcor, tempNumberString
+          CHARACTER(len=12)             :: relcor
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: dtild, phi_add
-          LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
+          LOGICAL                       :: l_found, l_kpts, l_exist
 
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
@@ -185,7 +186,11 @@
           banddos%l_mcd = .FALSE.
           banddos%e_mcd_lo = -10.0
           banddos%e_mcd_up = 0.0
+
           banddos%unfoldband = .FALSE.
+          banddos%s_cell_x = 1
+          banddos%s_cell_y = 1
+          banddos%s_cell_z = 1
 
           noco%l_mtNocoPot = .FALSE.
 
@@ -221,7 +226,7 @@
              CALL timestart("postprocessInput") 
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
-                                   noco,hub1,dimension,enpara,sphhar,l_opti,noel,l_kpts)
+                         noco,hub1,dimension,enpara,sphhar,l_opti,l_kpts)
              CALL timestop("postprocessInput") 
 
              IF (mpi%irank.EQ.0) THEN
@@ -485,11 +490,11 @@
                 END DO
              END DO
           ELSE
-             IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
+             IF ( banddos%dos .AND. banddos%ndir == -3) THEN
                 WRITE(*,*) 'Recalculating k point grid to cover the full BZ.'
                 CALL gen_bz(kpts,sym)
                 kpts%nkpt = kpts%nkptf
-                DEALLOCATE(kpts%bk,kpts%wtkpt)
+                IF(ALLOCATED(kpts%bk)) DEALLOCATE(kpts%bk,kpts%wtkpt)
                 ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))
                 kpts%bk(:,:) = kpts%bkf(:,:)
                 IF (kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3).NE.kpts%nkptf) THEN
@@ -507,6 +512,10 @@
                    kpts%wtkpt = 1.0 / kpts%nkptf
                 END IF
              END IF
+             IF (atoms%n_gf>0.AND..NOT.input%tria) THEN
+              IF(kpts%nkptf.EQ.0) CALL gen_bz(kpts,sym)
+              CALL calc_tetra(kpts,cell,input,sym)
+             ENDIF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf = .FALSE.
           END IF

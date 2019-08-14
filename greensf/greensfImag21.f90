@@ -37,7 +37,7 @@ MODULE m_greensfImag21
 
       INTEGER,                   INTENT(IN)     :: nbands   
       REAL,                      INTENT(IN)     :: wtkpt
-      REAL,                      INTENT(IN)     :: tetweights(greensfCoeffs%ne,nbands)
+      COMPLEX,                   INTENT(IN)     :: tetweights(greensfCoeffs%ne,nbands)
       INTEGER,                   INTENT(IN)     :: ind(nbands,2)
       REAL,                      INTENT(IN)     :: eig(nbands) 
 
@@ -61,7 +61,7 @@ MODULE m_greensfImag21
             im = 0.0
             !Loop through bands
             !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(natom,l,nType,wtkpt,i_gf,nbands) &
+            !$OMP SHARED(natom,l,nType,wtkpt,i_gf,nbands,l_tria) &
             !$OMP SHARED(atoms,im,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig,tetweights,ind) &
             !$OMP PRIVATE(ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop)
             !$OMP DO
@@ -70,7 +70,7 @@ MODULE m_greensfImag21
                l_zero = .true.
                IF(l_tria) THEN
                   !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
-                  IF(ANY(tetweights(:,ib).NE.0.0)) l_zero = .false.
+                  IF(ANY(ABS(tetweights(:,ib)).NE.0.0)) l_zero = .false.
                ELSE
                   !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
                   j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
@@ -85,7 +85,7 @@ MODULE m_greensfImag21
                      lmp = l*(l+1) + mp 
                      DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
                      
-                        weight =  MERGE(tetweights(ie,ib),wtkpt/greensfCoeffs%del,l_tria)
+                        weight =  MERGE(REAL(tetweights(ie,ib)),wtkpt/greensfCoeffs%del,l_tria)
                         !
                         !Contribution from states
                         !

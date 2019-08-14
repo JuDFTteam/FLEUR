@@ -713,6 +713,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          !General Switches
          input%l_gfsphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
          input%l_gfmperp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
+         input%l_resolvent = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_resolv'))
          !Information about the energy mesh on the real axis
          xPathB = TRIM(ADJUSTL(xPathA)) // '/realAxis'
          numberNodes = xmlGetNumberOfNodes(xPathB)

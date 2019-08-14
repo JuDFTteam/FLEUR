@@ -35,11 +35,12 @@ CONTAINS
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control the input:"
     CALL print_argument("-toXML")
-    CALL print_argument("-xmlXpath")
+    CALL print_argument("-xmlXPath")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Output options:"
     CALL print_argument("-no_out")
-    CALL print_argument("-gen_enpara")
+    CALL print_argument("-minimalOutput")
+    CALL print_argument("-genEnpara")
     CALL print_argument("-h")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Control FLEUR job:"
@@ -125,7 +126,8 @@ CONTAINS
     CALL new_argument(0,"-all_times","Write json files of timing for all PE, not only for PE=0","")
     !Output
     CALL new_argument(0,"-mix_io","Do not store mixing history in memory but do IO in each iteration","") 
-    CALL new_argument(0,"-no_out","Do not open the 'out' file but write to stdout","") 
+    CALL new_argument(0,"-no_out","Do not open the 'out' file but write to stdout","")
+    CALL new_argument(0,"-minimalOutput","Reduce the amount of output in the out.xml file","") 
     CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","") 
     CALL new_argument(0,"-gw","Add alternative k point set for GW in all outputs for the XML input file","") 
     CALL new_argument(0,"-noco","write out noco parameters in all outputs for inp.xml","") 

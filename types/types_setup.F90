@@ -442,6 +442,7 @@ MODULE m_types_setup
       REAL    :: ldauSpinf
       LOGICAL :: l_gfsphavg
       LOGICAL :: l_gfmperp
+      LOGICAL :: l_resolvent
       INTEGER :: gf_ne
       REAL    :: gf_ellow
       REAL    :: gf_elup

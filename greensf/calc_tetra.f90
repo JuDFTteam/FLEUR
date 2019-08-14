@@ -10,7 +10,6 @@ MODULE m_calc_tetra
       USE m_types
       USE m_juDFT
       USE m_constants
-      USE m_gen_bz
 
       IMPLICIT NONE
 
@@ -25,32 +24,6 @@ MODULE m_calc_tetra
       REAL sumvol,volbz
 
       CALL timestart("Calculation of Tetrahedra")
-      !We calculate the kpts in the whole bz
-      IF(kpts%nkptf.EQ.0) THEN
-         WRITE(*,*) "Recalculating the kpoints over the full brillouin zone"
-         CALL gen_bz(kpts,sym)
-      ENDIF
-
-      kpts%nkpt = kpts%nkptf
-      DEALLOCATE(kpts%bk,kpts%wtkpt)
-      ALLOCATE(kpts%bk(3,kpts%nkptf),kpts%wtkpt(kpts%nkptf))
-      kpts%bk(:,:) = kpts%bkf(:,:)
-      IF (kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3).NE.kpts%nkptf) THEN
-         IF(kpts%l_gamma) THEN
-            kpts%wtkpt = 1.0 / (kpts%nkptf-1)
-            DO ikpt = 1, kpts%nkptf
-               IF(ALL(kpts%bk(:,ikpt).EQ.0.0)) THEN
-                  kpts%wtkpt(ikpt) = 0.0
-               END IF
-            END DO
-         ELSE
-            CALL juDFT_error("nkptf does not match product of nkpt3(i).",calledby="calc_tetra")
-         END IF
-      ELSE
-         kpts%wtkpt = 1.0 / kpts%nkptf
-      END IF
-
-
 
       volbz = sqrt(sum(cell%bmat(:,1)*cell%bmat(:,1))*sum(cell%bmat(:,2)*cell%bmat(:,2))*sum(cell%bmat(:,3)*cell%bmat(:,3)))
       !Choose the tetrahedra decomposition along the shortest diagonal
@@ -58,8 +31,8 @@ MODULE m_calc_tetra
       !MISSING: Generate all kpts 
       !Set up pointer array for the kpts 
       p = 0
-      DO ikpt = 1, kpts%nkpt 
-         iarr = nint(kpts%bk(:,ikpt)*kpts%nkpt3)
+      DO ikpt = 1, kpts%nkptf 
+         iarr = nint(kpts%bkf(:,ikpt)*kpts%nkpt3)
          p(iarr(1),iarr(2),iarr(3)) = ikpt
       ENDDO
       !Wrap around at the end
@@ -73,7 +46,7 @@ MODULE m_calc_tetra
          p(:,:,0) = p(:,:,kpts%nkpt3(3))
       ENDIF
       !Check for invalid indices
-      IF(ANY(p<=0).OR.ANY(p>kpts%nkpt)) CALL juDFT_error("Invalid kpoint index in pointer array",calledby="calc_tetra")
+      IF(ANY(p<=0).OR.ANY(p>kpts%nkptf)) CALL juDFT_error("Invalid kpoint index in pointer array",calledby="calc_tetra")
 
       IF (ALLOCATED(kpts%ntetra)) THEN
          DEALLOCATE(kpts%ntetra)
@@ -81,8 +54,8 @@ MODULE m_calc_tetra
       IF (ALLOCATED(kpts%voltet)) THEN
          DEALLOCATE(kpts%voltet)
       END IF
-      ALLOCATE(kpts%ntetra(4,kpts%nkpt*6))
-      ALLOCATE(kpts%voltet(kpts%nkpt*6))
+      ALLOCATE(kpts%ntetra(4,kpts%nkptf*6))
+      ALLOCATE(kpts%voltet(kpts%nkptf*6))
 
       kpts%ntet = 0
       sumvol = 0.0
@@ -110,7 +83,7 @@ MODULE m_calc_tetra
             ENDDO
          ENDDO
       ENDDO
-      IF(ABS(sumvol-volbz).GT.0.001) CALL juDFT_error("calc_tetra failed", calledby="calc_tetra")
+      IF(ABS(sumvol-volbz).GT.1E-12) CALL juDFT_error("calc_tetra failed", calledby="calc_tetra")
       input%gfTet = .TRUE.
       kpts%voltet = kpts%voltet*kpts%ntet/volbz
       CALL timestop("Calculation of Tetrahedra")

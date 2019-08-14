@@ -64,6 +64,7 @@ CONTAINS
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
       ALLOCATE(vx%pw_w,mold=vTot%pw)
+      vx%pw_w = 0.0
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
 #else

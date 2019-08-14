@@ -4,10 +4,14 @@ set(fleur_F77 ${fleur_F77}
 set(fleur_F90 ${fleur_F90}
 greensf/greensfImag.f90
 greensf/greensfImag21.f90
+greensf/greensfRes.f90
+greensf/greensfRes21.f90
 greensf/angles.f90
 greensf/onsite.f90
 greensf/kkintgr.f90
-greensf/tetra_weights.f90
+greensf/dosWeights.f90
+greensf/resWeights.f90
+greensf/tetrahedronInit.f90
 greensf/kk_cutoff.f90
 greensf/gfcalc.f90
 greensf/crystalfield.f90

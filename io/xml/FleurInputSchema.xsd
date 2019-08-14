@@ -675,7 +675,8 @@
          </xsd:choice>
       </xsd:sequence>
       <xsd:attribute default="T" name="l_sphavg" type="FleurBool"/>
-      <xsd:attribute default="T" name="l_mperp" type="FleurBool"/>
+      <xsd:attribute default="F" name="l_mperp" type="FleurBool"/>
+      <xsd:attribute default="F" name="l_resolv" type="FleurBool"/>
    </xsd:complexType>
 
    <xsd:complexType name="ERealAxisType">

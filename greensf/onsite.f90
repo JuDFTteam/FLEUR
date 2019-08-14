@@ -24,10 +24,9 @@ INTEGER, PARAMETER :: int_method(3) = (/3,3,1/)
 
 CONTAINS
 
-SUBROUTINE calc_onsite(atoms,input,noco,greensfCoeffs,g,sym)
+SUBROUTINE calc_onsite(atoms,input,sym,noco,greensfCoeffs,g)
 
    USE m_kkintgr
-   USE m_gfcalc
    USE m_kk_cutoff
 
    IMPLICIT NONE

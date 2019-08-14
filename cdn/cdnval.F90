@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle,ntria,as,itria,atr)
+                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,greensf,angle,ntria,as,itria,atr)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -38,10 +38,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_pwden
    USE m_forcea8
    USE m_checkdopall
-   USE m_onsite     ! calculates the on-site green's function
-   USE m_greensfImag
-   USE m_greensfImag21
-   USE m_tetra_weights
+   USE m_tetrahedronInit
+   USE m_gfcalc
    USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into vacuum%layers
@@ -85,6 +83,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
    TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
    TYPE(t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
+   TYPE(t_greensf),       OPTIONAL, INTENT(INOUT) :: greensf
    INTEGER,               OPTIONAL, INTENT(IN)    :: ntria
    REAL,                  OPTIONAL, INTENT(IN)    :: as 
    INTEGER,               OPTIONAL, INTENT(IN)    :: itria(3,2*kpts%nkpt)
@@ -108,7 +107,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    REAL,ALLOCATABLE :: we(:),eig(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-   REAL,    ALLOCATABLE :: tetweights(:,:)
+   COMPLEX, ALLOCATABLE :: tetweights(:,:)
    INTEGER, ALLOCATABLE :: tet_ind(:,:)
 
    TYPE (t_lapw)             :: lapw
@@ -235,17 +234,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
       IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
-         IF(input%film) THEN
-            CALL timestart("TriangularWeights")
-            tetweights = 0.0
-            CALL tria_weights(ikpt,kpts,ntria,as,itria,atr,SIZE(ev_list),results%eig(ev_list,:,jsp),greensfCoeffs,tetweights,tet_ind,results%ef)
-            CALL timestop("TriangularWeights")
-         ELSE
-            CALL timestart("TetrahedronWeights")
-            tetweights = 0.0
-            CALL tetra_weights(ikpt,kpts,SIZE(ev_list),results%eig(ev_list,:,jsp),greensfCoeffs,tetweights,tet_ind,results%ef)
-            CALL timestop("TetrahedronWeights")
-         ENDIF
+         CALL timestart("TetrahedronWeights")
+         CALL tetrahedronInit(ikpt,kpts,input,SIZE(ev_list),results%eig(ev_list,:,jsp),&
+                              greensfCoeffs,results%ef,greensf%e,greensf%nz,tetweights,tet_ind)
+         CALL timestop("TetrahedronWeights")
       ENDIF
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
@@ -254,16 +246,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
-         IF (atoms%n_gf.GT.0) THEN
-            CALL timestart("Greens Function: Imaginary Part")
-               CALL greensfImag(atoms,sym,input,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,usdus,eigVecCoeffs,greensfCoeffs)
-            IF(input%l_gfmperp.AND.ispin==jsp_end) THEN
-               CALL greensfImag21(atoms,sym,angle,input,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),eig,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
-            ENDIF
-            CALL timestop("Greens Function: Imaginary Part")
-         ENDIF
-
-         
+         IF (atoms%n_gf.GT.0) CALL bzIntegrationGF(atoms,sym,input,angle,ispin,noccbd,tetweights,tet_ind,kpts%wtkpt(ikpt),&
+                                                   eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensf,greensfCoeffs,ispin==jsp_end)
 
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
@@ -301,7 +285,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
-                       results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin),mcd,slab,orbcomp,greensfCoeffs)
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,:,jspin),&
+                       mcd,slab,orbcomp,greensfCoeffs,greensf)
    END DO
 #endif
 
