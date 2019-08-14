@@ -225,8 +225,8 @@
             
              CALL timestart("postprocessInput") 
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
-                                   oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
-                         noco,hub1,dimension,enpara,sphhar,l_opti,l_kpts)
+                                   oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&	
+                                   noco,hub1,dimension,enpara,sphhar,l_opti,l_kpts)
              CALL timestop("postprocessInput") 
 
              IF (mpi%irank.EQ.0) THEN

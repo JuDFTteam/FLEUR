@@ -10,8 +10,7 @@ CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
      oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
-	  noco,hub1,DIMENSION,enpara,sphhar,l_opti,l_kpts)
-
+     noco,hub1,DIMENSION,enpara,sphhar,l_opti,l_kpts)
   USE m_juDFT
   USE m_types
   USE m_constants
