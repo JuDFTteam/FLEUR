@@ -458,8 +458,8 @@ CONTAINS
 
        !CALL writeTimesXML()
 
-       IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
-          CALL closeXMLElement('iteration')
+       IF (mpi%irank.EQ.0) THEN
+          IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
        END IF
 
     END DO scfloop ! DO WHILE (l_cont)

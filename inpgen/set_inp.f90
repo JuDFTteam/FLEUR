@@ -51,13 +51,13 @@
       CHARACTER(len=80), INTENT (IN) :: title
  
       INTEGER nel,i,j, nkptOld
-      REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
+      REAL    kmax,dtild,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
       REAL    recVecLength, kPointDen(3)
       LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
       INTEGER  div(3)
-      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
+      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype)
       CHARACTER(len=1)  :: ch_rw
       CHARACTER(len=4)  :: namex
       CHARACTER(len=3)  :: noel(atoms%ntype)
@@ -65,8 +65,7 @@
       CHARACTER(len=3)  :: latnamTemp
       CHARACTER(LEN=20) :: filename
       INTEGER  nu,iofile
-      INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus
+      INTEGER  n, errorStatus
       REAL     scpos ,zc
 
       TYPE(t_banddos)::banddos
@@ -88,7 +87,6 @@
       REAL     ::  taual_hyb(3,atoms%nat)
       INTEGER  ::  bands
       LOGICAL  ::  l_gamma
-      INTEGER  :: nkpt3(3)
 !HF
 
       INTEGER :: xmlElectronStates(29,atoms%ntype)
@@ -136,7 +134,7 @@
       atoms%ulo_der = 0
       ch_rw = 'w'
       sym%namgrp= 'any ' 
-      banddos%dos   = .false. ; banddos%l_mcd = .false. ; banddos%unfoldband = .FALSE. ; input%secvar = .false.
+      banddos%dos   = .false. ; banddos%l_mcd = .false. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
@@ -164,6 +162,7 @@
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
       input%l_wann = .FALSE.
       input%numBandsKPoints = 240
+      banddos%unfoldband = .FALSE. ; banddos%s_cell_x = 1 ; banddos%s_cell_y = 1 ; banddos%s_cell_z = 1
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
