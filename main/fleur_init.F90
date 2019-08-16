@@ -142,6 +142,7 @@
           input%ldauLinMix = .FALSE.
           input%ldauMixParam = 0.05
           input%ldauSpinf = 1.0
+          input%ldauAdjEnpara = .FALSE.
           input%pallst = .FALSE.
           input%scaleCell = 1.0
           input%scaleA1 = 1.0

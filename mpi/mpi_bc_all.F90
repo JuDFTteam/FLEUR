@@ -41,7 +41,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER i(42),ierr(3)
     REAL    r(34)
-    LOGICAL l(45)
+    LOGICAL l(46)
     !     ..
     !     .. External Subroutines..
 #ifdef CPP_MPI    
@@ -80,7 +80,7 @@ CONTAINS
        l(34)=banddos%l_mcd ; l(35)=banddos%unfoldband ; l(36)=noco%l_mtNocoPot
        l(38)=field%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=field%efield%dirichlet
-       l(43)=field%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
+       l(43)=field%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix; l(46)=input%ldauAdjEnpara
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -118,7 +118,7 @@ CONTAINS
     sym%invs=l(6) ; sym%invs2=l(7) ; input%l_bmt=l(8) ; input%l_f=l(9) ; input%cdinf=l(10)
     input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
     field%efield%l_segmented = l(38) ; sym%symor=l(39); field%efield%dirichlet = l(40)
-    field%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45)
+    field%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45);input%ldauAdjEnpara=l(46)
     banddos%unfoldband=l(35)
     noco%l_mtNocoPot=l(36)
     !

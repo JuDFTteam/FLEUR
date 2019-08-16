@@ -140,8 +140,8 @@ CONTAINS
     LOGICAL ::  l_enpara
     LOGICAL ::  l_done(0:atoms%lmaxd,atoms%ntype,input%jspins)
     LOGICAL ::  lo_done(atoms%nlod,atoms%ntype,input%jspins)
-    REAL    ::  vbar,vz0,rj
-    INTEGER ::  n,jsp,l,ilo,j,ivac
+    REAL    ::  vbar,vz0,rj,tr
+    INTEGER ::  n,jsp,l,ilo,j,ivac,i
     CHARACTER(LEN=20)    :: attributes(5)
     REAL ::  e_lo(0:3,atoms%ntype)!Store info on branches to do IO after OMP
     REAL ::  e_up(0:3,atoms%ntype)
@@ -182,6 +182,7 @@ CONTAINS
           ENDDO
        ENDDO ! n
        !$OMP END PARALLEL DO
+       
        IF (mpi%irank==0) THEN
           WRITE(6,*)
           WRITE(6,*) "Updated energy parameters for spin:",jsp
@@ -281,6 +282,24 @@ CONTAINS
        ENDDO
     ENDIF
 
+    IF(input%ldauAdjEnpara) THEN
+       !If requested we can adjust the energy parameters to the LDA+U potential correction
+       IF(mpi%irank.EQ.0) WRITE(6,"(A)") "LDA+U corrections for the energy parameters"
+       DO j = 1, atoms%n_u
+          l = atoms%lda_u(j)%l
+          n = atoms%lda_u(j)%atomType
+          !Calculate the trace of the LDA+U potential
+          DO jsp = 1, input%jspins
+             tr = 0.0
+             DO i = -l,l
+                tr = tr + REAL(v%mmpMat(i,i,j,jsp))
+             ENDDO
+             enpara%el0(l,n,jsp) = enpara%el0(l,n,jsp) + tr/(2*l+1)
+          ENDDO
+          IF(mpi%irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A6,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, " spin ", jsp,"--> ", enpara%el0(l,n,jsp)
+       ENDDO
+    ENDIF
+ 
 !    enpara%ready=(ALL(enpara%el0>-1E99).AND.ALL(enpara%ello0>-1E99))
     enpara%epara_min=MIN(MINVAL(enpara%el0),MINVAL(enpara%ello0))
     

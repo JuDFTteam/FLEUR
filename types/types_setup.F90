@@ -440,6 +440,7 @@ MODULE m_types_setup
       LOGICAL :: ldauLinMix
       REAL    :: ldauMixParam
       REAL    :: ldauSpinf
+      LOGICAL :: ldauAdjEnpara
       LOGICAL :: l_gfsphavg
       LOGICAL :: l_gfmperp
       LOGICAL :: l_resolvent
