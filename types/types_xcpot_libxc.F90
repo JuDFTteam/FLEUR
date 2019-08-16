@@ -199,7 +199,7 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f03_func_info_t)        :: xc_info
 
-      xc_info = xc_f03_func_get_info(xcpot%vxc_func_c)
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
       xcpot_vx_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_vx_is_gga=.false.
