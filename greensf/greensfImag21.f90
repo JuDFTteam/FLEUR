@@ -22,7 +22,7 @@ MODULE m_greensfImag21
 
    CONTAINS
 
-   SUBROUTINE greensfImag21(atoms,sym,angle,input,nbands,tetweights,ind,wtkpt,eig,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
+   SUBROUTINE greensfImag21(atoms,sym,angle,input,nbands,dosWeights,ind,wtkpt,eig,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
 
 
       IMPLICIT NONE
@@ -37,7 +37,7 @@ MODULE m_greensfImag21
 
       INTEGER,                   INTENT(IN)     :: nbands   
       REAL,                      INTENT(IN)     :: wtkpt
-      COMPLEX,                   INTENT(IN)     :: tetweights(greensfCoeffs%ne,nbands)
+      REAL,                      INTENT(IN)     :: dosWeights(greensfCoeffs%ne,nbands)
       INTEGER,                   INTENT(IN)     :: ind(nbands,2)
       REAL,                      INTENT(IN)     :: eig(nbands) 
 
@@ -62,7 +62,7 @@ MODULE m_greensfImag21
             !Loop through bands
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(natom,l,nType,wtkpt,i_gf,nbands,l_tria) &
-            !$OMP SHARED(atoms,im,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig,tetweights,ind) &
+            !$OMP SHARED(atoms,im,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig,dosWeights,ind) &
             !$OMP PRIVATE(ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop)
             !$OMP DO
             DO ib = 1, nbands
@@ -70,7 +70,7 @@ MODULE m_greensfImag21
                l_zero = .true.
                IF(l_tria) THEN
                   !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
-                  IF(ANY(ABS(tetweights(:,ib)).NE.0.0)) l_zero = .false.
+                  IF(ANY(dosWeights(:,ib).NE.0.0)) l_zero = .false.
                ELSE
                   !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
                   j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
@@ -85,7 +85,7 @@ MODULE m_greensfImag21
                      lmp = l*(l+1) + mp 
                      DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
                      
-                        weight =  MERGE(REAL(tetweights(ie,ib)),wtkpt/greensfCoeffs%del,l_tria)
+                        weight =  MERGE(dosWeights(ie,ib),wtkpt/greensfCoeffs%del,l_tria)
                         !
                         !Contribution from states
                         !

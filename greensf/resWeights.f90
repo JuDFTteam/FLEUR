@@ -2,7 +2,7 @@ MODULE m_resWeights
 
    CONTAINS
 
-   SUBROUTINE resWeights(ikpt,kpts,neig,eig,ez,nz,weights,boundInd)
+   SUBROUTINE resWeightsCalc(currKpt,kpts,neig,eig,ez,nz,weights,boundInd)
 
       !Weights for analytical tetrahedron method for spectral functions 
 
@@ -11,7 +11,7 @@ MODULE m_resWeights
 
       IMPLICIT NONE
 
-      INTEGER,          INTENT(IN)     :: ikpt
+      INTEGER,          INTENT(IN)     :: currKpt
       TYPE(t_kpts),     INTENT(IN)     :: kpts
       INTEGER,          INTENT(IN)     :: neig
       REAL,             INTENT(IN)     :: eig(neig,kpts%nkpt)
@@ -21,11 +21,11 @@ MODULE m_resWeights
       INTEGER,          INTENT(INOUT)  :: boundInd(neig,2)
 
 
-      INTEGER itet,ib,i,j,iz,icorn,ind(4),k(4)
-      REAL e(4),vol,tmp
-      COMPLEX z(4),rk(4),sk(4)
+      INTEGER itet,ib,i,j,iz,icorn,ind(4),k(4),tmp,ikpt
+      REAL e(4),vol
+      COMPLEX weight
 
-      CALL juDFT_error("Not yet implemented",calledby="resWeights")
+      !CALL juDFT_error("Not yet implemented",calledby="resWeights")
 
 
       !Here we do no truncation for now
@@ -33,59 +33,236 @@ MODULE m_resWeights
       boundInd(:,1) = nz
       weights = 0.0
 
-      DO itet = 1, kpts%ntet
-
-         IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE
-
+      DO ikpt = MERGE(currKpt,1,kpts%nkptf.EQ.0), MERGE(currKpt,kpts%nkptf,kpts%nkptf.EQ.0)
          IF(kpts%nkptf.NE.0) THEN
-            DO i = 1, 4
-               IF(kpts%ntetra(i,itet).GT.kpts%nkpt) THEN
-                  k(i) = kpts%bkp(kpts%ntetra(i,itet))
-               ELSE
-                  k(i) = kpts%ntetra(i,itet)
-               ENDIF
-            ENDDO
+            IF(kpts%bkp(ikpt).NE.currKpt) CYCLE !Search for the kpoints with the parent currKpt
          ENDIF
+         DO itet = 1, kpts%ntet
 
-         !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(ikpt,itet,neig,nz,k) &
-         !$OMP SHARED(kpts,eig,ez,weights) &
-         !$OMP PRIVATE(ib,iz,i,j,icorn,tmp,vol) &
-         !$OMP PRIVATE(ind,e,z,rk,sk)
+            IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE
 
-         !$OMP DO
-         DO ib = 1, neig
-
-            e(1:4) = eig(ib,k(1:4)) 
-            ind=(/1,2,3,4/)
-            !Sort the energies in the tetrahedron in ascending order
-            DO i = 1, 3
-               DO j = i+1, 4
-                  IF (e(ind(i)).GT.e(ind(j))) THEN
-                     tmp = ind(i)
-                     ind(i) = ind(j)
-                     ind(j) = tmp
+            IF(kpts%nkptf.NE.0) THEN
+               DO i = 1, 4
+                  IF(kpts%ntetra(i,itet).GT.kpts%nkpt) THEN
+                     k(i) = kpts%bkp(kpts%ntetra(i,itet))
+                  ELSE
+                     k(i) = kpts%ntetra(i,itet)
                   ENDIF
                ENDDO
-            ENDDO
-            !search for the corner ikpt in the sorted array
-            DO i = 1, 4
-               IF(kpts%ntetra(ind(i),itet).EQ.ikpt) icorn = i
-            ENDDO
+            ELSE
+               k(1:4) = kpts%ntetra(1:4,itet)
+            ENDIF
 
-            vol = kpts%voltet(itet)/kpts%ntet
-            DO iz = 1, nz
-               z(1:4) = ez(iz)-e(ind(1:4))
-               !CALL resWeightTetra(rk,sk,z)
-               weights(iz,ib) = weights(iz,ib) + rk(icorn)*vol
-            ENDDO
+            !$OMP PARALLEL DEFAULT(none) &
+            !$OMP SHARED(ikpt,itet,neig,nz,k) &
+            !$OMP SHARED(kpts,eig,ez,weights) &
+            !$OMP PRIVATE(ib,iz,i,j,icorn,tmp,vol) &
+            !$OMP PRIVATE(ind,e,weight)
 
+            !$OMP DO
+            DO ib = 1, neig
+
+               e(1:4) = eig(ib,k(1:4)) 
+               ind=(/1,2,3,4/)
+               !Sort the energies in the tetrahedron in ascending order
+               DO i = 1, 3
+                  DO j = i+1, 4
+                     IF (e(ind(i)).GT.e(ind(j))) THEN
+                        tmp = ind(i)
+                        ind(i) = ind(j)
+                        ind(j) = tmp
+                     ENDIF
+                  ENDDO
+               ENDDO
+               !search for the corner ikpt in the sorted array
+               DO i = 1, 4
+                  IF(kpts%ntetra(ind(i),itet).EQ.ikpt) icorn = i
+               ENDDO
+
+               vol = kpts%voltet(itet)/kpts%ntet
+               DO iz = 1, nz
+                  CALL resWeightTetra(ez(iz),e(ind(1:4)),vol,weight,icorn)
+                  IF(ISNAN(REAL(weight)).OR.ISNAN(AIMAG(weight))) CALL juDFT_error("Tetra Weight NaN",calledby="resWeights")
+                  weights(iz,ib) = weights(iz,ib) + weight
+               ENDDO
+
+            ENDDO
+            !$OMP END DO
+            !$OMP END PARALLEL
          ENDDO
-         !$OMP END DO
-         !$OMP END PARALLEL
+      ENDDO
+      IF(ANY(AIMAG(weights).GT.0.0)) THEN
+         CALL juDFT_warn("Some weights have a wrong sign in imaginary part, may be due to numerical instability in the formulas",calledby="resWeights")
+      ENDIF
+
+   END SUBROUTINE resWeightsCalc
+
+   SUBROUTINE resWeightTetra(z,e,vol,weight,ind)
+
+      !Calculates resolvent weights for point in tetrahedron (Compare PhysRevB.29.3430)
+
+      USE m_juDFT
+
+      IMPLICIT NONE 
+
+      COMPLEX,       INTENT(IN)  :: z
+      REAL,          INTENT(IN)  :: e(4)
+      REAL,          INTENT(IN)  :: vol
+      COMPLEX,       INTENT(OUT) :: weight 
+      INTEGER,       INTENT(IN)  :: ind
+
+      REAL tol,denom,a,b,cut,min,fac
+      INTEGER ndeg,i,j,k,l,m
+      INTEGER ideg(6,2)
+
+      tol = 1e-9 !Tolerance for degeneracy
+      fac = 10.0
+
+
+      min = 9e+20
+      cut = 9e+20
+      DO i = 1, 3
+         DO j=i+1,4
+            IF(ABS(e(i)-e(j)).LT.cut) cut = ABS(e(i)-e(j))
+         ENDDO
       ENDDO
 
-   END SUBROUTINE resWeights
+      DO i =1, 4
+         IF(ABS(z-e(i)).LT.min) min = ABS(z-e(i)) 
+      ENDDO
+
+      IF(min.GT.fac*cut) THEN
+         !asymptotic relation Eqs. 9-11
+         a = (e(ind) + SUM(e(:)))/5.0
+         b = 0.0
+         DO j = 1, 4
+            IF(j.EQ.ind) CYCLE
+            b = b + 3*(e(j)-e(ind))**2
+            DO k = 1, 4
+               IF(k.EQ.j) CYCLE
+               b = b + (e(k)-e(j))**2
+            ENDDO
+         ENDDO
+         b = b/300.0
+         weight = vol*0.25/(z-a-b/z)
+         RETURN
+      ENDIF
+
+      ndeg = 0
+      ideg = 0
+      DO i = 1, 3
+         DO j = i+1,4
+            IF(ABS(e(i)-e(j)).LT.tol) THEN
+               ndeg = ndeg + 1
+               IF(ndeg.GT.6) CALL juDFT_error("Dim Error ndeg>6",calledby="resWeightTetra")
+               ideg(ndeg,1) = i
+               ideg(ndeg,2) = j
+            ENDIF
+         ENDDO
+      ENDDO
+      weight = 0.0
+      IF(ndeg.EQ.0) THEN
+
+         !all eigenvalues are non degenerate (EQ.7 from the paper)
+         denom = 1.0
+         DO i = 1, 4
+            IF(i.EQ.ind) CYCLE
+            denom = denom*(e(i)-e(ind))
+         ENDDO
+         !First term
+         weight = vol*(z-e(ind))**2/denom
+         DO j = 1, 4
+            IF(j.EQ.ind) CYCLE
+            denom = 1.0
+            DO i = 1, 4
+               IF(i.EQ.j) CYCLE
+               denom = denom*(e(i)-e(j))
+            ENDDO
+            weight = weight + vol*(z-e(j))**3/denom*LOG((z-e(j))/(z-e(ind)))/(e(ind)-e(j))
+         ENDDO
+
+      ELSE IF(ndeg.EQ.1) THEN
+
+         !Two eigenvalues are degenerate (EQs. A1 A2)
+
+         l = ideg(1,1)
+         m = ideg(1,2)
+
+         IF(ind.EQ.l.OR.ind.EQ.m) THEN
+            !EQ. A2
+            j = 0
+            DO i = 1, 4
+               IF(i.EQ.l.OR.i.EQ.m) CYCLE
+               j = i
+            ENDDO
+            IF(j.EQ.0) CALL juDFT_error("j not found",calledby="resWeightTetra")
+            k = 0
+            DO i = 1, 4
+               IF(i.EQ.l.OR.i.EQ.m.OR.i.EQ.j) CYCLE
+               k = i
+            ENDDO
+            IF(k.EQ.0) CALL juDFT_error("k not found",calledby="resWeightTetra")
+            weight = vol*(z-e(k))**3/((e(k)-e(j))*(e(k)-e(m))**3)*LOG(z-e(k)) & 
+                     +vol*(z-e(j))**3/((e(j)-e(k))*(e(j)-e(m))**3)*LOG(z-e(j)) & 
+                     +vol*(z-e(m))/((e(m)-e(j))*(e(m)-e(k))) * (0.5 + (z-e(j))/(e(m)-e(j))&
+                        +(z-e(k))/(e(m)-e(k)) + ((z-e(j))**2/(e(m)-e(j))**2 &
+                        +(z-e(k))**2/(e(m)-e(k))**2 +(z-e(j))/(e(m)-e(j))*(z-e(k))/(e(m)-e(k))) &
+                        *LOG(z-e(m)))
+         ELSE
+            !k is the one site not equal to ind, l or m
+            k = 0
+            DO i = 1, 4
+               IF(i.EQ.ind.OR.i.EQ.l.OR.i.EQ.m) CYCLE
+               k = i
+            ENDDO
+            IF(k.EQ.0) CALL juDFT_error("k not found",calledby="resWeightTetra")
+            !EQ. A1
+            weight = vol*(z-e(ind))**2/((e(ind)-e(m))**2*(e(k)-e(ind))) *&
+                        (1 + (2*(z-e(m))/(e(ind)-e(m))+(z-e(k))/(e(ind)-e(k)))*LOG(z-e(ind))) &
+                     +vol*(z-e(m))**2/((e(m)-e(ind))**2*(e(k)-e(m))) *&
+                        (1 + (2*(z-e(ind))/(e(m)-e(ind))+(z-e(k))/(e(m)-e(k)))*LOG(z-e(m))) &
+                     +vol*(z-e(k))**3/((e(k)-e(ind))**2*(e(k)-e(m))**2)*LOG(z-e(k))
+         ENDIF
+      ELSE IF(ndeg.EQ.2) THEN
+         !This is the case E1=E2<E3=E4 => A4 
+         IF(ind.LE.2) THEN
+            weight = vol*3*(z-e(3))**2*(z-e(2))/(e(3)-e(2))**4*LOG((z-e(2))/(z-e(3))) &
+                     - vol*3.0/2.0*(z-e(2))*(2*(z-e(3))-e(3)+e(2))/(e(3)-e(2))**3-vol/(e(3)-e(2))
+         ELSE
+            weight = vol*3*(z-e(2))**2*(z-e(3))/(e(3)-e(2))**4*LOG((z-e(3))/(z-e(2))) &
+                     + vol*3.0/2.0*(z-e(3))*(2*(z-e(2))+e(3)-e(2))/(e(3)-e(2))**3+vol/(e(3)-e(2))
+         ENDIF
+      ELSE IF(ndeg.GE.3.AND.ndeg.LT.6) THEN
+         !EQs A3/A5 (here we explicitly write each weight)
+         IF(ALL(ideg(:,:).NE.4)) THEN
+            !A3
+            IF(ind.NE.4) THEN
+               weight = vol*(z-e(4))**3/(e(4)-e(3))**4*LOG((z-e(4))/(z-e(3))) &
+                        + vol*(6*(z-e(4))**2-3*(e(4)-e(3))*(z-e(4))+2*(e(4)-e(3))**2)/(6*(e(4)-e(3))**3)
+            ELSE
+               weight = vol*3*(z-e(4))**2*(z-e(3))/(e(4)-e(3))**4*LOG((z-e(3))/(z-e(4))) &
+                        - vol*3.0/2.0*(z-e(3))*(2*(z-e(4))-e(4)+e(3))/(e(4)-e(3))**3-vol/(e(4)-e(3))
+            ENDIF
+         ELSE IF(ALL(ideg(:,:).NE.1)) THEN
+            !A5
+            IF(ind.EQ.1) THEN
+               weight = vol*3*(z-e(1))**2*(z-e(2))/(e(2)-e(1))**4*LOG((z-e(2))/(z-e(1))) &
+                        + vol*3.0/2.0*(z-e(2))*(2*(z-e(1))-e(1)+e(2))/(e(2)-e(1))**3+vol/(e(2)-e(1))
+            ELSE
+               weight = vol*(z-e(1))**3/(e(2)-e(1))**4*LOG((z-e(1))/(z-e(2))) &
+                        - vol*(6*(z-e(1))**2+3*(z-e(1))*(e(2)-e(1))+2*(e(2)-e(1))**2)/(6*(e(2)-e(1))**3)
+            ENDIF
+         ENDIF
+      ELSE IF(ndeg.EQ.6) THEN
+         !Eq. A6
+         weight = vol/4.0 * 1.0/(z-e(1))
+      ENDIF
+      !IF(AIMAG(weight).GT.0.0) THEN
+      !   WRITE(*,*) weight, ndeg, ind, ideg(1,1), ideg(1,2)
+         !CALL juDFT_error("")
+      !ENDIF
+
+   END SUBROUTINE
 
 
 END MODULE m_resWeights

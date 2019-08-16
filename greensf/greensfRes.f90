@@ -9,7 +9,7 @@ USE m_constants
 
 CONTAINS
 
-SUBROUTINE greensfRes(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensf)
+SUBROUTINE greensfRes(atoms,sym,input,ispin,nbands,resWeights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensf)
 
    !This Subroutine calculates the contribution to the imaginary part of the Matrix elements G^[n \sigma]_{Lm Lm'}(E+i*sigma)
    !of the current k-Point (it is called in cdnval) inside the MT-sphere 
@@ -23,7 +23,7 @@ SUBROUTINE greensfRes(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdu
    TYPE(t_sym),           INTENT(IN)    :: sym
    TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
    TYPE(t_usdus),         INTENT(IN)    :: usdus
-   TYPE(t_greensf), INTENT(INOUT) :: greensf
+   TYPE(t_greensf),       INTENT(INOUT) :: greensf
    TYPE(t_input),         INTENT(IN)    :: input 
 
    !-Scalar Arguments 
@@ -32,7 +32,7 @@ SUBROUTINE greensfRes(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdu
    REAL,                  INTENT(IN)    :: wtkpt  !Weight of the current k-point
 
    !-Array Arguments
-   COMPLEX,               INTENT(IN)    :: tetweights(greensf%nz,nbands) !Precalculated tetrahedron weights for the current k-point
+   COMPLEX,               INTENT(IN)    :: resWeights(greensf%nz,nbands) !Precalculated tetrahedron weights for the current k-point
    INTEGER,               INTENT(IN)    :: ind(nbands,2)                       !Gives the range where the tetrahedron weights are non-zero
    REAL,                  INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
 
@@ -59,7 +59,7 @@ SUBROUTINE greensfRes(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdu
          !Loop through bands
          !$OMP PARALLEL DEFAULT(none) &
          !$OMP SHARED(natom,l,nType,ispin,wtkpt,i_gf,nbands,l_tria) &
-         !$OMP SHARED(atoms,g,input,eigVecCoeffs,usdus,greensf,eig,tetweights,ind) &
+         !$OMP SHARED(atoms,g,input,eigVecCoeffs,usdus,greensf,eig,resWeights,ind) &
          !$OMP PRIVATE(iz,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero)
          !$OMP DO
          DO ib = 1, nbands
@@ -70,7 +70,8 @@ SUBROUTINE greensfRes(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdu
                   !Choose the relevant energy points depending on the bz-integration method
                   DO iz = 1, greensf%nz
                      !weight for the bz-integration including spin-degeneracy
-                     weight = 2.0/input%jspins * tetweights(iz,ib) 
+                     weight = 2.0/input%jspins * resWeights(iz,ib) 
+                     IF(ISNAN(ABS(weight))) CALL juDFT_error("weight is NaN", calledby="greensfRes")
                      !
                      !Contribution from states
                      !

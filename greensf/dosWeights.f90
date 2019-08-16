@@ -56,7 +56,7 @@ MODULE m_dosWeights
 
 
 
-   SUBROUTINE dosWeights(currKpt,kpts,neig,eig,g,ef,weights,e_ind)
+   SUBROUTINE dosWeightsCalc(currKpt,kpts,neig,eig,g,ef,weights,e_ind)
 
       USE m_types
       USE m_constants
@@ -71,7 +71,7 @@ MODULE m_dosWeights
       REAL,                   INTENT(IN)     :: eig(:,:)
       TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
 
-      COMPLEX,                INTENT(OUT)    :: weights(:,:)
+      REAL,                   INTENT(OUT)    :: weights(:,:)
       INTEGER,                INTENT(OUT)    :: e_ind(:,:)
       REAL,                   INTENT(IN)     :: ef
 
@@ -92,7 +92,9 @@ MODULE m_dosWeights
       e_ind(:,2) = 0
       weights = 0.0
       DO ikpt = MERGE(currKpt,1,kpts%nkptf.EQ.0), MERGE(currKpt,kpts%nkptf,kpts%nkptf.EQ.0)
-         IF(kpts%bkp(ikpt).NE.currKpt) CYCLE !Search for the kpoints with the parent currKpt
+         IF(kpts%nkptf.NE.0) THEN
+            IF(kpts%bkp(ikpt).NE.currKpt) CYCLE !Search for the kpoints with the parent currKpt
+         ENDIF
          DO itet = 1, kpts%ntet
             IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE !search for the tetrahedra containing ikpt
 
@@ -104,7 +106,10 @@ MODULE m_dosWeights
                      k(i) = kpts%ntetra(i,itet)
                   ENDIF
                ENDDO
+            ELSE
+               k(1:4) = kpts%ntetra(1:4,itet)
             ENDIF
+            
             !$OMP PARALLEL DEFAULT(none) &
             !$OMP SHARED(ikpt,itet,ef,l_bloechl,neig,k,currKpt) &
             !$OMP SHARED(kpts,eig,g,weights) &
@@ -205,7 +210,7 @@ MODULE m_dosWeights
       ENDDO
       !$OMP END DO
       !$OMP END PARALLEL
-   END SUBROUTINE dosWeights
+   END SUBROUTINE dosWeightsCalc
 
    SUBROUTINE contribSingletetra(energy,vol,e,weight,ind)
 

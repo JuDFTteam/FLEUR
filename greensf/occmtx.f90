@@ -13,7 +13,7 @@ MODULE m_occmtx
 
 CONTAINS
 
-   SUBROUTINE occmtx(g,l,nType,atoms,sym,input,mmpMat,lp,nTypep,l_write)
+   SUBROUTINE occmtx(g,l,nType,atoms,sym,input,mmpMat,lp,nTypep,l_write,check)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -35,11 +35,15 @@ CONTAINS
       INTEGER, OPTIONAL,      INTENT(IN)  :: lp
       INTEGER, OPTIONAL,      INTENT(IN)  :: nTypep
       LOGICAL, OPTIONAL,      INTENT(IN)  :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
+      LOGICAL, OPTIONAL,      INTENT(IN)  :: check
+
+
 
       INTEGER ind1,ind2,ipm,iz,ispin,m,mp,lp_loop,i,ns
       LOGICAL l_vertcorr
-      REAL    re,imag,nup,ndwn,nhi,nlow
+      REAL    re,imag,nup,ndwn,nhi,nlow,tr
       TYPE(t_mat) :: gmat,cmat,jmat
+      CHARACTER(len=300) :: message
 
       l_vertcorr = .false. !Enables/Disables a correction for the vertical parts of the rectangular contour
 
@@ -100,6 +104,25 @@ CONTAINS
             ENDIF
          ENDDO
       ENDDO
+
+      !Sanity check are the occupations reasonable?
+      IF(PRESENT(check)) THEN
+         IF(check) THEN
+            DO ispin = 1, input%jspins 
+               tr = 0.0
+               DO i = -l,l
+                  tr = tr + REAL(mmpmat(i,i,ispin))
+                  IF(REAL(mmpmat(i,i,ispin)).GT.1.01.OR.REAL(mmpmat(i,i,ispin)).LT.0.0) CALL juDFT_warn("Invalid element in mmpMat")
+               ENDDO
+               IF(tr.LT.0.OR.tr.GT.2*l+2) THEN
+                  WRITE(message,9100) ispin,tr
+9100              FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
+                  CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx") 
+               ENDIF
+            ENDDO
+         ENDIF
+      ENDIF
+
 
       !Io-part (ATM this subroutine is only called from rank 0)
       IF(PRESENT(l_write)) THEN

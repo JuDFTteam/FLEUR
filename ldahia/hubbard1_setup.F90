@@ -88,7 +88,7 @@ MODULE m_hubbard1_setup
          CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,.FALSE.,den%mmpMat(:,:,indStart:indEnd,:),&
          u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),e_lda_hia)
 
-         IF(hub1%l_runthisiter.AND.(ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0))) THEN 
+         IF(hub1%l_runthisiter.AND.(ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)).AND.mpi%irank.EQ.0) THEN 
             !The onsite green's function was calculated but the solver 
             !was not yet run
             !--> write out the configuration for the hubbard 1 solver 

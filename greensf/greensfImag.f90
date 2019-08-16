@@ -7,7 +7,7 @@ USE m_constants
 
 CONTAINS
 
-SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
+SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
 
    !This Subroutine calculates the contribution to the imaginary part of the Matrix elements G^[n \sigma]_{Lm Lm'}(E+i*sigma)
    !of the current k-Point (it is called in cdnval) inside the MT-sphere 
@@ -30,7 +30,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
    REAL,                  INTENT(IN)    :: wtkpt  !Weight of the current k-point
 
    !-Array Arguments
-   COMPLEX,               INTENT(IN)    :: tetweights(greensfCoeffs%ne,nbands) !Precalculated tetrahedron weights for the current k-point
+   REAL,                  INTENT(IN)    :: dosWeights(greensfCoeffs%ne,nbands) !Precalculated tetrahedron weights for the current k-point
    INTEGER,               INTENT(IN)    :: ind(nbands,2)                       !Gives the range where the tetrahedron weights are non-zero
    REAL,                  INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
 
@@ -54,7 +54,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
          !Loop through bands
          !$OMP PARALLEL DEFAULT(none) &
          !$OMP SHARED(natom,l,nType,ispin,wtkpt,i_gf,nbands,l_tria) &
-         !$OMP SHARED(atoms,im,input,eigVecCoeffs,usdus,greensfCoeffs,eig,tetweights,ind) &
+         !$OMP SHARED(atoms,im,input,eigVecCoeffs,usdus,greensfCoeffs,eig,dosWeights,ind) &
          !$OMP PRIVATE(ie,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero)
          !$OMP DO
          DO ib = 1, nbands
@@ -63,7 +63,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
             l_zero = .true.
             IF(l_tria) THEN
                !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
-               IF(ANY(ABS(tetweights(ind(ib,1):ind(ib,2),ib)).NE.0.0)) l_zero = .false.
+               IF(ANY(dosWeights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
             ELSE
                !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
                j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
@@ -79,7 +79,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,tetweights,ind,wtkpt,eig,usd
                   !Choose the relevant energy points depending on the bz-integration method
                   DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
                      !weight for the bz-integration including spin-degeneracy
-                     weight = 2.0/input%jspins * MERGE(REAL(tetweights(ie,ib)),wtkpt/greensfCoeffs%del,l_tria)  
+                     weight = 2.0/input%jspins * MERGE(dosWeights(ie,ib),wtkpt/greensfCoeffs%del,l_tria)  
                      !
                      !Contribution from states
                      !
