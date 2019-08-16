@@ -31,6 +31,7 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: vx_is_LDA     => xcpot_vx_is_LDA
       PROCEDURE        :: vx_is_GGA     => xcpot_vx_is_GGA
       PROCEDURE        :: vx_is_MetaGGA => xcpot_vx_is_MetaGGA
+      PROCEDURE        :: vx_is_XC      => xcpot_vx_is_XC ! exchange and correlation in one functional
       
       PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
       PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
@@ -38,6 +39,7 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: exc_is_LDA     => xcpot_exc_is_LDA
       PROCEDURE        :: exc_is_gga     => xcpot_exc_is_gga
       PROCEDURE        :: exc_is_MetaGGA => xcpot_exc_is_MetaGGA
+      PROCEDURE        :: ex_is_XC       => xcpot_ex_is_XC ! exchange and correlation in one functional
 
       PROCEDURE        :: is_hybrid           => xcpot_is_hybrid 
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
@@ -218,6 +220,32 @@ CONTAINS
       xcpot_vx_is_MetaGGA=.false.
 #endif
    END FUNCTION xcpot_vx_is_MetaGGA
+   
+   LOGICAL FUNCTION xcpot_vx_is_XC(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_vx_is_XC =  xc_f03_func_info_get_kind(xc_info)  == XC_EXCHANGE_CORRELATION
+#else
+      xcpot_vx_is_gga=.false.
+#endif
+   END FUNCTION xcpot_vx_is_XC
+   
+   LOGICAL FUNCTION xcpot_ex_is_XC(xcpot)
+      IMPLICIT NONE
+   CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
+#ifdef CPP_LIBXC
+      TYPE(xc_f03_func_info_t)        :: xc_info
+
+      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
+      xcpot_ex_is_XC =  xc_f03_func_info_get_kind(xc_info)  == XC_EXCHANGE_CORRELATION
+#else
+      xcpot_vx_is_gga=.false.
+#endif
+   END FUNCTION xcpot_ex_is_XC
 
    LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
       IMPLICIT NONE
@@ -295,12 +323,12 @@ CONTAINS
          ALLOCATE(vsigma,mold=grad%vsigma)
          !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9
          CALL xc_f03_gga_vxc(xcpot%vxc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vx_tmp,vsigma)
-         IF (xcpot%func_vxc_id_c>0) THEN
+
+         ! check if vx has both exchange and correlation
+         IF (.not. xcpot%vx_is_XC()) THEN
             CALL xc_f03_gga_vxc(xcpot%vxc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,vxc_tmp,grad%vsigma)
             grad%vsigma=grad%vsigma+vsigma
             vxc_tmp=vxc_tmp+vx_tmp
-         ELSE     
-            vxc_tmp=vx_tmp
          ENDIF
       ELSE  !LDA potentials
          if(xcpot%vx_is_MetaGGA() .and. present(kinED_KS)) then
@@ -321,7 +349,7 @@ CONTAINS
          else
             CALL xc_f03_lda_vxc(initial_lda_func(jspins), SIZE(rh,1), TRANSPOSE(rh), vx_tmp)
          endif
-         IF (xcpot%func_vxc_id_c>0) THEN
+         IF (.not. xcpot%vx_is_XC()) THEN
             CALL xc_f03_lda_vxc(xcpot%vxc_func_c, SIZE(rh,1), TRANSPOSE(rh), vxc_tmp)
             vxc_tmp=vxc_tmp+vx_tmp
          ENDIF
@@ -377,13 +405,17 @@ CONTAINS
       IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
          CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,exc)
-         IF (xcpot%func_exc_id_c>0) THEN
+
+         !in case ex is both exchange and correlation
+         IF (.not. xcpot%ex_is_XC()) THEN
             CALL xc_f03_gga_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh),grad%sigma,excc)
             exc=exc+excc
          END IF
       ELSEIF(xcpot%exc_is_LDA()) THEN  !LDA potentials
          CALL xc_f03_lda_exc(xcpot%exc_func_x, SIZE(rh,1), TRANSPOSE(rh), exc)
-         IF (xcpot%func_exc_id_c>0) THEN
+         
+         !in case ex is both exchange and correlation
+         IF (.not. xcpot%ex_is_XC()) THEN
             CALL xc_f03_lda_exc(xcpot%exc_func_c, SIZE(rh,1), TRANSPOSE(rh), excc)
             exc=exc+excc
          END IF
