@@ -25,9 +25,6 @@ MODULE m_resWeights
       REAL e(4),vol
       COMPLEX weight
 
-      !CALL juDFT_error("Not yet implemented",calledby="resWeights")
-
-
       !Here we do no truncation for now
       boundInd(:,1) = 1
       boundInd(:,1) = nz
@@ -115,7 +112,7 @@ MODULE m_resWeights
       INTEGER ndeg,i,j,k,l,m
       INTEGER ideg(6,2)
 
-      tol = 1e-9 !Tolerance for degeneracy
+      tol = 1e-7 !Tolerance for degeneracy
       fac = 10.0
 
 

@@ -52,27 +52,27 @@ MODULE m_gfDOS
             CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
             !Calculate up/down dos
             DO i = 1, ns
-               dos(1,i) = dos(1,i) - 1/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
+               dos(1,i) = dos(1,i) - hartree_to_eV_const/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
             ENDDO
             DO i = ns+1, 2*ns
-               dos(2,i-ns) = dos(2,i-ns) - 1/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
+               dos(2,i-ns) = dos(2,i-ns) - hartree_to_eV_const/(2*pi_const) * (-1)**(ipm-1) * gmat%data_c(i,i)
             ENDDO
             !Transform to |J,mj> basis
             jmat%data_c = matmul(gmat%data_c,cmat%data_r)
             jmat%data_c = matmul(transpose(cmat%data_r),jmat%data_c)
             !Calculate low/high dos
             DO i = 1, ns-1
-               dos(3,i) = dos(3,i) - 1/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
+               dos(3,i) = dos(3,i) - hartree_to_eV_const/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
             ENDDO
             DO i = ns, 2*ns
-               dos(4,i-ns+1) = dos(4,i-ns+1) - 1/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i)
+               dos(4,i-ns+1) = dos(4,i-ns+1) - hartree_to_eV_const/(2*pi_const) * (-1)**(ipm-1) * jmat%data_c(i,i) 
             ENDDO
             !Real part
             DO i = 1, ns
-               re(1) = re(1) - 1/(2*pi_const)  * gmat%data_c(i,i)
+               re(1) = re(1) - hartree_to_eV_const/(2*pi_const)  * gmat%data_c(i,i)
             ENDDO
             DO i = ns+1, 2*ns
-               re(2) = re(2) - 1/(2*pi_const) * gmat%data_c(i,i)
+               re(2) = re(2) - hartree_to_eV_const/(2*pi_const) * gmat%data_c(i,i)
             ENDDO
             CALL gmat%free()
          ENDDO 
