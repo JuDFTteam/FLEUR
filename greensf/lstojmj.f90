@@ -19,7 +19,7 @@ MODULE m_lsTOjmj
       IF(.NOT.ALLOCATED(cmat%data_r)) CALL juDFT_error("matrix not initialized",calledby="lsTOjmj")
 
       !Calculate the matrix of CG-coefficients to transform from |l,ml,ms> to |j=l\pm1/2,mjz>
-      !compare utils/occup.f90 form libedsolver
+      !compare utils/occup.f90 from libedsolver
       cmat%data_r = 0.0
       DO jj = -1, 1, 2
          j = 2*l+jj

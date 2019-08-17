@@ -2,7 +2,7 @@ MODULE m_resWeights
 
    CONTAINS
 
-   SUBROUTINE resWeightsCalc(currKpt,kpts,neig,eig,ez,nz,weights,boundInd)
+   SUBROUTINE resWeightsCalc(ikpt,kpts,neig,eig,ez,nz,weights,boundInd)
 
       !Weights for analytical tetrahedron method for spectral functions 
 
@@ -11,7 +11,7 @@ MODULE m_resWeights
 
       IMPLICIT NONE
 
-      INTEGER,          INTENT(IN)     :: currKpt
+      INTEGER,          INTENT(IN)     :: ikpt
       TYPE(t_kpts),     INTENT(IN)     :: kpts
       INTEGER,          INTENT(IN)     :: neig
       REAL,             INTENT(IN)     :: eig(neig,kpts%nkpt)
@@ -21,8 +21,8 @@ MODULE m_resWeights
       INTEGER,          INTENT(INOUT)  :: boundInd(neig,2)
 
 
-      INTEGER itet,ib,i,j,iz,icorn,ind(4),k(4),tmp,ikpt
-      REAL e(4),vol
+      INTEGER itet,ib,i,j,iz,icorn,ind(4),k(4),tmp
+      REAL e(4),vol,fac
       COMPLEX weight
 
       !Here we do no truncation for now
@@ -30,63 +30,58 @@ MODULE m_resWeights
       boundInd(:,1) = nz
       weights = 0.0
 
-      DO ikpt = MERGE(currKpt,1,kpts%nkptf.EQ.0), MERGE(currKpt,kpts%nkptf,kpts%nkptf.EQ.0)
+      fac = count(kpts%bkp(:).EQ.ikpt)
+
+      DO itet = 1, kpts%ntet
+
+         IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE
          IF(kpts%nkptf.NE.0) THEN
-            IF(kpts%bkp(ikpt).NE.currKpt) CYCLE !Search for the kpoints with the parent currKpt
+            DO i = 1, 4
+               IF(kpts%ntetra(i,itet).GT.kpts%nkpt) THEN
+                  k(i) = kpts%bkp(kpts%ntetra(i,itet))
+               ELSE
+                  k(i) = kpts%ntetra(i,itet)
+               ENDIF
+            ENDDO
+         ELSE
+            k(1:4) = kpts%ntetra(1:4,itet)
          ENDIF
-         DO itet = 1, kpts%ntet
 
-            IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE
+         !$OMP PARALLEL DEFAULT(none) &
+         !$OMP SHARED(ikpt,itet,neig,nz,k,fac) &
+         !$OMP SHARED(kpts,eig,ez,weights) &
+         !$OMP PRIVATE(ib,iz,i,j,icorn,tmp,vol) &
+         !$OMP PRIVATE(ind,e,weight)
 
-            IF(kpts%nkptf.NE.0) THEN
-               DO i = 1, 4
-                  IF(kpts%ntetra(i,itet).GT.kpts%nkpt) THEN
-                     k(i) = kpts%bkp(kpts%ntetra(i,itet))
-                  ELSE
-                     k(i) = kpts%ntetra(i,itet)
+         !$OMP DO
+         DO ib = 1, neig
+
+            e(1:4) = eig(ib,k(1:4)) 
+            ind=(/1,2,3,4/)
+            !Sort the energies in the tetrahedron in ascending order
+            DO i = 1, 3
+               DO j = i+1, 4
+                  IF (e(ind(i)).GT.e(ind(j))) THEN
+                     tmp = ind(i)
+                     ind(i) = ind(j)
+                     ind(j) = tmp
                   ENDIF
                ENDDO
-            ELSE
-               k(1:4) = kpts%ntetra(1:4,itet)
-            ENDIF
-
-            !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(ikpt,itet,neig,nz,k) &
-            !$OMP SHARED(kpts,eig,ez,weights) &
-            !$OMP PRIVATE(ib,iz,i,j,icorn,tmp,vol) &
-            !$OMP PRIVATE(ind,e,weight)
-
-            !$OMP DO
-            DO ib = 1, neig
-
-               e(1:4) = eig(ib,k(1:4)) 
-               ind=(/1,2,3,4/)
-               !Sort the energies in the tetrahedron in ascending order
-               DO i = 1, 3
-                  DO j = i+1, 4
-                     IF (e(ind(i)).GT.e(ind(j))) THEN
-                        tmp = ind(i)
-                        ind(i) = ind(j)
-                        ind(j) = tmp
-                     ENDIF
-                  ENDDO
-               ENDDO
-               !search for the corner ikpt in the sorted array
-               DO i = 1, 4
-                  IF(kpts%ntetra(ind(i),itet).EQ.ikpt) icorn = i
-               ENDDO
-
-               vol = kpts%voltet(itet)/kpts%ntet
-               DO iz = 1, nz
-                  CALL resWeightTetra(ez(iz),e(ind(1:4)),vol,weight,icorn)
-                  IF(ISNAN(REAL(weight)).OR.ISNAN(AIMAG(weight))) CALL juDFT_error("Tetra Weight NaN",calledby="resWeights")
-                  weights(iz,ib) = weights(iz,ib) + weight
-               ENDDO
-
             ENDDO
-            !$OMP END DO
-            !$OMP END PARALLEL
+            !search for the corner ikpt in the sorted array
+            DO i = 1, 4
+               IF(kpts%ntetra(ind(i),itet).EQ.ikpt) icorn = i
+            ENDDO
+
+            vol = kpts%voltet(itet)/kpts%ntet
+            DO iz = 1, nz
+               CALL resWeightTetra(ez(iz),e(ind(1:4)),vol,weight,icorn,ib.EQ.1)
+               IF(ISNAN(REAL(weight)).OR.ISNAN(AIMAG(weight))) CALL juDFT_error("Tetra Weight NaN",calledby="resWeights")
+               weights(iz,ib) = weights(iz,ib) + weight * fac
+            ENDDO
          ENDDO
+         !$OMP END DO
+         !$OMP END PARALLEL
       ENDDO
       IF(ANY(AIMAG(weights).GT.0.0)) THEN
          CALL juDFT_warn("Some weights have a wrong sign in imaginary part, may be due to numerical instability in the formulas",calledby="resWeights")
@@ -94,7 +89,7 @@ MODULE m_resWeights
 
    END SUBROUTINE resWeightsCalc
 
-   SUBROUTINE resWeightTetra(z,e,vol,weight,ind)
+   SUBROUTINE resWeightTetra(z,e,vol,weight,ind,write)
 
       !Calculates resolvent weights for point in tetrahedron (Compare PhysRevB.29.3430)
 

@@ -47,7 +47,7 @@ CONTAINS
 
       l_vertcorr = .false. !Enables/Disables a correction for the vertical parts of the rectangular contour
 
-      mmpMat(:,:,:) = CMPLX(0.0,0.0)
+      mmpMat = 0.0
 
       IF(.NOT.PRESENT(lp)) THEN
          lp_loop = l 
@@ -111,10 +111,12 @@ CONTAINS
             DO ispin = 1, input%jspins 
                tr = 0.0
                DO i = -l,l
-                  tr = tr + REAL(mmpmat(i,i,ispin))
-                  IF(REAL(mmpmat(i,i,ispin)).GT.1.01.OR.REAL(mmpmat(i,i,ispin)).LT.0.0) CALL juDFT_warn("Invalid element in mmpMat")
+                  tr = tr + REAL(mmpmat(i,i,ispin))/(3-input%jspins)
+                  IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.01&
+                     .OR.REAL(mmpmat(i,i,ispin))/(3-input%jspins).LT.0.0)&
+                        CALL juDFT_warn("Invalid element in mmpMat")
                ENDDO
-               IF(tr.LT.0.OR.tr.GT.2*l+2) THEN
+               IF(tr.LT.0.OR.tr.GT.2*l+1.1) THEN
                   WRITE(message,9100) ispin,tr
 9100              FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
                   CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx") 

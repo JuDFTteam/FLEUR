@@ -22,6 +22,8 @@ MODULE m_calc_tetra
       INTEGER tetra(4,24), ntetra,k1,k2,k3,ikpt,itetra,iarr(3)
       REAL kcorn(8),vol
       REAL sumvol,volbz
+      INTEGER, ALLOCATABLE :: itet(:,:)
+      REAL,    ALLOCATABLE :: vtet(:)
 
       CALL timestart("Calculation of Tetrahedra")
 
@@ -69,17 +71,34 @@ MODULE m_calc_tetra
 
                !Now write the information about the tetrahedron into the corresponding arrays in kpts
                DO itetra = 1, ntetra
+                  !Drop all tetrahedra without kpoints inside the IBZ
+                  sumvol = sumvol + vol
+                  IF(ALL(kcorn(tetra(1:4,itetra)).GT.kpts%nkpt)) CYCLE
                   kpts%ntet = kpts%ntet+1
                   kpts%ntetra(1:4,kpts%ntet) = kcorn(tetra(1:4,itetra))
                   kpts%voltet(kpts%ntet) = vol
-                  sumvol = sumvol + vol
                ENDDO
             ENDDO
          ENDDO
       ENDDO
+
       IF(ABS(sumvol-volbz).GT.1E-12) CALL juDFT_error("calc_tetra failed", calledby="calc_tetra")
       input%gfTet = .TRUE.
       kpts%voltet = kpts%voltet*kpts%ntet/volbz
+
+      !Reallocate the tetraeder arrays
+      ALLOCATE(itet(4,kpts%ntet))
+      itet = kpts%ntetra(1:4,1:kpts%ntet)
+      DEALLOCATE(kpts%ntetra)
+      ALLOCATE(kpts%ntetra(4,kpts%ntet))
+      kpts%ntetra = itet
+
+      ALLOCATE(vtet(kpts%ntet))
+      vtet = kpts%voltet(1:kpts%ntet)
+      DEALLOCATE(kpts%voltet)
+      ALLOCATE(kpts%voltet(kpts%ntet))
+      kpts%voltet = vtet
+
       CALL timestop("Calculation of Tetrahedra")
 
    END SUBROUTINE calc_tetra
