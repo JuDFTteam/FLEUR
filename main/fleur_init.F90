@@ -20,6 +20,7 @@
           USE m_dwigner
           USE m_gen_bz
           USE m_calc_tetra
+          USE m_calc_tria
           USE m_ylm
           USE m_InitParallelProcesses
           USE m_checkInputParams
@@ -513,9 +514,15 @@
                    kpts%wtkpt = 1.0 / kpts%nkptf
                 END IF
              END IF
-             IF (atoms%n_gf>0.AND..NOT.input%tria) THEN
-              IF(kpts%nkptf.EQ.0) CALL gen_bz(kpts,sym)
-              CALL calc_tetra(kpts,cell,input,sym)
+             IF (atoms%n_gf>0) THEN
+              IF(.NOT.input%tria.AND..NOT.input%film) THEN
+                !Calculate regular decomposition into tetrahedra (make_tetra doesnt seem to work for most meshes)
+                IF(kpts%nkptf.EQ.0) CALL gen_bz(kpts,sym)
+                CALL calc_tetra(kpts,cell,input,sym)
+              ENDIF
+              IF(input%film) THEN 
+                CALL calc_tria(kpts,cell,input,sym)
+              ENDIF
              ENDIF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
              hybrid%l_calhf = .FALSE.

@@ -210,6 +210,181 @@ MODULE m_dosWeights
       !$OMP END PARALLEL
    END SUBROUTINE dosWeightsCalc
 
+   SUBROUTINE dosWeightsCalcTria(ikpt,kpts,neig,eig,g,ef,weights,e_ind)
+
+      USE m_types
+      USE m_constants
+      USE m_differentiate
+      USE m_juDFT
+
+      IMPLICIT NONE
+
+      INTEGER,                INTENT(IN)     :: ikpt
+      TYPE(t_kpts),           INTENT(IN)     :: kpts
+      INTEGER,                INTENT(IN)     :: neig
+      REAL,                   INTENT(IN)     :: eig(:,:)
+      TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
+
+      REAL,                   INTENT(OUT)    :: weights(:,:)
+      INTEGER,                INTENT(OUT)    :: e_ind(:,:)
+      REAL,                   INTENT(IN)     :: ef
+
+      INTEGER itria,ib,nstart,nend,ie,icorn,i
+      REAL vol,weight,tol
+
+      !Local Arrays
+      REAL,ALLOCATABLE :: dos_weights(:)
+      REAL             :: e(3)
+      INTEGER          :: ind(3)
+
+      DO itria = 1, kpts%ntria
+
+         IF(ALL(kpts%itria(:,itria).NE.ikpt)) CYCLE
+
+         !$OMP PARALLEL DEFAULT(none) &
+         !$OMP SHARED(ikpt,itria,neig) &
+         !$OMP SHARED(kpts,eig,g,weights) &
+         !$OMP PRIVATE(ib,ie,i,nstart,nend,icorn,weight,vol) &
+         !$OMP PRIVATE(ind,e)
+
+         !$OMP DO
+         DO ib = 1, neig
+            IF((MINVAL(eig(ib,kpts%itria(1:3,itria))).GT.g%e_top).OR.(MAXVAL(eig(ib,kpts%itria(1:3,itria))).LT.g%e_bot)) CYCLE
+
+            e(1:3) = eig(ib,kpts%itria(1:3,itria))
+            ind(1:3) = (/1,2,3/)
+            CALL sortEig(3,e,ind)
+            !Sort the energies in the tetrahedron in ascending order
+            !search for the corner ikpt in the sorted array
+            DO i = 1, 4
+               IF(kpts%ntetra(ind(i),itria).EQ.ikpt) icorn = i
+            ENDDO
+
+            !Below this index the weight is 0
+            nstart = INT((e(ind(1))-g%e_bot)/g%del)+1
+            vol = kpts%voltria(itria)
+            nend = g%ne
+
+            DO ie = MAX(1,nstart), g%ne
+               CALL contribSingleTria((ie-1)*g%del+g%e_bot,vol,e(ind(1:3)),weight,icorn)
+               weights(ie,ib) = weights(ie,ib) + weight 
+               IF(weight.EQ.1.0/3.0*vol) THEN
+                  !here we are above all eigenergies at the corners 
+                  !of the tetrahedron and we can simplify the rest of the loop
+                  nend = ie
+                  EXIT
+               ENDIF
+            ENDDO 
+            IF(nend.NE.g%ne) weights(nend+1:g%ne,ib) = weights(nend+1:g%ne,ib) + 1.0/3.0*vol
+         ENDDO
+         !$OMP END DO
+         !$OMP END PARALLEL
+      ENDDO
+
+      tol = 1E-14
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP SHARED(weights,g,e_ind,eig,ikpt,tol,neig) &
+      !$OMP PRIVATE(ib,i,dos_weights) 
+
+      !$OMP DO
+      DO ib = 1, neig
+         dos_weights = 0.0
+         !Imaginary part of the weights
+         CALL diff3(REAL(weights(:,ib)),g%del,dos_weights(:))
+         !
+         !Find the range where the weights are not equal to 0
+         !
+         !Start
+         i = 1
+         DO
+            IF(dos_weights(i).GT.tol) THEN
+               e_ind(ib,1) = i
+               EXIT
+            ELSE
+               dos_weights(i) = 0.0
+               i = i + 1
+               IF(i.EQ.g%ne+1) THEN
+                  e_ind(ib,1) = g%ne
+                  EXIT
+               ENDIF
+            ENDIF
+         ENDDO
+         !End
+         i = g%ne
+         DO
+            IF(dos_weights(i).GT.tol) THEN
+               e_ind(ib,2) = i
+               EXIT
+            ELSE
+               dos_weights(i) = 0.0
+               i = i - 1
+               IF(i.EQ.0) THEN
+                  e_ind(ib,2) = 1
+                  EXIT
+               ENDIF
+            ENDIF
+         ENDDO
+         IF(ANY(dos_weights(:).LT.0)) THEN
+            CALL juDFT_error("Negative tetra weight",calledby="tetra_weights")
+         ENDIF
+         IF(e_ind(ib,1).GT.e_ind(ib,2)) THEN
+            e_ind(ib,1) = 1
+            e_ind(ib,2) = 1
+         ENDIF
+         weights(:,ib) = dos_weights(:)
+      ENDDO
+      !$OMP END DO
+      !$OMP END PARALLEL
+
+   END SUBROUTINE dosWeightsCalcTria
+
+   SUBROUTINE contribSingleTria(energy,vol,e,weight,ind)
+
+      USE m_juDFT
+      !Integration weights (equivalent to doswt)
+
+      IMPLICIT NONE
+
+      REAL,                INTENT(IN)     :: energy
+      REAL,                INTENT(IN)     :: vol
+      REAL,                INTENT(IN)     :: e(3)
+      REAL,                INTENT(OUT)    :: weight
+      INTEGER,             INTENT(IN)     :: ind
+
+
+      weight = 0.0
+      IF(energy.GT.e(3)) THEN
+
+         weight = 1.0/3.0*vol
+
+      ELSE IF((energy.GT.e(2)).AND.(energy.LT.e(3))) THEN
+
+         IF(ind.EQ.1) THEN
+            weight = vol/3.0 * (1.0-(e(3)-energy)**3/((e(3)-e(1))**2*(e(3)-e(2))))
+         ELSE IF(ind.EQ.2) THEN
+            weight = vol/3.0 * (1.0-(e(3)-energy)**3/((e(3)-e(1))*(e(3)-e(2))**2))
+         ELSE IF(ind.EQ.3) THEN
+            weight = vol/3.0 * (1.0-(e(3)-energy)**2/((e(3)-e(1))*(e(3)-e(2)))*&
+                     (3.0-(e(3)-energy)/((e(3)-e(1)))-(e(3)-energy)/((e(3)-e(2)))))
+         ENDIF
+
+      ELSE IF((energy.GT.e(2)).AND.(energy.LT.e(3))) THEN
+
+         IF(ind.EQ.1) THEN
+            weight = vol/3.0*(energy-e(1))**2/((e(3)-e(1))*(e(2)-e(1)))*&
+                     (3.0-(energy-e(1))/((e(3)-e(1)))-(energy-e(1))/((e(2)-e(1))))
+         ELSE IF(ind.EQ.2) THEN
+            weight = vol/3.0 *(energy-e(1))**3/((e(3)-e(1))*(e(2)-e(1))**2)
+         ELSE IF(ind.EQ.3) THEN
+            weight = vol/3.0 *(energy-e(1))**3/((e(3)-e(1))**2*(e(2)-e(1)))
+         ENDIF
+
+      ENDIF
+
+   END SUBROUTINE contribSingleTria
+
+
+
    SUBROUTINE contribSingletetra(energy,vol,e,weight,ind)
 
       USE m_juDFT

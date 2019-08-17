@@ -15,6 +15,7 @@ MODULE m_types_kpts
      !no
      INTEGER               :: nkpt
      INTEGER               :: ntet
+     INTEGER               :: ntria
      REAL                  :: posScale
      LOGICAL               :: l_gamma
      !(3,nkpt) k-vectors internal units
@@ -33,6 +34,8 @@ MODULE m_types_kpts
      REAL   ,ALLOCATABLE           :: specialPoints(:,:)
      INTEGER,ALLOCATABLE           :: ntetra(:,:)
      REAL   ,ALLOCATABLE           :: voltet(:)
+     INTEGER, ALLOCATABLE          :: itria(:,:)
+     REAL,   ALLOCATABLE           :: voltria(:)
      REAL   ,ALLOCATABLE           :: sc_list(:,:) !list for all information about folding of bandstructure (need for unfoldBandKPTS)((k(x,y,z),K(x,y,z),m(g1,g2,g3)),(nkpt),k_original(x,y,z))
   ENDTYPE t_kpts
 

@@ -39,10 +39,11 @@ MODULE m_tetrahedronInit
       boundInd = 0
 
       IF(input%film) THEN
-         !IF(input%l_resolvent) THEN
-         !   CALL resWeightsCalc(ikpt,kpts,neig,eig,ez,nz,resWeights,boundInd)
-         !ENDIF
-         !CALL dosWeightsCalc(ikpt,kpts,neig,eig,gCoeffs,ef,dosWeights,boundInd)
+         IF(input%l_resolvent) THEN
+            CALL juDFT_error("Not yet ready")
+            !CALL resWeightsCalc(ikpt,kpts,neig,eig,ez,nz,resWeights,boundInd)
+         ENDIF
+         CALL dosWeightsCalcTria(ikpt,kpts,neig,eig,gCoeffs,ef,dosWeights,boundInd)
       ELSE
          IF(input%l_resolvent) THEN
             CALL resWeightsCalc(ikpt,kpts,neig,eig,ez,nz,resWeights,boundInd)
