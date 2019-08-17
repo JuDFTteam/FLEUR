@@ -14,7 +14,7 @@ MODULE m_calc_tetra
       IMPLICIT NONE
 
       TYPE(t_kpts),  INTENT(INOUT) :: kpts 
-      TYPE(t_input), INTENT(INOUT)    :: input
+      TYPE(t_input), INTENT(INOUT) :: input
       TYPE(t_sym),   INTENT(IN)    :: sym
       TYPE(t_cell),  INTENT(IN)    :: cell
 
@@ -25,7 +25,7 @@ MODULE m_calc_tetra
 
       CALL timestart("Calculation of Tetrahedra")
 
-      volbz = sqrt(sum(cell%bmat(:,1)*cell%bmat(:,1))*sum(cell%bmat(:,2)*cell%bmat(:,2))*sum(cell%bmat(:,3)*cell%bmat(:,3)))
+      volbz = ABS(det(cell%bmat))
       !Choose the tetrahedra decomposition along the shortest diagonal
       CALL get_tetra(tetra,ntetra,kpts,cell,vol)
       !MISSING: Generate all kpts 
@@ -35,16 +35,10 @@ MODULE m_calc_tetra
          iarr = nint(kpts%bkf(:,ikpt)*kpts%nkpt3)
          p(iarr(1),iarr(2),iarr(3)) = ikpt
       ENDDO
-      !Wrap around at the end
-      IF(ALL(p(kpts%nkpt3(1),:,:).EQ.0)) THEN
-         p(kpts%nkpt3(1),:,:) = p(0,:,:)
-         p(:,kpts%nkpt3(2),:) = p(:,0,:)
-         p(:,:,kpts%nkpt3(3)) = p(:,:,0)
-      ELSE
-         p(0,:,:) = p(kpts%nkpt3(1),:,:)
-         p(:,0,:) = p(:,kpts%nkpt3(2),:)
-         p(:,:,0) = p(:,:,kpts%nkpt3(3))
-      ENDIF
+      p(kpts%nkpt3(1),:,:) = p(0,:,:)
+      p(:,kpts%nkpt3(2),:) = p(:,0,:)
+      p(:,:,kpts%nkpt3(3)) = p(:,:,0)
+
       !Check for invalid indices
       IF(ANY(p<=0).OR.ANY(p>kpts%nkptf)) CALL juDFT_error("Invalid kpoint index in pointer array",calledby="calc_tetra")
 
@@ -74,7 +68,7 @@ MODULE m_calc_tetra
                kcorn(8) = p(k1+1,k2+1,k3+1)
 
                !Now write the information about the tetrahedron into the corresponding arrays in kpts
-               DO itetra = 1, 6
+               DO itetra = 1, ntetra
                   kpts%ntet = kpts%ntet+1
                   kpts%ntetra(1:4,kpts%ntet) = kcorn(tetra(1:4,itetra))
                   kpts%voltet(kpts%ntet) = vol
@@ -107,22 +101,23 @@ MODULE m_calc_tetra
       INTEGER idmin
 
       !Calculate the lengths of the three diagonals
-      rlv(:,1) = cell%bmat(:,1) / kpts%nkpt3(1)
-      rlv(:,2) = cell%bmat(:,2) / kpts%nkpt3(2)
-      rlv(:,3) = cell%bmat(:,3) / kpts%nkpt3(3)
-      vol = 1/6.0*sqrt(sum(rlv(:,1)*rlv(:,1))*sum(rlv(:,2)*rlv(:,2))*sum(rlv(:,3)*rlv(:,3))) 
+      rlv(:,1) = cell%bmat(:,1) / kpts%nkpt3
+      rlv(:,2) = cell%bmat(:,2) / kpts%nkpt3
+      rlv(:,3) = cell%bmat(:,3) / kpts%nkpt3
+      
+      vol = 1/6.0*ABS(det(rlv)) 
       d = rlv(:,1) + rlv(:,3) - rlv(:,2)
       diag(1) = sum(d*d)
       d = rlv(:,2) + rlv(:,3) - rlv(:,1)
-      diag(1) = sum(d*d)
+      diag(2) = sum(d*d)
       d = rlv(:,1) + rlv(:,2) + rlv(:,3)
-      diag(1) = sum(d*d)
+      diag(3) = sum(d*d)
       d = rlv(:,1) + rlv(:,2) - rlv(:,3)
-      diag(1) = sum(d*d)
+      diag(4) = sum(d*d)
       idmin = minloc(diag,1)
 
+      
       ntetra = 0
-
       !From spex tetrahedron.f (For now we only choose one decomposition)
       if(idmin==1) then
         tetra(:,ntetra+1:ntetra+6) = reshape ( [ 1,2,3,6, 5,7,3,6, 1,5,3,6, 2,4,3,6, 4,8,3,6, 7,8,3,6 ], [ 4,6 ] )
@@ -141,6 +136,13 @@ MODULE m_calc_tetra
         ntetra                     = ntetra + 6
       endif
    END SUBROUTINE get_tetra
+
+   REAL FUNCTION det(m)
+      REAL m(3,3)
+      det = m(1,1)*m(2,2)*m(3,3) + m(1,2)*m(2,3)*m(3,1) + &
+            m(2,1)*m(3,2)*m(1,3) - m(1,3)*m(2,2)*m(3,1) - &
+            m(2,3)*m(3,2)*m(1,1) - m(2,1)*m(1,2)*m(3,3)
+   END FUNCTION det
 
 
 END MODULE m_calc_tetra

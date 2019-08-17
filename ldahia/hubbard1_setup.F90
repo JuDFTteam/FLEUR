@@ -83,7 +83,7 @@ MODULE m_hubbard1_setup
          f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
          f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
          f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-         CALL umtx(atoms%lda_u(:),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
+         CALL umtx(atoms%lda_u(indStart:indEnd),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
 
          CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,.FALSE.,den%mmpMat(:,:,indStart:indEnd,:),&
          u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),e_lda_hia)

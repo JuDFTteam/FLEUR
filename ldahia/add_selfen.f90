@@ -155,7 +155,7 @@ MODULE m_add_selfen
                      CALL gmat%free()
                   ENDDO
                ENDDO
-               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
+               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),check=.TRUE.) !check makes sure that the elements are reasonable
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
