@@ -344,7 +344,7 @@ CONTAINS
       END SELECT
 
       input%alpha = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
-input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@preconditioning_param'))
+      input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@precondParam'))
       input%spinf = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
 
       ! Get parameters for core electrons
@@ -2168,7 +2168,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          numberNodes = xmlGetNumberOfNodes(xPathA)
 
          IF (numberNodes.EQ.1) THEN
-            banddos%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldband'))
+            banddos%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldBand'))
             banddos%s_cell_x = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellX'))
             banddos%s_cell_y = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellY'))
             banddos%s_cell_z = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellZ'))
