@@ -230,7 +230,7 @@ CONTAINS
       xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
       xcpot_vx_is_XC =  xc_f03_func_info_get_kind(xc_info)  == XC_EXCHANGE_CORRELATION
 #else
-      xcpot_vx_is_gga=.false.
+      xcpot_vx_is_XC=.false.
 #endif
    END FUNCTION xcpot_vx_is_XC
    
@@ -243,7 +243,7 @@ CONTAINS
       xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
       xcpot_ex_is_XC =  xc_f03_func_info_get_kind(xc_info)  == XC_EXCHANGE_CORRELATION
 #else
-      xcpot_vx_is_gga=.false.
+      xcpot_ex_is_XC=.false.
 #endif
    END FUNCTION xcpot_ex_is_XC
 
