@@ -192,7 +192,7 @@ CONTAINS
       ! Check version of inp.xml
       versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
       IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
-         (TRIM(ADJUSTL(versionString)).NE.'0.29')) THEN
+         (TRIM(ADJUSTL(versionString)).NE.'0.29').AND.(TRIM(ADJUSTL(versionString)).NE.'0.30')) THEN
          CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
       END IF
 
@@ -672,13 +672,26 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       input%l_f = .FALSE.
       input%qfix = 0
+      input%forcemix = 2 ! BFGS is default.
 
       IF (numberNodes.EQ.1) THEN
          input%l_f = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
          input%forcealpha = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
          input%epsdisp = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
          input%epsforce = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
-         input%forcemix = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix'))
+
+         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix')))
+         SELECT CASE (valueString)
+         CASE ('straight')
+            input%forcemix = 0
+         CASE ('CG')
+            input%forcemix = 1
+         CASE ('BFGS')
+            input%forcemix = 2
+         CASE DEFAULT
+            CALL juDFT_error('Error: unknown force mixing scheme selected!', calledby='r_inpXML')
+         END SELECT
+
          input%force_converged = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@force_converged'))
          input%qfix = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
       END IF
