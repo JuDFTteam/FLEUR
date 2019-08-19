@@ -222,11 +222,11 @@ SUBROUTINE w_inpXML(&
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
    190 FORMAT('      <geometryOptimization l_f="',l1,'" forcealpha="',f0.8,'" forcemix="',a,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
    SELECT CASE (input%forcemix)
-      CASE (1)
+      CASE (0)
          mixingScheme='straight'
-      CASE (2)
+      CASE (1)
          mixingScheme='CG'
-      CASE (3)
+      CASE (2)
          mixingScheme='BFGS'
       CASE DEFAULT
          mixingScheme='errorUnknownMixing'
