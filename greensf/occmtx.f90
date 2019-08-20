@@ -144,7 +144,6 @@ CONTAINS
                ENDDO
             ENDDO
             !spin-offdiagonal
-            WRITE(*,"(14f14.8)") mmpmat(-l:l,-l:l,3)
             IF(input%l_gfmperp) THEN
                gmat%data_r(1:ns,ns+1:2*ns) = REAL(mmpmat(-l:l,-l:l,3))
                gmat%data_r(ns+1:2*ns,1:ns) = REAL(transpose(mmpmat(-l:l,-l:l,3)))

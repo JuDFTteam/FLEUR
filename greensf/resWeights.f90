@@ -75,7 +75,7 @@ MODULE m_resWeights
 
             vol = kpts%voltet(itet)/kpts%ntet
             DO iz = 1, nz
-               CALL resWeightTetra(ez(iz),e(ind(1:4)),vol,weight,icorn,ib.EQ.1)
+               CALL resWeightTetra(ez(iz),e(ind(1:4)),vol,weight,icorn)
                IF(ISNAN(REAL(weight)).OR.ISNAN(AIMAG(weight))) CALL juDFT_error("Tetra Weight NaN",calledby="resWeights")
                weights(iz,ib) = weights(iz,ib) + weight * fac
             ENDDO
@@ -89,7 +89,7 @@ MODULE m_resWeights
 
    END SUBROUTINE resWeightsCalc
 
-   SUBROUTINE resWeightTetra(z,e,vol,weight,ind,write)
+   SUBROUTINE resWeightTetra(z,e,vol,weight,ind)
 
       !Calculates resolvent weights for point in tetrahedron (Compare PhysRevB.29.3430)
 
@@ -107,8 +107,8 @@ MODULE m_resWeights
       INTEGER ndeg,i,j,k,l,m
       INTEGER ideg(6,2)
 
-      tol = 1e-7 !Tolerance for degeneracy
-      fac = 10.0
+      tol = 1e-9 !Tolerance for degeneracy
+      fac = 50.0
 
 
       min = 9e+20
