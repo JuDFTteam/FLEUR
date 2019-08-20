@@ -153,7 +153,7 @@
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
       banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
-      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix=0
+      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix = 2 ! BFGS is default.
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
       banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
       input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
