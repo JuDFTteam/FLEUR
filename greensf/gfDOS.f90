@@ -9,7 +9,7 @@ MODULE m_gfDOS
    CONTAINS
 
 
-   SUBROUTINE gfDOS(g,l,nType,jobID,atoms,input)
+   SUBROUTINE gfDOS(g,l,nType,jobID,atoms,input,ef)
 
       !Provides the spin up/down DOS as well as the high/low J DOS 
       !calculated from the greens function in gfDOS.jobID
@@ -20,6 +20,7 @@ MODULE m_gfDOS
       INTEGER,             INTENT(IN)  :: l
       INTEGER,             INTENT(IN)  :: nType
       INTEGER,             INTENT(IN)  :: jobID
+      REAL, OPTIONAL,      INTENT(IN)  :: ef
 
       INTEGER iz,ipm,i,ns
       INTEGER io_error
@@ -27,7 +28,7 @@ MODULE m_gfDOS
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=10) :: filename
 
-
+      IF(.NOT.PRESENT(ef)) WRITE(*,*) "This gfDOS is not corrected to have ef=0"
       IF(g%mode.NE.3) WRITE(*,*) "You are using an energy contour where the gfDOS might not be very informative"
 9000  FORMAT("gfDOS.",I3.3)
 9001  FORMAT("mgfDOS.",I3.3)
@@ -76,10 +77,10 @@ MODULE m_gfDOS
             ENDDO
             CALL gmat%free()
          ENDDO 
-         WRITE(3456,"(7f14.8)") REAL(g%e(iz)), &
+         WRITE(3456,"(7f14.8)") REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)), &
                                 SUM(AIMAG(dos(1,1:ns))),SUM(AIMAG(dos(2,1:ns))),&
                                 SUM(AIMAG(dos(3,1:ns-1))),SUM(AIMAG(dos(4,1:ns+1))), REAL(re(1)), REAL(re(2))
-         WRITE(3457,"(15f10.5)") REAL(g%e(iz)), (AIMAG(dos(1,i)),i=1, ns),(AIMAG(dos(2,i)),i=1, ns) 
+         WRITE(3457,"(15f10.5)") REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)), (AIMAG(dos(1,i)),i=1, ns),(AIMAG(dos(2,i)),i=1, ns) 
 
 
       ENDDO

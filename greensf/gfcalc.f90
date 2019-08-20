@@ -114,7 +114,7 @@ MODULE m_gfcalc
          !Hybridization function
          CALL hybridization(greensf,l,nType,atoms,input,results%ef)
          !Density of states from Greens function
-         CALL gfDOS(greensf,l,nType,i_gf,atoms,input)
+         CALL gfDOS(greensf,l,nType,i_gf,atoms,input,results%ef)
       ENDDO
       CALL timestop("Green's Function: Postprocess")
 
