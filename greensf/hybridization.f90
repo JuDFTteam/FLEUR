@@ -72,7 +72,8 @@ MODULE m_hybridization
       avg_delta = 0.0
       DO iz = 1, gf%nz
          IF(REAL(gf%e(iz)).LT.ef+ellow.OR.REAL(gf%e(iz)).GT.ef+elup) CYCLE
-         avg_delta = avg_delta + Delta(iz)*hartree_to_ev_const*REAL(gf%de(iz))
+         avg_delta = avg_delta + Delta(iz)*hartree_to_ev_const*REAL(gf%de(iz))*&
+                                 pi_const*(input%gf_sigma**2)/(REAL(gf%e(iz)**2+input%gf_sigma**2))
       ENDDO
       WRITE(*,*) avg_delta
       !low J 

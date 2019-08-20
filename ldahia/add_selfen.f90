@@ -39,7 +39,7 @@ MODULE m_add_selfen
       COMPLEX,          INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
 
-      INTEGER i_hia,l,nType,ns,ispin,m,iz,ipm,spin_match,matsize,start,end,i_match
+      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,spin_match,matsize,start,end,i_match
       CHARACTER(len=6) app,filename
 
       REAL mu_a,mu_b,mu_step,mu_max,n_max
@@ -178,7 +178,18 @@ MODULE m_add_selfen
             ENDDO
          ENDDO
          CALL vmat%free()
+         !Test throw out elements smaller than 1e-6
+         DO ispin = 1, input%jspins
+            DO m = -l, l
+               DO mp=-l, l
+                  IF(ABS(REAL(mmpMat(m,mp,i_hia,ispin))).LT.1e-6) mmpMat(m,mp,i_hia,ispin) = 0.0
+               ENDDO
+            ENDDO
+         ENDDO
       ENDDO
+
+
+
 
 9000  FORMAT("mu_",I1)
 
