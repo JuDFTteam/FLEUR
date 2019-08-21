@@ -605,6 +605,19 @@ MODULE m_types_setup
       INTEGER :: wan90version
       INTEGER :: oc_num_orbs
       INTEGER, ALLOCATABLE :: oc_orbs(:)
+      LOGICAL :: l_mmn0_unf_to_spn_unf
+      LOGICAL :: l_mmn0_to_spn_unf
+      LOGICAL :: l_mmn0_to_spn
+      LOGICAL :: l_mmn0_to_spn2
+      LOGICAL :: l_mmn0_unf_to_spn
+      LOGICAL :: l_perpmag_unf_to_tor_unf 
+      LOGICAL :: l_perpmag_to_tor_unf
+      LOGICAL :: l_perpmag_to_tor
+      LOGICAL :: l_perpmag_unf_to_tor
+      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf
+      LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf
+      LOGICAL :: l_hsomtxvec_to_lmpzsoc
+      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc
       LOGICAL :: l_unformatted
       LOGICAL :: l_oc_f
       LOGICAL :: l_ndegen
