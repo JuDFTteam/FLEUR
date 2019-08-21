@@ -146,7 +146,7 @@ MODULE m_greensfImag21
                      DO m = -l,l
                         DO mp = -l,l
                            IF(imat.EQ.1) THEN
-                              greensfCoeffs%projdos(ie,i_gf,m,mp,3) = greensfCoeffs%projdos(ie,i_gf,m,mp,3) + AIMAG(fac * phase * ImagUnit*conjg(calc_mat(m,mp)))
+                              greensfCoeffs%projdos(ie,i_gf,m,mp,3) = greensfCoeffs%projdos(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
                            ELSE IF(imat.EQ.2) THEN
                               greensfCoeffs%uu(ie,i_gf,m,mp,3) = greensfCoeffs%uu(ie,i_gf,m,mp,3) + fac * phase * conjg(calc_mat(m,mp))
                            ELSE IF(imat.EQ.3) THEN

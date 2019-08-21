@@ -140,8 +140,8 @@ SUBROUTINE greensfRes21(atoms,sym,angle,input,nbands,resWeights,ind,wtkpt,eig,de
                   DO m = -l,l
                      DO mp = -l,l
                         IF(imat.EQ.1) THEN
-                           greensf%gmmpmat(iz,i_gf,m,mp,3,1) = greensf%gmmpmat(iz,i_gf,m,mp,3,1) + fac * phase * calc_mat(m,mp)
-                           greensf%gmmpmat(iz,i_gf,m,mp,3,2) = greensf%gmmpmat(iz,i_gf,m,mp,3,2) + fac * conjg(phase) * conjg(calc_mat(m,mp))
+                           greensf%gmmpmat(iz,i_gf,m,mp,3,1) = greensf%gmmpmat(iz,i_gf,m,mp,3,1) + fac * phase * conjg(calc_mat(m,mp))
+                           greensf%gmmpmat(iz,i_gf,m,mp,3,2) = greensf%gmmpmat(iz,i_gf,m,mp,3,2) + fac * conjg(phase)*calc_mat(m,mp)
                         !ELSE IF(imat.EQ.2) THEN
                         !   greensfCoeffs%uu(ie,i_gf,m,mp,ispin) = greensfCoeffs%uu(ie,i_gf,m,mp,ispin) + fac * conjg(calc_mat(m,mp))
                         !ELSE IF(imat.EQ.3) THEN

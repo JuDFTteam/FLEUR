@@ -342,7 +342,7 @@ MODULE m_types_greensf
          ipm = MERGE(2,1,l_conjg)
 
          gmat%data_c = 0.0
-         ispin_end = MERGE(3,2,input%l_gfmperp)
+         ispin_end = MERGE(4,2,input%l_gfmperp)
 
          DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
             !Find the right quadrant in gmat according to the spin index
@@ -352,6 +352,7 @@ MODULE m_types_greensf
             spin2 = MERGE(spin2,1,ispin.NE.4)
 
             spin_ind = MERGE(ispin,1,input%jspins.EQ.2)
+            spin_ind = MERGE(3,spin_ind,ispin.EQ.4)
             IF(l_full) THEN
                ind1_start = (spin1-1)*(2*l+1) 
                ind2_start = (spin2-1)*(2*lp_loop+1) 
@@ -374,6 +375,8 @@ MODULE m_types_greensf
                      IF(ispin.EQ.1.AND.input%jspins.EQ.1) THEN
                         !In this case the ordering of m and mp has to be reversed
                         gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,-m,-mp,spin_ind,ipm)
+                     ELSE IF(ispin.EQ.4) THEN
+                        gmat%data_c(ind1,ind2) = conjg(this%gmmpMat(iz,i_gf,mp,m,spin_ind,ipm))
                      ELSE
                         gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,spin_ind,ipm)
                      ENDIF

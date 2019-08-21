@@ -123,12 +123,12 @@ MODULE m_crystalfield
          DO m = -l, l 
             hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - tr/(2*l+1) 
          ENDDO
-          DO m = -l, l
-            DO mp = -l, l
-               hub1%ccfmat(i_hia,m,mp) = (hub1%ccfmat(i_hia,m,mp)+hub1%ccfmat(i_hia,-m,-mp))/2.0
-               hub1%ccfmat(i_hia,-m,-mp) = hub1%ccfmat(i_hia,m,mp)
-            ENDDO
-         ENDDO
+          !DO m = -l, l
+          !  DO mp = -l, l
+          !     hub1%ccfmat(i_hia,m,mp) = (hub1%ccfmat(i_hia,m,mp)+hub1%ccfmat(i_hia,-m,-mp))/2.0
+          !     hub1%ccfmat(i_hia,-m,-mp) = hub1%ccfmat(i_hia,m,mp)
+          !  ENDDO
+         !ENDDO
          IF(l_debug) THEN
             WRITE(*,*) "TRACELESS (eV)"
             WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const
