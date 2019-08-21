@@ -23,7 +23,7 @@ MODULE m_calc_tria
 
 
       CALL timestart("Calculation of Triangles")
-      CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,input%film)!keep
+      CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,.TRUE.)!keep
       l_tria = .true.
       IF (sym%invs) THEN
          IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.

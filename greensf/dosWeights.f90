@@ -256,8 +256,8 @@ MODULE m_dosWeights
             CALL sortEig(3,e,ind)
             !Sort the energies in the tetrahedron in ascending order
             !search for the corner ikpt in the sorted array
-            DO i = 1, 4
-               IF(kpts%ntetra(ind(i),itria).EQ.ikpt) icorn = i
+            DO i = 1, 3
+               IF(kpts%itria(ind(i),itria).EQ.ikpt) icorn = i
             ENDDO
 
             !Below this index the weight is 0
