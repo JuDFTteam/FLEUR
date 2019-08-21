@@ -294,7 +294,7 @@
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
       endif   
 
-c---- read data in fleur-format
+!---- read data in fleur-format
       spn_in=916
       num_compos=3
       do fileidx=1,filestoread
@@ -373,7 +373,7 @@ c---- read data in fleur-format
             do i=1,nbnd
              do j=1,nbnd
               read(spn_in,*)dummy1,dummy2,dummy3,a,b
-c             paulimat(1,j,i+num_bands*(jspins-1),nkp)=cmplx(a,b)
+!             paulimat(1,j,i+num_bands*(jspins-1),nkp)=cmplx(a,b)
 
                oper_o(j,i+firstband,nkp,fileidx)=cmplx(a,b)
              enddo !j
