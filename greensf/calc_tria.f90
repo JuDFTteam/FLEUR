@@ -19,11 +19,12 @@ MODULE m_calc_tria
       INTEGER :: itria(3,2*kpts%nkpt), ntria
       REAL    :: atr(2*kpts%nkpt), as
 
-      LOGICAL l_tria
+      LOGICAL l_tria, l_film
 
 
+      l_film = .TRUE.
       CALL timestart("Calculation of Triangles")
-      CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,.TRUE.)!keep
+      CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_film)
       l_tria = .true.
       IF (sym%invs) THEN
          IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
