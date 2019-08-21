@@ -520,10 +520,8 @@
          else
             oper_o(:,:,nkp,2)=ci*oper_o(:,:,nkp,1)
          endif
-         oper_o(:,:,nkp,1)=      oper_o(:,:,nkp,1)+
-     &          transpose(conjg(oper_o(:,:,nkp,1)))
-         oper_o(:,:,nkp,2)=      oper_o(:,:,nkp,2)+
-     &          transpose(conjg(oper_o(:,:,nkp,2)))
+         oper_o(:,:,nkp,1)=      oper_o(:,:,nkp,1)+transpose(conjg(oper_o(:,:,nkp,1)))
+         oper_o(:,:,nkp,2)=      oper_o(:,:,nkp,2)+transpose(conjg(oper_o(:,:,nkp,2)))
          endif
 
       enddo	
