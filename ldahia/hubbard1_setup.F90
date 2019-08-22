@@ -156,7 +156,7 @@ MODULE m_hubbard1_setup
                   !-------------------------------------------------------
                   !Is a crystal field matrix present in the work directory
                   INQUIRE(file=TRIM(ADJUSTL(cwd)) // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
-                  IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1%ccfmat(i_hia-,l:l,-l:l),l)
+                  IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1%ccfmat(i_hia,l:l,-l:l),l)
                   !Is a bath parameter file present 
                   INQUIRE(file=TRIM(ADJUSTL(cwd)) // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
                   !Copy the bath file to the Hubbard 1 solver if its present
