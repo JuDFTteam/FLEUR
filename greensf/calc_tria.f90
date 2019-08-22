@@ -32,7 +32,7 @@ MODULE m_calc_tria
          IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
       ENDIF
 
-      IF(.NOT.l_tria) CALL juDFT_warn("Triangles may not cover whol BZ",calledby="calc_tria")
+      !IF(.NOT.l_tria) CALL juDFT_warn("Triangles may not cover whol BZ",calledby="calc_tria")
 
       !Write to types_kpts
       kpts%ntria = ntria
