@@ -288,7 +288,7 @@ CONTAINS
 
           ! fermi level and occupancies
           IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd = 2*DIMENSION%neigd
-          IF ((mpi%irank.EQ.0)) THEN
+          !IF ((mpi%irank.EQ.0)) THEN
              CALL timestart("determination of fermi energy")
 
              IF (noco%l_soc.AND.(.NOT.noco%l_noco)) THEN
@@ -322,7 +322,7 @@ CONTAINS
 !!$          END IF
 !!$          !-Wannier
 
-          ENDIF
+          !ENDIF
 #ifdef CPP_MPI
           CALL MPI_BCAST(results%ef,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
