@@ -40,12 +40,15 @@ CONTAINS
 
 
       INTEGER ind1,ind2,ipm,iz,ispin,m,mp,lp_loop,i,ns
-      LOGICAL l_vertcorr
       REAL    re,imag,nup,ndwn,nhi,nlow,tr
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=300) :: message
 
-      l_vertcorr = .false. !Enables/Disables a correction for the vertical parts of the rectangular contour
+      !Check for Contours not reproducing occupations
+      IF(g%mode.EQ.2.AND.input%gf_et.NE.0.0) &
+         WRITE(6,*) "Energy contour not ending at efermi: These are not the actual occupations"
+      IF(g%mode.EQ.3.AND..NOT.input%gf_dosfermi) &
+         WRITE(6,*) "Energy contour not weighted for occupations: These are not the actual occupations"
 
       mmpMat = 0.0
 
