@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,greensf,angle,ntria,as,itria,atr)
+                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,greensf,angle)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -84,10 +84,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
    TYPE(t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
    TYPE(t_greensf),       OPTIONAL, INTENT(INOUT) :: greensf
-   INTEGER,               OPTIONAL, INTENT(IN)    :: ntria
-   REAL,                  OPTIONAL, INTENT(IN)    :: as 
-   INTEGER,               OPTIONAL, INTENT(IN)    :: itria(3,2*kpts%nkpt)
-   REAL,                  OPTIONAL, INTENT(IN)    :: atr(2*kpts%nkpt)
    REAL,                  OPTIONAL, INTENT(IN)    :: angle(sym%nop)
 
    ! Scalar Arguments

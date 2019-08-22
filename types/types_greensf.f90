@@ -136,10 +136,11 @@ MODULE m_types_greensf
 
       END SUBROUTINE greensf_init
 
-      SUBROUTINE e_contour(this,input,eb,et,ef)
+      SUBROUTINE e_contour(this,input,mpi,eb,et,ef)
 
 
          USE m_types_setup
+         USE m_types_mpi
          USE m_constants
          USE m_juDFT
          USE m_grule
@@ -149,6 +150,7 @@ MODULE m_types_greensf
 
          CLASS(t_greensf),  INTENT(INOUT)  :: this
          TYPE(t_input),     INTENT(IN)     :: input
+         TYPE(t_mpi),       INTENT(IN)     :: mpi
          REAL,              INTENT(IN)     :: eb  
          REAL,              INTENT(IN)     :: et
          REAL,              INTENT(IN)     :: ef
@@ -266,6 +268,51 @@ MODULE m_types_greensf
             CALL juDFT_error("Invalid mode for energy contour in Green's function calculation", calledby="init_e_contour")
 
          END IF
+
+         IF(mpi%irank.EQ.0) THEN 
+            !Write out the information about the energy contour to outfile
+            WRITE(6,"(A)") "---------------------------------------------"
+            WRITE(6,"(A)") " Green's function energy contour"
+            WRITE(6,"(A)") "---------------------------------------------"
+            WRITE(6,1000) this%mode
+            WRITE(6,*)
+
+            SELECT CASE(this%mode)
+
+            CASE(1)
+               WRITE(6,"(A)") "Rectangular Contour: "
+               WRITE(6,1010) this%nz, this%nmatsub,input%gf_n1,input%gf_n2,input%gf_n3
+               WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
+               WRITE(6,1040) eb,0.0
+            CASE(2)
+               WRITE(6,"(A)") "Semicircle Contour: "
+               WRITE(6,1020) this%nz, input%gf_alpha
+               WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
+               WRITE(6,1040) eb,input%gf_et
+            CASE(3)
+               WRITE(6,"(A)") "Equidistant Contour for DOS calculations: "
+               WRITE(6,1030) this%nz, input%gf_sigma
+               WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
+               WRITE(6,1040) eb,et
+            CASE default
+
+            END SELECT
+
+            !Write out points and weights
+            WRITE(6,*)
+            WRITE(6,"(A)") " Energy points: "
+            WRITE(6,"(A)") "---------------------------------------------"
+            DO iz = 1, this%nz 
+               WRITE(6,1050) REAL(this%e(iz)), AIMAG(this%e(iz)), REAL(this%de(iz)), AIMAG(this%de(iz))
+            ENDDO
+
+1000        FORMAT("Using energy contour mode: ", I1)
+1010        FORMAT("nz: ", I5.1,"; nmatsub: ", I5.1,"; n1: ", I5.1,"; n2: ", I5.1,"; n3: ", I5.1)
+1020        FORMAT("nz: ", I5.1," alpha: ", f8.4, "(not doing anything atm)")
+1030        FORMAT("n: ", I5.1,"; sigma: ", f8.4)
+1040        FORMAT("eb: ", f8.4,"; et: ",f8.4)
+1050        FORMAT(2f8.4,"      weight: ",2f8.4)
+         ENDIF
 
       END SUBROUTINE e_contour
 

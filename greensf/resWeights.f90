@@ -247,10 +247,6 @@ MODULE m_resWeights
             !Eq. A6
             weight = vol/4.0 * 1.0/(z-e(1))
          ENDIF
-         !IF(AIMAG(weight).GT.0.0) THEN
-         !   WRITE(*,*) weight, ndeg, ind, ideg(1,1), ideg(1,2)
-            !CALL juDFT_error("")
-         !ENDIF
       ENDIF
 
    END SUBROUTINE

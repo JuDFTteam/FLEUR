@@ -101,13 +101,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error, perform_MetaGGA
-   
-   LOGICAL l_tria
-   INTEGER ntria
-   REAL    as
-   INTEGER itria(3,2*kpts%nkpt)
-   REAL    atr(2*kpts%nkpt)
-   REAL    angle(sym%nop)
+   REAL                  :: angle(sym%nop)
 
 
 
@@ -122,18 +116,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) THEN
       !Only calculate the greens function when needed
       CALL greensfCoeffs%init(input,lmaxU_const,atoms,noco,results%ef)
-      IF(input%tria.AND.input%film) THEN
-         l_tria = .true.
-         CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
-         IF (sym%invs) THEN
-           IF (abs(sym%nop2*as-0.5).GT.0.000001) l_tria=.false.
-         ELSE
-           IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
-         ENDIF
-         write(*,*) as,sym%nop2,l_tria
-         IF(.NOT.l_tria) CALL juDFT_warn("l_tria=F",calledby="cdngen")
-      ENDIF
-      CALL gOnsite%e_contour(input,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
+      CALL gOnsite%e_contour(input,mpi,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
       gOnsite%gmmpMat = 0.0
       IF(atoms%n_hia.GT.0.AND.mpi%irank==0) hub1%mag_mom = 0.0
    ENDIF
@@ -154,13 +137,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !called once and both spin directions are calculated in a single run.
    results%force=0.0
    jspmax = input%jspins
-   IF (noco%l_mperp.OR.input%l_gfmperp) jspmax = 1
+   IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,hub1,coreSpecInput,&
-                  mcd,slab,orbcomp,greensfCoeffs,gOnsite,angle,ntria,as,itria,atr)
+                  mcd,slab,orbcomp,greensfCoeffs,gOnsite,angle)
    END DO
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN

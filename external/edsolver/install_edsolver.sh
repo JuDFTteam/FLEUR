@@ -15,7 +15,6 @@ fi
 
 #Add the linking arguments for fleur for both the EDsolver and ARPACk
 CLI_LIBRARIES="-lEDsolver;-larpack_$ED_PLATFORM $CLI_LIBRARIES"
-echo $CLI_LIBRARIES
 
 if [ ! -r  libEDsolver_FLEUR ]
 then 
