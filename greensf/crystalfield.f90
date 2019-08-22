@@ -89,7 +89,7 @@ MODULE m_crystalfield
                   !LDA+U potential
                   h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
                ENDDO
-               h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - hub1%xi(i_hia)/hartree_to_ev_const * m * (1.5-jspin) * MERGE(-1,1,input%jspins.EQ.1)
+               !h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - hub1%xi(i_hia)/hartree_to_ev_const * m * (1.5-jspin) * MERGE(-1,1,input%jspins.EQ.1)
             ENDDO
          ENDDO
          IF(l_debug) THEN
@@ -123,12 +123,12 @@ MODULE m_crystalfield
          DO m = -l, l 
             hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - tr/(2*l+1) 
          ENDDO
-          !DO m = -l, l
-          !  DO mp = -l, l
-          !     hub1%ccfmat(i_hia,m,mp) = (hub1%ccfmat(i_hia,m,mp)+hub1%ccfmat(i_hia,-m,-mp))/2.0
-          !     hub1%ccfmat(i_hia,-m,-mp) = hub1%ccfmat(i_hia,m,mp)
-          !  ENDDO
-         !ENDDO
+         DO m = -l, l
+            DO mp = -l, l
+               hub1%ccfmat(i_hia,m,mp) = (hub1%ccfmat(i_hia,m,mp)+hub1%ccfmat(i_hia,-m,-mp))/2.0
+               hub1%ccfmat(i_hia,-m,-mp) = hub1%ccfmat(i_hia,m,mp)
+            ENDDO
+         ENDDO
          IF(l_debug) THEN
             WRITE(*,*) "TRACELESS (eV)"
             WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const
