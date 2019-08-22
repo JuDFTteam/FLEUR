@@ -46,7 +46,7 @@ CONTAINS
     
     IF (atoms%jri(ntyp)>atoms%jmtd)  CALL juDFT_error("atoms%jri(ntyp).GT.atoms%jmtd",calledby ="sorad")
     ALLOCATE ( p(atoms%jmtd,2),pd(atoms%jmtd,2),q(atoms%jmtd,2),plo(atoms%jmtd,2),fint(atoms%jmtd),&
-         &   qlo(atoms%jmtd,2),plop(atoms%jmtd,2),qd(atoms%jmtd,2),v0(atoms%jmtd),vso(atoms%jmtd,2),vr_tmp(atoms%jmtd) )
+         &   qlo(atoms%jmtd,2),plop(atoms%jmtd,2),qd(atoms%jmtd,2),v0(atoms%jmtd),vso(atoms%jmtd,2),vrTmp(atoms%jmtd) )
 
     p = 0.0 ; pd = 0.0 ; q = 0.0 ; plo = 0.0 ; fint = 0.0
     qlo = 0.0 ; plop = 0.0 ; qd = 0.0 ; v0 = 0.0 ; vso = 0.0
