@@ -49,7 +49,7 @@ CONTAINS
          &   qlo(atoms%jmtd,2),plop(atoms%jmtd,2),qd(atoms%jmtd,2),v0(atoms%jmtd),vso(atoms%jmtd,2),vrTmp(atoms%jmtd) )
 
     p = 0.0 ; pd = 0.0 ; q = 0.0 ; plo = 0.0 ; fint = 0.0
-    qlo = 0.0 ; plop = 0.0 ; qd = 0.0 ; v0 = 0.0 ; vso = 0.0
+    qlo = 0.0 ; plop = 0.0 ; qd = 0.0 ; v0 = 0.0 ; vso = 0.0; vrTmp = 0.0
     
 
     DO l = 0,atoms%lmax(ntyp) 
