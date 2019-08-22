@@ -29,6 +29,7 @@ MODULE m_hubbard1_io
    CHARACTER(*), PARAMETER :: cfg_file_main ="hubbard1.cfg"
    CHARACTER(*), PARAMETER :: cfg_file_bath ="bath.cfg"
    CHARACTER(*), PARAMETER :: cfg_file_hloc ="hloc.cfg"
+   CHARACTER(*), PARAMETER :: cfg_file_ccf = "ccf.dat"
    CHARACTER(*), PARAMETER :: file_G0_fits  ="G0_fit_monitor.dat"
    CHARACTER(*), PARAMETER :: file_hybr_fits ="hyb_fit_monitor.dat"
    INTEGER, PARAMETER      :: input_iounit  = 17
@@ -43,7 +44,7 @@ MODULE m_hubbard1_io
 
    CONTAINS
 
-   SUBROUTINE hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_new)
+   SUBROUTINE hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath,l_new)
 
       IMPLICIT NONE
 
@@ -58,7 +59,7 @@ MODULE m_hubbard1_io
 
       !Old or new input format
       IF(l_new) THEN
-         CALL write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
+         CALL write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath)
       ELSE
          CALL write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
       ENDIF
@@ -66,7 +67,7 @@ MODULE m_hubbard1_io
    END SUBROUTINE hubbard1_input
 
 
-   SUBROUTINE write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
+   SUBROUTINE write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath)
 
       USE m_generic_txtio
 
@@ -79,6 +80,7 @@ MODULE m_hubbard1_io
       TYPE(t_hub1ham),  INTENT(IN)  :: hub1
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
+      LOGICAL,          INTENT(IN)  :: l_bath
       
       INTEGER :: info, io_error,i,j,k,ind1,ind2,i_exc,i_arg
       REAL exc
@@ -93,6 +95,7 @@ MODULE m_hubbard1_io
       CALL comment(input_iounit,"Slater Integrals",1)
       CALL writeValue(input_iounit,"Fk",(/f0,f2,f4,f6/))
       CALL writeValue(input_iounit, "include", cfg_file_hloc)
+      IF(l_bath) CALL writeValue(input_iounit, "include", cfg_file_bath)
       CALL endSection(input_iounit)
 
       CALL startSection(input_iounit,"fock_space")
@@ -309,14 +312,13 @@ MODULE m_hubbard1_io
       REAL,             INTENT(IN)  :: ccfmat(-l:l,-l:l)
       INTEGER,          INTENT(IN)  :: l
 
-      CHARACTER(len=300) :: fname
       INTEGER :: info, io_error,io_unit
 
       io_unit = 17
 
-      fname = "ccf.dat"
 
-      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(fname)), status="replace", action="write", iostat=io_error)
+
+      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_ccf)), status="replace", action="write", iostat=io_error)
 
       IF(l.EQ.2) THEN
          WRITE(io_unit,"(5f10.6)") ccfmat*hartree_to_ev_const
@@ -327,6 +329,28 @@ MODULE m_hubbard1_io
       CLOSE(io_unit)
 
    END SUBROUTINE write_ccfmat
+
+   SUBROUTINE read_ccfmat(path,ccfmat,l)
+
+      CHARACTER(len=*), INTENT(IN)  :: path
+      REAL,             INTENT(OUT)  :: ccfmat(-l:l,-l:l)
+      INTEGER,          INTENT(IN)  :: l
+
+      INTEGER :: info, io_error,io_unit
+
+      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_ccf)), status="old", action="read", iostat=io_error)
+      IF(io_error.NE.0) CALL juDFT_error("IO-error in Hubbard1-IO",calledby="read_ccfmat")
+
+      !The crystal field is assumed to be in eV 
+      IF(l.EQ.2) THEN
+         READ(io_unit,"(5f10.6)") ccfmat/hartree_to_ev_const
+      ELSE IF(l.EQ.3) THEN
+         READ(io_unit,"(7f10.6)") ccfmat/hartree_to_ev_const
+      ENDIF
+
+      CLOSE(unit=io_unit)
+
+   END SUBROUTINE read_ccfmat
 
    SUBROUTINE read_selfen(path,selfen,ne,matsize,l_matsub)
       

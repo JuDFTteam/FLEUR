@@ -66,7 +66,7 @@ MODULE m_hubbard1_setup
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
       COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz)
       REAL     n_l(atoms%n_hia,input%jspins)
-      LOGICAL  l_selfenexist,l_exist,l_linkedsolver
+      LOGICAL  l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist
 
       !Positions of the DFT+HIA elements in all DFT+U related arrays
       indStart = atoms%n_u+1
@@ -151,9 +151,22 @@ MODULE m_hubbard1_setup
                   !Nearest Integer occupation
                   n_occ = ANINT(SUM(n_l(i_hia,:)))
 #ifdef CPP_EDSOLVER
-                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.true.)
+                  !-------------------------------------------------------
+                  ! Check for additional input files
+                  !-------------------------------------------------------
+                  !Is a crystal field matrix present in the work directory
+                  INQUIRE(file=TRIM(ADJUSTL(cwd)) // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
+                  IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1%ccfmat(i_hia-,l:l,-l:l),l)
+                  !Is a bath parameter file present 
+                  INQUIRE(file=TRIM(ADJUSTL(cwd)) // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
+                  !Copy the bath file to the Hubbard 1 solver if its present
+                  IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(xPath)))
+                  !-------------------------------------------------------
+                  ! Write the main config files
+                  !-------------------------------------------------------
+                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,l_bathexist,.true.)
 #else
-                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.)
+                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.,.false.)
 
                   !If no Solver is linked we assume that the old solver is used and we write out some additional files
                   !Crystal field matrix (old version)
@@ -188,6 +201,7 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER
                      l_linkedsolver=.TRUE.
                      CALL timestart("Hubbard 1: EDsolver")
+                     !We have to change into the Hubbard1 directory so that the solver routines can read the config
                      CALL CHDIR(TRIM(ADJUSTL(xPath)))                  
                      CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,gdft%e(1:gdft%nz)*hartree_to_ev_const,selfen(i_hia,:,:,1:gdft%nz),1)
                      !The solver is given everything in eV by default, so we need to convert back to htr
