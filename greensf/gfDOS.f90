@@ -28,8 +28,6 @@ MODULE m_gfDOS
       TYPE(t_mat) :: gmat,cmat,jmat
       CHARACTER(len=10) :: filename
 
-      IF(.NOT.PRESENT(ef)) WRITE(*,*) "This gfDOS is not corrected to have ef=0"
-      IF(g%mode.NE.3) WRITE(*,*) "You are using an energy contour where the gfDOS might not be very informative"
 9000  FORMAT("gfDOS.",I3.3)
 9001  FORMAT("mgfDOS.",I3.3)
       WRITE(filename,9000) jobID
@@ -38,7 +36,9 @@ MODULE m_gfDOS
       WRITE(filename,9001) jobID
       OPEN(unit=3457,file=filename,status="replace",action="write",iostat=io_error)
       IF(io_error.NE.0) CALL juDFT_error("IO-error",calledby="gfDOS")
-
+      !Write out warnings
+      IF(.NOT.PRESENT(ef)) WRITE(3456,"(A)") "This gfDOS is not corrected to have ef=0"
+      IF(g%mode.NE.3) WRITE(3456,"(A)") "You are using an energy contour where the gfDOS might not be very informative"
       !Calculate the transformation between |L,S> and |J,mj> basis
       ns = 2*l+1
       CALL cmat%init(.TRUE.,2*ns,2*ns)
