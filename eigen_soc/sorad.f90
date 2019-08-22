@@ -41,7 +41,7 @@ CONTAINS
     REAL, ALLOCATABLE :: p(:,:),pd(:,:),q(:,:),qd(:,:),plo(:,:)
     REAL, ALLOCATABLE :: plop(:,:),glo(:,:),fint(:),pqlo(:,:)
     REAL, ALLOCATABLE :: filo(:,:)
-    REAL, ALLOCATABLE :: v0(:),vso(:,:),qlo(:,:),vr_tmp(:)
+    REAL, ALLOCATABLE :: v0(:),vso(:,:),qlo(:,:),vrTmp(:)
     !     ..
     
     IF (atoms%jri(ntyp)>atoms%jmtd)  CALL juDFT_error("atoms%jri(ntyp).GT.atoms%jmtd",calledby ="sorad")
@@ -60,24 +60,24 @@ CONTAINS
           ENDIF
        ENDDO
        DO jspin = 1,input%jspins
-          IF(l_hia.AND.input%jspins.NE.1) THEN
-             vr_tmp = (vr(:,1)+vr(:,2))/2.0
+          IF(l_hia.AND.input%jspins.EQ.2) THEN
+             vrTmp = (vr(:,1)+vr(:,2))/2.0
           ELSE
-             vr_tmp = vr(:,jspin)
+             vrTmp = vr(:,jspin)
           ENDIF
           !
           !--->    calculate normalized function at e: p and q 
           !
           e = enpara%el0(l,ntyp,jspin)
           CALL radsra(&
-               e,l,vr_tmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
+               e,l,vrTmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                usdus%us(l,ntyp,jspin),usdus%dus(l,ntyp,jspin),&
                nodeu,p(:,jspin),q(:,jspin))
           !                     
           !--->    calculate orthogonal energy derivative at e : pd and qd
           !
           CALL radsrd(&
-               e,l,vr_tmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
+               e,l,vrTmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                usdus%uds(l,ntyp,jspin),usdus%duds(l,ntyp,jspin),&
                usdus%ddn(l,ntyp,jspin),noded,pd(:,jspin),qd(:,jspin),&
                p(:,jspin),q(:,jspin),usdus%dus(l,ntyp,jspin))
