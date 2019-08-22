@@ -450,6 +450,7 @@ MODULE m_types_setup
       INTEGER :: gf_mode
       INTEGER :: gf_n
       REAL    :: gf_alpha
+      REAL    :: gf_et
       INTEGER :: gf_n1
       INTEGER :: gf_n2
       INTEGER :: gf_n3

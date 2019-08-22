@@ -252,7 +252,8 @@ CONTAINS
     CALL MPI_BCAST(input%gf_n2,1,MPI_INTEGER,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%gf_n3,1,MPI_INTEGER,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%gf_nmatsub,1,MPI_INTEGER,0,mpi%mpi_comm,ierr) 
-    CALL MPI_BCAST(input%gf_alpha,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
+    CALL MPI_BCAST(input%gf_alpha,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_et,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
 
     n = 7*7*3*sym%nop
     CALL MPI_BCAST(sym%d_wgn,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)

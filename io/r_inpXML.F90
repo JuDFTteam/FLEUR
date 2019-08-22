@@ -753,6 +753,7 @@ CONTAINS
          IF(numberNodes.EQ.1) THEN
             input%gf_mode = 2
             input%gf_n = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n'))
+            input%gf_et = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@et'))
             input%gf_alpha = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
          ENDIF
 

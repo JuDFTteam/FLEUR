@@ -221,14 +221,12 @@ MODULE m_types_greensf
                   this%e(nz)  = ef + (2*iz-1) * ImagUnit *sigma 
                   this%de(nz) =  -2 * ImagUnit * sigma
                ENDDO 
-               WRITE(*,1000) this%nz, this%nmatsub,input%gf_n1,input%gf_n2,input%gf_n3
             ENDIF
-1000     FORMAT("Energy Contour for Green's Function Integration with nz: ", I5.1,"; nmatsub: ", I5.1,"; n1: ", I5.1,"; n2: ", I5.1,"; n3: ", I5.1)
          ELSE IF(this%mode.EQ.2) THEN
 
             !Semicircle
             e1 = eb
-            e2 = ef
+            e2 = ef+input%gf_et
 
             this%nmatsub = 0
             !Radius
@@ -245,6 +243,9 @@ MODULE m_types_greensf
             DO i = 1, this%nz
                this%e(i) = xr + ImagUnit * r * EXP(-ImagUnit*pi_const/2.0 * x(this%nz-i+1))
                this%de(i) = pi_const/2.0 * r * EXP(-ImagUnit*pi_const/2.0 * x(this%nz-i+1)) * w(this%nz-i+1)
+               !Scale the imaginary part with the given factor alpha
+               this%e(i) = REAL(this%e(i)) + ImagUnit * input%gf_alpha * AIMAG(this%e(i))
+               this%de(i) = REAL(this%de(i)) + ImagUnit * input%gf_alpha * AIMAG(this%de(i))
             ENDDO
 
          ELSE IF(this%mode.EQ.3) THEN
