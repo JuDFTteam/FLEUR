@@ -55,6 +55,7 @@ MODULE m_hubbard1_io
       TYPE(t_hub1ham),  INTENT(IN)  :: hub1
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
+      LOGICAL,          INTENT(IN)  :: l_bath
       LOGICAL,          INTENT(IN)  :: l_new
 
       !Old or new input format
@@ -333,20 +334,24 @@ MODULE m_hubbard1_io
    SUBROUTINE read_ccfmat(path,ccfmat,l)
 
       CHARACTER(len=*), INTENT(IN)  :: path
-      REAL,             INTENT(OUT)  :: ccfmat(-l:l,-l:l)
+      REAL,             INTENT(OUT) :: ccfmat(-l:l,-l:l)
       INTEGER,          INTENT(IN)  :: l
 
       INTEGER :: info, io_error,io_unit
 
+      ccfmat = 0.0
       OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_ccf)), status="old", action="read", iostat=io_error)
       IF(io_error.NE.0) CALL juDFT_error("IO-error in Hubbard1-IO",calledby="read_ccfmat")
 
       !The crystal field is assumed to be in eV 
       IF(l.EQ.2) THEN
-         READ(io_unit,"(5f10.6)") ccfmat/hartree_to_ev_const
+         READ(io_unit,"(5f10.6)") ccfmat
       ELSE IF(l.EQ.3) THEN
-         READ(io_unit,"(7f10.6)") ccfmat/hartree_to_ev_const
+         READ(io_unit,"(7f10.6)") ccfmat
       ENDIF
+
+      !convert to htr (in writing the input file its converted back)
+      ccfmat = ccfmat/hartree_to_ev_const
 
       CLOSE(unit=io_unit)
 
