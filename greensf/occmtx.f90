@@ -162,7 +162,9 @@ CONTAINS
 9000        FORMAT("Occupation matrix obtained from the green's function for atom: ",I3," l: ",I3)
             WRITE(6,9000) nType, l
             WRITE(6,"(A)") "In the |L,S> basis:"
-            WRITE(6,"(14f8.4)") gmat%data_r
+            DO i = 1, 2*ns
+               WRITE(6,"(14f8.4)") gmat%data_r(i,:)
+            ENDDO
             WRITE(6,"(1x,A,f8.4)") "Spin-Up trace: ", nup
             WRITE(6,"(1x,A,f8.4)") "Spin-Down trace: ", ndwn
 
@@ -184,7 +186,9 @@ CONTAINS
             
             !Write to file
             WRITE(6,"(A)") "In the |J,mj> basis:"
-            WRITE(6,"(14f8.4)") jmat%data_r
+            DO i = 1, 2*ns
+               WRITE(6,"(14f8.4)") jmat%data_r(i,:)
+            ENDDO
             WRITE(6,"(1x,A,f8.4)") "Low J trace: ", nlow
             WRITE(6,"(1x,A,f8.4)") "High J trace: ", nhi
             WRITE(6,*)

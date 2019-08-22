@@ -219,7 +219,7 @@ MODULE m_types_greensf
                   nz = nz + 1 
                   IF(nz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
                   this%e(nz)  = ef + (2*iz-1) * ImagUnit *sigma 
-                  this%de(nz) =  -2 *ImagUnit * sigma
+                  this%de(nz) =  -2 * ImagUnit * sigma
                ENDDO 
                WRITE(*,1000) this%nz, this%nmatsub,input%gf_n1,input%gf_n2,input%gf_n3
             ENDIF
