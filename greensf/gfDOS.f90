@@ -77,10 +77,10 @@ MODULE m_gfDOS
             ENDDO
             CALL gmat%free()
          ENDDO 
-         WRITE(3456,"(7f14.8)") REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)), &
+         WRITE(3456,"(7f14.8)") (REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)))*hartree_to_eV_const, &
                                 SUM(AIMAG(dos(1,1:ns))),SUM(AIMAG(dos(2,1:ns))),&
                                 SUM(AIMAG(dos(3,1:ns-1))),SUM(AIMAG(dos(4,1:ns+1))), REAL(re(1)), REAL(re(2))
-         WRITE(3457,"(15f10.5)") REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)), (AIMAG(dos(1,i)),i=1, ns),(AIMAG(dos(2,i)),i=1, ns) 
+         WRITE(3457,"(15f10.5)") (REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)))*hartree_to_eV_const, (AIMAG(dos(1,i)),i=1, ns),(AIMAG(dos(2,i)),i=1, ns) 
 
 
       ENDDO
