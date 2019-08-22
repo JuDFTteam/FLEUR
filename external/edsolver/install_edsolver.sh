@@ -1,4 +1,21 @@
+edsolver_version="2019-Aug-22"
 
+if [ "$machine" = "AUTO" ]
+then
+   ED_PLATFORM="gfortran"
+else
+   if [ "$machine" = "INTEL" ] || [ "$machine" = "INTEL_MPI" ]
+   then
+      ED_PLATFORM="ifort"
+   else
+      echo "libEDsolver at the moment only configured with AUTO and INTEL/INTEL_MPI"
+   fi
+fi
+
+
+#Add the linking arguments for fleur for both the EDsolver and ARPACk
+CLI_LIBRARIES="-lEDsolver;-larpack_$ED_PLATFORM $CLI_LIBRARIES"
+echo $CLI_LIBRARIES
 
 if [ ! -r  libEDsolver_FLEUR ]
 then 
@@ -24,29 +41,33 @@ then
 
 
    #Now look at the EDsolver
-   edsolver_version="2019-Jun-10"
 
    if [ ! -r libEDsolver.${edsolver_version} ]
    then
       if [ -r libEDsolver.${edsolver_version}.tar.gz ]
       then
          tar xzf libEDsolver.${edsolver_version}.tar.gz
-         cp default.mk libEDsolver.${edsolver_version}/make/
          cd libEDsolver.${edsolver_version}.tar.gz
-         make lib
+         make lib PLATFORM="$ED_PLATFORM"
       else
          echo "libEDsolver not present"
       fi
    else
-      cp default.mk libEDsolver.${edsolver_version}/make/
       cd libEDsolver.${edsolver_version}
       if [ ! -r "libEDsolver.a" ]
       then
-         make lib
+         make lib PLATFORM="$ED_PLATFORM"
       fi
    fi
 
    #Store the installation location
    FLEUR_LIBDIR="$PWD/ $FLEUR_LIBDIR"
    FLEUR_INCLUDEDIR="$PWD/ $FLEUR_INCLUDEDIR"
+
+   #Make the utils (if the compilation was sucessful)
+   if [ -r "libEDsolver.a" ]
+   then
+      cd utils
+      make all PLATFORM="$ED_PLATFORM"
+   fi
 fi
