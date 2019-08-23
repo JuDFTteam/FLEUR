@@ -322,9 +322,9 @@ MODULE m_hubbard1_io
       OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_ccf)), status="replace", action="write", iostat=io_error)
 
       IF(l.EQ.2) THEN
-         WRITE(io_unit,"(5f10.6)") ccfmat*hartree_to_ev_const
+         WRITE(io_unit,"(5f10.5)") ccfmat*hartree_to_ev_const
       ELSE IF(l.EQ.3) THEN
-         WRITE(io_unit,"(7f10.6)") ccfmat*hartree_to_ev_const
+         WRITE(io_unit,"(7f10.5)") ccfmat*hartree_to_ev_const
       ENDIF
 
       CLOSE(io_unit)
@@ -340,7 +340,7 @@ MODULE m_hubbard1_io
       INTEGER :: info, io_error,io_unit
 
       ccfmat = 0.0
-      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // TRIM(ADJUSTL(cfg_file_ccf)), status="old", action="read", iostat=io_error)
+      OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)), status="old", action="read", iostat=io_error)
       IF(io_error.NE.0) CALL juDFT_error("IO-error in Hubbard1-IO",calledby="read_ccfmat")
 
       !The crystal field is assumed to be in eV 
