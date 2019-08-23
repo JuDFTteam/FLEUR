@@ -64,9 +64,12 @@ MODULE m_hubbard1_setup
                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia)
 
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
-      COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz)
+      COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),2*gdft%nz)
+      COMPLEX  e(2*gdft%nz)
       REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist
+
+      e = 0.0
 
       !Positions of the DFT+HIA elements in all DFT+U related arrays
       indStart = atoms%n_u+1
@@ -110,7 +113,7 @@ MODULE m_hubbard1_setup
                CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
 
                !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
-               IF(hub1%iter.EQ.1.AND.ALL(den%mmpMat(:,:,indStart:indEnd,:).EQ.0.0)) THEN
+               IF(.FALSE..AND.hub1%iter.EQ.1.AND.ALL(den%mmpMat(:,:,indStart:indEnd,:).EQ.0.0)) THEN
                   n_l(i_hia,:) = hub1%init_occ(i_hia)/input%jspins
                   DO i_exc = 1, hub1%n_exc_given(i_hia)
                      hub1%mag_mom(i_hia,i_exc) = hub1%init_mom(i_hia,i_exc)
@@ -202,8 +205,11 @@ MODULE m_hubbard1_setup
                      l_linkedsolver=.TRUE.
                      CALL timestart("Hubbard 1: EDsolver")
                      !We have to change into the Hubbard1 directory so that the solver routines can read the config
-                     CALL CHDIR(TRIM(ADJUSTL(xPath)))                  
-                     CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,gdft%e(1:gdft%nz)*hartree_to_ev_const,selfen(i_hia,:,:,1:gdft%nz),1)
+                     CALL CHDIR(TRIM(ADJUSTL(xPath)))
+                     !Set up the energy points (z and z*)
+                     e(1:gdft%nz) = gdft%e(1:gdft%nz)*hartree_to_ev_const  
+                     e(gdft%nz+1:2*gdft%nz) = conjg(gdft%e(1:gdft%nz))*hartree_to_ev_const                  
+                     CALL EDsolver_from_cfg(2*(2*l+1),2*gdft%nz,e,selfen(i_hia,:,:,1:2*gdft%nz),1)
                      !The solver is given everything in eV by default, so we need to convert back to htr
                      selfen(i_hia,:,:,:) = selfen(i_hia,:,:,:)/hartree_to_ev_const
                      CALL CHDIR(TRIM(ADJUSTL(cwd)))
@@ -222,7 +228,7 @@ MODULE m_hubbard1_setup
                DO i_hia = 1, atoms%n_hia
                   nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                   l = atoms%lda_u(atoms%n_u+i_hia)%l
-                  DO iz = 1, gdft%nz
+                  DO iz = 1, 2*gdft%nz
                      CALL swapSpin(selfen(i_hia,:,:,iz),2*l+1)
                   ENDDO
                ENDDO

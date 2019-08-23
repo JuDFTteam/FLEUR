@@ -32,7 +32,7 @@ MODULE m_add_selfen
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_input),    INTENT(IN)     :: input
-      COMPLEX,          INTENT(IN)     :: selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),g%nz)
+      COMPLEX,          INTENT(IN)     :: selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),2*g%nz)
       REAL,             INTENT(IN)     :: ef
       REAL,             INTENT(IN)     :: n_occ(atoms%n_hia,input%jspins)
       REAL,             INTENT(IN)     :: mu_dc
@@ -78,23 +78,23 @@ MODULE m_add_selfen
             DO WHILE(mu.LE.mu_b)
                mu = mu + mu_step
                DO iz = 1, g%nz
-                  !Read selfenergy
-                  vmat%data_c = selfen(i_hia,start:end,start:end,iz)
-                  IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
-                     !Dismiss spin-off-diagonal elements
-                     vmat%data_c(1:ns,ns+1:2*ns) = 0.0
-                     vmat%data_c(ns+1:2*ns,1:ns) = 0.0
-                  ENDIF
-                  !Remove +U potential
-                  vmat%data_c(1:ns,1:ns) = vmat%data_c(1:ns,1:ns) - vmmp(-l:l,-l:l,i_hia,i_match)
-                  IF(l_match_both_spins) vmat%data_c(ns+1:2*ns,ns+1:2*ns) = vmat%data_c(ns+1:2*ns,ns+1:2*ns) - vmmp(-l:l,-l:l,i_hia,2)
                   DO ipm = 1, 2
+                     !Read selfenergy
+                     vmat%data_c = selfen(i_hia,start:end,start:end,iz+(ipm-1)*g%nz)
+                     IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
+                        !Dismiss spin-off-diagonal elements
+                        vmat%data_c(1:ns,ns+1:2*ns) = 0.0
+                        vmat%data_c(ns+1:2*ns,1:ns) = 0.0
+                     ENDIF
+                     !Remove +U potential
+                     vmat%data_c(1:ns,1:ns) = vmat%data_c(1:ns,1:ns) - vmmp(-l:l,-l:l,i_hia,i_match)
+                     IF(l_match_both_spins) vmat%data_c(ns+1:2*ns,ns+1:2*ns) = vmat%data_c(ns+1:2*ns,ns+1:2*ns) - vmmp(-l:l,-l:l,i_hia,2)
                      IF(l_match_both_spins) THEN
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
-                     CALL add_pot(gmat,vmat,mu,(ipm.EQ.2))
+                     CALL add_pot(gmat,vmat,mu)
                      IF(l_match_both_spins) THEN
                         CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
@@ -130,23 +130,23 @@ MODULE m_add_selfen
             DO 
                mu = (mu_a + mu_b)/2.0
                DO iz = 1, g%nz
-                  !Read selfenergy
-                  vmat%data_c = selfen(i_hia,start:end,start:end,iz)
-                  IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
-                     !Dismiss spin-off-diagonal elements
-                     vmat%data_c(1:ns,ns+1:2*ns) = 0.0
-                     vmat%data_c(ns+1:2*ns,1:ns) = 0.0
-                  ENDIF
-                  !Remove +U potential
-                  vmat%data_c(1:ns,1:ns) = vmat%data_c(1:ns,1:ns) - vmmp(-l:l,-l:l,i_hia,i_match)
-                  IF(l_match_both_spins) vmat%data_c(ns+1:2*ns,ns+1:2*ns) = vmat%data_c(ns+1:2*ns,ns+1:2*ns) - vmmp(-l:l,-l:l,i_hia,2)
                   DO ipm = 1, 2
+                     !Read selfenergy
+                     vmat%data_c = selfen(i_hia,start:end,start:end,iz+(ipm-1)*g%nz)
+                     IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
+                        !Dismiss spin-off-diagonal elements
+                        vmat%data_c(1:ns,ns+1:2*ns) = 0.0
+                        vmat%data_c(ns+1:2*ns,1:ns) = 0.0
+                     ENDIF
+                     !Remove +U potential
+                     vmat%data_c(1:ns,1:ns) = vmat%data_c(1:ns,1:ns) - vmmp(-l:l,-l:l,i_hia,i_match)
+                     IF(l_match_both_spins) vmat%data_c(ns+1:2*ns,ns+1:2*ns) = vmat%data_c(ns+1:2*ns,ns+1:2*ns) - vmmp(-l:l,-l:l,i_hia,2)
                      IF(l_match_both_spins) THEN
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
-                     CALL add_pot(gmat,vmat,mu,(ipm.EQ.2))
+                     CALL add_pot(gmat,vmat,mu)
                      IF(l_match_both_spins) THEN
                         CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
@@ -195,19 +195,18 @@ MODULE m_add_selfen
 
    END SUBROUTINE add_selfen
 
-   SUBROUTINE add_pot(gmat,vmat,mu,l_conjg)
+   SUBROUTINE add_pot(gmat,vmat,mu)
 
       USE m_types
 
       TYPE(t_mat),      INTENT(INOUT)  :: gmat
       TYPE(t_mat),      INTENT(IN)     :: vmat
       REAL,             INTENT(IN)     :: mu
-      LOGICAL,          INTENT(IN)     :: l_conjg !Are we in the upper half of the complex plane
 
       INTEGER i,j
 
       CALL gmat%inverse()
-      gmat%data_c = gmat%data_c - MERGE(conjg(vmat%data_c),vmat%data_c,l_conjg)
+      gmat%data_c = gmat%data_c - vmat%data_c
       DO i = 1, gmat%matsize1
          gmat%data_c(i,i) = gmat%data_c(i,i) - mu
       ENDDO
