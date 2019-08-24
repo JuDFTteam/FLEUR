@@ -146,12 +146,15 @@ MODULE m_hubbard1_io
       DO i_exc = 1, hub1%n_exc_given(i_hia)
          exc = exc + hub1%exc(i_hia,i_exc)*hub1%mag_mom(i_hia,i_exc)
       ENDDO
-      !Only write the exchange splitting her if its not zero to not conflict with possible additional args
+      !Only write the exchange splitting here if its not zero to not conflict with possible additional args
       IF(exc.NE.0.0) THEN
          CALL comment(input_iounit,"Exchange splitting",1)
          !Sign??
-         CALL writeValue(input_iounit,"Exc",-exc)
+         CALL writeValue(input_iounit,"Exc",exc)
       ENDIF
+      !---------------------------------------------------------
+      ! Addtional arguments given by addArg are simply passed on
+      !---------------------------------------------------------
       CALL comment(input_iounit,"Additional arguments",1)
       DO i_arg = 1, hub1%n_addArgs(i_hia)
          CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))),hub1%arg_vals(i_hia,i_arg))

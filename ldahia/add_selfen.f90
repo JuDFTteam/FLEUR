@@ -39,7 +39,7 @@ MODULE m_add_selfen
       COMPLEX,          INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
 
-      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,spin_match,matsize,start,end,i_match
+      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,spin_match,matsize,start,end,i_match,ind
       CHARACTER(len=6) app,filename
 
       REAL mu_a,mu_b,mu_step,mu_max,n_max
@@ -103,6 +103,11 @@ MODULE m_add_selfen
                      CALL gmat%free()
                   ENDDO
                ENDDO
+               IF(mu.GT.-0.2.AND.mu.LT.0.2.AND.l_debug) THEN
+                  !DEBUG OUTPUT: Give the gfDOS around 0 (where we expect to find mu approx 0.05)
+                  ind = AINT((mu+0.2)/0.01)
+                  CALL gfDOS(gp,l,nType,500+ind,atoms,input,ef)
+               ENDIF
                CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
                !Calculate the trace
                n = 0.0
@@ -182,14 +187,11 @@ MODULE m_add_selfen
          DO ispin = 1, input%jspins
             DO m = -l, l
                DO mp=-l, l
-                  IF(ABS(REAL(mmpMat(m,mp,i_hia,ispin))).LT.1e-6) mmpMat(m,mp,i_hia,ispin) = 0.0
+                  IF(ABS(REAL(mmpMat(m,mp,i_hia,ispin))).LT.1e-5) mmpMat(m,mp,i_hia,ispin) = 0.0
                ENDDO
             ENDDO
          ENDDO
       ENDDO
-
-
-
 
 9000  FORMAT("mu_",I1)
 

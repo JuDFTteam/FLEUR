@@ -69,6 +69,7 @@ MODULE m_hubbard1_setup
       REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist
 
+      l_linkedsolver = .FALSE.
       e = 0.0
 
       !Positions of the DFT+HIA elements in all DFT+U related arrays
@@ -177,7 +178,7 @@ MODULE m_hubbard1_setup
                      CALL write_ccfmat(xPath,hub1%ccfmat(i_hia,-l:l,-l:l),l)
                   ENDIF
                   !Energy contour (old version)
-                  IF(gdft%mode.NE.1) THEN
+                  IF(gdft%mode.NE.3) THEN
                      OPEN(unit=1337,file=TRIM(ADJUSTL(xPath)) // "contour.dat",status="replace",action="write")
                      DO iz = 1, gdft%nz
                         WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
@@ -249,7 +250,11 @@ MODULE m_hubbard1_setup
                   DO i_hia = 1, atoms%n_hia
                      nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                      l = atoms%lda_u(atoms%n_u+i_hia)%l
-                     CALL gfDOS(gdft,l,nType,900+i_hia,atoms,input,results%ef)
+                     CALL gfDOS(gdft,l,nType,800+i_hia,atoms,input,results%ef)
+                     CALL gfDOS(gu,l,nType,900+i_hia,atoms,input,results%ef)
+                     DO i = 1, 2*(2*l+1)
+                        CALL writeSelfenElement(selfen(i_hia,:,:,1:gdft%nz),gdft%e,results%ef,gdft%nz,2*(2*l+1),i)
+                     ENDDO
                   ENDDO
                ENDIF
                !----------------------------------------------------------------------
@@ -381,24 +386,27 @@ MODULE m_hubbard1_setup
 
    END SUBROUTINE hubbard1_path
 
-   SUBROUTINE writeSelfenElement(selfen,e,nz,matsize,i)
+   SUBROUTINE writeSelfenElement(selfen,e,ef,nz,matsize,i)
 
+      USE m_constants
+      
       IMPLICIT NONE
 
       INTEGER,       INTENT(IN)  :: nz,matsize,i
+      REAL,          INTENT(IN)  :: ef
       COMPLEX,       INTENT(IN)  :: selfen(matsize,matsize,nz)
       COMPLEX,       INTENT(IN)  :: e(nz)
 
       INTEGER iz
       CHARACTER(len=300) file
 
-3456  FORMAT("selfen.",I3)
+3456  FORMAT("selfen.",I2)
       WRITE(file,3456) i
 
       OPEN(unit=3456,file=file,status="replace")
 
       DO iz = 1, nz
-         WRITE(3456,"(3f14.8)") REAL(e(iz)), REAL(selfen(i,i,iz)), AIMAG(selfen(i,i,iz))
+         WRITE(3456,"(3f14.8)") REAL(e(iz)-ef)*hartree_to_ev_const, REAL(selfen(i,i,iz)), AIMAG(selfen(i,i,iz))
       ENDDO
 
       CLOSE(unit=3456)
