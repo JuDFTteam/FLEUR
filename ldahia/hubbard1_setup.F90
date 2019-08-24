@@ -4,7 +4,7 @@ MODULE m_hubbard1_setup
 
    IMPLICIT NONE
 
-   LOGICAL, PARAMETER :: l_debug = .TRUE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
+   LOGICAL, PARAMETER :: l_setupdebug = .TRUE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
    CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
 
 
@@ -245,6 +245,13 @@ MODULE m_hubbard1_setup
                CALL add_selfen(gdft,gu,selfen,atoms,noco,hub1,sym,input,results%ef,n_l,mu_dc/hartree_to_ev_const,&
                               pot%mmpMat(:,:,indStart:indEnd,:),mmpMat)
                CALL timestop("Hubbard 1: Add Selfenenergy")
+               IF(l_setupdebug) THEN
+                  DO i_hia = 1, atoms%n_hia
+                     nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
+                     l = atoms%lda_u(atoms%n_u+i_hia)%l
+                     CALL gfDOS(gdft,l,nType,900+i_hia,atoms,input,results%ef)
+                  ENDDO
+               ENDIF
                !----------------------------------------------------------------------
                ! Calculate DFT+U potential correction
                !----------------------------------------------------------------------
