@@ -188,7 +188,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      IF (atoms%n_hia.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+Hubbard1 and sevcar not implemented",calledby ="postprocessInput")
-        IF (noco%l_mperp) CALL juDFT_error("LDA+Hubbard1 and l_mperp not implemented",calledby ="postprocessInput")
+        !IF (noco%l_mperp) CALL juDFT_error("LDA+Hubbard1 and l_mperp not implemented",calledby ="postprocessInput")
         IF (noco%l_soc.AND..NOT.noco%l_spav) CALL juDFT_warn("LDA+Hubbard1 with SOC and non averaged SOC potential not tested",calledby ="postprocessInput")
      END IF
      !greens function
@@ -521,7 +521,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
 
      !Calculate kpoint in the full BZ
-     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2.and. atoms%n_gf==0) THEN
+     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2) THEN
         CALL gen_bz(kpts,sym)
      ELSE
         kpts%nkptf=0

@@ -101,22 +101,4 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,greensfCoeffs,g)
 
 END SUBROUTINE calc_onsite
 
-!SUBROUTINE rot_gf_mat(g,noco,i_gf,nType)
-!
-!   USE m_rotdenmat
-!
-!   IMPLICIT NONE 
-!
-!   TYPE(t_greensf),     INTENT(INOUT)  :: g 
-!   TYPE(t_noco),        INTENT(IN)     :: noco
-!   INTEGER,             INTENT(IN)     :: i_gf  
-!   INTEGER,             INTENT(IN)     :: nType
-!
-!   CALL rot_den_mat(noco%alph(nType),noco%beta(nType),&
-!        g%gmmpMat(iz,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1,ipm),&
-!        g%gmmpMat(iz,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,2,ipm),&
-!        g%gmmpMat(iz,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3,ipm))
-!
-!END SUBROUTINE
-
 END MODULE m_onsite

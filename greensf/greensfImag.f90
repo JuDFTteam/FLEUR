@@ -89,13 +89,13 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,ind,wtkpt,eig,usd
                                           usdus%ddn(l,nType,ispin))
                      IF(.NOT.input%l_gfsphavg) THEN
                         im(ie,m,mp,2) = im(ie,m,mp,2) -  pi_const * weight *&
-                                        conjg(eigVecCoeffs%acof(ib,lm,natom,ispin))*eigVecCoeffs%acof(ib,lmp,natom,ispin)
+                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin)
                         im(ie,m,mp,3) = im(ie,m,mp,3) -  pi_const * weight *&
-                                        conjg(eigVecCoeffs%bcof(ib,lm,natom,ispin))*eigVecCoeffs%bcof(ib,lmp,natom,ispin)
+                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)
                         im(ie,m,mp,4) = im(ie,m,mp,4) -  pi_const * weight *&
-                                        conjg(eigVecCoeffs%acof(ib,lm,natom,ispin))*eigVecCoeffs%bcof(ib,lmp,natom,ispin)
+                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)
                         im(ie,m,mp,5) = im(ie,m,mp,5) -  pi_const * weight *&
-                                        conjg(eigVecCoeffs%bcof(ib,lm,natom,ispin))*eigVecCoeffs%acof(ib,lmp,natom,ispin)
+                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin)
                      END IF
                      !
                      ! add local orbital contribution (not implemented for radial dependence yet and not tested for average)

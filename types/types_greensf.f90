@@ -118,11 +118,10 @@ MODULE m_types_greensf
 
 
          IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
-            IF(input%l_gfsphavg) THEN
-               spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
-               ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
-               thisGREENSF%gmmpMat = 0.0
-            ELSE
+            spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
+            ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
+            thisGREENSF%gmmpMat = 0.0
+            IF(.NOT.input%l_gfsphavg) THEN
                ALLOCATE (thisGREENSF%uu(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
                ALLOCATE (thisGREENSF%dd(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
                ALLOCATE (thisGREENSF%du(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
