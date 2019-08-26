@@ -268,7 +268,7 @@ CONTAINS
        END IF
     END DO
 
-    IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2) THEN
+    IF(atoms%n_hia.GT.0.AND.input%jspins.EQ.2.AND..NOT.input%l_dftspinpol) THEN
        !Set the energy parameters to the same value
        !We want the shell where Hubbard 1 is applied to 
        !be non spin-polarized

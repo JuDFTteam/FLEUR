@@ -11,7 +11,7 @@ MODULE m_cdnmt
   !***********************************************************************
 CONTAINS
   SUBROUTINE cdnmt(mpi,jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
-                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1)
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1,l_dftspinpol)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -27,6 +27,7 @@ CONTAINS
     TYPE(t_enpara),  INTENT(IN)    :: enpara
     TYPE(t_moments), INTENT(INOUT) :: moments
     TYPE(t_hub1ham), OPTIONAL, INTENT(INOUT) :: hub1
+    LOGICAL,         INTENT(IN)    :: l_dftspinpol
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
@@ -67,7 +68,7 @@ CONTAINS
 
     !$OMP PARALLEL DEFAULT(none) &
     !$OMP SHARED(usdus,rho,moments,qmtl,hub1) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
+    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_dftspinpol)&
     !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
     !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs,l_hia,vrTmp,i_hia)
     IF (noco%l_mperp) THEN
@@ -99,7 +100,7 @@ CONTAINS
 
              !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
              !the correlated orbitals with a non-spin-polarized basis
-             IF(l_hia.AND.jspd.EQ.2) THEN
+             IF(l_hia.AND.jspd.EQ.2.AND..NOT.l_dftspinpol) THEN
                 vrTmp = (vr(:,itype,1) + vr(:,itype,2))/2.0 
              ELSE
                 vrTmp = vr(:,itype,ispin)

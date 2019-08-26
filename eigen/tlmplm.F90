@@ -54,7 +54,7 @@ CONTAINS
     IF (jsp<3) vr0(:,0)=0.0
 
     DO i=MERGE(1,jspin,jspin>2),MERGE(2,jspin,jspin>2)
-       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo)
+       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo,input%l_dftspinpol)
     ENDDO
     IF (jspin>2) THEN
        jspin1=1

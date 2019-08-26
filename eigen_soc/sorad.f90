@@ -60,7 +60,7 @@ CONTAINS
           ENDIF
        ENDDO
        DO jspin = 1,input%jspins
-          IF(l_hia.AND.input%jspins.EQ.2) THEN
+          IF(l_hia.AND.input%jspins.EQ.2.AND..NOT.input%l_dftspinpol) THEN
              vrTmp = (vr(:,1)+vr(:,2))/2.0
           ELSE
              vrTmp = vr(:,jspin)

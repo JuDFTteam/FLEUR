@@ -52,7 +52,7 @@ MODULE m_radovlp
 
              !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
              !the correlated orbitals with a non-spin-polarized basis
-             IF(l_hia.AND.input%jspins.EQ.2) THEN
+             IF(l_hia.AND.input%jspins.EQ.2.AND..NOT.input%l_dftspinpol) THEN
                 vrTmp = (vr(:,0,iType,1) + vr(:,0,iType,2))/2.0 
              ELSE
                 vrTmp = vr(:,0,iType,ispin)

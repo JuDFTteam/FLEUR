@@ -665,6 +665,7 @@
       <xsd:attribute default="100.0" name="beta" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.01" name="minoccDistance" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.001" name="minmatDistance" type="xsd:double" use="optional"/>
+      <xsd:attribute default="F" name="dftspinpol" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="GFGeneralType">

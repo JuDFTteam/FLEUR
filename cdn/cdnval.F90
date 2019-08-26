@@ -174,7 +174,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    DO iType = 1, atoms%ntype
       DO ispin = jsp_start, jsp_end
-         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
+         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),input%l_dftspinpol)
       END DO
       IF (noco%l_mperp.OR.input%l_gfmperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
@@ -290,7 +290,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #endif
 
    CALL cdnmt(mpi,input%jspins,atoms,sphhar,noco,jsp_start,jsp_end,&
-                 enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1)
+                 enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1,input%l_dftspinpol)
 
    IF (mpi%irank==0) THEN
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)

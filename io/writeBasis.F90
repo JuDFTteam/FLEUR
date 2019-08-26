@@ -349,7 +349,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 	    write(itype_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/itype_',itype
 	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(itype_name)), itypeGroupID, hdfError)
 
-            CALL genMTBasis(atoms,enpara,vTot,mpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo)
+            CALL genMTBasis(atoms,enpara,vTot,mpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo,input%l_dftspinpol)
 	    dims(:3)=(/atoms%jmtd,2,atoms%lmaxd+1/)
 	    dimsInt = dims
 	    CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)

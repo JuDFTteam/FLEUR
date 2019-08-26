@@ -7,7 +7,7 @@ MODULE m_genMTBasis
 
 CONTAINS
 
-  SUBROUTINE genMTBasis(atoms,enpara,vTot,mpi,iType,jspin,usdus,f,g,flo)
+  SUBROUTINE genMTBasis(atoms,enpara,vTot,mpi,iType,jspin,usdus,f,g,flo,l_dftspinpol)
     USE m_types
     USE m_radfun
     USE m_radflo
@@ -23,6 +23,8 @@ CONTAINS
 
     INTEGER,        INTENT(IN)    :: iType
     INTEGER,        INTENT(IN)    :: jspin
+
+    LOGICAL,        INTENT(IN)    :: l_dftspinpol
 
     REAL,           INTENT(INOUT) :: f(atoms%jmtd,2,0:atoms%lmaxd)
     REAL,           INTENT(INOUT) :: g(atoms%jmtd,2,0:atoms%lmaxd)
@@ -53,7 +55,7 @@ CONTAINS
 
        !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
        !the correlated orbitals with a non-spin-polarized basis  
-       IF(l_hia.AND.SIZE(vTot%mt,4).GT.1) THEN
+       IF(l_hia.AND.SIZE(vTot%mt,4).GT.1.AND..NOT.l_dftspinpol) THEN
           vrTmp = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,2))/2.0
        ELSE
           vrTmp = vTot%mt(:,0,iType,jspin)
