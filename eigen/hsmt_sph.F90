@@ -159,14 +159,14 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
          
          IF (smat%l_real) THEN
             smat%data_r(kj_off:kj_vec,kii) = &
-            smat%data_r(kj_off:kj_vec,kii) + cph_re * VecHelpS(:NVEC_REM)
+            smat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
             hmat%data_r(kj_off:kj_vec,kii) = &
-            hmat%data_r(kj_off:kj_vec,kii) + cph_re * VecHelpH(:NVEC_REM)
+            hmat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpH(:NVEC_REM)
          ELSE  ! real
             smat%data_c(kj_off:kj_vec,kii) = &
-            smat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re,cph_im) * VecHelpS(:NVEC_REM)
+            smat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
             hmat%data_c(kj_off:kj_vec,kii) = &
-            hmat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re,cph_im) * VecHelpH(:NVEC_REM)
+            hmat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpH(:NVEC_REM)
          ENDIF ! real
 
       END DO ! kj_off
