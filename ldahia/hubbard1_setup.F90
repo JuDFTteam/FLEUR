@@ -380,8 +380,8 @@ MODULE m_hubbard1_setup
       l = atoms%lda_u(atoms%n_u+i_hia)%l
       xPath = TRIM(ADJUSTL(main_folder))
       IF(atoms%n_hia>1) THEN
-         WRITE(fmt,'("(A",I2.2,",A1,A1,A1")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
-         WRITE(folder,fmt) atoms%label(nType),"_",l_name(l),"/"
+         WRITE(fmt,'("(A",I2.2,",A1,A1,A1)")') LEN(TRIM(ADJUSTL(atoms%label(nType))))
+         WRITE(folder,fmt) TRIM(ADJUSTL(atoms%label(nType))),"_",l_name(l),"/"
       ELSE
          folder=""
       ENDIF
