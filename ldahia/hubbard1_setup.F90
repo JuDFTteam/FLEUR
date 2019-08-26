@@ -69,7 +69,13 @@ MODULE m_hubbard1_setup
       REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist
 
+      !To avoid confusing structure later on
+#ifdef CPP_EDSOLVER
+      l_linkedsolver = .TRUE.
+#else
       l_linkedsolver = .FALSE.
+#endif
+
       e = 0.0
 
       !Positions of the DFT+HIA elements in all DFT+U related arrays
@@ -154,38 +160,40 @@ MODULE m_hubbard1_setup
                IF(mpi%irank.EQ.0.AND..NOT.l_selfenexist) THEN
                   !Nearest Integer occupation
                   n_occ = ANINT(SUM(n_l(i_hia,:)))
-#ifdef CPP_EDSOLVER
-                  !-------------------------------------------------------
-                  ! Check for additional input files
-                  !-------------------------------------------------------
-                  !Is a crystal field matrix present in the work directory
-                  INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
-                  IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1%ccfmat(i_hia,-l:l,-l:l),l)
-                  !Is a bath parameter file present 
-                  INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
-                  !Copy the bath file to the Hubbard 1 solver if its present
-                  IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(xPath)))
-                  !-------------------------------------------------------
-                  ! Write the main config files
-                  !-------------------------------------------------------
-                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,l_bathexist,.true.)
-#else
-                  CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.,.false.)
-
-                  !If no Solver is linked we assume that the old solver is used and we write out some additional files
-                  !Crystal field matrix (old version)
-                  IF(hub1%ccf(i_hia).NE.0.0) THEN
-                     CALL write_ccfmat(xPath,hub1%ccfmat(i_hia,-l:l,-l:l),l)
+                  IF(l_linkedsolver) THEN
+                     !-------------------------------------------------------
+                     ! Check for additional input files
+                     !-------------------------------------------------------
+                     !Is a crystal field matrix present in the work directory
+                     INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_ccf)),exist=l_ccfexist)
+                     IF(l_ccfexist) CALL read_ccfmat(TRIM(ADJUSTL(cwd)),hub1%ccfmat(i_hia,-l:l,-l:l),l)
+                     !Is a bath parameter file present 
+                     INQUIRE(file=TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(cfg_file_bath)),exist=l_bathexist)
+                     !Copy the bath file to the Hubbard 1 solver if its present
+                     IF(l_bathexist) CALL SYSTEM('cp ' // TRIM(ADJUSTL(cfg_file_bath)) // ' ' // TRIM(ADJUSTL(xPath)))
+                     !-------------------------------------------------------
+                     ! Write the main config files
+                     !-------------------------------------------------------
+                     CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,l_bathexist,.true.)
+                  ELSE
+                     !If no Solver is linked we assume that the old solver is used and we write out some additional files
+                     !Crystal field matrix (old version)
+                     IF(hub1%ccf(i_hia).NE.0.0) THEN
+                        CALL write_ccfmat(xPath,hub1%ccfmat(i_hia,-l:l,-l:l),l)
+                     ENDIF
+                     !Energy contour (old version)
+                     IF(gdft%mode.NE.3) THEN
+                        OPEN(unit=1337,file=TRIM(ADJUSTL(xPath)) // "contour.dat",status="replace",action="write")
+                        DO iz = 1, gdft%nz
+                           WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
+                        ENDDO
+                        CLOSE(unit= 1337)
+                     ENDIF 
+                     !-------------------------------------------------------
+                     ! Write the main config files (old version)
+                     !-------------------------------------------------------  
+                     CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.,.false.)
                   ENDIF
-                  !Energy contour (old version)
-                  IF(gdft%mode.NE.3) THEN
-                     OPEN(unit=1337,file=TRIM(ADJUSTL(xPath)) // "contour.dat",status="replace",action="write")
-                     DO iz = 1, gdft%nz
-                        WRITE(1337,"(2f14.8)") REAL(gdft%e(iz))*hartree_to_ev_const, AIMAG(gdft%e(iz))*hartree_to_ev_const
-                     ENDDO
-                     CLOSE(unit= 1337)
-                  ENDIF   
-#endif
                ENDIF
             ENDDO
 
@@ -202,8 +210,7 @@ MODULE m_hubbard1_setup
                INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
                IF(mpi%irank.EQ.0) THEN
                   IF(.NOT.l_selfenexist) THEN
-#ifdef CPP_EDSOLVER
-                     l_linkedsolver=.TRUE.
+                     IF(.NOT.l_linkedsolver) CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
                      CALL timestart("Hubbard 1: EDsolver")
                      !We have to change into the Hubbard1 directory so that the solver routines can read the config
                      CALL CHDIR(TRIM(ADJUSTL(xPath)))
@@ -215,9 +222,6 @@ MODULE m_hubbard1_setup
                      selfen(i_hia,:,:,:) = selfen(i_hia,:,:,:)/hartree_to_ev_const
                      CALL CHDIR(TRIM(ADJUSTL(cwd)))
                      CALL timestop("Hubbard 1: EDsolver")
-#else 
-                     CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
-#endif
                   ELSE               
                      !If there is no linked solver library we read in the selfenergy here
                      CALL read_selfen(xPath,selfen(i_hia,1:2*(2*l+1),1:2*(2*l+1),1:gdft%nz),gdft%nz,2*(2*l+1),.false.)
@@ -250,8 +254,8 @@ MODULE m_hubbard1_setup
                   DO i_hia = 1, atoms%n_hia
                      nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                      l = atoms%lda_u(atoms%n_u+i_hia)%l
-                     CALL gfDOS(gdft,l,nType,800+i_hia,atoms,input,results%ef)
-                     CALL gfDOS(gu,l,nType,900+i_hia,atoms,input,results%ef)
+                     CALL gfDOS(gdft,l,nType,800+i_hia+hub1%iter,atoms,input,results%ef)
+                     CALL gfDOS(gu,l,nType,900+i_hia+hub1%iter,atoms,input,results%ef)
                      DO i = 1, 2*(2*l+1)
                         CALL writeSelfenElement(selfen(i_hia,:,:,1:gdft%nz),gdft%e,results%ef,gdft%nz,2*(2*l+1),i)
                      ENDDO
@@ -298,18 +302,16 @@ MODULE m_hubbard1_setup
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
          !If we are on a different mpi%irank and no solver is linked we need to call juDFT_end here if the solver was not run
          !kind of a weird workaround (replace with something better)
-#ifdef CPP_EDSOLVER 
-         !Do nothing and go to the MPI_BCAST
-#else 
-         CALL get_environment_variable('PWD',cwd)
-         DO i_hia = atoms%n_u+1, atoms%n_u+atoms%n_hia
-            CALL hubbard1_path(atoms,i_hia,folder)
-            WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder)) 
-            INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
-            IF(.NOT.l_selfenexist) CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
-         ENDDO
-         !If we are here the solver was run and we go to MPI_BCAST
-#endif
+         IF(.NOT.l_linkedsolver) THEN
+            CALL get_environment_variable('PWD',cwd)
+            DO i_hia = atoms%n_u+1, atoms%n_u+atoms%n_hia
+               CALL hubbard1_path(atoms,i_hia,folder)
+               WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder)) 
+               INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
+               IF(.NOT.l_selfenexist) CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
+            ENDDO
+            !If we are here the solver was run and we go to MPI_BCAST
+         ENDIF
       ELSE
          !occupation matrix is zero and LDA+Hubbard 1 shouldn't be run yet
          !There is nothing to be done yet just set the potential correction to 0

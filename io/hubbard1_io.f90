@@ -101,8 +101,16 @@ MODULE m_hubbard1_io
 
       CALL startSection(input_iounit,"fock_space")
       CALL comment(input_iounit,"Min/Max Occupation",1)
-      CALL writeValue(input_iounit,"Np_min",MAX(0,n-hub1%n_exc))
-      CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),n+hub1%n_exc))
+      IF(l_bath) THEN
+         CALL writeValue(input_iounit,"Np_min",5)
+         CALL writeValue(input_iounit,"Np_max",18)
+      ELSE
+         CALL writeValue(input_iounit,"Np_min",MAX(0,n-hub1%n_exc))
+         CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),n+hub1%n_exc))
+      ENDIF
+      CALL comment(input_iounit,"Parameters for the case with bath states (only used when bath is present)",1)
+      CALL writeValue(input_iounit,"Nbath_exc",2)
+      CALL writeValue(input_iounit, "strict_perturb_order")
       CALL endSection(input_iounit)
 
       CALL startSection(input_iounit,"GC_ensemble")
@@ -120,6 +128,7 @@ MODULE m_hubbard1_io
       CALL writeValue(input_iounit,"N_lancz_states",80)
       CALL endSection(input_iounit)
 
+      CALL comment(input_iounit,"This discretization is only used by the dos utility. The actual energy points are provided in the function call",1)
       CALL startSection(input_iounit,"real_freq_axis")
       CALL writeValue(input_iounit, "omegamin", emin)
       CALL writeValue(input_iounit, "omegamax", emax)
@@ -159,20 +168,22 @@ MODULE m_hubbard1_io
       DO i_arg = 1, hub1%n_addArgs(i_hia)
          CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))),hub1%arg_vals(i_hia,i_arg))
       ENDDO
-      CALL writeValue(input_iounit, "cf")
+      IF(hub1%ccf(i_hia).NE.0.0) THEN
+         CALL writeValue(input_iounit, "cf")
 
-      CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))
-      cfmat%data_r= 0.0
-      DO i = 1, 2
-         DO j = 1, (2*l+1)
-            DO k = 1, (2*l+1)
-               ind1 = (i-1)*(2*l+1) + j
-               ind2 = (i-1)*(2*l+1) + k
-               cfmat%data_r(ind1,ind2) = hub1%ccfmat(i_hia,j-l-1,k-l-1)*hartree_to_ev_const*hub1%ccf(i_hia)
+         CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))
+         cfmat%data_r= 0.0
+         DO i = 1, 2
+            DO j = 1, (2*l+1)
+               DO k = 1, (2*l+1)
+                  ind1 = (i-1)*(2*l+1) + j
+                  ind2 = (i-1)*(2*l+1) + k
+                  cfmat%data_r(ind1,ind2) = hub1%ccfmat(i_hia,j-l-1,k-l-1)*hartree_to_ev_const*hub1%ccf(i_hia)
+               ENDDO
             ENDDO
          ENDDO
-      ENDDO
-      CALL writeValue(input_iounit, cfmat)
+         CALL writeValue(input_iounit, cfmat)
+      ENDIF
 
       CLOSE(unit=input_iounit,iostat=io_error)
       IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_new")
