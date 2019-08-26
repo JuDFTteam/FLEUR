@@ -253,7 +253,7 @@ c     ..initializations..
     ! In some modes the code skips the Hamiltonian setup and
     ! jumps directly into the Wannier branch.
       if(.not.allocated (usdus%us))then
-         call usdus%init(atoms,DIMENSION%jspd)
+         call usdus%init(atoms,input%jspins)
       endif
 
       aoff = iachar('1')-1
