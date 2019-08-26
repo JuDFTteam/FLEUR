@@ -96,8 +96,8 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
          ENDIF
 
          !--->          update overlap and l-diagonal hamiltonian matrix
-         VecHelpS = 0.d0
-         VecHelpH = 0.d0
+         VecHelpS = 0.0
+         VecHelpH = 0.0
          
          !--->       x for legendre polynomials
          DO jv = 0, NVEC_rem-1
@@ -125,19 +125,19 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
             IF (l == 0) THEN
                plegend(:,0) = 1.0
             ELSE IF (l == 1) THEN
-               plegend(:,1) = xlegend(:)
+               plegend(:NVEC_REM,1) = xlegend(:NVEC_REM)
             ELSE
-               plegend(:,l3) = fleg1(l-1)*xlegend(:)*plegend(:,modulo(l-1,3)) - fleg2(l-1)*plegend(:,modulo(l-2,3))
+               plegend(:NVEC_REM,l3) = fleg1(l-1)*xlegend(:NVEC_REM)*plegend(:,modulo(l-1,3)) - fleg2(l-1)*plegend(:,modulo(l-2,3))
             END IF ! l
-            
-            fct  = plegend(:,l3)*fl2p1(l)       * ( fjkiln*fj(kj_off:kj_vec,l,iintsp) + gjkiln*gj(kj_off:kj_vec,l,iintsp)*ddnln )
-            fct2 = plegend(:,l3)*fl2p1(l) * 0.5 * ( gjkiln*fj(kj_off:kj_vec,l,iintsp) + fjkiln*gj(kj_off:kj_vec,l,iintsp) )
 
-            VecHelpS = VecHelpS + fct
-            VecHelpH = VecHelpH + fct*elall + fct2
+            fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fj(kj_off:kj_vec,l,iintsp) + gjkiln*gj(kj_off:kj_vec,l,iintsp)*ddnln )
+            fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fj(kj_off:kj_vec,l,iintsp) + fjkiln*gj(kj_off:kj_vec,l,iintsp) )
+
+            VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
+            VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
 
             IF (input%l_useapw) THEN
-               VecHelpH = VecHelpH + plegend(:,l3) * ( apw_lo1*fj(kj_off:kj_vec,l,iintsp) + apw_lo2*gj(kj_off:kj_vec,l,iintsp) )
+               VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fj(kj_off:kj_vec,l,iintsp) + apw_lo2*gj(kj_off:kj_vec,l,iintsp) )
             ENDIF ! useapw
 
             !--->          end loop over l
@@ -152,21 +152,21 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
                kj = jv + kj_off
                dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapw%gvec(1:3,kj,iintsp) - qssbtj(1:3), tnn(1:3))
             END DO ! kj
-            cph_re = cph_re + COS(dot)
-            cph_im = cph_im - SIN(dot)
+            cph_re(:NVEC_REM) = cph_re(:NVEC_REM) + COS(dot(:NVEC_REM))
+            cph_im(:NVEC_REM) = cph_im(:NVEC_REM) - SIN(dot(:NVEC_REM))
             ! IF (iintsp.NE.jintsp) cph_im=-cph_im
          END DO ! nn
          
          IF (smat%l_real) THEN
             smat%data_r(kj_off:kj_vec,kii) = &
-            smat%data_r(kj_off:kj_vec,kii) + cph_re * VecHelpS
+            smat%data_r(kj_off:kj_vec,kii) + cph_re * VecHelpS(:NVEC_REM)
             hmat%data_r(kj_off:kj_vec,kii) = &
-            hmat%data_r(kj_off:kj_vec,kii) + cph_re * VecHelpH
+            hmat%data_r(kj_off:kj_vec,kii) + cph_re * VecHelpH(:NVEC_REM)
          ELSE  ! real
             smat%data_c(kj_off:kj_vec,kii) = &
-            smat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re,cph_im) * VecHelpS
+            smat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re,cph_im) * VecHelpS(:NVEC_REM)
             hmat%data_c(kj_off:kj_vec,kii) = &
-            hmat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re,cph_im) * VecHelpH
+            hmat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re,cph_im) * VecHelpH(:NVEC_REM)
          ENDIF ! real
 
       END DO ! kj_off
