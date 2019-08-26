@@ -14,16 +14,15 @@ MODULE m_hubbard1_setup
    SUBROUTINE hubbard1_setup(atoms,hub1,sym,mpi,noco,input,usdus,den,pot,gdft,results)
 
       USE m_types
-      USE m_hubbard1_io
-      USE m_uj2f
       USE m_constants
-      USE m_gfcalc
+      USE m_uj2f
       USE m_umtx
       USE m_vmmp
-      USE m_add_selfen
       USE m_mudc
-      USE m_occmtx
       USE m_denmat_dist
+      USE m_gfcalc
+      USE m_hubbard1_io
+      USE m_add_selfen
 #ifdef CPP_EDSOLVER
       USE EDsolver, only: EDsolver_from_cfg
 #endif

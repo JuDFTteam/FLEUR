@@ -236,6 +236,8 @@ CONTAINS
     CALL MPI_BCAST(atoms%gfelem(:)%lp,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%gfelem(:)%atomTypep,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     
+    CALL MPI_BCAST(input%minoccDistance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)   
+    CALL MPI_BCAST(input%minmatDistance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%gf_mode,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%gf_ne,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%gf_sigma,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
