@@ -260,6 +260,8 @@ CONTAINS
           CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
           vTemp = vTot
+          vTemp%mmpMat = 0.0 !To avoid errors later on (When ldaUAdjEnpara is T the density
+                             !is carried over after vgen)
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")

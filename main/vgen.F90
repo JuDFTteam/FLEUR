@@ -57,12 +57,22 @@ CONTAINS
 
       TYPE(t_potden)                    :: workden,denRot
 
+      COMPLEX :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u+atoms%n_hia),input%jspins)
+
       if (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
-
+      
+      IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN
+         !In this case we need the last mmpmat after vgen
+         mmpmat = vTot%mmpmat
+      ENDIF
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
+      IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN
+         !In this case we need the last mmpmat after vgen
+         vTot%mmpmat = mmpmat
+      ENDIF
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
 #ifndef CPP_OLDINTEL

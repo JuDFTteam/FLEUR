@@ -272,7 +272,10 @@ CONTAINS
        !Set the energy parameters to the same value
        !We want the shell where Hubbard 1 is applied to 
        !be non spin-polarized
-       IF(mpi%irank.EQ.0) WRITE(6,"(A)") "For Hubbard 1 we treat the correlated shell to be non spin-polarized"
+       IF(mpi%irank.EQ.0) THEN
+          WRITE(6,FMT=*)
+          WRITE(6,"(A)") "For Hubbard 1 we treat the correlated shell to be non spin-polarized"
+       ENDIF
        DO j = atoms%n_u+1, atoms%n_u+atoms%n_hia
           l = atoms%lda_u(j)%l
           n = atoms%lda_u(j)%atomType
@@ -284,7 +287,10 @@ CONTAINS
 
     IF(input%ldauAdjEnpara.AND.atoms%n_u+atoms%n_hia>0) THEN
        !If requested we can adjust the energy parameters to the LDA+U potential correction
-       IF(mpi%irank.EQ.0) WRITE(6,"(A)") "LDA+U corrections for the energy parameters"
+       IF(mpi%irank.EQ.0) THEN
+          WRITE(6,FMT=*)
+          WRITE(6,"(A)") "LDA+U corrections for the energy parameters"
+       ENDIF
        DO j = 1, atoms%n_u+atoms%n_hia
           l = atoms%lda_u(j)%l
           n = atoms%lda_u(j)%atomType
@@ -294,9 +300,10 @@ CONTAINS
              DO i = -l,l
                 tr = tr + REAL(v%mmpMat(i,i,j,jsp))
              ENDDO
-             enpara%el0(l,n,jsp) = enpara%el0(l,n,jsp) + tr/(2*l+1)
+             enpara%el0(l,n,jsp) = enpara%el0(l,n,jsp) + tr/REAL(2*l+1)
+             IF(mpi%irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A6,I1,A4,f16.10)")&
+                               "New energy parameter atom ", n, " l ", l, " spin ", jsp,"--> ", enpara%el0(l,n,jsp)
           ENDDO
-          IF(mpi%irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A6,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, " spin ", jsp,"--> ", enpara%el0(l,n,jsp)
        ENDDO
     ENDIF
  

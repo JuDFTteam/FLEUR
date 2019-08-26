@@ -94,7 +94,7 @@ MODULE m_hubbard1_setup
          f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
          CALL umtx(atoms%lda_u(indStart:indEnd),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
 
-         CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,.FALSE.,den%mmpMat(:,:,indStart:indEnd,:),&
+         CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,den%mmpMat(:,:,indStart:indEnd,:),&
          u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),e_lda_hia)
 
          IF(hub1%l_runthisiter.AND.(ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)).AND.mpi%irank.EQ.0) THEN 
@@ -135,7 +135,7 @@ MODULE m_hubbard1_setup
                   ENDDO
                ENDIF
 
-               !Initial Information
+               !Initial Information (We are already on irank 0)
                WRITE(6,*)
                WRITE(6,9010) nType
                WRITE(6,"(A)") "Everything related to the solver (e.g. mu_dc) is given in eV"
@@ -265,7 +265,7 @@ MODULE m_hubbard1_setup
                !----------------------------------------------------------------------
                ! Calculate DFT+U potential correction
                !----------------------------------------------------------------------
-               CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,.FALSE.,mmpMat,&
+               CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,mmpMat,&
                      u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),results%e_ldau)
                !----------------------------------------------------------------------
                ! Calculate the distance and update the density matrix 
