@@ -258,6 +258,9 @@ c
      +            '' and/or nmop(3) = 0'')') idsyst, idtype
                 WRITE (iofile,'(3(1x,i4),'' new val for nmop: '')')
      +                                              (nmop(i),i=1,3)
+                CALL juDFT_warn(
+     +             "k point mesh not compatible with symmetry (1)",
+     +             calledby='kptmop')
              ELSE
                 WRITE (iofile,'('' values accepted unchanged'')')
                 WRITE (iofile,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
@@ -274,6 +277,9 @@ c
      +            '' we have set nmop(3) = 0'')') idsyst, idtype
                 WRITE (iofile,'(3(1x,i4),'' new val for nmop: '')')
      +                                              (nmop(i),i=1,3)
+                CALL juDFT_warn(
+     +             "k point mesh not compatible with symmetry (2)",
+     +             calledby='kptmop')
              ELSE
                 WRITE (iofile,'('' values accepted unchanged'')')
                 WRITE (iofile,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
@@ -290,6 +296,9 @@ c
      +            '' we have set nmop(3) = 0'')') idsyst, idtype
                 WRITE (iofile,'(3(1x,i4),'' new val for nmop: '')')
      +                                              (nmop(i),i=1,3)
+                CALL juDFT_warn(
+     +             "k point mesh not compatible with symmetry (3)",
+     +             calledby='kptmop')
              ELSE
                 WRITE (iofile,'('' values accepted unchanged'')')
                 WRITE (iofile,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
@@ -320,6 +329,9 @@ c
      +          '' we have set all nmop(i) = nmop(1)'')') idsyst, idtype
                 WRITE (iofile,'(3(1x,i4),'' new val for nmop(i): '')')
      +                                                 (nmop(i),i=1,3)
+                CALL juDFT_warn(
+     +             "k point mesh not compatible with symmetry (4)",
+     +             calledby='kptmop')
              ELSE
                 WRITE (iofile,'('' values accepted unchanged'')')
                 WRITE (iofile,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
@@ -338,6 +350,9 @@ c
      +            '' we have set nmop(2) = nmop(1)'')') idsyst, idtype
                 WRITE (iofile,'(3(1x,i4),'' new val for nmop: '')')
      +                                              (nmop(i),i=1,3)
+                CALL juDFT_warn(
+     +             "k point mesh not compatible with symmetry (5)",
+     +             calledby='kptmop')
              ELSE
                 WRITE (iofile,'('' values accepted unchanged'')')
                 WRITE (iofile,'(3(1x,i4),14x,''nmop(i),i=1,3'')')
