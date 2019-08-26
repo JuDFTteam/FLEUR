@@ -472,11 +472,13 @@ CONTAINS
          ! MetaGGAs need a at least 2 iterations
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f & 
                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
-          !If we have converged run hia if the density matrix has not converged (not if we are at itmax)
+          !If we have converged run hia if the density matrix has not converged 
           IF(atoms%n_hia>0) THEN
-             hub1%l_runthisiter = .NOT.l_cont.AND.(iter < input%itmax).AND.(0.01<=results%last_occdistance.AND.0.001<=results%last_mmpMatdistance)
+             hub1%l_runthisiter = .NOT.l_cont.AND.(iter < input%itmax)&
+                                  .AND.(0.01<=results%last_occdistance.AND.0.001<=results%last_mmpMatdistance)
              !Run after first overall iteration to generate a starting density matrix
-             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==5.AND.(hub1%iter==0.AND.ALL(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:).EQ.0.0)))
+             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==5.AND.(hub1%iter==0&
+                                  .AND.ALL(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:).EQ.0.0)))
              !Prevent that the scf loop terminates
              l_cont = l_cont.OR.hub1%l_runthisiter
           ENDIF

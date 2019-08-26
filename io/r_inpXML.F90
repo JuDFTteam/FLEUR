@@ -720,7 +720,7 @@ CONTAINS
          input%minmatDistance = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minmatDistance'))
          hub1%beta            = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@beta'))
          !Switch determines wether the Hubbard 1 orbitals are kept non-polarized in the DFT part
-         input%l_dftspinpol   = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinpoldft')) 
+         input%l_dftspinpol   = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dftspinpol')) 
       END IF
 
       xPathA = '/fleurInput/calculationSetup/greensFunction'

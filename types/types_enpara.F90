@@ -282,10 +282,10 @@ CONTAINS
        ENDDO
     ENDIF
 
-    IF(input%ldauAdjEnpara) THEN
+    IF(input%ldauAdjEnpara.AND.atoms%n_u+atoms%n_hia>0) THEN
        !If requested we can adjust the energy parameters to the LDA+U potential correction
        IF(mpi%irank.EQ.0) WRITE(6,"(A)") "LDA+U corrections for the energy parameters"
-       DO j = 1, atoms%n_u
+       DO j = 1, atoms%n_u+atoms%n_hia
           l = atoms%lda_u(j)%l
           n = atoms%lda_u(j)%atomType
           !Calculate the trace of the LDA+U potential
