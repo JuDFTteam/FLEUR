@@ -248,6 +248,7 @@ c
 !
         IF (idsyst.EQ.2 .OR. idsyst.EQ.4) THEN
           IF (idtype.EQ.1) THEN
+             IF (nmop(3).EQ.1) nmop(3) = 0
              IF (nmop(1).NE.nmop(2) .OR. nmop(3).NE.0) THEN
                 nmop(2) = nmop(1)
                 nmop(3) = 0
@@ -269,6 +270,7 @@ c
           ENDIF
         ELSEIF (idsyst.EQ.3) THEN
           IF (idtype.EQ.1 .OR. idtype.EQ.6) THEN
+             IF (nmop(3).EQ.1) nmop(3) = 0
              IF (nmop(3).NE.0) THEN
                 nmop(3) = 0
                 WRITE (iofile,'(1x,''WARNING!!!!!!!'',/,
@@ -288,6 +290,7 @@ c
           ENDIF
         ELSEIF (idsyst.EQ.6) THEN
           IF (idtype.EQ.1) THEN
+             IF (nmop(3).EQ.1) nmop(3) = 0
              IF (nmop(3).NE.0) THEN
                 nmop(3) = 0
                 WRITE (iofile,'(1x,''WARNING!!!!!!!'',/,
