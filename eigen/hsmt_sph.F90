@@ -127,7 +127,7 @@ SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
             ELSE IF (l == 1) THEN
                plegend(:NVEC_REM,1) = xlegend(:NVEC_REM)
             ELSE
-               plegend(:NVEC_REM,l3) = fleg1(l-1)*xlegend(:NVEC_REM)*plegend(:,modulo(l-1,3)) - fleg2(l-1)*plegend(:,modulo(l-2,3))
+               plegend(:NVEC_REM,l3) = fleg1(l-1)*xlegend(:NVEC_REM)*plegend(:NVEC_REM,modulo(l-1,3)) - fleg2(l-1)*plegend(:NVEC_REM,modulo(l-2,3))
             END IF ! l
 
             fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fj(kj_off:kj_vec,l,iintsp) + gjkiln*gj(kj_off:kj_vec,l,iintsp)*ddnln )
