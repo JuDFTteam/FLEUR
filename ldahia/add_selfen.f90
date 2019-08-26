@@ -1,6 +1,6 @@
 MODULE m_add_selfen
 
-   LOGICAL, PARAMETER :: l_debug = .TRUE.
+   LOGICAL, PARAMETER :: l_debug = .FALSE.
 
    CONTAINS
 

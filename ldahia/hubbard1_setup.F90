@@ -4,7 +4,7 @@ MODULE m_hubbard1_setup
 
    IMPLICIT NONE
 
-   LOGICAL, PARAMETER :: l_setupdebug = .TRUE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
+   LOGICAL, PARAMETER :: l_setupdebug = .FALSE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
    CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
 
 
