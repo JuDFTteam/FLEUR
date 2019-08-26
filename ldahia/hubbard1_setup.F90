@@ -216,8 +216,10 @@ MODULE m_hubbard1_setup
                      CALL CHDIR(TRIM(ADJUSTL(xPath)))
                      !Set up the energy points (z and z*)
                      e(1:gdft%nz) = gdft%e(1:gdft%nz)*hartree_to_ev_const  
-                     e(gdft%nz+1:2*gdft%nz) = conjg(gdft%e(1:gdft%nz))*hartree_to_ev_const                  
+                     e(gdft%nz+1:2*gdft%nz) = conjg(gdft%e(1:gdft%nz))*hartree_to_ev_const 
+#ifdef CPP_EDSOLVER                 
                      CALL EDsolver_from_cfg(2*(2*l+1),2*gdft%nz,e,selfen(i_hia,:,:,1:2*gdft%nz),1)
+#endif
                      !The solver is given everything in eV by default, so we need to convert back to htr
                      selfen(i_hia,:,:,:) = selfen(i_hia,:,:,:)/hartree_to_ev_const
                      CALL CHDIR(TRIM(ADJUSTL(cwd)))
