@@ -72,6 +72,7 @@ CONTAINS
     INCLUDE 'mpif.h'
     INTEGER, PARAMETER :: comm = MPI_COMM_SELF
     INTEGER*4 :: nv_mpi(2),idum1d(0),idum2d(0,0)
+    INTEGER ierr
 #endif
 
     !     ..
@@ -121,8 +122,8 @@ CONTAINS
     IF (mpi%irank == 0) CALL openXMLElementNoAttributes('eigenvalues')
     DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
-          CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
           IF (mpi%irank == 0) THEN
+             CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
              WRITE (6,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
              WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :' 
              WRITE (6,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
@@ -136,10 +137,14 @@ CONTAINS
                 CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,eig(1:ne(k,jsp),k,jsp))
              END IF
           END IF
+#ifdef CPP_MPI
+          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
        END DO
     ENDDO
     !finished reading of eigenvalues
     IF (mpi%irank == 0) CALL closeXMLElement('eigenvalues')
+  IF (mpi%irank == 0) THEN 
 
     IF (ABS(input%fixed_moment)<1E-6) THEN
        !this is a standard calculation
@@ -257,15 +262,17 @@ CONTAINS
     WRITE(attributes(1),'(f20.10)') results%ef
     WRITE(attributes(2),'(a)') 'Htr'
     IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
+ ENDIF
 
     !Put w_iks into eig-file
-    IF (mpi%n_rank == 0) THEN
-       DO jsp = 1,nspins
-          DO  k = 1,kpts%nkpt
-             CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
-          ENDDO
+    DO jsp = 1,nspins
+       DO  k = 1,kpts%nkpt
+          IF (mpi%irank == 0) CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
+#ifdef CPP_MPI
+          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
        ENDDO
-    ENDIF
+    ENDDO
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&

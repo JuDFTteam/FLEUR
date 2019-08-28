@@ -50,7 +50,7 @@ IMPLICIT NONE
        CALL zhegvx(1,'V','I','U',hmat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,SIZE(smat%data_c,1),&
             0.0,0.0,1,ne,abstol,m,eigTemp,zmat%data_c,SIZE(zmat%data_c,1),work,lwork,rwork,iwork,ifail,info)
     ENDIF
-    eig(:SIZE(eig)) = eigTemp(:SIZE(eig))
+    eig(:MIN(SIZE(eig),SIZE(eigTemp))) = eigTemp(:MIN(SIZE(eig),SIZE(eigTemp)))
     IF (info.NE.0) CALL judft_error("Diagonalization via LAPACK failed(zhegvx/dsygvx)",no=info)
     IF (m.NE.ne) CALL judft_error("Diagonalization via LAPACK failed failed without explicit errorcode.")
   END SUBROUTINE lapack_diag

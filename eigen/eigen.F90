@@ -232,9 +232,6 @@ CONTAINS
             IF (mpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
                 ! eigenvalues. 
-                ! Trying to use MPI_PUT for the very same slot by all processes
-                ! causes problems with IntelMPI/2019
-                !        Mai 2019                 U. Alekseeva      
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                            eig(:ne_all),n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)

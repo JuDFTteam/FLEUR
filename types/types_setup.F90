@@ -378,6 +378,7 @@ MODULE m_types_setup
    END TYPE t_noco
 
    TYPE t_input
+      INTEGER :: eig66(2)
       LOGICAL :: strho
       LOGICAL :: cdinf
       LOGICAL :: vchk
