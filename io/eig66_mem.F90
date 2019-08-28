@@ -168,7 +168,7 @@ CONTAINS
        IF(PRESENT(list)) THEN
           ind=list
        ELSE
-          ALLOCATE(ind(SIZE(zmat%data_r,2)))
+          ALLOCATE(ind(zmat%matsize2))
           ind=[(i,i=1,SIZE(ind))]
        END IF
        IF (zmat%l_real) THEN
