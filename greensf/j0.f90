@@ -23,7 +23,7 @@ MODULE m_j0
       INTEGER nType,l_min,l_max,i_j0
       CHARACTER(len=30) :: filename
    
-      LOGICAL l_matinv,l_enerdepend
+      LOGICAL l_matinv
       TYPE(t_mat) :: calcup,calcdwn
       TYPE(t_mat) :: delta
       TYPE(t_mat) :: calc
@@ -32,7 +32,6 @@ MODULE m_j0
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
       l_matinv = .FALSE. !Determines how the onsite exchange splitting is calculated
-      l_enerdepend = .FALSE. !If true produces a file with the energy dependence of j0 (just for me ;) )
 
 
       DO i_j0 = 1, atoms%n_j0
@@ -78,8 +77,8 @@ MODULE m_j0
             ENDIF
          ENDIF
       DO l = l_min,l_max
-         WRITE(filename,9060) l
-         IF(l_enerdepend) OPEN(unit=1337,file=filename,status="replace")
+         WRITE(filename,9060) i_j0, l
+         IF(atoms%j0(i_j0)%l_eDependence) OPEN(unit=1337,file=filename,status="replace")
          WRITE(6,9030) l,exc_split(l)*hartree_to_ev_const
 
          matsize = (2*l+1)
@@ -150,7 +149,7 @@ MODULE m_j0
             ENDIF
             j0(l) = j0(l) + AIMAG(integrand)
 
-            IF(l_enerdepend) THEN
+            IF(atoms%j0(i_j0)%l_eDependence) THEN
             WRITE(1337,"(5f14.8)") REAL(g0%e(iz)), -1/(2.0*fpi_const)*hartree_to_ev_const *j0(l),&
                                    AIMAG(sumup),AIMAG(sumdwn),AIMAG(sumupdwn)
             ENDIF
@@ -163,7 +162,7 @@ MODULE m_j0
          WRITE(6,9040) l,j0(l),ABS(j0(l))*2/3*1/(boltzmannConst*hartree_to_ev_const)
 
 
-         IF(l_enerdepend) CLOSE(unit=1337)
+         IF(atoms%j0(i_j0)%l_eDependence) CLOSE(unit=1337)
          CALL delta%free()
          ENDDO
          WRITE(6,9050) SUM(j0(l_min:l_max)), ABS(SUM(j0(l_min:l_max)))*2/3 * 1/(boltzmannConst*hartree_to_ev_const)
@@ -175,7 +174,7 @@ MODULE m_j0
 9030  FORMAT("Onsite Exchange Splitting for l=",I1" : ", f14.8," eV")
 9040  FORMAT("J0 (l=", I3, "): " f14.8 " eV", "  Tc: " f14.8," K")
 9050  FORMAT("J0 : " f14.8 " eV", "  Tc: " f14.8," K")
-9060  FORMAT("j0_",I1)
+9060  FORMAT("j0_",I1,".",I1)
 
    END SUBROUTINE eff_excinteraction
 END MODULE m_j0

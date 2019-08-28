@@ -82,6 +82,7 @@ MODULE m_types_setup
       INTEGER l_min     !Minimum l considered
       INTEGER l_max     !Maximum l considered
       LOGICAL l_avgexc  !Determines wether we average over the exchange splittings for all l
+      LOGICAL l_eDependence  !Switch to output J0 with variating fermi energy (only with contourDOS)
    END TYPE
 
    !

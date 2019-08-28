@@ -203,6 +203,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      DO i = 1, atoms%n_j0
         IF(atoms%j0(i)%l_min.GT.atoms%j0(i)%l_max) CALL juDFT_error("Not a valid configuration for J0-calculation l_min>l_max", &
                                                                   calledby="postprocessInput")
+        IF(atoms%j0(i)%l_eDependence.AND.input%gf_mode.NE.3) CALL juDFT_error("Energy dependence of J0 only available with contourDOS",calledby="postprocessInput")
      ENDDO
 
      ! Check DOS related stuff (from inped)

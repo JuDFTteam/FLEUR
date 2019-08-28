@@ -128,7 +128,6 @@ CONTAINS
          ENDIF
       ENDIF
 
-
       !Io-part (ATM this subroutine is only called from rank 0)
       IF(PRESENT(l_write)) THEN
          IF(l_write.AND.lp_loop.EQ.l.AND.(.NOT.PRESENT(nTypep).OR.(PRESENT(nTypep).AND.nTypep.EQ.nType))) THEN

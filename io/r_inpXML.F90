@@ -131,7 +131,7 @@ CONTAINS
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_occ(4),hub1_val(4,5),hub1_exc(4,3),hub1_mom(4,3), tempReal
       REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
-      LOGICAL            :: l_amf(4), hub1_amf(4),l_found, j0_avgexc
+      LOGICAL            :: l_amf(4), hub1_amf(4),l_found, j0_avgexc, j0_eDependence
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
@@ -1566,7 +1566,7 @@ CONTAINS
             ENDDO
          ENDDO
          
-         !Are there onsiteGF to be calculated without LDA+Hubbard1 (e.g. to calculate j0)
+         !Are there onsiteGF to be calculated just for e.g. DOS calculations
          numOnsite = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/onsiteGF')
          IF(numOnsite.EQ.1) THEN
             WRITE(xPathB,*) i
@@ -1581,6 +1581,7 @@ CONTAINS
             j0_min = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_min'))
             j0_max = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_max'))
             j0_avgexc = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_avgexc'))
+            j0_eDependence = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/J0/@l_eDependence'))
          ENDIF
 
          numIntersite = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/intersiteGF')
@@ -1657,6 +1658,7 @@ CONTAINS
                   atoms%j0(atoms%n_j0)%l_min = j0_min
                   atoms%j0(atoms%n_j0)%l_max = j0_max
                   atoms%j0(atoms%n_j0)%l_avgexc = j0_avgexc
+                  atoms%j0(atoms%n_j0)%l_eDependence = j0_eDependence
                   !Add the greens functions
                   CALL add_gfjob(iType,j0_min,j0_max,atoms,.FALSE.,.FALSE.,.FALSE.)
                ENDIF
