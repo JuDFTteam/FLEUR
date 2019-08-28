@@ -50,7 +50,7 @@ MODULE m_greensfImag21
 
       IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
-      l_tria = input%tria.OR.input%gfTet
+      l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
       DO i_gf = 1, atoms%n_gf
          nType = atoms%gfelem(i_gf)%atomType
          l = atoms%gfelem(i_gf)%l

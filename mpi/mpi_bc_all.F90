@@ -249,6 +249,7 @@ CONTAINS
     CALL MPI_BCAST(input%l_gfsphavg,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%l_gfmperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%l_resolvent,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_hist,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%gf_ellow,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%gf_elup,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr) 
     CALL MPI_BCAST(input%gf_n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr) 

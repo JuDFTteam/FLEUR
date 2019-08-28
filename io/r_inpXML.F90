@@ -730,6 +730,7 @@ CONTAINS
          input%l_gfsphavg = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sphavg'))
          input%l_gfmperp = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
          input%l_resolvent = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_resolv'))
+         input%l_hist = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_hist'))
          !Information about the energy mesh on the real axis
          xPathB = TRIM(ADJUSTL(xPathA)) // '/realAxis'
          numberNodes = xmlGetNumberOfNodes(xPathB)
@@ -770,6 +771,7 @@ CONTAINS
          ENDIF
 
          IF(input%gf_mode.EQ.0) CALL juDFT_error("No energy contour read", calledby="r_inpXML")
+         IF(input%l_resolvent.AND.input%l_hist) CALL juDFT_error("Choose either l_resolvent or l_hist", calledby="r_inpXML")
       END IF
 
 

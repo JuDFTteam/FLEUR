@@ -80,7 +80,7 @@ MODULE m_j0
       DO l = l_min,l_max
          WRITE(filename,9060) l
          IF(l_enerdepend) OPEN(unit=1337,file=filename,status="replace")
-         WRITE(6,9030) l,exc_split(l)
+         WRITE(6,9030) l,exc_split(l)*hartree_to_ev_const
 
          matsize = (2*l+1)
          CALL delta%init(.false.,matsize,matsize)

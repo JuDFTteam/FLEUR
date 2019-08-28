@@ -364,7 +364,7 @@ MODULE m_types_greensf
             ENDIF
          END IF
          
-         !Determine matsize for the result gmat (if spin is given only return this digonal element)
+         !Determine matsize for the result gmat (if spin is given only return this diagonal element)
          l_full = .NOT.PRESENT(spin)
          matsize1 = (2*l+1) * MERGE(2,1,l_full)
          

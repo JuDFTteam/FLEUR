@@ -41,7 +41,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,ind,wtkpt,eig,usd
    COMPLEX im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg))
    COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
-   l_tria = input%tria.OR.input%gfTet
+   l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
    !Loop through the gf elements to be calculated
    DO i_gf = 1, atoms%n_gf
 

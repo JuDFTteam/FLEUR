@@ -445,6 +445,7 @@ MODULE m_types_setup
       LOGICAL :: l_gfsphavg
       LOGICAL :: l_gfmperp
       LOGICAL :: l_resolvent
+      LOGICAL :: l_hist
       INTEGER :: gf_ne
       REAL    :: gf_ellow
       REAL    :: gf_elup

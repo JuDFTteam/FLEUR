@@ -130,7 +130,7 @@ MODULE m_hubbard1_setup
                   n_l(i_hia,:) = 0.0
                   DO ispin = 1, input%jspins
                      DO m = -l, l
-                        n_l(i_hia,ispin) = n_l(i_hia,ispin) + mmpMat(m,m,i_hia,ispin)
+                        n_l(i_hia,ispin) = n_l(i_hia,ispin) + REAL(mmpMat(m,m,i_hia,ispin))
                      ENDDO
                   ENDDO
                ENDIF

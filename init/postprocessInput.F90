@@ -521,7 +521,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
 
      !Calculate kpoint in the full BZ
-     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2) THEN
+     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2.AND.atoms%n_gf==0) THEN
         CALL gen_bz(kpts,sym)
      ELSE
         kpts%nkptf=0

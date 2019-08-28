@@ -159,7 +159,7 @@ MODULE m_hubbard1_io
       IF(exc.NE.0.0) THEN
          CALL comment(input_iounit,"Exchange splitting",1)
          !Sign??
-         CALL writeValue(input_iounit,"Exc",exc)
+         CALL writeValue(input_iounit,"Exc",-exc)
       ENDIF
       !---------------------------------------------------------
       ! Addtional arguments given by addArg are simply passed on

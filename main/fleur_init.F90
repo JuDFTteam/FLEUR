@@ -159,6 +159,8 @@
           input%l_gfmperp = .FALSE.
           input%l_gf = .FALSE.
           input%l_dftspinpol = .FALSE.
+          input%l_resolvent = .FALSE.
+          input%l_hist = .FALSE.
           input%gf_ne = 1300
           input%gf_ellow = 0.0
           input%gf_elup = 0.0
