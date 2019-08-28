@@ -1,7 +1,7 @@
 MODULE m_kk_cutoff
 
 
-   LOGICAL, PARAMETER :: l_debug=.TRUE.
+   LOGICAL, PARAMETER :: l_debug=.FALSE.
 
    CONTAINS
 

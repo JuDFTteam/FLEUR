@@ -477,10 +477,10 @@ CONTAINS
           !If we have converged run hia if the density matrix has not converged 
           IF(atoms%n_hia>0) THEN
              hub1%l_runthisiter = .NOT.l_cont.AND.(iter < input%itmax)&
-                                  .AND.input%minoccDistance<=results%last_occdistance&
-                                  .AND.input%minmatDistance<=results%last_mmpMatdistance
+                                  .AND.(input%minoccDistance<=results%last_occdistance&
+                                  .OR.input%minmatDistance<=results%last_mmpMatdistance)
              !Run after first overall iteration to generate a starting density matrix
-             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==5.AND.(hub1%iter == 0&
+             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.(hub1%iter == 0&
                                   .AND.ALL(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:).EQ.0.0)))
              !Prevent that the scf loop terminates
              l_cont = l_cont.OR.hub1%l_runthisiter

@@ -19,7 +19,7 @@ MODULE m_crystalfield
 
    IMPLICIT NONE
 
-   LOGICAL, PARAMETER :: l_debug = .TRUE.
+   LOGICAL, PARAMETER :: l_debug = .FALSE.
 
    CONTAINS
 

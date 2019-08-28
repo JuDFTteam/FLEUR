@@ -19,7 +19,7 @@ USE m_juDFT
 USE m_types
 USE m_constants
 
-LOGICAL, PARAMETER :: l_debug = .TRUE.
+LOGICAL, PARAMETER :: l_debug = .FALSE.
 INTEGER, PARAMETER :: int_method(3) = (/3,3,1/)
 
 CONTAINS

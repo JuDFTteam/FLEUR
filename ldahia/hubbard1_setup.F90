@@ -119,7 +119,7 @@ MODULE m_hubbard1_setup
                CALL SYSTEM('mkdir -p ' // TRIM(ADJUSTL(xPath)))
 
                !For the first iteration we can fix the occupation and magnetic moments in the inp.xml file
-               IF(.FALSE..AND.hub1%iter.EQ.1.AND.ALL(den%mmpMat(:,:,indStart:indEnd,:).EQ.0.0)) THEN
+               IF(hub1%iter.EQ.1.AND.ALL(den%mmpMat(:,:,indStart:indEnd,:).EQ.0.0)) THEN
                   n_l(i_hia,:) = hub1%init_occ(i_hia)/input%jspins
                   DO i_exc = 1, hub1%n_exc_given(i_hia)
                      hub1%mag_mom(i_hia,i_exc) = hub1%init_mom(i_hia,i_exc)
