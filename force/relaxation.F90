@@ -143,7 +143,7 @@ CONTAINS
     DO n = 2,hist_length
        ! differences
        p(:) = RESHAPE(pos(:,:,n)-pos(:,:,n-1),(/SIZE(p)/))
-       y(:) = RESHAPE(force(:,:,n)-force(:,:,n-1),(/SIZE(p)/))
+       y(:) = RESHAPE(force(:,:,n-1)-force(:,:,n),(/SIZE(p)/))
        ! get necessary inner products and H|y>
        py = DOT_PRODUCT(p,y)
        v = MATMUL(y,h)
