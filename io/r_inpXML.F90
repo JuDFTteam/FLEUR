@@ -1430,7 +1430,7 @@ CONTAINS
                atoms%lnonsph(iType) = lnonsphr
                atoms%lapw_l(iType) = lmaxAPW
                IF (flipSpin) THEN
-                  atoms%nflip(iType) = 1
+                  atoms%nflip(iType) = -1
                ELSE
                   atoms%nflip(iType) = 0
                ENDIF
