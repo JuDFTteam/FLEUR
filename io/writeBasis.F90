@@ -131,6 +131,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
        ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,1:input%jspins) )
     ENDIF
     ALLOCATE (flo(atoms%jmtd,2,atoms%nlod))
+    flo(:,:,:) = 0.0
 
 
     !-------------------------write potential--------------------

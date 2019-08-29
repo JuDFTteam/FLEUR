@@ -18,7 +18,7 @@ CONTAINS
     CHARACTER(:), ALLOCATABLE:: infostring
 
     PRINT *,"     Welcome to FLEUR        (www.flapw.de)   "
-    PRINT *,"     MaX-Release 2.1       (www.max-centre.eu)"
+    PRINT *, version_const_MaX
     CALL add_fleur_arguments()
     IF (.NOT.check_arguments()) CALL judft_warn("Invalid command line arguments",hint="Use -h option to see valid choices")
     

@@ -15,7 +15,7 @@ CONTAINS
     CHARACTER(:), ALLOCATABLE:: infostring
 
     PRINT *,"     Welcome to FLEUR - inpgen   (www.flapw.de)   "
-    PRINT *,"     MaX-Release 3.0          (www.max-centre.eu)"
+    PRINT *, version_const_MaX
     
     CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","") 
     CALL new_argument(0,"-explicit","Write out k-point list, symmetry operations, and optional input to inp.xml","") 
