@@ -160,7 +160,6 @@ test-intel:
      - triggers
 
 gfortran-coverage:
-  timeout: 240
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
   script:
