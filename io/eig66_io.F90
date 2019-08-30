@@ -41,7 +41,12 @@ CONTAINS
     IF (mode<0) THEN
        !Use default mode
 #ifdef CPP_MPI
-       mode=MPI_mode
+       CALL MPI_COMM_SIZE(mpi_comm,isize,err)
+       IF (isize>1) THEN
+           mode=MPI_mode
+        ELSE
+           mode=MEM_mode
+        ENDIF   
 #else
        mode=MEM_mode
 #endif
