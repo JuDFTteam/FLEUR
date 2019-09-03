@@ -288,6 +288,17 @@ CONTAINS
 
           ! fermi level and occupancies
           IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd = 2*DIMENSION%neigd
+
+	  IF (input%gw.GT.0) THEN
+	    IF (mpi%irank.EQ.0) THEN
+	       CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
+		  	     results,eig_id,oneD,sphhar,stars,vacuum)
+	    END IF
+	    IF (input%gw.EQ.2) THEN
+	       CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+	    END IF
+	  END IF
+
           !IF ((mpi%irank.EQ.0)) THEN
              CALL timestart("determination of fermi energy")
 
@@ -404,16 +415,6 @@ CONTAINS
        END DO forcetheoloop
 
        CALL forcetheo%postprocess()
-
-       IF (input%gw.GT.0) THEN
-          IF (mpi%irank.EQ.0) THEN
-             CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
-                             results,eig_id,oneD,sphhar,stars,vacuum)
-          END IF
-          IF (input%gw.EQ.2) THEN
-             CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
-          END IF
-       END IF
 
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field
