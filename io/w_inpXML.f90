@@ -357,11 +357,11 @@ SUBROUTINE w_inpXML(&
       WRITE(fileNum,241) input%scaleCell, TRIM(ADJUSTL(cell%latnam)), vacuum%dvac, dtild
       IF (cell%latnam.EQ.'any') THEN
          WRITE (fileNum,'(a)') '         <bravaisMatrix>'
-         255 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
+         255 FORMAT('            <row-1>',f0.15,' ',f0.15,' ',f0.15,'</row-1>')
          WRITE (fileNum,255) a1Temp(1),a1Temp(2),a1Temp(3)
-         265 FORMAT('            <row-2>',f0.10,' ',f0.10,' ',f0.10,'</row-2>')
+         265 FORMAT('            <row-2>',f0.15,' ',f0.15,' ',f0.15,'</row-2>')
          WRITE (fileNum,265) a2Temp(1),a2Temp(2),a2Temp(3)
-         275 FORMAT('            <row-3>',f0.10,' ',f0.10,' ',f0.10,'</row-3>')
+         275 FORMAT('            <row-3>',f0.15,' ',f0.15,' ',f0.15,'</row-3>')
          WRITE (fileNum,275) a3Temp(1),a3Temp(2),a3Temp(3)
          WRITE (fileNum,'(a)') '         </bravaisMatrix>'
       ELSE
@@ -401,13 +401,13 @@ SUBROUTINE w_inpXML(&
          WRITE (fileNum,'(a)') '         <bravaisMatrix>'
 
 !            <row-1>0.00000 5.13000 5.13000</row-1>
-         250 FORMAT('            <row-1>',f0.10,' ',f0.10,' ',f0.10,'</row-1>')
+         250 FORMAT('            <row-1>',f0.15,' ',f0.15,' ',f0.15,'</row-1>')
          WRITE (fileNum,250) a1Temp(1),a1Temp(2),a1Temp(3)
 !            <row-2>5.13000 0.00000 5.13000</row-2>
-         260 FORMAT('            <row-2>',f0.10,' ',f0.10,' ',f0.10,'</row-2>')
+         260 FORMAT('            <row-2>',f0.15,' ',f0.15,' ',f0.15,'</row-2>')
          WRITE (fileNum,260) a2Temp(1),a2Temp(2),a2Temp(3)
 !            <row-3>5.13000 5.13000 0.00000</row-3>
-         270 FORMAT('            <row-3>',f0.10,' ',f0.10,' ',f0.10,'</row-3>')
+         270 FORMAT('            <row-3>',f0.15,' ',f0.15,' ',f0.15,'</row-3>')
          WRITE (fileNum,270) a3Temp(1),a3Temp(2),a3Temp(3)
 
          WRITE (fileNum,'(a)') '         </bravaisMatrix>'
