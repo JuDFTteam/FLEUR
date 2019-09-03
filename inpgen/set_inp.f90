@@ -360,7 +360,7 @@
 
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
-          cell%area = cell%omtil / vacuum%dvac
+          cell%area = ABS(cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1))
           kpts%nkpt = MAX(nint((3600/cell%area)/sym%nop2),1)
         ELSE
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
