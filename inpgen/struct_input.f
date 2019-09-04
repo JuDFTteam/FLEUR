@@ -47,8 +47,8 @@
       CHARACTER(len=1), PARAMETER :: cops(-1:3)=(/'2','3','4','6','1'/)
 
 !===> Local Variables
-      INTEGER :: n, ng, op, nbuffer, ios,nop2
-      REAL    :: shift(3),rdummy(3,3),z_max,z_min,mat(3,3),x(3)
+      INTEGER :: n, ng, op, nbuffer, ios,nop2, i, j
+      REAL    :: shift(3),rdummy(3,3),z_max,z_min,mat(3,3),x(3), rest
       LOGICAL :: oldfleurset,l_symfile,l_gen,hybrid
       CHARACTER(len=10)        :: chtmp
       CHARACTER(len=3)         :: ch_test
@@ -275,6 +275,14 @@
         ELSE
            WRITE(atomLabel(n),'(i0)') n
         END IF
+        DO i = 2,40
+           DO j = 1, 3
+              rest = ABS(i*atompos(j,n) - NINT(i*atompos(j,n)))
+              IF (rest.LT.(i*0.000001)) THEN
+                 atompos(j,n) = NINT(i*atompos(j,n)) / real(i)
+              END IF
+           END DO
+        END DO
       ENDDO
 
       CALL read_record(infh,xl_buffer,bfh,nline,nbuffer,buffer,ios)
