@@ -1,7 +1,7 @@
       MODULE m_inpeig
       CONTAINS
       SUBROUTINE inpeig(&
-     &                  atoms,cell,input,l_is_oneD,kpts,enpara)
+     &                  atoms,cell,input,l_is_oneD,kpts,enpara,kptsFilename)
 !*********************************************************************
 !     inputs the necessary quantities for the eigenvalue part (energy
 !     parameters, k-points, wavefunction cutoffs, etc.).
@@ -16,10 +16,9 @@
 !*********************************************************************
       USE m_gkptwgt
       USE m_constants
-      USE m_enpara,    ONLY : r_enpara,default_enpara
       USE m_types
-      use m_juDFT
-
+      USE m_juDFT
+     
       IMPLICIT NONE
 !     ..
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -27,14 +26,15 @@
       TYPE(t_input),INTENT(IN)     :: input
       LOGICAL,INTENT(IN)           :: l_is_oneD
       TYPE(t_kpts),INTENT(INOUT)   :: kpts
-      TYPE(t_enpara),INTENT(INOUT) :: enpara
+      TYPE(t_enpara),OPTIONAL,INTENT(INOUT) :: enpara
+      CHARACTER(LEN=*),OPTIONAL,INTENT(IN) :: kptsFilename
 
 !     ..
 !     .. Local Scalars ..
       REAL      :: wt,scale
       INTEGER   :: i,j,nk,jsp,n
       LOGICAL   :: xyu,l_enpara,l_clf
-      CHARACTER(len=13) :: fname
+      CHARACTER(LEN=255) :: fname
 !     ..
 !
      
@@ -42,51 +42,25 @@
 !---> the energy parameters for l.ge.3 have the same value
 !---> read from file 40='enpara'  shz Jan.96
 !
-      l_enpara = .FALSE.
-      INQUIRE (file ='enpara',exist= l_enpara)
-      IF (l_enpara) THEN
-         OPEN (40,file ='enpara',form='formatted',status='old')
-           DO jsp = 1,input%jspins
-            CALL r_enpara(&
-     &                    atoms,input,jsp,enpara)
-           ENDDO !dimension%jspd
-         CLOSE (40)
-      ELSE IF (.NOT.input%l_inpXML) THEN
-         WRITE(6,*) "No enpara file found, using default values"
-         enpara%el0(:,:,1)=0.0
-         enpara%el0(0,:,1)=-999999.0
-         enpara%lchange = .FALSE.
-         enpara%llochg = .FALSE.
-         enpara%lchg_v = .FALSE.
-         DO n = 1, atoms%ntype
-            l_clf = .FALSE.  
-            WRITE(fname,"('corelevels.',i2.2)") NINT(atoms%zatom(n))
-            INQUIRE (file=fname, exist=l_clf)
-            IF(l_clf) THEN
-               WRITE(6,*) "corelevels file found: ", fname
-               WRITE(6,*) "This is incompatible to a missing enpara file."
-               WRITE(6,*) "Please generate an adequate enpara file by starting"
-               WRITE(6,*) "inpgen with the -genEnpara command line switch or"
-               WRITE(6,*) "use the XML input by starting FLEUR with -xmlInput or -xml."
-               CALL juDFT_error('corelevels file is incompatible with missing enpara file',calledby='inpeig')
-            END IF
 
-            enpara%skiplo(n,:) = 0
-            DO i = 1, atoms%nlo(n)
-               enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
-            END DO
-         END DO
-         CALL default_enpara(1,atoms,enpara)
-         IF (input%jspins>1) THEN
-           enpara%el0(:,:,2)=enpara%el0(:,:,1)
-           enpara%ello0(:,:,2)=enpara%ello0(:,:,1)
-         ENDIF
-         IF (input%film) enpara%evac0 = eVac0Default_const
+      IF(PRESENT(enpara)) THEN
+         IF (.NOT.input%l_inpXML) THEN
+            !read enpara file if present!
+            CALL enpara%init(atoms,input%jspins)
+            CALL enpara%READ(atoms,input%jspins,input%film,.false.)        
+         END IF
       END IF
 !
 !---> read k-points from file 41='kpts'
 !
-      OPEN (41,file='kpts',form='formatted',status='old')
+
+      IF(PRESENT(kptsFilename)) THEN
+         fname = TRIM(ADJUSTL(kptsFilename))
+      ELSE
+         fname = 'kpts'
+      END IF
+
+      OPEN (41,file=TRIM(ADJUSTL(fname)),form='formatted',status='old')
 !
 !---> k-mesh: given in units of the reciprocal lattice basis vectors
 !---> scale is a factor to make input easier (default=1.0). k-pt
@@ -168,10 +142,8 @@
          kpts%wtkpt(:) = kpts%wtkpt(:)/wt
      
          WRITE (6,FMT=8120)  kpts%nkpt
-         WRITE (16,FMT=8120) kpts%nkpt
          DO  nk = 1,kpts%nkpt
             WRITE (6,FMT=8040)  kpts%bk(:,nk),kpts%wtkpt(nk)
-            WRITE (16,FMT=8040) kpts%bk(:,nk),kpts%wtkpt(nk)
          ENDDO
  8120    FORMAT (1x,/,' number of k-points for this window =',i5,/,t12,&
      &          'coordinates',t34,'weights')

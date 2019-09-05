@@ -6,7 +6,6 @@
 
       MODULE m_hdf_tools4 
       USE hdf5
-#include "juDFT_env.h"
 !-----------------------------------------------                        
 !     major rewrite of hdf_tools                                        
 !     this module contains various subroutines                          
@@ -29,7 +28,7 @@
       USE hdf5
       IMPLICIT NONE
       character(len=*),intent(in)    :: filename
-      INTEGER(HID_T),INTENT(in)      :: access_mode
+      INTEGER       ,INTENT(in)      :: access_mode
       INTEGER(HID_T),INTENT(out)     :: fid
       INTEGER,INTENT(OUT),optional   :: hdferr
       INTEGER(HID_T),INTENT(in),optional ::access_prp
@@ -47,8 +46,7 @@
 #endif
 
 
-      CALL h5fopen_f (filename,access_Mode,    &
-     &        fid, err,access_prp)
+      CALL h5fopen_f (filename,access_Mode,fid,err,access_prp)
 
       IF (present(hdferr)) hdferr=err
 
@@ -302,8 +300,14 @@
 #ifdef CPP_HDFMPI
       INCLUDE 'mpif.h' 
       INTEGER::hdferr 
-      CALL h5pcreate_f(H5P_DATASET_XFER_F, trans, hdferr) 
-      CALL h5pset_dxpl_mpio_f(trans,H5FD_MPIO_INDEPENDENT_F,hdferr) 
+      LOGICAL::l_mpi
+      CALL MPI_INITIALIZED(l_mpi,hdferr)
+      IF (l_mpi) THEN
+         CALL h5pcreate_f(H5P_DATASET_XFER_F, trans, hdferr) 
+         CALL h5pset_dxpl_mpio_f(trans,H5FD_MPIO_INDEPENDENT_F,hdferr)
+      ELSE
+         trans=H5P_DEFAULT_f 
+      ENDIF
 #else                                                                   
       trans=H5P_DEFAULT_f 
 #endif                                                                  
@@ -353,8 +357,12 @@
 #ifdef CPP_HDFMPI                                                          
       include 'mpif.h' 
       INTEGER             :: irank,nerr 
-      CALL MPI_COMM_rank(MPI_COMM_WORLD,irank,nerr) 
-      WRITE(pe,"(i4,a)") irank,":" 
+      LOGICAL             :: l_mpi
+      CALL MPI_INITIALIZED(l_mpi,nerr)
+      IF (l_mpi) THEN
+         CALL MPI_COMM_rank(MPI_COMM_WORLD,irank,nerr) 
+         WRITE(pe,"(i4,a)") irank,":" 
+      ENDIF
 #endif                                                                  
       n = 500 
       IF (err>=0) RETURN 
@@ -446,6 +454,7 @@
 !     Version for LINUX compiled with IFC                               
 !             (last modified: 05-02-25) D. Wortmann                     
 !-----------------------------------------------                        
+      use m_juDFT_stop
       IMPLICIT NONE 
       !<-- Arguments                                                    
       CHARACTER*(*)        ::message 
@@ -453,7 +462,7 @@
       !>                                                                
       WRITE(*,*) "Error in HDF-io" 
       WRITE(*,*) message 
-      CPP_error(message)
+      call judft_error(message)
       END SUBROUTINE 
                                                                         
       !>                                                                

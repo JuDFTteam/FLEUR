@@ -19,6 +19,7 @@
      &                   atomTypeSpecies,speciesRepAtomType,numSpecies,&
      &                   a1,a2,a3)
 
+      USE m_types
       USE iso_c_binding
       USE m_chkmt
       USE m_constants
@@ -26,10 +27,10 @@
       USE m_lapwinput
       USE m_rwinp
       USE m_winpXML
-      USE m_types
       USE m_juDFT_init
       USE m_kpoints
       USE m_inv3
+      USE m_types_xcpot_inbuild
 
       IMPLICIT NONE
       TYPE(t_input),INTENT(INOUT)    :: input
@@ -50,13 +51,13 @@
       CHARACTER(len=80), INTENT (IN) :: title
  
       INTEGER nel,i,j, nkptOld
-      REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
+      REAL    kmax,dtild,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
       REAL    recVecLength, kPointDen(3)
       LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
       INTEGER  div(3)
-      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
+      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype)
       CHARACTER(len=1)  :: ch_rw
       CHARACTER(len=4)  :: namex
       CHARACTER(len=3)  :: noel(atoms%ntype)
@@ -64,33 +65,28 @@
       CHARACTER(len=3)  :: latnamTemp
       CHARACTER(LEN=20) :: filename
       INTEGER  nu,iofile
-      INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus
+      INTEGER  n, errorStatus
       REAL     scpos ,zc
 
       TYPE(t_banddos)::banddos
       TYPE(t_obsolete)::obsolete
       TYPE(t_sliceplot)::sliceplot
       TYPE(t_oneD)::oneD
-      TYPE(t_jij)::Jij
       TYPE(t_stars)::stars
       TYPE(t_hybrid)::hybrid
-      TYPE(t_xcpot)::xcpot
+      TYPE(t_xcpot_inbuild)::xcpot
       TYPE(t_kpts)::kpts
       TYPE(t_enpara)::enpara
+      TYPE(t_forcetheo)::forcetheo
 
     !-odim
 !+odim
 !      REAL, PARAMETER :: eps=0.00000001
 !     ..
 !HF   added for HF and hybrid functionals
-      REAL     ::  gcutm,tolerance
       REAL     ::  taual_hyb(3,atoms%nat)
-      INTEGER  ::  selct(4,atoms%ntype),lcutm(atoms%ntype)
-      INTEGER  ::  selct2(4,atoms%ntype) 
-      INTEGER  ::  bands 
+      INTEGER  ::  bands
       LOGICAL  ::  l_gamma
-      INTEGER  :: nkpt3(3)
 !HF
 
       INTEGER :: xmlElectronStates(29,atoms%ntype)
@@ -128,8 +124,7 @@
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
-      ALLOCATE(noco%soc_opt(atoms%ntype+2))
-
+      
       atoms%nz(:) = NINT(atoms%zatom(:))
       DO i = 1, atoms%ntype
        noel(i) = namat_const(atoms%nz(i))
@@ -139,32 +134,35 @@
       atoms%ulo_der = 0
       ch_rw = 'w'
       sym%namgrp= 'any ' 
-      banddos%dos   = .false. ; input%secvar = .false.
+      banddos%dos   = .false. ; banddos%l_mcd = .false. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
-      obsolete%pot8 = .false. 
-      obsolete%l_u2f= .false. ; obsolete%l_f2u = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
-      sliceplot%slice= .false. ; obsolete%disp  = .false. ; input%swsp  = .false.
+      sliceplot%slice= .false. ;  input%swsp  = .false.
       input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
       sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
-      noco%l_noco = noco%l_ss ; jij%l_J = .false. ; noco%soc_opt(:) = .false. ; input%jspins = 1
-      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05 ; input%minDistance = 0.0
+      noco%l_noco = noco%l_ss ;   input%jspins = 1
+      input%itmax = 15 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
+      input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
       input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
-      input%isec1 = 99 ; nu = 5 ; vacuum%layerd = 1 ; iofile = 6
+      nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
-      banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0 
+      banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
+      banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
-      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%xa = 2.0 ; input%thetad = 330.0
+      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix = 2 ! BFGS is default.
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
       banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
       input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
       zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
       kpts%numSpecialPoints = 0
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
+      input%l_wann = .FALSE.
+      input%numBandsKPoints = 240
+      banddos%unfoldband = .FALSE. ; banddos%s_cell_x = 1 ; banddos%s_cell_y = 1 ; banddos%s_cell_z = 1
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
@@ -203,8 +201,8 @@
       a1(:) = cell%amat(:,1) ; a2(:) = cell%amat(:,2) ; a3(:) = cell%amat(:,3) 
 
       CALL chkmt(&
-     &           atoms,input,vacuum,cell,oneD,&
-     &           l_gga,noel,l_test,&
+     &           atoms,input,vacuum,cell,oneD,l_test,&
+     &           l_gga,noel,&
      &           kmax,dtild,vacuum%dvac,atoms%lmax,atoms%jri,atoms%rmt,atoms%dx)
 
 ! --> read in (possibly) atomic info
@@ -238,8 +236,8 @@
       rmtTemp = 999.0
       l_test = .true.
       CALL chkmt(&
-     &           atoms,input,vacuum,cell,oneD,&
-     &           l_gga,noel,l_test,&
+     &           atoms,input,vacuum,cell,oneD,l_test,&
+     &           l_gga,noel,&
      &           kmax0,dtild0,dvac0,lmax0,jri0,rmtTemp,dx0)
 
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN
@@ -294,42 +292,42 @@
       ENDIF
 
 !HF   added for HF and hybrid functionals
-      gcutm       = input%rkmax - 0.5
-      tolerance   = 1e-4
+      hybrid%gcutm1       = input%rkmax - 0.5
+      hybrid%tolerance1   = 1e-4
       taual_hyb   = atoms%taual
-      selct(1,:)  = 4
-      selct(2,:)  = 0
-      selct(3,:)  = 4
-      selct(4,:)  = 2
-      lcutm       = 4
-      selct2(1,:) = 4
-      selct2(2,:) = 0
-      selct2(3,:) = 4
-      selct2(4,:) = 2
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
+      ALLOCATE(hybrid%lcutm1(atoms%ntype))
+      ALLOCATE(hybrid%select1(4,atoms%ntype))
       hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
       hybrid%ewaldlambda = 3
       hybrid%lexp        = 16
+      hybrid%lcutm1 = 4
+      hybrid%select1(1,:) = 4
+      hybrid%select1(2,:) = 0
+      hybrid%select1(3,:) = 4
+      hybrid%select1(4,:) = 2
       bands       = max( nint(input%zelec)*10, 60 )
-      nkpt3       = (/ 4, 4, 4 /)
       l_gamma     = .false.
-      IF ( l_hyb ) THEN
-        input%ellow = input%ellow -  2.0
-        input%elup  = input%elup  + 10.0
-        input%gw_neigd = bands
-        l_gamma = .true.
+      hybrid%l_hybrid = l_hyb
+      IF (l_hyb) THEN
+         input%ellow = input%ellow -  2.0
+         input%elup  = input%elup  + 10.0
+         input%gw_neigd = bands
+         hybrid%bands1 = ceiling(0.75*bands)
+         l_gamma = .true.
+         input%minDistance = 1.0e-5
       ELSE
         input%gw_neigd = 0
       END IF
 !HF
 
 ! rounding
-      atoms%rmt(:) = real(NINT( atoms%rmt(:) * 100 ) / 100.)
-      atoms%dx(:)   = real(NINT( atoms%dx(:)   * 1000) / 1000.)
-      stars%gmax    = real(NINT( stars%gmax    * 10  ) / 10.)
-      input%rkmax  = real(NINT( input%rkmax  * 10  ) / 10.)
-      xcpot%gmaxxc  = real(NINT( xcpot%gmaxxc  * 10  ) / 10.)
-      gcutm   = real(INT( gcutm   * 10  ) / 10.)
+      atoms%rmt(:)  = real(NINT(atoms%rmt(:)  * 100 ) / 100.)
+      atoms%dx(:)   = real(NINT(atoms%dx(:)   * 1000) / 1000.)
+      stars%gmax    = real(NINT(stars%gmax    * 10  ) / 10.)
+      input%rkmax   = real(NINT(input%rkmax   * 10  ) / 10.)
+      xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
+      hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
       IF (input%film) THEN
        vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
        dtild = real(NINT(dtild*100)/100.)
@@ -342,6 +340,8 @@
      &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,kpts%kPointDensity,&
      &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
      &                vacuum%dvac,dtild,input%tkb,namex,relcor)
+
+      stars%gmaxInit = stars%gmax
 !
       IF (input%film) atoms%taual(3,:) = atoms%taual(3,:) * a3(3) / dtild
 
@@ -356,10 +356,11 @@
 
       nu = 8 
       input%gw = 0
+      IF(juDFT_was_argument("-gw")) input%gw = 1
 
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
-          cell%area = cell%omtil / vacuum%dvac
+          cell%area = ABS(cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1))
           kpts%nkpt = MAX(nint((3600/cell%area)/sym%nop2),1)
         ELSE
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
@@ -390,21 +391,14 @@
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1
       
-      ! Set defaults for noco and Jij types
+      ! Set defaults for noco  types
       ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
-      ALLOCATE (Jij%alph1(atoms%ntype),Jij%l_magn(atoms%ntype),Jij%M(atoms%ntype))
-      ALLOCATE (Jij%magtype(atoms%ntype),Jij%nmagtype(atoms%ntype))
-
+   
       IF (noco%l_ss) input%ctail = .FALSE.
       noco%l_mperp = .FALSE.
       noco%l_constr = .FALSE.
-      Jij%l_disp = .FALSE.
-      input%sso_opt = .FALSE.
       noco%mix_b = 0.0
-      Jij%thetaJ = 0.0
-      Jij%nmagn=1
-      Jij%nsh = 0
       noco%qss = 0.0
 
       noco%l_relax(:) = .FALSE.
@@ -413,13 +407,7 @@
       noco%beta(:) = 0.0
       noco%b_con(:,:) = 0.0
 
-      Jij%M(:) = 0.0
-      Jij%l_magn(:) = .FALSE.
-      Jij%l_wr=.TRUE.
-      Jij%nqptd=1
-      Jij%mtypes=1
-      Jij%phnd=1
-
+     
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       cell%bmat=tpi_const*cell%bmat
       kpts%nkpt3(:) = div(:)
@@ -435,7 +423,16 @@
          kpts%nkpt = kpts%nkpt3(1) * kpts%nkpt3(2) * kpts%nkpt3(3)
       END IF
 
-      IF(.NOT.juDFT_was_argument("-old")) THEN
+      IF (l_hyb) THEN
+         ! Changes for hybrid functionals
+         namex = 'pbe0'
+         input%ctail = .false. ; atoms%l_geo = .false.! ; input%frcor = .true.
+         input%itmax = 15 ; input%maxiter = 25!; input%imix  = 17
+         IF (ANY(kpts%nkpt3(:).EQ.0)) kpts%nkpt3(:) = 4
+         div(:) = kpts%nkpt3(:)
+         kpts%specificationType = 2
+      END IF
+
          nkptOld = kpts%nkpt
          latnamTemp = cell%latnam
 
@@ -448,12 +445,15 @@
          IF(l_explicit) THEN
             ! kpts generation
             kpts%l_gamma = l_gamma
-            sym%symSpecType = 3
 
-            CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+            CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
 
             kpts%specificationType = 3
+            IF (l_hyb) kpts%specificationType = 2
+         END IF
 
+         IF(l_explicit) THEN
+            sym%symSpecType = 3
             !set latnam to any
             cell%latnam = 'any'
 
@@ -470,8 +470,8 @@
          filename = 'inp.xml'
 
          CALL w_inpXML(&
-     &                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,div,l_gamma,&
+     &                 atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+     &                 cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
      &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
@@ -492,12 +492,8 @@
 
          kpts%nkpt = nkptOld
          cell%latnam = latnamTemp
-      END IF !xml output
-
+ 
       DEALLOCATE (noco%l_relax,noco%b_con,noco%alphInit,noco%alph,noco%beta)
-      DEALLOCATE (Jij%alph1,Jij%l_magn,Jij%M,Jij%magtype,Jij%nmagtype)
-      DEALLOCATE (enpara%el0,enpara%evac0,enpara%lchange,enpara%lchg_v)
-      DEALLOCATE (enpara%skiplo,enpara%ello0,enpara%llochg,enpara%enmix)
       DEALLOCATE (atoms%ulo_der)
 
       IF (ANY(kpts%nkpt3(:).NE.0)) THEN
@@ -513,63 +509,6 @@
 
       CLOSE (6)
 
-      IF (atoms%ntype.GT.999) THEN
-         WRITE(*,*) 'More than 999 atom types -> no conventional inp file generated!'
-         WRITE(*,*) 'Use inp.xml file instead!'
-      ELSE IF (juDFT_was_argument("-old")) THEN
-         IF (kpts%specificationType.EQ.4) THEN
-            CALL juDFT_error('No k point set specification by density supported for old inp file',&
-                             calledby = 'set_inp')
-         END IF
-         CALL rw_inp(&
-     &               ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &               cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &               noel,namex,relcor,a1,a2,a3,dtild,input%comment)
 
-
-         iofile = 6
-         OPEN (iofile,file='inp',form='formatted',status='old',position='append')
-      
-         IF( l_hyb ) THEN
-            WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma 
-         ELSE IF( (div(1) == 0).OR.(div(2) == 0) ) THEN 
-            WRITE (iofile,'(a5,i5)') 'nkpt=',kpts%nkpt
-         ELSE
-            WRITE (iofile,'(a5,i5,3(a4,i2))') 'nkpt=',kpts%nkpt,',nx=',div(1),',ny=',div(2),',nz=',div(3)
-         ENDIF
-
-         CLOSE (iofile)
-
-      END IF
-      iofile = 6
-
-!HF   create hybrid functional input file
-      IF ( l_hyb ) THEN
-        OPEN (iofile,file='inp_hyb',form='formatted',status='new',&
-     &        iostat=iostat)
-        IF (iostat /= 0) THEN
-          STOP &
-     &      'Cannot create new file "inp_hyb". Maybe it already exists?'
-        ENDIF
-
-        ! Changes for hybrid functionals
-        input%strho = .false. ; input%isec1 = 999
-        namex = 'hse '
-        obsolete%pot8  = .true.
-        input%frcor = .true. ; input%ctail = .false. ; atoms%l_geo = .false.
-        input%itmax = 15 ; input%maxiter = 25 ; input%imix  = 17
-      CALL rw_inp(&
-     &            ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,&
-     &                  noel,namex,relcor,a1,a2,a3,dtild,input%comment)
-
-        IF ( ALL(div /= 0) ) nkpt3 = div
-        WRITE (iofile,FMT=9999) product(nkpt3),nkpt3,l_gamma
-9999    FORMAT ( 'nkpt=',i5,',nx=',i2,',ny=',i2,',nz=',i2,',gamma=',l1)
-        CLOSE (iofile)
-      END IF ! l_hyb
-
-      DEALLOCATE(hybrid%lcutwf)
-!HF
       END SUBROUTINE set_inp
       END MODULE m_setinp

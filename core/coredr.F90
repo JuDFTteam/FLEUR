@@ -10,7 +10,6 @@ CONTAINS
     USE m_spratm
     USE m_ccdnup
     USE m_cdn_io
-
     USE m_types
     IMPLICIT NONE
     TYPE(t_dimension),INTENT(IN) :: DIMENSION
@@ -22,9 +21,9 @@ CONTAINS
     REAL seig
     !     ..
     !     .. Array Arguments ..
-    REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntype,DIMENSION%jspd),qints(atoms%ntype,DIMENSION%jspd)
+    REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntype,input%jspins)
+    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+    REAL,    INTENT (OUT) :: rhc(DIMENSION%msh,atoms%ntype,input%jspins),qints(atoms%ntype,input%jspins)
     !     ..
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
@@ -33,8 +32,8 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     REAL br(atoms%jmtd,atoms%ntype),brd(DIMENSION%msh),etab(100,atoms%ntype),&
-         rhcs(atoms%jmtd,atoms%ntype,DIMENSION%jspd),rhochr(DIMENSION%msh),rhospn(DIMENSION%msh),&
-         tecs(atoms%ntype,DIMENSION%jspd),vr(atoms%jmtd,atoms%ntype),vrd(DIMENSION%msh)
+         rhcs(atoms%jmtd,atoms%ntype,input%jspins),rhochr(DIMENSION%msh),rhospn(DIMENSION%msh),&
+         tecs(atoms%ntype,input%jspins),vr(atoms%jmtd,atoms%ntype),vrd(DIMENSION%msh)
     INTEGER nkmust(atoms%ntype),ntab(100,atoms%ntype),ltab(100,atoms%ntype)
 
     !     ..

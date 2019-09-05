@@ -5,12 +5,14 @@ MODULE m_forcea12
 ! ************************************************************
 !
 CONTAINS
-  SUBROUTINE force_a12(&
-       atoms,nobd,sym, DIMENSION, cell,oneD,&
-       we,jsp,ne,usdus,acof,bcof,e1cof,e2cof,&
-       acoflo,bcoflo, results,f_a12)
-    USE m_types
+  SUBROUTINE force_a12(atoms,nobd,sym, DIMENSION, cell,oneD,&
+                       we,jsp,ne,usdus,eigVecCoeffs,acoflo,bcoflo,e1cof,e2cof,f_a12,results)
+    USE m_types_setup
+    USE m_types_misc
+    USE m_types_usdus
+    USE m_types_cdnval
     USE m_constants
+    USE m_juDFT
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT)   :: results
@@ -20,26 +22,24 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)         :: cell
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd    
     INTEGER, INTENT (IN) :: ne ,jsp 
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(nobd) 
-    COMPLEX, INTENT (IN) ::  acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) ::  bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: e1cof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: e2cof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: acoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcoflo(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (INOUT) :: f_a12(3,atoms%ntype)
+    REAL,    INTENT(IN)    :: we(nobd)
+    COMPLEX, INTENT(IN)    :: acoflo(-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT(IN)    :: bcoflo(-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT(IN)    :: e1cof(ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: e2cof(ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(INOUT) :: f_a12(3,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     COMPLEX a12,cil1,cil2
     REAL,PARAMETER:: zero=0.0
     COMPLEX,PARAMETER:: czero=CMPLX(0.0,0.0)
-    COMPLEX,PARAMETER:: ci=CMPLX(0.0,1.0)
     INTEGER i,ie,irinv,is,isinv,it,j,l,l1,l2,lm1,lm2 ,m1,m2,n,natom,natrun,ilo,m
     !     ..
     !     .. Local Arrays ..
@@ -50,13 +50,9 @@ CONTAINS
     !     .. Statement Functions ..
     REAL   alpha,beta,delta,epslon,gamma,phi 
     INTEGER krondel
-    !     ..
-    !     .. Statement Function definitions ..
-    !  inline functions:
-    !
+
     ! Kronecker delta for arguments >=0 AND <0
-    !
-    !
+
     krondel(i,j) = MIN(ABS(i)+1,ABS(j)+1)/MAX(ABS(i)+1,ABS(j)+1)* (1+SIGN(1,i)*SIGN(1,j))/2
     alpha(l,m) = (l+1)*0.5e0*SQRT(REAL((l-m)* (l-m-1))/ REAL((2*l-1)* (2*l+1)))
     beta(l,m) = l*0.5e0*SQRT(REAL((l+m+2)* (l+m+1))/ REAL((2*l+1)* (2*l+3)))
@@ -64,9 +60,9 @@ CONTAINS
     delta(l,m) = l*0.5e0*SQRT(REAL((l-m+2)* (l-m+1))/ REAL((2*l+1)* (2*l+3)))
     epslon(l,m) = (l+1)*SQRT(REAL((l-m)* (l+m))/ REAL((2*l-1)* (2*l+1)))
     phi(l,m) = l*SQRT(REAL((l-m+1)* (l+m+1))/REAL((2*l+1)* (2*l+3)))
-    !     ..
-    !
-    !
+
+    CALL timestart("force_a12")
+
     natom = 1
     DO  n = 1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
@@ -87,8 +83,8 @@ CONTAINS
                 DO m1 = -l1,l1
                    lm1 = l1* (l1+1) + m1
                    DO ie = 1,ne
-                      acof_flapw(ie,lm1) = acof(ie,lm1,natrun)
-                      bcof_flapw(ie,lm1) = bcof(ie,lm1,natrun)
+                      acof_flapw(ie,lm1) = eigVecCoeffs%acof(ie,lm1,natrun,jsp)
+                      bcof_flapw(ie,lm1) = eigVecCoeffs%bcof(ie,lm1,natrun,jsp)
                    ENDDO
                 ENDDO
              ENDDO
@@ -104,11 +100,11 @@ CONTAINS
              ENDDO
              !
              DO l1 = 0,atoms%lmax(n)
-                cil1 = ci**l1
+                cil1 = ImagUnit**l1
                 DO m1 = -l1,l1
                    lm1 = l1* (l1+1) + m1
                    DO l2 = 0,atoms%lmax(n)
-                      cil2 = ci**l2
+                      cil2 = ImagUnit**l2
                       DO m2 = -l2,l2
                          lm2 = l2* (l2+1) + m2
                          !
@@ -116,8 +112,8 @@ CONTAINS
                          DO ie = 1,ne
                             !
                             a12 = a12 + CONJG(cil1*&
-                                 ( acof_flapw(ie,lm1)*usdus%us(l1,n,jsp) + bcof_flapw(ie,lm1)*usdus%uds(l1,n,jsp) ))*cil2*&
-                                 ( e1cof(ie,lm2,natrun)*usdus%us(l2,n,jsp)+ e2cof(ie,lm2,natrun)*usdus%uds(l2,n,jsp))*we(ie)
+                                 (acof_flapw(ie,lm1)*usdus%us(l1,n,jsp) + bcof_flapw(ie,lm1)*usdus%uds(l1,n,jsp) ))*cil2*&
+                                 (e1cof(ie,lm2,natrun)*usdus%us(l2,n,jsp)+ e2cof(ie,lm2,natrun)*usdus%uds(l2,n,jsp))*we(ie)
 
                          END DO
                          aaa(1) = alpha(l1,m1)*krondel(l2,l1-1)* krondel(m2,m1+1)
@@ -136,7 +132,7 @@ CONTAINS
                          gv(1) = gv(1) + (aaa(1)+bbb(1)-ccc(1)-ddd(1)+&
                               aaa(2)+bbb(2)-ccc(2)-ddd(2))*0.5* atoms%rmt(n)**2*a12
                          !
-                         gv(2) = gv(2) + ci* (aaa(1)+bbb(1)+ccc(1)+&
+                         gv(2) = gv(2) + ImagUnit* (aaa(1)+bbb(1)+ccc(1)+&
                               ddd(1)-aaa(2)-bbb(2)-ccc(2)-ddd(2))*0.5* atoms%rmt(n)**2*a12
                          !
                          gv(3) = gv(3) + (eee(1)+eee(2)-fff(1)-fff(2))* 0.5*atoms%rmt(n)**2*a12
@@ -234,7 +230,7 @@ CONTAINS
           !  is also a solution of Schr. equ. if psi is one.
           DO i = 1,3
              results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a12(i))
-             f_a12(i,n)     = f_a12(i,n)     + forc_a12(i)
+             f_a12(i,n) = f_a12(i,n) + forc_a12(i)
           END DO
           !
           !     write result moved to force_a8
@@ -242,6 +238,8 @@ CONTAINS
        ENDIF
        natom = natom + atoms%neq(n)
     ENDDO
-    !
+
+    CALL timestop("force_a12")
+
   END SUBROUTINE force_a12
 END MODULE m_forcea12

@@ -8,35 +8,25 @@ MODULE m_abcrot2
   PRIVATE
   PUBLIC :: abcrot2
 CONTAINS
-  SUBROUTINE abcrot2(atoms, neig, acof,bcof,ccof)
+  SUBROUTINE abcrot2(atoms,banddos,neig,eigVecCoeffs,jsp)
     USE m_dwigner
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_atoms),INTENT(IN)           :: atoms
+    TYPE(t_banddos),INTENT(IN)         :: banddos
+    TYPE(t_eigVecCoeffs),INTENT(INOUT) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: neig
-    !     ..
-    !     .. Array Arguments ..
-
-    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(dimension%neigd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!dimension%neigd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,dimension%neigd,atoms%nlod,atoms%nat)
+    INTEGER, INTENT (IN) :: neig,jsp
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,ineq,iatom,iop,ilo,i,l ,lm,lmp,ifac
-    REAL   beta,alpha,gamma
     REAL amx(3,3,1),imx(3,3)
     COMPLEX  d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,1:atoms%lmaxd,1)
 
-    OPEN (333,file='orbcomprot')
-    READ (333,*) alpha
-    READ (333,*) beta
-    READ (333,*) gamma
-    CLOSE (333)
-
-    CALL euler(alpha,beta,gamma, amx)
+    
+    CALL euler(banddos%alpha,banddos%beta,banddos%gamma, amx)
 
     imx(:,:) = 0. ; imx(1,1) = 1. ; imx(2,2) = 1. ; imx(3,3) = 1.
 
@@ -50,18 +40,18 @@ CONTAINS
           DO l = 1, atoms%lmax(itype)
 
              DO i = 1, neig
-                acof(i,l**2:l*(l+2),iatom) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,iop)),&
-                     acof(i,l**2:l*(l+2),iatom))
-                bcof(i,l**2:l*(l+2),iatom) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,iop)),&
-                                                      bcof(i,l**2:l*(l+2),iatom))
+                eigVecCoeffs%acof(i,l**2:l*(l+2),iatom,jsp) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,iop)),&
+                                                                     eigVecCoeffs%acof(i,l**2:l*(l+2),iatom,jsp))
+                eigVecCoeffs%bcof(i,l**2:l*(l+2),iatom,jsp) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,iop)),&
+                                                                     eigVecCoeffs%bcof(i,l**2:l*(l+2),iatom,jsp))
              ENDDO
           ENDDO
           DO ilo = 1, atoms%nlo(itype)
              l = atoms%llo(ilo,itype)
              IF (l.GT.0) THEN
                 DO i = 1 ,neig
-                   ccof(-l:l,i,ilo,iatom) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,iop)),&
-                        ccof(-l:l,i,ilo,iatom))
+                   eigVecCoeffs%ccof(-l:l,i,ilo,iatom,jsp) = MATMUL(CONJG(d_wgn(-l:l,-l:l,l,iop)),&
+                                                                    eigVecCoeffs%ccof(-l:l,i,ilo,iatom,jsp))
                 ENDDO
              ENDIF
           ENDDO

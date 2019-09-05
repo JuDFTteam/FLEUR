@@ -8,7 +8,7 @@ MODULE m_nocoInputCheck
 
    CONTAINS
 
-   SUBROUTINE nocoInputCheck(atoms,input,vacuum,jij,noco)
+   SUBROUTINE nocoInputCheck(atoms,input,vacuum,noco)
 
       USE m_juDFT
       USE m_types
@@ -18,21 +18,10 @@ MODULE m_nocoInputCheck
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       TYPE(t_input),  INTENT(IN)    :: input
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
-      TYPE(t_Jij),    INTENT(IN)    :: Jij
       TYPE(t_noco),   INTENT(IN)    :: noco
 
       INTEGER itype
       LOGICAL l_relax_any
-
-
-
-!---> make sure Wu-diagonalization is switched off
-      IF (input%isec1 .LE. input%itmax) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the Wu-diagonalization!!'
-         WRITE (6,*) 'itmax = ',input%itmax,'isec1 = ',input%isec1
-         CALL juDFT_error("Wu-diagonalization cannot be used!!!",calledby="nocoInputCheck")
-      END IF
 
 !---> make sure second variation is switched off
       IF (input%secvar) THEN
@@ -97,6 +86,7 @@ MODULE m_nocoInputCheck
          WRITE (6,*)'moment option has been switched on!!!'
 !          CALL juDFT_error("relaxation of moments and constraint are sw
       ENDIF
+      if (l_relax_any.or.noco%l_constr) CALL judft_warn("Constraint moments and relaxations are untested in this version!")
 !---> make sure that perp. component of mag. is calculated if needed
       IF ( (l_relax_any .or. noco%l_constr) .and. (.not. noco%l_mperp) ) THEN
          WRITE (6,*)'The relaxation of the moment is switched on for at'

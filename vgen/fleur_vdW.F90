@@ -42,13 +42,13 @@ CONTAINS
     COMPLEX,ALLOCATABLE:: vpw(:),psq(:)
     INTEGER            :: n,ncmsh,j,i
     LOGICAL            :: l_core,l_pot
-    REAL tec(atoms%ntype,dimension%jspd),qintc(atoms%ntype,dimension%jspd)
+    REAL tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins)
 
 
     l_core=.FALSE. !try to subtract core charge?
     ALLOCATE(n_grid(27*stars%mx1*stars%mx2*stars%mx3),v_grid(27*stars%mx1*stars%mx2*stars%mx3))
     ALLOCATE(vpw(SIZE(qpw)))
-    ALLOCATE(psq(SIZE(qpw)),rhc(atoms%jmtd,atoms%ntype,dimension%jspd))
+    ALLOCATE(psq(SIZE(qpw)),rhc(atoms%jmtd,atoms%ntype,input%jspins))
 
     IF (l_core) l_core = isCoreDensityPresent()
 
@@ -70,8 +70,8 @@ CONTAINS
     atoms_tmp%zatom=0.0
     CALL psqpw(mpi,&
          atoms_tmp,sphhar,stars,vacuum,&
-         DIMENSION,cell,input,sym,oneD,&
-         qpw,rho,(/0.,0./),.TRUE.,psq)
+         cell,input,sym,oneD,&
+         qpw,rho,(/0.,0./),.TRUE.,2,psq)
 
     !put pseudo charge on real-space grid
     !use v_pot for imaginary part

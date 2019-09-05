@@ -1,290 +1,301 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_hsmt_nonsph
-#define CPP_BLOCKSIZE 64
-  !      USE m_juDFT
-  !$     USE omp_lib
-
-  !TODO:
-  !  Check what can be done in l_noco=.true. case in terms of use of zgemm or aa_block
-  !  Check what happens in case of CPP_INVERSION -> real matrix a
-
+  USE m_juDFT
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC hsmt_nonsph
+  INTERFACE priv_noMPI
+    module procedure priv_noMPI_cpu
+#ifdef CPP_GPU
+    module procedure priv_noMPI_gpu
+#endif
+  END INTERFACE
 CONTAINS
-  SUBROUTINE hsmt_nonsph(DIMENSION,atoms,sym,SUB_COMM, n_size,n_rank,input,isp,nintsp,&
-       hlpmsize,noco,l_socfirst, lapw, cell,tlmplm, fj,gj,gk,vk,oneD,l_real,aa_r,aa_c)
-
-#include"cpp_double.h"
-    USE m_constants, ONLY : tpi_const
-    USE m_ylm
-    USE m_hsmt_spinor
-    USE m_hsmt_hlptomat
+  SUBROUTINE hsmt_nonsph(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
-    TYPE(t_oneD),INTENT(IN)     :: oneD
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_noco),INTENT(IN)     :: noco
-    TYPE(t_sym),INTENT(IN)      :: sym
-    TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(INOUT)  :: lapw !lapw%nv_tot is updated
-
-    !     ..
+    TYPE(t_mpi),INTENT(IN)        :: mpi
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(IN)       :: lapw
+    TYPE(t_tlmplm),INTENT(IN)     :: td
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nintsp,isp
-    INTEGER, INTENT (IN) :: SUB_COMM,n_size,n_rank 
-    INTEGER, INTENT (IN) :: hlpmsize
-    LOGICAL, INTENT (IN) :: l_socfirst
-    !     ..
+    INTEGER, INTENT (IN)          :: n,isp,iintsp,jintsp
+    COMPLEX,INTENT(IN)            :: chi
     !     .. Array Arguments ..
-    TYPE(t_tlmplm),INTENT(IN)::tlmplm
-    REAL, INTENT(IN)     :: fj(:,0:,:,:),gj(:,0:,:,:)
-    REAL,INTENT(IN)      :: gk(:,:,:),vk(:,:,:)
-    !-odim
-    !+odim
-    LOGICAL, INTENT(IN)     :: l_real
-    REAL,   ALLOCATABLE, INTENT (INOUT) :: aa_r(:)!(matsize)
-    COMPLEX,ALLOCATABLE, INTENT (INOUT) :: aa_c(:)
-    COMPLEX,PARAMETER :: one=CMPLX(1.0,0.0),zero=CMPLX(0.0,0.0)
+#if defined CPP_GPU
+    REAL,MANAGED,INTENT(IN)    :: fj(:,:,:),gj(:,:,:)
+#else
+    REAL,INTENT(IN)            :: fj(:,0:,:),gj(:,0:,:)
+#endif
+    CLASS(t_mat),INTENT(INOUT)     ::hmat
+#if defined CPP_GPU
+    COMPLEX,ALLOCATABLE,DEVICE :: h_loc_dev(:,:)
+#endif
+    CALL timestart("non-spherical setup")
+    IF (mpi%n_size==1) THEN
+#if defined CPP_GPU
+    ALLOCATE(h_loc_dev(size(td%h_loc,1),size(td%h_loc,2)))
+    h_loc_dev(1:,1:) = CONJG(td%h_loc(0:,0:,n,isp)) 
 
-    !     ..
-    !     .. Local Scalars ..
-    INTEGER :: i,iii,ii,ij,im,in,k,ki,kj,l,ll1,lm,lmp,lp,jd,m
-    INTEGER :: mp,n,na,nn,np,kjmax,iintsp,jintsp
-    INTEGER :: nc ,kii,spin2,ab_dim,lnonsphd,bsize,bsize2,kb
-    REAL    :: th,invsfct
-    COMPLEX :: term,chi11,chi21,chi22,chihlp
-
-
-    !     ..
-    !     .. Local Arrays ..
-    COMPLEX,ALLOCATABLE :: aa_block(:,:)
-    COMPLEX,ALLOCATABLE :: dtd(:,:),dtu(:,:),utd(:,:),utu(:,:)
-    REAL   :: bmrot(3,3),gkrot(DIMENSION%nvd,3),vmult(3),v(3)
-    COMPLEX:: ylm( (atoms%lmaxd+1)**2 ),chi(2,2)
-    !     ..
-    COMPLEX, ALLOCATABLE :: a(:,:,:),b(:,:,:),ax(:,:),bx(:,:)
-    COMPLEX, ALLOCATABLE :: c_ph(:,:)
-    COMPLEX,ALLOCATABLE :: aahlp(:),aa_tmphlp(:)
-    INTEGER :: n_threads,thread,blocksize,maxloop
-    INTEGER,ALLOCATABLE :: start_thread(:),stop_thread(:)
-
-
-    
-    lnonsphd=MAXVAL(atoms%lnonsph)*(MAXVAL(atoms%lnonsph)+2)
-    ALLOCATE(dtd(0:lnonsphd,0:lnonsphd),utd(0:lnonsphd,0:lnonsphd),dtu(0:lnonsphd,0:lnonsphd),utu(0:lnonsphd,0:lnonsphd))
-    !Decide how to distribute the work
-
-    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) ALLOCATE ( aahlp(hlpmsize),aa_tmphlp(hlpmsize) )
-
-    ALLOCATE(aa_block(CPP_BLOCKSIZE,MAXVAL(lapw%nv)))
-
-    ab_dim=1
-    IF (noco%l_ss) ab_dim=2
-    ALLOCATE(a(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim),b(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim))
-    ALLOCATE(ax(DIMENSION%nvd,0:DIMENSION%lmd),bx(DIMENSION%nvd,0:DIMENSION%lmd))
-    ALLOCATE(c_ph(DIMENSION%nvd,ab_dim))
-
-    ntyploop: DO n=1,atoms%ntype
-       IF (noco%l_noco) THEN
-          IF (.NOT.noco%l_ss) aahlp=CMPLX(0.0,0.0)
-          IF (.NOT.noco%l_ss) aa_tmphlp=CMPLX(0.0,0.0)
-          CALL hsmt_spinor(isp,n, noco,input, chi, chi11, chi21, chi22)
-       ENDIF
-       DO nn = 1,atoms%neq(n)
-	  a=0.0
-	  b=0.0
-          na = SUM(atoms%neq(:n-1))+nn
-          IF (atoms%lnonsph(n)<0) CYCLE ntyploop
-          IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
-             IF (atoms%invsat(na)==0) invsfct = 1
-             IF (atoms%invsat(na)==1) invsfct = 2
-             np = sym%invtab(atoms%ngopr(na))
-             IF (oneD%odi%d1) np = oneD%ods%ngopr(na)
-             !--->       loop over interstitial spins
-             DO iintsp = 1,nintsp
-                IF (noco%l_constr.OR.l_socfirst) THEN
-                   spin2=isp
-                ELSE
-                   spin2=iintsp
-                ENDIF
-                !--->          set up phase factors
-                DO k = 1,lapw%nv(iintsp)
-                   th= DOT_PRODUCT((/lapw%k1(k,iintsp),lapw%k2(k,iintsp),lapw%k3(k,iintsp)/)+(iintsp-1.5)*noco%qss,atoms%taual(:,na))
-                   c_ph(k,iintsp) = CMPLX(COS(tpi_const*th),-SIN(tpi_const*th))
-                END DO
-
-                IF (np==1) THEN
-                   gkrot( 1:lapw%nv(iintsp),:) = gk( 1:lapw%nv(iintsp),:,iintsp)
-                ELSE
-                   IF (oneD%odi%d1) THEN
-                      bmrot=MATMUL(oneD%ods%mrot(:,:,np),cell%bmat)
-                   ELSE
-                      bmrot=MATMUL(1.*sym%mrot(:,:,np),cell%bmat)
-                   END IF
-                   DO k = 1,lapw%nv(iintsp)
-                      !-->  apply the rotation that brings this atom into the
-                      !-->  representative (this is the definition of ngopr(na)
-                      !-->  and transform to cartesian coordinates
-                      v(:) = vk(k,:,iintsp)
-                      gkrot(k,:) = MATMUL(TRANSPOSE(bmrot),v)
-                   END DO
-                END IF
-                DO k = 1,lapw%nv(iintsp)
-                   !-->    generate spherical harmonics
-                   vmult(:) =  gkrot(k,:)
-                   CALL ylm4(atoms%lnonsph(n),vmult,ylm)
-                   !-->  synthesize the complex conjugates of a and b
-                   DO l = 0,atoms%lnonsph(n)
-                      ll1 = l* (l+1)
-                      DO m = -l,l
-                         term = c_ph(k,iintsp)*ylm(ll1+m+1)
-                         a(k,ll1+m,iintsp) = fj(k,l,n,spin2)*term
-                         b(k,ll1+m,iintsp) = gj(k,l,n,spin2)*term
-                      END DO
-                   END DO
-                ENDDO !k-loop
-                !--->       end loop over interstitial spin
-             ENDDO
-             !--->       loops over the interstitial spin
-             DO iintsp = 1,nintsp
-
-                DO jintsp = 1,iintsp
-
-                   jd = 1 ; IF (noco%l_noco) jd = isp
-                   !--->       loop over l',m'
-                   utu=0.0;utd=0.0;dtu=0.0;dtd=0.0
-!!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lp,mp,lmp,l,m,lm,in,utu,dtu,utd,dtd,im,k) &
-!!$OMP SHARED(tlmplm,invsfct,lnonsph,nv,jintsp,jd,n)
-                   DO lmp=0,atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
-                      lp=FLOOR(SQRT(1.0*lmp))
-                      mp=lmp-lp*(lp+1)
-                      IF (lp>atoms%lnonsph(n).OR.ABS(mp)>lp) STOP "BUG"
-                      !--->             loop over l,m
-                      DO l = 0,atoms%lnonsph(n)
-                         DO m = -l,l
-                            lm = l* (l+1) + m
-                            in = tlmplm%ind(lmp,lm,n,jd)
-                            IF (in/=-9999) THEN
-                               IF (in>=0) THEN
-                                  utu(lm,lmp) =CONJG(tlmplm%tuu(in,n,jd))*invsfct
-                                  dtu(lm,lmp) =CONJG(tlmplm%tdu(in,n,jd))*invsfct
-                                  utd(lm,lmp) =CONJG(tlmplm%tud(in,n,jd))*invsfct
-                                  dtd(lm,lmp) =CONJG(tlmplm%tdd(in,n,jd))*invsfct
-                               ELSE
-                                  im = -in
-                                  utu(lm,lmp) =tlmplm%tuu(im,n,jd)*invsfct
-                                  dtu(lm,lmp) =tlmplm%tud(im,n,jd)*invsfct
-                                  utd(lm,lmp) =tlmplm%tdu(im,n,jd)*invsfct
-                                  dtd(lm,lmp) =tlmplm%tdd(im,n,jd)*invsfct
-                               END IF
-                               !--->    update ax, bx
-
-                            END IF
-                         END DO
-                      END DO
-                   ENDDO
-!!$OMP END PARALLEL DO
-                   lmp=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)
-                   !ax(:nv(jintsp),0:lmp)=(matmul(a(:nv(jintsp),0:lmp,jintsp),utu(0:lmp,0:lmp))+matmul(b(:nv(jintsp),0:lmp,jintsp),utd(0:lmp,0:lmp)))
-                   !bx(:nv(jintsp),0:lmp)=(matmul(a(:nv(jintsp),0:lmp,jintsp),dtu(0:lmp,0:lmp))+matmul(b(:nv(jintsp),0:lmp,jintsp),dtd(0:lmp,0:lmp)))
-
-                   CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,a(1,0,jintsp),SIZE(a,1),utu(0,0),SIZE(utu,1),zero,ax,SIZE(ax,1))
-                   CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,b(1,0,jintsp),SIZE(a,1),utd(0,0),SIZE(utu,1),one,ax,SIZE(ax,1))
-
-                   CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,a(1,0,jintsp),SIZE(a,1),dtu(0,0),SIZE(utu,1),zero,bx,SIZE(ax,1))
-                   CALL zgemm("N","N",lapw%nv(jintsp),lmp+1,lmp+1,one,b(1,0,jintsp),SIZE(a,1),dtd(0,0),SIZE(utu,1),one,bx,SIZE(ax,1))
-
-                   !
-                   !--->             update hamiltonian and overlap matrices
-                   nc = 0
-                   IF ( noco%l_noco .AND. (n_size>1) ) THEN
-                      lapw%nv_tot = lapw%nv(1) + lapw%nv(2)
-                   ELSE
-                      lapw%nv_tot = lapw%nv(iintsp)
-                   ENDIF
-                   kii=n_rank
-                   DO WHILE(kii<lapw%nv_tot)
-                      !DO kii =  n_rank, nv_tot-1, n_size
-                      ki = MOD(kii,lapw%nv(iintsp)) + 1
-                      bsize=MIN(SIZE(aa_block,1),(lapw%nv(iintsp)-ki)/n_size+1) !Either use maximal blocksize or number of rows left to calculate
-                      IF (bsize<1) EXIT !nothing more to do here
-                      bsize2=bsize*n_size
-                      bsize2=min(bsize2,lapw%nv(iintsp)-ki+1)
-                      !aa_block(:bsize,:ki+bsize2-1)=matmul(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),conjg(transpose(ax(:ki+bsize2-1,0:lmp))))+ &
-                      !                              matmul(b(ki:ki+bsize2-1:n_size,0:lmp,iintsp),conjg(transpose(bx(:ki+bsize2-1,0:lmp))))
-                      IF (n_size==1) THEN !Make this a special case to avoid copy-in of a array
-                         call zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,a(ki,0,iintsp),SIZE(a,1),ax(1,0),SIZE(ax,1),zero,aa_block,SIZE(aa_block,1))
-                         call zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,b(ki,0,iintsp),SIZE(a,1),bx(1,0),SIZE(ax,1),one ,aa_block,SIZE(aa_block,1))
-                      ELSE
-                         CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),SIZE(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),1),ax(1,0),SIZE(ax,1),zero,aa_block,SIZE(aa_block,1))
-                         CALL zgemm("N","C",bsize,ki+bsize2-1,lmp+1,one,b(ki:ki+bsize2-1:n_size,0:lmp,iintsp),SIZE(a(ki:ki+bsize2-1:n_size,0:lmp,iintsp),1),bx(1,0),SIZE(ax,1),one,aa_block,SIZE(aa_block,1))
-                      ENDIF
-                      DO kb=1,bsize
-                         IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
-                            nc = 1+kii/n_size
-                            ii = nc*(nc-1)/2*n_size-(nc-1)*(n_size-n_rank-1)
-                            IF ( (n_size==1).OR.(kii+1<=lapw%nv(1)) ) THEN    !
-                               aahlp(ii+1:ii+ki) = aahlp(ii+1:ii+ki)+MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:lmp)),b(ki,:lmp,iintsp))
-                            ELSE                    ! components for <2||2> block unused
-                               aa_tmphlp(:ki) = MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:lmp)),b(ki,:lmp,iintsp))
-                               !--->                   spin-down spin-down part
-                               ij = ii + lapw%nv(1)
-                               aa_c(ij+1:ij+ki)=aa_c(ij+1:ij+ki)+chi22*aa_tmphlp(:ki)
-                               !--->                   spin-down spin-up part, lower triangle
-                               ij =  ii
-                               aa_c(ij+1:ij+ki)=aa_c(ij+1:ij+ki)+chi21*aa_tmphlp(:ki)
-                            ENDIF
-                            !-||
-                         ELSEIF ( noco%l_noco .AND. noco%l_ss ) THEN
-                            IF ( iintsp==1 .AND. jintsp==1 ) THEN
-                               !--->                      spin-up spin-up part
-                               kjmax = ki
-                               chihlp = chi11
-                               ii = (ki-1)*(ki)/2
-                            ELSEIF ( iintsp==2 .AND. jintsp==2 ) THEN
-                               !--->                      spin-down spin-down part
-                               kjmax = ki
-                               chihlp = chi22
-                               ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2+&
-                                    lapw%nv(1)+atoms%nlotot
-                            ELSE
-                               !--->                      spin-down spin-up part
-                               kjmax = lapw%nv(1)
-                               chihlp = chi21
-                               ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
-                            ENDIF
-                            aa_c(ii+1:ii+kjmax) = aa_c(ii+1:ii+kjmax) + chihlp*&
-                                 (MATMUL(CONJG(ax(:kjmax,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:kjmax,:lmp)),b(ki,:lmp,iintsp)))
-                         ELSE
-                            nc = 1+kii/n_size
-                            ii = nc*(nc-1)/2*n_size- (nc-1)*(n_size-n_rank-1)
-                            if (l_real) THEN
-                               aa_r(ii+1:ii+ki) = aa_r(ii+1:ii+ki) + aa_block(kb,:ki)
-                            ELSE
-                               aa_c(ii+1:ii+ki) = aa_c(ii+1:ii+ki) + aa_block(kb,:ki)
-                            endif
-                            !print*,ii,ki,kb
-                            !                           IF (.not.apw(l)) THEN
-                            !aa(ii+1:ii+ki) = aa(ii+1:ii+ki) + b(ki,lmp,iintsp)*bx(:ki)
-                            !                           ENDIF
-                         ENDIF
-                         ki=ki+n_size
-                         kii=kii+n_size
-                      ENDDO
-                      !--->             end loop over ki
-                   END DO
-                   !--->       end loops over interstitial spin
-                ENDDO
-             ENDDO
-          ENDIF              ! atoms%invsat(na) = 0 or 1
-          !--->    end loop over equivalent atoms
-       END DO
-       IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) CALL hsmt_hlptomat(atoms%nlotot,lapw%nv,sub_comm,chi11,chi21,chi22,aahlp,aa_c)
-       !---> end loop over atom types (ntype)
-    ENDDO ntyploop
-
-    RETURN
+       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj,gj,hmat)
+#else
+       CALL priv_noMPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
+#endif
+    ELSE
+       CALL priv_MPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
+    ENDIF
+    CALL timestop("non-spherical setup")
   END SUBROUTINE hsmt_nonsph
 
+#if defined CPP_GPU
+  SUBROUTINE priv_noMPI_gpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,h_loc_dev,fj_dev,gj_dev,hmat)
+!Calculate overlap matrix, GPU version
+!note that basically all matrices in the GPU version are conjugates of their cpu counterparts
+    USE m_hsmt_ab
+    USE m_constants, ONLY : fpi_const,tpi_const
+    USE m_types
+    USE m_ylm
+  !   cublas: required to use generic BLAS interface
+  !   cudafor: required to use CUDA runtime API routines 
+  !   nvtx: profiling
+    USE cublas   
+    USE cudafor
+    USE nvtx
 
+    IMPLICIT NONE
+    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_lapw),INTENT(IN)     :: lapw
+    COMPLEX, INTENT(IN),DEVICE  :: h_loc_dev(:,:)
+    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
+    COMPLEX,INTENT(in)   :: chi
+    !     ..
+    !     .. Array Arguments ..
+    REAL,   INTENT(IN),   DEVICE :: fj_dev(:,:,:), gj_dev(:,:,:)
+    CLASS(t_mat),INTENT(INOUT)     ::hmat
+    
+    INTEGER:: nn,na,ab_size,l,ll,m
+    real :: rchi
+    COMPLEX,ALLOCATABLE,DEVICE :: ab1_dev(:,:), ab_dev(:,:), ab2_dev(:,:)
+    integer :: i, j, istat
+    call nvtxStartRange("hsmt_nonsph",1)    
+
+    ALLOCATE(ab1_dev(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+    ALLOCATE(ab_dev(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+    IF (iintsp.NE.jintsp) ALLOCATE(ab2_dev(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+
+    IF (hmat%l_real) THEN
+       IF (ANY(SHAPE(hmat%data_c)/=SHAPE(hmat%data_r))) THEN
+          DEALLOCATE(hmat%data_c)
+          ALLOCATE(hmat%data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
+       ENDIF
+       hmat%data_c=0.0
+    ENDIF
+
+    DO nn = 1,atoms%neq(n)
+       na = SUM(atoms%neq(:n-1))+nn
+       IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
+          rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
+
+          CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj_dev,gj_dev,ab_dev,ab_size,.TRUE.)
+
+          !Calculate Hamiltonian
+          CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),&
+                     h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab1_dev,SIZE(ab1_dev,1))
+          IF (iintsp==jintsp) THEN
+             call nvtxStartRange("zherk",3)
+             CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,ab1_dev,SIZE(ab1_dev,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
+             istat = cudaDeviceSynchronize() 
+             call nvtxEndRange()    
+          ELSE  !here the l_ss off-diagonal part starts
+             !Second set of ab is needed
+             CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj_dev,gj_dev,ab_dev,ab_size,.TRUE.)
+             CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab_dev,SIZE(ab_dev,1),&
+                        h_loc_dev,SIZE(h_loc_dev,1),CMPLX(0.,0.),ab2_dev,SIZE(ab2_dev,1))
+             !Multiply for Hamiltonian
+
+             !$cuf kernel do<<<*,256>>>
+             do i = 1,size(ab1_dev,2)
+               do j = 1,size(ab1_dev,1)
+                  ab1_dev(j,i) = conjg(ab1_dev(j,i))
+               enddo
+             enddo
+             CALL zgemm("N","T",lapw%nv(iintsp),lapw%nv(jintsp),ab_size,chi,ab2_dev,SIZE(ab2_dev,1),&
+                        ab1_dev,SIZE(ab1_dev,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+          ENDIF
+       ENDIF
+    END DO
+
+    IF (hmat%l_real) THEN
+       hmat%data_r=hmat%data_r+REAL(hmat%data_c)
+    ENDIF
+    call nvtxEndRange
+ END SUBROUTINE priv_noMPI_gpu
+#endif
+
+  SUBROUTINE priv_noMPI_cpu(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
+!Calculate overlap matrix
+    USE m_hsmt_ab
+    USE m_constants, ONLY : fpi_const,tpi_const
+    USE m_types
+    USE m_ylm
+
+    IMPLICIT NONE
+    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_tlmplm),INTENT(IN)   :: td
+    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
+    COMPLEX,INTENT(in)   :: chi
+    !     ..
+    !     .. Array Arguments ..
+    REAL,INTENT(IN) :: fj(:,0:,:),gj(:,0:,:)
+    CLASS(t_mat),INTENT(INOUT)::hmat
+
+    
+    INTEGER:: nn,na,ab_size,l,ll,m
+    COMPLEX,ALLOCATABLE:: ab(:,:),ab1(:,:),ab2(:,:)
+    real :: rchi
+
+    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lmaxd*(atoms%lmaxd+2)+2),ab1(lapw%nv(jintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+
+    IF (iintsp.NE.jintsp) ALLOCATE(ab2(lapw%nv(iintsp),2*atoms%lmaxd*(atoms%lmaxd+2)+2))
+
+    IF (hmat%l_real) THEN
+       IF (ANY(SHAPE(hmat%data_c)/=SHAPE(hmat%data_r))) THEN
+          DEALLOCATE(hmat%data_c)
+          ALLOCATE(hmat%data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
+       ENDIF
+       hmat%data_c=0.0
+    ENDIF
+    
+    DO nn = 1,atoms%neq(n)
+       na = SUM(atoms%neq(:n-1))+nn
+       IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
+          rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
+
+          CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+          !Calculate Hamiltonian
+          CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),&
+                     td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
+          !ab1=MATMUL(ab(:lapw%nv(iintsp),:ab_size),td%h_loc(:ab_size,:ab_size,n,isp))
+          IF (iintsp==jintsp) THEN
+             IF (isp<3) THEN
+                CALL ZHERK("U","N",lapw%nv(iintsp),ab_size,Rchi,CONJG(ab1),SIZE(ab1,1),1.0,hmat%data_c,SIZE(hmat%data_c,1))
+             ELSE !This is the case of a local off-diagonal contribution.
+                  !It is not Hermitian, so we need to USE zgemm CALL
+                CALL zgemm("N","T",lapw%nv(iintsp),lapw%nv(jintsp),ab_size,chi,CONJG(ab),SIZE(ab,1),&
+                     ab1,SIZE(ab1,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+             ENDIF
+          ELSE  !here the l_ss off-diagonal part starts
+             !Second set of ab is needed
+             CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+             CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),&
+                        td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab2,SIZE(ab2,1))
+             !Multiply for Hamiltonian
+             CALL zgemm("N","T",lapw%nv(iintsp),lapw%nv(jintsp),ab_size,chi,conjg(ab2),SIZE(ab2,1),&
+                        ab1,SIZE(ab1,1),CMPLX(1.0,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+          ENDIF
+       ENDIF
+    END DO
+    
+    IF (hmat%l_real) THEN
+       hmat%data_r=hmat%data_r+REAL(hmat%data_c)
+    ENDIF
+
+ END SUBROUTINE priv_noMPI_cpu
+
+
+  SUBROUTINE priv_MPI(n,mpi,sym,atoms,isp,iintsp,jintsp,chi,noco,cell,lapw,td,fj,gj,hmat)
+!Calculate overlap matrix
+    USE m_hsmt_ab
+    USE m_constants, ONLY : fpi_const,tpi_const
+    USE m_types
+    USE m_ylm
+    IMPLICIT NONE
+    TYPE(t_mpi),INTENT(IN)      :: mpi
+    TYPE(t_sym),INTENT(IN)      :: sym
+    TYPE(t_noco),INTENT(IN)     :: noco
+    TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_lapw),INTENT(IN)     :: lapw
+    TYPE(t_tlmplm),INTENT(IN)   :: td
+    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
+    COMPLEX,INTENT(in)   :: chi
+    !     ..
+    !     .. Array Arguments ..
+    REAL,INTENT(IN) :: fj(:,0:,:),gj(:,0:,:)
+    CLASS(t_mat),INTENT(INOUT)::hmat
+
+    
+    INTEGER:: nn,na,ab_size,l,ll,m,i,ii
+    COMPLEX,ALLOCATABLE:: ab(:,:),ab1(:,:),ab_select(:,:)
+    real :: rchi
+
+    ALLOCATE(ab(MAXVAL(lapw%nv),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2),ab1(lapw%nv(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2),ab_select(lapw%num_local_cols(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2))
+
+    !IF (iintsp.NE.jintsp) ALLOCATE(ab_select1(lapw%num_local_cols(jintsp),2*atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+2))
+
+    IF (hmat%l_real) THEN
+       IF (ANY(SHAPE(hmat%data_c)/=SHAPE(hmat%data_r))) THEN
+          DEALLOCATE(hmat%data_c)
+          ALLOCATE(hmat%data_c(SIZE(hmat%data_r,1),SIZE(hmat%data_r,2)))
+       ENDIF
+       hmat%data_c=0.0
+    ENDIF
+    
+    DO nn = 1,atoms%neq(n)
+       na = SUM(atoms%neq(:n-1))+nn
+       IF ((atoms%invsat(na)==0) .OR. (atoms%invsat(na)==1)) THEN
+          rchi=MERGE(REAL(chi),REAL(chi)*2,(atoms%invsat(na)==0))
+          
+          CALL hsmt_ab(sym,atoms,noco,isp,jintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+          !Calculate Hamiltonian
+        
+          CALL zgemm("N","N",lapw%nv(jintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(0:,0:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
+          !Cut out of ab1 only the needed elements here
+          ab_select=ab1(mpi%n_rank+1:lapw%nv(jintsp):mpi%n_size,:)
+          IF (iintsp==jintsp) THEN
+             CALL zgemm("N","T",lapw%nv(iintsp),lapw%num_local_cols(iintsp),ab_size,CMPLX(rchi,0.0),CONJG(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(iintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))
+          ELSE
+             !Second set of ab is needed
+             CALL hsmt_ab(sym,atoms,noco,isp,iintsp,n,na,cell,lapw,fj,gj,ab,ab_size,.TRUE.)
+             CALL zgemm("N","N",lapw%nv(iintsp),ab_size,ab_size,CMPLX(1.0,0.0),ab,SIZE(ab,1),td%h_loc(:,:,n,isp),SIZE(td%h_loc,1),CMPLX(0.,0.),ab1,SIZE(ab1,1))
+             !Multiply for Hamiltonian
+             CALL zgemm("N","t",lapw%nv(iintsp),lapw%num_local_cols(jintsp),ab_size,chi,conjg(ab1),SIZE(ab1,1),ab_select,lapw%num_local_cols(jintsp),CMPLX(1.,0.0),hmat%data_c,SIZE(hmat%data_c,1))   
+          ENDIF
+       ENDIF
+    END DO
+    !delete lower part of matrix
+    !i=0
+    !DO ii=mpi%n_rank+1,lapw%nv(iintsp),mpi%n_size
+    !   i=i+1
+    !   hmat%data_c(ii+1:,i)=0.0
+    !ENDDO
+    IF (hmat%l_real) THEN
+       hmat%data_r=hmat%data_r+hmat%data_c
+    ENDIF
+    
+  END SUBROUTINE priv_MPI
+
+  
 END MODULE m_hsmt_nonsph

@@ -9,6 +9,7 @@
 
       IMPLICIT NONE
       
+      INTEGER, INTENT(IN) :: jmtd
       REAL, INTENT(IN) :: f(jmtd,2),g(jmtd,2)
       REAL, INTENT(IN) :: vr(jmtd)
       REAL, INTENT(IN) :: epar
@@ -16,7 +17,6 @@
       REAL, INTENT(IN) :: dx
       REAL, INTENT(IN) :: expect
       INTEGER, INTENT(IN) :: jri
-      INTEGER, INTENT(IN) :: jmtd
       INTEGER, INTENT(IN) :: l
 
       REAL, ALLOCATABLE :: x(:),dg(:,:),t(:,:),vv(:)

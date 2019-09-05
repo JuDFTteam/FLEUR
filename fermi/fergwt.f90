@@ -6,7 +6,7 @@ MODULE  m_fergwt
   !                                               c.l.fu
   !*****************************************************************
 CONTAINS
-  SUBROUTINE fergwt(kpts,input,mpi, ne,eig, results)
+  SUBROUTINE fergwt(kpts,input,mpi, ne,eig, ef,w_iks,seigv)
 
     USE m_constants
     USE m_types
@@ -15,7 +15,8 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)       :: mpi
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_kpts),INTENT(IN)      :: kpts
-    TYPE(t_results),INTENT(INOUT):: results
+    REAL,        INTENT(INOUT)   :: ef,seigv
+    REAL,INTENT(INOUT)           :: w_iks(:,:,:)
     !     ..
     !     ..
     !     .. Array Arguments ..
@@ -45,7 +46,7 @@ CONTAINS
                 nbnd = ne(k,jspin)
                 DO  i = 1,nbnd
                    en = eig(i,k,jspin)
-                   de = (en-results%ef)/input%delgau
+                   de = (en-ef)/input%delgau
                    wt = 2.0
                    IF (de.GT.eup) wt = 0.0
                    IF (de.GE.elow .AND. de.LE.eup) THEN
@@ -56,7 +57,7 @@ CONTAINS
                       END IF
                    END IF
                    s = s + wt*wtk
-                   results%w_iks(i,k,jspin) = wt/2.
+                   w_iks(i,k,jspin) = wt/2.
                 ENDDO
              ENDDO
           ENDDO
@@ -65,22 +66,22 @@ CONTAINS
           IF (ABS(zcdiff).LT.eps) EXIT conv_loop
           IF (ifl.EQ.0) THEN
              ifl = 1
-             ef0 = results%ef
-             results%ef = results%ef + 0.003
+             ef0 = ef
+             ef = ef + 0.003
              s0 = s
           ELSE
              fac = (s0-s)/ (input%zelec-s)
              IF (ABS(fac).LT.1.0e-1) THEN
-                ef0 = results%ef
+                ef0 = ef
                 s0 = s
                 IF (zcdiff.GE.zero) THEN
-                   results%ef = results%ef + 0.003
+                   ef = ef + 0.003
                 ELSE
-                   results%ef = results%ef - 0.003
+                   ef = ef - 0.003
                 END IF
              ELSE
-                ef1 = results%ef
-                results%ef = results%ef + (ef0-results%ef)/fac
+                ef1 = ef
+                ef = ef + (ef0-ef)/fac
                 ef0 = ef1
                 s0 = s
              END IF
@@ -90,10 +91,9 @@ CONTAINS
        IF ( mpi%irank == 0 ) WRITE (6,FMT=8000) eps
 8000   FORMAT (10x,'warning: eps has been increased to',e12.5)
     ENDDO conv_loop
-    workf = -hartree_to_ev_const*results%ef
+    workf = -hartree_to_ev_const*ef
     IF ( mpi%irank == 0 ) THEN
-       WRITE (16,FMT=8010) results%ef,workf,s
-       WRITE (6,FMT=8010) results%ef,workf,s
+       WRITE (6,FMT=8010) ef,workf,s
     END IF
 8010 FORMAT (/,10x,'fermi energy=',f10.5,' har',3x,'work function=',&
                 f10.5,' ev',/,10x,'number of valence electrons=',f10.5)
@@ -108,22 +108,21 @@ CONTAINS
           nbnd = ne(k,jspin)
           IF ( mpi%irank == 0 ) WRITE (6,FMT=8030) k
 8030      FORMAT (/,5x,'k-point=',i5,/)
-          results%w_iks(:,k,jspin) = kpts%wtkpt(k)*results%w_iks(:,k,jspin)
-          IF ( mpi%irank == 0) WRITE (6,FMT=8040) (results%w_iks(i,k,jspin),i=1,nbnd)
+          w_iks(:,k,jspin) = kpts%wtkpt(k)*w_iks(:,k,jspin)
+          IF ( mpi%irank == 0) WRITE (6,FMT=8040) (w_iks(i,k,jspin),i=1,nbnd)
 8040      FORMAT (5x,16f6.3)
        ENDDO
     ENDDO
     s1 = 0.
     s2 = 0.
-    results%seigv = 0.
     DO  jspin = 1,input%jspins
        s = 0.
        DO  k = 1,kpts%nkpt
           DO  i = 1,ne(k,jspin)
-             s = s + results%w_iks(i,k,jspin)
-             results%seigv = results%seigv + results%w_iks(i,k,jspin)*eig(i,k,jspin)
+             s = s + w_iks(i,k,jspin)
+             seigv = seigv + w_iks(i,k,jspin)*eig(i,k,jspin)
              en = eig(i,k,jspin)
-             de = (en-results%ef)/input%delgau
+             de = (en-ef)/input%delgau
              !     ---> correction term
              IF (ABS(de).LT.3.) THEN
                 de = de*de
@@ -133,12 +132,11 @@ CONTAINS
        ENDDO
        s1 = s1 + s
     ENDDO
-    results%seigv = (2/input%jspins)*results%seigv
+    seigv = (2/input%jspins)*seigv
     seigv1 = (1/input%jspins)*fact1*s2
     chmom = s1 - input%jspins*s
     IF ( mpi%irank == 0 ) THEN
-       WRITE (6,FMT=8050) results%seigv - seigv1,s1,chmom
-       WRITE (16,FMT=8050) results%seigv - seigv1,s1,chmom
+       WRITE (6,FMT=8050) seigv - seigv1,s1,chmom
     END IF
 8050 FORMAT (/,10x,'sum of eigenvalues-correction=',f12.5,/,10x,&
           'sum of weight                =',f12.5,/,10x,&

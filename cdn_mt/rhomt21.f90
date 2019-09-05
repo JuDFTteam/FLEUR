@@ -7,26 +7,33 @@ MODULE m_rhomt21
   !     FF
   !     ***************************************************************
 CONTAINS
-  SUBROUTINE rhomt21(atoms, we,ne,acof,bcof, ccof,mt21,lo21,uloulop21)
+  SUBROUTINE rhomt21(atoms,we,ne,eigVecCoeffs,uu21,ud21,du21,dd21,uulo21,dulo21,ulou21,ulod21,uloulop21)
 
-    USE m_types
+    USE m_types_setup
+    USE m_types_cdnval
+
     IMPLICIT NONE
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    !     ..
+
+    TYPE(t_atoms),       INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN)    :: eigVecCoeffs
+
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne 
-    !     ..
+    INTEGER,             INTENT(IN)    :: ne 
+
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: acof(:,0:,:,:)!(nobd,0:lmaxd* (lmaxd+2),natd,jspd)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:,:)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:,:) !(-llod:llod,nobd,nlod,natd,jspd)
-    REAL,    INTENT (IN) :: we(:)!(nobd)
-    TYPE (t_mt21), INTENT (INOUT) :: mt21(0:atoms%lmaxd,atoms%ntype)
-    TYPE (t_lo21), INTENT (INOUT) :: lo21(atoms%nlod,atoms%ntype)
-    COMPLEX,       INTENT (INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
-    !     ..
+    REAL,                INTENT(IN)    :: we(:)!(nobd)
+    COMPLEX,             INTENT(INOUT) :: uu21(0:atoms%lmaxd,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: ud21(0:atoms%lmaxd,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: du21(0:atoms%lmaxd,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: dd21(0:atoms%lmaxd,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: uulo21(atoms%nlod,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: dulo21(atoms%nlod,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: ulou21(atoms%nlod,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: ulod21(atoms%nlod,atoms%ntype)
+    COMPLEX,             INTENT(INOUT) :: uloulop21(atoms%nlod,atoms%nlod,atoms%ntype)
+
     !     .. Local Scalars ..
-    INTEGER   i,l,lm ,itype,na,natom,lo,lop,m
+    INTEGER i,l,lm,itype,na,natom,lo,lop,m
     natom = 0
     DO itype = 1,atoms%ntype
        DO na = 1,atoms%neq(itype)
@@ -39,10 +46,10 @@ CONTAINS
                 lm = l* (l+1) + m
                 !--->           sum over occupied bands
                 DO i = 1,ne
-                   mt21(l,itype)%uu = mt21(l,itype)%uu + we(i)* CONJG(acof(i,lm,natom,2))*acof(i,lm,natom,1)
-                   mt21(l,itype)%ud = mt21(l,itype)%ud + we(i)* CONJG(acof(i,lm,natom,2))*bcof(i,lm,natom,1)
-                   mt21(l,itype)%du = mt21(l,itype)%du + we(i)* CONJG(bcof(i,lm,natom,2))*acof(i,lm,natom,1)
-                   mt21(l,itype)%dd = mt21(l,itype)%dd + we(i)* CONJG(bcof(i,lm,natom,2))*bcof(i,lm,natom,1)
+                   uu21(l,itype) = uu21(l,itype) + we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,2))*eigVecCoeffs%acof(i,lm,natom,1)
+                   ud21(l,itype) = ud21(l,itype) + we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,2))*eigVecCoeffs%bcof(i,lm,natom,1)
+                   du21(l,itype) = du21(l,itype) + we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,2))*eigVecCoeffs%acof(i,lm,natom,1)
+                   dd21(l,itype) = dd21(l,itype) + we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,2))*eigVecCoeffs%bcof(i,lm,natom,1)
                 ENDDO ! i = 1,ne
              ENDDO   ! m = -l,l
           ENDDO     ! l
@@ -55,10 +62,10 @@ CONTAINS
              DO m = -l,l
                 lm = l* (l+1) + m
                 DO i = 1,ne
-                   lo21(lo,itype)%uulo = lo21(lo,itype)%uulo + we(i)* CONJG(acof(i,lm,natom,2))*ccof(m,i,lo,natom,1)
-                   lo21(lo,itype)%dulo = lo21(lo,itype)%dulo + we(i)* CONJG(bcof(i,lm,natom,2))*ccof(m,i,lo,natom,1)
-                   lo21(lo,itype)%ulou = lo21(lo,itype)%ulou + we(i)* CONJG(acof(i,lm,natom,1))*ccof(m,i,lo,natom,2)
-                   lo21(lo,itype)%ulod = lo21(lo,itype)%ulod + we(i)* CONJG(bcof(i,lm,natom,1))*ccof(m,i,lo,natom,2)
+                   uulo21(lo,itype) = uulo21(lo,itype) + we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,2))*eigVecCoeffs%ccof(m,i,lo,natom,1)
+                   dulo21(lo,itype) = dulo21(lo,itype) + we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,2))*eigVecCoeffs%ccof(m,i,lo,natom,1)
+                   ulou21(lo,itype) = ulou21(lo,itype) + we(i)* CONJG(eigVecCoeffs%acof(i,lm,natom,1))*eigVecCoeffs%ccof(m,i,lo,natom,2)
+                   ulod21(lo,itype) = ulod21(lo,itype) + we(i)* CONJG(eigVecCoeffs%bcof(i,lm,natom,1))*eigVecCoeffs%ccof(m,i,lo,natom,2)
                 ENDDO
              ENDDO
              !--->         contribution of local orbital - local orbital terms
@@ -68,7 +75,7 @@ CONTAINS
                    DO m = -l,l
                       DO i = 1,ne
                          uloulop21(lop,lo,itype) = uloulop21(lop,lo,itype)+&
-                              we(i)*CONJG(ccof(m,i,lop,natom,2))*ccof(m,i,lo, natom,1)
+                                                   we(i)*CONJG(eigVecCoeffs%ccof(m,i,lop,natom,2))*eigVecCoeffs%ccof(m,i,lo, natom,1)
                       ENDDO ! i = 1,ne
                    ENDDO   ! m = -l,l
                 ENDIF

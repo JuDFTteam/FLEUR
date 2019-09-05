@@ -28,33 +28,16 @@ CONTAINS
     COMPLEX, INTENT (INOUT)    :: n_mmp_in (-3:3,-3:3,atoms%n_u,input%jspins)
     !
     ! ... Locals ...
-    INTEGER j,k,iofl,l,itype,ios,i_u,jsp,lty(atoms%n_u)
+    INTEGER j,k,iofl,l,itype,ios,i_u,jsp
     REAL alpha,spinf,gam,del,sum1,sum2,mix_u, uParam, jParam
-    REAL    theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
-    LOGICAL n_exist
+    REAL    zero(atoms%n_u)
     CHARACTER(LEN=20)   :: attributes(6)
     COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
     !
     ! check for possible rotation of n_mmp
     !
-    INQUIRE (file='n_mmp_rot',exist=n_exist)
-    IF (n_exist) THEN
-       OPEN (68,file='n_mmp_rot',status='old',form='formatted')
-       DO i_u = 1, atoms%n_u
-          l = atoms%lda_u(i_u)%l
-          READ(68,*,iostat=ios) theta(i_u),phi(i_u)
-          IF (ios == 0) THEN
-             lty(i_u) = l
-          ELSE
-             IF (i_u == 1)  CALL juDFT_error("ERROR reading n_mmp_rot", calledby ="u_mix")
-             theta(i_u) = theta(i_u-1) ; phi(i_u) = phi(i_u-1)
-             lty(i_u) = lty(i_u-1)
-          END IF
-       END DO
-       CLOSE (68)
-       zero = 0.0
-       CALL nmat_rot(zero,-theta,-phi,3,atoms%n_u,input%jspins,lty,n_mmp_out)
-    END IF
+    zero=0.0
+    CALL nmat_rot(zero,-atoms%lda_u%theta,-atoms%lda_u%phi,3,atoms%n_u,input%jspins,atoms%lda_u%l,n_mmp_out)
 
     ! Write out n_mmp_out to out.xml file
 

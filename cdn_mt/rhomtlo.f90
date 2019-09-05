@@ -14,27 +14,19 @@ MODULE m_rhomtlo
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE rhomtlo(atoms, ne,we,acof,bcof,ccof, aclo,bclo,cclo)
+  SUBROUTINE rhomtlo(atoms,ne,we,eigVecCoeffs,denCoeffs,ispin)
 
     USE m_types
     IMPLICIT NONE
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne 
-    !     ..
-    !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(:)!(nobd)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:llod,nobd,atoms%nlod,atoms%nat)
-    REAL,    INTENT (INOUT):: aclo(atoms%nlod,atoms%ntype),bclo(atoms%nlod,atoms%ntype)
-    REAL,    INTENT (INOUT):: cclo(atoms%nlod,atoms%nlod,atoms%ntype)
-    !     ..
-    !     .. Local Scalars ..
-    INTEGER i,l,lm,lo,lop ,natom,nn,ntyp,m
-    !     ..
+    TYPE(t_atoms),        INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
+    INTEGER, INTENT (IN) :: ne, ispin
+
+    REAL,    INTENT (IN) :: we(:)!(nobd)
+
+    INTEGER i,l,lm,lo,lop ,natom,nn,ntyp,m
 
     natom = 0
     !---> loop over atoms
@@ -48,10 +40,10 @@ CONTAINS
              DO m = -l,l
                 lm = l* (l+1) + m
                 DO i = 1,ne
-                   aclo(lo,ntyp) = aclo(lo,ntyp) + we(i)*2*&
-                        real(conjg(acof(i,lm,natom))*ccof(m,i,lo,natom))
-                   bclo(lo,ntyp) = bclo(lo,ntyp) + we(i)*2*&
-                        real(conjg(bcof(i,lm,natom))*ccof(m,i,lo,natom))
+                   denCoeffs%aclo(lo,ntyp,ispin) = denCoeffs%aclo(lo,ntyp,ispin) + we(i)*2*&
+                        real(conjg(eigVecCoeffs%acof(i,lm,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
+                   denCoeffs%bclo(lo,ntyp,ispin) = denCoeffs%bclo(lo,ntyp,ispin) + we(i)*2*&
+                        real(conjg(eigVecCoeffs%bcof(i,lm,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
                 END DO
              END DO
              !--->       contribution of local orbital - local orbital terms
@@ -60,8 +52,8 @@ CONTAINS
                 IF (atoms%llo(lop,ntyp).EQ.l) THEN
                    DO m = -l,l
                       DO i = 1,ne
-                         cclo(lop,lo,ntyp) = cclo(lop,lo,ntyp) + we(i)*&
-                              real(conjg(ccof(m,i,lop,natom))*ccof(m,i,lo ,natom))
+                         denCoeffs%cclo(lop,lo,ntyp,ispin) = denCoeffs%cclo(lop,lo,ntyp,ispin) + we(i)*&
+                              real(conjg(eigVecCoeffs%ccof(m,i,lop,natom,ispin))*eigVecCoeffs%ccof(m,i,lo,natom,ispin))
                       END DO
                    END DO
                 END IF

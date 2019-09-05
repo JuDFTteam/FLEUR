@@ -6,17 +6,17 @@
 
 module m_corespec
 
-  USE m_types
+  USE m_types_setup, ONLY: t_coreSpecInput
 
   implicit none
 
 ! PARAMETERS
 
-  complex, parameter :: cone = cmplx(1.d0,0.d0)
-  complex, parameter :: cimu = cmplx(0.d0,1.d0)
-  real, parameter :: alpha = 7.29735257d-3
-  real, parameter :: mec2 = 0.51099891d6
-  real, parameter :: ecoredeep = 0.5d0
+  complex, parameter :: cone = cmplx(1.0,0.0)
+  complex, parameter :: cimu = cmplx(0.0,1.0)
+  real, parameter :: alpha = 7.29735257e-3
+  real, parameter :: mec2 = 0.51099891e6
+  real, parameter :: ecoredeep = 0.5
 
   integer, parameter :: edgel(11) = (/0,1,1,2,2,3,3,4,4,5,5/)
   integer, parameter :: edgej(11) = (/1,1,3,3,5,5,7,7,9,9,11/)
@@ -61,6 +61,11 @@ module m_corespec
      real, allocatable :: eloss(:,:)  ! efermi-eedge+egrid
      integer :: nen  ! minimum index for which egrid >=0
      integer :: nqv  ! no. of q vectors
+     integer :: nqphi ! no. of angle-sectors for integral over q vectors
+     integer :: nqr   ! no. of radial-sectors for integral over q vectors
+     real :: alpha_ex  ! maximal angle of incoming electrons
+     real :: beta_ex   ! maximal (measured) angle of outcoming electrons
+     real :: I0        ! incoming intensity
      real :: qv0  ! |q| of incoming electrons
      real, allocatable :: qv1(:,:,:)  ! |q| of outgoing electrons
      real, allocatable :: qv(:,:,:,:)  ! delta q vectors

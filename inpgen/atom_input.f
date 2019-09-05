@@ -6,7 +6,7 @@
 
       MODULE m_atominput
       use m_juDFT
-
+      INTEGER, PARAMETER ::  l_buffer=512   ! maximum length of e-config string
       INTEGER, PARAMETER  :: dbgfh=6, errfh=6, warnfh=6
       REAL, PARAMETER     :: eps=0.00000001
 
@@ -28,12 +28,11 @@
       USE m_readrecord
       USE m_setatomcore, ONLY : setatom_bystr, setcore_bystr
       USE m_constants
-      USE m_enpara,      ONLY : w_enpara,default_enpara
-
+    
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(INOUT)    :: input
-      TYPE(t_enpara),INTENT(INOUT)   :: enpara
+      TYPE(t_enpara),INTENT(OUT)     :: enpara
       TYPE(t_atoms),INTENT(INOUT)    :: atoms
 
 ! ... Arguments ...
@@ -53,7 +52,6 @@
       CHARACTER(len=xl_buffer) :: buffer
 
 !===> data
-      INTEGER, PARAMETER ::  l_buffer=512   ! maximum length of e-config string
       INTEGER, PARAMETER ::  nwdd=2         ! maximum number of windows
       INTEGER, PARAMETER ::  nstd=31        ! maximum number of core states
 
@@ -155,7 +153,7 @@
         ELSE
 !--->     read defaults for atom defaults
           CALL read_allatoms(
-     >                       bfh,l_buffer,
+     >                       bfh,
      <                       rmt0_def,dx0_def,jri0_def,lmax0_def,
      <                       lnonsph0_def,ncst0_def,econfig0_def,
      <                       bmu0_def,ios)
@@ -217,7 +215,7 @@
 
 !--->   read namelist
         CALL read_atom(
-     >                 bfh,l_buffer,lotype,
+     >                 bfh,lotype,
      <                 id,zat0,rmt0,jri0,dx0,lmax0,lnonsph0,
      <                 ncst0,econfig0,speciesName0,bmu0,lo0,nlod0,llod,
      <                 ios)
@@ -373,18 +371,9 @@
 
       IF ( ANY(atoms%bmu(:) > 0.0) ) input%jspins=2 
 
-      ALLOCATE (enpara%el0(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%evac0(2,input%jspins))
-      ALLOCATE (enpara%lchange(0:3,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%lchg_v(2,input%jspins))
-      ALLOCATE (enpara%skiplo(atoms%ntype,input%jspins))
-      ALLOCATE (enpara%ello0(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%llochg(atoms%nlod,atoms%ntype,input%jspins))
-      ALLOCATE (enpara%enmix(input%jspins))
-
-      enpara%el0 = -9999.9
-      enpara%ello0 = -9999.9
-      enpara%evac0 = eVac0Default_const
+      lmaxdTemp = atoms%lmaxd
+      atoms%lmaxd = 3
+      call enpara%init(atoms,input%jspins)
       DO n = 1, atoms%ntype
 
         CALL setcore_bystr(
@@ -659,22 +648,19 @@ c           in s and p states equal occupation of up and down states
         IF (atoms%nlo(n) /= 0) THEN                    ! check for local orbitals
           DO i = 1, atoms%nlo(n)
             enpara%ello0(i,n,:) = REAL(lonqn(i,n))
-            IF (lonqn(i,n) == NINT(enpara%el0(atoms%llo(i,n),n,1))) THEN  ! increase qn
-              enpara%el0(atoms%llo(i,n),n,:) = 
-     &           enpara%el0(atoms%llo(i,n),n,1) + 1          ! in LAPW's by 1
+            IF (lonqn(i,n) == enpara%qn_el(atoms%llo(i,n),n,1)) THEN  ! increase qn
+              enpara%qn_el(atoms%llo(i,n),n,:) = 
+     &           enpara%qn_el(atoms%llo(i,n),n,1) + 1          ! in LAPW's by 1
             ENDIF
           ENDDO
         ENDIF
         enpara%skiplo(n,:) = 0
         DO i = 1, atoms%nlo(n)
+          enpara%qn_ello(i,n,:) = enpara%qn_el(atoms%llo(i,n),n,:) - 1
           enpara%skiplo(n,:) = enpara%skiplo(n,1) + (2*atoms%llo(i,n)+1)
         ENDDO
 
       ENDDO
-
-      DO j = 1, input%jspins
-         CALL default_enpara(j,atoms,enpara)
-      END DO
 
       DO n = 1, atoms%ntype
 ! correct valence charge
@@ -683,8 +669,8 @@ c           in s and p states equal occupation of up and down states
                nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
                IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
                IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
-            ELSE IF (enpara%ello0(i,n,1).GE.
-     &               enpara%el0(atoms%llo(i,n),n,1)) THEN
+            ELSE IF (enpara%qn_ello(i,n,1).GE.
+     &               enpara%qn_el(atoms%llo(i,n),n,1)) THEN
                nel = nel - 2*(2*atoms%llo(i,n)+1)*atoms%neq(n)   
                IF (atoms%llo(i,n) == 0) atoms%ncst(n) = atoms%ncst(n)+1
                IF (atoms%llo(i,n) >  0) atoms%ncst(n) = atoms%ncst(n)+2
@@ -700,18 +686,9 @@ c           in s and p states equal occupation of up and down states
       enpara%enmix = 1.0
       enpara%lchg_v = .TRUE.
       IF(juDFT_was_argument("-genEnpara")) THEN
-         lmaxdTemp = atoms%lmaxd
-         atoms%lmaxd = 3
-         OPEN (40,file='enpara',form='formatted',status='unknown') ! write out an enpara-file
-         DO j = 1, input%jspins
-            OPEN (42)
-            CALL w_enpara(atoms,j,input%film,enpara,42)
-            CLOSE (42,status='delete')
-         ENDDO
-         CLOSE (40)
-         atoms%lmaxd = lmaxdTemp
+         CALL enpara%write(atoms,input%jspins,input%film)
       END IF
-
+      atoms%lmaxd = lmaxdTemp
       RETURN
 
 !===> error handling
@@ -772,7 +749,7 @@ c           in s and p states equal occupation of up and down states
 !----------------------------------------------------------------
 !================================================================
       SUBROUTINE read_allatoms(
-     >                         bfh,l_buffer,
+     >                         bfh,
      X                         rmt,dx,jri,lmax,lnonsph,ncst,econfig,
      <                         bmu,ios)
 !****************************************************************
@@ -781,7 +758,7 @@ c           in s and p states equal occupation of up and down states
 
       IMPLICIT NONE
 
-      INTEGER, INTENT (IN)    :: bfh,l_buffer
+      INTEGER, INTENT (IN)    :: bfh
       INTEGER, INTENT (INOUT) :: jri     ! mt radial mesh points
       INTEGER, INTENT (INOUT) :: lmax    ! max. l to include for density, overlap etc.
       INTEGER, INTENT (INOUT) :: lnonsph ! max. l for nonspherical MT-contributions
@@ -800,7 +777,7 @@ c           in s and p states equal occupation of up and down states
       END SUBROUTINE read_allatoms
 !================================================================
       SUBROUTINE read_atom(
-     >                     bfh,l_buffer,lotype,
+     >                     bfh,lotype,
      X                     id,z,rmt,jri,dx,lmax,lnonsph,ncst,econfig,
      <                     speciesName,bmu,lo,nlod,llod,ios )
 !***********************************************************************
@@ -811,7 +788,7 @@ c           in s and p states equal occupation of up and down states
       IMPLICIT NONE
 
 ! ... arguments ...
-      INTEGER, INTENT (IN)           :: bfh,l_buffer
+      INTEGER, INTENT (IN)           :: bfh
       REAL, INTENT (OUT)             :: id,z,rmt,dx,bmu
       INTEGER                        :: lmax,lnonsph,ncst,jri,nlod,llod
       CHARACTER(len=l_buffer)        :: econfig
@@ -950,14 +927,14 @@ c           in s and p states equal occupation of up and down states
 
 !Defaults
       ncst1 =(/0,0,                                            0,        ! Va,H,He
-     + 01, 01,                                  1, 1, 1, 1, 1, 1,        ! Li - Ne
-     + 304,304,                                  4, 4, 4, 4, 4, 4,       ! Na - Ar
-     + 307,307,307,307,307,307,307,307,207,207, 7,409,409,409,409,409,
+     + 01, 01,                                         1, 1, 1, 1, 1, 1,        ! Li - Ne
+     + 304,304,                                        4, 4, 4, 4, 4, 4,       ! Na - Ar
+     + 307,307,307,307,307,307,307,307,207,207, 7,  7,409,409,409,409,
      +                                                          409, 9,  ! K - Kr
-     + 312,312,312,312,312,312,312,212,212,212,312,414,414,414,414,414,
+     + 312,312,312,312,312,312,312,212,212,212,312,212,414,414,414,414,
      +                                                         414,414,  ! Rb - Xe
      + 317,317,217,217,217,217,217,217,217,217,217,17, 17,17,17,17,17,    ! Cs - Lu
-     +    1119,1119,319,319,219,219,219,219,619,421,421,421,421,421,421,  ! Hf - Rn
+     +    1119,1119,319,319,219,219,219,219,219,421,421,421,421,421,421,  ! Hf - Rn
      + 324,324,224,224,224,24,24,24,24,24,24,24, 24,24,24,24,24/)   ! Fr - Lw
 
       if (judft_was_argument("-fast_defaults")) 

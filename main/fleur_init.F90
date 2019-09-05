@@ -7,23 +7,21 @@
       IMPLICIT NONE
       CONTAINS
         SUBROUTINE fleur_init(mpi,&
-             input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
-             sliceplot,banddos,obsolete,enpara,xcpot,results,jij,kpts,hybrid,&
+             input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+             sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
+          USE m_types
           USE m_judft
           USE m_juDFT_init
-          USE m_types
           USE m_init_wannier_defaults
           USE m_rinpXML
           USE m_postprocessInput
-          USE m_dimens
-          USE m_inped
-          USE m_setup
           USE m_gen_map
           USE m_dwigner
           USE m_gen_bz
           USE m_ylm
           USE m_InitParallelProcesses
+          USE m_checkInputParams
           USE m_xmlOutput
           USE m_constants
           USE m_winpXML
@@ -31,10 +29,19 @@
           USE m_setupMPI
           USE m_cdn_io
           USE m_fleur_info
+          USE m_mixing_history
           USE m_checks
+          USE m_prpqfftmap
           USE m_writeOutHeader
+          USE m_fleur_init_old
+          USE m_types_xcpot_inbuild
+          USE m_mpi_bc_xcpot
+
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
+#ifndef CPP_OLDINTEL
+          USE m_mpi_dist_forcetheorem
+#endif
 #endif
 #ifdef CPP_HDF
           USE m_hdf_tools
@@ -43,6 +50,7 @@
           !     Types, these variables contain a lot of data!
           TYPE(t_mpi)    ,INTENT(INOUT):: mpi
           TYPE(t_input)    ,INTENT(OUT):: input
+          TYPE(t_field),    INTENT(OUT) :: field
           TYPE(t_dimension),INTENT(OUT):: DIMENSION
           TYPE(t_atoms)    ,INTENT(OUT):: atoms
           TYPE(t_sphhar)   ,INTENT(OUT):: sphhar
@@ -55,14 +63,14 @@
           TYPE(t_banddos)  ,INTENT(OUT):: banddos
           TYPE(t_obsolete) ,INTENT(OUT):: obsolete 
           TYPE(t_enpara)   ,INTENT(OUT):: enpara
-          TYPE(t_xcpot)    ,INTENT(OUT):: xcpot
+          CLASS(t_xcpot),ALLOCATABLE,INTENT(OUT):: xcpot
           TYPE(t_results)  ,INTENT(OUT):: results
-          TYPE(t_jij)      ,INTENT(OUT):: jij
           TYPE(t_kpts)     ,INTENT(OUT):: kpts
           TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
           TYPE(t_oneD)     ,INTENT(OUT):: oneD
           TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
           TYPE(t_wann)     ,INTENT(OUT):: wann
+          CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT)::forcetheo
           LOGICAL,          INTENT(OUT):: l_opti
 
 
@@ -76,11 +84,11 @@
           INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType
           COMPLEX    :: cdum
           CHARACTER(len=4)              :: namex
-          CHARACTER(len=12)             :: relcor, tempNumberString
+          CHARACTER(len=12)             :: relcor
           CHARACTER(LEN=20)             :: filename
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: dtild, phi_add
-          LOGICAL                       :: l_found, l_kpts, l_exist, l_krla
+          LOGICAL                       :: l_found, l_kpts, l_exist
 
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
@@ -95,33 +103,23 @@
           INQUIRE(file='inp',exist=l_found)
           IF (input%l_inpXML) THEN
              !xml found, we will use it, check if we also have a inp-file
-             IF (l_found.AND..NOT.(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml"))) &
-                  CALL judft_warn("Both inp & inp.xml given.",calledby="fleur_init",hint="Please delete one of the input files or specify -xml to use inp.xml")
+             IF (l_found) CALL judft_warn("Both inp & inp.xml given.", calledby="fleur_init",hint="Please delete one of the input files")
           ELSE
-             IF(juDFT_was_argument("-xmlInput").OR.juDFT_was_argument("-xml")) &
-                  CALL judft_error("inp.xml not found",calledby="fleur_init",hint="You gave the -xml option but provided no inp.xml file")
              IF (.NOT.l_found) CALL judft_error("No input file found",calledby='fleur_init',hint="To use FLEUR, you have to provide either an 'inp' or an 'inp.xml' file in the working directory")
           END IF
-
-
 
           CALL check_command_line()
 #ifdef CPP_HDF
           CALL hdf_init()
 #endif
-          results%seigscv         = 0.0
-          results%te_vcoul        = 0.0
-          results%te_veff         = 0.0
-          results%te_exc          = 0.0
-          results%te_hfex%valence = 0.0
-          results%te_hfex%core    = 0.0
-          results%e_ldau          = 0.0
-          results%ts              = 0.0
+          !call juDFT_check_para()
+          CALL field%init(input)
+
           input%gw                = -1
           input%gw_neigd          =  0
           !-t3e
           IF (mpi%irank.EQ.0) THEN
-             CALL startXMLOutput()
+             CALL startFleur_XMLOutput()
              IF (judft_was_argument("-info")) THEN
                   CLOSE(6)
                   OPEN (6,status='SCRATCH')
@@ -130,12 +128,10 @@
                   OPEN (6,file='out',form='formatted',status='unknown')
              ENDIF
              CALL writeOutHeader()
-             IF (judft_was_argument("-info")) THEN
-                OPEN (16,status='SCRATCH')
-             ELSE
-                OPEN (16,file='inf',form='formatted',status='unknown')
-             ENDIF
+             !OPEN (16,status='SCRATCH')
           ENDIF
+
+          input%l_rdmft = .FALSE.
 
           input%l_wann = .FALSE.
           CALL initWannierDefaults(wann)
@@ -149,6 +145,11 @@
           input%scaleA1 = 1.0
           input%scaleA2 = 1.0
           input%scaleC = 1.0
+          input%forcealpha = 1.0
+          input%forcemix = 2 ! BFGS is default.
+          input%epsdisp = 0.00001
+          input%epsforce = 0.00001
+          input%numBandsKPoints = -1
 
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
@@ -159,7 +160,18 @@
           sliceplot%e2s = 0.0
           sliceplot%nnne = 0
 
-          IF (input%l_inpXML) THEN
+          banddos%l_mcd = .FALSE.
+          banddos%e_mcd_lo = -10.0
+          banddos%e_mcd_up = 0.0
+
+          banddos%unfoldband = .FALSE.
+          banddos%s_cell_x = 1
+          banddos%s_cell_y = 1
+          banddos%s_cell_z = 1
+
+          noco%l_mtNocoPot = .FALSE.
+
+          IF (input%l_inpXML) THEN            
              ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
                 WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
@@ -172,28 +184,34 @@
                 a1 = 0.0
                 a2 = 0.0
                 a3 = 0.0
+                CALL timestart("r_inpXML") 
                 CALL r_inpXML(&
-                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,&
-                     cell,sym,xcpot,noco,Jij,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
+                     atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
+                     cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
-
-                ALLOCATE (results%force(3,atoms%ntype,DIMENSION%jspd))
-                ALLOCATE (results%force_old(3,atoms%ntype))
-                results%force(:,:,:) = 0.0
+                CALL timestop("r_inpXML") 
              END IF
-
-             CALL postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                                   oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
-                                   noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
+             CALL mpi_bc_xcpot(xcpot,mpi)
+#ifdef CPP_MPI
+#ifndef CPP_OLDINTEL
+             CALL mpi_dist_forcetheorem(mpi,forcetheo)
+#endif
+#endif
+            
+             CALL timestart("postprocessInput") 
+             CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
+                                   oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
+                                   noco,dimension,enpara,sphhar,l_opti,l_kpts)
+             CALL timestop("postprocessInput") 
 
              IF (mpi%irank.EQ.0) THEN
                 filename = ''
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
-                              atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                              cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
+                              atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+                              cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                               noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
                               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
@@ -207,215 +225,21 @@
 
 #ifdef CPP_MPI
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
-                  DIMENSION,cell,sym,xcpot,noco,jij,oneD,hybrid,&
-                  kpts,enpara,sphhar,mpi,results,obsolete)
+                  DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
+                  kpts,enpara,sphhar,mpi,obsolete)
+
 #endif
 
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
-
-             namex = '    '
-             relcor = '            '
-
-             !--- J< 
-             jij%l_wr=.TRUE.
-             jij%nqptd=1
-             jij%nmagn=1
-             jij%mtypes=1
-             jij%phnd=1
-             !--- J>
-
-             CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
-                         obsolete,kpts,oneD,hybrid,Jij)
-
-             DIMENSION%nn2d= (2*stars%mx1+1)* (2*stars%mx2+1)
-             DIMENSION%nn3d= (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)
-             !-odim
-             IF (oneD%odd%d1) THEN
-                oneD%odd%k3 = stars%mx3
-                oneD%odd%nn2d = (2*(oneD%odd%k3) + 1)*(2*(oneD%odd%M) + 1)
-             ELSE
-                oneD%odd%k3 = 0 ; oneD%odd%M =0 ; oneD%odd%nn2d = 1
-                oneD%odd%mb = 0
-             ENDIF
-             !-odim
-             ALLOCATE ( atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),atoms%nlhtyp(atoms%ntype))
-             ALLOCATE ( sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd),stars%ustep(stars%ng3) )
-             ALLOCATE ( stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3),stars%ig2(stars%ng3) )
-             ALLOCATE ( atoms%jri(atoms%ntype),stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3),sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd) )
-             ALLOCATE (sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
-             ALLOCATE ( atoms%lmax(atoms%ntype),sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))!,sym%mrot(3,3,sym%nop) )
-             ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),atoms%ngopr(atoms%nat) )
-             ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
-             ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
-             ALLOCATE ( stars%igfft(0:DIMENSION%nn3d-1,2),stars%igfft2(0:DIMENSION%nn2d-1,2),atoms%nflip(atoms%ntype) )
-             ALLOCATE ( atoms%ncst(atoms%ntype) )
-             ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
-             ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
-             ALLOCATE ( sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop) )
-             ALLOCATE ( atoms%invsat(atoms%nat),sym%invsatnr(atoms%nat) )
-             ALLOCATE ( atoms%lnonsph(atoms%ntype) )
-             ALLOCATE ( atoms%dx(atoms%ntype),atoms%pos(3,atoms%nat))!,sym%tau(3,sym%nop) )
-             ALLOCATE ( atoms%rmsh(atoms%jmtd,atoms%ntype),atoms%rmt(atoms%ntype),stars%sk2(stars%ng2),stars%sk3(stars%ng3) )
-             ALLOCATE ( stars%phi2(stars%ng2) )
-             ALLOCATE ( atoms%taual(3,atoms%nat),atoms%volmts(atoms%ntype),atoms%zatom(atoms%ntype) )
-             ALLOCATE ( enpara%el0(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
-             ALLOCATE ( enpara%evac0(2,DIMENSION%jspd),stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3)  )
-             ALLOCATE ( results%force(3,atoms%ntype,DIMENSION%jspd) )
-             ALLOCATE ( results%force_old(3,atoms%ntype) )
-             ALLOCATE ( kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt) )
-             ALLOCATE ( stars%pgfft(0:DIMENSION%nn3d-1),stars%pgfft2(0:DIMENSION%nn2d-1) )
-             ALLOCATE ( stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1) )
-             ALLOCATE ( atoms%bmu(atoms%ntype),atoms%vr0(atoms%ntype) )
-             ALLOCATE ( enpara%lchange(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd) )
-             ALLOCATE ( enpara%lchg_v(2,DIMENSION%jspd),atoms%l_geo(atoms%ntype) )
-             ALLOCATE ( atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),enpara%skiplo(atoms%ntype,DIMENSION%jspd) )
-             ALLOCATE ( enpara%ello0(atoms%nlod,atoms%ntype,DIMENSION%jspd),enpara%llochg(atoms%nlod,atoms%ntype,DIMENSION%jspd) )
-             ALLOCATE ( atoms%lo1l(0:atoms%llod,atoms%ntype),atoms%nlol(0:atoms%llod,atoms%ntype),atoms%lapw_l(atoms%ntype) )
-             ALLOCATE ( noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype),noco%l_relax(atoms%ntype) )
-             ALLOCATE ( jij%alph1(atoms%ntype),jij%l_magn(atoms%ntype),jij%M(atoms%ntype) )
-             ALLOCATE ( jij%magtype(atoms%ntype),jij%nmagtype(atoms%ntype) )
-             ALLOCATE ( noco%b_con(2,atoms%ntype),atoms%lda_u(atoms%ntype),atoms%l_dulo(atoms%nlod,atoms%ntype) )
-             ALLOCATE ( enpara%enmix(DIMENSION%jspd),sym%d_wgn(-3:3,-3:3,3,sym%nop) )
-             ALLOCATE ( atoms%ulo_der(atoms%nlod,atoms%ntype) )
-             ALLOCATE ( noco%soc_opt(atoms%ntype+2) )
-             ALLOCATE ( atoms%numStatesProvided(atoms%ntype))
-             ALLOCATE ( kpts%ntetra(4,kpts%ntet), kpts%voltet(kpts%ntet))
-             !+odim
-             ALLOCATE ( oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M) )
-             ALLOCATE ( oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d) )
-             ALLOCATE ( oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop) )
-             ALLOCATE ( oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop) )
-             ALLOCATE ( oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1) )
-             stars%sk2(:) = 0.0 ; stars%phi2(:) = 0.0
-             !-odim
-
-             ! HF/hybrid functionals/EXX
-             ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
-           
-             kpts%specificationType = 0
-             atoms%numStatesProvided(:) = 0
-             input%l_coreSpec = .FALSE.
-
-             jij%M(:)             = 0.0
-             jij%l_magn(:)        =.FALSE.
-
-             atoms%vr0(:)         = 0.0
-             results%force(:,:,:) = 0.0
-
-             CALL timestart("preparation:stars,lattice harmonics,+etc")
-
-             !+t3e
-             IF (mpi%irank.EQ.0) THEN
-                !-t3e
-                CALL inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
-                           cell,sliceplot,noco,&
-                           stars,oneD,jij,hybrid,kpts,a1,a2,a3,namex,relcor)
-                !
-                IF (xcpot%is_gga()) THEN
-                   ALLOCATE (stars%ft2_gfx(0:DIMENSION%nn2d-1),stars%ft2_gfy(0:DIMENSION%nn2d-1))
-                   ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
-                             oneD%pgft1xy(0:oneD%odd%nn2d-1),&
-                             oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
-                ELSE
-                   ALLOCATE (stars%ft2_gfx(0:1),stars%ft2_gfy(0:1))
-                   ALLOCATE (oneD%pgft1x(0:1),oneD%pgft1xx(0:1),oneD%pgft1xy(0:1),&
-                             oneD%pgft1y(0:1),oneD%pgft1yy(0:1))
-                ENDIF
-                oneD%odd%nq2 = oneD%odd%n2d
-                oneD%odi%nq2 = oneD%odd%nq2
-                !-odim
-                !+t3e
-                INQUIRE(file="cdn1",exist=l_opti)
-                IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
-                l_opti=.NOT.l_opti
-                IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-                     &    (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
-                !
-
-                namex=xcpot%get_name()
-                l_krla = xcpot%krla.EQ.1
-             END IF ! mpi%irank.eq.0
-
-#ifdef CPP_MPI
-             CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
-             CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-#endif
-             IF (mpi%irank.NE.0) THEN
-                CALL xcpot%init(namex,l_krla)
-             END IF
-
-             CALL setup(mpi,atoms,kpts,DIMENSION,sphhar,&
-                        obsolete,sym,stars,oneD,input,noco,&
-                        vacuum,cell,xcpot,&
-                        sliceplot,enpara,l_opti)
-
-             IF (mpi%irank.EQ.0) THEN
-                !
-                stars%ng3=stars%ng3 ; stars%ng2=stars%ng2 
-                !+t3e
-                banddos%l_orb = .FALSE.
-                banddos%orbCompAtom = 0
-
-                ALLOCATE(xcpot%lda_atom(atoms%ntype))
-                ALLOCATE(noco%socscale(atoms%ntype))
-                xcpot%lda_atom(:) = .FALSE.
-                noco%socscale(:) = 1.0
-
-                IF(juDFT_was_argument("-toXML")) THEN
-                   WRITE(*,*) ''
-                   WRITE(*,*) 'Please note:'
-                   WRITE(*,*) 'The inp to xml input conversion is experimental and'
-                   WRITE(*,*) 'only made for basic inp files without sophisticated'
-                   WRITE(*,*) 'parametrizations. You might have to adjust the generated'
-                   WRITE(*,*) 'file by hand to really obtain an adequate input file.'
-                   WRITE(*,*) 'Also the generated XML input file is not meant to be'
-                   WRITE(*,*) 'beautiful.'
-                   WRITE(*,*) ''
-                   ALLOCATE(noel(atoms%ntype),atomTypeSpecies(atoms%ntype),speciesRepAtomType(atoms%ntype))
-                   ALLOCATE(xmlElectronStates(29,atoms%ntype),xmlPrintCoreStates(29,atoms%ntype))
-                   ALLOCATE(xmlCoreOccs(1,1,1),atoms%label(atoms%nat))
-                   filename = 'inpConverted.xml'
-                   xmlElectronStates = noState_const
-                   xmlPrintCoreStates = .FALSE.
-                   DO i = 1, atoms%nat
-                      WRITE(atoms%label(i),'(i0)') i
-                   END DO
-                   DO i = 1, atoms%ntype
-                      noel(i) = namat_const(atoms%nz(i))
-                      atomTypeSpecies(i) = i
-                      speciesRepAtomType(i) = i
-                   END DO
-                   numSpecies = SIZE(speciesRepAtomType)
-                   ALLOCATE(atoms%speciesName(numSpecies))
-                   atoms%speciesName = ''
-                   DO i = 1, numSpecies
-                      tempNumberString = ''
-                      WRITE(tempNumberString,'(i0)') i
-                      atoms%speciesName(i) = TRIM(ADJUSTL(noel(speciesRepAtomType(i)))) // '-' // TRIM(ADJUSTL(tempNumberString))
-                   END DO
-                   a1(:) = a1(:) / input%scaleCell
-                   a2(:) = a2(:) / input%scaleCell
-                   a3(:) = a3(:) / input%scaleCell
-                   kpts%specificationType = 3
-                   sym%symSpecType = 3
-                   CALL w_inpXML(&
-                                 atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-                                 cell,sym,xcpot,noco,jij,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
-                                 noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
-                                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
-                                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&
-                                 .TRUE.,numSpecies,enpara)
-                   DEALLOCATE(atoms%speciesName, atoms%label)
-                   DEALLOCATE(noel,atomTypeSpecies,speciesRepAtomType)
-                   DEALLOCATE(xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs)
-                   CALL juDFT_end("Fleur inp to XML input conversion completed.")
-                END IF
-             END IF ! mpi%irank.eq.0
-             CALL timestop("preparation:stars,lattice harmonics,+etc")
-
+             CALL fleur_init_old(mpi,&
+                  input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+                  sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
+                  oneD,coreSpecInput,l_opti)
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
-          !-odim
+  
+          IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,input%jspins,.FALSE.)
+                   !-odim
           oneD%odd%nq2 = oneD%odd%n2d
           oneD%odd%kimax2 = oneD%odd%nq2 - 1
           oneD%odd%nat = atoms%nat
@@ -448,8 +272,9 @@
           CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(atoms%n_u,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(atoms%lmaxd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+          call MPI_BCAST( input%preconditioning_param, 1, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
-          CALL ylmnorm_init(atoms%lmaxd)
+          CALL ylmnorm_init(max(atoms%lmaxd, 2*hybrid%lexp))
           !
           !--> determine more dimensions
           !
@@ -457,69 +282,17 @@
           DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
           DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
 
-
-          IF (mpi%irank.EQ.0) THEN
-
-             !--- J< 
-             jij%l_jenerg = .FALSE.
-             IF (jij%l_J) THEN
-                OPEN (113,file='qpts',status='old')
-                INQUIRE(file='jenerg',exist=jij%l_jenerg)
-                OPEN (114,file='jenerg',status='unknown')
-                READ (113,*) jij%nqptd
-             ENDIF
-          ENDIF!(mpi%irank.EQ.0)
-
+          ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
+          ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
 #ifdef CPP_MPI
-          CALL MPI_BCAST(jij%nqptd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-          CALL MPI_BCAST(jij%l_jenerg,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+          CALL mpi_bc_all(mpi,stars,sphhar,atoms,obsolete,sym,kpts,DIMENSION,input,field,&
+                          banddos,sliceplot,vacuum,cell,enpara,noco,oneD,hybrid)
 #endif
-          ALLOCATE ( jij%qj(3,jij%nqptd) )
-          jij%nqpt=jij%nqptd
-          !+t3e
-          IF (mpi%irank.EQ.0) THEN
-             !-t3e
-             IF (jij%l_J) THEN
-                IF(jij%l_disp)THEN
-                   WRITE(6,*) 'q points for the magnon spectrum calculation:'
-                ELSE
-                   WRITE(6,*) 'q points for the J-constants calculation:'
-                ENDIF
-                WRITE(6,*)'      q1       ','      q2       ','      q3'
-                DO i=1,jij%nqpt
-                   READ (113,3333) jij%qj(1:3,i)
-                   WRITE(6,3333) jij%qj(1:3,i)
-                ENDDO
-3333            FORMAT(3(f14.10,1x))
-             ENDIF !(jij%l_J)
-             !+t3e
-          ENDIF
-          !-t3e
-          !--- J>
 
-          !Now check for additional input files
-          IF (mpi%irank.EQ.0) THEN
-             IF(.NOT.banddos%l_orb) THEN
-                INQUIRE(file='orbcomp',exist=banddos%l_orb)
-                IF (banddos%l_orb) THEN
-                   OPEN (111,file='orbcomp',form='formatted')
-                   READ (111,*) banddos%orbCompAtom
-                   CLOSE (111)
-                END IF
-             END IF
-             INQUIRE(file='mcd_inp',exist=banddos%l_mcd)
-          END IF
+          ! Set up pointer for backtransformation from g-vector in positive 
+          ! domain of carge density fftibox into stars
+          CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
-
-#ifdef CPP_MPI
-          CALL mpi_bc_all(&
-               &           mpi,stars,sphhar,atoms,obsolete,&
-               &           sym,kpts,jij,DIMENSION,input,&
-               &           banddos,sliceplot,vacuum,cell,enpara,&
-               &           noco,oneD,xcpot,hybrid)
-          ! initialize record length of the eig file
-
-#endif 
           atoms%nlotot = 0
           DO n = 1, atoms%ntype
              DO l = 1,atoms%nlo(n)
@@ -527,7 +300,6 @@
              ENDDO
           ENDDO
 
-          jij%qn = 0.0
           !-t3e
           !-odim
           oneD%odd%nq2 = oneD%odd%n2d
@@ -553,19 +325,7 @@
           oneD%odg%pgfxx => oneD%pgft1xx ; oneD%odg%pgfyy => oneD%pgft1yy ; oneD%odg%pgfxy => oneD%pgft1xy
           !+odim
           IF (noco%l_noco) DIMENSION%nbasfcn = 2*DIMENSION%nbasfcn
-          !
-          !--- J<
-          IF (jij%l_J) THEN
-             input%itmax = 1
-             jij%phnd=2
-             jij%nkpt_l = CEILING(REAL(kpts%nkpt)/mpi%isize)
-             ALLOCATE ( jij%eig_l(DIMENSION%neigd+5,jij%nkpt_l) )
-          ELSE
-             jij%nkpt_l = 1
-             ALLOCATE ( jij%eig_l(DIMENSION%neigd+5,1) )
-          ENDIF
-          !--- J>
-
+          
           IF( sym%invs .OR. noco%l_soc ) THEN
              sym%nsym = sym%nop
           ELSE
@@ -573,6 +333,8 @@
              ! thus the symmetry operations are doubled
              sym%nsym = 2*sym%nop
           END IF
+
+          CALL checkInputParams(mpi,input,dimension,atoms,noco,xcpot,oneD)
 
           ! Initializations for Wannier functions (start)
           IF (mpi%irank.EQ.0) THEN
@@ -673,24 +435,17 @@
 
           ! Initializations for Wannier functions (end)
 
-          IF (    xcpot%is_hybrid() ) THEN
-             IF (input%film .OR. oneD%odi%d1)&
-                  &    CALL juDFT_error("2D film and 1D calculations not implemented"&
-                  &                 //"for HF/EXX/PBE0/HSE", calledby ="fleur",&
-                  &                 hint="Use a supercell or a different functional")
+          IF (xcpot%is_hybrid().OR.input%l_rdmft) THEN
 
 !             IF( ANY( atoms%l_geo  ) )&
 !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
 !                  &                    calledby ="fleur")
 
-!             IF (.NOT. obsolete%pot8) STOP 'Choose pot8=T'
              !calculate whole Brilloun zone
              !CALL gen_bz(kpts,sym)
-             CALL gen_map(&
-                  &          atoms,sym,oneD,hybrid)
-             !
+             CALL gen_map(atoms,sym,oneD,hybrid)
+
              ! calculate d_wgn
-             !
              ALLOCATE (hybrid%d_wgn2(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,sym%nsym))
              CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,hybrid%d_wgn2(:,:,1:,:sym%nop))
              hybrid%d_wgn2(:,:,0,:) = 1
@@ -732,29 +487,51 @@
                 END IF
              END IF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
-             hybrid%l_calhf   = .FALSE.
+             hybrid%l_calhf = .FALSE.
+          END IF
+
+          IF(input%l_rdmft) THEN
+             hybrid%l_calhf = .FALSE.
           END IF
  
           IF (mpi%irank.EQ.0) THEN
              CALL writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                                     oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
+                                     oneD,hybrid,cell,banddos,sliceplot,xcpot,&
                                      noco,dimension,enpara,sphhar)
              CALL fleur_info(kpts)
              CALL deleteDensities()
           END IF
 
           !Finalize the MPI setup
-          CALL setupMPI(kpts%nkpt,mpi)
+          CALL setupMPI(kpts%nkpt,DIMENSION%neigd,mpi)
+
+          !Collect some usage info
+          CALL add_usage_data("A-Types",atoms%ntype)
+          CALL add_usage_data("Atoms",atoms%nat)
+          CALL add_usage_data("Real",sym%invs.AND..NOT.noco%l_noco)
+          CALL add_usage_data("Spins",input%jspins)
+          CALL add_usage_data("Noco",noco%l_noco)
+          CALL add_usage_data("SOC",noco%l_soc)
+          CALL add_usage_data("SpinSpiral",noco%l_ss)
+          CALL add_usage_data("PlaneWaves",DIMENSION%nvd)
+          CALL add_usage_data("LOs",atoms%nlotot)
+          CALL add_usage_data("nkpt", kpts%nkpt)
+
+#ifdef CPP_GPU
+         CALL add_usage_data("gpu_per_node",1)
+#else
+         CALL add_usage_data("gpu_per_node",0)
+#endif
+          
+          CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN
+             IF(input%gw.NE.0) CALL mixing_history_reset(mpi)
              CALL setStartingDensity(noco%l_noco)
           END IF
 
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
-
-          !check for broken feature
-          IF ((mpi%n_size>1).and.(ANY(atoms%nlo(:)>0)).and.(noco%l_noco)) call judft_warn("Eigenvector parallelization is broken for noco&LOs")
 
         END SUBROUTINE fleur_init
       END MODULE m_fleur_init

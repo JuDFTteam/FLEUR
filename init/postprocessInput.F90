@@ -8,15 +8,14 @@ MODULE m_postprocessInput
 
 CONTAINS
 
-SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
-                            oneD,hybrid,jij,cell,banddos,sliceplot,xcpot,&
-                            noco,dimension,enpara,sphhar,l_opti,noel,l_kpts)
+SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
+     oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
+     noco,DIMENSION,enpara,sphhar,l_opti,l_kpts)
 
   USE m_juDFT
   USE m_types
   USE m_constants
-  USE m_julia
-  USE m_apwsdim
+  USE m_lapwdim
   USE m_ylm
   USE m_convndim
   USE m_chkmt
@@ -29,21 +28,22 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   USE m_strgn
   USE m_od_strgn1
   USE m_prpqfft
-  USE m_writegw
   USE m_prpxcfft
   USE m_stepf
   USE m_convn
   USE m_efield
   USE m_od_mapatom
-  USE m_kptgen_hybrid
   USE m_od_kptsgen
   USE m_gen_bz
   USE m_nocoInputCheck
-  USE m_kpoints
+  USE m_kpoints   
+  USE m_types_forcetheo_extended
+  USE m_relaxio
 
   IMPLICIT NONE
 
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi
+  CLASS(t_forcetheo),INTENT(IN)   :: forcetheo
   TYPE(t_input),    INTENT(INOUT) :: input
   TYPE(t_sym),      INTENT(INOUT) :: sym
   TYPE(t_stars),    INTENT(INOUT) :: stars 
@@ -53,31 +53,26 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
   TYPE(t_kpts),     INTENT(INOUT) :: kpts
   TYPE(t_oneD),     INTENT(INOUT) :: oneD
   TYPE(t_hybrid),   INTENT(INOUT) :: hybrid
-  TYPE(t_Jij),      INTENT(INOUT) :: jij
   TYPE(t_cell),     INTENT(INOUT) :: cell
   TYPE(t_banddos),  INTENT(INOUT) :: banddos
   TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
-  TYPE(t_xcpot),    INTENT(INOUT) :: xcpot
+  CLASS(t_xcpot),   INTENT(INOUT) :: xcpot
   TYPE(t_noco),     INTENT(INOUT) :: noco
   TYPE(t_dimension),INTENT(INOUT) :: dimension
   TYPE(t_enpara)   ,INTENT(INOUT) :: enpara
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
+  TYPE(t_field),    INTENT(INOUT) :: field
   LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
-  CHARACTER(len=3), ALLOCATABLE, INTENT(IN) :: noel(:)
 
-  INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt, iqpt
-  INTEGER              :: minNeigd, nv, nv2, kq1, kq2, kq3, jrc, jsp, ii
+  INTEGER              :: i, j, n, na, iType, l, ilo
+  INTEGER              :: minNeigd, jrc, ii
   INTEGER              :: ios, ntst, ierr
-  REAL                 :: sumWeight, rmtmax, zp, radius, dr
-  REAL                 :: kmax1, dtild1, dvac1
-  REAL                 :: bk(3)
-  LOGICAL              :: l_vca, l_test,l_gga, l_krla
-  CHARACTER(len=4)     :: namex
-
+  REAL                 :: rmtmax, zp, radius, dr
+  LOGICAL              :: l_vca, l_test
+ 
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
-  INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
-  REAL,    ALLOCATABLE :: rmt1(:), dx1(:)
+  REAL,    ALLOCATABLE :: rmt1(:)
 
 #ifdef CPP_MPI
   INCLUDE 'mpif.h'
@@ -99,9 +94,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         IF (atoms%nlo(iType).GE.1) THEN
            IF (input%secvar) THEN
               CALL juDFT_error("LO + sevcar not implemented",calledby ="postprocessInput")
-           END IF
-           IF (input%isec1<input%itmax) THEN
-              CALL juDFT_error("LO + Wu not implemented",calledby ="postprocessInput")
            END IF
            IF (atoms%nlo(iType).GT.atoms%nlod) THEN
               WRITE (6,*) 'nlo(n) =',atoms%nlo(iType),' > nlod =',atoms%nlod
@@ -152,10 +144,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
            WRITE (6,*) 'atoms%lapw_l(n) = ',atoms%lapw_l(iType)
         END IF
 
-        enpara%skiplo(iType,:) = 0
-        DO j = 1, atoms%nlo(iType)
-           enpara%skiplo(iType,:) = enpara%skiplo(iType,1) + (2*atoms%llo(j,iType)+1)
-        END DO
      END DO
 
      ! Check lda+u stuff (from inped)
@@ -172,7 +160,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
 
      IF (atoms%n_u.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
-        IF (input%isec1<input%itmax) CALL juDFT_error("LDA+U and Wu not implemented",calledby ="postprocessInput")
         IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
      END IF
 
@@ -214,9 +201,9 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ! Check noco stuff and calculate missing noco parameters
 
      IF (noco%l_noco) THEN
-        CALL nocoInputCheck(atoms,input,vacuum,jij,noco)
+        CALL nocoInputCheck(atoms,input,vacuum,noco)
 
-        IF (.not.jij%l_j.and.noco%l_ss) THEN
+        IF (noco%l_ss) THEN
 
            !--->    the angle beta is relative to the spiral in a spin-spiral
            !--->    calculation, i.e. if beta = 0 for all atoms in the unit cell
@@ -226,8 +213,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
 
            na = 1
            DO iType = 1,atoms%ntype
-              noco%phi = tpi_const*dot_product(noco%qss,atoms%taual(:,na))
-              noco%alph(iType) = noco%alphInit(iType) + noco%phi
+              noco%alph(iType) = noco%alphInit(iType) + tpi_const*dot_product(noco%qss,atoms%taual(:,na))
               na = na + atoms%neq(iType)
            END DO
         END IF
@@ -236,17 +222,21 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
            CALL judft_warn("l_noco=F and l_ss=T is meaningless. Setting l_ss to F.")
            noco%l_ss = .FALSE.
         END IF
+        IF (noco%l_mperp) THEN
+           CALL judft_warn("l_noco=F and l_mperp=T is meaningless. Setting l_mperp to F.")
+           noco%l_mperp = .FALSE.
+        END IF
      END IF
 
      ! Calculate missing kpts parameters
-     CALL kpoints(oneD,jij,sym,cell,input,noco,banddos,kpts,l_kpts)
+     CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
     
      ! Generate missing general parameters
      
      minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
      IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
      IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
-     IF (dimension%neigd.LT.minNeigd) THEN
+     IF ((dimension%neigd.NE.-1).AND.(dimension%neigd.LT.minNeigd)) THEN
         IF (dimension%neigd>0) THEN
            WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
            WRITE(*,*) 'changed numbands (dimension%neigd) to ',minNeigd
@@ -254,37 +244,24 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         dimension%neigd = minNeigd
      END IF
 
-     dimension%nvd = 0 ; dimension%nv2d = 0
-     stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
-     obsolete%l_u2f = .FALSE.
-     obsolete%l_f2u = .FALSE.
+   
      !cell%aamat=matmul(transpose(cell%amat),cell%amat)
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
-     jij%nqpt=1
-     IF (jij%l_J) THEN
-        WRITE(*,*) 'jij%nqpt has to be corrected. Not yet done!'
-     END IF
 
-     DO iqpt=1,jij%nqpt
-        IF(jij%l_J) THEN
-           WRITE(*,*) 'select noco%qss here. ...not yet implemented'
-        END IF
-        DO ikpt = 1,kpts%nkpt
-           DO i = 1, 3
-              bk(i) = kpts%bk(i,ikpt)
-           END DO
-           !IF (input%film .OR.oneD%odd%d1) THEN
-           !   WRITE(*,*) 'There might be additional work required for the k points here!'
-           !   WRITE(*,*) '...in postprocessInput. See inpeig_dim for comparison!'
-           !END IF
-           CALL apws_dim(bk(:),cell,input,noco,oneD,nv,nv2,kq1,kq2,kq3)
-           stars%kq1_fft = max(kq1,stars%kq1_fft)
-           stars%kq2_fft = max(kq2,stars%kq2_fft)
-           stars%kq3_fft = max(kq3,stars%kq3_fft)
-           dimension%nvd = max(dimension%nvd,nv)
-           dimension%nv2d = max(dimension%nv2d,nv2)
-        END DO ! k-pts
-     END DO ! q-pts
+     CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
+
+     CALL lapw_fft_dim(cell,input,noco,stars)
+
+     atoms%nlotot = 0
+     DO n = 1, atoms%ntype
+        DO l = 1,atoms%nlo(n)
+           atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+        END DO
+     END DO
+
+     IF(dimension%neigd.EQ.-1) THEN
+        dimension%neigd = dimension%nvd + atoms%nlotot
+     END IF
 
      obsolete%lepr = 0
 
@@ -302,8 +279,6 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      dimension%msh = 0
      ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
      ALLOCATE(atoms%volmts(atoms%ntype))
-     ALLOCATE(atoms%vr0(atoms%ntype))  ! This should actually not be in the atoms type!
-     atoms%vr0(:) = 0.0
      na = 0
      DO iType = 1, atoms%ntype
         l_vca = .FALSE.
@@ -344,15 +319,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      END DO
 
 
-     ! Check muffin tin radii
 
-     ALLOCATE (jri1(atoms%ntype), lmax1(atoms%ntype))
-     ALLOCATE (rmt1(atoms%ntype), dx1(atoms%ntype))
-     l_test = .TRUE. ! only checking, dont use new parameters
-     l_gga=xcpot%is_gga()
-     CALL chkmt(atoms,input,vacuum,cell,oneD,l_gga,noel,l_test,&
-                kmax1,dtild1,dvac1,lmax1,jri1,rmt1,dx1)
-     DEALLOCATE (jri1,lmax1,rmt1,dx1)
 
      ! Dimensioning of lattice harmonics
 
@@ -412,8 +379,8 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         oneD%odd%nop = sym%nop
      END IF
 
-     dimension%nn2d = (2*stars%mx1+1)*(2*stars%mx2+1)
-     dimension%nn3d = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
+     stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
+     stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
      IF (oneD%odd%d1) THEN
         oneD%odd%k3 = stars%mx3
         oneD%odd%nn2d = (2*(oneD%odd%k3)+1)*(2*(oneD%odd%M)+1)
@@ -428,9 +395,9 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ALLOCATE (stars%kv2(2,stars%ng2),stars%kv3(3,stars%ng3))
      ALLOCATE (stars%nstr2(stars%ng2),stars%nstr(stars%ng3))
      ALLOCATE (stars%sk2(stars%ng2),stars%sk3(stars%ng3),stars%phi2(stars%ng2))
-     ALLOCATE (stars%igfft(0:dimension%nn3d-1,2),stars%igfft2(0:dimension%nn2d-1,2))
+     ALLOCATE (stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2))
      ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
-     ALLOCATE (stars%pgfft(0:dimension%nn3d-1),stars%pgfft2(0:dimension%nn2d-1))
+     ALLOCATE (stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2))
      ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
 
      stars%sk2(:) = 0.0
@@ -493,6 +460,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      IF (atoms%n_u.GT.0) THEN
         CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
      END IF
+
      IF (.NOT.oneD%odd%d1) THEN
         CALL mapatom(sym,atoms,cell,input,noco)
         oneD%ngopr1(1:atoms%nat) = atoms%ngopr(1:atoms%nat)
@@ -502,6 +470,13 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
         CALL mapatom(sym,atoms,cell,input,noco)
         CALL od_mapatom(oneD,atoms,sym,cell)
      END IF
+    ! Check muffin tin radii
+
+     l_test = .TRUE. ! only checking, dont use new parameters
+     CALL chkmt(atoms,input,vacuum,cell,oneD,l_test)
+
+     !adjust positions by displacements
+     CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
 
      !Calculate kpoint in the full BZ
      IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2) THEN
@@ -511,8 +486,8 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ENDIF
 
      ! Missing xc functionals initializations
-     IF (xcpot%is_gga()) THEN
-        ALLOCATE (stars%ft2_gfx(0:dimension%nn2d-1),stars%ft2_gfy(0:dimension%nn2d-1))
+     IF (xcpot%needs_grad()) THEN
+        ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
         ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                   oneD%pgft1xy(0:oneD%odd%nn2d-1),&
                   oneD%pgft1y(0:oneD%odd%nn2d-1),oneD%pgft1yy(0:oneD%odd%nn2d-1))
@@ -526,10 +501,11 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
 
      ! Store structure data
 
-     CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
+     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
 
      ! Generate stars
 
+     CALL timestart("strgn") 
      IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
         CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
         IF (oneD%odd%d1) THEN
@@ -538,6 +514,7 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      ELSE
         CALL strgn2(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
      END IF
+     CALL timestop("strgn") 
 
      ! Other small stuff
 
@@ -547,48 +524,41 @@ SUBROUTINE postprocessInput(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
      if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
      l_opti=.not.l_opti
      IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
-         (input%lflip).OR.(obsolete%l_f2u).OR.(obsolete%l_u2f).OR.(input%l_bmt)) l_opti = .TRUE.
+         (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
 
      IF (.NOT.l_opti) THEN
         !      The following call to inpeig should not be required.
         !      CALL inpeig(atoms,cell,input,oneD%odd%d1,kpts,enpara)
      END IF
-
+     kpts%wtkpt=kpts%wtkpt/sum(kpts%wtkpt) !Normalize k-point weight
      CALL prp_qfft(stars,cell,noco,input)
 
-     IF (input%gw.GE.1) THEN
-        CALL write_gw(atoms%ntype,sym%nop,1,input%jspins,atoms%nat,&
-                      atoms%ncst,atoms%neq,atoms%lmax,sym%mrot,cell%amat,cell%bmat,input%rkmax,&
-                      atoms%taual,atoms%zatom,cell%vol,1.0,DIMENSION%neigd,atoms%lmaxd,&
-                      atoms%nlod,atoms%llod,atoms%nlo,atoms%llo,noco%l_soc)
-     END IF
 
      CALL prp_xcfft(stars,input,cell,xcpot)
-
-     namex = xcpot%get_name()
-     l_krla = xcpot%krla.EQ.1
-
+ 
   END IF !(mpi%irank.EQ.0)
-
 #ifdef CPP_MPI
-  CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
-  CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+  CALL MPI_BCAST(input%qfix,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+  CALL MPI_BCAST(noco%l_noco,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
-  IF (mpi%irank.NE.0) THEN
-     CALL xcpot%init(namex,l_krla)
-  END IF
-
-  IF (.NOT.sliceplot%iplot) THEN
-     CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
+  CALL timestart("stepf") 
+  CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
+  CALL timestop("stepf") 
+  IF (.NOT.sliceplot%iplot) THEN   
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
-        CALL efield(atoms,DIMENSION,stars,sym,vacuum,cell,input)
+        CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
      END IF !(mpi%irank.EQ.0)
   END IF
 
-  ! 
+  !At some point this should be enabled for noco as well
+#ifdef CPP_MPI
+  CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+#endif
+  IF (.not.noco%l_noco) & 
+  CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of input postprocessing (calculate missing parameters)

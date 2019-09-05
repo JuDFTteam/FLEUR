@@ -128,13 +128,14 @@ CONTAINS
     END SUBROUTINE
 
     SUBROUTINE fleur_job_init()
-        USE m_fleur_help
-        INTEGER:: i
+      USE m_fleur_help
+      use m_judft
         INTEGER:: irank=0
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
-        INTEGER ierr(3)
+        INTEGER ierr(3), i
         CALL MPI_INIT_THREAD(MPI_THREAD_SERIALIZED,i,ierr)
+        CALL judft_init()
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
            !$    IF (i<MPI_THREAD_SERIALIZED) THEN
@@ -161,9 +162,10 @@ CONTAINS
         TYPE(t_job),INTENT(IN) ::jobs(:)
 
         INTEGER:: njob=1
-        INTEGER:: irank=0,ierr
+        INTEGER:: irank=0
 
 #ifdef CPP_MPI
+        INTEGER:: ierr
       INCLUDE 'mpif.h'
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 
@@ -225,7 +227,7 @@ CONTAINS
         jobs%mpi_comm=MPI_UNDEFINED
         CALL MPI_COMM_SPLIT(MPI_COMM_WORLD,i,irank,new_comm,ierr)
         IF (i.LE.size(jobs)) THEN
-            PRINT* ,"PE:",irank," works on job ",i," in ",jobs(i)%directory
+            if(size(jobs) > 1) PRINT* ,"PE:",irank," works on job ",i," in ",jobs(i)%directory
             jobs(i)%mpi_comm=new_comm
         ENDIF
 
@@ -248,7 +250,6 @@ PROGRAM fleurjob
     USE m_juDFT
     IMPLICIT NONE
     TYPE(t_job),ALLOCATABLE::jobs(:)
-    CALL judft_init()
     CALL fleur_job_init()
     CALL fleur_job_arguments(jobs)
     CALL fleur_job_distribute(jobs)

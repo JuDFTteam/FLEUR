@@ -4,15 +4,12 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_cdngen
-
-USE m_juDFT
-
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-                  dimension,kpts,atoms,sphhar,stars,sym,obsolete,&
-                  enpara,cell,noco,jij,vTot,results,oneD,coreSpecInput,&
-                  inIter,inDen,outDen)
+                  dimension,kpts,atoms,sphhar,stars,sym,&
+                  enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
+                  archiveType, xcpot,outDen,EnergyDen)
 
    !*****************************************************
    !    Charge density generator
@@ -20,27 +17,34 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    !    core routines for the core contribution
    !*****************************************************
 
+   USE m_types
    USE m_constants
-   USE m_umix
+   USE m_juDFT
    USE m_prpqfftmap
    USE m_cdnval
    USE m_cdn_io
    USE m_wrtdop
    USE m_cdntot
-   USE m_cdnovlp
    USE m_qfix
-   USE m_rwnoco
-   USE m_cored
-   USE m_coredr
-   USE m_m_perp
-   USE m_types
+   USE m_genNewNocoInp
    USE m_xmlOutput
+   USE m_magMoms
+   USE m_orbMagMoms
+   USE m_cdncore
+   USE m_doswrite
+   USE m_Ekwritesl
+   USE m_banddos_io
+   USE m_metagga
+   USE m_unfold_band_kpts
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
-   USE m_mpi_bc_coreden
 #endif
 
    IMPLICIT NONE
+
+#ifdef CPP_MPI
+   INCLUDE 'mpif.h'
+#endif
 
    ! Type instance arguments
    TYPE(t_results),INTENT(INOUT)    :: results
@@ -48,13 +52,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_dimension),INTENT(IN)     :: dimension
    TYPE(t_oneD),INTENT(IN)          :: oneD
    TYPE(t_enpara),INTENT(INOUT)     :: enpara
-   TYPE(t_obsolete),INTENT(IN)      :: obsolete
    TYPE(t_banddos),INTENT(IN)       :: banddos
    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_vacuum),INTENT(IN)        :: vacuum
-   TYPE(t_noco),INTENT(IN)          :: noco
-   TYPE(t_jij),INTENT(IN)           :: jij
+   TYPE(t_noco),INTENT(INOUT)       :: noco
    TYPE(t_sym),INTENT(IN)           :: sym
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
@@ -63,424 +65,163 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
    TYPE(t_potden),INTENT(IN)        :: vTot
-   TYPE(t_potden),INTENT(INOUT)     :: inDen,outDen
+   CLASS(t_xcpot),INTENT(INOUT)     :: xcpot
+   TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
 
    !Scalar Arguments
-   INTEGER, INTENT (IN)             :: eig_id
-   INTEGER, INTENT (IN)             :: inIter
+   INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_noco) :: noco_new
+   TYPE(t_noco)          :: noco_new
+   TYPE(t_regionCharges) :: regCharges, fake_regCharges
+   TYPE(t_dos)           :: dos, fake_dos
+   TYPE(t_moments)       :: moments, fake_moments
+   TYPE(t_results)       :: fake_results
+   TYPE(t_mcd)           :: mcd
+   TYPE(t_slab)          :: slab
+   TYPE(t_orbcomp)       :: orbcomp
+   TYPE(t_cdnvalJob)     :: cdnvalJob
+   TYPE(t_potden)        :: val_den, core_den
+
 
    !Local Scalars
-   REAL fix,qtot,scor,seig,smom,stot,sval,dummy
-   REAL slmom,slxmom,slymom,sum,thetai,phii,fermiEnergyTemp
-   INTEGER iter,ivac,j,jspin,jspmax,k,n,nt,ieig,ikpt
-   INTEGER  ityp,ilayer,urec,itype,iatom
-   LOGICAL l_relax_any,exst,n_exist,l_qfix, l_enpara
-   LOGICAL, PARAMETER :: l_st=.FALSE.
+   REAL                  :: fix, qtot, dummy,eFermiPrev
+   INTEGER               :: jspin, jspmax, ierr
+   INTEGER               :: dim_idx
 
-   !Local Arrays
-   REAL stdn(atoms%ntype,dimension%jspd),svdn(atoms%ntype,dimension%jspd),alpha_l(atoms%ntype)
-   REAL rh(dimension%msh,atoms%ntype,dimension%jspd),qint(atoms%ntype,dimension%jspd)
-   REAL tec(atoms%ntype,DIMENSION%jspd),rhTemp(dimension%msh,atoms%ntype,dimension%jspd)
-   REAL chmom(atoms%ntype,dimension%jspd),clmom(3,atoms%ntype,dimension%jspd)
-   INTEGER,ALLOCATABLE :: igq_fft(:)
-   REAL   ,ALLOCATABLE :: qvac(:,:,:,:),qvlay(:,:,:,:,:)
-   CHARACTER(LEN=20)   :: attributes(4)
+#ifdef CPP_HDF
+   INTEGER(HID_T)        :: banddosFile_id
+#endif
+   LOGICAL               :: l_error, perform_MetaGGA
 
-   !pk non-collinear (start)
-   REAL    rhoint,momint,alphdiff(atoms%ntype)
-   INTEGER igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1)
-   COMPLEX,ALLOCATABLE :: qa21(:)
-   !pk non-collinear (end)
+   CALL regCharges%init(input,atoms)
+   CALL dos%init(input,atoms,dimension,kpts,vacuum)
+   CALL moments%init(input,atoms)
+   CALL mcd%init1(banddos,dimension,input,atoms,kpts)
+   CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
+   CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
 
-   iter = inIter
-   CALL outDen%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+   CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+   CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
 
-   IF (mpi%irank.EQ.0) THEN
-      INQUIRE(file='enpara',exist=l_enpara)
-      IF (l_enpara) OPEN (40,file ='enpara',form = 'formatted',status ='unknown')
-   ENDIF
-   ALLOCATE (qa21(atoms%ntype))
-   ALLOCATE (qvac(dimension%neigd,2,kpts%nkpt,dimension%jspd))
-   ALLOCATE (qvlay(dimension%neigd,vacuum%layerd,2,kpts%nkpt,dimension%jspd))
-   ALLOCATE (igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
+   IF (mpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
-   !initialize density arrays with zero
-   qa21(:) = cmplx(0.0,0.0)
-   qvac(:,:,:,:) = 0.0 
-   qvlay(:,:,:,:,:) = 0.0
-
-   outDen%iter = iter
-        
-   !Set up pointer for backtransformation of from g-vector in
-   !positive domain fof carge density fftibox into stars
-   !In principle this can also be done in main program once.
-   !It is done here to save memory.
-   CALL prp_qfft_map(stars,sym, input, igq2_fft,igq_fft)
-
-   !in a non-collinear calcuation where the off-diagonal part of
+   !In a non-collinear calcuation where the off-diagonal part of the
    !density matrix in the muffin-tins is calculated, the a- and
    !b-coef. for both spins are needed at once. Thus, cdnval is only
-   !called once and both spin directions are calculated in a single
-   !go.
-   IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('valenceDensity')
-
+   !called once and both spin directions are calculated in a single run.
+   results%force=0.0
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
-      CALL timestart("cdngen: cdnval")
-      CALL cdnval(eig_id,&
-                  mpi,kpts,jspin,sliceplot,noco, input,banddos,cell,atoms,enpara,stars, vacuum,dimension,&
-                  sphhar,sym,obsolete,igq_fft,vTot%mt,vTot%vacz(:,:,jspin),oneD,coreSpecInput,&
-                  outDen%mmpMat(-lmaxU_const:,-lmaxU_const:,:,jspin),results, outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,&
-                  outDen%cdom,outDen%cdomvz,outDen%cdomvxy,qvac,qvlay,qa21, chmom,clmom)
-      CALL timestop("cdngen: cdnval")
-!-fo
+      CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
+      IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
+      CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
+   call val_den%copyPotDen(outDen)
 
-   ! lda+u
-   IF ((atoms%n_u.GT.0).and.(mpi%irank.EQ.0)) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
+   ! calculate kinetic energy density for MetaGGAs
+   if(xcpot%exc_is_metagga()) then
+      CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars,&
+                             vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
+   endif
 
-!+t3e
-   IF (mpi%irank.EQ.0) THEN
-!-t3e
-      IF (l_enpara) CLOSE (40)
-      CALL cdntot(stars,atoms,sym, vacuum,input,cell,oneD, outDen%pw,outDen%mt,outDen%vacz,.TRUE., qtot,dummy)
-      CALL closeXMLElement('valenceDensity')
-!---> changes
-   END IF ! mpi%irank = 0
-   IF (input%kcrel.EQ.0) THEN
-      results%seigc = 0.
-
-      ! Generate input file ecore for subsequent GW calculation
-      ! 11.2.2004 Arno Schindlmayr
-      IF ((input%gw.eq.1 .or. input%gw.eq.3).AND.(mpi%irank.EQ.0)) THEN
-         OPEN (15,file='ecore',status='unknown', action='write',form='unformatted')
-      END IF
-
-      rh = 0.0
-      tec = 0.0
-      qint = 0.0
-      IF (input%frcor) THEN
-         IF (mpi%irank.EQ.0) THEN
-            CALL readCoreDensity(input,atoms,dimension,rh,tec,qint)
+   IF (mpi%irank == 0) THEN
+      IF (banddos%dos.or.banddos%vacdos.or.input%cdinf) THEN
+         IF (banddos%unfoldband) THEN
+            eFermiPrev = 0.0
+            CALL readPrevEFermi(eFermiPrev,l_error)
+            CALL write_band_sc(kpts,results,eFermiPrev)
          END IF
-#ifdef CPP_MPI
-         CALL mpi_bc_coreDen(mpi,atoms,input,dimension,rh,tec,qint)
+#ifdef CPP_HDF
+         CALL openBandDOSFile(banddosFile_id,input,atoms,cell,kpts,banddos)
+         CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)
+         CALL closeBandDOSFile(banddosFile_id)
 #endif
-      END IF
-
-      DO jspin = 1,input%jspins
-         IF ((input%jspins.EQ.2).AND.(mpi%irank.EQ.0)) THEN
-            DO n = 1,atoms%ntype
-               svdn(n,jspin) = outDen%mt(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
-            END DO
+         CALL timestart("cdngen: dos")
+         CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
+         IF (banddos%dos.AND.(banddos%ndir == -3)) THEN
+            CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab,orbcomp,results)
          END IF
-
-         !block 1 unnecessary for slicing: begin
-         IF (.NOT.sliceplot%slice) THEN
-
-            !add in core density
-            IF (mpi%irank.EQ.0) THEN
-               CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh,tec,seig)
-               rhTemp(:,:,jspin) = rh(:,:,jspin)
-               results%seigc = results%seigc + seig
-               IF (input%jspins.EQ.2) THEN
-                  DO n = 1,atoms%ntype
-                     stdn(n,jspin) = outDen%mt(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
-                  END DO
-               END IF
-            END IF  ! mpi%irank = 0
-
-            !add core tail charge to outDen%pw
-            IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
-               !pk non-collinear (start)
-               !add the coretail-charge to the constant interstitial
-               !charge (star 0), taking into account the direction of
-               !magnetisation of this atom
-               IF (jspin .EQ. 2) THEN
-                  DO ityp = 1,atoms%ntype
-                     rhoint = (qint(ityp,1) + qint(ityp,2)) /cell%volint/input%jspins/2.0
-                     momint = (qint(ityp,1) - qint(ityp,2)) /cell%volint/input%jspins/2.0
-                     !rho_11
-                     outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(noco%beta(ityp))
-                     !rho_22
-                     outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(ityp))
-                     !real part rho_21
-                     outDen%cdom(1) = outDen%cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
-                     !imaginary part rho_21
-                     outDen%cdom(1) = outDen%cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
-                  END DO
-               END IF
-               !pk non-collinear (end)
-
-            ELSE IF (input%ctail) THEN
-               CALL cdnovlp(mpi,sphhar,stars,atoms,sym, dimension,vacuum,&
-                            cell, input,oneD,l_st, jspin,rh(:,:,jspin),&
-                            outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
-            ELSE IF (mpi%irank.EQ.0) THEN
-               DO ityp = 1,atoms%ntype
-                  outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
-               END DO
-            END IF
-         !block 1 unnecessary for slicing: end
-         END IF ! .NOT.sliceplot%slice
-
-      END DO ! loop over spins
-      IF (mpi%irank.EQ.0) THEN
-         CALL writeCoreDensity(input,atoms,dimension,rhTemp,tec,qint)
+         CALL timestop("cdngen: dos")
       END IF
-      IF ((input%gw.eq.1 .or. input%gw.eq.3).AND.(mpi%irank.EQ.0)) CLOSE(15)
-   ELSE ! input%kcrel.EQ.0
-      !relativistic core implementation : kcrel.eq.1
-      results%seigc = 0.
-      IF ((input%jspins.EQ.2).AND.(mpi%irank.EQ.0)) THEN
-         DO jspin = 1,input%jspins
-            DO n = 1,atoms%ntype
-               svdn(n,jspin) = outDen%mt(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
-            END DO
-         END DO
-      END IF
-      !block 1 unnecessary for slicing: begin
-      IF (.NOT.sliceplot%slice) THEN
-         !add in core density
-         IF (mpi%irank.EQ.0) THEN
-            CALL coredr(input,atoms,seig, outDen%mt,dimension,sphhar,vTot%mt(:,0,:,:),qint,rh)
-            results%seigc = results%seigc + seig
-            IF (input%jspins.EQ.2) THEN
-               DO jspin = 1,input%jspins
-                  DO n = 1,atoms%ntype
-                     stdn(n,jspin) = outDen%mt(1,0,n,jspin)/ (sfp_const*atoms%rmsh(1,n)*atoms%rmsh(1,n))
-                  END DO
-               END DO
-            END IF
-         END IF
+   END IF
 
-         IF ((noco%l_noco).AND.(mpi%irank.EQ.0)) THEN
-            !pk non-collinear (start)
-            !add the coretail-charge to the constant interstitial
-            !charge (star 0), taking into account the direction of
-            !magnetisation of this atom
-            DO ityp = 1,atoms%ntype
-               rhoint = (qint(ityp,1) + qint(ityp,2)) /cell%volint/input%jspins/2.0
-               momint = (qint(ityp,1) - qint(ityp,2)) /cell%volint/input%jspins/2.0
-               !rho_11
-               outDen%pw(1,1) = outDen%pw(1,1) + rhoint + momint*cos(noco%beta(ityp))
-               !rho_22
-               outDen%pw(1,2) = outDen%pw(1,2) + rhoint - momint*cos(noco%beta(ityp))
-               !real part rho_21
-               outDen%cdom(1) = outDen%cdom(1) + cmplx(0.5*momint *cos(noco%alph(ityp))*sin(noco%beta(ityp)),0.0)
-               !imaginary part rho_21
-               outDen%cdom(1) = outDen%cdom(1) + cmplx(0.0,-0.5*momint *sin(noco%alph(ityp))*sin(noco%beta(ityp)))
-            END DO
-            !pk non-collinear (end)
-         ELSE
-            DO jspin = 1,input%jspins
-               IF (input%ctail) THEN
-!+gu hope this works as well
-                  CALL cdnovlp(mpi,sphhar,stars,atoms,sym,dimension,vacuum,&
-                               cell,input,oneD,l_st,jspin,rh(1,1,jspin),&
-                               outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
-               ELSE IF (mpi%irank.EQ.0) THEN
-                  DO ityp = 1,atoms%ntype
-                     outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(ityp,jspin)/input%jspins/cell%volint
-                  END DO
-               END IF
-            END DO
-         END IF
-      !block 1 unnecessary for slicing: end
-      END IF ! .NOT.sliceplot%slice
-! end relativistic core
-   END IF ! input%kcrel.EQ.0
+   IF ((banddos%dos.OR.banddos%vacdos).AND.(banddos%ndir/=-2)) CALL juDFT_end("DOS OK",mpi%irank)
+   IF (vacuum%nstm == 3) CALL juDFT_end("VACWAVE OK",mpi%irank)
 
    IF (mpi%irank.EQ.0) THEN
-      !block 2 unnecessary for slicing: begin
-      IF (.NOT.sliceplot%slice) THEN
-         CALL openXMLElementNoAttributes('allElectronCharges')
-         CALL qfix(stars,atoms,sym,vacuum, sphhar,input,cell,oneD,&
-                   outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz,.TRUE.,.true.,fix)
-         CALL closeXMLElement('allElectronCharges')
-         !pk non-collinear (start)
-         IF (noco%l_noco) THEN
-            !fix also the off-diagonal part of the density matrix
-            outDen%cdom(:stars%ng3) = fix*outDen%cdom(:stars%ng3)
-            IF (input%film) THEN
-               outDen%cdomvz(:,:) = fix*outDen%cdomvz(:,:)
-               outDen%cdomvxy(:,:,:) = fix*outDen%cdomvxy(:,:,:)
-            END IF
-         END IF
-         !pk non-collinear (end)
+      CALL cdntot(stars,atoms,sym,vacuum,input,cell,oneD,outDen,.TRUE.,qtot,dummy)
+      CALL closeXMLElement('valenceDensity')
+   END IF ! mpi%irank = 0
 
-         !spin densities at the nucleus
-         !and magnetic moment in the spheres
-         IF (input%jspins.EQ.2) THEN
-            WRITE (6,FMT=8000)
-            WRITE (16,FMT=8000)
-            DO n = 1,atoms%ntype
-               sval = svdn(n,1) - svdn(n,input%jspins)
-               stot = stdn(n,1) - stdn(n,input%jspins)
-               scor = stot - sval
-               WRITE (6,FMT=8010) n,stot,sval,scor,svdn(n,1),stdn(n,1)
-               WRITE (16,FMT=8010) n,stot,sval,scor,svdn(n,1),stdn(n,1)
-            END DO
-            IF (noco%l_mperp) THEN
-               ! angles in nocoinp file are (alph-alphdiff)
-               iatom = 1
-               DO n = 1,atoms%ntype
-                  IF (noco%l_ss) THEN
-                     alphdiff(n)= 2.*pi_const*(noco%qss(1)*atoms%taual(1,iatom) + &
-                                               noco%qss(2)*atoms%taual(2,iatom) + &
-                                               noco%qss(3)*atoms%taual(3,iatom) )
-                  ELSE
-                     alphdiff(n)= 0.
-                  END IF
-                  iatom= iatom + atoms%neq(n)
-               END DO
-            END IF
-            WRITE (6,FMT=8020)
-            WRITE (16,FMT=8020)
-            noco_new = noco
-            CALL openXMLElement('magneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
-            DO n = 1, atoms%ntype
-               smom = chmom(n,1) - chmom(n,input%jspins)
-               WRITE (6,FMT=8030) n,smom, (chmom(n,j),j=1,input%jspins)
-               WRITE (16,FMT=8030) n,smom, (chmom(n,j),j=1,input%jspins)
-               attributes = ''
-               WRITE(attributes(1),'(i0)') n
-               WRITE(attributes(2),'(f15.10)') smom
-               WRITE(attributes(3),'(f15.10)') chmom(n,1)
-               WRITE(attributes(4),'(f15.10)') chmom(n,2)
-               CALL writeXMLElementFormPoly('magneticMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
-                                                               'spinDownCharge'/),&
-                                            attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
-               IF (noco%l_mperp) THEN
-                  !calculate the perpendicular part of the local moment
-                  !and relax the angle of the local moment or calculate
-                  !the constraint B-field.
-                  CALL m_perp(atoms,n,noco_new,vTot%mt(:,0,:,:),chmom,qa21,alphdiff)
-               END IF
-            END DO
-            CALL closeXMLElement('magneticMomentsInMTSpheres')
-
-            !save the new nocoinp file if the dierctions of the local
-            !moments are relaxed or a constraint B-field is calculated.
-            l_relax_any = .false.
-            iatom = 1
-            DO itype = 1,atoms%ntype
-               l_relax_any = l_relax_any.OR.noco%l_relax(itype)
-            END DO
-            IF (l_relax_any.OR.noco%l_constr) THEN
-               IF (.not. noco%l_mperp) THEN
-                  CALL juDFT_error ("(l_relax_any.OR.noco).AND.(.NOT. )" ,calledby ="cdngen")
-               END IF
-               DO itype = 1, atoms%ntype
-                  IF (noco%l_ss) THEN
-                     noco_new%alph(itype) = noco%alph(itype) - alphdiff(itype)
-                     DO WHILE (noco_new%alph(n) > +pi_const)
-                        noco_new%alph(n)= noco_new%alph(n) - 2.*pi_const
-                     END DO
-                     DO WHILE (noco_new%alph(n) < -pi_const)
-                        noco_new%alph(n)= noco_new%alph(n) + 2.*pi_const
-                     END DO
-                  ELSE
-                     noco_new%alph(itype) = noco%alph(itype)
-                  END IF
-               END DO
-
-               OPEN (24,file='nocoinp',form='formatted', status='old')
-               REWIND (24)
-               CALL rw_noco_write(atoms,jij,noco_new, input)
-               CLOSE (24)
-            END IF
-
-            IF (noco%l_soc) THEN
-               thetai = noco%theta
-               phii   = noco%phi
-               WRITE (6,FMT=9020)
-               WRITE (16,FMT=9020)
-               CALL openXMLElement('orbitalMagneticMomentsInMTSpheres',(/'units'/),(/'muBohr'/))
-               DO n = 1, atoms%ntype
-                  IF (noco%l_noco) THEN
-                     thetai = noco%beta(n)
-                     phii =   noco%alph(n)
-                  END IF
-
-                  ! magn. moment(-)
-                  slxmom = clmom(1,n,1)+clmom(1,n,2)
-                  slymom = clmom(2,n,1)+clmom(2,n,2)
-                  slmom =  clmom(3,n,1)+clmom(3,n,2)
-
-                  ! rotation: orbital moment || spin moment (extended to incude phi - hopefully)
-                  slmom   = cos(thetai)*slmom + sin(thetai)* (cos(phii)*slxmom + sin(phii)*slymom)
-                  clmom(3,n,1) = cos(thetai)*clmom(3,n,1) + &
-                                 sin(thetai)*(cos(phii)*clmom(1,n,1) + sin(phii)*clmom(2,n,1))
-                  clmom(3,n,2) = cos(thetai)*clmom(3,n,2) + &
-                                 sin(thetai)*(cos(phii)*clmom(1,n,2) + sin(phii)*clmom(2,n,2))
-
-                  WRITE (6,FMT=8030) n,slmom,(clmom(3,n,j),j=1,2)
-                  WRITE (16,FMT=8030) n,slmom,(clmom(3,n,j),j=1,2)
-                  attributes = ''
-                  WRITE(attributes(1),'(i0)') n
-                  WRITE(attributes(2),'(f15.10)') slmom
-                  WRITE(attributes(3),'(f15.10)') clmom(3,n,1)
-                  WRITE(attributes(4),'(f15.10)') clmom(3,n,2)
-                  CALL writeXMLElementFormPoly('orbMagMoment',(/'atomType      ','moment        ','spinUpCharge  ',&
-                                                                'spinDownCharge'/),&
-                                               attributes,reshape((/8,6,12,14,6,15,15,15/),(/4,2/)))
-               END DO
-               CALL closeXMLElement('orbitalMagneticMomentsInMTSpheres')
-            END IF
-         END IF
-      !block 2 unnecessary for slicing: end
-      END IF ! .NOT.sliceplot%slice
-
-      9020 FORMAT (/,/,10x,'orb. magnetic moments in the spheres:',/,10x,&
-                   'type',t22,'moment',t33,'spin-up',t43,'spin-down')
-      8000 FORMAT (/,/,10x,'spin density at the nucleus:',/,10x,'type',t25,&
-                   'input%total',t42,'valence',t65,'core',t90,&
-                   'majority valence and input%total density',/)
-      8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
-      8020 FORMAT (/,/,2x,'-->  magnetic moments in the spheres:',/,2x,&
-                   'mm -->   type',t22,'moment',t33,'spin-up',t43,'spin-down')
-      8030 FORMAT (2x,'--> mm',i8,2x,3f12.5)
-
-      IF (sliceplot%slice) THEN
-         OPEN (20,file='cdn_slice',form='unformatted',status='unknown')
-         CALL wrtdop(stars,vacuum,atoms,sphhar, input,sym, 20, outDen%iter,outDen%mt,outDen%pw,outDen%vacz,outDen%vacxy)
-         IF (noco%l_noco) THEN
-            WRITE (20) (outDen%cdom(k),k=1,stars%ng3)
-            IF (input%film) THEN
-               WRITE (20) ((outDen%cdomvz(j,ivac),j=1,vacuum%nmz),ivac=1,vacuum%nvac)
-               WRITE (20) (((outDen%cdomvxy(j,k-1,ivac),j=1,vacuum%nmzxy),k=2,oneD%odi%nq2) ,ivac=1,vacuum%nvac)
-            END IF
-         END IF
-         CLOSE(20) 
-         CALL juDFT_end("slice OK")
+   IF (sliceplot%slice) THEN
+      IF (mpi%irank == 0) THEN
+         CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                           0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
       END IF
+      CALL juDFT_end("slice OK",mpi%irank)
+   END IF
 
-      IF(vacuum%nvac.EQ.1) THEN
-         outDen%vacz(:,2,:) = outDen%vacz(:,1,:)
-         IF (sym%invs) THEN
-            outDen%vacxy(:,:,2,:) = CONJG(outDen%vacxy(:,:,1,:))
-         ELSE
-            outDen%vacxy(:,:,2,:) = outDen%vacxy(:,:,1,:)
+   CALL timestart("cdngen: cdncore")
+   if(xcpot%exc_is_MetaGGA()) then
+      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
+   else
+      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results)
+   endif
+   call core_den%subPotDen(outDen, val_den)
+   CALL timestop("cdngen: cdncore")
+
+   CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
+
+   IF (mpi%irank == 0) THEN
+      CALL openXMLElementNoAttributes('allElectronCharges')
+      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,outDen,noco%l_noco,.TRUE.,.true.,fix)
+      CALL closeXMLElement('allElectronCharges')
+
+      IF (input%jspins == 2) THEN
+         noco_new = noco
+
+         !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
+         CALL magMoms(dimension,input,atoms,noco_new,vTot,moments)
+
+         noco = noco_new
+
+         !Generate and save the new nocoinp file if the directions of the local
+         !moments are relaxed or a constraint B-field is calculated.
+         IF (ANY(noco%l_relax(:atoms%ntype)).OR.noco%l_constr) THEN
+            CALL genNewNocoInp(input,atoms,noco,noco_new)
          END IF
+
+         IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,moments%clmom)
+         
       END IF
-
-   ENDIF ! mpi%irank.EQ.0
-
+   END IF ! mpi%irank == 0
+   
+   perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
+                   .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+   if(perform_MetaGGA) then
+      call set_kinED(mpi, sphhar, atoms, sym, core_den, val_den, xcpot, &
+                     input, noco, stars, cell, outDen, EnergyDen, vTot)
+   endif
 #ifdef CPP_MPI
+   CALL MPI_BCAST(noco%l_ss,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%l_mperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%l_constr,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%mix_b,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+
+   CALL MPI_BCAST(noco%alphInit,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%beta,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%l_relax,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(noco%qss,3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+
    CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,outDen)
 #endif
-
-   DEALLOCATE (qvac,qvlay,qa21)
-   DEALLOCATE (igq_fft)
-
-   IF (sliceplot%slice) CALL juDFT_end("sliceplot%slice OK",mpi%irank)
-
-   RETURN
 
 END SUBROUTINE cdngen
 

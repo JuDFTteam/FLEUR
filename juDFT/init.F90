@@ -9,14 +9,15 @@
       USE m_judft_time
       USE m_judft_sysinfo
       USE m_judft_stop
-
+      USE m_judft_args
       IMPLICIT NONE
       PRIVATE
       PUBLIC juDFT_init
       CONTAINS
      
       SUBROUTINE juDFT_init()
-      CALL signal_handler()
+        IF (.NOT.judft_was_argument("-debugtime")) &
+             CALL signal_handler()
       CALL checkstack()
       END SUBROUTINE juDFT_init
 
@@ -46,20 +47,28 @@
 #ifdef CPP_MPI
       include "mpif.h"
       INTEGER:: irank,ierr
-
-      CALL MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
-      WRITE(*,*) "Signal ",signal," detected on PE:",irank
+      LOGICAL:: mpi_init
+      CALL MPI_initialized(mpi_init,ierr)
+      IF (mpi_init) THEN
+         CALL MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
+         WRITE(0,*) "Signal ",signal," detected on PE:",irank
+      ELSE
+         WRITE(0,*) "Signal detected:",signal
+      END IF
 #else
-      WRITE(*,*) "Signal detected:",signal
+      WRITE(0,*) "Signal detected:",signal
 #endif
-      WRITE(*,*) "This might be due to either:"
-      WRITE(*,*) " - A bug in FLEUR"
-      WRITE(*,*) " - Your job running out of memory"
-      WRITE(*,*) " - Your job got killed externally (e.g. no cpu-time left)"
-      WRITE(*,*) " - ...." 
-      WRITE(*,*) "Please check and report if you believe you found a bug"
+      WRITE(0,*) "This might be due to either:"
+      WRITE(0,*) " - A bug"
+      WRITE(0,*) " - Your job running out of memory"
+      WRITE(0,*) " - Your job got killed externally (e.g. no cpu-time left)"
+      WRITE(0,*) " - ...." 
+      WRITE(0,*) "Please check and report if you believe you found a bug"
       CALL writetimes()
-      CALL PRINT_memory_info()
+      CALL PRINT_memory_info(0,.true.)
+#ifdef CPP_MPI
+      IF (mpi_init) CALL MPI_ABORT(MPI_COMM_WORLD,ierr)
+#endif      
       STOP "Signal"
       intel_signal_handler=0
       END FUNCTION intel_signal_handler

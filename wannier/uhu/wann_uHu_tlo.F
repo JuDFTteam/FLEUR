@@ -80,7 +80,7 @@ C     .. Array Arguments ..
       LOGICAL, INTENT (IN) :: l_dulo(nlod)
 C     ..
 C     .. Local Scalars ..
-      COMPLEX cil,ci,cil2
+      COMPLEX cil,cil2
       INTEGER i,l,l2,lamda,lh,lm,lmin,lmp,lp
       INTEGER lp1,lpl,m,mem,mems,mp,mu,n,nh,noded,nodeu,nrec,nsym,na,ne
       INTEGER ljj1,ljj2,mjj1,mjj2,lo,lop
@@ -130,7 +130,6 @@ C     ..
       t_gggint = 0.
 
       lwn = lmax
-      ci = cmplx(0.0,1.0)
       tdulo(:,:,:) = cmplx(0.0,0.0)
       tuulo(:,:,:) = cmplx(0.0,0.0)
       tulod(:,:,:) = cmplx(0.0,0.0)
@@ -390,7 +389,7 @@ c*********************************************************c
      >                     m, mjj2, mtil1, lmaxd)
 
              ! set up prefactor
-             cil =   ( ci ** (lp - l + ljj1 + ljj2) ) 
+             cil =   ( ImagUnit ** (lp - l + ljj1 + ljj2) ) 
      +              *( (-1.0) **ljj1 )
      +              * gc1 * gc2
      +              * conjg( yl1(lmjj1 + 1) )
@@ -454,7 +453,7 @@ c             cil = 0.5 * cil
      >                     m, mjj2, mtil1, lmaxd)
 
              ! set up prefactor
-             cil =   ( ci ** (lp - l + ljj1 + ljj2) ) 
+             cil =   ( ImagUnit ** (lp - l + ljj1 + ljj2) ) 
      +              *( (-1.0) **ljj1 )
      +              * gc1 * gc2
      +              * conjg( yl1(lmjj1 + 1) )
@@ -522,7 +521,7 @@ c             cil = 0.5 * cil
      >                     mp, mjj2, mtil1, lmaxd)
 
              ! set up prefactor
-             cil =   ( ci ** (l - lp + ljj1 + ljj2) )
+             cil =   ( ImagUnit ** (l - lp + ljj1 + ljj2) )
      +              *( (-1.0) **ljj1 )
      +              * gc1 * gc2
      +              * conjg( yl1(lmjj1 + 1) )
@@ -633,7 +632,7 @@ c*********************************************************c
      >                         m,  mjj2,  mtil2, lmaxd)
 
                   ! set up prefactor
-                  cil =   ( ci ** (lp - l + ljj1 + ljj2) )
+                  cil =   ( ImagUnit ** (lp - l + ljj1 + ljj2) )
      +                   * conjg(clnu(mem,lh,nsym))
      +                   *( (-1.0) ** ljj1 )
      +                   * gc1 * gc2 * gc3
@@ -718,7 +717,7 @@ c*********************************************************c
      >                         m,  mjj2,  mtil2, lmaxd)
 
                   ! set up prefactor
-                  cil =   ( ci ** (lp - l + ljj1 + ljj2) )
+                  cil =   ( ImagUnit ** (lp - l + ljj1 + ljj2) )
      +                   * conjg(clnu(mem,lh,nsym))
      +                   *( (-1.0) ** ljj1 )
      +                   * gc1 * gc2 * gc3
@@ -781,7 +780,7 @@ c*********************************************************c
      >                         mp,  mjj2,  mtil2, lmaxd)
 
                   ! set up prefactor
-                  cil =   ( ci ** (l - lp + ljj1 + ljj2) )
+                  cil =   ( ImagUnit ** (l - lp + ljj1 + ljj2) )
      +                   * conjg(clnu(mem,lh,nsym))
      +                   *( (-1.0) ** ljj1 )
      +                   * gc1 * gc2 * gc3

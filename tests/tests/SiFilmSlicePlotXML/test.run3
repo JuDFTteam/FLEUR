@@ -1,0 +1,25 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::copyfile("files/inp-3.xml","$workdir/inp.xml");
+jt::copyfile("files/plot_inp",$workdir);
+
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_fileexists("$workdir/plot.xsf");
+# unit cell
+$result+=jt::test_grepexists("$workdir/plot.xsf",".0000000 11.36143");
+$result+=jt::test_grepexists("$workdir/plot.xsf","1.93419");
+# atom positions
+$result+=jt::test_grepexists("$workdir/plot.xsf","3.35012");
+$result+=jt::test_grepexists("$workdir/plot.xsf",".39481");
+$result+=jt::test_grepexists("$workdir/plot.xsf","2.23341");
+# density values
+$result+=jt::test_grepexists("$workdir/plot.xsf","1.596943750"); # line 24
+$result+=jt::test_grepexists("$workdir/plot.xsf","9.618902941"); # line 289
+$result+=jt::test_grepexists("$workdir/plot.xsf","2.872946019"); # line 521
+$result+=jt::test_grepexists("$workdir/plot.xsf","0.211894348"); # line 523
+$result+=jt::test_grepexists("$workdir/plot.xsf","1.097842867"); # line 3018
+
+jt::stageresult($workdir,$result,"3");

@@ -27,7 +27,8 @@ c     locals
       LOGICAL :: new
 c     constants
       REAL , PARAMETER :: zero = 0.0 , big = 1.e8 , tol = 1.e-5
-c
+
+      ntria = 0
       IF ( nkpt.LT.3 ) RETURN
 c
 c l_f_t=.true. means that we call from fertri and on output gives 'film'
@@ -220,8 +221,6 @@ c
             ENDDO
          ENDDO
       ELSE
-c     write(16,1000) ((v(i,j),i=1,2),j=1,nt)
-!          CALL juDFT_error("triang",calledby="triang")
       ENDIF
 c
 99001 FORMAT (' $$$ error in triang: collinear k-points'/(5x,2F12.6))

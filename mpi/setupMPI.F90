@@ -9,14 +9,14 @@ MODULE m_setupMPI
   IMPLICIT NONE
 
 CONTAINS
-  SUBROUTINE setupMPI(nkpt,mpi)
+  SUBROUTINE setupMPI(nkpt,neigd,mpi)
 !$  use omp_lib
     USE m_types  
-    USE m_eigen_diag,ONLY:parallel_solver_available
-    INTEGER,INTENT(in)           :: nkpt
+    USE m_available_solvers,ONLY:parallel_solver_available
+    INTEGER,INTENT(in)           :: nkpt,neigd
     TYPE(t_mpi),INTENT(inout)    :: mpi
 
-    integer :: omp=-1
+    INTEGER :: omp=-1,i
 
     !$ omp=omp_get_max_threads()
     if (mpi%irank==0) THEN
@@ -24,24 +24,32 @@ CONTAINS
        WRITE(*,*) "--------------------------------------------------------"
 #ifdef CPP_MPI
        write(*,*) "Number of MPI-tasks:  ",mpi%isize
-       !$ write(*,*) "Number of OMP-threads:",omp
+       CALL add_usage_data("MPI-PE",mpi%isize)     
 #else
-       if (omp==-1) THEN
-          write(*,*) "No OpenMP version of FLEUR."
-       else
-          write(*,*) "Number of OMP-threads:",omp
-       endif
+       CALL add_usage_data("MPI-PE",1)     
 #endif
+       IF (omp==-1) THEN
+          write(*,*) "No OpenMP version of FLEUR."
+          CALL add_usage_data("OMP",0)
+       ELSE
+          WRITE(*,*) "Number of OMP-threads:",omp
+          CALL add_usage_data("OMP",omp)
+       ENDIF
     endif
     IF (mpi%isize==1) THEN
        !give some info on available parallelisation
        CALL priv_dist_info(nkpt)
-       mpi%n_start=1
-       mpi%n_stride=1
        mpi%n_rank=0
        mpi%n_size=1
-       mpi%n_groups=1
        mpi%sub_comm=mpi%mpi_comm
+       IF (ALLOCATED(mpi%k_list)) DEALLOCATE(mpi%k_List)
+       IF (ALLOCATED(mpi%ev_list)) DEALLOCATE(mpi%ev_list)
+       ALLOCATE(mpi%k_list(nkpt))
+       ALLOCATE(mpi%ev_list(neigd))
+       mpi%k_list=[(i,i=1,nkpt)]
+       mpi%ev_list=[(i,i=1,neigd)]
+       WRITE(*,*) "--------------------------------------------------------"
+       RETURN
     END IF
 #ifdef CPP_MPI
     !Distribute the work
@@ -51,9 +59,12 @@ CONTAINS
     IF (mpi%n_size>1.AND..NOT.parallel_solver_available()) &
          CALL juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")       
 #endif
-
     !generate the MPI communicators
-    CALL priv_create_comm(nkpt,mpi)
+    CALL priv_create_comm(nkpt,neigd,mpi)
+
+    ALLOCATE(mpi%k_list(SIZE([(i, i=INT(mpi%irank/mpi%n_size)+1,nkpt,mpi%isize/mpi%n_size )])))
+    mpi%k_list=[(i, i=INT(mpi%irank/mpi%n_size)+1,nkpt,mpi%isize/mpi%n_size )]
+
     if (mpi%irank==0) WRITE(*,*) "--------------------------------------------------------"
 
   END SUBROUTINE setupMPI
@@ -90,12 +101,12 @@ CONTAINS
     !          G.B. `99
     !
     !-------------------------------------------------------------------------------------------
-    INTEGER:: n_members,n_size_min
+    INTEGER:: n_members,n_size_min,nk
     CHARACTER(len=1000)::txt
 
     n_members = MIN(nkpt,mpi%isize)
-    IF (judft_was_argument("-n_size_min")) THEN
-       txt=judft_string_for_argument("-n_size_min")
+    IF (judft_was_argument("-n_min_size")) THEN
+       txt=judft_string_for_argument("-n_min_size")
        READ(txt,*) n_size_min
        WRITE(*,*) "Trying to use ",n_size_min," PE per kpt"
        n_members = MIN(n_members , CEILING(REAL(mpi%isize)/n_size_min) ) 
@@ -104,28 +115,29 @@ CONTAINS
        IF ((MOD(mpi%isize,n_members) == 0).AND.(MOD(nkpt,n_members) == 0) ) EXIT
        n_members = n_members - 1
     ENDDO
-    mpi%n_groups = nkpt/n_members
+ 
+    !mpi%n_groups = nkpt/n_members
     mpi%n_size   = mpi%isize/n_members
-    mpi%n_stride = n_members
+    !mpi%n_stride = n_members
     IF (mpi%irank == 0) THEN
        WRITE(*,*) 'k-points in parallel: ',n_members
        WRITE(*,*) "pe's per k-point:     ",mpi%n_size
-       WRITE(*,*) '# of k-point loops:   ',mpi%n_groups
+       WRITE(*,*) '# of k-point loops:   ',nkpt/n_members
     ENDIF
   END SUBROUTINE priv_distribute_k
 
-  SUBROUTINE priv_create_comm(nkpt,mpi)
+  SUBROUTINE priv_create_comm(nkpt,neigd,mpi)
     use m_types
     implicit none
-    INTEGER,INTENT(in)      :: nkpt
+    INTEGER,INTENT(in)      :: nkpt,neigd
     TYPE(t_mpi),INTENT(inout)    :: mpi
 #ifdef CPP_MPI
-    INTEGER :: n_members,n,i,ierr,sub_group,world_group
+    INTEGER :: n_members,n,i,ierr,sub_group,world_group,n_start
     INTEGER :: i_mygroup(mpi%n_size)
     LOGICAL :: compact ! Deside how to distribute k-points
 
     compact = .true.
-    n_members = nkpt/mpi%n_groups
+    n_members = mpi%isize/mpi%n_size
     
     ! now, we make the groups
     
@@ -146,8 +158,8 @@ CONTAINS
         ! |        7        |        8        |
         !  -----------------------------------
     
-        mpi%n_start = INT(mpi%irank/mpi%n_size) + 1
-        i_mygroup(1) = (mpi%n_start-1) * mpi%n_size
+        n_start = INT(mpi%irank/mpi%n_size) + 1
+        i_mygroup(1) = (n_start-1) * mpi%n_size
         do i = 2, mpi%n_size
            i_mygroup(i) = i_mygroup(i-1) + 1
         enddo
@@ -168,10 +180,10 @@ CONTAINS
         ! |  7  |  8  |  7  |  8  |  7  |  8  |
         !  -----------------------------------
 
-        mpi%n_start = MOD(mpi%irank,n_members) + 1
+        n_start = MOD(mpi%irank,n_members) + 1
         !!      n_start = INT(irank/n_size) * n_size
         n = 0
-        DO i = mpi%n_start,mpi%isize,n_members
+        DO i = n_start,mpi%isize,n_members
         !!      DO i = n_start+1,n_start+n_size
            n = n+1
            i_mygroup(n) = i-1
@@ -185,17 +197,20 @@ CONTAINS
     !write (*,"(a,i0,100i4)") "MPI:",mpi%sub_comm,mpi%irank,mpi%n_groups,mpi%n_size,n,i_mygroup
 
     CALL MPI_COMM_RANK (mpi%SUB_COMM,mpi%n_rank,ierr)
+    ALLOCATE(mpi%ev_list(neigd/mpi%n_size+1))
+    mpi%ev_list=[(i,i=mpi%n_rank+1,neigd,mpi%n_size)]
+    
 #endif
   END SUBROUTINE priv_create_comm
 
   SUBROUTINE priv_dist_info(nkpt)
-    USE m_eigen_diag,ONLY:parallel_solver_available
+    USE m_available_solvers,ONLY:parallel_solver_available
     IMPLICIT NONE
     INTEGER,INTENT(in)           :: nkpt
 
     INTEGER:: n,k_only,pe_k_only(nkpt)
     
-
+#ifdef CPP_MPI
     !Create a list of PE that will lead to k-point parallelization only
     k_only=0
     DO n=1,nkpt
@@ -208,6 +223,7 @@ CONTAINS
     WRITE(*,*) pe_k_only(:k_only)
     !check if eigenvalue parallelization is possible
     IF (parallel_solver_available()) WRITE(*,*) "Additional eigenvalue parallelization possible"
+#endif
   END SUBROUTINE priv_dist_info
 
 

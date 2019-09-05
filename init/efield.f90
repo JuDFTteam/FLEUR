@@ -3,9 +3,9 @@
       USE m_constants
       IMPLICIT NONE
       PRIVATE
-      PUBLIC :: efield
+      PUBLIC :: e_field
       CONTAINS
-      SUBROUTINE efield(atoms, dimension, stars, sym, vacuum, cell, input)
+      SUBROUTINE e_field(atoms, DIMENSION, stars, sym, vacuum, cell, input,efield)
 !
 !*********************************************************************
 !     sets the values of the sheets of charge for external electric
@@ -28,7 +28,8 @@
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_vacuum),INTENT(IN)     :: vacuum
       TYPE(t_cell),INTENT(IN)       :: cell
-      TYPE(t_input),INTENT(INOUT)   :: input
+      TYPE(t_input),INTENT(IN)      :: input
+      TYPE(t_efield),INTENT(INOUT)  :: efield
 !     ..
 !     ..
 !     .. Local Scalars ..
@@ -74,7 +75,7 @@
       WRITE (6, '(3x,a,f12.5)') 'total electronic charge   =', qe
       WRITE (6, '(3x,a,f12.5)') 'total nuclear charge      =', qn
 
-      CALL read_efield (input%efield, stars%mx1, stars%mx2, vacuum%nvac, cell%area)
+      CALL read_efield (efield, stars%mx1, stars%mx2, vacuum%nvac, cell%area)
 
       ! Sign convention of electric field: E>0 repels electrons,
       ! consistent with conventional choice that current is
@@ -83,13 +84,13 @@
       ! In case of Dirichlet boundary conditions, we ignore the
       ! value of "sigma" and take the surplus charge into account
       ! in vvac.
-      if (input%efield%autocomp .or. input%efield%dirichlet) input%efield%sigma = 0.5*(qe-qn)
+      if (efield%autocomp .or. efield%dirichlet) efield%sigma = 0.5*(qe-qn)
 
-      CALL print_efield (6, input%efield, cell%area, vacuum%nvac, cell%amat,vacuum%dvac)
+      CALL print_efield (6, efield, cell%area, vacuum%nvac, cell%amat,vacuum%dvac)
 
-      IF (.NOT. input%efield%dirichlet&
-     &    .AND. ABS (SUM (input%efield%sig_b) + 2*input%efield%sigma - (qe-qn)) > eps) THEN
-        IF (ABS (SUM (input%efield%sig_b) - (qe-qn)) < eps) THEN
+      IF (.NOT. efield%dirichlet&
+     &    .AND. ABS (SUM (efield%sig_b) + 2*efield%sigma - (qe-qn)) > eps) THEN
+        IF (ABS (SUM (efield%sig_b) - (qe-qn)) < eps) THEN
           CALL juDFT_error&
      &          ("E field: top+bottom+film charge does not add up to "&
      &           //"zero.",&
@@ -104,29 +105,29 @@
      &        ,calledby ="efield")
       ENDIF
 
-      IF (ABS (input%efield%sigma) > 0.49 .OR. ANY (ABS (input%efield%sig_b) > 0.49)) THEN
+      IF (ABS (efield%sigma) > 0.49 .OR. ANY (ABS (efield%sig_b) > 0.49)) THEN
         WRITE ( 6,*) 'If you really want to calculate an e-field this'
         WRITE ( 6,*) 'big, uncomment STOP in efield.f !'
         CALL juDFT_error("E-field too big or No. of e- not correct"&
      &       ,calledby ="efield")
       ENDIF
 
-      IF (input%efield%l_segmented) THEN
+      IF (efield%l_segmented) THEN
         CALL V_seg_EF(&
-     &                input,&
+     &                efield,&
      &                vacuum, stars)
 
-        IF (input%efield%plot_rho)&
+        IF (efield%plot_rho)&
      &    CALL print_rhoEF(&
-     &                     input%efield, stars%mx1, stars%mx2, vacuum%nvac, stars%ng2, sym%nop, sym%nop2,&
+     &                     efield, stars%mx1, stars%mx2, vacuum%nvac, stars%ng2, sym%nop, sym%nop2,&
      &                     stars%ng2, stars%kv2, sym%mrot, sym%symor, sym%tau, sym%invtab,&
      &                     cell%area, stars%nstr2, cell%amat)
       END IF
 
-      IF (ALLOCATED (input%efield%sigEF)) DEALLOCATE (input%efield%sigEF)
+      IF (ALLOCATED (efield%sigEF)) DEALLOCATE (efield%sigEF)
 
-      IF (input%efield%dirichlet .AND. ALLOCATED (input%efield%rhoEF))&
-     &  call set_dirchlet_coeff (input%efield, vacuum%dvac, stars%ng2, stars%sk2, vacuum%nvac)
+      IF (efield%dirichlet .AND. ALLOCATED (efield%rhoEF))&
+     &  call set_dirchlet_coeff (efield, vacuum%dvac, stars%ng2, stars%sk2, vacuum%nvac)
 
       CONTAINS
 
@@ -257,54 +258,18 @@
         INTEGER, INTENT(IN) :: k1d, k2d, nvac
         REAL, INTENT(IN) :: area
 
-        REAL :: zsigma, sig_b(2), tmp
-        INTEGER, PARAMETER :: iou = 33
-        INTEGER :: ios
-        LOGICAL :: exists, eV
-        CHARACTER(len=50) :: str
-
-        INQUIRE (file='apwefl',exist=exists)
-        IF (.NOT. exists) RETURN
-
-        OPEN (iou,file='apwefl',form='formatted',status='old')
-        READ (iou, '(a)') str
-        str = ADJUSTL (str)
-
-        ! Old format: zsigma, optionally followed by
-        ! sig_b (1) and (2)
-        IF (str(1:1) /= '!' .AND. str(1:1) /= '#'&
-     &      .AND. str(1:1) /= '&' .AND. str /= '') THEN
-          READ (str, *) E%zsigma
-          READ (iou, *, iostat=ios) sig_b
-          IF (ios == 0) E%sig_b = sig_b
-          RETURN
-        END IF
-
+        REAL ::   tmp
+        INTEGER :: i
+   
         ! New format
         ALLOCATE(E%sigEF(3*k1d, 3*k2d, nvac))
         E%sigEF = 0.0
-        eV = .false.
-
-        REWIND(iou)
-        DO
-          READ(iou,'(a)', IOSTAT=ios) str
-          IF (ios /= 0) EXIT
-          str = ADJUSTL (str)
-          IF (str(1:1) == '#' .OR. str(1:1) == '!' .OR. str == '')&
-     &      CYCLE
-          IF (lower_case (str(1:8)) == '&efield ') THEN
-            BACKSPACE (iou)
-            CALL read_namelist (iou, E, eV)
-          ELSE IF (str(1:1) == '&') THEN
-             CALL juDFT_error("ERROR reading 'apwefl': Unknown namelist"&
-     &            ,calledby ="efield")
-          ELSE
-            CALL read_shape (E, str, nvac)
-          END IF
+        if (allocated(e%shapes)) then
+        DO i=1,SIZE(e%shapes)
+           CALL read_shape (E, e%shapes(i), nvac)
         END DO
-        CLOSE (iou)
-
-        IF (eV) THEN
+        endif
+        IF (e%l_eV) THEN
           E%sig_b(:) = E%sig_b/hartree_to_ev_const
           E%sigEF(:,:,:) = E%sigEF/hartree_to_ev_const
         END IF
@@ -797,13 +762,12 @@
         END SUBROUTINE print_efield
       
         SUBROUTINE V_seg_EF(&
-     &                      input,&
-     &                      vacuum, stars&
-     &                        )
+     &                      efield,&
+     &                      vacuum, stars)
           USE m_fft2d
           use m_types
           ! Dummy variables:
-          TYPE(t_input), INTENT(INOUT) :: input
+          TYPE(t_efield), INTENT(INOUT) :: efield
           TYPE(t_vacuum), INTENT(IN) :: vacuum
           TYPE(t_stars), INTENT(IN) :: stars
 
@@ -812,17 +776,17 @@
           REAL :: fg, fgi
           REAL :: rhoRS(3*stars%mx1,3*stars%mx2), rhoRSimag(3*stars%mx1,3*stars%mx2) ! Real space density
 
-          ALLOCATE (input%efield%rhoEF (stars%ng2-1, vacuum%nvac))
+          ALLOCATE (efield%rhoEF (stars%ng2-1, vacuum%nvac))
 
           DO ivac = 1, vacuum%nvac
             rhoRSimag = 0.0 ! Required in the loop. fft2d overrides this
             ! The fft2d algorithm puts the normalization to the  isn=-1
             ! (r->k) transformation, thus we need to multiply by
             ! ifft2 = 3*k1d*3*k2d to compensate.
-            IF (input%efield%dirichlet) THEN
-              rhoRS(:,:) = input%efield%sigEF(:,:,ivac)
+            IF (efield%dirichlet) THEN
+              rhoRS(:,:) = efield%sigEF(:,:,ivac)
             ELSE
-              rhoRS(:,:) = input%efield%sigEF(:,:,ivac)*(3*stars%mx1*3*stars%mx2)
+              rhoRS(:,:) = efield%sigEF(:,:,ivac)*(3*stars%mx1*3*stars%mx2)
             END IF
 
             ! FFT rhoRS(r_2d) -> rhoEF(g_2d)
@@ -830,16 +794,16 @@
      &                  stars,&
      &                  rhoRS, rhoRSimag,&
      &                  fg, fgi,&
-     &                  input%efield%rhoEF(:,ivac), 1, -1)
+     &                  efield%rhoEF(:,ivac), 1, -1)
 !           FFT gives the the average charge per grid point
 !           while sig_b stores the (total) charge per sheet
-            IF (input%efield%dirichlet .and. ABS (fg) > 1.0e-15) THEN
+            IF (efield%dirichlet .and. ABS (fg) > 1.0e-15) THEN
               PRINT *, 'INFO: Difference of average potential: fg=',&
-     &                 fg,', sig_b=', input%efield%sig_b(ivac),&
+     &                 fg,', sig_b=', efield%sig_b(ivac),&
      &                 ", ivac=", ivac
             ELSE IF (ABS (fg/(3*stars%mx1*3*stars%mx2)) > 1.0e-15) THEN
               PRINT *, 'INFO: Difference of average potential: fg=',&
-     &                 fg/(3*stars%mx1*3*stars%mx2),', sig_b=', input%efield%sig_b(ivac),&
+     &                 fg/(3*stars%mx1*3*stars%mx2),', sig_b=', efield%sig_b(ivac),&
      &                 ", ivac=", ivac
             END IF
           END DO ! ivac
@@ -928,7 +892,7 @@
             CLOSE (754)
           END DO ! ivac
         END SUBROUTINE print_rhoEF
-      END SUBROUTINE efield
+      END SUBROUTINE e_field
 
       SUBROUTINE read_namelist (iou, E, eV)
         USE m_types, only: t_efield
@@ -964,18 +928,18 @@
 
       ELEMENTAL FUNCTION lower_case(string)
         CHARACTER(len=*), INTENT(IN) :: string
-        CHARACTER(len=20):: lower_case
+        CHARACTER(len=len(string))   :: lower_case
 
         INTEGER :: i
 
         DO i = 1, LEN (string)
-          IF (      IACHAR ('A') <= IACHAR (string(i:i))&
-     &        .and. IACHAR ('Z') >= IACHAR (string(i:i))) THEN
+          IF (      IACHAR ('A') <= IACHAR (string(i:i)) &
+              .and. IACHAR ('Z') >= IACHAR (string(i:i))) THEN
             lower_case(i:i) = ACHAR (IACHAR (string(i:i))&
-     &                        + IACHAR ('a') - IACHAR ('A'))
+                              + IACHAR ('a') - IACHAR ('A'))
           ELSE
             lower_case(i:i) = string(i:i)
           END IF
         END do
       END FUNCTION lower_case
-      END MODULE m_efield
+    END MODULE m_efield

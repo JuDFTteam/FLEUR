@@ -18,8 +18,8 @@ contains
     integer:: irank=0,ierr
 #ifdef CPP_MPI
     include 'mpif.h'
-    logical:: l_mpi=.true.
-
+    LOGICAL:: l_mpi
+    CALL mpi_initialized(l_mpi,ierr)
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 #else
     logical :: l_mpi=.false.

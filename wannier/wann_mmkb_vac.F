@@ -32,7 +32,7 @@ c***************************************************************
 
       implicit none
 
-      TYPE(t_zmat), INTENT(IN) :: zMat, zMat_b
+      TYPE(t_mat), INTENT(IN) :: zMat, zMat_b
 
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
@@ -228,13 +228,13 @@ c-----> construct a and b coefficients for the k-point
 c-----> loop over basis functions
          IF(zMat%l_real) THEN
             do n = 1,nslibd
-               ac(l,n) = ac(l,n) + zMat%z_r(k+addnoco,n)*av
-               bc(l,n) = bc(l,n) + zMat%z_r(k+addnoco,n)*bv
+               ac(l,n) = ac(l,n) + zMat%data_r(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%data_r(k+addnoco,n)*bv
             enddo
          ELSE
             do n = 1,nslibd
-               ac(l,n) = ac(l,n) + zMat%z_c(k+addnoco,n)*av
-               bc(l,n) = bc(l,n) + zMat%z_c(k+addnoco,n)*bv
+               ac(l,n) = ac(l,n) + zMat%data_c(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%data_c(k+addnoco,n)*bv
             enddo
          END IF
       enddo
@@ -272,13 +272,13 @@ c-----> construct a and b coefficients for the k+b point
 c-----> loop over basis functions
          IF(zMat_b%l_real) THEN
             do n = 1,nslibd_b
-               ac_b(l,n) = ac_b(l,n) + zMat_b%z_r(k+addnoco,n)*av
-               bc_b(l,n) = bc_b(l,n) + zMat_b%z_r(k+addnoco,n)*bv
+               ac_b(l,n) = ac_b(l,n) + zMat_b%data_r(k+addnoco,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%data_r(k+addnoco,n)*bv
             enddo
          ELSE
             do n = 1,nslibd_b
-               ac_b(l,n) = ac_b(l,n) + zMat_b%z_c(k+addnoco,n)*av
-               bc_b(l,n) = bc_b(l,n) + zMat_b%z_c(k+addnoco,n)*bv
+               ac_b(l,n) = ac_b(l,n) + zMat_b%data_c(k+addnoco,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%data_c(k+addnoco,n)*bv
             enddo
          END IF
       enddo

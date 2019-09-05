@@ -25,8 +25,8 @@ MODULE m_radovlp
     TYPE(t_usdus),INTENT(INOUT):: usdus
 
     !     .. Array Arguments ..
-    REAL,    INTENT  (IN):: epar(0:,:,:)!(0:atoms%lmaxd,atoms%ntype,dimension%jspd)
-    REAL,    INTENT  (IN):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT  (IN):: epar(0:,:,:)!(0:atoms%lmaxd,atoms%ntype,input%jspins)
+    REAL,    INTENT  (IN):: vr(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT):: uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype)
     REAL,    INTENT (OUT):: dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype)
     !     ..
@@ -44,7 +44,7 @@ MODULE m_radovlp
              CALL radfun(l,itype,ispin,epar(l,itype,ispin),vr(:,0,itype,ispin), atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
           ENDDO
-          CALL int_21(f,g,atoms,itype,l, uun21(l,itype),udn21(l,itype), dun21(l,itype),ddn21(l,itype))
+          CALL int_21(f,g,atoms,itype,l,uun21,udn21,dun21,ddn21)
        ENDDO
     ENDDO
 

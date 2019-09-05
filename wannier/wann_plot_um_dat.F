@@ -14,7 +14,7 @@ c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
      >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
-     >          lapw,oneD,noco,cell,vTot,eig_id,l_real,
+     >          lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,
      >          mpi_comm,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
      >          ntypd,
@@ -70,6 +70,7 @@ c******************************************************************
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: vTot
+      TYPE(t_enpara),INTENT(IN)    :: enpara
 
       integer, intent (in) :: band_min(2),band_max(2),mpi_comm,eig_id
       logical, intent (in) :: l_soc,l_real
@@ -119,7 +120,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real eig(neigd),cp_time(9)
       logical l_p0,l_bkpts,l_proj,l_amn,l_mmn,l_eig,wann,wann_plott
 !!! energy window boundaries
-      integer, allocatable :: kveclo(:),nv(:)
+      integer, allocatable :: nv(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       real,    allocatable :: we(:)
 
@@ -144,8 +145,6 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real     :: uuilon(nlod,ntypd),duilon(nlod,ntypd)
       real     :: ulouilopn(nlod,nlod,ntypd)
 !!! energy parameters
-      real     :: ello(nlod,ntypd,max(2,jspd)),evac(2,max(2,jspd))
-      real     :: epar(0:lmaxd,ntypd,max(2,jspd)),evdu(2,max(2,jspd))
       character(len=3) :: spin12(2)
       data spin12/'WF1' , 'WF2'/
       character(len=2)::spinspin12(2)
@@ -223,7 +222,7 @@ c      real dotirp
       integer :: ngopr1(natd)
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat)  :: zzMat, zMat
+      TYPE(t_mat)   :: zzMat, zMat
 
       um_format=.false.
       l_byindex=.false.
@@ -325,7 +324,7 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspins
       if(l_soc) wannierspin=2
 
-      allocate ( kveclo(nlotot),nv(wannierspin) )
+      allocate ( nv(wannierspin) )
       allocate ( k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd) )
       allocate ( ff(ntypd,jmtd,2,0:lmaxd) )
       allocate ( gg(ntypd,jmtd,2,0:lmaxd) )
@@ -475,7 +474,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
       if (irank.eq.0) l_p0 = .true.
 
       call cdn_read0(eig_id,irank,isize,jspin,wannierspin,l_noco,
-     <               ello,evac,epar,bkpt,wk,n_bands,n_size)
+     <               n_bands,n_size)
 
 
       allocate ( flo(ntypd,jmtd,2,nlod) )
@@ -485,14 +484,14 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        do 30 l = 0,lmax(n)
 c...compute the l-dependent, k-independent radial MT- basis functions
          call radfun(
-     >              l,n,jspin,epar(l,n,jspin),vr(1,n,jspin2),atoms,
+     >             l,n,jspin,enpara%el0(l,n,jspin),vr(1,n,jspin2),atoms,
      <              ff(n,:,:,l),gg(n,:,:,l),usdus,
      <              nodeu,noded,wronk)
    30  continue
 c...and the local orbital radial functions
 c       do ilo = 1, nlo(n)
          call radflo(
-     >             atoms,n,jspin,ello(:,:,jspin),vr(1,n,jspin2),
+     >             atoms,n,jspin,enpara%ello0(:,:,jspin),vr(1,n,jspin2),
      >             ff(n,1:,1:,0:),gg(n,1:,1:,0:),mpi,
      <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:))
 c       enddo
@@ -527,32 +526,27 @@ c******************************************************************
       allocate (we(neigd),eigg(neigd))
 
       zzMat%l_real = l_real
-      zzMat%nbasfcn = nbasfcn
-      zzMat%nbands = neigd
+      zzMat%matsize1 = nbasfcn
+      zzMat%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+         ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
       ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+         ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
       END IF
-
-      call wann_read_eig(
-     >              eig_id,
-     >              lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
-     >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
-     >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg,zzMat,
-     >              .false.,1)
+      CALL judft_error("TODO:adjust in wann_plot_um_dat")
+!      call wann_read_eig(eig_id, lmaxd,ntypd,nlod,neigd,nvd,wannierspin,
+!     >     irank,isize,kptibz,jspin,nbasfcn,nlotot, l_ss,l_noco,nrec,
+!     <     nmat,nv, k1,k2,k3,bkpt,wk,nbands,eigg,zzMat, .false.,1)
 
       zMat%l_real = zzMat%l_real
-      zMat%nbasfcn = zzMat%nbasfcn
-      zMat%nbands = zzMat%nbands
+      zMat%matsize1 = zzMat%matsize1
+      zMat%matsize2 = zzMat%matsize2
       IF (zzMat%l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
-         zMat%z_r = 0.0
+         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+         zMat%data_r = 0.0
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
-         zMat%z_c = CMPLX(0.0,0.0)
+         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+         zMat%data_c = CMPLX(0.0,0.0)
       END IF
 
 
@@ -574,11 +568,11 @@ c...we work only within the energy window
         we(nslibd) = we(i)
         IF(zzMat%l_real) THEN
           do j = 1,nv(jspin) + nlotot
-             zMat%z_r(j,nslibd) = zzMat%z_r(j,i)
+             zMat%data_r(j,nslibd) = zzMat%data_r(j,i)
           end do
         ELSE
           do j = 1,nv(jspin) + nlotot
-             zMat%z_c(j,nslibd) = zzMat%z_c(j,i)
+             zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
           end do
         END IF
        endif 
@@ -593,7 +587,7 @@ c***********************************************************
      >            ntypd,nlo,llo,invsat,
      >            l_noco,l_soc,
      >            ntype,neq,nlotot,
-     >            kveclo,jspin,
+     >            jspin,
      >            oper,nop,mrot,nvd,nv,
      >            shiftkpt(:,ikpt),
      >            tau,
@@ -618,12 +612,10 @@ c...generation of the A,B,C coefficients in the spheres
 c...for the lapws and local orbitals, summed by the basis functions 
       ngopr1(:)=1
 
-      CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
-     >           noco,jspin,kveclo,oneD,acof,bcof,ccof,zMat)
+      CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
+     >           noco,jspin,oneD,acof,bcof,ccof,zMat)
 
-      call wann_abinv(
-     >        ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
-     >        noccbd,lmax,nlo,llo,invsat,invsatnr,bkpt,taual,
+      call wann_abinv(atoms,
      X        acof,bcof,ccof)
 
 
@@ -636,7 +628,7 @@ c***********************************************************************
          call wann_2dvacabcof(
      >         nv2d,nslibd,nvac,nmzd,nmz,omtil,vz(:,:,jspin2),
      >         nv(jspin),bkpt,z1,
-     >         nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
+     >    nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),
      >         bbmat,delz,bmat,nbasfcn,
      >         neigd,zMat,
      <         ac,bc,u,ue,addnoco,l_ss,qss,jspin)
@@ -650,7 +642,7 @@ c***********************************************************************
      >         DIMENSION,oneD,vacuum,stars,cell,
      >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:,jspin2),
      >         nv(jspin),bkpt,z1,odi,ods,
-     >         nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
+     >    nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),
      >         bbmat,delz,bmat,nbasfcn,neigd,zMat,
      >         n2d,n3d,ig,nmzxy,nmzxyd,ig2,sk2,phi2,k1d,k2d,k3d,
      <         ac_1,bc_1,u_1,ue_1,addnoco,l_ss,qss,jspin)
@@ -727,7 +719,7 @@ c**************************************************************************
                 jvac=ivac
                 if(nvac==1)jvac=1
                 call wann_plot_vac(point,z1,nmzd,nv2d,n3d,nvac,
-     >            nmz,delz,bmat,bbmat,evac(:,jspin),bkpt,vz,jspin,
+     >         nmz,delz,bmat,bbmat,enpara%evac0(:,jspin),bkpt,vz,jspin,
      >            k1(:,jspin),k2(:,jspin),k3(:,jspin),nvd, 
      >            nbasfcn,neigd,nv(jspin),omtil,nslibd,
      >            ac(:,nbn,ivac),
@@ -1027,7 +1019,7 @@ c*****************************************************************
 110   continue ! end of cycle by spins
 
 
-      deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
+      deallocate ( vr,vz,nv,k1,k2,k3 )
       deallocate ( ff,gg)
  
 #ifdef CPP_MPI

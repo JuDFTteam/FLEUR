@@ -87,7 +87,7 @@ C     .. Array Arguments ..
       LOGICAL, INTENT (IN) :: l_dulo(nlod,ntypd)
 C     ..
 C     .. Local Scalars ..
-      COMPLEX cil,ci,cci,cil1,fac1,fac2,fac3,cilp,cciljj1,ciljj2
+      COMPLEX cil,cci,cil1,fac1,fac2,fac3,cilp,cciljj1,ciljj2
       INTEGER i,l,l2,lamda,lh,lm,lmin,lmp,lp
       INTEGER lp1,lpl,m,mem,mems,mp,mu,n,nh,noded,nodeu,nrec,nsym,na,ne
       INTEGER ljj1,ljj2,mjj1,mjj2,lo,lop
@@ -145,7 +145,6 @@ C     ..
       tt2 = 0.
       tt3 = 0.
 
-      ci  = cmplx(0., 1.)
       cci = cmplx(0.,-1.)
       tdulo = cmplx(0.,0.); tuulo = cmplx(0.,0.); tuloulo = cmplx(0.,0.)
       tuu = cmplx(0.,0.); tdu = cmplx(0.,0.)
@@ -480,7 +479,7 @@ c*********************************************************c
              gc1 = gaunt1(ltil1, ljj1, lp, 
      >                    mtil1, mjj1, mp, lmaxd)
 
-             cil1 =  (ci**lp) * fac1 * gc1
+             cil1 =  (ImagUnit**lp) * fac1 * gc1
 
          DO ljj2=0,lwn
           lljj2 = ljj2 * (ljj2 + 1)
@@ -503,7 +502,7 @@ c*********************************************************c
      >                     m, mjj2, mtil1, lmaxd)
 
              ! set up prefactor
-             cil =  cil1* ( ci ** (ljj2 - l) ) 
+             cil =  cil1* ( ImagUnit ** (ljj2 - l) ) 
      +              * gc2 * conjg( yl2(lmjj2 + 1) )
 
              if(cil.eq.0.0) cycle
@@ -587,7 +586,7 @@ c*********************************************************c
 
          DO lp = 0, lnonsph(n)
             llp = lp * (lp + 1)
-            cilp = ci**lp
+            cilp = ImagUnit**lp
             DO mp = -lp, lp
                lmp = llp + mp
                mjj1 = mtil1 - mp
@@ -613,7 +612,7 @@ c*********************************************************c
 
          DO ljj2 = 0, lwn
             lljj2 = ljj2 * (ljj2 + 1)
-            ciljj2 = ci**ljj2
+            ciljj2 = ImagUnit**ljj2
             lmini3 = abs(ltil2 - ljj2)
             lmaxi3 = ltil2 + ljj2
             lmx3 = min(lmaxi3,lnonsph(n))

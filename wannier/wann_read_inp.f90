@@ -13,7 +13,7 @@ subroutine wann_read_inp(input,l_p0,wann)
 !     Frank Freimuth
 !********************************************
    use m_judft
-   use m_types
+   use m_types_setup
 
    implicit none
 
@@ -110,6 +110,19 @@ subroutine wann_read_inp(input,l_p0,wann)
    wann%l_matrixuHu_dmi=.false.
    wann%ikptstart=1
    wann%wan90version=2 ! Set the standard to Wannier90-1.2
+   wann%l_mmn0_unf_to_spn_unf=.false.
+   wann%l_mmn0_to_spn_unf=.false.
+   wann%l_mmn0_to_spn=.false.
+   wann%l_mmn0_to_spn2=.false.
+   wann%l_mmn0_unf_to_spn=.false.
+   wann%l_perpmag_unf_to_tor_unf=.false.
+   wann%l_perpmag_to_tor_unf=.false.
+   wann%l_perpmag_to_tor=.false.
+   wann%l_perpmag_unf_to_tor=.false.
+   wann%l_hsomtxvec_unf_to_lmpzsoc_unf=.false.
+   wann%l_hsomtxvec_to_lmpzsoc_unf=.false.
+   wann%l_hsomtxvec_to_lmpzsoc=.false.
+   wann%l_hsomtxvec_unf_to_lmpzsoc=.false.
 
 !-----read the input file 'wann_inp'
    l_file=.false.
@@ -201,6 +214,32 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_perpmagat=.true.
          elseif(trim(task).eq.'perpmagatrs')then
             wann%l_perpmagatrs=.true.
+         elseif(trim(task).eq.'mmn0_unf_to_spn_unf')then
+            wann%l_mmn0_unf_to_spn_unf=.true.
+         elseif(trim(task).eq.'mmn0_to_spn_unf')then
+            wann%l_mmn0_to_spn_unf=.true.
+         elseif(trim(task).eq.'mmn0_to_spn')then
+            wann%l_mmn0_to_spn=.true.
+         elseif(trim(task).eq.'mmn0_to_spn2')then
+            wann%l_mmn0_to_spn2=.true.
+         elseif(trim(task).eq.'mmn0_unf_to_spn')then
+            wann%l_mmn0_unf_to_spn=.true.
+         elseif(trim(task).eq.'perpmag_unf_to_tor_unf')then
+            wann%l_perpmag_unf_to_tor_unf=.true.
+         elseif(trim(task).eq.'perpmag_to_tor_unf')then
+            wann%l_perpmag_to_tor_unf=.true.
+         elseif(trim(task).eq.'perpmag_to_tor')then
+            wann%l_perpmag_to_tor=.true.
+         elseif(trim(task).eq.'perpmag_unf_to_tor')then
+            wann%l_perpmag_unf_to_tor=.true.
+         elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc_unf')then
+            wann%l_hsomtxvec_unf_to_lmpzsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc_unf')then
+            wann%l_hsomtxvec_to_lmpzsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc')then
+            wann%l_hsomtxvec_to_lmpzsoc=.true.
+         elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
+            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatrs')then
@@ -440,6 +479,32 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_perpmagat=.true.
          elseif(trim(task).eq.'perpmagatrs')then
             wann%l_perpmagatrs=.true.
+         elseif(trim(task).eq.'mmn0_unf_to_spn_unf')then
+            wann%l_mmn0_unf_to_spn_unf=.true.
+         elseif(trim(task).eq.'mmn0_to_spn_unf')then
+            wann%l_mmn0_to_spn_unf=.true.
+         elseif(trim(task).eq.'mmn0_to_spn')then
+            wann%l_mmn0_to_spn=.true.
+         elseif(trim(task).eq.'mmn0_to_spn2')then
+            wann%l_mmn0_to_spn2=.true.
+         elseif(trim(task).eq.'mmn0_unf_to_spn')then
+            wann%l_mmn0_unf_to_spn=.true.
+         elseif(trim(task).eq.'perpmag_unf_to_tor_unf')then
+            wann%l_perpmag_unf_to_tor_unf=.true.
+         elseif(trim(task).eq.'perpmag_to_tor_unf')then
+            wann%l_perpmag_to_tor_unf=.true.
+         elseif(trim(task).eq.'perpmag_to_tor')then
+            wann%l_perpmag_to_tor=.true.
+         elseif(trim(task).eq.'perpmag_unf_to_tor')then
+            wann%l_perpmag_unf_to_tor=.true.
+         elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc_unf')then
+            wann%l_hsomtxvec_unf_to_lmpzsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc_unf')then
+            wann%l_hsomtxvec_to_lmpzsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc')then
+            wann%l_hsomtxvec_to_lmpzsoc=.true.
+         elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
+            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatrs')then

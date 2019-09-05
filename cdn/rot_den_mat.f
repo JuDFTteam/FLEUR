@@ -15,8 +15,10 @@ c This subroutine rotates the direction of the magnetization of the
 c density matrix by multiplying with the unitary 2x2 spin rotation
 c matrix. --> U*rho*U^dagger
 c Philipp Kurz 2000-02-03
+c new method for improved stability (l_new=t) gb'19
 c***********************************************************************
 
+      use m_constants
       IMPLICIT NONE
 
 C     .. Scalar Arguments ..
@@ -27,21 +29,37 @@ C     .. Scalar Arguments ..
 C     ..
 C     .. Local Scalars ..
       INTEGER ispin
-      REAL eps
-      COMPLEX ci
+      REAL eps,r11n,r22n
+      COMPLEX r21n
+      LOGICAL l_new
 C     ..
 C     .. Local Arrays ..
       COMPLEX u2(2,2),rho(2,2),rhoh(2,2)
 C     ..
+      l_new = .true.
+
+      IF (l_new) THEN
+
+      r11n = 0.5*(1.0+cos(beta))*rho11 - sin(beta)*real(rho21) +
+     +       0.5*(1.0-cos(beta))*rho22
+      r22n = 0.5*(1.0-cos(beta))*rho11 + sin(beta)*real(rho21) +
+     +       0.5*(1.0+cos(beta))*rho22
+      r21n = CMPLX(cos(alph),-sin(alph))*(sin(beta)*(rho11-rho22) +
+     +       2.0*(cos(beta)*real(rho21)-cmplx(0.0,aimag(rho21))))*0.5
+
+      rho11 = r11n
+      rho22 = r22n
+      rho21 = r21n
+
+      ELSE
       
       eps = 1.0e-10
-      ci = cmplx(0.0,1.0)
 
 c---> set up the unitary 2x2 spin rotation matrix U^(2)
-      u2(1,1) =  exp(-ci*alph/2)*cos(beta/2)
-      u2(1,2) = -exp(-ci*alph/2)*sin(beta/2)
-      u2(2,1) =  exp( ci*alph/2)*sin(beta/2)
-      u2(2,2) =  exp( ci*alph/2)*cos(beta/2)
+      u2(1,1) =  exp(-ImagUnit*alph/2)*cos(beta/2)
+      u2(1,2) = -exp(-ImagUnit*alph/2)*sin(beta/2)
+      u2(2,1) =  exp( ImagUnit*alph/2)*sin(beta/2)
+      u2(2,2) =  exp( ImagUnit*alph/2)*cos(beta/2)
       
       rho(1,1) = cmplx(rho11,0.0)
       rho(2,2) = cmplx(rho22,0.0)
@@ -67,21 +85,21 @@ c---> check wether the diagonal elements of the rotated density
 c---> are real.
       DO ispin = 1,2
          IF (aimag(rho(ispin,ispin)).GT.eps) THEN
-            WRITE(16,8000)
-            WRITE( 6,8000)
             CALL juDFT_error("rotation of mag. failed",calledby
-     +           ="rot_den_mat")
+     +           ="rot_den_mat",hint=
+     +        'After the rotation of the density matrix in the '//
+     +       'muffin-tin sphere one diagonal element of the '//
+     +       '(hermitian) density matrix is not real. That means '//
+     +       'that the density matrix was probably damaged.')
          ENDIF
       ENDDO
- 8000 FORMAT('After the rotation of the density matrix in the'/
-     +       'muffin-tin sphere one diagonal element of the'/
-     +       '(hermitian) density matrix is not real. That means'/
-     +       'that the density matrix was probably damaged.')
-
+ 
       rho11 = real(rho(1,1))
       rho22 = real(rho(2,2))
       rho21 =      rho(2,1)
 
+      ENDIF
+      
       END SUBROUTINE rot_den_mat
       END MODULE m_rotdenmat
 

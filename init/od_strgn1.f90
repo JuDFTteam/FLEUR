@@ -16,7 +16,7 @@
           USE m_types
 
           IMPLICIT NONE
-          TYPE(t_xcpot),INTENT(IN)  :: xcpot
+          CLASS(t_xcpot),INTENT(IN) :: xcpot
           TYPE(t_cell),INTENT(IN)   :: cell
           TYPE(t_sym),INTENT(IN)    :: sym
           TYPE(t_oneD),INTENT(INOUT):: oneD
@@ -38,7 +38,7 @@
           oneD%igfft1(0:oneD%odd%nn2d-1,1:2) = 0
           oneD%pgfft1(0:oneD%odd%nn2d-1) = 0.
 
-          IF (xcpot%is_gga()) THEN
+          IF (xcpot%needs_grad()) THEN
              !         ALLOCATE ( odg%pgfx(0:odg%nn2d-1),
              !     &              odg%pgfy(0:odg%nn2d-1),
              !     &              odg%pgfxx(0:odg%nn2d-1),
@@ -125,7 +125,7 @@
              oneD%pgfft1(i-1) = 1.
           ENDDO
 
-          IF (xcpot%is_gga()) THEN
+          IF (xcpot%needs_grad()) THEN
              DO  i = 1,oneD%odd%nq2
                 kfx_1 = oneD%kv1(1,i)
                 kfy_1 = oneD%kv1(2,i)

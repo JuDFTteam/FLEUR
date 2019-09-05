@@ -17,13 +17,13 @@ SUBROUTINE initWannierDefaults(wann)
    !!!
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   USE m_types
+   USE m_types_setup
 
    IMPLICIT NONE
 
    TYPE(t_wann), INTENT(INOUT) :: wann
 
-   wann%wan90version = 2 ! Set the standard to Wannier90-1.2
+   wann%wan90version = 3 ! Set the standard to Wannier90-1.2
 
    wann%oc_num_orbs = 0
 !        integer,allocatable :: oc_orbs(:)

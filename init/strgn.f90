@@ -8,6 +8,9 @@ MODULE m_strgn
   !     implementation of new box-dimension: to treat nonorthogonal
   !     lattice systems
   !     S. Bl"ugel, IFF, 17.Nov.97
+  !
+  !     OpenMP paralleliation added
+  !     U.Alekseeva          Jan.2019
   !     *********************************************************
 CONTAINS
   SUBROUTINE strgn1(&
@@ -28,7 +31,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    CLASS(t_xcpot),INTENT(IN)    :: xcpot
 
     !     ..
     !     ..
@@ -37,7 +40,7 @@ CONTAINS
     REAL gmi,gla,eps 
     REAL gfx,gfy,pon,pon2
     INTEGER j,k,k1,k2,k3,m0,mxx1,mxx2,n
-    INTEGER ned1,nint,kdone,i
+    INTEGER ned1,nint,kdone,i,i_sym,n_sym
     LOGICAL NEW,l_cdn1,l_xcExtended, l_error
     INTEGER kfx,kfy,kfz,kidx,nfftx,nffty,nfftz,kfft
     INTEGER nfftxy,norm,n1,kidx2,k2i
@@ -63,13 +66,19 @@ CONTAINS
     !
     !WRITE (*,*) ' stars are always ordered '
 
-    l_xcExtended = xcpot%is_gga()
+    l_xcExtended = xcpot%needs_grad()
     !--->    read in information if exists
     CALL readStars(stars,l_xcExtended,.TRUE.,l_error)
     IF(.NOT.l_error) THEN
        GOTO 270
     END IF
  
+    IF (input%film.AND.sym%invs.AND.(.not.sym%zrfs).AND.(.not.sym%symor)) THEN
+      n_sym = 2 ! needs reordering of 2d-stars
+    ELSE
+      n_sym = 1 ! as before...
+    ENDIF
+
     mxx1 = 0
     mxx2 = 0
     stars%ng2 = 0
@@ -80,45 +89,53 @@ CONTAINS
        kv(1) = k1
        k2_loop:DO  k2 = stars%mx2,-stars%mx2,-1
           kv(2) = k2
-          DO j = 1,2
-             g(j) = kv(1)*cell%bmat(1,j) + kv(2)*cell%bmat(2,j)
-          ENDDO
-          s = SQRT(g(1)**2+g(2)**2)
-          !--->   determine the angle of the G_{||} needed in odim calculations
-          !+odim YM cute little 'angle' is written by me to determine the phi2
-          phi = angle(g(1),g(2))
-          !-odim
-          !
-          !--->   check if generated vector belongs to a star already
-          !--->   stars should be within the g_max-sphere !   (Oct.97) sbluegel
-          !
-          IF (s.LT.stars%gmax) THEN      
-             CALL spgrot(&
-                  &                     sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
-                  &                     kv,&
-                  &                     kr)
-             DO n = 1,sym%nop2
-                IF (mxx1.LT.kr(1,n)) mxx1 = kr(1,n)
-                IF (mxx2.LT.kr(2,n)) mxx2 = kr(2,n)
-             ENDDO
-             DO k = 1,stars%ng2 
-                DO n = 1,sym%nop2
-                   IF (kr(1,n).EQ.stars%kv2(1,k) .AND.&
-                        &                   kr(2,n).EQ.stars%kv2(2,k)) CYCLE k2_loop
-                ENDDO
-             ENDDO
-             !--->    new representative found
-             stars%ng2 = stars%ng2 + 1
-             IF (stars%ng2.GT.stars%ng2) THEN
-                WRITE (6,8070) stars%ng2,stars%ng2
-                CALL juDFT_error("nq2.GT.n2d",calledby="strgn")
-             ENDIF
-             DO j = 1,2
-                stars%kv2(j,stars%ng2) = kv(j)
-             ENDDO
-             stars%sk2(stars%ng2) = s
-             stars%phi2(stars%ng2) = phi
-          ENDIF
+
+          DO i_sym = 1, n_sym
+            IF (i_sym == 2) THEN
+               kv(1) = - kv(1) ; kv(2) = - kv(2)
+            ENDIF
+
+            DO j = 1,2
+               g(j) = kv(1)*cell%bmat(1,j) + kv(2)*cell%bmat(2,j)
+            ENDDO
+            s = SQRT(g(1)**2+g(2)**2)
+            !--->   determine the angle of the G_{||} needed in odim calculations
+            !+odim YM cute little 'angle' is written by me to determine the phi2
+            phi = angle(g(1),g(2))
+            !-odim
+            !
+            !--->   check if generated vector belongs to a star already
+            !--->   stars should be within the g_max-sphere !   (Oct.97) sbluegel
+            !
+            IF (s.LT.stars%gmax) THEN      
+               CALL spgrot(&
+                    &                     sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
+                    &                     kv,&
+                    &                     kr)
+               DO n = 1,sym%nop2
+                  IF (mxx1.LT.kr(1,n)) mxx1 = kr(1,n)
+                  IF (mxx2.LT.kr(2,n)) mxx2 = kr(2,n)
+               ENDDO
+               DO k = 1,stars%ng2 
+                  DO n = 1,sym%nop2
+                     IF (kr(1,n).EQ.stars%kv2(1,k) .AND.&
+                          &                   kr(2,n).EQ.stars%kv2(2,k)) CYCLE k2_loop
+                  ENDDO
+               ENDDO
+               !--->    new representative found
+               stars%ng2 = stars%ng2 + 1
+               IF (stars%ng2.GT.stars%ng2) THEN
+                  WRITE (6,8070) stars%ng2,stars%ng2
+                  CALL juDFT_error("nq2.GT.n2d",calledby="strgn")
+               ENDIF
+               DO j = 1,2
+                  stars%kv2(j,stars%ng2) = kv(j)
+               ENDDO
+               stars%sk2(stars%ng2) = s
+               stars%phi2(stars%ng2) = phi
+            ENDIF
+            ENDDO ! i_sym
+
        ENDDO k2_loop
     ENDDO
 8070 FORMAT ('nq2 = ',i5,' > n2d =',i5)
@@ -134,8 +151,10 @@ CONTAINS
     ENDIF
 
     !--->    sort for increasing length sk2
-
-    CALL sort(stars%ng2,stars%sk2,index)
+    DO  k = 1,stars%ng2
+       gsk3(k) = (stars%mx1+stars%kv2(1,k)) + (stars%mx2+stars%kv2(2,k))*(2*stars%mx1+1)
+    ENDDO
+    CALL sort(INDEX(:stars%ng2),stars%sk2(:stars%ng2),gsk3(:stars%ng2))
     DO k = 1,stars%ng2
        kv3rev(k,1) = stars%kv2(1,INDEX(k))
        kv3rev(k,2) = stars%kv2(2,INDEX(k))
@@ -149,33 +168,6 @@ CONTAINS
        stars%phi2(k) = phi3(k)
     ENDDO
 
-    !--roa   ....
-    !......sort stars of equal length 2D .....
-    i=1
-    gla=0.
-    gsk3(1)=0.0
-    eps=1.e-10
-    DO  k = 2,stars%ng2
-       IF (stars%sk2(k)-gla.GE.eps) i=i+1
-       gla=stars%sk2(k)
-       gmi = (stars%mx1+stars%kv2(1,k)) + (stars%mx2+stars%kv2(2,k))*(2*stars%mx1+1)
-       gsk3(k) = i * ((2*stars%mx1+1)*(2*stars%mx2+1)+9)+gmi
-    ENDDO
-    CALL sort(stars%ng2,gsk3,index2)
-    DO  k = 1,stars%ng2
-       kv3rev(k,1) = stars%kv2(1,index2(k))
-       kv3rev(k,2) = stars%kv2(2,index2(k))
-       gsk3(k) = stars%sk2(index2(k))
-       phi3(k) = stars%phi2(index2(k))
-    ENDDO
-    DO  k = 1,stars%ng2
-       stars%kv2(1,k) = kv3rev(k,1)
-       stars%kv2(2,k) = kv3rev(k,2)
-       stars%sk2(k) = gsk3(k)
-       stars%phi2(k) = phi3(k)
-       !         if (index2(k).ne.k) write(*,*) ' ic2: ',k,index2(k)
-    ENDDO
-    !--roa   ....
 
     WRITE (6,'(/'' nq2='',i4/'' k,kv2(1,2), sk2, phi2''&
          &     /(3i4,f10.5,f10.5))')&
@@ -203,7 +195,6 @@ CONTAINS
 
     IF (stars%mx3.GT.stars%mx3) THEN
        WRITE ( 6,FMT=8000) stars%mx3,stars%mx3
-       WRITE (16,FMT=8000) stars%mx3,stars%mx3
        CALL juDFT_error("mx3.gt.k3d",calledby="strgn")
     ENDIF
 8000 FORMAT('   mx3.gt.k3d:',2i6)
@@ -238,8 +229,13 @@ CONTAINS
     ENDDO
 
     !--->    sort for increasing length sk3
-
-    CALL sort(stars%ng3,stars%sk3,index)
+    ! secondary key for equal length stars
+    DO  k = 1,stars%ng3
+       gsk3(k) = (stars%mx1+stars%kv3(1,k)) +&
+            &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
+            &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
+    ENDDO
+    CALL sort(index(:stars%ng3),stars%sk3,gsk3)
 
     ALLOCATE (ig2p(stars%ng3))
 
@@ -257,41 +253,7 @@ CONTAINS
        stars%sk3(k) = gsk3(k)
        stars%ig2(k) = ig2p(k)
     ENDDO
-    !
-    !--roa   ....
-    !......sort stars of equal length 3D .....
-    i=1
-    gla=0.
-    gsk3(1)=0.
-    eps=1.e-10
-    DO  k = 2,stars%ng3
-       IF (stars%sk3(k)-gla.GE.eps) i=i+1
-       gla = stars%sk3(k)
-       gmi = (stars%mx1+stars%kv3(1,k)) +&
-            &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
-            &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
-       gsk3(k) = i * (9.+(2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)) + gmi
-    ENDDO
-    CALL sort(stars%ng3,gsk3,index3)
-    DO  k = 1,stars%ng3
-       kv3rev(k,1) = stars%kv3(1,index3(k))
-       kv3rev(k,2) = stars%kv3(2,index3(k))
-       kv3rev(k,3) = stars%kv3(3,index3(k))
-       gsk3(k) = stars%sk3(index3(k))
-       ig2p(k) = stars%ig2(index3(k))
-    ENDDO
-    DO  k = 1,stars%ng3
-       stars%kv3(1,k) = kv3rev(k,1)
-       stars%kv3(2,k) = kv3rev(k,2)
-       stars%kv3(3,k) = kv3rev(k,3)
-       stars%sk3(k) = gsk3(k)
-       stars%ig2(k) = ig2p(k)
-       !           if (index3(k).ne.k) write(*,*) ' ic: ',k,index3(k)
-    ENDDO
-
-    DEALLOCATE (ig2p)
-
-    !--roa   ....
+  
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
@@ -369,7 +331,7 @@ CONTAINS
                 stars%igfft2(kidx2,2) = kfft
                 stars%pgfft2(kidx2)   = phas(n)
                 !+guta
-                IF (xcpot%is_gga()) THEN
+                IF (xcpot%needs_grad()) THEN
                    !!                   pgft2x: exp(i*(gfx,gfy,gfz)*tau)*gfx.
                    !!                        y                             y.
                    !!                   pgft2xx: exp(i*(gfx,gfy,gfz)*tau)*gfx*gfx.
@@ -505,9 +467,7 @@ CONTAINS
     !
     !-->  listing
     !
-    WRITE (16,FMT=8010) stars%gmax,stars%ng3,stars%ng2
 8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i5,/,' nq2=  ',i5,/)
-    WRITE (16,FMT=8020) stars%mx1,stars%mx2
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,/)
     WRITE (6,FMT=8030)
 8030 FORMAT (/,/,/,'   s t a r   l i s t',/)
@@ -564,7 +524,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_xcpot),INTENT(IN)     :: xcpot
+    CLASS(t_xcpot),INTENT(IN)    :: xcpot
     !     ..
     !     .. Local Scalars ..
     REAL arltv1,arltv2,arltv3,s
@@ -596,7 +556,7 @@ CONTAINS
     !
     WRITE (*,*) ' stars are always ordered '
 
-    l_xcExtended = xcpot%is_gga()
+    l_xcExtended = xcpot%needs_grad()
     !--->    read in information if exists
     CALL readStars(stars,l_xcExtended,.FALSE.,l_error)
     IF(.NOT.l_error) THEN
@@ -668,8 +628,13 @@ CONTAINS
     ENDIF
 
     !--->    sort for increasing length sk3
-    !
-    CALL sort(stars%ng3,stars%sk3,index)
+    ! secondary key for equal length stars
+    DO  k = 1,stars%ng3
+       gsk3(k) = (stars%mx1+stars%kv3(1,k)) +&
+            &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
+            &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
+    ENDDO
+    CALL sort(index(:stars%ng3),stars%sk3,gsk3)
     DO k = 1,stars%ng3
        kv3rev(k,1) = stars%kv3(1,INDEX(k))
        kv3rev(k,2) = stars%kv3(2,INDEX(k))
@@ -682,36 +647,6 @@ CONTAINS
        stars%kv3(3,k) = kv3rev(k,3)
        stars%sk3(k) = gsk3(k)
     ENDDO
-    !
-    !--roa   ....
-    !......sort stars of equal length 3D .....
-    i=1
-    gla=0.
-    gsk3(1)=0.
-    eps=1.e-10
-    DO  k = 2,stars%ng3
-       IF (stars%sk3(k)-gla.GE.eps) i=i+1
-       gla = stars%sk3(k)
-       gmi = (stars%mx1+stars%kv3(1,k)) +&
-            &           (stars%mx2+stars%kv3(2,k))*(2*stars%mx1+1) +&
-            &           (stars%mx3+stars%kv3(3,k))*(2*stars%mx1+1)*(2*stars%mx2+1)
-       gsk3(k) = i * (9.+(2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)) + gmi
-    ENDDO
-    CALL sort(stars%ng3,gsk3,index3)
-    DO  k = 1,stars%ng3
-       kv3rev(k,1) = stars%kv3(1,index3(k))
-       kv3rev(k,2) = stars%kv3(2,index3(k))
-       kv3rev(k,3) = stars%kv3(3,index3(k))
-       gsk3(k) = stars%sk3(index3(k))
-    ENDDO
-    DO  k = 1,stars%ng3
-       stars%kv3(1,k) = kv3rev(k,1)
-       stars%kv3(2,k) = kv3rev(k,2)
-       stars%kv3(3,k) = kv3rev(k,3)
-       stars%sk3(k) = gsk3(k)
-       !           if (index3(k).ne.k) write(*,*) ' ic: ',k,index3(k)
-    ENDDO
-    !--roa   ....
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
@@ -817,6 +752,10 @@ CONTAINS
        stars%rgphs(:,:,:) = cmplx(1.0,0.0)
     ELSE
        pon = 1.0 / sym%nop
+       !$OMP PARALLEL DO &
+       !$OMP DEFAULT(none) &
+       !$OMP SHARED(mxx1,mxx2,mxx3,stars,nfftx,nffty,nfftz,nfftxy,pon) &
+       !$OMP PRIVATE(k1,k2,k3,k,kfx,kfy,kfz,kfft,kidx,i)
        DO k3 = -mxx3,mxx3
           DO k2 = -mxx2,mxx2
              DO k1 = -mxx1,mxx1
@@ -837,25 +776,26 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO
+       !OMP END PARALLLEL DO
     ENDIF
     if ( stars%mx1 < mxx1 .or. stars%mx2 < mxx2 .or. stars%mx3 < mxx3 ) call &
          judft_error("BUG 1 in strgen") 
     stars%ng2 = 2 ; stars%kv2 = 0 ; stars%ig2 = 0 ; stars%kimax2= 0 ; stars%igfft2 = 0
     stars%sk2 = 0.0 ; stars%pgfft2 = 0.0  ; stars%nstr2 = 0
-    IF (xcpot%is_gga()) THEN
+    IF (xcpot%needs_grad()) THEN
        stars%ft2_gfx = 0.0 ; stars%ft2_gfy = 0.0 
     ENDIF
 
     !--->    write /str0/ and /str1/ to file
+    CALL timestart("writeStars") 
     CALL writeStars(stars,l_xcExtended,.FALSE.)
+    CALL timestop("writeStars") 
 
 270 CONTINUE
 
     !
     !-->  listing
-    WRITE (16,FMT=8010) stars%gmax,stars%ng3
 8010 FORMAT (' gmax=',f10.6,/,' nq3=  ',i7,/)
-    WRITE (16,FMT=8020) stars%mx1,stars%mx2,stars%mx3
 8020 FORMAT (' mx1= ',i5,/,' mx2= ',i5,' mx3= ',i5,/)
     WRITE (6,FMT=8030)
 8030 FORMAT (/,/,/,'   s t a r   l i s t',/)

@@ -20,7 +20,7 @@
 #include "cpp_double.h"
       implicit none
 
-      TYPE(t_zmat), INTENT(IN) :: zMat, zMat_b
+      TYPE(t_mat), INTENT(IN) :: zMat, zMat_b
 
       integer, intent(in) :: addnoco,addnoco2
       integer, intent(in) :: nvd,n3d,k1(nvd),k2(nvd),k3(nvd)
@@ -74,25 +74,25 @@ c-->     determine index and phase factor
       enddo
       IF(zMat%l_real) THEN
          call CPP_BLAS_sgemm('T','N',nv,nslibd_b,nv_b,real(1.0),
-     &               stepf_r,nv_b,zMat_b%z_r(1+addnoco2,1),nbasfcn,
-c     &               stepf_r,nv_b,zMat_b%z_r,nbasfcn,
+     &               stepf_r,nv_b,zMat_b%data_r(1+addnoco2,1),nbasfcn,
+c     &               stepf_r,nv_b,zMat_b%data_r,nbasfcn,
      &               real(0.0),phasusbmat_r,nv)
          call CPP_BLAS_sgemm('T','N',nslibd,nslibd_b,nv,real(1.0),
-     &               zMat%z_r(1+addnoco,1),nbasfcn,phasusbmat_r,nv,
-c     &               zMat%z_r,nbasfcn,phasusbmat_r,nv,
+     &               zMat%data_r(1+addnoco,1),nbasfcn,phasusbmat_r,nv,
+c     &               zMat%data_r,nbasfcn,phasusbmat_r,nv,
      &               real(0.0),mmnk_tmp,nbnd)
          mmnk(1:nslibd,1:nslibd_b)=mmnk(1:nslibd,1:nslibd_b)+
      &               mmnk_tmp(1:nslibd,1:nslibd_b)*interchi
       ELSE
          call CPP_BLAS_cgemm('T','N',nv,nslibd_b,nv_b,cmplx(1.0),
-     &               stepf_c,nv_b,zMat_b%z_c(1+addnoco2,1),
-c     &               stepf_c,nv_b,zMat_b%z_c,
+     &               stepf_c,nv_b,zMat_b%data_c(1+addnoco2,1),
+c     &               stepf_c,nv_b,zMat_b%data_c,
      &               nbasfcn,cmplx(0.0),
      &               phasusbmat_c,nv)
          phasusbmat_c=conjg(phasusbmat_c)            
          call CPP_BLAS_cgemm('T','N',nslibd,nslibd_b,nv,interchi, 
-     &               zMat%z_c(1+addnoco,1),nbasfcn,phasusbmat_c,nv,
-c     &               zMat%z_c,nbasfcn,phasusbmat_c,nv,
+     &               zMat%data_c(1+addnoco,1),nbasfcn,phasusbmat_c,nv,
+c     &               zMat%data_c,nbasfcn,phasusbmat_c,nv,
      &               cmplx(1.0),mmnk,nbnd)
       END IF
 

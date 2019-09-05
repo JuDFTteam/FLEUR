@@ -5,8 +5,7 @@ MODULE m_orbmom2
   !     ***************************************************************
   !
 CONTAINS
-  SUBROUTINE orbmom2(atoms,itype,ddn,orb, &
-       uulon,dulon,uloulopn,orbl,orblo, clmom)
+  SUBROUTINE orbmom2(atoms,itype,ispin,ddn,orb,uulon,dulon,uloulopn,clmom)
 
     !      USE m_types, ONLY : t_orb,t_orbl,t_orblo
     USE m_types
@@ -15,14 +14,12 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)   :: atoms
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: itype 
+    INTEGER, INTENT (IN) :: itype, ispin
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: ddn(0:atoms%lmaxd),uulon(atoms%nlod),dulon(atoms%nlod)
     REAL,    INTENT (IN) :: uloulopn(atoms%nlod,atoms%nlod)
-    TYPE (t_orb),  INTENT (IN) :: orb(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd)
-    TYPE (t_orbl), INTENT (IN) :: orbl(atoms%nlod,-atoms%llod:atoms%llod)
-    TYPE (t_orblo),INTENT (IN) :: orblo(atoms%nlod,atoms%nlod,-atoms%llod:atoms%llod)
+    TYPE (t_orb),  INTENT (IN) :: orb
     REAL,    INTENT (OUT) :: clmom(3)
     !     ..
     !     .. Local Scalars ..
@@ -43,11 +40,11 @@ CONTAINS
        qmtly(l) = 0.
        DO m = -l,l
           ! lz
-          sumlm = m * (orb(l,m)%uu + orb(l,m)%dd * ddn(l) ) 
+          sumlm = m * (orb%uu(l,m,itype,ispin) + orb%dd(l,m,itype,ispin) * ddn(l) ) 
           ! lx,ly
-          orbp = SQRT(REAL((l-m)*(l+m+1))) * ( orb(l,m)%uup + orb(l,m)%ddp * ddn(l) ) 
+          orbp = SQRT(REAL((l-m)*(l+m+1))) * ( orb%uup(l,m,itype,ispin) + orb%ddp(l,m,itype,ispin) * ddn(l) ) 
 
-          orbm = SQRT(REAL((l+m)*(l-m+1))) * ( orb(l,m)%uum + orb(l,m)%ddm * ddn(l) )
+          orbm = SQRT(REAL((l+m)*(l-m+1))) * ( orb%uum(l,m,itype,ispin) + orb%ddm(l,m,itype,ispin) * ddn(l) )
           !+gu
           IF (m.EQ.l)  orbp = CMPLX(0.0,0.0)
           IF (m.EQ.-l) orbm = CMPLX(0.0,0.0)
@@ -63,13 +60,13 @@ CONTAINS
     DO ilo = 1, atoms%nlo(itype)
        l = atoms%llo(ilo,itype)
        DO m = -l,l
-          sumlm = m * (orbl(ilo,m)%uulo * uulon(ilo) + orbl(ilo,m)%dulo * dulon(ilo) )
+          sumlm = m * (orb%uulo(ilo,m,itype,ispin) * uulon(ilo) + orb%dulo(ilo,m,itype,ispin) * dulon(ilo) )
 
-          orbp = SQRT(REAL((l-m)*(l+m+1))) * ( orbl(ilo,m)%uulop * uulon(ilo) +&
-               orbl(ilo,m)%dulop * dulon(ilo) )
+          orbp = SQRT(REAL((l-m)*(l+m+1))) * ( orb%uulop(ilo,m,itype,ispin) * uulon(ilo) +&
+               orb%dulop(ilo,m,itype,ispin) * dulon(ilo) )
 
-          orbm = SQRT(REAL((l+m)*(l-m+1))) * ( orbl(ilo,m)%uulom * uulon(ilo) +&
-               orbl(ilo,m)%dulom * dulon(ilo) )
+          orbm = SQRT(REAL((l+m)*(l-m+1))) * ( orb%uulom(ilo,m,itype,ispin) * uulon(ilo) +&
+               orb%dulom(ilo,m,itype,ispin) * dulon(ilo) )
 
           IF (m.EQ.l)  orbp = CMPLX(0.0,0.0)
           IF (m.EQ.-l) orbm = CMPLX(0.0,0.0)
@@ -81,9 +78,9 @@ CONTAINS
        DO ilop = 1, atoms%nlo(itype)
           IF (atoms%llo(ilop,itype).EQ.l) THEN
              DO m = -l,l
-                sumlm = m * orblo(ilo,ilop,m)%z * uloulopn(ilo,ilop)
-                orbp = SQRT(REAL((l-m)*(l+m+1))) * orblo(ilo,ilop,m)%p * uloulopn(ilo,ilop)
-                orbm = SQRT(REAL((l+m)*(l-m+1))) * orblo(ilo,ilop,m)%m * uloulopn(ilo,ilop)
+                sumlm = m * orb%z(ilo,ilop,m,itype,ispin) * uloulopn(ilo,ilop)
+                orbp = SQRT(REAL((l-m)*(l+m+1))) * orb%p(ilo,ilop,m,itype,ispin) * uloulopn(ilo,ilop)
+                orbm = SQRT(REAL((l+m)*(l-m+1))) * orb%m(ilo,ilop,m,itype,ispin) * uloulopn(ilo,ilop)
                 IF (m.EQ.l)  orbp = CMPLX(0.0,0.0)
                 IF (m.EQ.-l) orbm = CMPLX(0.0,0.0)
 
@@ -108,10 +105,13 @@ CONTAINS
     clmom(2) = qmtty
     clmom(3) = qmtt
 
-    WRITE (6,FMT=8100) itype, (qmtl(l),l=0,3), qmtt
-    WRITE (6,FMT=8100) itype, (qmtlx(l),l=0,3),qmttx
-    WRITE (6,FMT=8100) itype, (qmtly(l),l=0,3),qmtty
-8100 FORMAT (' -->',i2,2x,4f9.5,2x,f9.5)
+! The following output was commented out, because the subroutine is now  used in parallel.
+! Jan. 2019   U.Alekseeva
+!
+!    WRITE (6,FMT=8100) itype, (qmtl(l),l=0,3), qmtt
+!    WRITE (6,FMT=8100) itype, (qmtlx(l),l=0,3),qmttx
+!    WRITE (6,FMT=8100) itype, (qmtly(l),l=0,3),qmtty
+!8100 FORMAT (' -->',i2,2x,4f9.5,2x,f9.5)
 
   END SUBROUTINE orbmom2
 END MODULE m_orbmom2

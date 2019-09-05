@@ -71,7 +71,7 @@ c-odim
 c+odim
 C     ..
 C     .. Local Scalars ..
-      COMPLEX phase,cexp,c_0,c_1,c_2,ci
+      COMPLEX phase,cexp,c_0,c_1,c_2
       REAL const,df,r1,s,tmk,wronk,tpi,qss1,qss2,qss3
       INTEGER i,j,k,l,ll1,lm,m,n,nap,natom,nn,iatom,jatom,lmp
       INTEGER inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap
@@ -90,7 +90,7 @@ C     .. Local Arrays ..
       REAL,    ALLOCATABLE :: work(:)
 #endif
 C     ..
-      ci = cmplx(0.0,1.0)
+
       tpi = 2 * pimach()
       const = 2 * tpi/sqrt(omtil)
 c
@@ -157,10 +157,10 @@ c--->        loop over lapws
 
                IF (l_noco) THEN
 c--->            generate the complex conjgates of the spinors (chi)
-                 ccchi(1,1) = conjg( exp(-ci*alph(n)/2)*cos(beta(n)/2))
-                 ccchi(1,2) = conjg(-exp(-ci*alph(n)/2)*sin(beta(n)/2))
-                 ccchi(2,1) = conjg( exp( ci*alph(n)/2)*sin(beta(n)/2))
-                 ccchi(2,2) = conjg( exp( ci*alph(n)/2)*cos(beta(n)/2))
+                 ccchi(1,1) = conjg( exp(-ImagUnit*alph(n)/2)*cos(beta(n)/2))
+                 ccchi(1,2) = conjg(-exp(-ImagUnit*alph(n)/2)*sin(beta(n)/2))
+                 ccchi(2,1) = conjg( exp( ImagUnit*alph(n)/2)*sin(beta(n)/2))
+                 ccchi(2,2) = conjg( exp( ImagUnit*alph(n)/2)*cos(beta(n)/2))
                  IF (l_ss) THEN
 c--->              the coefficients of the spin-down basis functions are
 c--->              stored in the second half of the eigenvector
@@ -204,7 +204,7 @@ c  ----> construct a and b coefficients
                  wronk = uds(l,n)*dus(l,n) - us(l,n)*duds(l,n)
                  IF (apw(l,n)) THEN
                    fj(l) = 1.0*const * fj(l)/us(l,n)
-                   dfj(l) = 0.0d0
+                   dfj(l) = 0.0
                  ELSE
                    dfj(l) = const* (dus(l,n)*fj(l)-df*us(l,n))/wronk
                    fj(l) = const* (df*uds(l,n)-fj(l)*duds(l,n))/wronk
@@ -304,7 +304,7 @@ c     ----> loop over bands
             iatom = iatom + 1
             IF (invsat(iatom).EQ.1) THEN
               jatom = invsatnr(iatom)
-              cexp = exp(tpi*ci*dot_product(taual(:,jatom)
+              cexp = exp(tpi*ImagUnit*dot_product(taual(:,jatom)
      +             + taual(:,iatom),(/bkpt(1),bkpt(2),bkpt(3)/)))
                DO ilo = 1,nlo(n)
                   l = llo(ilo,n)

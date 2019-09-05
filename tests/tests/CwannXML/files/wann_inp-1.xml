@@ -13,7 +13,6 @@
          <qss>.0000000000 .0000000000 .0000000000</qss>
       </nocoParams>
       <expertModes gw="0" pot8="F" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
       <bzIntegration valenceElectrons="8.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointMesh nx="2" ny="2" nz="2" gamma="F"/>

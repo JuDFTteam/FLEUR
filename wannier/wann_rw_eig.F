@@ -56,7 +56,6 @@ c****************************************************************
       integer          :: nkbnd,i
       REAL             :: ello(nlod,ntypd,jspd),evdu(2,jspd)
       REAL             :: epar(0:lmaxd,ntypd,jspd)
-      INTEGER          :: kveclo(nlotot)
       integer          :: n_start,n_end,co
       integer          :: bnd1,bnd2,kpt
       complex, allocatable :: paulimat(:,:,:,:) 
@@ -70,15 +69,15 @@ c****************************************************************
 ! END QPOINTS
       real,parameter   :: hartree=27.21138505
 
-      TYPE(t_zmat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_mat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
       zMat%l_real = l_real
-      zMat%nbasfcn = nbasfcn
-      zMat%nbands = neigd
+      zMat%matsize1 = nbasfcn
+      zMat%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zMat%z_r(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
       ELSE
-         ALLOCATE (zMat%z_c(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
       END IF
 
 !      WRITE(*,*)'min',band_min,'max',band_max,'num',numbands
@@ -138,8 +137,7 @@ c****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
+     <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
 
@@ -186,8 +184,7 @@ c****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
+     <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
 
@@ -212,10 +209,9 @@ c*****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
+     <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
-
+      USE m_judft
       USE m_types
       use m_cdnread, only:cdn_read
       implicit none
@@ -226,15 +222,10 @@ c*****************************************************************
       LOGICAL, INTENT (IN) :: l_ss,l_noco,l_gwf
 
       INTEGER, INTENT (OUT) :: nbands,nmat
-      REAL,    INTENT (OUT) :: wk
+  
+      REAL,    INTENT (OUT) :: eig(neigd)
 
-      INTEGER, INTENT (OUT) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
-      INTEGER, INTENT (OUT) :: nv(jspd),kveclo(nlotot)
-      REAL,    INTENT (OUT) :: bkpt(3),eig(neigd)
-      REAL,    INTENT (OUT) :: ello(nlod,ntypd,jspd),evdu(2,jspd)
-      REAL,    INTENT (OUT) :: epar(0:lmaxd,ntypd,jspd)
-
-      TYPE(t_zMat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
+      TYPE(t_mat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
       integer :: n_start,n_end
 
@@ -245,8 +236,7 @@ c*****************************************************************
      >              eig_id,
      >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
      >              l_ss,l_noco,neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat)
-
+     <              nbands,eig,zMat)
+!      CALL judft_error("BUG: wann_read in wann_rw_eig not implemented")
       END SUBROUTINE wann_read_eig  
       END MODULE m_wann_rw_eig

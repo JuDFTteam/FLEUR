@@ -4,21 +4,16 @@ MODULE m_intnv
   !     and potential in the unit cell
   !     ************************************************
 CONTAINS
-  SUBROUTINE int_nv(&
-       &                  stars,vacuum,atoms,sphhar,&
-       &                  cell,sym,input,oneD,&
-       &                  qpw,vpw_w,&
-       &                  rhtxy,vxy,&
-       &                  rht,vz,&
-       &                  rho,vr,&
-       &                  RESULT)
+  SUBROUTINE int_nv(ispin,stars,vacuum,atoms,sphhar,&
+       cell,sym,input,oneD,vpot,den,RESULT)
 
     USE m_intgr, ONLY : intgr3,intgz0
     USE m_types
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
-    REAL  RESULT  
+    REAL  RESULT
+    INTEGER,INTENT(IN)        :: ispin
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_vacuum),INTENT(IN) :: vacuum
     TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -27,14 +22,9 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_oneD),INTENT(IN)   :: oneD
+    TYPE(t_potden),INTENT(IN) :: vpot,den
 
-    !     ..
-    !     .. Array Arguments ..
-    COMPLEX qpw(stars%ng3),rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2),&
-         &       vpw_w(stars%ng3),vxy(vacuum%nmzxyd,oneD%odi%n2d-1,2)
-    REAL    rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),rht(vacuum%nmzd,2),&
-         &      vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype),vz(vacuum%nmzd,2)
-   
+  
     !     ..
     !     .. Local Scalars ..
     REAL dpdot,facv,tis,tmt,tvac,tvact
@@ -51,11 +41,10 @@ CONTAINS
     !
     !  -> warping has been moved to vgen and visxc resp. ...gustav
     !
-    tis = cell%omtil * REAL( DOT_PRODUCT(vpw_w,qpw))
+    tis = cell%omtil * REAL( DOT_PRODUCT(vpot%pw_w(:stars%ng3,ispin),den%pw(:stars%ng3,ispin)))
 
     WRITE (6,FMT=8020) tis
-    WRITE (16,FMT=8020) tis
-8020 FORMAT (/,10x,'interstitial :',t40,f20.10)
+8020 FORMAT (/,10x,'interstitial :',t40,ES20.10)
 
     RESULT = RESULT + tis
     !
@@ -66,7 +55,7 @@ CONTAINS
     DO n = 1,atoms%ntype
        DO lh = 0,sphhar%nlh(atoms%ntypsy(nat))
           DO j = 1,atoms%jri(n)
-             dpj(j) = rho(j,lh,n)*vr(j,lh,n)
+             dpj(j) = den%mt(j,lh,n,ispin)*vpot%mt(j,lh,n,ispin)
           ENDDO
           CALL intgr3(dpj,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),dpdot)
           tmt = tmt + dpdot*atoms%neq(n)
@@ -74,8 +63,7 @@ CONTAINS
        nat = nat + atoms%neq(n)
     ENDDO
     WRITE (6,FMT=8030) tmt
-    WRITE (16,FMT=8030) tmt
-8030 FORMAT (/,10x,'muffin tin spheres :',t40,f20.10)
+8030 FORMAT (/,10x,'muffin tin spheres :',t40,ES20.10)
     RESULT = RESULT + tmt
     !
     ! *********** VACUUM REGION**************
@@ -94,21 +82,20 @@ CONTAINS
        dpz=0.0
        DO ivac = 1,vacuum%nvac
           DO ip = 1,vacuum%nmz
-             dpz(npz-ip) = rht(ip,ivac)*vz(ip,ivac)
+             dpz(npz-ip) = den%vacz(ip,ivac,ispin)*vpot%vacz(ip,ivac,ispin)
              !         --->  WARPING REGION
           ENDDO
           DO  k2 = 2,stars%ng2
              DO  ip = 1,vacuum%nmzxy
                 dpz(npz-ip) = dpz(npz-ip) +&
-                     &                       stars%nstr2(k2)*rhtxy(ip,k2-1,ivac)*&
-                     &                          CONJG(vxy(ip,k2-1,ivac))
+                     &                       stars%nstr2(k2)*den%vacxy(ip,k2-1,ivac,ispin)*&
+                     &                          CONJG(vpot%vacxy(ip,k2-1,ivac,ispin))
              ENDDO
           ENDDO
           CALL intgz0(dpz,vacuum%delz,vacuum%nmz,tvac,tail)
           tvact = tvact + cell%area*tvac*facv
        ENDDO
        WRITE (6,FMT=8040) tvact
-       WRITE (16,FMT=8040) tvact
 8040   FORMAT (/,10x,'vacuum :',t40,f20.10)
        RESULT = RESULT + tvact
     ELSEIF (oneD%odi%d1) THEN
@@ -121,22 +108,21 @@ CONTAINS
        dpz=0.0
        DO  ip = 1,vacuum%nmz
           dpz(npz-ip) = (cell%z1+vacuum%delz*(ip-1))*&
-               &                    rht(ip,vacuum%nvac)*vz(ip,vacuum%nvac)
+               &                    den%vacz(ip,vacuum%nvac,ispin)*vpot%vacz(ip,vacuum%nvac,ispin)
           !          ---> WARPING REGION
        ENDDO
        DO  k2 = 2,oneD%odi%nq2
           DO  ip = 1,vacuum%nmzxy
              dpz(npz-ip) = dpz(npz-ip)+&
                   &             (cell%z1+vacuum%delz*(ip-1))*&
-                  &             rhtxy(ip,k2-1,vacuum%nvac)*&
-                  &             CONJG(vxy(ip,k2-1,vacuum%nvac))
+                  &             den%vacxy(ip,k2-1,vacuum%nvac,ispin)*&
+                  &             CONJG(vpot%vacxy(ip,k2-1,vacuum%nvac,ispin))
           ENDDO
        ENDDO
 
        CALL intgz0(dpz,vacuum%delz,vacuum%nmz,tvac,tail)
        tvact = tvact + cell%area*tvac
        WRITE (6,FMT=8041) tvact
-       WRITE (16,FMT=8041) tvact
 8041   FORMAT (/,10x,'vacuum :',t40,f20.10)
        RESULT = RESULT + tvact
        !+odim

@@ -23,7 +23,7 @@
       COMPLEX, INTENT (OUT):: pylm(:,:)
 !     ..
 !     .. Local Scalars ..
-      COMPLEX sf,ci,csf
+      COMPLEX sf,csf
       REAL x
       INTEGER j,l,m,n,na,lm,ll1
 !     ..
@@ -35,10 +35,9 @@
       COMPLEX, ALLOCATABLE :: ylm(:,:)
 !     ..
 
-      ci = cmplx(0.0,1.0)
       ciall(0) = fpi_const/sym%nop
       DO l = 1,atoms%lmaxd
-         ciall(l) = ciall(0)*ci**l
+         ciall(l) = ciall(0)*ImagUnit**l
       ENDDO
 
       CALL spgrot(&
@@ -50,7 +49,7 @@
           rg=matmul(kr(:,j),cell%bmat)
           CALL ylm4(&
      &              atoms%lmaxd,rg,&
-     &              ylm(1,j) )!keep
+     &              ylm(:,j) )!keep
       ENDDO
       ylm = conjg( ylm )
 

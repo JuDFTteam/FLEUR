@@ -74,11 +74,8 @@ PROGRAM inpgen
 
       bfh = 93
 
-      input%l_inpXML = .FALSE.
-      IF (.NOT.juDFT_was_argument("-old")) THEN
-         input%l_inpXML = .TRUE.
-      END IF
-
+      input%l_inpXML = .TRUE.
+   
       ALLOCATE ( mmrot(3,3,nop48), ttr(3,nop48) )
       ALLOCATE ( atompos(3,natmax),atomid(natmax) )
       ALLOCATE (atomLabel(natmax))
@@ -89,7 +86,6 @@ PROGRAM inpgen
       OPEN (bfh,file='bfh.txt',form='formatted',status='unknown')
 
       noco%l_ss = .FALSE.
-
       CALL struct_input(&
      &                  infh,errfh,warnfh,symfh,symfn,bfh,&
      &                  natmax,nop48,&
@@ -181,7 +177,7 @@ PROGRAM inpgen
       nops = sym%nop
       symfn = 'sym.out'
       IF (.not.input%film) sym%nop2=sym%nop
-      IF ((juDFT_was_argument("-old")).OR.(.NOT.juDFT_was_argument("-explicit"))) THEN
+      IF ((.NOT.juDFT_was_argument("-explicit"))) THEN
          CALL rw_symfile('W',symfh,symfn,nops,cell%bmat,sym%mrot,sym%tau,sym%nop,sym%nop2,sym%symor)
       END IF
 

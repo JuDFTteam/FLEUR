@@ -6,9 +6,8 @@
 
 MODULE m_forcea21lo
 CONTAINS
-  SUBROUTINE force_a21_lo(nobd,atoms,isp,itype,we,eig,ne,&
-                          acof,bcof,ccof,aveccof,bveccof,&
-                          cveccof,tlmplm,usdus, a21)
+  SUBROUTINE force_a21_lo(atoms,isp,itype,we,eig,ne,eigVecCoeffs,&
+                          aveccof,bveccof,cveccof,tlmplm,usdus,a21)
     !
     !***********************************************************************
     ! This subroutine calculates the local orbital contribution to A21,
@@ -17,25 +16,25 @@ CONTAINS
     ! p.kurz nov. 1997
     !***********************************************************************
     !
-    USE m_types
+    USE m_types_setup
+    USE m_types_usdus
+    USE m_types_tlmplm
+    USE m_types_cdnval
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)   :: usdus
-    TYPE(t_tlmplm),INTENT(IN)  :: tlmplm
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_tlmplm),INTENT(IN)       :: tlmplm
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nobd     
     INTEGER, INTENT (IN) :: itype,ne,isp
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(nobd),eig(:)!(dimension%neigd)
-    COMPLEX, INTENT (IN) :: acof(:,0:,:) !(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(:,0:,:) !(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN) :: aveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bveccof(:,:,0:,:)!(3,nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    REAL, INTENT (INOUT) :: a21(3,atoms%nat)
+    REAL,    INTENT(IN)    :: we(ne),eig(:)!(dimension%neigd)
+    REAL,    INTENT(INOUT) :: a21(3,atoms%nat)
+    COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
     !     ..
     !     .. Local Scalars ..
     COMPLEX utulo,dtulo,cutulo,cdtulo,ulotulo
@@ -73,13 +72,13 @@ CONTAINS
                       DO ie = 1,ne
                          DO i = 1,3
                             a21(i,iatom)=a21(i,iatom)+2.0*aimag(&
-                                 conjg(acof(ie,lmp,iatom))*utulo&
+                                 conjg(eigVecCoeffs%acof(ie,lmp,iatom,isp))*utulo&
                                  *cveccof(i,m,ie,lo,iatom)&
-                                 + conjg(bcof(ie,lmp,iatom))*dtulo&
+                                 + conjg(eigVecCoeffs%bcof(ie,lmp,iatom,isp))*dtulo&
                                  *cveccof(i,m,ie,lo,iatom)&
-                                 + conjg(ccof(m,ie,lo,iatom))&
+                                 + conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
                                  *cutulo*aveccof(i,ie,lmp,iatom)&
-                                 + conjg(ccof(m,ie,lo,iatom))&
+                                 + conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
                                  *cdtulo*bveccof(i,ie,lmp,iatom)&
                                  )*we(ie)/atoms%neq(itype)
                          ENDDO
@@ -107,7 +106,7 @@ CONTAINS
                       DO ie = 1,ne
                          DO i = 1,3
                             a21(i,iatom)=a21(i,iatom)+2.0*aimag(&
-                                 + conjg(ccof(m,ie,lo,iatom))&
+                                 + conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))&
                                  *ulotulo*cveccof(i,mp,ie,lop,iatom)&
                                  )*we(ie)/atoms%neq(itype)
                          ENDDO
@@ -121,10 +120,10 @@ CONTAINS
                 DO i = 1,3
                    a21(i,iatom)=a21(i,iatom)&
                         -2.0*aimag(&
-                        (conjg(acof(ie,lm,iatom))*cveccof(i,m,ie,lo,iatom)+&
-                        conjg(ccof(m,ie,lo,iatom))*aveccof(i,ie,lm,iatom))*usdus%uulon(lo,itype,isp)+&
-                        (conjg(bcof(ie,lm,iatom))*cveccof(i,m,ie,lo,iatom)+&
-                        conjg(ccof(m,ie,lo,iatom))*bveccof(i,ie,lm,iatom))*&
+                        (conjg(eigVecCoeffs%acof(ie,lm,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
+                        conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*aveccof(i,ie,lm,iatom))*usdus%uulon(lo,itype,isp)+&
+                        (conjg(eigVecCoeffs%bcof(ie,lm,iatom,isp))*cveccof(i,m,ie,lo,iatom)+&
+                        conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*bveccof(i,ie,lm,iatom))*&
                         usdus%dulon(lo,itype,isp))*eig(ie)*we(ie)/atoms%neq(itype)
                 ENDDO
              ENDDO
@@ -135,7 +134,7 @@ CONTAINS
                 DO ie = 1,ne
                    DO i = 1,3
                       a21(i,iatom)=a21(i,iatom)-2.0*aimag(&
-                           conjg(ccof(m,ie,lo,iatom))*&
+                           conjg(eigVecCoeffs%ccof(m,ie,lo,iatom,isp))*&
                            cveccof(i,m,ie,lop,iatom)*&
                            usdus%uloulopn(lo,lop,itype,isp))*&
                            eig(ie)*we(ie)/atoms%neq(itype)

@@ -140,9 +140,6 @@
          WRITE (6,'('' rkmax and true gmax recalculated '')')
          WRITE (6,2100) input%rkmax, rknew, rknew*rknew
          WRITE (6,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
-         WRITE (16,'('' rkmax and true gmax recalculated '')')
-         WRITE (16,2100) input%rkmax, rknew, rknew*rknew
-         WRITE (16,2200) gmaxp*rknew, gmaxp*rknew*gmaxp*rknew
          input%rkmax = rknew
       ENDIF
 !
@@ -185,17 +182,12 @@
          WRITE(6,'('' presumably ng3 too small '')')
          WRITE(6,'('' sk3max, gmaxp*rkmax '', 2f10.6)') &
      &                stars%sk3(stars%ng3),gmaxp*input%rkmax
-         WRITE(16,'('' presumably ng3 too small '')')
-         WRITE(16,'('' sk3max, gmaxp*rkmax '', 2f10.6)')&
-     &                stars%sk3(stars%ng3),gmaxp*input%rkmax
          CALL juDFT_error("presumably ng3 too small","prp_qfft")
       ENDIF
 !
       IF ( stars%ng3_fft.GT.stars%ng3 ) THEN
          WRITE(6,'('' nq3_fft > n3d '')')
          WRITE(6,'('' nq3_fft, n3d '',2i10)') stars%ng3_fft, stars%ng3
-         WRITE(16,'('' nq3_fft > n3d '')')
-         WRITE(16,'('' nq3_fft, n3d '',2i10)') stars%ng3_fft, stars%ng3
           CALL juDFT_error("nq3_fft > n3d",calledby="prp_qfft")
       ENDIF
 !
@@ -208,11 +200,6 @@
           WRITE (6,'('' not all nq3_fft stars in chg. den. FFT box'')')
           WRITE (6,'('' inconsistency in def.s see also strgn1'')')
           WRITE (6,'('' mq1d,mq2d,mq3d,kv1,kv2,kv3 '',6i5)')&
-     &                  stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,2*stars%kv3(1,istr),2*stars%kv3(2,istr),&
-     &                                 2*stars%kv3(3,istr)
-          WRITE (16,'('' not all nq3_fft stars in chg. den. FFT box'')')
-          WRITE (16,'('' inconsistency in def.s see also strgn1'')')
-          WRITE (16,'('' mq1d,mq2d,mq3d,kv1,kv2,kv3 '',6i5)')&
      &                  stars%kq1_fft,stars%kq2_fft,stars%kq3_fft,2*stars%kv3(1,istr),2*stars%kv3(2,istr),&
      &                                 2*stars%kv3(3,istr)
           CALL juDFT_error("not all nq3_fft stars in chg. den. FFT box",&

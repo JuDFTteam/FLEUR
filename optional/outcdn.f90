@@ -11,6 +11,7 @@
      &                  qpw,rhtxy,rho,rht,&
      &                  xdnout)
 !
+      use m_constants
       USE m_angle
       USE m_starf, ONLY : starf2,starf3
       USE m_ylm
@@ -33,25 +34,21 @@
 !+odim
 !     ..
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,dimension%jspd)
-      COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,dimension%jspd)
-      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
-      REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,dimension%jspd)
+      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,input%jspins)
+      COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
+      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+      REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,input%jspins)
       REAL,    INTENT (INOUT) :: p(3)
 !     ..
 !     .. Local Scalars ..
       REAL delta,s,sx,xd1,xd2,xx1,xx2,rrr,phi
       INTEGER i,j,jp3,jr,k,lh,mem,nd,nopa,ivac,ll1,lm ,gzi,m
-      COMPLEX ci
 !     ..
 !     .. Local Arrays ..
       COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2)
       REAL rcc(3),x(3)
-!     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC abs,real,sqrt
-!     ..
-      ci = cmplx(0.,1.)
+
+
       ivac=iv
      
       if (iflag.ne.1) THEN
@@ -86,10 +83,10 @@
                   m = oneD%odi%kv(2,k)
                   gzi = oneD%odi%kv(1,k)
                   xx1 = xx1 + real(rhtxy(jp3,k-1,ivac,jsp)*&
-     &                 exp(ci*m*phi)*exp(ci*gzi*cell%bmat(3,3)*p(3)))*&
+     &                 exp(ImagUnit*m*phi)*exp(ImagUnit*gzi*cell%bmat(3,3)*p(3)))*&
      &                 oneD%odi%nst2(k)
                   xx2 = xx2 + real(rhtxy(jp3+1,k-1,ivac,jsp)*&
-     &                 exp(ci*m*phi)*exp(ci*gzi*cell%bmat(3,3)*p(3)))*&
+     &                 exp(ImagUnit*m*phi)*exp(ImagUnit*gzi*cell%bmat(3,3)*p(3)))*&
      &                 oneD%odi%nst2(k)
             ENDDO
                xdnout = xdnout + xx1 + delta* (xx2-xx1)

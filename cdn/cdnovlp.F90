@@ -109,14 +109,14 @@
           LOGICAL,INTENT (IN) :: l_st
           !     ..
           !     .. Array Arguments ..
-          COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,DIMENSION%jspd)
-          COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
-          REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-          REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,DIMENSION%jspd)
+          COMPLEX,INTENT (INOUT) :: qpw(stars%ng3,input%jspins)
+          COMPLEX,INTENT (INOUT) :: rhtxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
+          REAL,   INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+          REAL,   INTENT (INOUT) :: rht(vacuum%nmzd,2,input%jspins)
           REAL,   INTENT (INOUT) :: rh(DIMENSION%msh,atoms%ntype)
           !     ..
           !     .. Local Scalars ..
-          COMPLEX czero,carg,VALUE,slope,ci
+          COMPLEX czero,carg,VALUE,slope,c_ph
           REAL    dif,dxx,g,gz,dtildh,&
                &        rkappa,sign,signz,tol_14,z,zero,zvac,&
                &        g2,phi,gamma,qq
@@ -161,7 +161,6 @@
           !                Tests have shown that (1) is more accurate.
           !           
           !
-          ci = CMPLX(0.0,1.0)
 
           ALLOCATE (qpwc(stars%ng3))
           !
@@ -223,7 +222,7 @@
                            &              ,calledby ="cdnovlp")
                    ENDIF
                    acoff(n) = rh(atoms%jri(n),n) * EXP( alpha(n)*atoms%rmt(n)*atoms%rmt(n) )
-                   WRITE (6,FMT=8010) alpha(n),acoff(n)
+                   !WRITE (6,FMT=8010) alpha(n),acoff(n)
                    DO j = 1,atoms%jri(n) - 1
                       rh(j,n) = acoff(n) * EXP( -alpha(n)*rat(j,n)**2 )
                    ENDDO
@@ -276,7 +275,7 @@
                       DO k = 2,stars%ng3
                          IF ((stars%kv3(1,k).EQ.0).AND.(stars%kv3(2,k).EQ.0)) THEN
                             g = stars%kv3(3,k) * cell%bmat(3,3) * (3. - 2.*ivac)
-                            carg = carg -qpwc(k)*(EXP(ci*g*dtildh)-EXP(ci*g*cell%z1))/g
+                            carg = carg -qpwc(k)*(EXP(ImagUnit*g*dtildh)-EXP(ImagUnit*g*cell%z1))/g
                          ENDIF
                       ENDDO
                       rho_out(ivac) = qpwc(1) * ( dtildh-cell%z1 ) - AIMAG(carg)
@@ -300,6 +299,7 @@
                       ! ---> sum over gz-stars
                       DO 250 kz = m0,stars%mx3
                          ig3 = stars%ig(k1,k2,kz)
+                         c_ph = stars%rgphs(k1,k2,kz) ! phase factor for invs=T & zrfs=F
                          !        ----> use only stars within the g_max sphere (oct.97 shz)
                          IF (ig3.NE.0) THEN
                             nz = 1
@@ -307,9 +307,9 @@
                             gz = kz*cell%bmat(3,3)
                             DO 240 nrz = 1,nz
                                signz = 3. - 2.*nrz
-                               carg = ci*sign*signz*gz
-                               VALUE = VALUE + qpwc(ig3)* EXP(carg*cell%z1)
-                               slope = slope + carg*qpwc(ig3)* EXP(carg*cell%z1)
+                               carg = ImagUnit*sign*signz*gz
+                               VALUE = VALUE + c_ph*qpwc(ig3)* EXP(carg*cell%z1)
+                               slope = slope + c_ph*carg*qpwc(ig3)* EXP(carg*cell%z1)
 240                         ENDDO
                          END IF
 250                   ENDDO
@@ -324,6 +324,7 @@
                          IF (rkappa.GT.zero) rkappa=MAX(rkappa,tol_14)
                          ! gb works also around
                          zvac   = - LOG( tol_14/cabs(VALUE) ) / rkappa
+                         zvac   = MIN (2.*vacuum%nmz,abs(zvac)) ! avoid int-overflow in next line
                          nzvac  = INT( zvac/vacuum%delz ) + 1
                          !               IF ( rkappa.GT.zero .AND. real(value).GT.zero ) THEN
                          IF ( rkappa.GT.zero ) THEN
@@ -390,9 +391,9 @@
                          phi = stars%phi2(irec2)
                          CALL cylbes(oneD%odi%M,g2*cell%z1,fJ)
                          CALL dcylbs(oneD%odi%M,g2*cell%z1,fJ,dfJ)
-                         VALUE = VALUE + (ci**m)*qpwc(irec3)*&
+                         VALUE = VALUE + (ImagUnit**m)*qpwc(irec3)*&
                               &                 EXP(CMPLX(0.,-m*phi))*fJ(m)
-                         slope = slope + (ci**m)*g2*qpwc(irec3)*&
+                         slope = slope + (ImagUnit**m)*g2*qpwc(irec3)*&
                               &                 EXP(CMPLX(0.,-m*phi))*dfJ(m)
                       END IF
                    END DO

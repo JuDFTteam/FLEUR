@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 module m_io_hybrid
   use m_io_matrix
   use m_judft
@@ -14,18 +20,30 @@ contains
     LOGICAL,INTENT(IN)          :: l_real
     LOGICAL :: opened=.false.
 
-    
+    if (opened) return
+    opened=.true.
+
+    !print *,"Open olap.mat"
+    id_olap=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"olap.mat")
+    !print *,"Open z.mat"
+    id_z=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"z.mat")
+  END SUBROUTINE open_hybrid_io1
+
+
+  SUBROUTINE open_hybrid_io1b(DIMENSION,l_real)
+    implicit none
+    TYPE(t_dimension),INTENT(IN):: dimension
+    LOGICAL,INTENT(IN)          :: l_real
+    LOGICAL :: opened=.false.
 
     if (opened) return
     opened=.true.
 
-    print *,"Open olap.mat"
-    id_olap=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"olap.mat")
-    print *,"Open z.mat"
-    id_z=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"z.mat")
-    print *,"Open v_x.mat"
-    id_v_x=OPEN_MATRIX(l_real,dimension%nbasfcn,1,"v_x.mat")
-  END SUBROUTINE open_hybrid_io1
+    !print *,"Open v_x.mat"
+    id_v_x=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"v_x.mat")
+  END SUBROUTINE open_hybrid_io1b
+
+
   SUBROUTINE open_hybrid_io2(hybrid,DIMENSION,atoms,l_real)
     IMPLICIT NONE
     TYPE(t_hybrid),INTENT(IN)   :: hybrid
@@ -97,7 +115,7 @@ contains
     real,intent(in) :: coulomb_mtir(:)
     integer,intent(in) :: nk
     
-    print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
+    !print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
     write(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine write_coulomb_spm_r
 
@@ -118,7 +136,7 @@ contains
     real,intent(out) :: coulomb_mtir(:)
     integer,intent(in) :: nk
     
-    print *, "read coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
+    !print *, "read coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
     read(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine read_coulomb_spm_r
 
@@ -169,7 +187,7 @@ contains
     implicit none
     TYPE(t_mat),INTENT(INOUT):: mat
     INTEGER,INTENT(IN)           :: rec
-    print *,"read z:",rec
+    !print *,"read z:",rec
     
     CALL read_matrix(mat,rec,id_z)
   END subroutine read_z
@@ -178,7 +196,7 @@ contains
     implicit none
     TYPE(t_mat),INTENT(IN)   :: mat
     INTEGER,INTENT(IN)           :: rec
-     print *,"write z:",rec
+     !print *,"write z:",rec
    CALL write_matrix(mat,rec,id_z)
   END subroutine write_z
 

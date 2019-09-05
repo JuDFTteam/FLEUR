@@ -1,9 +1,7 @@
 MODULE m_forcea21
 CONTAINS
-  SUBROUTINE force_a21(&
-       input,atoms,DIMENSION,nobd,sym,oneD,cell,&
-       we,jsp,epar,ne,eig,usdus,&
-       acof,bcof,ccof,aveccof,bveccof,cveccof, results,f_a21,f_b4)
+  SUBROUTINE force_a21(input,atoms,DIMENSION,sym,oneD,cell,&
+                       we,jsp,epar,ne,eig,usdus,eigVecCoeffs,aveccof,bveccof,cveccof,f_a21,f_b4,results)
 
     ! ************************************************************
     ! Pulay 2nd and 3rd (A17+A20) term force contribution a la Rici
@@ -26,32 +24,35 @@ CONTAINS
     USE m_forcea21lo
     USE m_forcea21U
     USE m_tlmplm_store
-    USE m_types
+    USE m_types_setup
+    USE m_types_misc
+    USE m_types_usdus
+    USE m_types_tlmplm
+    USE m_types_cdnval
     USE m_constants
+    USE m_juDFT
     IMPLICIT NONE
-    TYPE(t_input),INTENT(IN)     :: input
-    TYPE(t_results),INTENT(INOUT):: results
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
-    TYPE(t_oneD),INTENT(IN)      :: oneD
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_usdus),INTENT(IN)     :: usdus
+    TYPE(t_input),INTENT(IN)        :: input
+    TYPE(t_results),INTENT(INOUT)   :: results
+    TYPE(t_dimension),INTENT(IN)    :: DIMENSION
+    TYPE(t_oneD),INTENT(IN)         :: oneD
+    TYPE(t_sym),INTENT(IN)          :: sym
+    TYPE(t_cell),INTENT(IN)         :: cell
+    TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_usdus),INTENT(IN)        :: usdus
+    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nobd
     INTEGER, INTENT (IN) :: ne,jsp
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(nobd),epar(0:atoms%lmaxd,atoms%ntype)
-    REAL,    INTENT (IN) :: eig(DIMENSION%neigd)  
-    COMPLEX, INTENT (INOUT) :: f_a21(3,atoms%ntype),f_b4(3,atoms%ntype)
-    COMPLEX, INTENT (IN) :: acof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2) ,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN) :: aveccof(3,nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: bveccof(3,nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat )
-    COMPLEX, INTENT (IN) :: cveccof(3,-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
+    REAL,    INTENT(IN)    :: we(ne),epar(0:atoms%lmaxd,atoms%ntype)
+    REAL,    INTENT(IN)    :: eig(DIMENSION%neigd)
+    COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT(INOUT) :: f_a21(3,atoms%ntype)
+    COMPLEX, INTENT(INOUT) :: f_b4(3,atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     COMPLEX dtd,dtu,utd,utu
@@ -69,8 +70,9 @@ CONTAINS
     REAL vec(3),vec2(3),vecsum(3),vecsum2(3)
 
     TYPE(t_tlmplm)::tlmplm
-    !     ..
-    !     ..
+
+    CALL timestart("force_a21")
+
     !dimension%lmplmd = (dimension%lmd* (dimension%lmd+3))/2
     mlotot = 0 ; mlolotot = 0
     DO n = 1, atoms%ntype
@@ -150,10 +152,10 @@ CONTAINS
                                END IF
                                DO i = 1,3
                                   a21(i,natrun) = a21(i,natrun) + 2.0*&
-                                       AIMAG( CONJG(acof(ie,lm1,natrun)) *utu*aveccof(i,ie,lm2,natrun)&
-                                       +CONJG(acof(ie,lm1,natrun)) *utd*bveccof(i,ie,lm2,natrun)&
-                                       +CONJG(bcof(ie,lm1,natrun)) *dtu*aveccof(i,ie,lm2,natrun)&
-                                       +CONJG(bcof(ie,lm1,natrun)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
+                                       AIMAG( CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utu*aveccof(i,ie,lm2,natrun)&
+                                       +CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utd*bveccof(i,ie,lm2,natrun)&
+                                       +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtu*aveccof(i,ie,lm2,natrun)&
+                                       +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
                                   !   END i loop
                                END DO
                             END IF
@@ -165,17 +167,25 @@ CONTAINS
                       !   END l2 loop
                    END DO
                    !+gu 20.11.97
-                   utu = epar(l1,n)-eig(ie)
-                   utd = 0.5
-                   dtu = 0.5
-                   dtd = utu*usdus%ddn(l1,n,jsp)
+                   in = tlmplm%ind(lm1,lm1,n,1)
+                   IF (in.NE.-9999) THEN
+                      utu = -eig(ie)
+                      utd = 0.0
+                      dtu = 0.0
+                      dtd = utu*usdus%ddn(l1,n,jsp)
+                   ELSE
+                      utu = epar(l1,n)-eig(ie)
+                      utd = 0.5
+                      dtu = 0.5
+                      dtd = utu*usdus%ddn(l1,n,jsp)
+                   END IF
                    DO i = 1,3
                       DO natrun = natom,natom + atoms%neq(n) - 1
                          a21(i,natrun) = a21(i,natrun) + 2.0*&
-                              AIMAG(CONJG(acof(ie,lm1,natrun)) *utu*aveccof(i,ie,lm1,natrun)&
-                              +CONJG(acof(ie,lm1,natrun)) *utd*bveccof(i,ie,lm1,natrun)&
-                              +CONJG(bcof(ie,lm1,natrun)) *dtu*aveccof(i,ie,lm1,natrun)&
-                              +CONJG(bcof(ie,lm1,natrun)) *dtd*bveccof(i,ie,lm1,natrun)&
+                              AIMAG(CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utu*aveccof(i,ie,lm1,natrun)&
+                              +CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)) *utd*bveccof(i,ie,lm1,natrun)&
+                              +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtu*aveccof(i,ie,lm1,natrun)&
+                              +CONJG(eigVecCoeffs%bcof(ie,lm1,natrun,jsp)) *dtd*bveccof(i,ie,lm1,natrun)&
                               )*we(ie) /atoms%neq(n)
                       END DO
                       !
@@ -191,14 +201,10 @@ CONTAINS
           !
           !--->    add the local orbital and U contribution to a21
           !
-          CALL force_a21_lo(nobd,atoms,jsp,n,we,eig,ne,&
-               acof,bcof,ccof,aveccof,bveccof,&
-               cveccof, tlmplm,usdus, a21)
+          CALL force_a21_lo(atoms,jsp,n,we,eig,ne,eigVecCoeffs,aveccof,bveccof,cveccof,tlmplm,usdus,a21)
 
           IF ((atoms%n_u.GT.0).AND.(i_u.LE.atoms%n_u)) THEN
-             CALL force_a21_U(nobd,atoms,i_u,n,jsp,we,ne,&
-                              usdus,v_mmp,acof,bcof,ccof,&
-                              aveccof,bveccof,cveccof, a21)
+             CALL force_a21_U(atoms,i_u,n,jsp,we,ne,usdus,v_mmp,eigVecCoeffs,aveccof,bveccof,cveccof,a21)
           END IF
           IF (input%l_useapw) THEN
              ! -> B4 force
@@ -211,14 +217,14 @@ CONTAINS
                          DO natrun = natom,natom + atoms%neq(n) - 1
                             b4(i,natrun) = b4(i,natrun) + 0.5 *&
                                  we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG(acof(ie,lm1,natrun)*usdus%us(l1,n,jsp)&
-                                 +bcof(ie,lm1,natrun)*usdus%uds(l1,n,jsp))*&
+                                 CONJG(eigVecCoeffs%acof(ie,lm1,natrun,jsp)*usdus%us(l1,n,jsp)&
+                                 +eigVecCoeffs%bcof(ie,lm1,natrun,jsp)*usdus%uds(l1,n,jsp))*&
                                  (aveccof(i,ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
                                  +bveccof(i,ie,lm1,natrun)*usdus%duds(l1,n,jsp) )&
                                  -CONJG(aveccof(i,ie,lm1,natrun)*usdus%us(l1,n,jsp)&
                                  +bveccof(i,ie,lm1,natrun)*usdus%uds(l1,n,jsp) )*&
-                                 (acof(ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
-                                 +bcof(ie,lm1,natrun)*usdus%duds(l1,n,jsp)) )
+                                 (eigVecCoeffs%acof(ie,lm1,natrun,jsp)*usdus%dus(l1,n,jsp)&
+                                 +eigVecCoeffs%bcof(ie,lm1,natrun,jsp)*usdus%duds(l1,n,jsp)) )
                          END DO
                       END DO
                    END DO
@@ -231,20 +237,20 @@ CONTAINS
                          DO natrun = natom,natom + atoms%neq(n) - 1
                             b4(i,natrun) = b4(i,natrun) + 0.5 *&
                                  we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG( acof(ie,lm1,natrun)* usdus%us(l1,n,jsp)&
-                                 + bcof(ie,lm1,natrun)* usdus%uds(l1,n,jsp) ) *&
+                                 CONJG( eigVecCoeffs%acof(ie,lm1,natrun,jsp)* usdus%us(l1,n,jsp)&
+                                 + eigVecCoeffs%bcof(ie,lm1,natrun,jsp)* usdus%uds(l1,n,jsp) ) *&
                                  cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp)&
-                                 + CONJG(ccof(m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
+                                 + CONJG(eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)*usdus%ulos(lo,n,jsp)) *&
                                  ( aveccof(i,ie,lm1,natrun)* usdus%dus(l1,n,jsp)&
                                  + bveccof(i,ie,lm1,natrun)* usdus%duds(l1,n,jsp)&
                                  + cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp) )  &
                                  - (CONJG( aveccof(i,ie,lm1,natrun) *usdus%us(l1,n,jsp)&
                                  + bveccof(i,ie,lm1,natrun) *usdus%uds(l1,n,jsp) ) *&
-                                 ccof(m,ie,lo,natrun)  *usdus%dulos(lo,n,jsp)&
+                                 eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)  *usdus%dulos(lo,n,jsp)&
                                  + CONJG(cveccof(i,m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
-                                 ( acof(ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
-                                 + bcof(ie,lm1,natrun)*usdus%duds(l1,n,jsp)&
-                                 + ccof(m,ie,lo,natrun)*usdus%dulos(lo,n,jsp) ) ) )  
+                                 ( eigVecCoeffs%acof(ie,lm1,natrun,jsp)*usdus%dus(l1,n,jsp)&
+                                 + eigVecCoeffs%bcof(ie,lm1,natrun,jsp)*usdus%duds(l1,n,jsp)&
+                                 + eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)*usdus%dulos(lo,n,jsp) ) ) )  
                          END DO
                       ENDDO
                    ENDDO
@@ -358,8 +364,8 @@ CONTAINS
        ENDIF                                            !  IF (atoms%l_geo(n)) ...
        natom = natom + atoms%neq(n)
     ENDDO
-    !
-    DEALLOCATE (tlmplm%tdd,tlmplm%tuu,tlmplm%tdu,tlmplm%tud,tlmplm%tuulo,tlmplm%tdulo,tlmplm%tuloulo,tlmplm%ind,a21,b4)
+
+    CALL timestop("force_a21")
 
   END SUBROUTINE force_a21
 END MODULE m_forcea21

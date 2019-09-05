@@ -31,7 +31,7 @@ CONTAINS
     OPEN (741,file='fleur2tddft.dat',&
          &         form='unformatted',status='unknown')
     WRITE (741)  sphhar%memd,atoms%lmaxd,dimension%nspd,sphhar%nlhd,atoms%ntype,sym%nsymt
-    WRITE (741) dimension%jspd,stars%ng3,stars%ng2,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
+    WRITE (741) input%jspins,stars%ng3,stars%ng2,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
          &          input%jspins,stars%ng3,stars%ng2,vacuum%nvac,atoms%ntype,sphhar%ntypsd,atoms%nat,&
          &          sym%invs,sym%invs2,input%film
     WRITE (741)   sphhar%clnu, sphhar%nmem,sphhar%nlh,sphhar%mlh,sphhar%llh,atoms%jri,atoms%ntypsy,atoms%neq
@@ -65,11 +65,11 @@ CONTAINS
           WRITE (335,'(2i5)') i, stars%nstr(i)
        ENDDO
        WRITE (335,*)
-       WRITE (335,*) 'igfft', dimension%nn3d
+       WRITE (335,*) 'igfft', stars%kimax+1
        WRITE (335,'(3i15)') stars%igfft(:,1)
        WRITE (335,*) 'second part'
        WRITE (335,'(3i15)') stars%igfft(:,2)
-       WRITE (335,*) 'pgfft', dimension%nn3d
+       WRITE (335,*) 'pgfft',  stars%kimax+1
        WRITE (335,'(3f12.6)') stars%pgfft(:)
        WRITE (335,*)
        WRITE (335,*) 'stars%kimax: ', stars%kimax

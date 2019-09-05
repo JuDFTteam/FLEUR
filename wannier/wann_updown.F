@@ -21,7 +21,7 @@
      >      z1,nv2d,nmzxy,nmz,delz,ig2,area,tau,zatom,nq2,nop2,
      >      volint,symor,pos,ef,l_soc,
      >      memd,lnonsph,clnu,lmplmd,mlh,nmem,llh,lo1l,
-     >      theta,phi,soc_opt)
+     >      theta,phi)
 c****************************************************************************
 c     Calculate spin-up-spin-down matrix elements.
 c     Useful in the case of spin-orbit coupling and noncollinear magnetism.
@@ -122,8 +122,7 @@ c****************************************************************************
       type (od_inp), intent (in) :: odi
       type (od_sym), intent (in) :: ods
       real, intent(in) :: theta,phi
-      logical,intent(in) :: soc_opt(:)
-
+     
 cccccccccccccccccc   local variables   cccccccccccccccccccc
       type(t_wann) :: wann
       integer :: lmd,nlotot,n,nmat,iter,ikpt,ikpt_b,nmat_b
@@ -139,8 +138,8 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real    :: eig(neigd),cp_time(9),efermi
       logical :: l_p0,l_bkpts,l_proj,l_amn,l_mmn
 !!! energy window boundaries
-      integer, allocatable :: kveclo(:),nv(:)
-      integer, allocatable :: kveclo_b(:),nv_b(:)
+      integer, allocatable :: nv(:)
+      integer, allocatable :: nv_b(:)
       integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
       integer, allocatable :: k1_b(:,:),k2_b(:,:),k3_b(:,:)
 
@@ -168,7 +167,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       real    :: epar(0:lmaxd,ntypd,max(2,jspd)),evdu(2,max(jspd,2))
 !!! the Mmn matrices
       complex, allocatable :: surfcurr(:,:,:,:)
-      complex, allocatable :: hsomtx(:,:,:,:,:)
+      complex, allocatable :: hsomtx(:,:,:,:,:),hsomtx_l(:,:,:,:)
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)
       complex, allocatable :: perpmag(:,:,:)
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
@@ -222,13 +221,12 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       complex,allocatable::ulojug(:,:,:,:)
       complex,allocatable::ulojdg(:,:,:,:)
       complex,allocatable::ulojulog(:,:,:,:)
-      real(4) delta,delta1,time_interstitial,time_mmn
-      real(4) time_total,delta2,delta3
-      real(4) time_lapw_expand,time_rw,time_symm,time_film
-      real(4) time_lapw_plot,time_ujugaunt,time_abcof
+      real delta,delta1,time_interstitial,time_mmn
+      real time_total,delta2,delta3
+      real time_lapw_expand,time_rw,time_symm,time_film
+      real time_lapw_plot,time_ujugaunt,time_abcof
       integer :: n_start,n_end,mlotot,mlolotot,err
       integer :: mlot_d,mlolot_d,ilo,dir,l1,l2,ii,jj
-      complex :: ci
       character(len=2)    :: spin012(0:2)
       data spin012/'  ', '.1', '.2'/
       character(len=6)    :: filename
@@ -260,7 +258,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer :: spinloop1,spinloop2,ilop
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat)  :: zMat(2),zzMat(2)
+      TYPE(t_mat)   :: zMat(2),zzMat(2)
       TYPE(t_lapw)  :: lapw
 
       IF(l_ss) CALL juDFT_error("spin-spiral not yet in this version"
@@ -276,8 +274,6 @@ c-----initializations
       time_symm=0.0
       time_film=0.0
       ngopr1(:)=1
-
-      ci=cmplx(0.0,1.0)
 
       call cpu_time(time_total)
 
@@ -381,7 +377,7 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
 
-      allocate ( kveclo(nlotot),nv(wannierspin) )
+      allocate ( nv(wannierspin) )
       allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
      &           k3(nvd,wannierspin) )
       allocate ( ff(ntypd,jmtd,2,0:lmaxd,2) )
@@ -433,8 +429,9 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 
 
        do jspin=1,jspins
-         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
-     <                  ello,evac,epar,bkpt,wk,n_bands,n_size)
+          CALL judft_error("TODO:wann_updown")
+!         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
+ !    <                  ello,evac,epar,wk,n_bands,n_size)
        enddo
 
        jspin=1
@@ -496,6 +493,7 @@ c##################################################################
 
       if(wann%l_socmat)then
          allocate ( hsomtx(2,2,nbnd,nbnd,fullnkpts) )
+         allocate ( hsomtx_l(nbnd,nbnd,2,2) )
       endif
 
       write (*,*) 'nwfs=',nwfs
@@ -712,25 +710,23 @@ c****************************************************************
          n_end=neigd
 
       zzMat(jspin)%l_real = l_real
-      zzMat(jspin)%nbasfcn = nbasfcn
-      zzMat(jspin)%nbands = neigd
+      zzMat(jspin)%matsize1 = nbasfcn
+      zzMat(jspin)%matsize2 = neigd
       IF(l_real) THEN
-	    IF(.not.allocated(zzmat(jspin)%z_r))
-     +   ALLOCATE (zzMat(jspin)%z_r(zzMat(jspin)%nbasfcn,
-     +                              zzMat(jspin)%nbands))
+         ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
+     +                                 zzMat(jspin)%matsize2))
       ELSE
-	    IF(.not.allocated(zzmat(jspin)%z_c))
-     +   ALLOCATE (zzMat(jspin)%z_c(zzMat(jspin)%nbasfcn,
-     +                              zzMat(jspin)%nbands))
+         ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
+     +                                 zzMat(jspin)%matsize2))
       END IF
 
-         CALL cdn_read(
-     >              eig_id,
-     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
-     >              l_ss,l_noco,neigd,n_start,n_end,
-     <              nmat,nv,ello,evdu,epar,kveclo,
-     <              k1,k2,k3,bkpt,wk,nbands,eigg(:,jspin),zzMat(jspin))
-
+!         CALL cdn_read(
+!     >              eig_id,
+!     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
+!     >              l_ss,l_noco,neigd,n_start,n_end,
+!     <              nmat,nv,ello,evdu,epar,
+!     <              k1,k2,k3,bkpt,wk,nbands,eigg(:,jspin),zzMat(jspin))
+      call judft_error("cdn_read in wann_updown")
          nrec=0
       enddo !jspin
       call cpu_time(delta1)
@@ -743,18 +739,18 @@ c...we work only within the energy window
 
       DO jspin = 1, wannierspin
          zMat(jspin)%l_real = zzMat(jspin)%l_real
-         zMat(jspin)%nbasfcn = zzMat(jspin)%nbasfcn
-         zMat(jspin)%nbands = zzMat(jspin)%nbands
+         zMat(jspin)%matsize1 = zzMat(jspin)%matsize1
+         zMat(jspin)%matsize2 = zzMat(jspin)%matsize2
          IF (zzMat(jspin)%l_real) THEN
-	       IF(.not.allocated(zmat(jspin)%z_r))
-     +      ALLOCATE (zMat(jspin)%z_r(zMat(jspin)%nbasfcn,
-     +                                zMat(jspin)%nbands))
-            zMat(jspin)%z_r = 0.0
+	       IF(.not.allocated(zmat(jspin)%data_r))
+     +      ALLOCATE (zMat(jspin)%data_r(zMat(jspin)%matsize1,
+     +                                zMat(jspin)%matsize2))
+            zMat(jspin)%data_r = 0.0
          ELSE
-	       IF(.not.allocated(zMat(jspin)%z_c))
-     +      ALLOCATE (zMat(jspin)%z_c(zMat(jspin)%nbasfcn,
-     +                                zMat(jspin)%nbands))
-            zMat(jspin)%z_c = CMPLX(0.0,0.0)
+	       IF(.not.allocated(zMat(jspin)%data_c))
+     +      ALLOCATE (zMat(jspin)%data_c(zMat(jspin)%matsize1,
+     +                                zMat(jspin)%matsize2))
+            zMat(jspin)%data_c = CMPLX(0.0,0.0)
          END IF
       END DO
 
@@ -783,11 +779,11 @@ c...we work only within the energy window
            endif
            IF (zzMat(jspin)%l_real) THEN
               do j = 1,funbas
-                 zMat(jspin)%z_r(j,nslibd) = zzMat(jspin)%z_r(j,i)
+                 zMat(jspin)%data_r(j,nslibd) = zzMat(jspin)%data_r(j,i)
               enddo
            ELSE
               do j = 1,funbas
-                 zMat(jspin)%z_c(j,nslibd) = zzMat(jspin)%z_c(j,i)
+                 zMat(jspin)%data_c(j,nslibd) = zzMat(jspin)%data_c(j,i)
               enddo
            END IF
         endif
@@ -805,7 +801,7 @@ c***********************************************************
      >            ntypd,nlo,llo,invsat,
      >            l_noco,l_soc,
      >            ntype,neq,nlotot,
-     >            kveclo,jspin,
+     >            jspin,
      >            oper,nop,mrot,nvd,nv,
      >            shiftkpt(:,ikpt),
      >            tau,
@@ -846,16 +842,14 @@ c...for the lapws and local orbitals, summed by the basis functions
       call cpu_time(delta)
       do jspin=1,wannierspin
 
-         CALL abcof(input,atoms,noccbd,sym,cell,bkpt,lapw,noccbd,usdus,
-     +              noco,jspin,kveclo,oneD,acof(1:,0:,1:,jspin),
+         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
+     +              noco,jspin,oneD,acof(1:,0:,1:,jspin),
      +              bcof(1:,0:,1:,jspin),ccof(-llod:,1:,1:,1:,jspin),
      +              zMat(jspin))
 
-         call wann_abinv(
-     >       ntypd,natd,noccbd,lmaxd,lmd,llod,nlod,ntype,neq,
-     >       noccbd,lmax,nlo,llo,invsat,invsatnr,bkpt,taual,
-     X       acof(1,0,1,jspin),bcof(1,0,1,jspin),
-     <       ccof(-llod,1,1,1,jspin))
+         call wann_abinv(atoms,
+     X        acof(:,0:,:,jspin),bcof(:,0:,:,jspin),
+     <       ccof(-llod:,:,:,:,jspin))
       enddo !jspin
 
       DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
@@ -868,12 +862,21 @@ c...for the lapws and local orbitals, summed by the basis functions
          call wann_socmat(
      >       mpi,enpara,input,noco,atoms,
      >       lmaxd,ntypd,nlod,natd,noccbd,
-     >       llod,jmtd,jspd,nlhd,soc_opt,neq,
+     >       llod,jmtd,jspd,nlhd,neq,
      >       ntype,theta,phi,jspins,irank,
      >       jri,lmax,dx,rmsh,epar,ello,nlo,llo,
      >       l_dulo,ulo_der,vTot%mt,
      >       acof,bcof,ccof,
-     <       hsomtx(:,:,:,:,ikpt))
+     <       hsomtx_l)
+        do i1 = 1,2
+         do i2 = 1,2
+          do i = 1,nbnd
+           do j = 1,nbnd
+             hsomtx(i1,i2,i,j,ikpt) = hsomtx_l(i,j,i1,i2)
+           enddo
+          enddo
+         enddo
+        enddo
       endif
 
 #ifdef CPP_TOPO
@@ -958,11 +961,11 @@ c-->     determine index and phase factor
              do n = 1,nslibd
               do dir=1,3
                IF (zMat%l_real) THEN
-                  zzConjgTemp = cmplx(zMat(1)%z_r(i+addnoco,m) *
-     +                                zMat(2)%z_r(j+addnoco,n), 0.0)
+                  zzConjgTemp = cmplx(zMat(1)%data_r(i+addnoco,m) *
+     +                                zMat(2)%data_r(j+addnoco,n), 0.0)
                ELSE
-                  zzConjgTemp =       zMat(1)%z_c(i+addnoco,m) *
-     +                          CONJG(zMat(2)%z_c(j+addnoco,n))
+                  zzConjgTemp =       zMat(1)%data_c(i+addnoco,m) *
+     +                          CONJG(zMat(2)%data_c(j+addnoco,n))
                END IF
                value=phasust*zzConjgTemp
                nablamat(dir,m,n,ikpt) = nablamat(dir,m,n,ikpt) -
@@ -1142,7 +1145,7 @@ c******************************************************
 
       deallocate(flo)
  
-      deallocate ( vr,vz,kveclo,nv,k1,k2,k3 )
+      deallocate ( vr,vz,nv,k1,k2,k3 )
       deallocate ( ff,gg )
       if (wann%l_bzsym)  deallocate(irreduc,mapkoper)
 

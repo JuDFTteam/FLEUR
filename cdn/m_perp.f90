@@ -6,7 +6,7 @@
 
 MODULE m_m_perp
 CONTAINS 
-  SUBROUTINE m_perp(atoms,itype,noco,vr0, chmom,qa21,alphdiff)
+  SUBROUTINE m_perp(atoms,itype,iRepAtom,noco,vr0, chmom,qa21)
     !***********************************************************************
     ! calculates the perpendicular part of the local moment.
     ! if l_relax is true the angle of the output local moment is calculated
@@ -16,8 +16,8 @@ CONTAINS
     ! Philipp Kurz 2000-02-09
     !***********************************************************************
 
+    USE m_constants
     USE m_intgr, ONLY : intgr3
-    USE m_constants, ONLY : fpi_const
     USE m_polangle
     USE m_rotdenmat
     USE m_types
@@ -26,11 +26,10 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)     :: atoms
 
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: itype
+    INTEGER, INTENT (IN) :: itype, iRepAtom
     !     ..
     !     .. Array Arguments ..
-    REAL, INTENT    (IN) :: chmom(:,:)!(atoms%ntype,dimension%jspd)
-    REAL, INTENT    (IN) :: alphdiff(atoms%ntype) 
+    REAL, INTENT    (IN) :: chmom(:,:)!(atoms%ntype,input%jspins)
     REAL, INTENT    (IN) :: vr0(:,:,:)!(atoms%jmtd,atoms%ntype,jspd)
     COMPLEX, INTENT (IN) :: qa21(atoms%ntype)
     !     ..
@@ -38,23 +37,29 @@ CONTAINS
     INTEGER iri
     REAL b_xavh,scale,b_con_outx,b_con_outy,mx,my,mz,&
          &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix
-    REAL    rho11,rho22
+    REAL    rho11,rho22, alphdiff
     COMPLEX rho21
     !     ..
     !     .. Local Arrays ..
     REAL b_xc_h(atoms%jmtd),b_xav(atoms%ntype)
 
+    ! angles in nocoinp file are (alph-alphdiff)
+    IF (noco%l_ss) THEN
+       alphdiff = 2.0*pi_const*(noco%qss(1)*atoms%taual(1,iRepAtom) + &
+                                noco%qss(2)*atoms%taual(2,iRepAtom) + &
+                                noco%qss(3)*atoms%taual(3,iRepAtom) )
+    ELSE
+       alphdiff = 0.0
+    END IF
 
     !---> calculated the comp. of the local moment vector
     mx = 2*REAL(qa21(itype))
     my = 2*AIMAG(qa21(itype))
     mz = chmom(itype,1) - chmom(itype,2)
     WRITE  (6,8025) mx,my
-    WRITE (16,8025) mx,my
     !---> determine the polar angles of the moment vector in the local frame
     CALL pol_angle(mx,my,mz,betah,alphh)
     WRITE  (6,8026) betah,alphh
-    WRITE (16,8026) betah,alphh
 8025 FORMAT(2x,'--> local frame: ','mx=',f9.5,' my=',f9.5)
 8026 FORMAT(2x,'-->',10x,' delta beta=',f9.5,&
          &                   '  delta alpha=',f9.5)
@@ -71,10 +76,8 @@ CONTAINS
        my = 2*AIMAG(rho21)
        mz = rho11 - rho22
        CALL pol_angle(mx,my,mz,betah,alphh)
-       WRITE  (6,8027) noco%beta(itype),noco%alph(itype)-alphdiff(itype)
-       WRITE (16,8027) noco%beta(itype),noco%alph(itype)-alphdiff(itype)
-       WRITE  (6,8028) betah,alphh-alphdiff(itype)
-       WRITE (16,8028) betah,alphh-alphdiff(itype)
+       WRITE  (6,8027) noco%beta(itype),noco%alph(itype)-alphdiff
+       WRITE  (6,8028) betah,alphh-alphdiff
 8027   FORMAT(2x,'-->',10x,' input noco%beta=',f9.5, '  input noco%alpha=',f9.5)
 8028   FORMAT(2x,'-->',10x,'output noco%beta=',f9.5, ' output noco%alpha=',f9.5)
 
@@ -89,7 +92,6 @@ CONTAINS
        my_mix = 2*AIMAG(rho21)
        mz_mix = rho11 - rho22
        WRITE  (6,8031) mx_mix,my_mix
-       WRITE (16,8031) mx_mix,my_mix 
 8031   FORMAT(2x,'--> global frame: ','mixed mx=',f9.5,' mixed my=',f9.5)
        ! if magnetic moment (in local frame!) is negative, direction of quantization
        ! has to be antiparallel! 
@@ -101,8 +103,7 @@ CONTAINS
        ENDIF
        ! calculate angles alpha and beta in global frame
        CALL pol_angle(mx_mix,my_mix,mz_mix,betah,alphh)
-       WRITE  (6,8029) betah,alphh-alphdiff(itype)
-       WRITE (16,8029) betah,alphh-alphdiff(itype)
+       WRITE  (6,8029) betah,alphh-alphdiff
 8029   FORMAT(2x,'-->',10x,' new noco%beta  =',f9.5, '  new noco%alpha  =',f9.5)
        noco%alph(itype) = alphh
        noco%beta(itype) = betah
@@ -122,9 +123,7 @@ CONTAINS
        b_con_outy = scale*my
        !--->    mix input and output constraint fields
        WRITE  (6,8100) noco%b_con(1,itype),noco%b_con(2,itype)
-       WRITE (16,8100) noco%b_con(1,itype),noco%b_con(2,itype)
        WRITE  (6,8200) b_con_outx,b_con_outy
-       WRITE (16,8200) b_con_outx,b_con_outy
        noco%b_con(1,itype) = noco%b_con(1,itype) + noco%mix_b*b_con_outx
        noco%b_con(2,itype) = noco%b_con(2,itype) + noco%mix_b*b_con_outy
     ENDIF

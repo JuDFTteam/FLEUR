@@ -1,0 +1,518 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
+MODULE m_hsmt_sph
+  USE m_juDFT
+  IMPLICIT NONE
+CONTAINS
+  SUBROUTINE hsmt_sph(sym,DIMENSION,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
+       input,hlpmsize,noco,l_socfirst,cell,nintsp, lapw,el,usdus,vr,gk,rsoc,isigma,fj,gj,smat,hmat)
+
+#include"cpp_double.h"
+    USE m_constants, ONLY : fpi_const,tpi_const
+    USE m_sphbes
+    USE m_dsphbs
+    USE m_ylm
+    USE m_hsmt_socinit,ONLY:t_rsoc
+    USE m_hsmt_spinor
+    USE m_radovlp
+#ifdef CPP_MPI
+    USE m_mingeselle
+#endif
+    USE m_types
+    IMPLICIT NONE
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    TYPE(t_input),INTENT(IN)      :: input
+    TYPE(t_noco),INTENT(IN)       :: noco
+    TYPE(t_cell),INTENT(IN)       :: cell
+    TYPE(t_sphhar),INTENT(IN)     :: sphhar
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(INOUT)    :: lapw!lpaw%nv_tot is updated
+    TYPE(t_usdus),INTENT(INOUT)   :: usdus
+    TYPE(t_lapwmat),INTENT(INOUT) :: smat,hmat
+    !     ..
+    !     .. Scalar Arguments ..
+    INTEGER, INTENT (IN) :: isp,ab_dim
+    INTEGER, INTENT (IN) :: SUB_COMM,n_size,n_rank 
+    INTEGER, INTENT (IN) :: hlpmsize,nintsp
+    LOGICAL, INTENT (IN) :: l_socfirst
+    !     ..
+    !     .. Array Arguments ..
+    REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
+    REAL,INTENT(IN)      :: gk(:,:,:)
+    COMPLEX,INTENT(IN)   :: isigma(2,2,3)
+    TYPE(t_rsoc),INTENT(IN) :: rsoc
+
+
+    REAL,INTENT(OUT) :: fj(:,0:,:,:),gj(:,0:,:,:)
+    !     ..
+    !     .. Local Scalars ..
+    REAL con1,ff,gg,gs,ws,tnn(3), elall,fct,fjkiln,gjkiln,ddnln,ski(3)
+    REAL apw_lo1,apw_lo2,apw1,w1,aa_rDummy(1)
+
+    COMPLEX chi11,chi21,chi22,capw1
+    INTEGER ii,iii,ij,k,ki,kj,l,lo,n,n0,n1,nn,kjmax, nsp,iintsp,jintsp
+    INTEGER nc ,kii
+
+    !     ..
+    !     .. Local Arrays ..
+    REAL fb(0:atoms%lmaxd),fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)     
+    REAL fl2p1bt(0:atoms%lmaxd),gb(0:atoms%lmaxd)
+    REAL qssbti(3),qssbtj(3)
+
+
+    REAL, ALLOCATABLE :: plegend(:,:)
+    REAL, ALLOCATABLE :: rph(:,:),cph(:,:)
+    REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
+
+
+    COMPLEX chi(2,2),chj(2,2,2,atoms%ntype),aawa(DIMENSION%nvd),bbwa(DIMENSION%nvd)
+    COMPLEX, ALLOCATABLE :: aahlp(:),bbhlp(:)
+    LOGICAL apw(0:atoms%lmaxd)
+
+
+    ! for Spin-orbit...
+    REAL, ALLOCATABLE :: dplegend(:,:)
+    REAL, ALLOCATABLE :: cross_k(:,:)
+    INTEGER :: j1,j2
+    COMPLEX :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2)
+    COMPLEX :: chi11so(2,2),chi21so(2,2),chi22so(2,2),angso(DIMENSION%nvd,2,2)
+
+
+    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) ALLOCATE ( aahlp(hlpmsize),bbhlp(hlpmsize) )
+    !     ..
+    con1 = fpi_const/SQRT(cell%omtil)
+    DO l = 0,atoms%lmaxd
+       fleg1(l) = REAL(l+l+1)/REAL(l+1)
+       fleg2(l) = REAL(l)/REAL(l+1)
+       fl2p1(l) = REAL(l+l+1)/fpi_const
+       fl2p1bt(l) = fl2p1(l)*0.5
+    END DO
+    !---> calculate the overlap of the radial basis functions with different
+    !---> spin directions.
+    IF (noco%l_constr) THEN
+       ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
+            dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
+       CALL rad_ovlp(atoms,usdus,input,vr,el(0:,:,:), uun21,udn21,dun21,ddn21)
+    ENDIF
+    !---> loop over each atom type
+
+    !
+    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
+       !---> pk non-collinear
+       !--->    initialize hamiltonian help array
+       aahlp=CMPLX(0.0,0.0)
+       bbhlp=CMPLX(0.0,0.0)
+    ENDIF
+    !--->       loop over equivalent atoms
+    n1 = 0
+    DO n = 1,atoms%ntype
+       !$OMP PARALLEL  DEFAULT(shared)&
+       !$OMP PRIVATE(kii,ki,nc,iii,kjmax,ski,kj,plegend,l,n1,n)&
+       !$OMP PRIVATE(n0,rph,cph,nn,tnn,fjkiln,gjkiln)&
+       !$OMP PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,ij,apw1)&
+       !$OMP PRIVATE(cross_k,dplegend,chi,chi11,chi21,chi22,nsp,chj)&
+       !$OMP PRIVATE(isigma_x,isigma_y,isigma_z,j1,j2,chi11so,chi21so,chi22so)&
+       !$OMP PRIVATE(aawa,bbwa,capw1,ii) IF (.not.l_socfirst)
+       !$     IF (l_socfirst) WRITE(*,*) "WARNING: first variation SOC does not work with OPENMP in hsmt_sph"
+       !$     IF (l_socfirst) WRITE(*,*) "         switching off openmp parallelization"
+       ALLOCATE(rph(DIMENSION%nvd,ab_dim))
+       ALLOCATE(cph(DIMENSION%nvd,ab_dim))
+       ALLOCATE(plegend(DIMENSION%nvd,0:atoms%lmaxd))
+       IF (l_socfirst)THEN
+          ALLOCATE ( dplegend(DIMENSION%nvd,0:atoms%lmaxd),cross_k(DIMENSION%nvd,3))
+          dplegend(:,0)=0.e0
+          dplegend(:,1)=1.e0
+       ENDIF
+
+       plegend=0.0
+       plegend(:,0)=1.0
+       DO iintsp = 1,nintsp
+          qssbti=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
+          DO jintsp = 1,iintsp
+             qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
+             nc = 0                                    ! maybe IF (iintsp.EQ
+             IF ( noco%l_noco .AND. (n_size.GT.1) ) THEN
+                !--->       for EV-parallelization & noco ( see comments at top )
+                lapw%nv_tot = lapw%nv(1) + lapw%nv(2)
+                IF (noco%l_ss)  CALL juDFT_error("ev-parallelization & spin-spiral !",calledby ="hsmt_sph")
+             ELSE
+                lapw%nv_tot = lapw%nv(iintsp)
+             ENDIF
+
+             !
+             !$OMP  DO SCHEDULE(DYNAMIC,1)
+             DO  kii =  n_rank, lapw%nv_tot-1, n_size
+                ki = MOD(kii,lapw%nv(iintsp)) + 1
+                nc = nc + 1
+                !$          nc= 1+ (kii-n_rank)/n_size
+                iii = nc*(nc-1)/2 * n_size - (nc-1)*(n_size - n_rank - 1)
+                !            ii = nc*(nc+1)/2 * n_size -  nc   *(n_size - n_rank - 1)
+
+                IF (noco%l_ss.OR.noco%l_constr.OR.l_socfirst) THEN
+                   kjmax = lapw%nv(jintsp)
+                ELSE
+                   kjmax = ki
+                ENDIF
+                ski = (/lapw%k1(ki,iintsp),lapw%k2(ki,iintsp),lapw%k3(ki,iintsp)/) + qssbti
+                !--->       legendre polynomials
+                DO kj = 1,kjmax
+                   plegend(kj,1) = DOT_PRODUCT(gk(kj,:,jintsp),gk(ki,:,iintsp))
+                   IF (l_socfirst) THEN
+                      cross_k(kj,1)=gk(ki,2,jintsp)*gk(kj,3,iintsp)- gk(ki,3,jintsp)*gk(kj,2,iintsp)
+                      cross_k(kj,2)=gk(ki,3,jintsp)*gk(kj,1,iintsp)- gk(ki,1,jintsp)*gk(kj,3,iintsp)
+                      cross_k(kj,3)=gk(ki,1,jintsp)*gk(kj,2,iintsp)- gk(ki,2,jintsp)*gk(kj,1,iintsp)
+                   ENDIF
+                END DO
+                DO l = 1,MAXVAL(atoms%lmax) - 1
+                   plegend(:,l+1) = fleg1(l)*plegend(:,1)*plegend(:,l) - fleg2(l)*plegend(:,l-1)
+                   IF (l_socfirst) THEN
+                      dplegend(:,l+1)=REAL(l+1)*plegend(:,l)+ plegend(:,1)*dplegend(:,l)
+                   ENDIF
+                END DO
+
+
+                IF (noco%l_noco) THEN
+                   !--->          pk non-collinear
+                   !--->             set up the spinors of this atom within global
+                   !--->             spin-coordinateframe
+                   CALL hsmt_spinor(isp,n, noco, input,chi, chi11, chi21, chi22,l_socfirst,&
+                        isigma,isigma_x,isigma_y,isigma_z,chi11so,chi21so,chi22so,angso,chj,cross_k)
+                ENDIF
+                !---> pk non-collinear
+                n0 = n1 + 1
+                n1 = n1 + atoms%neq(n)
+                rph(:,1) = 0.0
+                cph(:,1) = 0.0
+                DO nn = n0,n1
+                   tnn = tpi_const*atoms%taual(:,nn)
+                   !--->             set up phase factors
+                   DO kj = 1,kjmax
+                      rph(kj,1) = rph(kj,1) +&
+                           COS(DOT_PRODUCT(ski-(/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj,tnn))
+
+                      IF (.NOT.sym%invs) THEN
+                         !--->                if the system does not posses inversion symmetry
+                         !--->                the complex part of the exponential is needed.
+                         cph(kj,1) = cph(kj,1) +&
+                              SIN(DOT_PRODUCT((/lapw%k1(kj,jintsp),lapw%k2(kj,jintsp),lapw%k3(kj,jintsp)/)+qssbtj-ski,tnn))
+                      ENDIF
+                   END DO
+                END DO
+
+                !--->          update overlap and l-diagonal hamiltonian matrix
+                DO  l = 0,atoms%lmax(n)
+                   IF (noco%l_constr.OR.l_socfirst) THEN
+                      fjkiln = fj(ki,l,n,isp)
+                      gjkiln = gj(ki,l,n,isp)
+                   ELSE
+                      fjkiln = fj(ki,l,n,iintsp)
+                      gjkiln = gj(ki,l,n,iintsp)
+                   ENDIF
+                   !
+                   w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + &
+                        usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
+                   apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 +&
+                        fjkiln * usdus%us(l,n,isp) * usdus%dus(l,n,isp) )
+                   apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 +&
+                        gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
+                   !
+                   ddnln =  usdus%ddn(l,n,isp)
+                   elall = el(l,n,isp)
+
+                   IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
+                      !--->             pk non-collinear
+                      IF (noco%l_constr.OR.l_socfirst) THEN
+                         DO kj = 1,ki
+                            fct  = plegend(kj,l)*fl2p1(l)*&
+                                 ( fjkiln*fj(kj,l,n,isp) + gjkiln*gj(kj,l,n,isp)*ddnln )
+
+                            bbwa(kj) = CMPLX(rph(kj,1),cph(kj,1))*fct
+                            aawa(kj) = CMPLX(rph(kj,1),cph(kj,1)) * ( &
+                                 fct*elall + plegend(kj,l)*fl2p1bt(l)*&
+                                 ( fjkiln*gj(kj,l,n,isp) + gjkiln*fj(kj,l,n,isp) ) )
+                            IF (input%l_useapw) THEN
+                               capw1 = CMPLX(rph(kj,1),cph(kj,1))*plegend(kj,l)&
+                                    * ( apw_lo1 * fj(kj,l,n,isp) + apw_lo2 * gj(kj,l,n,isp) )
+                               aawa(kj) = aawa(kj) + capw1
+                            ENDIF
+                         ENDDO
+                      ELSE
+                         DO kj = 1,ki
+                            fct  = plegend(kj,l)*fl2p1(l)*&
+                                 ( fjkiln*fj(kj,l,n,jintsp) + gjkiln*gj(kj,l,n,jintsp)*ddnln )
+
+                            bbwa(kj) = CMPLX(rph(kj,1),cph(kj,1))*fct
+                            aawa(kj) = CMPLX(rph(kj,1),cph(kj,1)) * (&
+                                 fct*elall + plegend(kj,l)*fl2p1bt(l)*&
+                                 ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
+                            IF (input%l_useapw) THEN
+                               capw1 = CMPLX(rph(kj,1),cph(kj,1))*plegend(kj,l)&
+                                    * ( apw_lo1 * fj(kj,l,n,jintsp) + apw_lo2 * gj(kj,l,n,jintsp) )
+                               aawa(kj) = aawa(kj) + capw1
+                            ENDIF
+                         ENDDO
+                      ENDIF
+                      !+||
+                      IF ( kii+1.LE.lapw%nv(1) ) THEN
+                         !--->                spin-up spin-up part
+                         CALL CPP_BLAS_caxpy(ki,chi11,bbwa,1,hamOvlp%b_c(iii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi11,aawa,1,hamOvlp%a_c(iii+1),1)
+                         !--->                spin-down spin-up part, upper triangle.
+                         !--->                the help array is used to allow vectorization on
+                         !--->                Cray PVP systems. it is mapped onto the hamiltonian
+                         !--->                matrix after the setup is complete.
+                         DO kj = 1,ki - 1
+                            ii = iii + kj
+                            aahlp(ii)=aahlp(ii)+CONJG(aawa(kj))*chi21
+                            bbhlp(ii)=bbhlp(ii)+CONJG(bbwa(kj))*chi21
+                         END DO
+                      ENDIF
+                      IF ( (kii+1.GT.lapw%nv(1)).OR.(n_size.EQ.1) ) THEN
+                         IF (n_size.EQ.1) THEN
+                            ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
+                         ELSE
+                            ii = iii
+                         ENDIF
+                         !--->                spin-down spin-up part, lower triangle
+                         CALL CPP_BLAS_caxpy(ki,chi21,bbwa,1,hamOvlp%b_c(ii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi21,aawa,1,hamOvlp%a_c(ii+1),1)
+                         !--->                spin-down spin-down part
+                         ii = ii + lapw%nv(1)+atoms%nlotot
+                         CALL CPP_BLAS_caxpy(ki,chi22,bbwa,1,hamOvlp%b_c(ii+1),1)
+                         CALL CPP_BLAS_caxpy(ki,chi22,aawa,1,hamOvlp%a_c(ii+1),1)
+                      ENDIF
+                      !-||
+                      !--->                when fj and gj are available for both local spins
+                      !--->                (isp), add the contribution from the constraint
+                      !--->                B-field.
+                      IF (noco%l_constr .AND. (isp .EQ. 2)) THEN
+                         DO nsp = 1,input%jspins
+                            IF (nsp.EQ.1) THEN
+                               DO kj = 1,lapw%nv(1)
+                                  aawa(kj) = (-0.5)*CMPLX(noco%b_con(1,n),noco%b_con(2,n))*&
+                                       CMPLX(rph(kj,1),cph(kj,1))*&
+                                       plegend(kj,l)*fl2p1(l)*(&
+                                       + fj(ki,l,n,2)*fj(kj,l,n,1)*uun21(l,n)&
+                                       + fj(ki,l,n,2)*gj(kj,l,n,1)*udn21(l,n)&
+                                       + gj(ki,l,n,2)*fj(kj,l,n,1)*dun21(l,n)&
+                                       + gj(ki,l,n,2)*gj(kj,l,n,1)*ddn21(l,n))
+                               ENDDO
+                            ELSE
+                               DO kj = 1,lapw%nv(1)
+                                  aawa(kj) = (-0.5)*CMPLX(noco%b_con(1,n),-noco%b_con(2,n))*&
+                                       CMPLX(rph(kj,1),cph(kj,1))*&
+                                       plegend(kj,l)*fl2p1(l)*(&
+                                       + fj(ki,l,n,1)*fj(kj,l,n,2)*uun21(l,n)&
+                                       + fj(ki,l,n,1)*gj(kj,l,n,2)*dun21(l,n)&
+                                       + gj(ki,l,n,1)*fj(kj,l,n,2)*udn21(l,n)&
+                                       + gj(ki,l,n,1)*gj(kj,l,n,2)*ddn21(l,n))
+                               ENDDO
+                            ENDIF
+                            !--->                  spin-up spin-up part
+                            ii = (ki-1)*(ki)/2
+                            DO kj = 1,ki
+                               hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chj(nsp,1,1,n)
+                            ENDDO
+                            !--->                  spin-down spin-down part
+                            ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2 + &
+                                 lapw%nv(1)+atoms%nlotot
+                            DO kj = 1,ki
+                               hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chj(nsp,2,2,n)
+                            ENDDO
+                            !--->                  spin-down spin-up part
+                            ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
+                            DO kj = 1,lapw%nv(1)
+                               hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chj(nsp,2,1,n)
+                            ENDDO
+                         ENDDO
+                      ENDIF
+
+                      !                 Add spin-orbit coupling
+                      IF (isp.EQ.2) THEN
+                         IF ((l.GT.0).AND.l_socfirst) THEN
+
+                            DO j1 = 1,input%jspins
+                               DO j2 = 1,input%jspins
+                                  DO kj = 1,lapw%nv(1)
+                                     aawa(kj)=CMPLX(rph(kj,1),cph(kj,1))*(&
+                                          + fj(ki,l,n,j1)*fj(kj,l,n,j2)*rsoc%rsopp(n,l,j1,j2)&
+                                          + fj(ki,l,n,j1)*gj(kj,l,n,j2)*rsoc%rsopdp(n,l,j1,j2)&
+                                          + gj(ki,l,n,j1)*fj(kj,l,n,j2)*rsoc%rsoppd(n,l,j1,j2)&
+                                          + gj(ki,l,n,j1)*gj(kj,l,n,j2)*rsoc%rsopdpd(n,l,j1,j2))&
+                                          *dplegend(kj,l)*fl2p1(l)*angso(kj,j1,j2)
+                                  ENDDO
+                                  IF (n_size.EQ.1) THEN
+
+                                     !--->                  spin-up spin-up part
+                                     ii = (ki-1)*(ki)/2
+                                     DO kj = 1,ki
+                                        hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chi11so(j1,j2)
+                                     ENDDO
+                                     !--->                  spin-down spin-down part
+                                     ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2 +&
+                                          lapw%nv(1)+atoms%nlotot
+                                     DO kj = 1,ki
+                                        hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chi22so(j1,j2)
+                                     ENDDO
+                                     !--->                  spin-down spin-up part
+                                     ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
+                                     DO kj = 1,lapw%nv(1)
+                                        hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chi21so(j1,j2)
+                                     ENDDO
+
+                                  ELSE  ! eigenvalue parallelization
+
+                                     IF ( kii+1.LE.lapw%nv(1) ) THEN
+                                        !--->                    spin-up spin-up part
+                                        CALL CPP_BLAS_caxpy(ki,chi11so(j1,j2),aawa,1, hamOvlp%a_c(iii+1),1)
+
+                                        !--->                    spin-down spin-up part, upper triangle.
+                                        DO kj = 1,ki - 1
+                                           ii = iii + kj
+                                           aahlp(ii) = aahlp(ii) + CONJG(aawa(kj))*chi21so(j2,j1)
+                                        END DO
+                                     ENDIF
+                                     IF  (kii+1.GT.lapw%nv(1)) THEN
+                                        ii = iii
+                                        !--->                    spin-down spin-up part, lower triangle
+                                        CALL CPP_BLAS_caxpy(ki,chi21so(j1,j2),aawa,1, hamOvlp%a_c(ii+1),1)
+                                        !--->                    spin-down spin-down part
+                                        ii = ii + lapw%nv(1)+atoms%nlotot
+                                        CALL CPP_BLAS_caxpy(ki,chi22so(j1,j2),aawa,1, hamOvlp%a_c(ii+1),1)
+                                     ENDIF
+
+                                  ENDIF ! eigenvalue par.
+
+                               ENDDO ! j2
+                            ENDDO    ! j1
+                         ENDIF       ! ( l > 0 ) & socfirst
+                      ENDIF          ! (isp = 2)
+                      !               End spin-orbit
+                   ELSEIF ( noco%l_noco .AND. noco%l_ss ) THEN
+                      IF ( iintsp.EQ.2 .AND. jintsp.EQ.1 ) THEN
+                         kjmax = lapw%nv(1)
+                      ELSE
+                         kjmax = ki
+                      ENDIF
+                      DO kj = 1,kjmax
+                         fct  = plegend(kj,l)*fl2p1(l)* ( fjkiln*fj(kj,l,n,jintsp) +&
+                              gjkiln*gj(kj,l,n,jintsp)*ddnln )
+
+                         bbwa(kj) = CMPLX(rph(kj,1),cph(kj,1))*fct
+                         aawa(kj) = CMPLX(rph(kj,1),cph(kj,1)) * ( &
+                              fct*elall + plegend(kj,l)*fl2p1bt(l)*&
+                              ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
+                      ENDDO
+                      IF ( iintsp.EQ.1 .AND. jintsp.EQ.1 ) THEN
+                         !--->                   spin-up spin-up part
+                         ii = (ki-1)*(ki)/2
+                         DO kj = 1,ki
+                            hamOvlp%b_c(ii+kj) = hamOvlp%b_c(ii+kj) + bbwa(kj)*chi11
+                            hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chi11
+                         ENDDO
+                      ELSEIF ( iintsp.EQ.2 .AND. jintsp.EQ.2 ) THEN
+                         !--->                   spin-down spin-down part
+                         ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2 +&
+                              lapw%nv(1)+atoms%nlotot
+                         DO kj = 1,ki
+                            hamOvlp%b_c(ii+kj) = hamOvlp%b_c(ii+kj) + bbwa(kj)*chi22
+                            hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chi22
+                         ENDDO
+                      ELSE
+                         !--->                   spin-down spin-up part
+                         ii = (lapw%nv(1)+atoms%nlotot+ki-1)*(lapw%nv(1)+atoms%nlotot+ki)/2
+                         DO kj = 1,lapw%nv(1)
+                            hamOvlp%b_c(ii+kj) = hamOvlp%b_c(ii+kj) + bbwa(kj)*chi21
+                            hamOvlp%a_c(ii+kj) = hamOvlp%a_c(ii+kj) + aawa(kj)*chi21
+                         ENDDO
+                      ENDIF
+                      !--->             pk non-collinear
+                   ELSE
+                      IF (smat%l_real) THEN
+                         DO kj = 1,ki
+                            fct  = plegend(kj,l)*fl2p1(l)*&
+                                 ( fjkiln*fj(kj,l,n,jintsp) + gjkiln*gj(kj,l,n,jintsp)*ddnln )
+                            smat%data_r(kj,ki)=smat%data_r(kj,ki)+rph(kj,1)*fct
+                            hmat%data_r(kj,ki)=hmat%data_r(kj,ki) + rph(kj,1) * ( fct * elall + plegend(kj,l) * fl2p1bt(l) *&
+                                 ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
+                            !+APW
+                            IF (input%l_useapw) THEN
+                               apw1 = rph(kj,1) * plegend(kj,l)  * &
+                                    ( apw_lo1 * fj(kj,l,n,iintsp) + apw_lo2 * gj(kj,l,n,iintsp) )
+                               hmat%data_r(kj,ki)=hmat%data_r(kj,ki) + apw1
+                            ENDIF
+                            !-APW
+                         ENDDO
+                      ELSE
+                         DO kj = 1,ki
+                            fct  = plegend(kj,l)*fl2p1(l)*&
+                                 ( fjkiln*fj(kj,l,n,jintsp) + gjkiln*gj(kj,l,n,jintsp)*ddnln )
+
+                            ij = iii + kj
+                            smat%data_c(kj,ki)=smat%data_c(kj,ki) + CMPLX(rph(kj,1),cph(kj,1))*fct
+                            hmat%data_c(kj,ki)=hmat%data_c(kj,ki) + CMPLX(rph(kj,1),cph(kj,1)) * ( fct*elall &
+                                 + plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,n,jintsp) + gjkiln*fj(kj,l,n,jintsp) ) )
+
+                            IF (input%l_useapw) THEN
+
+                               capw1 = CMPLX(rph(kj,1),cph(kj,1))*plegend(kj,l)&
+                                    * ( apw_lo1 * fj(kj,l,n,iintsp) + apw_lo2 * gj(kj,l,n,iintsp) )
+                               hmat%data_c(kj,ki)=hmat%data_c(kj,ki) + capw1
+                            ENDIF
+                         END DO
+                      ENDIF
+                   ENDIF
+
+                   !--->          end loop over l
+                ENDDO
+
+
+
+                !--->    end loop over ki
+
+             ENDDO
+
+             !$OMP END DO
+             !--->       end loop over atom types (ntype)
+          ENDDO
+          !---> end loops over interstitial spins
+       ENDDO ! jintsp = 1,iintsp
+    ENDDO   ! iintsp = 1,nintsp
+    DEALLOCATE(plegend)
+    IF (l_socfirst) DEALLOCATE(dplegend,cross_k)
+    DEALLOCATE(rph,cph)
+    !$OMP END PARALLEL
+
+
+    !---> pk non-collinear
+    IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) THEN
+       !--->    map the hamiltonian help array onto the hamitonian matrix
+       IF (n_size.EQ.1) THEN
+          DO ki = 1,lapw%nv(1)
+             ii = (ki-1)*(ki)/2
+             DO kj = 1,ki-1
+                ij = (lapw%nv(1)+atoms%nlotot+kj-1)*(lapw%nv(1)+atoms%nlotot+kj)/2 + ki
+                hamOvlp%a_c(ij) = hamOvlp%a_c(ij) + aahlp(ii+kj)
+                hamOvlp%b_c(ij) = hamOvlp%b_c(ij) + bbhlp(ii+kj)
+             ENDDO
+          ENDDO
+
+       ELSE
+#ifdef CPP_MPI
+          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, aahlp, .FALSE.,aa_rDummy,hamOvlp%a_c)
+          CALL mingeselle(SUB_COMM,n_size,n_rank,lapw%nv, bbhlp, .FALSE.,aa_rDummy,hamOvlp%b_c)
+#endif
+       ENDIF
+    ENDIF
+
+
+
+    RETURN
+  END SUBROUTINE hsmt_sph
+END MODULE m_hsmt_sph

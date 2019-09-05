@@ -1,10 +1,9 @@
       MODULE m_checkdop
       CONTAINS
         SUBROUTINE checkdop(&
-             &                    p,np,n,na,ivac,iflag,jsp,cdn,&
+             &                    p,np,n,na,ivac,iflag,jsp,&
              &                    DIMENSION,atoms,sphhar,stars,sym,&
-             &                    vacuum,cell,oneD,&
-             &                    fpw,fr,fxy,fz)
+             &                    vacuum,cell,oneD,potden)
           ! ************************************************************
           !     subroutines checks the continuity of coulomb           *
           !     potential or valence charge density                    *
@@ -14,6 +13,7 @@
           ! YM:  this routine doesn't really work in the vacuum in 1D case yet
           ! ************************************************************
 
+          USE m_juDFT
           USE m_starf, ONLY : starf2,starf3
           USE m_angle
           USE m_ylm
@@ -23,32 +23,37 @@
           IMPLICIT NONE
           !     ..
           !     .. Scalar Arguments ..
-          TYPE(t_dimension),INTENT(IN):: dimension
-          type(t_sphhar),intent(in):: sphhar      
-          TYPE(t_stars),INTENT(IN) :: stars
-          TYPE(t_atoms),INTENT(IN) :: atoms
-          TYPE(t_sym),INTENT(IN)   :: sym
-          TYPE(t_vacuum),INTENT(IN):: vacuum
-          TYPE(t_oneD),INTENT(IN)  :: oneD
-          TYPE(t_cell),INTENT(IN)  :: cell
+          TYPE(t_dimension),INTENT(IN) :: dimension
+          type(t_sphhar),intent(in)    :: sphhar      
+          TYPE(t_stars),INTENT(IN)     :: stars
+          TYPE(t_atoms),INTENT(IN)     :: atoms
+          TYPE(t_sym),INTENT(IN)       :: sym
+          TYPE(t_vacuum),INTENT(IN)    :: vacuum
+          TYPE(t_oneD),INTENT(IN)      :: oneD
+          TYPE(t_cell),INTENT(IN)      :: cell
+          TYPE(t_potden),INTENT(IN)    :: potden
 
-          INTEGER, INTENT (IN) :: iflag,ivac,n,na,np,jsp    
-          LOGICAL, INTENT (IN) :: cdn 
+          INTEGER, INTENT (IN) :: iflag,ivac,n,na,np,jsp
           !-odim
           !+odim
           !     .. Array Arguments ..
-          REAL,    INTENT (IN) :: p(3,DIMENSION%nspd)  
-          REAL,    INTENT (IN) :: fr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd),fz(vacuum%nmzd,2,DIMENSION%jspd)
-          COMPLEX, INTENT (IN) :: fpw(stars%ng3,DIMENSION%jspd),fxy(vacuum%nmzxyd,oneD%odi%n2d-1,2,DIMENSION%jspd)
+          REAL,    INTENT (IN) :: p(3,DIMENSION%nspd)
           !     ..
           !     .. Local Scalars ..
           REAL av,dms,rms,s,ir2,help,phi
           INTEGER i,j,k,lh,mem,nd,lm,ll1,nopa ,gz,m
           COMPLEX ic
+          LOGICAL l_cdn
           !     ..
           !     .. Local Arrays ..
           COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm( (atoms%lmaxd+1)**2 )
           REAL rcc(3),v1(DIMENSION%nspd),v2(DIMENSION%nspd),x(3),ri(3)
+
+          l_cdn = .FALSE. ! By default we assume that the input is a potential.
+          IF (potden%potdenType.LE.0) CALL juDFT_error('unknown potden type', calledby='checkdop')
+          IF (potden%potdenType.GT.1000) l_cdn = .TRUE. ! potdenTypes > 1000 are reserved for densities
+          
+
           !     ..
           !     ..
 #ifdef  __TOS_BGQ__
@@ -75,34 +80,32 @@
                 ENDIF
                 v1(j) = 0.0
                 DO k = 1,stars%ng3
-                   v1(j) = v1(j) + REAL(fpw(k,jsp)*sf3(k))*stars%nstr(k)
+                   v1(j) = v1(j) + REAL(potden%pw(k,jsp)*sf3(k))*stars%nstr(k)
                 ENDDO
              ENDDO
              !     ---> vacuum part
-             IF (cdn) THEN
+             IF (l_cdn) THEN
                 WRITE (6,FMT=9000) ivac
-                WRITE (16,FMT=9000) ivac
              ELSE
                 WRITE (6,FMT=8000) ivac
-                WRITE (16,FMT=8000) ivac
              ENDIF
              DO  j = 1,np
                 IF (.NOT.oneD%odi%d1) THEN
                    CALL starf2(&
                         &           sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1,j),sym%invtab,&
                         &           sf2)!keep
-                   v2(j) = fz(1,ivac,jsp)
+                   v2(j) = potden%vacz(1,ivac,jsp)
                    DO  k = 2,stars%ng2
-                      v2(j) = v2(j) + REAL(fxy(1,k-1,ivac,jsp)*sf2(k))*stars%nstr2(k)
+                      v2(j) = v2(j) + REAL(potden%vacxy(1,k-1,ivac,jsp)*sf2(k))*stars%nstr2(k)
                    ENDDO
                 ELSE
                    !-odim
-                   v2(j) = fz(1,ivac,jsp)
+                   v2(j) = potden%vacz(1,ivac,jsp)
                    phi = angle(p(1,j),p(2,j))
                    DO  k = 2,oneD%odi%nq2
                       m = oneD%odi%kv(2,k)
                       gz = oneD%odi%kv(1,k)
-                      v2(j) = v2(j) + REAL(fxy(1,k-1,ivac,jsp)*&
+                      v2(j) = v2(j) + REAL(potden%vacxy(1,k-1,ivac,jsp)*&
                            &           EXP(ic*m*phi)*EXP(ic*cell%bmat(3,3)*gz*p(3,j)))*oneD%odi%nst2(k)
                    ENDDO
                    !+odim
@@ -112,17 +115,14 @@
                    rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
                    WRITE (6,FMT=8020)  rcc,(p(i,j),i=1,3),v1(j),v2(j)
-                   WRITE (16,FMT=8020) rcc,(p(i,j),i=1,3),v1(j),v2(j)
                 ELSE
                    !CALL cotra0(p(1,j),rcc,cell%amat)
                    rcc=MATMUL(cell%amat,p(:,j))
                    WRITE (6,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
-                   WRITE (16,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
                 ENDIF
              ENDDO
              CALL fitchk(v1(:np),v2(:np),av,rms,dms)
              WRITE (6,FMT=8030) av,rms,dms
-             WRITE (16,FMT=8030) av,rms,dms
              RETURN
           ENDIF
           !      ----> interstitial part
@@ -136,19 +136,17 @@
              !
              v1(j) = 0.0
              DO k = 1,stars%ng3
-                v1(j) = v1(j) + REAL(fpw(k,jsp)*sf3(k))*stars%nstr(k)
+                v1(j) = v1(j) + REAL(potden%pw(k,jsp)*sf3(k))*stars%nstr(k)
              ENDDO
           ENDDO
           !     ----> m.t. part
-          IF (cdn) THEN
+          IF (l_cdn) THEN
              WRITE (6,FMT=9010) n
-             WRITE (16,FMT=9010) n
           ELSE
              WRITE (6,FMT=8010) n
-             WRITE (16,FMT=8010) n
           ENDIF
           ir2 = 1.0
-          IF (cdn) ir2 = 1.0 / ( atoms%rmt(n)*atoms%rmt(n) )
+          IF (l_cdn) ir2 = 1.0 / ( atoms%rmt(n)*atoms%rmt(n) )
           nd = atoms%ntypsy(na)
           nopa = atoms%ngopr(na)
           IF (oneD%odi%d1) THEN
@@ -190,7 +188,7 @@
                    lm = ll1 + sphhar%mlh(mem,lh,nd)
                    s = s + REAL( sphhar%clnu(mem,lh,nd)* ylm(lm) )
                 ENDDO
-                help = help + fr(atoms%jri(n),lh,n,jsp) * s
+                help = help + potden%mt(atoms%jri(n),lh,n,jsp) * s
              ENDDO
              v2(j) = help * ir2 
              IF (j.LE.8) THEN
@@ -198,12 +196,10 @@
                 rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
                 WRITE (6,FMT=8020) rcc, (p(i,j),i=1,3),v1(j),v2(j)
-                WRITE (16,FMT=8020) rcc, (p(i,j),i=1,3),v1(j),v2(j)
              END IF
           ENDDO
           CALL fitchk(v1(:np),v2(:np),av,rms,dms)
           WRITE (6,FMT=8030) av,rms,dms
-          WRITE (16,FMT=8030) av,rms,dms
 8000      FORMAT (/,'    int.-vac. boundary (potential): ivac=',i2,/,t10,&
                &       'int-coord',t36,'cart-coord',t57,' inter. ',t69,' vacuum ')
 8010      FORMAT (/,'    int.-m.t. boundary (potential): atom type=',i2,/,&

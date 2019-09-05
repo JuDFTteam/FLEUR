@@ -1,8 +1,7 @@
 MODULE m_qintsl
   USE m_juDFT
 CONTAINS
-  SUBROUTINE q_int_sl(isp,stars,atoms,sym, volsl,volintsl, cell,&
-       ne,lapw, nsl,zsl,nmtsl,oneD, qintslk,zMat)          
+  SUBROUTINE q_int_sl(isp,ikpt,stars,atoms,sym,cell,ne,lapw,slab,oneD,zMat)          
     !     *******************************************************
     !     calculate the charge of the En(k) state 
     !     in the interstitial region of each leyer
@@ -20,16 +19,11 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
-    TYPE(t_zMat),INTENT(IN)   :: zMat
+    TYPE(t_mat),INTENT(IN)    :: zMat
+    TYPE(t_slab),INTENT(INOUT):: slab
     !
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne,isp  ,nsl
-    !     ..
-    !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: nmtsl(atoms%ntype,nsl) 
-    REAL,    INTENT (IN) :: volintsl(atoms%nat)  
-    REAL,    INTENT (IN) :: zsl(2,atoms%nat) ,volsl(atoms%nat) 
-    REAL,    INTENT (OUT):: qintslk(:,:)!(nsl,dimension%neigd)
+    INTEGER, INTENT (IN) :: ne,isp,ikpt
     !     ..
     !     .. Local Scalars ..
     REAL q1,zsl1,zsl2,qi,volsli,volintsli
@@ -47,19 +41,19 @@ CONTAINS
     !    
     !     ----> g=0 star
     !
-    ALLOCATE ( stfunint(stars%ng3,nsl), z_z(stars%ng3) ) 
+    ALLOCATE ( stfunint(stars%ng3,slab%nsl), z_z(stars%ng3) ) 
     !
     !  -----> calculate the integrals of star functions over
     !                     the layer interstitial
     !
-    DO i = 1,nsl
-       zsl1 = zsl(1,i)
-       zsl2 = zsl(2,i)
-       volsli = volsl(i)
-       volintsli = volintsl(i)
+    DO i = 1,slab%nsl
+       zsl1 = slab%zsl(1,i)
+       zsl2 = slab%zsl(2,i)
+       volsli = slab%volsl(i)
+       volintsli = slab%volintsl(i)
        DO j = 1,stars%ng3
           CALL pwint_sl(stars,atoms,sym,zsl1,zsl2,&
-               volsli,volintsli,cell,nmtsl(1,i),stars%kv3(1,j),x)
+                        volsli,volintsli,cell,slab%nmtsl(1,i),stars%kv3(1,j),x)
           stfunint(j,i) =  x*stars%nstr(j)
        ENDDO  ! over 3D stars
     ENDDO     ! over vacuum%layers
@@ -71,11 +65,11 @@ CONTAINS
        q1 = 0.0
        IF (zmat%l_real) THEN
           DO  i = 1,lapw%nv(isp)
-             q1 = q1 + zMat%z_r(i,n)*zMat%z_r(i,n)
+             q1 = q1 + zMat%data_r(i,n)*zMat%data_r(i,n)
           ENDDO
        ELSE
           DO  i = 1,lapw%nv(isp)
-             q1 = q1 + REAL(zMat%z_c(i,n)*CONJG(zMat%z_c(i,n)))
+             q1 = q1 + REAL(zMat%data_c(i,n)*CONJG(zMat%data_c(i,n)))
           ENDDO
        ENDIF
        z_z(1) = q1/cell%omtil
@@ -96,22 +90,22 @@ CONTAINS
              phase = stars%rgphs(ix1,iy1,iz1)/ (stars%nstr(ind)*cell%omtil)
              phasep = stars%rgphs(-ix1,-iy1,-iz1)/ (stars%nstr(indp)*cell%omtil)
              IF (zmat%l_real) THEN
-                z_z(ind)  = z_z(ind)  + zMat%z_r(j,n)*zMat%z_r(i,n)*REAL(phase)
-                z_z(indp) = z_z(indp) + zMat%z_r(i,n)*zMat%z_r(j,n)*REAL(phasep)
+                z_z(ind)  = z_z(ind)  + zMat%data_r(j,n)*zMat%data_r(i,n)*REAL(phase)
+                z_z(indp) = z_z(indp) + zMat%data_r(i,n)*zMat%data_r(j,n)*REAL(phasep)
              ELSE
-                z_z(ind) = z_z(ind) +zMat%z_c(j,n)*CONJG(zMat%z_c(i,n))*phase
-                z_z(indp)= z_z(indp)+zMat%z_c(i,n)*CONJG(zMat%z_c(j,n))*phasep
+                z_z(ind) = z_z(ind) +zMat%data_c(j,n)*CONJG(zMat%data_c(i,n))*phase
+                z_z(indp)= z_z(indp)+zMat%data_c(i,n)*CONJG(zMat%data_c(j,n))*phasep
              ENDIF
           ENDDO
        ENDDO
        ! ----> calculate a charge in the layer interstitial region of the film
        !
-       DO i = 1,nsl
+       DO i = 1,slab%nsl
           qi = 0.0
           DO j = 1,stars%ng3
              qi = qi + z_z(j)*stfunint(j,i)
           ENDDO
-          qintslk(i,n) = qi 
+          slab%qintsl(i,n,ikpt,isp) = qi 
        ENDDO    ! over vacuum%layers         
 
     ENDDO ! over states

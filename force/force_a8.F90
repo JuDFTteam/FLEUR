@@ -4,29 +4,27 @@ MODULE m_forcea8
   !
   ! ************************************************************
 CONTAINS
-  SUBROUTINE force_a8(input,atoms,sphhar,&
-       jsp, vr,rho, f_a12,f_a21,f_b4,f_b8,&
-       force)
+  SUBROUTINE force_a8(input,atoms,sphhar,jsp,vr,rho,force,results)
     !
     USE m_intgr, ONLY : intgr3
-    USE m_constants,ONLY: pi_const,sfp_const
+    USE m_constants, ONLY: pi_const, sfp_const, ImagUnit
     USE m_gaunt, ONLY :gaunt1
     USE m_differentiate,ONLY: difcub
     USE m_types
+    USE m_juDFT
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_sphhar),INTENT(IN)      :: sphhar
     TYPE(t_atoms),INTENT(IN)       :: atoms
+    TYPE(t_force),INTENT(IN)       :: force
+    TYPE(t_results),INTENT(INOUT)  :: results
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp 
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (IN) :: f_a12(3,atoms%ntype),f_a21(3,atoms%ntype)
-    COMPLEX, INTENT (IN) :: f_b4(3,atoms%ntype),f_b8(3,atoms%ntype)
     REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,DIMENSION%jspd)
-    REAL,    INTENT (INOUT) :: force(:,:,:) !(3,ntypd,jspd)
+    REAL,    INTENT (IN) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !     ..
     !     .. Local Scalars ..
     COMPLEX aaa,bbb,ccc,ddd,eee,fff
@@ -43,13 +41,8 @@ CONTAINS
     !     ..
     !     .. Data statements ..
     COMPLEX,PARAMETER:: czero=CMPLX(0.000,0.000)
-    COMPLEX,PARAMETER:: ci = CMPLX(0.0,1.0)
-    !
-    !  inline functions:
-    !
+
     ! Kronecker delta for arguments >=0 AND <0
-    !
-    !
     krondel(i,j) = MIN(ABS(i)+1,ABS(j)+1)/MAX(ABS(i)+1,ABS(j)+1)* (1+SIGN(1,i)*SIGN(1,j))/2
     alpha(l,m) = (l+1)*0.5e0*SQRT(REAL((l-m)* (l-m-1))/ REAL((2*l-1)* (2*l+1)))
     beta(l,m) = l*0.5e0*SQRT(REAL((l+m+2)* (l+m+1))/ REAL((2*l+1)* (2*l+3)))
@@ -57,10 +50,11 @@ CONTAINS
     delta(l,m) = l*0.5e0*SQRT(REAL((l-m+2)* (l-m+1))/ REAL((2*l+1)* (2*l+3)))
     epslon(l,m) = (l+1)*SQRT(REAL((l-m)* (l+m))/ REAL((2*l-1)* (2*l+1)))
     phi(l,m) = l*SQRT(REAL((l-m+1)* (l+m+1))/REAL((2*l+1)* (2*l+3)))
-    !     ..
+
+    CALL timestart("force_a8")
+
     WRITE  (6,*)
-    WRITE (16,*)
-    !
+ 
     na = 1
     DO  n = 1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
@@ -72,17 +66,15 @@ CONTAINS
           nd = atoms%ntypsy(na)
           !
           CALL intgr3(rho(:,0,n,jsp),atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n),qval)
-          !
+
           !     check if l=0 density is correct;
           !     note that in general also all l>0
           !     components of the density have been multiplied by r**2
           !     (see for example subr. checkdop which constructs true MT-density at Rmt)
           !     factor sqrt(4pi) comes from Y_00 * \int d\Omega = 1/sqrt(4pi) * 4pi
-          !     write(16,1616) qval*sfp
 8000      FORMAT (' FORCE_A8: valence charge=',1p,e16.8)
-          !
+
           !    PART I of FORCE_A8
-          !
           DO  lh1 = 0,sphhar%nlh(nd)
              l1 = sphhar%llh(lh1,nd)
              DO  lh2 = 0,sphhar%nlh(nd)
@@ -101,7 +93,7 @@ CONTAINS
                            &                       sphhar%clnu(mem1,lh1,nd)*sphhar%clnu(mem2,lh2,nd)*&
                            &                       (gaunt1(1,l1,l2,-1,m1,m2,atoms%lmaxd)-&
                            &                       gaunt1(1,l1,l2,1,m1,m2,atoms%lmaxd))
-                      gv(2) = gv(2) - ci*SQRT(2.e0*pi_const/3.e0)*&
+                      gv(2) = gv(2) - ImagUnit*SQRT(2.e0*pi_const/3.e0)*&
                            &                       sphhar%clnu(mem1,lh1,nd)*sphhar%clnu(mem2,lh2,nd)*&
                            &                       (gaunt1(1,l1,l2,-1,m1,m2,atoms%lmaxd)+&
                            &                       gaunt1(1,l1,l2,1,m1,m2,atoms%lmaxd))
@@ -222,7 +214,7 @@ CONTAINS
                            &                     krondel(-m1,m2)
                       !
                       gv(1) = gv(1) + aaa + bbb - ccc - ddd
-                      gv(2) = gv(2) - ci* (aaa+bbb+ccc+ddd)
+                      gv(2) = gv(2) - ImagUnit* (aaa+bbb+ccc+ddd)
                       gv(3) = gv(3) + eee - fff
                       !
                       !  end of summation m1,m2
@@ -240,15 +232,13 @@ CONTAINS
           !     sum to existing forces
           !
           DO i = 1,3
-             force(i,n,jsp) = force(i,n,jsp) + REAL(forc_a8(i))
+             results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a8(i))
           END DO
           !
           !     write result
           !
           WRITE (6,FMT=8010) n
-          WRITE (16,FMT=8010) n
           WRITE (6,FMT=8020) (forc_a8(i),i=1,3)
-          WRITE (16,FMT=8020) (forc_a8(i),i=1,3)
 8010      FORMAT (' FORCES: EQUATION A8 FOR ATOM TYPE',i4)
 8020      FORMAT (' FX_A8=',2f10.6,' FY_A8=',2f10.6,' FZ_A8=',2f10.6)
 
@@ -262,55 +252,45 @@ CONTAINS
     IF (.NOT.input%l_useapw) THEN
 
        WRITE  (6,*)
-       WRITE (16,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8030) n
-             WRITE (16,FMT=8030) n
-             WRITE  (6,FMT=8040) (f_a12(i,n),i=1,3)
-             WRITE (16,FMT=8040) (f_a12(i,n),i=1,3)
+             WRITE  (6,FMT=8040) (force%f_a12(i,n),i=1,3)
           ENDIF
 8030      FORMAT (' FORCES: EQUATION A12 FOR ATOM TYPE',i4)
 8040      FORMAT (' FX_A12=',2f10.6,' FY_A12=',2f10.6,' FZ_A12=',2f10.6)
        ENDDO
     ELSE
        WRITE  (6,*)
-       WRITE (16,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8070) n
-             WRITE (16,FMT=8070) n
-             WRITE  (6,FMT=8080) (f_b4(i,n),i=1,3)
-             WRITE (16,FMT=8080) (f_b4(i,n),i=1,3)
+             WRITE  (6,FMT=8080) (force%f_b4(i,n),i=1,3)
           ENDIF
 8070      FORMAT (' FORCES: EQUATION B4 FOR ATOM TYPE',i4)
 8080      FORMAT (' FX_B4=',2f10.6,' FY_B4=',2f10.6,' FZ_B4=',2f10.6)
        ENDDO
        WRITE  (6,*)
-       WRITE (16,*)
        DO n=1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
              WRITE  (6,FMT=8090) n
-             WRITE (16,FMT=8090) n
-             WRITE  (6,FMT=8100) (f_b8(i,n),i=1,3)
-             WRITE (16,FMT=8100) (f_b8(i,n),i=1,3)
+             WRITE  (6,FMT=8100) (force%f_b8(i,n),i=1,3)
           ENDIF
 8090      FORMAT (' FORCES: EQUATION B8 FOR ATOM TYPE',i4)
 8100      FORMAT (' FX_B8=',2f10.6,' FY_B8=',2f10.6,' FZ_B8=',2f10.6)
        ENDDO
     ENDIF
     WRITE  (6,*)
-    WRITE (16,*)
     DO n=1,atoms%ntype
        IF (atoms%l_geo(n)) THEN
           WRITE  (6,FMT=8050) n
-          WRITE (16,FMT=8050) n
-          WRITE  (6,FMT=8060) (f_a21(i,n),i=1,3)
-          WRITE (16,FMT=8060) (f_a21(i,n),i=1,3)
+          WRITE  (6,FMT=8060) (force%f_a21(i,n),i=1,3)
        ENDIF
 8050   FORMAT (' FORCES: EQUATION A21 FOR ATOM TYPE',i4)
 8060   FORMAT (' FX_A21=',2f10.6,' FY_A21=',2f10.6,' FZ_A21=',2f10.6)
     ENDDO
+
+    CALL timestop("force_a8")
 
   END SUBROUTINE force_a8
 END MODULE m_forcea8

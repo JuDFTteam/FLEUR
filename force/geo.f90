@@ -12,7 +12,7 @@ CONTAINS
 
     !    *********************************************************************
     !    * calculates the NEW atomic positions after the results%force calculation   *
-    !    * SUBROUTINE is based on a BFGS method implemented by jij%M. Weinert    *
+    !    * SUBROUTINE is based on a BFGS method implemented by M. Weinert    *
     !    *                                [cf. PRB 52 (9) p. 6313 (1995)]    * 
     !    *                                                                   *
     !    * as a first step we READ in the file 'inp' WITH some additional    *
@@ -34,14 +34,15 @@ CONTAINS
     !        istepnow . steps to be done in this run
     !
     !    *********************************************************************
+    USE m_types
     USE m_rwinp
     USE m_bfgs
     USE m_bfgs0
-    USE m_types
     USE m_constants
     USE m_rinpXML
     USE m_winpXML
     USE m_init_wannier_defaults
+    USE m_xsf_io
     IMPLICIT NONE
     TYPE(t_oneD),INTENT(IN)   :: oneD
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -80,9 +81,8 @@ CONTAINS
     TYPE(t_banddos)               :: banddos_temp
     TYPE(t_obsolete)              :: obsolete_temp
     TYPE(t_enpara)                :: enpara_temp
-    TYPE(t_xcpot)                 :: xcpot_temp
+    CLASS(t_xcpot),ALLOCATABLE    :: xcpot_temp
     TYPE(t_results)               :: results_temp
-    TYPE(t_jij)                   :: jij_temp
     TYPE(t_kpts)                  :: kpts_temp
     TYPE(t_hybrid)                :: hybrid_temp
     TYPE(t_oneD)                  :: oneD_temp
@@ -102,7 +102,9 @@ CONTAINS
     CHARACTER(LEN=20)             :: filename
     REAL                          :: a1_temp(3),a2_temp(3),a3_temp(3)
     REAL                          :: scale_temp, dtild_temp
-
+    REAL                          :: forceAllAtoms(3,atoms%nat)
+    CLASS(t_forcetheo),ALLOCATABLE:: forcetheo
+    TYPE(t_field)                 :: field
     input=input_in
     atoms_new=atoms
 
@@ -136,9 +138,33 @@ CONTAINS
     ENDDO
 
     istep = 1
-    CALL bfgs(atoms%ntype,istep,istep0,forcetot,&
-         &          zat,input%xa,input%thetad,input%epsdisp,input%epsforce,tote,&
-         &          xold,y,h,tau0, lconv)
+    CALL bfgs(atoms%ntype,istep,istep0,forcetot,zat,input%xa,input%thetad,input%epsdisp,&
+              input%epsforce,tote,xold,y,h,tau0,lconv)
+
+    !write out struct_force.xsf file
+    forceAllAtoms = 0.0
+    na = 0
+    DO itype=1,atoms%ntype
+       forcetot(:,itype)=MATMUL(cell%bmat,forcetot(:,itype))/tpi_const ! to inner coordinates
+       DO ieq = 1,atoms%neq(itype)
+          na = na + 1
+          jop = sym%invtab(atoms%ngopr(na))
+          IF (oneD%odi%d1) jop = oneD%ods%ngopr(na)
+          DO i = 1,3
+             DO j = 1,3
+                IF (.NOT.oneD%odi%d1) THEN
+                   forceAllAtoms(i,na) = forceAllAtoms(i,na) + sym%mrot(i,j,jop) * forcetot(j,itype)
+                ELSE
+                   forceAllAtoms(i,na) = forceAllAtoms(i,na) + oneD%ods%mrot(i,j,jop) * forcetot(j,itype)
+                END IF
+             END DO
+          END DO
+          forceAllAtoms(:,na) = MATMUL(cell%amat,forceAllAtoms(:,na)) ! to external coordinates
+       END DO
+    END DO
+    OPEN (55,file="struct_force.xsf",status='replace')
+    CALL xsf_WRITE_atoms(55,atoms,input%film,.false.,cell%amat,forceAllAtoms)
+    CLOSE (55)
 
     IF (lconv) THEN
        WRITE (6,'(a)') "Des woars!"
@@ -172,62 +198,7 @@ CONTAINS
        input%l_f = .FALSE.
 
        IF(.NOT.input%l_inpXML) THEN
-          ALLOCATE(atoms_temp%nz(atoms%ntype))
-          ALLOCATE(atoms_temp%zatom(atoms%ntype))
-          ALLOCATE(atoms_temp%jri(atoms%ntype))
-          ALLOCATE(atoms_temp%dx(atoms%ntype))
-          ALLOCATE(atoms_temp%lmax(atoms%ntype))
-          ALLOCATE(atoms_temp%nlo(atoms%ntype))
-          ALLOCATE(atoms_temp%ncst(atoms%ntype))
-          ALLOCATE(atoms_temp%lnonsph(atoms%ntype))
-          ALLOCATE(atoms_temp%nflip(atoms%ntype))
-          ALLOCATE(atoms_temp%l_geo(atoms%ntype))
-          ALLOCATE(atoms_temp%lda_u(atoms%ntype))
-          ALLOCATE(atoms_temp%bmu(atoms%ntype))
-          ALLOCATE(atoms_temp%relax(3,atoms%ntype))
-          ALLOCATE(atoms_temp%neq(atoms%ntype))
-          ALLOCATE(atoms_temp%taual(3,atoms%nat))
-          ALLOCATE(atoms_temp%pos(3,atoms%nat))
-          ALLOCATE(atoms_temp%rmt(atoms%ntype))
-
-          ALLOCATE(atoms_temp%ncv(atoms%ntype))
-          ALLOCATE(atoms_temp%ngopr(atoms%nat))
-          ALLOCATE(atoms_temp%lapw_l(atoms%ntype))
-          ALLOCATE(atoms_temp%invsat(atoms%nat))
-
-          ALLOCATE(noco_temp%soc_opt(atoms%ntype+2),noco_temp%l_relax(atoms%ntype),noco_temp%b_con(2,atoms%ntype))
-          ALLOCATE(noco_temp%alph(atoms%ntype),noco_temp%beta(atoms%ntype))
-
-          ALLOCATE (Jij_temp%alph1(atoms%ntype),Jij_temp%l_magn(atoms%ntype),Jij_temp%M(atoms%ntype))
-          ALLOCATE (Jij_temp%magtype(atoms%ntype),Jij_temp%nmagtype(atoms%ntype))
-
-          ALLOCATE(atoms_temp%llo(atoms%nlod,atoms%ntype))
-          ALLOCATE(atoms_temp%ulo_der(atoms%nlod,atoms%ntype))
-          ALLOCATE(atoms_temp%l_dulo(atoms%nlod,atoms%ntype))
-
-          ALLOCATE(vacuum_temp%izlay(vacuum%layerd,2))
-          atoms_temp%ntype = atoms%ntype
-          ALLOCATE(noel_temp(atoms%ntype))
-
-          ALLOCATE (hybrid_temp%nindx(0:atoms%lmaxd,atoms%ntype))
-          ALLOCATE (hybrid_temp%select1(4,atoms%ntype),hybrid_temp%lcutm1(atoms%ntype))
-          ALLOCATE (hybrid_temp%lcutwf(atoms%ntype))
-
-          CALL rw_inp('r',atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-                      banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-                      kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,&
-                      input_temp%comment)
-          input_temp%l_f = input%l_f
-          input_temp%tkb = input%tkb
-          input_temp%delgau = input%tkb
-          cell_temp = cell
-          sym_temp = sym
-          vacuum_temp = vacuum
-          CALL rw_inp('W',atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-               banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,oneD_temp,hybrid_temp,&
-               kpts_temp,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,a3_temp(3),&
-               input_temp%comment)
-    
+          CALL judft_error("Relaxation no longer supported with old inp-file") 
        ELSE
           kpts_temp%ntet = 1
           kpts_temp%numSpecialPoints = 1
@@ -237,7 +208,7 @@ CONTAINS
           ALLOCATE(xmlCoreOccs(1,1,1))
           CALL initWannierDefaults(wann_temp)
           CALL r_inpXML(atoms_temp,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-                        banddos_temp,dimension_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,Jij_temp,&
+                        banddos_temp,dimension_temp,forcetheo,field,cell_temp,sym_temp,xcpot_temp,noco_temp,&
                         oneD_temp,hybrid_temp,kpts_temp,enpara_temp,coreSpecInput_temp,wann_temp,noel_temp,&
                         namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,dtild_temp,xmlElectronStates,&
                         xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,l_kpts_temp)
@@ -248,8 +219,8 @@ CONTAINS
           input_temp%gw_neigd = dimension_temp%neigd
           div(:) = MIN(kpts_temp%nkpt3(:),1)
           stars_temp%gmax = stars_temp%gmaxInit
-          CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,&
-                        banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,jij_temp,oneD_temp,hybrid_temp,&
+          CALL w_inpXML(atoms_new,obsolete_temp,vacuum_temp,input_temp,stars_temp,sliceplot_temp,forcetheo,&
+                        banddos_temp,cell_temp,sym_temp,xcpot_temp,noco_temp,oneD_temp,hybrid_temp,&
                         kpts_temp,kpts_temp%nkpt3,kpts_temp%l_gamma,noel_temp,namex_temp,relcor_temp,a1_temp,a2_temp,a3_temp,&
                         dtild_temp,input_temp%comment,xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                         atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,.TRUE.,numSpecies,enpara_temp)

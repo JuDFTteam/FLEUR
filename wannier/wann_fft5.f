@@ -91,7 +91,6 @@ c*************************************************
       character(len=6)    :: filename2
       integer             :: jp,mp,kk,ii,jj,dir,dir2,rvecind
       integer             :: spin1,spin2
-      complex,parameter   :: ci=(0.0,1.0)
 
       data spinspin12/'  ','.1' , '.2'/
       data spin12/'WF1','WF2'/

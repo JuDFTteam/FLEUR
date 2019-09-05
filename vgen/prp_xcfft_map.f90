@@ -33,13 +33,13 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)  :: cell
     !
     !
-    INTEGER,INTENT(OUT) ::    igxc_fft(0:stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft-1)
-    REAL   ,INTENT(OUT) ::    gxc_fft(0:stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft-1,3)
+    INTEGER,INTENT(INOUT), ALLOCATABLE :: igxc_fft(:)
+    REAL   ,INTENT(INOUT), ALLOCATABLE :: gxc_fft(:,:)
     !
     !---> local variables
     !
     LOGICAL NEW
-    INTEGER istr,iop,iopm1,il,im,in,kidx,iv1d,ifftq1,ifftq2
+    INTEGER istr,iop,iopm1,il,im,in,kidx,iv1d,ifftq1,ifftq2, ifftxc3
     INTEGER nop_local,norm,kr(3,sym%nop)
 
     !------->          abbreviations
@@ -59,6 +59,15 @@ CONTAINS
     !       in the positive domain of the charge density fft-box.
     !       correspondes  to igfft(*,2)
     !
+
+    ! allocate output arrays
+    ifftxc3 = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
+    IF(ALLOCATED(igxc_fft)) DEALLOCATE(igxc_fft)
+    IF(ALLOCATED(gxc_fft))  DEALLOCATE(gxc_fft)
+    ALLOCATE(igxc_fft(0:ifftxc3-1))
+    ALLOCATE(gxc_fft(0:ifftxc3-1,3))
+
+
     kidx    = 0
     ifftq1  = stars%kxc1_fft
     ifftq2  = stars%kxc1_fft*stars%kxc2_fft

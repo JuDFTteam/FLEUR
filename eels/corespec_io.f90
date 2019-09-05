@@ -42,10 +42,16 @@ MODULE m_corespec_io
     csi%edge = ""
     csi%edgeidx = 0
     csi%lx = -1
-    csi%ek0 = 0.d0
-    csi%emn = -2.d0
-    csi%emx = 20.d0
-    csi%ein = 0.1d0
+    csi%ek0 = 0.0
+    csi%emn = -2.0
+    csi%emx = 20.0
+    csi%ein = 0.1
+
+    csi%nqphi = 12
+    csi%nqr = 20
+    csi%alpha_ex=0.1 
+    csi%beta_ex=0.08 
+    csi%I0 = 10 
 
 ! reading of input parameters from 'corespec_inp' file
 
@@ -75,6 +81,48 @@ MODULE m_corespec_io
 ! sanity check of the input parameters; if they are not correct, program stops
 ! unit conversion if necessary
 ! if csi%verb = 1, detailed information is written to stdout
+
+!   csv%nqphi
+    if(csi%nqphi.lt.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%nqphi < 0 !"//csmsgerr ; stop
+    endif
+    csv%nqphi = csi%nqphi
+    if(csi%verb.eq.1) write(*,csmsgsis)  trim(smeno),&
+           &"Mesh number of angles: ","csi%nqphi = ",csv%nqphi,"will be used"
+ 
+! csi%nqr
+    if(csi%nqr.lt.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%nqr < 0 !"//csmsgerr ; stop
+    endif
+    csv%nqr = csi%nqr
+    if(csi%verb.eq.1) write(*,csmsgsis)  trim(smeno),&
+           &"Mesh number of radii: ","csi%nqr = ",csv%nqr,"will be used"
+
+! csi%alpha_ex
+    if(csi%alpha_ex.lt.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%alpha_ex < 0 !"//csmsgerr ; stop
+    endif
+    csv%alpha_ex = csi%alpha_ex
+    if(csi%verb.eq.1) write(*,csmsgsfs)  trim(smeno),&
+           &"Experimental convergence angle of incoming e-: ","csi%alpha_ex = ",csv%alpha_ex,"will be used"
+
+! csi%beta_ex
+    if(csi%beta_ex.lt.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%beta_ex < 0 !"//csmsgerr ; stop
+    endif
+    csv%beta_ex = csi%beta_ex
+    if(csi%verb.eq.1) write(*,csmsgsfs)  trim(smeno),&
+           &"Experimental convergence angle of outgoing e-: ","csi%beta_ex = ",csv%beta_ex,"will be used"
+
+! csi%I0
+    if(csi%I0.le.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%I0 <= 0 !"//csmsgerr ; stop
+    endif
+    csv%I0 = csi%I0
+    if(csi%verb.eq.1) write(*,csmsgsfs)  trim(smeno),&
+           &"Intensity of incoming electrons: ","csi%I0 = ",csv%I0,"will be used"
+
+
 
 ! csi%atomType
     if(csi%atomType.le.0) then
@@ -134,12 +182,12 @@ MODULE m_corespec_io
            &"maximum l: ","csi%lx = ",csi%lx,"will be used"
 
 ! csi%ek0
-    if(csi%ek0.le.0.d0) then
+    if(csi%ek0.le.0.0) then
       write(*,csmsgs)  trim(smeno),"found csi%ek0 <= 0.0 !"//csmsgerr ; stop
     endif
-    csi%ek0 = csi%ek0*1000.d0 ! conversion from keV to eV
-    csv%gamma = 1.d0+csi%ek0/mec2
-    csv%beta = sqrt(1.d0-1.d0/(csv%gamma**2))
+    csi%ek0 = csi%ek0*1000.0 ! conversion from keV to eV
+    csv%gamma = 1.0+csi%ek0/mec2
+    csv%beta = sqrt(1.0-1.0/(csv%gamma**2))
     if(csi%verb.eq.1) then
       write(*,csmsgses)  trim(smeno),&
            &"kinetic energy of incoming electrons: ","csi%ek0 = ",csi%ek0,&
@@ -156,8 +204,8 @@ MODULE m_corespec_io
     if(csi%emn.gt.csi%emx) then
       write(*,csmsgs)  trim(smeno),"found csi%emn > csi%emx !"//csmsgerr ; stop
     endif
-    if(csi%ein.le.0.d0) then
-      write(*,csmsgs)  trim(smeno),"found csi%ein <= 0.d0 !"//csmsgerr ; stop
+    if(csi%ein.le.0.0) then
+      write(*,csmsgs)  trim(smeno),"found csi%ein <= 0.0 !"//csmsgerr ; stop
     endif
     if(((csi%emx-csi%emn)/csi%ein)-int((csi%emx-csi%emn)/csi%ein).ne.0) then
       write(*,csmsgs)  trim(smeno),&
@@ -168,7 +216,7 @@ MODULE m_corespec_io
     csv%egrid = (/(csi%emn+csi%ein*dble(i), i = 0,csv%nex)/)
     csv%nen = 0
 !!$    do i = 0,csv%nex
-!!$      if(csv%egrid(i).ge.0.d0) then
+!!$      if(csv%egrid(i).ge.0.0) then
 !!$        csv%nen = i
 !!$        exit
 !!$      endif
@@ -192,9 +240,9 @@ MODULE m_corespec_io
            &csv%nen,"will be used"
 
     if(.not.allocated(csv%eedge)) allocate(csv%eedge(csv%nljc))
-    csv%eedge = 0.d0
+    csv%eedge = 0.0
     if(.not.allocated(csv%occ)) allocate(csv%occ(csv%nljc))
-    csv%occ = 0.d0
+    csv%occ = 0.0
 
     l_cs = .true.
 
@@ -232,5 +280,7 @@ MODULE m_corespec_io
   end subroutine iounit
 !
 !===============================================================================
+
+
 
 end module m_corespec_io

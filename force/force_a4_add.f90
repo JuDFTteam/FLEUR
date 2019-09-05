@@ -37,18 +37,18 @@ CONTAINS
 
 
 
-  SUBROUTINE alloc_fa4_arrays(atoms,dimension)
+  SUBROUTINE alloc_fa4_arrays(atoms,input)
     !     This subroutine allocates the arrays filled in cdnovlp.F
     !     so their content can be provided in totale.f, where the addition takes place
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms),INTENT(IN)       :: atoms
 
     !     .. Scalar Arguments ..
 
     IF (.not.allocated(force_a4_mt)) THEN
-       ALLOCATE ( force_a4_mt(3,atoms%ntype,dimension%jspd),force_a4_is(3,atoms%ntype,dimension%jspd) )
+       ALLOCATE ( force_a4_mt(3,atoms%ntype,input%jspins),force_a4_is(3,atoms%ntype,input%jspins) )
     END IF
 
   END SUBROUTINE alloc_fa4_arrays
@@ -169,25 +169,9 @@ CONTAINS
 
              !       write to out-file
              WRITE (6,FMT=8010) n
-             WRITE (16,FMT=8010) n
              WRITE (6,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
-             WRITE (16,FMT=8020) ((force_a4_is(dir,n,jsp)),dir=1,3) ! 8020
-             !         WRITE (6,FMT=8020) (real(force_a4_is(dir,n,jsp)),dir=1,3)
-             !         WRITE (16,FMT=8020) (real(force_a4_is(dir,n,jsp)),dir=1,3)
              WRITE (6,FMT=8015) n
-             WRITE (16,FMT=8015) n
              WRITE (6,FMT=8020) ((force_a4_mt(dir,n,jsp)),dir=1,3) ! 8020
-             WRITE (16,FMT=8020) ((force_a4_mt(dir,n,jsp)),dir=1,3) ! 8020
-             !         WRITE (6,FMT=8020) (real(force_a4_mt(dir,n,jsp)),dir=1,3)
-             !         WRITE (16,FMT=8020) (real(force_a4_mt(dir,n,jsp)),dir=1,3)
-             !         IF (film.AND..not.odi%d1) THEN
-             !         WRITE (6,FMT=8025) n
-             !         WRITE (16,FMT=8025) n
-             !         WRITE (6,FMT=8070) ((force_a4_2d(dir,n,jsp)),dir=1,3)
-             !         WRITE (16,FMT=8070) ((force_a4_2d(dir,n,jsp)),dir=1,3)
-             ! !         WRITE (6,FMT=8070) (real(force_a4_2d(dir,n,jsp)),dir=1,3)
-             ! !         WRITE (16,FMT=8070) (real(force_a4_2d(dir,n,jsp)),dir=1,3)
-             !         END IF
 8010         FORMAT (' FORCES: IS ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
 8015         FORMAT (' FORCES: MT ADDITION TO EQUATION A4 FOR ATOM TYPE',i4)
              !  8025   FORMAT (' FORCES: VACUUM ADD. TO EQUATION A4 FOR ATOM TYPE',i4)

@@ -1,0 +1,18 @@
+find_program(DOCKER docker)
+if (DOCKER)
+   if (FLEUR_USE_MPI)
+      set(dockername fleur_MPI)
+   else()
+	set(dockername fleur)   
+   endif()
+   message("${DOCKER}->${dockername}")
+   add_custom_command(OUTPUT docker/Dockerfile
+           COMMAND "mkdir docker"
+	   COMMAND "cp ${CMAKE_CURRENT_SOURCE_DIR}/docker/Dockerfile_${dockername} docker/Dockerfile"
+	   COMMAND "cd docker;${DOCKER} build -t iffregistery.fz-juelich.de/fleur/fleur:${dockername} ."
+	   COMMAND "${DOCKER} push iffregistery.fz-juelich.de/fleur/fleur:${dockername}"
+	   DEPENDS inpgen ${dockername}
+	   COMMENT "Build docker image")
+    add_custom_target(docker DEPENDS docker/Dockerfile)	   
+   
+endif()

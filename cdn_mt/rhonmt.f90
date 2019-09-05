@@ -1,40 +1,31 @@
 MODULE m_rhonmt
 CONTAINS
-  SUBROUTINE rhonmt(atoms,sphhar, we,ne,sym, acof,bcof,&
-       uunmt,ddnmt,udnmt,dunmt)
+  SUBROUTINE rhonmt(atoms,sphhar,we,ne,sym,eigVecCoeffs,denCoeffs,ispin)
     !     *************************************************************
     !     subroutine sets up the coefficients of non-sphereical
     !     muffin-tin density                          c.l.fu
     !     *************************************************************
     USE m_gaunt,ONLY:gaunt1
     USE m_types
+    use m_constants
     IMPLICIT NONE
-    TYPE(t_sym),INTENT(IN)     :: sym
-    TYPE(t_sphhar),INTENT(IN)  :: sphhar
-    TYPE(t_atoms),INTENT(IN)   :: atoms
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER,INTENT(IN) :: ne  
-    !     ..
-    !     .. Array Arguments ..
-    COMPLEX, INTENT(IN) :: acof(:,0:,:)!(nobd,0:lmaxd* (lmaxd+2),natd)
-    COMPLEX, INTENT(IN) :: bcof(:,0:,:)
+    TYPE(t_sym),          INTENT(IN)    :: sym
+    TYPE(t_sphhar),       INTENT(IN)    :: sphhar
+    TYPE(t_atoms),        INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
+
+    INTEGER,           INTENT(IN)    :: ne, ispin
+
     REAL,    INTENT(IN) :: we(:)!(nobd)
-    REAL,INTENT(INOUT) :: ddnmt(0:,:,:)!(0:(lmaxd* (lmaxd+3))/2,nlhd,ntypd)
-    REAL,INTENT(INOUT) :: dunmt(0:,:,:)
-    REAL,INTENT(INOUT) :: udnmt(0:,:,:)
-    REAL,INTENT(INOUT) :: uunmt(0:,:,:)
+
     !     ..
     !     .. Local Scalars ..
-    COMPLEX cconst,cil,cmv,ci
+    COMPLEX cconst,cil,cmv
     REAL coef
     INTEGER  :: jmem,l,lcond,lh,llp,llpmax,lm,lmp,lp,lphi,lplow,lplow0,lv
     INTEGER  :: mp,mv,na,natom,nb,nn,ns,nt,m
-    !     ..
-    !     ..
 
-    ci = cmplx(0.0,1.0)
-    !
     !Initialize private variables in gaunt module before parallel region
     !$      coef = gaunt1(0,0,0,0,0,0,atoms%lmaxd)
 
@@ -62,7 +53,7 @@ CONTAINS
                    lplow = lplow + mod(lcond,2)
                    IF (lplow.GT.lphi) CYCLE m_loop
                    DO  lp = lplow,lphi,2
-                      cil = ci** (l-lp)
+                      cil = ImagUnit** (l-lp)
                       lmp = lp* (lp+1) + mp
                       IF (lmp.GT.lm) CYCLE m_loop
                       llp = (l* (l+1))/2 + lp
@@ -78,15 +69,15 @@ CONTAINS
                             DO  na = 1,atoms%neq(nn)
                                nt = nt + 1
                                IF (atoms%ntypsy(nt).EQ.ns) THEN
-                                  DO  nb = 1,ne
-                                     uunmt(llp,lh,nn) = uunmt(llp,lh,nn)&
-                                          +we(nb)*real(cconst*acof(nb,lm,nt)*conjg(acof(nb,lmp,nt)))
-                                     ddnmt(llp,lh,nn) = ddnmt(llp,lh,nn) +&
-                                          we(nb)*real(cconst*bcof(nb,lm,nt)*conjg(bcof(nb,lmp,nt)))
-                                     udnmt(llp,lh,nn) = udnmt(llp,lh,nn) +&
-                                          we(nb)*real(cconst*acof(nb,lm,nt)*conjg(bcof(nb,lmp,nt)))
-                                     dunmt(llp,lh,nn) = dunmt(llp,lh,nn) +&
-                                          we(nb)*real(cconst*bcof(nb,lm,nt)*conjg(acof(nb,lmp,nt)))
+                                  DO nb = 1,ne
+                                     denCoeffs%uunmt(llp,lh,nn,ispin) = denCoeffs%uunmt(llp,lh,nn,ispin)&
+                                          +we(nb)*real(cconst*eigVecCoeffs%acof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%acof(nb,lmp,nt,ispin)))
+                                     denCoeffs%ddnmt(llp,lh,nn,ispin) = denCoeffs%ddnmt(llp,lh,nn,ispin) +&
+                                          we(nb)*real(cconst*eigVecCoeffs%bcof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%bcof(nb,lmp,nt,ispin)))
+                                     denCoeffs%udnmt(llp,lh,nn,ispin) = denCoeffs%udnmt(llp,lh,nn,ispin) +&
+                                          we(nb)*real(cconst*eigVecCoeffs%acof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%bcof(nb,lmp,nt,ispin)))
+                                     denCoeffs%dunmt(llp,lh,nn,ispin) = denCoeffs%dunmt(llp,lh,nn,ispin) +&
+                                          we(nb)*real(cconst*eigVecCoeffs%bcof(nb,lm,nt,ispin)*conjg(eigVecCoeffs%acof(nb,lmp,nt,ispin)))
                                   ENDDO
                                ENDIF
                             ENDDO

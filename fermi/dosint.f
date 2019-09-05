@@ -39,7 +39,6 @@ c
                e1 = eig(i,k1,jsp)
                e2 = eig(i,k2,jsp)
                e3 = eig(i,k3,jsp)
-c     write(16,*) 'eig=',i,', ntria=',n,', e1,e2,e3=',e1,e2,e3
                CALL trisrt(e1,e2,e3,k1,k2,k3)
                IF (e1.LE.-9999.0) CYCLE
                IF (ei.LE.e1) CYCLE

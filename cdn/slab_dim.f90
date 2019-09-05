@@ -1,7 +1,7 @@
 MODULE m_slabdim
   USE m_juDFT
 CONTAINS
-  SUBROUTINE slab_dim(   atoms,nsld)
+  SUBROUTINE slab_dim(atoms,nsld)
     !***********************************************************************
     !     This subroutine calculates  the number of layers in the slab 
     !     
@@ -20,7 +20,7 @@ CONTAINS
     !                               the nsl-layer 
     !-----------------------------------------------------------------------
     !
-    USE m_types
+    USE m_types_setup
     IMPLICIT NONE
 
     TYPE(t_atoms),INTENT(IN)   :: atoms

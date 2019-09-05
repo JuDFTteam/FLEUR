@@ -69,9 +69,9 @@ c***********************************************************************
       IF (PRESENT(recursion_level)) THEN
          rec_level=recursion_level+1
          IF (rec_level>20) CALL juDFT_error
-     +     ("Determination of fermi-level did not converge",hint
-     +        ='change temperature broad. or set gauss = T',calledby
-     +        ="ef_newton")
+     +     ("Determination of fermi-level did not converge",hint=
+     + 'change temp. broad., set gauss = T, or use finer k mesh',
+     + calledby="ef_newton")
       ELSE
          rec_level=0
          IF ( irank == 0 ) WRITE (6,FMT='(/,5x,''EF_NEWTON:  '',
@@ -119,7 +119,7 @@ c
                we(index(idim)) = ff(idim)
             END DO
 
- 8000       FORMAT (15x,'ef_newton failed after      :',i3,'iterations.',/,
+ 8000     FORMAT (15x,'ef_newton failed after      :',i3,'iterations.',/,
      +           15x,'The error in the weight is  : ',e12.5,/,
      +           15x,'The error in ef is          : ',e12.5,' htr',/)
  8010       FORMAT (15x,'Number of iterations needed  : ',i3,/,

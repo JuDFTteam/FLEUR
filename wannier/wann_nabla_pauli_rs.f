@@ -20,7 +20,7 @@ c*************************************************
      >               l_soc,band_min,band_max,neigd,
      >               l_socmmn0,wan90version)
 
-      use m_constants, only:pimach
+      use m_constants, only: pimach, ImagUnit
       use m_wann_read_umatrix
 c$$$      use m_wann_wigner_seitz
 
@@ -84,7 +84,6 @@ c      real                :: kpoints(3,nkpts)
       character(len=3)    :: spin12(2)
       character(len=6)    :: filename
       integer             :: jp,mp,kk,kkk
-      complex,parameter   :: ci=(0.0,1.0)
       integer             :: hopmin_z,hopmax_z
       integer             :: hopmin_y,hopmax_y
       integer             :: hopmin_x,hopmax_x
@@ -190,7 +189,7 @@ c****************************************************
            enddo !j
           enddo !i
           do k=1,3
-          paulimat(k,2,:,:,nkp)=ci*paulimat(k,1,:,:,nkp)
+          paulimat(k,2,:,:,nkp)=ImagUnit*paulimat(k,1,:,:,nkp)
           paulimat(k,1,:,:,nkp)=paulimat(k,1,:,:,nkp)+
      &        transpose(conjg( paulimat(k,1,:,:,nkp) ))
           paulimat(k,2,:,:,nkp)=paulimat(k,2,:,:,nkp)+

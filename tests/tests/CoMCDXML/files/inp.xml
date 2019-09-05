@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.29">
+   <comment>
+      hcp Cobalt                                                                      
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="8.70000000" numbands="0"/>
+      <scfLoop itmax="2" minDistance=".00000000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
+      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="99"/>
+      <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
+      <soc theta=".00000000" phi=".00000000" l_soc="T" spav="F"/>
+      <nocoParams l_ss="F" l_mperp="F" l_constr="F" mix_b=".00000000">
+         <qss>.0000000000 .0000000000 .0000000000</qss>
+      </nocoParams>
+      <expertModes gw="0" isec1="99" secvar="F"/>
+      <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+      <bzIntegration valenceElectrons="18.00000000" mode="hist" fermiSmearingEnergy=".00100000">
+         <kPointMesh nx="3" ny="3" nz="3" gamma="F"/>
+      </bzIntegration>
+      <energyParameterLimits ellow="-.80000000" elup="1.00000000"/>
+   </calculationSetup>
+   <cell>
+      <symmetryFile filename="sym.out"/>
+      <bulkLattice scale="1.0000000000" latnam="hex">
+         <a1 scale="1.0000000000">4.7182701200</a1>
+         <c scale="1.0000000000">7.6171300900</c>
+      </bulkLattice>
+   </cell>
+   <xcFunctional name="pbe" relativisticCorrections="F"/>
+   <atomSpecies>
+      <species name="Co-1" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpin="T">
+         <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+      </species>
+      <species name="Co-2" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpin="T">
+         <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Co-1">
+         <relPos label="                   1">1.000/3.000 1.000/3.000 1.000/4.000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
+      </atomGroup>
+      <atomGroup species="Co-2">
+         <relPos label="                   2">-1.000/3.000 -1.000/3.000 -1.000/4.000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+         <nocoParams l_relax="F" alpha=".00000000" beta=".00000000" b_cons_x=".00000000" b_cons_y=".00000000"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" vacdos="F" slice="F" mcd="F">
+      <checks vchk="F" cdinf="F"/>
+      <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".00500000"/>
+      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
+      <plotting iplot="F" score="F" plplot="F"/>
+      <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
+      <specialOutput eonly="F" bmt="F"/>
+      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
+   </output>
+</fleurInput>

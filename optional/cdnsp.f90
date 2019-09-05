@@ -44,8 +44,8 @@
           LOGICAL n_exist,l_qfix
           !     ..
           !     .. Local Arrays ..
-          REAL rhoc(atoms%jmtd,atoms%ntype,dimension%jspd)
-          REAL tec(atoms%ntype,dimension%jspd),qintc(atoms%ntype,dimension%jspd)
+          REAL rhoc(atoms%jmtd,atoms%ntype,input%jspins)
+          REAL tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins)
           CHARACTER(len=140), ALLOCATABLE :: clines(:)
           CHARACTER(len=140)              :: lineread
           !      ..
@@ -54,7 +54,7 @@
 
           IF (input%jspins/=2) CALL juDFT_error("cdnsp: set jspins = 2 and remove fl7para!", calledby ="cdnsp")
 
-          CALL den%init(stars,atoms,sphhar,vacuum,noco,oneD,input%jspins,.FALSE.,POTDEN_TYPE_DEN)
+          CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
           input%jspins=1
           CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
@@ -72,7 +72,6 @@
              DO j = 1,atoms%jri(n)
                 den%mt(j,0,n,1) = den%mt(j,0,n,1) - rhoc(j,n,1)/sfp
              ENDDO
-             !         WRITE (16,FMT='(8f10.4)') (den%mt(i,0,n,1),i=1,16)
              CALL intgr3(den%mt(1,0,n,1),atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),qval)
              p = (atoms%bmu(n)+sfp*qval)/ (2.*sfp*qval)
              pp = 1. - p

@@ -14,7 +14,7 @@ MODULE m_checks
       INCLUDE 'mpif.h'
       INTEGER:: isize,ierr,irank
 #endif
-      IF (juDFT_was_argument("-hdf")) THEN
+      IF (TRIM(juDFT_string_for_argument("-eig"))=="hdf") THEN
 #ifndef CPP_HDF
          CALL judft_error("HDF5 cannot be used for Eigenvector IO",&
               hint="You compiled without support for HDF5. Please use another mode")
@@ -31,10 +31,10 @@ MODULE m_checks
       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,irank,ierr)
       IF (irank.EQ.0) THEN
          IF (isize>1) THEN
-            IF (juDFT_was_argument("-mem")) CALL judft_error(&
-                "-mem cannot be used in parallel mode for Eigenvector IO",hint="Use -mpi or -hdf instead")
-            IF (juDFT_was_argument("-da")) CALL judft_error(&
-                "-da cannot be used in parallel mode for Eigenvector IO",hint="Use -mpi or -hdf instead")
+            IF (TRIM(juDFT_string_for_argument("-eig"))=="-mem") CALL judft_error(&
+                "-eig mem cannot be used in parallel mode for Eigenvector IO",hint="Use -eig mpi or -eig hdf instead")
+            IF (TRIM(juDFT_string_for_argument("-eig"))=="-da") CALL judft_error(&
+                "-eig da cannot be used in parallel mode for Eigenvector IO",hint="Use -eig mpi or -eig hdf instead")
          END IF
       END IF
 #endif

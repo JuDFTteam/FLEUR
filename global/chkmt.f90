@@ -15,10 +15,9 @@
 !                         GM'16
 !---------------------------------------------------------------------
       CONTAINS
-      SUBROUTINE chkmt(&
-     &                 atoms,input,vacuum,cell,oneD,&
-     &                 l_gga,noel,l_test,&
-     &                 kmax,dtild,dvac1,lmax1,jri1,rmt1,dx1)
+        SUBROUTINE chkmt(atoms,input,vacuum,cell,oneD,l_test,&
+             l_gga,noel, kmax,dtild,dvac1,lmax1,jri1,rmt1,dx1,&!optional, if l_gga and ... are present suggestions are calculated
+             overlap)!this is optional, if present and l_test the routine returns the overlaps and does not stop
 
       USE m_types
       USE m_sort
@@ -32,13 +31,15 @@
       TYPE(t_vacuum),INTENT(IN):: vacuum
       TYPE(t_cell),INTENT(IN)  :: cell
       TYPE(t_oneD),INTENT(IN)  :: oneD
-      CHARACTER*3, INTENT (IN) :: noel(atoms%ntype)
-      LOGICAL, INTENT (IN)     :: l_gga,l_test
-      REAL,    INTENT (OUT)    :: kmax,dtild,dvac1
+      CHARACTER*3, INTENT (IN),OPTIONAL :: noel(atoms%ntype)
+      LOGICAL, INTENT (IN),OPTIONAL     :: l_gga
+      LOGICAL, INTENT (IN)     ::l_test
+      REAL,    INTENT (OUT),OPTIONAL    :: kmax,dtild,dvac1
 !     ..
 !     .. Array Arguments ..
-      INTEGER, INTENT (OUT)    :: lmax1(atoms%ntype),jri1(atoms%ntype)
-      REAL,    INTENT (OUT)    :: rmt1(atoms%ntype),dx1(atoms%ntype)
+      INTEGER, INTENT (OUT),OPTIONAL    :: lmax1(atoms%ntype),jri1(atoms%ntype)
+      REAL,    INTENT (OUT),OPTIONAL    :: rmt1(atoms%ntype),dx1(atoms%ntype)
+      REAL,OPTIONAL,INTENT(OUT):: overlap(0:atoms%ntype,atoms%ntype)
 !     ..
 !     .. Local Scalars ..
       INTEGER na,n
@@ -92,6 +93,7 @@
 
 
 !     0. Do initializations and set some constants
+      if (present(overlap)) overlap=0.0
 
       rmtMaxDefault = 2.8
       rmtMax = rmtMaxDefault
@@ -274,7 +276,7 @@
             CALL juDFT_error("Too many atoms at same position.",calledby ="chkmt")
          END IF
          numNearestNeighbors(n) = MIN(maxCubeAtoms,iNeighborAtom)
-         CALL sort(iNeighborAtom,sqrDistances,distIndexList)
+         CALL sort(distIndexList(:iNeighborAtom),sqrDistances(:iNeighborAtom))
          DO i = 1, numNearestNeighbors(n)
             nearestNeighbors(i,n) = neighborAtoms(distIndexList(i))
             nearestNeighborDists(i,n) = SQRT(sqrDistances(distIndexList(i)))
@@ -291,9 +293,10 @@
          END IF
       END DO
 
+      IF (PRESENT(l_gga)) THEN
 !        Sort distances and set MT radii for the atoms
 
-      CALL sort(atoms%ntype,nearestAtomDists,sortedDistList)
+      CALL sort(sortedDistList,nearestAtomDists)
       rmt1 = -1.0
       minRmts = -1.0
       DO i = 1, atoms%ntype
@@ -323,6 +326,8 @@
          ELSE IF (minRmts(atoms%nz(typeB)).LT.0.0) THEN
            minRmts(atoms%nz(typeB)) = rmtFac * (dist - minRmts(atoms%nz(typeA)))
          END IF
+         minRmts(atoms%nz(typeA)) = min(minRmts(atoms%nz(typeA)),rmtMaxDefault) ! limit already here 
+         minRmts(atoms%nz(typeB)) = min(minRmts(atoms%nz(typeB)),rmtMaxDefault) ! to a reasonable value
       END DO
 
 !     6. Correct bad choices and set missing MT radii, vacuum distances, and other parameters
@@ -391,7 +396,11 @@
             jri11 = NINT(220*rmt1(n)) 
          END IF
          jri11 = NINT(jri11*0.5) * 2 + 1
-         dx11 = LOG(3200*atoms%nz(n)*rmt1(n))/(jri11-1)
+         IF (atoms%nz(n) > 0) THEN
+           dx11 = LOG(3200*atoms%nz(n)*rmt1(n))/(jri11-1)
+         ELSE
+           dx11 = LOG(3200*rmt1(n))/(jri11-1)
+         ENDIF
          rkm = MAX(rkm, lmax11/rmt1(n))
          WRITE (6,'(a3,i3,2i5,2f10.6)') noel(n),atoms%nz(n),lmax11,jri11,rmt1(n),dx11
          dx1(n) = dx11
@@ -401,6 +410,7 @@
       WRITE (6,'("k_max =",f8.5)') rkm
       WRITE (6,'("G_max =",f8.5)') 3*rkm
       kmax = rkm
+      ENDIF
 
 !     7. Test old MT radii
 
@@ -411,6 +421,7 @@
                k = nearestNeighbors(j,i)
                IF (atoms%rmt(i)+atoms%rmt(k).GE.nearestNeighborDists(j,i)) THEN
                   error = .TRUE.
+                  IF (PRESENT(overlap)) overlap(i,k)=atoms%rmt(i)+atoms%rmt(k)-nearestNeighborDists(j,i)
                   WRITE(6,240) i,k,nearestNeighborDists(j,i),atoms%rmt(i),atoms%rmt(k)
                END IF
             END DO
@@ -430,13 +441,14 @@
                          ((atoms%pos(3,iAtom)-atoms%rmt(i)).LT.-vacuum%dvac/2.)) THEN
                         error=.TRUE.
                         WRITE(6,241) i ,na
+                        IF (PRESENT(overlap)) overlap(0,i)=MAX(atoms%pos(3,iAtom)+atoms%rmt(i)-vacuum%dvac/2.,atoms%pos(3,iAtom)-atoms%rmt(i)+vacuum%dvac/2.)
                         WRITE(6,*) atoms%pos(3,iAtom),atoms%rmt(i),vacuum%dvac/2.
                      ENDIF
                   ENDIF
                END DO
             END IF
          END DO
-         IF (error) CALL juDFT_error("Error checking M.T. radii",calledby ="chkmt")
+         IF (error.AND..NOT.PRESENT(overlap)) CALL juDFT_error("Error checking M.T. radii",calledby ="chkmt")
       END IF
 
       DEALLOCATE(nearestNeighbors,numNearestNeighbors,nearestNeighborDists)

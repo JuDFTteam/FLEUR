@@ -8,7 +8,7 @@ module m_elemental
    PRIVATE
    !Module to call the elemental library for parallel diagonalization
    !complex only version at present!
-      
+#ifdef CPP_ELEMENTAL      
 ! This is the interface defined in fleur_elemental.cpp
 interface 
  subroutine fl_el_initialize(n,hmat,smat,mpi_com) bind (c)
@@ -43,7 +43,7 @@ interface
    complex(kind=c_double_complex),dimension(*),intent(out):: z
  end subroutine
 end interface
-
+#endif
  PUBLIC elemental
 
  CONTAINS
@@ -79,7 +79,7 @@ end interface
    INTEGER ::neig,nex,deg,mode,opt
    REAL    :: tol
    INTEGER :: isize,ierr
-
+#ifdef CPP_ELEMENTAL
    !Initialize the matrices in elemental
    CALL fl_el_initialize(m,a,b,SUB_COMM)
    DEALLOCATE(a,b)
@@ -101,6 +101,6 @@ end interface
 
    call fl_el_eigenvectors(num,eig,z(:m,:))
 
-
+#endif
   END subroutine
   END module

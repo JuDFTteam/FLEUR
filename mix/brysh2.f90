@@ -25,6 +25,11 @@ CONTAINS
     ! Local Scalars
     INTEGER i,iv,j,js,k,l,n,na
 
+    den%pw = CMPLX(0.0,0.0)
+    den%mt = 0.0
+    den%vacz = 0.0
+    den%vacxy = CMPLX(0.0,0.0)
+
     j=0
     DO  js = 1,input%jspins
        IF (sym%invs) THEN
@@ -55,14 +60,14 @@ CONTAINS
                 j = j + 1
                 den%vacz(k,iv,js) = s_in(j)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
                    den%vacxy(i,k,iv,js) = CMPLX(s_in(j),0.0)
                 END DO
              END DO
              IF (.NOT.sym%invs2) THEN
-                DO k = 1,oneD%odi%nq2-1
+                DO k = 1,stars%ng2-1
                    DO i = 1,vacuum%nmzxy
                       j = j + 1
                       den%vacxy(i,k,iv,js) = den%vacxy(i,k,iv,js) + CMPLX(0.0,s_in(j))
@@ -77,36 +82,51 @@ CONTAINS
        !--->    off-diagonal part of the density matrix
        DO i = 1,stars%ng3
           j = j + 1
-          den%cdom(i) = CMPLX(s_in(j),0.0)
+          den%pw(i,3) = CMPLX(s_in(j),0.0)
        END DO
        DO i = 1,stars%ng3
           j = j + 1
-          den%cdom(i) = den%cdom(i) + CMPLX(0.0,s_in(j))
+          den%pw(i,3) = den%pw(i,3) + CMPLX(0.0,s_in(j))
        END DO
        IF (input%film) THEN
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 j = j + 1
-                den%cdomvz(k,iv) = CMPLX(s_in(j),0.0)
+                den%vacz(k,iv,3) = s_in(j)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
-                   den%cdomvxy(i,k,iv) = CMPLX(s_in(j),0.0)
+                   den%vacxy(i,k,iv,3) = CMPLX(s_in(j),0.0)
                 END DO
              END DO
           END DO
           DO iv = 1,vacuum%nvac
              DO k = 1,vacuum%nmz
                 j = j + 1
-                den%cdomvz(k,iv) = den%cdomvz(k,iv) + CMPLX(0.0,s_in(j))
+                den%vacz(k,iv,4) = s_in(j)
              END DO
-             DO k = 1,oneD%odi%nq2-1
+             DO k = 1,stars%ng2-1
                 DO i = 1,vacuum%nmzxy
                    j = j + 1
-                   den%cdomvxy(i,k,iv) = den%cdomvxy(i,k,iv)+ CMPLX(0.0,s_in(j))
+                   den%vacxy(i,k,iv,3) = den%vacxy(i,k,iv,3)+ CMPLX(0.0,s_in(j))
                 END DO
              END DO
+          END DO
+       END IF
+       !MT part
+       IF (noco%l_mtnocopot) THEN
+          na = 1
+          DO n = 1,atoms%ntype
+             DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+                DO i = 1,atoms%jri(n)
+                   j = j + 1
+                   den%mt(i,l,n,3)=s_in(j) 
+                   j = j + 1
+                    den%mt(i,l,n,4)=s_in(j)
+                END DO
+             END DO
+             na = na + atoms%neq(n)
           END DO
        END IF
     ENDIF

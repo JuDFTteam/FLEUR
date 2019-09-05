@@ -39,7 +39,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     COMPLEX, INTENT (IN) :: qpwc(stars%ng3)
-    REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,dimension%jspd)
+    REAL,    INTENT (INOUT) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     !-odim
     !+odim
     !     ..
@@ -133,6 +133,8 @@ CONTAINS
        n1 = 1
        DO in = 1 , nrm
           n2 = mr(in)
+          bsl_r = 0.0
+          bsl_i = 0.0
           DO j = 1,atoms%jri(n1)
              cprr2 = cp*atoms%rmsh(j,n1)*atoms%rmsh(j,n1)
              gr = stars%sk3(k)*atoms%rmsh(j,n1)

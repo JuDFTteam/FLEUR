@@ -23,13 +23,17 @@ MODULE m_eparas
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,ccof, skip_t,l_evp,acof,bcof,&
-       usdus, ncore,l_mcd,m_mcd, enerlo,sqlo,ener,sqal,qal,mcd)
+  SUBROUTINE eparas(jsp,atoms,noccbd, mpi,ikpt,ne,we,eig,skip_t,l_evp,eigVecCoeffs,&
+                    usdus,regCharges,dos,l_mcd,mcd)
     USE m_types
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)   :: usdus
-    TYPE(t_mpi),INTENT(IN)     :: mpi
-    TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_usdus),         INTENT(IN)    :: usdus
+    TYPE(t_mpi),           INTENT(IN)    :: mpi
+    TYPE(t_atoms),         INTENT(IN)    :: atoms
+    TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
+    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
+    TYPE(t_dos),           INTENT(INOUT) :: dos
+    TYPE(t_mcd), OPTIONAL, INTENT(INOUT) :: mcd
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: noccbd,jsp     
@@ -37,17 +41,8 @@ CONTAINS
     LOGICAL, INTENT (IN) :: l_mcd,l_evp
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN)  :: ncore(atoms%ntype)
     REAL,    INTENT (IN)  :: eig(:)!(dimension%neigd),
     REAL,    INTENT (IN)  :: we(noccbd) 
-    COMPLEX, INTENT (IN)  :: ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat)
-    COMPLEX, INTENT (IN)  :: acof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN)  :: bcof(:,0:,:)!(noccbd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (IN)  :: m_mcd(:,:,:,:)!(dimension%nstd,(3+1)**2,3*ntypd ,2)
-    REAL,    INTENT (OUT) :: enerlo(atoms%nlod,atoms%ntype),sqlo(atoms%nlod,atoms%ntype)
-    REAL,    INTENT (OUT) :: ener(0:3,atoms%ntype),sqal(0:3,atoms%ntype)
-    REAL,    INTENT (OUT) :: qal(0:,:,:)!(0:3,atoms%ntype,dimension%neigd)
-    REAL,    INTENT (OUT) :: mcd(:,:,:)!(3*atoms%ntype,dimension%nstd,dimension%neigd)
 
     !     ..
     !     .. Local Scalars ..
@@ -65,16 +60,13 @@ CONTAINS
     !
 
     IF ((ikpt.LE.mpi%isize).AND..NOT.l_evp) THEN
-       IF (l_mcd) THEN
-          mcd(:,:,:) = 0.0
-       ENDIF
-       ener(:,:) = 0.0
-       sqal(:,:) = 0.0
-       qal(:,:,:) = 0.0
-       enerlo(:,:) = 0.0
-       sqlo(:,:) = 0.0
+       regCharges%ener(:,:,jsp) = 0.0
+       regCharges%sqal(:,:,jsp) = 0.0
+       regCharges%enerlo(:,:,jsp) = 0.0
+       regCharges%sqlo(:,:,jsp) = 0.0
+       dos%qal(:,:,:,ikpt,jsp) = 0.0
     END IF
-    !
+
     !--->    l-decomposed density for each occupied state
     !
     !         DO 140 i = (skip_t+1),ne    ! this I need for all states
@@ -91,31 +83,31 @@ CONTAINS
                 lm = ll1 + m
                 IF ( .NOT.l_mcd ) THEN
                    DO natom = nt1,nt2
-                      suma = suma + acof(i,lm,natom)*CONJG(acof(i,lm,natom))
-                      sumb = sumb + bcof(i,lm,natom)*CONJG(bcof(i,lm,natom))
+                      suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                      sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
                    ENDDO
                 ELSE
                    suma = CMPLX(0.,0.) ; sumab = CMPLX(0.,0.) 
                    sumb = CMPLX(0.,0.) ; sumba = CMPLX(0.,0.)
                    DO natom = nt1,nt2
-                      suma = suma + acof(i,lm,natom)*CONJG(acof(i,lm,natom))
-                      sumb = sumb + bcof(i,lm,natom)*CONJG(bcof(i,lm,natom))
-                      sumab= sumab + acof(i,lm,natom) *CONJG(bcof(i,lm,natom))
-                      sumba= sumba + bcof(i,lm,natom) *CONJG(acof(i,lm,natom))
+                      suma = suma + eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
+                      sumb = sumb + eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
+                      sumab= sumab + eigVecCoeffs%acof(i,lm,natom,jsp) *CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp))
+                      sumba= sumba + eigVecCoeffs%bcof(i,lm,natom,jsp) *CONJG(eigVecCoeffs%acof(i,lm,natom,jsp))
                    ENDDO
-                   DO icore = 1, ncore(n)
+                   DO icore = 1, mcd%ncore(n)
                       DO ipol = 1, 3
                          index = 3*(n-1) + ipol
-                         mcd(index,icore,i)=mcd(index,icore,i) + fac*(&
-                              suma * CONJG(m_mcd(icore,lm+1,index,1))*m_mcd(icore,lm+1,index,1)  +&
-                              sumb * CONJG(m_mcd(icore,lm+1,index,2))*m_mcd(icore,lm+1,index,2)  +&
-                              sumab* CONJG(m_mcd(icore,lm+1,index,2))*m_mcd(icore,lm+1,index,1)  +&
-                              sumba* CONJG(m_mcd(icore,lm+1,index,1))*m_mcd(icore,lm+1,index,2)  ) 
+                         mcd%mcd(index,icore,i,ikpt,jsp)=mcd%mcd(index,icore,i,ikpt,jsp) + fac*(&
+                              suma * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
+                              sumb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
+                              sumab* CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1)  +&
+                              sumba* CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,2)  ) 
                       ENDDO
                    ENDDO
                 ENDIF     ! end MCD
              ENDDO
-             qal(l,n,i) = (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)
+             dos%qal(l,n,i,ikpt,jsp) = (suma+sumb*usdus%ddn(l,n,jsp))/atoms%neq(n)
           ENDDO
           nt1 = nt1 + atoms%neq(n)
        ENDDO
@@ -128,8 +120,8 @@ CONTAINS
     DO l = 0,3
        DO n = 1,atoms%ntype
           DO i = (skip_t+1),noccbd
-             ener(l,n) = ener(l,n) + qal(l,n,i)*we(i)*eig(i)
-             sqal(l,n) = sqal(l,n) + qal(l,n,i)*we(i)
+             regCharges%ener(l,n,jsp) = regCharges%ener(l,n,jsp) + dos%qal(l,n,i,ikpt,jsp)*we(i)*eig(i)
+             regCharges%sqal(l,n,jsp) = regCharges%sqal(l,n,jsp) + dos%qal(l,n,i,ikpt,jsp)*we(i)
           ENDDO
        ENDDO
     ENDDO
@@ -153,9 +145,11 @@ CONTAINS
                 lm = ll1 + m
                 DO i = 1,ne
                    qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +REAL(&
-                        bcof(i,lm,natom)*CONJG(ccof(m,i,lo,natom))+ccof(m,i,lo,natom)*CONJG(bcof(i,lm,natom)) )
+                        eigVecCoeffs%bcof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))+&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%bcof(i,lm,natom,jsp)) )
                    qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) + REAL(&
-                        acof(i,lm,natom)*CONJG(ccof(m,i,lo,natom))+ccof(m,i,lo,natom)*CONJG(acof(i,lm,natom)) )
+                        eigVecCoeffs%acof(i,lm,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))+&
+                        eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%acof(i,lm,natom,jsp)) )
                 ENDDO
              ENDDO
              DO lop = 1,atoms%nlo(ntyp)
@@ -163,7 +157,7 @@ CONTAINS
                    DO m = -l,l
                       DO i = 1,ne
                          qlo(i,lop,lo,ntyp) = qlo(i,lop,lo,ntyp) +  REAL(&
-                              CONJG(ccof(m,i,lop,natom))*ccof(m,i,lo,natom))
+                              CONJG(eigVecCoeffs%ccof(m,i,lop,natom,jsp))*eigVecCoeffs%ccof(m,i,lo,natom,jsp))
                       ENDDO
                    ENDDO
                 ENDIF
@@ -180,15 +174,15 @@ CONTAINS
           ! llo > 3 used for unoccupied states only
           IF( l .GT. 3 ) CYCLE
           DO i = 1,ne
-             qal(l,ntyp,i)= qal(l,ntyp,i)  + ( 1.0/atoms%neq(ntyp) )* (&
+             dos%qal(l,ntyp,i,ikpt,jsp)= dos%qal(l,ntyp,i,ikpt,jsp)  + ( 1.0/atoms%neq(ntyp) )* (&
                   qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)+qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)     )
           END DO
           DO lop = 1,atoms%nlo(ntyp)
              IF (atoms%llo(lop,ntyp).EQ.l) THEN
                 DO i = 1,ne
-                   enerlo(lo,ntyp) = enerlo(lo,ntyp) +qlo(i,lop,lo,ntyp)*we(i)*eig(i)
-                   sqlo(lo,ntyp) = sqlo(lo,ntyp) + qlo(i,lop,lo,ntyp)*we(i)
-                   qal(l,ntyp,i)= qal(l,ntyp,i)  + ( 1.0/atoms%neq(ntyp) ) *&
+                   regCharges%enerlo(lo,ntyp,jsp) = regCharges%enerlo(lo,ntyp,jsp) +qlo(i,lop,lo,ntyp)*we(i)*eig(i)
+                   regCharges%sqlo(lo,ntyp,jsp) = regCharges%sqlo(lo,ntyp,jsp) + qlo(i,lop,lo,ntyp)*we(i)
+                   dos%qal(l,ntyp,i,ikpt,jsp)= dos%qal(l,ntyp,i,ikpt,jsp)  + ( 1.0/atoms%neq(ntyp) ) *&
                         qlo(i,lop,lo,ntyp)*usdus%uloulopn(lop,lo,ntyp,jsp)
                 ENDDO
              ENDIF

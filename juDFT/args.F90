@@ -5,24 +5,25 @@
 !--------------------------------------------------------------------------------
 MODULE m_juDFT_args
 !This subroutine allows to query for command line arguments
-!The following command line arguments are known to FLEUR
-! eig66_io.F90: -da, -mem, -mpi, -hdf                     
-!                        -->  choose the storage of eigenvalues&vectors
-! eigen_diag.F90: -lapack, -lapack2, -elpa, -magma, -scalapack
-!                        --> choose diagonalization sheme 
-! time.F90: -debugtime   --> write out the start/stop of all timers to STDOUT
-! fleur_init.F90,set_inp.F90: --xmlInput
-!                        --> choose xmlInput format
-
-PUBLIC
+  PRIVATE
+  CHARACTER(len=5):: ENV_NAME="juDFT" !name of environment variable
+  PUBLIC judft_was_argument,juDFT_string_for_argument
 CONTAINS
   FUNCTION juDFT_was_argument(arg) RESULT(OK)
+    USE m_check_arguments
     IMPLICIT NONE
     CHARACTER(len=*),INTENT(IN)::arg
     LOGICAL ok
 
     INTEGER:: i
     CHARACTER(LEN=30)::str
+
+    !check if argument is allowed
+    IF (argument_type(arg)<0) THEN
+       PRINT *,"Argument query invalid:",arg
+       PRINT *,"Add specification for fleur_arguments"
+       STOP "BUG in FLEUR, invalid argument query"
+    END IF
     ok=.FALSE.
     DO i=1,COMMAND_ARGUMENT_COUNT()
        CALL GET_COMMAND_ARGUMENT(i,str)
@@ -35,20 +36,30 @@ CONTAINS
 
   END FUNCTION juDFT_was_argument
 
-FUNCTION juDFT_string_for_argument(arg) RESULT(argstring)
+  FUNCTION juDFT_string_for_argument(arg) RESULT(argstring)
     IMPLICIT NONE
     CHARACTER(len=*),INTENT(IN)::arg
     CHARACTER(len=1000)::argstring
 
     INTEGER:: i
-    CHARACTER(LEN=30)::str
+    CHARACTER(LEN=30)  ::str
+    CHARACTER(LEN=1000)::env
     argstring=""
-    DO i=1,COMMAND_ARGUMENT_COUNT()
-       CALL GET_COMMAND_ARGUMENT(i,str)
-       IF(ADJUSTL(str)==ADJUSTL(arg)) THEN
-          if (i<=COMMAND_ARGUMENT_COUNT()) CALL GET_COMMAND_ARGUMENT(i+1,argstring)
-       endif
-    ENDDO
- 
+    IF (judft_was_argument(arg)) THEN
+       DO i=1,COMMAND_ARGUMENT_COUNT()
+          CALL GET_COMMAND_ARGUMENT(i,str)
+          IF(ADJUSTL(str)==ADJUSTL(arg)) THEN
+             IF (i<=COMMAND_ARGUMENT_COUNT()) CALL GET_COMMAND_ARGUMENT(i+1,argstring)
+             RETURN !Argument found
+          ENDIF
+       ENDDO
+       !Not found so must be in environment variable
+       CALL GET_ENVIRONMENT_VARIABLE("juDFT",env,status=i)
+       !cut of argument string
+       env=ADJUSTL(env(INDEX(env//' ',TRIM(ADJUSTL(arg)))+1:))//' '
+       i=INDEX(env,' ') !find first blank
+       argstring=TRIM(env(:i))
+    END IF
+    
   END FUNCTION juDFT_string_for_argument
 END MODULE m_juDFT_args
