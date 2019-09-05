@@ -1396,7 +1396,32 @@ c      endif
         deallocate ( we_b,we_b2 )
       deallocate ( eigg )
 
+
+
+      IF(l_real) THEN
+         DEALLOCATE ( zzMat%z_r )
+      ELSE
+         DEALLOCATE ( zzMat%z_c )
+      END IF
+
+
+
+      IF(zzMat%l_real) THEN
+         DEALLOCATE (zMat_b%z_r)
+         DEALLOCATE (zMat_b2%z_r)
+      ELSE
+         DEALLOCATE (zMat_b%z_c)
+         DEALLOCATE (zMat_b2%z_c)
+      END IF
+
+
+
       endif   ! loop by processors
+
+
+
+
+
 
 10    continue ! end of cycle by the k-points
 
