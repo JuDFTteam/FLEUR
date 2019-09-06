@@ -21,7 +21,7 @@ CONTAINS
     TYPE(t_xcpot_inbuild)    :: xcpot !local xcpot that is LDA to indicate we do not need gradients
     TYPE(t_gradients)        :: grad
 
-    INTEGER :: n,nsp,imesh,i
+    INTEGER :: n,nsp,imesh,i,b_ind
     REAL    :: rho_11,rho_22,rho_21r,rho_21i,mx,my,mz,magmom
     REAL    :: rhotot,rho_up,rho_down,theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
@@ -89,12 +89,12 @@ CONTAINS
     CALL finish_mt_grid()
   END SUBROUTINE rotate_mt_den_to_local
 
-  SUBROUTINE rotate_mt_den_from_local(atoms,sphhar,sym,den,vtot)
+  SUBROUTINE rotate_mt_den_from_local(atoms,sphhar,sym,den,vtot,xcB)
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_sphhar),INTENT(IN) :: sphhar
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_potden),INTENT(IN) :: den
-    TYPE(t_potden),INTENT(INOUT) :: vtot
+    TYPE(t_potden),INTENT(INOUT) :: vtot,xcB
     
     
     TYPE(t_xcpot_inbuild)     :: xcpot !local xcpot that is LDA to indicate we do not need gradients
@@ -103,7 +103,7 @@ CONTAINS
     INTEGER :: n,nsp,imesh,i
     REAL    :: vup,vdown,veff,beff
     REAL    :: theta,phi
-    REAL,ALLOCATABLE :: ch(:,:)
+    REAL,ALLOCATABLE :: ch(:,:),b_xc(:,:)
     
     nsp=atoms%nsp()
     ALLOCATE(ch(nsp*atoms%jmtd,4))
@@ -119,13 +119,18 @@ CONTAINS
           phi   = den%phi_mt(imesh,n)
           veff  = (vup + vdown)/2.0
           beff  = (vup - vdown)/2.0
-          ch(imesh,1) = veff + beff*COS(theta)
-          ch(imesh,2) = veff - beff*COS(theta)
-          ch(imesh,3) = beff*SIN(theta)*COS(phi)
-          ch(imesh,4) = beff*SIN(theta)*SIN(phi)
+          b_xc(imesh,1) = beff*SIN(theta)*COS(phi)
+          b_xc(imesh,2) = beff*SIN(theta)*SIN(phi)
+          b_xc(imesh,3) = beff*COS(theta)
+          ch(imesh,1) = veff + b_xc(imesh,3)
+          ch(imesh,2) = veff - b_xc(imesh,3)
+          ch(imesh,3) = b_xc(imesh,1)
+          ch(imesh,4) = b_xc(imesh,2)
        ENDDO
        vtot%mt(:,0:,n,:)=0.0
+       xcB%mt(:,0:,n,:)=0.0
        CALL mt_from_grid(atoms,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
+       CALL mt_from_grid(atoms,sphhar,n,3,b_xc,xcB%mt(:,0:,n,:))
        DO i=1,atoms%jri(n)
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO

@@ -6,7 +6,7 @@
 MODULE m_vgen_finalize
   USE m_juDFT
 CONTAINS
-  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot,xcB)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -26,7 +26,7 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)        :: atoms 
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
-    TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot
+    TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot,xcB
     !     ..
     !     .. Local Scalars ..
     INTEGER i,js,n
@@ -47,8 +47,8 @@ CONTAINS
           END DO
        END DO
     ELSEIF(noco%l_noco) THEN
-       CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
-       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
+       CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot,xcB)
+       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot,xcB)
     ENDIF
 
     ! Rescale vCoul%pw_w with number of stars
@@ -61,10 +61,13 @@ CONTAINS
     !Copy first vacuum into second vacuum if this was not calculated before 
     IF (vacuum%nvac==1) THEN
        vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
+       xcB%vacz(:,2,:)  = xcB%vacz(:,1,:)
        IF (sym%invs) THEN
           vTot%vacxy(:,:,2,:)  = CMPLX(vTot%vacxy(:,:,1,:))
+          xcB%vacxy(:,:,2,:)  = CMPLX(xcB%vacxy(:,:,1,:))
        ELSE
           vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
+          xcB%vacxy(:,:,2,:)  = xcB%vacxy(:,:,1,:)
        ENDIF
     ENDIF
  

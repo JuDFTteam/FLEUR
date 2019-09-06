@@ -20,7 +20,7 @@ CONTAINS
    !!     TE_EXC :   charge density-ex-corr.energy density integral
 
    SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                   obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul)
+                   obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul,xcB)
 
       USE m_types
       USE m_rotate_int_den_to_local
@@ -53,7 +53,7 @@ CONTAINS
       TYPE(t_atoms),     INTENT(IN)     :: atoms
       TYPE(t_potden),    INTENT(IN)     :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT)  :: den
-      TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul
+      TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul,xcB
 
       TYPE(t_potden)                    :: workden,denRot
 
@@ -94,7 +94,7 @@ CONTAINS
                       obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
-      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot,xcB)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)

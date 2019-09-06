@@ -21,9 +21,15 @@ MODULE m_vmatgen
   !     stars and written to file potmat.
   !
   !     Philipp Kurz 99/11/01
+  !   
+  !     Extended for the investigation of the exch-corr B-field, which is 
+  !     analogously saved as a potden type with 3 integers (i.e. in com-
+  !     ponent space.
+  !     
+  !     A.Neukirchen 05.09.2019
   !**********************************************************************
 CONTAINS
-  SUBROUTINE vmatgen(stars,atoms,vacuum,sym,input,den,vTot)
+  SUBROUTINE vmatgen(stars,atoms,vacuum,sym,input,den,vTot,xcB)
 
     !******** ABBREVIATIONS ***********************************************
     !     ifft3    : size of the 3d real space mesh
@@ -48,23 +54,27 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_potden),INTENT(IN) :: den
-    TYPE(t_potden),INTENT(INOUT):: vTot
+    TYPE(t_potden),INTENT(INOUT):: vTot,xcB
 
  
     !     ..
     !     .. Local Scalars ..
-    INTEGER imeshpt,ipot,jspin,ig2 ,ig3,ivac,ifft2,ifft3,imz,iter
+    INTEGER imeshpt,ipot,jspin,ig2 ,ig3,ivac,ifft2,ifft3,imz,iter,b_ind
     REAL    vup,vdown,veff,beff,vziw,theta,phi
     !     ..
     !     .. Local Arrays ..
-    REAL,    ALLOCATABLE :: vvacxy(:,:,:,:),vis(:,:),fftwork(:)
+    REAL,    ALLOCATABLE :: vvacxy(:,:,:,:),vis(:,:),fftwork(:),b_xc(:,:),b_xc_vacxy(:,:,:,:)
 
     ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
     IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
     ifft2 = SIZE(den%phi_vacxy,1) 
     
+    xcB%pw_w(:,:)=0.0
+    xcB%vacxy(:,:,:,:)=0.0
+    xcB%vacz(:,:,:)=0.0    
     
     ALLOCATE ( vis(ifft3,4),fftwork(ifft3))
+    ALLOCATE (b_xc(ifft3,3))
       
     
     !---> fouriertransform the spin up and down potential
@@ -80,22 +90,28 @@ CONTAINS
        vdown = vis(imeshpt,2)
        theta = den%theta_pw(imeshpt)
        phi   = den%phi_pw(imeshpt)
-       !--->    at first determine the effective potential and magnetic field
+       !--->    at first determine the effective potential and magnetic fields
        veff  = (vup + vdown)/2.0
        beff  = (vup - vdown)/2.0
+       b_xc(imeshpt,1)=beff*SIN(theta)*COS(phi)
+       b_xc(imeshpt,2)=beff*SIN(theta)*SIN(phi)
+       b_xc(imeshpt,3)=beff*COS(theta)
        !--->    now calculate the matrix potential, which is hermitian.
        !--->    thus calculate the diagonal elements:
        !--->    V_11
-       vis(imeshpt,1) = veff + beff*COS(theta)
+       vis(imeshpt,1) = veff + b_xc(imeshpt,3)
        !--->    V_22
-       vis(imeshpt,2) = veff - beff*COS(theta)
+       vis(imeshpt,2) = veff - b_xc(imeshpt,3)
        !--->    the real part of V_21
-       vis(imeshpt,3) = beff*SIN(theta)*COS(phi)
+       vis(imeshpt,3) = b_xc(imeshpt,1)
        !--->    and the imaginary part of V_21
-       vis(imeshpt,4) = beff*SIN(theta)*SIN(phi)
+       vis(imeshpt,4) = b_xc(imeshpt,2)
 
        DO ipot = 1,4
           vis(imeshpt,ipot) =  vis(imeshpt,ipot) * stars%ufft(imeshpt-1)
+       ENDDO
+       DO b_ind = 1,3
+          b_xc(imeshpt,b_ind) = b_xc(imeshpt,b_ind) * stars%ufft(imeshpt-1)
        ENDDO
     ENDDO
 
@@ -104,7 +120,13 @@ CONTAINS
        fftwork=0.0
        CALL fft3d(vis(:,ipot),fftwork, vTot%pw_w(1,ipot), stars,-1)
     ENDDO
+    
     CALL fft3d(vis(:,3),vis(:,4), vTot%pw_w(1,3), stars,-1)
+
+    DO b_ind=1,3
+       fftwork=0.0
+       CALL fft3d(b_xc(:,b_ind),fftwork, xcB%pw_w(1,b_ind), stars,-1)
+    ENDDO
 
     IF (.NOT. input%film) RETURN
 
@@ -112,6 +134,7 @@ CONTAINS
 
  
     ALLOCATE(vvacxy(ifft2,vacuum%nmzxyd,2,4))
+    ALLOCATE(b_xc_vacxy(ifft2,vacuum%nmzxyd,2,3))
 
     
        !--->    fouriertransform the spin up and down potential
@@ -148,10 +171,13 @@ CONTAINS
                 phi   = den%phi_vacxy(imeshpt,imz,ivac)
                 veff  = (vup + vdown)/2.0
                 beff  = (vup - vdown)/2.0
-                vvacxy(imeshpt,imz,ivac,1) = veff + beff*COS(theta)
-                vvacxy(imeshpt,imz,ivac,2) = veff - beff*COS(theta)
-                vvacxy(imeshpt,imz,ivac,3) = beff*SIN(theta)*COS(phi)
-                vvacxy(imeshpt,imz,ivac,4) = beff*SIN(theta)*SIN(phi)
+                b_xc_vacxy(imeshpt,imz,ivac,1) = beff*SIN(theta)*COS(phi)
+                b_xc_vacxy(imeshpt,imz,ivac,2) = beff*SIN(theta)*SIN(phi)
+                b_xc_vacxy(imeshpt,imz,ivac,3) = beff*COS(theta)
+                vvacxy(imeshpt,imz,ivac,1) = veff + b_xc_vacxy(imeshpt,imz,ivac,3)
+                vvacxy(imeshpt,imz,ivac,2) = veff - b_xc_vacxy(imeshpt,imz,ivac,3)
+                vvacxy(imeshpt,imz,ivac,3) = b_xc_vacxy(imeshpt,imz,ivac,1)
+                vvacxy(imeshpt,imz,ivac,4) = b_xc_vacxy(imeshpt,imz,ivac,2)
              ENDDO
           ENDDO
           DO imz = vacuum%nmzxyd+1,vacuum%nmzd
@@ -161,10 +187,13 @@ CONTAINS
              phi   = den%phi_vacz(imz,ivac)
              veff  = (vup + vdown)/2.0
              beff  = (vup - vdown)/2.0
-             vTot%vacz(imz,ivac,1) = veff + beff*COS(theta)
-             vTot%vacz(imz,ivac,2) = veff - beff*COS(theta)
-             vTot%vacz(imz,ivac,3) = beff*SIN(theta)*COS(phi)
-             vTot%vacz(imz,ivac,4) = beff*SIN(theta)*SIN(phi)
+             xcB%vacz(imz,ivac,1) = beff*SIN(theta)*COS(phi)
+             xcB%vacz(imz,ivac,2) = beff*SIN(theta)*SIN(phi)
+             xcB%vacz(imz,ivac,3) = beff*COS(theta)
+             vTot%vacz(imz,ivac,1) = veff + xcB%vacz(imz,ivac,3)
+             vTot%vacz(imz,ivac,2) = veff - xcB%vacz(imz,ivac,3)
+             vTot%vacz(imz,ivac,3) = xcB%vacz(imz,ivac,1)
+             vTot%vacz(imz,ivac,4) = xcB%vacz(imz,ivac,2)
           ENDDO
        ENDDO
 
@@ -186,6 +215,16 @@ CONTAINS
                    CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
                         vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,1,ivac,ipot), vacuum%nmzxyd,-1)
                 END IF
+             ENDDO
+          ENDDO
+       ENDDO
+
+       DO b_ind = 1,3
+          DO ivac = 1,vacuum%nvac
+             DO imz = 1,vacuum%nmzxyd
+                fftwork=0.0
+                CALL fft2d(stars, b_xc_vacxy(:,imz,ivac,b_ind),fftwork,&
+                     xcB%vacz(imz,ivac,b_ind),vziw,xcB%vacxy(imz,1,ivac,b_ind), vacuum%nmzxyd,-1)
              ENDDO
           ENDDO
        ENDDO
