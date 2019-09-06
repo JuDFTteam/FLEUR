@@ -69,7 +69,6 @@ CONTAINS
     IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
     ifft2 = SIZE(den%phi_vacxy,1) 
     
-    xcB%pw_w(:,:)=0.0
     xcB%vacxy(:,:,:,:)=0.0
     xcB%vacz(:,:,:)=0.0    
     
