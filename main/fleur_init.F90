@@ -519,7 +519,7 @@
                 END IF
              END IF
              IF (atoms%n_gf>0) THEN
-              IF(.NOT.input%tria.AND..NOT.input%film) THEN
+              IF(.NOT.input%tria.AND..NOT.input%film.AND..NOT.input%l_hist) THEN
                 !Calculate regular decomposition into tetrahedra (make_tetra doesnt seem to work for most meshes)
                 IF(kpts%nkptf.EQ.0) CALL gen_bz(kpts,sym)
                 CALL calc_tetra(kpts,cell,input,sym)

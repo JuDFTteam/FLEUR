@@ -88,10 +88,10 @@ CONTAINS
          tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1),&
          a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
     !
-    IF(atoms%n_u.GT.0) THEN
-       ALLOCATE(v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u))
+    IF(atoms%n_u+atoms%n_hia.GT.0) THEN
+       ALLOCATE(v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u+atoms%n_hia))
        v_mmp = CMPLX(0.0,0.0)
-       CALL read_tlmplm_vs_mmp(jsp,atoms%n_u,v_mmp)
+       CALL read_tlmplm_vs_mmp(jsp,atoms%n_u+atoms%n_hia,v_mmp)
     END IF
 
     i_u = 1
@@ -203,7 +203,7 @@ CONTAINS
           !
           CALL force_a21_lo(atoms,jsp,n,we,eig,ne,eigVecCoeffs,aveccof,bveccof,cveccof,tlmplm,usdus,a21)
 
-          IF ((atoms%n_u.GT.0).AND.(i_u.LE.atoms%n_u)) THEN
+          IF ((atoms%n_u+atoms%n_hia.GT.0).AND.(i_u.LE.atoms%n_u+atoms%n_hia)) THEN
              CALL force_a21_U(atoms,i_u,n,jsp,we,ne,usdus,v_mmp,eigVecCoeffs,aveccof,bveccof,cveccof,a21)
           END IF
           IF (input%l_useapw) THEN

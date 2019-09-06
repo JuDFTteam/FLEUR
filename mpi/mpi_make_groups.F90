@@ -211,7 +211,7 @@ CONTAINS
       mem = mem + (dimension%lmd+1)*(2*atoms%llod+1)*max(mlotot,1)*2 ! tlmplm%tuulo ...
       mem = mem + (2*atoms%llod+1)**2 * max(mlolotot,1)    ! tlmplm%tuloulo
       IF (noco%l_noco) mem = mem * 2                      ! both spins
-      mem = mem + 49*atoms%n_u*input%jspins*2                      ! lda+U, *2 for complex
+      mem = mem + 49*(atoms%n_u+atoms%n_hia)*input%jspins*2                      ! lda+U, *2 for complex
       mem = mem+INT((dimension%nbasfcn*2+(dimension%lmd+1)*atoms%ntype)*0.5)+1 ! tlmplm%ind, *0.5 for integer
 
       matsz = dimension%nbasfcn * CEILING(REAL(dimension%nbasfcn)/n_size) ! size of a, b

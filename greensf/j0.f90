@@ -10,12 +10,13 @@ MODULE m_j0
 
    CONTAINS
 
-   SUBROUTINE eff_excinteraction(g0,atoms,input,g0Coeffs)
+   SUBROUTINE eff_excinteraction(g0,atoms,input,ef,g0Coeffs)
 
       TYPE(t_greensf),        INTENT(IN)  :: g0
       TYPE(t_atoms),          INTENT(IN)  :: atoms
       TYPE(t_greensfCoeffs),  INTENT(IN)  :: g0Coeffs !For determining the onsite exchange splitting from the difference in the COM of the bands
       TYPE(t_input),          INTENT(IN)  :: input
+      REAL,                   INTENT(IN)  :: ef
 
       COMPLEX integrand, sumup, sumdwn, sumupdwn
       INTEGER i,iz,m,l,mp,ispin,n,i_gf,matsize,ipm,ie,n_cut
@@ -32,7 +33,6 @@ MODULE m_j0
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
       l_matinv = .FALSE. !Determines how the onsite exchange splitting is calculated
-
 
       DO i_j0 = 1, atoms%n_j0
 
@@ -150,7 +150,7 @@ MODULE m_j0
             j0(l) = j0(l) + AIMAG(integrand)
 
             IF(atoms%j0(i_j0)%l_eDependence) THEN
-            WRITE(1337,"(5f14.8)") REAL(g0%e(iz)), -1/(2.0*fpi_const)*hartree_to_ev_const *j0(l),&
+            WRITE(1337,"(5f14.8)") REAL(g0%e(iz)-ef)*hartree_to_ev_const, -1/(2.0*fpi_const)*hartree_to_ev_const *j0(l),&
                                    AIMAG(sumup),AIMAG(sumdwn),AIMAG(sumupdwn)
             ENDIF
 

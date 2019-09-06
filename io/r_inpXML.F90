@@ -1666,7 +1666,7 @@ CONTAINS
             ENDIF 
          ENDDO
       ENDDO
-      IF(atoms%n_gf>0) input%l_gf = .true.
+      IF(atoms%n_gf>0) input%l_gf = .true. !This switch enforces the consideration of unoccuied states in cdnval.f90
 
       atoms%lmaxd = MAXVAL(atoms%lmax(:))
       atoms%llod  = 0

@@ -102,7 +102,7 @@ CONTAINS
        END DO     ! lo = 1,atoms%nlo
 
        i_u = i_u + 1
-       IF(i_u.GT.atoms%n_u) EXIT
+       IF(i_u.GT.atoms%n_u+atoms%n_hia) EXIT
     END DO
 
   END SUBROUTINE force_a21_U

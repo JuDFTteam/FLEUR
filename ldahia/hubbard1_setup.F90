@@ -316,6 +316,7 @@ MODULE m_hubbard1_setup
       ELSE
          !occupation matrix is zero and LDA+Hubbard 1 shouldn't be run yet
          !There is nothing to be done yet just set the potential correction to 0
+         WRITE(*,*) "No density matrix and GF found -> skipping LDA+HIA"
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
          results%e_ldau = 0.0
       ENDIF

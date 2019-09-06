@@ -54,7 +54,7 @@ CONTAINS
        ENDDO
 
        !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
-       !the correlated orbitals with a non-spin-polarized basis  
+       !the correlated orbitals with a non-spin-polarized basis 
        IF(l_hia.AND.SIZE(vTot%mt,4).GT.1.AND..NOT.l_dftspinpol) THEN
           vrTmp = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,2))/2.0
        ELSE

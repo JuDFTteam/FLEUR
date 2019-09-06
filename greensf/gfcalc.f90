@@ -102,7 +102,7 @@ MODULE m_gfcalc
         CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot)
       ENDIF
       IF(input%jspins.EQ.2) THEN
-         CALL eff_excinteraction(greensf,atoms,input,greensfCoeffs)
+         CALL eff_excinteraction(greensf,atoms,input,results%ef,greensfCoeffs)
       ENDIF
       DO i_gf = 1, atoms%n_gf
          l = atoms%gfelem(i_gf)%l
