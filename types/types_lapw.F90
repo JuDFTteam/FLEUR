@@ -400,7 +400,7 @@ CONTAINS
     COMPLEX term1 
     REAL th,con1
     INTEGER l,lo ,mind,ll1,lm,iintsp,k,nkmin,ntyp,lmp,m,nintsp
-    LOGICAL linind,enough,l_lo1
+    LOGICAL linind,enough,l_lo1,l_real
     !     ..
     !     .. Local Arrays ..
     INTEGER :: nkvec(atoms%nlod,2)
@@ -414,6 +414,8 @@ CONTAINS
     !     .. Data statements ..
     REAL, PARAMETER :: eps = 1.0E-8
     REAL, PARAMETER :: linindq = 1.0e-4
+
+    l_real = sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_hia+atoms%n_u>0)
 
     con1=fpi_const/SQRT(cell%omtil)
     ntyp = n
@@ -471,8 +473,7 @@ CONTAINS
                             lm = ll1 + m
                             cwork(m,nkvec(lo,iintsp),lo,iintsp) = term1*ylm(lm)
                          END DO
-                         CALL orthoglo(&
-                              sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_hia+atoms%n_u>0),atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                         CALL orthoglo(l_real,atoms,nkvec(lo,iintsp),lo,l,linindq,.FALSE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                          IF (linind) THEN
                             lapw%kvec(nkvec(lo,iintsp),lo,na) = k
                          ELSE
@@ -494,8 +495,7 @@ CONTAINS
                                lmp = ll1 - m
                                cwork(mind,nkvec(lo,iintsp),lo,iintsp) = ((-1)** (l+m))*CONJG(term1*ylm(lmp))
                             END DO
-                            CALL orthoglo(&
-                                 sym%invs.and..not.noco%l_noco.and..not.(noco%l_soc.and.atoms%n_hia+atoms%n_u>0),atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
+                            CALL orthoglo(l_real,atoms,nkvec(lo,iintsp),lo,l,linindq,.TRUE., cwork(-2*atoms%llod,1,1,iintsp),linind)
                             IF (linind) THEN
                                lapw%kvec(nkvec(lo,iintsp),lo,na) = k
                                !                          write(*,*) nkvec(lo,iintsp),k,' <- '
