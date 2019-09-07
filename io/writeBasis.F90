@@ -142,7 +142,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
     END IF
 
 
-      l_real=sym%invs.AND..NOT.noco%l_noco
+      l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
 !     check if z-reflection trick can be used
       l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
 !     IF (mpi%n_size > 1) l_zref = .FALSE.

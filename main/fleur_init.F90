@@ -551,7 +551,7 @@
           !Collect some usage info
           CALL add_usage_data("A-Types",atoms%ntype)
           CALL add_usage_data("Atoms",atoms%nat)
-          CALL add_usage_data("Real",sym%invs.AND..NOT.noco%l_noco)
+          CALL add_usage_data("Real",sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0))
           CALL add_usage_data("Spins",input%jspins)
           CALL add_usage_data("Noco",noco%l_noco)
           CALL add_usage_data("SOC",noco%l_soc)

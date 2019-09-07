@@ -169,12 +169,12 @@ CONTAINS
     ! Initialize Green's function (end)
 
     ! Open/allocate eigenvector storage (start)
-    l_real=sym%invs.AND..NOT.noco%l_noco
+    l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
     eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
                     noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
 
 #ifdef CPP_CHASE
-    CALL init_chase(mpi,dimension,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
+    CALL init_chase(mpi,dimension,input,atoms,kpts,noco,.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0))
 #endif
     ! Open/allocate eigenvector storage (end)
 
