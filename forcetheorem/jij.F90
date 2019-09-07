@@ -179,6 +179,7 @@ CONTAINS
                RESHAPE((/1,1,5,5,5,6,4,18,4,4,2,15/),(/6,2/)))
     ENDDO
     CALL closeXMLElement('Forcetheorem_JIJ')
+    CALL judft_end("Forcetheorem: Jij")
   END SUBROUTINE jij_postprocess
 
 
