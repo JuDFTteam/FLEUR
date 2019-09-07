@@ -488,6 +488,8 @@
       <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="U" type="xsd:string" use="required"/>
       <xsd:attribute name="J" type="xsd:string" use="required"/>
+      <xsd:attribute name="phi" type="xsd:string" use="optional" default="0.0"/>
+      <xsd:attribute name="theta" type="xsd:string" use="optional" default="0.0"/>
       <xsd:attribute name="l_amf" type="FleurBool" use="required"/>
       <xsd:attribute name="init_occ" type="xsd:string" use="required"/>
    </xsd:complexType>

@@ -18,6 +18,7 @@ MODULE m_hubbard1_setup
       USE m_uj2f
       USE m_umtx
       USE m_vmmp
+      USE m_nmat_rot
       USE m_mudc
       USE m_denmat_dist
       USE m_gfcalc
@@ -61,8 +62,10 @@ MODULE m_hubbard1_setup
       REAL     f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
       REAL     u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia)
+      REAL     zero(atoms%n_hia)
 
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
+      COMPLEX  n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),2*gdft%nz)
       COMPLEX  e(2*gdft%nz)
       REAL     n_l(atoms%n_hia,input%jspins)
@@ -94,7 +97,12 @@ MODULE m_hubbard1_setup
          f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
          CALL umtx(atoms%lda_u(indStart:indEnd),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
 
-         CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,den%mmpMat(:,:,indStart:indEnd,:),&
+         ! check for possible rotation of n_mmp
+         n_mmp = den%mmpMat(:,:,indStart:indEnd,:)
+         zero = 0.0
+         CALL nmat_rot(atoms%lda_u(indStart:indEnd)%phi,atoms%lda_u(indStart:indEnd)%theta,zero,3,atoms%n_hia,input%jspins,atoms%lda_u(indStart:indEnd)%l,n_mmp)
+
+         CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,n_mmp,&
          u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),e_lda_hia)
 
          IF(hub1%l_runthisiter.AND.(ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)).AND.mpi%irank.EQ.0) THEN 
@@ -263,15 +271,19 @@ MODULE m_hubbard1_setup
                   ENDDO
                ENDIF
                !----------------------------------------------------------------------
-               ! Calculate DFT+U potential correction
-               !----------------------------------------------------------------------
-               CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,mmpMat,&
-                     u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),results%e_ldau)
-               !----------------------------------------------------------------------
                ! Calculate the distance and update the density matrix 
                !----------------------------------------------------------------------
                CALL n_mmp_dist(den%mmpMat(:,:,indStart:indEnd,:),mmpMat,atoms%n_hia,results,input%jspins)
                den%mmpMat(:,:,indStart:indEnd,:) = mmpMat(:,:,:,1:input%jspins) !For now LDA+U in FLEUR ignores spin offdiagonal elements
+               !----------------------------------------------------------------------
+               ! Calculate DFT+U potential correction
+               !----------------------------------------------------------------------
+               ! check for possible rotation of n_mmp
+               n_mmp = den%mmpMat(:,:,indStart:indEnd,:)
+               zero = 0.0
+               CALL nmat_rot(atoms%lda_u(indStart:indEnd)%phi,atoms%lda_u(indStart:indEnd)%theta,zero,3,atoms%n_hia,input%jspins,atoms%lda_u(indStart:indEnd)%l,n_mmp)
+               CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,n_mmp,&
+                     u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),results%e_ldau)
             ENDIF
          ELSE 
             !The solver does not need to be run so we just add the current energy correction from LDA+HIA 
@@ -287,7 +299,7 @@ MODULE m_hubbard1_setup
                   WRITE (l_type,'(i2)') 2*(2*l+1)
                   l_form = '('//l_type//'f12.7)'
                   WRITE (6,'(a20,i3)') 'n-matrix for atom # ',nType
-                  WRITE (6,l_form) ((den%mmpMat(k,j,i_hia,ispin),k=-l,l),j=-l,l)
+                  WRITE (6,l_form) ((n_mmp(k,j,i_hia,ispin),k=-l,l),j=-l,l)
                   WRITE (6,'(a20,i3)') 'V-matrix for atom # ',nType
                   IF (atoms%lda_u(i_hia)%l_amf) THEN
                      WRITE (6,*) 'using the around-mean-field limit '

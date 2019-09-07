@@ -519,13 +519,14 @@
                 END IF
              END IF
              IF (atoms%n_gf>0) THEN
-              IF(.NOT.input%tria.AND..NOT.input%film.AND..NOT.input%l_hist) THEN
-                !Calculate regular decomposition into tetrahedra (make_tetra doesnt seem to work for most meshes)
-                IF(kpts%nkptf.EQ.0) CALL gen_bz(kpts,sym)
-                CALL calc_tetra(kpts,cell,input,sym)
-              ENDIF
-              IF(input%film) THEN 
-                CALL calc_tria(kpts,cell,input,sym)
+              IF(.NOT.input%tria.AND..NOT.input%l_hist.AND.kpts%specificationType==2) THEN
+                IF(input%film) THEN
+                  CALL calc_tria(kpts,cell,input,sym)
+                ELSE
+                  !Calculate regular decomposition into tetrahedra (make_tetra doesnt seem to work for most meshes)
+                  IF(kpts%nkptf.EQ.0) CALL gen_bz(kpts,sym)
+                  CALL calc_tetra(kpts,cell,input,sym)
+                ENDIF
               ENDIF
              ENDIF
              ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))

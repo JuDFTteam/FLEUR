@@ -129,7 +129,7 @@ CONTAINS
       LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp,onsiteGF_loff,intersiteGF_loff,intersiteGF_lnn
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_occ(4),hub1_val(4,5),hub1_exc(4,3),hub1_mom(4,3), tempReal
-      REAL               :: ldau_phi(4),ldau_theta(4)
+      REAL               :: ldau_phi(4),ldau_theta(4), hub1_phi(4),hub1_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
       LOGICAL            :: l_amf(4), hub1_amf(4),l_found, j0_avgexc, j0_eDependence
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
@@ -1545,6 +1545,8 @@ CONTAINS
             hub1_l(i) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l'))
             hub1_u(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@U'))
             hub1_j(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@J'))
+            hub1_phi(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@phi'))
+            hub1_theta(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@theta'))
             hub1_amf(i) = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@l_amf'))
             hub1_occ(i)   = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/@init_occ'))
 
@@ -1607,6 +1609,8 @@ CONTAINS
                   atoms%lda_u(atoms%n_u+atoms%n_hia)%l        = hub1_l(i)
                   atoms%lda_u(atoms%n_u+atoms%n_hia)%u        = hub1_u(i)
                   atoms%lda_u(atoms%n_u+atoms%n_hia)%j        = hub1_j(i)
+                  atoms%lda_u(atoms%n_u+atoms%n_hia)%phi = hub1_phi(i)
+                  atoms%lda_u(atoms%n_u+atoms%n_hia)%theta = hub1_theta(i)
                   atoms%lda_u(atoms%n_u+atoms%n_hia)%l_amf    = hub1_amf(i)
                   atoms%lda_u(atoms%n_u+atoms%n_hia)%atomType = iType
                   hub1%init_occ(atoms%n_hia)          = hub1_occ(i)
