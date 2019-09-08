@@ -144,7 +144,7 @@
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
-      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
+      input%itmax = 15 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
       input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
       input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
@@ -360,7 +360,7 @@
 
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
-          cell%area = cell%omtil / vacuum%dvac
+          cell%area = ABS(cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1))
           kpts%nkpt = MAX(nint((3600/cell%area)/sym%nop2),1)
         ELSE
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)

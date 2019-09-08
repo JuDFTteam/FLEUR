@@ -318,8 +318,12 @@
           allocate(oper_o(num_bands,num_bands,num_kpts,num_compos) )
           oper_o=cmplx(0.0,0.0)
           endif
-          write(*,*)"before read(spn_in):nbnd,fullnkpts,fileidx=",nbnd,fullnkpts,fileidx 
-	  read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,fileidx)
+          write(*,*)"before read(spn_in):nbnd,fullnkpts,fileidx=",nbnd,fullnkpts,fileidx
+          if(.not.l_nocosoc  .and.  fileidx==1  )then
+            read(spn_in)oper_o(1:nbnd,1+nbnd:2*nbnd,1:fullnkpts,fileidx)
+          else
+	        read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,fileidx)
+	      endif
         endif
       else
         if(l_spinmat)then
