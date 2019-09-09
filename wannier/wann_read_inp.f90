@@ -123,6 +123,10 @@ subroutine wann_read_inp(input,l_p0,wann)
    wann%l_hsomtxvec_to_lmpzsoc_unf=.false.
    wann%l_hsomtxvec_to_lmpzsoc=.false.
    wann%l_hsomtxvec_unf_to_lmpzsoc=.false.
+   wann%l_hsomtx_unf_to_hsoc_unf=.false.
+   wann%l_hsomtx_to_hsoc_unf=.false.
+   wann%l_hsomtx_to_hsoc=.false.
+   wann%l_hsomtx_unf_to_hsoc=.false.
 
 !-----read the input file 'wann_inp'
    l_file=.false.
@@ -240,6 +244,14 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtxvec_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
             wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
+            wann%l_hsomtx_unf_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
+            wann%l_hsomtx_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc')then
+            wann%l_hsomtx_to_hsoc=.true.
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
+            wann%l_hsomtx_unf_to_hsoc=.true.
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatrs')then
@@ -505,6 +517,14 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtxvec_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
             wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
+            wann%l_hsomtx_unf_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
+            wann%l_hsomtx_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc')then
+            wann%l_hsomtx_to_hsoc=.true.
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
+            wann%l_hsomtx_unf_to_hsoc=.true.
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatrs')then
