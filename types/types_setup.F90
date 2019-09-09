@@ -574,6 +574,10 @@ MODULE m_types_setup
       LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf
       LOGICAL :: l_hsomtxvec_to_lmpzsoc
       LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc
+      LOGICAL :: l_hsomtx_unf_to_hsoc_unf
+      LOGICAL :: l_hsomtx_to_hsoc_unf
+      LOGICAL :: l_hsomtx_to_hsoc
+      LOGICAL :: l_hsomtx_unf_to_hsoc
       LOGICAL :: l_unformatted
       LOGICAL :: l_oc_f
       LOGICAL :: l_ndegen
