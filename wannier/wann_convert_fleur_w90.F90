@@ -27,11 +27,16 @@
       real :: s_real,s_img
       complex,parameter   :: ci=(0.0,1.0)
       integer :: dummy1,dummy2,dummy3
-      integer :: spin1,spin2,num_dims,ikpt,dir,ii,jj
+      integer :: spin1,spin2,spinmat_dims,ikpt,dir,ii,jj
       real :: conversionfactor
       real,parameter      :: hart=27.21138505
       integer :: jj_tmp,ii_tmp,j_tmp,i_tmp,dir_tmp,ikpt_tmp,test_tmp
       integer :: write_bands,firstband
+      integer :: map3(3)
+      
+      do ik=1,3
+         map3(ik)=ik
+      enddo   
 
       if(l_nocosoc)then
          jspins=1
@@ -64,6 +69,7 @@
       l_conjg=.false.
       l_spinmat=.false.
       l_paulimat=.false.
+      num_compos=3
       if(wann%l_mmn0_unf_to_spn_unf)then
          l_readunf=.true.
          readform='unformatted'
@@ -189,6 +195,8 @@
          filenameread(1)='updown.perpmag_unf'
          filenamewrite='WF1.tor'
          conversionfactor=hart
+         map3(1)=2
+         map3(2)=1
          if(l_nocosoc)then
             write_bands=num_bands1
          else
@@ -203,6 +211,8 @@
          filenameread(1)='updown.perpmag'
          filenamewrite='WF1.tor'
          conversionfactor=hart
+         map3(1)=2
+         map3(2)=1
          if(l_nocosoc)then
             write_bands=num_bands1
          else
@@ -217,6 +227,8 @@
          filenameread(1)='updown.perpmag'
          filenamewrite='WF1.tor'
          conversionfactor=hart
+         map3(1)=2
+         map3(2)=1
          if(l_nocosoc)then
             write_bands=num_bands1
          else
@@ -231,6 +243,8 @@
          filenameread(1)='updown.perpmag_unf'
          filenamewrite='WF1.tor'
          conversionfactor=hart
+         map3(1)=2
+         map3(2)=1
          if(l_nocosoc)then
             write_bands=num_bands1
          else
@@ -246,6 +260,7 @@
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
          l_conjg=.true.
+         spinmat_dims=3
          conversionfactor=hart         
 !         write_bands=num_bands1
          write_bands=num_bands
@@ -256,6 +271,7 @@
          l_writeunf=.true.
          writeform='unformatted'
          filestoread=1
+         spinmat_dims=3
          filenameread(1)='WF1.hsomtxvec'
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
@@ -273,6 +289,7 @@
          filenameread(1)='WF1.hsomtxvec'
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
+         spinmat_dims=3
          l_conjg=.true.
          conversionfactor=hart
 !         write_bands=num_bands1
@@ -287,16 +304,83 @@
          filenameread(1)='WF1.hsomtxvec_unf'
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
+         spinmat_dims=3
          l_conjg=.true.
          conversionfactor=hart
 !         write_bands=num_bands1
          write_bands=num_bands
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
+      elseif(wann%l_hsomtx_unf_to_hsoc_unf)then
+         l_readunf=.true.
+         readform='unformatted'
+         l_writeunf=.true.
+         writeform='unformatted'
+         filestoread=1
+         filenameread(1)='WF1.hsomtx_unf'
+         filenamewrite='WF1.hsoc'
+         l_spinmat=.true.
+         num_compos=1
+           spinmat_dims=1
+         l_conjg=.true.
+         conversionfactor=hart         
+!         write_bands=num_bands1
+         write_bands=num_bands
+         if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtx')      
+      elseif(wann%l_hsomtx_to_hsoc_unf)then
+         l_readunf=.false.
+         readform='formatted'
+         l_writeunf=.true.
+         writeform='unformatted'
+         filestoread=1
+         filenameread(1)='WF1.hsomtx'
+         filenamewrite='WF1.hsoc'
+         l_spinmat=.true.
+         num_compos=1
+           spinmat_dims=1
+         l_conjg=.true.
+         conversionfactor=hart
+!         write_bands=num_bands1
+         write_bands=num_bands
+         if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtx')   
+      elseif(wann%l_hsomtx_to_hsoc)then
+         l_readunf=.false.
+         readform='formatted'
+         l_writeunf=.false.
+         writeform='formatted'
+         filestoread=1
+         filenameread(1)='WF1.hsomtx'
+         filenamewrite='WF1.hsoc'
+         l_spinmat=.true.
+         num_compos=1
+           spinmat_dims=1
+         l_conjg=.true.
+         conversionfactor=hart
+!         write_bands=num_bands1
+         write_bands=num_bands
+         if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtx')   
+      elseif(wann%l_hsomtx_unf_to_hsoc)then
+         l_readunf=.true.
+         readform='unformatted'
+         l_writeunf=.false.
+         writeform='formatted'
+         filestoread=1
+         num_compos=1
+         filenameread(1)='WF1.hsomtx_unf'
+         filenamewrite='WF1.hsoc'
+         l_spinmat=.true.
+           spinmat_dims=1
+         l_conjg=.true.
+         conversionfactor=hart
+!         write_bands=num_bands1
+         write_bands=num_bands
+         if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtx')  
+         
+         
       endif   
 
 !---- read data in fleur-format
       spn_in=916
-      num_compos=3
+    
       do fileidx=1,filestoread
          write(*,*)"fileidx=",fileidx
          write(*,*)"filenameread(fileidx)=",filenameread(fileidx)
@@ -304,8 +388,8 @@
       if(l_readunf)then
          header=trim(filenameread(fileidx))
         if(l_spinmat)then
-           num_dims=3
-           allocate( matrix6(2,2,num_bands1,num_bands1,3,num_kpts) )
+           
+           allocate( matrix6(2,2,num_bands1,num_bands1,spinmat_dims,num_kpts) )
            do nkp=1,num_kpts
                read(spn_in)matrix6(:,:,:,:,:,nkp)
            enddo 
@@ -329,13 +413,13 @@
         if(l_spinmat)then
            spin1=2
            spin2=2
-           num_dims=3
+           
 !          num_bands=nbnd
-           allocate( matrix6(2,2,num_bands,num_bands,3,num_kpts) )
+           allocate( matrix6(2,2,num_bands,num_bands,spinmat_dims,num_kpts) )
            num_bands1=nbnd
            num_bands2=nbnd
            do ikpt=1,num_kpts
-            do dir=1,num_dims  
+            do dir=1,spinmat_dims  
              do i = 1,num_bands2
               do j = 1,num_bands1
                do ii=1,spin1
@@ -400,12 +484,12 @@
 !         num_bands=2*num_bands
 !         write(*,*)"num_bands1,num_bands2,num_bands=",num_bands1,
 !     &                   num_bands2,num_bands
-         allocate( oper_o(num_bands,num_bands,num_kpts,3) )
+         allocate( oper_o(num_bands,num_bands,num_kpts,spinmat_dims) )
          if(.false.)then
 !   Old variant with num_bands1==num_bands2:
            if(num_bands1.ne.num_bands2) call juDFT_error('convert: num_bands1.ne.num_bands2')
            do ikpt=1,fullnkpts
-            do dir=1,num_dims  
+            do dir=1,spinmat_dims  
              do i = 1,num_bands2
               do j = 1,num_bands2
                do ii=1,spin1
@@ -421,9 +505,9 @@
           if(num_bands1.ne.num_bands2) call juDFT_error('convert: num_bands1.ne.num_bands2')
 
 
-          write(*,*)"before first loop, fullnkpts,num_dims,num_bands1=",num_kpts,num_dims,num_bands1
+          write(*,*)"before first loop, fullnkpts,num_dims,num_bands1=",num_kpts,spinmat_dims,num_bands1
            do ikpt=1,num_kpts
-            do dir=1,num_dims  
+            do dir=1,spinmat_dims  
 
              do i = 1,num_bands1
               do j = 1,num_bands1
@@ -550,7 +634,7 @@
             do n = 1, m
               counter = counter + 1
               do compo=1,num_compos
-                oper_temp(compo, counter)=oper_o(n, m, ik, compo)
+                oper_temp(compo, counter)=oper_o(n, m, ik, map3(compo))
 !              oper_o(n, m, ik, compo) = oper_temp(compo, counter)
 !              oper_o(m, n, ik, compo) = conjg(oper_temp(compo, counter))
               enddo !compo
@@ -570,8 +654,8 @@
           do m = 1, write_bands
             do n = 1, m
               do compo=1,num_compos
-                  s_real=real(oper_o(n, m, ik, compo))*conversionfactor
-                  s_img=imag(oper_o(n, m, ik, compo))*conversionfactor
+                  s_real=real(oper_o(n, m, ik, map3(compo)))*conversionfactor
+                  s_img=imag(oper_o(n, m, ik, map3(compo)))*conversionfactor
                   write (spn_in, *) s_real, s_img   !,compo,n, m, ik 
 !               oper_o(n, m, ik, compo) = cmplx(s_real, s_img, dp)
               ! Read upper-triangular part, now build the rest
