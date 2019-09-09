@@ -59,14 +59,14 @@ CONTAINS
        l = u_in(i_u)%l
        u_htr = u_in(i_u)%u / hartree_to_ev_const
        j_htr = u_in(i_u)%j / hartree_to_ev_const
-       u_htr = f0(i_u)/hartree_to_ev_const
-       IF (l.EQ.1) THEN
-          j_htr = f2(i_u)/(5*hartree_to_ev_const)
-       ELSE IF (l.EQ.2) THEN
-          j_htr = 1.625*f2(i_u)/(14*hartree_to_ev_const)
-       ELSE IF (l.EQ.3) THEN
-          j_htr = (286.+195*451/675+250*1001/2025)*f2(i_u)/(6435*hartree_to_ev_const)
-       END IF
+       !u_htr = f0(i_u)/hartree_to_ev_const
+       !IF (l.EQ.1) THEN
+       !   j_htr = f2(i_u)/(5*hartree_to_ev_const)
+       !ELSE IF (l.EQ.2) THEN
+       !   j_htr = 1.625*f2(i_u)/(14*hartree_to_ev_const)
+       !ELSE IF (l.EQ.3) THEN
+       !   j_htr = (286.+195*451/675+250*1001/2025)*f2(i_u)/(6435*hartree_to_ev_const)
+       !END IF
        !
        ! calculate spin-density 'rho_sig' and total density 'rho_tot'
        !
@@ -83,17 +83,15 @@ CONTAINS
          rho_sig(1)      = rho_tot/jspins
          rho_sig(jspins) = rho_tot/jspins
        ENDIF
-       IF (u_in(i_u)%l_amf) THEN
+       IF(u_in(i_u)%l_amf) THEN
           eta(1) = rho_sig(1) / (2*l + 1) 
-          eta(jspins) = rho_sig(jspins) / (2*l + 1) 
+          eta(jspins) = rho_sig(jspins) / (2*l + 1)
           eta(0) = (eta(1) + eta(jspins) ) / 2
-          !In comparison to mudc.f90 there seems to be a missing factor 2 if we use the averaged double counting
-          eta = 2*eta
        ELSE
-          eta(0) = 1.0
-          eta(1) = 1.0
-          eta(jspins) = 1.0
-       END IF
+          eta(0) = 0.5
+          eta(1) = 0.5
+          eta(jspins) = 0.5
+       ENDIF
 
        !
        !--------------------------------------------------------------------------------------------+
@@ -147,7 +145,7 @@ CONTAINS
        !  set diagonal terms and correct for non-spin-polarised case
        !
        DO ispin = 1,jspins
-          v_diag(ispin) = - u_htr * ( rho_tot - 0.5*eta(0) ) + j_htr * ( rho_sig(ispin) - 0.5*eta(ispin) )
+          v_diag(ispin) = - u_htr * ( rho_tot - eta(ispin) ) + j_htr * ( rho_sig(ispin) - eta(ispin) )
           DO m = -l,l
              DO mp = -l,l
                 vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) * spin_deg
@@ -185,7 +183,7 @@ CONTAINS
        DO ispin = 1,jspins
           ns_sum = ns_sum + rho_sig(ispin) * (rho_sig(ispin) - eta(ispin))
        END DO
-       e_dc = u_htr * rho_tot * ( rho_tot - eta(0) ) - j_htr * ns_sum
+       e_dc = u_htr * rho_tot * ( rho_tot - 2*eta(0) ) - j_htr * ns_sum
        e_dcc = (u_htr - j_htr) * rho_tot
 
        ns_sum = ns_sum / spin_deg

@@ -49,7 +49,6 @@ MODULE m_j0
             exc_split = 0.0
             DO l = l_min, l_max
                i_gf = ind_greensf(atoms,l,nType)
-               int_com = 0.0
                !-------------------------------------------------
                ! Evaluate center of mass of the bands in question
                ! and tkae the differrence between spin up/down
@@ -58,6 +57,7 @@ MODULE m_j0
                ! E_COM = 1/(int dE N_l(E)) * int dE E * N_l(E)
                !-------------------------------------------------
                DO ispin = 1, input%jspins
+                  int_com = 0.0
                   n_cut = g0Coeffs%kkintgr_cutoff(i_gf,ispin,2)
                   DO ie = 1, n_cut
                      DO m = -l, l
