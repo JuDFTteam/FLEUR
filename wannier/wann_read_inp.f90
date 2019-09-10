@@ -53,6 +53,7 @@ subroutine wann_read_inp(input,l_p0,wann)
    wann%l_perpmagatrs=.false.
    wann%l_socmatrs=.false.
    wann%l_socmat=.false.
+   wann%l_socmatvec=.false.
    wann%l_soctomom=.false.
    wann%l_kptsreduc2=.false.
    wann%l_nablars=.false.
@@ -254,6 +255,8 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtx_unf_to_hsoc=.true.
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
+         elseif(trim(task).eq.'socmatvec')then
+            wann%l_socmatvec=.true.  
          elseif(trim(task).eq.'socmatrs')then
             wann%l_socmatrs=.true.
          elseif(trim(task).eq.'soctomom')then
@@ -527,6 +530,8 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtx_unf_to_hsoc=.true.
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
+         elseif(trim(task).eq.'socmatvec')then
+            wann%l_socmatvec=.true.
          elseif(trim(task).eq.'socmatrs')then
             wann%l_socmatrs=.true.
          elseif(trim(task).eq.'soctomom')then
