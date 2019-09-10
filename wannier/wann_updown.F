@@ -52,6 +52,7 @@ c****************************************************************************
       use m_wann_socmat
       use m_wann_write_hsomtx
       use m_wann_write_nabla
+      use m_wann_write_matrix6
       use m_wann_write_amn
       use m_wann_write_nabla
       use m_wann_mmkb_int
@@ -168,6 +169,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 !!! the Mmn matrices
       complex, allocatable :: surfcurr(:,:,:,:)
       complex, allocatable :: hsomtx(:,:,:,:,:),hsomtx_l(:,:,:,:)
+      complex, allocatable :: hsomtxvec(:,:,:,:,:,:)
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)
       complex, allocatable :: perpmag(:,:,:)
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
@@ -494,6 +496,11 @@ c##################################################################
       if(wann%l_socmat)then
          allocate ( hsomtx(2,2,nbnd,nbnd,fullnkpts) )
          allocate ( hsomtx_l(nbnd,nbnd,2,2) )
+      endif
+
+      if(wann%l_socmatvec)then
+         allocate ( hsomtxvec(2,2,nbnd,nbnd,3,fullnkpts) )
+         hsomtxvec=0.0
       endif
 
       write (*,*) 'nwfs=',nwfs
@@ -1107,6 +1114,15 @@ c******************************************************
      >      2,2,nbnd,nbnd,fullnkpts,
      >      irank,isize,
      <      hsomtx)
+      endif
+      
+      if(wann%l_socmatvec)then
+        call wann_write_matrix6(
+     >      mpi_comm,l_p0,'WF1.hsomtxvec',
+     >      'Vectors for spin-orbit coupling',
+     >      2,2,nbnd,nbnd,3,fullnkpts,
+     >      irank,isize,wann%l_unformatted,
+     <      hsomtxvec)
       endif
 
       if(wann%l_mmn0)then
