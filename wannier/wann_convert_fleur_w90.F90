@@ -486,6 +486,21 @@
         else   
           if(num_bands1.ne.num_bands2) call juDFT_error('convert: num_bands1.ne.num_bands2')
 
+          if(l_nocosoc)then !compute the full SOC-matrix
+           do ikpt=1,num_kpts
+            do dir=1,spinmat_dims   
+             do i = 1,num_bands1
+              do j = 1,num_bands1
+                 oper_o(j,i,ikpt,dir)=matrix6(1,1,j,i,dir,ikpt)+ &
+                                    matrix6(1,2,j,i,dir,ikpt)+ &
+                                    matrix6(2,1,j,i,dir,ikpt)+ &
+                                    matrix6(2,2,j,i,dir,ikpt)
+              enddo !j
+             enddo !i
+            enddo !dir
+           enddo !ikpt
+          else !rewrite the SOC-matrix for the purpose of socinterpol
+
 
           write(*,*)"before first loop, fullnkpts,num_dims,num_bands1=",num_kpts,spinmat_dims,num_bands1
            do ikpt=1,num_kpts
@@ -518,7 +533,7 @@
 
             enddo !dir 
            enddo !ikpt
-
+          endif !nocosoc?
         endif   
 
 !        write(*,*)"oper_o=",oper_o(2,1,1,2)
