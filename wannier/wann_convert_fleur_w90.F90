@@ -424,11 +424,17 @@
               do j = 1,num_bands1
                do ii=1,spin1
                 do jj=1,spin2
+                 if(spinmat_dims==3)then
        read (spn_in,'(6i5,3x,2f18.12)') jj_tmp,ii_tmp,j_tmp,i_tmp,dir_tmp,ikpt_tmp,   a,    b
                 test_tmp=abs(jj_tmp-jj)+abs(ii_tmp-ii)+abs(j_tmp-j)+abs(i_tmp-i)+abs(dir_tmp-dir)+abs(ikpt_tmp-ikpt)
                   if(test_tmp.ne.0)call juDFT_error('convert: test_tmp')
-                  matrix6(jj,ii,j,i,dir,ikpt) = cmplx(a,b)                 
-
+                  matrix6(jj,ii,j,i,dir,ikpt) = cmplx(a,b)
+                 else
+                 read (spn_in,'(5i5,3x,2f18.12)') jj_tmp,ii_tmp,j_tmp,i_tmp,ikpt_tmp,   a,    b
+                test_tmp=abs(jj_tmp-jj)+abs(ii_tmp-ii)+abs(j_tmp-j)+abs(i_tmp-i)+abs(ikpt_tmp-ikpt)
+                  if(test_tmp.ne.0)call juDFT_error('convert: test_tmp')
+                  matrix6(jj,ii,j,i,dir,ikpt) = cmplx(a,b)
+                 endif
                 enddo !jj 
                enddo !ii
               enddo !j
