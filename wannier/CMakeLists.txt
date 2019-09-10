@@ -84,6 +84,7 @@ wannier/wann_write_amn.F
 wannier/wann_write_hsomtx.F
 wannier/wann_write_matrix4.F
 wannier/wann_write_matrix5.F
+wannier/wann_write_matrix6.F
 wannier/wann_write_mmnk2.F
 wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
