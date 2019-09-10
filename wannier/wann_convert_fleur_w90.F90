@@ -436,6 +436,7 @@
 
            if(.not.allocated(oper_o))then
            allocate(oper_o(num_bands,num_bands,num_kpts,num_compos) )
+           oper_o=cmplx(0.0,0.0)
            endif
            
 
