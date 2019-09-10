@@ -10,7 +10,7 @@
      >               mpi_comm,l_p0,filename,title,
      >               num_bands1,num_bands2,
      >               num_dims1,num_dims2,fullnkpts,
-     >               irank,isize,
+     >               irank,isize,l_unformatted,
      <               matrix5)
 c*************************************************************
 c     This subroutine is used to write several matrices to 
@@ -35,6 +35,7 @@ c*************************************************************
       integer, intent(in)    :: fullnkpts
 
       integer, intent(in)    :: irank,isize
+      logical, intent(in)    :: l_unformatted
 
       complex, intent(inout) :: matrix5(:,:,:,:,:)
 
@@ -83,9 +84,18 @@ c**********************************************************
       write(6,*)"wann_write_matrix5"
 
       if(l_p0)then
+       if(l_unformatted)then
+	    open(305,file=trim(filename)//'_unf',form='unformatted')
+        write(305)num_dims1,num_dims2,num_bands1,
+     &               num_bands2,fullnkpts
+        do ikpt=1,fullnkpts
+	      write(305)matrix5(:,:,:,:,ikpt)
+        enddo
+       else
        open (305,file=filename)
        write (305,*)title
-       write (305,'(3i5)') num_bands1,num_bands1,fullnkpts
+       write (305,'(5i5)') num_dims1,num_dims2,num_bands1,
+     & num_bands2,fullnkpts
        do ikpt=1,fullnkpts
         do i = 1,num_bands2
          do j = 1,num_bands1
@@ -99,6 +109,7 @@ c**********************************************************
          enddo !j
         enddo !i
        enddo !ikpt
+       endif
        close(305)
       endif
 
