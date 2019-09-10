@@ -111,6 +111,11 @@ CONTAINS
        wann%l_perpmag_to_tor.or. &
        wann%l_perpmag_unf_to_tor.or. &
 
+      wann%l_hsomtx_unf_to_hsoc_unf.or. &
+      wann%l_hsomtx_to_hsoc_unf.or. &
+      wann%l_hsomtx_to_hsoc.or. &
+      wann%l_hsomtx_unf_to_hsoc .or.&
+
       wann%l_hsomtxvec_unf_to_lmpzsoc_unf.or. &
       wann%l_hsomtxvec_to_lmpzsoc_unf.or. &
       wann%l_hsomtxvec_to_lmpzsoc.or. &
