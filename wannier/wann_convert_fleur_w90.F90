@@ -26,7 +26,7 @@
       real :: a,b
       real :: s_real,s_img
       complex,parameter   :: ci=(0.0,1.0)
-      integer :: dummy1,dummy2,dummy3
+      integer :: dummy1,dummy2,dummy3,dummy4,dummy5,dummy6
       integer :: spin1,spin2,spinmat_dims,ikpt,dir,ii,jj
       real :: conversionfactor
       real,parameter      :: hart=27.21138505
@@ -390,8 +390,15 @@
         if(l_spinmat)then
            
            allocate( matrix6(2,2,num_bands1,num_bands1,spinmat_dims,num_kpts) )
+           
+           if(spinmat_dims==1)then
+            read(spn_in)dummy1,dummy2,dummy3,dummy4,dummy5
+           else
+            read(spn_in)dummy1,dummy2,dummy3,dummy4,dummy5,dummy6
+           endif
+           
            do nkp=1,num_kpts
-               read(spn_in)matrix6(:,:,:,:,:,nkp)
+            read(spn_in)matrix6(:,:,:,:,:,nkp)
            enddo 
         else
 	  read(spn_in)nbnd,fullnkpts,nwfs
@@ -418,6 +425,8 @@
            allocate( matrix6(2,2,num_bands,num_bands,spinmat_dims,num_kpts) )
            num_bands1=nbnd
            num_bands2=nbnd
+           read(spn_in,*)header
+           read(spn_in,*)
            do ikpt=1,num_kpts
             do dir=1,spinmat_dims  
              do i = 1,num_bands2
