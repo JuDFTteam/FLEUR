@@ -573,17 +573,17 @@
 !                write(*,*)"i,oper_o=",i,oper_o(i,i,nkp,3)
 !             enddo !i
 
-             do i=1,num_bands1
-              do j=1,num_bands1
-                 oper_o(j,i+num_bands1,nkp,1)=oper_o(j,i,nkp,1)
-              enddo   
-             enddo
+!             do i=1,num_bands1
+!              do j=1,num_bands1
+!                 oper_o(j,i+num_bands1,nkp,1)=oper_o(j,i,nkp,1)
+!              enddo   
+!             enddo
 
-             do i=1,num_bands1
-              do j=1,num_bands1
-                 oper_o(j,i,nkp,1)=cmplx(0.0,0.0)
-              enddo   
-             enddo
+!             do i=1,num_bands1
+!              do j=1,num_bands1
+!                 oper_o(j,i,nkp,1)=cmplx(0.0,0.0)
+!              enddo   
+!             enddo
 
             endif  
          endif
