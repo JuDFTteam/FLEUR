@@ -56,20 +56,26 @@
       num_bands1=wann%band_max(1)-wann%band_min(1)+1
       num_bands2=wann%band_max(2)-wann%band_min(2)+1
 
-      num_bands=num_bands1+num_bands2
+      if(l_nocosoc)then
+        num_bands=num_bands1
+      else  !assume that we use socinterpol
+         num_bands=num_bands1+num_bands2
+      endif   
+
 
       if(nbnd.ne.num_bands1) then
         write(*,*)"num_bands1=",num_bands1
         write(*,*)"nbnd=",nbnd
         call juDFT_error('discrepancy convert fleur_w90')
       endif   
+      
+      ! Defaults
       filestoread=1
-
-
       l_conjg=.false.
       l_spinmat=.false.
       l_paulimat=.false.
       num_compos=3
+      write_bands=num_bands
       if(wann%l_mmn0_unf_to_spn_unf)then
          l_readunf=.true.
          readform='unformatted'
@@ -88,11 +94,7 @@
          l_conjg=.true.
          conversionfactor=1.0
          l_paulimat=.true.
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         
       elseif(wann%l_mmn0_to_spn_unf)then
          l_readunf=.false.
          readform='formatted'
@@ -111,11 +113,7 @@
          l_conjg=.true.
          conversionfactor=1.0
          l_paulimat=.true.
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         
       elseif(wann%l_mmn0_to_spn)then
          l_readunf=.false.
          readform='formatted'
@@ -135,11 +133,7 @@
          conversionfactor=1.0
          l_paulimat=.true.
 
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+        
       elseif(wann%l_mmn0_to_spn2)then ! when socinterpolation is used
          l_readunf=.false.
          readform='formatted'
@@ -181,11 +175,7 @@
          conversionfactor=1.0
          l_paulimat=.true.
 
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+        
       elseif(wann%l_perpmag_unf_to_tor_unf)then
          l_readunf=.true.
          readform='unformatted'
@@ -197,11 +187,7 @@
          conversionfactor=hart
          map3(1)=2
          map3(2)=1
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+        
       elseif(wann%l_perpmag_to_tor_unf)then
          l_readunf=.false.
          readform='formatted'
@@ -213,11 +199,7 @@
          conversionfactor=hart
          map3(1)=2
          map3(2)=1
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+        
       elseif(wann%l_perpmag_to_tor)then
          l_readunf=.false.
          readform='formatted'
@@ -229,11 +211,7 @@
          conversionfactor=hart
          map3(1)=2
          map3(2)=1
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         
       elseif(wann%l_perpmag_unf_to_tor)then
          l_readunf=.true.
          readform='unformatted'
@@ -245,11 +223,7 @@
          conversionfactor=hart
          map3(1)=2
          map3(2)=1
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+        
       elseif(wann%l_hsomtxvec_unf_to_lmpzsoc_unf)then
          l_readunf=.true.
          readform='unformatted'
@@ -263,7 +237,7 @@
          spinmat_dims=3
          conversionfactor=hart         
 !         write_bands=num_bands1
-         write_bands=num_bands
+         
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')      
       elseif(wann%l_hsomtxvec_to_lmpzsoc_unf)then
          l_readunf=.false.
@@ -278,7 +252,7 @@
          l_conjg=.true.
          conversionfactor=hart
 !         write_bands=num_bands1
-         write_bands=num_bands
+        
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
       elseif(wann%l_hsomtxvec_to_lmpzsoc)then
          l_readunf=.false.
@@ -293,7 +267,7 @@
          l_conjg=.true.
          conversionfactor=hart
 !         write_bands=num_bands1
-         write_bands=num_bands
+        
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
       elseif(wann%l_hsomtxvec_unf_to_lmpzsoc)then
          l_readunf=.true.
@@ -308,7 +282,7 @@
          l_conjg=.true.
          conversionfactor=hart
 !         write_bands=num_bands1
-         write_bands=num_bands
+        
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
       elseif(wann%l_hsomtx_unf_to_hsoc_unf)then
          l_readunf=.true.
@@ -323,9 +297,8 @@
            spinmat_dims=1
          l_conjg=.true.
          conversionfactor=hart         
-!         write_bands=num_bands1
-         write_bands=num_bands
-         if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtx')      
+!       
+            
       elseif(wann%l_hsomtx_to_hsoc_unf)then
          l_readunf=.false.
          readform='formatted'
@@ -339,9 +312,7 @@
            spinmat_dims=1
          l_conjg=.true.
          conversionfactor=hart
-!         write_bands=num_bands1
-         write_bands=num_bands
-         if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtx')   
+!         
       elseif(wann%l_hsomtx_to_hsoc)then
          l_readunf=.false.
          readform='formatted'
@@ -355,9 +326,7 @@
            spinmat_dims=1
          l_conjg=.true.
          conversionfactor=hart
-!         write_bands=num_bands1
-         write_bands=num_bands
-         if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtx')   
+!       
       elseif(wann%l_hsomtx_unf_to_hsoc)then
          l_readunf=.true.
          readform='unformatted'
@@ -371,9 +340,7 @@
            spinmat_dims=1
          l_conjg=.true.
          conversionfactor=hart
-!         write_bands=num_bands1
-         write_bands=num_bands
-         if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtx')  
+!       
          
          
       endif   
