@@ -50,7 +50,7 @@ c****************************************************************************
       use m_wann_radovlp_integrals
       use m_matmul,only : matmul3,matmul3r
       use m_wann_socmat
-      use m_wann_write_hsomtx
+      use m_wann_write_matrix5
       use m_wann_write_nabla
       use m_wann_write_matrix6
       use m_wann_write_amn
@@ -1108,12 +1108,21 @@ c******************************************************
       endif
 
       if(wann%l_socmat)then
-        call wann_write_hsomtx(
+!        call wann_write_hsomtx(
+!     >      mpi_comm,l_p0,'WF1.hsomtx',
+!     >      'Matrix elements of spin-orbit coupling',
+!     >      2,2,nbnd,nbnd,fullnkpts,
+!     >      irank,isize,
+!     <      hsomtx)
+     
+        call wann_write_matrix5(
      >      mpi_comm,l_p0,'WF1.hsomtx',
      >      'Matrix elements of spin-orbit coupling',
-     >      2,2,nbnd,nbnd,fullnkpts,
-     >      irank,isize,
+     >      nbnd,nbnd,2,2,fullnkpts,
+     >      irank,isize,wann%l_unformatted,
      <      hsomtx)
+     
+     
       endif
       
       if(wann%l_socmatvec)then
