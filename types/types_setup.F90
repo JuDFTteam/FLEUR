@@ -611,6 +611,7 @@ MODULE m_types_setup
       LOGICAL :: l_socmatrs
       LOGICAL :: l_socmat
       LOGICAL :: l_socmatvec
+      LOGICAL :: l_socmatvecrs
       LOGICAL :: l_soctomom
       LOGICAL :: l_kptsreduc2
       LOGICAL :: l_nablapaulirs
