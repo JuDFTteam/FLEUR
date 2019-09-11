@@ -673,15 +673,20 @@ c****************************************************************
          allocate( ubeffdg(0:lmd,0:lmd,1:ntype) )
          allocate( dbeffug(0:lmd,0:lmd,1:ntype) )
          allocate( dbeffdg(0:lmd,0:lmd,1:ntype) )
-         allocate( ubeffulog(0:lmd,0:15,1:ntype) )
-         allocate( dbeffulog(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffug(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffdg(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffulog(0:15,0:15,1:ntype) )
+         
+         allocate( ubeffulog(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( dbeffulog(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffug(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffdg(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffulog(1:nlod,-llod:llod,
+     &                         1:nlod,-llod:llod,1:ntype) )
+         
+         
          call wann_gabeffgagaunt(
+     >            wann%l_perpmagatlres,wann%perpmagl,
      >            neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
-     >            nlod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
+     >            nlod,llod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
      >            lmaxd,lmd,clnu,
      <            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      <            dbeffulog,
@@ -892,12 +897,12 @@ c...for the lapws and local orbitals, summed by the basis functions
          call wann_perpmag(
      >            nslibd,neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
-     >            nlod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
+     >            nlod,llod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
      >            lmaxd,lmd,clnu,
      >            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      >            dbeffulog,
      >            ulobeffug,ulobeffdg,ulobeffulog,
-     >            acof,bcof,
+     >            acof,bcof,ccof,
      <            perpmag(:,:,ikpt))
       endif   
 
