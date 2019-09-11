@@ -490,7 +490,7 @@ MODULE m_types_greensf
          ENDIF
 
          !Find the index i_gf corresponding to l,lp,nType,nTypep
-         i_gf = ind_greensf(atoms,l,nType,lp,nTypep)
+         i_gf = ind_greensf(atoms,l,nType,lp=lp,nTypep=nTypep)
          ipm = MERGE(2,1,l_conjg)
 
          ispin_end = MERGE(3,input%jspins,input%l_gfmperp)

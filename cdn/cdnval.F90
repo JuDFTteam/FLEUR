@@ -103,7 +103,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    REAL,ALLOCATABLE :: we(:),eig(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-   COMPLEX, ALLOCATABLE :: resWeights(:,:)
+   REAL,    ALLOCATABLE :: resWeights(:,:)
    REAL,    ALLOCATABLE :: dosWeights(:,:)
    INTEGER, ALLOCATABLE :: dosBound(:,:)
 
@@ -140,7 +140,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
    ALLOCATE(dosWeights(greensfCoeffs%ne,dimension%neigd))
    ALLOCATE(dosBound(dimension%neigd,2))
-   ALLOCATE(resWeights(greensf%nz,dimension%neigd))
+   ALLOCATE(resWeights(greensfCoeffs%ne,dimension%neigd))
 
 
    ! Initializations
@@ -235,7 +235,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
          CALL timestart("TetrahedronWeights")
          CALL tetrahedronInit(ikpt,kpts,input,SIZE(ev_list),results%eig(ev_list,:,jsp),&
-                              greensfCoeffs,results%ef,greensf%e,greensf%nz,resWeights,dosWeights,dosBound)
+         greensfCoeffs,results%ef,resWeights,dosWeights,dosBound)
          CALL timestop("TetrahedronWeights")
       ENDIF
       DO ispin = jsp_start, jsp_end
@@ -245,7 +245,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,jspin))
 
-         IF (atoms%n_gf.GT.0) CALL bzIntegrationGF(atoms,sym,input,angle,ispin,noccbd,resWeights,dosWeights,dosBound,kpts%wtkpt(ikpt),&
+         IF (atoms%n_gf.GT.0) CALL bzIntegrationGF(atoms,sym,input,angle,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
                                                    eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensf,greensfCoeffs,ispin==jsp_end)
 
          ! perform Brillouin zone integration and summation over the

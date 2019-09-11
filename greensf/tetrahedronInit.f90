@@ -2,7 +2,7 @@ MODULE m_tetrahedronInit
 
    CONTAINS
 
-   SUBROUTINE tetrahedronInit(ikpt,kpts,input,neig,eig,gCoeffs,ef,ez,nz,resWeights,dosWeights,boundInd)
+   SUBROUTINE tetrahedronInit(ikpt,kpts,input,neig,eig,gCoeffs,ef,resWeights,dosWeights,boundInd)
 
       !This Subroutine sets up the weights for the brillouin zone integration using
       !the tetrahedron method for the greens function calculations
@@ -23,13 +23,12 @@ MODULE m_tetrahedronInit
       INTEGER,                INTENT(IN)  :: ikpt !Current k-point
       TYPE(t_kpts),           INTENT(IN)  :: kpts 
       TYPE(t_input),          INTENT(IN)  :: input
-      INTEGER,                INTENT(IN)  :: neig, nz
+      INTEGER,                INTENT(IN)  :: neig
       REAL,                   INTENT(IN)  :: eig(neig,kpts%nkpt)
       TYPE(t_greensfCoeffs),  INTENT(IN)  :: gCoeffs
       REAL,                   INTENT(IN)  :: ef
-      COMPLEX,                INTENT(IN)  :: ez(nz)
 
-      COMPLEX,                INTENT(INOUT) :: resWeights(nz,neig)
+      REAL,                   INTENT(INOUT) :: resWeights(gCoeffs%ne,neig)
       REAL,                   INTENT(INOUT) :: dosWeights(gCoeffs%ne,neig)
       INTEGER,                INTENT(INOUT) :: boundInd(neig,2) !Indices in between which the weights are non zero 
                                                                 !to save computation time
@@ -46,9 +45,14 @@ MODULE m_tetrahedronInit
          CALL dosWeightsCalcTria(ikpt,kpts,neig,eig,gCoeffs,ef,dosWeights,boundInd)
       ELSE
          IF(input%l_resolvent) THEN
-            CALL resWeightsCalc(ikpt,kpts,neig,eig,ez,nz,resWeights,boundInd)
+            CALL resWeightsCalc(ikpt,kpts,neig,eig,gCoeffs,resWeights,boundInd)
          ENDIF
          CALL dosWeightsCalc(ikpt,kpts,neig,eig,gCoeffs,ef,dosWeights,boundInd)
+      ENDIF
+
+      IF(input%l_resolvent) THEN
+         boundInd(1:neig,1) = 1
+         boundInd(1:neig,2) = gCoeffs%ne
       ENDIF
 
    END SUBROUTINE tetrahedronInit

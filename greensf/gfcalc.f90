@@ -12,7 +12,7 @@ MODULE m_gfcalc
 
    CONTAINS
 
-   SUBROUTINE bzIntegrationGF(atoms,sym,input,angle,ispin,nbands,resWeights,dosWeights,indBound,wtkpt,eig,denCoeffsOffdiag,&
+   SUBROUTINE bzIntegrationGF(atoms,sym,input,angle,ispin,nbands,dosWeights,resWeights,indBound,wtkpt,eig,denCoeffsOffdiag,&
                               usdus,eigVecCoeffs,greensf,greensfCoeffs,l21)
 
       USE m_greensfImag
@@ -40,30 +40,27 @@ MODULE m_gfcalc
       LOGICAL,                   INTENT(IN)    :: l21    !Calculate spin off-diagonal part ?
 
       !-Array Arguments
-      COMPLEX,                   INTENT(IN)    :: resWeights(greensf%nz,nbands)
+      REAL,                      INTENT(IN)    :: resWeights(greensfCoeffs%ne,nbands)
       REAL,                      INTENT(IN)    :: dosWeights(greensfCoeffs%ne,nbands) !Precalculated tetrahedron weights for the current k-point
       INTEGER,                   INTENT(IN)    :: indBound(nbands,2)                  !Gives the range where the tetrahedron weights are non-zero
       REAL,                      INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
       REAL,                      INTENT(IN)    :: angle(sym%nop)                      !Phases for spin-offdiagonal part
       
-
-      IF(input%l_resolvent) THEN
+      !IF(input%l_resolvent) THEN
          !Calculate greens function directly
-         CALL timestart("Greens Function: Resolvent")
-         CALL greensfRes(atoms,sym,input,ispin,nbands,resWeights,indBound,wtkpt,eig,usdus,eigVecCoeffs,greensf)
-         IF(input%l_gfmperp.AND.l21) THEN
-            CALL greensfRes21(atoms,sym,angle,input,nbands,resWeights,indBound,wtkpt,eig,denCoeffsOffdiag,eigVecCoeffs,greensf)
-         ENDIF
-         CALL timestop("Greens Function: Resolvent")
+      !   CALL timestart("Greens Function: Resolvent")
+      !   CALL greensfRes(atoms,sym,input,ispin,nbands,resWeights,indBound,wtkpt,eig,usdus,eigVecCoeffs,greensf)
+      !   IF(input%l_gfmperp.AND.l21) THEN
+      !      CALL greensfRes21(atoms,sym,angle,input,nbands,resWeights,indBound,wtkpt,eig,denCoeffsOffdiag,eigVecCoeffs,greensf)
+      !   ENDIF
+      !   CALL timestop("Greens Function: Resolvent")
+      !ENDIF
+      CALL timestart("Greens Function: Imaginary Part")
+      CALL greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,indBound,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
+      IF(input%l_gfmperp.AND.l21) THEN
+         CALL greensfImag21(atoms,sym,angle,input,nbands,dosWeights,resWeights,indBound,wtkpt,eig,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
       ENDIF
-      IF(.NOT.input%l_resolvent.OR.(input%l_resolvent.AND.atoms%n_hia>0)) THEN !We also need the imaginary part for the crystal field
-         CALL timestart("Greens Function: Imaginary Part")
-         CALL greensfImag(atoms,sym,input,ispin,nbands,dosWeights,indBound,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
-         IF(input%l_gfmperp.AND.l21) THEN
-            CALL greensfImag21(atoms,sym,angle,input,nbands,dosWeights,indBound,wtkpt,eig,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
-         ENDIF
-         CALL timestop("Greens Function: Imaginary Part")
-      ENDIF
+      CALL timestop("Greens Function: Imaginary Part")
 
 
    END SUBROUTINE bzIntegrationGF
@@ -91,9 +88,7 @@ MODULE m_gfcalc
 
       CALL timestart("Green's Function: Postprocess")
       !Perform the Kramer-Kronigs-Integration if we only have he imaginary part at this point
-      IF(.NOT.input%l_resolvent.OR.(input%l_resolvent.AND.atoms%n_hia>0)) THEN
-         CALL calc_onsite(atoms,input,sym,noco,greensfCoeffs,greensf)
-      ENDIF
+      CALL calc_onsite(atoms,input,sym,noco,greensfCoeffs,greensf)
       !-------------------------------------------------------------
       ! Calculate various properties from the greens function 
       !-------------------------------------------------------------

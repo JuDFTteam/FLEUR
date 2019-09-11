@@ -2,7 +2,7 @@ MODULE m_resWeights
 
    CONTAINS
 
-   SUBROUTINE resWeightsCalc(ikpt,kpts,neig,eig,ez,nz,weights,boundInd)
+   SUBROUTINE resWeightsCalc(ikpt,kpts,neig,eig,g,weights,boundInd)
 
       !Weights for analytical tetrahedron method for spectral functions 
 
@@ -15,19 +15,18 @@ MODULE m_resWeights
       TYPE(t_kpts),     INTENT(IN)     :: kpts
       INTEGER,          INTENT(IN)     :: neig
       REAL,             INTENT(IN)     :: eig(neig,kpts%nkpt)
-      INTEGER,          INTENT(IN)     :: nz
-      COMPLEX,          INTENT(IN)     :: ez(nz)
-      COMPLEX,          INTENT(INOUT)  :: weights(nz,neig)
+      TYPE(t_greensfCoeffs), INTENT(IN) :: g
+      REAL,          INTENT(INOUT)  :: weights(g%ne,neig)
       INTEGER,          INTENT(INOUT)  :: boundInd(neig,2)
 
 
       INTEGER itet,ib,i,j,iz,icorn,ind(4),k(4),tmp
       REAL e(4),vol,fac
-      COMPLEX weight
+      REAL weight
 
       !Here we do no truncation for now
       boundInd(:,1) = 1
-      boundInd(:,1) = nz
+      boundInd(:,2) = g%ne
       weights = 0.0
 
       fac = count(kpts%bkp(:).EQ.ikpt)
@@ -48,8 +47,8 @@ MODULE m_resWeights
          ENDIF
 
          !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(ikpt,itet,neig,nz,k,fac) &
-         !$OMP SHARED(kpts,eig,ez,weights) &
+         !$OMP SHARED(ikpt,itet,neig,g,k,fac) &
+         !$OMP SHARED(kpts,eig,weights) &
          !$OMP PRIVATE(ib,iz,i,j,icorn,tmp,vol) &
          !$OMP PRIVATE(ind,e,weight)
 
@@ -74,18 +73,15 @@ MODULE m_resWeights
             ENDDO
 
             vol = kpts%voltet(itet)/kpts%ntet
-            DO iz = 1, nz
-               CALL resWeightTetra(ez(iz),e(ind(1:4)),vol,weight,icorn)
-               IF(ISNAN(REAL(weight)).OR.ISNAN(AIMAG(weight))) CALL juDFT_error("Tetra Weight NaN",calledby="resWeights")
+            DO iz = 1, g%ne
+               CALL resWeightTetra((iz-1)*g%del+g%e_bot,e(ind(1:4)),vol,weight,icorn)
+               IF(ISNAN(weight)) CALL juDFT_error("Tetra Weight NaN",calledby="resWeights")
                weights(iz,ib) = weights(iz,ib) + weight * fac
             ENDDO
          ENDDO
          !$OMP END DO
          !$OMP END PARALLEL
       ENDDO
-      IF(ANY(AIMAG(weights).GT.0.0)) THEN
-         CALL juDFT_warn("Some weights have a wrong sign in imaginary part, may be due to numerical instability in the formulas",calledby="resWeights")
-      ENDIF
 
    END SUBROUTINE resWeightsCalc
 
@@ -97,10 +93,10 @@ MODULE m_resWeights
 
       IMPLICIT NONE 
 
-      COMPLEX,       INTENT(IN)  :: z
+      REAL,       INTENT(IN)  :: z
       REAL,          INTENT(IN)  :: e(4)
       REAL,          INTENT(IN)  :: vol
-      COMPLEX,       INTENT(OUT) :: weight 
+      REAL,       INTENT(OUT) :: weight 
       INTEGER,       INTENT(IN)  :: ind
 
       REAL tol,denom,a,b,cut,min,fac
@@ -168,7 +164,7 @@ MODULE m_resWeights
                   IF(i.EQ.j) CYCLE
                   denom = denom*(e(i)-e(j))
                ENDDO
-               weight = weight + vol*(z-e(j))**3/denom*LOG((z-e(j))/(z-e(ind)))/(e(ind)-e(j))
+               weight = weight + vol*(z-e(j))**3/denom*LOG(ABS((z-e(j))/(z-e(ind))))/(e(ind)-e(j))
             ENDDO
 
          ELSE IF(ndeg.EQ.1) THEN
@@ -192,12 +188,12 @@ MODULE m_resWeights
                   k = i
                ENDDO
                IF(k.EQ.0) CALL juDFT_error("k not found",calledby="resWeightTetra")
-               weight = vol*(z-e(k))**3/((e(k)-e(j))*(e(k)-e(m))**3)*LOG(z-e(k)) & 
-                        +vol*(z-e(j))**3/((e(j)-e(k))*(e(j)-e(m))**3)*LOG(z-e(j)) & 
+               weight = vol*(z-e(k))**3/((e(k)-e(j))*(e(k)-e(m))**3)*LOG(ABS(z-e(k))) & 
+                        +vol*(z-e(j))**3/((e(j)-e(k))*(e(j)-e(m))**3)*LOG(ABS(z-e(j))) & 
                         +vol*(z-e(m))/((e(m)-e(j))*(e(m)-e(k))) * (0.5 + (z-e(j))/(e(m)-e(j))&
                            +(z-e(k))/(e(m)-e(k)) + ((z-e(j))**2/(e(m)-e(j))**2 &
                            +(z-e(k))**2/(e(m)-e(k))**2 +(z-e(j))/(e(m)-e(j))*(z-e(k))/(e(m)-e(k))) &
-                           *LOG(z-e(m)))
+                           *LOG(ABS(z-e(m))))
             ELSE
                !k is the one site not equal to ind, l or m
                k = 0
@@ -208,18 +204,18 @@ MODULE m_resWeights
                IF(k.EQ.0) CALL juDFT_error("k not found",calledby="resWeightTetra")
                !EQ. A1
                weight = vol*(z-e(ind))**2/((e(ind)-e(m))**2*(e(k)-e(ind))) *&
-                           (1 + (2*(z-e(m))/(e(ind)-e(m))+(z-e(k))/(e(ind)-e(k)))*LOG(z-e(ind))) &
+                           (1 + (2*(z-e(m))/(e(ind)-e(m))+(z-e(k))/(e(ind)-e(k)))*LOG(ABS(z-e(ind)))) &
                         +vol*(z-e(m))**2/((e(m)-e(ind))**2*(e(k)-e(m))) *&
-                           (1 + (2*(z-e(ind))/(e(m)-e(ind))+(z-e(k))/(e(m)-e(k)))*LOG(z-e(m))) &
-                        +vol*(z-e(k))**3/((e(k)-e(ind))**2*(e(k)-e(m))**2)*LOG(z-e(k))
+                           (1 + (2*(z-e(ind))/(e(m)-e(ind))+(z-e(k))/(e(m)-e(k)))*LOG(ABS(z-e(m)))) &
+                        +vol*(z-e(k))**3/((e(k)-e(ind))**2*(e(k)-e(m))**2)*LOG(ABS(z-e(k)))
             ENDIF
          ELSE IF(ndeg.EQ.2) THEN
             !This is the case E1=E2<E3=E4 => A4 
             IF(ind.LE.2) THEN
-               weight = vol*3*(z-e(3))**2*(z-e(2))/(e(3)-e(2))**4*LOG((z-e(2))/(z-e(3))) &
+               weight = vol*3*(z-e(3))**2*(z-e(2))/(e(3)-e(2))**4*LOG(ABS((z-e(2))/(z-e(3)))) &
                         - vol*3.0/2.0*(z-e(2))*(2*(z-e(3))-e(3)+e(2))/(e(3)-e(2))**3-vol/(e(3)-e(2))
             ELSE
-               weight = vol*3*(z-e(2))**2*(z-e(3))/(e(3)-e(2))**4*LOG((z-e(3))/(z-e(2))) &
+               weight = vol*3*(z-e(2))**2*(z-e(3))/(e(3)-e(2))**4*LOG(ABS((z-e(3))/(z-e(2)))) &
                         + vol*3.0/2.0*(z-e(3))*(2*(z-e(2))+e(3)-e(2))/(e(3)-e(2))**3+vol/(e(3)-e(2))
             ENDIF
          ELSE IF(ndeg.GE.3.AND.ndeg.LT.6) THEN
@@ -227,19 +223,19 @@ MODULE m_resWeights
             IF(ALL(ideg(:,:).NE.4)) THEN
                !A3
                IF(ind.NE.4) THEN
-                  weight = vol*(z-e(4))**3/(e(4)-e(3))**4*LOG((z-e(4))/(z-e(3))) &
+                  weight = vol*(z-e(4))**3/(e(4)-e(3))**4*LOG(ABS((z-e(4))/(z-e(3)))) &
                            + vol*(6*(z-e(4))**2-3*(e(4)-e(3))*(z-e(4))+2*(e(4)-e(3))**2)/(6*(e(4)-e(3))**3)
                ELSE
-                  weight = vol*3*(z-e(4))**2*(z-e(3))/(e(4)-e(3))**4*LOG((z-e(3))/(z-e(4))) &
+                  weight = vol*3*(z-e(4))**2*(z-e(3))/(e(4)-e(3))**4*LOG(ABS((z-e(3))/(z-e(4)))) &
                            - vol*3.0/2.0*(z-e(3))*(2*(z-e(4))-e(4)+e(3))/(e(4)-e(3))**3-vol/(e(4)-e(3))
                ENDIF
             ELSE IF(ALL(ideg(:,:).NE.1)) THEN
                !A5
                IF(ind.EQ.1) THEN
-                  weight = vol*3*(z-e(1))**2*(z-e(2))/(e(2)-e(1))**4*LOG((z-e(2))/(z-e(1))) &
+                  weight = vol*3*(z-e(1))**2*(z-e(2))/(e(2)-e(1))**4*LOG(ABS((z-e(2))/(z-e(1)))) &
                            + vol*3.0/2.0*(z-e(2))*(2*(z-e(1))-e(1)+e(2))/(e(2)-e(1))**3+vol/(e(2)-e(1))
                ELSE
-                  weight = vol*(z-e(1))**3/(e(2)-e(1))**4*LOG((z-e(1))/(z-e(2))) &
+                  weight = vol*(z-e(1))**3/(e(2)-e(1))**4*LOG(ABS((z-e(1))/(z-e(2)))) &
                            - vol*(6*(z-e(1))**2+3*(z-e(1))*(e(2)-e(1))+2*(e(2)-e(1))**2)/(6*(e(2)-e(1))**3)
                ENDIF
             ENDIF

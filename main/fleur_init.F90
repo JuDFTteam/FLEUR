@@ -519,7 +519,7 @@
                 END IF
              END IF
              IF (atoms%n_gf>0) THEN
-              IF(.NOT.input%tria.AND..NOT.input%l_hist.AND.kpts%specificationType==2) THEN
+              IF(.NOT.input%tria.AND..NOT.input%l_hist.AND..NOT.banddos%band) THEN
                 IF(input%film) THEN
                   CALL calc_tria(kpts,cell,input,sym)
                 ELSE
