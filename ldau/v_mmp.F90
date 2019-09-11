@@ -86,9 +86,9 @@ CONTAINS
        IF(u_in(i_u)%l_amf) THEN
           eta(1) = rho_sig(1) / (2*l + 1) 
           eta(jspins) = rho_sig(jspins) / (2*l + 1)
-          eta(0) = (eta(1) + eta(jspins) ) / 2
+          eta(0) = (eta(1) + eta(jspins) )
        ELSE
-          eta(0) = 0.5
+          eta(0) = 1.0
           eta(1) = 0.5
           eta(jspins) = 0.5
        ENDIF
@@ -183,7 +183,7 @@ CONTAINS
        DO ispin = 1,jspins
           ns_sum = ns_sum + rho_sig(ispin) * (rho_sig(ispin) - eta(ispin))
        END DO
-       e_dc = u_htr * rho_tot * ( rho_tot - 2*eta(0) ) - j_htr * ns_sum
+       e_dc = u_htr * rho_tot * ( rho_tot - eta(0) ) - j_htr * ns_sum
        e_dcc = (u_htr - j_htr) * rho_tot
 
        ns_sum = ns_sum / spin_deg
