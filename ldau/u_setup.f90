@@ -57,7 +57,7 @@ CONTAINS
        ALLOCATE (u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
                    -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
        ALLOCATE (n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-       n_mmp(:,:,:,:) = inDen%mmpMat(:,:,:,:)
+       n_mmp(:,:,1:atoms%n_u,:) = inDen%mmpMat(:,:,1:atoms%n_u,:)
        DO ispin = 1, 1 ! input%jspins
           f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
           f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2

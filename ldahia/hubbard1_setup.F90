@@ -355,6 +355,7 @@ MODULE m_hubbard1_setup
       INTEGER,       INTENT(IN)    :: ns
 
       COMPLEX tmp(ns,ns)
+      INTEGER i,j
 
       !Spin-diagonal
       tmp = mat(1:ns,1:ns)
@@ -362,9 +363,17 @@ MODULE m_hubbard1_setup
       mat(ns+1:2*ns,ns+1:2*ns) = tmp
       !Spin-offdiagonal
       tmp = mat(ns+1:2*ns,1:ns)
-      mat(ns+1:2*ns,1:ns) = transpose(conjg(mat(1:ns,ns+1:2*ns)))
-      mat(1:ns,ns+1:2*ns) = transpose(conjg(tmp))
-
+      DO i = 1, ns
+         DO j = 1, ns
+            mat(ns+j,i) = tmp(ns-i+1,ns-j+1)
+         ENDDO
+      ENDDO
+      tmp = mat(1:ns,ns+1:2*ns)
+      DO i = 1, ns
+         DO j = 1, ns
+            mat(j,ns+i) = tmp(ns-i+1,ns-j+1)
+         ENDDO
+      ENDDO
    END SUBROUTINE
 
 

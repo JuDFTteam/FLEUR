@@ -104,7 +104,7 @@ MODULE m_add_selfen
                   ENDDO
                ENDDO
                IF(mu.GT.-0.2.AND.mu.LT.0.2.AND.l_debug) THEN
-                  !DEBUG OUTPUT: Give the gfDOS around 0 (where we expect to find mu approx 0.05)
+                  !DEBUG OUTPUT: Give the gfDOS around 0 (where we expect to find mu)
                   ind = AINT((mu+0.2)/0.01)
                   CALL gfDOS(gp,l,nType,500+ind,atoms,input,ef)
                ENDIF

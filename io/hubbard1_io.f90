@@ -168,7 +168,10 @@ MODULE m_hubbard1_io
       DO i_arg = 1, hub1%n_addArgs(i_hia)
          CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))),hub1%arg_vals(i_hia,i_arg))
       ENDDO
-      IF(hub1%ccf(i_hia).NE.0.0) THEN
+      !------------------------------------
+      ! Crystal field contribution
+      !------------------------------------
+      IF(hub1%ccf(i_hia).NE.0.0.AND..NOT.(hub1%iter==1)) THEN
          CALL writeValue(input_iounit, "cf")
 
          CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))

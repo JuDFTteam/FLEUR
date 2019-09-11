@@ -45,7 +45,7 @@ MODULE m_mudc
          WRITE(6,"(A)") "Using the around-mean-field limit"
          mu = (vdcamf1+vdcamf2)/2
       ELSE
-      WRITE(6,"(A)") "Using the fully-localized limit"
+         WRITE(6,"(A)") "Using the fully-localized limit"
          mu = (vdcfll1+vdcfll2)/2
       ENDIF 
       WRITE(6,9060) mu

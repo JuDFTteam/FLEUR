@@ -55,7 +55,7 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,greensfCoeffs,g)
          !
          !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
          !
-         CALL kk_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,:),atoms,noco,&
+         CALL kk_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1:input%jspins),atoms,noco,&
                         l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,&
                         greensfCoeffs%kkintgr_cutoff(i_gf,:,:))
       ELSE 
