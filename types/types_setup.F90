@@ -605,6 +605,8 @@ MODULE m_types_setup
       LOGICAL :: l_perpmagrs
       LOGICAL :: l_perpmag
       LOGICAL :: l_perpmagat
+      INTEGER :: perpmagl
+      LOGICAL :: l_perpmagatlres
       LOGICAL :: l_perpmagatrs
       LOGICAL :: l_socmatrs
       LOGICAL :: l_socmat
