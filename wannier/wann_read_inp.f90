@@ -27,6 +27,7 @@ subroutine wann_read_inp(input,l_p0,wann)
    real              :: version_real
 
 !-----some defaults
+   wann%l_perpmagatlres=.false.
    wann%l_atomlist=.false.
    wann%l_ndegen=.false.
    wann%l_orbitalmom=.false.
@@ -253,6 +254,15 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtx_to_hsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
             wann%l_hsomtx_unf_to_hsoc=.true.
+            
+         elseif(trim(task).eq.'perpmagatlres')then
+            wann%l_perpmagatlres=.true.
+	    backspace(916)
+            read(916,*,iostat=ios)task,wann%perpmagl
+            if (ios /= 0) &
+               CALL juDFT_error ("error reading perpmagl", &
+                               calledby="wann_read_inp")   
+            
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatvec')then
@@ -528,6 +538,15 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtx_to_hsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
             wann%l_hsomtx_unf_to_hsoc=.true.
+            
+         elseif(trim(task).eq.'perpmagatlres')then
+            wann%l_perpmagatlres=.true.
+	    backspace(916)
+            read(916,*,iostat=ios)task,wann%perpmagl
+            if (ios /= 0) &
+               CALL juDFT_error ("error reading perpmagl", &
+                               calledby="wann_read_inp")   
+            
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatvec')then
