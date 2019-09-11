@@ -81,8 +81,6 @@ c**********************************************************
       endif !isize
 #endif
 
-      write(6,*)"wann_write_matrix5"
-
       if(l_p0)then
        if(l_unformatted)then
 	    open(305,file=trim(filename)//'_unf',form='unformatted')
