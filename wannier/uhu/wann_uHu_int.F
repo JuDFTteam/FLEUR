@@ -16,6 +16,7 @@ c*****************************************c
 c                J.-P. Hanke, Dec. 2015   c
 c*****************************************c
       module m_wann_uHu_int
+      use m_juDFT
       contains
       subroutine wann_uHu_int(
      >               chi,nvd,k1d,k2d,k3d,
@@ -111,7 +112,7 @@ c     ..local variables..
         phase = rgphs(i1,i2,i3)    ! TODO: sign also here?
         phase2= rgphs(sign*i1,sign*i2,sign*i3)
         if(phase.ne.phase2) then
-           stop 'rgphs in wann_uHu_int'
+         call juDFT_error("rgphs in wann_uHu_int",calledby="wann_uHu_int")
         endif
 
         ekk = rk_b(i) + rk_b2(j)
