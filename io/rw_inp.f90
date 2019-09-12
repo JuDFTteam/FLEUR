@@ -879,7 +879,7 @@
  9120 FORMAT ('vchk=',l1,',cdinf=',l1,',pot8=',l1,',gw=',i1,&
      &        ',numbands=',i4)
       WRITE (5,9130) 0,.false.,input%l_f,input%eonly
- 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1)
+ 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1,',eig66',l1)
       IF ( l_hyb ) THEN
         WRITE (chntype,'(i3)') 2*atoms%ntype
         chform = '('//chntype//'i3 )'
