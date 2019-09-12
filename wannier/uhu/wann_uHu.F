@@ -1499,19 +1499,19 @@ c      endif
 
 
       IF(l_real) THEN
-         DEALLOCATE ( zzMat%z_r )
+         DEALLOCATE ( zzMat%data_r )
       ELSE
-         DEALLOCATE ( zzMat%z_c )
+         DEALLOCATE ( zzMat%data_c )
       END IF
 
 
 
       IF(zzMat%l_real) THEN
-         DEALLOCATE (zMat_b%z_r)
-         DEALLOCATE (zMat_b2%z_r)
+         DEALLOCATE (zMat_b%data_r)
+         DEALLOCATE (zMat_b2%data_r)
       ELSE
-         DEALLOCATE (zMat_b%z_c)
-         DEALLOCATE (zMat_b2%z_c)
+         DEALLOCATE (zMat_b%data_c)
+         DEALLOCATE (zMat_b2%data_c)
       END IF
 
 
