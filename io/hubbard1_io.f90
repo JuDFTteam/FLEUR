@@ -125,7 +125,7 @@ MODULE m_hubbard1_io
       CALL comment(input_iounit,"Number of iterations",1)
       CALL writeValue(input_iounit,"N_lancz_iter",100)
       CALL comment(input_iounit,"Number of eigenstates calculated",1)
-      CALL writeValue(input_iounit,"N_lancz_states",80)
+      CALL writeValue(input_iounit,"N_lancz_states",400)
       CALL endSection(input_iounit)
 
       CALL comment(input_iounit,"This discretization is only used by the dos utility. The actual energy points are provided in the function call",1)

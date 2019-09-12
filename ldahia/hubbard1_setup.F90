@@ -294,7 +294,7 @@ MODULE m_hubbard1_setup
             ENDIF
          ELSE 
             !The solver does not need to be run so we just add the current energy correction from LDA+HIA 
-            results%e_ldau = results%e_ldau + e_lda_hia 
+            results%e_ldau = MERGE(results%e_ldau,0.0,atoms%n_u>0) + e_lda_hia 
          ENDIF
          !Write out the density matrix and potential matrix (compare u_setup.f90)
          IF (mpi%irank.EQ.0) THEN
