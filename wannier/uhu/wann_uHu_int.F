@@ -32,7 +32,7 @@ c*****************************************c
 
       implicit none
 
-      TYPE(t_zmat), INTENT(IN) :: zMat_b, zMat_b2
+      TYPE(t_mat), INTENT(IN) :: zMat_b, zMat_b2
 
 c     ..arguments..
       logical, intent(in) :: l_kin
@@ -131,20 +131,20 @@ c     ..local variables..
       ! complex conjugate of (z(k+b1,g))^* vstep(g,g') z(k+b2,g')
       IF(zMat_b%l_real) THEN
          call CPP_BLAS_sgemm('T','N',nv_b,nslibd_b2,nv_b2,real(1.0),
-     >               vstep_r,nv_b2,zMat_b2%z_r(1+addnoco2,1),nbasfcn,
+     >               vstep_r,nv_b2,zMat_b2%data_r(1+addnoco2,1),nbasfcn,
      >               real(0.0),mat_r,nv_b)
          call CPP_BLAS_sgemm('T','N',nslibd_b,nslibd_b2,nv_b,
-     >              real(1.0),zMat_b%z_r(1+addnoco,1),nbasfcn,
+     >              real(1.0),zMat_b%data_r(1+addnoco,1),nbasfcn,
      >              mat_r,nv_b,real(0.0),uHu_tmp,nslibd_b)
          uHu(1:nslibd_b,1:nslibd_b2) = uHu(1:nslibd_b,1:nslibd_b2)
      >                            + uHu_tmp(1:nslibd_b,1:nslibd_b2)*chi
       ELSE
          call CPP_BLAS_cgemm('T','N',nv_b,nslibd_b2,nv_b2,cmplx(1.0),
-     >               vstep_c,nv_b2,zMat_b2%z_c(1+addnoco2,1),nbasfcn,
+     >               vstep_c,nv_b2,zMat_b2%data_c(1+addnoco2,1),nbasfcn,
      >               cmplx(0.0),mat_c,nv_b)
          mat_c = conjg(mat_c)
          call CPP_BLAS_cgemm('T','N',nslibd_b,nslibd_b2,nv_b,
-     >              chi,zMat_b%z_c(1+addnoco,1),nbasfcn,
+     >              chi,zMat_b%data_c(1+addnoco,1),nbasfcn,
      >              mat_c,nv_b,cmplx(1.0),uHu,nbnd)
       END IF
 
