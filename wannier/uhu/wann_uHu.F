@@ -949,10 +949,10 @@ c      if (mod(i_rec-1,isize).eq.irank) then
           zzMat%matsize2 = DIMENSION%neigd
           IF(l_real) THEN
              IF(.NOT.ALLOCATED(zzMat%data_r))
-    &               ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+     &               ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
           ELSE
                IF(.NOT.ALLOCATED(zzMat%data_c))
-    &          ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+     &          ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
           END IF
 
 
@@ -963,11 +963,11 @@ c      if (mod(i_rec-1,isize).eq.irank) then
           zMat%matsize2 = zzMat%matsize2
           IF (zzMat%l_real) THEN
              IF(.NOT.ALLOCATED(zMat%data_r))
-    &              ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+     &              ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
              zMat%data_r = 0.0
           ELSE
              IF(.NOT.ALLOCATED(zMat%data_c))
-    &              ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+     &              ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
              zMat%data_c = CMPLX(0.0,0.0)
           END IF
     
@@ -976,11 +976,11 @@ c      if (mod(i_rec-1,isize).eq.irank) then
           zMat_b%matsize2 = zzMat%matsize2
           IF (zzMat%l_real) THEN
                IF(.NOT.ALLOCATED(zMat_b%data_r))
-    &           ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
+     &           ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
              zMat_b%data_r = 0.0
           ELSE
                IF(.NOT.ALLOCATED(zMat_b%data_c))
-    &           ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
+     &           ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
              zMat_b%data_c = CMPLX(0.0,0.0)
           END IF
     
@@ -990,11 +990,11 @@ c      if (mod(i_rec-1,isize).eq.irank) then
           zMat_b2%matsize2 = zzMat%matsize2
           IF (zzMat%l_real) THEN
                IF(.NOT.ALLOCATED(zMat_b2%data_r))
-    &           ALLOCATE (zMat_b2%data_r(zMat_b%matsize1,zMat_b%matsize2))
+     &           ALLOCATE (zMat_b2%data_r(zMat_b%matsize1,zMat_b%matsize2))
              zMat_b2%data_r = 0.0
           ELSE
                IF(.NOT.ALLOCATED(zMat_b2%data_c))
-    &           ALLOCATE (zMat_b2%data_c(zMat_b%matsize1,zMat_b%matsize2))
+     &           ALLOCATE (zMat_b2%data_c(zMat_b%matsize1,zMat_b%matsize2))
              zMat_b2%data_c = CMPLX(0.0,0.0)
           END IF
     
