@@ -46,7 +46,6 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
    l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
 
    IF(l_tria.AND.(ANY(ind.GT.greensfCoeffs%ne).OR.ANY(ind.LT.1))) THEN
-      WRITE(*,*) ((ind(i,1), ind(i,2)), i= 1, nbands)
       CALL juDFT_error("Invalid index",calledby="greensfImag")
    ENDIF
 
