@@ -230,8 +230,8 @@ c     ..local scalars..
       complex :: nsfactor,nsfactor_b,nsfactor_b2
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat)  :: zMat, zzMat, zMat_b, zMat_b2
-      TYPE(t_lapw)  :: lapw_b, lapw_b2
+      TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
+      TYPE(t_lapw)  :: lapw, lapw_b, lapw_b2
 
 
 c     ..initializations..
@@ -945,8 +945,21 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       ! get current bkpt vector
 
       zzMat%l_real = l_real
-      zzMat%nbasfcn = nbasfcn
-      zzMat%nbands = neigd
+!      zzMat%nbasfcn = nbasfcn
+!      zzMat%matsize1 = nbasfcn
+!      zzMat%nbands = neigd
+          zzMat%l_real = l_real
+          zzMat%matsize1 = DIMENSION%nbasfcn
+          zzMat%matsize2 = DIMENSION%neigd
+          IF(l_real) THEN
+             IF(.NOT.ALLOCATED(zzMat%data_r))&
+               ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+          ELSE
+               IF(.NOT.ALLOCATED(zzMat%data_c))&
+               ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+          END IF
+
+
       IF(l_real) THEN
          ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
       ELSE
