@@ -939,7 +939,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       allocate ( eigg(neigd) )
 
           n_start=1
-          n_end=neigd
+          n_end=DIMENSION%neigd
  
       call cpu_time(t0)
       ! get current bkpt vector
@@ -1011,29 +1011,10 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
 
-      zMat_b%l_real = zzMat%l_real
-      zMat_b2%l_real = zzMat%l_real
-      zMat_b%nbasfcn = zzMat%nbasfcn
-      zMat_b2%nbasfcn = zzMat%nbasfcn
-      zMat_b%nbands = zzMat%nbands
-      zMat_b2%nbands = zzMat%nbands
-    !  IF(zzMat%l_real) THEN
-    !     ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
-    !     ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
-    !  ELSE
-    !     ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
-    !     ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
-    !  END IF
+ 
       
       
-      IF(zzMat%l_real) THEN
-         ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
-         ALLOCATE (zMat_b2%z_r(zMat_b2%nbasfcn,zMat_b2%nbands))
-      ELSE
-         ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
-         ALLOCATE (zMat_b2%z_c(zMat_b2%nbasfcn,zMat_b2%nbands))
-      END IF
-      
+    
       
 
       allocate (we_b(neigd), we_b2(neigd))
