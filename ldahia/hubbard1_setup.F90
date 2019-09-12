@@ -239,11 +239,21 @@ MODULE m_hubbard1_setup
             ENDDO
 
             IF(l_selfenexist.OR.l_linkedsolver) THEN
+               !-------------------------------------------
+               ! Postprocess selfenergy
+               !-------------------------------------------
                DO i_hia = 1, atoms%n_hia
                   nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                   l = atoms%lda_u(atoms%n_u+i_hia)%l
                   DO iz = 1, 2*gdft%nz
+                     !---------------------------------------------
+                     ! The order of spins is reversed in the Solver
+                     !---------------------------------------------
                      CALL swapSpin(selfen(i_hia,:,:,iz),2*l+1)
+                     ! The DFT green's function also includes the previous DFT+U correction
+                     ! This is removed by substracting it from the selfenergy
+                     !-------------------------------------------------------------
+                     CALL removeU(selfen(i_hia,:,:,iz),l,input%jspins,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
                   ENDDO
                ENDDO
                !----------------------------------------------------------------------
@@ -256,8 +266,7 @@ MODULE m_hubbard1_setup
                ! so that the occupation of the correlated orbital does not change
                !----------------------------------------------------------------------
                CALL timestart("Hubbard 1: Add Selfenenergy")
-               CALL add_selfen(gdft,gu,selfen,atoms,noco,hub1,sym,input,results%ef,n_l,mu_dc/hartree_to_ev_const,&
-                              pot%mmpMat(:,:,indStart:indEnd,:),mmpMat)
+               CALL add_selfen(gdft,gu,selfen,atoms,noco,hub1,sym,input,results%ef,n_l,mu_dc/hartree_to_ev_const,mmpMat)
                CALL timestop("Hubbard 1: Add Selfenenergy")
                IF(l_setupdebug) THEN
                   DO i_hia = 1, atoms%n_hia
@@ -265,9 +274,7 @@ MODULE m_hubbard1_setup
                      l = atoms%lda_u(atoms%n_u+i_hia)%l
                      CALL gfDOS(gdft,l,nType,800+i_hia+hub1%iter,atoms,input,results%ef)
                      CALL gfDOS(gu,l,nType,900+i_hia+hub1%iter,atoms,input,results%ef)
-                     DO i = 1, 2*(2*l+1)
-                        CALL writeSelfenElement(selfen(i_hia,:,:,1:gdft%nz),gdft%e,results%ef,gdft%nz,2*(2*l+1),i)
-                     ENDDO
+                     CALL writeSelfenElement(selfen(i_hia,:,:,1:gdft%nz),gdft%e,results%ef,gdft%nz,2*l+1)
                   ENDDO
                ENDIF
                !----------------------------------------------------------------------
@@ -312,6 +319,7 @@ MODULE m_hubbard1_setup
             WRITE (6,*) results%e_ldau
          ENDIF
       ELSE IF(mpi%irank.NE.0) THEN
+         results%e_ldau = 0.0
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
          !If we are on a different mpi%irank and no solver is linked we need to call juDFT_end here if the solver was not run
          !kind of a weird workaround (replace with something better)
@@ -338,6 +346,7 @@ MODULE m_hubbard1_setup
                      49*atoms%n_hia*input%jspins,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
       CALL MPI_BCAST(den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,indStart:indEnd,:),&
                      49*atoms%n_hia*input%jspins,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(results%e_ldau,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif 
       
       !FORMAT Statements:
@@ -374,7 +383,35 @@ MODULE m_hubbard1_setup
             mat(j,ns+i) = tmp(ns-i+1,ns-j+1)
          ENDDO
       ENDDO
-   END SUBROUTINE
+   END SUBROUTINE swapSpin
+
+
+   SUBROUTINE removeU(mat,l,jspins,vmmp)
+
+      USE m_constants
+
+      IMPLICIT NONE
+      COMPLEX,       INTENT(INOUT) :: mat(2*(2*l+1),2*(2*l+1))
+      INTEGER,       INTENT(IN)    :: l
+      INTEGER,       INTENT(IN)    :: jspins
+      COMPLEX,       INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
+
+      INTEGER ns,i,j,m,mp,ispin
+
+      ns = 2*l+1
+
+      DO i = 1, ns 
+         DO j = 1, ns 
+            m = i-1-l
+            mp = j-1-l
+            DO ispin = 1, jspins
+               mat(i+(ispin-1)*ns,j+(ispin-1)*ns) = mat(i+(ispin-1)*ns,j+(ispin-1)*ns) - vmmp(m,mp,ispin)
+               IF(jspins.EQ.1) mat(i+ns,j+ns) = mat(i+ns,j+ns) - vmmp(-m,-mp,ispin)
+            ENDDO
+         ENDDO
+      ENDDO
+
+   END SUBROUTINE removeU
 
 
    SUBROUTINE hubbard1_path(atoms,i_hia,xPath)
@@ -411,27 +448,31 @@ MODULE m_hubbard1_setup
 
    END SUBROUTINE hubbard1_path
 
-   SUBROUTINE writeSelfenElement(selfen,e,ef,nz,matsize,i)
+   SUBROUTINE writeSelfenElement(selfen,e,ef,nz,ns)
 
       USE m_constants
       
       IMPLICIT NONE
 
-      INTEGER,       INTENT(IN)  :: nz,matsize,i
+      INTEGER,       INTENT(IN)  :: nz,ns
       REAL,          INTENT(IN)  :: ef
-      COMPLEX,       INTENT(IN)  :: selfen(matsize,matsize,nz)
+      COMPLEX,       INTENT(IN)  :: selfen(2*ns,2*ns,nz)
       COMPLEX,       INTENT(IN)  :: e(nz)
 
-      INTEGER iz
+      INTEGER iz,i,io_error
       CHARACTER(len=300) file
+      COMPLEX up, down
 
-3456  FORMAT("selfen.",I2)
-      WRITE(file,3456) i
-
-      OPEN(unit=3456,file=file,status="replace")
+      OPEN(unit=3456,file="selfen",status="replace",iostat = io_error)
 
       DO iz = 1, nz
-         WRITE(3456,"(3f14.8)") REAL(e(iz)-ef)*hartree_to_ev_const, REAL(selfen(i,i,iz)), AIMAG(selfen(i,i,iz))
+         up = 0.0 
+         down = 0.0
+         DO i = 1, ns 
+            up = up + selfen(i,i,iz)
+            down = down + selfen(i+ns,i+ns,iz)
+         ENDDO
+         WRITE(3456,"(5f14.8)") REAL(e(iz))*hartree_to_ev_const, -AIMAG(up), -AIMAG(down), REAL(up), REAL(down)
       ENDDO
 
       CLOSE(unit=3456)

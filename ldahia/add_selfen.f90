@@ -4,7 +4,7 @@ MODULE m_add_selfen
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g,gp,selfen,atoms,noco,hub1,sym,input,ef,n_occ,mu_dc,vmmp,mmpMat)
+   SUBROUTINE add_selfen(g,gp,selfen,atoms,noco,hub1,sym,input,ef,n_occ,mu_dc,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -36,7 +36,6 @@ MODULE m_add_selfen
       REAL,             INTENT(IN)     :: ef
       REAL,             INTENT(IN)     :: n_occ(atoms%n_hia,input%jspins)
       REAL,             INTENT(IN)     :: mu_dc
-      COMPLEX,          INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
 
       INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,spin_match,matsize,start,end,i_match,ind
@@ -86,9 +85,6 @@ MODULE m_add_selfen
                         vmat%data_c(1:ns,ns+1:2*ns) = 0.0
                         vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                      ENDIF
-                     !Remove +U potential
-                     vmat%data_c(1:ns,1:ns) = vmat%data_c(1:ns,1:ns) - vmmp(-l:l,-l:l,i_hia,i_match)
-                     IF(l_match_both_spins) vmat%data_c(ns+1:2*ns,ns+1:2*ns) = vmat%data_c(ns+1:2*ns,ns+1:2*ns) - vmmp(-l:l,-l:l,i_hia,2)
                      IF(l_match_both_spins) THEN
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
@@ -143,9 +139,6 @@ MODULE m_add_selfen
                         vmat%data_c(1:ns,ns+1:2*ns) = 0.0
                         vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                      ENDIF
-                     !Remove +U potential
-                     vmat%data_c(1:ns,1:ns) = vmat%data_c(1:ns,1:ns) - vmmp(-l:l,-l:l,i_hia,i_match)
-                     IF(l_match_both_spins) vmat%data_c(ns+1:2*ns,ns+1:2*ns) = vmat%data_c(ns+1:2*ns,ns+1:2*ns) - vmmp(-l:l,-l:l,i_hia,2)
                      IF(l_match_both_spins) THEN
                         CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE

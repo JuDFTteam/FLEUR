@@ -43,6 +43,7 @@ MODULE m_crystalfield
       REAL    tr,xiSOC
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
+      REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
       REAL :: integrand(greensfCoeffs%ne)
 
       h_loc = 0.0
@@ -89,7 +90,7 @@ MODULE m_crystalfield
                   !LDA+U potential
                   h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
                ENDDO
-               !h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - hub1%xi(i_hia)/hartree_to_ev_const * m * (1.5-jspin) * MERGE(-1,1,input%jspins.EQ.1)
+               h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - hub1%xi(i_hia)/hartree_to_ev_const * m * (1.5-jspin) * MERGE(-1,1,input%jspins.EQ.1)
             ENDDO
          ENDDO
          IF(l_debug) THEN
@@ -98,16 +99,38 @@ MODULE m_crystalfield
             WRITE(*,*) "DOWN-REMOVED"
             WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
          ENDIF
+         ex = 0.0
+         DO m= -l, l
+            DO mp = -l, l 
+               ex(m,mp) = h_loc(m,mp,i_hia,1)-h_loc(m,mp,i_hia,2)
+            ENDDO
+         ENDDO
+         ex = 0.5*ex
+         IF(l_debug) THEN
+            WRITE(*,*) "Exchange (eV)"
+            WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const
+         ENDIF
          !Average over spins
          hub1%ccfmat(i_hia,:,:) = 0.0
          DO m = -l, l
             DO mp = -l, l
                hub1%ccfmat(i_hia,m,mp) = SUM(h_loc(m,mp,i_hia,:))/2.0
+               !For jspins.EQ.1 we need to take care of the fact that the spin-orbit coupling is opposite in spin 1/2
                IF(input%jspins.EQ.1) hub1%ccfmat(i_hia,m,mp) = (h_loc(m,mp,i_hia,1)+h_loc(-m,-mp,i_hia,1))/2.0
             ENDDO
          ENDDO
          IF(l_debug) THEN
             WRITE(*,*) "Average"
+            WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)
+         ENDIF
+         DO m = -l, l
+            DO mp = -l, l
+               hub1%ccfmat(i_hia,m,mp) = (hub1%ccfmat(i_hia,m,mp)+hub1%ccfmat(i_hia,-m,-mp))/2.0
+               hub1%ccfmat(i_hia,-m,-mp) = hub1%ccfmat(i_hia,m,mp)
+            ENDDO
+         ENDDO
+         IF(l_debug) THEN
+            WRITE(*,*) "SOC"
             WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)
          ENDIF
          tr = 0.0
@@ -123,12 +146,7 @@ MODULE m_crystalfield
          DO m = -l, l 
             hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - tr/(2*l+1) 
          ENDDO
-         DO m = -l, l
-            DO mp = -l, l
-               hub1%ccfmat(i_hia,m,mp) = (hub1%ccfmat(i_hia,m,mp)+hub1%ccfmat(i_hia,-m,-mp))/2.0
-               hub1%ccfmat(i_hia,-m,-mp) = hub1%ccfmat(i_hia,m,mp)
-            ENDDO
-         ENDDO
+
          IF(l_debug) THEN
             WRITE(*,*) "TRACELESS (eV)"
             WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const

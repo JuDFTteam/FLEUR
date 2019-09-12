@@ -116,8 +116,8 @@ MODULE m_hubbard1_io
       CALL startSection(input_iounit,"GC_ensemble")
       CALL comment(input_iounit,"Inverse temperature",1)
       CALL writeValue(input_iounit,"beta",hub1%beta)
-      CALL comment(input_iounit,"States with smaller weight are dropped",1)
-      CALL writeValue(input_iounit, "weight_limit",1.0e-4)
+      !CALL comment(input_iounit,"States with smaller weight are dropped",1)
+      !CALL writeValue(input_iounit, "weight_limit",1.0e-4)
       CALL endSection(input_iounit)
 
       CALL startSection(input_iounit,"method")
