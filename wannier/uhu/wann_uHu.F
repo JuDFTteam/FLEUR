@@ -1008,15 +1008,26 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 !     <              nmat,nv,ello,evdu,epar,
 !     <              wk,nbands,eigg,zzMat)
 
+
+
+        CALL lapw%init(input,noco,kpts,atoms,sym,kptibz,cell,
+     &    (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+        CALL cdn_read(
+     &      eig_id,
+     &      DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?&
+     &      kptibz,jspin,DIMENSION%nbasfcn,
+     &      noco%l_ss,noco%l_noco,DIMENSION%neigd,
+     &      n_start,n_end,
+     &      nbands,eigg,zzMat)
+
+
+
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
 
  
-      
-      
-    
-      
-
       allocate (we_b(neigd), we_b2(neigd))
 
   !!! the cycle by the nearest neighbors (nntot) for each kpoint
@@ -1040,12 +1051,27 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 !     <                nmat_b,nv_b,ello,evdu,epar,
 !     <                wk_b,nbands_b,eigg,zzMat)
 
+
+
+        call lapw_b%init(input,noco,kpts,atoms,sym,kptibz_b,cell,
+     &          (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &           .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+        CALL cdn_read(
+     &        eig_id,
+     &      DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     &    kptibz_b,jspin,DIMENSION%nbasfcn,
+     &    noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     &   nbands_b,eigg,zzMat)
+
+
+
+
         nslibd_b = 0
 
       IF(zzMat%l_real) THEN
-         zMat_b%z_r = 0.0
+         zMat_b%data_r = 0.0
       ELSE
-         zMat_b%z_c = CMPLX(0.0,0.0)
+         zMat_b%data_c = CMPLX(0.0,0.0)
       END IF
 
       eig_b(:) = 0.
@@ -1070,11 +1096,11 @@ c      if (mod(i_rec-1,isize).eq.irank) then
             endif
             IF (zzMat%l_real) THEN
                do j = 1,funbas
-                  zMat_b%z_r(j,nslibd_b) = zzMat%z_r(j,i)
+                  zMat_b%data_r(j,nslibd_b) = zzMat%data_r(j,i)
                enddo
             ELSE
                do j = 1,funbas
-                  zMat_b%z_c(j,nslibd_b) = zzMat%z_c(j,i)
+                  zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
                enddo
             END IF
           endif
@@ -1115,21 +1141,21 @@ c***********************************************************
 
       call cpu_time(t0)
 
-      ALLOCATE(lapw_b%k1(SIZE(k1_b,1),SIZE(k1_b,2)))
-      ALLOCATE(lapw_b%k2(SIZE(k1_b,1),SIZE(k1_b,2)))
-      ALLOCATE(lapw_b%k3(SIZE(k1_b,1),SIZE(k1_b,2)))
-      lapw_b%k1 = k1_b
-      lapw_b%k2 = k2_b
-      lapw_b%k3 = k3_b
-      lapw_b%nmat = nmat_b
-      lapw_b%nv = nv_b
+!      ALLOCATE(lapw_b%k1(SIZE(k1_b,1),SIZE(k1_b,2)))
+!      ALLOCATE(lapw_b%k2(SIZE(k1_b,1),SIZE(k1_b,2)))
+!      ALLOCATE(lapw_b%k3(SIZE(k1_b,1),SIZE(k1_b,2)))
+!      lapw_b%k1 = k1_b
+!      lapw_b%k2 = k2_b
+!      lapw_b%k3 = k3_b
+!      lapw_b%nmat = nmat_b
+!      lapw_b%nv = nv_b
       ! I think the other variables of lapw are not needed here.
 !TODO
 !      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
 !     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
 !     +           acof_b,bcof_b,ccof_b,zMat_b)
 
-      DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
+!      DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
 
       call wann_abinv(atoms,
      X        acof_b,bcof_b,ccof_b)
@@ -1143,7 +1169,7 @@ c***********************************************************
           if (wann%l_bzsym) kptibz_b2=irreduc(kptibz_b2)
 
           n_start=1
-          n_end=neigd
+          n_end=DIMENSION%neigd
 
           eigg = 0.
           call cpu_time(t0)
@@ -1158,6 +1184,18 @@ c***********************************************************
 !     <                  nmat_b2,nv_b2,ello,evdu,epar,kveclo_b2,
 !     <                  k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,
 !     <                  eigg,zzMat)
+
+          call lapw_b2%init(input,noco,kpts,atoms,sym,kptibz_b2,
+     &     cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+          CALL cdn_read(
+     &   eig_id,
+     &   DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?&
+     &   kptibz_b,jspin,DIMENSION%nbasfcn,
+     &   noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     &   nbands_b2,eigg,zzMat)
+
 
         nslibd_b2 = 0
 
@@ -1189,11 +1227,11 @@ c***********************************************************
             endif
             IF (zzMat%l_real) THEN
                do j = 1,funbas
-                  zMat_b2%z_r(j,nslibd_b2) = zzMat%z_r(j,i)
+                  zMat_b2%data_r(j,nslibd_b2) = zzMat%data_r(j,i)
                enddo
             ELSE
                do j = 1,funbas
-                  zMat_b2%z_c(j,nslibd_b2) = zzMat%z_c(j,i)
+                  zMat_b2%data_c(j,nslibd_b2) = zzMat%data_c(j,i)
                enddo
             END IF
           endif
@@ -1235,21 +1273,21 @@ c***********************************************************
       call cpu_time(t0)
 
 
-      ALLOCATE(lapw_b2%k1(SIZE(k1_b2,1),SIZE(k1_b2,2)))
-      ALLOCATE(lapw_b2%k2(SIZE(k1_b2,1),SIZE(k1_b2,2)))
-      ALLOCATE(lapw_b2%k3(SIZE(k1_b2,1),SIZE(k1_b2,2)))
-      lapw_b2%k1 = k1_b2
-      lapw_b2%k2 = k2_b2
-      lapw_b2%k3 = k3_b2
-      lapw_b2%nmat = nmat_b2
-      lapw_b2%nv = nv_b2
+!      ALLOCATE(lapw_b2%k1(SIZE(k1_b2,1),SIZE(k1_b2,2)))
+!      ALLOCATE(lapw_b2%k2(SIZE(k1_b2,1),SIZE(k1_b2,2)))
+!      ALLOCATE(lapw_b2%k3(SIZE(k1_b2,1),SIZE(k1_b2,2)))
+!      lapw_b2%k1 = k1_b2
+!      lapw_b2%k2 = k2_b2
+!      lapw_b2%k3 = k3_b2
+!      lapw_b2%nmat = nmat_b2
+!      lapw_b2%nv = nv_b2
       ! I think the other variables of lapw are not needed here.
 !TODO
 !      CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
 !     +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2,oneD,
 !     +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
 
-      DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
+!      DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
 
       call wann_abinv(atoms,
      X        acof_b2,bcof_b2,ccof_b2)
