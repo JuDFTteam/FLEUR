@@ -1024,6 +1024,39 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
 
 
+        do i = 1,nbands
+          if((eigg(i).ge.e1s.and.nslibd.lt.numbands
+     & .and.wann%l_bynumber)
+     &.or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
+     &.or.(i.ge.wann%band_min(jspin)
+     &                 .and.
+     &       (i.le.wann%band_max(jspin))
+     &                 .and.
+     &       wann%l_byindex))then
+            nslibd = nslibd + 1
+            eig(nslibd) = eigg(i)
+            we(nslibd) = we(i)
+            if(l_noco)then
+               funbas =        nv(1) + nlotot
+               funbas = funbas+nv(2) + nlotot
+            else
+               funbas = nv(jspin) + nlotot
+            endif
+            IF (zzMat%l_real) THEN
+               do j = 1,funbas
+                  zMat%data_r(j,nslibd) = zzMat%data_r(j,i)
+               enddo
+            ELSE
+               do j = 1,funbas
+                  zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
+               enddo
+            END IF
+          endif
+        enddo
+
+
+
+
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
 
