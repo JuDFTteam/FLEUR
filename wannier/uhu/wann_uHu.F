@@ -960,11 +960,54 @@ c      if (mod(i_rec-1,isize).eq.irank) then
           END IF
 
 
-      IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
-      ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
-      END IF
+    !  IF(l_real) THEN
+    !     ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+    !  ELSE
+    !     ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+    !  END IF
+    
+          zMat%l_real = zzMat%l_real
+          zMat%matsize1 = zzMat%matsize1
+          zMat%matsize2 = zzMat%matsize2
+          IF (zzMat%l_real) THEN
+             IF(.NOT.ALLOCATED(zMat%data_r))&
+                  ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+             zMat%data_r = 0.0
+          ELSE
+             IF(.NOT.ALLOCATED(zMat%data_c))&
+                  ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+             zMat%data_c = CMPLX(0.0,0.0)
+          END IF
+    
+          zMat_b%l_real = zzMat%l_real
+          zMat_b%matsize1 = zzMat%matsize1
+          zMat_b%matsize2 = zzMat%matsize2
+          IF (zzMat%l_real) THEN
+               IF(.NOT.ALLOCATED(zMat_b%data_r))&
+               ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
+             zMat_b%data_r = 0.0
+          ELSE
+               IF(.NOT.ALLOCATED(zMat_b%data_c))&
+               ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
+             zMat_b%data_c = CMPLX(0.0,0.0)
+          END IF
+    
+    
+          zMat_b2%l_real = zzMat%l_real
+          zMat_b2%matsize1 = zzMat%matsize1
+          zMat_b2%matsize2 = zzMat%matsize2
+          IF (zzMat%l_real) THEN
+               IF(.NOT.ALLOCATED(zMat_b2%data_r))&
+               ALLOCATE (zMat_b2%data_r(zMat_b%matsize1,zMat_b%matsize2))
+             zMat_b2%data_r = 0.0
+          ELSE
+               IF(.NOT.ALLOCATED(zMat_b2%data_c))&
+               ALLOCATE (zMat_b2%data_c(zMat_b%matsize1,zMat_b%matsize2))
+             zMat_b2%data_c = CMPLX(0.0,0.0)
+          END IF
+    
+    
+    
 
 !      CALL cdn_read(
 !     >              eig_id,
