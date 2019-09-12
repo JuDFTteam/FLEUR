@@ -50,8 +50,9 @@ c****************************************************************************
       use m_wann_radovlp_integrals
       use m_matmul,only : matmul3,matmul3r
       use m_wann_socmat
-      use m_wann_write_hsomtx
+      use m_wann_write_matrix5
       use m_wann_write_nabla
+      use m_wann_write_matrix6
       use m_wann_write_amn
       use m_wann_write_nabla
       use m_wann_mmkb_int
@@ -168,6 +169,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 !!! the Mmn matrices
       complex, allocatable :: surfcurr(:,:,:,:)
       complex, allocatable :: hsomtx(:,:,:,:,:),hsomtx_l(:,:,:,:)
+      complex, allocatable :: hsomtxvec(:,:,:,:,:,:)
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)
       complex, allocatable :: perpmag(:,:,:)
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
@@ -496,6 +498,11 @@ c##################################################################
          allocate ( hsomtx_l(nbnd,nbnd,2,2) )
       endif
 
+      if(wann%l_socmatvec)then
+         allocate ( hsomtxvec(2,2,nbnd,nbnd,3,fullnkpts) )
+         hsomtxvec=0.0
+      endif
+
       write (*,*) 'nwfs=',nwfs
 
       allocate ( flo(ntypd,jmtd,2,nlod,2) )
@@ -666,15 +673,20 @@ c****************************************************************
          allocate( ubeffdg(0:lmd,0:lmd,1:ntype) )
          allocate( dbeffug(0:lmd,0:lmd,1:ntype) )
          allocate( dbeffdg(0:lmd,0:lmd,1:ntype) )
-         allocate( ubeffulog(0:lmd,0:15,1:ntype) )
-         allocate( dbeffulog(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffug(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffdg(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffulog(0:15,0:15,1:ntype) )
+         
+         allocate( ubeffulog(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( dbeffulog(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffug(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffdg(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffulog(1:nlod,-llod:llod,
+     &                         1:nlod,-llod:llod,1:ntype) )
+         
+         
          call wann_gabeffgagaunt(
+     >            wann%l_perpmagatlres,wann%perpmagl,
      >            neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
-     >            nlod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
+     >            nlod,llod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
      >            lmaxd,lmd,clnu,
      <            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      <            dbeffulog,
@@ -885,12 +897,12 @@ c...for the lapws and local orbitals, summed by the basis functions
          call wann_perpmag(
      >            nslibd,neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
-     >            nlod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
+     >            nlod,llod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
      >            lmaxd,lmd,clnu,
      >            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      >            dbeffulog,
      >            ulobeffug,ulobeffdg,ulobeffulog,
-     >            acof,bcof,
+     >            acof,bcof,ccof,
      <            perpmag(:,:,ikpt))
       endif   
 
@@ -1101,12 +1113,30 @@ c******************************************************
       endif
 
       if(wann%l_socmat)then
-        call wann_write_hsomtx(
+!        call wann_write_hsomtx(
+!     >      mpi_comm,l_p0,'WF1.hsomtx',
+!     >      'Matrix elements of spin-orbit coupling',
+!     >      2,2,nbnd,nbnd,fullnkpts,
+!     >      irank,isize,
+!     <      hsomtx)
+     
+        call wann_write_matrix5(
      >      mpi_comm,l_p0,'WF1.hsomtx',
      >      'Matrix elements of spin-orbit coupling',
-     >      2,2,nbnd,nbnd,fullnkpts,
-     >      irank,isize,
+     >      nbnd,nbnd,2,2,fullnkpts,
+     >      irank,isize,wann%l_unformatted,
      <      hsomtx)
+     
+     
+      endif
+      
+      if(wann%l_socmatvec)then
+        call wann_write_matrix6(
+     >      mpi_comm,l_p0,'WF1.hsomtxvec',
+     >      'Vectors for spin-orbit coupling',
+     >      2,2,nbnd,nbnd,3,fullnkpts,
+     >      irank,isize,wann%l_unformatted,
+     <      hsomtxvec)
       endif
 
       if(wann%l_mmn0)then

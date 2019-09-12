@@ -27,6 +27,7 @@ subroutine wann_read_inp(input,l_p0,wann)
    real              :: version_real
 
 !-----some defaults
+   wann%l_perpmagatlres=.false.
    wann%l_atomlist=.false.
    wann%l_ndegen=.false.
    wann%l_orbitalmom=.false.
@@ -53,6 +54,7 @@ subroutine wann_read_inp(input,l_p0,wann)
    wann%l_perpmagatrs=.false.
    wann%l_socmatrs=.false.
    wann%l_socmat=.false.
+   wann%l_socmatvec=.false.
    wann%l_soctomom=.false.
    wann%l_kptsreduc2=.false.
    wann%l_nablars=.false.
@@ -123,6 +125,10 @@ subroutine wann_read_inp(input,l_p0,wann)
    wann%l_hsomtxvec_to_lmpzsoc_unf=.false.
    wann%l_hsomtxvec_to_lmpzsoc=.false.
    wann%l_hsomtxvec_unf_to_lmpzsoc=.false.
+   wann%l_hsomtx_unf_to_hsoc_unf=.false.
+   wann%l_hsomtx_to_hsoc_unf=.false.
+   wann%l_hsomtx_to_hsoc=.false.
+   wann%l_hsomtx_unf_to_hsoc=.false.
 
 !-----read the input file 'wann_inp'
    l_file=.false.
@@ -240,8 +246,27 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtxvec_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
             wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
+            wann%l_hsomtx_unf_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
+            wann%l_hsomtx_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc')then
+            wann%l_hsomtx_to_hsoc=.true.
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
+            wann%l_hsomtx_unf_to_hsoc=.true.
+            
+         elseif(trim(task).eq.'perpmagatlres')then
+            wann%l_perpmagatlres=.true.
+	    backspace(916)
+            read(916,*,iostat=ios)task,wann%perpmagl
+            if (ios /= 0) &
+               CALL juDFT_error ("error reading perpmagl", &
+                               calledby="wann_read_inp")   
+            
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
+         elseif(trim(task).eq.'socmatvec')then
+            wann%l_socmatvec=.true.  
          elseif(trim(task).eq.'socmatrs')then
             wann%l_socmatrs=.true.
          elseif(trim(task).eq.'soctomom')then
@@ -505,8 +530,27 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtxvec_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
             wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
+            wann%l_hsomtx_unf_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
+            wann%l_hsomtx_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc')then
+            wann%l_hsomtx_to_hsoc=.true.
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
+            wann%l_hsomtx_unf_to_hsoc=.true.
+            
+         elseif(trim(task).eq.'perpmagatlres')then
+            wann%l_perpmagatlres=.true.
+	    backspace(916)
+            read(916,*,iostat=ios)task,wann%perpmagl
+            if (ios /= 0) &
+               CALL juDFT_error ("error reading perpmagl", &
+                               calledby="wann_read_inp")   
+            
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
+         elseif(trim(task).eq.'socmatvec')then
+            wann%l_socmatvec=.true.
          elseif(trim(task).eq.'socmatrs')then
             wann%l_socmatrs=.true.
          elseif(trim(task).eq.'soctomom')then

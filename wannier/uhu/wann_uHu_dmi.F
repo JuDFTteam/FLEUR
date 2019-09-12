@@ -235,7 +235,7 @@ c     ..local scalars..
       complex :: chi,chi2
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat)  :: zMat, zzMat, zMat_b, zMat_b2
+      TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
       TYPE(t_lapw)  :: lapw_b, lapw_b2
 
       if(.not.l_socgwf) stop 'wann_uHu_dmi only with l_socgwf=T'
@@ -928,12 +928,17 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       ! get current bkpt vector
 
       zzMat%l_real = l_real
-      zzMat%nbasfcn = nbasfcn
-      zzMat%nbands = neigd
+!      zzMat%nbasfcn = nbasfcn
+      zzMat%matsize1 = nbasfcn
+!      zzMat%nbands = neigd
+      zzMat%matsize2 = neigd
+      
       IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+!         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
+          ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
       ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+!         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
+          ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
       END IF
 
 !      CALL cdn_read(
@@ -948,16 +953,27 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
       zMat_b%l_real = zzMat%l_real
       zMat_b2%l_real = zzMat%l_real
-      zMat_b%nbasfcn = zzMat%nbasfcn
-      zMat_b2%nbasfcn = zzMat%nbasfcn
-      zMat_b%nbands = zzMat%nbands
-      zMat_b2%nbands = zzMat%nbands
+      
+!      zMat_b%nbasfcn = zzMat%nbasfcn
+!      zMat_b2%nbasfcn = zzMat%nbasfcn
+       zMat_b%matsize1 = zzMat%matsize1
+       zMat_b2%matsize1 = zzMat%matsize1
+      
+!      zMat_b%nbands = zzMat%nbands
+!      zMat_b2%nbands = zzMat%nbands
+      zMat_b%matsize2 = zzMat%matsize2
+      zMat_b2%matsize2 = zzMat%matsize2
+
       IF(zzMat%l_real) THEN
-         ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
-         ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
+!         ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
+!         ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat_b%data_r(zMat%matsize1,zMat%matsize2))
+         ALLOCATE (zMat_b2%data_r(zMat%matsize1,zMat%matsize2))
       ELSE
-         ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
-         ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
+!         ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
+!         ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat_b%data_c(zMat%matsize1,zMat%matsize2))
+         ALLOCATE (zMat_b2%data_c(zMat%matsize1,zMat%matsize2))
       END IF
 
       allocate (we_b(neigd), we_b2(neigd))
@@ -986,9 +1002,9 @@ c      if (mod(i_rec-1,isize).eq.irank) then
         nslibd_b = 0
 
       IF(zzMat%l_real) THEN
-         zMat_b%z_r = 0.0
+         zMat_b%data_r = 0.0
       ELSE
-         zMat_b%z_c = CMPLX(0.0,0.0)
+         zMat_b%data_c = CMPLX(0.0,0.0)
       END IF
 
       eig_b(:) = 0.
@@ -1013,11 +1029,11 @@ c      if (mod(i_rec-1,isize).eq.irank) then
             endif
             IF (zzMat%l_real) THEN
                do j = 1,funbas
-                  zMat_b%z_r(j,nslibd_b) = zzMat%z_r(j,i)
+                  zMat_b%data_r(j,nslibd_b) = zzMat%data_r(j,i)
                enddo
             ELSE
                do j = 1,funbas
-                  zMat_b%z_c(j,nslibd_b) = zzMat%z_c(j,i)
+                  zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
                enddo
             END IF
           endif
@@ -1131,9 +1147,9 @@ c***********************************************************
         IF(ANY(bkpt_b2.ne.bkpt)) stop 'bkpt_b2.ne.bkpt'
 
       IF(zzMat%l_real) THEN
-         zMat_b2%z_r = 0.0
+         zMat_b2%data_r = 0.0
       ELSE
-         zMat_b2%z_c = CMPLX(0.0,0.0)
+         zMat_b2%data_c = CMPLX(0.0,0.0)
       END IF
 
       eig_b2(:) = 0.
@@ -1158,11 +1174,11 @@ c***********************************************************
             endif
             IF (zzMat%l_real) THEN
                do j = 1,funbas
-                  zMat_b2%z_r(j,nslibd_b2) = zzMat%z_r(j,i)
+                  zMat_b2%data_r(j,nslibd_b2) = zzMat%data_r(j,i)
                enddo
             ELSE
                do j = 1,funbas
-                  zMat_b2%z_c(j,nslibd_b2) = zzMat%z_c(j,i)
+                  zMat_b2%data_c(j,nslibd_b2) = zzMat%data_c(j,i)
                enddo
             END IF
           endif

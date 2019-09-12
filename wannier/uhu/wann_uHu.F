@@ -230,8 +230,8 @@ c     ..local scalars..
       complex :: nsfactor,nsfactor_b,nsfactor_b2
 
       TYPE(t_usdus) :: usdus
-      TYPE(t_zmat)  :: zMat, zzMat, zMat_b, zMat_b2
-      TYPE(t_lapw)  :: lapw_b, lapw_b2
+      TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
+      TYPE(t_lapw)  :: lapw, lapw_b, lapw_b2
 
 
 c     ..initializations..
@@ -939,19 +939,67 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       allocate ( eigg(neigd) )
 
           n_start=1
-          n_end=neigd
+          n_end=DIMENSION%neigd
  
       call cpu_time(t0)
       ! get current bkpt vector
 
-      zzMat%l_real = l_real
-      zzMat%nbasfcn = nbasfcn
-      zzMat%nbands = neigd
-      IF(l_real) THEN
-         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
-      ELSE
-         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
-      END IF
+          zzMat%l_real = l_real
+          zzMat%matsize1 = DIMENSION%nbasfcn
+          zzMat%matsize2 = DIMENSION%neigd
+          IF(l_real) THEN
+             IF(.NOT.ALLOCATED(zzMat%data_r))
+     &    ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+          ELSE
+               IF(.NOT.ALLOCATED(zzMat%data_c))
+     &    ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+          END IF
+
+
+
+    
+          zMat%l_real = zzMat%l_real
+          zMat%matsize1 = zzMat%matsize1
+          zMat%matsize2 = zzMat%matsize2
+          IF (zzMat%l_real) THEN
+             IF(.NOT.ALLOCATED(zMat%data_r))
+     &              ALLOCATE (zMat%data_r(zMat%matsize1,zMat%matsize2))
+             zMat%data_r = 0.0
+          ELSE
+             IF(.NOT.ALLOCATED(zMat%data_c))
+     &              ALLOCATE (zMat%data_c(zMat%matsize1,zMat%matsize2))
+             zMat%data_c = CMPLX(0.0,0.0)
+          END IF
+    
+          zMat_b%l_real = zzMat%l_real
+          zMat_b%matsize1 = zzMat%matsize1
+          zMat_b%matsize2 = zzMat%matsize2
+          IF (zzMat%l_real) THEN
+               IF(.NOT.ALLOCATED(zMat_b%data_r))
+     &    ALLOCATE (zMat_b%data_r(zMat_b%matsize1,zMat_b%matsize2))
+             zMat_b%data_r = 0.0
+          ELSE
+               IF(.NOT.ALLOCATED(zMat_b%data_c))
+     &    ALLOCATE (zMat_b%data_c(zMat_b%matsize1,zMat_b%matsize2))
+             zMat_b%data_c = CMPLX(0.0,0.0)
+          END IF
+    
+    
+          zMat_b2%l_real = zzMat%l_real
+          zMat_b2%matsize1 = zzMat%matsize1
+          zMat_b2%matsize2 = zzMat%matsize2
+          IF (zzMat%l_real) THEN
+               IF(.NOT.ALLOCATED(zMat_b2%data_r))
+     &   ALLOCATE (zMat_b2%data_r(zMat_b%matsize1,zMat_b%matsize2))
+             zMat_b2%data_r = 0.0
+          ELSE
+               IF(.NOT.ALLOCATED(zMat_b2%data_c))
+     &   ALLOCATE (zMat_b2%data_c(zMat_b%matsize1,zMat_b%matsize2))
+             zMat_b2%data_c = CMPLX(0.0,0.0)
+          END IF
+    
+    
+    
 
 !      CALL cdn_read(
 !     >              eig_id,
@@ -960,34 +1008,59 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 !     <              nmat,nv,ello,evdu,epar,
 !     <              wk,nbands,eigg,zzMat)
 
+
+
+        CALL lapw%init(input,noco,kpts,atoms,sym,kptibz,cell,
+     &    (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+        CALL cdn_read(
+     &      eig_id,
+     &      DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?&
+     &      kptibz,jspin,DIMENSION%nbasfcn,
+     &      noco%l_ss,noco%l_noco,DIMENSION%neigd,
+     &      n_start,n_end,
+     &      nbands,eigg,zzMat)
+
+
+
+        do i = 1,nbands
+          if((eigg(i).ge.e1s.and.nslibd.lt.numbands
+     & .and.wann%l_bynumber)
+     &.or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
+     &.or.(i.ge.wann%band_min(jspin)
+     &                 .and.
+     &       (i.le.wann%band_max(jspin))
+     &                 .and.
+     &       wann%l_byindex))then
+            nslibd = nslibd + 1
+            eig(nslibd) = eigg(i)
+            we(nslibd) = we(i)
+            if(l_noco)then
+               funbas =        nv(1) + nlotot
+               funbas = funbas+nv(2) + nlotot
+            else
+               funbas = nv(jspin) + nlotot
+            endif
+            IF (zzMat%l_real) THEN
+               do j = 1,funbas
+                  zMat%data_r(j,nslibd) = zzMat%data_r(j,i)
+               enddo
+            ELSE
+               do j = 1,funbas
+                  zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
+               enddo
+            END IF
+          endif
+        enddo
+
+
+
+
       call cpu_time(t1)
       t_eig = t_eig + t1 - t0
 
-      zMat_b%l_real = zzMat%l_real
-      zMat_b2%l_real = zzMat%l_real
-      zMat_b%nbasfcn = zzMat%nbasfcn
-      zMat_b2%nbasfcn = zzMat%nbasfcn
-      zMat_b%nbands = zzMat%nbands
-      zMat_b2%nbands = zzMat%nbands
-    !  IF(zzMat%l_real) THEN
-    !     ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
-    !     ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
-    !  ELSE
-    !     ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
-    !     ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
-    !  END IF
-      
-      
-      IF(zzMat%l_real) THEN
-         ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
-         ALLOCATE (zMat_b2%z_r(zMat_b2%nbasfcn,zMat_b2%nbands))
-      ELSE
-         ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
-         ALLOCATE (zMat_b2%z_c(zMat_b2%nbasfcn,zMat_b2%nbands))
-      END IF
-      
-      
-
+ 
       allocate (we_b(neigd), we_b2(neigd))
 
   !!! the cycle by the nearest neighbors (nntot) for each kpoint
@@ -1011,12 +1084,27 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 !     <                nmat_b,nv_b,ello,evdu,epar,
 !     <                wk_b,nbands_b,eigg,zzMat)
 
+
+
+        call lapw_b%init(input,noco,kpts,atoms,sym,kptibz_b,cell,
+     &          (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &           .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+        CALL cdn_read(
+     &        eig_id,
+     &      DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     &    kptibz_b,jspin,DIMENSION%nbasfcn,
+     &    noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     &   nbands_b,eigg,zzMat)
+
+
+
+
         nslibd_b = 0
 
       IF(zzMat%l_real) THEN
-         zMat_b%z_r = 0.0
+         zMat_b%data_r = 0.0
       ELSE
-         zMat_b%z_c = CMPLX(0.0,0.0)
+         zMat_b%data_c = CMPLX(0.0,0.0)
       END IF
 
       eig_b(:) = 0.
@@ -1041,11 +1129,11 @@ c      if (mod(i_rec-1,isize).eq.irank) then
             endif
             IF (zzMat%l_real) THEN
                do j = 1,funbas
-                  zMat_b%z_r(j,nslibd_b) = zzMat%z_r(j,i)
+                  zMat_b%data_r(j,nslibd_b) = zzMat%data_r(j,i)
                enddo
             ELSE
                do j = 1,funbas
-                  zMat_b%z_c(j,nslibd_b) = zzMat%z_c(j,i)
+                  zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
                enddo
             END IF
           endif
@@ -1086,21 +1174,21 @@ c***********************************************************
 
       call cpu_time(t0)
 
-      ALLOCATE(lapw_b%k1(SIZE(k1_b,1),SIZE(k1_b,2)))
-      ALLOCATE(lapw_b%k2(SIZE(k1_b,1),SIZE(k1_b,2)))
-      ALLOCATE(lapw_b%k3(SIZE(k1_b,1),SIZE(k1_b,2)))
-      lapw_b%k1 = k1_b
-      lapw_b%k2 = k2_b
-      lapw_b%k3 = k3_b
-      lapw_b%nmat = nmat_b
-      lapw_b%nv = nv_b
+!      ALLOCATE(lapw_b%k1(SIZE(k1_b,1),SIZE(k1_b,2)))
+!      ALLOCATE(lapw_b%k2(SIZE(k1_b,1),SIZE(k1_b,2)))
+!      ALLOCATE(lapw_b%k3(SIZE(k1_b,1),SIZE(k1_b,2)))
+!      lapw_b%k1 = k1_b
+!      lapw_b%k2 = k2_b
+!      lapw_b%k3 = k3_b
+!      lapw_b%nmat = nmat_b
+!      lapw_b%nv = nv_b
       ! I think the other variables of lapw are not needed here.
 !TODO
 !      CALL abcof(input,atoms,noccbd_b,sym,cell,bkpt_b,lapw_b,
 !     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
 !     +           acof_b,bcof_b,ccof_b,zMat_b)
 
-      DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
+!      DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
 
       call wann_abinv(atoms,
      X        acof_b,bcof_b,ccof_b)
@@ -1114,7 +1202,7 @@ c***********************************************************
           if (wann%l_bzsym) kptibz_b2=irreduc(kptibz_b2)
 
           n_start=1
-          n_end=neigd
+          n_end=DIMENSION%neigd
 
           eigg = 0.
           call cpu_time(t0)
@@ -1130,12 +1218,24 @@ c***********************************************************
 !     <                  k1_b2,k2_b2,k3_b2,bkpt_b2,wk_b2,nbands_b2,
 !     <                  eigg,zzMat)
 
+          call lapw_b2%init(input,noco,kpts,atoms,sym,kptibz_b2,
+     &     cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+          CALL cdn_read(
+     &   eig_id,
+     &   DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?&
+     &   kptibz_b,jspin,DIMENSION%nbasfcn,
+     &   noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     &   nbands_b2,eigg,zzMat)
+
+
         nslibd_b2 = 0
 
       IF(zzMat%l_real) THEN
-         zMat_b2%z_r = 0.0
+         zMat_b2%data_r = 0.0
       ELSE
-         zMat_b2%z_c = CMPLX(0.0,0.0)
+         zMat_b2%data_c = CMPLX(0.0,0.0)
       END IF
 
       eig_b2(:) = 0.
@@ -1160,11 +1260,11 @@ c***********************************************************
             endif
             IF (zzMat%l_real) THEN
                do j = 1,funbas
-                  zMat_b2%z_r(j,nslibd_b2) = zzMat%z_r(j,i)
+                  zMat_b2%data_r(j,nslibd_b2) = zzMat%data_r(j,i)
                enddo
             ELSE
                do j = 1,funbas
-                  zMat_b2%z_c(j,nslibd_b2) = zzMat%z_c(j,i)
+                  zMat_b2%data_c(j,nslibd_b2) = zzMat%data_c(j,i)
                enddo
             END IF
           endif
@@ -1206,21 +1306,21 @@ c***********************************************************
       call cpu_time(t0)
 
 
-      ALLOCATE(lapw_b2%k1(SIZE(k1_b2,1),SIZE(k1_b2,2)))
-      ALLOCATE(lapw_b2%k2(SIZE(k1_b2,1),SIZE(k1_b2,2)))
-      ALLOCATE(lapw_b2%k3(SIZE(k1_b2,1),SIZE(k1_b2,2)))
-      lapw_b2%k1 = k1_b2
-      lapw_b2%k2 = k2_b2
-      lapw_b2%k3 = k3_b2
-      lapw_b2%nmat = nmat_b2
-      lapw_b2%nv = nv_b2
+!      ALLOCATE(lapw_b2%k1(SIZE(k1_b2,1),SIZE(k1_b2,2)))
+!      ALLOCATE(lapw_b2%k2(SIZE(k1_b2,1),SIZE(k1_b2,2)))
+!      ALLOCATE(lapw_b2%k3(SIZE(k1_b2,1),SIZE(k1_b2,2)))
+!      lapw_b2%k1 = k1_b2
+!      lapw_b2%k2 = k2_b2
+!      lapw_b2%k3 = k3_b2
+!      lapw_b2%nmat = nmat_b2
+!      lapw_b2%nv = nv_b2
       ! I think the other variables of lapw are not needed here.
 !TODO
 !      CALL abcof(input,atoms,noccbd_b2,sym,cell,bkpt_b2,lapw_b2,
 !     +           noccbd_b2,usdus,noco,jspin_b,kveclo_b2,oneD,
 !     +           acof_b2,bcof_b2,ccof_b2,zMat_b2)
 
-      DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
+!      DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
 
       call wann_abinv(atoms,
      X        acof_b2,bcof_b2,ccof_b2)
@@ -1399,19 +1499,19 @@ c      endif
 
 
       IF(l_real) THEN
-         DEALLOCATE ( zzMat%z_r )
+         DEALLOCATE ( zzMat%data_r )
       ELSE
-         DEALLOCATE ( zzMat%z_c )
+         DEALLOCATE ( zzMat%data_c )
       END IF
 
 
 
       IF(zzMat%l_real) THEN
-         DEALLOCATE (zMat_b%z_r)
-         DEALLOCATE (zMat_b2%z_r)
+         DEALLOCATE (zMat_b%data_r)
+         DEALLOCATE (zMat_b2%data_r)
       ELSE
-         DEALLOCATE (zMat_b%z_c)
-         DEALLOCATE (zMat_b2%z_c)
+         DEALLOCATE (zMat_b%data_c)
+         DEALLOCATE (zMat_b2%data_c)
       END IF
 
 

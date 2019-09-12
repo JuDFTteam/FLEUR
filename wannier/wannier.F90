@@ -2241,7 +2241,7 @@ CONTAINS
                   'angular components',&
                   nbnd,nbnd,&
                   num_angl,wann%oc_num_orbs,fullnkpts,&
-                  mpi%irank,mpi%isize,&
+                  mpi%irank,mpi%isize,wann%l_unformatted,&
                   orbcomp)
           ENDIF
 
