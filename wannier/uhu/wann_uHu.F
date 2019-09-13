@@ -1194,6 +1194,11 @@ c***********************************************************
 !     +           noccbd_b,usdus,noco,jspin,kveclo_b,oneD,
 !     +           acof_b,bcof_b,ccof_b,zMat_b)
 
+        CALL abcof(input,atoms,sym,cell,lapw_b,
+     &      noccbd_b,usdus,noco,jspin,oneD,
+     &      acof_b,bcof_b,ccof_b,zMat_b)
+
+
 !      DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
 
       call wann_abinv(atoms,
