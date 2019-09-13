@@ -1424,7 +1424,9 @@ c      endif
          if(.not.l_skip_int) then
             call cpu_time(t0)
             call wann_uHu_int(cmplx(1.,0.),nvd,k1d,k2d,k3d,n3d,
-     >  nv_b(jspin),nv_b2(jspin_b),nbnd,neigd,
+     >  lapw_b%nv(jspin),!nv_b(jspin),
+     >  lapw_b2%nv(jspin),!nv_b2(jspin_b),
+     >  nbnd,neigd,
      >  nslibd_b,nslibd_b2,nbasfcn,addnoco,addnoco2,
 !     >            k1_b(:,jspin), k2_b(:,jspin), k3_b(:,jspin),
      >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
@@ -1462,7 +1464,10 @@ c      endif
 !     >      k1_b2,k2_b2,k3_b2,
      >      lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k3(:,jspin),
      >      wannierspin,nvd,nbasfcn,neigd,
-     >            zMat_b,zMat_b2,nv_b,nv_b2,omtil,gb(:,ikpt_b,ikpt),
+     >            zMat_b,zMat_b2,
+     >            lapw_b%nv,!nv_b,
+     >            lapw_b2%nv,! nv_b2,
+     >            omtil,gb(:,ikpt_b,ikpt),
      >            gb(:,ikpt_b2,ikpt),sign2,
      >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
             call cpu_time(t1)
@@ -1479,11 +1484,13 @@ c      endif
      >            bkpt_b2,odi,vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
      >            jspin,jspin_b,doublespin,
 !     >            k1_b,k2_b,k3_b,
-     >   lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k1(:,jspin),
+     >   lapw_b%k1(:,:),lapw_b%k2(:,:),lapw_b%k1(:,:),
 !     >            k1_b2,k2_b2,k3_b2,
-     >   lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k1(:,jspin),
+     >   lapw_b2%k1(:,:),lapw_b2%k2(:,:),lapw_b2%k1(:,:),
      >          wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
-     >            nv_b,nv_b2,sk2,phi2,omtil,gb(:,ikpt_b,ikpt),
+     >            lapw_b%nv,!nv_b,
+     >            lapw_b2%nv,!nv_b2,
+     >            sk2,phi2,omtil,gb(:,ikpt_b,ikpt),
      >            gb(:,ikpt_b2,ikpt),qpt_i,sign2,
      >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
             call cpu_time(t1)
