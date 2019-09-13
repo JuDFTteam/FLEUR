@@ -124,6 +124,7 @@ c******************************************************
        else
         open (305,file=spin12(jspin2)//trim(fending)//'.uHu'
      >                               //trim(ftype),form='unformatted')
+        write (305) header
         write (305) nbnd,fullnkpts,nntot !,nntot2
 !        write (305) bpt,gb
         do ikpt = 1,fullnkpts
