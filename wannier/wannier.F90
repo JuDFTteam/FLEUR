@@ -360,7 +360,7 @@ CONTAINS
 
     IF(wann%l_updown)THEN            
        CALL wann_updown(&
-            mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,&
+            mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,&
             enpara,eig_idList(1),l_real,&
             mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&
             atoms%lmaxd,atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,&
