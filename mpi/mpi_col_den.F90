@@ -441,6 +441,23 @@ CONTAINS
            IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,greensfCoeffs%ud(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspin),1)
          ENDIF
          DEALLOCATE(r_b)
+         IF(input%l_gfmperp.AND.jspin.EQ.1) THEN
+           n = greensfCoeffs%ne*atoms%n_gf*(2*lmaxU_const+1)**2
+           ALLOCATE(r_b(n))
+           CALL MPI_REDUCE(greensfCoeffs%projdos(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+           IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,greensfCoeffs%projdos(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),1)
+           IF(.NOT.input%l_gfsphavg) THEN
+             CALL MPI_REDUCE(greensfCoeffs%uu(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+             IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,greensfCoeffs%uu(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),1)
+             CALL MPI_REDUCE(greensfCoeffs%du(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+             IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,greensfCoeffs%du(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),1)
+             CALL MPI_REDUCE(greensfCoeffs%dd(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+             IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,greensfCoeffs%dd(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),1)
+             CALL MPI_REDUCE(greensfCoeffs%ud(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),r_b,n,CPP_MPI_REAL,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+             IF(mpi%irank.EQ.0) CALL CPP_BLAS_scopy(n,r_b,1,greensfCoeffs%ud(:,:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3),1)
+           ENDIF
+           DEALLOCATE(r_b)
+         ENDIF
         ENDIF
         IF(PRESENT(greensf)) THEN
          n = greensf%nz*atoms%n_gf*(2*lmaxU_const+1)**2*2

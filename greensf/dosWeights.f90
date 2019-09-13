@@ -88,11 +88,11 @@ MODULE m_dosWeights
       l_bloechl = .TRUE.
       ALLOCATE( dos_weights(g%ne) )
       dos_weights = 0.0
-      e_ind(:,1) = g%ne+1
-      e_ind(:,2) = 0
+      e_ind(:,1) = 0
+      e_ind(:,2) = g%ne+1
       weights = 0.0
 
-      fac = count(kpts%bkp(:).EQ.ikpt)
+      fac = MERGE(1,count(kpts%bkp(:).EQ.ikpt),kpts%nkptf.EQ.0)
 
       DO itet = 1, kpts%ntet
          IF(ALL(kpts%ntetra(1:4,itet).NE.ikpt)) CYCLE !search for the tetrahedra containing ikpt

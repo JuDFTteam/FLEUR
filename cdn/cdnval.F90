@@ -235,7 +235,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
          CALL timestart("TetrahedronWeights")
          CALL tetrahedronInit(ikpt,kpts,input,SIZE(ev_list),results%eig(ev_list,:,jsp),&
-         greensfCoeffs,results%ef,resWeights,dosWeights,dosBound)
+                              greensfCoeffs,results%ef,resWeights,dosWeights,dosBound)
          CALL timestop("TetrahedronWeights")
       ENDIF
       DO ispin = jsp_start, jsp_end

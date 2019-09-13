@@ -158,7 +158,7 @@ MODULE m_hubbard1_io
       !Only write the exchange splitting here if its not zero to not conflict with possible additional args
       IF(exc.NE.0.0) THEN
          CALL comment(input_iounit,"Exchange splitting",1)
-         !Sign??
+         !The sign flip is just a convention between the solver and the DFT calculation
          CALL writeValue(input_iounit,"Exc",-exc)
       ENDIF
       !---------------------------------------------------------

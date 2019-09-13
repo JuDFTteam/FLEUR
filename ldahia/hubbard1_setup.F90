@@ -321,7 +321,7 @@ MODULE m_hubbard1_setup
             WRITE (6,*) results%e_ldau
          ENDIF
       ELSE IF(mpi%irank.NE.0) THEN
-         results%e_ldau = MERGE(results%lda_u,0.0,atoms%n_u>0)
+         results%e_ldau = MERGE(results%e_ldau,0.0,atoms%n_u>0)
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
          !If we are on a different mpi%irank and no solver is linked we need to call juDFT_end here if the solver was not run
          !kind of a weird workaround (replace with something better)
@@ -340,7 +340,7 @@ MODULE m_hubbard1_setup
          !There is nothing to be done yet just set the potential correction to 0
          WRITE(*,*) "No density matrix and GF found -> skipping LDA+HIA"
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
-         results%e_ldau = MERGE(results%lda_u,0.0,atoms%n_u>0)
+         results%e_ldau = MERGE(results%e_ldau,0.0,atoms%n_u>0)
       ENDIF
 #ifdef CPP_MPI
       !Broadcast both the potential and the density matrix here

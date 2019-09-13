@@ -269,7 +269,7 @@ MODULE m_types_greensf
          END IF
 
          IF(mpi%irank.EQ.0) THEN 
-            !Write out the information about the energy contour to outfile
+            !Write out the information about the energy contour 
             WRITE(6,"(A)") "---------------------------------------------"
             WRITE(6,"(A)") " Green's function energy contour"
             WRITE(6,"(A)") "---------------------------------------------"
@@ -292,7 +292,7 @@ MODULE m_types_greensf
                WRITE(6,"(A)") "Equidistant Contour for DOS calculations: "
                WRITE(6,1030) this%nz, input%gf_sigma
                WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-               WRITE(6,1040) eb,et
+               WRITE(6,1040) eb-ef,et-ef
             CASE default
 
             END SELECT
@@ -307,7 +307,7 @@ MODULE m_types_greensf
 
 1000        FORMAT("Using energy contour mode: ", I1)
 1010        FORMAT("nz: ", I5.1,"; nmatsub: ", I5.1,"; n1: ", I5.1,"; n2: ", I5.1,"; n3: ", I5.1)
-1020        FORMAT("nz: ", I5.1," alpha: ", f8.4, "(not doing anything atm)")
+1020        FORMAT("nz: ", I5.1," alpha: ", f8.4)
 1030        FORMAT("n: ", I5.1,"; sigma: ", f8.4)
 1040        FORMAT("eb: ", f8.4,"; et: ",f8.4)
 1050        FORMAT(2f8.4,"      weight: ",2e11.4)
@@ -393,10 +393,10 @@ MODULE m_types_greensf
 
          DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
             !Find the right quadrant in gmat according to the spin index
-            spin1 = MERGE(ispin,1,ispin.NE.3)
-            spin1 = MERGE(spin1,2,ispin.NE.4)
-            spin2 = MERGE(ispin,2,ispin.NE.3)
-            spin2 = MERGE(spin2,1,ispin.NE.4)
+            spin1 = MERGE(ispin,2,ispin.NE.3)
+            spin1 = MERGE(spin1,1,ispin.NE.4)
+            spin2 = MERGE(ispin,1,ispin.NE.3)
+            spin2 = MERGE(spin2,2,ispin.NE.4)
 
             spin_ind = MERGE(ispin,1,input%jspins.EQ.2)
             spin_ind = MERGE(3,spin_ind,ispin.EQ.4)

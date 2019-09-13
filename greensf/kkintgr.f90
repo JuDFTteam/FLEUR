@@ -40,7 +40,7 @@ MODULE m_kkintgr
       IMPLICIT NONE
 
       !Information about the integrand
-      REAL,          INTENT(IN)  :: im(ne)      !part of the green's function on the real axis 
+      REAL,          INTENT(IN)  :: im(ne)      !Imaginary part of the green's function on the real axis 
       REAL,          INTENT(IN)  :: eb          !Bottom energy cutoff
       REAL,          INTENT(IN)  :: del         !Energy step on the real axis 
       INTEGER,       INTENT(IN)  :: ne          !Number of energy points on the real axis

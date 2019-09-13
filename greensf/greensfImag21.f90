@@ -52,6 +52,7 @@ MODULE m_greensfImag21
       IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
       l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
+
       DO i_gf = 1, atoms%n_gf
          nType = atoms%gfelem(i_gf)%atomType
          l = atoms%gfelem(i_gf)%l
@@ -95,20 +96,16 @@ MODULE m_greensfImag21
                         !
                         !Contribution from states
                         !
-                        im(ie,m,mp,1) = im(ie,m,mp,1) + (weight *&
-                                             CONJG(eigVecCoeffs%acof(ib,lmp,natom,1)) * eigVecCoeffs%acof(ib,lm,natom,2) * denCoeffsOffdiag%uu21n(l,nType)&
-                                           + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,1)) * eigVecCoeffs%bcof(ib,lm,natom,2) * denCoeffsOffdiag%dd21n(l,nType)&
-                                           + CONJG(eigVecCoeffs%acof(ib,lmp,natom,1)) * eigVecCoeffs%bcof(ib,lm,natom,2) * denCoeffsOffdiag%ud21n(l,nType)&
-                                           + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,1)) * eigVecCoeffs%acof(ib,lm,natom,2) * denCoeffsOffdiag%du21n(l,nType))
+                        im(ie,m,mp,1) = im(ie,m,mp,1) + weight *&
+                                             (CONJG(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%uu21n(l,nType)&
+                                            + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)&
+                                            + CONJG(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)&
+                                            + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%du21n(l,nType))
                         IF(.NOT.input%l_gfsphavg) THEN 
-                           im(ie,m,mp,2) = im(ie,m,mp,2) + (weight *&
-                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,2))*eigVecCoeffs%acof(ib,lm,natom,1))
-                           im(ie,m,mp,3) = im(ie,m,mp,3) + (weight *&
-                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,2))*eigVecCoeffs%bcof(ib,lm,natom,1))
-                           im(ie,m,mp,4) = im(ie,m,mp,4) + (weight *&
-                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,2))*eigVecCoeffs%bcof(ib,lm,natom,1))
-                           im(ie,m,mp,5) = im(ie,m,mp,5) + (weight *&
-                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,2))*eigVecCoeffs%acof(ib,lm,natom,1))
+                           im(ie,m,mp,2) = im(ie,m,mp,2) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1)
+                           im(ie,m,mp,3) = im(ie,m,mp,3) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1)
+                           im(ie,m,mp,4) = im(ie,m,mp,4) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1)
+                           im(ie,m,mp,5) = im(ie,m,mp,5) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1)
                         ENDIF
                         !
                         !Contribution from local Orbitals
@@ -116,7 +113,7 @@ MODULE m_greensfImag21
                         DO ilo = 1, atoms%nlo(nType)
                            IF(atoms%llo(ilo,nType).EQ.l) THEN
                               !TODO: Something is wrong here for noco%l_soc and noco%l_mperp with a local orbital on the same l
-                              im(ie,m,mp,1) = im(ie,m,mp,1) + (weight *&
+                              im(ie,m,mp,1) = im(ie,m,mp,1) + weight *&
                               (conjg(eigVecCoeffs%acof(ib,lmp,natom,2))*eigVecCoeffs%ccof(m,ib,ilo,natom,1) *&
                                denCoeffsOffDiag%uulo21n(ilo,nType) +&
                                conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,2))*eigVecCoeffs%acof(ib,lm,natom,1) *&
@@ -124,7 +121,7 @@ MODULE m_greensfImag21
                                conjg(eigVecCoeffs%bcof(ib,lmp,natom,2))*eigVecCoeffs%ccof(m,ib,ilo,natom,1) *&
                                denCoeffsOffDiag%dulo21n(ilo,nType) +&
                                conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,2))*eigVecCoeffs%bcof(ib,lm,natom,1) *&
-                               denCoeffsOffDiag%ulod21n(ilo,nType)))
+                               denCoeffsOffDiag%ulod21n(ilo,nType))
                               DO ilop = 1, atoms%nlo(nType)
                                  IF(atoms%llo(ilop,nType).EQ.l) THEN
                                     im(ie,m,mp,1) = im(ie,m,mp,1) + (weight  * denCoeffsOffDiag%uloulop21n(ilo,ilop,nType) *&
@@ -143,7 +140,7 @@ MODULE m_greensfImag21
             !Rotate the eqivalent atom into the irreducible brillouin zone
             fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
             IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="greensfImag")
-            DO imat = 1, 1
+            DO imat = 1, MERGE(1,5,input%l_gfsphavg)
                DO ie = 1, greensfCoeffs%ne 
                   DO it = 1, sym%invarind(natom)
                      is = sym%invarop(natom,it)
