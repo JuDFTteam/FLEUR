@@ -433,7 +433,7 @@ c..reading the proj.1 / proj.2 / proj file
 cccccccccccc   read in the eigenvalues and vectors   cccccc
 
 
-       do jspin=1,jspins
+       do jspin5=1,jspins
           CALL judft_error("TODO:wann_updown")
 !         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
  !    <                  ello,evac,epar,wk,n_bands,n_size)
