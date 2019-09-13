@@ -258,6 +258,12 @@ c     ..initializations..
       fullnqpts = 1
       funit_start = 5000
 
+    ! In some modes the code skips the Hamiltonian setup and
+    ! jumps directly into the Wannier branch.
+      if(.not.allocated (usdus%us))then
+         call usdus%init(atoms,input%jspins)
+      endif
+
       aoff = iachar('1')-1
       d1  = mod(irank,10)
       IF (irank < 100) THEN
@@ -548,26 +554,26 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       allocate ( flo(ntypd,jmtd,2,nlod,2) )
       allocate ( ff(ntypd,jmtd,2,0:lmaxd,2) )
       allocate ( gg(ntypd,jmtd,2,0:lmaxd,2) )
-      allocate ( usdus%us(0:lmaxd,ntypd,2) )
-      allocate ( usdus%uds(0:lmaxd,ntypd,2) )
-      allocate ( usdus%dus(0:lmaxd,ntypd,2) )
-      allocate ( usdus%duds(0:lmaxd,ntypd,2) )
-      allocate ( usdus%ddn(0:lmaxd,ntypd,2) )
-      allocate ( usdus%ulos(nlod,ntypd,2) )
-      allocate ( usdus%dulos(nlod,ntypd,2) )
-      allocate ( usdus%uulon(nlod,ntypd,2) )
-      allocate ( usdus%dulon(nlod,ntypd,2) )
-      allocate ( usdus%uloulopn(nlod,nlod,ntypd,2) )
+!      allocate ( usdus%us(0:lmaxd,ntypd,2) )
+!      allocate ( usdus%uds(0:lmaxd,ntypd,2) )
+!      allocate ( usdus%dus(0:lmaxd,ntypd,2) )
+!      allocate ( usdus%duds(0:lmaxd,ntypd,2) )
+!      allocate ( usdus%ddn(0:lmaxd,ntypd,2) )
+!      allocate ( usdus%ulos(nlod,ntypd,2) )
+!      allocate ( usdus%dulos(nlod,ntypd,2) )
+!      allocate ( usdus%uulon(nlod,ntypd,2) )
+!      allocate ( usdus%dulon(nlod,ntypd,2) )
+!      allocate ( usdus%uloulopn(nlod,nlod,ntypd,2) )
 
-      allocate ( kveclo(nlotot),nv(wannierspin) )
-      allocate ( kveclo_b(nlotot),nv_b(wannierspin) )
-      allocate ( kveclo_b2(nlotot),nv_b2(wannierspin) )
-      allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
-     &           k3(nvd,wannierspin) )
-      allocate ( k1_b(nvd,wannierspin),k2_b(nvd,wannierspin),
-     &           k3_b(nvd,wannierspin) )
-      allocate ( k1_b2(nvd,wannierspin),k2_b2(nvd,wannierspin),
-     &           k3_b2(nvd,wannierspin) )
+!      allocate ( kveclo(nlotot),nv(wannierspin) )
+!      allocate ( kveclo_b(nlotot),nv_b(wannierspin) )
+!      allocate ( kveclo_b2(nlotot),nv_b2(wannierspin) )
+!      allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
+!     &           k3(nvd,wannierspin) )
+!      allocate ( k1_b(nvd,wannierspin),k2_b(nvd,wannierspin),
+!     &           k3_b(nvd,wannierspin) )
+!      allocate ( k1_b2(nvd,wannierspin),k2_b2(nvd,wannierspin),
+!     &           k3_b2(nvd,wannierspin) )
 
       doublespin_start=1
       if(l_noco.or.l_soc) then
@@ -770,6 +776,11 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 !       call cdn_read0(eig_id,irank,isize,jspin5,jspd,l_noco, !wannierspin instead of jspd?
 !     <                ello,evac,epar,wk,n_bands,n_size)
 
+       CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,
+     &    input%jspins, !wannierspin instead of DIMENSION%jspd?&
+     & noco%l_noco, n_bands,n_size)
+
+
        enddo
 
 c..   now we want to define the maximum number of the bands by all kpts
@@ -931,16 +942,18 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
       zzMat%l_real = l_real
 !      zzMat%nbasfcn = nbasfcn
-      zzMat%matsize1 = nbasfcn
+      zzMat%matsize1 = DIMENSION%nbasfcn
 !      zzMat%nbands = neigd
-      zzMat%matsize2 = neigd
+      zzMat%matsize2 = DIMENSION%neigd
       
       IF(l_real) THEN
 !         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
-          ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
+             IF(.NOT.ALLOCATED(zzMat%data_r))
+     &      ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
       ELSE
 !         ALLOCATE (zzMat%z_c(zzMat%nbasfcn,zzMat%nbands))
-          ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
+            IF(.NOT.ALLOCATED(zzMat%data_c))
+     &      ALLOCATE (zzMat%data_c(zzMat%matsize1,zzMat%matsize2))
       END IF
 
 !      CALL cdn_read(
@@ -969,13 +982,18 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       IF(zzMat%l_real) THEN
 !         ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
 !         ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
-         ALLOCATE (zMat_b%data_r(zMat%matsize1,zMat%matsize2))
-         ALLOCATE (zMat_b2%data_r(zMat%matsize1,zMat%matsize2))
+               IF(.NOT.ALLOCATED(zMat_b%data_r))
+     &     ALLOCATE (zMat_b%data_r(zMat%matsize1,zMat%matsize2))
+         IF(.NOT.ALLOCATED(zMat_b2%data_r))
+     &    ALLOCATE (zMat_b2%data_r(zMat%matsize1,zMat%matsize2))
       ELSE
 !         ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
 !         ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
-         ALLOCATE (zMat_b%data_c(zMat%matsize1,zMat%matsize2))
-         ALLOCATE (zMat_b2%data_c(zMat%matsize1,zMat%matsize2))
+               IF(.NOT.ALLOCATED(zMat_b%data_c))
+     &    ALLOCATE (zMat_b%data_c(zMat%matsize1,zMat%matsize2))
+               IF(.NOT.ALLOCATED(zMat_b2%data_c))
+     &   ALLOCATE (zMat_b2%data_c(zMat_b%matsize1,zMat_b%matsize2))
+
       END IF
 
       allocate (we_b(neigd), we_b2(neigd))
