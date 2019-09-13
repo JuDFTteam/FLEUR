@@ -8,7 +8,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_updown(
-     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,
+     >      mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -75,6 +75,7 @@ c****************************************************************************
 
       TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_kpts),      INTENT(IN) :: kpts
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_stars),INTENT(IN)  :: stars
@@ -201,7 +202,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer :: fullnkpts,kpt,kptibz,kptibz_b,j1,j2,j3,oper,oper_b,k
       real :: bkrot(3)
       integer :: ios,kplot,kplotoper,plotoper,gfcut
-      integer :: funbas_start,funbas_stop
+      integer :: funbas_start,funbas_stop,jspin5
       complex :: phasust
       integer,allocatable::pair_to_do(:,:)
       integer :: ngopr1(natd)
