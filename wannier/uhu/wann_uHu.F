@@ -1079,7 +1079,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
           if (wann%l_bzsym) kptibz_b=irreduc(kptibz_b)
 
           n_start=1
-          n_end=neigd
+          n_end=DIMENSION%neigd
 
         eigg = 0.
         call cpu_time(t0)
@@ -1495,9 +1495,9 @@ c      endif
      >            bkpt_b2,odi,vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
      >            jspin,jspin_b,doublespin,
 !     >            k1_b,k2_b,k3_b,
-     >   lapw_b%k1(:,:),lapw_b%k2(:,:),lapw_b%k1(:,:),
+     >   lapw_b%k1(:,:),lapw_b%k2(:,:),lapw_b%k3(:,:),
 !     >            k1_b2,k2_b2,k3_b2,
-     >   lapw_b2%k1(:,:),lapw_b2%k2(:,:),lapw_b2%k1(:,:),
+     >   lapw_b2%k1(:,:),lapw_b2%k2(:,:),lapw_b2%k3(:,:),
      >          wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
      >            lapw_b%nv,!nv_b,
      >            lapw_b2%nv,!nv_b2,
