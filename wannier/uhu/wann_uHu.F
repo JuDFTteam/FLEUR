@@ -1170,7 +1170,8 @@ c***********************************************************
       t_eig = t_eig + t1 - t0
 
       addnoco = 0
-      if(l_noco.and.jspin.eq.2) addnoco=nv_b(1)+nlotot
+!      if(l_noco.and.jspin.eq.2) addnoco=nv_b(1)+nlotot
+      if(l_noco.and.jspin.eq.2) addnoco=lapw_b%nv(1)+atoms%nlotot
 
       ! set up a(k+b1),b(k+b1),c(k+b1)
       allocate( acof_b(noccbd_b,0:lmd,natd),
@@ -1301,7 +1302,8 @@ c***********************************************************
       t_eig = t_eig + t1 - t0
 
       addnoco2 = 0
-      if(l_noco.and.jspin_b.eq.2) addnoco2=nv_b2(1)+nlotot
+    !  if(l_noco.and.jspin_b.eq.2) addnoco2=nv_b2(1)+nlotot
+      if(l_noco.and.jspin_b.eq.2) addnoco2=lapw_b2%nv(1)+atoms%nlotot
 
       ! set up a(k+b2),b(k+b2),c(k+b2)
       allocate( acof_b2(noccbd_b2,0:lmd,natd),
@@ -1425,10 +1427,10 @@ c      endif
      >  nv_b(jspin),nv_b2(jspin_b),nbnd,neigd,
      >  nslibd_b,nslibd_b2,nbasfcn,addnoco,addnoco2,
 !     >            k1_b(:,jspin), k2_b(:,jspin), k3_b(:,jspin),
-     >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k1(:,jspin),
+     >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
      >  gb(:,ikpt_b,ikpt),
 !     >  k1_b2(:,jspin_b),k2_b2(:,jspin_b),k3_b2(:,jspin_b),
-     >  lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k1(:,jspin),
+     >  lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k3(:,jspin),
      >  gb(:,ikpt_b2,ikpt),
      >  bkpt,bbmat,vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
      >  ustep,ig,jspin.eq.jspin_b,sign2,
@@ -1454,8 +1456,12 @@ c      endif
      >            rgphs,nmzxy,nmz,delz,ig2,nq2,kv2,area,bmat,bbmat,
      >            evac(:,jspin4),evac(:,jspin4_b),bkpt_b,bkpt_b2,
      >            vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
-     >            jspin,jspin_b,doublespin,k1_b,k2_b,k3_b,
-     >            k1_b2,k2_b2,k3_b2,wannierspin,nvd,nbasfcn,neigd,
+     >            jspin,jspin_b,doublespin,
+!     >      k1_b,k2_b,k3_b,
+     >      lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
+!     >      k1_b2,k2_b2,k3_b2,
+     >      lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k3(:,jspin),
+     >      wannierspin,nvd,nbasfcn,neigd,
      >            zMat_b,zMat_b2,nv_b,nv_b2,omtil,gb(:,ikpt_b,ikpt),
      >            gb(:,ikpt_b2,ikpt),sign2,
      >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
@@ -1471,8 +1477,12 @@ c      endif
      >            nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,ig,nmzxy,nmz,
      >            delz,ig2,bbmat,evac(1,jspin4),evac(1,jspin4_b),bkpt_b,
      >            bkpt_b2,odi,vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
-     >            jspin,jspin_b,doublespin,k1_b,k2_b,k3_b,k1_b2,k2_b2,
-     >          k3_b2,wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
+     >            jspin,jspin_b,doublespin,
+!     >            k1_b,k2_b,k3_b,
+     >   lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k1(:,jspin),
+!     >            k1_b2,k2_b2,k3_b2,
+     >   lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k1(:,jspin),
+     >          wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
      >            nv_b,nv_b2,sk2,phi2,omtil,gb(:,ikpt_b,ikpt),
      >            gb(:,ikpt_b2,ikpt),qpt_i,sign2,
      >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
@@ -1586,7 +1596,7 @@ c               END Q LOOP                       c
 c************************************************c
 
 
-      deallocate ( kveclo,nv,k1,k2,k3 )
+!      deallocate ( kveclo,nv,k1,k2,k3 )
       deallocate(flo)
       deallocate ( ff,gg)
     !  if (allocated(nv_b))deallocate(kveclo_b,nv_b,k1_b,k2_b,k3_b)
