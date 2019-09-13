@@ -1652,7 +1652,7 @@ CONTAINS
                      END SELECT
                   ENDDO
                   IF(.NOT.hub1%l_ccf_given(atoms%n_hia)) THEN
-                     hub1%ccf(atoms%n_hia) = 1.0
+                     hub1%ccf(atoms%n_hia) = -1.0
                   ENDIF
                ENDDO
                IF(numOnsite.EQ.1) CALL add_gfjob(iType,onsiteGF_lmin,onsiteGF_lmax,atoms,onsiteGF_loff,.FALSE.,.FALSE.)

@@ -79,6 +79,7 @@ MODULE m_hubbard1_setup
 #endif
 
       e = 0.0
+      e_lda_hia = 0.0
 
       !Positions of the DFT+HIA elements in all DFT+U related arrays
       indStart = atoms%n_u+1
@@ -290,7 +291,8 @@ MODULE m_hubbard1_setup
                zero = 0.0
                CALL nmat_rot(atoms%lda_u(indStart:indEnd)%phi,atoms%lda_u(indStart:indEnd)%theta,zero,3,atoms%n_hia,input%jspins,atoms%lda_u(indStart:indEnd)%l,n_mmp)
                CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,n_mmp,&
-                     u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),results%e_ldau)
+                     u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:), e_lda_hia)
+               results%e_ldau = MERGE(results%e_ldau,0.0,atoms%n_u>0) + e_lda_hia 
             ENDIF
          ELSE 
             !The solver does not need to be run so we just add the current energy correction from LDA+HIA 
@@ -319,7 +321,7 @@ MODULE m_hubbard1_setup
             WRITE (6,*) results%e_ldau
          ENDIF
       ELSE IF(mpi%irank.NE.0) THEN
-         results%e_ldau = 0.0
+         results%e_ldau = MERGE(results%lda_u,0.0,atoms%n_u>0)
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
          !If we are on a different mpi%irank and no solver is linked we need to call juDFT_end here if the solver was not run
          !kind of a weird workaround (replace with something better)
@@ -338,7 +340,7 @@ MODULE m_hubbard1_setup
          !There is nothing to be done yet just set the potential correction to 0
          WRITE(*,*) "No density matrix and GF found -> skipping LDA+HIA"
          pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
-         results%e_ldau = 0.0
+         results%e_ldau = MERGE(results%lda_u,0.0,atoms%n_u>0)
       ENDIF
 #ifdef CPP_MPI
       !Broadcast both the potential and the density matrix here
