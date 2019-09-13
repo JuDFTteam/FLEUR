@@ -255,11 +255,11 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       complex,allocatable :: ubeffdg(:,:,:) 
       complex,allocatable :: dbeffug(:,:,:) 
       complex,allocatable :: dbeffdg(:,:,:) 
-      complex,allocatable :: ubeffulog(:,:,:) 
-      complex,allocatable :: dbeffulog(:,:,:) 
-      complex,allocatable :: ulobeffug(:,:,:) 
-      complex,allocatable :: ulobeffdg(:,:,:) 
-      complex,allocatable :: ulobeffulog(:,:,:) 
+      complex,allocatable :: ubeffulog(:,:,:,:) 
+      complex,allocatable :: dbeffulog(:,:,:,:) 
+      complex,allocatable :: ulobeffug(:,:,:,:) 
+      complex,allocatable :: ulobeffdg(:,:,:,:) 
+      complex,allocatable :: ulobeffulog(:,:,:,:,:) 
       integer :: spinloop1,spinloop2,ilop
 
       TYPE(t_usdus) :: usdus
