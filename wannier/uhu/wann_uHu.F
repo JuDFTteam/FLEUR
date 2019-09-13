@@ -1334,9 +1334,9 @@ c***********************************************************
 
 !      DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
 
-    CALL abcof(input,atoms,sym,cell,lapw_b2,
-        noccbd_b2,usdus,noco,jspin,oneD,
-        acof_b2,bcof_b2,ccof_b2,zMat_b2)
+      CALL abcof(input,atoms,sym,cell,lapw_b2,
+     &    noccbd_b2,usdus,noco,jspin,oneD,
+     &   acof_b2,bcof_b2,ccof_b2,zMat_b2)
 
       call wann_abinv(atoms,
      X        acof_b2,bcof_b2,ccof_b2)
