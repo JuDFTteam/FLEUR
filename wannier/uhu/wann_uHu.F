@@ -1236,7 +1236,7 @@ c***********************************************************
           CALL cdn_read(
      &   eig_id,
      &   DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?&
-     &   kptibz_b,jspin,DIMENSION%nbasfcn,
+     &   kptibz_b2,jspin,DIMENSION%nbasfcn,
      &   noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
      &   nbands_b2,eigg,zzMat)
 
