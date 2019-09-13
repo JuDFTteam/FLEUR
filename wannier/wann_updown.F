@@ -8,7 +8,8 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_updown(
-     >      mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,
+     >      DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,
+     >      sphhar,oneD,noco,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -73,6 +74,7 @@ c****************************************************************************
 
 #endif
 
+      TYPE(t_dimension), INTENT(IN) :: DIMENSION
       TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_kpts),      INTENT(IN) :: kpts
