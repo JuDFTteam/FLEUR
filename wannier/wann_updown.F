@@ -731,12 +731,27 @@ c****************************************************************
       zzMat(jspin)%matsize1 = nbasfcn
       zzMat(jspin)%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
+         IF(.NOT.ALLOCATED(zzMat(jspin)%data_r))
+     &    ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
      +                                 zzMat(jspin)%matsize2))
       ELSE
-         ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
+         IF(.NOT.ALLOCATED(zzMat(jspin)%data_c))
+     &     ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
      +                                 zzMat(jspin)%matsize2))
       END IF
+
+        CALL lapw%init(input,noco,kpts,atoms,sym,
+     &  kptibz,cell,
+     &  (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &  .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+        CALL cdn_read(
+     & eig_id,
+     & DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     & kptibz,jspin,DIMENSION%nbasfcn,
+     & noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     & nbands,eigg,zzMat)
+
 
 !         CALL cdn_read(
 !     >              eig_id,
@@ -744,6 +759,11 @@ c****************************************************************
 !     >              l_ss,l_noco,neigd,n_start,n_end,
 !     <              nmat,nv,ello,evdu,epar,
 !     <              k1,k2,k3,bkpt,wk,nbands,eigg(:,jspin),zzMat(jspin))
+
+
+
+
+
       call judft_error("cdn_read in wann_updown")
          nrec=0
       enddo !jspin
@@ -790,10 +810,10 @@ c...we work only within the energy window
            nslibd = nslibd + 1
            eig(nslibd) = eigg(i,1)
            if(l_noco)then
-             funbas=nv(1)+nlotot
-             funbas=funbas+nv(2)+nlotot
+             funbas=lapw%nv(1)+atoms%nlotot
+             funbas=funbas+lapw%nv(2)+atoms%nlotot
            else
-             funbas=nv(jspin)+nlotot
+             funbas=lapw%nv(jspin)+atoms%nlotot
            endif
            IF (zzMat(jspin)%l_real) THEN
               do j = 1,funbas
