@@ -434,6 +434,12 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
           CALL judft_error("TODO:wann_updown")
 !         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
  !    <                  ello,evac,epar,wk,n_bands,n_size)
+ 
+        CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,
+     >   input%jspins, !wannierspin instead of DIMENSION%jspd?&
+     >  noco%l_noco, n_bands,n_size)
+ 
+ 
        enddo
 
        jspin=1
