@@ -233,6 +233,8 @@ c     ..local scalars..
       TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
       TYPE(t_lapw)  :: lapw, lapw_b, lapw_b2
 
+       eig_id = eig_idList(1)
+
 
 c     ..initializations..
       call cpu_time(t00)
