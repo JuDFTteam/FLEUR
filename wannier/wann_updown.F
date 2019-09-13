@@ -870,14 +870,14 @@ c...the overlap matrix Mmn which is computed for each k- and b-point
 c...generation the A,B,C coefficients in the spheres
 c...for the lapws and local orbitals, summed by the basis functions
 
-      ALLOCATE(lapw%k1(SIZE(k1,1),SIZE(k1,2)))
-      ALLOCATE(lapw%k2(SIZE(k1,1),SIZE(k1,2)))
-      ALLOCATE(lapw%k3(SIZE(k1,1),SIZE(k1,2)))
-      lapw%nv = nv
-      lapw%nmat = nmat
-      lapw%k1 = k1
-      lapw%k2 = k2
-      lapw%k3 = k3
+!      ALLOCATE(lapw%k1(SIZE(k1,1),SIZE(k1,2)))
+!      ALLOCATE(lapw%k2(SIZE(k1,1),SIZE(k1,2)))
+!      ALLOCATE(lapw%k3(SIZE(k1,1),SIZE(k1,2)))
+!      lapw%nv = nv
+!      lapw%nmat = nmat
+!      lapw%k1 = k1
+1      lapw%k2 = k2
+!      lapw%k3 = k3
       ! I think the other variables of lapw are not needed here.
 
       call cpu_time(delta)
@@ -893,7 +893,7 @@ c...for the lapws and local orbitals, summed by the basis functions
      <       ccof(-llod:,:,:,:,jspin))
       enddo !jspin
 
-      DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
+!      DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
 
       jspin=1
       call cpu_time(delta1)
