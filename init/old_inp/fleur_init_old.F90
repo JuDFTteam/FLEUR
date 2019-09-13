@@ -136,7 +136,7 @@ CONTAINS
 
     atoms%nlo(:) = 0
     atoms%llo(:,:) = -1
-
+    input%eig66(1)=.FALSE.
     ! HF/hybrid functionals/EXX
     ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
 
