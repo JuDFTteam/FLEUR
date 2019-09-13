@@ -130,12 +130,12 @@ c     ..array arguments..
       complex, intent (in) :: clnu(memd,0:nlhd,ntypsd)
 
 c     ..allocatable arrays..
-      integer, allocatable :: kveclo(:)   , nv(:)
-      integer, allocatable :: kveclo_b(:) , nv_b(:)
-      integer, allocatable :: kveclo_b2(:), nv_b2(:)
-      integer, allocatable :: k1(:,:)   , k2(:,:)   , k3(:,:)
-      integer, allocatable :: k1_b(:,:) , k2_b(:,:) , k3_b(:,:)
-      integer, allocatable :: k1_b2(:,:), k2_b2(:,:), k3_b2(:,:)
+    !  integer, allocatable :: kveclo(:)   , nv(:)
+    !  integer, allocatable :: kveclo_b(:) , nv_b(:)
+    !  integer, allocatable :: kveclo_b2(:), nv_b2(:)
+    !  integer, allocatable :: k1(:,:)   , k2(:,:)   , k3(:,:)
+    !  integer, allocatable :: k1_b(:,:) , k2_b(:,:) , k3_b(:,:)
+    !  integer, allocatable :: k1_b2(:,:), k2_b2(:,:), k3_b2(:,:)
       integer, allocatable :: irreduc(:),mapkoper(:)
       integer, allocatable :: irreduc_q(:),mapqoper(:)        
       integer, allocatable :: shiftkpt(:,:),pair_to_do(:,:)
@@ -547,15 +547,15 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       allocate(flo(ntypd,jmtd,2,nlod,2))
       allocate ( ff(ntypd,jmtd,2,0:lmaxd,2) )
       allocate ( gg(ntypd,jmtd,2,0:lmaxd,2) )
-      allocate ( kveclo(nlotot),nv(wannierspin) )
-      allocate ( kveclo_b(nlotot),nv_b(wannierspin) )
-      allocate ( kveclo_b2(nlotot),nv_b2(wannierspin) )
-      allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
-     &           k3(nvd,wannierspin) )
-      allocate ( k1_b(nvd,wannierspin),k2_b(nvd,wannierspin),
-     &           k3_b(nvd,wannierspin) )
-      allocate ( k1_b2(nvd,wannierspin),k2_b2(nvd,wannierspin),
-     &           k3_b2(nvd,wannierspin) )
+    !  allocate ( kveclo(nlotot),nv(wannierspin) )
+    !  allocate ( kveclo_b(nlotot),nv_b(wannierspin) )
+    !  allocate ( kveclo_b2(nlotot),nv_b2(wannierspin) )
+    !  allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
+    ! &           k3(nvd,wannierspin) )
+    !  allocate ( k1_b(nvd,wannierspin),k2_b(nvd,wannierspin),
+    ! &           k3_b(nvd,wannierspin) )
+    !  allocate ( k1_b2(nvd,wannierspin),k2_b2(nvd,wannierspin),
+    ! &           k3_b2(nvd,wannierspin) )
 
       if(l_nocosoc) then
          doublespin_max=4
@@ -778,6 +778,11 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        CALL judft_error("TODO:wann_uHu")
 !       call cdn_read0(eig_id,irank,isize,jspin5,wannierspin,l_noco,
 !     <                ello,evac,epar,wk,n_bands,n_size)
+
+       CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,
+     &    input%jspins, !wannierspin instead of DIMENSION%jspd?&
+     & noco%l_noco, n_bands,n_size)
+
 
        enddo
 
@@ -1582,8 +1587,8 @@ c************************************************c
       deallocate ( kveclo,nv,k1,k2,k3 )
       deallocate(flo)
       deallocate ( ff,gg)
-      if (allocated(nv_b))deallocate(kveclo_b,nv_b,k1_b,k2_b,k3_b)
-      if (allocated(nv_b2))deallocate(kveclo_b2,nv_b2,k1_b2,k2_b2,k3_b2)
+    !  if (allocated(nv_b))deallocate(kveclo_b,nv_b,k1_b,k2_b,k3_b)
+    !  if (allocated(nv_b2))deallocate(kveclo_b2,nv_b2,k1_b2,k2_b2,k3_b2)
       if (wann%l_bzsym)deallocate(irreduc,mapkoper,shiftkpt)
       if (wann%l_bzsym.AND.l_gwf)deallocate(irreduc_q,mapqoper,shiftqpt)
       if (allocated(pair_to_do)) deallocate(pair_to_do,maptopair)
