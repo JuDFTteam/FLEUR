@@ -753,7 +753,7 @@ c****************************************************************
      & DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
      & kptibz,jspin,DIMENSION%nbasfcn,
      & noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
-     & nbands,eigg,zzMat)
+     & nbands,eigg(:,jspin),zzMat(jspin))
 
 
 !         CALL cdn_read(
