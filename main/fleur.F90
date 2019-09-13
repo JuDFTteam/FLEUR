@@ -288,7 +288,18 @@ CONTAINS
 
           ! fermi level and occupancies
           IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd = 2*DIMENSION%neigd
-          IF ((mpi%irank.EQ.0)) THEN
+
+	  IF (input%gw.GT.0) THEN
+	    IF (mpi%irank.EQ.0) THEN
+	       CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
+		  	     results,eig_id,oneD,sphhar,stars,vacuum)
+	    END IF
+	    IF (input%gw.EQ.2) THEN
+	       CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+	    END IF
+	  END IF
+
+          !IF ((mpi%irank.EQ.0)) THEN
              CALL timestart("determination of fermi energy")
 
              IF (noco%l_soc.AND.(.NOT.noco%l_noco)) THEN
@@ -322,7 +333,7 @@ CONTAINS
 !!$          END IF
 !!$          !-Wannier
 
-          ENDIF
+          !ENDIF
 #ifdef CPP_MPI
           CALL MPI_BCAST(results%ef,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -404,16 +415,6 @@ CONTAINS
        END DO forcetheoloop
 
        CALL forcetheo%postprocess()
-
-       IF (input%gw.GT.0) THEN
-          IF (mpi%irank.EQ.0) THEN
-             CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
-                             results,eig_id,oneD,sphhar,stars,vacuum)
-          END IF
-          IF (input%gw.EQ.2) THEN
-             CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
-          END IF
-       END IF
 
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field

@@ -151,10 +151,6 @@ c     ..allocatable arrays..
       real,    allocatable :: vr(:,:,:),vz(:,:,:)
       real,    allocatable :: flo(:,:,:,:,:)
       real,    allocatable :: ff(:,:,:,:,:),gg(:,:,:,:,:)
-      real,    allocatable :: us(:,:,:),uds(:,:,:),ulos(:,:,:)
-      real,    allocatable :: dus(:,:,:),duds(:,:,:),dulos(:,:,:)
-      real,    allocatable :: ddn(:,:,:),uulon(:,:,:),dulon(:,:,:)
-      real,    allocatable :: uloulopn(:,:,:,:)
       real,    allocatable :: kdiff(:,:),qdiff(:,:),zero_qdiff(:,:)
       complex, allocatable :: vpw(:,:),vzxy(:,:,:,:)
       complex, allocatable :: uHu(:,:,:,:,:)
@@ -253,6 +249,12 @@ c     ..initializations..
       nntot_q = 1
       fullnqpts = 1
       funit_start = 5000
+      
+    ! In some modes the code skips the Hamiltonian setup and
+    ! jumps directly into the Wannier branch.
+      if(.not.allocated (usdus%us))then
+         call usdus%init(atoms,input%jspins)
+      endif
 
       aoff = iachar('1')-1
       d1  = mod(irank,10)
@@ -545,17 +547,6 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       allocate(flo(ntypd,jmtd,2,nlod,2))
       allocate ( ff(ntypd,jmtd,2,0:lmaxd,2) )
       allocate ( gg(ntypd,jmtd,2,0:lmaxd,2) )
-      allocate ( us(0:lmaxd,ntypd,2) )
-      allocate ( uds(0:lmaxd,ntypd,2) )
-      allocate ( dus(0:lmaxd,ntypd,2) )
-      allocate ( duds(0:lmaxd,ntypd,2) )
-      allocate ( ddn(0:lmaxd,ntypd,2) )
-      allocate ( ulos(nlod,ntypd,2) )
-      allocate ( dulos(nlod,ntypd,2) )
-      allocate ( uulon(nlod,ntypd,2) )
-      allocate ( dulon(nlod,ntypd,2) )
-      allocate ( uloulopn(nlod,nlod,ntypd,2) )
-
       allocate ( kveclo(nlotot),nv(wannierspin) )
       allocate ( kveclo_b(nlotot),nv_b(wannierspin) )
       allocate ( kveclo_b2(nlotot),nv_b2(wannierspin) )
@@ -978,13 +969,24 @@ c      if (mod(i_rec-1,isize).eq.irank) then
       zMat_b2%nbasfcn = zzMat%nbasfcn
       zMat_b%nbands = zzMat%nbands
       zMat_b2%nbands = zzMat%nbands
+    !  IF(zzMat%l_real) THEN
+    !     ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
+    !     ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
+    !  ELSE
+    !     ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
+    !     ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
+    !  END IF
+      
+      
       IF(zzMat%l_real) THEN
-         ALLOCATE (zMat_b%z_r(zMat%nbasfcn,zMat%nbands))
-         ALLOCATE (zMat_b2%z_r(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat_b%z_r(zMat_b%nbasfcn,zMat_b%nbands))
+         ALLOCATE (zMat_b2%z_r(zMat_b2%nbasfcn,zMat_b2%nbands))
       ELSE
-         ALLOCATE (zMat_b%z_c(zMat%nbasfcn,zMat%nbands))
-         ALLOCATE (zMat_b2%z_c(zMat%nbasfcn,zMat%nbands))
+         ALLOCATE (zMat_b%z_c(zMat_b%nbasfcn,zMat_b%nbands))
+         ALLOCATE (zMat_b2%z_c(zMat_b2%nbasfcn,zMat_b2%nbands))
       END IF
+      
+      
 
       allocate (we_b(neigd), we_b2(neigd))
 
@@ -1454,8 +1456,7 @@ c************************************************c
 
       deallocate ( kveclo,nv,k1,k2,k3 )
       deallocate(flo)
-      deallocate ( ff,gg,us,dus,duds,uds,ddn)
-      deallocate ( ulos,dulos,uulon,dulon,uloulopn )
+      deallocate ( ff,gg)
       if (allocated(nv_b))deallocate(kveclo_b,nv_b,k1_b,k2_b,k3_b)
       if (allocated(nv_b2))deallocate(kveclo_b2,nv_b2,k1_b2,k2_b2,k3_b2)
       if (wann%l_bzsym)deallocate(irreduc,mapkoper,shiftkpt)

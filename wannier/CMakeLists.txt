@@ -93,6 +93,7 @@ wannier/bs_comfort.F
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
 wannier/wann_read_inp.f90
+wannier/wann_convert_fleur_w90.F90
 wannier/wann_optional.f90
 wannier/wann_abinv.f90
 wannier/wann_anglmom.f90

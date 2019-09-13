@@ -148,7 +148,7 @@ CONTAINS
     INTEGER         :: nprow,npcol,myrow,mycol,block_row,block_col,matsize,blacs_ctxt,err
     LOGICAL         :: ok
     !For readability get data from blacsdesc
-#ifdef CPP_MPI
+#ifdef CPP_SCALAPACK
     blacs_ctxt=blacsdesc(2)
     block_row=blacsdesc(5)
     block_col=blacsdesc(6)

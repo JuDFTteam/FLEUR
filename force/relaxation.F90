@@ -63,11 +63,13 @@ CONTAINS
           ! modify as needed
           !alpha = (250.0/(MAXVAL(atoms%zatom)*input%xa))*((330./input%thetad)**2)
           CALL simple_step(input%forcealpha,0.25,force,displace)
-       ELSEIF (input%forcemix==1) THEN
+       ELSE IF (input%forcemix==1) THEN
           CALL simple_cg(pos,force,displace)
-       ELSE
+       ELSE IF (input%forcemix==2) THEN
           CALL simple_bfgs(pos,force,displace)
-       ENDIF
+       ELSE
+          CALL juDFT_error('unkown mixing scheme for forces', calledby='relaxation')
+       END IF
 
        !Check for convergence of forces/displacements
        l_conv=.TRUE.
@@ -141,7 +143,7 @@ CONTAINS
     DO n = 2,hist_length
        ! differences
        p(:) = RESHAPE(pos(:,:,n)-pos(:,:,n-1),(/SIZE(p)/))
-       y(:) = RESHAPE(force(:,:,n)-force(:,:,n-1),(/SIZE(p)/))
+       y(:) = RESHAPE(force(:,:,n-1)-force(:,:,n),(/SIZE(p)/))
        ! get necessary inner products and H|y>
        py = DOT_PRODUCT(p,y)
        v = MATMUL(y,h)

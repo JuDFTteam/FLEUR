@@ -146,7 +146,7 @@
           input%scaleA2 = 1.0
           input%scaleC = 1.0
           input%forcealpha = 1.0
-          input%forcemix = 0
+          input%forcemix = 2 ! BFGS is default.
           input%epsdisp = 0.00001
           input%epsforce = 0.00001
           input%numBandsKPoints = -1

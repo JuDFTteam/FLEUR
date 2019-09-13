@@ -134,6 +134,9 @@ CONTAINS
     stars%sk2(:) = 0.0 ; stars%phi2(:) = 0.0
     !-odim
 
+    atoms%nlo(:) = 0
+    atoms%llo(:,:) = -1
+
     ! HF/hybrid functionals/EXX
     ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
 

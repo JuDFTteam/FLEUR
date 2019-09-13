@@ -42,6 +42,10 @@ CONTAINS
        mpi%n_rank=0
        mpi%n_size=1
        mpi%sub_comm=mpi%mpi_comm
+       IF (ALLOCATED(mpi%k_list)) DEALLOCATE(mpi%k_List)
+       IF (ALLOCATED(mpi%ev_list)) DEALLOCATE(mpi%ev_list)
+       ALLOCATE(mpi%k_list(nkpt))
+       ALLOCATE(mpi%ev_list(neigd))
        mpi%k_list=[(i,i=1,nkpt)]
        mpi%ev_list=[(i,i=1,neigd)]
        WRITE(*,*) "--------------------------------------------------------"
@@ -57,6 +61,8 @@ CONTAINS
 #endif
     !generate the MPI communicators
     CALL priv_create_comm(nkpt,neigd,mpi)
+
+    ALLOCATE(mpi%k_list(SIZE([(i, i=INT(mpi%irank/mpi%n_size)+1,nkpt,mpi%isize/mpi%n_size )])))
     mpi%k_list=[(i, i=INT(mpi%irank/mpi%n_size)+1,nkpt,mpi%isize/mpi%n_size )]
 
     if (mpi%irank==0) WRITE(*,*) "--------------------------------------------------------"
