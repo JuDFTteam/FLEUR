@@ -1042,19 +1042,19 @@ c      if (mod(i_rec-1,isize).eq.irank) then
             eig(nslibd) = eigg(i)
             we(nslibd) = we(i)
             if(l_noco)then
-               funbas =        nv(1) + nlotot
-               funbas = funbas+nv(2) + nlotot
+    !           funbas =        nv(1) + nlotot
+    !           funbas = funbas+nv(2) + nlotot
             else
-               funbas = nv(jspin) + nlotot
+    !           funbas = nv(jspin) + nlotot
             endif
             IF (zzMat%l_real) THEN
-               do j = 1,funbas
-                  zMat%data_r(j,nslibd) = zzMat%data_r(j,i)
-               enddo
+    !           do j = 1,funbas
+                  zMat%data_r(:,nslibd) = zzMat%data_r(:,i)
+    !           enddo
             ELSE
-               do j = 1,funbas
-                  zMat%data_c(j,nslibd) = zzMat%data_c(j,i)
-               enddo
+    !           do j = 1,funbas
+                  zMat%data_c(:,nslibd) = zzMat%data_c(:,i)
+    !           enddo
             END IF
           endif
         enddo
@@ -1127,15 +1127,15 @@ c      if (mod(i_rec-1,isize).eq.irank) then
             eig_b(nslibd_b) = eigg(i)
             we_b(nslibd_b) = we_b(i)
             if(l_noco)then
-               funbas =        nv_b(1) + nlotot
-               funbas = funbas+nv_b(2) + nlotot
+    !           funbas =        nv_b(1) + nlotot
+    !           funbas = funbas+nv_b(2) + nlotot
             else
-               funbas = nv_b(jspin) + nlotot
+    !           funbas = nv_b(jspin) + nlotot
             endif
             IF (zzMat%l_real) THEN
-               do j = 1,funbas
-                  zMat_b%data_r(j,nslibd_b) = zzMat%data_r(j,i)
-               enddo
+    !           do j = 1,funbas
+                  zMat_b%data_r(:,nslibd_b) = zzMat%data_r(:,i)
+    !           enddo
             ELSE
                do j = 1,funbas
                   zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
@@ -1258,19 +1258,19 @@ c***********************************************************
             eig_b2(nslibd_b2) = eigg(i)
             we_b2(nslibd_b2) = we_b2(i)
             if(l_noco)then
-               funbas =        nv_b2(1) + nlotot
-               funbas = funbas+nv_b2(2) + nlotot
+    !           funbas =        nv_b2(1) + nlotot
+    !           funbas = funbas+nv_b2(2) + nlotot
             else
-               funbas = nv_b2(jspin_b) + nlotot
+    !           funbas = nv_b2(jspin_b) + nlotot
             endif
             IF (zzMat%l_real) THEN
-               do j = 1,funbas
-                  zMat_b2%data_r(j,nslibd_b2) = zzMat%data_r(j,i)
-               enddo
+    !           do j = 1,funbas
+                  zMat_b2%data_r(:,nslibd_b2) = zzMat%data_r(:,i)
+    !           enddo
             ELSE
-               do j = 1,funbas
-                  zMat_b2%data_c(j,nslibd_b2) = zzMat%data_c(j,i)
-               enddo
+    !           do j = 1,funbas
+                  zMat_b2%data_c(:,nslibd_b2) = zzMat%data_c(:,i)
+    !           enddo
             END IF
           endif
         enddo
@@ -1422,15 +1422,17 @@ c      endif
          if(.not.l_skip_int) then
             call cpu_time(t0)
             call wann_uHu_int(cmplx(1.,0.),nvd,k1d,k2d,k3d,n3d,
-     >            nv_b(jspin),nv_b2(jspin_b),nbnd,neigd,
-     >            nslibd_b,nslibd_b2,nbasfcn,addnoco,addnoco2,
-     >            k1_b(:,jspin), k2_b(:,jspin), k3_b(:,jspin),
-     >            gb(:,ikpt_b,ikpt),
-     >            k1_b2(:,jspin_b),k2_b2(:,jspin_b),k3_b2(:,jspin_b),
-     >            gb(:,ikpt_b2,ikpt),
-     >            bkpt,bbmat,vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
-     >            ustep,ig,jspin.eq.jspin_b,sign2,
-     >            uHu(:,:,ikpt_b2,ikpt_b,i_rec))
+     >  nv_b(jspin),nv_b2(jspin_b),nbnd,neigd,
+     >  nslibd_b,nslibd_b2,nbasfcn,addnoco,addnoco2,
+!     >            k1_b(:,jspin), k2_b(:,jspin), k3_b(:,jspin),
+     >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k1(:,jspin),
+     >  gb(:,ikpt_b,ikpt),
+!     >  k1_b2(:,jspin_b),k2_b2(:,jspin_b),k3_b2(:,jspin_b),
+     >  lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k1(:,jspin),
+     >  gb(:,ikpt_b2,ikpt),
+     >  bkpt,bbmat,vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
+     >  ustep,ig,jspin.eq.jspin_b,sign2,
+     >  uHu(:,:,ikpt_b2,ikpt_b,i_rec))
             call cpu_time(t1)
             t_int = t_int + t1 - t0
          endif
