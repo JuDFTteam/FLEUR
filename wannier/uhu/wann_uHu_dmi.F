@@ -238,6 +238,8 @@ c     ..local scalars..
       TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
       TYPE(t_lapw)  :: lapw_b, lapw_b2
 
+       eig_id = eig_idList(1)
+
       if(.not.l_socgwf) stop 'wann_uHu_dmi only with l_socgwf=T'
       if(l_sgwf) stop 'wann_uHu_dmi only with l_sgwf=F'
       if(l_noco) stop 'noco and dmi not implemented'
