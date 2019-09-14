@@ -16,7 +16,9 @@ MODULE m_lsTOjmj
 
       INTEGER jj,j,mj,s,ml,i,k
 
-      IF(.NOT.ALLOCATED(cmat%data_r)) CALL juDFT_error("matrix not initialized",calledby="lsTOjmj")
+      IF(.NOT.ALLOCATED(cmat%data_r)) THEN
+         CALL cmat%init(.TRUE.,2*(2*l+1),2*(2*l+1))
+      ENDIF
 
       !Calculate the matrix of CG-coefficients to transform from |l,ml,ms> to |j=l\pm1/2,mjz>
       !compare utils/occup.f90 from libedsolver

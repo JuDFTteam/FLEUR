@@ -1,5 +1,13 @@
 MODULE m_ind_greensf
 
+!--------------------------------------------------------------------
+! The information on which index i_gf in the green's function arrays
+! corresponds to which (l,lp,nType,nTypep) block of the system is stored
+! in the gfelem array in atoms
+! This fucntion returns the index i_gf by supplying the four indices
+! If lp or nTypep are not given in the call they are assumed to be equal 
+! to l/nType
+!--------------------------------------------------------------------
 
 CONTAINS
 
@@ -28,39 +36,29 @@ CONTAINS
    
       DO WHILE(search)
          i_gf = i_gf + 1
-         IF(atoms%gfelem(i_gf)%l.EQ.l.AND.atoms%gfelem(i_gf)%atomType.EQ.nType) THEN
-            IF(PRESENT(lp).OR.PRESENT(nTypep)) THEN
-               !Check second l-argument
-               IF(PRESENT(lp)) THEN
-                  IF(atoms%gfelem(i_gf)%lp.EQ.lp) THEN
-                     search = .FALSE.
-                  ELSE
-                     search = .TRUE.
-                  ENDIF
-               ELSE IF(atoms%gfelem(i_gf)%lp.EQ.l) THEN
-                  search = .FALSE.
-               ELSE
-                  search = .TRUE.
-               ENDIF
-               !check second type argument
-               IF(PRESENT(nTypep)) THEN
-                  IF(atoms%gfelem(i_gf)%atomTypep.EQ.nTypep) THEN
-                     search = .FALSE.
-                  ELSE
-                     search = .TRUE.
-                  ENDIF
-               ELSE IF(atoms%gfelem(i_gf)%atomTypep.EQ.nType) THEN
-                  search = .FALSE.
-               ELSE
-                  search = .TRUE.
-               ENDIF
-            ELSE IF(atoms%gfelem(i_gf)%lp.EQ.l.AND.atoms%gfelem(i_gf)%atomTypep.EQ.nType) THEN
-               search = .FALSE.
-            ENDIF
-         ENDIF
-         IF(search.AND.i_gf.EQ.atoms%n_gf) THEN
+
+         IF(i_gf.GT.atoms%n_gf) THEN
+            !Something went wrong here
             CALL juDFT_error("Greens function element not found", calledby="ind_greensf")
          ENDIF
+
+         !--------------------------------------------
+         ! Check the current element
+         !--------------------------------------------
+         IF(atoms%gfelem(i_gf)%l.NE.l) CYCLE
+         IF(atoms%gfelem(i_gf)%atomType.NE.nType) CYCLE
+         IF(PRESENT(lp)) THEN
+            IF(atoms%gfelem(i_gf)%lp.NE.lp) CYCLE
+         ELSE
+            IF(atoms%gfelem(i_gf)%lp.NE.l) CYCLE
+         ENDIF
+         IF(PRESENT(nTypep)) THEN
+            IF(atoms%gfelem(i_gf)%atomTypep.NE.nTypep) CYCLE
+         ELSE
+            IF(atoms%gfelem(i_gf)%atomTypep.NE.nType) CYCLE
+         ENDIF
+         !If we are here we found the element
+         search = .FALSE.
       ENDDO 
    END FUNCTION ind_greensf
 

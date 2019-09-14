@@ -50,7 +50,7 @@ MODULE m_hybridization
                tr = tr + (-1)**(ipm-1) * gmat%data_c(i,i)
             ENDDO
          ENDDO
-         Delta(iz) = -1/(2.0*pi_const) * AIMAG(tr)
+         Delta(iz) = -1/(tpi_const*gmat%matsize1) * AIMAG(tr)
          WRITE(1337,"(2f14.8)") REAL(gf%e(iz)), Delta(iz)
          !Free up the gmat matrix (it is initialized in gf%get_gf)
          CALL gmat%free()

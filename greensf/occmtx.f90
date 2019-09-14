@@ -70,7 +70,7 @@ CONTAINS
                   ind2 = 0 
                   DO mp = -lp_loop,lp_loop
                      ind2 = ind2 + 1 
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) - 1/(2.0*pi_const*ImagUnit) * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
+                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + ImagUnit/tpi_const * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
                                                              * MERGE(g%de(iz),conjg(g%de(iz)),ipm.EQ.1)
                   ENDDO
                ENDDO
@@ -86,7 +86,7 @@ CONTAINS
                   ind2 = 0 
                   DO mp = -lp_loop,lp_loop
                      ind2 = ind2 + 1 
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) - 1/(2.0*pi_const) * gmat%data_c(ind1,ind2) &
+                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) - 1/tpi_const * gmat%data_c(ind1,ind2) &
                                                              * MERGE(g%de(1),conjg(g%de(1)),ipm.EQ.1)
                   ENDDO
                ENDDO
@@ -99,7 +99,7 @@ CONTAINS
                   ind2 = 0 
                   DO mp = -lp_loop,lp_loop
                      ind2 = ind2 + 1 
-                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + 1/(2.0*pi_const) * gmat%data_c(ind1,ind2) &
+                     mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + 1/tpi_const * gmat%data_c(ind1,ind2) &
                                                              * MERGE(g%de(g%nz),conjg(g%de(g%nz)),ipm.EQ.1)
                   ENDDO
                ENDDO

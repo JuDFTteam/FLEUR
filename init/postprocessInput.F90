@@ -181,7 +181,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         IF (atoms%nlo(n).GE.1) THEN
            DO j = 1, atoms%nlo(n)
               IF ((ABS(atoms%llo(j,n)).EQ.l) .AND. (.NOT.atoms%l_dulo(j,n)) ) &
-                 WRITE (*,*) 'LO and LDA+Hubbard1 for same l not implemented'
+                 WRITE (*,*) 'LO and LDA+Hubbard1 for same l not implemented/tested'
            END DO
         END IF
      END DO
