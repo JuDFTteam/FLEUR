@@ -59,14 +59,14 @@ CONTAINS
        l = u_in(i_u)%l
        u_htr = u_in(i_u)%u / hartree_to_ev_const
        j_htr = u_in(i_u)%j / hartree_to_ev_const
-       !u_htr = f0(i_u)/hartree_to_ev_const
-       !IF (l.EQ.1) THEN
-       !   j_htr = f2(i_u)/(5*hartree_to_ev_const)
-       !ELSE IF (l.EQ.2) THEN
-       !   j_htr = 1.625*f2(i_u)/(14*hartree_to_ev_const)
-       !ELSE IF (l.EQ.3) THEN
-       !   j_htr = (286.+195*451/675+250*1001/2025)*f2(i_u)/(6435*hartree_to_ev_const)
-       !END IF
+       u_htr = f0(i_u)/hartree_to_ev_const
+       IF (l.EQ.1) THEN
+          j_htr = f2(i_u)/(5*hartree_to_ev_const)
+       ELSE IF (l.EQ.2) THEN
+          j_htr = 1.625*f2(i_u)/(14*hartree_to_ev_const)
+       ELSE IF (l.EQ.3) THEN
+          j_htr = (286.+195*451/675+250*1001/2025)*f2(i_u)/(6435*hartree_to_ev_const)
+       END IF
        !
        ! calculate spin-density 'rho_sig' and total density 'rho_tot'
        !
