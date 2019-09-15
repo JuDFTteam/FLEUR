@@ -39,7 +39,7 @@ CONTAINS
     INTEGER n
     REAL rdum
     !     .. Local Arrays ..
-    INTEGER i(48),ierr(3)
+    INTEGER i(44),ierr(3)
     REAL    r(34)
     LOGICAL l(48)
     !     ..
