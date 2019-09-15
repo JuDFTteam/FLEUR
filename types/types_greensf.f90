@@ -282,12 +282,12 @@ MODULE m_types_greensf
                WRITE(6,"(A)") "Rectangular Contour: "
                WRITE(6,1010) this%nz, this%nmatsub,input%gf_n1,input%gf_n2,input%gf_n3
                WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-               WRITE(6,1040) eb,0.0
+               WRITE(6,1040) eb-ef,0.0
             CASE(2)
                WRITE(6,"(A)") "Semicircle Contour: "
                WRITE(6,1020) this%nz, input%gf_alpha
                WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
-               WRITE(6,1040) eb,input%gf_et
+               WRITE(6,1040) eb-ef,input%gf_et
             CASE(3)
                WRITE(6,"(A)") "Equidistant Contour for DOS calculations: "
                WRITE(6,1030) this%nz, input%gf_sigma
