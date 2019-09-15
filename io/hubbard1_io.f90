@@ -169,7 +169,7 @@ MODULE m_hubbard1_io
          !----------------------------------------------
          ! Write out a warning about the sign convention
          !----------------------------------------------
-         IF(TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1%arg_vals(i_hia,i_arg).GT.0.0)
+         IF(TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1%arg_vals(i_hia,i_arg).GT.0.0) THEN
             WRITE(*,*) "-----------------------------------------------------------------------------------------"
             WRITE(*,*) "You provided a positive exchange splitting."
             WRITE(*,*) "Due to different conventions in the solver this will result in a negative magnetic moment"

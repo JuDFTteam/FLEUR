@@ -27,7 +27,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
    !-Scalar Arguments 
    INTEGER,               INTENT(IN)    :: ispin  !Current spin index
    INTEGER,               INTENT(IN)    :: nbands !Number of bands to be considered
-   REAL,                  INTENT(IN)    :: wtkpt  !Weight of the current k-point
+   REAL,                  INTENT(IN)    :: wtkpt  !Weight of the current k-point (not used in tetrahedron method)
 
    !-Array Arguments
    REAL,                  INTENT(IN)    :: dosWeights(greensfCoeffs%ne,nbands) !Precalculated tetrahedron weights for the current k-point
@@ -89,40 +89,40 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                   !Choose the relevant energy points depending on the bz-integration method
                   DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
                      !weight for the bz-integration including spin-degeneracy
-                     weight = 2.0/input%jspins*(MERGE(resWeights(ie,ib),0.0,.FALSE.)&
+                     weight = 2.0/input%jspins*(MERGE(resWeights(ie,ib),0.0,input%l_resolvent)&
                                                 - ImagUnit * pi_const * MERGE(dosWeights(ie,ib),wtkpt/greensfCoeffs%del,l_tria))
-                     !
+                     !-------------------------
                      !Contribution from states
-                     !
-                     im(ie,m,mp,1) = im(ie,m,mp,1) + (weight *&
-                                    (conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) +&
+                     !-------------------------
+                     im(ie,m,mp,1) = im(ie,m,mp,1) + weight *&
+                                          (conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) +&
                                           conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin) *&
-                                          usdus%ddn(l,nType,ispin)))
+                                          usdus%ddn(l,nType,ispin))
                      IF(.NOT.input%l_gfsphavg) THEN
-                        im(ie,m,mp,2) = im(ie,m,mp,2) + (weight *&
-                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin))
-                        im(ie,m,mp,3) = im(ie,m,mp,3) + (weight *&
-                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin))
-                        im(ie,m,mp,4) = im(ie,m,mp,4) + (weight *&
-                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin))
-                        im(ie,m,mp,5) = im(ie,m,mp,5) + (weight *&
-                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin))
+                        im(ie,m,mp,2) = im(ie,m,mp,2) + weight *&
+                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin)
+                        im(ie,m,mp,3) = im(ie,m,mp,3) + weight *&
+                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)
+                        im(ie,m,mp,4) = im(ie,m,mp,4) + weight *&
+                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)
+                        im(ie,m,mp,5) = im(ie,m,mp,5) + weight *&
+                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin)
                      END IF
-                     !
+                     !------------------------------------------------------------------------------------------------------
                      ! add local orbital contribution (not implemented for radial dependence yet and not tested for average)
-                     !
+                     !------------------------------------------------------------------------------------------------------
                      DO ilo = 1, atoms%nlo(nType)
                         IF(atoms%llo(ilo,nType).EQ.l) THEN
-                           im(ie,m,mp,1) = im(ie,m,mp,1) + (weight * (  usdus%uulon(ilo,nType,ispin) * (&
+                           im(ie,m,mp,1) = im(ie,m,mp,1) + weight * (  usdus%uulon(ilo,nType,ispin) * (&
                                           conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%ccof(m,ib,ilo,natom,ispin) +&
                                           conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) )&
                                           + usdus%dulon(ilo,nType,ispin) * (&
                                           conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%ccof(m,ib,ilo,natom,ispin) +&
-                                          conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin))))
+                                          conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)))
                            DO ilop = 1, atoms%nlo(nType)
                               IF (atoms%llo(ilop,nType).EQ.l) THEN
-                                 im(ie,m,mp,1) = im(ie,m,mp,1) + (weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
-                                                conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin))
+                                 im(ie,m,mp,1) = im(ie,m,mp,1) + weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
+                                                conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
                               
                               ENDIF
                            ENDDO
