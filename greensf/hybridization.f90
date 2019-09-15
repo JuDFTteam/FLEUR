@@ -15,7 +15,7 @@ MODULE m_hybridization
       ! Evaluates the hybridization function 
       ! acc. to. sci. rep. 5, 15429 (2015)
       !------------------------------------------------------
-      ! \Delta(E) = -1/pi Im TR[G^-1_{DFT}(E+i\delta)]
+      ! \Delta(E) = -1/(pi*N_l) Im TR[G^-1_{DFT}(E+i\delta)]
       !------------------------------------------------------
 
       INTEGER,         INTENT(IN) :: l
@@ -39,10 +39,12 @@ MODULE m_hybridization
       DO iz = 1, gf%nz  
          tr = 0.0
          DO ipm = 1, 2
-            !Get the full Greens function matrix for the current energy point
+            !--------------------------------------------------
+            ! Get the full Greens function matrix for the current energy point
+            !--------------------------------------------------
             CALL gf%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
             !--------------------------------------------------
-            !Invert the matrix using the routines in types_mat
+            ! Invert the matrix using the routines in types_mat
             !--------------------------------------------------
             CALL gmat%inverse()
             !Compute the trace
@@ -51,7 +53,7 @@ MODULE m_hybridization
             ENDDO
          ENDDO
          Delta(iz) = -1/(tpi_const*gmat%matsize1) * AIMAG(tr)
-         WRITE(1337,"(2f14.8)") REAL(gf%e(iz)), Delta(iz)
+         WRITE(1337,"(2f14.8)") REAL(gf%e(iz)-ef)*hartree_to_ev_const, Delta(iz)
          !Free up the gmat matrix (it is initialized in gf%get_gf)
          CALL gmat%free()
       ENDDO

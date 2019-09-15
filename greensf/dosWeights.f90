@@ -162,12 +162,15 @@ MODULE m_dosWeights
       !$OMP DO
       DO ib = 1, neig
          dos_weights = 0.0
-         !Imaginary part of the weights
+         !---------------------------------------------------
+         ! Weights for DOS -> differentiate with respect to E
+         !---------------------------------------------------
          CALL diff3(REAL(weights(:,ib)),g%del,dos_weights(:))
-         !
-         !Find the range where the weights are not equal to 0
-         !
-         !Start
+         !----------------------------------------------------
+         !Find the range where the weights are bigger than tol
+         !----------------------------------------------------
+         ! Lower bound
+         !--------------------
          i = 1
          DO
             IF(dos_weights(i).GT.tol) THEN
@@ -182,7 +185,9 @@ MODULE m_dosWeights
                ENDIF
             ENDIF
          ENDDO
-         !End
+         !--------------------
+         ! Upper bound 
+         !--------------------
          i = g%ne
          DO
             IF(dos_weights(i).GT.tol) THEN
@@ -198,8 +203,11 @@ MODULE m_dosWeights
             ENDIF
          ENDDO
          IF(ANY(dos_weights(:).LT.0)) THEN
-            CALL juDFT_error("Negative tetra weight",calledby="tetra_weights")
+            CALL juDFT_error("Negative tetra weight",calledby="dosWeightsCalc")
          ENDIF
+         !---------------------------------------------------------------------------------------
+         ! All weights are smaller than the tolerance -> set the indices to equal to discard this  
+         !---------------------------------------------------------------------------------------
          IF(e_ind(ib,1).GT.e_ind(ib,2)) THEN
             e_ind(ib,1) = 1
             e_ind(ib,2) = 1
@@ -236,6 +244,12 @@ MODULE m_dosWeights
       REAL,ALLOCATABLE :: dos_weights(:)
       REAL             :: e(3)
       INTEGER          :: ind(3)
+
+      ALLOCATE( dos_weights(g%ne) )
+      dos_weights = 0.0
+      e_ind(:,1) = 0
+      e_ind(:,2) = g%ne+1
+      weights = 0.0
 
       DO itria = 1, kpts%ntria
 
@@ -289,12 +303,15 @@ MODULE m_dosWeights
       !$OMP DO
       DO ib = 1, neig
          dos_weights = 0.0
-         !Imaginary part of the weights
+         !---------------------------------------------------
+         ! Weights for DOS -> differentiate with respect to E
+         !---------------------------------------------------
          CALL diff3(REAL(weights(:,ib)),g%del,dos_weights(:))
-         !
-         !Find the range where the weights are not equal to 0
-         !
-         !Start
+         !----------------------------------------------------
+         !Find the range where the weights are bigger than tol
+         !----------------------------------------------------
+         ! Lower bound
+         !--------------------
          i = 1
          DO
             IF(dos_weights(i).GT.tol) THEN
@@ -309,7 +326,9 @@ MODULE m_dosWeights
                ENDIF
             ENDIF
          ENDDO
-         !End
+         !--------------------
+         ! Upper bound 
+         !--------------------
          i = g%ne
          DO
             IF(dos_weights(i).GT.tol) THEN
@@ -325,8 +344,11 @@ MODULE m_dosWeights
             ENDIF
          ENDDO
          IF(ANY(dos_weights(:).LT.0)) THEN
-            CALL juDFT_error("Negative tetra weight",calledby="tetra_weights")
+            CALL juDFT_error("Negative tria weight",calledby="dosWeightsCalcTria")
          ENDIF
+         !---------------------------------------------------------------------------------------
+         ! All weights are smaller than the tolerance -> set the indices to equal to discard this  
+         !---------------------------------------------------------------------------------------
          IF(e_ind(ib,1).GT.e_ind(ib,2)) THEN
             e_ind(ib,1) = 1
             e_ind(ib,2) = 1

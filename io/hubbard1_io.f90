@@ -166,6 +166,15 @@ MODULE m_hubbard1_io
       !---------------------------------------------------------
       CALL comment(input_iounit,"Additional arguments",1)
       DO i_arg = 1, hub1%n_addArgs(i_hia)
+         !----------------------------------------------
+         ! Write out a warning about the sign convention
+         !----------------------------------------------
+         IF(TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))).EQ.'Exc'.AND.hub1%arg_vals(i_hia,i_arg).GT.0.0)
+            WRITE(*,*) "-----------------------------------------------------------------------------------------"
+            WRITE(*,*) "You provided a positive exchange splitting."
+            WRITE(*,*) "Due to different conventions in the solver this will result in a negative magnetic moment"
+            WRITE(*,*) "-----------------------------------------------------------------------------------------"
+         ENDIF
          CALL writeValue(input_iounit, TRIM(ADJUSTL(hub1%arg_keys(i_hia,i_arg))),hub1%arg_vals(i_hia,i_arg))
       ENDDO
       !------------------------------------

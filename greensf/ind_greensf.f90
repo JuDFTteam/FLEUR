@@ -41,7 +41,6 @@ CONTAINS
             !Something went wrong here
             CALL juDFT_error("Greens function element not found", calledby="ind_greensf")
          ENDIF
-
          !--------------------------------------------
          ! Check the current element
          !--------------------------------------------

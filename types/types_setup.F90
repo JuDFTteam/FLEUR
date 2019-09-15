@@ -771,7 +771,7 @@ CONTAINS
          INTEGER l,lp,i_gf
          LOGICAL l_found
 
-         IF(l_inter.AND..NOT.l_nn) CALL juDFT_error("Intersite greens function for not nearest neighbours not implemented",calledby="add_gfjob")
+         IF(l_inter) CALL juDFT_error("Intersite greens function not yet implemented",calledby="add_gfjob")
 
          !TODO: add the nearest neighbours jobs
 
