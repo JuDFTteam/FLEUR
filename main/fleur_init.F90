@@ -39,6 +39,7 @@
           USE m_types_xcpot_inbuild
           USE m_mpi_bc_xcpot
 
+    
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
@@ -117,7 +118,7 @@
 #endif
           !call juDFT_check_para()
           CALL field%init(input)
-
+          input%eig66(1)=.FALSE.
           input%gw                = -1
           input%gw_neigd          =  0
           !-t3e

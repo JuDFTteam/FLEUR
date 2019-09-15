@@ -171,7 +171,7 @@ CONTAINS
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
     eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
-                    noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
+                    noco%l_noco,.NOT.INPUT%eig66(1),l_real,noco%l_soc,INPUT%eig66(1),mpi%n_size)
 
 #ifdef CPP_CHASE
     CALL init_chase(mpi,dimension,input,atoms,kpts,noco,.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0))
@@ -229,8 +229,9 @@ CONTAINS
        IF(input%l_rdmft) THEN
           CALL open_hybrid_io1(DIMENSION,sym%invs)
        END IF
-
-       CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+       IF(.not.input%eig66(1))THEN
+          CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+       END IF
        !$ call omp_set_num_threads(num_threads)
 
        !#endif
@@ -265,8 +266,10 @@ CONTAINS
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
-          CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+          IF(.not.input%eig66(1))THEN
+            CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx,gOnsite,hub1)
+          ENDIF             
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -289,7 +292,7 @@ CONTAINS
 #endif
 
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
-          IF (noco%l_soc.AND..NOT.noco%l_noco) &
+          IF (noco%l_soc.AND..NOT.noco%l_noco.AND..NOT.INPUT%eig66(1)) &
              CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
                           obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results,hub1)
           CALL timestop("gen. of hamil. and diag. (total)")
