@@ -105,9 +105,11 @@ CONTAINS
     REAL    :: vup,vdown,veff,beff
     REAL    :: theta,phi
     REAL,ALLOCATABLE :: ch(:,:),b_xc(:,:)
+    REAL,ALLOCATABLE :: livemt(:,:,:,:)
     
     nsp=atoms%nsp()
     ALLOCATE(ch(nsp*atoms%jmtd,4))
+    ALLOCATE(livemt(size(xcB(1)%mt,1),size(xcB(1)%mt,2),size(xcB(1)%mt,3),3))
     CALL xcpot%init("vwn",.FALSE.,1)
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
@@ -133,8 +135,9 @@ CONTAINS
           xcB(i)%mt(:,0:,n,:)=0.0
        ENDDO
        CALL mt_from_grid(atoms,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
+       CALL mt_from_grid(atoms,sphhar,n,3,b_xc,livemt(:,0:,n,:))
        DO i=1,3
-          CALL mt_from_grid(atoms,sphhar,n,1,b_xc(:,i),xcB(i)%mt(:,0:,n,:))
+          xcB(i)%mt(:,0:,n,1)=livemt(:,0:,n,i)
        ENDDO
        DO i=1,atoms%jri(n)
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
