@@ -70,7 +70,7 @@ c***********************************************************************
       complex, intent(in) :: bcof(:,0:,:,:) !bcof(noccbd,0:lmd,natd,jspd)
       complex, intent(in) :: chelp(-llod:,:,:,:,:) !chelp(-llod:llod,neigd,nlod,natd,jspd)
 
-      complex, allocatable, intent(out):: hsomtx(:,:,:,:) !(neigd,neigd,2,2)
+      complex, intent(out):: hsomtx(:,:,:,:) !(neigd,neigd,2,2)
 
       integer :: n,l,nwdd,nw,ispin,ie,na,ll1,m,lm,i,nsz(2)
       real    :: s(3),r2
