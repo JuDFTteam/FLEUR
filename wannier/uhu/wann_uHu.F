@@ -47,7 +47,7 @@ c*******************************************c
       use m_wann_projmethod
       use m_wann_abinv
       use m_wann_kptsrotate
-      use m_wann_read_inp
+!      use m_wann_read_inp  !Call wann_read_inp in fleur_init
       use m_matmul,only : matmul3,matmul3r
       use m_wann_maxbnd
       use m_wann_uHu_tlmplm
@@ -290,7 +290,7 @@ c     ..initializations..
       
 
 c-----read the input file to determine what to do
-      call wann_read_inp(input,l_p0,wann)
+!      call wann_read_inp(input,l_p0,wann) !Call wann_read_inp in fleur_init
 
       if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wannier")
