@@ -693,6 +693,7 @@ c****************************************************************
          
          
          call wann_gabeffgagaunt(
+     >            vTot,         
      >            wann%l_perpmagatlres,wann%perpmagl,
      >            neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
