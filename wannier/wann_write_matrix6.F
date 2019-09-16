@@ -4,13 +4,14 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      module m_wann_write_hsomtx
+      module m_wann_write_matrix6
       contains
-      subroutine wann_write_hsomtx(
+      subroutine wann_write_matrix6(
      >               mpi_comm,l_p0,filename,title,
-     >               spin1,spin2,nbnd,nwfs,fullnkpts,
-     >               irank,isize,
-     <               hsomtx)
+     >               spin1,spin2,num_bands1,num_bands2,
+     >               num_dims,fullnkpts,
+     >               irank,isize,l_unformatted,
+     <               matrix6)
 c*************************************************************
 c     This subroutine is used to write several matrices to 
 c     files. The corresponding 
@@ -29,16 +30,19 @@ c*************************************************************
 
       integer, intent(in)    :: spin1
       integer, intent(in)    :: spin2
-      integer, intent(in)    :: nbnd
-      integer, intent(in)    :: nwfs
+      integer, intent(in)    :: num_bands1
+      integer, intent(in)    :: num_bands2
+
+      integer, intent(in)    :: num_dims
       integer, intent(in)    :: fullnkpts
 
       integer, intent(in)    :: irank,isize
+      logical, intent(in)    :: l_unformatted
 
-      complex, intent(inout) :: hsomtx(:,:,:,:,:)
+      complex, intent(inout) :: matrix6(:,:,:,:,:,:)
 
       integer :: ikpt,i,j,ii,jj
-      integer :: cpu_index
+      integer :: cpu_index,dir
 #ifdef CPP_MPI
       include 'mpif.h'
       integer :: ierr(3)
@@ -48,7 +52,7 @@ c*************************************************************
 
 #ifdef CPP_MPI
 c**********************************************************
-c     Collect contributions to the hsomtx matrix from the
+c     Collect contributions to the matrix6 matrix from the
 c     various processors.
 c**********************************************************
       if(isize.ne.1)then
@@ -57,8 +61,9 @@ c**********************************************************
          do cpu_index=1,isize-1
           if(mod(ikpt-1,isize).eq.cpu_index)then
            call MPI_RECV(
-     &             hsomtx(1:spin1,1:spin2,1:nbnd,
-     &             1:nwfs,ikpt),spin1*spin2*nbnd*nwfs,
+     &             matrix6(1:spin1,1:spin2,1:num_bands1,
+     &             1:num_bands2,1:num_dims,ikpt),
+     &             spin1*spin2*num_bands1*num_bands2*num_dims,
      &             CPP_MPI_COMPLEX,cpu_index,
      &             ikpt,mpi_comm,stt,ierr)
           endif !processors
@@ -66,8 +71,9 @@ c**********************************************************
         else
          if(mod(ikpt-1,isize).eq.irank)then
            call MPI_SEND(
-     &             hsomtx(1:spin1,1:spin2,1:nbnd,
-     &             1:nwfs,ikpt),spin1*spin2*nbnd*nwfs,
+     &             matrix6(1:spin1,1:spin2,1:num_bands1,
+     &             1:num_bands2,1:num_dims,ikpt),
+     &             spin1*spin2*num_bands1*num_bands2*num_dims,
      &             CPP_MPI_COMPLEX,0,
      &             ikpt,mpi_comm,ierr)
          endif !processors
@@ -77,27 +83,39 @@ c**********************************************************
       endif !isize
 #endif
 
-      write(6,*)"wann_write_hsomtx"
+      write(6,*)"wann_write_matrix6"
 
       if(l_p0)then
-       open (305,file=filename)
-c       write (305,*)title
-c       write (305,'(3i5)') nbnd,nbnd,fullnkpts
-       do ikpt=1,fullnkpts
-        do i = 1,nwfs
-         do j = 1,nbnd
-          do ii=1,spin1
-           do jj=1,spin2
-            write (305,'(5i5,3x,2f18.12)') jj,ii,j,i,ikpt,
-     &              real(hsomtx(jj,ii,j,i,ikpt)),
-     &              aimag(hsomtx(jj,ii,j,i,ikpt))
-           enddo !jj 
-          enddo !ii
-         enddo !j
-        enddo !i
-       enddo !ikpt
+       if(l_unformatted)then
+	open(305,file=trim(filename)//'_unf',form='unformatted')
+        write(305)spin2,spin1,num_bands1,num_bands2,
+     &          num_dims,fullnkpts
+        do ikpt=1,fullnkpts
+	 write(305)matrix6(:,:,:,:,:,ikpt)
+        enddo
+       else
+        open (305,file=filename)
+       write (305,*)title
+       write (305,'(6i5)') spin2,spin1,num_bands1,num_bands2,
+     &          num_dims,fullnkpts
+        do ikpt=1,fullnkpts
+         do dir=1,num_dims  
+          do i = 1,num_bands2
+           do j = 1,num_bands1
+            do ii=1,spin1
+             do jj=1,spin2
+              write (305,'(6i5,3x,2f18.12)') jj,ii,j,i,dir,ikpt,
+     &              real(matrix6(jj,ii,j,i,dir,ikpt)),
+     &              aimag(matrix6(jj,ii,j,i,dir,ikpt))
+             enddo !jj 
+            enddo !ii
+           enddo !j
+          enddo !i
+         enddo !dir 
+        enddo !ikpt
+       endif 
        close(305)
       endif
 
-      end subroutine wann_write_hsomtx
-      end module m_wann_write_hsomtx
+      end subroutine wann_write_matrix6
+      end module m_wann_write_matrix6

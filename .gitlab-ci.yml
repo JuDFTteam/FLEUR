@@ -47,8 +47,6 @@ pages:
     paths:
       - public
   only:
-    - schedules
-    - triggers
     - web
   
 doxygen:
@@ -65,8 +63,6 @@ doxygen:
       - build/fleur_MPI
       - build/inpgen
   only:
-    - schedules
-    - triggers
     - web
 
 
@@ -179,4 +175,4 @@ gfortran-coverage:
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
   only:
       - web
-      - schedules
+    
