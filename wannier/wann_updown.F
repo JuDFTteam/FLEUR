@@ -8,7 +8,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_updown(
-     >      DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,
+     >      DIMENSION,wann,mpi,input,kpts,sym,atoms,stars,vacuum,
      >      sphhar,oneD,noco,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -75,6 +75,7 @@ c****************************************************************************
 #endif
 
       TYPE(t_dimension), INTENT(IN) :: DIMENSION
+      TYPE(t_wann),      INTENT(INOUT) :: wann    
       TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_kpts),      INTENT(IN) :: kpts
@@ -128,7 +129,7 @@ c****************************************************************************
       real, intent(in) :: theta,phi
      
 cccccccccccccccccc   local variables   cccccccccccccccccccc
-      type(t_wann) :: wann
+!      type(t_wann) :: wann  !now input variable
       integer :: lmd,nlotot,n,nmat,iter,ikpt,ikpt_b,nmat_b
       integer :: addnoco,addnoco2,funbas,loplod
       integer :: noccbd,noccbd_b,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
@@ -293,7 +294,7 @@ c-----initializations
       nkpts = nkpt
 
 c-----read the input file to determine what to do
-      call wann_read_inp(input,l_p0,wann)
+!      call wann_read_inp(input,l_p0,wann)  !call wann_read_inp now in fleur_init
 
       IF(wann%l_byenergy.AND.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wann_updown")
