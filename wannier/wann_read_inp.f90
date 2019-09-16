@@ -24,7 +24,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
    logical,intent(in)          :: l_p0
 
    logical           :: l_file,l_orbcompinp
-   integer           :: i,ios,n
+   integer           :: i,ios,n,neigd_min
    character(len=30) :: task
    real              :: version_real
 
