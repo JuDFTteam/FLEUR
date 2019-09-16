@@ -538,7 +538,7 @@
           INQUIRE (file='wann_inp',exist=l_wann_inp)
           input%l_wann = input%l_wann.OR.l_wann_inp
           IF(input%l_wann) THEN
-              CALL wann_read_inp(input,(mpi%irank.EQ.0),wann)
+            CALL wann_read_inp(DIMENSION,input,noco,(mpi%irank.EQ.0),wann)
           END IF
 
 
