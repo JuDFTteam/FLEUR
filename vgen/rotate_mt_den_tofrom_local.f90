@@ -94,7 +94,8 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN) :: sphhar
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_potden),INTENT(IN) :: den
-    TYPE(t_potden),INTENT(INOUT) :: vtot,xcB
+    TYPE(t_potden),INTENT(INOUT) :: vtot
+    TYPE(t_potden),dimension(3),INTENT(INOUT) :: xcB
     
     
     TYPE(t_xcpot_inbuild)     :: xcpot !local xcpot that is LDA to indicate we do not need gradients
@@ -128,9 +129,13 @@ CONTAINS
           ch(imesh,4) = b_xc(imesh,2)
        ENDDO
        vtot%mt(:,0:,n,:)=0.0
-       xcB%mt(:,0:,n,:)=0.0
+       Do i=1,3
+          xcB(i)%mt(:,0:,n,:)=0.0
+       ENDDO
        CALL mt_from_grid(atoms,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
-       CALL mt_from_grid(atoms,sphhar,n,3,b_xc,xcB%mt(:,0:,n,:))
+       DO i=1,3
+          CALL mt_from_grid(atoms,sphhar,n,1,b_xc(:,i),xcB(i)%mt(:,0:,n,:))
+       ENDDO
        DO i=1,atoms%jri(n)
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO

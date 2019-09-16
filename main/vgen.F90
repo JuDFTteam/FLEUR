@@ -53,7 +53,8 @@ CONTAINS
       TYPE(t_atoms),     INTENT(IN)     :: atoms
       TYPE(t_potden),    INTENT(IN)     :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT)  :: den
-      TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul,xcB
+      TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul
+      TYPE(t_potden),dimension(3),INTENT(INOUT) :: xcB
 
       TYPE(t_potden)                    :: workden,denRot
 
@@ -63,11 +64,14 @@ CONTAINS
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
-      CALL xcB%resetPotden()
+      DO i=1,3
+         CALL xcB(i)%resetPotden()
+         ALLOCATE(xcB(i)%pw_w,mold=vTot%pw)
+         xcB(i)%pw_w = 0.0
+      ENDDO
       ALLOCATE(vx%pw_w,mold=vTot%pw)
-      ALLOCATE(xcB%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
-      xcB%pw_w = 0.0
+
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
 #else

@@ -26,7 +26,8 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)        :: atoms 
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
-    TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot,xcB
+    TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot
+    TYPE(t_potden),dimension(3),INTENT(INOUT) :: xcB
     !     ..
     !     .. Local Scalars ..
     INTEGER i,js,n
@@ -61,13 +62,19 @@ CONTAINS
     !Copy first vacuum into second vacuum if this was not calculated before 
     IF (vacuum%nvac==1) THEN
        vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
-       xcB%vacz(:,2,:)  = xcB%vacz(:,1,:)
+       DO i=1,3
+          xcB(i)%vacz(:,2,:)  = xcB(i)%vacz(:,1,:)
+       ENDDO
        IF (sym%invs) THEN
           vTot%vacxy(:,:,2,:)  = CMPLX(vTot%vacxy(:,:,1,:))
-          xcB%vacxy(:,:,2,:)  = CMPLX(xcB%vacxy(:,:,1,:))
+          DO i=1,3
+             xcB(i)%vacxy(:,:,2,:)  = CMPLX(xcB(i)%vacxy(:,:,1,:))
+          ENDDO
        ELSE
           vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
-          xcB%vacxy(:,:,2,:)  = xcB%vacxy(:,:,1,:)
+          DO i=1,3
+             xcB(i)%vacxy(:,:,2,:)  = xcB(i)%vacxy(:,:,1,:)
+          ENDDO
        ENDIF
     ENDIF
  

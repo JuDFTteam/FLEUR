@@ -54,7 +54,8 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)  :: stars
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_potden),INTENT(IN) :: den
-    TYPE(t_potden),INTENT(INOUT):: vTot,xcB
+    TYPE(t_potden),INTENT(INOUT):: vTot
+    TYPE(t_potden),dimension(3),INTENT(INOUT):: xcB
 
  
     !     ..
@@ -68,9 +69,10 @@ CONTAINS
     ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
     IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
     ifft2 = SIZE(den%phi_vacxy,1) 
-    
-    xcB%vacxy(:,:,:,:)=0.0
-    xcB%vacz(:,:,:)=0.0    
+    DO i=1,3
+       xcB(i)%vacxy(:,:,:,:)=0.0
+       xcB(i)%vacz(:,:,:)=0.0
+    ENDDO    
     
     ALLOCATE ( vis(ifft3,4),fftwork(ifft3))
     ALLOCATE (b_xc(ifft3,3))
@@ -124,7 +126,7 @@ CONTAINS
 
     DO b_ind=1,3
        fftwork=0.0
-       CALL fft3d(b_xc(:,b_ind),fftwork, xcB%pw_w(1,b_ind), stars,-1)
+       CALL fft3d(b_xc(:,b_ind),fftwork, xcB(b_ind)%pw_w(1,1), stars,-1)
     ENDDO
 
     IF (.NOT. input%film) RETURN
@@ -186,13 +188,13 @@ CONTAINS
              phi   = den%phi_vacz(imz,ivac)
              veff  = (vup + vdown)/2.0
              beff  = (vup - vdown)/2.0
-             xcB%vacz(imz,ivac,1) = beff*SIN(theta)*COS(phi)
-             xcB%vacz(imz,ivac,2) = beff*SIN(theta)*SIN(phi)
-             xcB%vacz(imz,ivac,3) = beff*COS(theta)
-             vTot%vacz(imz,ivac,1) = veff + xcB%vacz(imz,ivac,3)
-             vTot%vacz(imz,ivac,2) = veff - xcB%vacz(imz,ivac,3)
-             vTot%vacz(imz,ivac,3) = xcB%vacz(imz,ivac,1)
-             vTot%vacz(imz,ivac,4) = xcB%vacz(imz,ivac,2)
+             xcB(1)%vacz(imz,ivac,1) = beff*SIN(theta)*COS(phi)
+             xcB(2)%vacz(imz,ivac,1) = beff*SIN(theta)*SIN(phi)
+             xcB(3)%vacz(imz,ivac,1) = beff*COS(theta)
+             vTot%vacz(imz,ivac,1) = veff + xcB(3)%vacz(imz,ivac,1)
+             vTot%vacz(imz,ivac,2) = veff - xcB(3)%vacz(imz,ivac,1)
+             vTot%vacz(imz,ivac,3) = xcB(1)%vacz(imz,ivac,1)
+             vTot%vacz(imz,ivac,4) = xcB(2)%vacz(imz,ivac,2)
           ENDDO
        ENDDO
 
@@ -223,7 +225,7 @@ CONTAINS
              DO imz = 1,vacuum%nmzxyd
                 fftwork=0.0
                 CALL fft2d(stars, b_xc_vacxy(:,imz,ivac,b_ind),fftwork,&
-                     xcB%vacz(imz,ivac,b_ind),vziw,xcB%vacxy(imz,1,ivac,b_ind), vacuum%nmzxyd,-1)
+                     xcB(b_ind)%vacz(imz,ivac,1),vziw,xcB(b_ind)%vacxy(imz,1,ivac,1), vacuum%nmzxyd,-1)
              ENDDO
           ENDDO
        ENDDO
