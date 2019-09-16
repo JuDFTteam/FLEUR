@@ -90,7 +90,7 @@
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: dtild, phi_add
           LOGICAL                       :: l_found, l_kpts, l_exist
-          LOGICAL                       :: l_wann
+          LOGICAL                       :: l_wann_inp
       
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
