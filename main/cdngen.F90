@@ -102,6 +102,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #endif
    LOGICAL               :: l_error, perform_MetaGGA
    REAL                  :: angle(sym%nop)
+   COMPLEX               :: n_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
 
 
 
@@ -122,6 +123,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    ENDIF
 
    IF(atoms%n_gf+atoms%n_u.GT.0.AND.noco%l_mperp) THEN
+      n_mmp21 = 0.0
       CALL angles(sym,angle)
    ENDIF
 
@@ -143,7 +145,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,hub1,coreSpecInput,&
-                  mcd,slab,orbcomp,greensfCoeffs,gOnsite,angle)
+                  mcd,slab,orbcomp,greensfCoeffs,gOnsite,angle,n_mmp21)
    END DO
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
