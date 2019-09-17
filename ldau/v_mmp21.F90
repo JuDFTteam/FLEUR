@@ -104,8 +104,7 @@ MODULE m_vmmp21
           WRITE (6,'(a6,f12.6)') 'e_off:',e_off
           WRITE (6,'(14f10.5)') v_mmp21(:,:,i_u)
         ENDIF
-     
-        ENDIF
+
       ENDDO ! loop over atoms
 
       e_off = e_off / 2
