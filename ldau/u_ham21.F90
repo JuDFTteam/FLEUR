@@ -51,6 +51,7 @@ MODULE m_uham21
 !     ..
 !     .. Scalar Arguments ..
       INTEGER, INTENT(IN) :: i_u, n
+      INTEGER, INTENT(IN) :: iintsp,jintsp,jsp
 
       REAL,    INTENT (IN) :: invsfct
       COMPLEX, INTENT (IN) :: chi11,chi22,chi21,chi12
@@ -61,9 +62,9 @@ MODULE m_uham21
       COMPLEX, INTENT (IN) :: alo(-atoms%llod:,:,:,:)!(-llod:llod,2*(2*llod+1),nlod,ab_dim)
       COMPLEX, INTENT (IN) :: blo(-atoms%llod:,:,:,:)!(-llod:llod,2*(2*llod+1),nlod,ab_dim)
       COMPLEX, INTENT (IN) :: clo(-atoms%llod:,:,:,:)!(-llod:llod,2*(2*llod+1),nlod,ab_dim)
-      COMPLEX, INTENT(IN)  :: v_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
+      COMPLEX, INTENT(IN)  :: v_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
 
-      CLASS(t_mat), INTENT(INOUT) :: hmat
+      CLASS(t_mat), INTENT(INOUT) :: hmat(:,:) !2x2
 !     ..
 !     .. Local Scalars ..
       INTEGER m,mp,ispin,itype,l,ig,igp,ll,llm,nvv,ii,lp,lop,ki,kj
@@ -130,15 +131,15 @@ MODULE m_uham21
         DO m = -l,l
           llm = ll + m
 
-!          ab1 = cmplx(ar(ig,llm,2),ai(ig,llm,2)) * denCoeffsOffDiag%uun21(l,n) +  ! 1 (see swap of spins in hssphn)
-!     +          cmplx(br(ig,llm,2),bi(ig,llm,2)) * denCoeffsOffDiag%udn21(l,n) 
-!          ab2 = cmplx(ar(ig,llm,2),ai(ig,llm,2)) * denCoeffsOffDiag%dun21(l,n) +
-!     +          cmplx(br(ig,llm,2),bi(ig,llm,2)) * denCoeffsOffDiag%ddn21(l,n) 
+!          ab1 = cmplx(ar(ig,llm,2),ai(ig,llm,2)) * denCoeffsOffDiag%uu21n(l,n) +  ! 1 (see swap of spins in hssphn)
+!     +          cmplx(br(ig,llm,2),bi(ig,llm,2)) * denCoeffsOffDiag%ud21n(l,n) 
+!          ab2 = cmplx(ar(ig,llm,2),ai(ig,llm,2)) * denCoeffsOffDiag%du21n(l,n) +
+!     +          cmplx(br(ig,llm,2),bi(ig,llm,2)) * denCoeffsOffDiag%dd21n(l,n) 
 
-          ab1 = cmplx(ar(ki,llm,1),ai(ki,llm,1)) * denCoeffsOffDiag%uun21(l,n) + & ! 1 (see swap of spins in hssphn)
-                cmplx(br(ki,llm,1),bi(ki,llm,1)) * denCoeffsOffDiag%udn21(l,n) 
-          ab2 = cmplx(ar(ki,llm,1),ai(ki,llm,1)) * denCoeffsOffDiag%dun21(l,n) + &
-                cmplx(br(ki,llm,1),bi(ki,llm,1)) * denCoeffsOffDiag%ddn21(l,n) 
+          ab1 = cmplx(ar(ki,llm,1),ai(ki,llm,1)) * denCoeffsOffDiag%uu21n(l,n) + & ! 1 (see swap of spins in hssphn)
+                cmplx(br(ki,llm,1),bi(ki,llm,1)) * denCoeffsOffDiag%ud21n(l,n) 
+          ab2 = cmplx(ar(ki,llm,1),ai(ki,llm,1)) * denCoeffsOffDiag%du21n(l,n) + &
+                cmplx(br(ki,llm,1),bi(ki,llm,1)) * denCoeffsOffDiag%dd21n(l,n) 
 
           DO kj = 1, lapw%nv(1) 
             aax(kj) = aax(kj)+ a_help(kj,m)*ab1 + b_help(kj,m)*ab2
@@ -146,7 +147,7 @@ MODULE m_uham21
         ENDDO   ! m
 
         DO kj = 1, ki
-          IF(.NOT.hmat%l_real) THEN
+          IF(.NOT.hmat(1,1)%l_real) THEN
             !spin-up/spin-up
             hmat(1,1)%data_c(kj,ki) = hmat(1,1)%data_c(kj,ki) + aax(kj) * chi11
             !spin-down/spin-down
