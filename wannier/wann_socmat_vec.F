@@ -70,7 +70,7 @@ c***********************************************************************
 
       complex, intent(out):: hsomtx_vec(:,:,:,:,:) !(2,2,neigd,neigd,3)
 
-      integer :: n,l,nwdd,nw,ispin,ie,na,ll1,m,lm,i,j,i1,i2,nsz(2)
+      integer :: n,l,nwdd,nw,ispin,ie,na,ll1,m,lm,i,j,i1,i2,nsz(2),compo
       real    :: s(3),r2
       logical :: l_all
       CHARACTER*3 chntype
