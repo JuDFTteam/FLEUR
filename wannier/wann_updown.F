@@ -930,7 +930,7 @@ c...for the lapws and local orbitals, summed by the basis functions
      >       jspins,irank,
      >       vTot%mt,! vr,
      >       acof,bcof,ccof,
-     <       hsomtx_vec(:,:,:,:,:,ikpt))
+     <       hsomtxvec(:,:,:,:,:,ikpt))
       endif
 
 #ifdef CPP_TOPO
