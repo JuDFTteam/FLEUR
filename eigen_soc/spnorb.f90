@@ -94,7 +94,7 @@ CONTAINS
          CALL spnorb_angles(atoms,mpi,noco%theta,noco%phi,rsoc%soangl)
   END SUBROUTINE spnorb
 
-  SUBROUTINE spnorb_angles(atoms,mpi,theta,phi,soangl)
+  SUBROUTINE spnorb_angles(atoms,mpi,theta,phi,soangl,compo)
     USE m_anglso
     USE m_sgml
     USE m_sorad 
@@ -104,6 +104,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(IN)      :: mpi
     REAL,INTENT(IN)             :: theta,phi
     COMPLEX,INTENT(INOUT)       :: soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:)
+    INTEGER, INTENT(IN),OPTIONAL :: compo    
     !     ..
     !     ..
     !     .. Local Scalars ..
@@ -116,7 +117,8 @@ CONTAINS
     DATA ispjsp/1,-1/
 
   
-    IF ((ABS(theta).LT.0.00001).AND.(ABS(phi).LT.0.00001)) THEN
+    IF ((ABS(theta).LT.0.00001).AND.(ABS(phi).LT.0.00001)&
+                       .AND..NOT.PRESENT(compo)) THEN
        !
        !       TEST for real function sgml(l1,m1,is1,l2,m2,is2)
        !
@@ -151,7 +153,7 @@ CONTAINS
                    DO m1 = -l1,l1,1
                       DO m2 = -l2,l2,1
                          soangl(l1,m1,jspin1,l2,m2,jspin2) =&
-                              anglso(theta,phi,l1,m1,is1,l2,m2,is2)
+                           anglso(theta,phi,l1,m1,is1,l2,m2,is2,compo)
                       ENDDO
                    ENDDO
                    !
