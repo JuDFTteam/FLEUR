@@ -77,7 +77,7 @@ CONTAINS
     USE m_wann_abinv
     USE m_wann_kptsrotate
     USE m_wann_plot
-    USE m_wann_read_inp
+!    USE m_wann_read_inp !Call wann_read_inp in fleur_init
     USE m_wann_plot_symm
     USE m_wann_mmkb_int
     USE m_wann_postproc
@@ -334,7 +334,7 @@ CONTAINS
     wann%atomlist_num=atoms%nat
     wann%oc_num_orbs=atoms%nat
 
-    CALL wann_read_inp(input,l_p0,wann)
+!    CALL wann_read_inp(input,l_p0,wann) !Call wann_read_inp in fleur_init
 
 
     !-----input file for orbital decomposition
@@ -360,7 +360,7 @@ CONTAINS
 
     IF(wann%l_updown)THEN            
        CALL wann_updown(&
-            DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
+            DIMENSION,wann,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
             oneD,noco,cell,vTot,&
             enpara,eig_idList(1),l_real,&
             mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&

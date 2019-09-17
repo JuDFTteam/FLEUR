@@ -47,7 +47,7 @@ c*******************************************c
       use m_wann_projmethod
       use m_wann_abinv
       use m_wann_kptsrotate
-      use m_wann_read_inp
+!      use m_wann_read_inp  !Call wann_read_inp in fleur_init
       use m_matmul,only : matmul3,matmul3r
       use m_wann_maxbnd
       use m_wann_uHu_tlmplm
@@ -290,7 +290,7 @@ c     ..initializations..
       
 
 c-----read the input file to determine what to do
-      call wann_read_inp(input,l_p0,wann)
+!      call wann_read_inp(input,l_p0,wann) !Call wann_read_inp in fleur_init
 
       if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wannier")
@@ -1030,36 +1030,36 @@ c      if (mod(i_rec-1,isize).eq.irank) then
      &      nbands,eigg,zzMat)
 
 
-
-        do i = 1,nbands
-          if((eigg(i).ge.e1s.and.nslibd.lt.numbands
-     & .and.wann%l_bynumber)
-     &.or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
-     &.or.(i.ge.wann%band_min(jspin)
-     &                 .and.
-     &       (i.le.wann%band_max(jspin))
-     &                 .and.
-     &       wann%l_byindex))then
-            nslibd = nslibd + 1
-            eig(nslibd) = eigg(i)
-            we(nslibd) = we(i)
-            if(l_noco)then
-    !           funbas =        nv(1) + nlotot
-    !           funbas = funbas+nv(2) + nlotot
-            else
-    !           funbas = nv(jspin) + nlotot
-            endif
-            IF (zzMat%l_real) THEN
-    !           do j = 1,funbas
-                  zMat%data_r(:,nslibd) = zzMat%data_r(:,i)
-    !           enddo
-            ELSE
-    !           do j = 1,funbas
-                  zMat%data_c(:,nslibd) = zzMat%data_c(:,i)
-    !           enddo
-            END IF
-          endif
-        enddo
+c$$$        nslibd=0
+!        do i = 1,nbands
+!          if((eigg(i).ge.e1s.and.nslibd.lt.numbands
+!     & .and.wann%l_bynumber)
+!     &.or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
+!     &.or.(i.ge.wann%band_min(jspin)
+!     &                 .and.
+!     &       (i.le.wann%band_max(jspin))
+!     &                 .and.
+!     &       wann%l_byindex))then
+!            nslibd = nslibd + 1
+!            eig(nslibd) = eigg(i)
+!            we(nslibd) = we(i)
+!            if(l_noco)then
+!    !           funbas =        nv(1) + nlotot
+!    !           funbas = funbas+nv(2) + nlotot
+!            else
+!    !           funbas = nv(jspin) + nlotot
+!            endif
+!            IF (zzMat%l_real) THEN
+!    !           do j = 1,funbas
+!                  zMat%data_r(:,nslibd) = zzMat%data_r(:,i)
+!    !           enddo
+!            ELSE
+!    !           do j = 1,funbas
+!                  zMat%data_c(:,nslibd) = zzMat%data_c(:,i)
+!    !           enddo
+!            END IF
+!          endif
+!        enddo
 
 
 
