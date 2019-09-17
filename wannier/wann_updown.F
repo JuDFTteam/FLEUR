@@ -51,6 +51,7 @@ c****************************************************************************
       use m_wann_radovlp_integrals
       use m_matmul,only : matmul3,matmul3r
       use m_wann_socmat
+      use m_wann_socmat_vec
       use m_wann_write_matrix5
       use m_wann_write_nabla
       use m_wann_write_matrix6
@@ -904,11 +905,10 @@ c...for the lapws and local orbitals, summed by the basis functions
       if(wann%l_socmat)then
          call wann_socmat(
      >       mpi,enpara,input,noco,atoms,
-     >       lmaxd,ntypd,nlod,natd,noccbd,
-     >       llod,jmtd,jspd,nlhd,neq,
-     >       ntype,theta,phi,jspins,irank,
-     >       jri,lmax,dx,rmsh,epar,ello,nlo,llo,
-     >       l_dulo,ulo_der,vTot%mt,
+     >       lmaxd,natd,noccbd,
+     >       llod,jspd,
+     >       theta,phi,jspins,irank,
+     >       vTot%mt,
      >       acof,bcof,ccof,
      <       hsomtx_l)
         do i1 = 1,2
@@ -920,6 +920,17 @@ c...for the lapws and local orbitals, summed by the basis functions
           enddo
          enddo
         enddo
+      endif
+
+      if(wann%l_socmatvec)then
+        call wann_socmat_vec(
+     >       mpi,enpara,input,noco,atoms,
+     >       lmaxd,natd,neigd,
+     >       llod,jspd,
+     >       jspins,irank,
+     >       vTot%mt,! vr,
+     >       acof,bcof,ccof,
+     <       hsomtx_vec(:,:,:,:,:,ikpt))
       endif
 
 #ifdef CPP_TOPO
