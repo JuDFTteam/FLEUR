@@ -98,7 +98,7 @@ CONTAINS
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen
-    TYPE(t_potden),dimension(3)     :: xcB
+    TYPE(t_potden),     dimension(3):: xcB
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
