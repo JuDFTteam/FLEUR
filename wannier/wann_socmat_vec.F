@@ -8,11 +8,10 @@
       contains
       subroutine wann_socmat_vec(
      >               mpi,enpara,input,noco,atoms,
-     >               lmaxd,ntypd,nlod,natd,neigd,
-     >               llod,jmtd,jspd,nlhd,neq,
-     >               ntype,jspins,irank,
-     >               jri,lmax,dx,rmsh,el,ello,nlo,llo,
-     >               l_dulo,ulo_der,vr,
+     >               lmaxd,natd,neigd,
+     >               llod,jspd,
+     >               jspins,irank,
+     >               vr,
      >               acof,bcof,chelp,
      <               hsomtx_vec)
 c***********************************************************************
@@ -36,32 +35,15 @@ c***********************************************************************
       TYPE(t_atoms),INTENT(IN)    :: atoms
 
       integer, intent(in) :: lmaxd
-      integer, intent(in) :: ntypd
-      integer, intent(in) :: nlod
       integer, intent(in) :: natd
       integer, intent(in) :: neigd
 
       integer, intent(in) :: llod
-      integer, intent(in) :: jmtd
       integer, intent(in) :: jspd
-      integer, intent(in) :: nlhd
-      integer, intent(in) :: neq(:) !ntype
 
-      integer, intent(in) :: ntype
       integer, intent(in) :: jspins
       integer, intent(in) :: irank
 
-      integer, intent(in) :: jri(:)  ! ntypd
-      integer, intent(in) :: lmax(:) ! ntypd
-      real,    intent(in) :: dx(:)   ! ntypd
-      real,    intent(in) :: rmsh(:,:)  ! jmtd,ntypd
-      real,    intent(in) :: el(0:,:,:) ! 0:lmaxd,ntypd,max(2,jspd)
-      real,    intent(in) :: ello(:,:,:)! nlod,ntypd,max(2,jspd)
-      integer, intent(in) :: nlo(:)     ! ntypd
-      integer, intent(in) :: llo(:,:)   ! nlod,ntypd
-
-      logical, intent(in) :: l_dulo(:,:)  ! l_dulo(nlod,ntypd)
-      integer, intent(in) :: ulo_der(:,:) ! ulo_der(nlod,ntypd)
       real,    intent(in) :: vr(:,0:,:,:)    ! jmtd,0:nlhd,ntypd,jspd   
   
       complex, intent(in) :: acof(:,0:,:,:) !acof(noccbd,0:lmd,natd,jspd)
