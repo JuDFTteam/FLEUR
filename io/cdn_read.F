@@ -73,7 +73,7 @@ c n_bands(i) the number of ev's processed on n_rank=0...i-1
       TYPE(t_mat), INTENT (INOUT) :: zmat !z(nbasfcn,noccbd) !can be real/complex
 
 ! Local variables ...
-      INTEGER :: isp
+      INTEGER :: isp,i
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
       INTEGER mpiierr
@@ -83,7 +83,7 @@ c n_bands(i) the number of ev's processed on n_rank=0...i-1
 
       CALL timestart("cdn_read")
 
-      CALL read_eig(eig_id,ikpt,isp,n_start=n_start,n_end=n_end,
+      CALL read_eig(eig_id,ikpt,isp,list=[(i,i=n_start,n_end)],
      <              neig=nbands,eig=eig,zmat=zmat)
 
       CALL timestop("cdn_read")

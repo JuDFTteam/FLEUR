@@ -36,6 +36,7 @@ CONTAINS
     USE m_types_xcpot_inbuild
     USE m_mpi_bc_xcpot
 
+    
 #ifdef CPP_MPI
     USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL

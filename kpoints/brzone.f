@@ -107,7 +107,7 @@ C
               WRITE (ibfile,'('' sum = dvec**2 = '',f13.6)') sum
             ENDDO
             sum = sqrt(sum)
-            ddist(n) = 0.5d0*sum
+            ddist(n) = 0.5*sum
             WRITE (ibfile,'(/'' ddist('',i3,'')=(.5*sum**.5) '',f13.6)')
      >                                                        n,ddist(n)
             sum = 1.0/sum

@@ -10,3 +10,5 @@ build.*
 *.x
 *.swp
 tags
+.DS_Store
+.vscode

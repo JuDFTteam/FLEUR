@@ -150,7 +150,7 @@
 
       INTEGER l,lm0,m
       REAL    fac,x,y,z,xy,r,rxy,cth,sth,cph,sph,cph2
-      REAL    p(0:lmax,0:lmax),c(0:lmax),s(0:lmax)
+      REAL    p(0:lmax,0:lmax),c(0:max(1,lmax)),s(0:max(1,lmax))
       COMPLEX ylms
 
 

@@ -152,6 +152,21 @@ CONTAINS
           ENDDO
        ENDDO ! n
        !$OMP END PARALLEL DO
+       IF (mpi%irank==0) THEN
+          WRITE(6,*)
+          WRITE(6,*) "Updated energy parameters for spin:",jsp
+          !Same loop for IO
+          DO n = 1, atoms%ntype
+             DO l = 0,3
+                IF( l_done(l,n,jsp)) CALL priv_write(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),e_lo(l,n),e_up(l,n),enpara%el0(l,n,jsp))
+             ENDDO ! l
+             ! Now for the lo's
+             DO ilo = 1, atoms%nlo(n)
+                l = atoms%llo(ilo,n)
+                IF( lo_done(ilo,n,jsp)) CALL priv_write(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),elo_lo(ilo,n),elo_up(ilo,n),enpara%ello0(ilo,n,jsp))
+             END DO
+          END DO
+       ENDIF
 
        !!   Now check for floating energy parameters (not for those with l_done=T)
        IF (enpara%floating) THEN
@@ -542,5 +557,51 @@ CONTAINS
        IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=regCharges%pvac(:vacuum%nvac,ispin)/regCharges%svac(:vacuum%nvac,ispin)
     END DO
   END SUBROUTINE calcOutParams
+
+  SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
+    !subroutine to write energy parameters to output
+    USE m_xmlOutput
+    IMPLICIT NONE
+    LOGICAL,INTENT(IN):: lo
+    INTEGER,INTENT(IN):: l,n,jsp,nqn
+    REAL,INTENT(IN)   :: e_lo,e_up,e
+
+    CHARACTER(LEN=20)    :: attributes(6)
+    CHARACTER(len=:),ALLOCATABLE:: label
+    CHARACTER(len=1),PARAMETER,DIMENSION(0:9):: ch=(/'s','p','d','f','g','h','i','j','k','l'/)
+
+    attributes = ''
+    WRITE(attributes(1),'(i0)') n
+    WRITE(attributes(2),'(i0)') jsp
+    WRITE(attributes(3),'(i0,a1)') abs(nqn), ch(l)
+    WRITE(attributes(4),'(f8.2)') e_lo
+    WRITE(attributes(5),'(f8.2)') e_up
+    WRITE(attributes(6),'(f16.10)') e
+    IF (nqn>0) THEN
+       IF (lo) THEN
+          label='loAtomicEP'
+       ELSE
+          label='atomicEP'
+       ENDIF
+    ELSE
+       IF (lo) THEN
+          label='heloAtomicEP'
+       ELSE
+          label='heAtomicEP'
+       ENDIF
+    END IF
+
+    CALL writeXMLElementForm(label,(/'atomType     ','spin         ','branch       ',&
+         'branchLowest ','branchHighest','value        '/),&
+         attributes,RESHAPE((/10,4,6,12,13,5,6,1,3,8,8,16/),(/6,2/)))
+    IF (lo) THEN
+       WRITE(6,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
+         e_lo, ' to',e_up,' htr. ; e_l(lo) =',e
+    ELSE
+       WRITE(6,'(a6,i5,i2,a1,a12,f6.2,a3,f6.2,a13,f8.4)') '  Atom',n,nqn,ch(l),' branch from',&
+         e_lo, ' to',e_up,' htr. ; e_l =',e
+    END IF
+  END SUBROUTINE priv_write
+
 
 END MODULE m_types_enpara

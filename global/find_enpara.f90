@@ -8,7 +8,6 @@ MODULE m_find_enpara
   USE m_judft
   IMPLICIT NONE
   PRIVATE
-  CHARACTER(len=1),PARAMETER,DIMENSION(0:9):: ch=(/'s','p','d','f','g','h','i','j','k','l'/)
   PUBLIC:: find_enpara
 
 CONTAINS
@@ -25,6 +24,7 @@ CONTAINS
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
+    REAL,INTENT(OUT) :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
     INTEGER,INTENT(IN)  ::irank
     REAL,INTENT(IN):: vr(:)
@@ -38,11 +38,11 @@ CONTAINS
     USE m_types_atoms
     USE m_radsra
     USE m_differ
-    USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
+    REAL,INTENT(OUT)  :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
     INTEGER,INTENT(IN)  ::irank
     REAL,INTENT(IN):: vr(:)
@@ -50,7 +50,7 @@ CONTAINS
 
     INTEGER j,ilo,i
     INTEGER nodeu,node,ierr,msh
-    REAL   e_up,e_lo,lnd,e1
+    REAL   lnd,e1
     REAL   d,rn,fl,fn,fj,t2,rr,t1,ldmt,us,dus,c
     LOGICAL start
     !     ..
@@ -127,7 +127,7 @@ CONTAINS
             rn,d,msh,vrd, e1, f(:,1),f(:,2),ierr)
        e = (2.0*e + e1 ) / 3.0      
     ENDIF
- 
+    
 
     IF (irank  == 0) THEN
        attributes = ''
@@ -155,18 +155,18 @@ CONTAINS
     USE m_types_atoms
     USE m_radsra
     USE m_differ
-    USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
+    REAL,INTENT(OUT)  :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
     INTEGER,INTENT(IN)  ::irank
     REAL,INTENT(IN):: vr(:)
 
     INTEGER j,ilo,i
     INTEGER nodeu,node,ierr,msh
-    REAL   e_up,e_lo,lnd,e_up_temp,e_lo_temp,large_e_step
+    REAL   lnd,e_up_temp,e_lo_temp,large_e_step
     REAL   d,rn,fl,fn,fj,t2,rr,t1,ldmt,us,dus,c
     LOGICAL start
     !     ..

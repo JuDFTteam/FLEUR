@@ -17,7 +17,7 @@ contains
 
   SUBROUTINE mix_charge( field, DIMENSION,  mpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-       oneD, archiveType, inDen, outDen, results )
+       oneD, archiveType, xcpot, iteration, inDen, outDen, results )
 
     use m_juDFT
     use m_constants
@@ -47,10 +47,11 @@ contains
     type(t_dimension), intent(in)    :: dimension
     type(t_mpi),       intent(in)    :: mpi
     TYPE(t_atoms),TARGET,INTENT(in)  :: atoms 
+    class(t_xcpot), intent(in)       :: xcpot
     type(t_potden),    intent(inout) :: outDen
     type(t_results),   intent(inout) :: results
     type(t_potden),    intent(inout) :: inDen
-    integer,           intent(in)    :: archiveType
+    integer,           intent(in)    :: archiveType, iteration
     LOGICAL,           INTENT(IN)    :: l_writehistory
 
     real                             :: fix
@@ -129,7 +130,7 @@ contains
        CALL judft_error("Unknown Mixing schema")
     END SELECT
     CALL timestop("Mixing")
-
+   
 
     CALL timestart("Postprocessing")
     !extracte mixed density 
@@ -145,6 +146,11 @@ contains
        CALL mixing_history_reset(mpi)
        CALL mixvector_reset()
     ENDIF
+
+    if(iteration == 1 .and. xcpot%vx_is_MetaGGA()) then 
+       CALL mixing_history_reset(mpi)
+       CALL mixvector_reset()
+    endif
 
     !fix charge of the new density
     IF (mpi%irank==0) CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.FALSE., fix)

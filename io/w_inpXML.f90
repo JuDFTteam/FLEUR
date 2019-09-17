@@ -151,18 +151,18 @@ SUBROUTINE w_inpXML(&
    110 FORMAT('      <cutoffs Kmax="',f0.8,'" Gmax="',f0.8,'" GmaxXC="',f0.8,'" numbands="',i0,'"/>')
    WRITE (fileNum,110) input%rkmax,input%gmax,xcpot%gmaxxc,input%gw_neigd
 
-!      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" preconditioning_param="0.0" spinf="2.00"/>
-   120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" preconditioning_param="',f3.1,'" spinf="',f0.8,'"/>')
+!      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.00"/>
+   120 FORMAT('      <scfLoop itmax="',i0,'" minDistance="',f0.8,'" maxIterBroyd="',i0,'" imix="',a,'" alpha="',f0.8,'" precondParam="',f3.1,'" spinf="',f0.8,'"/>')
    SELECT CASE (input%imix)
-      CASE (1) 
+      CASE (1)
          mixingScheme='straight'
-      CASE (3) 
+      CASE (3)
          mixingScheme='Broyden1'
-      CASE (5) 
+      CASE (5)
          mixingScheme='Broyden2'
-      CASE (7) 
+      CASE (7)
          mixingScheme='Anderson'
-      CASE DEFAULT 
+      CASE DEFAULT
          mixingScheme='errorUnknownMixing'
    END SELECT
    WRITE (fileNum,120) input%itmax,input%minDistance,input%maxiter,TRIM(mixingScheme),input%alpha,input%preconditioning_param,input%spinf
@@ -203,8 +203,18 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,180) input%gw,input%secvar
 
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
-   190 FORMAT('      <geometryOptimization l_f="',l1,'" forcealpha="',f0.8,'" forcemix="',i0,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
-   WRITE (fileNum,190) input%l_f,input%forcealpha,input%forcemix,input%epsdisp,input%epsforce
+   190 FORMAT('      <geometryOptimization l_f="',l1,'" forcealpha="',f0.8,'" forcemix="',a,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
+   SELECT CASE (input%forcemix)
+      CASE (0)
+         mixingScheme='straight'
+      CASE (1)
+         mixingScheme='CG'
+      CASE (2)
+         mixingScheme='BFGS'
+      CASE DEFAULT
+         mixingScheme='errorUnknownMixing'
+   END SELECT
+   WRITE (fileNum,190) input%l_f,input%forcealpha,TRIM(mixingScheme),input%epsdisp,input%epsforce
 
    IF(input%gauss.AND.input%tria) THEN
       STOP 'Error: bz integration modes gauss AND tria selected!'
@@ -507,6 +517,10 @@ SUBROUTINE w_inpXML(&
 !      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1="0.00" locy1="0.00" locx2="0.00" locy2="0.00" nstm="0" tworkf="0.000000"/>
    390 FORMAT('      <vacuumDOS layers="',i0,'" integ="',l1,'" star="',l1,'" nstars="',i0,'" locx1="',f0.5,'" locy1="',f0.5,'" locx2="',f0.5,'" locy2="',f0.5,'" nstm="',i0,'" tworkf="',f0.5,'"/>')
    WRITE (fileNum,390) vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,vacuum%locx(1),vacuum%locy(1),vacuum%locx(2),vacuum%locy(2),vacuum%nstm,vacuum%tworkf
+
+!      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+   395 FORMAT('      <unfoldingBand unfoldBand="',l1,'" supercellX="',i0,'" supercellY="',i0,'" supercellZ="',i0,'"/>')
+   WRITE (fileNum,395) banddos%unfoldband, banddos%s_cell_x, banddos%s_cell_y, banddos%s_cell_z
 
 !      <plotting iplot="F" score="F" plplot="F"/>
    400 FORMAT('      <plotting iplot="',l1,'" score="',l1,'" plplot="',l1,'"/>')

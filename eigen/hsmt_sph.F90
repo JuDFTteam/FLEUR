@@ -17,6 +17,172 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
+SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
+   USE m_constants, ONLY : fpi_const,tpi_const
+   USE m_types
+   IMPLICIT NONE
+   TYPE(t_input),INTENT(IN)      :: input
+   TYPE(t_mpi),INTENT(IN)        :: mpi
+   TYPE(t_noco),INTENT(IN)       :: noco
+   TYPE(t_atoms),INTENT(IN)      :: atoms
+   TYPE(t_lapw),INTENT(IN)       :: lapw
+   TYPE(t_usdus),INTENT(IN)      :: usdus
+   CLASS(t_mat),INTENT(INOUT)    :: smat,hmat
+   !     ..
+   !     .. Scalar Arguments ..
+   INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
+   COMPLEX, INTENT(IN)  :: chi
+   !     ..
+   !     .. Array Arguments ..
+   REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
+   REAL,    INTENT (IN) :: e_shift!(atoms%ntype,input%jspins)
+   REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
+   !     ..
+   !     .. Local Scalars ..
+   REAL tnn(3), elall,fjkiln,gjkiln,ddnln,ski(3)
+   REAL apw_lo1,apw_lo2,w1
+
+   INTEGER kii,ki,kj,l,nn,kj_end,l3,jv,kj_off,kj_vec
+
+   !     ..
+   !     .. Local Arrays ..
+   REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
+   REAL qssbti(3),qssbtj(3)
+   REAL, ALLOCATABLE :: plegend(:,:)
+   REAL, ALLOCATABLE :: xlegend(:)
+   REAL, ALLOCATABLE :: VecHelpS(:),VecHelpH(:)
+   REAL, ALLOCATABLE :: cph_re(:), cph_im(:)
+   REAL, ALLOCATABLE :: dot(:), fct(:), fct2(:)
+   INTEGER, PARAMETER :: NVEC = 128 
+   INTEGER :: NVEC_rem  !remainder
+
+   CALL timestart("spherical setup")
+
+   DO l = 0,atoms%lmaxd
+      fleg1(l) = REAL(l+l+1)/REAL(l+1)
+      fleg2(l) = REAL(l)/REAL(l+1)
+      fl2p1(l) = REAL(l+l+1)/fpi_const
+   END DO ! l
+!$OMP     PARALLEL DEFAULT(NONE)&
+!$OMP     SHARED(lapw,atoms,noco,mpi,input,usdus,smat,hmat)&
+!$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fj,gj,isp,fl2p1,el,e_shift,chi)&
+!$OMP     PRIVATE(kii,ki,ski,kj,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssbti,qssbtj,fct2)&
+!$OMP     PRIVATE(cph_re,cph_im,dot,nn,tnn,fjkiln,gjkiln)&
+!$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
+!$OMP     PRIVATE(VecHelpS,VecHelpH,NVEC_rem)
+   ALLOCATE(cph_re(NVEC),cph_im(NVEC))
+   ALLOCATE(dot(NVEC),fct(NVEC),fct2(NVEC))
+   ALLOCATE(plegend(NVEC,0:2))
+   ALLOCATE(xlegend(NVEC))
+   ALLOCATE(VecHelpS(NVEC),VecHelpH(NVEC))
+   qssbti=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
+   qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
+!$OMP      DO SCHEDULE(DYNAMIC,1)
+   DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
+      kii=(ki-1)/mpi%n_size+1
+      ski(1:3) = lapw%gvec(1:3,ki,jintsp) + qssbti(1:3)
+
+      IF (smat%l_real) THEN
+         kj_end = ki
+      ELSE
+         kj_end = MIN(ki,lapw%nv(iintsp))
+      ENDIF
+      NVEC_rem = NVEC
+      DO  kj_off = 1, kj_end, NVEC
+         kj_vec = kj_off - 1 + NVEC
+         IF (kj_vec > kj_end) THEN
+             kj_vec = kj_end
+             NVEC_rem = kj_end - kj_off + 1
+         ENDIF
+
+         !--->          update overlap and l-diagonal hamiltonian matrix
+         VecHelpS = 0.0
+         VecHelpH = 0.0
+         
+         !--->       x for legendre polynomials
+         DO jv = 0, NVEC_rem-1
+            kj = jv + kj_off
+            xlegend(jv+1) = DOT_PRODUCT(lapw%gk(1:3,kj,iintsp), lapw%gk(1:3,ki,jintsp))
+         END DO ! kj
+         
+         DO  l = 0,atoms%lmax(n)
+         
+            fjkiln = fj(ki,l,jintsp)
+            gjkiln = gj(ki,l,jintsp)
+
+            IF (input%l_useapw) THEN
+               w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
+               apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
+               apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
+            ENDIF ! useapw
+
+            ddnln = usdus%ddn(l,n,isp)
+            elall = el(l,n,isp)
+            IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
+
+            !--->       legendre polynomials
+            l3 = modulo(l, 3)
+            IF (l == 0) THEN
+               plegend(:,0) = 1.0
+            ELSE IF (l == 1) THEN
+               plegend(:NVEC_REM,1) = xlegend(:NVEC_REM)
+            ELSE
+               plegend(:NVEC_REM,l3) = fleg1(l-1)*xlegend(:NVEC_REM)*plegend(:NVEC_REM,modulo(l-1,3)) - fleg2(l-1)*plegend(:NVEC_REM,modulo(l-2,3))
+            END IF ! l
+
+            fct(:NVEC_REM)  = plegend(:NVEC_REM,l3)*fl2p1(l)       * ( fjkiln*fj(kj_off:kj_vec,l,iintsp) + gjkiln*gj(kj_off:kj_vec,l,iintsp)*ddnln )
+            fct2(:NVEC_REM) = plegend(:NVEC_REM,l3)*fl2p1(l) * 0.5 * ( gjkiln*fj(kj_off:kj_vec,l,iintsp) + fjkiln*gj(kj_off:kj_vec,l,iintsp) )
+
+            VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
+            VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
+
+            IF (input%l_useapw) THEN
+               VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fj(kj_off:kj_vec,l,iintsp) + apw_lo2*gj(kj_off:kj_vec,l,iintsp) )
+            ENDIF ! useapw
+
+            !--->          end loop over l
+         ENDDO ! l
+
+         !--->             set up phase factors
+         cph_re = 0.0
+         cph_im = 0.0
+         DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
+            tnn(1:3) = tpi_const*atoms%taual(1:3,nn)
+            DO jv = 0, NVEC_rem-1
+               kj = jv + kj_off
+               dot(jv+1) = DOT_PRODUCT(ski(1:3) - lapw%gvec(1:3,kj,iintsp) - qssbtj(1:3), tnn(1:3))
+            END DO ! kj
+            cph_re(:NVEC_REM) = cph_re(:NVEC_REM) + COS(dot(:NVEC_REM))
+            cph_im(:NVEC_REM) = cph_im(:NVEC_REM) - SIN(dot(:NVEC_REM))
+            ! IF (iintsp.NE.jintsp) cph_im=-cph_im
+         END DO ! nn
+         
+         IF (smat%l_real) THEN
+            smat%data_r(kj_off:kj_vec,kii) = &
+            smat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpS(:NVEC_REM)
+            hmat%data_r(kj_off:kj_vec,kii) = &
+            hmat%data_r(kj_off:kj_vec,kii) + cph_re(:NVEC_REM) * VecHelpH(:NVEC_REM)
+         ELSE  ! real
+            smat%data_c(kj_off:kj_vec,kii) = &
+            smat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpS(:NVEC_REM)
+            hmat%data_c(kj_off:kj_vec,kii) = &
+            hmat%data_c(kj_off:kj_vec,kii) + chi*cmplx(cph_re(:NVEC_REM),cph_im(:NVEC_REM)) * VecHelpH(:NVEC_REM)
+         ENDIF ! real
+
+      END DO ! kj_off
+
+      !--->    end loop over ki
+   ENDDO
+!$OMP     END DO
+   DEALLOCATE(plegend)
+   DEALLOCATE(VecHelpS,VecHelpH)
+!$OMP     END PARALLEL
+   CALL timestop("spherical setup")
+
+   RETURN
+END SUBROUTINE hsmt_sph_cpu
+
+
 #ifdef CPP_GPU
    ATTRIBUTES(global)&
       SUBROUTINE HsmtSphGpuKernel_real(loop_size,iintsp,jintsp,nv,lmaxd,lmax,ki_start,ki_end,ki_step,nn_start,nn_end,&
@@ -313,157 +479,4 @@ SUBROUTINE hsmt_sph_gpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_s
 END SUBROUTINE hsmt_sph_gpu
 #endif
 
-SUBROUTINE hsmt_sph_cpu(n,atoms,mpi,isp,input,noco,iintsp,jintsp,chi,lapw,el,e_shift,usdus,fj,gj,smat,hmat)
-   USE m_constants, ONLY : fpi_const,tpi_const
-   USE m_types
-   IMPLICIT NONE
-   TYPE(t_input),INTENT(IN)      :: input
-   TYPE(t_mpi),INTENT(IN)        :: mpi
-   TYPE(t_noco),INTENT(IN)       :: noco
-   TYPE(t_atoms),INTENT(IN)      :: atoms
-   TYPE(t_lapw),INTENT(IN)       :: lapw
-   TYPE(t_usdus),INTENT(IN)      :: usdus
-   CLASS(t_mat),INTENT(INOUT)     :: smat,hmat
-   !     ..
-   !     .. Scalar Arguments ..
-   INTEGER, INTENT (IN) :: n,isp,iintsp,jintsp
-   COMPLEX, INTENT(IN)  :: chi
-   !     ..
-   !     .. Array Arguments ..
-   REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
-   REAL,    INTENT (IN) :: e_shift!(atoms%ntype,input%jspins)
-   REAL,    INTENT (IN) :: fj(:,0:,:),gj(:,0:,:)
-   !     ..
-   !     .. Local Scalars ..
-   REAL tnn(3), elall,fct,fct2,fjkiln,gjkiln,ddnln,ski(3)
-   REAL apw_lo1,apw_lo2,apw1,w1
-
-   COMPLEX capw1
-   INTEGER kii,ki,kj,l,nn,kj_end
-
-   !     ..
-   !     .. Local Arrays ..
-   REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
-   REAL fl2p1bt(0:atoms%lmaxd)
-   REAL qssbti(3),qssbtj(3)
-   REAL, ALLOCATABLE :: plegend(:,:)
-   REAL, ALLOCATABLE :: VecHelpS(:),VecHelpH(:)
-   COMPLEX, ALLOCATABLE :: cph(:)
-   LOGICAL apw(0:atoms%lmaxd)
-
-   CALL timestart("spherical setup")
-
-   DO l = 0,atoms%lmaxd
-      fleg1(l) = REAL(l+l+1)/REAL(l+1)
-      fleg2(l) = REAL(l)/REAL(l+1)
-      fl2p1(l) = REAL(l+l+1)/fpi_const
-      fl2p1bt(l) = fl2p1(l)*0.5
-   END DO
-!$OMP     PARALLEL DEFAULT(NONE)&
-!$OMP     SHARED(lapw,atoms,noco,mpi,input,usdus,smat,hmat)&
-!$OMP     SHARED(jintsp,iintsp,n,fleg1,fleg2,fj,gj,isp,fl2p1,el,e_shift,fl2p1bt,chi)&
-!$OMP     PRIVATE(kii,ki,ski,kj,plegend,l,kj_end,qssbti,qssbtj,fct2)&
-!$OMP     PRIVATE(cph,nn,tnn,fjkiln,gjkiln)&
-!$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct,apw1)&
-!$OMP     PRIVATE(capw1,VecHelpS,VecHelpH)
-   ALLOCATE(cph(MAXVAL(lapw%nv)))
-   ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
-   ALLOCATE(VecHelpS(MAXVAL(lapw%nv)),VecHelpH(MAXVAL(lapw%nv)))
-   plegend=0.0
-   plegend(:,0)=1.0
-   qssbti=MERGE(- noco%qss/2,+ noco%qss/2,jintsp.EQ.1)
-   qssbtj=MERGE(- noco%qss/2,+ noco%qss/2,iintsp.EQ.1)
-!$OMP      DO SCHEDULE(DYNAMIC,1)
-   DO  ki =  mpi%n_rank+1, lapw%nv(jintsp), mpi%n_size
-      kii=(ki-1)/mpi%n_size+1
-      ski = lapw%gvec(:,ki,jintsp) + qssbti
-      !--->       legendre polynomials
-      DO kj = 1,ki
-         plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,iintsp),lapw%gk(:,ki,jintsp))
-      END DO
-      DO l = 1,atoms%lmax(n) - 1
-         plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
-      END DO
-      !--->             set up phase factors
-      cph = 0.0
-      DO nn = SUM(atoms%neq(:n-1))+1,SUM(atoms%neq(:n))
-         tnn = tpi_const*atoms%taual(:,nn)
-         DO kj = 1,ki
-            cph(kj) = cph(kj) +&
-                      CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,iintsp)-qssbtj,tnn)),&
-                            SIN(DOT_PRODUCT(lapw%gvec(:,kj,iintsp)+qssbtj-ski,tnn)))
-            ! IF (iintsp.NE.jintsp) cph(kj)=CONJG(cph(kj))
-         END DO
-      END DO
-
-      !--->          update overlap and l-diagonal hamiltonian matrix
-      kj_end = MIN(ki,lapw%nv(iintsp))
-      VecHelpS = 0.d0
-      VecHelpH = 0.d0
-      DO  l = 0,atoms%lmax(n)
-         fjkiln = fj(ki,l,jintsp)
-         gjkiln = gj(ki,l,jintsp)
-         !
-         IF (input%l_useapw) THEN
-            w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + &
-                        usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
-            apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 +&
-                                                          fjkiln * usdus%us(l,n,isp) * usdus%dus(l,n,isp) )
-            apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 +&
-                                                          gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
-            !
-         ENDIF
-         ddnln =  usdus%ddn(l,n,isp)
-         elall = el(l,n,isp)
-         IF (l<=atoms%lnonsph(n)) elall=elall-e_shift!(isp)
-         IF (smat%l_real) THEN
-            DO kj = 1,ki
-               fct  = plegend(kj,l)*fl2p1(l)*&
-                      ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
-               fct2 = plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) )
-
-               smat%data_r(kj,kii)=smat%data_r(kj,kii)+REAL(cph(kj))*fct
-               hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + REAL(cph(kj)) * ( fct * elall + fct2)
-               !+APW
-               IF (input%l_useapw) THEN
-                  apw1 = REAL(cph(kj)) * plegend(kj,l)  * &
-                         ( apw_lo1 * fj(kj,l,iintsp) + apw_lo2 * gj(kj,l,iintsp) )
-                  hmat%data_r(kj,kii)=hmat%data_r(kj,kii) + apw1
-               ENDIF
-               !-APW
-            ENDDO
-         ELSE
-            DO kj = 1,kj_end
-               fct  = plegend(kj,l)*fl2p1(l)*&
-                      ( fjkiln*fj(kj,l,iintsp) + gjkiln*gj(kj,l,iintsp)*ddnln )
-               fct2 = plegend(kj,l)*fl2p1bt(l) * ( fjkiln*gj(kj,l,iintsp) + gjkiln*fj(kj,l,iintsp) )
-
-               VecHelpS(kj) = VecHelpS(kj) + fct
-               VecHelpH(kj) = VecHelpH(kj) + fct*elall + fct2
-
-               IF (input%l_useapw) THEN
-                  capw1 = cph(kj)*plegend(kj,l)&
-                          * ( apw_lo1 * fj(kj,l,iintsp) + apw_lo2 * gj(kj,l,iintsp) )
-                  hmat%data_c(kj,kii)=hmat%data_c(kj,kii) + capw1
-               ENDIF
-            END DO
-
-         ENDIF
-         !--->          end loop over l
-      ENDDO
-      IF (.not.smat%l_real) THEN
-         smat%data_c(:kj_end,kii)=smat%data_c(:kj_end,kii) + chi*cph(:kj_end) * VecHelpS(:kj_end)
-         hmat%data_c(:kj_end,kii)=hmat%data_c(:kj_end,kii) + chi*cph(:kj_end) * VecHelpH(:kj_end)
-      ENDIF
-      !--->    end loop over ki
-   ENDDO
-!$OMP     END DO
-   DEALLOCATE(plegend)
-   DEALLOCATE(cph)
-   DEALLOCATE(VecHelpS,VecHelpH)
-!$OMP     END PARALLEL
-   CALL timestop("spherical setup")
-
-   RETURN
-END SUBROUTINE hsmt_sph_cpu
 END MODULE m_hsmt_sph

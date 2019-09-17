@@ -37,12 +37,21 @@ CONTAINS
     IF (mpi%irank==0) THEN
        ALLOCATE(pos(3,atoms%ntype,1)); 
        DO n=1,atoms%ntype
-          pos(:,n,1)=atoms%taual(:,SUM(atoms%neq(:n-1))+1)
+          pos(:,n,1)=atoms%pos(:,SUM(atoms%neq(:n-1))+1)
        END DO
        ALLOCATE(force(3,atoms%ntype,1)); force(:,:,1)=force_new
        ALLOCATE(energies(1));energies(1)=energies_new
        ALLOCATE(displace(3,atoms%ntype),old_displace(3,atoms%ntype))
 
+       !Remove force components that are not selected for relaxation
+       DO n=1,atoms%ntype
+          IF (atoms%l_geo(n)) THEN
+             force(:,n,1)=force(:,n,1)*REAL(atoms%relax(:,n))
+          ELSE
+             force(:,n,1)=0.0
+          ENDIF
+       ENDDO
+       
        ! add history 
        CALL read_relax(pos,force,energies)
 
@@ -53,18 +62,20 @@ CONTAINS
           ! this choice is based on a Debye temperature of 330K;
           ! modify as needed
           !alpha = (250.0/(MAXVAL(atoms%zatom)*input%xa))*((330./input%thetad)**2)
-          CALL simple_step(input%forcealpha,force,displace)
-       ELSEIF (input%forcemix==1) THEN
+          CALL simple_step(input%forcealpha,0.25,force,displace)
+       ELSE IF (input%forcemix==1) THEN
           CALL simple_cg(pos,force,displace)
-       ELSE
+       ELSE IF (input%forcemix==2) THEN
           CALL simple_bfgs(pos,force,displace)
-       ENDIF
+       ELSE
+          CALL juDFT_error('unkown mixing scheme for forces', calledby='relaxation')
+       END IF
 
        !Check for convergence of forces/displacements
        l_conv=.TRUE.
        DO n=1,atoms%ntype
           IF (DOT_PRODUCT(force(:,n,SIZE(force,3)),force(:,n,SIZE(force,3)))>input%epsforce**2) l_conv=.FALSE.
-          IF (DOT_PRODUCT(displace(:,n),displace(:,n))>input%epsforce**2) l_conv=.FALSE.
+          IF (DOT_PRODUCT(displace(:,n),displace(:,n))>input%epsdisp**2) l_conv=.FALSE.
        ENDDO
 
        !New displacements relative to positions in inp.xml
@@ -80,24 +91,28 @@ CONTAINS
     CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
     IF (l_conv) THEN
-       CALL judft_end("Structual relaxation: Done",mpi%irank)
+       CALL judft_end("Structural relaxation: Done",mpi%irank)
     ELSE
        CALL mixing_history_reset(mpi)
-       CALL judft_end("Structual relaxation: new displacements generated",mpi%irank)
+       CALL judft_end("Structural relaxation: new displacements generated",mpi%irank)
     END IF
   END SUBROUTINE relaxation
 
 
 
-  SUBROUTINE simple_step(alpha,force,displace)
+  SUBROUTINE simple_step(alpha,maxdisp,force,displace)
     !-----------------------------------------------
     IMPLICIT NONE
-    REAL,INTENT(in)  :: alpha
+    REAL,INTENT(in)  :: alpha,maxdisp
     REAL,INTENT(in)  :: force(:,:,:)
     REAL,INTENT(OUT) :: displace(:,:)
 
-
+    real :: corr
+    
     displace = alpha*force(:,:,SIZE(force,3))
+    corr=maxdisp/maxval(abs(displace))
+    if (corr<1.0) displace = corr*alpha*force(:,:,size(force,3))
+    
   END SUBROUTINE simple_step
 
   SUBROUTINE simple_bfgs(pos,force,shift)
@@ -128,7 +143,7 @@ CONTAINS
     DO n = 2,hist_length
        ! differences
        p(:) = RESHAPE(pos(:,:,n)-pos(:,:,n-1),(/SIZE(p)/))
-       y(:) = RESHAPE(force(:,:,n)-force(:,:,n-1),(/SIZE(p)/))
+       y(:) = RESHAPE(force(:,:,n-1)-force(:,:,n),(/SIZE(p)/))
        ! get necessary inner products and H|y>
        py = DOT_PRODUCT(p,y)
        v = MATMUL(y,h)

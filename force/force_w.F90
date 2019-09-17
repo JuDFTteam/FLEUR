@@ -23,7 +23,6 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     !     ..
     !     .. Local Scalars ..
-    REAL,PARAMETER:: zero=0.0
     REAL sum
     INTEGER i,jsp,n,nat1,ierr
     REAL eps_force
@@ -61,11 +60,9 @@ CONTAINS
 8005   FORMAT (/,' ***** TOTAL FORCES ON ATOMS ***** ',/)
        IF (input%l_f) CALL openXMLElement('totalForcesOnRepresentativeAtoms',(/'units'/),(/'Htr/bohr'/))
        nat1 = 1
+       forcetot = 0.0
        DO n = 1,atoms%ntype
           IF (atoms%l_geo(n)) THEN
-             DO i = 1,3
-                forcetot(i,n) = zero
-             END DO
              DO jsp = 1,input%jspins
                 DO i = 1,3
                    forcetot(i,n) = forcetot(i,n) + results%force(i,n,jsp)
@@ -103,7 +100,7 @@ CONTAINS
        l_relax=sum<input%force_converged
        IF (.NOT.l_relax) THEN
           WRITE (6,8020) input%force_converged,sum
-8020      FORMAT ('No new postions, force convergence required=',f8.5,'max force distance=',f8.5)
+8020      FORMAT ('No new postions, force convergence required=',f8.5,'; max force distance=',f8.5)
        END IF
     ENDIF
 #ifdef CPP_MPI

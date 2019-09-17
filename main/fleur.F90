@@ -70,6 +70,7 @@ CONTAINS
     USE m_eig66_io
     USE m_chase_diag
     USE m_writeBasis
+    !$ USE omp_lib
     IMPLICIT NONE
 
     INTEGER, INTENT(IN)             :: mpi_comm
@@ -106,7 +107,7 @@ CONTAINS
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER :: ierr(2)
+    INTEGER :: ierr(2),n
 #endif
 
     mpi%mpi_comm = mpi_comm
@@ -159,7 +160,7 @@ CONTAINS
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco
     eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
-                    noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
+                    noco%l_noco,.NOT.INPUT%eig66(1),l_real,noco%l_soc,INPUT%eig66(1),mpi%n_size)
 
 #ifdef CPP_CHASE
     CALL init_chase(mpi,dimension,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
@@ -197,6 +198,8 @@ CONTAINS
 
  
        !HF
+       !$ num_threads = omp_get_max_threads()
+       !$ call omp_set_num_threads(1)
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
@@ -212,8 +215,10 @@ CONTAINS
        IF(input%l_rdmft) THEN
           CALL open_hybrid_io1(DIMENSION,sym%invs)
        END IF
-
-       CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+       IF(.not.input%eig66(1))THEN
+          CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+       END IF
+       !$ call omp_set_num_threads(num_threads)
 
        !#endif
 
@@ -246,8 +251,10 @@ CONTAINS
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi%mpi_comm,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
-          CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+          IF(.not.input%eig66(1))THEN
+            CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
+          ENDIF             
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -270,7 +277,7 @@ CONTAINS
 #endif
 
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
-          IF (noco%l_soc.AND..NOT.noco%l_noco) &
+          IF (noco%l_soc.AND..NOT.noco%l_noco.AND..NOT.INPUT%eig66(1)) &
              CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
                           sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
           CALL timestop("gen. of hamil. and diag. (total)")
@@ -281,7 +288,18 @@ CONTAINS
 
           ! fermi level and occupancies
           IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd = 2*DIMENSION%neigd
-          IF ((mpi%irank.EQ.0)) THEN
+
+	  IF (input%gw.GT.0) THEN
+	    IF (mpi%irank.EQ.0) THEN
+	       CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
+		  	     results,eig_id,oneD,sphhar,stars,vacuum)
+	    END IF
+	    IF (input%gw.EQ.2) THEN
+	       CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
+	    END IF
+	  END IF
+
+          !IF ((mpi%irank.EQ.0)) THEN
              CALL timestart("determination of fermi energy")
 
              IF (noco%l_soc.AND.(.NOT.noco%l_noco)) THEN
@@ -315,7 +333,7 @@ CONTAINS
 !!$          END IF
 !!$          !-Wannier
 
-          ENDIF
+          !ENDIF
 #ifdef CPP_MPI
           CALL MPI_BCAST(results%ef,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
           CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -398,21 +416,13 @@ CONTAINS
 
        CALL forcetheo%postprocess()
 
-       IF (input%gw.GT.0) THEN
-          IF (mpi%irank.EQ.0) THEN
-             CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
-                             results,eig_id,oneD,sphhar,stars,vacuum)
-          END IF
-          CALL juDFT_end("GW data written. Fleur ends.",mpi%irank)
-       END IF
-
-       CALL enpara%mix(mpi%mpi_comm,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
+       CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field
 
        ! mix input and output densities
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
-            sym,cell,noco,oneD,archiveType,inDen,outDen,results)
+            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
        
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
@@ -449,8 +459,8 @@ CONTAINS
 
        !CALL writeTimesXML()
 
-       IF ((mpi%irank.EQ.0).AND.(isCurrentXMLElement("iteration"))) THEN
-          CALL closeXMLElement('iteration')
+       IF (mpi%irank.EQ.0) THEN
+          IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
        END IF
 
     END DO scfloop ! DO WHILE (l_cont)

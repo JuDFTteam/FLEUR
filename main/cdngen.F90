@@ -81,6 +81,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
    TYPE(t_cdnvalJob)     :: cdnvalJob
+   TYPE(t_potden)        :: val_den, core_den
 
 
    !Local Scalars
@@ -91,10 +92,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
-   LOGICAL               :: l_error
+   LOGICAL               :: l_error, perform_MetaGGA
 
    CALL regCharges%init(input,atoms)
-   CALL dos%init(dimension%neigd,input,atoms,kpts,vacuum)
+   CALL dos%init(input,atoms,dimension,kpts,vacuum)
    CALL moments%init(input,atoms)
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
@@ -113,12 +114,12 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    jspmax = input%jspins
    IF (noco%l_mperp) jspmax = 1
    DO jspin = 1,jspmax
-      CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin,sliceplot,banddos)
+      CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
+      IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
-   !TODO: change storage of META-GGA data
-   !call xcpot%val_den%copyPotDen(outDen)
+   call val_den%copyPotDen(outDen)
 
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
@@ -171,7 +172,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results)
    endif
-   !call xcpot%core_den%subPotDen(outDen, xcpot%val_den)
+   call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
@@ -199,7 +200,13 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          
       END IF
    END IF ! mpi%irank == 0
-
+   
+   perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
+                   .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+   if(perform_MetaGGA) then
+      call set_kinED(mpi, sphhar, atoms, sym, core_den, val_den, xcpot, &
+                     input, noco, stars, cell, outDen, EnergyDen, vTot)
+   endif
 #ifdef CPP_MPI
    CALL MPI_BCAST(noco%l_ss,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(noco%l_mperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)

@@ -27,6 +27,7 @@ CONTAINS
        CALL judft_error("BUG in relax_io")
     ENDIF
     OPEN(765,file="relax.xml",status="replace")
+    WRITE(765,*) "<!-- Attention, absolute coordinates used here -->"
     WRITE(765,*) "<relaxation>"
     !write current set of displacements
     WRITE(765,*) "  <displacements>"
@@ -128,6 +129,7 @@ CONTAINS
   SUBROUTINE apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
     USE m_types
     USE m_chkmt
+    USE m_constants
     USE m_mapatom
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_vacuum),INTENT(IN)  :: vacuum
@@ -143,6 +145,8 @@ CONTAINS
     REAL   :: disp(3,atoms%ntype),disp_all(3,atoms%nat),taual0(3,atoms%nat),overlap(0:atoms%ntype,atoms%ntype)
 
     CALL read_displacements(atoms,disp)
+    !change displacements to internal coordinates
+    disp=MATMUL(cell%bmat,disp)/tpi_const
     IF (ALL(ABS(disp)<1E-8)) RETURN
     !Fist make sure original MT spheres do not overlap
     CALL chkmt(atoms,input,vacuum,cell,oneD,.TRUE.,overlap=overlap)
@@ -173,7 +177,7 @@ CONTAINS
 
     WRITE(6,*) "Atomic positions including displacements:"
     DO n=1,atoms%nat
-       WRITE(6,*) n,atoms%taual(:,n),atoms%pos(:,n)
+       WRITE(6,"(i4,6(1x,f12.5))") n,atoms%taual(:,n),atoms%pos(:,n)
     ENDDO
 
   END SUBROUTINE apply_displacements

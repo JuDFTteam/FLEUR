@@ -81,9 +81,9 @@ wannier/wann_wan90prep.F
 wannier/wann_wannierize.F
 wannier/wann_wigner_seitz.f
 wannier/wann_write_amn.F
-wannier/wann_write_hsomtx.F
 wannier/wann_write_matrix4.F
 wannier/wann_write_matrix5.F
+wannier/wann_write_matrix6.F
 wannier/wann_write_mmnk2.F
 wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F
@@ -93,6 +93,7 @@ wannier/bs_comfort.F
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
 wannier/wann_read_inp.f90
+wannier/wann_convert_fleur_w90.F90
 wannier/wann_optional.f90
 wannier/wann_abinv.f90
 wannier/wann_anglmom.f90

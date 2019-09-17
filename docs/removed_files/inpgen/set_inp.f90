@@ -51,13 +51,13 @@
       CHARACTER(len=80), INTENT (IN) :: title
  
       INTEGER nel,i,j, nkptOld
-      REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
+      REAL    kmax,dtild,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
       REAL    recVecLength, kPointDen(3)
       LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
       INTEGER  div(3)
-      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
+      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype)
       CHARACTER(len=1)  :: ch_rw
       CHARACTER(len=4)  :: namex
       CHARACTER(len=3)  :: noel(atoms%ntype)
@@ -65,8 +65,7 @@
       CHARACTER(len=3)  :: latnamTemp
       CHARACTER(LEN=20) :: filename
       INTEGER  nu,iofile
-      INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus
+      INTEGER  n, errorStatus
       REAL     scpos ,zc
 
       TYPE(t_banddos)::banddos
@@ -87,7 +86,6 @@
       REAL     ::  taual_hyb(3,atoms%nat)
       INTEGER  ::  bands
       LOGICAL  ::  l_gamma
-      INTEGER  :: nkpt3(3)
 !HF
 
       INTEGER :: xmlElectronStates(29,atoms%ntype)
@@ -135,7 +133,7 @@
       atoms%ulo_der = 0
       ch_rw = 'w'
       sym%namgrp= 'any ' 
-      banddos%dos   = .false. ; banddos%l_mcd = .false. ; banddos%unfoldband = .FALSE. ; input%secvar = .false.
+      banddos%dos   = .false. ; banddos%l_mcd = .false. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
@@ -145,7 +143,7 @@
       input%pallst = .false. ;  vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
-      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
+      input%itmax = 15 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
       input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
       input%spinf = 2.0 ;  input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
@@ -154,7 +152,7 @@
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
       banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
-      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix=0
+      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix = 2 ! BFGS is default.
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
       banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
       input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
@@ -162,6 +160,8 @@
       kpts%numSpecialPoints = 0
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
       input%l_wann = .FALSE.
+      input%numBandsKPoints = 240
+      banddos%unfoldband = .FALSE. ; banddos%s_cell_x = 1 ; banddos%s_cell_y = 1 ; banddos%s_cell_z = 1
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
@@ -312,6 +312,7 @@
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
          input%gw_neigd = bands
+         hybrid%bands1 = ceiling(0.75*bands)
          l_gamma = .true.
          input%minDistance = 1.0e-5
       ELSE
@@ -354,10 +355,11 @@
 
       nu = 8 
       input%gw = 0
+      IF(juDFT_was_argument("-gw")) input%gw = 1
 
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
-          cell%area = cell%omtil / vacuum%dvac
+          cell%area = ABS(cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1))
           kpts%nkpt = MAX(nint((3600/cell%area)/sym%nop2),1)
         ELSE
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)

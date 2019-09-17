@@ -93,7 +93,7 @@ contains
     !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
     !$omp& private( vtl_loc )
     !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype)) 
-    !$ vtl_loc(:,:) = cmplx(0.d0,0.d0)
+    !$ vtl_loc(:,:) = cmplx(0.0,0.0)
     !$omp do
     do k = mpi%irank+2, stars%ng3, mpi%isize
       cp = vpw(k) * stars%nstr(k)

@@ -40,6 +40,8 @@ MODULE m_types_misc
       INTEGER, ALLOCATABLE :: pntgptd(:)                                     !alloc in eigen_HF_setup
       INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:)                                !alloc in eigen_HF_setup
       INTEGER,ALLOCATABLE   ::  nindxp1(:,:)
+      REAL, ALLOCATABLE   ::  stepfunc_r(:,:,:)
+      COMPLEX,ALLOCATABLE ::  stepfunc_c(:,:,:)
    END TYPE t_hybdat
 
    TYPE t_results

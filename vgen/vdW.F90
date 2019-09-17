@@ -201,7 +201,7 @@
 !
       do i1=1,n_grid
 !
-         if(n(i1) < 1.0d-12) cycle
+         if(n(i1) < 1e-12) cycle
 
          r_s = (3.0/(4.0*pi*n(i1)))**(1.0/3.0)
 
@@ -289,7 +289,7 @@
 !
       do i1=1,n_grid
 !
-      if(n(i1) < 1.0d-12) cycle
+      if(n(i1) < 1e-12) cycle
 !
         k_F = (3.0*pi*pi*n(i1))**(1.0/3.0)
 !
@@ -369,7 +369,7 @@
 !
       ind = G_ind(i1)
       size=sum(G(i1,1:3)**2)
-      if (size > 1.d-12) then
+      if (size > 1e-12) then
          fac=1.0/size
       else
       print'(A,F10.3)','Total nr. of electrons: ',omega*real(n_cmplx(ind))
@@ -1020,7 +1020,7 @@
 !     density corresponds to high q_0. Thats why we set it to q_cut the highest possible
 !     q_0 and continue with the next grid point.
 
-         if ( n(i) < 1.d-12 ) then
+         if ( n(i) < 1e-12 ) then
             q_0(i) = q_cut
             cycle
          end if
@@ -1459,7 +1459,7 @@
 
       do i=1,n_grid
 
-         if ( n(i) < 1.d-12 ) then
+         if ( n(i) < 1e-12 ) then
             cycle     ! NOTE: The derivatives will be zero at these points
          end if
 !

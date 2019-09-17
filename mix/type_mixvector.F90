@@ -110,7 +110,7 @@ CONTAINS
     IMPLICIT NONE
     atoms=>NULL()
     sym=>NULL()
-    DEALLOCATE(g_mt)
+    IF (ALLOCATED(g_mt)) DEALLOCATE(g_mt)
     IF (ALLOCATED(g_vac)) DEALLOCATE(g_vac)
     IF (ALLOCATED(g_misc)) DEALLOCATE(g_misc)
   END SUBROUTINE mixvector_reset

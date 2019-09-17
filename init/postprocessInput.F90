@@ -61,10 +61,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt
   INTEGER              :: minNeigd, nv, nv2, kq1, kq2, kq3, jrc, jsp, ii
   INTEGER              :: ios, ntst, ierr
-  REAL                 :: sumWeight, rmtmax, zp, radius, dr
-  REAL                 :: kmax1, dtild1, dvac1
-  REAL                 :: bk(3)
-  LOGICAL              :: l_vca, l_test,l_gga
+  REAL                 :: rmtmax, zp, radius, dr
+  LOGICAL              :: l_vca, l_test
  
   
   INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
@@ -157,7 +155,11 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      END IF !(mpi%irank.EQ.0)
   END IF
 
- 
+  !At some point this should be enabled for noco as well
+#ifdef CPP_MPI
+  CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+#endif
+  IF (.not.noco%l_noco) & 
   CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

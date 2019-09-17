@@ -32,6 +32,7 @@ CONTAINS
       USE m_checkdopall
       USE m_cdn_io
       USE m_convol
+      use m_cdntot
 
       IMPLICIT NONE
 
@@ -55,6 +56,7 @@ CONTAINS
 
       ! Local type instances
       TYPE(t_potden) :: workDen, exc, veff
+      real, allocatable :: tmp_mt(:,:,:), tmp_is(:,:)
       ! Local Scalars
       INTEGER ifftd, ifftd2, ifftxc3d, ispin, i
 #ifdef CPP_MPI
@@ -121,10 +123,8 @@ CONTAINS
          CALL timestart("Vxc in MT")
       END IF
 
-      CALL vmt_xc(DIMENSION, mpi, sphhar, atoms, den, xcpot, input, sym, &
-                   EnergyDen, vTot, vx, exc)
-
-      !
+      CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
+                  EnergyDen, vTot, vx, exc)
 
       ! add MT EXX potential to vr
       IF (mpi%irank == 0) THEN

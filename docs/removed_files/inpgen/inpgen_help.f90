@@ -15,11 +15,11 @@ CONTAINS
     CHARACTER(:), ALLOCATABLE:: infostring
 
     PRINT *,"     Welcome to FLEUR - inpgen   (www.flapw.de)   "
-    PRINT *,"     MaX-Release 3.0          (www.max-centre.eu)"
+    PRINT *, version_const_MaX
     
     CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","") 
     CALL new_argument(0,"-explicit","Write out k-point list, symmetry operations, and optional input to inp.xml","") 
-    CALL new_argument(0,"-kpts_gw","add alternative k point set for GW in all outputs for the XML input file","")
+    CALL new_argument(0,"-gw","Set GW mode 1 and add alternative k point set for GW in all outputs for the XML input file","")
     CALL new_argument(0,"-noco","write out noco parameters into inp.xml","")
     CALL new_argument(0,"-electronConfig","explicitely write the electron configuration into inp.xml","")
     CALL new_argument(0,"-fast_defaults","generate more aggressive (and less stable) input parameters for faster calculations","")
@@ -41,7 +41,7 @@ CONTAINS
     CALL print_argument("-noco")
     CALL print_argument("-electronConfig")
     CALL print_argument("-fast_defaults")
-    CALL print_argument("-kpts_gw")
+    CALL print_argument("-gw")
     CALL print_argument("-h")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"

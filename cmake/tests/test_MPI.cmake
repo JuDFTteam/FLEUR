@@ -16,9 +16,10 @@ if (DEFINED CLI_FLEUR_USE_MPI)
 	   set(FLEUR_USE_MPI FALSE)
        endif()
    endif()	   
-endif()  
+endif()
 
-if (FLEUR_USE_MPI)
+
+If (FLEUR_USE_MPI)
    set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_MPI")
    set(FLEUR_USE_SERIAL FALSE)
 else()

@@ -115,12 +115,12 @@ CONTAINS
     d%fname="eig"
     CALL eig66_remove_data(id)
   END SUBROUTINE close_eig
-  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,list,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
+    INTEGER, INTENT(IN),OPTIONAL   :: list(:)
     TYPE(t_mat),OPTIONAL  :: zmat
 
     !Local variables
@@ -134,8 +134,8 @@ CONTAINS
 
     CALL priv_find_data(id,d)
     ! check if io is performed correctly
-    IF (PRESENT(n_start)) THEN
-       IF (n_start/=1) &
+    IF (PRESENT(list)) THEN
+       IF (list(1)/=1) &
             CALL juDFT_error("In direct access mode only all eigenstates can be read")
     ENDIF
 

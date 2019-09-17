@@ -131,6 +131,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
        ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,1:input%jspins) )
     ENDIF
     ALLOCATE (flo(atoms%jmtd,2,atoms%nlod))
+    flo(:,:,:) = 0.0
 
 
     !-------------------------write potential--------------------
@@ -443,10 +444,10 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 
 
     IF(input%gw==2) THEN
-    INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
-    IF(l_exist) THEN
-       CALL system('rm '//TRIM(ADJUSTL(filename)))       
-    END IF
+      INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+      IF(l_exist) THEN
+        CALL system('rm '//TRIM(ADJUSTL(filename)))       
+      END IF
 
       CALL h5fcreate_f(TRIM(ADJUSTL(filename)), H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 

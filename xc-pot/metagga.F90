@@ -5,7 +5,9 @@
 !--------------------------------------------------------------------------------
 MODULE m_metagga
    PUBLIC  :: calc_EnergyDen
-   PRIVATE :: calc_EnergyDen_auxillary_weights
+   PRIVATE :: calc_EnergyDen_auxillary_weights, &
+              calc_kinEnergyDen_pw, &
+              calc_kinEnergyDen_mt
 
    type t_RS_potden
       REAL, ALLOCATABLE :: is(:,:), mt(:,:)
@@ -28,12 +30,11 @@ CONTAINS
    END SUBROUTINE calc_kinEnergyDen_pw
 
    SUBROUTINE calc_kinEnergyDen_mt(EnergyDen_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
-                                   atm_idx, nsp, kinEnergyDen_RS)
+                                   kinEnergyDen_RS)
       USE m_juDFT_stop
       USE m_juDFT_string
       implicit none
       REAL, INTENT(in)                 :: EnergyDen_RS(:,:), vTot_rs(:,:), vTot0_rs(:,:), core_den_rs(:,:), val_den_rs(:,:)
-      INTEGER, intent(in)              :: atm_idx, nsp
       REAL, INTENT(inout)              :: kinEnergyDen_RS(:,:)
 
 #ifdef CPP_LIBXC
@@ -178,4 +179,163 @@ CONTAINS
       res = matmul(transpose(cell%bmat), vec)
    end function internal_to_rez
 
+   subroutine undo_vgen_finalize(vtot, atoms, noco, stars)
+      use m_types
+      use m_constants
+      use m_judft
+      implicit none
+      TYPE(t_potden), intent(inout)  :: vtot
+      type(t_atoms), intent(in)      :: atoms
+      type(t_noco), intent(in)       :: noco
+      type(t_stars), intent(in)      :: stars
+   
+      integer                        :: js, n, st
+
+      do js = 1,size(vtot%mt,4)
+         do n = 1,atoms%ntype
+            vTot%mt(:atoms%jri(n),0,n,js) = vtot%mt(:atoms%jri(n),0,n,js) &
+                  / (atoms%rmsh(:atoms%jri(n),n) / sfp_const )
+         enddo
+      enddo
+
+      if(.not. noco%l_noco) then
+         do js=1,size(vtot%pw_w,2)
+            do st=1,stars%ng3
+               vTot%pw_w(st,js) = vTot%pw_w(st,js) * stars%nstr(st)
+            enddo
+         enddo
+      else
+         call juDFT_error("undo vgen_finalize not implemented for noco")
+      endif
+   end subroutine undo_vgen_finalize
+
+   subroutine set_kinED(mpi,   sphhar, atoms, sym, core_den, val_den, xcpot, &
+                        input, noco,   stars, cell,     den,     EnergyDen, vTot)
+      use m_types
+      implicit none
+      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_sym), INTENT(IN)      :: sym
+      TYPE(t_potden),INTENT(IN)    :: core_den, val_den
+      CLASS(t_xcpot),INTENT(INOUT) :: xcpot
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
+      
+      TYPE(t_potden)               :: vTot_corrected
+   
+      call vTot_corrected%copyPotDen(vTot)
+      call undo_vgen_finalize(vTot_corrected, atoms, noco, stars)
+
+      call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot_corrected)
+      call set_kinED_mt(mpi,   sphhar,    atoms, sym, core_den, val_den, &
+                           xcpot, EnergyDen, input, vTot_corrected)
+   end subroutine set_kinED
+
+   subroutine set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot)
+      use m_types
+      use m_pw_tofrom_grid
+      implicit none
+      CLASS(t_xcpot),INTENT(INOUT) :: xcpot
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_sym), INTENT(IN)      :: sym
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
+
+      !local arrays
+      REAL, ALLOCATABLE            :: den_rs(:,:), ED_rs(:,:), vTot_rs(:,:)
+      TYPE(t_gradients)            :: tmp_grad
+      
+      CALL init_pw_grid(xcpot,stars,sym,cell)
+
+      CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                      cell,  EnergyDen%pw, tmp_grad,    ED_rs)
+      CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                      cell,  vTot%pw,      tmp_grad,    vTot_rs)
+      CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
+                      cell,  den%pw,       tmp_grad,    den_rs)
+
+      CALL finish_pw_grid()
+      
+      call calc_kinEnergyDen_pw(ED_rs, vTot_rs, den_rs, xcpot%kinED%is)
+      !xcpot%kinED%is  = ED_RS - vTot_RS * den_RS
+      xcpot%kinED%set = .True.
+   end subroutine set_kinED_is
+
+   subroutine set_kinED_mt(mpi,   sphhar,    atoms, sym, core_den, val_den, &
+                           xcpot, EnergyDen, input, vTot)
+      use m_types
+      use m_mt_tofrom_grid
+      implicit none
+      TYPE(t_mpi),INTENT(IN)         :: mpi
+      TYPE(t_sphhar),INTENT(IN)      :: sphhar
+      TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_sym), INTENT(IN)        :: sym
+      TYPE(t_potden),INTENT(IN)      :: core_den, val_den, EnergyDen, vTot
+      CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
+      TYPE(t_input),INTENT(IN)       :: input
+
+      INTEGER                        :: jr, loc_n, n, n_start, n_stride, cnt
+      REAL,ALLOCATABLE               :: vTot_mt(:,:,:), ED_rs(:,:), vTot_rs(:,:), vTot0_rs(:,:),&
+                                        core_den_rs(:,:), val_den_rs(:,:)
+      TYPE(t_gradients)              :: tmp_grad
+      TYPE(t_sphhar)                 :: tmp_sphhar
+
+#ifdef CPP_MPI
+      n_start=mpi%irank+1
+      n_stride=mpi%isize
+#else
+      n_start=1
+      n_stride=1
+#endif
+      CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
+      loc_n = 0
+      allocate(ED_rs(atoms%nsp()*atoms%jmtd, input%jspins))
+      allocate(vTot_rs, mold=ED_rs)
+      allocate(vTot0_rs, mold=ED_rs)
+      allocate(core_den_rs, mold=ED_rs)
+      allocate(val_den_rs, mold=ED_rs)
+
+      call xcpot%kinED%alloc_mt(atoms%nsp()*atoms%jmtd, input%jspins, &
+                                n_start,                atoms%ntype,  n_stride)
+      loc_n = 0
+      do n = n_start,atoms%ntype,n_stride
+         loc_n = loc_n + 1
+
+         if(.not. allocated(vTot_mt)) then
+            allocate(vTot_mt(lbound(vTot%mt, dim=1):ubound(vTot%mt, dim=1),&
+                             lbound(vTot%mt, dim=2):ubound(vTot%mt, dim=2),&
+                             lbound(vTot%mt, dim=4):ubound(vTot%mt, dim=4)))
+         endif
+         
+         do jr=1,atoms%jri(n)
+            vTot_mt(jr,0:,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
+         enddo
+         CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, EnergyDen%mt(:, 0:, n, :), &
+                         n,     tmp_grad,     ED_rs)
+         CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, vTot_mt(:,0:,:), &
+                         n,     tmp_grad,     vTot_rs)
+         
+         tmp_sphhar%nlhd = sphhar%nlhd
+         tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
+
+         CALL mt_to_grid(xcpot, input%jspins, atoms, tmp_sphhar, vTot_mt(:,0:0,:), &
+                         n,     tmp_grad,     vTot0_rs)
+         CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
+                         core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
+         CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
+                         val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
+         
+         call calc_kinEnergyDen_mt(ED_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
+                                   xcpot%kinED%mt(:,:,loc_n))
+         !xcpot%kinED%mt(:,:,loc_n) = ED_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
+      enddo
+      xcpot%kinED%set = .True.
+      CALL finish_mt_grid()
+   end subroutine set_kinED_mt
 END MODULE m_metagga

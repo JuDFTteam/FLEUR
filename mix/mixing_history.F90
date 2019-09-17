@@ -114,7 +114,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(in)::mpi
     iter_stored=0
     PRINT *, "Reset of history"
-    IF (mpi%irank==0) CALL system('rm mixing_history*')
+    IF (mpi%irank==0) CALL system('rm -f mixing_history*')
   END SUBROUTINE mixing_history_reset
 
   subroutine mixing_history_limit(len)

@@ -39,7 +39,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER i(42),ierr(3)
     REAL    r(34)
-    LOGICAL l(45)
+    LOGICAL l(46)
     !     ..
     !     .. External Subroutines..
 #ifdef CPP_MPI    
@@ -79,6 +79,7 @@ CONTAINS
        l(38)=field%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=field%efield%dirichlet
        l(43)=field%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
+       l(46)=noco%l_spav
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -119,6 +120,7 @@ CONTAINS
     field%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45)
     banddos%unfoldband=l(35)
     noco%l_mtNocoPot=l(36)
+    noco%l_spav=l(46)
     !
     ! -> Broadcast the arrays:
     IF (field%efield%l_segmented) THEN
@@ -182,6 +184,7 @@ CONTAINS
     CALL MPI_BCAST(atoms%rmsh,atoms%jmtd*atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     !
     CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(kpts%nkptf,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%bk,3*kpts%nkpt,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%wtkpt,kpts%nkpt,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%ntetra,kpts%ntet,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -221,6 +224,8 @@ CONTAINS
     CALL MPI_BCAST(atoms%lda_u(:)%j,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%l_amf,atoms%n_u,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lda_u(:)%atomType,atoms%n_u,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%phi,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%theta,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lapw_l,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
  
     n = 7*7*3*sym%nop

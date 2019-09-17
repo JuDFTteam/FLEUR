@@ -161,7 +161,7 @@ c     - local -
       pure_intgrf%ierror = NO_ERROR
 
       ! integral from 0 to r1 approximated by leading term in power series expansion
-      IF (f(1)*f(2).gt.1d-10.and.h.gt.0) THEN
+      IF (f(1)*f(2).gt.1e-10.and.h.gt.0) THEN
         IF(f(2).eq.f(1)) THEN
           pure_intgrf%value = r1*f(1)
         ELSE
@@ -349,7 +349,7 @@ c     - local arrays -
       END IF
       
       ! integral from 0 to r1 approximated by leading term in power series expansion (only if h>0)
-      IF(h.gt.0.and.f(1)*f(2).gt.1d-10) THEN
+      IF(h.gt.0.and.f(1)*f(2).gt.1e-10) THEN
         IF(f(2).eq.f(1)) THEN
           intgr = r1*f(1)
         ELSE
@@ -416,14 +416,14 @@ c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
       modulo1 = kpoint*nkpt3
       help    = nint(modulo1)
-      IF(any(abs(help-modulo1).gt.1d-10)) THEN
+      IF(any(abs(help-modulo1).gt.1e-10)) THEN
         WRITE(6,'(A,F5.3,2('','',F5.3),A)')'modulo1: argument (',kpoint,
      +                         ') is not an element of the k-point set.'
         CALL juDFT_error(
      +     'modulo1: argument not an element of k-point set.', 
      +     calledby = 'util:modulo1')
       END IF
-      modulo1 = modulo(help,nkpt3)*1d0/nkpt3
+      modulo1 = modulo(help,nkpt3)*1.0/nkpt3
 
       END FUNCTION modulo1
       
@@ -462,7 +462,7 @@ c     Returns derivative of f in df.
       r = rmsh(1,itype)
       ! use power series expansion a+c**x for first point
       IF(f(2).eq.f(1)) THEN
-        df(1) = 0d0
+        df(1) = 0.0
       ELSE
         x     = (f(3)-f(2))/(f(2)-f(1))
         df(1) = (f(2)-f(1)) / (x-1) * log(x)/h / r
@@ -472,32 +472,32 @@ c     Returns derivative of f in df.
       d31 = d21 + d32        ; d42 = d32 + d43
       d41 = d31 + d43
       df(2) = - d32*d42 / (d21*d31*d41)         * f(1) 
-     &        + ( 1d0/d21 - 1d0/d32 - 1d0/d42)  * f(2)
+     &        + ( 1.0/d21 - 1.0/d32 - 1.0/d42)  * f(2)
      &        + d21*d42 / (d31*d32*d43)         * f(3)
      &        - d21*d32 / (d41*d42*d43)         * f(4)
       df1   =   d32*d43 / (d21*d31*d41)         * f(1) 
      &        - d31*d43 / (d21*d32*d42)         * f(2)
-     &        + ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(3)
+     &        + ( 1.0/d31 + 1.0/d32 - 1.0/d43 ) * f(3)
      &        + d31*d32 / (d41*d42*d43)         * f(4)
       DO i = 3,n-2
         d21 = d32 ; d32 = d43 ; d43 = d43 * exp(h)
         d31 = d42 ; d42 = d42 * exp(h)
         d41 = d41 * exp(h)
         df2   = - d32*d42 / (d21*d31*d41)         * f(i-1) 
-     &          + ( 1d0/d21 - 1d0/d32 - 1d0/d42)  * f(i)
+     &          + ( 1.0/d21 - 1.0/d32 - 1.0/d42)  * f(i)
      &          + d21*d42 / (d31*d32*d43)         * f(i+1)
      &          - d21*d32 / (d41*d42*d43)         * f(i+2)
         df(i) = ( df1 + df2 ) / 2
         df1   =   d32*d43 / (d21*d31*d41)         * f(i-1) 
      &          - d31*d43 / (d21*d32*d42)         * f(i)
-     &          + ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(i+1)
+     &          + ( 1.0/d31 + 1.0/d32 - 1.0/d43 ) * f(i+1)
      &          + d31*d32 / (d41*d42*d43)         * f(i+2)
       END DO
       df(n-1) = df1
       df(n)   = - d42*d43 / (d21*d31*d41)         * f(n-3) 
      &          + d41*d43 / (d21*d32*d42)         * f(n-2) 
      &          - d41*d42 / (d31*d32*d43)         * f(n-1) 
-     &          + ( 1d0/d41 + 1d0/d42 + 1d0/d43 ) * f(n)
+     &          + ( 1.0/d41 + 1.0/d42 + 1.0/d43 ) * f(n)
 
       END SUBROUTINE derivative_nt
 
@@ -560,7 +560,7 @@ c     Orders rarr(1:n) according to size and returns a correspondingly defined p
 c     Same as rorderp but divides the problem in halves np times (leading to 2**np intervals) and is
 c     much faster than rorderp (devide and conquer algorithm).
 c     There is an optimal np, while for larger np the overhead (also memory-wise) outweights the speed-up.
-c     np = max(0,int(log(n*0.001)/log(2d0))) should be a safe choice.
+c     np = max(0,int(log(n*0.001)/log(2.0))) should be a safe choice.
       RECURSIVE SUBROUTINE rorderpf(pnt,rarr,n,np)
 
       IMPLICIT NONE
@@ -624,9 +624,9 @@ c      "Computation of Special Functions".)
 !        STOP 'sphbes: negative argument (bug?).' 
 !      ELSE 
       IF( x.eq.0 ) THEN
-        sphbes(0)  = 1d0
+        sphbes(0)  = 1.0
         DO ll = 1,l
-          sphbes(ll) = 0d0
+          sphbes(ll) = 0.0
         END DO
         RETURN
       ENDIF
@@ -640,12 +640,12 @@ c      "Computation of Special Functions".)
       lmax = l                 !
       IF(lsta.lt.l) THEN       !
         lmax            = lsta ! determine starting point lsta
-        sphbes(lmax+1:) = 0d0  ! for backward recurrence
+        sphbes(lmax+1:) = 0.0  ! for backward recurrence
       ELSE                     !
         lsta = lsta2(x,l,15)   ! 
       END IF                    !
-      f0 = 0d0                                                      !
-      f1 = 1d-100                                                   !
+      f0 = 0.0                                                      !
+      f1 = 1e-100                                                   !
       DO ll = lsta,0,-1                                             ! backward recurrence
         f  = f1 / x * (2*ll+3) - f0 ; IF(ll.le.lmax) sphbes(ll) = f ! with arbitrary start values
         f0 = f1                                                     !
@@ -673,7 +673,7 @@ c     Test starting point
       f     = lgx
       DO WHILE(f.gt.-mp)
         lsta0 = lsta0 + 1
-        f     = f + lgx - log10(2d0*lsta0+1)
+        f     = f + lgx - log10(2.0*lsta0+1)
       END DO
       END FUNCTION lsta0
 
@@ -693,7 +693,7 @@ c     Returns starting point lsta1 for backward recurrence such that sphbes(lsta
       n1 = n0 + 5
       f1 = envj(n1,x) - mp
       DO it = 1,20
-        nn = n1 - (n1-n0) / (1d0-f0/f1)
+        nn = n1 - (n1-n0) / (1.0-f0/f1)
         f  = envj(nn,x) - mp
         IF(abs(nn-n1).lt.1) EXIT
         n0 = n1
@@ -715,7 +715,7 @@ c     Returns the starting point lsta2 for backward recurrence such that all sph
       REAL                :: f0,f1,f,hmp,ejn,obj
       INTEGER             :: n0,n1,nn,it
 
-      hmp = 0.5d0 * mp
+      hmp = 0.5 * mp
       ejn = envj(l,x)
       IF( ejn.le.hmp ) THEN
         obj = mp
@@ -728,7 +728,7 @@ c     Returns the starting point lsta2 for backward recurrence such that all sph
       n1 = n0 + 5
       f1 = envj(n1,x) - obj
       DO it = 1,20
-        nn = n1 - (n1-n0) / (1d0-f0/f1)
+        nn = n1 - (n1-n0) / (10-f0/f1)
         f  = envj(nn,x) - obj
         IF(abs(nn-n1).lt.1) EXIT
         n0 = n1
@@ -748,7 +748,7 @@ c     Returns the starting point lsta2 for backward recurrence such that all sph
       REAL   , INTENT(IN) :: x
       INTEGER, INTENT(IN) :: l
 
-      envj = 0.5d0 * log10(6.28d0*l) - l*log10(1.36d0*x/l)
+      envj = 0.5 * log10(6.28*l) - l*log10(1.36*x/l)
 
       END FUNCTION envj
 
@@ -769,9 +769,9 @@ c     for l = 0,...,ll in Y(1,...,(ll+1)**2).
       complex               :: c
       real                  :: stheta,ctheta,sphi,cphi,r,rvec1(3)
       integer               :: l,m,lm
-      complex , parameter   :: img = (0d0,1d0)
+      complex , parameter   :: img = (0.0,1.0)
  
-      Y(1) = 0.282094791773878d0
+      Y(1) = 0.282094791773878
       IF(ll.eq.0) RETURN
 
       stheta = 0
@@ -779,16 +779,16 @@ c     for l = 0,...,ll in Y(1,...,(ll+1)**2).
       sphi   = 0
       cphi   = 0
       r      = sqrt(sum(rvec**2))
-      IF(r.gt.1d-16) THEN
+      IF(r.gt.1e-16) THEN
         rvec1  = rvec / r
         ctheta = rvec1(3)
         stheta = sqrt(rvec1(1)**2+rvec1(2)**2)
-        IF(stheta.gt.1d-16) THEN
+        IF(stheta.gt.1e-16) THEN
           cphi = rvec1(1) / stheta
           sphi = rvec1(2) / stheta
         END IF
       ELSE
-        Y(2:) = 0d0
+        Y(2:) = 0.0
         RETURN
       END IF
 
@@ -796,16 +796,16 @@ c     define Y,l,-l and Y,l,l
       r = Y(1)
       c = 1
       DO l=1,ll
-        r           = r*stheta*sqrt(1d0+1d0/(2*l))
+        r           = r*stheta*sqrt(1.0+1.0/(2*l))
         c           = c * (cphi + img*sphi)
         Y(l**2+1)   = r*conjg(c)  ! l,-l
         Y((l+1)**2) = r*c*(-1)**l ! l,l
       END DO
 
 c     define Y,l,-l+1 and Y,l,l-1
-      Y(3) = 0.48860251190292d0*ctheta
+      Y(3) = 0.48860251190292*ctheta
       DO l=2,ll
-        r          = sqrt(2D0*l+1) * ctheta
+        r          = sqrt(2.0*l+1) * ctheta
         Y(l**2+2)  = r*Y((l-1)**2+1) ! l,-l+1
         Y(l*(l+2)) = r*Y(l**2)       ! l,l-1
       END DO
@@ -815,9 +815,9 @@ c     define Y,l,m, |m|<l-1
         lm = l**2 + 2
         DO m=-l+2,l-2
           lm = lm + 1
-          Y(lm) = sqrt((2d0*l+1)/(l+m)/(l-m)) * (
-     &            sqrt(2d0*l-1)*ctheta           *Y(lm-2*l)-
-     &            sqrt((l+m-1d0)*(l-m-1)/(2*l-3))*Y(lm-4*l+2) )
+          Y(lm) = sqrt((2.0*l+1)/(l+m)/(l-m)) * (
+     &            sqrt(2.0*l-1)*ctheta           *Y(lm-2*l)-
+     &            sqrt((l+m-1.0)*(l-m-1)/(2*l-3))*Y(lm-4*l+2) )
         END DO
       END DO
 
@@ -839,7 +839,7 @@ c     Returns the complex error function.
       pi = pimach()
       z1 = z
       IF(real(z).lt.0) z1 = -z1
-      IF(real(z1).lt.2d0) THEN ! McLaurin series
+      IF(real(z1).lt.2.0) THEN ! McLaurin series
         z2   = z1**2
         i    = 0
         c    = z1
@@ -848,11 +848,11 @@ c     Returns the complex error function.
           i    = i + 1
           c    = -c * z2 / i
           cerf = cerf + c/(2*i+1)
-          IF(abs(c/(2*i+1)).lt.1d-20) EXIT
+          IF(abs(c/(2*i+1)).lt.1e-20) EXIT
         END DO
         cerf = cerf * 2/sqrt(pi)
       ELSE ! continued fraction using Lentz's method
-        d    = 0d0
+        d    = 0.0
         c    = z1
         cerf = z1
         i    = 0
@@ -862,13 +862,13 @@ c     Returns the complex error function.
           d     = ( 2*z1 + i*d )**(-1)
           delta = c*d
           cerf  = cerf * delta
-          IF(abs(1-delta).lt.1d-15) EXIT
+          IF(abs(1-delta).lt.1e-15) EXIT
           i     = i + 1
           c     =   z1 + i/c
           d     = ( z1 + i*d )**(-1)
           delta = c*d
           cerf  = cerf * delta
-          IF(abs(1-delta).lt.1d-15) EXIT
+          IF(abs(1-delta).lt.1e-15) EXIT
           IF(i.eq.10000) 
      &        STOP 'cerf: Lentz method not converged after 10000 steps.'
         END DO

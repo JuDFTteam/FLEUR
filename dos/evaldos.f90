@@ -119,8 +119,8 @@
       ENDDO
  
       IF ( l_mcd ) THEN ! create an energy grid for mcd-spectra
-        e_lo =  9.9d+9 
-        e_up = -9.9d+9     
+        e_lo =  9.9*10.0**9 
+        e_up = -9.9*10.0**9     
         DO jspin = 1,input%jspins
           DO n = 1,atoms%ntype
             DO icore = 1 , mcd%ncore(n)

@@ -69,13 +69,11 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
    TYPE(t_potden) :: den
 
    ! Local Scalars
-   INTEGER :: nrhomfile=26   
    INTEGER iden,ivac,ifft2,ifft3,archiveType
-   INTEGER imz,ityp,iri,ilh,imesh,lh,iq2,iq3,iter
+   INTEGER imz,ityp,iri,ilh,imesh,iter
    REAL cdnup,cdndown,chden,mgden,theta,phi,zero,rho_11,rziw,fermiEnergyTemp
    REAL rho_22,rho_21r,rho_21i,rhotot,mx,my,mz,fix,vz_r,vz_i
    COMPLEX czero
-   CHARACTER*8 dop,iop,name(10)
 
    ! Local Arrays
    !---> off-diagonal part of the density matrix
@@ -87,11 +85,12 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
    !---> for testing: output of offdiag. output density matrix. to plot the
    !---> offdiag. part of the output density matrix, that part has to be
    !---> written the file rhomt21 in cdnmt.
-   LOGICAL :: l_fmpl2, l_qfix
+   LOGICAL :: l_qfix
    REAL    :: cdn11, cdn22
    COMPLEX :: cdn21
-   COMPLEX, ALLOCATABLE :: rho21(:,:,:)
    !---> end of test part
+
+   iter = 0 ! This is not clean!
 
    zero = 0.0 ; czero = CMPLX(0.0,0.0)
    ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
@@ -166,21 +165,11 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
       END IF
    END IF
 
-   !---> for testing: read offdiag. output density matrix
-   INQUIRE (file= 'rhomt21', exist= l_fmpl2)
-   IF (l_fmpl2) THEN
-      ALLOCATE( rho21(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
-      OPEN (26,file='rhomt21',form='unformatted',status='unknown')
-      READ (26) rho21
-      CLOSE (26)
-   END IF
-   !---> end of test output
-
    !---> calculate the charge and magnetization density in the muffin tins
    DO ityp = 1,atoms%ntype
       DO ilh = 0,sphhar%nlh(sym%ntypsy(ityp))
          DO iri = 1,atoms%jri(ityp)
-            IF (.NOT. l_fmpl2) THEN 
+            IF (SIZE(den%mt,4).LE.2) THEN 
                cdnup   = rho(iri,ilh,ityp,1)
                cdndown = rho(iri,ilh,ityp,2)
                theta = noco%beta(ityp)
@@ -195,11 +184,13 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
                !--->            for testing: output of offdiag. output density matrix
                cdn11 = rho(iri,ilh,ityp,1)
                cdn22 = rho(iri,ilh,ityp,2)
-               cdn21 = rho21(iri,ilh,ityp)
+               cdn21 = CMPLX(den%mt(iri,ilh,ityp,3),den%mt(iri,ilh,ityp,4))
                CALL rot_den_mat(noco%alph(ityp),noco%beta(ityp),cdn11,cdn22,cdn21)
                rho(iri,ilh,ityp,1) = cdn11 + cdn22
-               rho(iri,ilh,ityp,2) = 2*REAL(cdn21)
-               rho(iri,ilh,ityp,3) = 2*AIMAG(cdn21)
+               rho(iri,ilh,ityp,2) = 2.0*REAL(cdn21)
+               ! Note: The minus sign in the following line is temporary to adjust for differences in the offdiagonal
+               !       part of the density between this fleur version and ancient (v0.26) fleur.
+               rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
                rho(iri,ilh,ityp,4) = cdn11 - cdn22
                !--->            end of test part
             END IF
@@ -207,9 +198,6 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
       END DO
    END DO
 
-   IF (l_fmpl2) THEN
-      DEALLOCATE( rho21 )
-   END IF
 
    !---> fouriertransform the diagonal part of the density matrix
    !---> in the interstitial, qpw, to real space (ris)

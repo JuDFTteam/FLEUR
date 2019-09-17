@@ -204,7 +204,7 @@ c  ----> construct a and b coefficients
                  wronk = uds(l,n)*dus(l,n) - us(l,n)*duds(l,n)
                  IF (apw(l,n)) THEN
                    fj(l) = 1.0*const * fj(l)/us(l,n)
-                   dfj(l) = 0.0d0
+                   dfj(l) = 0.0
                  ELSE
                    dfj(l) = const* (dus(l,n)*fj(l)-df*us(l,n))/wronk
                    fj(l) = const* (df*uds(l,n)-fj(l)*duds(l,n))/wronk

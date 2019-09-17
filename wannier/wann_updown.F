@@ -8,7 +8,8 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_updown(
-     >      mpi,input,sym,atoms,stars,vacuum,sphhar,oneD,noco,cell,vTot,
+     >      DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,
+     >      sphhar,oneD,noco,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -50,8 +51,9 @@ c****************************************************************************
       use m_wann_radovlp_integrals
       use m_matmul,only : matmul3,matmul3r
       use m_wann_socmat
-      use m_wann_write_hsomtx
+      use m_wann_write_matrix5
       use m_wann_write_nabla
+      use m_wann_write_matrix6
       use m_wann_write_amn
       use m_wann_write_nabla
       use m_wann_mmkb_int
@@ -72,8 +74,10 @@ c****************************************************************************
 
 #endif
 
+      TYPE(t_dimension), INTENT(IN) :: DIMENSION
       TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_kpts),      INTENT(IN) :: kpts
       TYPE(t_sym),INTENT(IN)    :: sym
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_stars),INTENT(IN)  :: stars
@@ -168,6 +172,7 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
 !!! the Mmn matrices
       complex, allocatable :: surfcurr(:,:,:,:)
       complex, allocatable :: hsomtx(:,:,:,:,:),hsomtx_l(:,:,:,:)
+      complex, allocatable :: hsomtxvec(:,:,:,:,:,:)
       complex, allocatable :: mmnk(:,:,:,:),mmn(:,:,:)
       complex, allocatable :: perpmag(:,:,:)
       complex, allocatable :: amn(:,:,:),nablamat(:,:,:,:)
@@ -199,7 +204,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       integer :: fullnkpts,kpt,kptibz,kptibz_b,j1,j2,j3,oper,oper_b,k
       real :: bkrot(3)
       integer :: ios,kplot,kplotoper,plotoper,gfcut
-      integer :: funbas_start,funbas_stop
+      integer :: funbas_start,funbas_stop,jspin5
       complex :: phasust
       integer,allocatable::pair_to_do(:,:)
       integer :: ngopr1(natd)
@@ -250,11 +255,11 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       complex,allocatable :: ubeffdg(:,:,:) 
       complex,allocatable :: dbeffug(:,:,:) 
       complex,allocatable :: dbeffdg(:,:,:) 
-      complex,allocatable :: ubeffulog(:,:,:) 
-      complex,allocatable :: dbeffulog(:,:,:) 
-      complex,allocatable :: ulobeffug(:,:,:) 
-      complex,allocatable :: ulobeffdg(:,:,:) 
-      complex,allocatable :: ulobeffulog(:,:,:) 
+      complex,allocatable :: ubeffulog(:,:,:,:) 
+      complex,allocatable :: dbeffulog(:,:,:,:) 
+      complex,allocatable :: ulobeffug(:,:,:,:) 
+      complex,allocatable :: ulobeffdg(:,:,:,:) 
+      complex,allocatable :: ulobeffulog(:,:,:,:,:) 
       integer :: spinloop1,spinloop2,ilop
 
       TYPE(t_usdus) :: usdus
@@ -428,10 +433,16 @@ c..reading the proj.1 / proj.2 / proj file
 cccccccccccc   read in the eigenvalues and vectors   cccccc
 
 
-       do jspin=1,jspins
+       do jspin5=1,jspins
           CALL judft_error("TODO:wann_updown")
 !         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
  !    <                  ello,evac,epar,wk,n_bands,n_size)
+ 
+        CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,
+     >   input%jspins, !wannierspin instead of DIMENSION%jspd?&
+     >  noco%l_noco, n_bands,n_size)
+ 
+ 
        enddo
 
        jspin=1
@@ -494,6 +505,11 @@ c##################################################################
       if(wann%l_socmat)then
          allocate ( hsomtx(2,2,nbnd,nbnd,fullnkpts) )
          allocate ( hsomtx_l(nbnd,nbnd,2,2) )
+      endif
+
+      if(wann%l_socmatvec)then
+         allocate ( hsomtxvec(2,2,nbnd,nbnd,3,fullnkpts) )
+         hsomtxvec=0.0
       endif
 
       write (*,*) 'nwfs=',nwfs
@@ -666,15 +682,20 @@ c****************************************************************
          allocate( ubeffdg(0:lmd,0:lmd,1:ntype) )
          allocate( dbeffug(0:lmd,0:lmd,1:ntype) )
          allocate( dbeffdg(0:lmd,0:lmd,1:ntype) )
-         allocate( ubeffulog(0:lmd,0:15,1:ntype) )
-         allocate( dbeffulog(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffug(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffdg(0:lmd,0:15,1:ntype) )
-         allocate( ulobeffulog(0:15,0:15,1:ntype) )
+         
+         allocate( ubeffulog(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( dbeffulog(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffug(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffdg(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ulobeffulog(1:nlod,-llod:llod,
+     &                         1:nlod,-llod:llod,1:ntype) )
+         
+         
          call wann_gabeffgagaunt(
+     >            wann%l_perpmagatlres,wann%perpmagl,
      >            neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
-     >            nlod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
+     >            nlod,llod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
      >            lmaxd,lmd,clnu,
      <            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      <            dbeffulog,
@@ -713,12 +734,27 @@ c****************************************************************
       zzMat(jspin)%matsize1 = nbasfcn
       zzMat(jspin)%matsize2 = neigd
       IF(l_real) THEN
-         ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
+         IF(.NOT.ALLOCATED(zzMat(jspin)%data_r))
+     &    ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
      +                                 zzMat(jspin)%matsize2))
       ELSE
-         ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
+         IF(.NOT.ALLOCATED(zzMat(jspin)%data_c))
+     &     ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
      +                                 zzMat(jspin)%matsize2))
       END IF
+
+        CALL lapw%init(input,noco,kpts,atoms,sym,
+     &  kptibz,cell,
+     &  (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &  .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+        CALL cdn_read(
+     & eig_id,
+     & DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     & kptibz,jspin,DIMENSION%nbasfcn,
+     & noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     & nbands,eigg(:,jspin),zzMat(jspin))
+
 
 !         CALL cdn_read(
 !     >              eig_id,
@@ -726,6 +762,11 @@ c****************************************************************
 !     >              l_ss,l_noco,neigd,n_start,n_end,
 !     <              nmat,nv,ello,evdu,epar,
 !     <              k1,k2,k3,bkpt,wk,nbands,eigg(:,jspin),zzMat(jspin))
+
+
+
+
+
       call judft_error("cdn_read in wann_updown")
          nrec=0
       enddo !jspin
@@ -772,10 +813,10 @@ c...we work only within the energy window
            nslibd = nslibd + 1
            eig(nslibd) = eigg(i,1)
            if(l_noco)then
-             funbas=nv(1)+nlotot
-             funbas=funbas+nv(2)+nlotot
+             funbas=lapw%nv(1)+atoms%nlotot
+             funbas=funbas+lapw%nv(2)+atoms%nlotot
            else
-             funbas=nv(jspin)+nlotot
+             funbas=lapw%nv(jspin)+atoms%nlotot
            endif
            IF (zzMat(jspin)%l_real) THEN
               do j = 1,funbas
@@ -829,14 +870,14 @@ c...the overlap matrix Mmn which is computed for each k- and b-point
 c...generation the A,B,C coefficients in the spheres
 c...for the lapws and local orbitals, summed by the basis functions
 
-      ALLOCATE(lapw%k1(SIZE(k1,1),SIZE(k1,2)))
-      ALLOCATE(lapw%k2(SIZE(k1,1),SIZE(k1,2)))
-      ALLOCATE(lapw%k3(SIZE(k1,1),SIZE(k1,2)))
-      lapw%nv = nv
-      lapw%nmat = nmat
-      lapw%k1 = k1
-      lapw%k2 = k2
-      lapw%k3 = k3
+!      ALLOCATE(lapw%k1(SIZE(k1,1),SIZE(k1,2)))
+!      ALLOCATE(lapw%k2(SIZE(k1,1),SIZE(k1,2)))
+!      ALLOCATE(lapw%k3(SIZE(k1,1),SIZE(k1,2)))
+!      lapw%nv = nv
+!      lapw%nmat = nmat
+!      lapw%k1 = k1
+1      lapw%k2 = k2
+!      lapw%k3 = k3
       ! I think the other variables of lapw are not needed here.
 
       call cpu_time(delta)
@@ -852,7 +893,7 @@ c...for the lapws and local orbitals, summed by the basis functions
      <       ccof(-llod:,:,:,:,jspin))
       enddo !jspin
 
-      DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
+!      DEALLOCATE(lapw%k1,lapw%k2,lapw%k3)
 
       jspin=1
       call cpu_time(delta1)
@@ -885,12 +926,12 @@ c...for the lapws and local orbitals, summed by the basis functions
          call wann_perpmag(
      >            nslibd,neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
-     >            nlod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
+     >            nlod,llod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
      >            lmaxd,lmd,clnu,
      >            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      >            dbeffulog,
      >            ulobeffug,ulobeffdg,ulobeffulog,
-     >            acof,bcof,
+     >            acof,bcof,ccof,
      <            perpmag(:,:,ikpt))
       endif   
 
@@ -1101,12 +1142,30 @@ c******************************************************
       endif
 
       if(wann%l_socmat)then
-        call wann_write_hsomtx(
+!        call wann_write_hsomtx(
+!     >      mpi_comm,l_p0,'WF1.hsomtx',
+!     >      'Matrix elements of spin-orbit coupling',
+!     >      2,2,nbnd,nbnd,fullnkpts,
+!     >      irank,isize,
+!     <      hsomtx)
+     
+        call wann_write_matrix5(
      >      mpi_comm,l_p0,'WF1.hsomtx',
      >      'Matrix elements of spin-orbit coupling',
-     >      2,2,nbnd,nbnd,fullnkpts,
-     >      irank,isize,
+     >      nbnd,nbnd,2,2,fullnkpts,
+     >      irank,isize,wann%l_unformatted,
      <      hsomtx)
+     
+     
+      endif
+      
+      if(wann%l_socmatvec)then
+        call wann_write_matrix6(
+     >      mpi_comm,l_p0,'WF1.hsomtxvec',
+     >      'Vectors for spin-orbit coupling',
+     >      2,2,nbnd,nbnd,3,fullnkpts,
+     >      irank,isize,wann%l_unformatted,
+     <      hsomtxvec)
       endif
 
       if(wann%l_mmn0)then
