@@ -302,7 +302,7 @@ MODULE m_hubbard1_setup
          IF (mpi%irank.EQ.0) THEN
             DO ispin = 1,input%jspins
                WRITE (6,'(a7,i3)') 'spin #',ispin
-               DO i_hia = atoms%n_u+1, atoms%n_u+atoms%n_hia
+               DO i_hia = indStart, indEnd
                   nType = atoms%lda_u(i_hia)%atomType
                   l = atoms%lda_u(i_hia)%l
                   WRITE (l_type,'(i2)') 2*(2*l+1)
@@ -322,7 +322,7 @@ MODULE m_hubbard1_setup
          ENDIF
       ELSE IF(mpi%irank.NE.0) THEN
          results%e_ldau = MERGE(results%e_ldau,0.0,atoms%n_u>0)
-         pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
+         pot%mmpMat(:,:,indStart:indEnd,:) = CMPLX(0.0,0.0)
          !If we are on a different mpi%irank and no solver is linked we need to call juDFT_end here if the solver was not run
          !kind of a weird workaround (replace with something better)
          IF(.NOT.l_linkedsolver) THEN
@@ -339,7 +339,7 @@ MODULE m_hubbard1_setup
          !occupation matrix is zero and LDA+Hubbard 1 shouldn't be run yet
          !There is nothing to be done yet just set the potential correction to 0
          WRITE(*,*) "No density matrix and GF found -> skipping LDA+HIA"
-         pot%mmpMat(:,:,atoms%n_u+1:atoms%n_hia+atoms%n_u,:) = CMPLX(0.0,0.0)
+         pot%mmpMat(:,:,indStart:indEnd,:) = CMPLX(0.0,0.0)
          results%e_ldau = MERGE(results%e_ldau,0.0,atoms%n_u>0)
       ENDIF
 #ifdef CPP_MPI

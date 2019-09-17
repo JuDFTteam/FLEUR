@@ -34,6 +34,7 @@ MODULE m_calc_tria
 
       !IF(.NOT.l_tria) CALL juDFT_warn("Triangles may not cover whol BZ",calledby="calc_tria")
 
+      input%gfTet = .TRUE.
       !Write to types_kpts
       kpts%ntria = ntria
       ALLOCATE(kpts%itria(3,kpts%ntria))
