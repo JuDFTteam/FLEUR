@@ -72,6 +72,7 @@ wannier/wann_real.F
 wannier/wann_rmat.f
 wannier/wann_rw_eig.F
 wannier/wann_socmat.F
+wannier/wann_socmat_vec.F
 wannier/wann_socmat_rs.f
 wannier/wann_tlmw.f
 wannier/wann_ujugaunt.F
