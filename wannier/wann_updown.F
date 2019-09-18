@@ -580,16 +580,16 @@ c***********************************************************
         do n = 1,ntype
           do l = 0,lmax(n)
              call radfun(
-     >              l,n,jspin,epar(l,n,jspin2),vr(1,n,jspin2),atoms,
-     <              ff(n,:,:,l,jspin),gg(n,:,:,l,jspin),usdus,
-     <              nodeu,noded,wronk)
+     >      l,n,jspin,enpara%el0(l,n,jspin2),vr(1,n,jspin2),atoms,
+     <      ff(n,:,:,l,jspin),gg(n,:,:,l,jspin),usdus,
+     <      nodeu,noded,wronk)
           enddo !l
           do ilo = 1, nlo(n)
 
              call radflo(
-     >             atoms,n,jspin,ello(:,:,jspin2),vr(1,n,jspin2),
-     >             ff(n,1:,1:,0:,jspin),gg(n,1:,1:,0:,jspin),mpi,
-     <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin))
+     >  atoms,n,jspin,enpara%ello(:,:,jspin2),vr(1,n,jspin2),
+     >  ff(n,1:,1:,0:,jspin),gg(n,1:,1:,0:,jspin),mpi,
+     <  usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin))
 
           enddo !ilo
         enddo !n
