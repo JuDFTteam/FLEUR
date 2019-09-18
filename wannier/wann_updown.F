@@ -1293,7 +1293,7 @@ c******************************************************
      >      mpi_comm,l_p0,'updown.mmn0',
      >      'Overlaps of the wavefunct. at the same kpoint',
      >      nbnd,fullnkpts,nbnd,
-     >      irank,isize,.false.,
+     >      irank,isize,.false.,.true.,
      <      mmn,wann%l_unformatted)
       endif !l_soc and l_mmn0  
 
@@ -1302,7 +1302,7 @@ c******************************************************
      >      mpi_comm,l_p0,'updown.perpmag',
      >      'Overlaps of the wavefunct. with Beff',
      >      nbnd,fullnkpts,nbnd,
-     >      irank,isize,.true.,
+     >      irank,isize,.true.,.true.,
      <      perpmag,wann%l_unformatted)
       endif !l_soc and l_mmn0  
 
