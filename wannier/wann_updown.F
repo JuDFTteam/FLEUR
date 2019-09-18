@@ -131,7 +131,7 @@ c****************************************************************************
      
 cccccccccccccccccc   local variables   cccccccccccccccccccc
 !      type(t_wann) :: wann  !now input variable
-      integer :: lmd,nlotot,n,nmat,iter,ikpt,ikpt_b,nmat_b
+      integer :: lmd,nlotot,n,nmat,iter,ikpt
       integer :: addnoco,addnoco2,funbas,loplod
       integer :: noccbd,noccbd_b,nn,nkpts,i,jspin,j,l,i_rec,m,nwf,nwfp
       integer :: jsp_start,jsp_end,nrec,nrec1,nbands,nbands_b
@@ -139,15 +139,15 @@ cccccccccccccccccc   local variables   cccccccccccccccccccc
       integer :: i1,i2,i3,in,lda
       integer :: n_bands(0:neigd),nslibd,nslibd_b
       character(len=8) :: dop,iop,name(10)
-      real    :: bkpt(3),bkpt_b(3),sfp,tpi,wronk,wk,wk_b,phase
+      real    :: sfp,tpi,wronk,wk,wk_b,phase
       complex :: c_phase, zzConjgTemp
       real    :: eig(neigd),cp_time(9),efermi
       logical :: l_p0,l_bkpts,l_proj,l_amn,l_mmn
 !!! energy window boundaries
-      integer, allocatable :: nv(:)
-      integer, allocatable :: nv_b(:)
-      integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
-      integer, allocatable :: k1_b(:,:),k2_b(:,:),k3_b(:,:)
+!      integer, allocatable :: nv(:)
+!      integer, allocatable :: nv_b(:)
+!      integer, allocatable :: k1(:,:),k2(:,:),k3(:,:)
+!      integer, allocatable :: k1_b(:,:),k2_b(:,:),k3_b(:,:)
 
       real,    allocatable :: eigg(:,:)
       real kpoints(nkptd)
@@ -263,6 +263,7 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       complex,allocatable :: ulobeffdg(:,:,:,:) 
       complex,allocatable :: ulobeffulog(:,:,:,:,:) 
       integer :: spinloop1,spinloop2,ilop
+      integer :: alerr
 
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)   :: zMat(2),zzMat(2)
@@ -329,8 +330,15 @@ c**************************************************************
          if(l_p0)print*,"fullnkpts=",fullnkpts
          IF(fullnkpts<nkpts) CALL juDFT_error("fullnkpts.lt.nkpts"
      +        ,calledby ="wann_updown")
-         allocate(irreduc(fullnkpts),mapkoper(fullnkpts))
-         allocate(shiftkpt(3,fullnkpts))
+         allocate(irreduc(fullnkpts),stat=alerr)
+         if (alerr /= 0) call juDFT_error('alerr: 1',
+     &         calledby='wann_updown')
+         allocate(mapkoper(fullnkpts),stat=alerr)
+         if (alerr /= 0) call juDFT_error('alerr: 2',
+     &         calledby='wann_updown')
+         allocate(shiftkpt(3,fullnkpts),stat=alerr)
+         if (alerr /= 0) call juDFT_error('alerr: 3',
+     &         calledby='wann_updown')
          l_file=.false.
          inquire(file='kptsmap',exist=l_file)
          IF(.NOT.l_file)  CALL juDFT_error
@@ -367,8 +375,12 @@ c*********************************************************
 cccccccccccccccc   initialize the potential   cccccccccccc
 c*********************************************************
 
-      allocate (vz(nmzd,2,jspd))
-      allocate (vr(jmtd,ntypd,jspd))
+      allocate (vz(nmzd,2,jspd),stat=alerr)
+         if (alerr /= 0) call juDFT_error('alerr: 4',
+     &         calledby='wann_updown')
+      allocate (vr(jmtd,ntypd,jspd),stat=alerr)
+         if (alerr /= 0) call juDFT_error('alerr: 5',
+     &         calledby='wann_updown')
 
       vz = vTot%vacz
 
@@ -384,21 +396,47 @@ cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
 
-      allocate ( nv(wannierspin) )
-      allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
-     &           k3(nvd,wannierspin) )
-      allocate ( ff(ntypd,jmtd,2,0:lmaxd,2) )
-      allocate ( gg(ntypd,jmtd,2,0:lmaxd,2) )
-      allocate ( usdus%us(0:lmaxd,ntypd,2) )
-      allocate ( usdus%uds(0:lmaxd,ntypd,2) )
-      allocate ( usdus%dus(0:lmaxd,ntypd,2) )
-      allocate ( usdus%duds(0:lmaxd,ntypd,2) )
-      allocate ( usdus%ddn(0:lmaxd,ntypd,2) )
-      allocate ( usdus%ulos(nlod,ntypd,2) )
-      allocate ( usdus%dulos(nlod,ntypd,2) )
-      allocate ( usdus%uulon(nlod,ntypd,2) )
-      allocate ( usdus%dulon(nlod,ntypd,2) )
-      allocate ( usdus%uloulopn(nlod,nlod,ntypd,2) )
+!      allocate ( nv(wannierspin) )
+!      allocate ( k1(nvd,wannierspin),k2(nvd,wannierspin),
+!     &           k3(nvd,wannierspin) )
+
+
+      allocate ( ff(ntypd,jmtd,2,0:lmaxd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 6',
+     &         calledby='wann_updown')
+      allocate ( gg(ntypd,jmtd,2,0:lmaxd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 7',
+     &         calledby='wann_updown')
+      allocate ( usdus%us(0:lmaxd,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 8',
+     &         calledby='wann_updown')
+      allocate ( usdus%uds(0:lmaxd,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 9',
+     &         calledby='wann_updown')
+      allocate ( usdus%dus(0:lmaxd,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 10',
+     &         calledby='wann_updown')
+      allocate ( usdus%duds(0:lmaxd,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 11',
+     &         calledby='wann_updown')
+      allocate ( usdus%ddn(0:lmaxd,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 12',
+     &         calledby='wann_updown')
+      allocate ( usdus%ulos(nlod,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 13',
+     &         calledby='wann_updown')
+      allocate ( usdus%dulos(nlod,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 14',
+     &         calledby='wann_updown')
+      allocate ( usdus%uulon(nlod,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 15',
+     &         calledby='wann_updown')
+      allocate ( usdus%dulon(nlod,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 16',
+     &         calledby='wann_updown')
+      allocate ( usdus%uloulopn(nlod,nlod,ntypd,2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 17',
+     &         calledby='wann_updown')
 c****************************************************
 c     jspin=1 
 c****************************************************
@@ -489,34 +527,49 @@ c*************************************************************
        print*,"process: ",irank," nbnd= ",nbnd
 c##################################################################
 
-      allocate ( mmn(nbnd,nbnd,fullnkpts) )
+      allocate ( mmn(nbnd,nbnd,fullnkpts),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 18',
+     &         calledby='wann_updown')
       mmn(:,:,:) = cmplx(0.,0.)
       if((l_soc.or.l_noco) .and. (jspin.eq.1))
-     &   allocate( socmmn(nbnd,nbnd,fullnkpts) )
-
+     &   allocate( socmmn(nbnd,nbnd,fullnkpts),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 19',
+     &         calledby='wann_updown')
       if(wann%l_nabla)then
-         allocate ( nablamat(3,nbnd,nbnd,fullnkpts) )
+         allocate ( nablamat(3,nbnd,nbnd,fullnkpts),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 20',
+     &         calledby='wann_updown')
          nablamat = cmplx(0.,0.)
       endif
 
       if(wann%l_surfcurr)then
-         allocate ( surfcurr(3,nbnd,nbnd,fullnkpts) )
+         allocate ( surfcurr(3,nbnd,nbnd,fullnkpts),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 21',
+     &         calledby='wann_updown')
          surfcurr = cmplx(0.,0.)
       endif
 
       if(wann%l_socmat)then
-         allocate ( hsomtx(2,2,nbnd,nbnd,fullnkpts) )
-         allocate ( hsomtx_l(nbnd,nbnd,2,2) )
+         allocate ( hsomtx(2,2,nbnd,nbnd,fullnkpts),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 22',
+     &         calledby='wann_updown')
+         allocate ( hsomtx_l(nbnd,nbnd,2,2),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 23',
+     &         calledby='wann_updown')
       endif
 
       if(wann%l_socmatvec)then
-         allocate ( hsomtxvec(2,2,nbnd,nbnd,3,fullnkpts) )
+         allocate ( hsomtxvec(2,2,nbnd,nbnd,3,fullnkpts),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 24',
+     &         calledby='wann_updown')
          hsomtxvec=0.0
       endif
 
       write (*,*) 'nwfs=',nwfs
 
-      allocate ( flo(ntypd,jmtd,2,nlod,2) )
+      allocate ( flo(ntypd,jmtd,2,nlod,2),alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 25',
+     &         calledby='wann_updown')
 
 c***********************************************************
 c     Calculate the radial wave functions for the two spins.
@@ -546,16 +599,33 @@ c****************************************************************
 c     Calculate the radial overlap integrals.
 c****************************************************************
       if(wann%l_mmn0)then
-       allocate( radial1_ff(2,2,0:lmaxd,0:lmaxd,ntype) )
-       allocate( radial1_fg(2,2,0:lmaxd,0:lmaxd,ntype) )
-       allocate( radial1_gf(2,2,0:lmaxd,0:lmaxd,ntype) )
-       allocate( radial1_gg(2,2,0:lmaxd,0:lmaxd,ntype) )
-
-       allocate( radial1_flo(2,2,0:lmaxd,1:nlod,ntype) )
-       allocate( radial1_glo(2,2,0:lmaxd,1:nlod,ntype) )
-       allocate( radial1_lof(2,2,1:nlod,0:lmaxd,ntype) )
-       allocate( radial1_log(2,2,1:nlod,0:lmaxd,ntype) )
-       allocate( radial1_lolo(2,2,1:nlod,1:nlod,ntype) )
+       allocate( radial1_ff(2,2,0:lmaxd,0:lmaxd,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 26',
+     &         calledby='wann_updown')
+       allocate( radial1_fg(2,2,0:lmaxd,0:lmaxd,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 27',
+     &         calledby='wann_updown')
+       allocate( radial1_gf(2,2,0:lmaxd,0:lmaxd,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 28',
+     &         calledby='wann_updown')
+       allocate( radial1_gg(2,2,0:lmaxd,0:lmaxd,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 29',
+     &         calledby='wann_updown')
+       allocate( radial1_flo(2,2,0:lmaxd,1:nlod,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 30',
+     &         calledby='wann_updown')
+       allocate( radial1_glo(2,2,0:lmaxd,1:nlod,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 31',
+     &         calledby='wann_updown')
+       allocate( radial1_lof(2,2,1:nlod,0:lmaxd,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 32',
+     &         calledby='wann_updown')
+       allocate( radial1_log(2,2,1:nlod,0:lmaxd,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 33',
+     &         calledby='wann_updown')
+       allocate( radial1_lolo(2,2,1:nlod,1:nlod,ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 34',
+     &         calledby='wann_updown')
 
        do n=1,ntype
         do l1=0,lmaxd
@@ -678,19 +748,40 @@ c     compute matrix elements of exchange field
 c****************************************************************
 #ifdef CPP_TOPO
       if(wann%l_perpmag)then
-         allocate( perpmag(nbnd,nbnd,fullnkpts) )
+         allocate( perpmag(nbnd,nbnd,fullnkpts),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 35',
+     &         calledby='wann_updown')
          perpmag=0.0
-         allocate( ubeffug(0:lmd,0:lmd,1:ntype) )
-         allocate( ubeffdg(0:lmd,0:lmd,1:ntype) )
-         allocate( dbeffug(0:lmd,0:lmd,1:ntype) )
-         allocate( dbeffdg(0:lmd,0:lmd,1:ntype) )
-         
-         allocate( ubeffulog(0:lmd,1:nlod,-llod:llod,1:ntype) )
-         allocate( dbeffulog(0:lmd,1:nlod,-llod:llod,1:ntype) )
-         allocate( ulobeffug(0:lmd,1:nlod,-llod:llod,1:ntype) )
-         allocate( ulobeffdg(0:lmd,1:nlod,-llod:llod,1:ntype) )
+         allocate( ubeffug(0:lmd,0:lmd,1:ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 36',
+     &         calledby='wann_updown')
+         allocate( ubeffdg(0:lmd,0:lmd,1:ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 37',
+     &         calledby='wann_updown')
+         allocate( dbeffug(0:lmd,0:lmd,1:ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 38',
+     &         calledby='wann_updown')
+         allocate( dbeffdg(0:lmd,0:lmd,1:ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 39',
+     &         calledby='wann_updown')
+         allocate( ubeffulog(0:lmd,1:nlod,-llod:llod,1:ntype),
+     & stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 40',
+     &         calledby='wann_updown')
+         allocate( dbeffulog(0:lmd,1:nlod,-llod:llod,1:ntype),
+     &         stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 41',
+     &         calledby='wann_updown')
+         allocate( ulobeffug(0:lmd,1:nlod,-llod:llod,1:ntype),
+     &          stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 42',
+     &         calledby='wann_updown')
+         allocate( ulobeffdg(0:lmd,1:nlod,-llod:llod,1:ntype),
+     &         stat=alerr  )
          allocate( ulobeffulog(1:nlod,-llod:llod,
-     &                         1:nlod,-llod:llod,1:ntype) )
+     &                     1:nlod,-llod:llod,1:ntype),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 43',
+     &         calledby='wann_updown')
          
          
          call wann_gabeffgagaunt(
@@ -724,7 +815,11 @@ c****************************************************************
 c     Obtain eigenvectors for the two spin channels.
 c****************************************************************
       
-      allocate ( eigg(neigd,2) )
+      allocate ( eigg(neigd,2),stat=alerr  )
+         if (alerr /= 0) call juDFT_error('alerr: 44',
+     &         calledby='wann_updown')
+      
+      
       call cpu_time(delta)
       do jspin=1,wannierspin
          if(jspin.eq.1)nrec=0
@@ -736,14 +831,17 @@ c****************************************************************
       zzMat(jspin)%l_real = l_real
       zzMat(jspin)%matsize1 = nbasfcn
       zzMat(jspin)%matsize2 = neigd
-      IF(l_real) THEN
-         IF(.NOT.ALLOCATED(zzMat(jspin)%data_r))
-     &    ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
-     +                                 zzMat(jspin)%matsize2))
+      IF(.NOT.ALLOCATED(zzMat(jspin)%data_r))
+     &   ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
+     +                      zzMat(jspin)%matsize2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 45',
+     &         calledby='wann_updown')
       ELSE
          IF(.NOT.ALLOCATED(zzMat(jspin)%data_c))
-     &     ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
-     +                                 zzMat(jspin)%matsize2))
+     &   ALLOCATE (zzMat(jspin)%data_c(zzMat(jspin)%matsize1,
+     +                      zzMat(jspin)%matsize2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 46',
+     &         calledby='wann_updown')
       END IF
 
         CALL lapw%init(input,noco,kpts,atoms,sym,
@@ -788,12 +886,16 @@ c...we work only within the energy window
          IF (zzMat(jspin)%l_real) THEN
 	       IF(.not.allocated(zmat(jspin)%data_r))
      +      ALLOCATE (zMat(jspin)%data_r(zMat(jspin)%matsize1,
-     +                                zMat(jspin)%matsize2))
+     +                                zMat(jspin)%matsize2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 47',
+     &         calledby='wann_updown')
             zMat(jspin)%data_r = 0.0
          ELSE
 	       IF(.not.allocated(zMat(jspin)%data_c))
      +      ALLOCATE (zMat(jspin)%data_c(zMat(jspin)%matsize1,
-     +                                zMat(jspin)%matsize2))
+     +                                zMat(jspin)%matsize2),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 48',
+     &         calledby='wann_updown')
             zMat(jspin)%data_c = CMPLX(0.0,0.0)
          END IF
       END DO
@@ -849,7 +951,7 @@ c***********************************************************
      >            oper,nop,mrot,nvd,nv,
      >            shiftkpt(:,ikpt),
      >            tau,
-     x            bkpt,k1(:,:),k2(:,:),k3(:,:),
+     x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
      x            zMat(jspin),nsfactor)
         else
           nsfactor=cmplx(1.0,0.0)
@@ -864,8 +966,12 @@ c...the overlap matrix Mmn which is computed for each k- and b-point
       noccbd = nslibd
 
       allocate ( acof(noccbd,0:lmd,natd,wannierspin),
-     &           bcof(noccbd,0:lmd,natd,wannierspin),
-     &           ccof(-llod:llod,noccbd,nlod,natd,wannierspin))
+     & bcof(noccbd,0:lmd,natd,wannierspin),
+     & ccof(-llod:llod,noccbd,nlod,natd,wannierspin),stat=alerr )
+         if (alerr /= 0) call juDFT_error('alerr: 49',
+     &         calledby='wann_updown')
+     
+     
 
       acof(:,:,:,:) = cmplx(0.,0.) ; bcof(:,:,:,:) = cmplx(0.,0.)
       ccof(:,:,:,:,:) = cmplx(0.,0.)
@@ -956,8 +1062,8 @@ c...for the lapws and local orbitals, summed by the basis functions
      >       invs,invs2,z1,delz,ngopr,ntypsy,jri,
      >       pos,taual,zatom,rmt,
      >       lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,ikpt,
-     >       nvd,nv(jspin),bkpt,omtil,
-     >       k1(:,jspin),k2(:,jspin),k3(:,jspin),
+     >       nvd,nv(jspin),lapw%bkpt,omtil,
+     >       lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
      >       nslibd,nbasfcn,neigd,zMat,
      >       dirfacs,
      >       surfcurr(:,:,:,ikpt))
@@ -989,9 +1095,9 @@ c...for the lapws and local orbitals, summed by the basis functions
 
          addnoco=0
          do 41 i = n_rank+1,nv(jspin),n_size
-           b1(1)=bkpt(1)+k1(i,jspin)
-           b1(2)=bkpt(2)+k2(i,jspin)
-           b1(3)=bkpt(3)+k3(i,jspin)
+           b1(1)=lapw%bkpt(1)+lapw%k1(i,jspin)
+           b1(2)=lapw%bkpt(2)+lapw%k2(i,jspin)
+           b1(3)=lapw%bkpt(3)+lapw%k3(i,jspin)
            b2(1)=b1(1)*bmat(1,1)+b1(2)*bmat(2,1)+b1(3)*bmat(3,1)
            b2(2)=b1(1)*bmat(1,2)+b1(2)*bmat(2,2)+b1(3)*bmat(3,2)
            b2(3)=b1(1)*bmat(1,3)+b1(2)*bmat(2,3)+b1(3)*bmat(3,3)
@@ -1003,9 +1109,9 @@ c            b3(1)=b1(1)*bmat(1,1)+b1(2)*bmat(2,1)+b1(3)*bmat(3,1)
 c            b3(2)=b1(1)*bmat(1,2)+b1(2)*bmat(2,2)+b1(3)*bmat(3,2)
 c            b3(3)=b1(1)*bmat(1,3)+b1(2)*bmat(2,3)+b1(3)*bmat(3,3)
 c-->     determine index and phase factor
-            i1 = k1(j,jspin) - k1(i,jspin)
-            i2 = k2(j,jspin) - k2(i,jspin)
-            i3 = k3(j,jspin) - k3(i,jspin)
+            i1 = lapw%k1(j,jspin) - lapw%k1(i,jspin)
+            i2 = lapw%k2(j,jspin) - lapw%k2(i,jspin)
+            i3 = lapw%k3(j,jspin) - lapw%k3(i,jspin)
             in = ig(i1,i2,i3)
             if (in.eq.0) goto 42
             phase   = rgphs(i1,i2,i3)
@@ -1076,10 +1182,10 @@ c$$$       enddo !i
       call wann_mmkb_int(
      >         cmplx(1.,0.),addnoco,addnoco2,
      >         nvd,k1d,k2d,k3d,
-     >         n3d,k1(:,jspin),k2(:,jspin),k3(:,jspin),
+     >         n3d,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
      >         nv(jspin),neigd,nbasfcn,zMat(1),nslibd,
-     >         k1(:,jspin),k2(:,jspin),k3(:,jspin),
-     >         nv(jspin),zMat(2),nslibd,
+      >     lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
+     >         lapw%nv(jspin),zMat(2),nslibd,
      >         nbnd,
      >         rgphs,ustep,ig,(/ 0,0,0 /),
      <         mmn(:,:,ikpt))
