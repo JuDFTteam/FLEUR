@@ -567,7 +567,7 @@ c##################################################################
 
       write (*,*) 'nwfs=',nwfs
 
-      allocate ( flo(ntypd,jmtd,2,nlod,2),alerr )
+      allocate ( flo(ntypd,jmtd,2,nlod,2),stat=alerr )
          if (alerr /= 0) call juDFT_error('alerr: 25',
      &         calledby='wann_updown')
 
@@ -831,7 +831,8 @@ c****************************************************************
       zzMat(jspin)%l_real = l_real
       zzMat(jspin)%matsize1 = nbasfcn
       zzMat(jspin)%matsize2 = neigd
-      IF(.NOT.ALLOCATED(zzMat(jspin)%data_r))
+      IF(l_real) THEN
+         IF(.NOT.ALLOCATED(zzMat(jspin)%data_r))
      &   ALLOCATE (zzMat(jspin)%data_r(zzMat(jspin)%matsize1,
      +                      zzMat(jspin)%matsize2),stat=alerr )
          if (alerr /= 0) call juDFT_error('alerr: 45',
@@ -948,7 +949,7 @@ c***********************************************************
      >            l_noco,l_soc,
      >            ntype,neq,nlotot,
      >            jspin,
-     >            oper,nop,mrot,nvd,nv,
+     >            oper,nop,mrot,nvd,lapw%nv,
      >            shiftkpt(:,ikpt),
      >            tau,
      x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
@@ -1181,10 +1182,10 @@ c$$$       enddo !i
       addnoco2 = addnoco      ! TODO: correct for addnoco2
       call wann_mmkb_int(
      >         cmplx(1.,0.),addnoco,addnoco2,
-     >         nvd,k1d,k2d,k3d,
+     > nvd,k1d,k2d,k3d,
      >         n3d,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
-     >         nv(jspin),neigd,nbasfcn,zMat(1),nslibd,
-      >     lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
+     > lapw%nv(jspin),neigd,nbasfcn,zMat(1),nslibd,
+     > lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
      >         lapw%nv(jspin),zMat(2),nslibd,
      >         nbnd,
      >         rgphs,ustep,ig,(/ 0,0,0 /),
@@ -1323,7 +1324,7 @@ c******************************************************
 
       deallocate(flo)
  
-      deallocate ( vr,vz,nv,k1,k2,k3 )
+      deallocate ( vr,vz )
       deallocate ( ff,gg )
       if (wann%l_bzsym)  deallocate(irreduc,mapkoper)
 
