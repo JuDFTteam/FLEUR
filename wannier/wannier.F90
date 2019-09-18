@@ -2230,7 +2230,7 @@ CONTAINS
                   l_p0,spin12(jspin)//'.socmmn0',&
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,.FALSE.,&
+                  mpi%irank,mpi%isize,.FALSE.,.TRUE.&
                   mmn,.FALSE.)
           ENDIF !noco%l_soc and l_mmn0  
 
@@ -2263,7 +2263,7 @@ CONTAINS
                   l_p0,spin12(jspin2)//'.amn',&
                   'Overlaps of the wavefunct. with the trial orbitals',&
                   nbnd,fullnkpts,nwfs,&
-                  mpi%irank,mpi%isize,.FALSE.,&
+                  mpi%irank,mpi%isize,.FALSE.,.FALSE.&
                   amn(:,:,:),wann%l_unformatted)
           ENDIF !wann%l_matrixamn
 
@@ -2286,7 +2286,7 @@ CONTAINS
                      mpi%mpi_comm,l_p0,spin12(jspin2)//'.umn',&
                      'transformation to first guess Wannier functions',&
                      nbnd,fullnkpts,nwfs,&
-                     mpi%irank,mpi%isize,.FALSE.,&
+                     mpi%irank,mpi%isize,.FALSE.,.TRUE.&
                      psiw,.FALSE.)
 #ifdef CPP_MPI
                 ALLOCATE( hwfr2(SIZE(hwfr,1),SIZE(hwfr,2)) )
@@ -2324,7 +2324,7 @@ CONTAINS
                   l_p0,spin12(jspin2)//'.mmn0',&
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,.FALSE.,&
+                  mpi%irank,mpi%isize,.FALSE.,.TRUE.&
                   mmn,.FALSE.)
           ENDIF !wann%l_mmn0  
 
