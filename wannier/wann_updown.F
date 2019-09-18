@@ -986,7 +986,7 @@ c...for the lapws and local orbitals, summed by the basis functions
 !      lapw%nv = nv
 !      lapw%nmat = nmat
 !      lapw%k1 = k1
-1      lapw%k2 = k2
+!      lapw%k2 = k2
 !      lapw%k3 = k3
       ! I think the other variables of lapw are not needed here.
 
