@@ -1148,7 +1148,7 @@ c***************************************************
 c------> interstitial contribution to updown.mmn0-matrix
        addnoco=0
        if(l_noco)then
-          addnoco=nv(1)+nlotot
+          addnoco=lapw%nv(1)+nlotot
        endif
 
 c$$$       do i = n_rank+1,nv(jspin),n_size
