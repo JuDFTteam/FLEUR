@@ -11,9 +11,11 @@ MODULE m_mt_grad_on_grid
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
-   PUBLIC :: mt_do_grad!, mt_do_div
+   PUBLIC :: mt_do_grad, mt_do_div
 CONTAINS   
-   SUBROUTINE mt_do_grad(jspins, n, atoms, sphhar, sym, den_mt, grad, ch)
+   !SUBROUTINE init_mt_grad_grid()
+   !END SUBROUTINE init_mt_grad_grid
+   SUBROUTINE mt_do_grad(xcpot, jspins, n, atoms, sphhar, sym, den_mt, grad, ch)
       !-----------------------------------------------------------------------------!
       !By use of the radial functions/spherical harmonics representation of a field !
       !component in the Muffin Tins:                                                !
@@ -29,6 +31,7 @@ CONTAINS
 
       IMPLICIT NONE
 
+      CLASS(t_xcpot), INTENT(IN)   :: xcpot
       INTEGER, INTENT(IN)          :: jspins, n
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
@@ -145,12 +148,60 @@ CONTAINS
    
    END SUBROUTINE mt_do_grad
    
-!   SUBROUTINE mt_do_div()
-!   Bvec goes in and out as potden
-!   mt_do_grad is calles for each component
-!   the resulting gradients are combined appropriately into a divergence potden
-!   the divergence goes out
-! 
-!   END SUBROUTINE mt_do_div
+   SUBROUTINE mt_do_div(xcpot,jspins,n,atoms,sphhar,sym,xcB,div)
+   !-----------------------------------------------------------------------------!
+   !By use of the cartesian components of a field, its radial/angular derivati-  !
+   !ves in the muffin tin at each spherical grid point and the corresponding an- !
+   !gles:                                                                        !
+   !                                                                             !
+   !Make the divergence of said field in real space and store it as a source     !
+   !density, again represented by mt-coefficients in a potden.                   !
+   !                                                                             !
+   !Code by A. Neukirchen, September 2019                                        !
+   !-----------------------------------------------------------------------------! 
+   USE m_mt_tofrom_grid
+
+   IMPLICIT NONE
+   
+   CLASS(t_xcpot), INTENT(IN)                  :: xcpot
+   INTEGER, INTENT(IN)                         :: jspins, n
+   TYPE(t_atoms), INTENT(IN)                   :: atoms
+   TYPE(t_sphhar), INTENT(IN)                  :: sphhar
+   TYPE(t_sym), INTENT(IN)                     :: sym
+   TYPE(t_potden), dimension(3), INTENT(INOUT) :: xcB
+   TYPE(t_potden), INTENT(INOUT)               :: div
+
+   TYPE(t_gradients)                           :: gradx, grady, gradz
+
+   REAL, ALLOCATABLE :: div_temp(:, :)
+   REAL :: r,th,ph
+   INTEGER :: jr, k, nsp, kt
+
+   ALLOCATE (gradx%gr(3,atoms%jri(n)*nsp,jspins),grady%gr(3,atoms%jri(n)*nsp,jspins),gradz%gr(3,atoms%jri(n)*nsp,jspins))
+   ALLOCATE (div_temp(atoms%jri(n)*nsp,jspins))
+
+   CALL mt_do_grad(xcpot, jspins, n, atoms, sphhar, sym, xcB(1)%mt(:,0:,n,:), gradx)
+   CALL mt_do_grad(xcpot, jspins, n, atoms, sphhar, sym, xcB(2)%mt(:,0:,n,:), grady)
+   CALL mt_do_grad(xcpot, jspins, n, atoms, sphhar, sym, xcB(3)%mt(:,0:,n,:), gradz)
+
+   kt = 0
+   DO jr = 1, atoms%jri(n)
+      r=atoms%rmsh(jr, n)
+      DO k = 1, nsp
+         th = thet(k)
+         ph = phi(k)
+         div_temp(kt+nsp,1) = SIN(th)*COS(ph)*gradx%gr(1,kt+nsp,jspins) + SIN(th)*SIN(ph)*grady%gr(1,kt+nsp,jspins) + COS(th)*gradz%gr(1,kt+nsp,jspins)&
+                             +COS(th)*COS(ph)*gradx%gr(2,kt+nsp,jspins) + COS(th)*SIN(ph)*grady%gr(2,kt+nsp,jspins) - SIN(th)*gradz%gr(2,kt+nsp,jspins)&
+                             -SIN(ph)*gradx%gr(3,kt+nsp,jspins)         + COS(ph)*grady%gr(3,kt+nsp,jspins)
+      ENDDO ! k
+   
+      kt = kt+nsp
+   ENDDO ! jr
+    
+   CALL mt_from_grid(atoms, sphhar, n, jspins, div_temp, div%mt(:,0:,n,:))
+   
+   DEALLOCATE (ylh, wt, rx, thet, phi, ylht, ylhtt, ylhf, ylhff, ylhtf)
+   
+   END SUBROUTINE mt_do_div
 
 END MODULE m_mt_grad_on_grid
