@@ -851,7 +851,7 @@ c            uHuold = cmplx(0.,0.)
 c...compute the l-dependent, k-independent radial MT- basis functions
 
          call radfun(
-     >    l,n,jspin4,enpara%el0(l,n,jspin2),vr(1,n,jspin3),atoms,
+     >    l,n,jspin4,enpara%el0(l,n,jspin3),vr(1,n,jspin3),atoms,
      <    ff(n,:,:,l,jspin4),gg(n,:,:,l,jspin4),usdus,
      <    nodeu,noded,wronk)
 
