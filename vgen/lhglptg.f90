@@ -8,7 +8,7 @@ CONTAINS
   SUBROUTINE lhglptg(&
        &                   sphhar,atoms,&
        &                   rx,nsp,xcpot,sym,&
-       &                   ylh,thet,ylht1,ylht2,ylhf1,ylhf2,ylhtf)
+       &                   ylh,thet,phi,ylht1,ylht2,ylhf1,ylhf2,ylhtf)
     !
     USE m_polangle
     USE m_ylm
@@ -27,6 +27,7 @@ CONTAINS
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: rx(:,:)!(3,dimension%nspd)
     REAL,    INTENT (OUT):: thet(:) !nspd
+    REAL,    INTENT (OUT):: phi(:) !nspd
     REAL,    INTENT (OUT):: ylh(:,0:,:)!(dimension%nspd,0:sphhar%nlhd,sphhar%ntypsd),thet(nspd)
     REAL,    INTENT (OUT):: ylht1(:,0:,:)!(dimension%nspd,0:sphhar%nlhd,sphhar%ntypsd)
     REAL,    INTENT (OUT):: ylht2(:,0:,:)!(dimension%nspd,0:sphhar%nlhd,sphhar%ntypsd)
@@ -35,7 +36,7 @@ CONTAINS
     REAL,    INTENT (OUT):: ylhf2(:,0:,:)!(dimension%nspd,0:sphhar%nlhd,sphhar%ntypsd)
     !     ..
     !     .. Local Scalars ..
-    REAL s,st1,st2,sf1,sf2,stf,phi
+    REAL s,st1,st2,sf1,sf2,stf
     INTEGER k,lh,mem,nd,lm,ll1
     !     ..
     !     .. Local Arrays ..
@@ -56,7 +57,7 @@ CONTAINS
                &                   ylm)
           CALL pol_angle(&
                &                       rx(1,k),rx(2,k),rx(3,k),&
-               &                       thet(k),phi)
+               &                       thet(k),phi(k))
 
           IF (xcpot%needs_grad()) THEN
              CALL dylm3(&

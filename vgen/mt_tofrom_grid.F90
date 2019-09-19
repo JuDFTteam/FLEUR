@@ -10,7 +10,7 @@ MODULE m_mt_tofrom_grid
    INTEGER, PARAMETER :: ndvgrd = 6 ! this should be consistent across GGA derivative routines
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
-   REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:)
+   REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
    PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, finish_mt_grid
 CONTAINS
    SUBROUTINE init_mt_grid(jspins, atoms, sphhar, xcpot, sym)
@@ -27,7 +27,7 @@ CONTAINS
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
       ! theta are zeros of the legendre polynomials
-      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()))
+      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()), phi(atoms%nsp()))
       CALL gaussp(atoms%lmaxd, rx, wt)
       ! generate the lattice harmonics on the angular mesh
       ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
@@ -39,7 +39,7 @@ CONTAINS
          ALLOCATE (ylhtf, MOLD=ylh)
 
          CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot, sym, &
-                      ylh, thet, ylht, ylhtt, ylhf, ylhff, ylhtf)
+                      ylh, thet, phi, ylht, ylhtt, ylhf, ylhff, ylhtf)
       ELSE
          CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
       END IF
@@ -185,7 +185,7 @@ CONTAINS
    END SUBROUTINE mt_from_grid
 
    SUBROUTINE finish_mt_grid()
-      DEALLOCATE (ylh, wt, rx, thet)
+      DEALLOCATE (ylh, wt, rx, thet, phi)
       IF (ALLOCATED(ylht)) DEALLOCATE (ylht, ylhtt, ylhf, ylhff, ylhtf)
    END SUBROUTINE finish_mt_grid
 

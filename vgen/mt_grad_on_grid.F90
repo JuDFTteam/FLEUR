@@ -10,7 +10,7 @@ MODULE m_mt_grad_on_grid
    INTEGER, PARAMETER :: ndvgrd = 6
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
-   REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:)
+   REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
    PUBLIC :: mt_do_grad!, mt_do_div
 CONTAINS   
    SUBROUTINE mt_do_grad(jspins, n, atoms, sphhar, sym, den_mt, grad, ch)
@@ -47,7 +47,7 @@ CONTAINS
       !Generate nspd points on a sherical shell with radius 1.0:
       !The angular mesh is equidistant in phi,
       !theta are the zeros of the legendre polynomials
-      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()))
+      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()), phi(atoms%nsp()))
       CALL gaussp(atoms%lmaxd, rx, wt)
       !Generate the lattice harmonics on the angular mesh:
       ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
@@ -61,7 +61,7 @@ CONTAINS
       
       !Calculate the required lattice harmonics and their derivatives:
       CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot, sym, &
-                      ylh, thet, ylht, ylhtt, ylhf, ylhff, ylhtf)
+                      ylh, thet, phi, ylht, ylhtt, ylhf, ylhff, ylhtf)
       
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
       nsp = atoms%nsp()
@@ -146,7 +146,11 @@ CONTAINS
    END SUBROUTINE mt_do_grad
    
 !   SUBROUTINE mt_do_div()
-!   
+!   Bvec goes in and out as potden
+!   mt_do_grad is calles for each component
+!   the resulting gradients are combined appropriately into a divergence potden
+!   the divergence goes out
+! 
 !   END SUBROUTINE mt_do_div
 
 END MODULE m_mt_grad_on_grid
