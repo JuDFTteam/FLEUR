@@ -832,18 +832,18 @@ c##################################################################
        do 30 l = 0,lmax(n)
 c...compute the l-dependent, k-independent radial MT- basis functions
          call radfun(
-     >              l,n,jspin4,enpara%el0(l,n,jspin3),vr(1,n,jspin3),atoms,
-     <              ff(n,:,:,l,jspin4),gg(n,:,:,l,jspin4),usdus,
-     <              nodeu,noded,wronk)
+     >      l,n,jspin4,enpara%el0(l,n,jspin3),vr(1,n,jspin3),atoms,
+     <      ff(n,:,:,l,jspin4),gg(n,:,:,l,jspin4),usdus,
+     <      nodeu,noded,wronk)
 
    30  continue
 c...and the local orbital radial functions
        do ilo = 1, nlo(n)
 
          call radflo(
-     >             atoms,n,jspin4,enpara%ello0(:,:,jspin3),vr(1,n,jspin3),
-     >             ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),mpi,
-     <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
+     >      atoms,n,jspin4,enpara%ello0(:,:,jspin3),vr(1,n,jspin3),
+     >      ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),mpi,
+     <      usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
 
        enddo
 c       na = na + neq(n)
