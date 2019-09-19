@@ -20,7 +20,7 @@ c*******************************************c
       CONTAINS
       SUBROUTINE wann_uHu(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
-     >      banddos,oneD,noco,cell,vTot,wann,
+     >      banddos,oneD,noco,cell,vTot,wann,enpara,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -85,6 +85,7 @@ c*******************************************c
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_wann),INTENT(INOUT)   :: wann
+      TYPE(t_enpara),INTENT(IN) :: enpara
 
 c     ..scalar arguments..
       character(len=20),intent(in) :: param_file
@@ -850,18 +851,18 @@ c            uHuold = cmplx(0.,0.)
 c...compute the l-dependent, k-independent radial MT- basis functions
 
          call radfun(
-     >              l,n,jspin4,epar(l,n,jspin3),vr(1,n,jspin3),atoms,
-     <              ff(n,:,:,l,jspin4),gg(n,:,:,l,jspin4),usdus,
-     <              nodeu,noded,wronk)
+     >    l,n,jspin4,enpara%el0(l,n,jspin2),vr(1,n,jspin3),atoms,
+     <    ff(n,:,:,l,jspin4),gg(n,:,:,l,jspin4),usdus,
+     <    nodeu,noded,wronk)
 
    30  continue
 c...and the local orbital radial functions
        do ilo = 1, nlo(n)
 
          call radflo(
-     >             atoms,n,jspin4,ello(:,:,jspin3),vr(1,n,jspin3),
-     >             ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),mpi,
-     <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
+     >      atoms,n,jspin4,enpara%ello0(:,:,jspin3),vr(1,n,jspin3),
+     >      ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),mpi,
+     <      usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
 
        enddo
 c       na = na + neq(n)
