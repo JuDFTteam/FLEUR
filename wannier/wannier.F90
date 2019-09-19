@@ -402,7 +402,7 @@ CONTAINS
        wannTemp = wann
        CALL wann_uHu(&
             DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
-            banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,&
+            banddos,oneD,noco,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,&
             input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,&
@@ -445,7 +445,7 @@ CONTAINS
        wannTemp = wann
        CALL wann_uHu_dmi(&
             DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
-            banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,&
+            banddos,oneD,noco,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,&
             input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,&
