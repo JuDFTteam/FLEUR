@@ -13,6 +13,29 @@ MODULE m_types_wannier
   ! type for wannier-functions
   !
   TYPE,EXTENDS(t_fleurinput_base):: t_wann
+    !New parameters not handled correctly yet...
+    LOGICAL :: l_socmatvec
+    LOGICAL :: l_socmatvecrs
+    LOGICAL :: l_mmn0_unf_to_spn_unf
+      LOGICAL :: l_mmn0_to_spn_unf
+      LOGICAL :: l_mmn0_to_spn
+      LOGICAL :: l_mmn0_to_spn2
+      LOGICAL :: l_mmn0_unf_to_spn
+      LOGICAL :: l_perpmag_unf_to_tor_unf
+      LOGICAL :: l_perpmag_to_tor_unf
+      LOGICAL :: l_perpmag_to_tor
+      LOGICAL :: l_perpmag_unf_to_tor
+      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf
+      LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf
+      LOGICAL :: l_hsomtxvec_to_lmpzsoc
+      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc
+      LOGICAL :: l_hsomtx_unf_to_hsoc_unf
+      LOGICAL :: l_hsomtx_to_hsoc_unf
+      LOGICAL :: l_hsomtx_to_hsoc
+      LOGICAL :: l_hsomtx_unf_to_hsoc
+      INTEGER :: perpmagl
+      LOGICAL :: l_perpmagatlres
+
      INTEGER :: wan90version =3
      INTEGER :: oc_num_orbs =0
      INTEGER, ALLOCATABLE :: oc_orbs(:)
@@ -133,7 +156,7 @@ MODULE m_types_wannier
      PROCEDURE :: read_xml => read_xml_wannier
      PROCEDURE :: mpi_bc => mpi_bc_wannier
   END TYPE t_wann
-  
+
   PUBLIC t_wann
 CONTAINS
 

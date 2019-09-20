@@ -95,7 +95,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    LOGICAL               :: l_error, perform_MetaGGA
 
    CALL regCharges%init(input,atoms)
-   CALL dos%init(input,atoms,dimension,kpts,vacuum)
+   CALL dos%init(dimension%neigd,input,atoms,kpts,vacuum)
    CALL moments%init(input,atoms)
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
@@ -197,10 +197,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          END IF
 
          IF (noco%l_soc) CALL orbMagMoms(input,atoms,noco,moments%clmom)
-         
+
       END IF
    END IF ! mpi%irank == 0
-   
+
    perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
                    .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
    if(perform_MetaGGA) then

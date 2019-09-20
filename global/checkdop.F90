@@ -24,7 +24,7 @@
           !     ..
           !     .. Scalar Arguments ..
           TYPE(t_dimension),INTENT(IN) :: dimension
-          type(t_sphhar),intent(in)    :: sphhar      
+          type(t_sphhar),intent(in)    :: sphhar
           TYPE(t_stars),INTENT(IN)     :: stars
           TYPE(t_atoms),INTENT(IN)     :: atoms
           TYPE(t_sym),INTENT(IN)       :: sym
@@ -52,7 +52,7 @@
           l_cdn = .FALSE. ! By default we assume that the input is a potential.
           IF (potden%potdenType.LE.0) CALL juDFT_error('unknown potden type', calledby='checkdop')
           IF (potden%potdenType.GT.1000) l_cdn = .TRUE. ! potdenTypes > 1000 are reserved for densities
-          
+
 
           !     ..
           !     ..
@@ -92,7 +92,7 @@
              DO  j = 1,np
                 IF (.NOT.oneD%odi%d1) THEN
                    CALL starf2(&
-                        &           sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1,j),sym%invtab,&
+                        &           sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1:3,j),sym%invtab,&
                         &           sf2)!keep
                    v2(j) = potden%vacz(1,ivac,jsp)
                    DO  k = 2,stars%ng2
@@ -190,7 +190,7 @@
                 ENDDO
                 help = help + potden%mt(atoms%jri(n),lh,n,jsp) * s
              ENDDO
-             v2(j) = help * ir2 
+             v2(j) = help * ir2
              IF (j.LE.8) THEN
                 !CALL cotra1(p(1,j),rcc,cell%bmat)
                 rcc=MATMUL(cell%bmat,p(:,j))/tpi_const

@@ -157,9 +157,9 @@ MODULE m_kp_perturbation
                const = fpi_const*(atoms%rmt(itype)**2)/2/sqrt(cell%omtil)
                DO ieq = 1, atoms%neq(itype)
                   iatom = iatom + 1
-                  IF ((atoms%invsat(iatom) == 0) .or. (atoms%invsat(iatom) == 1)) THEN
-                     IF (atoms%invsat(iatom) == 0) invsfct = 1
-                     IF (atoms%invsat(iatom) == 1) THEN
+                  IF ((sym%invsat(iatom) == 0) .or. (sym%invsat(iatom) == 1)) THEN
+                     IF (sym%invsat(iatom) == 0) invsfct = 1
+                     IF (sym%invsat(iatom) == 1) THEN
                         invsfct = 2
                         iatom1 = sym%invsatnr(iatom)
                      END IF

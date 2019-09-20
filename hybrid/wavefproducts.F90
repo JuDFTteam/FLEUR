@@ -94,7 +94,8 @@ CONTAINS
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! k+q can lie outside the first BZ, transfer
       ! it back into the 1. BZ
-      kqpt = modulo1(kqpthlp, kpts%nkpt3)
+      call judft_error("Missing functionality")
+      !kqpt = modulo1(kqpthlp, kpts%nkpt3)
       g_t(:) = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       nkqpt = 0
@@ -368,7 +369,8 @@ CONTAINS
 
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
-      kqpt = modulo1(kqpthlp, kpts%nkpt3)
+      call judft_error("Missing functionality")
+      !kqpt = modulo1(kqpthlp, kpts%nkpt3)
       g_t(:) = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       nkqpt = 0
@@ -1293,7 +1295,8 @@ CONTAINS
 
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
-      kqpt = modulo1(kqpthlp, kpts%nkpt3)
+      call judft_error("Missing functionality")
+      !kqpt = modulo1(kqpthlp, kpts%nkpt3)
       g_t(:) = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       nkqpt = 0
@@ -2305,7 +2308,8 @@ CONTAINS
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! k+q can lie outside the first BZ, transfer
       ! it back into the 1. BZ
-      kqpt = modulo1(kqpthlp, kpts%nkpt3)
+      call judft_error("Missing functionality")
+      !kqpt = modulo1(kqpthlp, kpts%nkpt3)
       g_t(:) = nint(kqpt - kqpthlp)
       ! determine number of kqpt
       nkqpt = 0

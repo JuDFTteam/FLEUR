@@ -1,4 +1,4 @@
-pd--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -30,7 +30,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_input),INTENT(INOUT) :: input
     TYPE(t_sym),INTENT(INOUT) :: sym
-    TYPE(t_stars),INTENT(INOUT) :: stars 
+    TYPE(t_stars),INTENT(INOUT) :: stars
     TYPE(t_atoms),INTENT(INOUT) :: atoms
     TYPE(t_sphhar),INTENT(INOUT) :: sphhar
     TYPE(t_dimension),INTENT(INOUT) :: dimension
@@ -38,7 +38,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(INOUT) :: kpts
     TYPE(t_oneD),INTENT(INOUT) :: oneD
     TYPE(t_hybrid),INTENT(INOUT) :: hybrid
- 
+
     TYPE(t_cell)     :: cell
 
     LOGICAL l_kpts,l_qpts,l_inpexist,ldum

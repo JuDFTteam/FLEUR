@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_trafo
-
+  use m_judft
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
@@ -76,7 +76,8 @@ CONTAINS
 
       rkpt = matmul(rrot, kpts%bk(:, nk))
       rkpthlp = rkpt
-      rkpt = modulo1(rkpt, kpts%nkpt3)
+      call judft_error("Missing functionality here")
+      !rkpt = modulo1(rkpt, kpts%nkpt3)
       g1 = nint(rkpt - rkpthlp)
 
 ! MT coefficients
@@ -223,7 +224,8 @@ CONTAINS
 
       rkpt = matmul(rrot, kpts%bk(:, nk))
       rkpthlp = rkpt
-      rkpt = modulo1(rkpt, kpts%nkpt3)
+      call judft_error("Missing functionality here")
+      !rkpt = modulo1(rkpt, kpts%nkpt3)
       g1 = nint(rkpt - rkpthlp)
 
       ! MT coefficients
@@ -369,7 +371,7 @@ CONTAINS
          nn = sum((/((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))/))
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            IF (atoms%invsat(ic) == 0) THEN
+            IF (sym%invsat(ic) == 0) THEN
 ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
 ! invsat(atom) = 0, invsatnr(atom) = 0
 ! but we need invsatnr(atom) = natom
@@ -481,7 +483,7 @@ CONTAINS
          nn = sum((/((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))/))
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            IF (atoms%invsat(ic) == 0) THEN
+            IF (sym%invsat(ic) == 0) THEN
                ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
                ! invsat(atom) = 0, invsatnr(atom) =0
                ! but we need invsatnr(atom) = natom
@@ -633,7 +635,8 @@ CONTAINS
 
       rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
       rkpthlp = rkpt
-      rkpt = modulo1(rkpt, kpts%nkpt3)
+      call judft_error("Missing functionality here")
+      !rkpt = modulo1(rkpt, kpts%nkpt3)
       g = nint(rkpthlp - rkpt)
 
 #ifdef CPP_DEBUG
@@ -838,7 +841,8 @@ CONTAINS
          rrot = transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = transpose(sym%mrot(:, :, iisym))
          rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-         rkpthlp = modulo1(rkpt, kpts%nkpt3)
+         call judft_error("Missing functionality here")
+         ! rkpthlp = modulo1(rkpt, kpts%nkpt3)
          g = nint(rkpt - rkpthlp)
 
          CALL d_wigner(invrot, cell%bmat, maxlcutm, dwgn(:, :, 1:maxlcutm))
@@ -854,7 +858,8 @@ CONTAINS
          rrot = -transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = -transpose(sym%mrot(:, :, iisym))
          rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-         rkpthlp = modulo1(rkpt, kpts%nkpt3)
+         call judft_error("Missing functionality here")
+         !rkpthlp = modulo1(rkpt, kpts%nkpt3)
          g = nint(rkpt - rkpthlp)
          matin1 = conjg(matin1)
 
@@ -1111,7 +1116,8 @@ CONTAINS
       END DO
 
       rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-      rkpthlp = modulo1(rkpt, kpts%nkpt3)
+      call judft_error("Missing functionality here")
+      !rkpthlp = modulo1(rkpt, kpts%nkpt3)
       g = nint(rkpt - rkpthlp)
 
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
@@ -1332,7 +1338,8 @@ CONTAINS
          rrot = transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = transpose(sym%mrot(:, :, iisym))
          rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-         rkpthlp = modulo1(rkpt, kpts%nkpt3)
+         call judft_error("Missing functionality here")
+         !rkpthlp = modulo1(rkpt, kpts%nkpt3)
          g = nint(rkpt - rkpthlp)
 
          CALL d_wigner(invrot, cell%bmat, maxlcutm, dwgn(:, :, 1:maxlcutm))
@@ -1348,7 +1355,8 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iisym))
          invrrot = -transpose(sym%mrot(:, :, iisym))
          rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-         rkpthlp = modulo1(rkpt, kpts%nkpt3)
+         call judft_error("Missing functionality here")
+         !rkpthlp = modulo1(rkpt, kpts%nkpt3)
          g = nint(rkpt - rkpthlp)
          vecin1 = conjg(vecin1)
 
@@ -1534,7 +1542,8 @@ CONTAINS
       END IF
 
       rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-      rkpthlp = modulo1(rkpt, kpts%nkpt3)
+      call judft_error("Missing functionality here")
+      !rkpthlp = modulo1(rkpt, kpts%nkpt3)
       g = nint(rkpt - rkpthlp)
 
       DO l = 0, maxlcutm
@@ -1716,7 +1725,8 @@ CONTAINS
       END IF
 
       rkpthlp = matmul(rrot, kpts%bk(:, ikpt0))
-      rkpt = modulo1(rkpthlp, kpts%nkpt3)
+      call judft_error("Missing functionality here")
+      !     rkpt = modulo1(rkpthlp, kpts%nkpt3)
       g = nint(rkpthlp - rkpt)
       !
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1

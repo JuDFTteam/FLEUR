@@ -113,13 +113,18 @@
 
             !
             !         calculate the ex.-cor. potential
+#ifdef CPP_LIBXC
             if(perform_MetaGGA .and. xcpot%kinED%set) then
-               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
+              CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
                    , v_x(:nsp*atoms%jri(n),:),grad, kinED_KS=xcpot%kinED%mt(:,:,loc_n))
             else
                CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
                   , v_x(:nsp*atoms%jri(n),:),grad)
             endif
+#else
+               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
+                  , v_x(:nsp*atoms%jri(n),:),grad)
+#endif
             IF (lda_atom(n)) THEN
                ! Use local part of pw91 for this atom
                CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
@@ -147,7 +152,7 @@
                !
                !           calculate the ex.-cor energy density
                !
-               
+#ifdef CPP_LIBXC
                IF(perform_MetaGGA .and. xcpot%kinED%set) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, &
@@ -156,7 +161,10 @@
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)
                ENDIF
-   
+#else
+               CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
+                       e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)
+#endif
                !write (*,*) "cut first ", cut_ratio, " number of points"
                !where(cut_mask) e_xc(:,1) = 0.0
 

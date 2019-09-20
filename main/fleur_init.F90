@@ -36,7 +36,7 @@ CONTAINS
     USE m_types_xcpot_inbuild
     USE m_mpi_bc_xcpot
 
-    
+
 #ifdef CPP_MPI
     USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
@@ -134,17 +134,17 @@ CONTAINS
          xcpot,forcetheo_data,kpts,enparaXML,mpi%mpi_comm)
 
 
-    CALL timestart("postprocessInput") 
+    CALL timestart("postprocessInput")
     CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
          oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,forcetheo_data,&
          noco,DIMENSION,enpara,enparaxml,sphhar,l_kpts)
-    CALL timestop("postprocessInput") 
+    CALL timestop("postprocessInput")
 
     IF (mpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
             cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
-            .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])           
+            .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
     END IF
 
 
@@ -166,7 +166,7 @@ CONTAINS
     END IF
 
     !Finalize the MPI setup
-    CALL setupMPI(kpts%nkpt,mpi)
+    CALL setupMPI(kpts%nkpt,dimension%neigd,mpi)
 
     !Collect some usage info
     CALL add_usage_data("A-Types",atoms%ntype)

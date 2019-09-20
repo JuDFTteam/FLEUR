@@ -51,7 +51,7 @@ CONTAINS
       ! local arrays
 
       REAL, ALLOCATABLE :: basprod(:)
-      INTEGER              :: degenerat(DIMENSION%neigd2 + 1, kpts%nkpt)
+      INTEGER              :: degenerat(merge(dimension%neigd*2,dimension%neigd,noco%l_soc) + 1, kpts%nkpt)
       LOGICAL              :: skip_kpt(kpts%nkpt)
       INTEGER              :: g(3)
 
@@ -63,7 +63,7 @@ CONTAINS
 
          ALLOCATE (zmat(kpts%nkptf), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation z_c'
-         ALLOCATE (eig_irr(DIMENSION%neigd2, kpts%nkpt), stat=ok)
+         ALLOCATE (eig_irr(merge(dimension%neigd*2,dimension%neigd,noco%l_soc), kpts%nkpt), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation eig_irr'
          ALLOCATE (hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%kveclo_eig'
@@ -75,7 +75,7 @@ CONTAINS
             nrec1 = kpts%nkpt*(jsp - 1) + nk
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-            CALL zMat(nk)%init(l_real, nbasfcn, dimension%neigd2)
+            CALL zMat(nk)%init(l_real, nbasfcn, merge(dimension%neigd*2,dimension%neigd,noco%l_soc))
             CALL read_eig(eig_id_hf, nk, jsp, zmat=zMat(nk))
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybrid%ne_eig(nk) = results%neig(nk, jsp)
@@ -83,7 +83,7 @@ CONTAINS
          !Allocate further space
          DO nk = kpts%nkpt + 1, kpts%nkptf
             nbasfcn = zMat(kpts%bkp(nk))%matsize1
-            CALL zMat(nk)%init(l_real, nbasfcn, dimension%neigd2)
+            CALL zMat(nk)%init(l_real, nbasfcn, merge(dimension%neigd*2,dimension%neigd,noco%l_soc))
          END DO
 
          !determine degenerate states at each k-point

@@ -50,7 +50,7 @@
 !     converges well with q0. (Should be the default.)
 
 MODULE m_exchange_valence_hf
-
+  use m_judft
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
    INTEGER, PARAMETER:: maxmem = 600
 
@@ -287,7 +287,7 @@ CONTAINS
                                                 hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, hybrid%maxindxm1, hybrid%gptm, &
                                                 hybrid%ngptm(ikpt0), hybrid%pgptm(:, ikpt0), hybrid%gptmd, hybrid%basm1, &
                                                 hybrid%nbasm(ikpt0), iband1, hybrid%nbands(nk), nsest, ibando, psize, indx_sest, &
-                                                atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
+                                                sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
                                                 cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
             END IF
 #endif
@@ -506,9 +506,10 @@ CONTAINS
       cdum = sqrt(expo)*rrad
       divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
       rrad = rrad**2
-      kv1 = cell%bmat(1, :)/kpts%nkpt3(1)
-      kv2 = cell%bmat(2, :)/kpts%nkpt3(2)
-      kv3 = cell%bmat(3, :)/kpts%nkpt3(3)
+      call judft_error("Missing functionality")
+      !kv1 = cell%bmat(1, :)/kpts%nkpt3(1)
+      !kv2 = cell%bmat(2, :)/kpts%nkpt3(2)
+      !kv3 = cell%bmat(3, :)/kpts%nkpt3(3)
       n = 1
       found = .true.
 

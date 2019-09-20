@@ -233,9 +233,9 @@ CONTAINS
          DO itype = 1, atoms%ntype
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
-               IF ((atoms%invsat(iatom) == 0) .OR. (atoms%invsat(iatom) == 1)) THEN
-                  IF (atoms%invsat(iatom) == 0) invsfct = 1
-                  IF (atoms%invsat(iatom) == 1) invsfct = 2
+               IF ((sym%invsat(iatom) == 0) .OR. (sym%invsat(iatom) == 1)) THEN
+                  IF (sym%invsat(iatom) == 0) invsfct = 1
+                  IF (sym%invsat(iatom) == 1) invsfct = 2
                   DO ilo = 1, atoms%nlo(itype)
                      l = atoms%llo(ilo, itype)
                      DO m = 1, invsfct*(2*l + 1)
@@ -264,9 +264,9 @@ CONTAINS
          DO itype = 1, atoms%ntype
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
-               IF ((atoms%invsat(iatom) == 0) .OR. (atoms%invsat(iatom) == 1)) THEN
-                  IF (atoms%invsat(iatom) == 0) invsfct = 1
-                  IF (atoms%invsat(iatom) == 1) invsfct = 2
+               IF ((sym%invsat(iatom) == 0) .OR. (sym%invsat(iatom) == 1)) THEN
+                  IF (sym%invsat(iatom) == 0) invsfct = 1
+                  IF (sym%invsat(iatom) == 1) invsfct = 2
 
                   DO ilo = 1, atoms%nlo(itype)
                      l = atoms%llo(ilo, itype)
@@ -325,10 +325,10 @@ CONTAINS
                   iatom = iatom + 1
                   ratom = map(isym, iatom)
 
-                  IF ((atoms%invsat(iatom) == 0) .OR. (atoms%invsat(iatom) == 1)) THEN
-                     IF (atoms%invsat(iatom) == 0) invsfct = 1
-                     IF (atoms%invsat(iatom) == 1) THEN
-                        IF (atoms%invsat(ratom) == 2) THEN
+                  IF ((sym%invsat(iatom) == 0) .OR. (sym%invsat(iatom) == 1)) THEN
+                     IF (sym%invsat(iatom) == 0) invsfct = 1
+                     IF (sym%invsat(iatom) == 1) THEN
+                        IF (sym%invsat(ratom) == 2) THEN
                            ratom = sym%invsatnr(ratom)
                         END IF
                         invsfct = 2
@@ -387,9 +387,9 @@ CONTAINS
          DO itype = 1, atoms%ntype
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
-               IF ((atoms%invsat(iatom) == 0) .OR. (atoms%invsat(iatom) == 1)) THEN
-                  IF (atoms%invsat(iatom) == 0) invsfct = 1
-                  IF (atoms%invsat(iatom) == 1) invsfct = 2
+               IF ((sym%invsat(iatom) == 0) .OR. (sym%invsat(iatom) == 1)) THEN
+                  IF (sym%invsat(iatom) == 0) invsfct = 1
+                  IF (sym%invsat(iatom) == 1) invsfct = 2
 
                   DO ilo = 1, atoms%nlo(itype)
                      l = atoms%llo(ilo, itype)
@@ -403,7 +403,7 @@ CONTAINS
                               iop = psym(isym)
                               ratom = map(isym, iatom)
                               IF (invsfct == 2) THEN
-                                 IF (atoms%invsat(ratom) == 2) THEN
+                                 IF (sym%invsat(ratom) == 2) THEN
                                     ratom = sym%invsatnr(ratom)
                                  END IF
                               END IF
@@ -448,9 +448,9 @@ CONTAINS
          DO itype = 1, atoms%ntype
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
-               IF ((atoms%invsat(iatom) == 0) .OR. (atoms%invsat(iatom) == 1)) THEN
-                  IF (atoms%invsat(iatom) == 0) invsfct = 1
-                  IF (atoms%invsat(iatom) == 1) invsfct = 2
+               IF ((sym%invsat(iatom) == 0) .OR. (sym%invsat(iatom) == 1)) THEN
+                  IF (sym%invsat(iatom) == 0) invsfct = 1
+                  IF (sym%invsat(iatom) == 1) invsfct = 2
 
                   DO ilo = 1, atoms%nlo(itype)
                      l = atoms%llo(ilo, itype)
@@ -461,9 +461,9 @@ CONTAINS
                         DO itype1 = 1, atoms%ntype
                            DO ieq1 = 1, atoms%neq(itype1)
                               iatom1 = iatom1 + 1
-                              IF ((atoms%invsat(iatom1) == 0) .OR. (atoms%invsat(iatom1) == 1)) THEN
-                                 IF (atoms%invsat(iatom1) == 0) invsfct1 = 1
-                                 IF (atoms%invsat(iatom1) == 1) invsfct1 = 2
+                              IF ((sym%invsat(iatom1) == 0) .OR. (sym%invsat(iatom1) == 1)) THEN
+                                 IF (sym%invsat(iatom1) == 0) invsfct1 = 1
+                                 IF (sym%invsat(iatom1) == 1) invsfct1 = 2
 
                                  DO ilo1 = 1, atoms%nlo(itype1)
                                     l1 = atoms%llo(ilo1, itype1)
@@ -478,12 +478,12 @@ CONTAINS
                                           ratom1 = map(isym, iatom1)
 
                                           IF (invsfct == 2) THEN
-                                             IF (atoms%invsat(ratom) == 2) THEN
+                                             IF (sym%invsat(ratom) == 2) THEN
                                                 ratom = sym%invsatnr(ratom)
                                              END IF
                                           END IF
                                           IF (invsfct1 == 2) THEN
-                                             IF (atoms%invsat(ratom1) == 2) THEN
+                                             IF (sym%invsat(ratom1) == 2) THEN
                                                 ratom1 = sym%invsatnr(ratom1)
                                              END IF
                                           END IF

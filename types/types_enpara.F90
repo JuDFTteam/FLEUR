@@ -46,9 +46,9 @@ CONTAINS
     INTEGER,INTENT(IN)           :: jspins
     LOGICAL,INTENT(IN)           :: film
     TYPE(t_enparaxml),OPTIONAL   :: enparaxml
- 
+
     LOGICAL :: l_enpara
-    
+
     ALLOCATE(this%el0(0:atoms%lmaxd,atoms%ntype,jspins),this%el1(0:atoms%lmaxd,atoms%ntype,jspins))
     ALLOCATE(this%ello0(atoms%nlod,atoms%ntype,jspins),this%ello1(atoms%nlod,atoms%ntype,jspins))
     this%el0=-1E99
@@ -83,8 +83,8 @@ CONTAINS
           this%evac0=enparaxml%evac0
        END IF
     endif
-    
-    
+
+
   END SUBROUTINE init_enpara
 
   !> This subroutine adjusts the energy parameters to the potential. In particular, it
@@ -111,6 +111,11 @@ CONTAINS
     REAL    ::  vbar,vz0,rj
     INTEGER ::  n,jsp,l,ilo,j,ivac,irank
     CHARACTER(LEN=20)    :: attributes(5)
+    REAL ::  e_lo(0:3,atoms%ntype)!Store info on branches to do IO after OMP
+    REAL ::  e_up(0:3,atoms%ntype)
+    REAL ::  elo_lo(atoms%nlod,atoms%ntype)
+    REAL ::  elo_up(atoms%nlod,atoms%ntype)
+
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr
@@ -123,20 +128,20 @@ CONTAINS
     l_done = .FALSE.;lo_done=.FALSE.
     DO jsp = 1,input%jspins
        !$OMP PARALLEL DO DEFAULT(none) &
-       !$OMP SHARED(atoms,enpara,jsp,l_done,irank,v,lo_done) &
+       !$OMP SHARED(atoms,enpara,jsp,l_done,v,lo_done,e_lo,e_up,elo_lo,elo_up) &
        !$OMP PRIVATE(n,l,ilo)
        !! First calculate energy paramter from quantum numbers if these are given...
        !! l_done stores the index of those energy parameter updated
        DO n = 1, atoms%ntype
           DO l = 0,3
-             IF( enpara%qn_el(l,n,jsp).ne.0)THEN 
+             IF( enpara%qn_el(l,n,jsp).ne.0)THEN
                 l_done(l,n,jsp) = .TRUE.
-                enpara%el0(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,irank,v%mt(:,0,n,jsp))
+                enpara%el0(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,v%mt(:,0,n,jsp),e_lo(l,n),e_up(l,n))
                 IF( l .EQ. 3 ) THEN
                    enpara%el0(4:,n,jsp) = enpara%el0(3,n,jsp)
                    l_done(4:,n,jsp) = .TRUE.
                 END IF
-             ELSE 
+             ELSE
                 l_done(l,n,jsp) = .FALSE.
              END IF
           ENDDO ! l
@@ -145,32 +150,32 @@ CONTAINS
              l = atoms%llo(ilo,n)
              IF( enpara%qn_ello(ilo,n,jsp).NE.0) THEN
                 lo_done(ilo,n,jsp) = .TRUE.
-                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,irank,v%mt(:,0,n,jsp))
+                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,v%mt(:,0,n,jsp),e_lo(l,n),e_up(l,n))
              ELSE
                 lo_done(ilo,n,jsp) = .FALSE.
              ENDIF
           ENDDO
        ENDDO ! n
        !$OMP END PARALLEL DO
-       IF (mpi%irank==0) THEN
-          WRITE(6,*)
-          WRITE(6,*) "Updated energy parameters for spin:",jsp
-          !Same loop for IO
-          DO n = 1, atoms%ntype
-             DO l = 0,3
-                IF( l_done(l,n,jsp)) CALL priv_write(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),e_lo(l,n),e_up(l,n),enpara%el0(l,n,jsp))
-             ENDDO ! l
-             ! Now for the lo's
-             DO ilo = 1, atoms%nlo(n)
-                l = atoms%llo(ilo,n)
-                IF( lo_done(ilo,n,jsp)) CALL priv_write(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),elo_lo(ilo,n),elo_up(ilo,n),enpara%ello0(ilo,n,jsp))
-             END DO
-          END DO
+       IF (irank==0) THEN
+         WRITE(6,*)
+         WRITE(6,*) "Updated energy parameters for spin:",jsp
+         !Same loop for IO
+         DO n = 1, atoms%ntype
+           DO l = 0,3
+             IF( l_done(l,n,jsp)) CALL priv_write(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),e_lo(l,n),e_up(l,n),enpara%el0(l,n,jsp))
+           ENDDO ! l
+           ! Now for the lo's
+           DO ilo = 1, atoms%nlo(n)
+             l = atoms%llo(ilo,n)
+             IF( lo_done(ilo,n,jsp)) CALL priv_write(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),elo_lo(ilo,n),elo_up(ilo,n),enpara%ello0(ilo,n,jsp))
+           END DO
+         END DO
        ENDIF
 
        !!   Now check for floating energy parameters (not for those with l_done=T)
        IF (enpara%floating) THEN
-          types_loop: DO n = 1,atoms%ntype 
+          types_loop: DO n = 1,atoms%ntype
              !
              !--->    determine energy parameters if lepr=1. the reference energy
              !--->    is the value of the l=0 potential at approximately rmt/4.
@@ -213,7 +218,7 @@ CONTAINS
              IF (enpara%floating) THEN
                 vz0 = v%vacz(1,ivac,jsp)
                 IF (irank.EQ.0) THEN
-                   WRITE ( 6,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0 
+                   WRITE ( 6,'('' spin'',i2,'', vacuum   '',i3,'' ='',f12.6)') jsp,ivac,vz0
                 ENDIF
              ENDIF
              enpara%evac(ivac,jsp) = enpara%evac0(ivac,jsp) + vz0
@@ -239,7 +244,7 @@ CONTAINS
 
 !    enpara%ready=(ALL(enpara%el0>-1E99).AND.ALL(enpara%ello0>-1E99))
     enpara%epara_min=MIN(MINVAL(enpara%el0),MINVAL(enpara%ello0))
-    
+
     IF (irank  == 0) CALL closeXMLElement('energyParameters')
   END SUBROUTINE update
 
@@ -272,9 +277,9 @@ CONTAINS
        skip_t = 0
        DO n = 1,atoms%ntype
           READ (40,FMT=8040,END=200) (enpara%el0(l,n,jsp),l=0,3),&
-               (enpara%lchange(l,n,jsp),l=0,3),enpara%skiplo(n,jsp)    
+               (enpara%lchange(l,n,jsp),l=0,3),enpara%skiplo(n,jsp)
           WRITE (6,FMT=8140) n,(enpara%el0(l,n,jsp),l=0,3),&
-               (enpara%lchange(l,n,jsp),l=0,3),enpara%skiplo(n,jsp)    
+               (enpara%lchange(l,n,jsp),l=0,3),enpara%skiplo(n,jsp)
           !
           !--->    energy parameters for the local orbitals
           !
@@ -286,7 +291,7 @@ CONTAINS
              WRITE (6,FMT=8138)         (enpara%llochg(lo,n,jsp),lo=1,atoms%nlo(n))
           ELSEIF (enpara%skiplo(n,jsp).GT.0) THEN
              WRITE (6,*) "for atom",n," no LO's were specified"
-             WRITE (6,*) 'but skiplo was set to',enpara%skiplo 
+             WRITE (6,*) 'but skiplo was set to',enpara%skiplo
              CALL juDFT_error("No LO's but skiplo",calledby ="enpara",&
                   hint="If no LO's are set skiplo must be 0 in enpara")
           END IF
@@ -310,9 +315,9 @@ CONTAINS
           READ (40,FMT=8050,END=200) enpara%evac0(1,jsp),enpara%lchg_v(1,jsp),enpara%evac0(2,jsp)
           WRITE (6,FMT=8150)         enpara%evac0(1,jsp),enpara%lchg_v(1,jsp),enpara%evac0(2,jsp)
        ENDIF
-      ! IF (atoms%nlod.GE.1) THEN               
+      ! IF (atoms%nlod.GE.1) THEN
       !    WRITE (6,FMT=8090) jsp,skip_t
-      !    WRITE (6,FMT=8091) 
+      !    WRITE (6,FMT=8091)
       ! END IF
     END DO
 
@@ -501,8 +506,8 @@ CONTAINS
                 enpara%el0(:,n,jsp)=enpara%el0(:,n,jsp)-vbar
              ENDIF
           END DO
-          
-          
+
+
           IF (input%film) THEN
              WRITE(6,*) 'Vacuum:'
              DO n=1,vacuum%nvac
@@ -531,7 +536,7 @@ CONTAINS
     CALL MPI_BCAST(enpara%el0,SIZE(enpara%el0),MPI_DOUBLE_PRECISION,0,mpi_comm,ierr)
     CALL MPI_BCAST(enpara%ello0,SIZE(enpara%ello0),MPI_DOUBLE_PRECISION,0,mpi_comm,ierr)
     CALL MPI_BCAST(enpara%evac,SIZE(enpara%evac),MPI_DOUBLE_PRECISION,0,mpi_comm,ierr)
-#endif    
+#endif
     RETURN
 777 FORMAT('Old:',f8.5,' new:',f8.5,' diff:',f8.5)
 
@@ -557,8 +562,7 @@ CONTAINS
        IF (input%film) enpara%evac1(:vacuum%nvac,ispin)=regCharges%pvac(:vacuum%nvac,ispin)/regCharges%svac(:vacuum%nvac,ispin)
     END DO
   END SUBROUTINE calcOutParams
-
-  SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
+SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
     !subroutine to write energy parameters to output
     USE m_xmlOutput
     IMPLICIT NONE
@@ -602,6 +606,5 @@ CONTAINS
          e_lo, ' to',e_up,' htr. ; e_l =',e
     END IF
   END SUBROUTINE priv_write
-
 
 END MODULE m_types_enpara

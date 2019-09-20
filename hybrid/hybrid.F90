@@ -88,7 +88,7 @@ CONTAINS
       END IF
 
       hybrid%l_subvxc = (hybrid%l_subvxc .AND. hybrid%l_addhf)
-      IF (.NOT. ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(DIMENSION%neigd2, kpts%nkpt, input%jspins))
+      IF (.NOT. ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(merge(dimension%neigd*2,dimension%neigd,noco%l_soc), kpts%nkpt, input%jspins))
 
       IF (hybrid%l_calhf) THEN
          iterHF = iterHF + 1

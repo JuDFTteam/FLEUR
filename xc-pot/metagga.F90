@@ -145,7 +145,7 @@ CONTAINS
       implicit none
       INTEGER, intent(in)      :: dim_idx
       TYPE (t_mat), intent(in) :: zMat
-      REAL, intent(in)         :: kpt(3) 
+      REAL, intent(in)         :: kpt(3)
       TYPE(t_lapw), intent(in) :: lapw
       TYPE(t_cell), intent(in) :: cell
       TYPE (t_mat)             :: zPrime
@@ -162,9 +162,9 @@ CONTAINS
 
          fac = k_plus_g(dim_idx)
          if(zPrime%l_real) then
-            zPrime%data_r(basis_idx,:) =            fac * zMat%data_r(basis_idx,:) 
+            zPrime%data_r(basis_idx,:) =            fac * zMat%data_r(basis_idx,:)
          else
-            zPrime%data_c(basis_idx,:) = ImagUnit * fac * zMat%data_c(basis_idx,:) 
+            zPrime%data_c(basis_idx,:) = ImagUnit * fac * zMat%data_c(basis_idx,:)
          endif
       enddo
    end subroutine set_zPrime
@@ -188,7 +188,7 @@ CONTAINS
       type(t_atoms), intent(in)      :: atoms
       type(t_noco), intent(in)       :: noco
       type(t_stars), intent(in)      :: stars
-   
+
       integer                        :: js, n, st
 
       do js = 1,size(vtot%mt,4)
@@ -224,17 +224,18 @@ CONTAINS
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
-      
+
       TYPE(t_potden)               :: vTot_corrected
-   
+#ifdef CPP_LIBXC
       call vTot_corrected%copyPotDen(vTot)
       call undo_vgen_finalize(vTot_corrected, atoms, noco, stars)
 
       call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot_corrected)
       call set_kinED_mt(mpi,   sphhar,    atoms, sym, core_den, val_den, &
                            xcpot, EnergyDen, input, vTot_corrected)
+#endif
    end subroutine set_kinED
-
+#ifdef CPP_LIBXC
    subroutine set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot)
       use m_types
       use m_pw_tofrom_grid
@@ -250,7 +251,7 @@ CONTAINS
       !local arrays
       REAL, ALLOCATABLE            :: den_rs(:,:), ED_rs(:,:), vTot_rs(:,:)
       TYPE(t_gradients)            :: tmp_grad
-      
+
       CALL init_pw_grid(xcpot,stars,sym,cell)
 
       CALL pw_to_grid(xcpot, input%jspins, noco%l_noco, stars, &
@@ -261,7 +262,7 @@ CONTAINS
                       cell,  den%pw,       tmp_grad,    den_rs)
 
       CALL finish_pw_grid()
-      
+
       call calc_kinEnergyDen_pw(ED_rs, vTot_rs, den_rs, xcpot%kinED%is)
       !xcpot%kinED%is  = ED_RS - vTot_RS * den_RS
       xcpot%kinED%set = .True.
@@ -312,7 +313,7 @@ CONTAINS
                              lbound(vTot%mt, dim=2):ubound(vTot%mt, dim=2),&
                              lbound(vTot%mt, dim=4):ubound(vTot%mt, dim=4)))
          endif
-         
+
          do jr=1,atoms%jri(n)
             vTot_mt(jr,0:,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
          enddo
@@ -320,7 +321,7 @@ CONTAINS
                          n,     tmp_grad,     ED_rs)
          CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, vTot_mt(:,0:,:), &
                          n,     tmp_grad,     vTot_rs)
-         
+
          tmp_sphhar%nlhd = sphhar%nlhd
          tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
 
@@ -330,7 +331,7 @@ CONTAINS
                          core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
          CALL mt_to_grid(xcpot, input%jspins, atoms, sphhar, &
                          val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
-         
+
          call calc_kinEnergyDen_mt(ED_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
                                    xcpot%kinED%mt(:,:,loc_n))
          !xcpot%kinED%mt(:,:,loc_n) = ED_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
@@ -338,4 +339,5 @@ CONTAINS
       xcpot%kinED%set = .True.
       CALL finish_mt_grid()
    end subroutine set_kinED_mt
+#endif
 END MODULE m_metagga
