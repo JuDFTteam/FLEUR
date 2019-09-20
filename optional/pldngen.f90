@@ -25,7 +25,7 @@ MODULE m_pldngen
 CONTAINS
 
 SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
-                   cell,input,noco,oneD,sliceplot)
+                   cell,input,noco,oneD,sliceplot,cden,mxden,myden,mzden)
 
           !******** ABBREVIATIONS ***********************************************
           !     ifft3    : size of the 3d real space mesh
@@ -63,6 +63,7 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
    TYPE(t_oneD),INTENT(IN)    :: oneD
    TYPE(t_noco),INTENT(IN)   :: noco
    TYPE(t_sliceplot),INTENT(IN):: sliceplot
+   TYPE(t_potden),INTENT(OUT) :: cden, mxden, myden, mzden
 
    ! Local type instances
    TYPE(t_input)  :: inp
@@ -307,6 +308,11 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
    inp%jspins=1
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,inp%jspins,POTDEN_TYPE_DEN)
+   CALL cden%init(stars,atoms,sphhar,vacuum,noco,inp%jspins,POTDEN_TYPE_DEN)
+   CALL mxden%init(stars,atoms,sphhar,vacuum,noco,inp%jspins,POTDEN_TYPE_DEN)
+   CALL myden%init(stars,atoms,sphhar,vacuum,noco,inp%jspins,POTDEN_TYPE_DEN)
+   CALL mzden%init(stars,atoms,sphhar,vacuum,noco,inp%jspins,POTDEN_TYPE_DEN)
+
    den%iter = iter
    den%mt(:,0:,1:,1:1) = rho(:,0:,1:,1:1)
    den%pw(1:,1:1) = qpw(1:,1:1)
@@ -319,32 +325,36 @@ SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
       den%vacxy(:,:,:,3) = cdomvxy
    END IF
 
-   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                     0,-1.0,0.0,.FALSE.,den)
+   !CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+   !                  0,-1.0,0.0,.FALSE.,den)
+   cden=den
 
    !---> save mx to file mdnx
    den%mt(:,0:,1:,1) = rho(:,0:,1:,2)
    den%pw(1:,1) = qpw(1:,2)
    den%vacz(1:,1:,1) = rht(1:,1:,2)
    den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
-   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                     0,-1.0,0.0,.FALSE.,den,'mdnx')
+   !CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+   !                  0,-1.0,0.0,.FALSE.,den,'mdnx')
+   mxden=den
 
    !---> save my to file mdny
    den%mt(:,0:,1:,1) = rho(:,0:,1:,3)
    den%pw(1:,1) = qpw(1:,3)
    den%vacz(1:,1:,1) = rht(1:,1:,3)
    den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
-   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                     0,-1.0,0.0,.FALSE.,den,'mdny')
-
+   !CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+   !                  0,-1.0,0.0,.FALSE.,den,'mdny')
+   myden=den
+   
    !---> save mz to file mdnz
    den%mt(:,0:,1:,1) = rho(:,0:,1:,4)
    den%pw(1:,1) = qpw(1:,4)
    den%vacz(1:,1:,1) = rht(1:,1:,4)
    den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
-   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                     0,-1.0,0.0,.FALSE.,den,'mdnz')
+   !CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+   !                  0,-1.0,0.0,.FALSE.,den,'mdnz')
+   mzden=den
 
    DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,ris,fftwork,rvacxy,rho,rht)
 

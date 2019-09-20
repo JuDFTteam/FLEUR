@@ -22,12 +22,17 @@ use m_types
 !  end of the module
 !                     Juelich, 21.1.06 DW
 !
-!     +++++++++++++++++++++++++++++++++++++++++++++++++
+!   Killed I/O. No more HDFs generated, but potden-types directly given
+!   as input.
+!
+!                     Juelich, 20.09.19 AN 
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++
 
 CONTAINS
 
 SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                   input,sym,cell,sliceplot,noco,cdnfname)
+                   input,sym,cell,sliceplot,noco,cden,mxden,myden,mzden)
 
    USE m_outcdn
    USE m_loddop
@@ -48,7 +53,8 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    TYPE(t_cell),                INTENT(IN)    :: cell
    TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
    TYPE(t_noco),                INTENT(IN)    :: noco
-   CHARACTER(len=10), OPTIONAL, INTENT(IN)    :: cdnfname
+   TYPE(t_potden), INTENT(IN)                 :: cden
+   TYPE(t_potden), OPTIONAL, INTENT(IN)       :: mxden, myden, mzden
 
 !  .. Local Scalars ..
    REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
@@ -101,7 +107,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    nfile = 120
    numInFiles = 0
    numOutFiles = 0
-   IF(PRESENT(cdnfname)) THEN
+   IF(.NOT.PRESENT(mxden)) THEN
       numInFiles = 1
       numOutFiles = 1
    ELSE
@@ -115,8 +121,8 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    END IF
    ALLOCATE(den(numInFiles))
    ALLOCATE(cdnFilenames(numInFiles))
-   IF(PRESENT(cdnfname)) THEN
-      cdnFilenames(1) = cdnfname
+   IF(.NOT.PRESENT(mxden)) THEN
+      cdnFilenames(1) = 'cdn'
    ELSE
       IF(noco%l_noco) THEN
         cdnFilenames(1)='cdn'
@@ -133,19 +139,29 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    END IF
 
    ! Read in charge/potential
-   DO i = 1, numInFiles
-      CALL den(i)%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-      IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
-         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
-      ELSE IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn') THEN
-         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
-                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
-      ELSE
-         CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
-                          CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i),TRIM(ADJUSTL(cdnFilenames(i))))
-      END IF
+   !DO i = 1, numInFiles
+   !   CALL den(i)%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+   !   IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
+   !      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+   !                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
+   !      
+   !   ELSE IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn') THEN
+   !      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
+   !                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
+   !   ELSE
+   !      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
+   !                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i),TRIM(ADJUSTL(cdnFilenames(i))))
+   !   END IF
+   IF (numInFiles==1) THEN
+      den(1)=cden
+   ELSE 
+      den(1)=cden
+      den(2)=mxden
+      den(3)=myden
+      den(4)=mzden
+   END IF
 
+   DO i = 1, numInFiles
       ! Subtract core charge if input%score is set
       IF ((.NOT.noco%l_noco).AND.(input%score)) THEN
          OPEN (17,file='cdnc',form='unformatted',status='old')
