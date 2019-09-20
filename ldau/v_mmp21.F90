@@ -11,7 +11,7 @@ MODULE m_vmmp21
 !     Part of the LDA+U package                   G.B., Oct. 2000
 !     ************************************************************
       CONTAINS
-      SUBROUTINE v_mmp_21(u_in,n_u,irank,n_mmp21,u,f0,f2,v_mmp21,e_off)
+      SUBROUTINE v_mmp_21(u_in,n_u,n_mmp21,u,f0,f2,v_mmp21,e_off)
 
       USE m_types
       USE m_constants
@@ -19,14 +19,14 @@ MODULE m_vmmp21
       IMPLICIT NONE
 !
 ! ..  Arguments ..
-      INTEGER, INTENT (IN) :: n_u,irank
+      INTEGER, INTENT (IN) :: n_u
       REAL,    INTENT (IN) :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
                                 -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
       REAL,    INTENT (IN) :: f0(n_u),f2(n_u)
       REAL,    INTENT (OUT):: e_off 
       TYPE (t_utype), INTENT (IN) :: u_in(n_u)
 
-      COMPLEX           :: n_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
+      COMPLEX, INTENT(IN):: n_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
       COMPLEX,INTENT(OUT)::v_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
 !
 ! ..  Local Variables ..
@@ -98,12 +98,6 @@ MODULE m_vmmp21
           ENDDO
         ENDDO
         e_off = e_off + e_dc
-
-        IF (irank==0) THEN
-          WRITE (6,'(a6,i4)') 'atom: ',itype
-          WRITE (6,'(a6,f12.6)') 'e_off:',e_off
-          WRITE (6,'(14f10.5)') v_mmp21(:,:,i_u)
-        ENDIF
 
       ENDDO ! loop over atoms
 

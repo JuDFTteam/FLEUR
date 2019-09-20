@@ -34,7 +34,7 @@ CONTAINS
     INTEGER:: jsp
 
     IF (atoms%n_u>0) THEN
-       CALL u_setup(sym,atoms,sphhar,input,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
+       CALL u_setup(sym,atoms,sphhar,input,noco,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
     IF(atoms%n_hia>0) THEN
       CALL hubbard1_setup(atoms,hub1,sym,mpi,noco,input,ud,inDen,vTot,gOnsite,results)

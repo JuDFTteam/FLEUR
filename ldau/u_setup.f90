@@ -17,11 +17,12 @@ MODULE m_usetup
   !     Extension to multiple U per atom type  G.M. 2017              |
   !-------------------------------------------------------------------+
 CONTAINS
-  SUBROUTINE u_setup(sym,atoms,sphhar, input,el,inDen,pot,mpi,results)
+  SUBROUTINE u_setup(sym,atoms,sphhar, input,noco,el,inDen,pot,mpi,results)
     USE m_umtx
     USE m_uj2f
     USE m_nmat_rot
     USE m_vmmp
+    USE m_vmmp21
     USE m_types
     USE m_constants
     USE m_cdn_io
@@ -32,6 +33,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(IN)        :: atoms
+    TYPE(t_noco), INTENT(IN)        :: noco
     TYPE(t_potden),INTENT(IN)       :: inDen
     TYPE(t_potden),INTENT(INOUT)    :: pot
 
@@ -39,7 +41,7 @@ CONTAINS
     ! ... Local Variables ...
     INTEGER itype,ispin,j,k,l,jspin,urec,i_u
     INTEGER noded,nodeu,ios
-    REAL wronk
+    REAL wronk,e_off
     CHARACTER*8 l_type*2,l_form*9
     REAL f(atoms%jmtd,2),g(atoms%jmtd,2),zero(atoms%n_u)
     REAL f0(atoms%n_u,input%jspins),f2(atoms%n_u,input%jspins),f4(atoms%n_u,input%jspins),f6(atoms%n_u,input%jspins)
@@ -74,8 +76,14 @@ CONTAINS
        ! calculate potential matrix and total energy correction
        CALL v_mmp(sym,atoms,atoms%lda_u(:atoms%n_u),atoms%n_u,input%jspins,.TRUE.,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
 
+       !spin off-diagonal elements (no rotation yet)
+       IF(noco%l_mperp) THEN
+          CALL v_mmp_21(atoms%lda_u(1:atoms%n_u),atoms%n_u,inDen%mmpMat(:,:,1:atoms%n_u,3),u,f0,f2,pot%mmpMat(:,:,1:atoms%n_u,3),e_off)
+          results%e_ldau = results%e_ldau + e_off
+       ENDIF
+
        IF (mpi%irank.EQ.0) THEN
-          DO jspin = 1,input%jspins
+          DO jspin = 1,MERGE(3,input%jspins,noco%l_mperp)
              WRITE (6,'(a7,i3)') 'spin #',jspin
              DO i_u = 1, atoms%n_u
                 itype = atoms%lda_u(i_u)%atomType
@@ -83,7 +91,11 @@ CONTAINS
                 WRITE (l_type,'(i2)') 2*(2*l+1)
                 l_form = '('//l_type//'f12.7)'
                 WRITE (6,'(a20,i3)') 'n-matrix for atom # ',itype
-                WRITE (6,l_form) ((n_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                IF(jspin < 3) THEN
+                  WRITE (6,l_form) ((n_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                ELSE 
+                  WRITE (6,l_form) ((inDen%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
+                ENDIF
                 WRITE (6,'(a20,i3)') 'V-matrix for atom # ',itype
                 IF (atoms%lda_u(i_u)%l_amf) THEN
                    WRITE (6,*) 'using the around-mean-field limit '
@@ -93,7 +105,7 @@ CONTAINS
                 WRITE (6,l_form) ((pot%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
              END DO
           END DO
-          WRITE (6,*) results%e_ldau
+          WRITE (6,*) results%e_ldau, e_off
        ENDIF
        DEALLOCATE (u,n_mmp)
     ELSE
