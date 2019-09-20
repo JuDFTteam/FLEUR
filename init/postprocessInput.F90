@@ -161,7 +161,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      IF (atoms%n_u.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
-        IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
+        !IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
      END IF
 
      !  Check lda+hia stuff
@@ -192,19 +192,23 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         IF (noco%l_soc.AND..NOT.noco%l_spav) CALL juDFT_warn("LDA+Hubbard1 with SOC and non averaged SOC potential not tested",calledby ="postprocessInput")
      END IF
      !greens function
-     IF(input%gf_elup.GT.1.0) CALL juDFT_warn("Cutoff for the Greens function calculation should never be higher"//&
-                                              "than 1htr above efermi",calledby="postprocessInput")
-     IF(input%gf_elup.LT.input%gf_ellow) CALL juDFT_error("Not a valid energy grid elup<ellow",calledby="postprocessInput")
-     !Maybe add check for dense enough grid
-     IF(ANY(atoms%gfelem(:atoms%n_gf)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",calledby="postprocessInput")
-     IF(ANY(atoms%gfelem(:atoms%n_gf)%l.GT.3)) CALL juDFT_warn("Green's function only implemented for l<3",calledby="postprocessInput")
-     IF(input%l_gfmperp.AND..NOT.(noco%l_noco.AND.noco%l_mperp)) CALL juDFT_error("Off-diagonal elements only in noco calculations with noco%l_mperp=T",calledby="postprocessInput")
+     IF(atoms%n_gf.GT.0) THEN
+       IF(input%gf_mode.EQ.0) CALL juDFT_error("You have specified no energy contour in the inp.xml file",&
+                                                hint="Please add the greensFunction element to the calulationSetup",calledby="postprocessInput")
+       IF(input%gf_elup.GT.1.0) CALL juDFT_warn("Cutoff for the Greens function calculation should never be higher"//&
+                                                "than 1htr above efermi",calledby="postprocessInput")
+       IF(input%gf_elup.LT.input%gf_ellow) CALL juDFT_error("Not a valid energy grid elup<ellow",calledby="postprocessInput")
+       !Maybe add check for dense enough grid
+       IF(ANY(atoms%gfelem(:atoms%n_gf)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",calledby="postprocessInput")
+       IF(ANY(atoms%gfelem(:atoms%n_gf)%l.GT.3)) CALL juDFT_warn("Green's function only implemented for l<3",calledby="postprocessInput")
+       IF(input%l_gfmperp.AND..NOT.(noco%l_noco.AND.noco%l_mperp)) CALL juDFT_error("Off-diagonal GF elements only in noco calculations with noco%l_mperp=T",calledby="postprocessInput")
 
-     DO i = 1, atoms%n_j0
-        IF(atoms%j0(i)%l_min.GT.atoms%j0(i)%l_max) CALL juDFT_error("Not a valid configuration for J0-calculation l_min>l_max", &
-                                                                  calledby="postprocessInput")
-        IF(atoms%j0(i)%l_eDependence.AND.input%gf_mode.NE.3) CALL juDFT_error("Energy dependence of J0 only available with contourDOS",calledby="postprocessInput")
-     ENDDO
+       DO i = 1, atoms%n_j0
+          IF(atoms%j0(i)%l_min.GT.atoms%j0(i)%l_max) CALL juDFT_error("Not a valid configuration for J0-calculation l_min>l_max", &
+                                                                    calledby="postprocessInput")
+          IF(atoms%j0(i)%l_eDependence.AND.input%gf_mode.NE.3) CALL juDFT_error("Energy dependence of J0 only available with contourDOS",calledby="postprocessInput")
+       ENDDO
+     ENDIF
 
      ! Check DOS related stuff (from inped)
 
