@@ -57,7 +57,7 @@ CONTAINS
 
       TYPE(t_potden)                    :: workden,denRot
 
-      COMPLEX :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u+atoms%n_hia),input%jspins)
+      COMPLEX :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,noco%l_mperp))
 
       if (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
