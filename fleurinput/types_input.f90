@@ -24,8 +24,8 @@ MODULE m_types_input
      LOGICAL :: l_f =.FALSE.
      LOGICAL :: eonly =.FALSE.
      LOGICAL :: ctail =.TRUE.
-     INTEGER :: coretail_lmax =0 
-     INTEGER :: itmax =9 
+     INTEGER :: coretail_lmax =0
+     INTEGER :: itmax =9
      REAL    :: minDistance=1.0e-5
      INTEGER :: maxiter=99
      INTEGER :: imix=7
@@ -36,7 +36,7 @@ MODULE m_types_input
      REAL    :: epsdisp =0.00001!< minimal displacement. If all displacements are < epsdisp stop
      REAL    :: epsforce =0.00001!< minimal force. If all forces <epsforce stop
      REAL    :: force_converged=0.00001
-     INTEGER :: forcemix=3
+     INTEGER :: forcemix=2
      REAL    :: delgau =0.001  !TODO = tkb?
      REAL    :: alpha=0.05
      REAL    :: preconditioning_param=0.0
@@ -77,7 +77,7 @@ MODULE m_types_input
      PROCEDURE :: init
      PROCEDURE ::mpi_bc =>mpi_bc_input
   END TYPE t_input
-  
+
 CONTAINS
   subroutine mpi_bc_input(this,mpi_comm,irank)
     use m_mpi_bc_tool
@@ -207,7 +207,7 @@ CONTAINS
     END SELECT
 
     this%alpha = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
-    this%preconditioning_param = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@preconditioning_param'))
+    this%preconditioning_param = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@precondParam'))
     this%spinf = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
     ! Get parameters for core electrons
     this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
@@ -273,9 +273,19 @@ CONTAINS
        this%forcealpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
        this%epsdisp = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
        this%epsforce = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
-       this%forcemix = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix'))
        this%force_converged = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@force_converged'))
        this%qfix = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
+       valueString=xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix')
+       select case(trim(valuestring))
+       case ("straight")
+         this%forcemix = 0
+       case ("CG")
+         this%forcemix = 1
+       case ("BFGS")
+         this%forcemix = 2
+       case default
+         call juDFT_error("Illegal mixing scheme for force in inp.xml:"//trim(valuestring))
+       end select
     END IF
     ! Read in optional general LDA+U parameters
     xPathA = '/fleurInput/calculationSetup/ldaU'
@@ -354,4 +364,3 @@ CONTAINS
     class(t_input),intent(in)::input
   end subroutine init
 END MODULE m_types_input
-  

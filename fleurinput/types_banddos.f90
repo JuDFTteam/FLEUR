@@ -11,7 +11,7 @@ MODULE m_types_banddos
   PRIVATE
   PUBLIC:: t_banddos
   TYPE,EXTENDS(t_fleurinput_base):: t_banddos
-     LOGICAL :: dos =.FALSE. 
+     LOGICAL :: dos =.FALSE.
      LOGICAL :: band =.FALSE.
      LOGICAL :: l_mcd =.FALSE.
      LOGICAL :: l_orb =.FALSE.
@@ -24,9 +24,9 @@ MODULE m_types_banddos
      REAL    :: e_mcd_lo =-10.0
      REAL    :: e_mcd_up= 0.0
      LOGICAL :: unfoldband =.FALSE.
-     INTEGER :: s_cell_x
-     INTEGER :: s_cell_y
-     INTEGER :: s_cell_z
+     INTEGER :: s_cell_x=1
+     INTEGER :: s_cell_y=1
+     INTEGER :: s_cell_z=1
      REAL    :: alpha,beta,gamma !For orbital decomp. (was orbcomprot)
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_banddos
@@ -69,19 +69,19 @@ CONTAINS
     USE m_types_xml
     CLASS(t_banddos),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(IN)::xml
-    
+
     INTEGER::numberNodes
-    this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band')) 
+    this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))
     this%dos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@dos'))
     this%vacdos = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@vacdos'))
     this%l_mcd = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@mcd'))
-    
+
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/densityOfStates')
-    
+
     IF ((this%dos).AND.(numberNodes.EQ.0)) THEN
        CALL juDFT_error("dos is true but densityOfStates parameters are not set!")
     END IF
-    
+
     IF (numberNodes.EQ.1) THEN
        this%ndir = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@ndir'))
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/densityOfStates/@minEnergy'))
@@ -93,29 +93,28 @@ CONTAINS
        this%ndir = -4
        WRITE(*,*) 'band="T" --> Overriding "dos" and "ndir"!'
     ENDIF
-    
+
     ! Read in optional magnetic circular dichroism parameters
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/magneticCircularDichroism')
-    
+
     IF ((this%l_mcd).AND.(numberNodes.EQ.0)) THEN
        CALL juDFT_error("mcd is true but magneticCircularDichroism parameters are not set!", calledby = "r_inpXML")
     END IF
-    
+
     IF (numberNodes.EQ.1) THEN
        this%e_mcd_lo = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyLo'))
        this%e_mcd_up = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/magneticCircularDichroism/@energyUp'))
     END IF
-    
+
     ! Read in optional parameter for unfolding bandstructure of supercell
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/unfoldingBand')
-    
+
     IF (numberNodes.EQ.1) THEN
-       this%unfoldband = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@unfoldband'))
+       this%unfoldband = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@unfoldBand'))
        this%s_cell_x = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellX'))
        this%s_cell_y = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellY'))
        this%s_cell_z = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/unfoldingBand/@supercellZ'))
     END IF
   END SUBROUTINE read_xml_banddos
-  
-END MODULE m_types_banddos
 
+END MODULE m_types_banddos

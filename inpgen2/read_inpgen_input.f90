@@ -25,7 +25,7 @@ CONTAINS
     USE m_types_cell
     USE m_types_hybrid
     USE m_process_lattice_namelist
-    
+
     use m_inv3
     REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:)
     CHARACTER(len=20), ALLOCATABLE,INTENT(OUT) :: atom_Label(:)
@@ -38,8 +38,8 @@ CONTAINS
     TYPE(t_xcpot_inbuild_nf),INTENT(OUT)    :: xcpot
     TYPE(t_cell),INTENT(OUT)     :: cell
     TYPE(t_hybrid),INTENT(OUT)   :: hybrid
-    
-    
+
+
     !locals
     REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),det
     integer             :: ios,n,i
@@ -47,7 +47,7 @@ CONTAINS
     logical             :: l_exist
     CHARACTER(len=16384):: line
     type(t_atompar)     :: ap
-     
+
     !
     !read file and create normalized scratch file
     !
@@ -59,7 +59,7 @@ CONTAINS
     OPEN(98,file="scratch")
     CALL  normalize_file(97,98)
     close(97)
-    
+
     REWIND(98)
     READ(98,"(a)",iostat=ios) input%comment
     if (input%comment(1:1)=='&') then
@@ -158,13 +158,13 @@ CONTAINS
           atom_pos(:,n) = matmul(cell%bmat,matmul(mat,atom_pos(:,n)))
        ENDDO
     ENDIF
-    
+
     !set the cell
     cell%amat(:,1) = aa*scale(:)*a1(:)
     cell%amat(:,2) = aa*scale(:)*a2(:)
     cell%amat(:,3) = aa*scale(:)*a3(:)
     CALL cell%init(0.0)
-    
+
   END SUBROUTINE read_inpgen_input
 
 
@@ -189,7 +189,7 @@ CONTAINS
          write(kpts_str,"(a,i0,a,i0,a,i0)") "grid=",div1,",",div2,",",div3
       end if
     end SUBROUTINE process_kpts
-      
+
     SUBROUTINE process_input(line,film,symor,hybrid)
       CHARACTER(len=*),INTENT(in)::line
       LOGICAL,INTENT(out)::film,symor,hybrid
@@ -201,20 +201,21 @@ CONTAINS
       cartesian=.FALSE.
       cal_symm=.FALSE.
       oldfleur=.FALSE.
+      checkinp=.false.
      READ(line,input,iostat=ios)
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
      IF (ANY([cal_symm, checkinp,oldfleur])) CALL judft_error("Switches cal_symm, checkinp,oldfleur no longer supported")
    END SUBROUTINE process_input
-   
+
    SUBROUTINE process_qss(line,noco)
      USE m_types_noco
      CHARACTER(len=*),INTENT(in)::line
      TYPE(t_noco),INTENT(INOUT) :: noco
      CHARACTER(len=1000) :: buf
      INTEGER :: ios
- 
+
      buf=ADJUSTL(line(5:len_TRIM(line)-1))
-          
+
      READ(buf,*,iostat=ios) noco%qss
      noco%l_ss=.TRUE.
      noco%l_noco=.TRUE.
@@ -227,9 +228,9 @@ CONTAINS
      TYPE(t_noco),INTENT(INOUT) :: noco
      CHARACTER(len=1000) :: buf
      INTEGER :: ios
- 
+
      buf=ADJUSTL(line(5:len_TRIM(line)-1))
-          
+
      READ(buf,*,iostat=ios) noco%theta,noco%phi
      noco%l_soc=.TRUE.
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
@@ -250,10 +251,10 @@ CONTAINS
      CHARACTER(len=1000) :: buf
      REAL :: shift(3)
      INTEGER :: ios,n
-     
-     buf=ADJUSTL(line(7:len_TRIM(line)-1))    
+
+     buf=ADJUSTL(line(7:len_TRIM(line)-1))
      READ(buf,*,iostat=ios) shift
-     
+
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
      DO n=1,SIZE(atompos,2)
         atompos(:,n)=atompos(:,n)+shift
@@ -266,10 +267,10 @@ CONTAINS
      CHARACTER(len=1000) :: buf
      REAL :: factor(3)
      INTEGER :: ios,n
-     
-     buf=ADJUSTL(line(8:len_TRIM(line)-1))    
+
+     buf=ADJUSTL(line(8:len_TRIM(line)-1))
      READ(buf,*,iostat=ios) factor
-     
+
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
      DO n=1,SIZE(atompos,2)
         atompos(:,n)=atompos(:,n)/factor
@@ -282,12 +283,12 @@ CONTAINS
      TYPE(t_xcpot_inbuild_nf),INTENT(INOUT) :: xcpot
      LOGICAL::relxc
      CHARACTER(len=4) :: xctyp
-     NAMELIST /exco/   xctyp, relxc 
+     NAMELIST /exco/   xctyp, relxc
      INTEGER :: ios
-     
+
      relxc=.false.
      xctyp='pbe'
-     READ(line,exco,iostat=ios) 
+     READ(line,exco,iostat=ios)
      IF (ios.NE.0) CALL judft_error(("Error reading:"//trim(line)))
 
      xcpot%l_inbuild=.true.
@@ -304,8 +305,8 @@ CONTAINS
 
      INTEGER :: ios
      NAMELIST /comp/   jspins, frcor, ctail, kcrel, gmax, gmaxxc, kmax
-     
-     READ(line,comp,iostat=ios) 
+
+     READ(line,comp,iostat=ios)
      IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
    END SUBROUTINE process_comp
 
@@ -319,9 +320,9 @@ CONTAINS
     !  - combines multiple line namelists into single line
     !
     !  then the input is written to outfh
-    ! 
+    !
     !***********************************************************************
-    
+
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)    :: infh            ! input filehandle (5)
@@ -331,8 +332,8 @@ CONTAINS
       LOGICAL               :: building, complete
       CHARACTER(len=1000)   :: line,buffer
 
-      
-      
+
+
       !---> initialize some variables
       building = .false.
       complete = .false.
@@ -340,7 +341,7 @@ CONTAINS
       loop: DO
          READ (infh,'(a)',IOSTAT=ios) line
          IF (ios.NE.0) EXIT !done
-         
+
          LINE = ADJUSTL(line)
          n = SCAN(line,'!')                 ! remove end of line comments
          IF ( n>0 ) THEN
@@ -378,6 +379,6 @@ CONTAINS
 
     END SUBROUTINE normalize_file
 
-  
-    
+
+
   END MODULE m_read_inpgen_input

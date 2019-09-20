@@ -16,9 +16,9 @@ CONTAINS
 
     PRINT *,"     Welcome to FLEUR - inpgen   (www.flapw.de)   "
     PRINT *,"     MaX-Release 3.0          (www.max-centre.eu)"
-    
-    CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","") 
-    CALL new_argument(0,"-explicit","Write out k-point list, symmetry operations, and optional input to inp.xml","") 
+
+    CALL new_argument(0,"-genEnpara","Generate an 'enpara' file for the energy parameters","")
+    CALL new_argument(0,"-explicit","Write out k-point list, symmetry operations, and optional input to inp.xml","")
     CALL new_argument(0,"-kpts_gw","add alternative k point set for GW in all outputs for the XML input file","")
     CALL new_argument(0,"-noco","write out noco parameters into inp.xml","")
     CALL new_argument(0,"-electronConfig","explicitely write the electron configuration into inp.xml","")
@@ -28,12 +28,13 @@ CONTAINS
     CALL new_argument(1,"-f","filename to process","")
     CALL new_argument(0,"-warn_only","do not stop for warnings","")
     CALL new_argument(1,"-inc","which data to include in inp.xml, e.g. +all,-species,+operations,-kpts","")
-    
+
     CALL new_argument(1,"-k","String to define k-point set","")
     call new_argument(0,"-no_send","Do not send usage data","")
     CALL new_argument(0,"-overwrite","Overwrite inp.xml if present","")
     CALL new_argument(0,"-h","Print this help message","")
-    
+    CALL new_argument(0,"-trace","Try to generate a traceback in case of an error","")
+
     IF (.NOT.check_arguments()) CALL judft_warn("Invalid command line arguments",hint="Use -h option to see valid choices")
     IF (.NOT. juDFT_was_argument("-h")) RETURN
 
@@ -50,8 +51,12 @@ CONTAINS
     CALL print_argument("-noco")
     CALL print_argument("-electronConfig")
     CALL print_argument("-fast_defaults")
-    CALL print_argument("-kpts_gw")
-    CALL print_argument("-h")
+    CALL print_argument("-inp.xml")
+    CALL print_argument("-inp")
+    CALL print_argument("-k")
+    CALL print_argument("-inc")
+    CALL print_argument("-overwrite")
+    
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
 

@@ -24,7 +24,7 @@ SUBROUTINE w_inpXML(&
 
    use m_types_input
    use m_types_sym
-   use m_types_stars 
+   use m_types_stars
    use m_types_atoms
    use m_types_vacuum
    use m_types_kpts
@@ -37,8 +37,8 @@ SUBROUTINE w_inpXML(&
    USE m_types_xcpot_inbuild_nofunction
    USE m_types_noco
    use m_types_enparaxml
-   USE m_types_forcetheo 
-  
+   USE m_types_forcetheo
+
    USE m_juDFT
    USE m_constants
    USE m_xmlOutput
@@ -49,7 +49,7 @@ SUBROUTINE w_inpXML(&
 
    TYPE(t_input),INTENT(IN)   :: input
    TYPE(t_sym),INTENT(IN)     :: sym
-   TYPE(t_stars),INTENT(IN)   :: stars 
+   TYPE(t_stars),INTENT(IN)   :: stars
    TYPE(t_atoms),INTENT(IN)   :: atoms
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
    TYPE(t_kpts),INTENT(IN)     :: kpts
@@ -72,9 +72,9 @@ SUBROUTINE w_inpXML(&
    INTEGER          :: speciesRepAtomType(atoms%ntype)
    CHARACTER(len=20):: speciesNames(atoms%ntype)
    LOGICAL          :: known_species
-   
-   
- 
+
+
+
 !+lda+u
    REAL    u,j
    INTEGER l, i_u
@@ -128,7 +128,7 @@ SUBROUTINE w_inpXML(&
 
    band = .false.
    nw=1
-  
+
 
 
    IF(PRESENT(filename)) THEN
@@ -144,7 +144,7 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,'(a)') '   <comment>'
    WRITE (fileNum,'(a6,10a8)') '      ',input%comment
    WRITE (fileNum,'(a)') '   </comment>'
-   
+
    WRITE (fileNum,'(a)') '   <calculationSetup>'
 
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
@@ -206,7 +206,7 @@ SUBROUTINE w_inpXML(&
    190 FORMAT('      <geometryOptimization l_f="',l1,'" forcealpha="',f0.8,'" forcemix="',a,'" epsdisp="',f0.8,'" epsforce="',f0.8,'"/>')
    SELECT CASE (input%forcemix)
       CASE (0)
-         mixingScheme='straight'
+         mixingScheme='Straight'
       CASE (1)
          mixingScheme='CG'
       CASE (2)
@@ -279,7 +279,7 @@ SUBROUTINE w_inpXML(&
 270 FORMAT('            <row-3>',f0.10,' ',f0.10,' ',f0.10,'</row-3>')
    WRITE (fileNum,270)  cell%amat(:,3)
    WRITE (fileNum,'(a)') '         </bravaisMatrix>'
-      
+
    IF (input%film) THEN
 268 FORMAT('         <vacuumEnergyParameters vacuum="',i0,'" spinUp="',f0.8,'" spinDown="',f0.8,'"/>')
       DO i = 1, vacuum%nvac
@@ -388,7 +388,7 @@ SUBROUTINE w_inpXML(&
 
       DO ilo = 1, atoms%nlo(iAtomType)
 !         <lo type="HELO" l="0" n="4"/>
-         l = atoms%llo(ilo,iAtomType)       
+         l = atoms%llo(ilo,iAtomType)
          n = enpara%qn_ello(ilo,iAtomType,1)
          loType = 'SCLO'
          IF(n.LT.0) THEN
@@ -510,7 +510,7 @@ SUBROUTINE w_inpXML(&
    370 FORMAT('      <checks vchk="',l1,'" cdinf="',l1,'"/>')
    WRITE (fileNum,370) input%vchk,input%cdinf
 
-!      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>  
+!      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>
    380 FORMAT('      <densityOfStates ndir="',i0,'" minEnergy="',f0.8,'" maxEnergy="',f0.8,'" sigma="',f0.8,'"/>')
    WRITE (fileNum,380) banddos%ndir,banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
 

@@ -28,7 +28,7 @@
       CONTAINS
         SUBROUTINE inped(atoms,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
-                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam,grid)
+                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
           USE m_rwinp
           !USE m_chkmt
           USE m_inpnoco
@@ -66,9 +66,9 @@
           REAL,              INTENT(OUT)   :: a1(3)
           REAL,              INTENT(OUT)   :: a2(3)
           REAL,              INTENT(OUT)   :: a3(3)
-          CHARACTER(len=4),  INTENT(OUT)   :: namex 
+          CHARACTER(len=4),  INTENT(OUT)   :: namex
           CHARACTER(len=12), INTENT(OUT)   :: relcor
-          CHARACTER(len=4),INTENT(OUT)     ::latnam
+          CHARACTER(len=4),INTENT(OUT)     ::latnam,namgrp
           INTEGER,INTENT(OUT):: grid(3)
           !     .. Local Scalars ..
           REAL dr,dtild,r,kmax1,dvac1,zp
@@ -82,12 +82,11 @@
           CHARACTER(8) llr(0:1)
           INTEGER  jri1(atoms%ntype),lmax1(atoms%ntype)
           REAL    rmt1(atoms%ntype),dx1(atoms%ntype)
-          character(len=5)::namgrp
           real     ::scalecell
           !     ..
           !     .. Data statements ..
           DATA llr(0)/'absolute'/,llr(1)/'floating'/
-          
+
           !
 
           a1(:) = 0
@@ -263,7 +262,7 @@
 !!$          xcpot%krla = 0
 !!$          IF (relcor.EQ.'relativistic') THEN
 !!$             xcpot%krla = 1
-!!$           
+!!$
 !!$          ENDIF
 
 !!$          IF (xcpot%icorr.EQ.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
@@ -275,7 +274,7 @@
 
           !-guta
           !     specification of atoms
-          
+
           cell%volint = cell%vol
 
           DO  n = 1,atoms%ntype
@@ -419,7 +418,7 @@
 8240      FORMAT (/,10x,'number of valence electrons=',f10.5,/,10x, 'temperature broadening     =',f10.5)
           WRITE (6,FMT=*) 'itmax=',input%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
           WRITE (6,FMT=*) 'alpha=',input%alpha,' spinf=',input%spinf
-    
+
           IF ((.NOT.sym%invs).AND.input%secvar) THEN
              WRITE(6,*)'The second variation is not implemented in the'
              WRITE(6,*)'complex version of the program.'

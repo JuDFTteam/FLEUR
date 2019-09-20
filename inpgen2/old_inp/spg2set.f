@@ -42,12 +42,13 @@
 
 !mod: INTEGER spg2(3,25)             ! generators for 2d space groups
 !mod: INTEGER gnt2(3,25)             ! translations for 2d space groups
-!mod: INTEGER gen2(2,2,9)            ! rotation matrices for the generators 
+!mod: INTEGER gen2(2,2,9)            ! rotation matrices for the generators
 !mod: REAL    tau2(2,3)              ! translations for the generators
 !mod: CHARACTER(len=4) :: namgr2(25) ! names of 2d space groups
 !
 ! Determine number of 2d space group
 !
+      n2spg=0
       DO i = 1, 20
         IF (namgrp.EQ.nammap(i)) n2spg = i
       ENDDO
@@ -55,8 +56,11 @@
      +                      AND.(n2spg.LT.18)) THEN
         n2spg = n2spg + 8
       ENDIF
-      IF (n2spg == 0)  CALL juDFT_error("2D-symmetry group not found!"
+      IF (n2spg == 0)  THEN
+        print *,latnam,namgrp 
+        CALL juDFT_error("2D-symmetry group not found!"
      +     ,calledby ="spg2set")
+      ENDIF
 !
 ! Determine number of generators ngen
 !
@@ -77,7 +81,7 @@
         tau(:,igen) =  0.0
         IF (gnt2(igen-1,n2spg).NE.0) THEN
           symor = .false.
-          tau(1:2,igen) = tau2(1:2,gnt2(igen-1,n2spg)) 
+          tau(1:2,igen) = tau2(1:2,gnt2(igen-1,n2spg))
         ENDIF
       ENDDO
 !
@@ -105,7 +109,7 @@
                WRITE(6,'(a7,i4,a7,i4)') 'ngen = ',ngen,' nop = ',nop
                 CALL juDFT_error("ngen > nop",calledby="spg2set")
             ENDIF
-           
+
             CALL matmul4(mrot(1,1,n1),tau(1,n1),
      >                   mrot(1,1,n2),tau(1,n2),
      <                   mrot(1,1,ngen),tau(1,ngen))
@@ -120,7 +124,7 @@
         l_new = .true.
         IF (invs) THEN
           ngen = ngen + 1
-          mrot(:,:,ngen) = - mrot(:,:,1)                     ! I 
+          mrot(:,:,ngen) = - mrot(:,:,1)                     ! I
           tau(:,ngen) =  0.0
           IF (spg2(1,n2spg).EQ.2) l_new = .false.            ! if c_2 & I are generators
         ENDIF                                                ! m_z is no new generator
@@ -146,11 +150,11 @@
 !
 ! Determine the kind of symmetry operation we have here
 !
-         d = mrot(1,1,n)*mrot(2,2,n)*mrot(3,3,n) + 
+         d = mrot(1,1,n)*mrot(2,2,n)*mrot(3,3,n) +
      +       mrot(1,2,n)*mrot(2,3,n)*mrot(3,1,n) +
-     +       mrot(2,1,n)*mrot(3,2,n)*mrot(1,3,n) - 
+     +       mrot(2,1,n)*mrot(3,2,n)*mrot(1,3,n) -
      +       mrot(1,3,n)*mrot(2,2,n)*mrot(3,1,n) -
-     +       mrot(2,3,n)*mrot(3,2,n)*mrot(1,1,n) - 
+     +       mrot(2,3,n)*mrot(3,2,n)*mrot(1,1,n) -
      +       mrot(2,1,n)*mrot(1,2,n)*mrot(3,3,n)
          t =  mrot(1,1,n) + mrot(2,2,n) + mrot(3,3,n)
 

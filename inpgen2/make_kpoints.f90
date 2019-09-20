@@ -24,7 +24,9 @@ CONTAINS
     REAL   :: den
     INTEGER:: nk,grid(3)
     character(len=20)::name=""
+    !defaults
     l_soc_or_ss=l_socorss
+    tria=.false.;l_gamma=.false.
 
     IF (judft_was_argument("-k")) THEN
        IF (LEN_TRIM(str)>1) CALL judft_error("Do not specify k-points in file and on command line")
@@ -71,7 +73,7 @@ CONTAINS
     ELSE
        CALL judft_error(("Could not process -k argument:"//str))
     ENDIF
-    
+
     if (len_trim(name)>0) kpts%name=name
   END SUBROUTINE make_kpoints
 
@@ -99,11 +101,11 @@ CONTAINS
   SUBROUTINE init_by_kptsfile(kpts,film)
     CLASS(t_kpts),INTENT(out):: kpts
     LOGICAL,INTENT(in)       :: film
-    
+
     LOGICAL :: l_exist
     REAL    :: scale,wscale
     INTEGER :: n,ios
-    
+
     INQUIRE(file='kpts',exist=l_exist)
     IF (.NOT.l_exist) CALL judft_error("Could not read 'kpts' file")
     OPEN(99,file='kpts')
@@ -123,7 +125,7 @@ CONTAINS
     IF (wscale>0.0) kpts%wtkpt=kpts%wtkpt/wscale
   END SUBROUTINE init_by_kptsfile
 
- 
+
 
   SUBROUTINE init_special(kpts,cell,film)
     USE m_types_cell
@@ -159,7 +161,7 @@ CONTAINS
        kpts%bk(:,kpts%nkpt)=kpts%specialPoints(:,i)
        kpts%specialPointIndices(i)=kpts%nkpt
        kpts%nkpt=kpts%nkpt+1
-       d=(kpts%specialPoints(:,i+1)-kpts%specialPoints(:,i))/(nk(i)+2) 
+       d=(kpts%specialPoints(:,i+1)-kpts%specialPoints(:,i))/(nk(i)+2)
        DO ii=1,nk(i)
           kpts%bk(:,kpts%nkpt)=kpts%specialPoints(:,i)+d*ii
           kpts%nkpt=kpts%nkpt+1
@@ -288,7 +290,7 @@ CONTAINS
     ! 1 with boundary points (not for BZ integration!!!)
     INTEGER ikzero   ! 0 no shift of k-points;
     ! 1 shift of k-points for better use of sym in irrBZ
-    REAL    kzero(3) ! shifting vector to bring one k-point to or 
+    REAL    kzero(3) ! shifting vector to bring one k-point to or
     ! away from (0,0,0) (for even/odd nkpt3)
 
     INTEGER i,j,k,l,mkpt,addSym,nsym
@@ -308,7 +310,7 @@ CONTAINS
     ELSE
        !------------------------------------------------------------
        !
-       !        idsyst         idtype 
+       !        idsyst         idtype
        !
        !   1  cubic          primitive
        !   2  tetragonal     body centered
@@ -316,7 +318,7 @@ CONTAINS
        !   4  hexagonal      A-face centered
        !   5  trigonal       B-face centered
        !   6  monoclinic     C-face centered
-       !   7  triclinic 
+       !   7  triclinic
        !
        ! --->   for 2 dimensions only the following Bravais lattices exist:
        !
@@ -330,9 +332,9 @@ CONTAINS
        !------------------------------------------------------------
 
 
-       CALL bravais(cell%amat,idsyst,idtype) 
+       CALL bravais(cell%amat,idsyst,idtype)
 
-       nsym = MERGE(sym%nop2,sym%nop,film)    
+       nsym = MERGE(sym%nop2,sym%nop,film)
        nbound  = MERGE(1,0,film.AND.tria)
        random  = tria.AND..NOT.film
        idimens = MERGE(2,3,film)
@@ -440,7 +442,7 @@ CONTAINS
     REAL, PARAMETER :: f13 = 1./3., f23 = 2./3.
 
     INTEGER:: idsyst,idtype
-    CALL bravais(cell%amat,idsyst,idtype) 
+    CALL bravais(cell%amat,idsyst,idtype)
 
     IF (.NOT.film) THEN
        IF ( (idsyst == 1).AND.(idtype ==  3) ) THEN       ! fcc
@@ -506,7 +508,7 @@ CONTAINS
           CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    ! via Sigma)
           CALL kpts%add_special_line((/-f12,f12,f12/) ,"Z")    ! via Y)
           CALL kpts%add_special_line((/zro,zro, f12/) ,"X")    ! via Delta)
-          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")    
+          CALL kpts%add_special_line((/zro,zro, zro/) ,"g")
           CALL kpts%add_special_line((/zro,f12, zro/) ,"N")    ! via Q)
           CALL kpts%add_special_line((/f14,f14, f14/) ,"P")    ! via W)
           CALL kpts%add_special_line((/zro,zro, f12/) ,"X")
@@ -614,17 +616,17 @@ CONTAINS
     INTEGER                 ::  ic,iop,ikpt,ikpt1
     LOGICAL                 ::  l_found
 
-    !  - local arrays - 
+    !  - local arrays -
     INTEGER,ALLOCATABLE     ::  iarr(:)
     REAL                    ::  rrot(3,3,2*sym%nop),rotkpt(3)
     REAL,ALLOCATABLE        ::  rarr1(:,:)
 
     INTEGER:: nsym,ID_mat(3,3)
 
-    
+
     nsym=sym%nop
     IF (.NOT.sym%invs) nsym=2*sym%nop
-    
+
     ALLOCATE (kpts%bkf(3,nsym*kpts%nkpt))
     ALLOCATE (kpts%bkp(nsym*kpts%nkpt))
     ALLOCATE (kpts%bksym(nsym*kpts%nkpt))
@@ -689,6 +691,6 @@ CONTAINS
 
   END SUBROUTINE gen_bz
 
- 
+
 
 END MODULE m_make_kpoints
