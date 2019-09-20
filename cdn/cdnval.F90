@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,greensf,angle,n_mmp21)
+                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,greensf,angle)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -86,7 +86,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
    TYPE(t_greensf),       OPTIONAL, INTENT(INOUT) :: greensf
    REAL,                  OPTIONAL, INTENT(IN)    :: angle(sym%nop)
-   COMPLEX,               OPTIONAL, INTENT(INOUT) :: n_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -246,7 +245,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                     eigVecCoeffs%acof(:,0:,:,ispin),eigVecCoeffs%bcof(:,0:,:,ispin),&
                     eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat,eig,force)
          IF (atoms%n_u.GT.0) CALL n_mat(atoms,sym,noccbd,usdus,ispin,we,eigVecCoeffs,den%mmpMat(:,:,:,ispin))
-         IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) CALL n_mat21(atoms,sym,noccbd,denCoeffsOffdiag,we,eigVecCoeffs,angle,n_mmp21)
+         IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) CALL n_mat21(atoms,sym,noccbd,denCoeffsOffdiag,&
+                                                                                 we,eigVecCoeffs,angle,den%mmpMat(:,:,:,3))
 
          IF (atoms%n_gf.GT.0) CALL bzIntegrationGF(atoms,sym,input,angle,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
                                                    eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensf,greensfCoeffs,ispin==jsp_end)
@@ -287,8 +287,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
-                       results,denCoeffs,orb,denCoeffsOffdiag,den,den%mmpMat(:,:,1:atoms%n_u,ispin),n_mmp21,&
-                       mcd,slab,orbcomp,greensfCoeffs,greensf)
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,greensfCoeffs,greensf)
    END DO
 #endif
 

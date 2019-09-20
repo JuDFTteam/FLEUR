@@ -97,6 +97,7 @@ CONTAINS
              END DO
           ENDDO
           !Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
+          IF(jsp<3) THEN !offdiagonal contributions are added currently in hsmt_u_offdiag 
           DO i_u=1,atoms%n_u+atoms%n_hia
              IF (n.NE.atoms%lda_u(i_u)%atomType) CYCLE
              !Found a "U" for this atom type
@@ -111,6 +112,7 @@ CONTAINS
                 ENDDO
              ENDDO
           END DO
+        ENDIF
 
           !Now add diagonal contribution to matrices
           IF (jsp<3) THEN

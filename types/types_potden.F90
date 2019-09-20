@@ -274,17 +274,17 @@ CONTAINS
     INTEGER,INTENT(IN)       :: jspins, potden_type
  
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
-         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mtnocopot,potden_type,&
+         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mtnocopot,noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,nlhd,ntype,n_u,jspins,nocoExtraDim,nocoExtraMTDim,nocoExtraUDim,potden_type,nmzd,nmzxyd,n2d)
     USE m_constants
     USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT) :: pd
     INTEGER,INTENT(IN)          :: ng3,jmtd,nlhd,ntype,n_u,jspins,potden_type
-    LOGICAL,INTENT(IN)          :: nocoExtraDim,nocoExtraMTDim
+    LOGICAL,INTENT(IN)          :: nocoExtraDim,nocoExtraMTDim,nocoExtraUDim
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
 
     INTEGER:: err(4)
@@ -302,7 +302,7 @@ CONTAINS
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
 
-    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jspins))
+    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraUDim)))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)

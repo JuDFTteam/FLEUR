@@ -12,7 +12,7 @@ MODULE m_mpi_col_den
   !
 CONTAINS
   SUBROUTINE mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,jspin,regCharges,dos,&
-                         results,denCoeffs,orb,denCoeffsOffdiag,den,n_mmp,n_mmp21,mcd,slab,orbcomp,greensfCoeffs,greensf)
+                         results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,greensfCoeffs,greensf)
 
 #include"cpp_double.h"
     USE m_types
@@ -36,7 +36,6 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin
     ! ..
     ! ..  Array Arguments ..
-    COMPLEX,INTENT(INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
 
     TYPE (t_orb),               INTENT(INOUT) :: orb
     TYPE (t_denCoeffs),         INTENT(INOUT) :: denCoeffs
@@ -48,7 +47,6 @@ CONTAINS
     TYPE (t_orbcomp), OPTIONAL, INTENT(INOUT) :: orbcomp
     TYPE (t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
     TYPE (t_greensf), OPTIONAL, INTENT(INOUT) :: greensf
-    COMPLEX, OPTIONAL,INTENT(INOUT) :: n_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -417,17 +415,17 @@ CONTAINS
     IF ( atoms%n_u.GT.0 ) THEN
        n = 49*atoms%n_u 
        ALLOCATE(c_b(n))
-       CALL MPI_REDUCE(n_mmp,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+       CALL MPI_REDUCE(den%mmpMat(:,:,1:atoms%n_u,ispin),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (mpi%irank.EQ.0) THEN
-          CALL CPP_BLAS_ccopy(n, c_b, 1, n_mmp, 1)
+          CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat(:,:,1:atoms%n_u,ispin), 1)
        ENDIF
        DEALLOCATE (c_b)
-       IF(noco%l_mperp.AND.PRESENT(n_mmp21).AND.jspin.EQ.1) THEN
+       IF(noco%l_mperp.AND.jspin.EQ.1) THEN
          n = 49*atoms%n_u 
          ALLOCATE(c_b(n))
-         CALL MPI_REDUCE(n_mmp21,c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         CALL MPI_REDUCE(den%mmpMat(:,:,1:atoms%n_u,3),c_b,n,CPP_MPI_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
          IF (mpi%irank.EQ.0) THEN
-            CALL CPP_BLAS_ccopy(n, c_b, 1, n_mmp21, 1)
+            CALL CPP_BLAS_ccopy(n, c_b, 1, den%mmpMat(:,:,1:atoms%n_u,3), 1)
          ENDIF
          DEALLOCATE (c_b)
        ENDIF
