@@ -2325,7 +2325,7 @@ CONTAINS
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
                   mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
-                  mmn,.FALSE.)
+                  mmn,wann%l_unformatted)
           ENDIF !wann%l_mmn0  
 
 
