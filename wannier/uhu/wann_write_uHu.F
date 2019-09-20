@@ -62,6 +62,8 @@ c      uHu = uHu_in
 #endif
       endif
 
+      header='Elements uHu at k+b1 and k+b2'
+
 c******************************************************
 c     Write mmnk matrix to file.
 c******************************************************
@@ -137,10 +139,12 @@ c******************************************************
 !        write (305) conjg(uHu_in)
              write (305) uHu_in(:,:,ikpt_b2,ikpt_b,ikpt)
            endif
-           close (305)
+           
           enddo
          enddo
         enddo
+        
+        close(305)
        endif
        
 
