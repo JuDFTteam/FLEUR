@@ -87,6 +87,7 @@ CONTAINS
     INTEGER :: it, archiveType
     CHARACTER*10 :: cdnfname
     LOGICAL :: strho
+    TYPE(t_potden) :: cden, mxden, myden, mzden
 #ifdef CPP_MPI
     include 'mpif.h'
     INTEGER :: ierr(2)
@@ -97,7 +98,7 @@ CONTAINS
     IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
        IF (noco%l_noco) THEN
           CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
-               cell,input,noco,oneD,sliceplot)
+               cell,input,noco,oneD,sliceplot,cden,mxden,myden,mzden)
        ENDIF
     ENDIF
 
@@ -107,8 +108,13 @@ CONTAINS
        IF (sliceplot%iplot) THEN
           CALL timestart("Plotting")
           IF (input%strho) CALL juDFT_error("strho = T and iplot=T",calledby = "optional")
-          CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                       input,sym,cell,sliceplot,noco)
+          IF (noco%l_noco) THEN
+             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                          input,sym,cell,sliceplot,noco,cden,mxden,myden,mzden)
+          ELSE
+             CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+                          input,sym,cell,sliceplot,noco,cden)
+          END IF
           CALL timestop("Plotting")
        END IF
     ENDIF ! mpi%irank == 0
