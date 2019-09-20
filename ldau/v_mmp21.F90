@@ -1,9 +1,9 @@
 MODULE m_vmmp21
 !     ************************************************************
 !     This subroutine calculates the potential matrix v^{s}_{m,m'}
-!     for a given atom 'n' and l-quantum number 'l'. The l,u,j's for
+!     for a given atom 'iType' and l-quantum number 'l'. The l,u,j's for
 !     all atoms are stored in lda_u, the density matrix is ns_mmp,
-!     and the e-e- interaction potential is u(m1,m2,m3,m4,n).
+!     and the e-e- interaction potential is u(m1,m2,m3,m4,iType).
 !     For details see Eq.(16) of Shick et al. PRB 60, 10765 (1999)
 !
 !     Additionally, the total energy contribution of LDA+U (Eq.24)
@@ -27,10 +27,10 @@ MODULE m_vmmp21
       TYPE (t_utype), INTENT (IN) :: u_in(n_u)
 
       COMPLEX, INTENT(IN):: n_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
-      COMPLEX,INTENT(OUT)::v_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
+      COMPLEX,INTENT(INOUT)::v_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
 !
 ! ..  Local Variables ..
-      INTEGER n,ispin,jspin,l,m,mp,p,q,iType,i_u
+      INTEGER ispin,jspin,l,m,mp,p,q,iType,i_u
       REAL rho_tot,u_htr,j_htr,e_ee,ns_sum,spin_deg,e_dc,e_dcc
       REAL a1,a2,alpha
       LOGICAL l_mix
@@ -45,7 +45,7 @@ MODULE m_vmmp21
         iType = u_in(i_u)%atomType
         l = u_in(i_u)%l
         l_mix = .false. ! lda_u(itype)%l_amf ! switched off
-        u_htr = f0(n)/hartree_to_ev_const
+        u_htr = f0(i_u)/hartree_to_ev_const
         IF (l.EQ.1) THEN
           j_htr = f2(i_u)/(5*hartree_to_ev_const)
         ELSEIF (l.EQ.2) THEN
@@ -62,7 +62,7 @@ MODULE m_vmmp21
 !------------------------------------------------------------------------+     
 ! initialise v_mmp
 !
-        v_mmp21(:,:,n) = cmplx(0.0,0.0)
+        v_mmp21(:,:,i_u) = cmplx(0.0,0.0)
 !
 ! outer spin loop - set up v_mmp
 !

@@ -59,7 +59,7 @@ CONTAINS
        ALLOCATE (u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
                    -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
        ALLOCATE (n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u),input%jspins))
-       n_mmp(:,:,1:atoms%n_u,:) = inDen%mmpMat(:,:,1:atoms%n_u,:)
+       n_mmp(:,:,1:atoms%n_u,:) = inDen%mmpMat(:,:,1:atoms%n_u,1:input%jspins)
        DO ispin = 1, 1 ! input%jspins
           f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
           f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
@@ -74,7 +74,7 @@ CONTAINS
        CALL nmat_rot(atoms%lda_u(1:atoms%n_u)%phi,atoms%lda_u(1:atoms%n_u)%theta,zero,3,atoms%n_u,input%jspins,atoms%lda_u(1:atoms%n_u)%l,n_mmp)
        
        ! calculate potential matrix and total energy correction
-       CALL v_mmp(sym,atoms,atoms%lda_u(:atoms%n_u),atoms%n_u,input%jspins,.TRUE.,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
+       CALL v_mmp(sym,atoms,atoms%lda_u(:atoms%n_u),atoms%n_u,input%jspins,.TRUE.,n_mmp,u,f0,f2,pot%mmpMat(:,:,1:atoms%n_u,1:input%jspins),results%e_ldau)
 
        !spin off-diagonal elements (no rotation yet)
        IF(noco%l_mperp) THEN
