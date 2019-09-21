@@ -79,12 +79,12 @@ contains
        IF (ALL(inDen%mmpMat(:,:,1:atoms%n_u,:)==0.0)) THEN
           l_densitymatrix=.FALSE.
           inDen%mmpMat(:,:,1:atoms%n_u,:)=outDen%mmpMat(:,:,1:atoms%n_u,:)
-          if (mpi%irank.ne.0) inDen%mmpMat(:,:,:,:) = 0.0
+          if (mpi%irank.ne.0) inDen%mmpMat(:,:,:,:) = 0.0 
        ENDIF
     ENDIF 
 
     CALL timestart("Reading of distances")
-    CALL mixvector_init(mpi%mpi_comm,.FALSE.,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
+    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
 
     CALL mixing_history_open(mpi,input%maxiter)
 
@@ -146,16 +146,14 @@ contains
     inDen%pw=0.0;inDen%mt=0.0
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
     IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
-    IF (ALLOCATED(inDen%mmpMat).AND..FALSE.) inden%mmpMat(:,:,1:atoms%n_u,:)=0.0
+    IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,1:atoms%n_u,:)=0.0
     CALL sm(it)%to_density(inDen)
-    IF (atoms%n_u>0.AND..NOT.input%ldaulinmix) THEN
+    IF (atoms%n_u>0.AND..NOT.l_densitymatrix.AND..NOT.input%ldaulinmix) THEN
        !No density matrix was present 
        !but is now created...
        inden%mmpMAT(:,:,1:atoms%n_u,:)=outden%mmpMat(:,:,1:atoms%n_u,:)
-       IF(.NOT.l_densitymatrix) THEN
-        CALL mixing_history_reset(mpi)
-        CALL mixvector_reset()
-       ENDIF
+       CALL mixing_history_reset(mpi)
+       CALL mixvector_reset()
     ENDIF
 
     IF(atoms%n_hia>0) THEN
