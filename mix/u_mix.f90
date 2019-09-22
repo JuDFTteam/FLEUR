@@ -99,7 +99,7 @@ CONTAINS
                 DO k = -3,3
                    sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
                    sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
-                   IF(noco%l_mperp) sum3 = sum2 + ABS(n_mmp_out(k,j,i_u,3) - n_mmp_in(k,j,i_u,3))
+                   IF(noco%l_mperp) sum3 = sum3 + ABS(n_mmp_out(k,j,i_u,3) - n_mmp_in(k,j,i_u,3))
 
                    n_mmp(k,j,i_u,1) =       gam * n_mmp_out(k,j,i_u,1) + &
                                       (1.0-gam) * n_mmp_in (k,j,i_u,1) + &

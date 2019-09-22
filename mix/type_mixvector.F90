@@ -20,7 +20,7 @@ MODULE m_types_mixvector
   TYPE(t_sphhar),POINTER :: sphhar
   TYPE(t_atoms),POINTER  :: atoms  =>null()
   INTEGER                :: jspins,nvac
-  LOGICAL                :: l_noco,invs,invs2,l_mtnocopot,l_mperp
+  LOGICAL                :: l_noco,invs,invs2,l_mtnocopot,l_mperp,l_ldau
   INTEGER                :: pw_length !The shape of the local arrays
   INTEGER                :: pw_start(3)=0,pw_stop(3) !First and last index for spin
   INTEGER                :: mt_length,mt_length_g
@@ -242,7 +242,7 @@ CONTAINS
            END IF
         END IF
      ENDDO
-     call den%collect(mix_mpi_comm,misc_here)
+     call den%collect(mix_mpi_comm,l_ldau)
     
   END SUBROUTINE mixvector_to_density
 
@@ -476,6 +476,7 @@ CONTAINS
     stars=>stars_i;cell=>cell_i;sphhar=>sphhar_i;atoms=>atoms_i
     
     vac_here=input%film
+    l_ldau=l_densitymatrix
     misc_here=l_densitymatrix
     CALL init_storage_mpi(mpi_comm)
     
