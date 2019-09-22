@@ -52,7 +52,7 @@
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
       INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra
-      INTEGER  icore,qdim,n_orb,ncored
+      INTEGER  icore,qdim,n_orb,ncored,jsp
       REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
       REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
       LOGICAL  l_tria,l_orbcomp,l_error
@@ -146,7 +146,8 @@
             qal(:,:,k) = 0.0
             qval(:,:,k) = 0.0
 
-            ntb = max(ntb,results%neig(k,jspin))
+            jsp = MERGE(1,jspin,noco%l_noco)
+            ntb = max(ntb,results%neig(k,jsp))
             IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,dimension%neigd/))
             IF (.NOT.l_orbcomp) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(dos%qal(0:,:,:,k,jspin),(/lmax*atoms%ntype,size(dos%qal,3)/))
@@ -159,10 +160,10 @@
                   qal(slab%nsld+1:2*slab%nsld,:,k) = slab%qmtsl(:,:,k,jspin)
                ELSE
                   DO i = 1, 23
-                     DO l = 1, results%neig(k,jspin)
+                     DO l = 1, results%neig(k,jsp)
                         qal(i,l,k) = orbcomp%comp(l,i,n_orb,k,jspin)*orbcomp%qmtp(l,n_orb,k,jspin)/10000.
                      END DO
-                     DO l = results%neig(k,jspin)+1, dimension%neigd
+                     DO l = results%neig(k,jsp)+1, dimension%neigd
                         qal(i,l,k) = 0.0
                      END DO
                   END DO
@@ -178,7 +179,7 @@
                   qal(lmax*atoms%ntype+3,n,k) = 0.0
                ENDDO
             ELSEIF ( banddos%vacdos .and. input%film ) THEN
-               DO i = 1,results%neig(k,jspin)
+               DO i = 1,results%neig(k,jsp)
                   DO v = 1,vacuum%nvac
                      DO l = 1,vacuum%layers
                         index = (l-1)*vacuum%nstars + (v-1)*(vacuum%nstars*vacuum%layers) + 1
@@ -213,10 +214,10 @@
 !
 !---- >     convert eigenvalues to ev and shift them by efermi
 !
-            DO i = 1 , results%neig(k,jspin)
-               ev(i,k) = results%eig(i,k,jspin)*hartree_to_ev_const - efermi
+            DO i = 1 , results%neig(k,jsp)
+               ev(i,k) = results%eig(i,k,jsp)*hartree_to_ev_const - efermi
             ENDDO
-            DO i = results%neig(k,jspin) + 1, dimension%neigd
+            DO i = results%neig(k,jsp) + 1, dimension%neigd
                ev(i,k) = 9.9e+99
             ENDDO
 !
@@ -225,7 +226,7 @@
 !
 !     calculate the triangles!
 !
-         IF ( jspin.EQ.1 ) THEN
+         IF ( jspin.EQ.1 .AND. .FALSE.) THEN
            l_tria=.true.
            IF (input%film .AND. .NOT.oneD%odi%d1) THEN
              CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
@@ -282,6 +283,8 @@
  67          CONTINUE                       ! tetrahedron-information read or created
            ENDIF
          ENDIF
+
+         l_tria = .false.
 !
         IF ( .not.l_mcd ) THEN
          ALLOCATE (g(ned,qdim))
@@ -304,7 +307,7 @@
             ELSE
               write(*,*) efermi
               CALL tetra_dos(lmax,atoms%ntype,dimension%neigd,ned,ntetra,kpts%nkpt,&
-                            itetra,efermi,voltet,e,results%neig(:,jspin), ev,qal, g)
+                            itetra,efermi,voltet,e,results%neig(:,jsp), ev,qal, g)
               IF (input%jspins.EQ.1) g(:,:) = 2 * g(:,:)
             ENDIF
          ELSE
@@ -313,10 +316,10 @@
 !
             IF ( .not.l_mcd ) THEN
             CALL dos_bin(input%jspins,qdim,ned,emin,emax,dimension%neigd,kpts%nkpt,&
-                 results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
+                 results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
             ELSE
             CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
-                 results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
+                 results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
             ENDIF
          ENDIF
 !
