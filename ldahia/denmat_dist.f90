@@ -7,10 +7,10 @@ MODULE m_denmat_dist
       USE m_constants
 
       INTEGER,             INTENT(IN)     :: natoms
-      COMPLEX,             INTENT(IN)     :: n_mmp_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,natoms,jspins)
-      COMPLEX,             INTENT(IN)     :: n_mmp_out(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,natoms,jspins)
-      TYPE(t_results),     INTENT(INOUT)  :: results
       TYPE(t_input),       INTENT(IN)     :: input
+      COMPLEX,             INTENT(IN)     :: n_mmp_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,natoms,input%jspins)
+      COMPLEX,             INTENT(IN)     :: n_mmp_out(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,natoms,input%jspins)
+      TYPE(t_results),     INTENT(INOUT)  :: results
 
       INTEGER ispin,i_at,j,k
       REAL n_in,n_out

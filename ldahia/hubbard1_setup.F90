@@ -358,9 +358,9 @@ MODULE m_hubbard1_setup
 #ifdef CPP_MPI
       !Broadcast both the potential and the density matrix here
       CALL MPI_BCAST(pot%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,indStart:indEnd,:),&
-                     49*atoms%n_hia*input%jspins,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+                     49*atoms%n_hia*MERGE(3,input%jspins,input%l_gfmperp),MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
       CALL MPI_BCAST(den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,indStart:indEnd,:),&
-                     49*atoms%n_hia*input%jspins,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
+                     49*atoms%n_hia*MERGE(3,input%jspins,input%l_gfmperp),MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
       CALL MPI_BCAST(results%e_ldau,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif 
       

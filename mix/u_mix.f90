@@ -72,7 +72,7 @@ CONTAINS
 
        ! mix here straight with given mixing factors
 
-       ALLOCATE (n_mmp(-3:3,-3:3,MAX(1,atoms%n_u),input%jspins))
+       ALLOCATE (n_mmp(-3:3,-3:3,MAX(1,atoms%n_u),MERGE(3,input%jspins,noco%l_mperp)))
        n_mmp = CMPLX(0.0,0.0)
 
        alpha = input%ldauMixParam
@@ -91,6 +91,7 @@ CONTAINS
           WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
        ELSE
           sum2 = 0.0
+          sum3 = 0.0
           gam = 0.5 * alpha * (1.0 + spinf)
           del = 0.5 * alpha * (1.0 - spinf)
           DO i_u = 1,atoms%n_u
@@ -98,6 +99,7 @@ CONTAINS
                 DO k = -3,3
                    sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
                    sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
+                   IF(noco%l_mperp) sum3 = sum2 + ABS(n_mmp_out(k,j,i_u,3) - n_mmp_in(k,j,i_u,3))
 
                    n_mmp(k,j,i_u,1) =       gam * n_mmp_out(k,j,i_u,1) + &
                                       (1.0-gam) * n_mmp_in (k,j,i_u,1) + &
@@ -108,11 +110,16 @@ CONTAINS
                                       (1.0-gam) * n_mmp_in (k,j,i_u,2) + &
                                             del * n_mmp_out(k,j,i_u,1) - &
                                             del * n_mmp_in (k,j,i_u,1)
+                   IF(noco%l_mperp) THEN
+                      n_mmp(k,j,i_u,3) =       alpha * n_mmp_out(k,j,i_u,3) + &
+                                         (1.0-alpha) * n_mmp_in (k,j,i_u,3)
+                   ENDIF
                 END DO
              END DO
           END DO
           WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
           WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
+          IF(noco%l_mperp) WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 3 =',sum3
        ENDIF
        n_mmp_in = n_mmp
        DEALLOCATE (n_mmp)
@@ -153,7 +160,7 @@ CONTAINS
             DO i_u = 1, atoms%n_u
                DO j = -3,3
                   DO k = -3,3
-                     sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,3) - n_mmp_in(k,j,i_u,3))
+                     sum3 = sum3 + ABS(n_mmp_out(k,j,i_u,3) - n_mmp_in(k,j,i_u,3))
                   END DO
                END DO
             END DO
