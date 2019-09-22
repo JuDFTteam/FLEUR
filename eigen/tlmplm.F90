@@ -196,7 +196,7 @@ CONTAINS
     !
     !--->   set up the t-matrices for the local orbitals,
     !--->   if there are any
-    IF (atoms%nlo(n).GE.1) THEN
+    IF (atoms%nlo(n).GE.1.AND.jspin<3) THEN
        CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
             na,flo,f(:,:,:,jspin),g(:,:,:,jspin),ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
 
