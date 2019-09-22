@@ -41,6 +41,7 @@ MODULE m_types_greensfCoeffs
          !If we look at the Green's function that only depends on Energy and not on spatial arguments
          !the imaginary part is equal to the proected density of states
          REAL, ALLOCATABLE :: projdos(:,:,:,:,:)
+         REAL, ALLOCATABLE :: projdos21(:,:,:,:,:)
 
          ! These arrays are only used in the case we want the green's function with radial dependence
          REAL, ALLOCATABLE :: uu(:,:,:,:,:)
@@ -92,8 +93,10 @@ MODULE m_types_greensfCoeffs
 
          IF(atoms%n_gf.GT.0) THEN
             ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2))
-            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
+            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins))
+            ALLOCATE (thisGREENSFCOEFFS%projdos21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),MAXVAL(atoms%neq),-lmax:lmax,-lmax:lmax))
             thisGREENSFCOEFFS%projdos     = 0.0
+            thisGREENSFCOEFFS%projdos21   = 0.0
             IF(.NOT.input%l_gfsphavg) THEN
                ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
                ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))

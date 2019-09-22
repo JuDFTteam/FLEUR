@@ -24,7 +24,7 @@ INTEGER, PARAMETER :: int_method(3) = (/3,3,1/)
 
 CONTAINS
 
-SUBROUTINE calc_onsite(atoms,input,sym,noco,greensfCoeffs,g)
+SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
 
    USE m_kkintgr
    USE m_kk_cutoff
@@ -38,10 +38,15 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,greensfCoeffs,g)
    TYPE(t_sym),            INTENT(IN)     :: sym
    TYPE(t_noco),           INTENT(IN)     :: noco
    TYPE(t_input),          INTENT(IN)     :: input
+   REAL,                   INTENT(IN)     :: angle(sym%nop)
 
    !-Local Scalars
-   INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm,kkcut,lp,nTypep,spin_cut
+   INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm,kkcut,lp,nTypep,spin_cut,nn,natom
    REAL    fac
+   INTEGER it,is,isi
+   COMPLEX phase
+   COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+   COMPLEX g21(g%nz,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
    DO i_gf = 1, atoms%n_gf
       l =     atoms%gfelem(i_gf)%l
@@ -67,7 +72,7 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,greensfCoeffs,g)
       !Perform the Kramers-Kronig-Integration if not already calculated
       !
       CALL timestart("On-Site: Kramer-Kronigs-Integration")
-      DO jspin = 1, MERGE(3,input%jspins,input%l_gfmperp)
+      DO jspin = 1, input%jspins
          spin_cut = MERGE(1,jspin,jspin.GT.2)
          kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,spin_cut,2)
          DO m= -l,l
@@ -91,6 +96,45 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,greensfCoeffs,g)
             ENDDO
          ENDDO
       ENDDO
+      IF(input%l_gfmperp) THEN
+         kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,1,2)
+         DO nn = 1, atoms%neq(nType)
+            natom = SUM(atoms%neq(:nType-1)) + nn
+            DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
+               DO m= -l,l
+                  DO mp= -lp,lp
+                     CALL kkintgr(greensfCoeffs%projdos21(1:kkcut,i_gf,nn,m,mp),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                                 g21(:,m,mp),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
+                  ENDDO
+               ENDDO
+               fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
+               IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations available",calledby="greensfImag")
+               DO ie = 1, g%nz 
+                  DO it = 1, sym%invarind(natom)
+                     is = sym%invarop(natom,it)
+                     isi = sym%invtab(is)
+                     d_mat(:,:) = cmplx(0.0,0.0)
+                     DO m = -l,l
+                        DO mp = -l,l
+                           d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
+                        ENDDO
+                     ENDDO
+                     calc_mat = matmul( transpose( conjg(d_mat) ) , &
+                                 g21(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
+                     calc_mat =  matmul( calc_mat, d_mat )
+                     phase = exp(ImagUnit*angle(isi))
+                     DO m = -l,l
+                        DO mp = -l,l
+                           g%gmmpMat(ie,i_gf,m,mp,3,ipm) =&
+                           g%gmmpMat(ie,i_gf,m,mp,3,ipm) + phase * fac * conjg(calc_mat(m,mp))
+                        ENDDO
+                     ENDDO
+                  ENDDO!it
+               ENDDO!ie
+            ENDDO
+         ENDDO!natom
+      ENDIF
+
       CALL timestop("On-Site: Kramer-Kronigs-Integration")
       !IF(input%l_gfmperp) THEN
       !   CALL rot_gf_mat(g,noco)

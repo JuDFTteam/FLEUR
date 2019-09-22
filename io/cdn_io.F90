@@ -351,7 +351,7 @@ MODULE m_cdn_io
             IF (iofl < 0) EXIT
             numLines = numLines + 1
          END DO
-         IF (MOD(numLines,14*input%jspins).NE.0) THEN
+         IF (MOD(numLines,14*SIZE(den%mmpMat,4)).NE.0) THEN
             WRITE(*,*) 'The n_mmp_mat file could not be read.'
             WRITE(*,*) 'Was it an old style file with linear mixing parameter specification'
             WRITE(*,*) 'in the last line? Linear mixing for the density matrix can now be'

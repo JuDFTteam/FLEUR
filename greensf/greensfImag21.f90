@@ -42,7 +42,7 @@ MODULE m_greensfImag21
       INTEGER,                   INTENT(IN)     :: ind(nbands,2)
       REAL,                      INTENT(IN)     :: eig(nbands) 
 
-      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,imat,it,is,isi,ilo,ilop
+      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,imat,it,is,isi,ilo,ilop,nn
       REAL     fac
       COMPLEX phase,weight
       LOGICAL  l_zero,l_tria
@@ -58,12 +58,13 @@ MODULE m_greensfImag21
          l = atoms%gfelem(i_gf)%l
 
 
-         DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
+         DO nn = 1, atoms%neq(nType)
+            natom = SUM(atoms%neq(:nType-1)) + nn
             
             im = 0.0
             !Loop through bands
             !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(natom,l,nType,wtkpt,i_gf,nbands,l_tria) &
+            !$OMP SHARED(natom,nn,l,nType,wtkpt,i_gf,nbands,l_tria) &
             !$OMP SHARED(atoms,im,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig,dosWeights,resWeights,ind) &
             !$OMP PRIVATE(ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop)
             !$OMP DO
@@ -138,41 +139,47 @@ MODULE m_greensfImag21
             !$OMP END PARALLEL
 
             !Rotate the eqivalent atom into the irreducible brillouin zone
-            fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
-            IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="greensfImag")
-            DO imat = 1, MERGE(1,5,input%l_gfsphavg)
-               DO ie = 1, greensfCoeffs%ne 
-                  DO it = 1, sym%invarind(natom)
-                     is = sym%invarop(natom,it)
-                     isi = sym%invtab(is)
-                     d_mat(:,:) = cmplx(0.0,0.0)
-                     DO m = -l,l
-                        DO mp = -l,l
-                           d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
-                        ENDDO
-                     ENDDO
-                     calc_mat = matmul( transpose( conjg(d_mat) ) , &
-                                 im(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,imat))
-                     calc_mat =  matmul( calc_mat, d_mat )
-                     phase = exp(ImagUnit * angle(isi))
-                     DO m = -l,l
-                        DO mp = -l,l
-                           IF(imat.EQ.1) THEN
-                              greensfCoeffs%projdos(ie,i_gf,m,mp,3) = greensfCoeffs%projdos(ie,i_gf,m,mp,3) - AIMAG(fac * phase * conjg(calc_mat(m,mp)))
-                           ELSE IF(imat.EQ.2) THEN
-                              greensfCoeffs%uu(ie,i_gf,m,mp,3) = greensfCoeffs%uu(ie,i_gf,m,mp,3) - AIMAG(fac * phase * conjg(calc_mat(m,mp)))
-                           ELSE IF(imat.EQ.3) THEN
-                              greensfCoeffs%dd(ie,i_gf,m,mp,3) = greensfCoeffs%dd(ie,i_gf,m,mp,3) - AIMAG(fac * phase * conjg(calc_mat(m,mp)))
-                           ELSE IF(imat.EQ.4) THEN
-                              greensfCoeffs%ud(ie,i_gf,m,mp,3) = greensfCoeffs%ud(ie,i_gf,m,mp,3) - AIMAG(fac * phase * conjg(calc_mat(m,mp)))
-                           ELSE IF(imat.EQ.5) THEN
-                              greensfCoeffs%du(ie,i_gf,m,mp,3) = greensfCoeffs%du(ie,i_gf,m,mp,3) - AIMAG(fac * phase * conjg(calc_mat(m,mp)))
-                           ENDIF
-                        ENDDO
-                     ENDDO
-                  ENDDO!it
-               ENDDO!ie
-            ENDDO!imat
+            !fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
+            !IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="greensfImag")
+            !DO imat = 1, MERGE(1,5,input%l_gfsphavg)
+            !   DO ie = 1, greensfCoeffs%ne 
+            !      DO it = 1, sym%invarind(natom)
+            !         is = sym%invarop(natom,it)
+            !         isi = sym%invtab(is)
+            !         d_mat(:,:) = cmplx(0.0,0.0)
+            !         DO m = -l,l
+            !            DO mp = -l,l
+            !               d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
+            !            ENDDO
+            !         ENDDO
+            !         calc_mat = matmul( transpose( conjg(d_mat) ) , &
+            !                     im(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,imat))
+            !         calc_mat =  matmul( calc_mat, d_mat )
+            !         !phase = exp(ImagUnit * angle(isi))
+            !         DO m = -l,l
+            !            DO mp = -l,l
+            !               IF(imat.EQ.1) THEN
+            DO ie = 1, greensfCoeffs%ne
+               DO m = -l,l
+                  DO mp = -l,l
+                     greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) = greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) - AIMAG(im(ie,m,mp,1))
+                  ENDDO
+               ENDDO
+            ENDDO
+                           !ELSE IF(imat.EQ.2) THEN
+                           !   greensfCoeffs%uu(ie,i_gf,m,mp,3) = greensfCoeffs%uu(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
+                           !ELSE IF(imat.EQ.3) THEN
+                           !   greensfCoeffs%dd(ie,i_gf,m,mp,3) = greensfCoeffs%dd(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
+                           !ELSE IF(imat.EQ.4) THEN
+                           !   greensfCoeffs%ud(ie,i_gf,m,mp,3) = greensfCoeffs%ud(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
+                           !ELSE IF(imat.EQ.5) THEN
+                           !   greensfCoeffs%du(ie,i_gf,m,mp,3) = greensfCoeffs%du(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
+                           !ENDIF
+                        !ENDDO
+                     !ENDDO
+                  !ENDDO!it
+               !ENDDO!ie
+            !ENDDO!imat
 
          ENDDO !natom
       ENDDO !i_gf

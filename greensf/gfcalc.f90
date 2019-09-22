@@ -67,7 +67,7 @@ MODULE m_gfcalc
 
 
 
-   SUBROUTINE postProcessGF(greensf,greensfCoeffs,atoms,input,sym,noco,vTot,hub1,results)
+   SUBROUTINE postProcessGF(greensf,greensfCoeffs,atoms,input,sym,noco,vTot,hub1,results,angle)
       
       !contains all the modules for calculating properties from the greens function
       USE m_onsite
@@ -81,6 +81,7 @@ MODULE m_gfcalc
       TYPE(t_hub1ham),           INTENT(INOUT)  :: hub1
       TYPE(t_results),           INTENT(IN)     :: results
       TYPE(t_potden),            INTENT(IN)     :: vTot
+      REAL,                   INTENT(IN)     :: angle(sym%nop)
 
       INTEGER  i_gf,l,nType
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,3)
@@ -88,7 +89,7 @@ MODULE m_gfcalc
 
       CALL timestart("Green's Function: Postprocess")
       !Perform the Kramer-Kronigs-Integration if we only have he imaginary part at this point
-      CALL calc_onsite(atoms,input,sym,noco,greensfCoeffs,greensf)
+      CALL calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,greensf)
       !-------------------------------------------------------------
       ! Calculate various properties from the greens function 
       !-------------------------------------------------------------

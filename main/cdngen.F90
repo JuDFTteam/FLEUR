@@ -146,7 +146,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
       IF(atoms%n_gf.GT.0) THEN
-        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,input,sym,noco,vTot,hub1,results)
+        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,input,sym,noco,vTot,hub1,results,angle)
       ENDIF
    ENDIF
 
