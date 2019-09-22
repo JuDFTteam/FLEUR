@@ -75,7 +75,7 @@ contains
 
     IF (atoms%n_u>0) THEN
        l_densitymatrix=.NOT.input%ldaulinmix
-       IF (mpi%irank==0) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
+       IF (mpi%irank==0) CALL u_mix(input,atoms,noco,inDen%mmpMat,outDen%mmpMat)
        IF (ALL(inDen%mmpMat(:,:,1:atoms%n_u,:)==0.0)) THEN
           l_densitymatrix=.FALSE.
           inDen%mmpMat(:,:,1:atoms%n_u,:)=outDen%mmpMat(:,:,1:atoms%n_u,:)

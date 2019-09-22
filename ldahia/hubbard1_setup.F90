@@ -4,7 +4,7 @@ MODULE m_hubbard1_setup
 
    IMPLICIT NONE
 
-   LOGICAL, PARAMETER :: l_setupdebug = .FALSE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
+   LOGICAL, PARAMETER :: l_setupdebug = .TRUE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
    CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
 
 
@@ -18,6 +18,7 @@ MODULE m_hubbard1_setup
       USE m_uj2f
       USE m_umtx
       USE m_vmmp
+      USE m_vmmp21
       USE m_nmat_rot
       USE m_mudc
       USE m_denmat_dist
@@ -51,7 +52,7 @@ MODULE m_hubbard1_setup
       INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i
       INTEGER io_error,ierr
       INTEGER indStart,indEnd
-      REAL    mu_dc,e_lda_hia,exc
+      REAL    mu_dc,e_lda_hia,exc,e_off
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
       CHARACTER(len=8)   :: l_type*2,l_form*9
@@ -105,6 +106,12 @@ MODULE m_hubbard1_setup
 
          CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,n_mmp,&
          u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:),e_lda_hia)
+
+         IF(noco%l_mperp) THEN
+             IF(ANY(atoms%lda_u(1:atoms%n_u)%phi.NE.0.0).OR.ANY(atoms%lda_u(1:atoms%n_u)%theta.NE.0.0)) CALL juDFT_error("vmmp21+Rot not implemented", calledby="u_setup")
+             CALL v_mmp_21(atoms%lda_u(indStart:indEnd),atoms%n_u,den%mmpMat(:,:,indStart:indEnd,3),u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,3),e_off)
+             e_lda_hia = e_lda_hia + e_off
+         ENDIF
 
          IF(hub1%l_runthisiter.AND.(ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)).AND.mpi%irank.EQ.0) THEN 
             !The onsite green's function was calculated but the solver 
@@ -282,7 +289,7 @@ MODULE m_hubbard1_setup
                ! Calculate the distance and update the density matrix 
                !----------------------------------------------------------------------
                CALL n_mmp_dist(den%mmpMat(:,:,indStart:indEnd,:),mmpMat,atoms%n_hia,results,input%jspins)
-               den%mmpMat(:,:,indStart:indEnd,:) = mmpMat(:,:,:,1:input%jspins) !For now LDA+U in FLEUR ignores spin offdiagonal elements
+               den%mmpMat(:,:,indStart:indEnd,:) = mmpMat(:,:,:,1:MERGE(3,input%jspins,noco%l_mperp)) !For now LDA+U in FLEUR ignores spin offdiagonal elements
                !----------------------------------------------------------------------
                ! Calculate DFT+U potential correction
                !----------------------------------------------------------------------
@@ -292,6 +299,12 @@ MODULE m_hubbard1_setup
                CALL nmat_rot(atoms%lda_u(indStart:indEnd)%phi,atoms%lda_u(indStart:indEnd)%theta,zero,3,atoms%n_hia,input%jspins,atoms%lda_u(indStart:indEnd)%l,n_mmp)
                CALL v_mmp(sym,atoms,atoms%lda_u(indStart:indEnd),atoms%n_hia,input%jspins,input%l_dftspinpol,n_mmp,&
                      u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,:), e_lda_hia)
+
+               IF(noco%l_mperp) THEN
+                  IF(ANY(atoms%lda_u(1:atoms%n_u)%phi.NE.0.0).OR.ANY(atoms%lda_u(1:atoms%n_u)%theta.NE.0.0)) CALL juDFT_error("vmmp21+Rot not implemented", calledby="u_setup")
+                  CALL v_mmp_21(atoms%lda_u(indStart:indEnd),atoms%n_u,den%mmpMat(:,:,indStart:indEnd,3),u,f0,f2,pot%mmpMat(:,:,indStart:indEnd,3),e_off)
+                  e_lda_hia = e_lda_hia + e_off
+               ENDIF
                results%e_ldau = MERGE(results%e_ldau,0.0,atoms%n_u>0) + e_lda_hia 
             ENDIF
          ELSE 

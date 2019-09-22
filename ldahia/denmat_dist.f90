@@ -1,7 +1,7 @@
 MODULE m_denmat_dist
    
    CONTAINS
-   SUBROUTINE n_mmp_dist(n_mmp_in,n_mmp_out,natoms,results,jspins)
+   SUBROUTINE n_mmp_dist(n_mmp_in,n_mmp_out,natoms,results,input)
 
       USE m_types
       USE m_constants
@@ -10,7 +10,7 @@ MODULE m_denmat_dist
       COMPLEX,             INTENT(IN)     :: n_mmp_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,natoms,jspins)
       COMPLEX,             INTENT(IN)     :: n_mmp_out(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,natoms,jspins)
       TYPE(t_results),     INTENT(INOUT)  :: results
-      INTEGER,             INTENT(IN)     :: jspins
+      TYPE(t_input),       INTENT(IN)     :: input
 
       INTEGER ispin,i_at,j,k
       REAL n_in,n_out
@@ -19,14 +19,14 @@ MODULE m_denmat_dist
       n_out = 0.0
       n_in = 0.0
       results%last_mmpMatdistance = 0.0
-      DO ispin = 1, jspins
+      DO ispin = 1, MERGE(3,input%jspins,input%l_gfmperp)
          DO i_at = 1, natoms
             DO j = -3,3
                DO k = -3,3
                   IF((ABS(n_mmp_out(k,j,i_at,ispin) - n_mmp_in(k,j,i_at,ispin))).GT.results%last_mmpMatdistance) THEN
                      results%last_mmpMatdistance = ABS(n_mmp_out(k,j,i_at,ispin) - n_mmp_in(k,j,i_at,ispin))
                   ENDIF
-                  IF(j.EQ.k) THEN
+                  IF(j.EQ.k.AND.ispin<3) THEN
                      n_out = n_out + REAL(n_mmp_out(k,j,i_at,ispin))
                      n_in = n_in + REAL(n_mmp_in(k,j,i_at,ispin))
                   ENDIF
