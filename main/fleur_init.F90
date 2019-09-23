@@ -155,7 +155,7 @@
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
 
-          sliceplot%iplot=.FALSE.
+          sliceplot%iplot=0
           sliceplot%kk = 0
           sliceplot%e1s = 0.0
           sliceplot%e2s = 0.0

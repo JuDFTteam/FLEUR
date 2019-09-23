@@ -931,7 +931,7 @@
       END IF
       band = .false.
       WRITE (5,9240) sliceplot%iplot,input%score,sliceplot%plpot,band
- 9240 FORMAT ('iplot=',l1,',score=',l1,',plpot=',l1,',band=',l1)
+ 9240 FORMAT ('iplot=',i5,',score=',l1,',plpot=',l1,',band=',l1)
       WRITE (5,9250) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
  9250 FORMAT (i3,2f10.6,',nnne=',i3,',pallst=',l1)
       WRITE(5,*) "No relaxation with old input anymore"
