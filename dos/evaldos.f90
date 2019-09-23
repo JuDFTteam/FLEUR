@@ -355,6 +355,7 @@
     
 !**** write out DOS
          OPEN (18,FILE='DOS'//spin12(jspin))
+         OPEN (1337,FILE="PROJDOS"//spin12(jspin))
 
          DO i = 1 , ned
            totdos = 0.0
@@ -371,6 +372,7 @@
              ELSE
              WRITE (18,99001)  e(i),totdos,g(i,lmax*atoms%ntype+1), &
                   g(i,lmax*atoms%ntype+2),g(i,lmax*atoms%ntype+3), (gpart(i,l),l=1,atoms%ntype)
+             WRITE (1337,99001)  e(i),(g(i,l),l=1,lmax)
           ENDIF
        ELSEIF (n_orb == 0) THEN
           DO nl = 1, slab%nsld
@@ -385,6 +387,7 @@
            ENDIF
          ENDDO
          CLOSE (18)
+         CLOSE (1337)
 
          ELSE
            write(*,'(4f15.8)') ((mcd%e_mcd(n,jspin,i),n=1,atoms%ntype),i=1,ncored)
