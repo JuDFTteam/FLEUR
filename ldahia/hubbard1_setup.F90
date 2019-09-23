@@ -100,7 +100,7 @@ MODULE m_hubbard1_setup
          CALL umtx(atoms%lda_u(indStart:indEnd),atoms%n_hia,f0(:,1),f2(:,1),f4(:,1),f6(:,1),u)
 
          ! check for possible rotation of n_mmp
-         n_mmp = den%mmpMat(:,:,indStart:indEnd,:)
+         n_mmp = den%mmpMat(:,:,indStart:indEnd,1:input%jspins)
          zero = 0.0
          CALL nmat_rot(atoms%lda_u(indStart:indEnd)%phi,atoms%lda_u(indStart:indEnd)%theta,zero,3,atoms%n_hia,input%jspins,atoms%lda_u(indStart:indEnd)%l,n_mmp)
 
@@ -189,7 +189,8 @@ MODULE m_hubbard1_setup
                      !-------------------------------------------------------
                      ! Write the main config files
                      !-------------------------------------------------------
-                     CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,l_bathexist,.true.)
+                     CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,&
+                                        l_bathexist,hub1%iter==1.AND.ALL(pot%mmpmat(:,:,indStart:indEnd,:).EQ.0.0),.true.)
                   ELSE
                      !If no Solver is linked we assume that the old solver is used and we write out some additional files
                      !Crystal field matrix (old version)
@@ -207,7 +208,7 @@ MODULE m_hubbard1_setup
                      !-------------------------------------------------------
                      ! Write the main config files (old version)
                      !-------------------------------------------------------  
-                     CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.,.false.)
+                     CALL hubbard1_input(xPath,i_hia,l,f0(i_hia,1),f2(i_hia,1),f4(i_hia,1),f6(i_hia,1),hub1,mu_dc,n_occ,.false.,.false.,.false.)
                   ENDIF
                ENDIF
             ENDDO
@@ -288,7 +289,7 @@ MODULE m_hubbard1_setup
                !----------------------------------------------------------------------
                ! Calculate the distance and update the density matrix 
                !----------------------------------------------------------------------
-               CALL n_mmp_dist(den%mmpMat(:,:,indStart:indEnd,:),mmpMat,atoms%n_hia,results,input%jspins)
+               CALL n_mmp_dist(den%mmpMat(:,:,indStart:indEnd,:),mmpMat,atoms%n_hia,results,input)
                den%mmpMat(:,:,indStart:indEnd,:) = mmpMat(:,:,:,1:MERGE(3,input%jspins,noco%l_mperp)) !For now LDA+U in FLEUR ignores spin offdiagonal elements
                !----------------------------------------------------------------------
                ! Calculate DFT+U potential correction

@@ -44,7 +44,7 @@ MODULE m_hubbard1_io
 
    CONTAINS
 
-   SUBROUTINE hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath,l_new)
+   SUBROUTINE hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath,l_first,l_new)
 
       IMPLICIT NONE
 
@@ -56,11 +56,12 @@ MODULE m_hubbard1_io
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
       LOGICAL,          INTENT(IN)  :: l_bath
+      LOGICAL,          INTENT(IN)  :: l_first
       LOGICAL,          INTENT(IN)  :: l_new
 
       !Old or new input format
       IF(l_new) THEN
-         CALL write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath)
+         CALL write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath,l_first)
       ELSE
          CALL write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
       ENDIF
@@ -68,7 +69,7 @@ MODULE m_hubbard1_io
    END SUBROUTINE hubbard1_input
 
 
-   SUBROUTINE write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath)
+   SUBROUTINE write_hubbard1_input_new(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n,l_bath,l_first)
 
       USE m_generic_txtio
 
@@ -82,6 +83,7 @@ MODULE m_hubbard1_io
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
       LOGICAL,          INTENT(IN)  :: l_bath
+      LOGICAL,          INTENT(IN)  :: l_first
       
       INTEGER :: info, io_error,i,j,k,ind1,ind2,i_exc,i_arg
       REAL exc
@@ -180,7 +182,7 @@ MODULE m_hubbard1_io
       !------------------------------------
       ! Crystal field contribution
       !------------------------------------
-      IF(hub1%ccf(i_hia).NE.0.0.AND..NOT.(hub1%iter==1)) THEN
+      IF(hub1%ccf(i_hia).NE.0.0.AND..NOT.l_first) THEN
          CALL writeValue(input_iounit, "cf")
 
          CALL cfmat%init(.true.,2*(2*l+1),2*(2*l+1))

@@ -17,8 +17,8 @@ MODULE m_gfcalc
 
       USE m_greensfImag
       USE m_greensfImag21
-      USE m_greensfRes
-      USE m_greensfRes21
+      !USE m_greensfRes
+      !USE m_greensfRes21
 
       IMPLICIT NONE
 
