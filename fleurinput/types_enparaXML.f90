@@ -36,7 +36,7 @@ CONTAINS
     ELSE
        rank=0
     END IF
-    
+
     CALL mpi_bc(this%qn_el,rank,mpi_comm)
     CALL mpi_bc(this%qn_ello,rank,mpi_comm)
     CALL mpi_bc(rank,mpi_comm,this%evac0)
@@ -58,7 +58,7 @@ CONTAINS
     lmaxd=xml%get_lmaxd()
     jspins=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@jspins'))
     film=xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
-    
+
     CALL this%init(ntype,MAXVAL(nlo),jspins)
 
     DO n=1,ntype
@@ -69,8 +69,8 @@ CONTAINS
        this%qn_el(3,n,:)=evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(xpath)//'/@f'))
        DO lo=1,nlo(n)
           WRITE(xpath2,"(a,a,i0,a)") TRIM(xml%speciesPath(n)),'/lo[',lo,']'
-          this%qn_ello(lo,n,:)=evaluateFirstINTOnly(xml%GetAttributeValue(TRIM(xpath)//'/@n'))
-          IF (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'@type')))=='HELO') &
+          this%qn_ello(lo,n,:)=evaluateFirstINTOnly(xml%GetAttributeValue(TRIM(xpath2)//'/@n'))
+          IF (TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPath2))//'/@type')))=='HELO') &
                this%qn_ello(lo,n,:)=-1*this%qn_ello(lo,n,:)
        END DO
     END DO
@@ -86,7 +86,7 @@ CONTAINS
           IF (i==1.AND.n==1) this%evac0(2,:)=this%evac0(1,:)
        END DO
     END IF
-    
+
 
   END SUBROUTINE read_xml_enpara
 
@@ -97,17 +97,17 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER,INTENT(in)           :: ntype
     CHARACTER(len=*),INTENT(in)  :: str,lo
-    
+
     CHARACTER(len=100):: val_str
     character         :: ch
     INTEGER           :: qn,n,i,l
-    
+
     !Process lo's
     DO i=1,LEN_TRIM(lo)/2
        READ(lo(2*i-1:2*i),"(i1,a1)") qn,ch
        enpara%qn_ello(i,ntype,:)=qn
     ENDDO
-    
+
     !Valence string
     val_str=ADJUSTL(str(INDEX(str,"|")+1:))
     DO WHILE(LEN_TRIM(val_str)>1)
@@ -130,7 +130,7 @@ CONTAINS
     ENDDO
     enpara%qn_el(:,ntype,:)=ABS(enpara%qn_el(:,ntype,:))
   END SUBROUTINE set_quantum_numbers
-  
+
   SUBROUTINE init(this,ntype,nlod,jspins,l_defaults,nz)
     USE m_constants
     CLASS(t_enparaXML),INTENT(inout):: this
@@ -153,29 +153,29 @@ CONTAINS
     DO jsp=1,jspins
        DO n = 1,ntype
           IF ( nz(n) < 3 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/1,2,3,4/) 
+             this%qn_el(0:3,n,jsp) =  (/1,2,3,4/)
           ELSEIF ( nz(n) < 11 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/2,2,3,4/) 
+             this%qn_el(0:3,n,jsp) =  (/2,2,3,4/)
           ELSEIF ( nz(n) < 19 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/3,3,3,4/) 
+             this%qn_el(0:3,n,jsp) =  (/3,3,3,4/)
           ELSEIF ( nz(n) < 31 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/4,4,3,4/) 
+             this%qn_el(0:3,n,jsp) =  (/4,4,3,4/)
           ELSEIF ( nz(n) < 37 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/4,4,4,4/) 
+             this%qn_el(0:3,n,jsp) =  (/4,4,4,4/)
           ELSEIF ( nz(n) < 49 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/5,5,4,4/) 
+             this%qn_el(0:3,n,jsp) =  (/5,5,4,4/)
           ELSEIF ( nz(n) < 55 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/5,5,5,4/) 
+             this%qn_el(0:3,n,jsp) =  (/5,5,5,4/)
           ELSEIF ( nz(n) < 72 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/6,6,5,4/) 
+             this%qn_el(0:3,n,jsp) =  (/6,6,5,4/)
           ELSEIF ( nz(n) < 81 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/6,6,5,5/) 
+             this%qn_el(0:3,n,jsp) =  (/6,6,5,5/)
           ELSEIF ( nz(n) < 87 ) THEN
-             this%qn_el(0:3,n,jsp) =  (/6,6,6,5/) 
+             this%qn_el(0:3,n,jsp) =  (/6,6,6,5/)
           ELSE
-             this%qn_el(0:3,n,jsp) =  (/7,7,6,5/) 
+             this%qn_el(0:3,n,jsp) =  (/7,7,6,5/)
           ENDIF
-          
+
           this%qn_ello(:,n,jsp) = 0
        ENDDO
     ENDDO

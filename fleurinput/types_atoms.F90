@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 #ifndef CPP_MANAGED
-#define CPP_MANAGED 
+#define CPP_MANAGED
 #endif
 MODULE m_types_atoms
   USE m_juDFT
@@ -193,7 +193,7 @@ MODULE m_types_atoms
     IMPLICIT NONE
     CLASS(t_atoms),INTENT(IN)      :: self
     INTEGER                        :: nsp
-      
+
     nsp = (self%lmaxd+1+MOD(self%lmaxd+1,2))*(2*self%lmaxd+1)
    END FUNCTION
 
@@ -233,7 +233,9 @@ MODULE m_types_atoms
     ALLOCATE(this%econf(this%ntype))
     ALLOCATE(this%ncv(this%ntype)) ! For what is this?
     ALLOCATE(this%lapw_l(this%ntype)) ! Where do I put this?
-    ALLOCATE(this%llo(MAXVAL(xml%get_nlo()),this%ntype))
+    this%nlod=MAXVAL(xml%get_nlo())
+    ALLOCATE(this%llo(this%nlod,this%ntype))
+    ALLOCATE(this%ulo_der(this%nlod,this%ntype))
     ALLOCATE(this%speciesname(this%ntype))
     this%lapw_l(:) = -1
     this%n_u = 0
@@ -253,7 +255,7 @@ MODULE m_types_atoms
           this%zatom(n) = 1.0e-10
        END IF
        this%zatom(n) = this%nz(n)
-       
+
        IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@flipSpin'))) THEN
           this%nflip(n) = 1
        ELSE
@@ -287,7 +289,7 @@ MODULE m_types_atoms
           this%l_geo(n) = .FALSE.
           this%relax(:,n) = 0
        END IF
-       !LO stuff  
+       !LO stuff
        this%nlo(n) = 0
         DO ilo = 1,xml%getNumberOfNodes(TRIM(ADJUSTL(xpaths))//'/lo')+xml%getNumberOfNodes(TRIM(ADJUSTL(xpathg))//'/lo')
            IF (ilo>xml%getNumberOfNodes(TRIM(ADJUSTL(xpaths))//'/lo')) THEN
@@ -307,7 +309,7 @@ MODULE m_types_atoms
              this%llo(this%nlo(n)+i,n) = lNumbers(i)
              this%ulo_der(this%nlo(n)+i,n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@eDeriv'))
           ENDDO
-          this%nlo(n) = this%nlo(n) +lnumcount 
+          this%nlo(n) = this%nlo(n) +lnumcount
           DEALLOCATE (lNumbers, nNumbers)
        END DO
        !LDA+U
@@ -316,7 +318,7 @@ MODULE m_types_atoms
           IF (i.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="types_this")
           this%n_u = this%n_u + 1
           this%lda_u(this%n_u)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l'))
-          
+
           this%lda_u(this%n_u)%u =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@U'))
           this%lda_u(this%n_u)%j = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@J'))
           this%lda_u(this%n_u)%l_amf =  evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_amf'))
@@ -382,7 +384,7 @@ MODULE m_types_atoms
 
 
 
- 
+
     END DO
 
     this%nlotot = 0
@@ -391,13 +393,13 @@ MODULE m_types_atoms
           this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
        ENDDO
     ENDDO
-    
+
     ! Check the LO stuff and call setlomap (from inped):
-    
+    this%llod=maxval(this%llo)
     ALLOCATE(this%lo1l(0:this%llod,this%ntype))
     ALLOCATE(this%nlol(0:this%llod,this%ntype))
     ALLOCATE(this%l_dulo(this%nlod,this%ntype))
-    
+
     DO n = 1, this%ntype
        IF (this%nlo(n).GE.1) THEN
           IF (this%nlo(n).GT.this%nlod) THEN
@@ -410,18 +412,18 @@ MODULE m_types_atoms
                 CALL juDFT_error("llo(j,n)>llod",calledby ="postprocessInput")
              END IF
           END DO
-          
+
           ! Replace call to setlomap with the following 3 loops (preliminary).
           ! this%nlol and this%lo1l arrays are strange. This should be solved differently.
           DO l = 0,this%llod
              this%nlol(l,n) = 0
              this%lo1l(l,n) = 0
           END DO
-          
+
           DO ilo = 1,this%nlod
              this%l_dulo(ilo,n) = .FALSE.
           END DO
-          
+
           DO ilo = 1,this%nlo(n)
              WRITE(6,'(A,I2,A,I2)') 'I use',this%ulo_der(ilo,n),'. derivative of l =',this%llo(ilo,n)
              IF (this%llo(ilo,n)>this%llod) CALL juDFT_error(" l > llod!!!",calledby="postprocessInput")
@@ -437,11 +439,11 @@ MODULE m_types_atoms
           END DO
           WRITE (6,*) 'this%lapw_l(n) = ',this%lapw_l(n)
        END IF
-       
+
     END DO
-    
+
     ! Check lda+u stuff (from inped)
-    
+
     DO i = 1, this%n_u
        n = this%lda_u(i)%atomType
        IF (this%nlo(n).GE.1) THEN
@@ -451,7 +453,7 @@ MODULE m_types_atoms
           END DO
        END IF
     END DO
-    
+
     this%jmtd = maxval(this%jri(:))
     ALLOCATE(this%rmsh(this%jmtd,this%ntype))
     ALLOCATE(this%volmts(this%ntype))
@@ -483,15 +485,15 @@ MODULE m_types_atoms
     END DO
 
     this%lmaxd=maxval(this%lmax)
-    
-    
+
+
   END SUBROUTINE read_xml_atoms
-  
+
   subroutine init_atoms(this,cell)
     use m_types_cell
     class(t_atoms),intent(inout):: this
     type(t_cell),INTENT(IN)   :: cell
-    
+
     where (abs(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
     this%pos(:,:) = matmul(cell%amat,this%taual(:,:))
   end subroutine init_atoms
