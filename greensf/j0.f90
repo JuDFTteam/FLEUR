@@ -83,6 +83,7 @@ MODULE m_j0
 
          matsize = (2*l+1)
          CALL delta%init(.false.,matsize,matsize)
+         CALL calc%init(.false.,matsize,matsize)
          DO i = 1, matsize
             delta%data_c(i,i) = exc_split(l)
          ENDDO
@@ -155,7 +156,7 @@ MODULE m_j0
             ENDIF
 
          
-            CALL calc%free()
+            IF(l_matinv) CALL calc%free()
          
          ENDDO
          j0(l) = -1/(2.0*fpi_const)*hartree_to_ev_const * j0(l)
@@ -164,6 +165,7 @@ MODULE m_j0
 
          IF(atoms%j0(i_j0)%l_eDependence) CLOSE(unit=1337)
          CALL delta%free()
+         CALL calc%free()
          ENDDO
          WRITE(6,9050) SUM(j0(l_min:l_max)), ABS(SUM(j0(l_min:l_max)))*2/3 * 1/(boltzmannConst*hartree_to_ev_const)
       ENDDO
