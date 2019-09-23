@@ -226,7 +226,7 @@
 !
 !     calculate the triangles!
 !
-         IF ( jspin.EQ.1 .AND. .FALSE.) THEN
+         IF ( jspin.EQ.1 ) THEN
            l_tria=.true.
            IF (input%film .AND. .NOT.oneD%odi%d1) THEN
              CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
@@ -284,7 +284,6 @@
            ENDIF
          ENDIF
 
-         l_tria = .false.
 !
         IF ( .not.l_mcd ) THEN
          ALLOCATE (g(ned,qdim))
