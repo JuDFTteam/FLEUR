@@ -820,7 +820,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="PlottingType">
-      <xsd:attribute default="F" name="iplot" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute default="F" name="iplot" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="score" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="plplot" type="FleurBool" use="optional"/>
    </xsd:complexType>
