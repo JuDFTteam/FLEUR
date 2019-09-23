@@ -58,6 +58,7 @@ MODULE m_j0
                !-------------------------------------------------
                DO ispin = 1, input%jspins
                   int_com = 0.0
+                  int_norm = 0.0
                   n_cut = g0Coeffs%kkintgr_cutoff(i_gf,ispin,2)
                   DO ie = 1, n_cut
                      DO m = -l, l
@@ -66,7 +67,7 @@ MODULE m_j0
                         int_norm(ie,ispin) = int_norm(ie,ispin) + g0Coeffs%projdos(ie,i_gf,m,m,ispin)
                      ENDDO
                   ENDDO
-                  exc_split(l) = exc_split(l) + (-1)**(ispin-1) * 1.0/((2*l+1)*pi_const) * trapz(int_com(:n_cut,ispin),g0Coeffs%del,n_cut) 
+                  exc_split(l) = exc_split(l) + (-1)**(ispin) * 1.0/(trapz(int_norm(:n_cut,ispin),g0Coeffs%del,n_cut)) * trapz(int_com(:n_cut,ispin),g0Coeffs%del,n_cut) 
                ENDDO
             ENDDO
             IF(atoms%j0(i_j0)%l_avgexc) THEN
