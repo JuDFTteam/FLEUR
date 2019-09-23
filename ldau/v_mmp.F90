@@ -145,7 +145,7 @@ CONTAINS
        !  set diagonal terms and correct for non-spin-polarised case
        !
        DO ispin = 1,jspins
-          v_diag(ispin) = - u_htr * ( rho_tot - eta(ispin) ) + j_htr * ( rho_sig(ispin) - eta(ispin) )
+          v_diag(ispin) = - u_htr * ( rho_tot - 0.5*eta(0) ) + j_htr * ( rho_sig(ispin) - eta(ispin) )
           DO m = -l,l
              DO mp = -l,l
                 vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) * spin_deg
