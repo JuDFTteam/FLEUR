@@ -45,7 +45,7 @@ swsp=F  0.00  0.00  0.00  0.00
 lflip=F  1  1  1  1
 vacdos=F,layers= 0,integ=F,star=F,nstars= 0     0.00     0.00     0.00     0.00,nstm=0,tworkf=  0.000000
  
-iplot=0,score=F,plpot=F,band=F
+iplot=    0,score=F,plpot=F,band=F
   0  0.000000  0.000000,nnne=  0,pallst=F
 xa=   2.00000,thetad= 330.00000,epsdisp=   0.00001,epsforce=   0.00001
 relax 111 111 111 111
