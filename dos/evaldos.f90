@@ -355,7 +355,7 @@
     
 !**** write out DOS
          OPEN (18,FILE='DOS'//spin12(jspin))
-         OPEN (1337,FILE="PROJDOS"//spin12(jspin))
+         IF (atoms%ntype >= 20) OPEN (1337,FILE="PROJDOS"//spin12(jspin))
 
          DO i = 1 , ned
            totdos = 0.0
@@ -387,7 +387,7 @@
            ENDIF
          ENDDO
          CLOSE (18)
-         CLOSE (1337)
+         IF (atoms%ntype >= 20) CLOSE (1337)
 
          ELSE
            write(*,'(4f15.8)') ((mcd%e_mcd(n,jspin,i),n=1,atoms%ntype),i=1,ncored)
