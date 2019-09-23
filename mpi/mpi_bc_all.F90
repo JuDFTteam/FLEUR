@@ -40,7 +40,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER i(43),ierr(3)
     REAL    r(34)
-    LOGICAL l(46)
+    LOGICAL l(45)
     !     ..
     !     .. External Subroutines..
 #ifdef CPP_MPI    
@@ -71,7 +71,7 @@ CONTAINS
 
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
-       l(11)=banddos%dos ; l(12) = hybrid%l_hybrid ; l(13)=banddos%vacdos ; l(14)=input%integ
+       l(11)=banddos%dos ; l(12) = hybrid%l_hybrid ; l(13)=banddos%vacdos ; l(14)=input%integ; l(15)=noco%l_spav
        l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip 
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
@@ -80,7 +80,7 @@ CONTAINS
        l(38)=field%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=field%efield%dirichlet
        l(43)=field%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
-       l(46)=noco%l_spav
+       
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -121,7 +121,7 @@ CONTAINS
     field%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45)
     banddos%unfoldband=l(35)
     noco%l_mtNocoPot=l(36)
-    noco%l_spav=l(46)
+    noco%l_spav=l(15)
     !
     ! -> Broadcast the arrays:
     IF (field%efield%l_segmented) THEN
