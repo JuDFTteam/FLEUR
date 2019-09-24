@@ -523,7 +523,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      INQUIRE(file="cdn1",exist=l_opti)
      if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
      l_opti=.not.l_opti
-     IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
+     IF ((sliceplot%iplot.NE.0).OR.(input%strho).OR.(input%swsp).OR.&
          (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
 
      IF (.NOT.l_opti) THEN
@@ -546,7 +546,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CALL timestart("stepf") 
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
   CALL timestop("stepf") 
-  IF (.NOT.sliceplot%iplot) THEN   
+  IF (sliceplot%iplot.EQ.0) THEN   
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
