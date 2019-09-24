@@ -1151,7 +1151,7 @@ CONTAINS
 
       IF (input%film.AND..NOT.oneD%odd%d1) THEN
          cell%vol = (cell%omtil/cell%amat(3,3))*vacuum%dvac
-         cell%area = cell%omtil/cell%amat(3,3)
+         cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
          !-odim
       ELSE IF (oneD%odd%d1) THEN
          cell%area = tpi_const*cell%amat(3,3)

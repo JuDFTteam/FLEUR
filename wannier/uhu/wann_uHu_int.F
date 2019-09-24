@@ -16,6 +16,7 @@ c*****************************************c
 c                J.-P. Hanke, Dec. 2015   c
 c*****************************************c
       module m_wann_uHu_int
+      use m_juDFT
       contains
       subroutine wann_uHu_int(
      >               chi,nvd,k1d,k2d,k3d,
@@ -32,7 +33,7 @@ c*****************************************c
 
       implicit none
 
-      TYPE(t_zmat), INTENT(IN) :: zMat_b, zMat_b2
+      TYPE(t_mat), INTENT(IN) :: zMat_b, zMat_b2
 
 c     ..arguments..
       logical, intent(in) :: l_kin
@@ -111,7 +112,8 @@ c     ..local variables..
         phase = rgphs(i1,i2,i3)    ! TODO: sign also here?
         phase2= rgphs(sign*i1,sign*i2,sign*i3)
         if(phase.ne.phase2) then
-           stop 'rgphs in wann_uHu_int'
+         call juDFT_error("rgphs in wann_uHu_int",
+     &     calledby="wann_uHu_int")
         endif
 
         ekk = rk_b(i) + rk_b2(j)
@@ -131,20 +133,20 @@ c     ..local variables..
       ! complex conjugate of (z(k+b1,g))^* vstep(g,g') z(k+b2,g')
       IF(zMat_b%l_real) THEN
          call CPP_BLAS_sgemm('T','N',nv_b,nslibd_b2,nv_b2,real(1.0),
-     >               vstep_r,nv_b2,zMat_b2%z_r(1+addnoco2,1),nbasfcn,
+     >               vstep_r,nv_b2,zMat_b2%data_r(1+addnoco2,1),nbasfcn,
      >               real(0.0),mat_r,nv_b)
          call CPP_BLAS_sgemm('T','N',nslibd_b,nslibd_b2,nv_b,
-     >              real(1.0),zMat_b%z_r(1+addnoco,1),nbasfcn,
+     >              real(1.0),zMat_b%data_r(1+addnoco,1),nbasfcn,
      >              mat_r,nv_b,real(0.0),uHu_tmp,nslibd_b)
          uHu(1:nslibd_b,1:nslibd_b2) = uHu(1:nslibd_b,1:nslibd_b2)
      >                            + uHu_tmp(1:nslibd_b,1:nslibd_b2)*chi
       ELSE
          call CPP_BLAS_cgemm('T','N',nv_b,nslibd_b2,nv_b2,cmplx(1.0),
-     >               vstep_c,nv_b2,zMat_b2%z_c(1+addnoco2,1),nbasfcn,
+     >               vstep_c,nv_b2,zMat_b2%data_c(1+addnoco2,1),nbasfcn,
      >               cmplx(0.0),mat_c,nv_b)
          mat_c = conjg(mat_c)
          call CPP_BLAS_cgemm('T','N',nslibd_b,nslibd_b2,nv_b,
-     >              chi,zMat_b%z_c(1+addnoco,1),nbasfcn,
+     >              chi,zMat_b%data_c(1+addnoco,1),nbasfcn,
      >              mat_c,nv_b,cmplx(1.0),uHu,nbnd)
       END IF
 

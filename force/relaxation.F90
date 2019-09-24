@@ -91,10 +91,10 @@ CONTAINS
     CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
     IF (l_conv) THEN
-       CALL judft_end("Structual relaxation: Done",mpi%irank)
+       CALL judft_end("Structural relaxation: Done",mpi%irank)
     ELSE
        CALL mixing_history_reset(mpi)
-       CALL judft_end("Structual relaxation: new displacements generated",mpi%irank)
+       CALL judft_end("Structural relaxation: new displacements generated",mpi%irank)
     END IF
   END SUBROUTINE relaxation
 
