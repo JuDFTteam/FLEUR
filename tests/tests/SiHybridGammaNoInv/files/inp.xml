@@ -5,13 +5,12 @@
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.70000000" Gmax="11.10000000" GmaxXC="9.20000000" numbands="80"/>
-      <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="25" imix="Anderson" alpha=".05000000" preconditioning_param="0.0" spinf="2.00000000"/>
+      <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="25" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <prodBasis gcutm="3.20000000" tolerance=".00010000" ewaldlambda="3" lexp="16" bands="60"/>
       <expertModes gw="0" secvar="F"/>
-      <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="0" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
       <bzIntegration valenceElectrons="8.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointMesh nx="4" ny="4" nz="4" gamma="T"/>
