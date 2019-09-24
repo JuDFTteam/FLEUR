@@ -21,9 +21,10 @@ MODULE m_plot
    ! A general purpose plotting routine for FLEUR.
    ! 
    ! Based on older plotting routines in pldngen.f90
-   ! and plotdop.f90 called by optional.F90 and now
+   ! and plotdop.f90 originally called by optional.F90 and now
    ! called within a scf-loop instead of as a post
-   ! process functionality.
+   ! process functionality. This allowed us to remove
+   ! i/o from the ploting routine completely. 
    ! 
    ! A. Neukirchen & R. Hilgers, September 2019 
    !------------------------------------------------
