@@ -71,7 +71,7 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
-    USE m_plot
+!    USE m_plot
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
