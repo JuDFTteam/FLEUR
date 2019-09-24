@@ -680,7 +680,7 @@ SUBROUTINE w_inpXML(&
    WRITE (fileNum,395) banddos%unfoldband, banddos%s_cell_x, banddos%s_cell_y, banddos%s_cell_z
 
 !      <plotting iplot="0" score="F" plplot="F"/>
-   400 FORMAT('      <plotting iplot="',i5,'" score="',l1,'" plplot="',l1,'"/>')
+   400 FORMAT('      <plotting iplot="',i0,'" score="',l1,'" plplot="',l1,'"/>')
    WRITE (fileNum,400) sliceplot%iplot,input%score,sliceplot%plpot
 
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
