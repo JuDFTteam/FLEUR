@@ -382,10 +382,116 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE scalarplot(iplot,den,filename)
+   SUBROUTINE scalarplot(den,filename)
    !Takes a 1-component t_potden density, i.e. a scalar field in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
+      
+   IMPLICIT NONE
+
+
+   TYPE(t_potden), INTENT(IN)    :: den
+
+   CHARACTER (len=30) :: filename
+   CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
+   CHARACTER (len=7)               :: textline
+
+   REAL, ALLOCATABLE    :: xdnout(:)
+   REAL    :: vec1(3),vec2(3),vec3(3),zero(3)
+
+   INTEGER :: grid(3)
+
+   LOGICAL            :: polar, xsf, cartesian, twodim
+
+
+
+
+   ALLOCATE(outFilenames(1))
+   ALLOCATE(xdnout(1))
+
+   OPEN (18,file=filename)
+   READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
+   polar = .FALSE.
+   OPEN(120+1,file=TRIM(ADJUSTL(outFilenames(1)))//'.xsf',form='formatted')
+   CALL xsf_WRITE_atoms(120+1,atoms,input%film,oneD%odi%d1,cell%amat)
+
+
+------
+
+   DO nplo = 1, nplot
+
+      ! the defaults
+      twodim = .TRUE.
+      cartesian = .TRUE.
+      grid = (/100,100,100/)
+      vec1 = (/0.,0.,0./)
+      vec2 = (/0.,0.,0./)
+      vec3 = (/0.,0.,0./)
+      zero = (/0.,0.,0./)
+      READ(18,filename)
+      IF (twodim.AND.ANY(grid(1:2)<1)) &
+         CALL juDFT_error("Illegal grid size in plot",calledby="plot")
+      IF (.NOT.twodim.AND.ANY(grid<1)) &
+         CALL juDFT_error("Illegal grid size in plot",calledby="plot")
+      IF (twodim) grid(3) = 1
+
+      !calculate cartesian coordinates if needed
+      IF (.NOT.cartesian) THEN
+         vec1=matmul(cell%amat,vec1)
+         vec2=matmul(cell%amat,vec2)
+         vec3=matmul(cell%amat,vec3)
+         zero=matmul(cell%amat,zero)
+      END IF
+
+      !Open the file
+      IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo
+      DO i = 1, numOutFiles
+         IF (xsf) THEN
+            CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
+         ELSE
+            IF (numOutFiles.NE.1) THEN
+               OPEN (nfile+i,file = filename//outFilenames(i),form='formatted')
+            ELSE
+               OPEN (nfile+i,file = filename,form='formatted')
+            END IF
+         END IF
+      END DO
+
+      !loop over spins
+      DO jsp = 1, input%jspins
+         !loop over all points
+         DO iz = 0, grid(3)-1
+            DO iy = 0, grid(2)-1
+               DO ix = 0, grid(1)-1
+
+                  point = zero + vec1*REAL(ix)/(grid(1)-1) +&
+                                 vec2*REAL(iy)/(grid(2)-1)
+                  IF (.NOT.twodim) point = point + vec3*REAL(iz)/(grid(3)-1)
+
+                  ! Set region specific parameters for point
+                  
+                  ! Get MT sphere for point if point is in MT sphere
+                  CALL getMTSphere(input,cell,atoms,oneD,point,nt,na,pt)
+                  IF (na.NE.0) THEN
+                     ! In MT sphere
+                     iv = 0
+                     iflag = 1
+                  ELSE IF (input%film.AND..NOT.oneD%odi%d1.AND.ABS(point(3))>=cell%z1) THEN
+                     ! In vacuum in 2D system
+                     iv = 1
+                     iflag = 0
+                     pt(:) = point(:)
+                  ELSE IF ((oneD%odi%d1).AND.(SQRT((point(1))**2 + (point(2))**2)>=cell%z1)) THEN
+                     ! In vacuum in 1D system
+                     iv = 1
+                     iflag = 0
+                     pt(:) = point(:)
+                  ELSE
+                     ! In interstitial region
+                     iv = 0
+                     iflag = 2
+                     pt(:) = point(:)
+                  END IF
    
    END SUBROUTINE scalarplot
 
@@ -411,6 +517,10 @@ CONTAINS
       CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
       CALL scalarplot(...,cden,filenames(1))
       CALL scalarplot(...,mden,filenames(2))
+
+
+
+
 
    END SUBROUTINE vectorplot
 
