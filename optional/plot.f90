@@ -25,7 +25,7 @@ MODULE m_plot
    ! called within a scf-loop instead of as a post
    ! process functionality.
    ! 
-   ! A. Neukirchen, September 2019 
+   ! A. Neukirchen & R. Hilgers, September 2019 
    !------------------------------------------------
    INTEGER, PARAMETER :: PLOT_INPDEN_const=2        !ind_plot= 1
    INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE_const=4 !ind_plot= 2
@@ -33,9 +33,9 @@ MODULE m_plot
    INTEGER, PARAMETER :: PLOT_POT_TOT_const=128     !ind_plot= 7
    INTEGER, PARAMETER :: PLOT_POT_EXT_const=256     !ind_plot= 8
    INTEGER, PARAMETER :: PLOT_POT_COU_const=512     !ind_plot= 9
-   INTEGER, PARAMETER     :: PLOT_POT_VXC_const=1024    !ind_plot=10
-   !CHARACTER, PARAMETER, DIMENSION(7) :: filenames=(/''/)
-   PUBLIC             :: checkplotinp, genplotinp, doplots, vectorsplit, matrixsplit, scalarplot, vectorplot, matrixplot
+   INTEGER, PARAMETER :: PLOT_POT_VXC_const=1024    !ind_plot=10
+
+   PUBLIC             :: checkplotinp, makeplots, procplot, vectorsplit, matrixsplit, scalarplot, vectorplot, matrixplot
 
 CONTAINS
 
@@ -50,81 +50,67 @@ CONTAINS
       END IF
 
       INQUIRE(file = "plot_inp", exist = newform)
-      IF (.NOT.newform) THEN CALL genplotinp()
+      IF (.NOT.newform) THEN
+         OPEN(20,file ="plot_inp")
+         WRITE(20,'(i2,a5,l1)') 2,",xsf=",.true.
+         WRITE(20,*) "&PLOT twodim=t,cartesian=t"
+         WRITE(20,*) "  vec1(1)=10.0 vec2(2)=10.0"
+         WRITE(20,*) "  filename='plot1' /"
+         WRITE(20,*) "&PLOT twodim=f,cartesian=f"
+         WRITE(20,*) "  vec1(1)=1.0 vec1(2)=0.0 vec1(3)=0.0 "
+         WRITE(20,*) "  vec2(1)=0.0 vec2(2)=1.0 vec2(3)=0.0 "
+         WRITE(20,*) "  vec3(1)=0.0 vec3(2)=0.0 vec3(3)=1.0 "
+         WRITE(20,*) "  grid(1)=30  grid(2)=30  grid(3)=30  "
+         WRITE(20,*) "  zero(1)=0.0 zero(2)=0.0 zero(3)=0.5 "
+         WRITE(20,*) "  filename ='plot2' /"
+         CLOSE(20)   
+      END IF
 
    END SUBROUTINE checkplotinp
 
-   SUBROUTINE genplotinp()
-   ! Generates the necessary plot_inp file that dictates the parameters of all
-   ! generated .xsf files.
-
-      OPEN(20,file ="plot_inp")
-      WRITE(20,'(i2,a5,l1)') 2,",xsf=",.true.
-      WRITE(20,*) "&PLOT twodim=t,cartesian=t"
-      WRITE(20,*) "  vec1(1)=10.0 vec2(2)=10.0"
-      WRITE(20,*) "  filename='plot1' /"
-      WRITE(20,*) "&PLOT twodim=f,cartesian=f"
-      WRITE(20,*) "  vec1(1)=1.0 vec1(2)=0.0 vec1(3)=0.0 "
-      WRITE(20,*) "  vec2(1)=0.0 vec2(2)=1.0 vec2(3)=0.0 "
-      WRITE(20,*) "  vec3(1)=0.0 vec3(2)=0.0 vec3(3)=1.0 "
-      WRITE(20,*) "  grid(1)=30  grid(2)=30  grid(3)=30  "
-      WRITE(20,*) "  zero(1)=0.0 zero(2)=0.0 zero(3)=0.5 "
-      WRITE(20,*) "  filename ='plot2' /"
-      CLOSE(20)
-
-   END SUBROUTINE genplotinp
+!--------------------------------------------------------------------------------------------
    
-   SUBROUTINE doplots(jspins,noco,iplot,ind_plot,den)   
-      INTEGER, INTENT(IN) :: iplot
-      INTEGER, INTENT(IN) :: ind_plot !Index of the plot according to the constants set above
-      INTEGER :: jplot
-      
-      IF btest(iplot,ind_plot) THEN
-         jplot=2**ind_plot   
-         CALL checkplotinp()
-         CALL doplot(jspins,noco,jplot,den)
-      END IF
-   END SUBROUTINE doplots
-
-   SUBROUTINE doplot(jspins,noco,iplot,ind_plot,den)   
-      INTEGER, INTENT(IN) :: jplot
-      CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
-      INTEGER :: i
-      
-      ! Plotting the density matrix as n or n,m or n,mx,my,mz 
-      IF jplot==2 THEN
-         IF jspins==2 THEN
-            IF noco%l_noco THEN
-               ALLOCATE(outFilenames(4))
-               outFilenames(1)='cden'
-               outFilenames(2)='mdnx'
-               outFilenames(3)='mdny'
-               outFilenames(4)='mdnz'
-               !--> matrixplot mit factor=1
-            ELSE
-               ALLOCATE(outFilenames(2))
-               outFilenames(1)='cden'
-               outFilenames(2)='mden'
-            END IF
-         ELSE
-            ALLOCATE(outFilenames(1))
-            outFilenames(1)='cden'
-         END IF
-      END IF
-   END SUBROUTINE doplot
-   
-   
-   SUBROUTINE vectorsplit(den,den1,den2)
+   SUBROUTINE vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
    ! Takes a 2D potential/density vector and rearanges it into two plottable
    ! seperate ones (e.g. [rho_up, rho_down] ---> n, m).
-      TYPE(t_potden) :: den1
-      CALL den1%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
+      IMPLICIT NONE
+
+      TYPE(t_stars),     INTENT(IN)    :: stars
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_noco),      INTENT(IN)    :: noco
+      TYPE(t_potden),    INTENT(INOUT) :: denmat
+      TYPE(t_potden),    INTENT(OUT)   :: cden, mden
+
+      CALL cden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+      CALL mden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+
+      CALL SpinsToChargeAndMagnetisation(denmat)
+
+      cden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,1)
+      cden%pw(1:,1) = denmat%pw(1:,1)
+      cden%vacz(1:,1:,1) = denmat%vacz(1:,1:,1)
+      cden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,1)
+
+      mden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,2)
+      mden%pw(1:,1) = denmat%pw(1:,2)
+      mden%vacz(1:,1:,1) = denmat%vacz(1:,1:,2)
+      mden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,2)
+
+      CALL ChargeAndMagnetisationToSpins(denmat)
+      
    END SUBROUTINE vectorsplit
+
+!--------------------------------------------------------------------------------------------
 
    SUBROUTINE matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
    ! Takes a 2x2 potential/density matrix and rearanges it into four plottable
    ! seperate ones (e.g. rho_mat ---> n, mx, my, mz).
+   !
+   ! This is basically 1:1 the old pldngen.f90 routine, courtesy of Philipp Kurz.
 
       IMPLICIT NONE
 
@@ -394,6 +380,8 @@ CONTAINS
 
    END SUBROUTINE matrixsplit
 
+!--------------------------------------------------------------------------------------------
+
    SUBROUTINE scalarplot(iplot,den,filename)
    !Takes a 1-component t_potden density, i.e. a scalar field in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
@@ -401,30 +389,111 @@ CONTAINS
    
    END SUBROUTINE scalarplot
 
-   SUBROUTINE vectorplot()
+!--------------------------------------------------------------------------------------------
+
+   SUBROUTINE vectorplot(stars,vacuum,atoms,sphhar,input,noco,denmat,filenames)
    !Takes a spin-polarized t_potden density, i.e. a 2D vector in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
 
-      CALL vectorsplit(den,den1,den2)
-      CALL scalarplot(den1,filenames(1))
-      CALL scalarplot(den2,filenames(1))
+      IMPLICIT NONE
+
+      TYPE(t_stars),     INTENT(IN)    :: stars
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_noco),      INTENT(IN)    :: noco
+      TYPE(t_potden),    INTENT(INOUT) :: denmat
+
+      TYPE(t_potden)                   :: cden, mden
+
+      CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
+      CALL scalarplot(...,cden,filenames(1))
+      CALL scalarplot(...,mden,filenames(2))
 
    END SUBROUTINE vectorplot
 
-   SUBROUTINE matrixplot(iplot,den,filenames,factor)
+!--------------------------------------------------------------------------------------------
+
+   SUBROUTINE matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,filenames)
    !Takes a 2x2 t_potden density, i.e. a sum of Pauli matrices in MT-sphere/star
    !representation and makes it into 4 plottable .xsf files according to a scheme
    !given in plot_inp.
-   
-      !Local variables:
 
-      CALL matrixsplit(den,den1,den2,den3,den4,factor)
-      CALL scalarplot(den1,filenames(1))
-      CALL scalarplot(den2,filenames(1))
-      CALL scalarplot(den3,filenames(1))
-      CALL scalarplot(den4,filenames(1))
+      IMPLICIT NONE
+
+      TYPE(t_mpi),       INTENT(IN)    :: mpi
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_stars),     INTENT(IN)    :: stars
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_cell),      INTENT(IN)    :: cell
+      TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_noco),      INTENT(IN)    :: noco
+      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
+      REAL,              INTENT(IN)    :: factor
+      TYPE(t_potden),    INTENT(INOUT) :: denmat
+
+      TYPE(t_potden),                  :: cden, mxden, myden, mzden
+
+      CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
+      CALL scalarplot(...,cden,filenames(1))
+      CALL scalarplot(...,mxden,filenames(2))
+      CALL scalarplot(...,myden,filenames(3))
+      CALL scalarplot(...,mzden,filenames(4))
       
    END SUBROUTINE matrixplot
+
+!--------------------------------------------------------------------------------------------
+
+   SUBROUTINE procplot(jspins,noco,iplot,ind_plot,den)   
+      INTEGER, INTENT(IN) :: jplot
+      CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
+      INTEGER :: i
+      
+      ! Plotting the density matrix as n or n,m or n,mx,my,mz 
+      IF jplot==2 THEN
+         IF jspins==2 THEN
+            IF noco%l_noco THEN
+               ALLOCATE(outFilenames(4))
+               outFilenames(1)='cden'
+               outFilenames(2)='mdnx'
+               outFilenames(3)='mdny'
+               outFilenames(4)='mdnz'
+               call matrixplot(...)
+            ELSE
+               ALLOCATE(outFilenames(2))
+               outFilenames(1)='cden'
+               outFilenames(2)='mden'
+               call vectorplot(...)
+            END IF
+         ELSE
+            ALLOCATE(outFilenames(1))
+            outFilenames(1)='cden'
+            call scalarplot(...)
+         END IF
+      END IF
+   END SUBROUTINE procplot
+
+!--------------------------------------------------------------------------------------------
+
+   SUBROUTINE makeplots(jspins,noco,iplot,ind_plot,den)   
+      INTEGER, INTENT(IN) :: iplot
+      INTEGER, INTENT(IN) :: ind_plot !Index of the plot according to the constants set above
+      INTEGER :: jplot
+      LOGICAL :: allowplot
+      
+      allowplot=BTEST(iplot,ind_plot).OR.(MODULO(iplot,2).NE.1)
+      IF (allowplot) THEN
+         jplot=2**ind_plot   
+         CALL checkplotinp()
+         CALL procplot(jspins,noco,jplot,den)
+      END IF
+   END SUBROUTINE makeplots
+
+!--------------------------------------------------------------------------------------------
 
 END MODULE m_plot
