@@ -190,9 +190,9 @@ CONTAINS
       DO k = 1, nsp
          th = thet(k)
          ph = phi(k)
-         div_temp(kt+nsp,1) = SIN(th)*COS(ph)*gradx%gr(1,kt+nsp,jspins) + SIN(th)*SIN(ph)*grady%gr(1,kt+nsp,jspins) + COS(th)*gradz%gr(1,kt+nsp,jspins)&
-                             +COS(th)*COS(ph)*gradx%gr(2,kt+nsp,jspins) + COS(th)*SIN(ph)*grady%gr(2,kt+nsp,jspins) - SIN(th)*gradz%gr(2,kt+nsp,jspins)&
-                             -SIN(ph)*gradx%gr(3,kt+nsp,jspins)         + COS(ph)*grady%gr(3,kt+nsp,jspins)
+         div_temp(kt+nsp,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+nsp,jspins) + SIN(th)*SIN(ph)*grady%gr(1,kt+nsp,jspins) + COS(th)*gradz%gr(1,kt+nsp,jspins))&
+                             +(COS(th)*COS(ph)*gradx%gr(2,kt+nsp,jspins) + COS(th)*SIN(ph)*grady%gr(2,kt+nsp,jspins) - SIN(th)*gradz%gr(2,kt+nsp,jspins))/r&
+                             -(SIN(ph)*gradx%gr(3,kt+nsp,jspins)         + COS(ph)*grady%gr(3,kt+nsp,jspins))/(r*SIN(th))
       ENDDO ! k
    
       kt = kt+nsp
