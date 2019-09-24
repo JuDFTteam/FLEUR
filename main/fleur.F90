@@ -5,13 +5,6 @@
 !--------------------------------------------------------------------------------
 MODULE m_fleur
   IMPLICIT NONE
-  INTEGER, PARAMETER :: PLOT_INPDEN_INDEX_const=1
-  INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE_INDEX_const=2
-  INTEGER, PARAMETER :: PLOT_INPDEN_N_CORE_INDEX_const=3
-  INTEGER, PARAMETER :: PLOT_POT_TOT_INDEX_const=7
-  INTEGER, PARAMETER :: PLOT_POT_EXT_INDEX_const=8
-  INTEGER, PARAMETER :: PLOT_POT_COU_INDEX_const=9
-  INTEGER, PARAMETER :: PLOT_POT_VXC_INDEX_const=10
 CONTAINS
   SUBROUTINE fleur_execute(mpi_comm)
 
@@ -71,7 +64,6 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
-!    USE m_plot
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -157,11 +149,6 @@ CONTAINS
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
-    
-!    IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-!       CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_INPDEN_INDEX_const,inDen)
-!    END IF 
-
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
@@ -253,14 +240,6 @@ CONTAINS
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
                  obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
-
-!       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-!          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_TOT_INDEX_const,vTot)
-!       END IF 
-
-!       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-!          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_COU_INDEX_const,vCoul)
-!       END IF 
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
@@ -385,14 +364,6 @@ CONTAINS
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
-           
-!          IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN      
-!             IF-statement to check whether we remove core densities    
-!                CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_OUTDEN_Y_CORE_INDEX_const,outDen)
-!             ELSE
-!                CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_OUTDEN_N_CORE_INDEX_const,outDen)
-!             END IF
-!          END IF 
 
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)

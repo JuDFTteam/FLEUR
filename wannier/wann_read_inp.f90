@@ -7,7 +7,7 @@
 module m_wann_read_inp
 
 contains
-subroutine wann_read_inp(input,l_p0,wann)
+subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
 !********************************************
 !     Read the Wannier input file 'wann_inp'.
 !     Frank Freimuth
@@ -17,12 +17,14 @@ subroutine wann_read_inp(input,l_p0,wann)
 
    implicit none
 
-   TYPE(t_input), intent(in)   :: input
+   TYPE(t_dimension), INTENT(INOUT) :: DIMENSION
+   TYPE(t_input),intent(inout) :: input
+   TYPE(t_noco),      INTENT(INOUT) :: noco
    TYPE(t_wann), intent(inout) :: wann
    logical,intent(in)          :: l_p0
 
    logical           :: l_file,l_orbcompinp
-   integer           :: i,ios,n
+   integer           :: i,ios,n,neigd_min
    character(len=30) :: task
    real              :: version_real
 
@@ -178,6 +180,8 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_ndegen=.true.
          elseif(trim(task).eq.'unformatted')then
             wann%l_unformatted=.true.
+         elseif(trim(task).eq.'eig66')then
+            input%eig66(1)=.true.       
          elseif(trim(task).eq.'orbcomp')then
             wann%l_orbcomp=.true.
          elseif(trim(task).eq.'orbcomprs')then
@@ -462,6 +466,8 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_ndegen=.true.
          elseif(trim(task).eq.'unformatted')then
             wann%l_unformatted=.true.
+         elseif(trim(task).eq.'eig66')then
+            input%eig66(1)=.true.        
          elseif(trim(task).eq.'orbcomp')then
             wann%l_orbcomp=.true.
          elseif(trim(task).eq.'orbcomprs')then
@@ -725,6 +731,34 @@ subroutine wann_read_inp(input,l_p0,wann)
        wann%atomlist(n)=n
      enddo
    endif      
+
+
+!---- check if we need to increase the neigd parameter
+   if(wann%l_byindex)then
+   if(noco%l_soc.OR.noco%l_noco)then
+      neigd_min=wann%band_max(1)
+   else   
+      neigd_min=max(wann%band_max(1),wann%band_max(2))
+   endif !noco,soc?
+   if(l_p0)then
+      write(*,*)"In wann_read_inp: input-neigd=",DIMENSION%neigd
+      write(*,*)"In wann_read_inp: we require at least neigd_min=",neigd_min
+      if(neigd_min>DIMENSION%neigd)then
+         write(*,*)"we increase neigd..."
+      else
+         write(*,*)"we leave neigd unchanged"
+      endif      
+   endif !l_p0?
+   if(neigd_min>DIMENSION%neigd)then
+         DIMENSION%neigd=neigd_min
+   endif    
+   if(l_p0)then
+      write(*,*)"In wann_read_inp: output-neigd=",DIMENSION%neigd
+   endif
+
+   endif !l_byindex?
+
+
 
 end subroutine wann_read_inp
 

@@ -1,19 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2016 Peter GrÃ¼nberg Institut, Forschungszentrum JÃ¼lich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      module m_wann_socmat
+      module m_wann_socmat_vec
       contains
-      subroutine wann_socmat(
+      subroutine wann_socmat_vec(
      >               mpi,enpara,input,noco,atoms,
      >               lmaxd,natd,neigd,
      >               llod,jspd,
-     >               theta_in,phi_in,jspins,irank,
+     >               jspins,irank,
      >               vr,
      >               acof,bcof,chelp,
-     <               hsomtx)
+     <               hsomtx_vec)
 c***********************************************************************
 c     Calculate matrix elements of the spin-orbit interaction for those
 c     Bloch functions out of which the Wannier functions are 
@@ -41,12 +41,8 @@ c***********************************************************************
       integer, intent(in) :: llod
       integer, intent(in) :: jspd
 
-
-      real,    intent(in) :: theta_in
-      real,    intent(in) :: phi_in
       integer, intent(in) :: jspins
       integer, intent(in) :: irank
-
 
       real,    intent(in) :: vr(:,0:,:,:)    ! jmtd,0:nlhd,ntypd,jspd   
   
@@ -54,27 +50,17 @@ c***********************************************************************
       complex, intent(in) :: bcof(:,0:,:,:) !bcof(noccbd,0:lmd,natd,jspd)
       complex, intent(in) :: chelp(-llod:,:,:,:,:) !chelp(-llod:llod,neigd,nlod,natd,jspd)
 
-      complex, intent(out):: hsomtx(:,:,:,:) !(neigd,neigd,2,2)
+      complex, intent(out):: hsomtx_vec(:,:,:,:,:) !(2,2,neigd,neigd,3)
 
-      integer :: n,l,nwdd,nw,ispin,ie,na,ll1,m,lm,i,nsz(2)
+      integer :: n,l,nwdd,nw,ispin,ie,na,ll1,m,lm,i,j,i1,i2,nsz(2),compo
       real    :: s(3),r2
       logical :: l_all
       CHARACTER*3 chntype
       real    :: theta,phi,pi
 
-!      real,allocatable :: ddn(:,:,:) ! 0:lmaxd,ntypd,jspd
-!      real,allocatable :: us(:,:,:)  ! 0:lmaxd,ntypd,jspd
-!      real,allocatable :: dus(:,:,:) ! 0:lmaxd,ntypd,jspd
-!      real,allocatable :: uds(:,:,:) ! 0:lmaxd,ntypd,jspd
-!      real,allocatable :: duds(:,:,:)! 0:lmaxd,ntypd,jspd
-
-!      real,allocatable :: ulos(:,:,:)  ! nlod,ntypd,jspd
-!      real,allocatable :: dulos(:,:,:) ! nlod,ntypd,jspd
-!      real,allocatable :: uulon(:,:,:) ! nlod,ntypd,jspd
-!      real,allocatable :: dulon(:,:,:) ! nlod,ntypd,jspd  
-
       COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:)
       complex,allocatable :: bhelp(:,:,:,:)
+      COMPLEX,ALLOCATABLE :: hsomtx(:,:,:,:)
 
       TYPE(t_rsoc)::rsoc
       TYPE(t_usdus):: usdus
@@ -83,19 +69,12 @@ c***********************************************************************
       nw=1
       nsz=neigd
 
-      IF (.true.) THEN
-        theta= theta_In
-        phi= phi_In
-      ELSE
-        pi= 4.*ATAN(1.)
-        theta= -theta_In
-        phi=   phi_In+pi
-        ! now the definition of rotation matrices
-        ! is equivalent to the def in the noco-routines
-      ENDIF
+      theta= 0.0
+      phi= 0.0
 
       ALLOCATE ( ahelp(lmaxd*(lmaxd+2),natd,neigd,input%jspins) )
       ALLOCATE ( bhelp(lmaxd*(lmaxd+2),natd,neigd,input%jspins) )
+      allocate ( hsomtx(neigd,neigd,2,2) )
 
       do ispin=1,input%jspins
        DO ie = 1, neigd
@@ -122,21 +101,33 @@ c***********************************************************************
      +         usdus%uulon(atoms%nlod,atoms%ntype,jspd),
      +         usdus%dulon(atoms%nlod,atoms%ntype,jspd))
 
-!      ALLOCATE( us(0:lmaxd,ntypd,jspd), dus(0:lmaxd,ntypd,jspd),
-!     +          uds(0:lmaxd,ntypd,jspd),duds(0:lmaxd,ntypd,jspd),
-!     +          ddn(0:lmaxd,ntypd,jspd),
-!     +          ulos(nlod,ntypd,jspd),dulos(nlod,ntypd,jspd),
-!     +          uulon(nlod,ntypd,jspd),dulon(nlod,ntypd,jspd))
 
       CALL spnorb(
      >         atoms,noco,input,mpi, enpara,
      >         vr,usdus,rsoc,.true.)
       
-      rsoc%soangl= conjg(rsoc%soangl)
+      do compo=1,3 
+        rsoc%soangl= cmplx(0.0,0.0)
 
-      CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
+        
+        CALL spnorb_angles(atoms,mpi,noco%theta,
+     >        noco%phi,rsoc%soangl,compo)
+
+        CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
      >            bhelp,1,natd,mpi%n_rank,mpi%n_size,mpi%SUB_COMM,
      <            hsomtx)
  
-      end subroutine wann_socmat
-      end module m_wann_socmat
+        do i1 = 1,2
+         do i2 = 1,2
+          do i = 1,neigd
+           do j = 1,neigd
+             hsomtx_vec(i1,i2,i,j,compo) = hsomtx(i,j,i1,i2)
+           enddo
+          enddo
+         enddo
+        enddo
+
+      enddo !compo
+
+      end subroutine wann_socmat_vec
+      end module m_wann_socmat_vec

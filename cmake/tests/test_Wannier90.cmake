@@ -2,6 +2,37 @@
 try_compile(FLEUR_USE_WANN ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_Wannier90.f90
 	    LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
+            
+            
+message("Wannier90 1.2 Library found:${FLEUR_USE_WANN}")
+
+
+foreach(ADD_String "-lwannier;-lmkl_intel_lp64;-lmkl_sequential;-lmkl_core" )
+
+
+
+   if (NOT FLEUR_USE_WANN)
+     set(TEST_LIBRARIES "${FLEUR_LIBRARIES};${ADD_String}")
+
+     message("compilation test:${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_Wannier90.f90
+            LINK_LIBRARIES ${TEST_LIBRARIES}")
+
+
+     try_compile(FLEUR_USE_WANN ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_Wannier90.f90
+            LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE TELL_ME
+            )
+
+     message("TELL_ME=${TELL_ME}")
+
+
+     if (FLEUR_USE_WANN)
+          set(FLEUR_WANNIER90_LIBRARIES ${TEST_LIBRARIES})
+          set(  FLEUR_LIBRARIES "${FLEUR_LIBRARIES};${ADD_String}"  )
+     endif()
+   endif()
+endforeach()            
+            
+            
 
 message("Wannier90 1.2 Library found:${FLEUR_USE_WANN}")
 
