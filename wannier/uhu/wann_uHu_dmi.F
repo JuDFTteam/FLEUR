@@ -1330,8 +1330,8 @@ c**************************************c
          call wann_uHu_sph(
      >        chi,nbnd,llod,nslibd_b,nslibd_b2,nlod,natd,ntypd,
      >        lmd,jmtd,taual,nop,lmax,ntype,neq,nlo,llo,
-     >        acof_b,bcof_b,ccof_b,bkpt_b2,
-     >        acof_b2,bcof_b2,ccof_b2,bkpt_b,bkpt,
+     >        acof_b,bcof_b,ccof_b,lapw_b2%bkpt,
+     >        acof_b2,bcof_b2,ccof_b2,lapw_b%bkpt,lapw%bkpt,
      >        gb(:,ikpt_b,ikpt),(/0,0,0/),
      <        tuu(:,:,:,:,doublespin),
      >        tud(:,:,:,:,doublespin),
