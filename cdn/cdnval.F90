@@ -238,7 +238,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
             IF (banddos%l_orb.AND.ANY((/banddos%alpha,banddos%beta,banddos%gamma/).NE.0.0)) THEN
                CALL abcrot2(atoms,banddos,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
-               IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+               IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,ev_list,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
             END IF
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
