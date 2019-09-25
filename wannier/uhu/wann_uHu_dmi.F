@@ -861,7 +861,7 @@ c       na = na + neq(n)
      >        rmsh,jri,lmax,ntypsy,natd,lnonsph,lmd,lmplmd,clnu,
      >        mlh,nmem,llh,nlh,neq,irank,mlotot,mlolotot,
      >        vTot%mt(:,:,:,jspin3),nlod,llod,loplod,
-     >        enpara%ello(1,1,jspin3),
+     >        enpara%ello0(1,1,jspin3),
      >        llo,nlo,lo1l,l_dulo,ulo_der,ff(:,:,:,:,jspin),
      >        gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
      >        ff(:,:,:,:,jspin_b),gg(:,:,:,:,jspin_b),
@@ -1448,8 +1448,9 @@ c**************************************c
      >            jspin_b,jspin,
      >     lapw_b%k1,lapw_b%k2,lapw_b%k3,
      >     lapw_b2%k1,lapw_b2%k2,lapw_b2%k3,
-     >           wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,nv_b,
-     >            nv_b2,sk2,phi2,omtil,gb(:,ikpt_b,ikpt),
+     >           wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
+     >     lapw_b%nv,
+     >     lapw_b2%nv,sk2,phi2,omtil,gb(:,ikpt_b,ikpt),
      >            (/0,0,0/),qpt_i,sign2,
      >            uHu(:,:,iqpt_b,ikpt_b,i_rec))
             call cpu_time(t1)
