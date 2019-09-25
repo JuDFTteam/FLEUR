@@ -1410,9 +1410,10 @@ c**************************************c
      >  nslibd_b,nslibd_b2,nbasfcn,addnoco,addnoco2,
      >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
      >  gb(:,ikpt_b,ikpt),
-     >  lapw_b2%k1(:,jspin_b),lapw_b2%k2(:,jspin_b),lapw_b2%k3(:,jspin_b),
-     >            (/0,0,0/),lapw%bkpt,bbmat,
-     >            vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
+     >  lapw_b2%k1(:,jspin_b),lapw_b2%k2(:,jspin_b),
+     >  lapw_b2%k3(:,jspin_b),
+     >      (/0,0,0/), lapw%bkpt, bbmat,
+     >  vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
      >            ustep,ig,.true.,sign2,
      >            uHu(:,:,iqpt_b,ikpt_b,i_rec))
             call cpu_time(t1)
