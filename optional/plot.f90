@@ -480,8 +480,8 @@ CONTAINS
    !END IF 
 
    ! Open the plot_inp file for input 
-   OPEN (18,file='plot_inp')
-   READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
+   OPEN (fileNumberRead,file='plot_inp')
+   READ(fileNumberRead,'(i2,5x,l1,1x,a)') nplot,xsf,textline
    !polar = .FALSE. !TODO: Implement that it will be checked in the plot_inp if ploar==T
    !IF ((noco%l_noco).AND.(numInFiles.EQ.4)) THEN !TODO: Implement when density is plotted. 
       !polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
@@ -491,30 +491,16 @@ CONTAINS
    !END IF
    ALLOCATE(outFilenames(numOutFiles))
    ALLOCATE(xdnout(numOutFiles))
-   !IF(numOutFiles.EQ.1) THEN!ONLY relevant case for SCALARPLOT
-      outFilenames(1) = 'plot'
-   !ELSE
-   !   DO i = 1, numInFiles
-   !      outFilenames(i) = TRIM(ADJUSTL(cdnFilenames(i)))//'_pl'
-   !   END DO
-   !   IF (polar) THEN
-   !      outFilenames(5) = 'mabs_pl'
-   !      outFilenames(6) = 'mtha_pl'
-   !      outFilenames(7) = 'mphi_pl'
-   !   END IF
-   !END IF
+
+   outFilenames(1) = fileName!We can do this more elegant later.
+
 
    ! If xsf is specified we create input files for xcrysden
 
    xsf=.TRUE.
-   !From now on an XSF file will ALWAYS be created.
-   !IF (xsf) THEN
-      !DO i = 1, numOutFiles
-         OPEN(nfile+1,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted')
-         CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
-      !END DO
-   !END IF
-
+   OPEN(nfile+1,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted')
+   CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
+   
    ! Loop over all plots
    DO nplo = 1, nplot
 
@@ -527,37 +513,18 @@ CONTAINS
       vec3 = (/0.,0.,0./)
       zero = (/0.,0.,0./)
       filename = "default"
-      READ(18,plot)
+      READ(fileNumberRead,plot)
       IF (twodim.AND.ANY(grid(1:2)<1)) &
          CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
       IF (.NOT.twodim.AND.ANY(grid<1)) &
          CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
       IF (twodim) grid(3) = 1
 
-      !calculate cartesian coordinates if needed
-
-      !Option will never be called since line 523 (cartesian = .TRUE.). Maybe this is an ancient artifact.
-      !IF (.NOT.cartesian) THEN
-      !   vec1=matmul(cell%amat,vec1)
-      !   vec2=matmul(cell%amat,vec2)
-      !   vec3=matmul(cell%amat,vec3)
-      !   zero=matmul(cell%amat,zero)
-      !END IF
-
       !Open the file
       IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo !Which role does "default" exactly play? 
-      !DO i = 1, numOutFiles!numOutFiles=1 => Pointless loop
-         !IF (xsf) THEN!Pointless
-            CALL xsf_WRITE_header(nfile+1,twodim,filename,vec1,vec2,vec3,zero,grid)
-     !Will never be called again due to xsf=.TRUE.
-     !    ELSE
-     !       IF (numOutFiles.NE.1) THEN
-     !          OPEN (nfile+i,file = filename//outFilenames(i),form='formatted')
-     !       ELSE
-     !          OPEN (nfile+i,file = filename,form='formatted')
-     !       END IF
+         CALL xsf_WRITE_header(nfile+1,twodim,filename,vec1,vec2,vec3,zero,grid)
          END IF
-      !END DO
+      
 
       !loop over spins
       DO jsp = 1, input%jspins
@@ -594,14 +561,11 @@ CONTAINS
                      iflag = 2
                      pt(:) = point(:)
                   END IF
-
-                  !DO i = 1, numInFiles !pointless do Loop
                      CALL outcdn(pt,nt,na,iv,iflag,jsp,sliceplot,stars,&!TODO; We have to get rid of that but I need to understand EXACTLY whats happening here.
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
                                  den(i)%pw,den(i)%vacxy,den(i)%mt,&
-                                 den(i)%vacz,xdnout(i))
-                  !END DO
-
+                                 den(i)%vacz,xdnout(i)) !Close look at xdnout later in the file. This seems to be the crucial part which is then plotted.
+ 
                   !IF (na.NE.0) THEN!TODO: do it somewhere else.
                   !   IF (noco%l_ss) THEN 
                   !      ! rotate magnetization "backward"
@@ -663,38 +627,18 @@ CONTAINS
                   !   xdnout(6)= xdnout(6)/pi_const
                   !   xdnout(7)= xdnout(7)/pi_const
                   !END IF ! (polar)
-
-                  !DO i = 1, numOutFiles!Pointless loop
-                     !IF (xsf) THEN
-                     WRITE(nfile+1,*) xdnout(i)
-                     !ELSE !Will never be "Else" again
-                     !   WRITE(nfile+i,'(4e15.7)') point ,xdnout(i)
-                     !END IF
-                  !END DO
-
+                    WRITE(nfile+1,*) xdnout(i)
                END DO
             END DO
          END DO !z-loop
-         !DO i = 1, numOutFiles !numOutFiles=1
             IF (xsf.AND.jsp /= input%jspins) &
                CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)
-         !END DO
-      END DO !Spin-loop!Pointless
-
-      !DO i = 1, numOutFiles
-         !IF (xsf) THEN
+      END DO !Spin-loop
             CALL xsf_WRITE_endblock(nfile+i,twodim)
-         !ELSE!Also Pointless
-         !   CLOSE(nfile+i)
-         !END IF
-      !END DO
    END DO !nplot  
     
-   CLOSE(18)!TODO: Keep 18?????
-   !IF (xsf) THEN!Pointless
-      !DO i = 1, numOutFiles!Pointless
+   CLOSE(fileNumberRead)
          CLOSE(nfile=1)
-      !END DO
    END IF
 
    DEALLOCATE(xdnout, cdnFilenames, outFilenames)
