@@ -12,7 +12,7 @@
 !! In addition to overloading the t_xcpot datatype also mpi_bc_xcpot must be adjusted
 !! for additional implementations.
 MODULE m_types_xcpot
-   use m_types_potden
+   USE m_types_potden
    IMPLICIT NONE
    PRIVATE
    PUBLIC           :: t_xcpot,t_gradients
@@ -69,8 +69,8 @@ MODULE m_types_xcpot
       REAL,ALLOCATABLE :: laplace(:,:)
    END TYPE t_gradients
 CONTAINS
-   subroutine kED_alloc_mt(kED,nsp_x_jmtd, jspins, n_start, n_types, n_stride)
-      implicit none
+   SUBROUTINE kED_alloc_mt(kED,nsp_x_jmtd, jspins, n_start, n_types, n_stride)
+      IMPLICIT NONE
       class(t_kinED), intent(inout)   :: kED
       integer, intent(in)            :: nsp_x_jmtd, jspins, n_start, n_types, n_stride
       integer                        :: cnt, n

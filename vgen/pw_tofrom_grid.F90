@@ -15,11 +15,11 @@ MODULE m_pw_tofrom_grid
   
   PUBLIC :: init_pw_grid,pw_to_grid,pw_from_grid,finish_pw_grid
 CONTAINS
-  SUBROUTINE init_pw_grid(xcpot,stars,sym,cell)
+  SUBROUTINE init_pw_grid(dograds,stars,sym,cell)
     USE m_prpxcfftmap
     USE m_types
     IMPLICIT NONE
-    CLASS(t_xcpot),INTENT(IN)     :: xcpot
+    LOGICAL,INTENT(IN)            :: dograds
     TYPE(t_stars),INTENT(IN)      :: stars
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -34,13 +34,13 @@ CONTAINS
       
     ifftd=27*stars%mx1*stars%mx2*stars%mx3
     ifftxc3  = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
-    IF (xcpot%needs_grad()) THEN
+    IF (dograds) THEN
        CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
     ENDIF
        
   END SUBROUTINE init_pw_grid
   
-  SUBROUTINE pw_to_grid(xcpot,jspins,l_noco,stars,cell,den_pw,grad,rho)
+  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,rho)
     !.....------------------------------------------------------------------
     !------->          abbreviations
     !
@@ -73,9 +73,9 @@ CONTAINS
     USE m_fft3dxc
     USE m_fft3d
     USE m_types
-    use m_constants
+    USE m_constants
     IMPLICIT NONE
-    CLASS(t_xcpot),INTENT(IN)     :: xcpot
+    LOGICAL,INTENT(IN)            :: dograds
     INTEGER,INTENT(IN)            :: jspins
     LOGICAL,INTENT(IN)            :: l_noco
     TYPE(t_stars),INTENT(IN)      :: stars
@@ -96,7 +96,7 @@ CONTAINS
     
     ! Allocate arrays
     ALLOCATE( bf3(0:ifftd-1))
-    IF (xcpot%needs_grad()) THEN
+    IF (dograds) THEN
        IF (PRESENT(rho)) ALLOCATE(rho(0:ifftxc3-1,jspins))
        ALLOCATE( ph_wrk(0:ifftxc3-1),rhd1(0:ifftxc3-1,jspins,3))
        ALLOCATE( rhd2(0:ifftxc3-1,jspins,6) )
@@ -104,7 +104,7 @@ CONTAINS
         IF (PRESENT(rho)) ALLOCATE(rho(0:ifftd-1,jspins))
      ENDIF
     IF (l_noco)  THEN
-       IF (xcpot%needs_grad()) THEN
+       IF (dograds) THEN
           ALLOCATE( mx(0:ifftxc3-1),my(0:ifftxc3-1),magmom(0:ifftxc3-1))
           ALLOCATE(dmagmom(0:ifftxc3-1,3),ddmagmom(0:ifftxc3-1,3,3) )
        ELSE
@@ -115,7 +115,7 @@ CONTAINS
     IF (PRESENT(rho)) THEN
     !Put den_pw on grid and store into rho(:,1:2)
        DO js=1,jspins
-          IF (xcpot%needs_grad()) THEN
+          IF (dograds) THEN
              CALL fft3dxc(rho(0:,js),bf3, den_pw(:,js), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
                   stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
           ELSE
@@ -125,7 +125,7 @@ CONTAINS
 
        IF (l_noco) THEN  
           !  Get mx,my on real space grid and recalculate rho and magmom
-          IF (xcpot%needs_grad()) THEN
+          IF (dograds) THEN
              CALL fft3dxc(mx,my, den_pw(:,3), stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
                   stars%nxc3_fft,stars%kmxxc_fft,+1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
           ELSE
@@ -139,7 +139,7 @@ CONTAINS
           END DO
        ENDIF
     ENDIF
-    IF (xcpot%needs_grad()) THEN  
+    IF (dograds) THEN
 
     ! In collinear calculations all derivatives are calculated in g-spce,
     ! in non-collinear calculations the derivatives of |m| are calculated in real space. 
@@ -215,12 +215,27 @@ CONTAINS
              ENDDO !jdm
           ENDDO   !idm 
        END IF
-       CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
- 
-       !
+
+!       CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
+       !!!!!!!THIS IS A QUICKFIX! TO BE REMOVED ASAP!!!!!!!!!
+       !A. Neukirchen 25.09.19
+       IF (ALLOCATED(grad%agrt)) THEN
+          DEALLOCATE(grad%agrt,grad%agru,grad%agrd)
+          DEALLOCATE(grad%g2ru,grad%g2rd,grad%gggrt)
+          DEALLOCATE(grad%gggru,grad%gzgr,grad%g2rt)
+          DEALLOCATE(grad%gggrd,grad%grgru,grad%grgrd)
+       ENDIF
+
+       ALLOCATE(grad%agrt(ifftxc3),grad%agru(ifftxc3),grad%agrd(ifftxc3))
+       ALLOCATE(grad%g2ru(ifftxc3),grad%g2rd(ifftxc3),grad%gggrt(ifftxc3))
+       ALLOCATE(grad%gggru(ifftxc3),grad%gzgr(ifftxc3),grad%g2rt(ifftxc3))
+       ALLOCATE(grad%gggrd(ifftxc3),grad%grgru(ifftxc3),grad%grgrd(ifftxc3))
+       !!!!!!!!!
+
+       ! 
        !     calculate the quantities such as abs(grad(rho)),.. used in
        !     evaluating the gradient contributions to potential and energy.
-       !
+       ! 
        IF (PRESENT(rho)) THEN
           CALL mkgxyz3 (rho,rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
                rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),grad)
@@ -238,12 +253,12 @@ CONTAINS
   END SUBROUTINE pw_to_grid
 
 
-  SUBROUTINE pw_from_grid(xcpot,stars,l_pw_w,v_in,v_out_pw,v_out_pw_w)
+  SUBROUTINE pw_from_grid(dograds,stars,l_pw_w,v_in,v_out_pw,v_out_pw_w)
     USE m_fft3d
     USE m_fft3dxc
     USE m_types
     IMPLICIT NONE
-    CLASS(t_xcpot),INTENT(in)     :: xcpot
+    LOGICAL,INTENT(IN)            :: dograds
     TYPE(t_stars),INTENT(IN)      :: stars
     REAL,INTENT(INOUT)            :: v_in(0:,:)
     LOGICAL,INTENT(in)            :: l_pw_w
@@ -258,19 +273,19 @@ CONTAINS
     ALLOCATE ( vcon(0:ifftd-1) )
     DO js = 1,SIZE(v_in,2)
        bf3=0.0
-       IF (xcpot%needs_grad()) THEN
+       IF (dograds) THEN
           CALL fft3dxc(v_in(0:,js),bf3, fg3, stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft,&
                stars%nxc3_fft,stars%kmxxc_fft,-1, stars%igfft(0:,1),igxc_fft,stars%pgfft,stars%nstr)
        ELSE
           vcon(0:)=v_in(0:,js)
           CALL fft3d(v_in(0:,js),bf3, fg3, stars,-1)
        ENDIF
-       DO k = 1,MERGE(stars%nxc3_fft,stars%ng3,xcpot%needs_grad())
+       DO k = 1,MERGE(stars%nxc3_fft,stars%ng3,dograds)
           v_out_pw(k,js) = v_out_pw(k,js) + fg3(k)
        ENDDO
 
        IF (l_pw_w) THEN
-          IF (xcpot%needs_grad()) THEN
+          IF (dograds) THEN
              !----> Perform fft transform: v_xc(star) --> vxc(r) 
              !     !Use large fft mesh for convolution
              fg3(stars%nxc3_fft+1:)=0.0

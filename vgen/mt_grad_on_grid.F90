@@ -63,7 +63,7 @@ CONTAINS
       ALLOCATE (ylhtf, MOLD=ylh)
       
       !Calculate the required lattice harmonics and their derivatives:
-      CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot, sym, &
+      CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot%needs_grad(), sym, &
                       ylh, thet, phi, ylht, ylhtt, ylhf, ylhff, ylhtf)
       
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
