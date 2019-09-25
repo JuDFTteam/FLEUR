@@ -99,7 +99,7 @@ CONTAINS
                    DO icore = 1, mcd%ncore(n)
                       DO ipol = 1, 3
                          index = 3*(n-1) + ipol
-                         mcd%mcd(index,icore,i,ikpt,jsp)=mcd%mcd(index,icore,i,ikpt,jsp) + fac*(&
+                         mcd%mcd(index,icore,ev_list(i),ikpt,jsp)=mcd%mcd(index,icore,ev_list(i),ikpt,jsp) + fac*(&
                               suma * CONJG(mcd%m_mcd(icore,lm+1,index,1))*mcd%m_mcd(icore,lm+1,index,1)  +&
                               sumb * CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,2)  +&
                               sumab* CONJG(mcd%m_mcd(icore,lm+1,index,2))*mcd%m_mcd(icore,lm+1,index,1)  +&
