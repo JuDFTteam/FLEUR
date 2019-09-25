@@ -237,7 +237,7 @@ c     ..local scalars..
 
       TYPE(t_usdus) :: usdus
       TYPE(t_mat)  :: zMat, zzMat, zMat_b, zMat_b2
-      TYPE(t_lapw)  :: lapw_b, lapw_b2
+      TYPE(t_lapw)  :: lapw_b, lapw_b2, lapw
 
        eig_id = eig_idList(1)
 
@@ -935,6 +935,12 @@ c****************************************************************
 c      if (mod(i_rec-1,isize).eq.irank) then
 
       allocate (eigg(neigd))
+
+        CALL lapw%init(input,noco,kpts,atoms,sym,kptibz,cell,
+     &    (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9)
+     &     .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
+
+
 
           n_start=1
           n_end=neigd
