@@ -205,13 +205,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
          CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,we,eig,den,results,force%f_b8,zMat,dos)
+                    jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
          IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
             CALL vacden(vacuum,dimension,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
-                        gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac,eig,den,zMat,dos)
+                        gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,dos)
          END IF
       END IF
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
