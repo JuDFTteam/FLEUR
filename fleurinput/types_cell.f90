@@ -58,20 +58,20 @@ CONTAINS
     call mpi_bc(this%vol,rank,mpi_comm)
     call mpi_bc(this%volint,rank,mpi_comm)
   end subroutine mpi_bc_cell
-    
+
   SUBROUTINE init(cell,volmts)
     !initialize cell, only input is cell%amat and cell%z1 in case of a film
     USE m_constants,ONLY:tpi_const
     CLASS (t_cell),INTENT(INOUT):: cell
     real,intent(in):: volmts !Volume of all MT-spheres
-    
+
     CALL inv3(cell%amat,cell%bmat,cell%omtil)
     IF (cell%omtil<0) CALL judft_warn("Negative volume! You are using a left-handed coordinate system")
     cell%omtil=ABS(cell%omtil)
-    
+
     cell%bmat=tpi_const*cell%bmat
     IF (cell%z1>0) THEN
-       cell%vol = (cell%omtil/cell%amat(3,3))*cell%z1
+       cell%vol = (cell%omtil/cell%amat(3,3))*cell%z1*2
        cell%area = cell%omtil/cell%amat(3,3)
     ELSE
        cell%vol = cell%omtil
@@ -109,7 +109,7 @@ CONTAINS
        b(3,1) = (a(2,1)*a(3,2)-a(2,2)*a(3,1))/d
        b(3,2) = (a(1,2)*a(3,1)-a(1,1)*a(3,2))/d
        b(3,3) = (a(1,1)*a(2,2)-a(1,2)*a(2,1))/d
-       
+
      END SUBROUTINE inv3
 
    END SUBROUTINE init
@@ -118,20 +118,21 @@ CONTAINS
      use m_types_xml
      class(t_cell),intent(INout)::this
      type(t_xml),intent(in)   ::xml
-     
+
      ! Read in lattice parameters
      character(len=200)::valueString,path
      REAL:: scale,dvac,dtild
-     
+
      if (xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1) then
         path= '/fleurInput/cell/filmLattice'
-        this%z1=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dvac'))/2
-        dtild=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dtilda'))
-     else        
+        this%z1=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dVac'))/2
+        dvac=this%z1*2
+        dtild=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@dTilda'))
+     else
         dvac=0.0
         path = '/fleurInput/cell/bulkLattice'
      endif
-     
+
      scale=evaluateFirstOnly(xml%GetAttributeValue(trim(path)//'/@scale'))
      path=trim(path)//'/bravaisMatrix'
      valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(path))//'/row-1')))
@@ -146,12 +147,12 @@ CONTAINS
      this%amat(1,3) = evaluateFirst(valueString)
      this%amat(2,3) = evaluateFirst(valueString)
      this%amat(3,3) = evaluateFirst(valueString)
-     
+
      IF (dvac>0) THEN
-        this%amat(3,3)=2*this%z1
+        this%amat(3,3)=dtild
      ENDIF
      this%amat=this%amat*scale
-     
+
    END SUBROUTINE read_xml_cell
-   
+
  END MODULE m_types_cell

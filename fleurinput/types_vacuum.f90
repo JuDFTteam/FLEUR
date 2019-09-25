@@ -32,6 +32,7 @@ MODULE m_types_vacuum
     CONTAINS
       PROCEDURE :: read_xml
       PROCEDURE :: mpi_bc => mpi_bc_vacuum
+      PROCEDURE :: init =>vacuum_init
    END TYPE t_vacuum
  CONTAINS
 
@@ -65,14 +66,14 @@ MODULE m_types_vacuum
     CALL mpi_bc(this%locy(2),rank,mpi_comm)
     CALL mpi_bc(this%starcoeff,rank,mpi_comm)
     CALL mpi_bc(this%izlay,rank,mpi_comm)
-    
+
   END SUBROUTINE mpi_bc_vacuum
    SUBROUTINE read_xml(this,xml)
      USE m_types_xml
      CLASS(t_vacuum),INTENT(INOUT)::this
      TYPE(t_xml),INTENT(IN)::xml
      CHARACTER(len=100)::xpatha
-     
+
 
      IF (xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1) THEN
      this%dvac = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/cell/filmLattice/@dVac'))
@@ -93,6 +94,15 @@ MODULE m_types_vacuum
      END IF
      this%layerd = this%layers
      ALLOCATE(this%izlay(this%layerd,2))
-  ENDIF
-   END SUBROUTINE read_xml
+   ENDIF
+ END SUBROUTINE read_xml
+
+ subroutine vacuum_init(this,sym)
+   use m_types_sym
+   CLASS(t_vacuum),INTENT(INOUT)::this
+   TYPE(t_sym),INTENT(IN)::sym
+
+   if (sym%invs.or.sym%zrfs) this%nvac=1
+ end subroutine vacuum_init
+
  END MODULE m_types_vacuum

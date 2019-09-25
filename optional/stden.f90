@@ -46,16 +46,16 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    TYPE(t_enpara)   :: enpara
    ! Local Scalars
    REAL d,del,fix,h,r,rnot,z,bm,qdel,va
-   REAL denz1(1,1),vacxpot(1,1),vacpot(1,1) 
-   INTEGER i,ivac,iza,j,jr,k,n,n1,ispin 
-   INTEGER nw,ilo,natot,nat 
+   REAL denz1(1,1),vacxpot(1,1),vacpot(1,1)
+   INTEGER i,ivac,iza,j,jr,k,n,n1,ispin
+   INTEGER nw,ilo,natot,nat
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: vbar(:,:)
    REAL,    ALLOCATABLE :: rat(:,:),eig(:,:,:),sigm(:)
    REAL,    ALLOCATABLE :: rh(:,:,:),rh1(:,:,:),rhoss(:,:)
-   REAL,    ALLOCATABLE :: vacpar(:)
-   INTEGER lnum(29,atoms%ntype),nst(atoms%ntype) 
+   REAL     :: vacpar(2)
+   INTEGER lnum(29,atoms%ntype),nst(atoms%ntype)
    INTEGER jrc(atoms%ntype)
    LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
    REAL                 :: occ(MAXVAL(atoms%econf%num_states),2)
@@ -95,7 +95,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          r = atoms%rmsh(1,n)
          d = EXP(atoms%dx(n))
          jrc(n) = 0
-         DO WHILE (r < atoms%rmt(n) + 20.0) 
+         DO WHILE (r < atoms%rmt(n) + 20.0)
             IF (jrc(n) > atoms%msh) CALL juDFT_error("increase msh in fl7para!",calledby ="stden")
             jrc(n) = jrc(n) + 1
             rat(jrc(n),n) = r
@@ -229,7 +229,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
          enpara%lchange = .TRUE.
          enpara%llochg = .TRUE.
-                
+
          DO ispin = 1, input%jspins
             ! vacpar is taken as highest occupied level from atomic eigenvalues
             ! vacpar (+0.3)  serves as fermi level for film or bulk
@@ -251,7 +251,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                END DO
 
                ! take energy-parameters from atomic calculation
-               DO i = nst(n), 1, -1 
+               DO i = nst(n), 1, -1
                   IF (.NOT.input%film) eig(i,ispin,n) = eig(i,ispin,n) + 0.4
                   IF (.NOT.l_found(lnum(i,n)).AND.(lnum(i,n).LE.3)) THEN
                      enpara%el0(lnum(i,n),n,ispin) = eig(i,ispin,n)
@@ -287,7 +287,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                         END DO ! ilo = 1, atoms%nlo(n)
                      END IF
                   END IF ! .NOT.l_found(lnum(i,n)).AND.(lnum(i,n).LE.3)
-               END DO ! i = nst(n), 1, -1 
+               END DO ! i = nst(n), 1, -1
             END DO ! atom types
 
             IF (input%film) THEN
@@ -314,14 +314,20 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
             enpara%enmix = 1.0
 
-            
+
             enpara%evac0(:,ispin)=vacpar(:SIZE(enpara%evac0,1))
-           
+
          END DO ! ispin
          CALL enpara%WRITE(atoms,input%jspins,input%film)
       END IF
    END IF ! mpi%irank == 0
+   DEALLOCATE ( rat,eig )
+   DEALLOCATE ( rh,rh1)
+   DEALLOCATE ( vbar,sigm )
+   DEALLOCATE ( rhoss )
+   deallocate(den%vacz)
+   deallocate(den%vacxy)
 
-END SUBROUTINE stden
+ END SUBROUTINE stden
 
 END MODULE m_stden

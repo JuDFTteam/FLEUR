@@ -19,7 +19,7 @@ MODULE m_types_oneD
      INTEGER :: kimax2
      INTEGER :: nop=0, nat=0
   END TYPE od_dim
-  
+
   TYPE od_inp
      LOGICAL :: d1
      INTEGER :: mb, M, k3, m_cyl
@@ -31,7 +31,7 @@ MODULE m_types_oneD
      INTEGER, POINTER :: kv(:, :)        !(2,n2d)
      INTEGER, POINTER :: nst2(:)        !(n2d)
   END TYPE od_inp
-  
+
   TYPE od_sym
      INTEGER :: nop, nat
      INTEGER, POINTER :: ngopr(:)     !(nat)
@@ -40,13 +40,13 @@ MODULE m_types_oneD
      INTEGER, POINTER :: invtab(:)    !(nop)
      INTEGER, POINTER :: multab(:, :)  !(nop,nop)
   END TYPE od_sym
-  
+
   TYPE od_lda
      INTEGER :: nn2d
      INTEGER, POINTER :: igf(:, :)  !(0:nn2d-1,2)
      REAL, POINTER :: pgf(:)    !(0:nn2d-1)
   END TYPE od_lda
-  
+
   TYPE od_gga
      INTEGER          :: nn2d
      REAL, POINTER    :: pgfx(:)  ! (0:nn2d-1)
@@ -111,11 +111,11 @@ MODULE m_types_oneD
      class(t_oned),intent(inout)::this
      type(t_xml),intent(in)   ::xml
 
-     
+
       ! Read in optional 1D parameters if present
      character(len=100):: xpathA
      integer :: numberNodes
-     
+
       xPathA = '/fleurInput/calculationSetup/oneDParams'
       numberNodes = xml%GetNumberOfNodes(xPathA)
 
@@ -138,10 +138,30 @@ MODULE m_types_oneD
       USE m_types_atoms
       CLASS(t_oned),INTENT(inout)::oneD
       TYPE(t_atoms),INTENT(in)::atoms
+      oneD%odd%nq2 = oneD%odd%n2d
+      oneD%odd%kimax2 = oneD%odd%nq2 - 1
+      oneD%odd%nat = atoms%nat
 
+      oneD%odi%d1 = oneD%odd%d1 ; oneD%odi%mb = oneD%odd%mb ; oneD%odi%M = oneD%odd%M
+      oneD%odi%k3 = oneD%odd%k3 ; oneD%odi%chi = oneD%odd%chi ; oneD%odi%rot = oneD%odd%rot
+      oneD%odi%invs = oneD%odd%invs ; oneD%odi%zrfs = oneD%odd%zrfs
+      oneD%odi%n2d = oneD%odd%n2d ; oneD%odi%nq2 = oneD%odd%nq2 ; oneD%odi%nn2d = oneD%odd%nn2d
+      oneD%odi%kimax2 = oneD%odd%kimax2 ; oneD%odi%m_cyl = oneD%odd%m_cyl
+      oneD%odi%ig => oneD%ig1 ; oneD%odi%kv => oneD%kv1 ; oneD%odi%nst2 => oneD%nstr1
 
+      oneD%ods%nop = oneD%odd%nop ; oneD%ods%nat = oneD%odd%nat
+      oneD%ods%mrot => oneD%mrot1 ; oneD%ods%tau => oneD%tau1 ; oneD%ods%ngopr => oneD%ngopr1
+      oneD%ods%invtab => oneD%invtab1 ; oneD%ods%multab => oneD%multab1
+
+      oneD%odl%nn2d = oneD%odd%nn2d
+      oneD%odl%igf => oneD%igfft1 ; oneD%odl%pgf => oneD%pgfft1
+
+      oneD%odg%nn2d = oneD%odd%nn2d
+      oneD%odg%pgfx => oneD%pgft1x ; oneD%odg%pgfy => oneD%pgft1y
+      oneD%odg%pgfxx => oneD%pgft1xx ; oneD%odg%pgfyy => oneD%pgft1yy ; oneD%odg%pgfxy => oneD%pgft1xy
+      oneD%odd%nq2 = oneD%odd%n2d
       ! Initialize missing 1D code arrays
-      
+      if (associated(oneD%ig1)) return
       ALLOCATE (oneD%ig1(-oneD%odd%k3:oneD%odd%k3,-oneD%odd%M:oneD%odd%M))
       ALLOCATE (oneD%kv1(2,oneD%odd%n2d),oneD%nstr1(oneD%odd%n2d))
       ALLOCATE (oneD%ngopr1(atoms%nat),oneD%mrot1(3,3,oneD%odd%nop),oneD%tau1(3,oneD%odd%nop))

@@ -109,7 +109,7 @@ CONTAINS
     INQUIRE(file='kpts',exist=l_exist)
     IF (.NOT.l_exist) CALL judft_error("Could not read 'kpts' file")
     OPEN(99,file='kpts')
-    READ(99,*,iostat=ios) kpts%nkpt,scale,wscale
+    READ(99,"(i5,2f20.10,3x,l1)",iostat=ios) kpts%nkpt,scale,wscale
     ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt))
     DO n=1,kpts%nkpt
        IF (.NOT.film) THEN
@@ -119,7 +119,12 @@ CONTAINS
           kpts%bk(3,n)=0.0
        ENDIF
     ENDDO
-    CLOSE(99)
+    !check for tetraeder
+    READ(99,*,err=100,end=100) kpts%ntet
+    ALLOCATE(kpts%ntetra(4,kpts%ntet),kpts%voltet(kpts%ntet))
+    read(99,*) kpts%ntetra
+    read(99,*) kpts%voltet
+100 CLOSE(99)
     IF (ios.NE.0) CALL judft_error("Error while reading 'kpts' file")
     IF (scale>0.0) kpts%bk=kpts%bk/scale
     IF (wscale>0.0) kpts%wtkpt=kpts%wtkpt/wscale

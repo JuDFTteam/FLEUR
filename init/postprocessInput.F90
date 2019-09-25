@@ -32,7 +32,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   USE m_od_kptsgen
   USE m_relaxio
 
-         
+
   IMPLICIT NONE
 
   TYPE(t_mpi)      ,INTENT   (IN) :: mpi
@@ -40,7 +40,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   TYPE(t_forcetheo_data),INTENT(IN):: forcetheo_data
   TYPE(t_input),    INTENT(INOUT) :: input
   TYPE(t_sym),      INTENT(INOUT) :: sym
-  TYPE(t_stars),    INTENT(INOUT) :: stars 
+  TYPE(t_stars),    INTENT(INOUT) :: stars
   TYPE(t_atoms),    INTENT(INOUT) :: atoms
   TYPE(t_vacuum),   INTENT(INOUT) :: vacuum
   TYPE(t_kpts),     INTENT(INOUT) :: kpts
@@ -57,17 +57,17 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   TYPE(t_field),    INTENT(INOUT) :: field
   LOGICAL,          INTENT   (IN) :: l_kpts
-  
+
   INTEGER              :: i, j, n, na, n1, n2, iType, l, ilo, ikpt
   INTEGER              :: minNeigd, nv, nv2, kq1, kq2, kq3, jrc, jsp, ii
   INTEGER              :: ios, ntst, ierr
   REAL                 :: rmtmax, zp, radius, dr
   LOGICAL              :: l_vca, l_test
- 
-  
+
+
   INTEGER, ALLOCATABLE :: jri1(:), lmax1(:)
   REAL,    ALLOCATABLE :: rmt1(:), dx1(:)
- 
+
 #ifdef CPP_MPI
   INCLUDE 'mpif.h'
 #endif
@@ -78,17 +78,17 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:)))
   call atoms%init(cell)
   CALL sym%init(cell,input%film)
-
+  call vacuum%init(sym)
 
   CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
-  CALL make_sym(sym,cell,atoms,noco,oneD,input) 
+  CALL make_sym(sym,cell,atoms,noco,oneD,input)
   call make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
   call make_xcpot(xcpot,atoms,input)
-  
+
   IF (mpi%irank.EQ.0) call check_input_switches(banddos,vacuum,noco,atoms,input)
 
   ! Generate missing general parameters
-  
+
   minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
   IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
   IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
@@ -99,9 +99,9 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      ENDIF
      dimension%neigd = minNeigd
   END IF
-  
+
   CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
-   
+
   IF(dimension%neigd.EQ.-1) THEN
      dimension%neigd = dimension%nvd + atoms%nlotot
   END IF
@@ -111,7 +111,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 
 
   CALL ylmnorm_init(atoms%lmaxd)
-  
 
 
   call oneD%init(atoms)
@@ -120,18 +119,18 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   ! Check muffin tin radii
   l_test = .TRUE. ! only checking, dont use new parameters
   CALL chkmt(atoms,input,vacuum,cell,oneD,l_test)
-  
+
   !adjust positions by displacements
   CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
-  
+
   call make_sphhar(atoms,sphhar,sym,cell,oneD)
   CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
 
   ! Store structure data
   CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
-   
+
   !Adjust kpoints in case of DOS
-  
+
   IF ( banddos%dos .AND. banddos%ndir == -3 ) THEN
      WRITE(*,*) 'Recalculating k point grid to cover the full BZ.'
      !CALL gen_bz(kpts,sym)
@@ -141,14 +140,14 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      kpts%bk(:,:) = kpts%bkf(:,:)
      kpts%wtkpt = 1.0 / kpts%nkptf
   END IF
-  
-  
-  
-  
+
+
+
+
   CALL prp_xcfft(stars,input,cell,xcpot)
-  
-  
-  IF (.NOT.sliceplot%iplot) THEN   
+
+
+  IF (.NOT.sliceplot%iplot) THEN
      IF (mpi%irank.EQ.0) THEN
         CALL convn(atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
@@ -159,12 +158,13 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
 #ifdef CPP_MPI
   CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 #endif
-  IF (.not.noco%l_noco) & 
+  IF (.not.noco%l_noco) &
   CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of input postprocessing (calculate missing parameters)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  call oneD%init(atoms)
 
 END SUBROUTINE postprocessInput
 
