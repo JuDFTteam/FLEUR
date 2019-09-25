@@ -173,7 +173,7 @@
           !
         ENDIF ! (mpi%irank == 0)
           CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum,mpi)
-          IF (.NOT.sliceplot%iplot) THEN
+          IF (sliceplot%iplot.EQ.0) THEN
              IF ( mpi%irank == 0 ) THEN
                 CALL convn(DIMENSION,atoms,stars)
 
