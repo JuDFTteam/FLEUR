@@ -101,7 +101,7 @@ CONTAINS
                                        qtot, qistot
 
       call tmp_potden%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
-      call init_mt_grid(input%jspins, atoms, sphhar, xcpot%needs_grad(), sym)
+      call init_mt_grid(input%jspins, atoms, sphhar, xcpot, sym)
       do n_atm =1,atoms%ntype
          call mt_from_grid(atoms, sphhar, n_atm, input%jspins, mt(:,:,n_atm), &
                            tmp_potden%mt(:,0:,n_atm,:))
@@ -112,8 +112,8 @@ CONTAINS
       enddo
       call finish_mt_grid()
 
-      call init_pw_grid(xcpot%needs_grad(), stars, sym, cell)
-      call pw_from_grid(xcpot%needs_grad(), stars, .False., is, tmp_potden%pw)
+      call init_pw_grid(xcpot, stars, sym, cell)
+      call pw_from_grid(xcpot, stars, .False., is, tmp_potden%pw)
       call finish_pw_grid()
 
       call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, tmp_potden, &

@@ -7,7 +7,7 @@ MODULE m_lhglptg
 CONTAINS
   SUBROUTINE lhglptg(&
        &                   sphhar,atoms,&
-       &                   rx,nsp,dograds,sym,&
+       &                   rx,nsp,xcpot,sym,&
        &                   ylh,thet,phi,ylht1,ylht2,ylhf1,ylhf2,ylhtf)
     !
     USE m_polangle
@@ -16,7 +16,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    LOGICAL, INTENT(IN)         :: dograds
+    CLASS(t_xcpot),INTENT(IN)   :: xcpot
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -59,7 +59,7 @@ CONTAINS
                &                       rx(1,k),rx(2,k),rx(3,k),&
                &                       thet(k),phi(k))
 
-          IF (dograds) THEN
+          IF (xcpot%needs_grad()) THEN
              CALL dylm3(&
                   &                     atoms%lmaxd,atoms%lmaxd,rx(:,k),ylm,&
                   &                     dylmt1,dylmt2,dylmf1,dylmf2,dylmtf)
@@ -81,7 +81,7 @@ CONTAINS
 
              ylh(k,lh,nd) = s
 
-             IF (dograds) THEN
+             IF (xcpot%needs_grad()) THEN
 
                 DO mem = 1,sphhar%nmem(lh,nd)
                    lm = ll1 + sphhar%mlh(mem,lh,nd)

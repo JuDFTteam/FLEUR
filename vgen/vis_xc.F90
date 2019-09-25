@@ -55,10 +55,10 @@ CONTAINS
 
       perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
                       .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
-      CALL init_pw_grid(xcpot%needs_grad(),stars,sym,cell)
+      CALL init_pw_grid(xcpot,stars,sym,cell)
 
       !Put the charge on the grid, in GGA case also calculate gradients
-      CALL pw_to_grid(xcpot%needs_grad(),input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho)
+      CALL pw_to_grid(xcpot,input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho)
 
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
@@ -76,8 +76,8 @@ CONTAINS
          END SELECT
       ENDIF
       !Put the potentials in rez. space.
-      CALL  pw_from_grid(xcpot%needs_grad(),stars,input%total,v_xc,vTot%pw,vTot%pw_w)
-      CALL  pw_from_grid(xcpot%needs_grad(),stars,input%total,v_x,vx%pw,vx%pw_w)
+      CALL  pw_from_grid(xcpot,stars,input%total,v_xc,vTot%pw,vTot%pw_w)
+      CALL  pw_from_grid(xcpot,stars,input%total,v_x,vx%pw,vx%pw_w)
 
       !calculate the ex.-cor energy density
       IF (ALLOCATED(exc%pw_w)) THEN
@@ -88,7 +88,7 @@ CONTAINS
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
          ENDIF
-         CALL pw_from_grid(xcpot%needs_grad(),stars,.TRUE.,e_xc,exc%pw,exc%pw_w)
+         CALL pw_from_grid(xcpot,stars,.TRUE.,e_xc,exc%pw,exc%pw_w)
       ENDIF
 
       CALL finish_pw_grid()

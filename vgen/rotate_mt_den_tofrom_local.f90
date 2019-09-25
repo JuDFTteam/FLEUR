@@ -32,9 +32,9 @@ CONTAINS
              den%phi_mt(nsp*atoms%jmtd,atoms%ntype))
     CALL xcpot%init("vwn",.FALSE.,1)
 
-    CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
+    CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
+       CALL mt_to_grid(xcpot,4,atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
     
           rho_11  = ch(imesh,1)
@@ -97,6 +97,7 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT) :: vtot
     TYPE(t_potden),dimension(3),INTENT(INOUT) :: xcB
     
+    
     TYPE(t_xcpot_inbuild)     :: xcpot !local xcpot that is LDA to indicate we do not need gradients
     TYPE(t_gradients) :: grad
     
@@ -111,9 +112,9 @@ CONTAINS
     ALLOCATE(livemt(size(xcB(1)%mt,1),size(xcB(1)%mt,2),size(xcB(1)%mt,3),3))
     CALL xcpot%init("vwn",.FALSE.,1)
 
-    CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
+    CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
+       CALL mt_to_grid(xcpot,4,atoms,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
           vup   = ch(imesh,1)
           vdown = ch(imesh,2)
