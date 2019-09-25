@@ -13,7 +13,7 @@
       <expertModes gw="0" secvar="F"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
       <bzIntegration valenceElectrons="8.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-         <kPointMesh nx="4" ny="4" nz="4" gamma="T"/>
+         <kPointMesh nx="1" ny="1" nz="1" gamma="T"/>
       </bzIntegration>
       <energyParameterLimits ellow="-2.80000000" elup="11.00000000"/>
    </calculationSetup>
