@@ -5,7 +5,7 @@
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.70000000" Gmax="11.10000000" GmaxXC="9.20000000" numbands="80"/>
-      <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="25" imix="Anderson" alpha=".05000000" preconditioning_param="0.0" spinf="2.00000000"/>
+      <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="25" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
@@ -48,7 +48,6 @@
       <checks vchk="F" cdinf="F"/>
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
-      <plotting iplot="F" score="F" plplot="F"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
       <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>
