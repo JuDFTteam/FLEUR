@@ -642,8 +642,8 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
       TYPE(t_potden)                   :: cden, mden
       CHARACTER(len=30), INTENT (IN):: filenames
       CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
-      !CALL scalarplot(...,cden,filenames(1)) TODO: Corret ARGUMENTS
-      !CALL scalarplot(...,mdenx,filenames(2))
+      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,cden,filenames(1),.FALSE.) 
+      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mden,filenames(2),.FALSE.) 
 
 
 
@@ -676,10 +676,10 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
       TYPE(t_potden)                 :: cden, mxden, myden, mzden
 
       CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
-      !CALL scalarplot(...,cden,filenames(1)) TODO ARGUMENTS
-      !CALL scalarplot(...,mxden,filenames(2))
-      !CALL scalarplot(...,myden,filenames(3))
-      !CALL scalarplot(...,mzden,filenames(4))
+      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,cden,filenames(1),.FALSE.)
+      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mxden,filenames(2),.FALSE.)
+      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,myden,filenames(3),.FALSE.)
+      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mzden,filenames(4),.FALSE.)
       
    END SUBROUTINE matrixplot
 
