@@ -45,8 +45,8 @@ CONTAINS
    SUBROUTINE checkplotinp()
       ! Checks for existing plot input. If an ancient plotin file is used, an
       ! error is called. If no usable plot_inp exists, a new one is generated. 
-
-      oldform = .false.
+      LOGICAL :: oldform,newform
+      oldform = .FALSE.
       INQUIRE(file = "plotin", exist = oldform) 
       IF (oldform) THEN 
          CALL juDFT_error("Use of plotin file no longer supported",calledby = "plotdop")
@@ -396,23 +396,16 @@ CONTAINS
    IMPLICIT NONE
 
    TYPE(t_oneD),                INTENT(IN)    :: oneD
-   TYPE(t_dimension),           INTENT(IN)    :: dimension
-   TYPE(t_stars),               INTENT(IN)    :: stars
-   TYPE(t_vacuum),              INTENT(IN)    :: vacuum
-   TYPE(t_sphhar),              INTENT(IN)    :: sphhar
    TYPE(t_atoms),               INTENT(IN)    :: atoms
    TYPE(t_input),               INTENT(IN)    :: input
-   TYPE(t_sym),                 INTENT(IN)    :: sym
    TYPE(t_cell),                INTENT(IN)    :: cell
-
-   TYPE(t_noco),                INTENT(IN)    :: noco
    TYPE(t_potden),              INTENT(IN)    :: den
 ! .. Logical Arguments ..
    LOGICAL, INTENT (IN) :: logicPotential
 ! .. Integer Arguments ..
    INTEGER, INTENT(IN) :: fileNumberRead,fileNumberWrite
-   
-
+! .. String Arguments
+   CHARACTER(len=30), INTENT (IN):: fileName
 
 !  .. Local Scalars ..
    REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
@@ -639,7 +632,7 @@ CONTAINS
       TYPE(t_potden),    INTENT(INOUT) :: denmat
 
       TYPE(t_potden)                   :: cden, mden
-
+      CHARACTER(len=30), INTENT (IN):: filenames
       CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
       !CALL scalarplot(...,cden,filenames(1)) TODO: Corret ARGUMENTS
       !CALL scalarplot(...,mdenx,filenames(2))
