@@ -420,7 +420,6 @@ CONTAINS
    INTEGER :: grid(3)
    REAL    :: rhocc(atoms%jmtd)
    REAL    :: point(3)
-   CHARACTER (len=30)              :: filename
    CHARACTER (len=7)               :: textline
 
    REAL, PARAMETER :: eps = 1.0e-15
@@ -664,7 +663,7 @@ CONTAINS
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       REAL,              INTENT(IN)    :: factor
       TYPE(t_potden),    INTENT(INOUT) :: denmat
-
+      CHARACTER(len=30), INTENT (IN):: filenames
       TYPE(t_potden)                 :: cden, mxden, myden, mzden
 
       CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
@@ -678,7 +677,6 @@ CONTAINS
 !--------------------------------------------------------------------------------------------
 
    SUBROUTINE procplot(jspins,noco,iplot,ind_plot,den)   
-      INTEGER, INTENT(IN) :: jplot
       CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
       INTEGER :: i
             TYPE(t_noco),      INTENT(IN)    :: noco
