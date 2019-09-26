@@ -40,7 +40,7 @@ CONTAINS
        
   END SUBROUTINE init_pw_grid
   
-  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,rho,xcpot)
+  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,xcpot,rho)
     !.....------------------------------------------------------------------
     !------->          abbreviations
     !

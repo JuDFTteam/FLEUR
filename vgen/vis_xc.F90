@@ -58,7 +58,7 @@ CONTAINS
       CALL init_pw_grid(xcpot%needs_grad(),stars,sym,cell)
 
       !Put the charge on the grid, in GGA case also calculate gradients
-      CALL pw_to_grid(xcpot%needs_grad(),input%jspins,noco%l_noco,stars,cell,den%pw,grad,rho,xcpot)
+      CALL pw_to_grid(xcpot%needs_grad(),input%jspins,noco%l_noco,stars,cell,den%pw,grad,xcpot,rho)
 
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
