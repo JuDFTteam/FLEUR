@@ -624,7 +624,7 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE vectorplot(stars,vacuum,atoms,sphhar,input,noco,denmat,filenames)
+   SUBROUTINE vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,denmat,filenames)
    !Takes a spin-polarized t_potden density, i.e. a 2D vector in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
@@ -638,9 +638,14 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_potden),    INTENT(INOUT) :: denmat
-
+      TYPE(t_oned), INTENT(IN):: oneD
       TYPE(t_potden)                   :: cden, mden
-      CHARACTER(len=30), INTENT (IN):: filenames
+      INTEGER :: fileNumberRead,fileNumberWrite
+      CHARACTER(len=30), INTENT (IN):: filenames (2)
+      !Need to find reasonable ID's for fileNumberRead and fileNumberWrite. Temp use:
+      fileNumberRead=20
+      fileNumberWrite=21
+      !!!
       CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
       CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,cden,filenames(1),.FALSE.) 
       CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mden,filenames(2),.FALSE.) 
@@ -672,14 +677,20 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       REAL,              INTENT(IN)    :: factor
       TYPE(t_potden),    INTENT(INOUT) :: denmat
-      CHARACTER(len=30), INTENT (IN):: filenames
+      CHARACTER(len=30), INTENT (IN):: filenames(4)
       TYPE(t_potden)                 :: cden, mxden, myden, mzden
+      INTEGER :: fileNumberRead,fileNumberWrite
 
+
+      !Need to find reasonable ID's for fileNumberRead and fileNumberWrite. Temp use:
+      fileNumberRead=20
+      fileNumberWrite=21
+      !!!
       CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
       CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,cden,filenames(1),.FALSE.)
-      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mxden,filenames(2),.FALSE.)
-      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,myden,filenames(3),.FALSE.)
-      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mzden,filenames(4),.FALSE.)
+      CALL scalarplot(fileNumberRead,fileNumberWrite+1,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mxden,filenames(2),.FALSE.)
+      CALL scalarplot(fileNumberRead,fileNumberWrite+2,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,myden,filenames(3),.FALSE.)
+      CALL scalarplot(fileNumberRead,fileNumberWrite+3,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mzden,filenames(4),.FALSE.)
       
    END SUBROUTINE matrixplot
 
