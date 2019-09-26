@@ -47,7 +47,7 @@ CONTAINS
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
 
 !     - arrays -
-      INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
+      REAL                    ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  tau1(3), rtaual(3), rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
@@ -56,21 +56,21 @@ CONTAINS
       tpiimg = -tpi_const*img
 
       if (l_real) THEN
-         rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-         invrrot = transpose(sym%mrot(:, :, iop))
-         trans = sym%tau(:, iop)
+         rrot    = transpose(1.0 *  sym%mrot(:, :, sym%invtab(iop)))
+         invrrot = transpose(1.0 * sym%mrot(:, :, iop))
+         trans   = sym%tau(:, iop)
       else
          IF (iop <= sym%nop) THEN
-            trs = .false.
-            rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-            invrrot = transpose(sym%mrot(:, :, iop))
-            trans = sym%tau(:, iop)
+            trs     = .false.
+            rrot    = transpose(1.0 * sym%mrot(:, :, sym%invtab(iop)))
+            invrrot = transpose(1.0 * sym%mrot(:, :, iop))
+            trans   = sym%tau(:, iop)
          ELSE
-            trs = .true.
-            iiop = iop - sym%nop
-            rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
-            invrrot = -transpose(sym%mrot(:, :, iiop))
-            trans = sym%tau(:, iiop)
+            trs     = .true.
+            iiop    = iop - sym%nop
+            rrot    = -transpose(1.0 * sym%mrot(:, :, sym%invtab(iiop)))
+            invrrot = -transpose(1.0 * sym%mrot(:, :, iiop))
+            trans   = sym%tau(:, iiop)
          END IF
       endif
 
