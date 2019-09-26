@@ -75,17 +75,16 @@ CONTAINS
     USE m_types
     USE m_constants
     IMPLICIT NONE
-
-    CLASS(t_xcpot), INTENT(IN)    :: xcpot
     
-    LOGICAL,INTENT(IN)            :: dograds
-    INTEGER,INTENT(IN)            :: jspins
-    LOGICAL,INTENT(IN)            :: l_noco
-    TYPE(t_stars),INTENT(IN)      :: stars
-    TYPE(t_cell),INTENT(IN)       :: cell
-    COMPLEX,INTENT(IN)            :: den_pw(:,:)
-    TYPE(t_gradients),INTENT(OUT) :: grad
-    REAL,ALLOCATABLE,INTENT(out),OPTIONAL   :: rho(:,:)
+    LOGICAL,INTENT(IN)                    :: dograds
+    INTEGER,INTENT(IN)                    :: jspins
+    LOGICAL,INTENT(IN)                    :: l_noco
+    TYPE(t_stars),INTENT(IN)              :: stars
+    TYPE(t_cell),INTENT(IN)               :: cell
+    COMPLEX,INTENT(IN)                    :: den_pw(:,:)
+    TYPE(t_gradients),INTENT(OUT)         :: grad
+    CLASS(t_xcpot), INTENT(IN),OPTIONAL   :: xcpot
+    REAL,ALLOCATABLE,INTENT(OUT),OPTIONAL :: rho(:,:)
   
 
     INTEGER      :: js,i,idm,ig,ndm,jdm
@@ -218,8 +217,9 @@ CONTAINS
              ENDDO !jdm
           ENDDO   !idm 
        END IF
-
-       CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
+       IF (PRESENT(xcpot)) THEN
+          CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
+       END IF
        !!!!!!!THIS IS A QUICKFIX! TO BE REMOVED ASAP!!!!!!!!!
        !A. Neukirchen 25.09.19
        !IF (ALLOCATED(grad%agrt)) THEN
