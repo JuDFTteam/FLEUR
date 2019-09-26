@@ -503,8 +503,8 @@ CONTAINS
 
       !Open the file
       IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo !Which role does "default" exactly play? 
-         CALL xsf_WRITE_header(nfile+1,twodim,filename,vec1,vec2,vec3,zero,grid)
-         END IF
+      CALL xsf_WRITE_header(nfile+1,twodim,filename,vec1,vec2,vec3,zero,grid)
+         
       
 
       !loop over spins
@@ -641,9 +641,8 @@ CONTAINS
       TYPE(t_potden)                   :: cden, mden
 
       CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
-      CALL scalarplot(...,cden,filenames(1))
-      CALL scalarplot(...,mden,filenames(2))
-
+      !CALL scalarplot(...,cden,filenames(1)) TODO: Corret ARGUMENTS
+      !CALL scalarplot(...,mdenx,filenames(2))
 
 
 
@@ -673,13 +672,13 @@ CONTAINS
       REAL,              INTENT(IN)    :: factor
       TYPE(t_potden),    INTENT(INOUT) :: denmat
 
-      TYPE(t_potden),                  :: cden, mxden, myden, mzden
+      TYPE(t_potden)                 :: cden, mxden, myden, mzden
 
       CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
-      CALL scalarplot(...,cden,filenames(1))
-      CALL scalarplot(...,mxden,filenames(2))
-      CALL scalarplot(...,myden,filenames(3))
-      CALL scalarplot(...,mzden,filenames(4))
+      !CALL scalarplot(...,cden,filenames(1)) TODO ARGUMENTS
+      !CALL scalarplot(...,mxden,filenames(2))
+      !CALL scalarplot(...,myden,filenames(3))
+      !CALL scalarplot(...,mzden,filenames(4))
       
    END SUBROUTINE matrixplot
 
@@ -689,7 +688,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: jplot
       CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
       INTEGER :: i
-      
+            TYPE(t_noco),      INTENT(IN)    :: noco
       ! Plotting the density matrix as n or n,m or n,mx,my,mz 
       IF (jplot.EQ.2) THEN
          IF (jspins.EQ.2) THEN
@@ -699,17 +698,17 @@ CONTAINS
                outFilenames(2)='mdnx'
                outFilenames(3)='mdny'
                outFilenames(4)='mdnz'
-               call matrixplot(...)
+               !call matrixplot(...) TODO ARGUMENTS
             ELSE
                ALLOCATE(outFilenames(2))
                outFilenames(1)='cden'
                outFilenames(2)='mden'
-               call vectorplot(...)
+               !call vectorplot(...) TODO ARGUMENTS
             END IF
          ELSE
             ALLOCATE(outFilenames(1))
             outFilenames(1)='cden'
-            call scalarplot(...)
+            !call scalarplot(...) TODO ARGUMENTS
          END IF
       END IF
    END SUBROUTINE procplot
