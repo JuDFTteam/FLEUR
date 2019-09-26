@@ -40,7 +40,7 @@ CONTAINS
        
   END SUBROUTINE init_pw_grid
   
-  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,rho)
+  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,rho,xcpot)
     !.....------------------------------------------------------------------
     !------->          abbreviations
     !
@@ -75,6 +75,9 @@ CONTAINS
     USE m_types
     USE m_constants
     IMPLICIT NONE
+
+    CLASS(t_xcpot), INTENT(IN)    :: xcpot
+    
     LOGICAL,INTENT(IN)            :: dograds
     INTEGER,INTENT(IN)            :: jspins
     LOGICAL,INTENT(IN)            :: l_noco
@@ -216,20 +219,20 @@ CONTAINS
           ENDDO   !idm 
        END IF
 
-!       CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
+       CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
        !!!!!!!THIS IS A QUICKFIX! TO BE REMOVED ASAP!!!!!!!!!
        !A. Neukirchen 25.09.19
-       IF (ALLOCATED(grad%agrt)) THEN
-          DEALLOCATE(grad%agrt,grad%agru,grad%agrd)
-          DEALLOCATE(grad%g2ru,grad%g2rd,grad%gggrt)
-          DEALLOCATE(grad%gggru,grad%gzgr,grad%g2rt)
-          DEALLOCATE(grad%gggrd,grad%grgru,grad%grgrd)
-       ENDIF
+       !IF (ALLOCATED(grad%agrt)) THEN
+          !DEALLOCATE(grad%agrt,grad%agru,grad%agrd)
+          !DEALLOCATE(grad%g2ru,grad%g2rd,grad%gggrt)
+          !DEALLOCATE(grad%gggru,grad%gzgr,grad%g2rt)
+          !DEALLOCATE(grad%gggrd,grad%grgru,grad%grgrd)
+       !ENDIF
 
-       ALLOCATE(grad%agrt(ifftxc3),grad%agru(ifftxc3),grad%agrd(ifftxc3))
-       ALLOCATE(grad%g2ru(ifftxc3),grad%g2rd(ifftxc3),grad%gggrt(ifftxc3))
-       ALLOCATE(grad%gggru(ifftxc3),grad%gzgr(ifftxc3),grad%g2rt(ifftxc3))
-       ALLOCATE(grad%gggrd(ifftxc3),grad%grgru(ifftxc3),grad%grgrd(ifftxc3))
+       !ALLOCATE(grad%agrt(ifftxc3),grad%agru(ifftxc3),grad%agrd(ifftxc3))
+       !ALLOCATE(grad%g2ru(ifftxc3),grad%g2rd(ifftxc3),grad%gggrt(ifftxc3))
+       !ALLOCATE(grad%gggru(ifftxc3),grad%gzgr(ifftxc3),grad%g2rt(ifftxc3))
+       !ALLOCATE(grad%gggrd(ifftxc3),grad%grgru(ifftxc3),grad%grgrd(ifftxc3))
        !!!!!!!!!
 
        ! 

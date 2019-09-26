@@ -254,11 +254,11 @@ CONTAINS
       CALL init_pw_grid(xcpot%needs_grad(),stars,sym,cell)
 
       CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
-                      cell,  EnergyDen%pw, tmp_grad,    ED_rs)
+                      cell,  EnergyDen%pw, tmp_grad,    ED_rs,xcpot)
       CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
-                      cell,  vTot%pw,      tmp_grad,    vTot_rs)
+                      cell,  vTot%pw,      tmp_grad,    vTot_rs,xcpot)
       CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
-                      cell,  den%pw,       tmp_grad,    den_rs)
+                      cell,  den%pw,       tmp_grad,    den_rs,xcpot)
 
       CALL finish_pw_grid()
       

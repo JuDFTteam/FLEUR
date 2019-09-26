@@ -63,7 +63,7 @@ CONTAINS
       CALL pw_from_grid(xcpot%needs_grad(),stars,.FALSE.,vsigma,vsigma_g)
       !vsigma_g(:,1)=vsigma_g(:,1)*stars%nstr(:)
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
-      CALL pw_to_grid(xcpot%needs_grad(),n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma)
+      CALL pw_to_grid(xcpot%needs_grad(),n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma,xcpot)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_pw
