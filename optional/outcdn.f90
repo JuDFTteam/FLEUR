@@ -60,9 +60,9 @@
       
       !Temp. Variable Assignment TODO: Can be removed as soon as the potDen datatype has been implemented in the whole file.
       qpw=potDen%pw
-      rhtxz=den%vacxy
-      rho=den%mt
-      rht=den%vacz
+      rhtxz=potDen%vacxy
+      rho=potDen%mt
+      rht=potDen%vacz
        
 
       ivac=iv
