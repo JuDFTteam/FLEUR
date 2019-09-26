@@ -19,7 +19,7 @@ CONTAINS
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                    cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx,gOnsite,hub1)
+                    cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx,hub1)
 
 
 #include"cpp_double.h"
@@ -61,11 +61,10 @@ CONTAINS
       TYPE(t_kpts),INTENT(INOUT)   :: kpts
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
-      TYPE(t_potden),INTENT(INOUT) :: inden !hubbard1_setup will modify the density matrix
+      TYPE(t_potden),INTENT(IN) :: inden !hubbard1_setup will modify the density matrix
+      TYPE(t_hub1ham),INTENT(INOUT):: hub1
       TYPE(t_potden), INTENT(IN)   :: vx
       TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
-      TYPE(t_greensf),INTENT(INOUT):: gOnsite
-      TYPE(t_hub1ham),INTENT(INOUT)   :: hub1
 
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -126,7 +125,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,hub1,inden,v,mpi,results,DIMENSION,td,ud)
+      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,hub1,inden,v,mpi,results,DIMENSION,td,ud)
 
       neigBuffer = 0
       results%neig = 0

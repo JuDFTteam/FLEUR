@@ -7,13 +7,12 @@
 MODULE m_mt_setup
 
 CONTAINS
-  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,gOnsite,hub1,inden,vTot,mpi,results,DIMENSION,td,ud)
+  SUBROUTINE mt_setup(atoms,sym,sphhar,input,noco,enpara,hub1,inden,vTot,mpi,results,DIMENSION,td,ud)
     USE m_types
     USE m_usetup
     USE m_tlmplm_cholesky
     USE m_tlmplm_store
     USE m_spnorb
-    USE m_hubbard1_setup
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: mpi
@@ -24,21 +23,18 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)       :: sym  
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_greensf),INTENT(IN)   :: gOnsite
-    TYPE(t_potden),INTENT(INOUT) :: inDen
+    TYPE(t_potden),INTENT(IN)    :: inDen
     TYPE(t_potden),INTENT(INOUT) :: vTot
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
-    TYPE(t_hub1ham),INTENT(INOUT)   :: hub1
+    TYPE(t_hub1ham),INTENT(INOUT) :: hub1
 
     INTEGER:: jsp
 
-    IF (atoms%n_u>0) THEN
+    IF (atoms%n_u+atoms%n_hia>0) THEN
        CALL u_setup(sym,atoms,sphhar,input,noco,enpara%el0(0:,:,:),inDen,vTot,mpi,results)
     END IF
-    IF(atoms%n_hia>0) THEN
-      CALL hubbard1_setup(atoms,hub1,sym,mpi,noco,input,ud,inDen,vTot,gOnsite,results)
-    END IF
+
 
     CALL timestart("tlmplm")
     CALL td%init(DIMENSION%lmplmd,DIMENSION%lmd,atoms%ntype,atoms%lmaxd,atoms%llod,SUM(atoms%nlo),&

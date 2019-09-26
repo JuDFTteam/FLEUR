@@ -79,7 +79,7 @@ CONTAINS
           rho_tot = rho_tot + rho_sig(ispin)
        END DO
        rho_sig(1) = rho_sig(1) * spin_deg  ! if jspins = 1, divide by 2
-       IF(jspins.EQ.2.AND..NOT.spin_pol) THEN
+       IF(jspins.EQ.2.AND.i_u>atoms%n_u.AND..NOT.spin_pol) THEN
          rho_sig(1)      = rho_tot/jspins
          rho_sig(jspins) = rho_tot/jspins
        ENDIF

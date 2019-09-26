@@ -393,13 +393,20 @@ MODULE m_types_greensf
 
          DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
             !Find the right quadrant in gmat according to the spin index
-            spin1 = MERGE(ispin,2,ispin.NE.3)
-            spin1 = MERGE(spin1,1,ispin.NE.4)
-            spin2 = MERGE(ispin,1,ispin.NE.3)
-            spin2 = MERGE(spin2,2,ispin.NE.4)
+            
+            IF(ispin < 3) THEN 
+               spin1 = ispin 
+               spin2 = ispin 
+            ELSE IF(ispin.EQ.3) THEN 
+               spin1 = 2
+               spin2 = 1
+            ELSE
+               spin1 = 1
+               spin2 = 2
+            ENDIF
 
             spin_ind = MERGE(ispin,1,input%jspins.EQ.2)
-            spin_ind = MERGE(3,spin_ind,ispin.EQ.4)
+            spin_ind = MERGE(3,spin_ind,ispin.EQ.4.AND.input%jspins.EQ.2)
             IF(l_full) THEN
                ind1_start = (spin1-1)*(2*l+1) 
                ind2_start = (spin2-1)*(2*lp_loop+1) 

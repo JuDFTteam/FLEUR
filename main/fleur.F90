@@ -64,6 +64,7 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
+    USE m_hubbard1_setup
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -181,7 +182,10 @@ CONTAINS
     scfloop:DO WHILE (l_cont)
 
        iter = iter + 1
-       IF(hub1%l_runthisiter) hub1%iter = hub1%iter + 1
+       IF(hub1%l_runthisiter.AND.atoms%n_hia>0) THEN
+          hub1%iter = hub1%iter + 1
+          CALL hubbard1_setup(atoms,hub1,sym,mpi,noco,input,inDen,vTot,gOnsite,results)
+       ENDIF
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
 
@@ -268,7 +272,7 @@ CONTAINS
           CALL timestop("Updating energy parameters")
           IF(.not.input%eig66(1))THEN
             CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx,gOnsite,hub1)
+                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx,hub1)
           ENDIF             
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -484,7 +488,7 @@ CONTAINS
                                   .AND.(input%minoccDistance<=results%last_occdistance&
                                   .OR.input%minmatDistance<=results%last_mmpMatdistance)
              !Run after first overall iteration to generate a starting density matrix
-             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==5.AND.(hub1%iter == 0&
+             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.(hub1%iter == 0&
                                   .AND.ALL(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:).EQ.0.0)))
              !Prevent that the scf loop terminates
              l_cont = l_cont.OR.hub1%l_runthisiter
