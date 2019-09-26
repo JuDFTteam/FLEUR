@@ -283,7 +283,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
                   END IF
 
                   DO i = 1, numInFiles
-                     CALL outcdn(pt,nt,na,iv,iflag,jsp,sliceplot%plplot,stars,& !plplot will be removed soon.
+                     CALL outcdn(pt,nt,na,iv,iflag,jsp,.FALSE.,stars,& 
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
                                  den(i),xdnout(i))
                   END DO
