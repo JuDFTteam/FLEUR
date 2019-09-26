@@ -624,7 +624,7 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,denmat,filenames)
+   SUBROUTINE vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,filenames)
    !Takes a spin-polarized t_potden density, i.e. a 2D vector in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
@@ -632,6 +632,8 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
       IMPLICIT NONE
 
       TYPE(t_stars),     INTENT(IN)    :: stars
+      TYPE(t_cell),     INTENT(IN)    :: cell
+      TYPE(t_sym),     INTENT(IN)    :: sym
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
