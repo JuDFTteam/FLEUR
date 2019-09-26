@@ -64,9 +64,6 @@ CONTAINS
       INTEGER                 :: nodem, noded
       REAL                    :: wronk
 
-      INTEGER                 :: lower, upper
-      LOGICAL                 :: found
-
       ! local arrays
       INTEGER                 :: rrot(3, 3, sym%nsym)
       INTEGER                 :: map_lo(atoms%nlod)
@@ -284,7 +281,26 @@ CONTAINS
 
       DEALLOCATE (acof, bcof, ccof)
       DEALLOCATE (cmt, cmthlp)
+      
+      !write out mat's
+      call execute_command_line("cp cmt " // new_filename("cmt", it))
+      call execute_command_line("cp z.mat " // new_filename("zmat", it))
+
+      !read out mat's
+      !call execute_command_line("cp " // new_filename("cmt", it) // " cmt")
+      !call execute_command_line("cp " // new_filename("zmat", it) // " z.mat")
 
    END SUBROUTINE gen_wavf
+
+   function new_filename(base, it) result(out_str)
+      use m_judft
+      implicit none
+      character(len=*), intent(in)  :: base
+      integer, intent(in)           ::  it
+      character(:), allocatable     :: out_str
+
+      out_str = base // "_it=" // int2str(it) // ".gnu"
+
+   end function new_filename
 
 END MODULE m_gen_wavf
