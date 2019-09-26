@@ -404,12 +404,14 @@ CONTAINS
    TYPE(t_input),               INTENT(IN)    :: input
    TYPE(t_sym),                 INTENT(IN)    :: sym
    TYPE(t_cell),                INTENT(IN)    :: cell
-   TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
+
    TYPE(t_noco),                INTENT(IN)    :: noco
-
+   TYPE(t_potden),              INTENT(IN)    :: den
 ! .. Logical Arguments ..
-   LOGICAL, INTENT (IN) logicPotential
-
+   LOGICAL, INTENT (IN) :: logicPotential
+! .. Integer Arguments ..
+   INTEGER, INTENT(IN) :: fileNumberRead,fileNumberWrite
+   
 
 
 !  .. Local Scalars ..
@@ -420,7 +422,6 @@ CONTAINS
    LOGICAL       :: cartesian,xsf,unwind,polar
 
 !  .. Local Arrays ..
-   TYPE(t_potden) :: den
    REAL    :: xdnout
    REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3),help(3),qssc(3)
    INTEGER :: grid(3)
@@ -433,13 +434,8 @@ CONTAINS
 
    NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
-
-
    nfile = 120
 
-
- 
-   ALLOCATE(den)
    ! Subtract core charge if input%score is set !TODO: Implement when density is plotted. 
    !   IF ((.NOT.noco%l_noco).AND.(input%score)) THEN
    !      OPEN (17,file='cdnc',form='unformatted',status='old')
@@ -477,19 +473,16 @@ CONTAINS
       !   numOutFiles = 7
       !END IF
    !END IF
-   ALLOCATE(outFilenames(1))
 
-
-   outFilenames(1) = fileName!We can do this more elegant later.
 
 
    ! If xsf is specified we create input files for xcrysden
 
    xsf=.TRUE.
-   OPEN(nfile+1,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted')
+   OPEN(nfile+1,file=TRIM(ADJUSTL(fileName))//'.xsf',form='formatted')
    CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
    
-   ! Loop over all plots
+   ! Loop over all plots (Generate Grid points)
    DO nplo = 1, nplot
 
       ! the defaults
@@ -551,7 +544,7 @@ CONTAINS
                   END IF
                      CALL outcdn(pt,nt,na,iv,iflag,jsp,logicPotential,stars,&
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 den,xdnout)
+                                 den,xdnout) !(Calculation of pot/den value at the given point.)
  
                   !IF (na.NE.0) THEN!TODO: do it somewhere else.
                   !   IF (noco%l_ss) THEN 
@@ -625,8 +618,7 @@ CONTAINS
    END DO !nplot  
     
    CLOSE(fileNumberRead)
-         CLOSE(nfile=1)
-   END IF
+         CLOSE(nfile+1)
    END SUBROUTINE scalarplot
 
 !--------------------------------------------------------------------------------------------
@@ -699,9 +691,9 @@ CONTAINS
       INTEGER :: i
       
       ! Plotting the density matrix as n or n,m or n,mx,my,mz 
-      IF jplot==2 THEN
-         IF jspins==2 THEN
-            IF noco%l_noco THEN
+      IF (jplot.EQ.2) THEN
+         IF (jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
                ALLOCATE(outFilenames(4))
                outFilenames(1)='cden'
                outFilenames(2)='mdnx'
