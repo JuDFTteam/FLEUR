@@ -385,7 +385,7 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,atoms,input,oneD,cell,den,fileName) !filename: READ filename of plot_inp... ! den is given POTDENTYPE
+   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,atoms,input,oneD,cell,den,fileName,logicPotential) !filename: READ filename of plot_inp... ! den is given POTDENTYPE
    !Takes a 1-component t_potden density, i.e. a scalar field in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
@@ -407,23 +407,25 @@ CONTAINS
    TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
    TYPE(t_noco),                INTENT(IN)    :: noco
 
+! .. Logical Arguments ..
+   LOGICAL, INTENT (IN) logicPotential
+
+
 
 !  .. Local Scalars ..
    REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
    INTEGER       :: i,j,ix,iy,iz,jsp,na,nplo,iv,iflag,nfile
-   INTEGER       :: nplot,nt,jm,jspin,numInFiles,numOutFiles
+   INTEGER       :: nplot,nt,jm,jspin
    LOGICAL       :: twodim,oldform,newform,l_qfix
    LOGICAL       :: cartesian,xsf,unwind,polar
 
 !  .. Local Arrays ..
-   TYPE(t_potden), ALLOCATABLE :: den(:)
-   REAL, ALLOCATABLE    :: xdnout(:)
+   TYPE(t_potden) :: den
+   REAL    :: xdnout
    REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3),help(3),qssc(3)
    INTEGER :: grid(3)
    REAL    :: rhocc(atoms%jmtd)
    REAL    :: point(3)
-   CHARACTER (len=10), ALLOCATABLE :: cdnFilenames(:)
-   CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
    CHARACTER (len=30)              :: filename
    CHARACTER (len=7)               :: textline
 
@@ -434,26 +436,11 @@ CONTAINS
 
 
    nfile = 120
-   numInFiles = 1
-   numOutFiles = 1 !TODO: We can remove the variable completly if we want.
- 
-   ALLOCATE(den(numInFiles))
-   
-   ! Read in charge/potential !DONE: I/O shut off TODO: Is PotDen input implemented well?
-   !DO i = 1, numInFiles
-   !   CALL den(i)%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-   !   IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn1') THEN
-   !      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
-   !                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
-   !   ELSE IF(TRIM(ADJUSTL(cdnFilenames(i))).EQ.'cdn') THEN
-   !      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
-   !                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i))
-   !   ELSE
-   !      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,&
-   !                       CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den(i),TRIM(ADJUSTL(cdnFilenames(i))))
-   !   END IF
 
-      ! Subtract core charge if input%score is set !TODO: Implement when density is plotted. 
+
+ 
+   ALLOCATE(den)
+   ! Subtract core charge if input%score is set !TODO: Implement when density is plotted. 
    !   IF ((.NOT.noco%l_noco).AND.(input%score)) THEN
    !      OPEN (17,file='cdnc',form='unformatted',status='old')
    !      REWIND 17
@@ -482,6 +469,7 @@ CONTAINS
    ! Open the plot_inp file for input 
    OPEN (fileNumberRead,file='plot_inp')
    READ(fileNumberRead,'(i2,5x,l1,1x,a)') nplot,xsf,textline
+
    !polar = .FALSE. !TODO: Implement that it will be checked in the plot_inp if ploar==T
    !IF ((noco%l_noco).AND.(numInFiles.EQ.4)) THEN !TODO: Implement when density is plotted. 
       !polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
@@ -489,8 +477,8 @@ CONTAINS
       !   numOutFiles = 7
       !END IF
    !END IF
-   ALLOCATE(outFilenames(numOutFiles))
-   ALLOCATE(xdnout(numOutFiles))
+   ALLOCATE(outFilenames(1))
+
 
    outFilenames(1) = fileName!We can do this more elegant later.
 
@@ -561,10 +549,9 @@ CONTAINS
                      iflag = 2
                      pt(:) = point(:)
                   END IF
-                     CALL outcdn(pt,nt,na,iv,iflag,jsp,sliceplot,stars,&!TODO; We have to get rid of that but I need to understand EXACTLY whats happening here.
+                     CALL outcdn(pt,nt,na,iv,iflag,jsp,logicPotential,stars,&
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 den(i)%pw,den(i)%vacxy,den(i)%mt,&
-                                 den(i)%vacz,xdnout(i)) !Close look at xdnout later in the file. This seems to be the crucial part which is then plotted.
+                                 den,xdnout)
  
                   !IF (na.NE.0) THEN!TODO: do it somewhere else.
                   !   IF (noco%l_ss) THEN 
@@ -627,23 +614,19 @@ CONTAINS
                   !   xdnout(6)= xdnout(6)/pi_const
                   !   xdnout(7)= xdnout(7)/pi_const
                   !END IF ! (polar)
-                    WRITE(nfile+1,*) xdnout(i)
+                    WRITE(nfile+1,*) xdnout
                END DO
             END DO
          END DO !z-loop
             IF (xsf.AND.jsp /= input%jspins) &
                CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)
       END DO !Spin-loop
-            CALL xsf_WRITE_endblock(nfile+i,twodim)
+            CALL xsf_WRITE_endblock(nfile+1,twodim)
    END DO !nplot  
     
    CLOSE(fileNumberRead)
          CLOSE(nfile=1)
    END IF
-
-   DEALLOCATE(xdnout, cdnFilenames, outFilenames)
-
- 
    END SUBROUTINE scalarplot
 
 !--------------------------------------------------------------------------------------------
