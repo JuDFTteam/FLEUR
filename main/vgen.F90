@@ -20,7 +20,7 @@ CONTAINS
    !!     TE_EXC :   charge density-ex-corr.energy density integral
 
    SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                   obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul)
+                   obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul,xcB)
 
       USE m_types
       USE m_rotate_int_den_to_local
@@ -54,17 +54,25 @@ CONTAINS
       TYPE(t_potden),    INTENT(IN)     :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT)  :: den
       TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul
+      TYPE(t_potden),dimension(3),INTENT(INOUT) :: xcB
 
       TYPE(t_potden)                    :: workden,denRot
 
+      INTEGER :: i
+
       if (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
-
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
+      DO i=1,3
+         CALL xcB(i)%resetPotden()
+         ALLOCATE(xcB(i)%pw_w,mold=vTot%pw)
+         xcB(i)%pw_w = 0.0
+      ENDDO
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
+
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
 #else
@@ -94,7 +102,7 @@ CONTAINS
                       obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
-      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot,xcB)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)
