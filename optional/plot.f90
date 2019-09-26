@@ -385,7 +385,8 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,atoms,input,oneD,cell,den,fileNameIN,logicPotential) !filename: READ filename of plot_inp... ! den is given POTDENTYPE
+   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,atoms,input,oneD,cell,&
+noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename of plot_inp... ! den is given POTDENTYPE
    !Takes a 1-component t_potden density, i.e. a scalar field in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
@@ -432,7 +433,6 @@ CONTAINS
    CHARACTER (len=7)               :: textline
    CHARACTER(len=30) ::filename
    REAL, PARAMETER :: eps = 1.0e-15
-   filename=fileNameIN
    NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
    nfile = 120
@@ -725,7 +725,7 @@ CONTAINS
       IF (allowplot) THEN
          jplot=2**ind_plot   
          CALL checkplotinp()
-         CALL procplot(jspins,noco,jplot,den)
+         CALL procplot(jspins,noco,iplot,ind_plot,den)
       END IF
    END SUBROUTINE makeplots
 
