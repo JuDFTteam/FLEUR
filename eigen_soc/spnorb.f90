@@ -79,6 +79,7 @@ CONTAINS
          n = atoms%lda_u(atoms%n_u+i_hia)%atomType
          l = atoms%lda_u(atoms%n_u+i_hia)%l
          hub1%xi(i_hia) = 2*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
+         hub1%xi(i_hia) = 2.0*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
       ENDDO
     ENDIF
 

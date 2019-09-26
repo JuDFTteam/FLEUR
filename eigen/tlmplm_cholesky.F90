@@ -123,10 +123,10 @@ CONTAINS
                      td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + v%mmpMat(m,mp,i_u,jsp) * udn21(l,n)
                      td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + v%mmpMat(m,mp,i_u,jsp) * ddn21(l,n)
                    ELSE
-                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + v%mmpMat(mp,m,i_u,3) * uun21(l,n)
-                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + v%mmpMat(mp,m,i_u,3) * dun21(l,n)
-                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + v%mmpMat(mp,m,i_u,3) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + v%mmpMat(mp,m,i_u,3) * ddn21(l,n)
+                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + CONJG(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + CONJG(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + CONJG(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + CONJG(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
                    ENDIF
                 ENDDO
              ENDDO
