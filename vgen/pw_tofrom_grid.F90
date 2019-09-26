@@ -217,23 +217,10 @@ CONTAINS
              ENDDO !jdm
           ENDDO   !idm 
        END IF
+
        IF (PRESENT(xcpot)) THEN
           CALL xcpot%alloc_gradients(ifftxc3,jspins,grad)
        END IF
-       !!!!!!!THIS IS A QUICKFIX! TO BE REMOVED ASAP!!!!!!!!!
-       !A. Neukirchen 25.09.19
-       !IF (ALLOCATED(grad%agrt)) THEN
-          !DEALLOCATE(grad%agrt,grad%agru,grad%agrd)
-          !DEALLOCATE(grad%g2ru,grad%g2rd,grad%gggrt)
-          !DEALLOCATE(grad%gggru,grad%gzgr,grad%g2rt)
-          !DEALLOCATE(grad%gggrd,grad%grgru,grad%grgrd)
-       !ENDIF
-
-       !ALLOCATE(grad%agrt(ifftxc3),grad%agru(ifftxc3),grad%agrd(ifftxc3))
-       !ALLOCATE(grad%g2ru(ifftxc3),grad%g2rd(ifftxc3),grad%gggrt(ifftxc3))
-       !ALLOCATE(grad%gggru(ifftxc3),grad%gzgr(ifftxc3),grad%g2rt(ifftxc3))
-       !ALLOCATE(grad%gggrd(ifftxc3),grad%grgru(ifftxc3),grad%grgrd(ifftxc3))
-       !!!!!!!!!
 
        ! 
        !     calculate the quantities such as abs(grad(rho)),.. used in
