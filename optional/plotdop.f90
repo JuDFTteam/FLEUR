@@ -285,8 +285,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
                   DO i = 1, numInFiles
                      CALL outcdn(pt,nt,na,iv,iflag,jsp,sliceplot,stars,&
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 den(i)%pw,den(i)%vacxy,den(i)%mt,&
-                                 den(i)%vacz,xdnout(i))
+                                 den(i),xdnout(i))
                   END DO
 
                   IF (na.NE.0) THEN
