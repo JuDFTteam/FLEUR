@@ -392,6 +392,7 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
    !given in plot_inp.
    USE m_xsf_io
    USE m_types
+   USE m_outcdn
 
 
    IMPLICIT NONE
@@ -744,5 +745,58 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
    END SUBROUTINE makeplots
 
 !--------------------------------------------------------------------------------------------
+
+!!!Subroutine originally from Plotdop. Needed in SCALARPLOT
+SUBROUTINE getMTSphere(input,cell,atoms,oneD,point,iType,iAtom,pt)
+
+   IMPLICIT NONE
+
+   TYPE(t_input), INTENT(IN)    :: input
+   TYPE(t_cell),  INTENT(IN)    :: cell
+   TYPE(t_atoms), INTENT(IN)    :: atoms
+   TYPE(t_oneD),  INTENT(IN)    :: oneD
+
+   INTEGER,       INTENT(OUT)   :: iType, iAtom
+   REAL,          INTENT(OUT)   :: pt(3)
+   REAL,          INTENT(IN)    :: point(3)
+
+   INTEGER                      :: ii1, ii2, ii3, i1, i2, i3, nq
+   REAL                         :: s
+
+   ii1 = 3
+   ii2 = 3
+   ii3 = 3
+   IF (input%film .AND. .NOT.oneD%odi%d1) ii3 = 0
+   IF (oneD%odi%d1) THEN
+      ii1 = 0
+      ii2 = 0
+   END IF
+
+   DO i1 = -ii1, ii1
+      DO i2 = -ii2, ii2
+         DO i3 = -ii3, ii3
+            pt = point+MATMUL(cell%amat,(/i1,i2,i3/))
+            iAtom = 0
+            DO iType = 1, atoms%ntype
+               DO nq = 1, atoms%neq(iType)
+                  iAtom = iAtom + 1
+                  s = SQRT(DOT_PRODUCT(atoms%pos(:,iAtom)-pt,atoms%pos(:,iAtom)-pt))
+                  IF (s<atoms%rmsh(atoms%jri(iType),iType)) THEN
+                     ! Return with the current iType, iAtom, pt
+                     RETURN
+                  END IF
+               END DO
+            END DO
+         END DO
+      END DO
+   END DO !i1
+
+   ! If no MT sphere encloses the point return 0 for iType, iAtom
+   iType = 0
+   iAtom = 0
+   pt(:) = point(:)
+
+   END SUBROUTINE getMTSphere
+
 
 END MODULE m_plot
