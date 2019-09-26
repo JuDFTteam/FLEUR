@@ -385,7 +385,7 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,atoms,input,oneD,cell,&
+   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,stars,atoms,input,oneD,cell,&
 noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename of plot_inp... ! den is given POTDENTYPE
    !Takes a 1-component t_potden density, i.e. a scalar field in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
@@ -719,6 +719,7 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
       INTEGER, INTENT(IN) :: iplot
       INTEGER, INTENT(IN) :: ind_plot !Index of the plot according to the constants set above
       INTEGER :: jplot
+      TYPE(t_noco),      INTENT(IN)    :: noco
       LOGICAL :: allowplot
       
       allowplot=BTEST(iplot,ind_plot).OR.(MODULO(iplot,2).NE.1)
