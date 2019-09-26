@@ -385,7 +385,7 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,atoms,input,oneD,cell,den,fileName,logicPotential) !filename: READ filename of plot_inp... ! den is given POTDENTYPE
+   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,atoms,input,oneD,cell,den,fileNameIN,logicPotential) !filename: READ filename of plot_inp... ! den is given POTDENTYPE
    !Takes a 1-component t_potden density, i.e. a scalar field in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
@@ -394,18 +394,27 @@ CONTAINS
 
 
    IMPLICIT NONE
-
+!!! TODO CHECK
    TYPE(t_oneD),                INTENT(IN)    :: oneD
    TYPE(t_atoms),               INTENT(IN)    :: atoms
    TYPE(t_input),               INTENT(IN)    :: input
    TYPE(t_cell),                INTENT(IN)    :: cell
    TYPE(t_potden),              INTENT(IN)    :: den
+!!!CHECK
+
+
+
+   TYPE(t_sym),                 INTENT(IN)    :: sym
+   TYPE(t_vacuum),              INTENT(IN)    :: vacuum
+   TYPE(t_noco),                INTENT(IN)    :: noco
+   TYPE(t_stars),               INTENT(IN)    :: stars
+   TYPE(t_sphhar),              INTENT(IN)    :: sphhar
 ! .. Logical Arguments ..
    LOGICAL, INTENT (IN) :: logicPotential
 ! .. Integer Arguments ..
    INTEGER, INTENT(IN) :: fileNumberRead,fileNumberWrite
 ! .. String Arguments
-   CHARACTER(len=30), INTENT (IN):: fileName
+   CHARACTER(len=30), INTENT (IN):: fileNameIN
 
 !  .. Local Scalars ..
    REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
@@ -421,9 +430,9 @@ CONTAINS
    REAL    :: rhocc(atoms%jmtd)
    REAL    :: point(3)
    CHARACTER (len=7)               :: textline
-
+   CHARACTER(len=30) ::filename
    REAL, PARAMETER :: eps = 1.0e-15
-
+   filename=fileNameIN
    NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
    nfile = 120
