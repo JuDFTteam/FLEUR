@@ -449,6 +449,7 @@
 
              ! calculate d_wgn
              ALLOCATE (hybrid%d_wgn2(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,sym%nsym))
+             hybrid%d_wgn2 =  CMPLX(0.0,0.0)
              CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,hybrid%d_wgn2(:,:,1:,:sym%nop))
              hybrid%d_wgn2(:,:,0,:) = 1
 
