@@ -168,15 +168,6 @@ CONTAINS
              'nodes', t68, 'value', t81, 'derivative', t95, 'nodes', t107, 'norm', t119, 'wronskian')
 8010  FORMAT(i3, f10.5, 2(5x, 1p, 2e16.7, i5), 1p, 2e16.7)
 
-      ! determine boundaries for parallel calculations
-      lower = 1
-      upper = nkpti
-      found = .true.
-      
-      IF (.NOT. found) THEN
-         upper = 0
-      END IF
-
       ! calculate wavefunction expansion in the the MT region
       ! (acof,bcof,ccof) and APW-basis coefficients
       ! (a,b,bascofold_lo) at irred. kpoints
@@ -192,7 +183,7 @@ CONTAINS
       ALLOCATE (cmthlp(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation cmthlp'
 
-      DO ikpt0 = lower, upper
+      DO ikpt0 = 1, nkpti
 
          acof = 0; bcof = 0; ccof = 0
 
