@@ -509,8 +509,6 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
          
       
 
-      !loop over spins
-      DO jsp = 1, input%jspins
          !loop over all points
          DO iz = 0, grid(3)-1
             DO iy = 0, grid(2)-1
@@ -614,8 +612,7 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
             END DO
          END DO !z-loop
             IF (xsf.AND.jsp /= input%jspins) &
-               CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)
-      END DO !Spin-loop
+            CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)
             CALL xsf_WRITE_endblock(nfile+1,twodim)
    END DO !nplot  
     
