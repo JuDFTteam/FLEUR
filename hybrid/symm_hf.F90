@@ -68,7 +68,7 @@ CONTAINS
    END SUBROUTINE symm_hf_init
 
    SUBROUTINE symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, hybrid, cell, &
-                      lapw, jsp, mpi, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
+                      lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
       USE m_constants
@@ -81,7 +81,6 @@ CONTAINS
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
-      TYPE(t_mpi), INTENT(IN)   :: mpi
       TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_hybrid), INTENT(IN) :: hybrid
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -111,7 +110,6 @@ CONTAINS
       INTEGER                         :: itype, ieq, iatom, ratom
       INTEGER                         :: iband, iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
-      INTEGER                         :: irecl_cmt, irecl_z
       INTEGER                         :: ok
       INTEGER                         :: l, lm
       INTEGER                         :: n1, n2, nn
@@ -128,7 +126,6 @@ CONTAINS
       INTEGER                         :: neqvkpt(kpts%nkptf)
       INTEGER                         :: list(kpts%nkptf)
       INTEGER                         :: degenerat(hybrid%ne_eig(nk))
-      INTEGER, ALLOCATABLE             :: help(:)
 
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE             :: olapmt(:, :, :, :)

@@ -150,7 +150,7 @@ CONTAINS
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
-         CALL symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, hybrid, cell, lapw, jsp, mpi, &
+         CALL symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, hybrid, cell, lapw, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
@@ -212,7 +212,7 @@ CONTAINS
          CALL timestop("time for performing T^-1*mat_ex*T^-1*")
 
          call timestart("symmetrizeh")
-         CALL symmetrizeh(atoms, kpts%bkf(:, nk), dimension, jsp, lapw, sym, hybdat%kveclo_eig, cell, nsymop, psym, v_x)
+         CALL symmetrizeh(atoms, kpts%bkf(:, nk), jsp, lapw, sym, hybdat%kveclo_eig, cell, nsymop, psym, v_x)
          call timestop("symmetrizeh")
 
          CALL write_v_x(v_x, kpts%nkpt*(jsp - 1) + nk)

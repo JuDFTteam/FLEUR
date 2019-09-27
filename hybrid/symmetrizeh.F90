@@ -10,14 +10,13 @@ MODULE m_symmetrizeh
 
 CONTAINS
 
-   SUBROUTINE symmetrizeh(atoms, bk, DIMENSION, jsp, lapw, sym, kveclo, cell, nsymop, psym, hmat)
+   SUBROUTINE symmetrizeh(atoms, bk, jsp, lapw, sym, kveclo, cell, nsymop, psym, hmat)
 
       USE m_constants
       USE m_types
 
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)    :: DIMENSION
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -34,7 +33,7 @@ CONTAINS
 
       ! local scalars
       INTEGER               ::  ilotot, itype, itype1, ilo, ilo1
-      INTEGER               ::  iatom, iatom1, iiatom, iiatom1
+      INTEGER               ::  iatom, iatom1, iiatom
       INTEGER               ::  i, ieq, ieq1, m
       INTEGER               ::  igpt_lo, igpt_lo1, igpt_lo2, igpt1_lo1
       INTEGER               ::  igpt1_lo2, isym, iop, ic, ic1, ic2
@@ -48,7 +47,6 @@ CONTAINS
       INTEGER               ::  l_lo(atoms%nlotot)
       INTEGER               ::  itype_lo(atoms%nlotot)
       INTEGER               ::  gpt_lo(3, atoms%nlotot), gpthlp(3), g(3)
-      INTEGER               ::  indx(DIMENSION%nbasfcn, DIMENSION%nbasfcn)
       INTEGER               ::  lo_indx(atoms%nlod, atoms%nat)
       INTEGER               ::  rot(3, 3, nsymop), rrot(3, 3, nsymop)
 
@@ -57,7 +55,7 @@ CONTAINS
       INTEGER, ALLOCATABLE   ::  map(:, :)
 
       REAL                  ::  rtaual(3), kghlp(3)
-      REAL                  ::  rotkpthlp(3), rotkpt(3)
+      REAL                  ::  rotkpt(3)
       REAL                  ::  trans(3, nsymop)
       COMPLEX, ALLOCATABLE   ::  c_lo(:, :, :, :), c_rot(:, :, :, :, :), y(:)
       COMPLEX, ALLOCATABLE   ::  cfac(:, :), chelp(:, :)

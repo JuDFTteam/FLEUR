@@ -471,7 +471,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             parent = 0
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
-            CALL symm_hf(kpts,ikpt,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jspin,mpi,&
+            CALL symm_hf(kpts,ikpt,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
@@ -527,7 +527,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             CALL exMat%multiply(invtrafo,tmpMat)
             CALL trafo%multiply(tmpMat,exMatLAPW)
 
-            CALL symmetrizeh(atoms,kpts%bkf(:,ikpt),dimension,jspin,lapw,sym,hybdat%kveclo_eig,cell,nsymop,psym,exMatLAPW)
+            CALL symmetrizeh(atoms,kpts%bkf(:,ikpt),jspin,lapw,sym,hybdat%kveclo_eig,cell,nsymop,psym,exMatLAPW)
 
             IF (.NOT.exMatLAPW%l_real) exMatLAPW%data_c=conjg(exMatLAPW%data_c)
             zMat%matsize1=MIN(zMat%matsize1,exMatLAPW%matsize2)
