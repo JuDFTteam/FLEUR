@@ -112,7 +112,7 @@ CONTAINS
 
          CALL open_hybrid_io2(hybrid, DIMENSION, atoms, sym%invs)
 
-         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, hybrid, xcpot, l_restart)
+         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, hybrid, xcpot)
 
          CALL hf_init(hybrid, kpts, atoms, input, DIMENSION, hybdat, sym%invs)
          CALL timestop("Preparation for Hybrid functionals")

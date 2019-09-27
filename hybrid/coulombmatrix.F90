@@ -35,7 +35,7 @@ MODULE m_coulombmatrix
 
 CONTAINS
 
-   SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, hybrid, xcpot, l_restart)
+   SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, hybrid, xcpot)
 
       USE m_types
       USE m_juDFT
@@ -59,15 +59,13 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)      :: kpts
       TYPE(t_atoms), INTENT(IN)     :: atoms
 
-      ! - scalars -
-      LOGICAL, INTENT(IN)    :: l_restart
 
       ! - local scalars -
       INTEGER                    :: inviop
       INTEGER                    :: nqnrm, iqnrm, iqnrm1, iqnrm2, iqnrmstart, iqnrmstep
       INTEGER                    :: itype, l, ix, iy, iy0, i, j, lm, l1, l2, m1, m2, ineq, idum, ikpt, ikpt0, ikpt1
       INTEGER                    :: lm1, lm2, itype1, itype2, ineq1, ineq2, n, n1, n2, ng
-      INTEGER                    :: ic, ic1, ic2, ic3, ic4, ic5, ic6, ic7, ic8
+      INTEGER                    :: ic, ic1, ic2, ic3, ic4
       INTEGER                    :: igpt, igpt1, igpt2, igptp, igptp1, igptp2
       INTEGER                    :: isym, isym1, isym2, igpt0
       INTEGER                    :: ok
@@ -133,7 +131,7 @@ CONTAINS
       INTEGER                    :: ishift, ishift1
       INTEGER                    :: iatom, iatom1
       INTEGER                    :: indx1, indx2, indx3, indx4
-      LOGICAL                    :: l_found, l_warn, l_warned, l_plot = .FALSE.!.true.!.false.
+      LOGICAL                    :: l_warn, l_warned!.true.!.false.
       TYPE(t_mat)                :: olapm, coulhlp
 
       CALL timestart("Coulomb matrix setup")
