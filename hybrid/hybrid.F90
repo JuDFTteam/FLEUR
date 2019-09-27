@@ -120,7 +120,7 @@ CONTAINS
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
             CALL HF_setup(hybrid, input, sym, kpts, dimension, atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id, &
-                          hybdat, iterHF, sym%invs, v%mt(:, 0, :, :), eig_irr)
+                          hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 
             DO nk = 1, kpts%nkpt

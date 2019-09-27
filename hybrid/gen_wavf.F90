@@ -15,7 +15,7 @@ MODULE m_gen_wavf
 
 CONTAINS
 
-   SUBROUTINE gen_wavf(nkpti, kpts, it, sym, atoms, el_eig, ello_eig, cell, dimension, hybrid, vr0, &
+   SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, dimension, hybrid, vr0, &
                        hybdat, noco, oneD, mpi, input, jsp, zmat)
 
       ! nkpti      ::     number of irreducible k-points
@@ -46,7 +46,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mat), INTENT(IN)    :: zmat(:) !for all kpoints
 
-      INTEGER, INTENT(IN)    :: nkpti, it
+      INTEGER, INTENT(IN)    :: nkpti
       INTEGER, INTENT(IN)    :: jsp
 
       REAL, INTENT(IN)    :: vr0(:, :, :)!(jmtd,ntype,jspd)
@@ -54,10 +54,10 @@ CONTAINS
       REAL, INTENT(IN)    :: ello_eig(atoms%nlod, atoms%ntype)
 
       ! local scalars
-      INTEGER                 :: ilo, idum, m, irecl_cmt, irecl_z
+      INTEGER                 :: ilo, idum, m
       COMPLEX                 :: cdum
       TYPE(t_mat)             :: zhlp
-      INTEGER                 :: ikpt0, ikpt, itype, iop, ispin, ieq, indx, iatom
+      INTEGER                 :: ikpt0, ikpt, itype, iop, ieq, indx, iatom
       INTEGER                 :: i, j, l, ll, lm, ng, ok
       COMPLEX                 :: img = (0.0, 1.0)
 
@@ -78,8 +78,6 @@ CONTAINS
       REAL                    :: flo(atoms%jmtd, 2, atoms%nlod)
       REAL                    :: uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
       REAL                    :: ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
-
-      REAL                    :: bkpt(3)
 
 !     local arrays for abcof1
 !      COMPLEX                 ::  a(nvd,0:lmd,natd,nkpti),b(nvd,0:lmd,natd,nkpti)
@@ -281,14 +279,6 @@ CONTAINS
 
       DEALLOCATE (acof, bcof, ccof)
       DEALLOCATE (cmt, cmthlp)
-      
-      !write out mat's
-      call execute_command_line("cp cmt " // new_filename("cmt", it))
-      call execute_command_line("cp z.mat " // new_filename("zmat", it))
-
-      !read out mat's
-      !call execute_command_line("cp " // new_filename("cmt", it) // " cmt")
-      !call execute_command_line("cp " // new_filename("zmat", it) // " z.mat")
 
    END SUBROUTINE gen_wavf
 

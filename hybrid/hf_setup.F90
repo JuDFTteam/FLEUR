@@ -9,7 +9,7 @@ MODULE m_hf_setup
 CONTAINS
 
    SUBROUTINE hf_setup(hybrid, input, sym, kpts, DIMENSION, atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
-                       hybdat, it, l_real, vr0, eig_irr)
+                       hybdat, l_real, vr0, eig_irr)
       USE m_types
       USE m_eig66_io
       USE m_util
@@ -33,7 +33,6 @@ CONTAINS
       TYPE(t_results), INTENT(INOUT) :: results
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
-      INTEGER, INTENT(IN)    :: it
       INTEGER, INTENT(IN)    :: jsp, eig_id_hf
       REAL, INTENT(IN)    :: vr0(:, :, :)
       LOGICAL, INTENT(IN)    :: l_real
@@ -151,7 +150,7 @@ CONTAINS
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
-         CALL gen_wavf(kpts%nkpt, kpts, it, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell, dimension, &
+         CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell, dimension, &
                        hybrid, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
