@@ -97,7 +97,7 @@ CONTAINS
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
-    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
+    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
@@ -248,11 +248,10 @@ CONTAINS
        CALL timestop("generation of potential")
 
 !       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-!          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_TOT_INDEX_const,vTot)
-!       END IF 
-
-!       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
+!          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_TOT_INDEX_const,vTot)         
 !          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_COU_INDEX_const,vCoul)
+!          CALL subPotDen(vxcForPlotting,vTot,vCoul)
+!          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_VXC_const,vxcForPlotting)
 !       END IF 
 
 #ifdef CPP_MPI
@@ -379,12 +378,9 @@ CONTAINS
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
            
-!          IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN      
-!             IF-statement to check whether we remove core densities    
+!          IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !                CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_OUTDEN_Y_CORE_INDEX_const,outDen)
-!             ELSE
 !                CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_OUTDEN_N_CORE_INDEX_const,outDen)
-!             END IF
 !          END IF 
 
           IF (input%l_rdmft) THEN
