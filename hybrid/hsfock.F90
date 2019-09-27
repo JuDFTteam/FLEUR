@@ -83,11 +83,9 @@ CONTAINS
       REAL, INTENT(IN)    :: eig_irr(dimension%neigd, kpts%nkpt)
 
       ! local scalars
-      INTEGER                 ::  i, j, ic, ic1, l, itype, n, nn
-      INTEGER                 ::  iband, iband1, iband2
+      INTEGER                 ::  i, j, l, itype
+      INTEGER                 ::  iband
       INTEGER                 ::  ikpt, ikpt0
-      INTEGER                 ::  irec
-      INTEGER                 ::  irecl_olap, irecl_z, irecl_vx
       INTEGER                 ::  nbasfcn
       INTEGER                 ::  nsymop
       INTEGER                 ::  nkpt_EIBZ
@@ -107,8 +105,6 @@ CONTAINS
       REAL                    ::  wl_iks(dimension%neigd, kpts%nkptf)
 
       TYPE(t_mat)             :: olap, trafo, invtrafo, ex, tmp, v_x, z
-      COMPLEX                 ::  exch(dimension%neigd, dimension%neigd)
-      COMPLEX, ALLOCATABLE     ::  carr(:)
 
       CALL timestart("total time hsfock")
 
