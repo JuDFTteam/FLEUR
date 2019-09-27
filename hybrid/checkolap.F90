@@ -5,7 +5,7 @@
          SUBROUTINE checkolap(atoms, hybdat,&
         &                  hybrid,&
         &                  nkpti, kpts,&
-        &                  dimension, mpi, skip_kpt,&
+        &                  dimension, mpi, &
         &                  input, sym, noco,&
         &                  cell, lapw, jsp)
             USE m_util, ONLY: intgrf, intgrf_init, chr, sphbessel, harmonicsr
@@ -31,16 +31,13 @@
             INTEGER, INTENT(IN)     :: jsp
             INTEGER, INTENT(IN)     ::  nkpti
 
-            ! - arrays -
-            LOGICAL, INTENT(IN)     ::  skip_kpt(nkpti)
 
             ! - local scalars -
             INTEGER                 ::  i, itype, iatom, ikpt, ineq, igpt, iband
-            INTEGER                 ::  irecl_cmt
             INTEGER                 ::  j, m
             INTEGER                 ::  l
             INTEGER                 :: lm, lm1
-            INTEGER                 ::  n, nred, nbasfcn
+            INTEGER                 ::  n, nbasfcn
 
             REAL                    ::  rdum, rdum1
             REAL                    ::  qnorm
@@ -55,16 +52,14 @@
             REAL                    ::  sphbes(0:atoms%lmaxd)
             REAL                    ::  q(3)
             REAL                    ::  integrand(atoms%jmtd)
-            REAL                    ::  bkpt(3)
             REAL                    ::  rarr(maxval(hybrid%nbands))
-            REAL                    ::  rtaual(3)
             REAL, ALLOCATABLE   ::  olapcb(:)
             REAL, ALLOCATABLE   :: olapcv_avg(:, :, :, :), olapcv_max(:, :, :, :)
             TYPE(t_mat), ALLOCATABLE :: z(:)
 
             COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat, nkpti)
             COMPLEX                 ::  y((atoms%lmaxd + 1)**2)
-            COMPLEX, ALLOCATABLE   ::  olapcv(:, :), olapww(:, :)
+            COMPLEX, ALLOCATABLE   ::  olapcv(:, :)
             COMPLEX, ALLOCATABLE   ::  carr1(:, :), carr2(:, :), carr3(:, :)
 
             CHARACTER, PARAMETER    ::  lchar(0:38) =&

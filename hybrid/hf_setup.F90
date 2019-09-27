@@ -158,7 +158,7 @@ CONTAINS
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
 
          ! check olap between core-basis/core-valence/basis-basis
-         CALL checkolap(atoms, hybdat, hybrid, kpts%nkpt, kpts, dimension, mpi, skip_kpt, &
+         CALL checkolap(atoms, hybdat, hybrid, kpts%nkpt, kpts, dimension, mpi, &
                         input, sym, noco, cell, lapw, jsp)
 
          ! set up pointer pntgpt
