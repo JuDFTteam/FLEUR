@@ -275,30 +275,30 @@ CONTAINS
          nst = atoms%ncst(itype)
 
          DO 90 korb = 1, nst
-            IF (occ(korb) == 0) GOTO 90
-            fn = nprnc(korb)
-            fj = iabs(kappa(korb)) - .5e0
-            weight = 2*fj + 1.e0
-            IF (bmu > 99.) weight = occ(korb)
-            fl = fj + (.5e0)*isign(1, kappa(korb))
-            e = -2*(z/(fn + fl))**2
-            CALL differ(fn, fl, fj, c, z, dxx, rnot, rn, d, ncmsh, vrd, e, a, b, ierr)
+            IF (occ(korb) > 0) THEN
+               fn = nprnc(korb)
+               fj = iabs(kappa(korb)) - .5e0
+               weight = 2*fj + 1.e0
+               IF (bmu > 99.) weight = occ(korb)
+               fl = fj + (.5e0)*isign(1, kappa(korb))
+               e = -2*(z/(fn + fl))**2
+               CALL differ(fn, fl, fj, c, z, dxx, rnot, rn, d, ncmsh, vrd, e, a, b, ierr)
 
-            nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
+               nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
 
-            core1(:atoms%jri(itype), NINT(fl), nindxcr(NINT(fl), itype), itype)&
-     &                                                 = a(:atoms%jri(itype))
-            core2(:atoms%jri(itype), NINT(fl), nindxcr(NINT(fl), itype), itype)&
-     &                                                 = b(:atoms%jri(itype))
+               core1(:atoms%jri(itype), NINT(fl), nindxcr(NINT(fl), itype), itype)&
+        &                                                 = a(:atoms%jri(itype))
+               core2(:atoms%jri(itype), NINT(fl), nindxcr(NINT(fl), itype), itype)&
+        &                                                 = b(:atoms%jri(itype))
 
-            eig_c(NINT(fl), nindxcr(NINT(fl), itype), itype) = e
+               eig_c(NINT(fl), nindxcr(NINT(fl), itype), itype) = e
 
-            IF (mpi%irank == 0) THEN
-               WRITE (6, FMT=8010) fn, fl, fj, e, weight
-            END IF
-            IF (ierr /= 0) STOP 'error in core-level routine'
-
-90       END DO
+               IF (mpi%irank == 0) THEN
+                  WRITE (6, FMT=8010) fn, fl, fj, e, weight
+               END IF
+               IF (ierr /= 0) call judft_error('error in core-level routine')
+            ENDIF
+         END DO
 
       END DO
 
