@@ -492,22 +492,22 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
 
 !-------------------------------------------------------------------------------------------
 SUBROUTINE pointGen(nplo)
-
-
+  !NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename CALL?
 INTEGER, INTENT (IN) :: nplo
+REAL, DIMENSION(3,:), ALLOCATABLE :: pointMesh
 ! Loop over all plots (Generate Grid points)
    DO nplo = 1, nplot
 
       ! the defaults
-      twodim = .TRUE.
-      cartesian = .TRUE.
-      grid = (/100,100,100/)
-      vec1 = (/0.,0.,0./)
-      vec2 = (/0.,0.,0./)
-      vec3 = (/0.,0.,0./)
-      zero = (/0.,0.,0./)
-      filename = "default"
-      READ(fileNumberRead,plot)
+      !twodim = .TRUE.
+      !cartesian = .TRUE.
+      !grid = (/100,100,100/)
+      !vec1 = (/0.,0.,0./)
+      !vec2 = (/0.,0.,0./)
+      !vec3 = (/0.,0.,0./)
+      !zero = (/0.,0.,0./)
+      !filename = "default"
+      !READ(fileNumberRead,plot) => callReadPlotinp
       IF (twodim.AND.ANY(grid(1:2)<1)) &
          CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
       IF (.NOT.twodim.AND.ANY(grid<1)) &
@@ -518,8 +518,6 @@ INTEGER, INTENT (IN) :: nplo
       IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo !Which role does "default" exactly play? 
       CALL xsf_WRITE_header(nfile+1,twodim,filename,vec1,vec2,vec3,zero,grid)
          
-      
-
          !loop over all points
          DO iz = 0, grid(3)-1
             DO iy = 0, grid(2)-1
@@ -553,12 +551,11 @@ INTEGER, INTENT (IN) :: nplo
                      iflag = 2
                      pt(:) = point(:)
                   END IF
-                     CALL outcdn(pt,nt,na,iv,iflag,jsp,logicPotential,stars,&
-                                 vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 den,xdnout) !(Calculation of pot/den value at the given point.)
+                     !CALL outcdn(pt,nt,na,iv,iflag,jsp,logicPotential,stars,&
+                     !            vacuum,sphhar,atoms,sym,cell,oneD,&
+                     !            den,xdnout) !(Calculation of pot/den value at the given point.)
  
-                  !IF (na.NE.0) THEN!TODO: do it somewhere else.
-                  !   IF (noco%l_ss) THEN 
+                  !IF (na.NE.0.AND.noco%l_ss) THEN!TODO: do it somewhere else.
                   !      ! rotate magnetization "backward"
                   !      angss = DOT_PRODUCT(qssc,pt-atoms%pos(:,na))
                   !      help(1) = xdnout(2)
@@ -566,7 +563,6 @@ INTEGER, INTENT (IN) :: nplo
                   !      xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss) 
                   !      xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss) 
                   !      ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0. 
-                  !   END IF
                   !END IF
 
                   !IF (noco%l_ss .AND. (.NOT. unwind)) THEN !TODO: do it somewhere else.
@@ -717,7 +713,7 @@ END SUBROUTINE pointGen
       IF (jplot.EQ.2) THEN
          IF (jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               ALLOCATE(outFilenames(4))
+               TE(outFilenames(4))
                outFilenames(1)='cden'
                outFilenames(2)='mdnx'
                outFilenames(3)='mdny'
