@@ -30,13 +30,6 @@ MODULE m_plot
    ! 
    ! A. Neukirchen & R. Hilgers, September 2019 
    !------------------------------------------------
-   INTEGER, PARAMETER :: PLOT_INPDEN_const=2        !ind_plot= 1
-   INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE_const=4 !ind_plot= 2
-   INTEGER, PARAMETER :: PLOT_INPDEN_N_CORE_const=8 !ind_plot= 4
-   INTEGER, PARAMETER :: PLOT_POT_TOT_const=128     !ind_plot= 7
-   INTEGER, PARAMETER :: PLOT_POT_EXT_const=256     !ind_plot= 8
-   INTEGER, PARAMETER :: PLOT_POT_COU_const=512     !ind_plot= 9
-   INTEGER, PARAMETER :: PLOT_POT_VXC_const=1024    !ind_plot=10
 
    PUBLIC             :: checkplotinp, makeplots, procplot, vectorsplit, matrixsplit, scalarplot, vectorplot, matrixplot
 
@@ -704,13 +697,18 @@ END SUBROUTINE pointGen
    END SUBROUTINE matrixplot
 
 !--------------------------------------------------------------------------------------------
+   SUBROUTINE read_plot_inp()
+   
+   END SUBROUTINE
 
-   SUBROUTINE procplot(jspins,noco,iplot,ind_plot,den)   
+!--------------------------------------------------------------------------------------------
+
+   SUBROUTINE procplot(jspins,noco,iplot,plot_const,den)   
       CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
       INTEGER :: i
-            TYPE(t_noco),      INTENT(IN)    :: noco
+      TYPE(t_noco),      INTENT(IN)    :: noco
       ! Plotting the density matrix as n or n,m or n,mx,my,mz 
-      IF (jplot.EQ.2) THEN
+      IF (plot_const.EQ.2) THEN
          IF (jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
                TE(outFilenames(4))
@@ -735,18 +733,20 @@ END SUBROUTINE pointGen
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE makeplots(jspins,noco,iplot,ind_plot,den)   
+   SUBROUTINE makeplots(jspins,noco,iplot,plot_const,den)   
+      USE m_constants
       INTEGER, INTENT(IN) :: iplot
-      INTEGER, INTENT(IN) :: ind_plot !Index of the plot according to the constants set above
+      INTEGER INTENT(IN) :: plot_const !Index of the plot according to the constants set above
       INTEGER :: jplot
       TYPE(t_noco),      INTENT(IN)    :: noco
       LOGICAL :: allowplot
+
+      jplot=2**plot_const
       
-      allowplot=BTEST(iplot,ind_plot).OR.(MODULO(iplot,2).NE.1)
-      IF (allowplot) THEN
-         jplot=2**ind_plot   
+      allowplot=BTEST(iplot,plot_const).OR.(MODULO(iplot,2).NE.1)
+      IF (allowplot) THEN  
          CALL checkplotinp()
-         CALL procplot(jspins,noco,iplot,ind_plot,den)
+         CALL procplot(jspins,noco,iplot,plot_const,den)
       END IF
    END SUBROUTINE makeplots
 
