@@ -476,7 +476,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             exMat%l_real=sym%invs
             CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,hybrid,cell,dimension,input,jspin,hybdat,mnobd,lapw,&
-                                     eig_irr,results,parent,pointer_EIBZ,n_q,wl_iks,iterHF,xcpot,noco,nsest,indx_sest,&
+                                     eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nsest,indx_sest,&
                                      mpi,exMat)
             CALL exchange_vccv1(ikpt,atoms,hybrid,hybdat,dimension,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
 

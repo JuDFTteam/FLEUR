@@ -166,7 +166,7 @@ CONTAINS
          ! HF exchange
          ex%l_real = sym%invs
          CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, parent, pointer_EIBZ, n_q, wl_iks, it, xcpot, noco, nsest, indx_sest, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, ex)
 
          CALL timestart("core exchange calculation")

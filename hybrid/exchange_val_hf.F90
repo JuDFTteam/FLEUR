@@ -57,7 +57,7 @@ MODULE m_exchange_valence_hf
 CONTAINS
 
    SUBROUTINE exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, parent, pointer_EIBZ, n_q, wl_iks, it, xcpot, noco, nsest, indx_sest, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, mat_ex)
 
       USE m_types
@@ -89,7 +89,6 @@ CONTAINS
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
       ! scalars
-      INTEGER, INTENT(IN)    :: it
       INTEGER, INTENT(IN)    :: jsp
       INTEGER, INTENT(IN)    :: nk, nkpt_EIBZ
       INTEGER, INTENT(IN)    :: mnobd
@@ -97,7 +96,6 @@ CONTAINS
       ! arrays
       INTEGER, INTENT(IN)    ::  n_q(nkpt_EIBZ)
 
-      INTEGER, INTENT(IN)    ::  parent(kpts%nkptf)
       INTEGER, INTENT(IN)    ::  pointer_EIBZ(nkpt_EIBZ)
       INTEGER, INTENT(IN)    ::  nsest(hybrid%nbands(nk))
       INTEGER, INTENT(IN)    ::  indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
@@ -107,38 +105,33 @@ CONTAINS
 
       ! local scalars
       INTEGER                 ::  iband, iband1, ibando, ikpt, ikpt0
-      INTEGER                 ::  i, ic, ix, iy, iz
-      INTEGER                 ::  irecl_coulomb, irecl_coulomb1
+      INTEGER                 ::  i
       INTEGER                 ::  j
-      INTEGER                 ::  m1, m2
       INTEGER                 ::  n, n1, n2, nn, nn2
       INTEGER                 ::  nkqpt
-      INTEGER                 ::  npot
       INTEGER                 ::  ok
       INTEGER                 ::  psize
       REAL                    ::  rdum
-      REAL                    ::  k0
 
       REAL, SAVE             ::  divergence
 
-      COMPLEX                 ::  cdum, cdum1, cdum2
+      COMPLEX                 ::  cdum, cdum2
       COMPLEX                 ::  exch0
 
       LOGICAL, SAVE           ::  initialize = .true.
 
       ! local arrays
-      INTEGER              :: kcorner(3, 8) = reshape((/0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1/), (/3, 8/))
       COMPLEX              :: exchcorrect(kpts%nkptf)
       COMPLEX              :: dcprod(hybrid%nbands(nk), hybrid%nbands(nk), 3)
       COMPLEX              :: exch_vv(hybrid%nbands(nk), hybrid%nbands(nk))
       COMPLEX              :: hessian(3, 3)
       COMPLEX              :: proj_ibsc(3, mnobd, hybrid%nbands(nk))
       COMPLEX              :: olap_ibsc(3, 3, mnobd, mnobd)
-      REAL                 :: carr1_v_r(hybrid%maxbasm1), carr1_c_r(hybrid%maxbasm1)
-      COMPLEX              :: carr1_v_c(hybrid%maxbasm1), carr1_c_c(hybrid%maxbasm1)
+      REAL                 :: carr1_v_r(hybrid%maxbasm1)
+      COMPLEX              :: carr1_v_c(hybrid%maxbasm1)
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
-      REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), cprod_cv_r(:, :, :), carr3_vv_r(:, :, :), carr3_cv_r(:, :, :)
-      COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), cprod_cv_c(:, :, :), carr3_vv_c(:, :, :), carr3_cv_c(:, :, :)
+      REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :)
+      COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :)
 
       REAL                 :: coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1, 0:hybrid%maxlcutm1, atoms%ntype)
       REAL                 :: coulomb_mt2_r(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
