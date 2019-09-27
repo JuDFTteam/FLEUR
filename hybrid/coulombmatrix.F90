@@ -1776,7 +1776,7 @@ CONTAINS
          g(6) = pref*aa**7*a**4/10395
          g(7) = pref*aa**7*a**5/135135
          a = a + 1
-      enddo 
+      enddo
       rrad = a*scale
       call timestop("fourier space")
 
@@ -1990,30 +1990,30 @@ CONTAINS
       rad = (cell%vol*3/4/pi_const)**(1.0/3) ! Wigner-Seitz radius (rad is recycled)
 
       !     Calculate accuracy of Gamma-decomposition
-      IF (ALL(kpts%bk == 0)) GOTO 4
-      a = 1e30 ! ikpt = index of shortest non-zero k-point
-      DO i = 2, kpts%nkpt
-         rdum = SUM(MATMUL(kpts%bk(:, i), cell%bmat)**2)
-         IF (rdum < a) THEN
-            ikpt = i
-            a = rdum
-         END IF
-      END DO
-      rdum = SQRT(SUM(MATMUL(kpts%bk(:, ikpt), cell%bmat)**2))
-      a = 0
-      DO ic2 = 1, atoms%nat
-         DO ic1 = 1, MAX(1, ic2 - 1)
-            a = a + ABS(structconst(1, ic1, ic2, ikpt) - &
-                        (structconst(1, ic1, ic2, 1) + SQRT(4*pi_const)/cell%vol/rdum**2* &
-                         EXP(-CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT( &
-                             kpts%bk(:, ikpt), atoms%taual(:, ic2) - atoms%taual(:, ic1)))))**2
+      IF (ALL(kpts%bk /= 0)) THEN
+         a = 1e30 ! ikpt = index of shortest non-zero k-point
+         DO i = 2, kpts%nkpt
+            rdum = SUM(MATMUL(kpts%bk(:, i), cell%bmat)**2)
+            IF (rdum < a) THEN
+               ikpt = i
+               a = rdum
+            END IF
          END DO
-      END DO
-      a = SQRT(a/atoms%nat**2)
-      aa = SQRT(SUM(ABS(structconst(1, :, :, ikpt))**2)/atoms%nat**2)
-      IF (first) WRITE (6, '(/A,F8.5,A,F8.5,A)') 'Accuracy of Gamma-decomposition (structureconstant):', a, ' (abs)', a/aa, ' (rel)'
-
-4     DEALLOCATE (ptsh, radsh)
+         rdum = SQRT(SUM(MATMUL(kpts%bk(:, ikpt), cell%bmat)**2))
+         a = 0
+         DO ic2 = 1, atoms%nat
+            DO ic1 = 1, MAX(1, ic2 - 1)
+               a = a + ABS(structconst(1, ic1, ic2, ikpt) - &
+                           (structconst(1, ic1, ic2, 1) + SQRT(4*pi_const)/cell%vol/rdum**2* &
+                            EXP(-CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT( &
+                                kpts%bk(:, ikpt), atoms%taual(:, ic2) - atoms%taual(:, ic1)))))**2
+            END DO
+         END DO
+         a = SQRT(a/atoms%nat**2)
+         aa = SQRT(SUM(ABS(structconst(1, :, :, ikpt))**2)/atoms%nat**2)
+         IF (first) WRITE (6, '(/A,F8.5,A,F8.5,A)') 'Accuracy of Gamma-decomposition (structureconstant):', a, ' (abs)', a/aa, ' (rel)'
+      ENDIF
+      DEALLOCATE (ptsh, radsh)
 
       first = .FALSE.
 
