@@ -729,11 +729,11 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
    SUBROUTINE makeplots(jspins,noco,iplot,plot_const,den)   
       USE m_constants
       INTEGER, INTENT(IN) :: iplot
-      INTEGER INTENT(IN) :: plot_const !Index of the plot according to constant setf in constants.f90
+      INTEGER INTENT(IN) :: plot_const !Index of the plot according to constant set in constants.f90
       TYPE(t_noco),      INTENT(IN)    :: noco
       LOGICAL :: allowplot
       
-      allowplot=BTEST(iplot,plot_const).OR.(MODULO(iplot,2).NE.1)
+      allowplot=BTEST(iplot,plot_const).OR.(MODULO(iplot,2).EQ.1)
       IF (allowplot) THEN  
          CALL checkplotinp()
          CALL procplot(jspins,noco,iplot,plot_const,den)
