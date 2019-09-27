@@ -45,7 +45,6 @@ CONTAINS
       USE m_radflo, ONLY: radflo
       USE m_loddop, ONLY: loddop
       USE m_util, ONLY: intgrf_init, intgrf, rorderpf
-      USE m_read_core
       USE m_wrapper
       USE m_eig66_io
       USE m_types

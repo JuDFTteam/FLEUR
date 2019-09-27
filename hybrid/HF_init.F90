@@ -6,7 +6,6 @@ MODULE m_hf_init
 CONTAINS
    SUBROUTINE hf_init(hybrid, atoms, input, DIMENSION, hybdat)
       USE m_types
-      USE m_read_core
       USE m_util
       USE m_io_hybrid
       IMPLICIT NONE

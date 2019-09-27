@@ -14,7 +14,6 @@ CONTAINS
       USE m_eig66_io
       USE m_util
       USE m_checkolap
-      USE m_read_core
       USE m_gen_wavf
 
       IMPLICIT NONE
