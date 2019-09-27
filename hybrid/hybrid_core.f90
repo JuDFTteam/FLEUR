@@ -206,18 +206,19 @@ CONTAINS
 
          nst = atoms%ncst(itype)
 
-         DO 80 korb = 1, nst
-            IF (occ(korb) == 0) GOTO 80
-            fn = nprnc(korb)
-            fj = iabs(kappa(korb)) - .5e0
-            weight = 2*fj + 1.e0
-            IF (bmu > 99.) weight = occ(korb)
-            fl = fj + (.5e0)*isign(1, kappa(korb))
-            e = -2*(z/(fn + fl))**2
+         DO korb = 1, nst
+            IF (occ(korb) > 0) THEN
+               fn = nprnc(korb)
+               fj = iabs(kappa(korb)) - .5e0
+               weight = 2*fj + 1.e0
+               IF (bmu > 99.) weight = occ(korb)
+               fl = fj + (.5e0)*isign(1, kappa(korb))
+               e = -2*(z/(fn + fl))**2
 
-            nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
-            lmaxc(itype) = max(lmaxc(itype), NINT(fl))
-80       END DO
+               nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
+               lmaxc(itype) = max(lmaxc(itype), NINT(fl))
+            ENDIF
+         END DO
 
       END DO
 
