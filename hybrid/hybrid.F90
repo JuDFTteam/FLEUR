@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_calc_hybrid
-
    USE m_judft
 
 CONTAINS
@@ -44,15 +43,18 @@ CONTAINS
       INTEGER, INTENT(IN)    :: eig_id
 
       ! local variables
-      INTEGER           :: jsp, nk, nred
+      INTEGER           :: jsp, nk
       TYPE(t_hybdat)    :: hybdat
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_restart = .FALSE.
       LOGICAL           :: l_zref
 
-      REAL              :: bkpt(3)
       REAL, ALLOCATABLE :: eig_irr(:, :)
+
+      ! open(7465, file="iter_translator.txt", position="append")
+      ! write (7465,*) iter, iterHF
+      ! close(7465)
 
       CALL timestart("Hybrid code")
       INQUIRE (file="v_x.mat", exist=hybrid%l_addhf)
