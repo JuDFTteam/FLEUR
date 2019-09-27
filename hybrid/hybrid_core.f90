@@ -32,17 +32,13 @@ CONTAINS
 
       ! - local scalars -
       INTEGER                   ::  ncstd
-      INTEGER                   ::  ok, itype, i, j, idum, l
+      INTEGER                   ::  ok, itype, i, l
 
-      REAL                      ::  rdum
       REAL                      ::  weight1, weight2
       ! - local arrays -
       INTEGER, ALLOCATABLE       ::  nindxcr(:, :)
-      INTEGER, ALLOCATABLE       ::  l_qn(:, :), n_qn(:, :)
 
-      REAL, ALLOCATABLE          ::  j_qn(:, :)
       REAL, ALLOCATABLE          ::  core1r(:, :, :, :), core2r(:, :, :, :)
-      REAL, ALLOCATABLE          ::  core11r(:, :, :, :), core22r(:, :, :, :)
       REAL, ALLOCATABLE          ::  eig_cr(:, :, :)
 
       ncstd = maxval(atoms%ncst)
@@ -324,14 +320,14 @@ CONTAINS
       INTEGER, INTENT(OUT)            :: maxindxc, lmaxcd
 
       !  - local scalars -
-      INTEGER              :: i, j, itype, korb, ncmsh, nst, ierr
-      REAL                 :: e, fj, fl, fn, t, bmu, c
-      REAL                 :: d, dxx, rn, rnot, z, t1, rr
+      INTEGER              :: itype, korb, ncmsh, nst
+      REAL                 :: e, fj, fl, fn, bmu, c
+      REAL                 :: d, dxx, rn, rnot, z
 
       !  - local arrays -
       INTEGER              :: kappa(dimension%nstd), nprnc(dimension%nstd)
       INTEGER              :: nindxcr(0:dimension%nstd, atoms%ntype)
-      REAL                 :: occ(dimension%nstd), occ_h(dimension%nstd, 2), a(dimension%msh), b(dimension%msh)
+      REAL                 :: occ(dimension%nstd), occ_h(dimension%nstd, 2)
       INTEGER              :: lmaxc(atoms%ntype)
 
       !   - intrinsic functions -
@@ -359,15 +355,16 @@ CONTAINS
          nst = atoms%ncst(itype)
 
          DO korb = 1, nst
-            IF (occ(korb) == 0) CYCLE
-            fn = nprnc(korb)
-            fj = iabs(kappa(korb)) - .5e0
+            IF (occ(korb) > 0) THEN
+               fn = nprnc(korb)
+               fj = iabs(kappa(korb)) - .5e0
 
-            fl = fj + (.5e0)*isign(1, kappa(korb))
-            e = -2*(z/(fn + fl))**2
+               fl = fj + (.5e0)*isign(1, kappa(korb))
+               e = -2*(z/(fn + fl))**2
 
-            nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
-            lmaxc(itype) = max(lmaxc(itype), NINT(fl))
+               nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
+               lmaxc(itype) = max(lmaxc(itype), NINT(fl))
+            ENDIF
          END DO
 
       END DO
