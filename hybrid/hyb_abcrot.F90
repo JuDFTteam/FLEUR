@@ -1,7 +1,7 @@
 
 MODULE m_hyb_abcrot
 CONTAINS
-   SUBROUTINE hyb_abcrot(hybrid, atoms, neig, sym, cell, oneD,&
+   SUBROUTINE hyb_abcrot(hybrid, atoms, neig, sym,&
   &                 acof, bcof, ccof)
 !     ***************************************************************
 !     * This routine transforms a/b/cof which are given wrt rotated *
@@ -14,9 +14,7 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
       TYPE(t_hybrid), INTENT(IN) :: hybrid
-      TYPE(t_oneD), INTENT(IN)   :: oneD
       TYPE(t_sym), INTENT(IN)    :: sym
-      TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)  :: atoms
 !     ..
 !     .. Scalar Arguments ..
@@ -29,7 +27,7 @@ CONTAINS
       COMPLEX, INTENT(INOUT) :: ccof(-atoms%llod:, :, :, :)!(-llod:llod,dimension%neigd,atoms%nlod,atoms%natd)
 !     ..
 !     .. Local Scalars ..
-      INTEGER itype, ineq, iatom, iop, ilo, i, l, lm, lmp, ifac
+      INTEGER itype, ineq, iatom, iop, ilo, i, l, ifac
 !     ..
 !     .. Local Arrays ..
 !***** COMPLEX, ALLOCATABLE :: d_wgn(:,:,:,:) !put into module m_savewigner
@@ -51,21 +49,14 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ineq = 1, atoms%neq(itype)
             iatom = iatom + 1
-            IF (.NOT. oneD%odi%d1) THEN
-               iop = atoms%ngopr(iatom)
-            ELSE
-               iop = oneD%ods%ngopr(iatom)
-            ENDIF
+            iop = atoms%ngopr(iatom)
 !                                    l                        l    l
 ! inversion of spherical harmonics: Y (pi-theta,pi+phi) = (-1)  * Y (theta,phi)
 !                                    m                             m
             ifac = 1
             IF (atoms%invsat(iatom) == 2) THEN
-               IF (.NOT. oneD%odi%d1) THEN
-                  iop = atoms%ngopr(sym%invsatnr(iatom))
-               ELSE
-                  iop = oneD%ods%ngopr(sym%invsatnr(iatom))
-               ENDIF
+               iop = atoms%ngopr(sym%invsatnr(iatom))
+
                ifac = -1
             ENDIF
             DO l = 1, atoms%lmax(itype)
