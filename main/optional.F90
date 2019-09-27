@@ -103,7 +103,6 @@ CONTAINS
 
        
     IF (mpi%irank == 0) THEN
-       IF (sliceplot%plpot) input%score = .FALSE.
        IF (sliceplot%iplot.NE.0) THEN
           CALL timestart("Plotting")
           IF (input%strho) CALL juDFT_error("strho = T and iplot=/=0",calledby = "optional")

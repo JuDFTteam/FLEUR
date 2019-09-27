@@ -68,13 +68,6 @@ MODULE m_nocoInputCheck
          CALL juDFT_error("Coretail option cannot be used!!!",calledby="nocoInputCheck")
       END IF
 
-!---> make sure score is false
-      IF (input%score) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the score option!! '
-         CALL juDFT_error("score must be false!!!",calledby ="nocoInputCheck")
-      END IF
-
 !---> make sure that moments are not relaxed and constrained
       l_relax_any = .FALSE.
       DO itype = 1,atoms%ntype
