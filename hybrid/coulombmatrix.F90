@@ -1764,19 +1764,19 @@ CONTAINS
       ! (2) Fourier space
       call timestart("fourier space")
       a = 1
-2     aa = (1 + a**2)**(-1)
-      g(0) = pref*aa**4/a**2
-      g(1) = pref*aa**4/a
-      g(2) = pref*aa**5/3
-      g(3) = pref*aa**5*a/15
-      g(4) = pref*aa**6*a**2/105
-      g(5) = pref*aa**6*a**3/945
-      g(6) = pref*aa**7*a**4/10395
-      g(7) = pref*aa**7*a**5/135135
-      IF (ANY(g > convpar)) THEN
+      g(0:7) = 1e99
+      do while(ANY(g > convpar))
+         aa = (1 + a**2)**(-1)
+         g(0) = pref*aa**4/a**2
+         g(1) = pref*aa**4/a
+         g(2) = pref*aa**5/3
+         g(3) = pref*aa**5*a/15
+         g(4) = pref*aa**6*a**2/105
+         g(5) = pref*aa**6*a**3/945
+         g(6) = pref*aa**7*a**4/10395
+         g(7) = pref*aa**7*a**5/135135
          a = a + 1
-         GOTO 2
-      END IF
+      enddo 
       rrad = a*scale
       call timestop("fourier space")
 
