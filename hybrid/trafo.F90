@@ -417,6 +417,8 @@ CONTAINS
       END DO
 
       IF (lreal) THEN
+
+
 !     ! Determine common phase factor and devide by it to make the output matrix real.
 !     rmax = 0
 !     DO i = 1,dim1
@@ -424,7 +426,7 @@ CONTAINS
 !     rdum = abs(real(mat(i,j)))+abs(aimag(mat(i,j)))
 !     IF(rdum.gt.1e-6) THEN
 !     cfac = mat(i,j)/abs(mat(i,j))
-!     GOTO 1
+!     GO TO 1
 !     ELSE IF(rdum.gt.rmax) THEN
 !     cfac = mat(i,j)/abs(mat(i,j))
 !     rmax = rdum
