@@ -38,7 +38,7 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, DIMENSION, input, cell, sym, xcpot, hybrid, enpara, mpi, v, l_restart)
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, hybrid, enpara, mpi, v, l_restart)
 
       USE m_judft
       USE m_radfun, ONLY: radfun
@@ -54,11 +54,9 @@ CONTAINS
 
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -70,17 +68,15 @@ CONTAINS
       TYPE(t_usdus)                   ::  usdus
 
       ! local scalars
-      INTEGER                         ::  ilo, ikpt, ispin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ic, ng
-      INTEGER                         ::  jsp, nodem, noded, m, nk, ok, x, y, z, maxindxc, lmaxcd
+      INTEGER                         ::  ilo, ikpt, ispin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
+      INTEGER                         ::  nodem, noded, m, nk, x, y, z
       INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
-      REAL                            ::  gcutm, wronk, rdum, rdum1, rdum2
+      REAL                            ::  gcutm, wronk, rdum, rdum1
 
       LOGICAL                         ::  ldum, ldum1
 
       ! - local arrays -
-      INTEGER                         ::  g(3)
-      INTEGER                         ::  lmaxc(atoms%ntype)
-      INTEGER, ALLOCATABLE             ::  nindxc(:, :)
+      INTEGER                          ::  g(3)
       INTEGER, ALLOCATABLE             ::  ihelp(:)
       INTEGER, ALLOCATABLE             ::  ptr(:)           ! pointer for array sorting
       INTEGER, ALLOCATABLE             ::  unsrt_pgptm(:, :) ! unsorted pointers to g vectors
@@ -89,7 +85,6 @@ CONTAINS
       REAL                            ::  flo(atoms%jmtd, 2, atoms%nlod)
       REAL                            ::  uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
       REAL                            ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
-      REAL                            ::  potatom(atoms%jmtd, atoms%ntype)
       REAL                            ::  bashlp(atoms%jmtd)
 
       REAL, ALLOCATABLE               ::  f(:, :, :), df(:, :, :)
@@ -97,8 +92,6 @@ CONTAINS
       REAL, ALLOCATABLE               ::  bas1(:, :, :, :, :), bas2(:, :, :, :, :)
       REAL, ALLOCATABLE               ::  basmhlp(:, :, :, :)
       REAL, ALLOCATABLE               ::  gridf(:, :), vr0(:, :, :)
-      REAL, ALLOCATABLE               ::  core1(:, :, :, :, :), core2(:, :, :, :, :)
-      REAL, ALLOCATABLE               ::  eig_c(:, :, :, :)
       REAL, ALLOCATABLE               ::  length_kg(:, :) ! length of the vectors k + G
 
       LOGICAL, ALLOCATABLE            ::  selecmat(:, :, :, :)
@@ -108,9 +101,6 @@ CONTAINS
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
 
-      CHARACTER(len=2)                ::  nchar
-      CHARACTER(len=2)                ::  noel(atoms%ntype)
-      CHARACTER(len=10)               ::  fname(atoms%ntype)
       ! writing to a file
       INTEGER, PARAMETER              ::  iounit = 125
       CHARACTER(10), PARAMETER        ::  ioname = 'mixbas'
@@ -870,7 +860,7 @@ CONTAINS
             r = atoms%rmsh(i, itype)
             DO j = 1, ic - 1
                IF (r_atom(j) > r) THEN
-                  M = (v_atom(j) - v_atom(j + 1))/(r_atom(j) - r_atom(j + 1))
+                  M = int((v_atom(j) - v_atom(j + 1))/(r_atom(j) - r_atom(j + 1)))
                   n = v_atom(j) - M*r_atom(j)
                   potential(i, itype) = n + M*r
                   !               WRITE(333,'(4f25.10)') n + m*r_atom(j),v_atom(j),n + m*r_atom(j+1),v_atom(j+1)
@@ -886,4 +876,3 @@ CONTAINS
    END SUBROUTINE read_atompotential
 
 END MODULE m_mixedbasis
-

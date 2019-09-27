@@ -107,7 +107,7 @@ CONTAINS
 
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
-         CALL mixedbasis(atoms, kpts, dimension, input, cell, sym, xcpot, hybrid, enpara, mpi, v, l_restart)
+         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, hybrid, enpara, mpi, v, l_restart)
          CALL timestop("generation of mixed basis")
 
          CALL open_hybrid_io2(hybrid, DIMENSION, atoms, sym%invs)

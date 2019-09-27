@@ -295,7 +295,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             cdnvalJob%k_list=[ikpt]
             cdnvalJob%ev_list=[iband]
             cdnvalJob%weights(iBand,ikpt) = spinDegenFac
-     
+
             ! Call cdnval to construct density
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
@@ -340,7 +340,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
 !   CALL open_hybrid_io1(DIMENSION,sym%invs)
 
-   CALL mixedbasis(atoms,kpts,dimension,input,cell,sym,xcpot,hybrid,enpara,mpi,vTot,l_restart)
+   CALL mixedbasis(atoms,kpts,input,cell,xcpot,hybrid,enpara,mpi,vTot,l_restart)
 
    CALL open_hybrid_io2(hybrid,DIMENSION,atoms,sym%invs)
 
@@ -529,7 +529,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             CALL symmetrizeh(atoms,kpts%bkf(:,ikpt),dimension,jspin,lapw,sym,hybdat%kveclo_eig,cell,nsymop,psym,exMatLAPW)
 
-            IF (.NOT.exMatLAPW%l_real) exMatLAPW%data_c=conjg(exMatLAPW%data_c) 
+            IF (.NOT.exMatLAPW%l_real) exMatLAPW%data_c=conjg(exMatLAPW%data_c)
             zMat%matsize1=MIN(zMat%matsize1,exMatLAPW%matsize2)
 
             CALL exMatLAPW%multiply(zMat,tmpMat)
