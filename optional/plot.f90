@@ -697,6 +697,7 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
 !--------------------------------------------------------------------------------------------
 
    SUBROUTINE procplot(jspins,noco,iplot,plot_const,den)   
+      INTEGER, INTENT(IN) :: plot_const
       CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
       INTEGER :: i
       TYPE(t_noco),      INTENT(IN)    :: noco
