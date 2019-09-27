@@ -274,7 +274,7 @@ CONTAINS
 
          nst = atoms%ncst(itype)
 
-         DO 90 korb = 1, nst
+         DO korb = 1, nst
             IF (occ(korb) > 0) THEN
                fn = nprnc(korb)
                fj = iabs(kappa(korb)) - .5e0
