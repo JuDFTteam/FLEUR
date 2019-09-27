@@ -5,13 +5,6 @@
 !--------------------------------------------------------------------------------
 MODULE m_fleur
   IMPLICIT NONE
-  INTEGER, PARAMETER :: PLOT_INPDEN_INDEX_const=1
-  INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE_INDEX_const=2
-  INTEGER, PARAMETER :: PLOT_INPDEN_N_CORE_INDEX_const=3
-  INTEGER, PARAMETER :: PLOT_POT_TOT_INDEX_const=7
-  INTEGER, PARAMETER :: PLOT_POT_EXT_INDEX_const=8
-  INTEGER, PARAMETER :: PLOT_POT_COU_INDEX_const=9
-  INTEGER, PARAMETER :: PLOT_POT_VXC_INDEX_const=10
 CONTAINS
   SUBROUTINE fleur_execute(mpi_comm)
 
@@ -159,7 +152,7 @@ CONTAINS
     END IF
     
 !    IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-!       CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_INPDEN_INDEX_const,inDen)
+!       CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_INPDEN_const,inDen)
 !    END IF 
 
     ! Initialize and load inDen density (end)
