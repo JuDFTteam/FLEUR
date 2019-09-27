@@ -679,9 +679,9 @@ SUBROUTINE w_inpXML(&
    395 FORMAT('      <unfoldingBand unfoldBand="',l1,'" supercellX="',i0,'" supercellY="',i0,'" supercellZ="',i0,'"/>')
    WRITE (fileNum,395) banddos%unfoldband, banddos%s_cell_x, banddos%s_cell_y, banddos%s_cell_z
 
-!      <plotting iplot="0" score="F" plplot="F"/>
-   400 FORMAT('      <plotting iplot="',i0,'" score="',l1,'" plplot="',l1,'"/>')
-   WRITE (fileNum,400) sliceplot%iplot,input%score,sliceplot%plpot
+!      <plotting iplot="0">
+   400 FORMAT('      <plotting iplot="',i0,'"/>')
+   WRITE (fileNum,400) sliceplot%iplot
 
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
    410 FORMAT('      <chargeDensitySlicing numkpt="',i0,'" minEigenval="',f0.8,'" maxEigenval="',f0.8,'" nnne="',i0,'" pallst="',l1,'"/>')

@@ -1925,8 +1925,6 @@ CONTAINS
       input%cdinf = .FALSE.
 
       sliceplot%iplot = 0
-      input%score = .FALSE.
-      sliceplot%plpot = .FALSE.
 
       input%eonly = .FALSE.
       input%l_bmt = .FALSE.
@@ -1963,8 +1961,6 @@ CONTAINS
 
          IF (numberNodes.EQ.1) THEN
             sliceplot%iplot = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
-            input%score = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
-            sliceplot%plpot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
          END IF
 
          ! Read in optional specialOutput switches
