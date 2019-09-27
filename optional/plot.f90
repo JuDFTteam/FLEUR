@@ -30,6 +30,13 @@ MODULE m_plot
    ! 
    ! A. Neukirchen & R. Hilgers, September 2019 
    !------------------------------------------------
+   INTEGER, PARAMETER :: PLOT_INPDEN_const=2        !ind_plot= 1
+   INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE_const=4 !ind_plot= 2
+   INTEGER, PARAMETER :: PLOT_INPDEN_N_CORE_const=8 !ind_plot= 4
+   INTEGER, PARAMETER :: PLOT_POT_TOT_const=128     !ind_plot= 7
+   INTEGER, PARAMETER :: PLOT_POT_EXT_const=256     !ind_plot= 8
+   INTEGER, PARAMETER :: PLOT_POT_COU_const=512     !ind_plot= 9
+   INTEGER, PARAMETER :: PLOT_POT_VXC_const=1024    !ind_plot=10
 
    PUBLIC             :: checkplotinp, makeplots, procplot, vectorsplit, matrixsplit, scalarplot, vectorplot, matrixplot
 
@@ -477,30 +484,19 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
    OPEN(nfile+1,file=TRIM(ADJUSTL(fileName))//'.xsf',form='formatted')
    CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
    
-   
-    
-   CLOSE(fileNumberRead)
-         CLOSE(nfile+1)
-   END SUBROUTINE scalarplot
-
-!-------------------------------------------------------------------------------------------
-SUBROUTINE pointGen(nplo)
-  !NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename CALL?
-INTEGER, INTENT (IN) :: nplo
-REAL, DIMENSION(3,:), ALLOCATABLE :: pointMesh
-! Loop over all plots (Generate Grid points)
+   ! Loop over all plots (Generate Grid points)
    DO nplo = 1, nplot
 
       ! the defaults
-      !twodim = .TRUE.
-      !cartesian = .TRUE.
-      !grid = (/100,100,100/)
-      !vec1 = (/0.,0.,0./)
-      !vec2 = (/0.,0.,0./)
-      !vec3 = (/0.,0.,0./)
-      !zero = (/0.,0.,0./)
-      !filename = "default"
-      !READ(fileNumberRead,plot) => callReadPlotinp
+      twodim = .TRUE.
+      cartesian = .TRUE.
+      grid = (/100,100,100/)
+      vec1 = (/0.,0.,0./)
+      vec2 = (/0.,0.,0./)
+      vec3 = (/0.,0.,0./)
+      zero = (/0.,0.,0./)
+      filename = "default"
+      READ(fileNumberRead,plot)
       IF (twodim.AND.ANY(grid(1:2)<1)) &
          CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
       IF (.NOT.twodim.AND.ANY(grid<1)) &
@@ -511,6 +507,8 @@ REAL, DIMENSION(3,:), ALLOCATABLE :: pointMesh
       IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo !Which role does "default" exactly play? 
       CALL xsf_WRITE_header(nfile+1,twodim,filename,vec1,vec2,vec3,zero,grid)
          
+      
+
          !loop over all points
          DO iz = 0, grid(3)-1
             DO iy = 0, grid(2)-1
@@ -544,11 +542,12 @@ REAL, DIMENSION(3,:), ALLOCATABLE :: pointMesh
                      iflag = 2
                      pt(:) = point(:)
                   END IF
-                     !CALL outcdn(pt,nt,na,iv,iflag,jsp,logicPotential,stars,&
-                     !            vacuum,sphhar,atoms,sym,cell,oneD,&
-                     !            den,xdnout) !(Calculation of pot/den value at the given point.)
+                     CALL outcdn(pt,nt,na,iv,iflag,jsp,logicPotential,stars,&
+                                 vacuum,sphhar,atoms,sym,cell,oneD,&
+                                 den,xdnout) !(Calculation of pot/den value at the given point.)
  
-                  !IF (na.NE.0.AND.noco%l_ss) THEN!TODO: do it somewhere else.
+                  !IF (na.NE.0) THEN!TODO: do it somewhere else.
+                  !   IF (noco%l_ss) THEN 
                   !      ! rotate magnetization "backward"
                   !      angss = DOT_PRODUCT(qssc,pt-atoms%pos(:,na))
                   !      help(1) = xdnout(2)
@@ -556,6 +555,7 @@ REAL, DIMENSION(3,:), ALLOCATABLE :: pointMesh
                   !      xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss) 
                   !      xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss) 
                   !      ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0. 
+                  !   END IF
                   !END IF
 
                   !IF (noco%l_ss .AND. (.NOT. unwind)) THEN !TODO: do it somewhere else.
@@ -607,20 +607,18 @@ REAL, DIMENSION(3,:), ALLOCATABLE :: pointMesh
                   !   xdnout(6)= xdnout(6)/pi_const
                   !   xdnout(7)= xdnout(7)/pi_const
                   !END IF ! (polar)
-    !                WRITE(nfile+1,*) xdnout NOT HERE
+                    WRITE(nfile+1,*) xdnout
                END DO
             END DO
          END DO !z-loop
-            !IF (xsf.AND.jsp /= input%jspins) & NOT HERE
-            !CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)NOT HERE
-            !CALL xsf_WRITE_endblock(nfile+1,twodim)NOT HERE
+            IF (xsf.AND.jsp /= input%jspins) &
+            CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)
+            CALL xsf_WRITE_endblock(nfile+1,twodim)
    END DO !nplot  
-
-
-
-END SUBROUTINE pointGen
-
-
+    
+   CLOSE(fileNumberRead)
+         CLOSE(nfile+1)
+   END SUBROUTINE scalarplot
 
 !--------------------------------------------------------------------------------------------
 
@@ -697,21 +695,16 @@ END SUBROUTINE pointGen
    END SUBROUTINE matrixplot
 
 !--------------------------------------------------------------------------------------------
-   SUBROUTINE read_plot_inp()
-   
-   END SUBROUTINE
 
-!--------------------------------------------------------------------------------------------
-
-   SUBROUTINE procplot(jspins,noco,iplot,plot_const,den)   
+   SUBROUTINE procplot(jspins,noco,iplot,ind_plot,den)   
       CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
       INTEGER :: i
-      TYPE(t_noco),      INTENT(IN)    :: noco
+            TYPE(t_noco),      INTENT(IN)    :: noco
       ! Plotting the density matrix as n or n,m or n,mx,my,mz 
-      IF (plot_const.EQ.2) THEN
+      IF (jplot.EQ.2) THEN
          IF (jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               TE(outFilenames(4))
+               ALLOCATE(outFilenames(4))
                outFilenames(1)='cden'
                outFilenames(2)='mdnx'
                outFilenames(3)='mdny'
@@ -733,20 +726,18 @@ END SUBROUTINE pointGen
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE makeplots(jspins,noco,iplot,plot_const,den)   
-      USE m_constants
+   SUBROUTINE makeplots(jspins,noco,iplot,ind_plot,den)   
       INTEGER, INTENT(IN) :: iplot
-      INTEGER INTENT(IN) :: plot_const !Index of the plot according to the constants set above
+      INTEGER, INTENT(IN) :: ind_plot !Index of the plot according to the constants set above
       INTEGER :: jplot
       TYPE(t_noco),      INTENT(IN)    :: noco
       LOGICAL :: allowplot
-
-      jplot=2**plot_const
       
-      allowplot=BTEST(iplot,plot_const).OR.(MODULO(iplot,2).NE.1)
-      IF (allowplot) THEN  
+      allowplot=BTEST(iplot,ind_plot).OR.(MODULO(iplot,2).NE.1)
+      IF (allowplot) THEN
+         jplot=2**ind_plot   
          CALL checkplotinp()
-         CALL procplot(jspins,noco,iplot,plot_const,den)
+         CALL procplot(jspins,noco,iplot,ind_plot,den)
       END IF
    END SUBROUTINE makeplots
 
