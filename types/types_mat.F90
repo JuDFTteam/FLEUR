@@ -30,6 +30,7 @@ MODULE m_types_mat
       GENERIC          :: init => init_details, init_template
       PROCEDURE        :: free => t_mat_free                  !> dealloc the data (overloaded for t_mpimat)
       PROCEDURE        :: add_transpose => t_mat_add_transpose!> add the tranpose/Hermitian conjg. without the diagonal (overloaded for t_mpimat)
+      PROCEDURE        :: save_npy => t_mat_save_npy
    END type t_mat
    PUBLIC t_mat
 CONTAINS
@@ -317,6 +318,19 @@ CONTAINS
          mat%data_c = 0.0
       ENDIF
    END SUBROUTINE t_mat_clear
+
+   subroutine t_mat_save_npy(mat, filename)
+      use m_judft
+      implicit NONE
+      class(t_mat), intent(in) :: mat
+      character(len=*)         :: filename
+
+      if (mat%l_real) then
+         call save_npy(filename, mat%data_r)
+      else
+         call save_npy(filename, mat%data_c)
+      endif
+   end subroutine t_mat_save_npy
 END MODULE m_types_mat
 
 MODULE m_types_rcmat
