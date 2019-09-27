@@ -13,4 +13,5 @@ MODULE m_juDFT
   USE m_judft_info
   USE m_judft_usage
   use m_judft_para
+  use m_npy
 END MODULE m_juDFT
