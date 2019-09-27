@@ -696,12 +696,12 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE procplot(jspins,noco,iplot,ind_plot,den)   
+   SUBROUTINE procplot(jspins,noco,iplot,plot_const,den)   
       CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
       INTEGER :: i
-            TYPE(t_noco),      INTENT(IN)    :: noco
+      TYPE(t_noco),      INTENT(IN)    :: noco
       ! Plotting the density matrix as n or n,m or n,mx,my,mz 
-      IF (jplot.EQ.2) THEN
+      IF (plot_const.EQ.1) THEN
          IF (jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
                ALLOCATE(outFilenames(4))
@@ -726,18 +726,17 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE makeplots(jspins,noco,iplot,ind_plot,den)   
+   SUBROUTINE makeplots(jspins,noco,iplot,plot_const,den)   
+      USE m_constants
       INTEGER, INTENT(IN) :: iplot
-      INTEGER, INTENT(IN) :: ind_plot !Index of the plot according to the constants set above
-      INTEGER :: jplot
+      INTEGER INTENT(IN) :: plot_const !Index of the plot according to constant setf in constants.f90
       TYPE(t_noco),      INTENT(IN)    :: noco
       LOGICAL :: allowplot
       
-      allowplot=BTEST(iplot,ind_plot).OR.(MODULO(iplot,2).NE.1)
-      IF (allowplot) THEN
-         jplot=2**ind_plot   
+      allowplot=BTEST(iplot,plot_const).OR.(MODULO(iplot,2).NE.1)
+      IF (allowplot) THEN  
          CALL checkplotinp()
-         CALL procplot(jspins,noco,iplot,ind_plot,den)
+         CALL procplot(jspins,noco,iplot,plot_const,den)
       END IF
    END SUBROUTINE makeplots
 
