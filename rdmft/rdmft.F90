@@ -346,7 +346,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot)
 
-   CALL hf_init(hybrid,kpts,atoms,input,DIMENSION,hybdat,sym%invs)
+   CALL hf_init(hybrid,atoms,input,DIMENSION,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 

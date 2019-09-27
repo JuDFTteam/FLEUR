@@ -4,21 +4,19 @@ MODULE m_hf_init
    !     preparations for HF and hybrid functional calculation
    !
 CONTAINS
-   SUBROUTINE hf_init(hybrid, kpts, atoms, input, DIMENSION, hybdat, l_real)
+   SUBROUTINE hf_init(hybrid, atoms, input, DIMENSION, hybdat)
       USE m_types
       USE m_read_core
       USE m_util
       USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybrid), INTENT(INOUT)     :: hybrid
-      TYPE(t_kpts), INTENT(IN)          :: kpts
       TYPE(t_atoms), INTENT(IN)         :: atoms
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_dimension), INTENT(IN)     :: DIMENSION
       TYPE(t_hybdat), INTENT(OUT)       :: hybdat
-      LOGICAL, INTENT(IN)               :: l_real
 
-      INTEGER:: itype, ieq, l, m, i, nk, l1, l2, m1, m2, ok
+      INTEGER:: l, m, i, l1, l2, m1, m2, ok
 
       !initialize hybdat%gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, hybdat%gridf)
