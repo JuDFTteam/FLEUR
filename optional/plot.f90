@@ -477,7 +477,18 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
    OPEN(nfile+1,file=TRIM(ADJUSTL(fileName))//'.xsf',form='formatted')
    CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
    
-   ! Loop over all plots (Generate Grid points)
+   
+    
+   CLOSE(fileNumberRead)
+         CLOSE(nfile+1)
+   END SUBROUTINE scalarplot
+
+!-------------------------------------------------------------------------------------------
+SUBROUTINE pointGen(nplo)
+
+
+INTEGER, INTENT (IN) :: nplo
+! Loop over all plots (Generate Grid points)
    DO nplo = 1, nplot
 
       ! the defaults
@@ -502,8 +513,6 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
          
       
 
-      !loop over spins
-      DO jsp = 1, input%jspins
          !loop over all points
          DO iz = 0, grid(3)-1
             DO iy = 0, grid(2)-1
@@ -602,19 +611,20 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
                   !   xdnout(6)= xdnout(6)/pi_const
                   !   xdnout(7)= xdnout(7)/pi_const
                   !END IF ! (polar)
-                    WRITE(nfile+1,*) xdnout
+    !                WRITE(nfile+1,*) xdnout NOT HERE
                END DO
             END DO
          END DO !z-loop
-            IF (xsf.AND.jsp /= input%jspins) &
-               CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)
-      END DO !Spin-loop
-            CALL xsf_WRITE_endblock(nfile+1,twodim)
+            !IF (xsf.AND.jsp /= input%jspins) & NOT HERE
+            !CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)NOT HERE
+            !CALL xsf_WRITE_endblock(nfile+1,twodim)NOT HERE
    END DO !nplot  
-    
-   CLOSE(fileNumberRead)
-         CLOSE(nfile+1)
-   END SUBROUTINE scalarplot
+
+
+
+END SUBROUTINE pointGen
+
+
 
 !--------------------------------------------------------------------------------------------
 
