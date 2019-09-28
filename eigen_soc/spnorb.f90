@@ -54,7 +54,8 @@ CONTAINS
     DO n = 1,atoms%ntype
        CALL sorad(atoms,input,n,vr(:,0,n,:),enpara,noco%l_spav,rsoc,usdus)
     END DO
-    
+
+
     !
     !Scale SOC 
     DO n= 1,atoms%ntype
@@ -78,7 +79,6 @@ CONTAINS
          IF(hub1%l_soc_given(i_hia)) CYCLE
          n = atoms%lda_u(atoms%n_u+i_hia)%atomType
          l = atoms%lda_u(atoms%n_u+i_hia)%l
-         hub1%xi(i_hia) = 2*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
          hub1%xi(i_hia) = 2.0*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
       ENDDO
     ENDIF

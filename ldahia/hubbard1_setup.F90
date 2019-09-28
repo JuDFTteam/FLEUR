@@ -4,7 +4,7 @@ MODULE m_hubbard1_setup
 
    IMPLICIT NONE
 
-   LOGICAL, PARAMETER :: l_setupdebug = .TRUE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
+   LOGICAL, PARAMETER :: l_setupdebug = .FALSE.  !Enable/Disable Debug outputs like dependency of occupation on chemical potential shift 
    CHARACTER(len=30), PARAMETER :: main_folder = "Hubbard1"
 
 
@@ -217,8 +217,6 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER                 
                   CALL EDsolver_from_cfg(2*(2*l+1),2*gdft%nz,e,selfen(i_hia,:,:,1:2*gdft%nz),1)
 #endif
-                  !The solver is given everything in eV by default, so we need to convert back to htr
-                  selfen(i_hia,:,:,:) = selfen(i_hia,:,:,:)/hartree_to_ev_const
                   CALL CHDIR(TRIM(ADJUSTL(cwd)))
                   CALL timestop("Hubbard 1: EDsolver")
                ELSE               
@@ -237,6 +235,10 @@ MODULE m_hubbard1_setup
                l = atoms%lda_u(atoms%n_u+i_hia)%l
                DO iz = 1, 2*gdft%nz
                   !---------------------------------------------
+                  ! Convert the selfenergy to hartree 
+                  !---------------------------------------------
+                  selfen(i_hia,:,:,iz) = selfen(i_hia,:,:,iz)/hartree_to_ev_const
+                  !---------------------------------------------
                   ! The order of spins is reversed in the Solver
                   !---------------------------------------------
                   CALL swapSpin(selfen(i_hia,:,:,iz),2*l+1)
@@ -244,7 +246,7 @@ MODULE m_hubbard1_setup
                   ! The DFT green's function also includes the previous DFT+U correction
                   ! This is removed by substracting it from the selfenergy
                   !---------------------------------------------------------------------
-                  CALL removeU(selfen(i_hia,:,:,iz),l,MERGE(3,input%jspins,noco%l_mtNocoPot),pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+                  CALL removeU(selfen(i_hia,:,:,iz),l,input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
                ENDDO
             ENDDO
             !----------------------------------------------------------------------
@@ -323,10 +325,7 @@ MODULE m_hubbard1_setup
       !WRITE(*,"(14f8.5)") REAL(mat)
       mat = matmul(mat,tmp)
       mat = matmul(tmp,mat)
-      !WRITE(*,*) "AFTER"
-      !WRITE(*,"(14f8.5)") REAL(mat)
-      !WRITE(*,*) "BEFORE"
-      !WRITE(*,"(14f8.5)") REAL(mat)
+
       mat(1:ns,ns+1:2*ns) = matmul(mat(1:ns,ns+1:2*ns),tmp_off)
       mat(1:ns,ns+1:2*ns) = transpose(matmul(tmp_off,mat(1:ns,ns+1:2*ns)))
 
@@ -339,7 +338,7 @@ MODULE m_hubbard1_setup
    END SUBROUTINE swapSpin
 
 
-   SUBROUTINE removeU(mat,l,jspins,vmmp)
+   SUBROUTINE removeU(mat,l,jspins,l_vmperp,vmmp)
 
       USE m_constants
 
@@ -347,7 +346,8 @@ MODULE m_hubbard1_setup
       COMPLEX,       INTENT(INOUT) :: mat(2*(2*l+1),2*(2*l+1))
       INTEGER,       INTENT(IN)    :: l
       INTEGER,       INTENT(IN)    :: jspins
-      COMPLEX,       INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
+      LOGICAL,       INTENT(IN)    :: l_vmperp
+      COMPLEX,       INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(3,jspins,l_vmperp))
 
       INTEGER ns,i,j,m,mp,ispin
 
@@ -357,17 +357,17 @@ MODULE m_hubbard1_setup
          DO j = 1, ns 
             m = i-1-l
             mp = j-1-l
-            DO ispin = 1, jspins
-               mat(i+(ispin-1)*ns,j+(ispin-1)*ns) = mat(i+(ispin-1)*ns,j+(ispin-1)*ns) - vmmp(m,mp,ispin)
-               IF(jspins.EQ.1) mat(i+ns,j+ns) = mat(i+ns,j+ns) - vmmp(-m,-mp,ispin)
-               IF(ispin.EQ.3) THEN
-                  mat(i,j+ns) = mat(i,j+ns) - vmmp(m,mp,ispin)
-                  mat(i+ns,j) = mat(i+ns,j) - conjg(vmmp(mp,m,ispin))
+            DO ispin = 1, MERGE(3,jspins,l_vmperp)
+               IF(ispin < 3) THEN
+                  mat(i+(ispin-1)*ns,j+(ispin-1)*ns) = mat(i+(ispin-1)*ns,j+(ispin-1)*ns) - vmmp(m,mp,ispin)
+                  IF(jspins.EQ.1) mat(i+ns,j+ns) = mat(i+ns,j+ns) - vmmp(-m,-mp,ispin)
+               ELSE
+                  mat(i+ns,j) = mat(i+ns,j) - vmmp(m,mp,ispin)
+                  mat(i,j+ns) = mat(i,j+ns) - vmmp(mp,m,ispin)
                ENDIF
             ENDDO
          ENDDO
       ENDDO
-
    END SUBROUTINE removeU
 
 

@@ -82,7 +82,7 @@ MODULE m_kk_cutoff
             ! If the integral is to small we stop here to avoid problems
                CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
             ENDIF
-         ELSE IF((integral.GT.n_states).AND.((integral-n_states).GT.0.001)) THEN
+         ELSE IF((integral.GT.n_states).AND.((integral-n_states).GT.0.00001)) THEN
             !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method   
 
             a = e_bot
