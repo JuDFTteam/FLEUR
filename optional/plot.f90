@@ -820,7 +820,7 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,iplot,plot_const)   
+   SUBROUTINE makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const)   
       USE m_constants
 
       IMPLICIT NONE
@@ -837,12 +837,11 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_potden),    INTENT(INOUT) :: denmat
-      INTEGER,           INTENT(IN)    :: iplot
       INTEGER,           INTENT(IN)    :: plot_const
 
       LOGICAL :: allowplot
       
-      allowplot=BTEST(iplot,plot_const).OR.(MODULO(iplot,2).EQ.1)
+      allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN  
          CALL checkplotinp()
          CALL procplot(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const)
@@ -851,7 +850,7 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   !!!Subroutine originally from Plotdop. Needed in SCALARPLOT
+   !Subroutine originally from Plotdop. Needed in savxsf
    SUBROUTINE getMTSphere(input,cell,atoms,oneD,point,iType,iAtom,pt)
 
       IMPLICIT NONE

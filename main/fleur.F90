@@ -152,7 +152,7 @@ CONTAINS
     END IF
     
     IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
-       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,sliceplot%iplot,PLOT_INPDEN) 
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_INPDEN) 
     END IF 
 
     ! Initialize and load inDen density (end)
