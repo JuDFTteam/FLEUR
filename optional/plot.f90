@@ -30,15 +30,8 @@ MODULE m_plot
    ! 
    ! A. Neukirchen & R. Hilgers, September 2019 
    !------------------------------------------------
-   INTEGER, PARAMETER :: PLOT_INPDEN_const=2        !ind_plot= 1
-   INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE_const=4 !ind_plot= 2
-   INTEGER, PARAMETER :: PLOT_INPDEN_N_CORE_const=8 !ind_plot= 4
-   INTEGER, PARAMETER :: PLOT_POT_TOT_const=128     !ind_plot= 7
-   INTEGER, PARAMETER :: PLOT_POT_EXT_const=256     !ind_plot= 8
-   INTEGER, PARAMETER :: PLOT_POT_COU_const=512     !ind_plot= 9
-   INTEGER, PARAMETER :: PLOT_POT_VXC_const=1024    !ind_plot=10
 
-   PUBLIC             :: checkplotinp, makeplots, procplot, vectorsplit, matrixsplit, scalarplot, vectorplot, matrixplot
+   PUBLIC             :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, matrixplot, makeplots, procplot, getMTSphere
 
 CONTAINS
 
@@ -385,129 +378,207 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE scalarplot(fileNumberRead, fileNumberWrite,stars,atoms,input,oneD,cell,&
-noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename of plot_inp... ! den is given POTDENTYPE
-   !Takes a 1-component t_potden density, i.e. a scalar field in MT-sphere/star
-   !representation and makes it into a plottable .xsf file according to a scheme
-   !given in plot_inp.
-   USE m_xsf_io
-   USE m_types
-   USE m_outcdn
+   SUBROUTINE savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot, &
+                       noco,score,denName,denf,denA1,denA2,denA3)
+   !Takes one/several t_potden variable(s), i.e. a scalar fields in MT-sphere/star
+   !representation and makes it/them into plottable .xsf file(s) according to a scheme
+   !given in plot_inp. 
 
+   !Based on ye olde plotdop.f90 by P. Kurz.
 
-   IMPLICIT NONE
-!!! TODO CHECK
-   TYPE(t_oneD),                INTENT(IN)    :: oneD
-   TYPE(t_atoms),               INTENT(IN)    :: atoms
-   TYPE(t_input),               INTENT(IN)    :: input
-   TYPE(t_cell),                INTENT(IN)    :: cell
-   TYPE(t_potden),              INTENT(IN)    :: den
-!!!CHECK
+   !Naming convention:
+   !   The output .xsf files will have names composed of the plotted density (c.f. identifier)
+   !   and an optional tag. For a scalar density, only said density is plotted. For a spin-po-
+   !   larized density with an up and down component, f denotes the sum of both densities and
+   !   g denotes their difference (u-d). f and g are to be understood as scalar fields f(r_vec)
+   !   and g(r_vec). For a density matrix, f is still the scalar part. Aditionally, three vector
+   !   components A1-3 arise.
 
+   !   E.g.: scalar density rho (n(r_vec))
+   !               ---> rho.xsf (n(r_vec))
+   !         spin-polarized density rho (n_up(r_vec),n_down(r_vec))
+   !               ---> rho_f.xsf, rho_g.xsf (n(r_vec),m(r_vec))
+   !         matrix density rho (n_11(r_vec),n_12(r_vec),n_21(r_vec),n_22(r_vec))
+   !               ---> rho_f.xsf, rho_A1.xsf, rho_A2.xsf, rho_A3.xsf (n(r_vec),m_vec(r_vec))
 
+      USE m_outcdn
+      USE m_loddop
+      USE m_xsf_io
+      USE m_cdn_io
+      USE m_constants
 
-   TYPE(t_sym),                 INTENT(IN)    :: sym
-   TYPE(t_vacuum),              INTENT(IN)    :: vacuum
-   TYPE(t_noco),                INTENT(IN)    :: noco
-   TYPE(t_stars),               INTENT(IN)    :: stars
-   TYPE(t_sphhar),              INTENT(IN)    :: sphhar
-! .. Logical Arguments ..
-   LOGICAL, INTENT (IN) :: logicPotential
-! .. Integer Arguments ..
-   INTEGER, INTENT(IN) :: fileNumberRead,fileNumberWrite
-! .. String Arguments
-   CHARACTER(len=30), INTENT (IN):: fileNameIN
+      IMPLICIT NONE
 
-!  .. Local Scalars ..
-   REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
-   INTEGER       :: i,j,ix,iy,iz,jsp,na,nplo,iv,iflag,nfile
-   INTEGER       :: nplot,nt,jm,jspin
-   LOGICAL       :: twodim,oldform,newform,l_qfix
-   LOGICAL       :: cartesian,xsf,unwind,polar
+      TYPE(t_oneD),                INTENT(IN)    :: oneD
+      TYPE(t_stars),               INTENT(IN)    :: stars
+      TYPE(t_vacuum),              INTENT(IN)    :: vacuum
+      TYPE(t_sphhar),              INTENT(IN)    :: sphhar
+      TYPE(t_atoms),               INTENT(IN)    :: atoms
+      TYPE(t_input),               INTENT(IN)    :: input
+      TYPE(t_sym),                 INTENT(IN)    :: sym
+      TYPE(t_cell),                INTENT(IN)    :: cell
+      TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
+      TYPE(t_noco),                INTENT(IN)    :: noco
+      LOGICAL,                     INTENT(IN)    :: score
+      CHARACTER(len=10),           INTENT(IN)    :: denName
+      TYPE(t_potden),              INTENT(IN)    :: denf
+      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA1
+      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA2
+      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA3
 
-!  .. Local Arrays ..
-   REAL    :: xdnout
-   REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3),help(3),qssc(3)
-   INTEGER :: grid(3)
-   REAL    :: rhocc(atoms%jmtd)
-   REAL    :: point(3)
-   CHARACTER (len=7)               :: textline
-   CHARACTER(len=30) ::filename
-   REAL, PARAMETER :: eps = 1.0e-15
-   NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
+      !  .. Local Scalars ..
+      REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
+      INTEGER       :: i,j,ix,iy,iz,jsp,na,nplo,iv,iflag,nfile
+      INTEGER       :: nplot,nt,jm,jspin,numInDen,numOutFiles
+      LOGICAL       :: twodim,oldform,newform,l_qfix
+      LOGICAL       :: cartesian,xsf,unwind,polar
 
-   nfile = 120
+      !  .. Local Arrays ..
+      TYPE(t_potden), ALLOCATABLE :: den(:)
+      REAL, ALLOCATABLE    :: xdnout(:)
+      REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3),help(3),qssc(3)
+      INTEGER :: grid(3)
+      REAL    :: rhocc(atoms%jmtd)
+      REAL    :: point(3)
+      CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
+      CHARACTER (len=30)              :: filename
+      CHARACTER (len=7)               :: textline
 
-   ! Subtract core charge if input%score is set !TODO: Implement when density is plotted. 
-   !   IF ((.NOT.noco%l_noco).AND.(input%score)) THEN
-   !      OPEN (17,file='cdnc',form='unformatted',status='old')
-   !      REWIND 17
-   !      DO jspin = 1, input%jspins
-   !         DO nt = 1, atoms%ntype
-   !           jm = atoms%jri(nt)
-   !           READ (17) (rhocc(j),j=1,jm)
-   !           DO j = 1, atoms%jri(nt)
-   !              den(i)%mt(j,0,nt,jspin) = den(i)%mt(j,0,nt,jspin) - rhocc(j)/2.0/SQRT(pi_const)
-   !           END DO
-   !           READ (17) tec
-   !        END DO
-   !        READ (17) qint
-   !        den(i)%pw(1,jspin) = den(i)%pw(1,jspin) - qint/cell%volint
-   !     END DO
-   !     CLOSE (17)
-   !  ELSE IF (input%score) THEN
-   !     CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plotdop')
-   !  END IF
-   !END DO
+      REAL, PARAMETER :: eps = 1.0e-15
 
-   !IF (noco%l_ss) THEN !TODO: Implement for spin spirals.  
-   !   qssc = MATMUL(TRANSPOSE(cell%bmat),noco%qss) 
-   !END IF 
+      NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
-   ! Open the plot_inp file for input 
-   OPEN (fileNumberRead,file='plot_inp')
-   READ(fileNumberRead,'(i2,5x,l1,1x,a)') nplot,xsf,textline
+      nfile = 120
 
-   !polar = .FALSE. !TODO: Implement that it will be checked in the plot_inp if ploar==T
-   !IF ((noco%l_noco).AND.(numInFiles.EQ.4)) THEN !TODO: Implement when density is plotted. 
-      !polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
-      !IF (polar) THEN!TODO; Include some Polar representation.
-      !   numOutFiles = 7
-      !END IF
-   !END IF
+      IF (PRESENT(denA2)) THEN
+         ALLOCATE(den(4))
+         den(1)          = denf
+         den(2)          = denA1
+         den(3)          = denA2
+         den(4)          = denA3
+         numInDen        = 4
+         numOutFiles     = 4
+      ELSE IF (PRESENT(denA1)) THEN
+         ALLOCATE(den(2))
+         den(1)          = denf
+         den(2)          = denA1
+         numInDen        = 2
+         numOutFiles     = 2
+      ELSE
+         ALLOCATE(den(1))
+         den(1)          = denf
+         numInDen        = 1
+         numOutFiles     = 4
+      END IF
 
-
-
-   ! If xsf is specified we create input files for xcrysden
-
-   xsf=.TRUE.
-   OPEN(nfile+1,file=TRIM(ADJUSTL(fileName))//'.xsf',form='formatted')
-   CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
-   
-   ! Loop over all plots (Generate Grid points)
-   DO nplo = 1, nplot
-
-      ! the defaults
-      twodim = .TRUE.
-      cartesian = .TRUE.
-      grid = (/100,100,100/)
-      vec1 = (/0.,0.,0./)
-      vec2 = (/0.,0.,0./)
-      vec3 = (/0.,0.,0./)
-      zero = (/0.,0.,0./)
-      filename = "default"
-      READ(fileNumberRead,plot)
-      IF (twodim.AND.ANY(grid(1:2)<1)) &
-         CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
-      IF (.NOT.twodim.AND.ANY(grid<1)) &
-         CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
-      IF (twodim) grid(3) = 1
-
-      !Open the file
-      IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo !Which role does "default" exactly play? 
-      CALL xsf_WRITE_header(nfile+1,twodim,filename,vec1,vec2,vec3,zero,grid)
+      DO i = 1, numInDen
          
-      
+         ! TODO: Understand and incorporate substraction of core charges!
+         ! Subtract core charge if input%score is set
+         IF ((numInDen.NE.4).AND.(score)) THEN
+            OPEN (17,file='cdnc',form='unformatted',status='old')
+            REWIND 17
+            DO jspin = 1, input%jspins
+               DO nt = 1, atoms%ntype
+                  jm = atoms%jri(nt)
+                  READ (17) (rhocc(j),j=1,jm)
+                  DO j = 1, jm
+                     den(i)%mt(j,0,nt,jspin) = den(i)%mt(j,0,nt,jspin) - rhocc(j)/2.0/SQRT(pi_const)
+                  END DO
+                  READ (17) tec
+               END DO
+               READ (17) qint
+               den(i)%pw(1,jspin) = den(i)%pw(1,jspin) - qint/cell%volint
+            END DO
+            CLOSE (17)
+         ELSE IF (score) THEN
+            CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plotdop')
+         END IF
+      END DO
+
+      IF (noco%l_ss) THEN 
+         qssc = MATMUL(TRANSPOSE(cell%bmat),noco%qss) 
+      END IF 
+
+      ! Open the plot_inp file for input
+      OPEN (18,file='plot_inp')
+      READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
+      polar = .FALSE.
+      IF ((noco%l_noco).AND.(numInDen.EQ.4)) THEN
+         polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
+         IF (polar) THEN
+            numOutFiles = 7
+         END IF
+      END IF
+
+      ALLOCATE(outFilenames(numOutFiles))
+      ALLOCATE(xdnout(numOutFiles))
+
+      IF (numOutFiles.EQ.1) THEN
+         outFilenames(1) = TRIM(denName)
+      ELSE IF (numOutFiles.EQ.2) THEN
+         outFilenames(1) = TRIM(denName) // '_f'
+         outFilenames(2) = TRIM(denName) // '_g'
+      ELSE
+         outFilenames(1) = TRIM(denName) // '_f'
+         outFilenames(2) = TRIM(denName) // '_A1'
+         outFilenames(3) = TRIM(denName) // '_A2'
+         outFilenames(4) = TRIM(denName) // '_A3'
+         IF (polar) THEN
+            outFilenames(5) = TRIM(denName) // '_Aabs'
+            outFilenames(6) = TRIM(denName) // '_Atha'
+            outFilenames(7) = TRIM(denName) // '_Aphi'
+         END IF
+      END IF
+
+      ! If xsf is specified we create input files for xcrysden
+      IF (xsf) THEN
+         DO i = 1, numOutFiles
+            OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted')
+            CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
+         END DO
+      END IF
+
+      ! Loop over all plots
+      DO nplo = 1, nplot
+
+         ! the defaults
+         twodim = .TRUE.
+         cartesian = .TRUE.
+         grid = (/100,100,100/)
+         vec1 = (/0.,0.,0./)
+         vec2 = (/0.,0.,0./)
+         vec3 = (/0.,0.,0./)
+         zero = (/0.,0.,0./)
+         filename = "default"
+         READ(18,plot)
+         IF (twodim.AND.ANY(grid(1:2)<1)) &
+            CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
+         IF (.NOT.twodim.AND.ANY(grid<1)) &
+            CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
+         IF (twodim) grid(3) = 1
+
+         !calculate cartesian coordinates if needed
+         IF (.NOT.cartesian) THEN
+            vec1=matmul(cell%amat,vec1)
+            vec2=matmul(cell%amat,vec2)
+            vec3=matmul(cell%amat,vec3)
+            zero=matmul(cell%amat,zero)
+         END IF
+
+         !Open the file
+         IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo
+         DO i = 1, numOutFiles
+            IF (xsf) THEN
+               CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
+            ELSE
+               IF (numOutFiles.NE.1) THEN
+                  OPEN (nfile+i,file = filename//outFilenames(i),form='formatted')
+               ELSE
+                  OPEN (nfile+i,file = filename,form='formatted')
+               END IF
+            END IF
+         END DO
 
          !loop over all points
          DO iz = 0, grid(3)-1
@@ -519,11 +590,11 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
                   IF (.NOT.twodim) point = point + vec3*REAL(iz)/(grid(3)-1)
 
                   ! Set region specific parameters for point
-                  
+                     
                   ! Get MT sphere for point if point is in MT sphere
                   CALL getMTSphere(input,cell,atoms,oneD,point,nt,na,pt)
                   IF (na.NE.0) THEN
-                     ! In MT sphere
+                  ! In MT sphere
                      iv = 0
                      iflag = 1
                   ELSE IF (input%film.AND..NOT.oneD%odi%d1.AND.ABS(point(3))>=cell%z1) THEN
@@ -542,122 +613,140 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
                      iflag = 2
                      pt(:) = point(:)
                   END IF
-                     CALL outcdn(pt,nt,na,iv,iflag,jsp,logicPotential,stars,&
+
+                  DO i = 1, numInDen
+                     CALL outcdn(pt,nt,na,iv,iflag,jsp,.FALSE.,stars,& 
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 den,xdnout) !(Calculation of pot/den value at the given point.)
- 
-                  !IF (na.NE.0) THEN!TODO: do it somewhere else.
-                  !   IF (noco%l_ss) THEN 
-                  !      ! rotate magnetization "backward"
-                  !      angss = DOT_PRODUCT(qssc,pt-atoms%pos(:,na))
-                  !      help(1) = xdnout(2)
-                  !      help(2) = xdnout(3)
-                  !      xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss) 
-                  !      xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss) 
-                  !      ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0. 
-                  !   END IF
-                  !END IF
+                                 den(i),xdnout(i))
+                  END DO
 
-                  !IF (noco%l_ss .AND. (.NOT. unwind)) THEN !TODO: do it somewhere else.
-                  !   ! rotate magnetization
-                  !   angss = DOT_PRODUCT(qssc,point)
-                  !   help(1) = xdnout(2)
-                  !   help(2) = xdnout(3)
-                  !   xdnout(2) = +help(1)*COS(angss) -help(2)*SIN(angss)
-                  !   xdnout(3) = +help(1)*SIN(angss) +help(2)*COS(angss)
-                  !END IF
+                  IF (na.NE.0) THEN
+                     IF (noco%l_ss) THEN 
+                        ! rotate magnetization "backward"
+                        angss = DOT_PRODUCT(qssc,pt-atoms%pos(:,na))
+                        help(1) = xdnout(2)
+                        help(2) = xdnout(3)
+                        xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss) 
+                        xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss) 
+                        ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0. 
+                     END IF
+                  END IF
 
-                  !IF (polar) THEN!TODO: do it somewhere else.
-                  !   xdnout(5) = SQRT(ABS(xdnout(2)**2+xdnout(3)**2+xdnout(4)**2))
-                  !   IF (xdnout(5)<eps) THEN
-                  !      xdnout(5)= 0.0
-                  !      xdnout(6)= -tpi_const
-                  !      xdnout(7)= -tpi_const
-                  !   ELSE
-                  !      DO j = 1, 3
-                  !         help(j) = xdnout(1+j)/xdnout(5) 
-                  !      END DO
-                  !      IF (help(3)<0.5) THEN
-                  !         xdnout(6)= ACOS(help(3))
-                  !      ELSE
-                  !         xdnout(6)= pi_const/2.0-ASIN(help(3))
-                  !      END IF
-                  !      IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
-                  !         xdnout(7)= -tpi_const
-                  !      ELSE
-                  !         IF ( ABS(help(1)) > ABS(help(2)) ) THEN
-                  !            xdnout(7)= ABS(ATAN(help(2)/help(1)))
-                  !         ELSE
-                  !            xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
-                  !         END IF
-                  !         IF (help(2)<0.0) THEN
-                  !            xdnout(7)= -xdnout(7)
-                  !         END IF
-                  !         IF (help(1)<0.0) THEN
-                  !            xdnout(7)= pi_const-xdnout(7)
-                  !         END IF
-                  !         DO WHILE (xdnout(7)-pi_const*phi0 > +pi_const)
-                  !            xdnout(7)= xdnout(7)-tpi_const
-                  !         END DO
-                  !         DO WHILE (xdnout(7)-pi_const*phi0 < -pi_const)
-                  !            xdnout(7)= xdnout(7)+tpi_const
-                  !         END DO
-                  !      END IF
-                  !   END IF
-                  !   xdnout(6)= xdnout(6)/pi_const
-                  !   xdnout(7)= xdnout(7)/pi_const
-                  !END IF ! (polar)
-                    WRITE(nfile+1,*) xdnout
+                  IF (noco%l_ss .AND. (.NOT. unwind)) THEN
+                     ! rotate magnetization
+                     angss = DOT_PRODUCT(qssc,point)
+                     help(1) = xdnout(2)
+                     help(2) = xdnout(3)
+                     xdnout(2) = +help(1)*COS(angss) -help(2)*SIN(angss)
+                     xdnout(3) = +help(1)*SIN(angss) +help(2)*COS(angss)
+                  END IF
+
+                  IF (polar) THEN
+                     xdnout(5) = SQRT(ABS(xdnout(2)**2+xdnout(3)**2+xdnout(4)**2))
+                     IF (xdnout(5)<eps) THEN
+                        xdnout(5)= 0.0
+                        xdnout(6)= -tpi_const
+                        xdnout(7)= -tpi_const
+                     ELSE
+                        DO j = 1, 3
+                           help(j) = xdnout(1+j)/xdnout(5) 
+                        END DO
+                        IF (help(3)<0.5) THEN
+                           xdnout(6)= ACOS(help(3))
+                        ELSE
+                           xdnout(6)= pi_const/2.0-ASIN(help(3))
+                        END IF
+                        IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
+                           xdnout(7)= -tpi_const
+                        ELSE
+                           IF ( ABS(help(1)) > ABS(help(2)) ) THEN
+                              xdnout(7)= ABS(ATAN(help(2)/help(1)))
+                           ELSE
+                              xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
+                           END IF
+                           IF (help(2)<0.0) THEN
+                              xdnout(7)= -xdnout(7)
+                           END IF
+                           IF (help(1)<0.0) THEN
+                              xdnout(7)= pi_const-xdnout(7)
+                           END IF
+                           DO WHILE (xdnout(7)-pi_const*phi0 > +pi_const)
+                              xdnout(7)= xdnout(7)-tpi_const
+                           END DO
+                           DO WHILE (xdnout(7)-pi_const*phi0 < -pi_const)
+                              xdnout(7)= xdnout(7)+tpi_const
+                           END DO
+                        END IF
+                     END IF
+                     xdnout(6)= xdnout(6)/pi_const
+                     xdnout(7)= xdnout(7)/pi_const
+                  END IF ! (polar)
+
+                  DO i = 1, numOutFiles
+                     IF (xsf) THEN
+                        WRITE(nfile+i,*) xdnout(i)
+                     ELSE
+                        WRITE(nfile+i,'(4e15.7)') point ,xdnout(i)
+                     END IF
+                  END DO
+
                END DO
             END DO
          END DO !z-loop
-            IF (xsf.AND.jsp /= input%jspins) &
-            CALL xsf_WRITE_newblock(nfile+1,twodim,vec1,vec2,vec3,zero,grid)
-            CALL xsf_WRITE_endblock(nfile+1,twodim)
-   END DO !nplot  
-    
-   CLOSE(fileNumberRead)
-         CLOSE(nfile+1)
-   END SUBROUTINE scalarplot
+
+         DO i = 1, numOutFiles
+            IF (xsf) THEN
+               CALL xsf_WRITE_endblock(nfile+i,twodim)
+            ELSE
+               CLOSE(nfile+i)
+            END IF
+         END DO
+      END DO !nplot  
+      
+      CLOSE(18)
+      IF (xsf) THEN
+         DO i = 1, numOutFiles
+            CLOSE(nfile+i)
+         END DO
+      END IF
+
+      DEALLOCATE(xdnout, outFilenames)
+
+   END SUBROUTINE savxsf
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,filenames)
+   SUBROUTINE vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
    !Takes a spin-polarized t_potden density, i.e. a 2D vector in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
 
       IMPLICIT NONE
 
-      TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_cell),     INTENT(IN)    :: cell
-      TYPE(t_sym),     INTENT(IN)    :: sym
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
-      TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
-      TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(INOUT) :: denmat
-      TYPE(t_oned), INTENT(IN):: oneD
-      TYPE(t_potden)                   :: cden, mden
-      INTEGER :: fileNumberRead,fileNumberWrite
-      CHARACTER(len=30), INTENT (IN):: filenames (2)
-      !Need to find reasonable ID's for fileNumberRead and fileNumberWrite. Temp use:
-      fileNumberRead=20
-      fileNumberWrite=21
-      !!!
+      TYPE(t_stars),  INTENT(IN)    :: stars
+      TYPE(t_cell),   INTENT(IN)    :: cell
+      TYPE(t_sym),    INTENT(IN)    :: sym
+      TYPE(t_vacuum), INTENT(IN)    :: vacuum
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      TYPE(t_input),  INTENT(IN)    :: input
+      TYPE(t_noco),   INTENT(IN)    :: noco
+      TYPE(t_potden), INTENT(INOUT) :: denmat
+      TYPE(t_oned),   INTENT(IN)    :: oneD
+      TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
+      LOGICAL,                     INTENT(IN)    :: score
+      CHARACTER(len=10),           INTENT(IN)    :: denName
+
+      TYPE(t_potden)                :: cden, mden
+
       CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
-      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,cden,filenames(1),.FALSE.) 
-      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mden,filenames(2),.FALSE.) 
-
-
-
+      CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mden)
 
    END SUBROUTINE vectorplot
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,filenames)
+   SUBROUTINE matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,score,denName)
    !Takes a 2x2 t_potden density, i.e. a sum of Pauli matrices in MT-sphere/star
    !representation and makes it into 4 plottable .xsf files according to a scheme
    !given in plot_inp.
@@ -677,123 +766,141 @@ noco,sphhar,sym,vacuum,den,fileNameIN,logicPotential) !filename: READ filename o
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       REAL,              INTENT(IN)    :: factor
       TYPE(t_potden),    INTENT(INOUT) :: denmat
-      CHARACTER(len=30), INTENT (IN):: filenames(4)
-      TYPE(t_potden)                 :: cden, mxden, myden, mzden
-      INTEGER :: fileNumberRead,fileNumberWrite
+      LOGICAL,           INTENT(IN)    :: score
+      CHARACTER(len=10), INTENT(IN)    :: denName
 
-
-      !Need to find reasonable ID's for fileNumberRead and fileNumberWrite. Temp use:
-      fileNumberRead=20
-      fileNumberWrite=21
-      !!!
+      TYPE(t_potden)                   :: cden, mxden, myden, mzden
       CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
-      CALL scalarplot(fileNumberRead,fileNumberWrite,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,cden,filenames(1),.FALSE.)
-      CALL scalarplot(fileNumberRead,fileNumberWrite+1,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mxden,filenames(2),.FALSE.)
-      CALL scalarplot(fileNumberRead,fileNumberWrite+2,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,myden,filenames(3),.FALSE.)
-      CALL scalarplot(fileNumberRead,fileNumberWrite+3,stars,atoms,input,oneD,cell,noco,sphhar,sym,vacuum,mzden,filenames(4),.FALSE.)
-      
+      CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mxden,myden,mzden)
+
    END SUBROUTINE matrixplot
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE procplot(jspins,noco,iplot,plot_const,den)   
-      INTEGER, INTENT(IN) :: plot_const
-      CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
-      INTEGER :: i
+   SUBROUTINE procplot(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const) 
+      
+      IMPLICIT NONE
+
+      TYPE(t_mpi),       INTENT(IN)    :: mpi
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_stars),     INTENT(IN)    :: stars
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_cell),      INTENT(IN)    :: cell
+      TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_noco),      INTENT(IN)    :: noco
-      ! Plotting the density matrix as n or n,m or n,mx,my,mz 
+      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
+      TYPE(t_potden),    INTENT(INOUT) :: denmat
+      INTEGER,           INTENT(IN)    :: plot_const
+
+      INTEGER            :: i
+      REAL               :: factor
+      CHARACTER (len=10) :: denName
+      LOGICAL            :: score
+
+      ! Plotting the input density matrix as n or n,m or n,mx,my,mz 
       IF (plot_const.EQ.1) THEN
-         IF (jspins.EQ.2) THEN
+         factor = 1.0
+         denName = 'denIn'
+         score = .FALSE.
+         IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               ALLOCATE(outFilenames(4))
-               outFilenames(1)='cden'
-               outFilenames(2)='mdnx'
-               outFilenames(3)='mdny'
-               outFilenames(4)='mdnz'
-               !call matrixplot(...) TODO ARGUMENTS
+               CALL matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+                               noco,oneD,sliceplot,factor,denmat,score,denName)
             ELSE
-               ALLOCATE(outFilenames(2))
-               outFilenames(1)='cden'
-               outFilenames(2)='mden'
-               !call vectorplot(...) TODO ARGUMENTS
+               CALL vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
-            ALLOCATE(outFilenames(1))
-            outFilenames(1)='cden'
-            !call scalarplot(...) TODO ARGUMENTS
+            CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
          END IF
       END IF
    END SUBROUTINE procplot
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE makeplots(jspins,noco,iplot,plot_const,den)   
+   SUBROUTINE makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,iplot,plot_const)   
       USE m_constants
-      INTEGER, INTENT(IN) :: iplot
-      INTEGER, INTENT(IN) :: plot_const !Index of the plot according to constant set in constants.f90
+
+      IMPLICIT NONE
+
+      TYPE(t_mpi),       INTENT(IN)    :: mpi
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_stars),     INTENT(IN)    :: stars
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_cell),      INTENT(IN)    :: cell
+      TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_noco),      INTENT(IN)    :: noco
+      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
+      TYPE(t_potden),    INTENT(INOUT) :: denmat
+      INTEGER,           INTENT(IN)    :: iplot
+      INTEGER,           INTENT(IN)    :: plot_const
+
       LOGICAL :: allowplot
       
       allowplot=BTEST(iplot,plot_const).OR.(MODULO(iplot,2).EQ.1)
       IF (allowplot) THEN  
          CALL checkplotinp()
-         CALL procplot(jspins,noco,iplot,plot_const,den)
+         CALL procplot(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const)
       END IF
    END SUBROUTINE makeplots
 
 !--------------------------------------------------------------------------------------------
 
-!!!Subroutine originally from Plotdop. Needed in SCALARPLOT
-SUBROUTINE getMTSphere(input,cell,atoms,oneD,point,iType,iAtom,pt)
+   !!!Subroutine originally from Plotdop. Needed in SCALARPLOT
+   SUBROUTINE getMTSphere(input,cell,atoms,oneD,point,iType,iAtom,pt)
 
-   IMPLICIT NONE
+      IMPLICIT NONE
 
-   TYPE(t_input), INTENT(IN)    :: input
-   TYPE(t_cell),  INTENT(IN)    :: cell
-   TYPE(t_atoms), INTENT(IN)    :: atoms
-   TYPE(t_oneD),  INTENT(IN)    :: oneD
+      TYPE(t_input), INTENT(IN)    :: input
+      TYPE(t_cell),  INTENT(IN)    :: cell
+      TYPE(t_atoms), INTENT(IN)    :: atoms
+      TYPE(t_oneD),  INTENT(IN)    :: oneD
 
-   INTEGER,       INTENT(OUT)   :: iType, iAtom
-   REAL,          INTENT(OUT)   :: pt(3)
-   REAL,          INTENT(IN)    :: point(3)
+      INTEGER,       INTENT(OUT)   :: iType, iAtom
+      REAL,          INTENT(OUT)   :: pt(3)
+      REAL,          INTENT(IN)    :: point(3)
 
-   INTEGER                      :: ii1, ii2, ii3, i1, i2, i3, nq
-   REAL                         :: s
+      INTEGER                      :: ii1, ii2, ii3, i1, i2, i3, nq
+      REAL                         :: s
 
-   ii1 = 3
-   ii2 = 3
-   ii3 = 3
-   IF (input%film .AND. .NOT.oneD%odi%d1) ii3 = 0
-   IF (oneD%odi%d1) THEN
-      ii1 = 0
-      ii2 = 0
-   END IF
+      ii1 = 3
+      ii2 = 3
+      ii3 = 3
+      IF (input%film .AND. .NOT.oneD%odi%d1) ii3 = 0
+      IF (oneD%odi%d1) THEN
+         ii1 = 0
+         ii2 = 0
+      END IF
 
-   DO i1 = -ii1, ii1
-      DO i2 = -ii2, ii2
-         DO i3 = -ii3, ii3
-            pt = point+MATMUL(cell%amat,(/i1,i2,i3/))
-            iAtom = 0
-            DO iType = 1, atoms%ntype
-               DO nq = 1, atoms%neq(iType)
-                  iAtom = iAtom + 1
-                  s = SQRT(DOT_PRODUCT(atoms%pos(:,iAtom)-pt,atoms%pos(:,iAtom)-pt))
-                  IF (s<atoms%rmsh(atoms%jri(iType),iType)) THEN
-                     ! Return with the current iType, iAtom, pt
-                     RETURN
-                  END IF
+      DO i1 = -ii1, ii1
+         DO i2 = -ii2, ii2
+            DO i3 = -ii3, ii3
+               pt = point+MATMUL(cell%amat,(/i1,i2,i3/))
+               iAtom = 0
+               DO iType = 1, atoms%ntype
+                  DO nq = 1, atoms%neq(iType)
+                     iAtom = iAtom + 1
+                     s = SQRT(DOT_PRODUCT(atoms%pos(:,iAtom)-pt,atoms%pos(:,iAtom)-pt))
+                     IF (s<atoms%rmsh(atoms%jri(iType),iType)) THEN
+                        ! Return with the current iType, iAtom, pt
+                        RETURN
+                     END IF
+                  END DO
                END DO
             END DO
          END DO
-      END DO
-   END DO !i1
+      END DO !i1
 
-   ! If no MT sphere encloses the point return 0 for iType, iAtom
-   iType = 0
-   iAtom = 0
-   pt(:) = point(:)
-
+      ! If no MT sphere encloses the point return 0 for iType, iAtom
+      iType = 0
+      iAtom = 0
+      pt(:) = point(:)
+  
    END SUBROUTINE getMTSphere
-
 
 END MODULE m_plot

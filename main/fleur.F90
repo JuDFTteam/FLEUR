@@ -64,7 +64,7 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
-!    USE m_plot
+    USE m_plot
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -151,9 +151,9 @@ CONTAINS
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
     
-!    IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-!       CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_INPDEN,inDen)
-!    END IF 
+    IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,sliceplot%iplot,PLOT_INPDEN) 
+    END IF 
 
     ! Initialize and load inDen density (end)
 
