@@ -147,7 +147,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
       END IF
 
       ! Subtract core charge if input%score is set
-      IF ((.NOT.noco%l_noco).AND.(input%score)) THEN
+      IF ((.NOT.noco%l_noco).AND.(.FALSE.)) THEN !Temp: Score=FALSE
          OPEN (17,file='cdnc',form='unformatted',status='old')
          REWIND 17
          DO jspin = 1, input%jspins
@@ -163,7 +163,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
             den(i)%pw(1,jspin) = den(i)%pw(1,jspin) - qint/cell%volint
          END DO
          CLOSE (17)
-      ELSE IF (input%score) THEN
+      ELSE IF (.FALSE.) THEN !Temp: Score=False
          CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plotdop')
       END IF
    END DO

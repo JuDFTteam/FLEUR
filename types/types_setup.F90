@@ -388,7 +388,6 @@ MODULE m_types_setup
       INTEGER:: kcrel
       LOGICAL:: frcor
       LOGICAL:: lflip
-      LOGICAL:: score
       LOGICAL:: swsp
       LOGICAL:: tria
       LOGICAL:: integ
