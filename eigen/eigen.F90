@@ -205,7 +205,11 @@ CONTAINS
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
             CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
-              
+            call hmat%save_npy(gen_filename("hmat", iter=iter, kpt=nk, ext=".npy"))
+            call smat%save_npy(gen_filename("smat", iter=iter, kpt=nk, ext=".npy"))
+            call zmat%save_npy(gen_filename("zmat", iter=iter, kpt=nk, ext=".npy"))
+            call save_npy(gen_filename("eig", iter=iter, kpt=nk, ext=".npy"), eig)
+
             CALL smat%free()
             CALL hmat%free()
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
@@ -227,7 +231,7 @@ CONTAINS
             END IF
             IF (mpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
-                ! eigenvalues. 
+                ! eigenvalues.
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                            eig(:ne_all),n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
@@ -243,7 +247,7 @@ CONTAINS
             CALL timestop("EV output")
 
             IF (banddos%unfoldband) THEN
-               IF(modulo (kpts%nkpt,mpi%n_size).NE.0) call juDFT_error("number kpts needs to be multiple of number mpi threads",& 
+               IF(modulo (kpts%nkpt,mpi%n_size).NE.0) call juDFT_error("number kpts needs to be multiple of number mpi threads",&
                    hint=errmsg, calledby="eigen.F90")
                CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
                CALL smat_unfold%free()
@@ -283,4 +287,3 @@ CONTAINS
       enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)
    END SUBROUTINE eigen
 END MODULE m_eigen
-
