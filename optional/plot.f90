@@ -380,7 +380,7 @@ CONTAINS
 
    SUBROUTINE savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot, &
                        noco,score,denName,denf,denA1,denA2,denA3)
-   !Takes one/several t_potden variable(s), i.e. a scalar fields in MT-sphere/star
+   !Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/star
    !representation and makes it/them into plottable .xsf file(s) according to a scheme
    !given in plot_inp. 
 
@@ -778,7 +778,8 @@ CONTAINS
 !--------------------------------------------------------------------------------------------
 
    SUBROUTINE procplot(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const) 
-      
+   !According to iplot, we process which exact plots we do, after we assured that we do any.
+   !n-th digit (from the back) of iplot ==1 --> plot with identifier n is done. 
       IMPLICIT NONE
 
       TYPE(t_mpi),       INTENT(IN)    :: mpi
@@ -800,7 +801,8 @@ CONTAINS
       CHARACTER (len=10) :: denName
       LOGICAL            :: score
 
-      ! Plotting the input density matrix as n or n,m or n,mx,my,mz 
+      !Plotting the input density matrix as n or n,m or n,mx,my,mz. identifier: 1
+      ! --> Additive term for iplot: 2
       IF (plot_const.EQ.1) THEN
          factor = 1.0
          denName = 'denIn'
@@ -821,6 +823,9 @@ CONTAINS
 !--------------------------------------------------------------------------------------------
 
    SUBROUTINE makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const)   
+   !Checks, based on the iplot switch that is given in the input, whether or not plots should be made.
+   !Before the plot command iss processed, we check if the plot_inp is there and no oldform is given. If that
+   !is not the case, we throw an error/create a plot_inp.
       USE m_constants
 
       IMPLICIT NONE
@@ -841,6 +846,11 @@ CONTAINS
 
       LOGICAL :: allowplot
       
+      !The check is done via bitwise operations. If the i-th position of iplot in binary representation
+      !(2^n == n-th position) has a 1, the corresponding plot with number 2^n is plotted.
+      !E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted and none else, iplot would
+      !need to be 2^1+2^2+2^3=2+4+8=14. iplot=1 or any odd number will *always* plot all possible options.
+
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN  
          CALL checkplotinp()
