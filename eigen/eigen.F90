@@ -85,6 +85,7 @@ CONTAINS
 
       COMPLEX              :: unfoldingBuffer(SIZE(results%unfolding_weights,1),kpts%nkpt,input%jspins) ! needed for unfolding bandstructure mpi case
 
+      INTEGER, ALLOCATABLE :: nvBuffer(:,:), nvBufferTemp(:,:)
       REAL,    ALLOCATABLE :: bkpt(:)
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
@@ -105,6 +106,7 @@ CONTAINS
       ALLOCATE(eig(DIMENSION%neigd))
       ALLOCATE(bkpt(3))
       ALLOCATE(eigBuffer(DIMENSION%neigd,kpts%nkpt,input%jspins))
+      ALLOCATE(nvBuffer(kpts%nkpt,MERGE(1,input%jspins,noco%l_noco)),nvBufferTemp(kpts%nkpt,MERGE(1,input%jspins,noco%l_noco)))
 
       l_real=sym%invs.AND..NOT.noco%l_noco
 
@@ -129,6 +131,8 @@ CONTAINS
       results%eig = 1.0e300
       eigBuffer = 1.0e300
       unfoldingBuffer = CMPLX(0.0,0.0)
+      nvBuffer = 0
+      nvBufferTemp = 0
 
       DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
          k_loop:DO nk_i = 1,size(mpi%k_list)
@@ -139,6 +143,8 @@ CONTAINS
             CALL eigen_hssetup(jsp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,sym,&
                                stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
             CALL timestop("Setup of H&S matrices")
+
+            nvBuffer(nk,jsp) = lapw%nv(jsp)
 
             IF(hybrid%l_hybrid.OR.input%l_rdmft) THEN
 
@@ -269,13 +275,25 @@ CONTAINS
       END IF
       CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results%eig(:neigd2,:,:),neigd2*kpts%nkpt*input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(nvBuffer(:,:),nvBufferTemp(:,:),kpts%nkpt*input%jspins,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
       CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
-
 #else
       results%neig(:,:) = neigBuffer(:,:)
       results%eig(:neigd2,:,:) = eigBuffer(:neigd2,:,:)
       results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
+      nvBufferTemp(:,:) = nvBuffer(:,:)
 #endif
+
+      IF(mpi%irank.EQ.0) THEN
+         WRITE(6,'(a)') ''
+         WRITE(6,'(a)') '              basis set size:'
+         WRITE(6,'(a)') '      jsp    ikpt     nv      LOs  overall'
+         DO jsp = 1, MERGE(1,input%jspins,noco%l_noco)
+            DO nk = 1, kpts%nkpt
+               WRITE(6,'(5i8)') jsp, nk, nvBufferTemp(nk,jsp), atoms%nlotot, nvBufferTemp(nk,jsp) + atoms%nlotot
+            END DO
+         END DO
+      END IF
 
       !IF (hybrid%l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id)
 
