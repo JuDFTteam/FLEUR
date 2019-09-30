@@ -464,7 +464,7 @@ CONTAINS
          ALLOCATE(den(1))
          den(1)          = denf
          numInDen        = 1
-         numOutFiles     = 4
+         numOutFiles     = 1
       END IF
 
       DO i = 1, numInDen
