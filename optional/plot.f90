@@ -805,16 +805,20 @@ CONTAINS
          score = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL timestart("Hallo, ich sollte hier nicht sein. 1")
+!TODO: REMOVE               
+CALL timestart("Hallo, ich sollte hier nicht sein. 1")
                CALL matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
                                noco,oneD,sliceplot,factor,denmat,score,denName)
+!TODO: REMOVE
                CALL timestop("Hallo, ich sollte hier nicht sein. 1")
             ELSE
                CALL vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
+!TODO: REMOVE
 CALL timestart("Hallo, ich sollte hier nicht sein. 2")
             CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+!TODO: REMOVE
 CALL timestop("Hallo, ich sollte hier nicht sein. 2")
          END IF
       END IF
