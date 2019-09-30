@@ -14,7 +14,6 @@ MODULE m_plot
    USE m_xsf_io
    USE m_fft2d
    USE m_fft3d
-   USE m_types
    USE m_rotdenmat 
 
    PRIVATE
@@ -83,20 +82,17 @@ CONTAINS
 
       CALL cden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       CALL mden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+      
+      cden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,1)+denmat%mt(:,0:,1:,2)
+      cden%pw(1:,1) = denmat%pw(1:,1)+denmat%pw(1:,2)
+      cden%vacz(1:,1:,1) = denmat%vacz(1:,1:,1)+denmat%vacz(1:,1:,2)
+      cden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,1)+denmat%vacxy(1:,1:,1:,2)
 
-      CALL SpinsToChargeAndMagnetisation(denmat)
+      mden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,1)-denmat%mt(:,0:,1:,2)
+      mden%pw(1:,1) = denmat%pw(1:,1)-denmat%pw(1:,2)
+      mden%vacz(1:,1:,1) = denmat%vacz(1:,1:,1)-denmat%vacz(1:,1:,2)
+      mden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,1)-denmat%vacxy(1:,1:,1:,2)
 
-      cden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,1)
-      cden%pw(1:,1) = denmat%pw(1:,1)
-      cden%vacz(1:,1:,1) = denmat%vacz(1:,1:,1)
-      cden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,1)
-
-      mden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,2)
-      mden%pw(1:,1) = denmat%pw(1:,2)
-      mden%vacz(1:,1:,1) = denmat%vacz(1:,1:,2)
-      mden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,2)
-
-      CALL ChargeAndMagnetisationToSpins(denmat)
       
    END SUBROUTINE vectorsplit
 
@@ -106,7 +102,7 @@ CONTAINS
    ! Takes a 2x2 potential/density matrix and rearanges it into four plottable
    ! seperate ones (e.g. rho_mat ---> n, mx, my, mz).
    !
-   ! This is basically 1:1 the old pldngen.f90 routine, courtesy of Philipp Kurz.
+   ! This is basically 1:1 the old pldngen.f90 routine, courtesy of Philipp Kurz
 
       IMPLICIT NONE
 
@@ -809,13 +805,17 @@ CONTAINS
          score = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
+               CALL timestart("Hallo, ich sollte hier nicht sein. 1")
                CALL matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
                                noco,oneD,sliceplot,factor,denmat,score,denName)
+               CALL timestop("Hallo, ich sollte hier nicht sein. 1")
             ELSE
                CALL vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
+CALL timestart("Hallo, ich sollte hier nicht sein. 2")
             CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+CALL timestop("Hallo, ich sollte hier nicht sein. 2")
          END IF
       END IF
    END SUBROUTINE procplot
