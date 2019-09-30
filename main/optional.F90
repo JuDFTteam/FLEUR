@@ -94,12 +94,12 @@ CONTAINS
     !     ..
     it = 1
 
-    IF ((sliceplot%iplot.NE.0 ).AND. (mpi%irank==0) ) THEN
-       IF (noco%l_noco) THEN
-          !CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
-          !     cell,input,noco,oneD,sliceplot)
-       ENDIF
-    ENDIF
+ !   IF ((sliceplot%iplot.NE.0 ).AND. (mpi%irank==0) ) THEN
+ !      IF (noco%l_noco) THEN
+ !         CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
+ !              cell,input,noco,oneD,sliceplot)
+ !      ENDIF
+ !   ENDIF
 
        
     !

@@ -77,7 +77,7 @@ CONTAINS
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(INOUT) :: denmat
+      TYPE(t_potden),    INTENT(IN)    :: denmat
       TYPE(t_potden),    INTENT(OUT)   :: cden, mden
 
       CALL cden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
@@ -118,7 +118,7 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       REAL,              INTENT(IN)    :: factor
-      TYPE(t_potden),    INTENT(INOUT) :: denmat
+      TYPE(t_potden),    INTENT(IN)    :: denmat
       TYPE(t_potden),    INTENT(OUT)   :: cden, mxden, myden, mzden
 
       ! Local type instances
@@ -424,7 +424,7 @@ CONTAINS
 
       !  .. Local Scalars ..
       REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
-      INTEGER       :: i,j,ix,iy,iz,jsp,na,nplo,iv,iflag,nfile
+      INTEGER       :: i,j,ix,iy,iz,na,nplo,iv,iflag,nfile
       INTEGER       :: nplot,nt,jm,jspin,numInDen,numOutFiles
       LOGICAL       :: twodim,oldform,newform,l_qfix
       LOGICAL       :: cartesian,xsf,unwind,polar
@@ -611,7 +611,7 @@ CONTAINS
                   END IF
 
                   DO i = 1, numInDen
-                     CALL outcdn(pt,nt,na,iv,iflag,jsp,.FALSE.,stars,& 
+                     CALL outcdn(pt,nt,na,iv,iflag,1,.FALSE.,stars,& 
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
                                  den(i),xdnout(i))
                   END DO
@@ -727,7 +727,7 @@ CONTAINS
       TYPE(t_sphhar), INTENT(IN)    :: sphhar
       TYPE(t_input),  INTENT(IN)    :: input
       TYPE(t_noco),   INTENT(IN)    :: noco
-      TYPE(t_potden), INTENT(INOUT) :: denmat
+      TYPE(t_potden), INTENT(IN) :: denmat
       TYPE(t_oned),   INTENT(IN)    :: oneD
       TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
       LOGICAL,                     INTENT(IN)    :: score
@@ -761,7 +761,7 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       REAL,              INTENT(IN)    :: factor
-      TYPE(t_potden),    INTENT(INOUT) :: denmat
+      TYPE(t_potden),    INTENT(IN) :: denmat
       LOGICAL,           INTENT(IN)    :: score
       CHARACTER(len=10), INTENT(IN)    :: denName
 
@@ -789,7 +789,7 @@ CONTAINS
       TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-      TYPE(t_potden),    INTENT(INOUT) :: denmat
+      TYPE(t_potden),    INTENT(IN) :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
 
       INTEGER            :: i
@@ -845,7 +845,7 @@ CALL timestop("Hallo, ich sollte hier nicht sein. 2")
       TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-      TYPE(t_potden),    INTENT(INOUT) :: denmat
+      TYPE(t_potden),    INTENT(IN) :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
 
       LOGICAL :: allowplot
