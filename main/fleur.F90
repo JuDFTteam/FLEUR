@@ -484,6 +484,12 @@ CONTAINS
           IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
        END IF
 
+  !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
+       IF(iplot%sliceplot.NE.0) THEN
+          CALL juDFT_end("topped self consistency loop after all plots have been generated.")
+       END IF
+
+
     END DO scfloop ! DO WHILE (l_cont)
    
     CALL add_usage_data("Iterations",iter)
