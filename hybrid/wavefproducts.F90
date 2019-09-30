@@ -110,7 +110,7 @@ CONTAINS
             EXIT
          END IF
       END DO
-      IF (nkqpt == 0) STOP 'wavefproducts_inv5: k-point not found'
+      IF (nkqpt == 0) call juDFT_error('wavefproducts_inv5: k-point not found')
 
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
