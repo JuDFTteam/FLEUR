@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurInput fleurInputVersion="0.29">
    <comment>
-      Si bulk                                                                         
+      Si bulk
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.70000000" Gmax="11.10000000" GmaxXC="9.20000000" numbands="80"/>
-      <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="25" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
+      <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="25" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
