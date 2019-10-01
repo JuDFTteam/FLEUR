@@ -3,7 +3,7 @@ project(FLEUR LANGUAGES Fortran)
 
 include("../cmake/Generate_Schema.cmake")
 
-set(FLEURINPUT_COMPILEOPTS "-r8")
+#set(FLEURINPUT_COMPILEOPTS "-r8")
 
 add_library(fleurinput	 STATIC
 fleurinput_read_xml.f90    fleurinput_mpi_bc.f90

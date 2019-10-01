@@ -1,6 +1,9 @@
 include_directories(include)
 
 
+set(FLEURINPUT_COMPILEOPTS "${FLEUR_PRECISION_OPTION}")
+add_subdirectory("fleurinput")
+
 set(c_filesInpgen io/xml/inputSchema.h io/xml/dropInputSchema.c)
 set(c_filesFleur io/xml/inputSchema.h io/xml/dropInputSchema.c io/xml/xmlInterfaceWrapper.c)
 if(FLEUR_USE_CUSOLVER)
