@@ -341,10 +341,16 @@ CONTAINS
             END DO
          END DO
       END IF
+      
+      !---> save charge density to cden
+      den%mt(:,0:,1:,1) = rho(:,0:,1:,1)
+      den%pw(1:,1) = qpw(1:,1)
+      den%vacz(1:,1:,1) = rht(1:,1:,1)
+      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,1)
 
       cden=den
 
-      !---> save mx to file mdnx
+      !---> save m_x to mxden
       den%mt(:,0:,1:,1) = rho(:,0:,1:,2)
       den%pw(1:,1) = qpw(1:,2)
       den%vacz(1:,1:,1) = rht(1:,1:,2)
@@ -352,7 +358,7 @@ CONTAINS
 
       mxden=den
 
-      !---> save my to file mdny
+      !---> save m_y to myden
       den%mt(:,0:,1:,1) = rho(:,0:,1:,3)
       den%pw(1:,1) = qpw(1:,3)
       den%vacz(1:,1:,1) = rht(1:,1:,3)
@@ -360,7 +366,7 @@ CONTAINS
 
       myden=den
    
-      !---> save mz to file mdnz
+      !---> save m_z to mzden
       den%mt(:,0:,1:,1) = rho(:,0:,1:,4)
       den%pw(1:,1) = qpw(1:,4)
       den%vacz(1:,1:,1) = rht(1:,1:,4)
