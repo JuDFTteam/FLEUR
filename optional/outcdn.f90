@@ -14,7 +14,7 @@
      &                  p,n,na,iv,iflag,jsp,l_potential,stars,&
      &                  vacuum,sphhar,atoms,sym,cell,oneD,&
      &                  potDen,&
-     &                  ,xdnout)
+     &                  xdnout)
 !
       use m_constants
       USE m_angle
