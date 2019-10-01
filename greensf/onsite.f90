@@ -7,8 +7,8 @@ MODULE m_onsite
 !> @author
 !> Henning Janßen
 !
-! DESCRIPTION: 
-!>  This module contains the functions to calculate the imaginary part of the 
+! DESCRIPTION:
+!>  This module contains the functions to calculate the imaginary part of the
 !>  onsite GF with and without radial dependence
 !>  Further we can transform this imaginary part to obtain the onsite GF
 !>  using the Kramer Kronig Transformation
@@ -56,14 +56,14 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
       !
       !Enforcing that the projected density of states follows the local symmetries
       !
-      IF(nType.EQ.nTypep.AND.l.EQ.lp) THEN   
+      IF(nType.EQ.nTypep.AND.l.EQ.lp) THEN
          !
-         !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration 
+         !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
          !
          CALL kk_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1:input%jspins),atoms,noco,&
                         l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,&
                         greensfCoeffs%kkintgr_cutoff(i_gf,:,:))
-      ELSE 
+      ELSE
          !For all other elements we just use ef+elup as a hard cutoff
          greensfCoeffs%kkintgr_cutoff(i_gf,:,1) = 1
          greensfCoeffs%kkintgr_cutoff(i_gf,:,2) = greensfCoeffs%ne
@@ -75,9 +75,9 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
       DO jspin = 1, input%jspins
          spin_cut = MERGE(1,jspin,jspin.GT.2)
          kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,spin_cut,2)
-         DO m= -l,l
-            DO mp= -lp,lp
-               DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
+         DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
+            DO m= -l,l
+               DO mp= -lp,lp
                   CALL kkintgr(greensfCoeffs%projdos(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                               g%gmmpMat(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   IF(.NOT.input%l_gfsphavg) THEN
@@ -109,16 +109,16 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
                ENDDO
                fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
                IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations available",calledby="greensfImag")
-               DO ie = 1, g%nz 
-                  DO it = 1, sym%invarind(natom)
-                     is = sym%invarop(natom,it)
-                     isi = sym%invtab(is)
-                     d_mat(:,:) = cmplx(0.0,0.0)
-                     DO m = -l,l
-                        DO mp = -l,l
-                           d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
-                        ENDDO
+               DO it = 1, sym%invarind(natom)
+                  is = sym%invarop(natom,it)
+                  isi = sym%invtab(is)
+                  d_mat(:,:) = cmplx(0.0,0.0)
+                  DO m = -l,l
+                     DO mp = -l,l
+                        d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
                      ENDDO
+                  ENDDO
+                  DO ie = 1, g%nz
                      calc_mat = matmul( transpose( conjg(d_mat) ) , &
                                  g21(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
                      calc_mat =  matmul( calc_mat, d_mat )
@@ -129,8 +129,8 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
                            g%gmmpMat(ie,i_gf,m,mp,3,ipm) + phase * fac * conjg(calc_mat(m,mp))
                         ENDDO
                      ENDDO
-                  ENDDO!it
-               ENDDO!ie
+                  ENDDO!ie
+               ENDDO!it
             ENDDO
          ENDDO!natom
       ENDIF

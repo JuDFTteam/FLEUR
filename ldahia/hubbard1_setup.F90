@@ -62,8 +62,8 @@ MODULE m_hubbard1_setup
       REAL     f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
 
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
-      COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),2*gdft%nz)
-      COMPLEX  e(2*gdft%nz)
+      COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz,2)
+      COMPLEX  e(gdft%nz)
       REAL     n_l(atoms%n_hia,input%jspins)
       LOGICAL  l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist
 
@@ -211,17 +211,18 @@ MODULE m_hubbard1_setup
                   CALL timestart("Hubbard 1: EDsolver")
                   !We have to change into the Hubbard1 directory so that the solver routines can read the config
                   CALL CHDIR(TRIM(ADJUSTL(xPath)))
-                  !Set up the energy points (z and z*)
-                  e(1:gdft%nz) = gdft%e(1:gdft%nz)*hartree_to_ev_const
-                  e(gdft%nz+1:2*gdft%nz) = conjg(gdft%e(1:gdft%nz))*hartree_to_ev_const
 #ifdef CPP_EDSOLVER
-                  CALL EDsolver_from_cfg(2*(2*l+1),2*gdft%nz,e,selfen(i_hia,:,:,1:2*gdft%nz),1)
+                  e = gdft%e*hartree_to_ev_const
+                  CALL EDsolver_from_cfg(2*(2*l+1),2*gdft%nz,e,selfen(i_hia,:,:,:,1),1)
+                  e = conjg(gdft%e)*hartree_to_ev_const
+                  !no rediagonalization
+                  CALL EDsolver_from_cfg(2*(2*l+1),2*gdft%nz,e,selfen(i_hia,:,:,:,2),0)
 #endif
                   CALL CHDIR(TRIM(ADJUSTL(cwd)))
                   CALL timestop("Hubbard 1: EDsolver")
                ELSE
                   !If there is no linked solver library we read in the selfenergy here
-                  CALL read_selfen(xPath,selfen(i_hia,1:2*(2*l+1),1:2*(2*l+1),1:gdft%nz),gdft%nz,2*(2*l+1),.false.)
+                  CALL read_selfen(xPath,selfen(i_hia,:,:,:,1),gdft%nz,2*(2*l+1),.false.)
                ENDIF
             ENDIF
          ENDDO
@@ -233,20 +234,22 @@ MODULE m_hubbard1_setup
             DO i_hia = 1, atoms%n_hia
                nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
                l = atoms%lda_u(atoms%n_u+i_hia)%l
-               DO iz = 1, 2*gdft%nz
-                  !---------------------------------------------
-                  ! Convert the selfenergy to hartree
-                  !---------------------------------------------
-                  selfen(i_hia,:,:,iz) = selfen(i_hia,:,:,iz)/hartree_to_ev_const
-                  !---------------------------------------------
-                  ! The order of spins is reversed in the Solver
-                  !---------------------------------------------
-                  CALL swapSpin(selfen(i_hia,:,:,iz),2*l+1)
-                  !---------------------------------------------------------------------
-                  ! The DFT green's function also includes the previous DFT+U correction
-                  ! This is removed by substracting it from the selfenergy
-                  !---------------------------------------------------------------------
-                  CALL removeU(selfen(i_hia,:,:,iz),l,input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+               DO ipm = 1, 2
+                  DO iz = 1, gdft%nz
+                     !---------------------------------------------
+                     ! Convert the selfenergy to hartree
+                     !---------------------------------------------
+                     selfen(i_hia,:,:,iz,ipm) = selfen(i_hia,:,:,iz,ipm)/hartree_to_ev_const
+                     !---------------------------------------------
+                     ! The order of spins is reversed in the Solver
+                     !---------------------------------------------
+                     CALL swapSpin(selfen(i_hia,:,:,iz,ipm),2*l+1)
+                     !---------------------------------------------------------------------
+                     ! The DFT green's function also includes the previous DFT+U correction
+                     ! This is removed by substracting it from the selfenergy
+                     !---------------------------------------------------------------------
+                     CALL removeU(selfen(i_hia,:,:,iz,ipm),l,input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+                  ENDDO
                ENDDO
             ENDDO
             !----------------------------------------------------------------------
@@ -267,7 +270,7 @@ MODULE m_hubbard1_setup
                   l = atoms%lda_u(atoms%n_u+i_hia)%l
                   CALL gfDOS(gdft,l,nType,800+i_hia+hub1%iter,atoms,input,results%ef)
                   CALL gfDOS(gu,l,nType,900+i_hia+hub1%iter,atoms,input,results%ef)
-                  CALL writeSelfenElement(selfen(i_hia,:,:,1:gdft%nz),gdft%e,results%ef,gdft%nz,2*l+1)
+                  CALL writeSelfenElement(selfen(i_hia,:,:,:,1),gdft%e,results%ef,gdft%nz,2*l+1)
                ENDDO
             ENDIF
             !----------------------------------------------------------------------
@@ -316,7 +319,7 @@ MODULE m_hubbard1_setup
       !Transformation matrix
       tmp = 0.0
       tmp_off = 0.0
-      DO i = 1, ns 
+      DO i = 1, ns
          tmp(i,ns+i) = 1.0
          tmp(ns+i,i) = 1.0
          tmp_off(i,ns-i+1) = 1.0
@@ -353,8 +356,8 @@ MODULE m_hubbard1_setup
 
       ns = 2*l+1
 
-      DO i = 1, ns 
-         DO j = 1, ns 
+      DO i = 1, ns
+         DO j = 1, ns
             m = i-1-l
             mp = j-1-l
             DO ispin = 1, MERGE(3,jspins,l_vmperp)
@@ -375,14 +378,14 @@ MODULE m_hubbard1_setup
 
       !Defines the folder structure
       ! The Solver is run in the subdirectories
-      ! Hubbard1/ if only one Hubbard1 prodcedure is run 
+      ! Hubbard1/ if only one Hubbard1 prodcedure is run
       ! Hubbard1/atom_label_l if there are more
 
       USE m_types
 
-      IMPLICIT NONE 
+      IMPLICIT NONE
 
-      TYPE(t_atoms),       INTENT(IN)  :: atoms 
+      TYPE(t_atoms),       INTENT(IN)  :: atoms
       INTEGER,             INTENT(IN)  :: i_hia
       CHARACTER(len=300),  INTENT(OUT) :: xPath
 
@@ -408,7 +411,7 @@ MODULE m_hubbard1_setup
    SUBROUTINE writeSelfenElement(selfen,e,ef,nz,ns)
 
       USE m_constants
-      
+
       IMPLICIT NONE
 
       INTEGER,       INTENT(IN)  :: nz,ns
@@ -423,9 +426,9 @@ MODULE m_hubbard1_setup
       OPEN(unit=3456,file="selfen",status="replace",iostat = io_error)
 
       DO iz = 1, nz
-         up = 0.0 
+         up = 0.0
          down = 0.0
-         DO i = 1, ns 
+         DO i = 1, ns
             up = up + selfen(i,i,iz)
             down = down + selfen(i+ns,i+ns,iz)
          ENDDO

@@ -6,7 +6,7 @@ MODULE m_greensfImag21
    !> @author
    !> Henning Janßen
    !
-   ! DESCRIPTION: 
+   ! DESCRIPTION:
    !>  This module handles the spin-offdiagonal part of the imaginary part of the onsite
    !>  Green's function in the noco
    !
@@ -60,7 +60,7 @@ MODULE m_greensfImag21
 
          DO nn = 1, atoms%neq(nType)
             natom = SUM(atoms%neq(:nType-1)) + nn
-            
+
             im = 0.0
             !Loop through bands
             !$OMP PARALLEL DEFAULT(none) &
@@ -86,12 +86,12 @@ MODULE m_greensfImag21
 
                IF(l_zero) CYCLE
 
-               DO m = -l, l 
-                  lm = l*(l+1) + m 
-                  DO mp = -l, l 
-                     lmp = l*(l+1) + mp 
+               DO m = -l, l
+                  lm = l*(l+1) + m
+                  DO mp = -l, l
+                     lmp = l*(l+1) + mp
                      DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
-                     
+
                          weight = 2.0/input%jspins*(MERGE(resWeights(ie,ib),0.0,input%l_resolvent)&
                                                 - ImagUnit * pi_const * MERGE(dosWeights(ie,ib),wtkpt/greensfCoeffs%del,l_tria))
                         !
@@ -102,7 +102,7 @@ MODULE m_greensfImag21
                                             + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)&
                                             + CONJG(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)&
                                             + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%du21n(l,nType))
-                        IF(.NOT.input%l_gfsphavg) THEN 
+                        IF(.NOT.input%l_gfsphavg) THEN
                            im(ie,m,mp,2) = im(ie,m,mp,2) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%uu21n(l,nType)
                            im(ie,m,mp,3) = im(ie,m,mp,3) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)
                            im(ie,m,mp,4) = im(ie,m,mp,4) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)
@@ -131,7 +131,7 @@ MODULE m_greensfImag21
                               ENDDO
                            ENDIF
                         ENDDO!local orbitals
-                     ENDDO!ie                
+                     ENDDO!ie
                   ENDDO!mp
                ENDDO!m
             ENDDO !ib
@@ -142,7 +142,7 @@ MODULE m_greensfImag21
             !fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
             !IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="greensfImag")
             !DO imat = 1, MERGE(1,5,input%l_gfsphavg)
-            !   DO ie = 1, greensfCoeffs%ne 
+            !   DO ie = 1, greensfCoeffs%ne
             !      DO it = 1, sym%invarind(natom)
             !         is = sym%invarop(natom,it)
             !         isi = sym%invtab(is)
@@ -159,13 +159,15 @@ MODULE m_greensfImag21
             !         DO m = -l,l
             !            DO mp = -l,l
             !               IF(imat.EQ.1) THEN
-            DO ie = 1, greensfCoeffs%ne
+
                DO m = -l,l
                   DO mp = -l,l
-                     greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) = greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) - AIMAG(im(ie,m,mp,1))
+                     DO ie = 1, greensfCoeffs%ne
+                        greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) = greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) - AIMAG(im(ie,m,mp,1))
+                     ENDDO
                   ENDDO
                ENDDO
-            ENDDO
+
                            !ELSE IF(imat.EQ.2) THEN
                            !   greensfCoeffs%uu(ie,i_gf,m,mp,3) = greensfCoeffs%uu(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
                            !ELSE IF(imat.EQ.3) THEN

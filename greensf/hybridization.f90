@@ -12,7 +12,7 @@ MODULE m_hybridization
    SUBROUTINE hybridization(gf,l,nType,atoms,input,ef)
 
       !------------------------------------------------------
-      ! Evaluates the hybridization function 
+      ! Evaluates the hybridization function
       ! acc. to. sci. rep. 5, 15429 (2015)
       !------------------------------------------------------
       ! \Delta(E) = -1/(pi*N_l) Im TR[G^-1_{DFT}(E+i\delta)]
@@ -20,7 +20,7 @@ MODULE m_hybridization
 
       INTEGER,         INTENT(IN) :: l
       INTEGER,         INTENT(IN) :: nType
-      TYPE(t_greensf), INTENT(IN) :: gf 
+      TYPE(t_greensf), INTENT(IN) :: gf
       TYPE(t_atoms),   INTENT(IN) :: atoms
       TYPE(t_input),   INTENT(IN) :: input
       REAL,            INTENT(IN) :: ef
@@ -36,7 +36,7 @@ MODULE m_hybridization
       IF(io_error.NE.0) CALL juDFT_error("IO error",calledby="hybridization")
 
       Delta = 0.0
-      DO iz = 1, gf%nz  
+      DO iz = 1, gf%nz
          tr = 0.0
          DO ipm = 1, 2
             !--------------------------------------------------
@@ -78,10 +78,10 @@ MODULE m_hybridization
                                  pi_const*(input%gf_sigma**2)/(REAL(gf%e(iz)**2+input%gf_sigma**2))
       ENDDO
       WRITE(*,*) avg_delta
-      !low J 
+      !low J
       nf = 2*l
       v_low = sqrt(-avg_delta/(nf))
-      !high J 
+      !high J
       nf = 2*l+2
       v_high = sqrt(-avg_delta/(nf))
       WRITE(*,*) v_low,v_high

@@ -138,16 +138,16 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
          fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
          IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations available",calledby="greensfImag")
          DO imat = 1, MERGE(1,5,input%l_gfsphavg)
-            DO ie = 1, greensfCoeffs%ne
-               DO it = 1, sym%invarind(natom)
-                  is = sym%invarop(natom,it)
-                  isi = sym%invtab(is)
-                  d_mat(:,:) = cmplx(0.0,0.0)
-                  DO m = -l,l
-                     DO mp = -l,l
-                        d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
-                     ENDDO
+            DO it = 1, sym%invarind(natom)
+               is = sym%invarop(natom,it)
+               isi = sym%invtab(is)
+               d_mat(:,:) = cmplx(0.0,0.0)
+               DO m = -l,l
+                  DO mp = -l,l
+                     d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
                   ENDDO
+               ENDDO
+               DO ie = 1, greensfCoeffs%ne
                   calc_mat = matmul( transpose( conjg(d_mat) ) , &
                               im(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,imat))
                   calc_mat =  matmul( calc_mat, d_mat )
