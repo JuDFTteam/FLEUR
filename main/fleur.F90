@@ -248,10 +248,10 @@ CONTAINS
        CALL timestop("generation of potential")
 
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,PLOT_POT_TOT,vTot)         
-!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,,PLOT_POT_COU,vCoul)
+          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vTot,PLOT_POT_TOT)         
+!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
 !          CALL subPotDen(vxcForPlotting,vTot,vCoul)
-!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,PLOT_POT_VXC,vxcForPlotting)
+!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
        END IF 
 
 #ifdef CPP_MPI
@@ -379,8 +379,8 @@ CONTAINS
                       archiveType,xcpot,outDen,EnergyDen)
            
 !          IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
-!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,PLOT_OUTDEN_Y_CORE,outDen)
-!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,PLOT_OUTDEN_N_CORE,outDen)
+!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_Y_CORE
+!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_N_CORE
 !          END IF 
 
           IF (input%l_rdmft) THEN
