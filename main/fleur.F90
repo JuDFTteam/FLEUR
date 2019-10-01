@@ -378,10 +378,10 @@ CONTAINS
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
            
-!          IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
-!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_Y_CORE
+          IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
+                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_Y_CORE
 !                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_N_CORE
-!          END IF 
+          END IF 
 
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)
