@@ -837,15 +837,15 @@ CONTAINS
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
 
-               CALL matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
                                noco,oneD,sliceplot,factor,denmat,score,denName)
 
             ELSE
-               CALL vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
 
-            CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
 
          END IF
          
