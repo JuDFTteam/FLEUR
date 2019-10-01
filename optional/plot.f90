@@ -380,7 +380,7 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot, &
+   SUBROUTINE savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot, &
                        noco,score,denName,denf,denA1,denA2,denA3)
    !Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/star
    !representation and makes it/them into plottable .xsf file(s) according to a scheme
@@ -421,7 +421,7 @@ CONTAINS
       TYPE(t_cell),                INTENT(IN)    :: cell
       TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
       TYPE(t_noco),                INTENT(IN)    :: noco
-      LOGICAL,                     INTENT(IN)    :: score
+      LOGICAL,                     INTENT(IN)    :: score, potnorm
       CHARACTER(len=10),           INTENT(IN)    :: denName
       TYPE(t_potden),              INTENT(IN)    :: denf
       TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA1
@@ -617,9 +617,9 @@ CONTAINS
                   END IF
 
                   DO i = 1, numInDen
-                     CALL outcdn(pt,nt,na,iv,iflag,1,.FALSE.,stars,& 
+                     CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,& 
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 den(i),xdnout(i))
+                                 den(i),potnorm,xdnout(i))
                   END DO
 
                   IF (na.NE.0) THEN
@@ -718,13 +718,14 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+   SUBROUTINE vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
    !Takes a spin-polarized t_potden density, i.e. a 2D vector in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
 
       IMPLICIT NONE
 
+      
       TYPE(t_stars),  INTENT(IN)    :: stars
       TYPE(t_cell),   INTENT(IN)    :: cell
       TYPE(t_sym),    INTENT(IN)    :: sym
@@ -733,10 +734,10 @@ CONTAINS
       TYPE(t_sphhar), INTENT(IN)    :: sphhar
       TYPE(t_input),  INTENT(IN)    :: input
       TYPE(t_noco),   INTENT(IN)    :: noco
-      TYPE(t_potden), INTENT(IN) :: denmat
+      TYPE(t_potden), INTENT(IN)    :: denmat
       TYPE(t_oned),   INTENT(IN)    :: oneD
       TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
-      LOGICAL,                     INTENT(IN)    :: score
+      LOGICAL,                     INTENT(IN)    :: score, potnorm
       CHARACTER(len=10),           INTENT(IN)    :: denName
 
       TYPE(t_potden)                :: cden, mden
@@ -748,7 +749,7 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,score,denName)
+   SUBROUTINE matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,score,denName)
    !Takes a 2x2 t_potden density, i.e. a sum of Pauli matrices in MT-sphere/star
    !representation and makes it into 4 plottable .xsf files according to a scheme
    !given in plot_inp.
@@ -767,8 +768,8 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       REAL,              INTENT(IN)    :: factor
-      TYPE(t_potden),    INTENT(IN) :: denmat
-      LOGICAL,           INTENT(IN)    :: score
+      TYPE(t_potden),    INTENT(IN)    :: denmat
+      LOGICAL,           INTENT(IN)    :: score, potnorm
       CHARACTER(len=10), INTENT(IN)    :: denName
 
       TYPE(t_potden)                   :: cden, mxden, myden, mzden
@@ -795,13 +796,14 @@ CONTAINS
       TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-      TYPE(t_potden),    INTENT(IN) :: denmat
+      TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
 
       INTEGER            :: i
       REAL               :: factor
       CHARACTER (len=10) :: denName
       LOGICAL            :: score
+      LOGICAL            :: potnorm
 
       !Plotting the input density matrix as n or n,m or n,mx,my,mz. identifier: 1
       ! --> Additive term for iplot: 2
@@ -809,18 +811,19 @@ CONTAINS
          factor = 1.0
          denName = 'denIn'
          score = .FALSE.
+         potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
 
-               CALL matrixplot(mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
                                noco,oneD,sliceplot,factor,denmat,score,denName)
 
             ELSE
-               CALL vectorplot(stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
 
-            CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
 
          END IF
       
@@ -830,6 +833,7 @@ CONTAINS
          factor = 2.0
          denName = 'vTot'
          score = .FALSE.
+         potnorm = .TRUE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
 
@@ -869,7 +873,7 @@ CONTAINS
       TYPE(t_oneD),      INTENT(IN)    :: oneD
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-      TYPE(t_potden),    INTENT(IN) :: denmat
+      TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
 
       LOGICAL :: allowplot

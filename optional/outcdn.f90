@@ -14,7 +14,7 @@
      &                  p,n,na,iv,iflag,jsp,l_potential,stars,&
      &                  vacuum,sphhar,atoms,sym,cell,oneD,&
      &                  potDen,&
-     &                  xdnout)
+     &                  ,xdnout)
 !
       use m_constants
       USE m_angle
@@ -31,7 +31,7 @@
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_potden),INTENT(IN)    :: potDen
-
+  
 
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: iflag,jsp,n,na,iv
@@ -47,7 +47,7 @@
       REAL delta,s,sx,xd1,xd2,xx1,xx2,rrr,phi
       INTEGER i,j,jp3,jr,k,lh,mem,nd,nopa,ivac,ll1,lm ,gzi,m
 
-!     .. Logical Argumens  ..
+!     .. Logical Argument  ..
       LOGICAL, INTENT (IN) :: l_potential 
       
 !     ..
