@@ -36,7 +36,8 @@
           USE m_fleur_init_old
           USE m_types_xcpot_inbuild
           USE m_mpi_bc_xcpot
-
+          USE m_wann_read_inp
+    
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
@@ -89,7 +90,8 @@
           REAL                          :: a1(3),a2(3),a3(3)
           REAL                          :: dtild, phi_add
           LOGICAL                       :: l_found, l_kpts, l_exist
-
+          LOGICAL                       :: l_wann_inp
+      
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
           INTEGER ierr(3)
@@ -114,7 +116,7 @@
 #endif
           !call juDFT_check_para()
           CALL field%init(input)
-
+          input%eig66(1)=.FALSE.
           input%gw                = -1
           input%gw_neigd          =  0
           !-t3e
@@ -154,7 +156,7 @@
           kpts%ntet = 1
           kpts%numSpecialPoints = 1
 
-          sliceplot%iplot=.FALSE.
+          sliceplot%iplot=0
           sliceplot%kk = 0
           sliceplot%e1s = 0.0
           sliceplot%e2s = 0.0
@@ -532,6 +534,13 @@
 
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
+
+          INQUIRE (file='wann_inp',exist=l_wann_inp)
+          input%l_wann = input%l_wann.OR.l_wann_inp
+          IF(input%l_wann) THEN
+            CALL wann_read_inp(DIMENSION,input,noco,(mpi%irank.EQ.0),wann)
+          END IF
+
 
         END SUBROUTINE fleur_init
       END MODULE m_fleur_init

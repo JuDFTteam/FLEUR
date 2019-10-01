@@ -94,29 +94,19 @@ CONTAINS
     !     ..
     it = 1
 
-    IF (sliceplot%iplot .AND. (mpi%irank==0) ) THEN
-       IF (noco%l_noco) THEN
-          CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
-               cell,input,noco,oneD,sliceplot)
-       ENDIF
-    ENDIF
+ !   IF ((sliceplot%iplot.NE.0 ).AND. (mpi%irank==0) ) THEN
+ !      IF (noco%l_noco) THEN
+ !         CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
+ !              cell,input,noco,oneD,sliceplot)
+ !      ENDIF
+ !   ENDIF
 
        
-    IF (mpi%irank == 0) THEN
-       IF (sliceplot%plpot) input%score = .FALSE.
-       IF (sliceplot%iplot) THEN
-          CALL timestart("Plotting")
-          IF (input%strho) CALL juDFT_error("strho = T and iplot=T",calledby = "optional")
-          CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                       input,sym,cell,sliceplot,noco)
-          CALL timestop("Plotting")
-       END IF
-    ENDIF ! mpi%irank == 0
     !
     !     --->generate starting charge density
     !
     strho=input%strho
-    IF (.NOT.(strho.OR.sliceplot%iplot)) THEN
+    IF (.NOT.(strho.OR.(sliceplot%iplot.NE.0))) THEN
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
        IF (noco%l_noco) THEN
           archiveType = CDN_ARCHIVE_TYPE_NOCO_const
@@ -168,7 +158,6 @@ CONTAINS
 
     ENDIF ! mpi%irank == 0
 
-    IF (sliceplot%iplot)      CALL juDFT_end("density plot o.k.",mpi%irank)
     IF (input%strho)          CALL juDFT_end("starting density generated",mpi%irank)
     IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
     IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)

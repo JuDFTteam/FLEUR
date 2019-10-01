@@ -71,7 +71,7 @@
       INTEGER  ::nw,idsprs
       INTEGER ieq,i,k,na,n,ilo
       REAL s3,ah,a,hs2,rest
-      LOGICAL l_hyb,l_sym,ldum
+      LOGICAL l_hyb,l_sym,ldum,ldum2
       INTEGER :: ierr, intDummy
 ! ..
 !...  Local Arrays
@@ -619,15 +619,17 @@
       END IF
 !
       band = .false.
-      READ (UNIT=5,FMT=8050,END=992,ERR=992) sliceplot%iplot,input%score,sliceplot%plpot,band
-      WRITE (6,9240) sliceplot%iplot,input%score,sliceplot%plpot,band
+      READ (UNIT=5,FMT=8050,END=992,ERR=992) ldum,ldum2,ldum2,band
+      WRITE (6,9240) ldum,ldum2,ldum2,band
+      sliceplot%iplot=MERGE(1,0,ldum)
       IF (band) THEN
         banddos%dos=.true. ; banddos%ndir = -4
       ENDIF
       GOTO 993
  992  BACKSPACE(5)
-      READ (UNIT=5,FMT=8050,END=99,ERR=99) sliceplot%iplot,input%score,sliceplot%plpot
-      WRITE (6,9240) sliceplot%iplot,input%score,sliceplot%plpot,band
+      READ (UNIT=5,FMT=8050,END=99,ERR=99) ldum,ldum2,ldum2
+      WRITE (6,9240) ldum,ldum2,ldum2,band
+      sliceplot%iplot=MERGE(1,0,ldum)
 !
  993  READ (UNIT=5,FMT='(i3,2f10.6,6x,i3,8x,l1)',END=99,ERR=99)&
      &                sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
@@ -879,7 +881,7 @@
  9120 FORMAT ('vchk=',l1,',cdinf=',l1,',pot8=',l1,',gw=',i1,&
      &        ',numbands=',i4)
       WRITE (5,9130) 0,.false.,input%l_f,input%eonly
- 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1)
+ 9130 FORMAT ('lpr=',i1,',form66=',l1,',l_f=',l1,',eonly=',l1,',eig66',l1)
       IF ( l_hyb ) THEN
         WRITE (chntype,'(i3)') 2*atoms%ntype
         chform = '('//chntype//'i3 )'
@@ -930,7 +932,7 @@
         WRITE (5,*)
       END IF
       band = .false.
-      WRITE (5,9240) sliceplot%iplot,input%score,sliceplot%plpot,band
+      WRITE (5,9240) ldum,ldum2,ldum2,band
  9240 FORMAT ('iplot=',l1,',score=',l1,',plpot=',l1,',band=',l1)
       WRITE (5,9250) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
  9250 FORMAT (i3,2f10.6,',nnne=',i3,',pallst=',l1)

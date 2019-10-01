@@ -72,6 +72,7 @@ wannier/wann_real.F
 wannier/wann_rmat.f
 wannier/wann_rw_eig.F
 wannier/wann_socmat.F
+wannier/wann_socmat_vec.F
 wannier/wann_socmat_rs.f
 wannier/wann_tlmw.f
 wannier/wann_ujugaunt.F
@@ -81,9 +82,9 @@ wannier/wann_wan90prep.F
 wannier/wann_wannierize.F
 wannier/wann_wigner_seitz.f
 wannier/wann_write_amn.F
-wannier/wann_write_hsomtx.F
 wannier/wann_write_matrix4.F
 wannier/wann_write_matrix5.F
+wannier/wann_write_matrix6.F
 wannier/wann_write_mmnk2.F
 wannier/wann_write_mmnk.F
 wannier/wann_write_nabla.F

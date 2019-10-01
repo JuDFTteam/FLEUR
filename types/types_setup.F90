@@ -354,7 +354,7 @@ MODULE m_types_setup
    END TYPE t_noco
 
    TYPE t_input
-      INTEGER :: eig66(2)
+      LOGICAL :: eig66(2)
       LOGICAL :: strho
       LOGICAL :: cdinf
       LOGICAL :: vchk
@@ -388,7 +388,6 @@ MODULE m_types_setup
       INTEGER:: kcrel
       LOGICAL:: frcor
       LOGICAL:: lflip
-      LOGICAL:: score
       LOGICAL:: swsp
       LOGICAL:: tria
       LOGICAL:: integ
@@ -423,7 +422,7 @@ MODULE m_types_setup
    END TYPE t_input
 
    TYPE t_sliceplot
-      LOGICAL :: iplot
+      INTEGER :: iplot
       LOGICAL :: slice
       LOGICAL :: plpot
       INTEGER :: kk
@@ -574,6 +573,10 @@ MODULE m_types_setup
       LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf
       LOGICAL :: l_hsomtxvec_to_lmpzsoc
       LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc
+      LOGICAL :: l_hsomtx_unf_to_hsoc_unf
+      LOGICAL :: l_hsomtx_to_hsoc_unf
+      LOGICAL :: l_hsomtx_to_hsoc
+      LOGICAL :: l_hsomtx_unf_to_hsoc
       LOGICAL :: l_unformatted
       LOGICAL :: l_oc_f
       LOGICAL :: l_ndegen
@@ -601,9 +604,13 @@ MODULE m_types_setup
       LOGICAL :: l_perpmagrs
       LOGICAL :: l_perpmag
       LOGICAL :: l_perpmagat
+      INTEGER :: perpmagl
+      LOGICAL :: l_perpmagatlres
       LOGICAL :: l_perpmagatrs
       LOGICAL :: l_socmatrs
       LOGICAL :: l_socmat
+      LOGICAL :: l_socmatvec
+      LOGICAL :: l_socmatvecrs
       LOGICAL :: l_soctomom
       LOGICAL :: l_kptsreduc2
       LOGICAL :: l_nablapaulirs

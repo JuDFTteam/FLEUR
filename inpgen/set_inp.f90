@@ -140,7 +140,7 @@
       input%gauss= .false. ; input%tria  = .false. 
       sliceplot%slice= .false. ;  input%swsp  = .false.
       input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
-      sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
+      sliceplot%iplot= 0
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1

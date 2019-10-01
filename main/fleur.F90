@@ -64,6 +64,7 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
+    USE m_plot
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
 #endif
@@ -96,7 +97,7 @@ CONTAINS
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
-    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
+    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen
     TYPE(t_potden),     dimension(3):: xcB
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
@@ -153,6 +154,11 @@ CONTAINS
        CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
+    
+    IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_INPDEN) 
+    END IF 
+
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
@@ -165,7 +171,7 @@ CONTAINS
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco
     eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
-                    noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
+                    noco%l_noco,.NOT.INPUT%eig66(1),l_real,noco%l_soc,INPUT%eig66(1),mpi%n_size)
 
 #ifdef CPP_CHASE
     CALL init_chase(mpi,dimension,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
@@ -222,8 +228,9 @@ CONTAINS
        IF(input%l_rdmft) THEN
           CALL open_hybrid_io1(DIMENSION,sym%invs)
        END IF
-
-       CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+       IF(.not.input%eig66(1))THEN
+          CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
+       END IF
        !$ call omp_set_num_threads(num_threads)
 
        !#endif
@@ -244,6 +251,13 @@ CONTAINS
                  obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul,xcB)
        CALL timestop("generation of potential")
 
+       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
+          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vTot,PLOT_POT_TOT)         
+!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
+!          CALL subPotDen(vxcForPlotting,vTot,vCoul)
+!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
+       END IF 
+
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
@@ -257,8 +271,10 @@ CONTAINS
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
-          CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+          IF(.not.input%eig66(1))THEN
+            CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
+          ENDIF             
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -281,7 +297,7 @@ CONTAINS
 #endif
 
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
-          IF (noco%l_soc.AND..NOT.noco%l_noco) &
+          IF (noco%l_soc.AND..NOT.noco%l_noco.AND..NOT.INPUT%eig66(1)) &
              CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
                           obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
           CALL timestop("gen. of hamil. and diag. (total)")
@@ -365,6 +381,11 @@ CONTAINS
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
+           
+          IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
+                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_Y_CORE)
+!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_N_CORE)
+          END IF 
 
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)
@@ -466,6 +487,12 @@ CONTAINS
        IF (mpi%irank.EQ.0) THEN
           IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
        END IF
+
+  !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
+       IF(sliceplot%iplot.NE.0) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+       END IF
+
 
     END DO scfloop ! DO WHILE (l_cont)
    

@@ -5,10 +5,15 @@
 !     calculates the charge density at given point p(i=1,3)
 !     ********************************************************
       CONTAINS
-      SUBROUTINE outcdn(&
-     &                  p,n,na,iv,iflag,jsp,sliceplot,stars,&
+      !SUBROUTINE outcdn(&
+     !&                  p,n,na,iv,iflag,jsp,l_potential,stars,&
+     !&                  vacuum,sphhar,atoms,sym,cell,oneD,&
+     !&                  qpw,rhtxy,rho,rht,&
+     !&                  xdnout)
+ SUBROUTINE outcdn(&
+     &                  p,n,na,iv,iflag,jsp,l_potential,stars,&
      &                  vacuum,sphhar,atoms,sym,cell,oneD,&
-     &                  qpw,rhtxy,rho,rht,&
+     &                  potDen,&
      &                  xdnout)
 !
       use m_constants
@@ -17,7 +22,7 @@
       USE m_ylm
       IMPLICIT NONE
 !
-      TYPE(t_sliceplot),INTENT(IN) :: sliceplot
+!      TYPE(t_sliceplot),INTENT(IN) :: sliceplot TODO:Remove
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
@@ -25,7 +30,8 @@
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_oneD),INTENT(IN)      :: oneD
-
+      TYPE(t_potden),INTENT(IN)    :: potDen
+  
 
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: iflag,jsp,n,na,iv
@@ -34,20 +40,27 @@
 !+odim
 !     ..
 !     .. Array Arguments ..
-      COMPLEX, INTENT (IN) :: qpw(:,:) !(stars%ng3,input%jspins)
-      COMPLEX, INTENT (IN) :: rhtxy(:,:,:,:) !(vacuum%nmzxyd,oneD%odi%n2d-1,2,input%jspins)
-      REAL,    INTENT (IN) :: rho(:,0:,:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-      REAL,    INTENT (IN) :: rht(:,:,:) !(vacuum%nmzd,2,input%jspins)
+
       REAL,    INTENT (INOUT) :: p(3)
 !     ..
 !     .. Local Scalars ..
       REAL delta,s,sx,xd1,xd2,xx1,xx2,rrr,phi
       INTEGER i,j,jp3,jr,k,lh,mem,nd,nopa,ivac,ll1,lm ,gzi,m
+
+!     .. Logical Argument  ..
+      LOGICAL, INTENT (IN) :: l_potential 
+      
 !     ..
 !     .. Local Arrays ..
       COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2)
       REAL rcc(3),x(3)
-
+      
+      !Temp. Variable Assignment TODO: Can be removed as soon as the potDen datatype has been implemented in the whole file.
+      !qpw=potDen%pw
+      !rhtxz=potDen%vacxy
+      !rho=potDen%mt
+      !rht=potDen%vacz
+       
 
       ivac=iv
      
@@ -60,7 +73,7 @@
      &            sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc,sym%invtab,&
      &            sf3)
 !
-      xdnout=dot_product(real(qpw(:,jsp)*sf3(:)),stars%nstr)
+      xdnout=dot_product(real(potDen%pw(:,jsp)*sf3(:)),stars%nstr)
       RETURN
 !     ---> vacuum part
       ENDIF
@@ -74,18 +87,18 @@
 !*     we count 0 as point 1
          jp3 = jp3 + 1
          IF (jp3.LT.vacuum%nmz) THEN
-            xdnout = rht(jp3,ivac,jsp) + delta*&
-     &           (rht(jp3+1,ivac,jsp)-rht(jp3,ivac,jsp))
+            xdnout = potDen%vacz(jp3,ivac,jsp) + delta*&
+     &           (potDen%vacz(jp3+1,ivac,jsp)-potDen%vacz(jp3,ivac,jsp))
             IF (jp3.LT.vacuum%nmzxy) THEN
                xx1 = 0.
                xx2 = 0.
                DO  k = 2,oneD%odi%nq2
                   m = oneD%odi%kv(2,k)
                   gzi = oneD%odi%kv(1,k)
-                  xx1 = xx1 + real(rhtxy(jp3,k-1,ivac,jsp)*&
+                  xx1 = xx1 + real(potDen%vacxy(jp3,k-1,ivac,jsp)*&
      &                 exp(ImagUnit*m*phi)*exp(ImagUnit*gzi*cell%bmat(3,3)*p(3)))*&
      &                 oneD%odi%nst2(k)
-                  xx2 = xx2 + real(rhtxy(jp3+1,k-1,ivac,jsp)*&
+                  xx2 = xx2 + real(potDen%vacxy(jp3+1,k-1,ivac,jsp)*&
      &                 exp(ImagUnit*m*phi)*exp(ImagUnit*gzi*cell%bmat(3,3)*p(3)))*&
      &                 oneD%odi%nst2(k)
             ENDDO
@@ -115,14 +128,14 @@
 !*     we count 0 as point 1
          jp3 = jp3 + 1
          IF (jp3.LT.vacuum%nmz) THEN
-             xdnout = rht(jp3,ivac,jsp) + delta*&
-     &               (rht(jp3+1,ivac,jsp)-rht(jp3,ivac,jsp))
+             xdnout = potDen%vacz(jp3,ivac,jsp) + delta*&
+     &               (potDen%vacz(jp3+1,ivac,jsp)-potDen%vacz(jp3,ivac,jsp))
             IF (jp3.LT.vacuum%nmzxy) THEN
                xx1 = 0.
                xx2 = 0.
               DO  k = 2,stars%ng2
-               xx1 = xx1 + real(rhtxy(jp3,k-1,ivac,jsp)*sf2(k))*stars%nstr2(k)
-               xx2 = xx2 + real(rhtxy(jp3+1,k-1,ivac,jsp)*sf2(k))*&
+               xx1 = xx1 + real(potDen%vacxy(jp3,k-1,ivac,jsp)*sf2(k))*stars%nstr2(k)
+               xx2 = xx2 + real(potDen%vacxy(jp3+1,k-1,ivac,jsp)*sf2(k))*&
      &               stars%nstr2(k)
    enddo
               xdnout = xdnout + xx1 + delta* (xx2-xx1)
@@ -181,16 +194,16 @@
            lm = ll1 + sphhar%mlh(mem,lh,nd)
            s = s + real( sphhar%clnu(mem,lh,nd)*ylm(lm) )
          ENDDO
-         IF (sliceplot%plpot) THEN
-            xd1 = xd1 + rho(jr,lh,n,jsp)*s
+         IF (l_potential) THEN
+            xd1 = xd1 + potDen%mt(jr,lh,n,jsp)*s
          ELSE
-            xd1 = xd1 + rho(jr,lh,n,jsp)*s/ (atoms%rmsh(jr,n)*atoms%rmsh(jr,n))
+            xd1 = xd1 + potDen%mt(jr,lh,n,jsp)*s/ (atoms%rmsh(jr,n)*atoms%rmsh(jr,n))
          END IF
          IF (jr.EQ.atoms%jri(n)) CYCLE
-         IF (sliceplot%plpot) THEN
-            xd2 = xd2 + rho(jr+1,lh,n,jsp)*s
+         IF (l_potential) THEN
+            xd2 = xd2 + potDen%mt(jr+1,lh,n,jsp)*s
          ELSE
-            xd2 = xd2 + rho(jr+1,lh,n,jsp)*s/&
+            xd2 = xd2 + potDen%mt(jr+1,lh,n,jsp)*s/&
      &            (atoms%rmsh(jr+1,n)*atoms%rmsh(jr+1,n))
          END IF
    ENDDO
