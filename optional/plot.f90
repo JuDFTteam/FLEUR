@@ -619,7 +619,7 @@ CONTAINS
                   DO i = 1, numInDen
                      CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,& 
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
-                                 den(i),potnorm,xdnout(i))
+                                 den(i),xdnout(i))
                   END DO
 
                   IF (na.NE.0) THEN
