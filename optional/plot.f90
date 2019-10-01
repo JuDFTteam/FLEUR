@@ -828,7 +828,10 @@ CONTAINS
          END IF
       
       END IF
-      
+
+      !Plotting the output density matrix as n or n,m or n,mx,my,mz. identifier: 2
+      !No core subtraction done!
+      ! --> Additive term for iplot: 4
       IF (plot_const.EQ.2) THEN
          factor = 1.0
          denName = 'denOutWithCore'
@@ -851,6 +854,9 @@ CONTAINS
       
       END IF
          
+      !Plotting the total potential as vtot or vtot,vdiff or vtot,B_xc1,B_xc2,B_xc3. identifier: 2
+      !No core subtraction done!
+      ! --> Additive term for iplot: 128
       IF (plot_const.EQ.7) THEN
          factor = 2.0
          denName = 'vTot'
