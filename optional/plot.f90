@@ -828,6 +828,28 @@ CONTAINS
          END IF
       
       END IF
+      
+      IF (plot_const.EQ.2) THEN
+         factor = 1.0
+         denName = 'denOutWithCore'
+         score = .FALSE.
+         potnorm = .FALSE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+                               noco,oneD,sliceplot,factor,denmat,score,denName)
+
+            ELSE
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+            END IF
+         ELSE
+
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+
+         END IF
+      
+      END IF
          
       IF (plot_const.EQ.7) THEN
          factor = 2.0
@@ -850,6 +872,7 @@ CONTAINS
          END IF
          
       END IF
+      
    END SUBROUTINE procplot
 
 !--------------------------------------------------------------------------------------------
