@@ -73,6 +73,15 @@ CONTAINS
        lp1 = (lp* (lp+1))/2
        DO l = 0,lp
           lpl = lp1 + l
+          !----------------------------------------------------------------------------
+          ! Remove non-spherical components for the orbitals treated with DFT+Hubbard-1
+          !----------------------------------------------------------------------------
+          l_remove=.FALSE.
+          IF(l.EQ.lp) THEN
+             DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+               IF(atoms%lda_u(i)%atomType.EQ.n.AND.atoms%lda_u(i)%l.EQ.l) l_remove=.TRUE.
+             ENDDO
+          ENDIF
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)
@@ -80,7 +89,7 @@ CONTAINS
              lamda = sphhar%llh(lh,nsym)
              lmin = lp - l
              lmx = lp + l
-             IF ((mod(lamda+lmx,2).EQ.1) .OR. (lamda.LT.lmin) .OR. (lamda.GT.lmx)) THEN
+             IF ((mod(lamda+lmx,2).EQ.1) .OR. (lamda.LT.lmin) .OR. (lamda.GT.lmx) .OR. l_remove) THEN
                 uvu(lpl,lh) = 0.0
                 dvd(lpl,lh) = 0.0
                 uvd(lpl,lh) = 0.0
@@ -107,18 +116,6 @@ CONTAINS
                 CALL intgr3(x,atoms%rmsh(1,n),atoms%dx(n),atoms%jri(n),temp)
                 dvd(lpl,lh) = temp
              END IF
-             l_remove=.FALSE.
-             DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
-                IF(atoms%lda_u(i)%atomType.EQ.n.AND.atoms%lda_u(i)%l.EQ.l.AND.lp.EQ.l) THEN
-                   l_remove=.TRUE.
-                ENDIF
-             ENDDO
-             IF(l_remove) THEN
-                uvu(lpl,lh) = 0.0
-                dvd(lpl,lh) = 0.0
-                uvd(lpl,lh) = 0.0
-                dvu(lpl,lh) = 0.0
-             ENDIF
           END DO
        END DO
     END DO
