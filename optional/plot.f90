@@ -882,12 +882,15 @@ CONTAINS
       !(2^n == n-th position) has a 1, the corresponding plot with number 2^n is plotted.
       !E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted and none else, iplot would
       !need to be 2^1+2^2+2^3=2+4+8=14. iplot=1 or any odd number will *always* plot all possible options.
+      CALL timestart("Plotting")       
+
 
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN  
          CALL checkplotinp()
          CALL procplot(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const)
       END IF
+   CALL timestop("Plotting")
    END SUBROUTINE makeplots
 
 !--------------------------------------------------------------------------------------------
