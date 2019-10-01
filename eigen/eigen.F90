@@ -163,14 +163,14 @@ CONTAINS
                END DO
 
                ! Write overlap matrix smat to direct access file olap
-               print *,"Wrong overlap matrix used, fix this later"
+               ! print *,"Wrong overlap matrix used, fix this later"
                CALL write_olap(smat,(jsp-1)*kpts%nkpt+nk) ! Note: At this moment this only works without MPI parallelization
             END IF ! hybrid%l_hybrid.OR.input%l_rdmft
 
             IF(hybrid%l_hybrid) THEN
-               PRINT *,"TODO"
-!             STOP "TODO"
-               PRINT *,"BASIS:", lapw%nv(jsp), atoms%nlotot
+!                PRINT *,"TODO"
+! !             ST OP "TODO"
+!                PRINT *,"BASIS:", lapw%nv(jsp), atoms%nlotot
                IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybrid,dimension,kpts,jsp,results,xcpot,noco,hmat)
 
                IF(hybrid%l_subvxc) THEN
@@ -211,10 +211,10 @@ CONTAINS
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
             CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
-            call hmat%save_npy(gen_filename("hmat", iter=iter, kpt=nk, ext=".npy"))
-            call smat%save_npy(gen_filename("smat", iter=iter, kpt=nk, ext=".npy"))
-            call zmat%save_npy(gen_filename("zmat", iter=iter, kpt=nk, ext=".npy"))
-            call save_npy(gen_filename("eig", iter=iter, kpt=nk, ext=".npy"), eig)
+            ! call hmat%save_npy(gen_filename("hmat", iter=iter, kpt=nk, ext=".npy"))
+            ! call smat%save_npy(gen_filename("smat", iter=iter, kpt=nk, ext=".npy"))
+            ! call zmat%save_npy(gen_filename("zmat", iter=iter, kpt=nk, ext=".npy"))
+            ! call save_npy(gen_filename("eig", iter=iter, kpt=nk, ext=".npy"), eig)
 
             CALL smat%free()
             CALL hmat%free()
