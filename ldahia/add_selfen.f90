@@ -10,15 +10,15 @@ MODULE m_add_selfen
       !
       ! (G)^-1 = (G_0)^-1 - mu 1 + V_dc - selfen + V_U
       !
-      !The term mu * unity is there to ensure that the number of particles 
+      !The term mu * unity is there to ensure that the number of particles
       !doesn't change and is determined by a two-step process
-      !The occupation as a function of mu has a peak in the region where 
+      !The occupation as a function of mu has a peak in the region where
       !something is inside the energy interval between e_bot adn e_fermi
-      !To determine where we have the same number of particles we first 
+      !To determine where we have the same number of particles we first
       !search for the maximum occupation
-      !Then the desired chemical potential is found with the bisection method 
+      !Then the desired chemical potential is found with the bisection method
       !to the right of the maximum
-      
+
       USE m_types
       USE m_constants
       USE m_gfcalc
@@ -128,7 +128,7 @@ MODULE m_add_selfen
 
             !Set up the interval for the bisection method (mu_max,mu_b)
             mu_a = mu_max
-            DO 
+            DO
                mu = (mu_a + mu_b)/2.0
                DO iz = 1, g%nz
                   DO ipm = 1, 2
@@ -206,7 +206,7 @@ MODULE m_add_selfen
          gmat%data_c(i,i) = gmat%data_c(i,i) - mu
       ENDDO
       CALL gmat%inverse()
-    
+
    END SUBROUTINE add_pot
 
 END MODULE m_add_selfen

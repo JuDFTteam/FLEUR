@@ -1,5 +1,5 @@
 MODULE m_hubbard1_io
-   
+
    !------------------------------------------------------------------------------
    !
    ! MODULE: m_hubbard1_io
@@ -7,8 +7,8 @@ MODULE m_hubbard1_io
    !> @author
    !> Henning Janßen
    !
-   ! DESCRIPTION: 
-   !>  This module provides an interface with the Hubbard 1 Solver written by 
+   ! DESCRIPTION:
+   !>  This module provides an interface with the Hubbard 1 Solver written by
    !>  J. Kolorenč
    !
    ! REVISION HISTORY:
@@ -84,7 +84,7 @@ MODULE m_hubbard1_io
       INTEGER,          INTENT(IN)  :: n
       LOGICAL,          INTENT(IN)  :: l_bath
       LOGICAL,          INTENT(IN)  :: l_first
-      
+
       INTEGER :: info, io_error,i,j,k,ind1,ind2,i_exc,i_arg
       REAL exc
       TYPE(t_mat) :: cfmat
@@ -107,8 +107,8 @@ MODULE m_hubbard1_io
          CALL writeValue(input_iounit,"Np_min",5)
          CALL writeValue(input_iounit,"Np_max",18)
       ELSE
-         CALL writeValue(input_iounit,"Np_min",MAX(0,n-hub1%n_exc))
-         CALL writeValue(input_iounit,"Np_max",MIN(2*(2*l+1),n+hub1%n_exc))
+         CALL writeValue(input_iounit,"Np_min",0)!MAX(0,n-hub1%n_exc))
+         CALL writeValue(input_iounit,"Np_max",14)!MIN(2*(2*l+1),n+hub1%n_exc))
       ENDIF
       CALL comment(input_iounit,"Parameters for the case with bath states (only used when bath is present)",1)
       CALL writeValue(input_iounit,"Nbath_exc",2)
@@ -203,7 +203,7 @@ MODULE m_hubbard1_io
       IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_hubbard1_input_new")
 
    END SUBROUTINE write_hubbard1_input_new
-   
+
 
    SUBROUTINE write_hubbard1_input_old(path,i_hia,l,f0,f2,f4,f6,hub1,mu,n)
 
@@ -218,7 +218,7 @@ MODULE m_hubbard1_io
       TYPE(t_hub1ham),  INTENT(IN)  :: hub1
       REAL,             INTENT(IN)  :: mu
       INTEGER,          INTENT(IN)  :: n
-      
+
       INTEGER :: info, io_error,i_exc
       REAL exc
 
@@ -381,7 +381,7 @@ MODULE m_hubbard1_io
    END SUBROUTINE read_ccfmat
 
    SUBROUTINE read_selfen(path,selfen,ne,matsize,l_matsub)
-      
+
       USE m_constants
       !This Subroutine reads in the self-energy
       !produced by the hubbard 1 solver
@@ -390,8 +390,8 @@ MODULE m_hubbard1_io
       CHARACTER(len=*), INTENT(IN)  :: path
       INTEGER,          INTENT(IN)  :: ne
       INTEGER,          INTENT(IN)  :: matsize
-      LOGICAL,          INTENT(IN)  :: l_matsub  
-      
+      LOGICAL,          INTENT(IN)  :: l_matsub
+
       INTEGER io_error,io_unit
       INTEGER n,m,i
       REAL tmp(matsize,matsize)
@@ -403,7 +403,7 @@ MODULE m_hubbard1_io
          IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
          READ(io_unit,*)
          DO i = 1, ne
-            READ(io_unit,*) 
+            READ(io_unit,*)
             DO m = 1, matsize
                READ(io_unit,*) selfen(1:matsize,m,i)
             ENDDO
@@ -412,13 +412,13 @@ MODULE m_hubbard1_io
          OPEN(unit=io_unit, file=TRIM(ADJUSTL(path)) // "se.atom", status="old", action="read", iostat=io_error)
 
          IF(io_error.NE.0) CALL juDFT_error("IO-Error in reading the self-energy", calledby="read_selfen")
-         
+
          DO i = 1, ne
-            READ(io_unit,9010) 
+            READ(io_unit,9010)
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(1:matsize,1:matsize,i) = tmp(1:matsize,1:matsize)/hartree_to_ev_const 
+            selfen(1:matsize,1:matsize,i) = tmp(1:matsize,1:matsize)/hartree_to_ev_const
             READ(io_unit,9020) ((tmp(m,n), m= 1, matsize), n= 1, matsize)
-            selfen(1:matsize,1:matsize,i) = selfen(1:matsize,1:matsize,i) + ImagUnit * tmp(1:matsize,1:matsize)/hartree_to_ev_const 
+            selfen(1:matsize,1:matsize,i) = selfen(1:matsize,1:matsize,i) + ImagUnit * tmp(1:matsize,1:matsize)/hartree_to_ev_const
          ENDDO
       ENDIF
 

@@ -7,8 +7,8 @@ MODULE m_types_greensfCoeffs
    !> @author
    !> Henning Janßen
    !
-   ! DESCRIPTION: 
-   !>  Contains a type, which stores coefficients for the Green's function calculated 
+   ! DESCRIPTION:
+   !>  Contains a type, which stores coefficients for the Green's function calculated
    !>  in the k-point loop in cdnval
    !>  Contains Arrays for the following cases:
    !>       -onsite
@@ -37,7 +37,7 @@ MODULE m_types_greensfCoeffs
 
          INTEGER, ALLOCATABLE :: kkintgr_cutoff(:,:,:)
 
-         !Array declarations 
+         !Array declarations
          !If we look at the Green's function that only depends on Energy and not on spatial arguments
          !the imaginary part is equal to the proected density of states
          REAL, ALLOCATABLE :: projdos(:,:,:,:,:)
@@ -71,7 +71,7 @@ MODULE m_types_greensfCoeffs
 
          INTEGER i,j,l_dim,spin_dim
 
-         !IF(thisGREENSFCOEFFS%l_calc) THEN 
+         !IF(thisGREENSFCOEFFS%l_calc) THEN
          !
          !Set up general parameters for the Green's function (intersite and onsite)
          !
@@ -102,11 +102,11 @@ MODULE m_types_greensfCoeffs
                ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
                ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
                ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
-               
+
                thisGREENSFCOEFFS%uu      = 0.0
                thisGREENSFCOEFFS%dd      = 0.0
-               thisGREENSFCOEFFS%du      = 0.0  
-               thisGREENSFCOEFFS%ud      = 0.0  
+               thisGREENSFCOEFFS%du      = 0.0
+               thisGREENSFCOEFFS%ud      = 0.0
             ENDIF
          END IF
 

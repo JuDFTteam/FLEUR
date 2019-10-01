@@ -7,9 +7,9 @@ MODULE m_dosWeights
    !> @author
    !> Henning Janßen
    !
-   ! DESCRIPTION: 
-   !>  calculates the weights for one k-point in the tetrahedron method 
-   !>  the weights are calculated according to PhysRevB.49.16223 
+   ! DESCRIPTION:
+   !>  calculates the weights for one k-point in the tetrahedron method
+   !>  the weights are calculated according to PhysRevB.49.16223
    !>  When used to calculate a DOS we need to differentiate with respect to energy
    !
    !------------------------------------------------------------------------------
@@ -20,8 +20,8 @@ MODULE m_dosWeights
 
       IMPLICIT NONE
 
-      INTEGER,          INTENT(IN)     :: n 
-      REAL,             INTENT(INOUT)  :: e(n) 
+      INTEGER,          INTENT(IN)     :: n
+      REAL,             INTENT(INOUT)  :: e(n)
       INTEGER,          INTENT(INOUT)  :: ind(n)
 
       INTEGER i,j
@@ -29,11 +29,11 @@ MODULE m_dosWeights
 
 
       DO i = 1, n
-         ind(i) = i 
+         ind(i) = i
       ENDDO
 
       !Sort the energies in the tetrahedron in ascending order
-      DO i = 1, n-1 
+      DO i = 1, n-1
          DO j = i+1, n
             IF (e(ind(i)).GT.e(ind(j))) THEN
                tmp = ind(i)
@@ -42,7 +42,7 @@ MODULE m_dosWeights
             ENDIF
          ENDDO
       ENDDO
-      !check for energy degeneracies 
+      !check for energy degeneracies
       DO i = 1, n-1
          DO j = i+1, n
             IF(abs(e(ind(i))-e(ind(j))).LT.1.0E-9) THEN
@@ -108,7 +108,7 @@ MODULE m_dosWeights
          ELSE
             k(1:4) = kpts%ntetra(1:4,itet)
          ENDIF
-         
+
          !$OMP PARALLEL DEFAULT(none) &
          !$OMP SHARED(ikpt,itet,ef,l_bloechl,neig,k,fac) &
          !$OMP SHARED(kpts,eig,g,weights) &
@@ -117,12 +117,12 @@ MODULE m_dosWeights
 
          !$OMP DO
          DO ib = 1, neig
-           
+
             !check if the band is inside the energy window
             IF((MINVAL(eig(ib,k(1:4))).GT.g%e_top).OR.(MAXVAL(eig(ib,k(1:4))).LT.g%e_bot)) CYCLE !Maybe cancel the band loop completely if we go above top
 
 
-            e(1:4) = eig(ib,k(1:4)) 
+            e(1:4) = eig(ib,k(1:4))
             ind=(/1,2,3,4/)
             CALL sortEig(4,e,ind)
             !Sort the energies in the tetrahedron in ascending order
@@ -140,12 +140,12 @@ MODULE m_dosWeights
                CALL contribSingletetra((ie-1)*g%del+g%e_bot,vol,e(ind(1:4)),weight,icorn)
                weights(ie,ib) = weights(ie,ib) + weight * fac
                IF(weight.EQ.1/4.0*vol) THEN
-                  !here we are above all eigenergies at the corners 
+                  !here we are above all eigenergies at the corners
                   !of the tetrahedron and we can simplify the rest of the loop
                   nend = ie
                   EXIT
                ENDIF
-            ENDDO 
+            ENDDO
             IF(nend.NE.g%ne) weights(nend+1:g%ne,ib) = weights(nend+1:g%ne,ib) + fac/4.0*vol
          ENDDO
          !$OMP END DO
@@ -157,7 +157,7 @@ MODULE m_dosWeights
       tol = 1E-14
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(weights,g,e_ind,eig,ikpt,tol,neig) &
-      !$OMP PRIVATE(ib,i,dos_weights) 
+      !$OMP PRIVATE(ib,i,dos_weights)
 
       !$OMP DO
       DO ib = 1, neig
@@ -186,7 +186,7 @@ MODULE m_dosWeights
             ENDIF
          ENDDO
          !--------------------
-         ! Upper bound 
+         ! Upper bound
          !--------------------
          i = g%ne
          DO
@@ -206,7 +206,7 @@ MODULE m_dosWeights
             CALL juDFT_error("Negative tetra weight",calledby="dosWeightsCalc")
          ENDIF
          !---------------------------------------------------------------------------------------
-         ! All weights are smaller than the tolerance -> set the indices to equal to discard this  
+         ! All weights are smaller than the tolerance -> set the indices to equal to discard this
          !---------------------------------------------------------------------------------------
          IF(e_ind(ib,1).GT.e_ind(ib,2)) THEN
             e_ind(ib,1) = 1
@@ -281,14 +281,14 @@ MODULE m_dosWeights
 
             DO ie = MAX(1,nstart), g%ne
                CALL contribSingleTria((ie-1)*g%del+g%e_bot,vol,e(ind(1:3)),weight,icorn)
-               weights(ie,ib) = weights(ie,ib) + weight 
+               weights(ie,ib) = weights(ie,ib) + weight
                IF(weight.EQ.1.0/3.0*vol) THEN
-                  !here we are above all eigenergies at the corners 
+                  !here we are above all eigenergies at the corners
                   !of the tetrahedron and we can simplify the rest of the loop
                   nend = ie
                   EXIT
                ENDIF
-            ENDDO 
+            ENDDO
             IF(nend.NE.g%ne) weights(nend+1:g%ne,ib) = weights(nend+1:g%ne,ib) + 1.0/3.0*vol
          ENDDO
          !$OMP END DO
@@ -298,7 +298,7 @@ MODULE m_dosWeights
       tol = 1E-14
       !$OMP PARALLEL DEFAULT(none) &
       !$OMP SHARED(weights,g,e_ind,eig,ikpt,tol,neig) &
-      !$OMP PRIVATE(ib,i,dos_weights) 
+      !$OMP PRIVATE(ib,i,dos_weights)
 
       !$OMP DO
       DO ib = 1, neig
@@ -327,7 +327,7 @@ MODULE m_dosWeights
             ENDIF
          ENDDO
          !--------------------
-         ! Upper bound 
+         ! Upper bound
          !--------------------
          i = g%ne
          DO
@@ -347,7 +347,7 @@ MODULE m_dosWeights
             CALL juDFT_error("Negative tria weight",calledby="dosWeightsCalcTria")
          ENDIF
          !---------------------------------------------------------------------------------------
-         ! All weights are smaller than the tolerance -> set the indices to equal to discard this  
+         ! All weights are smaller than the tolerance -> set the indices to equal to discard this
          !---------------------------------------------------------------------------------------
          IF(e_ind(ib,1).GT.e_ind(ib,2)) THEN
             e_ind(ib,1) = 1
@@ -410,8 +410,8 @@ MODULE m_dosWeights
    SUBROUTINE contribSingletetra(energy,vol,e,weight,ind)
 
       USE m_juDFT
-      !Integration weights taken from 
-      !PhysRevB.49.16223 
+      !Integration weights taken from
+      !PhysRevB.49.16223
 
       IMPLICIT NONE
 
@@ -439,13 +439,13 @@ MODULE m_dosWeights
 
          IF(ind.EQ.1) THEN
             weight = C * (4 - (energy-e(1)) * (1/(e(2)-e(1)) + 1/(e(3)-e(1)) + 1/(e(4)-e(1))))
-         ELSE 
-            weight = C * (energy-e(1))/(e(ind)-e(1)) 
+         ELSE
+            weight = C * (energy-e(1))/(e(ind)-e(1))
          ENDIF
       ELSE IF((e(2).LE.energy).AND.(energy.LE.e(3))) THEN
 
          C1     = 1./4. * vol * (energy-e(1))**2/((e(3)-e(1))*(e(4)-e(1)))
-      
+
          C2     = 1./4. * vol * (energy-e(1))*(energy-e(2))*(e(3)-energy)/((e(3)-e(1))*(e(3)-e(2))*(e(4)-e(1)))
 
 
@@ -453,13 +453,13 @@ MODULE m_dosWeights
 
          IF(ind.EQ.1) THEN
             weight = C1 + (C1 + C2) * (e(3)-energy)/(e(3)-e(1))+&
-                        (C1 + C2 + C3) * (e(4)-energy)/(e(4)-e(1)) 
+                        (C1 + C2 + C3) * (e(4)-energy)/(e(4)-e(1))
          ELSE IF(ind.EQ.2) THEN
             weight = C1 + C2 + C3 + (C2 + C3) * (e(3)-energy)/(e(3)-e(2)) &
                         + C3 * (e(4)-energy)/(e(4)-e(2))
          ELSE IF(ind.EQ.3) THEN
             weight = (C1 + C2) * (energy-e(1))/(e(3)-e(1)) +&
-                        (C2 + C3) * (energy-e(2))/(e(3)-e(2)) 
+                        (C2 + C3) * (energy-e(2))/(e(3)-e(2))
          ELSE IF(ind.EQ.4) THEN
             weight = (C1 + C2 + C3) * (energy-e(1))/(e(4)-e(1)) +&
                         C3 * (energy-e(2))/(e(4)-e(2))
@@ -529,7 +529,7 @@ MODULE m_dosWeights
    ! Not used at the moment
       SUBROUTINE getTetraContrib(energy,vol,ev,w,g)
 
-      !Integration weights taken from 
+      !Integration weights taken from
       !PhysRevB.49.16223
 
       USE m_types
@@ -544,7 +544,7 @@ MODULE m_dosWeights
 
       INTEGER i , j, n
       REAL emin, emax, e
-      REAL weight 
+      REAL weight
       REAL a,b,c
       INTEGER ind(3)
       REAL deln
@@ -563,7 +563,7 @@ MODULE m_dosWeights
          nstart = INT((emin-g%e_bot)/g%del)+1
          nend = INT((emax-g%e_bot)/g%del)+1
 
-         !distance between e(nstart+1) and emin 
+         !distance between e(nstart+1) and emin
          aw = g%del - (emin - ((nstart-1)*g%del+g%e_bot))
          !distance between e(nend) and emax
          bw = emax - ((nend-1)*g%del+g%e_bot)
@@ -583,7 +583,7 @@ MODULE m_dosWeights
                a = emax**2 * weight
                b = (-1.0) * emax * weight
                c = 1./3. * weight
-            ELSE 
+            ELSE
                a = emin**2 * weight
                b = (-1.0) * emin * weight
                c = 1./3. * weight
@@ -600,7 +600,7 @@ MODULE m_dosWeights
             IF((nstart.LE.g%ne).AND.(nstart.GE.1)) w(nstart) = w(nstart) + deln
             e = emin + aw
             !loop over grid points between emin and emax
-            DO n = nstart + 1, nend-1 
+            DO n = nstart + 1, nend-1
                deln = (a + b*(2*e+g%del) + c*((2*e+g%del)**2-e*(e+g%del)))
                IF((n.LE.g%ne).AND.(n.GE.1)) w(n) = w(n) + deln
                e = e + g%del

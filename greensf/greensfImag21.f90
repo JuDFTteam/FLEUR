@@ -28,19 +28,19 @@ MODULE m_greensfImag21
       IMPLICIT NONE
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
-      TYPE(t_sym),               INTENT(IN)     :: sym 
+      TYPE(t_sym),               INTENT(IN)     :: sym
       REAL,                      INTENT(IN)     :: angle(sym%nop)
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
       TYPE(t_greensfCoeffs),     INTENT(INOUT)  :: greensfCoeffs
 
-      INTEGER,                   INTENT(IN)     :: nbands   
+      INTEGER,                   INTENT(IN)     :: nbands
       REAL,                      INTENT(IN)     :: wtkpt
       REAL,                      INTENT(IN)     :: dosWeights(greensfCoeffs%ne,nbands)
       REAL,                      INTENT(IN)     :: resWeights(greensfCoeffs%ne,nbands)
       INTEGER,                   INTENT(IN)     :: ind(nbands,2)
-      REAL,                      INTENT(IN)     :: eig(nbands) 
+      REAL,                      INTENT(IN)     :: eig(nbands)
 
       INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,imat,it,is,isi,ilo,ilop,nn
       REAL     fac

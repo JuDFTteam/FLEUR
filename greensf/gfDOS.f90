@@ -11,7 +11,7 @@ MODULE m_gfDOS
 
    SUBROUTINE gfDOS(g,l,nType,jobID,atoms,input,ef)
 
-      !Provides the spin up/down DOS as well as the high/low J DOS 
+      !Provides the spin up/down DOS as well as the high/low J DOS
       !calculated from the greens function in gfDOS.jobID
 
       TYPE(t_greensf),     INTENT(IN)  :: g
@@ -68,7 +68,7 @@ MODULE m_gfDOS
                dos(3,i) = dos(3,i) - 1.0/tpi_const * (-1)**(ipm-1) * jmat%data_c(i,i)
             ENDDO
             DO i = ns, 2*ns
-               dos(4,i-ns+1) = dos(4,i-ns+1) - 1.0/tpi_const * (-1)**(ipm-1) * jmat%data_c(i,i) 
+               dos(4,i-ns+1) = dos(4,i-ns+1) - 1.0/tpi_const * (-1)**(ipm-1) * jmat%data_c(i,i)
             ENDDO
             !Real part
             DO i = 1, ns
@@ -78,11 +78,11 @@ MODULE m_gfDOS
                re(2) = re(2) - 1.0/tpi_const* gmat%data_c(i,i)
             ENDDO
             CALL gmat%free()
-         ENDDO 
+         ENDDO
          WRITE(3456,"(7f14.8)") (REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)))*hartree_to_eV_const, &
                                 SUM(AIMAG(dos(1,1:ns))),SUM(AIMAG(dos(2,1:ns))),&
                                 SUM(AIMAG(dos(3,1:ns-1))),SUM(AIMAG(dos(4,1:ns+1))), REAL(re(1)), REAL(re(2))
-         WRITE(3457,"(15f10.5)") (REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)))*hartree_to_eV_const, (AIMAG(dos(1,i)),i=1, ns),(AIMAG(dos(2,i)),i=1, ns) 
+         WRITE(3457,"(15f10.5)") (REAL(g%e(iz))-MERGE(ef,0.0,PRESENT(ef)))*hartree_to_eV_const, (AIMAG(dos(1,i)),i=1, ns),(AIMAG(dos(2,i)),i=1, ns)
 
 
       ENDDO

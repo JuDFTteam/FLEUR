@@ -10,7 +10,7 @@ CONTAINS
 SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
 
    !This Subroutine calculates the contribution to the imaginary part of the Matrix elements G^[n \sigma]_{Lm Lm'}(E+i*sigma)
-   !of the current k-Point (it is called in cdnval) inside the MT-sphere 
+   !of the current k-Point (it is called in cdnval) inside the MT-sphere
    !and sums over the Brillouin-Zone using the histogram method or linear tetrahedron method
    !It is essentially the l-density of states in a (m,mp) matrix with an additional factor - pi
 
@@ -22,9 +22,9 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
    TYPE(t_eigVecCoeffs),  INTENT(IN)    :: eigVecCoeffs
    TYPE(t_usdus),         INTENT(IN)    :: usdus
    TYPE(t_greensfCoeffs), INTENT(INOUT) :: greensfCoeffs
-   TYPE(t_input),         INTENT(IN)    :: input 
+   TYPE(t_input),         INTENT(IN)    :: input
 
-   !-Scalar Arguments 
+   !-Scalar Arguments
    INTEGER,               INTENT(IN)    :: ispin  !Current spin index
    INTEGER,               INTENT(IN)    :: nbands !Number of bands to be considered
    REAL,                  INTENT(IN)    :: wtkpt  !Weight of the current k-point (not used in tetrahedron method)
@@ -80,7 +80,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) )         l_zero = .false.
             END IF
 
-            IF(l_zero) CYCLE 
+            IF(l_zero) CYCLE
 
             DO m = -l, l
                lm = l*(l+1)+m
@@ -123,7 +123,6 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                               IF (atoms%llo(ilop,nType).EQ.l) THEN
                                  im(ie,m,mp,1) = im(ie,m,mp,1) + weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
                                                 conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
-                              
                               ENDIF
                            ENDDO
                         ENDIF
@@ -139,7 +138,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
          fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
          IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations available",calledby="greensfImag")
          DO imat = 1, MERGE(1,5,input%l_gfsphavg)
-            DO ie = 1, greensfCoeffs%ne 
+            DO ie = 1, greensfCoeffs%ne
                DO it = 1, sym%invarind(natom)
                   is = sym%invarop(natom,it)
                   isi = sym%invtab(is)

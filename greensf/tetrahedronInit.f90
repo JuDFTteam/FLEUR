@@ -8,7 +8,7 @@ MODULE m_tetrahedronInit
       !the tetrahedron method for the greens function calculations
       !
       !If we are in a non-magnetic or collinear case we can decompose the greens function
-      !into real and imaginary part and obtain the real part from the imaginary part 
+      !into real and imaginary part and obtain the real part from the imaginary part
       !via Kramers-Kronig transformation. Then we only need the weights for a dos calculations
       !
       !Otherwise we need the weights for the resolvent function
@@ -21,7 +21,7 @@ MODULE m_tetrahedronInit
       IMPLICIT NONE
 
       INTEGER,                INTENT(IN)  :: ikpt !Current k-point
-      TYPE(t_kpts),           INTENT(IN)  :: kpts 
+      TYPE(t_kpts),           INTENT(IN)  :: kpts
       TYPE(t_input),          INTENT(IN)  :: input
       INTEGER,                INTENT(IN)  :: neig
       REAL,                   INTENT(IN)  :: eig(neig,kpts%nkpt)

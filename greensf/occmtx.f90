@@ -23,7 +23,7 @@ CONTAINS
       !
       ! If l_write is given the density matrix together with the spin up/down trace is written to the out files
       ! Additionally the transformation to the |J,mj> subspace is performed via the clebsch gordan coefficients
-      ! And the occupations of the respective j states are given 
+      ! And the occupations of the respective j states are given
 
       TYPE(t_greensf),        INTENT(IN)  :: g
       TYPE(t_atoms),          INTENT(IN)  :: atoms
@@ -53,9 +53,9 @@ CONTAINS
       mmpMat = 0.0
 
       IF(.NOT.PRESENT(lp)) THEN
-         lp_loop = l 
-      ELSE 
-         lp_loop = lp 
+         lp_loop = l
+      ELSE
+         lp_loop = lp
       ENDIF
 
       DO ispin = 1, MERGE(3,input%jspins,input%l_gfmperp)
@@ -67,9 +67,9 @@ CONTAINS
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
-                  ind2 = 0 
+                  ind2 = 0
                   DO mp = -lp_loop,lp_loop
-                     ind2 = ind2 + 1 
+                     ind2 = ind2 + 1
                      mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + ImagUnit/tpi_const * (-1)**(ipm-1) * gmat%data_c(ind1,ind2) &
                                                              * MERGE(g%de(iz),conjg(g%de(iz)),ipm.EQ.1)
                   ENDDO
@@ -81,11 +81,11 @@ CONTAINS
                !left tail
                CALL g%get_gf(gmat,atoms,input,1,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
                ind1 = 0
-               DO m = -l, l 
+               DO m = -l, l
                   ind1 = ind1 + 1
-                  ind2 = 0 
+                  ind2 = 0
                   DO mp = -lp_loop,lp_loop
-                     ind2 = ind2 + 1 
+                     ind2 = ind2 + 1
                      mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) - 1/tpi_const * gmat%data_c(ind1,ind2) &
                                                              * MERGE(g%de(1),conjg(g%de(1)),ipm.EQ.1)
                   ENDDO
@@ -94,11 +94,11 @@ CONTAINS
                !right tail
                CALL g%get_gf(gmat,atoms,input,g%nz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
                ind1 = 0
-               DO m = -l, l 
+               DO m = -l, l
                   ind1 = ind1 + 1
-                  ind2 = 0 
+                  ind2 = 0
                   DO mp = -lp_loop,lp_loop
-                     ind2 = ind2 + 1 
+                     ind2 = ind2 + 1
                      mmpMat(m,mp,ispin) = mmpMat(m,mp,ispin) + 1/tpi_const * gmat%data_c(ind1,ind2) &
                                                              * MERGE(g%de(g%nz),conjg(g%de(g%nz)),ipm.EQ.1)
                   ENDDO
@@ -111,7 +111,7 @@ CONTAINS
       !Sanity check are the occupations reasonable?
       IF(PRESENT(check)) THEN
          IF(check) THEN
-            DO ispin = 1, input%jspins 
+            DO ispin = 1, input%jspins
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3-input%jspins)
@@ -122,7 +122,7 @@ CONTAINS
                IF(tr.LT.0.OR.tr.GT.2*l+1.1) THEN
                   WRITE(message,9100) ispin,tr
 9100              FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
-                  CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx") 
+                  CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
                ENDIF
             ENDDO
          ENDIF
@@ -135,7 +135,7 @@ CONTAINS
             ns = 2*l+1
             CALL gmat%init(.TRUE.,2*ns,2*ns)
             CALL jmat%init(.TRUE.,2*ns,2*ns)
-            DO m = -l, l 
+            DO m = -l, l
                DO mp = -l, l
                   gmat%data_r(m+l+1,mp+l+1) = REAL(mmpmat(m,mp,1))/(3-input%jspins)
                   IF(input%jspins.EQ.1) THEN
@@ -185,7 +185,7 @@ CONTAINS
             DO i = ns, 2*ns
                nhi = nhi + jmat%data_r(i,i)
             ENDDO
-            
+
             !Write to file
             WRITE(6,"(A)") "In the |J,mj> basis:"
             DO i = 1, 2*ns

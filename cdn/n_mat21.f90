@@ -20,7 +20,7 @@
     REAL,       INTENT(IN)          :: angle(sym%nop)
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ne 
+    INTEGER, INTENT (IN) :: ne
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: we(:)!(dimension%neigd)
@@ -39,7 +39,7 @@
 !     ..
 ! calculate n_mat:
 !
-      
+
       natom = 0
       i_u = 1
       DO n = 1,atoms%ntype
@@ -48,11 +48,11 @@
           natomTemp = natom
           n_tmp(:,:) = cmplx(0.0,0.0)
           l = atoms%lda_u(i_u)%l
-          ll1 = (l+1)*l 
+          ll1 = (l+1)*l
           DO nn = 1, atoms%neq(n)
             natomTemp = natomTemp + 1
             !
-            !  prepare n_mat in local frame (in noco-calculations this depends 
+            !  prepare n_mat in local frame (in noco-calculations this depends
             !                                also on alpha(n) and beta(n) )
             !
             DO m = -l,l
@@ -67,7 +67,7 @@
                       + conjg(eigVecCoeffs%bcof(i,lmp,natomTemp,2))*eigVecCoeffs%acof(i,lm,natomTemp,1) * denCoeffsOffdiag%du21n(l,n) &
                       + conjg(eigVecCoeffs%bcof(i,lmp,natomTemp,2))*eigVecCoeffs%bcof(i,lm,natomTemp,1) * denCoeffsOffdiag%dd21n(l,n))
                 ENDDO
-                n_tmp(m,mp) = c_0 
+                n_tmp(m,mp) = c_0
               ENDDO
             ENDDO
 !
@@ -82,7 +82,7 @@
                      lmp = ll1+mp
                      c_0 = cmplx(0.0,0.0)
                      DO i = 1,ne
-                       c_0 = c_0 +  we(i) * (  & 
+                       c_0 = c_0 +  we(i) * (  &
                             conjg(eigVecCoeffs%acof(i,lmp,natomTemp,2))*eigVecCoeffs%ccof(m,i,ilo,natomTemp,1) * denCoeffsOffdiag%uulo21n(l,n) + &
                             conjg(eigVecCoeffs%ccof(mp,i,ilo,natomTemp,2))*eigVecCoeffs%acof(i,lm,natomTemp,1) * denCoeffsOffdiag%ulou21n(l,n) + &
                             conjg(eigVecCoeffs%bcof(i,lmp,natomTemp,2))*eigVecCoeffs%ccof(m,i,ilo,natomTemp,1) * denCoeffsOffdiag%dulo21n(l,n) + &
@@ -92,7 +92,7 @@
                        IF (atoms%llo(ilop,n).EQ.l) THEN
                          DO i = 1,ne
                            c_0 = c_0 +  we(i) * denCoeffsOffdiag%uloulop21n(ilo,ilop,n) *conjg(eigVecCoeffs%ccof(mp,i,ilop,natomTemp,2)) *eigVecCoeffs%ccof(m ,i,ilo ,natomTemp,1)
-                         ENDDO 
+                         ENDDO
                        ENDIF
                      ENDDO
                      n_tmp(m,mp) = n_tmp(m,mp) + c_0
@@ -101,9 +101,9 @@
 
               ENDIF
             ENDDO
-! 
+!
 !  n_mmp should be rotated by D_mm' ; compare force_a21
-!           
+!
 
             DO it = 1, sym%invarind(natomTemp)
 
@@ -127,12 +127,12 @@
 
             ENDDO
 
-          ENDDO ! sum  over equivalent 
+          ENDDO ! sum  over equivalent
          i_u = i_u +1
         ENDDO
         natom = natom + atoms%neq(n)
       ENDDO     ! loop over atom types
-    
+
 !      do m=-l,l
 !       write(*,'(14f12.6)') (n_mmp21(m,mp,1),mp=-l,l)
 !      enddo

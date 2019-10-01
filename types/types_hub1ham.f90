@@ -13,22 +13,22 @@ MODULE m_types_hub1ham
       LOGICAL                    :: l_runthisiter   !switch which determines wether Hubbard 1 will be run in the current iteration
       REAL, ALLOCATABLE          :: init_occ(:)     !initial occupation
       REAL                       :: beta            !inverse Temperature
-      INTEGER                    :: n_exc = 2       !number of excitations considered 
- 
-      
+      INTEGER                    :: n_exc = 2       !number of excitations considered
+
+
       !Switches for args that were explicitly given and should not be calculated from DFT
-      LOGICAL,ALLOCATABLE :: l_soc_given(:) 
-      LOGICAL,ALLOCATABLE :: l_ccf_given(:) 
+      LOGICAL,ALLOCATABLE :: l_soc_given(:)
+      LOGICAL,ALLOCATABLE :: l_ccf_given(:)
 
       !Additional arguments to be passed on to hloc.cfg (at the moment only real)
-      INTEGER,             ALLOCATABLE :: n_addArgs(:) 
+      INTEGER,             ALLOCATABLE :: n_addArgs(:)
       CHARACTER(len=50),   ALLOCATABLE :: arg_keys(:,:)
       REAL,                ALLOCATABLE :: arg_vals(:,:)
 
       !Exchange splitting
       INTEGER, ALLOCATABLE       :: n_exc_given(:)
       REAL,    ALLOCATABLE       :: exc(:,:)        !exchange splitting
-      INTEGER, ALLOCATABLE       :: exc_l(:,:)      !l quantum number from which the intraorbital exchange 
+      INTEGER, ALLOCATABLE       :: exc_l(:,:)      !l quantum number from which the intraorbital exchange
       REAL,    ALLOCATABLE       :: mag_mom(:,:)    !magnetic moment (for exchange splitting)
       REAL, ALLOCATABLE          :: init_mom(:,:)     !initial magnetic moment
 
@@ -37,7 +37,7 @@ MODULE m_types_hub1ham
       REAL, ALLOCATABLE          :: ccf(:)          !crystal field factor
       REAL, ALLOCATABLE          :: ccfmat(:,:,:)   !crystal field splitting matrix
 
-      CONTAINS 
+      CONTAINS
 
       PROCEDURE, PASS :: init => hub1_init
 
@@ -45,7 +45,7 @@ MODULE m_types_hub1ham
 
    PUBLIC t_hub1ham
 
-   CONTAINS 
+   CONTAINS
 
    SUBROUTINE hub1_init(this,n_maxhub,n_maxargs)
 

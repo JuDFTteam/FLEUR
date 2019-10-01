@@ -11,7 +11,7 @@ MODULE m_calc_tria
 
       IMPLICIT NONE
 
-      TYPE(t_kpts),  INTENT(INOUT) :: kpts 
+      TYPE(t_kpts),  INTENT(INOUT) :: kpts
       TYPE(t_input), INTENT(INOUT) :: input
       TYPE(t_sym),   INTENT(IN)    :: sym
       TYPE(t_cell),  INTENT(IN)    :: cell

@@ -7,15 +7,15 @@ MODULE m_generic_txtio
    !> @author
    !> Henning Janßen
    !
-   ! DESCRIPTION: 
+   ! DESCRIPTION:
    !>  Contains relatively general subroutines for writing txt files with keywords
-   !>  written for hubbard 1 solver 
+   !>  written for hubbard 1 solver
    !
    !------------------------------------------------------------------------------
    USE m_juDFT
 
    IMPLICIT NONE
-   
+
    PUBLIC :: writeValue,comment,header,startSection,endSection
 
    PRIVATE
@@ -24,15 +24,15 @@ MODULE m_generic_txtio
       PROCEDURE writeInt, writeReal, writeRealArray, writeKeyword, writeCharacter, write_tmat
    END INTERFACE
 
-   INTERFACE comment 
+   INTERFACE comment
       PROCEDURE add_comment
    END INTERFACE
 
-   INTERFACE header 
+   INTERFACE header
       PROCEDURE add_header
    END INTERFACE
-   
-   
+
+
    !Format specifiers:
    INTEGER, PARAMETER            :: indent_before_key = 3
    INTEGER, PARAMETER            :: pos_numbers       = 18
@@ -43,7 +43,7 @@ MODULE m_generic_txtio
 CONTAINS
    SUBROUTINE add_comment(iounit,comment_str,indent)
 
-      INTEGER,           INTENT(IN)  :: iounit 
+      INTEGER,           INTENT(IN)  :: iounit
       CHARACTER(len=*),  INTENT(IN)  :: comment_str
       INTEGER, OPTIONAL, INTENT(IN)  :: indent
 
@@ -59,7 +59,7 @@ CONTAINS
 
    SUBROUTINE add_header(iounit,header_str,indent)
 
-      INTEGER,           INTENT(IN)  :: iounit 
+      INTEGER,           INTENT(IN)  :: iounit
       CHARACTER(len=*),  INTENT(IN)  :: header_str
       INTEGER, OPTIONAL, INTENT(IN)  :: indent
 
@@ -78,7 +78,7 @@ CONTAINS
       IMPLICIT NONE
 
       INTEGER,             INTENT(IN)  :: iounit
-      CHARACTER(len=*),    INTENT(IN)  :: key 
+      CHARACTER(len=*),    INTENT(IN)  :: key
       REAL,                INTENT(IN)  :: value
 
       INTEGER indent_after_key
@@ -100,7 +100,7 @@ CONTAINS
       IMPLICIT NONE
 
       INTEGER,             INTENT(IN)  :: iounit
-      CHARACTER(len=*),    INTENT(IN)  :: key 
+      CHARACTER(len=*),    INTENT(IN)  :: key
       REAL,                INTENT(IN)  :: value(:)
 
       INTEGER indent_after_key
@@ -121,7 +121,7 @@ CONTAINS
       IMPLICIT NONE
 
       INTEGER,             INTENT(IN)  :: iounit
-      CHARACTER(len=*),    INTENT(IN)  :: key 
+      CHARACTER(len=*),    INTENT(IN)  :: key
       INTEGEr,             INTENT(IN)  :: value
 
       INTEGER indent_after_key
@@ -168,7 +168,7 @@ CONTAINS
 
       WRITE(fmt,'("(TR",I2.2,",A",I2.2,",TR",I2.2,",A",I2.2,")")') &
             indent_before_key,LEN(value),indent_after_key,LEN(value)
-         
+
       WRITE(iounit,fmt) TRIM(ADJUSTL(key)),TRIM(ADJUSTL(value))
    END SUBROUTINE writeCharacter
 
@@ -192,18 +192,18 @@ CONTAINS
 
 
    END SUBROUTINE write_tmat
-      
+
    SUBROUTINE startSection(iounit,sectionname)
 
       IMPLICIT NONE
 
-      INTEGER,             INTENT(IN)  :: iounit 
+      INTEGER,             INTENT(IN)  :: iounit
       CHARACTER(len=*),    INTENT(IN)  :: sectionname
 
       CHARACTER(len=300) fmt
 
       WRITE(fmt,'("(A",I2.2,",TR1,A1)")') LEN(sectionname)
-      WRITE(iounit,fmt) sectionname , "{" 
+      WRITE(iounit,fmt) sectionname , "{"
 
    END SUBROUTINE startSection
 
@@ -211,9 +211,9 @@ CONTAINS
 
       IMPLICIT NONE
 
-      INTEGER,             INTENT(IN)  :: iounit 
+      INTEGER,             INTENT(IN)  :: iounit
 
-      WRITE(iounit,"(A1)") "}" 
+      WRITE(iounit,"(A1)") "}"
 
    END SUBROUTINE endSection
 

@@ -38,7 +38,7 @@ MODULE m_kk_cutoff
 
       fDOS = 0.0
 
-      !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS 
+      !Calculate the trace over m,mp of the Greens-function matrix to obtain the fDOS
       !n_f(e) = -1/pi * TR[Im(G_f(e))]
       DO ispin = 1, jspins
          DO m = -l , l
@@ -68,14 +68,14 @@ MODULE m_kk_cutoff
       cutoff(:,2) = ne
 
       DO ispin = 1, spins_cut
-         IF(spins_cut.EQ.1.AND.jspins.EQ.2) fDOS(:,1) = fDOS(:,1) + fDOS(:,2) 
-         integral =  trapz(fDOS(1:ne,ispin), del, ne)      
+         IF(spins_cut.EQ.1.AND.jspins.EQ.2) fDOS(:,1) = fDOS(:,1) + fDOS(:,2)
+         integral =  trapz(fDOS(1:ne,ispin),del,ne)
          IF(l_debug) WRITE(*,*) "Integral over DOS: ", integral
          IF(integral.LT.n_states) THEN
-            !If we are calculating the greens function for a d-band this is expected to happen 
+            !If we are calculating the greens function for a d-band this is expected to happen
             IF(l.EQ.2) THEN
                scale = (2*l+1)/integral
-               IF(l_debug) WRITE(*,9000) l,ispin,scale 
+               IF(l_debug) WRITE(*,9000) l,ispin,scale
                IF(scale.GT.1.25) CALL juDFT_warn("scaling factor >1.25 -> increase elup(<1htr) or numbands",calledby="kk_cutoff")
                im(:,-l:l,-l:l,ispin) = scale * im(:,-l:l,-l:l,ispin)
             ELSE IF(integral.LT.n_states-0.1) THEN
@@ -83,7 +83,7 @@ MODULE m_kk_cutoff
                CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
             ENDIF
          ELSE IF((integral.GT.n_states).AND.((integral-n_states).GT.0.00001)) THEN
-            !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method   
+            !IF the integral is bigger than 2l+1, search for the cutoff using the bisection method
 
             a = e_bot
             b = e_top

@@ -7,8 +7,8 @@ MODULE m_kkintgr
    !> @author
    !> Henning Janßen
    !
-   ! DESCRIPTION: 
-   !>  Performs the Kramer-Kronig-Transformation to obtain the Green's function 
+   ! DESCRIPTION:
+   !>  Performs the Kramer-Kronig-Transformation to obtain the Green's function
    !>  in the complex plane from the imaginary part calculated on the real axis
    !
    !------------------------------------------------------------------------------
@@ -25,7 +25,7 @@ MODULE m_kkintgr
    !PARAMETER FOR LORENTZIAN SMOOTHING
    REAL,    PARAMETER :: cut              = 1e-8
 
-   CONTAINS 
+   CONTAINS
 
    SUBROUTINE kkintgr(im,eb,del,ne,g,ez,l_conjg,shape,nz,method)
 
@@ -40,9 +40,9 @@ MODULE m_kkintgr
       IMPLICIT NONE
 
       !Information about the integrand
-      REAL,          INTENT(IN)  :: im(ne)      !Imaginary part of the green's function on the real axis 
+      REAL,          INTENT(IN)  :: im(ne)      !Imaginary part of the green's function on the real axis
       REAL,          INTENT(IN)  :: eb          !Bottom energy cutoff
-      REAL,          INTENT(IN)  :: del         !Energy step on the real axis 
+      REAL,          INTENT(IN)  :: del         !Energy step on the real axis
       INTEGER,       INTENT(IN)  :: ne          !Number of energy points on the real axis
 
       !Information about the complex energy contour
@@ -51,8 +51,8 @@ MODULE m_kkintgr
       LOGICAL,       INTENT(IN)  :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
       INTEGER,       INTENT(IN)  :: shape       !Determines wether we have a rectangular (1) or a semicircle contour(2)
       INTEGER,       INTENT(IN)  :: nz          !Number of energy points on the complex contour
-  
-      !Information about the method 
+
+      !Information about the method
       INTEGER,       INTENT(IN)  :: method      !Integer associated with the method to be used (definitions above)
 
       REAL ::  im_calc(ne),e(ne)  !Array where the smoothed version of im is stored
@@ -63,14 +63,14 @@ MODULE m_kkintgr
       DO i = 1, ne
          e(i) = (i-1) * del + eb
       ENDDO
-      
+
       CALL timestart("kkintgr: integration")
       g = 0.0
       sigma = 0.0
       !!$OMP PARALLEL DEFAULT(none) &
       !!$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
       !!$OMP SHARED(g,ez,im,e) &
-      !!$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2,im_n1,im_n2,im_calc) 
+      !!$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2,im_n1,im_n2,im_calc)
    !
       !!$OMP DO
       DO iz = 1, nz
@@ -80,8 +80,8 @@ MODULE m_kkintgr
             IF(AIMAG(ez(iz)).NE.0.0.AND.AIMAG(ez(iz)).NE.sigma) THEN
                !Sigma is changed, so we need to smooth here
                im_calc = im !Get the original version
-               sigma = AIMAG(ez(iz)) 
-               CALL smooth(e,im_calc,sigma,ne)   
+               sigma = AIMAG(ez(iz))
+               CALL smooth(e,im_calc,sigma,ne)
             ENDIF
             !Next point to the left
             n1 = INT((REAL(ez(iz))-eb)/del) +1
@@ -91,11 +91,11 @@ MODULE m_kkintgr
             re_n2 = re_ire(im_calc,ne,n2,method)
             re_n1 = re_ire(im_calc,ne,n1,method)
             !Interpolate to the energy ez(iz)
-            !Real Part 
+            !Real Part
             g(iz) = (re_n2-re_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + re_n1
             !Imaginary Part (0 outside of the energy range)
-            im_n1 = MERGE(im_calc(n1),0.0,(n1.LE.ne).AND.(n1.GE.1)) 
-            im_n2 = MERGE(im_calc(n2),0.0,(n2.LE.ne).AND.(n2.GE.1)) 
+            im_n1 = MERGE(im_calc(n1),0.0,(n1.LE.ne).AND.(n1.GE.1))
+            im_n2 = MERGE(im_calc(n2),0.0,(n2.LE.ne).AND.(n2.GE.1))
             g(iz) = g(iz) + ImagUnit *( (im_n2-im_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_n1 )
             IF(ISNAN(AIMAG(g(iz))).OR.ISNAN(REAL(g(iz)))) THEN
                CALL juDFT_error("Kkintgr failed",calledby="kkintgr")
@@ -114,9 +114,9 @@ MODULE m_kkintgr
       IMPLICIT NONE
 
       REAL,    INTENT(IN) :: im(ne)
-      INTEGER, INTENT(IN) :: ne 
+      INTEGER, INTENT(IN) :: ne
       COMPLEX, INTENT(IN) :: z
-      REAL,    INTENT(IN) :: del 
+      REAL,    INTENT(IN) :: del
       REAL,    INTENT(IN) :: eb
 
       COMPLEX :: integrand(ne)
@@ -133,7 +133,7 @@ MODULE m_kkintgr
 
    REAL FUNCTION re_ire(im,ne,ire,method)
 
-      IMPLICIT NONE 
+      IMPLICIT NONE
 
       REAL,    INTENT(IN)  :: im(ne) !Imaginary part
       INTEGER, INTENT(IN)  :: ne     !Dimension of the energy grid
@@ -143,9 +143,9 @@ MODULE m_kkintgr
       REAL    y,im_ire
 
       re_ire = 0.0
-      im_ire = MERGE(im(ire),0.0,(ire.LE.ne).AND.(ire.GE.1)) 
+      im_ire = MERGE(im(ire),0.0,(ire.LE.ne).AND.(ire.GE.1))
       SELECT CASE(method)
-               
+
       CASE (method_maclaurin)
          !Calculate the real part on the same energy points as the imaginary part
          !regardless of the contour
@@ -154,9 +154,9 @@ MODULE m_kkintgr
             IF(MOD(ire,2).EQ.0) THEN
                i = 2*j-1
             ELSE
-               i = 2*j 
+               i = 2*j
             ENDIF
-            y = - 1/pi_const * 2.0 * im(i)/REAL(ire-i) 
+            y = - 1/pi_const * 2.0 * im(i)/REAL(ire-i)
             IF(j.EQ.1.OR.j.EQ.INT(ne/2.0)) y = y/2.0
             re_ire = re_ire + y
          ENDDO
@@ -191,7 +191,7 @@ MODULE m_kkintgr
 !    Arguments
       INTEGER, INTENT(IN)    :: n
       REAL,    INTENT(INOUT) :: f(n)
-      REAL,    INTENT(IN)    :: sigma 
+      REAL,    INTENT(IN)    :: sigma
       REAL,    INTENT(IN)    :: dx
 
 !    Locals
@@ -200,19 +200,18 @@ MODULE m_kkintgr
 
       INTEGER ie,je
       REAL fac,sum,energy
-      
 
       !LORENTZIAN SMOOTHING COMPARE https://heasarc.nasa.gov/xanadu/xspec/models/glsmooth.html
       f0 = f
       f = 0.0
-      DO ie = 1, n 
+      DO ie = 1, n
 
          energy = (ie-0.5)*dx
 
          fac = 1.0
          je = ie
          sum = 0.0
-         DO WHILE(fac.GT.cut.AND.je.GE.1) 
+         DO WHILE(fac.GT.cut.AND.je.GE.1)
             fac = 1/pi_const * ( atan(2*((je)*dx-energy)/sigma) &
                                  -atan(2*((je-1)*dx-energy)/sigma) )
 
@@ -223,7 +222,7 @@ MODULE m_kkintgr
 
          fac = 1.0
          je = ie+1
-         DO WHILE(fac.GT.cut.AND.je.LE.n) 
+         DO WHILE(fac.GT.cut.AND.je.LE.n)
             fac = 1/pi_const * ( atan(2*((je)*dx-energy)/sigma) &
                                  -atan(2*((je-1)*dx-energy)/sigma) )
 
@@ -241,25 +240,25 @@ MODULE m_kkintgr
    REAL FUNCTION trapz(y,h,n)
 
       IMPLICIT NONE
-   
+
       REAL,          INTENT(IN)     :: y(n)
-   
+
       INTEGER,       INTENT(IN)     :: n
       REAL,          INTENT(IN)     :: h
-   
-   
+
+
       INTEGER i
-   
+
       trapz = y(1)
       DO i = 2, n-1
-   
+
          trapz = trapz + 2*y(i)
-   
+
       ENDDO
       trapz = trapz + y(n)
-   
+
       trapz = trapz*h/2.0
-   
+
    END FUNCTION trapz
 
 END MODULE m_kkintgr

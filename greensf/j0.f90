@@ -23,7 +23,7 @@ MODULE m_j0
       REAL beta,j0(0:lmaxU_const),exc_split(0:lmaxU_const),tmp,avgexc
       INTEGER nType,l_min,l_max,i_j0
       CHARACTER(len=30) :: filename
-   
+
       LOGICAL l_matinv
       TYPE(t_mat) :: calcup,calcdwn
       TYPE(t_mat) :: delta
@@ -42,7 +42,7 @@ MODULE m_j0
          WRITE(6,9010) nType
          WRITE(6,9020) l_min,l_max,atoms%j0(i_j0)%l_avgexc
          j0 = 0.0
-         !Calculate the onsite exchange splitting by determining the difference in the center of mass 
+         !Calculate the onsite exchange splitting by determining the difference in the center of mass
          !of the bands under consideration
          !The cutoffs were determined so that both the integral over the DOS for spin up/down is equal to 2*l+1
          IF(.NOT.l_matinv) THEN
@@ -71,7 +71,7 @@ MODULE m_j0
                ENDDO
             ENDDO
             IF(atoms%j0(i_j0)%l_avgexc) THEN
-               avgexc = SUM(exc_split(l_min:l_max))/(l_max-l_min+1) 
+               avgexc = SUM(exc_split(l_min:l_max))/(l_max-l_min+1)
                DO l = l_min,l_max
                   exc_split(l) = avgexc
                ENDDO
@@ -88,7 +88,7 @@ MODULE m_j0
          DO i = 1, matsize
             delta%data_c(i,i) = exc_split(l)
          ENDDO
-         
+
          DO iz = 1, g0%nz
             !
             !calculate the onsite exchange matrix if we use matrix inversion
@@ -97,7 +97,7 @@ MODULE m_j0
                !---------------------------------------------
                !\Delta = (G_up)^-1-(G_down)^-1
                !---------------------------------------------
-               !Symmetrize the green's function for up/down 
+               !Symmetrize the green's function for up/down
                !spin with respect to the complex plane
                !Here we assume that the onsite Hamiltonian
                !is real
@@ -136,11 +136,11 @@ MODULE m_j0
                                                       * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
                   sumdwn    = sumdwn    + (-1)**(ipm) * 1./(2.0*fpi_const) * hartree_to_ev_const * calcdwn%data_c(i,i) &
                                                       * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
-                  sumupdwn  = sumupdwn  + (-1)**(ipm) * 1./(2.0*fpi_const) * hartree_to_ev_const * calc%data_c(i,i) &   
+                  sumupdwn  = sumupdwn  + (-1)**(ipm) * 1./(2.0*fpi_const) * hartree_to_ev_const * calc%data_c(i,i) &
                                                       * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
 
                   integrand = integrand + (-1)**(ipm-1) * (calcup%data_c(i,i)-calcdwn%data_c(i,i)+calc%data_c(i,i)) &
-                                                      * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)                        
+                                                      * MERGE(g0%de(iz),conjg(g0%de(iz)),ipm.EQ.1)
                ENDDO
                CALL calcup%free()
                CALL calcdwn%free()
@@ -156,9 +156,9 @@ MODULE m_j0
                                    AIMAG(sumup),AIMAG(sumdwn),AIMAG(sumupdwn)
             ENDIF
 
-         
+
             IF(l_matinv) CALL calc%free()
-         
+
          ENDDO
          j0(l) = -1/(2.0*fpi_const)*hartree_to_ev_const * j0(l)
          WRITE(6,9040) l,j0(l),ABS(j0(l))*2/3*1/(boltzmannConst*hartree_to_ev_const)

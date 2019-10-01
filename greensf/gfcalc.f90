@@ -25,7 +25,7 @@ MODULE m_gfcalc
       !-Type Arguments
       TYPE(t_atoms),             INTENT(IN)    :: atoms
       TYPE(t_sym),               INTENT(IN)    :: sym
-      TYPE(t_input),             INTENT(IN)    :: input 
+      TYPE(t_input),             INTENT(IN)    :: input
       TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
       TYPE(t_usdus),             INTENT(IN)    :: usdus
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)    :: denCoeffsOffdiag
@@ -33,7 +33,7 @@ MODULE m_gfcalc
       TYPE(t_greensf),           INTENT(INOUT) :: greensf
 
 
-      !-Scalar Arguments 
+      !-Scalar Arguments
       INTEGER,                   INTENT(IN)    :: ispin  !Current spin index
       INTEGER,                   INTENT(IN)    :: nbands !Number of bands to be considered
       REAL,                      INTENT(IN)    :: wtkpt  !Weight of the current k-point
@@ -45,7 +45,7 @@ MODULE m_gfcalc
       INTEGER,                   INTENT(IN)    :: indBound(nbands,2)                  !Gives the range where the tetrahedron weights are non-zero
       REAL,                      INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
       REAL,                      INTENT(IN)    :: angle(sym%nop)                      !Phases for spin-offdiagonal part
-      
+
       !IF(input%l_resolvent) THEN
          !Calculate greens function directly
       !   CALL timestart("Greens Function: Resolvent")
@@ -68,7 +68,7 @@ MODULE m_gfcalc
 
 
    SUBROUTINE postProcessGF(greensf,greensfCoeffs,atoms,input,sym,noco,vTot,hub1,results,angle)
-      
+
       !contains all the modules for calculating properties from the greens function
       USE m_onsite
 
@@ -81,7 +81,7 @@ MODULE m_gfcalc
       TYPE(t_hub1ham),           INTENT(INOUT)  :: hub1
       TYPE(t_results),           INTENT(IN)     :: results
       TYPE(t_potden),            INTENT(IN)     :: vTot
-      REAL,                   INTENT(IN)     :: angle(sym%nop)
+      REAL,                      INTENT(IN)     :: angle(sym%nop)
 
       INTEGER  i_gf,l,nType
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,3)
@@ -91,7 +91,7 @@ MODULE m_gfcalc
       !Perform the Kramer-Kronigs-Integration if we only have he imaginary part at this point
       CALL calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,greensf)
       !-------------------------------------------------------------
-      ! Calculate various properties from the greens function 
+      ! Calculate various properties from the greens function
       !-------------------------------------------------------------
       !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
       IF(atoms%n_hia.GT.0.AND.ANY(hub1%ccf(:).NE.0.0)) THEN

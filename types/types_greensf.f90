@@ -7,9 +7,9 @@ MODULE m_types_greensf
    !> @author
    !> Henning Janßen
    !
-   ! DESCRIPTION: 
+   ! DESCRIPTION:
    !>  Contains a type for onsite and intersite green's functions in the mt-sphere
-   !>  It stores the energy contour in the complex plane and the corresponding   
+   !>  It stores the energy contour in the complex plane and the corresponding
    !>  matrix elements of the green's function
    !>  We have the following cases
    !>    -onsite
@@ -37,15 +37,13 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE  :: de(:) !weights for integration
 
          !Arrays for Green's function
-         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:) 
+         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:)
 
          !for radial dependence
          COMPLEX, ALLOCATABLE :: uu(:,:,:,:,:,:)
          COMPLEX, ALLOCATABLE :: dd(:,:,:,:,:,:)
          COMPLEX, ALLOCATABLE :: du(:,:,:,:,:,:)
          COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
-
-         
 
          CONTAINS
             PROCEDURE, PASS :: init => greensf_init
@@ -69,7 +67,7 @@ MODULE m_types_greensf
          TYPE(t_input),       INTENT(IN)     :: input
          INTEGER,             INTENT(IN)     :: lmax
          TYPE(t_noco),        INTENT(IN)     :: noco
-         !Pass a already calculated energy contour to the type 
+         !Pass a already calculated energy contour to the type
          INTEGER, OPTIONAL,   INTENT(IN)     :: nz_in
          INTEGER, OPTIONAL,   INTENT(IN)     :: matsub_in
          COMPLEX, OPTIONAL,   INTENT(IN)     :: e_in(:)
@@ -90,7 +88,7 @@ MODULE m_types_greensf
          !
          thisGREENSF%mode     = input%gf_mode
          IF(PRESENT(nz_in)) THEN
-            thisGREENSF%nz = nz_in 
+            thisGREENSF%nz = nz_in
             thisGREENSF%nmatsub = matsub_in
          ELSE
             !Parameters for the energy contour in the complex plane
@@ -150,10 +148,10 @@ MODULE m_types_greensf
          CLASS(t_greensf),  INTENT(INOUT)  :: this
          TYPE(t_input),     INTENT(IN)     :: input
          TYPE(t_mpi),       INTENT(IN)     :: mpi
-         REAL,              INTENT(IN)     :: eb  
+         REAL,              INTENT(IN)     :: eb
          REAL,              INTENT(IN)     :: et
          REAL,              INTENT(IN)     :: ef
-         
+
          INTEGER i, j, iz,nz
 
          REAL e1, e2, del, sigma
@@ -164,7 +162,7 @@ MODULE m_types_greensf
 
 
          IF(this%mode.EQ.1) THEN
-            
+
             sigma = input%gf_sigma * pi_const
 
             IF(this%nmatsub > 0) THEN
@@ -181,7 +179,7 @@ MODULE m_types_greensf
                DO iz = 1, input%gf_n1
                   nz = nz + 1
                   IF(nz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
-                  this%e(nz) = eb + de + de * x(iz) 
+                  this%e(nz) = eb + de + de * x(iz)
                   this%de(nz) = w(iz)*de
                ENDDO
 
@@ -216,12 +214,12 @@ MODULE m_types_greensf
                ENDDO
 
                !Matsubara frequencies
-               DO iz = this%nmatsub , 1, -1 
-                  nz = nz + 1 
+               DO iz = this%nmatsub , 1, -1
+                  nz = nz + 1
                   IF(nz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
-                  this%e(nz)  = ef + (2*iz-1) * ImagUnit *sigma 
+                  this%e(nz)  = ef + (2*iz-1) * ImagUnit *sigma
                   this%de(nz) =  -2 * ImagUnit * sigma
-               ENDDO 
+               ENDDO
             ENDIF
          ELSE IF(this%mode.EQ.2) THEN
 
@@ -251,7 +249,7 @@ MODULE m_types_greensf
 
          ELSE IF(this%mode.EQ.3) THEN
             !Equidistant contour (without vertical edges)
-   
+
             de = (et-eb)/REAL(this%nz-1)
             DO iz = 1, this%nz
                this%e(iz) = (iz-1) * de + eb + ImagUnit * input%gf_sigma
@@ -268,8 +266,8 @@ MODULE m_types_greensf
 
          END IF
 
-         IF(mpi%irank.EQ.0) THEN 
-            !Write out the information about the energy contour 
+         IF(mpi%irank.EQ.0) THEN
+            !Write out the information about the energy contour
             WRITE(6,"(A)") "---------------------------------------------"
             WRITE(6,"(A)") " Green's function energy contour"
             WRITE(6,"(A)") "---------------------------------------------"
@@ -301,7 +299,7 @@ MODULE m_types_greensf
             WRITE(6,*)
             WRITE(6,"(A)") " Energy points: "
             WRITE(6,"(A)") "---------------------------------------------"
-            DO iz = 1, this%nz 
+            DO iz = 1, this%nz
                WRITE(6,1050) REAL(this%e(iz)), AIMAG(this%e(iz)), REAL(this%de(iz)), AIMAG(this%de(iz))
             ENDDO
 
@@ -328,18 +326,18 @@ MODULE m_types_greensf
          IMPLICIT NONE
 
          CLASS(t_greensf),    INTENT(IN)  :: this
-         TYPE(t_atoms),       INTENT(IN)  :: atoms 
+         TYPE(t_atoms),       INTENT(IN)  :: atoms
          TYPE(t_input),       INTENT(IN)  :: input
-         TYPE(t_mat),         INTENT(OUT) :: gmat !Return matrix 
+         TYPE(t_mat),         INTENT(OUT) :: gmat !Return matrix
 
          INTEGER,             INTENT(IN)  :: iz
          INTEGER,             INTENT(IN)  :: nType
-         INTEGER,             INTENT(IN)  :: l 
+         INTEGER,             INTENT(IN)  :: l
          LOGICAL,             INTENT(IN)  :: l_conjg
          INTEGER, OPTIONAL,   INTENT(IN)  :: spin
          INTEGER, OPTIONAL,   INTENT(IN)  :: nTypep
-         INTEGER, OPTIONAL,   INTENT(IN)  :: lp 
-         REAL   , OPTIONAL,   INTENT(IN)  :: u(2,input%jspins)       !Radial functions at the point where you want to evaluate the greens function 
+         INTEGER, OPTIONAL,   INTENT(IN)  :: lp
+         REAL   , OPTIONAL,   INTENT(IN)  :: u(2,input%jspins)       !Radial functions at the point where you want to evaluate the greens function
          REAL   , OPTIONAL,   INTENT(IN)  :: udot(2,input%jspins)
 
          INTEGER matsize1,matsize2,i_gf,i,j,ind1,ind2,ind1_start,ind2_start
@@ -363,24 +361,24 @@ MODULE m_types_greensf
                CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
             ENDIF
          END IF
-         
+
          !Determine matsize for the result gmat (if spin is given only return this diagonal element)
          l_full = .NOT.PRESENT(spin)
          matsize1 = (2*l+1) * MERGE(2,1,l_full)
-         
+
          IF(PRESENT(lp)) THEN
             matsize2 = (2*lp+1) * MERGE(2,1,l_full)
          ELSE
             matsize2 = matsize1
-         ENDIF 
-         !If we give no spin argument and we have only one spin in the 
+         ENDIF
+         !If we give no spin argument and we have only one spin in the
          !calculation we blow up the one spin to the full matrix
 
          CALL gmat%init(.FALSE.,matsize1,matsize2)
 
          IF(.NOT.PRESENT(lp)) THEN
-            lp_loop = l 
-         ELSE 
+            lp_loop = l
+         ELSE
             lp_loop = lp
          ENDIF
 
@@ -393,11 +391,11 @@ MODULE m_types_greensf
 
          DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
             !Find the right quadrant in gmat according to the spin index
-            
-            IF(ispin < 3) THEN 
-               spin1 = ispin 
-               spin2 = ispin 
-            ELSE IF(ispin.EQ.3) THEN 
+
+            IF(ispin < 3) THEN
+               spin1 = ispin
+               spin2 = ispin
+            ELSE IF(ispin.EQ.3) THEN
                spin1 = 2
                spin2 = 1
             ELSE
@@ -408,15 +406,15 @@ MODULE m_types_greensf
             spin_ind = MERGE(ispin,1,input%jspins.EQ.2)
             spin_ind = MERGE(3,spin_ind,ispin.EQ.4.AND.input%jspins.EQ.2)
             IF(l_full) THEN
-               ind1_start = (spin1-1)*(2*l+1) 
-               ind2_start = (spin2-1)*(2*lp_loop+1) 
-            ELSE 
+               ind1_start = (spin1-1)*(2*l+1)
+               ind2_start = (spin2-1)*(2*lp_loop+1)
+            ELSE
                ind1_start = 0
                ind2_start = 0
             ENDIF
             ind1 = ind1_start
-            DO m = -l,l 
-               ind1 = ind1 + 1 
+            DO m = -l,l
+               ind1 = ind1 + 1
                ind2 = ind2_start
                DO mp = -lp_loop,lp_loop
                   ind2 = ind2 + 1
@@ -424,8 +422,8 @@ MODULE m_types_greensf
                      gmat%data_c(ind1,ind2) = this%uu(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*u(2,spin2) + &
                                               this%dd(iz,i_gf,m,mp,spin_ind,ipm) * udot(1,spin1)*udot(2,spin2) + &
                                               this%du(iz,i_gf,m,mp,spin_ind,ipm) * udot(1,spin1)*u(2,spin2) + &
-                                              this%ud(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*udot(2,spin2) 
-                  ELSE        
+                                              this%ud(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*udot(2,spin2)
+                  ELSE
                      IF(ispin.EQ.1.AND.input%jspins.EQ.1) THEN
                         !In this case the ordering of m and mp has to be reversed
                         gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,-m,-mp,spin_ind,ipm)
@@ -434,7 +432,7 @@ MODULE m_types_greensf
                      ELSE
                         gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,spin_ind,ipm)
                      ENDIF
-                     IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3-input%jspins) 
+                     IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3-input%jspins)
                   ENDIF
                ENDDO
             ENDDO
@@ -442,7 +440,7 @@ MODULE m_types_greensf
 
       END SUBROUTINE get_gf
 
-      SUBROUTINE set_gf(this,gmat,atoms,input,iz,l,nType,l_conjg,spin,lp,nTypep) 
+      SUBROUTINE set_gf(this,gmat,atoms,input,iz,l,nType,l_conjg,spin,lp,nTypep)
 
          USE m_types_mat
          USE m_types_setup
@@ -450,22 +448,22 @@ MODULE m_types_greensf
          USE m_ind_greensf
 
          !Sets the spherically averaged greens function matrix belonging to energy point iz with l,lp,nType,nTypep
-         !equal to gmat 
+         !equal to gmat
 
          IMPLICIT NONE
 
          CLASS(t_greensf),    INTENT(INOUT)  :: this
-         TYPE(t_atoms),       INTENT(IN)     :: atoms 
+         TYPE(t_atoms),       INTENT(IN)     :: atoms
          TYPE(t_input),       INTENT(IN)     :: input
-         TYPE(t_mat),         INTENT(IN)     :: gmat  
+         TYPE(t_mat),         INTENT(IN)     :: gmat
 
          INTEGER,             INTENT(IN)     :: iz
          INTEGER,             INTENT(IN)     :: nType
-         INTEGER,             INTENT(IN)     :: l 
+         INTEGER,             INTENT(IN)     :: l
          LOGICAL,             INTENT(IN)     :: l_conjg
          INTEGER, OPTIONAL,   INTENT(IN)     :: spin
          INTEGER, OPTIONAL,   INTENT(IN)     :: nTypep
-         INTEGER, OPTIONAL,   INTENT(IN)     :: lp 
+         INTEGER, OPTIONAL,   INTENT(IN)     :: lp
 
          INTEGER matsize1,matsize2,i_gf,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end
@@ -476,23 +474,23 @@ MODULE m_types_greensf
                CALL juDFT_error("Invalid argument for spin",calledby="get_gf")
             ENDIF
          ENDIF
-         
+
          !Determine matsize for the result gmat (if spin is given only return this digonal element)
          matsize1 = (2*l+1) * MERGE(1,input%jspins,PRESENT(spin))
          IF(PRESENT(lp)) THEN
             matsize2 = (2*lp+1) * MERGE(1,input%jspins,PRESENT(spin))
          ELSE
             matsize2 = matsize1
-         ENDIF 
-         
+         ENDIF
+
          !Check the expected matsizes against the actual
          IF(matsize1.NE.gmat%matsize1.OR.matsize2.NE.gmat%matsize2) THEN
             CALL juDFT_error("Mismatch in matsizes", calledby="set_gf")
          ENDIF
 
          IF(.NOT.PRESENT(lp)) THEN
-            lp_loop = l 
-         ELSE 
+            lp_loop = l
+         ELSE
             lp_loop = lp
          ENDIF
 
@@ -505,29 +503,29 @@ MODULE m_types_greensf
          DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
             !Find the right quadrant in gmat according to the spin index
             IF(.NOT.PRESENT(spin)) THEN
-               IF(ispin < 3) THEN 
-                  spin1 = ispin 
-                  spin2 = ispin 
-               ELSE IF(ispin.EQ.3) THEN 
+               IF(ispin < 3) THEN
+                  spin1 = ispin
+                  spin2 = ispin
+               ELSE IF(ispin.EQ.3) THEN
                   spin1 = 2
                   spin2 = 1
                ELSE
                   spin1 = 1
                   spin2 = 2
                ENDIF
-               ind1_start = (spin1-1)*(2*l+1) 
-               ind2_start = (spin2-1)*(2*lp_loop+1) 
-            ELSE 
+               ind1_start = (spin1-1)*(2*l+1)
+               ind2_start = (spin2-1)*(2*lp_loop+1)
+            ELSE
                ind1_start = 0
                ind2_start = 0
             ENDIF
             ind1 = ind1_start
-            DO m = -l,l 
-               ind1 = ind1 + 1 
+            DO m = -l,l
+               ind1 = ind1 + 1
                ind2 = ind2_start
                DO mp = -lp_loop,lp_loop
                   ind2 = ind2 + 1
-                  this%gmmpMat(iz,i_gf,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2) 
+                  this%gmmpMat(iz,i_gf,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2)
                ENDDO
             ENDDO
          ENDDO

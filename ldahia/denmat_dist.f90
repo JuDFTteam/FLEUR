@@ -1,5 +1,5 @@
 MODULE m_denmat_dist
-   
+
    CONTAINS
    SUBROUTINE n_mmp_dist(n_mmp_in,n_mmp_out,natoms,results,input)
 
@@ -14,7 +14,7 @@ MODULE m_denmat_dist
 
       INTEGER ispin,i_at,j,k
       REAL n_in,n_out
-      
+
       !Calculates the distance for two density matrices (maximum distance between two elements)
       n_out = 0.0
       n_in = 0.0
@@ -37,6 +37,6 @@ MODULE m_denmat_dist
       results%last_occdistance = ABS(n_out-n_in)
       WRITE(6,*) "Occupation distance: ", results%last_occdistance
       WRITE(6,*) "Density matrix distance: ", results%last_mmpMatdistance
-   
+
    END SUBROUTINE n_mmp_dist
 END MODULE m_denmat_dist

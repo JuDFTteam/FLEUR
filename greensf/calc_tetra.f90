@@ -1,9 +1,9 @@
 MODULE m_calc_tetra
 
    !Calculate tetraeder from equidistant grid ref Phys. Rev. B 49, (16223).
-   !Largely equivalent to spex routines 
+   !Largely equivalent to spex routines
 
-   CONTAINS 
+   CONTAINS
 
    SUBROUTINE calc_tetra(kpts,cell,input,sym)
 
@@ -13,7 +13,7 @@ MODULE m_calc_tetra
 
       IMPLICIT NONE
 
-      TYPE(t_kpts),  INTENT(INOUT) :: kpts 
+      TYPE(t_kpts),  INTENT(INOUT) :: kpts
       TYPE(t_input), INTENT(INOUT) :: input
       TYPE(t_sym),   INTENT(IN)    :: sym
       TYPE(t_cell),  INTENT(IN)    :: cell
@@ -30,10 +30,10 @@ MODULE m_calc_tetra
       volbz = ABS(det(cell%bmat))
       !Choose the tetrahedra decomposition along the shortest diagonal
       CALL get_tetra(tetra,ntetra,kpts,cell,vol)
-      !MISSING: Generate all kpts 
-      !Set up pointer array for the kpts 
+      !MISSING: Generate all kpts
+      !Set up pointer array for the kpts
       p = 0
-      DO ikpt = 1, kpts%nkptf 
+      DO ikpt = 1, kpts%nkptf
          iarr = nint(kpts%bkf(:,ikpt)*kpts%nkpt3)
          p(iarr(1),iarr(2),iarr(3)) = ikpt
       ENDDO
@@ -112,7 +112,7 @@ MODULE m_calc_tetra
 
       INTEGER, INTENT(OUT) :: tetra(4,*)
       INTEGER, INTENT(OUT) :: ntetra
-      TYPE(t_kpts), INTENT(IN) :: kpts 
+      TYPE(t_kpts), INTENT(IN) :: kpts
       TYPE(t_cell), INTENT(IN) :: cell
       REAL,         INTENT(OUT):: vol
 
@@ -123,8 +123,8 @@ MODULE m_calc_tetra
       rlv(:,1) = cell%bmat(:,1) / kpts%nkpt3
       rlv(:,2) = cell%bmat(:,2) / kpts%nkpt3
       rlv(:,3) = cell%bmat(:,3) / kpts%nkpt3
-      
-      vol = 1/6.0*ABS(det(rlv)) 
+
+      vol = 1/6.0*ABS(det(rlv))
       d = rlv(:,1) + rlv(:,3) - rlv(:,2)
       diag(1) = sum(d*d)
       d = rlv(:,2) + rlv(:,3) - rlv(:,1)
@@ -135,7 +135,7 @@ MODULE m_calc_tetra
       diag(4) = sum(d*d)
       idmin = minloc(diag,1)
 
-      
+
       ntetra = 0
       !From spex tetrahedron.f (For now we only choose one decomposition)
       if(idmin==1) then

@@ -75,7 +75,7 @@ CONTAINS
        ! check for possible rotation of n_mmp
        zero = 0.0
        CALL nmat_rot(atoms%lda_u(:)%phi,atoms%lda_u(:)%theta,zero,3,n_u,input%jspins,atoms%lda_u(:)%l,n_mmp)
-       
+
        ! calculate potential matrix and total energy correction
        CALL v_mmp(sym,atoms,atoms%lda_u(:),n_u,input%jspins,input%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat(:,:,:,1:input%jspins),results%e_ldau)
 
@@ -98,7 +98,7 @@ CONTAINS
                 IF(i_u > atoms%n_u) WRITE(6,"(A)") 'n-matrix calculated with DFT+Hubbard-1'
                 IF(jspin < 3) THEN
                   WRITE (6,l_form) ((n_mmp(k,j,i_u,jspin),k=-l,l),j=-l,l)
-                ELSE 
+                ELSE
                   WRITE (6,l_form) ((inDen%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
                 ENDIF
                 WRITE (6,'(a20,i3)') 'V-matrix for atom # ',itype

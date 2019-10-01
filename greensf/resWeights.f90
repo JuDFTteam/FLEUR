@@ -4,7 +4,7 @@ MODULE m_resWeights
 
    SUBROUTINE resWeightsCalc(ikpt,kpts,neig,eig,g,weights,boundInd)
 
-      !Weights for analytical tetrahedron method for spectral functions 
+      !Weights for analytical tetrahedron method for spectral functions
 
       USE m_types
       USE m_juDFT
@@ -55,7 +55,7 @@ MODULE m_resWeights
          !$OMP DO
          DO ib = 1, neig
 
-            e(1:4) = eig(ib,k(1:4)) 
+            e(1:4) = eig(ib,k(1:4))
             ind=(/1,2,3,4/)
             !Sort the energies in the tetrahedron in ascending order
             DO i = 1, 3
@@ -91,12 +91,12 @@ MODULE m_resWeights
 
       USE m_juDFT
 
-      IMPLICIT NONE 
+      IMPLICIT NONE
 
-      REAL,       INTENT(IN)  :: z
+      REAL,          INTENT(IN)  :: z
       REAL,          INTENT(IN)  :: e(4)
       REAL,          INTENT(IN)  :: vol
-      REAL,       INTENT(OUT) :: weight 
+      REAL,          INTENT(OUT) :: weight
       INTEGER,       INTENT(IN)  :: ind
 
       REAL tol,denom,a,b,cut,min,fac
@@ -116,11 +116,11 @@ MODULE m_resWeights
       ENDDO
 
       DO i =1, 4
-         IF(ABS(z-e(i)).LT.min) min = ABS(z-e(i)) 
+         IF(ABS(z-e(i)).LT.min) min = ABS(z-e(i))
       ENDDO
       ndeg = 0
       ideg = 0
-      
+
       IF(min.GT.fac*cut) THEN
          !asymptotic relation Eqs. 9-11
          a = (e(ind) + SUM(e(:)))/5.0
@@ -188,8 +188,8 @@ MODULE m_resWeights
                   k = i
                ENDDO
                IF(k.EQ.0) CALL juDFT_error("k not found",calledby="resWeightTetra")
-               weight = vol*(z-e(k))**3/((e(k)-e(j))*(e(k)-e(m))**3)*LOG(ABS(z-e(k))) & 
-                        +vol*(z-e(j))**3/((e(j)-e(k))*(e(j)-e(m))**3)*LOG(ABS(z-e(j))) & 
+               weight = vol*(z-e(k))**3/((e(k)-e(j))*(e(k)-e(m))**3)*LOG(ABS(z-e(k))) &
+                        +vol*(z-e(j))**3/((e(j)-e(k))*(e(j)-e(m))**3)*LOG(ABS(z-e(j))) &
                         +vol*(z-e(m))/((e(m)-e(j))*(e(m)-e(k))) * (0.5 + (z-e(j))/(e(m)-e(j))&
                            +(z-e(k))/(e(m)-e(k)) + ((z-e(j))**2/(e(m)-e(j))**2 &
                            +(z-e(k))**2/(e(m)-e(k))**2 +(z-e(j))/(e(m)-e(j))*(z-e(k))/(e(m)-e(k))) &
@@ -210,7 +210,7 @@ MODULE m_resWeights
                         +vol*(z-e(k))**3/((e(k)-e(ind))**2*(e(k)-e(m))**2)*LOG(ABS(z-e(k)))
             ENDIF
          ELSE IF(ndeg.EQ.2) THEN
-            !This is the case E1=E2<E3=E4 => A4 
+            !This is the case E1=E2<E3=E4 => A4
             IF(ind.LE.2) THEN
                weight = vol*3*(z-e(3))**2*(z-e(2))/(e(3)-e(2))**4*LOG(ABS((z-e(2))/(z-e(3)))) &
                         - vol*3.0/2.0*(z-e(2))*(2*(z-e(3))-e(3)+e(2))/(e(3)-e(2))**3-vol/(e(3)-e(2))

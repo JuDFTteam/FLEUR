@@ -1,4 +1,4 @@
-MODULE m_mudc 
+MODULE m_mudc
 
    CONTAINS
 
@@ -17,10 +17,10 @@ MODULE m_mudc
       REAL vdcamf1,vdcamf2
       REAL nup,ndn
       REAL u,j
-      INTEGER l 
+      INTEGER l
 
       u = lda_u%U
-      j = lda_u%J 
+      j = lda_u%J
       l = lda_u%l
 
       IF(jspins.EQ.2) THEN
@@ -47,7 +47,7 @@ MODULE m_mudc
       ELSE
          WRITE(6,"(A)") "Using the fully-localized limit"
          mu = (vdcfll1+vdcfll2)/2
-      ENDIF 
+      ENDIF
       WRITE(6,9060) mu
 
 9040  FORMAT(TR3,A4,TR1,A7,TR3,A7,TR3,A9,TR3,A5)

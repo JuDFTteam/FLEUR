@@ -135,16 +135,16 @@ MODULE m_crystalfield
          ENDIF
          tr = 0.0
          !calculate the trace
-         DO m = -l, l 
+         DO m = -l, l
             tr = tr + hub1%ccfmat(i_hia,m,m)
          ENDDO
          IF(l_debug) THEN
             WRITE(*,*) "TRACE"
             WRITE(*,"(2f7.3)") tr, tr/(2*l+1)
          ENDIF
-         !Remove trace 
-         DO m = -l, l 
-            hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - tr/(2*l+1) 
+         !Remove trace
+         DO m = -l, l
+            hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - tr/(2*l+1)
          ENDDO
 
          IF(l_debug) THEN

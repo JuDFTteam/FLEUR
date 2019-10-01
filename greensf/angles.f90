@@ -1,6 +1,5 @@
 MODULE m_angles
 
-
 CONTAINS 
 
 !Calculate the correct angles for the rotation in spin-space (needed for LDA+U and Greens functions with noco)
@@ -15,7 +14,7 @@ SUBROUTINE angles(sym,angle)
    TYPE(t_sym),   INTENT(IN)  :: sym
    REAL,          INTENT(OUT) :: angle(sym%nop)
 
-   INTEGER iop,d,t 
+   INTEGER iop,d,t
 
    angle = 0.0
 
@@ -27,7 +26,7 @@ SUBROUTINE angles(sym,angle)
       IF(t.EQ.1)  angle(iop) = 1.0/2.0
       IF(t.EQ.2)  angle(iop) = 1.0/3.0
       IF(t.EQ.3)  angle(iop) = 0.0
-      angle(iop) = d*angle(iop)*pi_const 
+      angle(iop) = d*angle(iop)*pi_const
    ENDDO
 
 END SUBROUTINE
