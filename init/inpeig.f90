@@ -22,7 +22,7 @@
       USE m_types_kpts
       USE m_types_enpara
       USE m_juDFT
-     
+
       IMPLICIT NONE
 !     ..
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -31,7 +31,7 @@
       LOGICAL,INTENT(IN)           :: l_is_oneD
       TYPE(t_kpts),INTENT(INOUT)   :: kpts
       TYPE(t_enpara),OPTIONAL,INTENT(INOUT) :: enpara
-      
+
       CHARACTER(LEN=*),OPTIONAL,INTENT(IN) :: kptsFilename
       CHARACTER(len=*),INTENT(IN)    :: latnam
 
@@ -43,17 +43,17 @@
       CHARACTER(LEN=255) :: fname
 !     ..
 !
-     
+
 !---> input energy parameters for each atom.
 !---> the energy parameters for l.ge.3 have the same value
 !---> read from file 40='enpara'  shz Jan.96
 !
 
       IF(PRESENT(enpara)) THEN
-         IF (.NOT.input%l_inpXML) THEN
-            !read enpara file if present!
+         !IF (.NOT.input%l_inpXML) THEN
+          !read enpara file if present!
             CALL enpara%init_enpara(atoms,input%jspins,input%film)
-         END IF
+         !END IF
       END IF
 !
 !---> read k-points from file 41='kpts'
@@ -66,7 +66,7 @@
       END IF
 
       INQUIRE(file=TRIM(ADJUSTL(fname)),exist=l_k)
-      if (.not.l_k) return 
+      if (.not.l_k) return
 
       OPEN (41,file=TRIM(ADJUSTL(fname)),form='formatted',status='old')
 !
@@ -84,7 +84,7 @@
   911    CONTINUE
          xyu = .false.
   912    CONTINUE
-         
+
          IF (kpts%nkpt.GT.kpts%nkpt)  THEN
            CALL juDFT_error('nkptd too small',calledby='inpeig')
          ENDIF
@@ -146,9 +146,9 @@
      &              ="The sum of weights in the kpts file is zero")
             END IF
          END IF
-         IF (l_is_oneD)  kpts%bk(1:2,:) = 0.0    
+         IF (l_is_oneD)  kpts%bk(1:2,:) = 0.0
          kpts%wtkpt(:) = kpts%wtkpt(:)/wt
-     
+
          WRITE (6,FMT=8120)  kpts%nkpt
          DO  nk = 1,kpts%nkpt
             WRITE (6,FMT=8040)  kpts%bk(:,nk),kpts%wtkpt(nk)

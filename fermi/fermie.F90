@@ -80,11 +80,11 @@ CONTAINS
     !***********************************************************************
     !                  ABBREVIATIONS
     !
-    !     eig        : array of eigenvalues 
+    !     eig        : array of eigenvalues
     !     wtkpt      : list of the weights of each k-point (from inp-file)
-    !     e          : linear list of the eigenvalues 
+    !     e          : linear list of the eigenvalues
     !     we         : list of weights of the eigenvalues in e
-    !     zelec      : number of electrons 
+    !     zelec      : number of electrons
     !     spindg     : spindegeneracy (2 in nonmagnetic calculations)
     !     seigv      : weighted sum of the occupied valence eigenvalues
     !     seigsc     : weighted sum of the semi-core eigenvalues
@@ -125,7 +125,7 @@ CONTAINS
           IF (mpi%irank == 0) THEN
              CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
              WRITE (6,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
-             WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :' 
+             WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :'
              WRITE (6,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
              IF(.NOT.judft_was_argument("-minimalOutput")) THEN
                 attributes = ''
@@ -144,7 +144,7 @@ CONTAINS
     ENDDO
     !finished reading of eigenvalues
     IF (mpi%irank == 0) CALL closeXMLElement('eigenvalues')
-  IF (mpi%irank == 0) THEN 
+  IF (mpi%irank == 0) THEN
 
     IF (ABS(input%fixed_moment)<1E-6) THEN
        !this is a standard calculation
@@ -167,7 +167,7 @@ CONTAINS
           !Generate a list of energies
           DO  k = 1,kpts%nkpt
              !
-             !--->          STORE EIGENVALUES AND WEIGHTS IN A LINEAR LIST. AND MEMORIZE 
+             !--->          STORE EIGENVALUES AND WEIGHTS IN A LINEAR LIST. AND MEMORIZE
              !--->          CONECTION TO THE ORIGINAL ARRAYS
              !
              DO  j = 1,ne(k,jsp)
@@ -208,7 +208,7 @@ CONTAINS
              IF ( mpi%irank == 0 ) THEN
                 WRITE (6,FMT=8010) n,ws,weight
              END IF
-             CALL juDFT_error("Not enough eavefunctions",calledby="fermie")
+             CALL juDFT_error("Not enough weavefunctions",calledby="fermie")
 8010         FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
           END IF
           ws = ws + we(INDEX(l))

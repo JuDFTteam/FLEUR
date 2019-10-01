@@ -131,7 +131,7 @@ CONTAINS
     enpara%qn_el(:,ntype,:)=ABS(enpara%qn_el(:,ntype,:))
   END SUBROUTINE set_quantum_numbers
 
-  SUBROUTINE init(this,ntype,nlod,jspins,l_defaults,nz)
+  SUBROUTINE Init(This,Ntype,Nlod,Jspins,L_defaults,Nz)
     USE m_constants
     CLASS(t_enparaXML),INTENT(inout):: this
     INTEGER,INTENT(IN)           :: jspins,nlod,ntype
@@ -141,6 +141,9 @@ CONTAINS
     INTEGER :: n,i,jsp,l
 
     this%evac0=-1E99
+    if (allocated(this%qn_el)) deallocate(this%qn_el)
+    if (allocated(this%qn_ello)) deallocate(this%qn_ello)
+
     ALLOCATE(this%qn_el(0:3,ntype,jspins))
     ALLOCATE(this%qn_ello(nlod,ntype,jspins))
 

@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_noco
-  USE m_judft 
+  USE m_judft
   USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
@@ -21,7 +21,7 @@ MODULE m_types_noco
     LOGICAL:: l_spav= .FALSE.
     REAL   :: theta=0.0
     REAL   :: phi=0.0
-    
+
     LOGICAL, ALLOCATABLE :: l_relax(:)
     REAL, ALLOCATABLE    :: alphInit(:)
     REAL, ALLOCATABLE    :: alph(:)
@@ -49,7 +49,7 @@ MODULE m_types_noco
      ELSE
         rank=0
      END IF
-     
+
      CALL mpi_bc(this%l_ss,rank,mpi_comm)
      CALL mpi_bc(this%l_soc,rank,mpi_comm)
      CALL mpi_bc(this%l_noco ,rank,mpi_comm)
@@ -61,27 +61,27 @@ MODULE m_types_noco
      CALL mpi_bc(this%l_spav,rank,mpi_comm)
      CALL mpi_bc(this%theta,rank,mpi_comm)
      CALL mpi_bc(this%phi,rank,mpi_comm)
-     
+
      CALL mpi_bc(this%l_relax,rank,mpi_comm)
      CALL mpi_bc(this%alphInit,rank,mpi_comm)
      CALL mpi_bc(this%alph,rank,mpi_comm)
      CALL mpi_bc(this%beta,rank,mpi_comm)
      CALL mpi_bc(this%b_con,rank,mpi_comm)
      CALL mpi_bc(this%socscale,rank,mpi_comm)
-     
-     
+
+
    END SUBROUTINE mpi_bc_noco
 
    SUBROUTINE read_xml_noco(this,xml)
      USE m_types_xml
      CLASS(t_noco),INTENT(inout):: this
      TYPE(t_xml),INTENT(IN)   :: xml
-     
+
      INTEGER:: numberNodes,ntype,itype
      CHARACTER(len=100)::xpathA,xpathB,valueString
 
       this%l_noco = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_noco'))
-   
+
       ! Read in optional SOC parameters if present
       xPathA = '/fleurInput/calculationSetup/soc'
       numberNodes = xml%GetNumberOfNodes(xPathA)
@@ -115,8 +115,9 @@ MODULE m_types_noco
       ALLOCATE(this%socscale(ntype))
 
       DO itype=1,ntype
+        this%socscale(Itype)=1.0
          IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xml%speciesPath(itype)))//'/special/@socscale')>0) &
-              this%socscale(iType)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xml%speciesPath(itype)))//'/special/@socscale'))
+              this%socscale(Itype)=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xml%speciesPath(itype)))//'/special/@socscale'))
          !Read in atom group specific noco parameters
          xPathB = TRIM(ADJUSTL(xml%groupPath(itype)))//'/nocoParams'
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB)))
@@ -139,7 +140,7 @@ MODULE m_types_noco
 
 
       integer :: na,itype
-      
+
       ! Check noco stuff and calculate missing noco parameters
       IF (noco%l_noco) THEN
          IF (noco%l_ss) THEN
@@ -162,9 +163,9 @@ MODULE m_types_noco
       END IF
 
 
-      
+
     end subroutine init_noco
 
-      
-     
+
+
  END MODULE m_types_noco

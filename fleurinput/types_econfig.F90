@@ -9,7 +9,7 @@ MODULE m_types_econfig
   PRIVATE
   !This is used by t_atoms and does not extend t_fleurinput_base by itself
   TYPE:: t_econfig
-     CHARACTER(len=100) :: coreconfig 
+     CHARACTER(len=200) :: coreconfig
      CHARACTER(len=100) :: valenceconfig
      INTEGER            :: num_core_states
      INTEGER            :: num_states
@@ -29,7 +29,7 @@ MODULE m_types_econfig
   END TYPE t_econfig
   PUBLIC :: t_econfig
 CONTAINS
-  
+
   SUBROUTINE get_core(econf,nst,nprnc,kappa,occupation,l_valence)
     CLASS(t_econfig),INTENT(IN)  :: econf
     INTEGER         ,INTENT(out) :: nst
@@ -46,9 +46,9 @@ CONTAINS
     occupation(:nst,:)=econf%occupation(:nst,:)
     if (size(occupation,2)==1) occupation=occupation*2
   END SUBROUTINE get_core
-    
-   
-  
+
+
+
   FUNCTION get_state_string(econf,i)RESULT(str)
     CLASS(t_econfig),INTENT(IN):: econf
     INTEGER,INTENT(in)         :: i
@@ -74,17 +74,17 @@ CONTAINS
     CASE default
        call judft_error("Invalid reqest for string with kappa")
     END SELECT
-    
-    
+
+
     WRITE(str,"(a1,i1,a)") "(",econf%nprnc(i),s
   END FUNCTION get_state_string
-    
-    
+
+
   SUBROUTINE broadcast(econf,mpi_comm)
     USE m_mpi_bc_tool
     CLASS(t_econfig),INTENT(INOUT):: econf
     INTEGER,INTENT(in)            :: mpi_comm
-#ifdef CPP_MPI    
+#ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr,irank
 
@@ -97,7 +97,7 @@ CONTAINS
     CALL mpi_bc(econf%valence_electrons,0,mpi_comm)
 #endif
   END SUBROUTINE broadcast
-    
+
 
   SUBROUTINE init_num(econf,nc,nz)
     USE m_constants
@@ -114,8 +114,8 @@ CONTAINS
 
     CALL econf%init(core,nz)
   END SUBROUTINE init_num
-  
-    
+
+
   SUBROUTINE init_simple(econf,str)
     CLASS(t_econfig),INTENT(OUT):: econf
     CHARACTER(len=*),INTENT(IN) :: str
@@ -123,10 +123,10 @@ CONTAINS
     CHARACTER(len=200)::core,valence
     INTEGER :: n
     REAL,allocatable :: core_occ(:),valence_occ(:)
-    
+
     n=INDEX(str,"|")
     IF (n==0) CALL judft_error(("Invalid econfig:"//TRIM(str)))
-    
+
     IF (INDEX(str,"|")==1) THEN
        ! No core
        core=""
@@ -157,15 +157,15 @@ CONTAINS
 
 
     INTEGER :: np(40),kap(40)
-    
+
     econf%coreconfig=core
     econf%valenceconfig=valence
-    
+
     CALL expand_noble_gas(core) !extend noble gas config
 
     IF (VERIFY(core,"(1234567spdf/) ")>0) call judft_error(("Invalid econfig:"//TRIM(core)))
     IF (VERIFY(valence,"(1234567spdf/) ")>0) CALL judft_error(("Invalid econfig:"//TRIM(valence)))
-    
+
     econf%num_core_states=0
     DO WHILE (len_TRIM(core)>1)
        CALL extract_next(core,np(econf%num_core_states+1),kap(econf%num_core_states+1))
@@ -180,7 +180,7 @@ CONTAINS
     econf%nprnc=np(:econf%num_states)
     econf%kappa=kap(:econf%num_states)
     ALLOCATE(econf%occupation(econf%num_states,2))
-    
+
     CALL econf%set_occupation("(1s1/2)",-1.,-1.)
   END SUBROUTINE init_all
 
@@ -195,34 +195,34 @@ CONTAINS
     CHARACTER(len=7)::str
 
     IF (nz>54) CALL judft_warn("Specifying no explicit valence config for systems with f-states might lead to broken configs")
-    
+
     econf%coreconfig=core
-    
+
     CALL expand_noble_gas(core) !extend noble gas config
 
     IF (VERIFY(core,"(1234567spdf/) ")>0) call judft_error(("Invalid econfig:"//TRIM(core)))
-    
+
     econf%num_core_states=0
     DO WHILE (len_TRIM(core)>1)
        CALL extract_next(core,np(econf%num_core_states+1),kap(econf%num_core_states+1))
        econf%num_core_states=econf%num_core_states+1
     ENDDO
     econf%num_states=econf%num_core_states
-    !valence charge 
-    charge=nz-SUM(ABS(kap(:econf%num_core_states)))*2
-    DO  WHILE(charge>0) !Add valence 
+    !valence charge
+    charge=nz-SUM(ABS(kap(:econf%num_core_states))**2)*2
+    DO  WHILE(charge>0) !Add valence
        str=coreStateList_const(econf%num_states+1)
        PRINT*,econf%num_states,str,charge
        CALL extract_next(str,np(econf%num_states+1),kap(econf%num_states+1))
        econf%num_states=econf%num_states+1
-       charge=charge-ABS(kap(econf%num_states))
+       charge=charge-ABS(kap(econf%num_states)**2)*2
     ENDDO
 
     ALLOCATE(econf%nprnc(econf%num_states),econf%kappa(econf%num_states))
     econf%nprnc=np(:econf%num_states)
     econf%kappa=kap(:econf%num_states)
     ALLOCATE(econf%occupation(econf%num_states,2))
-    
+
     CALL econf%set_occupation("(1s1/2)",-1.,-1.)
     !last level might be partially occupied
     IF (charge<0) THEN
@@ -241,9 +241,9 @@ CONTAINS
     REAL :: up,down
     up=u
     down=d
-    
+
     str=ADJUSTL(state)
-    
+
     IF (up==-1. .AND. down==-1) THEN
        !Set all defaults
        econf%occupation=0.0
@@ -264,12 +264,12 @@ CONTAINS
                 up=-1;down=-1
              END IF
           END IF
-       END DO              
+       END DO
     END IF
     econf%core_electrons=SUM(econf%occupation(:econf%num_core_states,:))
     econf%valence_electrons=SUM(econf%occupation(econf%num_core_states+1:econf%num_states,:))
   END SUBROUTINE set_occupation
-    
+
 
   SUBROUTINE set_initial_moment(econf,bmu)
     CLASS(t_econfig),INTENT(INOUT):: econf
@@ -301,7 +301,7 @@ CONTAINS
 
 
 
-    
+
   SUBROUTINE extract_next(str,n,kappa)
     CHARACTER(len=*),INTENT(INOUT) :: str
     INTEGER,INTENT(out)         :: n,kappa
@@ -345,29 +345,29 @@ CONTAINS
     CASE ("Ne","ne","NE")
        str="(1s1/2) (2s1/2) (2p1/2) "//str
     CASE ("Ar","ar","AR")
-       str="(1s1/2) (2s1/2) (2p1/2) (3s1/2) (3p1/2) (3p3/2) "//str
+       str="(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) "//str
     CASE ("Kr","kr","KR")
-       str="(1s1/2) (2s1/2) (2p1/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2)"//str
+       str="(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2)"//str
     CASE ("Xe","xe","XE")
-       str="(1s1/2) (2s1/2) (2p1/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2) (5s1/2) (4d3/2) (4d5/2) (5p1/2) (5p3/2) "//str
+       str="(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2) (5s1/2) (4d3/2) (4d5/2) (5p1/2) (5p3/2) "//str
     CASE ("Rn","rn","RN")
-       str="(1s1/2) (2s1/2) (2p1/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2) (5s1/2) (4d3/2) (4d5/2) (5p1/2) (5p3/2) (6s1/2) (4f5/2) (4f7/2) (5d3/2) (5d5/2) (6p1/2) (6p3/2) "//str
+       str="(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2) (5s1/2) (4d3/2) (4d5/2) (5p1/2) (5p3/2) (6s1/2) (4f5/2) (4f7/2) (5d3/2) (5d5/2) (6p1/2) (6p3/2) "//str
     CASE default
        call judft_error(("Invalid econfig:"//TRIM(str)))
     END SELECT
   END SUBROUTINE expand_noble_gas
 
-    
-    
+
+
 
 
     SUBROUTINE convert_to_extended(simple,extended,occupations)
       CHARACTER(len=*),INTENT(IN)  :: simple
       CHARACTER(len=*),INTENT(OUT) :: extended
       REAL,ALLOCATABLE,INTENT(OUT) :: occupations(:)
-      
+
       CHARACTER(len=200)::conf
-      REAL :: occupation(100) !this is the tmp local variable (no 's')
+      REAL :: occupation(200) !this is the tmp local variable (no 's')
       INTEGER:: n,nn,occ
       CHARACTER:: n_ch,ch
       extended=""

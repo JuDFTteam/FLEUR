@@ -311,11 +311,10 @@
       READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
       IF (ch_test.EQ.'igr') THEN                          ! GGA input
          BACKSPACE (5)
-         call judft_error("Old input files with explicit GGA parameters no longer supported")
-!         READ (UNIT=5,FMT=7121,END=99,ERR=99)&
-!     &                   idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
-!         IF (idsprs.ne.0)&
-!     &        CALL juDFT_warn("idsprs no longer supported in rw_inp")
+         READ (UNIT=5,FMT=7121,END=99,ERR=99)&
+     &                   idum,ldum,idum,idsprs
+         IF (idsprs.ne.0)&
+     &        CALL juDFT_warn("idsprs no longer supported in rw_inp")
 !         WRITE (6,9121) idum,obsolete%lwb,obsolete%ndvgrd,idsprs,obsolete%chng
  7121    FORMAT (5x,i1,5x,l1,8x,i1,8x,i1,6x,d10.3)
 

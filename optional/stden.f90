@@ -57,8 +57,8 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    REAL     :: vacpar(2)
    INTEGER lnum(29,atoms%ntype),nst(atoms%ntype)
    INTEGER jrc(atoms%ntype)
-   LOGICAL l_found(0:3),llo_found(atoms%nlod),l_enpara,l_st
-   REAL                 :: occ(MAXVAL(atoms%econf%num_states),2)
+   LOGICAL l_found(0:3),llo_found(atoms%nlod),l_st
+   REAL,ALLOCATABLE   :: occ(:,:)
    ! Data statements
    DATA del/1.e-6/
    PARAMETER (l_st=.true.)
@@ -219,12 +219,8 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
          END DO ! ispin = 1, input%jspins
       END IF ! input%vchk
 
-      l_enpara = .FALSE.
-      INQUIRE (file='enpara',exist=l_enpara)
-      l_enpara = l_enpara.OR.input%l_inpXML
-
       ! set up parameters for enpara-file
-      IF ((juDFT_was_argument("-genEnpara")).AND..NOT.l_enpara) THEN
+      IF ((juDFT_was_argument("-genEnpara"))) THEN
          CALL enpara%init_enpara(atoms,input%jspins,input%film)
 
          enpara%lchange = .TRUE.

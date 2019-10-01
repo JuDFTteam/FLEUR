@@ -47,8 +47,8 @@
       TYPE(t_atoms),INTENT(IN)       :: atoms
 
       REAL,    INTENT(IN) :: efermiarg, bandgap
-      LOGICAL, INTENT(IN) :: l_mcd 
- 
+      LOGICAL, INTENT(IN) :: l_mcd
+
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
       INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra
@@ -73,7 +73,7 @@
       qdim = lmax*atoms%ntype+3
       l_orbcomp = banddos%l_orb
       IF (banddos%ndir.EQ.-3) THEN
-        qdim = 2*slab%nsld 
+        qdim = 2*slab%nsld
         n_orb = 0
         IF (banddos%l_orb) THEN
            n_orb = banddos%orbCompAtom
@@ -84,7 +84,7 @@
       ALLOCATE( qal(qdim,dimension%neigd,kpts%nkpt),&
      &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkpt),&
      &          qlay(dimension%neigd,vacuum%layerd,2))
-      IF (l_mcd) THEN 
+      IF (l_mcd) THEN
          ALLOCATE(mcd_local(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
       ELSE
          ALLOCATE(mcd_local(0,0,0))
@@ -95,11 +95,11 @@
       emin =min(banddos%e1_dos*hartree_to_ev_const,banddos%e2_dos*hartree_to_ev_const)
       emax =max(banddos%e1_dos*hartree_to_ev_const,banddos%e2_dos*hartree_to_ev_const)
       efermi = efermiarg*hartree_to_ev_const
- 
+
       WRITE (6,'(a)') 'DOS-Output is generated!'
 
       IF ( NINT((emax - emin)/sigma) > ned ) THEN
-        WRITE(6,*) 'sig_dos too small for DOS smoothing:'   
+        WRITE(6,*) 'sig_dos too small for DOS smoothing:'
         WRITE(6,*) 'Reduce energy window or enlarge banddos%sig_dos!'
         WRITE(6,*) 'For now: setting sigma to zero !'
         sigma = 0.0
@@ -117,10 +117,10 @@
       DO i=1,ned
          e(i) = emin + (i-1)*de
       ENDDO
- 
+
       IF ( l_mcd ) THEN ! create an energy grid for mcd-spectra
-        e_lo =  9.9*10.0**9 
-        e_up = -9.9*10.0**9     
+        e_lo =  9.9*10.0**9
+        e_up = -9.9*10.0**9
         DO jspin = 1,input%jspins
           DO n = 1,atoms%ntype
             DO icore = 1 , mcd%ncore(n)
@@ -129,7 +129,7 @@
             ENDDO
           ENDDO
         ENDDO
-        e_lo = e_lo*hartree_to_ev_const - efermi - emax 
+        e_lo = e_lo*hartree_to_ev_const - efermi - emax
         e_up = e_up*hartree_to_ev_const - efermi
         de = (e_up-e_lo)/(ned-1)
         DO i=1,ned
@@ -207,7 +207,7 @@
                      qal(lmax*atoms%ntype+1,i,k) = qal(lmax*atoms%ntype+1,i,k) - qmt
                   ENDDO
                   qal(lmax*atoms%ntype+1,i,k) = qal(lmax*atoms%ntype+1,i,k)&
-                       -qal(lmax*atoms%ntype+2,i,k)*(3-vacuum%nvac) -qal(lmax*atoms%ntype+3,i,k)*(vacuum%nvac-1) 
+                       -qal(lmax*atoms%ntype+2,i,k)*(3-vacuum%nvac) -qal(lmax*atoms%ntype+3,i,k)*(vacuum%nvac-1)
                ENDDO
             ENDIF
 !
@@ -237,27 +237,17 @@
              write(*,*) as,sym%nop2,l_tria
 !             l_tria=.true.
            ELSE
-             IF (input%l_inpXML) THEN
-                IF (input%tria) THEN
-                   ntetra = kpts%ntet
-                   DO i = 1, ntetra
-                      itetra(1:4,i) = kpts%ntetra(1:4,i)
-                      voltet(i) = kpts%voltet(i) / ntetra
-                   END DO
-                   l_tria = input%tria
-                   GOTO 67
-                ELSE
-                   GOTO 66
-                END IF
+             IF (input%tria) THEN
+               ntetra = kpts%ntet
+               DO i = 1, ntetra
+                 itetra(1:4,i) = kpts%ntetra(1:4,i)
+                 voltet(i) = kpts%voltet(i) / ntetra
+               END DO
+               l_tria = input%tria
+               GOTO 67
+             ELSE
+               GOTO 66
              END IF
-             OPEN (41,file='kpts',FORM='formatted',STATUS='old')
-             DO i = 1, kpts%nkpt+1
-                READ (41,*,END=66,ERR=66)
-             ENDDO
-             READ (41,'(i5)',END=66,ERR=66) ntetra
-             READ (41,'(4(4i6,4x))') ((itetra(i,k),i=1,4),k=1,ntetra)
-             READ (41,'(4f20.13)') (voltet(k),k=1,ntetra)
-             CLOSE(41)
              voltet(1:ntetra) = voltet(1:ntetra) / ntetra
              l_tria=.true.
              GOTO 67
@@ -265,7 +255,7 @@
              CALL triang(kpts%bk,kpts%nkpt,itria,ntria,atr,as,l_tria)
              l_tria=.true.
 ! YM: tetrahedrons is not the way in 1D
-             IF (oneD%odi%d1) as = 0.0         
+             IF (oneD%odi%d1) as = 0.0
              IF (sym%invs) THEN
                IF (abs(sym%nop2*as-1.0).GT.0.000001) l_tria=.false.
              ELSE
@@ -328,9 +318,9 @@
                 CALL smooth(e,g(1,ln),sigma,ned)
               ENDDO
             ENDIF
- 
+
 !*** sum up for all atoms
- 
+
          IF (banddos%ndir.NE.-3) THEN
             DO l = 1 , atoms%ntype
                l1 = lmax*(l-1) + 1
@@ -350,7 +340,7 @@
                ENDDO
             ENDDO
          ENDIF
-    
+
 !**** write out DOS
          OPEN (18,FILE='DOS'//spin12(jspin))
 
@@ -409,14 +399,14 @@
                ENDDO
              ENDDO
            ENDDO
-           CLOSE (18) 
+           CLOSE (18)
          ENDIF
          DEALLOCATE (g)
-!         
+!
 !------------------------------------------------------------------------------
 !     now calculate the VACOS
 !------------------------------------------------------------------------------
-            
+
          IF ( banddos%vacdos .and. input%film ) THEN
             ALLOCATE(g(ned,vacuum%nstars*vacuum%layers*vacuum%nvac))
 !            CALL ptdos(
@@ -425,16 +415,16 @@
 !     <                 g)
             CALL ptdos(emin,emax,input%jspins,ned,vacuum%nstars*vacuum%nvac*vacuum%layers,ntb,ntria&
                 ,as,atr,2*kpts%nkpt,itria,kpts%nkpt,ev(1:ntb,1:kpts%nkpt), qval(:,1:ntb,1:kpts%nkpt),e,g)
-            
+
 !---- >     smoothening
             IF ( sigma.GT.0.0 ) THEN
                DO ln = 1 , vacuum%nstars*vacuum%nvac*vacuum%layers
                   CALL smooth(e,g(1,ln),sigma,ned)
                ENDDO
             ENDIF
-            
+
 !     write VACDOS
-            
+
             OPEN (18,FILE='VACDOS'//spin12(jspin))
 !            WRITE (18,'(i2,25(2x,i3))') Layers , (Zlay(l),l=1,Layers)
             DO i = 1 , ned
@@ -464,11 +454,11 @@
             END IF
 
             OPEN (18,FILE='bands'//spin12(jspin))
-            ntb = minval(results%neig(:,jspin))    
+            ntb = minval(results%neig(:,jspin))
             kx(1) = 0.0
             vkr(:,1)=matmul(kpts%bk(:,1),cell%bmat)
             DO k = 2, kpts%nkpt
-              
+
                vkr(:,k)=matmul(kpts%bk(:,k),cell%bmat)
                dk = (vkr(1,k)-vkr(1,k-1))**2 + (vkr(2,k)-vkr(2,k-1) )**2 + &
                     (vkr(3,k)-vkr(3,k-1))**2
@@ -483,7 +473,7 @@
          ENDIF
 
       ENDDO
-!         
+!
 !------------------------------------------------------------------------------
 !     for MCD calculations ...
 !------------------------------------------------------------------------------
@@ -512,4 +502,4 @@
 99001 FORMAT (f10.5,110(1x,e10.3))
 
       END SUBROUTINE evaldos
-      END MODULE m_evaldos 
+      END MODULE m_evaldos

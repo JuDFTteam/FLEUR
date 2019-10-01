@@ -278,9 +278,10 @@ MODULE m_types_atoms
        !force type
        xpath=''
        IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/force')==1) xpath=xpaths
+       IF(xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/force')==1) xpath=xpathg
        IF (xpath.NE.'') THEN
-          this%l_geo(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'/force/@calculate'))
-          valueString = xml%getAttributeValue(TRIM(ADJUSTL(xPathg))//'force/@relaxXYZ')
+          this%l_geo(n) = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/force/@calculate'))
+          valueString = xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/force/@relaxXYZ')
           READ(valueString,'(3l1)') relaxX, relaxY, relaxZ
           IF (relaxX) this%relax(1,n) = 1
           IF (relaxY) this%relax(2,n) = 1

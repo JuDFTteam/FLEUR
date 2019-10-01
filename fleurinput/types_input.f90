@@ -57,7 +57,7 @@ MODULE m_types_input
      LOGICAL:: l_wann=.FALSE.
      LOGICAL:: secvar=.FALSE.
      LOGICAL:: evonly=.FALSE.
-     LOGICAL:: l_inpXML=.TRUE.
+!     LOGICAL:: l_inpXML=.TRUE.
      REAL :: ellow=-1.8
      REAL :: elup=1.0
      REAL :: fixed_moment = 0.0
@@ -135,7 +135,7 @@ CONTAINS
     call mpi_bc(this%l_wann,rank,mpi_comm)
     call mpi_bc(this%secvar,rank,mpi_comm)
     call mpi_bc(this%evonly,rank,mpi_comm)
-    call mpi_bc(this%l_inpXML,rank,mpi_comm)
+!    call mpi_bc(this%l_inpXML,rank,mpi_comm)
     call mpi_bc(this%ellow,rank,mpi_comm)
     call mpi_bc(this%elup,rank,mpi_comm)
     call mpi_bc(this%fixed_moment ,rank,mpi_comm)

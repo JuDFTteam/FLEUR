@@ -99,8 +99,8 @@ CONTAINS
     mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
     !determine if we use an xml-input file
-    INQUIRE (file='inp.xml',exist=input%l_inpXML)
-    IF (.NOT.input%l_inpXML) THEN
+    INQUIRE (file='inp.xml',exist=l_found)
+    IF (.NOT.l_found) THEN
        CALL judft_error("No input file found",calledby='fleur_init',hint="To use FLEUR, you have to provide an 'inp.xml' file in the working directory")
     END IF
 

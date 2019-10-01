@@ -41,12 +41,13 @@ CONTAINS
 
     TYPE(t_forcetheo):: forcetheo
     TYPE(t_kpts) ,INTENT(OUT):: kpts
-   
+
     !local only
     TYPE(t_dimension)    ::dimension
     TYPE(t_sphhar)       ::sphhar
     TYPE(t_atompar)      :: ap
     INTEGER              :: n,grid(3)
+    LOGICAL              :: l_enparaok
 
     CALL fleur_init_old(&
          input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
@@ -54,15 +55,35 @@ CONTAINS
          oneD,grid) !kpt grid not used...
 
     CALL sym%init(cell,input%film)
-    ALLOCATE(enpara%qn_el(0:3,atoms%ntype,2),enpara%qn_ello(size(enpara%ello0),atoms%ntype,2))
-    enpara%qn_el=0.0
-    enpara%qn_ello=0.0
- 
-    ALLOCATE(atoms%label(atoms%nat)); atoms%label=""
+
+    !Generate speciesnames
     ALLOCATE(atoms%speciesname(atoms%ntype))
     DO n=1,atoms%ntype
-       WRITE(atoms%speciesname(n),"(a,a,i0)") ADJUSTL(TRIM(namat_const(atoms%nz(n)))),"-",n
-    END DO
+      write(atoms%speciesname(n),"(a,a,i0)") namat_const(atoms%nz(n)),"-",n
+    ENDDO
+    IF (.not.allocated(atoms%label)) THEN
+      allocate(atoms%label(atoms%nat))
+      atoms%label=""
+    ENDIF
+    !convert enpara
+    l_enparaok=.false.
+    If (all(abs(enpara%el0)<1E10))THEN
+      IF (All(Abs(Enpara%El0-Nint(Enpara%El0))<1e-9)) Then
+        Enpara%Qn_el=Nint(Enpara%El0)
+        l_enparaok=.true.
+        if (atoms%nlotot>0) THEN
+          IF (all(abs(enpara%ello0-Nint(Enpara%ello0))<1e-9)) THEN
+            enpara%qn_ello=Nint(enpara%ello0)
+          ELSE
+            l_enparaok=.false.
+          ENDIF
+        ENDIF
+      ENDIF
+    ENDIF
+    IF (.NOT.l_enparaok) THEN
+      CALL enpara%init(atoms%ntype,atoms%nlod,input%jspins,.true.,atoms%nz)
+      call judft_warn("Enpara not found or not set to integer values. Using defaults")
+    ENDIF
 
     DO n=1,atoms%ntype
        ap=find_atompar(atoms%nz(n),atoms%rmt(n))
@@ -70,6 +91,6 @@ CONTAINS
        call atoms%econf(n)%init(ap%econfig)
     END DO
 
-  
+
   END SUBROUTINE read_old_inp
  END MODULE m_read_old_inp

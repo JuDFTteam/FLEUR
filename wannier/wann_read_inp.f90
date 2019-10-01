@@ -34,7 +34,7 @@ subroutine wann_read_inp(input,l_p0,wann)
    wann%l_orbcomp=.false.
    wann%l_orbcomprs=.false.
    wann%l_perturbrs=.false.
-   wann%l_denmat=.false.                                             
+   wann%l_denmat=.false.
    wann%l_perturb=.false.
    wann%l_nedrho=.false.
    wann%l_anglmomrs=.false.
@@ -133,7 +133,7 @@ subroutine wann_read_inp(input,l_p0,wann)
 !-----read the input file 'wann_inp'
    l_file=.false.
    inquire(file='wann_inp',exist=l_file)
-   IF ((.not.l_file).AND.(.NOT.input%l_inpXML)) THEN
+   IF ((.not.l_file)) THEN
       CALL juDFT_error ("wann_inp not found", calledby="wann_read_inp")
    END IF
    IF (l_file) THEN
@@ -142,7 +142,7 @@ subroutine wann_read_inp(input,l_p0,wann)
       wann%l_byindex=.false.
       open(916,file='wann_inp',form='formatted')
       i=0
-      do 
+      do
          i=i+1
          read(916,'(a)',iostat=ios)task
          if(ios.ne.0)exit
@@ -245,7 +245,7 @@ subroutine wann_read_inp(input,l_p0,wann)
          elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc')then
             wann%l_hsomtxvec_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
-            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
             wann%l_hsomtx_unf_to_hsoc_unf=.true.
          elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
@@ -254,19 +254,19 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtx_to_hsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
             wann%l_hsomtx_unf_to_hsoc=.true.
-            
+
          elseif(trim(task).eq.'perpmagatlres')then
             wann%l_perpmagatlres=.true.
 	    backspace(916)
             read(916,*,iostat=ios)task,wann%perpmagl
             if (ios /= 0) &
                CALL juDFT_error ("error reading perpmagl", &
-                               calledby="wann_read_inp")   
-            
+                               calledby="wann_read_inp")
+
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatvec')then
-            wann%l_socmatvec=.true.  
+            wann%l_socmatvec=.true.
          elseif(trim(task).eq.'socmatrs')then
             wann%l_socmatrs=.true.
          elseif(trim(task).eq.'soctomom')then
@@ -426,7 +426,7 @@ subroutine wann_read_inp(input,l_p0,wann)
       if(l_p0.and.ios.lt.0)write(6,*)"end of wann_inp reached"
       close(916)
 
-   ELSE IF (input%l_inpXML) THEN
+   ELSE
 
       DO i = 1, SIZE(wann%jobList)
          task = TRIM(ADJUSTL(wann%jobList(i)))
@@ -529,7 +529,7 @@ subroutine wann_read_inp(input,l_p0,wann)
          elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc')then
             wann%l_hsomtxvec_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
-            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
             wann%l_hsomtx_unf_to_hsoc_unf=.true.
          elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
@@ -538,15 +538,15 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_hsomtx_to_hsoc=.true.
          elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
             wann%l_hsomtx_unf_to_hsoc=.true.
-            
+
          elseif(trim(task).eq.'perpmagatlres')then
             wann%l_perpmagatlres=.true.
 	    backspace(916)
             read(916,*,iostat=ios)task,wann%perpmagl
             if (ios /= 0) &
                CALL juDFT_error ("error reading perpmagl", &
-                               calledby="wann_read_inp")   
-            
+                               calledby="wann_read_inp")
+
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
          elseif(trim(task).eq.'socmatvec')then
@@ -724,7 +724,7 @@ subroutine wann_read_inp(input,l_p0,wann)
      do n=1,wann%atomlist_num
        wann%atomlist(n)=n
      enddo
-   endif      
+   endif
 
 end subroutine wann_read_inp
 
