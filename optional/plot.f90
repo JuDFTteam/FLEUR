@@ -743,7 +743,7 @@ CONTAINS
       TYPE(t_potden)                :: cden, mden
 
       CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
-      CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mden)
+      CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mden)
 
    END SUBROUTINE vectorplot
 
@@ -774,7 +774,7 @@ CONTAINS
 
       TYPE(t_potden)                   :: cden, mxden, myden, mzden
       CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
-      CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mxden,myden,mzden)
+      CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mxden,myden,mzden)
 
    END SUBROUTINE matrixplot
 
