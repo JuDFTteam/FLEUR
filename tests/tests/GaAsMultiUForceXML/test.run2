@@ -4,12 +4,12 @@
 jt::copyfile("files/inp-2.xml","$workdir/inp.xml");
 jt::copyfile("files/n_mmp_mat",$workdir);
 
-jt::testrun("rm broyd*",$workdir);
+jt::testrun("rm mixing_*",$workdir);
 jt::testrun($executable,$workdir);
 
 #now test output
 $result=jt::test_grepexists("$workdir/out","it= 12  is completed");
-$result+=jt::test_grepnumber("$workdir/out","first approx. to ef",".*: *([^ ]*)",0.1917,0.001);
-$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-4204.78236,0.0001);
+$result+=jt::test_grepnumber("$workdir/out","first approx. to ef",".*: *([^ ]*)",0.126,0.001);
+$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-4204.7140,0.0001);
 
 jt::stageresult($workdir,$result,"2");
