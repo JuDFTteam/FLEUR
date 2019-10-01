@@ -823,6 +823,8 @@ CONTAINS
             CALL savxsf(oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
 
          END IF
+      
+      END IF
          
       IF (plot_const.EQ.7) THEN
          factor = 2.0
