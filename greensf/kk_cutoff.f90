@@ -7,7 +7,7 @@ MODULE m_kk_cutoff
 
    SUBROUTINE kk_cutoff(im,atoms,noco,l,jspins,ne,del,e_bot,e_top,cutoff)
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
-      !This cutoff energy is defined so that the integral over the fDOS up to this cutoff 
+      !This cutoff energy is defined so that the integral over the fDOS up to this cutoff
       !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
 
       USE m_kkintgr

@@ -48,7 +48,7 @@ MODULE m_hubbard1_setup
       EXTERNAL MPI_BCAST
 #endif
 
-      INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin
+      INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm
       INTEGER io_error,ierr
       INTEGER indStart,indEnd
       REAL    mu_dc,exc
@@ -213,10 +213,10 @@ MODULE m_hubbard1_setup
                   CALL CHDIR(TRIM(ADJUSTL(xPath)))
 #ifdef CPP_EDSOLVER
                   e = gdft%e*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),2*gdft%nz,e,selfen(i_hia,:,:,:,1),1)
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(i_hia,:,:,:,1),1)
                   e = conjg(gdft%e)*hartree_to_ev_const
                   !no rediagonalization
-                  CALL EDsolver_from_cfg(2*(2*l+1),2*gdft%nz,e,selfen(i_hia,:,:,:,2),0)
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(i_hia,:,:,:,2),0)
 #endif
                   CALL CHDIR(TRIM(ADJUSTL(cwd)))
                   CALL timestop("Hubbard 1: EDsolver")
