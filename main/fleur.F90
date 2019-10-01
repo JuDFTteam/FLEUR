@@ -130,11 +130,11 @@ CONTAINS
        IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
-  
+
     iter     = 0
     iterHF   = 0
     l_cont = (iter < input%itmax)
-    
+
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
@@ -261,7 +261,7 @@ CONTAINS
           IF(.not.input%eig66(1))THEN
             CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
-          ENDIF             
+          ENDIF
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")
@@ -351,7 +351,7 @@ CONTAINS
              CYCLE forcetheoloop
           ENDIF
 
-          
+
           !+Wannier functions
           IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
              CALL wannier(DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
@@ -399,7 +399,7 @@ CONTAINS
 #endif
           CALL timestop("generation of new charge density (total)")
 
-             
+
 !!$             !----> output potential and potential difference
 !!$             IF (obsolete%disp) THEN
 !!$                reap = .FALSE.
@@ -411,7 +411,7 @@ CONTAINS
 !!$
 !!$                CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
 !!$             END IF
-             
+
              ! total energy
              CALL timestart('determination of total energy')
              CALL totale(mpi,atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
@@ -430,14 +430,14 @@ CONTAINS
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
             sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
-       
+
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
-         WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
+         WRITE(*,"(A,I3,A,ES15.8)") "Iteration: ",iter," Distance: ",results%last_distance
          CALL timestop("Iteration")
        END IF ! mpi%irank.EQ.0
-          
+
 #ifdef CPP_MPI
        CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
@@ -459,7 +459,7 @@ CONTAINS
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
           ! MetaGGAs need a at least 2 iterations
-          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f & 
+          l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f &
                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
@@ -471,7 +471,7 @@ CONTAINS
        END IF
 
     END DO scfloop ! DO WHILE (l_cont)
-   
+
     CALL add_usage_data("Iterations",iter)
 
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
@@ -479,7 +479,7 @@ CONTAINS
     CALL close_eig(eig_id)
 
     CALL juDFT_end("all done",mpi%irank)
-    
+
   CONTAINS
     SUBROUTINE priv_geo_end(mpi)
       TYPE(t_mpi),INTENT(IN)::mpi
@@ -506,6 +506,6 @@ CONTAINS
       ENDIF
       CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
     END SUBROUTINE priv_geo_end
-    
+
   END SUBROUTINE fleur_execute
 END MODULE m_fleur
