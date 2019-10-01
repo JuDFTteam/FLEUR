@@ -247,12 +247,12 @@ CONTAINS
                  obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
-!       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-!          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_TOT_INDEX_const,vTot)         
+       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
+          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_TOT_INDEX_const,vTot)         
 !          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_COU_INDEX_const,vCoul)
 !          CALL subPotDen(vxcForPlotting,vTot,vCoul)
 !          CALL makeplots(input%jspins,noco,sliceplot%iplot,PLOT_POT_VXC_const,vxcForPlotting)
-!       END IF 
+       END IF 
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
