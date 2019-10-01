@@ -486,7 +486,7 @@ CONTAINS
 
   !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
        IF(sliceplot%iplot.NE.0) THEN
-          CALL juDFT_end("topped self consistency loop after all plots have been generated.")
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
 
 
