@@ -114,19 +114,24 @@ CONTAINS
                 lm = l* (l+1) + m
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
+                   !------------------------------------------------------------------------
+                   ! Currently for jsp >= 3 the convention is:
+                   !      -jsp=3 => real part of the off-diagonal hamiltonian
+                   !      -jsp=4 => imaginary part of the off-diagonal hamiltonian
+                   !------------------------------------------------------------------------
                    IF (jsp < 3) THEN
                      td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + v%mmpMat(m,mp,i_u,jsp)
                      td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
                    ELSE IF(jsp.EQ.3) THEN
-                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + v%mmpMat(m,mp,i_u,jsp) * uun21(l,n)
-                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + v%mmpMat(m,mp,i_u,jsp) * dun21(l,n)
-                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + v%mmpMat(m,mp,i_u,jsp) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + v%mmpMat(m,mp,i_u,jsp) * ddn21(l,n)
+                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
                    ELSE
-                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + CONJG(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
-                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + CONJG(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
-                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + CONJG(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + CONJG(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
+                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + AIMAG(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + AIMAG(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + AIMAG(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + AIMAG(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
                    ENDIF
                 ENDDO
              ENDDO
