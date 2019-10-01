@@ -52,7 +52,13 @@ MODULE m_greensfImag21
       IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
       l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
-
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP SHARED(wtkpt,i_gf,nbands,l_tria) &
+      !$OMP SHARED(atoms,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig) &
+      !$OMP SHARED(dosWeights,resWeights,ind) &
+      !$OMP PRIVATE(l,nType,natom,nn,ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop) &
+      !$OMP PRIVATE(im)
+      !$OMP DO
       DO i_gf = 1, atoms%n_gf
          nType = atoms%gfelem(i_gf)%atomType
          l = atoms%gfelem(i_gf)%l
@@ -62,34 +68,29 @@ MODULE m_greensfImag21
             natom = SUM(atoms%neq(:nType-1)) + nn
 
             im = 0.0
-            !Loop through bands
-            !$OMP PARALLEL DEFAULT(none) &
-            !$OMP SHARED(natom,nn,l,nType,wtkpt,i_gf,nbands,l_tria) &
-            !$OMP SHARED(atoms,im,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig,dosWeights,resWeights,ind) &
-            !$OMP PRIVATE(ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop)
-            !$OMP DO
-            DO ib = 1, nbands
+            DO m = -l, l
+               lm = l*(l+1) + m
+               DO mp = -l, l
+                  lmp = l*(l+1) + mp
+                  !Loop through bands
+                  DO ib = 1, nbands
 
-               l_zero = .true.
-               IF(l_tria) THEN
-                  IF(.NOT.input%l_resolvent) THEN
-                     !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
-                     IF(ANY(dosWeights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
-                  ELSE
-                     l_zero = .false.
-                  ENDIF
-               ELSE
-                  !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
-                  j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
-                  IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) )         l_zero = .false.
-               END IF
+                     l_zero = .true.
+                     IF(l_tria) THEN
+                        IF(.NOT.input%l_resolvent) THEN
+                           !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
+                           IF(ANY(dosWeights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
+                        ELSE
+                           l_zero = .false.
+                        ENDIF
+                     ELSE
+                        !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
+                        j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
+                        IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) )         l_zero = .false.
+                     END IF
 
-               IF(l_zero) CYCLE
+                     IF(l_zero) CYCLE
 
-               DO m = -l, l
-                  lm = l*(l+1) + m
-                  DO mp = -l, l
-                     lmp = l*(l+1) + mp
                      DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
 
                          weight = 2.0/input%jspins*(MERGE(resWeights(ie,ib),0.0,input%l_resolvent)&
@@ -132,11 +133,12 @@ MODULE m_greensfImag21
                            ENDIF
                         ENDDO!local orbitals
                      ENDDO!ie
-                  ENDDO!mp
-               ENDDO!m
-            ENDDO !ib
-            !$OMP END DO
-            !$OMP END PARALLEL
+                  ENDDO!ib
+                  DO ie = 1, greensfCoeffs%ne
+                     greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) = greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) - AIMAG(im(ie,m,mp,1))
+                  ENDDO
+               ENDDO!mp
+            ENDDO!m
 
             !Rotate the eqivalent atom into the irreducible brillouin zone
             !fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
@@ -160,14 +162,6 @@ MODULE m_greensfImag21
             !            DO mp = -l,l
             !               IF(imat.EQ.1) THEN
 
-               DO m = -l,l
-                  DO mp = -l,l
-                     DO ie = 1, greensfCoeffs%ne
-                        greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) = greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) - AIMAG(im(ie,m,mp,1))
-                     ENDDO
-                  ENDDO
-               ENDDO
-
                            !ELSE IF(imat.EQ.2) THEN
                            !   greensfCoeffs%uu(ie,i_gf,m,mp,3) = greensfCoeffs%uu(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
                            !ELSE IF(imat.EQ.3) THEN
@@ -185,6 +179,8 @@ MODULE m_greensfImag21
 
          ENDDO !natom
       ENDDO !i_gf
+      !$OMP END DO
+      !$OMP END PARALLEL
 
    END SUBROUTINE greensfImag21
 
@@ -193,7 +189,7 @@ MODULE m_greensfImag21
       USE m_rotdenmat
 
       IMPLICIT NONE
-       
+
       TYPE(t_atoms),          INTENT(IN)     :: atoms
       TYPE(t_noco),           INTENT(IN)     :: noco
       TYPE(t_greensf),        INTENT(INOUT)  :: gf
@@ -213,9 +209,9 @@ MODULE m_greensfImag21
          !$OMP PRIVATE(gf11re,gf22re,gf11imag,gf22imag,gf21re,gf21imag)
          !$OMP DO
          DO ie = 1, gf%nz
-            DO m = -l, l 
+            DO m = -l, l
                DO mp = -l, l
-                  DO ipm = 1, 2 
+                  DO ipm = 1, 2
                      !We need to call rot_den_mat two times for real and imaginary part
                      gf11re = REAL(gf%gmmpMat(ie,i_gf,m,mp,1,ipm))
                      gf22re = REAL(gf%gmmpMat(ie,i_gf,m,mp,2,ipm))
@@ -224,7 +220,7 @@ MODULE m_greensfImag21
                      gf22imag = AIMAG(gf%gmmpMat(ie,i_gf,m,mp,2,ipm))
                      CALL rot_den_mat(noco%alph(nType),noco%beta(nType),gf11imag,gf22imag,gf21imag)
 
-                     gf%gmmpMat(ie,i_gf,m,mp,1,ipm) = gf11re + ImagUnit * gf11imag 
+                     gf%gmmpMat(ie,i_gf,m,mp,1,ipm) = gf11re + ImagUnit * gf11imag
                      gf%gmmpMat(ie,i_gf,m,mp,2,ipm) = gf22re + ImagUnit * gf22imag
                      gf%gmmpMat(ie,i_gf,m,mp,3,ipm) = gf21re + ImagUnit * gf21imag
                   ENDDO

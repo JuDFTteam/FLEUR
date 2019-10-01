@@ -37,7 +37,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
 
    !-Local Scalars
    LOGICAL l_zero,l_tria
-   INTEGER i_gf,ib,ie,j,nType,natom,l,m,mp,lm,lmp,ilo,ilop,imat,it,is,isi,i
+   INTEGER i_gf,ib,ie,j,nType,natom,l,m,mp,lm,lmp,ilo,ilop,imat,it,is,isi
    REAL    fac
    COMPLEX weight
    COMPLEX im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg))
@@ -50,6 +50,14 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
    ENDIF
 
    !Loop through the gf elements to be calculated
+
+   !$OMP PARALLEL DEFAULT(none) &
+   !$OMP SHARED(ispin,wtkpt,i_gf,nbands,l_tria) &
+   !$OMP SHARED(atoms,input,eigVecCoeffs,usdus,greensfCoeffs,eig,sym) &
+   !$OMP SHARED(dosWeights,resWeights,ind) &
+   !$OMP PRIVATE(natom,l,nType,ie,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero,it,is,isi,fac) &
+   !$OMP PRIVATE(im,d_mat,calc_mat)
+   !$OMP DO
    DO i_gf = 1, atoms%n_gf
 
       l     = atoms%gfelem(i_gf)%l
@@ -58,34 +66,29 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
       !Loop through equivalent atoms
       DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
          im = 0.0
-         !Loop through bands
-         !$OMP PARALLEL DEFAULT(none) &
-         !$OMP SHARED(natom,l,nType,ispin,wtkpt,i_gf,nbands,l_tria) &
-         !$OMP SHARED(atoms,im,input,eigVecCoeffs,usdus,greensfCoeffs,eig,dosWeights,resWeights,ind) &
-         !$OMP PRIVATE(ie,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero)
-         !$OMP DO
-         DO ib = 1, nbands
-            !Check wether there is a non-zero weight for the energy window
-            l_zero = .true.
-            IF(l_tria) THEN
-               IF(.NOT.input%l_resolvent) THEN
-                  !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
-                  IF(ANY(dosWeights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
-               ELSE
-                  l_zero = .false.
-               ENDIF
-            ELSE
-               !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
-               j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
-               IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) )         l_zero = .false.
-            END IF
+         DO m = -l, l
+            lm = l*(l+1)+m
+            DO mp = -l,l
+               lmp = l*(l+1)+mp
+               !Loop through bands
+               DO ib = 1, nbands
+                  !Check wether there is a non-zero weight for the energy window
+                  l_zero = .true.
+                  IF(l_tria) THEN
+                     IF(.NOT.input%l_resolvent) THEN
+                        !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
+                        IF(ANY(dosWeights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
+                     ELSE
+                        l_zero = .false.
+                     ENDIF
+                  ELSE
+                     !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
+                     j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
+                     IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) )         l_zero = .false.
+                  END IF
 
-            IF(l_zero) CYCLE
+                  IF(l_zero) CYCLE
 
-            DO m = -l, l
-               lm = l*(l+1)+m
-               DO mp = -l,l
-                  lmp = l*(l+1)+mp
                   !Choose the relevant energy points depending on the bz-integration method
                   DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
                      !weight for the bz-integration including spin-degeneracy
@@ -127,12 +130,10 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                            ENDDO
                         ENDIF
                      ENDDO
-                  ENDDO! ie
-               ENDDO !mp
-            ENDDO !m
-         ENDDO !ib
-         !$OMP END DO
-         !$OMP END PARALLEL
+                  ENDDO!ie
+               ENDDO!ib
+            ENDDO !mp
+         ENDDO !m
 
          !Rotate the eqivalent atom into the irreducible brillouin zone
          fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
@@ -171,6 +172,8 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
          ENDDO!imat
       ENDDO!natom
    ENDDO !i_gf
+   !$OMP END DO
+   !$OMP END PARALLEL
 
 END SUBROUTINE greensfImag
 
