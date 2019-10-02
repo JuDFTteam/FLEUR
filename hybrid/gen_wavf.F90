@@ -119,7 +119,7 @@ CONTAINS
       ALLOCATE (f(atoms%jmtd, 2, 0:atoms%lmaxd), &
                 df(atoms%jmtd, 2, 0:atoms%lmaxd), &
                 source=0.0)
-                
+
       iarr = 2
       DO itype = 1, atoms%ntype
          IF (mpi%irank == 0) WRITE (6, FMT=8000) itype
@@ -156,7 +156,7 @@ CONTAINS
 
 #if CPP_DEBUG
       ! consistency check
-      IF (.not. all(iarr == hybrid%nindx)) STOP 'gen_wavf: counting error'
+      IF (.not. all(iarr == hybrid%nindx)) call judft_error('gen_wavf: counting error')
 #endif
 
 8000  FORMAT(1x, /, /, ' wavefunction parameters for atom type', i3, ':', /, t32, 'radial function', t79, &
@@ -169,15 +169,15 @@ CONTAINS
       ! (a,b,bascofold_lo) at irred. kpoints
 
       ALLOCATE (acof(dimension%neigd, 0:dimension%lmd, atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'gen_wavf: failure allocation acof'
+      IF (ok /= 0) call judft_error('gen_wavf: failure allocation acof')
       ALLOCATE (bcof(dimension%neigd, 0:dimension%lmd, atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'gen_wavf: failure allocation bcof'
+      IF (ok /= 0) call judft_error('gen_wavf: failure allocation bcof')
       ALLOCATE (ccof(-atoms%llod:atoms%llod, dimension%neigd, atoms%nlod, atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'gen_wavf: failure allocation ccof'
+      IF (ok /= 0) call judft_error('gen_wavf: failure allocation ccof')
       ALLOCATE (cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'gen_wavf: Failure allocation cmt'
+      IF (ok /= 0) call judft_error('gen_wavf: Failure allocation cmt')
       ALLOCATE (cmthlp(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'gen_wavf: failure allocation cmthlp'
+      IF (ok /= 0) call judft_error('gen_wavf: failure allocation cmthlp')
 
       DO ikpt0 = 1, nkpti
 
