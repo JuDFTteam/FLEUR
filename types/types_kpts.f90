@@ -40,19 +40,20 @@ MODULE m_types_kpts
       procedure :: is_kpt => kpts_is_kpt
    ENDTYPE t_kpts
 contains
-   function kpts_get_nk(kpts, kpoint) result(idx)
+   function kpts_get_nk(kpts, kpoint) result(ret_idx)
       ! get the index of a kpoint
       implicit NONE
       class(t_kpts), intent(in)    :: kpts
       real, intent(in)            :: kpoint(3)
-      integer                     :: idx
+      integer                     :: idx, ret_idx
 
       DO idx = 1, kpts%nkptf
          IF (all(abs(kpoint - kpts%bkf(:,idx)) < 1E-06)) THEN
+            ret_idx = idx
             return
          END IF
       END DO
-      idx = 0
+      ret_idx = 0
    end function kpts_get_nk
 
    function kpts_to_first_bz(kpts, kpoint) result(out_point)
