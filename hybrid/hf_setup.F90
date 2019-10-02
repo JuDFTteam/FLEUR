@@ -52,7 +52,6 @@ CONTAINS
       REAL, ALLOCATABLE :: basprod(:)
       INTEGER              :: degenerat(DIMENSION%neigd2 + 1, kpts%nkpt)
       LOGICAL              :: skip_kpt(kpts%nkpt)
-      INTEGER              :: g(3)
 
       skip_kpt = .FALSE.
 
@@ -61,11 +60,11 @@ CONTAINS
          CALL timestart("gen_bz and gen_wavf")
 
          ALLOCATE (zmat(kpts%nkptf), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation z_c'
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
          ALLOCATE (eig_irr(DIMENSION%neigd2, kpts%nkpt), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation eig_irr'
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
          ALLOCATE (hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%kveclo_eig'
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
          eig_irr = 0
          hybdat%kveclo_eig = 0
 
@@ -175,22 +174,21 @@ CONTAINS
 
          ALLOCATE (hybdat%pntgpt(-hybdat%pntgptd(1):hybdat%pntgptd(1), -hybdat%pntgptd(2):hybdat%pntgptd(2), &
                                  -hybdat%pntgptd(3):hybdat%pntgptd(3), kpts%nkptf), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation pntgpt'
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation pntgpt')
          hybdat%pntgpt = 0
          DO nk = 1, kpts%nkptf
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
             DO i = 1, lapw%nv(jsp)
-               g = (/lapw%k1(i, jsp), lapw%k2(i, jsp), lapw%k3(i, jsp)/)
-               hybdat%pntgpt(g(1), g(2), g(3), nk) = i
+               hybdat%pntgpt(lapw%gvec(1,i,jsp), lapw%gvec(2,i,jsp), lapw%gvec(3,i,jsp), nk) = i
             END DO
          END DO
 
          ALLOCATE (basprod(atoms%jmtd), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation basprod'
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
          ALLOCATE (hybdat%prodm(hybrid%maxindxm1, hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%prodm'
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
          ALLOCATE (hybdat%prod(hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%prod'
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prod')
          basprod = 0; hybdat%prodm = 0; hybdat%prod%l1 = 0; hybdat%prod%l2 = 0
          hybdat%prod%n1 = 0; hybdat%prod%n2 = 0
          ALLOCATE (hybdat%nindxp1(0:hybrid%maxlcutm1, atoms%ntype))
