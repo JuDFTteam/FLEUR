@@ -106,7 +106,7 @@ CONTAINS
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
-    INTEGER :: iter,iterHF,i,n
+    INTEGER :: iter,iterHF,i
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
@@ -499,8 +499,9 @@ CONTAINS
 
 !    DIVERGENCE
     CALL divB%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-    DO n=1,atoms%ntype
-       CALL divergence(input%jspins,n,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
+    
+    DO i=1,atoms%ntype
+       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
     END DO
 
     IF ((sliceplot%iplot.NE.0).AND.(mpi%irank==0) ) THEN
