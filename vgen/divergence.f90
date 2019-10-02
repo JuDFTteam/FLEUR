@@ -6,7 +6,7 @@
 MODULE m_divergence
    USE m_types
    PRIVATE
-   PUBLIC :: mt_div, pw_div, divergence
+   PUBLIC :: mt_div, pw_div, divergence!, divpotgrad
 
 CONTAINS
    SUBROUTINE mt_div(jspins,n,atoms,sphhar,sym,xcB,div)
@@ -28,7 +28,7 @@ CONTAINS
    TYPE(t_atoms), INTENT(IN)                   :: atoms
    TYPE(t_sphhar), INTENT(IN)                  :: sphhar
    TYPE(t_sym), INTENT(IN)                     :: sym
-   TYPE(t_potden), dimension(3), INTENT(INOUT) :: xcB
+   TYPE(t_potden), dimension(3), INTENT(IN)    :: xcB
    TYPE(t_potden), INTENT(INOUT)               :: div
 
    TYPE(t_gradients)                           :: gradx, grady, gradz
@@ -71,12 +71,11 @@ CONTAINS
 
    SUBROUTINE pw_div(ifftxc3,jspins,stars,cell,noco,sym,xcB,div)
    !-----------------------------------------------------------------------------!
-   !By use of the cartesian components of a field, its radial/angular derivati-  !
-   !ves in the muffin tin at each spherical grid point and the corresponding an- !
-   !gles:                                                                        !
+   !By use of the cartesian components of a field and its carthesian derivatives !
+   !in the interstitial/vacuum region at each grid point:                        !
    !                                                                             !
    !Make the divergence of said field in real space and store it as a source     !
-   !density, again represented by mt-coefficients in a potden.                   !
+   !density, again represented by pw-coefficients in a potden.                   !
    !                                                                             !
    !Code by A. Neukirchen, September 2019                                        !
    !-----------------------------------------------------------------------------! 
@@ -89,7 +88,7 @@ CONTAINS
    TYPE(t_noco), INTENT(IN)                    :: noco
    TYPE(t_stars),INTENT(IN)                    :: stars
    TYPE(t_cell),INTENT(IN)                     :: cell
-   TYPE(t_potden), dimension(3), INTENT(INOUT) :: xcB
+   TYPE(t_potden), dimension(3), INTENT(IN)    :: xcB
    TYPE(t_potden), INTENT(INOUT)               :: div
 
    TYPE(t_gradients)                           :: gradx, grady, gradz
@@ -119,9 +118,14 @@ CONTAINS
    END SUBROUTINE pw_div
 
    SUBROUTINE divergence(jspins,n,ifftxc3,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,div)
+
    USE m_types
+   USE m_constants
    IMPLICIT NONE
-   
+   !-----------------------------------------------------------------------------!
+   !Use the two divergence subroutines above to now put the complete divergence  !
+   !of a field into a t_potden variable.                                         !
+   !-----------------------------------------------------------------------------!   
    INTEGER, INTENT(IN)                         :: jspins, n, ifftxc3
    TYPE(t_atoms), INTENT(IN)                   :: atoms
    TYPE(t_sphhar), INTENT(IN)                  :: sphhar
@@ -130,14 +134,18 @@ CONTAINS
    TYPE(t_stars),INTENT(IN)                    :: stars
    TYPE(t_cell),INTENT(IN)                     :: cell
    TYPE(t_vacuum),INTENT(IN)                   :: vacuum
-   TYPE(t_potden), dimension(3), INTENT(INOUT) :: xcB
+   TYPE(t_potden), dimension(3), INTENT(OUT)   :: xcB
    TYPE(t_potden), INTENT(OUT)                 :: div
 
-   CALL div%init(stars,atoms,sphhar,vacuum,noco,jspins,1001)
+   CALL div%init(stars,atoms,sphhar,vacuum,noco,jspins,POTDEN_TYPE_DEN)
 
    CALL mt_div(jspins,n,atoms,sphhar,sym,xcB,div)
    CALL pw_div(ifftxc3,jspins,stars,cell,noco,sym,xcB,div)
       
    END SUBROUTINE divergence
+
+!   SUBROUTINE divpotgrad(jspins,n,ifftxc3,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,div)
+! 
+!   END SUBROUTINE divpotgrad
 
 END MODULE m_divergence

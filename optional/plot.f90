@@ -878,6 +878,18 @@ CONTAINS
          END IF
          
       END IF
+
+      !Plotting the divergence of B_xc_vec. identifier: 14
+      !No core subtraction done!
+      ! --> Additive term for iplot: 16384
+      IF (plot_const.EQ.14) THEN
+         denName = 'diverg'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
       
    END SUBROUTINE procplot
 

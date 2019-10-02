@@ -64,6 +64,7 @@ CONTAINS
     USE m_dwigner
     USE m_ylm
     USE m_metagga
+    USE m_divergence
     USE m_plot
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
@@ -98,14 +99,14 @@ CONTAINS
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
-    TYPE(t_potden)                  :: inDen, outDen, EnergyDen
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen, divB
     TYPE(t_potden),     dimension(3):: xcB
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
-    INTEGER :: iter,iterHF,i
+    INTEGER :: iter,iterHF,i,n
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
@@ -495,7 +496,17 @@ CONTAINS
 
 
     END DO scfloop ! DO WHILE (l_cont)
-   
+
+!    DIVERGENCE
+    CALL divB%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+    DO n=1,atoms%ntype
+       CALL divergence(input%jspins,n,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
+    END DO
+
+    IF ((sliceplot%iplot.NE.0).AND.(mpi%irank==0) ) THEN
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,divB,PLOT_SPECIAL) 
+    END IF 
+
     CALL add_usage_data("Iterations",iter)
 
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
