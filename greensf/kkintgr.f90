@@ -66,13 +66,11 @@ MODULE m_kkintgr
 
       CALL timestart("kkintgr: integration")
       g = 0.0
-      sigma = 0.0
-      !!$OMP PARALLEL DEFAULT(none) &
-      !!$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
-      !!$OMP SHARED(g,ez,im,e) &
-      !!$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2,im_n1,im_n2,im_calc)
-   !
-      !!$OMP DO
+      !$OMP PARALLEL DEFAULT(none) &
+      !$OMP SHARED(nz,ne,method,shape,del,eb,l_conjg) &
+      !$OMP SHARED(g,ez,im,e) &
+      !$OMP PRIVATE(iz,n1,n2,sigma,re_n1,re_n2,im_n1,im_n2,im_calc)
+      !$OMP DO
       DO iz = 1, nz
          IF(method.EQ.3) THEN
             g(iz) = g_circle(im,ne,MERGE(conjg(ez(iz)),ez(iz),l_conjg),del,eb)
@@ -103,8 +101,8 @@ MODULE m_kkintgr
             IF(l_conjg) g(iz) = conjg(g(iz))
          ENDIF
       ENDDO
-      !!$OMP END DO
-      !!$OMP END PARALLEL
+      !$OMP END DO
+      !$OMP END PARALLEL
       CALL timestop("kkintgr: integration")
 
    END SUBROUTINE kkintgr

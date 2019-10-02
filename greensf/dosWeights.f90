@@ -156,7 +156,7 @@ MODULE m_dosWeights
       !
       tol = 1E-14
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(weights,g,e_ind,eig,ikpt,tol,neig) &
+      !$OMP SHARED(weights,g,e_ind,tol,neig) &
       !$OMP PRIVATE(ib,i,dos_weights)
 
       !$OMP DO
@@ -297,7 +297,7 @@ MODULE m_dosWeights
 
       tol = 1E-14
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(weights,g,e_ind,eig,ikpt,tol,neig) &
+      !$OMP SHARED(weights,g,e_ind,tol,neig) &
       !$OMP PRIVATE(ib,i,dos_weights)
 
       !$OMP DO
