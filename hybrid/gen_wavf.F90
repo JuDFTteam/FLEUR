@@ -25,7 +25,6 @@ CONTAINS
       USE m_radflo
       USE m_abcof
       USE m_trafo, ONLY: waveftrafo_genwavf
-      USE m_util, ONLY: modulo1
       USE m_olap
       USE m_types
       USE m_hyb_abcrot

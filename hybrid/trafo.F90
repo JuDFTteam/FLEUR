@@ -13,7 +13,6 @@ CONTAINS
                               jsp, dimension, cell, lapw)
 
       USE m_constants
-      USE m_util, ONLY: modulo1
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
@@ -76,7 +75,7 @@ CONTAINS
 
       rkpt = matmul(rrot, kpts%bk(:, nk))
       rkpthlp = rkpt
-      rkpt = modulo1(rkpt, kpts%nkpt3)
+      rkpt = kpts%to_first_bz(rkpt)
       g1 = nint(rkpt - rkpthlp)
 
 ! MT coefficients
@@ -157,7 +156,6 @@ CONTAINS
 
       use m_juDFT
       USE m_constants
-      USE m_util, ONLY: modulo1
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
@@ -635,7 +633,7 @@ CONTAINS
 
       rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
       rkpthlp = rkpt
-      rkpt = modulo1(rkpt, kpts%nkpt3)
+      rkpt = kpts%to_first_bz(rkpt)
       g = nint(rkpthlp - rkpt)
 
 #ifdef CPP_DEBUG
@@ -840,7 +838,7 @@ CONTAINS
          rrot = transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = transpose(sym%mrot(:, :, iisym))
          rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-         rkpthlp = modulo1(rkpt, kpts%nkpt3)
+         rkpthlp = kpts%to_first_bz(rkpt)
          g = nint(rkpt - rkpthlp)
 
          CALL d_wigner(invrot, cell%bmat, maxlcutm, dwgn(:, :, 1:maxlcutm))
@@ -856,7 +854,7 @@ CONTAINS
          rrot = -transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = -transpose(sym%mrot(:, :, iisym))
          rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-         rkpthlp = modulo1(rkpt, kpts%nkpt3)
+         rkpthlp = kpts%to_first_bz(rkpt)
          g = nint(rkpt - rkpthlp)
          matin1 = conjg(matin1)
 
@@ -1113,7 +1111,7 @@ CONTAINS
       END DO
 
       rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-      rkpthlp = modulo1(rkpt, kpts%nkpt3)
+      rkpthlp = kpts%to_first_bz(rkpt)
       g = nint(rkpt - rkpthlp)
 
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
@@ -1334,7 +1332,7 @@ CONTAINS
          rrot = transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = transpose(sym%mrot(:, :, iisym))
          rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-         rkpthlp = modulo1(rkpt, kpts%nkpt3)
+         rkpthlp = kpts%to_first_bz(rkpt)
          g = nint(rkpt - rkpthlp)
 
          CALL d_wigner(invrot, cell%bmat, maxlcutm, dwgn(:, :, 1:maxlcutm))
@@ -1350,7 +1348,7 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iisym))
          invrrot = -transpose(sym%mrot(:, :, iisym))
          rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-         rkpthlp = modulo1(rkpt, kpts%nkpt3)
+         rkpthlp = kpts%to_first_bz(rkpt)
          g = nint(rkpt - rkpthlp)
          vecin1 = conjg(vecin1)
 
@@ -1536,7 +1534,7 @@ CONTAINS
       END IF
 
       rkpt = matmul(rrot, kpts%bk(:, ikpt0))
-      rkpthlp = modulo1(rkpt, kpts%nkpt3)
+      rkpthlp = kpts%to_first_bz(rkpt)
       g = nint(rkpt - rkpthlp)
 
       DO l = 0, maxlcutm
@@ -1718,7 +1716,7 @@ CONTAINS
       END IF
 
       rkpthlp = matmul(rrot, kpts%bk(:, ikpt0))
-      rkpt = modulo1(rkpthlp, kpts%nkpt3)
+      rkpt = kpts%to_first_bz(rkpthlp)
       g = nint(rkpthlp - rkpt)
       !
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
