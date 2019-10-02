@@ -270,7 +270,7 @@ CONTAINS
 
       zhlp = 0
       DO igpt = 1, lapw_rkpt%nv(jsp)
-         g = matmul(invrrot, (/lapw_rkpt%k1(igpt, jsp), lapw_rkpt%k2(igpt, jsp), lapw_rkpt%k3(igpt, jsp)/) + g1)
+         g = matmul(invrrot, lapw_rkpt%gvec(:,igpt,jsp) + g1)
          !determine number of g
          igpt1 = 0
          DO i = 1, lapw_nk%nv(jsp)
@@ -280,7 +280,7 @@ CONTAINS
             END IF
          END DO
          IF (igpt1 == 0) CYCLE
-         cdum = exp(tpiimg*dot_product(rkpt + (/lapw_rkpt%k1(igpt, jsp), lapw_rkpt%k2(igpt, jsp), lapw_rkpt%k3(igpt, jsp)/), trans))
+         cdum = exp(tpiimg*dot_product(rkpt + lapw_rkpt%gvec(:,igpt,jsp), trans))
          if (l_real) THEN
             zhlp(igpt, :nbands) = cdum*z_r(igpt1, :nbands)
          else
