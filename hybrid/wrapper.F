@@ -18,16 +18,12 @@
       module procedure  unpackmat_d,unpackmat_z
       end interface
 
-      interface dotprod
-      module procedure  dotprod_dd, dotprod_dz, dotprod_zd, dotprod_zz
-      end interface
-
       interface matvec
       module procedure  matvec_dpd, matvec_dpz, matvec_zpd, matvec_zpz
       end interface
 
       interface matmat
-      module procedure  
+      module procedure
      &     matmat_dpdp, matmat_dpzp, matmat_zpdp, matmat_zpzp,
      &                  matmat_dmzp, matmat_dpzm, matmat_dmzm,
      &                  matmat_zmdp, matmat_zpdm, matmat_zmdm,
@@ -43,12 +39,12 @@
 !      &                  diagonalize_ze,  diagonalize_zv,  diagonalize_zpe,  diagonalize_zpv,
 !      &                  diagonalize_deo, diagonalize_dvo, diagonalize_dpeo, diagonalize_dpvo,
 !      &                  diagonalize_zeo, diagonalize_zvo, diagonalize_zpeo, diagonalize_zpvo
-      module procedure  
+      module procedure
      +     diagonalize_de,    diagonalize_dv,    diagonalize_dpe,
      +     diagonalize_dpv,   diagonalize_ze,    diagonalize_zv,
      +     diagonalize_zpe,   diagonalize_zpv,   diagonalize_deo,
      +     diagonalize_dvo,   diagonalize_dpeo,  diagonalize_dpvo,
-     +     diagonalize_zeo,   diagonalize_zvo,   diagonalize_zpeo, 
+     +     diagonalize_zeo,   diagonalize_zvo,   diagonalize_zpeo,
      +     diagonalize_zpvo,  diagonalize_dvs,   diagonalize_dvos,
      +     diagonalize_dpvs,  diagonalize_dpvos, diagonalize_zvs,
      +     diagonalize_zvos,  diagonalize_zpvs,  diagonalize_zpvos,
@@ -70,7 +66,7 @@
       module procedure  sqrtmat_d,  sqrtmat_dp,  sqrtmat_z,  sqrtmat_zp,
      &                  sqrtmat_d1, sqrtmat_dp1, sqrtmat_z1, sqrtmat_zp1
       end interface
-      
+
       contains
 
 c     --------
@@ -95,7 +91,7 @@ c     --------
      +                                  size(a,1)+size(b,1))
       integer             :: na,nb
       na = size(a,1) ; nb = size(b,1)
-      if(size(a,2).ne.na) 
+      if(size(a,2).ne.na)
      +  stop 'blockmat_d: dimensions of first array differ.'
       if(size(b,2).ne.nb)
      +  stop 'blockmat_d: dimensions of second array differ.'
@@ -141,7 +137,7 @@ c     --------
         enddo
       enddo
       end function packmat_d
-      
+
       function packmatcoul_d(mat)
       implicit none
       real, intent(in)  :: mat(:,:)
@@ -158,13 +154,13 @@ c     --------
           packmatcoul_d(k) = (mat(i,j)+mat(j,i))/2.
 
 !           if(abs(mat(j,i)-mat(i,j)).gt.1e-6) then
-!             write(*,*) 'packmatcoul_d: input matrix not symmetric; deviation .gt. 1E-06'         
+!             write(*,*) 'packmatcoul_d: input matrix not symmetric; deviation .gt. 1E-06'
 !           endif
         enddo
       enddo
       end function packmatcoul_d
 
-            
+
       function unpackmat_d(mat)
       implicit none
       real, intent(in)  :: mat(:)
@@ -183,7 +179,7 @@ c     --------
       enddo
       end function unpackmat_d
 
-      
+
 
       function packmat_z(mat)
       implicit none
@@ -198,7 +194,7 @@ c     --------
           k            = k + 1
           packmat_z(k) = mat(i,j)
 # ifdef test
-          if(abs(conjg(mat(j,i))-mat(i,j)).gt.1e-8) 
+          if(abs(conjg(mat(j,i))-mat(i,j)).gt.1e-8)
      +                    stop 'packmat_z: input matrix not Hermitian.'
 # endif
         enddo
@@ -226,7 +222,7 @@ c     --------
         enddo
       enddo
       end function packmatcoul_z
-  
+
       function unpackmat_z(mat)
       implicit none
       complex, intent(in)  :: mat(:)
@@ -244,61 +240,6 @@ c     --------
         enddo
       enddo
       end function unpackmat_z
-
-c     --------
-
-      function dotprod_dd(vec1,vec2)
-      implicit none
-      real, intent(in) :: vec1(:),vec2(:)
-      real             :: dotprod_dd
-      integer             :: n
-      real             :: ddot
-      n = size(vec1) 
-      if(size(vec2).ne.n) 
-     +  stop 'dotprod_dd: sizes of input vectors differ.'
-      dotprod_dd = ddot(n,vec1,1,vec2,1)
-      end function dotprod_dd
-
-      function dotprod_dz(vec1,vec2)
-      implicit none
-      real,    intent(in) :: vec1(:)
-      complex, intent(in) :: vec2(:)
-      complex             :: dotprod_dz
-      integer                :: n
-      real                :: ddot
-      n = size(vec1) 
-      if(size(vec2).ne.n) 
-     +  stop 'dotprod_dz: sizes of input vectors differ.'
-      dotprod_dz = ddot(n,vec1,1,real(vec2),1)
-     +             +(0.0,1.0)*ddot(n,vec1,1,aimag(vec2),1)
-      end function dotprod_dz
-
-      function dotprod_zd(vec1,vec2)
-      implicit none
-      complex, intent(in) :: vec1(:)
-      real,    intent(in) :: vec2(:)
-      complex             :: dotprod_zd
-      integer                :: n
-      real                :: ddot
-      n = size(vec1) 
-      if(size(vec2).ne.n)
-     +  stop 'dotprod_zd: sizes of input vectors differ.'
-      dotprod_zd = ddot(n,real(vec1),1,vec2,1)
-     +             -(0.0,1.0)*ddot(n,aimag(vec1),1,vec2,1)
-      end function dotprod_zd
-
-      function dotprod_zz(vec1,vec2)
-      implicit none
-      complex, intent(in) :: vec1(:),vec2(:)
-      complex             :: dotprod_zz
-      integer                :: n
-      complex             :: zdotc
-      n = size(vec1)
-      if(size(vec2).ne.n)
-     +  stop 'dotprod_zz: sizes of input vectors differ.'
-      dotprod_zz = zdotc(n,vec1,1,vec2,1)
-      end function dotprod_zz
-
 c     --------
 
       function matvec_dpd(mat,vec)
@@ -307,7 +248,7 @@ c     --------
       real              :: matvec_dpd(size(vec))
       integer              :: nn,n
       n  = size(vec)
-      nn = n*(n+1)/2 
+      nn = n*(n+1)/2
       if(size(mat).ne.nn) stop 'matvec_dpd: input array has wrong size.'
       call dspmv('U',n,1.0,mat,vec,1,0.0,matvec_dpd,1)
       end function matvec_dpd
@@ -320,7 +261,7 @@ c     --------
       real,   allocatable :: vecr(:),veci(:)
       integer                :: nn,n
       n  = size(vec) ; allocate ( vecr(n),veci(n) )
-      nn = n*(n+1)/2 
+      nn = n*(n+1)/2
       if(size(mat).ne.nn) stop 'matvec_dpz: input array has wrong size.'
       call dspmv('U',n,1.0,mat,real(vec),1,0.0,vecr,1)
       call dspmv('U',n,1.0,mat,aimag(vec),1,0.0,veci,1)
@@ -336,21 +277,21 @@ c     --------
       real,   allocatable :: vecr(:),veci(:)
       integer                :: nn,n
       n  = size(vec) ; allocate ( vecr(n),veci(n) )
-      nn = n*(n+1)/2 
+      nn = n*(n+1)/2
       if(size(mat).ne.nn) stop 'matvec_zpd: input array has wrong size.'
       call dspmv('U',n,1.0,real(mat),vec,1,0.0,vecr,1)
       call dspmv('U',n,1.0,aimag(mat),vec,1,0.0,veci,1)
       matvec_zpd = vecr + (0.0,1.0) * veci
       deallocate ( vecr,veci )
       end function matvec_zpd
-      
+
       function matvec_zpz(mat,vec)
       implicit none
       complex, intent(in)  :: mat(:),vec(:)
       complex              :: matvec_zpz(size(vec))
       integer                 :: nn,n
       n  = size(vec)
-      nn = n*(n+1)/2 
+      nn = n*(n+1)/2
       if(size(mat).ne.nn) stop 'matvec_zpz: input array has wrong size.'
       call zhpmv('U',n,(1.0,0.0),mat,vec,1,(0.0,0.0),matvec_zpz,1)
       end function matvec_zpz
@@ -395,7 +336,7 @@ c     --------
       complex, allocatable :: vec2(:)
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
-      n  = nint(sqrt(0.25+2*nn)-0.5) 
+      n  = nint(sqrt(0.25+2*nn)-0.5)
       allocate ( vecr(n),veci(n),vec2(n) )
       if(size(mat2).ne.nn)
      +  stop 'matmat_dpzp: second input array has wrong size.'
@@ -426,7 +367,7 @@ c     --------
       complex, allocatable :: vec1(:)
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
-      n  = nint(sqrt(0.25+2*nn)-0.5) 
+      n  = nint(sqrt(0.25+2*nn)-0.5)
       allocate ( vecr(n),veci(n),vec1(n) )
       if(size(mat2).ne.nn)
      +  stop 'matmat_zpdp: second input array has wrong size.'
@@ -456,7 +397,7 @@ c     --------
       integer                 :: nn,n,k1,i,j,k
       nn = size(mat1)
       n  = nint(sqrt(0.25+2*nn)-0.5) ; allocate ( vec(n),vec2(n) )
-      if(size(mat2).ne.nn) 
+      if(size(mat2).ne.nn)
      +  stop 'matmat_zpzp: second input array has wrong size.'
       k  = 0
       do i = 1,n
@@ -480,9 +421,9 @@ c     --------
       real, allocatable :: vec(:),vec2(:)
       integer              :: nn,n,k1,i
       n = size(mat2,1) ; nn = n*(n+1)/2 ; allocate ( vec(n),vec2(n) )
-      if(size(mat2,2).ne.n)  
+      if(size(mat2,2).ne.n)
      +  stop 'matmat_dpdm: dimensions of second input array differ.'
-      if(size(mat1)  .ne.nn) 
+      if(size(mat1)  .ne.nn)
      +  stop 'matmat_dpdm: first input array has wrong size.'
       do i = 1,n
         vec2 = mat2(:,i)
@@ -499,9 +440,9 @@ c     --------
       real, allocatable :: vec(:),vec2(:)
       integer              :: nn,n,k1,i
       n = size(mat1,1) ; nn = n*(n+1)/2 ; allocate ( vec(n),vec2(n) )
-      if(size(mat1,2).ne.n)  
+      if(size(mat1,2).ne.n)
      +  stop 'matmat_dmdp: dimensions of first input array differ.'
-      if(size(mat2)  .ne.nn) 
+      if(size(mat2)  .ne.nn)
      +  stop 'matmat_dmdp: second input array has wrong size.'
       do i = 1,n
         vec2 = mat1(i,:)
@@ -534,7 +475,7 @@ c     --------
       real,    allocatable :: vecr(:),veci(:)
       complex, allocatable :: vec2(:)
       integer                 :: nn,n,k1,i
-      n = size(mat2,1) 
+      n = size(mat2,1)
       nn = n*(n+1)/2 ; allocate ( vecr(n),veci(n),vec2(n) )
       if(size(mat2,2).ne.n)
      +  stop 'matmat_dpzm: dimensions of second input array differ.'
@@ -615,7 +556,7 @@ c     --------
       complex, allocatable :: vec1(:)
       real,    allocatable :: vecr(:),veci(:)
       integer                 :: nn,n,k1,i
-      n = size(mat1,1) ; nn = n*(n+1)/2 
+      n = size(mat1,1) ; nn = n*(n+1)/2
       allocate ( vecr(n),veci(n),vec1(n) )
       if(size(mat1,2).ne.n)
      +  stop 'matmat_zmdp: dimensions of first input array differ.'
@@ -636,7 +577,7 @@ c     --------
       real,    intent(in) :: mat2(:,:)
       complex             :: matmat_zmdm(size(mat1,1),size(mat2,2))
       real                :: matr(size(mat1,1),size(mat2,2)),
-     +                          mati(size(mat1,1),size(mat2,2)) 
+     +                          mati(size(mat1,1),size(mat2,2))
       integer                :: n,n1,n2
       n1 = size(mat1,1)
       n  = size(mat1,2)
@@ -707,7 +648,7 @@ c     --------
       real             :: matmatmatd_ddd(size(diag1),size(diag1))
       integer             :: n,i
       n = size(diag1)
-      if(size(mat,1).ne.n) 
+      if(size(mat,1).ne.n)
      +  stop 'matmatmatd_ddd: input matrix has wrong size.'
       if(size(mat,2).ne.n)
      +  stop 'matmatmatd_ddd: dimensions of input matrix differ.'
@@ -743,7 +684,7 @@ c     --------
       end function matmatmatd_dzd
 
 c     --------
-      
+
       subroutine diagonalize_de(eval,mat)
       implicit none
       real, intent(out) :: eval(:)
@@ -758,7 +699,7 @@ c     --------
       if(size(eval) .ne.n)
      +  stop 'diagonalize_de: eigenvalue array has wrong size.'
       allocate ( mat1(n,n),work(3*n) ) ; mat1 = mat
-      call dsyev('N','U',n,mat1,n,eval,work,3*n,info) 
+      call dsyev('N','U',n,mat1,n,eval,work,3*n,info)
       if(info.ne.0) stop 'diagonalize_de: dsyev failed.'
       deallocate ( mat1,work )
       end subroutine diagonalize_de
@@ -781,7 +722,7 @@ c     --------
       if(size(evec,2).ne.n)
      +  stop 'diagonalize_dv: dimensions of eigenvector array differ.'
       allocate ( work(3*n) ) ; evec = mat
-      call dsyev('V','U',n,evec,n,eval,work,3*n,info) 
+      call dsyev('V','U',n,evec,n,eval,work,3*n,info)
       if(info.ne.0) stop 'diagonalize_dv: dsyev failed.'
       deallocate ( work )
       end subroutine diagonalize_dv
@@ -798,7 +739,7 @@ c     --------
       if(size(mat).ne.nn)
      +  stop 'diagonalize_dpe: input matrix has wrong size.'
       allocate ( mat1(nn),work(3*n) ) ; mat1 = mat
-      call dspev('N','U',n,mat1,eval,work,n,work,info) 
+      call dspev('N','U',n,mat1,eval,work,n,work,info)
       if(info.ne.0) stop 'diagonalize_dpe: dspev failed.'
       deallocate ( mat1,work )
       end subroutine diagonalize_dpe
@@ -819,7 +760,7 @@ c     --------
       if(size(evec,2).ne.n)
      +  stop 'diagonalize_dpv: dimensions of eigenvector array differ.'
       allocate ( mat1(nn),work(3*n) ) ; mat1 = mat
-      call dspev('V','U',n,mat1,eval,evec,n,work,info) 
+      call dspev('V','U',n,mat1,eval,evec,n,work,info)
       if(info.ne.0) stop 'diagonalize_dpv: dspev failed.'
       deallocate ( mat1,work )
       end subroutine diagonalize_dpv
@@ -839,7 +780,7 @@ c     --------
       if(size(eval) .ne.n)
      +  stop 'diagonalize_ze: eigenvalue array has wrong size.'
       allocate ( mat1(n,n),work(3*n),rwork(3*n) ) ; mat1 = mat
-      call zheev('N','U',n,mat1,n,eval,work,3*n,rwork,info) 
+      call zheev('N','U',n,mat1,n,eval,work,3*n,rwork,info)
       if(info.ne.0) stop 'diagonalize_ze: zheev failed.'
       deallocate ( mat1,work,rwork )
       end subroutine diagonalize_ze
@@ -864,7 +805,7 @@ c     --------
       if(size(evec,2).ne.n)
      +  stop 'diagonalize_zv: dimensions of eigenvector array differ.'
       allocate ( work(3*n),rwork(3*n) ) ; evec = mat
-      call zheev('V','U',n,evec,n,eval,work,3*n,rwork,info) 
+      call zheev('V','U',n,evec,n,eval,work,3*n,rwork,info)
       if(info.ne.0) stop 'diagonalize_zv: zheev failed.'
       deallocate ( work,rwork )
       end subroutine diagonalize_zv
@@ -882,7 +823,7 @@ c     --------
       if(size(mat).ne.nn)
      +  stop 'diagonalize_zpe: input matrix has wrong size.'
       allocate ( mat1(nn),work(3*n),rwork(3*n) ) ; mat1 = mat
-      call zhpev('N','U',n,mat1,eval,work,n,work,rwork,info) 
+      call zhpev('N','U',n,mat1,eval,work,n,work,rwork,info)
       if(info.ne.0) stop 'diagonalize_zpe: zhpev failed.'
       deallocate ( mat1,work,rwork )
       end subroutine diagonalize_zpe
@@ -904,8 +845,8 @@ c     --------
      +  stop 'diagonalize_zpv: eigenvector array has wrong dimensions.'
       if(size(evec,2).ne.n)
      +  stop 'diagonalize_zpv: dimensions of eigenvector array differ.'
-      allocate ( mat1(nn),work(3*n),rwork(3*n) ) ; mat1 = mat 
-      call zhpev('V','U',n,mat1,eval,evec,n,work,rwork,info) 
+      allocate ( mat1(nn),work(3*n),rwork(3*n) ) ; mat1 = mat
+      call zhpev('V','U',n,mat1,eval,evec,n,work,rwork,info)
       if(info.ne.0) stop 'diagonalize_zpv: zhpev failed.'
       deallocate ( mat1,work,rwork )
       end subroutine diagonalize_zpv
@@ -927,7 +868,7 @@ c     --------
      +  stop 'diagonalize_deo: overlap matrix has wrong size.'
       if(size(olap,2).ne.n)
      +  stop 'diagonalize_deo: dimensions of overlap matrix differ.'
-      allocate ( mat1(n,n),olap1(n,n),work(3*n) ) 
+      allocate ( mat1(n,n),olap1(n,n),work(3*n) )
       mat1 = mat ; olap1 = olap
       call dsygv(1,'N','U',n,mat1,n,olap1,n,eval,work,3*n,info)
       if(info.ne.0) stop 'diagonalize_deo: dsygv failed.'
@@ -956,7 +897,7 @@ c     --------
       if(size(olap,2).ne.n)
      +  stop 'diagonalize_dvo: dimensions of overlap matrix differ.'
       allocate ( olap1(n,n),work(3*n) ) ; evec = mat ; olap1 = olap
-      call dsygv(1,'V','U',n,evec,n,olap1,n,eval,work,3*n,info) 
+      call dsygv(1,'V','U',n,evec,n,olap1,n,eval,work,3*n,info)
       if(info.ne.0) stop 'diagonalize_dvo: dsygv failed.'
       deallocate ( olap1,work )
       end subroutine diagonalize_dvo
@@ -974,9 +915,9 @@ c     --------
      +  stop 'diagonalize_dpeo: input matrix has wrong size.'
       if(size(olap).ne.nn)
      +  stop 'diagonalize_dpeo: overlap matrix has wrong size.'
-      allocate ( mat1(nn),olap1(nn),work(3*n) ) 
+      allocate ( mat1(nn),olap1(nn),work(3*n) )
       mat1 = mat ; olap1 = olap
-      call dspgv(1,'N','U',n,mat1,olap1,eval,work,n,work,info) 
+      call dspgv(1,'N','U',n,mat1,olap1,eval,work,n,work,info)
       if(info.ne.0) stop 'diagonalize_dpeo: dspgv failed.'
       deallocate ( mat1,olap1,work )
       end subroutine diagonalize_dpeo
@@ -998,9 +939,9 @@ c     --------
      +  stop 'diagonalize_dpvo: eigenvector array has wrong dimensions.'
       if(size(evec,2).ne.n)
      +  stop 'diagonalize_dpvo: dimensions of eigenvector array differ.'
-      allocate ( mat1(nn),olap1(nn),work(3*n) ) 
+      allocate ( mat1(nn),olap1(nn),work(3*n) )
       mat1 = mat ; olap1 = olap
-      call dspgv(1,'V','U',n,mat1,olap1,eval,evec,n,work,info) 
+      call dspgv(1,'V','U',n,mat1,olap1,eval,evec,n,work,info)
       if(info.ne.0) stop 'diagonalize_dpvo: dspgv failed.'
       deallocate ( mat1,olap1,work )
       end subroutine diagonalize_dpvo
@@ -1023,9 +964,9 @@ c     --------
      +  stop 'diagonalize_zeo: overlap matrix has wrong size.'
       if(size(olap,2).ne.n)
      +  stop 'diagonalize_zeo: dimensions of overlap matrix differ.'
-      allocate ( mat1(n,n),olap1(n,n),work(3*n),rwork(3*n) ) 
+      allocate ( mat1(n,n),olap1(n,n),work(3*n),rwork(3*n) )
       mat1 = mat ; olap1 = olap
-      call zhegv(1,'N','U',n,mat1,n,olap1,n,eval,work,3*n,rwork,info) 
+      call zhegv(1,'N','U',n,mat1,n,olap1,n,eval,work,3*n,rwork,info)
       if(info.ne.0) stop 'diagonalize_zeo: zhegv failed.'
       deallocate ( mat1,olap1,work,rwork )
       end subroutine diagonalize_zeo
@@ -1053,9 +994,9 @@ c     --------
      +  stop 'diagonalize_zvo: overlap matrix has wrong dimensions.'
       if(size(olap,2).ne.n)
      +  stop 'diagonalize_zvo: dimensions of overlap matrix differ.'
-      allocate ( olap1(n,n),work(3*n),rwork(3*n) ) 
+      allocate ( olap1(n,n),work(3*n),rwork(3*n) )
       evec = mat ; olap1 = olap
-      call zhegv(1,'V','U',n,evec,n,olap1,n,eval,work,3*n,rwork,info) 
+      call zhegv(1,'V','U',n,evec,n,olap1,n,eval,work,3*n,rwork,info)
       if(info.ne.0) stop 'diagonalize_zvo: zhegv failed.'
       deallocate ( olap1,work,rwork )
       end subroutine diagonalize_zvo
@@ -1074,9 +1015,9 @@ c     --------
      +  stop 'diagonalize_zpeo: input matrix has wrong size.'
       if(size(olap).ne.nn)
      +  stop 'diagonalize_zpeo: overlap matrix has wrong size.'
-      allocate ( mat1(nn),olap1(nn),work(3*n),rwork(3*n) ) 
+      allocate ( mat1(nn),olap1(nn),work(3*n),rwork(3*n) )
       mat1 = mat ; olap1 = olap
-      call zhpgv(1,'N','U',n,mat1,olap1,eval,work,n,work,rwork,info) 
+      call zhpgv(1,'N','U',n,mat1,olap1,eval,work,n,work,rwork,info)
       if(info.ne.0) stop 'diagonalize_zpeo: zhpev failed.'
       deallocate ( mat1,olap1,work,rwork )
       end subroutine diagonalize_zpeo
@@ -1100,9 +1041,9 @@ c     --------
      +  stop 'diagonalize_zpvo: eigenvector array has wrong dimensions.'
       if(size(evec,2).ne.n)
      +  stop 'diagonalize_zpvo: dimensions of eigenvector array differ.'
-      allocate ( mat1(nn),olap1(nn),work(3*n),rwork(3*n) ) 
+      allocate ( mat1(nn),olap1(nn),work(3*n),rwork(3*n) )
       mat1 = mat ; olap1 = olap
-      call zhpgv(1,'V','U',n,mat1,olap1,eval,evec,n,work,rwork,info) 
+      call zhpgv(1,'V','U',n,mat1,olap1,eval,evec,n,work,rwork,info)
       if(info.ne.0) stop 'diagonalize_zpvo: zhpgv failed.'
       deallocate ( mat1,olap1,work,rwork )
       end subroutine diagonalize_zpvo
@@ -1154,7 +1095,7 @@ c     --------
       integer              :: n,ma,idum,info
       ma = abs(m)
       n  = size(mat,1)
-      if(n.eq.0) 
+      if(n.eq.0)
      +  stop 'diagonalize_dvos: zero dimension in eigenvalue problem.'
       if(ma.gt.n) stop 'diagonalize_dvos: number of selected&
      & eigenvalues exceeds maximal number.'
@@ -1170,7 +1111,7 @@ c     --------
      &of overlap matrix is wrong.'
       if(size(olap,2).ne.n) stop 'diagonalize_dvos: second dimension of&
      & overlap matrix is wrong.'
-      allocate ( work(8*n),iwork(5*n),mat1(n,n),olap1(n,n),ifail(n) ) 
+      allocate ( work(8*n),iwork(5*n),mat1(n,n),olap1(n,n),ifail(n) )
       mat1 = mat ; olap1 = olap
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
@@ -1204,7 +1145,7 @@ c     --------
      +  stop 'diagonalize_dpvs: input matrix has wrong size.'
       if(size(evec,1).ne.n)  stop 'diagonalize_dpvs: first dimension &
      &of eigenvector is wrong.'
-      if(size(evec,2).ne.n) 
+      if(size(evec,2).ne.n)
      +stop 'diagonalize_dpvs: second dimension of eigenvector is wrong.'
       allocate ( work(8*n),iwork(5*n),mat1(nn),ifail(n) ) ; mat1 = mat
       abstol = 2 * dlamch('S')
@@ -1243,7 +1184,7 @@ c     --------
      & of eigenvector is wrong.'
       if(size(evec,2).ne.n)  stop 'diagonalize_dpvos: second dimension&
      & of eigenvector is wrong.'
-      allocate ( work(8*n),iwork(5*n),mat1(nn),olap1(nn),ifail(n) ) 
+      allocate ( work(8*n),iwork(5*n),mat1(nn),olap1(nn),ifail(n) )
       mat1 = mat ; olap1 = olap
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
@@ -1282,7 +1223,7 @@ c     --------
      +  stop 'diagonalize_zvs: first dimension of eigenvector is wrong.'
       if(size(evec,2).ne.n)
      + stop 'diagonalize_zvs: second dimension of eigenvector is wrong.'
-      allocate ( work(2*n),rwork(7*n),iwork(5*n),mat1(n,n),ifail(n) ) 
+      allocate ( work(2*n),rwork(7*n),iwork(5*n),mat1(n,n),ifail(n) )
       mat1 = mat
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
@@ -1363,7 +1304,7 @@ c     --------
      + stop 'diagonalize_zpvs: first dimension of eigenvector is wrong.'
       if(size(evec,2).ne.n)
      +stop 'diagonalize_zpvs: second dimension of eigenvector is wrong.'
-      allocate ( work(2*n),rwork(7*n),iwork(5*n),mat1(nn),ifail(n) ) 
+      allocate ( work(2*n),rwork(7*n),iwork(5*n),mat1(nn),ifail(n) )
       mat1 = mat
       abstol = 2 * dlamch('S')
       if(m.gt.0) then
@@ -1395,7 +1336,7 @@ c     --------
      +  stop 'diagonalize_zpvos: zero dimension in eigenvalue problem.'
       if(ma.gt.n)            stop 'diagonalize_zpvos: number of&
      & selected eigenvalues exceeds maximal number.'
-      if(size(mat)   .ne.nn) 
+      if(size(mat)   .ne.nn)
      + stop 'diagonalize_zpvos: input matrix has wrong size.'
       if(size(olap)  .ne.nn) stop 'diagonalize_zpvos: overlap matrix&
      + has wrong size.'
@@ -1433,7 +1374,7 @@ c     --------
       integer                :: n,m,idum,info
       n = size(mat,1)
       m = ir2 - ir1 + 1
-      if(n.eq.0) 
+      if(n.eq.0)
      +  stop 'diagonalize_dvx: zero dimension in eigenvalue problem.'
       if(m.lt.0)
      +  stop 'diagonalize_dvx: negative index range.'
@@ -1473,8 +1414,8 @@ c     --------
       integer, allocatable   :: iwork(:),ifail(:)
       integer                :: n,m,ma,idum,info
       n = size(mat,1)
-      m = ir2 - ir1 + 1 
-      if(n.eq.0) 
+      m = ir2 - ir1 + 1
+      if(n.eq.0)
      +  stop 'diagonalize_dvox: zero dimension in eigenvalue problem.'
       if(m.lt.0)
      +  stop 'diagonalize_dvox: negative index range.'
@@ -1492,7 +1433,7 @@ c     --------
      & overlap matrix is wrong.'
       if(size(olap,2).ne.n) stop 'diagonalize_dvox: second dimension of&
      & overlap matrix is wrong.'
-      allocate ( work(8*n),iwork(5*n),mat1(n,n),olap1(n,n),ifail(n) ) 
+      allocate ( work(8*n),iwork(5*n),mat1(n,n),olap1(n,n),ifail(n) )
       mat1 = mat ; olap1 = olap
       abstol = 2 * dlamch('S')
       if(r1.lt.r2) then
@@ -1567,15 +1508,15 @@ c     --------
      +  stop 'diagonalize_dpvox: negative index range.'
       if(m.gt.n)            stop 'diagonalize_dpvox: number of selected&
      & eigenvalues exceeds maximal number.'
-      if(size(mat)   .ne.nn) 
+      if(size(mat)   .ne.nn)
      +  stop 'diagonalize_dpvox: input matrix has wrong size.'
-      if(size(olap)  .ne.nn) 
+      if(size(olap)  .ne.nn)
      +  stop 'diagonalize_dpvox: overlap matrix has wrong size.'
       if(size(eval)  .lt.m)
      +  stop 'diagonalize_dpvox: eigenvalue array too small.'
       if(size(evec,2).lt.m)  stop 'diagonalize_dpvox: second dimension&
      & of eigenvector too small.'
-      allocate ( work(8*n),iwork(5*n),mat1(nn),olap1(nn),ifail(n) ) 
+      allocate ( work(8*n),iwork(5*n),mat1(nn),olap1(nn),ifail(n) )
       mat1 = mat ; olap1 = olap
       abstol = 2 * dlamch('S')
       if(r1.lt.r2) then
@@ -1616,9 +1557,9 @@ c     --------
      +  stop 'diagonalize_zvx: eigenvalue array too small.'
       if(size(evec,1).ne.n)
      +  stop 'diagonalize_zvx: first dimension of eigenvector is wrong.'
-      if(size(evec,2).lt.m) 
+      if(size(evec,2).lt.m)
      +stop 'diagonalize_zvx: second dimension of eigenvector too small.'
-      allocate ( work(2*n),rwork(7*n),iwork(5*n),mat1(n,n),ifail(n) ) 
+      allocate ( work(2*n),rwork(7*n),iwork(5*n),mat1(n,n),ifail(n) )
       mat1 = mat
       abstol = 2 * dlamch('S')
       if(r1.lt.r2) then
@@ -1709,7 +1650,7 @@ c     --------
      +  stop 'diagonalize_zpvx: eigenvalue array too small.'
       if(size(evec,2).lt.m)  stop 'diagonalize_zpvx: second dimension&
      +  of eigenvector too small.'
-      allocate ( work(2*n),rwork(7*n),iwork(5*n),mat1(nn),ifail(n) ) 
+      allocate ( work(2*n),rwork(7*n),iwork(5*n),mat1(nn),ifail(n) )
       mat1 = mat
       abstol = 2 * dlamch('S')
       if(r1.lt.r2) then
@@ -1783,12 +1724,12 @@ c     --------
       real                 :: dlamch
       stop 'geteigen: disabled!'
       n = size(evec) ; nn = n*(n+1)/2
-      if(size(mat) .ne.nn) 
+      if(size(mat) .ne.nn)
      +  stop 'diagonalize_zpvo: input matrix has wrong size.'
       if(size(olap).ne.nn)
      +  stop 'diagonalize_zpvo: overlap matrix has wrong size.'
       allocate ( mat1(nn),olap1(nn),eval1(n),evec1(n,n),work(2*n),
-     +           rwork(7*n),iwork(5*n),ifail(n) ) 
+     +           rwork(7*n),iwork(5*n),ifail(n) )
       mat1 = mat ; olap1 = olap
 c      call zhpgvx(1,'V','I','U',n,mat1,olap1,0.0,0.0,n,n,2*dlamch('S'),1,eval1,evec1,n,work,rwork,iwork,ifail,info)
       if(info.ne.0) stop 'geteigen_zpvo: zhpgvx failed.'
@@ -1812,9 +1753,9 @@ c     --------
       if(size(mati,2).ne.n)
      +  stop 'inverse_d: dimensions of output array differ.'
       mati = mat
-      call dpotrf('U',n,mati,n,info) 
+      call dpotrf('U',n,mati,n,info)
       if(info.ne.0) stop 'inverse_d: dpotrf failed.'
-      call dpotri('U',n,mati,n,info) 
+      call dpotri('U',n,mati,n,info)
       if(info.ne.0) stop 'inverse_d: dpotri failed.'
       do i = 1,n ; do j = 1,i ; mati(i,j) = mati(j,i) ; enddo ; enddo
       end subroutine inverse_d
@@ -1828,9 +1769,9 @@ c     --------
       if(size(mati).ne.nn)
      +  stop 'inverse_dp: output array has wrong size.'
       mati = mat
-      call dpptrf('U',n,mati,info) 
+      call dpptrf('U',n,mati,info)
       if(info.ne.0) stop 'inverse_dp: dpptrf failed.'
-      call dpptri('U',n,mati,info) 
+      call dpptri('U',n,mati,info)
       if(info.ne.0) stop 'inverse_dp: dpptri failed.'
       end subroutine inverse_dp
 
@@ -1847,17 +1788,17 @@ c     --------
       if(size(mati,2).ne.n)
      +  stop 'inverse_z: dimensions of output array differ.'
       mati = mat
-      call zpotrf('U',n,mati,n,info) 
-      if(info.ne.0) then 
+      call zpotrf('U',n,mati,n,info)
+      if(info.ne.0) then
         WRITE(*,*) 'info',info
-        stop 'inverse_z: zpotrf failed.' 
+        stop 'inverse_z: zpotrf failed.'
       endif
-      call zpotri('U',n,mati,n,info) 
+      call zpotri('U',n,mati,n,info)
       if(info.ne.0) stop 'inverse_z: zpotri failed.'
-      do i = 1,n 
-        do j = 1,i 
-          mati(i,j) = conjg(mati(j,i)) 
-        enddo 
+      do i = 1,n
+        do j = 1,i
+          mati(i,j) = conjg(mati(j,i))
+        enddo
       enddo
       end subroutine inverse_z
 
@@ -1870,9 +1811,9 @@ c     --------
       if(size(mati).ne.nn)
      +  stop 'inverse_zp: output array has wrong size.'
       mati = mat
-      call zpptrf('U',n,mati,n,info) 
+      call zpptrf('U',n,mati,n,info)
       if(info.ne.0) stop 'inverse_zp: zpptrf failed.'
-      call zpptri('U',n,mati,n,info) 
+      call zpptri('U',n,mati,n,info)
       if(info.ne.0) stop 'inverse_zp: zpptri failed.'
       end subroutine inverse_zp
 
@@ -1898,7 +1839,7 @@ c     --------
       nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       call dpptrf('U',n,mat,info)
       if(info.ne.0) stop 'inverse_dp1: dpptrf failed.'
-      call dpptri('U',n,mat,info) 
+      call dpptri('U',n,mat,info)
       if(info.ne.0) stop 'inverse_dp1: dpptri failed.'
       end subroutine inverse_dp1
 
@@ -1923,7 +1864,7 @@ c     --------
       complex, allocatable   :: work(:)
       integer,    allocatable   :: ipiv(:)
       integer                   :: n,nn,info
-      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5) 
+      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       allocate(ipiv(n),work(n))
       call zsptrf('U',n,mat,ipiv,info)
       if(info.ne.0) stop 'inverse_zp1: zpptrf failed.'
@@ -1940,10 +1881,10 @@ c     --------
       real, allocatable :: eval(:),evec(:,:)
       integer              :: n,i
       n = size(matin,1)
-      if(size(matin,2).ne.n) 
+      if(size(matin,2).ne.n)
      +  stop 'sqrtmat_d: dimensions of input array differ.'
       allocate ( evec(n,n),eval(n) )
-      call diagonalize(evec,eval,matin) 
+      call diagonalize(evec,eval,matin)
       if(any(eval.lt.0.0)) stop 'sqrtmat_d: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
@@ -1962,7 +1903,7 @@ c     --------
       if(size(matout).ne.nn)
      +  stop 'sqrtmat_dp: output array has wrong size.'
       allocate ( evec(n,n),eval(n) )
-      call diagonalize(evec,eval,matin) 
+      call diagonalize(evec,eval,matin)
       if(any(eval.lt.0.0)) stop 'sqrtmat_dp: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
@@ -1979,10 +1920,10 @@ c     --------
       real,    allocatable :: eval(:)
       integer                 :: n,i
       n = size(matin,1)
-      if(size(matin,2).ne.n) 
+      if(size(matin,2).ne.n)
      +  stop 'sqrtmat_z: dimensions of input array differ.'
       allocate ( evec(n,n),eval(n) )
-      call diagonalize(evec,eval,matin) 
+      call diagonalize(evec,eval,matin)
       if(any(eval.lt.0.0)) stop 'sqrtmat_z: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
@@ -2002,7 +1943,7 @@ c     --------
       if(size(matout).ne.nn)
      +  stop 'sqrtmat_zp: output array has wrong size.'
       allocate ( eval(n),evec(n,n) )
-      call diagonalize(evec,eval,matin) 
+      call diagonalize(evec,eval,matin)
       if(any(eval.lt.0.0)) stop 'sqrtmat_zp: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i) !sqrt(sqrt(eval(i))) * evec(:,i)
@@ -2019,7 +1960,7 @@ c     --------
       n = size(mat,1)
       if(size(mat,2).ne.n) stop 'sqrtmat_d1: array dimensions differ.'
       allocate ( evec(n,n),eval(n) )
-      call diagonalize(evec,eval,mat) 
+      call diagonalize(evec,eval,mat)
       if(any(eval.lt.0.0)) stop 'sqrtmat_d1: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
@@ -2035,7 +1976,7 @@ c     --------
       integer                :: nn,n,i,j
       nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       allocate ( evec(n,n),eval(n) )
-      call diagonalize(evec,eval,mat) 
+      call diagonalize(evec,eval,mat)
       if(any(eval.lt.0.0)) stop 'sqrtmat_dp1: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
@@ -2050,10 +1991,10 @@ c     --------
       complex, allocatable   :: evec(:,:)
       real,    allocatable   :: eval(:)
       integer                   :: n,i
-      n = size(mat,1) 
+      n = size(mat,1)
       if(size(mat,2).ne.n) stop 'sqrtmat_z1: array dimensions differ.'
       allocate ( evec(n,n),eval(n) )
-      call diagonalize(evec,eval,mat) 
+      call diagonalize(evec,eval,mat)
       if(any(eval.lt.0.0)) stop 'sqrtmat_z1: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
@@ -2068,9 +2009,9 @@ c     --------
       complex, allocatable   :: evec(:,:)
       real,    allocatable   :: eval(:)
       integer                   :: nn,n,i,j
-      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5) 
+      nn = size(mat,1) ; n = nint(sqrt(0.25+2*nn)-0.5)
       allocate ( eval(n),evec(n,n) )
-      call diagonalize(evec,eval,mat) 
+      call diagonalize(evec,eval,mat)
       if(any(eval.lt.0.0)) stop 'sqrtmat_zp1: negative eigenvalue.'
       do i = 1,n
         evec(:,i) = sqrt(sqrt(eval(i))) * evec(:,i)
@@ -2078,8 +2019,7 @@ c     --------
       mat = packmat(matmat(evec,conjg(transpose(evec))))
       deallocate ( evec,eval )
       end subroutine sqrtmat_zp1
-      
+
 c     --------
 
       end module m_wrapper
-      
