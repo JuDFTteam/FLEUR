@@ -170,7 +170,7 @@ MODULE m_kp_perturbation
                         DO ikvec = 1, invsfct*(2*l + 1)
                            ic = ic + 1
                            ibas = ibas + 1
-                           kvec = kpts%bk(:, nk) + (/lapw%k1(hybdat%kveclo_eig(ic, nk), jsp), lapw%k2(hybdat%kveclo_eig(ic, nk), jsp), lapw%k3(hybdat%kveclo_eig(ic, nk), jsp)/)
+                           kvec = kpts%bk(:, nk) + lapw%gvec(:,hybdat%kveclo_eig(ic, nk), jsp)
 
                            phase = exp(img*tpi_const*dot_product(atoms%taual(:, iatom), kvec))
                            cdum1 = cdum*phase
@@ -226,7 +226,7 @@ MODULE m_kp_perturbation
             ALLOCATE (cmt_apw(dimension%neigd, idum, atoms%nat))
             cmt_apw = 0
             DO i = 1, lapw%nv(jsp)
-               kvec = kpts%bk(:, nk) + (/lapw%k1(i, jsp), lapw%k2(i, jsp), lapw%k3(i, jsp)/)
+               kvec = kpts%bk(:, nk) + lapw%gvec(:,i, jsp)
                kvecn = sqrt(dot_product(matmul(kvec, cell%bmat), matmul(kvec, cell%bmat)))
 
                iatom = 0
@@ -844,10 +844,7 @@ MODULE m_kp_perturbation
             call read_z(z, nk)
 
             !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
-
-            gpt(1, 1:lapw%nv(jsp)) = lapw%k1(1:lapw%nv(jsp), jsp)
-            gpt(2, 1:lapw%nv(jsp)) = lapw%k2(1:lapw%nv(jsp), jsp)
-            gpt(3, 1:lapw%nv(jsp)) = lapw%k3(1:lapw%nv(jsp), jsp)
+            gpt(:, 1:lapw%nv(jsp)) = lapw%gvec(:,1:lapw%nv(jsp), jsp)
 
 !     Define coefficients F and G
             lm = 0
