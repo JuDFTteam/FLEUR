@@ -100,6 +100,7 @@ MODULE m_gfcalc
       IF(input%jspins.EQ.2) THEN
          CALL eff_excinteraction(greensf,atoms,input,results%ef,greensfCoeffs)
       ENDIF
+      CALL timestart("Green's Function: Occupation/DOS")
       DO i_gf = 1, atoms%n_gf
          l = atoms%gfelem(i_gf)%l
          nType = atoms%gfelem(i_gf)%atomType
@@ -112,6 +113,7 @@ MODULE m_gfcalc
          !Density of states from Greens function
          CALL gfDOS(greensf,l,nType,i_gf,atoms,input,results%ef)
       ENDDO
+      CALL timestop("Green's Function: Occupation/DOS")
       CALL timestop("Green's Function: Postprocess")
 
    END SUBROUTINE postProcessGF
