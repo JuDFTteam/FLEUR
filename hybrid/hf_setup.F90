@@ -168,7 +168,7 @@ CONTAINS
          DO nk = 1, kpts%nkptf
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
             do n_dim = 1,3
-               hybdat%pntgptd(n_dim) = MAXVAL([(ABS(lapw%gvec(n_dim,i, jsp)), i=1), lapw%nv(jsp), hybdat%pntgptd(n_dim) ])
+               hybdat%pntgptd(n_dim) = MAXVAL([(ABS(lapw%gvec(n_dim, jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(n_dim)])
             end do
          END DO
 
