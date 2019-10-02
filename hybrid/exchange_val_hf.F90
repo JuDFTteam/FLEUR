@@ -290,13 +290,13 @@ CONTAINS
                      DO n2 = 1, nsest(n1)!n1
                         nn2 = indx_sest(n2, n1)
                         exch_vv(nn2, n1) = exch_vv(nn2, n1) + cdum*phase_vv(iband, nn2)* &
-                                           dotprod(carr1_v_r(:n), cprod_vv_r(:n, iband, nn2))
+                                           dot_product(carr1_v_r(:n), cprod_vv_r(:n, iband, nn2))
                      END DO !n2
                   ELSE
                      DO n2 = 1, nsest(n1)!n1
                         nn2 = indx_sest(n2, n1)
                         exch_vv(nn2, n1) = exch_vv(nn2, n1) + cdum*phase_vv(iband, nn2)* &
-                                           dotprod(carr1_v_c(:n), cprod_vv_c(:n, iband, nn2))
+                                           dot_product(carr1_v_c(:n), cprod_vv_c(:n, iband, nn2))
                      END DO !n2
                   END IF
                END DO

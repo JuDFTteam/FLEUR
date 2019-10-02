@@ -253,7 +253,7 @@ CONTAINS
                DO i = 1, j
                   ic = ic + 1
                   vxc(ic) = vxc(ic) + carr1(i, j)
-                  ! vxc(ic) = vxc(ic) + conjg(dotprod ( bascof(i,:nnbas,iatom),carr(:nnbas) ))
+                  ! vxc(ic) = vxc(ic) + conjg(dot_product ( bascof(i,:nnbas,iatom),carr(:nnbas) ))
                END DO
             END DO
          END DO

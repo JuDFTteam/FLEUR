@@ -389,7 +389,7 @@ CONTAINS
                         lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
                         lm2 = lm + (iatom2 - 1 - iiatom)*ioffset + ishift
 
-                        rdum = tpi_const*dotprod(kpts%bkf(:, iq), atoms%taual(:, iatom1))
+                        rdum = tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, iatom1))
                         rfac1 = sin(rdum)/sr2
                         rfac2 = cos(rdum)/sr2
                         DO iband = bandi, bandf

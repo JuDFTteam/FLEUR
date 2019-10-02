@@ -1933,13 +1933,13 @@ CONTAINS
                if (l_real) THEN
                   cprod_fourier_trafo_r(igpt, iobd0, iband1) = &
                      ! muffin tin contribution
-                     dotprod(fourier_trafo(:nbasp, igpt), cprod_r(:nbasp, iobd0, iband1)) &
+                     dot_product(fourier_trafo(:nbasp, igpt), cprod_r(:nbasp, iobd0, iband1)) &
                      ! interstitial contribution (interstitial is kronecker_G,G')
                      + cprod_r(nbasp + igpt, iobd0, iband1)
                else
                   cprod_fourier_trafo_c(igpt, iobd0, iband1) = &
                      ! muffin tin contribution
-                     dotprod(cprod_c(:nbasp, iobd0, iband1), fourier_trafo(:nbasp, igpt)) &
+                     dot_product(cprod_c(:nbasp, iobd0, iband1), fourier_trafo(:nbasp, igpt)) &
                      ! interstitial contribution (interstitial is kronecker_G,G')
                      + CONJG(cprod_c(nbasp + igpt, iobd0, iband1))
                endif

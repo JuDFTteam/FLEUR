@@ -1637,7 +1637,7 @@ CONTAINS
       ENDIF
       ! Explicit normalization here in order to prevent failure of the diagonalization in diagonalize_coulomb
       ! due to inaccuracies in the overlap matrix (which can make it singular).
-      !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybrid%nbasp))**2) + dotprod ( coeff(hybrid%nbasp+1:), MATMUL(olap,coeff(hybrid%nbasp+1:)) ) ) )
+      !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybrid%nbasp))**2) + dot_product ( coeff(hybrid%nbasp+1:), MATMUL(olap,coeff(hybrid%nbasp+1:)) ) ) )
 
    END SUBROUTINE subtract_sphaverage
 

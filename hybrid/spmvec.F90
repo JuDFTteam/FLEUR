@@ -148,7 +148,7 @@ MODULE m_spmvec
                         indx2 = indx2 + 1
                         indx3 = indx3 + n - 1
 
-                        vecout(indx1) = vecout(indx1) + dotprod(coulomb_mt2(:n - 1, m, l, iatom), vecinhlp(indx2:indx3))
+                        vecout(indx1) = vecout(indx1) + dot_product(coulomb_mt2(:n - 1, m, l, iatom), vecinhlp(indx2:indx3))
                         indx2 = indx3
                      END DO
 
@@ -165,7 +165,7 @@ MODULE m_spmvec
                      iatom = iatom + 1
                      indx1 = indx0 + 1
                      indx2 = indx1 + hybrid%nindxm1(0, itype) - 2
-                     vecout(hybrid%nbasp + 1) = vecout(hybrid%nbasp + 1) + dotprod(coulomb_mt2(:hybrid%nindxm1(0, itype) - 1, 0, hybrid%maxlcutm1 + 1, iatom), vecinhlp(indx1:indx2))
+                     vecout(hybrid%nbasp + 1) = vecout(hybrid%nbasp + 1) + dot_product(coulomb_mt2(:hybrid%nindxm1(0, itype) - 1, 0, hybrid%maxlcutm1 + 1, iatom), vecinhlp(indx1:indx2))
 
                      indx0 = indx0 + ishift
                   END DO
@@ -190,7 +190,7 @@ MODULE m_spmvec
                            indx3 = indx2 + (ieq1 - 1)*ishift1 + 1
                            indx4 = indx3 + hybrid%nindxm1(0, itype1) - 2
 
-                           vecout(indx1) = vecout(indx1) + dotprod(coulomb_mt3(:hybrid%nindxm1(0, itype1) - 1, iatom, iatom1), vecinhlp(indx3:indx4))
+                           vecout(indx1) = vecout(indx1) + dot_product(coulomb_mt3(:hybrid%nindxm1(0, itype1) - 1, iatom, iatom1), vecinhlp(indx3:indx4))
 
                         END DO
                         indx2 = indx2 + atoms%neq(itype1)*ishift1
@@ -356,7 +356,7 @@ MODULE m_spmvec
                         indx2 = indx2 + 1
                         indx3 = indx3 + n - 1
 
-                        vecout(indx1) = vecout(indx1) + dotprod(coulomb_mt2(:n - 1, m, l, iatom), vecinhlp(indx2:indx3))
+                        vecout(indx1) = vecout(indx1) + dot_product(coulomb_mt2(:n - 1, m, l, iatom), vecinhlp(indx2:indx3))
                         indx2 = indx3
                      END DO
 
@@ -373,7 +373,7 @@ MODULE m_spmvec
                      iatom = iatom + 1
                      indx1 = indx0 + 1
                      indx2 = indx1 + hybrid%nindxm1(0, itype) - 2
-                     vecout(hybrid%nbasp + 1) = vecout(hybrid%nbasp + 1) + dotprod(coulomb_mt2(:hybrid%nindxm1(0, itype) - 1, 0, hybrid%maxlcutm1 + 1, iatom), vecinhlp(indx1:indx2))
+                     vecout(hybrid%nbasp + 1) = vecout(hybrid%nbasp + 1) + dot_product(coulomb_mt2(:hybrid%nindxm1(0, itype) - 1, 0, hybrid%maxlcutm1 + 1, iatom), vecinhlp(indx1:indx2))
 
                      indx0 = indx0 + ishift
                   END DO
@@ -398,7 +398,7 @@ MODULE m_spmvec
                            indx3 = indx2 + (ieq1 - 1)*ishift1 + 1
                            indx4 = indx3 + hybrid%nindxm1(0, itype1) - 2
 
-                           vecout(indx1) = vecout(indx1) + dotprod(coulomb_mt3(:hybrid%nindxm1(0, itype1) - 1, iatom, iatom1), vecinhlp(indx3:indx4))
+                           vecout(indx1) = vecout(indx1) + dot_product(coulomb_mt3(:hybrid%nindxm1(0, itype1) - 1, iatom, iatom1), vecinhlp(indx3:indx4))
 
                         END DO
                         indx2 = indx2 + atoms%neq(itype1)*ishift1

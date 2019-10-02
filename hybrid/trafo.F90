@@ -91,7 +91,7 @@ CONTAINS
             iatom1 = hybrid%map(iatom, iop)
             tau1 = hybrid%tvec(:, iatom, iop)
 
-            cdum = exp(tpiimg*dotprod(rkpt, tau1))
+            cdum = exp(tpiimg*dot_product(rkpt, tau1))
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
@@ -136,7 +136,7 @@ CONTAINS
          IF (igpt1 == 0) THEN
             STOP 'wavetrafo_symm: rotated G vector not found'
          END IF
-         cdum = exp(tpiimg*dotprod(rkpt + lapw%gvec(:, igpt, jsp), trans(:)))
+         cdum = exp(tpiimg*dot_product(rkpt + lapw%gvec(:, igpt, jsp), trans(:)))
          if (l_real) THEN
             z_out(igpt, 1:ndb) = cdum*z_r(igpt1, bandi:bandi + ndb - 1)
          else
@@ -238,7 +238,7 @@ CONTAINS
             iatom1 = hybrid%map(iatom, iop)
             tau1 = hybrid%tvec(:, iatom, iop)
 
-            cdum = exp(tpiimg*dotprod(rkpt, tau1))
+            cdum = exp(tpiimg*dot_product(rkpt, tau1))
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
@@ -282,7 +282,7 @@ CONTAINS
             END IF
          END DO
          IF (igpt1 == 0) CYCLE
-         cdum = exp(tpiimg*dotprod(rkpt + (/lapw_rkpt%k1(igpt, jsp), lapw_rkpt%k2(igpt, jsp), lapw_rkpt%k3(igpt, jsp)/), trans))
+         cdum = exp(tpiimg*dot_product(rkpt + (/lapw_rkpt%k1(igpt, jsp), lapw_rkpt%k2(igpt, jsp), lapw_rkpt%k3(igpt, jsp)/), trans))
          if (l_real) THEN
             zhlp(igpt, :nbands) = cdum*z_r(igpt1, :nbands)
          else

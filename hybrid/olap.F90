@@ -245,8 +245,8 @@ CONTAINS
 !       CALL dgemv('N',ngpt1,ngpt2,1.0,olappw,ngpt1,real(cpw2),1,0.0,rarr1,1)
 !       CALL dgemv('N',ngpt1,ngpt2,1.0,olappw,ngpt1,aimag(cpw2),1,0.0,rarr2,1)
 !
-!       rdum1 = dotprod(cpw1,rarr1)
-!       rdum2 = dotprod(cpw1,rarr2)
+!       rdum1 = dot_product(cpw1,rarr1)
+!       rdum2 = dot_product(cpw1,rarr2)
 !       cdum  = cmplx( rdum1, rdum2 )
 
 !       wfolap = wfolap + cdum
@@ -299,8 +299,8 @@ CONTAINS
 !       CALL dgemv('N',ngpt1,ngpt2,1.0,olappw,ngpt1,real(cpw2),1,0.0,rarr1,1)
 !       CALL dgemv('N',ngpt1,ngpt2,1.0,olappw,ngpt1,aimag(cpw2),1,0.0,rarr2,1)
 !
-!       rdum1 = dotprod(cpw1,rarr1)
-!       rdum2 = dotprod(cpw1,rarr2)
+!       rdum1 = dot_product(cpw1,rarr1)
+!       rdum2 = dot_product(cpw1,rarr2)
 !       cdum  = cmplx( rdum1, rdum2 )
 
 !       wfolap = wfolap + cdum
