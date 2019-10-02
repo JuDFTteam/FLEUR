@@ -271,9 +271,7 @@ CONTAINS
       DO ig1 = 1, lapw%nv(jsp)
          DO ig2 = 1, ig1
             ic = ic + 1
-            gg(1) = lapw%k1(ig1, jsp) - lapw%k1(ig2, jsp)
-            gg(2) = lapw%k2(ig1, jsp) - lapw%k2(ig2, jsp)
-            gg(3) = lapw%k3(ig1, jsp) - lapw%k3(ig2, jsp)
+            gg = lapw%gvec(:,ig1,jsp) - lapw%gvec(:,ig2,jsp)
             istar = stars%ig(gg(1), gg(2), gg(3))
             IF (istar /= 0) THEN
                vxc(ic) = vxc(ic) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
@@ -513,4 +511,3 @@ CONTAINS
 
    END SUBROUTINE subvxc
 END MODULE m_subvxc
-
