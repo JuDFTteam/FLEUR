@@ -6,9 +6,5 @@ hybrid/HF_init.F90   hybrid/hsfock.F90          hybrid/subvxc.F90          hybri
 hybrid/hf_setup.F90  hybrid/kp_perturbation.F90 hybrid/symm_hf.F90 hybrid/trafo.F90
 hybrid/exponential_integral.f90
 hybrid/hsefunctional.F90
-hybrid/olap.F90
-)
-
-set(fleur_F77 ${fleur_F77}
-hybrid/wrapper.F
+hybrid/olap.F90 hybrid/wrapper.f90
 )

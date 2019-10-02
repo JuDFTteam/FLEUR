@@ -1080,7 +1080,7 @@ CONTAINS
 !   G,I     \      |  k,I /     Sqrt(Om)   LM                |               L
 !                                                           /
 !                                                            0
-      IF (ngptm < noGpts) STOP 'hsefunctional: error calculating Fourier coefficients, noGpts too large'
+      IF (ngptm < noGpts) call juDFT_error( 'hsefunctional: error calculating Fourier coefficients, noGpts too large')
 
       gPts(:, :) = gptm(:, pgptm(1:noGPts))
 #ifndef __PGI
@@ -1157,7 +1157,7 @@ CONTAINS
          IF (irank == 0) WRITE (6, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
       ELSEIF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_WARNING)) THEN
          IF (irank == 0) WRITE (6, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
-         STOP 'intgrf: Negative exponent x in extrapolation a+c*r**x'
+         call juDFT_error( 'intgrf: Negative exponent x in extrapolation a+c*r**x')
       END IF
 
       ! Calculate the interstitial value with eq.[3] using the limit
@@ -1383,9 +1383,9 @@ CONTAINS
          ! unset flag as arrays are allocated
          first_entry = .FALSE.
       ELSE
-         ! check if size of arrays has changed and stop with error if they did
-         IF (SIZE(already_known) /= nkptf) STOP 'hsefunctional: Array size changed!'
-         IF (SIZE(known_fourier_trafo, 1) /= nbasp) STOP 'hsefunctional: Array size changed!'
+         ! check if size of arrays has changed and st--op with error if they did
+         IF (SIZE(already_known) /= nkptf) call juDFT_error('hsefunctional: Array size changed!')
+         IF (SIZE(known_fourier_trafo, 1) /= nbasp) call juDFT_error( 'hsefunctional: Array size changed!')
       END IF
 
       ! if the current k-point was not calculated yet
@@ -1438,7 +1438,7 @@ CONTAINS
 !   G,I     \      |  k,I /     Sqrt(Om)   LM                |               L
 !                                                           /
 !                                                            0
-         IF (ngptm < noGpts) STOP 'hsefunctional: error calculating Fourier coefficients, noGpts too large'
+         IF (ngptm < noGpts) call juDFT_error( 'hsefunctional: error calculating Fourier coefficients, noGpts too large')
 
          gPts(:, :) = gptm(:, pgptm(1:noGPts))
 
@@ -1497,7 +1497,7 @@ CONTAINS
             IF (irank == 0) WRITE (6, *) 'intgrf: Warning! Negative exponent x in extrapolation a+c*r**x'
          ELSEIF (ANY(intgrMT%ierror == NEGATIVE_EXPONENT_WARNING)) THEN
             IF (irank == 0) WRITE (6, *) 'intgrf: Negative exponent x in extrapolation a+c*r**x'
-            STOP 'intgrf: Negative exponent x in extrapolation a+c*r**x'
+            call juDFT_error( 'intgrf: Negative exponent x in extrapolation a+c*r**x')
          END IF
 
 ! Calculate the Fourier transformed potential
@@ -1547,7 +1547,7 @@ CONTAINS
                END DO
             END DO
          END DO
-         IF (nbasp /= cg) STOP 'hsefunctional: wrong array size: nbasp'
+         IF (nbasp /= cg) call juDFT_error( 'hsefunctional: wrong array size: nbasp')
 
 #ifdef CPP_INVERSION
          ! Symmetrize muffin tin fourier transform
@@ -1638,7 +1638,7 @@ CONTAINS
       coulomb)
 
       USE m_trafo, ONLY: symmetrize
-      USE m_wrapper, ONLY: packmat, unpackmat, diagonalize, inverse
+      USE m_wrapper, ONLY: packmat, unpackmat, diagonalize
       USE m_olap, ONLY: olap_pw
 
       IMPLICIT NONE
@@ -1687,9 +1687,9 @@ CONTAINS
       COMPLEX, ALLOCATABLE   :: coulmat(:, :)                                 ! helper array to symmetrize coulomb
 
       ! Check size of arrays
-      IF (nkpti > nkptd) STOP 'hsefunctional: missmatch in dimension of arrays'
+      IF (nkpti > nkptd) call juDFT_error( 'hsefunctional: missmatch in dimension of arrays')
       nbasp = maxbasm - MAXVAL(ngptm)
-      IF (ANY(nbasm - ngptm /= nbasp)) STOP 'hsefunctional: wrong assignment of nbasp'
+      IF (ANY(nbasm - ngptm /= nbasp)) call juDFT_error( 'hsefunctional: wrong assignment of nbasp')
 
       !
       ! Create pointer which correlate the position in the array with the
@@ -1741,7 +1741,7 @@ CONTAINS
 
          ! Helper matrix for temporary storage of the attenuated Coulomb matrix
          ALLOCATE (coulmat(nbasm(ikpt), nbasm(ikpt)), stat=ok)
-         IF (ok /= 0) STOP 'hsefunctional: failure at matrix allocation'
+         IF (ok /= 0) call juDFT_error( 'hsefunctional: failure at matrix allocation')
          coulmat = 0
          !
          ! Calculate the difference of the Coulomb matrix by the attenuation
@@ -1847,7 +1847,7 @@ CONTAINS
 
       USE m_trafo, ONLY: symmetrize
       USE m_olap, ONLY: olap_pw, olap_pwp
-      USE m_wrapper, ONLY: diagonalize, packmat, inverse
+      USE m_wrapper, ONLY: diagonalize, packmat
 
       IMPLICIT NONE
 
@@ -2198,7 +2198,7 @@ CONTAINS
       LOGICAL                 ::  ldum(nbands, nbands)
 
       ! check if a_ex is consistent
-!     IF ( a_ex /= aMix_HSE ) STOP 'hsefunctional: inconsistent mixing!'
+!     IF ( a_ex /= aMix_HSE ) st--op 'hsefunctional: inconsistent mixing!'
 
       ! read in mt wavefunction coefficients from file cmt
       irecl_cmt = neigd*maxlmindx*natd*16
@@ -2325,7 +2325,7 @@ CONTAINS
       IF (ANY(ABS(aimag(exchange)) > 10.0**-10)) THEN
          IF (irank == 0) WRITE (6, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
          WRITE (*, *) MAXVAL(ABS(aimag(exchange)))
-         STOP 'exchangeCore: Unusually large imaginary component.'
+         call juDFT_error( 'exchangeCore: Unusually large imaginary component.')
       END IF
 #endif
 
@@ -2428,7 +2428,7 @@ CONTAINS
       ! in Legendre polynomials
       CHARACTER*100         :: outtext
 
-!   IF ( a_ex /= aMix_HSE ) STOP 'hsefunctional: mixing parameter inconsistent'
+!   IF ( a_ex /= aMix_HSE ) st--op 'hsefunctional: mixing parameter inconsistent'
 
 !   IF ( irank == 0 ) THEN
 !     WRITE(outtext,'(A)') new_line('n') // new_line('n') // '### core-core-core-core exchange ###'
@@ -2538,7 +2538,7 @@ CONTAINS
       CALL symmetrize(exch, ncstd, ncstd, 3, .FALSE., &
                       ntype, ntype, neq, lmaxc, lmaxcd, &
                       nindxc, natd, invsat, invsatnr)
-      IF (ANY(ABS(aimag(exch)) > 1E-6)) STOP 'exchange_cccc: exch possesses significant imaginary part'
+      IF (ANY(ABS(aimag(exch)) > 1E-6)) call juDFT_error( 'exchange_cccc: exch possesses significant imaginary part')
 # endif
 !   DO icst = 1,ncstd
 !     IF ( irank == 0 ) &
