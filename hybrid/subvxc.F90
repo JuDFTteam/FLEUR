@@ -278,8 +278,7 @@ CONTAINS
             ELSE
                IF (mpi%irank == 0) THEN
                   WRITE (6, '(A,/6I5)') 'Warning: Gi-Gj not in any star:', &
-                     lapw%k1(ig1, jsp), lapw%k2(ig1, jsp), lapw%k3(ig1, jsp), &
-                     lapw%k1(ig2, jsp), lapw%k2(ig2, jsp), lapw%k3(ig2, jsp)
+                     lapw%gvec(:,ig1, jsp), lapw%gvec(:,ig2, jsp)
                END IF
             END IF
          END DO
