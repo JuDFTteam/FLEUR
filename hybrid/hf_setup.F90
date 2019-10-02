@@ -45,7 +45,7 @@ CONTAINS
 
       ! local scalars
       INTEGER :: ok, nk, nrec1, i, j, ll, l1, l2, ng, itype, n, l, n1, n2, nn
-      INTEGER :: nbasfcn
+      INTEGER :: nbasfcn, n_dim
 
       ! local arrays
 
@@ -167,9 +167,9 @@ CONTAINS
          hybdat%pntgptd = 0
          DO nk = 1, kpts%nkptf
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
-            hybdat%pntgptd(1) = MAXVAL((/(ABS(lapw%k1(i, jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(1)/))
-            hybdat%pntgptd(2) = MAXVAL((/(ABS(lapw%k2(i, jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(2)/))
-            hybdat%pntgptd(3) = MAXVAL((/(ABS(lapw%k3(i, jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(3)/))
+            do n_dim = 1,3
+               hybdat%pntgptd(n_dim) = MAXVAL([(ABS(lapw%gvec(n_dim,i, jsp)), i=1), lapw%nv(jsp), hybdat%pntgptd(n_dim) ])
+            end do
          END DO
 
          ALLOCATE (hybdat%pntgpt(-hybdat%pntgptd(1):hybdat%pntgptd(1), -hybdat%pntgptd(2):hybdat%pntgptd(2), &
