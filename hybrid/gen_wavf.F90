@@ -124,9 +124,12 @@ CONTAINS
          IF (mpi%irank == 0) WRITE (6, FMT=8000) itype
          ng = atoms%jri(itype)
          DO l = 0, atoms%lmax(itype)
-            CALL radfun(l, itype, jsp, el_eig(l, itype), vr(:, itype, jsp), atoms, f(:, :, l), df(:, :, l), usdus, nodem, noded, wronk)
-            IF (mpi%irank == 0) WRITE (6, FMT=8010) l, el_eig(l, itype), usdus%us(l, itype, jsp), usdus%dus(l, itype, jsp), nodem, &
-               usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp), noded, usdus%ddn(l, itype, jsp), wronk
+            CALL radfun(l, itype, jsp, el_eig(l, itype), vr(:, itype, jsp), &
+                      atoms, f(:, :, l), df(:, :, l), usdus, nodem, noded, wronk)
+            IF (mpi%irank == 0) WRITE (6, FMT=8010) l, el_eig(l, itype), &
+                               usdus%us(l, itype, jsp), usdus%dus(l, itype, jsp),&
+                               nodem, usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp),&
+                               noded, usdus%ddn(l, itype, jsp), wronk
 
             hybdat%bas1(1:ng, 1, l, itype) = f(1:ng, 1, l)
             hybdat%bas2(1:ng, 1, l, itype) = f(1:ng, 2, l)
@@ -271,16 +274,4 @@ CONTAINS
       DEALLOCATE (cmt, cmthlp)
 
    END SUBROUTINE gen_wavf
-
-   function new_filename(base, it) result(out_str)
-      use m_judft
-      implicit none
-      character(len=*), intent(in)  :: base
-      integer, intent(in)           ::  it
-      character(:), allocatable     :: out_str
-
-      out_str = base // "_it=" // int2str(it) // ".gnu"
-
-   end function new_filename
-
 END MODULE m_gen_wavf
