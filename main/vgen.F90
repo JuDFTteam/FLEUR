@@ -65,11 +65,11 @@ CONTAINS
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
-      DO i=1,3
-         CALL xcB(i)%resetPotden()
-         ALLOCATE(xcB(i)%pw_w,mold=vTot%pw)
-         xcB(i)%pw_w = 0.0
-      ENDDO
+!      DO i=1,3
+!         CALL xcB(i)%resetPotden()
+!         ALLOCATE(xcB(i)%pw_w,mold=den%pw_w)
+!         xcB(i)%pw_w = CMPLX(0.0,0.0)
+!      ENDDO
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
 

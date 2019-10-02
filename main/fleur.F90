@@ -142,7 +142,8 @@ CONTAINS
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
     DO i=1,3
-       CALL xcB(i)%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+       CALL xcB(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
+       ALLOCATE(xcB(i)%pw_w,mold=xcB(i)%pw)
     ENDDO
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
@@ -498,7 +499,9 @@ CONTAINS
     END DO scfloop ! DO WHILE (l_cont)
 
 !    DIVERGENCE
+
     CALL divB%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+    ALLOCATE(divB%pw_w,mold=divB%pw)
     
     DO i=1,atoms%ntype
        CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
