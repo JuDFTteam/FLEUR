@@ -214,8 +214,12 @@ MODULE m_hubbard1_setup
 #ifdef CPP_EDSOLVER
                   e = gdft%e*hartree_to_ev_const
                   CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(i_hia,:,:,:,1),1)
+                  !---------------------------------------------------
+                  ! Calculate selfenergy on lower contour explicitly
+                  ! Mainly out of paranoia :D
+                  ! No rediagonalization (last argument switches this)
+                  !---------------------------------------------------
                   e = conjg(gdft%e)*hartree_to_ev_const
-                  !no rediagonalization
                   CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(i_hia,:,:,:,2),0)
 #endif
                   CALL CHDIR(TRIM(ADJUSTL(cwd)))
@@ -358,15 +362,19 @@ MODULE m_hubbard1_setup
 
       DO i = 1, ns
          DO j = 1, ns
-            m = i-1-l
+            m  = i-1-l
             mp = j-1-l
             DO ispin = 1, MERGE(3,jspins,l_vmperp)
                IF(ispin < 3) THEN
                   mat(i+(ispin-1)*ns,j+(ispin-1)*ns) = mat(i+(ispin-1)*ns,j+(ispin-1)*ns) - vmmp(m,mp,ispin)
                   IF(jspins.EQ.1) mat(i+ns,j+ns) = mat(i+ns,j+ns) - vmmp(-m,-mp,ispin)
                ELSE
-                  mat(i,j+ns) = mat(i,j+ns) - vmmp(m,mp,ispin)
-                  mat(i+ns,j) = mat(i+ns,j) - conjg(vmmp(mp,m,ispin))
+                  !----------------------------------------------------------------------------
+                  ! The offdiagonal elements only have to be removed if they are actually added
+                  ! to the hamiltonian (so noco%l_mperp and noco%l_mtNocoPot)
+                  !----------------------------------------------------------------------------
+                  mat(i+ns,j) = mat(i+ns,j) - vmmp(m,mp,ispin)
+                  mat(i,j+ns) = mat(i,j+ns) - conjg(vmmp(mp,m,ispin))
                ENDIF
             ENDDO
          ENDDO

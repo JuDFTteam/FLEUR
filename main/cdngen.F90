@@ -111,7 +111,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
-   
+
 
    IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) THEN
       !Only calculate the greens function when needed

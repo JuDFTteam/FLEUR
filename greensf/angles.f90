@@ -1,6 +1,6 @@
 MODULE m_angles
 
-CONTAINS 
+CONTAINS
 
 !Calculate the correct angles for the rotation in spin-space (needed for LDA+U and Greens functions with noco)
 

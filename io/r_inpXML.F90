@@ -120,7 +120,7 @@ CONTAINS
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
-      INTEGER            :: ldau_l(4), hub1_l(4),hub1_excl(4,3), onsiteGF_lmin,onsiteGF_lmax,intersiteGF_lmin,intersiteGF_lmax, numVac, numU,
+      INTEGER            :: ldau_l(4), hub1_l(4),hub1_excl(4,3), onsiteGF_lmin,onsiteGF_lmax,intersiteGF_lmin,intersiteGF_lmax, numVac, numU
       INTEGER            :: numOnsite, numIntersite, numHIA, numaddArgs(4), numaddExc(4), numJ0, j0_min, j0_max
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
