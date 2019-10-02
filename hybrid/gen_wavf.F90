@@ -190,16 +190,6 @@ CONTAINS
                     oneD, acof(:hybrid%nbands(ikpt0), :, :), bcof(:hybrid%nbands(ikpt0), :, :), &
                     ccof(:, :hybrid%nbands(ikpt0), :, :), zmat(ikpt0))
 
-! call was ...
-         ! gpt(1,:,:,ikpt0),gpt(2,:,:,ikpt0),&
-         ! gpt(3,:,:,ikpt0),ngpt(:,ikpt0),&!k1hlp,k2hlp,k3hlp,nvhlp,&
-         !    ngpt(jsp,ikpt0)+nbands(ikpt0),z(:,:,ikpt0),&!nvhlp(jsp)+ &
-         !   &usdus,&
-         !    noco,&
-         !    jsp,kveclo_eig(:ikpt0),oneD,oneD,&
-         !    acof(:nbands(ikpt0),:,:),&
-         !    bcof(:nbands(ikpt0),:,:),ccof(:,:nbands(ikpt0),:,:) )
-
          ! MT wavefunction coefficients are calculated in a local coordinate system rotate them in the global one
 
          CALL hyb_abcrot(hybrid, atoms, hybrid%nbands(ikpt0), sym, acof(:hybrid%nbands(ikpt0), :, :), &

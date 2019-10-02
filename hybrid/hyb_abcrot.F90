@@ -62,15 +62,18 @@ CONTAINS
             DO l = 1, atoms%lmax(itype)
 !  replaced d_wgn by conjg(d_wgn),FF October 2006
                DO i = 1, neig
-                  acof(i, l**2:l*(l + 2), iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)), acof(i, l**2:l*(l + 2), iatom))
-                  bcof(i, l**2:l*(l + 2), iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)), bcof(i, l**2:l*(l + 2), iatom))
+                  acof(i, l**2:l*(l + 2), iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)),&
+                                                                  acof(i, l**2:l*(l + 2), iatom))
+                  bcof(i, l**2:l*(l + 2), iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)),&
+                                                                  bcof(i, l**2:l*(l + 2), iatom))
                ENDDO
             ENDDO
             DO ilo = 1, atoms%nlo(itype)
                l = atoms%llo(ilo, itype)
                IF (l > 0) THEN
                   DO i = 1, neig
-                     ccof(-l:l, i, ilo, iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)), ccof(-l:l, i, ilo, iatom))
+                     ccof(-l:l, i, ilo, iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)), &
+                                                                ccof(-l:l, i, ilo, iatom))
                   ENDDO
                ENDIF
             ENDDO
