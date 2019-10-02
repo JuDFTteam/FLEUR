@@ -274,7 +274,7 @@ CONTAINS
          !determine number of g
          igpt1 = 0
          DO i = 1, lapw_nk%nv(jsp)
-            IF (all(abs(g - lapw_nk%gvec(:,i, jsp) )) <= 1E-06) THEN
+            IF (all(abs(g - lapw_nk%gvec(:,i, jsp) ) <= 1E-06)) THEN
                igpt1 = i
                EXIT
             END IF
