@@ -100,7 +100,7 @@ CONTAINS
 
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
-      kqpt = ktps%to_first_bz(kqpthlp)
+      kqpt = kpts%to_first_bz(kqpthlp)
       g_t(:) = nint(kqpt - kqpthlp)
 
       ! determine number of kqpt
@@ -289,7 +289,7 @@ CONTAINS
       iiatom = 0
 
       DO itype = 1, atoms%ntype
-         ioffset = sum((/((2*ll + 1)*hybrid%nindxm1(ll, itype), ll=0, hybrid%lcutm1(itype))/))
+         ioffset = sum([((2*ll + 1)*hybrid%nindxm1(ll, itype), ll=0, hybrid%lcutm1(itype))])
          lm_0 = lm_00
          DO ieq = 1, atoms%neq(itype)
             iatom1 = iatom1 + 1
@@ -1050,17 +1050,11 @@ CONTAINS
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! k+q can lie outside the first BZ, transfer
       ! it back into the 1. BZ
-      kqpt = modulo1(kqpthlp, kpts%nkpt3)
+      kqpt = kpts%to_first_bz((kqpthlp, kpts%nkpt3))
       g_t(:) = nint(kqpt - kqpthlp)
       ! determine number of kqpt
-      nkqpt = 0
-      DO ikpt = 1, kpts%nkptf
-         IF (maxval(abs(kqpt - kpts%bkf(:, ikpt))) <= 1E-06) THEN
-            nkqpt = ikpt
-            EXIT
-         END IF
-      END DO
-      IF (nkqpt == 0) STOP 'wavefproducts: k-point not found'
+      nkqpt = kpts%get_nk(kqpt)
+      IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
 
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
