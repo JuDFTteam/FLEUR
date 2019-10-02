@@ -379,7 +379,7 @@ MODULE m_dosWeights
 
          weight = 1.0/3.0*vol
 
-      ELSE IF((energy.GT.e(2)).AND.(energy.LT.e(3))) THEN
+      ELSE IF((energy.GE.e(2)).AND.(energy.LE.e(3))) THEN
 
          IF(ind.EQ.1) THEN
             weight = vol/3.0 * (1.0-(e(3)-energy)**3/((e(3)-e(1))**2*(e(3)-e(2))))
@@ -387,14 +387,14 @@ MODULE m_dosWeights
             weight = vol/3.0 * (1.0-(e(3)-energy)**3/((e(3)-e(1))*(e(3)-e(2))**2))
          ELSE IF(ind.EQ.3) THEN
             weight = vol/3.0 * (1.0-(e(3)-energy)**2/((e(3)-e(1))*(e(3)-e(2)))*&
-                     (3.0-(e(3)-energy)/((e(3)-e(1)))-(e(3)-energy)/((e(3)-e(2)))))
+                     (3.0-(e(3)-energy)/(e(3)-e(1))-(e(3)-energy)/(e(3)-e(2))))
          ENDIF
 
-      ELSE IF((energy.GT.e(2)).AND.(energy.LT.e(3))) THEN
+      ELSE IF((energy.GE.e(1)).AND.(energy.LE.e(2))) THEN
 
          IF(ind.EQ.1) THEN
             weight = vol/3.0*(energy-e(1))**2/((e(3)-e(1))*(e(2)-e(1)))*&
-                     (3.0-(energy-e(1))/((e(3)-e(1)))-(energy-e(1))/((e(2)-e(1))))
+                     (3.0-(energy-e(1))/(e(3)-e(1))-(energy-e(1))/(e(2)-e(1)))
          ELSE IF(ind.EQ.2) THEN
             weight = vol/3.0 *(energy-e(1))**3/((e(3)-e(1))*(e(2)-e(1))**2)
          ELSE IF(ind.EQ.3) THEN
