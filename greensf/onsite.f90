@@ -56,6 +56,7 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
       !
       !Enforcing that the projected density of states follows the local symmetries
       !
+      CALL timestart("On-Site: Integration Cutoff")
       IF(nType.EQ.nTypep.AND.l.EQ.lp) THEN
          !
          !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
@@ -68,6 +69,7 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
          greensfCoeffs%kkintgr_cutoff(i_gf,:,1) = 1
          greensfCoeffs%kkintgr_cutoff(i_gf,:,2) = greensfCoeffs%ne
       ENDIF
+      CALL timestop("On-Site: Integration Cutoff")
       !
       !Perform the Kramers-Kronig-Integration if not already calculated
       !

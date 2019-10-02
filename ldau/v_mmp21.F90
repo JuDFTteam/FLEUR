@@ -23,7 +23,7 @@ MODULE m_vmmp21
       REAL,    INTENT (IN) :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
                                 -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
       REAL,    INTENT (IN) :: f0(n_u),f2(n_u)
-      REAL,    INTENT (OUT):: e_off 
+      REAL,    INTENT (OUT):: e_off
       TYPE (t_utype), INTENT (IN) :: u_in(n_u)
 
       COMPLEX, INTENT(IN):: n_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
@@ -59,7 +59,7 @@ MODULE m_vmmp21
 ! V     =  >  (  <m,p|V|q,m'> ) n     + d    ( -U (n - -) + J (n  - -) ) |
 !  m,m'    --                    p,q     m,m'          2            2    |
 !        p,q                                                             |
-!------------------------------------------------------------------------+     
+!------------------------------------------------------------------------+
 ! initialise v_mmp
 !
         v_mmp21(:,:,i_u) = cmplx(0.0,0.0)
@@ -67,11 +67,11 @@ MODULE m_vmmp21
 ! outer spin loop - set up v_mmp
 !
         DO m = -l,l
-          DO mp =-l,l 
+          DO mp =-l,l
              DO p = -l,l
                DO q = -l,l
                  v_mmp21(m,mp,i_u) = v_mmp21(m,mp,i_u) - &
-                                   u(m,p,q,mp,i_u) * n_mmp21(p,q,i_u) 
+                                   u(m,p,q,mp,i_u) * n_mmp21(p,q,i_u)
                ENDDO
              ENDDO
           ENDDO ! m' loop
@@ -102,6 +102,6 @@ MODULE m_vmmp21
       ENDDO ! loop over atoms
 
       e_off = e_off / 2
-      
+
       END SUBROUTINE v_mmp_21
 END MODULE m_vmmp21
