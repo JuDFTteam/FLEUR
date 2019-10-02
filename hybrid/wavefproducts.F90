@@ -103,14 +103,8 @@ CONTAINS
       kqpt = modulo1(kqpthlp, kpts%nkpt3)
       g_t(:) = nint(kqpt - kqpthlp)
       ! determine number of kqpt
-      nkqpt = 0
-      DO ikpt = 1, kpts%nkptf
-         IF (maxval(abs(kqpt - kpts%bkf(:, ikpt))) <= 1E-06) THEN
-            nkqpt = ikpt
-            EXIT
-         END IF
-      END DO
-      IF (nkqpt == 0) call juDFT_error('wavefproducts_inv5: k-point not found')
+      nkqpt = kpts%get_nk(kqpt)
+      IF (kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
