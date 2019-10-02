@@ -193,7 +193,7 @@ CONTAINS
             den%vacz(:,:,4) = AIMAG(cdomvz(:,:))
             den%vacxy(:,:,:,3) = cdomvxy
          END IF
-         CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,noco%l_noco,.FALSE.,.true.,fix)
+         !CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,noco%l_noco,.FALSE.,.true.,fix)
          rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
          qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
          rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
