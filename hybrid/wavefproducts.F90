@@ -163,9 +163,7 @@ CONTAINS
             g = lapw%gvec(:,ig1,jsp) + hybrid%gptm(:, iigptm) - g_t
             ig2 = pointer(g(1), g(2), g(3))
 
-            IF (ig2 == 0) THEN
-               STOP 'wavefproducts_inv5: pointer undefined'
-            END IF
+            IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
 
             DO n1 = 1, bandf - bandi + 1
                rdum1 = z_nk%data_r(ig1, n1)
