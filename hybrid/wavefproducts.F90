@@ -136,9 +136,9 @@ CONTAINS
 
       !(2) calculate convolution
       call timestart("calc convolution")
-      ALLOCATE (z0(bandoi:bandof, ngpt0), stat=ok)
-      IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation z0'
-      z0 = 0
+      ALLOCATE (z0(bandoi:bandof, ngpt0), stat=ok, source=0.0)
+      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation z0')
+
       call timestart("step function")
       DO ig2 = 1, lapw_nkqpt%nv(jsp)
          rarr1 = z_kqpt%data_r(ig2, bandoi:bandof)
