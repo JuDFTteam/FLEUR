@@ -213,9 +213,11 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
-            cmplx_exp(iatom) = exp((-img)*tpi_const*dotprod(kpts%bkf(:, iq) + kpts%bkf(:, nk), atoms%taual(:, iatom)))
+            cmplx_exp(iatom) = exp((-img)*tpi_const*&
+                                   dot_product(kpts%bkf(:, iq) + kpts%bkf(:, nk), atoms%taual(:, iatom)))
 
-            cexp_nk(iatom) = exp((-img)*tpi_const*dotprod(kpts%bkf(:, nk), atoms%taual(:, iatom)))
+            cexp_nk(iatom) = exp((-img)*tpi_const*&
+                                 dot_product(kpts%bkf(:, nk), atoms%taual(:, iatom)))
          END DO
       END DO
 
