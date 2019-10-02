@@ -223,7 +223,7 @@ CONTAINS
 
       rkpt = matmul(rrot, kpts%bk(:, nk))
       rkpthlp = rkpt
-      rkpt = modulo1(rkpt, kpts%nkpt3)
+      rkpt = kpts%to_first_bz(rkpt)
       g1 = nint(rkpt - rkpthlp)
 
       ! MT coefficients
