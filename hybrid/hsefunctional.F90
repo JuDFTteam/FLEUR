@@ -1847,7 +1847,7 @@ CONTAINS
 
       USE m_trafo, ONLY: symmetrize
       USE m_olap, ONLY: olap_pw, olap_pwp
-      USE m_wrapper, ONLY: diagonalize, matvec, packmat, inverse
+      USE m_wrapper, ONLY: diagonalize, packmat, inverse
 
       IMPLICIT NONE
 

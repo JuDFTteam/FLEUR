@@ -998,9 +998,9 @@ MODULE m_kp_perturbation
 
             if (z%l_real) THEN
             DO iband2 = bandi2, bandf2
-               vec1_r = matvec(olap_r, z%data_r(:lapw%nv(jsp), iband2)*qg(:, 1))
-               vec2_r = matvec(olap_r, z%data_r(:lapw%nv(jsp), iband2)*qg(:, 2))
-               vec3_r = matvec(olap_r, z%data_r(:lapw%nv(jsp), iband2)*qg(:, 3))
+               vec1_r = matmul(olap_r, z%data_r(:lapw%nv(jsp), iband2)*qg(:, 1))
+               vec2_r = matmul(olap_r, z%data_r(:lapw%nv(jsp), iband2)*qg(:, 2))
+               vec3_r = matmul(olap_r, z%data_r(:lapw%nv(jsp), iband2)*qg(:, 3))
                DO iband1 = bandi1, bandf1
                   momentum(iband2, iband1, 1) = momentum(iband2, iband1, 1) + dot_product(z%data_r(:lapw%nv(jsp), iband1), vec1_r)
                   momentum(iband2, iband1, 2) = momentum(iband2, iband1, 2) + dot_product(z%data_r(:lapw%nv(jsp), iband1), vec2_r)
@@ -1009,9 +1009,9 @@ MODULE m_kp_perturbation
             END DO
             else
             DO iband2 = bandi2, bandf2
-               vec1_c = matvec(olap_c, z%data_c(:lapw%nv(jsp), iband2)*qg(:, 1))
-               vec2_c = matvec(olap_c, z%data_c(:lapw%nv(jsp), iband2)*qg(:, 2))
-               vec3_c = matvec(olap_c, z%data_c(:lapw%nv(jsp), iband2)*qg(:, 3))
+               vec1_c = matmul(olap_c, z%data_c(:lapw%nv(jsp), iband2)*qg(:, 1))
+               vec2_c = matmul(olap_c, z%data_c(:lapw%nv(jsp), iband2)*qg(:, 2))
+               vec3_c = matmul(olap_c, z%data_c(:lapw%nv(jsp), iband2)*qg(:, 3))
                DO iband1 = bandi1, bandf1
                   momentum(iband2, iband1, 1) = momentum(iband2, iband1, 1) + dot_product(z%data_c(:lapw%nv(jsp), iband1), vec1_c)
                   momentum(iband2, iband1, 2) = momentum(iband2, iband1, 2) + dot_product(z%data_c(:lapw%nv(jsp), iband1), vec2_c)
