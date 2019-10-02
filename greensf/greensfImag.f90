@@ -52,10 +52,10 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
    !Loop through the gf elements to be calculated
 
    !$OMP PARALLEL DEFAULT(none) &
-   !$OMP SHARED(ispin,wtkpt,i_gf,nbands,l_tria) &
+   !$OMP SHARED(ispin,wtkpt,nbands,l_tria) &
    !$OMP SHARED(atoms,input,eigVecCoeffs,usdus,greensfCoeffs,eig,sym) &
    !$OMP SHARED(dosWeights,resWeights,ind) &
-   !$OMP PRIVATE(natom,l,nType,ie,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero,it,is,isi,fac) &
+   !$OMP PRIVATE(i_gf,natom,l,nType,ie,m,mp,lm,lmp,ilo,ilop,imat,weight,ib,j,l_zero,it,is,isi,fac) &
    !$OMP PRIVATE(im,d_mat,calc_mat)
    !$OMP DO
    DO i_gf = 1, atoms%n_gf
