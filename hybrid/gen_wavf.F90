@@ -59,7 +59,7 @@ CONTAINS
       TYPE(t_mat)             :: zhlp
       INTEGER                 :: ikpt0, ikpt, itype, iop, ieq, indx, iatom
       INTEGER                 :: i, j, l, ll, lm, ng, ok
-      COMPLEX                 :: img = (0.0, 1.0)
+      COMPLEX, PARAMETER      :: img = (0.0, 1.0)
 
       INTEGER                 :: nodem, noded
       REAL                    :: wronk
@@ -116,9 +116,10 @@ CONTAINS
       ! bas1 denotes the large component
       ! bas2    "     "  small component
 
-      ALLOCATE (f(atoms%jmtd, 2, 0:atoms%lmaxd), df(atoms%jmtd, 2, 0:atoms%lmaxd))
-      f = 0
-      df = 0
+      ALLOCATE (f(atoms%jmtd, 2, 0:atoms%lmaxd), &
+                df(atoms%jmtd, 2, 0:atoms%lmaxd), &
+                source=0.0)
+                
       iarr = 2
       DO itype = 1, atoms%ntype
          IF (mpi%irank == 0) WRITE (6, FMT=8000) itype
