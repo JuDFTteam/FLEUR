@@ -198,8 +198,9 @@ CONTAINS
       END DO
 
       ! read in cmt coefficient at k-point nk
-      ALLOCATE (ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat), ccmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation ccmt_nk/ccmt'
+      ALLOCATE (ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat),&
+                ccmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), source=0.0, stat=ok)
+      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt')
 
       call read_cmt(ccmt_nk, nk)
       !read in cmt coefficients at k+q point
