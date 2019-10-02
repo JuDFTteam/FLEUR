@@ -120,7 +120,8 @@ CONTAINS
       INTEGER            :: latticeDef, symmetryDef, nop48, firstAtomOfType, errorStatus
       INTEGER            :: loEDeriv, ntp1, ios, ntst, jrc, minNeigd, providedCoreStates, providedStates
       INTEGER            :: nv, nv2, kq1, kq2, kq3, nprncTemp, kappaTemp, tempInt
-      INTEGER            :: ldau_l(4), hub1_l(4),hub1_excl(4,3), onsiteGF_lmin,onsiteGF_lmax,intersiteGF_lmin,intersiteGF_lmax, numVac, numU, numOnsite, numIntersite, numHIA, numaddArgs(4), numaddExc(4), numJ0, j0_min, j0_max  
+      INTEGER            :: ldau_l(4), hub1_l(4),hub1_excl(4,3), onsiteGF_lmin,onsiteGF_lmax,intersiteGF_lmin,intersiteGF_lmax, numVac, numU,
+      INTEGER            :: numOnsite, numIntersite, numHIA, numaddArgs(4), numaddExc(4), numJ0, j0_min, j0_max
       INTEGER            :: speciesEParams(0:3)
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
@@ -1480,7 +1481,7 @@ CONTAINS
          IF (numberNodes==1) THEN
             vcaSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vca_charge'))))
          ENDIF
-       
+
          DO iType = 1, atoms%ntype
             WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
@@ -1515,7 +1516,7 @@ CONTAINS
                   atoms%lda_u(atoms%n_u)%phi = ldau_phi(i)
                   atoms%lda_u(atoms%n_u)%theta = ldau_theta(i)
                   atoms%lda_u(atoms%n_u)%l_amf    = l_amf(i)
-                  atoms%lda_u(atoms%n_u)%atomType = iType 
+                  atoms%lda_u(atoms%n_u)%atomType = iType
                ENDDO
                atomTypeSpecies(iType) = iSpecies
                IF(speciesRepAtomType(iSpecies).EQ.-1) speciesRepAtomType(iSpecies) = iType
@@ -1564,10 +1565,10 @@ CONTAINS
                WRITE(xPathC,*) j
                hub1_excl(i,j) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@l'))
                hub1_exc(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@J'))
-               hub1_mom(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@init_mom'))        
+               hub1_mom(i,j) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/ldaHIA['//TRIM(ADJUSTL(xPathB))//']/exc['//TRIM(ADJUSTL(xPathC))//']/@init_mom'))
             ENDDO
          ENDDO
-         
+
          !Are there onsiteGF to be calculated just for e.g. DOS calculations
          numOnsite = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/onsiteGF')
          IF(numOnsite.EQ.1) THEN
@@ -1622,7 +1623,7 @@ CONTAINS
                      hub1%n_exc_given(atoms%n_hia) = hub1%n_exc_given(atoms%n_hia) + 1
                      hub1%exc_l(atoms%n_hia,hub1%n_exc_given(atoms%n_hia)) = hub1_excl(i,j)
                      hub1%exc(atoms%n_hia,hub1%n_exc_given(atoms%n_hia)) = hub1_exc(i,j)
-                     hub1%init_mom(atoms%n_hia,hub1%n_exc_given(atoms%n_hia)) = hub1_mom(i,j) 
+                     hub1%init_mom(atoms%n_hia,hub1%n_exc_given(atoms%n_hia)) = hub1_mom(i,j)
                   ENDDO
 
                   !Additional Arguments
@@ -1631,16 +1632,16 @@ CONTAINS
                      DO k = 1, hub1%n_addArgs(atoms%n_hia)
                         IF(TRIM(ADJUSTL(hub1_key(i,j))).EQ.TRIM(ADJUSTL(hub1%arg_keys(atoms%n_hia,k)))) THEN
                            CALL juDFT_error("Ambigous additional arguments",calledby="r_inpXML")
-                        ENDIF 
+                        ENDIF
                      ENDDO
                      SELECT CASE (hub1_key(i,j))
-                     CASE('xiSOC') 
+                     CASE('xiSOC')
                         !Do not get soc from DFT and use provided value
                         IF(hub1%l_soc_given(atoms%n_hia)) CALL juDFT_error("Two soc parameters provided",calledby="r_inpXML")
                         hub1%l_soc_given(atoms%n_hia) = .TRUE.
                         hub1%xi(atoms%n_hia) = hub1_val(i,j)
                         IF( hub1%xi(atoms%n_hia).EQ.0.0)  hub1%xi(atoms%n_hia) = 0.001
-                     CASE('ccf') 
+                     CASE('ccf')
                         IF(hub1%l_ccf_given(atoms%n_hia)) CALL juDFT_error("Two crystal field parameters provided",calledby="r_inpXML")
                         hub1%l_ccf_given(atoms%n_hia) = .TRUE.
                         hub1%ccf(atoms%n_hia) = hub1_val(i,j)
@@ -1667,7 +1668,7 @@ CONTAINS
                   CALL add_gfjob(iType,j0_min,j0_max,atoms,.FALSE.,.FALSE.,.FALSE.)
                ENDIF
                IF(numIntersite.EQ.1) CALL add_gfjob(iType,intersiteGF_lmin,intersiteGF_lmax,atoms,intersiteGF_loff,.TRUE.,intersiteGF_lnn)
-            ENDIF 
+            ENDIF
          ENDDO
       ENDDO
       IF(atoms%n_gf>0) input%l_gf = .true. !This switch enforces the consideration of unoccuied states in cdnval.f90

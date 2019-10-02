@@ -133,14 +133,13 @@ CONTAINS
        IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
-  
 
     iter     = 0
     iterHF   = 0
     hub1%iter  = 0
     hub1%l_runthisiter = .FALSE.
     l_cont = (iter < input%itmax)
-    
+
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
@@ -482,7 +481,7 @@ CONTAINS
          ! MetaGGAs need a at least 2 iterations
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f & 
                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
-          !If we have converged run hia if the density matrix has not converged 
+          !If we have converged run hia if the density matrix has not converged
           IF(atoms%n_hia>0) THEN
              hub1%l_runthisiter = .NOT.l_cont.AND.(input%minoccDistance<=results%last_occdistance&
                                   .OR.input%minmatDistance<=results%last_mmpMatdistance)
