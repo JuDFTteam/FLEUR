@@ -53,7 +53,7 @@ MODULE m_greensfImag21
 
       l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(wtkpt,i_gf,nbands,l_tria) &
+      !$OMP SHARED(wtkpt,nbands,l_tria) &
       !$OMP SHARED(atoms,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig) &
       !$OMP SHARED(dosWeights,resWeights,ind) &
       !$OMP PRIVATE(i_gf,imat,l,nType,natom,nn,ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop) &
