@@ -245,9 +245,7 @@
 
                      ! PW part
                      DO igpt = 1, lapw%nv(jsp)
-                        gpt(1) = lapw%k1(igpt, jsp)
-                        gpt(2) = lapw%k2(igpt, jsp)
-                        gpt(3) = lapw%k3(igpt, jsp)
+                        gpt = lapw%gvec(:,igpt, jsp)
 
                         cexp = exp(img*2*pi_const* &
                &                   dot_product(kpts%bkf(:, ikpt) + gpt, atoms%taual(:, iatom)))
