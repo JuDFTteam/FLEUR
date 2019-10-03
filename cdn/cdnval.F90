@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,greensf,angle)
+                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -84,7 +84,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
    TYPE(t_orbcomp),       OPTIONAL, INTENT(INOUT) :: orbcomp
    TYPE(t_greensfCoeffs), OPTIONAL, INTENT(INOUT) :: greensfCoeffs
-   TYPE(t_greensf),       OPTIONAL, INTENT(INOUT) :: greensf
    REAL,                  OPTIONAL, INTENT(IN)    :: angle(sym%nop)
 
    ! Scalar Arguments
@@ -249,7 +248,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
                                                                                  we,eigVecCoeffs,angle,den%mmpMat(:,:,:,3))
 
          IF (atoms%n_gf.GT.0) CALL bzIntegrationGF(atoms,sym,input,angle,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
-                                                   eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensf,greensfCoeffs,ispin==jsp_end)
+                                                   eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensfCoeffs,ispin==jsp_end)
 
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
@@ -287,7 +286,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
-                       results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,greensfCoeffs,greensf)
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 #endif
 

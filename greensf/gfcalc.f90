@@ -13,12 +13,10 @@ MODULE m_gfcalc
    CONTAINS
 
    SUBROUTINE bzIntegrationGF(atoms,sym,input,angle,ispin,nbands,dosWeights,resWeights,indBound,wtkpt,eig,denCoeffsOffdiag,&
-                              usdus,eigVecCoeffs,greensf,greensfCoeffs,l21)
+                              usdus,eigVecCoeffs,greensfCoeffs,l21)
 
       USE m_greensfImag
       USE m_greensfImag21
-      !USE m_greensfRes
-      !USE m_greensfRes21
 
       IMPLICIT NONE
 
@@ -30,7 +28,6 @@ MODULE m_gfcalc
       TYPE(t_usdus),             INTENT(IN)    :: usdus
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)    :: denCoeffsOffdiag
       TYPE(t_greensfCoeffs),     INTENT(INOUT) :: greensfCoeffs
-      TYPE(t_greensf),           INTENT(INOUT) :: greensf
 
 
       !-Scalar Arguments
@@ -46,22 +43,12 @@ MODULE m_gfcalc
       REAL,                      INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
       REAL,                      INTENT(IN)    :: angle(sym%nop)                      !Phases for spin-offdiagonal part
 
-      !IF(input%l_resolvent) THEN
-         !Calculate greens function directly
-      !   CALL timestart("Greens Function: Resolvent")
-      !   CALL greensfRes(atoms,sym,input,ispin,nbands,resWeights,indBound,wtkpt,eig,usdus,eigVecCoeffs,greensf)
-      !   IF(input%l_gfmperp.AND.l21) THEN
-      !      CALL greensfRes21(atoms,sym,angle,input,nbands,resWeights,indBound,wtkpt,eig,denCoeffsOffdiag,eigVecCoeffs,greensf)
-      !   ENDIF
-      !   CALL timestop("Greens Function: Resolvent")
-      !ENDIF
       CALL timestart("Greens Function: Imaginary Part")
       CALL greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,indBound,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
       IF(input%l_gfmperp.AND.l21) THEN
          CALL greensfImag21(atoms,sym,angle,input,nbands,dosWeights,resWeights,indBound,wtkpt,eig,denCoeffsOffdiag,eigVecCoeffs,greensfCoeffs)
       ENDIF
       CALL timestop("Greens Function: Imaginary Part")
-
 
    END SUBROUTINE bzIntegrationGF
 
@@ -88,7 +75,7 @@ MODULE m_gfcalc
 
 
       CALL timestart("Green's Function: Postprocess")
-      !Perform the Kramer-Kronigs-Integration if we only have he imaginary part at this point
+      !Perform the Kramer-Kronigs-Integration if we only have the imaginary part at this point
       CALL calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,greensf)
       !-------------------------------------------------------------
       ! Calculate various properties from the greens function
