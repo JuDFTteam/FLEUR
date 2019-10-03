@@ -16,6 +16,7 @@ greensf/crystalfield.f90
 greensf/j0.f90
 greensf/ind_greensf.f90
 greensf/hybridization.f90
+greensf/rot_gf.f90
 greensf/occmtx.f90
 greensf/gfDOS.f90
 greensf/lstojmj.f90

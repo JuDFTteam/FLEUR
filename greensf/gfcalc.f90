@@ -58,6 +58,7 @@ MODULE m_gfcalc
 
       !contains all the modules for calculating properties from the greens function
       USE m_onsite
+      USE m_rot_gf
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_input),             INTENT(IN)     :: input
@@ -75,6 +76,7 @@ MODULE m_gfcalc
 
 
       CALL timestart("Green's Function: Postprocess")
+      CALL rot_projDOS(sym,atoms,input,angle,greensfCoeffs)
       !Perform the Kramer-Kronigs-Integration if we only have the imaginary part at this point
       CALL calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,greensf)
       !-------------------------------------------------------------

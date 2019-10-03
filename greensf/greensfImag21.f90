@@ -136,49 +136,11 @@ MODULE m_greensfImag21
                      ENDDO!ie
                   ENDDO!ib
                   DO ie = 1, greensfCoeffs%ne
-                     greensfCoeffs%projdos21(ie,m,mp,nn,i_gf) = greensfCoeffs%projdos21(ie,m,mp,nn,i_gf) - AIMAG(im(ie,m,mp,1))
+                     greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) - AIMAG(im(ie,m,mp,1))
                   ENDDO
                ENDDO!mp
             ENDDO!m
-
-            !Rotate the eqivalent atom into the irreducible brillouin zone
-            !fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
-            !IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations",calledby="greensfImag")
-            !DO imat = 1, MERGE(1,5,input%l_gfsphavg)
-            !   DO ie = 1, greensfCoeffs%ne
-            !      DO it = 1, sym%invarind(natom)
-            !         is = sym%invarop(natom,it)
-            !         isi = sym%invtab(is)
-            !         d_mat(:,:) = cmplx(0.0,0.0)
-            !         DO m = -l,l
-            !            DO mp = -l,l
-            !               d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
-            !            ENDDO
-            !         ENDDO
-            !         calc_mat = matmul( transpose( conjg(d_mat) ) , &
-            !                     im(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,imat))
-            !         calc_mat =  matmul( calc_mat, d_mat )
-            !         !phase = exp(ImagUnit * angle(isi))
-            !         DO m = -l,l
-            !            DO mp = -l,l
-            !               IF(imat.EQ.1) THEN
-
-                           !ELSE IF(imat.EQ.2) THEN
-                           !   greensfCoeffs%uu(ie,i_gf,m,mp,3) = greensfCoeffs%uu(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                           !ELSE IF(imat.EQ.3) THEN
-                           !   greensfCoeffs%dd(ie,i_gf,m,mp,3) = greensfCoeffs%dd(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                           !ELSE IF(imat.EQ.4) THEN
-                           !   greensfCoeffs%ud(ie,i_gf,m,mp,3) = greensfCoeffs%ud(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                           !ELSE IF(imat.EQ.5) THEN
-                           !   greensfCoeffs%du(ie,i_gf,m,mp,3) = greensfCoeffs%du(ie,i_gf,m,mp,3) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                           !ENDIF
-                        !ENDDO
-                     !ENDDO
-                  !ENDDO!it
-               !ENDDO!ie
-            !ENDDO!imat
-
-         ENDDO !natom
+         ENDDO !nn
       ENDDO !i_gf
       !$OMP END DO
       !$OMP END PARALLEL

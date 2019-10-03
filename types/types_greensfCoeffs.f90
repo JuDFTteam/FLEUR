@@ -40,14 +40,13 @@ MODULE m_types_greensfCoeffs
          !Array declarations
          !If we look at the Green's function that only depends on Energy and not on spatial arguments
          !the imaginary part is equal to the proected density of states
-         REAL, ALLOCATABLE :: projdos(:,:,:,:,:)
-         REAL, ALLOCATABLE :: projdos21(:,:,:,:,:)
+         REAL, ALLOCATABLE :: projdos(:,:,:,:,:,:)
 
          ! These arrays are only used in the case we want the green's function with radial dependence
-         REAL, ALLOCATABLE :: uu(:,:,:,:,:)
-         REAL, ALLOCATABLE :: dd(:,:,:,:,:)
-         REAL, ALLOCATABLE :: du(:,:,:,:,:)
-         REAL, ALLOCATABLE :: ud(:,:,:,:,:)
+         REAL, ALLOCATABLE :: uu(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: dd(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: du(:,:,:,:,:,:)
+         REAL, ALLOCATABLE :: ud(:,:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init => greensfCoeffs_init
@@ -93,15 +92,13 @@ MODULE m_types_greensfCoeffs
 
          IF(atoms%n_gf.GT.0) THEN
             ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2))
-            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),input%jspins))
-            ALLOCATE (thisGREENSFCOEFFS%projdos21(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAXVAL(atoms%neq),MAX(1,atoms%n_gf)))
+            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
             thisGREENSFCOEFFS%projdos     = 0.0
-            thisGREENSFCOEFFS%projdos21   = 0.0
             IF(.NOT.input%l_gfsphavg) THEN
-               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
 
                thisGREENSFCOEFFS%uu      = 0.0
                thisGREENSFCOEFFS%dd      = 0.0

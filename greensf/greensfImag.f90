@@ -37,11 +37,9 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
 
    !-Local Scalars
    LOGICAL l_zero,l_tria
-   INTEGER i_gf,ib,ie,j,nType,natom,l,m,mp,lm,lmp,ilo,ilop,imat,it,is,isi
-   REAL    fac
+   INTEGER i_gf,ib,ie,j,nType,nn,natom,l,m,mp,lm,lmp,ilo,ilop
    COMPLEX weight
-   COMPLEX, ALLOCATABLE :: im(:,:,:,:)
-   COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+   COMPLEX, ALLOCATABLE :: im(:,:)
 
    l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
 
@@ -55,23 +53,24 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
    !$OMP SHARED(ispin,wtkpt,nbands,l_tria) &
    !$OMP SHARED(atoms,input,eigVecCoeffs,usdus,greensfCoeffs,eig,sym) &
    !$OMP SHARED(dosWeights,resWeights,ind) &
-   !$OMP PRIVATE(i_gf,natom,l,nType,ie,m,mp,lm,lmp,ilo,ilop,imat,weight,ib,j,l_zero,it,is,isi,fac) &
-   !$OMP PRIVATE(im,d_mat,calc_mat)
+   !$OMP PRIVATE(i_gf,natom,l,nType,ie,m,mp,lm,lmp,ilo,ilop,weight,ib,j,l_zero) &
+   !$OMP PRIVATE(im)
    !$OMP DO
    DO i_gf = 1, atoms%n_gf
 
       l     = atoms%gfelem(i_gf)%l
       nType = atoms%gfelem(i_gf)%atomType
 
-      ALLOCATE(im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg)))
+      ALLOCATE(im(greensfCoeffs%ne,MERGE(1,5,input%l_gfsphavg)))
 
       !Loop through equivalent atoms
-      DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
-         im = 0.0
+      DO nn = 1, atoms%neq(nType)
+         natom = SUM(atoms%neq(:nType-1)) + nn
          DO m = -l, l
             lm = l*(l+1)+m
             DO mp = -l,l
                lmp = l*(l+1)+mp
+               im = 0.0
                !Loop through bands
                DO ib = 1, nbands
                   !Check wether there is a non-zero weight for the energy window
@@ -99,26 +98,22 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                      !-------------------------
                      !Contribution from states
                      !-------------------------
-                     im(ie,m,mp,1) = im(ie,m,mp,1) + weight *&
+                     im(ie,1) = im(ie,1) + weight *&
                                           (conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) +&
                                           conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin) *&
                                           usdus%ddn(l,nType,ispin))
                      IF(.NOT.input%l_gfsphavg) THEN
-                        im(ie,m,mp,2) = im(ie,m,mp,2) + weight *&
-                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin)
-                        im(ie,m,mp,3) = im(ie,m,mp,3) + weight *&
-                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)
-                        im(ie,m,mp,4) = im(ie,m,mp,4) + weight *&
-                                        conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)
-                        im(ie,m,mp,5) = im(ie,m,mp,5) + weight *&
-                                        conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin)
+                        im(ie,2) = im(ie,2) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin)
+                        im(ie,3) = im(ie,3) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)
+                        im(ie,4) = im(ie,4) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)
+                        im(ie,5) = im(ie,5) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin)
                      END IF
                      !------------------------------------------------------------------------------------------------------
                      ! add local orbital contribution (not implemented for radial dependence yet and not tested for average)
                      !------------------------------------------------------------------------------------------------------
                      DO ilo = 1, atoms%nlo(nType)
                         IF(atoms%llo(ilo,nType).EQ.l) THEN
-                           im(ie,m,mp,1) = im(ie,m,mp,1) + weight * (  usdus%uulon(ilo,nType,ispin) * (&
+                           im(ie,1) = im(ie,1) + weight * (  usdus%uulon(ilo,nType,ispin) * (&
                                           conjg(eigVecCoeffs%acof(ib,lmp,natom,ispin))*eigVecCoeffs%ccof(m,ib,ilo,natom,ispin) +&
                                           conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%acof(ib,lm,natom,ispin) )&
                                           + usdus%dulon(ilo,nType,ispin) * (&
@@ -126,7 +121,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                                           conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,ispin))*eigVecCoeffs%bcof(ib,lm,natom,ispin)))
                            DO ilop = 1, atoms%nlo(nType)
                               IF (atoms%llo(ilop,nType).EQ.l) THEN
-                                 im(ie,m,mp,1) = im(ie,m,mp,1) + weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
+                                 im(ie,1) = im(ie,1) + weight * usdus%uloulopn(ilo,ilop,nType,ispin) *&
                                                 conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,ispin)) *eigVecCoeffs%ccof(m,ib,ilo,natom,ispin)
                               ENDIF
                            ENDDO
@@ -134,42 +129,18 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                      ENDDO
                   ENDDO!ie
                ENDDO!ib
+               DO ie = 1, greensfCoeffs%ne
+                  greensfCoeffs%projdos(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,1))
+                  IF(.NOT.input%l_gfsphavg) THEN
+                     greensfCoeffs%uu(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%uu(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,2))
+                     greensfCoeffs%dd(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%dd(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,3))
+                     greensfCoeffs%ud(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%ud(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,4))
+                     greensfCoeffs%du(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%du(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,5))
+                  ENDIF
+               ENDDO
             ENDDO !mp
          ENDDO !m
-
-         !Rotate the eqivalent atom into the irreducible brillouin zone
-         fac = 1.0/(sym%invarind(natom)*atoms%neq(nType))
-         IF(sym%invarind(natom).EQ.0) CALL juDFT_error("No symmetry operations available",calledby="greensfImag")
-         DO imat = 1, MERGE(1,5,input%l_gfsphavg)
-            DO it = 1, sym%invarind(natom)
-               is = sym%invarop(natom,it)
-               isi = sym%invtab(is)
-               d_mat(:,:) = cmplx(0.0,0.0)
-               DO m = -l,l
-                  DO mp = -l,l
-                     d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
-                  ENDDO
-               ENDDO
-               DO ie = MINVAL(ind(:,1)), MAXVAL(ind(:,2))
-                  WRITE(*,*) ie
-                  calc_mat = matmul( transpose( conjg(d_mat) ) , &
-                              im(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,imat))
-                  calc_mat =  matmul( calc_mat, d_mat )
-                  IF(imat.EQ.1) THEN
-                     greensfCoeffs%projdos(ie,:,:,i_gf,ispin) = greensfCoeffs%projdos(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
-                  ELSE IF(imat.EQ.2) THEN
-                     greensfCoeffs%uu(ie,:,:,i_gf,ispin) = greensfCoeffs%uu(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
-                  ELSE IF(imat.EQ.3) THEN
-                     greensfCoeffs%dd(ie,:,:,i_gf,ispin) = greensfCoeffs%dd(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
-                  ELSE IF(imat.EQ.4) THEN
-                     greensfCoeffs%ud(ie,:,:,i_gf,ispin) = greensfCoeffs%ud(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
-                  ELSE IF(imat.EQ.5) THEN
-                     greensfCoeffs%du(ie,:,:,i_gf,ispin) = greensfCoeffs%du(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
-                  ENDIF
-               ENDDO!ie
-            ENDDO!it
-         ENDDO!imat
-      ENDDO!natom
+      ENDDO!nn
       DEALLOCATE(im)
    ENDDO !i_gf
    !$OMP END DO
