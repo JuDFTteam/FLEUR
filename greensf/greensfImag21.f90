@@ -42,12 +42,10 @@ MODULE m_greensfImag21
       INTEGER,                   INTENT(IN)     :: ind(nbands,2)
       REAL,                      INTENT(IN)     :: eig(nbands)
 
-      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,imat,it,is,isi,ilo,ilop,nn
-      REAL     fac
-      COMPLEX phase,weight
+      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,ilo,ilop,nn
+      COMPLEX  weight
       LOGICAL  l_zero,l_tria
-      COMPLEX, ALLOCATABLE :: im(:,:,:,:)
-      COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
+      COMPLEX, ALLOCATABLE :: im(:,:)
 
       IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
@@ -56,23 +54,23 @@ MODULE m_greensfImag21
       !$OMP SHARED(wtkpt,nbands,l_tria) &
       !$OMP SHARED(atoms,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig) &
       !$OMP SHARED(dosWeights,resWeights,ind) &
-      !$OMP PRIVATE(i_gf,imat,l,nType,natom,nn,ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop) &
+      !$OMP PRIVATE(i_gf,l,nType,natom,nn,ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop) &
       !$OMP PRIVATE(im)
       !$OMP DO
       DO i_gf = 1, atoms%n_gf
          nType = atoms%gfelem(i_gf)%atomType
          l = atoms%gfelem(i_gf)%l
 
-         ALLOCATE(im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg)))
+         ALLOCATE(im(greensfCoeffs%ne,MERGE(1,5,input%l_gfsphavg)))
 
          DO nn = 1, atoms%neq(nType)
             natom = SUM(atoms%neq(:nType-1)) + nn
 
-            im = 0.0
             DO m = -l, l
                lm = l*(l+1) + m
                DO mp = -l, l
                   lmp = l*(l+1) + mp
+                  im = 0.0
                   !Loop through bands
                   DO ib = 1, nbands
 
@@ -99,16 +97,16 @@ MODULE m_greensfImag21
                         !
                         !Contribution from states
                         !
-                        im(ie,m,mp,1) = im(ie,m,mp,1) + weight *&
+                        im(ie,1) = im(ie,1) + weight *&
                                              (CONJG(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%uu21n(l,nType)&
                                             + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)&
                                             + CONJG(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)&
                                             + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%du21n(l,nType))
                         IF(.NOT.input%l_gfsphavg) THEN
-                           im(ie,m,mp,2) = im(ie,m,mp,2) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%uu21n(l,nType)
-                           im(ie,m,mp,3) = im(ie,m,mp,3) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)
-                           im(ie,m,mp,4) = im(ie,m,mp,4) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)
-                           im(ie,m,mp,5) = im(ie,m,mp,5) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%du21n(l,nType)
+                           im(ie,2) = im(ie,2) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%uu21n(l,nType)
+                           im(ie,3) = im(ie,3) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)
+                           im(ie,4) = im(ie,4) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)
+                           im(ie,5) = im(ie,5) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%du21n(l,nType)
                         ENDIF
                         !
                         !Contribution from local Orbitals
@@ -116,7 +114,7 @@ MODULE m_greensfImag21
                         DO ilo = 1, atoms%nlo(nType)
                            IF(atoms%llo(ilo,nType).EQ.l) THEN
                               !TODO: Something is wrong here for noco%l_soc and noco%l_mperp with a local orbital on the same l
-                              im(ie,m,mp,1) = im(ie,m,mp,1) + weight *&
+                              im(ie,1) = im(ie,1) + weight *&
                               (conjg(eigVecCoeffs%acof(ib,lmp,natom,2))*eigVecCoeffs%ccof(m,ib,ilo,natom,1) *&
                                denCoeffsOffDiag%uulo21n(ilo,nType) +&
                                conjg(eigVecCoeffs%ccof(mp,ib,ilo,natom,2))*eigVecCoeffs%acof(ib,lm,natom,1) *&
@@ -127,7 +125,7 @@ MODULE m_greensfImag21
                                denCoeffsOffDiag%ulod21n(ilo,nType))
                               DO ilop = 1, atoms%nlo(nType)
                                  IF(atoms%llo(ilop,nType).EQ.l) THEN
-                                    im(ie,m,mp,1) = im(ie,m,mp,1) + (weight  * denCoeffsOffDiag%uloulop21n(ilo,ilop,nType) *&
+                                    im(ie,1) = im(ie,1) + (weight  * denCoeffsOffDiag%uloulop21n(ilo,ilop,nType) *&
                                     conjg(eigVecCoeffs%ccof(mp,ib,ilop,natom,2)) *eigVecCoeffs%ccof(m,ib,ilo,natom,1))
                                  ENDIF
                               ENDDO
@@ -136,11 +134,12 @@ MODULE m_greensfImag21
                      ENDDO!ie
                   ENDDO!ib
                   DO ie = 1, greensfCoeffs%ne
-                     greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) - AIMAG(im(ie,m,mp,1))
+                     greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) - AIMAG(im(ie,1))
                   ENDDO
                ENDDO!mp
             ENDDO!m
          ENDDO !nn
+         DEALLOCATE(im)
       ENDDO !i_gf
       !$OMP END DO
       !$OMP END PARALLEL
