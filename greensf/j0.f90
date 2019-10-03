@@ -63,11 +63,11 @@ MODULE m_j0
                   DO ie = 1, n_cut
                      DO m = -l, l
                         int_com(ie,ispin) = int_com(ie,ispin) + ((ie-1)*g0Coeffs%del+g0Coeffs%e_bot)&
-                                                                *g0Coeffs%projdos(ie,i_gf,m,m,ispin)
-                        int_norm(ie,ispin) = int_norm(ie,ispin) + g0Coeffs%projdos(ie,i_gf,m,m,ispin)
+                                                                *g0Coeffs%projdos(ie,m,m,i_gf,ispin)
+                        int_norm(ie,ispin) = int_norm(ie,ispin) + g0Coeffs%projdos(ie,m,m,i_gf,ispin)
                      ENDDO
                   ENDDO
-                  exc_split(l) = exc_split(l) + (-1)**(ispin) * 1.0/(trapz(int_norm(:n_cut,ispin),g0Coeffs%del,n_cut)) * trapz(int_com(:n_cut,ispin),g0Coeffs%del,n_cut) 
+                  exc_split(l) = exc_split(l) + (-1)**(ispin) * 1.0/(trapz(int_norm(:n_cut,ispin),g0Coeffs%del,n_cut)) * trapz(int_com(:n_cut,ispin),g0Coeffs%del,n_cut)
                ENDDO
             ENDDO
             IF(atoms%j0(i_j0)%l_avgexc) THEN

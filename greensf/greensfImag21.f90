@@ -46,7 +46,7 @@ MODULE m_greensfImag21
       REAL     fac
       COMPLEX phase,weight
       LOGICAL  l_zero,l_tria
-      COMPLEX im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg))
+      COMPLEX, ALLOCATABLE :: im(:,:,:,:)
       COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
       IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
@@ -63,6 +63,7 @@ MODULE m_greensfImag21
          nType = atoms%gfelem(i_gf)%atomType
          l = atoms%gfelem(i_gf)%l
 
+         ALLOCATE(im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg)))
 
          DO nn = 1, atoms%neq(nType)
             natom = SUM(atoms%neq(:nType-1)) + nn
@@ -135,7 +136,7 @@ MODULE m_greensfImag21
                      ENDDO!ie
                   ENDDO!ib
                   DO ie = 1, greensfCoeffs%ne
-                     greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) = greensfCoeffs%projdos21(ie,i_gf,nn,m,mp) - AIMAG(im(ie,m,mp,1))
+                     greensfCoeffs%projdos21(ie,m,mp,nn,i_gf) = greensfCoeffs%projdos21(ie,m,mp,nn,i_gf) - AIMAG(im(ie,m,mp,1))
                   ENDDO
                ENDDO!mp
             ENDDO!m

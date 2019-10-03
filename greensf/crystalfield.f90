@@ -70,7 +70,8 @@ MODULE m_crystalfield
                   integrand = 0.0
                   DO ie = 1, kkcut
                      integrand(ie) = -1.0/pi_const * ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) &
-                                     * greensfCoeffs%projdos(ie,i_gf,m,mp,jspin)/(3.0-input%jspins)
+                                     * greensfCoeffs%projdos(ie,m,mp,i_gf,jspin)/(3.0-input%jspins)
+                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * greensfCoeffs%projdos(ie,m,mp,i_gf,jspin)/(3.0-input%jspins)
                   ENDDO
                   h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),greensfCoeffs%del,kkcut)
                ENDDO

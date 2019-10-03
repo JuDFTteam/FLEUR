@@ -40,7 +40,7 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
    INTEGER i_gf,ib,ie,j,nType,natom,l,m,mp,lm,lmp,ilo,ilop,imat,it,is,isi
    REAL    fac
    COMPLEX weight
-   COMPLEX im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg))
+   COMPLEX, ALLOCATABLE :: im(:,:,:,:)
    COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),calc_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
 
    l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
@@ -62,6 +62,8 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
 
       l     = atoms%gfelem(i_gf)%l
       nType = atoms%gfelem(i_gf)%atomType
+
+      ALLOCATE(im(greensfCoeffs%ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(1,5,input%l_gfsphavg)))
 
       !Loop through equivalent atoms
       DO natom = SUM(atoms%neq(:nType-1)) + 1, SUM(atoms%neq(:nType))
@@ -148,29 +150,27 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                      d_mat(m,mp) = sym%d_wgn(m,mp,l,isi)
                   ENDDO
                ENDDO
-               DO ie = 1, greensfCoeffs%ne
+               DO ie = MINVAL(ind(:,1)), MAXVAL(ind(:,2))
+                  WRITE(*,*) ie
                   calc_mat = matmul( transpose( conjg(d_mat) ) , &
                               im(ie,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,imat))
                   calc_mat =  matmul( calc_mat, d_mat )
-                  DO m = -l,l
-                     DO mp = -l,l
-                        IF(imat.EQ.1) THEN
-                           greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) = greensfCoeffs%projdos(ie,i_gf,m,mp,ispin) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                        ELSE IF(imat.EQ.2) THEN
-                           greensfCoeffs%uu(ie,i_gf,m,mp,ispin) = greensfCoeffs%uu(ie,i_gf,m,mp,ispin) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                        ELSE IF(imat.EQ.3) THEN
-                           greensfCoeffs%dd(ie,i_gf,m,mp,ispin) = greensfCoeffs%dd(ie,i_gf,m,mp,ispin) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                        ELSE IF(imat.EQ.4) THEN
-                           greensfCoeffs%ud(ie,i_gf,m,mp,ispin) = greensfCoeffs%ud(ie,i_gf,m,mp,ispin) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                        ELSE IF(imat.EQ.5) THEN
-                           greensfCoeffs%du(ie,i_gf,m,mp,ispin) = greensfCoeffs%du(ie,i_gf,m,mp,ispin) - AIMAG(fac * conjg(calc_mat(m,mp)))
-                        ENDIF
-                     ENDDO
-                  ENDDO
-               ENDDO!it
-            ENDDO!ie
+                  IF(imat.EQ.1) THEN
+                     greensfCoeffs%projdos(ie,:,:,i_gf,ispin) = greensfCoeffs%projdos(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
+                  ELSE IF(imat.EQ.2) THEN
+                     greensfCoeffs%uu(ie,:,:,i_gf,ispin) = greensfCoeffs%uu(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
+                  ELSE IF(imat.EQ.3) THEN
+                     greensfCoeffs%dd(ie,:,:,i_gf,ispin) = greensfCoeffs%dd(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
+                  ELSE IF(imat.EQ.4) THEN
+                     greensfCoeffs%ud(ie,:,:,i_gf,ispin) = greensfCoeffs%ud(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
+                  ELSE IF(imat.EQ.5) THEN
+                     greensfCoeffs%du(ie,:,:,i_gf,ispin) = greensfCoeffs%du(ie,:,:,i_gf,ispin) - AIMAG(fac * conjg(calc_mat(:,:)))
+                  ENDIF
+               ENDDO!ie
+            ENDDO!it
          ENDDO!imat
       ENDDO!natom
+      DEALLOCATE(im)
    ENDDO !i_gf
    !$OMP END DO
    !$OMP END PARALLEL

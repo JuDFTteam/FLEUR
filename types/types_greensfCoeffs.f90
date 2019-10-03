@@ -93,15 +93,15 @@ MODULE m_types_greensfCoeffs
 
          IF(atoms%n_gf.GT.0) THEN
             ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2))
-            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,input%jspins))
-            ALLOCATE (thisGREENSFCOEFFS%projdos21(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),MAXVAL(atoms%neq),-lmax:lmax,-lmax:lmax))
+            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),input%jspins))
+            ALLOCATE (thisGREENSFCOEFFS%projdos21(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAXVAL(atoms%neq),MAX(1,atoms%n_gf)))
             thisGREENSFCOEFFS%projdos     = 0.0
             thisGREENSFCOEFFS%projdos21   = 0.0
             IF(.NOT.input%l_gfsphavg) THEN
-               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),spin_dim))
+               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,MAX(1,atoms%n_gf),spin_dim))
 
                thisGREENSFCOEFFS%uu      = 0.0
                thisGREENSFCOEFFS%dd      = 0.0

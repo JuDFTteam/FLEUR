@@ -61,7 +61,7 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
          !
          !Check the integral over the fDOS to define a cutoff for the Kramer-Kronigs-Integration
          !
-         CALL kk_cutoff(greensfCoeffs%projdos(:,i_gf,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,1:input%jspins),atoms,noco,&
+         CALL kk_cutoff(greensfCoeffs%projdos(:,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,i_gf,:),atoms,noco,&
                         l,input%jspins,greensfCoeffs%ne,greensfCoeffs%del,greensfCoeffs%e_bot,greensfCoeffs%e_top,&
                         greensfCoeffs%kkintgr_cutoff(i_gf,:,:))
       ELSE
@@ -80,18 +80,18 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
          DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
             DO m= -l,l
                DO mp= -lp,lp
-                  CALL kkintgr(greensfCoeffs%projdos(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                  CALL kkintgr(greensfCoeffs%projdos(1:kkcut,m,mp,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                               g%gmmpMat(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   IF(.NOT.input%l_gfsphavg) THEN
                      ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
                      ! We can do this because the radial functions are independent of E
-                     CALL kkintgr(greensfCoeffs%uu(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(greensfCoeffs%uu(1:kkcut,m,mp,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g%uu(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
-                     CALL kkintgr(greensfCoeffs%dd(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(greensfCoeffs%dd(1:kkcut,m,mp,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g%dd(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
-                     CALL kkintgr(greensfCoeffs%du(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(greensfCoeffs%du(1:kkcut,m,mp,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g%du(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
-                     CALL kkintgr(greensfCoeffs%ud(1:kkcut,i_gf,m,mp,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(greensfCoeffs%ud(1:kkcut,m,mp,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g%ud(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   ENDIF
                ENDDO
@@ -105,7 +105,7 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
             DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
                DO m= -l,l
                   DO mp= -lp,lp
-                     CALL kkintgr(greensfCoeffs%projdos21(1:kkcut,i_gf,nn,m,mp),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(greensfCoeffs%projdos21(1:kkcut,m,mp,nn,i_gf),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g21(:,m,mp),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   ENDDO
                ENDDO
