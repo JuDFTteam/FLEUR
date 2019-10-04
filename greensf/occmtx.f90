@@ -115,13 +115,14 @@ CONTAINS
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3-input%jspins)
-                  IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.05&
-                     .OR.REAL(mmpmat(i,i,ispin))/(3-input%jspins).LT.0.0)&
-                        CALL juDFT_warn("Invalid element in mmpMat")
+                  IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.01&
+                     .OR.REAL(mmpmat(i,i,ispin))/(3-input%jspins).LT.0.0) THEN
+                     WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
+                     CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
+                  ENDIF
                ENDDO
                IF(tr.LT.0.OR.tr.GT.2*l+1.1) THEN
                   WRITE(message,9100) ispin,tr
-9100              FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
                   CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
                ENDIF
             ENDDO
@@ -196,6 +197,12 @@ CONTAINS
             WRITE(6,*)
          ENDIF
       ENDIF
+
+
+
+   !FORMAT statements for error messages
+9100  FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
+9110  FORMAT("Invalid element in mmpmat (spin ",I1,",m ",I1": ",f14.8)
 
    END SUBROUTINE occmtx
 
