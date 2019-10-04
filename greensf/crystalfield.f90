@@ -39,12 +39,12 @@ MODULE m_crystalfield
       TYPE(t_potden),        INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
 
       !-Local Scalars
-      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,spin_cut,i_u
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u
       REAL    tr,xiSOC
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      REAL :: integrand(greensfCoeffs%ne)
+      REAL :: integrand(greensfCoeffs%ne), norm(greensfCoeffs%ne)
 
       h_loc = 0.0
       DO i_hia = 1, atoms%n_hia
@@ -53,25 +53,25 @@ MODULE m_crystalfield
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
          i_gf = ind_greensf(atoms,l,nType)
          !---------------------------------------------------------
-         ! Perform the integration 
+         ! Perform the integration
          !---------------------------------------------------------
          ! \int_{E_b}^{E_c} dE E * N_LL'(E)
          !---------------------------------------------------------
-         ! N_LL' is the l projected density of states and 
-         ! connected to the imaginary part of the greens function 
+         ! N_LL' is the l projected density of states and
+         ! connected to the imaginary part of the greens function
          ! with a factor -1/pi
          !---------------------------------------------------------
          DO jspin = 1, input%jspins
             !Use the same cutoffs as in the kramer kronigs integration
-            spin_cut = MERGE(1,jspin,jspin.GT.2)
-            kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,spin_cut,2)
+            kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2)
+            norm = 0.0
             DO m = -l, l
                DO mp = -l, l
                   integrand = 0.0
                   DO ie = 1, kkcut
                      integrand(ie) = -1.0/pi_const * ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) &
-                                     * greensfCoeffs%projdos(ie,m,mp,i_gf,jspin)/(3.0-input%jspins)
-                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * greensfCoeffs%projdos(ie,m,mp,i_gf,jspin)/(3.0-input%jspins)
+                                     * REAL(greensfCoeffs%projdos(ie,m,mp,0,i_gf,jspin)/(3.0-input%jspins))
+                     IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfCoeffs%projdos(ie,m,mp,0,i_gf,jspin))/(3.0-input%jspins)
                   ENDDO
                   h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),greensfCoeffs%del,kkcut)
                ENDDO
@@ -83,13 +83,15 @@ MODULE m_crystalfield
             WRITE(*,*) "DOWN"
             WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
          ENDIF
-         !Remove LDA+U and SOC potential 
-         i_u = atoms%n_u+i_hia !position in the v%mmpmat array 
+         !Remove LDA+U and SOC potential
+         i_u = atoms%n_u+i_hia !position in the v%mmpmat array
          DO jspin = 1, input%jspins
             DO m = -l, l
                DO mp = -l, l
                   !LDA+U potential
-                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
+                  IF(ABS(h_loc(m,mp,i_hia,jspin)).GT.0.001.OR.m.EQ.mp) THEN
+                     h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
+                  ENDIF
                ENDDO
                h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - hub1%xi(i_hia)/hartree_to_ev_const * m * (1.5-jspin) * MERGE(-1,1,input%jspins.EQ.1)
             ENDDO
@@ -102,15 +104,34 @@ MODULE m_crystalfield
          ENDIF
          ex = 0.0
          DO m= -l, l
-            DO mp = -l, l 
+            DO mp = -l, l
                ex(m,mp) = h_loc(m,mp,i_hia,1)-h_loc(m,mp,i_hia,2)
             ENDDO
          ENDDO
-         ex = 0.5*ex
          IF(l_debug) THEN
             WRITE(*,*) "Exchange (eV)"
-            WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const
+            WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const*0.5
          ENDIF
+         !------------------------------------------------------------------------------------
+         ! If states move close to the cutoff we get some shift in the results on the diagonal
+         ! The reason for this is a bit unclear we remove these results and replace them
+         ! with either the -m or corresponding opposite spin result (only diagonal)
+         !------------------------------------------------------------------------------------
+         DO m = -l, l
+            !100 meV cutoff
+            IF(ABS(ex(m,m)).LT.0.1/hartree_to_ev_const) CYCLE
+            IF(ex(-m,-m).LT.0.1/hartree_to_ev_const) THEN
+            !Assume the error is on the spin-down states
+            IF(m.EQ.0) THEN
+               WRITE(*,*) "Replacing m 0 spin down with m 0 spin up"
+               h_loc(0,0,i_hia,2) = h_loc(0,0,i_hia,1)
+            ELSE
+               WRITE(*,*) "Replacing m ", m
+               h_loc(m,m,i_hia,2) = h_loc(-m,-m,i_hia,2)
+            ENDIF
+         ENDIF
+         ENDDO
+
          !Average over spins
          hub1%ccfmat(i_hia,:,:) = 0.0
          DO m = -l, l
