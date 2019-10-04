@@ -80,18 +80,18 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
          DO ipm = 1, 2 !upper or lower half of the complex plane (G(E \pm i delta))
             DO m= -l,l
                DO mp= -lp,lp
-                  CALL kkintgr(greensfCoeffs%projdos(1:kkcut,m,mp,0,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                  CALL kkintgr(REAL(greensfCoeffs%projdos(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                               g%gmmpMat(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   IF(.NOT.input%l_gfsphavg) THEN
                      ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
                      ! We can do this because the radial functions are independent of E
-                     CALL kkintgr(greensfCoeffs%uu(1:kkcut,m,mp,0,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(REAL(greensfCoeffs%uu(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g%uu(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
-                     CALL kkintgr(greensfCoeffs%dd(1:kkcut,m,mp,0,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(REAL(greensfCoeffs%dd(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g%dd(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
-                     CALL kkintgr(greensfCoeffs%du(1:kkcut,m,mp,0,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(REAL(greensfCoeffs%du(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g%du(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
-                     CALL kkintgr(greensfCoeffs%ud(1:kkcut,m,mp,0,i_gf,jspin),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
+                     CALL kkintgr(REAL(greensfCoeffs%ud(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
                                  g%ud(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   ENDIF
                ENDDO

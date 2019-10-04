@@ -40,13 +40,13 @@ MODULE m_types_greensfCoeffs
          !Array declarations
          !If we look at the Green's function that only depends on Energy and not on spatial arguments
          !the imaginary part is equal to the proected density of states
-         REAL, ALLOCATABLE :: projdos(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: projdos(:,:,:,:,:,:)
 
          ! These arrays are only used in the case we want the green's function with radial dependence
-         REAL, ALLOCATABLE :: uu(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: dd(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: du(:,:,:,:,:,:)
-         REAL, ALLOCATABLE :: ud(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: uu(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: dd(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: du(:,:,:,:,:,:)
+         COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
 
          CONTAINS
             PROCEDURE, PASS :: init => greensfCoeffs_init

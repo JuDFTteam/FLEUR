@@ -134,7 +134,7 @@ MODULE m_greensfImag21
                      ENDDO!ie
                   ENDDO!ib
                   DO ie = 1, greensfCoeffs%ne
-                     greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) + AIMAG(im(ie,1))
+                     greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) + im(ie,1)
                   ENDDO
                ENDDO!mp
             ENDDO!m

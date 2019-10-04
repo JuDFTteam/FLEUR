@@ -15,7 +15,7 @@ MODULE m_kk_cutoff
 
       IMPLICIT NONE
 
-      REAL,                INTENT(INOUT)  :: im(ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
+      COMPLEX,             INTENT(INOUT)  :: im(ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
       TYPE(t_atoms),       INTENT(IN)     :: atoms
       TYPE(t_noco),        INTENT(IN)     :: noco
 
@@ -43,7 +43,7 @@ MODULE m_kk_cutoff
       DO ispin = 1, jspins
          DO m = -l , l
             DO i = 1, ne
-               fDOS(i,ispin) = fDOS(i,ispin) + im(i,m,m,ispin)
+               fDOS(i,ispin) = fDOS(i,ispin) + REAL(im(i,m,m,ispin))
             ENDDO
          ENDDO
       ENDDO

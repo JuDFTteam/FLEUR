@@ -130,12 +130,12 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
                   ENDDO!ie
                ENDDO!ib
                DO ie = 1, greensfCoeffs%ne
-                  greensfCoeffs%projdos(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,1))
+                  greensfCoeffs%projdos(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,ispin) + im(ie,1)
                   IF(.NOT.input%l_gfsphavg) THEN
-                     greensfCoeffs%uu(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%uu(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,2))
-                     greensfCoeffs%dd(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%dd(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,3))
-                     greensfCoeffs%ud(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%ud(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,4))
-                     greensfCoeffs%du(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%du(ie,m,mp,nn,i_gf,ispin) + AIMAG(im(ie,5))
+                     greensfCoeffs%uu(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%uu(ie,m,mp,nn,i_gf,ispin) + im(ie,2)
+                     greensfCoeffs%dd(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%dd(ie,m,mp,nn,i_gf,ispin) + im(ie,3)
+                     greensfCoeffs%ud(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%ud(ie,m,mp,nn,i_gf,ispin) + im(ie,4)
+                     greensfCoeffs%du(ie,m,mp,nn,i_gf,ispin) = greensfCoeffs%du(ie,m,mp,nn,i_gf,ispin) + im(ie,5)
                   ENDIF
                ENDDO
             ENDDO !mp
