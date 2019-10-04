@@ -115,7 +115,7 @@ CONTAINS
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3-input%jspins)
-                  IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.01&
+                  IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.05&
                      .OR.REAL(mmpmat(i,i,ispin))/(3-input%jspins).LT.0.0)&
                         CALL juDFT_warn("Invalid element in mmpMat")
                ENDDO
