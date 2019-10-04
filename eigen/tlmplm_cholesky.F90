@@ -128,10 +128,10 @@ CONTAINS
                      td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
                      td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
                    ELSE
-                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + AIMAG(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
-                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + AIMAG(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
-                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + AIMAG(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
-                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + AIMAG(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
+                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
                    ENDIF
                 ENDDO
              ENDDO
