@@ -202,7 +202,7 @@ CONTAINS
 
    !FORMAT statements for error messages
 9100  FORMAT("Invalid occupation for spin ",I1,": ",f14.8)
-9110  FORMAT("Invalid element in mmpmat (spin ",I1,",m ",I1": ",f14.8)
+9110  FORMAT("Invalid element in mmpmat (spin ",I1,",m ",I2"): ",f14.8)
 
    END SUBROUTINE occmtx
 
