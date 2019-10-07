@@ -131,7 +131,7 @@ CONTAINS
       ! initialize gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
-      ALLOCATE (vr0(atoms%jmtd, atoms%ntype, input%jspins))
+      ALLOCATE (vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
 
       vr0(:, :, :) = v%mt(:, 0, :, :)
 
@@ -139,9 +139,10 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      ALLOCATE (f(atoms%jmtd, 2, 0:atoms%lmaxd), df(atoms%jmtd, 2, 0:atoms%lmaxd))
-      ALLOCATE (bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins))
-      ALLOCATE (bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins))
+      ALLOCATE ( f(atoms%jmtd, 2, 0:atoms%lmaxd), &
+                df(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
+      ALLOCATE (bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
+      ALLOCATE (bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
 
       DO itype = 1, atoms%ntype
          ng = atoms%jri(itype)
