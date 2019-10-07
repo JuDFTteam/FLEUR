@@ -5,7 +5,7 @@ IMPLICIT NONE
 CONTAINS
 
 !
-! build up field map(iatom,isym), which contains the number of the atom, on 
+! build up field map(iatom,isym), which contains the number of the atom, on
 ! which the atom iatom is mapped via the symmetry operation isym
 ! tvec is the translation, which maps R R_a + tau back in the unit cell
 !
@@ -48,7 +48,6 @@ SUBROUTINE gen_map(atoms,sym,oneD,hybrid)
             ratom              = iatom0 + ieq1
             hybrid%map (  iatom,isym) = ratom
             hybrid%tvec(:,iatom,isym) = nint ( rtaual-atoms%taual(:,ratom) )
-            CYCLE
           END IF
         END DO
         IF( ratom .eq. 0 ) STOP 'eigen_hf: ratom not found'
