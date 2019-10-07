@@ -65,6 +65,7 @@ CONTAINS
     USE m_ylm
     USE m_metagga
     USE m_divergence
+!    USE m_gradfromgrid
     USE m_plot
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
@@ -98,9 +99,9 @@ CONTAINS
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
-    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
+    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting, vDiv
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen, divB
-    TYPE(t_potden),     dimension(3):: xcB
+    TYPE(t_potden),     dimension(3):: xcB, graddiv
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
@@ -500,16 +501,38 @@ CONTAINS
 
 !    DIVERGENCE
 
-    CALL divB%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-    ALLOCATE(divB%pw_w,mold=divB%pw)
+!    CALL divB%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+!    ALLOCATE(divB%pw_w,mold=divB%pw)
     
-    DO i=1,atoms%ntype
-       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
-    END DO
+!    DO i=1,atoms%ntype
+!       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
+!    END DO
 
-    IF ((sliceplot%iplot.NE.0).AND.(mpi%irank==0) ) THEN
-       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,divB,PLOT_SPECIAL) 
-    END IF 
+!    CALL vDiv%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_POTCOUL)
+!    ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
+!    vDiv%pw_w = CMPLX(0.0,0.0)
+
+!    CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
+
+!    DO i=1,3
+!       CALL graddiv(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
+!       ALLOCATE(graddiv(i)%pw_w,mold=graddiv(i)%pw)
+!    ENDDO
+
+!    DO i=1,atoms%ntype
+!       CALL gradfromgrid(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,vDiv,graddiv)
+!    END DO
+
+!    DO i=1,atoms%ntype
+!       xcB(i)=xcB(i)+graddiv/(4.0*pi_const)
+!    END DO
+
+!    IF ((sliceplot%iplot.NE.0).AND.(mpi%irank==0) ) THEN
+!       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,divB,PLOT_SPECIAL) 
+!       DO i=1,3
+!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,graddiv(i),PLOT_SPECIAL2) 
+!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,xcB(i),PLOT_SPECIAL3) 
+!    END IF
 
     CALL add_usage_data("Iterations",iter)
 

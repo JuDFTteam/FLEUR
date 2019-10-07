@@ -879,11 +879,28 @@ CONTAINS
          
       END IF
 
-      !Plotting the divergence of B_xc_vec. identifier: 14
+      !Plotting the divergence of B_xc_vec. identifier: 14 (Pot: 15, B_corrected: 16)
       !No core subtraction done!
       ! --> Additive term for iplot: 16384
       IF (plot_const.EQ.14) THEN
          denName = 'diverg'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      END IF
+
+      IF (plot_const.EQ.15) THEN
+         denName = 'divPot'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.16) THEN
+         denName = 'xcBcorr'
          score = .FALSE.
          potnorm = .FALSE.
 
