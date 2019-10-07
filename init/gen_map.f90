@@ -17,7 +17,7 @@ CONTAINS
       TYPE(t_oneD), INTENT(IN)  :: oneD
       TYPE(t_hybrid), INTENT(INOUT)::hybrid
       ! private scalars
-      INTEGER                           :: iatom, iatom0, itype, ieq, isym, iisym, ieq1
+      INTEGER                           :: iatom, first_eq_atom, itype, ieq, isym, iisym, ieq1
       INTEGER                           :: ratom, ok
       ! private arrays
       REAL                              :: rtaual(3)
@@ -29,7 +29,7 @@ CONTAINS
       IF (ok /= 0) call judft_error('gen_map: error during allocation of tvec')
 
       iatom = 0
-      iatom0 = 0
+      first_eq_atom = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
@@ -45,8 +45,8 @@ CONTAINS
 
                ratom = 0
                DO ieq1 = 1, atoms%neq(itype)
-                  IF (all(abs(modulo(rtaual - atoms%taual(:, iatom0 + ieq1) + 1e-12, 1.0)) < 1e-10)) THEN
-                     ratom = iatom0 + ieq1
+                  IF (all(abs(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-12, 1.0)) < 1e-10)) THEN
+                     ratom = first_eq_atom + ieq1
                      hybrid%map(iatom, isym) = ratom
                      hybrid%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
                   END IF
@@ -55,7 +55,7 @@ CONTAINS
 
             END DO
          END DO
-         iatom0 = iatom0 + atoms%neq(itype)
+         first_eq_atom = first_eq_atom + atoms%neq(itype)
       END DO
 
    END SUBROUTINE gen_map
