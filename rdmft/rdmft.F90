@@ -92,7 +92,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    REAL, PARAMETER                      :: degenEps = 0.00001
    REAL, PARAMETER                      :: convCrit = 1.0e-6
    REAL, PARAMETER                      :: minOcc = 1.0e-8
-   LOGICAL                              :: converged, l_qfix, l_restart, l_zref
+   LOGICAL                              :: converged, l_qfix, l_zref
    CHARACTER(LEN=20)                    :: filename
 
    INTEGER                              :: nsest(dimension%neigd) ! probably too large
@@ -333,14 +333,13 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf))
    ALLOCATE(hybrid%nbasm(kpts%nkptf))
    ALLOCATE(hybrid%div_vv(DIMENSION%neigd,kpts%nkpt,input%jspins))
-   l_restart = .FALSE.
    l_zref = (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
    iterHF = 0
    hybrid%l_calhf = .TRUE.
 
 !   CALL open_hybrid_io1(DIMENSION,sym%invs)
 
-   CALL mixedbasis(atoms,kpts,input,cell,xcpot,hybrid,enpara,mpi,vTot,l_restart)
+   CALL mixedbasis(atoms,kpts,input,cell,xcpot,hybrid,enpara,mpi,vTot)
 
    CALL open_hybrid_io2(hybrid,DIMENSION,atoms,sym%invs)
 
