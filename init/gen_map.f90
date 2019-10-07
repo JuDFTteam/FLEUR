@@ -10,6 +10,7 @@ CONTAINS
 !
    SUBROUTINE gen_map(atoms, sym, oneD, hybrid)
       USE m_types
+      IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_oneD), INTENT(IN)  :: oneD
