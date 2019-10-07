@@ -185,8 +185,7 @@ CONTAINS
 !     - scalars -
       INTEGER                 ::  itype, iatom, iatom1, iiatom, igpt, igpt1, ieq, ieq1, iiop
       INTEGER                 ::  i, l, n, nn, lm0, lm1, lm2, m1, m2
-      COMPLEX                 ::  cdum, tpiimg
-      COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
+      COMPLEX                 ::  cdum
       LOGICAL                 ::  trs
 
 !     - arrays -
@@ -196,7 +195,6 @@ CONTAINS
       COMPLEX                 ::  zhlp(dimension%nbasfcn, dimension%neigd)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
-      tpiimg = -tpi_const*img
       if (l_real) THEN
          rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
          invrrot = transpose(sym%mrot(:, :, iop))
@@ -236,7 +234,7 @@ CONTAINS
             iatom1 = hybrid%map(iatom, iop)
             tau1 = hybrid%tvec(:, iatom, iop)
 
-            cdum = exp(tpiimg*dot_product(rkpt, tau1))
+            cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt, tau1))
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
@@ -280,7 +278,7 @@ CONTAINS
             END IF
          END DO
          IF (igpt1 == 0) CYCLE
-         cdum = exp(tpiimg*dot_product(rkpt + lapw_rkpt%gvec(:,igpt,jsp), trans))
+         cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw_rkpt%gvec(:,igpt,jsp), trans))
          if (l_real) THEN
             zhlp(igpt, :nbands) = cdum*z_r(igpt1, :nbands)
          else
