@@ -42,7 +42,7 @@ CONTAINS
 !     - scalars -
       INTEGER                 ::  iatom, iatom1, iiatom, itype, igpt, igpt1, ieq, ieq1, iiop
       INTEGER                 ::  i, l, n, nn, lm0, lm1, lm2, m1, m2
-      COMPLEX                 ::  cdum, tpiimg
+      COMPLEX                 ::  cdum
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
 
 !     - arrays -
@@ -52,7 +52,6 @@ CONTAINS
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
       LOGICAL                 ::  trs
 
-      tpiimg = -tpi_const*img
 
       if (l_real) THEN
          rrot    = transpose(1.0 *  sym%mrot(:, :, sym%invtab(iop)))
@@ -90,7 +89,7 @@ CONTAINS
             iatom1 = hybrid%map(iatom, iop)
             tau1 = hybrid%tvec(:, iatom, iop)
 
-            cdum = exp(tpiimg*dot_product(rkpt, tau1))
+            cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt, tau1))
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
@@ -135,7 +134,7 @@ CONTAINS
          IF (igpt1 == 0) THEN
             STOP 'wavetrafo_symm: rotated G vector not found'
          END IF
-         cdum = exp(tpiimg*dot_product(rkpt + lapw%gvec(:, igpt, jsp), trans(:)))
+         cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw%gvec(:, igpt, jsp), trans(:)))
          if (l_real) THEN
             z_out(igpt, 1:ndb) = cdum*z_r(igpt1, bandi:bandi + ndb - 1)
          else
