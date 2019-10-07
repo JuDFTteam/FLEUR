@@ -38,7 +38,7 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, hybrid, enpara, mpi, v, l_restart)
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, hybrid, enpara, mpi, v)
 
       USE m_judft
       USE m_radfun, ONLY: radfun
@@ -62,7 +62,6 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_potden), INTENT(IN)    :: v
 
-      LOGICAL, INTENT(INOUT) :: l_restart
 
       ! local type variables
       TYPE(t_usdus)                   ::  usdus
@@ -120,39 +119,6 @@ CONTAINS
       IF (ALLOCATED(hybrid%basm1)) DEALLOCATE (hybrid%basm1)
 
       CALL usdus%init(atoms, input%jspins)
-
-      ! If restart is specified read file if it already exists. If not create it.
-      IF (l_restart) THEN
-
-         ! Test if file exists
-         INQUIRE (FILE=ioname, EXIST=l_found)
-
-         IF (l_found .AND. .FALSE.) THEN !reading not working yet
-            ! Open file
-            OPEN (UNIT=iounit, FILE=ioname, FORM='unformatted', STATUS='old')
-
-            ! Read array sizes
-            !READ(iounit) kpts%nkptf,hybrid%gptmd
-            READ (iounit) hybrid%maxgptm, hybrid%maxindx
-            ! Allocate necessary array size and read arrays
-            ALLOCATE (hybrid%ngptm(kpts%nkptf), hybrid%gptm(3, hybrid%gptmd))
-            ALLOCATE (hybrid%pgptm(hybrid%maxgptm, kpts%nkptf))
-            READ (iounit) hybrid%ngptm, hybrid%gptm, hybrid%pgptm, hybrid%nindx
-
-            ! Read array sizes
-            READ (iounit) hybrid%maxgptm1, hybrid%maxlcutm1, hybrid%maxindxm1, hybrid%maxindxp1
-            ! Allocate necessary array size and read arrays
-            ALLOCATE (hybrid%ngptm1(kpts%nkptf), hybrid%pgptm1(hybrid%maxgptm1, kpts%nkptf))
-            ALLOCATE (hybrid%nindxm1(0:hybrid%maxlcutm1, atoms%ntype))
-            ALLOCATE (hybrid%basm1(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
-            READ (iounit) hybrid%ngptm1, hybrid%pgptm1, hybrid%nindxm1
-            READ (iounit) hybrid%basm1
-
-            CLOSE (iounit)
-
-            RETURN
-         END IF
-      END IF
 
       hybrid%maxindx = 0
       DO itype = 1, atoms%ntype
@@ -794,28 +760,6 @@ CONTAINS
       END DO
 
       hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%nindx(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
-
-      !
-      !
-      ! Write all information to a file to enable restarting
-      !
-      IF (l_restart .AND. mpi%irank == 0) THEN
-
-         OPEN (UNIT=iounit, FILE=ioname, FORM='unformatted', STATUS='replace')
-
-         WRITE (iounit) kpts%nkptf, hybrid%gptmd
-         WRITE (iounit) hybrid%maxgptm, hybrid%maxindx
-         WRITE (iounit) hybrid%ngptm, hybrid%gptm, hybrid%pgptm, hybrid%nindx
-
-         WRITE (iounit) hybrid%maxgptm1, hybrid%maxlcutm1, hybrid%maxindxm1, hybrid%maxindxp1
-         WRITE (iounit) hybrid%ngptm1, hybrid%pgptm1, hybrid%nindxm1
-         WRITE (iounit) hybrid%basm1
-
-         CLOSE (iounit)
-
-         l_restart = .FALSE.
-
-      END IF
 
    END SUBROUTINE mixedbasis
 

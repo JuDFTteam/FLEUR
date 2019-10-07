@@ -47,7 +47,6 @@ CONTAINS
       TYPE(t_hybdat)    :: hybdat
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
-      LOGICAL           :: l_restart = .FALSE.
       LOGICAL           :: l_zref
 
       REAL, ALLOCATABLE :: eig_irr(:, :)
@@ -107,7 +106,7 @@ CONTAINS
 
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
-         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, hybrid, enpara, mpi, v, l_restart)
+         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, hybrid, enpara, mpi, v)
          CALL timestop("generation of mixed basis")
 
          CALL open_hybrid_io2(hybrid, DIMENSION, atoms, sym%invs)
