@@ -10,6 +10,7 @@ CONTAINS
 !
    SUBROUTINE gen_map(atoms, sym, oneD, hybrid)
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_sym), INTENT(IN)   :: sym
@@ -22,10 +23,10 @@ CONTAINS
       REAL                              :: rtaual(3)
 
       ALLOCATE (hybrid%map(atoms%nat, sym%nsym), stat=ok)
-      IF (ok /= 0) STOP 'gen_map: error during allocation of map'
+      IF (ok /= 0) call judft_error('gen_map: error during allocation of map')
 
       ALLOCATE (hybrid%tvec(3, atoms%nat, sym%nsym), stat=ok)
-      IF (ok /= 0) STOP 'gen_map: error during allocation of tvec'
+      IF (ok /= 0) call judft_error('gen_map: error during allocation of tvec')
 
       iatom = 0
       iatom0 = 0
@@ -50,7 +51,7 @@ CONTAINS
                      hybrid%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
                   END IF
                END DO
-               IF (ratom == 0) STOP 'eigen_hf: ratom not found'
+               IF (ratom == 0) call judft_error('eigen_hf: ratom not found')
 
             END DO
          END DO

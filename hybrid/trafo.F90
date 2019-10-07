@@ -216,10 +216,6 @@ CONTAINS
          END IF
       endif
 
-      if(any(matmul(invrrot, rrot) /= identity(3))) &
-         call juDFT_error("rrot and invrrot are not inverse operations")
-
-
       rkpt = matmul(rrot, kpts%bk(:, nk))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
