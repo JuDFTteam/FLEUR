@@ -73,6 +73,7 @@ MODULE m_gfcalc
 
       INTEGER  i_gf,l,nType
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,3)
+      LOGICAL  err
 
 
       CALL timestart("Green's Function: Postprocess")
@@ -96,7 +97,7 @@ MODULE m_gfcalc
          IF(l.NE.atoms%gfelem(i_gf)%lp) CYCLE
          IF(nType.NE.atoms%gfelem(i_gf)%atomTypep) CYCLE
          !Occupation matrix
-         CALL occmtx(greensf,l,nType,atoms,sym,input,mmpmat(:,:,i_gf,:),l_write=.TRUE.,check=.TRUE.)
+         CALL occmtx(greensf,l,nType,atoms,sym,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
          !Hybridization function
          CALL hybridization(greensf,l,nType,atoms,input,results%ef)
          !Density of states from Greens function
