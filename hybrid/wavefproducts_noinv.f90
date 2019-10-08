@@ -69,12 +69,11 @@ CONTAINS
       TYPE(t_mat)             ::  z_nk, z_kqpt
       COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX, ALLOCATABLE     ::  z0(:, :)
+      COMPLEX, ALLOCATABLE    ::  z0(:, :)
 
       call timestart("wavefproducts_noinv5")
       call timestart("wavefproducts_noinv5 IR")
-      cprod = 0
-
+      cprod = cmplx_0
       !
       ! compute k+q point for given q point in EIBZ(k)
       !

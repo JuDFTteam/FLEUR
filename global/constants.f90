@@ -17,6 +17,7 @@ MODULE m_constants
    REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932
    REAL,             PARAMETER :: sfp_const=sqrt(4.*3.1415926535897932)
    complex,          parameter :: ImagUnit=(0.0,1.0)
+   complex,          parameter :: cmplx_0 = (0.0,0.0)
    REAL,             PARAMETER :: hartree_to_ev_const=27.21138602 ! value from 2014 CODATA recommended values. Uncertainty is 0.00000017
    REAL,             PARAMETER :: eVac0Default_const = -0.25
    CHARACTER(len=9), PARAMETER :: version_const = 'fleur 30'
@@ -79,11 +80,11 @@ MODULE m_constants
    REAL ELEMENTAL FUNCTION c_light(fac)
       IMPLICIT NONE
       !  This subprogram supplies the value of c according to
-      !  NIST standard 13.1.99 
+      !  NIST standard 13.1.99
       !  Hartree and Rydbergs changed by fac = 1.0 or 2.0
 
       REAL, INTENT (IN) :: fac
-      c_light = 137.0359895e0 * fac 
+      c_light = 137.0359895e0 * fac
       !c_light = 1e6*fac
    END FUNCTION c_light
 
