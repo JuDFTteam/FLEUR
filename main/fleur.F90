@@ -516,10 +516,10 @@ CONTAINS
 
     CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
 
-!    DO i=1,3
-!       CALL graddiv(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
-!       ALLOCATE(graddiv(i)%pw_w,mold=graddiv(i)%pw)
-!    ENDDO
+    DO i=1,3
+       CALL graddiv(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+       ALLOCATE(graddiv(i)%pw_w,mold=graddiv(i)%pw)
+    ENDDO
 
 !    DO i=1,atoms%ntype
 !       CALL gradfromgrid(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,vDiv,graddiv)
