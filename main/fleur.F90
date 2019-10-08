@@ -44,6 +44,7 @@ CONTAINS
     USE m_mixing_history
     USE m_qfix
     USE m_vgen
+    USE m_vgen_coulomb
     USE m_writexcstuff
     USE m_vmatgen
     USE m_eigen
@@ -509,10 +510,11 @@ CONTAINS
     END DO
 
 !    CALL vDiv%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_POTCOUL)
-!    ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
-!    vDiv%pw_w = CMPLX(0.0,0.0)
+    CALL vDiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+    ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
+    vDiv%pw_w = CMPLX(0.0,0.0)
 
-!    CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
+    CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
 
 !    DO i=1,3
 !       CALL graddiv(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
