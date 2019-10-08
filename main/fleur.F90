@@ -379,7 +379,9 @@ CONTAINS
                       archiveType,xcpot,outDen,EnergyDen)
            
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
+!               CDN including core charge
                 CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_Y_CORE)
+!               CDN subtracted by core charge
 !                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_N_CORE)
           END IF 
 
