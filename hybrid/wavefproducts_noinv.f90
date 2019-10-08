@@ -46,7 +46,7 @@ CONTAINS
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
       INTEGER                 ::  itype, ieq, iband, iband1
       INTEGER                 ::  ic1, ig1, ig2, ig
-      INTEGER                 ::  igptm, iigptm, nbasm_ir, ngpt0, nbasfcn, m
+      INTEGER                 ::  igptm, iigptm, ngpt0, nbasfcn, m
 
       REAL                    ::  rdum
 
@@ -74,8 +74,6 @@ CONTAINS
       call timestart("wavefproducts_noinv5")
       call timestart("wavefproducts_noinv5 IR")
       cprod = 0
-
-      nbasm_ir = maxval(hybrid%ngptm)
 
       !
       ! compute k+q point for given q point in EIBZ(k)
