@@ -13,7 +13,7 @@ MODULE m_occmtx
 
 CONTAINS
 
-   SUBROUTINE occmtx(g,l,nType,atoms,sym,input,mmpMat,lp,nTypep,l_write,check)
+   SUBROUTINE occmtx(g,l,nType,atoms,sym,input,mmpMat,err,lp,nTypep,l_write,check)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -32,6 +32,7 @@ CONTAINS
       COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3)
       INTEGER,                INTENT(IN)  :: l
       INTEGER,                INTENT(IN)  :: nType
+      LOGICAL,                INTENT(OUT) :: err
       INTEGER, OPTIONAL,      INTENT(IN)  :: lp
       INTEGER, OPTIONAL,      INTENT(IN)  :: nTypep
       LOGICAL, OPTIONAL,      INTENT(IN)  :: l_write !write the occupation matrix to out file in both |L,S> and |J,mj>
@@ -108,6 +109,7 @@ CONTAINS
          ENDDO
       ENDDO
 
+      err = .FALSE.
       !Sanity check are the occupations reasonable?
       IF(PRESENT(check)) THEN
          IF(check) THEN
@@ -117,11 +119,13 @@ CONTAINS
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3-input%jspins)
                   IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.01&
                      .OR.REAL(mmpmat(i,i,ispin))/(3-input%jspins).LT.0.0) THEN
+                     err = .TRUE.
                      WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
                      CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
                   ENDIF
                ENDDO
                IF(tr.LT.0.OR.tr.GT.2*l+1.1) THEN
+                  err = .TRUE.
                   WRITE(message,9100) ispin,tr
                   CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
                ENDIF

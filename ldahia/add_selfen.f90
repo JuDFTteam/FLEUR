@@ -104,7 +104,8 @@ MODULE m_add_selfen
                   ind = AINT((mu+0.2)/0.01)
                   CALL gfDOS(gp,l,nType,500+ind,atoms,input,ef)
                ENDIF
-               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
+               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
+               IF(err.AND.l_debug) CALL gfDOS(gp,l,nType,999,atoms,input,ef)
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins

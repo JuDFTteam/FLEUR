@@ -240,10 +240,10 @@ MODULE m_types_greensf
                w(this%nz-i+1) =  w(i)
             ENDDO
             DO i = 1, this%nz
-               this%e(i) = xr + ImagUnit * r * EXP(-ImagUnit*pi_const/2.0 * x(this%nz-i+1))
-               this%de(i) = pi_const/2.0 * r * EXP(-ImagUnit*pi_const/2.0 * x(this%nz-i+1)) * w(this%nz-i+1)
+               this%e(i)  = xr + ImagUnit * r * EXP(ImagUnit*pi_const/2.0 * x(i))
+               this%de(i) = pi_const/2.0 * r * w(i) * EXP(ImagUnit*pi_const/2.0 * x(i))
                !Scale the imaginary part with the given factor alpha
-               this%e(i) = REAL(this%e(i)) + ImagUnit * input%gf_alpha * AIMAG(this%e(i))
+               this%e(i)  = REAL(this%e(i))  + ImagUnit * input%gf_alpha * AIMAG(this%e(i))
                this%de(i) = REAL(this%de(i)) + ImagUnit * input%gf_alpha * AIMAG(this%de(i))
             ENDDO
 
@@ -308,7 +308,7 @@ MODULE m_types_greensf
 1020        FORMAT("nz: ", I5.1," alpha: ", f8.4)
 1030        FORMAT("n: ", I5.1,"; sigma: ", f8.4)
 1040        FORMAT("eb: ", f8.4,"; et: ",f8.4)
-1050        FORMAT(2f8.4,"      weight: ",2e11.4)
+1050        FORMAT(2f8.4,"      weight: ",2e13.4)
          ENDIF
 
       END SUBROUTINE e_contour
