@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,enpara,&
-       jspin,jsp,mpi,v,input,td,ud)
+       jspin,mpi,v,input,td,ud)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
