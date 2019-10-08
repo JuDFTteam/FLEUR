@@ -97,13 +97,13 @@ CONTAINS
    REAL, ALLOCATABLE :: div_temp(:, :)
    INTEGER :: i, nsp
 
-   nsp = 3*ifftxc3
+   nsp = ifftxc3
 !   CALL xcpot%alloc_gradients(ifftxc3,1,gradx)
 !   CALL xcpot%alloc_gradients(ifftxc3,2,gradx)
 !   CALL xcpot%alloc_gradients(ifftxc3,3,gradx)
-   ALLOCATE (gradx%gr(3,nsp,1))
-   ALLOCATE (grady%gr(3,nsp,1))
-   ALLOCATE (gradz%gr(3,nsp,1))
+!   ALLOCATE (gradx%gr(3,nsp,1))
+!   ALLOCATE (grady%gr(3,nsp,1))
+!   ALLOCATE (gradz%gr(3,nsp,1))
 !   ALLOCATE (gradx%agrt(nsp),grady%agrt(nsp),gradz%agrt(nsp))
 !   ALLOCATE (gradx%agru(nsp),grady%agru(nsp),gradz%agru(nsp))
 !   ALLOCATE (gradx%agrd(nsp),grady%agrd(nsp),gradz%agrd(nsp))
@@ -126,8 +126,7 @@ CONTAINS
 !   DEALLOCATE(gradx%agrt,gradx%agru,gradx%agrd,gradx%gggrt,gradx%gggru,gradx%gggrd,gradx%gzgr,gradx%g2rt,gradx%g2ru,gradx%g2rd)
 !   DEALLOCATE(grady%agrt,grady%agru,grady%agrd,grady%gggrt,grady%gggru,grady%gggrd,grady%gzgr,grady%g2rt,grady%g2ru,grady%g2rd)
 !   DEALLOCATE(gradz%agrt,gradz%agru,gradz%agrd,gradz%gggrt,gradz%gggru,gradz%gggrd,gradz%gzgr,gradz%g2rt,gradz%g2ru,gradz%g2rd)
-   
-   print *, ifftxc3
+
    DO i = 1, ifftxc3
          div_temp(i,1)=gradx%gr(1,i,1)+grady%gr(2,i,1)+gradz%gr(3,i,1)
    ENDDO ! i

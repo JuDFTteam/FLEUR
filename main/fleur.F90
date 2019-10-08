@@ -501,12 +501,12 @@ CONTAINS
 
 !    DIVERGENCE
 
-!    CALL divB%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-!    ALLOCATE(divB%pw_w,mold=divB%pw)
+    CALL divB%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+    ALLOCATE(divB%pw_w,mold=divB%pw)
     
-!    DO i=1,atoms%ntype
-!       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
-!    END DO
+    DO i=1,atoms%ntype
+       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
+    END DO
 
 !    CALL vDiv%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_POTCOUL)
 !    ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
