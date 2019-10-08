@@ -6,4 +6,6 @@
 MODULE m_wavefproducts
    USE m_wavefproducts_noinv
    USE m_wavefproducts_inv
+CONTAINS
+
 END MODULE m_wavefproducts
