@@ -39,4 +39,18 @@ CONTAINS
       ngpt0 = ic
       call timestop("prep list of Gvec")
    end subroutine prep_list_of_gvec
+
+   function calc_number_of_basis_functions(lapw, atoms, noco) result(nbasfcn)
+      implicit NONE
+      use m_types
+      type(t_lapw), intent(in)  :: lapw
+      type(t_atoms), intent(in) :: atoms
+      type(t_noco), intent(in)  :: noco
+
+      if(noco%l_noco) then
+         nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot
+      else
+         lapw%nv(1) + atoms%nlotot
+      endif
+   end function calc_number_of_basis_functions
 end module m_wavefproducts_aux
