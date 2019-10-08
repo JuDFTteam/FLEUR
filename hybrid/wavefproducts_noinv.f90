@@ -54,7 +54,7 @@ CONTAINS
       COMPLEX                 ::  cmplx_exp
 
       LOGICAL                 ::  offdiag
-      TYPE(t_lapw)            ::    lapw_nkqpt
+      TYPE(t_lapw)            ::  lapw_nkqpt
 
 !      - local arrays -
       INTEGER                 ::  g(3), g_t(3)
@@ -93,9 +93,9 @@ CONTAINS
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
       !
       CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
-      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
+      nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
       call z_nk%alloc(.false., nbasfcn, dimension%neigd)
-      nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
+      nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)
       call z_kqpt%alloc(.false., nbasfcn, dimension%neigd)
 
       ! read in z at k-point nk and nkqpt
