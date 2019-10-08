@@ -35,7 +35,7 @@ CONTAINS
     COMPLEX  :: cil
     REAL     :: temp
     INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
-    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2
+    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2,jsp
 
     ALLOCATE( dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
     ALLOCATE( dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
