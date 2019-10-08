@@ -13,13 +13,12 @@ CONTAINS
   &                      nkqpt, cprod)
 
       USE m_constants
-      USE m_util, ONLY: modulo1
       USE m_types_hybrid, ONLY: gptnorm
       USE m_trafo
       USE m_wrapper
       USE m_types
-      USE m_io_hybrid
-      USE m_wavefproducts_aux
+      USE m_judft
+      USE m_io_hybrid, only: read_cmt
       IMPLICIT NONE
       TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_input), INTENT(IN)       :: input
@@ -43,124 +42,34 @@ CONTAINS
       COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
 !     - local scalars -
-      INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
+      INTEGER                 ::  l, n, l1, l2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
       INTEGER                 ::  itype, ieq, iband, iband1
-      INTEGER                 ::  ic1, ig1, ig2, ig
-      INTEGER                 ::  igptm, iigptm, ngpt0, nbasfcn, m
+      INTEGER                 ::  ic, ic1, n1, n2
+      INTEGER                 ::  m
 
       REAL                    ::  rdum
 
-      COMPLEX                 ::  cdum, cdum1
+      COMPLEX                 ::  cdum
       COMPLEX                 ::  cmplx_exp
 
       LOGICAL                 ::  offdiag
-      TYPE(t_lapw)            ::  lapw_nkqpt
 
 !      - local arrays -
-      INTEGER                 ::  g(3), g_t(3)
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
-      INTEGER, ALLOCATABLE    ::  gpt0(:, :)
-      INTEGER, ALLOCATABLE    ::  pointer(:,:,:)
 
-      REAL                    ::  kqpt(3), kqpthlp(3)
-
-      COMPLEX                 ::  carr1(bandoi:bandof)
-      COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
-      TYPE(t_mat)             ::  z_nk, z_kqpt
       COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX, ALLOCATABLE    ::  z0(:, :)
+
+      COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
 
       call timestart("wavefproducts_noinv5")
-      call timestart("wavefproducts_noinv5 IR")
-      cprod = cmplx_0
-      !
-      ! compute k+q point for given q point in EIBZ(k)
-      !
-      kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
-      ! k+q can lie outside the first BZ, transfer
-      ! it back into the 1. BZ
-      kqpt = kpts%to_first_bz(kqpthlp)
-      g_t(:) = nint(kqpt - kqpthlp)
-      ! determine number of kqpt
-      nkqpt = kpts%get_nk(kqpt)
-      IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
 
-      !
-      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
-      !
-      CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
-      nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
-      call z_nk%alloc(.false., nbasfcn, dimension%neigd)
-      nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)
-      call z_kqpt%alloc(.false., nbasfcn, dimension%neigd)
-
-      ! read in z at k-point nk and nkqpt
-      call timestart("read_z")
-      call read_z(z_nk, nk)
-      call read_z(z_kqpt, nkqpt)
-      call timestop("read_z")
-
-      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
-     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-     &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
-
-      call hybdat%set_stepfunction(cell, atoms,g, sqrt(cell%omtil))
-
-      !
-      ! convolute phi(n,k) with the step function and store in cpw0
-      !
-
-      !(1) prepare list of G vectors
-      call prep_list_of_gvec(lapw, lapw_nkqpt, hybrid, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
-
-      !(2) calculate convolution
-      call timestart("calc convolution")
-      call timestart("step function")
-      ALLOCATE (z0(bandoi:bandof, ngpt0), source=cmplx_0)
-      
-      DO ig2 = 1, lapw_nkqpt%nv(jsp)
-         carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
-         DO ig = 1, ngpt0
-            g = gpt0(:, ig) - lapw_nkqpt%gvec(:,ig2, jsp)
-            cdum = hybdat%stepfunc(g(1), g(2), g(3))
-            DO n2 = bandoi, bandof
-               z0(n2, ig) = z0(n2, ig) + carr1(n2)*cdum
-            END DO
-         END DO
-      END DO
-      call timestop("step function")
-
-      call timestart("hybrid gptm")
-      ic = nbasm_mt
-      DO igptm = 1, hybrid%ngptm(iq)
-         carr2 = 0
-         ic = ic + 1
-         iigptm = hybrid%pgptm(igptm, iq)
-
-         DO ig1 = 1, lapw%nv(jsp)
-            g = lapw%gvec(:,ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
-            ig2 = pointer(g(1), g(2), g(3))
-
-            IF (ig2 == 0) THEN
-               call juDFT_error('wavefproducts_noinv2: pointer undefined')
-            END IF
-
-            DO n1 = 1, bandf - bandi + 1
-               cdum1 = conjg(z_nk%data_c(ig1, n1))
-               DO n2 = bandoi, bandof
-                  carr2(n2, n1) = carr2(n2, n1) + cdum1*z0(n2, ig2)
-               END DO
-            END DO
-
-         END DO
-         cprod(ic, :, :) = carr2(:, :)
-      END DO
-      call timestop("hybrid gptm")
-      DEALLOCATE (z0, pointer, gpt0)
-      call timestop("calc convolution")
-
-      call timestop("wavefproducts_noinv5 IR")
+      ! wavefproducts in interstitial region
+      call wavefproducts_noinv5_IR(atoms, bandi, bandf, bandoi, bandof,cell, &
+                                   dimension, hybrid, input, iq, jsp, kpts, lapw,&
+                                   nbasm_mt, nk, noco, sym,&
+                                   hybdat,&
+                                   cprod)
 
 !       RETURN
 
@@ -262,7 +171,7 @@ CONTAINS
 
                END DO
                lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
-               IF (lm /= lm_0) call juDFT_error('wavefproducts_noinv2: counting of lm-index incorrect (bug?)')
+               IF (lm /= lm_0) call juDFT_error('wavefproducts_noinv5: counting of lm-index incorrect (bug?)')
             END DO
          END DO
       END DO
@@ -270,5 +179,143 @@ CONTAINS
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
+
+   SUBROUTINE wavefproducts_noinv5_IR(atoms, bandi, bandf, bandoi, bandof,cell, &
+                                      dimension, hybrid, input, iq, jsp, kpts, lapw,&
+                                      nbasm_mt, nk, noco, sym,&
+                                      hybdat,&
+                                      cprod)
+      use m_constants
+      use m_types
+      USE m_wavefproducts_aux
+      use m_judft
+      USE m_io_hybrid, only: read_z
+      implicit NONE
+
+      ! INS
+      type(t_atoms), intent(in)     :: atoms
+      INTEGER, INTENT(IN)           :: bandi, bandf, bandoi, bandof, nk, iq, jsp
+      INTEGER, INTENT(IN)           :: nbasm_mt
+      type(t_cell), intent(in)      :: cell
+      type(t_dimension), intent(in) :: dimension
+      type(t_hybrid), intent(in)    :: hybrid
+      type(t_input), intent(in)     :: input
+      TYPE(t_kpts), INTENT(IN)      :: kpts
+      TYPE(t_lapw), INTENT(IN)      :: lapw
+      TYPE(t_noco), INTENT(IN)      :: noco
+      type(t_sym), intent(in)       :: sym
+
+      ! INOUTS
+      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
+
+      ! OUTS
+      COMPLEX, INTENT(OUT)      :: cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+
+      TYPE(t_lapw)              :: lapw_nkqpt
+      TYPE(t_mat)               :: z_nk, z_kqpt
+
+      INTEGER                   :: nkqpt, nbasfcn, n1, n2, ic, ig1, ig2, ig, igptm
+      INTEGER                   :: iigptm,ngpt0
+      INTEGER                   :: g(3), g_t(3)
+      INTEGER, ALLOCATABLE      :: gpt0(:,:), pointer(:,:,:)
+
+      REAL                      :: kqpt(3), kqpthlp(3)
+
+      complex                   :: cdum, cdum1
+      COMPLEX, ALLOCATABLE      :: z0(:,:)
+      COMPLEX                   :: carr1(bandoi:bandof)
+      COMPLEX                   :: carr2(bandoi:bandof, bandf - bandi + 1)
+
+
+      call timestart("wavefproducts_noinv5 IR")
+      cprod = cmplx_0
+      !
+      ! compute k+q point for given q point in EIBZ(k)
+      !
+      kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
+      ! k+q can lie outside the first BZ, transfer
+      ! it back into the 1. BZ
+      kqpt = kpts%to_first_bz(kqpthlp)
+      g_t(:) = nint(kqpt - kqpthlp)
+      ! determine number of kqpt
+      nkqpt = kpts%get_nk(kqpt)
+      IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
+
+      !
+      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
+      !
+      CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
+      nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
+      call z_nk%alloc(.false., nbasfcn, dimension%neigd)
+      nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)
+      call z_kqpt%alloc(.false., nbasfcn, dimension%neigd)
+
+      ! read in z at k-point nk and nkqpt
+      call timestart("read_z")
+      call read_z(z_nk, nk)
+      call read_z(z_kqpt, nkqpt)
+      call timestop("read_z")
+
+      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
+     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+     &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
+
+      call hybdat%set_stepfunction(cell, atoms,g, sqrt(cell%omtil))
+
+      !
+      ! convolute phi(n,k) with the step function and store in cpw0
+      !
+
+      !(1) prepare list of G vectors
+      call prep_list_of_gvec(lapw, lapw_nkqpt, hybrid, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
+
+      !(2) calculate convolution
+      call timestart("calc convolution")
+      call timestart("step function")
+      ALLOCATE (z0(bandoi:bandof, ngpt0), source=cmplx_0)
+
+      DO ig2 = 1, lapw_nkqpt%nv(jsp)
+         carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
+         DO ig = 1, ngpt0
+            g = gpt0(:, ig) - lapw_nkqpt%gvec(:,ig2, jsp)
+            cdum = hybdat%stepfunc(g(1), g(2), g(3))
+            DO n2 = bandoi, bandof
+               z0(n2, ig) = z0(n2, ig) + carr1(n2)*cdum
+            END DO
+         END DO
+      END DO
+      call timestop("step function")
+
+      call timestart("hybrid gptm")
+      ic = nbasm_mt
+      DO igptm = 1, hybrid%ngptm(iq)
+         carr2 = 0
+         ic = ic + 1
+         iigptm = hybrid%pgptm(igptm, iq)
+
+         DO ig1 = 1, lapw%nv(jsp)
+            g = lapw%gvec(:,ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
+            ig2 = pointer(g(1), g(2), g(3))
+
+            IF (ig2 == 0) THEN
+               call juDFT_error('wavefproducts_noinv5: pointer undefined')
+            END IF
+
+            DO n1 = 1, bandf - bandi + 1
+               cdum1 = conjg(z_nk%data_c(ig1, n1))
+               DO n2 = bandoi, bandof
+                  carr2(n2, n1) = carr2(n2, n1) + cdum1*z0(n2, ig2)
+               END DO
+            END DO
+
+         END DO
+         cprod(ic, :, :) = carr2(:, :)
+      END DO
+      call timestop("hybrid gptm")
+      DEALLOCATE (z0, pointer, gpt0)
+      call timestop("calc convolution")
+
+      call timestop("wavefproducts_noinv5 IR")
+   end subroutine wavefproducts_noinv5_IR
 
 end module m_wavefproducts_noinv
