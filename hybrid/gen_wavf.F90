@@ -187,9 +187,9 @@ CONTAINS
       IF (ok /= 0) STOP 'gen_wavf: failure allocation bcof'
       ALLOCATE (ccof(-atoms%llod:atoms%llod, dimension%neigd, atoms%nlod, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation ccof'
-      ALLOCATE (cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      ALLOCATE (cmt(dimension%neigd2, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: Failure allocation cmt'
-      ALLOCATE (cmthlp(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      ALLOCATE (cmthlp(dimension%neigd2, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation cmthlp'
 
       DO ikpt0 = lower, upper
@@ -282,7 +282,7 @@ CONTAINS
             IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
                iop = kpts%bksym(ikpt)
                CALL waveftrafo_genwavf(cmthlp, zhlp%data_r, zhlp%data_c, cmt(:, :, :), zmat(1)%l_real, zmat(ikpt0)%data_r(:, :), &
-                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, hybrid, kpts, sym, jsp, dimension, &
+                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1, dimension, &
                                        hybrid%nbands(ikpt0), cell, lapw(ikpt0), lapw(ikpt), .true.)
 
                CALL write_cmt(cmthlp, ikpt)
