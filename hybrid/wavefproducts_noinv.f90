@@ -48,11 +48,10 @@ CONTAINS
       INTEGER                 ::  ic1, ig1, ig2, ig
       INTEGER                 ::  igptm, iigptm, nbasm_ir, ngpt0, nbasfcn, m
 
-      REAL                    ::  rdum, svol, s2
+      REAL                    ::  rdum
 
       COMPLEX                 ::  cdum, cdum1
       COMPLEX                 ::  cmplx_exp
-      COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
 
       LOGICAL                 ::  offdiag
       TYPE(t_lapw)            ::    lapw_nkqpt
@@ -75,8 +74,6 @@ CONTAINS
       call timestart("wavefproducts_noinv5")
       call timestart("wavefproducts_noinv5 IR")
       cprod = 0
-      svol = sqrt(cell%omtil)
-      s2 = sqrt(2.0)
 
       nbasm_ir = maxval(hybrid%ngptm)
 
@@ -111,7 +108,7 @@ CONTAINS
      &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
      &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
-      call hybdat%set_stepfunction(cell, atoms,g, svol)
+      call hybdat%set_stepfunction(cell, atoms,g, sqrt(cell%omtil))
 
       !
       ! convolute phi(n,k) with the step function and store in cpw0
@@ -193,7 +190,7 @@ CONTAINS
             ic = ic + 1
             ic1 = 0
 
-            cmplx_exp = exp(-img*tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, ic)))
+            cmplx_exp = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, ic)))
 
             DO l = 0, hybrid%lcutm1(itype)
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
