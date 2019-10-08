@@ -1,5 +1,5 @@
 MODULE m_tlmplm
-
+  use m_judft
   IMPLICIT NONE
   !*********************************************************************
   !     sets up the local Hamiltonian, i.e. the Hamiltonian in the
@@ -25,7 +25,7 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
-    INTEGER, INTENT (IN) :: n,jspin,jsp !atom index,physical spin&spin index for data
+    INTEGER, INTENT (IN) :: n,jspin !atom index,physical spin&spin index for data
 
     REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:)
     INTEGER,ALLOCATABLE :: indt(:)
@@ -48,7 +48,7 @@ CONTAINS
     ALLOCATE( vr0(SIZE(v%mt,1),0:SIZE(v%mt,2)-1))
 
 
-    
+    jsp=jspin
     vr0=v%mt(:,:,n,jsp)
     IF (jsp<3) vr0(:,0)=0.0
 
@@ -184,8 +184,9 @@ CONTAINS
     !--->   set up the t-matrices for the local orbitals,
     !--->   if there are any
     IF (atoms%nlo(n).GE.1) THEN
-       CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
-            na,flo,f(:,:,:,jspin),g(:,:,:,jspin),ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
+       IF (jspin>3) call judft_error("l_mtnocoPot=T and LOs not supported.")
+          CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
+               na,flo,f(:,:,:,jspin),g(:,:,:,jspin),ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
 
     ENDIF
   END SUBROUTINE tlmplm
