@@ -117,8 +117,8 @@ CONTAINS
       !(2) calculate convolution
       call timestart("calc convolution")
       call timestart("step function")
-      ALLOCATE (z0(bandoi:bandof, ngpt0))
-      z0 = 0
+      ALLOCATE (z0(bandoi:bandof, ngpt0), source=cmplx_0)
+      
       DO ig2 = 1, lapw_nkqpt%nv(jsp)
          carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
          DO ig = 1, ngpt0
