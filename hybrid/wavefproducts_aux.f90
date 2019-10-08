@@ -1,23 +1,22 @@
 module m_wavefproducts_aux
 
 CONTAINS
-   subroutine prep_list_of_gvec(lapw, lapw_nkqpt, hybrid, g_t, iq,jsp, pointer,gpt0, ngpt0)
+   subroutine prep_list_of_gvec(lapw, lapw_nkqpt, hybrid,g_bounds, g_t, iq,jsp, pointer,gpt0, ngpt0)
       use m_types
       use m_juDFT
       implicit none
       type(t_lapw),         intent(in)    :: lapw, lapw_nkqpt
       type(t_hybrid),       intent(in)    :: hybrid
-      integer,              intent(in)    ::  g_t(3), iq, jsp
+      integer,              intent(in)    :: g_bounds(3), g_t(3), iq, jsp
       integer, allocatable, intent(inout) :: pointer(:,:,:), gpt0(:,:)
       integer,              intent(inout) :: ngpt0
 
-      integer :: g(3), ic, ig1, igptm, iigptm, ok
+      integer :: ic, ig1, igptm, iigptm, ok, g(3)
 
-      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
-        + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-        + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
-      ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
+      ALLOCATE (pointer(-g_bounds(1):g_bounds(1), &
+                        -g_bounds(2):g_bounds(2),&
+                        -g_bounds(3):g_bounds(3)), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation pointer')
       ALLOCATE (gpt0(3, size(pointer)), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation gpt0')
