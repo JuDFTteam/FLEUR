@@ -44,9 +44,9 @@ CONTAINS
 
 !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
-      INTEGER                 ::  itype, ieq, ikpt, iband, iband1
+      INTEGER                 ::  itype, ieq, iband, iband1
       INTEGER                 ::  ic1, ig1, ig2, ig
-      INTEGER                 ::  igptm, iigptm, nbasm_ir, ngpt0, nbasfcn, ok, m
+      INTEGER                 ::  igptm, iigptm, nbasm_ir, ngpt0, nbasfcn, m
 
       REAL                    ::  rdum, svol, s2
 
@@ -222,7 +222,7 @@ CONTAINS
                         IF (abs(m2) <= l2) THEN
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
                            rdum = hybdat%gauntarr(1, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
-                           IF (rdum /= 0) THEN
+                           IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
                                  cdum = rdum*conjg(cmt_nk(iband, lm1, ic)) !nk
                                  DO iband1 = bandoi, bandof
@@ -237,7 +237,7 @@ CONTAINS
                         IF (abs(m2) <= l2 .and. offdiag) THEN
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
                            rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
-                           IF (rdum /= 0) THEN
+                           IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
                                  cdum = rdum*conjg(cmt_nk(iband, lm2, ic)) !nk
                                  DO iband1 = bandoi, bandof
