@@ -41,8 +41,8 @@ CONTAINS
    end subroutine prep_list_of_gvec
 
    function calc_number_of_basis_functions(lapw, atoms, noco) result(nbasfcn)
-      implicit NONE
       use m_types
+      implicit NONE
       type(t_lapw), intent(in)  :: lapw
       type(t_atoms), intent(in) :: atoms
       type(t_noco), intent(in)  :: noco
