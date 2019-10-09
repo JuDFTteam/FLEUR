@@ -50,7 +50,7 @@ CONTAINS
 
       REAL, INTENT(IN)    :: vr0(:, :, :)!(jmtd,ntype,jspd)
       REAL, INTENT(IN)    :: el_eig(0:atoms%lmaxd, atoms%ntype)
-      REAL, INTENT(IN)    :: ello_eig(atoms%nlod, atoms%ntype)
+      REAL, INTENT(IN)    :: ello_eig(:,:)
 
       ! local scalars
       INTEGER                 :: ilo, idum, m
