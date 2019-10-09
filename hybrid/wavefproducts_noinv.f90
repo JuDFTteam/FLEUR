@@ -304,7 +304,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      call timestart("wavefproducts_noinv5 MT")
+      call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT
 
 end module m_wavefproducts_noinv
