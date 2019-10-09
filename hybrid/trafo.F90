@@ -171,7 +171,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  iop
       LOGICAL                 ::  phase
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(:,:)
+      COMPLEX, INTENT(IN)      ::  cmt(:,:,:)
       LOGICAL, INTENT(IN)      :: l_real
       REAL, INTENT(IN)         ::  z_r(:,:)
       REAL, INTENT(INOUT)      ::  z_rout(:,:)
@@ -345,7 +345,7 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    ::  nindxm(0:maxlcutm, atoms%ntype)
-      COMPLEX, INTENT(INOUT) ::  mat(:,:)
+      COMPLEX, INTENT(INOUT) ::  mat(dim1,dim2)
 
 !     -local scalars -
       INTEGER               ::  i, j, itype, ieq, ic, ic1, i1, i2, l, m, n, nn, ifac, ishift
@@ -462,7 +462,7 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)      :: lcutm(:)
       INTEGER, INTENT(IN)      ::  nindxm(0:maxlcutm, atoms%ntype)
-      COMPLEX, INTENT(INOUT)   ::  mat(:,:)
+      COMPLEX, INTENT(INOUT)   ::  mat(dim1,dim2)
 
 !     - local scalars -
       INTEGER                 ::  ifac, i, j, itype, ieq, ic, ic1, i1, i2, l, m, n, nn, ishift
@@ -1628,7 +1628,7 @@ CONTAINS
    SUBROUTINE commonphase(cfac, carr, n)
       IMPLICIT NONE
       INTEGER, INTENT(IN)      :: n
-      COMPLEX, INTENT(IN)      :: carr(:)
+      COMPLEX, INTENT(IN)      :: carr(n)
       COMPLEX, INTENT(OUT)     :: cfac
       REAL                    :: rdum, rmax
       INTEGER                 :: i
