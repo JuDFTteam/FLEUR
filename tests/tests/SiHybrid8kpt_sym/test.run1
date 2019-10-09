@@ -24,11 +24,11 @@ jt::testrun_seq("$executable ",$workdir);
 $result=jt::test_grepexists("$workdir/out","it=  1  is completed");
 
 $result+=jt::test_grepnumber("$workdir/out", "    total energy=", ".*= *([^ ]*)", -579.9778364589, 0.0001);
-$result+=jt::test_grepnumber("$workdir/out", "HF total energy=",  ".*= *([^ ]*)", -591.9810455795, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "HF total energy=",  ".*= *([^ ]*)", -592.0649472524, 0.0001);
 
 $result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "13: *([^ ]*)", 0.000002, 0.0001);
-$result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "14: *([^ ]*)", 0.328999,      0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "14: *([^ ]*)", 0.507533,      0.0001);
 
-$result+=jt::test_grepnumber("$workdir/out", "bandgap",  ".*: *([^ ]*)", 0.100069, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "bandgap",  ".*: *([^ ]*)", 0.088515, 0.0001);
 
 jt::stageresult($workdir,$result,"1");
