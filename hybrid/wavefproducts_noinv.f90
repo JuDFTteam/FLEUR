@@ -43,22 +43,16 @@ CONTAINS
       COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
 !     - local scalars -
-      INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
-      INTEGER                 ::  itype, ieq, iband, iband1
-      INTEGER                 ::  ic1, ig1, ig2, ig
-      INTEGER                 ::  igptm, iigptm, ngpt0, nbasfcn, m
-
-      REAL                    ::  rdum
+      INTEGER                 :: ic, n1, n2
+      INTEGER                 :: ig1, ig2, ig
+      INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
 
       COMPLEX                 ::  cdum, cdum1
-      COMPLEX                 ::  cmplx_exp
 
-      LOGICAL                 ::  offdiag
       TYPE(t_lapw)            ::  lapw_nkqpt
 
 !      - local arrays -
       INTEGER                 ::  g(3), g_t(3)
-      INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
       INTEGER, ALLOCATABLE    ::  gpt0(:, :)
       INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
 
@@ -67,8 +61,6 @@ CONTAINS
       COMPLEX                 ::  carr1(bandoi:bandof)
       COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
       TYPE(t_mat)             ::  z_nk, z_kqpt
-      COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE    ::  z0(:, :)
 
       call timestart("wavefproducts_noinv5")
@@ -165,16 +157,14 @@ CONTAINS
 !       RETURN
 
       call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                  dimension, input, jsp, cell, atoms, hybrid, &
-                                  hybdat, kpts, lapw, sym, nbasm_mt, noco, &
+                                  dimension, atoms, hybrid, hybdat, kpts, &
                                   nkqpt, cprod)
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
 
    subroutine wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                     dimension, input, jsp, cell, atoms, hybrid, &
-                                     hybdat, kpts, lapw, sym, nbasm_mt, noco, &
+                                     dimension, atoms, hybrid, hybdat, kpts, &
                                      nkqpt, cprod)
       use m_types
       USE m_constants
@@ -182,20 +172,14 @@ CONTAINS
       use m_judft
       IMPLICIT NONE
       TYPE(t_dimension), INTENT(IN)   :: dimension
-      TYPE(t_input), INTENT(IN)       :: input
-      TYPE(t_noco), INTENT(IN)        :: noco
-      TYPE(t_sym), INTENT(IN)         :: sym
-      TYPE(t_cell), INTENT(IN)        :: cell
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
-      TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
       !     - scalars -
       INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
-      INTEGER, INTENT(IN)      ::  nk, iq, jsp
-      INTEGER, INTENT(IN)      ::  nbasm_mt
+      INTEGER, INTENT(IN)      ::  nk, iq
       INTEGER, INTENT(OUT)     ::  nkqpt
 
       !     - arrays -
@@ -203,33 +187,23 @@ CONTAINS
       COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       !     - local scalars -
-      INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
-      INTEGER                 ::  itype, ieq, iband, iband1
-      INTEGER                 ::  ic1, ig1, ig2, ig
-      INTEGER                 ::  igptm, iigptm, ngpt0, nbasfcn, m
+      INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
+      INTEGER                 ::  lm, lm1, lm2, m1, m2, i, j, ll
+      INTEGER                 ::  itype, ieq, iband, iband1, ic1, m
 
       REAL                    ::  rdum
 
-      COMPLEX                 ::  cdum, cdum1
+      COMPLEX                 ::  cdum
       COMPLEX                 ::  cmplx_exp
 
       LOGICAL                 ::  offdiag
-      TYPE(t_lapw)            ::  lapw_nkqpt
 
       !      - local arrays -
-      INTEGER                 ::  g(3), g_t(3)
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
-      INTEGER, ALLOCATABLE    ::  gpt0(:, :)
-      INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
 
-      REAL                    ::  kqpt(3), kqpthlp(3)
-
-      COMPLEX                 ::  carr1(bandoi:bandof)
       COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
-      TYPE(t_mat)             ::  z_nk, z_kqpt
       COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX, ALLOCATABLE    ::  z0(:, :)
 
       call timestart("wavefproducts_noinv5 MT")
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
