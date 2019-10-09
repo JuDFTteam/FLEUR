@@ -94,14 +94,14 @@ CONTAINS
       INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
-      INTEGER, INTENT(IN)    ::  n_q(nkpt_EIBZ)
+      INTEGER, INTENT(IN)    ::  n_q(:)
 
-      INTEGER, INTENT(IN)    ::  pointer_EIBZ(nkpt_EIBZ)
-      INTEGER, INTENT(IN)    ::  nsest(hybrid%nbands(nk))
-      INTEGER, INTENT(IN)    ::  indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
+      INTEGER, INTENT(IN)    ::  pointer_EIBZ(:)
+      INTEGER, INTENT(IN)    ::  nsest(:)
+      INTEGER, INTENT(IN)    ::  indx_sest(:,:)
 
-      REAL, INTENT(IN)    ::  eig_irr(dimension%neigd, kpts%nkpt)
-      REAL, INTENT(IN)    ::  wl_iks(dimension%neigd, kpts%nkptf)
+      REAL, INTENT(IN)    ::  eig_irr(:,:)
+      REAL, INTENT(IN)    ::  wl_iks(:,:)
 
       ! local scalars
       INTEGER                 ::  iband, iband1, ibando, ikpt, ikpt0
