@@ -138,9 +138,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,jsp_start:jsp_end))
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
-   ALLOCATE(dosWeights(greensfCoeffs%ne,dimension%neigd))
-   ALLOCATE(dosBound(dimension%neigd,2))
-   ALLOCATE(resWeights(greensfCoeffs%ne,dimension%neigd))
 
 
    ! Initializations
@@ -234,7 +231,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
       IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
          CALL timestart("TetrahedronWeights")
-         CALL tetrahedronInit(ikpt,kpts,input,SIZE(ev_list),results%eig(ev_list,:,jsp),&
+         ALLOCATE(dosWeights(greensfCoeffs%ne,noccbd))
+         ALLOCATE(dosBound(dimension%neigd,2))
+         ALLOCATE(resWeights(greensfCoeffs%ne,noccbd))
+         CALL tetrahedronInit(ikpt,kpts,input,noccbd,results%eig(ev_list,:,jsp),&
                               greensfCoeffs,results%ef,resWeights,dosWeights,dosBound)
          CALL timestop("TetrahedronWeights")
       ENDIF
@@ -275,6 +275,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
+      IF(atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) DEALLOCATE(dosWeights,resWeights,dosBound)
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
