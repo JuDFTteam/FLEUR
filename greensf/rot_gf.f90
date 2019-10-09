@@ -57,6 +57,9 @@ CONTAINS
                   ELSE IF(imat.EQ.5) THEN
                      curr_dos(:,:,:) = greensfCoeffs%du(:,:,:,nn,i_gf,ispin)
                   ENDIF
+                  DO m = -l ,l
+                     IF(ANY(AIMAG(curr_dos(:,m,m)).GT.0.0).AND.ispin<3) CALL juDFT_error("curr_dos>0")
+                  ENDDO
                   DO it = 1, sym%invarind(natom)
                      is = sym%invarop(natom,it)
                      isi = sym%invtab(is)
@@ -69,7 +72,7 @@ CONTAINS
                      phase = MERGE(exp(ImagUnit*angle(isi)),CMPLX(1.0,0.0),ispin.EQ.3)
                      DO ie = 1, greensfCoeffs%ne
                         calc_mat(ie,:,:) = matmul( transpose( conjg(d_mat) ) , curr_dos(ie,:,:))
-                        calc_mat(ie,:,:) =  matmul( calc_mat(ie,:,:), d_mat )
+                        calc_mat(ie,:,:) = matmul( calc_mat(ie,:,:), d_mat )
                      ENDDO
                      DO ie = 1, greensfCoeffs%ne
                         IF(imat.EQ.1) THEN
