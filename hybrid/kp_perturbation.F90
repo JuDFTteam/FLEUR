@@ -36,11 +36,9 @@ CONTAINS
       INTEGER, INTENT(IN)   ::  mnobd
       INTEGER, INTENT(IN)   ::  nk, nkpti
 
-!       REAL   , INTENT(INOUT)::  ibs_corr(3,3,nbands)
-
       ! - arrays -
 
-      COMPLEX, INTENT(INOUT)::  olap_ibsc(3, 3, mnobd, mnobd)
+      COMPLEX, INTENT(INOUT)::  olap_ibsc(:,:,:,:)
       COMPLEX, INTENT(INOUT)::  proj_ibsc(:, :, :)!(3,mnobd,hybrid%nbands(nk))
       ! - local scalars -
       INTEGER               ::  i, itype, ieq, iatom, iatom1, iband, iband1
@@ -731,7 +729,7 @@ CONTAINS
 
 !     - arrays -
 
-      REAL, INTENT(IN)         ::  eig_irr(dimension%neigd, nkpti)
+      REAL, INTENT(IN)         ::  eig_irr(:,:)
       COMPLEX, INTENT(OUT)     ::  dcprod(bandi2:bandf2, bandi1:bandf1, 3)
 
 !     - local scalars -
