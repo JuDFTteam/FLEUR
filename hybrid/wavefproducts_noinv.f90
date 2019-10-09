@@ -180,7 +180,7 @@ CONTAINS
       !     - scalars -
       INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
       INTEGER, INTENT(IN)      ::  nk, iq
-      INTEGER, INTENT(OUT)     ::  nkqpt
+      INTEGER, INTENT(IN)     ::  nkqpt
 
       !     - arrays -
 
