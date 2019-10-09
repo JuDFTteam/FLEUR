@@ -80,7 +80,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
-      REAL, INTENT(IN)    :: eig_irr(dimension%neigd, kpts%nkpt)
+      REAL, INTENT(IN)    :: eig_irr(:,:)
 
       ! local scalars
       INTEGER                 ::  i, j, l, itype
