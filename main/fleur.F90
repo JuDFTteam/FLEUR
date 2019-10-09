@@ -66,7 +66,6 @@ CONTAINS
     USE m_ylm
     USE m_metagga
     USE m_divergence
-!    USE m_gradfromgrid
     USE m_plot
 #ifdef CPP_MPI
     USE m_mpi_bc_potden
@@ -102,7 +101,7 @@ CONTAINS
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting, vDiv
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen, divB
-    TYPE(t_potden),     dimension(3):: xcB, graddiv
+    TYPE(t_potden),     dimension(3):: xcB, graddiv, corrB
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
@@ -493,16 +492,16 @@ CONTAINS
        END IF
 
   !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
-       IF(sliceplot%iplot.NE.0) THEN
-          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
-       END IF
+!!       IF(sliceplot%iplot.NE.0) THEN
+!!          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+!!       END IF
 
 
     END DO scfloop ! DO WHILE (l_cont)
 
 !    DIVERGENCE
 
-    CALL divB%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+    CALL divB%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
     ALLOCATE(divB%pw_w,mold=divB%pw)
     
     DO i=1,atoms%ntype
@@ -517,24 +516,29 @@ CONTAINS
     CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
 
     DO i=1,3
-       CALL graddiv(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+       CALL graddiv(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
        ALLOCATE(graddiv(i)%pw_w,mold=graddiv(i)%pw)
+       CALL corrB(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
+       ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
     ENDDO
 
-!    DO i=1,atoms%ntype
-!       CALL gradfromgrid(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,vDiv,graddiv)
-!    END DO
+    DO i=1,atoms%ntype
+       CALL divpotgrad(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,vDiv,graddiv)
+    END DO
 
-!    DO i=1,atoms%ntype
-!       xcB(i)=xcB(i)+graddiv/(4.0*pi_const)
-!    END DO
+    DO i=1,3
+       CALL corrB(i)%addPotDen(xcB(i), graddiv(i))
+    END DO
 
-!    IF ((sliceplot%iplot.NE.0).AND.(mpi%irank==0) ) THEN
-!       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,divB,PLOT_SPECIAL) 
-!       DO i=1,3
-!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,graddiv(i),PLOT_SPECIAL2) 
-!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,xcB(i),PLOT_SPECIAL3) 
-!    END IF
+    IF ((sliceplot%iplot.NE.0).AND.(mpi%irank==0) ) THEN
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,divB,PLOT_SPECIAL) 
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,graddiv(1),PLOT_SPECIAL2x) 
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,graddiv(2),PLOT_SPECIAL2y) 
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,graddiv(3),PLOT_SPECIAL2z) 
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,corrB(1),PLOT_SPECIAL3x) 
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,corrB(2),PLOT_SPECIAL3y) 
+       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,corrB(3),PLOT_SPECIAL3z) 
+    END IF
 
     CALL add_usage_data("Iterations",iter)
 

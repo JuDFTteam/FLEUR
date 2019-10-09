@@ -891,7 +891,7 @@ CONTAINS
       END IF
 
       IF (plot_const.EQ.15) THEN
-         denName = 'divPot'
+         denName = 'divPotx'
          score = .FALSE.
          potnorm = .FALSE.
 
@@ -900,7 +900,43 @@ CONTAINS
       END IF
 
       IF (plot_const.EQ.16) THEN
-         denName = 'xcBcorr'
+         denName = 'divPoty'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.17) THEN
+         denName = 'divPotz'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.18) THEN
+         denName = 'xcBcorrx'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.19) THEN
+         denName = 'xcBcorry'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.20) THEN
+         denName = 'xcBcorrz'
          score = .FALSE.
          potnorm = .FALSE.
 
