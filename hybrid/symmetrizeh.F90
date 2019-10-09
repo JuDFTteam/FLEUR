@@ -27,9 +27,9 @@ CONTAINS
       INTEGER, INTENT(IN)    :: nsymop, jsp
 
       ! arrays
-      INTEGER, INTENT(IN)    :: kveclo(atoms%nlotot)
-      INTEGER, INTENT(IN)    :: psym(nsymop)
-      REAL, INTENT(IN)    :: bk(3)
+      INTEGER, INTENT(IN)    :: kveclo(:)
+      INTEGER, INTENT(IN)    :: psym(:)
+      REAL, INTENT(IN)    :: bk(:)
 
       ! local scalars
       INTEGER               ::  ilotot, itype, itype1, ilo, ilo1
@@ -544,7 +544,7 @@ CONTAINS
          use m_judft
          IMPLICIT NONE
          INTEGER, INTENT(IN)    :: ll
-         REAL, INTENT(IN)       :: rvec(3)
+         REAL, INTENT(IN)       :: rvec(:)
          COMPLEX, INTENT(OUT)   :: Y((ll + 1)**2)
          REAL                  :: stheta, ctheta, sphi, cphi, r, rvec1(3)
          INTEGER               :: l, lm
