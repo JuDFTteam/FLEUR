@@ -1540,9 +1540,9 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_hybrid), INTENT(IN)    :: hybrid
 
-      INTEGER, INTENT(IN)    :: nbasm1(kpts%nkptf)
-      REAL, INTENT(IN)    :: gridf(:, :)
-      COMPLEX, INTENT(INOUT) :: coulomb(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2, kpts%nkpt)
+      INTEGER, INTENT(IN)    :: nbasm1(:)
+      REAL, INTENT(IN)    :: gridf(:,:)
+      COMPLEX, INTENT(INOUT) :: coulomb(:,:)
 
       ! - local scalars -
       INTEGER               :: l, i, j, n, nn, itype, ieq, M
@@ -1681,7 +1681,7 @@ CONTAINS
       ! - scalars -
 
       ! - arrays -
-      COMPLEX, INTENT(INOUT)   ::  structconst((2*hybrid%lexp + 1)**2, atoms%nat, atoms%nat, kpts%nkpt)
+      COMPLEX, INTENT(INOUT)   ::  structconst(:,:,:,:)
 
       ! - local scalars -
       INTEGER                   ::  i, ic1, ic2, lm, ikpt, l, ishell, nshell
@@ -2032,7 +2032,7 @@ CONTAINS
       INTEGER, INTENT(OUT)   :: nptsh, nshell
       INTEGER, ALLOCATABLE   :: ptsh(:, :)
       REAL, ALLOCATABLE   :: radsh(:)
-      REAL, INTENT(IN)    :: rad, lat(3, 3)
+      REAL, INTENT(IN)    :: rad, lat(:,:)
       REAL                    :: r(3), rdum
       INTEGER, ALLOCATABLE   :: pnt(:)
       INTEGER                 :: n, i, ix, iy, iz, ok
