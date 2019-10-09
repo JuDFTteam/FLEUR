@@ -333,11 +333,11 @@ MODULE m_hubbard1_setup
       mat = matmul(mat,tmp)
       mat = matmul(tmp,mat)
 
-      mat(1:ns,ns+1:2*ns) = matmul(mat(1:ns,ns+1:2*ns),tmp_off)
-      mat(1:ns,ns+1:2*ns) = transpose(matmul(tmp_off,mat(1:ns,ns+1:2*ns)))
+      !mat(1:ns,ns+1:2*ns) = matmul(mat(1:ns,ns+1:2*ns),tmp_off)
+      !mat(1:ns,ns+1:2*ns) = transpose(matmul(tmp_off,mat(1:ns,ns+1:2*ns)))
 
-      mat(ns+1:2*ns,1:ns) = matmul(mat(ns+1:2*ns,1:ns),tmp_off)
-      mat(ns+1:2*ns,1:ns) = transpose(matmul(tmp_off,mat(ns+1:2*ns,1:ns)))
+      !mat(ns+1:2*ns,1:ns) = matmul(mat(ns+1:2*ns,1:ns),tmp_off)
+      !mat(ns+1:2*ns,1:ns) = transpose(matmul(tmp_off,mat(ns+1:2*ns,1:ns)))
 
       !WRITE(*,*) "AFTER"
       !WRITE(*,"(14f8.5)") REAL(mat)
