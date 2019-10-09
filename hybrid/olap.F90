@@ -17,7 +17,7 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)       :: ngpt
 !     - arrays -
-      INTEGER, INTENT(IN)       :: gpt(3, ngpt)
+      INTEGER, INTENT(IN)       :: gpt(:,:)
       TYPE(t_mat)              :: olap
 !     - local -
       INTEGER                  :: i, j, itype, icent, ineq
@@ -80,7 +80,7 @@ CONTAINS
 !     - scalars -
       INTEGER, INTENT(IN)       :: ngpt
 !     - arrays -
-      INTEGER, INTENT(IN)       :: gpt(3, ngpt)
+      INTEGER, INTENT(IN)       :: gpt(:,:)
 
       LOGICAL, INTENT(IN)       :: l_real
       REAL, INTENT(OUT)         ::  olap_r(ngpt*(ngpt + 1)/2)
@@ -210,11 +210,10 @@ CONTAINS
       COMPLEX                :: wfolap_inv
       INTEGER, INTENT(IN)     :: ngpt1, ngpt2
 !     - arrays -
-      COMPLEX, INTENT(IN)     :: cmt1(hybrid%maxlmindx, atoms%nat),&
-     &                          cmt2(hybrid%maxlmindx, atoms%nat)
-      REAL, INTENT(IN)        :: cpw1(ngpt1)
-      COMPLEX, INTENT(IN)     :: cpw2(ngpt2)
-      REAL, INTENT(IN)        :: olappw(ngpt1, ngpt2)
+      COMPLEX, INTENT(IN)     :: cmt1(:,:), cmt2(:,:)
+      REAL, INTENT(IN)        :: cpw1(:)
+      COMPLEX, INTENT(IN)     :: cpw2(:)
+      REAL, INTENT(IN)        :: olappw(:,:)
       REAL, INTENT(IN)        :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
@@ -264,11 +263,10 @@ CONTAINS
       COMPLEX                :: wfolap_noinv
       INTEGER, INTENT(IN)     :: ngpt1, ngpt2
 !     - arrays -
-      COMPLEX, INTENT(IN)     :: cmt1(hybrid%maxlmindx, atoms%nat),&
-     &                          cmt2(hybrid%maxlmindx, atoms%nat)
-      COMPLEX, INTENT(IN)     :: cpw1(ngpt1)
-      COMPLEX, INTENT(IN)     :: cpw2(ngpt2)
-      COMPLEX, INTENT(IN)     :: olappw(ngpt1, ngpt2)
+      COMPLEX, INTENT(IN)     :: cmt1(:,:),cmt2(:,:)
+      COMPLEX, INTENT(IN)     :: cpw1(:)
+      COMPLEX, INTENT(IN)     :: cpw2(:)
+      COMPLEX, INTENT(IN)     :: olappw(:,:)
       REAL, INTENT(IN)        :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
@@ -320,17 +318,16 @@ CONTAINS
       COMPLEX                :: wfolap1
       INTEGER, INTENT(IN)     :: ngpt1, ngpt2
 !     - arrays -
-      COMPLEX, INTENT(IN)     :: cmt1(hybrid%maxlmindx, atoms%nat),&
-     &                          cmt2(hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(IN)     :: cmt1(:,:), cmt2(:,:)
 #if ( defined(CPP_INVERSION) )
-      REAL, INTENT(IN)        :: cpw1(ngpt1), cpw2(ngpt2)
+      REAL, INTENT(IN)        :: cpw1(:), cpw2(:)
 #else
-      COMPLEX, INTENT(IN)     :: cpw1(ngpt1), cpw2(ngpt2)
+      COMPLEX, INTENT(IN)     :: cpw1(:), cpw2(:)
 #endif
 #if ( defined(CPP_INVERSION) )
-      REAL, INTENT(IN)        :: olappw(ngpt1, ngpt2)
+      REAL, INTENT(IN)        :: olappw(:,:)
 #else
-      COMPLEX, INTENT(IN)     :: olappw(ngpt1, ngpt2)
+      COMPLEX, INTENT(IN)     :: olappw(:,:)
 #endif
       REAL, INTENT(IN)        :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
 
@@ -372,18 +369,17 @@ CONTAINS
       COMPLEX                :: wfolap2
       INTEGER, INTENT(IN)     :: ngpt1, ngpt2
 !     - arrays -
-      COMPLEX, INTENT(IN)     :: cmt1(hybrid%maxlmindx, atoms%nat),&
-     &                          cmt2(hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(IN)     :: cmt1(:,:),cmt2(:,:)
 ! #if ( defined(CPP_INVERSION) )
-!       REAL,INTENT(IN)        :: cpw1(ngpt1)
+!       REAL,INTENT(IN)        :: cpw1(:)
 ! #else
-      COMPLEX, INTENT(IN)     :: cpw1(ngpt1)
+      COMPLEX, INTENT(IN)     :: cpw1(:)
 ! #endif
-      COMPLEX, INTENT(IN)     :: cpw2(ngpt2)
+      COMPLEX, INTENT(IN)     :: cpw2(:)
 #if ( defined(CPP_INVERSION) )
-      REAL, INTENT(IN)        :: olappw(ngpt1, ngpt2)
+      REAL, INTENT(IN)        :: olappw(:,:)
 #else
-      COMPLEX, INTENT(IN)     :: olappw(ngpt1, ngpt2)
+      COMPLEX, INTENT(IN)     :: olappw(:,:)
 #endif
       REAL, INTENT(IN)        :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
 !     - local -
