@@ -44,10 +44,10 @@ CONTAINS
       INTEGER, INTENT(IN) :: jsp
 
       ! Array Arguments
-      REAL, INTENT(IN) :: vr0(atoms%jmtd, atoms%ntype, input%jspins)               ! just for radial functions
+      REAL, INTENT(IN) :: vr0(:,:,:)               ! just for radial functions
       REAL, INTENT(IN) :: el(0:atoms%lmaxd, atoms%ntype, input%jspins)
-      REAL, INTENT(IN) :: ello(atoms%nlod, atoms%ntype, input%jspins)
-      REAL, INTENT(IN) :: bk(3)
+      REAL, INTENT(IN) :: ello(:,:,:)
+      REAL, INTENT(IN) :: bk(:)
 
       ! Local Scalars
       INTEGER               ::  ic, indx, m, ig1, ig2, n, nn
