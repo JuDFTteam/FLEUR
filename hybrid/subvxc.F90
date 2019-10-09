@@ -102,7 +102,7 @@ CONTAINS
          WRITE (6, '(a)') '  l    energy            value        '// &
             'derivative    nodes          value        derivative    nodes       norm        wronskian'
          DO l = 0, atoms%lmax(itype)
-            CALL radfun(l, itype, jsp, el(l, itype, jsp), vr0(1, itype, jsp), atoms, f(1, 1, l), g(1, 1, l), usdus, nodeu, noded, wronk)
+            CALL radfun(l, itype, jsp, el(l, itype, jsp), vr0(:, itype, jsp), atoms, f(1, 1, l), g(1, 1, l), usdus, nodeu, noded, wronk)
             WRITE (6, FMT=8010) l, el(l, itype, jsp), usdus%us(l, itype, jsp), &
                usdus%dus(l, itype, jsp), nodeu, usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp), noded, &
                usdus%ddn(l, itype, jsp), wronk
@@ -116,7 +116,7 @@ CONTAINS
 
          ! Generate the extra radial basis-functions for the local orbitals, if there are any.
          IF (atoms%nlo(itype) >= 1) THEN
-            CALL radflo(atoms, itype, jsp, ello(1, 1, jsp), vr0(1, itype, jsp), f, g, mpi, &
+            CALL radflo(atoms, itype, jsp, ello(:,:, jsp), vr0(:, itype, jsp), f, g, mpi, &
                         usdus, uuilon, duilon, ulouilopn, flo, .TRUE.)
 
             DO i = 1, atoms%nlo(itype)
