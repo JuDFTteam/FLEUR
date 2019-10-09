@@ -258,7 +258,8 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  nsymop
       REAL, INTENT(IN)         ::  a_ex
       !     - arays -
-      INTEGER, INTENT(IN)      ::  nsest(:,:,:)
+      INTEGER, INTENT(IN)      ::  nsest(:), indx_sest(:,:)
+
 
       TYPE(t_mat), INTENT(INOUT):: mat_ex
       !     - local scalars -
