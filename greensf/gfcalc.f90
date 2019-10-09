@@ -96,12 +96,12 @@ MODULE m_gfcalc
          nType = atoms%gfelem(i_gf)%atomType
          IF(l.NE.atoms%gfelem(i_gf)%lp) CYCLE
          IF(nType.NE.atoms%gfelem(i_gf)%atomTypep) CYCLE
+         !Density of states from Greens function
+         CALL gfDOS(greensf,l,nType,i_gf,atoms,input,results%ef)
          !Occupation matrix
          CALL occmtx(greensf,l,nType,atoms,sym,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
          !Hybridization function
-         CALL hybridization(greensf,l,nType,atoms,input,results%ef)
-         !Density of states from Greens function
-         CALL gfDOS(greensf,l,nType,i_gf,atoms,input,results%ef)
+         !CALL hybridization(greensf,l,nType,atoms,input,results%ef)
       ENDDO
       CALL timestop("Green's Function: Occupation/DOS")
       CALL timestop("Green's Function: Postprocess")
