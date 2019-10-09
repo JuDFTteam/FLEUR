@@ -62,10 +62,10 @@ MODULE m_hubbard1_setup
       REAL     f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
 
       COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
-      COMPLEX  selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz,2)
+      COMPLEX, ALLOCATABLE :: selfen(:,:,:,:,:)
       COMPLEX  e(gdft%nz)
       REAL     n_l(atoms%n_hia,input%jspins)
-      LOGICAL  l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist
+      LOGICAL  l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist,occ_err
 
       !To avoid confusing structure later on
 #ifdef CPP_EDSOLVER
@@ -87,6 +87,9 @@ MODULE m_hubbard1_setup
          !--> write out the configuration for the hubbard 1 solver
          IF(.NOT.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
          CALL gu%init(input,lmaxU_const,atoms,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de,matsub_in=gdft%nmatsub)
+         ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz,2,atoms%n_hia))
+         selfen = 0.0
+
 
          !Get the working directory
          CALL get_environment_variable('PWD',cwd)
@@ -122,7 +125,7 @@ MODULE m_hubbard1_setup
                ENDDO
             ELSE
                !calculate the occupation of the correlated shell
-               CALL occmtx(gdft,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:))
+               CALL occmtx(gdft,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),occ_err)
                n_l(i_hia,:) = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
@@ -213,20 +216,20 @@ MODULE m_hubbard1_setup
                   CALL CHDIR(TRIM(ADJUSTL(xPath)))
 #ifdef CPP_EDSOLVER
                   e = gdft%e*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(i_hia,:,:,:,1),1)
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(:,:,:,1,i_hia),1)
                   !---------------------------------------------------
                   ! Calculate selfenergy on lower contour explicitly
                   ! Mainly out of paranoia :D
                   ! No rediagonalization (last argument switches this)
                   !---------------------------------------------------
                   e = conjg(gdft%e)*hartree_to_ev_const
-                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(i_hia,:,:,:,2),0)
+                  CALL EDsolver_from_cfg(2*(2*l+1),gdft%nz,e,selfen(:,:,:,2,i_hia),0)
 #endif
                   CALL CHDIR(TRIM(ADJUSTL(cwd)))
                   CALL timestop("Hubbard 1: EDsolver")
                ELSE
                   !If there is no linked solver library we read in the selfenergy here
-                  CALL read_selfen(xPath,selfen(i_hia,:,:,:,1),gdft%nz,2*(2*l+1),.false.)
+                  CALL read_selfen(xPath,selfen(:,:,:,1,i_hia),gdft%nz,2*(2*l+1),.false.)
                ENDIF
             ENDIF
          ENDDO
@@ -243,16 +246,16 @@ MODULE m_hubbard1_setup
                      !---------------------------------------------
                      ! Convert the selfenergy to hartree
                      !---------------------------------------------
-                     selfen(i_hia,:,:,iz,ipm) = selfen(i_hia,:,:,iz,ipm)/hartree_to_ev_const
+                     selfen(:,:,iz,ipm,i_hia) = selfen(:,:,iz,ipm,i_hia)/hartree_to_ev_const
                      !---------------------------------------------
                      ! The order of spins is reversed in the Solver
                      !---------------------------------------------
-                     CALL swapSpin(selfen(i_hia,:,:,iz,ipm),2*l+1)
+                     CALL swapSpin(selfen(:,:,iz,ipm,i_hia),2*l+1)
                      !---------------------------------------------------------------------
                      ! The DFT green's function also includes the previous DFT+U correction
                      ! This is removed by substracting it from the selfenergy
                      !---------------------------------------------------------------------
-                     CALL removeU(selfen(i_hia,:,:,iz,ipm),l,input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
+                     CALL removeU(selfen(:,:,iz,ipm,i_hia),l,input%jspins,noco%l_mtNocoPot,pot%mmpMat(:,:,atoms%n_u+i_hia,:))
                   ENDDO
                ENDDO
             ENDDO
@@ -274,7 +277,7 @@ MODULE m_hubbard1_setup
                   l = atoms%lda_u(atoms%n_u+i_hia)%l
                   CALL gfDOS(gdft,l,nType,800+i_hia+hub1%iter,atoms,input,results%ef)
                   CALL gfDOS(gu,l,nType,900+i_hia+hub1%iter,atoms,input,results%ef)
-                  CALL writeSelfenElement(selfen(i_hia,:,:,:,1),gdft%e,results%ef,gdft%nz,2*l+1)
+                  CALL writeSelfenElement(selfen(:,:,:,1,i_hia),gdft%e,results%ef,gdft%nz,2*l+1)
                ENDDO
             ENDIF
             !----------------------------------------------------------------------
@@ -283,20 +286,21 @@ MODULE m_hubbard1_setup
             CALL n_mmp_dist(den%mmpMat(:,:,indStart:indEnd,:),mmpMat,atoms%n_hia,results,input)
             den%mmpMat(:,:,indStart:indEnd,:) = mmpMat(:,:,:,1:MERGE(3,input%jspins,noco%l_mperp))
          ENDIF
-   ELSE
-      !If we are on a different mpi%irank and no solver is linked we need to call juDFT_end here if the solver was not run
-      !kind of a weird workaround (replace with something better)
-      IF(.NOT.l_linkedsolver) THEN
-         CALL get_environment_variable('PWD',cwd)
-         DO i_hia = atoms%n_u+1, atoms%n_u+atoms%n_hia
-            CALL hubbard1_path(atoms,i_hia,folder)
-            WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
-            INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
-            IF(.NOT.l_selfenexist) CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
-         ENDDO
-         !If we are here the solver was run and we go to MPI_BCAST
+         DEALLOCATE(selfen)
+      ELSE
+         !If we are on a different mpi%irank and no solver is linked we need to call juDFT_end here if the solver was not run
+         !kind of a weird workaround (replace with something better)
+         IF(.NOT.l_linkedsolver) THEN
+            CALL get_environment_variable('PWD',cwd)
+            DO i_hia = atoms%n_u+1, atoms%n_u+atoms%n_hia
+               CALL hubbard1_path(atoms,i_hia,folder)
+               WRITE(xPath,*) TRIM(ADJUSTL(cwd)) // "/" // TRIM(ADJUSTL(folder))
+               INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
+               IF(.NOT.l_selfenexist) CALL juDFT_END("Hubbard1 input has been written into Hubbard1/ (No Solver linked)",mpi%irank)
+            ENDDO
+            !If we are here the solver was run and we go to MPI_BCAST
+         ENDIF
       ENDIF
-   ENDIF
 #ifdef CPP_MPI
       !Broadcast the density matrix here
       CALL MPI_BCAST(den%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,indStart:indEnd,:),&
