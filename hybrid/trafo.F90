@@ -72,7 +72,7 @@ CONTAINS
          END IF
       endif
 
-      rkpt = matmul(rrot, kpts%bk(:, nk))
+      rkpt = matmul(rrot, kpts%bkf(:, nk))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g1 = nint(rkpt - rkpthlp)
@@ -150,7 +150,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_genwavf( &
       cmt_out, z_rout, z_cout, cmt, l_real, z_r, z_c, nk, iop, atoms, &
-      hybrid, kpts, sym, jsp, dimension, nbands, &
+      hybrid, kpts, sym, jsp, nbasfcn, dimension, nbands, &
       cell, lapw_nk, lapw_rkpt, phase)
 
       use m_juDFT
@@ -167,18 +167,18 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
 !     - scalars -
-      INTEGER, INTENT(IN)      :: nk, jsp, nbands
+      INTEGER, INTENT(IN)      :: nk, jsp, nbasfcn, nbands
       INTEGER, INTENT(IN)      ::  iop
       LOGICAL                 ::  phase
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(IN)      ::  cmt(dimension%neigd2, hybrid%maxlmindx, atoms%nat)
       LOGICAL, INTENT(IN)      :: l_real
-      REAL, INTENT(IN)         ::  z_r(dimension%nbasfcn, dimension%neigd)
-      REAL, INTENT(OUT)        ::  z_rout(dimension%nbasfcn, dimension%neigd)
-      COMPLEX, INTENT(IN)      ::  z_c(dimension%nbasfcn, dimension%neigd)
-      COMPLEX, INTENT(OUT)     ::  z_cout(dimension%nbasfcn, dimension%neigd)
+      REAL, INTENT(IN)         ::  z_r(nbasfcn, dimension%neigd2)
+      REAL, INTENT(INOUT)      ::  z_rout(nbasfcn, dimension%neigd2)
+      COMPLEX, INTENT(IN)      ::  z_c(nbasfcn, dimension%neigd2)
+      COMPLEX, INTENT(INOUT)   ::  z_cout(nbasfcn, dimension%neigd2)
 
-      COMPLEX, INTENT(OUT)    ::  cmt_out(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(INOUT)  ::  cmt_out(dimension%neigd2, hybrid%maxlmindx, atoms%nat)
 !        - local -
 
 !     - scalars -
@@ -191,7 +191,7 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  tau1(3), rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  zhlp(dimension%nbasfcn, dimension%neigd)
+      COMPLEX                 ::  zhlp(nbasfcn, dimension%neigd2)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
       if (l_real) THEN
@@ -216,7 +216,7 @@ CONTAINS
          END IF
       endif
 
-      rkpt = matmul(rrot, kpts%bk(:, nk))
+      rkpt = matmul(rrot, kpts%bkf(:, nk))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g1 = nint(rkpt - rkpthlp)
@@ -295,7 +295,7 @@ CONTAINS
       IF (phase) THEN
          DO i = 1, nbands
             if (l_real) THEN
-               CALL commonphase(cdum, zhlp(:, i), dimension%nbasfcn)
+               CALL commonphase(cdum, zhlp(:, i), nbasfcn)
 
                IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                   WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
@@ -769,7 +769,6 @@ CONTAINS
 
       USE m_wrapper
       USE m_dwigner
-      USE m_util, ONLY: modulo1
       USE m_constants
       USE m_types
       IMPLICIT NONE
@@ -834,7 +833,7 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iisym))
          rrot = transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = transpose(sym%mrot(:, :, iisym))
-         rkpt = matmul(rrot, kpts%bk(:, ikpt0))
+         rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
          rkpthlp = kpts%to_first_bz(rkpt)
          g = nint(rkpt - rkpthlp)
 
@@ -850,7 +849,7 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iisym))
          rrot = -transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = -transpose(sym%mrot(:, :, iisym))
-         rkpt = matmul(rrot, kpts%bk(:, ikpt0))
+         rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
          rkpthlp = kpts%to_first_bz(rkpt)
          g = nint(rkpt - rkpthlp)
          matin1 = conjg(matin1)
@@ -876,7 +875,7 @@ CONTAINS
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
       !
       DO i = 1, kpts%nkpt
-         IF (maxval(abs(rkpthlp - kpts%bk(:, i))) <= 1E-06) THEN
+         IF (maxval(abs(rkpthlp - kpts%bkf(:, i))) <= 1E-06) THEN
             ikpt1 = i
             EXIT
          END IF
@@ -904,7 +903,7 @@ CONTAINS
 
 !     Right-multiplication
       ! MT
-      cexp = exp(img*tpi_const*dot_product(kpts%bk(:, ikpt1) + g, sym%tau(:, iisym)))
+      cexp = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, sym%tau(:, iisym)))
       iatom = 0
       iiatom = 0
       DO itype = 1, atoms%ntype
@@ -955,7 +954,7 @@ CONTAINS
 !         igptm2 = pntgptm(g1(1),g1(2),g1(3),ikpt0)
          IF (igptm2 == 0) STOP 'matrixtrafo: G point not found in G-point set.'
 
-         cdum = exp(img*tpi_const*dot_product(kpts%bk(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
+         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
 
          matout1(:, nbasp + igptm) = cdum*matin1(:, nbasp + igptm2)
 
@@ -1006,7 +1005,7 @@ CONTAINS
          IF (igptm2 == 0) STOP 'matrixtrafo: G point not found in G-point set.'
          iarr(igptm) = igptm2
          carr(igptm) = exp(-img*tpi_const* &
-      &              dot_product(kpts%bk(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
+      &              dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
 !        cdum  = exp(-img * 2*pi * dot_product(bk(:,ikpt1)+gptm(:,igptp),tau(:,isym)))
 !        matout1(nbasp+igptm,:) = cdum * matin1(nbasp+igptm2,:)
       END DO
@@ -1107,13 +1106,13 @@ CONTAINS
             transpose(hybrid%d_wgn2(-maxlcutm:maxlcutm, -maxlcutm:maxlcutm, l, isym))
       END DO
 
-      rkpt = matmul(rrot, kpts%bk(:, ikpt0))
+      rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
       rkpthlp = kpts%to_first_bz(rkpt)
       g = nint(rkpt - rkpthlp)
 
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
       DO i = 1, kpts%nkpt
-         IF (maxval(abs(rkpthlp - kpts%bk(:, i))) <= 1E-06) THEN
+         IF (maxval(abs(rkpthlp - kpts%bkf(:, i))) <= 1E-06) THEN
             ikpt1 = i
             EXIT
          END IF
@@ -1137,7 +1136,7 @@ CONTAINS
 
 !     Right-multiplication
       ! MT
-      cexp = exp(-img*tpi_const*dot_product(kpts%bk(:, ikpt1) + g, sym%tau(:, iisym)))
+      cexp = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, sym%tau(:, iisym)))
       iatom = 0
       iiatom = 0
       DO itype = 1, atoms%ntype
@@ -1178,7 +1177,7 @@ CONTAINS
          END DO
          IF (igptm1 == 0) STOP 'matrixtrafo1: G point not found in G-point set.'
 
-         cdum = exp(-img*tpi_const*dot_product(kpts%bk(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
+         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
 
          matout1(:, nbasp + igptm) = cdum*matin1(:, nbasp + igptm1)
 
@@ -1234,7 +1233,7 @@ CONTAINS
          END DO
          IF (igptm1 == 0) STOP 'matrixtrafo1: G point not found in G-point set.'
          iarr(igptm) = igptm1
-         carr(igptm) = exp(img*tpi_const*dot_product(kpts%bk(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
+         carr(igptm) = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
       END DO
       DO i2 = 1, nbasm(ikpt0)
          DO i1 = 1, hybrid%ngptm(ikpt0)
@@ -1328,7 +1327,7 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iisym))
          rrot = transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrrot = transpose(sym%mrot(:, :, iisym))
-         rkpt = matmul(rrot, kpts%bk(:, ikpt0))
+         rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
          rkpthlp = kpts%to_first_bz(rkpt)
          g = nint(rkpt - rkpthlp)
 
@@ -1344,7 +1343,7 @@ CONTAINS
          rrot = -transpose(sym%mrot(:, :, sym%invtab(iisym)))
          invrot = sym%mrot(:, :, sym%invtab(iisym))
          invrrot = -transpose(sym%mrot(:, :, iisym))
-         rkpt = matmul(rrot, kpts%bk(:, ikpt0))
+         rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
          rkpthlp = kpts%to_first_bz(rkpt)
          g = nint(rkpt - rkpthlp)
          vecin1 = conjg(vecin1)
@@ -1370,7 +1369,7 @@ CONTAINS
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
       !
       DO i = 1, kpts%nkpt
-         IF (maxval(abs(rkpthlp - kpts%bk(:, i))) <= 1E-06) THEN
+         IF (maxval(abs(rkpthlp - kpts%bkf(:, i))) <= 1E-06) THEN
             ikpt1 = i
             EXIT
          END IF
@@ -1398,7 +1397,7 @@ CONTAINS
 
 !     Multiplication
       ! MT
-      cexp = exp(img*tpi_const*dot_product(kpts%bk(:, ikpt1) + g, sym%tau(:, iisym)))
+      cexp = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, sym%tau(:, iisym)))
       iatom = 0
       iiatom = 0
       DO itype = 1, atoms%ntype
@@ -1449,7 +1448,7 @@ CONTAINS
       &               STOP 'ket_trafo: G point not found in G-point set.'
 
          cdum = exp(img*tpi_const* &
-      &              dot_product(kpts%bk(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
+      &              dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
 
          vecout1(nbasp + igptm) = cdum*vecin1(nbasp + igptm2)
 
@@ -1530,7 +1529,7 @@ CONTAINS
          rrot = -transpose(sym%mrot(:, :, sym%invtab(iisym)))
       END IF
 
-      rkpt = matmul(rrot, kpts%bk(:, ikpt0))
+      rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
       rkpthlp = kpts%to_first_bz(rkpt)
       g = nint(rkpt - rkpthlp)
 
@@ -1543,7 +1542,7 @@ CONTAINS
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
       !
       DO i = 1, kpts%nkpt
-         IF (maxval(abs(rkpthlp - kpts%bk(:, i))) <= 1E-06) THEN
+         IF (maxval(abs(rkpthlp - kpts%bkf(:, i))) <= 1E-06) THEN
             ikpt1 = i
             EXIT
          END IF
@@ -1567,7 +1566,7 @@ CONTAINS
 
 !     Multiplication
       ! MT
-      cexp = exp(-img*tpi_const*dot_product(kpts%bk(:, ikpt1) + g, sym%tau(:, iisym)))
+      cexp = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, sym%tau(:, iisym)))
       iatom = 0
       iiatom = 0
       DO itype = 1, atoms%ntype
@@ -1608,7 +1607,7 @@ CONTAINS
          END DO
          IF (igptm1 == 0) STOP 'ket_trafo: G point not found in G-point set.'
 
-         cdum = exp(-img*tpi_const*dot_product(kpts%bk(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
+         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
 
          vecout1(nbasp + igptm) = cdum*vecin1(nbasp + igptm1)
 
@@ -1712,14 +1711,14 @@ CONTAINS
          trans = sym%tau(:, isym)
       END IF
 
-      rkpthlp = matmul(rrot, kpts%bk(:, ikpt0))
+      rkpthlp = matmul(rrot, kpts%bkf(:, ikpt0))
       rkpt = kpts%to_first_bz(rkpthlp)
       g = nint(rkpthlp - rkpt)
       !
       ! determine number of rotated k-point bk(:,ikpt) -> ikpt1
       !
       DO i = 1, kpts%nkpt
-         IF (maxval(abs(rkpt - kpts%bk(:, i))) <= 1E-06) THEN
+         IF (maxval(abs(rkpt - kpts%bkf(:, i))) <= 1E-06) THEN
             ikpt1 = i
             EXIT
          END IF
@@ -1732,7 +1731,7 @@ CONTAINS
          IF (igptm2 == igptm_in) THEN
             igptm_out = igptm
             IF (writevec) THEN
-               cdum = exp(img*tpi_const*dot_product(kpts%bk(:, ikpt1) + hybrid%gptm(:, igptp), trans))
+               cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), trans))
                EXIT
             ELSE
                RETURN
@@ -1769,7 +1768,7 @@ CONTAINS
 
 !     Left-multiplication
       ! MT
-      cexp = exp(-img*tpi_const*dot_product(kpts%bk(:, ikpt1) + g, trans))
+      cexp = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, trans))
       ic = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
@@ -1798,7 +1797,7 @@ CONTAINS
          igptp = hybrid%pgptm(igptm, ikpt1)
          g1 = matmul(invrrot, hybrid%gptm(:, igptp) - g)
          iarr(igptm) = pointer(g1(1), g1(2), g1(3))
-         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bk(:, ikpt1) + hybrid%gptm(:, igptp), trans))
+         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), trans))
       END DO
       DO i1 = 1, hybrid%ngptm(ikpt1)
          vecout(nbasp + i1) = carr(i1)*vecin1(nbasp + iarr(i1))
