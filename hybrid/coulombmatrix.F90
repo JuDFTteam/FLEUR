@@ -2120,7 +2120,7 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
 
-      INTEGER, INTENT(IN)  :: ngpt(:), gpt(3,*), pgpt(:, :)!(dim,kpts%nkpt)
+      INTEGER, INTENT(IN)  :: ngpt(:), gpt(:,:), pgpt(:, :)!(dim,kpts%nkpt)
       REAL, ALLOCATABLE :: qnrm(:), help(:)
       INTEGER, INTENT(OUT) :: nqnrm
       INTEGER, ALLOCATABLE :: pqnrm(:, :)
