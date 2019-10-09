@@ -26,8 +26,8 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       INTEGER, INTENT(IN)    :: nk
       INTEGER, INTENT(OUT)   :: nsymop
-      INTEGER, INTENT(INOUT) :: rrot(3, 3, sym%nsym)
-      INTEGER, INTENT(INOUT) :: psym(sym%nsym) ! Note: psym is only filled up to index nsymop
+      INTEGER, INTENT(INOUT) :: rrot(:, :,) ! 3,3,sym%nsym
+      INTEGER, INTENT(INOUT) :: psym(:) ! Note: psym is only filled up to index nsymop
 
       INTEGER :: i
       REAL    :: rotkpt(3)
@@ -96,14 +96,14 @@ CONTAINS
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
-      INTEGER, INTENT(IN)              :: rrot(3, 3, sym%nsym)
-      INTEGER, INTENT(IN)              :: psym(sym%nsym)
+      INTEGER, INTENT(IN)              :: rrot(:,:,:)
+      INTEGER, INTENT(IN)              :: psym(:)
       INTEGER, INTENT(OUT)             :: parent(kpts%nkptf)
       INTEGER, INTENT(OUT)             :: nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
       INTEGER, ALLOCATABLE, INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER, ALLOCATABLE, INTENT(OUT) :: n_q(:)
 
-      REAL, INTENT(IN)                 :: eig_irr(dimension%neigd, kpts%nkpt)
+      REAL, INTENT(IN)                 :: eig_irr(:,:)
 
 !     - local scalars -
       INTEGER                         :: ikpt, ikpt1, iop, isym, iisym, m
