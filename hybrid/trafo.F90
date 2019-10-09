@@ -30,10 +30,10 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  bandi, iop
 
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(IN)      ::  cmt(:,:,:)
       LOGICAL, INTENT(IN)      ::  l_real
-      REAL, INTENT(IN)         ::  z_r(dimension%nbasfcn, dimension%neigd)
-      COMPLEX, INTENT(IN)      ::  z_c(dimension%nbasfcn, dimension%neigd)
+      REAL, INTENT(IN)         ::  z_r(:,:)
+      COMPLEX, INTENT(IN)      ::  z_c(:,:)
       COMPLEX, INTENT(OUT)     ::  cmt_out(hybrid%maxlmindx, atoms%nat, ndb)
       COMPLEX, INTENT(OUT)     ::  z_out(lapw%nv(jsp), ndb)
 
@@ -171,14 +171,14 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  iop
       LOGICAL                 ::  phase
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(dimension%neigd2, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(IN)      ::  cmt(:,:)
       LOGICAL, INTENT(IN)      :: l_real
-      REAL, INTENT(IN)         ::  z_r(nbasfcn, dimension%neigd2)
-      REAL, INTENT(INOUT)      ::  z_rout(nbasfcn, dimension%neigd2)
-      COMPLEX, INTENT(IN)      ::  z_c(nbasfcn, dimension%neigd2)
-      COMPLEX, INTENT(INOUT)   ::  z_cout(nbasfcn, dimension%neigd2)
+      REAL, INTENT(IN)         ::  z_r(:,:)
+      REAL, INTENT(INOUT)      ::  z_rout(:,:)
+      COMPLEX, INTENT(IN)      ::  z_c(:,:)
+      COMPLEX, INTENT(INOUT)   ::  z_cout(:,:)
 
-      COMPLEX, INTENT(INOUT)  ::  cmt_out(dimension%neigd2, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(INOUT)  ::  cmt_out(:,:,:)
 !        - local -
 
 !     - scalars -
@@ -343,9 +343,9 @@ CONTAINS
       LOGICAL, INTENT(IN)    ::  lreal
 
 !     - arrays -
-      INTEGER, INTENT(IN)    :: lcutm(atoms%ntype)
+      INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    ::  nindxm(0:maxlcutm, atoms%ntype)
-      COMPLEX, INTENT(INOUT) ::  mat(dim1, dim2)
+      COMPLEX, INTENT(INOUT) ::  mat(:,:)
 
 !     -local scalars -
       INTEGER               ::  i, j, itype, ieq, ic, ic1, i1, i2, l, m, n, nn, ifac, ishift
@@ -460,9 +460,9 @@ CONTAINS
       INTEGER, INTENT(IN)      :: maxlcutm
 
 !     - arrays -
-      INTEGER, INTENT(IN)      :: lcutm(atoms%ntype)
+      INTEGER, INTENT(IN)      :: lcutm(:)
       INTEGER, INTENT(IN)      ::  nindxm(0:maxlcutm, atoms%ntype)
-      COMPLEX, INTENT(INOUT)   ::  mat(dim1, dim2)
+      COMPLEX, INTENT(INOUT)   ::  mat(:,:)
 
 !     - local scalars -
       INTEGER                 ::  ifac, i, j, itype, ieq, ic, ic1, i1, i2, l, m, n, nn, ishift
@@ -559,11 +559,11 @@ CONTAINS
 
       LOGICAL, INTENT(IN)      :: l_real
 
-      REAL, INTENT(IN)         ::  vecin_r(dim, nobd, nbands)
-      REAL, INTENT(OUT)        ::  vecout_r(dim, nobd, nbands)
-      COMPLEX, INTENT(IN)      ::  vecin_c(dim, nobd, nbands)
-      COMPLEX, INTENT(OUT)     ::  vecout_c(dim, nobd, nbands)
-      COMPLEX, INTENT(OUT)     ::  phase(nobd, nbands)
+      REAL, INTENT(IN)         ::  vecin_r(:,:,:)
+      REAL, INTENT(OUT)        ::  vecout_r(:,:,:)
+      COMPLEX, INTENT(IN)      ::  vecin_c(:,:,:)
+      COMPLEX, INTENT(OUT)     ::  vecout_c(:,:,:)
+      COMPLEX, INTENT(OUT)     ::  phase(:,:)
 
 !          - local -
 
@@ -785,12 +785,12 @@ CONTAINS
       LOGICAL, INTENT(IN)  ::  lsymmetrize
 
       ! - arrays -
-      INTEGER, INTENT(IN)  ::  nbasm(kpts%nkpt)
+      INTEGER, INTENT(IN)  ::  nbasm(:)
       INTEGER, INTENT(IN)  ::  nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)  ::  ngptmall
-      INTEGER, INTENT(IN)  ::  lcutm(atoms%ntype)
+      INTEGER, INTENT(IN)  ::  lcutm(:)
 
-      COMPLEX, INTENT(IN)  ::  matin(nbasm(ikpt0), nbasm(ikpt0))
+      COMPLEX, INTENT(IN)  ::  matin(:,:)
       COMPLEX, INTENT(OUT) ::  matout(nbasm(ikpt0), nbasm(ikpt0))
       ! - local scalars -
       INTEGER               ::  iatom, iatom1, iiatom, itype, ieq, ieq1, ic,&
@@ -1049,12 +1049,12 @@ CONTAINS
       LOGICAL, INTENT(IN)  ::  lsymmetrize
 
       ! - arrays -
-      INTEGER, INTENT(IN)  ::  nbasm(kpts%nkpt)
+      INTEGER, INTENT(IN)  ::  nbasm(:)
       INTEGER, INTENT(IN)  ::  nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)  ::  ngptmall
-      INTEGER, INTENT(IN)  ::  lcutm(atoms%ntype)
+      INTEGER, INTENT(IN)  ::  lcutm(:)
 
-      COMPLEX, INTENT(IN)  ::  matin(nbasm(ikpt0), nbasm(ikpt0))
+      COMPLEX, INTENT(IN)  ::  matin(:,:)
       COMPLEX, INTENT(OUT) ::  matout(nbasm(ikpt0), nbasm(ikpt0))
       ! - local scalars -
       INTEGER               ::  iatom, iatom1, iiatom, itype, ieq, ieq1, ic, l,&
@@ -1280,12 +1280,12 @@ CONTAINS
 
       ! - arrays -
 
-      INTEGER, INTENT(IN)  ::  nbasm(kpts%nkpt)
+      INTEGER, INTENT(IN)  ::  nbasm(:)
       INTEGER, INTENT(IN)  ::  nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)  ::  ngptmall
-      INTEGER, INTENT(IN)  ::  lcutm(atoms%ntype)
+      INTEGER, INTENT(IN)  ::  lcutm(:)
 
-      COMPLEX, INTENT(IN)  ::  vecin(nbasm(ikpt0))
+      COMPLEX, INTENT(IN)  ::  vecin(:)
       COMPLEX, INTENT(OUT) ::  vecout(nbasm(ikpt0))
 
       ! -local scalars -
@@ -1484,12 +1484,12 @@ CONTAINS
 
       ! - arrays -
 
-      INTEGER, INTENT(IN)  ::  nbasm(kpts%nkpt)
+      INTEGER, INTENT(IN)  ::  nbasm(:)
       INTEGER, INTENT(IN)  ::  nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)  ::  ngptmall
-      INTEGER, INTENT(IN)  ::  lcutm(atoms%ntype)
+      INTEGER, INTENT(IN)  ::  lcutm(:)
 
-      COMPLEX, INTENT(IN)  ::  vecin(nbasm(ikpt0))
+      COMPLEX, INTENT(IN)  ::  vecin(:)
       COMPLEX, INTENT(OUT) ::  vecout(nbasm(ikpt0))
 
       ! -local scalars -
@@ -1628,7 +1628,7 @@ CONTAINS
    SUBROUTINE commonphase(cfac, carr, n)
       IMPLICIT NONE
       INTEGER, INTENT(IN)      :: n
-      COMPLEX, INTENT(IN)      :: carr(n)
+      COMPLEX, INTENT(IN)      :: carr(:)
       COMPLEX, INTENT(OUT)     :: cfac
       REAL                    :: rdum, rmax
       INTEGER                 :: i
@@ -1672,16 +1672,16 @@ CONTAINS
       LOGICAL, INTENT(IN)      ::  writevec
       INTEGER, INTENT(OUT)     ::  igptm_out
 !     - arrays -
-      INTEGER, INTENT(IN)      ::  rrot(3, 3), invrrot(3, 3)
+      INTEGER, INTENT(IN)      ::  rrot(:,:), invrrot(:,:)
       INTEGER, INTENT(IN)      :: lcutm(atoms%ntype),&
      &                            nindxm(0:maxlcutm, atoms%ntype)
-      INTEGER, INTENT(IN)      :: nbasm(kpts%nkptf)
+      INTEGER, INTENT(IN)      :: nbasm(:)
       INTEGER, INTENT(IN)      ::  pointer(&
      &                          minval(hybrid%gptm(1, :)) - 1:maxval(hybrid%gptm(1, :)) + 1,&
      &                          minval(hybrid%gptm(2, :)) - 1:maxval(hybrid%gptm(2, :)) + 1,&
      &                          minval(hybrid%gptm(3, :)) - 1:maxval(hybrid%gptm(3, :)) + 1)
 
-      COMPLEX, INTENT(IN)      ::  vecin(nbasm(ikpt0))
+      COMPLEX, INTENT(IN)      ::  vecin(:)
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
      &                                 -maxlcutm:maxlcutm,&
      &                                         0:maxlcutm)
