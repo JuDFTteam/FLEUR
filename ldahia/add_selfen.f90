@@ -32,7 +32,7 @@ MODULE m_add_selfen
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_input),    INTENT(IN)     :: input
-      COMPLEX,          INTENT(IN)     :: selfen(atoms%n_hia,2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),g%nz,2)
+      COMPLEX,          INTENT(IN)     :: selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),g%nz,2,atoms%n_hia)
       REAL,             INTENT(IN)     :: ef
       REAL,             INTENT(IN)     :: n_occ(atoms%n_hia,input%jspins)
       REAL,             INTENT(IN)     :: mu_dc
@@ -44,11 +44,11 @@ MODULE m_add_selfen
       REAL mu_a,mu_b,mu_step,mu_max,n_max
       REAL mu,n,n_target
       TYPE(t_mat) :: gmat,vmat
-      LOGICAL l_match_both_spins
+      LOGICAL l_match_both_spins,err
 
       !Interval where we expect the correct mu
-      mu_a = -4.0
-      mu_b = 4.0
+      mu_a = -2.0
+      mu_b = 1.5
       mu_step = 0.01
       mu_max = 0.0
       n_max = 0.0
@@ -79,7 +79,7 @@ MODULE m_add_selfen
                DO ipm = 1, 2
                   DO iz = 1, g%nz
                      !Read selfenergy
-                     vmat%data_c = selfen(i_hia,start:end,start:end,iz,ipm)
+                     vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
                      IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
                         !Dismiss spin-off-diagonal elements
                         vmat%data_c(1:ns,ns+1:2*ns) = 0.0
@@ -134,7 +134,7 @@ MODULE m_add_selfen
                DO ipm = 1, 2
                   DO iz = 1, g%nz
                      !Read selfenergy
-                     vmat%data_c = selfen(i_hia,start:end,start:end,iz,ipm)
+                     vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
                      IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
                         !Dismiss spin-off-diagonal elements
                         vmat%data_c(1:ns,ns+1:2*ns) = 0.0
@@ -154,7 +154,7 @@ MODULE m_add_selfen
                      CALL gmat%free()
                   ENDDO
                ENDDO
-               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),check=.TRUE.) !check makes sure that the elements are reasonable
+               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.) !check makes sure that the elements are reasonable
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
@@ -178,13 +178,13 @@ MODULE m_add_selfen
          ENDDO
          CALL vmat%free()
          !Test throw out elements smaller than 1e-6
-         DO ispin = 1, input%jspins
-            DO m = -l, l
-               DO mp=-l, l
-                  IF(ABS(REAL(mmpMat(m,mp,i_hia,ispin))).LT.1e-5) mmpMat(m,mp,i_hia,ispin) = 0.0
-               ENDDO
-            ENDDO
-         ENDDO
+         !DO ispin = 1, input%jspins
+         !   DO m = -l, l
+         !      DO mp=-l, l
+         !         IF(ABS(REAL(mmpMat(m,mp,i_hia,ispin))).LT.1e-5) mmpMat(m,mp,i_hia,ispin) = 0.0
+         !      ENDDO
+         !   ENDDO
+         !ENDDO
       ENDDO
 
 9000  FORMAT("mu_",I1)
