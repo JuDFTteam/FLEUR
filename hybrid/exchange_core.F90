@@ -42,7 +42,7 @@ CONTAINS
       INTEGER, INTENT(IN)      :: jsp
       INTEGER, INTENT(IN)      ::nk, maxbands, mnobd
       !     - arays -
-      INTEGER, INTENT(IN)      ::  degenerat(hybrid%ne_eig(nk))
+      INTEGER, INTENT(IN)      ::  degenerat(:)
       LOGICAL, INTENT(IN)      :: l_real
       REAL, INTENT(INOUT)  ::  ex_vv_r(:, :, :)!(maxbands,mnobd,nkpti)
       COMPLEX, INTENT(INOUT)  ::  ex_vv_c(:, :, :)!(maxbands,mnobd,nkpti)
@@ -258,7 +258,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  nsymop
       REAL, INTENT(IN)         ::  a_ex
       !     - arays -
-      INTEGER, INTENT(IN)      ::  nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
+      INTEGER, INTENT(IN)      ::  nsest(:,:,:)
 
       TYPE(t_mat), INTENT(INOUT):: mat_ex
       !     - local scalars -
@@ -571,7 +571,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: maxbands
 
       ! - arays -
-      REAL, INTENT(IN)    ::  bkpt(3)
+      REAL, INTENT(IN)    ::  bkpt(:)
       LOGICAL, INTENT(IN)    :: l_real
       REAL, INTENT(INOUT) ::  exch_cv_r(:, :, :)!(maxbands,ncstd,nkpti)
       COMPLEX, INTENT(INOUT) ::  exch_cv_c(:, :, :) !(maxbands,ncstd,nkpti)
