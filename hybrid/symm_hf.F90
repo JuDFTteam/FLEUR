@@ -26,7 +26,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       INTEGER, INTENT(IN)    :: nk
       INTEGER, INTENT(OUT)   :: nsymop
-      INTEGER, INTENT(INOUT) :: rrot(:, :,) ! 3,3,sym%nsym
+      INTEGER, INTENT(INOUT) :: rrot(:,:,:) ! 3,3,sym%nsym
       INTEGER, INTENT(INOUT) :: psym(:) ! Note: psym is only filled up to index nsymop
 
       INTEGER :: i

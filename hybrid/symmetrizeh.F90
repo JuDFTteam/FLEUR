@@ -27,7 +27,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: nsymop, jsp
 
       ! arrays
-      INTEGER, INTENT(IN)    :: kveclo(:)
+      INTEGER, INTENT(IN)    :: kveclo(atoms%nlotot)
       INTEGER, INTENT(IN)    :: psym(:)
       REAL, INTENT(IN)    :: bk(:)
 
