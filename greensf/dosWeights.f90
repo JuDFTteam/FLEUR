@@ -85,7 +85,7 @@ MODULE m_dosWeights
       REAL             :: e(4)
       INTEGER          :: ind(4), k(4)
 
-      l_bloechl = .TRUE.
+      l_bloechl = .FALSE.
       ALLOCATE( dos_weights(g%ne) )
       dos_weights = 0.0
       e_ind(:,1) = 0
@@ -135,9 +135,8 @@ MODULE m_dosWeights
             nstart = INT((e(ind(1))-g%e_bot)/g%del)+1
             vol = kpts%voltet(itet)/kpts%ntet
             nend = g%ne
-            IF(l_bloechl) CALL bloechl_corrections(ef,vol,e(ind(1:4)),dweight,icorn)
             DO ie = MAX(1,nstart), g%ne
-               CALL contribSingletetra((ie-1)*g%del+g%e_bot,vol,e(ind(1:4)),weight,icorn)
+               CALL contribSingletetra((ie-1)*g%del+g%e_bot,vol,e(ind(1:4)),icorn,l_bloechl,weight)
                weights(ie,ib) = weights(ie,ib) + weight * fac
                IF(weight.EQ.1/4.0*vol) THEN
                   !here we are above all eigenergies at the corners
@@ -165,7 +164,7 @@ MODULE m_dosWeights
          !---------------------------------------------------
          ! Weights for DOS -> differentiate with respect to E
          !---------------------------------------------------
-         CALL diff3(REAL(weights(:,ib)),g%del,dos_weights(:))
+         CALL diff3(weights(:,ib),g%del,dos_weights)
          !----------------------------------------------------
          !Find the range where the weights are bigger than tol
          !----------------------------------------------------
@@ -280,7 +279,7 @@ MODULE m_dosWeights
             nend = g%ne
 
             DO ie = MAX(1,nstart), g%ne
-               CALL contribSingleTria((ie-1)*g%del+g%e_bot,vol,e(ind(1:3)),weight,icorn)
+               CALL contribSingleTria((ie-1)*g%del+g%e_bot,vol,e(ind(1:3)),icorn,weight)
                weights(ie,ib) = weights(ie,ib) + weight
                IF(weight.EQ.1.0/3.0*vol) THEN
                   !here we are above all eigenergies at the corners
@@ -306,7 +305,7 @@ MODULE m_dosWeights
          !---------------------------------------------------
          ! Weights for DOS -> differentiate with respect to E
          !---------------------------------------------------
-         CALL diff3(REAL(weights(:,ib)),g%del,dos_weights(:))
+         CALL diff3(weights(:,ib),g%del,dos_weights(:))
          !----------------------------------------------------
          !Find the range where the weights are bigger than tol
          !----------------------------------------------------
@@ -360,7 +359,7 @@ MODULE m_dosWeights
 
    END SUBROUTINE dosWeightsCalcTria
 
-   SUBROUTINE contribSingleTria(energy,vol,e,weight,ind)
+   SUBROUTINE contribSingleTria(energy,vol,e,ind,weight)
 
       USE m_juDFT
       !Integration weights (equivalent to doswt)
@@ -370,44 +369,46 @@ MODULE m_dosWeights
       REAL,                INTENT(IN)     :: energy
       REAL,                INTENT(IN)     :: vol
       REAL,                INTENT(IN)     :: e(3)
-      REAL,                INTENT(OUT)    :: weight
       INTEGER,             INTENT(IN)     :: ind
+      REAL,                INTENT(OUT)    :: weight
 
 
       weight = 0.0
       IF(energy.GT.e(3)) THEN
 
-         weight = 1.0/3.0*vol
+         weight = 1.0
 
-      ELSE IF((energy.GE.e(2)).AND.(energy.LE.e(3))) THEN
+      ELSE IF( energy.GT.e(2) ) THEN
 
          IF(ind.EQ.1) THEN
-            weight = vol/3.0 * (1.0-(e(3)-energy)**3/((e(3)-e(1))**2*(e(3)-e(2))))
+            weight = (1.0-(e(3)-energy)**3/((e(3)-e(1))**2*(e(3)-e(2))))
          ELSE IF(ind.EQ.2) THEN
-            weight = vol/3.0 * (1.0-(e(3)-energy)**3/((e(3)-e(1))*(e(3)-e(2))**2))
+            weight = (1.0-(e(3)-energy)**3/((e(3)-e(1))*(e(3)-e(2))**2))
          ELSE IF(ind.EQ.3) THEN
-            weight = vol/3.0 * (1.0-(e(3)-energy)**2/((e(3)-e(1))*(e(3)-e(2)))*&
+            weight = (1.0-(e(3)-energy)**2/((e(3)-e(1))*(e(3)-e(2)))*&
                      (3.0-(e(3)-energy)/(e(3)-e(1))-(e(3)-energy)/(e(3)-e(2))))
          ENDIF
 
-      ELSE IF((energy.GE.e(1)).AND.(energy.LE.e(2))) THEN
+      ELSE IF(energy.GT.e(1)) THEN
 
          IF(ind.EQ.1) THEN
-            weight = vol/3.0*(energy-e(1))**2/((e(3)-e(1))*(e(2)-e(1)))*&
+            weight = (energy-e(1))**2/((e(3)-e(1))*(e(2)-e(1)))*&
                      (3.0-(energy-e(1))/(e(3)-e(1))-(energy-e(1))/(e(2)-e(1)))
          ELSE IF(ind.EQ.2) THEN
-            weight = vol/3.0 *(energy-e(1))**3/((e(3)-e(1))*(e(2)-e(1))**2)
+            weight = (energy-e(1))**3/((e(3)-e(1))*(e(2)-e(1))**2)
          ELSE IF(ind.EQ.3) THEN
-            weight = vol/3.0 *(energy-e(1))**3/((e(3)-e(1))**2*(e(2)-e(1)))
+            weight = (energy-e(1))**3/((e(3)-e(1))**2*(e(2)-e(1)))
          ENDIF
 
       ENDIF
+
+      weight = weight * vol/3.0
 
    END SUBROUTINE contribSingleTria
 
 
 
-   SUBROUTINE contribSingletetra(energy,vol,e,weight,ind)
+   SUBROUTINE contribSingleTetra(energy,vol,e,ind,l_bloechl,weight)
 
       USE m_juDFT
       !Integration weights taken from
@@ -418,38 +419,37 @@ MODULE m_dosWeights
       REAL,                INTENT(IN)     :: energy
       REAL,                INTENT(IN)     :: vol
       REAL,                INTENT(IN)     :: e(4)
-      REAL,                INTENT(OUT)    :: weight
       INTEGER,             INTENT(IN)     :: ind
+      LOGICAL,             INTENT(IN)     :: l_bloechl
+      REAL,                INTENT(OUT)    :: weight
 
       INTEGER j
 
-      REAL C
+      REAL C, D_ef
       REAL C1, C2, C3
-      IF(energy.GT.e(4)) THEN
 
-         weight = 1/4.*vol
+      weight = 0.0
+      IF( energy.GT.e(4) ) THEN
 
-      ELSE IF(energy.LT.e(1)) THEN
+         weight = 1.0
 
-         weight = 0.0
+      ELSE IF( energy.GT.e(3) ) THEN
 
-      ELSE IF((e(1).LE.energy).AND.(energy.LE.e(2))) THEN
+         C     =  (e(4)-energy)**3/((e(4)-e(1))*(e(4)-e(2))*(e(4)-e(3)))
 
-         C     = 1./4. * vol * (energy-e(1))**3/((e(2)-e(1))*(e(3)-e(1))*(e(4)-e(1)))
-
-         IF(ind.EQ.1) THEN
-            weight = C * (4 - (energy-e(1)) * (1/(e(2)-e(1)) + 1/(e(3)-e(1)) + 1/(e(4)-e(1))))
+         IF(ind.EQ.4) THEN
+            weight = 1.0 - C * ( 4 - (e(4)-energy) * (1/(e(4)-e(1)) + 1/(e(4)-e(2)) + 1/(e(4)-e(3))) )
          ELSE
-            weight = C * (energy-e(1))/(e(ind)-e(1))
-         ENDIF
-      ELSE IF((e(2).LE.energy).AND.(energy.LE.e(3))) THEN
+            weight = 1.0 - C * (e(4)-energy)/(e(4)-e(ind))
+         END IF
 
-         C1     = 1./4. * vol * (energy-e(1))**2/((e(3)-e(1))*(e(4)-e(1)))
+      ELSE IF( energy.GT.e(2) ) THEN
 
-         C2     = 1./4. * vol * (energy-e(1))*(energy-e(2))*(e(3)-energy)/((e(3)-e(1))*(e(3)-e(2))*(e(4)-e(1)))
+         C1     = (energy-e(1))**2/((e(3)-e(1))*(e(4)-e(1)))
 
+         C2     = (energy-e(1))*(energy-e(2))*(e(3)-energy)/((e(3)-e(1))*(e(3)-e(2))*(e(4)-e(1)))
 
-         C3     = 1./4. * vol * (energy-e(2))**2*(e(4)-energy)/((e(3)-e(2))*(e(4)-e(1))*(e(4)-e(2)))
+         C3     = (energy-e(2))**2*(e(4)-energy)/((e(3)-e(2))*(e(4)-e(1))*(e(4)-e(2)))
 
          IF(ind.EQ.1) THEN
             weight = C1 + (C1 + C2) * (e(3)-energy)/(e(3)-e(1))+&
@@ -464,66 +464,40 @@ MODULE m_dosWeights
             weight = (C1 + C2 + C3) * (energy-e(1))/(e(4)-e(1)) +&
                         C3 * (energy-e(2))/(e(4)-e(2))
          END IF
-      ELSE IF((e(3).LE.energy).AND.(energy.LE.e(4))) THEN
 
-         C     = 1./4. * vol * (e(4)-energy)**3/((e(4)-e(1))*(e(4)-e(2))*(e(4)-e(3)))
+      ELSE IF( energy.GT.e(1) ) THEN
 
-         IF(ind.LE.3) THEN
-            weight = 1/4.*vol-C * (e(4)-energy)/(e(4)-e(ind))
+         C     = (energy-e(1))**3/((e(2)-e(1))*(e(3)-e(1))*(e(4)-e(1)))
+
+         IF(ind.EQ.1) THEN
+            weight = C * (4 - (energy-e(1)) * (1/(e(2)-e(1)) + 1/(e(3)-e(1)) + 1/(e(4)-e(1))))
          ELSE
-            weight = 1/4.*vol-C * (4 - (e(4)-energy) * (1/(e(4)-e(1)) + 1/(e(4)-e(2)) + 1/(e(4)-e(3))))
-         END IF
+            weight = C * (energy-e(1))/(e(ind)-e(1))
+         ENDIF
 
       END IF
 
-   END SUBROUTINE contribSingletetra
+      IF(l_bloechl) THEN
+         IF( energy.GT.e(4) ) THEN
+            D_ef = 0.0
+         ELSE IF( energy.LT.e(1) ) THEN
+            D_ef = 0.0
+         ELSE IF( energy.GT.e(3) ) THEN
+            D_ef = 3.0 * (e(4)-energy)**2/( (e(4)-e(1))*(e(4)-e(2))*(e(4)-e(3)) )
+         ELSE IF( energy.GT.e(2) ) THEN
+            D_ef = 3.0 * 1./( (e(3)-e(1))*(e(4)-e(2)) ) *&
+                       ( (energy-e(2))*(e(3)-energy)/(e(3)-e(2)) &
+                        +(energy-e(1))*(e(4)-energy)/(e(4)-e(1)) )
+         ELSE IF( energy.GT.e(1) ) THEN
+            D_ef = 3.0 * (energy-e(1))**2/( (e(2)-e(1))*(e(3)-e(1))*(e(4)-e(1)) )
+         ENDIF
 
-   SUBROUTINE bloechl_corrections(ef,vol,e,dweight,ind)
+         weight = weight + 1/10.0 * D_ef * SUM(e(:)-e(ind))
+      ENDIF
 
-      REAL,                INTENT(IN)     :: ef
-      REAL,                INTENT(IN)     :: vol
-      REAL,                INTENT(IN)     :: e(4)
-      REAL,                INTENT(OUT)    :: dweight
-      INTEGER,             INTENT(IN)     :: ind
+      weight = weight * vol/4.0
 
-      INTEGER i
-      REAL dos
-
-      CALL dos_tetra(ef,vol,e,dos)
-
-      dweight = 0.0
-      DO i = 1, 4
-         dweight = dweight + 1/40.0*dos*(e(i)-e(ind))
-      ENDDO
-
-
-   END SUBROUTINE bloechl_corrections
-
-   SUBROUTINE dos_tetra(energy,vol,e,dos)
-
-      IMPLICIT NONE
-
-      REAL,                INTENT(IN)     :: energy
-      REAL,                INTENT(IN)     :: vol
-      REAL,                INTENT(IN)     :: e(4)
-      REAL,                INTENT(OUT)    :: dos
-
-      IF((energy.GT.e(4)).OR.(energy.LT.e(1))) THEN
-         dos = 0.0
-      ELSE IF((energy.GT.e(1)).AND.(energy.LT.e(2))) THEN
-
-         dos = 3.0 * vol * (energy-e(1))**2/((e(2)-e(1))*(e(3)-e(1))*(e(4)-e(1)))
-
-      ELSE IF((energy.GT.e(2)).AND.(energy.LT.e(3))) THEN
-
-         dos = 3.0 * vol * 1./((e(3)-e(1))*(e(4)-e(1))) * (e(2) - e(1) + 2*(energy - e(2)) -&
-               (e(3)-e(1)+e(4)-e(2)) * (energy-e(2))**2/((e(3)-e(2))*(e(4)-e(2))))
-
-      ELSE IF((energy.GT.e(3)).AND.(energy.LT.e(4))) THEN
-
-         dos = 3.0 * vol * (e(4)-energy)**2/((e(4)-e(1))*(e(4)-e(2))*(e(4)-e(3)))
-      END IF
-   END SUBROUTINE dos_tetra
+   END SUBROUTINE contribSingleTetra
 
 
    ! Not used at the moment
