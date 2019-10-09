@@ -984,18 +984,18 @@ CONTAINS
       REAL, INTENT(IN)       :: vol
 
       ! array input
-      INTEGER, INTENT(IN)    :: lcutm(ntype)
+      INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(ntype)
-      INTEGER, INTENT(IN)    :: jri(ntype)
-      INTEGER, INTENT(IN)    :: gptm(3, gptmd)
+      INTEGER, INTENT(IN)    :: jri(:)
+      INTEGER, INTENT(IN)    :: gptm(:,:)
       INTEGER, INTENT(IN)    :: ngptm
-      INTEGER, INTENT(IN)    :: pgptm(ngptm)
+      INTEGER, INTENT(IN)    :: pgptm(:)
 
-      REAL, INTENT(IN)       :: bk(3)
-      REAL, INTENT(IN)       :: rmsh(jmtd, ntype), rmt(ntype), dx(ntype)
+      REAL, INTENT(IN)       :: bk(:)
+      REAL, INTENT(IN)       :: rmsh(:,:), rmt(:), dx(:)
       REAL, INTENT(IN)       :: basm(jmtd, maxindxm, 0:maxlcutm, ntype)
-      REAL, INTENT(IN)       :: bmat(3, 3)!,amat(3,3)
-      REAL, INTENT(IN)       :: taual(3, natd)
+      REAL, INTENT(IN)       :: bmat(:,:)!,amat(3,3)
+      REAL, INTENT(IN)       :: taual(:,:)
 
       ! array output
       REAL, INTENT(OUT)   :: potential(noGPts)                           ! Fourier transformed potential
@@ -1216,8 +1216,8 @@ CONTAINS
       !         gPts_gptm - vector G - G_I
       PURE FUNCTION calculateSummation(abs_dg, gPts_gptm)
          IMPLICIT NONE
-         INTEGER, INTENT(IN) :: gPts_gptm(3, noGPts, gptmd)
-         REAL, INTENT(IN)    :: abs_dg(noGPts, gptmd)
+         INTEGER, INTENT(IN) :: gPts_gptm(:,:,:)
+         REAL, INTENT(IN)    :: abs_dg(:,:)
          COMPLEX             :: calculateSummation(noGPts, gptmd)
          INTEGER             :: cn, ci                                     ! counter variables
          REAL                :: abs_dgR(noGPts, gptmd, ntype)               ! abs(gPts - gptm)*R (R: radius MT)
@@ -1317,19 +1317,19 @@ CONTAINS
       REAL, INTENT(IN)       :: vol
 
       ! array input
-      INTEGER, INTENT(IN)    :: lcutm(ntype)
-      INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(ntype)
-      INTEGER, INTENT(IN)    :: jri(ntype)
-      INTEGER, INTENT(IN)    :: gptm(3, gptmd)
+      INTEGER, INTENT(IN)    :: lcutm(:)
+      INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(:)
+      INTEGER, INTENT(IN)    :: jri(:)
+      INTEGER, INTENT(IN)    :: gptm(:,:)
       INTEGER, INTENT(IN)    :: ngptm, nbasp
-      INTEGER, INTENT(IN)    :: pgptm(ngptm)
-      INTEGER, INTENT(IN)    :: invsat(natd), invsatnr(natd)
+      INTEGER, INTENT(IN)    :: pgptm(:)
+      INTEGER, INTENT(IN)    :: invsat(:), invsatnr(:)
 
-      REAL, INTENT(IN)       :: bk(3)
-      REAL, INTENT(IN)       :: rmsh(jmtd, ntype), rmt(ntype), dx(ntype)
+      REAL, INTENT(IN)       :: bk(:)
+      REAL, INTENT(IN)       :: rmsh(:,:), rmt(:), dx(:)
       REAL, INTENT(IN)       :: basm(jmtd, maxindxm, 0:maxlcutm, ntype)
-      REAL, INTENT(IN)       :: bmat(3, 3)
-      REAL, INTENT(IN)       :: taual(3, natd)
+      REAL, INTENT(IN)       :: bmat(:,:)
+      REAL, INTENT(IN)       :: taual(:,:)
 
       ! array output
       REAL, INTENT(OUT)   :: potential(noGPts)                           ! Fourier transformed potential
@@ -1652,26 +1652,26 @@ CONTAINS
       REAL, INTENT(IN)       :: vol
 
       ! array input
-      INTEGER, INTENT(IN)    :: lcutm(ntype)
+      INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(ntype)
-      INTEGER, INTENT(IN)    :: jri(ntype)
-      INTEGER, INTENT(IN)    :: gptm(3, gptmd)
-      INTEGER, INTENT(IN)    :: ngptm(nkptf)
-      INTEGER, INTENT(IN)    :: pgptm(MAXVAL(ngptm), nkptf)
-      INTEGER, INTENT(IN)    :: nbasm(nkptf)
-      INTEGER, INTENT(IN)    :: invsat(natd), invsatnr(natd)
+      INTEGER, INTENT(IN)    :: jri(:)
+      INTEGER, INTENT(IN)    :: gptm(:,:)
+      INTEGER, INTENT(IN)    :: ngptm(:)
+      INTEGER, INTENT(IN)    :: pgptm(:,:)
+      INTEGER, INTENT(IN)    :: nbasm(:)
+      INTEGER, INTENT(IN)    :: invsat(:), invsatnr(:)
 
-      REAL, INTENT(IN)       :: bk(3, nkptd)
-      REAL, INTENT(IN)       :: rmsh(jmtd, ntype), rmt(ntype), dx(ntype)
+      REAL, INTENT(IN)       :: bk(:,:)
+      REAL, INTENT(IN)       :: rmsh(:,:), rmt(:), dx(:)
       REAL, INTENT(IN)       :: basm(jmtd, maxindxm, 0:maxlcutm, ntype)
-      REAL, INTENT(IN)       :: bmat(3, 3)
-      REAL, INTENT(IN)       :: taual(3, natd)
+      REAL, INTENT(IN)       :: bmat(:,:)
+      REAL, INTENT(IN)       :: taual(:,:)
 
       ! array inout
 #ifdef CPP_INVERSION
-      REAL, INTENT(INOUT)    :: coulomb(maxbasm*(maxbasm + 1)/2, nkpti)
+      REAL, INTENT(INOUT)    :: coulomb(:,:)
 #else
-      COMPLEX, INTENT(INOUT) :: coulomb(maxbasm*(maxbasm + 1)/2, nkpti)
+      COMPLEX, INTENT(INOUT) :: coulomb(:,:)
 #endif
 
       ! private scalars
@@ -1861,22 +1861,22 @@ CONTAINS
       REAL, INTENT(IN)     :: vol
 
       ! array input
-      INTEGER, INTENT(IN)  :: lcutm(ntype)
+      INTEGER, INTENT(IN)  :: lcutm(:)
       INTEGER, INTENT(IN)  :: nindxm(0:maxlcutm, ntype), neq(ntype)
-      INTEGER, INTENT(IN)  :: jri(ntype)
-      INTEGER, INTENT(IN)  :: gptm(3, gptmd)
+      INTEGER, INTENT(IN)  :: jri(:)
+      INTEGER, INTENT(IN)  :: gptm(:,:)
       INTEGER, INTENT(IN)  :: ngptm
-      INTEGER, INTENT(IN)  :: pgptm(ngptm)
-      INTEGER, INTENT(IN)  :: nsst(nbands), indx(nbands, nbands)
-      INTEGER, INTENT(IN)  :: invsat(natd), invsatnr(natd)
-      REAL, INTENT(IN)     :: bk(3)
-      REAL, INTENT(IN)     :: rmsh(jmtd, ntype), rmt(ntype), dx(ntype)
+      INTEGER, INTENT(IN)  :: pgptm(:)
+      INTEGER, INTENT(IN)  :: nsst(:), indx(:,:)
+      INTEGER, INTENT(IN)  :: invsat(:), invsatnr(:)
+      REAL, INTENT(IN)     :: bk(:)
+      REAL, INTENT(IN)     :: rmsh(:,:), rmt(:), dx(:)
       REAL, INTENT(IN)     :: basm(jmtd, maxindxm, 0:maxlcutm, ntype)
-      REAL, INTENT(IN)     :: bmat(3, 3)
-      REAL, INTENT(IN)     :: taual(3, natd)
-      REAL, INTENT(IN)     :: wl_iks(nobd)
-      REAL, INTENT(IN)     :: cprod_r(nbasm, psize, nbands)
-      COMPLEX, INTENT(IN)  :: cprod_c(nbasm, psize, nbands)
+      REAL, INTENT(IN)     :: bmat(:,:)
+      REAL, INTENT(IN)     :: taual(:,:)
+      REAL, INTENT(IN)     :: wl_iks(:)
+      REAL, INTENT(IN)     :: cprod_r(:,:,:)
+      COMPLEX, INTENT(IN)  :: cprod_c(:,:,:)
       LOGICAL, INTENT(IN)   :: l_real
 
       ! return type definition
@@ -1979,7 +1979,7 @@ CONTAINS
    PURE FUNCTION calcYlm(rvec, ll)
       USE m_util, ONLY: harmonicsr
       IMPLICIT NONE
-      REAL, INTENT(IN)    :: rvec(3)
+      REAL, INTENT(IN)    :: rvec(:)
       INTEGER, INTENT(IN) :: ll
       COMPLEX             :: calcYlm((ll + 1)**2)
       CALL harmonicsr(calcYlm, rvec, ll)
@@ -2000,7 +2000,7 @@ CONTAINS
    PURE FUNCTION my_dot_product3x1(first, second)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: first(:, :, :)
-      REAL, INTENT(IN)    :: second(SIZE(first, 1))
+      REAL, INTENT(IN)    :: second(:)
       REAL                :: my_dot_product3x1(SIZE(first, 2), SIZE(first, 3))
       INTEGER             :: ci, cj
 
@@ -2013,7 +2013,7 @@ CONTAINS
    PURE FUNCTION my_dot_product4x1(first, second)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: first(:, :, :, :)
-      REAL, INTENT(IN)    :: second(SIZE(first, 1))
+      REAL, INTENT(IN)    :: second(:)
       REAL                :: my_dot_product4x1(SIZE(first, 2), SIZE(first, 3), SIZE(first, 4))
       INTEGER             :: ci, cj, ck
 
@@ -2027,7 +2027,7 @@ CONTAINS
    PURE FUNCTION my_dot_product3x3(first, second)
       IMPLICIT NONE
       COMPLEX, INTENT(IN) :: first(:, :, :)
-      REAL, INTENT(IN) :: second(SIZE(first, 1), SIZE(first, 2), SIZE(first, 3))
+      REAL, INTENT(IN) :: second(:,:,:)
       COMPLEX             :: my_dot_product3x3(SIZE(first, 1), SIZE(first, 2))
       INTEGER             :: ci, cj
 
@@ -2041,7 +2041,7 @@ CONTAINS
    PURE FUNCTION my_dot_product4x4(first, second)
       IMPLICIT NONE
       COMPLEX, INTENT(IN) :: first(:, :, :, :)
-      REAL, INTENT(IN) :: second(SIZE(first, 1), SIZE(first, 2), SIZE(first, 3), SIZE(first, 4))
+      REAL, INTENT(IN) :: second(:,:,:,:)
       COMPLEX             :: my_dot_product4x4(SIZE(first, 1), SIZE(first, 2), SIZE(first, 3))
       INTEGER             :: ci, cj, ck
 
@@ -2078,9 +2078,9 @@ CONTAINS
    COMPLEX PURE FUNCTION crc_gPtsSummation(noGpts, vec1, vec2, vec3)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: noGPts
-      COMPLEX, INTENT(IN) :: vec1(noGPts)
-      REAL, INTENT(IN)    :: vec2(noGPts)
-      COMPLEX, INTENT(IN) :: vec3(noGPts)
+      COMPLEX, INTENT(IN) :: vec1(:)
+      REAL, INTENT(IN)    :: vec2(:)
+      COMPLEX, INTENT(IN) :: vec3(:)
       COMPLEX             :: temp(noGPts)
       temp = vec1*vec3
       crc_gPtsSummation = DOT_PRODUCT(temp, vec2)
@@ -2088,9 +2088,9 @@ CONTAINS
    REAL PURE FUNCTION rrr_gPtsSummation(noGpts, vec1, vec2, vec3)
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: noGPts
-      REAL, INTENT(IN)    :: vec1(noGPts)
-      REAL, INTENT(IN)    :: vec2(noGPts)
-      REAL, INTENT(IN)    :: vec3(noGPts)
+      REAL, INTENT(IN)    :: vec1(:)
+      REAL, INTENT(IN)    :: vec2(:)
+      REAL, INTENT(IN)    :: vec3(:)
       REAL                :: temp(noGPts)
       temp = vec1*vec3
       rrr_gPtsSummation = DOT_PRODUCT(temp, vec2)
@@ -2146,26 +2146,26 @@ CONTAINS
       REAL, INTENT(INOUT)   ::  te_hfex_core
 
 !   - arrays -
-      INTEGER, INTENT(IN)      ::  neq(ntype), lcutm(ntype), lmax(ntype), &
-                                  lmaxc(ntype), jri(ntype), nv(jspd), &
+      INTEGER, INTENT(IN)      ::  neq(:), lcutm(:), lmax(:), &
+                                  lmaxc(:), jri(:), nv(:), &
                                   nindxc(0:MAXVAL(lmaxc), ntype), &
                                   nindx(0:lmaxd, ntype)
-      INTEGER, INTENT(IN)      ::  nsest(nbands), indx_sest(nbands, nbands)
-      INTEGER, INTENT(IN)      ::  nobd(nkpt)
-      REAL, INTENT(IN)         ::  rmsh(jmtd, ntype), dx(ntype)
+      INTEGER, INTENT(IN)      ::  nsest(:), indx_sest(:,:)
+      INTEGER, INTENT(IN)      ::  nobd(:)
+      REAL, INTENT(IN)         ::  rmsh(:,:), dx(:)
       REAL, INTENT(IN)         ::  bas1(jmtd, maxindx, 0:lmaxd, ntype), &
                                   bas2(jmtd, maxindx, 0:lmaxd, ntype)
       REAL, INTENT(IN)         ::  core1(jmtd, maxindxc, 0:MAXVAL(lmaxc), ntype), &
                                   core2(jmtd, maxindxc, 0:MAXVAL(lmaxc), ntype)
       REAL, INTENT(IN)         ::  fac(0:maxfac), sfac(0:maxfac)
-      REAL, INTENT(IN)         ::  bkpt(3)
-      REAL, INTENT(IN)         ::  gridf(jmtd, ntype)
-      REAL, INTENT(IN)         ::  w_iks(neigd, nkptd, jspd)
+      REAL, INTENT(IN)         ::  bkpt(:)
+      REAL, INTENT(IN)         ::  gridf(:,:)
+      REAL, INTENT(IN)         ::  w_iks(:,:,:)
 
 #ifdef CPP_INVERSION
-      REAL, INTENT(INOUT)  ::  mat_ex(nbasfcn*(nbasfcn + 1)/2)
+      REAL, INTENT(INOUT)  ::  mat_ex(:)
 #else
-      COMPLEX, INTENT(INOUT)  ::  mat_ex(nbasfcn*(nbasfcn + 1)/2)
+      COMPLEX, INTENT(INOUT)  ::  mat_ex(:)
 #endif
       INTEGER, PARAMETER      ::  ncut = 5                  ! cut-off value of n-summation
       INTEGER                 ::  cn                        ! counter for n-summation
@@ -2397,17 +2397,17 @@ CONTAINS
       REAL, INTENT(INOUT) ::  te_hfex
 
       ! - arays -
-      INTEGER, INTENT(IN)    ::  neq(ntype), ncst(ntype), lmaxc(ntype)
+      INTEGER, INTENT(IN)    ::  neq(:), ncst(:), lmaxc(:)
       INTEGER, INTENT(IN)    ::  nindxc(0:lmaxcd, ntype)
-      INTEGER, INTENT(IN)    ::  jri(ntype)
-      INTEGER, INTENT(IN)    ::  invsat(natd), invsatnr(natd)
+      INTEGER, INTENT(IN)    ::  jri(:)
+      INTEGER, INTENT(IN)    ::  invsat(:), invsatnr(:)
 
-      REAL, INTENT(IN)    ::  rmsh(jmtd, ntype), dx(ntype)
+      REAL, INTENT(IN)    ::  rmsh(:,:), dx(:)
       REAL, INTENT(IN)    ::  core1(jmtd, maxindxc, 0:lmaxcd, ntype), &
                              core2(jmtd, maxindxc, 0:lmaxcd, ntype)
-      REAL, INTENT(IN)    ::  bkpt(3)
-      REAL, INTENT(IN)    ::  gridf(jmtd, ntype)
-      REAL, INTENT(IN)    ::  wtkpt(nkpti, nwd)
+      REAL, INTENT(IN)    ::  bkpt(:)
+      REAL, INTENT(IN)    ::  gridf(:,:)
+      REAL, INTENT(IN)    ::  wtkpt(:,:)
       REAL, INTENT(IN)    ::  fac(0:maxfac)
 
       ! - local scalars -
