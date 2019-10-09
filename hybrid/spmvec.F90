@@ -28,7 +28,7 @@ MODULE m_spmvec
            &                                    0:hybrid%maxlcutm1, atoms%ntype)
             REAL, INTENT(IN) ::  coulomb_mt2(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1,&
            &                                    0:hybrid%maxlcutm1 + 1, atoms%nat)
-            REAL, INTENT(IN) ::  coulomb_mt3(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
+            REAL, INTENT(IN) ::  coulomb_mt3(:,:,:)
             REAL, INTENT(IN) ::  coulomb_mtir(:)
             REAL, INTENT(IN) ::  vecin(:)!(hybrid%nbasm)
             REAL, INTENT(INOUT)::  vecout(:)!(hybrid%nbasm)
@@ -135,7 +135,7 @@ MODULE m_spmvec
             indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
            &                                      itype=1, atoms%ntype)/)) + hybrid%ngptm(ikpt)
             CALL dspmv('U', indx1, 1.0, coulomb_mtir, vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + 1:), 1)
-            
+
             iatom = 0
             indx1 = ibasm; indx2 = 0; indx3 = 0
             DO itype = 1, atoms%ntype
@@ -232,7 +232,7 @@ MODULE m_spmvec
            &                                    0:hybrid%maxlcutm1, atoms%ntype)
             COMPLEX, INTENT(IN) ::  coulomb_mt2(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1,&
            &                                    0:hybrid%maxlcutm1 + 1, atoms%nat)
-            COMPLEX, INTENT(IN) ::  coulomb_mt3(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
+            COMPLEX, INTENT(IN) ::  coulomb_mt3(:,:,:)
             COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
             COMPLEX, INTENT(IN) ::  vecin(:)!(hybrid%nbasm)
             COMPLEX, INTENT(OUT)::  vecout(:)!(hybrid%nbasm)
@@ -426,7 +426,7 @@ MODULE m_spmvec
             INTEGER, INTENT(IN)   ::  imode
 
             ! - arrays -
-            INTEGER, INTENT(IN)   ::  lcutm(atoms%ntype)
+            INTEGER, INTENT(IN)   ::  lcutm(:)
             INTEGER, INTENT(IN)   ::  nindxm(0:maxlcutm, atoms%ntype)
             REAL, INTENT(INOUT), OPTIONAL::  vec_r(nbasm)
             COMPLEX, INTENT(INOUT), OPTIONAL::  vec_c(nbasm)
