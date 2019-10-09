@@ -7,7 +7,7 @@ CONTAINS
       implicit none
       type(t_lapw),         intent(in)    :: lapw, lapw_nkqpt
       type(t_hybrid),       intent(in)    :: hybrid
-      integer,              intent(in)    :: g_bounds(3), g_t(3), iq, jsp
+      integer,              intent(in)    :: g_bounds(:), g_t(:), iq, jsp
       integer, allocatable, intent(inout) :: pointer(:,:,:), gpt0(:,:)
       integer,              intent(inout) :: ngpt0
 
