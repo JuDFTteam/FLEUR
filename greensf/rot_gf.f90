@@ -73,7 +73,7 @@ CONTAINS
                      ENDDO
                      DO ie = 1, greensfCoeffs%ne
                         IF(imat.EQ.1) THEN
-                           greensfCoeffs%projdos(ie,:,:,0,i_gf,ispin) = greensfCoeffs%projdos(ie,:,:,0,i_gf,ispin) + AIMAG(fac * phase * calc_mat(ie,:,:))
+                           greensfCoeffs%projdos(ie,:,:,0,i_gf,ispin) = greensfCoeffs%projdos(ie,:,:,0,i_gf,ispin) + phase *AIMAG(fac *  calc_mat(ie,:,:))
                         ELSE IF(imat.EQ.2) THEN
                            greensfCoeffs%uu(ie,:,:,0,i_gf,ispin) = greensfCoeffs%uu(ie,:,:,0,i_gf,ispin) + AIMAG(fac * phase * calc_mat(ie,:,:))
                         ELSE IF(imat.EQ.3) THEN
