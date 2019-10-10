@@ -30,21 +30,6 @@ CONTAINS
 
       COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
-!     - local scalars -
-      INTEGER                 :: n1, n2
-      INTEGER                 :: ig1, ig2, ig
-      INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
-
-
-      TYPE(t_lapw)            ::  lapw_nkqpt
-
-!      - local arrays -
-      INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
-
-      REAL                    ::  kqpt(3), kqpthlp(3)
-
-      TYPE(t_mat)             ::  z_nk, z_kqpt
-      COMPLEX, ALLOCATABLE    ::  z0(:, :)
 
       call timestart("wavefproducts_noinv5")
 
