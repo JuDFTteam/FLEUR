@@ -1,16 +1,10 @@
 module m_wavefproducts_noinv
 
 CONTAINS
-   SUBROUTINE wavefproducts_noinv5(&
-  &                      bandi, bandf, bandoi, bandof,&
-  &                      nk, iq, dimension, input, jsp,&
-  &                      cell, atoms, hybrid,&
-  &                      hybdat,&
-  &                      kpts,&
-  &                      lapw, sym,&
-  &                      nbasm_mt,&
-  &                      noco,&
-  &                      nkqpt, cprod)
+   SUBROUTINE wavefproducts_noinv5(bandi, bandf, bandoi, bandof, nk, iq, &
+                                   dimension, input, jsp, cell, atoms, hybrid,&
+                                   hybdat, kpts, lapw, sym, nbasm_mt, noco,&
+                                   nkqpt, cprod)
 
       USE m_constants
       USE m_util, ONLY: modulo1
@@ -64,6 +58,73 @@ CONTAINS
       COMPLEX, ALLOCATABLE    ::  z0(:, :)
 
       call timestart("wavefproducts_noinv5")
+
+
+      call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, &
+                                         dimension, input, jsp, cell, atoms, hybrid,&
+                                         hybdat, kpts, lapw, sym, nbasm_mt, noco,&
+                                         nkqpt, cprod)
+
+      call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
+                                  dimension, atoms, hybrid, hybdat, kpts, &
+                                  nkqpt, cprod)
+      call timestop("wavefproducts_noinv5")
+
+   END SUBROUTINE wavefproducts_noinv5
+
+   subroutine wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, &
+                                      dimension, input, jsp, cell, atoms, hybrid,&
+                                      hybdat, kpts, lapw, sym, nbasm_mt, noco,&
+                                      nkqpt, cprod)
+      use m_types
+      use m_constants
+      use m_wavefproducts_aux
+      use m_judft
+      use m_io_hybrid
+      implicit NONE
+      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input), INTENT(IN)       :: input
+      TYPE(t_noco), INTENT(IN)        :: noco
+      TYPE(t_sym), INTENT(IN)         :: sym
+      TYPE(t_cell), INTENT(IN)        :: cell
+      TYPE(t_kpts), INTENT(IN)        :: kpts
+      TYPE(t_atoms), INTENT(IN)       :: atoms
+      TYPE(t_lapw), INTENT(IN)        :: lapw
+      TYPE(t_hybrid), INTENT(IN)      :: hybrid
+      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
+
+!     - scalars -
+      INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
+      INTEGER, INTENT(IN)      ::  nk, iq, jsp
+      INTEGER, INTENT(IN)      ::  nbasm_mt
+      INTEGER, INTENT(OUT)     ::  nkqpt
+
+!     - arrays -
+
+      COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+
+!     - local scalars -
+      INTEGER                 :: ic, n1, n2
+      INTEGER                 :: ig1, ig2, ig
+      INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
+
+      COMPLEX                 ::  cdum, cdum1
+
+      TYPE(t_lapw)            ::  lapw_nkqpt
+
+!      - local arrays -
+      INTEGER                 ::  g(3), g_t(3)
+      INTEGER, ALLOCATABLE    ::  gpt0(:, :)
+      INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
+
+      REAL                    ::  kqpt(3), kqpthlp(3)
+
+      COMPLEX                 ::  carr1(bandoi:bandof)
+      COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
+      TYPE(t_mat)             ::  z_nk, z_kqpt
+      COMPLEX, ALLOCATABLE    ::  z0(:, :)
+
+
       call timestart("wavefproducts_noinv5 IR")
       cprod = cmplx_0
       !
@@ -153,15 +214,8 @@ CONTAINS
       call timestop("calc convolution")
 
       call timestop("wavefproducts_noinv5 IR")
+   end subroutine wavefproducts_noinv5_IS
 
-!       RETURN
-
-      call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                  dimension, atoms, hybrid, hybdat, kpts, &
-                                  nkqpt, cprod)
-      call timestop("wavefproducts_noinv5")
-
-   END SUBROUTINE wavefproducts_noinv5
 
    subroutine wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
                                      dimension, atoms, hybrid, hybdat, kpts, &

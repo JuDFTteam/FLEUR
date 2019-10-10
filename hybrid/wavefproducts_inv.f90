@@ -117,11 +117,11 @@ CONTAINS
       call read_z(z_kqpt, nkqpt)
       call timestop("read_z")
 
-      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
-     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
+     &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
      &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
-      call hybdat%set_stepfunction(cell, atoms,g, svol)
+      call hybdat%set_stepfunction(cell, atoms, g, svol)
       !
       ! convolute phi(n,k) with the step function and store in cpw0
       !
@@ -138,8 +138,8 @@ CONTAINS
       DO ig2 = 1, lapw_nkqpt%nv(jsp)
          rarr1 = z_kqpt%data_r(ig2, bandoi:bandof)
          DO ig = 1, ngpt0
-            g = gpt0(:,ig) - lapw_nkqpt%gvec(:,ig2,jsp)
-            rdum = hybdat%stepfunc(g(1), g(2), g(3))
+            g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
+            rdum = REAL(hybdat%stepfunc(g(1), g(2), g(3)))
             DO n2 = bandoi, bandof
                z0(n2, ig) = z0(n2, ig) + rarr1(n2)*rdum
             END DO
@@ -155,7 +155,7 @@ CONTAINS
          iigptm = hybrid%pgptm(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g = lapw%gvec(:,ig1,jsp) + hybrid%gptm(:, iigptm) - g_t
+            g = lapw%gvec(:, ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
             ig2 = pointer(g(1), g(2), g(3))
 
             IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
@@ -193,9 +193,9 @@ CONTAINS
       END DO
 
       ! read in cmt coefficient at k-point nk
-      ALLOCATE (ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat),&
+      ALLOCATE (ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat), &
                 ccmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), &
-                source=cmplx(0.0,0.0), stat=ok)
+                source=cmplx(0.0, 0.0), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt')
 
       call read_cmt(ccmt_nk, nk)
@@ -207,10 +207,10 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
-            cmplx_exp(iatom) = exp((-img)*tpi_const*&
+            cmplx_exp(iatom) = exp((-img)*tpi_const* &
                                    dot_product(kpts%bkf(:, iq) + kpts%bkf(:, nk), atoms%taual(:, iatom)))
 
-            cexp_nk(iatom) = exp((-img)*tpi_const*&
+            cexp_nk(iatom) = exp((-img)*tpi_const* &
                                  dot_product(kpts%bkf(:, nk), atoms%taual(:, iatom)))
          END DO
       END DO
