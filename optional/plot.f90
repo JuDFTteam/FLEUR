@@ -853,6 +853,80 @@ CONTAINS
          END IF
       
       END IF
+
+      !Plotting the output density matrix as n or n,m or n,mx,my,mz. identifier: 3
+      !core subtraction done!
+      ! --> Additive term for iplot: 8
+      IF (plot_const.EQ.3) THEN
+         factor = 1.0
+         denName = 'denOutNOCore'
+         score = .TRUE.
+         potnorm = .FALSE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+                               noco,oneD,sliceplot,factor,denmat,score,denName)
+
+            ELSE
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+            END IF
+         ELSE
+
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+
+         END IF
+      
+      END IF
+
+      !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier:4
+      !No core subtraction done!
+      ! --> Additive term for iplot: 16
+      IF (plot_const.EQ.4) THEN
+         factor = 1.0
+         denName = 'denOutMixNoCore'
+         score = .TRUE.
+         potnorm = .FALSE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+                               noco,oneD,sliceplot,factor,denmat,score,denName)
+
+            ELSE
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+            END IF
+         ELSE
+
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+
+         END IF
+      
+      END IF
+      !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier: 5
+      !No core subtraction done!
+      ! --> Additive term for iplot: 32
+      IF (plot_const.EQ.5) THEN
+         factor = 1.0
+         denName = 'denOutMixWithCore'
+         score = .FALSE.
+         potnorm = .FALSE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+                               noco,oneD,sliceplot,factor,denmat,score,denName)
+
+            ELSE
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+            END IF
+         ELSE
+
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+
+         END IF
+      
+      END IF
          
       !Plotting the total potential as vtot or vtot,vdiff or vtot,B_xc1,B_xc2,B_xc3. identifier: 2
       !No core subtraction done!

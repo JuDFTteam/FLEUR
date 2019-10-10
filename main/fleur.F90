@@ -447,6 +447,14 @@ CONTAINS
             stars,atoms,sphhar,vacuum,input,&
             sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
        
+       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
+!               CDN including core charge
+                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_Y_CORE)
+!               CDN subtracted by core charge
+!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+          END IF 
+
+
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
