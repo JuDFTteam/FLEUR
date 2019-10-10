@@ -140,9 +140,14 @@
         !
         ! --> set up stepfunction on fft-grid:
         !
-       
+#ifdef CPP_MPI
+        ALLOCATE ( bfft_local(0:ifftd-1), ufft_local(0:ifftd-1) )
+        bfft_local = 0.0
+        ufft_local = 0.0
+#endif
+
         ALLOCATE (  bfft(0:ifftd-1) )
-        im1=CEILING(1.5*stars%mx1); im2=CEILING(1.5*stars%mx2); im3=CEILING(1.5*stars%mx3) 
+        im1=CEILING(1.5*stars%mx1); im2=CEILING(1.5*stars%mx2); im3=CEILING(1.5*stars%mx3)
         ALLOCATE ( icm(-im1:im1,-im2:im2,-im3:im3) )
         icm = 0
 #ifdef CPP_MPI
@@ -173,13 +178,13 @@
         i3_start = 0
         i3_end = im3
 #ifdef CPP_MPI
-        chunk_size = im3/mpi%isize
-        leftover_size = modulo(im3,mpi%isize)
+        chunk_size = (im3+1)/mpi%isize
+        leftover_size = modulo(im3+1,mpi%isize)
         IF (mpi%irank < leftover_size ) THEN
-            i3_start =  mpi%irank      * (chunk_size + 1)
-            i3_end   = (mpi%irank + 1) * (chunk_size + 1) - 1
+            i3_start =  mpi%irank      * chunk_size
+            i3_end   = (mpi%irank + 1) * chunk_size  - 1
         ELSE
-            i3_start = leftover_size * (chunk_size + 1) + (mpi%irank - leftover_size) * chunk_size
+            i3_start = leftover_size * chunk_size  + (mpi%irank - leftover_size) * chunk_size
             i3_end = (i3_start + chunk_size) - 1
         ENDIF
 #endif
@@ -189,7 +194,7 @@
                 gm(2)=REAL(i2)
                 IF ( 2*i2 > 3*stars%mx2 ) gm(2)=gm(2)-3.0*stars%mx2
                 IF (i3 == 0 .AND. i2 == 0 ) THEN
-                   loopstart=1 
+                   loopstart=1
                 ELSE
                    loopstart=0
                 ENDIF
@@ -257,11 +262,11 @@
 
                    IF (((i3.EQ.3*stars%mx3/2).OR. (i2.EQ.3*stars%mx2/2)).OR. (i1.EQ.3*stars%mx1/2)) THEN
 #ifdef CPP_MPI
-                      ufft_local(ic)=0.0 
-                      bfft_local(ic)=0.0 
+                      ufft_local(ic)=0.0
+                      bfft_local(ic)=0.0
 #else
-                      stars%ufft(ic)=0.0 
-                      bfft(ic)=0.0 
+                      stars%ufft(ic)=0.0
+                      bfft(ic)=0.0
 #endif
                    ENDIF
                    !-odim
@@ -288,7 +293,7 @@
         CALL MPI_REDUCE(bfft_local,bfft,ifftd,CPP_MPI_REAL, MPI_SUM,0,mpi%mpi_comm,ierr)
         CALL MPI_REDUCE(icm_local,icm,size(icm),MPI_INTEGER, MPI_SUM,0,mpi%mpi_comm,ierr)
 #endif
- 
+
         IF (mpi%irank == 0) THEN
           ic = 9*stars%mx1*stars%mx2*(im3+1)
           DO i3=im3+1,3*stars%mx3-1
