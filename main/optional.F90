@@ -56,13 +56,12 @@ CONTAINS
     !                     +- wrtdop
     !----------------------------------------
     USE m_bmt
-    USE m_plotdop
     USE m_stden
     USE m_cdnsp
     USE m_flipcdn
     USE m_cdn_io
     USE m_types
-    USE m_pldngen
+
    
     IMPLICIT NONE
     !     ..
