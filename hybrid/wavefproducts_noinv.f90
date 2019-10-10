@@ -30,11 +30,23 @@ CONTAINS
 
       COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
+      INTEGER        :: g_t(3)
+      REAL           ::  kqpt(3), kqpthlp(3)
+
 
       call timestart("wavefproducts_noinv5")
 
+      ! calculate nkpqt
+      kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
+      ! k+q can lie outside the first BZ, transfer
+      ! it back into the 1. BZ
+      kqpt = kpts%to_first_bz(kqpthlp)
+      g_t  = nint(kqpt - kqpthlp)
+      ! determine number of kqpt
+      nkqpt = kpts%get_nk(kqpt)
+      IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
 
-      call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, &
+      call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
                                          dimension, input, jsp, cell, atoms, hybrid,&
                                          hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                          nkqpt, cprod)
@@ -46,7 +58,7 @@ CONTAINS
 
    END SUBROUTINE wavefproducts_noinv5
 
-   subroutine wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, &
+   subroutine wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t, &
                                       dimension, input, jsp, cell, atoms, hybrid,&
                                       hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                       nkqpt, cprod)
@@ -69,9 +81,9 @@ CONTAINS
 
 !     - scalars -
       INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
-      INTEGER, INTENT(IN)      ::  nk, iq, jsp
+      INTEGER, INTENT(IN)      ::  nk, iq, jsp, g_t(3)
       INTEGER, INTENT(IN)      ::  nbasm_mt
-      INTEGER, INTENT(INOUT)   ::  nkqpt
+      INTEGER, INTENT(IN)      ::  nkqpt
 
 !     - arrays -
 
@@ -87,11 +99,11 @@ CONTAINS
       TYPE(t_lapw)            ::  lapw_nkqpt
 
 !      - local arrays -
-      INTEGER                 ::  g(3), g_t(3)
+      INTEGER                 ::  g(3)
       INTEGER, ALLOCATABLE    ::  gpt0(:, :)
       INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
 
-      REAL                    ::  kqpt(3), kqpthlp(3)
+
 
       COMPLEX                 ::  carr1(bandoi:bandof)
       COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
@@ -104,14 +116,8 @@ CONTAINS
       !
       ! compute k+q point for given q point in EIBZ(k)
       !
-      kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
-      ! k+q can lie outside the first BZ, transfer
-      ! it back into the 1. BZ
-      kqpt = kpts%to_first_bz(kqpthlp)
-      g_t(:) = nint(kqpt - kqpthlp)
-      ! determine number of kqpt
-      nkqpt = kpts%get_nk(kqpt)
-      IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
+
+
 
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
