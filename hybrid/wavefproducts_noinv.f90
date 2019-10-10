@@ -71,7 +71,7 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
       INTEGER, INTENT(IN)      ::  nk, iq, jsp
       INTEGER, INTENT(IN)      ::  nbasm_mt
-      INTEGER, INTENT(OUT)     ::  nkqpt
+      INTEGER, INTENT(INOUT)   ::  nkqpt
 
 !     - arrays -
 
