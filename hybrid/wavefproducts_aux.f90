@@ -1,11 +1,11 @@
 module m_wavefproducts_aux
 
 CONTAINS
-   subroutine prep_list_of_gvec(lapw, lapw_nkqpt, hybrid,g_bounds, g_t, iq,jsp, pointer,gpt0, ngpt0)
+   subroutine prep_list_of_gvec(lapw, hybrid,g_bounds, g_t, iq,jsp, pointer,gpt0, ngpt0)
       use m_types
       use m_juDFT
       implicit none
-      type(t_lapw),         intent(in)    :: lapw, lapw_nkqpt
+      type(t_lapw),         intent(in)    :: lapw
       type(t_hybrid),       intent(in)    :: hybrid
       integer,              intent(in)    :: g_bounds(:), g_t(:), iq, jsp
       integer, allocatable, intent(inout) :: pointer(:,:,:), gpt0(:,:)

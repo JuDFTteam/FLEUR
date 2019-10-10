@@ -218,7 +218,7 @@ CONTAINS
             ELSE
                isym2 = isym
             END IF
-            IF (ANY(sym%tau(:, isym2) /= 0)) CYCLE
+            IF (ANY(abs(sym%tau(:, isym2)) > 1e-12)) CYCLE
 
             IF (ALL(ABS(MATMUL(rrot(:, :, isym), kpts%bk(:, ikpt)) - kpts%bk(:, ikpt)) < 1e-12)) THEN
                isym1 = isym1 + 1
@@ -344,7 +344,7 @@ CONTAINS
             rdum = atoms%rmt(itype)
             sphbes_var = 0
             sphbesmoment1 = 0
-            IF (qnorm == 0) THEN
+            IF (abs(qnorm) < 1e-12) THEN
                sphbesmoment(0, itype, iqnrm) = rdum**3/3
                DO i = 1, ng
                   sphbes_var(i, 0) = 1
@@ -712,7 +712,7 @@ CONTAINS
             DO igpt1 = 1, igpt2
                g = hybrid%gptm(:, igpt2) - hybrid%gptm(:, igpt1)
                gnorm = gptnorm(g, cell%bmat)
-               IF (gnorm == 0) THEN
+               IF (abs(gnorm) < 1e-12) THEN
                   DO itype = 1, atoms%ntype
                      smat(igpt1, igpt2) = smat(igpt1, igpt2) + atoms%neq(itype)*4*pi_const*atoms%rmt(itype)**3/3
                   END DO
@@ -744,7 +744,7 @@ CONTAINS
                iy = hybrid%nbasp
                q2 = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp2), cell%bmat)
                rdum2 = SUM(q2**2)
-               IF (rdum2 /= 0) rdum2 = 4*pi_const/rdum2
+               IF (abs(rdum2) > 1e-12) rdum2 = 4*pi_const/rdum2
 
                DO igpt1 = 1, igpt2
                   igptp1 = hybrid%pgptm(igpt1, ikpt)
@@ -752,7 +752,7 @@ CONTAINS
                   q1 = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp1), cell%bmat)
                   idum = ix*(ix - 1)/2 + iy
                   rdum1 = SUM(q1**2)
-                  IF (rdum1 /= 0) rdum1 = 4*pi_const/rdum1
+                  IF (abs(rdum1) > 1e-12) rdum1 = 4*pi_const/rdum1
 
                   IF (ikpt == 1) THEN
                      IF (igpt1 /= 1) THEN
@@ -828,7 +828,7 @@ CONTAINS
                         DO m2 = -l2, l2
                            lm2 = lm2 + 1
                            cdum = idum*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
-                           IF (cdum /= 0) THEN
+                           IF (abs(cdum) > 1e-12) THEN
                               lm1 = 0
                               DO l1 = 0, hybrid%lexp
                                  l = l1 + l2
@@ -981,7 +981,7 @@ CONTAINS
             DO itype = 1, atoms%ntype
                rdum = qnrm(iqnrm)*atoms%rmt(itype)
                call sphbes(hybrid%lexp + 2, rdum, sphbes0(0, itype, iqnrm))
-               IF (rdum /= 0) sphbes0(-1, itype, iqnrm) = COS(rdum)/rdum
+               IF (abs(rdum) > 1e-12) sphbes0(-1, itype, iqnrm) = COS(rdum)/rdum
             END DO
          END DO
          call timestop("sphbesintegral")
@@ -1138,7 +1138,7 @@ CONTAINS
          ! the normal Coulomb matrix
          !
       ELSE
-         IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, kpts, hybrid, nbasm1, gridf, coulomb)
+         IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, hybrid, nbasm1, gridf, coulomb)
       END IF
 
       ! transform Coulomb matrix to the biorthogonal set
@@ -1524,7 +1524,7 @@ CONTAINS
    !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .
    !     For this we must subtract from coulomb(:,1) the spherical average of a term that comes
    !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
-   SUBROUTINE subtract_sphaverage(sym, cell, atoms, kpts, hybrid, nbasm1, gridf, coulomb)
+   SUBROUTINE subtract_sphaverage(sym, cell, atoms, hybrid, nbasm1, gridf, coulomb)
 
       USE m_types
       USE m_constants
@@ -1537,7 +1537,6 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_atoms), INTENT(IN)    :: atoms
-      TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_hybrid), INTENT(IN)    :: hybrid
 
       INTEGER, INTENT(IN)    :: nbasm1(:)
@@ -1826,7 +1825,7 @@ CONTAINS
                ENDIF
                ra = MATMUL(cell%amat, ptsh(:, i)) + rc
                a = scale*SQRT(SUM(ra**2))
-               IF (a == 0) THEN
+               IF (abs(a) < 1e-12) THEN
                   CYCLE
                ELSE IF (ABS(a - a1) > 1e-10) THEN
                   a1 = a
@@ -1922,7 +1921,7 @@ CONTAINS
             aa = (1 + a**2)**(-1)
             IF (ABS(a - a1) > 1e-10) THEN
                a1 = a
-               IF (a == 0) THEN
+               IF (abs(a) < 1e-12) THEN
                   g(0) = pref*(-4)
                   g(1) = 0
                ELSE
@@ -1990,7 +1989,7 @@ CONTAINS
       rad = (cell%vol*3/4/pi_const)**(1.0/3) ! Wigner-Seitz radius (rad is recycled)
 
       !     Calculate accuracy of Gamma-decomposition
-      IF (ALL(kpts%bk /= 0)) THEN
+      IF (ALL(abs(kpts%bk) > 1e-12)) THEN
          a = 1e30 ! ikpt = index of shortest non-zero k-point
          DO i = 2, kpts%nkpt
             rdum = SUM(MATMUL(kpts%bk(:, i), cell%bmat)**2)
@@ -2183,23 +2182,23 @@ CONTAINS
       q1 = qnrm(iqnrm1)
       q2 = qnrm(iqnrm2)
       s = atoms%rmt(itype)
-      IF (q1 == 0 .AND. q2 == 0) THEN
+      IF (abs(q1) < 1e-12 .AND. abs(q2) < 1e-12) THEN
          IF (l > 0) THEN
             sphbessel_integral = 0
          ELSE
             sphbessel_integral = 2*s**5/15
          ENDIF
-      ELSE IF (q1 == 0 .OR. q2 == 0) THEN
+      ELSE IF (abs(q1) < 1e-12 .OR. abs(q2) < 1e-12) THEN
          IF (l > 0) THEN
             sphbessel_integral = 0
-         ELSE IF (q1 == 0) THEN
+         ELSE IF (abs(q1) < 1e-12) THEN
             sphbessel_integral = s**3/(3*q2**2)*(q2*s*sphbes0(1, itype, iqnrm2) &
                                                  + sphbes0(2, itype, iqnrm2))
          ELSE
             sphbessel_integral = s**3/(3*q1**2)*(q1*s*sphbes0(1, itype, iqnrm1) &
                                                  + sphbes0(2, itype, iqnrm1))
          ENDIF
-      ELSE IF (q1 == q2) THEN
+      ELSE IF (abs(q1 -q2) < 1e-12) THEN
          sphbessel_integral = s**3/(2*q1**2)*((2*l + 3)*sphbes0(l + 1, itype, iqnrm1)**2 - &
                                               (2*l + 1)*sphbes0(l, itype, iqnrm1)*sphbes0(l + 2, itype, iqnrm1))
       ELSE ! We use either if two fromulas that are stable for high and small q1/q2 respectively

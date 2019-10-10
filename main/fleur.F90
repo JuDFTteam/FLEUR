@@ -211,7 +211,7 @@ CONTAINS
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
              CALL calc_hybrid(eig_id,hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
-                              cell,oneD,enpara,results,sym,xcpot,vTot,iter,iterHF)
+                              cell,oneD,enpara,results,sym,xcpot,vTot,iterHF)
           END SELECT
           IF(hybrid%l_calhf) THEN
              call mixing_history_reset(mpi)

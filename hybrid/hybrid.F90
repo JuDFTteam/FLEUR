@@ -10,7 +10,7 @@ MODULE m_calc_hybrid
 CONTAINS
 
    SUBROUTINE calc_hybrid(eig_id, hybrid, kpts, atoms, input, DIMENSION, mpi, noco, cell, oneD, &
-                          enpara, results, sym, xcpot, v, iter, iterHF)
+                          enpara, results, sym, xcpot, v, iterHF)
 
       USE m_types
       USE m_mixedbasis
@@ -38,7 +38,6 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_potden), INTENT(IN)    :: v
 
-      INTEGER, INTENT(IN)    :: iter
       INTEGER, INTENT(INOUT) :: iterHF
       INTEGER, INTENT(IN)    :: eig_id
 
