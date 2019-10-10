@@ -1740,7 +1740,7 @@ CONTAINS
       END DO
 
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
-      vecout = vecin
+      vecout = vecin(:nbasm(ikpt0))
       if (sym%invs) CALL desymmetrize(vecout, nbasp, 1, 1, &
                                       atoms, lcutm, maxlcutm, nindxm, sym)
 
