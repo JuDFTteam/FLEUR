@@ -5,16 +5,10 @@ CONTAINS
                                    dimension, input, jsp, cell, atoms, hybrid,&
                                    hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                    nkqpt, cprod)
-
-      USE m_constants
-      USE m_util, ONLY: modulo1
-      USE m_types_hybrid, ONLY: gptnorm
-      USE m_trafo
-      USE m_wrapper
       USE m_types
-      USE m_io_hybrid
-      USE m_wavefproducts_aux
+      use m_juDFT
       IMPLICIT NONE
+
       TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_noco), INTENT(IN)        :: noco
@@ -37,23 +31,18 @@ CONTAINS
       COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
 !     - local scalars -
-      INTEGER                 :: ic, n1, n2
+      INTEGER                 :: n1, n2
       INTEGER                 :: ig1, ig2, ig
       INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
 
-      COMPLEX                 ::  cdum, cdum1
 
       TYPE(t_lapw)            ::  lapw_nkqpt
 
 !      - local arrays -
-      INTEGER                 ::  g(3), g_t(3)
-      INTEGER, ALLOCATABLE    ::  gpt0(:, :)
       INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
 
       REAL                    ::  kqpt(3), kqpthlp(3)
 
-      COMPLEX                 ::  carr1(bandoi:bandof)
-      COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
       TYPE(t_mat)             ::  z_nk, z_kqpt
       COMPLEX, ALLOCATABLE    ::  z0(:, :)
 
@@ -238,7 +227,7 @@ CONTAINS
 
       !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(INOUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
