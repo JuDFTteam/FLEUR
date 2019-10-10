@@ -43,32 +43,24 @@ CONTAINS
       COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
 !     - local scalars -
-      INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
-      INTEGER                 ::  itype, ieq, iband, iband1
-      INTEGER                 ::  ic1, ig1, ig2, ig
-      INTEGER                 ::  igptm, iigptm, ngpt0, nbasfcn, m
-
-      REAL                    ::  rdum
+      INTEGER                 :: ic, n1, n2
+      INTEGER                 :: ig1, ig2, ig
+      INTEGER                 :: igptm, iigptm, ngpt0, nbasfcn
 
       COMPLEX                 ::  cdum, cdum1
-      COMPLEX                 ::  cmplx_exp
 
-      LOGICAL                 ::  offdiag
       TYPE(t_lapw)            ::  lapw_nkqpt
 
 !      - local arrays -
       INTEGER                 ::  g(3), g_t(3)
-      INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
       INTEGER, ALLOCATABLE    ::  gpt0(:, :)
-      INTEGER, ALLOCATABLE    ::  pointer(:,:,:)
+      INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
 
       REAL                    ::  kqpt(3), kqpthlp(3)
 
       COMPLEX                 ::  carr1(bandoi:bandof)
       COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
       TYPE(t_mat)             ::  z_nk, z_kqpt
-      COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE    ::  z0(:, :)
 
       call timestart("wavefproducts_noinv5")
@@ -101,11 +93,11 @@ CONTAINS
       call read_z(z_kqpt, nkqpt)
       call timestop("read_z")
 
-      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
-     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
+     &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
      &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
-      call hybdat%set_stepfunction(cell, atoms,g, sqrt(cell%omtil))
+      call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
 
       !
       ! convolute phi(n,k) with the step function and store in cpw0
@@ -122,7 +114,7 @@ CONTAINS
       DO ig2 = 1, lapw_nkqpt%nv(jsp)
          carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
          DO ig = 1, ngpt0
-            g = gpt0(:, ig) - lapw_nkqpt%gvec(:,ig2, jsp)
+            g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
             cdum = hybdat%stepfunc(g(1), g(2), g(3))
             DO n2 = bandoi, bandof
                z0(n2, ig) = z0(n2, ig) + carr1(n2)*cdum
@@ -139,7 +131,7 @@ CONTAINS
          iigptm = hybrid%pgptm(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g = lapw%gvec(:,ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
+            g = lapw%gvec(:, ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
             ig2 = pointer(g(1), g(2), g(3))
 
             IF (ig2 == 0) THEN
@@ -164,10 +156,56 @@ CONTAINS
 
 !       RETURN
 
-      !
-      ! MT contribution
-      !
+      call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
+                                  dimension, atoms, hybrid, hybdat, kpts, &
+                                  nkqpt, cprod)
+      call timestop("wavefproducts_noinv5")
 
+   END SUBROUTINE wavefproducts_noinv5
+
+   subroutine wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
+                                     dimension, atoms, hybrid, hybdat, kpts, &
+                                     nkqpt, cprod)
+      use m_types
+      USE m_constants
+      use m_io_hybrid
+      use m_judft
+      IMPLICIT NONE
+      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_kpts), INTENT(IN)        :: kpts
+      TYPE(t_atoms), INTENT(IN)       :: atoms
+      TYPE(t_hybrid), INTENT(IN)      :: hybrid
+      TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
+
+      !     - scalars -
+      INTEGER, INTENT(IN)      ::  bandi, bandf, bandoi, bandof
+      INTEGER, INTENT(IN)      ::  nk, iq
+      INTEGER, INTENT(IN)     ::  nkqpt
+
+      !     - arrays -
+
+      COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+
+      !     - local scalars -
+      INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
+      INTEGER                 ::  lm, lm1, lm2, m1, m2, i, j, ll
+      INTEGER                 ::  itype, ieq, iband, iband1, ic1, m
+
+      REAL                    ::  rdum
+
+      COMPLEX                 ::  cdum
+      COMPLEX                 ::  cmplx_exp
+
+      LOGICAL                 ::  offdiag
+
+      !      - local arrays -
+      INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
+
+      COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
+      COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+
+      call timestart("wavefproducts_noinv5 MT")
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
@@ -266,9 +304,7 @@ CONTAINS
             END DO
          END DO
       END DO
-
-      call timestop("wavefproducts_noinv5")
-
-   END SUBROUTINE wavefproducts_noinv5
+      call timestop("wavefproducts_noinv5 MT")
+   end subroutine wavefproducts_noinv_MT
 
 end module m_wavefproducts_noinv
