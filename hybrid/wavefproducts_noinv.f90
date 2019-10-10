@@ -38,8 +38,6 @@ CONTAINS
 
       ! calculate nkpqt
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
-      ! k+q can lie outside the first BZ, transfer
-      ! it back into the 1. BZ
       kqpt = kpts%to_first_bz(kqpthlp)
       g_t  = nint(kqpt - kqpthlp)
       ! determine number of kqpt
