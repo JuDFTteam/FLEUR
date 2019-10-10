@@ -117,14 +117,14 @@ CONTAINS
                tr = 0.0
                DO i = -l,l
                   tr = tr + REAL(mmpmat(i,i,ispin))/(3-input%jspins)
-                  IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.01&
-                     .OR.REAL(mmpmat(i,i,ispin))/(3-input%jspins).LT.0.0) THEN
+                  IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.05&
+                     .OR.REAL(mmpmat(i,i,ispin))/(3-input%jspins).LT.-0.01) THEN
                      err = .TRUE.
                      WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
                      CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
                   ENDIF
                ENDDO
-               IF(tr.LT.0.OR.tr.GT.2*l+1.1) THEN
+               IF(tr.LT.-0.01.OR.tr.GT.2*l+1.1) THEN
                   err = .TRUE.
                   WRITE(message,9100) ispin,tr
                   CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")
