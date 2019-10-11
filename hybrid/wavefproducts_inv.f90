@@ -35,33 +35,9 @@ CONTAINS
       REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       ! - local scalars -
-      INTEGER                 ::    i, iband
-      INTEGER                 ::    iatom, iiatom, itype, ieq, ishift
-      INTEGER                 ::    ibando, iatom1, iatom2, ioffset
-      INTEGER                 ::    l, p, l1, m1, l2, m2, p1, p2, n, ok
-      INTEGER                 ::    lm, lm1, lm2, lm_0, lm_00, lm1_0, lm2_0
-      INTEGER                 ::    j, ll, m, lmp1, lmp2, lmp3, lmp4, lp1, lp2
-      REAL                    ::    rdum, rfac, rfac1, rfac2, rdum1, rdum2
-      REAL                    ::    add1, add2
-      REAL                    ::    fac, fac1, fac2
-      REAL                    ::    monepl1, monepl2, monepl, monepm1, monepm, moneplm, monepl1m1
-      COMPLEX                 ::    cdum, cfac
-      COMPLEX, PARAMETER      ::    img = (0.0, 1.0)
-      LOGICAL                 ::    offdiag
       INTEGER                 ::    g_t(3)
-
-      ! - local arrays -
-      INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
-
       REAL                    ::    kqpt(3), kqpthlp(3)
-      REAL                    ::    cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      REAL                    ::    cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
-      REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
 
-      COMPLEX                 ::    cmplx_exp(atoms%nat), cexp_nk(atoms%nat)
-      COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :)
-      COMPLEX, ALLOCATABLE    ::    ccmt(:, :, :)
 
       CALL timestart("wavefproducts_inv5")
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
@@ -110,7 +86,7 @@ CONTAINS
      INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
      INTEGER, INTENT(IN)      :: jsp, nk, iq, g_t(3)
      INTEGER, INTENT(IN)      :: nbasm_mt
-     INTEGER, INTENT(OUT)     :: nkqpt
+     INTEGER, INTENT(IN)     :: nkqpt
 
      ! - arrays -
      REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
@@ -217,6 +193,10 @@ CONTAINS
    subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension, input,&
                                    jsp, atoms, lapw, kpts, nk, iq, hybdat, hybrid,&
                                    cell, nbasm_mt, sym, noco, nkqpt, cprod)
+     use m_types
+     use m_judft
+     use m_io_hybrid
+     use m_constants
      implicit NONE
      TYPE(t_dimension), INTENT(IN) :: dimension
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
@@ -233,7 +213,7 @@ CONTAINS
      INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
      INTEGER, INTENT(IN)      :: jsp, nk, iq
      INTEGER, INTENT(IN)      :: nbasm_mt
-     INTEGER, INTENT(OUT)     :: nkqpt
+     INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
      REAL, INTENT(INOUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
