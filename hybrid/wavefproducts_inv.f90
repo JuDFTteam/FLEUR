@@ -86,14 +86,14 @@ CONTAINS
      INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
      INTEGER, INTENT(IN)      :: jsp, nk, iq, g_t(3)
      INTEGER, INTENT(IN)      :: nbasm_mt
-     INTEGER, INTENT(IN)     :: nkqpt
+     INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
      REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
      ! - local scalars -
      INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm
-     INTEGER                 ::    nbasm_ir, ngpt0, n1, n2, nbasfcn
+     INTEGER                 ::    ngpt0, n1, n2, nbasfcn
      REAL                    ::    rdum, rdum1
      TYPE(t_lapw)            ::    lapw_nkqpt
 
@@ -108,17 +108,12 @@ CONTAINS
      TYPE(t_mat)             :: z_nk, z_kqpt
 
      CALL timestart("wavefproducts_inv5 IR")
-
-     cprod = 0
-
-     nbasm_ir = maxval(hybrid%ngptm)
-
+     cprod = 0.0
 
      !
      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
      !
      CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
-
      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
      call z_nk%alloc(.true., nbasfcn, dimension%neigd)
      nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)

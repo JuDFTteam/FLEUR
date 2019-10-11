@@ -168,10 +168,8 @@ CONTAINS
             g = lapw%gvec(:, ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
             ig2 = pointer(g(1), g(2), g(3))
 
-            IF (ig2 == 0) THEN
-               call juDFT_error('wavefproducts_noinv2: pointer undefined')
-            END IF
-
+            IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
+            
             DO n1 = 1, bandf - bandi + 1
                cdum1 = conjg(z_nk%data_c(ig1, n1))
                DO n2 = bandoi, bandof
