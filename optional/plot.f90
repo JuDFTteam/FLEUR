@@ -348,7 +348,7 @@ CONTAINS
       !rhoMat=0.5*((n+m_z,m_x+i*m_y),(m_x-i*m_y,n-m_z))
       !  vMat=    ((V_eff+B_z,B_x-i*B_y),(B_x+i*m_y,V_eff-B_z))
       
-      IF factor==2.0 THEN
+      IF (factor==2.0) THEN
       
          rho(:,0:,1:,:) = rho(:,0:,1:,:)/2.0
          qpw(1:,:) = qpw(1:,:)/2.0
