@@ -85,7 +85,6 @@ MODULE m_constants
 
       REAL, INTENT (IN) :: fac
       c_light = 137.0359895e0 * fac
-      !c_light = 1e6*fac
    END FUNCTION c_light
 
 END MODULE m_constants
