@@ -4,9 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur
-  IMPLICIT NONE
+   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE fleur_execute(mpi_comm)
+   SUBROUTINE fleur_execute(mpi_comm)
 
     !     ***************************************************************
     !
@@ -36,48 +36,48 @@ CONTAINS
     !----------------------------------------
     ! this routine is the main PROGRAM
 
-    USE m_types
-    USE m_constants
-    USE m_fleur_init
-    USE m_optional
-    USE m_cdn_io
-    USE m_mixing_history
-    USE m_qfix
-    USE m_vgen
-    USE m_vgen_coulomb
-    USE m_writexcstuff
-    USE m_vmatgen
-    USE m_eigen
-    USE m_eigenso
-    USE m_fermie
-    USE m_cdngen
-    USE m_totale
-    USE m_potdis
-    USE m_mix
-    USE m_xmlOutput
-    USE m_juDFT_time
-    USE m_calc_hybrid
-    USE m_rdmft
-    USE m_io_hybrid
-    USE m_wann_optional
-    USE m_wannier
-    USE m_bs_comfort
-    USE m_dwigner
-    USE m_ylm
-    USE m_metagga
-    USE m_divergence
-    USE m_rotate_mt_den_tofrom_local
-    USE m_plot
+   USE m_types
+   USE m_constants
+   USE m_fleur_init
+   USE m_optional
+   USE m_cdn_io
+   USE m_mixing_history
+   USE m_qfix
+   USE m_vgen
+   USE m_vgen_coulomb
+   USE m_writexcstuff
+   USE m_vmatgen
+   USE m_eigen
+   USE m_eigenso
+   USE m_fermie
+   USE m_cdngen
+   USE m_totale
+   USE m_potdis
+   USE m_mix
+   USE m_xmlOutput
+   USE m_juDFT_time
+   USE m_calc_hybrid
+   USE m_rdmft
+   USE m_io_hybrid
+   USE m_wann_optional
+   USE m_wannier
+   USE m_bs_comfort
+   USE m_dwigner
+   USE m_ylm
+   USE m_metagga
+   USE m_divergence
+   USE m_rotate_mt_den_tofrom_local
+   USE m_plot
 #ifdef CPP_MPI
-    USE m_mpi_bc_potden
+   USE m_mpi_bc_potden
 #endif
-    USE m_eig66_io
-    USE m_chase_diag
-    USE m_writeBasis
-    !$ USE omp_lib
-    IMPLICIT NONE
+   USE m_eig66_io
+   USE m_chase_diag
+   USE m_writeBasis
+   !$ USE omp_lib
+   IMPLICIT NONE
 
-    INTEGER, INTENT(IN)             :: mpi_comm
+   INTEGER, INTENT(IN)             :: mpi_comm
 
     TYPE(t_input)                   :: input
     TYPE(t_field)                   :: field, field2
@@ -143,12 +143,6 @@ CONTAINS
 
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-    DO i=1,3
-!       CALL xcB(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
-       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-       ALLOCATE(xcB(i)%pw_w,mold=xcB(i)%pw)
-!       xcB(i)%
-    ENDDO
     
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
@@ -255,7 +249,7 @@ CONTAINS
 
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                 obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul,xcB)
+                 obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
@@ -433,7 +427,7 @@ CONTAINS
 !!$                input%total = .FALSE.
 !!$                CALL timestart("generation of potential (total)")
 !!$                CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-!!$                     obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul,xcB)
+!!$                     obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
 !!$                CALL timestop("generation of potential (total)")
 !!$
 !!$                CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
@@ -515,11 +509,10 @@ CONTAINS
 
 !    DIVERGENCE
 
-!    IF ((.TRUE.).AND.(.NOT.noco%l_mtnocoPot)) THEN
-!       CALL timestart("grab B Kurz noco")
-!       CALL only_get_B(atoms,sphhar,sym,vtot,xcB,noco)
-!       CALL timestop("grab B Kurz noco")
-!    END IF
+!    DO i=1,3
+!       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+!       ALLOCATE(xcB(i)%pw_w,mold=xcB(i)%pw)
+!    ENDDO
 
 !    CALL dummyDen%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
 !    ALLOCATE(dummyDen%pw_w,mold=dummyDen%pw)
@@ -535,7 +528,6 @@ CONTAINS
 !       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
 !    END DO
 
-!!    CALL vDiv%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_POTCOUL)
 !    CALL vDiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 !    ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
 !    vDiv%pw_w = CMPLX(0.0,0.0)
@@ -543,10 +535,8 @@ CONTAINS
 !    CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
 
 !    DO i=1,3
-!!       CALL graddiv(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
 !       CALL graddiv(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 !       ALLOCATE(graddiv(i)%pw_w,mold=graddiv(i)%pw)
-!!       CALL corrB(i)%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
 !       CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 !       ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
 !    ENDDO

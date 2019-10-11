@@ -22,14 +22,9 @@ MODULE m_vmatgen
   !
   !     Philipp Kurz 99/11/01
   !   
-  !     Extended for the investigation of the exch-corr B-field, which is 
-  !     analogously saved as a potden type with 3 integers (i.e. in com-
-  !     ponent space.
-  !     
-  !     A.Neukirchen 05.09.2019
   !**********************************************************************
 CONTAINS
-  SUBROUTINE vmatgen(stars,atoms,vacuum,sym,input,den,vTot,xcB)
+  SUBROUTINE vmatgen(stars,atoms,vacuum,sym,input,den,vTot)
 
     !******** ABBREVIATIONS ***********************************************
     !     ifft3    : size of the 3d real space mesh
@@ -55,30 +50,21 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_potden),INTENT(IN) :: den
     TYPE(t_potden),INTENT(INOUT):: vTot
-    TYPE(t_potden),dimension(3),INTENT(INOUT):: xcB
-
  
     !     ..
     !     .. Local Scalars ..
-    INTEGER imeshpt,ipot,jspin,ig2 ,ig3,ivac,ifft2,ifft3,imz,iter,b_ind,i
+    INTEGER imeshpt,ipot,jspin,ig2 ,ig3,ivac,ifft2,ifft3,imz,iter,i
     REAL    vup,vdown,veff,beff,vziw,theta,phi
     !     ..
     !     .. Local Arrays ..
-    REAL,    ALLOCATABLE :: vvacxy(:,:,:,:),vis(:,:),fftwork(:),b_xc(:,:),b_xc_vacxy(:,:,:,:)
+    REAL,    ALLOCATABLE :: vvacxy(:,:,:,:),vis(:,:),fftwork(:)
 
     ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
     IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
     ifft2 = SIZE(den%phi_vacxy,1) 
-
-    DO i=1,3
-       xcB(i)%vacxy(:,:,:,:)=0.0
-       xcB(i)%vacz(:,:,:)=0.0
-    ENDDO    
     
     ALLOCATE ( vis(ifft3,4),fftwork(ifft3))
-    ALLOCATE (b_xc(ifft3,3))
       
-    
     !---> fouriertransform the spin up and down potential
     !---> in the interstitial, vpw, to real space (vis)
     DO jspin = 1,input%jspins
@@ -95,26 +81,21 @@ CONTAINS
        !--->    at first determine the effective potential and magnetic fields
        veff  = (vup + vdown)/2.0
        beff  = (vup - vdown)/2.0
-       b_xc(imeshpt,1)=beff*SIN(theta)*COS(phi)
-       b_xc(imeshpt,2)=beff*SIN(theta)*SIN(phi)
-       b_xc(imeshpt,3)=beff*COS(theta)
        !--->    now calculate the matrix potential, which is hermitian.
        !--->    thus calculate the diagonal elements:
        !--->    V_11
-       vis(imeshpt,1) = veff + b_xc(imeshpt,3)
+       vis(imeshpt,1) = veff + beff*COS(theta)
        !--->    V_22
-       vis(imeshpt,2) = veff - b_xc(imeshpt,3)
+       vis(imeshpt,2) = veff - beff*COS(theta)
        !--->    the real part of V_21
-       vis(imeshpt,3) = b_xc(imeshpt,1)
+       vis(imeshpt,3) = beff*SIN(theta)*COS(phi)
        !--->    and the imaginary part of V_21
-       vis(imeshpt,4) = b_xc(imeshpt,2)
+       vis(imeshpt,4) = beff*SIN(theta)*SIN(phi)
 
        DO ipot = 1,4
           vis(imeshpt,ipot) =  vis(imeshpt,ipot) * stars%ufft(imeshpt-1)
        ENDDO
-       DO b_ind = 1,3
-          b_xc(imeshpt,b_ind) = b_xc(imeshpt,b_ind) * stars%ufft(imeshpt-1)
-       ENDDO
+
     ENDDO
 
     !---> Fouriertransform the matrix potential back to reciprocal space
@@ -125,19 +106,12 @@ CONTAINS
     
     CALL fft3d(vis(:,3),vis(:,4), vTot%pw_w(1,3), stars,-1)
 
-    DO b_ind=1,3
-       fftwork=0.0
-       CALL fft3d(b_xc(:,b_ind),fftwork, xcB(b_ind)%pw_w(1,1), stars,-1)
-    ENDDO
-
     IF (.NOT. input%film) RETURN
 
     !Now the vacuum part starts
 
  
     ALLOCATE(vvacxy(ifft2,vacuum%nmzxyd,2,4))
-    ALLOCATE(b_xc_vacxy(ifft2,vacuum%nmzxyd,2,3))
-
     
        !--->    fouriertransform the spin up and down potential
        !--->    in the vacuum, vz & vxy, to real space (vvacxy)
@@ -173,13 +147,10 @@ CONTAINS
                 phi   = den%phi_vacxy(imeshpt,imz,ivac)
                 veff  = (vup + vdown)/2.0
                 beff  = (vup - vdown)/2.0
-                b_xc_vacxy(imeshpt,imz,ivac,1) = beff*SIN(theta)*COS(phi)
-                b_xc_vacxy(imeshpt,imz,ivac,2) = beff*SIN(theta)*SIN(phi)
-                b_xc_vacxy(imeshpt,imz,ivac,3) = beff*COS(theta)
-                vvacxy(imeshpt,imz,ivac,1) = veff + b_xc_vacxy(imeshpt,imz,ivac,3)
-                vvacxy(imeshpt,imz,ivac,2) = veff - b_xc_vacxy(imeshpt,imz,ivac,3)
-                vvacxy(imeshpt,imz,ivac,3) = b_xc_vacxy(imeshpt,imz,ivac,1)
-                vvacxy(imeshpt,imz,ivac,4) = b_xc_vacxy(imeshpt,imz,ivac,2)
+                vvacxy(imeshpt,imz,ivac,1) = veff + beff*COS(theta)
+                vvacxy(imeshpt,imz,ivac,2) = veff - beff*COS(theta)
+                vvacxy(imeshpt,imz,ivac,3) = beff*SIN(theta)*COS(phi)
+                vvacxy(imeshpt,imz,ivac,4) = beff*SIN(theta)*SIN(phi)
              ENDDO
           ENDDO
           DO imz = vacuum%nmzxyd+1,vacuum%nmzd
@@ -189,13 +160,10 @@ CONTAINS
              phi   = den%phi_vacz(imz,ivac)
              veff  = (vup + vdown)/2.0
              beff  = (vup - vdown)/2.0
-             xcB(1)%vacz(imz,ivac,1) = beff*SIN(theta)*COS(phi)
-             xcB(2)%vacz(imz,ivac,1) = beff*SIN(theta)*SIN(phi)
-             xcB(3)%vacz(imz,ivac,1) = beff*COS(theta)
-             vTot%vacz(imz,ivac,1) = veff + xcB(3)%vacz(imz,ivac,1)
-             vTot%vacz(imz,ivac,2) = veff - xcB(3)%vacz(imz,ivac,1)
-             vTot%vacz(imz,ivac,3) = xcB(1)%vacz(imz,ivac,1)
-             vTot%vacz(imz,ivac,4) = xcB(2)%vacz(imz,ivac,2)
+             vTot%vacz(imz,ivac,1) = veff + beff*COS(theta)
+             vTot%vacz(imz,ivac,2) = veff - beff*COS(theta)
+             vTot%vacz(imz,ivac,3) = beff*SIN(theta)*COS(phi)
+             vTot%vacz(imz,ivac,4) = beff*SIN(theta)*SIN(phi)
           ENDDO
        ENDDO
 
@@ -217,16 +185,6 @@ CONTAINS
                    CALL fft2d(stars, vvacxy(:,imz,ivac,ipot),fftwork,&
                         vTot%vacz(imz,ivac,ipot),vziw,vTot%vacxy(imz,1,ivac,ipot), vacuum%nmzxyd,-1)
                 END IF
-             ENDDO
-          ENDDO
-       ENDDO
-
-       DO b_ind = 1,3
-          DO ivac = 1,vacuum%nvac
-             DO imz = 1,vacuum%nmzxyd
-                fftwork=0.0
-                CALL fft2d(stars, b_xc_vacxy(:,imz,ivac,b_ind),fftwork,&
-                     xcB(b_ind)%vacz(imz,ivac,1),vziw,xcB(b_ind)%vacxy(imz,1,ivac,1), vacuum%nmzxyd,-1)
              ENDDO
           ENDDO
        ENDDO

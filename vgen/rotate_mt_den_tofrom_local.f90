@@ -89,13 +89,12 @@ CONTAINS
     CALL finish_mt_grid()
   END SUBROUTINE rotate_mt_den_to_local
 
-  SUBROUTINE rotate_mt_den_from_local(atoms,sphhar,sym,den,vtot,xcB)
+  SUBROUTINE rotate_mt_den_from_local(atoms,sphhar,sym,den,vtot)
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_sphhar),INTENT(IN) :: sphhar
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_potden),INTENT(IN) :: den
     TYPE(t_potden),INTENT(INOUT) :: vtot
-    TYPE(t_potden),dimension(3),INTENT(INOUT) :: xcB
     
     TYPE(t_xcpot_inbuild)     :: xcpot !local xcpot that is LDA to indicate we do not need gradients
     TYPE(t_gradients) :: grad
@@ -103,13 +102,10 @@ CONTAINS
     INTEGER :: n,nsp,imesh,i
     REAL    :: vup,vdown,veff,beff
     REAL    :: theta,phi
-    REAL,ALLOCATABLE :: ch(:,:),b_xc(:,:)
-    REAL,ALLOCATABLE :: livemt(:,:,:,:)
+    REAL,ALLOCATABLE :: ch(:,:)
     
     nsp=atoms%nsp()
     ALLOCATE(ch(nsp*atoms%jmtd,4))
-    ALLOCATE(b_xc(nsp*atoms%jmtd,3))
-    ALLOCATE(livemt(size(xcB(1)%mt,1),size(xcB(1)%mt,2),size(xcB(1)%mt,3),3))
     CALL xcpot%init("vwn",.FALSE.,1)
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
@@ -122,23 +118,16 @@ CONTAINS
           phi   = den%phi_mt(imesh,n)
           veff  = (vup + vdown)/2.0
           beff  = (vup - vdown)/2.0
-          b_xc(imesh,1) = beff*SIN(theta)*COS(phi)
-          b_xc(imesh,2) = beff*SIN(theta)*SIN(phi)
-          b_xc(imesh,3) = beff*COS(theta)
-          ch(imesh,1) = veff + b_xc(imesh,3)
-          ch(imesh,2) = veff - b_xc(imesh,3)
-          ch(imesh,3) = b_xc(imesh,1)
-          ch(imesh,4) = b_xc(imesh,2)
+          ch(imesh,1) = veff + beff*COS(theta)
+          ch(imesh,2) = veff - beff*COS(theta)
+          ch(imesh,3) = beff*SIN(theta)*COS(phi)
+          ch(imesh,4) = beff*SIN(theta)*SIN(phi)
        ENDDO
+
        vtot%mt(:,0:,n,:)=0.0
-       Do i=1,3
-          xcB(i)%mt(:,0:,n,:)=0.0
-       ENDDO
+
        CALL mt_from_grid(atoms,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
-       CALL mt_from_grid(atoms,sphhar,n,3,b_xc,livemt(:,0:,n,:))
-       DO i=1,3
-          xcB(i)%mt(:,0:,n,1)=livemt(:,0:,n,i)
-       ENDDO
+
        DO i=1,atoms%jri(n)
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO

@@ -17,26 +17,34 @@ MODULE m_plot
    USE m_rotdenmat 
 
    PRIVATE
-   !------------------------------------------------
+   !-----------------------------------------------------------------------------
    ! A general purpose plotting routine for FLEUR.
    ! 
-   ! Based on older plotting routines in pldngen.f90
-   ! and plotdop.f90 originally called by optional.F90 and now
-   ! called within a scf-loop instead of as a post
-   ! process functionality. This allowed us to remove
-   ! i/o (using .hdf files) from the ploting routine completely. 
-   ! plot_inp files are still in use.
+   ! Based on the older plotting routines pldngen.f90 and plotdop.f90 that were
+   ! originally called by optional.F90 and are now used in the scf-loop instead.
+   ! At the cost of no reduced postprocess functionality, this allowed us to re-
+   ! move I/O (using plot.hdf files) from the plotting routine completely.
+   ! 
+   ! TODO:
+   ! - plot_inp files are still in use and should be replaced by a plotting type.
+   ! - Only the .xsf format for xcrysden is supported right now. Further exten-
+   !   sion should include several plotting options, most importantly a way to
+   !   neatly plot vectorial quantities like the magnetisation density as vectors
+   !   on a grid.
    ! 
    ! A. Neukirchen & R. Hilgers, September 2019 
    !------------------------------------------------
 
-   PUBLIC             :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, matrixplot, makeplots, procplot, getMTSphere
+   PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
+             matrixplot, makeplots, procplot, getMTSphere
 
 CONTAINS
 
    SUBROUTINE checkplotinp()
+      !--------------------------------------------------------------------------
       ! Checks for existing plot input. If an ancient plotin file is used, an
       ! error is called. If no usable plot_inp exists, a new one is generated. 
+      !--------------------------------------------------------------------------
       LOGICAL :: oldform,newform
       oldform = .FALSE.
       INQUIRE(file = "plotin", exist = oldform) 
@@ -230,6 +238,8 @@ CONTAINS
                   rho(iri,ilh,ityp,2) = 2.0*REAL(cdn21)
                   ! Note: The minus sign in the following line is temporary to adjust for differences in the offdiagonal
                   !       part of the density between this fleur version and ancient (v0.26) fleur.
+                  ! 
+                  ! TODO: Should that still be here? It effectively amounts to a conjugation of the density matrix.
                   rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
                   rho(iri,ilh,ityp,4) = cdn11 - cdn22
                   !--->            end of test part
@@ -343,10 +353,6 @@ CONTAINS
       END IF
 
       CALL plotden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-!      den%mt(:,0:,1:,:)=denmat%mt(:,0:,1:,1)
-!      den%pw(1:,:) = denmat%pw(1:,1)
-!      den%vacz(1:,1:,:) = denmat%vacz(1:,1:,1)
-!      den%vacxy(1:,1:,1:,:) = denmat%vacxy(1:,1:,1:,1)
       
       !Correction for the case of plotting the total potential.
       !Needed due to the different definitons of density/potential matrices in
