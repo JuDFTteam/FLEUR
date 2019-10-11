@@ -68,6 +68,7 @@ CONTAINS
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, rprod)
      use m_types
+     use m_wavefproducts_noinv
      implicit NONE
 
      TYPE(t_dimension), INTENT(IN) :: dimension
