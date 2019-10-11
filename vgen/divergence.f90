@@ -36,7 +36,7 @@ CONTAINS
    REAL, ALLOCATABLE :: div_temp(:, :)
    REAL, ALLOCATABLE :: thet(:), phi(:)
    REAL :: r,th,ph
-   INTEGER :: jr, k, nsp, kt
+   INTEGER :: jr, k, nsp, kt, i
 
    nsp = atoms%nsp()
 
@@ -58,13 +58,18 @@ CONTAINS
          ph = phi(k)
          div_temp(kt+nsp,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+nsp,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+nsp,1) + COS(th)*gradz%gr(1,kt+nsp,1))&
                              +(COS(th)*COS(ph)*gradx%gr(2,kt+nsp,1) + COS(th)*SIN(ph)*grady%gr(2,kt+nsp,1) - SIN(th)*gradz%gr(2,kt+nsp,1))/r&
-                             -(SIN(ph)*gradx%gr(3,kt+nsp,1)         + COS(ph)*grady%gr(3,kt+nsp,1))/(r*SIN(th))
+                             -(SIN(ph)*gradx%gr(3,kt+nsp,1)         - COS(ph)*grady%gr(3,kt+nsp,1))/(r*SIN(th))
+!         div_temp(kt+nsp,1) = div_temp(kt+nsp,1)*r*r
       ENDDO ! k
    
       kt = kt+nsp
    ENDDO ! jr
     
    CALL mt_from_grid(atoms, sphhar, n, 1, div_temp, div%mt(:,0:,n,:))
+
+   DO i=1,atoms%jri(n)
+      div%mt(i,:,n,:)=div%mt(i,:,n,:)*atoms%rmsh(i,n)**2
+   ENDDO
    
    CALL finish_mt_grid
    
@@ -305,8 +310,8 @@ CONTAINS
    den%vacz  = pot%vacz
    den%vacxy = pot%vacxy
 
-   CALL mt_grad(n,atoms,sphhar,sym,den,grad)
-   CALL pw_grad(ifftxc3,jspins,stars,cell,noco,sym,den,grad)
+   CALL mt_grad(n,atoms,sphhar,sym,pot,grad)
+   CALL pw_grad(ifftxc3,jspins,stars,cell,noco,sym,pot,grad)
 
    END SUBROUTINE divpotgrad
 
