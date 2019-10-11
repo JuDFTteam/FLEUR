@@ -108,6 +108,7 @@ CONTAINS
     
     nsp=atoms%nsp()
     ALLOCATE(ch(nsp*atoms%jmtd,4))
+    ALLOCATE(b_xc(nsp*atoms%jmtd,3))
     ALLOCATE(livemt(size(xcB(1)%mt,1),size(xcB(1)%mt,2),size(xcB(1)%mt,3),3))
     CALL xcpot%init("vwn",.FALSE.,1)
 
@@ -144,4 +145,5 @@ CONTAINS
     END DO
     CALL finish_mt_grid()
   END SUBROUTINE rotate_mt_den_from_local
+
 END MODULE m_rotate_mt_den_tofrom_local

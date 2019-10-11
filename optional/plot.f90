@@ -123,7 +123,7 @@ CONTAINS
 
       ! Local type instances
       TYPE(t_input)  :: inp
-      TYPE(t_potden) :: den
+      TYPE(t_potden) :: den, plotden
 
       ! Local scalars
       INTEGER iden,ivac,ifft2,ifft3
@@ -341,6 +341,12 @@ CONTAINS
             END DO
          END DO
       END IF
+
+      CALL plotden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+!      den%mt(:,0:,1:,:)=denmat%mt(:,0:,1:,1)
+!      den%pw(1:,:) = denmat%pw(1:,1)
+!      den%vacz(1:,1:,:) = denmat%vacz(1:,1:,1)
+!      den%vacxy(1:,1:,1:,:) = denmat%vacxy(1:,1:,1:,1)
       
       !Correction for the case of plotting the total potential.
       !Needed due to the different definitons of density/potential matrices in
@@ -363,36 +369,36 @@ CONTAINS
       END IF
       
       !---> save charge density to cden
-      den%mt(:,0:,1:,1) = rho(:,0:,1:,1)
-      den%pw(1:,1) = qpw(1:,1)
-      den%vacz(1:,1:,1) = rht(1:,1:,1)
-      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,1)
+      plotden%mt(:,0:,1:,1) = rho(:,0:,1:,1)
+      plotden%pw(1:,1) = qpw(1:,1)
+      plotden%vacz(1:,1:,1) = rht(1:,1:,1)
+      plotden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,1)
 
-      cden=den
+      cden=plotden
 
       !---> save m_x to mxden
-      den%mt(:,0:,1:,1) = rho(:,0:,1:,2)
-      den%pw(1:,1) = qpw(1:,2)
-      den%vacz(1:,1:,1) = rht(1:,1:,2)
-      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
+      plotden%mt(:,0:,1:,1) = rho(:,0:,1:,2)
+      plotden%pw(1:,1) = qpw(1:,2)
+      plotden%vacz(1:,1:,1) = rht(1:,1:,2)
+      plotden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
 
-      mxden=den
+      mxden=plotden
 
       !---> save m_y to myden
-      den%mt(:,0:,1:,1) = rho(:,0:,1:,3)
-      den%pw(1:,1) = qpw(1:,3)
-      den%vacz(1:,1:,1) = rht(1:,1:,3)
-      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
+      plotden%mt(:,0:,1:,1) = rho(:,0:,1:,3)
+      plotden%pw(1:,1) = qpw(1:,3)
+      plotden%vacz(1:,1:,1) = rht(1:,1:,3)
+      plotden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
 
-      myden=den
+      myden=plotden
    
       !---> save m_z to mzden
-      den%mt(:,0:,1:,1) = rho(:,0:,1:,4)
-      den%pw(1:,1) = qpw(1:,4)
-      den%vacz(1:,1:,1) = rht(1:,1:,4)
-      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
+      plotden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
+      plotden%pw(1:,1) = qpw(1:,4)
+      plotden%vacz(1:,1:,1) = rht(1:,1:,4)
+      plotden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
 
-      mzden=den
+      mzden=plotden
 
       DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,ris,fftwork,rvacxy,rho,rht)
 
@@ -985,7 +991,7 @@ CONTAINS
       END IF
 
       IF (plot_const.EQ.15) THEN
-         denName = 'divPot'
+         denName = 'divPotx'
          score = .FALSE.
          potnorm = .FALSE.
 
@@ -994,9 +1000,54 @@ CONTAINS
       END IF
 
       IF (plot_const.EQ.16) THEN
-         denName = 'xcBcorr'
+         denName = 'divPoty'
          score = .FALSE.
          potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.17) THEN
+         denName = 'divPotz'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.18) THEN
+         denName = 'xcBcorrx'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.19) THEN
+         denName = 'xcBcorry'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.20) THEN
+         denName = 'xcBcorrz'
+         score = .FALSE.
+         potnorm = .FALSE.
+
+         CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+      
+      END IF
+
+      IF (plot_const.EQ.21) THEN
+         denName = 'correctorP'
+         score = .FALSE.
+         potnorm = .TRUE.
 
          CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
       

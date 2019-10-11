@@ -49,7 +49,9 @@ CONTAINS
        END DO
     ELSEIF(noco%l_noco) THEN
        CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot,xcB)
-       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot,xcB)
+       IF (noco%l_mtnocoPot) THEN
+          CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot,xcB)
+       END IF
     ENDIF
 
     ! Rescale vCoul%pw_w with number of stars
