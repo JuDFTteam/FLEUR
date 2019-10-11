@@ -111,11 +111,6 @@ CONTAINS
 
       call timestart("wavefproducts_noinv5 IR")
       cprod = cmplx_0
-      !
-      ! compute k+q point for given q point in EIBZ(k)
-      !
-
-
 
       !
       ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax

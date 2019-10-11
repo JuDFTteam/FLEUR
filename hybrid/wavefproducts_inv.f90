@@ -1,15 +1,9 @@
 module m_wavefproducts_inv
 
 CONTAINS
-   SUBROUTINE wavefproducts_inv5(&
-  &                    bandi, bandf, bandoi, bandof,&
-  &                    dimension, input, jsp, atoms,&
-  &                    lapw, kpts,&
-  &                    nk, iq, hybdat, hybrid,&
-  &                    cell,&
-  &                    nbasm_mt, sym,&
-  &                    noco,&
-  &                    nkqpt, cprod)
+   SUBROUTINE wavefproducts_inv5(bandi, bandf, bandoi, bandof, dimension, input,&
+                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, hybrid,&
+                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
       USE m_util, ONLY: modulo1
       USE m_types_hybrid, ONLY: gptnorm
@@ -41,57 +35,35 @@ CONTAINS
       REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       ! - local scalars -
-      INTEGER                 ::    i, ikpt, ic, iband, ig, ig2, ig1
+      INTEGER                 ::    i, iband
       INTEGER                 ::    iatom, iiatom, itype, ieq, ishift
       INTEGER                 ::    ibando, iatom1, iatom2, ioffset
       INTEGER                 ::    l, p, l1, m1, l2, m2, p1, p2, n, ok
-      INTEGER                 ::    igptm, iigptm
-      INTEGER                 ::    lm, lm1, lm2, lm_0, lm_00, lm1_0, lm2_0, lmp1, lmp2, lmp3, lmp4, lp1, lp2
-      INTEGER                 ::    j, ll, m
-      INTEGER                 ::    nbasm_ir, ngpt0
-      INTEGER                 ::    n1, n2, nbasfcn
-      REAL                    ::    svol, sr2
+      INTEGER                 ::    lm, lm1, lm2, lm_0, lm_00, lm1_0, lm2_0
+      INTEGER                 ::    j, ll, m, lmp1, lmp2, lmp3, lmp4, lp1, lp2
       REAL                    ::    rdum, rfac, rfac1, rfac2, rdum1, rdum2
-      REAL                    ::    add1, add2
+      REAL                    ::    add1, add2, sr2
       REAL                    ::    fac, fac1, fac2
       REAL                    ::    monepl1, monepl2, monepl, monepm1, monepm, moneplm, monepl1m1
       COMPLEX                 ::    cdum, cfac
       COMPLEX, PARAMETER      ::    img = (0.0, 1.0)
       LOGICAL                 ::    offdiag
-      TYPE(t_lapw)            ::    lapw_nkqpt
+      INTEGER                 ::    g_t(3)
 
       ! - local arrays -
-      INTEGER                 ::    g(3), g_t(3)
       INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
-      INTEGER, ALLOCATABLE    ::    gpt0(:, :)
-      INTEGER, ALLOCATABLE    ::    pointer(:, :, :)
 
       REAL                    ::    kqpt(3), kqpthlp(3)
       REAL                    ::    cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       REAL                    ::    cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      REAL                    ::    rarr1(bandoi:bandof)
       REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
       REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
-      REAL, ALLOCATABLE       ::    z0(:, :)
 
       COMPLEX                 ::    cmplx_exp(atoms%nat), cexp_nk(atoms%nat)
-      COMPLEX, ALLOCATABLE     ::    ccmt_nk(:, :, :)
-      COMPLEX, ALLOCATABLE     ::    ccmt(:, :, :)
-      TYPE(t_mat)             :: z_nk, z_kqpt
+      COMPLEX, ALLOCATABLE    ::    ccmt_nk(:, :, :)
+      COMPLEX, ALLOCATABLE    ::    ccmt(:, :, :)
 
       CALL timestart("wavefproducts_inv5")
-      CALL timestart("wavefproducts_inv5 IR")
-
-      cprod = 0
-      svol = sqrt(cell%omtil)
-      sr2 = sqrt(2.0)
-
-      nbasm_ir = maxval(hybrid%ngptm)
-
-      !
-      ! compute k+q point for q (iq) in EIBZ(k)
-      !
-
       kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
       ! kqpt can lie outside the first BZ, transfer it back
       kqpt = kpts%to_first_bz(kqpthlp)
@@ -101,80 +73,9 @@ CONTAINS
       nkqpt = kpts%get_nk(kqpt)
       IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
-      !
-      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
-      !
-      CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
-
-      nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_nk%alloc(.true., nbasfcn, dimension%neigd)
-      nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_kqpt%alloc(.true., nbasfcn, dimension%neigd)
-
-      ! read in z at k-point nk and nkqpt
-      call timestart("read_z")
-      CALL read_z(z_nk, nk)
-      call read_z(z_kqpt, nkqpt)
-      call timestop("read_z")
-
-      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
-     &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-     &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
-
-      call hybdat%set_stepfunction(cell, atoms, g, svol)
-      !
-      ! convolute phi(n,k) with the step function and store in cpw0
-      !
-
-      !(1) prepare list of G vectors
-      call prep_list_of_gvec(lapw, hybrid, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
-
-      !(2) calculate convolution
-      call timestart("calc convolution")
-      ALLOCATE (z0(bandoi:bandof, ngpt0), stat=ok, source=0.0)
-      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation z0')
-
-      call timestart("step function")
-      DO ig2 = 1, lapw_nkqpt%nv(jsp)
-         rarr1 = z_kqpt%data_r(ig2, bandoi:bandof)
-         DO ig = 1, ngpt0
-            g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
-            rdum = REAL(hybdat%stepfunc(g(1), g(2), g(3)))
-            DO n2 = bandoi, bandof
-               z0(n2, ig) = z0(n2, ig) + rarr1(n2)*rdum
-            END DO
-         END DO
-      END DO
-      call timestop("step function")
-
-      call timestart("hybrid gptm")
-      ic = nbasm_mt
-      DO igptm = 1, hybrid%ngptm(iq)
-         rarr2 = 0
-         ic = ic + 1
-         iigptm = hybrid%pgptm(igptm, iq)
-
-         DO ig1 = 1, lapw%nv(jsp)
-            g = lapw%gvec(:, ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
-            ig2 = pointer(g(1), g(2), g(3))
-
-            IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
-
-            DO n1 = 1, bandf - bandi + 1
-               rdum1 = z_nk%data_r(ig1, n1)
-               DO n2 = bandoi, bandof
-                  rarr2(n2, n1) = rarr2(n2, n1) + rdum1*z0(n2, ig2)
-               END DO
-            END DO
-
-         END DO
-         cprod(ic, :, :) = rarr2(:, :)
-      END DO
-      call timestop("hybrid gptm")
-      call timestop("calc convolution")
-
-      DEALLOCATE (z0, pointer, gpt0)
-      CALL timestop("wavefproducts_inv5 IR")
+      call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
+                                jsp, atoms, lapw, kpts, nk, iq, hybdat, hybrid,&
+                                cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
       DO itype = 1, atoms%ntype
@@ -325,7 +226,7 @@ CONTAINS
                               lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
                               ! precalculated Gaunt coefficient
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
                                  DO iband = bandi, bandf
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                     rdum2 = rdum*cmt_nk(iband, lmp1, iatom2)
@@ -347,7 +248,7 @@ CONTAINS
                            IF (abs(m2) <= l2 .and. offdiag) THEN
                               lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
                               rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
                                  DO iband = bandi, bandf
                                     rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                     rdum2 = rdum*cmt_nk(iband, lmp2, iatom2)
@@ -458,7 +359,7 @@ CONTAINS
                            END IF
 
                            rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
-                           IF (rdum /= 0) THEN
+                           IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
                                  rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                  IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
@@ -470,7 +371,7 @@ CONTAINS
 
                            IF (offdiag) THEN
                               rdum = hybdat%gauntarr(1, l2, l1, l, -m, m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
                                  DO iband = bandi, bandf
                                     rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                     IF (mod(l1, 2) == 0) rdum1 = moneplm*rdum1
@@ -492,7 +393,7 @@ CONTAINS
                            lmp2 = lp2 + l2*hybrid%nindx(l2, itype)
 
                            rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
-                           IF (rdum /= 0) THEN
+                           IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
                                  rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
                                  IF (mod(l2, 2) == 0) rdum1 = moneplm*rdum1
@@ -504,7 +405,7 @@ CONTAINS
 
                            IF (offdiag) THEN
                               rdum = hybdat%gauntarr(1, l2, l1, l, 0, m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
                                  DO iband = bandi, bandf
                                     rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                     IF (mod(l2, 2) /= 0) rdum1 = moneplm*rdum1
@@ -533,7 +434,7 @@ CONTAINS
                            m2 = m1 + m
                            IF (abs(m2) <= l2 .and. m2 /= 0) THEN
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
                                  IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                     lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
                                  ELSE
@@ -552,7 +453,7 @@ CONTAINS
 
                               IF (offdiag) THEN
                                  rdum = hybdat%gauntarr(1, l2, l1, l, m2, -m)
-                                 IF (rdum /= 0) THEN
+                                 IF (abs(rdum) > 1e-12) THEN
                                     lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
                                     IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                        lmp3 = lmp1
@@ -577,7 +478,7 @@ CONTAINS
                            IF (abs(m2) <= l2 .and. m2 /= 0) THEN
 
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, -m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
 
                                  IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                     lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
@@ -598,7 +499,7 @@ CONTAINS
 
                               IF (offdiag) THEN
                                  rdum = hybdat%gauntarr(1, l2, l1, l, m2, m)
-                                 IF (rdum /= 0) THEN
+                                 IF (abs(rdum) > 1e-12) THEN
                                     lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
                                     IF (sign(1, m1) + sign(1, m2) /= 0) THEN
                                        lmp3 = lmp1
@@ -676,7 +577,7 @@ CONTAINS
                            ELSE
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)*fac1
                            END IF
-                           IF (rdum /= 0) THEN
+                           IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
                                  rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                  DO ibando = bandoi, bandof
@@ -692,7 +593,7 @@ CONTAINS
                               ELSE
                                  rdum = hybdat%gauntarr(2, l1, l2, l, m1, m)*fac2
                               END IF
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
                                  DO iband = bandi, bandf
                                     rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
                                     DO ibando = bandoi, bandof
@@ -744,7 +645,7 @@ CONTAINS
                            END IF
 
                            rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
-                           IF (rdum /= 0) THEN
+                           IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
                                  rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                  IF (mod(l1, 2) /= 0) rdum1 = moneplm*rdum1
@@ -756,7 +657,7 @@ CONTAINS
 
                            IF (offdiag) THEN
                               rdum = hybdat%gauntarr(1, l2, l1, l, -m, m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
                                  DO iband = bandi, bandf
                                     rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                     IF (mod(l1, 2) == 0) rdum1 = moneplm*rdum1
@@ -778,7 +679,7 @@ CONTAINS
                            lmp2 = lp2 + l2*hybrid%nindx(l2, itype)
 
                            rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
-                           IF (rdum /= 0) THEN
+                           IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
                                  rdum1 = rdum*cmt_nk(iband, lmp3, iatom1)
                                  IF (mod(l2, 2) == 0) rdum1 = moneplm*rdum1
@@ -790,7 +691,7 @@ CONTAINS
 
                            IF (offdiag) THEN
                               rdum = hybdat%gauntarr(1, l2, l1, l, 0, m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
                                  DO iband = bandi, bandf
                                     rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                     IF (mod(l2, 2) /= 0) rdum1 = moneplm*rdum1
@@ -819,7 +720,7 @@ CONTAINS
                            monepl1m1 = monepl1*monepm1
                            IF (abs(m2) <= l2 .and. m2 /= 0) THEN
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
 
                                  IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                     lmp2 = lp2 + (-m2 + l2)*hybrid%nindx(l2, itype)
@@ -841,7 +742,7 @@ CONTAINS
 
                               IF (offdiag) THEN
                                  rdum = hybdat%gauntarr(2, l1, l2, l, m1, -m)
-                                 IF (rdum /= 0) THEN
+                                 IF (abs(rdum) > 1e-12) THEN
                                     lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
                                     IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                        lmp3 = lmp1 - 2*m1*hybrid%nindx(l1, itype)
@@ -867,7 +768,7 @@ CONTAINS
                            IF (abs(m2) <= l2 .and. m2 /= 0) THEN
 
                               rdum = hybdat%gauntarr(1, l1, l2, l, m1, -m)
-                              IF (rdum /= 0) THEN
+                              IF (abs(rdum) > 1e-12) THEN
 
                                  IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                     lmp2 = lp2 + (-m2 + l2)*hybrid%nindx(l2, itype)
@@ -887,7 +788,7 @@ CONTAINS
 
                               IF (offdiag) THEN
                                  rdum = hybdat%gauntarr(2, l1, l2, l, m1, m)
-                                 IF (rdum /= 0) THEN
+                                 IF (abs(rdum) > 1e-12) THEN
                                     lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
                                     IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                        lmp3 = lmp1 - 2*m1*hybrid%nindx(l1, itype)
@@ -950,4 +851,136 @@ CONTAINS
       CALL timestop("wavefproducts_inv5")
 
    END SUBROUTINE wavefproducts_inv5
+
+
+   subroutine wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
+                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, hybrid,&
+                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
+     use m_types
+     use m_constants
+     use m_wavefproducts_aux
+     use m_judft
+     use m_io_hybrid
+     implicit NONE
+     TYPE(t_dimension), INTENT(IN) :: dimension
+     TYPE(t_hybrid), INTENT(IN)    :: hybrid
+     TYPE(t_input), INTENT(IN)     :: input
+     TYPE(t_noco), INTENT(IN)      :: noco
+     TYPE(t_sym), INTENT(IN)       :: sym
+     TYPE(t_cell), INTENT(IN)      :: cell
+     TYPE(t_kpts), INTENT(IN)      :: kpts
+     TYPE(t_atoms), INTENT(IN)     :: atoms
+     TYPE(t_lapw), INTENT(IN)      :: lapw
+     TYPE(t_hybdat), INTENT(INOUT) :: hybdat
+
+     ! - scalars -
+     INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
+     INTEGER, INTENT(IN)      :: jsp, nk, iq
+     INTEGER, INTENT(IN)      :: nbasm_mt
+     INTEGER, INTENT(OUT)     :: nkqpt
+
+     ! - arrays -
+     REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+
+     ! - local scalars -
+     INTEGER                 ::    ic, ig, ig2, ig1
+     INTEGER                 ::    ok, igptm, iigptm
+     INTEGER                 ::    nbasm_ir, ngpt0, n1, n2, nbasfcn
+     REAL                    ::    sr2, rdum, rdum1
+     TYPE(t_lapw)            ::    lapw_nkqpt
+
+     ! - local arrays -
+     INTEGER, ALLOCATABLE    ::    pointer(:, :, :)
+     INTEGER, ALLOCATABLE    ::    gpt0(:, :)
+     INTEGER                 ::    g(3), g_t(3)
+
+     REAL                    ::    rarr1(bandoi:bandof)
+     REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
+     REAL, ALLOCATABLE       ::    z0(:, :)
+
+     TYPE(t_mat)             :: z_nk, z_kqpt
+
+     CALL timestart("wavefproducts_inv5 IR")
+
+     cprod = 0
+     sr2 = sqrt(2.0)
+
+     nbasm_ir = maxval(hybrid%ngptm)
+
+
+     !
+     ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
+     !
+     CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
+
+     nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
+     call z_nk%alloc(.true., nbasfcn, dimension%neigd)
+     nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
+     call z_kqpt%alloc(.true., nbasfcn, dimension%neigd)
+
+     ! read in z at k-point nk and nkqpt
+     call timestart("read_z")
+     CALL read_z(z_nk, nk)
+     call read_z(z_kqpt, nkqpt)
+     call timestop("read_z")
+
+     g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
+    &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+    &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
+
+     call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
+     !
+     ! convolute phi(n,k) with the step function and store in cpw0
+     !
+
+     !(1) prepare list of G vectors
+     call prep_list_of_gvec(lapw, hybrid, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
+
+     !(2) calculate convolution
+     call timestart("calc convolution")
+     ALLOCATE (z0(bandoi:bandof, ngpt0), stat=ok, source=0.0)
+     IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation z0')
+
+     call timestart("step function")
+     DO ig2 = 1, lapw_nkqpt%nv(jsp)
+        rarr1 = z_kqpt%data_r(ig2, bandoi:bandof)
+        DO ig = 1, ngpt0
+           g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
+           rdum = REAL(hybdat%stepfunc(g(1), g(2), g(3)))
+           DO n2 = bandoi, bandof
+              z0(n2, ig) = z0(n2, ig) + rarr1(n2)*rdum
+           END DO
+        END DO
+     END DO
+     call timestop("step function")
+
+     call timestart("hybrid gptm")
+     ic = nbasm_mt
+     DO igptm = 1, hybrid%ngptm(iq)
+        rarr2 = 0
+        ic = ic + 1
+        iigptm = hybrid%pgptm(igptm, iq)
+
+        DO ig1 = 1, lapw%nv(jsp)
+           g = lapw%gvec(:, ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
+           ig2 = pointer(g(1), g(2), g(3))
+
+           IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
+
+           DO n1 = 1, bandf - bandi + 1
+              rdum1 = z_nk%data_r(ig1, n1)
+              DO n2 = bandoi, bandof
+                 rarr2(n2, n1) = rarr2(n2, n1) + rdum1*z0(n2, ig2)
+              END DO
+           END DO
+
+        END DO
+        cprod(ic, :, :) = rarr2(:, :)
+     END DO
+     call timestop("hybrid gptm")
+     call timestop("calc convolution")
+
+     DEALLOCATE (z0, pointer, gpt0)
+     CALL timestop("wavefproducts_inv5 IR")
+   end subroutine wavefproducts_inv_IS
 end module m_wavefproducts_inv
