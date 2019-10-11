@@ -49,13 +49,19 @@ CONTAINS
       nkqpt = kpts%get_nk(kqpt)
       IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
-    !  call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
-    !                            jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
-    !                            cell, nbasm_mt, sym, noco, nkqpt, cprod)
+
 
       call wavefproducts_inv_IS_using_noinv(bandi, bandf, bandoi, bandof, dimension, input,&
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
+
+
+      call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
+                                jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
+                                cell, nbasm_mt, sym, noco, nkqpt, cprod)
+      call save_npy("cprod.npy", cprod)
+
+      call juDFT_error("i dont want anymore")
       call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
                                 atoms, kpts, nk, iq, hybdat, hybrid,&
                                 sym, nkqpt, cprod)
@@ -69,6 +75,7 @@ CONTAINS
                                  cell, nbasm_mt, sym, noco, nkqpt, rprod)
      use m_types
      use m_wavefproducts_noinv
+     use m_judft
      implicit NONE
 
      TYPE(t_dimension), INTENT(IN) :: dimension
@@ -94,6 +101,7 @@ CONTAINS
                                   dimension, input, jsp, cell, atoms, hybrid,&
                                   hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                   nkqpt, cprod)
+    call save_npy("cprod_using_noinv.npy", cprod)
     rprod = real(cprod)
    end subroutine wavefproducts_inv_IS_using_noinv
 
@@ -149,9 +157,9 @@ CONTAINS
      ! compute G's fulfilling |bk(:,nkqpt) + G| <= rkmax
      !
      CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
-     nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
+     nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
      call z_nk%alloc(.true., nbasfcn, dimension%neigd)
-     nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
+     nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)
      call z_kqpt%alloc(.true., nbasfcn, dimension%neigd)
 
      ! read in z at k-point nk and nkqpt
