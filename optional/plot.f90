@@ -170,14 +170,14 @@ CONTAINS
       CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       den=denmat
 
-      rho(:,0:,1:,:input%jspins) = factor*den%mt(:,0:,1:,:input%jspins)
-      qpw(1:,:input%jspins) = factor*den%pw(1:,:input%jspins)
-      rht(1:,1:,:input%jspins) = factor*den%vacz(1:,1:,:input%jspins)
-      rhtxy(1:,1:,1:,:input%jspins) = factor*den%vacxy(1:,1:,1:,:input%jspins)
+      rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
+      qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
+      rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
+      rhtxy(1:,1:,1:,:input%jspins) = den%vacxy(1:,1:,1:,:input%jspins)
       IF(noco%l_noco) THEN
-         cdom = factor*den%pw(:,3)
-         cdomvz(:,:) = CMPLX(factor*den%vacz(:,:,3),factor*den%vacz(:,:,4))
-         cdomvxy = factor*den%vacxy(:,:,:,3)
+         cdom = den%pw(:,3)
+         cdomvz(:,:) = CMPLX(den%vacz(:,:,3),den%vacz(:,:,4))
+         cdomvxy = den%vacxy(:,:,:,3)
       END IF
 
       IF (.NOT. sliceplot%slice) THEN
@@ -340,6 +340,26 @@ CONTAINS
                END DO
             END DO
          END DO
+      END IF
+      
+      !Correction for the case of plotting the total potential.
+      !Needed due to the different definitons of density/potential matrices in
+      !FLEUR:
+      !rhoMat=0.5*((n+m_z,m_x+i*m_y),(m_x-i*m_y,n-m_z))
+      !  vMat=    ((V_eff+B_z,B_x-i*B_y),(B_x+i*m_y,V_eff-B_z))
+      
+      IF factor==2.0 THEN
+      
+         rho(:,0:,1:,:) = rho(:,0:,1:,:)/2.0
+         qpw(1:,:) = qpw(1:,:)/2.0
+         rht(1:,1:,:) = rht(1:,1:,:)/2.0
+         rhtxy(1:,1:,1:,:) = rhtxy(1:,1:,1:,:)/2.0
+         
+         rho(:,0:,1:,3) = -rho(:,0:,1:,3)
+         qpw(1:,3) = -qpw(1:,3)
+         rht(1:,1:,3) = -rht(1:,1:,3)
+         rhtxy(1:,1:,1:,3) = -rhtxy(1:,1:,1:,3)
+         
       END IF
       
       !---> save charge density to cden
