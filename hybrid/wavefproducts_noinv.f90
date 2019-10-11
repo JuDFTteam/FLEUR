@@ -31,7 +31,7 @@ CONTAINS
       COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       INTEGER        :: g_t(3)
-      REAL           ::  kqpt(3), kqpthlp(3)
+      REAL           :: kqpt(3), kqpthlp(3)
 
 
       call timestart("wavefproducts_noinv5")
