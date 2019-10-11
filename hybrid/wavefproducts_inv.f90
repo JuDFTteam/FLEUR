@@ -173,15 +173,6 @@ CONTAINS
       call timestop("hybrid gptm")
       call timestop("calc convolution")
 
-      WRITE (2005, *) 'Point B'
-      DO n2 = 1, 1
-         DO n1 = 1, 2
-            DO ic = 1, 20
-               WRITE (2010, '(3i7,f15.8)') ic, n1, n2, cprod(ic, n1, n2)
-            END DO
-         END DO
-      END DO
-
       DEALLOCATE (z0, pointer, gpt0)
       CALL timestop("wavefproducts_inv5 IR")
 
