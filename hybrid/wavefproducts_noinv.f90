@@ -146,7 +146,11 @@ CONTAINS
       ALLOCATE (z0(bandoi:bandof, ngpt0), source=cmplx_0)
 
       DO ig2 = 1, lapw_nkqpt%nv(jsp)
-         carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
+         if(z_kqpt%l_real) then
+            carr1 = z_kqpt%data_r(ig2, bandoi:bandof)
+         else
+            carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
+         endif
          DO ig = 1, ngpt0
             g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
             cdum = hybdat%stepfunc(g(1), g(2), g(3))
@@ -156,6 +160,7 @@ CONTAINS
          END DO
       END DO
       call timestop("step function")
+      call save_npy("stepfunc_noinv.npy", hybdat%stepfunc)
 
       call timestart("hybrid gptm")
       ic = nbasm_mt
@@ -169,9 +174,13 @@ CONTAINS
             ig2 = pointer(g(1), g(2), g(3))
 
             IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
-            
+
             DO n1 = 1, bandf - bandi + 1
-               cdum1 = conjg(z_nk%data_c(ig1, n1))
+               if(z_nk%l_real) then
+                  cdum1 = z_nk%data_r(ig1, n1)
+               ELSE
+                  cdum1 = conjg(z_nk%data_c(ig1, n1))
+               endif
                DO n2 = bandoi, bandof
                   carr2(n2, n1) = carr2(n2, n1) + cdum1*z0(n2, ig2)
                END DO
@@ -185,6 +194,7 @@ CONTAINS
       call timestop("calc convolution")
 
       call timestop("wavefproducts_noinv5 IR")
+      call save_npy("cprod_noinv.npy", cprod)
    end subroutine wavefproducts_noinv5_IS
 
 

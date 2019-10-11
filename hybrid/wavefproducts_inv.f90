@@ -50,18 +50,11 @@ CONTAINS
       IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
 
-      ! 
-      ! call wavefproducts_inv_IS_using_noinv(bandi, bandf, bandoi, bandof, dimension, input,&
-      !                           jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
-      !                           cell, nbasm_mt, sym, noco, nkqpt, cprod)
-      !
 
-      call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
+      call wavefproducts_inv_IS_using_noinv(bandi, bandf, bandoi, bandof, dimension, input,&
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
-      ! call save_npy("cprod.npy", cprod)
-      !
-      ! call juDFT_error("i dont want anymore")
+
       call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
                                 atoms, kpts, nk, iq, hybdat, hybrid,&
                                 sym, nkqpt, cprod)
@@ -101,7 +94,6 @@ CONTAINS
                                   dimension, input, jsp, cell, atoms, hybrid,&
                                   hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                   nkqpt, cprod)
-    call save_npy("cprod_using_noinv.npy", cprod)
     rprod = real(cprod)
    end subroutine wavefproducts_inv_IS_using_noinv
 
@@ -197,6 +189,7 @@ CONTAINS
         END DO
      END DO
      call timestop("step function")
+     call save_npy("stepfunc_inv.npy", real(hybdat%stepfunc))
 
      call timestart("hybrid gptm")
      ic = nbasm_mt
@@ -226,6 +219,8 @@ CONTAINS
 
      DEALLOCATE (z0, pointer, gpt0)
      CALL timestop("wavefproducts_inv5 IR")
+
+     call save_npy("cprod_inv.npy", cprod)
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
