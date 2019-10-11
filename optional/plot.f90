@@ -16,7 +16,6 @@ MODULE m_plot
    USE m_fft3d
    USE m_rotdenmat 
 
-   PRIVATE
    !-----------------------------------------------------------------------------
    ! A general purpose plotting routine for FLEUR.
    ! 
@@ -41,20 +40,24 @@ MODULE m_plot
 CONTAINS
 
    SUBROUTINE checkplotinp()
+
       !--------------------------------------------------------------------------
       ! Checks for existing plot input. If an ancient plotin file is used, an
       ! error is called. If no usable plot_inp exists, a new one is generated. 
       !--------------------------------------------------------------------------
+
       LOGICAL :: oldform,newform
-      oldform = .FALSE.
-      INQUIRE(file = "plotin", exist = oldform) 
+
+      oldform=.FALSE.
+      INQUIRE(file="plotin",exist = oldform) 
+      INQUIRE(file="plot_inp",exist = newform)
+
       IF (oldform) THEN 
-         CALL juDFT_error("Use of plotin file no longer supported",calledby = "plot")
+         CALL juDFT_error("Use of plotin file no longer supported",calledby="plot")
       END IF
 
-      INQUIRE(file = "plot_inp", exist = newform)
       IF (.NOT.newform) THEN
-         OPEN(20,file ="plot_inp")
+         OPEN(20,file="plot_inp")
          WRITE(20,'(i2,a5,l1)') 2,",xsf=",.true.
          WRITE(20,*) "&PLOT twodim=t,cartesian=t"
          WRITE(20,*) "  vec1(1)=10.0 vec2(2)=10.0"
@@ -70,41 +73,44 @@ CONTAINS
       END IF
 
    END SUBROUTINE checkplotinp
-
-!--------------------------------------------------------------------------------------------
    
-   SUBROUTINE vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
-   ! Takes a 2D potential/density vector and rearanges it into two plottable
-   ! seperate ones (e.g. [rho_up, rho_down] ---> n, m).
+   SUBROUTINE vectorsplit(stars,vacuum,atoms,sphhar,input,noco,factor,denmat,cden,mden)
+
+      !--------------------------------------------------------------------------
+      ! Takes a spin-polarized density vector and rearanges it into two plottable
+      ! seperate ones, i.e. (rho_up, rho_down) ---> n, m.
+      ! 
+      ! Can also be applied to a potential with an additional factor, i.e. while 
+      ! the densities n/m are defined as (rho_up+-rho_down), V_eff/B_eff are de-
+      ! fined as (V_up+-V_down)/2.
+      !--------------------------------------------------------------------------
 
       IMPLICIT NONE
 
-      TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
-      TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
-      TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(IN)    :: denmat
-      TYPE(t_potden),    INTENT(OUT)   :: cden, mden
+      TYPE(t_stars),  INTENT(IN)  :: stars
+      TYPE(t_vacuum), INTENT(IN)  :: vacuum
+      TYPE(t_atoms),  INTENT(IN)  :: atoms
+      TYPE(t_sphhar), INTENT(IN)  :: sphhar
+      TYPE(t_input),  INTENT(IN)  :: input
+      TYPE(t_noco),   INTENT(IN)  :: noco
+      REAL,           INTENT(IN)  :: factor
+      TYPE(t_potden), INTENT(IN)  :: denmat
+      TYPE(t_potden), INTENT(OUT) :: cden, mden
 
       CALL cden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       CALL mden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       
-      cden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,1)+denmat%mt(:,0:,1:,2)
-      cden%pw(1:,1) = denmat%pw(1:,1)+denmat%pw(1:,2)
-      cden%vacz(1:,1:,1) = denmat%vacz(1:,1:,1)+denmat%vacz(1:,1:,2)
-      cden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,1)+denmat%vacxy(1:,1:,1:,2)
+      cden%mt(:,0:,1:,1) = (denmat%mt(:,0:,1:,1)+denmat%mt(:,0:,1:,2))/factor
+      cden%pw(1:,1) = (denmat%pw(1:,1)+denmat%pw(1:,2))/factor
+      cden%vacz(1:,1:,1) = (denmat%vacz(1:,1:,1)+denmat%vacz(1:,1:,2))/factor
+      cden%vacxy(1:,1:,1:,1) = (denmat%vacxy(1:,1:,1:,1)+denmat%vacxy(1:,1:,1:,2))/factor
 
-      mden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,1)-denmat%mt(:,0:,1:,2)
-      mden%pw(1:,1) = denmat%pw(1:,1)-denmat%pw(1:,2)
-      mden%vacz(1:,1:,1) = denmat%vacz(1:,1:,1)-denmat%vacz(1:,1:,2)
-      mden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,1)-denmat%vacxy(1:,1:,1:,2)
+      mden%mt(:,0:,1:,1) = (denmat%mt(:,0:,1:,1)-denmat%mt(:,0:,1:,2))/factor
+      mden%pw(1:,1) = (denmat%pw(1:,1)-denmat%pw(1:,2))/factor
+      mden%vacz(1:,1:,1) = (denmat%vacz(1:,1:,1)-denmat%vacz(1:,1:,2))/factor
+      mden%vacxy(1:,1:,1:,1) = (denmat%vacxy(1:,1:,1:,1)-denmat%vacxy(1:,1:,1:,2))/factor
 
-      
    END SUBROUTINE vectorsplit
-
-!--------------------------------------------------------------------------------------------
 
    SUBROUTINE matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
    ! Takes a 2x2 potential/density matrix and rearanges it into four plottable
@@ -750,7 +756,7 @@ CONTAINS
 
 !--------------------------------------------------------------------------------------------
 
-   SUBROUTINE vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+   SUBROUTINE vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,factor,oneD,cell,sym,denmat,sliceplot,score,denName)
    !Takes a spin-polarized t_potden density, i.e. a 2D vector in MT-sphere/star
    !representation and makes it into a plottable .xsf file according to a scheme
    !given in plot_inp.
@@ -766,6 +772,7 @@ CONTAINS
       TYPE(t_sphhar), INTENT(IN)    :: sphhar
       TYPE(t_input),  INTENT(IN)    :: input
       TYPE(t_noco),   INTENT(IN)    :: noco
+      REAL,              INTENT(IN)    :: factor
       TYPE(t_potden), INTENT(IN)    :: denmat
       TYPE(t_oned),   INTENT(IN)    :: oneD
       TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
@@ -774,7 +781,7 @@ CONTAINS
 
       TYPE(t_potden)                :: cden, mden
 
-      CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
+      CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,factor,denmat,cden,mden)
       CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mden)
 
    END SUBROUTINE vectorplot
@@ -851,7 +858,7 @@ CONTAINS
                                noco,oneD,sliceplot,factor,denmat,score,denName)
 
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,factor,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
 
@@ -876,7 +883,7 @@ CONTAINS
                                noco,oneD,sliceplot,factor,denmat,score,denName)
 
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,factor,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
 
@@ -901,7 +908,7 @@ CONTAINS
                                noco,oneD,sliceplot,factor,denmat,score,denName)
 
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,factor,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
 
@@ -925,7 +932,7 @@ CONTAINS
                                noco,oneD,sliceplot,factor,denmat,score,denName)
 
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,factor,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
 
@@ -949,7 +956,7 @@ CONTAINS
                                noco,oneD,sliceplot,factor,denmat,score,denName)
 
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,factor,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
 
@@ -975,7 +982,7 @@ CONTAINS
                                noco,oneD,sliceplot,factor,denmat,score,denName)
 
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,factor,oneD,cell,sym,denmat,sliceplot,score,denName)
             END IF
          ELSE
 
