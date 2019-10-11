@@ -41,7 +41,7 @@ CONTAINS
       oldform = .FALSE.
       INQUIRE(file = "plotin", exist = oldform) 
       IF (oldform) THEN 
-         CALL juDFT_error("Use of plotin file no longer supported",calledby = "plotdop")
+         CALL juDFT_error("Use of plotin file no longer supported",calledby = "plot")
       END IF
 
       INQUIRE(file = "plot_inp", exist = newform)
@@ -170,14 +170,14 @@ CONTAINS
       CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
       den=denmat
 
-      rho(:,0:,1:,:input%jspins) = factor*den%mt(:,0:,1:,:input%jspins)
-      qpw(1:,:input%jspins) = factor*den%pw(1:,:input%jspins)
-      rht(1:,1:,:input%jspins) = factor*den%vacz(1:,1:,:input%jspins)
-      rhtxy(1:,1:,1:,:input%jspins) = factor*den%vacxy(1:,1:,1:,:input%jspins)
+      rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
+      qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
+      rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
+      rhtxy(1:,1:,1:,:input%jspins) = den%vacxy(1:,1:,1:,:input%jspins)
       IF(noco%l_noco) THEN
-         cdom = factor*den%pw(:,3)
-         cdomvz(:,:) = CMPLX(factor*den%vacz(:,:,3),factor*den%vacz(:,:,4))
-         cdomvxy = factor*den%vacxy(:,:,:,3)
+         cdom = den%pw(:,3)
+         cdomvz(:,:) = CMPLX(den%vacz(:,:,3),den%vacz(:,:,4))
+         cdomvxy = den%vacxy(:,:,:,3)
       END IF
 
       IF (.NOT. sliceplot%slice) THEN
@@ -342,6 +342,26 @@ CONTAINS
          END DO
       END IF
       
+      !Correction for the case of plotting the total potential.
+      !Needed due to the different definitons of density/potential matrices in
+      !FLEUR:
+      !rhoMat=0.5*((n+m_z,m_x+i*m_y),(m_x-i*m_y,n-m_z))
+      !  vMat=    ((V_eff+B_z,B_x-i*B_y),(B_x+i*m_y,V_eff-B_z))
+      
+      IF (factor==2.0) THEN
+      
+         rho(:,0:,1:,:) = rho(:,0:,1:,:)/2.0
+         qpw(1:,:) = qpw(1:,:)/2.0
+         rht(1:,1:,:) = rht(1:,1:,:)/2.0
+         rhtxy(1:,1:,1:,:) = rhtxy(1:,1:,1:,:)/2.0
+         
+         rho(:,0:,1:,3) = -rho(:,0:,1:,3)
+         qpw(1:,3) = -qpw(1:,3)
+         rht(1:,1:,3) = -rht(1:,1:,3)
+         rhtxy(1:,1:,1:,3) = -rhtxy(1:,1:,1:,3)
+         
+      END IF
+      
       !---> save charge density to cden
       den%mt(:,0:,1:,1) = rho(:,0:,1:,1)
       den%pw(1:,1) = qpw(1:,1)
@@ -494,7 +514,7 @@ CONTAINS
             END DO
             CLOSE (17)
          ELSE IF (score) THEN
-            CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plotdop')
+            CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plot')
          END IF
       END DO
 
@@ -555,9 +575,9 @@ CONTAINS
          filename = "default"
          READ(18,plot)
          IF (twodim.AND.ANY(grid(1:2)<1)) &
-            CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
+            CALL juDFT_error("Illegal grid size in plot",calledby="plot")
          IF (.NOT.twodim.AND.ANY(grid<1)) &
-            CALL juDFT_error("Illegal grid size in plot",calledby="plotdop")
+            CALL juDFT_error("Illegal grid size in plot",calledby="plot")
          IF (twodim) grid(3) = 1
 
          !calculate cartesian coordinates if needed
@@ -853,6 +873,80 @@ CONTAINS
          END IF
       
       END IF
+
+      !Plotting the output density matrix as n or n,m or n,mx,my,mz. identifier: 3
+      !core subtraction done!
+      ! --> Additive term for iplot: 8
+      IF (plot_const.EQ.3) THEN
+         factor = 1.0
+         denName = 'denOutNOCore'
+         score = .TRUE.
+         potnorm = .FALSE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+                               noco,oneD,sliceplot,factor,denmat,score,denName)
+
+            ELSE
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+            END IF
+         ELSE
+
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+
+         END IF
+      
+      END IF
+!Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier: 4
+      !No core subtraction done!
+      ! --> Additive term for iplot: 16
+      IF (plot_const.EQ.4) THEN
+         factor = 1.0
+         denName = 'denOutMixWithCore'
+         score = .FALSE.
+         potnorm = .FALSE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+                               noco,oneD,sliceplot,factor,denmat,score,denName)
+
+            ELSE
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+            END IF
+         ELSE
+
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+
+         END IF
+      
+      END IF
+      !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier:5
+      !core subtraction done!
+      ! --> Additive term for iplot: 32
+      IF (plot_const.EQ.5) THEN
+         factor = 1.0
+         denName = 'denOutMixNoCore'
+         score = .TRUE.
+         potnorm = .FALSE.
+         IF (input%jspins.EQ.2) THEN
+            IF (noco%l_noco) THEN
+
+               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
+                               noco,oneD,sliceplot,factor,denmat,score,denName)
+
+            ELSE
+               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+            END IF
+         ELSE
+
+            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
+
+         END IF
+      
+      END IF
+      
          
       !Plotting the total potential as vtot or vtot,vdiff or vtot,B_xc1,B_xc2,B_xc3. identifier: 2
       !No core subtraction done!
