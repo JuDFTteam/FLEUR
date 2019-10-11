@@ -53,9 +53,9 @@ CONTAINS
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
-      call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension, input,&
-                                jsp, atoms, lapw, kpts, nk, iq, hybdat, hybrid,&
-                                cell, nbasm_mt, sym, noco, nkqpt, cprod)
+      call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
+                                atoms, kpts, nk, iq, hybdat, hybrid,&
+                                sym, nkqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
@@ -190,9 +190,9 @@ CONTAINS
      CALL timestop("wavefproducts_inv5 IR")
    end subroutine wavefproducts_inv_IS
 
-   subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension, input,&
-                                   jsp, atoms, lapw, kpts, nk, iq, hybdat, hybrid,&
-                                   cell, nbasm_mt, sym, noco, nkqpt, cprod)
+   subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
+                                   atoms, kpts, nk, iq, hybdat, hybrid,&
+                                   sym, nkqpt, cprod)
      use m_types
      use m_judft
      use m_io_hybrid
@@ -200,19 +200,14 @@ CONTAINS
      implicit NONE
      TYPE(t_dimension), INTENT(IN) :: dimension
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
-     TYPE(t_input), INTENT(IN)     :: input
-     TYPE(t_noco), INTENT(IN)      :: noco
      TYPE(t_sym), INTENT(IN)       :: sym
-     TYPE(t_cell), INTENT(IN)      :: cell
      TYPE(t_kpts), INTENT(IN)      :: kpts
      TYPE(t_atoms), INTENT(IN)     :: atoms
-     TYPE(t_lapw), INTENT(IN)      :: lapw
      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
      ! - scalars -
      INTEGER, INTENT(IN)      :: bandi, bandf, bandoi, bandof
-     INTEGER, INTENT(IN)      :: jsp, nk, iq
-     INTEGER, INTENT(IN)      :: nbasm_mt
+     INTEGER, INTENT(IN)      :: nk, iq
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
@@ -232,12 +227,10 @@ CONTAINS
      COMPLEX                 ::    cdum, cfac
      COMPLEX, PARAMETER      ::    img = (0.0, 1.0)
      LOGICAL                 ::    offdiag
-     INTEGER                 ::    g_t(3)
 
      ! - local arrays -
      INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
 
-     REAL                    ::    kqpt(3), kqpthlp(3)
      REAL                    ::    cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
      REAL                    ::    cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
      REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
@@ -302,33 +295,33 @@ CONTAINS
 
                     IF (iatom == iiatom) THEN
                        IF (m < 0) THEN
-                          cmt(:, lm1, iatom) = (ccmt(:, lm1, iatom) + rdum*ccmt(:, lm2, iiatom))*cmplx_exp(iatom)*rfac
+                          cmt(:, lm1, iatom) = real((ccmt(:, lm1, iatom) + rdum*ccmt(:, lm2, iiatom))*cmplx_exp(iatom)*rfac)
 
-                          cmt_nk(:, lm1, iatom) = (ccmt_nk(:, lm1, iatom) + rdum*ccmt_nk(:, lm2, iiatom))*cexp_nk(iatom)*rfac
+                          cmt_nk(:, lm1, iatom) = real((ccmt_nk(:, lm1, iatom) + rdum*ccmt_nk(:, lm2, iiatom))*cexp_nk(iatom)*rfac)
                        ELSE IF (m > 0) THEN
 
-                          cmt(:, lm1, iatom) = (ccmt(:, lm1, iatom) - rdum*ccmt(:, lm2, iiatom))*cmplx_exp(iatom)*cfac
+                          cmt(:, lm1, iatom) = real((ccmt(:, lm1, iatom) - rdum*ccmt(:, lm2, iiatom))*cmplx_exp(iatom)*cfac)
 
-                          cmt_nk(:, lm1, iatom) = (ccmt_nk(:, lm1, iatom) - rdum*ccmt_nk(:, lm2, iiatom))*cexp_nk(iatom)*cfac
+                          cmt_nk(:, lm1, iatom) = real((ccmt_nk(:, lm1, iatom) - rdum*ccmt_nk(:, lm2, iiatom))*cexp_nk(iatom)*cfac)
                        ELSE
                           IF (mod(l, 2) == 0) THEN
-                             cmt(:, lm1, iatom) = ccmt(:, lm1, iatom)*cmplx_exp(iatom)
-                             cmt_nk(:, lm1, iatom) = ccmt_nk(:, lm1, iatom)*cexp_nk(iatom)
+                             cmt(:, lm1, iatom) = real(ccmt(:, lm1, iatom)*cmplx_exp(iatom))
+                             cmt_nk(:, lm1, iatom) = real(ccmt_nk(:, lm1, iatom)*cexp_nk(iatom))
                           ELSE
-                             cmt(:, lm1, iatom) = ccmt(:, lm1, iatom)*(-img)*cmplx_exp(iatom)
-                             cmt_nk(:, lm1, iatom) = ccmt_nk(:, lm1, iatom)*(-img)*cexp_nk(iatom)
+                             cmt(:, lm1, iatom) = real(ccmt(:, lm1, iatom)*(-img)*cmplx_exp(iatom))
+                             cmt_nk(:, lm1, iatom) = real(ccmt_nk(:, lm1, iatom)*(-img)*cexp_nk(iatom))
                           END IF
                        END IF
                     ELSE
                        cdum = rdum*cmplx_exp(iatom)*cmplx_exp(iiatom)
-                       cmt(:, lm1, iatom) = (ccmt(:, lm1, iatom) + cdum*ccmt(:, lm2, iiatom))*rfac
+                       cmt(:, lm1, iatom) = real((ccmt(:, lm1, iatom) + cdum*ccmt(:, lm2, iiatom))*rfac)
 
-                       cmt(:, lm1, iiatom) = (ccmt(:, lm1, iatom) - cdum*ccmt(:, lm2, iiatom))*cfac
+                       cmt(:, lm1, iiatom) = real((ccmt(:, lm1, iatom) - cdum*ccmt(:, lm2, iiatom))*cfac)
 
                        cdum = rdum*cexp_nk(iatom)*cexp_nk(iiatom)
-                       cmt_nk(:, lm1, iatom) = (ccmt_nk(:, lm1, iatom) + cdum*ccmt_nk(:, lm2, iiatom))*rfac
+                       cmt_nk(:, lm1, iatom) = real((ccmt_nk(:, lm1, iatom) + cdum*ccmt_nk(:, lm2, iiatom))*rfac)
 
-                       cmt_nk(:, lm1, iiatom) = (ccmt_nk(:, lm1, iatom) - cdum*ccmt_nk(:, lm2, iiatom))*cfac
+                       cmt_nk(:, lm1, iiatom) = real((ccmt_nk(:, lm1, iatom) - cdum*ccmt_nk(:, lm2, iiatom))*cfac)
                     END IF
 
                  END DO
