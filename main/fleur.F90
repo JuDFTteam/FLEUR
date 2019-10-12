@@ -518,7 +518,7 @@ CONTAINS
 !    ALLOCATE(dummyDen%pw_w,mold=dummyDen%pw)
 
 !    DO i=1,3
-!       CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,2.0,vtot,dummyDen,xcB(1),xcB(2),xcB(3))
+!       CALL matrixsplit(stars,atoms,sphhar,vacuum,input,noco,2.0,vtot,dummyDen,xcB(1),xcB(2),xcB(3))
 !    END DO
 
 !    CALL divB%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
