@@ -1,6 +1,6 @@
 MODULE m_add_selfen
 
-   LOGICAL, PARAMETER :: l_debug = .FALSE.
+   LOGICAL, PARAMETER :: l_selfenDebug = .TRUE.
 
    CONTAINS
 
@@ -70,7 +70,7 @@ MODULE m_add_selfen
             !Target occupation
             n_target = MERGE(SUM(n_occ(i_hia,:)),n_occ(i_hia,i_match),l_match_both_spins)
             WRITE(filename,9000) i_match
-            IF(l_debug) OPEN(unit=1337,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
+            IF(l_selfenDebug) OPEN(unit=1337,file=TRIM(ADJUSTL(filename)),status="replace",action="write")
             mu = mu_a
             start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
             end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
@@ -99,13 +99,13 @@ MODULE m_add_selfen
                      CALL gmat%free()
                   ENDDO
                ENDDO
-               IF(mu.GT.-0.2.AND.mu.LT.0.2.AND.l_debug) THEN
+               IF(mu.GT.-0.2.AND.mu.LT.0.2.AND.l_selfenDebug) THEN
                   !DEBUG OUTPUT: Give the gfDOS around 0 (where we expect to find mu)
                   ind = AINT((mu+0.2)/0.01)
                   CALL gfDOS(gp,l,nType,500+ind,atoms,input,ef)
                ENDIF
                CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
-               IF(err.AND.l_debug) CALL gfDOS(gp,l,nType,999,atoms,input,ef)
+               IF(err.AND.l_selfenDebug) CALL gfDOS(gp,l,nType,999,atoms,input,ef)
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
@@ -113,13 +113,13 @@ MODULE m_add_selfen
                      n = n + mmpMat(m,m,i_hia,ispin)
                   ENDDO
                ENDDO
-               IF(l_debug) WRITE(1337,"(2f15.8)") mu,n
+               IF(l_selfenDebug) WRITE(1337,"(2f15.8)") mu,n
                IF(n.GT.n_max) THEN
                   mu_max = mu
                   n_max  = n
                ENDIF
             ENDDO
-            IF(l_debug) CLOSE(1337)
+            IF(l_selfenDebug) CLOSE(1337)
 
             !Sanity check for the maximum occupation
             IF(n_max-2*ns.GT.1) THEN
