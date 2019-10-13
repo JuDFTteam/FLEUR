@@ -22,7 +22,6 @@
       USE m_ylm
       IMPLICIT NONE
 !
-!      TYPE(t_sliceplot),INTENT(IN) :: sliceplot TODO:Remove
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_sphhar),INTENT(IN)    :: sphhar

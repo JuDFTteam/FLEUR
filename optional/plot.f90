@@ -379,8 +379,9 @@ CONTAINS
 
    SUBROUTINE savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                      noco, score, potnorm, denName, denf, denA1, denA2, denA3)
-      USE m_cdn_io
+      USE m_outcdn
       USE m_xsf_io
+      USE m_cdn_io
 
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
@@ -407,48 +408,40 @@ CONTAINS
       !          ---> rho_f.xsf, rho_A1.xsf, rho_A2.xsf, rho_A3.xsf
       !                                [n(r_vec),m_vec(r_vec)]
 
-      USE m_outcdn
-      USE m_xsf_io
-      USE m_cdn_io
-      USE m_constants
-
       IMPLICIT NONE
 
-      TYPE(t_stars),               INTENT(IN)    :: stars
-      TYPE(t_vacuum),              INTENT(IN)    :: vacuum
-      TYPE(t_sphhar),              INTENT(IN)    :: sphhar
-      TYPE(t_atoms),               INTENT(IN)    :: atoms
-      TYPE(t_input),               INTENT(IN)    :: input
-      TYPE(t_oneD),                INTENT(IN)    :: oneD
-      TYPE(t_sym),                 INTENT(IN)    :: sym
-      TYPE(t_cell),                INTENT(IN)    :: cell
-      TYPE(t_noco),                INTENT(IN)    :: noco
-      LOGICAL,                     INTENT(IN)    :: score, potnorm
-      CHARACTER(len=10),           INTENT(IN)    :: denName
-      TYPE(t_potden),              INTENT(IN)    :: denf
-      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA1
-      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA2
-      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA3
+      TYPE(t_stars),               INTENT(IN) :: stars
+      TYPE(t_atoms),               INTENT(IN) :: atoms
+      TYPE(t_sphhar),              INTENT(IN) :: sphhar
+      TYPE(t_vacuum),              INTENT(IN) :: vacuum
+      TYPE(t_input),               INTENT(IN) :: input
+      TYPE(t_oneD),                INTENT(IN) :: oneD
+      TYPE(t_sym),                 INTENT(IN) :: sym
+      TYPE(t_cell),                INTENT(IN) :: cell
+      TYPE(t_noco),                INTENT(IN) :: noco
+      LOGICAL,                     INTENT(IN) :: score, potnorm
+      CHARACTER(len=20),           INTENT(IN) :: denName
+      TYPE(t_potden),              INTENT(IN) :: denf
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA1
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA2
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA3
 
-      !  .. Local Scalars ..
-      REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
-      INTEGER       :: i,j,ix,iy,iz,na,nplo,iv,iflag,nfile
-      INTEGER       :: nplot,nt,jm,jspin,numInDen,numOutFiles
-      LOGICAL       :: twodim,oldform,newform,l_qfix
-      LOGICAL       :: cartesian,xsf,unwind,polar
+      REAL    :: tec, qint, phi0, angss
+      INTEGER :: i, j, ix, iy, iz, na, nplo, iv, iflag, nfile
+      INTEGER :: nplot, nt, jm, jspin, numInDen, numOutFiles
+      LOGICAL :: twodim, cartesian, xsf, unwind, polar
 
-      !  .. Local Arrays ..
-      TYPE(t_potden), ALLOCATABLE :: den(:)
-      REAL, ALLOCATABLE    :: xdnout(:)
-      REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3),help(3),qssc(3)
-      INTEGER :: grid(3)
-      REAL    :: rhocc(atoms%jmtd)
-      REAL    :: point(3)
+      TYPE(t_potden),     ALLOCATABLE :: den(:)
+      REAL,               ALLOCATABLE :: xdnout(:)
+      REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
+                                         zero(3), help(3), qssc(3), point(3)
+      INTEGER                         :: grid(3)
+      REAL                            :: rhocc(atoms%jmtd)
       CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
       CHARACTER (len=30)              :: filename
       CHARACTER (len=7)               :: textline
 
-      REAL, PARAMETER :: eps = 1.0e-15
+      REAL,               PARAMETER   :: eps = 1.0e-15
 
       NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
@@ -477,8 +470,7 @@ CONTAINS
 
       DO i = 1, numInDen
          
-         ! TODO: Understand and incorporate substraction of core charges!
-         ! Subtract core charge if input%score is set
+         ! TODO: Does this work as intended?
          IF ((numInDen.NE.4).AND.(score)) THEN
             OPEN (17,file='cdnc',form='unformatted',status='old')
             REWIND 17
@@ -751,31 +743,28 @@ CONTAINS
 
    END SUBROUTINE vectorplot
 
-!--------------------------------------------------------------------------------------------
-
-   SUBROUTINE matrixplot(potnorm,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,factor,denmat,score,denName)
+   SUBROUTINE matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                         noco, factor, score, potnorm, denmat, denName)
 
       ! Takes a 2x2 t_potden variable, i.e. a sum of Pauli matrices in MT-
       ! sphere/ plane wave representation and splits it into four spinless ones,
       ! which are then passed on to the savxsf routine to get 4 .xsf files out.
-      ! 
-      ! TODO: Clean up this routine and order its arguments.
 
       IMPLICIT NONE
 
-      TYPE(t_sym),       INTENT(IN)    :: sym
-      TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
-      TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
-      TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_cell),      INTENT(IN)    :: cell
-      TYPE(t_oneD),      INTENT(IN)    :: oneD
-      TYPE(t_noco),      INTENT(IN)    :: noco
-      REAL,              INTENT(IN)    :: factor
-      TYPE(t_potden),    INTENT(IN)    :: denmat
-      LOGICAL,           INTENT(IN)    :: score, potnorm
-      CHARACTER(len=10), INTENT(IN)    :: denName
+      TYPE(t_stars),     INTENT(IN) :: stars
+      TYPE(t_atoms),     INTENT(IN) :: atoms
+      TYPE(t_sphhar),    INTENT(IN) :: sphhar
+      TYPE(t_vacuum),    INTENT(IN) :: vacuum
+      TYPE(t_input),     INTENT(IN) :: input
+      TYPE(t_oneD),      INTENT(IN) :: oneD
+      TYPE(t_sym),       INTENT(IN) :: sym
+      TYPE(t_cell),      INTENT(IN) :: cell
+      TYPE(t_noco),      INTENT(IN) :: noco
+      REAL,              INTENT(IN) :: factor
+      LOGICAL,           INTENT(IN) :: score, potnorm
+      TYPE(t_potden),    INTENT(IN) :: denmat
+      CHARACTER(len=10), INTENT(IN) :: denName
 
       TYPE(t_potden)                   :: cden, mxden, myden, mzden
 
@@ -787,24 +776,23 @@ CONTAINS
 
    END SUBROUTINE matrixplot
 
-   SUBROUTINE procplot(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,denmat,plot_const) 
+   SUBROUTINE procplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                       noco, denmat, plot_const) 
    
       ! According to iplot, we process which exact plots we make after we assured 
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with 
       ! identifier n is done. 
-      ! 
-      ! TODO: Clean up this messy routine.
       
       IMPLICIT NONE
 
-      TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
@@ -812,11 +800,11 @@ CONTAINS
       INTEGER            :: i
       REAL               :: factor
       CHARACTER (len=10) :: denName
-      LOGICAL            :: score
-      LOGICAL            :: potnorm
+      LOGICAL            :: score, potnorm
 
-      !Plotting the input density matrix as n or n,m or n,mx,my,mz. identifier: 1
-      ! --> Additive term for iplot: 2
+      ! Plotting the input density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_INPDEN = 1
+      ! Additive term for iplot: 2
       IF (plot_const.EQ.1) THEN
          factor = 1.0
          denName = 'denIn'
@@ -824,26 +812,24 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
                CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-
-            CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
          END IF
-      
       END IF
 
-      !Plotting the output density matrix as n or n,m or n,mx,my,mz. identifier: 2
-      !No core subtraction done!
-      ! --> Additive term for iplot: 4
+      ! Plotting the output density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_OUTDEN_Y_CORE = 2
+      ! No core subtraction done!
+      ! Additive term for iplot: 4
       IF (plot_const.EQ.2) THEN
          factor = 1.0
          denName = 'denOutWithCore'
@@ -851,26 +837,24 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
                CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-
-            CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-
-         END IF
-      
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
 
-      !Plotting the output density matrix as n or n,m or n,mx,my,mz. identifier: 3
-      !core subtraction done!
-      ! --> Additive term for iplot: 8
+      ! Plotting the output density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_OUTDEN_N_CORE = 3
+      ! Core subtraction done!
+      ! Additive term for iplot: 8
       IF (plot_const.EQ.3) THEN
          factor = 1.0
          denName = 'denOutNOCore'
@@ -878,25 +862,24 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
                CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-
-            CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-
-         END IF
-      
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
-!Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier: 4
-      !No core subtraction done!
-      ! --> Additive term for iplot: 16
+
+      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_MIXDEN_Y_CORE = 4
+      ! No core subtraction done!
+      ! Additive term for iplot: 16
       IF (plot_const.EQ.4) THEN
          factor = 1.0
          denName = 'denOutMixWithCore'
@@ -904,25 +887,25 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
                CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-
-            CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-
-         END IF
-      
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
-      !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier:5
-      !core subtraction done!
-      ! --> Additive term for iplot: 32
+
+      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_MIXDEN_N_CORE = 5
+      ! Core subtraction done!
+      ! Additive term for iplot: 32
+
       IF (plot_const.EQ.5) THEN
          factor = 1.0
          denName = 'denOutMixNoCore'
@@ -930,27 +913,25 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
                CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-
-            CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-
-         END IF
-      
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
-      
-         
-      !Plotting the total potential as vtot or vtot,vdiff or vtot,B_xc1,B_xc2,B_xc3. identifier: 2
-      !No core subtraction done!
-      ! --> Additive term for iplot: 128
+              
+      ! Plotting the total potential as vTot / v_eff, B_eff / v_eff, 
+      ! B_xc_1, B_xc_2, B_xc_3.
+      ! Plot identifier: PLOT_POT_TOT = 7
+      ! No core subtraction done!
+      ! Additive term for iplot: 128
       IF (plot_const.EQ.7) THEN
          factor = 2.0
          denName = 'vTot'
@@ -958,121 +939,89 @@ CONTAINS
          potnorm = .TRUE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
                CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-
-            CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-
-         END IF
-         
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
 
-      !Plotting the divergence of B_xc_vec. identifier: 14 (Pot: 15, B_corrected: 16)
-      !No core subtraction done!
-      ! --> Additive term for iplot: 16384
-      IF (plot_const.EQ.14) THEN
-         denName = 'diverg'
-         score = .FALSE.
-         potnorm = .FALSE.
-
-         CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-      END IF
-
-      IF (plot_const.EQ.15) THEN
-         denName = 'divPotx'
-         score = .FALSE.
-         potnorm = .FALSE.
-
-         CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-      
-      END IF
-
-      IF (plot_const.EQ.16) THEN
-         denName = 'divPoty'
-         score = .FALSE.
-         potnorm = .FALSE.
-
-         CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-      
-      END IF
-
-      IF (plot_const.EQ.17) THEN
-         denName = 'divPotz'
-         score = .FALSE.
-         potnorm = .FALSE.
-
-         CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-      
-      END IF
-
-      IF (plot_const.EQ.18) THEN
-         denName = 'xcBcorrx'
-         score = .FALSE.
-         potnorm = .FALSE.
-
-         CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-      
-      END IF
-
-      IF (plot_const.EQ.19) THEN
-         denName = 'xcBcorry'
-         score = .FALSE.
-         potnorm = .FALSE.
-
-         CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-      
-      END IF
-
-      IF (plot_const.EQ.20) THEN
-         denName = 'xcBcorrz'
-         score = .FALSE.
-         potnorm = .FALSE.
-
-         CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-      
-      END IF
-
-      IF (plot_const.EQ.21) THEN
-         denName = 'correctorP'
-         score = .FALSE.
-         potnorm = .TRUE.
-
-         CALL savxsf(stars, atoms, sphhar, vacuum, input,oneD,sym,cell,noco,score,potnorm,denName,denmat)
-      
-      END IF
-      
    END SUBROUTINE procplot
 
-   SUBROUTINE makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const) 
-  
-      !Checks, based on the iplot switch that is given in the input, whether or not plots should be made.
-      !Before the plot command iss processed, we check if the plot_inp is there and no oldform is given. If that
-      !is not the case, we throw an error/create a plot_inp.
-      ! 
-      ! TODO: Clean up this routine and order its arguments.
+   SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, div, phiPot, divGrx, divGry, divGrz, &
+                        xcBmodx, xcBmody, xcBmodz) 
 
       IMPLICIT NONE
 
-      TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
+      TYPE(t_potden),    INTENT(IN)    :: div, phiPot, divGrx, divGry, divGrz, &
+                                          xcBmodx, xcBmody, xcBmodz
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .FALSE., 'divergence', div)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'modPot', phiPot)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'divPotx', divGrx)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'divPoty', divGry)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'divPotz', divGrz)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'xcBmodx', xcBmodx)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'xcBmody', xcBmody)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'xcBmodz', xcBmodz)
+      
+   END SUBROUTINE plotBtest
+
+   SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, denmat, plot_const, sliceplot) 
+  
+      ! Checks, based on the iplot switch that is given in the input, whether or
+      ! not plots should be made. Before the plot command is processed, we check 
+      ! whether the plot_inp is there and no oldform is given. If that is not the
+      ! case, we throw an error/create a plot_inp.
+
+      IMPLICIT NONE
+
+
+      TYPE(t_stars),     INTENT(IN)    :: stars
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_cell),      INTENT(IN)    :: cell
+      TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
+      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
 
       LOGICAL :: allowplot
       
@@ -1084,22 +1033,20 @@ CONTAINS
       ! and none else, iplot would need to be 2^1 + 2^2 + 2^3 = 2 + 4 + 8 = 14.
       ! iplot=1 or any odd number will *always* plot all possible options.
       
-      CALL timestart("Plotting")       
-
+      CALL timestart("Plotting iplot plots")       
 
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN  
          CALL checkplotinp()
-         CALL procplot(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,denmat,plot_const)
+         CALL  procplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, denmat, plot_const) 
       END IF
-   CALL timestop("Plotting")
+      CALL timestop("Plotting iplot plots")
    END SUBROUTINE makeplots
 
-   SUBROUTINE getMTSphere(input,cell,atoms,oneD,point,iType,iAtom,pt)
+   SUBROUTINE getMTSphere(input, cell, atoms, oneD, point, iType, iAtom, pt)
 
       ! Old subroutine originally from plotdop.f90, which is needed in savxsf.
-      ! 
-      ! TODO: Clean up this routine.
 
       IMPLICIT NONE
 

@@ -157,7 +157,8 @@ CONTAINS
     END IF
     
     IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
-       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_INPDEN) 
+       CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                      noco, inDen, PLOT_INPDEN, sliceplot) 
     END IF 
 
     ! Initialize and load inDen density (end)
@@ -252,8 +253,9 @@ CONTAINS
                  obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
-       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vTot,PLOT_POT_TOT)         
+       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN            
+          CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                         noco, vTot, PLOT_POT_TOT, sliceplot)      
 !          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
 !          CALL subPotDen(vxcForPlotting,vTot,vCoul)
 !          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
@@ -385,9 +387,11 @@ CONTAINS
            
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
-                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_Y_CORE)
-!               CDN subtracted by core charge
-!                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_N_CORE)
+                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
+!!               CDN subtracted by core charge
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
           IF (input%l_rdmft) THEN
@@ -454,9 +458,12 @@ CONTAINS
        
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
-                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_Y_CORE)
-!               CDN subtracted by core charge
+                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, outDen, PLOT_MIXDEN_Y_CORE, sliceplot)
+!!               CDN subtracted by core charge
 !                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
 
@@ -483,7 +490,6 @@ CONTAINS
              l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
           END IF
           IF (hybrid%l_subvxc) THEN
-             results%te_hfex%valence = 0
           END IF
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
@@ -507,7 +513,7 @@ CONTAINS
 
     END DO scfloop ! DO WHILE (l_cont)
 
-!    DIVERGENCE
+!    DIVERGENCE; TODO: Remove all the B_field stuff and put it into its own routine.
 
 !    DO i=1,3
 !       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -549,16 +555,9 @@ CONTAINS
 !       CALL corrB(i)%addPotDen(xcB(i), graddiv(i))
 !    END DO
 
-!    IF ((sliceplot%iplot.NE.0).AND.(mpi%irank==0) ) THEN
-!       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,divB,PLOT_SPECIAL) 
-!       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vDiv,PLOT_SPECIAL4) 
-!       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,graddiv(1),PLOT_SPECIAL2x) 
-!       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,graddiv(2),PLOT_SPECIAL2y) 
-!       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,graddiv(3),PLOT_SPECIAL2z) 
-!       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,xcB(1),PLOT_SPECIAL3x) 
-!       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,xcB(2),PLOT_SPECIAL3y) 
-!       CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,xcB(3),PLOT_SPECIAL3z) 
-!    END IF
+!    CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+!                        noco, divB, vDiv, graddiv(1), graddiv(2), graddiv(3), &
+!                        corrB(1), corrB(2), corrB(3))
 
     CALL add_usage_data("Iterations",iter)
 
