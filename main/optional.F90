@@ -13,9 +13,7 @@ CONTAINS
     ! this routine is called by: fleur.F90
     !
     ! optional --+-- plot -+- loddop
-    !            |         +- outcdn -+- cotra0
-    !            |                    +- cotra1
-    !            |                    +- starf2 -- spgrot
+    !            |         +- outcdn -+- starf2 -- spgrot
     !            |                    +- starf3
     !            |                    +- ylm3
     !            +-- stden -+- atom2 -+- setcor
@@ -40,10 +38,8 @@ CONTAINS
     !            |          +- points -- qranf
     !            |          +- sphpts -- qranf
     !            |          +- checkdop -+- starf3
-    !            |                       +- cotra0
     !            |                       +- starf2 -- spgrot
     !            |                       +- fitchk
-    !            |                       +- cotra1
     !            |                       +- ylm3
     !            +-- cdnsp -+- readDensity
     !            |          +- writeDensity

@@ -16,7 +16,7 @@ CONTAINS
       USE m_ylm
 
       !--------------------------------------------------------------------------
-      ! Calculates the charge density at given point p(i=1,3).
+      ! Calculates the charge density at a given point p(i=1,3).
       !--------------------------------------------------------------------------
 
       IMPLICIT NONE
@@ -56,7 +56,6 @@ CONTAINS
       IF (iflag.NE.1) THEN
          IF (iflag.NE.0) THEN
             ! Interstitial part:
-            !CALL cotra1(p(1),rcc,cell%bmat)
             rcc=matmul(cell%bmat,p)/tpi_const
             CALL starf3(sym%nop, stars%ng3, sym%symor, stars%kv3, sym%mrot, &
                         sym%tau, rcc, sym%invtab, sf3)
@@ -107,7 +106,6 @@ CONTAINS
                END IF
                p(3) = abs(p(3))
             END IF
-            !CALL cotra1(p,rcc,cell%bmat)
             rcc=matmul(cell%bmat,p)/tpi_const
             CALL starf2(sym%nop2, stars%ng2, stars%kv3, sym%mrot, sym%symor, &
                         sym%tau,rcc,sym%invtab,sf2)
@@ -152,7 +150,6 @@ CONTAINS
       sx = sqrt(sx)
       IF (nopa.NE.1) THEN
          ! Switch to internal units.
-         !CALL cotra1(x,rcc,cell%bmat)
          rcc=matmul(cell%bmat,x)/tpi_const
          ! Rotate into representative.
          DO  i = 1,3
@@ -166,7 +163,6 @@ CONTAINS
             END DO
          END DO
          ! Switch back to cartesian units.
-         !CALL cotra0(p,x,cell%amat)
          x=matmul(cell%amat,p)
       END IF
       DO j = atoms%jri(n),2,-1
