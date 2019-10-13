@@ -284,10 +284,10 @@ CONTAINS
           !-------------------------------------------
           ! Modify the higher energyParameters for f-orbitals
           !-------------------------------------------
-          !IF(l.EQ.3) THEN
-          !  enpara%el0(4:,n,1) = enpara%el0(3,n,1)
-          !  enpara%el0(4:,n,2) = enpara%el0(3,n,1)
-          !ENDIF
+          IF(l.EQ.3) THEN
+            enpara%el0(4:,n,1) = enpara%el0(3,n,1)
+            enpara%el0(4:,n,2) = enpara%el0(3,n,1)
+          ENDIF
           IF(mpi%irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1) 
        ENDDO
     ENDIF
