@@ -10,16 +10,16 @@ MODULE m_divergence
 
 CONTAINS
    SUBROUTINE mt_div(n,atoms,sphhar,sym,xcB,div)
-   !-----------------------------------------------------------------------------!
-   !By use of the cartesian components of a field, its radial/angular derivati-  !
-   !ves in the muffin tin at each spherical grid point and the corresponding an- !
-   !gles:                                                                        !
-   !                                                                             !
-   !Make the divergence of said field in real space and store it as a source     !
-   !density, again represented by mt-coefficients in a potden.                   !
-   !                                                                             !
-   !Code by A. Neukirchen, September 2019                                        !
-   !-----------------------------------------------------------------------------! 
+   !-----------------------------------------------------------------------------
+   !By use of the cartesian components of a field, its radial/angular derivati-  
+   !ves in the muffin tin at each spherical grid point and the corresponding an- 
+   !gles:                                                                        
+   !                                                                             
+   !Make the divergence of said field in real space and store it as a source     
+   !density, again represented by mt-coefficients in a potden.                   
+   !                                                                             
+   !Code by A. Neukirchen, September 2019                                        
+   !----------------------------------------------------------------------------- 
    USE m_mt_tofrom_grid
 
    IMPLICIT NONE
@@ -76,15 +76,15 @@ CONTAINS
    END SUBROUTINE mt_div
 
    SUBROUTINE pw_div(ifftxc3,jspins,stars,cell,noco,sym,xcB,div)
-   !-----------------------------------------------------------------------------!
-   !By use of the cartesian components of a field and its carthesian derivatives !
-   !in the interstitial/vacuum region at each grid point:                        !
-   !                                                                             !
-   !Make the divergence of said field in real space and store it as a source     !
-   !density, again represented by pw-coefficients in a potden.                   !
-   !                                                                             !
-   !Code by A. Neukirchen, September 2019                                        !
-   !-----------------------------------------------------------------------------! 
+   !-----------------------------------------------------------------------------
+   !By use of the cartesian components of a field and its cartesian derivatives  
+   !in the interstitial/vacuum region at each grid point:                        
+   !                                                                             
+   !Make the divergence of said field in real space and store it as a source     
+   !density, again represented by pw-coefficients in a potden.                   
+   !                                                                             
+   !Code by A. Neukirchen, September 2019                                        
+   !----------------------------------------------------------------------------- 
    USE m_pw_tofrom_grid
 
    IMPLICIT NONE
@@ -125,10 +125,10 @@ CONTAINS
    USE m_types
    USE m_constants
    IMPLICIT NONE
-   !-----------------------------------------------------------------------------!
-   !Use the two divergence subroutines above to now put the complete divergence  !
-   !of a field into a t_potden variable.                                         !
-   !-----------------------------------------------------------------------------!   
+   !-----------------------------------------------------------------------------
+   !Use the two divergence subroutines above to now put the complete divergence  
+   !of a field into a t_potden variable.                                         
+   !-----------------------------------------------------------------------------   
    INTEGER, INTENT(IN)                         :: jspins, n, ifftxc3
    TYPE(t_atoms), INTENT(IN)                   :: atoms
    TYPE(t_sphhar), INTENT(IN)                  :: sphhar
@@ -146,16 +146,16 @@ CONTAINS
    END SUBROUTINE divergence
 
    SUBROUTINE mt_grad(n,atoms,sphhar,sym,den,gradphi)
-   !-----------------------------------------------------------------------------!
-   !By use of the cartesian components of a field, its radial/angular derivati-  !
-   !ves in the muffin tin at each spherical grid point and the corresponding an- !
-   !gles:                                                                        !
-   !                                                                             !
-   !Make the divergence of said field in real space and store it as a source     !
-   !density, again represented by mt-coefficients in a potden.                   !
-   !                                                                             !
-   !Code by A. Neukirchen, September 2019                                        !
-   !-----------------------------------------------------------------------------! 
+   !-----------------------------------------------------------------------------
+   !By use of the cartesian components of a field, its radial/angular derivati-  
+   !ves in the muffin tin at each spherical grid point and the corresponding an- 
+   !gles:                                                                        
+   !                                                                             
+   !Make the divergence of said field in real space and store it as a source     
+   !density, again represented by mt-coefficients in a potden.                   
+   !                                                                             
+   !Code by A. Neukirchen, September 2019                                        
+   !----------------------------------------------------------------------------- 
    USE m_constants
    USE m_mt_tofrom_grid
 
@@ -207,15 +207,15 @@ CONTAINS
    END SUBROUTINE mt_grad
 
    SUBROUTINE pw_grad(ifftxc3,jspins,stars,cell,noco,sym,den,gradphi)
-   !-----------------------------------------------------------------------------!
-   !By use of the cartesian components of a field and its carthesian derivatives !
-   !in the interstitial/vacuum region at each grid point:                        !
-   !                                                                             !
-   !Make the divergence of said field in real space and store it as a source     !
-   !density, again represented by pw-coefficients in a potden.                   !
-   !                                                                             !
-   !Code by A. Neukirchen, September 2019                                        !
-   !-----------------------------------------------------------------------------! 
+   !-----------------------------------------------------------------------------
+   !By use of the cartesian components of a field and its cartesian derivatives  
+   !in the interstitial/vacuum region at each grid point:                        
+   !                                                                             
+   !Make the divergence of said field in real space and store it as a source     
+   !density, again represented by pw-coefficients in a potden.                   
+   !                                                                             
+   !Code by A. Neukirchen, September 2019                                        
+   !----------------------------------------------------------------------------- 
    USE m_constants
    USE m_pw_tofrom_grid
 
@@ -258,10 +258,10 @@ CONTAINS
    USE m_constants
    USE m_mt_tofrom_grid
    IMPLICIT NONE
-   !-----------------------------------------------------------------------------!
-   !Use the two gradient subroutines above to now put the complete gradient      !
-   !of a potential into a t_potden variable.                                     !
-   !-----------------------------------------------------------------------------!   
+   !-----------------------------------------------------------------------------
+   !Use the two gradient subroutines above to now put the complete gradient      
+   !of a potential into a t_potden variable.                                     
+   !-----------------------------------------------------------------------------   
    INTEGER, INTENT(IN)                         :: jspins, n, ifftxc3
    TYPE(t_atoms), INTENT(IN)                   :: atoms
    TYPE(t_sphhar), INTENT(IN)                  :: sphhar
