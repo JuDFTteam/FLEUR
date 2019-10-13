@@ -34,7 +34,7 @@ CONTAINS
    TYPE(t_gradients)                           :: gradx, grady, gradz
 
    REAL, ALLOCATABLE :: div_temp(:, :)
-   REAL, ALLOCATABLE :: thet(:), phi(:)
+   REAL, ALLOCATABLE :: thet(:), phi(:), xcBx_mt(:,:,:), xcBy_mt(:,:,:), xcBz_mt(:,:,:)
    REAL :: r,th,ph
    INTEGER :: jr, k, nsp, kt, i
 
@@ -44,11 +44,29 @@ CONTAINS
    ALLOCATE (div_temp(atoms%jri(n)*nsp,1))
    ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
+   ALLOCATE (xcBx_mt(lbound(xcb(1)%mt, dim=1):ubound(xcb(1)%mt, dim=1), &
+                     lbound(xcb(1)%mt, dim=2):ubound(xcb(1)%mt, dim=2), &
+                     lbound(xcb(1)%mt, dim=4):ubound(xcb(1)%mt, dim=4)))
+
+   ALLOCATE (xcBy_mt(lbound(xcb(2)%mt, dim=1):ubound(xcb(2)%mt, dim=1), &
+                     lbound(xcb(2)%mt, dim=2):ubound(xcb(2)%mt, dim=2), &
+                     lbound(xcb(2)%mt, dim=4):ubound(xcb(2)%mt, dim=4)))
+
+   ALLOCATE (xcBz_mt(lbound(xcb(3)%mt, dim=1):ubound(xcb(3)%mt, dim=1), &
+                     lbound(xcb(3)%mt, dim=2):ubound(xcb(3)%mt, dim=2), &
+                     lbound(xcb(3)%mt, dim=4):ubound(xcb(3)%mt, dim=4)))
+
    CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
-   CALL mt_to_grid(.TRUE., 1, atoms, sphhar, xcB(1)%mt(:,0:,n,:), n, gradx)
-   CALL mt_to_grid(.TRUE., 1, atoms, sphhar, xcB(2)%mt(:,0:,n,:), n, grady)
-   CALL mt_to_grid(.TRUE., 1, atoms, sphhar, xcB(3)%mt(:,0:,n,:), n, gradz)
+   DO jr=1,atoms%jri(n)
+      xcBx_mt(jr,0:,:) = xcB(1)%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
+      xcBy_mt(jr,0:,:) = xcB(2)%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
+      xcBz_mt(jr,0:,:) = xcB(3)%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
+   ENDDO
+
+   CALL mt_to_grid(.TRUE., 1, atoms, sphhar, xcBx_mt(:,0:,:), n, gradx)
+   CALL mt_to_grid(.TRUE., 1, atoms, sphhar, xcBy_mt(:,0:,:), n, grady)
+   CALL mt_to_grid(.TRUE., 1, atoms, sphhar, xcBz_mt(:,0:,:), n, gradz)
 
    kt = 0
    DO jr = 1, atoms%jri(n)
@@ -59,17 +77,12 @@ CONTAINS
          div_temp(kt+nsp,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+nsp,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+nsp,1) + COS(th)*gradz%gr(1,kt+nsp,1))&
                              +(COS(th)*COS(ph)*gradx%gr(2,kt+nsp,1) + COS(th)*SIN(ph)*grady%gr(2,kt+nsp,1) - SIN(th)*gradz%gr(2,kt+nsp,1))/r&
                              -(SIN(ph)*gradx%gr(3,kt+nsp,1)         - COS(ph)*grady%gr(3,kt+nsp,1))/(r*SIN(th))
-!         div_temp(kt+nsp,1) = div_temp(kt+nsp,1)*r*r
       ENDDO ! k
    
       kt = kt+nsp
    ENDDO ! jr
     
    CALL mt_from_grid(atoms, sphhar, n, 1, div_temp, div%mt(:,0:,n,:))
-
-   DO i=1,atoms%jri(n)
-      div%mt(i,:,n,:)=div%mt(i,:,n,:)*atoms%rmsh(i,n)**2
-   ENDDO
    
    CALL finish_mt_grid
    

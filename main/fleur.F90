@@ -517,7 +517,7 @@ CONTAINS
 !    DIVERGENCE; TODO: Remove all the B_field stuff and put it into its own routine.
 
 !    DO i=1,3
-!       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+!       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 !       ALLOCATE(xcB(i)%pw_w,mold=xcB(i)%pw)
 !    ENDDO
 
