@@ -117,7 +117,8 @@ MODULE m_crystalfield
          ! The reason for this is a bit unclear we remove these results and replace them
          ! with either the -m or corresponding opposite spin result (only diagonal)
          !------------------------------------------------------------------------------------
-         DO m = -l, l
+        IF(.FALSE.) THEN 
+        DO m = -l, l
             !100 meV cutoff
             IF(ABS(ex(m,m)).LT.0.1/hartree_to_ev_const) CYCLE
             IF(ex(-m,-m).LT.0.1/hartree_to_ev_const) THEN
@@ -131,6 +132,7 @@ MODULE m_crystalfield
             ENDIF
          ENDIF
          ENDDO
+        ENDIF
 
          !Average over spins
          hub1%ccfmat(i_hia,:,:) = 0.0
