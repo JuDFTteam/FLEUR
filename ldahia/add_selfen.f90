@@ -178,13 +178,13 @@ MODULE m_add_selfen
          ENDDO
          CALL vmat%free()
          !Test throw out elements smaller than 1e-6
-         !DO ispin = 1, input%jspins
-         !   DO m = -l, l
-         !      DO mp=-l, l
-         !         IF(ABS(REAL(mmpMat(m,mp,i_hia,ispin))).LT.1e-5) mmpMat(m,mp,i_hia,ispin) = 0.0
-         !      ENDDO
-         !   ENDDO
-         !ENDDO
+         DO ispin = 1, input%jspins
+            DO m = -l, l
+               DO mp=-l, l
+                  IF(ABS(REAL(mmpMat(m,mp,i_hia,ispin))).LT.1e-5) mmpMat(m,mp,i_hia,ispin) = 0.0
+               ENDDO
+            ENDDO
+         ENDDO
       ENDDO
 
 9000  FORMAT("mu_",I1)
