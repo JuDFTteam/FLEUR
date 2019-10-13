@@ -89,13 +89,26 @@ CONTAINS
       REAL,           INTENT(IN)  :: factor
       TYPE(t_potden), INTENT(IN)  :: denmat
       TYPE(t_potden), INTENT(OUT) :: cden, mden
-
-      CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
-                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
-                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-      CALL mden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
-                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
-                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+      
+      IF (factor==1.0) THEN
+         CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+         CALL mden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+      ELSE
+         CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+         CALL mden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+      END IF
       
       cden%mt(:,0:,1:,1) = (denmat%mt(:,0:,1:,1)+denmat%mt(:,0:,1:,2))/factor
       cden%pw(1:,1) = (denmat%pw(1:,1)+denmat%pw(1:,2))/factor
@@ -349,6 +362,43 @@ CONTAINS
          rht(1:,1:,3) = -rht(1:,1:,3)
          rhtxy(1:,1:,1:,3) = -rhtxy(1:,1:,1:,3)
          
+      END IF
+
+      ! Initialize the four output densities.
+      IF (factor==1.0) THEN
+         CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+         CALL mxden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+         CALL myden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+         CALL mzden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+      ELSE
+         CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+         CALL mxden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+         CALL myden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+         CALL mzden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
       END IF
       
       ! Save the four densities to the outputs of the function.
@@ -956,8 +1006,8 @@ CONTAINS
    END SUBROUTINE procplot
 
    SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                        noco, div, phiPot, divGrx, divGry, divGrz, &
-                        xcBmodx, xcBmody, xcBmodz) 
+                        noco, div)!, phiPot, divGrx, divGry, divGrz, &
+                        !xcBmodx, xcBmody, xcBmodz) 
 
       IMPLICIT NONE
 
@@ -970,32 +1020,32 @@ CONTAINS
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(IN)    :: div, phiPot, divGrx, divGry, divGrz, &
-                                          xcBmodx, xcBmody, xcBmodz
+      TYPE(t_potden),    INTENT(IN)    :: div!, phiPot, divGrx, divGry, divGrz, &
+                                          !xcBmodx, xcBmody, xcBmodz
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'divergence', div)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'modPot', phiPot)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'modPot', phiPot)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPotx', divGrx)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPotx', divGrx)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPoty', divGry)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPoty', divGry)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPotz', divGrz)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPotz', divGrz)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'xcBmodx', xcBmodx)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'xcBmodx', xcBmodx)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'xcBmody', xcBmody)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'xcBmody', xcBmody)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'xcBmodz', xcBmodz)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'xcBmodz', xcBmodz)
       
    END SUBROUTINE plotBtest
 

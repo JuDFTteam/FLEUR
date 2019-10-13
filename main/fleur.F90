@@ -516,24 +516,25 @@ CONTAINS
 
 !    DIVERGENCE; TODO: Remove all the B_field stuff and put it into its own routine.
 
-!    DO i=1,3
-!       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-!       ALLOCATE(xcB(i)%pw_w,mold=xcB(i)%pw)
-!    ENDDO
+    DO i=1,3
+       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+       ALLOCATE(xcB(i)%pw_w,mold=xcB(i)%pw)
+    ENDDO
 
-!    CALL dummyDen%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
-!    ALLOCATE(dummyDen%pw_w,mold=dummyDen%pw)
+    CALL dummyDen%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_POTTOT)
+    ALLOCATE(dummyDen%pw_w,mold=dummyDen%pw)
 
-!    DO i=1,3
-!       CALL matrixsplit(stars,atoms,sphhar,vacuum,input,noco,2.0,vtot,dummyDen,xcB(1),xcB(2),xcB(3))
-!    END DO
+    DO i=1,3
+       CALL matrixsplit(stars,atoms,sphhar,vacuum,input,noco,2.0,vtot,dummyDen,xcB(1),xcB(2),xcB(3))
+    END DO
 
-!    CALL divB%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
-!    ALLOCATE(divB%pw_w,mold=divB%pw)
+    CALL divB%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+!init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
+    ALLOCATE(divB%pw_w,mold=divB%pw)
     
-!    DO i=1,atoms%ntype
-!       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
-!    END DO
+    DO i=1,atoms%ntype
+       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
+    END DO
 
 !    CALL vDiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
 !    ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
@@ -556,9 +557,9 @@ CONTAINS
 !       CALL corrB(i)%addPotDen(xcB(i), graddiv(i))
 !    END DO
 
-!    CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-!                        noco, divB, vDiv, graddiv(1), graddiv(2), graddiv(3), &
-!                        corrB(1), corrB(2), corrB(3))
+    CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, divB)!, vDiv, graddiv(1), graddiv(2), graddiv(3), &
+                        !corrB(1), corrB(2), corrB(3))
 
     CALL add_usage_data("Iterations",iter)
 
