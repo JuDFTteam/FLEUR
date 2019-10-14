@@ -16,10 +16,6 @@ MODULE m_hubbard1_setup
       USE m_types
       USE m_constants
       USE m_uj2f
-      USE m_umtx
-      USE m_vmmp
-      USE m_vmmp21
-      USE m_nmat_rot
       USE m_mudc
       USE m_denmat_dist
       USE m_gfcalc
