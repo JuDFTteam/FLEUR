@@ -24,13 +24,13 @@ MODULE m_tetrahedronInit
       TYPE(t_kpts),           INTENT(IN)  :: kpts
       TYPE(t_input),          INTENT(IN)  :: input
       INTEGER,                INTENT(IN)  :: neig
-      REAL,                   INTENT(IN)  :: eig(neig,kpts%nkpt)
+      REAL,                   INTENT(IN)  :: eig(:,:)
       TYPE(t_greensfCoeffs),  INTENT(IN)  :: gCoeffs
       REAL,                   INTENT(IN)  :: ef
 
-      REAL,                   INTENT(INOUT) :: resWeights(gCoeffs%ne,neig)
-      REAL,                   INTENT(INOUT) :: dosWeights(gCoeffs%ne,neig)
-      INTEGER,                INTENT(INOUT) :: boundInd(neig,2) !Indices in between which the weights are non zero 
+      REAL,                   INTENT(INOUT) :: resWeights(:,:)
+      REAL,                   INTENT(INOUT) :: dosWeights(:,:)
+      INTEGER,                INTENT(INOUT) :: boundInd(:,:) !Indices in between which the weights are non zero
                                                                 !to save computation time
 
       resWeights = 0.0
@@ -51,8 +51,8 @@ MODULE m_tetrahedronInit
       ENDIF
 
       IF(input%l_resolvent) THEN
-         boundInd(1:neig,1) = 1
-         boundInd(1:neig,2) = gCoeffs%ne
+         boundInd(:,1) = 1
+         boundInd(:,2) = gCoeffs%ne
       ENDIF
 
    END SUBROUTINE tetrahedronInit
