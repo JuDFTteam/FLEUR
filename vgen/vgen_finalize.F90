@@ -6,7 +6,7 @@
 MODULE m_vgen_finalize
   USE m_juDFT
 CONTAINS
-  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot,xcB)
+  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -27,7 +27,6 @@ CONTAINS
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot
-    TYPE(t_potden),dimension(3),INTENT(INOUT) :: xcB
     !     ..
     !     .. Local Scalars ..
     INTEGER i,js,n
@@ -48,8 +47,8 @@ CONTAINS
           END DO
        END DO
     ELSEIF(noco%l_noco) THEN
-       CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot,xcB)
-       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot,xcB)
+       CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
+       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
     ENDIF
 
     ! Rescale vCoul%pw_w with number of stars
@@ -62,19 +61,19 @@ CONTAINS
     !Copy first vacuum into second vacuum if this was not calculated before 
     IF (vacuum%nvac==1) THEN
        vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
-       DO i=1,3
-          xcB(i)%vacz(:,2,:)  = xcB(i)%vacz(:,1,:)
-       ENDDO
+!       DO i=1,3
+!          xcB(i)%vacz(:,2,:)  = xcB(i)%vacz(:,1,:)
+!       ENDDO
        IF (sym%invs) THEN
           vTot%vacxy(:,:,2,:)  = CMPLX(vTot%vacxy(:,:,1,:))
-          DO i=1,3
-             xcB(i)%vacxy(:,:,2,:)  = CMPLX(xcB(i)%vacxy(:,:,1,:))
-          ENDDO
+!          DO i=1,3
+!             xcB(i)%vacxy(:,:,2,:)  = CMPLX(xcB(i)%vacxy(:,:,1,:))
+!          ENDDO
        ELSE
           vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
-          DO i=1,3
-             xcB(i)%vacxy(:,:,2,:)  = xcB(i)%vacxy(:,:,1,:)
-          ENDDO
+!          DO i=1,3
+!             xcB(i)%vacxy(:,:,2,:)  = xcB(i)%vacxy(:,:,1,:)
+!          ENDDO
        ENDIF
     ENDIF
  

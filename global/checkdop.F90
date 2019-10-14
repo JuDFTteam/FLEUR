@@ -64,7 +64,6 @@
              !     ---> Interstitial part
              DO j = 1,np
                 IF (.NOT.oneD%odi%d1) THEN
-                   !CALL cotra1(p(:,j),rcc,cell%bmat)
                    rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
                    CALL starf3(&
                         &               sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,p(:,j),sym%invtab,&
@@ -72,7 +71,6 @@
                 ENDIF
                 !
                 IF (oneD%odi%d1) THEN
-                   !CALL cotra1(p(:,j),rcc,cell%bmat)
                    rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
                    CALL starf3(&
                         &               sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc,sym%invtab,&
@@ -111,12 +109,10 @@
                    !+odim
                 END IF
                 IF (oneD%odi%d1) THEN
-                   !CALL cotra1(p(:,j),rcc,cell%bmat)
                    rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
                    WRITE (6,FMT=8020)  rcc,(p(i,j),i=1,3),v1(j),v2(j)
                 ELSE
-                   !CALL cotra0(p(1,j),rcc,cell%amat)
                    rcc=MATMUL(cell%amat,p(:,j))
                    WRITE (6,FMT=8020) (p(i,j),i=1,3),rcc,v1(j),v2(j)
                 ENDIF
@@ -127,7 +123,6 @@
           ENDIF
           !      ----> interstitial part
           DO j = 1,np
-             !CALL cotra1(p(1,j),rcc,cell%bmat)
              rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
              CALL starf3(&
@@ -159,7 +154,6 @@
              ENDDO
              ! new
              IF (nopa.NE.1) THEN
-                !CALL cotra1(x,rcc,cell%bmat)  ! switch to internal units
                 rcc=MATMUL(cell%bmat,x)/tpi_const
 
                 DO i = 1,3               ! rotate into representative
@@ -172,7 +166,6 @@
                       END IF
                    ENDDO
                 ENDDO
-                !CALL cotra0(ri,x,cell%amat)    !switch back to cartesian units
                 x=MATMUL(cell%amat,ri)
 
              END IF
@@ -192,7 +185,6 @@
              ENDDO
              v2(j) = help * ir2 
              IF (j.LE.8) THEN
-                !CALL cotra1(p(1,j),rcc,cell%bmat)
                 rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 
                 WRITE (6,FMT=8020) rcc, (p(i,j),i=1,3),v1(j),v2(j)

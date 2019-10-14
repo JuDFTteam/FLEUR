@@ -67,18 +67,20 @@ CONTAINS
 
     IF (ANY(SHAPE(vl).NE.SHAPE(dvx))) CALL judft_error("Gradients for internal GGA called with inconsistent sizes",hint="This is a bug")
     
-    DO i = 1,size(grad%agrt)
-       grad%agrt(i)  = 0.0
-       grad%agru(i)  = 0.0
-       grad%agrd(i)  = 0.0
-       grad%gggrt(i) = 0.0
-       grad%gggru(i) = 0.0
-       grad%gggrd(i) = 0.0
-       grad%gzgr(i)  = 0.0
-       grad%g2rt(i)  = 0.0
-       grad%g2ru(i)  = 0.0
-       grad%g2rd(i)  = 0.0
-    ENDDO
+    IF(ALLOCATED(grad%agrt)) THEN  
+       DO i = 1,size(grad%agrt)
+          grad%agrt(i)  = 0.0
+          grad%agru(i)  = 0.0
+          grad%agrd(i)  = 0.0
+          grad%gggrt(i) = 0.0
+          grad%gggru(i) = 0.0
+          grad%gggrd(i) = 0.0
+          grad%gzgr(i)  = 0.0
+          grad%g2rt(i)  = 0.0
+          grad%g2ru(i)  = 0.0
+          grad%g2rd(i)  = 0.0
+       ENDDO
+    END IF
 
     IF (jspins.eq.1) THEN
 
@@ -118,7 +120,7 @@ CONTAINS
           dvyzt = dvyzu + dvyzd
           dvzxt = dvzxu + dvzxd
           dvxyt = dvxyu + dvxyd
-
+    IF(ALLOCATED(grad%agrt)) THEN 
           !         agr: abs(grad(ro)), t,u,d for total, up and down.
 
           grad%agrt(i) = max(sqrt(dvxt**2 + dvyt**2 + dvzt**2),sml)
@@ -157,7 +159,7 @@ CONTAINS
           grad%g2ru(i) = dvxxu + dvyyu + dvzzu
           grad%g2rd(i) = dvxxd + dvyyd + dvzzd
 
-
+END IF
        ENDDO
 
     ELSE
@@ -197,7 +199,7 @@ CONTAINS
           dvyzt = dvyzu + dvyzd
           dvzxt = dvzxu + dvzxd
           dvxyt = dvxyu + dvxyd
-
+    IF(ALLOCATED(grad%agrt)) THEN 
           !c         agr: abs(grad(ro)), t,u,d for total, up and down.
 
           grad%agrt(i) = max(sqrt(dvxt**2 + dvyt**2 + dvzt**2),sml)
@@ -235,7 +237,7 @@ CONTAINS
           grad%g2rt(i) = dvxxt + dvyyt + dvzzt
           grad%g2ru(i) = dvxxu + dvyyu + dvzzu
           grad%g2rd(i) = dvxxd + dvyyd + dvzzd
-
+END IF
        ENDDO
 
     ENDIF

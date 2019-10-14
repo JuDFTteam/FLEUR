@@ -7,46 +7,50 @@ MODULE m_plot
    USE m_types
    USE m_juDFT
    USE m_constants
-   USE m_cdn_io
-   USE m_loddop
-   USE m_wrtdop
-   USE m_qfix
-   USE m_xsf_io
-   USE m_fft2d
-   USE m_fft3d
-   USE m_rotdenmat 
 
-   PRIVATE
-   !------------------------------------------------
+   !-----------------------------------------------------------------------------
    ! A general purpose plotting routine for FLEUR.
    ! 
-   ! Based on older plotting routines in pldngen.f90
-   ! and plotdop.f90 originally called by optional.F90 and now
-   ! called within a scf-loop instead of as a post
-   ! process functionality. This allowed us to remove
-   ! i/o (using .hdf files) from the ploting routine completely. 
-   ! plot_inp files are still in use.
+   ! Based on the older plotting routines pldngen.f90 and plotdop.f90 that were
+   ! originally called by optional.F90 and are now used in the scf-loop instead.
+   ! At the cost of no reduced postprocess functionality, this allowed us to re-
+   ! move I/O (using plot.hdf files) from the plotting routine completely.
+   ! 
+   ! TODO:
+   ! - plot_inp files are still in use and should be replaced by a plotting type.
+   ! - Only the .xsf format for xcrysden is supported right now. Further exten-
+   !   sion should include several plotting options, most importantly a way to
+   !   neatly plot vectorial quantities like the magnetisation density as vectors
+   !   on a grid.
    ! 
    ! A. Neukirchen & R. Hilgers, September 2019 
    !------------------------------------------------
 
-   PUBLIC             :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, matrixplot, makeplots, procplot, getMTSphere
+   PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
+             matrixplot, makeplots, procplot, getMTSphere
 
 CONTAINS
 
    SUBROUTINE checkplotinp()
+
+      !--------------------------------------------------------------------------
       ! Checks for existing plot input. If an ancient plotin file is used, an
       ! error is called. If no usable plot_inp exists, a new one is generated. 
+      !--------------------------------------------------------------------------
+
       LOGICAL :: oldform,newform
-      oldform = .FALSE.
-      INQUIRE(file = "plotin", exist = oldform) 
+
+      oldform=.FALSE.
+      INQUIRE(file="plotin",exist = oldform) 
+      INQUIRE(file="plot_inp",exist = newform)
+
       IF (oldform) THEN 
-         CALL juDFT_error("Use of plotin file no longer supported",calledby = "plot")
+         CALL juDFT_error("Use of plotin file no longer supported", &
+                          calledby="plot")
       END IF
 
-      INQUIRE(file = "plot_inp", exist = newform)
       IF (.NOT.newform) THEN
-         OPEN(20,file ="plot_inp")
+         OPEN(20,file="plot_inp")
          WRITE(20,'(i2,a5,l1)') 2,",xsf=",.true.
          WRITE(20,*) "&PLOT twodim=t,cartesian=t"
          WRITE(20,*) "  vec1(1)=10.0 vec2(2)=10.0"
@@ -62,193 +66,189 @@ CONTAINS
       END IF
 
    END SUBROUTINE checkplotinp
-
-!--------------------------------------------------------------------------------------------
    
-   SUBROUTINE vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
-   ! Takes a 2D potential/density vector and rearanges it into two plottable
-   ! seperate ones (e.g. [rho_up, rho_down] ---> n, m).
+   SUBROUTINE vectorsplit(stars, atoms, sphhar, vacuum, input, factor, denmat, &
+                          cden,mden)
+
+      !--------------------------------------------------------------------------
+      ! Takes a spin-polarized density vector and rearranges it into two plottable
+      ! seperate ones, i.e. (rho_up, rho_down) ---> n, m.
+      ! 
+      ! Can also be applied to a potential with an additional factor, i.e. while 
+      ! the densities n/m are defined as (rho_up+-rho_down), V_eff/B_eff are de-
+      ! fined as (V_up+-V_down)/2.
+      !--------------------------------------------------------------------------
 
       IMPLICIT NONE
 
-      TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
-      TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
-      TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(IN)    :: denmat
-      TYPE(t_potden),    INTENT(OUT)   :: cden, mden
-
-      CALL cden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-      CALL mden%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+      TYPE(t_stars),  INTENT(IN)  :: stars
+      TYPE(t_atoms),  INTENT(IN)  :: atoms
+      TYPE(t_sphhar), INTENT(IN)  :: sphhar
+      TYPE(t_vacuum), INTENT(IN)  :: vacuum
+      TYPE(t_input),  INTENT(IN)  :: input
+      REAL,           INTENT(IN)  :: factor
+      TYPE(t_potden), INTENT(IN)  :: denmat
+      TYPE(t_potden), INTENT(OUT) :: cden, mden
       
-      cden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,1)+denmat%mt(:,0:,1:,2)
-      cden%pw(1:,1) = denmat%pw(1:,1)+denmat%pw(1:,2)
-      cden%vacz(1:,1:,1) = denmat%vacz(1:,1:,1)+denmat%vacz(1:,1:,2)
-      cden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,1)+denmat%vacxy(1:,1:,1:,2)
-
-      mden%mt(:,0:,1:,1) = denmat%mt(:,0:,1:,1)-denmat%mt(:,0:,1:,2)
-      mden%pw(1:,1) = denmat%pw(1:,1)-denmat%pw(1:,2)
-      mden%vacz(1:,1:,1) = denmat%vacz(1:,1:,1)-denmat%vacz(1:,1:,2)
-      mden%vacxy(1:,1:,1:,1) = denmat%vacxy(1:,1:,1:,1)-denmat%vacxy(1:,1:,1:,2)
-
+      IF (factor==1.0) THEN
+         CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+         CALL mden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+      ELSE
+         CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+         CALL mden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+      END IF
       
+      cden%mt(:,0:,1:,1) = (denmat%mt(:,0:,1:,1)+denmat%mt(:,0:,1:,2))/factor
+      cden%pw(1:,1) = (denmat%pw(1:,1)+denmat%pw(1:,2))/factor
+      cden%vacz(1:,1:,1) = (denmat%vacz(1:,1:,1)+denmat%vacz(1:,1:,2))/factor
+      cden%vacxy(1:,1:,1:,1) = (denmat%vacxy(1:,1:,1:,1)+denmat%vacxy(1:,1:,1:,2))/factor
+
+      mden%mt(:,0:,1:,1) = (denmat%mt(:,0:,1:,1)-denmat%mt(:,0:,1:,2))/factor
+      mden%pw(1:,1) = (denmat%pw(1:,1)-denmat%pw(1:,2))/factor
+      mden%vacz(1:,1:,1) = (denmat%vacz(1:,1:,1)-denmat%vacz(1:,1:,2))/factor
+      mden%vacxy(1:,1:,1:,1) = (denmat%vacxy(1:,1:,1:,1)-denmat%vacxy(1:,1:,1:,2))/factor
+
    END SUBROUTINE vectorsplit
 
-!--------------------------------------------------------------------------------------------
+   SUBROUTINE matrixsplit(stars, atoms, sphhar, vacuum, input, noco, factor, &
+                          denmat, cden, mxden, myden, mzden)
+      USE m_fft2d
+      USE m_fft3d
+      USE m_rotdenmat 
 
-   SUBROUTINE matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
-   ! Takes a 2x2 potential/density matrix and rearanges it into four plottable
-   ! seperate ones (e.g. rho_mat ---> n, mx, my, mz).
-   !
-   ! This is basically 1:1 the old pldngen.f90 routine, courtesy of Philipp Kurz
+      !--------------------------------------------------------------------------
+      ! Takes a 2x2 density matrix and rearranges it into four plottable seperate
+      ! ones, i.e. ((rho_11, rho_12),(rho_21, rho_22)) ---> n, mx, my, mz.
+      ! 
+      ! This is an adaptation of the old pldngen.f90 by P. Kurz.
+      ! 
+      ! Can also be applied to a potential with additional factors, i.e. while 
+      ! the densities n/m are defined as (rho_up+-rho_down), V_eff/B_eff are de-
+      ! fined as (V_up+-V_down)/2 and while rho_21 is of the form a-i*b, for the
+      ! potential we have a+i*b.
+      ! 
+      ! TODO: Find out, whether the latter form of rho is still valid. Having the
+      ! additive rho_21=m_x+i*m_y would be nicer and more convenient/consistent.
+      !--------------------------------------------------------------------------
 
       IMPLICIT NONE
 
-      TYPE(t_mpi),       INTENT(IN)    :: mpi
-      TYPE(t_sym),       INTENT(IN)    :: sym
-      TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
-      TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
-      TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_cell),      INTENT(IN)    :: cell
-      TYPE(t_oneD),      INTENT(IN)    :: oneD
-      TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-      REAL,              INTENT(IN)    :: factor
-      TYPE(t_potden),    INTENT(IN)    :: denmat
-      TYPE(t_potden),    INTENT(OUT)   :: cden, mxden, myden, mzden
+      TYPE(t_stars),  INTENT(IN)  :: stars
+      TYPE(t_atoms),  INTENT(IN)  :: atoms
+      TYPE(t_sphhar), INTENT(IN)  :: sphhar
+      TYPE(t_vacuum), INTENT(IN)  :: vacuum
+      TYPE(t_input),  INTENT(IN)  :: input
+      TYPE(t_noco),   INTENT(IN)  :: noco
+      REAL,           INTENT(IN)  :: factor
+      TYPE(t_potden), INTENT(IN)  :: denmat
+      TYPE(t_potden), INTENT(OUT) :: cden, mxden, myden, mzden
+      
+      ! Local scalars: iteration indices, matrix elements etc.
+      INTEGER iden, ivac, ifft2, ifft3, imz, ityp, iri, ilh, imesh
+      REAL cdnup, cdndown, chden, mgden, theta, phi, rhotot, mx, my, mz
+      REAL zero, rziw, vz_r, vz_i, rho_11, rho_22, rho_21r, rho_21i, cdn11, cdn22
+      COMPLEX czero, cdn21
 
-      ! Local type instances
-      TYPE(t_input)  :: inp
-      TYPE(t_potden) :: den
+      ! Local arrays: densities in real space and off-diagonal elements.
+      REAL,    ALLOCATABLE        :: rvacxy(:,:,:,:), ris(:,:), fftwork(:)
+      REAL,    ALLOCATABLE        :: rho(:,:,:,:), rht(:,:,:)
+      COMPLEX, ALLOCATABLE        :: qpw(:,:), rhtxy(:,:,:,:)
+      COMPLEX, ALLOCATABLE        :: cdom(:), cdomvz(:,:), cdomvxy(:,:,:)
 
-      ! Local scalars
-      INTEGER iden,ivac,ifft2,ifft3
-      INTEGER imz,ityp,iri,ilh,imesh,iter
-      REAL cdnup,cdndown,chden,mgden,theta,phi,zero,rho_11,rziw,fermiEnergyTemp
-      REAL rho_22,rho_21r,rho_21i,rhotot,mx,my,mz,fix,vz_r,vz_i
-      COMPLEX czero
-
-      ! Local arrays
-      !---> off-diagonal part of the density matrix
-      COMPLEX, ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:)
-      COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
-      REAL,    ALLOCATABLE :: rht(:,:,:),rho(:,:,:,:)
-      REAL,    ALLOCATABLE :: rvacxy(:,:,:,:),ris(:,:),fftwork(:)
-
-      !---> for testing: output of offdiag. output density matrix. to plot the
-      !---> offdiag. part of the output density matrix, that part has to be
-      !---> written the file rhomt21 in cdnmt.
-      LOGICAL :: l_qfix
-      REAL    :: cdn11, cdn22
-      COMPLEX :: cdn21
-      !---> end of test part
-
-      iter = 0 ! This is not clean!
-
-      zero = 0.0 ; czero = CMPLX(0.0,0.0)
+      zero  = 0.0; czero = CMPLX(0.0,0.0)
       ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
       ifft2 = 9*stars%mx1*stars%mx2
 
-      ALLOCATE (qpw(stars%ng3,4),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,4),&
-                cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,stars%ng2-1,2),&
-                ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
-                rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxyd,2,4),&
-                rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4),rht(vacuum%nmzd,2,4) )
+      ! Allocation of arrays and initialization of those that make up the real
+      ! space density matrix.
+      ALLOCATE (rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4), qpw(stars%ng3,4), &
+                rht(vacuum%nmzd,2,4), rhtxy(vacuum%nmzxyd,stars%ng2-1,2,4), &
+                cdomvz(vacuum%nmzd,2), cdomvxy(vacuum%nmzxyd,stars%ng2-1,2), &
+                cdom(stars%ng3), fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1), &
+                ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4), &
+                rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxyd,2,4))
+                
+      rho(:,:,:,:) = zero; qpw(:,:) = czero; cdom(:) = czero
 
-      !---> initialize arrays for the density matrix
-      rho(:,:,:,:) = zero ; qpw(:,:) = czero ; cdom(:) = czero
       IF (input%film) THEN
-         cdomvz(:,:) = czero ;    rhtxy(:,:,:,:) = czero
-         cdomvxy(:,:,:) = czero ; rht(:,:,:) = zero
+         cdomvz(:,:) = czero;    rhtxy(:,:,:,:) = czero
+         cdomvxy(:,:,:) = czero; rht(:,:,:) = zero
       END IF
 
-      ! Save the density matrix to a work density
-      CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-      den=denmat
+      rho(:,0:,1:,:input%jspins)    = denmat%mt(:,0:,1:,:input%jspins)
+      qpw(1:,:input%jspins)         = denmat%pw(1:,:input%jspins)
+      rht(1:,1:,:input%jspins)      = denmat%vacz(1:,1:,:input%jspins)
+      rhtxy(1:,1:,1:,:input%jspins) = denmat%vacxy(1:,1:,1:,:input%jspins)
 
-      rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
-      qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
-      rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
-      rhtxy(1:,1:,1:,:input%jspins) = den%vacxy(1:,1:,1:,:input%jspins)
       IF(noco%l_noco) THEN
-         cdom = den%pw(:,3)
-         cdomvz(:,:) = CMPLX(den%vacz(:,:,3),den%vacz(:,:,4))
-         cdomvxy = den%vacxy(:,:,:,3)
-      END IF
-
-      IF (.NOT. sliceplot%slice) THEN
-         CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-         den%iter = iter
-         den%mt(:,0:,1:,:input%jspins) = rho(:,0:,1:,:input%jspins)
-         den%pw(1:,:input%jspins) = qpw(1:,:input%jspins)
-         den%vacz(1:,1:,:input%jspins) = rht(1:,1:,:input%jspins)
-         den%vacxy(1:,1:,1:,:input%jspins) = rhtxy(1:,1:,1:,:input%jspins)
-         IF(noco%l_noco) THEN
-            den%pw(:,3) = cdom
-            den%vacz(:,:,3) = REAL(cdomvz(:,:))
-            den%vacz(:,:,4) = AIMAG(cdomvz(:,:))
-            den%vacxy(:,:,:,3) = cdomvxy
-         END IF
-         !CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,noco%l_noco,.FALSE.,.true.,fix)
-         rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
-         qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
-         rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
-         rhtxy(1:,1:,1:,:input%jspins) = den%vacxy(1:,1:,1:,:input%jspins)
-         IF(noco%l_noco) THEN
-            cdom = den%pw(:,3)
-            cdomvz(:,:) = CMPLX(den%vacz(:,:,3),den%vacz(:,:,4))
-            cdomvxy = den%vacxy(:,:,:,3)
-         END IF
+         cdom = denmat%pw(:,3)
+         cdomvz(:,:) = CMPLX(denmat%vacz(:,:,3),denmat%vacz(:,:,4))
+         cdomvxy = denmat%vacxy(:,:,:,3)
       END IF
    
-      !---> calculate the charge and magnetization density in the muffin tins
+      ! Calculate the charge and magnetization densities in the muffin tins.
       DO ityp = 1,atoms%ntype
          DO ilh = 0,sphhar%nlh(atoms%ntypsy(ityp))
             DO iri = 1,atoms%jri(ityp)
-               IF (SIZE(den%mt,4).LE.2) THEN 
+               IF (SIZE(denmat%mt,4).LE.2) THEN 
                   cdnup   = rho(iri,ilh,ityp,1)
                   cdndown = rho(iri,ilh,ityp,2)
-                  theta = noco%beta(ityp)
-                  phi   = noco%alph(ityp)
-                  chden  = cdnup + cdndown
-                  mgden  = cdnup - cdndown
+                  theta   = noco%beta(ityp)
+                  phi     = noco%alph(ityp)
+                  chden   = cdnup + cdndown
+                  mgden   = cdnup - cdndown
+
                   rho(iri,ilh,ityp,1) = chden
                   rho(iri,ilh,ityp,2) = mgden*COS(phi)*SIN(theta)
                   rho(iri,ilh,ityp,3) = mgden*SIN(phi)*SIN(theta)
                   rho(iri,ilh,ityp,4) = mgden*COS(theta)
                ELSE 
-                  !--->            for testing: output of offdiag. output density matrix
                   cdn11 = rho(iri,ilh,ityp,1)
                   cdn22 = rho(iri,ilh,ityp,2)
-                  cdn21 = CMPLX(den%mt(iri,ilh,ityp,3),den%mt(iri,ilh,ityp,4))
-                  CALL rot_den_mat(noco%alph(ityp),noco%beta(ityp),cdn11,cdn22,cdn21)
+                  cdn21 = CMPLX(denmat%mt(iri,ilh,ityp,3), &
+                                denmat%mt(iri,ilh,ityp,4))
+
+                  CALL rot_den_mat(noco%alph(ityp), noco%beta(ityp), &
+                                   cdn11,cdn22,cdn21)
+
                   rho(iri,ilh,ityp,1) = cdn11 + cdn22
                   rho(iri,ilh,ityp,2) = 2.0*REAL(cdn21)
-                  ! Note: The minus sign in the following line is temporary to adjust for differences in the offdiagonal
-                  !       part of the density between this fleur version and ancient (v0.26) fleur.
+                  !! Note: The minus sign in the following line is temporary to 
+                  !!       adjust for differences in the offdiagonal part of the
+                  !!       density between this FLEUR version and ancient v0.26 .
+                  !! 
+                  !! TODO: Should that still be here? It effectively amounts to a
+                  !!       conjugation of the density matrix.
                   rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
                   rho(iri,ilh,ityp,4) = cdn11 - cdn22
-                  !--->            end of test part
                END IF
             END DO
          END DO
       END DO
 
-
-      !---> fouriertransform the diagonal part of the density matrix
-      !---> in the interstitial, qpw, to real space (ris)
+      ! Fourier transform the diagonal part of the density matrix in the
+      ! interstitial (qpw) to real space (ris).
       DO iden = 1,2
          CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,1)
       END DO
-      !---> fouriertransform the off-diagonal part of the density matrix
-      CALL fft3d(ris(0,3),ris(0,4),cdom(1),stars,+1)
 
-      !---> calculate the charge and magnetization density on the
-      !---> real space mesh
+      ! Also do that for the off-diagonal part. Real part goes into index
+      ! 3 and imaginary part into index 4.
+      CALL fft3d(ris(0,3),ris(0,4),cdom(1),stars,1)
+
+      ! Calculate the charge and magnetization densities in the interstitial.
       DO imesh = 0,ifft3-1
          rho_11  = ris(imesh,1)
          rho_22  = ris(imesh,2)
@@ -265,37 +265,36 @@ CONTAINS
          ris(imesh,4) = mz
       END DO
 
-      !---> Fouriertransform the density matrix back to reciprocal space
+      ! Invert the transformation to put the four densities back into
+      ! reciprocal space.
       DO iden = 1,4
          fftwork=zero
          CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,-1)
       END DO
 
-      !---> fouriertransform the diagonal part of the density matrix
-      !---> in the vacuum, rz & rxy, to real space (rvacxy)
+      ! As above, but for the vacuum components in xy- and z-direction.
       IF (input%film) THEN
          DO iden = 1,2
             DO ivac = 1,vacuum%nvac
                DO imz = 1,vacuum%nmzxyd
                   rziw = 0.0
-                  CALL fft2d(stars,rvacxy(0,imz,ivac,iden),fftwork,rht(imz,ivac,iden),&
-                             rziw,rhtxy(imz,1,ivac,iden),vacuum%nmzxyd,1)
+                  CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, &
+                             rht(imz,ivac,iden), rziw, rhtxy(imz,1,ivac,iden), &
+                             vacuum%nmzxyd, 1)
                END DO
             END DO
          END DO
-         !--->    fouriertransform the off-diagonal part of the density matrix
+
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
                rziw = 0.0
                vz_r = REAL(cdomvz(imz,ivac))
                vz_i = AIMAG(cdomvz(imz,ivac))
-               CALL fft2d(stars,rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
-                          vz_r,vz_i,cdomvxy(imz,1,ivac),vacuum%nmzxyd,1)
+               CALL fft2d(stars, rvacxy(0,imz,ivac,3), rvacxy(0,imz,ivac,4), &
+                          vz_r, vz_i, cdomvxy(imz,1,ivac), vacuum%nmzxyd, 1)
             END DO
          END DO
 
-         !--->    calculate the four components of the matrix potential on
-         !--->    real space mesh
          DO ivac = 1,vacuum%nvac
             DO imz = 1,vacuum%nmzxyd
                DO imesh = 0,ifft2-1
@@ -314,6 +313,7 @@ CONTAINS
                   rvacxy(imesh,imz,ivac,4) = mz
                END DO
             END DO
+
             DO imz = vacuum%nmzxyd+1,vacuum%nmzd
                rho_11  = rht(imz,ivac,1)
                rho_22  = rht(imz,ivac,2)
@@ -330,23 +330,25 @@ CONTAINS
                rht(imz,ivac,4) = mz
             END DO
          END DO
-         !--->    Fouriertransform the matrix potential back to reciprocal space
+
          DO iden = 1,4
             DO ivac = 1,vacuum%nvac
                DO imz = 1,vacuum%nmzxyd
                   fftwork=zero
-                  CALL fft2d(stars,rvacxy(0,imz,ivac,iden),fftwork,rht(imz,ivac,iden),&
-                             rziw,rhtxy(imz,1,ivac,iden),vacuum%nmzxyd,-1)
+                  CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, &
+                             rht(imz,ivac,iden), rziw, rhtxy(imz,1,ivac,iden), &
+                             vacuum%nmzxyd, -1)
                END DO
             END DO
          END DO
       END IF
       
-      !Correction for the case of plotting the total potential.
-      !Needed due to the different definitons of density/potential matrices in
-      !FLEUR:
-      !rhoMat=0.5*((n+m_z,m_x+i*m_y),(m_x-i*m_y,n-m_z))
-      !  vMat=    ((V_eff+B_z,B_x-i*B_y),(B_x+i*m_y,V_eff-B_z))
+      ! Correction for the case of plotting the total potential.
+      ! Needed due to the different definitons of density/potential matrices in
+      ! FLEUR:
+      !
+      ! rhoMat = 0.5*((n    +m_z,m_x+i*m_y),(m_x-i*m_y,n    -m_z))
+      !   vMat =     ((V_eff+B_z,B_x-i*B_y),(B_x+i*m_y,V_eff-B_z))
       
       IF (factor==2.0) THEN
       
@@ -361,112 +363,135 @@ CONTAINS
          rhtxy(1:,1:,1:,3) = -rhtxy(1:,1:,1:,3)
          
       END IF
+
+      ! Initialize the four output densities.
+      IF (factor==1.0) THEN
+         CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+         CALL mxden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+         CALL myden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+         CALL mzden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
+                                      stars%ng2)
+      ELSE
+         CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+         CALL mxden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+         CALL myden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+         CALL mzden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
+                                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
+                                      POTDEN_TYPE_POTTOT,vacuum%nmzd,&
+                                      vacuum%nmzxyd,stars%ng2)
+      END IF
       
-      !---> save charge density to cden
-      den%mt(:,0:,1:,1) = rho(:,0:,1:,1)
-      den%pw(1:,1) = qpw(1:,1)
-      den%vacz(1:,1:,1) = rht(1:,1:,1)
-      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,1)
+      ! Save the four densities to the outputs of the function.
+      cden%mt(:,0:,1:,1) = rho(:,0:,1:,1)
+      cden%pw(1:,1) = qpw(1:,1)
+      cden%vacz(1:,1:,1) = rht(1:,1:,1)
+      cden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,1)
 
-      cden=den
+      mxden%mt(:,0:,1:,1) = rho(:,0:,1:,2)
+      mxden%pw(1:,1) = qpw(1:,2)
+      mxden%vacz(1:,1:,1) = rht(1:,1:,2)
+      mxden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
 
-      !---> save m_x to mxden
-      den%mt(:,0:,1:,1) = rho(:,0:,1:,2)
-      den%pw(1:,1) = qpw(1:,2)
-      den%vacz(1:,1:,1) = rht(1:,1:,2)
-      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
-
-      mxden=den
-
-      !---> save m_y to myden
-      den%mt(:,0:,1:,1) = rho(:,0:,1:,3)
-      den%pw(1:,1) = qpw(1:,3)
-      den%vacz(1:,1:,1) = rht(1:,1:,3)
-      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
-
-      myden=den
+      myden%mt(:,0:,1:,1) = rho(:,0:,1:,3)
+      myden%pw(1:,1) = qpw(1:,3)
+      myden%vacz(1:,1:,1) = rht(1:,1:,3)
+      myden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
    
-      !---> save m_z to mzden
-      den%mt(:,0:,1:,1) = rho(:,0:,1:,4)
-      den%pw(1:,1) = qpw(1:,4)
-      den%vacz(1:,1:,1) = rht(1:,1:,4)
-      den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
+      mzden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
+      mzden%pw(1:,1) = qpw(1:,4)
+      mzden%vacz(1:,1:,1) = rht(1:,1:,4)
+      mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
 
-      mzden=den
-
-      DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,ris,fftwork,rvacxy,rho,rht)
+      DEALLOCATE (rho, qpw, rht, rhtxy, cdomvz, cdomvxy, &
+                  cdom, fftwork, ris, rvacxy)
 
    END SUBROUTINE matrixsplit
 
-!--------------------------------------------------------------------------------------------
-
-   SUBROUTINE savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot, &
-                       noco,score,denName,denf,denA1,denA2,denA3)
-   !Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/star
-   !representation and makes it/them into plottable .xsf file(s) according to a scheme
-   !given in plot_inp. 
-
-   !Based on ye olde plotdop.f90 by P. Kurz.
-
-   !Naming convention:
-   !   The output .xsf files will have names composed of the plotted density (c.f. identifier)
-   !   and an optional tag. For a scalar density, only said density is plotted. For a spin-po-
-   !   larized density with an up and down component, f denotes the sum of both densities and
-   !   g denotes their difference (u-d). f and g are to be understood as scalar fields f(r_vec)
-   !   and g(r_vec). For a density matrix, f is still the scalar part. Aditionally, three vector
-   !   components A1-3 arise.
-
-   !   E.g.: scalar density rho (n(r_vec))
-   !               ---> rho.xsf (n(r_vec))
-   !         spin-polarized density rho (n_up(r_vec),n_down(r_vec))
-   !               ---> rho_f.xsf, rho_g.xsf (n(r_vec),m(r_vec))
-   !         matrix density rho (n_11(r_vec),n_12(r_vec),n_21(r_vec),n_22(r_vec))
-   !               ---> rho_f.xsf, rho_A1.xsf, rho_A2.xsf, rho_A3.xsf (n(r_vec),m_vec(r_vec))
-
+   SUBROUTINE savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                     noco, score, potnorm, denName, denf, denA1, denA2, denA3)
       USE m_outcdn
-      USE m_loddop
       USE m_xsf_io
       USE m_cdn_io
-      USE m_constants
+
+      ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
+      ! plane wave representation and makes it/them into plottable .xsf file(s)
+      ! according to a scheme given in plot_inp. 
+      ! 
+      ! This is an adaptation of the old plotdop.f90 by P. Kurz.
+      ! 
+      ! Naming convention:
+      !  The output .xsf files will have names composed of the plotted density
+      !  (c.f. identifier) and an optional tag. For a scalar density, only said
+      !  density is plotted. For a spin-polarized density with an up and down 
+      !  component, f denotes the sum of both densities and g denotes their
+      !  difference u-d possibly with additional modifying factors as explained
+      !  above in vector-/matrixsplit. f and g are to be understood as scalar
+      !  fields f(r_vec) and g(r_vec). For a density matrix, f is still the 
+      !  scalar part. Aditionally, three vector components A_[1-3] arise.
+      ! 
+      !   E.g.: scalar density rho (n(r_vec))
+      !          ---> rho.xsf (n(r_vec))
+      !         spin-polarized density rho (n_up(r_vec),n_down(r_vec))
+      !          ---> rho_f.xsf, rho_g.xsf [n(r_vec),m(r_vec)]
+      !         matrix density rho ((n_11(r_vec),n_12(r_vec)),
+      !                             (n_21(r_vec),n_22(r_vec)))
+      !          ---> rho_f.xsf, rho_A1.xsf, rho_A2.xsf, rho_A3.xsf
+      !                                [n(r_vec),m_vec(r_vec)]
 
       IMPLICIT NONE
 
-      TYPE(t_oneD),                INTENT(IN)    :: oneD
-      TYPE(t_stars),               INTENT(IN)    :: stars
-      TYPE(t_vacuum),              INTENT(IN)    :: vacuum
-      TYPE(t_sphhar),              INTENT(IN)    :: sphhar
-      TYPE(t_atoms),               INTENT(IN)    :: atoms
-      TYPE(t_input),               INTENT(IN)    :: input
-      TYPE(t_sym),                 INTENT(IN)    :: sym
-      TYPE(t_cell),                INTENT(IN)    :: cell
-      TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
-      TYPE(t_noco),                INTENT(IN)    :: noco
-      LOGICAL,                     INTENT(IN)    :: score, potnorm
-      CHARACTER(len=10),           INTENT(IN)    :: denName
-      TYPE(t_potden),              INTENT(IN)    :: denf
-      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA1
-      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA2
-      TYPE(t_potden),    OPTIONAL, INTENT(IN)    :: denA3
+      TYPE(t_stars),               INTENT(IN) :: stars
+      TYPE(t_atoms),               INTENT(IN) :: atoms
+      TYPE(t_sphhar),              INTENT(IN) :: sphhar
+      TYPE(t_vacuum),              INTENT(IN) :: vacuum
+      TYPE(t_input),               INTENT(IN) :: input
+      TYPE(t_oneD),                INTENT(IN) :: oneD
+      TYPE(t_sym),                 INTENT(IN) :: sym
+      TYPE(t_cell),                INTENT(IN) :: cell
+      TYPE(t_noco),                INTENT(IN) :: noco
+      LOGICAL,                     INTENT(IN) :: score, potnorm
+      CHARACTER(len=20),           INTENT(IN) :: denName
+      TYPE(t_potden),              INTENT(IN) :: denf
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA1
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA2
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA3
 
-      !  .. Local Scalars ..
-      REAL          :: tec,qint,fermiEnergyTemp,phi0,angss
-      INTEGER       :: i,j,ix,iy,iz,na,nplo,iv,iflag,nfile
-      INTEGER       :: nplot,nt,jm,jspin,numInDen,numOutFiles
-      LOGICAL       :: twodim,oldform,newform,l_qfix
-      LOGICAL       :: cartesian,xsf,unwind,polar
+      REAL    :: tec, qint, phi0, angss
+      INTEGER :: i, j, ix, iy, iz, na, nplo, iv, iflag, nfile
+      INTEGER :: nplot, nt, jm, jspin, numInDen, numOutFiles
+      LOGICAL :: twodim, cartesian, xsf, unwind, polar
 
-      !  .. Local Arrays ..
-      TYPE(t_potden), ALLOCATABLE :: den(:)
-      REAL, ALLOCATABLE    :: xdnout(:)
-      REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3),help(3),qssc(3)
-      INTEGER :: grid(3)
-      REAL    :: rhocc(atoms%jmtd)
-      REAL    :: point(3)
+      TYPE(t_potden),     ALLOCATABLE :: den(:)
+      REAL,               ALLOCATABLE :: xdnout(:)
+      REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
+                                         zero(3), help(3), qssc(3), point(3)
+      INTEGER                         :: grid(3)
+      REAL                            :: rhocc(atoms%jmtd)
       CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
       CHARACTER (len=30)              :: filename
       CHARACTER (len=7)               :: textline
 
-      REAL, PARAMETER :: eps = 1.0e-15
+      REAL,               PARAMETER   :: eps = 1.0e-15
 
       NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
@@ -495,8 +520,7 @@ CONTAINS
 
       DO i = 1, numInDen
          
-         ! TODO: Understand and incorporate substraction of core charges!
-         ! Subtract core charge if input%score is set
+         ! TODO: Does this work as intended?
          IF ((numInDen.NE.4).AND.(score)) THEN
             OPEN (17,file='cdnc',form='unformatted',status='old')
             REWIND 17
@@ -736,97 +760,101 @@ CONTAINS
 
    END SUBROUTINE savxsf
 
-!--------------------------------------------------------------------------------------------
+   SUBROUTINE vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                         noco, factor, score, potnorm, denmat, denName)
 
-   SUBROUTINE vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
-   !Takes a spin-polarized t_potden density, i.e. a 2D vector in MT-sphere/star
-   !representation and makes it into a plottable .xsf file according to a scheme
-   !given in plot_inp.
+      ! Takes a spin-polarized t_potden variable, i.e. a 2D vector in MT-sphere/
+      ! plane wave representation, splits it into two spinless ones, which are
+      ! then passed on to the savxsf routine to get 2 .xsf files out.
 
       IMPLICIT NONE
-
-      
-      TYPE(t_stars),  INTENT(IN)    :: stars
-      TYPE(t_cell),   INTENT(IN)    :: cell
-      TYPE(t_sym),    INTENT(IN)    :: sym
-      TYPE(t_vacuum), INTENT(IN)    :: vacuum
-      TYPE(t_atoms),  INTENT(IN)    :: atoms
-      TYPE(t_sphhar), INTENT(IN)    :: sphhar
-      TYPE(t_input),  INTENT(IN)    :: input
-      TYPE(t_noco),   INTENT(IN)    :: noco
-      TYPE(t_potden), INTENT(IN)    :: denmat
-      TYPE(t_oned),   INTENT(IN)    :: oneD
-      TYPE(t_sliceplot),           INTENT(IN)    :: sliceplot
-      LOGICAL,                     INTENT(IN)    :: score, potnorm
-      CHARACTER(len=10),           INTENT(IN)    :: denName
+     
+      TYPE(t_stars),     INTENT(IN) :: stars
+      TYPE(t_atoms),     INTENT(IN) :: atoms
+      TYPE(t_sphhar),    INTENT(IN) :: sphhar
+      TYPE(t_vacuum),    INTENT(IN) :: vacuum
+      TYPE(t_input),     INTENT(IN) :: input
+      TYPE(t_oned),      INTENT(IN) :: oneD
+      TYPE(t_sym),       INTENT(IN) :: sym
+      TYPE(t_cell),      INTENT(IN) :: cell
+      TYPE(t_noco),      INTENT(IN) :: noco
+      REAL,              INTENT(IN) :: factor
+      LOGICAL,           INTENT(IN) :: score, potnorm
+      TYPE(t_potden),    INTENT(IN) :: denmat
+      CHARACTER(len=10), INTENT(IN) :: denName
 
       TYPE(t_potden)                :: cden, mden
 
-      CALL vectorsplit(stars,vacuum,atoms,sphhar,input,noco,denmat,cden,mden)
-      CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mden)
+      CALL vectorsplit(stars, atoms, sphhar, vacuum, input, factor, denmat, &
+                       cden, mden)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  score, potnorm, denName, cden, mden)
 
    END SUBROUTINE vectorplot
 
-!--------------------------------------------------------------------------------------------
+   SUBROUTINE matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                         noco, factor, score, potnorm, denmat, denName)
 
-   SUBROUTINE matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,score,denName)
-   !Takes a 2x2 t_potden density, i.e. a sum of Pauli matrices in MT-sphere/star
-   !representation and makes it into 4 plottable .xsf files according to a scheme
-   !given in plot_inp.
+      ! Takes a 2x2 t_potden variable, i.e. a sum of Pauli matrices in MT-
+      ! sphere/ plane wave representation and splits it into four spinless ones,
+      ! which are then passed on to the savxsf routine to get 4 .xsf files out.
 
       IMPLICIT NONE
 
-      TYPE(t_mpi),       INTENT(IN)    :: mpi
-      TYPE(t_sym),       INTENT(IN)    :: sym
-      TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
-      TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
-      TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_cell),      INTENT(IN)    :: cell
-      TYPE(t_oneD),      INTENT(IN)    :: oneD
-      TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-      REAL,              INTENT(IN)    :: factor
-      TYPE(t_potden),    INTENT(IN)    :: denmat
-      LOGICAL,           INTENT(IN)    :: score, potnorm
-      CHARACTER(len=10), INTENT(IN)    :: denName
+      TYPE(t_stars),     INTENT(IN) :: stars
+      TYPE(t_atoms),     INTENT(IN) :: atoms
+      TYPE(t_sphhar),    INTENT(IN) :: sphhar
+      TYPE(t_vacuum),    INTENT(IN) :: vacuum
+      TYPE(t_input),     INTENT(IN) :: input
+      TYPE(t_oneD),      INTENT(IN) :: oneD
+      TYPE(t_sym),       INTENT(IN) :: sym
+      TYPE(t_cell),      INTENT(IN) :: cell
+      TYPE(t_noco),      INTENT(IN) :: noco
+      REAL,              INTENT(IN) :: factor
+      LOGICAL,           INTENT(IN) :: score, potnorm
+      TYPE(t_potden),    INTENT(IN) :: denmat
+      CHARACTER(len=10), INTENT(IN) :: denName
 
       TYPE(t_potden)                   :: cden, mxden, myden, mzden
-      CALL matrixsplit(mpi,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,sliceplot,factor,denmat,cden,mxden,myden,mzden)
-      CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,cden,mxden,myden,mzden)
+
+      CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, factor, &
+                       denmat, cden, mxden, myden, mzden)
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  score, potnorm, denName, cden, mxden, myden, mzden)
 
    END SUBROUTINE matrixplot
 
-!--------------------------------------------------------------------------------------------
-
-   SUBROUTINE procplot(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const) 
-   !According to iplot, we process which exact plots we do, after we assured that we do any.
-   !n-th digit (from the back) of iplot ==1 --> plot with identifier n is done. 
+   SUBROUTINE procplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                       noco, denmat, plot_const) 
+   
+      ! According to iplot, we process which exact plots we make after we assured 
+      ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with 
+      ! identifier n is done. 
+      
       IMPLICIT NONE
 
-      TYPE(t_mpi),       INTENT(IN)    :: mpi
-      TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
 
       INTEGER            :: i
       REAL               :: factor
       CHARACTER (len=10) :: denName
-      LOGICAL            :: score
-      LOGICAL            :: potnorm
+      LOGICAL            :: score, potnorm
 
-      !Plotting the input density matrix as n or n,m or n,mx,my,mz. identifier: 1
-      ! --> Additive term for iplot: 2
+      ! Plotting the input density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_INPDEN = 1
+      ! Additive term for iplot: 2
       IF (plot_const.EQ.1) THEN
          factor = 1.0
          denName = 'denIn'
@@ -834,24 +862,24 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,sliceplot,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             END IF
          ELSE
-
-            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
-
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
          END IF
-      
       END IF
 
-      !Plotting the output density matrix as n or n,m or n,mx,my,mz. identifier: 2
-      !No core subtraction done!
-      ! --> Additive term for iplot: 4
+      ! Plotting the output density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_OUTDEN_Y_CORE = 2
+      ! No core subtraction done!
+      ! Additive term for iplot: 4
       IF (plot_const.EQ.2) THEN
          factor = 1.0
          denName = 'denOutWithCore'
@@ -859,24 +887,24 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,sliceplot,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             END IF
          ELSE
-
-            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
-
-         END IF
-      
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
 
-      !Plotting the output density matrix as n or n,m or n,mx,my,mz. identifier: 3
-      !core subtraction done!
-      ! --> Additive term for iplot: 8
+      ! Plotting the output density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_OUTDEN_N_CORE = 3
+      ! Core subtraction done!
+      ! Additive term for iplot: 8
       IF (plot_const.EQ.3) THEN
          factor = 1.0
          denName = 'denOutNOCore'
@@ -884,92 +912,76 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,sliceplot,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             END IF
          ELSE
-
-            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
-
-         END IF
-      
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
 
-      !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier:4
-      !No core subtraction done!
-      ! --> Additive term for iplot: 16
+      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_MIXDEN_Y_CORE = 4
+      ! No core subtraction done!
+      ! Additive term for iplot: 16
       IF (plot_const.EQ.4) THEN
          factor = 1.0
-<<<<<<< Updated upstream
          denName = 'denOutMixWithCore'
          score = .FALSE.
-=======
-         denName = 'denOutMixNoCore'
-         score = .TRUE.
->>>>>>> Stashed changes
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,sliceplot,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             END IF
          ELSE
-
-            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
-
-         END IF
-      
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
-<<<<<<< Updated upstream
 
-      !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier:5
-      !core subtraction done!
-      ! --> Additive term for iplot: 32
+      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz. 
+      ! Plot identifier: PLOT_MIXDEN_N_CORE = 5
+      ! Core subtraction done!
+      ! Additive term for iplot: 32
       IF (plot_const.EQ.5) THEN
          factor = 1.0
          denName = 'denOutMixNoCore'
          score = .TRUE.
-=======
-      !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier: 5
-      !No core subtraction done!
-      ! --> Additive term for iplot: 32
-      IF (plot_const.EQ.5) THEN
-         factor = 1.0
-         denName = 'denOutMixWithCore'
-         score = .FALSE.
->>>>>>> Stashed changes
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,sliceplot,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             END IF
          ELSE
-
-            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
-
-         END IF
-      
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
-<<<<<<< Updated upstream
-=======
-         
->>>>>>> Stashed changes
-      !Plotting the total potential as vtot or vtot,vdiff or vtot,B_xc1,B_xc2,B_xc3. identifier: 2
-      !No core subtraction done!
-      ! --> Additive term for iplot: 128
+
+              
+      ! Plotting the total potential as vTot / v_eff, B_eff / v_eff, 
+      ! B_xc_1, B_xc_2, B_xc_3.
+      ! Plot identifier: PLOT_POT_TOT = 7
+      ! No core subtraction done!
+      ! Additive term for iplot: 128
       IF (plot_const.EQ.7) THEN
          factor = 2.0
          denName = 'vTot'
@@ -977,68 +989,114 @@ CONTAINS
          potnorm = .TRUE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-
-               CALL matrixplot(potnorm,mpi,sym,stars,atoms,sphhar,vacuum,cell,input, &
-                               noco,oneD,sliceplot,factor,denmat,score,denName)
-
+               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             ELSE
-               CALL vectorplot(potnorm,stars,vacuum,atoms,sphhar,input,noco,oneD,cell,sym,denmat,sliceplot,score,denName)
+               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, factor, score, potnorm, denmat, &
+                               denName)
             END IF
          ELSE
-
-            CALL savxsf(potnorm,oneD,stars,vacuum,sphhar,atoms,input,sym,cell,sliceplot,noco,score,denName,denmat)
-
-         END IF
-         
+            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, score, potnorm, denName, denmat)
+         END IF      
       END IF
-      
+
    END SUBROUTINE procplot
 
-!--------------------------------------------------------------------------------------------
-
-   SUBROUTINE makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const)   
-   !Checks, based on the iplot switch that is given in the input, whether or not plots should be made.
-   !Before the plot command iss processed, we check if the plot_inp is there and no oldform is given. If that
-   !is not the case, we throw an error/create a plot_inp.
-      USE m_constants
+   SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, div)!, phiPot, divGrx, divGry, divGrz, &
+                        !xcBmodx, xcBmody, xcBmodz) 
 
       IMPLICIT NONE
 
-      TYPE(t_mpi),       INTENT(IN)    :: mpi
-      TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
+      TYPE(t_potden),    INTENT(IN)    :: div!, phiPot, divGrx, divGry, divGrz, &
+                                          !xcBmodx, xcBmody, xcBmodz
+
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .FALSE., 'divergence', div)
+
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'modPot', phiPot)
+
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPotx', divGrx)
+
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPoty', divGry)
+
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPotz', divGrz)
+
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'xcBmodx', xcBmodx)
+
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'xcBmody', xcBmody)
+
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'xcBmodz', xcBmodz)
+      
+   END SUBROUTINE plotBtest
+
+   SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, denmat, plot_const, sliceplot) 
+  
+      ! Checks, based on the iplot switch that is given in the input, whether or
+      ! not plots should be made. Before the plot command is processed, we check 
+      ! whether the plot_inp is there and no oldform is given. If that is not the
+      ! case, we throw an error/create a plot_inp.
+
+      IMPLICIT NONE
+
+
+      TYPE(t_stars),     INTENT(IN)    :: stars
+      TYPE(t_atoms),     INTENT(IN)    :: atoms
+      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
+      TYPE(t_input),     INTENT(IN)    :: input
+      TYPE(t_oneD),      INTENT(IN)    :: oneD
+      TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_cell),      INTENT(IN)    :: cell
+      TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
+      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
 
       LOGICAL :: allowplot
       
-      !The check is done via bitwise operations. If the i-th position of iplot in binary representation
-      !(2^n == n-th position) has a 1, the corresponding plot with number 2^n is plotted.
-      !E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted and none else, iplot would
-      !need to be 2^1+2^2+2^3=2+4+8=14. iplot=1 or any odd number will *always* plot all possible options.
-      CALL timestart("Plotting")       
-
+      ! The check is done via bitwise operations. If the i-th position of iplot
+      ! in binary representation (2^n == n-th position) has a 1, the correspon-
+      ! ding plot with number 2^n is plotted.
+      ! 
+      ! E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted 
+      ! and none else, iplot would need to be 2^1 + 2^2 + 2^3 = 2 + 4 + 8 = 14.
+      ! iplot=1 or any odd number will *always* plot all possible options.
+      
+      CALL timestart("Plotting iplot plots")       
 
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN  
          CALL checkplotinp()
-         CALL procplot(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,denmat,plot_const)
+         CALL  procplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, denmat, plot_const) 
       END IF
-   CALL timestop("Plotting")
+      CALL timestop("Plotting iplot plots")
    END SUBROUTINE makeplots
 
-!--------------------------------------------------------------------------------------------
+   SUBROUTINE getMTSphere(input, cell, atoms, oneD, point, iType, iAtom, pt)
 
-   !Subroutine originally from Plotdop. Needed in savxsf
-   SUBROUTINE getMTSphere(input,cell,atoms,oneD,point,iType,iAtom,pt)
+      ! Old subroutine originally from plotdop.f90, which is needed in savxsf.
 
       IMPLICIT NONE
 

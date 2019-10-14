@@ -40,8 +40,6 @@ MODULE m_constants
    INTEGER, PARAMETER :: PLOT_POT_COU=9
    INTEGER, PARAMETER :: PLOT_POT_VXC=10
 
-
-
    CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&
         'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',&
         'Na','Mg','Al','Si',' P',' S','Cl','Ar',' K','Ca','Sc','Ti',&

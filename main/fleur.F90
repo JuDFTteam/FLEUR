@@ -4,9 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur
-  IMPLICIT NONE
+   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE fleur_execute(mpi_comm)
+   SUBROUTINE fleur_execute(mpi_comm)
 
     !     ***************************************************************
     !
@@ -36,45 +36,48 @@ CONTAINS
     !----------------------------------------
     ! this routine is the main PROGRAM
 
-    USE m_types
-    USE m_constants
-    USE m_fleur_init
-    USE m_optional
-    USE m_cdn_io
-    USE m_mixing_history
-    USE m_qfix
-    USE m_vgen
-    USE m_writexcstuff
-    USE m_vmatgen
-    USE m_eigen
-    USE m_eigenso
-    USE m_fermie
-    USE m_cdngen
-    USE m_totale
-    USE m_potdis
-    USE m_mix
-    USE m_xmlOutput
-    USE m_juDFT_time
-    USE m_calc_hybrid
-    USE m_rdmft
-    USE m_io_hybrid
-    USE m_wann_optional
-    USE m_wannier
-    USE m_bs_comfort
-    USE m_dwigner
-    USE m_ylm
-    USE m_metagga
-    USE m_plot
+   USE m_types
+   USE m_constants
+   USE m_fleur_init
+   USE m_optional
+   USE m_cdn_io
+   USE m_mixing_history
+   USE m_qfix
+   USE m_vgen
+   USE m_vgen_coulomb
+   USE m_writexcstuff
+   USE m_vmatgen
+   USE m_eigen
+   USE m_eigenso
+   USE m_fermie
+   USE m_cdngen
+   USE m_totale
+   USE m_potdis
+   USE m_mix
+   USE m_xmlOutput
+   USE m_juDFT_time
+   USE m_calc_hybrid
+   USE m_rdmft
+   USE m_io_hybrid
+   USE m_wann_optional
+   USE m_wannier
+   USE m_bs_comfort
+   USE m_dwigner
+   USE m_ylm
+   USE m_metagga
+   USE m_divergence
+   USE m_rotate_mt_den_tofrom_local
+   USE m_plot
 #ifdef CPP_MPI
-    USE m_mpi_bc_potden
+   USE m_mpi_bc_potden
 #endif
-    USE m_eig66_io
-    USE m_chase_diag
-    USE m_writeBasis
-    !$ USE omp_lib
-    IMPLICIT NONE
+   USE m_eig66_io
+   USE m_chase_diag
+   USE m_writeBasis
+   !$ USE omp_lib
+   IMPLICIT NONE
 
-    INTEGER, INTENT(IN)             :: mpi_comm
+   INTEGER, INTENT(IN)             :: mpi_comm
 
     TYPE(t_input)                   :: input
     TYPE(t_field)                   :: field, field2
@@ -97,9 +100,9 @@ CONTAINS
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
-    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
-    TYPE(t_potden)                  :: inDen, outDen, EnergyDen
-    TYPE(t_potden),     dimension(3):: xcB
+    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting, vDiv
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen, divB, dummyDen
+    TYPE(t_potden),     dimension(3):: xcB, graddiv, corrB
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
@@ -140,9 +143,7 @@ CONTAINS
 
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-    DO i=1,3
-       CALL xcB(i)%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-    ENDDO
+    
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     IF(mpi%irank.EQ.0) THEN
@@ -156,7 +157,8 @@ CONTAINS
     END IF
     
     IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
-       CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_INPDEN) 
+       CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                      noco, inDen, PLOT_INPDEN, sliceplot) 
     END IF 
 
     ! Initialize and load inDen density (end)
@@ -248,14 +250,15 @@ CONTAINS
 
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                 obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul,xcB)
+                 obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
-       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN          
-          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vTot,PLOT_POT_TOT)         
-!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
+       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN            
+          CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                         noco, vTot, PLOT_POT_TOT, sliceplot)      
+!          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
 !          CALL subPotDen(vxcForPlotting,vTot,vCoul)
-!          CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
+!          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
        END IF 
 
 #ifdef CPP_MPI
@@ -384,9 +387,11 @@ CONTAINS
            
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
-                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_Y_CORE)
-!               CDN subtracted by core charge
-!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,outDen,PLOT_OUTDEN_N_CORE)
+                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
+!!               CDN subtracted by core charge
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
           IF (input%l_rdmft) THEN
@@ -426,7 +431,7 @@ CONTAINS
 !!$                input%total = .FALSE.
 !!$                CALL timestart("generation of potential (total)")
 !!$                CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
-!!$                     obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul,xcB)
+!!$                     obsolete,cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
 !!$                CALL timestop("generation of potential (total)")
 !!$
 !!$                CALL potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
@@ -453,9 +458,12 @@ CONTAINS
        
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
-                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_Y_CORE)
-!               CDN subtracted by core charge
-!                CALL makeplots(mpi,sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, outDen, PLOT_MIXDEN_Y_CORE, sliceplot)
+!!               CDN subtracted by core charge
+!                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
 
@@ -499,13 +507,60 @@ CONTAINS
        END IF
 
   !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
-       IF(sliceplot%iplot.NE.0) THEN
-          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
-       END IF
+!!       IF(sliceplot%iplot.NE.0) THEN
+!!          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+!!       END IF
 
 
     END DO scfloop ! DO WHILE (l_cont)
-   
+
+!    DIVERGENCE; TODO: Remove all the B_field stuff and put it into its own routine.
+
+    DO i=1,3
+       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+       ALLOCATE(xcB(i)%pw_w,mold=xcB(i)%pw)
+    ENDDO
+
+    CALL dummyDen%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_POTTOT)
+    ALLOCATE(dummyDen%pw_w,mold=dummyDen%pw)
+
+    DO i=1,3
+       CALL matrixsplit(stars,atoms,sphhar,vacuum,input,noco,2.0,vtot,dummyDen,xcB(1),xcB(2),xcB(3))
+    END DO
+
+    CALL divB%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+!init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
+    ALLOCATE(divB%pw_w,mold=divB%pw)
+    
+    DO i=1,atoms%ntype
+       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
+    END DO
+
+!    CALL vDiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+!    ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
+!    vDiv%pw_w = CMPLX(0.0,0.0)
+
+!    CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
+
+!    DO i=1,3
+!       CALL graddiv(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+!       ALLOCATE(graddiv(i)%pw_w,mold=graddiv(i)%pw)
+!       CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+!       ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
+!    ENDDO
+
+!    DO i=1,atoms%ntype
+!       CALL divpotgrad(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,vDiv,graddiv)
+!    END DO
+
+!    DO i=1,3
+!       CALL corrB(i)%addPotDen(xcB(i), graddiv(i))
+!    END DO
+
+    CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                        noco, divB)!, vDiv, graddiv(1), graddiv(2), graddiv(3), &
+                        !corrB(1), corrB(2), corrB(3))
+
     CALL add_usage_data("Iterations",iter)
 
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')

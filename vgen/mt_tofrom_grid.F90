@@ -13,7 +13,7 @@ MODULE m_mt_tofrom_grid
    REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
    PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, finish_mt_grid
 CONTAINS
-   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym)
+   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout)
       USE m_gaussp
       USE m_lhglptg
       USE m_lhglpts
@@ -23,6 +23,8 @@ CONTAINS
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       LOGICAL, INTENT(IN)          :: dograds
       TYPE(t_sym), INTENT(IN)      :: sym
+      REAL, INTENT(OUT), OPTIONAL  :: thout(:)
+      REAL, INTENT(OUT), OPTIONAL  :: phout(:)
 
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
@@ -40,6 +42,11 @@ CONTAINS
 
          CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), dograds, sym, &
                       ylh, thet, phi, ylht, ylhtt, ylhf, ylhff, ylhtf)
+         IF (PRESENT(thout)) THEN
+            thout=thet
+            phout=phi
+         END IF
+
       ELSE
          CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
       END IF
