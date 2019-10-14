@@ -2,14 +2,14 @@ MODULE m_mudc
 
    CONTAINS
 
-   SUBROUTINE mudc(lda_u,n,mu,jspins)
+   SUBROUTINE mudc(lda_u,n,jspins,mu)
 
       USE m_types
 
       IMPLICIT NONE
 
       TYPE(t_utype), INTENT(IN)  :: lda_u
-      REAL,    INTENT(IN)  :: n(jspins)
+      REAL,    INTENT(IN)  :: n(:)
       REAL,    INTENT(OUT) :: mu
       INTEGER, INTENT(IN)  :: jspins
 

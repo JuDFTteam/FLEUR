@@ -151,7 +151,7 @@ MODULE m_hubbard1_setup
             ! V_FLL = U (n - 1/2) - J (n - 1) / 2
             ! V_AMF = U n/2 + 2l/[2(2l+1)] (U-J) n
             !--------------------------------------------------------------------------
-            CALL mudc(atoms%lda_u(atoms%n_u+i_hia),n_l(i_hia,:),mu_dc,input%jspins)
+            CALL mudc(atoms%lda_u(atoms%n_u+i_hia),n_l(i_hia,:),input%jspins,mu_dc)
 
             !Check wether the hubbard 1 solver was run:(old version)
             INQUIRE(file=TRIM(ADJUSTL(xPath)) // "se.atom",exist=l_selfenexist)
