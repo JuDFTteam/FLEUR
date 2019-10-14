@@ -487,7 +487,7 @@ CONTAINS
                                          zero(3), help(3), qssc(3), point(3)
       INTEGER                         :: grid(3)
       REAL                            :: rhocc(atoms%jmtd)
-      CHARACTER (len=15), ALLOCATABLE :: outFilenames(:)
+      CHARACTER (len=20), ALLOCATABLE :: outFilenames(:)
       CHARACTER (len=30)              :: filename
       CHARACTER (len=7)               :: textline
 

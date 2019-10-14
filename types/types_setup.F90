@@ -161,7 +161,8 @@ MODULE m_types_setup
       !lda_u information(ntype)
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
-      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
+      INTEGER, ALLOCATABLE :: flipSpinPhi(:) !<flip magnetisation of this atom by angle phi
+      INTEGER, ALLOCATABLE :: flipSpinTheta(:)
    CONTAINS
       procedure :: nsp => calc_nsp_atom
    END TYPE t_atoms

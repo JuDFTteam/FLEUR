@@ -218,7 +218,8 @@ CONTAINS
       ALLOCATE(atoms%nlo(atoms%ntype))
       ALLOCATE(atoms%ncst(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%nflip(atoms%ntype))
+      ALLOCATE(atoms%flipPhi(atoms%ntype))
+      ALLOCATE(atoms%flipTheta(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
@@ -1354,6 +1355,20 @@ CONTAINS
          coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
          magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
          flipSpin = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
+         atoms%flipSpinPhi(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
+         atoms%flipSpinTheta(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
+         
+         IF (flipSpin=.TRUE. .AND. noco%l_noco=.TRUE.) CALL juDFT_error("l_noco=T and flipSpin=T is meaningless. Flipspin is designed for the colinear case only.",calledby ="r_inpXML")
+          
+         IF (((flipSpin=.TRUE..AND.atoms%flipSpinTheta(i).NE.180.0).AND.atoms%flipSpinPhi(i).NE.0.0) .OR.((flipSpin=.TRUE..AND.atoms%flipSpinTheta(i).NE.0.0).AND.atoms%flipSpinPhi(i).NE.0) ) THEN
+         CALL juDFT_error("You entered an unvalid Spinflip combination. flipSpin=T and flipSpinTheta=/=180 or 0 respectivley flipSpinPhi(i)=/=0 is meaningless.",calledby ="r_inpXML")
+         END IF
+         IF (flipSpin=.TRUE.) THEN
+         atoms%flipSpinPhi(i)=0.0
+         atoms%flipSpinTheta(i)=180.0
+         END IF
+ 
+
 
          ! Attributes of mtSphere element of species
          radius = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/mtSphere/@radius'))
