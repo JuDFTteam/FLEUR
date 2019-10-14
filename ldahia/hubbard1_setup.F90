@@ -318,7 +318,7 @@ MODULE m_hubbard1_setup
 
       IMPLICIT NONE
 
-      COMPLEX,       INTENT(INOUT) :: mat(2*ns,2*ns)
+      COMPLEX,       INTENT(INOUT) :: mat(:,:)
       INTEGER,       INTENT(IN)    :: ns
 
       COMPLEX tmp(2*ns,2*ns),tmp_off(ns,ns)
@@ -354,11 +354,11 @@ MODULE m_hubbard1_setup
       USE m_constants
 
       IMPLICIT NONE
-      COMPLEX,       INTENT(INOUT) :: mat(2*(2*l+1),2*(2*l+1))
+      COMPLEX,       INTENT(INOUT) :: mat(:,:)
       INTEGER,       INTENT(IN)    :: l
       INTEGER,       INTENT(IN)    :: jspins
       LOGICAL,       INTENT(IN)    :: l_vmperp
-      COMPLEX,       INTENT(IN)     :: vmmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MERGE(3,jspins,l_vmperp))
+      COMPLEX,       INTENT(IN)     :: vmmp(-lmaxU_const:,-lmaxU_const:,:)
 
       INTEGER ns,i,j,m,mp,ispin
 
@@ -428,8 +428,8 @@ MODULE m_hubbard1_setup
 
       INTEGER,       INTENT(IN)  :: nz,ns
       REAL,          INTENT(IN)  :: ef
-      COMPLEX,       INTENT(IN)  :: selfen(2*ns,2*ns,nz)
-      COMPLEX,       INTENT(IN)  :: e(nz)
+      COMPLEX,       INTENT(IN)  :: selfen(:,:,:)
+      COMPLEX,       INTENT(IN)  :: e(:)
 
       INTEGER iz,i,io_error
       CHARACTER(len=300) file
