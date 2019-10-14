@@ -269,7 +269,7 @@ MODULE m_hubbard1_setup
             ! so that the occupation of the correlated orbital does not change
             !----------------------------------------------------------------------
             CALL timestart("Hubbard 1: Add Selfenenergy")
-            CALL add_selfen(gdft,gu,selfen,atoms,noco,hub1,sym,input,results%ef,n_l,mu_dc/hartree_to_ev_const,mmpMat)
+            CALL add_selfen(gdft,selfen,atoms,input,sym,noco,hub1,results%ef,n_l,gu,mmpMat)
             CALL timestop("Hubbard 1: Add Selfenenergy")
             IF(l_setupdebug) THEN
                DO i_hia = 1, atoms%n_hia

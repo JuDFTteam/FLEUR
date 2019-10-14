@@ -4,7 +4,7 @@ MODULE m_add_selfen
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g,gp,selfen,atoms,noco,hub1,sym,input,ef,n_occ,mu_dc,mmpMat)
+   SUBROUTINE add_selfen(g,selfen,atoms,input,sym,noco,hub1,ef,n_occ,gp,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -26,17 +26,16 @@ MODULE m_add_selfen
       IMPLICIT NONE
 
       TYPE(t_greensf),  INTENT(IN)     :: g
-      TYPE(t_greensf),  INTENT(INOUT)  :: gp
       TYPE(t_hub1ham),  INTENT(IN)     :: hub1
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_input),    INTENT(IN)     :: input
-      COMPLEX,          INTENT(IN)     :: selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),g%nz,2,atoms%n_hia)
+      COMPLEX,          INTENT(IN)     :: selfen(:,:,:,:,:)
       REAL,             INTENT(IN)     :: ef
-      REAL,             INTENT(IN)     :: n_occ(atoms%n_hia,input%jspins)
-      REAL,             INTENT(IN)     :: mu_dc
-      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
+      REAL,             INTENT(IN)     :: n_occ(:,:)
+      TYPE(t_greensf),  INTENT(INOUT)  :: gp
+      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:,-lmaxU_const:,:,:)
 
       INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,spin_match,matsize,start,end,i_match,ind
       CHARACTER(len=6) app,filename
