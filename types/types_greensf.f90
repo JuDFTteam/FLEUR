@@ -337,8 +337,8 @@ MODULE m_types_greensf
          INTEGER, OPTIONAL,   INTENT(IN)  :: spin
          INTEGER, OPTIONAL,   INTENT(IN)  :: nTypep
          INTEGER, OPTIONAL,   INTENT(IN)  :: lp
-         REAL   , OPTIONAL,   INTENT(IN)  :: u(2,input%jspins)       !Radial functions at the point where you want to evaluate the greens function
-         REAL   , OPTIONAL,   INTENT(IN)  :: udot(2,input%jspins)
+         REAL   , OPTIONAL,   INTENT(IN)  :: u(:,:)       !Radial functions at the point where you want to evaluate the greens function
+         REAL   , OPTIONAL,   INTENT(IN)  :: udot(:,:)
 
          INTEGER matsize1,matsize2,i_gf,i,j,ind1,ind2,ind1_start,ind2_start
          INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end,spin_ind
