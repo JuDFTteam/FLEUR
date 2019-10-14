@@ -44,26 +44,28 @@ MODULE m_hubbard1_setup
       EXTERNAL MPI_BCAST
 #endif
 
-      INTEGER i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm
-      INTEGER io_error,ierr
-      INTEGER indStart,indEnd
-      REAL    mu_dc,exc
+      !-- Local Scalars
+      INTEGER :: i_hia,nType,l,n_occ,ispin,m,iz,k,j,i_exc,i,jspin,ipm
+      INTEGER :: io_error,ierr
+      INTEGER :: indStart,indEnd
+      REAL    :: mu_dc,exc
+      LOGICAL :: l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist,occ_err
 
       CHARACTER(len=300) :: cwd,path,folder,xPath
       CHARACTER(len=8)   :: l_type*2,l_form*9
 
+      !-- Local Types
       TYPE(t_greensf)    :: gu
 
-      REAL     f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
-      REAL     f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
-
-      COMPLEX  mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
+      !-- Local Arrays
+      REAL    :: f0(atoms%n_hia,input%jspins),f2(atoms%n_hia,input%jspins)
+      REAL    :: f4(atoms%n_hia,input%jspins),f6(atoms%n_hia,input%jspins)
+      REAL    :: n_l(atoms%n_hia,input%jspins)
+      COMPLEX :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,3)
+      COMPLEX :: e(gdft%nz)
       COMPLEX, ALLOCATABLE :: selfen(:,:,:,:,:)
-      COMPLEX  e(gdft%nz)
-      REAL     n_l(atoms%n_hia,input%jspins)
-      LOGICAL  l_selfenexist,l_exist,l_linkedsolver,l_ccfexist,l_bathexist,occ_err
 
-      !To avoid confusing structure later on
+      !To avoid confusing structure with pre-processor-switches later on
 #ifdef CPP_EDSOLVER
       l_linkedsolver = .TRUE.
 #else
