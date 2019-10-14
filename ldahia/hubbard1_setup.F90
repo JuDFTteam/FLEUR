@@ -11,7 +11,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,hub1,sym,mpi,noco,input,den,pot,gdft,results)
+   SUBROUTINE hubbard1_setup(atoms,input,sym,mpi,noco,pot,gdft,hub1,results,den)
 
       USE m_types
       USE m_constants
@@ -34,15 +34,15 @@ MODULE m_hubbard1_setup
 
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
-      TYPE(t_hub1ham),  INTENT(INOUT)  :: hub1
+      TYPE(t_input),    INTENT(IN)     :: input
       TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_mpi),      INTENT(IN)     :: mpi
       TYPE(t_noco),     INTENT(IN)     :: noco
-      TYPE(t_input),    INTENT(IN)     :: input
-      TYPE(t_potden),   INTENT(INOUT)  :: den
       TYPE(t_potden),   INTENT(IN)     :: pot
-      TYPE(t_results),  INTENT(INOUT)  :: results
       TYPE(t_greensf),  INTENT(IN)     :: gdft !green's function calculated from the Kohn-Sham system
+      TYPE(t_hub1ham),  INTENT(INOUT)  :: hub1
+      TYPE(t_results),  INTENT(INOUT)  :: results
+      TYPE(t_potden),   INTENT(INOUT)  :: den
 
 #ifdef CPP_MPI
       EXTERNAL MPI_BCAST

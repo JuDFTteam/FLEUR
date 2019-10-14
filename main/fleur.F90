@@ -183,7 +183,7 @@ CONTAINS
        iter = iter + 1
        IF(hub1%l_runthisiter.AND.atoms%n_hia>0) THEN
           hub1%iter = hub1%iter + 1
-          CALL hubbard1_setup(atoms,hub1,sym,mpi,noco,input,inDen,vTot,gOnsite,results)
+          CALL hubbard1_setup(atoms,input,sym,mpi,noco,vTot,gOnsite,hub1,results,inDen)
        ENDIF
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
