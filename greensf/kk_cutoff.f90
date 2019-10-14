@@ -15,7 +15,7 @@ MODULE m_kk_cutoff
 
       IMPLICIT NONE
 
-      COMPLEX,             INTENT(INOUT)  :: im(ne,-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,jspins)
+      COMPLEX,             INTENT(INOUT)  :: im(ne,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_atoms),       INTENT(IN)     :: atoms
       TYPE(t_noco),        INTENT(IN)     :: noco
 
@@ -26,7 +26,7 @@ MODULE m_kk_cutoff
       REAL,                INTENT(IN)     :: e_bot
       REAL,                INTENT(IN)     :: e_top
 
-      INTEGER,             INTENT(OUT)    :: cutoff(jspins,2)
+      INTEGER,             INTENT(OUT)    :: cutoff(:,:)
 
 
       INTEGER i,m,n_c,ispin,spins_cut
