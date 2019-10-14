@@ -29,7 +29,7 @@ MODULE m_greensfImag21
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
       TYPE(t_sym),               INTENT(IN)     :: sym
-      REAL,                      INTENT(IN)     :: angle(sym%nop)
+      REAL,                      INTENT(IN)     :: angle(:)
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
@@ -37,10 +37,10 @@ MODULE m_greensfImag21
 
       INTEGER,                   INTENT(IN)     :: nbands
       REAL,                      INTENT(IN)     :: wtkpt
-      REAL,                      INTENT(IN)     :: dosWeights(greensfCoeffs%ne,nbands)
-      REAL,                      INTENT(IN)     :: resWeights(greensfCoeffs%ne,nbands)
-      INTEGER,                   INTENT(IN)     :: ind(nbands,2)
-      REAL,                      INTENT(IN)     :: eig(nbands)
+      REAL,                      INTENT(IN)     :: dosWeights(:,:)
+      REAL,                      INTENT(IN)     :: resWeights(:,:)
+      INTEGER,                   INTENT(IN)     :: ind(:,:)
+      REAL,                      INTENT(IN)     :: eig(:)
 
       INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,ilo,ilop,nn
       COMPLEX  weight
