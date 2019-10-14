@@ -5,7 +5,7 @@
       PRIVATE
       PUBLIC :: e_field
       CONTAINS
-      SUBROUTINE e_field(atoms, DIMENSION, stars, sym, vacuum, cell, input,efield)
+      SUBROUTINE e_field(atoms,  stars, sym, vacuum, cell, input,efield)
 !
 !*********************************************************************
 !     sets the values of the sheets of charge for external electric
@@ -23,7 +23,6 @@
 !     ..
 !     .. Scalar Arguments ..
       TYPE(t_atoms), INTENT (IN)    :: atoms
-      TYPE(t_dimension),INTENT(IN)  :: dimension
       Type(t_stars),INTENT(IN)      :: stars
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_vacuum),INTENT(IN)     :: vacuum
@@ -253,7 +252,7 @@
 
         REAL ::   tmp
         INTEGER :: i
-   
+
         ! New format
         ALLOCATE(E%sigEF(3*k1d, 3*k2d, nvac))
         E%sigEF = 0.0
@@ -753,7 +752,7 @@
             END DO
           END IF
         END SUBROUTINE print_efield
-      
+
         SUBROUTINE V_seg_EF(&
      &                      efield,&
      &                      vacuum, stars)

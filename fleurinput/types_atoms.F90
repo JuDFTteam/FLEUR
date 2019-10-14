@@ -113,7 +113,7 @@ MODULE m_types_atoms
      class(t_atoms),INTENT(INOUT)::this
      integer,INTENT(IN):: mpi_comm
      INTEGER,INTENT(IN),OPTIONAL::irank
-     INTEGER ::rank
+     INTEGER ::rank,myrank,ierr,n
      if (present(irank)) THEN
         rank=irank
      else
@@ -160,11 +160,27 @@ MODULE m_types_atoms
      call mpi_bc(this%relax,rank,mpi_comm)
      call mpi_bc(this%nflip,rank,mpi_comm)
 
-
-
-     !this needs work
-     !TYPE(t_econfig),ALLOCATABLE::econf(:)
-     !TYPE(t_utype), ALLOCATABLE::lda_u(:)
+#ifdef CPP_MPI
+     CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
+     IF (myrank.ne.rank) Then
+       if (allocated(this%econf)) DEALLOCATE(this%econf)
+       if (allocated(this%lda_u)) DEALLOCATE(this%lda_u)
+       ALLOCATE(this%econf(this%ntype))
+       ALLOCATE(this%lda_u(4*this%ntype))
+     ENDIF
+     DO n=1,this%ntype
+       call this%econf(n)%broadcast(rank,mpi_comm)
+     endDO
+     DO n=1,this%n_u
+       call mpi_bc(this%lda_u(n)%j,irank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%u,irank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%theta,irank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%phi,irank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%l,irank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%atomType,irank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%l_amf,irank,mpi_comm)
+     ENDDO
+#endif
    end subroutine mpi_bc_atoms
 
    LOGICAL FUNCTION same_species(atoms,n,nn)

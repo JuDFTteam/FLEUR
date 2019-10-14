@@ -28,7 +28,7 @@ MODULE m_make_stars
      use m_types_oned
      USE m_types_mpi
      use m_types_noco
-
+     use m_mpi_bc_tool
 
      class(t_stars),intent(INOUT) :: stars
      type(t_sym),intent(in)::sym
@@ -44,12 +44,12 @@ MODULE m_make_stars
      ! Generate stars
 
     ! Dimensioning of stars
-  
+
   IF (input%film) THEN
      CALL strgn1_dim(input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
           sym%tau,sym%nop,sym%nop2,stars%mx1,stars%mx2,stars%mx3,&
           stars%ng3,stars%ng2,oneD%odd)
-     
+
   ELSE
      CALL strgn2_dim(input%gmax,cell%bmat,sym%invs,sym%zrfs,sym%mrot,&
           sym%tau,sym%nop,stars%mx1,stars%mx2,stars%mx3,&
@@ -79,14 +79,14 @@ MODULE m_make_stars
   ALLOCATE (stars%rgphs(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-stars%mx3:stars%mx3))
   ALLOCATE (stars%pgfft(0:stars%kimax),stars%pgfft2(0:stars%kimax2))
   ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-  
+
   stars%sk2(:) = 0.0
   stars%phi2(:) = 0.0
 
   ! Initialize xc fft box
-  
+
   CALL prp_xcfft_box(xcpot%gmaxxc,cell%bmat,stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft)
-   
+
   ! Missing xc functionals initializations
   IF (xcpot%needs_grad()) THEN
      ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
@@ -102,7 +102,7 @@ MODULE m_make_stars
   oneD%odi%nq2 = oneD%odd%nq2
 
 
-  CALL timestart("strgn") 
+  CALL timestart("strgn")
   IF (input%film) THEN
      CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
      IF (oneD%odd%d1) THEN
@@ -114,21 +114,23 @@ MODULE m_make_stars
 
   CALL lapw_fft_dim(cell,input,noco,stars)
 
-  
+
   ALLOCATE (stars%igq_fft(0:stars%kq1_fft*stars%kq2_fft*stars%kq3_fft-1))
   ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
-  
-  ! Set up pointer for backtransformation from g-vector in positive 
+
+  ! Set up pointer for backtransformation from g-vector in positive
   ! domain of carge density fftibox into stars
   CALL prp_qfft(stars,cell,noco,input)
   CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
-  
-  CALL timestop("strgn") 
 
-  CALL timestart("stepf") 
+  CALL timestop("strgn")
+
+  CALL timestart("stepf")
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
-  CALL timestop("stepf") 
-  
+  call mpi_bc(stars%ustep,0,mpi%mpi_comm)
+  call mpi_bc(stars%ufft,0,mpi%mpi_comm)
+  CALL timestop("stepf")
+
 
 
 END SUBROUTINE make_stars

@@ -33,17 +33,19 @@ MODULE m_types_xcpot
       REAL,ALLOCATABLE :: gr(:,:,:)
       REAL,ALLOCATABLE :: laplace(:,:)
    END TYPE t_gradients
-   
-   TYPE,ABSTRACT,EXTENDS(t_fleurinput_base) :: t_xcpot
+
+   TYPE,EXTENDS(t_fleurinput_base) :: t_xcpot
       REAL :: gmaxxc
       !Data for libxc
       LOGICAL                  :: l_libxc=.FALSE.
       INTEGER                  :: func_vxc_id_c, func_vxc_id_x !> functionals to be used for potential & density convergence
       INTEGER                  :: func_exc_id_c, func_exc_id_x !> functionals to be used in exc- & totale-calculations
       !For inbuild
+
       LOGICAL          :: l_inbuild=.FALSE.
       CHARACTER(len=10):: inbuild_name="vwn"
       LOGICAL          :: l_relativistic=.FALSE.
+
    CONTAINS
       PROCEDURE        :: vxc_is_LDA => xcpot_vxc_is_LDA
       PROCEDURE        :: vxc_is_GGA => xcpot_vxc_is_GGA
@@ -73,18 +75,18 @@ MODULE m_types_xcpot
 
  CONTAINS
 
-   SUBROUTINE mpi_bc_xcpot(this,mpi_comm,irank)
-    USE m_mpi_bc_tool
-    CLASS(t_xcpot),INTENT(INOUT)::this
-    INTEGER,INTENT(IN):: mpi_comm
-    INTEGER,INTENT(IN),OPTIONAL::irank
-    INTEGER ::rank
-    IF (PRESENT(irank)) THEN
-       rank=irank
-    ELSE
-       rank=0
-    END IF
-    
+   Subroutine Mpi_bc_xcpot(This,Mpi_comm,Irank)
+    Use M_mpi_bc_tool
+    Class(T_xcpot),Intent(Inout)::This
+    Integer,Intent(In):: Mpi_comm
+    Integer,Intent(In),Optional::Irank
+    Integer ::Rank
+    If (Present(Irank)) Then
+       Rank=Irank
+    Else
+       Rank=0
+    End If
+
     CALL mpi_bc(this%l_libxc,rank,mpi_comm)
     CALL mpi_bc(this%func_vxc_id_c,rank,mpi_comm)
     CALL mpi_bc(this%func_vxc_id_x ,rank,mpi_comm)
@@ -93,7 +95,6 @@ MODULE m_types_xcpot
     CALL mpi_bc(this%l_inbuild,rank,mpi_comm)
     CALL mpi_bc(rank,mpi_comm,this%inbuild_name)
     CALL mpi_bc(this%l_relativistic,rank,mpi_comm)
- 
 
   END SUBROUTINE mpi_bc_xcpot
 
@@ -101,7 +102,7 @@ MODULE m_types_xcpot
      USE m_types_xml
      CLASS(t_xcpot),INTENT(INOUT):: this
      TYPE(t_xml),INTENT(in)      :: xml
-     
+
      CHARACTER(len=10)::xpathA,xpathB
      INTEGER          :: vxc_id_x,vxc_id_c, exc_id_x,  exc_id_c,jspins
      LOGICAL          :: l_libxc_names
@@ -114,14 +115,14 @@ MODULE m_types_xcpot
         this%inbuild_name=TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL('/fleurInput/xcFunctional/@name')))))
         this%l_relativistic=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/xcFunctional/@relativisticCorrections'))
      ENDIF
-     
+
      !Input for libxc
      ! Read in xc functional parameters
      !Read in libxc parameters if present
      xPathA = '/fleurInput/xcFunctional/LibXCID'
      xPathB = '/fleurInput/xcFunctional/LibXCName'
 
-     ! LibXCID 
+     ! LibXCID
      IF (xml%GetNumberOfNodes(xPathA) == 1) THEN
         this%l_libxc=.TRUE.
         this%func_vxc_id_x=evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@exchange'))
@@ -131,29 +132,29 @@ MODULE m_types_xcpot
         ELSE
            this%func_exc_id_x = vxc_id_x
         ENDIF
-        
+
         IF(xml%GetNumberOfNodes(TRIM(xPathA) // '/@exc_correlation') == 1) THEN
            this%func_exc_id_c = evaluateFirstOnly(xml%GetAttributeValue(xPathA // '/@exc_correlation'))
         ELSE
            this%func_exc_id_c = this%func_vxc_id_c
         ENDIF
-        ! LibXCName 
+        ! LibXCName
      ELSEIF (xml%GetNumberOfNodes(TRIM(xPathB)) == 1) THEN
         l_libxc_names=.TRUE.
 #ifdef CPP_LIBXC
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@exchange')))
          this%func_vxc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
-         
+
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@correlation')))
          this%func_vxc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
-         
+
          IF(xml%GetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
             valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
             this%func_exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
          ELSE
             this%func_exc_id_x = this%func_vxc_id_x
          ENDIF
-         
+
          IF(xml%GetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
             valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
             this%func_exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
@@ -164,12 +165,12 @@ MODULE m_types_xcpot
          CALL judft_error("To use libxc functionals you have to compile with libXC support")
 #endif
       ENDIF
-     
+
       IF (this%l_libxc.AND.l_libxc_names) CALL judft_error("You specified libxc by name and id, please choose only one option")
       this%l_libxc=this%l_libxc.OR.l_libxc_names
       IF (this%l_inbuild.AND.this%l_libxc) CALL judft_error("You specified libxc and an inbuild xc-pot, please choose only one option")
       IF (.NOT.(this%l_inbuild.OR.this%l_libxc)) CALL judft_error("You specified no xc-pot")
- 
+
     END SUBROUTINE read_xml_xcpot
 
    ! LDA
@@ -184,7 +185,7 @@ MODULE m_types_xcpot
       CLASS(t_xcpot),INTENT(IN):: xcpot
       xcpot_vx_is_LDA=.FALSE.
    END FUNCTION xcpot_vx_is_LDA
-   
+
    LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
@@ -209,7 +210,7 @@ MODULE m_types_xcpot
       CLASS(t_xcpot),INTENT(IN):: xcpot
       xcpot_vx_is_GGA=.FALSE.
    END FUNCTION xcpot_vx_is_GGA
-   
+
    LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
@@ -286,7 +287,7 @@ MODULE m_types_xcpot
       !---> xc energy density
       REAL, INTENT (OUT)                    :: exc (:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) :: grad
-      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call
       REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
 
       exc = 0.0

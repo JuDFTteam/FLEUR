@@ -14,6 +14,7 @@ init/spgrot.f
 init/strgn_dim.F
 )
 set(fleur_F90 ${fleur_F90}
+init/fleurinput_postprocess.f90
 init/compile_descr.F90
 init/checks.F90
 init/efield.f90
@@ -32,6 +33,5 @@ init/prp_xcfft.f90
 init/stepf.F90
 init/strgn.f90
 init/postprocessInput.F90
-init/initParallelProcesses.F90
 init/lapw_dim.F90
 )

@@ -80,21 +80,18 @@ CONTAINS
   END FUNCTION get_state_string
 
 
-  SUBROUTINE broadcast(econf,mpi_comm)
+  SUBROUTINE broadcast(econf,irank,mpi_comm)
     USE m_mpi_bc_tool
     CLASS(t_econfig),INTENT(INOUT):: econf
-    INTEGER,INTENT(in)            :: mpi_comm
+    INTEGER,INTENT(in)            :: irank,mpi_comm
 #ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-    INTEGER :: ierr,irank
-
-    CALL mpi_bc(econf%num_core_states,0,mpi_comm)
-    CALL mpi_bc(econf%num_states,0,mpi_comm)
-    CALL mpi_bc(econf%nprnc,0,mpi_comm)
-    CALL mpi_bc(econf%kappa,0,mpi_comm)
-    CALL mpi_bc(econf%occupation,0,mpi_comm)
-    CALL mpi_bc(econf%core_electrons,0,mpi_comm)
-    CALL mpi_bc(econf%valence_electrons,0,mpi_comm)
+    CALL mpi_bc(econf%num_core_states,irank,mpi_comm)
+    CALL mpi_bc(econf%num_states,irank,mpi_comm)
+    CALL mpi_bc(econf%nprnc,irank,mpi_comm)
+    CALL mpi_bc(econf%kappa,irank,mpi_comm)
+    CALL mpi_bc(econf%occupation,Irank,mpi_comm)
+    CALL mpi_bc(econf%core_electrons,irank,mpi_comm)
+    CALL mpi_bc(econf%valence_electrons,irank,mpi_comm)
 #endif
   END SUBROUTINE broadcast
 

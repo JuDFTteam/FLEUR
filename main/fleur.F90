@@ -107,7 +107,7 @@ CONTAINS
     REAL    :: fix
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
-    INTEGER :: ierr(2),n
+    INTEGER :: ierr(2)
 #endif
 
     mpi%mpi_comm = mpi_comm

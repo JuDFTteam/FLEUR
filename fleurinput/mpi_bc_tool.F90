@@ -8,7 +8,7 @@ MODULE m_mpi_bc_tool
   USE m_judft
   IMPLICIT NONE
   PRIVATE
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
   INCLUDE 'mpif.h'
 #endif
   !This interface is used to broadcast data. On the recieving PE the data-array is first allocated to
@@ -29,7 +29,7 @@ CONTAINS
 
     INTEGER:: ierr=0
 
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
     CALL MPI_BCAST(i,1,MPI_LOGICAL,irank,mpi_comm,ierr)
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
@@ -42,15 +42,18 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(1),iup(1),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (allocated(i).and.myrank==irank) THEN
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
     CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(i)) DEALLOCATE(i)
        ALLOCATE(i(ilow(1):iup(1)))
@@ -69,15 +72,18 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(2),iup(2),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (allocated(i).and.myrank==irank) THEN
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
     CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(i)) DEALLOCATE(i)
        ALLOCATE(i(ilow(1):iup(1),ilow(2):iup(2)))
@@ -95,7 +101,7 @@ CONTAINS
 
     INTEGER:: ierr=0
 
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
     CALL MPI_BCAST(i,1,MPI_INTEGER,irank,mpi_comm,ierr)
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
@@ -108,15 +114,18 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(1),iup(1),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (allocated(i).and.myrank==irank) THEN
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
     CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(i)) DEALLOCATE(i)
        ALLOCATE(i(ilow(1):iup(1)))
@@ -135,15 +144,18 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(2),iup(2),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (allocated(i).and.myrank==irank) THEN
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
     CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(i)) DEALLOCATE(i)
        ALLOCATE(i(ilow(1):iup(1),ilow(2):iup(2)))
@@ -163,15 +175,18 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(3),iup(3),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (allocated(i).and.myrank==irank) THEN
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
     CALL MPI_BCAST(ilow,3,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,3,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(i)) DEALLOCATE(i)
        ALLOCATE(i(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3)))
@@ -189,16 +204,19 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(4),iup(4),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (allocated(i).and.myrank==irank) THEN
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
     CALL MPI_BCAST(ilow,4,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,4,MPI_INTEGER,0,mpi_comm,ierr)
-    IF (myrank.NE.irank) THEN
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
+    IF (allocated(i).and.myrank.NE.irank) THEN
        IF (ALLOCATED(i)) DEALLOCATE(i)
        ALLOCATE(i(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3),ilow(4):iup(4)))
     ENDIF
@@ -215,15 +233,18 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(5),iup(5),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (allocated(i).and.myrank==irank) THEN
        ilow=LBOUND(i)
        iup=UBOUND(i)
     END IF
     CALL MPI_BCAST(ilow,5,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,5,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(i)) DEALLOCATE(i)
        ALLOCATE(i(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3),ilow(4):iup(4),ilow(5):iup(5)))
@@ -238,15 +259,15 @@ CONTAINS
   ! now the same for reals
   !
 
-  SUBROUTINE mpi_bc_real_fixed2(irank,mpi_comm,r)!Special routine for non-allocatable 2d arrays
+  SUBROUTINE mpi_bc_real_fixed2(irank,mpi_comm,r2)!Special routine for non-allocatable 2d arrays
     IMPLICIT NONE
-    REAL,INTENT(INOUT)   :: r(:,:)
+    REAL,INTENT(INOUT)   :: r2(:,:)
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
     INTEGER:: ierr=0
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
-    CALL MPI_BCAST(r,size(r),MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(r2,size(r2),MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real_fixed2
@@ -257,9 +278,9 @@ CONTAINS
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
     INTEGER:: ierr=0
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
-    CALL MPI_BCAST(r,9,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(r,3,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real_3
@@ -270,7 +291,7 @@ CONTAINS
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
     INTEGER:: ierr=0
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
     CALL MPI_BCAST(r,1,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
 #endif
@@ -284,15 +305,18 @@ CONTAINS
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
     INTEGER:: ierr=0,ilow(1),iup(1),myrank
-
+    ilow=0;iup=0
 #ifdef CPP_MPI
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(r).and.myrank==irank) THEN
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
     CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(r)) DEALLOCATE(r)
        ALLOCATE(r(ilow(1):iup(1)))
@@ -310,22 +334,25 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(2),iup(2),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(r).and.myrank==irank) THEN
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
     CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(r)) DEALLOCATE(r)
        ALLOCATE(r(ilow(1):iup(1),ilow(2):iup(2)))
     ENDIF
 
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
-#endif  
+#endif
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real2
@@ -337,22 +364,25 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(3),iup(3),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(r).and.myrank==irank) THEN
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
     CALL MPI_BCAST(ilow,3,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,3,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(r)) DEALLOCATE(r)
        ALLOCATE(r(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3)))
     ENDIF
 
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
-#endif  
+#endif
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real3
@@ -363,16 +393,19 @@ CONTAINS
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
     INTEGER:: ierr=0,ilow(4),iup(4),myrank
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
-
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(r).and.myrank==irank) THEN
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
     CALL MPI_BCAST(ilow,4,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,4,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(r)) DEALLOCATE(r)
        ALLOCATE(r(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3),ilow(4):iup(4)))
@@ -380,7 +413,7 @@ CONTAINS
 
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
 
-#endif  
+#endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real4
 
@@ -390,23 +423,26 @@ CONTAINS
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
     INTEGER:: ierr=0,ilow(5),iup(5),myrank
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
-
+    ilow=0;iup=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(r).and.myrank==irank) THEN
        ilow=LBOUND(r)
        iup=UBOUND(r)
     END IF
     CALL MPI_BCAST(ilow,5,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,5,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(r)) DEALLOCATE(r)
        ALLOCATE(r(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3),ilow(4):iup(4),ilow(5):iup(5)))
     ENDIF
 
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
-#endif  
+#endif
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real5
@@ -421,10 +457,10 @@ CONTAINS
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
     INTEGER:: ierr=0
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
     CALL MPI_BCAST(c,1,MPI_DOUBLE_COMPLEX,irank,mpi_comm,ierr)
-#endif  
+#endif
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_complex
@@ -436,22 +472,25 @@ CONTAINS
 
     INTEGER:: ierr=0,ilow(1),iup(1),myrank
 
-#ifdef CPP_MPI  
-
+#ifdef CPP_MPI
+    iup=0;ilow=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(c).and.myrank==irank) THEN
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
     CALL MPI_BCAST(ilow,1,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,1,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(c)) DEALLOCATE(c)
        ALLOCATE(c(ilow(1):iup(1)))
     ENDIF
 
     CALL MPI_BCAST(c,SIZE(c),MPI_DOUBLE_COMPLEX,irank,mpi_comm,ierr)
-#endif  
+#endif
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_complex1
@@ -462,23 +501,26 @@ CONTAINS
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
     INTEGER:: ierr=0,ilow(2),iup(2),myrank
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
-
+    iup=0;ilow=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(c).and.myrank==irank) THEN
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
     CALL MPI_BCAST(ilow,2,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,2,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(c)) DEALLOCATE(c)
        ALLOCATE(c(ilow(1):iup(1),ilow(2):iup(2)))
     ENDIF
 
     CALL MPI_BCAST(c,SIZE(c),MPI_DOUBLE_COMPLEX,irank,mpi_comm,ierr)
-#endif  
+#endif
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_complex2
@@ -489,23 +531,26 @@ CONTAINS
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
     INTEGER:: ierr=0,ilow(3),iup(3),myrank
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
-
+    iup=0;ilow=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(c).and.myrank==irank) THEN
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
     CALL MPI_BCAST(ilow,3,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,3,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(c)) DEALLOCATE(c)
        ALLOCATE(c(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3)))
     ENDIF
 
     CALL MPI_BCAST(c,SIZE(c),MPI_DOUBLE_COMPLEX,irank,mpi_comm,ierr)
-#endif  
+#endif
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_complex3
@@ -516,23 +561,27 @@ CONTAINS
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
     INTEGER:: ierr=0,ilow(4),iup(4),myrank
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
+    iup=0;ilow=0
 
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(c).and.myrank==irank) THEN
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
     CALL MPI_BCAST(ilow,4,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,4,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(c)) DEALLOCATE(c)
        ALLOCATE(c(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3),ilow(4):iup(4)))
     ENDIF
 
     CALL MPI_BCAST(c,SIZE(c),MPI_DOUBLE_COMPLEX,irank,mpi_comm,ierr)
-#endif  
+#endif
 
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_complex4
@@ -543,16 +592,19 @@ CONTAINS
     INTEGER,INTENT(IN)                :: irank,mpi_comm
 
     INTEGER:: ierr=0,ilow(5),iup(5),myrank
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
-
+    iup=0;ilow=0
     CALL MPI_COMM_RANK(mpi_comm,myrank,ierr)
-    IF (myrank==irank) THEN
+    IF (ALLOCATED(c).and.myrank==irank) THEN
        ilow=LBOUND(c)
        iup=UBOUND(c)
     END IF
     CALL MPI_BCAST(ilow,5,MPI_INTEGER,0,mpi_comm,ierr)
     CALL MPI_BCAST(iup,5,MPI_INTEGER,0,mpi_comm,ierr)
+    If (All(Ilow==0).And.All(Iup==0)) then
+ print *,"Empty mpi_bc" ; return
+ endif
     IF (myrank.NE.irank) THEN
        IF (ALLOCATED(c)) DEALLOCATE(c)
        ALLOCATE(c(ilow(1):iup(1),ilow(2):iup(2),ilow(3):iup(3),ilow(4):iup(4),ilow(5):iup(5)))
@@ -560,7 +612,7 @@ CONTAINS
 
     CALL MPI_BCAST(c,SIZE(c),MPI_DOUBLE_COMPLEX,irank,mpi_comm,ierr)
 
-#endif  
+#endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_complex5
 
@@ -571,9 +623,9 @@ CONTAINS
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
     INTEGER:: ierr=0
-#ifdef CPP_MPI  
+#ifdef CPP_MPI
 
-    CALL MPI_BCAST(c,len_trim(c),MPI_CHARACTER,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(c,len(c),MPI_CHARACTER,irank,mpi_comm,ierr)
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_character_fixed1

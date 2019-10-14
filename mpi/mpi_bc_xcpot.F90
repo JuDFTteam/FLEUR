@@ -45,29 +45,7 @@ CONTAINS
        END SELECT
     END IF
     !Now we can do the the type dependend bc
-    SELECT TYPE(xcpot)
-    TYPE IS (t_xcpot_inbuild)
-       IF (mpi%irank==0) THEN
-          namex=xcpot%get_name()
-          l_relcor=xcpot%DATA%krla==1
-          n=SIZE(xcpot%lda_atom)
-       ENDIF
-       CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(l_relcor,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       IF (mpi%irank /= 0)  CALL xcpot%init(namex(1:4),l_relcor,n)
-       CALL MPI_BCAST(xcpot%lda_atom,n,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    TYPE IS (t_xcpot_libxc)
-       IF (mpi%irank==0) THEN
-          i(1) = xcpot%jspins
-          i(2) = xcpot%func_vxc_id_x
-          i(3) = xcpot%func_vxc_id_c
-          i(4) = xcpot%func_exc_id_x
-          i(5) = xcpot%func_exc_id_c
-       ENDIF
-       CALL MPI_BCAST(i,size(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
-        IF (mpi%irank /= 0)  CALL xcpot%init(i(1),i(2),i(3),i(4),i(5)) 
-    END SELECT
+    call xcpot%mpi_bc(mpi%mpi_comm,0)
 #endif
   END SUBROUTINE mpi_bc_xcpot
 END MODULE m_mpi_bc_xcpot

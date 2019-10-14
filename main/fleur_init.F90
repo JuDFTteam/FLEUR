@@ -21,7 +21,7 @@ CONTAINS
     USE m_dwigner
     !USE m_gen_bz
     USE m_ylm
-    USE m_InitParallelProcesses
+    !USE m_InitParallelProcesses
     USE m_xmlOutput
     USE m_constants
     USE m_winpXML
@@ -35,10 +35,16 @@ CONTAINS
     !USE m_fleur_init_old
     USE m_types_xcpot_inbuild
     USE m_mpi_bc_xcpot
-
-
+    USE m_prpxcfft
+    use m_make_stars
+    use m_make_sphhar
+    USE m_convn
+    USE m_efield
+    USE m_fleurinput_postprocess
+    use m_make_forcetheo
+    use m_lapwdim
 #ifdef CPP_MPI
-    USE m_mpi_bc_all,  ONLY : mpi_bc_all
+    !USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
     USE m_mpi_dist_forcetheorem
 #endif
@@ -81,7 +87,7 @@ CONTAINS
     REAL, ALLOCATABLE             :: xmlCoreOccs(:,:,:)
     LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:,:)
     !     .. Local Scalars ..
-    INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType
+    INTEGER    :: i,n,l,m1,m2,isym,iisym,numSpecies,pc,iAtom,iType,minneigd
     COMPLEX    :: cdum
     CHARACTER(len=4)              :: namex
     CHARACTER(len=12)             :: relcor, tempNumberString
@@ -98,11 +104,6 @@ CONTAINS
 #else
     mpi%irank=0 ; mpi%isize=1; mpi%mpi_comm=1
 #endif
-    !determine if we use an xml-input file
-    INQUIRE (file='inp.xml',exist=l_found)
-    IF (.NOT.l_found) THEN
-       CALL judft_error("No input file found",calledby='fleur_init',hint="To use FLEUR, you have to provide an 'inp.xml' file in the working directory")
-    END IF
 
     CALL check_command_line()
 #ifdef CPP_HDF
@@ -118,27 +119,45 @@ CONTAINS
                OPEN (6,file='out',form='formatted',status='unknown')
        ENDIF
        CALL writeOutHeader()
+       !this should be removed, it deletes output of old inf file
        OPEN (16,status='SCRATCH')
     ENDIF
 
     ALLOCATE(t_xcpot_inbuild::xcpot)
-
+    !Only PE==0 reads the input and does basic postprocessing
     IF (mpi%irank.EQ.0) THEN
-       CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
-            sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
-            xcpot,forcetheo_data,kpts,enparaXML)
+      CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
+      sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
+      xcpot,forcetheo_data,kpts,enparaXML)
+      call fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
+      Banddos,Oned,Wann,Xcpot,Kpts)
     END IF
+    !Distribute input to all PE
+    CALL fleurinput_mpi_bc(Cell,Sym,Atoms,Input,Noco,Vacuum,Field,&
+         Sliceplot,Banddos,Hybrid,Oned,Corespecinput,Wann,&
+         Xcpot,Forcetheo_data,Kpts,Enparaxml,Mpi%Mpi_comm)
 
-    CALL fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
-         sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
-         xcpot,forcetheo_data,kpts,enparaXML,mpi%mpi_comm)
+    !Remaining init is done using all PE
+    CALL ylmnorm_init(atoms%lmaxd)
+    CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
+    CALL make_sphhar(atoms,sphhar,sym,cell,oneD)
+    CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
+    call make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
+    CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
+    call oned%init(atoms) !call again, because make_stars modified it :-)
+    ! Store structure data
+    CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
+    CALL prp_xcfft(stars,input,cell,xcpot)
+    CALL convn(atoms,stars)
+    if (mpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
+    if (mpi%isize>1) call field%mpi_bc(mpi%mpi_comm,0)
+    ! Initialize missing hybrid functionals arrays
+    ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
 
+    !At some point this should be enabled for noco as well
+    IF (.not.noco%l_noco) &
+    CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
-    CALL timestart("postprocessInput")
-    CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
-         oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,forcetheo_data,&
-         noco,DIMENSION,enpara,enparaxml,sphhar,l_kpts)
-    CALL timestop("postprocessInput")
 
     IF (mpi%irank.EQ.0) THEN
        CALL w_inpXML(&
@@ -146,15 +165,34 @@ CONTAINS
             cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
             .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
     END IF
-
-
-    CALL ylmnorm_init(atoms%lmaxd)
     !
     !--> determine more dimensions
     !
     DIMENSION%nbasfcn = DIMENSION%nvd + atoms%nat*atoms%nlod*(2*atoms%llod+1)
     DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
     IF (noco%l_noco) DIMENSION%nbasfcn = 2*DIMENSION%nbasfcn
+    ! Generate missing general parameters
+
+    minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
+    IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
+    IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
+    IF ((dimension%neigd.NE.-1).AND.(dimension%neigd.LT.minNeigd)) THEN
+      IF (dimension%neigd>0) THEN
+        WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
+        WRITE(*,*) 'changed numbands (dimension%neigd) to ',minNeigd
+      ENDIF
+      dimension%neigd = minNeigd
+    END IF
+    IF(dimension%neigd.EQ.-1) THEN
+      dimension%neigd = dimension%nvd + atoms%nlotot
+    END IF
+    IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
+#ifdef CPP_MPI
+    CALL MPI_BCAST(dimension%neigd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(dimension%nbasfcn,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(dimension%nv2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(dimension%nvd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+#endif
 
 
     IF (mpi%irank.EQ.0) THEN

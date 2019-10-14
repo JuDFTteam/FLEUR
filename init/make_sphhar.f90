@@ -49,7 +49,7 @@ contains
           atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
           sphhar%nlh,sphhar%llh,sphhar%nmem,&
-          sphhar%mlh,sphhar%clnu)        
+          sphhar%mlh,sphhar%clnu)
      ii = 1
      DO i = 1,atoms%ntype
         atoms%nlhtyp(i) = nlhtp1(ii)
@@ -58,7 +58,7 @@ contains
      DEALLOCATE (nq1,lmx1,nlhtp1)
   END IF
   DEALLOCATE(sphhar%clnu,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh)
-  
+
   ALLOCATE(sphhar%clnu(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
   ALLOCATE(sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd))
   ALLOCATE(sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
@@ -71,8 +71,8 @@ contains
           sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.FALSE.,&
           atoms%nlhtyp,sphhar%nlh,sphhar%llh,sphhar%nmem,sphhar%mlh,sphhar%clnu)
      sym%nsymt = sphhar%ntypsd
-     oneD%mrot1(:,:,:) = sym%mrot(:,:,:)
-     oneD%tau1(:,:) = sym%tau(:,:)
+!     oneD%mrot1(:,:,:) = sym%mrot(:,:,:)
+!     oneD%tau1(:,:) = sym%tau(:,:)
   ELSE IF (oneD%odd%d1) THEN
      WRITE(*,*) 'Note: I would be surprised if lattice harmonics generation works'
      WRITE(*,*) 'Dimensioning of local arrays seems to be inconsistent with routine local_sym'
@@ -98,5 +98,5 @@ contains
      END DO
      DEALLOCATE (lmx1,nlhtp1)
   END IF
-  end 
+  end
 end

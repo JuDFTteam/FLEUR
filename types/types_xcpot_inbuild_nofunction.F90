@@ -15,7 +15,7 @@ MODULE m_types_xcpot_inbuild_nofunction
                                 'l91 ','x-a ','wign','mjw ','hl  ','bh  ','vwn ','pz  ', &
                                 'pw91','pbe ','rpbe','Rpbe','wc  ','PBEs', &
                                 'pbe0','hse ','vhse','lhse','exx ','hf  ']
-   
+
    LOGICAL,PARAMETER:: priv_LDA(20)=[&
                        .FALSE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
                        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
@@ -37,9 +37,8 @@ MODULE m_types_xcpot_inbuild_nofunction
    REAL, PARAMETER       ::  amix_hf   = 1.00
 
    TYPE, EXTENDS(t_xcpot):: t_xcpot_inbuild_nf
-      INTEGER             :: icorr=0 !not private to allow bcasting it around, and to check for initiazaition
-
-      TYPE(t_xcpot_data)   :: DATA
+      INTEGER          :: icorr=0
+      TYPE(t_xcpot_data) :: data
 
       LOGICAL,ALLOCATABLE :: lda_atom(:)
 
@@ -50,7 +49,7 @@ MODULE m_types_xcpot_inbuild_nofunction
 
       PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
       PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
-      
+
       PROCEDURE        :: exc_is_LDA => xcpot_exc_is_LDA
       PROCEDURE        :: exc_is_gga => xcpot_exc_is_gga
       PROCEDURE        :: is_hybrid  => xcpot_is_hybrid
@@ -63,15 +62,49 @@ MODULE m_types_xcpot_inbuild_nofunction
       PROCEDURE        :: relativistic_correction
       PROCEDURE        :: is_name  => xcpot_is_name
       PROCEDURE        :: init     => xcpot_init
+      PROCEDURE        :: mpi_bc => mpi_bc_xcpot_ib
    END TYPE t_xcpot_inbuild_nf
    PUBLIC t_xcpot_inbuild_nf
  CONTAINS
+
+   Subroutine Mpi_bc_xcpot_ib(This,Mpi_comm,Irank)
+    Use M_mpi_bc_tool
+    Class(t_xcpot_inbuild_nf),Intent(Inout)::This
+    Integer,Intent(In):: Mpi_comm
+    Integer,Intent(In),Optional::Irank
+    Integer ::Rank
+    If (Present(Irank)) Then
+       Rank=Irank
+    Else
+       Rank=0
+    End If
+
+    call this%t_xcpot%mpi_bc(mpi_comm,irank)
+
+    CALL mpi_bc(this%icorr,rank,mpi_comm)
+    CALL mpi_bc(this%data%is_rpbe,rank,mpi_comm)
+    CALL mpi_bc(this%data%is_wc,rank,mpi_comm)
+    CALL mpi_bc(this%data%is_hse,rank,mpi_comm)
+    CALL mpi_bc(this%data%uk,rank,mpi_comm)
+    CALL mpi_bc(this%data%um,rank,mpi_comm)
+    CALL mpi_bc(this%data%is_pbes,rank,mpi_comm)
+    CALL mpi_bc(this%data%is_pbe0,rank,mpi_comm)
+    CALL mpi_bc(this%data%is_bh,rank,mpi_comm)
+    CALL mpi_bc(this%data%is_mjw,rank,mpi_comm)
+    CALL mpi_bc(this%data%exchange_weight,rank,mpi_comm)
+    CALL mpi_bc(this%data%krla,rank,mpi_comm)
+    CALL mpi_bc(this%lda_atom,rank,mpi_comm)
+
+
+
+  END SUBROUTINE mpi_bc_xcpot_ib
+
    LOGICAL FUNCTION relativistic_correction(xcpot)
      IMPLICIT NONE
      CLASS(t_xcpot_inbuild_nf),INTENT(IN)    :: xcpot
      relativistic_correction=xcpot%DATA%krla==1
    END FUNCTION relativistic_correction
-   
+
    CHARACTER(len=4) FUNCTION xcpot_get_name(xcpot)
       USE m_judft
       IMPLICIT NONE
@@ -126,14 +159,14 @@ MODULE m_types_xcpot_inbuild_nofunction
       xcpot%DATA%exchange_weight=xcpot%get_exchange_weight()
 
    END SUBROUTINE xcpot_init
-  
+
    !! LDA
    logical function xcpot_exc_is_lda(xcpot)
       implicit none
       CLASS(t_xcpot_inbuild_nf),INTENT(IN):: xcpot
       xcpot_exc_is_lda= xcpot%vxc_is_lda()
    end function xcpot_exc_is_lda
-   
+
    logical function xcpot_vx_is_lda(xcpot)
       implicit none
       CLASS(t_xcpot_inbuild_nf),INTENT(IN):: xcpot
@@ -205,7 +238,7 @@ MODULE m_types_xcpot_inbuild_nofunction
       ! optional arguments for GGA
       TYPE(t_gradients),INTENT(INOUT),OPTIONAL::grad
 
-      CALL judft_error("BUG: dummy xcxpot type is not functional and should not be called") 
+      CALL judft_error("BUG: dummy xcxpot type is not functional and should not be called")
 
    END SUBROUTINE xcpot_get_vxc
 
@@ -213,18 +246,18 @@ MODULE m_types_xcpot_inbuild_nofunction
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS, mt_call)
 !***********************************************************************
       IMPLICIT NONE
-      
+
       CLASS(t_xcpot_inbuild_nf),INTENT(IN)     :: xcpot
       INTEGER, INTENT (IN)                  :: jspins
       REAL,INTENT (IN)                      :: rh(:,:)
       REAL, INTENT (OUT)                    :: exc(:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) ::grad
-      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call
       REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
 
 !c
 !c ---> local scalars
-      CALL judft_error("BUG: dummy xcxpot type is not functional and should not be called") 
+      CALL judft_error("BUG: dummy xcxpot type is not functional and should not be called")
 
    END SUBROUTINE xcpot_get_exc
 
