@@ -10,10 +10,10 @@ MODULE m_mt_tofrom_grid
    INTEGER, PARAMETER :: ndvgrd = 6 ! this should be consistent across GGA derivative routines
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
    REAL, ALLOCATABLE :: ylhf(:, :, :), ylhff(:, :, :), ylhtf(:, :, :)
-   REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:)
+   REAL, ALLOCATABLE :: wt(:), rx(:, :), thet(:), phi(:)
    PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, finish_mt_grid
 CONTAINS
-   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, xcpot, sym)
+   SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout)
       USE m_gaussp
       USE m_lhglptg
       USE m_lhglpts
@@ -21,36 +21,43 @@ CONTAINS
       INTEGER, INTENT(IN)          :: jspins
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
-      CLASS(t_xcpot), INTENT(IN)   :: xcpot
+      LOGICAL, INTENT(IN)          :: dograds
       TYPE(t_sym), INTENT(IN)      :: sym
+      REAL, INTENT(OUT), OPTIONAL  :: thout(:)
+      REAL, INTENT(OUT), OPTIONAL  :: phout(:)
 
       ! generate nspd points on a sherical shell with radius 1.0
       ! angular mesh equidistant in phi,
       ! theta are zeros of the legendre polynomials
-      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()))
+      ALLOCATE (wt(atoms%nsp()), rx(3, atoms%nsp()), thet(atoms%nsp()), phi(atoms%nsp()))
       CALL gaussp(atoms%lmaxd, rx, wt)
       ! generate the lattice harmonics on the angular mesh
       ALLOCATE (ylh(atoms%nsp(), 0:sphhar%nlhd, sphhar%ntypsd))
-      IF (xcpot%needs_grad()) THEN
+      IF (dograds) THEN
          ALLOCATE (ylht, MOLD=ylh)
          ALLOCATE (ylhtt, MOLD=ylh)
          ALLOCATE (ylhf, MOLD=ylh)
          ALLOCATE (ylhff, MOLD=ylh)
          ALLOCATE (ylhtf, MOLD=ylh)
 
-         CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), xcpot, sym, &
-                      ylh, thet, ylht, ylhtt, ylhf, ylhff, ylhtf)
+         CALL lhglptg(sphhar, atoms, rx, atoms%nsp(), dograds, sym, &
+                      ylh, thet, phi, ylht, ylhtt, ylhf, ylhff, ylhtf)
+         IF (PRESENT(thout)) THEN
+            thout=thet
+            phout=phi
+         END IF
+
       ELSE
          CALL lhglpts(sphhar, atoms, rx, atoms%nsp(), sym, ylh)
       END IF
       !ENDIF
    END SUBROUTINE init_mt_grid
 
-   SUBROUTINE mt_to_grid(xcpot, jspins, atoms, sphhar, den_mt, n, grad, ch)
+   SUBROUTINE mt_to_grid(dograds, jspins, atoms, sphhar, den_mt, n, grad, ch)
       USE m_grdchlh
       USE m_mkgylm
       IMPLICIT NONE
-      CLASS(t_xcpot), INTENT(IN)   :: xcpot
+      LOGICAL, INTENT(IN)          :: dograds
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       REAL, INTENT(IN)             :: den_mt(:, 0:, :)
@@ -69,7 +76,7 @@ CONTAINS
 
       ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspins))
       ALLOCATE (ch_tmp(nsp, jspins))
-      IF (xcpot%needs_grad()) THEN
+      IF (dograds) THEN
          ALLOCATE (chdr(nsp, jspins), chdt(nsp, jspins), chdf(nsp, jspins), chdrr(nsp, jspins), &
                    chdtt(nsp, jspins), chdff(nsp, jspins), chdtf(nsp, jspins), chdrt(nsp, jspins), &
                    chdrf(nsp, jspins))
@@ -87,7 +94,7 @@ CONTAINS
             DO jr = 1, atoms%jri(n)
                chlh(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
             ENDDO
-            IF (xcpot%needs_grad()) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
+            IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
                                                  chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh, js))
 
          ENDDO ! js
@@ -106,7 +113,7 @@ CONTAINS
                ENDDO
             ENDDO
          ENDDO
-         IF (xcpot%needs_grad()) THEN
+         IF (dograds) THEN
             chdr(:, :) = 0.0     ! d(ch)/dr
             chdt(:, :) = 0.0     ! d(ch)/dtheta
             chdf(:, :) = 0.0     ! d(ch)/dfai
@@ -185,7 +192,7 @@ CONTAINS
    END SUBROUTINE mt_from_grid
 
    SUBROUTINE finish_mt_grid()
-      DEALLOCATE (ylh, wt, rx, thet)
+      DEALLOCATE (ylh, wt, rx, thet, phi)
       IF (ALLOCATED(ylht)) DEALLOCATE (ylht, ylhtt, ylhf, ylhff, ylhtf)
    END SUBROUTINE finish_mt_grid
 

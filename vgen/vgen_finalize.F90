@@ -61,10 +61,19 @@ CONTAINS
     !Copy first vacuum into second vacuum if this was not calculated before 
     IF (vacuum%nvac==1) THEN
        vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
+!       DO i=1,3
+!          xcB(i)%vacz(:,2,:)  = xcB(i)%vacz(:,1,:)
+!       ENDDO
        IF (sym%invs) THEN
           vTot%vacxy(:,:,2,:)  = CMPLX(vTot%vacxy(:,:,1,:))
+!          DO i=1,3
+!             xcB(i)%vacxy(:,:,2,:)  = CMPLX(xcB(i)%vacxy(:,:,1,:))
+!          ENDDO
        ELSE
           vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
+!          DO i=1,3
+!             xcB(i)%vacxy(:,:,2,:)  = xcB(i)%vacxy(:,:,1,:)
+!          ENDDO
        ENDIF
     ENDIF
  

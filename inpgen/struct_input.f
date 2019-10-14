@@ -327,11 +327,9 @@
       IF (abs(mat(1,1)).GT.0.0000001) THEN ! transform hex->trig
         CALL recip(a1,a2,a3,rdummy)
         DO n = 1, abs(natin)
-!          CALL cotra0(atompos(1,n),x,mat)
           x = matmul(mat,atompos(:,n))
           write(*,'(3f10.5)') x(1:3)
           write(*,'(3f10.5)') rdummy
-!          CALL cotra1(x,atompos(1,n),rdummy)
           atompos(:,n) = matmul(rdummy,x)
           write(*,'(3f10.5)') atompos(1:3,n)
         ENDDO

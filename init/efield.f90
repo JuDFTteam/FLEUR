@@ -736,7 +736,6 @@
                 pt_rel(1) = REAL(i-1)/nx
                 DO j = 1, ny+1
                   pt_rel(2) = REAL(j-1)/ny
-                  !CALL cotra0 (pt_rel, pt_abs, amat)
                   pt_abs=matmul(amat,pt_rel)
                   IF (E%dirichlet) THEN
                     WRITE (748, '(4f12.5,2g16.5)')&
@@ -881,7 +880,6 @@
      &                          * nstr2(k)/(3*k1d*3*k2d)
                   END IF
                 END DO ! k
-                !CALL cotra0 (pt_rel, pt_abs, amat)
                 pt_abs=matmul(amat,pt_rel)
                 WRITE (754,'(4f14.7,3g16.7,2i6)')&
      &            pt_abs(1:2),pt_rel(1:2),&
