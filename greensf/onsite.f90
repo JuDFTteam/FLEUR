@@ -38,7 +38,7 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
    TYPE(t_sym),            INTENT(IN)     :: sym
    TYPE(t_noco),           INTENT(IN)     :: noco
    TYPE(t_input),          INTENT(IN)     :: input
-   REAL,                   INTENT(IN)     :: angle(sym%nop)
+   REAL,                   INTENT(IN)     :: angle(:)
 
    !-Local Scalars
    INTEGER i_gf,ie,l,m,mp,nType,jspin,ipm,kkcut,lp,nTypep,spin_cut,nn,natom
