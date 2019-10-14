@@ -898,23 +898,14 @@ CONTAINS
          END IF
       
       END IF
-<<<<<<< Updated upstream
-!Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier: 4
-=======
 
       !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier:4
->>>>>>> Stashed changes
       !No core subtraction done!
       ! --> Additive term for iplot: 16
       IF (plot_const.EQ.4) THEN
          factor = 1.0
-<<<<<<< Updated upstream
          denName = 'denOutMixWithCore'
          score = .FALSE.
-=======
-         denName = 'denOutMixNoCore'
-         score = .TRUE.
->>>>>>> Stashed changes
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
@@ -932,7 +923,7 @@ CONTAINS
          END IF
       
       END IF
-<<<<<<< Updated upstream
+
       !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier:5
       !core subtraction done!
       ! --> Additive term for iplot: 32
@@ -940,15 +931,6 @@ CONTAINS
          factor = 1.0
          denName = 'denOutMixNoCore'
          score = .TRUE.
-=======
-      !Plotting the density matrix after mixing as n or n,m or n,mx,my,mz. identifier: 5
-      !No core subtraction done!
-      ! --> Additive term for iplot: 32
-      IF (plot_const.EQ.5) THEN
-         factor = 1.0
-         denName = 'denOutMixWithCore'
-         score = .FALSE.
->>>>>>> Stashed changes
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
@@ -966,11 +948,6 @@ CONTAINS
          END IF
       
       END IF
-<<<<<<< Updated upstream
-      
-=======
->>>>>>> Stashed changes
-         
       !Plotting the total potential as vtot or vtot,vdiff or vtot,B_xc1,B_xc2,B_xc3. identifier: 2
       !No core subtraction done!
       ! --> Additive term for iplot: 128
