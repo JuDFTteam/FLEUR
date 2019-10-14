@@ -30,10 +30,10 @@ SUBROUTINE greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,ind,wt
    REAL,                  INTENT(IN)    :: wtkpt  !Weight of the current k-point (not used in tetrahedron method)
 
    !-Array Arguments
-   REAL,                  INTENT(IN)    :: dosWeights(greensfCoeffs%ne,nbands) !Precalculated tetrahedron weights for the current k-point
-   REAL,                  INTENT(IN)    :: resWeights(greensfCoeffs%ne,nbands) !Precalculated tetrahedron weights for the current k-point
-   INTEGER,               INTENT(IN)    :: ind(nbands,2)                       !Gives the range where the tetrahedron weights are non-zero
-   REAL,                  INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
+   REAL,                  INTENT(IN)    :: dosWeights(:,:) !Precalculated tetrahedron weights for the current k-point
+   REAL,                  INTENT(IN)    :: resWeights(:,:) !Precalculated tetrahedron weights for the current k-point
+   INTEGER,               INTENT(IN)    :: ind(:,:)        !Gives the range where the tetrahedron weights are non-zero
+   REAL,                  INTENT(IN)    :: eig(:)          !Eigenvalues for the current k-point
 
    !-Local Scalars
    LOGICAL l_zero,l_tria
