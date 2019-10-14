@@ -29,7 +29,7 @@ CONTAINS
       TYPE(t_atoms),          INTENT(IN)  :: atoms
       TYPE(t_sym),            INTENT(IN)  :: sym
       TYPE(t_input),          INTENT(IN)  :: input
-      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,3)
+      COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
       INTEGER,                INTENT(IN)  :: l
       INTEGER,                INTENT(IN)  :: nType
       LOGICAL,                INTENT(OUT) :: err
