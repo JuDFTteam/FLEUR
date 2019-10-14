@@ -8,8 +8,8 @@ MODULE m_denmat_dist
 
       INTEGER,             INTENT(IN)     :: natoms
       TYPE(t_input),       INTENT(IN)     :: input
-      COMPLEX,             INTENT(IN)     :: n_mmp_in(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,natoms,input%jspins)
-      COMPLEX,             INTENT(IN)     :: n_mmp_out(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,natoms,input%jspins)
+      COMPLEX,             INTENT(IN)     :: n_mmp_in(-lmaxU_const:,-lmaxU_const:,:,:)
+      COMPLEX,             INTENT(IN)     :: n_mmp_out(-lmaxU_const:,-lmaxU_const:,:,:)
       TYPE(t_results),     INTENT(INOUT)  :: results
 
       INTEGER ispin,i_at,j,k
