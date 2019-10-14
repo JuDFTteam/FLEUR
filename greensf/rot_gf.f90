@@ -19,7 +19,7 @@ CONTAINS
       TYPE(t_atoms),          INTENT(IN)     :: atoms
       TYPE(t_input),          INTENT(IN)     :: input
       TYPE(t_greensfCoeffs),  INTENT(INOUT)  :: greensfCoeffs
-      REAL,                   INTENT(IN)     :: angle(sym%nop)
+      REAL,                   INTENT(IN)     :: angle(:)
 
       COMPLEX, ALLOCATABLE :: curr_dos(:,:,:),calc_mat(:,:,:)
       COMPLEX d_mat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
