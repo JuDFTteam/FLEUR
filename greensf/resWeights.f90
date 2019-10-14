@@ -11,13 +11,13 @@ MODULE m_resWeights
 
       IMPLICIT NONE
 
-      INTEGER,          INTENT(IN)     :: ikpt
-      TYPE(t_kpts),     INTENT(IN)     :: kpts
-      INTEGER,          INTENT(IN)     :: neig
-      REAL,             INTENT(IN)     :: eig(neig,kpts%nkpt)
-      TYPE(t_greensfCoeffs), INTENT(IN) :: g
-      REAL,          INTENT(INOUT)  :: weights(g%ne,neig)
-      INTEGER,          INTENT(INOUT)  :: boundInd(neig,2)
+      INTEGER,                INTENT(IN)     :: ikpt
+      TYPE(t_kpts),           INTENT(IN)     :: kpts
+      INTEGER,                INTENT(IN)     :: neig
+      REAL,                   INTENT(IN)     :: eig(:,:)
+      TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
+      REAL,                   INTENT(INOUT)  :: weights(:,:)
+      INTEGER,                INTENT(INOUT)  :: boundInd(:,:)
 
 
       INTEGER itet,ib,i,j,iz,icorn,ind(4),k(4),tmp
@@ -94,7 +94,7 @@ MODULE m_resWeights
       IMPLICIT NONE
 
       REAL,          INTENT(IN)  :: z
-      REAL,          INTENT(IN)  :: e(4)
+      REAL,          INTENT(IN)  :: e(:)
       REAL,          INTENT(IN)  :: vol
       REAL,          INTENT(OUT) :: weight
       INTEGER,       INTENT(IN)  :: ind
