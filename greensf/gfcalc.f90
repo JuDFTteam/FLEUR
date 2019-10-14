@@ -37,11 +37,11 @@ MODULE m_gfcalc
       LOGICAL,                   INTENT(IN)    :: l21    !Calculate spin off-diagonal part ?
 
       !-Array Arguments
-      REAL,                      INTENT(IN)    :: resWeights(greensfCoeffs%ne,nbands)
-      REAL,                      INTENT(IN)    :: dosWeights(greensfCoeffs%ne,nbands) !Precalculated tetrahedron weights for the current k-point
-      INTEGER,                   INTENT(IN)    :: indBound(nbands,2)                  !Gives the range where the tetrahedron weights are non-zero
-      REAL,                      INTENT(IN)    :: eig(nbands)                         !Eigenvalues for the current k-point
-      REAL,                      INTENT(IN)    :: angle(sym%nop)                      !Phases for spin-offdiagonal part
+      REAL,                      INTENT(IN)    :: resWeights(:,:)
+      REAL,                      INTENT(IN)    :: dosWeights(:,:) !Precalculated tetrahedron weights for the current k-point
+      INTEGER,                   INTENT(IN)    :: indBound(:,:)   !Gives the range where the tetrahedron weights are non-zero
+      REAL,                      INTENT(IN)    :: eig(:)          !Eigenvalues for the current k-point
+      REAL,                      INTENT(IN)    :: angle(:)        !Phases for spin-offdiagonal part
 
       CALL timestart("Greens Function: Imaginary Part")
       CALL greensfImag(atoms,sym,input,ispin,nbands,dosWeights,resWeights,indBound,wtkpt,eig,usdus,eigVecCoeffs,greensfCoeffs)
@@ -69,7 +69,7 @@ MODULE m_gfcalc
       TYPE(t_hub1ham),           INTENT(INOUT)  :: hub1
       TYPE(t_results),           INTENT(IN)     :: results
       TYPE(t_potden),            INTENT(IN)     :: vTot
-      REAL,                      INTENT(IN)     :: angle(sym%nop)
+      REAL,                      INTENT(IN)     :: angle(:)
 
       INTEGER  i_gf,l,nType
       COMPLEX  mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_gf,3)
