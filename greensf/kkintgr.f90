@@ -40,14 +40,14 @@ MODULE m_kkintgr
       IMPLICIT NONE
 
       !Information about the integrand
-      REAL,          INTENT(IN)  :: im(ne)      !Imaginary part of the green's function on the real axis
+      REAL,          INTENT(IN)  :: im(:)      !Imaginary part of the green's function on the real axis
       REAL,          INTENT(IN)  :: eb          !Bottom energy cutoff
       REAL,          INTENT(IN)  :: del         !Energy step on the real axis
       INTEGER,       INTENT(IN)  :: ne          !Number of energy points on the real axis
 
       !Information about the complex energy contour
-      COMPLEX,       INTENT(OUT) :: g(nz)       !Green's function on the complex plane
-      COMPLEX,       INTENT(IN)  :: ez(nz)      !Complex energy contour
+      COMPLEX,       INTENT(OUT) :: g(:)       !Green's function on the complex plane
+      COMPLEX,       INTENT(IN)  :: ez(:)      !Complex energy contour
       LOGICAL,       INTENT(IN)  :: l_conjg     !Switch determines wether we calculate g on the complex conjugate of the contour ez
       INTEGER,       INTENT(IN)  :: shape       !Determines wether we have a rectangular (1) or a semicircle contour(2)
       INTEGER,       INTENT(IN)  :: nz          !Number of energy points on the complex contour
@@ -111,7 +111,7 @@ MODULE m_kkintgr
 
       IMPLICIT NONE
 
-      REAL,    INTENT(IN) :: im(ne)
+      REAL,    INTENT(IN) :: im(:)
       INTEGER, INTENT(IN) :: ne
       COMPLEX, INTENT(IN) :: z
       REAL,    INTENT(IN) :: del
@@ -133,7 +133,7 @@ MODULE m_kkintgr
 
       IMPLICIT NONE
 
-      REAL,    INTENT(IN)  :: im(ne) !Imaginary part
+      REAL,    INTENT(IN)  :: im(:) !Imaginary part
       INTEGER, INTENT(IN)  :: ne     !Dimension of the energy grid
       INTEGER, INTENT(IN)  :: ire    !Position where to calculate the real part
       INTEGER, INTENT(IN)  :: method !Method to be used
@@ -188,7 +188,7 @@ MODULE m_kkintgr
 
 !    Arguments
       INTEGER, INTENT(IN)    :: n
-      REAL,    INTENT(INOUT) :: f(n)
+      REAL,    INTENT(INOUT) :: f(:)
       REAL,    INTENT(IN)    :: sigma
       REAL,    INTENT(IN)    :: dx
 
@@ -239,7 +239,7 @@ MODULE m_kkintgr
 
       IMPLICIT NONE
 
-      REAL,          INTENT(IN)     :: y(n)
+      REAL,          INTENT(IN)     :: y(:)
 
       INTEGER,       INTENT(IN)     :: n
       REAL,          INTENT(IN)     :: h
