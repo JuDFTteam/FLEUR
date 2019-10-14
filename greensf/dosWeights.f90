@@ -21,8 +21,8 @@ MODULE m_dosWeights
       IMPLICIT NONE
 
       INTEGER,          INTENT(IN)     :: n
-      REAL,             INTENT(INOUT)  :: e(n)
-      INTEGER,          INTENT(INOUT)  :: ind(n)
+      REAL,             INTENT(INOUT)  :: e(:)
+      INTEGER,          INTENT(INOUT)  :: ind(:)
 
       INTEGER i,j
       INTEGER tmp
@@ -368,7 +368,7 @@ MODULE m_dosWeights
 
       REAL,                INTENT(IN)     :: energy
       REAL,                INTENT(IN)     :: vol
-      REAL,                INTENT(IN)     :: e(3)
+      REAL,                INTENT(IN)     :: e(:)
       INTEGER,             INTENT(IN)     :: ind
       REAL,                INTENT(OUT)    :: weight
 
@@ -418,7 +418,7 @@ MODULE m_dosWeights
 
       REAL,                INTENT(IN)     :: energy
       REAL,                INTENT(IN)     :: vol
-      REAL,                INTENT(IN)     :: e(4)
+      REAL,                INTENT(IN)     :: e(:)
       INTEGER,             INTENT(IN)     :: ind
       LOGICAL,             INTENT(IN)     :: l_bloechl
       REAL,                INTENT(OUT)    :: weight
@@ -512,7 +512,7 @@ MODULE m_dosWeights
 
       REAL,                   INTENT(IN)     :: energy
       REAL,                   INTENT(IN)     :: vol
-      REAL,                   INTENT(IN)     :: ev(4)
+      REAL,                   INTENT(IN)     :: ev(:)
       REAL,                   INTENT(INOUT)  :: w(:)
       TYPE(t_greensfCoeffs),  INTENT(IN)     :: g
 
