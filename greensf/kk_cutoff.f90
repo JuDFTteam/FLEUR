@@ -15,7 +15,7 @@ MODULE m_kk_cutoff
 
       IMPLICIT NONE
 
-      COMPLEX,             INTENT(INOUT)  :: im(ne,-lmaxU_const:,-lmaxU_const:,:)
+      COMPLEX,             INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
       TYPE(t_atoms),       INTENT(IN)     :: atoms
       TYPE(t_noco),        INTENT(IN)     :: noco
 
