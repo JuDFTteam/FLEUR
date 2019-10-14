@@ -172,13 +172,13 @@ MODULE m_types_atoms
        call this%econf(n)%broadcast(rank,mpi_comm)
      endDO
      DO n=1,this%n_u
-       call mpi_bc(this%lda_u(n)%j,irank,mpi_comm)
-       call mpi_bc(this%lda_u(n)%u,irank,mpi_comm)
-       call mpi_bc(this%lda_u(n)%theta,irank,mpi_comm)
-       call mpi_bc(this%lda_u(n)%phi,irank,mpi_comm)
-       call mpi_bc(this%lda_u(n)%l,irank,mpi_comm)
-       call mpi_bc(this%lda_u(n)%atomType,irank,mpi_comm)
-       call mpi_bc(this%lda_u(n)%l_amf,irank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%j,rank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%u,rank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%theta,rank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%phi,rank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%l,rank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%atomType,rank,mpi_comm)
+       call mpi_bc(this%lda_u(n)%l_amf,rank,mpi_comm)
      ENDDO
 #endif
    end subroutine mpi_bc_atoms
