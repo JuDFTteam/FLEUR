@@ -29,7 +29,7 @@ MODULE m_calc_tetra
 
       volbz = ABS(det(cell%bmat))
       !Choose the tetrahedra decomposition along the shortest diagonal
-      CALL get_tetra(tetra,ntetra,kpts,cell,vol)
+      CALL get_tetra(kpts,cell,ntetra,vol,tetra)
       !MISSING: Generate all kpts
       !Set up pointer array for the kpts
       p = 0
@@ -104,17 +104,17 @@ MODULE m_calc_tetra
    END SUBROUTINE calc_tetra
 
 
-   SUBROUTINE get_tetra(tetra,ntetra,kpts,cell,vol)
+   SUBROUTINE get_tetra(kpts,cell,ntetra,vol,tetra)
 
       USE m_types
 
       IMPLICIT NONE
 
-      INTEGER, INTENT(OUT) :: tetra(4,*)
-      INTEGER, INTENT(OUT) :: ntetra
-      TYPE(t_kpts), INTENT(IN) :: kpts
-      TYPE(t_cell), INTENT(IN) :: cell
-      REAL,         INTENT(OUT):: vol
+      TYPE(t_kpts),  INTENT(IN)  :: kpts
+      TYPE(t_cell),  INTENT(IN)  :: cell
+      INTEGER,       INTENT(OUT) :: ntetra
+      REAL,          INTENT(OUT) :: vol
+      INTEGER,       INTENT(OUT) :: tetra(:,:)
 
       REAL rlv(3,3),diag(4),d(3)
       INTEGER idmin
@@ -157,7 +157,7 @@ MODULE m_calc_tetra
    END SUBROUTINE get_tetra
 
    REAL FUNCTION det(m)
-      REAL m(3,3)
+      REAL m(:,:)
       det = m(1,1)*m(2,2)*m(3,3) + m(1,2)*m(2,3)*m(3,1) + &
             m(2,1)*m(3,2)*m(1,3) - m(1,3)*m(2,2)*m(3,1) - &
             m(2,3)*m(3,2)*m(1,1) - m(2,1)*m(1,2)*m(3,3)
