@@ -460,10 +460,10 @@ SUBROUTINE w_inpXML(&
       IF(iAtomType.EQ.-1) THEN
          EXIT
       END IF
-!      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F" flipSpinPhi="0.0" flipSpinTheta="0.0">
-      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'"flipSpinPhi="',f0.8,'"flipSpinTheta="',f0.8,'">')
+!      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpinPhi="0.0" flipSpinTheta="0.0">
+      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'"flipSpinPhi="',f0.8,'"flipSpinTheta="',f0.8,'">')
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
-      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType),atoms%flipSpinPhi(iAtomType),atoms%flipSpinTheta(iAtomType)
+      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%flipSpinPhi(iAtomType),atoms%flipSpinTheta(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
       310 FORMAT('         <mtSphere radius="',f0.8,'" gridPoints="',i0,'" logIncrement="',f0.8,'"/>')

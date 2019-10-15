@@ -123,7 +123,7 @@ CONTAINS
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
       REAL               :: bk(3)
-      LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
+      LOGICAL            :: l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
       LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
@@ -1354,23 +1354,8 @@ CONTAINS
          atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
          coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
          magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
-         flipSpin = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
          atoms%flipSpinPhi(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
          atoms%flipSpinTheta(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
-         IF(input%lflip) THEN
-            
-            IF (flipSpin=.TRUE. .AND. noco%l_noco=.TRUE.) CALL juDFT_error("l_noco=T and flipSpin=T is meaningless. Flipspin is designed for the colinear case only.",calledby ="r_inpXML")
-          
-            IF (((flipSpin=.TRUE..AND.atoms%flipSpinTheta(i).NE.180.0).AND.atoms%flipSpinPhi(i).NE.0.0) .OR.((flipSpin=.TRUE..AND.atoms%flipSpinTheta(i).NE.0.0).AND.atoms%flipSpinPhi(i).NE.0) ) THEN
-               CALL juDFT_error("You entered an unvalid Spinflip combination. flipSpin=T and flipSpinTheta=/=180 or 0 respectivley flipSpinPhi(i)=/=0 is meaningless.",calledby ="r_inpXML")
-            END IF
-
-            IF (flipSpin=.TRUE.) THEN
-            atoms%flipSpinPhi(i)=0.0
-            atoms%flipSpinTheta(i)=180.0
-            END IF
-         
-            END IF
      
 
          ! Attributes of mtSphere element of species
@@ -1447,11 +1432,6 @@ CONTAINS
                atoms%ncst(iType) = coreStates
                atoms%lnonsph(iType) = lnonsphr
                atoms%lapw_l(iType) = lmaxAPW
-               IF (flipSpin) THEN
-                  atoms%nflip(iType) = -1
-               ELSE
-                  atoms%nflip(iType) = 0
-               ENDIF
                atoms%bmu(iType) = magMom
                DO i = 1, numU
                   atoms%n_u = atoms%n_u + 1
