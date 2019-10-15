@@ -14,10 +14,9 @@ CONTAINS
       IMPLICIT NONE
 
       INTEGER,       INTENT(IN)  :: n_u
-      TYPE(t_utype), INTENT(IN)  :: u_in(n_u)
-      REAL,          INTENT(IN)  :: f0(n_u),f2(n_u),f4(n_u),f6(n_u)
-      REAL,          INTENT(OUT) :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                      -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
+      TYPE(t_utype), INTENT(IN)  :: u_in(:)
+      REAL,          INTENT(IN)  :: f0(:),f2(:),f4(:),f6(:)
+      REAL,          INTENT(OUT) :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,:)
 
       INTEGER, PARAMETER         :: lmaxw=3,lmmaxw1=(2*lmaxw+2)**2
 
