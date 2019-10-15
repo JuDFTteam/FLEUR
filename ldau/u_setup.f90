@@ -76,12 +76,12 @@ CONTAINS
        CALL nmat_rot(atoms%lda_u(:)%phi,atoms%lda_u(:)%theta,zero,3,n_u,input%jspins,atoms%lda_u(:)%l,n_mmp)
 
        ! calculate potential matrix and total energy correction
-       CALL v_mmp(sym,atoms,atoms%lda_u(:),n_u,input%jspins,input%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
+       CALL v_mmp(sym,atoms,atoms%lda_u(:),n_u,input%jspins,input%l_dftspinpol,n_mmp,u,f0(:,1),f2(:,1),pot%mmpMat,results%e_ldau)
 
        !spin off-diagonal elements (no rotation yet)
        IF(noco%l_mperp) THEN
           IF(ANY(atoms%lda_u(:)%phi.NE.0.0).OR.ANY(atoms%lda_u(:)%theta.NE.0.0)) CALL juDFT_error("vmmp21+Rot not implemented", calledby="u_setup")
-          CALL v_mmp_21(atoms%lda_u(:),n_u,inDen%mmpMat(:,:,:,3),u,f0,f2,pot%mmpMat(:,:,:,3),e_off)
+          CALL v_mmp_21(atoms%lda_u(:),n_u,inDen%mmpMat(:,:,:,3),u,f0(:,1),f2(:,1),pot%mmpMat(:,:,:,3),e_off)
           results%e_ldau = results%e_ldau + e_off
        ENDIF
 
