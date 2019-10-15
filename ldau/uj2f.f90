@@ -17,9 +17,9 @@ MODULE m_uj2f
       !  .. Arguments ..
       INTEGER,          INTENT(IN)  :: jspins
       INTEGER,          INTENT(IN)  :: n_u
-      TYPE(t_utype),    INTENT(IN)  :: u_in(n_u)
-      REAL,             INTENT(OUT) :: f0(n_u,jspins),f2(n_u,jspins)
-      REAL,             INTENT(OUT) :: f4(n_u,jspins),f6(n_u,jspins)
+      TYPE(t_utype),    INTENT(IN)  :: u_in(:)
+      REAL,             INTENT(OUT) :: f0(:,:),f2(:,:)
+      REAL,             INTENT(OUT) :: f4(:,:),f6(:,:)
       !
       !  .. Local variables ..
       INTEGER l,itype,ltest,ispin,i_u
