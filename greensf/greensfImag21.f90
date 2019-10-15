@@ -84,7 +84,7 @@ MODULE m_greensfImag21
                         ENDIF
                      ELSE
                         !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
-                        j = NINT((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
+                        j = FLOOR((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
                         IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) )         l_zero = .false.
                      END IF
 
