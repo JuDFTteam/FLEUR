@@ -142,7 +142,6 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    ALLOCATE(dosBound(dimension%neigd,2))
    ALLOCATE(resWeights(greensfCoeffs%ne,dimension%neigd))
 
-
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
    CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
@@ -234,7 +233,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
       IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
          CALL timestart("TetrahedronWeights")
-         CALL tetrahedronInit(ikpt,kpts,input,SIZE(ev_list),results%eig(ev_list,:,jsp),&
+         CALL tetrahedronInit(ikpt,kpts,input,noccbd,results%eig(ev_list,:,jsp),&
                               greensfCoeffs,results%ef,resWeights,dosWeights,dosBound)
          CALL timestop("TetrahedronWeights")
       ENDIF

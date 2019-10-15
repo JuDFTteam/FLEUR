@@ -547,7 +547,7 @@
           END IF
 
           !Finalize the MPI setup
-          CALL setupMPI(kpts%nkpt,DIMENSION%neigd,mpi)
+          CALL setupMPI(kpts%nkpt,DIMENSION%neigd*MERGE(2,1,noco%l_soc.AND..NOT.noco%l_noco),mpi)
 
           !Collect some usage info
           CALL add_usage_data("A-Types",atoms%ntype)
