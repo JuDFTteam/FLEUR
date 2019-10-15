@@ -46,7 +46,7 @@ CONTAINS
     REAL f(atoms%jmtd,2),g(atoms%jmtd,2),zero(atoms%n_u+atoms%n_hia)
     REAL f0(atoms%n_u+atoms%n_hia,input%jspins),f2(atoms%n_u+atoms%n_hia,input%jspins)
     REAL f4(atoms%n_u+atoms%n_hia,input%jspins),f6(atoms%n_u+atoms%n_hia,input%jspins)
-    REAL, ALLOCATABLE :: u(:,:,:,:,:,:)
+    REAL, ALLOCATABLE :: u(:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: n_mmp(:,:,:,:)
     !
     ! look, whether density matrix exists already:
@@ -59,17 +59,16 @@ CONTAINS
        CALL uj2f(input%jspins,atoms%lda_u(:),n_u,f0,f2,f4,f6)
 
        ! set up e-e- interaction matrix
-       ALLOCATE (u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                   -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),input%jspins))
-       ALLOCATE (n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),input%jspins))
+       ALLOCATE ( u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
+                   -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u)) )
+       ALLOCATE ( n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),input%jspins) )
        n_mmp = inDen%mmpMat(:,:,:,1:input%jspins)
        DO ispin = 1, 1 ! input%jspins
           f0(:,1) = (f0(:,1) + f0(:,input%jspins) ) / 2
           f2(:,1) = (f2(:,1) + f2(:,input%jspins) ) / 2
           f4(:,1) = (f4(:,1) + f4(:,input%jspins) ) / 2
           f6(:,1) = (f6(:,1) + f6(:,input%jspins) ) / 2
-          CALL umtx(atoms%lda_u(:),n_u,f0(1,ispin),f2(1,ispin),f4(1,ispin),f6(1,ispin),&
-                    u(-lmaxU_const,-lmaxU_const,-lmaxU_const,-lmaxU_const,1,ispin))
+          CALL umtx(atoms%lda_u(:),n_u,f0(:,ispin),f2(:,ispin),f4(:,ispin),f6(:,ispin),u)
        END DO
 
        ! check for possible rotation of n_mmp
@@ -77,7 +76,7 @@ CONTAINS
        CALL nmat_rot(atoms%lda_u(:)%phi,atoms%lda_u(:)%theta,zero,3,n_u,input%jspins,atoms%lda_u(:)%l,n_mmp)
 
        ! calculate potential matrix and total energy correction
-       CALL v_mmp(sym,atoms,atoms%lda_u(:),n_u,input%jspins,input%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat(:,:,:,1:input%jspins),results%e_ldau)
+       CALL v_mmp(sym,atoms,atoms%lda_u(:),n_u,input%jspins,input%l_dftspinpol,n_mmp,u,f0,f2,pot%mmpMat,results%e_ldau)
 
        !spin off-diagonal elements (no rotation yet)
        IF(noco%l_mperp) THEN
@@ -110,7 +109,8 @@ CONTAINS
                 WRITE (6,l_form) ((pot%mmpMat(k,j,i_u,jspin),k=-l,l),j=-l,l)
              END DO
           END DO
-          WRITE (6,*) results%e_ldau, e_off
+          WRITE (6,*) results%e_ldau
+          IF(noco%l_mperp) WRITE(6,*) e_off
        ENDIF
        DEALLOCATE (u,n_mmp)
     ELSE
