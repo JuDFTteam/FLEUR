@@ -109,7 +109,7 @@ MODULE m_add_selfen
                n = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
-                     n = n + mmpMat(m,m,i_hia,ispin)
+                     n = n + REAL(mmpMat(m,m,i_hia,ispin))
                   ENDDO
                ENDDO
                IF(l_selfenDebug) WRITE(1337,"(2f15.8)") mu,n
@@ -158,13 +158,17 @@ MODULE m_add_selfen
                n = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
-                     n = n + mmpMat(m,m,i_hia,ispin)
+                     n = n + REAL(mmpMat(m,m,i_hia,ispin))
                   ENDDO
                ENDDO
                IF(ABS(n-n_target).LT.0.001.OR.ABS((mu_b - mu_a)/2.0).LT.0.00001) THEN
                   !We found the chemical potential to within the desired accuracy
                   WRITE(6,"(A)") "Calculated mu to match Self-energy to DFT-GF"
                   WRITE(6,"(TR3,A4,f8.4)") "mu = ", mu
+                  !----------------------------------------------------
+                  ! Check if the final mmpMat contains invalid elements
+                  !----------------------------------------------------
+                  IF(err) CALL juDFT_error("Invalid Element/occupation in final density matrix",calledby="add_selfen")
                   EXIT
                ELSE IF((n - n_target).GT.0) THEN
                   !The occupation is to big --> choose the right interval
