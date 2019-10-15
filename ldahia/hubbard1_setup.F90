@@ -281,8 +281,12 @@ MODULE m_hubbard1_setup
             !----------------------------------------------------------------------
             ! Calculate the distance and update the density matrix
             !----------------------------------------------------------------------
-            CALL n_mmp_dist(den%mmpMat(:,:,indStart:indEnd,:),mmpMat,atoms%n_hia,results,input)
-            den%mmpMat(:,:,indStart:indEnd,:) = mmpMat(:,:,:,1:MERGE(3,input%jspins,noco%l_mperp))
+            DO i_hia = 1, atoms%n_hia
+               CALL n_mmp_dist(den%mmpMat(:,:,atoms%n_u+i_hia,:),mmpMat(:,:,i_hia,:),input,results)
+               DO ispin = 1, MERGE(3,input%jspins,noco%l_mperp)
+                  den%mmpMat(:,:,atoms%n_u+i_hia,ispin) = mmpMat(:,:,i_hia,ispin)
+               ENDDO
+            ENDDO
          ENDIF
          DEALLOCATE(selfen)
       ELSE

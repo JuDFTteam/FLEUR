@@ -36,7 +36,7 @@ CONTAINS
     REAL,    INTENT(IN)    :: f0(:),f2(:)
     COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
 
-    COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
+    COMPLEX, INTENT(IN)    :: ns_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
     LOGICAL, INTENT(IN)    :: spin_pol !Is the double-counting spin-polarised (reason: for spin-polarized calculations
                                        !with DFT+Hubbard1 we use a non-spin polarized orbital in DFT)
 
