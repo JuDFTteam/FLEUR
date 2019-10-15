@@ -46,7 +46,7 @@
       CHARACTER(len=12),INTENT(OUT):: relcor
       REAL,INTENT(IN),OPTIONAL     :: dtild_opt
       CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
-
+      
 
 
       CHARACTER(len=8) :: name(10)
@@ -75,6 +75,7 @@
       INTEGER :: ierr, intDummy
 ! ..
 !...  Local Arrays
+      INTEGER :: nflip(atoms%ntype)
       CHARACTER :: helpchar(atoms%ntype)
       CHARACTER(len=  4) :: chntype
       CHARACTER(len= 41) :: chform
@@ -584,14 +585,14 @@
       chform = '(6x,l1,'//chntype//'i3 )'
 !      chform = '(6x,l1,23i3 )'
       READ (UNIT=5,FMT=chform,END=99,ERR=99)&
-     &                                   input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+     &                                   input%lflip, (nflip(i),i=1,atoms%ntype) !atoms%nflip not supported in old inp file anymore =>Dummy variable
 !-
       chform = '("swsp=",l1,'//chntype//'f6.2)'
 !      chform = '("swsp=",l1,23f6.2)'
       WRITE (6,FMT=chform) input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
       chform = '("lflip=",l1,'//chntype//'i3 )'
 !      chform = '("lflip=",l1,23i3 )'
-      WRITE (6,FMT=chform) input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+      WRITE (6,FMT=chform) input%lflip, (nflip(i),i=1,atoms%ntype)!atoms%nflip not supported in old inp file anymore =>Dummy variable
 !-roa
 !+stm
       READ (UNIT=5,FMT=8075,END=99,ERR=99)&

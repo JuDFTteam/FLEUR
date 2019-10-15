@@ -1357,18 +1357,21 @@ CONTAINS
          flipSpin = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
          atoms%flipSpinPhi(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
          atoms%flipSpinTheta(i) = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
-         
-         IF (flipSpin=.TRUE. .AND. noco%l_noco=.TRUE.) CALL juDFT_error("l_noco=T and flipSpin=T is meaningless. Flipspin is designed for the colinear case only.",calledby ="r_inpXML")
+         IF(input%lflip) THEN
+            
+            IF (flipSpin=.TRUE. .AND. noco%l_noco=.TRUE.) CALL juDFT_error("l_noco=T and flipSpin=T is meaningless. Flipspin is designed for the colinear case only.",calledby ="r_inpXML")
           
-         IF (((flipSpin=.TRUE..AND.atoms%flipSpinTheta(i).NE.180.0).AND.atoms%flipSpinPhi(i).NE.0.0) .OR.((flipSpin=.TRUE..AND.atoms%flipSpinTheta(i).NE.0.0).AND.atoms%flipSpinPhi(i).NE.0) ) THEN
-         CALL juDFT_error("You entered an unvalid Spinflip combination. flipSpin=T and flipSpinTheta=/=180 or 0 respectivley flipSpinPhi(i)=/=0 is meaningless.",calledby ="r_inpXML")
-         END IF
-         IF (flipSpin=.TRUE.) THEN
-         atoms%flipSpinPhi(i)=0.0
-         atoms%flipSpinTheta(i)=180.0
-         END IF
- 
+            IF (((flipSpin=.TRUE..AND.atoms%flipSpinTheta(i).NE.180.0).AND.atoms%flipSpinPhi(i).NE.0.0) .OR.((flipSpin=.TRUE..AND.atoms%flipSpinTheta(i).NE.0.0).AND.atoms%flipSpinPhi(i).NE.0) ) THEN
+               CALL juDFT_error("You entered an unvalid Spinflip combination. flipSpin=T and flipSpinTheta=/=180 or 0 respectivley flipSpinPhi(i)=/=0 is meaningless.",calledby ="r_inpXML")
+            END IF
 
+            IF (flipSpin=.TRUE.) THEN
+            atoms%flipSpinPhi(i)=0.0
+            atoms%flipSpinTheta(i)=180.0
+            END IF
+         
+            END IF
+     
 
          ! Attributes of mtSphere element of species
          radius = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/mtSphere/@radius'))
