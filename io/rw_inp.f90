@@ -913,7 +913,7 @@
       chform = '("swsp=",l1,'//chntype//'f6.2)'
       WRITE (5,FMT=chform) input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
       chform = '("lflip=",l1,'//chntype//'i3 )'
-      WRITE (5,FMT=chform) input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+      WRITE (5,FMT=chform) input%lflip, (nflip(i),i=1,atoms%ntype)!atoms%nflip not supported in old inp file anymore =>Dummy variable
 !-roa
 !+stm
       WRITE (5,9210) banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&
