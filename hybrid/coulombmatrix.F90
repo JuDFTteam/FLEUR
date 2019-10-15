@@ -2009,6 +2009,7 @@ CONTAINS
             IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
             call timestart("harmonics")
             call ylm4(maxl, ka, y)
+            IF(ALL(ka(:).EQ.0.0)) y(2:(maxl+1)**2)=CMPLX(0.0,0.0)
             call timestop("harmonics")
             cdum = 1.0
             lm = 0
