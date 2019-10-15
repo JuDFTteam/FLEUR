@@ -20,14 +20,13 @@ MODULE m_vmmp21
 !
 ! ..  Arguments ..
       INTEGER, INTENT (IN) :: n_u
-      REAL,    INTENT (IN) :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
-      REAL,    INTENT (IN) :: f0(n_u),f2(n_u)
+      TYPE (t_utype), INTENT (IN) :: u_in(:)
+      REAL,    INTENT (IN) :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,:)
+      REAL,    INTENT (IN) :: f0(:),f2(:)
       REAL,    INTENT (OUT):: e_off
-      TYPE (t_utype), INTENT (IN) :: u_in(n_u)
 
-      COMPLEX, INTENT(IN):: n_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
-      COMPLEX,INTENT(INOUT)::v_mmp21(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
+      COMPLEX, INTENT(IN):: n_mmp21(-lmaxU_const:,-lmaxU_const:,:)
+      COMPLEX,INTENT(INOUT)::v_mmp21(-lmaxU_const:,-lmaxU_const:,:)
 !
 ! ..  Local Variables ..
       INTEGER ispin,jspin,l,m,mp,p,q,iType,i_u
