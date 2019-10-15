@@ -10,12 +10,19 @@ MODULE m_flipcdn
 !     magnetic moment within the m.t.sphere for each atom 
 !     according to the variable nflip. This variable is read in
 !     the main program
-!             nflip = -1 : flip spin in sphere
-!             nflip = -2 : scale spin by bmu(n)
+!  TODO:           nflip = -1 : flip spin in sphere
+!  TODO:           nflip = -2 : scale spin by bmu(n)
 !             nflip = any: no spin flip
 !                            r.pentcheva,kfa,Feb'96
 !
 !     Extension to multiple U per atom type by G.M. 2017
+!      
+!     Removed integer nflip switch and added angles phi/theta 
+!     (and an additional spin scale switch)
+!     which define spin flip for each atom individually. 
+!     => Magnetisation axis can now be chosen independet 
+!     of spin quantization axis.
+!     R. Hilgers Okt. 2019
 !     *******************************************************
 CONTAINS
 
@@ -63,7 +70,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    ! flip cdn for each atom with nflip=-1
    na = 1
    DO itype = 1, atoms%ntype
-      IF (atoms%nflip(itype).EQ.-1) THEN
+! TODO:      IF (atoms%nflip(itype).EQ.-1) THEN
          ! spherical and non-spherical m.t. charge density
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
@@ -72,7 +79,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                den%mt(j,lh,itype,input%jspins) = rhodummy
             END DO
          END DO
-      ELSE IF (atoms%nflip(itype).EQ.-2) THEN
+! TODO:      ELSE IF (atoms%nflip(itype).EQ.-2) THEN
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
@@ -89,7 +96,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
       DO i_u = 1, atoms%n_u
          itype = atoms%lda_u(i_u)%atomType
-         IF (atoms%nflip(itype).EQ.-1) THEN
+! TODO:         IF (atoms%nflip(itype).EQ.-1) THEN
             DO m = -3,3
                DO mp = -3,3
                   rhodummy = den%mmpMat(m,mp,i_u,1)
@@ -97,7 +104,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                   den%mmpMat(m,mp,i_u,input%jspins) = rhodummy
                END DO
             END DO
-         ELSE IF (atoms%nflip(itype).EQ.-2) THEN
+! TODO:         ELSE IF (atoms%nflip(itype).EQ.-2) THEN
             DO m = -3,3
                DO mp = -3,3
                   rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
@@ -139,7 +146,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
          DO itype = 1, atoms%ntype
             i = i + 1
             m = i
-            IF (atoms%nflip(itype)==-1) m = MOD(i+j,2*j)
+! TODO:            IF (atoms%nflip(itype)==-1) m = MOD(i+j,2*j)
             IF (m==0) m = 2*j
             WRITE (40,'(a)') TRIM(clines(m))
             IF (atoms%nlo(itype)>0) THEN
