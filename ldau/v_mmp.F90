@@ -15,7 +15,7 @@ MODULE m_vmmp
   !     Additionally, the total energy contribution of LDA+U (Eq.24)
   !     is calculated (e_ldau).
   !     Part of the LDA+U package                   G.B., Oct. 2000
-  !     
+  !
   !     Extension to multiple U per atom type  G.M. 2017
   !     ************************************************************
 CONTAINS
@@ -28,17 +28,16 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)        :: atoms
     REAL,INTENT(INOUT)              :: e
     INTEGER,          INTENT(IN)  :: n_u
-    TYPE(t_utype),    INTENT(IN)  :: u_in(n_u)
+    TYPE(t_utype),    INTENT(IN)  :: u_in(:)
     !
     ! ..  Arguments ..
-    INTEGER, INTENT(IN)    :: jspins 
-    REAL,    INTENT(IN)    :: u(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,&
-                                -lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u)
-    REAL,    INTENT(IN)    :: f0(n_u),f2(n_u)
-    COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
+    INTEGER, INTENT(IN)    :: jspins
+    REAL,    INTENT(IN)    :: u(-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,-lmaxU_const:,:)
+    REAL,    INTENT(IN)    :: f0(:),f2(:)
+    COMPLEX, INTENT(OUT)   :: vs_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
 
-    COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,n_u,jspins)
-    LOGICAL, INTENT(IN)    :: spin_pol !Is the double-counting spin-polarised (reason: for spin-polarized calculations 
+    COMPLEX, INTENT(INOUT) :: ns_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
+    LOGICAL, INTENT(IN)    :: spin_pol !Is the double-counting spin-polarised (reason: for spin-polarized calculations
                                        !with DFT+Hubbard1 we use a non-spin polarized orbital in DFT)
 
     ! ..  Local Variables ..
@@ -99,7 +98,7 @@ CONTAINS
        ! V     =  >  ( <m,p|V|m',q> - <m,p|V|q,m'> d     ) n     + d    ( -U (n - -) + J (n  - -) ) |
        !  m,m'    --                                s,s'    p,q     m,m'          2            2    |
        !        p,q,s'                                                                              |
-       !--------------------------------------------------------------------------------------------+     
+       !--------------------------------------------------------------------------------------------+
        ! initialise vs_mmp
        !
        !IF (sym%invs) THEN
@@ -118,13 +117,13 @@ CONTAINS
        !
        DO ispin = 1,jspins
           DO m = -l,l
-             DO mp =-l,l 
+             DO mp =-l,l
                 DO jspin = 1,jspins
                    IF (ispin.EQ.jspin) THEN
                       DO p = -l,l
                          DO q = -l,l
                             vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) +  &
-                               ns_mmp(p, q,i_u,jspin) * ( u(m,p,mp,q,i_u) - u(m,p,q,mp,i_u) ) 
+                               ns_mmp(p, q,i_u,jspin) * ( u(m,p,mp,q,i_u) - u(m,p,q,mp,i_u) )
                          END DO
                       END DO
                    END IF
@@ -132,7 +131,7 @@ CONTAINS
                       DO p = -l,l
                          DO q = -l,l
                             vs_mmp(m,mp,i_u,ispin) = vs_mmp(m,mp,i_u,ispin) +  &
-                               u(m,p,mp,q,i_u) * ns_mmp(p, q,i_u,jspin) 
+                               u(m,p,mp,q,i_u) * ns_mmp(p, q,i_u,jspin)
                          END DO
                       END DO
                    END IF
@@ -187,7 +186,7 @@ CONTAINS
        e_dcc = (u_htr - j_htr) * rho_tot
 
        ns_sum = ns_sum / spin_deg
-       !       e_ldau = e_ldau + (e_ee -  u_htr * rho_tot * ( rho_tot - 1. ) 
+       !       e_ldau = e_ldau + (e_ee -  u_htr * rho_tot * ( rho_tot - 1. )
        !    +    + j_htr * ns_sum  - (u_htr - j_htr) * rho_tot) * neq(itype)
        !       write(*,*) e_ldau
        e = e + ( e_ee - e_dc - e_dcc) * atoms%neq(itype)
