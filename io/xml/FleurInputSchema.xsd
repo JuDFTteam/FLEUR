@@ -391,9 +391,9 @@
       <xsd:attribute name="atomicNumber" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="coreStates" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="0.0" name="magMom" type="xsd:string" use="optional"/>
-      <xsd:attribute default="F" name="flipSpin" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.00000000" name="flipSpinPhi" type="xsd:double" use="optional"/>
       <xsd:attribute default="0.00000000" name="flipSpinTheta" type="xsd:double" use="optional"/>
+      <xsd:attribute default="F" name="l_flipSpinScale" type="FleurBool" use="optional"/>
       <xsd:attribute name="magField" type="xsd:double" use="optional"/>
       <xsd:attribute name="vcaAddCharge" type="xsd:double" use="optional"/>
    </xsd:complexType>

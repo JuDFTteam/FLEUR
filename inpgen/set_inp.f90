@@ -164,7 +164,7 @@
       input%l_wann = .FALSE.
       input%numBandsKPoints = 240
       banddos%unfoldband = .FALSE. ; banddos%s_cell_x = 1 ; banddos%s_cell_y = 1 ; banddos%s_cell_z = 1
-      atoms%flipSpinTheta(:)=0.0; atoms%flipSpinPhi(:)=0.0
+      atoms%flipSpinTheta(:)=0.0; atoms%flipSpinPhi(:)=0.0; atoms%l_flipSpinScale=.FALSE.
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
       oneD%odd%k3 = 0 ; oneD%odd%n2d= 0 ; oneD%odd%nq2 = 0 ; oneD%odd%nn2d = 0 
