@@ -56,8 +56,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
 
-   DO k=1, atoms%ntype 
-      l_flip(k)=MERGE(.TRUE.,.FALSE.,(atoms%flipSpinPhi(k).EQ.0.0) .AND.(atoms%flipSpinTheta(k).EQ.0.0))
+   DO itype=1, atoms%ntype 
+      l_flip(itype)=MERGE(.TRUE.,.FALSE.,(atoms%flipSpinPhi(itype).NE.0.0) .AND.(atoms%flipSpinTheta(itype).NE.0.0))
    END DO
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
@@ -150,7 +150,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
          DO itype = 1, atoms%ntype
             i = i + 1
             m = i
-! TODO:            IF (atoms%nflip(itype)==-1) m = MOD(i+j,2*j)
+            IF (l_flip(itype)) m = MOD(i+j,2*j)
             IF (m==0) m = 2*j
             WRITE (40,'(a)') TRIM(clines(m))
             IF (atoms%nlo(itype)>0) THEN
