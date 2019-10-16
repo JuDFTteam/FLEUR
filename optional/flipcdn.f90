@@ -57,7 +57,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
 
 
-   l_flip=MERGE(.TRUE.,.FALSE.,atoms%flipSpinPhi.EQ.0.0 .AND.atoms%flipSpinTheta.EQ.0.0)
+   l_flip=MERGE(.TRUE.,.FALSE.,(atoms%flipSpinPhi.EQ.0.0) .AND.(atoms%flipSpinTheta.EQ.0.0))
 
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
