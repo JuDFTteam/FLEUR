@@ -138,7 +138,7 @@ CONTAINS
 
    END SUBROUTINE sourcefree
 
-   SUBROUTINE builddivtest(stars,atoms,sphhar,vacuum,sym,Avec)
+   SUBROUTINE builddivtest(stars,atoms,sphhar,vacuum,sym,itest,Avec)
       USE m_mt_tofrom_grid
 
       TYPE(t_stars),                INTENT(IN)     :: stars
@@ -146,14 +146,16 @@ CONTAINS
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar
       TYPE(t_vacuum),               INTENT(IN)     :: vacuum
       TYPE(t_sym),                  INTENT(IN)     :: sym
-      LOGICAL,                      INTENT(IN)     :: itest
+      INTEGER,                      INTENT(IN)     :: itest
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: Avec
 
       INTEGER                                      :: nsp, n, kt, ir, k
       REAL                                         :: r, th, ph
       REAL, ALLOCATABLE                            :: thet(:), phi(:), A_temp(:,:)!space grid, index
 
-      IF (itest==0) THEN RETURN
+      IF (itest.EQ.0) THEN 
+         RETURN
+      END IF
 
       nsp = atoms%nsp()
 
