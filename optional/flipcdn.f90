@@ -51,14 +51,14 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    REAL                      :: rhodummy,rhodumms,fermiEnergyTemp
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u
    INTEGER                   :: archiveType
-   LOGICAL                   :: n_exist,l_qfix,l_error, l_flip
+   LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype)
 
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
 
-
-   l_flip=MERGE(.TRUE.,.FALSE.,(atoms%flipSpinPhi.EQ.0.0) .AND.(atoms%flipSpinTheta.EQ.0.0))
-
+   DO k=1, atoms%ntype 
+      l_flip(k)=MERGE(.TRUE.,.FALSE.,(atoms%flipSpinPhi(k).EQ.0.0) .AND.(atoms%flipSpinTheta(k).EQ.0.0))
+   END DO
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
    IF(noco%l_noco) THEN
@@ -71,10 +71,10 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
-   ! flip cdn for each atom with nflip=-1
+   ! flip cdn for each atom with rotation angles given
    na = 10
    DO itype = 1, atoms%ntype
-      IF (l_flip.AND.(.NOT.atoms%l_flipSpinScale)) THEN
+      IF (l_flip(itype).AND.(.NOT.atoms%l_flipSpinScale)) THEN
          ! spherical and non-spherical m.t. charge density
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
@@ -83,7 +83,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 !               den%mt(j,lh,itype,input%jspins) = rhodummy
             END DO
          END DO
-      ELSE IF (l_flip.AND.atoms%l_flipSpinScale) THEN
+      ELSE IF (l_flip(itype).AND.atoms%l_flipSpinScale) THEN
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
 !               rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
@@ -100,7 +100,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
       DO i_u = 1, atoms%n_u
          itype = atoms%lda_u(i_u)%atomType
-        IF (l_flip.AND.(.NOT.atoms%l_flipSpinScale)) THEN
+        IF (l_flip(itype).AND.(.NOT.atoms%l_flipSpinScale)) THEN
             DO m = -3,3
                DO mp = -3,3
 !                  rhodummy = den%mmpMat(m,mp,i_u,1)
@@ -108,7 +108,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 !                  den%mmpMat(m,mp,i_u,input%jspins) = rhodummy
                END DO
             END DO
-          ELSE IF (l_flip.AND.(atoms%l_flipSpinScale)) THEN
+          ELSE IF (l_flip(itype).AND.(atoms%l_flipSpinScale)) THEN
             DO m = -3,3
                DO mp = -3,3
 !                  rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
