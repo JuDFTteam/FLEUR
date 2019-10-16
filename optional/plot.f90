@@ -1001,7 +1001,6 @@ CONTAINS
       ! Plot identifier: PLOT_MIXDEN_N_CORE = 5
       ! Core subtraction done!
       ! Additive term for iplot: 32
-
       IF (plot_const.EQ.5) THEN
          factor = 1.0
          denName = 'denOutMixNoCore'
@@ -1022,6 +1021,7 @@ CONTAINS
                         noco, score, potnorm, denName, denmat)
          END IF      
       END IF
+
               
       ! Plotting the total potential as vTot / v_eff, B_eff / v_eff, 
       ! B_xc_1, B_xc_2, B_xc_3.
