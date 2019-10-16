@@ -138,20 +138,56 @@ CONTAINS
 
    END SUBROUTINE sourcefree
 
-   !SUBROUTINE builddivtest()
+   SUBROUTINE builddivtest(stars,atoms,sphhar,vacuum,sym,Avec)
+      USE m_mt_tofrom_grid
 
-   !   DO i=1,3
-   !      CALL bxc(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd, &
-   !                  atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
-   !                  POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-   !      ALLOCATE(bxc(i)%pw_w,mold=bxc(i)%pw)
+      TYPE(t_stars),                INTENT(IN)     :: stars
+      TYPE(t_atoms),                INTENT(IN)     :: atoms
+      TYPE(t_sphhar),               INTENT(IN)     :: sphhar
+      TYPE(t_vacuum),               INTENT(IN)     :: vacuum
+      TYPE(t_sym),                  INTENT(IN)     :: sym
+      TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: Avec
 
-   !      bxc(i)%mt(:,0:,:,:)      = dummyDen(i+1)%mt(:,0:,:,:)/r2
-   !      bxc(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
-   !      bxc(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
-   !      bxc(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
-   !   ENDDO
+      INTEGER                                      :: nsp, n, kt, ir, k
+      REAL                                         :: r, th, ph
+      REAL, ALLOCATABLE                            :: thet(:), phi(:), A_temp(:,:)!space grid, index
 
-   !END SUBROUTINE builddivtest
+      nsp = atoms%nsp()
+
+      DO i=1,3
+         CALL Avec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd, &
+                       atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
+                       POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         ALLOCATE(Avec(i)%pw_w,mold=Avec(i)%pw)
+      END DO
+
+      ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
+
+      CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
+
+      DO n=1,atoms%ntype
+         ALLOCATE (A_temp(atoms%jri(n)*nsp,3))
+         kt = 0
+         DO ir = 1, atoms%jri(n)
+            r = atoms%rmsh(jr, n)
+            DO k = 1, nsp
+               th = thet(k)
+               ph = phi(k)
+               A_temp(kt+nsp,1)=COS(ph)*SIN(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
+               A_temp(kt+nsp,2)=SIN(ph)*SIN(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
+               A_temp(kt+nsp,3)=        COS(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
+            ENDDO ! k
+            kt = kt + nsp
+         END DO ! ir
+
+         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,:), Avec(1)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,:), Avec(2)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,:), Avec(3)%mt(:,0:,n,:))
+         DEALLOCATE (A_temp)
+      END DO ! n
+      
+      CALL finish_mt_grid
+
+   END SUBROUTINE builddivtest
 
 END MODULE m_xcBfield
