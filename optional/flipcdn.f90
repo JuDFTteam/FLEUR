@@ -48,7 +48,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    TYPE(t_potden)            :: den
 
    ! Local Scalars
-   REAL                      :: rhodummy,rhodumms,fermiEnergyTemp
+   COMPLEX                   :: rhodummy
+   REAL                      :: rhodumms,fermiEnergyTemp
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u
    INTEGER                   :: archiveType
    LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype)
@@ -78,9 +79,10 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
          ! spherical and non-spherical m.t. charge density
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
-                rhodummy=AIMAG(den%mt(j,lh,itype,3))
+                rhodummy=CMPLX(en%mt(j,lh,itype,3)),0)
                 CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
-                den%mt(j,lh,itype,3)=rhodummy
+                den%mt(j,lh,itype,3))=AIMAG(rhodummy)
+
             END DO
          END DO
       ELSE IF (l_flip(itype).AND.atoms%l_flipSpinScale) THEN
