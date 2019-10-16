@@ -81,18 +81,18 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
             DO m= -l,l
                DO mp= -lp,lp
                   CALL kkintgr(REAL(greensfCoeffs%projdos(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                              g%gmmpMat(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
+                              g%gmmpMat(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   IF(.NOT.input%l_gfsphavg) THEN
                      ! In the case of radial dependence we perform the kramers-kronig-integration seperately for uu,dd,etc.
                      ! We can do this because the radial functions are independent of E
                      CALL kkintgr(REAL(greensfCoeffs%uu(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 g%uu(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
+                                 g%uu(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                      CALL kkintgr(REAL(greensfCoeffs%dd(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 g%dd(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
+                                 g%dd(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                      CALL kkintgr(REAL(greensfCoeffs%du(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 g%du(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
+                                 g%du(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                      CALL kkintgr(REAL(greensfCoeffs%ud(1:kkcut,m,mp,0,i_gf,jspin)),greensfCoeffs%e_bot,greensfCoeffs%del,kkcut,&
-                                 g%ud(:,i_gf,m,mp,jspin,ipm),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
+                                 g%ud(:,m,mp,jspin,ipm,i_gf),g%e,(ipm.EQ.2),g%mode,g%nz,int_method(g%mode))
                   ENDIF
                ENDDO
             ENDDO
@@ -127,8 +127,8 @@ SUBROUTINE calc_onsite(atoms,input,sym,noco,angle,greensfCoeffs,g)
                      phase = exp(ImagUnit*angle(isi))
                      DO m = -l,l
                         DO mp = -l,l
-                           g%gmmpMat(ie,i_gf,m,mp,3,ipm) =&
-                           g%gmmpMat(ie,i_gf,m,mp,3,ipm) + phase * fac * conjg(calc_mat(m,mp))
+                           g%gmmpMat(ie,m,mp,3,ipm,i_gf) =&
+                           g%gmmpMat(ie,m,mp,3,ipm,i_gf) + phase * fac * conjg(calc_mat(m,mp))
                         ENDDO
                      ENDDO
                   ENDDO!ie

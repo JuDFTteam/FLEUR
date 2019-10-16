@@ -118,13 +118,13 @@ MODULE m_types_greensf
 
          IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
             spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
-            ALLOCATE (thisGREENSF%gmmpMat(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
+            ALLOCATE ( thisGREENSF%gmmpMat(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
             thisGREENSF%gmmpMat = 0.0
             IF(.NOT.input%l_gfsphavg) THEN
-               ALLOCATE (thisGREENSF%uu(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
-               ALLOCATE (thisGREENSF%dd(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
-               ALLOCATE (thisGREENSF%du(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
-               ALLOCATE (thisGREENSF%ud(thisGREENSF%nz,MAX(1,atoms%n_gf),-lmax:lmax,-lmax:lmax,spin_dim,2))
+               ALLOCATE ( thisGREENSF%uu(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
+               ALLOCATE ( thisGREENSF%dd(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
+               ALLOCATE ( thisGREENSF%du(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
+               ALLOCATE ( thisGREENSF%ud(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
                thisGREENSF%uu = 0.0
                thisGREENSF%dd = 0.0
                thisGREENSF%du = 0.0
@@ -427,11 +427,11 @@ MODULE m_types_greensf
                   ELSE
                      IF(ispin.EQ.2.AND.input%jspins.EQ.1) THEN
                         !In this case the ordering of m and mp has to be reversed
-                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,-m,-mp,spin_ind,ipm)
+                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,-m,-mp,spin_ind,ipm,i_gf)
                      ELSE IF(ispin.EQ.4) THEN
-                        gmat%data_c(ind1,ind2) = conjg(this%gmmpMat(iz,i_gf,mp,m,spin_ind,ipm))
+                        gmat%data_c(ind1,ind2) = conjg(this%gmmpMat(iz,mp,m,spin_ind,ipm,i_gf))
                      ELSE
-                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,m,mp,spin_ind,ipm)
+                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m,mp,spin_ind,ipm,i_gf)
                      ENDIF
                      IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3-input%jspins)
                   ENDIF
@@ -527,7 +527,7 @@ MODULE m_types_greensf
                ind2 = ind2_start
                DO mp = -lp_loop,lp_loop
                   ind2 = ind2 + 1
-                  this%gmmpMat(iz,i_gf,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2)*MERGE(1,2/input%jspins,PRESENT(spin))
+                  this%gmmpMat(iz,m,mp,ispin,ipm,i_gf) = gmat%data_c(ind1,ind2)*MERGE(1,2/input%jspins,PRESENT(spin))
                ENDDO
             ENDDO
          ENDDO
@@ -570,12 +570,12 @@ MODULE m_types_greensf
          ENDIF
 
          DO i_gf = MERGE(1,i_reset,lFullreset), MERGE(atoms%n_gf,i_reset,lFullreset)
-            this%gmmpMat(:,i_gf,:,:,:,:) = 0.0
+            this%gmmpMat(:,:,:,:,:,i_gf) = 0.0
             IF(.NOT.input%l_gfsphavg) THEN
-               this%uu(:,i_gf,:,:,:,:) = 0.0
-               this%ud(:,i_gf,:,:,:,:) = 0.0
-               this%du(:,i_gf,:,:,:,:) = 0.0
-               this%dd(:,i_gf,:,:,:,:) = 0.0
+               this%uu(:,:,:,:,:,i_gf) = 0.0
+               this%ud(:,:,:,:,:,i_gf) = 0.0
+               this%du(:,:,:,:,:,i_gf) = 0.0
+               this%dd(:,:,:,:,:,i_gf) = 0.0
             ENDIF
          ENDDO
 
