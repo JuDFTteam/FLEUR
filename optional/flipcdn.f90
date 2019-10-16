@@ -22,7 +22,7 @@ MODULE m_flipcdn
 !     which define spin flip for each atom individually. 
 !     => Magnetisation axis can now be chosen independet 
 !     of spin quantization axis.
-!     R. Hilgers Okt. 2019
+!     R. Hilgers, Okt. 2019
 !     *******************************************************
 CONTAINS
 
@@ -51,10 +51,14 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    REAL                      :: rhodummy,rhodumms,fermiEnergyTemp
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u
    INTEGER                   :: archiveType
-   LOGICAL                   :: n_exist,l_qfix,l_error
+   LOGICAL                   :: n_exist,l_qfix,l_error, l_flip
 
    ! Local Arrays
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
+
+
+   l_flip=MERGE(.TRUE.,.FALSE.,atoms%flipSpinPhi.EQ.0.0 .AND.atoms%flipSpinTheta.EQ.0.0)
+
 
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
    IF(noco%l_noco) THEN
@@ -68,24 +72,24 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
    ! flip cdn for each atom with nflip=-1
-   na = 1
+   na = 10
    DO itype = 1, atoms%ntype
-! TODO:      IF (atoms%nflip(itype).EQ.-1) THEN
+      IF (l_flip.AND.(.NOT.atoms%l_flipSpinScale)) THEN
          ! spherical and non-spherical m.t. charge density
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
-               rhodummy = den%mt(j,lh,itype,1)
-               den%mt(j,lh,itype,1) = den%mt(j,lh,itype,input%jspins)
-               den%mt(j,lh,itype,input%jspins) = rhodummy
+!               rhodummy = den%mt(j,lh,itype,1)
+!               den%mt(j,lh,itype,1) = den%mt(j,lh,itype,input%jspins)
+!               den%mt(j,lh,itype,input%jspins) = rhodummy
             END DO
          END DO
-! TODO:      ELSE IF (atoms%nflip(itype).EQ.-2) THEN
+      ELSE IF (l_flip.AND.atoms%l_flipSpinScale) THEN
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
-               rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
-               rhodumms = den%mt(j,lh,itype,1) - den%mt(j,lh,itype,input%jspins)
-               den%mt(j,lh,itype,1) = 0.5 * (rhodummy + atoms%bmu(itype)*rhodumms)
-               den%mt(j,lh,itype,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype)*rhodumms )
+!               rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
+!               rhodumms = den%mt(j,lh,itype,1) - den%mt(j,lh,itype,input%jspins)
+!               den%mt(j,lh,itype,1) = 0.5 * (rhodummy + atoms%bmu(itype)*rhodumms)
+!               den%mt(j,lh,itype,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype)*rhodumms )
             END DO
          END DO
       END IF
@@ -96,21 +100,21 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
       DO i_u = 1, atoms%n_u
          itype = atoms%lda_u(i_u)%atomType
-! TODO:         IF (atoms%nflip(itype).EQ.-1) THEN
+        IF (l_flip.AND.(.NOT.atoms%l_flipSpinScale)) THEN
             DO m = -3,3
                DO mp = -3,3
-                  rhodummy = den%mmpMat(m,mp,i_u,1)
-                  den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
-                  den%mmpMat(m,mp,i_u,input%jspins) = rhodummy
+!                  rhodummy = den%mmpMat(m,mp,i_u,1)
+!                  den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
+!                  den%mmpMat(m,mp,i_u,input%jspins) = rhodummy
                END DO
             END DO
-! TODO:         ELSE IF (atoms%nflip(itype).EQ.-2) THEN
+          ELSE IF (l_flip.AND.(atoms%l_flipSpinScale)) THEN
             DO m = -3,3
                DO mp = -3,3
-                  rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
-                  rhodumms = den%mmpMat(m,mp,i_u,1) - den%mmpMat(m,mp,i_u,input%jspins)
-                  den%mmpMat(m,mp,i_u,1) = 0.5 * (rhodummy + atoms%bmu(itype) * rhodumms)
-                  den%mmpMat(m,mp,i_u,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype) * rhodumms)
+!                  rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
+!                  rhodumms = den%mmpMat(m,mp,i_u,1) - den%mmpMat(m,mp,i_u,input%jspins)
+!                  den%mmpMat(m,mp,i_u,1) = 0.5 * (rhodummy + atoms%bmu(itype) * rhodumms)
+!                  den%mmpMat(m,mp,i_u,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype) * rhodumms)
                END DO
             END DO
          END IF
