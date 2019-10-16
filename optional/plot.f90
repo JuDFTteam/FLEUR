@@ -1022,9 +1022,10 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_potden),    INTENT(IN)    :: div!, phiPot, divGrx, divGry, divGrz, &
                                           !xcBmodx, xcBmody, xcBmodz
-
+      CHARACTER(len=20) :: divName
+      divName='divergence'
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .FALSE., 'divergence', div)
+                  .FALSE., .FALSE., divName, div)
 
       !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
       !            .FALSE., .TRUE., 'modPot', phiPot)

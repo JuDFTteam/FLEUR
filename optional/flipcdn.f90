@@ -27,7 +27,7 @@ MODULE m_flipcdn
 CONTAINS
 
 SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
-
+   USE m_rotdenmat
    USE m_constants
    USE m_cdn_io
    USE m_types
@@ -59,7 +59,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    DO itype=1, atoms%ntype 
       l_flip(itype)=MERGE(.TRUE.,.FALSE.,(atoms%flipSpinPhi(itype).NE.0.0) .AND.(atoms%flipSpinTheta(itype).NE.0.0))
    END DO
-
+   !rot_den_mat(alph,beta,rho11,rho22,rho21)
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
    IF(noco%l_noco) THEN
       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
@@ -78,9 +78,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
          ! spherical and non-spherical m.t. charge density
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
-!               rhodummy = den%mt(j,lh,itype,1)
-!               den%mt(j,lh,itype,1) = den%mt(j,lh,itype,input%jspins)
-!               den%mt(j,lh,itype,input%jspins) = rhodummy
+                CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),den%mt(j,lh,itype,3))
             END DO
          END DO
       ELSE IF (l_flip(itype).AND.atoms%l_flipSpinScale) THEN
