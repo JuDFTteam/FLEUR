@@ -17,7 +17,7 @@ MODULE m_xcBfield
    ! consistent source-free fields.
    !-----------------------------------------------------------------------------
 
-   PUBLIC :: makeBxc, sourcefree
+   PUBLIC :: makeBxc, sourcefree, builddivtest
 
 CONTAINS
    SUBROUTINE makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,bxc)
@@ -146,11 +146,14 @@ CONTAINS
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar
       TYPE(t_vacuum),               INTENT(IN)     :: vacuum
       TYPE(t_sym),                  INTENT(IN)     :: sym
+      LOGICAL,                      INTENT(IN)     :: itest
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: Avec
 
       INTEGER                                      :: nsp, n, kt, ir, k
       REAL                                         :: r, th, ph
       REAL, ALLOCATABLE                            :: thet(:), phi(:), A_temp(:,:)!space grid, index
+
+      IF (itest==0) THEN RETURN
 
       nsp = atoms%nsp()
 
@@ -164,6 +167,13 @@ CONTAINS
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
+      !--------------------------------------------------------------------------
+      ! Test case 1.
+      ! In MT: radial function f(r)=r*R_MT in direction e_r.
+      ! In interstitial: f(r_vec)=r_vec.
+      ! So by construction, the divergence for a set of atoms with R_MT=rmt(n)
+      ! for every n should be an isotropic 3*R_MT.
+      ! TODO: Add interstitial part and if-test (1---> this test).
 
       DO n=1,atoms%ntype
          ALLOCATE (A_temp(atoms%jri(n)*nsp,3))
@@ -185,7 +195,8 @@ CONTAINS
          CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,:), Avec(3)%mt(:,0:,n,:))
          DEALLOCATE (A_temp)
       END DO ! n
-      
+      ! End test case 1.
+      !--------------------------------------------------------------------------
       CALL finish_mt_grid
 
    END SUBROUTINE builddivtest
