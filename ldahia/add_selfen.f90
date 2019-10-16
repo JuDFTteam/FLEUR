@@ -74,6 +74,7 @@ MODULE m_add_selfen
             start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
             end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
             DO WHILE(mu.LE.mu_b)
+               CALL gp%reset(atoms,input,l,nType)
                mu = mu + mu_step
                DO ipm = 1, 2
                   DO iz = 1, g%nz
@@ -129,6 +130,7 @@ MODULE m_add_selfen
             !Set up the interval for the bisection method (mu_max,mu_b)
             mu_a = mu_max
             DO
+               CALL gp%reset(atoms,input,l,nType)
                mu = (mu_a + mu_b)/2.0
                DO ipm = 1, 2
                   DO iz = 1, g%nz

@@ -50,6 +50,7 @@ MODULE m_types_greensf
             PROCEDURE       :: e_contour
             PROCEDURE       :: get_gf
             PROCEDURE       :: set_gf
+            PROCEDURE       :: reset => reset_gf
       END TYPE t_greensf
 
 
@@ -531,5 +532,52 @@ MODULE m_types_greensf
          ENDDO
 
       END SUBROUTINE set_gf
+
+      SUBROUTINE reset_gf(this,atoms,input,l,nType,lp,ntypep)
+
+         USE m_constants
+         USE m_types_setup
+         USE m_juDFT
+         USE m_ind_greensf
+
+         !---------------------------------------------------
+         ! Sets all gmmpMat arrays back to 0
+         ! if no element is specified all elements are reset
+         !---------------------------------------------------
+
+         IMPLICIT NONE
+
+         CLASS(t_greensf),       INTENT(INOUT)  :: this
+         TYPE(t_atoms),          INTENT(IN)     :: atoms
+         TYPE(t_input),          INTENT(IN)     :: input
+         INTEGER, OPTIONAL,      INTENT(IN)     :: l, lp
+         INTEGER, OPTIONAL,      INTENT(IN)     :: nType, nTypep
+
+         INTEGER :: i_gf,i_reset
+         LOGICAL :: lFullreset
+
+         lFullreset = .TRUE.
+
+         IF(PRESENT(l).OR.PRESENT(nType)) THEN
+            IF(PRESENT(l).AND.PRESENT(nType)) THEN
+               i_reset = ind_greensf(atoms,l,nType,lp=lp,nTypep=nTypep)
+               lFullreset = .FALSE.
+            ELSE
+               CALL juDFT_error("Please specify both l and nType or none", &
+                     hint="This is a bug in FLEUR please report", calledby="reset_gf")
+            ENDIF
+         ENDIF
+
+         DO i_gf = MERGE(1,i_reset,lFullreset), MERGE(atoms%n_gf,i_reset,lFullreset)
+            this%gmmpMat(:,i_gf,:,:,:,:) = 0.0
+            IF(.NOT.input%l_gfsphavg) THEN
+               this%uu(:,i_gf,:,:,:,:) = 0.0
+               this%ud(:,i_gf,:,:,:,:) = 0.0
+               this%du(:,i_gf,:,:,:,:) = 0.0
+               this%dd(:,i_gf,:,:,:,:) = 0.0
+            ENDIF
+         ENDDO
+
+      END SUBROUTINE reset_gf
 
 END MODULE m_types_greensf
