@@ -425,7 +425,7 @@ MODULE m_types_greensf
                                               this%du(iz,i_gf,m,mp,spin_ind,ipm) * udot(1,spin1)*u(2,spin2) + &
                                               this%ud(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*udot(2,spin2)
                   ELSE
-                     IF(ispin.EQ.1.AND.input%jspins.EQ.1) THEN
+                     IF(ispin.EQ.2.AND.input%jspins.EQ.1) THEN
                         !In this case the ordering of m and mp has to be reversed
                         gmat%data_c(ind1,ind2) = this%gmmpMat(iz,i_gf,-m,-mp,spin_ind,ipm)
                      ELSE IF(ispin.EQ.4) THEN
@@ -477,9 +477,9 @@ MODULE m_types_greensf
          ENDIF
 
          !Determine matsize for the result gmat (if spin is given only return this digonal element)
-         matsize1 = (2*l+1) * MERGE(1,input%jspins,PRESENT(spin))
+         matsize1 = (2*l+1) * MERGE(1,2,PRESENT(spin))
          IF(PRESENT(lp)) THEN
-            matsize2 = (2*lp+1) * MERGE(1,input%jspins,PRESENT(spin))
+            matsize2 = (2*lp+1) * MERGE(1,2,PRESENT(spin))
          ELSE
             matsize2 = matsize1
          ENDIF
@@ -520,13 +520,14 @@ MODULE m_types_greensf
                ind1_start = 0
                ind2_start = 0
             ENDIF
+            IF(ispin.EQ.2.AND.input%jspins.EQ.1) CYCLE
             ind1 = ind1_start
             DO m = -l,l
                ind1 = ind1 + 1
                ind2 = ind2_start
                DO mp = -lp_loop,lp_loop
                   ind2 = ind2 + 1
-                  this%gmmpMat(iz,i_gf,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2)
+                  this%gmmpMat(iz,i_gf,m,mp,ispin,ipm) = gmat%data_c(ind1,ind2)*MERGE(1,2/input%jspins,PRESENT(spin))
                ENDDO
             ENDDO
          ENDDO

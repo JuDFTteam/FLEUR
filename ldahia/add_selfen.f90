@@ -56,7 +56,7 @@ MODULE m_add_selfen
       !Not tested yet for two chemical potentials, so we just take one
       spin_match=1
       !Are we matching the spin polarized self-energy with one chemical potential
-      l_match_both_spins = spin_match.EQ.1.AND.input%jspins.EQ.2
+      l_match_both_spins = spin_match.EQ.1!.AND.input%jspins.EQ.2
 
       DO i_hia = 1, atoms%n_hia
          l = atoms%lda_u(atoms%n_u+i_hia)%l
