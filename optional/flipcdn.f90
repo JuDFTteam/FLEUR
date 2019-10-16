@@ -79,9 +79,9 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
          ! spherical and non-spherical m.t. charge density
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
-                rhodummy=CMPLX(en%mt(j,lh,itype,3)),0)
+                rhodummy=CMPLX(den%mt(j,lh,itype,3)),0)
                 CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
-                den%mt(j,lh,itype,3))=AIMAG(rhodummy)
+                den%mt(j,lh,itype,3)=AIMAG(rhodummy)
 
             END DO
          END DO
