@@ -781,7 +781,7 @@ CONTAINS
       REAL,              INTENT(IN) :: factor
       LOGICAL,           INTENT(IN) :: score, potnorm
       TYPE(t_potden),    INTENT(IN) :: denmat
-      CHARACTER(len=10), INTENT(IN) :: denName
+      CHARACTER(len=20), INTENT(IN) :: denName
 
       TYPE(t_potden)                :: cden, mden
 
@@ -814,7 +814,7 @@ CONTAINS
       REAL,              INTENT(IN) :: factor
       LOGICAL,           INTENT(IN) :: score, potnorm
       TYPE(t_potden),    INTENT(IN) :: denmat
-      CHARACTER(len=10), INTENT(IN) :: denName
+      CHARACTER(len=20), INTENT(IN) :: denName
 
       TYPE(t_potden)                   :: cden, mxden, myden, mzden
 
@@ -849,7 +849,7 @@ CONTAINS
 
       INTEGER            :: i
       REAL               :: factor
-      CHARACTER (len=10) :: denName
+      CHARACTER (len=20) :: denName
       LOGICAL            :: score, potnorm
 
       ! Plotting the input density matrix as n / n, m / n, mx, my, mz. 
