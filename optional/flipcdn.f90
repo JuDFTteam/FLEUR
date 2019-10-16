@@ -105,9 +105,9 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
         IF (l_flip(itype).AND.(.NOT.atoms%l_flipSpinScale)) THEN
             DO m = -3,3
                DO mp = -3,3
-                rhodummy=CMPLX(den%mmpMat(m,mp,i_u,input%jspins),0)
-                CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mmpMat(m,mp,i_u,1),den%mmpMat(m,mp,i_u,2),rhodummy)
-                den%mmpMat(m,mp,i_u,input%jspins)=AIMAG(rhodummy)
+
+                CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mmpMat(m,mp,i_u,1),den%mmpMat(m,mp,i_u,2),den%mmpMat(m,mp,i_u,input%jspins))
+
 !                  rhodummy = den%mmpMat(m,mp,i_u,1)
 !                  den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
 !                  den%mmpMat(m,mp,i_u,input%jspins) = rhodummy
