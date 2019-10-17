@@ -109,16 +109,16 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 ! Since den%mmpMat is complex but rot_den_mat can only handle real values as diagonals of den_mat a splitting of den%mmpMat in real and imaginary part is performed. Rotations are performed seperatly and added up afterwards.
                    realPart1=REAL(den%mmpMat(m,mp,i_u,1))
                    realPart2=REAL(den%mmpMat(m,mp,i_u,2))
-                   realPart12=COMPLEX(REAL(den%mmpMat(m,mp,i_u,3)),0)
+                   realPart12=CMPLX(REAL(den%mmpMat(m,mp,i_u,3)),0)
                    imPart1=AIMAG(den%mmpMat(m,mp,i_u,1))
                    imPart2=AIMAG(den%mmpMat(m,mp,i_u,2))
-                   imPart12=COMPLEX(0,AIMAG(den%mmpMat(m,mp,i_u,3)))
+                   imPart12=CMPLX(0,AIMAG(den%mmpMat(m,mp,i_u,3)))
                   CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),realPart1,realPart2,&
                    realPart12)
                   CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),imPart1,imPart2,&
                    imPart12)
-                  den%mmpMat(m,mp,i_u,1)=COMPLEX(realPart1,imPart1)
-                  den%mmpMat(m,mp,i_u,2)=COMPLEX(realPart2,imPart2)
+                  den%mmpMat(m,mp,i_u,1)=CMPLX(realPart1,imPart1)
+                  den%mmpMat(m,mp,i_u,2)=CMPLX(realPart2,imPart2)
                   den%mmpMat(m,mp,i_u,3)=realPart12+imPart12
                END DO
             END DO
