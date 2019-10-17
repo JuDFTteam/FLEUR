@@ -75,7 +75,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    ! flip cdn for each atom with rotation angles given
    na = 10
    DO itype = 1, atoms%ntype
-      IF (l_flip(itype).AND.(.NOT.atoms%l_flipSpinScale)) THEN
+      IF (l_flip(itype).AND.(.NOT.atoms%flipSpinScale(itype))) THEN
          ! spherical and non-spherical m.t. charge density
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
@@ -85,7 +85,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 
             END DO
          END DO
-      ELSE IF (l_flip(itype).AND.atoms%l_flipSpinScale) THEN
+      ELSE IF (l_flip(itype).AND.atoms%flipSpinScale(itype)) THEN
          IF((atoms%flipSpinTheta(itype).NE.0.0 .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=flipSpinPhi=0.0", calledby="flipcdn")
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
@@ -103,7 +103,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
       DO i_u = 1, atoms%n_u
          itype = atoms%lda_u(i_u)%atomType
-        IF (l_flip(itype).AND.(.NOT.atoms%l_flipSpinScale)) THEN
+        IF (l_flip(itype).AND.(.NOT.atoms%flipSpinScale(itype))) THEN
             DO m = -3,3
                DO mp = -3,3
 ! Since den%mmpMat is complex but rot_den_mat can only handle real values as diagonals of den_mat a splitting of den%mmpMat in real and imaginary part is performed. Rotations are performed seperatly and added up afterwards.
@@ -122,7 +122,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                   den%mmpMat(m,mp,i_u,3)=realPart12+imPart12
                END DO
             END DO
-          ELSE IF (l_flip(itype).AND.(atoms%l_flipSpinScale)) THEN
+          ELSE IF (l_flip(itype).AND.(atoms%flipSpinScale(itype))) THEN
             DO m = -3,3
                DO mp = -3,3
          IF((atoms%flipSpinTheta(itype).NE.0.0 .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=flipSpinPhi=0.0",&

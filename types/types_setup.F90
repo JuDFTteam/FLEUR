@@ -163,7 +163,7 @@ MODULE m_types_setup
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       REAL, ALLOCATABLE :: flipSpinPhi(:) !<flip magnetisation of this atom by angle phi
       REAL, ALLOCATABLE :: flipSpinTheta(:)
-      LOGICAL, ALLOCATABLE :: l_flipSpinScale(:)
+      LOGICAL, ALLOCATABLE :: flipSpinScale(:)
    CONTAINS
       procedure :: nsp => calc_nsp_atom
    END TYPE t_atoms
