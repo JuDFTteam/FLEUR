@@ -199,12 +199,18 @@ MODULE m_add_selfen
    SUBROUTINE add_pot(gmat,vmat,mu)
 
       USE m_types
+      USE m_juDFT
+
+      IMPLICIT NONE
 
       TYPE(t_mat),      INTENT(INOUT)  :: gmat
       TYPE(t_mat),      INTENT(IN)     :: vmat
       REAL,             INTENT(IN)     :: mu
 
-      INTEGER i,j
+      INTEGER i
+
+      IF(vmat%matsize1.NE.gmat%matsize1.OR.vmat%matsize2.NE.gmat%matsize2) &
+         CALL juDFT_error("vmat & gmat dimension do not match",hint="This is a bug in FLEUR, please report",calledby="add_pot")
 
       CALL gmat%inverse()
       gmat%data_c = gmat%data_c - vmat%data_c
