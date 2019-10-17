@@ -433,7 +433,7 @@ MODULE m_types_greensf
                      !matrix. Then we need to reverse the order (SOC prop m*s_z)
                      m_ind  = -m
                      mp_ind = -mp
-                  ELSE IF(ispin.EQ.4)
+                  ELSE IF(ispin.EQ.4) THEN
                      !We only calculate spin21. spin12 is obtained as hermitian conjugate
                      !(Complex conjugation happens afterwards)
                      m_ind  = mp
