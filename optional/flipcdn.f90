@@ -48,8 +48,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    TYPE(t_potden)            :: den
 
    ! Local Scalars
-   COMPLEX                   :: rhodummy
-   REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, realPart12, imPart1,imPart2, imPart12
+   COMPLEX                   :: rhodummy, imPart12, realPart12
+   REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, imPart1,imPart2
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u
    INTEGER                   :: archiveType
    LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype)
@@ -119,7 +119,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                    imPart12)
                   den%mmpMat(m,mp,i_u,1)=COMPLEX(realPart1,imPart1)
                   den%mmpMat(m,mp,i_u,2)=COMPLEX(realPart2,imPart2)
-                  den%mmpMat(m,mp,i_u,3)=COMPLEX(realPart12,imPart12)
+                  den%mmpMat(m,mp,i_u,3)=realPart12+imPart12
                END DO
             END DO
           ELSE IF (l_flip(itype).AND.(atoms%l_flipSpinScale)) THEN
