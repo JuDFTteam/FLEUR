@@ -119,6 +119,7 @@
       ALLOCATE(atoms%ncst(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
       ALLOCATE(atoms%flipSpinPhi(atoms%ntype))
+      ALLOCATE(atoms%flipSpinScale(atoms%ntype))
       ALLOCATE(atoms%flipSpinTheta(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(atoms%ntype))
