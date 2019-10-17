@@ -138,18 +138,22 @@ CONTAINS
 
    END SUBROUTINE sourcefree
 
-   SUBROUTINE builddivtest(stars,atoms,sphhar,vacuum,sym,itest,Avec)
+   SUBROUTINE builddivtest(stars,atoms,sphhar,vacuum,sym,cell,itest,Avec)
       USE m_mt_tofrom_grid
+      USE m_pw_tofrom_grid
+
+      IMPLICIT NONE
 
       TYPE(t_stars),                INTENT(IN)     :: stars
       TYPE(t_atoms),                INTENT(IN)     :: atoms
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar
       TYPE(t_vacuum),               INTENT(IN)     :: vacuum
       TYPE(t_sym),                  INTENT(IN)     :: sym
+      TYPE(t_cell),                 INTENT(IN)     :: cell
       INTEGER,                      INTENT(IN)     :: itest
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: Avec
 
-      INTEGER                                      :: nsp, n, kt, ir, k
+      INTEGER                                      :: nsp, n, kt, ir, k, i, ifftxc3
       REAL                                         :: r, th, ph
       REAL, ALLOCATABLE                            :: thet(:), phi(:), A_temp(:,:)!space grid, index
 
@@ -158,6 +162,7 @@ CONTAINS
       END IF
 
       nsp = atoms%nsp()
+      ifftxc3=stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
 
       DO i=1,3
          CALL Avec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd, &
@@ -168,7 +173,8 @@ CONTAINS
 
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
-      CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
+      CALL init_mt_grid(1, atoms, sphhar, .FALSE., sym, thet, phi)
+      CALL init_pw_grid(.FALSE.,stars,sym,cell)
       !--------------------------------------------------------------------------
       ! Test case 1.
       ! In MT: radial function f(r)=r*R_MT in direction e_r.
@@ -181,7 +187,7 @@ CONTAINS
          ALLOCATE (A_temp(atoms%jri(n)*nsp,3))
          kt = 0
          DO ir = 1, atoms%jri(n)
-            r = atoms%rmsh(jr, n)
+            r = atoms%rmsh(ir, n)
             DO k = 1, nsp
                th = thet(k)
                ph = phi(k)
@@ -197,9 +203,19 @@ CONTAINS
          CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,:), Avec(3)%mt(:,0:,n,:))
          DEALLOCATE (A_temp)
       END DO ! n
+
+      ALLOCATE (A_temp(ifftxc3,3))
+
+      !DO i = 1, ifftxc3
+      !   div_temp(i,1)=
+      !   div_temp(i,2)=
+      !   div_temp(i,3)=
+      !ENDDO ! i
+
       ! End test case 1.
       !--------------------------------------------------------------------------
       CALL finish_mt_grid
+      CALL finish_pw_grid()
 
    END SUBROUTINE builddivtest
 
