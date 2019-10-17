@@ -311,7 +311,7 @@ MODULE m_types_greensf
 1020        FORMAT("nz: ", I5.1," alpha: ", f8.4)
 1030        FORMAT("n: ", I5.1,"; sigma: ", f8.4)
 1040        FORMAT("eb: ", f8.4,"; et: ",f8.4)
-1050        FORMAT(2f8.4,"      weight: ",2e13.4)
+1050        FORMAT(2f8.4,"      weight: ",2e15.4)
          ENDIF
 
       END SUBROUTINE e_contour
