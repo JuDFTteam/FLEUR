@@ -116,7 +116,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) THEN
       !Only calculate the greens function when needed
       CALL greensfCoeffs%init(input,lmaxU_const,atoms,noco,results%ef)
-      CALL gOnsite%e_contour(input,mpi,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
+      CALL gOnsite%getEnergyContour(input,mpi,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
       gOnsite%gmmpMat = 0.0
       IF(atoms%n_hia.GT.0.AND.mpi%irank==0) hub1%mag_mom = 0.0
    ENDIF

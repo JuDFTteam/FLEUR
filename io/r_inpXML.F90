@@ -750,6 +750,7 @@ CONTAINS
             input%gf_n3 = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n3'))
             input%gf_nmatsub = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@nmatsub'))
             input%gf_sigma = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@sigma'))
+            input%gf_eb = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@eb'))
          ENDIF
 
          xPathB = TRIM(ADJUSTL(xPathA)) // '/contourSemicircle'
@@ -758,6 +759,7 @@ CONTAINS
             input%gf_mode = 2
             input%gf_n = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@n'))
             input%gf_et = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@et'))
+            input%gf_eb = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@eb'))
             input%gf_alpha = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
          ENDIF
 

@@ -71,7 +71,7 @@ MODULE m_types_setup
    TYPE t_gfelementtype
       SEQUENCE
       !defines the l and atomType elements for given greens function element (used for mapping index in types_greensf)
-      INTEGER l        
+      INTEGER l
       INTEGER lp
       INTEGER atomType
       INTEGER atomTypep
@@ -455,6 +455,7 @@ MODULE m_types_setup
       INTEGER :: gf_n
       REAL    :: gf_alpha
       REAL    :: gf_et
+      REAL    :: gf_eb
       INTEGER :: gf_n1
       INTEGER :: gf_n2
       INTEGER :: gf_n3

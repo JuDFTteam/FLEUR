@@ -174,6 +174,7 @@
           input%gf_n = 128
           input%gf_alpha = 1.0
           input%gf_et = 0.0
+          input%gf_eb = 0.0
           input%gfTet = .FALSE.
           input%minoccDistance = 0.01
           input%minmatDistance = 0.001

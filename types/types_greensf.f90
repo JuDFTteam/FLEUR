@@ -50,7 +50,7 @@ MODULE m_types_greensf
             PROCEDURE       :: get     => get_gf
             PROCEDURE       :: set     => set_gf
             PROCEDURE       :: reset   => reset_gf
-            PROCEDURE       :: e_contour
+            PROCEDURE       :: getEnergyContour => e_contour
       END TYPE t_greensf
 
 
@@ -168,8 +168,10 @@ MODULE m_types_greensf
 
             IF(this%nmatsub > 0) THEN
 
+               e1 = ef+input%gf_eb
+
                nz = 0
-               !Left Vertical part (eb,0) -> (eb,sigma)
+               !Left Vertical part (e1,0) -> (e1,sigma)
                de = this%nmatsub * CMPLX(0.0,sigma)
                CALL grule(input%gf_n1,x(1:(input%gf_n1)/2),w(1:(input%gf_n1)/2))
                x = -x
@@ -180,12 +182,12 @@ MODULE m_types_greensf
                DO iz = 1, input%gf_n1
                   nz = nz + 1
                   IF(nz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
-                  this%e(nz) = eb + de + de * x(iz)
+                  this%e(nz) = e1 + de + de * x(iz)
                   this%de(nz) = w(iz)*de
                ENDDO
 
                !Horizontal Part (eb,sigma) -> (et,sigma)
-               de = (ef-30*input%gf_sigma-eb)/2.0
+               de = (ef-30*input%gf_sigma-e1)/2.0
                CALL grule(input%gf_n2,x(1:(input%gf_n2)/2),w(1:(input%gf_n2)/2))
                x = -x
                DO i = 1, (input%gf_n2+3)/2-1
@@ -195,7 +197,7 @@ MODULE m_types_greensf
                DO iz = 1, input%gf_n2
                   nz = nz + 1
                   IF(nz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
-                  this%e(nz) = de*x(iz) + de + eb + 2 * this%nmatsub * ImagUnit * sigma
+                  this%e(nz) = de*x(iz) + de + e1 + 2 * this%nmatsub * ImagUnit * sigma
                   this%de(nz) = de*w(iz)
                ENDDO
 
@@ -225,7 +227,7 @@ MODULE m_types_greensf
          ELSE IF(this%mode.EQ.2) THEN
 
             !Semicircle
-            e1 = eb
+            e1 = ef+input%gf_eb
             e2 = ef+input%gf_et
 
             this%nmatsub = 0
@@ -263,7 +265,7 @@ MODULE m_types_greensf
 
          ELSE
 
-            CALL juDFT_error("Invalid mode for energy contour in Green's function calculation", calledby="init_e_contour")
+            CALL juDFT_error("Invalid mode for energy contour in Green's function calculation", calledby="e_contour")
 
          END IF
 
