@@ -10,7 +10,7 @@ MODULE m_flipcdn
 !     magnetic moment within the m.t.sphere for each atom 
 !     according to the variable nflip. This variable is read in
 !     the main program
-!  TODO:           nflip = -1 : flip spin in sphere
+!  TODO; (Test)           nflip = -1 : flip spin in sphere
 !  TODO:           nflip = -2 : scale spin by bmu(n)
 !             nflip = any: no spin flip
 !                            r.pentcheva,kfa,Feb'96
@@ -73,7 +73,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
    ! flip cdn for each atom with rotation angles given
-   na = 10
+   na = 1
    DO itype = 1, atoms%ntype
       IF (l_flip(itype).AND.(.NOT.atoms%flipSpinScale(itype))) THEN
          ! spherical and non-spherical m.t. charge density
