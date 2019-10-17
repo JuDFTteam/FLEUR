@@ -698,10 +698,12 @@
       <xsd:attribute default="5" name="n3" type="xsd:nonNegativeInteger"/>
       <xsd:attribute default="5" name="nmatsub" type="xsd:nonNegativeInteger"/>
       <xsd:attribute default="0.005" name="sigma" type="xsd:double"/>
+      <xsd:attribute default="-1.0" name="eb" type="xsd:double"/>
    </xsd:complexType>
 
    <xsd:complexType name="EContourSemicircleType">
       <xsd:attribute default="128" name="n" type="xsd:nonNegativeInteger"/>
+      <xsd:attribute default="-1.0" name="eb" type="xsd:double"/>
       <xsd:attribute default="0.0" name="et" type="xsd:double"/>
       <xsd:attribute default="1.0" name="alpha" type="xsd:double"/>
    </xsd:complexType>
