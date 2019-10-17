@@ -86,12 +86,13 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
             END DO
          END DO
       ELSE IF (l_flip(itype).AND.atoms%l_flipSpinScale) THEN
+         IF((atoms%flipSpinTheta(itype).NE.0.0 .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling currently only implemented for flipSpinTheta=flipSpinPhi=0.0", calledby="flipcdn")
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
-!               rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
-!               rhodumms = den%mt(j,lh,itype,1) - den%mt(j,lh,itype,input%jspins)
-!               den%mt(j,lh,itype,1) = 0.5 * (rhodummy + atoms%bmu(itype)*rhodumms)
-!               den%mt(j,lh,itype,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype)*rhodumms )
+               rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
+               rhodumms = den%mt(j,lh,itype,1) - den%mt(j,lh,itype,input%jspins)
+               den%mt(j,lh,itype,1) = 0.5 * (rhodummy + atoms%bmu(itype)*rhodumms)
+               den%mt(j,lh,itype,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype)*rhodumms )
             END DO
          END DO
       END IF
@@ -106,8 +107,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
             DO m = -3,3
                DO mp = -3,3
 
-                CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mmpMat(m,mp,i_u,1),den%mmpMat(m,mp,i_u,2),den%mmpMat(m,mp,i_u,input%jspins))
-
+!                  CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mmpMat(m,mp,i_u,1),den%mmpMat(m,mp,i_u,2),den%mmpMat(m,mp,i_u,input%jspins))
 !                  rhodummy = den%mmpMat(m,mp,i_u,1)
 !                  den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
 !                  den%mmpMat(m,mp,i_u,input%jspins) = rhodummy
