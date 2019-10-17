@@ -163,7 +163,7 @@ MODULE m_add_selfen
                      n = n + REAL(mmpMat(m,m,i_hia,ispin))
                   ENDDO
                ENDDO
-               IF(ABS(n-n_target).LT.0.001.OR.ABS((mu_b - mu_a)/2.0).LT.0.00001) THEN
+               IF(ABS(n-n_target).LT.0.001.OR.ABS((mu_b - mu_a)/2.0).LT.1e-4) THEN
                   !We found the chemical potential to within the desired accuracy
                   WRITE(6,"(A)") "Calculated mu to match Self-energy to DFT-GF"
                   WRITE(6,"(TR3,A4,f8.4)") "mu = ", mu
@@ -186,7 +186,7 @@ MODULE m_add_selfen
          DO ispin = 1, input%jspins
             DO m = -l, l
                DO mp=-l, l
-                  IF(ABS(REAL(mmpMat(m,mp,i_hia,ispin))).LT.1e-5) mmpMat(m,mp,i_hia,ispin) = 0.0
+                  IF(ABS(mmpMat(m,mp,i_hia,ispin)).LT.1e-6) mmpMat(m,mp,i_hia,ispin) = 0.0
                ENDDO
             ENDDO
          ENDDO
