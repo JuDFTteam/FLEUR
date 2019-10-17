@@ -49,7 +49,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 
    ! Local Scalars
    COMPLEX                   :: rhodummy
-   REAL                      :: rhodumms,fermiEnergyTemp
+   REAL                      :: rhodumms,fermiEnergyTemp, realPart1, realPart2, realPart12, imPart1,imPart2, imPart12
    INTEGER                   :: i,nt,j,lh,na,mp,ispin,urec,itype,m,i_u
    INTEGER                   :: archiveType
    LOGICAL                   :: n_exist,l_qfix,l_error, l_flip(atoms%ntype)
@@ -81,12 +81,12 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
             DO j = 1,atoms%jri(itype)
                 rhodummy=CMPLX(den%mt(j,lh,itype,3),0)
                 CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
-                den%mt(j,lh,itype,3)=AIMAG(rhodummy)
+                den%mt(j,lh,itype,3)=REAL(rhodummy)
 
             END DO
          END DO
       ELSE IF (l_flip(itype).AND.atoms%l_flipSpinScale) THEN
-         IF((atoms%flipSpinTheta(itype).NE.0.0 .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling currently only implemented for flipSpinTheta=flipSpinPhi=0.0", calledby="flipcdn")
+         IF((atoms%flipSpinTheta(itype).NE.0.0 .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=flipSpinPhi=0.0", calledby="flipcdn")
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
@@ -106,20 +106,31 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
         IF (l_flip(itype).AND.(.NOT.atoms%l_flipSpinScale)) THEN
             DO m = -3,3
                DO mp = -3,3
-
-!                  CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mmpMat(m,mp,i_u,1),den%mmpMat(m,mp,i_u,2),den%mmpMat(m,mp,i_u,input%jspins))
-!                  rhodummy = den%mmpMat(m,mp,i_u,1)
-!                  den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
-!                  den%mmpMat(m,mp,i_u,input%jspins) = rhodummy
+! Since den%mmpMat is complex but rot_den_mat can only handle real values as diagonals of den_mat a splitting of den%mmpMat in real and imaginary part is performed. Rotations are performed seperatly and added up afterwards.
+                   realPart1=REAL(den%mmpMat(m,mp,i_u,1))
+                   realPart2=REAL(den%mmpMat(m,mp,i_u,2))
+                   realPart12=REAL(den%mmpMat(m,mp,i_u,3))
+                   imPart1=AIMAG(den%mmpMat(m,mp,i_u,1))
+                   imPart2=AIMAG(den%mmpMat(m,mp,i_u,2))
+                   imPart12=AIMAG(den%mmpMat(m,mp,i_u,3))
+                  CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),realPart1,realPart2,&
+                   realPart12)
+                  CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),imPart1,imPart2,&
+                   imPart12)
+                  den%mmpMat(m,mp,i_u,1)=COMPLEX(realPart1,imPart1)
+                  den%mmpMat(m,mp,i_u,2)=COMPLEX(realPart2,imPart2)\
+                  den%mmpMat(m,mp,i_u,3)=COMPLEX(realPart12,imPart12)
                END DO
             END DO
           ELSE IF (l_flip(itype).AND.(atoms%l_flipSpinScale)) THEN
             DO m = -3,3
                DO mp = -3,3
-!                  rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
-!                  rhodumms = den%mmpMat(m,mp,i_u,1) - den%mmpMat(m,mp,i_u,input%jspins)
-!                  den%mmpMat(m,mp,i_u,1) = 0.5 * (rhodummy + atoms%bmu(itype) * rhodumms)
-!                  den%mmpMat(m,mp,i_u,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype) * rhodumms)
+         IF((atoms%flipSpinTheta(itype).NE.0.0 .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=flipSpinPhi=0.0",&
+                   calledby="flipcdn")
+                  rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
+                  rhodumms = den%mmpMat(m,mp,i_u,1) - den%mmpMat(m,mp,i_u,input%jspins)
+                  den%mmpMat(m,mp,i_u,1) = 0.5 * (rhodummy + atoms%bmu(itype) * rhodumms)
+                  den%mmpMat(m,mp,i_u,input%jspins) = 0.5 * (rhodummy - atoms%bmu(itype) * rhodumms)
                END DO
             END DO
          END IF
