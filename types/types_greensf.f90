@@ -344,7 +344,7 @@ MODULE m_types_greensf
          REAL   , OPTIONAL,   INTENT(IN)  :: udot(:,:)
 
          INTEGER matsize1,matsize2,i_gf,i,j,ind1,ind2,ind1_start,ind2_start
-         INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end,spin_ind
+         INTEGER m,mp,spin1,spin2,ipm,ispin,ispin_end,spin_ind,m_ind,mp_ind
          INTEGER lp_loop
          LOGICAL l_radial,l_full
 
@@ -374,10 +374,12 @@ MODULE m_types_greensf
          ELSE
             matsize2 = matsize1
          ENDIF
-         !If we give no spin argument and we have only one spin in the
-         !calculation we blow up the one spin to the full matrix
 
-         CALL gmat%init(.FALSE.,matsize1,matsize2)
+         IF(.NOT.ALLOCATED(gmat%data_c)) THEN
+            CALL gmat%init(.FALSE.,matsize1,matsize2)
+         ELSE IF(matsize1.NE.gmat%matsize1.OR.matsize2.NE.gmat%matsize2) THEN
+            CALL juDFT_error("Mismatch in matsizes", calledby="get_gf")
+         ENDIF
 
          IF(.NOT.PRESENT(lp)) THEN
             lp_loop = l
@@ -393,8 +395,7 @@ MODULE m_types_greensf
          ispin_end = MERGE(4,2,input%l_gfmperp)
 
          DO ispin = MERGE(1,spin,l_full), MERGE(ispin_end,spin,l_full)
-            !Find the right quadrant in gmat according to the spin index
-
+            !Find the corresponding physical spin indices
             IF(ispin < 3) THEN
                spin1 = ispin
                spin2 = ispin
@@ -405,9 +406,10 @@ MODULE m_types_greensf
                spin1 = 1
                spin2 = 2
             ENDIF
-
+            !Find the correct spin index in gmmpMat arrays
             spin_ind = MERGE(ispin,1,input%jspins.EQ.2)
-            spin_ind = MERGE(3,spin_ind,ispin.EQ.4.AND.input%jspins.EQ.2)
+            spin_ind = MERGE(3,spin_ind,ispin.EQ.4)
+            !Find the right quadrant in gmat
             IF(l_full) THEN
                ind1_start = (spin1-1)*(2*l+1)
                ind2_start = (spin2-1)*(2*lp_loop+1)
@@ -415,31 +417,54 @@ MODULE m_types_greensf
                ind1_start = 0
                ind2_start = 0
             ENDIF
+
             ind1 = ind1_start
             DO m = -l,l
                ind1 = ind1 + 1
                ind2 = ind2_start
                DO mp = -lp_loop,lp_loop
                   ind2 = ind2 + 1
-                  IF(l_radial) THEN
-                     gmat%data_c(ind1,ind2) = this%uu(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*u(2,spin2) + &
-                                              this%dd(iz,i_gf,m,mp,spin_ind,ipm) * udot(1,spin1)*udot(2,spin2) + &
-                                              this%du(iz,i_gf,m,mp,spin_ind,ipm) * udot(1,spin1)*u(2,spin2) + &
-                                              this%ud(iz,i_gf,m,mp,spin_ind,ipm) * u(1,spin1)*udot(2,spin2)
+
+                  !-------------------------------------------------------------------
+                  ! Check wether we need to do some operation on the indices m and mp
+                  !-------------------------------------------------------------------
+                  IF(ispin.EQ.2.AND.input%jspins.EQ.1) THEN
+                     !For a non-spin-polarized calculation we might still want the full
+                     !matrix. Then we need to reverse the order (SOC prop m*s_z)
+                     m_ind  = -m
+                     mp_ind = -mp
+                  ELSE IF(ispin.EQ.4)
+                     !We only calculate spin21. spin12 is obtained as hermitian conjugate
+                     !(Complex conjugation happens afterwards)
+                     m_ind  = mp
+                     mp_ind = m
                   ELSE
-                     IF(ispin.EQ.2.AND.input%jspins.EQ.1) THEN
-                        !In this case the ordering of m and mp has to be reversed
-                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,-m,-mp,spin_ind,ipm,i_gf)
-                     ELSE IF(ispin.EQ.4) THEN
-                        gmat%data_c(ind1,ind2) = conjg(this%gmmpMat(iz,mp,m,spin_ind,ipm,i_gf))
-                     ELSE
-                        gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m,mp,spin_ind,ipm,i_gf)
-                     ENDIF
-                     IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3.0-input%jspins)
+                     !Do nothing
+                     m_ind  = m
+                     mp_ind = mp
                   ENDIF
-               ENDDO
-            ENDDO
-         ENDDO
+                  !-------------------
+                  ! Fetch the values
+                  !-------------------_ind
+                  IF(l_radial) THEN
+                     gmat%data_c(ind1,ind2) = this%uu(iz,i_gf,m_ind,mp_ind,spin_ind,ipm) * u(1,spin1)    * u(2,spin2)     + &
+                                              this%dd(iz,i_gf,m_ind,mp_ind,spin_ind,ipm) * udot(1,spin1) * udot(2,spin2)  + &
+                                              this%du(iz,i_gf,m_ind,mp_ind,spin_ind,ipm) * udot(1,spin1) * u(2,spin2)     + &
+                                              this%ud(iz,i_gf,m_ind,mp_ind,spin_ind,ipm) * u(1,spin1)    * udot(2,spin2)
+                  ELSE
+                     gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m_ind,mp_ind,spin_ind,ipm,i_gf)
+                  ENDIF
+                  !------------------------
+                  ! Additional operations
+                  !------------------------
+                  !Spin-degeneracy when using a full matrix and having input%jspins.EQ.1
+                  IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3.0-input%jspins)
+                  !Complex conjugate for spin 4
+                  IF(ispin.EQ.4) gmat%data_c(ind1,ind2) = conjg(gmat%data_c(ind1,ind2))
+
+               ENDDO!mp
+            ENDDO!m
+         ENDDO!ispin
 
       END SUBROUTINE get_gf
 
