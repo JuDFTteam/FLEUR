@@ -461,7 +461,7 @@ SUBROUTINE w_inpXML(&
          EXIT
       END IF
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpinPhi="0.0" flipSpinTheta="0.0" l_flipSpinScale=F>
-      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'"flipSpinPhi="',f0.8,'"flipSpinTheta="',f0.8,'"l_flipSpinScale="',l1,'"/>')
+      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpinPhi="',f0.8,'" flipSpinTheta="',f0.8,'" l_flipSpinScale="',l1,'"/>')
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
       WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%flipSpinPhi(iAtomType),atoms%flipSpinTheta(iAtomType)
 
