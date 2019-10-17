@@ -42,7 +42,7 @@ MODULE m_hybridization
             !--------------------------------------------------
             ! Get the full Greens function matrix for the current energy point
             !--------------------------------------------------
-            CALL gf%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+            CALL gf%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
             !--------------------------------------------------
             ! Invert the matrix using the routines in types_mat
             !--------------------------------------------------
@@ -54,7 +54,7 @@ MODULE m_hybridization
          ENDDO
          Delta(iz) = -1/(tpi_const*gmat%matsize1) * AIMAG(tr)
          WRITE(1337,"(2f14.8)") REAL(gf%e(iz)-ef)*hartree_to_ev_const, Delta(iz)
-         !Free up the gmat matrix (it is initialized in gf%get_gf)
+         !Free up the gmat matrix (it is initialized in gf%get)
          CALL gmat%free()
       ENDDO
 

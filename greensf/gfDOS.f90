@@ -50,7 +50,7 @@ MODULE m_gfDOS
          re = 0.0
          DO ipm = 1, 2  !Sum over G^+ and G^-
             !Get the full gf matrix at the energy point
-            CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+            CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
             !Convert to eV^-1
             gmat%data_c = gmat%data_c/hartree_to_eV_const
             !Calculate up/down dos

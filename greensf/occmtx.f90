@@ -64,7 +64,7 @@ CONTAINS
             !Integrate over the contour:
             DO iz = 1, g%nz
                !get the corresponding gf-matrix
-               CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
+               CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -80,7 +80,7 @@ CONTAINS
             !For the contour 3 (real Axis just shifted with sigma) we can add the tails on both ends
             IF(g%mode.EQ.3.AND.input%gf_anacont) THEN
                !left tail
-               CALL g%get_gf(gmat,atoms,input,1,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
+               CALL g%get(gmat,atoms,input,1,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1
@@ -93,7 +93,7 @@ CONTAINS
                ENDDO
                CALL gmat%free()
                !right tail
-               CALL g%get_gf(gmat,atoms,input,g%nz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
+               CALL g%get(gmat,atoms,input,g%nz,l,nType,ipm.EQ.2,spin=ispin,lp=lp,nTypep=nTypep)
                ind1 = 0
                DO m = -l, l
                   ind1 = ind1 + 1

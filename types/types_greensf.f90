@@ -46,11 +46,11 @@ MODULE m_types_greensf
          COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
 
          CONTAINS
-            PROCEDURE, PASS :: init => greensf_init
+            PROCEDURE, PASS :: init    => greensf_init
+            PROCEDURE       :: get     => get_gf
+            PROCEDURE       :: set     => set_gf
+            PROCEDURE       :: reset   => reset_gf
             PROCEDURE       :: e_contour
-            PROCEDURE       :: get_gf
-            PROCEDURE       :: set_gf
-            PROCEDURE       :: reset => reset_gf
       END TYPE t_greensf
 
 

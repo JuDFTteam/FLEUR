@@ -86,15 +86,15 @@ MODULE m_add_selfen
                         vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                      ENDIF
                      IF(l_match_both_spins) THEN
-                        CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                        CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
-                        CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL add_pot(gmat,vmat,mu)
                      IF(l_match_both_spins) THEN
-                        CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                        CALL gp%set(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
-                        CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL gp%set(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL gmat%free()
                   ENDDO
@@ -142,15 +142,15 @@ MODULE m_add_selfen
                         vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                      ENDIF
                      IF(l_match_both_spins) THEN
-                        CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                        CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
-                        CALL g%get_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL add_pot(gmat,vmat,mu)
                      IF(l_match_both_spins) THEN
-                        CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                        CALL gp%set(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
                      ELSE
-                        CALL gp%set_gf(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL gp%set(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL gmat%free()
                   ENDDO

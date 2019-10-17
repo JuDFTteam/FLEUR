@@ -107,7 +107,7 @@ MODULE m_j0
                delta%data_c = 0.0
                DO ispin = 1, input%jspins
                   DO ipm = 1, 2
-                     CALL g0%get_gf(calc,atoms,input,iz,l,nType,ipm.EQ.2,spin=ispin)
+                     CALL g0%get(calc,atoms,input,iz,l,nType,ipm.EQ.2,spin=ispin)
                      CALL calc%inverse()
                      delta%data_c = delta%data_c + 1/2.0 * (-1)**(ispin-1) * calc%data_c
                   ENDDO
@@ -123,8 +123,8 @@ MODULE m_j0
             sumdwn = 0.0
             sumupdwn = 0.0
             DO ipm = 1, 2
-               CALL g0%get_gf(calcup,atoms,input,iz,l,nType,ipm.EQ.2,spin=1)
-               CALL g0%get_gf(calcdwn,atoms,input,iz,l,nType,ipm.EQ.2,spin=2)
+               CALL g0%get(calcup,atoms,input,iz,l,nType,ipm.EQ.2,spin=1)
+               CALL g0%get(calcdwn,atoms,input,iz,l,nType,ipm.EQ.2,spin=2)
                calcup%data_c  = matmul(delta%data_c,calcup%data_c)
                calcdwn%data_c = matmul(delta%data_c,calcdwn%data_c)
                calc%data_c    = matmul(calcup%data_c,calcdwn%data_c)
