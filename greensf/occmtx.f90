@@ -116,9 +116,9 @@ CONTAINS
             DO ispin = 1, input%jspins
                tr = 0.0
                DO i = -l,l
-                  tr = tr + REAL(mmpmat(i,i,ispin))/(3-input%jspins)
-                  IF(REAL(mmpmat(i,i,ispin))/(3-input%jspins).GT.1.05&
-                     .OR.REAL(mmpmat(i,i,ispin))/(3-input%jspins).LT.-0.01) THEN
+                  tr = tr + REAL(mmpmat(i,i,ispin))/(3.0-input%jspins)
+                  IF(REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).GT.1.05&
+                     .OR.REAL(mmpmat(i,i,ispin))/(3.0-input%jspins).LT.-0.01) THEN
                      err = .TRUE.
                      WRITE(message,9110) ispin,i,REAL(mmpmat(i,i,ispin))
                      CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occmtx")

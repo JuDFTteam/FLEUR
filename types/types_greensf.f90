@@ -433,7 +433,7 @@ MODULE m_types_greensf
                      ELSE
                         gmat%data_c(ind1,ind2) = this%gmmpMat(iz,m,mp,spin_ind,ipm,i_gf)
                      ENDIF
-                     IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3-input%jspins)
+                     IF(l_full) gmat%data_c(ind1,ind2) = gmat%data_c(ind1,ind2)/(3.0-input%jspins)
                   ENDIF
                ENDDO
             ENDDO
@@ -503,6 +503,7 @@ MODULE m_types_greensf
 
          DO ispin = MERGE(spin,1,PRESENT(spin)), MERGE(spin,ispin_end,PRESENT(spin))
             !Find the right quadrant in gmat according to the spin index
+            IF(ispin.EQ.2.AND.input%jspins.EQ.1) CYCLE
             IF(.NOT.PRESENT(spin)) THEN
                IF(ispin < 3) THEN
                   spin1 = ispin
@@ -520,14 +521,13 @@ MODULE m_types_greensf
                ind1_start = 0
                ind2_start = 0
             ENDIF
-            IF(ispin.EQ.2.AND.input%jspins.EQ.1) CYCLE
             ind1 = ind1_start
             DO m = -l,l
                ind1 = ind1 + 1
                ind2 = ind2_start
                DO mp = -lp_loop,lp_loop
                   ind2 = ind2 + 1
-                  this%gmmpMat(iz,m,mp,ispin,ipm,i_gf) = gmat%data_c(ind1,ind2)*MERGE(1,2/input%jspins,PRESENT(spin))
+                  this%gmmpMat(iz,m,mp,ispin,ipm,i_gf) = gmat%data_c(ind1,ind2)*MERGE(1.0,2.0/input%jspins,PRESENT(spin))
                ENDDO
             ENDDO
          ENDDO
