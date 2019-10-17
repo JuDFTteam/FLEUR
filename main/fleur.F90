@@ -101,6 +101,7 @@ CONTAINS
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
     TYPE(t_potden)                  :: inDen, outDen, EnergyDen
+    TYPE(t_potden), DIMENSION(3)    :: testDen
 
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
@@ -516,8 +517,12 @@ CONTAINS
     ! Test: Build a field, for which the theoretical divergence etc. are known and
     ! compare with the result of the routine.
 
-    !CALL builddivtest() 
-    !CALL sourcefree(stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc)
+    !CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
+    CALL makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,testDen)
+    CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenx            ', testDen(1))
+    CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
+    CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenz            ', testDen(3))
+    CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
 
     CALL add_usage_data("Iterations",iter)
 

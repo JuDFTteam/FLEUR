@@ -76,9 +76,9 @@ CONTAINS
          DO k = 1, nsp
             th = thet(k)
             ph = phi(k)
-            div_temp(kt+nsp,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+nsp,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+nsp,1) + COS(th)*gradz%gr(1,kt+nsp,1))&
-                                +(COS(th)*COS(ph)*gradx%gr(2,kt+nsp,1) + COS(th)*SIN(ph)*grady%gr(2,kt+nsp,1) - SIN(th)*gradz%gr(2,kt+nsp,1))/r&
-                                -(SIN(ph)*gradx%gr(3,kt+nsp,1)         - COS(ph)*grady%gr(3,kt+nsp,1))/(r*SIN(th))
+            div_temp(kt+k,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+k,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+k,1) + COS(th)*gradz%gr(1,kt+k,1))&
+                               +(COS(th)*COS(ph)*gradx%gr(2,kt+k,1) + COS(th)*SIN(ph)*grady%gr(2,kt+k,1) - SIN(th)*gradz%gr(2,kt+k,1))/r&
+                               -(SIN(ph)*gradx%gr(3,kt+k,1)         - COS(ph)*grady%gr(3,kt+k,1))/(r*SIN(th))
          ENDDO ! k
          kt = kt+nsp
       ENDDO ! jr
@@ -206,9 +206,9 @@ CONTAINS
       DO k = 1, nsp
          th = thet(k)
          ph = phi(k)
-         grad_temp(kt+nsp,1,1) = (SIN(th)*COS(ph)*grad%gr(1,kt+nsp,1) + COS(th)*COS(ph)*grad%gr(2,kt+nsp,1)/r - SIN(ph)*grad%gr(3,kt+nsp,1)/(r*SIN(th)))/(4.0*pi_const)
-         grad_temp(kt+nsp,1,2) = (SIN(th)*SIN(ph)*grad%gr(1,kt+nsp,1) + COS(th)*SIN(ph)*grad%gr(2,kt+nsp,1)/r + COS(ph)*grad%gr(3,kt+nsp,1)/(r*SIN(th)))/(4.0*pi_const)
-         grad_temp(kt+nsp,1,3) = (        COS(th)*grad%gr(1,kt+nsp,1) -         SIN(th)*grad%gr(2,kt+nsp,1)/r                                          )/(4.0*pi_const)
+         grad_temp(kt+k,1,1) = (SIN(th)*COS(ph)*grad%gr(1,kt+k,1) + COS(th)*COS(ph)*grad%gr(2,kt+k,1)/r - SIN(ph)*grad%gr(3,kt+k,1)/(r*SIN(th)))/(4.0*pi_const)
+         grad_temp(kt+k,1,2) = (SIN(th)*SIN(ph)*grad%gr(1,kt+k,1) + COS(th)*SIN(ph)*grad%gr(2,kt+k,1)/r + COS(ph)*grad%gr(3,kt+k,1)/(r*SIN(th)))/(4.0*pi_const)
+         grad_temp(kt+k,1,3) = (        COS(th)*grad%gr(1,kt+k,1) -         SIN(th)*grad%gr(2,kt+k,1)/r                                        )/(4.0*pi_const)
       ENDDO ! k
    
       kt = kt+nsp

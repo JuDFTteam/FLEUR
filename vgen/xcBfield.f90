@@ -77,7 +77,8 @@ CONTAINS
      
    END SUBROUTINE makeBxc
 
-   SUBROUTINE sourcefree(stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc)
+   SUBROUTINE sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc)
+      USE m_vgen_coulomb
 
       ! Takes a vectorial quantity, i.e. a t_potden variable of dimension 3, and
       ! makes it into a source free vector field as follows:
@@ -87,6 +88,9 @@ CONTAINS
       ! c) Construct an auxiliary vector field C_vec=(nabla phi)/(4*pi).
       ! d) Build A_vec_sf=A_vec+C_vec, which is source free by construction.
 
+      TYPE(t_mpi),                  INTENT(IN)     :: mpi
+      TYPE(t_dimension),            INTENT(IN)     :: dimension
+      TYPE(t_field),                INTENT(INOUT)  :: field
       TYPE(t_stars),                INTENT(IN)     :: stars
       TYPE(t_atoms),                INTENT(IN)     :: atoms
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar
@@ -96,11 +100,14 @@ CONTAINS
       TYPE(t_sym),                  INTENT(IN)     :: sym
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
-      TYPE(t_potden), DIMENSION(3), INTENT(IN)  :: bxc
+      TYPE(t_potden), DIMENSION(3), INTENT(IN)     :: bxc
       
-      TYPE(t_potden)                               :: div!,phi
-      !TYPE(t_potden), DIMENSION(3)                 :: cvec
+      TYPE(t_potden)                               :: div,phi
+      TYPE(t_potden), DIMENSION(3)                 :: cvec
       INTEGER                                      :: n
+      REAL                                         :: divfactor
+
+      !divfactor=10**16
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
@@ -111,29 +118,46 @@ CONTAINS
          CALL divergence(n,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
       END DO
 
-      !CALL vDiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-      !ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
-      !vDiv%pw_w = CMPLX(0.0,0.0)
+      !div%mt=divfactor*div%mt
+      !div%pw=divfactor*div%pw
+      !div%pw_w=divfactor*div%pw_w
+      !div%vacz=divfactor*div%vacz
+      !div%vacxy=divfactor*div%vacxy
 
-      !CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
-    
-      !DO i=1,3
-      !   CALL graddiv(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-      !   ALLOCATE(graddiv(i)%pw_w,mold=graddiv(i)%pw)
-      !   CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-      !   ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
-      !ENDDO
+      CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+      ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
+      phi%pw_w = CMPLX(0.0,0.0)
 
-      !DO i=1,atoms%ntype
-      !   CALL divpotgrad(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,vDiv,graddiv)
-      !END DO
+      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,div,phi)
+
+      !div%mt=div%mt/divfactor
+      !div%pw=div%pw/divfactor
+      !div%pw_w=div%pw_w/divfactor
+      !div%vacz=div%vacz/divfactor
+      !div%vacxy=div%vacxy/divfactor
+      !phi%mt=phi%mt/divfactor
+      !phi%pw=phi%pw/divfactor
+      !phi%pw_w=phi%pw_w/divfactor
+      !phi%vacz=phi%vacz/divfactor
+      !phi%vacxy=phi%vacxy/divfactor
+
+      DO i=1,3
+         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
+         !CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         !ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
+      ENDDO
+
+      DO i=1,atoms%ntype
+         CALL divpotgrad(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,phi,cvec)
+      END DO
 
       !DO i=1,3
       !   CALL corrB(i)%addPotDen(xcB(i), graddiv(i))
       !END DO
 
       CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                     noco, div)!, vDiv, graddiv(1), graddiv(2), graddiv(3), &
+                     noco, div, phi, cvec(1), cvec(2), cvec(3))!, &
                      !corrB(1), corrB(2), corrB(3))
 
    END SUBROUTINE sourcefree
@@ -153,9 +177,9 @@ CONTAINS
       INTEGER,                      INTENT(IN)     :: itest
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: Avec
 
-      INTEGER                                      :: nsp, n, kt, ir, k, i, ifftxc3
-      REAL                                         :: r, th, ph
-      REAL, ALLOCATABLE                            :: thet(:), phi(:), A_temp(:,:)!space grid, index
+      INTEGER                                      :: nsp, n, kt, kt2, ir, i, j, k, ifftxc3
+      REAL                                         :: r, th, ph, x, y, z, dx, dy, dz
+      REAL, ALLOCATABLE                            :: thet(:), phi(:), A_temp(:,:,:)!space grid, index
 
       IF (itest.EQ.0) THEN 
          RETURN
@@ -169,11 +193,16 @@ CONTAINS
                        atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
                        POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(Avec(i)%pw_w,mold=Avec(i)%pw)
+         ! Temporary.
+         Avec(i)%pw    = 0
+         Avec(i)%pw_w  = CMPLX(0.0,0.0)
+         Avec(i)%vacxy = 0 
+         Avec(i)%vacz  = 0
       END DO
 
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
-      CALL init_mt_grid(1, atoms, sphhar, .FALSE., sym, thet, phi)
+      CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
       CALL init_pw_grid(.FALSE.,stars,sym,cell)
       !--------------------------------------------------------------------------
       ! Test case 1.
@@ -184,32 +213,40 @@ CONTAINS
       ! TODO: Add interstitial part and if-test (1---> this test).
 
       DO n=1,atoms%ntype
-         ALLOCATE (A_temp(atoms%jri(n)*nsp,3))
+         ALLOCATE (A_temp(atoms%jri(n)*nsp,3,1))
          kt = 0
          DO ir = 1, atoms%jri(n)
             r = atoms%rmsh(ir, n)
             DO k = 1, nsp
                th = thet(k)
                ph = phi(k)
-               A_temp(kt+nsp,1)=COS(ph)*SIN(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
-               A_temp(kt+nsp,2)=SIN(ph)*SIN(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
-               A_temp(kt+nsp,3)=        COS(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
+               A_temp(k+kt,1,1)=COS(ph)*SIN(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
+               A_temp(k+kt,2,1)=SIN(ph)*SIN(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
+               A_temp(k+kt,3,1)=        COS(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
             ENDDO ! k
             kt = kt + nsp
          END DO ! ir
 
-         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,:), Avec(1)%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,:), Avec(2)%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,:), Avec(3)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,1,:), Avec(1)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,2,:), Avec(2)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,3,:), Avec(3)%mt(:,0:,n,:))
          DEALLOCATE (A_temp)
       END DO ! n
 
-      ALLOCATE (A_temp(ifftxc3,3))
+      ALLOCATE (A_temp(ifftxc3,3,1))
 
-      !DO i = 1, ifftxc3
-      !   div_temp(i,1)=
-      !   div_temp(i,2)=
-      !   div_temp(i,3)=
+      !dx=1.0/REAL(stars%kxc1_fft)
+      !dy=1.0/REAL(stars%kxc2_fft)
+      !dz=1.0/REAL(stars%kxc3_fft)
+
+      !DO i = 1, stars%kxc1_fft
+      !   DO j = 1, stars%kxc2_fft
+      !      DO k = 1, stars%kxc3_fft
+      !         A_temp(i,1)=i*dx
+      !         A_temp(i,2)=j*dy
+      !         A_temp(i,3)=k*dz
+      !      ENDDO ! k
+      !   ENDDO ! j
       !ENDDO ! i
 
       ! End test case 1.
