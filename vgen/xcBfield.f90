@@ -67,7 +67,7 @@ CONTAINS
                            POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
                ALLOCATE(bxc(i)%pw_w,mold=bxc(i)%pw)
 
-               bxc(i)%mt(:,0:,:,:)      = dummyDen(i+1)%mt(:,0:,:,:)/r2
+               bxc(i)%mt(:,0:,:,:)      = dummyDen(i+1)%mt(:,0:,:,:)!/r2
                bxc(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
                bxc(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
                bxc(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
@@ -113,33 +113,14 @@ CONTAINS
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
-    
-      DO n=1,atoms%ntype
-         CALL divergence(n,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
-      END DO
-
-      !div%mt=divfactor*div%mt
-      !div%pw=divfactor*div%pw
-      !div%pw_w=divfactor*div%pw_w
-      !div%vacz=divfactor*div%vacz
-      !div%vacxy=divfactor*div%vacxy
+      
+      CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
 
       CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
       CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,div,phi)
-
-      !div%mt=div%mt/divfactor
-      !div%pw=div%pw/divfactor
-      !div%pw_w=div%pw_w/divfactor
-      !div%vacz=div%vacz/divfactor
-      !div%vacxy=div%vacxy/divfactor
-      !phi%mt=phi%mt/divfactor
-      !phi%pw=phi%pw/divfactor
-      !phi%pw_w=phi%pw_w/divfactor
-      !phi%vacz=phi%vacz/divfactor
-      !phi%vacxy=phi%vacxy/divfactor
 
       DO i=1,3
          CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -203,7 +184,7 @@ CONTAINS
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
-      CALL init_pw_grid(.FALSE.,stars,sym,cell)
+      CALL init_pw_grid(.TRUE.,stars,sym,cell)
       !--------------------------------------------------------------------------
       ! Test case 1.
       ! In MT: radial function f(r)=r*R_MT in direction e_r.
@@ -220,9 +201,9 @@ CONTAINS
             DO k = 1, nsp
                th = thet(k)
                ph = phi(k)
-               A_temp(k+kt,1,1)=COS(ph)*SIN(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
-               A_temp(k+kt,2,1)=SIN(ph)*SIN(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
-               A_temp(k+kt,3,1)=        COS(th)*atoms%rmt(n)*atoms%rmsh(ir,n)
+               A_temp(k+kt,1,1)=0*(r**2)*(r/atoms%rmt(n))!*SIN(th)*COS(ph)*1000000.0
+               A_temp(k+kt,2,1)=0*(r**2)*(r/atoms%rmt(n))!*SIN(th)*SIN(ph)*1000000.0
+               A_temp(k+kt,3,1)=(r**2)*ph!*COS(th)*1000000.0
             ENDDO ! k
             kt = kt + nsp
          END DO ! ir
@@ -234,6 +215,14 @@ CONTAINS
       END DO ! n
 
       ALLOCATE (A_temp(ifftxc3,3,1))
+
+      DO i=1,ifftxc3
+         A_temp(i,:,:)=0.5
+      END DO
+
+      DO i=1,3
+         CALL pw_from_grid(.TRUE.,stars,.TRUE.,A_temp(:,i,:),Avec(i)%pw,Avec(i)%pw_w)
+      END DO
 
       !dx=1.0/REAL(stars%kxc1_fft)
       !dy=1.0/REAL(stars%kxc2_fft)

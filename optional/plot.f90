@@ -438,14 +438,14 @@ CONTAINS
          mzden%vacz(1:,1:,1) = rht(1:,1:,4)
          mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
         
-         DO ityp=1, atoms%ntype
-            DO iri=1, atoms%jri(ityp)
-               cden%mt(iri,0:,ityp,:) = cden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
-               mxden%mt(iri,0:,ityp,:) = mxden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
-               myden%mt(iri,0:,ityp,:) = myden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
-               mzden%mt(iri,0:,ityp,:) = mzden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
-            END DO
-         END DO
+         !DO ityp=1, atoms%ntype
+         !   DO iri=1, atoms%jri(ityp)
+         !      cden%mt(iri,0:,ityp,:) = cden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
+         !      mxden%mt(iri,0:,ityp,:) = mxden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
+         !      myden%mt(iri,0:,ityp,:) = myden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
+         !      mzden%mt(iri,0:,ityp,:) = mzden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
+         !   END DO
+         !END DO
 
       END IF
 

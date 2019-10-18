@@ -76,9 +76,9 @@ CONTAINS
          DO k = 1, nsp
             th = thet(k)
             ph = phi(k)
-            div_temp(kt+k,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+k,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+k,1) + COS(th)*gradz%gr(1,kt+k,1))&
-                               +(COS(th)*COS(ph)*gradx%gr(2,kt+k,1) + COS(th)*SIN(ph)*grady%gr(2,kt+k,1) - SIN(th)*gradz%gr(2,kt+k,1))/r&
-                               -(SIN(ph)*gradx%gr(3,kt+k,1)         - COS(ph)*grady%gr(3,kt+k,1))/(r*SIN(th))
+            div_temp(kt+k,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+k,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+k,1) + COS(th)*gradz%gr(1,kt+k,1))*r**2&
+                               +(COS(th)*COS(ph)*gradx%gr(2,kt+k,1) + COS(th)*SIN(ph)*grady%gr(2,kt+k,1) - SIN(th)*gradz%gr(2,kt+k,1))*r&
+                               -(SIN(ph)*gradx%gr(3,kt+k,1)         - COS(ph)*grady%gr(3,kt+k,1))*r/SIN(th)
          ENDDO ! k
          kt = kt+nsp
       ENDDO ! jr
@@ -136,7 +136,7 @@ CONTAINS
    
    END SUBROUTINE pw_div
 
-   SUBROUTINE divergence(n,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+   SUBROUTINE divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
 
       !--------------------------------------------------------------------------
       ! Use the two divergence subroutines above to now put the complete diver-  
@@ -145,7 +145,6 @@ CONTAINS
 
       IMPLICIT NONE
 
-      INTEGER,                      INTENT(IN)    :: n
       TYPE(t_stars),                INTENT(IN)    :: stars
       TYPE(t_atoms),                INTENT(IN)    :: atoms
       TYPE(t_sphhar),               INTENT(IN)    :: sphhar
@@ -156,7 +155,12 @@ CONTAINS
       TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: bxc
       TYPE(t_potden),               INTENT(INOUT) :: div
 
-      CALL mt_div(n,atoms,sphhar,sym,bxc,div)
+      INTEGER                                     :: n
+
+      DO n=1,atoms%ntype
+         CALL mt_div(n,atoms,sphhar,sym,bxc,div)
+      END DO
+
       CALL pw_div(stars,sym,cell,noco,bxc,div)
       
    END SUBROUTINE divergence
