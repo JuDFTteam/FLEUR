@@ -44,7 +44,7 @@ MODULE m_sphcoord
          ELSE IF (y.GE.0.0) THEN
             phi = ATAN(y/x)+pi_const
          ELSE 
-            phi = ATAN(vy/vx)-pi_const
+            phi = ATAN(y/x)-pi_const
          
          ENDIF
       ENDIF

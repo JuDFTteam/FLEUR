@@ -18,7 +18,7 @@ CONTAINS
 
     USE m_constants
     USE m_intgr, ONLY : intgr3
-    USE m_sphcooord
+    USE m_sphcoord
     USE m_rotdenmat
     USE m_types
     IMPLICIT NONE
