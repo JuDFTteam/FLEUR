@@ -92,7 +92,6 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                       !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by 180 degrees are allowed. 
                       CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=180, flipSpinPhi=0 is meaningless",&
                          calledby="flipcdn")
-         DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
                    END IF
                 END IF
             END DO
