@@ -84,20 +84,20 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                    CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
                    den%mt(j,lh,itype,3)=REAL(rhodummy)
                 ELSE
-                   IF (atoms%flipSpinTheta(itype).EQ.180.AND.atoms%flipSpinPhi(itype).EQ.0) THEN
+                   IF (atoms%flipSpinTheta(itype).EQ.(pimach()).AND.atoms%flipSpinPhi(itype).EQ.0) THEN
                       rhodummyR = den%mt(j,lh,itype,1)
                       den%mt(j,lh,itype,1) = den%mt(j,lh,itype,input%jspins)
                       den%mt(j,lh,itype,input%jspins) = rhodummyR
                    ELSE
-                      !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by 180 degrees are allowed. 
-                      CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=180, flipSpinPhi=0 is meaningless",&
+                      !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by theta=Pi/2 are allowed. 
+                      CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi, flipSpinPhi=0 is meaningless",&
                          calledby="flipcdn")
                    END IF
                 END IF
             END DO
          END DO
       ELSE IF (l_flip(itype).AND.atoms%flipSpinScale(itype)) THEN
-         IF((atoms%flipSpinTheta(itype).NE.180 .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=180.0 and flipSpinPhi=0.0",calledby="flipcdn")
+         IF((atoms%flipSpinTheta(itype).NE.(pimach()) .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0",calledby="flipcdn")
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
@@ -133,13 +133,13 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                     den%mmpMat(m,mp,i_u,2)=CMPLX(realPart2,imPart2)
                     den%mmpMat(m,mp,i_u,3)=realPart12+imPart12
                  ELSE
-                    IF (atoms%flipSpinTheta(itype).EQ.180.AND.atoms%flipSpinPhi(itype).EQ.0) THEN
+                    IF (atoms%flipSpinTheta(itype).EQ.(pimach()).AND.atoms%flipSpinPhi(itype).EQ.0) THEN
                        rhodummyR = den%mmpMat(m,mp,i_u,1)
                        den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
                        den%mmpMat(m,mp,i_u,input%jspins) = rhodummyR
                     ELSE
-                       !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by 180 degrees are allowed. 
-                       CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=180, flipSpinPhi=0 is meaningless",&
+                       !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by Pi degrees are allowed. 
+                       CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi, flipSpinPhi=0 is meaningless",&
                          calledby="flipcdn")
                     END IF
                  END IF
@@ -149,7 +149,7 @@ END DO
           ELSE IF (l_flip(itype).AND.(atoms%flipSpinScale(itype))) THEN
             DO m = -3,3
                DO mp = -3,3
-                  IF((atoms%flipSpinTheta(itype).NE.180 .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=180.0 and flipSpinPhi=0.0",calledby="flipcdn")
+                  IF((atoms%flipSpinTheta(itype).NE.Pi .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0",calledby="flipcdn")
                   rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
                   rhodumms = den%mmpMat(m,mp,i_u,1) - den%mmpMat(m,mp,i_u,input%jspins)
                   den%mmpMat(m,mp,i_u,1) = 0.5 * (rhodummy + atoms%bmu(itype) * rhodumms)
