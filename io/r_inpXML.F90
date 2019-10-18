@@ -130,6 +130,7 @@ CONTAINS
       REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
       LOGICAL            :: l_amf(4)
+      REAL               :: flipSpinPhi,flipSpinTheta,flipSpinScale
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
@@ -220,6 +221,7 @@ CONTAINS
       ALLOCATE(atoms%lnonsph(atoms%ntype))
       ALLOCATE(atoms%flipSpinPhi(atoms%ntype))
       ALLOCATE(atoms%flipSpinTheta(atoms%ntype))
+      ALLOCATE(atoms%flipSpinScale(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
@@ -1354,9 +1356,9 @@ CONTAINS
          atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
          coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
          magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
-         atoms%flipSpinPhi = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinPhi'))
-         atoms%flipSpinTheta = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinTheta'))
-         atoms%flipSpinScale = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinScale'))
+         flipSpinPhi = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinPhi'))
+         flipSpinTheta = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinTheta'))
+         flipSpinScale = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinScale'))
      
 
          ! Attributes of mtSphere element of species
@@ -1427,6 +1429,9 @@ CONTAINS
                noel(iType) = namat_const(atoms%nz(iType))
                atoms%rmt(iType) = radius
                atoms%jri(iType) = gridPoints
+               atoms%flipSpinPhi(itype) = flipSpinPhi               
+               atoms%flipSpinTheta(itype) =flipSpinTheta
+               atoms%flipSpinScale(itype) =flipSpinScale 
                atoms%dx(iType) = logIncrement
                atoms%lmax(iType) = lmax
                atoms%nlo(iType) = speciesNLO(iSpecies)

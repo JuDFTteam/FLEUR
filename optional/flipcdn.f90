@@ -58,7 +58,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    CHARACTER(len=80), ALLOCATABLE :: clines(:)
 
    DO itype=1, atoms%ntype 
-      l_flip(itype)=MERGE(.TRUE.,.FALSE.,(atoms%flipSpinPhi(itype).NE.0.0) .AND.(atoms%flipSpinTheta(itype).NE.0.0))
+      l_flip(itype)=MERGE(.TRUE.,.FALSE.,(atoms%flipSpinPhi(itype).NE.0.0) .OR.(atoms%flipSpinTheta(itype).NE.0.0))
    END DO
    !rot_den_mat(alph,beta,rho11,rho22,rho21)
    CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
