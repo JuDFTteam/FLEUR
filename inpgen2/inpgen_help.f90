@@ -29,6 +29,8 @@ CONTAINS
     CALL new_argument(0,"-warn_only","do not stop for warnings","")
     CALL new_argument(1,"-inc","which data to include in inp.xml, e.g. +all,-species,+operations,-kpts","")
 
+
+    CALL new_argument(1,"-xmlXPath","specify an xml path and value to overwrite inp.xml","")
     CALL new_argument(1,"-k","String to define k-point set","")
     call new_argument(0,"-no_send","Do not send usage data","")
     CALL new_argument(0,"-overwrite","Overwrite inp.xml if present","")
@@ -56,7 +58,7 @@ CONTAINS
     CALL print_argument("-k")
     CALL print_argument("-inc")
     CALL print_argument("-overwrite")
-    
+
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Please check the documentation on www.flapw.de for more details"
 

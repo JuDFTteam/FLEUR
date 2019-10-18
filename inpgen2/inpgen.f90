@@ -10,7 +10,7 @@ PROGRAM inpgen
 !   refer to inpgen.html (or see http://www.flapw.de/docs/inpgen.html)       !
 !                                                                            |
 !   The program is based on the input conventions of the FLAIR-code, so that !
-!   some compatibility is ensured. The symmetry generator was written by     ! 
+!   some compatibility is ensured. The symmetry generator was written by     !
 !   M.Weinert and implemented in the FLAIR-code by G.Schneider.              !
 !                                                                    gb`02   |
 !----------------------------------------------------------------------------+
@@ -39,13 +39,14 @@ PROGRAM inpgen
   USE m_types_sliceplot
   USE m_types_stars
   use m_read_old_inp
-  
+  use m_fleurinput_read_xml
+
       IMPLICIT NONE
-    
-      REAL,    ALLOCATABLE :: atompos(:, :),atomid(:) 
+
+      REAL,    ALLOCATABLE :: atompos(:, :),atomid(:)
       CHARACTER(len=20), ALLOCATABLE :: atomLabel(:)
       LOGICAL               :: l_fullinput,l_explicit,l_inpxml,l_include(4)
-      
+
       TYPE(t_input)    :: input
       TYPE(t_atoms)    :: atoms
       TYPE(t_cell)     :: cell
@@ -61,7 +62,7 @@ PROGRAM inpgen
       TYPE(t_oned)     :: oned
       TYPE(t_sliceplot):: sliceplot
       TYPE(t_stars)    :: stars
-      
+
       CHARACTER(len=40):: kpts_str
       LOGICAL          :: l_exist
       INTEGER          :: idum
@@ -73,11 +74,11 @@ PROGRAM inpgen
     END INTERFACE
 
       kpts_str=""
-      
+
       !Start program and greet user
       CALL inpgen_help()
       l_explicit=judft_was_argument("-explicit")
-      
+
       INQUIRE(file='default.econfig',exist=l_exist)
       IF (.NOT.l_exist) idum=dropDefaultEconfig()
 
@@ -86,18 +87,19 @@ PROGRAM inpgen
       INQUIRE(file='inp.xml',exist=l_inpxml)
       IF (l_inpxml.AND..NOT.(judft_was_argument("-inp.xml").or.judft_was_argument("-overwrite")))&
            CALL judft_error("inp.xml exists and can not be overwritten")
-      
+
       IF (judft_was_argument("-inp")) THEN
          call read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
               sliceplot,banddos,enpara,xcpot,kpts,hybrid, oneD)
          l_fullinput=.TRUE.
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
-         call judft_error("reading inp.xml not yet possible")
+         call Fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,&
+         sliceplot=Sliceplot,banddos=Banddos,hybrid=Hybrid,oned=Oned,xcpot=Xcpot,kpts=Kpts)
          l_fullinput=.TRUE.
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
-         
+
          CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,&
               input,sym,noco,vacuum,stars,xcpot,cell,hybrid)
          l_fullinput=.FALSE.
@@ -107,12 +109,12 @@ PROGRAM inpgen
       IF (.NOT.l_fullinput) THEN
          !First we determine the spacegoup and map the atoms to groups
          CALL make_crystal(input%film,atomid,atompos,atomlabel,vacuum%dvac,noco,&
-              cell,sym,atoms)          
-         
+              cell,sym,atoms)
+
          !All atom related parameters are set here. Note that some parameters might
          !have been set in the read_input call before by adding defaults to the atompar module
          CALL make_atomic_defaults(input,vacuum,cell,oneD,atoms,enpara)
-         
+
          !Set all defaults that have not been specified before or can not be specified in inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
                    xcpot,noco,hybrid)
@@ -135,28 +137,28 @@ PROGRAM inpgen
          if (.not.l_include(1)) CALL sym%print_XML(99,"sym.xml")
       ENDIF
       if (.not.l_include(2)) CALL kpts%print_XML(99,"kpts.xml")
-      
+
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
       CALL xsf_WRITE_atoms(55,atoms,input%film,.FALSE.,cell%amat)
       CLOSE (55)
       CLOSE(6)
-      
+
       CALL juDFT_end("All done")
 
     CONTAINS
       SUBROUTINE determine_includes(l_include)
         LOGICAL,INTENT(out)::l_include(4)  !kpts,operations,species,position
-        
+
         CHARACTER(len=100)::str=''
         LOGICAL           ::incl
 
         l_include=[.FALSE.,.FALSE.,.TRUE.,.TRUE.]
-        
+
         IF (judft_was_argument("-inc")) THEN
            str=judft_string_for_argument("-inc")
-           
-           DO WHILE(LEN_TRIM(str)>0) 
+
+           DO WHILE(LEN_TRIM(str)>0)
               IF (str(1:1)=='-') THEN
                  incl=.FALSE.
                  str=str(2:)
@@ -183,7 +185,7 @@ PROGRAM inpgen
               END IF
            END DO
         ENDIF
-        
+
       END SUBROUTINE determine_includes
-      
+
     END PROGRAM inpgen
