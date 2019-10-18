@@ -149,7 +149,7 @@ END DO
           ELSE IF (l_flip(itype).AND.(atoms%flipSpinScale(itype))) THEN
             DO m = -3,3
                DO mp = -3,3
-                  IF((atoms%flipSpinTheta(itype).NE.Pi .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0",calledby="flipcdn")
+                  IF((atoms%flipSpinTheta(itype).NE.pimach() .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0",calledby="flipcdn")
                   rhodummy = den%mmpMat(m,mp,i_u,1) + den%mmpMat(m,mp,i_u,input%jspins)
                   rhodumms = den%mmpMat(m,mp,i_u,1) - den%mmpMat(m,mp,i_u,input%jspins)
                   den%mmpMat(m,mp,i_u,1) = 0.5 * (rhodummy + atoms%bmu(itype) * rhodumms)
