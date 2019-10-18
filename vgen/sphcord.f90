@@ -1,68 +1,53 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2019 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-      MODULE m_polangle
-c***********************************************************************
-c calculates the polar angle theta and phi of a vector with components
-c vx, vy and vz.
-c Philipp Kurz 2000-02-08
-c***********************************************************************
-      CONTAINS
-      SUBROUTINE pol_angle(
-     >                     vx,vy,vz,
-     <                     theta,phi)
+MODULE m_sphcoord
+   
+   !--------------------------------------------------------------------------------
+   ! Calculates the polar angles theta and phi of a vector with components
+   ! x, y and z.
+   !
+   ! Based on pol_angle by P. Kurz.  
+   !--------------------------------------------------------------------------------
+   
+   CONTAINS
+      SUBROUTINE sphcoord(x,y,z,theta,phi)
 
-      USE m_constants, ONLY : pimach
+      USE m_constants
+
       IMPLICIT NONE
 
-C     .. Scalar Arguments ..
-      REAL, INTENT    (IN) :: vx,vy,vz
-      REAL, INTENT   (OUT) :: theta,phi
-C     ..
-C     .. Local Scalars ..
-      REAL eps,vxyz,vxy,pi
-C     ..
+      REAL, INTENT(IN)  :: x, y, z
+      REAL, INTENT(OUT) :: theta, phi
+      
+      REAL, PARAMETER   :: eps = 1.0e-15
 
-      pi = pimach()
-      eps = 1.0e-8
+      REAL r, rho
 
-      vxy  = sqrt(vx**2 + vy**2)
-      vxyz = sqrt(vx**2 + vy**2 + vz**2)
+      rho  = SQRT(x**2+y**2)
+      r = SQRT(x**2+y**2+z**2)
 
-      IF ( (vxyz.LT.eps) .OR. (vxy.LT.eps) ) THEN
+      IF (r.LT.eps) THEN
          theta = 0.0
          phi   = 0.0
       ELSE
-c--->    due to rounding errors vxy/vxyz can become >1, if vz is very
-c--->    small. therefore, make sure that vz is not to small.
-         IF (abs(vz).LT.eps) THEN
-            theta = pi/2
-         ELSE
-            !theta = asin(vxy/vxyz)
-            theta = ACOS(vz/vxyz)
-         ENDIF
-         !IF ( vz.LT.0 ) theta = pi - theta
-
-c--->    due to rounding errors vy/vxy can become >1, if vx is very
-c--->    small. therefore, make sure that vx is not to small.
-         IF (abs(vx).LT.eps) THEN
-            phi = SIGN(1.0, vy)*pi/2
-         ELSE IF ((abs(vy).LT.eps)) THEN
-            phi = pi/2 - SIGN(1.0, vx)*pi/2
-         ELSE IF ((vx<0).AND.(vy.GE.0)) THEN
-            phi = ATAN(vy/vx)+pi
+         theta = ACOS(z/r)
+         IF (rho.LT.eps) THEN
+            phi = 0.0
+         ELSE IF ((x/rho).LT.eps) THEN
+            phi = SIGN(1.0, y)*pi_const/2.0
+         ELSE IF (x.GT.0.0) THEN
+            phi = ATAN(y/x)!pi/2 - SIGN(1.0, vx)*pi/2
+         ELSE IF (y.GE.0.0) THEN
+            phi = ATAN(y/x)+pi_const
          ELSE 
-            phi = ATAN(vy/vx)-pi
-         !ELSE
-         !   phi   = asin(abs(vy)/vxy)
+            phi = ATAN(vy/vx)-pi_const
          
          ENDIF
-         !IF ( vx.LT.0 ) phi = pi - phi
-         !IF ( vy.LT.0 ) phi = -phi
       ENDIF
 
-      END SUBROUTINE pol_angle
-      END MODULE m_polangle
+   END SUBROUTINE sphcoord
+END MODULE m_sphcoord
