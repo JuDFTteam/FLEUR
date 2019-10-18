@@ -130,7 +130,8 @@ CONTAINS
       REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
       LOGICAL            :: l_amf(4)
-      REAL               :: flipSpinPhi,flipSpinTheta,flipSpinScale
+      REAL               :: flipSpinPhi,flipSpinTheta
+      LOGICAL            :: flipSpinScale
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
