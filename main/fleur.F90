@@ -519,6 +519,7 @@ CONTAINS
 
     CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
     !CALL makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,testDen)
+    CALL checkplotinp()
     CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDen             ', testDen(1), testDen(1), testDen(2), testDen(3))
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenz            ', testDen(3))
