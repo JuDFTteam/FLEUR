@@ -52,6 +52,7 @@ wannier/wann_nocoplot.F
 #wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
 wannier/wann_gabeffgagaunt.f
+wannier/wann_perpmag.f
 wannier/wann_perpmag_rs.f
 wannier/wann_plot.F
 wannier/wann_plot_from_lapw.f
