@@ -58,12 +58,12 @@ c****************************************************************************
       use m_wann_write_amn
       use m_wann_write_nabla
       use m_wann_mmkb_int
-#ifdef CPP_TOPO
       use m_wann_perpmag
+      use m_wann_gabeffgagaunt
+#ifdef CPP_TOPO
       use m_wann_nabla_updown
       use m_wann_surfcurr_updown
       use m_wann_surfcurr_int_updown
-      use m_wann_gabeffgagaunt
 #endif
       IMPLICIT NONE
 #include "cpp_double.h"
@@ -746,7 +746,7 @@ c****************************************************************
 c****************************************************************
 c     compute matrix elements of exchange field
 c****************************************************************
-#ifdef CPP_TOPO
+
       if(wann%l_perpmag)then
          allocate( perpmag(nbnd,nbnd,fullnkpts),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 35',
@@ -795,7 +795,7 @@ c****************************************************************
      <            dbeffulog,
      <            ulobeffug,ulobeffdg,ulobeffulog)
       endif   
-#endif      
+    
 
 
       i_rec = 0 ; n_rank = 0
@@ -1040,8 +1040,6 @@ c...for the lapws and local orbitals, summed by the basis functions
      <       hsomtxvec(:,:,:,:,:,ikpt))
       endif
 
-#ifdef CPP_TOPO
-
       if(wann%l_perpmag)then
          call wann_perpmag(
      >            nslibd,neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
@@ -1054,6 +1052,8 @@ c...for the lapws and local orbitals, summed by the basis functions
      >            acof,bcof,ccof,
      <            perpmag(:,:,ikpt))
       endif   
+
+#ifdef CPP_TOPO
 
       if(wann%l_surfcurr)then
          call wann_surfcurr_int_updown(
