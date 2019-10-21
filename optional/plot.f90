@@ -458,7 +458,6 @@ CONTAINS
                      noco, score, potnorm, denName, denf, denA1, denA2, denA3)
       USE m_outcdn
       USE m_xsf_io
-      USE m_cdn_io
 
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
@@ -805,6 +804,10 @@ CONTAINS
       DEALLOCATE(xdnout, outFilenames)
 
    END SUBROUTINE savxsf
+
+   SUBROUTINE savcsv
+   
+   END SUBROUTINE savcsv
 
    SUBROUTINE vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                          noco, factor, score, potnorm, denmat, denName)

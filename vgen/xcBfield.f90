@@ -210,7 +210,7 @@ CONTAINS
 	
 	            A_temp(kt+k,1,1)=0.0!*(r**2)*(r/atoms%rmt(n))!*SIN(th)*COS(ph)*1000000.0
 	            A_temp(kt+k,2,1)=0.0!*(r**2)*(r/atoms%rmt(n))!*SIN(th)*SIN(ph)*1000000.0
-	            A_temp(kt+k,3,1)=(r**2)*r!*COS(th)!*1000000.0
+	            A_temp(kt+k,3,1)=(r**2)*r*COS(th)
             ENDDO ! k
             kt = kt + nsp
          END DO ! ir
