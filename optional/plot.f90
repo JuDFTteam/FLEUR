@@ -726,11 +726,11 @@ CONTAINS
                         DO j = 1, 3
                            help(j) = xdnout(1+j)/xdnout(5) 
                         END DO
-                        IF (help(3)<0.5) THEN
+                        !IF (help(3)<0.5) THEN
                            xdnout(6)= ACOS(help(3))
-                        ELSE
-                           xdnout(6)= pi_const/2.0-ASIN(help(3))
-                        END IF
+                        !ELSE
+                        !   xdnout(6)= pi_const/2.0-ASIN(help(3))
+                        !END IF
                         IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
                            !xdnout(7)= -tpi_const
                            xdnout(7)= 0.0

@@ -203,7 +203,7 @@ CONTAINS
                ph = phi(k)
                A_temp(k+kt,1,1)=0*(r**2)*(r/atoms%rmt(n))!*SIN(th)*COS(ph)*1000000.0
                A_temp(k+kt,2,1)=0*(r**2)*(r/atoms%rmt(n))!*SIN(th)*SIN(ph)*1000000.0
-               A_temp(k+kt,3,1)=(r**2)*ph!*COS(th)*1000000.0
+               A_temp(k+kt,3,1)=(r**2)*th!*COS(th)*1000000.0
             ENDDO ! k
             kt = kt + nsp
          END DO ! ir
