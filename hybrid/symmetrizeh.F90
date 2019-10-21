@@ -240,7 +240,7 @@ CONTAINS
                         ilotot = ilotot + 1
                         l_lo(ilotot) = l
                         itype_lo(ilotot) = itype
-                        gpt_lo(:, ilotot) = lapw%gvec(:, kveclo(ilotot), jsp)
+                        gpt_lo(:, ilotot) = lapw%gvec(:, lapw%kvec(m,ilo,iatom), jsp)
                      END DO
                   END DO
                END IF
@@ -551,7 +551,6 @@ CONTAINS
          COMPLEX               :: c
          COMPLEX, PARAMETER     :: img = (0.0, 1.0)
 
-         call timestart("symm harmonics")
          Y(1) = 0.282094791773878
          IF (ll == 0) RETURN
 
@@ -599,7 +598,6 @@ CONTAINS
                Y(lm) = SQRT((2.0*l + 1)/(l + m)/(l - m))*(SQRT(2.0*l - 1)*ctheta*Y(lm - 2*l) - SQRT((l + m - 1.0)*(l - m - 1)/(2*l - 3))*Y(lm - 4*l + 2))
             END DO
          END DO
-         call timestop("symm harmonics")
       END SUBROUTINE harmonicsr
 
    END SUBROUTINE symmetrizeh

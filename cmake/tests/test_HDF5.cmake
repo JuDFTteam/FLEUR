@@ -29,6 +29,31 @@ if ( FLEUR_USE_HDF5)
             )
 endif()
 
+
+#now try to find the library by adding the -l stuff to the FLEUR_LIBRARIES
+foreach(ADD_String "-lhdf5_fortran;-lhdf5" 
+                   "-lhdf5_fortran;-lhdf5_f90cstub;-lhdf5"
+		   "-lhdf5_fortran;-lhdf5;-ldl" 
+                   "-lhdf5_fortran;-lhdf5_f90cstub;-lhdf5;-ldl"
+                   "-lhdf5_fortran;-lhdf5;-lz" 
+                   "-lhdf5_fortran;-lhdf5_f90cstub;-lhdf5;-lz"
+		   "-lhdf5_fortran;-lhdf5;-ldl;-lz" 
+                   "-lhdf5_fortran;-lhdf5_f90cstub;-lhdf5;-ldl;-lz")
+   if (NOT FLEUR_USE_HDF5MPI)
+     set(TEST_LIBRARIES "${FLEUR_LIBRARIES};${ADD_String}")
+     try_compile(FLEUR_USE_HDF5MPI ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_HDF5MPI.f90
+   	    LINK_LIBRARIES ${TEST_LIBRARIES}
+            )
+     if (FLEUR_USE_HDF5MPI)
+          set(FLEUR_HDF5_LIBRARIES ${TEST_LIBRARIES})
+     endif()       	    
+   endif()
+endforeach()
+
+
+
+
+
 message("HDF5 Library found:${FLEUR_USE_HDF5}")
 
 if (DEFINED CLI_FLEUR_USE_HDF5)
