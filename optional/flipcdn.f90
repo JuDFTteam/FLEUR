@@ -90,14 +90,14 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                       den%mt(j,lh,itype,input%jspins) = rhodummyR
                    ELSE
                       !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by theta=Pi/2 are allowed. 
-                      CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi, flipSpinPhi=0 is meaningless",&
+                      CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi and flipSpinPhi=0 is currently not supported.",&
                          calledby="flipcdn")
                    END IF
                 END IF
             END DO
          END DO
       ELSE IF (l_flip(itype).AND.atoms%flipSpinScale(itype)) THEN
-         IF((atoms%flipSpinTheta(itype).NE.(pimach()) .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0",calledby="flipcdn")
+         IF((atoms%flipSpinTheta(itype).NE.(pimach()) .OR.atoms%flipSpinPhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0.",calledby="flipcdn")
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
@@ -139,7 +139,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
                        den%mmpMat(m,mp,i_u,input%jspins) = rhodummyR
                     ELSE
                        !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by Pi degrees are allowed. 
-                       CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi, flipSpinPhi=0 is meaningless",&
+                       CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi, flipSpinPhi=0 is currently not supported.",&
                          calledby="flipcdn")
                     END IF
                  END IF
