@@ -161,6 +161,7 @@ CONTAINS
       INTEGER                                      :: nsp, n, kt, kt2, ir, i, j, k, ifftxc3
       REAL                                         :: r, th, ph, x, y, z, dx, dy, dz
       REAL, ALLOCATABLE                            :: thet(:), phi(:), A_temp(:,:,:)!space grid, index
+      TYPE(t_gradients)                            :: grad
 
       IF (itest.EQ.0) THEN 
          RETURN
@@ -198,12 +199,18 @@ CONTAINS
          kt = 0
          DO ir = 1, atoms%jri(n)
             r = atoms%rmsh(ir, n)
+            !print *, 'ir'
+            !print *, ir
             DO k = 1, nsp
                th = thet(k)
                ph = phi(k)
-               A_temp(k+kt,1,1)=0*(r**2)*(r/atoms%rmt(n))!*SIN(th)*COS(ph)*1000000.0
-               A_temp(k+kt,2,1)=0*(r**2)*(r/atoms%rmt(n))!*SIN(th)*SIN(ph)*1000000.0
-               A_temp(k+kt,3,1)=(r**2)*th!*COS(th)*1000000.0
+               !print *, k
+	            !print *, th/pi_const
+	            !print *, ph/pi_const
+	
+	            A_temp(kt+k,1,1)=0.0!*(r**2)*(r/atoms%rmt(n))!*SIN(th)*COS(ph)*1000000.0
+	            A_temp(kt+k,2,1)=0.0!*(r**2)*(r/atoms%rmt(n))!*SIN(th)*SIN(ph)*1000000.0
+	            A_temp(kt+k,3,1)=(r**2)*r!*COS(th)!*1000000.0
             ENDDO ! k
             kt = kt + nsp
          END DO ! ir
@@ -211,6 +218,11 @@ CONTAINS
          CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,1,:), Avec(1)%mt(:,0:,n,:))
          CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,2,:), Avec(2)%mt(:,0:,n,:))
          CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,3,:), Avec(3)%mt(:,0:,n,:))
+         print *, 'A_z 3rd entry before fromto grid'
+         print *, A_temp(3,3,1)/((atoms%rmsh(1, n)**2))
+         CALL mt_to_grid(.FALSE., 1, atoms, sphhar, Avec(3)%mt(:,0:,n,:), n, grad, A_temp(:,3,:))
+         print *, 'A_z 3rd entry after fromto grid'
+         print *, A_temp(3,3,1)
          DEALLOCATE (A_temp)
       END DO ! n
 
