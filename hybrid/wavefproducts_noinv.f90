@@ -224,10 +224,8 @@ CONTAINS
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
-      INTEGER                 ::  lm, lm1, lm2, m1, m2, i, j, ll
+      INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll
       INTEGER                 ::  itype, ieq, iband, jband, ic1, m
-
-      REAL                    ::  rdum
 
       COMPLEX                 ::  cdum
       COMPLEX                 ::  cmplx_exp
@@ -314,8 +312,7 @@ CONTAINS
                         DO jband = bandoi, bandof
                            cdum = carr(jband, iband)*cmplx_exp
                            DO i = 1, hybrid%nindxm1(l, itype)
-                              j = lm + i
-                              cprod(j, jband, iband) = cprod(j, jband, iband) + hybdat%prodm(i, n, l, itype)*cdum
+                              cprod(i+lm, jband, iband) = cprod(i+lm, jband, iband) + hybdat%prodm(i, n, l, itype)*cdum
                            END DO
 
                         END DO
