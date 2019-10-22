@@ -148,20 +148,6 @@ CONTAINS
 
             IF(hybrid%l_hybrid.OR.input%l_rdmft) THEN
 
-               DO i = 1, hmat%matsize1
-                  DO j = 1, i
-                     IF (hmat%l_real) THEN
-                        IF ((i.LE.5).AND.(j.LE.5)) THEN
-                           WRITE(1233,'(2i7,2f15.8)') i, j, hmat%data_r(i,j), hmat%data_r(j,i)
-                        END IF
-                     ELSE
-                        IF ((i.LE.5).AND.(j.LE.5)) THEN
-                           WRITE(1233,'(2i7,4f15.8)') i, j, hmat%data_c(i,j), hmat%data_c(j,i)
-                        END IF
-                     ENDIF
-                  END DO
-               END DO
-
                ! Write overlap matrix smat to direct access file olap
                ! print *,"Wrong overlap matrix used, fix this later"
                CALL write_olap(smat,(jsp-1)*kpts%nkpt+nk) ! Note: At this moment this only works without MPI parallelization
