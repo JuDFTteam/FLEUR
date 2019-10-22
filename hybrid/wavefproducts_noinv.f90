@@ -291,7 +291,8 @@ CONTAINS
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
                            IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                               carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                          * outer_prod(cmt(bandoi:bandof, lm2, ic), conjg(cmt_nk(bandi:bandf, lm1, ic)))
+                                          * outer_prod(cmt(bandoi:bandof, lm2, ic), &
+                                                       conjg(cmt_nk(bandi:bandf, lm1, ic)))
                            END IF
                         END IF
 
@@ -299,13 +300,9 @@ CONTAINS
                         IF (abs(m2) <= l2 .and. offdiag) THEN
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
                            IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
-                              DO iband = bandi, bandf
-                                 DO jband = bandoi, bandof
-                                    carr(jband, iband) = carr(jband, iband) &
-                                       + hybdat%gauntarr(2, l1, l2, l, m1, m)&
-                                       * conjg(cmt_nk(iband, lm2, ic)) * cmt(jband, lm1, ic)
-                                 END DO
-                              END DO
+                              carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
+                                          * outer_prod(cmt(bandoi:bandof, lm1, ic),&
+                                                       conjg(cmt_nk(bandi:bandf, lm2, ic)))
                            END IF
                         END IF
 
