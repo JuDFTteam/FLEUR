@@ -298,12 +298,12 @@ CONTAINS
                         m2 = m1 - m ! switch role of b1 and b2
                         IF (abs(m2) <= l2 .and. offdiag) THEN
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
-                           rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
-                           IF (abs(rdum) > 1e-12) THEN
+                           IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                               DO iband = bandi, bandf
-                                 cdum = rdum*conjg(cmt_nk(iband, lm2, ic)) !nk
                                  DO jband = bandoi, bandof
-                                    carr(jband, iband) = carr(jband, iband) + cdum*cmt(jband, lm1, ic)
+                                    carr(jband, iband) = carr(jband, iband) &
+                                       + hybdat%gauntarr(2, l1, l2, l, m1, m)&
+                                       * conjg(cmt_nk(iband, lm2, ic)) * cmt(jband, lm1, ic)
                                  END DO
                               END DO
                            END IF
