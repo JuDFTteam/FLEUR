@@ -242,7 +242,7 @@ CONTAINS
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            lmstart(l, itype) = sum((/(hybrid%nindx(ll, itype)*(2*ll + 1), ll=0, l - 1)/))
+            lmstart(l, itype) = sum([(hybrid%nindx(ll, itype)*(2*ll + 1), ll=0, l - 1)/)])
          END DO
       END DO
 
