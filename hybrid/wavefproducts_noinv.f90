@@ -227,7 +227,6 @@ CONTAINS
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll
       INTEGER                 ::  itype, ieq, iband, jband, ic1, m
 
-      COMPLEX                 ::  cdum
       COMPLEX                 ::  cmplx_exp
 
       LOGICAL                 ::  offdiag
@@ -308,15 +307,11 @@ CONTAINS
 
                      END DO  !m1
 
-                     DO iband = bandi, bandf
-                        DO jband = bandoi, bandof
-                           cdum = carr(jband, iband)*cmplx_exp
-                           DO i = 1, hybrid%nindxm1(l, itype)
-                              cprod(i+lm, jband, iband) = cprod(i+lm, jband, iband) + hybdat%prodm(i, n, l, itype)*cdum
-                           END DO
+                     DO i = 1, hybrid%nindxm1(l, itype)
+                        cprod(i+lm,:,:) = cprod(i+lm,:,:) &
+                              + hybdat%prodm(i, n, l, itype)*carr *cmplx_exp
+                     ENDDO
 
-                        END DO
-                     END DO
 
                      lm = lm + hybrid%nindxm1(l, itype) ! go to lm start index for next m-quantum number
 
