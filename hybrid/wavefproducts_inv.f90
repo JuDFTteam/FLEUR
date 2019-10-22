@@ -63,6 +63,40 @@ CONTAINS
 
    END SUBROUTINE wavefproducts_inv5
 
+   subroutine wavefproducts_inv_IS_using_noinv(bandi, bandf, bandoi, bandof, dimension, input,&
+                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
+                                 cell, nbasm_mt, sym, noco, nkqpt, rprod)
+     use m_types
+     use m_wavefproducts_noinv
+     use m_judft
+     implicit NONE
+
+     TYPE(t_dimension), INTENT(IN) :: dimension
+     TYPE(t_hybrid), INTENT(IN)    :: hybrid
+     TYPE(t_input), INTENT(IN)     :: input
+     TYPE(t_noco), INTENT(IN)      :: noco
+     TYPE(t_sym), INTENT(IN)       :: sym
+     TYPE(t_cell), INTENT(IN)      :: cell
+     TYPE(t_kpts), INTENT(IN)      :: kpts
+     TYPE(t_atoms), INTENT(IN)     :: atoms
+     TYPE(t_lapw), INTENT(IN)      :: lapw
+     TYPE(t_hybdat), INTENT(INOUT) :: hybdat
+
+     ! - scalars -
+     INTEGER, INTENT(IN)  :: bandi, bandf, bandoi, bandof, jsp, nk, iq, nbasm_mt
+     INTEGER, INTENT(IN)  :: nkqpt, g_t(3)
+
+     ! - arrays -
+     REAL, INTENT(OUT) :: rprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+     COMPLEX :: cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+
+     call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
+                                  dimension, input, jsp, cell, atoms, hybrid,&
+                                  hybdat, kpts, lapw, sym, nbasm_mt, noco,&
+                                  nkqpt, cprod)
+    rprod = real(cprod)
+   end subroutine wavefproducts_inv_IS_using_noinv
+
    subroutine wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
