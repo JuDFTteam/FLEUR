@@ -143,7 +143,7 @@ CONTAINS
       !(2) calculate convolution
       call timestart("calc convolution")
       call timestart("step function")
-      ALLOCATE (z0(bandoi:bandof, ngpt0), source=cmplx_0)
+      ALLOCATE(z0(bandoi:bandof, ngpt0), source=cmplx_0)
 
       DO ig2 = 1, lapw_nkqpt%nv(jsp)
          if(z_kqpt%l_real) then
@@ -227,7 +227,7 @@ CONTAINS
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll
       INTEGER                 ::  itype, ieq, iband, jband, ic1, m
 
-      COMPLEX                 ::  cmplx_exp
+      COMPLEX                 ::  atom_phase
 
       LOGICAL                 ::  offdiag
 
@@ -258,7 +258,7 @@ CONTAINS
             ic = ic + 1
             ic1 = 0
 
-            cmplx_exp = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, ic)))
+            atom_phase = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, ic)))
 
             DO l = 0, hybrid%lcutm1(itype)
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
@@ -268,55 +268,51 @@ CONTAINS
                   n1 = hybdat%prod(n, l, itype)%n1 ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
                   n2 = hybdat%prod(n, l, itype)%n2 !
 
-                  IF (mod(l1 + l2 + l, 2) /= 0) cycle
+                  IF (mod(l1 + l2 + l, 2) == 0) THEN
+                     offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
+                     !(leading to the same basis-function product)
 
-                  offdiag = l1 /= l2 .or. n1 /= n2 ! offdiag=true means that b1*b2 and b2*b1 are different combinations
-                  !(leading to the same basis-function product)
+                     lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
+                     lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
-                  lm1_0 = lmstart(l1, itype) ! start at correct lm index of cmt-coefficients
-                  lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
+                     lm = lm_0
+                     DO m = -l, l
 
-                  lm = lm_0
-                  DO m = -l, l
+                        carr = 0.0
 
-                     carr = 0.0
-
-                     lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
-                     DO m1 = -l1, l1
-                        m2 = m1 + m ! Gaunt condition -m1+m2-m=0
-                        IF (abs(m2) <= l2) THEN
-                           lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
-                           IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
-                              carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
-                                          * outer_prod(cmt(bandoi:bandof, lm2, ic), &
-                                                       conjg(cmt_nk(bandi:bandf, lm1, ic)))
+                        lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
+                        DO m1 = -l1, l1
+                           m2 = m1 + m ! Gaunt condition -m1+m2-m=0
+                           IF (abs(m2) <= l2) THEN
+                              lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                              IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
+                                 carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
+                                             * outer_prod(cmt(bandoi:bandof, lm2, ic), &
+                                                          conjg(cmt_nk(bandi:bandf, lm1, ic)))
+                              END IF
                            END IF
-                        END IF
 
-                        m2 = m1 - m ! switch role of b1 and b2
-                        IF (abs(m2) <= l2 .and. offdiag) THEN
-                           lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
-                           IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
-                              carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
-                                          * outer_prod(cmt(bandoi:bandof, lm1, ic),&
-                                                       conjg(cmt_nk(bandi:bandf, lm2, ic)))
+                           m2 = m1 - m ! switch role of b1 and b2
+                           IF (abs(m2) <= l2 .and. offdiag) THEN
+                              lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                              IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
+                                 carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
+                                             * outer_prod(cmt(bandoi:bandof, lm1, ic),&
+                                                          conjg(cmt_nk(bandi:bandf, lm2, ic)))
+                              END IF
                            END IF
-                        END IF
 
-                        lm1 = lm1 + hybrid%nindx(l1, itype) ! go to lm start index for next m1-quantum number
+                           lm1 = lm1 + hybrid%nindx(l1, itype) ! go to lm start index for next m1-quantum number
 
-                     END DO  !m1
+                        END DO  !m1
 
-                     DO i = 1, hybrid%nindxm1(l, itype)
-                        cprod(i+lm,:,:) = cprod(i+lm,:,:) &
-                              + hybdat%prodm(i, n, l, itype)*carr *cmplx_exp
-                     ENDDO
-
-
-                     lm = lm + hybrid%nindxm1(l, itype) ! go to lm start index for next m-quantum number
-
-                  END DO
-
+                        DO i = 1, hybrid%nindxm1(l, itype)
+                           cprod(i+lm,:,:) = cprod(i+lm,:,:) &
+                                 + hybdat%prodm(i, n, l, itype)*carr *atom_phase
+                        ENDDO
+                        lm = lm + hybrid%nindxm1(l, itype) ! go to lm start index for next m-quantum number
+                     END DO
+                  ENDIF
                END DO
                lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
                IF (lm /= lm_0) call juDFT_error('wavefproducts_noinv2: counting of lm-index incorrect (bug?)')
