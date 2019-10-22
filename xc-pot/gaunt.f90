@@ -21,6 +21,7 @@ CONTAINS
 !     modified to use calculated points and weights
 !     to make it dynamic.   (m.w.  jan. 1982)
 !*********************************************************************
+      USE m_judft
       IMPLICIT NONE
       INTEGER,INTENT(IN):: l,lp,ls,m,mp,ms,lmaxd
       INTEGER :: i,il,ilp,ils,n
