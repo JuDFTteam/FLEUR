@@ -224,7 +224,7 @@ CONTAINS
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, j, ll
-      INTEGER                 ::  itype, ieq, iband, jband, ic1, m
+      INTEGER                 ::  itype, ieq, iband, iband1, ic1, m
 
       REAL                    ::  rdum
 
@@ -288,11 +288,12 @@ CONTAINS
                         m2 = m1 + m ! Gaunt condition -m1+m2-m=0
                         IF (abs(m2) <= l2) THEN
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                           rdum = hybdat%gauntarr(1, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
                            IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
-                                 DO jband = bandoi, bandof
-                                    carr2(jband, iband) = carr2(jband, iband) &
-                                    + hybdat%gauntarr(1, l1, l2, l, m1, m)*conjg(cmt_nk(iband, lm1, ic))*cmt(jband, lm2, ic) !ikpt
+                                 cdum = rdum*conjg(cmt_nk(iband, lm1, ic)) !nk
+                                 DO iband1 = bandoi, bandof
+                                    carr2(iband1, iband) = carr2(iband1, iband) + cdum*cmt(iband1, lm2, ic) !ikpt
 
                                  END DO
                               END DO
@@ -306,8 +307,8 @@ CONTAINS
                            IF (abs(rdum) > 1e-12) THEN
                               DO iband = bandi, bandf
                                  cdum = rdum*conjg(cmt_nk(iband, lm2, ic)) !nk
-                                 DO jband = bandoi, bandof
-                                    carr2(jband, iband) = carr2(jband, iband) + cdum*cmt(jband, lm1, ic)
+                                 DO iband1 = bandoi, bandof
+                                    carr2(iband1, iband) = carr2(iband1, iband) + cdum*cmt(iband1, lm1, ic)
                                  END DO
                               END DO
                            END IF
@@ -318,11 +319,11 @@ CONTAINS
                      END DO  !m1
 
                      DO iband = bandi, bandf
-                        DO jband = bandoi, bandof
-                           cdum = carr2(jband, iband)*cmplx_exp
+                        DO iband1 = bandoi, bandof
+                           cdum = carr2(iband1, iband)*cmplx_exp
                            DO i = 1, hybrid%nindxm1(l, itype)
                               j = lm + i
-                              cprod(j, jband, iband) = cprod(j, jband, iband) + hybdat%prodm(i, n, l, itype)*cdum
+                              cprod(j, iband1, iband) = cprod(j, iband1, iband) + hybdat%prodm(i, n, l, itype)*cdum
                            END DO
 
                         END DO
