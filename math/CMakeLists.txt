@@ -7,7 +7,6 @@ math/d_wigner.F
 math/dcylbs.f
 math/dsphbs.f
 math/gaussp.f
-math/grule.f
 math/inv3.f
 math/inwint.f
 math/matmul.f
@@ -32,6 +31,7 @@ math/DoubleFactorial.f90
 math/ExpSave.f90
 math/intgr.F90
 math/ylm4.F90
+math/grule.f90
 )
 if (FLEUR_USE_FFTMKL)
    set(fleur_F90 ${fleur_F90} math/mkl_dfti.f90)
