@@ -290,10 +290,9 @@ CONTAINS
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
                            IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                               DO iband = bandi, bandf
-                                 cdum = hybdat%gauntarr(1, l1, l2, l, m1, m)*conjg(cmt_nk(iband, lm1, ic)) !nk
                                  DO jband = bandoi, bandof
-                                    carr2(jband, iband) = carr2(jband, iband) + cdum*cmt(jband, lm2, ic) !ikpt
-
+                                    carr2(jband, iband) = carr2(jband, iband) + &
+                                    hybdat%gauntarr(1, l1, l2, l, m1, m)*conjg(cmt_nk(iband, lm1, ic))*cmt(jband, lm2, ic) !ikpt
                                  END DO
                               END DO
                            END IF
