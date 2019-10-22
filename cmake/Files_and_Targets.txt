@@ -54,7 +54,7 @@ io/calculator.f global/ss_sym.f global/soc_sym.f math/inv3.f  io/rw_symfile.f
 kpoints/od_kptsgen.f kpoints/bravais.f kpoints/divi.f kpoints/brzone.f
 kpoints/kptmop.f kpoints/kpttet.f init/bandstr1.F kpoints/ordstar.f kpoints/fulstar.f kpoints/kprep.f
 kpoints/tetcon.f kpoints/kvecon.f init/boxdim.f global/radsra.f global/differ.f math/inwint.f
-math/outint.f math/grule.f )
+math/outint.f)
 
 set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
 eigen/orthoglo.F90  math/ylm4.F90 mpi/mpi_bc_tool.F90 kpoints/kptgen_hybrid.f90
@@ -63,7 +63,7 @@ inpgen/closure.f90  math/intgr.F90
 io/w_inpXML.f90 kpoints/julia.f90 global/utility.F90
 init/compile_descr.F90 kpoints/kpoints.f90 io/xmlOutput.F90 kpoints/brzone2.f90 cdn/slab_dim.f90 cdn/slabgeom.f90 dos/nstm3.f90 cdn/int_21.f90
 cdn/int_21lo.f90 cdn_mt/rhomt21.f90 cdn_mt/rhonmt21.f90 force/force_a21.F90 force/force_a21_lo.f90 force/force_a21_U.f90 force/force_a12.f90
-eigen/tlmplm_store.F90 xc-pot/gaunt.f90 kpoints/unfoldBandKPTS.f90)
+eigen/tlmplm_store.F90 xc-pot/gaunt.f90 kpoints/unfoldBandKPTS.f90 math/grule.f90)
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 
