@@ -288,10 +288,9 @@ CONTAINS
                         m2 = m1 + m ! Gaunt condition -m1+m2-m=0
                         IF (abs(m2) <= l2) THEN
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
-                           rdum = hybdat%gauntarr(1, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
-                           IF (abs(rdum) > 1e-12) THEN
+                           IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                               DO iband = bandi, bandf
-                                 cdum = rdum*conjg(cmt_nk(iband, lm1, ic)) !nk
+                                 cdum = hybdat%gauntarr(1, l1, l2, l, m1, m)*conjg(cmt_nk(iband, lm1, ic)) !nk
                                  DO jband = bandoi, bandof
                                     carr2(jband, iband) = carr2(jband, iband) + cdum*cmt(jband, lm2, ic) !ikpt
 
