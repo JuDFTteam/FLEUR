@@ -49,13 +49,12 @@ CONTAINS
       IF ((l+lp-ls) < 0) RETURN
       IF ((l-lp+ls) < 0) RETURN
       IF ((lp-l+ls) < 0) RETURN
-      il = l* (l+1) + m + 1
-      ilp = lp* (lp+1) + mp + 1
-      ils = ls* (ls+1) + ms + 1
-      DO i = 1,n
-         gaunt1 = gaunt1 + w(i)*yr(i,ilp)*yr(i,il)*yr(i,ils)
-      END DO
-      RETURN
+
+      il  = l  * (l  + 1) + m  + 1
+      ilp = lp * (lp + 1) + mp + 1
+      ils = ls * (ls + 1) + ms + 1
+
+      gaunt1 = dot_product(w, yr(:,ilp)*yr(:,il)*yr(:,ils))
    END FUNCTION
 
 !     private subroutine for initializing the private arrays!
