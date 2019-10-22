@@ -53,4 +53,19 @@ CONTAINS
          nbasfcn = lapw%nv(1) + atoms%nlotot
       endif
    end function calc_number_of_basis_functions
+
+
+   function outer_prod(x,y) result(outer)
+      implicit NONE
+      complex, intent(in) :: x(:), y(:)
+      complex, allocatable :: x_mat(:,:), y_mat(:,:), outer(:,:)
+
+      allocate(x_mat(size(x), 1)      )
+      allocate(y_mat(1,      size(y)) )
+
+      x_mat(:,1) =x
+      y_mat(1,:) = y
+      outer = matmul(x_mat,y_mat)
+
+   end function outer_prod
 end module m_wavefproducts_aux

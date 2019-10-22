@@ -104,7 +104,7 @@ CONTAINS
 
 
       COMPLEX                 ::  carr1(bandoi:bandof)
-      COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
+      COMPLEX                 ::  carr(bandoi:bandof, bandf - bandi + 1)
       TYPE(t_mat)             ::  z_nk, z_kqpt
       COMPLEX, ALLOCATABLE    ::  z0(:, :)
 
@@ -165,7 +165,7 @@ CONTAINS
       call timestart("hybrid gptm")
       ic = nbasm_mt
       DO igptm = 1, hybrid%ngptm(iq)
-         carr2 = 0
+         carr = 0
          ic = ic + 1
          iigptm = hybrid%pgptm(igptm, iq)
 
@@ -182,12 +182,12 @@ CONTAINS
                   cdum1 = conjg(z_nk%data_c(ig1, n1))
                endif
                DO n2 = bandoi, bandof
-                  carr2(n2, n1) = carr2(n2, n1) + cdum1*z0(n2, ig2)
+                  carr(n2, n1) = carr(n2, n1) + cdum1*z0(n2, ig2)
                END DO
             END DO
 
          END DO
-         cprod(ic, :, :) = carr2(:, :)
+         cprod(ic, :, :) = carr(:, :)
       END DO
       call timestop("hybrid gptm")
       DEALLOCATE (z0, pointer, gpt0)
@@ -205,6 +205,7 @@ CONTAINS
       USE m_constants
       use m_io_hybrid
       use m_judft
+      use m_wavefproducts_aux
       IMPLICIT NONE
       TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_kpts), INTENT(IN)        :: kpts
@@ -236,7 +237,7 @@ CONTAINS
       !      - local arrays -
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
 
-      COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
+      COMPLEX                 ::  carr(bandoi:bandof, bandf - bandi + 1)
       COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
 
@@ -281,7 +282,7 @@ CONTAINS
                   lm = lm_0
                   DO m = -l, l
 
-                     carr2 = 0.0
+                     carr = 0.0
 
                      lm1 = lm1_0 + n1 ! go to lm index for m1=-l1
                      DO m1 = -l1, l1
@@ -289,12 +290,8 @@ CONTAINS
                         IF (abs(m2) <= l2) THEN
                            lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%nindx(l2, itype)
                            IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
-                              DO iband = bandi, bandf
-                                 DO jband = bandoi, bandof
-                                    carr2(jband, iband) = carr2(jband, iband) + &
-                                    hybdat%gauntarr(1, l1, l2, l, m1, m)*conjg(cmt_nk(iband, lm1, ic))*cmt(jband, lm2, ic) !ikpt
-                                 END DO
-                              END DO
+                              carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
+                                          * outer_prod(cmt(bandoi:bandof, lm2, ic), conjg(cmt_nk(bandi:bandf, lm1, ic)))
                            END IF
                         END IF
 
@@ -306,7 +303,7 @@ CONTAINS
                               DO iband = bandi, bandf
                                  cdum = rdum*conjg(cmt_nk(iband, lm2, ic)) !nk
                                  DO jband = bandoi, bandof
-                                    carr2(jband, iband) = carr2(jband, iband) + cdum*cmt(jband, lm1, ic)
+                                    carr(jband, iband) = carr(jband, iband) + cdum*cmt(jband, lm1, ic)
                                  END DO
                               END DO
                            END IF
@@ -318,7 +315,7 @@ CONTAINS
 
                      DO iband = bandi, bandf
                         DO jband = bandoi, bandof
-                           cdum = carr2(jband, iband)*cmplx_exp
+                           cdum = carr(jband, iband)*cmplx_exp
                            DO i = 1, hybrid%nindxm1(l, itype)
                               j = lm + i
                               cprod(j, jband, iband) = cprod(j, jband, iband) + hybdat%prodm(i, n, l, itype)*cdum
@@ -339,5 +336,4 @@ CONTAINS
       END DO
       call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT
-
 end module m_wavefproducts_noinv
