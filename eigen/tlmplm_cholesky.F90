@@ -12,7 +12,6 @@ CONTAINS
        jspin,jsp,mpi,v,input,td,ud)
     USE m_tlmplm
     USE m_types
-    USE m_gaunt, ONLY: gaunt2
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_noco),INTENT(IN)     :: noco
