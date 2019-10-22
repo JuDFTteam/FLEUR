@@ -22,19 +22,11 @@ CONTAINS
 !     to make it dynamic.   (m.w.  jan. 1982)
 !*********************************************************************
       IMPLICIT NONE
-!     ..
-!     .. Scalar Arguments ..
       INTEGER,INTENT(IN):: l,lp,ls,m,mp,ms,lmaxd
-!     ..
-!     .. Local Scalars ..
       INTEGER :: i,il,ilp,ils,n
-!     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC mod
-!     ..
-!     .. Data statements ..
-      n= (3*lmaxd)/4+1
 
+
+      n= (3*lmaxd)/4+1
 ! heck if this is first call to subroutine
       IF ( .NOT. ALLOCATED(YR)) CALL gaunt2(lmaxd)
 ! heck if the previous call of the subroutine was with the same lmaxd
@@ -71,23 +63,16 @@ CONTAINS
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: lmaxd
-!     ..
-!     .. Local Scalars ..
       REAL :: a,cd,cth,fac,fpi,rf,sgm,sth,t
       INTEGER :: k,l,lm,lomax,m,nn
       INTEGER :: n,lmax1d
-!     ..
-!     .. Local Arrays ..
       REAL :: p(0:lmaxd+1,0:lmaxd+1),x((3*lmaxd)/4+1)
-!     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC sqrt
-!     ..
-      if (allocated(w)) return
-!$    if (omp_in_parallel() .and. omp_get_num_threads() > 1) call juDFT_error("BUG IN GAUNT!!")
-      ALLOCATE(w((3*lmaxd)/4+1),yr((3*lmaxd)/4+1,(lmaxd+1)**2))
 
+      if (allocated(w)) return
+!$    if (omp_in_parallel() .and. omp_get_num_threads() > 1) call juDFT_error("BUG IN GAUNT!!"
       n = (3*lmaxd)/4+1
+      ALLOCATE(w(n), yr(n,(lmaxd+1)**2), source=0.0)
+
       lmaxdp = lmaxd
       lmax1d = lmaxd+1
 
