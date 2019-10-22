@@ -27,15 +27,12 @@ CONTAINS
       INTEGER,INTENT(IN):: l,lp,ls,m,mp,ms,lmaxd
 !     ..
 !     .. Local Scalars ..
-      REAL :: zero
       INTEGER :: i,il,ilp,ils,n
 !     ..
 !     .. Intrinsic Functions ..
       INTRINSIC mod
 !     ..
 !     .. Data statements ..
-      DATA zero/0.0e0/
-!     ..
       n= (3*lmaxd)/4+1
 
 ! heck if this is first call to subroutine
@@ -46,7 +43,7 @@ CONTAINS
          CALL gaunt2(lmaxd)
       END IF
 
-      gaunt1 = zero
+      gaunt1 = 0.0
       IF (mp /= (m+ms)) RETURN
       IF (MOD((l+lp+ls),2) == 1) RETURN
       IF ((l+lp-ls) < 0) RETURN
