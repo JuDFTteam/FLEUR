@@ -45,6 +45,11 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE :: l2(:,:,:)
       INTEGER, ALLOCATABLE :: n1(:,:,:)
       INTEGER, ALLOCATABLE :: n2(:,:,:)
+   contains
+      procedure  :: init => init_prodtype
+      procedure  :: free => free_prodtype
+   contains
+
    END TYPE t_prodtype
 
    TYPE t_hybdat
@@ -146,4 +151,37 @@ contains
       gptnorm = sqrt(sum(matmul(gpt(:), bmat(:,:))**2))
 
    END FUNCTION gptnorm
+
+   subroutine init_prodtype(prod, hybrid, atoms)
+      use m_types
+      use m_judft
+      implicit none
+      class(t_prodtype)          :: prod
+      type(t_hybrid), intent(in) :: hybrid
+      type(t_atoms),  intent(in) :: atoms
+      integer                    :: ok
+
+      ALLOCATE (prod%l1(hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
+      IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%l1')
+
+      ALLOCATE (prod%l2, mold=prod%l1, stat=ok)
+      IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%l2')
+
+      ALLOCATE (prod%n1, mold=prod%l1, stat=ok)
+      IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%n1')
+
+      ALLOCATE (prod%n2, mold=prod%l1, stat=ok)
+      IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%n2')
+   end subroutine init_prodtype
+
+   subroutine free_prodtype(prod)
+      use m_types
+      implicit NONE
+      class(t_prodtype)          :: prod
+
+      IF(ALLOCATED(prod%l1)) DEALLOCATE (prod%l1)
+      IF(ALLOCATED(prod%l2)) DEALLOCATE (prod%l2)
+      IF(ALLOCATED(prod%n1)) DEALLOCATE (prod%n1)
+      IF(ALLOCATED(prod%n2)) DEALLOCATE (prod%n2)
+   end subroutine free_prodtype
 END MODULE m_types_hybrid

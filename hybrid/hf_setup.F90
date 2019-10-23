@@ -188,16 +188,7 @@ CONTAINS
          ALLOCATE (hybdat%prodm(hybrid%maxindxm1, hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
-         ! allocate prod arrays
-         ALLOCATE (hybdat%prod%l1(hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
-         IF (ok /= 0) call judft_error('hf_setup: failure allocation hybdat%prod%l1')
-         ALLOCATE (hybdat%prod%l2, mold=hybdat%prod%l1, stat=ok)
-         IF (ok /= 0) call judft_error('hf_setup: failure allocation hybdat%prod%l2')
-         ALLOCATE (hybdat%prod%n1, mold=hybdat%prod%l1, stat=ok)
-         IF (ok /= 0) call judft_error('hf_setup: failure allocation hybdat%prod%n1')
-         ALLOCATE (hybdat%prod%n2, mold=hybdat%prod%l1, stat=ok)
-         IF (ok /= 0) call judft_error('hf_setup: failure allocation hybdat%prod%n2')
-
+         call hybdat%prod%init(hybrid, atoms)
 
          basprod = 0; hybdat%prodm = 0; hybdat%prod%l1 = 0; hybdat%prod%l2 = 0
          hybdat%prod%n1 = 0; hybdat%prod%n2 = 0
