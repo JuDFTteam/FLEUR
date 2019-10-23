@@ -174,7 +174,7 @@ CONTAINS
 
      !(2) calculate convolution
      call timestart("calc convolution")
-     ALLOCATE (z0(bandoi:bandof, ngpt0), stat=ok, source=0.0)
+     allocate(z0(bandoi:bandof, ngpt0), stat=ok, source=0.0)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation z0')
 
      call timestart("step function")
@@ -217,7 +217,7 @@ CONTAINS
      call timestop("hybrid gptm")
      call timestop("calc convolution")
 
-     DEALLOCATE (z0, pointer, gpt0)
+     deallocate(z0, pointer, gpt0)
      CALL timestop("wavefproducts_inv5 IR")
 
      call save_npy("cprod_inv.npy", cprod)
@@ -281,7 +281,7 @@ CONTAINS
      END DO
 
      ! read in cmt coefficient at k-point nk
-     ALLOCATE (ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat), &
+     allocate(ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat), &
                ccmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), &
                source=cmplx(0.0, 0.0), stat=ok)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt')
@@ -363,7 +363,7 @@ CONTAINS
 
         END DO
      END DO
-     DEALLOCATE (ccmt_nk, ccmt)
+     deallocate(ccmt_nk, ccmt)
 
      lm_0 = 0
      lm_00 = 0

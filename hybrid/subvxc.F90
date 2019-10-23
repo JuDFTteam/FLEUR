@@ -136,12 +136,12 @@ CONTAINS
       ! Compute APW coefficients
 
       ! Calculate bascof
-      ALLOCATE (ahlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), bhlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), stat=ok)
+      allocate(ahlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), bhlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'subvxc: error in allocation of ahlp/bhlp'
 #ifndef CPP_OLDINTEL
       CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, ahlp, bhlp, bascof_lo)
 #endif
-      ALLOCATE (bascof(DIMENSION%nvd, 2*(DIMENSION%lmd + 1), atoms%nat), stat=ok)
+      allocate(bascof(DIMENSION%nvd, 2*(DIMENSION%lmd + 1), atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'subvxc: error in allocation of bascof'
 
       bascof = 0
@@ -167,7 +167,7 @@ CONTAINS
          END DO
       END DO
 
-      DEALLOCATE (ahlp, bhlp)
+      deallocate(ahlp, bhlp)
 
       ! Loop over atom types
       iatom = 0
@@ -508,7 +508,7 @@ CONTAINS
 
       CALL timestop("subvxc")
 
-      DEALLOCATE (bascof)
+      deallocate(bascof)
 
    END SUBROUTINE subvxc
 END MODULE m_subvxc

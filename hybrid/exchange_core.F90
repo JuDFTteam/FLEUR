@@ -79,7 +79,7 @@ CONTAINS
 
       ! read in mt wavefunction coefficients from file cmt
       CALL read_cmt(cmt, nk)
-      ALLOCATE (fprod(atoms%jmtd, 5), larr(5), parr(5))
+      allocate(fprod(atoms%jmtd, 5), larr(5), parr(5))
 
       ! generate ldum(nbands(nk),nbands(nk)), which is true if the corresponding matrix entry is non-zero
       ic1 = 0
@@ -128,14 +128,14 @@ CONTAINS
                            n = n + 1
                            M = SIZE(fprod, 2)
                            IF (n > M) THEN
-                              ALLOCATE (fprod2(atoms%jmtd, M), larr2(M), parr2(M))
+                              allocate(fprod2(atoms%jmtd, M), larr2(M), parr2(M))
                               fprod2 = fprod; larr2 = larr; parr2 = parr
-                              DEALLOCATE (fprod, larr, parr)
-                              ALLOCATE (fprod(atoms%jmtd, M + 5), larr(M + 5), parr(M + 5))
+                              deallocate(fprod, larr, parr)
+                              allocate(fprod(atoms%jmtd, M + 5), larr(M + 5), parr(M + 5))
                               fprod(:, :M) = fprod2
                               larr(:M) = larr2
                               parr(:M) = parr2
-                              DEALLOCATE (fprod2, larr2, parr2)
+                              deallocate(fprod2, larr2, parr2)
                            END IF
                            fprod(:atoms%jri(itype), n) = (hybdat%core1(:atoms%jri(itype), p1, l1, itype)*hybdat%bas1(:atoms%jri(itype), p2, l2, itype) &
                                                           + hybdat%core2(:atoms%jri(itype), p1, l1, itype)*hybdat%bas2(:atoms%jri(itype), p2, l2, itype))/atoms%rmsh(:atoms%jri(itype), itype)
@@ -146,7 +146,7 @@ CONTAINS
 
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                     ALLOCATE (integral(n, n), carr(n, hybrid%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
+                     allocate(integral(n, n), carr(n, hybrid%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
 
                      DO i = 1, n
                         CALL primitivef(primf1, fprod(:, i)*atoms%rmsh(:, itype)**(l + 1), atoms%rmsh, atoms%dx, atoms%jri, atoms%jmtd, itype, atoms%ntype)
@@ -190,7 +190,7 @@ CONTAINS
                         END DO
                      END DO
 
-                     DEALLOCATE (integral, carr, carr2, carr3)
+                     deallocate(integral, carr, carr2, carr3)
 
                   END DO
                END DO
@@ -292,7 +292,7 @@ CONTAINS
 
       CALL read_cmt(cmt, nk)
 
-      ALLOCATE (fprod(atoms%jmtd, 5), larr(5), parr(5))
+      allocate(fprod(atoms%jmtd, 5), larr(5), parr(5))
 
       exchange = 0
       iatom = 0
@@ -315,14 +315,14 @@ CONTAINS
                            n = n + 1
                            M = SIZE(fprod, 2)
                            IF (n > M) THEN
-                              ALLOCATE (fprod2(atoms%jmtd, M), larr2(M), parr2(M))
+                              allocate(fprod2(atoms%jmtd, M), larr2(M), parr2(M))
                               fprod2 = fprod; larr2 = larr; parr2 = parr
-                              DEALLOCATE (fprod, larr, parr)
-                              ALLOCATE (fprod(atoms%jmtd, M + 5), larr(M + 5), parr(M + 5))
+                              deallocate(fprod, larr, parr)
+                              allocate(fprod(atoms%jmtd, M + 5), larr(M + 5), parr(M + 5))
                               fprod(:, :M) = fprod2
                               larr(:M) = larr2
                               parr(:M) = parr2
-                              DEALLOCATE (fprod2, larr2, parr2)
+                              deallocate(fprod2, larr2, parr2)
                            END IF
                            fprod(:atoms%jri(itype), n) = (hybdat%core1(:atoms%jri(itype), p1, l1, itype)*hybdat%bas1(:atoms%jri(itype), p2, l2, itype) &
                                                           + hybdat%core2(:atoms%jri(itype), p1, l1, itype)*hybdat%bas2(:atoms%jri(itype), p2, l2, itype))/atoms%rmsh(:atoms%jri(itype), itype)
@@ -333,7 +333,7 @@ CONTAINS
 
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                     ALLOCATE (integral(n, n), carr(n, hybrid%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
+                     allocate(integral(n, n), carr(n, hybrid%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
 
                      DO i = 1, n
                         CALL primitivef(primf1, fprod(:atoms%jri(itype), i)*atoms%rmsh(:atoms%jri(itype), itype)**(l + 1), atoms%rmsh, atoms%dx, atoms%jri, atoms%jmtd, itype, atoms%ntype)
@@ -376,7 +376,7 @@ CONTAINS
                         END DO
                      END DO
 
-                     DEALLOCATE (integral, carr, carr2, carr3)
+                     deallocate(integral, carr, carr2, carr3)
 
                   END DO
                END DO

@@ -197,13 +197,13 @@ contains
       complex             :: matvec_dpz(size(vec))
       real, allocatable :: vecr(:), veci(:)
       integer        :: nn, n
-      n = size(vec); allocate (vecr(n), veci(n))
+      n = size(vec); allocate(vecr(n), veci(n))
       nn = n*(n + 1)/2
       if (size(mat) /= nn) call juDFT_error( 'matvec_dpz: input array has wrong size.')
       call dspmv('U', n, 1.0, mat, real(vec), 1, 0.0, vecr, 1)
       call dspmv('U', n, 1.0, mat, aimag(vec), 1, 0.0, veci, 1)
       matvec_dpz = vecr + (0.0, 1.0)*veci
-      deallocate (vecr, veci)
+      deallocate(vecr, veci)
    end function matvec_dpz
 
    function matvec_zpd(mat, vec)
@@ -214,13 +214,13 @@ contains
       complex             :: matvec_zpd(size(vec))
       real, allocatable :: vecr(:), veci(:)
       integer        :: nn, n
-      n = size(vec); allocate (vecr(n), veci(n))
+      n = size(vec); allocate(vecr(n), veci(n))
       nn = n*(n + 1)/2
       if (size(mat) /= nn) call juDFT_error( 'matvec_zpd: input array has wrong size.')
       call dspmv('U', n, 1.0, real(mat), vec, 1, 0.0, vecr, 1)
       call dspmv('U', n, 1.0, aimag(mat), vec, 1, 0.0, veci, 1)
       matvec_zpd = vecr + (0.0, 1.0)*veci
-      deallocate (vecr, veci)
+      deallocate(vecr, veci)
    end function matvec_zpd
 
    function matvec_zpz(mat, vec)
@@ -247,7 +247,7 @@ contains
       real, allocatable :: vec(:), vec2(:)
       integer        :: nn, n, k1, i, j, k
       nn = size(mat1)
-      n = nint(sqrt(0.25 + 2*nn) - 0.5); allocate (vec(n), vec2(n))
+      n = nint(sqrt(0.25 + 2*nn) - 0.5); allocate(vec(n), vec2(n))
       if (size(mat2) /= nn) &
          call juDFT_error( 'matmat_dpdp: second input array has wrong size.')
       k = 0
@@ -262,7 +262,7 @@ contains
          matmat_dpdp(:, i) = vec
          k = k + i
       enddo
-      deallocate (vec, vec2)
+      deallocate(vec, vec2)
    end function matmat_dpdp
 
    function matmat_dpzp(mat1, mat2)
@@ -278,7 +278,7 @@ contains
       integer        :: nn, n, k1, i, j, k
       nn = size(mat1)
       n = nint(sqrt(0.25 + 2*nn) - 0.5)
-      allocate (vecr(n), veci(n), vec2(n))
+      allocate(vecr(n), veci(n), vec2(n))
       if (size(mat2) /= nn) &
          call juDFT_error( 'matmat_dpzp: second input array has wrong size.')
       k = 0
@@ -294,7 +294,7 @@ contains
          matmat_dpzp(:, i) = vecr + (0.0, 1.0)*veci
          k = k + i
       enddo
-      deallocate (vecr, veci, vec2)
+      deallocate(vecr, veci, vec2)
    end function matmat_dpzp
 
    function matmat_zpdp(mat1, mat2)
@@ -310,7 +310,7 @@ contains
       integer        :: nn, n, k1, i, j, k
       nn = size(mat1)
       n = nint(sqrt(0.25 + 2*nn) - 0.5)
-      allocate (vecr(n), veci(n), vec1(n))
+      allocate(vecr(n), veci(n), vec1(n))
       if (size(mat2) /= nn) &
          call juDFT_error( 'matmat_zpdp: second input array has wrong size.')
       k = 0
@@ -326,7 +326,7 @@ contains
          matmat_zpdp(i, :) = vecr + (0.0, 1.0)*veci
          k = k + i
       enddo
-      deallocate (vecr, veci, vec1)
+      deallocate(vecr, veci, vec1)
    end function matmat_zpdp
 
    function matmat_zpzp(mat1, mat2)
@@ -339,7 +339,7 @@ contains
       complex, allocatable :: vec(:), vec2(:)
       integer        :: nn, n, k1, i, j, k
       nn = size(mat1)
-      n = nint(sqrt(0.25 + 2*nn) - 0.5); allocate (vec(n), vec2(n))
+      n = nint(sqrt(0.25 + 2*nn) - 0.5); allocate(vec(n), vec2(n))
       if (size(mat2) /= nn) &
          call juDFT_error( 'matmat_zpzp: second input array has wrong size.')
       k = 0
@@ -354,7 +354,7 @@ contains
          matmat_zpzp(:, i) = vec
          k = k + i
       enddo
-      deallocate (vec, vec2)
+      deallocate(vec, vec2)
    end function matmat_zpzp
 
    function matmat_dpdm(mat1, mat2)
@@ -364,7 +364,7 @@ contains
       real        :: matmat_dpdm(size(mat2, 1), size(mat2, 1))
       real, allocatable :: vec(:), vec2(:)
       integer        :: nn, n, k1, i
-      n = size(mat2, 1); nn = n*(n + 1)/2; allocate (vec(n), vec2(n))
+      n = size(mat2, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       if (size(mat2, 2) /= n) &
          call juDFT_error( 'matmat_dpdm: dimensions of second input array differ.')
       if (size(mat1) /= nn) &
@@ -374,7 +374,7 @@ contains
          call dspmv('U', n, 1.0, mat1, vec2, 1, 0.0, vec, 1)
          matmat_dpdm(:, i) = vec
       enddo
-      deallocate (vec, vec2)
+      deallocate(vec, vec2)
    end function matmat_dpdm
 
    function matmat_dmdp(mat1, mat2)
@@ -384,7 +384,7 @@ contains
       real        :: matmat_dmdp(size(mat1, 1), size(mat1, 1))
       real, allocatable :: vec(:), vec2(:)
       integer        :: nn, n, k1, i
-      n = size(mat1, 1); nn = n*(n + 1)/2; allocate (vec(n), vec2(n))
+      n = size(mat1, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       if (size(mat1, 2) /= n) &
          call juDFT_error( 'matmat_dmdp: dimensions of first input array differ.')
       if (size(mat2) /= nn) &
@@ -394,7 +394,7 @@ contains
          call dspmv('U', n, 1.0, mat2, vec2, 1, 0.0, vec, 1)
          matmat_dmdp(i, :) = vec
       enddo
-      deallocate (vec, vec2)
+      deallocate(vec, vec2)
    end function matmat_dmdp
 
    function matmat_dmdm(mat1, mat2)
@@ -423,7 +423,7 @@ contains
       complex, allocatable :: vec2(:)
       integer        :: nn, n, k1, i
       n = size(mat2, 1)
-      nn = n*(n + 1)/2; allocate (vecr(n), veci(n), vec2(n))
+      nn = n*(n + 1)/2; allocate(vecr(n), veci(n), vec2(n))
       if (size(mat2, 2) /= n) &
          call juDFT_error( 'matmat_dpzm: dimensions of second input array differ.')
       if (size(mat1) /= nn) &
@@ -434,7 +434,7 @@ contains
          call dspmv('U', n, 1.0, mat1, aimag(vec2), 1, 0.0, veci, 1)
          matmat_dpzm(:, i) = vecr + (0.0, 1.0)*veci
       enddo
-      deallocate (vecr, veci, vec2)
+      deallocate(vecr, veci, vec2)
    end function matmat_dpzm
 
    function matmat_dmzp(mat1, mat2)
@@ -445,7 +445,7 @@ contains
       complex              :: matmat_dmzp(size(mat1, 1), size(mat1, 1))
       complex, allocatable :: vec1(:), vec(:)
       integer        :: nn, n, k1, i
-      n = size(mat1, 1); nn = n*(n + 1)/2; allocate (vec(n), vec1(n))
+      n = size(mat1, 1); nn = n*(n + 1)/2; allocate(vec(n), vec1(n))
       if (size(mat1, 2) /= n) &
          call juDFT_error( 'matmat_dmzp: dimensions of first input array differ.')
       if (size(mat2) /= nn) &
@@ -455,7 +455,7 @@ contains
          call zhpmv('U', n, (1.0, 0.0), mat2, vec1, 1, (0.0, 0.0), vec, 1)
          matmat_dmzp(i, :) = conjg(vec)
       enddo
-      deallocate (vec, vec1)
+      deallocate(vec, vec1)
    end function matmat_dmzp
 
    function matmat_dmzm(mat1, mat2)
@@ -485,7 +485,7 @@ contains
       complex              :: matmat_zpdm(size(mat2, 1), size(mat2, 1))
       complex, allocatable :: vec(:), vec2(:)
       integer        :: nn, n, k1, i
-      n = size(mat2, 1); nn = n*(n + 1)/2; allocate (vec(n), vec2(n))
+      n = size(mat2, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       if (size(mat2, 2) /= n) &
          call juDFT_error( 'matmat_zpdm: dimensions of second input array differ.')
       if (size(mat1) /= nn) &
@@ -495,7 +495,7 @@ contains
          call zhpmv('U', n, (1.0, 0.0), mat1, vec2, 1, (0.0, 0.0), vec, 1)
          matmat_zpdm(:, i) = vec
       enddo
-      deallocate (vec, vec2)
+      deallocate(vec, vec2)
    end function matmat_zpdm
 
    function matmat_zmdp(mat1, mat2)
@@ -508,7 +508,7 @@ contains
       real, allocatable :: vecr(:), veci(:)
       integer        :: nn, n, k1, i
       n = size(mat1, 1); nn = n*(n + 1)/2
-      allocate (vecr(n), veci(n), vec1(n))
+      allocate(vecr(n), veci(n), vec1(n))
       if (size(mat1, 2) /= n) &
          call juDFT_error( 'matmat_zmdp: dimensions of first input array differ.')
       if (size(mat2) /= nn) &
@@ -519,7 +519,7 @@ contains
          call dspmv('U', n, 1.0, mat2, aimag(vec1), 1, 0.0, veci, 1)
          matmat_zmdp(i, :) = vecr - (0.0, 1.0)*veci
       enddo
-      deallocate (vecr, veci, vec1)
+      deallocate(vecr, veci, vec1)
    end function matmat_zmdp
 
    function matmat_zmdm(mat1, mat2)
@@ -548,7 +548,7 @@ contains
       complex              :: matmat_zpzm(size(mat2, 1), size(mat2, 2))
       complex, allocatable :: vec(:), vec2(:)
       integer        :: nn, n, k1, i, n2
-      n = size(mat2, 1); nn = n*(n + 1)/2; allocate (vec(n), vec2(n))
+      n = size(mat2, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       n2 = size(mat2, 2)
       if (size(mat1) /= nn) &
          call juDFT_error( 'matmat_zpzm: first input array has wrong size.')
@@ -557,7 +557,7 @@ contains
          call zhpmv('U', n, (1.0, 0.0), mat1, vec2, 1, (0.0, 0.0), vec, 1)
          matmat_zpzm(:, i) = vec
       enddo
-      deallocate (vec, vec2)
+      deallocate(vec, vec2)
    end function matmat_zpzm
 
    function matmat_zmzp(mat1, mat2)
@@ -567,7 +567,7 @@ contains
       complex              :: matmat_zmzp(size(mat1, 1), size(mat1, 1))
       complex, allocatable :: vec(:), vec2(:)
       integer        :: nn, n, k1, i
-      n = size(mat1, 1); nn = n*(n + 1)/2; allocate (vec(n), vec2(n))
+      n = size(mat1, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       if (size(mat1, 2) /= n) &
          call juDFT_error( 'matmat_zmzp: dimensions of first input array differ.')
       if (size(mat2) /= nn) &
@@ -577,7 +577,7 @@ contains
          call zhpmv('U', n, (1.0, 0.0), mat2, vec2, 1, (0.0, 0.0), vec, 1)
          matmat_zmzp(i, :) = conjg(vec)
       enddo
-      deallocate (vec, vec2)
+      deallocate(vec, vec2)
    end function matmat_zmzp
 
    function matmat_zmzm(mat1, mat2)
@@ -611,10 +611,10 @@ contains
          call juDFT_error( 'diagonalize_de: dimensions of input matrix differ.')
       if (size(eval) /= n) &
          call juDFT_error( 'diagonalize_de: eigenvalue array has wrong size.')
-      allocate (mat1(n, n), work(3*n)); mat1 = mat
+      allocate(mat1(n, n), work(3*n)); mat1 = mat
       call dsyev('N', 'U', n, mat1, n, eval, work, 3*n, info)
       if (info /= 0) call juDFT_error( 'diagonalize_de: dsyev failed.')
-      deallocate (mat1, work)
+      deallocate(mat1, work)
    end subroutine diagonalize_de
 
    subroutine diagonalize_dv(evec, eval, mat)
@@ -635,10 +635,10 @@ contains
          call juDFT_error( 'diagonalize_dv: eigenvector array has wrong dimensions.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_dv: dimensions of eigenvector array differ.')
-      allocate (work(3*n)); evec = mat
+      allocate(work(3*n)); evec = mat
       call dsyev('V', 'U', n, evec, n, eval, work, 3*n, info)
       if (info /= 0) call juDFT_error( 'diagonalize_dv: dsyev failed.')
-      deallocate (work)
+      deallocate(work)
    end subroutine diagonalize_dv
 
    subroutine diagonalize_dpe(eval, mat)
@@ -653,10 +653,10 @@ contains
          call juDFT_error( 'diagonalize_dpe: zero dimension in eigenvalue problem.')
       if (size(mat) /= nn) &
          call juDFT_error( 'diagonalize_dpe: input matrix has wrong size.')
-      allocate (mat1(nn), work(3*n)); mat1 = mat
+      allocate(mat1(nn), work(3*n)); mat1 = mat
       call dspev('N', 'U', n, mat1, eval, work, n, work, info)
       if (info /= 0) call juDFT_error( 'diagonalize_dpe: dspev failed.')
-      deallocate (mat1, work)
+      deallocate(mat1, work)
    end subroutine diagonalize_dpe
 
    subroutine diagonalize_dpv(evec, eval, mat)
@@ -675,10 +675,10 @@ contains
          call juDFT_error( 'diagonalize_dpv: eigenvector array has wrong dimensions.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_dpv: dimensions of eigenvector array differ.')
-      allocate (mat1(nn), work(3*n)); mat1 = mat
+      allocate(mat1(nn), work(3*n)); mat1 = mat
       call dspev('V', 'U', n, mat1, eval, evec, n, work, info)
       if (info /= 0) call juDFT_error( 'diagonalize_dpv: dspev failed.')
-      deallocate (mat1, work)
+      deallocate(mat1, work)
    end subroutine diagonalize_dpv
 
    subroutine diagonalize_ze(eval, mat)
@@ -696,10 +696,10 @@ contains
          call juDFT_error( 'diagonalize_ze: dimensions of input matrix differ.')
       if (size(eval) /= n) &
          call juDFT_error( 'diagonalize_ze: eigenvalue array has wrong size.')
-      allocate (mat1(n, n), work(3*n), rwork(3*n)); mat1 = mat
+      allocate(mat1(n, n), work(3*n), rwork(3*n)); mat1 = mat
       call zheev('N', 'U', n, mat1, n, eval, work, 3*n, rwork, info)
       if (info /= 0) call juDFT_error( 'diagonalize_ze: zheev failed.')
-      deallocate (mat1, work, rwork)
+      deallocate(mat1, work, rwork)
    end subroutine diagonalize_ze
 
    subroutine diagonalize_zv(evec, eval, mat)
@@ -722,10 +722,10 @@ contains
          call juDFT_error( 'diagonalize_zv: eigenvector array has wrong dimensions.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_zv: dimensions of eigenvector array differ.')
-      allocate (work(3*n), rwork(3*n)); evec = mat
+      allocate(work(3*n), rwork(3*n)); evec = mat
       call zheev('V', 'U', n, evec, n, eval, work, 3*n, rwork, info)
       if (info /= 0) call juDFT_error( 'diagonalize_zv: zheev failed.')
-      deallocate (work, rwork)
+      deallocate(work, rwork)
    end subroutine diagonalize_zv
 
    subroutine diagonalize_zpe(eval, mat)
@@ -741,10 +741,10 @@ contains
          call juDFT_error( 'diagonalize_zpe: zero dimension in eigenvalue problem.')
       if (size(mat) /= nn) &
          call juDFT_error( 'diagonalize_zpe: input matrix has wrong size.')
-      allocate (mat1(nn), work(3*n), rwork(3*n)); mat1 = mat
+      allocate(mat1(nn), work(3*n), rwork(3*n)); mat1 = mat
       call zhpev('N', 'U', n, mat1, eval, work, n, work, rwork, info)
       if (info /= 0) call juDFT_error( 'diagonalize_zpe: zhpev failed.')
-      deallocate (mat1, work, rwork)
+      deallocate(mat1, work, rwork)
    end subroutine diagonalize_zpe
 
    subroutine diagonalize_zpv(evec, eval, mat)
@@ -765,10 +765,10 @@ contains
          call juDFT_error( 'diagonalize_zpv: eigenvector array has wrong dimensions.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_zpv: dimensions of eigenvector array differ.')
-      allocate (mat1(nn), work(3*n), rwork(3*n)); mat1 = mat
+      allocate(mat1(nn), work(3*n), rwork(3*n)); mat1 = mat
       call zhpev('V', 'U', n, mat1, eval, evec, n, work, rwork, info)
       if (info /= 0) call juDFT_error( 'diagonalize_zpv: zhpev failed.')
-      deallocate (mat1, work, rwork)
+      deallocate(mat1, work, rwork)
    end subroutine diagonalize_zpv
 
    subroutine diagonalize_deo(eval, mat, olap)
@@ -789,11 +789,11 @@ contains
          call juDFT_error( 'diagonalize_deo: overlap matrix has wrong size.')
       if (size(olap, 2) /= n) &
          call juDFT_error( 'diagonalize_deo: dimensions of overlap matrix differ.')
-      allocate (mat1(n, n), olap1(n, n), work(3*n))
+      allocate(mat1(n, n), olap1(n, n), work(3*n))
       mat1 = mat; olap1 = olap
       call dsygv(1, 'N', 'U', n, mat1, n, olap1, n, eval, work, 3*n, info)
       if (info /= 0) call juDFT_error( 'diagonalize_deo: dsygv failed.')
-      deallocate (mat1, olap1, work)
+      deallocate(mat1, olap1, work)
    end subroutine diagonalize_deo
 
    subroutine diagonalize_dvo(evec, eval, mat, olap)
@@ -818,10 +818,10 @@ contains
          call juDFT_error( 'diagonalize_dvo: overlap matrix has wrong dimensions.')
       if (size(olap, 2) /= n) &
          call juDFT_error( 'diagonalize_dvo: dimensions of overlap matrix differ.')
-      allocate (olap1(n, n), work(3*n)); evec = mat; olap1 = olap
+      allocate(olap1(n, n), work(3*n)); evec = mat; olap1 = olap
       call dsygv(1, 'V', 'U', n, evec, n, olap1, n, eval, work, 3*n, info)
       if (info /= 0) call juDFT_error( 'diagonalize_dvo: dsygv failed.')
-      deallocate (olap1, work)
+      deallocate(olap1, work)
    end subroutine diagonalize_dvo
 
    subroutine diagonalize_dpeo(eval, mat, olap)
@@ -838,11 +838,11 @@ contains
          call juDFT_error( 'diagonalize_dpeo: input matrix has wrong size.')
       if (size(olap) /= nn) &
          call juDFT_error( 'diagonalize_dpeo: overlap matrix has wrong size.')
-      allocate (mat1(nn), olap1(nn), work(3*n))
+      allocate(mat1(nn), olap1(nn), work(3*n))
       mat1 = mat; olap1 = olap
       call dspgv(1, 'N', 'U', n, mat1, olap1, eval, work, n, work, info)
       if (info /= 0) call juDFT_error( 'diagonalize_dpeo: dspgv failed.')
-      deallocate (mat1, olap1, work)
+      deallocate(mat1, olap1, work)
    end subroutine diagonalize_dpeo
 
    subroutine diagonalize_dpvo(evec, eval, mat, olap)
@@ -863,11 +863,11 @@ contains
          call juDFT_error( 'diagonalize_dpvo: eigenvector array has wrong dimensions.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_dpvo: dimensions of eigenvector array differ.')
-      allocate (mat1(nn), olap1(nn), work(3*n))
+      allocate(mat1(nn), olap1(nn), work(3*n))
       mat1 = mat; olap1 = olap
       call dspgv(1, 'V', 'U', n, mat1, olap1, eval, evec, n, work, info)
       if (info /= 0) call juDFT_error( 'diagonalize_dpvo: dspgv failed.')
-      deallocate (mat1, olap1, work)
+      deallocate(mat1, olap1, work)
    end subroutine diagonalize_dpvo
 
    subroutine diagonalize_zeo(eval, mat, olap)
@@ -889,11 +889,11 @@ contains
          call juDFT_error( 'diagonalize_zeo: overlap matrix has wrong size.')
       if (size(olap, 2) /= n) &
          call juDFT_error( 'diagonalize_zeo: dimensions of overlap matrix differ.')
-      allocate (mat1(n, n), olap1(n, n), work(3*n), rwork(3*n))
+      allocate(mat1(n, n), olap1(n, n), work(3*n), rwork(3*n))
       mat1 = mat; olap1 = olap
       call zhegv(1, 'N', 'U', n, mat1, n, olap1, n, eval, work, 3*n, rwork, info)
       if (info /= 0) call juDFT_error( 'diagonalize_zeo: zhegv failed.')
-      deallocate (mat1, olap1, work, rwork)
+      deallocate(mat1, olap1, work, rwork)
    end subroutine diagonalize_zeo
 
    subroutine diagonalize_zvo(evec, eval, mat, olap)
@@ -920,11 +920,11 @@ contains
          call juDFT_error( 'diagonalize_zvo: overlap matrix has wrong dimensions.')
       if (size(olap, 2) /= n) &
          call juDFT_error( 'diagonalize_zvo: dimensions of overlap matrix differ.')
-      allocate (olap1(n, n), work(3*n), rwork(3*n))
+      allocate(olap1(n, n), work(3*n), rwork(3*n))
       evec = mat; olap1 = olap
       call zhegv(1, 'V', 'U', n, evec, n, olap1, n, eval, work, 3*n, rwork, info)
       if (info /= 0) call juDFT_error( 'diagonalize_zvo: zhegv failed.')
-      deallocate (olap1, work, rwork)
+      deallocate(olap1, work, rwork)
    end subroutine diagonalize_zvo
 
    subroutine diagonalize_zpeo(eval, mat, olap)
@@ -942,11 +942,11 @@ contains
          call juDFT_error( 'diagonalize_zpeo: input matrix has wrong size.')
       if (size(olap) /= nn) &
          call juDFT_error( 'diagonalize_zpeo: overlap matrix has wrong size.')
-      allocate (mat1(nn), olap1(nn), work(3*n), rwork(3*n))
+      allocate(mat1(nn), olap1(nn), work(3*n), rwork(3*n))
       mat1 = mat; olap1 = olap
       call zhpgv(1, 'N', 'U', n, mat1, olap1, eval, work, n, work, rwork, info)
       if (info /= 0) call juDFT_error( 'diagonalize_zpeo: zhpev failed.')
-      deallocate (mat1, olap1, work, rwork)
+      deallocate(mat1, olap1, work, rwork)
    end subroutine diagonalize_zpeo
 
    subroutine diagonalize_zpvo(evec, eval, mat, olap)
@@ -969,11 +969,11 @@ contains
          call juDFT_error( 'diagonalize_zpvo: eigenvector array has wrong dimensions.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_zpvo: dimensions of eigenvector array differ.')
-      allocate (mat1(nn), olap1(nn), work(3*n), rwork(3*n))
+      allocate(mat1(nn), olap1(nn), work(3*n), rwork(3*n))
       mat1 = mat; olap1 = olap
       call zhpgv(1, 'V', 'U', n, mat1, olap1, eval, evec, n, work, rwork, info)
       if (info /= 0) call juDFT_error( 'diagonalize_zpvo: zhpgv failed.')
-      deallocate (mat1, olap1, work, rwork)
+      deallocate(mat1, olap1, work, rwork)
    end subroutine diagonalize_zpvo
 
    subroutine diagonalize_dvs(evec, eval, mat, m)
@@ -1000,7 +1000,7 @@ contains
          call juDFT_error( 'diagonalize_dvs: first dimension of eigenvector is wrong.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_dvs: second dimension of eigenvector is wrong.')
-      allocate (work(8*n), iwork(5*n), mat1(n, n), ifail(n)); mat1 = mat
+      allocate(work(8*n), iwork(5*n), mat1(n, n), ifail(n)); mat1 = mat
       abstol = 2*dlamch('S')
       if (m > 0) then
          call dsyevx('V', 'I', 'U', n, mat1, n, 0.0, 0.0, n - ma + 1, n, abstol, idum, &
@@ -1010,7 +1010,7 @@ contains
                      eval, evec, n, work, 8*n, iwork, ifail, info)
       endif
       if (info /= 0) call juDFT_error( 'diagonalize_dvs: dsyevx failed.')
-      deallocate (work, iwork, mat1, ifail)
+      deallocate(work, iwork, mat1, ifail)
    end subroutine diagonalize_dvs
 
    subroutine diagonalize_dvos(evec, eval, mat, olap, m)
@@ -1041,7 +1041,7 @@ contains
          // 'of overlap matrix is wrong.')
       if (size(olap, 2) /= n) call juDFT_error( 'diagonalize_dvos: second dimension of' &
          // 'overlap matrix is wrong.')
-      allocate (work(8*n), iwork(5*n), mat1(n, n), olap1(n, n), ifail(n))
+      allocate(work(8*n), iwork(5*n), mat1(n, n), olap1(n, n), ifail(n))
       mat1 = mat; olap1 = olap
       abstol = 2*dlamch('S')
       if (m > 0) then
@@ -1052,7 +1052,7 @@ contains
                      abstol, idum, eval, evec, n, work, 8*n, iwork, ifail, info)
       endif
       if (info /= 0) call juDFT_error( 'diagonalize_dvos: dsygvx failed.')
-      deallocate (work, iwork, mat1, olap1, ifail)
+      deallocate(work, iwork, mat1, olap1, ifail)
    end subroutine diagonalize_dvos
 
    subroutine diagonalize_dpvs(evec, eval, mat, m)
@@ -1078,7 +1078,7 @@ contains
          // 'of eigenvector is wrong.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_dpvs: second dimension of eigenvector is wrong.')
-      allocate (work(8*n), iwork(5*n), mat1(nn), ifail(n)); mat1 = mat
+      allocate(work(8*n), iwork(5*n), mat1(nn), ifail(n)); mat1 = mat
       abstol = 2*dlamch('S')
       if (m > 0) then
          call dspevx('V', 'I', 'U', n, mat1, 0.0, 0.0, n - ma + 1, n, abstol, idum, &
@@ -1088,7 +1088,7 @@ contains
                      eval, evec, n, work, iwork, ifail, info)
       endif
       if (info /= 0) call juDFT_error( 'diagonalize_dpvs: dspevx failed.')
-      deallocate (work, iwork, mat1, ifail)
+      deallocate(work, iwork, mat1, ifail)
    end subroutine diagonalize_dpvs
 
    subroutine diagonalize_dpvos(evec, eval, mat, olap, m)
@@ -1116,7 +1116,7 @@ contains
          // 'of eigenvector is wrong.')
       if (size(evec, 2) /= n) call juDFT_error( 'diagonalize_dpvos: second dimension ' &
          //'of eigenvector is wrong.')
-      allocate (work(8*n), iwork(5*n), mat1(nn), olap1(nn), ifail(n))
+      allocate(work(8*n), iwork(5*n), mat1(nn), olap1(nn), ifail(n))
       mat1 = mat; olap1 = olap
       abstol = 2*dlamch('S')
       if (m > 0) then
@@ -1127,7 +1127,7 @@ contains
                      idum, eval, evec, n, work, iwork, ifail, info)
       endif
       if (info /= 0) call juDFT_error( 'diagonalize_dpvos: dspgvx failed.')
-      deallocate (work, iwork, mat1, olap1, ifail)
+      deallocate(work, iwork, mat1, olap1, ifail)
    end subroutine diagonalize_dpvos
 
    subroutine diagonalize_zvs(evec, eval, mat, m)
@@ -1156,7 +1156,7 @@ contains
          call juDFT_error( 'diagonalize_zvs: first dimension of eigenvector is wrong.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_zvs: second dimension of eigenvector is wrong.')
-      allocate (work(2*n), rwork(7*n), iwork(5*n), mat1(n, n), ifail(n))
+      allocate(work(2*n), rwork(7*n), iwork(5*n), mat1(n, n), ifail(n))
       mat1 = mat
       abstol = 2*dlamch('S')
       if (m > 0) then
@@ -1167,7 +1167,7 @@ contains
                      eval, evec, n, work, 2*n, rwork, iwork, ifail, info)
       endif
       if (info /= 0) call juDFT_error( 'diagonalize_zvs: zheevx failed.')
-      deallocate (work, rwork, iwork, mat1, ifail)
+      deallocate(work, rwork, iwork, mat1, ifail)
    end subroutine diagonalize_zvs
 
    subroutine diagonalize_zvos(evec, eval, mat, olap, m)
@@ -1200,7 +1200,7 @@ contains
          // 'overlap matrix is wrong.')
       if (size(olap, 2) /= n) call juDFT_error( 'diagonalize_zvos: second dimension of ' &
          // 'overlap matrix is wrong.')
-      allocate (work(2*n), rwork(7*n), iwork(5*n), mat1(n, n), olap1(n, n), &
+      allocate(work(2*n), rwork(7*n), iwork(5*n), mat1(n, n), olap1(n, n), &
                 ifail(n)); mat1 = mat; olap1 = olap
       abstol = 2*dlamch('S')
       if (m > 0) then
@@ -1211,7 +1211,7 @@ contains
                      abstol, idum, eval, evec, n, work, 2*n, rwork, iwork, ifail, info)
       endif
       if (info /= 0) call juDFT_error( 'diagonalize_zvos: zhegvx failed.')
-      deallocate (work, rwork, iwork, mat1, olap1, ifail)
+      deallocate(work, rwork, iwork, mat1, olap1, ifail)
    end subroutine diagonalize_zvos
 
    subroutine diagonalize_zpvs(evec, eval, mat, m)
@@ -1239,7 +1239,7 @@ contains
          call juDFT_error( 'diagonalize_zpvs: first dimension of eigenvector is wrong.')
       if (size(evec, 2) /= n) &
          call juDFT_error( 'diagonalize_zpvs: second dimension of eigenvector is wrong.')
-      allocate (work(2*n), rwork(7*n), iwork(5*n), mat1(nn), ifail(n))
+      allocate(work(2*n), rwork(7*n), iwork(5*n), mat1(nn), ifail(n))
       mat1 = mat
       abstol = 2*dlamch('S')
       if (m > 0) then
@@ -1250,7 +1250,7 @@ contains
                      eval, evec, n, work, iwork, ifail, info)
       endif
       if (info /= 0) call juDFT_error( 'diagonalize_zpvs: zhpevx failed.')
-      deallocate (work, rwork, iwork, mat1, ifail)
+      deallocate(work, rwork, iwork, mat1, ifail)
    end subroutine diagonalize_zpvs
 
    subroutine diagonalize_zpvos(evec, eval, mat, olap, m)
@@ -1280,7 +1280,7 @@ contains
          of eigenvector is wrong.')
       if (size(evec, 2) /= n) call juDFT_error( 'diagonalize_zpvos: second dimension& &
          of eigenvector is wrong.')
-      allocate (work(2*n), rwork(7*n), iwork(5*n), mat1(nn), olap1(nn), &
+      allocate(work(2*n), rwork(7*n), iwork(5*n), mat1(nn), olap1(nn), &
                 ifail(n)); mat1 = mat; olap1 = olap
       abstol = 2*dlamch('S')
       if (m > 0) then
@@ -1291,7 +1291,7 @@ contains
                      idum, eval, evec, n, work, rwork, iwork, ifail, info)
       endif
       if (info /= 0) call juDFT_error( 'diagonalize_zpvos: zhpgvx failed.')
-      deallocate (work, rwork, iwork, mat1, olap1, ifail)
+      deallocate(work, rwork, iwork, mat1, olap1, ifail)
    end subroutine diagonalize_zpvos
 
 ! routines for diagonalization: eigenvalue range [r1,r2) or index range [ir1,ir2].
@@ -1325,7 +1325,7 @@ contains
          eigenvector is wrong.')
       if (size(evec, 2) < m) call juDFT_error( 'diagonalize_dvx: second dimension of& &
          eigenvector too small.')
-      allocate (work(8*n), iwork(5*n), mat1(n, n), ifail(n)); mat1 = mat
+      allocate(work(8*n), iwork(5*n), mat1(n, n), ifail(n)); mat1 = mat
       abstol = 2*dlamch('S')
       if (r1 < r2) then
          call dsyevx('V', 'V', 'U', n, mat1, n, r1, r2, 0, 0, abstol, idum, &
@@ -1336,7 +1336,7 @@ contains
       endif
       ir2 = idum
       if (info /= 0) call juDFT_error( 'diagonalize_dvx: dsyevx failed.')
-      deallocate (work, iwork, mat1, ifail)
+      deallocate(work, iwork, mat1, ifail)
    end subroutine diagonalize_dvx
 
    subroutine diagonalize_dvox(evec, eval, mat, olap, ir1, ir2, r1, r2)
@@ -1371,7 +1371,7 @@ contains
          // 'overlap matrix is wrong.')
       if (size(olap, 2) /= n) call juDFT_error( 'diagonalize_dvox: second dimension of' &
          // 'overlap matrix is wrong.')
-      allocate (work(8*n), iwork(5*n), mat1(n, n), olap1(n, n), ifail(n))
+      allocate(work(8*n), iwork(5*n), mat1(n, n), olap1(n, n), ifail(n))
       mat1 = mat; olap1 = olap
       abstol = 2*dlamch('S')
       if (r1 < r2) then
@@ -1383,7 +1383,7 @@ contains
       endif
       ir2 = idum
       if (info /= 0) call juDFT_error( 'diagonalize_dvos: dsygvx failed.')
-      deallocate (work, iwork, mat1, olap1, ifail)
+      deallocate(work, iwork, mat1, olap1, ifail)
    end subroutine diagonalize_dvox
 
    subroutine diagonalize_dpvx(evec, eval, mat, ir1, ir2, r1, r2)
@@ -1413,7 +1413,7 @@ contains
          call juDFT_error( 'diagonalize_dpvx: eigenvalue array too small.')
       if (size(evec, 2) < m) call juDFT_error( 'diagonalize_dpvx: second dimension of ' &
          // 'eigenvector too small.')
-      allocate (work(8*n), iwork(5*n), mat1(nn), ifail(n)); mat1 = mat
+      allocate(work(8*n), iwork(5*n), mat1(nn), ifail(n)); mat1 = mat
       abstol = 2*dlamch('S')
       if (r1 < r2) then
          call dspevx('V', 'V', 'U', n, mat1, r1, r2, 0, 0, abstol, idum, eval, &
@@ -1424,7 +1424,7 @@ contains
       endif
       ir2 = idum
       if (info /= 0) call juDFT_error( 'diagonalize_dpvx: dspevx failed.')
-      deallocate (work, iwork, mat1, ifail)
+      deallocate(work, iwork, mat1, ifail)
    end subroutine diagonalize_dpvx
 
    subroutine diagonalize_dpvox(evec, eval, mat, olap, ir1, ir2, r1, r2)
@@ -1456,7 +1456,7 @@ contains
          call juDFT_error( 'diagonalize_dpvox: eigenvalue array too small.')
       if (size(evec, 2) < m) call juDFT_error( 'diagonalize_dpvox: second dimension ' &
          // 'of eigenvector too small.')
-      allocate (work(8*n), iwork(5*n), mat1(nn), olap1(nn), ifail(n))
+      allocate(work(8*n), iwork(5*n), mat1(nn), olap1(nn), ifail(n))
       mat1 = mat; olap1 = olap
       abstol = 2*dlamch('S')
       if (r1 < r2) then
@@ -1468,7 +1468,7 @@ contains
       endif
       ir2 = idum
       if (info /= 0) call juDFT_error( 'diagonalize_dpvox: dspgvx failed.')
-      deallocate (work, iwork, mat1, olap1, ifail)
+      deallocate(work, iwork, mat1, olap1, ifail)
    end subroutine diagonalize_dpvox
 
    subroutine diagonalize_zvx(evec, eval, mat, ir1, ir2, r1, r2)
@@ -1500,7 +1500,7 @@ contains
          call juDFT_error( 'diagonalize_zvx: first dimension of eigenvector is wrong.')
       if (size(evec, 2) < m) &
          call juDFT_error( 'diagonalize_zvx: second dimension of eigenvector too small.')
-      allocate (work(2*n), rwork(7*n), iwork(5*n), mat1(n, n), ifail(n))
+      allocate(work(2*n), rwork(7*n), iwork(5*n), mat1(n, n), ifail(n))
       mat1 = mat
       abstol = 2*dlamch('S')
       if (r1 < r2) then
@@ -1512,7 +1512,7 @@ contains
       endif
       ir2 = idum
       if (info /= 0) call juDFT_error( 'diagonalize_zvx: zheevx failed.')
-      deallocate (work, rwork, iwork, mat1, ifail)
+      deallocate(work, rwork, iwork, mat1, ifail)
    end subroutine diagonalize_zvx
 
    subroutine diagonalize_zvox(evec, eval, mat, olap, ir1, ir2, r1, r2)
@@ -1549,7 +1549,7 @@ contains
          // 'overlap matrix is wrong.')
       if (size(olap, 2) /= n) call juDFT_error( 'diagonalize_zvox: second dimension of ' &
          // 'overlap matrix is wrong.')
-      allocate (work(2*n), rwork(7*n), iwork(5*n), mat1(n, n), olap1(n, n), &
+      allocate(work(2*n), rwork(7*n), iwork(5*n), mat1(n, n), olap1(n, n), &
                 ifail(n)); mat1 = mat; olap1 = olap
       abstol = 2*dlamch('S')
       if (r1 < r2) then
@@ -1561,7 +1561,7 @@ contains
       endif
       ir2 = idum
       if (info /= 0) call juDFT_error( 'diagonalize_zvox: zhegvx failed.')
-      deallocate (work, rwork, iwork, mat1, olap1, ifail)
+      deallocate(work, rwork, iwork, mat1, olap1, ifail)
    end subroutine diagonalize_zvox
 
    subroutine diagonalize_zpvx(evec, eval, mat, ir1, ir2, r1, r2)
@@ -1593,7 +1593,7 @@ contains
          call juDFT_error( 'diagonalize_zpvx: eigenvalue array too small.')
       if (size(evec, 2) < m) call juDFT_error( 'diagonalize_zpvx: second dimension& &
          of eigenvector too small.')
-      allocate (work(2*n), rwork(7*n), iwork(5*n), mat1(nn), ifail(n))
+      allocate(work(2*n), rwork(7*n), iwork(5*n), mat1(nn), ifail(n))
       mat1 = mat
       abstol = 2*dlamch('S')
       if (r1 < r2) then
@@ -1605,7 +1605,7 @@ contains
       endif
       ir2 = idum
       if (info /= 0) call juDFT_error( 'diagonalize_zpvx: zhpevx failed.')
-      deallocate (work, rwork, iwork, mat1, ifail)
+      deallocate(work, rwork, iwork, mat1, ifail)
    end subroutine diagonalize_zpvx
 
    subroutine diagonalize_zpvox(evec, eval, mat, olap, ir1, ir2, r1, r2)
@@ -1639,7 +1639,7 @@ contains
          // 'of eigenvector too small.')
       if (size(evec, 2) < m) call juDFT_error( 'diagonalize_zpvox: second dimension ' &
          // 'of eigenvector too small.')
-      allocate (work(2*n), rwork(7*n), iwork(5*n), mat1(nn), olap1(nn), &
+      allocate(work(2*n), rwork(7*n), iwork(5*n), mat1(nn), olap1(nn), &
                 ifail(n)); mat1 = mat; olap1 = olap
       abstol = 2*dlamch('S')
       if (r1 < r2) then
@@ -1651,6 +1651,6 @@ contains
       endif
       ir2 = idum
       if (info /= 0) call juDFT_error( 'diagonalize_zpvox: zhpgvx failed.')
-      deallocate (work, rwork, iwork, mat1, olap1, ifail)
+      deallocate(work, rwork, iwork, mat1, olap1, ifail)
    end subroutine diagonalize_zpvox
 end module m_wrapper

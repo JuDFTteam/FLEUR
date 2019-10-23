@@ -192,7 +192,7 @@ CONTAINS
       END DO
       nkpt_EIBZ = ic
 
-      ALLOCATE (pointer_EIBZ(nkpt_EIBZ))
+      allocate(pointer_EIBZ(nkpt_EIBZ))
       ic = 0
       DO ikpt = 1, kpts%nkptf
          IF (parent(ikpt) == ikpt) THEN
@@ -206,7 +206,7 @@ CONTAINS
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
 
-      ALLOCATE (n_q(nkpt_EIBZ))
+      allocate(n_q(nkpt_EIBZ))
 
       ic = 0
       n_q = 0
@@ -274,17 +274,17 @@ CONTAINS
          CALL read_cmt(cmt, nk)
          call read_z(z, nk)
 
-         ALLOCATE (rep_d(maxndb, nddb, nsymop), stat=ok)
+         allocate(rep_d(maxndb, nddb, nsymop), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation rep_v'
 
          call olappw%alloc(z%l_real, lapw%nv(jsp), lapw%nv(jsp))
-         ALLOCATE (olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
+         allocate(olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation olapmt'
 
          olapmt = 0
          CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, hybrid, cell, hybdat%bas1, hybdat%bas2)
 
-         ALLOCATE (cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
+         allocate(cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation cmthlp/cpwhlp'
 
          DO isym = 1, nsymop
@@ -317,10 +317,10 @@ CONTAINS
 
          END DO
 
-         DEALLOCATE (cmthlp, cpwhlp)
+         deallocate(cmthlp, cpwhlp)
 
          ! calculate trace of irrecudible representation
-         ALLOCATE (trace(sym%nsym, nddb), stat=ok)
+         allocate(trace(sym%nsym, nddb), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation trace'
 
          ic = 0
@@ -341,7 +341,7 @@ CONTAINS
 
          ! determine symmetry equivalent bands/irreducible representations by comparing the trace
 
-         ALLOCATE (symequivalent(nddb, nddb), stat=ok)
+         allocate(symequivalent(nddb, nddb), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation symequivalent'
 
          ic1 = 0
@@ -377,8 +377,8 @@ CONTAINS
          CALL read_cmt(cmt, nk)
          !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
-         IF (allocated(olapmt)) deallocate (olapmt)
-         ALLOCATE (olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
+         IF (allocated(olapmt)) deallocate(olapmt)
+         allocate(olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation olapmt'
          olapmt = 0
 
@@ -396,7 +396,7 @@ CONTAINS
             END DO
          END DO
 
-         ALLOCATE (wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(hybrid%maxindx), stat=ok)
+         allocate(wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(hybrid%maxindx), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation wfolap/maxindx'
          wavefolap = 0
 
@@ -429,7 +429,7 @@ CONTAINS
             END DO
          END DO
 
-         ALLOCATE (symequivalent(nddb, nddb), stat=ok)
+         allocate(symequivalent(nddb, nddb), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation symequivalent'
          symequivalent = .false.
          ic1 = 0
@@ -564,7 +564,7 @@ CONTAINS
       ! psym   :: points to the symmetry-operation
 
       ic = 0
-      ALLOCATE (psym(sym%nsym))
+      allocate(psym(sym%nsym))
 
       DO iop = 1, sym%nsym
          rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))

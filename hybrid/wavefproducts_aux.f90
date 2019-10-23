@@ -14,11 +14,11 @@ CONTAINS
       integer :: ic, ig1, igptm, iigptm, ok, g(3)
 
 
-      ALLOCATE (pointer(-g_bounds(1):g_bounds(1), &
+      allocate(pointer(-g_bounds(1):g_bounds(1), &
                         -g_bounds(2):g_bounds(2),&
                         -g_bounds(3):g_bounds(3)), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation pointer')
-      ALLOCATE (gpt0(3, size(pointer)), stat=ok)
+      allocate(gpt0(3, size(pointer)), stat=ok)
       IF (ok /= 0) call juDFT_error('wavefproducts_noinv2: error allocation gpt0')
 
       call timestart("prep list of Gvec")

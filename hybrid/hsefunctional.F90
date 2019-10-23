@@ -1199,7 +1199,7 @@ CONTAINS
       potential = -pi_omega2
       endwhere
 
-      DEALLOCATE (gridf)
+      deallocate(gridf)
 #else
       call judft_error("hsefunctional not implemented for PGI")
 #endif
@@ -1373,7 +1373,7 @@ CONTAINS
 
       ! allocate arrays in first entry reuse later
       IF (first_entry) THEN
-         ALLOCATE (already_known(nkptf), &            ! stores which elements are known
+         allocate(already_known(nkptf), &            ! stores which elements are known
                    known_potential(maxNoGPts, nkptf), &            ! stores the potential for all k-points
                    known_fourier_trafo(nbasp, maxNoGPts, nkptf))            ! stores the fourier transform of the mixed basis
          ! initialization
@@ -1525,7 +1525,7 @@ CONTAINS
          potential = -pi_omega2
          endwhere
 
-         DEALLOCATE (gridf)
+         deallocate(gridf)
 
          !
          ! Create pointer which correlate the position in the array with the
@@ -1695,7 +1695,7 @@ CONTAINS
       ! Create pointer which correlate the position in the array with the
       ! appropriate indices of the MT mixed basis function
       !
-      ALLOCATE (ptrType(nbasp), ptrEq(nbasp), ptrL(nbasp), ptrM(nbasp), ptrN(nbasp))
+      allocate(ptrType(nbasp), ptrEq(nbasp), ptrL(nbasp), ptrM(nbasp), ptrN(nbasp))
       nbasp = 0
       DO itype = 1, ntype
          DO ieq = 1, neq(itype)
@@ -1740,7 +1740,7 @@ CONTAINS
          interstitial = CONJG(interstitial)
 
          ! Helper matrix for temporary storage of the attenuated Coulomb matrix
-         ALLOCATE (coulmat(nbasm(ikpt), nbasm(ikpt)), stat=ok)
+         allocate(coulmat(nbasm(ikpt), nbasm(ikpt)), stat=ok)
          IF (ok /= 0) call juDFT_error( 'hsefunctional: failure at matrix allocation')
          coulmat = 0
          !
@@ -1781,11 +1781,11 @@ CONTAINS
 #endif
          ! add the changes to the Coulomb matrix
          coulomb(:nbasm(ikpt)*(nbasm(ikpt) + 1)/2, ikpt) = packmat(coulmat) + coulomb(:nbasm(ikpt)*(nbasm(ikpt) + 1)/2, ikpt)
-         DEALLOCATE (coulmat)
+         deallocate(coulmat)
 
       END DO
 
-      DEALLOCATE (ptrType, ptrEq, ptrL, ptrM, ptrN)
+      deallocate(ptrType, ptrEq, ptrL, ptrM, ptrN)
 
    END SUBROUTINE change_coulombmatrix
 
@@ -2206,7 +2206,7 @@ CONTAINS
       READ (777, rec=nk) cmt(:, :, :)
       CLOSE (777)
 
-      ALLOCATE (fprod(jmtd, 5), larr(5), parr(5))
+      allocate(fprod(jmtd, 5), larr(5), parr(5))
 
       exchange = 0
       iatom = 0
@@ -2231,14 +2231,14 @@ CONTAINS
                            n = n + 1
                            m = SIZE(fprod, 2)
                            IF (n > m) THEN
-                              ALLOCATE (fprod2(jmtd, m), larr2(m), parr2(m))
+                              allocate(fprod2(jmtd, m), larr2(m), parr2(m))
                               fprod2 = fprod; larr2 = larr; parr2 = parr
-                              DEALLOCATE (fprod, larr, parr)
-                              ALLOCATE (fprod(jmtd, m + 5), larr(m + 5), parr(m + 5))
+                              deallocate(fprod, larr, parr)
+                              allocate(fprod(jmtd, m + 5), larr(m + 5), parr(m + 5))
                               fprod(:, :m) = fprod2
                               larr(:m) = larr2
                               parr(:m) = parr2
-                              DEALLOCATE (fprod2, larr2, parr2)
+                              deallocate(fprod2, larr2, parr2)
                            END IF
                            fprod(:, n) = (core1(:, p1, l1, itype) &
                                           *bas1(:, p2, l2, itype) &
@@ -2251,7 +2251,7 @@ CONTAINS
 
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                     ALLOCATE (integral(n, n), carr(n, nbands), &
+                     allocate(integral(n, n), carr(n, nbands), &
                                carr2(n, nv(jsp)), carr3(n, nv(jsp)))
 
                      DO i = 1, n
@@ -2313,7 +2313,7 @@ CONTAINS
                         END DO
                      END DO
 
-                     DEALLOCATE (integral, carr, carr2, carr3)
+                     deallocate(integral, carr, carr2, carr3)
 
                   END DO
                END DO

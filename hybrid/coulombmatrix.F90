@@ -163,9 +163,9 @@ CONTAINS
       !
 
       call timestart("coulomb allocation")
-      IF (ALLOCATED(coulomb)) DEALLOCATE (coulomb)
+      IF (ALLOCATED(coulomb)) deallocate(coulomb)
 
-      ALLOCATE (coulomb(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
+      allocate(coulomb(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
       IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulomb matrix'
       coulomb = 0
       call timestop("coulomb allocation")
@@ -228,8 +228,8 @@ CONTAINS
          nsym1(ikpt) = isym1
       END DO
       ! Define reduced lists of G points -> pgptm1(:,ikpt), ikpt=1,..,nkpt
-      !ALLOCATE ( hybrid%pgptm1(hybrid%maxgptm,kpts%nkpt)) !in mixedbasis
-      ALLOCATE (iarr(hybrid%maxgptm), POINTER(kpts%nkpt, &
+      !allocate( hybrid%pgptm1(hybrid%maxgptm,kpts%nkpt)) !in mixedbasis
+      allocate(iarr(hybrid%maxgptm), POINTER(kpts%nkpt, &
                                               MINVAL(hybrid%gptm(1, :)) - 1:MAXVAL(hybrid%gptm(1, :)) + 1, &
                                               MINVAL(hybrid%gptm(2, :)) - 1:MAXVAL(hybrid%gptm(2, :)) + 1, &
                                               MINVAL(hybrid%gptm(3, :)) - 1:MAXVAL(hybrid%gptm(3, :)) + 1))
@@ -255,7 +255,7 @@ CONTAINS
          END DO
          hybrid%ngptm1(ikpt) = j
       END DO
-      DEALLOCATE (iarr)
+      deallocate(iarr)
 
       IF (mpi%irank == 0) WRITE (6, '(12X,A)', advance='no') 'done'
       CALL cpu_TIME(time2)
@@ -275,7 +275,7 @@ CONTAINS
       call timestart("define gmat")
       ! Define gmat (symmetric)
       i = (hybrid%lexp + 1)**2
-      ALLOCATE (gmat(i, i))
+      allocate(gmat(i, i))
       gmat = 0
       lm1 = 0
       DO l1 = 0, hybrid%lexp
@@ -316,7 +316,7 @@ CONTAINS
       call timestart("getnorm")
       ! Look for different qnorm = |k+G|, definition of qnrm and pqnrm.
       CALL getnorm(kpts, hybrid%gptm, hybrid%ngptm, hybrid%pgptm, qnrm, nqnrm, pqnrm, cell)
-      ALLOCATE (sphbesmoment(0:hybrid%lexp, atoms%ntype, nqnrm), &
+      allocate(sphbesmoment(0:hybrid%lexp, atoms%ntype, nqnrm), &
                 olap(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype, nqnrm), &
                 integral(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype, nqnrm))
       sphbes_var = 0
@@ -456,7 +456,7 @@ CONTAINS
 
          !       (1b) r,r' in different MT
 
-         ALLOCATE (coulmat(hybrid%nbasp, hybrid%nbasp), stat=ok)
+         allocate(coulmat(hybrid%nbasp, hybrid%nbasp), stat=ok)
          IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulmat'
          coulmat = 0
 
@@ -527,7 +527,7 @@ CONTAINS
          call timestop("MT-MT part")
 
       END DO
-      IF (ANY(calc_mt)) DEALLOCATE (coulmat)
+      IF (ANY(calc_mt)) deallocate(coulmat)
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(2X,A)', advance='no') 'done'
@@ -550,7 +550,7 @@ CONTAINS
          !     (2b) r,r' in same MT
          !     (2c) r,r' in different MT
 
-         ALLOCATE (coulmat(hybrid%nbasp, hybrid%maxgptm), stat=ok)
+         allocate(coulmat(hybrid%nbasp, hybrid%maxgptm), stat=ok)
          IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulmat'
          coulmat = 0
 
@@ -685,7 +685,7 @@ CONTAINS
          END DO
          call timestop("loop over interst.")
 
-         DEALLOCATE (coulmat, olap, integral)
+         deallocate(coulmat, olap, integral)
 
          IF (mpi%irank == 0) THEN
             WRITE (6, '(2X,A)', advance='no') 'done'
@@ -706,7 +706,7 @@ CONTAINS
          CALL cpu_TIME(time1)
          ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
          call timestart("calc smat")
-         ALLOCATE (smat(hybrid%gptmd, hybrid%gptmd))
+         allocate(smat(hybrid%gptmd, hybrid%gptmd))
          smat = 0
          DO igpt2 = 1, hybrid%gptmd
             DO igpt1 = 1, igpt2
@@ -778,7 +778,7 @@ CONTAINS
          DO ikpt = ikptmin, ikptmax!1,kpts%nkpt
 
             ! group together quantities which depend only on l,m and igpt -> carr2a
-            ALLOCATE (carr2a((hybrid%lexp + 1)**2, hybrid%maxgptm), carr2b(atoms%nat, hybrid%maxgptm))
+            allocate(carr2a((hybrid%lexp + 1)**2, hybrid%maxgptm), carr2b(atoms%nat, hybrid%maxgptm))
             carr2a = 0; carr2b = 0
             DO igpt = 1, hybrid%ngptm(ikpt)
                igptp = hybrid%pgptm(igpt, ikpt)
@@ -805,7 +805,7 @@ CONTAINS
 
             !finally we can loop over the plane waves (G: igpt1,igpt2)
             call timestart("loop over plane waves")
-            ALLOCATE (carr2(atoms%nat, (hybrid%lexp + 1)**2), &
+            allocate(carr2(atoms%nat, (hybrid%lexp + 1)**2), &
                       structconst1(atoms%nat, (2*hybrid%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,hybrid%ngptm1(ikpt)
@@ -875,7 +875,7 @@ CONTAINS
                   coulomb(idum, ikpt) = coulomb(idum, ikpt) + csum/cell%vol
                END DO
             END DO
-            DEALLOCATE (carr2, carr2a, carr2b, structconst1)
+            deallocate(carr2, carr2a, carr2b, structconst1)
             call timestop("loop over plane waves")
          END DO !ikpt
          call timestop("loop 4:")
@@ -974,7 +974,7 @@ CONTAINS
 
          ! Calculate sphbesintegral
          call timestart("sphbesintegral")
-         ALLOCATE (sphbes0(-1:hybrid%lexp + 2, atoms%ntype, nqnrm),&
+         allocate(sphbes0(-1:hybrid%lexp + 2, atoms%ntype, nqnrm),&
               &           carr2((hybrid%lexp + 1)**2, hybrid%maxgptm))
          sphbes0 = 0; carr2 = 0
          DO iqnrm = 1, nqnrm
@@ -1046,7 +1046,7 @@ CONTAINS
 
          END DO
          call timestop("loop 2")
-         DEALLOCATE (carr2)
+         deallocate(carr2)
 
          IF (mpi%irank == 0) THEN
             WRITE (6, '(2X,A)', advance='no') 'done'
@@ -1063,8 +1063,8 @@ CONTAINS
          ! All elements are needed so send all data to all processes treating the
          ! respective k-points
 
-         ALLOCATE (carr2(hybrid%maxbasm1, 2), iarr(hybrid%maxgptm))
-         ALLOCATE (nsym_gpt(hybrid%gptmd, kpts%nkpt), &
+         allocate(carr2(hybrid%maxbasm1, 2), iarr(hybrid%maxgptm))
+         allocate(nsym_gpt(hybrid%gptmd, kpts%nkpt), &
                    sym_gpt(MAXVAL(nsym1), hybrid%gptmd, kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
          call timestart("loop 3")
@@ -1122,14 +1122,14 @@ CONTAINS
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
-         DEALLOCATE (carr2, iarr, hybrid%pgptm1)
+         deallocate(carr2, iarr, hybrid%pgptm1)
          IF (mpi%irank == 0) THEN
             WRITE (6, '(2X,A)', advance='no') 'done'
             CALL cpu_TIME(time2)
             WRITE (6, '(2X,A,F8.2,A)') '( Timing:', time2 - time1, ' )'
          END IF
       END IF
-      DEALLOCATE (qnrm, pqnrm)
+      deallocate(qnrm, pqnrm)
 
       CALL cpu_TIME(time1)
       IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
@@ -1222,20 +1222,20 @@ CONTAINS
       ! rearrange coulomb matrix
       !
 
-      ALLOCATE (coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1, 0:hybrid%maxlcutm1, atoms%ntype, 1))
+      allocate(coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1, 0:hybrid%maxlcutm1, atoms%ntype, 1))
       ic = (hybrid%maxlcutm1 + 1)**2*atoms%nat
       idum = ic + hybrid%maxgptm
       idum = (idum*(idum + 1))/2
       if (sym%invs) THEN
-         ALLOCATE (coulomb_mt2_r(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
-         ALLOCATE (coulomb_mt3_r(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat, 1))
-         ALLOCATE (coulomb_mtir_r(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
-         ALLOCATE (coulombp_mtir_r(idum, 1))
+         allocate(coulomb_mt2_r(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
+         allocate(coulomb_mt3_r(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat, 1))
+         allocate(coulomb_mtir_r(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
+         allocate(coulombp_mtir_r(idum, 1))
       else
-         ALLOCATE (coulomb_mt2_c(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
-         ALLOCATE (coulomb_mt3_c(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat, 1))
-         ALLOCATE (coulomb_mtir_c(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
-         ALLOCATE (coulombp_mtir_c(idum, 1))
+         allocate(coulomb_mt2_c(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
+         allocate(coulomb_mt3_c(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat, 1))
+         allocate(coulomb_mtir_c(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
+         allocate(coulombp_mtir_c(idum, 1))
       endif
       call timestart("loop bla")
       DO ikpt = ikptmin, ikptmax
@@ -1506,9 +1506,9 @@ CONTAINS
       call timestop("loop bla")
 
       if (sym%invs) THEN
-         DEALLOCATE (coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r, coulombp_mtir_r)
+         deallocate(coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, coulomb_mtir_r, coulombp_mtir_r)
       else
-         DEALLOCATE (coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c, coulombp_mtir_c)
+         deallocate(coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, coulomb_mtir_c, coulombp_mtir_c)
       end if
 
       IF (mpi%irank == 0) THEN
@@ -1790,7 +1790,7 @@ CONTAINS
       CALL getshells(ptsh, nptsh, radsh, nshell, rad, cell%amat, first)
       call timestop("determine atomic shell")
 
-      ALLOCATE (pnt(nptsh))
+      allocate(pnt(nptsh))
       structconst = 0
 
       !
@@ -1886,7 +1886,7 @@ CONTAINS
       END DO
       call timestop("realspace sum")
 
-      DEALLOCATE (ptsh, radsh)
+      deallocate(ptsh, radsh)
 
       CALL cpu_TIME(time2)
       IF (first) WRITE (6, '(A,F7.2)') '  Timing: ', time2 - time1
@@ -2013,7 +2013,7 @@ CONTAINS
          aa = SQRT(SUM(ABS(structconst(1, :, :, ikpt))**2)/atoms%nat**2)
          IF (first) WRITE (6, '(/A,F8.5,A,F8.5,A)') 'Accuracy of Gamma-decomposition (structureconstant):', a, ' (abs)', a/aa, ' (rel)'
       ENDIF
-      DEALLOCATE (ptsh, radsh)
+      deallocate(ptsh, radsh)
 
       first = .FALSE.
 
@@ -2040,7 +2040,7 @@ CONTAINS
       INTEGER, ALLOCATABLE   :: ihelp(:, :)
       REAL, ALLOCATABLE   :: rhelp(:)
 
-      ALLOCATE (ptsh(3, 100000), radsh(100000), stat=ok)
+      allocate(ptsh(3, 100000), radsh(100000), stat=ok)
       IF (ok /= 0) STOP 'getshells: failure allocation ptsh/radsh'
 
       ptsh = 0
@@ -2059,16 +2059,16 @@ CONTAINS
                   found = .TRUE.
                   i = i + 1
                   IF (i > SIZE(radsh)) THEN
-                     ALLOCATE (rhelp(SIZE(radsh)), ihelp(3, SIZE(ptsh, 2)), stat=ok)
+                     allocate(rhelp(SIZE(radsh)), ihelp(3, SIZE(ptsh, 2)), stat=ok)
                      IF (ok /= 0) STOP 'getshells: failure allocation rhelp/ihelp'
                      rhelp = radsh
                      ihelp = ptsh
-                     DEALLOCATE (radsh, ptsh)
-                     ALLOCATE (radsh(SIZE(rhelp) + 100000), ptsh(3, SIZE(ihelp, 2) + 100000), stat=ok)
+                     deallocate(radsh, ptsh)
+                     allocate(radsh(SIZE(rhelp) + 100000), ptsh(3, SIZE(ihelp, 2) + 100000), stat=ok)
                      IF (ok /= 0) STOP 'getshells: failure re-allocation ptsh/radsh'
                      radsh(1:SIZE(rhelp)) = rhelp
                      ptsh(:, 1:SIZE(ihelp, 2)) = ihelp
-                     DEALLOCATE (rhelp, ihelp)
+                     deallocate(rhelp, ihelp)
                   END IF
                   ptsh(:, i) = (/ix, iy, iz/)
                   radsh(i) = SQRT(rdum)
@@ -2084,17 +2084,17 @@ CONTAINS
       END DO
       nptsh = i
 
-      ALLOCATE (pnt(nptsh))
+      allocate(pnt(nptsh))
 
       !reallocate radsh ptsh
-      ALLOCATE (rhelp(nptsh), ihelp(3, nptsh))
+      allocate(rhelp(nptsh), ihelp(3, nptsh))
       rhelp = radsh(1:nptsh)
       ihelp = ptsh(:, 1:nptsh)
-      DEALLOCATE (radsh, ptsh)
-      ALLOCATE (radsh(nptsh), ptsh(3, nptsh))
+      deallocate(radsh, ptsh)
+      allocate(radsh(nptsh), ptsh(3, nptsh))
       radsh = rhelp
       ptsh = ihelp
-      DEALLOCATE (rhelp, ihelp)
+      deallocate(rhelp, ihelp)
 
       CALL rorderpf(pnt, radsh, nptsh, MAX(0, INT(LOG(nptsh*0.001)/LOG(2.0))))
       radsh = radsh(pnt)
@@ -2127,7 +2127,7 @@ CONTAINS
       INTEGER               :: i, j, ikpt, igpt, igptp
       REAL                  :: q(3), qnorm
 
-      ALLOCATE (qnrm(MAXVAL(ngpt)*kpts%nkpt), pqnrm(MAXVAL(ngpt), kpts%nkpt))
+      allocate(qnrm(MAXVAL(ngpt)*kpts%nkpt), pqnrm(MAXVAL(ngpt), kpts%nkpt))
       i = 0
       DO ikpt = 1, kpts%nkpt
          igptloop: DO igpt = 1, ngpt(ikpt)
@@ -2148,10 +2148,10 @@ CONTAINS
       END DO
       nqnrm = i
 
-      ALLOCATE (help(nqnrm))
+      allocate(help(nqnrm))
       help(1:nqnrm) = qnrm(1:nqnrm)
-      DEALLOCATE (qnrm)
-      ALLOCATE (qnrm(1:nqnrm))
+      deallocate(qnrm)
+      allocate(qnrm(1:nqnrm))
       qnrm = help
 
    END SUBROUTINE getnorm
