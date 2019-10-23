@@ -151,7 +151,7 @@ contains
    END FUNCTION gptnorm
 
    subroutine init_prodtype(prod, hybrid, atoms)
-      use m_types
+      use m_types_setup
       use m_judft
       implicit none
       class(t_prodtype)          :: prod
@@ -173,7 +173,7 @@ contains
    end subroutine init_prodtype
 
    subroutine free_prodtype(prod)
-      use m_types
+      use m_types_setup
       implicit NONE
       class(t_prodtype)          :: prod
 
