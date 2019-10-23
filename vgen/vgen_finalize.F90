@@ -33,7 +33,7 @@ CONTAINS
 
     !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
     
-    DO js = 1,SIZE(vtot%mt,4)
+    DO js = 1,input%jspins !Used input%jspins instead of SIZE(vtot%mt,4) since the off diag, elements of VTot%mt need no rescaling. 
        DO n = 1,atoms%ntype
           vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
        ENDDO
