@@ -143,7 +143,7 @@ CONTAINS
          IF (nk == 1 .and. jsp == 1 .and. input%imix > 10) CALL system('rm -f broyd*')
          ! calculate all symmetrie operations, which yield k invariant
 
-         allocate(parent(kpts%nkptf), stat=ok)
+         ALLOCATE (parent(kpts%nkptf), stat=ok)
          IF (ok /= 0) STOP 'mhsfock: failure allocation parent'
          parent = 0
 
@@ -179,7 +179,7 @@ CONTAINS
             CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, mpi, results)
          END IF
 
-         deallocate(n_q)
+         DEALLOCATE (n_q)
          CALL timestop("core exchange calculation")
 
          CALL timestart("time for performing T^-1*mat_ex*T^-1*")

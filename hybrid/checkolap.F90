@@ -68,7 +68,7 @@
            &            'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
             LOGICAL                 ::  l_mism = .true.
 
-            allocate(z(nkpti))
+            ALLOCATE (z(nkpti))
             DO ikpt = 1, nkpti
                CALL lapw%init(input, noco, kpts, atoms, sym, ikpt, cell, sym%zrfs)
                nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
@@ -107,7 +107,7 @@
             END DO
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|basis>'
-            allocate(olapcb(hybrid%maxindx), olapcv(maxval(hybrid%nbands), nkpti),&
+            ALLOCATE (olapcb(hybrid%maxindx), olapcv(maxval(hybrid%nbands), nkpti),&
            &          olapcv_avg(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
            &          olapcv_max(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
            &          olapcv_loc(2, -hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype))
@@ -186,7 +186,7 @@
                END DO
             END IF ! mpi%irank == 0
 
-            deallocate(olapcb, olapcv, olapcv_avg, olapcv_max, olapcv_loc)
+            DEALLOCATE (olapcb, olapcv, olapcv_avg, olapcv_max, olapcv_loc)
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <basis|basis>'
 
@@ -221,9 +221,9 @@
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') &
            &          'Mismatch of wave functions at the MT-sphere boundaries'
-            allocate(carr1(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
-            allocate(carr2(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
-            allocate(carr3(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
+            ALLOCATE (carr1(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
+            ALLOCATE (carr2(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
+            ALLOCATE (carr3(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
             DO ikpt = 1, nkpti
                call read_z(z(ikpt), ikpt)
             END DO

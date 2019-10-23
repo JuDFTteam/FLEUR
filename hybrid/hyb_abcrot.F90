@@ -37,10 +37,10 @@ CONTAINS
          PRINT *, "calculate wigner-matrix"
          STOP "WIGNER MATRIX should be available in hybrid part"
          !IF (.NOT.oneD%odi%d1) THEN
-         !  allocate(sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,sym%nop))
+         !  ALLOCATE (sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,sym%nop))
          !  CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,sym%d_wgn)
          !ELSE
-         !  allocate(sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,oneD%ods%nop))
+         !  ALLOCATE (sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,oneD%ods%nop))
          !  CALL d_wigner(oneD%ods%nop,oneD%ods%mrot,cell%bmat,atoms%lmaxd,sym%d_wgn)
          !ENDIF
       ENDIF

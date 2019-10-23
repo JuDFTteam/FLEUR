@@ -176,23 +176,23 @@ CONTAINS
          WRITE (6, '(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied hybrid%bands in packages', &
             ' of the size', psize, ' (cprod=', rdum*psize, 'MB)'
       END IF
-      allocate(phase_vv(psize, hybrid%nbands(nk)), stat=ok)
+      ALLOCATE (phase_vv(psize, hybrid%nbands(nk)), stat=ok)
       IF (ok /= 0) STOP 'exchange_val_hf: error allocation phase'
       phase_vv = 0
       IF (ok /= 0) STOP 'exchange_val_hf: error allocation phase'
 
       if (mat_ex%l_real) THEN
-         allocate(cprod_vv_c(hybrid%maxbasm1, 0, 0), carr3_vv_c(hybrid%maxbasm1, 0, 0))
-         allocate(cprod_vv_r(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
+         ALLOCATE (cprod_vv_c(hybrid%maxbasm1, 0, 0), carr3_vv_c(hybrid%maxbasm1, 0, 0))
+         ALLOCATE (cprod_vv_r(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
          IF (ok /= 0) STOP 'exchange_val_hf: error allocation cprod'
-         allocate(carr3_vv_r(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
+         ALLOCATE (carr3_vv_r(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
          IF (ok /= 0) STOP 'exchange_val_hf: error allocation carr3'
          cprod_vv_r = 0; carr3_vv_r = 0
       ELSE
-         allocate(cprod_vv_r(hybrid%maxbasm1, 0, 0), carr3_vv_r(hybrid%maxbasm1, 0, 0))
-         allocate(cprod_vv_c(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
+         ALLOCATE (cprod_vv_r(hybrid%maxbasm1, 0, 0), carr3_vv_r(hybrid%maxbasm1, 0, 0))
+         ALLOCATE (cprod_vv_c(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
          IF (ok /= 0) STOP 'exchange_val_hf: error allocation cprod'
-         allocate(carr3_vv_c(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
+         ALLOCATE (carr3_vv_c(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
          IF (ok /= 0) STOP 'exchange_val_hf: error allocation carr3'
          cprod_vv_c = 0; carr3_vv_c = 0
       END IF

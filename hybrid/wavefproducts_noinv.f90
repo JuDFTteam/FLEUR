@@ -190,7 +190,7 @@ CONTAINS
          cprod(ic, :, :) = carr(:, :)
       END DO
       call timestop("hybrid gptm")
-      deallocate(z0, pointer, gpt0)
+      DEALLOCATE (z0, pointer, gpt0)
       call timestop("calc convolution")
 
       call timestop("wavefproducts_noinv5 IR")

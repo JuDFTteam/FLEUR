@@ -586,7 +586,7 @@ CONTAINS
 
       call timestart("bra trafo")
 
-      allocate(vecin1(dim, nobd, nbands), &
+      ALLOCATE (vecin1(dim, nobd, nbands), &
      &           vecout1(dim, nobd, nbands), stat=ok)
       IF (ok /= 0) &
      &             STOP 'bra_trafo2: error allocating vecin1 or vecout1'
@@ -731,7 +731,7 @@ CONTAINS
          vecout1(hybrid%nbasp + igptm, :, :) = cdum*vecin1(hybrid%nbasp + igptm2, :, :)
       END DO
 
-      deallocate(vecin1)
+      DEALLOCATE (vecin1)
 
       if (l_real) THEN
          DO i = 1, nbands
@@ -758,7 +758,7 @@ CONTAINS
       else
          vecout_c = vecout1
       endif
-      deallocate(vecout1)
+      DEALLOCATE (vecout1)
       call timestop("bra trafo")
    END SUBROUTINE bra_trafo2
 

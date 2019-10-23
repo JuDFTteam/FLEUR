@@ -42,7 +42,7 @@ CONTAINS
       REAL, ALLOCATABLE          ::  eig_cr(:, :, :)
 
       ncstd = maxval(atoms%ncst)
-      allocate(nindxcr(0:ncstd, atoms%ntype), stat=ok)
+      ALLOCATE (nindxcr(0:ncstd, atoms%ntype), stat=ok)
 
       ! generate relativistic core wave functions( ->core1r,core2r )
       CALL calcorewf(dimension, input, jsp, atoms,&
@@ -114,7 +114,7 @@ CONTAINS
          END DO
       END DO
 
-      deallocate(nindxcr, core1r, core2r, eig_cr)
+      DEALLOCATE (nindxcr, core1r, core2r, eig_cr)
 
       IF (maxindxc /= maxval(nindxc))&
      &   STOP 'corewf: counting error nindxc'
@@ -166,7 +166,7 @@ CONTAINS
       c = c_light(1.0)
 
       IF (first) THEN
-         allocate(vr0(atoms%jmtd, atoms%ntype, input%jspins))
+         ALLOCATE (vr0(atoms%jmtd, atoms%ntype, input%jspins))
       END IF
 
       IF (input%frcor) THEN
@@ -218,9 +218,9 @@ CONTAINS
 
       END DO
 
-      allocate(core1(atoms%jmtd, 0:maxval(lmaxc), maxval(nindxcr), atoms%ntype))
-      allocate(core2(atoms%jmtd, 0:maxval(lmaxc), maxval(nindxcr), atoms%ntype))
-      allocate(eig_c(0:maxval(lmaxc), maxval(nindxcr), atoms%ntype))
+      ALLOCATE (core1(atoms%jmtd, 0:maxval(lmaxc), maxval(nindxcr), atoms%ntype))
+      ALLOCATE (core2(atoms%jmtd, 0:maxval(lmaxc), maxval(nindxcr), atoms%ntype))
+      ALLOCATE (eig_c(0:maxval(lmaxc), maxval(nindxcr), atoms%ntype))
 
       core1 = 0; core2 = 0
       nindxcr = 0

@@ -110,13 +110,13 @@ CONTAINS
       IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version", calledby='mixedbasis')
 
       ! Deallocate arrays which might have been allocated in a previous run of this subroutine
-      IF (ALLOCATED(hybrid%ngptm)) deallocate(hybrid%ngptm)
-      IF (ALLOCATED(hybrid%ngptm1)) deallocate(hybrid%ngptm1)
-      IF (ALLOCATED(hybrid%nindxm1)) deallocate(hybrid%nindxm1)
-      IF (ALLOCATED(hybrid%pgptm)) deallocate(hybrid%pgptm)
-      IF (ALLOCATED(hybrid%pgptm1)) deallocate(hybrid%pgptm1)
-      IF (ALLOCATED(hybrid%gptm)) deallocate(hybrid%gptm)
-      IF (ALLOCATED(hybrid%basm1)) deallocate(hybrid%basm1)
+      IF (ALLOCATED(hybrid%ngptm)) DEALLOCATE (hybrid%ngptm)
+      IF (ALLOCATED(hybrid%ngptm1)) DEALLOCATE (hybrid%ngptm1)
+      IF (ALLOCATED(hybrid%nindxm1)) DEALLOCATE (hybrid%nindxm1)
+      IF (ALLOCATED(hybrid%pgptm)) DEALLOCATE (hybrid%pgptm)
+      IF (ALLOCATED(hybrid%pgptm1)) DEALLOCATE (hybrid%pgptm1)
+      IF (ALLOCATED(hybrid%gptm)) DEALLOCATE (hybrid%gptm)
+      IF (ALLOCATED(hybrid%basm1)) DEALLOCATE (hybrid%basm1)
 
       CALL usdus%init(atoms, input%jspins)
 
@@ -131,7 +131,7 @@ CONTAINS
       ! initialize gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
-      allocate(vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
+      ALLOCATE (vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
 
       vr0(:, :, :) = v%mt(:, 0, :, :)
 
@@ -139,10 +139,10 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      allocate( f(atoms%jmtd, 2, 0:atoms%lmaxd), &
+      ALLOCATE ( f(atoms%jmtd, 2, 0:atoms%lmaxd), &
                 df(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
-      allocate(bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
-      allocate(bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
+      ALLOCATE (bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
+      ALLOCATE (bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
 
       DO itype = 1, atoms%ntype
          ng = atoms%jri(itype)
@@ -171,7 +171,7 @@ CONTAINS
          END DO
       END DO
 
-      deallocate(f, df)
+      DEALLOCATE (f, df)
 
       ! the radial functions are normalized
       DO ispin = 1, input%jspins
@@ -191,7 +191,7 @@ CONTAINS
 
       ! construct G-vectors with cutoff smaller than gcutm
       gcutm = hybrid%gcutm1
-      allocate(hybrid%ngptm(kpts%nkptf))
+      ALLOCATE (hybrid%ngptm(kpts%nkptf))
 
       hybrid%ngptm = 0
       i = 0
@@ -236,8 +236,8 @@ CONTAINS
       hybrid%gptmd = i
       hybrid%maxgptm = MAXVAL(hybrid%ngptm)
 
-      allocate(hybrid%gptm(3, hybrid%gptmd))
-      allocate(hybrid%pgptm(hybrid%maxgptm, kpts%nkptf))
+      ALLOCATE (hybrid%gptm(3, hybrid%gptmd))
+      ALLOCATE (hybrid%pgptm(hybrid%maxgptm, kpts%nkptf))
 
       hybrid%gptm = 0
       hybrid%pgptm = 0
@@ -247,8 +247,8 @@ CONTAINS
       n = -1
 
       ! Allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(hybrid%maxgptm, kpts%nkptf))
-      allocate(length_kG(hybrid%maxgptm, kpts%nkptf))
+      ALLOCATE (unsrt_pgptm(hybrid%maxgptm, kpts%nkptf))
+      ALLOCATE (length_kG(hybrid%maxgptm, kpts%nkptf))
       length_kG = 0
       unsrt_pgptm = 0
 
@@ -292,7 +292,7 @@ CONTAINS
 
       ! Sort pointers in array, so that shortest |k+G| comes first
       DO ikpt = 1, kpts%nkptf
-         allocate(ptr(hybrid%ngptm(ikpt)))
+         ALLOCATE (ptr(hybrid%ngptm(ikpt)))
          ! Divide and conquer algorithm for arrays > 1000 entries
          divconq = MAX(0, INT(1.443*LOG(0.001*hybrid%ngptm(ikpt))))
          ! create pointers which correspond to a sorted array
@@ -301,15 +301,15 @@ CONTAINS
          DO igpt = 1, hybrid%ngptm(ikpt)
             hybrid%pgptm(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
          END DO
-         deallocate(ptr)
+         DEALLOCATE (ptr)
       END DO
-      deallocate(unsrt_pgptm)
-      deallocate(length_kG)
+      DEALLOCATE (unsrt_pgptm)
+      DEALLOCATE (length_kG)
 
       ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm1
 
       ! first run to determine dimension of pgptm1
-      allocate(hybrid%ngptm1(kpts%nkptf))
+      ALLOCATE (hybrid%ngptm1(kpts%nkptf))
       hybrid%ngptm1 = 0
       DO igpt = 1, hybrid%gptmd
          g = hybrid%gptm(:, igpt)
@@ -323,13 +323,13 @@ CONTAINS
       END DO
       hybrid%maxgptm1 = MAXVAL(hybrid%ngptm1)
 
-      allocate(hybrid%pgptm1(hybrid%maxgptm1, kpts%nkptf))
+      ALLOCATE (hybrid%pgptm1(hybrid%maxgptm1, kpts%nkptf))
       hybrid%pgptm1 = 0
       hybrid%ngptm1 = 0
 
       ! Allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(hybrid%maxgptm1, kpts%nkptf))
-      allocate(length_kG(hybrid%maxgptm1, kpts%nkptf))
+      ALLOCATE (unsrt_pgptm(hybrid%maxgptm1, kpts%nkptf))
+      ALLOCATE (length_kG(hybrid%maxgptm1, kpts%nkptf))
       length_kG = 0
       unsrt_pgptm = 0
       DO igpt = 1, hybrid%gptmd
@@ -347,7 +347,7 @@ CONTAINS
 
       ! Sort pointers in array, so that shortest |k+G| comes first
       DO ikpt = 1, kpts%nkptf
-         allocate(ptr(hybrid%ngptm1(ikpt)))
+         ALLOCATE (ptr(hybrid%ngptm1(ikpt)))
          ! Divide and conquer algorithm for arrays > 1000 entries
          divconq = MAX(0, INT(1.443*LOG(0.001*hybrid%ngptm1(ikpt))))
          ! create pointers which correspond to a sorted array
@@ -356,10 +356,10 @@ CONTAINS
          DO igpt = 1, hybrid%ngptm1(ikpt)
             hybrid%pgptm1(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
          END DO
-         deallocate(ptr)
+         DEALLOCATE (ptr)
       END DO
-      deallocate(unsrt_pgptm)
-      deallocate(length_kG)
+      DEALLOCATE (unsrt_pgptm)
+      DEALLOCATE (length_kG)
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(/A)') 'Mixed basis'
@@ -383,9 +383,9 @@ CONTAINS
 
       hybrid%maxlcutm1 = MAXVAL(hybrid%lcutm1)
 
-      allocate(hybrid%nindxm1(0:hybrid%maxlcutm1, atoms%ntype))
-      allocate(seleco(hybrid%maxindx, 0:atoms%lmaxd), selecu(hybrid%maxindx, 0:atoms%lmaxd))
-      allocate(selecmat(hybrid%maxindx, 0:atoms%lmaxd, hybrid%maxindx, 0:atoms%lmaxd))
+      ALLOCATE (hybrid%nindxm1(0:hybrid%maxlcutm1, atoms%ntype))
+      ALLOCATE (seleco(hybrid%maxindx, 0:atoms%lmaxd), selecu(hybrid%maxindx, 0:atoms%lmaxd))
+      ALLOCATE (selecmat(hybrid%maxindx, 0:atoms%lmaxd, hybrid%maxindx, 0:atoms%lmaxd))
       hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
 
       ! determine maximal indices of (radial) mixed-basis functions (->nindxm1)
@@ -442,7 +442,7 @@ CONTAINS
       END DO
       hybrid%maxindxm1 = MAXVAL(hybrid%nindxm1)
 
-      allocate(hybrid%basm1(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
+      ALLOCATE (hybrid%basm1(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
       hybrid%basm1 = 0
 
       ! Define product bases and reduce them according to overlap
@@ -472,7 +472,7 @@ CONTAINS
             END IF
 
             ! set up the overlap matrix
-            allocate(olap(n, n), eigv(n, n), work(3*n), eig(n), ihelp(n))
+            ALLOCATE (olap(n, n), eigv(n, n), work(3*n), eig(n), ihelp(n))
             ihelp = 1 ! initialize to avoid a segfault
             i = 0
 
@@ -559,12 +559,12 @@ CONTAINS
 
                ! Check if basm1 must be reallocated
                IF (nn + 1 > SIZE(hybrid%basm1, 2)) THEN
-                  allocate(basmhlp(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
+                  ALLOCATE (basmhlp(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
                   basmhlp(:, 1:nn, :, :) = hybrid%basm1
-                  deallocate(hybrid%basm1)
-                  allocate(hybrid%basm1(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
+                  DEALLOCATE (hybrid%basm1)
+                  ALLOCATE (hybrid%basm1(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
                   hybrid%basm1(:, 1:nn, :, :) = basmhlp(:, 1:nn, :, :)
-                  deallocate(basmhlp)
+                  DEALLOCATE (basmhlp)
                END IF
 
                hybrid%basm1(:ng, nn + 1, 0, itype) = atoms%rmsh(:ng, itype)/SQRT(atoms%rmsh(ng, itype)**3/3)
@@ -581,8 +581,8 @@ CONTAINS
                                                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
                END DO
                nn = nn + 1
-               deallocate(olap)
-               allocate(olap(nn, nn))
+               DEALLOCATE (olap)
+               ALLOCATE (olap(nn, nn))
                hybrid%nindxm1(l, itype) = nn
             END IF
 
@@ -618,7 +618,7 @@ CONTAINS
                WRITE (6, '(6X,A,I4,'' ->'',I4,''   ('',ES8.1,'' )'')') lchar(l)//':', n, nn, SQRT(rdum)/nn
             END IF
 
-            deallocate(olap, eigv, work, eig, ihelp)
+            DEALLOCATE (olap, eigv, work, eig, ihelp)
 
          END DO !l
          IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(hybrid%nindxm1(0:hybrid%lcutm1(itype), itype))
@@ -626,14 +626,14 @@ CONTAINS
 
       hybrid%maxindxm1 = MAXVAL(hybrid%nindxm1)
 
-      allocate(basmhlp(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
+      ALLOCATE (basmhlp(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
       basmhlp(1:atoms%jmtd, 1:hybrid%maxindxm1, 0:hybrid%maxlcutm1, 1:atoms%ntype) &
          = hybrid%basm1(1:atoms%jmtd, 1:hybrid%maxindxm1, 0:hybrid%maxlcutm1, 1:atoms%ntype)
-      deallocate(hybrid%basm1)
-      allocate(hybrid%basm1(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
+      DEALLOCATE (hybrid%basm1)
+      ALLOCATE (hybrid%basm1(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
       hybrid%basm1 = basmhlp
 
-      deallocate(basmhlp, seleco, selecu, selecmat)
+      DEALLOCATE (basmhlp, seleco, selecu, selecmat)
 
       !
       ! now we build linear combinations of the radial functions

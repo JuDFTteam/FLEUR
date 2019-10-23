@@ -81,14 +81,14 @@ CONTAINS
 
       !In first iteration allocate some memory
       IF (init_vex) THEN
-         allocate(hybrid%ne_eig(kpts%nkpt), hybrid%nbands(kpts%nkpt), hybrid%nobd(kpts%nkptf), source=0)
-         allocate(hybrid%nbasm(kpts%nkptf), source=0)
-         allocate(hybrid%div_vv(DIMENSION%neigd, kpts%nkpt, input%jspins), source=0.0)
+         ALLOCATE (hybrid%ne_eig(kpts%nkpt), hybrid%nbands(kpts%nkpt), hybrid%nobd(kpts%nkptf), source=0)
+         ALLOCATE (hybrid%nbasm(kpts%nkptf), source=0)
+         ALLOCATE (hybrid%div_vv(DIMENSION%neigd, kpts%nkpt, input%jspins), source=0.0)
          init_vex = .FALSE.
       END IF
 
       hybrid%l_subvxc = (hybrid%l_subvxc .AND. hybrid%l_addhf)
-      IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(DIMENSION%neigd2, kpts%nkpt, input%jspins))
+      IF (.NOT. ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(DIMENSION%neigd2, kpts%nkpt, input%jspins))
 
       IF (hybrid%l_calhf) THEN
          iterHF = iterHF + 1
