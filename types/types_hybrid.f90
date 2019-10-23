@@ -48,8 +48,6 @@ MODULE m_types_hybrid
    contains
       procedure  :: init => init_prodtype
       procedure  :: free => free_prodtype
-   contains
-
    END TYPE t_prodtype
 
    TYPE t_hybdat
