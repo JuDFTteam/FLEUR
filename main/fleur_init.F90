@@ -37,7 +37,8 @@
           USE m_types_xcpot_inbuild
           USE m_mpi_bc_xcpot
           USE m_wann_read_inp
-    
+          use m_gaunt, only: gaunt_init
+
 #ifdef CPP_MPI
           USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
@@ -62,7 +63,7 @@
           TYPE(t_vacuum)   ,INTENT(OUT):: vacuum
           TYPE(t_sliceplot),INTENT(OUT):: sliceplot
           TYPE(t_banddos)  ,INTENT(OUT):: banddos
-          TYPE(t_obsolete) ,INTENT(OUT):: obsolete 
+          TYPE(t_obsolete) ,INTENT(OUT):: obsolete
           TYPE(t_enpara)   ,INTENT(OUT):: enpara
           CLASS(t_xcpot),ALLOCATABLE,INTENT(OUT):: xcpot
           TYPE(t_results)  ,INTENT(OUT):: results
@@ -91,7 +92,7 @@
           REAL                          :: dtild, phi_add
           LOGICAL                       :: l_found, l_kpts, l_exist
           LOGICAL                       :: l_wann_inp
-      
+
 #ifdef CPP_MPI
           INCLUDE 'mpif.h'
           INTEGER ierr(3)
@@ -173,7 +174,7 @@
 
           noco%l_mtNocoPot = .FALSE.
 
-          IF (input%l_inpXML) THEN            
+          IF (input%l_inpXML) THEN
              ALLOCATE(noel(1))
              IF (mpi%irank.EQ.0) THEN
                 WRITE (6,*) 'XML code path used: Calculation parameters are stored in out.xml'
@@ -186,14 +187,14 @@
                 a1 = 0.0
                 a2 = 0.0
                 a3 = 0.0
-                CALL timestart("r_inpXML") 
+                CALL timestart("r_inpXML")
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
                      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
-                CALL timestop("r_inpXML") 
+                CALL timestop("r_inpXML")
              END IF
              CALL mpi_bc_xcpot(xcpot,mpi)
 #ifdef CPP_MPI
@@ -201,12 +202,12 @@
              CALL mpi_dist_forcetheorem(mpi,forcetheo)
 #endif
 #endif
-            
-             CALL timestart("postprocessInput") 
+
+             CALL timestart("postprocessInput")
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
                                    oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,l_kpts)
-             CALL timestop("postprocessInput") 
+             CALL timestop("postprocessInput")
 
              IF (mpi%irank.EQ.0) THEN
                 filename = ''
@@ -239,7 +240,7 @@
                   oneD,coreSpecInput,l_opti)
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !
-  
+
           IF (.NOT.mpi%irank==0) CALL enpara%init(atoms,input%jspins,.FALSE.)
                    !-odim
           oneD%odd%nq2 = oneD%odd%n2d
@@ -277,6 +278,7 @@
           call MPI_BCAST( input%preconditioning_param, 1, MPI_DOUBLE_PRECISION, 0, mpi%mpi_comm, ierr )
 #endif
           CALL ylmnorm_init(max(atoms%lmaxd, 2*hybrid%lexp))
+          CALL gaunt_init(max(atoms%lmaxd+1, 2*hybrid%lexp))
           !
           !--> determine more dimensions
           !
@@ -291,7 +293,7 @@
                           banddos,sliceplot,vacuum,cell,enpara,noco,oneD,hybrid)
 #endif
 
-          ! Set up pointer for backtransformation from g-vector in positive 
+          ! Set up pointer for backtransformation from g-vector in positive
           ! domain of carge density fftibox into stars
           CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
 
@@ -327,7 +329,7 @@
           oneD%odg%pgfxx => oneD%pgft1xx ; oneD%odg%pgfyy => oneD%pgft1yy ; oneD%odg%pgfxy => oneD%pgft1xy
           !+odim
           IF (noco%l_noco) DIMENSION%nbasfcn = 2*DIMENSION%nbasfcn
-          
+
           IF( sym%invs .OR. noco%l_soc ) THEN
              sym%nsym = sym%nop
           ELSE
@@ -413,7 +415,7 @@
                                               wann%param_vec(3,pc)*atoms%taual(3,iAtom))
                          wann%param_alpha(iType,pc) = noco%alph(iType) + phi_add
                          iAtom = iAtom + atoms%neq(iType)
-                      END DO  
+                      END DO
                    END IF
                 END DO
 
@@ -496,7 +498,7 @@
           IF(input%l_rdmft) THEN
              hybrid%l_calhf = .FALSE.
           END IF
- 
+
           IF (mpi%irank.EQ.0) THEN
              CALL writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
                                      oneD,hybrid,cell,banddos,sliceplot,xcpot,&
@@ -525,7 +527,7 @@
 #else
          CALL add_usage_data("gpu_per_node",0)
 #endif
-          
+
           CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN

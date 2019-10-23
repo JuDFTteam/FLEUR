@@ -7,9 +7,9 @@ MODULE m_gaunt
    PRIVATE
    INTEGER,SAVE         :: lmaxdp
    REAL,SAVE,ALLOCATABLE::w(:),yr(:,:)
-   PUBLIC gaunt1,gaunt_init
+   PUBLIC gaunt1, gaunt_init
 CONTAINS
-   REAL FUNCTION gaunt1(lp,l,ls,mp,m,ms,lmaxd)
+   FUNCTION gaunt1(lp,l,ls,mp,m,ms,lmaxd)
 !*********************************************************************
 !     gaunt computes the integral of conjg(y(lp,mp))*y(l,m)*y(ls,ms)
 !     for lp+l+ls .lt. 2*ngntd
@@ -23,7 +23,8 @@ CONTAINS
 !*********************************************************************
       USE m_judft
       IMPLICIT NONE
-      INTEGER,INTENT(IN):: l,lp,ls,m,mp,ms,lmaxd
+      INTEGER,INTENT(IN) :: l,lp,ls,m,mp,ms,lmaxd
+      REAL               :: gaunt1
       INTEGER :: i,il,ilp,ils,n
 
 
