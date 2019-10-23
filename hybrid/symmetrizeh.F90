@@ -430,8 +430,10 @@ CONTAINS
                            END DO
                            IF (hmat%l_real) THEN
                               hmat%data_r(j, lapw%nv(jsp) + i) = cdum!/ic
+                              hmat%data_r(lapw%nv(jsp) + i,j) = cdum!/ic
                            ELSE
                               hmat%data_c(j, lapw%nv(jsp) + i) = cdum!/ic
+                              hmat%data_c(lapw%nv(jsp) + i,j) = CONJG(cdum)!/ic
                            END IF
                         END DO
                      END DO
