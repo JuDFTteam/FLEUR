@@ -16,7 +16,7 @@
              END DO
           END DO
 
-          ALLOCATE (coulhlp(nbasm1(ikpt), nbasm1(ikpt)))
+          allocate(coulhlp(nbasm1(ikpt), nbasm1(ikpt)))
           coulhlp = unpackmat(coulomb(:nbasm1(ikpt)*(nbasm1(ikpt) + 1)/2, ikpt))
 
           ic = 0
@@ -33,7 +33,7 @@
                 END DO
              END DO
           END DO
-          ALLOCATE (coulhlp1(nbasm1(ikpt), nbasm1(ikpt)))
+          allocate(coulhlp1(nbasm1(ikpt), nbasm1(ikpt)))
           coulhlp1 = 0
 
           ic2 = 0
@@ -234,7 +234,7 @@
                 END IF
              END DO
           END DO
-          DEALLOCATE (coulhlp, coulhlp1)
+          deallocate(coulhlp, coulhlp1)
        END DO
        STOP
     END IF ! lplot

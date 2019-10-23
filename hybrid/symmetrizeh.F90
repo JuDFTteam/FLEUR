@@ -94,7 +94,7 @@ CONTAINS
       END DO
 
       ! caclulate mapping of atoms
-      ALLOCATE (map(nsymop, atoms%nat))
+      allocate(map(nsymop, atoms%nat))
       map = 0
       iatom = 0
       iiatom = 0
@@ -117,7 +117,7 @@ CONTAINS
       END DO
 
       ! initialze pointer_apw and the apw part of cfac
-      ALLOCATE (pointer_apw(lapw%nv(jsp), nsymop), cfac(lapw%nv(jsp) + atoms%nlotot, nsymop), stat=ok)
+      allocate(pointer_apw(lapw%nv(jsp), nsymop), cfac(lapw%nv(jsp) + atoms%nlotot, nsymop), stat=ok)
       IF (ok /= 0) STOP 'symmetrizeh_new: failure allocation pointer_apw,cfac'
 
       pointer_apw = 0
@@ -249,9 +249,9 @@ CONTAINS
 
          ! calculate expansion coefficients for local orbitals
          IF (hmat%l_real) THEN
-            ALLOCATE (c_lo(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat), stat=ok)
+            allocate(c_lo(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat), stat=ok)
          ELSE
-            ALLOCATE (c_lo(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat), stat=ok)
+            allocate(c_lo(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat), stat=ok)
          END IF
 
          IF (ok /= 0) STOP 'symmetrizeh_new: failure allocation c_lo'
@@ -268,7 +268,7 @@ CONTAINS
 
                   DO ilo = 1, atoms%nlo(itype)
                      l = atoms%llo(ilo, itype)
-                     ALLOCATE (y((l + 1)**2))
+                     allocate(y((l + 1)**2))
                      lo_indx(ilo, iatom) = ilotot + 1
 
                      DO igpt_lo = 1, invsfct*(2*l + 1)
@@ -294,7 +294,7 @@ CONTAINS
                            END DO
                         END IF
                      END DO
-                     DEALLOCATE (y)
+                     deallocate(y)
                   END DO
                END IF
             END DO
@@ -303,11 +303,11 @@ CONTAINS
          IF (ilotot /= atoms%nlotot) STOP 'symmetrizeh_new: failure counting local orbitals(ilotot)'
 
          IF (hmat%l_real) THEN
-            ALLOCATE (c_rot(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat, nsymop))
-            ALLOCATE (chelp(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2))
+            allocate(c_rot(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat, nsymop))
+            allocate(chelp(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2))
          ELSE
-            ALLOCATE (c_rot(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat, nsymop))
-            ALLOCATE (chelp(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1))
+            allocate(c_rot(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat, nsymop))
+            allocate(chelp(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1))
          END IF
 
          DO isym = 1, nsymop
@@ -334,7 +334,7 @@ CONTAINS
 
                      DO ilo = 1, atoms%nlo(itype)
                         l = atoms%llo(ilo, itype)
-                        ALLOCATE (y((l + 1)**2))
+                        allocate(y((l + 1)**2))
 
                         DO igpt_lo = 1, invsfct*(2*l + 1)
                            ilotot = ilotot + 1
@@ -365,14 +365,14 @@ CONTAINS
 
                         idum = invsfct*(2*l + 1)
 
-                        ALLOCATE (ipiv(idum))
+                        allocate(ipiv(idum))
 
                         chelp(:idum, :idum) = c_lo(:idum, :idum, ilo, ratom)
 
                         CALL ZGESV(idum, idum, chelp(:idum, :idum), idum, ipiv, c_rot(:idum, :idum, ilo, ratom, isym), idum, ok)
 
                         IF (ok /= 0) STOP 'symmetrizeh_new: failure zgesv'
-                        DEALLOCATE (ipiv, y)
+                        deallocate(ipiv, y)
                      END DO
                   END IF
                END DO

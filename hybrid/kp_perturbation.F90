@@ -144,7 +144,7 @@ CONTAINS
       END DO
 
       ! calculate lo wavefunction coefficients
-      ALLOCATE (cmt_lo(dimension%neigd, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
+      allocate(cmt_lo(dimension%neigd, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
       cmt_lo = 0
       iatom = 0
       ic = 0
@@ -221,7 +221,7 @@ CONTAINS
       END DO
       idum = maxval(lmp_start)
 
-      ALLOCATE (cmt_apw(dimension%neigd, idum, atoms%nat))
+      allocate(cmt_apw(dimension%neigd, idum, atoms%nat))
       cmt_apw = 0
       DO i = 1, lapw%nv(jsp)
          kvec = kpts%bk(:, nk) + lapw%gvec(:, i, jsp)
@@ -285,9 +285,9 @@ CONTAINS
       ! construct radial functions (complex) for the first order
       ! incomplete basis set correction
 
-      ALLOCATE (u1(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybrid%nbands
+      allocate(u1(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybrid%nbands
       IF (ok /= 0) STOP 'kp_perturbation: failure allocation u1'
-      ALLOCATE (u2(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybrid%nbands
+      allocate(u2(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybrid%nbands
       IF (ok /= 0) STOP 'kp_perturbation: failure allocation u2'
       u1 = 0; u2 = 0
 

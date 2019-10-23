@@ -105,7 +105,7 @@ CONTAINS
       ! set spherical component of the potential from the previous iteration vr
       vr = vr0
 
-!       ALLOCATE ( z_out(nbasfcn,neigd,nkpti),stat=ok )
+!       allocate( z_out(nbasfcn,neigd,nkpti),stat=ok )
 !       IF ( ok .ne. 0) STOP 'gen_wavf: failure allocation z'
 !       z_out = 0
 !       z_out(:,:,:nkpti) = z_in
@@ -115,7 +115,7 @@ CONTAINS
       ! bas1 denotes the large component
       ! bas2    "     "  small component
 
-      ALLOCATE (f(atoms%jmtd, 2, 0:atoms%lmaxd), &
+      allocate(f(atoms%jmtd, 2, 0:atoms%lmaxd), &
                 df(atoms%jmtd, 2, 0:atoms%lmaxd), &
                 source=0.0)
 
@@ -154,7 +154,7 @@ CONTAINS
             END DO
          END IF
       END DO
-      DEALLOCATE (f, df)
+      deallocate(f, df)
 
 #if CPP_DEBUG
       ! consistency check
@@ -170,15 +170,15 @@ CONTAINS
       ! (acof,bcof,ccof) and APW-basis coefficients
       ! (a,b,bascofold_lo) at irred. kpoints
 
-      ALLOCATE (acof(dimension%neigd, 0:dimension%lmd, atoms%nat), stat=ok)
+      allocate(acof(dimension%neigd, 0:dimension%lmd, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation acof')
-      ALLOCATE (bcof(dimension%neigd, 0:dimension%lmd, atoms%nat), stat=ok)
+      allocate(bcof(dimension%neigd, 0:dimension%lmd, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation bcof')
-      ALLOCATE (ccof(-atoms%llod:atoms%llod, dimension%neigd, atoms%nlod, atoms%nat), stat=ok)
+      allocate(ccof(-atoms%llod:atoms%llod, dimension%neigd, atoms%nlod, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation ccof')
-      ALLOCATE (cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      allocate(cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: Failure allocation cmt')
-      ALLOCATE (cmthlp(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      allocate(cmthlp(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation cmthlp')
 
       DO ikpt0 = 1, nkpti
@@ -270,8 +270,8 @@ CONTAINS
          END DO  !ikpt
       END DO !ikpt0
 
-      DEALLOCATE (acof, bcof, ccof)
-      DEALLOCATE (cmt, cmthlp)
+      deallocate(acof, bcof, ccof)
+      deallocate(cmt, cmthlp)
 
    END SUBROUTINE gen_wavf
 END MODULE m_gen_wavf
