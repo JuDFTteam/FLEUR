@@ -187,8 +187,18 @@ CONTAINS
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
          ALLOCATE (hybdat%prodm(hybrid%maxindxm1, hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
-         ALLOCATE (hybdat%prod(hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
-         IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prod')
+
+         ! allocate prod arrays
+         ALLOCATE (hybdat%prod%l1(hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
+         IF (ok /= 0) call judft_error('hf_setup: failure allocation hybdat%prod%l1')
+         ALLOCATE (hybdat%prod%l2, mold=hybdat%prod%l1, stat=ok)
+         IF (ok /= 0) call judft_error('hf_setup: failure allocation hybdat%prod%l2')
+         ALLOCATE (hybdat%prod%n1, mold=hybdat%prod%l1, stat=ok)
+         IF (ok /= 0) call judft_error('hf_setup: failure allocation hybdat%prod%n1')
+         ALLOCATE (hybdat%prod%n2, mold=hybdat%prod%l1, stat=ok)
+         IF (ok /= 0) call judft_error('hf_setup: failure allocation hybdat%prod%n2')
+
+
          basprod = 0; hybdat%prodm = 0; hybdat%prod%l1 = 0; hybdat%prod%l2 = 0
          hybdat%prod%n1 = 0; hybdat%prod%n2 = 0
          ALLOCATE (hybdat%nindxp1(0:hybrid%maxlcutm1, atoms%ntype))
@@ -211,10 +221,10 @@ CONTAINS
                               IF (MOD(l1 + l2 + l, 2) == 0) THEN
                                  hybdat%nindxp1(l, itype) = hybdat%nindxp1(l, itype) + 1
                                  n = hybdat%nindxp1(l, itype)
-                                 hybdat%prod(n, l, itype)%l1 = l1
-                                 hybdat%prod(n, l, itype)%l2 = l2
-                                 hybdat%prod(n, l, itype)%n1 = n1
-                                 hybdat%prod(n, l, itype)%n2 = n2
+                                 hybdat%prod%l1(n,l,itype) = l1
+                                 hybdat%prod%l2(n,l,itype) = l2
+                                 hybdat%prod%n1(n,l,itype) = n1
+                                 hybdat%prod%n2(n,l,itype) = n2
                                  DO i = 1, hybrid%nindxm1(l, itype)
                                     hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*hybrid%basm1(:ng, i, l, itype), atoms%jri, &
                                                                           atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)

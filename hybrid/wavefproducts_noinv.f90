@@ -263,10 +263,10 @@ CONTAINS
             DO l = 0, hybrid%lcutm1(itype)
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
 
-                  l1 = hybdat%prod(n, l, itype)%l1 !
-                  l2 = hybdat%prod(n, l, itype)%l2 ! current basis-function product
-                  n1 = hybdat%prod(n, l, itype)%n1 ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
-                  n2 = hybdat%prod(n, l, itype)%n2 !
+                  l1 = hybdat%prod%l1(n,l,itype) !
+                  l2 = hybdat%prod%l2(n,l,itype) ! current basis-function product
+                  n1 = hybdat%prod%n1(n,l,itype) ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
+                  n2 = hybdat%prod%n2(n,l,itype) !
 
                   IF (mod(l1 + l2 + l, 2) == 0) THEN
                      offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations

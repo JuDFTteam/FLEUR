@@ -41,7 +41,10 @@ MODULE m_types_hybrid
    END TYPE t_hybrid
 
    TYPE t_prodtype
-      INTEGER :: l1, l2, n1, n2
+      INTEGER, ALLOCATABLE :: l1(:, :, :)
+      INTEGER, ALLOCATABLE :: l2(:, :, :)
+      INTEGER, ALLOCATABLE :: n1(:, :, :)
+      INTEGER, ALLOCATABLE :: n2(:, :, :)
    END TYPE t_prodtype
 
    TYPE t_hybdat
@@ -58,7 +61,7 @@ MODULE m_types_hybrid
       REAL, ALLOCATABLE :: bas1(:, :, :, :), bas2(:, :, :, :) !alloc in eigen_HF_init
       REAL, ALLOCATABLE :: bas1_MT(:, :, :), drbas1_MT(:, :, :) !alloc in eigen_HF_init
       REAL, ALLOCATABLE :: prodm(:, :, :, :)           !alloc in eigen_HF_setup
-      TYPE(t_PRODTYPE), ALLOCATABLE :: prod(:, :, :)  !alloc in eigen_HF_setup
+      TYPE(t_PRODTYPE)  :: prod  !alloc in eigen_HF_setup
       INTEGER, ALLOCATABLE :: pntgptd(:)    !alloc in eigen_HF_setup
       INTEGER, ALLOCATABLE :: pntgpt(:, :, :, :)           !alloc in eigen_HF_setup
       INTEGER, ALLOCATABLE :: nindxp1(:, :)

@@ -452,7 +452,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
          IF(ALLOCATED(hybdat%pntgptd)) DEALLOCATE (hybdat%pntgptd)
          IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE (hybdat%pntgpt)
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE (hybdat%prodm)
-         IF(ALLOCATED(hybdat%prod)) DEALLOCATE (hybdat%prod)
+
+         IF(ALLOCATED(hybdat%prod%l1)) DEALLOCATE (hybdat%prod%l1)
+         IF(ALLOCATED(hybdat%prod%l2)) DEALLOCATE (hybdat%prod%l2)
+         IF(ALLOCATED(hybdat%prod%n1)) DEALLOCATE (hybdat%prod%n1)
+         IF(ALLOCATED(hybdat%prod%n2)) DEALLOCATE (hybdat%prod%n2)
+
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE (hybdat%nindxp1)
 
          results%neig(:,:) = neigTemp(:,:)

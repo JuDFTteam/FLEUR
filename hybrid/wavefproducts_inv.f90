@@ -390,10 +390,10 @@ CONTAINS
                  DO n = 1, hybdat%nindxp1(l, itype)
 
                     ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                    l1 = hybdat%prod(n, l, itype)%l1
-                    l2 = hybdat%prod(n, l, itype)%l2
-                    p1 = hybdat%prod(n, l, itype)%n1
-                    p2 = hybdat%prod(n, l, itype)%n2
+                    l1 = hybdat%prod%l1(n,l,itype)
+                    l2 = hybdat%prod%l2(n,l,itype)
+                    p1 = hybdat%prod%n1(n,l,itype)
+                    p2 = hybdat%prod%n2(n,l,itype)
 
                     ! condition for Gaunt coefficients
                     IF (mod(l + l1 + l2, 2) /= 0) CYCLE
@@ -511,10 +511,10 @@ CONTAINS
                  DO n = 1, hybdat%nindxp1(l, itype)
 
                     ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                    l1 = hybdat%prod(n, l, itype)%l1
-                    l2 = hybdat%prod(n, l, itype)%l2
-                    p1 = hybdat%prod(n, l, itype)%n1
-                    p2 = hybdat%prod(n, l, itype)%n2
+                    l1 = hybdat%prod%l1(n,l,itype)
+                    l2 = hybdat%prod%l2(n,l,itype)
+                    p1 = hybdat%prod%n1(n,l,itype)
+                    p2 = hybdat%prod%n2(n,l,itype)
 
                     ! condition for Gaunt coefficients
                     IF (mod(l + l1 + l2, 2) /= 0) CYCLE
