@@ -19,53 +19,53 @@ MODULE m_types_hybrid
       INTEGER                ::  maxindx
       INTEGER                ::  maxlmindx
       INTEGER                ::  gptmd
-      INTEGER, ALLOCATABLE   ::  nindx(:, :)
-      INTEGER, ALLOCATABLE   ::  select1(:, :)
+      INTEGER, ALLOCATABLE   ::  nindx(:,:)
+      INTEGER, ALLOCATABLE   ::  select1(:,:)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
-      INTEGER, ALLOCATABLE   ::  nindxm1(:, :)
-      INTEGER, ALLOCATABLE   ::  gptm(:, :)
+      INTEGER, ALLOCATABLE   ::  nindxm1(:,:)
+      INTEGER, ALLOCATABLE   ::  gptm(:,:)
       INTEGER, ALLOCATABLE   ::  ngptm1(:)
-      INTEGER, ALLOCATABLE   ::  pgptm1(:, :)
+      INTEGER, ALLOCATABLE   ::  pgptm1(:,:)
       INTEGER, ALLOCATABLE   ::  ngptm(:)
-      INTEGER, ALLOCATABLE   ::  pgptm(:, :)
+      INTEGER, ALLOCATABLE   ::  pgptm(:,:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
-      INTEGER, ALLOCATABLE   ::  map(:, :)
-      INTEGER, ALLOCATABLE   ::  tvec(:, :, :)
+      INTEGER, ALLOCATABLE   ::  map(:,:)
+      INTEGER, ALLOCATABLE   ::  tvec(:,:,:)
       INTEGER, ALLOCATABLE   ::  nbasm(:)
       REAL                   ::  gcutm1
       REAL                   ::  tolerance1  !only read in
-      REAL, ALLOCATABLE      ::  basm1(:, :, :, :)
-      COMPLEX, ALLOCATABLE   ::  d_wgn2(:, :, :, :)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:)  !alloc in eigen_HF_init
-      REAL, ALLOCATABLE      ::  div_vv(:, :, :)
+      REAL, ALLOCATABLE      ::  basm1(:,:,:,:)
+      COMPLEX, ALLOCATABLE   ::  d_wgn2(:,:,:,:)
+      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:)
+      REAL, ALLOCATABLE      ::  div_vv(:,:,:)
    END TYPE t_hybrid
 
    TYPE t_prodtype
-      INTEGER, ALLOCATABLE :: l1(:, :, :)
-      INTEGER, ALLOCATABLE :: l2(:, :, :)
-      INTEGER, ALLOCATABLE :: n1(:, :, :)
-      INTEGER, ALLOCATABLE :: n2(:, :, :)
+      INTEGER, ALLOCATABLE :: l1(:,:,:)
+      INTEGER, ALLOCATABLE :: l2(:,:,:)
+      INTEGER, ALLOCATABLE :: n1(:,:,:)
+      INTEGER, ALLOCATABLE :: n2(:,:,:)
    END TYPE t_prodtype
 
    TYPE t_hybdat
-      INTEGER                     :: lmaxcd, maxindxc
-      INTEGER                     :: maxfac
-      REAL, ALLOCATABLE :: gridf(:, :)     !alloc in util.F
-      INTEGER, ALLOCATABLE :: nindxc(:, :)     !alloc in eigen_HF_init
-      INTEGER, ALLOCATABLE :: lmaxc(:)      !alloc in eigen_HF_init
-      REAL, ALLOCATABLE :: core1(:, :, :, :), core2(:, :, :, :) !alloc in eigen_HF_init
-      REAL, ALLOCATABLE :: eig_c(:, :, :)  !alloc in eigen_HF_init
-      INTEGER, ALLOCATABLE :: kveclo_eig(:, :)     !alloc in eigen_HF_setup
-      REAL, ALLOCATABLE :: sfac(:), fac(:) !alloc in eigen_HF_init
-      REAL, ALLOCATABLE :: gauntarr(:, :, :, :, :, :) !alloc in eigen_HF_init
-      REAL, ALLOCATABLE :: bas1(:, :, :, :), bas2(:, :, :, :) !alloc in eigen_HF_init
-      REAL, ALLOCATABLE :: bas1_MT(:, :, :), drbas1_MT(:, :, :) !alloc in eigen_HF_init
-      REAL, ALLOCATABLE :: prodm(:, :, :, :)           !alloc in eigen_HF_setup
-      TYPE(t_PRODTYPE)  :: prod  !alloc in eigen_HF_setup
-      INTEGER, ALLOCATABLE :: pntgptd(:)    !alloc in eigen_HF_setup
-      INTEGER, ALLOCATABLE :: pntgpt(:, :, :, :)           !alloc in eigen_HF_setup
-      INTEGER, ALLOCATABLE :: nindxp1(:, :)
-      COMPLEX, ALLOCATABLE ::  stepfunc(:, :, :)
+      INTEGER                :: lmaxcd, maxindxc
+      INTEGER                :: maxfac
+      REAL, ALLOCATABLE      :: gridf(:,:)
+      INTEGER, ALLOCATABLE   :: nindxc(:,:)
+      INTEGER, ALLOCATABLE   :: lmaxc(:)
+      REAL, ALLOCATABLE      :: core1(:,:,:,:), core2(:,:,:,:)
+      REAL, ALLOCATABLE      :: eig_c(:,:,:)
+      INTEGER, ALLOCATABLE   :: kveclo_eig(:,:)
+      REAL, ALLOCATABLE      :: sfac(:), fac(:)
+      REAL, ALLOCATABLE      :: gauntarr(:,:,:,:,:,:)
+      REAL, ALLOCATABLE      :: bas1(:,:,:,:), bas2(:,:,:,:)
+      REAL, ALLOCATABLE      :: bas1_MT(:,:,:), drbas1_MT(:,:,:)
+      REAL, ALLOCATABLE      :: prodm(:,:,:,:)
+      TYPE(t_PRODTYPE)       :: prod
+      INTEGER, ALLOCATABLE   :: pntgptd(:)
+      INTEGER, ALLOCATABLE   :: pntgpt(:,:,:,:)
+      INTEGER, ALLOCATABLE   :: nindxp1(:,:)
+      COMPLEX, ALLOCATABLE   ::  stepfunc(:,:,:)
    contains
       procedure  :: set_stepfunction => set_stepfunction
    END TYPE t_hybdat
@@ -130,7 +130,7 @@ contains
             fgr = fpi_const*(sin(r) - r*cos(r))/gnorm3/cell%omtil
             DO ieq = 1, atoms%neq(itype)
                icent = icent + 1
-               stepfunction = stepfunction - fgr*exp(-cmplx(0., tpi_const*dot_product(atoms%taual(:, icent), g)))
+               stepfunction = stepfunction - fgr*exp(-cmplx(0., tpi_const*dot_product(atoms%taual(:,icent), g)))
             ENDDO
          ENDDO
       ENDIF
@@ -143,7 +143,7 @@ contains
       INTEGER, INTENT(IN)  :: gpt(3)
       REAL, INTENT(IN)     :: bmat(3, 3)
 
-      gptnorm = sqrt(sum(matmul(gpt(:), bmat(:, :))**2))
+      gptnorm = sqrt(sum(matmul(gpt(:), bmat(:,:))**2))
 
    END FUNCTION gptnorm
 END MODULE m_types_hybrid
