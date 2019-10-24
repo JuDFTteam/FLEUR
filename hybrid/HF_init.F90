@@ -23,10 +23,10 @@ CONTAINS
 
       !Alloc variables
       allocate(hybdat%lmaxc(atoms%ntype), source=0)
-      allocate(hybdat%bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%bas1_MT(hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%drbas1_MT(hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas2(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas1_MT(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%drbas1_MT(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
 
       ! preparations for core states
       CALL core_init(dimension, input, atoms, hybdat%lmaxcd, hybdat%maxindxc)

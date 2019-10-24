@@ -278,7 +278,7 @@ CONTAINS
          IF (ok /= 0) call judft_error('symm: failure allocation rep_v')
 
          call olappw%alloc(z%l_real, lapw%nv(jsp), lapw%nv(jsp))
-         allocate(olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
+         allocate(olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
 
          olapmt = 0
@@ -378,7 +378,7 @@ CONTAINS
          !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
          IF (allocated(olapmt)) deallocate(olapmt)
-         allocate(olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
+         allocate(olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
          olapmt = 0
 
@@ -396,7 +396,7 @@ CONTAINS
             END DO
          END DO
 
-         allocate(wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(hybrid%maxindx), stat=ok)
+         allocate(wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(maxval(hybrid%num_radfun_per_l)), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
          wavefolap = 0
 

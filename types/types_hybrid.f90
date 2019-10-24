@@ -15,7 +15,6 @@ MODULE m_types_hybrid
       INTEGER                ::  max_indx_p_1
       INTEGER                ::  maxgptm
       INTEGER                ::  maxgptm1
-      INTEGER                ::  maxindx
       INTEGER                ::  maxlmindx
       INTEGER                ::  gptmd
       INTEGER, ALLOCATABLE   ::  num_radfun_per_l(:,:)

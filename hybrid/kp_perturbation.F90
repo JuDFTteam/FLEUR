@@ -68,10 +68,10 @@ CONTAINS
                                u2_lo(atoms%jmtd, atoms%nlod, atoms%ntype)
       REAL                  ::  kvec(3), qvec(3)
       REAL                  ::  sbes(0:atoms%lmaxd + 1), dsbes(0:atoms%lmaxd + 1)
-      REAL                  ::  bas1_tmp(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd + 1, atoms%ntype), &
-                               bas2_tmp(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd + 1, atoms%ntype)
-      REAL                  ::  bas1_MT_tmp(hybrid%maxindx, 0:atoms%lmaxd + 1, atoms%ntype), &
-                               drbas1_MT_tmp(hybrid%maxindx, 0:atoms%lmaxd + 1, atoms%ntype)
+      REAL                  ::  bas1_tmp(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype), &
+                               bas2_tmp(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype)
+      REAL                  ::  bas1_MT_tmp(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype), &
+                               drbas1_MT_tmp(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype)
       REAL                  ::  ru1(atoms%jmtd, 3, mnobd), ru2(atoms%jmtd, 3, mnobd)
       REAL                  ::  iu1(atoms%jmtd, 3, mnobd), iu2(atoms%jmtd, 3, mnobd)
       REAL                  ::  rintegrand(atoms%jmtd), iintegrand(atoms%jmtd), &
@@ -821,8 +821,8 @@ CONTAINS
       INTEGER                 ::  gpt(3, lapw%nv(jsp))
 
       REAL                    ::  fcoeff((atoms%lmaxd + 1)**2, -1:1), gcoeff((atoms%lmaxd + 1)**2, -1:1)
-      REAL                    ::  qmat1(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), dbas1(atoms%jmtd)
-      REAL                    ::  qmat2(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), dbas2(atoms%jmtd)
+      REAL                    ::  qmat1(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), dbas1(atoms%jmtd)
+      REAL                    ::  qmat2(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), dbas2(atoms%jmtd)
       REAL                    ::  qg(lapw%nv(jsp), 3)
 
       COMPLEX                 ::  hlp(3, 3)

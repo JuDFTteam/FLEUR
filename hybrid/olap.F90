@@ -166,9 +166,9 @@ CONTAINS
 
 !     - arrays -
       INTEGER, INTENT(IN)       :: gpt(:, :)!(3,ngpt)
-      REAL, INTENT(IN)         ::  bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype),&
-     &                            bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
-      REAL, INTENT(OUT)         :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+     &                            bas2(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(OUT)         :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
       TYPE(t_mat), INTENT(INOUT):: olappw
 
 !     - local -
@@ -214,7 +214,7 @@ CONTAINS
       REAL, INTENT(IN)        :: cpw1(:)
       COMPLEX, INTENT(IN)     :: cpw2(:)
       REAL, INTENT(IN)        :: olappw(:,:)
-      REAL, INTENT(IN)        :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)        :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
       COMPLEX                :: carr(ngpt1), cdum
@@ -267,7 +267,7 @@ CONTAINS
       COMPLEX, INTENT(IN)     :: cpw1(:)
       COMPLEX, INTENT(IN)     :: cpw2(:)
       COMPLEX, INTENT(IN)     :: olappw(:,:)
-      REAL, INTENT(IN)        :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)        :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
       COMPLEX                :: carr(ngpt1), cdum
@@ -329,7 +329,7 @@ CONTAINS
 #else
       COMPLEX, INTENT(IN)     :: olappw(:,:)
 #endif
-      REAL, INTENT(IN)        :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)        :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
@@ -381,7 +381,7 @@ CONTAINS
 #else
       COMPLEX, INTENT(IN)     :: olappw(:,:)
 #endif
-      REAL, INTENT(IN)        :: olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)        :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, ic, l, m, lm, nn
 

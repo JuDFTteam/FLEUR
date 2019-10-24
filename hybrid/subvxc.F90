@@ -68,7 +68,7 @@ CONTAINS
       INTEGER               ::  gg(3)
       INTEGER               ::  pointer_lo(atoms%nlod, atoms%ntype)
 
-      REAL                  ::  integ(0:sphhar%nlhd, hybrid%maxindx, 0:atoms%lmaxd, hybrid%maxindx, 0:atoms%lmaxd)
+      REAL                  ::  integ(0:sphhar%nlhd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd)
       REAL                  ::  grid(atoms%jmtd)
       REAL                  ::  vr(atoms%jmtd, 0:sphhar%nlhd)
       REAL                  ::  f(atoms%jmtd, 2, 0:atoms%lmaxd), g(atoms%jmtd, 2, 0:atoms%lmaxd)
@@ -76,8 +76,8 @@ CONTAINS
       REAL                  ::  uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
       REAL                  ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
 
-      REAL                  ::  bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
-      REAL                  ::  bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
+      REAL                  ::  bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL                  ::  bas2(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX               ::  vpw(stars%ng3)
       COMPLEX               ::  vxc(hmat%matsize1*(hmat%matsize1 + 1)/2)

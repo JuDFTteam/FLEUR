@@ -107,7 +107,7 @@
             END DO
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|basis>'
-            allocate(olapcb(hybrid%maxindx), olapcv(maxval(hybrid%nbands), nkpti),&
+            allocate(olapcb(maxval(hybrid%num_radfun_per_l)), olapcv(maxval(hybrid%nbands), nkpti),&
            &          olapcv_avg(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
            &          olapcv_max(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
            &          olapcv_loc(2, -hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype))

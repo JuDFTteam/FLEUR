@@ -117,12 +117,6 @@ CONTAINS
       CALL usdus%init(atoms, input%jspins)
       call hybrid%set_num_radfun_per_l(atoms)
 
-      hybrid%maxindx = 0
-      DO itype = 1, atoms%ntype
-         DO l = 0, atoms%lmax(itype)
-            hybrid%maxindx = MAX(hybrid%maxindx, 2 + COUNT(atoms%llo(:atoms%nlo(itype), itype) == l))
-         END DO
-      END DO
       ! maxindx = maxval(nlo) + 2
 
       ! initialize gridf for radial integration
@@ -138,8 +132,8 @@ CONTAINS
 
       allocate( f(atoms%jmtd, 2, 0:atoms%lmaxd), &
                 df(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
-      allocate(bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
-      allocate(bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
+      allocate(bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
+      allocate(bas2(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
 
       DO itype = 1, atoms%ntype
          ng = atoms%jri(itype) ! number of radial gridpoints
@@ -379,8 +373,8 @@ CONTAINS
       hybrid%maxlcutm1 = MAXVAL(hybrid%lcutm1)
 
       allocate(hybrid%nindxm1(0:hybrid%maxlcutm1, atoms%ntype))
-      allocate(seleco(hybrid%maxindx, 0:atoms%lmaxd), selecu(hybrid%maxindx, 0:atoms%lmaxd))
-      allocate(selecmat(hybrid%maxindx, 0:atoms%lmaxd, hybrid%maxindx, 0:atoms%lmaxd))
+      allocate(seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd), selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
+      allocate(selecmat(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
       hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
 
       ! determine maximal indices of (radial) mixed-basis functions (->nindxm1)
@@ -395,7 +389,7 @@ CONTAINS
          selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
 
          ! include local orbitals
-         IF (hybrid%maxindx >= 3) THEN
+         IF (maxval(hybrid%num_radfun_per_l) >= 3) THEN
             seleco(3:,:) = .TRUE.
             selecu(3:,:) = .TRUE.
          END IF
@@ -410,8 +404,8 @@ CONTAINS
 
             ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
             selecmat = RESHAPE((/((((seleco(n1, l1) .AND. selecu(n2, l2), &
-                                     n1=1, hybrid%maxindx), l1=0, atoms%lmaxd), n2=1, hybrid%maxindx), l2=0, atoms%lmaxd)/), &
-                               (/hybrid%maxindx, atoms%lmaxd + 1, hybrid%maxindx, atoms%lmaxd + 1/))
+                                     n1=1, maxval(hybrid%num_radfun_per_l)), l1=0, atoms%lmaxd), n2=1, maxval(hybrid%num_radfun_per_l)), l2=0, atoms%lmaxd)/), &
+                               (/maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1/))
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
@@ -449,7 +443,7 @@ CONTAINS
          seleco(2, 0:hybrid%select1(2, itype)) = .TRUE.
          selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
          ! include lo's
-         IF (hybrid%maxindx >= 3) THEN
+         IF (maxval(hybrid%num_radfun_per_l) >= 3) THEN
             seleco(3:,:) = .TRUE.
             selecu(3:,:) = .TRUE.
          END IF
@@ -474,8 +468,8 @@ CONTAINS
 
             ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
             selecmat = RESHAPE((/((((seleco(n1, l1) .AND. selecu(n2, l2), &
-                                     n1=1, hybrid%maxindx), l1=0, atoms%lmaxd), n2=1, hybrid%maxindx), l2=0, atoms%lmaxd)/), &
-                               (/hybrid%maxindx, atoms%lmaxd + 1, hybrid%maxindx, atoms%lmaxd + 1/))
+                                     n1=1, maxval(hybrid%num_radfun_per_l)), l1=0, atoms%lmaxd), n2=1, maxval(hybrid%num_radfun_per_l)), l2=0, atoms%lmaxd)/), &
+                               (/maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1/))
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
