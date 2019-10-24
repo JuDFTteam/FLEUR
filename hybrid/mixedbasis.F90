@@ -100,10 +100,6 @@ CONTAINS
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
 
-      ! writing to a file
-      INTEGER, PARAMETER              ::  iounit = 125
-      CHARACTER(10), PARAMETER        ::  ioname = 'mixbas'
-      LOGICAL                         ::  l_found
 
       IF (mpi%irank == 0) WRITE (6, '(//A,I2,A)') '### subroutine: mixedbasis ###'
 
@@ -145,7 +141,7 @@ CONTAINS
       allocate(bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
 
       DO itype = 1, atoms%ntype
-         ng = atoms%jri(itype)
+         ng = atoms%jri(itype) ! number of radial gridpoints
          DO ispin = 1, input%jspins
             DO l = 0, atoms%lmax(itype)
                CALL radfun(l, itype, ispin, enpara%el0(l, itype, ispin), vr0(:,itype, ispin), atoms, &
