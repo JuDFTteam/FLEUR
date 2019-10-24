@@ -143,7 +143,7 @@ CONTAINS
          END DO
 
          IF (atoms%nlo(itype) >= 1) THEN
-            CALL radflo(atoms, itype, jsp, ello_eig, vr(:, itype, jsp), f, df, mpi, usdus, uuilon, duilon, ulouilopn, flo)
+            CALL radflo(atoms, itype, jsp, ello_eig, vr(:, itype, jsp), u, du, mpi, usdus, uuilon, duilon, ulouilopn, flo)
 
             DO ilo = 1, atoms%nlo(itype)
                iarr(atoms%llo(ilo, itype), itype) = iarr(atoms%llo(ilo, itype), itype) + 1
@@ -154,7 +154,7 @@ CONTAINS
             END DO
          END IF
       END DO
-      deallocate(f, du)
+      deallocate(u, du)
 
 #if CPP_DEBUG
       ! consistency check
