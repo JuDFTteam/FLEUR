@@ -132,7 +132,7 @@ CONTAINS
       allocate(du(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
       allocate(bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), &
                     0:atoms%lmaxd, atoms%ntype, input%jspins),   source=0.0)
-      allocate(bas2, mold=bas1, source=0.0)
+      allocate(bas2, source=bas1)
 
       DO itype = 1, atoms%ntype
          ng = atoms%jri(itype) ! number of radial gridpoints
