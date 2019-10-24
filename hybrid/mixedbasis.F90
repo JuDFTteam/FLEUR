@@ -436,7 +436,6 @@ CONTAINS
             hybrid%nindxm1(l, itype) = n*input%jspins
          END DO
       END DO
-      maxval(hybrid%nindxm1) = MAXVAL(hybrid%nindxm1)
 
       allocate(hybrid%basm1(atoms%jmtd, maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype))
       hybrid%basm1 = 0
@@ -619,8 +618,6 @@ CONTAINS
          END DO !l
          IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(hybrid%nindxm1(0:hybrid%lcutm1(itype), itype))
       END DO ! itype
-
-      maxval(hybrid%nindxm1) = MAXVAL(hybrid%nindxm1)
 
       allocate(basmhlp(atoms%jmtd, maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype))
       basmhlp(1:atoms%jmtd, 1:maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, 1:atoms%ntype) &
