@@ -94,7 +94,7 @@ CONTAINS
                IF (ndb2 >= 1) THEN
                   ic2 = ic2 + 1
                   IF (symequivalent(ic2, ic1)) THEN
-                     IF (ndb1 /= ndb2) STOP 'exchange: failure symequivalent'
+                     IF (ndb1 /= ndb2) call judft_error('exchange: failure symequivalent')
                      DO i = 0, ndb1 - 1
                         DO j = 0, ndb2 - 1
                            ldum(iband1 + i, iband2 + j) = .TRUE.
@@ -202,7 +202,7 @@ CONTAINS
          IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
             IF (mpi%irank == 0) WRITE (6, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
             WRITE (*, *) MAXVAL(ABS(AIMAG(exchange)))
-            STOP 'exchangeCore: Unusually large imaginary component.'
+            call judft_error('exchangeCore: Unusually large imaginary component.')
          END IF
       ENDIF
 
@@ -388,7 +388,7 @@ CONTAINS
          IF (ANY(ABS(AIMAG(exchange)) > 1e-10)) THEN
             IF (mpi%irank == 0) WRITE (6, '(A)') 'exchangeCore: Warning! Unusually large imaginary component.'
             WRITE (*, *) MAXVAL(ABS(AIMAG(exchange)))
-            STOP 'exchangeCore: Unusually large imaginary component.'
+            call judft_error('exchangeCore: Unusually large imaginary component.')
          END IF
       ENDIF
 
@@ -535,7 +535,7 @@ CONTAINS
 
       IF (sym%invs) THEN
          CALL symmetrize(exch, ncstd, ncstd, 3, .FALSE., atoms, hybdat%lmaxc, hybdat%lmaxcd, hybdat%nindxc, sym)
-         IF (ANY(ABS(AIMAG(exch)) > 1E-6)) STOP 'exchange_cccc: exch possesses significant imaginary part'
+         IF (ANY(ABS(AIMAG(exch)) > 1E-6)) call judft_error('exchange_cccc: exch possesses significant imaginary part')
       ENDIF
       !       DO icst = 1,ncstd
       !         IF ( irank == 0 )
@@ -722,7 +722,7 @@ CONTAINS
          !symmetrize core-wavefunctions such that phi(-r) = phi(r)*
          CALL symmetrize(exch, hybrid%nbands(nk), ncstd, 2, .FALSE., atoms, hybdat%lmaxc, hybdat%lmaxcd, hybdat%nindxc, sym)
 
-         IF (ANY(ABS(AIMAG(exch)) > 1E-6)) STOP 'exchange_cccv: exch possesses significant imaginary part'
+         IF (ANY(ABS(AIMAG(exch)) > 1E-6)) call judft_error('exchange_cccv: exch possesses significant imaginary part')
       ENDIF
 
       IF (l_real) THEN

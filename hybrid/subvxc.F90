@@ -137,12 +137,12 @@ CONTAINS
 
       ! Calculate bascof
       allocate(ahlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), bhlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'subvxc: error in allocation of ahlp/bhlp'
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of ahlp/bhlp')
 #ifndef CPP_OLDINTEL
       CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, ahlp, bhlp, bascof_lo)
 #endif
       allocate(bascof(DIMENSION%nvd, 2*(DIMENSION%lmd + 1), atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'subvxc: error in allocation of bascof'
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of bascof')
 
       bascof = 0
       ic = 0
@@ -361,7 +361,7 @@ CONTAINS
                                  pp1 = p1
                               END IF
 
-                              IF (hybrid%num_radfun_per_l(l1, itype) <= 2) STOP 'subvxc: error hybrid%num_radfun_per_l'
+                              IF (hybrid%num_radfun_per_l(l1, itype) <= 2) call judft_error('subvxc: error hybrid%num_radfun_per_l')
 
                               lm = 0
 
@@ -400,7 +400,7 @@ CONTAINS
                               END DO ! l2 ->  loop over APW
 
                               ! calcualte matrix-elements with local orbitals at the same atom
-                              IF (ic /= icentry + lapw%nv(jsp)) STOP 'subvxc: error counting ic'
+                              IF (ic /= icentry + lapw%nv(jsp)) call judft_error('subvxc: error counting ic')
 
                               ic = ic + ikvecprevat
 

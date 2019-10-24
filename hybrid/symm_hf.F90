@@ -169,7 +169,7 @@ CONTAINS
                   EXIT
                END IF
             END DO
-            IF (nrkpt == 0) STOP 'symm: Difference vector not found !'
+            IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
             IF (list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
@@ -227,7 +227,7 @@ CONTAINS
             END DO
          END IF
       END DO
-      IF (ic /= nkpt_EIBZ) STOP 'symm: failure EIBZ'
+      IF (ic /= nkpt_EIBZ) call judft_error('symm: failure EIBZ')
 
       ! calculate degeneracy:
       ! degenerat(i) = 1 state i  is not degenerat,
@@ -275,17 +275,17 @@ CONTAINS
          call read_z(z, nk)
 
          allocate(rep_d(maxndb, nddb, nsymop), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation rep_v'
+         IF (ok /= 0) call judft_error('symm: failure allocation rep_v')
 
          call olappw%alloc(z%l_real, lapw%nv(jsp), lapw%nv(jsp))
          allocate(olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation olapmt'
+         IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
 
          olapmt = 0
          CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, hybrid, cell, hybdat%bas1, hybdat%bas2)
 
          allocate(cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation cmthlp/cpwhlp'
+         IF (ok /= 0) call judft_error('symm: failure allocation cmthlp/cpwhlp')
 
          DO isym = 1, nsymop
             iop = psym(isym)
@@ -321,7 +321,7 @@ CONTAINS
 
          ! calculate trace of irrecudible representation
          allocate(trace(sym%nsym, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation trace'
+         IF (ok /= 0) call judft_error('symm: failure allocation trace')
 
          ic = 0
          trace = 0
@@ -342,7 +342,7 @@ CONTAINS
          ! determine symmetry equivalent bands/irreducible representations by comparing the trace
 
          allocate(symequivalent(nddb, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation symequivalent'
+         IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
 
          ic1 = 0
          symequivalent = .false.
@@ -379,7 +379,7 @@ CONTAINS
 
          IF (allocated(olapmt)) deallocate(olapmt)
          allocate(olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation olapmt'
+         IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
          olapmt = 0
 
          DO itype = 1, atoms%ntype
@@ -397,7 +397,7 @@ CONTAINS
          END DO
 
          allocate(wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(hybrid%maxindx), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation wfolap/maxindx'
+         IF (ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
          wavefolap = 0
 
          iatom = 0
@@ -430,7 +430,7 @@ CONTAINS
          END DO
 
          allocate(symequivalent(nddb, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation symequivalent'
+         IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
          symequivalent = .false.
          ic1 = 0
          DO iband1 = 1, hybrid%nbands(nk)
@@ -478,7 +478,7 @@ CONTAINS
             ndb2 = degenerat(iband2 - i)
             ! only upper triangular part
             IF (symequivalent(ic2, ic1) .and. iband2 <= iband1) THEN
-!            IF( ndb1 .ne. ndb2 ) STOP 'symm_hf: failure symequivalent'
+!            IF( ndb1 .ne. ndb2 ) call judft_error('symm_hf: failure symequivalent')
                nsest(iband1) = nsest(iband1) + 1
                indx_sest(nsest(iband1), iband1) = iband2
             END IF
@@ -531,6 +531,7 @@ CONTAINS
 
       USE m_util, ONLY: modulo1
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -615,7 +616,7 @@ CONTAINS
                   EXIT
                END IF
             END DO
-            IF (nrkpt == 0) STOP 'symm: Difference vector not found !'
+            IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
             IF (list(nrkpt) /= 0) THEN
                list(nrkpt) = 0

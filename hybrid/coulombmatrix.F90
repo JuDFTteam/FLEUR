@@ -166,7 +166,7 @@ CONTAINS
       IF (ALLOCATED(coulomb)) deallocate(coulomb)
 
       allocate(coulomb(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
-      IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulomb matrix'
+      IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
       coulomb = 0
       call timestop("coulomb allocation")
 
@@ -248,7 +248,7 @@ CONTAINS
                DO isym1 = 1, nsym1(ikpt)
                   g = MATMUL(rrot(:, :, sym1(isym1, ikpt)), hybrid%gptm(:, hybrid%pgptm(igpt, ikpt)))
                   i = POINTER(ikpt, g(1), g(2), g(3))
-                  IF (i == 0) STOP 'coulombmatrix: zero pointer (bug?)'
+                  IF (i == 0) call judft_error('coulombmatrix: zero pointer (bug?)')
                   iarr(i) = 1
                END DO
             END IF
@@ -457,7 +457,7 @@ CONTAINS
          !       (1b) r,r' in different MT
 
          allocate(coulmat(hybrid%nbasp, hybrid%nbasp), stat=ok)
-         IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulmat'
+         IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
          coulmat = 0
 
       END IF
@@ -551,7 +551,7 @@ CONTAINS
          !     (2c) r,r' in different MT
 
          allocate(coulmat(hybrid%nbasp, hybrid%maxgptm), stat=ok)
-         IF (ok /= 0) STOP 'coulombmatrix: failure allocation coulmat'
+         IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
          coulmat = 0
 
          call timestart("loop over interst.")
@@ -567,7 +567,7 @@ CONTAINS
                qnorm = SQRT(SUM(q**2))
                iqnrm = pqnrm(igpt, ikpt)
                IF (ABS(qnrm(iqnrm) - qnorm) > 1e-12) then
-                  STOP 'coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)' ! We shouldn't stop here!
+                  call judft_error('coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)') ! We shouldn't stop here!
                endif
 
                call timestart("harmonics")
@@ -1466,7 +1466,7 @@ CONTAINS
          END DO
          call timestop("residual MT contributions")
 
-         IF (indx1 /= ic) STOP 'coulombmatrix: error index counting'
+         IF (indx1 /= ic) call judft_error('coulombmatrix: error index counting')
 
          !
          ! add ir part to the matrix coulomb_mtir
@@ -2027,6 +2027,7 @@ CONTAINS
 
    SUBROUTINE getshells(ptsh, nptsh, radsh, nshell, rad, lat, lwrite)
       USE m_util, ONLY: rorderpf
+      USE m_juDFT
       IMPLICIT NONE
       LOGICAL, INTENT(IN)    :: lwrite
       INTEGER, INTENT(OUT)   :: nptsh, nshell
@@ -2041,7 +2042,7 @@ CONTAINS
       REAL, ALLOCATABLE   :: rhelp(:)
 
       allocate(ptsh(3, 100000), radsh(100000), stat=ok)
-      IF (ok /= 0) STOP 'getshells: failure allocation ptsh/radsh'
+      IF (ok /= 0) call judft_error('getshells: failure allocation ptsh/radsh')
 
       ptsh = 0
       radsh = 0
@@ -2060,12 +2061,12 @@ CONTAINS
                   i = i + 1
                   IF (i > SIZE(radsh)) THEN
                      allocate(rhelp(SIZE(radsh)), ihelp(3, SIZE(ptsh, 2)), stat=ok)
-                     IF (ok /= 0) STOP 'getshells: failure allocation rhelp/ihelp'
+                     IF (ok /= 0) call judft_error('getshells: failure allocation rhelp/ihelp')
                      rhelp = radsh
                      ihelp = ptsh
                      deallocate(radsh, ptsh)
                      allocate(radsh(SIZE(rhelp) + 100000), ptsh(3, SIZE(ihelp, 2) + 100000), stat=ok)
-                     IF (ok /= 0) STOP 'getshells: failure re-allocation ptsh/radsh'
+                     IF (ok /= 0) call judft_error('getshells: failure re-allocation ptsh/radsh')
                      radsh(1:SIZE(rhelp)) = rhelp
                      ptsh(:, 1:SIZE(ihelp, 2)) = ihelp
                      deallocate(rhelp, ihelp)
@@ -2116,6 +2117,7 @@ CONTAINS
    !     Returns a list of (k+G) vector lengths in qnrm(1:nqnrm) and the corresponding pointer pqnrm(1:ngpt(ikpt),ikpt)
    SUBROUTINE getnorm(kpts, gpt, ngpt, pgpt, qnrm, nqnrm, pqnrm, cell)
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -2132,7 +2134,7 @@ CONTAINS
       DO ikpt = 1, kpts%nkpt
          igptloop: DO igpt = 1, ngpt(ikpt)
             igptp = pgpt(igpt, ikpt)
-            IF (igptp == 0) STOP 'getnorm: zero pointer (bug?)'
+            IF (igptp == 0) call judft_error('getnorm: zero pointer (bug?)')
             q = MATMUL(kpts%bk(:, ikpt) + gpt(:, igptp), cell%bmat)
             qnorm = SQRT(SUM(q**2))
             DO j = 1, i

@@ -286,9 +286,9 @@ CONTAINS
       ! incomplete basis set correction
 
       allocate(u1(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybrid%nbands
-      IF (ok /= 0) STOP 'kp_perturbation: failure allocation u1'
+      IF (ok /= 0) call judft_error('kp_perturbation: failure allocation u1')
       allocate(u2(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybrid%nbands
-      IF (ok /= 0) STOP 'kp_perturbation: failure allocation u2'
+      IF (ok /= 0) call judft_error('kp_perturbation: failure allocation u2')
       u1 = 0; u2 = 0
 
       iatom = 0
@@ -405,7 +405,7 @@ CONTAINS
       END DO  !iatom
 
       ! construct lo contribtution
-      IF (any(atoms%llo == atoms%lmaxd)) STOP 'ibs_correction: atoms%llo=atoms%lmaxd is not implemented'
+      IF (any(atoms%llo == atoms%lmaxd)) call judft_error('ibs_correction: atoms%llo=atoms%lmaxd is not implemented')
 
       iatom = 0
       DO itype = 1, atoms%ntype
@@ -611,6 +611,7 @@ CONTAINS
 
       USE m_constants
       USE m_gaunt
+      USE m_juDFT
 
       USE m_types
       IMPLICIT NONE
@@ -648,6 +649,7 @@ CONTAINS
    FUNCTION w(p1, l1, p2, l2, itype, bas1_mt, drbas1_mt, &
               rmt)
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
 
       INTEGER, INTENT(IN)       ::  p1, l1, p2, l2
@@ -659,7 +661,7 @@ CONTAINS
       INTEGER               ::  p
       REAL                  ::  denom, enum
 
-      IF (p1 > 2 .or. p2 > 2) STOP 'w: the formalism is only valid for p<=2'
+      IF (p1 > 2 .or. p2 > 2) call judft_error('w: the formalism is only valid for p<=2')
 
       denom = wronskian(bas1_MT(2, l1, itype), drbas1_MT(2, l1, itype), bas1_MT(1, l1, itype), drbas1_MT(1, l1, itype))
 

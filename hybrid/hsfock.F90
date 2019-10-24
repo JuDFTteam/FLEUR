@@ -144,7 +144,7 @@ CONTAINS
          ! calculate all symmetrie operations, which yield k invariant
 
          allocate(parent(kpts%nkptf), stat=ok)
-         IF (ok /= 0) STOP 'mhsfock: failure allocation parent'
+         IF (ok /= 0) call judft_error('mhsfock: failure allocation parent')
          parent = 0
 
          CALL timestart("symm_hf")
@@ -173,7 +173,7 @@ CONTAINS
 
          ! calculate contribution from the core states to the HF exchange
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-            STOP "HSE not implemented in hsfock"
+            call judft_error('HSE not implemented in hsfock')
          ELSE
             CALL exchange_vccv1(nk, atoms, hybrid, hybdat, dimension, jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
             CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, mpi, results)
@@ -184,7 +184,7 @@ CONTAINS
 
          CALL timestart("time for performing T^-1*mat_ex*T^-1*")
          !calculate trafo from wavefunctions to APW basis
-         IF (dimension%neigd < hybrid%nbands(nk)) STOP " mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)"
+         IF (dimension%neigd < hybrid%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
 
          call z%init(olap%l_real, nbasfcn, dimension%neigd)
          call read_z(z, kpts%nkpt*(jsp - 1) + nk)

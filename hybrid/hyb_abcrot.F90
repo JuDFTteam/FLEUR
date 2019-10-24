@@ -12,6 +12,7 @@ CONTAINS
 !     ***************************************************************
       USE m_dwigner
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_hybrid), INTENT(IN) :: hybrid
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -35,7 +36,7 @@ CONTAINS
 
       IF (.NOT. ALLOCATED(hybrid%d_wgn2)) THEN    !calculate sym%d_wgn only once
          PRINT *, "calculate wigner-matrix"
-         STOP "WIGNER MATRIX should be available in hybrid part"
+         call judft_error('WIGNER MATRIX should be available in hybrid part')
          !IF (.NOT.oneD%odi%d1) THEN
          !  allocate(sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,sym%nop))
          !  CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,sym%d_wgn)

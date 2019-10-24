@@ -106,7 +106,7 @@ CONTAINS
       vr = vr0
 
 !       allocate( z_out(nbasfcn,neigd,nkpti),stat=ok )
-!       IF ( ok .ne. 0) STOP 'gen_wavf: failure allocation z'
+!       IF ( ok .ne. 0) call judft_error('gen_wavf: failure allocation z')
 !       z_out = 0
 !       z_out(:,:,:nkpti) = z_in
 

@@ -2,7 +2,7 @@
     ! plot matrix
     !
     IF (l_plot) THEN
-       IF (mpi%isize /= 1) STOP 'coulombmatrix: l_plot only works with one process'
+       IF (mpi%isize /= 1) call judft_error('coulombmatrix: l_plot only works with one process')
        DO ikpt = 1, kpts%nkpt
 
           ic = 0

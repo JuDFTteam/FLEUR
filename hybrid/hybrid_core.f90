@@ -8,6 +8,7 @@ CONTAINS
    SUBROUTINE corewf(atoms, jsp, input, dimension,&
   &                   vr, lmaxcd, maxindxc, mpi, lmaxc, nindxc, core1, core2, eig_c)
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
@@ -117,7 +118,7 @@ CONTAINS
       deallocate(nindxcr, core1r, core2r, eig_cr)
 
       IF (maxindxc /= maxval(nindxc))&
-     &   STOP 'corewf: counting error nindxc'
+     &   call judft_error('corewf: counting error nindxc')
 
    END SUBROUTINE corewf
 

@@ -177,23 +177,23 @@ CONTAINS
             ' of the size', psize, ' (cprod=', rdum*psize, 'MB)'
       END IF
       allocate(phase_vv(psize, hybrid%nbands(nk)), stat=ok)
-      IF (ok /= 0) STOP 'exchange_val_hf: error allocation phase'
+      IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
       phase_vv = 0
-      IF (ok /= 0) STOP 'exchange_val_hf: error allocation phase'
+      IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       if (mat_ex%l_real) THEN
          allocate(cprod_vv_c(hybrid%maxbasm1, 0, 0), carr3_vv_c(hybrid%maxbasm1, 0, 0))
          allocate(cprod_vv_r(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
-         IF (ok /= 0) STOP 'exchange_val_hf: error allocation cprod'
+         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
          allocate(carr3_vv_r(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
-         IF (ok /= 0) STOP 'exchange_val_hf: error allocation carr3'
+         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_r = 0; carr3_vv_r = 0
       ELSE
          allocate(cprod_vv_r(hybrid%maxbasm1, 0, 0), carr3_vv_r(hybrid%maxbasm1, 0, 0))
          allocate(cprod_vv_c(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
-         IF (ok /= 0) STOP 'exchange_val_hf: error allocation cprod'
+         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
          allocate(carr3_vv_c(hybrid%maxbasm1, psize, hybrid%nbands(nk)), stat=ok)
-         IF (ok /= 0) STOP 'exchange_val_hf: error allocation carr3'
+         IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_c = 0; carr3_vv_c = 0
       END IF
 
@@ -204,7 +204,7 @@ CONTAINS
          ikpt0 = pointer_EIBZ(ikpt)
 
          n = hybrid%nbasp + hybrid%ngptm(ikpt0)
-         IF (hybrid%nbasm(ikpt0) /= n) STOP 'error hybrid%nbasm'
+         IF (hybrid%nbasm(ikpt0) /= n) call judft_error('error hybrid%nbasm')
          nn = n*(n + 1)/2
 
          ! read in coulomb matrix from direct access file coulomb

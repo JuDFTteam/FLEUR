@@ -15,6 +15,7 @@ CONTAINS
       USE m_constants
       USE m_wrapper
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_dimension), INTENT(IN)   :: dimension
@@ -132,7 +133,7 @@ CONTAINS
             END IF
          END DO
          IF (igpt1 == 0) THEN
-            STOP 'wavetrafo_symm: rotated G vector not found'
+            call judft_error('wavetrafo_symm: rotated G vector not found')
          END IF
          cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt + lapw%gvec(:, igpt, jsp), trans(:)))
          if (l_real) THEN
@@ -300,7 +301,7 @@ CONTAINS
                IF (any(abs(aimag(zhlp(:, i)/cdum)) > 1e-8)) THEN
                   WRITE (*, *) maxval(abs(aimag(zhlp(:, i)/cdum)))
                   WRITE (*, *) zhlp
-                  STOP 'waveftrafo1: Residual imaginary part.'
+                  call judft_error('waveftrafo1: Residual imaginary part.')
                END IF
                z_rout(:, i) = zhlp(:, i)/cdum
                cmt_out(i, :, :) = cmt_out(i, :, :)/cdum
@@ -433,7 +434,7 @@ CONTAINS
 !
 !     IF(any(abs(aimag(mat)).gt.1e-8)) THEN
 !     WRITE(*,*) maxval(aimag(mat))
-!     STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
+!     call judft_error('symmetrize: Residual imaginary part. Symmetrization failed.')
 
 ! Determine common phase factor and divide by it to make the output matrix real.
          CALL commonphase(cfac, mat, dim1*dim2)
@@ -589,10 +590,10 @@ CONTAINS
       allocate(vecin1(dim, nobd, nbands), &
      &           vecout1(dim, nobd, nbands), stat=ok)
       IF (ok /= 0) &
-     &             STOP 'bra_trafo2: error allocating vecin1 or vecout1'
+     &             call judft_error('bra_trafo2: error allocating vecin1 or vecout1')
       vecin1 = 0; vecout1 = 0
 
-      IF (hybrid%maxlcutm1 > atoms%lmaxd) STOP 'bra_trafo2: maxlcutm > atoms%lmaxd'   ! very improbable case
+      IF (hybrid%maxlcutm1 > atoms%lmaxd) call judft_error('bra_trafo2: maxlcutm > atoms%lmaxd')   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       if (l_real) THEN
@@ -648,7 +649,7 @@ CONTAINS
          PRINT *, kpts%bkf(:, ikpt0)
          PRINT *, rkpt
 
-         STOP 'bra_trafo2: rotation failed'
+         call judft_error('bra_trafo2: rotation failed')
       ENDIF
 #endif
 
@@ -724,7 +725,7 @@ CONTAINS
             DO i = 1, hybrid%ngptm(ikpt1)
                WRITE (*, *) hybrid%gptm(:, hybrid%pgptm(i, ikpt1))
             ENDDO
-            STOP 'bra_trafo2: G-point not found in G-point set.'
+            call judft_error('bra_trafo2: G-point not found in G-point set.')
          END IF
          cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g1, trans(:)))
 
@@ -744,7 +745,7 @@ CONTAINS
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
                IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
                   WRITE (*, *) vecout1(:, j, i)
-                  STOP 'bra_trafo2: Residual imaginary part.'
+                  call judft_error('bra_trafo2: Residual imaginary part.')
                END IF
 
             END DO
@@ -771,6 +772,7 @@ CONTAINS
       USE m_dwigner
       USE m_constants
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
@@ -919,7 +921,7 @@ CONTAINS
 !               iatom1 = iiatom + ieq1
 !             END IF
 !           END DO
-!           IF( iatom1 .eq. 0 ) STOP 'matrixtrafo atom not found'
+!           IF( iatom1 .eq. 0 ) call judft_error('matrixtrafo atom not found')
 
             iatom1 = hybrid%map(iatom, sym%invtab(iisym))
             DO l = 0, lcutm(itype)
@@ -952,7 +954,7 @@ CONTAINS
             END IF
          END DO
 !         igptm2 = pntgptm(g1(1),g1(2),g1(3),ikpt0)
-         IF (igptm2 == 0) STOP 'matrixtrafo: G point not found in G-point set.'
+         IF (igptm2 == 0) call judft_error('matrixtrafo: G point not found in G-point set.')
 
          cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
 
@@ -1002,7 +1004,7 @@ CONTAINS
             END IF
          END DO
 !         igptm2 = pntgptm(g1(1),g1(2),g1(3),ikpt0)
-         IF (igptm2 == 0) STOP 'matrixtrafo: G point not found in G-point set.'
+         IF (igptm2 == 0) call judft_error('matrixtrafo: G point not found in G-point set.')
          iarr(igptm) = igptm2
          carr(igptm) = exp(-img*tpi_const* &
       &              dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
@@ -1034,6 +1036,7 @@ CONTAINS
       USE m_util, ONLY: modulo1
       USE m_constants
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
@@ -1084,7 +1087,7 @@ CONTAINS
      &                                          0:maxlcutm)
       COMPLEX               ::  carr(hybrid%ngptm(ikpt0))
 
-      IF (maxlcutm > atoms%lmaxd) STOP 'matrixtrafo1: maxlcutm .gt. atoms%lmaxd'
+      IF (maxlcutm > atoms%lmaxd) call judft_error('matrixtrafo1: maxlcutm .gt. atoms%lmaxd')
 
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
       matin1 = matin
@@ -1175,7 +1178,7 @@ CONTAINS
                EXIT
             END IF
          END DO
-         IF (igptm1 == 0) STOP 'matrixtrafo1: G point not found in G-point set.'
+         IF (igptm1 == 0) call judft_error('matrixtrafo1: G point not found in G-point set.')
 
          cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
 
@@ -1231,7 +1234,7 @@ CONTAINS
                EXIT
             END IF
          END DO
-         IF (igptm1 == 0) STOP 'matrixtrafo1: G point not found in G-point set.'
+         IF (igptm1 == 0) call judft_error('matrixtrafo1: G point not found in G-point set.')
          iarr(igptm) = igptm1
          carr(igptm) = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
       END DO
@@ -1265,6 +1268,7 @@ CONTAINS
       USE m_util, ONLY: modulo1
       USE m_dwigner
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
@@ -1413,7 +1417,7 @@ CONTAINS
                   iatom1 = iiatom + ieq1
                END IF
             END DO
-            IF (iatom1 == 0) STOP 'ket_trafo: rotated atom not found'
+            IF (iatom1 == 0) call judft_error('ket_trafo: rotated atom not found')
 
             DO l = 0, lcutm(itype)
                nn = nindxm(l, itype)
@@ -1445,7 +1449,7 @@ CONTAINS
             END IF
          END DO
          IF (igptm2 == 0) &
-      &               STOP 'ket_trafo: G point not found in G-point set.'
+      &               call judft_error('ket_trafo: G point not found in G-point set.')
 
          cdum = exp(img*tpi_const* &
       &              dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
@@ -1469,6 +1473,7 @@ CONTAINS
       USE m_util, ONLY: modulo1
       USE m_dwigner
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
@@ -1514,7 +1519,7 @@ CONTAINS
      &                               -maxlcutm:maxlcutm,&
      &                                       0:maxlcutm)
 
-      IF (maxlcutm > atoms%lmaxd) STOP 'kettrafo1: maxlcutm > atoms%lmaxd'
+      IF (maxlcutm > atoms%lmaxd) call judft_error('kettrafo1: maxlcutm > atoms%lmaxd')
 
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
       vecin1 = vecin!(:nbasp)
@@ -1605,7 +1610,7 @@ CONTAINS
                EXIT
             END IF
          END DO
-         IF (igptm1 == 0) STOP 'ket_trafo: G point not found in G-point set.'
+         IF (igptm1 == 0) call judft_error('ket_trafo: G point not found in G-point set.')
 
          cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
 
@@ -1626,6 +1631,7 @@ CONTAINS
 
    ! Determines common phase factor (with unit norm)
    SUBROUTINE commonphase(cfac, carr, n)
+      USE m_juDFT
       IMPLICIT NONE
       INTEGER, INTENT(IN)      :: n
       COMPLEX, INTENT(IN)      :: carr(n)
@@ -1648,7 +1654,7 @@ CONTAINS
       END DO
       IF (cfac == 0 .and. all(carr /= 0)) THEN
          WRITE (999, *) carr
-         STOP 'commonphase: Could not determine common phase factor. (Wrote carr to fort.999)'
+         call judft_error('commonphase: Could not determine common phase factor. (Wrote carr to fort.999)')
       END IF
    END SUBROUTINE commonphase
 

@@ -14,6 +14,7 @@ CONTAINS
 
       USE m_constants
       USE m_types
+      USE m_juDFT
 
       IMPLICIT NONE
 
@@ -109,7 +110,7 @@ CONTAINS
                      iatom1 = iiatom + ieq1
                   END IF
                END DO
-               IF (iatom1 == 0) STOP 'symmetrizeh_new: error finding rotated atomic position'
+               IF (iatom1 == 0) call judft_error('symmetrizeh_new: error finding rotated atomic position')
                map(isym, iatom) = iatom1
             END DO
          END DO
@@ -118,7 +119,7 @@ CONTAINS
 
       ! initialze pointer_apw and the apw part of cfac
       allocate(pointer_apw(lapw%nv(jsp), nsymop), cfac(lapw%nv(jsp) + atoms%nlotot, nsymop), stat=ok)
-      IF (ok /= 0) STOP 'symmetrizeh_new: failure allocation pointer_apw,cfac'
+      IF (ok /= 0) call judft_error('symmetrizeh_new: failure allocation pointer_apw,cfac')
 
       pointer_apw = 0
       cfac = 0
@@ -150,7 +151,7 @@ CONTAINS
                DO i = 1, lapw%nv(jsp)
                   WRITE (6, *) i, lapw%gvec(:, i, jsp)
                ENDDO
-               STOP 'symmetrizeh_new: rotated G point not found'
+               call judft_error('symmetrizeh_new: rotated G point not found')
             END IF
             pointer_apw(igpt, isym) = nrgpt
             cfac(igpt, isym) = EXP(-2*pi_const*img*(dot_PRODUCT(bk(:) + gpthlp(:), trans(:, isym))))
@@ -254,7 +255,7 @@ CONTAINS
             allocate(c_lo(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat), stat=ok)
          END IF
 
-         IF (ok /= 0) STOP 'symmetrizeh_new: failure allocation c_lo'
+         IF (ok /= 0) call judft_error('symmetrizeh_new: failure allocation c_lo')
 
          iatom = 0
          ilotot = 0
@@ -300,7 +301,7 @@ CONTAINS
             END DO
          END DO
 
-         IF (ilotot /= atoms%nlotot) STOP 'symmetrizeh_new: failure counting local orbitals(ilotot)'
+         IF (ilotot /= atoms%nlotot) call judft_error('symmetrizeh_new: failure counting local orbitals(ilotot)')
 
          IF (hmat%l_real) THEN
             allocate(c_rot(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat, nsymop))
@@ -371,7 +372,7 @@ CONTAINS
 
                         CALL ZGESV(idum, idum, chelp(:idum, :idum), idum, ipiv, c_rot(:idum, :idum, ilo, ratom, isym), idum, ok)
 
-                        IF (ok /= 0) STOP 'symmetrizeh_new: failure zgesv'
+                        IF (ok /= 0) call judft_error('symmetrizeh_new: failure zgesv')
                         deallocate(ipiv, y)
                      END DO
                   END IF
