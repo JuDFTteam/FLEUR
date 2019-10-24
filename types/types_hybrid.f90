@@ -37,6 +37,8 @@ MODULE m_types_hybrid
       COMPLEX, ALLOCATABLE   ::  d_wgn2(:,:,:,:)
       INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:)
       REAL, ALLOCATABLE      ::  div_vv(:,:,:)
+   CONTAINS
+      procedure set_num_radfun_per_l => set_num_radfun_per_l_hybrid
    END TYPE t_hybrid
 
    TYPE t_prodtype
@@ -196,4 +198,19 @@ contains
       n2 = prod%n2(n,l,itype) !
 
    end subroutine set_nl_prodtype
+
+   subroutine set_num_radfun_per_l_hybrid(hybrid, atoms)
+      implicit NONE
+      class(t_hybrid) :: hybrid
+      type(t_atoms)   :: atoms
+
+      ! there is always at least two: u and u_dot
+      hybrid%num_radfun_per_l = 2
+      DO itype = 1, atoms%ntype
+         DO ilo = 1, atoms%nlo(itype)
+            hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) &
+              = hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) + 1
+         END DO
+      END DO
+   end subroutine set_num_radfun_per_l_hybrid
 END MODULE m_types_hybrid

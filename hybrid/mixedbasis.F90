@@ -115,6 +115,7 @@ CONTAINS
       IF (ALLOCATED(hybrid%basm1)) deallocate(hybrid%basm1)
 
       CALL usdus%init(atoms, input%jspins)
+      call hybrid%set_num_radfun_per_l(atoms)
 
       hybrid%maxindx = 0
       DO itype = 1, atoms%ntype
@@ -152,14 +153,12 @@ CONTAINS
             bas1(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 1, 0:atoms%lmaxd)
             bas2(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 2, 0:atoms%lmaxd)
 
-            hybrid%num_radfun_per_l(:,itype) = 2
             ! generate radial functions for local orbitals
             IF (atoms%nlo(itype) >= 1) THEN
                CALL radflo(atoms, itype, ispin, enpara%ello0(1, 1, ispin), vr0(:,itype, ispin), &
                            f, df, mpi, usdus, uuilon, duilon, ulouilopn, flo)
 
                DO ilo = 1, atoms%nlo(itype)
-                  hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) = hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) + 1
                   bas1(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 1, ilo)
                   bas2(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 2, ilo)
                END DO
