@@ -72,7 +72,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE     :: cmt(:, :, :), cmthlp(:, :, :)
 
       REAL                    :: vr(atoms%jmtd, atoms%ntype, input%jspins)
-      REAL, ALLOCATABLE        :: f(:, :, :), df(:, :, :)
+      REAL, ALLOCATABLE        :: u(:, :, :), du(:, :, :)
 
       REAL                    :: flo(atoms%jmtd, 2, atoms%nlod)
       REAL                    :: uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
@@ -115,8 +115,8 @@ CONTAINS
       ! bas1 denotes the large component
       ! bas2    "     "  small component
 
-      allocate(f(atoms%jmtd, 2, 0:atoms%lmaxd), &
-                df(atoms%jmtd, 2, 0:atoms%lmaxd), &
+      allocate(u(atoms%jmtd, 2, 0:atoms%lmaxd), &
+                du(atoms%jmtd, 2, 0:atoms%lmaxd), &
                 source=0.0)
 
       iarr = 2
@@ -125,16 +125,16 @@ CONTAINS
          ng = atoms%jri(itype)
          DO l = 0, atoms%lmax(itype)
             CALL radfun(l, itype, jsp, el_eig(l, itype), vr(:, itype, jsp), &
-                      atoms, f(:, :, l), df(:, :, l), usdus, nodem, noded, wronk)
+                      atoms, u(:, :, l), du(:, :, l), usdus, nodem, noded, wronk)
             IF (mpi%irank == 0) WRITE (6, FMT=8010) l, el_eig(l, itype), &
                                usdus%us(l, itype, jsp), usdus%dus(l, itype, jsp),&
                                nodem, usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp),&
                                noded, usdus%ddn(l, itype, jsp), wronk
 
-            hybdat%bas1(1:ng, 1, l, itype) = f(1:ng, 1, l)
-            hybdat%bas2(1:ng, 1, l, itype) = f(1:ng, 2, l)
-            hybdat%bas1(1:ng, 2, l, itype) = df(1:ng, 1, l)
-            hybdat%bas2(1:ng, 2, l, itype) = df(1:ng, 2, l)
+            hybdat%bas1(1:ng, 1, l, itype) = u(1:ng, 1, l)
+            hybdat%bas2(1:ng, 1, l, itype) = u(1:ng, 2, l)
+            hybdat%bas1(1:ng, 2, l, itype) = du(1:ng, 1, l)
+            hybdat%bas2(1:ng, 2, l, itype) = du(1:ng, 2, l)
 
             hybdat%bas1_MT(1, l, itype) = usdus%us(l, itype, jsp)
             hybdat%drbas1_MT(1, l, itype) = usdus%dus(l, itype, jsp)
@@ -154,7 +154,7 @@ CONTAINS
             END DO
          END IF
       END DO
-      deallocate(f, df)
+      deallocate(f, du)
 
 #if CPP_DEBUG
       ! consistency check

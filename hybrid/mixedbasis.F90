@@ -86,7 +86,7 @@ CONTAINS
       REAL                            ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
       REAL                            ::  bashlp(atoms%jmtd)
 
-      REAL, ALLOCATABLE               ::  f(:,:,:), df(:,:,:)
+      REAL, ALLOCATABLE               ::  u(:,:,:), du(:,:,:)
       REAL, ALLOCATABLE               ::  olap(:,:), work(:), eig(:), eigv(:,:)
       REAL, ALLOCATABLE               ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
       REAL, ALLOCATABLE               ::  basmhlp(:,:,:,:)
@@ -117,8 +117,6 @@ CONTAINS
       CALL usdus%init(atoms, input%jspins)
       call hybrid%set_num_radfun_per_l(atoms)
 
-      ! maxindx = maxval(nlo) + 2
-
       ! initialize gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
@@ -130,27 +128,28 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      allocate( f(atoms%jmtd, 2, 0:atoms%lmaxd), &
-                df(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
-      allocate(bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
-      allocate(bas2(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype, input%jspins), source=0.0)
+      allocate( u(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
+      allocate(du(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
+      allocate(bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), &
+                    0:atoms%lmaxd, atoms%ntype, input%jspins),   source=0.0)
+      allocate(bas2, mold=bas1, source=0.0)
 
       DO itype = 1, atoms%ntype
          ng = atoms%jri(itype) ! number of radial gridpoints
          DO ispin = 1, input%jspins
             DO l = 0, atoms%lmax(itype)
                CALL radfun(l, itype, ispin, enpara%el0(l, itype, ispin), vr0(:,itype, ispin), atoms, &
-                           f(:,:,l), df(:,:,l), usdus, nodem, noded, wronk)
+                           u(:,:,l), du(:,:,l), usdus, nodem, noded, wronk)
             END DO
-            bas1(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = f(1:ng, 1, 0:atoms%lmaxd)
-            bas2(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = f(1:ng, 2, 0:atoms%lmaxd)
-            bas1(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 1, 0:atoms%lmaxd)
-            bas2(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 2, 0:atoms%lmaxd)
+            bas1(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = u(1:ng, 1, 0:atoms%lmaxd)
+            bas2(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = u(1:ng, 2, 0:atoms%lmaxd)
+            bas1(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = du(1:ng, 1, 0:atoms%lmaxd)
+            bas2(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = du(1:ng, 2, 0:atoms%lmaxd)
 
             ! generate radial functions for local orbitals
             IF (atoms%nlo(itype) >= 1) THEN
                CALL radflo(atoms, itype, ispin, enpara%ello0(1, 1, ispin), vr0(:,itype, ispin), &
-                           f, df, mpi, usdus, uuilon, duilon, ulouilopn, flo)
+                           u, du, mpi, usdus, uuilon, duilon, ulouilopn, flo)
 
                DO ilo = 1, atoms%nlo(itype)
                   bas1(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 1, ilo)
@@ -160,7 +159,7 @@ CONTAINS
          END DO
       END DO
 
-      deallocate(f, df)
+      deallocate(u, du)
 
       ! the radial functions are normalized
       DO ispin = 1, input%jspins
