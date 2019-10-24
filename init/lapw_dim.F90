@@ -13,7 +13,7 @@ CONTAINS
     !  Generalization of the old apws_dim routine
     !*********************************************************************
     USE m_boxdim
-    USE m_types
+    USE m_types_fleurinput
     USE m_types_forcetheo_extended
     IMPLICIT NONE
     TYPE(t_kpts),INTENT(IN)      :: kpts
@@ -75,7 +75,7 @@ CONTAINS
     noco%qss=q_vectors(:,1) ! Usually does not do anything, but ensures that in
                             !force theorem CASE noco%qss is first q-vector in list
 
-    
+
     DIMENSION%nvd = 0 ; DIMENSION%nv2d = 0
     DO q=1,SIZE(q_vectors,2)
        qss=q_vectors(:,q)
@@ -189,7 +189,7 @@ CONTAINS
     mk2 = int(gmaxp*input%rkmax/arltv2) + 1
     mk3 = int(gmaxp*input%rkmax/arltv3) + 1
 
-    !---> add + 1 in spin spiral calculation, to make sure that all G's are 
+    !---> add + 1 in spin spiral calculation, to make sure that all G's are
     !---> still within the FFT-box after being shifted by the spin spiral
     !---> q-vector.
     IF (noco%l_ss) THEN

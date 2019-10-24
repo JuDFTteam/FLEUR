@@ -19,7 +19,7 @@
              l_gga,noel, kmax,dtild,dvac1,lmax1,jri1,rmt1,dx1,&!optional, if l_gga and ... are present suggestions are calculated
              overlap)!this is optional, if present and l_test the routine returns the overlaps and does not stop
 
-      USE m_types
+      USE m_types_fleurinput
       USE m_sort
       USE m_inv3
       USE m_juDFT
@@ -80,7 +80,7 @@
 !     0. Do initializations and set some constants
 !     1. Locally replace unit cell by an auxiliary unit cell with:
 !        a) all atoms within the unit cell
-!        b) basis vectors obtained by lattice reduction of the original cell. 
+!        b) basis vectors obtained by lattice reduction of the original cell.
 !           [not in 1st (this) version of routine. Can be implemented with the LLL algorithm when needed.]
 !     2. Get minimal and maximal coordinates within auxiliary unit cell
 !     3. Construct mesh of cubes covering the auxiliary unit cell and a boundary of width 2*rmtMax + rmtDelta
@@ -146,7 +146,7 @@
             END DO
          END DO
       END DO
-      
+
 !     3. Construct cube mesh:
 !        In each dimension cube i covers the interval from i*cubeLength to (i+1)*cubeLength
 !        Each cube may cover up to maxCubeAtoms atoms. This should be set to a save size.
@@ -240,7 +240,7 @@
          END DO
       END DO
 
-!     5. For each atom type in auxiliary unit cell select cube and collect shortest distances 
+!     5. For each atom type in auxiliary unit cell select cube and collect shortest distances
 !        to other atoms in neighborhood
 
       maxSqrDist = cubeLength**2
@@ -326,7 +326,7 @@
          ELSE IF (minRmts(atoms%nz(typeB)).LT.0.0) THEN
            minRmts(atoms%nz(typeB)) = rmtFac * (dist - minRmts(atoms%nz(typeA)))
          END IF
-         minRmts(atoms%nz(typeA)) = min(minRmts(atoms%nz(typeA)),rmtMaxDefault) ! limit already here 
+         minRmts(atoms%nz(typeA)) = min(minRmts(atoms%nz(typeA)),rmtMaxDefault) ! limit already here
          minRmts(atoms%nz(typeB)) = min(minRmts(atoms%nz(typeB)),rmtMaxDefault) ! to a reasonable value
       END DO
 
@@ -359,7 +359,7 @@
 
       WRITE (6,*) '----------------------------------------------------'
       WRITE (6,*) 'Suggested values for input: '
-      WRITE (6,*) 
+      WRITE (6,*)
 
       dvac1 = 0.0
       IF (input%film) THEN
@@ -387,13 +387,13 @@
             lmax11 = 6
          ELSE IF (rmt1(n).LT.2.4) THEN
             lmax11 = 8
-         ELSE 
+         ELSE
             lmax11 = 10
          END IF
          IF (l_gga) THEN
-            jri11 = NINT(330*rmt1(n)) 
+            jri11 = NINT(330*rmt1(n))
          ELSE
-            jri11 = NINT(220*rmt1(n)) 
+            jri11 = NINT(220*rmt1(n))
          END IF
          jri11 = NINT(jri11*0.5) * 2 + 1
          IF (atoms%nz(n) > 0) THEN

@@ -66,12 +66,13 @@ PROGRAM inpgen
       CHARACTER(len=40):: kpts_str
       LOGICAL          :: l_exist
       INTEGER          :: idum
-       INTERFACE
+
+      INTERFACE
        FUNCTION dropDefaultEConfig() BIND(C, name="dropDefaultEconfig")
          USE iso_c_binding
          INTEGER(c_int) dropDefaultEConfig
        END FUNCTION dropDefaultEConfig
-    END INTERFACE
+      END INTERFACE
 
       kpts_str=""
 
@@ -96,6 +97,9 @@ PROGRAM inpgen
          !not yet
          call Fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,&
          sliceplot=Sliceplot,banddos=Banddos,hybrid=Hybrid,oned=Oned,xcpot=Xcpot,kpts=Kpts)
+         Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
+         call atoms%init(cell)
+         Call Sym%Init(Cell,Input%Film)
          l_fullinput=.TRUE.
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input

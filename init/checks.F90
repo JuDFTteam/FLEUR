@@ -44,13 +44,13 @@ MODULE m_checks
 
     SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input)
       USE m_nocoInputCheck
-      USE m_types
+      USE m_types_fleurinput
       type(t_banddos),INTENT(IN)::banddos
       type(t_vacuum),INTENT(IN) ::vacuum
       type(t_noco),INTENT(IN)   ::noco
       type(t_atoms),INTENT(IN)  ::atoms
       type(t_input),INTENT(IN)  ::input
-      
+
       integer :: i
 
            ! Check DOS related stuff (from inped)
@@ -89,5 +89,5 @@ MODULE m_checks
      END IF
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,vacuum,noco)
    END SUBROUTINE check_input_switches
-    
+
   END MODULE m_checks

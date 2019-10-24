@@ -3,9 +3,9 @@ MODULE m_fleurinput_postprocess
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
-    Banddos,Oned,Wann,Xcpot,Kpts)
+    Banddos,Oned,Xcpot,Kpts)
     USE m_juDFT
-    USE m_types
+    USE m_types_fleurinput
     use m_make_sym
     USE m_chkmt
     use m_make_xcpot
@@ -21,7 +21,6 @@ CONTAINS
     TYPE(t_vacuum),INTENT(INOUT)::vacuum
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_oneD),INTENT(INOUT)  ::oneD
-    TYPE(t_wann),INTENT(OUT)    ::wann
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_kpts),INTENT(IN)::kpts
 
