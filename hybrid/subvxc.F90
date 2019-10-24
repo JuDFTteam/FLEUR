@@ -98,7 +98,7 @@ CONTAINS
       vxc = 0
 
       ! Calculate radial functions
-      hybrid%nindx = 2
+      hybrid%num_radfun_per_l = 2
       DO itype = 1, atoms%ntype
 
          ! Generate the radial basis-functions for each l
@@ -125,10 +125,10 @@ CONTAINS
                         usdus, uuilon, duilon, ulouilopn, flo, .TRUE.)
 
             DO i = 1, atoms%nlo(itype)
-               hybrid%nindx(atoms%llo(i, itype), itype) = hybrid%nindx(atoms%llo(i, itype), itype) + 1
-               pointer_lo(i, itype) = hybrid%nindx(atoms%llo(i, itype), itype)
-               bas1(:, hybrid%nindx(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 1, i)
-               bas2(:, hybrid%nindx(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 2, i)
+               hybrid%num_radfun_per_l(atoms%llo(i, itype), itype) = hybrid%num_radfun_per_l(atoms%llo(i, itype), itype) + 1
+               pointer_lo(i, itype) = hybrid%num_radfun_per_l(atoms%llo(i, itype), itype)
+               bas1(:, hybrid%num_radfun_per_l(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 1, i)
+               bas2(:, hybrid%num_radfun_per_l(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 2, i)
             END DO
          END IF
       END DO
@@ -320,11 +320,11 @@ CONTAINS
             DO ilharm = 0, nlharm
                i = 0
                DO l1 = 0, atoms%lmax(itype)
-                  DO p1 = 1, hybrid%nindx(l1, itype)
+                  DO p1 = 1, hybrid%num_radfun_per_l(l1, itype)
                      i = i + 1
                      j = 0
                      DO l2 = 0, atoms%lmax(itype)
-                        DO p2 = 1, hybrid%nindx(l2, itype)
+                        DO p2 = 1, hybrid%num_radfun_per_l(l2, itype)
                            j = j + 1
                            IF (j <= i) THEN
                               DO igrid = 1, atoms%jri(itype)
@@ -361,7 +361,7 @@ CONTAINS
                                  pp1 = p1
                               END IF
 
-                              IF (hybrid%nindx(l1, itype) <= 2) STOP 'subvxc: error hybrid%nindx'
+                              IF (hybrid%num_radfun_per_l(l1, itype) <= 2) STOP 'subvxc: error hybrid%num_radfun_per_l'
 
                               lm = 0
 

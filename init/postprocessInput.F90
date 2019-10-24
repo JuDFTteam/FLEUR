@@ -417,7 +417,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Initialize missing hybrid functionals arrays
 
-     ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
+     ALLOCATE (hybrid%num_radfun_per_l(0:atoms%lmaxd,atoms%ntype))
    
      ! Generate lattice harmonics
 

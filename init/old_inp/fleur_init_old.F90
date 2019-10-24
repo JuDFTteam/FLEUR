@@ -138,7 +138,7 @@ CONTAINS
     atoms%llo(:,:) = -1
     input%eig66(1)=.FALSE.
     ! HF/hybrid functionals/EXX
-    ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
+    ALLOCATE ( hybrid%num_radfun_per_l(0:atoms%lmaxd,atoms%ntype) )
 
     kpts%specificationType = 0
     atoms%numStatesProvided(:) = 0

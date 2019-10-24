@@ -93,7 +93,7 @@ CONTAINS
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
-               nn = hybrid%nindx(l, itype)
+               nn = hybrid%num_radfun_per_l(l, itype)
                DO n = 1, nn
                   lm1 = lm0 + n
                   lm2 = lm0 + n + 2*l*nn
@@ -237,7 +237,7 @@ CONTAINS
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
-               nn = hybrid%nindx(l, itype)
+               nn = hybrid%num_radfun_per_l(l, itype)
                DO n = 1, nn
                   lm1 = lm0 + n
                   lm2 = lm0 + n + 2*l*nn

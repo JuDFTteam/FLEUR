@@ -185,7 +185,7 @@ CONTAINS
 
          allocate(basprod(atoms%jmtd), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
-         allocate(hybdat%prodm(maxval(hybrid%nindxm1), hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
+         allocate(hybdat%prodm(maxval(hybrid%nindxm1), hybrid%max_indx_p_1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
          call hybdat%prod%init(hybrid, atoms)
@@ -200,8 +200,8 @@ CONTAINS
                ll = l2
                DO l1 = 0, ll
                   IF (ABS(l1 - l2) <= hybrid%lcutm1(itype)) THEN
-                     DO n2 = 1, hybrid%nindx(l2, itype)
-                        nn = hybrid%nindx(l1, itype)
+                     DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
+                        nn = hybrid%num_radfun_per_l(l1, itype)
                         IF (l1 == l2) nn = n2
                         DO n1 = 1, nn
                            ! Calculate all basis-function hybdat%products to obtain
@@ -239,7 +239,7 @@ CONTAINS
             hybrid%nobd(nk) = COUNT(results%w_iks(:hybrid%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
-         hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%nindx(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
+         hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
          hybrid%nbands = MIN(hybrid%bands1, DIMENSION%neigd)
 
       ENDIF ! hybrid%l_calhf

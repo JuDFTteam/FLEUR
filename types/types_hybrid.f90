@@ -12,13 +12,13 @@ MODULE m_types_hybrid
       INTEGER                ::  nbasp
       INTEGER                ::  maxlcutm1
       INTEGER                ::  maxbasm1
-      INTEGER                ::  maxindxp1
+      INTEGER                ::  max_indx_p_1
       INTEGER                ::  maxgptm
       INTEGER                ::  maxgptm1
       INTEGER                ::  maxindx
       INTEGER                ::  maxlmindx
       INTEGER                ::  gptmd
-      INTEGER, ALLOCATABLE   ::  nindx(:,:)
+      INTEGER, ALLOCATABLE   ::  num_radfun_per_l(:,:)
       INTEGER, ALLOCATABLE   ::  select1(:,:)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  nindxm1(:,:)
@@ -159,7 +159,7 @@ contains
       type(t_atoms),  intent(in) :: atoms
       integer                    :: ok
 
-      ALLOCATE (prod%l1(hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
+      ALLOCATE (prod%l1(hybrid%max_indx_p_1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
       IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%l1')
 
       ALLOCATE (prod%l2, mold=prod%l1, stat=ok)

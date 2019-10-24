@@ -119,11 +119,11 @@
                   IF (l > atoms%lmax(itype)) EXIT ! very improbable case
                   IF (mpi%irank == 0) &
              &        WRITE (6, "(9X,'u(',A,')',4X,'udot(',A,')',:,3X,'ulo(',A,"//&
-             &                "') ...')") (lchar(l), i=1, min(3, hybrid%nindx(l, itype)))
+             &                "') ...')") (lchar(l), i=1, min(3, hybrid%num_radfun_per_l(l, itype)))
                   DO i = 1, hybdat%nindxc(l, itype)
                      IF (mpi%irank == 0)&
               &        WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
-                     DO j = 1, hybrid%nindx(l, itype)
+                     DO j = 1, hybrid%num_radfun_per_l(l, itype)
 
                         integrand = hybdat%core1(:, i, l, itype)*hybdat%bas1(:, j, l, itype)&
                &                  + hybdat%core2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
@@ -135,11 +135,11 @@
                &          WRITE (6, '(F10.6)', advance='no') olapcb(j)
                      END DO
 
-                     lm = sum((/(hybrid%nindx(j, itype)*(2*j + 1), j=0, l - 1)/))
+                     lm = sum((/(hybrid%num_radfun_per_l(j, itype)*(2*j + 1), j=0, l - 1)/))
                      iatom = sum(atoms%neq(1:itype - 1)) + 1 ! take first of group of equivalent atoms
                      DO m = -l, l
                         olapcv = 0
-                        DO j = 1, hybrid%nindx(l, itype)
+                        DO j = 1, hybrid%num_radfun_per_l(l, itype)
                            lm = lm + 1
                            olapcv(:, :) = olapcv(:, :) + &
                 &                        olapcb(j)*cmt(:maxval(hybrid%nbands), lm, iatom, :nkpti)
@@ -194,7 +194,7 @@
                IF (atoms%ntype > 1 .AND. mpi%irank == 0) &
             &     WRITE (6, '(A,I3)') ' Atom type', itype
                DO l = 0, atoms%lmax(itype)
-                  DO i = 1, hybrid%nindx(l, itype)
+                  DO i = 1, hybrid%num_radfun_per_l(l, itype)
                      IF (mpi%irank == 0) THEN
                         SELECT CASE (i)
                         CASE (1)
@@ -277,7 +277,7 @@
                      DO l = 0, atoms%lmax(itype)
                         DO m = -l, l
                            lm = lm + 1
-                           DO n = 1, hybrid%nindx(l, itype)
+                           DO n = 1, hybrid%num_radfun_per_l(l, itype)
                               lm1 = lm1 + 1
                               rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
                               DO iband = 1, hybrid%nbands(ikpt)

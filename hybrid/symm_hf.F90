@@ -384,7 +384,7 @@ CONTAINS
 
          DO itype = 1, atoms%ntype
             DO l = 0, atoms%lmax(itype)
-               nn = hybrid%nindx(l, itype)
+               nn = hybrid%num_radfun_per_l(l, itype)
                DO n2 = 1, nn
                   DO n1 = 1, nn
                      olapmt(n1, n2, l, itype) = intgrf( &
@@ -407,7 +407,7 @@ CONTAINS
                lm = 0
                DO l = 0, atoms%lmax(itype)
                   DO M = -l, l
-                     nn = hybrid%nindx(l, itype)
+                     nn = hybrid%num_radfun_per_l(l, itype)
                      DO iband1 = 1, hybrid%nbands(nk)
                         carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
            &                                cmt(iband1, lm + 1:lm + nn, iatom))

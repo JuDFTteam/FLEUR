@@ -110,12 +110,12 @@ CONTAINS
       ! with this the local orbitals have a trivial k-dependence
 
       ! compute radial lo matching coefficients
-      hybrid%nindx = 2
+      hybrid%num_radfun_per_l = 2
       DO itype = 1, atoms%ntype
          DO ilo = 1, atoms%nlo(itype)
             l = atoms%llo(ilo, itype)
-            hybrid%nindx(l, itype) = hybrid%nindx(l, itype) + 1
-            p = hybrid%nindx(l, itype)
+            hybrid%num_radfun_per_l(l, itype) = hybrid%num_radfun_per_l(l, itype) + 1
+            p = hybrid%num_radfun_per_l(l, itype)
 
             ws = -wronskian(hybdat%bas1_MT(1, l, itype), hybdat%drbas1_MT(1, l, itype), hybdat%bas1_MT(2, l, itype), hybdat%drbas1_MT(2, l, itype))
 
@@ -410,12 +410,12 @@ CONTAINS
       iatom = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
-            hybrid%nindx = 2
+            hybrid%num_radfun_per_l = 2
             iatom = iatom + 1
             DO ilo = 1, atoms%nlo(itype)
                l1 = atoms%llo(ilo, itype)
-               hybrid%nindx(l1, itype) = hybrid%nindx(l1, itype) + 1
-               p1 = hybrid%nindx(l1, itype)
+               hybrid%num_radfun_per_l(l1, itype) = hybrid%num_radfun_per_l(l1, itype) + 1
+               p1 = hybrid%num_radfun_per_l(l1, itype)
 
                l2 = l1 + 1
                lm2 = l2**2
@@ -864,7 +864,7 @@ CONTAINS
       ic = 0
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            DO n2 = 1, hybrid%nindx(l, itype)
+            DO n2 = 1, hybrid%num_radfun_per_l(l, itype)
                !ic = ic + 1
                CALL derivative(dbas1, hybdat%bas1(:, n2, l, itype), atoms, itype)
                dbas1 = dbas1 - hybdat%bas1(:, n2, l, itype)/atoms%rmsh(:, itype)
@@ -873,7 +873,7 @@ CONTAINS
                dbas2 = dbas2 - hybdat%bas2(:, n2, l, itype)/atoms%rmsh(:, itype)
 
                IF (l /= 0) THEN
-                  DO n1 = 1, hybrid%nindx(l - 1, itype)
+                  DO n1 = 1, hybrid%num_radfun_per_l(l - 1, itype)
                      ic = ic + 1
                      qmat1(n1, n2, l, itype) = intgrf(dbas1(:)*hybdat%bas1(:, n1, l - 1, itype) + &
                                                       dbas2(:)*hybdat%bas2(:, n1, l - 1, itype), atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf) &
@@ -883,7 +883,7 @@ CONTAINS
                   END DO
                END IF
                IF (l /= atoms%lmax(itype)) THEN
-                  DO n1 = 1, hybrid%nindx(l + 1, itype)
+                  DO n1 = 1, hybrid%num_radfun_per_l(l + 1, itype)
 
                      qmat2(n1, n2, l, itype) = intgrf(dbas1(:)*hybdat%bas1(:, n1, l + 1, itype) + dbas2(:)*hybdat%bas2(:, n1, l + 1, itype), &
                                                       atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf) &
@@ -909,7 +909,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            nn = sum((/((2*l + 1)*hybrid%nindx(l, itype), l=0, atoms%lmax(itype))/))
+            nn = sum((/((2*l + 1)*hybrid%num_radfun_per_l(l, itype), l=0, atoms%lmax(itype))/))
             DO iband1 = bandi1, bandf1
                cmt1(:nn, iband1) = cmt(iband1, :nn, ic)
             ENDDO
@@ -921,11 +921,11 @@ CONTAINS
                cvec1 = 0; cvec2 = 0; cvec3 = 0
                ! build up left vector(s) ( -> cvec1/2/3 )
                lm_0 = 0              ! we start with s-functions (l=0)
-               lm_1 = hybrid%nindx(0, itype) ! we start with p-functions (l=0+1)
+               lm_1 = hybrid%num_radfun_per_l(0, itype) ! we start with p-functions (l=0+1)
                lm = 0
                DO l = 0, atoms%lmax(itype) - 1
-                  n0 = hybrid%nindx(l, itype)
-                  n1 = hybrid%nindx(l + 1, itype)
+                  n0 = hybrid%num_radfun_per_l(l, itype)
+                  n1 = hybrid%num_radfun_per_l(l + 1, itype)
                   DO M = -l, l
                      lm = lm + 1
                      lm0 = lm_0 + (M + l)*n0
@@ -940,12 +940,12 @@ CONTAINS
                   lm_1 = lm_1 + (2*l + 3)*n1
                END DO
 
-               lm_0 = hybrid%nindx(0, itype) ! we start with p-functions (l=1)
+               lm_0 = hybrid%num_radfun_per_l(0, itype) ! we start with p-functions (l=1)
                lm_1 = 0              ! we start with s-functions (l=1-1)
                lm = 1
                DO l = 1, atoms%lmax(itype)
-                  n0 = hybrid%nindx(l, itype)
-                  n1 = hybrid%nindx(l - 1, itype)
+                  n0 = hybrid%num_radfun_per_l(l, itype)
+                  n1 = hybrid%num_radfun_per_l(l - 1, itype)
                   DO M = -l, l
                      lm = lm + 1
                      lm0 = lm_0 + (M + l)*n0

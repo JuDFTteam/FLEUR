@@ -168,7 +168,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop))
       ALLOCATE(oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1))
 
-      ALLOCATE(hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
+      ALLOCATE(hybrid%num_radfun_per_l(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
 

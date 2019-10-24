@@ -276,7 +276,7 @@ CONTAINS
      ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
      DO itype = 1, atoms%ntype
         DO l = 0, atoms%lmax(itype)
-           lmstart(l, itype) = sum([(hybrid%nindx(ll, itype)*(2*ll + 1), ll=0, l - 1)])
+           lmstart(l, itype) = sum([(hybrid%num_radfun_per_l(ll, itype)*(2*ll + 1), ll=0, l - 1)])
         END DO
      END DO
 
@@ -321,10 +321,10 @@ CONTAINS
            DO l = 0, atoms%lmax(itype)
               DO m = -l, l
                  rdum = (-1)**(l + m)
-                 DO p = 1, hybrid%nindx(l, itype)
+                 DO p = 1, hybrid%num_radfun_per_l(l, itype)
                     lm1 = lm1 + 1
                     ! lm index at l,-m
-                    lm2 = lm1 - 2*m*hybrid%nindx(l, itype)
+                    lm2 = lm1 - 2*m*hybrid%num_radfun_per_l(l, itype)
 
                     IF (iatom == iiatom) THEN
                        IF (m < 0) THEN
@@ -419,7 +419,7 @@ CONTAINS
                           ! Gaunt condition -m1+m2-m=0
                           m2 = m1 + m
                           IF (abs(m2) <= l2) THEN
-                             lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                             lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                              ! precalculated Gaunt coefficient
                              rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
                              IF (abs(rdum) > 1e-12) THEN
@@ -442,7 +442,7 @@ CONTAINS
 
                           m2 = m1 - m ! switch role of b1 and b2
                           IF (abs(m2) <= l2 .and. offdiag) THEN
-                             lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                             lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                              rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
                              IF (abs(rdum) > 1e-12) THEN
                                 DO iband = bandi, bandf
@@ -461,7 +461,7 @@ CONTAINS
                           END IF  ! abs(m2) .le. l2 .and. offdiag
 
                           ! go to lmp start index for next m1-quantum number
-                          lmp1 = lmp1 + hybrid%nindx(l1, itype)
+                          lmp1 = lmp1 + hybrid%num_radfun_per_l(l1, itype)
 
                        END DO  !m1
 
@@ -547,11 +547,11 @@ CONTAINS
                        ! calculate the contributions which are identical for m>0 and m <0
                        rarr2 = 0.0
                        IF (abs(m) <= l2) THEN
-                          lmp1 = lp1 + l1*hybrid%nindx(l1, itype)
+                          lmp1 = lp1 + l1*hybrid%num_radfun_per_l(l1, itype)
                           IF (mod(l1, 2) == 0) THEN
-                             lmp2 = lp2 + (m + l2)*hybrid%nindx(l2, itype)
+                             lmp2 = lp2 + (m + l2)*hybrid%num_radfun_per_l(l2, itype)
                           ELSE
-                             lmp2 = lp2 + (-m + l2)*hybrid%nindx(l2, itype)
+                             lmp2 = lp2 + (-m + l2)*hybrid%num_radfun_per_l(l2, itype)
                           END IF
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
@@ -582,11 +582,11 @@ CONTAINS
 
                        IF (abs(m) <= l1) THEN
                           IF (mod(l2, 2) == 0) THEN
-                             lmp3 = lp1 + (m + l1)*hybrid%nindx(l1, itype)
+                             lmp3 = lp1 + (m + l1)*hybrid%num_radfun_per_l(l1, itype)
                           ELSE
-                             lmp3 = lp1 + (-m + l1)*hybrid%nindx(l1, itype)
+                             lmp3 = lp1 + (-m + l1)*hybrid%num_radfun_per_l(l1, itype)
                           END IF
-                          lmp2 = lp2 + l2*hybrid%nindx(l2, itype)
+                          lmp2 = lp2 + l2*hybrid%num_radfun_per_l(l2, itype)
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
                           IF (abs(rdum) > 1e-12) THEN
@@ -622,7 +622,7 @@ CONTAINS
                        DO m1 = -l1, l1
                           monepm1 = -monepm1
                           IF (m1 == 0) THEN
-                             lmp1 = lmp1 + hybrid%nindx(l1, itype)
+                             lmp1 = lmp1 + hybrid%num_radfun_per_l(l1, itype)
                              CYCLE
                           END IF
                           ! (-1)**(l1+m1)
@@ -632,9 +632,9 @@ CONTAINS
                              rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
                              IF (abs(rdum) > 1e-12) THEN
                                 IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                   lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                 ELSE
-                                   lmp2 = lp2 + (-m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (-m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                 END IF
                                 rdum = rdum/sqrt(2.0)
@@ -650,11 +650,11 @@ CONTAINS
                              IF (offdiag) THEN
                                 rdum = hybdat%gauntarr(1, l2, l1, l, m2, -m)
                                 IF (abs(rdum) > 1e-12) THEN
-                                   lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                    IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                       lmp3 = lmp1
                                    ELSE
-                                      lmp3 = lmp1 - 2*m1*hybrid%nindx(l1, itype)
+                                      lmp3 = lmp1 - 2*m1*hybrid%num_radfun_per_l(l1, itype)
                                       fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                    END IF
                                    rdum = moneplm*rdum/sqrt(2.0)
@@ -677,9 +677,9 @@ CONTAINS
                              IF (abs(rdum) > 1e-12) THEN
 
                                 IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                   lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                 ELSE
-                                   lmp2 = lp2 + (-m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (-m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                 END IF
                                 rdum = moneplm*rdum/sqrt(2.0)
@@ -696,11 +696,11 @@ CONTAINS
                              IF (offdiag) THEN
                                 rdum = hybdat%gauntarr(1, l2, l1, l, m2, m)
                                 IF (abs(rdum) > 1e-12) THEN
-                                   lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                    IF (sign(1, m1) + sign(1, m2) /= 0) THEN
                                       lmp3 = lmp1
                                    ELSE
-                                      lmp3 = lmp1 - 2*m1*hybrid%nindx(l1, itype)
+                                      lmp3 = lmp1 - 2*m1*hybrid%num_radfun_per_l(l1, itype)
                                       fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                    END IF
                                    rdum = rdum/sqrt(2.0)
@@ -717,7 +717,7 @@ CONTAINS
                           END IF  ! abs(m2) .le. l2 .and. m1 .ne. 0
 
                           !go to lmp start index for next m1-quantum number
-                          lmp1 = lmp1 + hybrid%nindx(l1, itype)
+                          lmp1 = lmp1 + hybrid%num_radfun_per_l(l1, itype)
                        END DO  ! m1
 
                        ! go to lm mixed basis startindx for l and m
@@ -753,15 +753,15 @@ CONTAINS
                        IF (abs(m2) <= l2) THEN
 
                           IF (mod(l, 2) == 0) THEN
-                             lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                             lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                              !lmp3 and lmp4 are variables, which avoid an if clause in the loop
                              lmp3 = lmp2
                              lmp4 = lmp1
                           ELSE
-                             lmp2 = lp2 + (-m2 + l2)*hybrid%nindx(l2, itype)
+                             lmp2 = lp2 + (-m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                              !lmp3 and lmp3 are variables, which avoid an if clause in the loop
-                             lmp3 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
-                             lmp4 = lmp1 - 2*m1*hybrid%nindx(l1, itype)
+                             lmp3 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
+                             lmp4 = lmp1 - 2*m1*hybrid%num_radfun_per_l(l1, itype)
 
                              fac1 = monepl1*monepm1 ! (-1)**(l1+m1)
                              fac2 = monepl2*monepm1 ! (-1)**(l2+m1)
@@ -802,7 +802,7 @@ CONTAINS
                        END IF  ! abs(m2).le.l2
 
                        ! go to lmp start index for next m1-quantum number
-                       lmp1 = lmp1 + hybrid%nindx(l1, itype)
+                       lmp1 = lmp1 + hybrid%num_radfun_per_l(l1, itype)
                     END DO  !m1
 
                     ! go to lm mixed basis startindx for l and m
@@ -833,11 +833,11 @@ CONTAINS
                        ! calculate the contributions which are identical for m>0 and m <0
                        rarr2 = 0.0
                        IF (abs(m) <= l2) THEN
-                          lmp1 = lp1 + l1*hybrid%nindx(l1, itype)
+                          lmp1 = lp1 + l1*hybrid%num_radfun_per_l(l1, itype)
                           IF (mod(l1, 2) == 0) THEN
-                             lmp2 = lp2 + (m + l2)*hybrid%nindx(l2, itype)
+                             lmp2 = lp2 + (m + l2)*hybrid%num_radfun_per_l(l2, itype)
                           ELSE
-                             lmp2 = lp2 + (-m + l2)*hybrid%nindx(l2, itype)
+                             lmp2 = lp2 + (-m + l2)*hybrid%num_radfun_per_l(l2, itype)
                           END IF
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
@@ -868,11 +868,11 @@ CONTAINS
 
                        IF (abs(m) <= l1) THEN
                           IF (mod(l2, 2) == 0) THEN
-                             lmp3 = lp1 + (m + l1)*hybrid%nindx(l1, itype)
+                             lmp3 = lp1 + (m + l1)*hybrid%num_radfun_per_l(l1, itype)
                           ELSE
-                             lmp3 = lp1 + (-m + l1)*hybrid%nindx(l1, itype)
+                             lmp3 = lp1 + (-m + l1)*hybrid%num_radfun_per_l(l1, itype)
                           END IF
-                          lmp2 = lp2 + l2*hybrid%nindx(l2, itype)
+                          lmp2 = lp2 + l2*hybrid%num_radfun_per_l(l2, itype)
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
                           IF (abs(rdum) > 1e-12) THEN
@@ -908,7 +908,7 @@ CONTAINS
                        DO m1 = -l1, l1
                           monepm1 = -monepm1
                           IF (m1 == 0) THEN
-                             lmp1 = lmp1 + hybrid%nindx(l1, itype)
+                             lmp1 = lmp1 + hybrid%num_radfun_per_l(l1, itype)
                              CYCLE
                           END IF
                           m2 = m1 + m
@@ -919,9 +919,9 @@ CONTAINS
                              IF (abs(rdum) > 1e-12) THEN
 
                                 IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                   lmp2 = lp2 + (-m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (-m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                 ELSE
-                                   lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                    fac = -moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))/2
                                 END IF
 
@@ -939,9 +939,9 @@ CONTAINS
                              IF (offdiag) THEN
                                 rdum = hybdat%gauntarr(2, l1, l2, l, m1, -m)
                                 IF (abs(rdum) > 1e-12) THEN
-                                   lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                    IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                      lmp3 = lmp1 - 2*m1*hybrid%nindx(l1, itype)
+                                      lmp3 = lmp1 - 2*m1*hybrid%num_radfun_per_l(l1, itype)
                                    ELSE
                                       lmp3 = lmp1
                                       fac = 1/2.*monepl1m1*(sign(1, m2) - sign(1, m1))
@@ -967,9 +967,9 @@ CONTAINS
                              IF (abs(rdum) > 1e-12) THEN
 
                                 IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                   lmp2 = lp2 + (-m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (-m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                 ELSE
-                                   lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m1) - sign(1, m2))
                                 END IF
                                 rdum = monepl1m1*rdum/sqrt(2.0)
@@ -985,9 +985,9 @@ CONTAINS
                              IF (offdiag) THEN
                                 rdum = hybdat%gauntarr(2, l1, l2, l, m1, m)
                                 IF (abs(rdum) > 1e-12) THEN
-                                   lmp2 = lp2 + (m2 + l2)*hybrid%nindx(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
                                    IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                      lmp3 = lmp1 - 2*m1*hybrid%nindx(l1, itype)
+                                      lmp3 = lmp1 - 2*m1*hybrid%num_radfun_per_l(l1, itype)
                                    ELSE
                                       lmp3 = lmp1
                                       fac = -monepl1m1*(sign(1, m1) - sign(1, m2))/2
@@ -1007,7 +1007,7 @@ CONTAINS
                           END IF  !  abs(m2) .le. l2 .and. m2 .ne. 0
 
                           !go to lmp start index for next m1-quantum number
-                          lmp1 = lmp1 + hybrid%nindx(l1, itype)
+                          lmp1 = lmp1 + hybrid%num_radfun_per_l(l1, itype)
                        END DO  ! m1
 
                        ! multiply rarr2 by (-1)**(l+m+1)

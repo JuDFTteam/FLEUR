@@ -158,7 +158,7 @@ CONTAINS
 
 #if CPP_DEBUG
       ! consistency check
-      IF (.not. all(iarr == hybrid%nindx)) call judft_error('gen_wavf: counting error')
+      IF (.not. all(iarr == hybrid%num_radfun_per_l)) call judft_error('gen_wavf: counting error')
 #endif
 
 8000  FORMAT(1x, /, /, ' wavefunction parameters for atom type', i3, ':', /, t32, 'radial function', t79, &
@@ -216,7 +216,7 @@ CONTAINS
                   ! number l in the list of all local orbitals of the atom type
                   idum = 0
                   map_lo = 0
-                  IF (hybrid%nindx(l, itype) > 2) THEN
+                  IF (hybrid%num_radfun_per_l(l, itype) > 2) THEN
                      DO j = 1, atoms%nlo(itype)
                         IF (atoms%llo(j, itype) == l) THEN
                            idum = idum + 1
@@ -227,7 +227,7 @@ CONTAINS
 
                   DO M = -l, l
                      lm = ll + M
-                     DO i = 1, hybrid%nindx(l, itype)
+                     DO i = 1, hybrid%num_radfun_per_l(l, itype)
                         indx = indx + 1
                         IF (i == 1) THEN
                            cmt(:, indx, iatom) = cdum*acof(:, lm, iatom)

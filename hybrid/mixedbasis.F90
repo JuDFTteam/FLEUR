@@ -152,16 +152,16 @@ CONTAINS
             bas1(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 1, 0:atoms%lmaxd)
             bas2(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 2, 0:atoms%lmaxd)
 
-            hybrid%nindx(:,itype) = 2
+            hybrid%num_radfun_per_l(:,itype) = 2
             ! generate radial functions for local orbitals
             IF (atoms%nlo(itype) >= 1) THEN
                CALL radflo(atoms, itype, ispin, enpara%ello0(1, 1, ispin), vr0(:,itype, ispin), &
                            f, df, mpi, usdus, uuilon, duilon, ulouilopn, flo)
 
                DO ilo = 1, atoms%nlo(itype)
-                  hybrid%nindx(atoms%llo(ilo, itype), itype) = hybrid%nindx(atoms%llo(ilo, itype), itype) + 1
-                  bas1(1:ng, hybrid%nindx(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 1, ilo)
-                  bas2(1:ng, hybrid%nindx(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 2, ilo)
+                  hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) = hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) + 1
+                  bas1(1:ng, hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 1, ilo)
+                  bas2(1:ng, hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 2, ilo)
                END DO
             END IF
          END DO
@@ -173,7 +173,7 @@ CONTAINS
       DO ispin = 1, input%jspins
          DO itype = 1, atoms%ntype
             DO l = 0, atoms%lmax(itype)
-               DO i = 1, hybrid%nindx(l, itype)
+               DO i = 1, hybrid%num_radfun_per_l(l, itype)
                   rdum = intgrf(bas1(:,i, l, itype, ispin)**2 + bas2(:,i, l, itype, ispin)**2, &
                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
                   bas1(:atoms%jri(itype), i, l, itype, ispin) = bas1(:atoms%jri(itype), i, l, itype, ispin)/SQRT(rdum)
@@ -386,7 +386,7 @@ CONTAINS
 
       ! determine maximal indices of (radial) mixed-basis functions (->nindxm1)
       ! (will be reduced later-on due to overlap)
-      hybrid%maxindxp1 = 0
+      hybrid%max_indx_p_1 = 0
       DO itype = 1, atoms%ntype
          seleco = .FALSE.
          selecu = .FALSE.
@@ -417,8 +417,8 @@ CONTAINS
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
                   IF (l >= ABS(l1 - l2) .AND. l <= l1 + l2) THEN
-                     DO n1 = 1, hybrid%nindx(l1, itype)
-                        DO n2 = 1, hybrid%nindx(l2, itype)
+                     DO n1 = 1, hybrid%num_radfun_per_l(l1, itype)
+                        DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
                            M = M + 1
                            IF (selecmat(n1, l1, n2, l2)) THEN
                               n = n + 1
@@ -432,7 +432,7 @@ CONTAINS
             IF (n == 0 .AND. mpi%irank == 0) &
                WRITE (6, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
-            hybrid%maxindxp1 = MAX(hybrid%maxindxp1, M)
+            hybrid%max_indx_p_1 = MAX(hybrid%max_indx_p_1, M)
             hybrid%nindxm1(l, itype) = n*input%jspins
          END DO
       END DO
@@ -482,8 +482,8 @@ CONTAINS
                DO l2 = 0, atoms%lmax(itype)
                   IF (l < ABS(l1 - l2) .OR. l > l1 + l2) CYCLE
 
-                  DO n1 = 1, hybrid%nindx(l1, itype)
-                     DO n2 = 1, hybrid%nindx(l2, itype)
+                  DO n1 = 1, hybrid%num_radfun_per_l(l1, itype)
+                     DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
 
                         IF (selecmat(n1, l1, n2, l2)) THEN
                            DO ispin = 1, input%jspins
@@ -753,7 +753,7 @@ CONTAINS
          hybrid%nbasm(nk) = hybrid%nbasp + hybrid%ngptm(nk)
       END DO
 
-      hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%nindx(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
+      hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
 
    END SUBROUTINE mixedbasis
 END MODULE m_mixedbasis

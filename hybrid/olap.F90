@@ -180,7 +180,7 @@ CONTAINS
       olapmt = 0
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            nn = hybrid%nindx(l, itype)
+            nn = hybrid%num_radfun_per_l(l, itype)
             DO n2 = 1, nn
                DO n1 = 1, nn!n2
                   !IF( n1 .gt. 2 .or. n2 .gt. 2) CYCLE
@@ -228,7 +228,7 @@ CONTAINS
             lm = 0
             DO l = 0, atoms%lmax(itype)
                DO M = -l, l
-                  nn = hybrid%nindx(l, itype)
+                  nn = hybrid%num_radfun_per_l(l, itype)
                   wfolap_inv = wfolap_inv + &
          &                 dot_product(cmt1(lm + 1:lm + nn, iatom),&
          &                               matmul(olapmt(:nn, :nn, l, itype),&
@@ -281,7 +281,7 @@ CONTAINS
             lm = 0
             DO l = 0, atoms%lmax(itype)
                DO M = -l, l
-                  nn = hybrid%nindx(l, itype)
+                  nn = hybrid%num_radfun_per_l(l, itype)
                   wfolap_noinv = wfolap_noinv + &
          &                 dot_product(cmt1(lm + 1:lm + nn, iatom),&
          &                               matmul(olapmt(:nn, :nn, l, itype),&
@@ -342,7 +342,7 @@ CONTAINS
             lm = 0
             DO l = 0, atoms%lmax(itype)
                DO M = -l, l
-                  nn = hybrid%nindx(l, itype)
+                  nn = hybrid%num_radfun_per_l(l, itype)
                   wfolap1 = wfolap1 + &
          &                  dot_product(cmt1(lm + 1:lm + nn, iatom),&
          &                                matmul(olapmt(:nn, :nn, l, itype),&
@@ -393,7 +393,7 @@ CONTAINS
             lm = 0
             DO l = 0, atoms%lmax(itype)
                DO M = -l, l
-                  nn = hybrid%nindx(l, itype)
+                  nn = hybrid%num_radfun_per_l(l, itype)
                   wfolap2 = wfolap2 + &
          &                 dot_product(cmt1(lm + 1:lm + nn, ic),&
          &                               matmul(olapmt(:nn, :nn, l, itype),&
