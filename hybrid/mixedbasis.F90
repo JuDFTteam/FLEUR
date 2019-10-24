@@ -160,8 +160,8 @@ CONTAINS
 
                DO ilo = 1, atoms%nlo(itype)
                   hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) = hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) + 1
-                  bas1(1:ng, hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 1, ilo)
-                  bas2(1:ng, hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 2, ilo)
+                  bas1(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 1, ilo)
+                  bas2(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 2, ilo)
                END DO
             END IF
          END DO
