@@ -38,7 +38,7 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:)
       REAL, ALLOCATABLE      ::  div_vv(:,:,:)
    CONTAINS
-      procedure set_num_radfun_per_l => set_num_radfun_per_l_hybrid
+      procedure :: set_num_radfun_per_l => set_num_radfun_per_l_hybrid
    END TYPE t_hybrid
 
    TYPE t_prodtype
@@ -200,9 +200,11 @@ contains
    end subroutine set_nl_prodtype
 
    subroutine set_num_radfun_per_l_hybrid(hybrid, atoms)
+      use m_types_setup
       implicit NONE
       class(t_hybrid) :: hybrid
       type(t_atoms)   :: atoms
+      integer :: itype, ilo
 
       ! there is always at least two: u and u_dot
       hybrid%num_radfun_per_l = 2
