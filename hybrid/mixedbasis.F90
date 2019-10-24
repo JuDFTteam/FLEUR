@@ -78,7 +78,7 @@ CONTAINS
       INTEGER                          ::  g(3)
       INTEGER, ALLOCATABLE             ::  ihelp(:)
       INTEGER, ALLOCATABLE             ::  ptr(:)           ! pointer for array sorting
-      INTEGER, ALLOCATABLE             ::  unsrt_pgptm(:, :) ! unsorted pointers to g vectors
+      INTEGER, ALLOCATABLE             ::  unsrt_pgptm(:,:) ! unsorted pointers to g vectors
 
       REAL                            ::  kvec(3)
       REAL                            ::  flo(atoms%jmtd, 2, atoms%nlod)
@@ -86,15 +86,15 @@ CONTAINS
       REAL                            ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
       REAL                            ::  bashlp(atoms%jmtd)
 
-      REAL, ALLOCATABLE               ::  f(:, :, :), df(:, :, :)
-      REAL, ALLOCATABLE               ::  olap(:, :), work(:), eig(:), eigv(:, :)
-      REAL, ALLOCATABLE               ::  bas1(:, :, :, :, :), bas2(:, :, :, :, :)
-      REAL, ALLOCATABLE               ::  basmhlp(:, :, :, :)
-      REAL, ALLOCATABLE               ::  gridf(:, :), vr0(:, :, :)
-      REAL, ALLOCATABLE               ::  length_kg(:, :) ! length of the vectors k + G
+      REAL, ALLOCATABLE               ::  f(:,:,:), df(:,:,:)
+      REAL, ALLOCATABLE               ::  olap(:,:), work(:), eig(:), eigv(:,:)
+      REAL, ALLOCATABLE               ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
+      REAL, ALLOCATABLE               ::  basmhlp(:,:,:,:)
+      REAL, ALLOCATABLE               ::  gridf(:,:), vr0(:,:,:)
+      REAL, ALLOCATABLE               ::  length_kg(:,:) ! length of the vectors k + G
 
-      LOGICAL, ALLOCATABLE            ::  selecmat(:, :, :, :)
-      LOGICAL, ALLOCATABLE            ::  seleco(:, :), selecu(:, :)
+      LOGICAL, ALLOCATABLE            ::  selecmat(:,:,:,:)
+      LOGICAL, ALLOCATABLE            ::  seleco(:,:), selecu(:,:)
 
       CHARACTER, PARAMETER            :: lchar(0:38) = (/'s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', &
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
@@ -133,7 +133,7 @@ CONTAINS
 
       allocate(vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
 
-      vr0(:, :, :) = v%mt(:, 0, :, :)
+      vr0(:,:,:) = v%mt(:,0, :,:)
 
       ! calculate radial basisfunctions u and u' with
       ! the spherical part of the potential vr0 and store them in
@@ -148,18 +148,18 @@ CONTAINS
          ng = atoms%jri(itype)
          DO ispin = 1, input%jspins
             DO l = 0, atoms%lmax(itype)
-               CALL radfun(l, itype, ispin, enpara%el0(l, itype, ispin), vr0(:, itype, ispin), atoms, &
-                           f(:, :, l), df(:, :, l), usdus, nodem, noded, wronk)
+               CALL radfun(l, itype, ispin, enpara%el0(l, itype, ispin), vr0(:,itype, ispin), atoms, &
+                           f(:,:,l), df(:,:,l), usdus, nodem, noded, wronk)
             END DO
             bas1(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = f(1:ng, 1, 0:atoms%lmaxd)
             bas2(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = f(1:ng, 2, 0:atoms%lmaxd)
             bas1(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 1, 0:atoms%lmaxd)
             bas2(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 2, 0:atoms%lmaxd)
 
-            hybrid%nindx(:, itype) = 2
+            hybrid%nindx(:,itype) = 2
             ! generate radial functions for local orbitals
             IF (atoms%nlo(itype) >= 1) THEN
-               CALL radflo(atoms, itype, ispin, enpara%ello0(1, 1, ispin), vr0(:, itype, ispin), &
+               CALL radflo(atoms, itype, ispin, enpara%ello0(1, 1, ispin), vr0(:,itype, ispin), &
                            f, df, mpi, usdus, uuilon, duilon, ulouilopn, flo)
 
                DO ilo = 1, atoms%nlo(itype)
@@ -178,7 +178,7 @@ CONTAINS
          DO itype = 1, atoms%ntype
             DO l = 0, atoms%lmax(itype)
                DO i = 1, hybrid%nindx(l, itype)
-                  rdum = intgrf(bas1(:, i, l, itype, ispin)**2 + bas2(:, i, l, itype, ispin)**2, &
+                  rdum = intgrf(bas1(:,i, l, itype, ispin)**2 + bas2(:,i, l, itype, ispin)**2, &
                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
                   bas1(:atoms%jri(itype), i, l, itype, ispin) = bas1(:atoms%jri(itype), i, l, itype, ispin)/SQRT(rdum)
                   bas2(:atoms%jri(itype), i, l, itype, ispin) = bas2(:atoms%jri(itype), i, l, itype, ispin)/SQRT(rdum)
@@ -197,7 +197,7 @@ CONTAINS
       i = 0
       n = -1
 
-      rdum1 = MAXVAL((/(SQRT(SUM(MATMUL(kpts%bkf(:, ikpt), cell%bmat)**2)), ikpt=1, kpts%nkptf)/))
+      rdum1 = MAXVAL((/(SQRT(SUM(MATMUL(kpts%bkf(:,ikpt), cell%bmat)**2)), ikpt=1, kpts%nkptf)/))
 
       ! a first run for the determination of the dimensions of the fields gptm,pgptm
 
@@ -214,7 +214,7 @@ CONTAINS
                   IF (rdum > gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
-                     kvec = kpts%bkf(:, ikpt)
+                     kvec = kpts%bkf(:,ikpt)
                      rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
 
                      IF (rdum <= gcutm**2) THEN
@@ -265,13 +265,13 @@ CONTAINS
                   IF (rdum > gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
-                     kvec = kpts%bkf(:, ikpt)
+                     kvec = kpts%bkf(:,ikpt)
                      rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
 
                      IF (rdum <= (gcutm)**2) THEN
                         IF (.NOT. ldum1) THEN
                            i = i + 1
-                           hybrid%gptm(:, i) = g
+                           hybrid%gptm(:,i) = g
                            ldum1 = .TRUE.
                         END IF
 
@@ -312,9 +312,9 @@ CONTAINS
       allocate(hybrid%ngptm1(kpts%nkptf))
       hybrid%ngptm1 = 0
       DO igpt = 1, hybrid%gptmd
-         g = hybrid%gptm(:, igpt)
+         g = hybrid%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
-            kvec = kpts%bkf(:, ikpt)
+            kvec = kpts%bkf(:,ikpt)
             rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
             IF (rdum <= hybrid%gcutm1**2) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
@@ -333,9 +333,9 @@ CONTAINS
       length_kG = 0
       unsrt_pgptm = 0
       DO igpt = 1, hybrid%gptmd
-         g = hybrid%gptm(:, igpt)
+         g = hybrid%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
-            kvec = kpts%bkf(:, ikpt)
+            kvec = kpts%bkf(:,ikpt)
             rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
             IF (rdum <= hybrid%gcutm1**2) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
@@ -401,8 +401,8 @@ CONTAINS
 
          ! include local orbitals
          IF (hybrid%maxindx >= 3) THEN
-            seleco(3:, :) = .TRUE.
-            selecu(3:, :) = .TRUE.
+            seleco(3:,:) = .TRUE.
+            selecu(3:,:) = .TRUE.
          END IF
 
          DO l = 0, hybrid%lcutm1(itype)
@@ -456,8 +456,8 @@ CONTAINS
          selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
          ! include lo's
          IF (hybrid%maxindx >= 3) THEN
-            seleco(3:, :) = .TRUE.
-            selecu(3:, :) = .TRUE.
+            seleco(3:,:) = .TRUE.
+            selecu(3:,:) = .TRUE.
          END IF
          IF (atoms%ntype > 1 .AND. mpi%irank == 0)&
               &    WRITE (6, '(6X,A,I3)') 'Atom type', itype
@@ -502,7 +502,7 @@ CONTAINS
                                     *bas2(:ng, n2, l2, itype, ispin))/atoms%rmsh(:ng, itype)
 
                               !normalize basm1
-                              rdum = SQRT(intgrf(hybrid%basm1(:, i, l, itype)**2, &
+                              rdum = SQRT(intgrf(hybrid%basm1(:,i, l, itype)**2, &
                                                  atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
 
                               hybrid%basm1(:ng, i, l, itype) = hybrid%basm1(:ng, i, l, itype)/rdum
@@ -529,7 +529,7 @@ CONTAINS
             olap = 0
             DO n2 = 1, n
                DO n1 = 1, n2
-                  olap(n1, n2) = intgrf(hybrid%basm1(:, n1, l, itype)*hybrid%basm1(:, n2, l, itype), &
+                  olap(n1, n2) = intgrf(hybrid%basm1(:,n1, l, itype)*hybrid%basm1(:,n2, l, itype), &
                                         atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
                   olap(n2, n1) = olap(n1, n2)
                END DO
@@ -548,10 +548,10 @@ CONTAINS
             END DO
             hybrid%nindxm1(l, itype) = nn
             eig = eig(ihelp)
-            eigv(:, :) = eigv(:, ihelp)
+            eigv(:,:) = eigv(:,ihelp)
 
             DO i = 1, ng
-               hybrid%basm1(i, 1:nn, l, itype) = MATMUL(hybrid%basm1(i, 1:n, l, itype), eigv(:, 1:nn))/SQRT(eig(:nn))
+               hybrid%basm1(i, 1:nn, l, itype) = MATMUL(hybrid%basm1(i, 1:n, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
             END DO
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
@@ -560,10 +560,10 @@ CONTAINS
                ! Check if basm1 must be reallocated
                IF (nn + 1 > SIZE(hybrid%basm1, 2)) THEN
                   allocate(basmhlp(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
-                  basmhlp(:, 1:nn, :, :) = hybrid%basm1
+                  basmhlp(:,1:nn, :,:) = hybrid%basm1
                   deallocate(hybrid%basm1)
                   allocate(hybrid%basm1(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
-                  hybrid%basm1(:, 1:nn, :, :) = basmhlp(:, 1:nn, :, :)
+                  hybrid%basm1(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
                   deallocate(basmhlp)
                END IF
 
@@ -590,7 +590,7 @@ CONTAINS
             rdum = 0
             DO i = 1, nn
                DO j = 1, i
-                  rdum1 = intgrf(hybrid%basm1(:, i, l, itype)*hybrid%basm1(:, j, l, itype), &
+                  rdum1 = intgrf(hybrid%basm1(:,i, l, itype)*hybrid%basm1(:,j, l, itype), &
                                  atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
 
                   IF (i == j) THEN
