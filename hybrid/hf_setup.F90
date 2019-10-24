@@ -185,7 +185,7 @@ CONTAINS
 
          allocate(basprod(atoms%jmtd), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
-         allocate(hybdat%prodm(hybrid%maxindxm1, hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
+         allocate(hybdat%prodm(maxval(hybrid%nindxm1), hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
          call hybdat%prod%init(hybrid, atoms)

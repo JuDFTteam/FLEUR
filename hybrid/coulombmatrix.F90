@@ -96,9 +96,9 @@ CONTAINS
 
       REAL                       :: q(3), q1(3), q2(3)
       REAL                       :: integrand(atoms%jmtd), primf1(atoms%jmtd), primf2(atoms%jmtd)
-      REAL                       :: mat(hybrid%maxindxm1*(hybrid%maxindxm1 + 1)/2)
-      REAL                       :: moment(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype), &
-                                    moment2(hybrid%maxindxm1, atoms%ntype)
+      REAL                       :: mat(maxval(hybrid%nindxm1)*(maxval(hybrid%nindxm1) + 1)/2)
+      REAL                       :: moment(maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype), &
+                                    moment2(maxval(hybrid%nindxm1), atoms%ntype)
       REAL                       :: sphbes_var(atoms%jmtd, 0:hybrid%maxlcutm1)
       REAL                       :: sphbesmoment1(atoms%jmtd, 0:hybrid%maxlcutm1)
       REAL                       :: rarr(0:hybrid%lexp + 1), rarr1(0:hybrid%maxlcutm1)
@@ -317,8 +317,8 @@ CONTAINS
       ! Look for different qnorm = |k+G|, definition of qnrm and pqnrm.
       CALL getnorm(kpts, hybrid%gptm, hybrid%ngptm, hybrid%pgptm, qnrm, nqnrm, pqnrm, cell)
       allocate(sphbesmoment(0:hybrid%lexp, atoms%ntype, nqnrm), &
-                olap(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype, nqnrm), &
-                integral(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype, nqnrm))
+                olap(maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype, nqnrm), &
+                integral(maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype, nqnrm))
       sphbes_var = 0
       sphbesmoment = 0
       sphbesmoment1 = 0
@@ -1098,7 +1098,7 @@ CONTAINS
                      carr2(:, 2), igpt2, ikpt, isym, .FALSE., POINTER(ikpt, :, :, :), &
                      sym, rrot(:, :, isym), invrrot(:, :, isym), hybrid, &
                      kpts, hybrid%maxlcutm1, atoms, hybrid%lcutm1, &
-                     hybrid%nindxm1, hybrid%maxindxm1, dwgn(:, :, :, isym), &
+                     hybrid%nindxm1, maxval(hybrid%nindxm1), dwgn(:, :, :, isym), &
                      hybrid%nbasp, nbasm1)
                   IF (iarr(igpt1) == 0) THEN
                      CALL bramat_trafo( &
@@ -1106,7 +1106,7 @@ CONTAINS
                         carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
                         sym, rrot(:, :, isym), invrrot(:, :, isym), hybrid, &
                         kpts, hybrid%maxlcutm1, atoms, hybrid%lcutm1, &
-                        hybrid%nindxm1, hybrid%maxindxm1, &
+                        hybrid%nindxm1, maxval(hybrid%nindxm1), &
                         dwgn(:, :, :, isym), hybrid%nbasp, nbasm1)
                      l = (hybrid%nbasp + igpt1 - 1)*(hybrid%nbasp + igpt1)/2
                      coulomb(l + 1:l + hybrid%nbasp + igpt1, ikpt) = carr2(:hybrid%nbasp + igpt1, 1)
@@ -1222,18 +1222,18 @@ CONTAINS
       ! rearrange coulomb matrix
       !
 
-      allocate(coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1, 0:hybrid%maxlcutm1, atoms%ntype, 1))
+      allocate(coulomb_mt1(maxval(hybrid%nindxm1) - 1, maxval(hybrid%nindxm1) - 1, 0:hybrid%maxlcutm1, atoms%ntype, 1))
       ic = (hybrid%maxlcutm1 + 1)**2*atoms%nat
       idum = ic + hybrid%maxgptm
       idum = (idum*(idum + 1))/2
       if (sym%invs) THEN
-         allocate(coulomb_mt2_r(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
-         allocate(coulomb_mt3_r(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat, 1))
+         allocate(coulomb_mt2_r(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
+         allocate(coulomb_mt3_r(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat, 1))
          allocate(coulomb_mtir_r(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
          allocate(coulombp_mtir_r(idum, 1))
       else
-         allocate(coulomb_mt2_c(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
-         allocate(coulomb_mt3_c(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat, 1))
+         allocate(coulomb_mt2_c(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
+         allocate(coulomb_mt3_c(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat, 1))
          allocate(coulomb_mtir_c(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
          allocate(coulombp_mtir_c(idum, 1))
       endif

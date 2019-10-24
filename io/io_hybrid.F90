@@ -68,9 +68,9 @@ contains
 #else
     ! if the sparse matrix technique is used, several entries of the
     ! matrix vanish so that the size of each entry is smaller
-    irecl_coulomb = ( atoms%ntype*(hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)**2&
-         +   atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(hybrid%maxindxm1-1)&
-         +   (hybrid%maxindxm1-1)*atoms%nat**2&
+    irecl_coulomb = ( atoms%ntype*(hybrid%maxlcutm1+1)*(maxval(hybrid%nindxm1)-1)**2&
+         +   atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(maxval(hybrid%nindxm1)-1)&
+         +   (maxval(hybrid%nindxm1)-1)*atoms%nat**2&
          +   ((hybrid%maxlcutm1+1)**2*atoms%nat+hybrid%maxgptm)&
          *((hybrid%maxlcutm1+1)**2*atoms%nat+hybrid%maxgptm+1)/2 )*8
     if (.not.l_real) irecl_coulomb =irecl_coulomb *2

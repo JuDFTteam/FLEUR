@@ -575,7 +575,7 @@ CONTAINS
 !     - arrays -
 
       INTEGER                 ::  rrot(3, 3), invrot(3, 3)
-      INTEGER                 ::  pnt(hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%nat)
+      INTEGER                 ::  pnt(maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%nat)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  rkpt(3), rkpthlp(3), rtaual(3), trans(3)
       REAL                    ::  arg

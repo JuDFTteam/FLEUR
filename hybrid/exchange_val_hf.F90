@@ -133,11 +133,11 @@ CONTAINS
       REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :)
       COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :)
 
-      REAL                 :: coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1, 0:hybrid%maxlcutm1, atoms%ntype)
-      REAL                 :: coulomb_mt2_r(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
-      REAL                 :: coulomb_mt3_r(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
-      COMPLEX              :: coulomb_mt2_c(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
-      COMPLEX              :: coulomb_mt3_c(hybrid%maxindxm1 - 1, atoms%nat, atoms%nat)
+      REAL                 :: coulomb_mt1(maxval(hybrid%nindxm1) - 1, maxval(hybrid%nindxm1) - 1, 0:hybrid%maxlcutm1, atoms%ntype)
+      REAL                 :: coulomb_mt2_r(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
+      REAL                 :: coulomb_mt3_r(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat)
+      COMPLEX              :: coulomb_mt2_c(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
+      COMPLEX              :: coulomb_mt3_c(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat)
 
       REAL                 :: coulomb_mtir_r(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))* &
                                              ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm) + 1)/2)
@@ -243,7 +243,7 @@ CONTAINS
                exch_vv = exch_vv + &
                          dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
-                                                hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, hybrid%maxindxm1, hybrid%gptm, &
+                                                hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, maxval(hybrid%nindxm1), hybrid%gptm, &
                                                 hybrid%ngptm(ikpt0), hybrid%pgptm(:, ikpt0), hybrid%gptmd, hybrid%basm1, &
                                                 hybrid%nbasm(ikpt0), iband1, hybrid%nbands(nk), nsest, ibando, psize, indx_sest, &
                                                 atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &

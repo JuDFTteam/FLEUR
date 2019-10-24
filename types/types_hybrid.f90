@@ -11,7 +11,6 @@ MODULE m_types_hybrid
       INTEGER                ::  bands1 !Only read in
       INTEGER                ::  nbasp
       INTEGER                ::  maxlcutm1
-      INTEGER                ::  maxindxm1
       INTEGER                ::  maxbasm1
       INTEGER                ::  maxindxp1
       INTEGER                ::  maxgptm

@@ -24,9 +24,9 @@ MODULE m_spmvec
             INTEGER, INTENT(IN) ::  ikpt
 
             ! - arrays -
-            REAL, INTENT(IN) ::  coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1,&
+            REAL, INTENT(IN) ::  coulomb_mt1(maxval(hybrid%nindxm1) - 1, maxval(hybrid%nindxm1) - 1,&
            &                                    0:hybrid%maxlcutm1, atoms%ntype)
-            REAL, INTENT(IN) ::  coulomb_mt2(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1,&
+            REAL, INTENT(IN) ::  coulomb_mt2(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1,&
            &                                    0:hybrid%maxlcutm1 + 1, atoms%nat)
             REAL, INTENT(IN) ::  coulomb_mt3(:,:,:)
             REAL, INTENT(IN) ::  coulomb_mtir(:)
@@ -228,9 +228,9 @@ MODULE m_spmvec
             INTEGER, INTENT(IN) ::  ikpt
 
             ! - arrays -
-            REAL, INTENT(IN) ::  coulomb_mt1(hybrid%maxindxm1 - 1, hybrid%maxindxm1 - 1,&
+            REAL, INTENT(IN) ::  coulomb_mt1(maxval(hybrid%nindxm1) - 1, maxval(hybrid%nindxm1) - 1,&
            &                                    0:hybrid%maxlcutm1, atoms%ntype)
-            COMPLEX, INTENT(IN) ::  coulomb_mt2(hybrid%maxindxm1 - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1,&
+            COMPLEX, INTENT(IN) ::  coulomb_mt2(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1,&
            &                                    0:hybrid%maxlcutm1 + 1, atoms%nat)
             COMPLEX, INTENT(IN) ::  coulomb_mt3(:,:,:)
             COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
@@ -250,7 +250,7 @@ MODULE m_spmvec
             COMPLEX, PARAMETER  ::  img = (0.0, 1.0)
             ! - local arrays -
 
-            REAL                ::  vecr(hybrid%maxindxm1 - 1), veci(hybrid%maxindxm1 - 1)
+            REAL                ::  vecr(maxval(hybrid%nindxm1) - 1), veci(maxval(hybrid%nindxm1) - 1)
             COMPLEX             ::  vecinhlp(hybrid%nbasm(ikpt))
             COMPLEX, ALLOCATABLE ::  coulhlp(:, :)
 
