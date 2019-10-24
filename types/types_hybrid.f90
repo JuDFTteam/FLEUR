@@ -121,7 +121,7 @@ contains
 
       gnorm = gptnorm(g, cell%bmat)
       gnorm3 = gnorm**3
-      IF (gnorm == 0) THEN
+      IF (abs(gnorm) < 1e-12) THEN
          stepfunction = 1
          DO itype = 1, atoms%ntype
             stepfunction = stepfunction - atoms%neq(itype)*atoms%volmts(itype)/cell%omtil
