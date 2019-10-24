@@ -37,7 +37,7 @@ CONTAINS
       call timestart("wavefproducts_noinv5")
 
       ! calculate nkpqt
-      kqpthlp = kpts%bkf(:, nk) + kpts%bkf(:, iq)
+      kqpthlp = kpts%bkf(:,nk) + kpts%bkf(:,iq)
       kqpt = kpts%to_first_bz(kqpthlp)
       g_t  = nint(kqpt - kqpthlp)
       ! determine number of kqpt
@@ -98,15 +98,15 @@ CONTAINS
 
 !      - local arrays -
       INTEGER                 ::  g(3)
-      INTEGER, ALLOCATABLE    ::  gpt0(:, :)
-      INTEGER, ALLOCATABLE    ::  pointer(:, :, :)
+      INTEGER, ALLOCATABLE    ::  gpt0(:,:)
+      INTEGER, ALLOCATABLE    ::  pointer(:,:,:)
 
 
 
       COMPLEX                 ::  carr1(bandoi:bandof)
       COMPLEX                 ::  carr(bandoi:bandof, bandf - bandi + 1)
       TYPE(t_mat)             ::  z_nk, z_kqpt
-      COMPLEX, ALLOCATABLE    ::  z0(:, :)
+      COMPLEX, ALLOCATABLE    ::  z0(:,:)
 
 
       call timestart("wavefproducts_noinv5 IR")
@@ -127,9 +127,9 @@ CONTAINS
       call read_z(z_kqpt, nkqpt)
       call timestop("read_z")
 
-      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
-     &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-     &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
+      g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
+     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+     &  + maxval(abs(hybrid%gptm(:,hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
 
       call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
 
@@ -152,7 +152,7 @@ CONTAINS
             carr1 = z_kqpt%data_c(ig2, bandoi:bandof)
          endif
          DO ig = 1, ngpt0
-            g = gpt0(:, ig) - lapw_nkqpt%gvec(:, ig2, jsp)
+            g = gpt0(:,ig) - lapw_nkqpt%gvec(:,ig2, jsp)
             cdum = hybdat%stepfunc(g(1), g(2), g(3))
             DO n2 = bandoi, bandof
                z0(n2, ig) = z0(n2, ig) + carr1(n2)*cdum
@@ -170,7 +170,7 @@ CONTAINS
          iigptm = hybrid%pgptm(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g = lapw%gvec(:, ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
+            g = lapw%gvec(:,ig1, jsp) + hybrid%gptm(:,iigptm) - g_t
             ig2 = pointer(g(1), g(2), g(3))
 
             IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
@@ -187,7 +187,7 @@ CONTAINS
             END DO
 
          END DO
-         cprod(ic, :, :) = carr(:, :)
+         cprod(ic, :,:) = carr(:,:)
       END DO
       call timestop("hybrid gptm")
       deallocate(z0, pointer, gpt0)
@@ -225,7 +225,7 @@ CONTAINS
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
       INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll
-      INTEGER                 ::  itype, ieq, iband, jband, ic1, m
+      INTEGER                 ::  itype, ieq, ic1, m
 
       COMPLEX                 ::  atom_phase
 
@@ -242,13 +242,13 @@ CONTAINS
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            lmstart(l, itype) = sum([(hybrid%nindx(ll, itype)*(2*ll + 1), ll=0, l - 1)])
+            lmstart(l, itype) = sum([(hybrid%nindx(ll, itype)*(2*ll+1), ll=0, l-1)])
          END DO
       END DO
 
       ! read in cmt coefficients from direct access file cmt
-      call read_cmt(cmt_nk(:, :, :), nk)
-      call read_cmt(cmt(:, :, :), nkqpt)
+      call read_cmt(cmt_nk(:,:,:), nk)
+      call read_cmt(cmt(:,:,:), nkqpt)
 
       lm_0 = 0
       ic = 0
@@ -258,15 +258,11 @@ CONTAINS
             ic = ic + 1
             ic1 = 0
 
-            atom_phase = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:, iq), atoms%taual(:, ic)))
+            atom_phase = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:,iq), atoms%taual(:,ic)))
 
             DO l = 0, hybrid%lcutm1(itype)
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
-
-                  l1 = hybdat%prod%l1(n,l,itype) !
-                  l2 = hybdat%prod%l2(n,l,itype) ! current basis-function product
-                  n1 = hybdat%prod%n1(n,l,itype) ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
-                  n2 = hybdat%prod%n2(n,l,itype) !
+                  call hybdat%prod%set_nl(n,l,itype, n1,l1,n2,l2)
 
                   IF (mod(l1 + l2 + l, 2) == 0) THEN
                      offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
@@ -277,7 +273,6 @@ CONTAINS
 
                      lm = lm_0
                      DO m = -l, l
-
                         carr = 0.0
 
                         lm1 = lm1_0 + n1 ! go to lm index for m1=-l1

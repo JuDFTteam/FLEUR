@@ -46,8 +46,9 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE :: n1(:,:,:)
       INTEGER, ALLOCATABLE :: n2(:,:,:)
    contains
-      procedure  :: init => init_prodtype
-      procedure  :: free => free_prodtype
+      procedure  :: init   => init_prodtype
+      procedure  :: free   => free_prodtype
+      procedure  :: set_nl => set_nl_prodtype
    END TYPE t_prodtype
 
    TYPE t_hybdat
@@ -182,4 +183,18 @@ contains
       IF(ALLOCATED(prod%n1)) DEALLOCATE (prod%n1)
       IF(ALLOCATED(prod%n2)) DEALLOCATE (prod%n2)
    end subroutine free_prodtype
+
+   subroutine set_nl_prodtype(prod,n,l,itype,n1,l1,n2,l2)
+      use m_types_setup
+      implicit NONE
+      class(t_prodtype)    :: prod
+      integer, intent(in)  :: n, l, itype
+      integer, intent(out) :: n1, l1, n2, l2
+
+      l1 = prod%l1(n,l,itype) !
+      l2 = prod%l2(n,l,itype) ! current basis-function product
+      n1 = prod%n1(n,l,itype) ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
+      n2 = prod%n2(n,l,itype) !
+
+   end subroutine set_nl_prodtype
 END MODULE m_types_hybrid
