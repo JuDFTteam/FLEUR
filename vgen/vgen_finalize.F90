@@ -31,13 +31,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER i,js,n
 
-    !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
-    
-    DO js = 1,input%jspins !Used input%jspins instead of SIZE(vtot%mt,4) since the off diag, elements of VTot%mt need no rescaling. 
-       DO n = 1,atoms%ntype
-          vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
-       ENDDO
-    ENDDO     ! js =1,input%jspins
+  
     
     ! Rescale vTot%pw_w with number of stars
     IF (.NOT.noco%l_noco) THEN
@@ -50,6 +44,14 @@ CONTAINS
        CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
        IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
     ENDIF
+
+  !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
+    
+ DO js = 1,input%jspins !Used input%jspins instead of SIZE(vtot%mt,4) since the off diag, elements of VTot%mt need no rescaling. 
+       DO n = 1,atoms%ntype
+          vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
+       ENDDO
+    ENDDO     ! js =1,input%jspins
 
     ! Rescale vCoul%pw_w with number of stars
     DO js = 1, SIZE(vCoul%pw_w,2)
