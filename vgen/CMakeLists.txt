@@ -6,6 +6,7 @@ vgen/modcyli.f
 vgen/modcylk.f
 vgen/od_mkgxyz3.f
 vgen/od_mkgz.f
+vgen/sphcoord.f
 vgen/vacp5_0.f
 vgen/vacp5_z.f
 vgen/visp5_0.f
@@ -49,7 +50,6 @@ vgen/xy_av_den.f90
 vgen/VYukawaFilm.f90
 vgen/divergence.f90
 vgen/xcBfield.f90
-vgen/sphcoord.f90
 )
 #vdW Stuff
 set(fleur_F90 ${fleur_F90}

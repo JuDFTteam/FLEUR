@@ -30,7 +30,7 @@ CONTAINS
       ! Assumes the following form for the potential matrix:
       ! V_mat = V*Id_(2x2) + sigma_vec*B_vec
       ! 
-      ! B_vec is saved as a density type with no additional r^2-factor.
+      ! B_vec is saved as a density type with an additional r^2-factor.
 
       TYPE(t_stars),                INTENT(IN)  :: stars
       TYPE(t_atoms),                INTENT(IN)  :: atoms
@@ -67,7 +67,7 @@ CONTAINS
                            POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
                ALLOCATE(bxc(i)%pw_w,mold=bxc(i)%pw)
 
-               bxc(i)%mt(:,0:,:,:)      = dummyDen(i+1)%mt(:,0:,:,:)!/r2
+               bxc(i)%mt(:,0:,:,:)      = dummyDen(i+1)%mt(:,0:,:,:)
                bxc(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
                bxc(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
                bxc(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
@@ -102,12 +102,10 @@ CONTAINS
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(IN)     :: bxc
       
+      TYPE(t_atoms)                                :: atloc
       TYPE(t_potden)                               :: div,phi
       TYPE(t_potden), DIMENSION(3)                 :: cvec
       INTEGER                                      :: n
-      REAL                                         :: divfactor
-
-      !divfactor=10**16
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
@@ -115,30 +113,33 @@ CONTAINS
       ALLOCATE(div%pw_w,mold=div%pw)
       
       CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+ 
+      atloc=atoms
+      atloc%zatom=0.0
 
       CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
-      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,div,phi)
+      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,div,phi)
 
-      DO i=1,3
-         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-         ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
+      !DO i=1,3
+         !CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         !ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
          !CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          !ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
-      ENDDO
+      !ENDDO
 
-      DO i=1,atoms%ntype
-         CALL divpotgrad(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,phi,cvec)
-      END DO
+      !DO i=1,atoms%ntype
+         !CALL divpotgrad(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,phi,cvec)
+      !END DO
 
       !DO i=1,3
       !   CALL corrB(i)%addPotDen(xcB(i), graddiv(i))
       !END DO
 
       CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                     noco, div, phi, cvec(1), cvec(2), cvec(3))!, &
+                     noco, div, phi)!, cvec(1), cvec(2), cvec(3), &
                      !corrB(1), corrB(2), corrB(3))
 
    END SUBROUTINE sourcefree
@@ -158,10 +159,13 @@ CONTAINS
       INTEGER,                      INTENT(IN)     :: itest
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: Avec
 
-      INTEGER                                      :: nsp, n, kt, kt2, ir, i, j, k, ifftxc3
+      INTEGER                                      :: nsp, n, kt, kt2, ir, i, j, k, ifftxc3, ind
       REAL                                         :: r, th, ph, x, y, z, dx, dy, dz
       REAL, ALLOCATABLE                            :: thet(:), phi(:), A_temp(:,:,:)!space grid, index
       TYPE(t_gradients)                            :: grad
+
+      REAL                            :: vec1(3), vec2(3), vec3(3), zero(3), point(3)
+      INTEGER                         :: grid(3)
 
       IF (itest.EQ.0) THEN 
          RETURN
@@ -175,6 +179,7 @@ CONTAINS
                        atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
                        POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(Avec(i)%pw_w,mold=Avec(i)%pw)
+         Avec(i)%mt    = 0
          ! Temporary.
          Avec(i)%pw    = 0
          Avec(i)%pw_w  = CMPLX(0.0,0.0)
@@ -208,9 +213,9 @@ CONTAINS
 	            !print *, th/pi_const
 	            !print *, ph/pi_const
 	
-	            A_temp(kt+k,1,1)=0.0!*(r**2)*(r/atoms%rmt(n))!*SIN(th)*COS(ph)*1000000.0
-	            A_temp(kt+k,2,1)=0.0!*(r**2)*(r/atoms%rmt(n))!*SIN(th)*SIN(ph)*1000000.0
-	            A_temp(kt+k,3,1)=(r**2)*r*COS(th)
+	            A_temp(kt+k,1,1)=0*(r**2)*(r/atoms%rmt(n))*SIN(th)*COS(ph)
+	            A_temp(kt+k,2,1)=(r**2)*(r/atoms%rmt(n))*SIN(th)*SIN(ph)
+	            A_temp(kt+k,3,1)=(r**2)*(r/atoms%rmt(n))*COS(th)
             ENDDO ! k
             kt = kt + nsp
          END DO ! ir
@@ -218,37 +223,63 @@ CONTAINS
          CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,1,:), Avec(1)%mt(:,0:,n,:))
          CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,2,:), Avec(2)%mt(:,0:,n,:))
          CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,3,:), Avec(3)%mt(:,0:,n,:))
-         print *, 'A_z 3rd entry before fromto grid'
-         print *, A_temp(3,3,1)/((atoms%rmsh(1, n)**2))
-         CALL mt_to_grid(.FALSE., 1, atoms, sphhar, Avec(3)%mt(:,0:,n,:), n, grad, A_temp(:,3,:))
-         print *, 'A_z 3rd entry after fromto grid'
-         print *, A_temp(3,3,1)
+
+         !print *, 'A_z*r^2 3rd entry before fromto grid'
+         !print *, A_temp(3,3,1)
+
+         !CALL mt_to_grid(.FALSE., 1, atoms, sphhar, Avec(3)%mt(:,0:,n,:), n, grad, A_temp(:,3,:))
+
+         !kt=0
+         !DO ir = 1, atoms%jri(n)
+         !   r = atoms%rmsh(ir, n)
+         !   DO k = 1, nsp
+	      !      A_temp(kt+k,3,1)=A_temp(kt+k,3,1)*r**2
+         !   ENDDO ! k
+         !   kt = kt + nsp
+         !END DO ! ir
+         
+         !print *, 'A_z*r^2 3rd entry after fromto grid'
+         !print *, A_temp(3,3,1)
          DEALLOCATE (A_temp)
       END DO ! n
 
       ALLOCATE (A_temp(ifftxc3,3,1))
 
-      DO i=1,ifftxc3
-         A_temp(i,:,:)=0.5
-      END DO
+      grid = (/stars%kxc1_fft,stars%kxc2_fft,stars%kxc3_fft/)
+      vec1 = (/1.,0.,0./)
+      vec2 = (/0.,1.,0./)
+      vec3 = (/0.,0.,1./)
+      zero = (/0.,0.,0./)
+      vec1=matmul(cell%amat,vec1)
+      vec2=matmul(cell%amat,vec2)
+      vec3=matmul(cell%amat,vec3)
+      zero=matmul(cell%amat,zero)
+
+      DO i = 0, grid(1)-1
+         DO j = 0, grid(2)-1
+            DO k = 0, grid(3)-1
+
+               point = zero + vec1*REAL(i)/(grid(1)-1) +&
+                              vec2*REAL(j)/(grid(2)-1) +&
+                              vec3*REAL(k)/(grid(3)-1)
+      
+               ind = k*grid(2)*grid(1) + j*grid(1) + i + 1
+
+               A_temp(ind,1,1)=SIN(i*2*pi_const/grid(1))
+               A_temp(ind,2,1)=0.0
+               A_temp(ind,3,1)=0.0
+
+            END DO
+         END DO
+      END DO !z-loop
+
+      !DO i=1,ifftxc3
+         !A_temp(i,:,:)=0.5
+      !END DO
 
       DO i=1,3
          CALL pw_from_grid(.TRUE.,stars,.TRUE.,A_temp(:,i,:),Avec(i)%pw,Avec(i)%pw_w)
       END DO
-
-      !dx=1.0/REAL(stars%kxc1_fft)
-      !dy=1.0/REAL(stars%kxc2_fft)
-      !dz=1.0/REAL(stars%kxc3_fft)
-
-      !DO i = 1, stars%kxc1_fft
-      !   DO j = 1, stars%kxc2_fft
-      !      DO k = 1, stars%kxc3_fft
-      !         A_temp(i,1)=i*dx
-      !         A_temp(i,2)=j*dy
-      !         A_temp(i,3)=k*dz
-      !      ENDDO ! k
-      !   ENDDO ! j
-      !ENDDO ! i
 
       ! End test case 1.
       !--------------------------------------------------------------------------

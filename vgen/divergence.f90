@@ -36,10 +36,12 @@ CONTAINS
 
       REAL, ALLOCATABLE :: thet(:), phi(:), div_temp(:, :) 
       REAL, ALLOCATABLE :: xcBx_mt(:,:,:), xcBy_mt(:,:,:), xcBz_mt(:,:,:)
-      REAL :: r, th, ph
-      INTEGER :: jr, k, nsp, kt, i
+      REAL :: r, th, ph, eps
+      INTEGER :: jr, k, nsp, kt, i, lh, lhmax
 
       nsp = atoms%nsp()
+      lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+      eps=1.e-10
 
       ALLOCATE (gradx%gr(3,atoms%jri(n)*nsp,1),grady%gr(3,atoms%jri(n)*nsp,1), &
                 gradz%gr(3,atoms%jri(n)*nsp,1))
@@ -60,12 +62,6 @@ CONTAINS
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
-      !DO jr=1,atoms%jri(n)
-      !   xcBx_mt(jr,0:,:) = xcB(1)%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
-      !   xcBy_mt(jr,0:,:) = xcB(2)%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
-      !   xcBz_mt(jr,0:,:) = xcB(3)%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
-      !ENDDO
-
       CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(1)%mt(:,0:,n,:), n, gradx)
       CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(2)%mt(:,0:,n,:), n, grady)
       CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(3)%mt(:,0:,n,:), n, gradz)
@@ -76,14 +72,33 @@ CONTAINS
          DO k = 1, nsp
             th = thet(k)
             ph = phi(k)
-            div_temp(kt+k,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+k,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+k,1) + COS(th)*gradz%gr(1,kt+k,1))*r**2&
-                               +(COS(th)*COS(ph)*gradx%gr(2,kt+k,1) + COS(th)*SIN(ph)*grady%gr(2,kt+k,1) - SIN(th)*gradz%gr(2,kt+k,1))*r&
-                               -(SIN(ph)*gradx%gr(3,kt+k,1)         - COS(ph)*grady%gr(3,kt+k,1))*r/SIN(th)
+            div_temp(kt+k,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+k,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+k,1) + COS(th)*gradz%gr(1,kt+k,1))&
+                               +(COS(th)*COS(ph)*gradx%gr(2,kt+k,1) + COS(th)*SIN(ph)*grady%gr(2,kt+k,1) - SIN(th)*gradz%gr(2,kt+k,1))/r&
+                               -(SIN(ph)*gradx%gr(3,kt+k,1)         - COS(ph)*grady%gr(3,kt+k,1))/(r*SIN(th))
          ENDDO ! k
          kt = kt+nsp
       ENDDO ! jr
     
       CALL mt_from_grid(atoms, sphhar, n, 1, div_temp, div%mt(:,0:,n,:))
+
+      DO jr = 1, atoms%jri(n)
+         DO lh=0, lhmax
+
+            IF (ABS(div%mt(jr,lh,n,1))<eps) THEN
+               div%mt(jr,lh,n,:)=0.0
+            END IF
+         END DO
+      END DO
+
+      kt = 0
+      DO jr = 1, atoms%jri(n)
+         r =atoms%rmsh(jr, n)
+         DO k = 1, nsp
+            div_temp(kt+k,1) = div_temp(kt+k,1)*r**2
+         ENDDO ! k
+         kt = kt+nsp
+      ENDDO ! jr
+
    
       CALL finish_mt_grid
    
@@ -112,7 +127,7 @@ CONTAINS
       TYPE(t_potden),               INTENT(INOUT) :: div
 
       TYPE(t_gradients)                           :: gradx,grady,gradz
-
+     
       REAL, ALLOCATABLE :: div_temp(:, :)
       INTEGER :: i,ifftxc3
 

@@ -200,16 +200,16 @@ CONTAINS
    
       ! Calculate the charge and magnetization densities in the muffin tins.
       DO ityp = 1,atoms%ntype
+         theta   = noco%beta(ityp)
+         phi     = noco%alph(ityp)
          DO ilh = 0,sphhar%nlh(atoms%ntypsy(ityp))
             DO iri = 1,atoms%jri(ityp)
                IF (SIZE(denmat%mt,4).LE.2) THEN 
                   cdnup   = rho(iri,ilh,ityp,1)
                   cdndown = rho(iri,ilh,ityp,2)
-                  theta   = noco%beta(ityp)
-                  phi     = noco%alph(ityp)
+
                   chden   = cdnup + cdndown
                   mgden   = cdnup - cdndown
-
                   rho(iri,ilh,ityp,1) = chden
                   rho(iri,ilh,ityp,2) = mgden*COS(phi)*SIN(theta)
                   rho(iri,ilh,ityp,3) = mgden*SIN(phi)*SIN(theta)
@@ -805,8 +805,353 @@ CONTAINS
 
    END SUBROUTINE savxsf
 
-   SUBROUTINE savcsv
-   
+   SUBROUTINE savcsv(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                     noco, score, potnorm, denName, denf, denA1, denA2, denA3)
+      USE m_outcdn
+      USE m_xsf_io
+
+      ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
+      ! plane wave representation and makes it/them into plottable .xsf file(s)
+      ! according to a scheme given in plot_inp. 
+      ! 
+      ! This is an adaptation of the old plotdop.f90 by P. Kurz.
+      ! 
+      ! Naming convention:
+      !  The output .xsf files will have names composed of the plotted density
+      !  (c.f. identifier) and an optional tag. For a scalar density, only said
+      !  density is plotted. For a spin-polarized density with an up and down 
+      !  component, f denotes the sum of both densities and g denotes their
+      !  difference u-d possibly with additional modifying factors as explained
+      !  above in vector-/matrixsplit. f and g are to be understood as scalar
+      !  fields f(r_vec) and g(r_vec). For a density matrix, f is still the 
+      !  scalar part. Aditionally, three vector components A_[1-3] arise.
+      ! 
+      !   E.g.: scalar density rho (n(r_vec))
+      !          ---> rho.xsf (n(r_vec))
+      !         spin-polarized density rho (n_up(r_vec),n_down(r_vec))
+      !          ---> rho_f.xsf, rho_g.xsf [n(r_vec),m(r_vec)]
+      !         matrix density rho ((n_11(r_vec),n_12(r_vec)),
+      !                             (n_21(r_vec),n_22(r_vec)))
+      !          ---> rho_f.xsf, rho_A1.xsf, rho_A2.xsf, rho_A3.xsf
+      !                                [n(r_vec),m_vec(r_vec)]
+
+      IMPLICIT NONE
+
+      TYPE(t_stars),               INTENT(IN) :: stars
+      TYPE(t_atoms),               INTENT(IN) :: atoms
+      TYPE(t_sphhar),              INTENT(IN) :: sphhar
+      TYPE(t_vacuum),              INTENT(IN) :: vacuum
+      TYPE(t_input),               INTENT(IN) :: input
+      TYPE(t_oneD),                INTENT(IN) :: oneD
+      TYPE(t_sym),                 INTENT(IN) :: sym
+      TYPE(t_cell),                INTENT(IN) :: cell
+      TYPE(t_noco),                INTENT(IN) :: noco
+      LOGICAL,                     INTENT(IN) :: score, potnorm
+      CHARACTER(len=20),           INTENT(IN) :: denName
+      TYPE(t_potden),              INTENT(IN) :: denf
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA1
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA2
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA3
+
+      REAL    :: tec, qint, phi0, angss
+      INTEGER :: i, j, ix, iy, iz, na, nplo, iv, iflag, nfile
+      INTEGER :: nplot, nt, jm, jspin, numInDen, numOutFiles
+      LOGICAL :: twodim, cartesian, xsf, unwind, polar
+
+      TYPE(t_potden),     ALLOCATABLE :: den(:)
+      REAL,               ALLOCATABLE :: xdnout(:)
+      REAL                            :: pt(3), vec1(3), vec2(3), vec3(3), &
+                                         zero(3), help(3), qssc(3), point(3)
+      INTEGER                         :: grid(3)
+      REAL                            :: rhocc(atoms%jmtd)
+      CHARACTER (len=20), ALLOCATABLE :: outFilenames(:)
+      CHARACTER (len=30)              :: filename
+      CHARACTER (len=7)               :: textline
+
+      REAL,               PARAMETER   :: eps = 1.0e-15
+
+      NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
+
+      nfile = 120
+
+      IF (PRESENT(denA2)) THEN
+         ALLOCATE(den(4))
+         den(1)          = denf
+         den(2)          = denA1
+         den(3)          = denA2
+         den(4)          = denA3
+         numInDen        = 4
+         numOutFiles     = 4
+      ELSE IF (PRESENT(denA1)) THEN
+         ALLOCATE(den(2))
+         den(1)          = denf
+         den(2)          = denA1
+         numInDen        = 2
+         numOutFiles     = 2
+      ELSE
+         ALLOCATE(den(1))
+         den(1)          = denf
+         numInDen        = 1
+         numOutFiles     = 1
+      END IF
+
+      DO i = 1, numInDen
+         
+         IF ((numInDen.NE.4).AND.(score)) THEN
+            OPEN (17,file='cdnc',form='unformatted',status='old')
+            REWIND 17
+            DO jspin = 1, input%jspins
+               DO nt = 1, atoms%ntype
+                  jm = atoms%jri(nt)
+                  READ (17) (rhocc(j),j=1,jm)
+                  DO j = 1, jm
+                     den(i)%mt(j,0,nt,jspin) = den(i)%mt(j,0,nt,jspin) - rhocc(j)/2.0/SQRT(pi_const)
+                  END DO
+                  READ (17) tec
+               END DO
+               READ (17) qint
+               den(i)%pw(1,jspin) = den(i)%pw(1,jspin) - qint/cell%volint
+            END DO
+            CLOSE (17)
+         ELSE IF (score) THEN
+            CALL juDFT_error('Subtracting core charge in noco calculations not supported', calledby = 'plot')
+         END IF
+      END DO
+
+      IF (noco%l_ss) THEN 
+         qssc = MATMUL(TRANSPOSE(cell%bmat),noco%qss) 
+      END IF 
+
+      ! Open the plot_inp file for input
+      OPEN (18,file='plot_inp')
+      READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
+      polar = .FALSE.
+      IF ((noco%l_noco).AND.(numInDen.EQ.4)) THEN
+         polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
+         IF (polar) THEN
+            numOutFiles = 7
+         END IF
+      END IF
+
+      ALLOCATE(outFilenames(numOutFiles))
+      ALLOCATE(xdnout(numOutFiles))
+
+      IF (numOutFiles.EQ.1) THEN
+         outFilenames(1) = TRIM(denName)
+      ELSE IF (numOutFiles.EQ.2) THEN
+         outFilenames(1) = TRIM(denName) // '_f'
+         outFilenames(2) = TRIM(denName) // '_g'
+      ELSE
+         outFilenames(1) = TRIM(denName) // '_f'
+         outFilenames(2) = TRIM(denName) // '_A1'
+         outFilenames(3) = TRIM(denName) // '_A2'
+         outFilenames(4) = TRIM(denName) // '_A3'
+         IF (polar) THEN
+            outFilenames(5) = TRIM(denName) // '_Aabs'
+            outFilenames(6) = TRIM(denName) // '_Atheta'
+            outFilenames(7) = TRIM(denName) // '_Aphi'
+         END IF
+      END IF
+
+      ! If xsf is specified we create input files for xcrysden
+      IF (.NOT.xsf) THEN
+         DO i = 1, numOutFiles
+            OPEN(nfile+i,file=TRIM(ADJUSTL(outFilenames(i)))//'.xsf',form='formatted')
+            CALL xsf_WRITE_atoms(nfile+i,atoms,input%film,oneD%odi%d1,cell%amat)
+         END DO
+      END IF
+
+      ! Loop over all plots
+      DO nplo = 1, nplot
+
+         ! the defaults
+         twodim = .TRUE.
+         cartesian = .TRUE.
+         grid = (/100,100,100/)
+         vec1 = (/0.,0.,0./)
+         vec2 = (/0.,0.,0./)
+         vec3 = (/0.,0.,0./)
+         zero = (/0.,0.,0./)
+         filename = "default"
+         READ(18,plot)
+         IF (twodim.AND.ANY(grid(1:2)<1)) &
+            CALL juDFT_error("Illegal grid size in plot",calledby="plot")
+         IF (.NOT.twodim.AND.ANY(grid<1)) &
+            CALL juDFT_error("Illegal grid size in plot",calledby="plot")
+         IF (twodim) grid(3) = 1
+
+         !calculate cartesian coordinates if needed
+         IF (.NOT.cartesian) THEN
+            vec1=matmul(cell%amat,vec1)
+            vec2=matmul(cell%amat,vec2)
+            vec3=matmul(cell%amat,vec3)
+            zero=matmul(cell%amat,zero)
+         END IF
+
+         !Open the file
+         IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo
+         DO i = 1, numOutFiles
+            IF (xsf) THEN
+               CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
+            ELSE
+               IF (numOutFiles.NE.1) THEN
+                  OPEN (nfile+i,file = filename//outFilenames(i),form='formatted')
+               ELSE
+                  OPEN (nfile+i,file = filename,form='formatted')
+               END IF
+            END IF
+         END DO
+
+         !loop over all points
+         DO iz = 0, grid(3)-1
+            DO iy = 0, grid(2)-1
+               DO ix = 0, grid(1)-1
+
+                  point = zero + vec1*REAL(ix)/(grid(1)-1) +&
+                                 vec2*REAL(iy)/(grid(2)-1)
+                  IF (.NOT.twodim) point = point + vec3*REAL(iz)/(grid(3)-1)
+
+                  ! Set region specific parameters for point
+                     
+                  ! Get MT sphere for point if point is in MT sphere
+                  CALL getMTSphere(input,cell,atoms,oneD,point,nt,na,pt)
+                  IF (na.NE.0) THEN
+                  ! In MT sphere
+                     iv = 0
+                     iflag = 1
+                  ELSE IF (input%film.AND..NOT.oneD%odi%d1.AND.ABS(point(3))>=cell%z1) THEN
+                     ! In vacuum in 2D system
+                     iv = 1
+                     iflag = 0
+                     pt(:) = point(:)
+                  ELSE IF ((oneD%odi%d1).AND.(SQRT((point(1))**2 + (point(2))**2)>=cell%z1)) THEN
+                     ! In vacuum in 1D system
+                     iv = 1
+                     iflag = 0
+                     pt(:) = point(:)
+                  ELSE
+                     ! In interstitial region
+                     iv = 0
+                     iflag = 2
+                     pt(:) = point(:)
+                  END IF
+
+                  DO i = 1, numInDen
+                     CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,& 
+                                 vacuum,sphhar,atoms,sym,cell,oneD,&
+                                 den(i),xdnout(i))
+                  END DO
+
+                  IF (na.NE.0) THEN
+                     IF (noco%l_ss) THEN 
+                        ! rotate magnetization "backward"
+                        angss = DOT_PRODUCT(qssc,pt-atoms%pos(:,na))
+                        help(1) = xdnout(2)
+                        help(2) = xdnout(3)
+                        xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss) 
+                        xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss) 
+                        ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0. 
+                     END IF
+                  END IF
+
+                  IF (noco%l_ss .AND. (.NOT. unwind)) THEN
+                     ! rotate magnetization
+                     angss = DOT_PRODUCT(qssc,point)
+                     help(1) = xdnout(2)
+                     help(2) = xdnout(3)
+                     xdnout(2) = +help(1)*COS(angss) -help(2)*SIN(angss)
+                     xdnout(3) = +help(1)*SIN(angss) +help(2)*COS(angss)
+                  END IF
+
+                  IF (polar) THEN
+                     xdnout(5) = SQRT(ABS(xdnout(2)**2+xdnout(3)**2+xdnout(4)**2))
+                     IF (xdnout(5)<eps) THEN
+                        xdnout(5)= 0.0
+                        !xdnout(6)= -tpi_const
+                        !xdnout(7)= -tpi_const
+                        xdnout(6)= 0.0
+                        xdnout(7)= 0.0
+                     ELSE
+                        DO j = 1, 3
+                           help(j) = xdnout(1+j)/xdnout(5) 
+                        END DO
+                        IF (help(3)<0.5) THEN
+                           xdnout(6)= ACOS(help(3))
+                        ELSE
+                           xdnout(6)= pi_const/2.0-ASIN(help(3))
+                        END IF
+                        IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
+                           !xdnout(7)= -tpi_const
+                           xdnout(7)= 0.0
+                        ELSE
+                           IF ( ABS(help(1)) > ABS(help(2)) ) THEN
+                              xdnout(7)= ABS(ATAN(help(2)/help(1)))
+                           ELSE
+                              xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
+                           END IF
+                           IF (help(2)<0.0) THEN
+                              xdnout(7)= -xdnout(7)
+                           END IF
+                           IF (help(1)<0.0) THEN
+                              xdnout(7)= pi_const-xdnout(7)
+                           END IF
+                           !phi0=0
+                           DO WHILE (xdnout(7) > +pi_const)
+                              xdnout(7)= xdnout(7)-tpi_const
+                           END DO
+                           DO WHILE (xdnout(7) < -pi_const)
+                              xdnout(7)= xdnout(7)+tpi_const
+                           END DO
+                           !IF (ABS(xdnout(2)-xdnout(3))<eps) THEN
+                           !   IF (xdnout(2)>0) THEN
+                           !      xdnout(7)=pi_const/4.0
+                           !   ELSE
+                           !      xdnout(7)=-3*pi_const/4.0
+                           !   END IF 
+                           !IF (xdnout(2)>eps) THEN
+                           !   xdnout(7)=ATAN(xdnout(3)/xdnout(2))
+                           !ELSE IF (ABS(xdnout(2))<eps) THEN
+                           !   xdnout(7)=SIGN(1.0, xdnout(3))*pi_const/2.0 
+                           !ELSE IF ((xdnout(2)<-eps).AND.(xdnout(3)>=0.0)) THEN
+                           !   xdnout(7)=ATAN(xdnout(3)/xdnout(2))+pi_const 
+                           !ELSE
+                           !   xdnout(7)=ATAN(xdnout(3)/xdnout(2))-pi_const 
+                           !END IF
+                        END IF
+                     END IF
+                     xdnout(6)= xdnout(6)/pi_const
+                     xdnout(7)= xdnout(7)/pi_const
+                  END IF ! (polar)
+
+                  DO i = 1, numOutFiles
+                     IF (xsf) THEN
+                        WRITE(nfile+i,*) xdnout(i)
+                     ELSE
+                        WRITE(nfile+i,'(4e15.7)') point ,xdnout(i)
+                     END IF
+                  END DO
+
+               END DO
+            END DO
+         END DO !z-loop
+
+         DO i = 1, numOutFiles
+            IF (xsf) THEN
+               CALL xsf_WRITE_endblock(nfile+i,twodim)
+            ELSE
+               CLOSE(nfile+i)
+            END IF
+         END DO
+      END DO !nplot  
+      
+      CLOSE(18)
+      IF (xsf) THEN
+         DO i = 1, numOutFiles
+            CLOSE(nfile+i)
+         END DO
+      END IF
+
+      DEALLOCATE(xdnout, outFilenames)   
    END SUBROUTINE savcsv
 
    SUBROUTINE vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
@@ -1035,7 +1380,7 @@ CONTAINS
          factor = 2.0
          denName = 'vTot'
          score = .FALSE.
-         potnorm = .FALSE.
+         potnorm = .TRUE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
                CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
@@ -1055,7 +1400,7 @@ CONTAINS
    END SUBROUTINE procplot
 
    SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                        noco, div, phiPot, divGrx, divGry, divGrz)!, &
+                        noco, div, phiPot)!, divGrx, divGry, divGrz, &
                         !xcBmodx, xcBmody, xcBmodz) 
 
       IMPLICIT NONE
@@ -1069,7 +1414,7 @@ CONTAINS
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(IN)    :: div, phiPot, divGrx, divGry, divGrz!, &
+      TYPE(t_potden),    INTENT(IN)    :: div, phiPot!, divGrx, divGry, divGrz, &
                                           !xcBmodx, xcBmody, xcBmodz
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
@@ -1078,14 +1423,14 @@ CONTAINS
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .TRUE., 'modPot              ', phiPot)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPotx             ', divGrx)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPotx             ', divGrx)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPoty             ', divGry)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPoty             ', divGry)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPotz             ', divGrz)
+      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      !            .FALSE., .TRUE., 'divPotz             ', divGrz)
 
       !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
       !            .FALSE., .TRUE., 'xcBmodx             ', xcBmodx)

@@ -100,7 +100,7 @@ CONTAINS
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
-    TYPE(t_potden)                  :: inDen, outDen, EnergyDen
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen, dummyDen
     TYPE(t_potden), DIMENSION(3)    :: testDen
 
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
@@ -517,8 +517,10 @@ CONTAINS
     ! Test: Build a field, for which the theoretical divergence etc. are known and
     ! compare with the result of the routine.
 
-    CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
+    !CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
     !CALL makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,testDen)
+    CALL dummyDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+    CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, 1.0, inDen, dummyDen, testDen(1), testDen(2), testDen(3))
     CALL checkplotinp()
     CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDen             ', testDen(1), testDen(1), testDen(2), testDen(3))
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
