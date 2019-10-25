@@ -315,7 +315,7 @@ CONTAINS
       !REAL, ALLOCATABLE                           :: ch(:, :)
       REAL                                        :: r
       !REAL, ALLOCATABLE                           :: r2Array(:)
-      INTEGER :: jr, k, nsp, kt
+      INTEGER :: jr, k, nsp, kt, n
 
       !CALL den%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
       !ALLOCATE(den%pw_w,mold=den%pw)
