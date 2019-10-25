@@ -35,7 +35,6 @@ CONTAINS
       TYPE(t_gradients)                           :: gradx, grady, gradz
 
       REAL, ALLOCATABLE :: thet(:), phi(:), div_temp(:, :) 
-      REAL, ALLOCATABLE :: xcBx_mt(:,:,:), xcBy_mt(:,:,:), xcBz_mt(:,:,:)
       REAL :: r, th, ph, eps
       INTEGER :: jr, k, nsp, kt, i, lh, lhmax
 
@@ -47,18 +46,6 @@ CONTAINS
                 gradz%gr(3,atoms%jri(n)*nsp,1))
       ALLOCATE (div_temp(atoms%jri(n)*nsp,1))
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
-
-      ALLOCATE (xcBx_mt(lbound(bxc(1)%mt, dim=1):ubound(bxc(1)%mt, dim=1), &
-                        lbound(bxc(1)%mt, dim=2):ubound(bxc(1)%mt, dim=2), &
-                        lbound(bxc(1)%mt, dim=4):ubound(bxc(1)%mt, dim=4)))
-
-      ALLOCATE (xcBy_mt(lbound(bxc(2)%mt, dim=1):ubound(bxc(2)%mt, dim=1), &
-                        lbound(bxc(2)%mt, dim=2):ubound(bxc(2)%mt, dim=2), &
-                        lbound(bxc(2)%mt, dim=4):ubound(bxc(2)%mt, dim=4)))
-
-      ALLOCATE (xcBz_mt(lbound(bxc(3)%mt, dim=1):ubound(bxc(3)%mt, dim=1), &
-                        lbound(bxc(3)%mt, dim=2):ubound(bxc(3)%mt, dim=2), &
-                        lbound(bxc(3)%mt, dim=4):ubound(bxc(3)%mt, dim=4)))
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
@@ -93,13 +80,12 @@ CONTAINS
       kt = 0
       DO jr = 1, atoms%jri(n)
          r =atoms%rmsh(jr, n)
-         DO k = 1, nsp
-            div_temp(kt+k,1) = div_temp(kt+k,1)*r**2
-         ENDDO ! k
+
+         div%mt(jr,0:,n,:) = div%mt(jr,0:,n,:)*r**2
+
          kt = kt+nsp
       ENDDO ! jr
 
-   
       CALL finish_mt_grid
    
    END SUBROUTINE mt_div
@@ -181,172 +167,180 @@ CONTAINS
    END SUBROUTINE divergence
 
    SUBROUTINE mt_grad(n,atoms,sphhar,sym,den,gradphi)
-   !-----------------------------------------------------------------------------
-   !By use of the cartesian components of a field, its radial/angular derivati-  
-   !ves in the muffin tin at each spherical grid point and the corresponding an- 
-   !gles:                                                                        
-   !                                                                             
-   !Make the divergence of said field in real space and store it as a source     
-   !density, again represented by mt-coefficients in a potden.                   
-   !                                                                             
-   !Code by A. Neukirchen, September 2019                                        
-   !----------------------------------------------------------------------------- 
-   USE m_constants
-   USE m_mt_tofrom_grid
+      !-----------------------------------------------------------------------------
+      !By use of the cartesian components of a field, its radial/angular derivati-  
+      !ves in the muffin tin at each spherical grid point and the corresponding an- 
+      !gles:                                                                        
+      !                                                                             
+      !Make the divergence of said field in real space and store it as a source     
+      !density, again represented by mt-coefficients in a potden.                   
+      !                                                                             
+      !Code by A. Neukirchen, September 2019                                        
+      !----------------------------------------------------------------------------- 
+      USE m_mt_tofrom_grid
+      USE m_constants
 
-   IMPLICIT NONE
+      IMPLICIT NONE
    
-   INTEGER, INTENT(IN)                         :: n
-   TYPE(t_atoms), INTENT(IN)                   :: atoms
-   TYPE(t_sphhar), INTENT(IN)                  :: sphhar
-   TYPE(t_sym), INTENT(IN)                     :: sym
-   TYPE(t_potden), dimension(3), INTENT(INOUT) :: gradphi
-   TYPE(t_potden), INTENT(IN)                  :: den
-   TYPE(t_gradients)                           :: grad
+      INTEGER, INTENT(IN)                         :: n
+      TYPE(t_atoms), INTENT(IN)                   :: atoms
+      TYPE(t_sphhar), INTENT(IN)                  :: sphhar
+      TYPE(t_sym), INTENT(IN)                     :: sym
+      TYPE(t_potden), INTENT(IN)                  :: den
+      TYPE(t_potden), dimension(3), INTENT(INOUT) :: gradphi
 
-   REAL, ALLOCATABLE :: grad_temp(:, :, :)
-   REAL, ALLOCATABLE :: thet(:), phi(:)
-   REAL :: r,th,ph
-   INTEGER :: i, jr, k, nsp, kt
+      TYPE(t_gradients)                           :: grad
 
-   nsp = atoms%nsp()
+      REAL, ALLOCATABLE :: thet(:), phi(:), grad_temp(:, :, :)
+      REAL :: r, th, ph, eps
+      INTEGER :: i, jr, k, nsp, kt, lh, lhmax
 
-   ALLOCATE (grad%gr(3,atoms%jri(n)*nsp,1))
-   ALLOCATE (grad_temp(atoms%jri(n)*nsp,1,3))
-   ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
+      nsp = atoms%nsp()
+      lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+      eps=1.e-10
 
-   CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
+      ALLOCATE (grad%gr(3,atoms%jri(n)*nsp,1))
+      ALLOCATE (grad_temp(atoms%jri(n)*nsp,1,3))
+      ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
-   CALL mt_to_grid(.TRUE., 1, atoms, sphhar, den%mt(:,0:,n,:), n, grad)
+      CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
-   kt = 0
-   DO jr = 1, atoms%jri(n)
-      r=atoms%rmsh(jr, n)
-      DO k = 1, nsp
-         th = thet(k)
-         ph = phi(k)
-         grad_temp(kt+k,1,1) = (SIN(th)*COS(ph)*grad%gr(1,kt+k,1) + COS(th)*COS(ph)*grad%gr(2,kt+k,1)/r - SIN(ph)*grad%gr(3,kt+k,1)/(r*SIN(th)))/(4.0*pi_const)
-         grad_temp(kt+k,1,2) = (SIN(th)*SIN(ph)*grad%gr(1,kt+k,1) + COS(th)*SIN(ph)*grad%gr(2,kt+k,1)/r + COS(ph)*grad%gr(3,kt+k,1)/(r*SIN(th)))/(4.0*pi_const)
-         grad_temp(kt+k,1,3) = (        COS(th)*grad%gr(1,kt+k,1) -         SIN(th)*grad%gr(2,kt+k,1)/r                                        )/(4.0*pi_const)
-      ENDDO ! k
-   
-      kt = kt+nsp
-   ENDDO ! jr
+      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, den%mt(:,0:,n,:), n, grad)
 
-   DO i=1,3 
-      CALL mt_from_grid(atoms, sphhar, n, 1, grad_temp(:,:,i), gradphi(i)%mt(:,0:,n,:))
-   END DO
-   
-   CALL finish_mt_grid
+      kt = 0
+      DO jr = 1, atoms%jri(n)
+         r=atoms%rmsh(jr, n)
+         DO k = 1, nsp
+            th = thet(k)
+            ph = phi(k)
+            grad_temp(kt+k,1,1) = (SIN(th)*COS(ph)*grad%gr(1,kt+k,1) + COS(th)*COS(ph)*grad%gr(2,kt+k,1)/r - SIN(ph)*grad%gr(3,kt+k,1)/(r*SIN(th)))/(4.0*pi_const)
+            grad_temp(kt+k,1,2) = (SIN(th)*SIN(ph)*grad%gr(1,kt+k,1) + COS(th)*SIN(ph)*grad%gr(2,kt+k,1)/r + COS(ph)*grad%gr(3,kt+k,1)/(r*SIN(th)))/(4.0*pi_const)
+            grad_temp(kt+k,1,3) = (        COS(th)*grad%gr(1,kt+k,1) -         SIN(th)*grad%gr(2,kt+k,1)/r                                        )/(4.0*pi_const)
+         ENDDO ! k
+         kt = kt+nsp
+      ENDDO ! jr
+
+      DO i=1,3 
+         CALL mt_from_grid(atoms, sphhar, n, 1, grad_temp(:,:,i), gradphi(i)%mt(:,0:,n,:))
+         DO jr = 1, atoms%jri(n)
+            DO lh=0, lhmax
+               IF (ABS(gradphi(i)%mt(jr,lh,n,1))<eps) THEN
+                  gradphi(i)%mt(jr,lh,n,:)=0.0
+               END IF
+            END DO
+         END DO
+      END DO
+
+      kt = 0
+      DO jr = 1, atoms%jri(n)
+         r =atoms%rmsh(jr, n)
+         DO i=1,3
+            gradphi(i)%mt(jr,0:,n,:) = gradphi(i)%mt(jr,0:,n,:)*r**2
+         END DO
+         kt = kt+nsp
+      ENDDO ! jr
+  
+      CALL finish_mt_grid
    
    END SUBROUTINE mt_grad
 
-   SUBROUTINE pw_grad(ifftxc3,jspins,stars,cell,noco,sym,den,gradphi)
-   !-----------------------------------------------------------------------------
-   !By use of the cartesian components of a field and its cartesian derivatives  
-   !in the interstitial/vacuum region at each grid point:                        
-   !                                                                             
-   !Make the divergence of said field in real space and store it as a source     
-   !density, again represented by pw-coefficients in a potden.                   
-   !                                                                             
-   !Code by A. Neukirchen, September 2019                                        
-   !----------------------------------------------------------------------------- 
-   USE m_constants
-   USE m_pw_tofrom_grid
+   SUBROUTINE pw_grad(stars,cell,noco,sym,den,gradphi)
+      !-----------------------------------------------------------------------------
+      !By use of the cartesian components of a field and its cartesian derivatives  
+      !in the interstitial/vacuum region at each grid point:                        
+      !                                                                             
+      !Make the divergence of said field in real space and store it as a source     
+      !density, again represented by pw-coefficients in a potden.                   
+      !                                                                             
+      !Code by A. Neukirchen, September 2019                                        
+      !----------------------------------------------------------------------------- 
+      USE m_constants
+      USE m_pw_tofrom_grid
 
-   IMPLICIT NONE
+      IMPLICIT NONE
    
-   INTEGER, INTENT(IN)                         :: jspins, ifftxc3
-   TYPE(t_sym), INTENT(IN)                     :: sym
-   TYPE(t_noco), INTENT(IN)                    :: noco
-   TYPE(t_stars),INTENT(IN)                    :: stars
-   TYPE(t_cell),INTENT(IN)                     :: cell
-   TYPE(t_potden), dimension(3), INTENT(INOUT) :: gradphi
-   TYPE(t_potden), INTENT(IN)                  :: den
-   TYPE(t_gradients)                           :: grad
+      TYPE(t_sym), INTENT(IN)                     :: sym
+      TYPE(t_noco), INTENT(IN)                    :: noco
+      TYPE(t_stars),INTENT(IN)                    :: stars
+      TYPE(t_cell),INTENT(IN)                     :: cell
+      TYPE(t_potden), dimension(3), INTENT(INOUT) :: gradphi
+      TYPE(t_potden), INTENT(IN)                  :: den
 
-   REAL, ALLOCATABLE :: grad_temp(:, :, :)
-   INTEGER :: i
+      TYPE(t_gradients)                           :: grad
 
-   ALLOCATE (grad_temp(ifftxc3,1,3))
+      REAL, ALLOCATABLE :: grad_temp(:, :, :)
+      INTEGER :: i,ifftxc3
 
-   CALL init_pw_grid(.TRUE.,stars,sym,cell)
+      ifftxc3=stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
 
-   CALL pw_to_grid(.TRUE.,1,.FALSE.,stars,cell,den%pw,grad)
+      ALLOCATE (grad_temp(ifftxc3,1,3))
 
-   DO i = 1, ifftxc3
-         grad_temp(i,1,:)=grad%gr(:,i,1)/(4.0*pi_const)
-   ENDDO ! i
+      CALL init_pw_grid(.TRUE.,stars,sym,cell)
 
-   DO i=1,3 
-      CALL pw_from_grid(.TRUE.,stars,.TRUE.,grad_temp(:,:,i),gradphi(i)%pw,gradphi(i)%pw_w)
-   END DO
+      CALL pw_to_grid(.TRUE.,1,.FALSE.,stars,cell,den%pw,grad)
 
-   CALL finish_pw_grid()
+      DO i = 1, ifftxc3
+            grad_temp(i,1,:)=grad%gr(:,i,1)/(4.0*pi_const)
+      ENDDO ! i
+
+      DO i=1,3 
+         CALL pw_from_grid(.TRUE.,stars,.TRUE.,grad_temp(:,:,i),gradphi(i)%pw,gradphi(i)%pw_w)
+      END DO
+
+      CALL finish_pw_grid()
    
    END SUBROUTINE pw_grad
 
+   SUBROUTINE divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
 
-   SUBROUTINE divpotgrad(jspins,n,ifftxc3,atoms,sphhar,sym,stars,cell,vacuum,noco,pot,grad)
+      USE m_types
+      USE m_constants
+      USE m_mt_tofrom_grid
+      IMPLICIT NONE
+      !-----------------------------------------------------------------------------
+      !Use the two gradient subroutines above to now put the complete gradient      
+      !of a potential into a t_potden variable.                                     
+      !-----------------------------------------------------------------------------  
+      TYPE(t_stars),INTENT(IN)                    :: stars 
+      TYPE(t_atoms), INTENT(IN)                   :: atoms
+      TYPE(t_sphhar), INTENT(IN)                  :: sphhar
+      TYPE(t_vacuum),INTENT(IN)                   :: vacuum
+      TYPE(t_sym), INTENT(IN)                     :: sym
+      TYPE(t_cell),INTENT(IN)                     :: cell
+      TYPE(t_noco), INTENT(IN)                    :: noco
+      TYPE(t_potden), INTENT(IN)                  :: pot
+      TYPE(t_potden), dimension(3), INTENT(INOUT) :: grad
 
-   USE m_types
-   USE m_constants
-   USE m_mt_tofrom_grid
-   IMPLICIT NONE
-   !-----------------------------------------------------------------------------
-   !Use the two gradient subroutines above to now put the complete gradient      
-   !of a potential into a t_potden variable.                                     
-   !-----------------------------------------------------------------------------   
-   INTEGER, INTENT(IN)                         :: jspins, n, ifftxc3
-   TYPE(t_atoms), INTENT(IN)                   :: atoms
-   TYPE(t_sphhar), INTENT(IN)                  :: sphhar
-   TYPE(t_sym), INTENT(IN)                     :: sym
-   TYPE(t_noco), INTENT(IN)                    :: noco
-   TYPE(t_stars),INTENT(IN)                    :: stars
-   TYPE(t_cell),INTENT(IN)                     :: cell
-   TYPE(t_vacuum),INTENT(IN)                   :: vacuum
-   TYPE(t_potden), dimension(3), INTENT(INOUT) :: grad
-   TYPE(t_potden), INTENT(IN)                  :: pot
+      !TYPE(t_potden)                              :: den   
+      !REAL, ALLOCATABLE                           :: ch(:, :)
+      REAL                                        :: r
+      !REAL, ALLOCATABLE                           :: r2Array(:)
+      INTEGER :: jr, k, nsp, kt
 
-   TYPE(t_gradients)                           :: dummygrad   
-   TYPE(t_potden)                              :: den   
-   REAL, ALLOCATABLE                           :: ch(:, :)
-   REAL                                        :: r
-   REAL, ALLOCATABLE                           :: r2Array(:)
-   INTEGER :: jr, k, nsp, kt
+      !CALL den%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
+      !ALLOCATE(den%pw_w,mold=den%pw)
+   
+      nsp = atoms%nsp()
+      !ALLOCATE(r2Array(nsp*atoms%jri(n)))
+      !ALLOCATE(ch(nsp*atoms%jri(n),1))
+   
+      !CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym)
+      !CALL mt_to_grid(.TRUE., 1, atoms, sphhar, pot%mt(:,0:,n,:), n, dummygrad, ch)
 
-   CALL den%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
-   ALLOCATE(den%pw_w,mold=den%pw)
+      !ch(:,1)=ch(:,1)*r2Array
 
-   nsp = atoms%nsp()
-   ALLOCATE(r2Array(nsp*atoms%jri(n)))
-   ALLOCATE(ch(nsp*atoms%jri(n),1))
+      !CALL mt_from_grid(atoms, sphhar, n, 1, ch, den%mt(:,0:,n,:))
 
-   CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym)
-   CALL mt_to_grid(.TRUE., 1, atoms, sphhar, pot%mt(:,0:,n,:), n, dummygrad, ch)
+      !CALL finish_mt_grid
 
-   kt = 0
-   DO jr = 1, atoms%jri(n)
-      r=atoms%rmsh(jr, n)
-      DO k = 1, nsp
-         r2Array(kt+nsp) = r*r
-      ENDDO ! k
-      kt = kt+nsp
-   ENDDO ! jr
-
-   ch(:,1)=ch(:,1)*r2Array
-
-   CALL mt_from_grid(atoms, sphhar, n, 1, ch, den%mt(:,0:,n,:))
-
-   CALL finish_mt_grid
-
-   den%pw    = pot%pw
-   den%pw_w  = pot%pw_w
-   den%vacz  = pot%vacz
-   den%vacxy = pot%vacxy
-
-   CALL mt_grad(n,atoms,sphhar,sym,pot,grad)
-   CALL pw_grad(ifftxc3,jspins,stars,cell,noco,sym,pot,grad)
+      !den%pw    = pot%pw
+      !den%pw_w  = pot%pw_w
+      !den%vacz  = pot%vacz
+      !den%vacxy = pot%vacxy
+      DO n=1,atoms%ntype
+         CALL mt_grad(n,atoms,sphhar,sym,pot,grad)
+      END DO
+      CALL pw_grad(stars,cell,noco,sym,pot,grad)
 
    END SUBROUTINE divpotgrad
 
