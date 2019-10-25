@@ -279,10 +279,17 @@
 #endif
           CALL ylmnorm_init(max(atoms%lmaxd, 2*hybrid%lexp))
           CALL gaunt_init(max(atoms%lmaxd+1, 2*hybrid%lexp))
+
           !
           !--> determine more dimensions
           !
-          DIMENSION%nbasfcn = DIMENSION%nvd + atoms%nat*atoms%nlod*(2*atoms%llod+1)
+          atoms%nlotot = 0
+          DO n = 1, atoms%ntype
+             DO l = 1,atoms%nlo(n)
+                atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+             ENDDO
+          ENDDO
+          DIMENSION%nbasfcn = DIMENSION%nvd + atoms%nlotot
           DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
           DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
 
@@ -296,13 +303,6 @@
           ! Set up pointer for backtransformation from g-vector in positive
           ! domain of carge density fftibox into stars
           CALL prp_qfft_map(stars,sym,input,stars%igq2_fft,stars%igq_fft)
-
-          atoms%nlotot = 0
-          DO n = 1, atoms%ntype
-             DO l = 1,atoms%nlo(n)
-                atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
-             ENDDO
-          ENDDO
 
           !-t3e
           !-odim
