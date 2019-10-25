@@ -126,7 +126,7 @@ CONTAINS
       DO n=1, atoms%ntype
          DO jr = 1, atoms%jri(n)
             r=atoms%rmsh(jr, n)
-            pot%mt(jr,0:,n,:) = pot%mt(jr,0:,n,:)*r**2
+            phi%mt(jr,0:,n,:) = phi%mt(jr,0:,n,:)*r**2
          END DO ! jr
       END DO
 
