@@ -67,7 +67,7 @@ CONTAINS
       TYPE(t_usdus)                   ::  usdus
 
       ! local scalars
-      INTEGER                         ::  ilo, ikpt, ispin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
+      INTEGER                         ::  ilo, ikpt, jspin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
       INTEGER                         ::  nodem, noded, m, nk, x, y, z
       INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
       REAL                            ::  gcutm, wronk, rdum, rdum1
@@ -86,7 +86,7 @@ CONTAINS
       REAL                            ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
       REAL                            ::  bashlp(atoms%jmtd)
 
-      REAL, ALLOCATABLE               ::  u(:,:,:), du(:,:,:)
+
       REAL, ALLOCATABLE               ::  olap(:,:), work(:), eig(:), eigv(:,:)
       REAL, ALLOCATABLE               ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
       REAL, ALLOCATABLE               ::  basmhlp(:,:,:,:)
@@ -128,48 +128,18 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      allocate( u(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
-      allocate(du(atoms%jmtd, 2, 0:atoms%lmaxd), source=0.0)
-      allocate(bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), &
-                    0:atoms%lmaxd, atoms%ntype, input%jspins),   source=0.0)
-      allocate(bas2, source=bas1)
+      call gen_bas_fun()
 
-      DO itype = 1, atoms%ntype
-         ng = atoms%jri(itype) ! number of radial gridpoints
-         DO ispin = 1, input%jspins
-            DO l = 0, atoms%lmax(itype)
-               CALL radfun(l, itype, ispin, enpara%el0(l, itype, ispin), vr0(:,itype, ispin), atoms, &
-                           u(:,:,l), du(:,:,l), usdus, nodem, noded, wronk)
-            END DO
-            bas1(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = u(1:ng, 1, 0:atoms%lmaxd)
-            bas2(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = u(1:ng, 2, 0:atoms%lmaxd)
-            bas1(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = du(1:ng, 1, 0:atoms%lmaxd)
-            bas2(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = du(1:ng, 2, 0:atoms%lmaxd)
-
-            ! generate radial functions for local orbitals
-            IF (atoms%nlo(itype) >= 1) THEN
-               CALL radflo(atoms, itype, ispin, enpara%ello0(1, 1, ispin), vr0(:,itype, ispin), &
-                           u, du, mpi, usdus, uuilon, duilon, ulouilopn, flo)
-
-               DO ilo = 1, atoms%nlo(itype)
-                  bas1(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 1, ilo)
-                  bas2(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 2, ilo)
-               END DO
-            END IF
-         END DO
-      END DO
-
-      deallocate(u, du)
 
       ! the radial functions are normalized
-      DO ispin = 1, input%jspins
+      DO jspin = 1, input%jspins
          DO itype = 1, atoms%ntype
             DO l = 0, atoms%lmax(itype)
                DO i = 1, hybrid%num_radfun_per_l(l, itype)
-                  rdum = intgrf(bas1(:,i, l, itype, ispin)**2 + bas2(:,i, l, itype, ispin)**2, &
+                  rdum = intgrf(bas1(:,i, l, itype, jspin)**2 + bas2(:,i, l, itype, jspin)**2, &
                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-                  bas1(:atoms%jri(itype), i, l, itype, ispin) = bas1(:atoms%jri(itype), i, l, itype, ispin)/SQRT(rdum)
-                  bas2(:atoms%jri(itype), i, l, itype, ispin) = bas2(:atoms%jri(itype), i, l, itype, ispin)/SQRT(rdum)
+                  bas1(:atoms%jri(itype), i, l, itype, jspin) = bas1(:atoms%jri(itype), i, l, itype, jspin)/SQRT(rdum)
+                  bas2(:atoms%jri(itype), i, l, itype, jspin) = bas2(:atoms%jri(itype), i, l, itype, jspin)/SQRT(rdum)
                END DO
             END DO
          END DO
@@ -478,15 +448,15 @@ CONTAINS
                      DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
 
                         IF (selecmat(n1, l1, n2, l2)) THEN
-                           DO ispin = 1, input%jspins
+                           DO jspin = 1, input%jspins
                               i = i + 1
                               IF (i > n) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
                               hybrid%basm1(:ng, i, l, itype) &
-                                 = (bas1(:ng, n1, l1, itype, ispin) &
-                                    *bas1(:ng, n2, l2, itype, ispin) &
-                                    + bas2(:ng, n1, l1, itype, ispin) &
-                                    *bas2(:ng, n2, l2, itype, ispin))/atoms%rmsh(:ng, itype)
+                                 = (bas1(:ng, n1, l1, itype, jspin) &
+                                    *bas1(:ng, n2, l2, itype, jspin) &
+                                    + bas2(:ng, n1, l1, itype, jspin) &
+                                    *bas2(:ng, n2, l2, itype, jspin))/atoms%rmsh(:ng, itype)
 
                               !normalize basm1
                               rdum = SQRT(intgrf(hybrid%basm1(:,i, l, itype)**2, &
@@ -494,7 +464,7 @@ CONTAINS
 
                               hybrid%basm1(:ng, i, l, itype) = hybrid%basm1(:ng, i, l, itype)/rdum
 
-                           END DO !ispin
+                           END DO !jspin
                            ! prevent double counting of products (a*b = b*a)
                            selecmat(n2, l2, n1, l1) = .FALSE.
                         END IF
@@ -748,4 +718,54 @@ CONTAINS
       hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
 
    END SUBROUTINE mixedbasis
+
+   subroutine gen_bas_fun(atoms, input, hybrad, bas1, bas2)
+      use m_judft
+      use m_types
+      implicit NONE
+      REAL, ALLOCATABLE, INTENT(INOUT) ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
+
+      REAL    ::  u(atoms%jmtd, 2, 0:atoms%lmaxd)
+      REAL    :: du(atoms%jmtd, 2, 0:atoms%lmaxd)
+      INTEGER :: itype, jspin, l, ilo, ok
+      u  = 0.0
+      du = 0.0
+
+      ! this is 5-D array. it could cause Problems in bigger systems
+      allocate(bas1(atoms%jmtd,
+                    maxval(hybrid%num_radfun_per_l), &
+                    0:atoms%lmaxd,
+                    atoms%ntype,
+                    input%jspins),   source=0.0, stat=ok)
+      if(ok /= 0) call judft_error("Can't allocate bas1 array. Stat= " // int2str(ok))
+
+      allocate(bas2, source=bas1, stat=ok)
+      if(ok /= 0) call judft_error("Can't allocate bas1 array. Stat= " // int2str(ok))
+
+      DO itype = 1, atoms%ntype
+         ng = atoms%jri(itype) ! number of radial gridpoints
+         DO jspin = 1, input%jspins
+            DO l = 0, atoms%lmax(itype)
+               CALL radfun(l, itype, jspin, enpara%el0(l, itype, jspin), vr0(:,itype, jspin), atoms, &
+                           u(:,:,l), du(:,:,l), usdus, nodem, noded, wronk)
+            END DO
+            bas1(1:ng, 1, 0:atoms%lmaxd, itype, jspin)  = u(1:ng, 1, 0:atoms%lmaxd)
+            bas2(1:ng, 1, 0:atoms%lmaxd, itype, jspin)  = u(1:ng, 2, 0:atoms%lmaxd)
+            bas1(1:ng, 2, 0:atoms%lmaxd, itype, jspin) = du(1:ng, 1, 0:atoms%lmaxd)
+            bas2(1:ng, 2, 0:atoms%lmaxd, itype, jspin) = du(1:ng, 2, 0:atoms%lmaxd)
+
+            ! generate radial functions for local orbitals
+            IF (atoms%nlo(itype) >= 1) THEN
+               CALL radflo(atoms, itype, jspin, enpara%ello0(1, 1, jspin), vr0(:,itype, jspin), &
+                           u, du, mpi, usdus, uuilon, duilon, ulouilopn, flo)
+
+               DO ilo = 1, atoms%nlo(itype)
+                  bas1(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, jspin) = flo(1:ng, 1, ilo)
+                  bas2(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, jspin) = flo(1:ng, 2, ilo)
+               END DO
+            END IF
+         END DO
+      END DO
+   end subroutine gen_bas_fun
+
 END MODULE m_mixedbasis
