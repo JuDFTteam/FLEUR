@@ -284,12 +284,14 @@
           !--> determine more dimensions
           !
           atoms%nlotot = 0
-          DO n = 1, atoms%ntype
-             DO l = 1,atoms%nlo(n)
-                atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+          IF(mpi%irank.EQ.0) THEN
+             DO n = 1, atoms%ntype
+                DO l = 1,atoms%nlo(n)
+                   atoms%nlotot = atoms%nlotot + atoms%neq(n) * ( 2*atoms%llo(l,n) + 1 )
+                ENDDO
              ENDDO
-          ENDDO
-          DIMENSION%nbasfcn = DIMENSION%nvd + atoms%nlotot
+             DIMENSION%nbasfcn = DIMENSION%nvd + atoms%nlotot
+          END IF
           DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
           DIMENSION%lmplmd  = (DIMENSION%lmd* (DIMENSION%lmd+3))/2
 
