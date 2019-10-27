@@ -1400,8 +1400,8 @@ CONTAINS
    END SUBROUTINE procplot
 
    SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                        noco, div, phiPot)!, divGrx, divGry, divGrz, &
-                        !xcBmodx, xcBmody, xcBmodz) 
+                        noco, div, phi, divGrx, divGry, divGrz, &
+                        xcBmodx, xcBmody, xcBmodz) 
 
       IMPLICIT NONE
 
@@ -1414,32 +1414,32 @@ CONTAINS
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(IN)    :: div, phiPot!, divGrx, divGry, divGrz, &
-                                          !xcBmodx, xcBmody, xcBmodz
+      TYPE(t_potden),    INTENT(IN)    :: div, phi, divGrx, divGry, divGrz, &
+                                          xcBmodx, xcBmody, xcBmodz
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'divergence          ', div)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'modPot              ', phiPot)
+                  .FALSE., .TRUE., 'modPot              ', phi)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'divPotx             ', divGrx)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'divPotx             ', divGrx)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'divPoty             ', divGry)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'divPoty             ', divGry)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'divPotz             ', divGrz)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'divPotz             ', divGrz)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'xcBmodx             ', xcBmodx)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'xcBmodx             ', xcBmodx)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'xcBmody             ', xcBmody)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'xcBmody             ', xcBmody)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'xcBmodz             ', xcBmodz)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'xcBmodz             ', xcBmodz)
       
    END SUBROUTINE plotBtest
 

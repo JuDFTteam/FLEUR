@@ -85,7 +85,7 @@ CONTAINS
       ! 
       ! a) Build the divergence d of the vector field A_vec as d=nabla_vec*A_vec.
       ! b) Solve the Poisson equation (nabla_vec*nabla_vec)phi=-4*pi*d.
-      ! c) Construct an auxiliary vector field C_vec=(nabla phi)/(4*pi).
+      ! c) Construct an auxiliary vector field C_vec=(nabla_vec phi)/(4*pi).
       ! d) Build A_vec_sf=A_vec+C_vec, which is source free by construction.
 
       TYPE(t_mpi),                  INTENT(IN)     :: mpi
@@ -104,7 +104,7 @@ CONTAINS
       
       TYPE(t_atoms)                                :: atloc
       TYPE(t_potden)                               :: div,phi
-      TYPE(t_potden), DIMENSION(3)                 :: cvec
+      TYPE(t_potden), DIMENSION(3)                 :: cvec, corrB
       INTEGER                                      :: n, jr
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
@@ -116,6 +116,7 @@ CONTAINS
  
       atloc=atoms
       atloc%zatom=0.0
+      eps=1.e-10
 
       CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
@@ -124,30 +125,35 @@ CONTAINS
       CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,div,phi)
 
       DO n=1, atoms%ntype
+         lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
          DO jr = 1, atoms%jri(n)
             r=atoms%rmsh(jr, n)
-            phi%mt(jr,0:,n,:) = phi%mt(jr,0:,n,:)*r**2
+            DO lh=0, lhmax
+               IF (ABS(phi%mt(jr,lh,n,1))<eps) THEN
+                  phi%mt(jr,lh,n,:)=0.0
+               ELSE
+                  phi%mt(jr,0:,n,:) = phi%mt(jr,0:,n,:)*r**2
+               END IF
+            END DO
          END DO ! jr
       END DO
 
-      !DO i=1,3
-         !CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-         !ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
-         !CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-         !ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
-      !ENDDO
+      DO i=1,3
+         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
+      ENDDO
 
-      !DO i=1,atoms%ntype
-         !CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
-      !END DO
+      CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
 
-      !DO i=1,3
-      !   CALL corrB(i)%addPotDen(xcB(i), graddiv(i))
-      !END DO
+      DO i=1,3
+         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
+         CALL corrB(i)%addPotDen(bxc(i),cvec(i))
+      ENDDO
 
       CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                     noco, div, phi)!, cvec(1), cvec(2), cvec(3), &
-                     !corrB(1), corrB(2), corrB(3))
+                     noco, div, phi, cvec(1), cvec(2), cvec(3), &
+                     corrB(1), corrB(2), corrB(3))
 
    END SUBROUTINE sourcefree
 
