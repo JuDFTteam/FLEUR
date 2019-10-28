@@ -564,7 +564,7 @@ CONTAINS
                igptp = hybrid%pgptm(igpt, ikpt)
                ix = hybrid%nbasp + igpt
                q = MATMUL(kpts%bk(:, ikpt) + hybrid%gptm(:, igptp), cell%bmat)
-               qnorm = SQRT(SUM(q**2))
+               qnorm = norm2(q)
                iqnrm = pqnrm(igpt, ikpt)
                IF (ABS(qnrm(iqnrm) - qnorm) > 1e-12) then
                   call judft_error('coulombmatrix: qnorm does not equal corresponding & element in qnrm (bug?)') ! We shouldn't stop here!
@@ -889,7 +889,7 @@ CONTAINS
             iqnrm2 = pqnrm(igpt2, 1)
             igptp2 = hybrid%pgptm(igpt2, 1)
             q2 = MATMUL(hybrid%gptm(:, igptp2), cell%bmat)
-            qnorm2 = SQRT(SUM(q2**2))
+            qnorm2 = norm2(q2)
             iy = hybrid%nbasp + 1
             DO igpt1 = 2, igpt2
                iy = iy + 1
@@ -897,7 +897,7 @@ CONTAINS
                iqnrm1 = pqnrm(igpt1, 1)
                igptp1 = hybrid%pgptm(igpt1, 1)
                q1 = MATMUL(hybrid%gptm(:, igptp1), cell%bmat)
-               qnorm1 = SQRT(SUM(q1**2))
+               qnorm1 = norm2(q1)
                rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
                ic1 = 0
                DO itype1 = 1, atoms%ntype
@@ -1805,7 +1805,7 @@ CONTAINS
             rc = MATMUL(cell%amat, (atoms%taual(:, ic2) - atoms%taual(:, ic1)))
             DO i = 1, nptsh
                ra = MATMUL(cell%amat, ptsh(:, i)) + rc
-               a = SQRT(SUM(ra**2))
+               a = norm2(ra)
                radsh(i) = a
             END DO
             call timestart("rorderpf")
@@ -1824,7 +1824,7 @@ CONTAINS
                   IF (ABS(radsh(i) - radsh(i - 1)) > 1e-10) ishell = ishell + 1
                ENDIF
                ra = MATMUL(cell%amat, ptsh(:, i)) + rc
-               a = scale*SQRT(SUM(ra**2))
+               a = scale*norm2(ra)
                IF (abs(a) < 1e-12) THEN
                   CYCLE
                ELSE IF (ABS(a - a1) > 1e-10) THEN
@@ -1917,7 +1917,7 @@ CONTAINS
             ENDIF
             ki = ptsh(:, i) + k - NINT(k) ! -nint(...) transforms to Wigner-Seitz cell ( i.e. -0.5 <= x,y,z < 0.5 )
             ka = MATMUL(ki, cell%bmat)
-            a = SQRT(SUM(ka**2))/scale
+            a = norm2(ka)/scale
             aa = (1 + a**2)**(-1)
             IF (ABS(a - a1) > 1e-10) THEN
                a1 = a
@@ -1944,7 +1944,7 @@ CONTAINS
             IF (ishell > conv(maxl) .AND. maxl /= 0) maxl = maxl - 1
             call timestart("harmonics")
             call ylm4(maxl, ka, y)
-            IF(sqrt(sum(ka(:)**2)).LT.1.0e-16) y(2:(maxl+1)**2)=CMPLX(0.0,0.0)
+            IF(norm2(ka(:)).LT.1.0e-16) y(2:(maxl+1)**2)=CMPLX(0.0,0.0)
             call timestop("harmonics")
             cdum = 1.0
             lm = 0
@@ -1999,7 +1999,7 @@ CONTAINS
                a = rdum
             END IF
          END DO
-         rdum = SQRT(SUM(MATMUL(kpts%bk(:, ikpt), cell%bmat)**2))
+         rdum = norm2(MATMUL(kpts%bk(:, ikpt), cell%bmat))
          a = 0
          DO ic2 = 1, atoms%nat
             DO ic1 = 1, MAX(1, ic2 - 1)
@@ -2136,7 +2136,7 @@ CONTAINS
             igptp = pgpt(igpt, ikpt)
             IF (igptp == 0) call judft_error('getnorm: zero pointer (bug?)')
             q = MATMUL(kpts%bk(:, ikpt) + gpt(:, igptp), cell%bmat)
-            qnorm = SQRT(SUM(q**2))
+            qnorm = norm2(q)
             DO j = 1, i
                IF (ABS(qnrm(j) - qnorm) < 1e-12) THEN
                   pqnrm(igpt, ikpt) = j

@@ -561,7 +561,7 @@ CONTAINS
          ctheta = 0
          sphi = 0
          cphi = 0
-         r = SQRT(SUM(rvec**2))
+         r = norm2(rvec)
          IF (r > 1e-16) THEN
             rvec1 = rvec/r
             ctheta = rvec1(3)

@@ -778,7 +778,7 @@ c     for l = 0,...,ll in Y(1,...,(ll+1)**2).
       ctheta = 0
       sphi   = 0
       cphi   = 0
-      r      = sqrt(sum(rvec**2))
+      r      = norm2(rvec)
       IF(r.gt.1e-16) THEN
         rvec1  = rvec / r
         ctheta = rvec1(3)

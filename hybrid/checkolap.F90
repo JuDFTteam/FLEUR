@@ -251,7 +251,7 @@
                &                   dot_product(kpts%bkf(:, ikpt) + gpt, atoms%taual(:, iatom)))
                         q = matmul(kpts%bkf(:, ikpt) + gpt, cell%bmat)
 
-                        qnorm = sqrt(sum(q**2))
+                        qnorm = norm2(q)
                         call sphbessel(sphbes, atoms%rmt(itype)*qnorm, atoms%lmax(itype))
                         call harmonicsr(y, q, atoms%lmax(itype))
                         y = conjg(y)

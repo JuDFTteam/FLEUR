@@ -147,7 +147,7 @@ contains
       INTEGER, INTENT(IN)  :: gpt(3)
       REAL, INTENT(IN)     :: bmat(3, 3)
 
-      gptnorm = sqrt(sum(matmul(gpt(:), bmat(:,:))**2))
+      gptnorm = norm2(matmul(gpt(:), bmat(:,:)))
 
    END FUNCTION gptnorm
 
