@@ -45,7 +45,7 @@ CONTAINS
 
       ! local scalars
       INTEGER :: ok, nk, nrec1, i, j, ll, l1, l2, ng, itype, n, l, n1, n2, nn
-      INTEGER :: nbasfcn
+      INTEGER :: nbasfcn, n_dim
       LOGICAL :: l_exist
 
       ! local arrays
@@ -85,7 +85,7 @@ CONTAINS
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
             CALL zMat(nk)%init(l_real, nbasfcn, dimension%neigd2)
             CALL read_eig(eig_id_hf, nk, jsp, zmat=zMat(nk))
-        
+
             IF(l_exist.AND.zmat(1)%l_real) THEN
                READ(993,rec=nk) zDebug_r(:,:)
                zMat(nk)%data_r = 0.0
