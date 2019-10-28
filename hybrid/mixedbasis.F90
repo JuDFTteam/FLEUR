@@ -41,8 +41,6 @@ CONTAINS
    SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, hybrid, enpara, mpi, v)
 
       USE m_judft
-      USE m_radfun, ONLY: radfun
-      USE m_radflo, ONLY: radflo
       USE m_loddop, ONLY: loddop
       USE m_util, ONLY: intgrf_init, intgrf, rorderpf
       USE m_hybrid_core
@@ -81,7 +79,6 @@ CONTAINS
       INTEGER, ALLOCATABLE             ::  unsrt_pgptm(:,:) ! unsorted pointers to g vectors
 
       REAL                            ::  kvec(3)
-      REAL                            ::  flo(atoms%jmtd, 2, atoms%nlod)
       REAL                            ::  uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
       REAL                            ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
       REAL                            ::  bashlp(atoms%jmtd)
@@ -128,8 +125,7 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      call gen_bas_fun()
-
+      call gen_bas_fun(atoms, enpara, input, hybrid, mpi, vr0, usdus, bas1, bas2)
 
       ! the radial functions are normalized
       DO jspin = 1, input%jspins
@@ -719,23 +715,41 @@ CONTAINS
 
    END SUBROUTINE mixedbasis
 
-   subroutine gen_bas_fun(atoms, input, hybrad, bas1, bas2)
+   subroutine gen_bas_fun(atoms, enpara, input, hybrid, mpi, vr0, usdus, bas1, bas2)
       use m_judft
       use m_types
+      USE m_radfun, ONLY: radfun
+      USE m_radflo, ONLY: radflo
       implicit NONE
-      REAL, ALLOCATABLE, INTENT(INOUT) ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
+      type(t_atoms), intent(in)        :: atoms
+      type(t_enpara), intent(in)       :: enpara
+      type(t_input), intent(in)        :: input
+      type(t_hybrid), intent(in)       :: hybrid
+      type(t_mpi), intent(in)          :: mpi
+      type(t_usdus), intent(inout)     :: usdus
 
-      REAL    ::  u(atoms%jmtd, 2, 0:atoms%lmaxd)
-      REAL    :: du(atoms%jmtd, 2, 0:atoms%lmaxd)
+      REAL, ALLOCATABLE, INTENT(INOUT) :: bas1(:,:,:,:,:), bas2(:,:,:,:,:)
+      REAL, intent(in)                 :: vr0(:,:,:)
+
+      REAL    ::   u(atoms%jmtd, 2, 0:atoms%lmaxd)
+      REAL    ::  du(atoms%jmtd, 2, 0:atoms%lmaxd)
+      REAL    :: flo(atoms%jmtd, 2, atoms%nlod)
+
+      REAL    :: uuilon(atoms%nlod, atoms%ntype)
+      REAL    :: duilon(atoms%nlod, atoms%ntype)
+      REAL    :: ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
+      REAL    :: wronk
+
       INTEGER :: itype, jspin, l, ilo, ok
+      INTEGER :: ng, noded, nodem
       u  = 0.0
       du = 0.0
 
       ! this is 5-D array. it could cause Problems in bigger systems
-      allocate(bas1(atoms%jmtd,
+      allocate(bas1(atoms%jmtd,    &
                     maxval(hybrid%num_radfun_per_l), &
-                    0:atoms%lmaxd,
-                    atoms%ntype,
+                    0:atoms%lmaxd, &
+                    atoms%ntype,   &
                     input%jspins),   source=0.0, stat=ok)
       if(ok /= 0) call judft_error("Can't allocate bas1 array. Stat= " // int2str(ok))
 
