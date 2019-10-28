@@ -225,7 +225,7 @@
             allocate(carr2(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
             allocate(carr3(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
             DO ikpt = 1, nkpti
-               call read_z(z(ikpt), ikpt)
+               call read_z(z(ikpt), kpts%nkptf*(jsp - 1) + ikpt)
             END DO
 
             iatom = 0

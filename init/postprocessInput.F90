@@ -263,6 +263,10 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         dimension%neigd = dimension%nvd + atoms%nlotot
      END IF
 
+     IF(dimension%neigd.GT.(dimension%nvd + atoms%nlotot)) THEN
+        dimension%neigd = dimension%nvd + atoms%nlotot
+     END IF
+
      obsolete%lepr = 0
 
      IF (noco%l_noco) dimension%neigd = 2*dimension%neigd

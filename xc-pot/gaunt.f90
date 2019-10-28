@@ -69,8 +69,8 @@ CONTAINS
       if (allocated(w)) return
 !$    if (omp_in_parallel() .and. omp_get_num_threads() > 1) call juDFT_error("BUG IN GAUNT!!")
       n = (3*lmaxd)/4+1
-      ALLOCATE(w(n), yr(n,(lmaxd+1)**2), source=0.0)
-
+      ALLOCATE(w(n),  source=0.0)
+      ALLOCATE(yr(n,(lmaxd+1)**2), source=0.0)
       lmaxdp = lmaxd
       lmax1d = lmaxd+1
 
