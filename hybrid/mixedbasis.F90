@@ -137,7 +137,7 @@ CONTAINS
       i = 0
       n = -1
 
-      rdum1 = MAXVAL([(SQRT(SUM(MATMUL(kpts%bkf(:,ikpt), cell%bmat)**2)), ikpt=1, kpts%nkptf)])
+      rdum1 = MAXVAL([(norm2(MATMUL(kpts%bkf(:,ikpt), cell%bmat)), ikpt=1, kpts%nkptf)])
 
       ! a first run for the determination of the dimensions of the fields gptm,pgptm
 
@@ -150,7 +150,7 @@ CONTAINS
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  rdum = SQRT(SUM(MATMUL(g, cell%bmat)**2)) - rdum1
+                  rdum = norm2(MATMUL(g, cell%bmat)) - rdum1
                   IF (rdum > gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
@@ -201,7 +201,7 @@ CONTAINS
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  rdum = SQRT(SUM(MATMUL(g, cell%bmat)**2)) - rdum1
+                  rdum = norm2(MATMUL(g, cell%bmat)) - rdum1
                   IF (rdum > gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
