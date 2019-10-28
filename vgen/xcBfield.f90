@@ -129,11 +129,11 @@ CONTAINS
          DO jr = 1, atoms%jri(n)
             r=atoms%rmsh(jr, n)
             DO lh=0, lhmax
-               IF (ABS(phi%mt(jr,lh,n,1))<eps) THEN
-                  phi%mt(jr,lh,n,:)=0.0
-               ELSE
-                  phi%mt(jr,0:,n,:) = phi%mt(jr,0:,n,:)*r**2
-               END IF
+               !IF (ABS(phi%mt(jr,lh,n,1))<eps) THEN
+               !   phi%mt(jr,lh,n,:)=0.0
+               !ELSE
+               phi%mt(jr,0:,n,:) = phi%mt(jr,0:,n,:)*r**2
+               !END IF
             END DO
          END DO ! jr
       END DO

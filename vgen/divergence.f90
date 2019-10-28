@@ -34,7 +34,7 @@ CONTAINS
    
       TYPE(t_gradients)                           :: gradx, grady, gradz
 
-      REAL, ALLOCATABLE :: thet(:), phi(:), div_temp(:, :) 
+      REAL, ALLOCATABLE :: thet(:), phi(:), div_temp(:, :), div_temp2(:, :)
       REAL :: r, th, ph, eps
       INTEGER :: jr, k, nsp, kt, i, lh, lhmax
 
@@ -45,6 +45,7 @@ CONTAINS
       ALLOCATE (gradx%gr(3,atoms%jri(n)*nsp,1),grady%gr(3,atoms%jri(n)*nsp,1), &
                 gradz%gr(3,atoms%jri(n)*nsp,1))
       ALLOCATE (div_temp(atoms%jri(n)*nsp,1))
+      ALLOCATE (div_temp2(atoms%jri(n)*nsp,1))
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
@@ -70,7 +71,6 @@ CONTAINS
 
       DO jr = 1, atoms%jri(n)
          DO lh=0, lhmax
-
             IF (ABS(div%mt(jr,lh,n,1))<eps) THEN
                div%mt(jr,lh,n,:)=0.0
             END IF
@@ -85,6 +85,8 @@ CONTAINS
 
          kt = kt+nsp
       ENDDO ! jr
+
+      CALL mt_to_grid(.FALSE., 1, atoms, sphhar, div%mt(:,0:,n,:), n, gradx, div_temp2)
 
       CALL finish_mt_grid
    
