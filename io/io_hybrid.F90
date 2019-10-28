@@ -71,8 +71,8 @@ contains
     irecl_coulomb = ( atoms%ntype*(hybrid%maxlcutm1+1)*(maxval(hybrid%nindxm1)-1)**2&
          +   atoms%nat *(hybrid%maxlcutm1+2)*(2*hybrid%maxlcutm1+1)*(maxval(hybrid%nindxm1)-1)&
          +   (maxval(hybrid%nindxm1)-1)*atoms%nat**2&
-         +   ((hybrid%maxlcutm1+1)**2*atoms%nat+hybrid%maxgptm)&
-         *((hybrid%maxlcutm1+1)**2*atoms%nat+hybrid%maxgptm+1)/2 )*8
+         +   ((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm))&
+         *((hybrid%maxlcutm1+1)**2*atoms%nat+maxval(hybrid%ngptm)+1)/2 )*8
     if (.not.l_real) irecl_coulomb =irecl_coulomb *2
     OPEN(unit=778,file='coulomb1',form='unformatted',access='direct', recl=irecl_coulomb)
     id_coulomb_spm=778

@@ -155,9 +155,8 @@ CONTAINS
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
                      kvec = kpts%bkf(:,ikpt)
-                     rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
 
-                     IF (rdum <= gcutm**2) THEN
+                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= gcutm) THEN
                         IF (.NOT. ldum1) THEN
                            i = i + 1
                            ldum1 = .TRUE.
@@ -174,10 +173,9 @@ CONTAINS
       END DO
 
       hybrid%gptmd = i
-      hybrid%maxgptm = MAXVAL(hybrid%ngptm)
 
       allocate(hybrid%gptm(3, hybrid%gptmd))
-      allocate(hybrid%pgptm(hybrid%maxgptm, kpts%nkptf))
+      allocate(hybrid%pgptm(maxval(hybrid%ngptm), kpts%nkptf))
 
       hybrid%gptm = 0
       hybrid%pgptm = 0
@@ -187,8 +185,8 @@ CONTAINS
       n = -1
 
       ! Allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(hybrid%maxgptm, kpts%nkptf))
-      allocate(length_kG(hybrid%maxgptm, kpts%nkptf))
+      allocate(unsrt_pgptm(maxval(hybrid%ngptm), kpts%nkptf))
+      allocate(length_kG(maxval(hybrid%ngptm), kpts%nkptf))
       length_kG = 0
       unsrt_pgptm = 0
 
@@ -306,7 +304,7 @@ CONTAINS
          WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', hybrid%gptmd
          WRITE (6, *)
          WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm1/2*input%rkmax):'
-         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', hybrid%maxgptm
+         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(hybrid%ngptm)
          WRITE (6, *)
          WRITE (6, *)
          WRITE (6, '(3x,A)') 'IR Plane-wave basis for non-local exchange potential:'
@@ -692,7 +690,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      hybrid%maxbasm1 = hybrid%nbasp + hybrid%maxgptm
+      hybrid%maxbasm1 = hybrid%nbasp + maxval(hybrid%ngptm)
       DO nk = 1, kpts%nkptf
          hybrid%nbasm(nk) = hybrid%nbasp + hybrid%ngptm(nk)
       END DO

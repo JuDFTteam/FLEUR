@@ -13,7 +13,6 @@ MODULE m_types_hybrid
       INTEGER                ::  maxlcutm1
       INTEGER                ::  maxbasm1
       INTEGER                ::  max_indx_p_1
-      INTEGER                ::  maxgptm
       INTEGER                ::  maxgptm1
       INTEGER                ::  maxlmindx
       INTEGER                ::  gptmd

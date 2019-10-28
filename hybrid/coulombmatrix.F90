@@ -228,8 +228,8 @@ CONTAINS
          nsym1(ikpt) = isym1
       END DO
       ! Define reduced lists of G points -> pgptm1(:,ikpt), ikpt=1,..,nkpt
-      !allocate( hybrid%pgptm1(hybrid%maxgptm,kpts%nkpt)) !in mixedbasis
-      allocate(iarr(hybrid%maxgptm), POINTER(kpts%nkpt, &
+      !allocate( hybrid%pgptm1(maxval(hybrid%ngptm),kpts%nkpt)) !in mixedbasis
+      allocate(iarr(maxval(hybrid%ngptm)), POINTER(kpts%nkpt, &
                                               MINVAL(hybrid%gptm(1, :)) - 1:MAXVAL(hybrid%gptm(1, :)) + 1, &
                                               MINVAL(hybrid%gptm(2, :)) - 1:MAXVAL(hybrid%gptm(2, :)) + 1, &
                                               MINVAL(hybrid%gptm(3, :)) - 1:MAXVAL(hybrid%gptm(3, :)) + 1))
@@ -536,7 +536,7 @@ CONTAINS
          WRITE (6, *)
       END IF
 
-      IF (hybrid%maxgptm /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
+      IF (maxval(hybrid%ngptm) /= 0) THEN ! skip calculation of plane-wave contribution if mixed basis does not contain plane waves
 
          !
          !     (2) Case < MT | v | PW >
@@ -550,7 +550,7 @@ CONTAINS
          !     (2b) r,r' in same MT
          !     (2c) r,r' in different MT
 
-         allocate(coulmat(hybrid%nbasp, hybrid%maxgptm), stat=ok)
+         allocate(coulmat(hybrid%nbasp, maxval(hybrid%ngptm)), stat=ok)
          IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
          coulmat = 0
 
@@ -778,7 +778,7 @@ CONTAINS
          DO ikpt = ikptmin, ikptmax!1,kpts%nkpt
 
             ! group together quantities which depend only on l,m and igpt -> carr2a
-            allocate(carr2a((hybrid%lexp + 1)**2, hybrid%maxgptm), carr2b(atoms%nat, hybrid%maxgptm))
+            allocate(carr2a((hybrid%lexp + 1)**2, maxval(hybrid%ngptm)), carr2b(atoms%nat, maxval(hybrid%ngptm)))
             carr2a = 0; carr2b = 0
             DO igpt = 1, hybrid%ngptm(ikpt)
                igptp = hybrid%pgptm(igpt, ikpt)
@@ -975,7 +975,7 @@ CONTAINS
          ! Calculate sphbesintegral
          call timestart("sphbesintegral")
          allocate(sphbes0(-1:hybrid%lexp + 2, atoms%ntype, nqnrm),&
-              &           carr2((hybrid%lexp + 1)**2, hybrid%maxgptm))
+              &           carr2((hybrid%lexp + 1)**2, maxval(hybrid%ngptm)))
          sphbes0 = 0; carr2 = 0
          DO iqnrm = 1, nqnrm
             DO itype = 1, atoms%ntype
@@ -1063,7 +1063,7 @@ CONTAINS
          ! All elements are needed so send all data to all processes treating the
          ! respective k-points
 
-         allocate(carr2(hybrid%maxbasm1, 2), iarr(hybrid%maxgptm))
+         allocate(carr2(hybrid%maxbasm1, 2), iarr(maxval(hybrid%ngptm)))
          allocate(nsym_gpt(hybrid%gptmd, kpts%nkpt), &
                    sym_gpt(MAXVAL(nsym1), hybrid%gptmd, kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
@@ -1224,17 +1224,17 @@ CONTAINS
 
       allocate(coulomb_mt1(maxval(hybrid%nindxm1) - 1, maxval(hybrid%nindxm1) - 1, 0:hybrid%maxlcutm1, atoms%ntype, 1))
       ic = (hybrid%maxlcutm1 + 1)**2*atoms%nat
-      idum = ic + hybrid%maxgptm
+      idum = ic + maxval(hybrid%ngptm)
       idum = (idum*(idum + 1))/2
       if (sym%invs) THEN
          allocate(coulomb_mt2_r(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
          allocate(coulomb_mt3_r(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat, 1))
-         allocate(coulomb_mtir_r(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
+         allocate(coulomb_mtir_r(ic + maxval(hybrid%ngptm), ic + maxval(hybrid%ngptm), 1))
          allocate(coulombp_mtir_r(idum, 1))
       else
          allocate(coulomb_mt2_c(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat, 1))
          allocate(coulomb_mt3_c(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat, 1))
-         allocate(coulomb_mtir_c(ic + hybrid%maxgptm, ic + hybrid%maxgptm, 1))
+         allocate(coulomb_mtir_c(ic + maxval(hybrid%ngptm), ic + maxval(hybrid%ngptm), 1))
          allocate(coulombp_mtir_c(idum, 1))
       endif
       call timestart("loop bla")
