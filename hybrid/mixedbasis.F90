@@ -68,7 +68,7 @@ CONTAINS
       INTEGER                         ::  ikpt, jspin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
       INTEGER                         ::  m, nk, x, y, z
       INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
-      REAL                            ::  gcutm, rdum, rdum1
+      REAL                            ::  gcutm, rdum, rdum1, longest_k
 
       LOGICAL                         ::  ldum, ldum1
 
@@ -137,7 +137,7 @@ CONTAINS
       i = 0
       n = -1
 
-      rdum1 = MAXVAL([(norm2(MATMUL(kpts%bkf(:,ikpt), cell%bmat)), ikpt=1, kpts%nkptf)])
+      longest_k = MAXVAL([(norm2(MATMUL(kpts%bkf(:,ikpt), cell%bmat)), ikpt=1, kpts%nkptf)])
 
       ! a first run for the determination of the dimensions of the fields gptm,pgptm
 
@@ -150,7 +150,7 @@ CONTAINS
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  rdum = norm2(MATMUL(g, cell%bmat)) - rdum1
+                  rdum = norm2(MATMUL(g, cell%bmat)) - longest_k
                   IF (rdum > gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
@@ -202,7 +202,7 @@ CONTAINS
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  rdum = norm2(MATMUL(g, cell%bmat)) - rdum1
+                  rdum = norm2(MATMUL(g, cell%bmat)) - longest_k
                   IF (rdum > gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
