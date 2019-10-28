@@ -221,7 +221,7 @@ CONTAINS
                         ! Position of the vector is saved as pointer
                         unsrt_pgptm(hybrid%ngptm(ikpt), ikpt) = i
                         ! Save length of vector k + G for array sorting
-                        length_kG(hybrid%ngptm(ikpt), ikpt) = rdum
+                        length_kG(hybrid%ngptm(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
                      END IF
                   END DO
                END DO
