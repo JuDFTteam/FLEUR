@@ -65,10 +65,10 @@ CONTAINS
       TYPE(t_usdus)                   ::  usdus
 
       ! local scalars
-      INTEGER                         ::  ilo, ikpt, jspin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
-      INTEGER                         ::  nodem, noded, m, nk, x, y, z
+      INTEGER                         ::  ikpt, jspin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
+      INTEGER                         ::  m, nk, x, y, z
       INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
-      REAL                            ::  gcutm, wronk, rdum, rdum1
+      REAL                            ::  gcutm, rdum, rdum1
 
       LOGICAL                         ::  ldum, ldum1
 
@@ -79,8 +79,6 @@ CONTAINS
       INTEGER, ALLOCATABLE             ::  unsrt_pgptm(:,:) ! unsorted pointers to g vectors
 
       REAL                            ::  kvec(3)
-      REAL                            ::  uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
-      REAL                            ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
       REAL                            ::  bashlp(atoms%jmtd)
 
 
@@ -139,7 +137,7 @@ CONTAINS
       i = 0
       n = -1
 
-      rdum1 = MAXVAL((/(SQRT(SUM(MATMUL(kpts%bkf(:,ikpt), cell%bmat)**2)), ikpt=1, kpts%nkptf)/))
+      rdum1 = MAXVAL([(SQRT(SUM(MATMUL(kpts%bkf(:,ikpt), cell%bmat)**2)), ikpt=1, kpts%nkptf)])
 
       ! a first run for the determination of the dimensions of the fields gptm,pgptm
 
@@ -151,7 +149,7 @@ CONTAINS
             DO y = -n1, n1
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
-                  g = (/x, y, z/)
+                  g = [x, y, z]
                   rdum = SQRT(SUM(MATMUL(g, cell%bmat)**2)) - rdum1
                   IF (rdum > gcutm) CYCLE
                   ldum1 = .FALSE.
@@ -202,7 +200,7 @@ CONTAINS
             DO y = -n1, n1
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
-                  g = (/x, y, z/)
+                  g = [x, y, z]
                   rdum = SQRT(SUM(MATMUL(g, cell%bmat)**2)) - rdum1
                   IF (rdum > gcutm) CYCLE
                   ldum1 = .FALSE.
@@ -358,7 +356,7 @@ CONTAINS
             ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
             selecmat = RESHAPE((/((((seleco(n1, l1) .AND. selecu(n2, l2), &
                                      n1=1, maxval(hybrid%num_radfun_per_l)), l1=0, atoms%lmaxd), n2=1, maxval(hybrid%num_radfun_per_l)), l2=0, atoms%lmaxd)/), &
-                               (/maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1/))
+                               [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
@@ -422,7 +420,7 @@ CONTAINS
             ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
             selecmat = RESHAPE((/((((seleco(n1, l1) .AND. selecu(n2, l2), &
                                      n1=1, maxval(hybrid%num_radfun_per_l)), l1=0, atoms%lmaxd), n2=1, maxval(hybrid%num_radfun_per_l)), l2=0, atoms%lmaxd)/), &
-                               (/maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1/))
+                               [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
@@ -699,7 +697,7 @@ CONTAINS
          hybrid%nbasm(nk) = hybrid%nbasp + hybrid%ngptm(nk)
       END DO
 
-      hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
+      hybrid%maxlmindx = MAXVAL([(SUM([(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
 
    END SUBROUTINE mixedbasis
 
