@@ -126,7 +126,20 @@ CONTAINS
       ! bas1 = large component ,bas2 = small component
 
       call gen_bas_fun(atoms, enpara, input, hybrid, mpi, vr0, usdus, bas1, bas2)
-      call normalize_bas_fun(atoms, gridf, hybrid, input, bas1, bas2)
+
+      ! the radial functions are normalized
+      DO jspin = 1, input%jspins
+         DO itype = 1, atoms%ntype
+            DO l = 0, atoms%lmax(itype)
+               DO i = 1, hybrid%num_radfun_per_l(l, itype)
+                  rdum = intgrf(bas1(:,i, l, itype, jspin)**2 + bas2(:,i, l, itype, jspin)**2, &
+                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                  bas1(:atoms%jri(itype), i, l, itype, jspin) = bas1(:atoms%jri(itype), i, l, itype, jspin)/SQRT(rdum)
+                  bas2(:atoms%jri(itype), i, l, itype, jspin) = bas2(:atoms%jri(itype), i, l, itype, jspin)/SQRT(rdum)
+               END DO
+            END DO
+         END DO
+      END DO
 
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
@@ -768,34 +781,5 @@ CONTAINS
          END DO
       END DO
    end subroutine gen_bas_fun
-
-   subroutine normalize_bas_fun(atoms, gridf, hybrid, input, bas1, bas2)
-      use m_judft
-      use m_types
-      USE m_util, ONLY: intgrf_init, intgrf
-      implicit NONE
-      type(t_atoms), intent(in)        :: atoms
-      real, intent(in)                 :: gridf(:,:)
-      type(t_hybrid), intent(in)       :: hybrid
-      type(t_input), intent(in)        :: input
-      REAL, INTENT(INOUT)              :: bas1(:,:,:,:,:), bas2(:,:,:,:,:)
-
-      INTEGER :: jspin, itype, l, i
-      REAL    :: rdum
-
-      DO jspin = 1, input%jspins
-         DO itype = 1, atoms%ntype
-            DO l = 0, atoms%lmax(itype)
-               DO i = 1, hybrid%num_radfun_per_l(l, itype)
-                  rdum = intgrf(bas1(:,i, l, itype, jspin)**2 + bas2(:,i, l, itype, jspin)**2, &
-                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-                  bas1(:atoms%jri(itype), i, l, itype, jspin) = bas1(:atoms%jri(itype), i, l, itype, jspin)/SQRT(rdum)
-                  bas2(:atoms%jri(itype), i, l, itype, jspin) = bas2(:atoms%jri(itype), i, l, itype, jspin)/SQRT(rdum)
-               END DO
-            END DO
-         END DO
-      END DO
-
-   end subroutine normalize_bas_fun
 
 END MODULE m_mixedbasis
