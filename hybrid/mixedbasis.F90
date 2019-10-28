@@ -255,8 +255,8 @@ CONTAINS
          g = hybrid%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
-            rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
-            IF (rdum <= hybrid%gcutm1**2) THEN
+            rdum = norm2(MATMUL(kvec + g, cell%bmat))
+            IF (rdum <= hybrid%gcutm1) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
             END IF
          END DO
