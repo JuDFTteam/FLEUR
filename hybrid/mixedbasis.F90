@@ -138,7 +138,7 @@ CONTAINS
       i = 0
       n = -1
 
-      rdum1 = MAXVAL([(SQRT(SUM(MATMUL(kpts%bkf(:,ikpt), cell%bmat)**2)), ikpt=1, kpts%nkptf)])
+      rdum1 = MAXVAL((/(SQRT(SUM(MATMUL(kpts%bkf(:,ikpt), cell%bmat)**2)), ikpt=1, kpts%nkptf)/))
 
       ! a first run for the determination of the dimensions of the fields gptm,pgptm
 
