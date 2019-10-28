@@ -126,8 +126,8 @@ CONTAINS
       nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
       call z_kqpt%alloc(.false., nbasfcn, dimension%neigd)
 
-      call read_z(z_nk, nk)
-      call read_z(z_kqpt, nkqpt)
+      call read_z(z_nk, kpts%nkptf*(jsp - 1) + nk)
+      call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
 
       ! read in cmt coefficients from direct access file cmt
       call read_cmt(cmt_nk, nk)
@@ -388,8 +388,8 @@ CONTAINS
       nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
       call z_kqpt%alloc(.true., nbasfcn, dimension%neigd)
 
-      call read_z(z_nk, nk)
-      call read_z(z_kqpt, nkqpt)
+      call read_z(z_nk, kpts%nkptf*(jsp - 1) + nk)
+      call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
 
       DO igpt = 1, hybrid%ngptm(iq)
          igptp = hybrid%pgptm(igpt, iq)
@@ -1317,8 +1317,8 @@ CONTAINS
 
       ! read in z at k-point nk and nkqpt
       call timestart("read_z")
-      CALL read_z(z_nk, nk)
-      call read_z(z_kqpt, nkqpt)
+      CALL read_z(z_nk, kpts%nkptf*(jsp - 1) + nk)
+      call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
       call timestop("read_z")
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
@@ -2328,8 +2328,8 @@ CONTAINS
 
       ! read in z at k-point nk and nkqpt
       call timestart("read_z")
-      call read_z(z_nk, nk)
-      call read_z(z_kqpt, nkqpt)
+      call read_z(z_nk, kpts%nkptf*(jsp - 1) + nk)
+      call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
       call timestop("read_z")
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &

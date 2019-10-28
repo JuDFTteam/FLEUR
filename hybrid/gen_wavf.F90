@@ -273,7 +273,7 @@ CONTAINS
          ELSE
             zhlp%data_c = zmat(ikpt0)%data_c
          END IF
-         CALL write_z(zhlp, ikpt0)
+         CALL write_z(zhlp, kpts%nkptf*(jsp - 1) + ikpt0)
 
          ! generate wavefunctions coefficients at all k-points from
          ! irreducible k-points
@@ -286,7 +286,7 @@ CONTAINS
                                        hybrid%nbands(ikpt0), cell, lapw(ikpt0), lapw(ikpt), .true.)
 
                CALL write_cmt(cmthlp, ikpt)
-               CALL write_z(zhlp, ikpt)
+               CALL write_z(zhlp, kpts%nkptf*(jsp - 1) + ikpt)
             END IF
          END DO  !ikpt
       END DO !ikpt0
