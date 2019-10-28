@@ -125,21 +125,9 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      call gen_bas_fun(atoms, enpara, input, hybrid, mpi, vr0, usdus, bas1, bas2)
+      call gen_bas_fun(atoms, enpara, gridf, input, hybrid, mpi, vr0, usdus, bas1, bas2)
 
-      ! the radial functions are normalized
-      DO jspin = 1, input%jspins
-         DO itype = 1, atoms%ntype
-            DO l = 0, atoms%lmax(itype)
-               DO i = 1, hybrid%num_radfun_per_l(l, itype)
-                  rdum = intgrf(bas1(:,i, l, itype, jspin)**2 + bas2(:,i, l, itype, jspin)**2, &
-                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-                  bas1(:atoms%jri(itype), i, l, itype, jspin) = bas1(:atoms%jri(itype), i, l, itype, jspin)/SQRT(rdum)
-                  bas2(:atoms%jri(itype), i, l, itype, jspin) = bas2(:atoms%jri(itype), i, l, itype, jspin)/SQRT(rdum)
-               END DO
-            END DO
-         END DO
-      END DO
+
 
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
@@ -715,11 +703,12 @@ CONTAINS
 
    END SUBROUTINE mixedbasis
 
-   subroutine gen_bas_fun(atoms, enpara, input, hybrid, mpi, vr0, usdus, bas1, bas2)
+   subroutine gen_bas_fun(atoms, enpara, gridf, input, hybrid, mpi, vr0, usdus, bas1, bas2)
       use m_judft
       use m_types
       USE m_radfun, ONLY: radfun
       USE m_radflo, ONLY: radflo
+      USE m_util,   ONLY: intgrf
       implicit NONE
       type(t_atoms), intent(in)        :: atoms
       type(t_enpara), intent(in)       :: enpara
@@ -729,7 +718,7 @@ CONTAINS
       type(t_usdus), intent(inout)     :: usdus
 
       REAL, ALLOCATABLE, INTENT(INOUT) :: bas1(:,:,:,:,:), bas2(:,:,:,:,:)
-      REAL, intent(in)                 :: vr0(:,:,:)
+      REAL, intent(in)                 :: vr0(:,:,:), gridf(:,:)
 
       REAL    ::   u(atoms%jmtd, 2, 0:atoms%lmaxd)
       REAL    ::  du(atoms%jmtd, 2, 0:atoms%lmaxd)
@@ -738,9 +727,9 @@ CONTAINS
       REAL    :: uuilon(atoms%nlod, atoms%ntype)
       REAL    :: duilon(atoms%nlod, atoms%ntype)
       REAL    :: ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
-      REAL    :: wronk
+      REAL    :: wronk, norm
 
-      INTEGER :: itype, jspin, l, ilo, ok
+      INTEGER :: itype, jspin, i, l, ilo, ok
       INTEGER :: ng, noded, nodem
       u  = 0.0
       du = 0.0
@@ -778,6 +767,20 @@ CONTAINS
                   bas2(1:ng, 2+ilo, atoms%llo(ilo, itype), itype, jspin) = flo(1:ng, 2, ilo)
                END DO
             END IF
+         END DO
+      END DO
+
+      ! the radial functions are normalized
+      DO jspin = 1, input%jspins
+         DO itype = 1, atoms%ntype
+            DO l = 0, atoms%lmax(itype)
+               DO i = 1, hybrid%num_radfun_per_l(l, itype)
+                  norm = sqrt(intgrf(bas1(:,i, l, itype, jspin)**2 + bas2(:,i, l, itype, jspin)**2, &
+                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
+                  bas1(:atoms%jri(itype), i, l, itype, jspin) = bas1(:atoms%jri(itype), i, l, itype, jspin)/norm
+                  bas2(:atoms%jri(itype), i, l, itype, jspin) = bas2(:atoms%jri(itype), i, l, itype, jspin)/norm
+               END DO
+            END DO
          END DO
       END DO
    end subroutine gen_bas_fun
