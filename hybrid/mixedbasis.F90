@@ -207,9 +207,8 @@ CONTAINS
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
                      kvec = kpts%bkf(:,ikpt)
-                     rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
 
-                     IF (rdum <= (gcutm)**2) THEN
+                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= gcutm) THEN
                         IF (.NOT. ldum1) THEN
                            i = i + 1
                            hybrid%gptm(:,i) = g
