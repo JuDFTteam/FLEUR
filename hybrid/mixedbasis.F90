@@ -177,6 +177,12 @@ CONTAINS
       allocate(hybrid%gptm(3, hybrid%gptmd))
       allocate(hybrid%pgptm(maxval(hybrid%ngptm), kpts%nkptf))
 
+
+
+      ! Allocate and initialize arrays needed for G vector ordering
+      allocate(unsrt_pgptm(maxval(hybrid%ngptm), kpts%nkptf))
+      allocate(length_kG(maxval(hybrid%ngptm), kpts%nkptf))
+
       hybrid%gptm = 0
       hybrid%pgptm = 0
       hybrid%ngptm = 0
@@ -184,9 +190,6 @@ CONTAINS
       i = 0
       n = -1
 
-      ! Allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(maxval(hybrid%ngptm), kpts%nkptf))
-      allocate(length_kG(maxval(hybrid%ngptm), kpts%nkptf))
       length_kG = 0
       unsrt_pgptm = 0
 
