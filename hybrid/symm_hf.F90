@@ -595,7 +595,7 @@ CONTAINS
 
       neqvkpt = 0
 
-!       list = (/ (ikpt-1, ikpt=1,nkpt) /)
+!       list = [(ikpt-1, ikpt=1,nkpt) ]
       DO ikpt = 1, kpts%nkptf
          list(ikpt) = ikpt - 1
       END DO

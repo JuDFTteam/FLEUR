@@ -217,7 +217,7 @@ CONTAINS
       !
 
       DO itype = 1, atoms%ntype
-         lmp_start(itype) = sum((/(2*(2*l + 1), l=0, atoms%lmax(itype) + 1)/))
+         lmp_start(itype) = sum([(2*(2*l + 1), l=0, atoms%lmax(itype) + 1)])
       END DO
       idum = maxval(lmp_start)
 
@@ -911,7 +911,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            nn = sum((/((2*l + 1)*hybrid%num_radfun_per_l(l, itype), l=0, atoms%lmax(itype))/))
+            nn = sum([((2*l + 1)*hybrid%num_radfun_per_l(l, itype), l=0, atoms%lmax(itype))])
             DO iband1 = bandi1, bandf1
                cmt1(:nn, iband1) = cmt(iband1, :nn, ic)
             ENDDO

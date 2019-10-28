@@ -97,7 +97,7 @@ CONTAINS
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
-            ishift = sum((/((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))/))
+            ishift = sum([((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
                l = 0
@@ -161,7 +161,7 @@ CONTAINS
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
-            ishift = sum((/((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))/))
+            ishift = sum([((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
                indx1 = indx0 + 1
@@ -183,7 +183,7 @@ CONTAINS
                iatom1 = 0
                indx2 = 0
                DO itype1 = 1, atoms%ntype
-                  ishift1 = sum((/((2*l + 1)*(hybrid%nindxm1(l, itype1) - 1), l=0, hybrid%lcutm1(itype1))/))
+                  ishift1 = sum([((2*l + 1)*(hybrid%nindxm1(l, itype1) - 1), l=0, hybrid%lcutm1(itype1))])
                   DO ieq1 = 1, atoms%neq(itype1)
                      iatom1 = iatom1 + 1
                      IF (iatom1 == iatom) CYCLE
@@ -303,7 +303,7 @@ CONTAINS
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
-            ishift = sum((/((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))/))
+            ishift = sum([((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
                l = 0
@@ -368,7 +368,7 @@ CONTAINS
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
-            ishift = sum((/((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))/))
+            ishift = sum([((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
                indx1 = indx0 + 1
@@ -390,7 +390,7 @@ CONTAINS
                iatom1 = 0
                indx2 = 0
                DO itype1 = 1, atoms%ntype
-                  ishift1 = sum((/((2*l + 1)*(hybrid%nindxm1(l, itype1) - 1), l=0, hybrid%lcutm1(itype1))/))
+                  ishift1 = sum([((2*l + 1)*(hybrid%nindxm1(l, itype1) - 1), l=0, hybrid%lcutm1(itype1))])
                   DO ieq1 = 1, atoms%neq(itype1)
                      iatom1 = iatom1 + 1
                      IF (iatom1 == iatom) CYCLE

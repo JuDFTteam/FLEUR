@@ -138,7 +138,7 @@ CONTAINS
       call timestop("read in olap")
 
       IF (hybrid%l_calhf) THEN
-         ncstd = sum((/((hybdat%nindxc(l, itype)*(2*l + 1)*atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, atoms%ntype)/))
+         ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, atoms%ntype)])
          IF (nk == 1 .and. mpi%irank == 0) WRITE (*, *) 'calculate new HF matrix'
          IF (nk == 1 .and. jsp == 1 .and. input%imix > 10) CALL system('rm -f broyd*')
          ! calculate all symmetrie operations, which yield k invariant

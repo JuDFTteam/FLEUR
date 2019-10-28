@@ -175,7 +175,7 @@ CONTAINS
                                  ll = larr(i)
                                  IF (ABS(m2) > ll) CYCLE
 
-                                 lm = SUM((/((2*l2 + 1)*hybrid%num_radfun_per_l(l2, itype), l2=0, ll - 1)/)) + (m2 + ll)*hybrid%num_radfun_per_l(ll, itype) + parr(i)
+                                 lm = SUM([((2*l2 + 1)*hybrid%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) + (m2 + ll)*hybrid%num_radfun_per_l(ll, itype) + parr(i)
 
                                  carr(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
 
@@ -361,7 +361,7 @@ CONTAINS
                                  ll = larr(i)
                                  IF (ABS(m2) > ll) CYCLE
 
-                                 lm = SUM((/((2*l2 + 1)*hybrid%num_radfun_per_l(l2, itype), l2=0, ll - 1)/)) &
+                                 lm = SUM([((2*l2 + 1)*hybrid%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) &
                                       + (m2 + ll)*hybrid%num_radfun_per_l(ll, itype) + parr(i)
 
                                  carr(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
@@ -621,7 +621,7 @@ CONTAINS
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            lmstart(l, itype) = SUM((/(hybrid%num_radfun_per_l(ll, itype)*(2*ll + 1), ll=0, l - 1)/))
+            lmstart(l, itype) = SUM([(hybrid%num_radfun_per_l(ll, itype)*(2*ll + 1), ll=0, l - 1)])
          END DO
       END DO
 

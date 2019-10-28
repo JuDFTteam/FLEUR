@@ -239,7 +239,7 @@ CONTAINS
             hybrid%nobd(nk) = COUNT(results%w_iks(:hybrid%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
-         hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
+         hybrid%maxlmindx = MAXVAL([(SUM([(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
          hybrid%nbands = MIN(hybrid%bands1, DIMENSION%neigd)
 
       ENDIF ! hybrid%l_calhf

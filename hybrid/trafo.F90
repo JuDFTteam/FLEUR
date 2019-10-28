@@ -362,7 +362,7 @@ CONTAINS
       i = 0
 
       DO itype = 1, atoms%ntype
-         nn = sum((/((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))/))
+         nn = sum([((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))])
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
             IF (atoms%invsat(ic) == 0) THEN
@@ -476,7 +476,7 @@ CONTAINS
       ic = 0
       i = 0
       DO itype = 1, atoms%ntype
-         nn = sum((/((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))/))
+         nn = sum([((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))])
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
             IF (atoms%invsat(ic) == 0) THEN

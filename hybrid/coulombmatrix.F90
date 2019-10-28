@@ -1334,7 +1334,7 @@ CONTAINS
                            coulomb_mt2_c(n, 0, hybrid%maxlcutm1 + 1, iatom, ikpt0) = coulhlp%data_c(ic + n, hybrid%nbasp + 1)
                         endif
                      END DO
-                     ic = ic + SUM((/((2*l + 1)*hybrid%nindxm1(l, itype), l=0, hybrid%lcutm1(itype))/))
+                     ic = ic + SUM([((2*l + 1)*hybrid%nindxm1(l, itype), l=0, hybrid%lcutm1(itype))])
                   END DO
                END DO
 
@@ -1345,7 +1345,7 @@ CONTAINS
                iatom = 0
                ic = 0
                DO itype = 1, atoms%ntype
-                  ishift = SUM((/((2*l + 1)*hybrid%nindxm1(l, itype), l=0, hybrid%lcutm1(itype))/))
+                  ishift = SUM([((2*l + 1)*hybrid%nindxm1(l, itype), l=0, hybrid%lcutm1(itype))])
                   DO ineq = 1, atoms%neq(itype)
                      iatom = iatom + 1
                      ic1 = ic + hybrid%nindxm1(0, itype)
@@ -1353,7 +1353,7 @@ CONTAINS
                      iatom1 = 0
                      ic2 = 0
                      DO itype1 = 1, atoms%ntype
-                        ishift1 = SUM((/((2*l1 + 1)*hybrid%nindxm1(l1, itype1), l1=0, hybrid%lcutm1(itype1))/))
+                        ishift1 = SUM([((2*l1 + 1)*hybrid%nindxm1(l1, itype1), l1=0, hybrid%lcutm1(itype1))])
                         DO ineq1 = 1, atoms%neq(itype1)
                            iatom1 = iatom1 + 1
                            ic3 = ic2 + 1
@@ -2071,7 +2071,7 @@ CONTAINS
                      ptsh(:, 1:SIZE(ihelp, 2)) = ihelp
                      deallocate(rhelp, ihelp)
                   END IF
-                  ptsh(:, i) = (/ix, iy, iz/)
+                  ptsh(:, i) = [ix, iy, iz]
                   radsh(i) = SQRT(rdum)
                END IF
                IF (iz > 0) THEN

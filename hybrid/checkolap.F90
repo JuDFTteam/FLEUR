@@ -135,7 +135,7 @@
                &          WRITE (6, '(F10.6)', advance='no') olapcb(j)
                      END DO
 
-                     lm = sum((/(hybrid%num_radfun_per_l(j, itype)*(2*j + 1), j=0, l - 1)/))
+                     lm = sum([(hybrid%num_radfun_per_l(j, itype)*(2*j + 1), j=0, l - 1)])
                      iatom = sum(atoms%neq(1:itype - 1)) + 1 ! take first of group of equivalent atoms
                      DO m = -l, l
                         olapcv = 0
@@ -301,7 +301,7 @@
                      !    &              ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
                      !             CALL writeout(outtext,mpi%irank)
 !             IF( iatom .eq. 6 ) THEN
-!               cdum = exp(2*pi*img*dot_product(bkf(:,ikpt),(/0.0,0.0,1.0/) ))
+!               cdum = exp(2*pi*img*dot_product(bkf(:,ikpt),[0.0,0.0,1.0] ))
 !               lm = 0
 !               DO l = 0,lmax(itype)
 !                 DO m = -l,l

@@ -264,8 +264,8 @@ CONTAINS
 
          ! combine the solutions of the integrals with the appropriate prefactors
          a_omegaI(0) = 1.0
-         a_omegaI(1:8) = a*(/(omega_kF**i, i=1, 8)/)
-         aI_omegaI = (/(i*a_omegaI(i), i=0, 8)/)
+         a_omegaI(1:8) = a*[(omega_kF**i, i=1, 8)]
+         aI_omegaI = [(i*a_omegaI(i), i=0, 8)]
          appInt = DOT_PRODUCT(a_omegaI, integral(0:8))
          dotpr = DOT_PRODUCT(a_omegaI, integral(2:10))
          dAppInt_ds = -dotpr*dHs2_ds
@@ -2297,7 +2297,7 @@ CONTAINS
                                  ll = larr(i)
                                  IF (ABS(m2) > ll) CYCLE
 
-                                 lm = SUM((/((2*l2 + 1)*nindx(l2, itype), l2=0, ll - 1)/)) &
+                                 lm = SUM([((2*l2 + 1)*nindx(l2, itype), l2=0, ll - 1)]) &
                                       + (m2 + ll)*nindx(ll, itype) + parr(i)
 
                                  carr(i, n1) = cmt(n1, lm, iatom) &
