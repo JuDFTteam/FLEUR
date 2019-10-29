@@ -125,16 +125,10 @@ CONTAINS
 
       call gen_bas_fun(atoms, enpara, gridf, input, hybrid, mpi, vr0, usdus, bas1, bas2)
 
-
-
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
       call gen_gvec(cell, kpts, hybrid)
-
-      allocate(hybrid%gptm(3, hybrid%gptmd))
-      allocate(hybrid%pgptm(maxval(hybrid%ngptm), kpts%nkptf))
-
 
 
       ! Allocate and initialize arrays needed for G vector ordering
@@ -753,7 +747,7 @@ CONTAINS
       integer :: x, y, z, ikpt
       integer :: g(3)
       real    :: longest_k, rdum
-      logical :: ldum, ldum1
+      logical :: l_found_new_gpt, ldum1
 
       allocate(hybrid%ngptm(kpts%nkptf))
 
@@ -767,15 +761,14 @@ CONTAINS
 
       DO
          n = n + 1
-         ldum = .FALSE.
+         l_found_new_gpt = .FALSE.
          DO x = -n, n
             n1 = n - ABS(x)
             DO y = -n1, n1
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  rdum = norm2(MATMUL(g, cell%bmat)) - longest_k
-                  IF (rdum >hybrid%gcutm) CYCLE
+                  IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > hybrid%gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
                      IF (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= hybrid%gcutm) THEN
@@ -785,16 +778,18 @@ CONTAINS
                         END IF
 
                         hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
-                        ldum = .TRUE.
+                        l_found_new_gpt = .TRUE.
                      END IF
-                  END DO
+                  END DO ! k-loop
                END DO
             END DO
          END DO
-         IF (.NOT. ldum) EXIT
+         IF (.NOT. l_found_new_gpt) EXIT
       END DO
 
       hybrid%gptmd = i
+      allocate(hybrid%gptm(3, hybrid%gptmd))
+      allocate(hybrid%pgptm(maxval(hybrid%ngptm), kpts%nkptf))
 
    end subroutine gen_gvec
 END MODULE m_mixedbasis
