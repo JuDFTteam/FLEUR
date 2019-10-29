@@ -137,7 +137,7 @@ CONTAINS
       CALL timestart("wavefproducts_noinv IR")
 
       DO igpt = 1, mpbasis%ngptm(iq)
-         igptp = hybrid%pgptm(igpt, iq)
+         igptp = mpbasis%gptm_ptr(igpt, iq)
          ghelp = mpbasis%gptm(:, igptp) - g_t(:)
          DO i = 1, lapw%nv(jsp)
             gsum(:) = ghelp + gpt_nk(:, i)
@@ -392,7 +392,7 @@ CONTAINS
       call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
 
       DO igpt = 1, mpbasis%ngptm(iq)
-         igptp = hybrid%pgptm(igpt, iq)
+         igptp = mpbasis%gptm_ptr(igpt, iq)
          ghelp = mpbasis%gptm(:, igptp) - g_t(:)
          DO i = 1, lapw%nv(jsp)
             gsum(:) = ghelp + gpt_nk(:, i)
@@ -1323,13 +1323,13 @@ CONTAINS
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
      &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(1, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(1, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
       g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(2, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(2, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
       g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(3, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(3, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation pointer'
@@ -1363,7 +1363,7 @@ CONTAINS
       ic = 0
       DO ig1 = 1, lapw%nv(jsp)
          DO igptm = 1, mpbasis%ngptm(iq)
-            iigptm = hybrid%pgptm(igptm, iq)
+            iigptm = mpbasis%gptm_ptr(igptm, iq)
             g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
             g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
             g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
@@ -1402,7 +1402,7 @@ CONTAINS
       DO igptm = 1, mpbasis%ngptm(iq)
          rarr2 = 0
          ic = ic + 1
-         iigptm = hybrid%pgptm(igptm, iq)
+         iigptm = mpbasis%gptm_ptr(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
             g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
@@ -2334,13 +2334,13 @@ CONTAINS
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
      &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(1, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(1, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
       g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(2, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(2, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
       g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(3, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(3, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_noinv2: error allocation pointer'
@@ -2373,7 +2373,7 @@ CONTAINS
       ic = 0
       DO ig1 = 1, lapw%nv(jsp)
          DO igptm = 1, mpbasis%ngptm(iq)
-            iigptm = hybrid%pgptm(igptm, iq)
+            iigptm = mpbasis%gptm_ptr(igptm, iq)
             g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
             g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
             g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
@@ -2411,7 +2411,7 @@ CONTAINS
       DO igptm = 1, mpbasis%ngptm(iq)
          carr2 = 0
          ic = ic + 1
-         iigptm = hybrid%pgptm(igptm, iq)
+         iigptm = mpbasis%gptm_ptr(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
             g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)

@@ -706,11 +706,11 @@ CONTAINS
 
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt0)
-         igptp = hybrid%pgptm(igptm, ikpt0)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
          igptm2 = 0
          DO i = 1, mpbasis%ngptm(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -724,7 +724,7 @@ CONTAINS
             WRITE (*, *) rrot
             WRITE (*, *) "Failed tests:", g1
             DO i = 1, mpbasis%ngptm(ikpt1)
-               WRITE (*, *) mpbasis%gptm(:, hybrid%pgptm(i, ikpt1))
+               WRITE (*, *) mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1))
             ENDDO
             call judft_error('bra_trafo2: G-point not found in G-point set.')
          END IF
@@ -946,11 +946,11 @@ CONTAINS
 
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt1)
-         igptp = hybrid%pgptm(igptm, ikpt1)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          igptm2 = 0
          DO i = 1, mpbasis%ngptm(ikpt0)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -996,11 +996,11 @@ CONTAINS
 
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt1)
-         igptp = hybrid%pgptm(igptm, ikpt1)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          igptm2 = 0
          DO i = 1, mpbasis%ngptm(ikpt0)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -1171,13 +1171,13 @@ CONTAINS
 
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt0)
-         igptp = hybrid%pgptm(igptm, ikpt0)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
          igptm1 = 0
          DO i = 1, mpbasis%ngptm(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
-               igptp1 = hybrid%pgptm(i, ikpt1)
+               igptp1 = mpbasis%gptm_ptr(i, ikpt1)
                EXIT
             END IF
          END DO
@@ -1227,13 +1227,13 @@ CONTAINS
 
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt0)
-         igptp = hybrid%pgptm(igptm, ikpt0)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
          igptm1 = 0
          DO i = 1, mpbasis%ngptm(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
-               igptp1 = hybrid%pgptm(i, ikpt1)
+               igptp1 = mpbasis%gptm_ptr(i, ikpt1)
                EXIT
             END IF
          END DO
@@ -1443,11 +1443,11 @@ CONTAINS
 
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt1)
-         igptp = hybrid%pgptm(igptm, ikpt1)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          igptm2 = 0
          DO i = 1, mpbasis%ngptm(ikpt0)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -1605,13 +1605,13 @@ CONTAINS
 
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt0)
-         igptp = hybrid%pgptm(igptm, ikpt0)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
          igptm1 = 0
          DO i = 1, mpbasis%ngptm(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
-               igptp1 = hybrid%pgptm(i, ikpt1)
+               igptp1 = mpbasis%gptm_ptr(i, ikpt1)
                EXIT
             END IF
          END DO
@@ -1737,7 +1737,7 @@ CONTAINS
       END DO
 
       DO igptm = 1, mpbasis%ngptm(ikpt1)
-         igptp = hybrid%pgptm(igptm, ikpt1)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          igptm2 = pointer(g1(1), g1(2), g1(3))
          IF (igptm2 == igptm_in) THEN
@@ -1806,7 +1806,7 @@ CONTAINS
 
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt1)
-         igptp = hybrid%pgptm(igptm, ikpt1)
+         igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          iarr(igptm) = pointer(g1(1), g1(2), g1(3))
          carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), trans))

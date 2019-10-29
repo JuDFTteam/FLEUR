@@ -165,7 +165,7 @@ CONTAINS
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
     &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-    &  + maxval(abs(mpbasis%gptm(:, hybrid%pgptm(:mpbasis%ngptm(iq), iq))), dim=2) + 1
+    &  + maxval(abs(mpbasis%gptm(:, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq))), dim=2) + 1
 
      call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
      !
@@ -199,7 +199,7 @@ CONTAINS
      DO igptm = 1, mpbasis%ngptm(iq)
         rarr2 = 0
         ic = ic + 1
-        iigptm = hybrid%pgptm(igptm, iq)
+        iigptm = mpbasis%gptm_ptr(igptm, iq)
 
         DO ig1 = 1, lapw%nv(jsp)
            g = lapw%gvec(:, ig1, jsp) + mpbasis%gptm(:, iigptm) - g_t

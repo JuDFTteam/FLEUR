@@ -245,7 +245,7 @@ CONTAINS
                          dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
                                                 hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, maxval(hybrid%nindxm1), mpbasis%gptm, &
-                                                mpbasis%ngptm(ikpt0), hybrid%pgptm(:, ikpt0), mpbasis%num_gpts(), hybrid%basm1, &
+                                                mpbasis%ngptm(ikpt0), mpbasis%gptm_ptr(:, ikpt0), mpbasis%num_gpts(), hybrid%basm1, &
                                                 hybrid%nbasm(ikpt0), iband1, hybrid%nbands(nk), nsest, ibando, psize, indx_sest, &
                                                 atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
                                                 cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))

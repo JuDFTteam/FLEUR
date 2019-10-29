@@ -237,7 +237,7 @@ CONTAINS
       hybrid%pgptm1 = 0; iarr = 0; POINTER = 0
       DO ikpt = 1, kpts%nkpt
          DO igpt = 1, mpbasis%ngptm(ikpt)
-            g = mpbasis%gptm(:, hybrid%pgptm(igpt, ikpt))
+            g = mpbasis%gptm(:, mpbasis%gptm_ptr(igpt, ikpt))
             POINTER(ikpt, g(1), g(2), g(3)) = igpt
          END DO
          iarr = 0
@@ -247,7 +247,7 @@ CONTAINS
                j = j + 1
                hybrid%pgptm1(j, ikpt) = igpt
                DO isym1 = 1, nsym1(ikpt)
-                  g = MATMUL(rrot(:, :, sym1(isym1, ikpt)), mpbasis%gptm(:, hybrid%pgptm(igpt, ikpt)))
+                  g = MATMUL(rrot(:, :, sym1(isym1, ikpt)), mpbasis%gptm(:, mpbasis%gptm_ptr(igpt, ikpt)))
                   i = POINTER(ikpt, g(1), g(2), g(3))
                   IF (i == 0) call judft_error('coulombmatrix: zero pointer (bug?)')
                   iarr(i) = 1
@@ -316,7 +316,7 @@ CONTAINS
 
       call timestart("getnorm")
       ! Look for different qnorm = |k+G|, definition of qnrm and pqnrm.
-      CALL getnorm(kpts, mpbasis%gptm, mpbasis%ngptm, hybrid%pgptm, qnrm, nqnrm, pqnrm, cell)
+      CALL getnorm(kpts, mpbasis%gptm, mpbasis%ngptm, mpbasis%gptm_ptr, qnrm, nqnrm, pqnrm, cell)
       allocate(sphbesmoment(0:hybrid%lexp, atoms%ntype, nqnrm), &
                 olap(maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype, nqnrm), &
                 integral(maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype, nqnrm))
@@ -562,7 +562,7 @@ CONTAINS
             ! start to loop over interstitial plane waves
             DO igpt0 = igptmin(ikpt), igptmax(ikpt) !1,hybrid%ngptm1(ikpt)
                igpt = hybrid%pgptm1(igpt0, ikpt)
-               igptp = hybrid%pgptm(igpt, ikpt)
+               igptp = mpbasis%gptm_ptr(igpt, ikpt)
                ix = hybrid%nbasp + igpt
                q = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), cell%bmat)
                qnorm = norm2(q)
@@ -740,7 +740,7 @@ CONTAINS
 
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)
                igpt2 = hybrid%pgptm1(igpt0, ikpt)
-               igptp2 = hybrid%pgptm(igpt2, ikpt)
+               igptp2 = mpbasis%gptm_ptr(igpt2, ikpt)
                ix = hybrid%nbasp + igpt2
                iy = hybrid%nbasp
                q2 = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp2), cell%bmat)
@@ -748,7 +748,7 @@ CONTAINS
                IF (abs(rdum2) > 1e-12) rdum2 = 4*pi_const/rdum2
 
                DO igpt1 = 1, igpt2
-                  igptp1 = hybrid%pgptm(igpt1, ikpt)
+                  igptp1 = mpbasis%gptm_ptr(igpt1, ikpt)
                   iy = iy + 1
                   q1 = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp1), cell%bmat)
                   idum = ix*(ix - 1)/2 + iy
@@ -782,7 +782,7 @@ CONTAINS
             allocate(carr2a((hybrid%lexp + 1)**2, maxval(mpbasis%ngptm)), carr2b(atoms%nat, maxval(mpbasis%ngptm)))
             carr2a = 0; carr2b = 0
             DO igpt = 1, mpbasis%ngptm(ikpt)
-               igptp = hybrid%pgptm(igpt, ikpt)
+               igptp = mpbasis%gptm_ptr(igpt, ikpt)
                iqnrm = pqnrm(igpt, ikpt)
                q = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), cell%bmat)
 
@@ -812,7 +812,7 @@ CONTAINS
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,hybrid%ngptm1(ikpt)
                igpt2 = hybrid%pgptm1(igpt0, ikpt)
                ix = hybrid%nbasp + igpt2
-               igptp2 = hybrid%pgptm(igpt2, ikpt)
+               igptp2 = mpbasis%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
                ic2 = 0
                carr2 = 0
@@ -854,7 +854,7 @@ CONTAINS
                iy = hybrid%nbasp
                DO igpt1 = 1, igpt2
                   iy = iy + 1
-                  igptp1 = hybrid%pgptm(igpt1, ikpt)
+                  igptp1 = mpbasis%gptm_ptr(igpt1, ikpt)
                   iqnrm1 = pqnrm(igpt1, ikpt)
                   csum = 0
                   ic = 0
@@ -888,7 +888,7 @@ CONTAINS
             igpt2 = hybrid%pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
             ix = hybrid%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
-            igptp2 = hybrid%pgptm(igpt2, 1)
+            igptp2 = mpbasis%gptm_ptr(igpt2, 1)
             q2 = MATMUL(mpbasis%gptm(:, igptp2), cell%bmat)
             qnorm2 = norm2(q2)
             iy = hybrid%nbasp + 1
@@ -896,7 +896,7 @@ CONTAINS
                iy = iy + 1
                idum = ix*(ix - 1)/2 + iy
                iqnrm1 = pqnrm(igpt1, 1)
-               igptp1 = hybrid%pgptm(igpt1, 1)
+               igptp1 = mpbasis%gptm_ptr(igpt1, 1)
                q1 = MATMUL(mpbasis%gptm(:, igptp1), cell%bmat)
                qnorm1 = norm2(q1)
                rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
@@ -934,7 +934,7 @@ CONTAINS
             igpt2 = hybrid%pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
             ix = hybrid%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
-            igptp2 = hybrid%pgptm(igpt2, 1)
+            igptp2 = mpbasis%gptm_ptr(igpt2, 1)
             qnorm2 = qnrm(iqnrm2)
             idum = ix*(ix - 1)/2 + iy
             DO itype1 = 1, atoms%ntype
@@ -992,7 +992,7 @@ CONTAINS
          DO ikpt = ikptmin, ikptmax!1,nkpt
 
             DO igpt = 1, mpbasis%ngptm(ikpt)
-               igptp = hybrid%pgptm(igpt, ikpt)
+               igptp = mpbasis%gptm_ptr(igpt, ikpt)
                q = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), cell%bmat)
                call timestart("harmonics")
                call ylm4(hybrid%lexp, q, carr2(:, igpt))
@@ -1002,14 +1002,14 @@ CONTAINS
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,hybrid%ngptm1(ikpt)
                igpt2 = hybrid%pgptm1(igpt0, ikpt)
                ix = hybrid%nbasp + igpt2
-               igptp2 = hybrid%pgptm(igpt2, ikpt)
+               igptp2 = mpbasis%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
                q2 = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp2), cell%bmat)
                y2 = CONJG(carr2(:, igpt2))
                iy = hybrid%nbasp
                DO igpt1 = 1, igpt2
                   iy = iy + 1
-                  igptp1 = hybrid%pgptm(igpt1, ikpt)
+                  igptp1 = mpbasis%gptm_ptr(igpt1, ikpt)
                   iqnrm1 = pqnrm(igpt1, ikpt)
                   q1 = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp1), cell%bmat)
                   y1 = carr2(:, igpt1)
@@ -1152,7 +1152,7 @@ CONTAINS
          !calculate IR overlap-matrix
          CALL olapm%alloc(sym%invs, mpbasis%ngptm(ikpt), mpbasis%ngptm(ikpt), 0.0)
 
-         CALL olap_pw(olapm, mpbasis%gptm(:, hybrid%pgptm(:mpbasis%ngptm(ikpt), ikpt)), mpbasis%ngptm(ikpt), atoms, cell)
+         CALL olap_pw(olapm, mpbasis%gptm(:, mpbasis%gptm_ptr(:mpbasis%ngptm(ikpt), ikpt)), mpbasis%ngptm(ikpt), atoms, cell)
 
          !         !calculate eigenvalues of olapm
          !         ALLOCATE( eval(ngptm(ikpt)),evec(ngptm(ikpt),ngptm(ikpt)) )
@@ -1557,7 +1557,7 @@ CONTAINS
 
       n = nbasm1(1)
       nn = n*(n + 1)/2
-      CALL olap_pw(olap, mpbasis%gptm(:, hybrid%pgptm(:mpbasis%ngptm(1), 1)), mpbasis%ngptm(1), atoms, cell)
+      CALL olap_pw(olap, mpbasis%gptm(:, mpbasis%gptm_ptr(:mpbasis%ngptm(1), 1)), mpbasis%ngptm(1), atoms, cell)
 
       ! Define coefficients (coeff) and their derivatives (cderiv,claplace)
       coeff = 0

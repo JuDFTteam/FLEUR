@@ -27,7 +27,7 @@ CONTAINS
       ic = 0
       DO ig1 = 1, lapw%nv(jsp)
          DO igptm = 1, mpbasis%ngptm(iq)
-            iigptm = hybrid%pgptm(igptm, iq)
+            iigptm = mpbasis%gptm_ptr(igptm, iq)
             g = lapw%gvec(:,ig1,jsp) + mpbasis%gptm(:, iigptm) - g_t
             IF (pointer(g(1), g(2), g(3)) == 0) THEN
                ic = ic + 1

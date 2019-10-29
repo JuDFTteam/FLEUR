@@ -21,7 +21,6 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  nindxm1(:,:)
       INTEGER, ALLOCATABLE   ::  ngptm1(:)
       INTEGER, ALLOCATABLE   ::  pgptm1(:,:)
-      INTEGER, ALLOCATABLE   ::  pgptm(:,:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
       INTEGER, ALLOCATABLE   ::  map(:,:)
       INTEGER, ALLOCATABLE   ::  tvec(:,:,:)

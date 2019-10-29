@@ -103,7 +103,7 @@ CONTAINS
       IF (ALLOCATED(mpbasis%ngptm)) deallocate(mpbasis%ngptm)
       IF (ALLOCATED(hybrid%ngptm1)) deallocate(hybrid%ngptm1)
       IF (ALLOCATED(hybrid%nindxm1)) deallocate(hybrid%nindxm1)
-      IF (ALLOCATED(hybrid%pgptm)) deallocate(hybrid%pgptm)
+      IF (ALLOCATED(mpbasis%gptm_ptr)) deallocate(mpbasis%gptm_ptr)
       IF (ALLOCATED(hybrid%pgptm1)) deallocate(hybrid%pgptm1)
       IF (ALLOCATED(mpbasis%gptm)) deallocate(mpbasis%gptm)
       IF (ALLOCATED(hybrid%basm1)) deallocate(hybrid%basm1)
@@ -725,14 +725,14 @@ CONTAINS
       END DO
 
       allocate(mpbasis%gptm(3,i)) ! i = gptmd
-      allocate(hybrid%pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
+      allocate(mpbasis%gptm_ptr(maxval(mpbasis%ngptm), kpts%nkptf))
 
       ! Allocate and initialize arrays needed for G vector ordering
       allocate(unsrt_pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
       allocate(length_kG(maxval(mpbasis%ngptm), kpts%nkptf))
 
       mpbasis%gptm = 0
-      hybrid%pgptm = 0
+      mpbasis%gptm_ptr = 0
       mpbasis%ngptm = 0
 
       i = 0
@@ -786,7 +786,7 @@ CONTAINS
          CALL rorderpf(ptr, length_kG(1:mpbasis%ngptm(ikpt), ikpt), mpbasis%ngptm(ikpt), divconq)
          ! rearrange old pointers
          DO igpt = 1, mpbasis%ngptm(ikpt)
-            hybrid%pgptm(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
+            mpbasis%gptm_ptr(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
          END DO
          deallocate(ptr)
       END DO
