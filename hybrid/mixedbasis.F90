@@ -747,7 +747,7 @@ CONTAINS
       integer :: x, y, z, ikpt
       integer :: g(3)
       real    :: longest_k, rdum
-      logical :: l_found_new_gpt, ldum1
+      logical :: l_found_new_gpt, l_found_kg_in_sphere
 
       allocate(hybrid%ngptm(kpts%nkptf))
 
@@ -769,12 +769,12 @@ CONTAINS
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
                   IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > hybrid%gcutm) CYCLE
-                  ldum1 = .FALSE.
+                  l_found_kg_in_sphere = .FALSE.
                   DO ikpt = 1, kpts%nkptf
                      IF (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= hybrid%gcutm) THEN
-                        IF (.NOT. ldum1) THEN
+                        IF (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
-                           ldum1 = .TRUE.
+                           l_found_kg_in_sphere = .TRUE.
                         END IF
 
                         hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
