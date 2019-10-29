@@ -127,7 +127,7 @@ CONTAINS
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      call gen_gvec(cell, kpts, mpbasis, hybrid)
+      call gen_gvec(cell, kpts, mpbasis)
 
       ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
 
@@ -664,14 +664,13 @@ CONTAINS
       END DO
    end subroutine gen_bas_fun
 
-   subroutine gen_gvec(cell, kpts, mpbasis, hybrid)
+   subroutine gen_gvec(cell, kpts, mpbasis)
       use m_types
       USE m_util, ONLY: intgrf_init, intgrf, rorderpf
       implicit NONE
       type(t_cell), intent(in)       :: cell
       type(t_kpts), intent(in)       :: kpts
       TYPE(t_mpbasis), intent(inout) :: mpbasis
-      type(t_hybrid), intent(inout)  :: hybrid
 
 
       integer :: i, n, n1, n2, divconq
