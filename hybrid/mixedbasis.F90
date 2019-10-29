@@ -68,7 +68,7 @@ CONTAINS
       INTEGER                         ::  ikpt, jspin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
       INTEGER                         ::  m, nk, x, y, z
       INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
-      REAL                            ::  rdum, rdum1, longest_k
+      REAL                            ::  rdum, rdum1
 
       LOGICAL                         ::  ldum, ldum1
 
@@ -130,48 +130,7 @@ CONTAINS
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      allocate(hybrid%ngptm(kpts%nkptf))
-
-      hybrid%ngptm = 0
-      i = 0
-      n = -1
-
-      longest_k = MAXVAL([(norm2(MATMUL(kpts%bkf(:,ikpt), cell%bmat)), ikpt=1, kpts%nkptf)])
-
-      ! a first run for the determination of the dimensions of the fields gptm,pgptm
-
-      DO
-         n = n + 1
-         ldum = .FALSE.
-         DO x = -n, n
-            n1 = n - ABS(x)
-            DO y = -n1, n1
-               n2 = n1 - ABS(y)
-               DO z = -n2, n2, MAX(2*n2, 1)
-                  g = [x, y, z]
-                  rdum = norm2(MATMUL(g, cell%bmat)) - longest_k
-                  IF (rdum >hybrid%gcutm) CYCLE
-                  ldum1 = .FALSE.
-                  DO ikpt = 1, kpts%nkptf
-                     kvec = kpts%bkf(:,ikpt)
-
-                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= hybrid%gcutm) THEN
-                        IF (.NOT. ldum1) THEN
-                           i = i + 1
-                           ldum1 = .TRUE.
-                        END IF
-
-                        hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
-                        ldum = .TRUE.
-                     END IF
-                  END DO
-               END DO
-            END DO
-         END DO
-         IF (.NOT. ldum) EXIT
-      END DO
-
-      hybrid%gptmd = i
+      call gen_gvec(cell, kpts, hybrid)
 
       allocate(hybrid%gptm(3, hybrid%gptmd))
       allocate(hybrid%pgptm(maxval(hybrid%ngptm), kpts%nkptf))
@@ -201,7 +160,7 @@ CONTAINS
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  rdum = norm2(MATMUL(g, cell%bmat)) - longest_k
+                  rdum = norm2(MATMUL(g, cell%bmat)) - MAXVAL([(norm2(MATMUL(kpts%bkf(:,ikpt), cell%bmat)), ikpt=1, kpts%nkptf)]) !longest_k
                   IF (rdum > hybrid%gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
@@ -245,7 +204,7 @@ CONTAINS
       deallocate(unsrt_pgptm)
       deallocate(length_kG)
 
-      ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm1
+      ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
 
       ! first run to determine dimension of pgptm1
       allocate(hybrid%ngptm1(kpts%nkptf))
@@ -255,7 +214,7 @@ CONTAINS
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
             rdum = norm2(MATMUL(kvec + g, cell%bmat))
-            IF (rdum <= hybrid%gcutm1) THEN
+            IF (rdum <= hybrid%gcutm) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
             END IF
          END DO
@@ -276,7 +235,7 @@ CONTAINS
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
             rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
-            IF (rdum <= hybrid%gcutm1**2) THEN
+            IF (rdum <= hybrid%gcutm**2) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
                unsrt_pgptm(hybrid%ngptm1(ikpt), ikpt) = igpt
                length_kG(hybrid%ngptm1(ikpt), ikpt) = rdum
@@ -304,7 +263,7 @@ CONTAINS
          WRITE (6, '(/A)') 'Mixed basis'
          WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', hybrid%gptmd
          WRITE (6, *)
-         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm1/2*input%rkmax):'
+         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm/2*input%rkmax):'
          WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(hybrid%ngptm)
          WRITE (6, *)
          WRITE (6, *)
@@ -782,10 +741,60 @@ CONTAINS
       END DO
    end subroutine gen_bas_fun
 
-   subroutine gen_gvec()
+   subroutine gen_gvec(cell, kpts, hybrid)
+      use m_types
       implicit NONE
+      type(t_cell), intent(in)       :: cell
+      type(t_kpts), intent(in)       :: kpts
+      type(t_hybrid), intent(inout)  :: hybrid
 
 
-   subroutine gen_gvec()
+      integer :: i, n, n1, n2
+      integer :: x, y, z, ikpt
+      integer :: g(3)
+      real    :: longest_k, rdum
+      logical :: ldum, ldum1
 
+      allocate(hybrid%ngptm(kpts%nkptf))
+
+      hybrid%ngptm = 0
+      i = 0
+      n = -1
+
+      longest_k = MAXVAL([(norm2(MATMUL(kpts%bkf(:,ikpt), cell%bmat)), ikpt=1, kpts%nkptf)])
+
+      ! a first run for the determination of the dimensions of the fields gptm,pgptm
+
+      DO
+         n = n + 1
+         ldum = .FALSE.
+         DO x = -n, n
+            n1 = n - ABS(x)
+            DO y = -n1, n1
+               n2 = n1 - ABS(y)
+               DO z = -n2, n2, MAX(2*n2, 1)
+                  g = [x, y, z]
+                  rdum = norm2(MATMUL(g, cell%bmat)) - longest_k
+                  IF (rdum >hybrid%gcutm) CYCLE
+                  ldum1 = .FALSE.
+                  DO ikpt = 1, kpts%nkptf
+                     IF (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= hybrid%gcutm) THEN
+                        IF (.NOT. ldum1) THEN
+                           i = i + 1
+                           ldum1 = .TRUE.
+                        END IF
+
+                        hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
+                        ldum = .TRUE.
+                     END IF
+                  END DO
+               END DO
+            END DO
+         END DO
+         IF (.NOT. ldum) EXIT
+      END DO
+
+      hybrid%gptmd = i
+
+   end subroutine gen_gvec
 END MODULE m_mixedbasis

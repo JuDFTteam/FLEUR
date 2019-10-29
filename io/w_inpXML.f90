@@ -198,7 +198,7 @@ SUBROUTINE w_inpXML(&
 
    IF (l_explicit.OR.hybrid%l_hybrid) THEN
       155 FORMAT('      <prodBasis gcutm="',f0.8,'" tolerance="',f0.8,'" ewaldlambda="',i0,'" lexp="',i0,'" bands="',i0,'"/>')
-      WRITE (fileNum,155) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+      WRITE (fileNum,155) hybrid%gcutm,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
    END IF
 
    IF (l_nocoOpt.OR.l_explicit) THEN

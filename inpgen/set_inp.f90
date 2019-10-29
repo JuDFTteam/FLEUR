@@ -292,7 +292,7 @@
       ENDIF
 
 !HF   added for HF and hybrid functionals
-      hybrid%gcutm1       = input%rkmax - 0.5
+      hybrid%gcutm       = input%rkmax - 0.5
       hybrid%tolerance1   = 1e-4
       taual_hyb   = atoms%taual
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
@@ -327,7 +327,7 @@
       stars%gmax    = real(NINT(stars%gmax    * 10  ) / 10.)
       input%rkmax   = real(NINT(input%rkmax   * 10  ) / 10.)
       xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
-      hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
+      hybrid%gcutm = real(NINT(hybrid%gcutm * 10  ) / 10.)
       IF (input%film) THEN
        vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
        dtild = real(NINT(dtild*100)/100.)

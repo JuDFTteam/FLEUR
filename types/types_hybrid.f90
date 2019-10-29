@@ -29,7 +29,7 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  map(:,:)
       INTEGER, ALLOCATABLE   ::  tvec(:,:,:)
       INTEGER, ALLOCATABLE   ::  nbasm(:)
-      REAL                   ::  gcutm1
+      REAL                   ::  gcutm
       REAL                   ::  tolerance1  !only read in
       REAL, ALLOCATABLE      ::  basm1(:,:,:,:)
       COMPLEX, ALLOCATABLE   ::  d_wgn2(:,:,:,:)
