@@ -68,7 +68,7 @@ CONTAINS
       INTEGER                         ::  ikpt, jspin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
       INTEGER                         ::  m, nk, x, y, z
       INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
-      REAL                            ::  gcutm, rdum, rdum1, longest_k
+      REAL                            ::  rdum, rdum1, longest_k
 
       LOGICAL                         ::  ldum, ldum1
 
@@ -130,7 +130,6 @@ CONTAINS
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      gcutm = hybrid%gcutm1
       allocate(hybrid%ngptm(kpts%nkptf))
 
       hybrid%ngptm = 0
@@ -151,12 +150,12 @@ CONTAINS
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
                   rdum = norm2(MATMUL(g, cell%bmat)) - longest_k
-                  IF (rdum > gcutm) CYCLE
+                  IF (rdum >hybrid%gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
                      kvec = kpts%bkf(:,ikpt)
 
-                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= gcutm) THEN
+                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= hybrid%gcutm) THEN
                         IF (.NOT. ldum1) THEN
                            i = i + 1
                            ldum1 = .TRUE.
@@ -203,12 +202,12 @@ CONTAINS
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
                   rdum = norm2(MATMUL(g, cell%bmat)) - longest_k
-                  IF (rdum > gcutm) CYCLE
+                  IF (rdum > hybrid%gcutm) CYCLE
                   ldum1 = .FALSE.
                   DO ikpt = 1, kpts%nkptf
                      kvec = kpts%bkf(:,ikpt)
 
-                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= gcutm) THEN
+                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= hybrid%gcutm) THEN
                         IF (.NOT. ldum1) THEN
                            i = i + 1
                            hybrid%gptm(:,i) = g
@@ -782,5 +781,11 @@ CONTAINS
          END DO
       END DO
    end subroutine gen_bas_fun
+
+   subroutine gen_gvec()
+      implicit NONE
+
+
+   subroutine gen_gvec()
 
 END MODULE m_mixedbasis
