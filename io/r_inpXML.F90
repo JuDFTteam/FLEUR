@@ -15,7 +15,7 @@ MODULE m_rinpXML
 CONTAINS
    SUBROUTINE r_inpXML(&
       atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
-      cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
+      cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,enpara,coreSpecInput,wann,&
       noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
       xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
       l_kpts)
@@ -50,6 +50,7 @@ CONTAINS
       TYPE(t_obsolete),INTENT(INOUT) :: obsolete
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
+      TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_banddos),INTENT(INOUT)  :: banddos
@@ -740,13 +741,13 @@ CONTAINS
       !   END IF
 
       ! Read in optional E-Field parameters
-     
+
       xPathA = '/fleurInput/calculationSetup/fields'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       field%b_field=0.0
       field%l_b_field=.FALSE.
       field%efield%sigma=0.0
-      
+
 
       IF (numberNodes.EQ.1) THEN
          IF (xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
@@ -1228,7 +1229,7 @@ CONTAINS
       ENDIF
 
 
-      ! LibXCID 
+      ! LibXCID
       IF (xmlGetNumberOfNodes(xPathA) == 1) THEN
 #ifdef CPP_LIBXC
          vxc_id_x=evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@exchange'))
@@ -1239,7 +1240,7 @@ CONTAINS
          ELSE
             exc_id_x = vxc_id_x
          ENDIF
-         
+
          IF(xmlGetNumberOfNodes(TRIM(xPathA) // '/@exc_correlation') == 1) THEN
             exc_id_c = evaluateFirstOnly(xmlGetAttributeValue(xPathA // '/@exc_correlation'))
          ELSE
@@ -1248,7 +1249,7 @@ CONTAINS
 #else
          CALL judft_error("To use libxc functionals you have to compile with libXC support")
 #endif
-      ! LibXCName 
+      ! LibXCName
       ELSEIF (xmlGetNumberOfNodes(TRIM(xPathB)) == 1) THEN
 #ifdef CPP_LIBXC
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@exchange')))
@@ -1256,14 +1257,14 @@ CONTAINS
 
          valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@correlation')))
          vxc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
-         
+
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_exchange') == 1) THEN
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_exchange')))
             exc_id_x =  xc_f03_functional_get_number(TRIM(valueString))
          ELSE
             exc_id_x = vxc_id_x
          ENDIF
-         
+
          IF(xmlGetNumberOfNodes(TRIM(xPathB) // '/@etot_correlation') == 1) THEN
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(xPathB) // '/@etot_correlation')))
             exc_id_c =  xc_f03_functional_get_number(TRIM(valueString))
@@ -1311,7 +1312,7 @@ CONTAINS
          obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
       END IF
 
-      hybrid%gcutm = input%rkmax - 0.5
+      mpbasis%gcutm = input%rkmax - 0.5
       hybrid%tolerance1 = 1.0e-4
       hybrid%ewaldlambda = 3
       hybrid%lexp = 16
@@ -1321,7 +1322,7 @@ CONTAINS
       IF (numberNodes==0) THEN
          IF (hybrid%l_hybrid) CALL judft_error("Mixed product basis input missing in inp.xml")
       ELSE
-         hybrid%gcutm=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
+         mpbasis%gcutm=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
          hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
          hybrid%ewaldlambda=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
          hybrid%lexp=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
@@ -1408,7 +1409,7 @@ CONTAINS
          IF (numberNodes==1) THEN
             vcaSpecies   = evaluateFirstOnly(TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vca_charge'))))
          ENDIF
-       
+
          DO iType = 1, atoms%ntype
             WRITE(xPathA,*) '/fleurInput/atomGroups/atomGroup[',iType,']/@species'
             valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA)))))
@@ -2230,7 +2231,7 @@ CONTAINS
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       !CALL xmlFreeResources()
-      
+
       !WRITE(*,*) 'Reading of inp.xml file finished'
 
       DEALLOCATE(speciesNLO)

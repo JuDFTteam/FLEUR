@@ -8,7 +8,7 @@
       CONTAINS
         SUBROUTINE fleur_init(mpi,&
              input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-             sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,hybrid,&
+             sliceplot,banddos,obsolete,enpara,xcpot,results,kpts,mpbasis,hybrid,&
              oneD,coreSpecInput,wann,l_opti)
           USE m_types
           USE m_judft
@@ -68,6 +68,7 @@
           CLASS(t_xcpot),ALLOCATABLE,INTENT(OUT):: xcpot
           TYPE(t_results)  ,INTENT(OUT):: results
           TYPE(t_kpts)     ,INTENT(OUT):: kpts
+          TYPE(t_mpbasis), intent(inout):: mpbasis
           TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
           TYPE(t_oneD)     ,INTENT(OUT):: oneD
           TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
@@ -190,7 +191,7 @@
                 CALL timestart("r_inpXML")
                 CALL r_inpXML(&
                      atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
-                     cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,coreSpecInput,wann,&
+                     cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,enpara,coreSpecInput,wann,&
                      noel,namex,relcor,a1,a2,a3,dtild,xmlElectronStates,&
                      xmlPrintCoreStates,xmlCoreOccs,atomTypeSpecies,speciesRepAtomType,&
                      l_kpts)
@@ -214,7 +215,7 @@
                 numSpecies = SIZE(speciesRepAtomType)
                 CALL w_inpXML(&
                               atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-                              cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
+                              cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                               noel,namex,relcor,a1,a2,a3,dtild,input%comment,&
                               xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                               atomTypeSpecies,speciesRepAtomType,.TRUE.,filename,&
@@ -236,7 +237,7 @@
           ELSE ! else branch of "IF (input%l_inpXML) THEN"
              CALL fleur_init_old(mpi,&
                   input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-                  sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
+                  sliceplot,banddos,obsolete,enpara,xcpot,kpts,mpbasis,hybrid,&
                   oneD,coreSpecInput,l_opti)
           END IF ! end of else branch of "IF (input%l_inpXML) THEN"
           !

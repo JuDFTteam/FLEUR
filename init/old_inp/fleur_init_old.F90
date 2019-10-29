@@ -9,7 +9,7 @@ CONTAINS
   !> Collection of code for old-style inp-file treatment
   SUBROUTINE fleur_init_old(mpi,&
        input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-       sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
+       sliceplot,banddos,obsolete,enpara,xcpot,kpts,mpbasis,hybrid,&
        oneD,coreSpecInput,l_opti)
     USE m_types
     USE m_judft
@@ -38,10 +38,11 @@ CONTAINS
     TYPE(t_vacuum)   ,INTENT(OUT)  :: vacuum
     TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
     TYPE(t_banddos)  ,INTENT(OUT)  :: banddos
-    TYPE(t_obsolete) ,INTENT(OUT)  :: obsolete 
+    TYPE(t_obsolete) ,INTENT(OUT)  :: obsolete
     TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
     CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE  :: xcpot
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
+    TYPE(t_mpbasis), intent(inout) :: mpbasis
     TYPE(t_hybrid)   ,INTENT(OUT)  :: hybrid
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
     TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
@@ -78,7 +79,7 @@ CONTAINS
     relcor = '            '
 
     CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
-         obsolete,kpts,oneD,hybrid)
+         obsolete,kpts,oneD,mpbasis,hybrid)
     stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
     stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
     !-odim
@@ -165,7 +166,7 @@ CONTAINS
        !-t3e
        CALL inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
             cell,sliceplot,noco,&
-            stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
+            stars,oneD,mpbasis,hybrid,kpts,a1,a2,a3,namex,relcor)
        !
        IF (xcpot%needs_grad()) THEN
           ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
@@ -247,7 +248,7 @@ CONTAINS
              hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
              hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
           END DO
-          hybrid%gcutm = input%rkmax - 0.5
+          mpbasis%gcutm = input%rkmax - 0.5
           hybrid%tolerance1 = 1.0e-4
           hybrid%ewaldlambda = 3
           hybrid%lexp = 16
@@ -268,7 +269,7 @@ CONTAINS
           sym%symSpecType = 3
           CALL w_inpXML(&
                atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
+               cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                noel,namex,relcor,a1,a2,a3,cell%amat(3,3),input%comment,&
                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&

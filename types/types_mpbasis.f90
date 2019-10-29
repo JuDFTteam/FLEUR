@@ -4,6 +4,7 @@ module m_types_mpbasis
    type t_mpbasis
       INTEGER, ALLOCATABLE   ::  gptm(:,:) ! (3, num_gpts)
       INTEGER, ALLOCATABLE   ::  ngptm(:)
+      REAL                   ::  gcutm
    CONTAINS
       procedure :: num_gpts => mpbasis_num_gpts
    end type t_mpbasis
