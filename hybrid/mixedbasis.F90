@@ -724,7 +724,7 @@ CONTAINS
          IF (.NOT. l_found_new_gpt) EXIT
       END DO
 
-      allocate(mpbasis%gptm(3, mpbasis%num_gpts()))
+      allocate(mpbasis%gptm(3,i)) ! i = gptmd
       allocate(hybrid%pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
 
       ! Allocate and initialize arrays needed for G vector ordering
