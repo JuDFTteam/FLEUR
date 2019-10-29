@@ -9,7 +9,7 @@ MODULE m_rdmft
 CONTAINS
 
 SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
-                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
+                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpbasis,hybrid,results,coreSpecInput,archiveType,outDen)
 
    USE m_types
    USE m_juDFT
@@ -62,6 +62,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_noco),          INTENT(INOUT) :: noco
    TYPE(t_xcpot_inbuild), INTENT(INOUT) :: xcpot
+   TYPE(t_mpbasis),       intent(inout) :: mpbasis
    TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
@@ -339,11 +340,11 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
 !   CALL open_hybrid_io1(DIMENSION,sym%invs)
 
-   CALL mixedbasis(atoms,kpts,input,cell,xcpot,hybrid,enpara,mpi,vTot)
+   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpbasis,hybrid,enpara,mpi,vTot)
 
-   CALL open_hybrid_io2(hybrid,DIMENSION,atoms,sym%invs)
+   CALL open_hybrid_io2(mpbasis, hybrid,DIMENSION,atoms,sym%invs)
 
-   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,hybrid,xcpot)
+   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpbasis,hybrid,xcpot)
 
    CALL hf_init(hybrid,atoms,input,DIMENSION,hybdat)
 
@@ -476,7 +477,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
-            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,hybrid,cell,dimension,input,jspin,hybdat,mnobd,lapw,&
+            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpbasis,hybrid,cell,dimension,input,jspin,hybdat,mnobd,lapw,&
                                      eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nsest,indx_sest,&
                                      mpi,exMat)
             CALL exchange_vccv1(ikpt,atoms,hybrid,hybdat,dimension,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)

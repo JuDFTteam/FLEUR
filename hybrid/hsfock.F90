@@ -44,7 +44,7 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, hybrid, lapw, dimension, kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
+   SUBROUTINE hsfock(nk, atoms, mpbasis, hybrid, lapw, dimension, kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
                      results, it, mnobd, xcpot, mpi)
 
       USE m_types
@@ -69,6 +69,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw
+      TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_results), INTENT(INOUT) :: results
@@ -165,7 +166,7 @@ CONTAINS
          ! calculate contribution from valence electrons to the
          ! HF exchange
          ex%l_real = sym%invs
-         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
+         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpbasis, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
                                   eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, ex)
 

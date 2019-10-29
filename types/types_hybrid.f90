@@ -15,15 +15,12 @@ MODULE m_types_hybrid
       INTEGER                ::  max_indx_p_1
       INTEGER                ::  maxgptm1
       INTEGER                ::  maxlmindx
-      INTEGER                ::  gptmd
       INTEGER, ALLOCATABLE   ::  num_radfun_per_l(:,:)
       INTEGER, ALLOCATABLE   ::  select1(:,:)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  nindxm1(:,:)
-      INTEGER, ALLOCATABLE   ::  gptm(:,:)
       INTEGER, ALLOCATABLE   ::  ngptm1(:)
       INTEGER, ALLOCATABLE   ::  pgptm1(:,:)
-      INTEGER, ALLOCATABLE   ::  ngptm(:)
       INTEGER, ALLOCATABLE   ::  pgptm(:,:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
       INTEGER, ALLOCATABLE   ::  map(:,:)
@@ -38,6 +35,7 @@ MODULE m_types_hybrid
    CONTAINS
       procedure :: set_num_radfun_per_l => set_num_radfun_per_l_hybrid
    END TYPE t_hybrid
+
 
    TYPE t_prodtype
       INTEGER, ALLOCATABLE :: l1(:,:,:)

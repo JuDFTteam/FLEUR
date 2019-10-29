@@ -38,7 +38,7 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, hybrid, enpara, mpi, v)
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v)
 
       USE m_judft
       USE m_loddop, ONLY: loddop
@@ -52,6 +52,7 @@ CONTAINS
 
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
+      TYPE(t_mpbasis), intent(inout)  :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_input), INTENT(IN)    :: input
@@ -99,12 +100,12 @@ CONTAINS
       IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version", calledby='mixedbasis')
 
       ! Deallocate arrays which might have been allocated in a previous run of this subroutine
-      IF (ALLOCATED(hybrid%ngptm)) deallocate(hybrid%ngptm)
+      IF (ALLOCATED(mpbasis%ngptm)) deallocate(mpbasis%ngptm)
       IF (ALLOCATED(hybrid%ngptm1)) deallocate(hybrid%ngptm1)
       IF (ALLOCATED(hybrid%nindxm1)) deallocate(hybrid%nindxm1)
       IF (ALLOCATED(hybrid%pgptm)) deallocate(hybrid%pgptm)
       IF (ALLOCATED(hybrid%pgptm1)) deallocate(hybrid%pgptm1)
-      IF (ALLOCATED(hybrid%gptm)) deallocate(hybrid%gptm)
+      IF (ALLOCATED(mpbasis%gptm)) deallocate(mpbasis%gptm)
       IF (ALLOCATED(hybrid%basm1)) deallocate(hybrid%basm1)
 
       CALL usdus%init(atoms, input%jspins)
@@ -126,15 +127,15 @@ CONTAINS
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      call gen_gvec(cell, kpts, hybrid)
+      call gen_gvec(cell, kpts, mpbasis, hybrid)
 
       ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
 
       ! first run to determine dimension of pgptm1
       allocate(hybrid%ngptm1(kpts%nkptf))
       hybrid%ngptm1 = 0
-      DO igpt = 1, hybrid%gptmd
-         g = hybrid%gptm(:,igpt)
+      DO igpt = 1, mpbasis%gptmd
+         g = mpbasis%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
             rdum = norm2(MATMUL(kvec + g, cell%bmat))
@@ -154,8 +155,8 @@ CONTAINS
       allocate(length_kG(hybrid%maxgptm1, kpts%nkptf))
       length_kG = 0
       unsrt_pgptm = 0
-      DO igpt = 1, hybrid%gptmd
-         g = hybrid%gptm(:,igpt)
+      DO igpt = 1, mpbasis%gptmd
+         g = mpbasis%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
             rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
@@ -185,10 +186,10 @@ CONTAINS
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(/A)') 'Mixed basis'
-         WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', hybrid%gptmd
+         WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpbasis%gptmd
          WRITE (6, *)
          WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm/2*input%rkmax):'
-         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(hybrid%ngptm)
+         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
          WRITE (6, *)
          WRITE (6, *)
          WRITE (6, '(3x,A)') 'IR Plane-wave basis for non-local exchange potential:'
@@ -574,9 +575,9 @@ CONTAINS
             END DO
          END DO
       END DO
-      hybrid%maxbasm1 = hybrid%nbasp + maxval(hybrid%ngptm)
+      hybrid%maxbasm1 = hybrid%nbasp + maxval(mpbasis%ngptm)
       DO nk = 1, kpts%nkptf
-         hybrid%nbasm(nk) = hybrid%nbasp + hybrid%ngptm(nk)
+         hybrid%nbasm(nk) = hybrid%nbasp + mpbasis%ngptm(nk)
       END DO
 
       hybrid%maxlmindx = MAXVAL([(SUM([(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
@@ -665,12 +666,13 @@ CONTAINS
       END DO
    end subroutine gen_bas_fun
 
-   subroutine gen_gvec(cell, kpts, hybrid)
+   subroutine gen_gvec(cell, kpts, mpbasis, hybrid)
       use m_types
       USE m_util, ONLY: intgrf_init, intgrf, rorderpf
       implicit NONE
       type(t_cell), intent(in)       :: cell
       type(t_kpts), intent(in)       :: kpts
+      TYPE(t_mpbasis), intent(inout) :: mpbasis
       type(t_hybrid), intent(inout)  :: hybrid
 
 
@@ -684,9 +686,9 @@ CONTAINS
       REAL, ALLOCATABLE               ::  length_kg(:,:) ! length of the vectors k + G
       INTEGER, ALLOCATABLE            ::  ptr(:)
 
-      allocate(hybrid%ngptm(kpts%nkptf))
+      allocate(mpbasis%ngptm(kpts%nkptf))
 
-      hybrid%ngptm = 0
+      mpbasis%ngptm = 0
       i = 0
       n = -1
 
@@ -712,7 +714,7 @@ CONTAINS
                            l_found_kg_in_sphere = .TRUE.
                         END IF
 
-                        hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
+                        mpbasis%ngptm(ikpt) = mpbasis%ngptm(ikpt) + 1
                         l_found_new_gpt = .TRUE.
                      END IF
                   END DO ! k-loop
@@ -722,17 +724,17 @@ CONTAINS
          IF (.NOT. l_found_new_gpt) EXIT
       END DO
 
-      hybrid%gptmd = i
-      allocate(hybrid%gptm(3, hybrid%gptmd))
-      allocate(hybrid%pgptm(maxval(hybrid%ngptm), kpts%nkptf))
+      mpbasis%gptmd = i
+      allocate(mpbasis%gptm(3, mpbasis%gptmd))
+      allocate(hybrid%pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
 
       ! Allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(maxval(hybrid%ngptm), kpts%nkptf))
-      allocate(length_kG(maxval(hybrid%ngptm), kpts%nkptf))
+      allocate(unsrt_pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
+      allocate(length_kG(maxval(mpbasis%ngptm), kpts%nkptf))
 
-      hybrid%gptm = 0
+      mpbasis%gptm = 0
       hybrid%pgptm = 0
-      hybrid%ngptm = 0
+      mpbasis%ngptm = 0
 
       i = 0
       n = -1
@@ -757,17 +759,17 @@ CONTAINS
                      IF (norm2(MATMUL(kvec + g, cell%bmat)) <= hybrid%gcutm) THEN
                         IF (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
-                           hybrid%gptm(:,i) = g
+                           mpbasis%gptm(:,i) = g
                            l_found_kg_in_sphere = .TRUE.
                         END IF
 
-                        hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
+                        mpbasis%ngptm(ikpt) = mpbasis%ngptm(ikpt) + 1
                         l_found_new_gpt = .TRUE.
 
                         ! Position of the vector is saved as pointer
-                        unsrt_pgptm(hybrid%ngptm(ikpt), ikpt) = i
+                        unsrt_pgptm(mpbasis%ngptm(ikpt), ikpt) = i
                         ! Save length of vector k + G for array sorting
-                        length_kG(hybrid%ngptm(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
+                        length_kG(mpbasis%ngptm(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
                      END IF
                   END DO
                END DO
@@ -778,13 +780,13 @@ CONTAINS
 
       ! Sort pointers in array, so that shortest |k+G| comes first
       DO ikpt = 1, kpts%nkptf
-         allocate(ptr(hybrid%ngptm(ikpt)))
+         allocate(ptr(mpbasis%ngptm(ikpt)))
          ! Divide and conquer algorithm for arrays > 1000 entries
-         divconq = MAX(0, INT(1.443*LOG(0.001*hybrid%ngptm(ikpt))))
+         divconq = MAX(0, INT(1.443*LOG(0.001*mpbasis%ngptm(ikpt))))
          ! create pointers which correspond to a sorted array
-         CALL rorderpf(ptr, length_kG(1:hybrid%ngptm(ikpt), ikpt), hybrid%ngptm(ikpt), divconq)
+         CALL rorderpf(ptr, length_kG(1:mpbasis%ngptm(ikpt), ikpt), mpbasis%ngptm(ikpt), divconq)
          ! rearrange old pointers
-         DO igpt = 1, hybrid%ngptm(ikpt)
+         DO igpt = 1, mpbasis%ngptm(ikpt)
             hybrid%pgptm(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
          END DO
          deallocate(ptr)

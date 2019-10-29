@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id, hybrid, kpts, atoms, input, DIMENSION, mpi, noco, cell, oneD, &
+   SUBROUTINE calc_hybrid(eig_id, mpbasis, hybrid, kpts, atoms, input, DIMENSION, mpi, noco, cell, oneD, &
                           enpara, results, sym, xcpot, v, iterHF)
 
       USE m_types
@@ -27,6 +27,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_dimension), INTENT(IN)    :: DIMENSION
       TYPE(t_oneD), INTENT(IN)    :: oneD
+      type(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
@@ -105,12 +106,12 @@ CONTAINS
 
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
-         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, hybrid, enpara, mpi, v)
+         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v)
          CALL timestop("generation of mixed basis")
 
-         CALL open_hybrid_io2(hybrid, DIMENSION, atoms, sym%invs)
+         CALL open_hybrid_io2(mpbasis, hybrid, DIMENSION, atoms, sym%invs)
 
-         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, hybrid, xcpot)
+         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpbasis, hybrid, xcpot)
 
          CALL hf_init(hybrid, atoms, input, DIMENSION, hybdat)
          CALL timestop("Preparation for Hybrid functionals")
@@ -124,7 +125,7 @@ CONTAINS
             DO nk = 1, kpts%nkpt
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
                CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, l_zref)
-               CALL hsfock(nk, atoms, hybrid, lapw, DIMENSION, kpts, jsp, input, hybdat, eig_irr, sym, cell, &
+               CALL hsfock(nk, atoms, mpbasis, hybrid, lapw, DIMENSION, kpts, jsp, input, hybdat, eig_irr, sym, cell, &
                            noco, results, iterHF, MAXVAL(hybrid%nobd), xcpot, mpi)
             END DO
          END DO

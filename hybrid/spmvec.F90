@@ -4,7 +4,7 @@ CONTAINS
    !Note this module contains a real/complex version of spmvec
 
    SUBROUTINE spmvec_invs(&
-  &           atoms, hybrid,&
+  &           atoms, mpbasis, hybrid,&
   &           hybdat, ikpt, kpts, cell,&
   &           coulomb_mt1, coulomb_mt2, coulomb_mt3,&
   &           coulomb_mtir, vecin,&
@@ -16,6 +16,7 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
+      TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_kpts), INTENT(IN)     :: kpts
@@ -134,7 +135,7 @@ CONTAINS
       ! compute vecout for the index-range from ibasm+1:nbasm
 
       indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
-     &                                      itype=1, atoms%ntype)/)) + hybrid%ngptm(ikpt)
+     &                                      itype=1, atoms%ntype)/)) + mpbasis%ngptm(ikpt)
       CALL dspmv('U', indx1, 1.0, coulomb_mtir, vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + 1:), 1)
 
       iatom = 0
@@ -209,7 +210,7 @@ CONTAINS
    END SUBROUTINE spmvec_invs
 
    SUBROUTINE spmvec_noinvs(&
-    &           atoms, hybrid,&
+    &           atoms, mpbasis, hybrid,&
     &           hybdat, ikpt, kpts, cell,&
     &           coulomb_mt1, coulomb_mt2, coulomb_mt3,&
     &           coulomb_mtir, vecin,&
@@ -221,6 +222,7 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
+      TYPE(t_mpbasis), INTENT(IN)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_kpts), INTENT(IN)     :: kpts
@@ -341,7 +343,7 @@ CONTAINS
       ! compute vecout for the index-range from ibasm+1:nbasm
 
       indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
-     &                                      itype=1, atoms%ntype)/)) + hybrid%ngptm(ikpt)
+     &                                      itype=1, atoms%ntype)/)) + mpbasis%ngptm(ikpt)
       call zhpmv('U', indx1, (1.0, 0.0), coulomb_mtir, vecinhlp(ibasm + 1), 1, (0.0, 0.0), vecout(ibasm + 1), 1)
 
       iatom = 0

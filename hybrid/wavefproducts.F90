@@ -113,7 +113,7 @@ CONTAINS
          END DO
       END DO
 
-      nbasm_ir = maxval(hybrid%ngptm)
+      nbasm_ir = maxval(mpbasis%ngptm)
       ALLOCATE (cprod_ir(bandf - bandi + 1, mnobd, nbasm_ir), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts: failure allocation cprod_ir'
       cprod_ir = 0
@@ -136,9 +136,9 @@ CONTAINS
 
       CALL timestart("wavefproducts_noinv IR")
 
-      DO igpt = 1, hybrid%ngptm(iq)
+      DO igpt = 1, mpbasis%ngptm(iq)
          igptp = hybrid%pgptm(igpt, iq)
-         ghelp = hybrid%gptm(:, igptp) - g_t(:)
+         ghelp = mpbasis%gptm(:, igptp) - g_t(:)
          DO i = 1, lapw%nv(jsp)
             gsum(:) = ghelp + gpt_nk(:, i)
             IF (all(abs(gsum) <= hybdat%pntgptd)) THEN
@@ -260,7 +260,7 @@ CONTAINS
       CALL timestop("wavefproducts_noinv")
 
       ic = nbasm_mt
-      DO igpt = 1, hybrid%ngptm(iq)
+      DO igpt = 1, mpbasis%ngptm(iq)
          ic = ic + 1
          DO ibando = 1, mnobd
             DO iband = bandi, bandf
@@ -355,7 +355,7 @@ CONTAINS
       svol = sqrt(cell%omtil)
       sr2 = sqrt(2.0)
 
-      nbasm_ir = maxval(hybrid%ngptm)
+      nbasm_ir = maxval(mpbasis%ngptm)
       ALLOCATE (cprod_ir(bandf - bandi + 1, mnobd, nbasm_ir))
       cprod_ir = 0
       gpt_nk(1, :) = lapw%k1(:lapw%nv(jsp), jsp)
@@ -391,9 +391,9 @@ CONTAINS
       call read_z(z_nk, kpts%nkptf*(jsp - 1) + nk)
       call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
 
-      DO igpt = 1, hybrid%ngptm(iq)
+      DO igpt = 1, mpbasis%ngptm(iq)
          igptp = hybrid%pgptm(igpt, iq)
-         ghelp = hybrid%gptm(:, igptp) - g_t(:)
+         ghelp = mpbasis%gptm(:, igptp) - g_t(:)
          DO i = 1, lapw%nv(jsp)
             gsum(:) = ghelp + gpt_nk(:, i)
             IF (all(abs(gsum) <= hybdat%pntgptd)) THEN
@@ -1184,7 +1184,7 @@ CONTAINS
       END DO  !itype
 
       ic = nbasm_mt
-      DO igpt = 1, hybrid%ngptm(iq)
+      DO igpt = 1, mpbasis%ngptm(iq)
          ic = ic + 1
          DO ibando = 1, mnobd
             DO iband = bandi, bandf
@@ -1285,7 +1285,7 @@ CONTAINS
       svol = sqrt(cell%omtil)
       sr2 = sqrt(2.0)
 
-      nbasm_ir = maxval(hybrid%ngptm)
+      nbasm_ir = maxval(mpbasis%ngptm)
 
       !
       ! compute k+q point for q (iq) in EIBZ(k)
@@ -1323,13 +1323,13 @@ CONTAINS
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
      &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(1, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(1, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
       g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(2, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(2, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
       g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(3, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(3, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation pointer'
@@ -1362,11 +1362,11 @@ CONTAINS
       pointer = 0
       ic = 0
       DO ig1 = 1, lapw%nv(jsp)
-         DO igptm = 1, hybrid%ngptm(iq)
+         DO igptm = 1, mpbasis%ngptm(iq)
             iigptm = hybrid%pgptm(igptm, iq)
-            g(1) = lapw%k1(ig1, jsp) + hybrid%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + hybrid%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + hybrid%gptm(3, iigptm) - g_t(3)
+            g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
+            g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
+            g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
             IF (pointer(g(1), g(2), g(3)) == 0) THEN
                ic = ic + 1
                gpt0(:, ic) = g
@@ -1399,15 +1399,15 @@ CONTAINS
 
       call timestart("hybrid gptm")
       ic = nbasm_mt
-      DO igptm = 1, hybrid%ngptm(iq)
+      DO igptm = 1, mpbasis%ngptm(iq)
          rarr2 = 0
          ic = ic + 1
          iigptm = hybrid%pgptm(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g(1) = lapw%k1(ig1, jsp) + hybrid%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + hybrid%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + hybrid%gptm(3, iigptm) - g_t(3)
+            g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
+            g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
+            g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
 
             ig2 = pointer(g(1), g(2), g(3))
 
@@ -2297,7 +2297,7 @@ CONTAINS
       svol = sqrt(cell%omtil)
       s2 = sqrt(2.0)
 
-      nbasm_ir = maxval(hybrid%ngptm)
+      nbasm_ir = maxval(mpbasis%ngptm)
 
       !
       ! compute k+q point for given q point in EIBZ(k)
@@ -2334,13 +2334,13 @@ CONTAINS
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
      &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(1, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(1, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
       g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(2, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(2, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
       g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(hybrid%gptm(3, hybrid%pgptm(:hybrid%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%gptm(3, hybrid%pgptm(:mpbasis%ngptm(iq), iq)))) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_noinv2: error allocation pointer'
@@ -2372,11 +2372,11 @@ CONTAINS
       pointer = 0
       ic = 0
       DO ig1 = 1, lapw%nv(jsp)
-         DO igptm = 1, hybrid%ngptm(iq)
+         DO igptm = 1, mpbasis%ngptm(iq)
             iigptm = hybrid%pgptm(igptm, iq)
-            g(1) = lapw%k1(ig1, jsp) + hybrid%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + hybrid%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + hybrid%gptm(3, iigptm) - g_t(3)
+            g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
+            g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
+            g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
             IF (pointer(g(1), g(2), g(3)) == 0) THEN
                ic = ic + 1
                gpt0(:, ic) = g
@@ -2408,15 +2408,15 @@ CONTAINS
 
       call timestart("hybrid gptm")
       ic = nbasm_mt
-      DO igptm = 1, hybrid%ngptm(iq)
+      DO igptm = 1, mpbasis%ngptm(iq)
          carr2 = 0
          ic = ic + 1
          iigptm = hybrid%pgptm(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g(1) = lapw%k1(ig1, jsp) + hybrid%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + hybrid%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + hybrid%gptm(3, iigptm) - g_t(3)
+            g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
+            g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
+            g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
 
             ig2 = pointer(g(1), g(2), g(3))
 

@@ -536,7 +536,7 @@ CONTAINS
    SUBROUTINE bra_trafo2( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
       dim, nobd, nbands, ikpt0, ikpt1, iop, sym, &
-      hybrid, kpts, cell, atoms, &
+      mpbasis, hybrid, kpts, cell, atoms, &
       phase)
 
       !  ikpt0  ::  parent of ikpt1
@@ -547,6 +547,7 @@ CONTAINS
       USE m_util
       USE m_types
       IMPLICIT NONE
+      type(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -704,26 +705,26 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, hybrid%ngptm(ikpt0)
+      DO igptm = 1, mpbasis%ngptm(ikpt0)
          igptp = hybrid%pgptm(igptm, ikpt0)
-         g1 = matmul(rrot, hybrid%gptm(:, igptp)) + g
+         g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
          igptm2 = 0
-         DO i = 1, hybrid%ngptm(ikpt1)
-            IF (maxval(abs(g1 - hybrid%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
+         DO i = 1, mpbasis%ngptm(ikpt1)
+            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
          END DO
          IF (igptm2 == 0) THEN
             WRITE (*, *) ikpt0, ikpt1, g1
-            WRITE (*, *) hybrid%ngptm(ikpt0), hybrid%ngptm(ikpt1)
+            WRITE (*, *) mpbasis%ngptm(ikpt0), mpbasis%ngptm(ikpt1)
             WRITE (*, *)
-            WRITE (*, *) igptp, hybrid%gptm(:, igptp)
+            WRITE (*, *) igptp, mpbasis%gptm(:, igptp)
             WRITE (*, *) g
             WRITE (*, *) rrot
             WRITE (*, *) "Failed tests:", g1
-            DO i = 1, hybrid%ngptm(ikpt1)
-               WRITE (*, *) hybrid%gptm(:, hybrid%pgptm(i, ikpt1))
+            DO i = 1, mpbasis%ngptm(ikpt1)
+               WRITE (*, *) mpbasis%gptm(:, hybrid%pgptm(i, ikpt1))
             ENDDO
             call judft_error('bra_trafo2: G-point not found in G-point set.')
          END IF
@@ -765,7 +766,7 @@ CONTAINS
 
 !     This routine is not very fast at the moment.
    SUBROUTINE matrixtrafo(matout, matin, ikpt0, isym, lsymmetrize, atoms, &
-                          kpts, sym, hybrid, cell, maxindxm, nindxm, nbasm, ngptmall, nbasp, &
+                          kpts, sym, mpbasis, hybrid, cell, maxindxm, nindxm, nbasm, ngptmall, nbasp, &
                           lcutm, maxlcutm)
 
       USE m_wrapper
@@ -774,6 +775,7 @@ CONTAINS
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
+      type(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -806,7 +808,7 @@ CONTAINS
 
       ! - local arrays -
       INTEGER               ::  pnt(maxindxm, 0:maxlcutm, atoms%nat),&
-     &                          g(3), g1(3), iarr(hybrid%ngptm(ikpt0))
+     &                          g(3), g1(3), iarr(mpbasis%ngptm(ikpt0))
       INTEGER               ::  rot(3, 3), invrot(3, 3), rrot(3, 3), invrrot(3, 3)
 
       REAL                  ::  rkpt(3), rkpthlp(3), rtaual(3)
@@ -820,7 +822,7 @@ CONTAINS
       COMPLEX               ::  dwgninv(-maxlcutm:maxlcutm,&
      &                                  -maxlcutm:maxlcutm,&
      &                                          0:maxlcutm)
-      COMPLEX               ::  carr(hybrid%ngptm(ikpt0))
+      COMPLEX               ::  carr(mpbasis%ngptm(ikpt0))
 
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
       matin1 = matin
@@ -943,12 +945,12 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, hybrid%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = hybrid%pgptm(igptm, ikpt1)
-         g1 = matmul(invrrot, hybrid%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          igptm2 = 0
-         DO i = 1, hybrid%ngptm(ikpt0)
-            IF (maxval(abs(g1 - hybrid%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
+         DO i = 1, mpbasis%ngptm(ikpt0)
+            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -956,7 +958,7 @@ CONTAINS
 !         igptm2 = pntgptm(g1(1),g1(2),g1(3),ikpt0)
          IF (igptm2 == 0) call judft_error('matrixtrafo: G point not found in G-point set.')
 
-         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
+         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), sym%tau(:, iisym)))
 
          matout1(:, nbasp + igptm) = cdum*matin1(:, nbasp + igptm2)
 
@@ -993,12 +995,12 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, hybrid%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = hybrid%pgptm(igptm, ikpt1)
-         g1 = matmul(invrrot, hybrid%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          igptm2 = 0
-         DO i = 1, hybrid%ngptm(ikpt0)
-            IF (maxval(abs(g1 - hybrid%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
+         DO i = 1, mpbasis%ngptm(ikpt0)
+            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -1007,12 +1009,12 @@ CONTAINS
          IF (igptm2 == 0) call judft_error('matrixtrafo: G point not found in G-point set.')
          iarr(igptm) = igptm2
          carr(igptm) = exp(-img*tpi_const* &
-      &              dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
+      &              dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), sym%tau(:, iisym)))
 !        cdum  = exp(-img * 2*pi * dot_product(bk(:,ikpt1)+gptm(:,igptp),tau(:,isym)))
 !        matout1(nbasp+igptm,:) = cdum * matin1(nbasp+igptm2,:)
       END DO
       DO i2 = 1, nbasm(ikpt1)
-         DO i1 = 1, hybrid%ngptm(ikpt1)
+         DO i1 = 1, mpbasis%ngptm(ikpt1)
             matout1(nbasp + i1, i2) = carr(i1)*matin1(nbasp + iarr(i1), i2)
          END DO
       END DO
@@ -1029,7 +1031,7 @@ CONTAINS
 
    SUBROUTINE matrixtrafo1( &
       matout, matin, ikpt0, isym, lsymmetrize, atoms, kpts, sym, &
-      hybrid, cell, maxindxm, nindxm, nbasm, ngptmall, nbasp, lcutm, maxlcutm)
+      mpbasis, hybrid, cell, maxindxm, nindxm, nbasm, ngptmall, nbasp, lcutm, maxlcutm)
 
       USE m_wrapper
       USE m_dwigner
@@ -1039,6 +1041,7 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
 
+      type(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -1071,7 +1074,7 @@ CONTAINS
 
       ! - local arrays -
       INTEGER               ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
-     &                          g1(3), iarr(hybrid%ngptm(ikpt0))
+     &                          g1(3), iarr(mpbasis%ngptm(ikpt0))
       INTEGER               ::  rrot(3, 3)
 
       REAL                  ::  rkpt(3), rkpthlp(3), rtaual(3)
@@ -1085,7 +1088,7 @@ CONTAINS
       COMPLEX               ::  dwgninv(-maxlcutm:maxlcutm,&
      &                                  -maxlcutm:maxlcutm,&
      &                                          0:maxlcutm)
-      COMPLEX               ::  carr(hybrid%ngptm(ikpt0))
+      COMPLEX               ::  carr(mpbasis%ngptm(ikpt0))
 
       IF (maxlcutm > atoms%lmaxd) call judft_error('matrixtrafo1: maxlcutm .gt. atoms%lmaxd')
 
@@ -1167,12 +1170,12 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, hybrid%ngptm(ikpt0)
+      DO igptm = 1, mpbasis%ngptm(ikpt0)
          igptp = hybrid%pgptm(igptm, ikpt0)
-         g1 = matmul(rrot, hybrid%gptm(:, igptp)) + g
+         g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
          igptm1 = 0
-         DO i = 1, hybrid%ngptm(ikpt1)
-            IF (maxval(abs(g1 - hybrid%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
+         DO i = 1, mpbasis%ngptm(ikpt1)
+            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = hybrid%pgptm(i, ikpt1)
                EXIT
@@ -1180,7 +1183,7 @@ CONTAINS
          END DO
          IF (igptm1 == 0) call judft_error('matrixtrafo1: G point not found in G-point set.')
 
-         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
+         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp1), sym%tau(:, iisym)))
 
          matout1(:, nbasp + igptm) = cdum*matin1(:, nbasp + igptm1)
 
@@ -1223,12 +1226,12 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, hybrid%ngptm(ikpt0)
+      DO igptm = 1, mpbasis%ngptm(ikpt0)
          igptp = hybrid%pgptm(igptm, ikpt0)
-         g1 = matmul(rrot, hybrid%gptm(:, igptp)) + g
+         g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
          igptm1 = 0
-         DO i = 1, hybrid%ngptm(ikpt1)
-            IF (maxval(abs(g1 - hybrid%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
+         DO i = 1, mpbasis%ngptm(ikpt1)
+            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = hybrid%pgptm(i, ikpt1)
                EXIT
@@ -1236,10 +1239,10 @@ CONTAINS
          END DO
          IF (igptm1 == 0) call judft_error('matrixtrafo1: G point not found in G-point set.')
          iarr(igptm) = igptm1
-         carr(igptm) = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
+         carr(igptm) = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp1), sym%tau(:, iisym)))
       END DO
       DO i2 = 1, nbasm(ikpt0)
-         DO i1 = 1, hybrid%ngptm(ikpt0)
+         DO i1 = 1, mpbasis%ngptm(ikpt0)
             matout1(nbasp + i1, i2) = carr(i1)*matin1(nbasp + iarr(i1), i2)
          END DO
       END DO
@@ -1261,7 +1264,7 @@ CONTAINS
    SUBROUTINE ket_trafo(&
   &        vecout, vecin, ikpt0, isym, lreal, lsymmetrize,&
   &        atoms, kpts, sym,&
-  &        hybrid, cell, maxindxm, nindxm, nbasm,&
+  &        mpbasis, hybrid, cell, maxindxm, nindxm, nbasm,&
   &        ngptmall, nbasp, lcutm, maxlcutm)
 
       USE m_constants
@@ -1270,6 +1273,7 @@ CONTAINS
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
+      type(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -1438,12 +1442,12 @@ CONTAINS
       ENDDO
 
       ! PW
-      DO igptm = 1, hybrid%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = hybrid%pgptm(igptm, ikpt1)
-         g1 = matmul(invrrot, hybrid%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          igptm2 = 0
-         DO i = 1, hybrid%ngptm(ikpt0)
-            IF (maxval(abs(g1 - hybrid%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
+         DO i = 1, mpbasis%ngptm(ikpt0)
+            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -1452,7 +1456,7 @@ CONTAINS
       &               call judft_error('ket_trafo: G point not found in G-point set.')
 
          cdum = exp(img*tpi_const* &
-      &              dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), sym%tau(:, iisym)))
+      &              dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), sym%tau(:, iisym)))
 
          vecout1(nbasp + igptm) = cdum*vecin1(nbasp + igptm2)
 
@@ -1466,7 +1470,7 @@ CONTAINS
    END SUBROUTINE ket_trafo
 
    SUBROUTINE ket_trafo1(vecout, vecin, ikpt0, isym, lreal, lsymmetrize, &
-                         atoms, kpts, sym, hybrid, &
+                         atoms, kpts, sym, mpbasis, hybrid, &
                          cell, maxindxm, nindxm, nbasm, ngptmall, nbasp, lcutm, maxlcutm)
 
       USE m_constants
@@ -1475,6 +1479,7 @@ CONTAINS
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
+      TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -1599,12 +1604,12 @@ CONTAINS
       ENDDO
 
       ! PW
-      DO igptm = 1, hybrid%ngptm(ikpt0)
+      DO igptm = 1, mpbasis%ngptm(ikpt0)
          igptp = hybrid%pgptm(igptm, ikpt0)
-         g1 = matmul(rrot, hybrid%gptm(:, igptp)) + g
+         g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
          igptm1 = 0
-         DO i = 1, hybrid%ngptm(ikpt1)
-            IF (maxval(abs(g1 - hybrid%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
+         DO i = 1, mpbasis%ngptm(ikpt1)
+            IF (maxval(abs(g1 - mpbasis%gptm(:, hybrid%pgptm(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = hybrid%pgptm(i, ikpt1)
                EXIT
@@ -1612,7 +1617,7 @@ CONTAINS
          END DO
          IF (igptm1 == 0) call judft_error('ket_trafo: G point not found in G-point set.')
 
-         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp1), sym%tau(:, iisym)))
+         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp1), sym%tau(:, iisym)))
 
          vecout1(nbasp + igptm) = cdum*vecin1(nbasp + igptm1)
 
@@ -1660,12 +1665,13 @@ CONTAINS
 
    SUBROUTINE bramat_trafo( &
       vecout, igptm_out, vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
-      rrot, invrrot, hybrid, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, dwgn, nbasp, nbasm)
+      rrot, invrrot, mpbasis, hybrid, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, dwgn, nbasp, nbasm)
 
       USE m_constants
       USE m_util
       USE m_types
       IMPLICIT NONE
+      type(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -1683,9 +1689,9 @@ CONTAINS
      &                            nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)      :: nbasm(:)
       INTEGER, INTENT(IN)      ::  pointer(&
-     &                          minval(hybrid%gptm(1, :)) - 1:maxval(hybrid%gptm(1, :)) + 1,&
-     &                          minval(hybrid%gptm(2, :)) - 1:maxval(hybrid%gptm(2, :)) + 1,&
-     &                          minval(hybrid%gptm(3, :)) - 1:maxval(hybrid%gptm(3, :)) + 1)
+     &                          minval(mpbasis%gptm(1, :)) - 1:maxval(mpbasis%gptm(1, :)) + 1,&
+     &                          minval(mpbasis%gptm(2, :)) - 1:maxval(mpbasis%gptm(2, :)) + 1,&
+     &                          minval(mpbasis%gptm(3, :)) - 1:maxval(mpbasis%gptm(3, :)) + 1)
 
       COMPLEX, INTENT(IN)      ::  vecin(:)
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
@@ -1702,10 +1708,10 @@ CONTAINS
       COMPLEX                 ::  cexp, cdum
 !     - private arrays -
       INTEGER                 ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
-     &                            g1(3), iarr(hybrid%ngptm(ikpt0))
+     &                            g1(3), iarr(mpbasis%ngptm(ikpt0))
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
-      COMPLEX                 ::  carr(hybrid%ngptm(ikpt0))
+      COMPLEX                 ::  carr(mpbasis%ngptm(ikpt0))
 
       IF (iop <= sym%nop) THEN
          isym = iop
@@ -1730,14 +1736,14 @@ CONTAINS
          END IF
       END DO
 
-      DO igptm = 1, hybrid%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = hybrid%pgptm(igptm, ikpt1)
-         g1 = matmul(invrrot, hybrid%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          igptm2 = pointer(g1(1), g1(2), g1(3))
          IF (igptm2 == igptm_in) THEN
             igptm_out = igptm
             IF (writevec) THEN
-               cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), trans))
+               cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), trans))
                EXIT
             ELSE
                RETURN
@@ -1799,13 +1805,13 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, hybrid%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = hybrid%pgptm(igptm, ikpt1)
-         g1 = matmul(invrrot, hybrid%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
          iarr(igptm) = pointer(g1(1), g1(2), g1(3))
-         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + hybrid%gptm(:, igptp), trans))
+         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), trans))
       END DO
-      DO i1 = 1, hybrid%ngptm(ikpt1)
+      DO i1 = 1, mpbasis%ngptm(ikpt1)
          vecout(nbasp + i1) = carr(i1)*vecin1(nbasp + iarr(i1))
       END DO
 

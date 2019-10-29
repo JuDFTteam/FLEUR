@@ -2,7 +2,7 @@ module m_wavefproducts_inv
 
 CONTAINS
    SUBROUTINE wavefproducts_inv5(bandi, bandf, bandoi, bandof, dimension, input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, hybrid,&
+                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, mpbasis, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
       USE m_util, ONLY: modulo1
@@ -15,6 +15,7 @@ CONTAINS
 
       IMPLICIT NONE
       TYPE(t_dimension), INTENT(IN) :: dimension
+      TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)    :: hybrid
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_noco), INTENT(IN)      :: noco
@@ -52,7 +53,7 @@ CONTAINS
 
 
       call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
-                                jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
+                                jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpbasis, hybrid,&
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
       call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
@@ -64,7 +65,7 @@ CONTAINS
    END SUBROUTINE wavefproducts_inv5
 
    subroutine wavefproducts_inv_IS_using_noinv(bandi, bandf, bandoi, bandof, dimension, input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
+                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpbasis, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, rprod)
      use m_types
      use m_wavefproducts_noinv
@@ -72,6 +73,7 @@ CONTAINS
      implicit NONE
 
      TYPE(t_dimension), INTENT(IN) :: dimension
+     TYPE(t_mpbasis), intent(in)  :: mpbasis
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
      TYPE(t_input), INTENT(IN)     :: input
      TYPE(t_noco), INTENT(IN)      :: noco
@@ -91,14 +93,14 @@ CONTAINS
      COMPLEX :: cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
      call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
-                                  dimension, input, jsp, cell, atoms, hybrid,&
+                                  dimension, input, jsp, cell, atoms, mpbasis, hybrid,&
                                   hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                   nkqpt, cprod)
     rprod = real(cprod)
    end subroutine wavefproducts_inv_IS_using_noinv
 
    subroutine wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, hybrid,&
+                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpbasis, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
      use m_types
      use m_constants
@@ -107,6 +109,7 @@ CONTAINS
      use m_io_hybrid
      implicit NONE
      TYPE(t_dimension), INTENT(IN) :: dimension
+     TYPE(t_mpbasis), intent(in)  :: mpbasis
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
      TYPE(t_input), INTENT(IN)     :: input
      TYPE(t_noco), INTENT(IN)      :: noco
@@ -162,7 +165,7 @@ CONTAINS
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
     &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-    &  + maxval(abs(hybrid%gptm(:, hybrid%pgptm(:hybrid%ngptm(iq), iq))), dim=2) + 1
+    &  + maxval(abs(mpbasis%gptm(:, hybrid%pgptm(:mpbasis%ngptm(iq), iq))), dim=2) + 1
 
      call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
      !
@@ -170,7 +173,7 @@ CONTAINS
      !
 
      !(1) prepare list of G vectors
-     call prep_list_of_gvec(lapw, hybrid, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
+     call prep_list_of_gvec(lapw, mpbasis, hybrid, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
 
      !(2) calculate convolution
      call timestart("calc convolution")
@@ -193,13 +196,13 @@ CONTAINS
 
      call timestart("hybrid gptm")
      ic = nbasm_mt
-     DO igptm = 1, hybrid%ngptm(iq)
+     DO igptm = 1, mpbasis%ngptm(iq)
         rarr2 = 0
         ic = ic + 1
         iigptm = hybrid%pgptm(igptm, iq)
 
         DO ig1 = 1, lapw%nv(jsp)
-           g = lapw%gvec(:, ig1, jsp) + hybrid%gptm(:, iigptm) - g_t
+           g = lapw%gvec(:, ig1, jsp) + mpbasis%gptm(:, iigptm) - g_t
            ig2 = pointer(g(1), g(2), g(3))
 
            IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')

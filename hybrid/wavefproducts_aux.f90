@@ -1,11 +1,12 @@
 module m_wavefproducts_aux
 
 CONTAINS
-   subroutine prep_list_of_gvec(lapw, hybrid,g_bounds, g_t, iq,jsp, pointer,gpt0, ngpt0)
+   subroutine prep_list_of_gvec(lapw, mpbasis, hybrid,g_bounds, g_t, iq,jsp, pointer,gpt0, ngpt0)
       use m_types
       use m_juDFT
       implicit none
       type(t_lapw),         intent(in)    :: lapw
+      TYPE(t_mpbasis), intent(in)  :: mpbasis
       type(t_hybrid),       intent(in)    :: hybrid
       integer,              intent(in)    :: g_bounds(:), g_t(:), iq, jsp
       integer, allocatable, intent(inout) :: pointer(:,:,:), gpt0(:,:)
@@ -25,9 +26,9 @@ CONTAINS
       pointer = 0
       ic = 0
       DO ig1 = 1, lapw%nv(jsp)
-         DO igptm = 1, hybrid%ngptm(iq)
+         DO igptm = 1, mpbasis%ngptm(iq)
             iigptm = hybrid%pgptm(igptm, iq)
-            g = lapw%gvec(:,ig1,jsp) + hybrid%gptm(:, iigptm) - g_t
+            g = lapw%gvec(:,ig1,jsp) + mpbasis%gptm(:, iigptm) - g_t
             IF (pointer(g(1), g(2), g(3)) == 0) THEN
                ic = ic + 1
                gpt0(:, ic) = g

@@ -92,6 +92,7 @@ CONTAINS
     TYPE(t_results)                 :: results
     TYPE(t_kpts)                    :: kpts
     TYPE(t_hybrid)                  :: hybrid
+    TYPE(t_mpbasis)                 :: mpbasis
     TYPE(t_oneD)                    :: oneD
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
@@ -207,7 +208,7 @@ CONTAINS
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
-             CALL calc_hybrid(eig_id,hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
+             CALL calc_hybrid(eig_id,mpbasis,hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
                               cell,oneD,enpara,results,sym,xcpot,vTot,iterHF)
           END SELECT
           IF(hybrid%l_calhf) THEN
@@ -370,7 +371,7 @@ CONTAINS
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
                    CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
-                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
+                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpbasis,hybrid,results,coreSpecInput,archiveType,outDen)
              END SELECT
           END IF
 

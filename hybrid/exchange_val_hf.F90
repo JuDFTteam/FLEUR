@@ -56,7 +56,7 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
 
-   SUBROUTINE exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
+   SUBROUTINE exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpbasis, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
                                   eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, mat_ex)
 
@@ -77,6 +77,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_dimension), INTENT(IN)    :: dimension
+      TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
@@ -139,10 +140,10 @@ CONTAINS
       COMPLEX              :: coulomb_mt2_c(maxval(hybrid%nindxm1) - 1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1 + 1, atoms%nat)
       COMPLEX              :: coulomb_mt3_c(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat)
 
-      REAL                 :: coulomb_mtir_r(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))* &
-                                             ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm) + 1)/2)
-      COMPLEX              :: coulomb_mtir_c(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm))* &
-                                             ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm) + 1)/2)
+      REAL                 :: coulomb_mtir_r(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(mpbasis%ngptm))* &
+                                             ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(mpbasis%ngptm) + 1)/2)
+      COMPLEX              :: coulomb_mtir_c(((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(mpbasis%ngptm))* &
+                                             ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(mpbasis%ngptm) + 1)/2)
 
       LOGICAL              :: occup(dimension%neigd)
       CALL timestart("valence exchange calculation")
@@ -203,7 +204,7 @@ CONTAINS
 
          ikpt0 = pointer_EIBZ(ikpt)
 
-         n = hybrid%nbasp + hybrid%ngptm(ikpt0)
+         n = hybrid%nbasp + mpbasis%ngptm(ikpt0)
          IF (hybrid%nbasm(ikpt0) /= n) call judft_error('error hybrid%nbasm')
          nn = n*(n + 1)/2
 
@@ -225,11 +226,11 @@ CONTAINS
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, dimension, input, jsp, atoms, &
-                                       lapw, kpts, nk, ikpt0, hybdat, hybrid, cell, hybrid%nbasp, sym, &
+                                       lapw, kpts, nk, ikpt0, hybdat, mpbasis, hybrid, cell, hybrid%nbasp, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, dimension, input, jsp, &!jsp,&
-                                         cell, atoms, hybrid, hybdat, kpts, lapw, sym, hybrid%nbasp, noco, nkqpt, cprod_vv_c)
+                                         cell, atoms, mpbasis, hybrid, hybdat, kpts, lapw, sym, hybrid%nbasp, noco, nkqpt, cprod_vv_c)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
@@ -243,8 +244,8 @@ CONTAINS
                exch_vv = exch_vv + &
                          dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
-                                                hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, maxval(hybrid%nindxm1), hybrid%gptm, &
-                                                hybrid%ngptm(ikpt0), hybrid%pgptm(:, ikpt0), hybrid%gptmd, hybrid%basm1, &
+                                                hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, maxval(hybrid%nindxm1), mpbasis%gptm, &
+                                                mpbasis%ngptm(ikpt0), hybrid%pgptm(:, ikpt0), mpbasis%gptmd, hybrid%basm1, &
                                                 hybrid%nbasm(ikpt0), iband1, hybrid%nbands(nk), nsest, ibando, psize, indx_sest, &
                                                 atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
                                                 cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
@@ -257,7 +258,7 @@ CONTAINS
                CALL bra_trafo2(mat_ex%l_real, carr3_vv_r(:hybrid%nbasm(ikpt0), :, :), cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
                                carr3_vv_c(:hybrid%nbasm(ikpt0), :, :), cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), &
                                hybrid%nbasm(ikpt0), psize, hybrid%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
-                               hybrid, kpts, cell, atoms, phase_vv)
+                               mpbasis, hybrid, kpts, cell, atoms, phase_vv)
                IF (mat_ex%l_real) THEN
                   cprod_vv_r(:hybrid%nbasm(ikpt0), :, :) = carr3_vv_r(:hybrid%nbasm(ikpt0), :, :)
                ELSE
@@ -278,11 +279,11 @@ CONTAINS
 
                   IF (mat_ex%l_real) THEN
                      carr1_v_r(:n) = 0
-                     CALL spmvec_invs(atoms, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
+                     CALL spmvec_invs(atoms, mpbasis, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
                                       coulomb_mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                   ELSE
                      carr1_v_c(:n) = 0
-                     CALL spmvec_noinvs(atoms, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
+                     CALL spmvec_noinvs(atoms, mpbasis, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
                                         coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
                   END IF
 

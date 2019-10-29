@@ -192,7 +192,7 @@
                          END DO
                       END DO
 
-                      DO igpt = 1, hybrid%ngptm(ikpt)
+                      DO igpt = 1, mpbasis%ngptm(ikpt)
                          coulhlp1(ic2, ic4) = coulhlp(ic1, nbasp + igpt)
                          IF (sym%invs) THEN
                             coulhlp1(ic4, ic2) = coulhlp1(ic2, ic4)
