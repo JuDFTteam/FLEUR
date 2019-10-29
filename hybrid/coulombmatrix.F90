@@ -707,9 +707,9 @@ CONTAINS
          CALL cpu_TIME(time1)
          ! Calculate the hermitian matrix smat(i,j) = sum(a) integral(MT(a)) exp[i(Gj-Gi)r] dr
          call timestart("calc smat")
-         allocate(smat(mpbasis%gptmd, mpbasis%gptmd))
+         allocate(smat(mpbasis%num_gpts(), mpbasis%num_gpts()))
          smat = 0
-         DO igpt2 = 1, mpbasis%gptmd
+         DO igpt2 = 1, mpbasis%num_gpts()
             DO igpt1 = 1, igpt2
                g = mpbasis%gptm(:, igpt2) - mpbasis%gptm(:, igpt1)
                gnorm = gptnorm(g, cell%bmat)
@@ -1065,8 +1065,8 @@ CONTAINS
          ! respective k-points
 
          allocate(carr2(hybrid%maxbasm1, 2), iarr(maxval(mpbasis%ngptm)))
-         allocate(nsym_gpt(mpbasis%gptmd, kpts%nkpt), &
-                   sym_gpt(MAXVAL(nsym1), mpbasis%gptmd, kpts%nkpt))
+         allocate(nsym_gpt(mpbasis%num_gpts(), kpts%nkpt), &
+                   sym_gpt(MAXVAL(nsym1), mpbasis%num_gpts(), kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
          call timestart("loop 3")
          DO ikpt = ikptmin, ikptmax

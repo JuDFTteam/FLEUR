@@ -134,7 +134,7 @@ CONTAINS
       ! first run to determine dimension of pgptm1
       allocate(hybrid%ngptm1(kpts%nkptf))
       hybrid%ngptm1 = 0
-      DO igpt = 1, mpbasis%gptmd
+      DO igpt = 1, mpbasis%num_gpts()
          g = mpbasis%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
@@ -155,7 +155,7 @@ CONTAINS
       allocate(length_kG(hybrid%maxgptm1, kpts%nkptf))
       length_kG = 0
       unsrt_pgptm = 0
-      DO igpt = 1, mpbasis%gptmd
+      DO igpt = 1, mpbasis%num_gpts()
          g = mpbasis%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
@@ -186,7 +186,7 @@ CONTAINS
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(/A)') 'Mixed basis'
-         WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpbasis%gptmd
+         WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpbasis%num_gpts()
          WRITE (6, *)
          WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm/2*input%rkmax):'
          WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
@@ -724,8 +724,7 @@ CONTAINS
          IF (.NOT. l_found_new_gpt) EXIT
       END DO
 
-      mpbasis%gptmd = i
-      allocate(mpbasis%gptm(3, mpbasis%gptmd))
+      allocate(mpbasis%gptm(3, mpbasis%num_gpts()))
       allocate(hybrid%pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
 
       ! Allocate and initialize arrays needed for G vector ordering
