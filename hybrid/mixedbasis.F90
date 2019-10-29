@@ -66,11 +66,9 @@ CONTAINS
 
       ! local scalars
       INTEGER                         ::  ikpt, jspin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ng
-      INTEGER                         ::  m, nk, x, y, z
+      INTEGER                         ::  m, nk
       INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
       REAL                            ::  rdum, rdum1
-
-      LOGICAL                         ::  ldum, ldum1
 
       ! - local arrays -
       INTEGER                          ::  g(3)
@@ -129,74 +127,6 @@ CONTAINS
 
       ! construct G-vectors with cutoff smaller than gcutm
       call gen_gvec(cell, kpts, hybrid)
-
-
-      ! Allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(maxval(hybrid%ngptm), kpts%nkptf))
-      allocate(length_kG(maxval(hybrid%ngptm), kpts%nkptf))
-
-      hybrid%gptm = 0
-      hybrid%pgptm = 0
-      hybrid%ngptm = 0
-
-      i = 0
-      n = -1
-
-      length_kG = 0
-      unsrt_pgptm = 0
-
-      DO
-         n = n + 1
-         ldum = .FALSE.
-         DO x = -n, n
-            n1 = n - ABS(x)
-            DO y = -n1, n1
-               n2 = n1 - ABS(y)
-               DO z = -n2, n2, MAX(2*n2, 1)
-                  g = [x, y, z]
-                  rdum = norm2(MATMUL(g, cell%bmat)) - MAXVAL([(norm2(MATMUL(kpts%bkf(:,ikpt), cell%bmat)), ikpt=1, kpts%nkptf)]) !longest_k
-                  IF (rdum > hybrid%gcutm) CYCLE
-                  ldum1 = .FALSE.
-                  DO ikpt = 1, kpts%nkptf
-                     kvec = kpts%bkf(:,ikpt)
-
-                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= hybrid%gcutm) THEN
-                        IF (.NOT. ldum1) THEN
-                           i = i + 1
-                           hybrid%gptm(:,i) = g
-                           ldum1 = .TRUE.
-                        END IF
-
-                        hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
-                        ldum = .TRUE.
-
-                        ! Position of the vector is saved as pointer
-                        unsrt_pgptm(hybrid%ngptm(ikpt), ikpt) = i
-                        ! Save length of vector k + G for array sorting
-                        length_kG(hybrid%ngptm(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
-                     END IF
-                  END DO
-               END DO
-            END DO
-         END DO
-         IF (.NOT. ldum) EXIT
-      END DO
-
-      ! Sort pointers in array, so that shortest |k+G| comes first
-      DO ikpt = 1, kpts%nkptf
-         allocate(ptr(hybrid%ngptm(ikpt)))
-         ! Divide and conquer algorithm for arrays > 1000 entries
-         divconq = MAX(0, INT(1.443*LOG(0.001*hybrid%ngptm(ikpt))))
-         ! create pointers which correspond to a sorted array
-         CALL rorderpf(ptr, length_kG(1:hybrid%ngptm(ikpt), ikpt), hybrid%ngptm(ikpt), divconq)
-         ! rearrange old pointers
-         DO igpt = 1, hybrid%ngptm(ikpt)
-            hybrid%pgptm(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
-         END DO
-         deallocate(ptr)
-      END DO
-      deallocate(unsrt_pgptm)
-      deallocate(length_kG)
 
       ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
 
@@ -737,17 +667,22 @@ CONTAINS
 
    subroutine gen_gvec(cell, kpts, hybrid)
       use m_types
+      USE m_util, ONLY: intgrf_init, intgrf, rorderpf
       implicit NONE
       type(t_cell), intent(in)       :: cell
       type(t_kpts), intent(in)       :: kpts
       type(t_hybrid), intent(inout)  :: hybrid
 
 
-      integer :: i, n, n1, n2
-      integer :: x, y, z, ikpt
+      integer :: i, n, n1, n2, divconq
+      integer :: x, y, z, ikpt, igpt
       integer :: g(3)
-      real    :: longest_k, rdum
+      real    :: longest_k, kvec(3)
       logical :: l_found_new_gpt, l_found_kg_in_sphere
+
+      INTEGER, ALLOCATABLE            ::  unsrt_pgptm(:,:) ! unsorted pointers to g vectors
+      REAL, ALLOCATABLE               ::  length_kg(:,:) ! length of the vectors k + G
+      INTEGER, ALLOCATABLE            ::  ptr(:)
 
       allocate(hybrid%ngptm(kpts%nkptf))
 
@@ -791,5 +726,68 @@ CONTAINS
       allocate(hybrid%gptm(3, hybrid%gptmd))
       allocate(hybrid%pgptm(maxval(hybrid%ngptm), kpts%nkptf))
 
+      ! Allocate and initialize arrays needed for G vector ordering
+      allocate(unsrt_pgptm(maxval(hybrid%ngptm), kpts%nkptf))
+      allocate(length_kG(maxval(hybrid%ngptm), kpts%nkptf))
+
+      hybrid%gptm = 0
+      hybrid%pgptm = 0
+      hybrid%ngptm = 0
+
+      i = 0
+      n = -1
+
+      length_kG = 0
+      unsrt_pgptm = 0
+
+      DO
+         n = n + 1
+         l_found_new_gpt = .FALSE.
+         DO x = -n, n
+            n1 = n - ABS(x)
+            DO y = -n1, n1
+               n2 = n1 - ABS(y)
+               DO z = -n2, n2, MAX(2*n2, 1)
+                  g = [x, y, z]
+                  IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > hybrid%gcutm) CYCLE
+                  l_found_kg_in_sphere = .FALSE.
+                  DO ikpt = 1, kpts%nkptf
+                     kvec = kpts%bkf(:,ikpt)
+
+                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= hybrid%gcutm) THEN
+                        IF (.NOT. l_found_kg_in_sphere) THEN
+                           i = i + 1
+                           hybrid%gptm(:,i) = g
+                           l_found_kg_in_sphere = .TRUE.
+                        END IF
+
+                        hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
+                        l_found_new_gpt = .TRUE.
+
+                        ! Position of the vector is saved as pointer
+                        unsrt_pgptm(hybrid%ngptm(ikpt), ikpt) = i
+                        ! Save length of vector k + G for array sorting
+                        length_kG(hybrid%ngptm(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
+                     END IF
+                  END DO
+               END DO
+            END DO
+         END DO
+         IF (.NOT. l_found_new_gpt) EXIT
+      END DO
+
+      ! Sort pointers in array, so that shortest |k+G| comes first
+      DO ikpt = 1, kpts%nkptf
+         allocate(ptr(hybrid%ngptm(ikpt)))
+         ! Divide and conquer algorithm for arrays > 1000 entries
+         divconq = MAX(0, INT(1.443*LOG(0.001*hybrid%ngptm(ikpt))))
+         ! create pointers which correspond to a sorted array
+         CALL rorderpf(ptr, length_kG(1:hybrid%ngptm(ikpt), ikpt), hybrid%ngptm(ikpt), divconq)
+         ! rearrange old pointers
+         DO igpt = 1, hybrid%ngptm(ikpt)
+            hybrid%pgptm(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
+         END DO
+         deallocate(ptr)
+      END DO
    end subroutine gen_gvec
 END MODULE m_mixedbasis
