@@ -10,7 +10,6 @@ MODULE m_types_hybrid
       INTEGER                ::  lexp = 0
       INTEGER                ::  bands1 !Only read in
       INTEGER                ::  nbasp
-      INTEGER                ::  maxlcutm1
       INTEGER                ::  maxbasm1
       INTEGER                ::  max_indx_p_1
       INTEGER                ::  maxgptm1
@@ -155,7 +154,7 @@ contains
       type(t_atoms),  intent(in) :: atoms
       integer                    :: ok
 
-      ALLOCATE (prod%l1(hybrid%max_indx_p_1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
+      ALLOCATE (prod%l1(hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
       IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%l1')
 
       ALLOCATE (prod%l2, mold=prod%l1, stat=ok)

@@ -577,12 +577,12 @@ CONTAINS
 !     - arrays -
 
       INTEGER                 ::  rrot(3, 3), invrot(3, 3)
-      INTEGER                 ::  pnt(maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%nat)
+      INTEGER                 ::  pnt(maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), atoms%nat)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  rkpt(3), rkpthlp(3), rtaual(3), trans(3)
       REAL                    ::  arg
-      COMPLEX                 ::  dwgn(-hybrid%maxlcutm1:hybrid%maxlcutm1,&
-     &                                 -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1)
+      COMPLEX                 ::  dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
+     &                                 -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1))
 !       COMPLEX                 ::  vecin1(dim,nobd,nbands),vecout1(dim,nobd,nbands)
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
 
@@ -594,7 +594,7 @@ CONTAINS
      &             call judft_error('bra_trafo2: error allocating vecin1 or vecout1')
       vecin1 = 0; vecout1 = 0
 
-      IF (hybrid%maxlcutm1 > atoms%lmaxd) call judft_error('bra_trafo2: maxlcutm > atoms%lmaxd')   ! very improbable case
+      IF (maxval(hybrid%lcutm1) > atoms%lmaxd) call judft_error('bra_trafo2: maxlcutm > atoms%lmaxd')   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       if (l_real) THEN
@@ -602,7 +602,7 @@ CONTAINS
          DO i = 1, nbands
             DO j = 1, nobd
                CALL desymmetrize(vecin1(:hybrid%nbasp, j, i), hybrid%nbasp, 1, 1, &
-                                 atoms, hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, sym)
+                                 atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%nindxm1, sym)
             END DO
          END DO
       else
@@ -615,8 +615,8 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iop))
          trans = sym%tau(:, iop)
 
-         dwgn(-hybrid%maxlcutm1:hybrid%maxlcutm1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1) &
-            = hybrid%d_wgn2(-hybrid%maxlcutm1:hybrid%maxlcutm1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1, inviop)
+         dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1)) &
+            = hybrid%d_wgn2(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1), inviop)
 
       ELSE
          iiop = iop - sym%nop
@@ -625,8 +625,8 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iiop))
          trans = sym%tau(:, iiop)
 
-         dwgn(-hybrid%maxlcutm1:hybrid%maxlcutm1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1) &
-            = conjg(hybrid%d_wgn2(-hybrid%maxlcutm1:hybrid%maxlcutm1, -hybrid%maxlcutm1:hybrid%maxlcutm1, 0:hybrid%maxlcutm1, inviop))
+         dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1)) &
+            = conjg(hybrid%d_wgn2(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1), inviop))
 
       END IF
 
@@ -740,7 +740,7 @@ CONTAINS
             DO j = 1, nobd
 
                CALL symmetrize(vecout1(:, j, i), dim, 1, 1, .false., &
-                               atoms, hybrid%lcutm1, hybrid%maxlcutm1, hybrid%nindxm1, sym)
+                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%nindxm1, sym)
 
                CALL commonphase(phase(j, i), vecout1(:, j, i), dim)
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)

@@ -204,9 +204,7 @@ CONTAINS
          WRITE (6, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
       END IF
 
-      hybrid%maxlcutm1 = MAXVAL(hybrid%lcutm1)
-
-      allocate(hybrid%nindxm1(0:hybrid%maxlcutm1, atoms%ntype))
+      allocate(hybrid%nindxm1(0:maxval(hybrid%lcutm1), atoms%ntype))
       allocate(seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd), selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
       allocate(selecmat(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
       hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
@@ -264,7 +262,7 @@ CONTAINS
          END DO
       END DO
 
-      allocate(hybrid%basm1(atoms%jmtd, maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype))
+      allocate(hybrid%basm1(atoms%jmtd, maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), atoms%ntype))
       hybrid%basm1 = 0
 
       ! Define product bases and reduce them according to overlap
@@ -381,10 +379,10 @@ CONTAINS
 
                ! Check if basm1 must be reallocated
                IF (nn + 1 > SIZE(hybrid%basm1, 2)) THEN
-                  allocate(basmhlp(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
+                  allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
                   basmhlp(:,1:nn, :,:) = hybrid%basm1
                   deallocate(hybrid%basm1)
-                  allocate(hybrid%basm1(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
+                  allocate(hybrid%basm1(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
                   hybrid%basm1(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
                   deallocate(basmhlp)
                END IF
@@ -446,11 +444,11 @@ CONTAINS
          IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(hybrid%nindxm1(0:hybrid%lcutm1(itype), itype))
       END DO ! itype
 
-      allocate(basmhlp(atoms%jmtd, maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype))
-      basmhlp(1:atoms%jmtd, 1:maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, 1:atoms%ntype) &
-         = hybrid%basm1(1:atoms%jmtd, 1:maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, 1:atoms%ntype)
+      allocate(basmhlp(atoms%jmtd, maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      basmhlp(1:atoms%jmtd, 1:maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), 1:atoms%ntype) &
+         = hybrid%basm1(1:atoms%jmtd, 1:maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
       deallocate(hybrid%basm1)
-      allocate(hybrid%basm1(atoms%jmtd, maxval(hybrid%nindxm1), 0:hybrid%maxlcutm1, atoms%ntype))
+      allocate(hybrid%basm1(atoms%jmtd, maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), atoms%ntype))
       hybrid%basm1 = basmhlp
 
       deallocate(basmhlp, seleco, selecu, selecmat)

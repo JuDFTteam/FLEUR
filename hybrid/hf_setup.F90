@@ -215,7 +215,7 @@ CONTAINS
 
          allocate(basprod(atoms%jmtd), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
-         allocate(hybdat%prodm(maxval(hybrid%nindxm1), hybrid%max_indx_p_1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
+         allocate(hybdat%prodm(maxval(hybrid%nindxm1), hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
          call hybdat%prod%init(hybrid, atoms)
@@ -223,7 +223,7 @@ CONTAINS
          basprod = 0; hybdat%prodm = 0; hybdat%prod%l1 = 0; hybdat%prod%l2 = 0
          hybdat%prod%n1 = 0; hybdat%prod%n2 = 0
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE(hybdat%nindxp1) ! for spinpolarized systems
-         ALLOCATE (hybdat%nindxp1(0:hybrid%maxlcutm1, atoms%ntype))
+         ALLOCATE (hybdat%nindxp1(0:maxval(hybrid%lcutm1), atoms%ntype))
          hybdat%nindxp1 = 0
          DO itype = 1, atoms%ntype
             ng = atoms%jri(itype)

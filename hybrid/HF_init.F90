@@ -41,7 +41,7 @@ CONTAINS
 
       ! pre-calculate gaunt coefficients
 
-      hybdat%maxfac = max(2*atoms%lmaxd + hybrid%maxlcutm1 + 1, 2*hybdat%lmaxcd + 2*atoms%lmaxd + 1)
+      hybdat%maxfac = max(2*atoms%lmaxd + maxval(hybrid%lcutm1) + 1, 2*hybdat%lmaxcd + 2*atoms%lmaxd + 1)
       allocate(hybdat%fac(0:hybdat%maxfac), hybdat%sfac(0:hybdat%maxfac), stat=ok, source=0.0)
       IF (ok /= 0) call judft_error('eigen_hf: failure allocation fac,hybdat%sfac')
       hybdat%fac(0) = 1
@@ -51,14 +51,14 @@ CONTAINS
          hybdat%sfac(i) = hybdat%sfac(i - 1)*sqrt(i*1.0) ! hybdat%sfac(i)   = sqrt(i!)
       END DO
 
-      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:hybrid%maxlcutm1,&
-                           -atoms%lmaxd:atoms%lmaxd, -hybrid%maxlcutm1:hybrid%maxlcutm1),&
+      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:maxval(hybrid%lcutm1),&
+                           -atoms%lmaxd:atoms%lmaxd, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1)),&
                             stat=ok, source=0.0)
       IF (ok /= 0) call judft_error('eigen: failure allocation hybdat%gauntarr')
 
       DO l2 = 0, atoms%lmaxd
          DO l1 = 0, atoms%lmaxd
-            DO l = abs(l1 - l2), min(l1 + l2, hybrid%maxlcutm1)
+            DO l = abs(l1 - l2), min(l1 + l2, maxval(hybrid%lcutm1))
                DO m = -l, l
                   DO m1 = -l1, l1
                      m2 = m1 + m ! Gaunt condition -m1+m2-m = 0

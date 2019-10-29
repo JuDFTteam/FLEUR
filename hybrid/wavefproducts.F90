@@ -330,7 +330,7 @@ CONTAINS
       INTEGER                 ::    gsum(3)
       INTEGER                 ::    g_t(3)
       INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
-      INTEGER                 ::    lmstart2(0:hybrid%maxlcutm1, atoms%nat)
+      INTEGER                 ::    lmstart2(0:maxval(hybrid%lcutm1), atoms%nat)
       REAL                    ::    kqpt(3), kqpthlp(3)
 
       REAL, ALLOCATABLE        ::    cprod_ir(:, :, :)
