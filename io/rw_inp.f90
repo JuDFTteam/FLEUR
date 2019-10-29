@@ -323,9 +323,9 @@
          GOTO 78
       ELSEIF ( ch_test .eq. 'gcu' ) then              ! HF
         BACKSPACE (5)
-        READ (UNIT=5,FMT=7999,END=99,ERR=99) mpbasis%gcutm,hybrid%tolerance1,&
+        READ (UNIT=5,FMT=7999,END=99,ERR=99) mpbasis%g_cutoff,hybrid%tolerance1,&
      &     hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
-        WRITE (6,9999) mpbasis%gcutm,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+        WRITE (6,9999) mpbasis%g_cutoff,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
  7999   FORMAT (6x,f8.5,6x,f10.8,8x,i2,6x,i2,7x,i4)
  9999   FORMAT ('gcutm=',f8.5,',mtol=',f10.8,',lambda=',i2,&
      &          ',lexp=',i2,',bands=',i4)
@@ -690,7 +690,7 @@
 
       IF(namex=='exx ') THEN
          CALL judft_error("No EXX calculations in this FLEUR version")
-        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) mpbasis%gcutm2,hybrid%tolerance2,hybrid%bands2
+        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) mpbasis%g_cutoff2,hybrid%tolerance2,hybrid%bands2
 
         !DO i=1,atoms%ntype
           !READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
@@ -787,7 +787,7 @@
       ENDIF
       IF( namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
      &    .OR. namex.EQ.'vhse' ) THEN
-        WRITE (5,9999) mpbasis%gcutm,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+        WRITE (5,9999) mpbasis%g_cutoff,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
         l_hyb = .true.
       END IF
 

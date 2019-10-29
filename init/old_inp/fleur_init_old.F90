@@ -248,7 +248,7 @@ CONTAINS
              hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
              hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
           END DO
-          mpbasis%gcutm = input%rkmax - 0.5
+          mpbasis%g_cutoff = input%rkmax - 0.5
           hybrid%tolerance1 = 1.0e-4
           hybrid%ewaldlambda = 3
           hybrid%lexp = 16

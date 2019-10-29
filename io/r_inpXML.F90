@@ -1312,7 +1312,7 @@ CONTAINS
          obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
       END IF
 
-      mpbasis%gcutm = input%rkmax - 0.5
+      mpbasis%g_cutoff = input%rkmax - 0.5
       hybrid%tolerance1 = 1.0e-4
       hybrid%ewaldlambda = 3
       hybrid%lexp = 16
@@ -1322,7 +1322,7 @@ CONTAINS
       IF (numberNodes==0) THEN
          IF (hybrid%l_hybrid) CALL judft_error("Mixed product basis input missing in inp.xml")
       ELSE
-         mpbasis%gcutm=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
+         mpbasis%g_cutoff=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
          hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
          hybrid%ewaldlambda=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
          hybrid%lexp=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))

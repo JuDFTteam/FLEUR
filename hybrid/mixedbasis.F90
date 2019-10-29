@@ -139,7 +139,7 @@ CONTAINS
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
             rdum = norm2(MATMUL(kvec + g, cell%bmat))
-            IF (rdum <= mpbasis%gcutm) THEN
+            IF (rdum <= mpbasis%g_cutoff) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
             END IF
          END DO
@@ -160,7 +160,7 @@ CONTAINS
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
             rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
-            IF (rdum <= mpbasis%gcutm**2) THEN
+            IF (rdum <= mpbasis%g_cutoff**2) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
                unsrt_pgptm(hybrid%ngptm1(ikpt), ikpt) = igpt
                length_kG(hybrid%ngptm1(ikpt), ikpt) = rdum
@@ -188,7 +188,7 @@ CONTAINS
          WRITE (6, '(/A)') 'Mixed basis'
          WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpbasis%num_gpts()
          WRITE (6, *)
-         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpbasis%gcutm/2*input%rkmax):'
+         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpbasis%g_cutoff/2*input%rkmax):'
          WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
          WRITE (6, *)
          WRITE (6, *)
@@ -705,10 +705,10 @@ CONTAINS
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%gcutm) CYCLE
+                  IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
                   DO ikpt = 1, kpts%nkptf
-                     IF (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= mpbasis%gcutm) THEN
+                     IF (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
                         IF (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
                            l_found_kg_in_sphere = .TRUE.
@@ -750,12 +750,12 @@ CONTAINS
                n2 = n1 - ABS(y)
                DO z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%gcutm) CYCLE
+                  IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
                   DO ikpt = 1, kpts%nkptf
                      kvec = kpts%bkf(:,ikpt)
 
-                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= mpbasis%gcutm) THEN
+                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
                         IF (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
                            mpbasis%gptm(:,i) = g
