@@ -151,9 +151,9 @@ CONTAINS
       
       CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
 
-      CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                     noco, div, phi, cvec(1), cvec(2), cvec(3), &
-                     corrB(1), corrB(2), corrB(3), checkdiv)
+      !CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+      !               noco, div, phi, cvec(1), cvec(2), cvec(3), &
+      !               corrB(1), corrB(2), corrB(3), checkdiv)
 
    END SUBROUTINE sourcefree
 
@@ -225,10 +225,10 @@ CONTAINS
                !print *, k
 	            !print *, th/pi_const
 	            !print *, ph/pi_const
-	
-	            A_temp(kt+k,1,1)=0*(r**2)*(r/atoms%rmt(n))*SIN(th)*COS(ph)
-	            A_temp(kt+k,2,1)=(r**2)*(r/atoms%rmt(n))*SIN(th)*SIN(ph)
-	            A_temp(kt+k,3,1)=(r**2)*(r/atoms%rmt(n))*COS(th)
+	            !(r/atoms%rmt(n))
+	            A_temp(kt+k,1,1)=(r**2)*r*SIN(th)*COS(ph)
+	            A_temp(kt+k,2,1)=(r**2)*r*SIN(th)*SIN(ph)
+	            A_temp(kt+k,3,1)=(r**2)*r*COS(th)
             ENDDO ! k
             kt = kt + nsp
          END DO ! ir
@@ -268,9 +268,9 @@ CONTAINS
       vec3=matmul(cell%amat,vec3)
       zero=matmul(cell%amat,zero)
 
-      DO i = 0, grid(1)-1
+      DO k = 0, grid(3)-1
          DO j = 0, grid(2)-1
-            DO k = 0, grid(3)-1
+            DO i = 0, grid(1)-1
 
                point = zero + vec1*REAL(i)/(grid(1)-1) +&
                               vec2*REAL(j)/(grid(2)-1) +&
@@ -279,8 +279,8 @@ CONTAINS
                ind = k*grid(2)*grid(1) + j*grid(1) + i + 1
 
                A_temp(ind,1,1)=SIN(i*2*pi_const/grid(1))
-               A_temp(ind,2,1)=0.0
-               A_temp(ind,3,1)=0.0
+               A_temp(ind,2,1)=SIN(j*2*pi_const/grid(2))
+               A_temp(ind,3,1)=SIN(k*2*pi_const/grid(3))
 
             END DO
          END DO
