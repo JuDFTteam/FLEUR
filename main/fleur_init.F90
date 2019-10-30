@@ -299,7 +299,7 @@
           ALLOCATE (stars%igq2_fft(0:stars%kq1_fft*stars%kq2_fft-1))
 #ifdef CPP_MPI
           CALL mpi_bc_all(mpi,stars,sphhar,atoms,obsolete,sym,kpts,DIMENSION,input,field,&
-                          banddos,sliceplot,vacuum,cell,enpara,noco,oneD,hybrid)
+                          banddos,sliceplot,vacuum,cell,enpara,noco,oneD,mpbasis,hybrid)
 #endif
 
           ! Set up pointer for backtransformation from g-vector in positive
