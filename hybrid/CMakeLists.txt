@@ -8,5 +8,5 @@ hybrid/exponential_integral.f90
 hybrid/hsefunctional.F90
 hybrid/olap.F90 hybrid/wrapper.f90
 hybrid/wavefproducts.f90 hybrid/wavefproducts_aux.f90
-hybrid/wavefproducts_inv.f90 hybrid/wavefproducts_noinv.f90
+hybrid/wavefproducts_inv.f90 hybrid/wavefproducts_noinv.f90 hybrid/util.f90
 )

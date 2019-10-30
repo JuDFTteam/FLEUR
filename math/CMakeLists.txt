@@ -31,7 +31,6 @@ math/ExpSave.f90
 math/intgr.F90
 math/ylm4.F90
 math/grule.f90
-math/util.f90
 )
 if (FLEUR_USE_FFTMKL)
    set(fleur_F90 ${fleur_F90} math/mkl_dfti.f90)
