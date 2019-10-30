@@ -43,7 +43,8 @@ CONTAINS
       USE m_olap, ONLY: olap_pw
       use m_types_hybrid, only: gptnorm
       USE m_trafo, ONLY: symmetrize, bramat_trafo
-      USE m_util, ONLY: intgrf, intgrf_init, primitivef
+      USE m_intgrf, ONLY: intgrf, intgrf_init
+      use m_util, only: primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
       USE m_io_hybrid
@@ -1532,6 +1533,7 @@ CONTAINS
       USE m_wrapper
       USE m_trafo
       USE m_util
+      use m_intgrf
       USE m_olap
       IMPLICIT NONE
 

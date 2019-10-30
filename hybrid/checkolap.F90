@@ -8,7 +8,8 @@
         &                  dimension, mpi, &
         &                  input, sym, noco,&
         &                  cell, lapw, jsp)
-            USE m_util, ONLY: intgrf, intgrf_init, chr, sphbessel, harmonicsr
+            USE m_util, ONLY: chr, sphbessel, harmonicsr
+            use m_intgrf, only:  intgrf, intgrf_init
             USE m_constants
             USE m_types
             USE m_io_hybrid

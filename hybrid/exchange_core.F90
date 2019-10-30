@@ -24,7 +24,8 @@ CONTAINS
                             ex_vv_r, ex_vv_c, l_real)
 
       USE m_constants
-      USE m_util
+      use m_util
+      USE m_intgrf
       USE m_wrapper
       USE m_types
       USE m_io_hybrid
@@ -239,6 +240,7 @@ CONTAINS
 
       USE m_constants
       USE m_util
+      use m_intgrf
       USE m_wrapper
       USE m_types
       USE m_io_hybrid
@@ -413,6 +415,7 @@ CONTAINS
 
       USE m_constants
       USE m_util
+      use m_intgrf
       USE m_wrapper
       USE m_gaunt
       USE m_trafo
@@ -555,6 +558,7 @@ CONTAINS
 
       USE m_constants
       USE m_util
+      use m_intgrf
       USE m_wrapper
       USE m_gaunt
       USE m_trafo

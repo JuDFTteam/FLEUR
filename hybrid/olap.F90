@@ -157,7 +157,7 @@ CONTAINS
   &                       atoms, hybrid, cell,&
   &                       bas1, bas2)
 
-      USE m_util, ONLY: intgrf, intgrf_init
+      USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_types
       IMPLICIT NONE
       TYPE(t_hybrid), INTENT(IN)   :: hybrid

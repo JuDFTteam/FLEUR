@@ -42,7 +42,7 @@ CONTAINS
 
       USE m_judft
       USE m_loddop, ONLY: loddop
-      USE m_util, ONLY: intgrf_init, intgrf
+      USE m_intgrf, ONLY: intgrf_init, intgrf
       use m_rorder, only: rorderpf
       USE m_hybrid_core
       USE m_wrapper
@@ -588,7 +588,7 @@ CONTAINS
       use m_types
       USE m_radfun, ONLY: radfun
       USE m_radflo, ONLY: radflo
-      USE m_util,   ONLY: intgrf
+      USE m_intgrf,   ONLY: intgrf
       implicit NONE
       type(t_atoms), intent(in)        :: atoms
       type(t_enpara), intent(in)       :: enpara
@@ -667,7 +667,7 @@ CONTAINS
 
    subroutine gen_gvec(cell, kpts, mpbasis)
       use m_types
-      USE m_util, ONLY: intgrf_init, intgrf
+      USE m_intgrf, ONLY: intgrf_init, intgrf
       use m_rorder, only: rorderpf
       implicit NONE
       type(t_cell), intent(in)       :: cell

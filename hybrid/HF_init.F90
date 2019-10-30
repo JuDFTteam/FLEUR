@@ -8,6 +8,7 @@ CONTAINS
       USE m_types
       USE m_hybrid_core
       USE m_util
+      use m_intgrf
       USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybrid), INTENT(INOUT)     :: hybrid

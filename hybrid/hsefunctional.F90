@@ -972,8 +972,8 @@ CONTAINS
 
       USE m_constants
       USE m_types_hybrid, ONLY: gptnorm
-      USE m_util, ONLY: sphbessel, pure_intgrf, intgrf_init, intgrf_out, NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
-
+      USE m_util, ONLY: sphbessel
+      use m_intgrf, only: pure_intgrf, intgrf_init, intgrf_out,NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
       IMPLICIT NONE
 
       ! scalar input
@@ -1304,7 +1304,8 @@ CONTAINS
       potential, fourier_trafo)
 
       USE m_constants
-      USE m_util, ONLY: sphbessel, pure_intgrf, intgrf_init, intgrf_out, NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
+      USE m_util, ONLY: sphbessel
+      use m_intgrf, only: pure_intgrf, intgrf_init, intgrf_out,  NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
       USE m_trafo, ONLY: symmetrize
 
       IMPLICIT NONE
@@ -2132,6 +2133,7 @@ CONTAINS
 
       USE m_constants
       USE m_util
+      USE m_intgrf
       USE m_wrapper
 
       IMPLICIT NONE
@@ -2382,6 +2384,7 @@ CONTAINS
 
       USE m_constants
       USE m_util
+      use m_intgrf
       USE m_wrapper
       USE m_gaunt
       USE m_trafo

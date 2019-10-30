@@ -45,7 +45,7 @@ CONTAINS
    SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybrid, dimension, kpts, jsp, results, xcpot, noco, hmat)
 
       USE m_symm_hf, ONLY: symm_hf
-      USE m_util, ONLY: intgrf, intgrf_init
+      USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_exchange_valence_hf
       USE m_exchange_core
       USE m_symmetrizeh

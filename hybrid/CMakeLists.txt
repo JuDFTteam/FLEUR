@@ -26,6 +26,7 @@ hybrid/wavefproducts.f90
 hybrid/wavefproducts_aux.f90
 hybrid/wavefproducts_inv.f90
 hybrid/wavefproducts_noinv.f90
-hybrid/util.f90
-hybrid/rorder.f90
+hybrid/util/util.f90
+hybrid/util/rorder.f90
+hybrid/util/intgrf.f90
 )

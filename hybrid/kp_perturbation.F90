@@ -17,6 +17,7 @@ CONTAINS
       USE m_ylm
       USE m_gaunt
       USE m_util
+      use m_intgrf
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
@@ -786,7 +787,8 @@ CONTAINS
 
       USE m_olap
       USE m_wrapper
-      USE m_util, only: derivative, intgrf_init, intgrf
+      USE m_util, only: derivative
+      use m_intgrf, only: intgrf_init, intgrf
       USE m_dr2fdr
       USE m_constants
       USE m_types

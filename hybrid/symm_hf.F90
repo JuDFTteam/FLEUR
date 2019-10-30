@@ -19,7 +19,6 @@ CONTAINS
 
       USE m_types
       USE m_util, ONLY: modulo1
-
       IMPLICIT NONE
 
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -73,7 +72,8 @@ CONTAINS
 
       USE m_constants
       USE m_types
-      USE m_util, ONLY: modulo1, intgrf, intgrf_init
+      USE m_util, ONLY: modulo1
+      use m_intgrf, only: intgrf, intgrf_init
       USE m_olap, ONLY: wfolap_inv, wfolap_noinv, wfolap1, wfolap_init
       USE m_trafo, ONLY: waveftrafo_symm
       USE m_io_hybrid

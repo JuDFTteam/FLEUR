@@ -13,6 +13,7 @@ CONTAINS
       USE m_types
       USE m_eig66_io
       USE m_util
+      USE m_intgrf
       USE m_checkolap
       USE m_hybrid_core
       USE m_gen_wavf
