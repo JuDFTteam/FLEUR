@@ -103,7 +103,7 @@ CONTAINS
       TYPE(t_potden), DIMENSION(3), INTENT(IN)     :: bxc
       
       TYPE(t_atoms)                                :: atloc
-      TYPE(t_potden)                               :: div,phi
+      TYPE(t_potden)                               :: div,phi,checkdiv
       TYPE(t_potden), DIMENSION(3)                 :: cvec, corrB
       INTEGER                                      :: n, jr
 
@@ -126,16 +126,9 @@ CONTAINS
 
       DO n=1, atoms%ntype
          lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-         DO jr = 1, atoms%jri(n)
-            r=atoms%rmsh(jr, n)
-            DO lh=0, lhmax
-               !IF (ABS(phi%mt(jr,lh,n,1))<eps) THEN
-               !   phi%mt(jr,lh,n,:)=0.0
-               !ELSE
-               phi%mt(jr,0:,n,:) = phi%mt(jr,0:,n,:)*r**2
-               !END IF
-            END DO
-         END DO ! jr
+         DO lh=0, lhmax
+            phi%mt(:,lh,n,1) = phi%mt(:,lh,n,1)*atoms%rmsh(:, n)**2
+         END DO
       END DO
 
       DO i=1,3
@@ -150,10 +143,17 @@ CONTAINS
          ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
          CALL corrB(i)%addPotDen(bxc(i),cvec(i))
       ENDDO
+      
+      CALL checkdiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
+                                  atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
+                                  vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+      ALLOCATE(checkdiv%pw_w,mold=checkdiv%pw)
+      
+      CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
 
       CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                      noco, div, phi, cvec(1), cvec(2), cvec(3), &
-                     corrB(1), corrB(2), corrB(3))
+                     corrB(1), corrB(2), corrB(3), checkdiv)
 
    END SUBROUTINE sourcefree
 

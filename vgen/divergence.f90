@@ -224,24 +224,11 @@ CONTAINS
 
       DO i=1,3 
          CALL mt_from_grid(atoms, sphhar, n, 1, grad_temp(:,:,i), gradphi(i)%mt(:,0:,n,:))
-         DO jr = 1, atoms%jri(n)
-            DO lh=0, lhmax
-               IF (ABS(gradphi(i)%mt(jr,lh,n,1))<eps) THEN
-                  gradphi(i)%mt(jr,lh,n,:)=0.0
-               END IF
-            END DO
-         END DO
-      END DO
+         DO lh=0, lhmax
+            gradphi(i)%mt(:,lh,n,1) = gradphi(i)%mt(:,lh,n,1)*atoms%rmsh(:, n)**2
+         END DO ! lh
+      END DO ! i
 
-      kt = 0
-      DO jr = 1, atoms%jri(n)
-         r =atoms%rmsh(jr, n)
-         DO i=1,3
-            gradphi(i)%mt(jr,0:,n,:) = gradphi(i)%mt(jr,0:,n,:)*r**2
-         END DO
-         kt = kt+nsp
-      ENDDO ! jr
-  
       CALL finish_mt_grid
    
    END SUBROUTINE mt_grad
@@ -313,32 +300,8 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)                  :: pot
       TYPE(t_potden), dimension(3), INTENT(INOUT) :: grad
 
-      !TYPE(t_potden)                              :: den   
-      !REAL, ALLOCATABLE                           :: ch(:, :)
-      REAL                                        :: r
-      !REAL, ALLOCATABLE                           :: r2Array(:)
-      INTEGER :: jr, k, nsp, kt, n
+      INTEGER :: n
 
-      !CALL den%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
-      !ALLOCATE(den%pw_w,mold=den%pw)
-   
-      nsp = atoms%nsp()
-      !ALLOCATE(r2Array(nsp*atoms%jri(n)))
-      !ALLOCATE(ch(nsp*atoms%jri(n),1))
-   
-      !CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym)
-      !CALL mt_to_grid(.TRUE., 1, atoms, sphhar, pot%mt(:,0:,n,:), n, dummygrad, ch)
-
-      !ch(:,1)=ch(:,1)*r2Array
-
-      !CALL mt_from_grid(atoms, sphhar, n, 1, ch, den%mt(:,0:,n,:))
-
-      !CALL finish_mt_grid
-
-      !den%pw    = pot%pw
-      !den%pw_w  = pot%pw_w
-      !den%vacz  = pot%vacz
-      !den%vacxy = pot%vacxy
       DO n=1,atoms%ntype
          CALL mt_grad(n,atoms,sphhar,sym,pot,grad)
       END DO

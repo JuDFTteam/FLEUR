@@ -519,13 +519,12 @@ CONTAINS
 
     !CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
     !CALL makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,testDen)
-    !CALL dummyDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-    !CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, 1.0, inDen, dummyDen, testDen(1), testDen(2), testDen(3))
-    !CALL checkplotinp()
-    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDen             ', dummyDen, testDen(1), testDen(2), testDen(3))
+    CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, 1.0, inDen, dummyDen, testDen(1), testDen(2), testDen(3))
+    CALL checkplotinp()
+    CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDen             ', dummyDen, testDen(1), testDen(2), testDen(3))
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenz            ', testDen(3))
-    !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
+    CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
 
     CALL add_usage_data("Iterations",iter)
 

@@ -1071,7 +1071,7 @@ CONTAINS
 
    SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, div, phi, divGrx, divGry, divGrz, &
-                        xcBmodx, xcBmody, xcBmodz) 
+                        xcBmodx, xcBmody, xcBmodz, div2) 
 
       IMPLICIT NONE
 
@@ -1085,31 +1085,33 @@ CONTAINS
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_potden),    INTENT(IN)    :: div, phi, divGrx, divGry, divGrz, &
-                                          xcBmodx, xcBmody, xcBmodz
+                                          xcBmodx, xcBmody, xcBmodz, div2
+
+      LOGICAL                          :: xsf
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .FALSE., 'divergence          ', div)
+                  .FALSE., .FALSE., 'div                 ', div)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'modPot              ', phi)
+                  .FALSE., .TRUE., 'phiDiv              ', phi)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPotx             ', divGrx)
+                  .FALSE., .TRUE., 'gradPhiDiv          ', divGrx, divGrx, divGry, divGrz)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPoty             ', divGry)
+                  .FALSE., .TRUE., 'bCorrected          ', xcBmodx, xcBmodx, xcBmody, xcBmodz)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'divPotz             ', divGrz)
+                  .FALSE., .FALSE., 'divCorrected        ', div2)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'xcBmodx             ', xcBmodx)
-
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'xcBmody             ', xcBmody)
-
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'xcBmodz             ', xcBmodz)
+      INQUIRE(file="div.xsf",exist=xsf)
+    
+      IF (xsf) THEN
+         OPEN  (120, FILE='gradPhiDiv_f.xsf', STATUS='OLD')
+         CLOSE (120, STATUS="DELETE")
+         OPEN  (120, FILE='bCorrected_f.xsf', STATUS='OLD')
+         CLOSE (120, STATUS="DELETE")
+      END IF 
       
    END SUBROUTINE plotBtest
 
