@@ -8,6 +8,7 @@ module m_types_mpbasis
       REAL                   ::  g_cutoff
    CONTAINS
       procedure :: num_gpts => mpbasis_num_gpts
+      procedure :: gen_gvec => mpbasis_gen_gvec
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
@@ -18,15 +19,15 @@ contains
       mpbasis_num_gpts = size(mpbasis%gptm,dim=2)
    end function mpbasis_num_gpts
 
-   subroutine gen_gvec(cell, kpts, mpbasis)
+   subroutine mpbasis_gen_gvec(mpbasis, cell, kpts)
       use m_types_setup
       use m_types_kpts
       USE m_intgrf, ONLY: intgrf_init, intgrf
       use m_rorder, only: rorderpf
       implicit NONE
+      class(t_mpbasis), intent(inout) :: mpbasis
       type(t_cell), intent(in)       :: cell
       type(t_kpts), intent(in)       :: kpts
-      TYPE(t_mpbasis), intent(inout) :: mpbasis
 
 
       integer :: i, n, n1, n2, divconq
@@ -143,5 +144,5 @@ contains
          END DO
          deallocate(ptr)
       END DO
-   end subroutine gen_gvec
+   end subroutine mpbasis_gen_gvec
 end module m_types_mpbasis

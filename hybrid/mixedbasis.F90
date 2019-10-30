@@ -128,7 +128,7 @@ CONTAINS
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      call gen_gvec(cell, kpts, mpbasis)
+      call mpbasis%gen_gvec(cell, kpts)
 
       ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
 
