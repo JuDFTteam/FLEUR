@@ -1665,7 +1665,7 @@ CONTAINS
    SUBROUTINE structureconstant(structconst, cell, hybrid, atoms, kpts, mpi)
 
       USE m_constants, ONLY: pi_const
-      USE m_util, ONLY: rorderp, rorderpf
+      USE m_rorder, ONLY: rorderp, rorderpf
       USE m_types
       USE m_juDFT
       use m_ylm
@@ -2028,7 +2028,7 @@ CONTAINS
    !     The lattice points (number = nptsh) are stored in ptsh, their corresponding lengths (shell radii) in radsh.
 
    SUBROUTINE getshells(ptsh, nptsh, radsh, nshell, rad, lat, lwrite)
-      USE m_util, ONLY: rorderpf
+      USE m_rorder, ONLY: rorderpf
       USE m_juDFT
       IMPLICIT NONE
       LOGICAL, INTENT(IN)    :: lwrite

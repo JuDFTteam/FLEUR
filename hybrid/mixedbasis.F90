@@ -42,7 +42,8 @@ CONTAINS
 
       USE m_judft
       USE m_loddop, ONLY: loddop
-      USE m_util, ONLY: intgrf_init, intgrf, rorderpf
+      USE m_util, ONLY: intgrf_init, intgrf
+      use m_rorder, only: rorderpf
       USE m_hybrid_core
       USE m_wrapper
       USE m_eig66_io
@@ -666,7 +667,8 @@ CONTAINS
 
    subroutine gen_gvec(cell, kpts, mpbasis)
       use m_types
-      USE m_util, ONLY: intgrf_init, intgrf, rorderpf
+      USE m_util, ONLY: intgrf_init, intgrf
+      use m_rorder, only: rorderpf
       implicit NONE
       type(t_cell), intent(in)       :: cell
       type(t_kpts), intent(in)       :: kpts
