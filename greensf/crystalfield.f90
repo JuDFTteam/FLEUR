@@ -44,6 +44,7 @@ MODULE m_crystalfield
       !-Local Scalars
       INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp
       REAL    tr,xiSOC
+      COMPLEX vso
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
