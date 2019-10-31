@@ -126,17 +126,7 @@ CONTAINS
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      call mpbasis%gen_gvec(cell, kpts)
-
-      ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
-
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(/A)') 'Mixed basis'
-         WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpbasis%num_gpts()
-         WRITE (6, *)
-         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpbasis%g_cutoff/2*input%rkmax):'
-         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
-      END IF
+      call mpbasis%gen_gvec(cell, kpts, mpi)
 
       ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
 

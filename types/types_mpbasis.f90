@@ -19,15 +19,17 @@ contains
       mpbasis_num_gpts = size(mpbasis%gptm,dim=2)
    end function mpbasis_num_gpts
 
-   subroutine mpbasis_gen_gvec(mpbasis, cell, kpts)
+   subroutine mpbasis_gen_gvec(mpbasis, cell, kpts, mpi)
       use m_types_setup
       use m_types_kpts
+      use m_types_mpi
       USE m_intgrf, ONLY: intgrf_init, intgrf
       use m_rorder, only: rorderpf
       implicit NONE
       class(t_mpbasis), intent(inout) :: mpbasis
       type(t_cell), intent(in)       :: cell
       type(t_kpts), intent(in)       :: kpts
+      type(t_mpi), intent(in)        :: mpi
 
 
       integer :: i, n, n1, n2, divconq
@@ -144,5 +146,13 @@ contains
          END DO
          deallocate(ptr)
       END DO
+
+      IF (mpi%irank == 0) THEN
+         WRITE (6, '(/A)') 'Mixed basis'
+         WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpbasis%num_gpts()
+         WRITE (6, *)
+         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpbasis%g_cutoff/2*input%rkmax):'
+         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
+      END IF
    end subroutine mpbasis_gen_gvec
 end module m_types_mpbasis
