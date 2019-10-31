@@ -132,58 +132,9 @@ CONTAINS
 
       ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
 
-      ! first run to determine dimension of pgptm1
-      allocate(hybrid%ngptm1(kpts%nkptf))
+      hybrid%maxgptm1 = MAXVAL(hybrid%ngptm)
+      allocate(hybrid%ngptm1, mold=hybrid%ngptm)
       hybrid%ngptm1 = 0
-      DO igpt = 1, mpbasis%num_gpts()
-         g = mpbasis%gptm(:,igpt)
-         DO ikpt = 1, kpts%nkptf
-            kvec = kpts%bkf(:,ikpt)
-            rdum = norm2(MATMUL(kvec + g, cell%bmat))
-            IF (rdum <= mpbasis%g_cutoff) THEN
-               hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
-            END IF
-         END DO
-      END DO
-      hybrid%maxgptm1 = MAXVAL(hybrid%ngptm1)
-
-      allocate(hybrid%pgptm1(hybrid%maxgptm1, kpts%nkptf))
-      hybrid%pgptm1 = 0
-      hybrid%ngptm1 = 0
-
-      ! Allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(hybrid%maxgptm1, kpts%nkptf))
-      allocate(length_kG(hybrid%maxgptm1, kpts%nkptf))
-      length_kG = 0
-      unsrt_pgptm = 0
-      DO igpt = 1, mpbasis%num_gpts()
-         g = mpbasis%gptm(:,igpt)
-         DO ikpt = 1, kpts%nkptf
-            kvec = kpts%bkf(:,ikpt)
-            rdum = norm2(MATMUL(kvec + g, cell%bmat))
-            IF (rdum <= mpbasis%g_cutoff) THEN
-               hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
-               unsrt_pgptm(hybrid%ngptm1(ikpt), ikpt) = igpt
-               length_kG(hybrid%ngptm1(ikpt), ikpt) = rdum
-            END IF
-         END DO
-      END DO
-
-      ! Sort pointers in array, so that shortest |k+G| comes first
-      DO ikpt = 1, kpts%nkptf
-         allocate(ptr(hybrid%ngptm1(ikpt)))
-         ! Divide and conquer algorithm for arrays > 1000 entries
-         divconq = MAX(0, INT(1.443*LOG(0.001*hybrid%ngptm1(ikpt))))
-         ! create pointers which correspond to a sorted array
-         CALL rorderpf(ptr, length_kG(1:hybrid%ngptm1(ikpt), ikpt), hybrid%ngptm1(ikpt), divconq)
-         ! rearrange old pointers
-         DO igpt = 1, hybrid%ngptm1(ikpt)
-            hybrid%pgptm1(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
-         END DO
-         deallocate(ptr)
-      END DO
-      deallocate(unsrt_pgptm)
-      deallocate(length_kG)
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(/A)') 'Mixed basis'
@@ -191,11 +142,6 @@ CONTAINS
          WRITE (6, *)
          WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpbasis%g_cutoff/2*input%rkmax):'
          WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
-         WRITE (6, *)
-         WRITE (6, *)
-         WRITE (6, '(3x,A)') 'IR Plane-wave basis for non-local exchange potential:'
-         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', hybrid%maxgptm1
-         WRITE (6, *)
       END IF
 
       ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
