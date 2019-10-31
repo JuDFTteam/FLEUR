@@ -728,7 +728,7 @@ c     Returns the starting point lsta2 for backward recurrence such that all sph
       n1 = n0 + 5
       f1 = envj(n1,x) - obj
       DO it = 1,20
-        nn = n1 - (n1-n0) / (10-f0/f1)
+        nn = n1 - (n1-n0) / (1.0-f0/f1)
         f  = envj(nn,x) - obj
         IF(abs(nn-n1).lt.1) EXIT
         n0 = n1

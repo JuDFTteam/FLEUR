@@ -56,14 +56,16 @@ CONTAINS
 
       TYPE(t_potden)                    :: workden,denRot
 
+      INTEGER :: i
+
       if (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
-
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
+
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
 #else

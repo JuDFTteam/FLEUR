@@ -47,6 +47,7 @@ CONTAINS
       ! local scalars
       INTEGER :: ok, nk, nrec1, i, j, ll, l1, l2, ng, itype, n, l, n1, n2, nn
       INTEGER :: nbasfcn
+      LOGICAL :: l_exist
 
       ! local arrays
 
@@ -55,20 +56,33 @@ CONTAINS
       LOGICAL              :: skip_kpt(kpts%nkpt)
       INTEGER              :: g(3)
 
+      REAL :: zDebug_r(DIMENSION%nbasfcn,Dimension%Neigd)
+      COMPLEX :: zDebug_c(DIMENSION%nbasfcn,Dimension%Neigd)
+
       skip_kpt = .FALSE.
 
       IF (hybrid%l_calhf) THEN
          ! Preparations for HF and hybrid functional calculation
          CALL timestart("gen_bz and gen_wavf")
 
+         WRITE(9333,*) DIMENSION%nbasfcn, Dimension%Neigd, atoms%nlotot, kpts%nkpt
+         WRITE(9333,*) ALLOCATED(hybdat%kveclo_eig)
+
          ALLOCATE (zmat(kpts%nkptf), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation z_c'
          ALLOCATE (eig_irr(merge(dimension%neigd*2,dimension%neigd,noco%l_soc), kpts%nkpt), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation eig_irr'
+         IF(ALLOCATED(hybdat%kveclo_eig)) DEALLOCATE (hybdat%kveclo_eig) ! for spinpolarized systems
          ALLOCATE (hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%kveclo_eig'
          eig_irr = 0
          hybdat%kveclo_eig = 0
+
+         INQUIRE(file ="z",exist= l_exist)
+         IF(l_exist) THEN
+            IF (l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=DIMENSION%nbasfcn*Dimension%Neigd*8)
+            IF (.NOT.l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=DIMENSION%nbasfcn*Dimension%Neigd*16)
+         END IF
 
          ! Reading the eig file
          DO nk = 1, kpts%nkpt
@@ -77,9 +91,27 @@ CONTAINS
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
             CALL zMat(nk)%init(l_real, nbasfcn, merge(dimension%neigd*2,dimension%neigd,noco%l_soc))
             CALL read_eig(eig_id_hf, nk, jsp, zmat=zMat(nk))
+
+            IF(l_exist.AND.zmat(1)%l_real) THEN
+               READ(993,rec=nk) zDebug_r(:,:)
+               zMat(nk)%data_r = 0.0
+               zMat(nk)%data_r(:nbasfcn,:Dimension%Neigd) = zDebug_r(:nbasfcn,:Dimension%Neigd)
+            END IF
+            IF(l_exist.AND..NOT.zmat(1)%l_real) THEN
+               READ(993,rec=nk) zDebug_c(:,:)
+               zMat(nk)%data_c = 0.0
+               zMat(nk)%data_c(:nbasfcn,:Dimension%Neigd) = zDebug_c(:nbasfcn,:Dimension%Neigd)
+            END IF
+
+            WRITE(9333,*) SHAPE(eig_irr)
+            WRITE(9333,*) SHAPE(results%eig)
+
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybrid%ne_eig(nk) = results%neig(nk, jsp)
          END DO
+
+         IF(l_exist) CLOSE(993)
+
          !Allocate further space
          DO nk = kpts%nkpt + 1, kpts%nkptf
             nbasfcn = zMat(kpts%bkp(nk))%matsize1
@@ -165,6 +197,7 @@ CONTAINS
          ! set up pointer pntgpt
 
          ! setup dimension of pntgpt
+         IF(ALLOCATED(hybdat%pntgptd)) DEALLOCATE(hybdat%pntgptd) ! for spinpolarized systems
          ALLOCATE (hybdat%pntgptd(3))
          hybdat%pntgptd = 0
          DO nk = 1, kpts%nkptf
@@ -174,6 +207,7 @@ CONTAINS
             hybdat%pntgptd(3) = MAXVAL((/(ABS(lapw%k3(i, jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(3)/))
          END DO
 
+         IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE(hybdat%pntgpt) ! for spinpolarized systems
          ALLOCATE (hybdat%pntgpt(-hybdat%pntgptd(1):hybdat%pntgptd(1), -hybdat%pntgptd(2):hybdat%pntgptd(2), &
                                  -hybdat%pntgptd(3):hybdat%pntgptd(3), kpts%nkptf), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation pntgpt'
@@ -188,12 +222,15 @@ CONTAINS
 
          ALLOCATE (basprod(atoms%jmtd), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation basprod'
+         IF(ALLOCATED(hybdat%prodm)) DEALLOCATE(hybdat%prodm) ! for spinpolarized systems
          ALLOCATE (hybdat%prodm(hybrid%maxindxm1, hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%prodm'
+         IF(ALLOCATED(hybdat%prod)) DEALLOCATE(hybdat%prod) ! for spinpolarized systems
          ALLOCATE (hybdat%prod(hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%prod'
          basprod = 0; hybdat%prodm = 0; hybdat%prod%l1 = 0; hybdat%prod%l2 = 0
          hybdat%prod%n1 = 0; hybdat%prod%n2 = 0
+         IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE(hybdat%nindxp1) ! for spinpolarized systems
          ALLOCATE (hybdat%nindxp1(0:hybrid%maxlcutm1, atoms%ntype))
          hybdat%nindxp1 = 0
          DO itype = 1, atoms%ntype

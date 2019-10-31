@@ -16,12 +16,12 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN) :: sphhar
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_potden),INTENT(INOUT) :: den
-    
-    
+
+
     TYPE(t_xcpot_inbuild)    :: xcpot !local xcpot that is LDA to indicate we do not need gradients
     TYPE(t_gradients)        :: grad
 
-    INTEGER :: n,nsp,imesh,i
+    INTEGER :: n,nsp,imesh,i,b_ind
     REAL    :: rho_11,rho_22,rho_21r,rho_21i,mx,my,mz,magmom
     REAL    :: rhotot,rho_up,rho_down,theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
@@ -33,11 +33,11 @@ CONTAINS
     xcpot%l_inbuild=.TRUE.
     CALL xcpot%init(1)
 
-    CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
+    CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot,4,atoms,sym,sphhar,den%mt(:,0:,n,:),n,grad,ch)
+       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,den%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
-    
+
           rho_11  = ch(imesh,1)
           rho_22  = ch(imesh,2)
           rho_21r = ch(imesh,3)
@@ -75,7 +75,7 @@ CONTAINS
                 phi = ATAN(my/mx) - pi_const
              ENDIF
           ENDIF
-          
+
           ch(imesh,1) = rho_up
           ch(imesh,2) = rho_down
           den%theta_mt(imesh,n) = theta
@@ -96,24 +96,23 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_potden),INTENT(IN) :: den
     TYPE(t_potden),INTENT(INOUT) :: vtot
-    
-    
+
     TYPE(t_xcpot_inbuild)     :: xcpot !local xcpot that is LDA to indicate we do not need gradients
     TYPE(t_gradients) :: grad
-    
+
     INTEGER :: n,nsp,imesh,i
     REAL    :: vup,vdown,veff,beff
     REAL    :: theta,phi
     REAL,ALLOCATABLE :: ch(:,:)
-    
+
     nsp=atoms%nsp()
     ALLOCATE(ch(nsp*atoms%jmtd,4))
     xcpot%l_inbuild=.TRUE.
     CALL xcpot%init(1)
 
-    CALL init_mt_grid(4,atoms,sphhar,xcpot,sym)
+    CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot,4,atoms,sym,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
+       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
           vup   = ch(imesh,1)
           vdown = ch(imesh,2)
@@ -127,7 +126,9 @@ CONTAINS
           ch(imesh,4) = beff*SIN(theta)*SIN(phi)
        ENDDO
        vtot%mt(:,0:,n,:)=0.0
+
        CALL mt_from_grid(atoms,sym,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
+
        DO i=1,atoms%jri(n)
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO

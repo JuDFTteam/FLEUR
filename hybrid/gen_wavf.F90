@@ -172,7 +172,7 @@ CONTAINS
       lower = 1
       upper = nkpti
       found = .true.
-      
+
       IF (.NOT. found) THEN
          upper = 0
       END IF
@@ -187,9 +187,9 @@ CONTAINS
       IF (ok /= 0) STOP 'gen_wavf: failure allocation bcof'
       ALLOCATE (ccof(-atoms%llod:atoms%llod, dimension%neigd, atoms%nlod, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation ccof'
-      ALLOCATE (cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      ALLOCATE (cmt(Dimension%Neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: Failure allocation cmt'
-      ALLOCATE (cmthlp(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      ALLOCATE (cmthlp(Dimension%Neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation cmthlp'
 
       DO ikpt0 = lower, upper
@@ -273,7 +273,7 @@ CONTAINS
          ELSE
             zhlp%data_c = zmat(ikpt0)%data_c
          END IF
-         CALL write_z(zhlp, ikpt0)
+         CALL write_z(zhlp, kpts%nkptf*(jsp - 1) + ikpt0)
 
          ! generate wavefunctions coefficients at all k-points from
          ! irreducible k-points
@@ -282,11 +282,11 @@ CONTAINS
             IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
                iop = kpts%bksym(ikpt)
                CALL waveftrafo_genwavf(cmthlp, zhlp%data_r, zhlp%data_c, cmt(:, :, :), zmat(1)%l_real, zmat(ikpt0)%data_r(:, :), &
-                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, hybrid, kpts, sym, jsp, dimension, &
+                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1, dimension, &
                                        hybrid%nbands(ikpt0), cell, lapw(ikpt0), lapw(ikpt), .true.)
 
                CALL write_cmt(cmthlp, ikpt)
-               CALL write_z(zhlp, ikpt)
+               CALL write_z(zhlp, kpts%nkptf*(jsp - 1) + ikpt)
             END IF
          END DO  !ikpt
       END DO !ikpt0

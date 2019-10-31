@@ -3,6 +3,7 @@
       subroutine wann_convert_fleur_w90(jspins_in,l_nocosoc,wann)
       use m_types
       use m_juDFT
+      use m_constants
       IMPLICIT NONE
       integer,intent(in) :: jspins_in
       logical,intent(in) :: l_nocosoc
@@ -29,7 +30,7 @@
       integer :: dummy1,dummy2,dummy3,dummy4,dummy5,dummy6
       integer :: spin1,spin2,spinmat_dims,ikpt,dir,ii,jj
       real :: conversionfactor
-      real,parameter      :: hart=27.21138505
+!      real,parameter      :: hart=27.21138505  !take from m_constants
       integer :: jj_tmp,ii_tmp,j_tmp,i_tmp,dir_tmp,ikpt_tmp,test_tmp
       integer :: write_bands,firstband
       integer :: map3(3)
@@ -184,7 +185,7 @@
          filestoread=1
          filenameread(1)='updown.perpmag_unf'
          filenamewrite='WF1.tor'
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
          map3(1)=2
          map3(2)=1
         
@@ -196,7 +197,7 @@
          filestoread=1
          filenameread(1)='updown.perpmag'
          filenamewrite='WF1.tor'
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
          map3(1)=2
          map3(2)=1
         
@@ -208,7 +209,7 @@
          filestoread=1
          filenameread(1)='updown.perpmag'
          filenamewrite='WF1.tor'
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
          map3(1)=2
          map3(2)=1
          
@@ -220,7 +221,7 @@
          filestoread=1
          filenameread(1)='updown.perpmag_unf'
          filenamewrite='WF1.tor'
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
          map3(1)=2
          map3(2)=1
         
@@ -235,7 +236,7 @@
          l_spinmat=.true.
          l_conjg=.true.
          spinmat_dims=3
-         conversionfactor=hart         
+         conversionfactor=hartree_to_ev_const         
 !         write_bands=num_bands1
          
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')      
@@ -250,7 +251,7 @@
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !         write_bands=num_bands1
         
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
@@ -265,7 +266,7 @@
          l_spinmat=.true.
          spinmat_dims=3
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !         write_bands=num_bands1
         
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
@@ -280,7 +281,7 @@
          l_spinmat=.true.
          spinmat_dims=3
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !         write_bands=num_bands1
         
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
@@ -296,7 +297,7 @@
          num_compos=1
            spinmat_dims=1
          l_conjg=.true.
-         conversionfactor=hart         
+         conversionfactor=hartree_to_ev_const         
 !       
             
       elseif(wann%l_hsomtx_to_hsoc_unf)then
@@ -311,7 +312,7 @@
          num_compos=1
            spinmat_dims=1
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !         
       elseif(wann%l_hsomtx_to_hsoc)then
          l_readunf=.false.
@@ -325,7 +326,7 @@
          num_compos=1
            spinmat_dims=1
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !       
       elseif(wann%l_hsomtx_unf_to_hsoc)then
          l_readunf=.true.
@@ -339,7 +340,7 @@
          l_spinmat=.true.
            spinmat_dims=1
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !       
          
          

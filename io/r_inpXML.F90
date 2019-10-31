@@ -87,7 +87,7 @@ CONTAINS
       INTEGER :: iAtomType
       CHARACTER(len=100) :: xPosString, yPosString, zPosString
       CHARACTER(len=20),ALLOCATABLE :: speciesName(:)
-      
+
       !   REAL :: tempTaual(3,atoms%nat)
       TYPE(t_econfig)  :: econf
 
@@ -140,18 +140,18 @@ CONTAINS
       REAL, ALLOCATABLE    :: rmt1(:), dx1(:)
 
 
-    
 
-     
+
+
       IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
 
- 
-    
-   
-      
 
-     
-    
+
+
+
+
+
+
       ! Construction of amat requires additional information about the lattice
       ! and is done later (scroll down)!
 
@@ -177,7 +177,7 @@ CONTAINS
                   END IF
                END DO
             END IF
-      
+
 
       IF (.NOT.input%film) vacuum%dvac = a3(3)
       vacuum%dvac = latticeScale*vacuum%dvac
@@ -185,12 +185,12 @@ CONTAINS
 
 
   !some settings for film calculations
-     
+
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1
-    
+
       IF (oneD%odd%d1) vacuum%delz = 20.0 / vacuum%nmz
-    
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -211,7 +211,7 @@ CONTAINS
          IF (numberNodes.EQ.1) THEN
          ENDIF
          !dmi
-         
+
          !jij
          xPathA = '/fleurInput/forceTheorem/Jij'
          numberNodes = xmlGetNumberOfNodes(xPathA)
@@ -226,13 +226,13 @@ CONTAINS
 !!! End of force-theorem section
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-         
-         
 
-         
+
+
+
 
       !CALL xmlFreeResources()
-      
+
       !WRITE(*,*) 'Reading of inp.xml file finished'
 
       DEALLOCATE(speciesNLO)
@@ -395,5 +395,5 @@ CONTAINS
 
    END SUBROUTINE getIntegerSequenceFromString
 
-  
+
 END MODULE m_rinpXML

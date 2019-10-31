@@ -6,7 +6,6 @@ math/cylpts.f
 math/dcylbs.f
 math/dsphbs.f
 math/gaussp.f
-math/grule.f
 math/inwint.f
 math/matmul.f
 math/outint.f
@@ -30,8 +29,10 @@ math/fft_interface.F90
 math/SphBessel.f90
 math/DoubleFactorial.f90
 math/ExpSave.f90
+math/grule.f90
 math/intgr.F90
 math/ylm4.F90
+math/grule.f90
 )
 if (FLEUR_USE_FFTMKL)
    set(fleur_F90 ${fleur_F90} math/mkl_dfti.f90)

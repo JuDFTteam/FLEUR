@@ -51,6 +51,8 @@ wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
 #wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
+wannier/wann_gabeffgagaunt.f
+wannier/wann_perpmag.f
 wannier/wann_perpmag_rs.f
 wannier/wann_plot.F
 wannier/wann_plot_from_lapw.f
@@ -72,6 +74,7 @@ wannier/wann_real.F
 wannier/wann_rmat.f
 wannier/wann_rw_eig.F
 wannier/wann_socmat.F
+wannier/wann_socmat_vec.F
 wannier/wann_socmat_rs.f
 wannier/wann_tlmw.f
 wannier/wann_ujugaunt.F

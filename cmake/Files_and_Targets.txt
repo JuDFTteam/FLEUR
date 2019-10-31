@@ -83,13 +83,13 @@ endif ()
 include(cmake/docker.txt)
 
 
-#if (${FLEUR_USE_SERIAL})        
-#install(TARGETS fleur inpgen 
+#if (${FLEUR_USE_SERIAL})
+#install(TARGETS fleur inpgen
 #        CONFIGURATIONS Release
 #        DESTINATION bin)
 #endif()
-#if (${FLEUR_USE_MPI})        
-#install(TARGETS fleur_MPI 
+#if (${FLEUR_USE_MPI})
+#install(TARGETS fleur_MPI
 #        CONFIGURATIONS Release
 #        DESTINATION bin)
 #endif()

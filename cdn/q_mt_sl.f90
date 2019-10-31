@@ -1,14 +1,14 @@
 MODULE m_qmtsl
 CONTAINS
   !***********************************************************************
-  ! Calculates the mt-spheres contribution to the layer charge for states 
-  !  {En} at the current k-point. 
+  ! Calculates the mt-spheres contribution to the layer charge for states
+  !  {En} at the current k-point.
   !                                      Yury Koroteev 2003
   !                     from eparas.F  by  Philipp Kurz 99/04
   !
   !***********************************************************************
   !
-  SUBROUTINE q_mt_sl(jsp,atoms,sym,nobd,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
+  SUBROUTINE q_mt_sl(jsp,atoms,sym,nobd,ev_list,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
     USE m_types_setup
     USE m_types_usdus
     USE m_types_cdnval, ONLY: t_eigVecCoeffs, t_slab
@@ -20,8 +20,11 @@ CONTAINS
     TYPE(t_slab), INTENT(INOUT)     :: slab
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nobd,jsp      
+    INTEGER, INTENT (IN) :: nobd,jsp
     INTEGER, INTENT (IN) :: ne,ikpt ,skip_t,noccbd
+
+    INTEGER, INTENT (IN) :: ev_list(nobd)
+
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lo ,natom,nn,ntyp,nt1,nt2,m
@@ -68,7 +71,7 @@ CONTAINS
           nt1 = nt1 + atoms%neq(n)
        enddo
     enddo
-    !                  
+    !
     !---> initialize qlo
     !
     qlo=0.0
@@ -124,7 +127,7 @@ CONTAINS
           DO lo = 1,atoms%nlo(ntyp)
              qq = qq + qlo(i,lo,ntyp)*usdus%uloulopn(lo,lo,ntyp,jsp) +&
                   qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)     +&
-                  qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)    
+                  qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)
           ENDDO
           qmtlo(ntyp,i) = qq*fac
           qmttot(ntyp,i) = qmt(ntyp,i) + qmtlo(ntyp,i)
@@ -137,7 +140,7 @@ CONTAINS
           DO ntyp = 1,atoms%ntype
              qq = qq + qmttot(ntyp,i)*slab%nmtsl(ntyp,nl)
           ENDDO
-          slab%qmtsl(nl,i,ikpt,jsp) = qq
+          slab%qmtsl(nl,ev_list(i),ikpt,jsp) = qq
        ENDDO
     ENDDO
     !        DO ntyp = 1,ntype

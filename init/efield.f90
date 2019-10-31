@@ -61,7 +61,7 @@
       ENDDO
 !---> semi-core and valence electrons
       qe=qe+input%zelec
-      WRITE (6,*) 'zelec=  ',input%zelec
+      WRITE (6,"(A, F12.8)") 'zelec=  ',input%zelec
 
       WRITE (6, '(/,/,a)') ' parameters for external electric field:'
       WRITE (6, '(3x,a,f12.5)') 'total electronic charge   =', qe

@@ -98,7 +98,7 @@ ${FLEUR_SRC}/cdn/int_21lo.f90
 ${FLEUR_SRC}/cdn_mt/rhomt21.f90
 ${FLEUR_SRC}/cdn_mt/rhonmt21.f90
 ${FLEUR_SRC}/xc-pot/gaunt.f90
-${FLEUR_SRC}/math/grule.f
+${FLEUR_SRC}/math/grule.f90
 ${FLEUR_SRC}/init/ifft235.f
 ${FLEUR_SRC}/init/mod_symdata.f
 ${FLEUR_SRC}/init/inpeig.f90

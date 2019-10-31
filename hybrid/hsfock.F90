@@ -191,7 +191,7 @@ CONTAINS
          IF (dimension%neigd < hybrid%nbands(nk)) STOP " mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)"
 
          call z%init(olap%l_real, nbasfcn, dimension%neigd)
-         call read_z(z, kpts%nkpt*(jsp - 1) + nk)
+         call read_z(z, kpts%nkptf*(jsp - 1) + nk)
          z%matsize2 = hybrid%nbands(nk) ! reduce "visible matsize" for the following computations
 
          call olap%multiply(z, trafo)

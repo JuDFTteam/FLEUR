@@ -12,14 +12,13 @@
 !! In addition to overloading the t_xcpot datatype also mpi_bc_xcpot must be adjusted
 !! for additional implementations.
 MODULE m_types_xcpot
-   USE m_juDFT
-   USE m_types_fleurinput_base
+   USE m_types_potden
    IMPLICIT NONE
    PRIVATE
 <<<<<<< variant A
    PUBLIC :: t_xcpot,t_gradients
-   
-   
+
+
    TYPE,ABSTRACT,EXTENDS(t_fleurinput_base) :: t_xcpot
 >>>>>>> variant B
    PUBLIC           :: t_xcpot,t_gradients
@@ -77,12 +76,12 @@ MODULE m_types_xcpot
       REAL,ALLOCATABLE :: laplace(:,:)
    END TYPE t_gradients
 CONTAINS
-   subroutine kED_alloc_mt(kED,nsp_x_jmtd, jspins, n_start, n_types, n_stride)
-      implicit none
+   SUBROUTINE kED_alloc_mt(kED,nsp_x_jmtd, jspins, n_start, n_types, n_stride)
+      IMPLICIT NONE
       class(t_kinED), intent(inout)   :: kED
       integer, intent(in)            :: nsp_x_jmtd, jspins, n_start, n_types, n_stride
       integer                        :: cnt, n
-      
+
       if(.not. allocated(kED%mt)) then
          cnt = 0
          do n = n_start,n_types,n_stride
@@ -104,7 +103,7 @@ CONTAINS
       CLASS(t_xcpot),INTENT(IN):: xcpot
       xcpot_vx_is_LDA=.false.
    END FUNCTION xcpot_vx_is_LDA
-   
+
    LOGICAL FUNCTION xcpot_vxc_is_LDA(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
@@ -129,7 +128,7 @@ CONTAINS
       CLASS(t_xcpot),INTENT(IN):: xcpot
       xcpot_vx_is_GGA=.false.
    END FUNCTION xcpot_vx_is_GGA
-   
+
    LOGICAL FUNCTION xcpot_vxc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN):: xcpot
@@ -207,7 +206,7 @@ CONTAINS
       !---> xc energy density
       REAL, INTENT (OUT)                    :: exc (:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) :: grad
-      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call
       REAL, INTENT(IN), OPTIONAL            :: kinED_KS(:,:)
 
       exc = 0.0

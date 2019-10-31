@@ -43,6 +43,7 @@ CONTAINS
     USE m_fleurinput_postprocess
     use m_make_forcetheo
     use m_lapwdim
+    use m_gaunt
 #ifdef CPP_MPI
     !USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
@@ -139,6 +140,7 @@ CONTAINS
 
     !Remaining init is done using all PE
     CALL ylmnorm_init(atoms%lmaxd)
+    CALL gaunt_init(atoms%lmaxd+1)
     CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
     CALL make_sphhar(atoms,sphhar,sym,cell,oneD)
     CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)

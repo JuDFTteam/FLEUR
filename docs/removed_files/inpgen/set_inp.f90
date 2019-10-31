@@ -45,17 +45,17 @@
       INTEGER, INTENT (IN) :: atomTypeSpecies(atoms%ntype)
       INTEGER, INTENT (IN) :: speciesRepAtomType(atoms%nat)
       CHARACTER(len=xl_buffer) :: buffer
-      LOGICAL, INTENT (IN) :: l_hyb  
+      LOGICAL, INTENT (IN) :: l_hyb
       REAL,    INTENT (IN) :: idlist(:)
       REAL,    INTENT (INOUT) :: a1(3),a2(3),a3(3)
       CHARACTER(len=80), INTENT (IN) :: title
- 
+
       INTEGER nel,i,j, nkptOld
       REAL    kmax,dtild,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
       REAL    recVecLength, kPointDen(3)
       LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
-      REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
+      REAL     a1Temp(3),a2Temp(3),a3Temp(3)
       INTEGER  div(3)
       INTEGER jri0(atoms%ntype),lmax0(atoms%ntype)
       CHARACTER(len=1)  :: ch_rw
@@ -123,7 +123,7 @@
       ALLOCATE(atoms%bmu(atoms%ntype))
       ALLOCATE(atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
-      
+
       atoms%nz(:) = NINT(atoms%zatom(:))
       DO i = 1, atoms%ntype
        noel(i) = namat_const(atoms%nz(i))
@@ -132,21 +132,21 @@
       atoms%pos(:,:) = matmul( cell%amat , atoms%taual(:,:) )
       atoms%ulo_der = 0
       ch_rw = 'w'
-      sym%namgrp= 'any ' 
+      sym%namgrp= 'any '
       banddos%dos   = .false. ; banddos%l_mcd = .false. ; input%secvar = .false.
-      input%vchk = .false. ; input%cdinf = .false. 
+      input%vchk = .false. ; input%cdinf = .false.
       input%l_bmt= .false. ; input%eonly  = .false.
-      input%gauss= .false. ; input%tria  = .false. 
+      input%gauss= .false. ; input%tria  = .false.
       sliceplot%slice= .false. ;  input%swsp  = .false.
       input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
-      sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
+      sliceplot%iplot= 0 ; input%score = .false. ; sliceplot%plpot = .false.
       input%pallst = .false. ;  vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
       input%itmax = 15 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
       input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
       input%spinf = 2.0 ;  input%coretail_lmax = 0
-      sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
+      sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0
       nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
       banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
@@ -165,7 +165,7 @@
 
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
-      oneD%odd%k3 = 0 ; oneD%odd%n2d= 0 ; oneD%odd%nq2 = 0 ; oneD%odd%nn2d = 0 
+      oneD%odd%k3 = 0 ; oneD%odd%n2d= 0 ; oneD%odd%nq2 = 0 ; oneD%odd%nn2d = 0
       oneD%odd%nop = 0 ; oneD%odd%kimax2 = 0 ; oneD%odd%nat = 0
       oneD%odd%invs = .false. ; oneD%odd%zrfs = .false. ; oneD%odd%d1 = .false.
 !-odim
@@ -182,7 +182,7 @@
         IF (atoms%nz(n).EQ.61) atoms%bmu(n) = 4.1
         IF (atoms%nz(n).EQ.62) atoms%bmu(n) = 5.1
         IF (atoms%nz(n).EQ.63) atoms%bmu(n) = 7.1
-        IF (atoms%nz(n).EQ.64) atoms%bmu(n) = 7.1 
+        IF (atoms%nz(n).EQ.64) atoms%bmu(n) = 7.1
         IF (atoms%nz(n).EQ.65) atoms%bmu(n) = 6.1
         IF (atoms%nz(n).EQ.66) atoms%bmu(n) = 5.1
         IF (atoms%nz(n).EQ.67) atoms%bmu(n) = 4.1
@@ -194,10 +194,10 @@
       DO i = 1, 10
         j = (i-1) * 8 + 1
         input%comment(i) = title(j:j+7)
-      ENDDO 
+      ENDDO
       IF (noco%l_noco) input%jspins = 2
-       
-      a1(:) = cell%amat(:,1) ; a2(:) = cell%amat(:,2) ; a3(:) = cell%amat(:,3) 
+
+      a1(:) = cell%amat(:,1) ; a2(:) = cell%amat(:,2) ; a3(:) = cell%amat(:,3)
 
       CALL chkmt(&
      &           atoms,input,vacuum,cell,oneD,l_test,&
@@ -219,11 +219,11 @@
 
       DO n = 1, atoms%ntype
          IF (atoms%lnonsph(n).GT.atoms%lmax(n)) THEN
-            WRITE(*,'(a20,i5,a25,i3,a4,i3,a1)')& 
-               'NOTE: For atom type ', n,' lnonsph is reduced from ',& 
+            WRITE(*,'(a20,i5,a25,i3,a4,i3,a1)')&
+               'NOTE: For atom type ', n,' lnonsph is reduced from ',&
                atoms%lnonsph(n),' to ', atoms%lmax(n), '.'
             WRITE(6,'(a20,i5,a25,i3,a4,i3,a1)')&
-               'NOTE: For atom type ', n, ' lnonsph is reduced from ',& 
+               'NOTE: For atom type ', n, ' lnonsph is reduced from ',&
                atoms%lnonsph(n),' to ', atoms%lmax(n), '.'
             atoms%lnonsph(n) = atoms%lmax(n)
          END IF
@@ -242,19 +242,19 @@
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN
         input%ellow = -1.8
       ELSE
-        input%ellow = -0.8  
+        input%ellow = -0.8
       ENDIF
       IF (input%film) THEN
          input%elup = 0.5
       ELSE
          input%elup = 1.0
-      ENDIF 
+      ENDIF
 
       IF (.not.input%film) THEN
          vacuum%dvac = a3(3) ; dtild = vacuum%dvac
       ENDIF
       IF ( (abs(a1(3)).GT.eps).OR.(abs(a2(3)).GT.eps).OR.&
-     &     (abs(a3(1)).GT.eps).OR.(abs(a3(2)).GT.eps) ) THEN          
+     &     (abs(a3(1)).GT.eps).OR.(abs(a3(2)).GT.eps) ) THEN
         cell%latnam = 'any'
       ELSE
         IF ( (abs(a1(2)).LT.eps).AND.(abs(a2(1)).LT.eps) ) THEN
@@ -353,7 +353,7 @@
          CALL juDFT_error("inp.xml-file exists. Cannot write another input file in this directory.",calledby="set_inp")
       ENDIF
 
-      nu = 8 
+      nu = 8
       input%gw = 0
       IF(juDFT_was_argument("-gw")) input%gw = 1
 
@@ -389,11 +389,11 @@
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       IF (oneD%odd%d1) vacuum%nvac = 1
-      
+
       ! Set defaults for noco  types
       ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
-   
+
       IF (noco%l_ss) input%ctail = .FALSE.
       noco%l_mperp = .FALSE.
       noco%l_constr = .FALSE.
@@ -406,7 +406,7 @@
       noco%beta(:) = 0.0
       noco%b_con(:,:) = 0.0
 
-     
+
       CALL inv3(cell%amat,cell%bmat,cell%omtil)
       cell%bmat=tpi_const*cell%bmat
       kpts%nkpt3(:) = div(:)
@@ -491,7 +491,7 @@
 
          kpts%nkpt = nkptOld
          cell%latnam = latnamTemp
- 
+
       DEALLOCATE (noco%l_relax,noco%b_con,noco%alphInit,noco%alph,noco%beta)
       DEALLOCATE (atoms%ulo_der)
 

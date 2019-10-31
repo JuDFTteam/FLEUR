@@ -318,7 +318,7 @@ CONTAINS
           DO i=1,SIZE(list)
               CALL io_read_real3(d%evsetid,(/1,1,list(i),nk,jspin/),&
                &                      (/2,nmat,1,1,1/),z1)
-              z(:,i) = CMPLX( z1(1,:,i) ,z1(2,:,i) )
+              z(:,i) = CMPLX( z1(1,:,1) ,z1(2,:,1) )
            ENDDO
         END IF
      END SUBROUTINE priv_r_vecc

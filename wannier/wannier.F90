@@ -77,7 +77,7 @@ CONTAINS
     USE m_wann_abinv
     USE m_wann_kptsrotate
     USE m_wann_plot
-    USE m_wann_read_inp
+!    USE m_wann_read_inp !Call wann_read_inp in fleur_init
     USE m_wann_plot_symm
     USE m_wann_mmkb_int
     USE m_wann_postproc
@@ -335,7 +335,7 @@ CONTAINS
     wann%atomlist_num=atoms%nat
     wann%oc_num_orbs=atoms%nat
 
-    CALL wann_read_inp(input,l_p0,wann)
+!    CALL wann_read_inp(input,l_p0,wann) !Call wann_read_inp in fleur_init
 
 
     !-----input file for orbital decomposition
@@ -361,7 +361,7 @@ CONTAINS
 
     IF(wann%l_updown)THEN            
        CALL wann_updown(&
-            DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
+            DIMENSION,wann,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
             oneD,noco,cell,vTot,&
             enpara,eig_idList(1),l_real,&
             mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&
@@ -403,7 +403,7 @@ CONTAINS
        wannTemp = wann
        CALL wann_uHu(&
             DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
-            banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,&
+            banddos,oneD,noco,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,&
             input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,&
@@ -446,7 +446,7 @@ CONTAINS
        wannTemp = wann
        CALL wann_uHu_dmi(&
             DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
-            banddos,oneD,noco,cell,vTot,wannTemp,eig_idList,&
+            banddos,oneD,noco,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
             atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,&
             input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,&
@@ -2231,8 +2231,8 @@ CONTAINS
                   l_p0,spin12(jspin)//'.socmmn0',&
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,.FALSE.,&
-                  mmn,.FALSE.)
+                  mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
+                  mmn,wann%l_unformatted)
           ENDIF !noco%l_soc and l_mmn0  
 
           IF(wann%l_orbcomp)THEN
@@ -2264,7 +2264,7 @@ CONTAINS
                   l_p0,spin12(jspin2)//'.amn',&
                   'Overlaps of the wavefunct. with the trial orbitals',&
                   nbnd,fullnkpts,nwfs,&
-                  mpi%irank,mpi%isize,.FALSE.,&
+                  mpi%irank,mpi%isize,.FALSE.,.FALSE.,&
                   amn(:,:,:),wann%l_unformatted)
           ENDIF !wann%l_matrixamn
 
@@ -2287,7 +2287,7 @@ CONTAINS
                      mpi%mpi_comm,l_p0,spin12(jspin2)//'.umn',&
                      'transformation to first guess Wannier functions',&
                      nbnd,fullnkpts,nwfs,&
-                     mpi%irank,mpi%isize,.FALSE.,&
+                     mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
                      psiw,.FALSE.)
 #ifdef CPP_MPI
                 ALLOCATE( hwfr2(SIZE(hwfr,1),SIZE(hwfr,2)) )
@@ -2325,8 +2325,8 @@ CONTAINS
                   l_p0,spin12(jspin2)//'.mmn0',&
                   'Overlaps of the wavefunct. at the same kpoint',&
                   nbnd,fullnkpts,nbnd,&
-                  mpi%irank,mpi%isize,.FALSE.,&
-                  mmn,.FALSE.)
+                  mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
+                  mmn,wann%l_unformatted)
           ENDIF !wann%l_mmn0  
 
 
