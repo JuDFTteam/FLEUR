@@ -124,8 +124,10 @@ MODULE m_add_selfen
             !Sanity check for the maximum occupation
             IF(n_max-2*ns.GT.1) THEN
                !These oscillations seem to emerge when the lorentzian smoothing is done inadequately
-               CALL juDFT_error("Something went wrong with the addition of the selfenergy",calledby="add_selfen")
+               CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max>>ns",calledby="add_selfen")
             ENDIF
+
+            IF(n_max-n_target.LT.0.0) CALL juDFT_error("Something went wrong with the addition of the selfenergy: n_max<n_target",calledby="add_selfen")
 
             !Set up the interval for the bisection method (mu_max,mu_b)
             mu_a = mu_max
