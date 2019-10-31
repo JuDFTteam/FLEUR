@@ -16,6 +16,8 @@ MODULE m_crystalfield
    USE m_constants
    USE m_kkintgr
    USE m_ind_greensf
+   USE m_sgml
+   USE m_anglso
 
    IMPLICIT NONE
 
@@ -23,7 +25,7 @@ MODULE m_crystalfield
 
    CONTAINS
 
-   SUBROUTINE crystal_field(atoms,input,greensfCoeffs,hub1,v)
+   SUBROUTINE crystal_field(atoms,input,noco,greensfCoeffs,hub1,v)
 
       !calculates the crystal-field matrix for the local hamiltonian
 
@@ -33,13 +35,14 @@ MODULE m_crystalfield
       TYPE(t_greensfCoeffs), INTENT(IN)    :: greensfCoeffs
       TYPE(t_atoms),         INTENT(IN)    :: atoms
       TYPE(t_input),         INTENT(IN)    :: input
+      TYPE(t_noco),          INTENT(IN)    :: noco
       TYPE(t_hub1ham),       INTENT(INOUT) :: hub1
 
       !-Array Arguments
       TYPE(t_potden),        INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
 
       !-Local Scalars
-      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u
+      INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp
       REAL    tr,xiSOC
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
@@ -83,17 +86,29 @@ MODULE m_crystalfield
             WRITE(*,*) "DOWN"
             WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
          ENDIF
-         !Remove LDA+U and SOC potential
+         !Remove LDA+U potential
          i_u = atoms%n_u+i_hia !position in the v%mmpmat array
          DO jspin = 1, input%jspins
             DO m = -l, l
                DO mp = -l, l
-                  !LDA+U potential
                   IF(ABS(h_loc(m,mp,i_hia,jspin)).GT.0.001.OR.m.EQ.mp) THEN
                      h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
                   ENDIF
                ENDDO
-               h_loc(m,m,i_hia,jspin) = h_loc(m,m,i_hia,jspin) - hub1%xi(i_hia)/hartree_to_ev_const * m * (1.5-jspin) * MERGE(-1,1,input%jspins.EQ.1)
+            ENDDO
+         ENDDO
+         !Remove SOC potential (only spin-diagonal)
+         DO jspin = 1, 2
+            DO m = -l, l
+               DO mp = -l, l
+                  isp = 3.0-2.0*jspin !1,-1
+                  IF((ABS(noco%theta).LT.0.00001).AND.(ABS(noco%phi).LT.0.00001)) THEN
+                     vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
+                  ELSE
+                     vso = anglso(noco%theta,noco%phi,l,m,isp,l,mp,isp)
+                  ENDIF
+                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - vso/2.0 * hub1%xi(i_hia)/hartree_to_ev_const
+               ENDDO
             ENDDO
          ENDDO
          IF(l_debug) THEN
@@ -117,7 +132,7 @@ MODULE m_crystalfield
          ! The reason for this is a bit unclear we remove these results and replace them
          ! with either the -m or corresponding opposite spin result (only diagonal)
          !------------------------------------------------------------------------------------
-        IF(.FALSE.) THEN 
+        IF(.FALSE.) THEN
         DO m = -l, l
             !100 meV cutoff
             IF(ABS(ex(m,m)).LT.0.1/hartree_to_ev_const) CYCLE

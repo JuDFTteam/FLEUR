@@ -85,7 +85,7 @@ MODULE m_gfcalc
       !-------------------------------------------------------------
       !calculate the crystal field contribution to the local hamiltonian in LDA+Hubbard 1
       IF(atoms%n_hia.GT.0.AND.ANY(hub1%ccf(:).NE.0.0)) THEN
-        CALL crystal_field(atoms,input,greensfCoeffs,hub1,vTot)
+        CALL crystal_field(atoms,input,noco,greensfCoeffs,hub1,vTot)
       ENDIF
       IF(input%jspins.EQ.2) THEN
          CALL eff_excinteraction(greensf,atoms,input,results%ef,greensfCoeffs)
