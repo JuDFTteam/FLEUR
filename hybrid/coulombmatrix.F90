@@ -230,12 +230,15 @@ CONTAINS
          nsym1(ikpt) = isym1
       END DO
       ! Define reduced lists of G points -> pgptm1(:,ikpt), ikpt=1,..,nkpt
-      !allocate( hybrid%pgptm1(maxval(mpbasis%ngptm),kpts%nkpt)) !in mixedbasis
-      allocate(iarr(maxval(mpbasis%ngptm)), POINTER(kpts%nkpt, &
-                                              MINVAL(mpbasis%gptm(1, :)) - 1:MAXVAL(mpbasis%gptm(1, :)) + 1, &
-                                              MINVAL(mpbasis%gptm(2, :)) - 1:MAXVAL(mpbasis%gptm(2, :)) + 1, &
-                                              MINVAL(mpbasis%gptm(3, :)) - 1:MAXVAL(mpbasis%gptm(3, :)) + 1))
-      hybrid%pgptm1 = 0; iarr = 0; POINTER = 0
+      if(allocated(hybrid%pgptm1)) deallocate(hybrid%pgptm1)
+      allocate(hybrid%pgptm1(maxval(mpbasis%ngptm),kpts%nkptf), source=0) !in mixedbasis
+      allocate(iarr(maxval(mpbasis%ngptm)), source=0)
+      allocate(POINTER(kpts%nkpt,&
+                      MINVAL(mpbasis%gptm(1, :)) - 1:MAXVAL(mpbasis%gptm(1, :)) + 1, &
+                      MINVAL(mpbasis%gptm(2, :)) - 1:MAXVAL(mpbasis%gptm(2, :)) + 1, &
+                      MINVAL(mpbasis%gptm(3, :)) - 1:MAXVAL(mpbasis%gptm(3, :)) + 1), &
+                      source=0)
+      
       DO ikpt = 1, kpts%nkpt
          DO igpt = 1, mpbasis%ngptm(ikpt)
             g = mpbasis%gptm(:, mpbasis%gptm_ptr(igpt, ikpt))
