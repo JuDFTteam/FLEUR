@@ -12,14 +12,11 @@ MODULE m_types_hybrid
       INTEGER                ::  nbasp
       INTEGER                ::  maxbasm1
       INTEGER                ::  max_indx_p_1
-      INTEGER                ::  maxgptm1
       INTEGER                ::  maxlmindx
       INTEGER, ALLOCATABLE   ::  num_radfun_per_l(:,:)
       INTEGER, ALLOCATABLE   ::  select1(:,:)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  nindxm1(:,:)
-      INTEGER, ALLOCATABLE   ::  ngptm1(:)
-      INTEGER, ALLOCATABLE   ::  pgptm1(:,:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
       INTEGER, ALLOCATABLE   ::  map(:,:)
       INTEGER, ALLOCATABLE   ::  tvec(:,:,:)

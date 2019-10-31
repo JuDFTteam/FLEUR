@@ -94,6 +94,9 @@ CONTAINS
       INTEGER, ALLOCATABLE   :: nsym_gpt(:, :), sym_gpt(:, :, :)
       INTEGER                    :: nsym1(kpts%nkpt + 1), sym1(sym%nsym, kpts%nkpt + 1)
 
+      INTEGER, ALLOCATABLE   ::  ngptm1(:)
+      INTEGER, ALLOCATABLE   ::  pgptm1(:,:)
+
       LOGICAL                    :: calc_mt(kpts%nkpt)
 
       REAL                       :: q(3), q1(3), q2(3)
@@ -230,15 +233,17 @@ CONTAINS
          nsym1(ikpt) = isym1
       END DO
       ! Define reduced lists of G points -> pgptm1(:,ikpt), ikpt=1,..,nkpt
-      if(allocated(hybrid%pgptm1)) deallocate(hybrid%pgptm1)
-      allocate(hybrid%pgptm1(maxval(mpbasis%ngptm),kpts%nkptf), source=0) !in mixedbasis
+      !if(allocated(pgptm1)) deallocate(hybrid%pgptm1)
+      allocate(pgptm1(maxval(mpbasis%ngptm),kpts%nkptf), source=0) !in mixedbasis
       allocate(iarr(maxval(mpbasis%ngptm)), source=0)
       allocate(POINTER(kpts%nkpt,&
                       MINVAL(mpbasis%gptm(1, :)) - 1:MAXVAL(mpbasis%gptm(1, :)) + 1, &
                       MINVAL(mpbasis%gptm(2, :)) - 1:MAXVAL(mpbasis%gptm(2, :)) + 1, &
                       MINVAL(mpbasis%gptm(3, :)) - 1:MAXVAL(mpbasis%gptm(3, :)) + 1), &
                       source=0)
-      
+      allocate(ngptm1, mold=mpbasis%ngptm)
+      ngptm1 = 0
+
       DO ikpt = 1, kpts%nkpt
          DO igpt = 1, mpbasis%ngptm(ikpt)
             g = mpbasis%gptm(:, mpbasis%gptm_ptr(igpt, ikpt))
@@ -249,7 +254,7 @@ CONTAINS
          DO igpt = mpbasis%ngptm(ikpt), 1, -1
             IF (iarr(igpt) == 0) THEN
                j = j + 1
-               hybrid%pgptm1(j, ikpt) = igpt
+               pgptm1(j, ikpt) = igpt
                DO isym1 = 1, nsym1(ikpt)
                   g = MATMUL(rrot(:, :, sym1(isym1, ikpt)), mpbasis%gptm(:, mpbasis%gptm_ptr(igpt, ikpt)))
                   i = POINTER(ikpt, g(1), g(2), g(3))
@@ -258,7 +263,7 @@ CONTAINS
                END DO
             END IF
          END DO
-         hybrid%ngptm1(ikpt) = j
+         ngptm1(ikpt) = j
       END DO
       deallocate(iarr)
 
@@ -270,7 +275,7 @@ CONTAINS
       ikptmin = 1
       ikptmax = kpts%nkpt
       igptmin = 1
-      igptmax = hybrid%ngptm1(:kpts%nkpt)
+      igptmax = ngptm1(:kpts%nkpt)
       calc_mt = .TRUE.
       nkminmax = kpts%nkpt
 
@@ -564,8 +569,8 @@ CONTAINS
 
             coulmat = 0
             ! start to loop over interstitial plane waves
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt) !1,hybrid%ngptm1(ikpt)
-               igpt = hybrid%pgptm1(igpt0, ikpt)
+            DO igpt0 = igptmin(ikpt), igptmax(ikpt) !1,ngptm1(ikpt)
+               igpt = pgptm1(igpt0, ikpt)
                igptp = mpbasis%gptm_ptr(igpt, ikpt)
                ix = hybrid%nbasp + igpt
                q = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), cell%bmat)
@@ -743,7 +748,7 @@ CONTAINS
          DO ikpt = ikptmin, ikptmax
 
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)
-               igpt2 = hybrid%pgptm1(igpt0, ikpt)
+               igpt2 = pgptm1(igpt0, ikpt)
                igptp2 = mpbasis%gptm_ptr(igpt2, ikpt)
                ix = hybrid%nbasp + igpt2
                iy = hybrid%nbasp
@@ -813,8 +818,8 @@ CONTAINS
             allocate(carr2(atoms%nat, (hybrid%lexp + 1)**2), &
                       structconst1(atoms%nat, (2*hybrid%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,hybrid%ngptm1(ikpt)
-               igpt2 = hybrid%pgptm1(igpt0, ikpt)
+            DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
+               igpt2 = pgptm1(igpt0, ikpt)
                ix = hybrid%nbasp + igpt2
                igptp2 = mpbasis%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
@@ -888,8 +893,8 @@ CONTAINS
          ! (1) igpt1 > 1 , igpt2 > 1  (finite G vectors)
          call timestart("add corrections from higher orders")
          rdum = (4*pi_const)**(1.5)/cell%vol**2*gmat(1, 1)
-         DO igpt0 = 1, hybrid%ngptm1(1)
-            igpt2 = hybrid%pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
+         DO igpt0 = 1, ngptm1(1)
+            igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
             ix = hybrid%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
             igptp2 = mpbasis%gptm_ptr(igpt2, 1)
@@ -934,8 +939,8 @@ CONTAINS
          END DO
          ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
          iy = hybrid%nbasp + 1
-         DO igpt0 = 1, hybrid%ngptm1(1)
-            igpt2 = hybrid%pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
+         DO igpt0 = 1, ngptm1(1)
+            igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
             ix = hybrid%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
             igptp2 = mpbasis%gptm_ptr(igpt2, 1)
@@ -1003,8 +1008,8 @@ CONTAINS
                call timestop("harmonics")
             END DO
 
-            DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,hybrid%ngptm1(ikpt)
-               igpt2 = hybrid%pgptm1(igpt0, ikpt)
+            DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
+               igpt2 = pgptm1(igpt0, ikpt)
                ix = hybrid%nbasp + igpt2
                igptp2 = mpbasis%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
@@ -1075,11 +1080,11 @@ CONTAINS
          call timestart("loop 3")
          DO ikpt = ikptmin, ikptmax
             carr2 = 0; iarr = 0
-            iarr(hybrid%pgptm1(:hybrid%ngptm1(ikpt), ikpt)) = 1
-            DO igpt0 = 1, hybrid%ngptm1(ikpt) !igptmin(ikpt),igptmax(ikpt)
+            iarr(pgptm1(:ngptm1(ikpt), ikpt)) = 1
+            DO igpt0 = 1, ngptm1(ikpt) !igptmin(ikpt),igptmax(ikpt)
                lsym = ((igptmin(ikpt) <= igpt0) .AND. &
                        (igptmax(ikpt) >= igpt0))
-               igpt2 = hybrid%pgptm1(igpt0, ikpt)
+               igpt2 = pgptm1(igpt0, ikpt)
                j = (hybrid%nbasp + igpt2 - 1)*(hybrid%nbasp + igpt2)/2
                i = hybrid%nbasp + igpt2
                carr2(1:i, 2) = coulomb(j + 1:j + i, ikpt)
@@ -1127,7 +1132,7 @@ CONTAINS
          END DO ! ikpt
          call timestop("loop 3")
          call timestart("gap 1:")
-         deallocate(carr2, iarr, hybrid%pgptm1)
+         deallocate(carr2, iarr, pgptm1)
          IF (mpi%irank == 0) THEN
             WRITE (6, '(2X,A)', advance='no') 'done'
             CALL cpu_TIME(time2)

@@ -102,10 +102,8 @@ CONTAINS
 
       ! Deallocate arrays which might have been allocated in a previous run of this subroutine
       IF (ALLOCATED(mpbasis%ngptm)) deallocate(mpbasis%ngptm)
-      IF (ALLOCATED(hybrid%ngptm1)) deallocate(hybrid%ngptm1)
       IF (ALLOCATED(hybrid%nindxm1)) deallocate(hybrid%nindxm1)
       IF (ALLOCATED(mpbasis%gptm_ptr)) deallocate(mpbasis%gptm_ptr)
-      IF (ALLOCATED(hybrid%pgptm1)) deallocate(hybrid%pgptm1)
       IF (ALLOCATED(mpbasis%gptm)) deallocate(mpbasis%gptm)
       IF (ALLOCATED(hybrid%basm1)) deallocate(hybrid%basm1)
 
@@ -131,10 +129,6 @@ CONTAINS
       call mpbasis%gen_gvec(cell, kpts)
 
       ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
-
-      hybrid%maxgptm1 = MAXVAL(mpbasis%ngptm)
-      allocate(hybrid%ngptm1, mold=mpbasis%ngptm)
-      hybrid%ngptm1 = 0
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(/A)') 'Mixed basis'
