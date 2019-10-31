@@ -372,8 +372,8 @@ MODULE m_hubbard1_setup
             mp = j-1-l
             DO ispin = 1, MERGE(3,jspins,l_vmperp)
                IF(ispin < 3) THEN
-                  mat(i+(ispin-1)*ns,j+(ispin-1)*ns) = mat(i+(ispin-1)*ns,j+(ispin-1)*ns) - vmmp(m,mp,ispin)/(3.0-jspins)
-                  IF(jspins.EQ.1) mat(i+ns,j+ns) = mat(i+ns,j+ns) - vmmp(-m,-mp,ispin)/(3.0-jspins)
+                  mat(i+(ispin-1)*ns,j+(ispin-1)*ns) = mat(i+(ispin-1)*ns,j+(ispin-1)*ns) - REAL(vmmp(m,mp,ispin))/(3.0-jspins)
+                  IF(jspins.EQ.1) mat(i+ns,j+ns) = mat(i+ns,j+ns) - REAL(vmmp(-m,-mp,ispin))/(3.0-jspins)
                ELSE
                   !----------------------------------------------------------------------------
                   ! The offdiagonal elements only have to be removed if they are actually added

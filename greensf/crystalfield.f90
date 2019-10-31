@@ -21,7 +21,7 @@ MODULE m_crystalfield
 
    IMPLICIT NONE
 
-   LOGICAL, PARAMETER :: l_debug = .FALSE.
+   LOGICAL, PARAMETER :: l_debug = .TRUE.
 
    CONTAINS
 
@@ -108,7 +108,7 @@ MODULE m_crystalfield
                   ELSE
                      vso = anglso(noco%theta,noco%phi,l,m,isp,l,mp,isp)
                   ENDIF
-                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - vso/2.0 * hub1%xi(i_hia)/hartree_to_ev_const
+                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1%xi(i_hia)/hartree_to_ev_const
                ENDDO
             ENDDO
          ENDDO
