@@ -92,9 +92,7 @@ MODULE m_crystalfield
          DO jspin = 1, input%jspins
             DO m = -l, l
                DO mp = -l, l
-                  IF(ABS(h_loc(m,mp,i_hia,jspin)).GT.0.001.OR.m.EQ.mp) THEN
-                     h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
-                  ENDIF
+                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(v%mmpmat(m,mp,i_u,jspin))
                ENDDO
             ENDDO
          ENDDO
