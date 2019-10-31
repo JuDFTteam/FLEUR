@@ -160,12 +160,11 @@ CONTAINS
          g = mpbasis%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
-            IF (norm2(MATMUL(kvec + g, cell%bmat))<= mpbasis%g_cutoff) THEN
+            rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
+            IF (rdum <= mpbasis%g_cutoff**2) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
                unsrt_pgptm(hybrid%ngptm1(ikpt), ikpt) = igpt
-               length_kG(hybrid%ngptm1(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
-            ELSE
-               call judft_error("I am fucking suprised by this")
+               length_kG(hybrid%ngptm1(ikpt), ikpt) = rdum
             END IF
          END DO
       END DO
