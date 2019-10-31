@@ -132,8 +132,8 @@ CONTAINS
 
       ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm
 
-      hybrid%maxgptm1 = MAXVAL(hybrid%ngptm)
-      allocate(hybrid%ngptm1, mold=hybrid%ngptm)
+      hybrid%maxgptm1 = MAXVAL(mpbasis%ngptm)
+      allocate(hybrid%ngptm1, mold=mpbasis%ngptm)
       hybrid%ngptm1 = 0
 
       IF (mpi%irank == 0) THEN
