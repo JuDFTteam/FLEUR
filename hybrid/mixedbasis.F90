@@ -160,8 +160,8 @@ CONTAINS
          g = mpbasis%gptm(:,igpt)
          DO ikpt = 1, kpts%nkptf
             kvec = kpts%bkf(:,ikpt)
-            rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
-            IF (rdum <= mpbasis%g_cutoff**2) THEN
+            rdum = norm2(MATMUL(kvec + g, cell%bmat))
+            IF (rdum <= mpbasis%g_cutoff) THEN
                hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
                unsrt_pgptm(hybrid%ngptm1(ikpt), ikpt) = igpt
                length_kG(hybrid%ngptm1(ikpt), ikpt) = rdum
