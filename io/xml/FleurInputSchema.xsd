@@ -728,6 +728,7 @@
       <xsd:attribute name="minEnergy" type="xsd:string" use="required"/>
       <xsd:attribute name="maxEnergy" type="xsd:string" use="required"/>
       <xsd:attribute name="sigma" type="xsd:string" use="required"/>
+      <xsd:attribute default="0" name="projdos" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="AltKPointSetType">

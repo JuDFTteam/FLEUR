@@ -493,6 +493,7 @@ MODULE m_types_setup
       REAL    :: e1_dos
       REAL    :: e2_dos
       REAL    :: sig_dos
+      INTEGER :: projdos !selects one atomtype and prints the projected dos if there are to many atoms
       REAL    :: e_mcd_lo
       REAL    :: e_mcd_up
       LOGICAL :: unfoldband
