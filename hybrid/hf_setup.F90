@@ -129,7 +129,7 @@ CONTAINS
             WRITE (6, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
          END IF
          degenerat = 1
-         hybrid%nobd = 0
+         hybrid%nobd(:,jsp) = 0
          DO nk = 1, kpts%nkpt
             DO i = 1, hybrid%ne_eig(nk)
                DO j = i + 1, hybrid%ne_eig(nk)
@@ -163,23 +163,23 @@ CONTAINS
             END DO
 
             DO i = 1, hybrid%ne_eig(nk)
-               IF (results%w_iks(i, nk, jsp) > 0.0) hybrid%nobd(nk) = hybrid%nobd(nk) + 1
+               IF (results%w_iks(i, nk, jsp) > 0.0) hybrid%nobd(nk,jsp) = hybrid%nobd(nk,jsp) + 1
             END DO
 
-            IF (hybrid%nobd(nk) > hybrid%nbands(nk)) THEN
+            IF (hybrid%nobd(nk,jsp) > hybrid%nbands(nk)) THEN
                WRITE (*, *) 'k-point: ', nk
                WRITE (*, *) 'number of bands:          ', hybrid%nbands(nk)
-               WRITE (*, *) 'number of occupied bands: ', hybrid%nobd(nk)
+               WRITE (*, *) 'number of occupied bands: ', hybrid%nobd(nk,jsp)
                CALL judft_warn("More occupied bands than total no of bands!?")
-               hybrid%nbands(nk) = hybrid%nobd(nk)
+               hybrid%nbands(nk) = hybrid%nobd(nk,jsp)
             END IF
-            PRINT *, "bands:", nk, hybrid%nobd(nk), hybrid%nbands(nk), hybrid%ne_eig(nk)
+            PRINT *, "bands:", nk, hybrid%nobd(nk,jsp), hybrid%nbands(nk), hybrid%ne_eig(nk)
          END DO
 
          ! spread hybrid%nobd from IBZ to whole BZ
          DO nk = 1, kpts%nkptf
             i = kpts%bkp(nk)
-            hybrid%nobd(nk) = hybrid%nobd(i)
+            hybrid%nobd(nk,jsp) = hybrid%nobd(i,jsp)
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
@@ -275,7 +275,7 @@ CONTAINS
          !DO nk = n_start,kpts%nkpt,n_stride
          DO nk = 1, kpts%nkpt, 1
             hybrid%ne_eig(nk) = results%neig(nk, jsp)
-            hybrid%nobd(nk) = COUNT(results%w_iks(:hybrid%ne_eig(nk), nk, jsp) > 0.0)
+            hybrid%nobd(nk,jsp) = COUNT(results%w_iks(:hybrid%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
          hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%nindx(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
