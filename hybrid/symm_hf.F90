@@ -68,7 +68,7 @@ CONTAINS
 
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, hybrid, cell, &
+   SUBROUTINE symm_hf(kpts, nk, sym, input, hybdat, eig_irr, atoms, hybrid, cell, &
                       lapw, jsp, mpi, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
@@ -83,7 +83,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_hybrid), INTENT(IN) :: hybrid
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -105,7 +105,7 @@ CONTAINS
       INTEGER, ALLOCATABLE, INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER, ALLOCATABLE, INTENT(OUT) :: n_q(:)
 
-      REAL, INTENT(IN)                 :: eig_irr(dimension%neigd, kpts%nkpt)
+      REAL, INTENT(IN)                 :: eig_irr(input%neig, kpts%nkpt)
 
 !     - local scalars -
       INTEGER                         :: ikpt, ikpt1, iop, isym, iisym, m
@@ -134,7 +134,7 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE             :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                         :: cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       COMPLEX                         :: carr1(hybrid%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
@@ -305,7 +305,7 @@ CONTAINS
                   cpwhlp = 0
 
                   CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms, hybrid, kpts, sym, jsp, dimension, cell, lapw)
+                                       i, ndb, nk, iop, atoms, hybrid, kpts, sym, jsp, input, cell, lapw)
 
                   DO iband = 1, ndb
                      carr1 = cmt(iband + i - 1, :, :)

@@ -181,15 +181,15 @@ CONTAINS
       ! (acof,bcof,ccof) and APW-basis coefficients
       ! (a,b,bascofold_lo) at irred. kpoints
 
-      ALLOCATE (acof(dimension%neigd, 0:dimension%lmd, atoms%nat), stat=ok)
+      ALLOCATE (acof(input%neig, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation acof'
-      ALLOCATE (bcof(dimension%neigd, 0:dimension%lmd, atoms%nat), stat=ok)
+      ALLOCATE (bcof(input%neig, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation bcof'
-      ALLOCATE (ccof(-atoms%llod:atoms%llod, dimension%neigd, atoms%nlod, atoms%nat), stat=ok)
+      ALLOCATE (ccof(-atoms%llod:atoms%llod, input%neig, atoms%nlod, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation ccof'
-      ALLOCATE (cmt(Dimension%Neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      ALLOCATE (cmt(input%neig, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: Failure allocation cmt'
-      ALLOCATE (cmthlp(Dimension%Neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      ALLOCATE (cmthlp(input%neig, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'gen_wavf: failure allocation cmthlp'
 
       DO ikpt0 = lower, upper
@@ -282,7 +282,7 @@ CONTAINS
             IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
                iop = kpts%bksym(ikpt)
                CALL waveftrafo_genwavf(cmthlp, zhlp%data_r, zhlp%data_c, cmt(:, :, :), zmat(1)%l_real, zmat(ikpt0)%data_r(:, :), &
-                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1, dimension, &
+                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1, input, &
                                        hybrid%nbands(ikpt0), cell, lapw(ikpt0), lapw(ikpt), .true.)
 
                CALL write_cmt(cmthlp, ikpt)

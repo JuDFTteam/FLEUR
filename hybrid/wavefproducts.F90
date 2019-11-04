@@ -61,7 +61,7 @@ CONTAINS
 !      - local arrays -
       INTEGER                 ::  iarr(lapw%nv(jsp))
       INTEGER                 ::  g(3), ghelp(3), lmstart(0:atoms%lmaxd, atoms%ntype)
-      INTEGER                 ::  gpthlp(3, dimension%nvd), nvhlp(input%jspins)
+      INTEGER                 ::  gpthlp(3, lapw%dim_nvd()), nvhlp(input%jspins)
       INTEGER                 ::  gpt_nk(3, lapw%nv(jsp))
       INTEGER                 ::  g_t(3)
       INTEGER                 ::  gsum(3)
@@ -72,8 +72,8 @@ CONTAINS
 !      COMPLEX                 :: chelp(maxbasm,mnobd,bandf-bandi+1,nkpt_EIBZ)
       COMPLEX                 ::  cexp
       COMPLEX                 ::  z_help(lapw%nv(jsp))
-      COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE     ::  cprod_ir(:, :, :)
       TYPE(t_mat)             :: z_nk, z_kqpt
       TYPE(t_lapw)            :: lapw_nkqpt
@@ -123,9 +123,9 @@ CONTAINS
 
       CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
       nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_nk%alloc(.false., nbasfcn, dimension%neigd)
+      call z_nk%alloc(.false., nbasfcn, input%neig)
       nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_kqpt%alloc(.false., nbasfcn, dimension%neigd)
+      call z_kqpt%alloc(.false., nbasfcn, input%neig)
 
       call read_z(z_nk, kpts%nkptf*(jsp - 1) + nk)
       call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
@@ -338,15 +338,15 @@ CONTAINS
 
       REAL                    ::    z_help(lapw%nv(jsp))
 
-      REAL                    ::    cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      REAL                    ::    cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      REAL                    ::    cmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
+      REAL                    ::    cmt(input%neig, hybrid%maxlmindx, atoms%nat)
 
-      COMPLEX                 ::    ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                 ::    ccmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::    ccmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::    ccmt(input%neig, hybrid%maxlmindx, atoms%nat)
 
       REAL                    ::    rarr1(1:mnobd, bandf - bandi + 1)
       REAL                    ::    rarr(2, 1:mnobd, bandf - bandi + 1)
-      COMPLEX                 ::    cmthlp(dimension%neigd), cmthlp1(dimension%neigd)
+      COMPLEX                 ::    cmthlp(input%neig), cmthlp1(input%neig)
       COMPLEX                 ::    cexp(atoms%nat), cexp_nk(atoms%nat)
       TYPE(t_mat)             :: z_nk, z_kqpt
       TYPE(t_lapw)            :: lapw_nkqpt
@@ -386,9 +386,9 @@ CONTAINS
 
       CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
       nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_nk%alloc(.true., nbasfcn, dimension%neigd)
+      call z_nk%alloc(.true., nbasfcn, input%neig)
       nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_kqpt%alloc(.true., nbasfcn, dimension%neigd)
+      call z_kqpt%alloc(.true., nbasfcn, input%neig)
 
       call read_z(z_nk, kpts%nkptf*(jsp - 1) + nk)
       call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
@@ -1268,8 +1268,8 @@ CONTAINS
 
       REAL                    ::    kqpt(3), kqpthlp(3)
       REAL                    ::    bkpt(3)
-      REAL                    ::    cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      REAL                    ::    cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      REAL                    ::    cmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
+      REAL                    ::    cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       REAL                    ::    rarr1(bandoi:bandof)
       REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
       REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
@@ -1314,9 +1314,9 @@ CONTAINS
       CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
 
       nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_nk%alloc(.true., nbasfcn, dimension%neigd)
+      call z_nk%alloc(.true., nbasfcn, input%neig)
       nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_kqpt%alloc(.true., nbasfcn, dimension%neigd)
+      call z_kqpt%alloc(.true., nbasfcn, input%neig)
 
       ! read in z at k-point nk and nkqpt
       call timestart("read_z")
@@ -1451,7 +1451,7 @@ CONTAINS
       END DO
 
       ! read in cmt coefficient at k-point nk
-      ALLOCATE (ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat), ccmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), stat=ok)
+      ALLOCATE (ccmt_nk(input%neig, hybrid%maxlmindx, atoms%nat), ccmt(input%neig, hybrid%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation ccmt_nk/ccmt'
 
       call read_cmt(ccmt_nk, nk)
@@ -2290,8 +2290,8 @@ CONTAINS
       COMPLEX                 ::  carr1(bandoi:bandof)
       COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
       TYPE(t_mat)             ::  z_nk, z_kqpt
-      COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE     ::  z0(:, :)
 
       call timestart("wavefproducts_noinv5")
@@ -2326,9 +2326,9 @@ CONTAINS
       !
       CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
       nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_nk%alloc(.false., nbasfcn, dimension%neigd)
+      call z_nk%alloc(.false., nbasfcn, input%neig)
       nbasfcn = MERGE(lapw_nkqpt%nv(1) + lapw_nkqpt%nv(2) + 2*atoms%nlotot, lapw_nkqpt%nv(1) + atoms%nlotot, noco%l_noco)
-      call z_kqpt%alloc(.false., nbasfcn, dimension%neigd)
+      call z_kqpt%alloc(.false., nbasfcn, input%neig)
 
       ! read in z at k-point nk and nkqpt
       call timestart("read_z")

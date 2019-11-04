@@ -42,7 +42,7 @@ MODULE m_add_vnonlocal
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 CONTAINS
 
-   SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybrid, dimension, kpts, jsp, results, xcpot, noco, hmat)
+   SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybrid, input, kpts, jsp, results, xcpot, noco, hmat)
 
       USE m_symm_hf, ONLY: symm_hf
       USE m_util, ONLY: intgrf, intgrf_init
@@ -58,7 +58,7 @@ CONTAINS
 
       TYPE(t_results), INTENT(INOUT) :: results
       CLASS(t_xcpot), INTENT(IN)    :: xcpot
-      TYPE(t_dimension), INTENT(IN)    :: dimension
+      TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_lapw), INTENT(IN)    :: lapw
@@ -73,7 +73,7 @@ CONTAINS
       INTEGER                 :: n, nn, iband, nbasfcn
       REAL                    :: a_ex
       TYPE(t_mat)             :: olap, tmp, v_x, z
-      COMPLEX                 :: exch(dimension%neigd, dimension%neigd)
+      COMPLEX                 :: exch(input%neig, input%neig)
 
       ! initialize weighting factor for HF exchange part
       a_ex = xcpot%get_exchange_weight()
@@ -104,7 +104,7 @@ CONTAINS
       CALL read_olap(olap, kpts%nkpt*(jsp - 1) + nk)
       IF (.NOT. olap%l_real) olap%data_c = conjg(olap%data_c)
 
-      CALL z%init(olap%l_real, nbasfcn, dimension%neigd)
+      CALL z%init(olap%l_real, nbasfcn, input%neig)
 
       CALL read_z(z, kpts%nkptf*(jsp - 1) + nk)
 

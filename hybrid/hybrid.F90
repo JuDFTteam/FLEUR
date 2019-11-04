@@ -10,7 +10,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id, hybrid, kpts, atoms, input, DIMENSION, mpi, noco, cell, oneD, &
+   SUBROUTINE calc_hybrid(eig_id, hybrid, kpts, atoms, input, mpi, noco, cell, oneD, &
                           enpara, results, sym, xcpot, v, iter, iterHF)
 
       USE m_types
@@ -26,7 +26,7 @@ CONTAINS
 
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_dimension), INTENT(IN)    :: DIMENSION
+      TYPE(t_dimension)  :: DIMENSION !to be deleted
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
@@ -56,7 +56,7 @@ CONTAINS
 
       CALL timestart("Hybrid code")
       INQUIRE (file="v_x.mat", exist=hybrid%l_addhf)
-      CALL open_hybrid_io1(DIMENSION, sym%invs)
+      CALL open_hybrid_io1( sym%invs)
 
       IF (kpts%nkptf == 0) THEN
          CALL judft_error("kpoint-set of full BZ not available", &
@@ -76,19 +76,19 @@ CONTAINS
       results%te_hfex%core = 0
 
       !Check if we are converged well enough to calculate a new potential
-      CALL open_hybrid_io1b(DIMENSION, sym%invs)
+      CALL open_hybrid_io1b( sym%invs)
       hybrid%l_addhf = .TRUE.
 
       !In first iteration allocate some memory
       IF (init_vex) THEN
          ALLOCATE (hybrid%ne_eig(kpts%nkpt), hybrid%nbands(kpts%nkpt), hybrid%nobd(kpts%nkptf))
          ALLOCATE (hybrid%nbasm(kpts%nkptf))
-         ALLOCATE (hybrid%div_vv(DIMENSION%neigd, kpts%nkpt, input%jspins))
+         ALLOCATE (hybrid%div_vv(input%neig, kpts%nkpt, input%jspins))
          init_vex = .FALSE.
       END IF
 
       hybrid%l_subvxc = (hybrid%l_subvxc .AND. hybrid%l_addhf)
-      IF (.NOT. ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(merge(dimension%neigd*2,dimension%neigd,noco%l_soc), kpts%nkpt, input%jspins))
+      IF (.NOT. ALLOCATED(results%w_iks)) ALLOCATE (results%w_iks(merge(input%neig*2,input%neig,noco%l_soc), kpts%nkpt, input%jspins))
 
       IF (hybrid%l_calhf) THEN
          iterHF = iterHF + 1
@@ -108,7 +108,7 @@ CONTAINS
          CALL mixedbasis(atoms, kpts, dimension, input, cell, sym, xcpot, hybrid, enpara, mpi, v, l_restart)
          CALL timestop("generation of mixed basis")
 
-         CALL open_hybrid_io2(hybrid, DIMENSION, atoms, sym%invs)
+         CALL open_hybrid_io2(hybrid, input, atoms, sym%invs)
 
          CALL coulombmatrix(mpi, atoms, kpts, cell, sym, hybrid, xcpot, l_restart)
 

@@ -52,12 +52,12 @@ CONTAINS
       ! local arrays
 
       REAL, ALLOCATABLE :: basprod(:)
-      INTEGER              :: degenerat(merge(dimension%neigd*2,dimension%neigd,noco%l_soc) + 1, kpts%nkpt)
+      INTEGER              :: degenerat(merge(input%neig*2,input%neig,noco%l_soc) + 1, kpts%nkpt)
       LOGICAL              :: skip_kpt(kpts%nkpt)
       INTEGER              :: g(3)
 
-      REAL :: zDebug_r(DIMENSION%nbasfcn,Dimension%Neigd)
-      COMPLEX :: zDebug_c(DIMENSION%nbasfcn,Dimension%Neigd)
+      REAL :: zDebug_r(lapw_dim_nbasfcn,input%neig)
+      COMPLEX :: zDebug_c(lapw_dim_nbasfcn,input%neig)
 
       skip_kpt = .FALSE.
 
@@ -65,12 +65,12 @@ CONTAINS
          ! Preparations for HF and hybrid functional calculation
          CALL timestart("gen_bz and gen_wavf")
 
-         WRITE(9333,*) DIMENSION%nbasfcn, Dimension%Neigd, atoms%nlotot, kpts%nkpt
+         WRITE(9333,*) lapw%dim_nbasfcn(), input%neig, atoms%nlotot, kpts%nkpt
          WRITE(9333,*) ALLOCATED(hybdat%kveclo_eig)
 
          ALLOCATE (zmat(kpts%nkptf), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation z_c'
-         ALLOCATE (eig_irr(merge(dimension%neigd*2,dimension%neigd,noco%l_soc), kpts%nkpt), stat=ok)
+         ALLOCATE (eig_irr(merge(input%neig*2,input%neig,noco%l_soc), kpts%nkpt), stat=ok)
          IF (ok /= 0) STOP 'eigen_hf: failure allocation eig_irr'
          IF(ALLOCATED(hybdat%kveclo_eig)) DEALLOCATE (hybdat%kveclo_eig) ! for spinpolarized systems
          ALLOCATE (hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
@@ -80,8 +80,8 @@ CONTAINS
 
          INQUIRE(file ="z",exist= l_exist)
          IF(l_exist) THEN
-            IF (l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=DIMENSION%nbasfcn*Dimension%Neigd*8)
-            IF (.NOT.l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=DIMENSION%nbasfcn*Dimension%Neigd*16)
+            IF (l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=lapw%dim_nbasfcn()*input%neig*8)
+            IF (.NOT.l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=lapw%dim_nbasfcn()*input%neig*16)
          END IF
 
          ! Reading the eig file
@@ -89,18 +89,18 @@ CONTAINS
             nrec1 = kpts%nkpt*(jsp - 1) + nk
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-            CALL zMat(nk)%init(l_real, nbasfcn, merge(dimension%neigd*2,dimension%neigd,noco%l_soc))
+            CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
             CALL read_eig(eig_id_hf, nk, jsp, zmat=zMat(nk))
 
             IF(l_exist.AND.zmat(1)%l_real) THEN
                READ(993,rec=nk) zDebug_r(:,:)
                zMat(nk)%data_r = 0.0
-               zMat(nk)%data_r(:nbasfcn,:Dimension%Neigd) = zDebug_r(:nbasfcn,:Dimension%Neigd)
+               zMat(nk)%data_r(:nbasfcn,:input%neig) = zDebug_r(:nbasfcn,:input%neig)
             END IF
             IF(l_exist.AND..NOT.zmat(1)%l_real) THEN
                READ(993,rec=nk) zDebug_c(:,:)
                zMat(nk)%data_c = 0.0
-               zMat(nk)%data_c(:nbasfcn,:Dimension%Neigd) = zDebug_c(:nbasfcn,:Dimension%Neigd)
+               zMat(nk)%data_c(:nbasfcn,:input%neig) = zDebug_c(:nbasfcn,:input%neig)
             END IF
 
             WRITE(9333,*) SHAPE(eig_irr)
@@ -115,7 +115,7 @@ CONTAINS
          !Allocate further space
          DO nk = kpts%nkpt + 1, kpts%nkptf
             nbasfcn = zMat(kpts%bkp(nk))%matsize1
-            CALL zMat(nk)%init(l_real, nbasfcn, merge(dimension%neigd*2,dimension%neigd,noco%l_soc))
+            CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
          END DO
 
          !determine degenerate states at each k-point
@@ -279,7 +279,7 @@ CONTAINS
          END DO
 
          hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%nindx(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
-         hybrid%nbands = MIN(hybrid%bands1, DIMENSION%neigd)
+         hybrid%nbands = MIN(hybrid%bands1, input%neig)
 
       ENDIF ! hybrid%l_calhf
 

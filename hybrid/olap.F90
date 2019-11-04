@@ -428,13 +428,13 @@ CONTAINS
 
    SUBROUTINE olap_cv(hybrid, kpts, maxlcutc, maxindxc, atoms,&
   &                   lmaxc, lmaxcd, nindxc,&
-  &                   core1, core2, bas1, bas2, cmt, dimension,&
+  &                   core1, core2, bas1, bas2, cmt, input,&
   &                   gridf)
 
       USE m_util, ONLY: intgrf, intgrf_init, chr
       USE m_types
       IMPLICIT NONE
-      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -449,7 +449,7 @@ CONTAINS
      &                          core2(atoms%jmtd, 0:lmaxcd, maxindxc, atoms%ntype)
       REAL, INTENT(IN)       ::  bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype),&
      &                          bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
-      COMPLEX, INTENT(IN)    ::  cmt(dimension%neigd, kpts%nkpt, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(IN)    ::  cmt(input%neig, kpts%nkpt, hybrid%maxlmindx, atoms%nat)
 
 !     - local scalars -
       INTEGER               :: itype, icent, l, m, lm, i, j
@@ -467,7 +467,7 @@ CONTAINS
 
 !      CALL intgrf_init(ntype,jmtd,jri,dx,rmsh,gridf)
       WRITE (6, '(/A)') 'Overlap <core|basis>'
-      ALLOCATE (olapcb(hybrid%maxindx), olapcv(dimension%neigd, kpts%nkpt),&
+      ALLOCATE (olapcb(hybrid%maxindx), olapcv(input%neig, kpts%nkpt),&
      &     olapcv_avg(-maxlcutc:maxlcutc, maxindxc, 0:maxlcutc, atoms%ntype),&
      &     olapcv_max(-maxlcutc:maxlcutc, maxindxc, 0:maxlcutc, atoms%ntype),&
      &     olapcv_loc(2, -maxlcutc:maxlcutc, maxindxc, 0:maxlcutc, atoms%ntype))
@@ -498,7 +498,7 @@ CONTAINS
                      olapcv(:, :) = olapcv(:, :) + olapcb(j)*cmt(:, :, lm, icent)
                   END DO
                   olapcv_avg(M, i, l, itype) = sqrt(sum(abs(olapcv(:, :))**2)&
-         &                                          /kpts%nkpt/dimension%neigd)
+         &                                          /kpts%nkpt/input%neig)
                   olapcv_max(M, i, l, itype) = maxval(abs(olapcv(:, :)))
                   olapcv_loc(:, M, i, l, itype) = maxloc(abs(olapcv(:, :)))
                END DO

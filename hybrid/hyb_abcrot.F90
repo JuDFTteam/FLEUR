@@ -24,9 +24,9 @@ CONTAINS
 !     ..
 !     .. Array Arguments ..
 
-      COMPLEX, INTENT(INOUT) :: acof(:, 0:, :) !(dimension%neigd,0:dimension%lmd,atoms%natd)
-      COMPLEX, INTENT(INOUT) :: bcof(:, 0:, :) !(dimension%neigd,0:dimension%lmd,atoms%natd)
-      COMPLEX, INTENT(INOUT) :: ccof(-atoms%llod:, :, :, :)!(-llod:llod,dimension%neigd,atoms%nlod,atoms%natd)
+      COMPLEX, INTENT(INOUT) :: acof(:, 0:, :) !(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd)
+      COMPLEX, INTENT(INOUT) :: bcof(:, 0:, :) !(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%natd)
+      COMPLEX, INTENT(INOUT) :: ccof(-atoms%llod:, :, :, :)!(-llod:llod,input%neig,atoms%nlod,atoms%natd)
 !     ..
 !     .. Local Scalars ..
       INTEGER itype, ineq, iatom, iop, ilo, i, l, lm, lmp, ifac

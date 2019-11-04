@@ -102,8 +102,8 @@ CONTAINS
       INTEGER, INTENT(IN)    ::  nsest(hybrid%nbands(nk))
       INTEGER, INTENT(IN)    ::  indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
 
-      REAL, INTENT(IN)    ::  eig_irr(dimension%neigd, kpts%nkpt)
-      REAL, INTENT(IN)    ::  wl_iks(dimension%neigd, kpts%nkptf)
+      REAL, INTENT(IN)    ::  eig_irr(input%neig, kpts%nkpt)
+      REAL, INTENT(IN)    ::  wl_iks(input%neig, kpts%nkptf)
 
       ! local scalars
       INTEGER                 ::  iband, iband1, ibando, ikpt, ikpt0
@@ -168,7 +168,7 @@ CONTAINS
                                              ((hybrid%maxlcutm1 + 1)**2*atoms%nat + maxval(hybrid%ngptm) + 1)/2)
 #endif
 
-      LOGICAL              :: occup(dimension%neigd)
+      LOGICAL              :: occup(input%neig)
       CALL timestart("valence exchange calculation")
 
       IF (initialize) THEN !it .eq. 1 .and. nk .eq. 1) THEN
@@ -367,7 +367,7 @@ CONTAINS
 
          IF (zero_order) THEN
             CALL dwavefproducts(dcprod, nk, 1, hybrid%nbands(nk), 1, hybrid%nbands(nk), .false., atoms, hybrid, &
-                                cell, hybdat, kpts, kpts%nkpt, lapw, dimension, jsp, eig_irr)
+                                cell, hybdat, kpts, kpts%nkpt, lapw, input, jsp, eig_irr)
 
             ! make dcprod hermitian
             DO n1 = 1, hybrid%nbands(nk)

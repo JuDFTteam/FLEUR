@@ -19,7 +19,7 @@ MODULE m_exchange_core
 
 CONTAINS
 
-   SUBROUTINE exchange_vccv(nk, atoms, hybrid, hybdat, DIMENSION, jsp, lapw, &
+   SUBROUTINE exchange_vccv(nk, atoms, hybrid, hybdat, input, jsp, lapw, &
                             maxbands, mnobd, mpi, degenerat, symequivalent, results, &
                             ex_vv_r, ex_vv_c, l_real)
 
@@ -33,7 +33,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
       TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_dimension), INTENT(IN)   :: DIMENSION
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
@@ -68,7 +68,7 @@ CONTAINS
       REAL, ALLOCATABLE        ::  fprod(:, :), fprod2(:, :)
       REAL, ALLOCATABLE        ::  integral(:, :)
 
-      COMPLEX                 ::  cmt(DIMENSION%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       COMPLEX                 ::  exchange(hybrid%nbands(nk), hybrid%nbands(nk))
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 
@@ -234,7 +234,7 @@ CONTAINS
 
    END SUBROUTINE exchange_vccv
 
-   SUBROUTINE exchange_vccv1(nk, atoms, hybrid, hybdat, DIMENSION, jsp, lapw, &
+   SUBROUTINE exchange_vccv1(nk, atoms, hybrid, hybdat, input, jsp, lapw, &
                              nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
 
       USE m_constants
@@ -247,7 +247,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
       TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_dimension), INTENT(IN)   :: DIMENSION
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
@@ -281,7 +281,7 @@ CONTAINS
       REAL, ALLOCATABLE        ::  fprod(:, :), fprod2(:, :)
       REAL, ALLOCATABLE        ::  integral(:, :)
 
-      COMPLEX                 ::  cmt(DIMENSION%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       COMPLEX                 ::  exchange(hybrid%nbands(nk), hybrid%nbands(nk))
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 
@@ -549,7 +549,7 @@ CONTAINS
 
    END SUBROUTINE exchange_cccc
 
-   SUBROUTINE exchange_cccv(nk, atoms, hybdat, hybrid, DIMENSION, maxbands, ncstd, &
+   SUBROUTINE exchange_cccv(nk, atoms, hybdat, hybrid, input, maxbands, ncstd, &
                             bkpt, sym, mpi, exch_cv_r, exch_cv_c, l_real)
 
       USE m_constants
@@ -562,7 +562,7 @@ CONTAINS
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_dimension), INTENT(IN)   :: DIMENSION
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -593,7 +593,7 @@ CONTAINS
       REAL                  ::  integrand(atoms%jmtd)
       COMPLEX               ::  cexp(atoms%nat)
       COMPLEX               ::  exch(hybrid%nbands(nk), ncstd)
-      COMPLEX               ::  cmt(DIMENSION%neigd, hybrid%maxlmindx, atoms%nat), carr(hybrid%nbands(nk))
+      COMPLEX               ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat), carr(hybrid%nbands(nk))
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(//A)') '### core-core-core-valence exchange  ###'

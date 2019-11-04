@@ -10,7 +10,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
                               nk, iop, atoms, hybrid, kpts, sym, &
-                              jsp, dimension, cell, lapw)
+                              jsp, input, cell, lapw)
 
       USE m_constants
       USE m_util, ONLY: modulo1
@@ -18,7 +18,7 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_sym), INTENT(IN)         :: sym
       TYPE(t_cell), INTENT(IN)        :: cell
@@ -31,10 +31,10 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  bandi, iop
 
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(IN)      ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       LOGICAL, INTENT(IN)      ::  l_real
-      REAL, INTENT(IN)         ::  z_r(dimension%nbasfcn, dimension%neigd)
-      COMPLEX, INTENT(IN)      ::  z_c(dimension%nbasfcn, dimension%neigd)
+      REAL, INTENT(IN)         ::  z_r(lapw%dim_nbasfcn(), input%neig)
+      COMPLEX, INTENT(IN)      ::  z_c(lapw%dim_nbasfcn(), input%neig)
       COMPLEX, INTENT(OUT)     ::  cmt_out(hybrid%maxlmindx, atoms%nat, ndb)
       COMPLEX, INTENT(OUT)     ::  z_out(lapw%nv(jsp), ndb)
 
@@ -153,7 +153,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_genwavf( &
       cmt_out, z_rout, z_cout, cmt, l_real, z_r, z_c, nk, iop, atoms, &
-      hybrid, kpts, sym, jsp, nbasfcn, dimension, nbands, &
+      hybrid, kpts, sym, jsp, nbasfcn, input, nbands, &
       cell, lapw_nk, lapw_rkpt, phase)
 
       use m_juDFT
@@ -163,7 +163,7 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -175,14 +175,14 @@ CONTAINS
       INTEGER, INTENT(IN)      ::  iop
       LOGICAL                 ::  phase
 !     - arrays -
-      COMPLEX, INTENT(IN)      ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(IN)      ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       LOGICAL, INTENT(IN)      :: l_real
-      REAL, INTENT(IN)         ::  z_r(nbasfcn, dimension%neigd)
-      REAL, INTENT(INOUT)      ::  z_rout(nbasfcn, dimension%neigd)
-      COMPLEX, INTENT(IN)      ::  z_c(nbasfcn, dimension%neigd)
-      COMPLEX, INTENT(INOUT)   ::  z_cout(nbasfcn, dimension%neigd)
+      REAL, INTENT(IN)         ::  z_r(nbasfcn, input%neig)
+      REAL, INTENT(INOUT)      ::  z_rout(nbasfcn, input%neig)
+      COMPLEX, INTENT(IN)      ::  z_c(nbasfcn, input%neig)
+      COMPLEX, INTENT(INOUT)   ::  z_cout(nbasfcn, input%neig)
 
-      COMPLEX, INTENT(INOUT)  ::  cmt_out(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX, INTENT(INOUT)  ::  cmt_out(input%neig, hybrid%maxlmindx, atoms%nat)
 !        - local -
 
 !     - scalars -
@@ -196,7 +196,7 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  tau1(3), rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  zhlp(nbasfcn, dimension%neigd)
+      COMPLEX                 ::  zhlp(nbasfcn, input%neig)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
       tpiimg = -tpi_const*img

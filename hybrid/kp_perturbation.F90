@@ -86,8 +86,8 @@ MODULE m_kp_perturbation
             COMPLEX, ALLOCATABLE   ::  cmt_lo(:, :, :, :)
             COMPLEX, ALLOCATABLE   ::  cmt_apw(:, :, :)
             TYPE(t_mat)           ::  z
-            REAL                  ::  work_r(dimension%neigd)
-            COMPLEX               ::  work_c(dimension%neigd)
+            REAL                  ::  work_r(input%neig)
+            COMPLEX               ::  work_c(input%neig)
 
             !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
@@ -146,7 +146,7 @@ MODULE m_kp_perturbation
             END DO
 
             ! calculate lo wavefunction coefficients
-            ALLOCATE (cmt_lo(dimension%neigd, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
+            ALLOCATE (cmt_lo(input%neig, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
             cmt_lo = 0
             iatom = 0
             ic = 0
@@ -223,7 +223,7 @@ MODULE m_kp_perturbation
             END DO
             idum = maxval(lmp_start)
 
-            ALLOCATE (cmt_apw(dimension%neigd, idum, atoms%nat))
+            ALLOCATE (cmt_apw(input%neig, idum, atoms%nat))
             cmt_apw = 0
             DO i = 1, lapw%nv(jsp)
                kvec = kpts%bk(:, nk) + (/lapw%k1(i, jsp), lapw%k2(i, jsp), lapw%k3(i, jsp)/)
@@ -708,7 +708,7 @@ MODULE m_kp_perturbation
             atoms, hybrid, &
             cell, &
             hybdat, kpts, nkpti, lapw, &
-            dimension, jsp, &
+            input, jsp, &
             eig_irr)
 
             USE m_wrapper
@@ -717,7 +717,7 @@ MODULE m_kp_perturbation
 
             TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
-            TYPE(t_dimension), INTENT(IN)   :: dimension
+            TYPE(t_input), INTENT(IN)   :: input
             TYPE(t_hybrid), INTENT(IN)   :: hybrid
             TYPE(t_cell), INTENT(IN)   :: cell
             TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -731,7 +731,7 @@ MODULE m_kp_perturbation
 
 !     - arrays -
 
-            REAL, INTENT(IN)         ::  eig_irr(dimension%neigd, nkpti)
+            REAL, INTENT(IN)         ::  eig_irr(input%neig, nkpti)
             COMPLEX, INTENT(OUT)     ::  dcprod(bandi2:bandf2, bandi1:bandf1, 3)
 
 !     - local scalars -
@@ -747,7 +747,7 @@ MODULE m_kp_perturbation
                atoms, hybrid, &
                cell, &
                hybdat, kpts, lapw, &
-               dimension, jsp)
+               input,jsp)
 
             !                                                __
             !  Calculate expansion coefficients -i < uj | \/ | ui > / ( ei - ej ) for periodic function ui
@@ -782,7 +782,7 @@ MODULE m_kp_perturbation
             atoms, hybrid, &
             cell, &
             hybdat, kpts, lapw, &
-            dimension, jsp)
+            input, jsp)
 
             USE m_olap
             USE m_wrapper
@@ -794,7 +794,7 @@ MODULE m_kp_perturbation
             IMPLICIT NONE
 
             TYPE(t_hybdat), INTENT(IN)   :: hybdat
-            TYPE(t_dimension), INTENT(IN)   :: dimension
+            TYPE(t_input), INTENT(IN)   :: input
             TYPE(t_hybrid), INTENT(IN)   :: hybrid
             TYPE(t_cell), INTENT(IN)   :: cell
             TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -829,7 +829,7 @@ MODULE m_kp_perturbation
             COMPLEX                 ::  cvec1(hybrid%maxlmindx), cvec2(hybrid%maxlmindx), cvec3(hybrid%maxlmindx)
             COMPLEX                 ::  cmt1(hybrid%maxlmindx, bandi1:bandf1), cmt2(hybrid%maxlmindx, bandi2:bandf2)
             COMPLEX                 ::  carr1(3), carr2(3)
-            COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+            COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
             REAL                    ::  olap_r(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
             COMPLEX                 ::  olap_c(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
             REAL                    ::  vec1_r(lapw%nv(jsp)), vec2_r(lapw%nv(jsp)), vec3_r(lapw%nv(jsp))

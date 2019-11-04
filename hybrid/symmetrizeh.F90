@@ -48,7 +48,7 @@ CONTAINS
       INTEGER               ::  l_lo(atoms%nlotot)
       INTEGER               ::  itype_lo(atoms%nlotot)
       INTEGER               ::  gpt_lo(3, atoms%nlotot), gpthlp(3), g(3)
-      INTEGER               ::  indx(DIMENSION%nbasfcn, DIMENSION%nbasfcn)
+      INTEGER               ::  indx(lapw%dim_nbasfcn(), lapw%dim_nbasfcn())
       INTEGER               ::  lo_indx(atoms%nlod, atoms%nat)
       INTEGER               ::  rot(3, 3, nsymop), rrot(3, 3, nsymop)
 
