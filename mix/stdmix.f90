@@ -32,7 +32,7 @@ CONTAINS
     !
     sm = sm + input%alpha*fsm
 
-    IF ( ABS(input%spinf-1.0e0).LE.tol_6 .OR. input%jspins.EQ.1 .or.input%imix.ne.0) THEN
+    IF ( ABS(input%spinf-1.0).LE.tol_6 .OR. input%jspins.EQ.1 .or.input%imix.ne.0) THEN
        !  Done with     sm1 = sm + alpha * F(sm)
        !No spin
        RETURN

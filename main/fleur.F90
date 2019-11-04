@@ -388,10 +388,10 @@ CONTAINS
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
                ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
-                               cell, noco, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
+!                               cell, noco, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
 !!               CDN subtracted by core charge
                ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
-                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
+!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
           IF (input%l_rdmft) THEN
