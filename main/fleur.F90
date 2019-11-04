@@ -256,9 +256,9 @@ CONTAINS
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN            
           CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                          noco, vTot, PLOT_POT_TOT, sliceplot)      
-          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
-          CALL subPotDen(vxcForPlotting,vTot,vCoul)
-          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
+          !CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
+          !CALL subPotDen(vxcForPlotting,vTot,vCoul)
+          !CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC)
        END IF 
 
 #ifdef CPP_MPI
