@@ -22,14 +22,14 @@ MODULE m_alinemuff
   !*                                                                      *
   !************************************************************************
 CONTAINS
-  SUBROUTINE aline_muff(atoms,DIMENSION,sym, cell, jsp,ne, usdus,td, bkpt,lapw, eig,z_r,z_c,realdata)
+  SUBROUTINE aline_muff(atoms,input,sym, cell, jsp,ne, usdus,td, bkpt,lapw, eig,z_r,z_c,realdata)
 
 #include"cpp_double.h"
 
     USE m_hnonmuff
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -38,14 +38,14 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(IN)      :: td
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jsp,ne   
+    INTEGER, INTENT (IN) :: jsp,ne
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: bkpt(3)   
-    REAL,    INTENT (INOUT) :: eig(DIMENSION%neigd)
+    REAL,    INTENT (IN) :: bkpt(3)
+    REAL,    INTENT (INOUT) :: eig(input%neig)
 
-    REAL,    OPTIONAL,INTENT (INOUT) :: z_r(DIMENSION%nbasfcn,ne)
-    COMPLEX, OPTIONAL,INTENT (INOUT) :: z_c(DIMENSION%nbasfcn,ne)
+    REAL,    OPTIONAL,INTENT (INOUT) :: z_r(lapw%dim_nbasfcn(),ne)
+    COMPLEX, OPTIONAL,INTENT (INOUT) :: z_c(lapw%dim_nbasfcn(),ne)
     LOGICAL,OPTIONAL,INTENT(IN):: realdata
     !     ..
     !     .. Local Scalars ..
@@ -73,9 +73,9 @@ CONTAINS
           ii = (i-1)*i/2 + i
           h(ii) = eig(i)
        END DO
-   
+
     !---> add the off-diagonal (non-muffin-tin) terms
-    CALL h_nonmuff(atoms,DIMENSION,sym, cell, jsp,ne, usdus,td, bkpt,lapw, h,l_real,z_r,z_c)
+    CALL h_nonmuff(atoms,input,sym, cell, jsp,ne, usdus,td, bkpt,lapw, h,l_real,z_r,z_c)
 
     !---> DIAGONALIZE THE HAMILTONIAN USING LIBRARY-ROUTINES
 #ifdef CPP_ESSL

@@ -19,7 +19,7 @@ CONTAINS
    !!     TE_VEFF:   charge density-effective potential integral
    !!     TE_EXC :   charge density-ex-corr.energy density integral
 
-   SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
+   SUBROUTINE vgen(hybrid,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul)
 
       USE m_types
@@ -38,7 +38,7 @@ CONTAINS
       CLASS(t_xcpot),    INTENT(INOUT)  :: xcpot
       TYPE(t_hybrid),    INTENT(IN)     :: hybrid
       TYPE(t_mpi),       INTENT(IN)     :: mpi
-      TYPE(t_dimension), INTENT(IN)     :: dimension
+      
       TYPE(t_oneD),      INTENT(IN)     :: oneD
       TYPE(t_sliceplot), INTENT(IN)     :: sliceplot
       TYPE(t_input),     INTENT(IN)     :: input
@@ -79,7 +79,7 @@ CONTAINS
       !sum up both spins in den into workden
       CALL den%sum_both_spin(workden)
 
-      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,workden,vCoul,results)
+      CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,workden,vCoul,results)
 
       CALL vCoul%copy_both_spin(vTot)
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
@@ -87,11 +87,11 @@ CONTAINS
       IF (noco%l_noco) THEN
          CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
          denRot=den
-         CALL rotate_int_den_to_local(DIMENSION,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
+         CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
          IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,denrot)         
       ENDIF
 
-      CALL vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
+      CALL vgen_xcpot(hybrid,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                       cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...

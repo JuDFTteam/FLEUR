@@ -29,8 +29,8 @@ CONTAINS
 
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: bkpt(3)
-    COMPLEX, INTENT (OUT):: a(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (OUT):: b(:,0:,:)!(dimension%nvd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT):: a(:,0:,:)!(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (OUT):: b(:,0:,:)!(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT (OUT):: bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%nat)
     !     .. Local Scalars ..
     COMPLEX phase,c_0,c_1,c_2

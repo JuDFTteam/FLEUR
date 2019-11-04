@@ -10,7 +10,7 @@ module m_vgen_coulomb
 
 contains
 
-  subroutine vgen_coulomb( ispin, mpi, dimension, oneD, input, field, vacuum, sym, stars, &
+  subroutine vgen_coulomb( ispin, mpi,  oneD, input, field, vacuum, sym, stars, &
              cell, sphhar, atoms, den, vCoul, results )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator                           
@@ -40,7 +40,7 @@ contains
 
     integer,            intent(in)               :: ispin
     type(t_mpi),        intent(in)               :: mpi
-    type(t_dimension),  intent(in)               :: dimension
+    
     type(t_oneD),       intent(in)               :: oneD
     type(t_input),      intent(in)               :: input
     type(t_field),      intent(inout)            :: field
@@ -196,7 +196,7 @@ contains
     if ( mpi%irank == 0 ) then
       CHECK_CONTINUITY: if ( input%vchk ) then
         call timestart( "checking" )
-        call checkDOPAll( input, dimension, sphhar, stars, atoms, sym, vacuum, oneD, &
+        call checkDOPAll( input,  sphhar, stars, atoms, sym, vacuum, oneD, &
                           cell, vCoul, ispin )
         call timestop( "checking" )
       end if CHECK_CONTINUITY

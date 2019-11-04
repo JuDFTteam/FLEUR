@@ -12,7 +12,7 @@
       CONTAINS
         SUBROUTINE cdnovlp(mpi,&
              &                   sphhar,stars,atoms,sym,&
-             &                   DIMENSION,vacuum,cell,&
+             &                   vacuum,cell,&
              &                   input,oneD,l_st,&
              &                   jspin,rh,&
              &                   qpw,rhtxy,rho,rht)
@@ -96,7 +96,7 @@
           TYPE(t_cell),INTENT(IN)     :: cell
           TYPE(t_sym),INTENT(IN)      :: sym
           TYPE(t_oneD),INTENT(IN)     :: oneD
-          TYPE(t_dimension),INTENT(IN)::DIMENSION
+          
           TYPE(t_vacuum),INTENT(in):: vacuum
           TYPE(t_input),INTENT(in)::input
 
@@ -241,7 +241,7 @@
           !
           !=====> calculate the fourier transform of the core-pseudocharge
 
-          CALL ft_of_CorePseudocharge(mpi,DIMENSION,atoms,mshc,alpha,tol_14,rh, &
+          CALL ft_of_CorePseudocharge(mpi,atoms,mshc,alpha,tol_14,rh, &
                           acoff,stars,method2,rat,cell,oneD,sym,qpwc)
 
           DO k = 1 , stars%ng3    
@@ -476,7 +476,7 @@
 !     INTERNAL SUBROUTINES
 !***********************************************************************
 
-      subroutine ft_of_CorePseudocharge(mpi,DIMENSION,atoms,mshc,alpha,&
+      subroutine ft_of_CorePseudocharge(mpi,atoms,mshc,alpha,&
             tol_14,rh,acoff,stars,method2,rat,cell,oneD,sym,qpwc)
 
       !=====> calculate the fourier transform of the core-pseudocharge
@@ -489,7 +489,7 @@
       USE m_types
 
       type(t_mpi)      ,intent(in) :: mpi
-      type(t_dimension),intent(in) :: DIMENSION
+      
       type(t_atoms)    ,intent(in) :: atoms
       integer          ,intent(in) :: mshc(atoms%ntype)
       real             ,intent(in) :: alpha(atoms%ntype), tol_14

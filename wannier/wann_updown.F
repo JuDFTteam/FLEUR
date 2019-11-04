@@ -8,7 +8,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_updown(
-     >      DIMENSION,wann,mpi,input,kpts,sym,atoms,stars,vacuum,
+     >      wann,mpi,input,kpts,sym,atoms,stars,vacuum,
      >      sphhar,oneD,noco,cell,vTot,
      >      enpara,
      >      eig_id,l_real,mpi_comm,l_dulo,l_noco,l_ss,lmaxd,ntypd,
@@ -75,7 +75,7 @@ c****************************************************************************
 
 #endif
 
-      TYPE(t_dimension), INTENT(IN) :: DIMENSION
+      
       TYPE(t_wann),      INTENT(INOUT) :: wann    
       TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_input),INTENT(IN)  :: input
@@ -852,9 +852,9 @@ c****************************************************************
 
         CALL cdn_read(
      & eig_id,
-     & DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
-     & kptibz,jspin,DIMENSION%nbasfcn,
-     & noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     & lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     & kptibz,jspin,lapw%dim_nbasfcn(),
+     & noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
      & nbands,eigg(:,jspin),zzMat(jspin))
 
 

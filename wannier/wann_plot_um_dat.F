@@ -13,7 +13,7 @@ c       FF, September 2006
 c******************************************************************
       CONTAINS
       SUBROUTINE wann_plot_um_dat(
-     >          DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,
+     >          stars,vacuum,atoms,sphhar,input,sym,mpi,
      >          lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,
      >          mpi_comm,sortrule,band_min,band_max,l_soc,
      >          l_dulo,l_noco,l_ss,lmaxd,
@@ -57,7 +57,7 @@ c******************************************************************
       integer stt(MPI_STATUS_SIZE)
 #endif
 
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -639,7 +639,7 @@ c***********************************************************************
      &              u_1(nmzd,nv2d,-odi%mb:odi%mb),
      &              ue_1(nmzd,nv2d,-odi%mb:odi%mb) )
          call wann_1dvacabcof(
-     >         DIMENSION,oneD,vacuum,stars,cell,
+     >         oneD,vacuum,stars,cell,
      >         nv2d,nslibd,nmzd,nmz,omtil,vz(:,:,jspin2),
      >         nv(jspin),bkpt,z1,odi,ods,
      >    nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),enpara%evac0(:,jspin),

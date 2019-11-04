@@ -77,7 +77,7 @@ CONTAINS
 
     TYPE(t_input)                   :: input
     TYPE(t_field)                   :: field, field2
-    TYPE(t_dimension)               :: DIMENSION
+
     TYPE(t_atoms) ,TARGET           :: atoms
     TYPE(t_sphhar),TARGET           :: sphhar
     TYPE(t_cell) ,TARGET            :: cell
@@ -113,7 +113,7 @@ CONTAINS
     mpi%mpi_comm = mpi_comm
 
     CALL timestart("Initialization")
-    CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
+    CALL fleur_init(mpi,input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
                     banddos,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann)
     CALL timestop("Initialization")
 
@@ -121,7 +121,7 @@ CONTAINS
       CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
     END IF
 
-    CALL optional(mpi,atoms,sphhar,vacuum,dimension,&
+    CALL optional(mpi,atoms,sphhar,vacuum,&
                               stars,input,sym,cell,sliceplot,xcpot,noco,oneD)
 
     IF (input%l_wann.AND.(mpi%irank==0).AND.(.NOT.wann%l_bs_comf)) THEN
@@ -160,11 +160,11 @@ CONTAINS
 
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco
-    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
+    eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,input%neig,kpts%nkpt,input%jspins,&
                     noco%l_noco,.true.,l_real,noco%l_soc,.false.,mpi%n_size)
 
 #ifdef CPP_CHASE
-    CALL init_chase(mpi,dimension,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
+    CALL init_chase(mpi,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
 #endif
     ! Open/allocate eigenvector storage (end)
 
@@ -204,7 +204,7 @@ CONTAINS
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
-             CALL calc_hybrid(eig_id,hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
+             CALL calc_hybrid(eig_id,hybrid,kpts,atoms,input,mpi,noco,&
                               cell,oneD,enpara,results,sym,xcpot,vTot,iter,iterHF)
           END SELECT
           IF(hybrid%l_calhf) THEN
@@ -214,7 +214,7 @@ CONTAINS
        ENDIF
        !RDMFT
        IF(input%l_rdmft) THEN
-          CALL open_hybrid_io1(DIMENSION,sym%invs)
+          CALL open_hybrid_io1(sym%invs)
        END IF
        !IF(.not.input%eig66(1))THEN
           CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
@@ -235,7 +235,7 @@ CONTAINS
        !---< gwf
 
        CALL timestart("generation of potential")
-       CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
+       CALL vgen(hybrid,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                  cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
@@ -253,7 +253,7 @@ CONTAINS
           CALL enpara%update(mpi%mpi_comm,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
           !IF(.not.input%eig66(1))THEN
-            CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+            CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
           !ENDIF
           vTot%mmpMat = vTemp%mmpMat
@@ -279,7 +279,7 @@ CONTAINS
 
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
-             CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
+             CALL eigenso(eig_id,mpi,stars,vacuum,atoms,sphhar,&
                           sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
           CALL timestop("gen. of hamil. and diag. (total)")
 
@@ -288,11 +288,11 @@ CONTAINS
 #endif
 
           ! fermi level and occupancies
-          IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd = 2*DIMENSION%neigd
+          IF (noco%l_soc.AND.(.NOT.noco%l_noco)) input%neig = 2*input%neig
 
 	  IF (input%gw.GT.0) THEN
 	    IF (mpi%irank.EQ.0) THEN
-	       CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,&
+	       CALL writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,&
 		  	     results,eig_id,oneD,sphhar,stars,vacuum)
 	    END IF
 	    IF (input%gw.EQ.2) THEN
@@ -323,7 +323,7 @@ CONTAINS
 !!$                OPEN(780,file='out_eig.2_diag')
 !!$             END IF
 !!$
-!!$             CALL bs_comfort(eig_id,DIMENSION,input,noco,kpts%nkpt,pc)
+!!$             CALL bs_comfort(eig_id,input,noco,kpts%nkpt,pc)
 !!$
 !!$             IF(pc.EQ.wann%nparampts)THEN
 !!$                CLOSE(777)
@@ -340,15 +340,15 @@ CONTAINS
           CALL MPI_BCAST(results%w_iks,SIZE(results%w_iks),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
 #endif
 
-          IF (forcetheo%eval(eig_id,DIMENSION,atoms,kpts,sym,cell,noco,input,mpi,oneD,enpara,vToT,results)) THEN
-             IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
+          IF (forcetheo%eval(eig_id,atoms,kpts,sym,cell,noco,input,mpi,oneD,enpara,vToT,results)) THEN
+             IF (noco%l_soc.AND.(.NOT.noco%l_noco)) input%neig=input%neig/2
              CYCLE forcetheoloop
           ENDIF
 
 
           !+Wannier functions
           IF ((input%l_wann).AND.(.NOT.wann%l_bs_comf)) THEN
-             CALL wannier(DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
+             CALL wannier(mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
                   wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
                   (/eig_id/),(sym%invs).AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco),kpts%nkpt)
           END IF
@@ -359,19 +359,19 @@ CONTAINS
           CALL outDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum, &
-                      dimension,kpts,atoms,sphhar,stars,sym,&
+                      kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
 
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
-                   CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
+                   CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
                               sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,hybrid,results,coreSpecInput,archiveType,outDen)
              END SELECT
           END IF
 
-          IF (noco%l_soc.AND.(.NOT.noco%l_noco)) DIMENSION%neigd=DIMENSION%neigd/2
+          IF (noco%l_soc.AND.(.NOT.noco%l_noco)) input%neig=input%neig/2
 
 #ifdef CPP_MPI
           CALL MPI_BCAST(enpara%evac,SIZE(enpara%evac),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -399,7 +399,7 @@ CONTAINS
 !!$                reap = .FALSE.
 !!$                input%total = .FALSE.
 !!$                CALL timestart("generation of potential (total)")
-!!$                CALL vgen(hybrid,reap,input,xcpot,DIMENSION, atoms,sphhar,stars,vacuum,sym,&
+!!$                CALL vgen(hybrid,reap,input,xcpot, atoms,sphhar,stars,vacuum,sym,&
 !!$                     cell,oneD,sliceplot,mpi, results,noco,outDen,inDenRot,vTot,vx,vCoul)
 !!$                CALL timestop("generation of potential (total)")
 !!$
@@ -408,7 +408,7 @@ CONTAINS
 
              ! total energy
              CALL timestart('determination of total energy')
-             CALL totale(mpi,atoms,sphhar,stars,vacuum,DIMENSION,sym,input,noco,cell,oneD,&
+             CALL totale(mpi,atoms,sphhar,stars,vacuum,sym,input,noco,cell,oneD,&
                          xcpot,hybrid,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
           IF (hybrid%l_hybrid) CALL close_eig(eig_id)
@@ -421,7 +421,7 @@ CONTAINS
        field2 = field
 
        ! mix input and output densities
-       CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
+       CALL mix_charge(field2,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
             sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
 

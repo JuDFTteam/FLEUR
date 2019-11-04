@@ -1,7 +1,7 @@
       MODULE m_setup
       USE m_juDFT
       CONTAINS
-        SUBROUTINE setup(mpi,atoms,kpts,DIMENSION,sphhar,&
+        SUBROUTINE setup(mpi,atoms,kpts,sphhar,&
                   obsolete,sym,stars,oneD, input,noco,vacuum,cell,xcpot, sliceplot,enpara,l_opti)
           !
           !----------------------------------------
@@ -58,7 +58,7 @@
           TYPE(t_mpi),INTENT(IN)         :: mpi
           TYPE(t_atoms),INTENT(INOUT)    :: atoms
           TYPE(t_kpts),INTENT(INOUT)     :: kpts
-          TYPE(t_dimension),INTENT(INOUT):: DIMENSION
+          
           TYPE(t_sphhar),INTENT(INOUT)   :: sphhar
           TYPE(t_obsolete),INTENT(INOUT) :: obsolete
           TYPE(t_sym),INTENT(INOUT)      :: sym
@@ -175,10 +175,10 @@
           CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum,mpi)
           IF (sliceplot%iplot.EQ.0) THEN
              IF ( mpi%irank == 0 ) THEN
-                CALL convn(DIMENSION,atoms,stars)
+                CALL convn(atoms,stars)
 
                 !--->    set up electric field parameters (if needed) 
-                ! CALL e_field(atoms, DIMENSION, stars, sym, vacuum, cell, input,field)
+                ! CALL e_field(atoms,  stars, sym, vacuum, cell, input,field)
              ENDIF
           ENDIF
 

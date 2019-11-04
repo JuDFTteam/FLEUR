@@ -70,7 +70,7 @@ CONTAINS
 
     ! temporary variables for XML IO
     TYPE(t_input)                 :: input_temp
-    TYPE(t_dimension)             :: dimension_temp
+    
     TYPE(t_atoms)                 :: atoms_temp
     TYPE(t_cell)                  :: cell_temp
     TYPE(t_stars)                 :: stars_temp

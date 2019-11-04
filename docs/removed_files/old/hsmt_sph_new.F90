@@ -2,7 +2,7 @@ MODULE m_hsmt_sph
   use m_juDFT
   implicit none
 CONTAINS
-  SUBROUTINE hsmt_sph(dimension,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
+  SUBROUTINE hsmt_sph(atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
        input,hlpmsize,noco,l_socfirst,cell,nintsp, lapw,el,usdus,vr,gk,rsoc,isigma, aa,bb,fj,gj)
 
 #include"cpp_double.h"
@@ -18,7 +18,7 @@ CONTAINS
 #endif
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: dimension
+    
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_cell),INTENT(IN)     :: cell
@@ -102,9 +102,9 @@ CONTAINS
  
     ENDDO       ! iintsp = 1,nintsp
     !
-    ALLOCATE(rph(dimension%nvd))
-    ALLOCATE(cph(dimension%nvd))
-    ALLOCATE(plegend(dimension%nvd,0:atoms%lmaxd))
+    ALLOCATE(rph(lapw%dim_nvd()))
+    ALLOCATE(cph(lapw%dim_nvd()))
+    ALLOCATE(plegend(lapw%dim_nvd(),0:atoms%lmaxd))
   
     plegend=0.0
     plegend(:,0)=1.0

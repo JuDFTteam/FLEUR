@@ -2,7 +2,7 @@
       CONTAINS
         SUBROUTINE checkdop(&
              &                    p,np,n,na,ivac,iflag,jsp,&
-             &                    DIMENSION,atoms,sphhar,stars,sym,&
+             &                    atoms,sphhar,stars,sym,&
              &                    vacuum,cell,oneD,potden)
           ! ************************************************************
           !     subroutines checks the continuity of coulomb           *
@@ -23,7 +23,7 @@
           IMPLICIT NONE
           !     ..
           !     .. Scalar Arguments ..
-          TYPE(t_dimension),INTENT(IN) :: dimension
+          
           type(t_sphhar),intent(in)    :: sphhar
           TYPE(t_stars),INTENT(IN)     :: stars
           TYPE(t_atoms),INTENT(IN)     :: atoms

@@ -1,6 +1,6 @@
 MODULE m_cored
 CONTAINS
-   SUBROUTINE cored(input, jspin, atoms, rho, DIMENSION, sphhar, vr, qint, rhc, tec, seig, EnergyDen)
+   SUBROUTINE cored(input, jspin, atoms, rho,  sphhar, vr, qint, rhc, tec, seig, EnergyDen)
       !     *******************************************************
       !     *****   set up the core densities for compounds.  *****
       !     *****                      d.d.koelling           *****
@@ -13,7 +13,7 @@ CONTAINS
       USE m_types
       USE m_xmlOutput
       IMPLICIT NONE
-      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      
       TYPE(t_input),INTENT(IN)       :: input
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms

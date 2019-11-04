@@ -42,7 +42,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: ev_list(noccbd)
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN)  :: eig(:)!(dimension%neigd),
+    REAL,    INTENT (IN)  :: eig(:)!(input%neig),
     REAL,    INTENT (IN)  :: we(noccbd) 
 
     !     ..

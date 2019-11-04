@@ -7,7 +7,7 @@ MODULE m_fleur_init
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleur_init(mpi,&
-       input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+       input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
        sliceplot,banddos,enpara,xcpot,results,kpts,hybrid,&
        oneD,coreSpecInput,wann)
     USE m_types
@@ -58,7 +58,7 @@ CONTAINS
     TYPE(t_mpi)    ,INTENT(INOUT):: mpi
     TYPE(t_input)    ,INTENT(OUT):: input
     TYPE(t_field),    INTENT(OUT) :: field
-    TYPE(t_dimension),INTENT(OUT):: DIMENSION
+
     TYPE(t_atoms)    ,INTENT(OUT):: atoms
     TYPE(t_sphhar)   ,INTENT(OUT):: sphhar
     TYPE(t_cell)     ,INTENT(OUT):: cell
@@ -145,7 +145,7 @@ CONTAINS
     CALL make_sphhar(atoms,sphhar,sym,cell,oneD)
     CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
     call make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
-    CALL lapw_dim(kpts,cell,input,noco,oneD,forcetheo,DIMENSION)
+    call lapw_dim(kpts,cell,input,noco,oneD,forcetheo,atoms)
     call oned%init(atoms) !call again, because make_stars modified it :-)
     ! Store structure data
     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
@@ -170,43 +170,35 @@ CONTAINS
     !
     !--> determine more dimensions
     !
-    DIMENSION%nbasfcn = DIMENSION%nvd + atoms%nat*atoms%nlod*(2*atoms%llod+1)
-    DIMENSION%lmd     = atoms%lmaxd* (atoms%lmaxd+2)
-    IF (noco%l_noco) DIMENSION%nbasfcn = 2*DIMENSION%nbasfcn
-    ! Generate missing general parameters
+  ! Generate missing general parameters
 
     minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
     IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
     IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
-    IF ((dimension%neigd.NE.-1).AND.(dimension%neigd.LT.minNeigd)) THEN
-      IF (dimension%neigd>0) THEN
+    IF ((input%neig.NE.-1).AND.(input%neig.LT.minNeigd)) THEN
+      IF (input%neig>0) THEN
         WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
-        WRITE(*,*) 'changed numbands (dimension%neigd) to ',minNeigd
+        WRITE(*,*) 'changed numbands (input%neig) to ',minNeigd
       ENDIF
-      dimension%neigd = minNeigd
+      input%neig = minNeigd
     END IF
-    IF(dimension%neigd.EQ.-1) THEN
-      dimension%neigd = dimension%nvd + atoms%nlotot
+    IF(input%neig.EQ.-1) THEN
+      input%neig = lapw_dim_nvd + atoms%nlotot
     END IF
-    IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
-#ifdef CPP_MPI
-    CALL MPI_BCAST(dimension%neigd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(dimension%nbasfcn,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(dimension%nv2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(dimension%nvd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-#endif
+    IF (noco%l_noco) input%neig = 2*input%neig
+
 
 
     IF (mpi%irank.EQ.0) THEN
        CALL writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
             oneD,hybrid,cell,banddos,sliceplot,xcpot,&
-            noco,DIMENSION,enpara,sphhar)
+            noco,enpara,sphhar)
        CALL fleur_info(kpts)
        CALL deleteDensities()
     END IF
 
     !Finalize the MPI setup
-    CALL setupMPI(kpts%nkpt,dimension%neigd,mpi)
+    CALL setupMPI(kpts%nkpt,input%neig,mpi)
 
     !Collect some usage info
     CALL add_usage_data("A-Types",atoms%ntype)
@@ -216,7 +208,7 @@ CONTAINS
     CALL add_usage_data("Noco",noco%l_noco)
     CALL add_usage_data("SOC",noco%l_soc)
     CALL add_usage_data("SpinSpiral",noco%l_ss)
-    CALL add_usage_data("PlaneWaves",DIMENSION%nvd)
+    CALL add_usage_data("PlaneWaves",lapw_dim_nvd)
     CALL add_usage_data("LOs",atoms%nlotot)
     CALL add_usage_data("nkpt", kpts%nkpt)
 
@@ -226,7 +218,7 @@ CONTAINS
     CALL add_usage_data("gpu_per_node",0)
 #endif
 
-    CALL results%init(DIMENSION,input,atoms,kpts,noco)
+    CALL results%init(input,atoms,kpts,noco)
 
     IF (mpi%irank.EQ.0) THEN
        IF(input%gw.NE.0) CALL mixing_history_reset(mpi)

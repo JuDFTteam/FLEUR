@@ -91,7 +91,7 @@ CONTAINS
        IF (this%l_io) CALL openXMLElementPoly('Forcetheorem_Loop_MAE',(/'No'/),(/this%directions_done/))
   END FUNCTION mae_next_job
 
-  FUNCTION mae_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+  FUNCTION mae_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
     USE m_types
     IMPLICIT NONE
@@ -99,7 +99,7 @@ CONTAINS
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco

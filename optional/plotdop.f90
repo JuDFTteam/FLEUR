@@ -26,7 +26,7 @@ use m_types
 
 CONTAINS
 
-SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+SUBROUTINE plotdop(oneD,stars,vacuum,sphhar,atoms,&
                    input,sym,cell,sliceplot,noco,cdnfname)
 
    USE m_outcdn
@@ -38,7 +38,7 @@ SUBROUTINE plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
    IMPLICIT NONE
 
    TYPE(t_oneD),                INTENT(IN)    :: oneD
-   TYPE(t_dimension),           INTENT(IN)    :: dimension
+   
    TYPE(t_stars),               INTENT(IN)    :: stars
    TYPE(t_vacuum),              INTENT(IN)    :: vacuum
    TYPE(t_sphhar),              INTENT(IN)    :: sphhar

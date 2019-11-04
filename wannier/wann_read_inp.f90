@@ -7,7 +7,7 @@
 module m_wann_read_inp
 
 contains
-subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
+subroutine wann_read_inp(input,noco,l_p0,wann)
 !********************************************
 !     Read the Wannier input file 'wann_inp'.
 !     Frank Freimuth
@@ -17,7 +17,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
 
    implicit none
 
-   TYPE(t_dimension), INTENT(INOUT) :: DIMENSION
+   
    TYPE(t_input),intent(inout) :: input
    TYPE(t_noco),      INTENT(INOUT) :: noco
    TYPE(t_wann), intent(inout) :: wann
@@ -742,19 +742,19 @@ subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
       neigd_min=max(wann%band_max(1),wann%band_max(2))
    endif !noco,soc?
    if(l_p0)then
-      write(*,*)"In wann_read_inp: input-neigd=",DIMENSION%neigd
+      write(*,*)"In wann_read_inp: input-neigd=",input%neig
       write(*,*)"In wann_read_inp: we require at least neigd_min=",neigd_min
-      if(neigd_min>DIMENSION%neigd)then
+      if(neigd_min>input%neig)then
          write(*,*)"we increase neigd..."
       else
          write(*,*)"we leave neigd unchanged"
       endif
    endif !l_p0?
-   if(neigd_min>DIMENSION%neigd)then
-         DIMENSION%neigd=neigd_min
+   if(neigd_min>input%neig)then
+         input%neig=neigd_min
    endif
    if(l_p0)then
-      write(*,*)"In wann_read_inp: output-neigd=",DIMENSION%neigd
+      write(*,*)"In wann_read_inp: output-neigd=",input%neig
    endif
 
    endif !l_byindex?

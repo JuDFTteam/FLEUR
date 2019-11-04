@@ -8,7 +8,7 @@ MODULE m_writeBasis
 
 CONTAINS
 
-SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DIMENSION,results,eig_id,oneD,sphhar,stars,vacuum)
+SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,results,eig_id,oneD,sphhar,stars,vacuum)
 
    USE m_types
    USE m_juDFT
@@ -24,7 +24,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 
    IMPLICIT NONE
 !     TYPE(t_results),INTENT(IN)    :: results
-      TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+      
       TYPE(t_enpara),INTENT(IN)     :: enpara
 !     TYPE(t_banddos),INTENT(IN)    :: banddos
 
@@ -476,7 +476,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*atoms%nlotot,lapw%nv(1)+atoms%nlotot,noco%l_noco)
             CALL zMat%init(l_real,nbasfcn,numbands)
             CALL read_eig(eig_id,nk,jsp,zmat=zMat)
-	    CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jsp,numbands)
+	    CALL eigVecCoeffs%init(input,atoms,noco,jsp,numbands)
             IF (input%l_f) CALL force%init2(numbands,input,atoms)
 !            DO i=1,atoms%nat
 !	    	ngopr_temp(i)=sym%ngopr(i)
@@ -488,7 +488,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 !            DO i=1,atoms%nat
 !	     	sym%ngopr(i)=ngopr_temp(i)
 !            END DO
-		CALL abcrot(atoms%ntype,atoms%nat,numbands,atoms%lmaxd,dimension%lmd,atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
+		CALL abcrot(atoms%ntype,atoms%nat,numbands,atoms%lmaxd,atoms%lmaxd*(atoms%lmaxd+2),atoms%llod,atoms%nlod,atoms%ntype,atoms%neq,&
 		            numbands,atoms%lmax,atoms%nlo,atoms%llo,sym%nop,sym%ngopr,sym%mrot,sym%invsat,sym%invsatnr,cell%bmat,&
 		           oneD%odi,oneD%ods,&
 		           eigVecCoeffs%acof(:,0:,:,jsp),eigVecCoeffs%bcof(:,0:,:,jsp),eigVecCoeffs%ccof(-atoms%llod:,:,:,:,jsp))
@@ -537,10 +537,10 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 		      CALL h5dclose_f(zmatSetID, hdfError)
 		      DEAllOCATE(output3)
 		END IF
-		!AllOCATE(output(2,numbands,dimension%lmd+1,atoms%nat))
+		!AllOCATE(output(2,numbands,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%nat))
 		!output(1,:,:,:)=REAL(eigVecCoeffs%acof(:,0:,:,jsp))
 		!output(2,:,:,:)=AIMAG(eigVecCoeffs%acof(:,0:,:,jsp))
-		!dims(:4)=(/2,numbands,dimension%lmd+1,atoms%nat/)
+		!dims(:4)=(/2,numbands,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%nat/)
 		!dimsInt = dims
                 !CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
 		!CALL h5dcreate_f(kptGroupID, "acof", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)
@@ -549,10 +549,10 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 		!CALL h5dclose_f(itypeSetID, hdfError)
 		!DEAllOCATE(output)
 
-		!AllOCATE(output(2,numbands,dimension%lmd+1,atoms%nat))
+		!AllOCATE(output(2,numbands,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%nat))
 		!output(1,:,:,:)=REAL(eigVecCoeffs%bcof(:,0:,:,jsp))
 		!output(2,:,:,:)=AIMAG(eigVecCoeffs%bcof(:,0:,:,jsp))
-		!dims(:4)=(/2,numbands,dimension%lmd+1,atoms%nat/)
+		!dims(:4)=(/2,numbands,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%nat/)
 		!dimsInt = dims
                 !CALL h5screate_simple_f(4,dims(:4),itypeSpaceID,hdfError)
 		!CALL h5dcreate_f(kptGroupID, "bcof", H5T_NATIVE_DOUBLE, itypeSpaceID, itypeSetID, hdfError)

@@ -5,7 +5,7 @@ MODULE m_vacden
   !     vacuum charge density. speed up by r. wu 1992
   !     *************************************************************
 CONTAINS
-  SUBROUTINE vacden(vacuum,DIMENSION,stars,oneD,kpts,input,sym,cell,atoms,noco,banddos,&
+  SUBROUTINE vacden(vacuum,stars,oneD,kpts,input,sym,cell,atoms,noco,banddos,&
                     gVacMap,we,ikpt,jspin,vz,ne,ev_list,lapw,evac,eig,den,zMat,dos)
 
     !***********************************************************************
@@ -13,10 +13,10 @@ CONTAINS
     !     ****** change vacden(......,dos%qstars) for starcoefficients, shz. Jan.99
     !     ****** changed for fleur dw
     !     In non-collinear calculations the density becomes a hermitian 2x2
-    !     matrix. This subroutine generates this density matrix in the 
+    !     matrix. This subroutine generates this density matrix in the
     !     vacuum region. The diagonal elements of this matrix (n_11 & n_22)
     !     are store in den%vacz and den%vacxy, while the real and imaginary part
-    !     of the off-diagonal element are stored in den%vacz(:,:,3:4) and den%vacxy(:,:,:,3). 
+    !     of the off-diagonal element are stored in den%vacz(:,:,3:4) and den%vacxy(:,:,:,3).
     !
     !     Philipp Kurz 99/07
     !***********************************************************************
@@ -48,7 +48,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_lapw),INTENT(INOUT)    :: lapw !for some reason the second spin data is reset in noco case
-    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+
     TYPE(t_oneD),INTENT(IN)       :: oneD
     TYPE(t_banddos),INTENT(IN)    :: banddos
     TYPE(t_input),INTENT(IN)      :: input
@@ -64,23 +64,23 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT)  :: den
     TYPE(t_dos),   INTENT(INOUT)  :: dos
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jspin      
-    INTEGER, INTENT (IN) :: ne    
+    INTEGER, INTENT (IN) :: jspin
+    INTEGER, INTENT (IN) :: ne
     INTEGER, INTENT (IN) :: ikpt
     INTEGER,PARAMETER    :: n2max=13
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
     INTEGER, INTENT(IN)     :: ev_list(ne)
     REAL,    INTENT(IN)     :: evac(2,input%jspins)
-    REAL,    INTENT(IN)     :: we(DIMENSION%neigd)
+    REAL,    INTENT(IN)     :: we(input%neig)
     REAL                    :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
     !     STM-Arguments
-    REAL,    INTENT (IN)    :: eig(DIMENSION%neigd)
+    REAL,    INTENT (IN)    :: eig(input%neig)
     !     local STM variables
     INTEGER nv2(input%jspins)
-    INTEGER kvac1(DIMENSION%nv2d,input%jspins),kvac2(DIMENSION%nv2d,input%jspins),map2(DIMENSION%nvd,input%jspins)
-    INTEGER kvac3(DIMENSION%nv2d,input%jspins),map1(DIMENSION%nvd,input%jspins)
-    INTEGER mapg2k(DIMENSION%nv2d)
+    INTEGER kvac1(lapw%dim_nv2d(),input%jspins),kvac2(lapw%dim_nv2d(),input%jspins),map2(lapw%dim_nvd(),input%jspins)
+    INTEGER kvac3(lapw%dim_nv2d(),input%jspins),map1(lapw%dim_nvd(),input%jspins)
+    INTEGER mapg2k(lapw%dim_nv2d())
     !     .. Local Scalars ..
     COMPLEX aa,ab,av,ba,bb,bv,t1,aae,bbe,abe,bae,aaee,bbee,abee,baee,&
          &     factorx,factory,c_1,aa_1,ab_1,ba_1,bb_1,ic,av_1,bv_1,d,tempCmplx
@@ -120,12 +120,12 @@ CONTAINS
     !    izlay : defines vertical position of layers in delz (=0.1 a.u.) units from begining of vacuum region
     !    vacdos: =T: calculate vacuum dos in layers as given by the above
     !    integ : =T: integrate in vertical position between izlay(layer,1)..izlay(layer,2)
-    !    nstm  : 0: s-Tip, 1: p_z-Tip, 2: d_z^2-Tip (following Chen's derivative rule) ->rhzgrd.f is used 
-    !                 to calculate derivatives 
+    !    nstm  : 0: s-Tip, 1: p_z-Tip, 2: d_z^2-Tip (following Chen's derivative rule) ->rhzgrd.f is used
+    !                 to calculate derivatives
     !    tworkf: Workfunction of Tip (in hartree units) is needed for d_z^2-Orbital)
-    !    starcoeff: =T: star coefficients are calculated at values of izlay for 0th (=q) to nstars-1. star 
+    !    starcoeff: =T: star coefficients are calculated at values of izlay for 0th (=q) to nstars-1. star
     !                (dos%qstars(1..nstars-1))
-    !    nstars: number of star functions to be used (0th star is given by value of q=charge integrated in 2D) 
+    !    nstars: number of star functions to be used (0th star is given by value of q=charge integrated in 2D)
     !
     !    further possibility: (readin of locx, locy has to be implemented in flapw7.f or they have to be set explicitly)
     !
@@ -133,31 +133,31 @@ CONTAINS
     !     within a restricted area of the 2D unit cell, the corners of this area is given by locx and locy
     !     they are defined in internal coordinates, i.e. \vec{r}_1=locx(1)*\vec{a}_1+locy(1)*\vec{a}_2
     !                                                    \vec{r}_2=locx(2)*\vec{a}_1+locy(2)*\vec{a}_2
-    !                 \vec{a}_1,2 are the 2D lattice vectors           
-    !  
+    !                 \vec{a}_1,2 are the 2D lattice vectors
+    !
     !     **************************************************************************************************
 
     CALL timestart("vacden")
 
-    ALLOCATE ( ac(DIMENSION%nv2d,DIMENSION%neigd,input%jspins),bc(DIMENSION%nv2d,DIMENSION%neigd,input%jspins),dt(DIMENSION%nv2d),&
-         &           dte(DIMENSION%nv2d),du(vacuum%nmzd),ddu(vacuum%nmzd,DIMENSION%nv2d),due(vacuum%nmzd),&
-         &           ddue(vacuum%nmzd,DIMENSION%nv2d),t(DIMENSION%nv2d),te(DIMENSION%nv2d),&
-         &           tei(DIMENSION%nv2d,input%jspins),u(vacuum%nmzd,DIMENSION%nv2d,input%jspins),ue(vacuum%nmzd,DIMENSION%nv2d,input%jspins),&
+    ALLOCATE ( ac(lapw%dim_nv2d(),input%neig,input%jspins),bc(lapw%dim_nv2d(),input%neig,input%jspins),dt(lapw%dim_nv2d()),&
+         &           dte(lapw%dim_nv2d()),du(vacuum%nmzd),ddu(vacuum%nmzd,lapw%dim_nv2d()),due(vacuum%nmzd),&
+         &           ddue(vacuum%nmzd,lapw%dim_nv2d()),t(lapw%dim_nv2d()),te(lapw%dim_nv2d()),&
+         &           tei(lapw%dim_nv2d(),input%jspins),u(vacuum%nmzd,lapw%dim_nv2d(),input%jspins),ue(vacuum%nmzd,lapw%dim_nv2d(),input%jspins),&
          &           v(3),yy(vacuum%nmzd))
     IF (oneD%odi%d1) THEN
-       ALLOCATE (      ac_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%neigd,input%jspins),&
-            &                  bc_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,DIMENSION%neigd,input%jspins),&
-            &                  dt_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
-            &                 dte_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
+       ALLOCATE (      ac_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%neig,input%jspins),&
+            &                  bc_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%neig,input%jspins),&
+            &                  dt_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
+            &                 dte_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
             &                  du_1(vacuum%nmzd,-oneD%odi%mb:oneD%odi%mb),&
-            &            ddu_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
+            &            ddu_1(vacuum%nmzd,lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
             &                 due_1(vacuum%nmzd,-oneD%odi%mb:oneD%odi%mb),&
-            &           ddue_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
-            &                   t_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
-            &                  te_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb),&
-            &                 tei_1(DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins),&
-            &              u_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins),&
-            &             ue_1(vacuum%nmzd,DIMENSION%nv2d,-oneD%odi%mb:oneD%odi%mb,input%jspins) )
+            &           ddue_1(vacuum%nmzd,lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
+            &                   t_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
+            &                  te_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb),&
+            &                 tei_1(lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%jspins),&
+            &              u_1(vacuum%nmzd,lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%jspins),&
+            &             ue_1(vacuum%nmzd,lapw%dim_nv2d(),-oneD%odi%mb:oneD%odi%mb,input%jspins) )
     END IF ! oneD%odi%d1
     !
 
@@ -165,7 +165,7 @@ CONTAINS
     eps=0.01
     ic = CMPLX(0.,1.)
     !    ------------------
-   
+
     !     -----> set up mapping arrays
     IF (noco%l_ss) THEN
        jsp_start = 1
@@ -185,7 +185,7 @@ CONTAINS
                 END IF
              ENDDO
              n2 = n2 + 1
-             IF (n2>DIMENSION%nv2d)  CALL juDFT_error("vacden0",calledby ="vacden")
+             IF (n2>lapw%dim_nv2d())  CALL juDFT_error("vacden0",calledby ="vacden")
              kvac3(n2,ispin) =  lapw%k3(k,ispin)
              map1(k,ispin) = n2
           ENDDO k_loop
@@ -201,7 +201,7 @@ CONTAINS
                 END IF
              ENDDO
              n2 = n2 + 1
-             IF (n2>DIMENSION%nv2d)  CALL juDFT_error("vacden0","vacden")
+             IF (n2>lapw%dim_nv2d())  CALL juDFT_error("vacden0","vacden")
              kvac1(n2,ispin) = lapw%gvec(1,k,ispin)
              kvac2(n2,ispin) = lapw%gvec(2,k,ispin)
              map2(k,ispin) = n2
@@ -229,7 +229,7 @@ CONTAINS
     ENDIF
 
     !+dw
-    !    if tunneling current should be calculated we need to write out 
+    !    if tunneling current should be calculated we need to write out
     !     info on electronic structure: --> mapping from kvac to gvac by mapg2k
     !                                             shz, Jan.99
     IF (vacuum%nstm.EQ.3) THEN
@@ -242,7 +242,7 @@ CONTAINS
     END IF
     !
     !-dw
-   
+
 
     wronk = 2.0
     const = 1.0 / ( SQRT(cell%omtil)*wronk )
@@ -256,7 +256,7 @@ CONTAINS
        ac(:,:,:) = CMPLX(0.0,0.0)
        bc(:,:,:) = CMPLX(0.0,0.0)
        sign = 3. - 2.*ivac
-      
+
        IF (noco%l_noco) THEN
           !--->    In a non-collinear calculation vacden is only called once.
           !--->    Thus, the vaccum wavefunctions and the A- and B-coeff. (ac bc)
@@ -272,18 +272,18 @@ CONTAINS
              !     -----> set up vacuum wave functions
              IF (oneD%odi%d1) THEN
                 CALL od_abvac(&
-                     cell,vacuum,DIMENSION,stars,&
+                     cell,vacuum,stars,&
                      oneD,qssbti(3,ispin),&
                      oneD%odi%n2d,&
                      wronk,evacp,lapw%bkpt,oneD%odi%M,oneD%odi%mb,&
-                     vz(1,ispin),kvac3(1,ispin),nv2(ispin),&
-                     t_1(1,-oneD%odi%mb),dt_1(1,-oneD%odi%mb),u_1(1,1,-oneD%odi%mb,ispin),&
-                     te_1(1,-oneD%odi%mb),dte_1(1,-oneD%odi%mb),&
-                     tei_1(1,-oneD%odi%mb,ispin),&
-                     ue_1(1,1,-oneD%odi%mb,ispin))
+                     vz(1,ispin),kvac3(:,ispin),nv2(ispin),&
+                     t_1(:,-oneD%odi%mb:),dt_1(:,-oneD%odi%mb:),u_1(:,:,-oneD%odi%mb:,ispin),&
+                     te_1(:,-oneD%odi%mb:),dte_1(:,-oneD%odi%mb:),&
+                     tei_1(:,-oneD%odi%mb:,ispin),&
+                     ue_1(:,:,-oneD%odi%mb:,ispin))
                 DO k = 1,lapw%nv(ispin)
                    kspin = (lapw%nv(1)+atoms%nlotot)*(ispin-1) + k
-                   l = map1(k,ispin) 
+                   l = map1(k,ispin)
                    irec3 = stars%ig(lapw%gvec(1,k,ispin),lapw%gvec(2,k,ispin),lapw%gvec(3,k,ispin))
                    IF (irec3.NE.0) THEN
                       irec2 = stars%ig2(irec3)
@@ -342,8 +342,8 @@ CONTAINS
                    zks = lapw%k3(k,ispin)*cell%bmat(3,3)*sign
                    arg = zks*cell%z1
                    c_1 = CMPLX(COS(arg),SIN(arg)) * const
-                   av = -c_1 * CMPLX( dte(l),zks*te(l) ) 
-                   bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
+                   av = -c_1 * CMPLX( dte(l),zks*te(l) )
+                   bv =  c_1 * CMPLX(  dt(l),zks* t(l) )
                    !     -----> loop over basis functions
                    IF (zmat%l_real) THEN
                       ac(l,:ne,ispin) = ac(l,:ne,ispin) + zMat%data_r(kspin,:ne)*av
@@ -374,15 +374,15 @@ CONTAINS
              qssbtii = 0.
              evacp = evac(ivac,jspin)
              CALL od_abvac(&
-                  &           cell,vacuum,DIMENSION,stars,&
+                  &           cell,vacuum,stars,&
                   &           oneD,qssbtii,&
                   &           oneD%odi%n2d,&
                   &           wronk,evacp,lapw%bkpt,oneD%odi%M,oneD%odi%mb,&
-                  &           vz(1,ivac),kvac3(1,jspin),nv2(jspin),&
-                  &           t_1(1,-oneD%odi%mb),dt_1(1,-oneD%odi%mb),u_1(1,1,-oneD%odi%mb,jspin),&
-                  &           te_1(1,-oneD%odi%mb),dte_1(1,-oneD%odi%mb),&
-                  &           tei_1(1,-oneD%odi%mb,jspin),&
-                  &           ue_1(1,1,-oneD%odi%mb,jspin))
+                  &           vz(:,ivac),kvac3(:,jspin),nv2(jspin),&
+                  &           t_1(:,-oneD%odi%mb:),dt_1(:,-oneD%odi%mb:),u_1(:,:,-oneD%odi%mb:,jspin),&
+                  &           te_1(:,-oneD%odi%mb:),dte_1(:,-oneD%odi%mb:),&
+                  &           tei_1(:,-oneD%odi%mb:,jspin),&
+                  &           ue_1(:,:,-oneD%odi%mb:,jspin))
              DO k = 1,lapw%nv(jspin)
                 l = map1(k,jspin)
                 irec3 = stars%ig(lapw%gvec(1,k,jspin),lapw%gvec(2,k,jspin),lapw%gvec(3,k,jspin))
@@ -437,8 +437,8 @@ CONTAINS
                 zks = lapw%k3(k,jspin)*cell%bmat(3,3)*sign
                 arg = zks*cell%z1
                 c_1 = CMPLX(COS(arg),SIN(arg)) * const
-                av = -c_1 * CMPLX( dte(l),zks*te(l) ) 
-                bv =  c_1 * CMPLX(  dt(l),zks* t(l) ) 
+                av = -c_1 * CMPLX( dte(l),zks*te(l) )
+                bv =  c_1 * CMPLX(  dt(l),zks* t(l) )
                 !     -----> loop over basis functions
                 IF (zmat%l_real) THEN
                    ac(l,:ne,jspin) = ac(l,:ne,jspin) + zMat%data_r(k,:ne)*av
@@ -451,13 +451,13 @@ CONTAINS
           END IF ! D1
        ENDIF
        !
-       !   ----> calculate first and second derivative of u,ue 
+       !   ----> calculate first and second derivative of u,ue
        !        in order to simulate p_z or d_z^2 Tip in Chen's model , shz. 97
-       ! 
+       !
        IF (vacuum%nstm.GT.0) THEN
           DO  ik = 1,nv2(jspin)
              !               CALL rhzgrd(nmz,delz,u(1,ik,jspin),4,du,ddu(1,ik))
-             !               CALL rhzgrd(nmz,delz,ue(1,ik,jspin),4,due,ddue(1,ik))   
+             !               CALL rhzgrd(nmz,delz,ue(1,ik,jspin),4,due,ddue(1,ik))
 
              ALLOCATE ( dummy(vacuum%nmz) )
              CALL grdchlh(&
@@ -480,7 +480,7 @@ CONTAINS
        !
        !       --> to calculate Tunneling Current between two systems
        !           within Bardeens Approach one needs ac(l,n), bc(l,n);
-       !           they are written to the file vacwave 
+       !           they are written to the file vacwave
        !                           IF nstm=3
        !                              tworkf is then the fermi energy (in hartree)
        !
@@ -540,11 +540,11 @@ CONTAINS
              aaee=aa*vacuum%tworkf*vacuum%tworkf*4/9
              bbee=bb*vacuum%tworkf*vacuum%tworkf*4/9
              abee=ab*vacuum%tworkf*vacuum%tworkf*4/9
-             baee=ba*vacuum%tworkf*vacuum%tworkf*4/9  
+             baee=ba*vacuum%tworkf*vacuum%tworkf*4/9
              DO  jz = 1,vacuum%nmz
                 ui = u(jz,l,jspin)
                 uei = ue(jz,l,jspin)
-                ddui = ddu(jz,l) 
+                ddui = ddu(jz,l)
                 dduei = ddue(jz,l)
                 den%vacz(jz,ivac,jspin) = den%vacz(jz,ivac,jspin) +&
                      REAL(aaee*ui*ui+bbee*uei*uei+&
@@ -556,7 +556,7 @@ CONTAINS
              ENDDO
           END DO
           !
-          !    -----> s-Tip: |psi|^2 and p-Tip: |d(psi)/dz|^2 
+          !    -----> s-Tip: |psi|^2 and p-Tip: |d(psi)/dz|^2
           !
        ELSE
           IF (noco%l_noco) THEN
@@ -588,7 +588,7 @@ CONTAINS
                          END DO
                       END DO
                    END DO
-                ELSE 
+                ELSE
                    DO l = 1,nv2(ispin)
                       aa = 0.0
                       bb = 0.0
@@ -660,7 +660,7 @@ CONTAINS
        !
        !     ****************** change for vacuum density of states shz Jan.96 ***
        !
-       IF (banddos%vacdos) THEN                       
+       IF (banddos%vacdos) THEN
           !
           !  ----> d_z^2-Tip needs: |d^2(psi)/dz^2 - kappa^2/3 psi|^2
           !
@@ -682,7 +682,7 @@ CONTAINS
                    DO jj = 1,vacuum%layers
                       !
                       !     ----> either integrated LDOS(z1,z2) or LDOS(z1)
-                      !     
+                      !
                       IF (input%integ) THEN
                          ll = 1
                          DO ii = vacuum%izlay(jj,1),vacuum%izlay(jj,2)
@@ -698,7 +698,7 @@ CONTAINS
                          CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
                          dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
                       ELSE
-                         ui = u(vacuum%izlay(jj,1),l,jspin)       
+                         ui = u(vacuum%izlay(jj,1),l,jspin)
                          uei = ue(vacuum%izlay(jj,1),l,jspin)
                          ddui = ddu(vacuum%izlay(jj,1),l)
                          dduei = ddue(vacuum%izlay(jj,1),l)
@@ -712,12 +712,12 @@ CONTAINS
                    END DO
                 END DO
              END DO
-             !     
+             !
              !     ----> s-Tip = calculate LDOS and(!) p_z-Tip (since u->du/dz, ue->due/dz)
-             !     
-          ELSE 
+             !
+          ELSE
              IF (ABS(vacuum%locx(1)-vacuum%locx(2)).LE.eps) THEN
-                !     
+                !
                 !     ----> integrated over 2D-unit cell
                 !
                 IF (noco%l_noco) THEN
@@ -733,11 +733,11 @@ CONTAINS
                          aa = CONJG(ac(l,n,ispin))*ac(l,n,ispin)
                          bb = CONJG(bc(l,n,ispin))*bc(l,n,ispin)
                          ab = CONJG(ac(l,n,ispin))*bc(l,n,ispin)
-                         ba = CONJG(bc(l,n,ispin))*ac(l,n,ispin) 
+                         ba = CONJG(bc(l,n,ispin))*ac(l,n,ispin)
                          DO jj = 1,vacuum%layers
-                            !     
+                            !
                             !     ---> either integrated (z1,z2) or slice (z1)
-                            !     
+                            !
                             IF (input%integ) THEN
                                ll = 1
                                DO ii = vacuum%izlay(jj,1),vacuum%izlay(jj,2)
@@ -749,7 +749,7 @@ CONTAINS
                                CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
                                dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + RESULT(1)
                             ELSE
-                               ui = u(vacuum%izlay(jj,1),l,ispin)       
+                               ui = u(vacuum%izlay(jj,1),l,ispin)
                                uei = ue(vacuum%izlay(jj,1),l,ispin)
                                dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + REAL(&
                                     aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
@@ -760,11 +760,11 @@ CONTAINS
                    END DO
                 ENDDO
              ELSE
-                !     
+                !
                 !     ----> if LDOS should be calculated over restricted area of the 2D-unit cell
                 !     lower left corner: (locx(1), locy(1))   }  in internal
                 !     upper right corner: (locx(2), locy(2))  }  coordinates
-                !     
+                !
                 DO l=1, nv2(jspin)
                    DO l1=1, nv2(jspin)
                       IF (kvac1(l,jspin).EQ.kvac1(l1,jspin)) THEN
@@ -791,11 +791,11 @@ CONTAINS
                          aa = CONJG(ac(l1,n,jspin))*ac(l,n,jspin)
                          bb = CONJG(bc(l1,n,jspin))*bc(l,n,jspin)
                          ab = CONJG(ac(l1,n,jspin))*bc(l,n,jspin)
-                         ba = CONJG(bc(l1,n,jspin))*ac(l,n,jspin)   
+                         ba = CONJG(bc(l1,n,jspin))*ac(l,n,jspin)
                          DO jj = 1,vacuum%layers
-                            !     
+                            !
                             !     ---> either integrated (z1,z2) or slice (z1)
-                            !     
+                            !
                             IF (input%integ) THEN
                                ll = 1
                                DO ii = vacuum%izlay(jj,1), vacuum%izlay(jj,2)
@@ -809,7 +809,7 @@ CONTAINS
                                CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
                                dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
                             ELSE
-                               ui = u(vacuum%izlay(jj,1),l,jspin)       
+                               ui = u(vacuum%izlay(jj,1),l,jspin)
                                uei = ue(vacuum%izlay(jj,1),l,jspin)
                                uj = u(vacuum%izlay(jj,1),l1,jspin)
                                uej = ue(vacuum%izlay(jj,1),l1,jspin)
@@ -876,7 +876,7 @@ CONTAINS
                         + aae*(ui*dduj+uj*ddui)+bbe*(uei*dduej+uej*dduei)&
                         + abe*(ui*dduej+uj*dduei)+bae*(ddui*uej+dduj*uei)&
                         + aa*ddui*dduj+bb*dduei*dduej+ba*ddui*dduej&
-                        + ab*dduei*dduj  
+                        + ab*dduei*dduj
                    den%vacxy(jz,ind2-1,ivac,jspin) = den%vacxy(jz,ind2-1,ivac,jspin) + t1*phs/stars%nstr2(ind2)
                    den%vacxy(jz,ind2p-1,ivac,jspin)= den%vacxy(jz,ind2p-1,ivac,jspin) + CONJG(t1)*phsp/stars%nstr2(ind2p)
                 ENDDO
@@ -909,7 +909,7 @@ CONTAINS
                                   bb = CMPLX(0.,0.)
                                   ba = CMPLX(0.,0.)
                                   ab = CMPLX(0.,0.)
-                                  DO n = 1,ne 
+                                  DO n = 1,ne
                                      aa=aa+we(n)*CONJG(ac_1(l1,m1,n,ispin))*ac_1(l,m,n,ispin)
                                      bb=bb+we(n)*CONJG(bc_1(l1,m1,n,ispin))*bc_1(l,m,n,ispin)
                                      ab=ab+we(n)*CONJG(ac_1(l1,m1,n,ispin))*bc_1(l,m,n,ispin)
@@ -1174,7 +1174,7 @@ CONTAINS
        END IF
        !=============================================================
        !
-       !       calculate 1. to nstars. starcoefficient for each k and energy eigenvalue 
+       !       calculate 1. to nstars. starcoefficient for each k and energy eigenvalue
        !           to dos%qstars(ne,layer,ivac,ikpt) if starcoeff=T (the star coefficient values are written to vacdos)
        !
        IF (vacuum%starcoeff .AND. banddos%vacdos) THEN

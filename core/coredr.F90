@@ -1,6 +1,6 @@
 MODULE m_coredr
 CONTAINS
-  SUBROUTINE coredr(input,atoms,seig, rho,DIMENSION,sphhar, vrs, qints,rhc)
+  SUBROUTINE coredr(input,atoms,seig, rho,sphhar, vrs, qints,rhc)
     !     *******************************************************
     !     *****   set up the core densities for compounds   *****
     !     *****   for relativistic core                     *****
@@ -12,7 +12,7 @@ CONTAINS
     USE m_cdn_io
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
+    
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -73,7 +73,7 @@ CONTAINS
        END DO
     ELSE
        OPEN (58,file='core.dat',form='formatted',status='new')
-       CALL etabinit(atoms,DIMENSION,input, vr, etab,ntab,ltab,nkmust)
+       CALL etabinit(atoms,input, vr, etab,ntab,ltab,nkmust)
     END IF
     !
     ncmsh = atoms%msh
@@ -166,6 +166,6 @@ CONTAINS
     END DO ! loop over atoms (jatom)
     !
     !----> store core charge densities
-    CALL writeCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
+    CALL writeCoreDensity(input,atoms,rhcs,tecs,qints)
   END SUBROUTINE coredr
 END MODULE m_coredr

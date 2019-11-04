@@ -1,5 +1,5 @@
       SUBROUTINE parawrite(&
-     &                     sym,stars,atoms,sphhar,dimension,vacuum,&
+     &                     sym,stars,atoms,sphhar,vacuum,&
      &                     kpts,oneD,input)
 
       USE m_types
@@ -8,7 +8,7 @@
       TYPE(t_stars),INTENT(IN)     :: stars 
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
-      TYPE(t_dimension),INTENT(IN) :: dimension
+      
       TYPE(t_vacuum),INTENT(INOUT) :: vacuum
       TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_oneD),INTENT(IN)      :: oneD
@@ -65,12 +65,12 @@
 
 !+gu
       WRITE (6,'(6x,''3 & 2D planewaves, windows, k-points'')')
-      WRITE (6,8180) dimension%nvd,dimension%nv2d,kpts%nkpt
+      WRITE (6,8180) lapw%dim_nvd(),lapw%dim_nv2d(),kpts%nkpt
 
  8180 FORMAT (6x,'parameter (nvd=',i5,',nv2d=',i4,',nwdd=1', ',nkptd=',i5,')')
 
       WRITE (6,'(6x,''Number of (occupied) bands'')')
-      WRITE (6,8190) dimension%neigd,dimension%neigd
+      WRITE (6,8190) input%neig,input%neig
 
  8190 FORMAT (6x,'parameter (nobd=',i4,',neigd=',i4,')')
 !-gu

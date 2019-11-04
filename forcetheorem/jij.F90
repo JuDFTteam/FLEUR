@@ -178,7 +178,7 @@ CONTAINS
   END SUBROUTINE jij_postprocess
 
 
-  FUNCTION jij_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+  FUNCTION jij_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
@@ -187,7 +187,7 @@ CONTAINS
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco

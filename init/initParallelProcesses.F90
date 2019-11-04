@@ -17,7 +17,7 @@ CONTAINS
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
-                                 dimension,cell,sym,xcpot,noco,oneD,hybrid,&
+                                 cell,sym,xcpot,noco,oneD,hybrid,&
                                  kpts,enpara,sphhar,mpi)
 
    USE m_types
@@ -38,7 +38,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
    CLASS(t_xcpot),    INTENT(INOUT) :: xcpot
    TYPE(t_noco),     INTENT(INOUT) :: noco
-   TYPE(t_dimension),INTENT(INOUT) :: dimension
+   
    TYPE(t_enpara),   INTENT(INOUT) :: enpara
    TYPE(t_sphhar),   INTENT(INOUT) :: sphhar
 #ifdef CPP_MPI
@@ -72,9 +72,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(29,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(stars%kimax,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(stars%kimax2,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(dimension%nvd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(dimension%neigd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(dimension%nv2d,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(lapw%dim_nvd(),1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(input%neig,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(lapw%dim_nv2d(),1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%msh,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(dimension%nspd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%numSpecialPoints,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)

@@ -20,7 +20,7 @@ MODULE m_eigenso
   !**********************************************************************
   !
 CONTAINS
-  SUBROUTINE eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
+  SUBROUTINE eigenso(eig_id,mpi,stars,vacuum,atoms,sphhar,&
                      sym,cell,noco,input,kpts,oneD,vTot,enpara,results)
 
     USE m_types
@@ -34,7 +34,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)        :: mpi
-    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)       :: oneD
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
@@ -117,8 +117,8 @@ CONTAINS
     !
 
 
-    ALLOCATE (eig_so(2*DIMENSION%neigd))
-    ALLOCATE (eigBuffer(2*DIMENSION%neigd,kpts%nkpt,wannierspin))
+    ALLOCATE (eig_so(2*input%neig))
+    ALLOCATE (eigBuffer(2*input%neig,kpts%nkpt,wannierspin))
     ALLOCATE (neigBuffer(kpts%nkpt,wannierspin))
     results%eig = 1.0e300
     eigBuffer = 1.0e300
@@ -132,10 +132,10 @@ CONTAINS
         nk=mpi%k_list(nk_i)
      !DO nk = mpi%n_start,n_end,n_stride
        CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)
-       ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*DIMENSION%neigd,wannierspin))
+       ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*input%neig,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
        CALL timestart("eigenso: alineso")
-       CALL alineso(eig_id,lapw, mpi,DIMENSION,atoms,sym,kpts,&
+       CALL alineso(eig_id,lapw, mpi,atoms,sym,kpts,&
             input,noco,cell,oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN
@@ -169,12 +169,12 @@ CONTAINS
 
 #ifdef CPP_MPI
     CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
-    CALL MPI_ALLREDUCE(eigBuffer(:2*dimension%neigd,:,:),results%eig(:2*dimension%neigd,:,:),&
-                       2*dimension%neigd*kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
+    CALL MPI_ALLREDUCE(eigBuffer(:2*input%neig,:,:),results%eig(:2*input%neig,:,:),&
+                       2*input%neig*kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #else
     results%neig(:,:) = neigBuffer(:,:)
-    results%eig(:2*dimension%neigd,:,:) = eigBuffer(:2*dimension%neigd,:,:)
+    results%eig(:2*input%neig,:,:) = eigBuffer(:2*input%neig,:,:)
 #endif
 
     RETURN

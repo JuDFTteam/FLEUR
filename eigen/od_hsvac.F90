@@ -8,7 +8,7 @@ MODULE m_od_hsvac
   USE m_juDFT
 CONTAINS
   SUBROUTINE od_hsvac(&
-       vacuum,stars,DIMENSION, oneD,atoms, jsp,input,vxy,vz,evac,cell,&
+       vacuum,stars, oneD,atoms, jsp,input,vxy,vz,evac,cell,&
        bkpt,lapw, MM,vM,m_cyl,n2d_1, n_size,n_rank,sym,noco,nv2,l_real,hamOvlp)
 
     !     subroutine for calculating the hamiltonian and overlap matrices in
@@ -20,7 +20,7 @@ CONTAINS
     USE m_od_vacfun
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)       :: oneD
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
@@ -75,18 +75,18 @@ CONTAINS
 
  
     ALLOCATE (&
-         ai(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),bi(-vM:vM,DIMENSION%nv2d,DIMENSION%nvd),&
-         nvp(DIMENSION%nv2d,input%jspins),ind(stars%ng2,DIMENSION%nv2d,input%jspins),&
-         kvac3(DIMENSION%nv2d,input%jspins),map1(DIMENSION%nvd,input%jspins),&
-         tddv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
-         tduv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
-         tudv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
-         tuuv(-vM:vM,-vM:vM,DIMENSION%nv2d,DIMENSION%nv2d),&
-         a(-vM:vM,DIMENSION%nvd,input%jspins),b(-vM:vM,DIMENSION%nvd,input%jspins),&
+         ai(-vM:vM,lapw%dim_nv2d(),lapw%dim_nvd()),bi(-vM:vM,lapw%dim_nv2d(),lapw%dim_nvd()),&
+         nvp(lapw%dim_nv2d(),input%jspins),ind(stars%ng2,lapw%dim_nv2d(),input%jspins),&
+         kvac3(lapw%dim_nv2d(),input%jspins),map1(lapw%dim_nvd(),input%jspins),&
+         tddv(-vM:vM,-vM:vM,lapw%dim_nv2d(),lapw%dim_nv2d()),&
+         tduv(-vM:vM,-vM:vM,lapw%dim_nv2d(),lapw%dim_nv2d()),&
+         tudv(-vM:vM,-vM:vM,lapw%dim_nv2d(),lapw%dim_nv2d()),&
+         tuuv(-vM:vM,-vM:vM,lapw%dim_nv2d(),lapw%dim_nv2d()),&
+         a(-vM:vM,lapw%dim_nvd(),input%jspins),b(-vM:vM,lapw%dim_nvd(),input%jspins),&
          bess(-vM:vM),dbss(-vM:vM),bess1(-vM:vM),&
-         ddnv(-vM:vM,DIMENSION%nv2d,input%jspins),dudz(-vM:vM,DIMENSION%nv2d,input%jspins),&
-         duz(-vM:vM,DIMENSION%nv2d,input%jspins),&
-         udz(-vM:vM,DIMENSION%nv2d,input%jspins),uz(-vM:vM,DIMENSION%nv2d,input%jspins) )
+         ddnv(-vM:vM,lapw%dim_nv2d(),input%jspins),dudz(-vM:vM,lapw%dim_nv2d(),input%jspins),&
+         duz(-vM:vM,lapw%dim_nv2d(),input%jspins),&
+         udz(-vM:vM,lapw%dim_nv2d(),input%jspins),uz(-vM:vM,lapw%dim_nv2d(),input%jspins) )
 
     !--->     set up mapping function from 3d-->1d lapws
     !--->            creating arrays ind and nvp
@@ -102,12 +102,12 @@ CONTAINS
              END IF
           ENDDO
           nv2(jspin) = nv2(jspin) + 1
-          IF (nv2(jspin)>DIMENSION%nv2d)  CALL juDFT_error("dimension%nv2d",calledby ="od_hsvac")
+          IF (nv2(jspin)>lapw%dim_nv2d())  CALL juDFT_error("lapw%dim_nv2d()",calledby ="od_hsvac")
           kvac3(nv2(jspin),jspin) = lapw%k3(k,jspin)
           map1(k,jspin) = nv2(jspin)
        END DO k_loop
 
-       DO ik = 1,DIMENSION%nv2d
+       DO ik = 1,lapw%dim_nv2d()
           nvp(ik,jspin) = 0
           DO i = 1,stars%ng2
              ind(i,ik,jspin) = 0
@@ -141,7 +141,7 @@ CONTAINS
        !     get the wavefunctions and set up the tuuv, etc matrices
 
        CALL od_vacfun(&
-            m_cyl,cell,vacuum,DIMENSION,stars,&
+            m_cyl,cell,vacuum,stars,&
             jsp,input,noco,ipot,oneD,n2d_1, ivac,evac(1,1),bkpt,MM,vM,&
             vxy(1,1,ivac),vz,kvac3,nv2, tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv)
 

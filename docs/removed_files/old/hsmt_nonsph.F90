@@ -9,7 +9,7 @@ MODULE m_hsmt_nonsph
 
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_nonsph(DIMENSION,atoms,sym,SUB_COMM, n_size,n_rank,input,isp,nintsp,&
+  SUBROUTINE hsmt_nonsph(atoms,sym,SUB_COMM, n_size,n_rank,input,isp,nintsp,&
        hlpmsize,noco,l_socfirst, lapw, cell,tlmplm, fj,gj,gk,vk,oneD,l_real,aa_r,aa_c)
 
 #include"cpp_double.h"
@@ -19,7 +19,7 @@ CONTAINS
     USE m_hsmt_hlptomat
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)     :: oneD
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -59,7 +59,7 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX,ALLOCATABLE :: aa_block(:,:)
     COMPLEX,ALLOCATABLE :: dtd(:,:),dtu(:,:),utd(:,:),utu(:,:)
-    REAL   :: bmrot(3,3),gkrot(DIMENSION%nvd,3),vmult(3),v(3)
+    REAL   :: bmrot(3,3),gkrot(lapw%dim_nvd(),3),vmult(3),v(3)
     COMPLEX:: ylm( (atoms%lmaxd+1)**2 ),chi(2,2)
     !     ..
     COMPLEX, ALLOCATABLE :: a(:,:,:),b(:,:,:),ax(:,:),bx(:,:)
@@ -80,9 +80,9 @@ CONTAINS
 
     ab_dim=1
     IF (noco%l_ss) ab_dim=2
-    ALLOCATE(a(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim),b(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim))
-    ALLOCATE(ax(DIMENSION%nvd,0:DIMENSION%lmd),bx(DIMENSION%nvd,0:DIMENSION%lmd))
-    ALLOCATE(c_ph(DIMENSION%nvd,ab_dim))
+    ALLOCATE(a(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim),b(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim))
+    ALLOCATE(ax(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2)),bx(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2)))
+    ALLOCATE(c_ph(lapw%dim_nvd(),ab_dim))
     print*,atoms%lnonsph
     ntyploop: DO n=1,atoms%ntype
        IF (noco%l_noco) THEN

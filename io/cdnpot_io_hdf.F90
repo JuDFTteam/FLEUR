@@ -2721,11 +2721,11 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE peekDensityEntryHDF
 
-   SUBROUTINE writeCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
+   SUBROUTINE writeCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
 
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_input),    INTENT(IN) :: input
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       REAL,           INTENT(IN) :: rhcs(:,:,:)!(atoms%msh,atoms%ntype,input%jspins)
@@ -2800,11 +2800,11 @@ MODULE m_cdnpot_io_hdf
 
    END SUBROUTINE writeCoreDensityHDF
 
-   SUBROUTINE readCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
+   SUBROUTINE readCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
 
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_input),    INTENT(IN) :: input
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       REAL,    INTENT(OUT)       :: rhcs(atoms%jmtd,atoms%ntype,input%jspins)

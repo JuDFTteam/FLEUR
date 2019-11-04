@@ -8,7 +8,7 @@ MODULE m_fleur_init_old
 CONTAINS
   !> Collection of code for old-style inp-file treatment
   SUBROUTINE fleur_init_old(mpi,&
-       input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+       input,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
        sliceplot,banddos,obsolete,enpara,xcpot,kpts,hybrid,&
        oneD,coreSpecInput,l_opti)
     USE m_types
@@ -28,7 +28,7 @@ CONTAINS
     !     Types, these variables contain a lot of data!
     TYPE(t_mpi)    ,INTENT(INOUT)  :: mpi
     TYPE(t_input)    ,INTENT(INOUT):: input
-    TYPE(t_dimension),INTENT(OUT)  :: DIMENSION
+    
     TYPE(t_atoms)    ,INTENT(OUT)  :: atoms
     TYPE(t_sphhar)   ,INTENT(OUT)  :: sphhar
     TYPE(t_cell)     ,INTENT(OUT)  :: cell
@@ -77,7 +77,7 @@ CONTAINS
     namex = '    '
     relcor = '            '
 
-    CALL dimens(mpi,input,sym,stars,atoms,sphhar,DIMENSION,vacuum,&
+    CALL dimens(mpi,input,sym,stars,atoms,sphhar,vacuum,&
          obsolete,kpts,oneD,hybrid)
     stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
     stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
@@ -205,7 +205,7 @@ CONTAINS
        CALL xcpot%init(namex,l_krla,atoms%ntype)
     END IF
 
-    CALL setup(mpi,atoms,kpts,DIMENSION,sphhar,&
+    CALL setup(mpi,atoms,kpts,sphhar,&
          obsolete,sym,stars,oneD,input,noco,&
          vacuum,cell,xcpot,&
          sliceplot,enpara,l_opti)

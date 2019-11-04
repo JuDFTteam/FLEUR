@@ -8,7 +8,7 @@ MODULE m_hsmt_sph
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_sph(sym,DIMENSION,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
+  SUBROUTINE hsmt_sph(sym,atoms,SUB_COMM,n_size,n_rank,sphhar,isp,ab_dim,&
        input,hlpmsize,noco,l_socfirst,cell,nintsp, lapw,el,usdus,vr,gk,rsoc,isigma,fj,gj,smat,hmat)
 
 #include"cpp_double.h"
@@ -25,7 +25,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
     TYPE(t_sym),INTENT(IN)        :: sym
-    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_noco),INTENT(IN)       :: noco
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -71,7 +71,7 @@ CONTAINS
     REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
 
 
-    COMPLEX chi(2,2),chj(2,2,2,atoms%ntype),aawa(DIMENSION%nvd),bbwa(DIMENSION%nvd)
+    COMPLEX chi(2,2),chj(2,2,2,atoms%ntype),aawa(lapw%dim_nvd()),bbwa(lapw%dim_nvd())
     COMPLEX, ALLOCATABLE :: aahlp(:),bbhlp(:)
     LOGICAL apw(0:atoms%lmaxd)
 
@@ -81,7 +81,7 @@ CONTAINS
     REAL, ALLOCATABLE :: cross_k(:,:)
     INTEGER :: j1,j2
     COMPLEX :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2)
-    COMPLEX :: chi11so(2,2),chi21so(2,2),chi22so(2,2),angso(DIMENSION%nvd,2,2)
+    COMPLEX :: chi11so(2,2),chi21so(2,2),chi22so(2,2),angso(lapw%dim_nvd(),2,2)
 
 
     IF ( noco%l_noco .AND. (.NOT. noco%l_ss) ) ALLOCATE ( aahlp(hlpmsize),bbhlp(hlpmsize) )
@@ -121,11 +121,11 @@ CONTAINS
        !$OMP PRIVATE(aawa,bbwa,capw1,ii) IF (.not.l_socfirst)
        !$     IF (l_socfirst) WRITE(*,*) "WARNING: first variation SOC does not work with OPENMP in hsmt_sph"
        !$     IF (l_socfirst) WRITE(*,*) "         switching off openmp parallelization"
-       ALLOCATE(rph(DIMENSION%nvd,ab_dim))
-       ALLOCATE(cph(DIMENSION%nvd,ab_dim))
-       ALLOCATE(plegend(DIMENSION%nvd,0:atoms%lmaxd))
+       ALLOCATE(rph(lapw%dim_nvd(),ab_dim))
+       ALLOCATE(cph(lapw%dim_nvd(),ab_dim))
+       ALLOCATE(plegend(lapw%dim_nvd(),0:atoms%lmaxd))
        IF (l_socfirst)THEN
-          ALLOCATE ( dplegend(DIMENSION%nvd,0:atoms%lmaxd),cross_k(DIMENSION%nvd,3))
+          ALLOCATE ( dplegend(lapw%dim_nvd(),0:atoms%lmaxd),cross_k(lapw%dim_nvd(),3))
           dplegend(:,0)=0.e0
           dplegend(:,1)=1.e0
        ENDIF

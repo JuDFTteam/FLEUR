@@ -8,14 +8,14 @@ MODULE m_checkInputParams
 
 CONTAINS
 
-SUBROUTINE checkInputParams(mpi,input,dimension,atoms,noco,xcpot,oneD)
+SUBROUTINE checkInputParams(mpi,input,atoms,noco,xcpot,oneD)
 
    USE m_juDFT
    USE m_types
 
    TYPE(t_mpi),           INTENT(IN)    :: mpi
    TYPE(t_input),         INTENT(IN)    :: input
-   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_noco),          INTENT(IN)    :: noco
    CLASS(t_xcpot),        INTENT(IN)    :: xcpot

@@ -43,14 +43,14 @@ CONTAINS
     TYPE(t_kpts) ,INTENT(OUT):: kpts
 
     !local only
-    TYPE(t_dimension)    ::dimension
+    
     TYPE(t_sphhar)       ::sphhar
     TYPE(t_atompar)      :: ap
     INTEGER              :: n,grid(3)
     LOGICAL              :: l_enparaok
 
     CALL fleur_init_old(&
-         input,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,&
+         input,atoms,sphhar,cell,stars,sym,noco,vacuum,&
          sliceplot,banddos,enpara,xcpot,kpts,hybrid,&
          oneD,grid) !kpt grid not used...
 

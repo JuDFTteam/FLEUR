@@ -9,7 +9,7 @@ MODULE m_atom2
 !     *************************************************************
 CONTAINS
    SUBROUTINE atom2(&
-  &                 dimension, atoms, xcpot, input, ntyp, jrc, rnot1,&
+  &                  atoms, xcpot, input, ntyp, jrc, rnot1,&
   &                 qdel,&
   &                 rhoss, nst, lnum, eig, vbar,l_valence)
 
@@ -23,7 +23,7 @@ CONTAINS
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
-      TYPE(t_dimension), INTENT(IN)  :: dimension
+      
       TYPE(t_atoms), INTENT(IN)      :: atoms
       CLASS(t_xcpot), INTENT(IN)     :: xcpot
       TYPE(t_input), INTENT(IN)      :: input

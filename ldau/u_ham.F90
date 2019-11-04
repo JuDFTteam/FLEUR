@@ -45,8 +45,8 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     TYPE(t_usdus),INTENT(IN) :: ud
-    REAL,    INTENT (IN) :: ar(:,0:,:),ai(:,0:,:) !(dimension%nvd,0:dimension%lmd,ab_dim)
-    REAL,    INTENT (IN) :: br(:,0:,:),bi(:,0:,:) !(dimension%nvd,0:dimension%lmd,ab_dim)
+    REAL,    INTENT (IN) :: ar(:,0:,:),ai(:,0:,:) !(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim)
+    REAL,    INTENT (IN) :: br(:,0:,:),bi(:,0:,:) !(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim)
     COMPLEX, INTENT (IN) :: alo(-atoms%llod:,:,:,:)!(-llod:llod,2*(2*llod+1),nlod,ab_dim)
     COMPLEX, INTENT (IN) :: blo(-atoms%llod:,:,:,:)!(-llod:llod,2*(2*llod+1),nlod,ab_dim)
     COMPLEX, INTENT (IN) :: clo(-atoms%llod:,:,:,:)!(-llod:llod,2*(2*llod+1),nlod,ab_dim)

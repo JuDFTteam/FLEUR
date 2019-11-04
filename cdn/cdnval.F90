@@ -11,7 +11,7 @@ USE m_juDFT
 CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
-                  vacuum,dimension,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
+                  vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
                   moments,coreSpecInput,mcd,slab,orbcomp)
 
    !************************************************************************************
@@ -56,7 +56,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_mpi),           INTENT(IN)    :: mpi
-   TYPE(t_dimension),     INTENT(IN)    :: dimension
+   
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_enpara),        INTENT(IN)    :: enpara
    TYPE(t_banddos),       INTENT(IN)    :: banddos
@@ -163,7 +163,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
       END DO
       IF (noco%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
-      IF (banddos%l_mcd) CALL mcd_init(atoms,input,dimension,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
+      IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
       IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,29,input%jspins,jspin,results%ef,&
                                         atoms%msh,vTot%mt(:,0,:,:),f,g)
    END DO
@@ -199,7 +199,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
 
-      CALL gVacMap%init(dimension,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
+      CALL gVacMap%init(sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
@@ -210,14 +210,14 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
-            CALL vacden(vacuum,dimension,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
+            CALL vacden(vacuum,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
                         gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,dos)
          END IF
       END IF
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
       ! valence density in the atomic spheres
-      CALL eigVecCoeffs%init(input,DIMENSION,atoms,noco,jspin,noccbd)
+      CALL eigVecCoeffs%init(input,atoms,noco,jspin,noccbd)
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,ispin,oneD,&
@@ -230,7 +230,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          CALL eparas(ispin,atoms,noccbd,ev_list,mpi,ikpt,noccbd,we,eig,&
                      skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
 
-         IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,ev_list,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+         IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(atoms,input,noccbd,ev_list,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
          IF (l_dosNdir) THEN
@@ -244,16 +244,16 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)
 
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
-         IF (input%l_f) CALL force%addContribsA21A12(input,atoms,dimension,sym,cell,oneD,enpara,&
+         IF (input%l_f) CALL force%addContribsA21A12(input,atoms,sym,cell,oneD,enpara,&
                                                      usdus,eigVecCoeffs,noccbd,ispin,eig,we,results)
-         IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,dimension%lmd,kpts%nkpt,ikpt,dimension%neigd,&
+         IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
          ! since z is no longer an argument of cdninf sympsi has to be called here!
-         CALL sympsi(lapw,jspin,sym,dimension,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
+         CALL sympsi(lapw,jspin,sym,nbands,cell,eig,noco,dos%ksym(:,ikpt,jspin),dos%jsym(:,ikpt,jspin),zMat)
       END IF
    END DO ! end of k-point loop
 
@@ -272,7 +272,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF (input%cdinf) THEN
             WRITE (6,FMT=8210) ispin
 8210        FORMAT (/,5x,'check continuity of cdn for spin=',i2)
-            CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
+            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,cell,den,ispin)
          END IF
          IF (input%l_f) CALL force_a8(input,atoms,sym,sphhar,ispin,vTot%mt(:,:,:,ispin),den%mt,force,results)
       END DO

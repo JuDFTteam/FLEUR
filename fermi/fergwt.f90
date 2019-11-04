@@ -21,7 +21,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: ne(:,:)    !(kpts%nkpt,dimension%jspd)
-    REAL,    INTENT (IN) :: eig(:,:,:) !dimension%neigd,kpts%nkpt,dimension%jspd)
+    REAL,    INTENT (IN) :: eig(:,:,:) !input%neig,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
     REAL chmom,de,ef0,ef1,elow,en,eps,eup,fac,fact1,s,s0,s1,s2,&

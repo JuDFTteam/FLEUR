@@ -11,7 +11,7 @@ MODULE m_hnonmuff
   !                r. p  1995
   !*********************************************************************
 CONTAINS
-  SUBROUTINE h_nonmuff(atoms,DIMENSION,sym,cell, jsp,ne,usdus,td, bkpt,lapw, h,l_real,z_r,z_c)
+  SUBROUTINE h_nonmuff(atoms,input,sym,cell, jsp,ne,usdus,td, bkpt,lapw, h,l_real,z_r,z_c)
 
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
@@ -20,7 +20,7 @@ CONTAINS
     USE m_ylm
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_cell),INTENT(IN)        :: cell
     TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -29,15 +29,15 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     LOGICAL,INTENT(IN)   :: l_real
-    INTEGER, INTENT (IN) :: jsp,ne     
+    INTEGER, INTENT (IN) :: jsp,ne
     !     ..
     TYPE(t_tlmplm),INTENT(IN)::td
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: bkpt(3)   
+    REAL,    INTENT (IN) :: bkpt(3)
     REAL,    INTENT (INOUT) :: h(ne*(ne+1)/2)
 
-    REAL,    OPTIONAL,INTENT (IN) :: z_r(DIMENSION%nbasfcn,ne)
-    COMPLEX, OPTIONAL,INTENT (IN) :: z_c(DIMENSION%nbasfcn,ne)
+    REAL,    OPTIONAL,INTENT (IN) :: z_r(lapw%dim_nbasfcn(),ne)
+    COMPLEX, OPTIONAL,INTENT (IN) :: z_c(lapw%dim_nbasfcn(),ne)
     !     ..
     !     .. Local Scalars ..
     COMPLEX dtd,dtu,hij,phase,sij,utd,utu
@@ -46,8 +46,8 @@ CONTAINS
     INTEGER i,im,in,j,k,ke ,m1,n,na,nn,np,ii,ij,m
     !     ..
     !     .. Local Arrays ..
-    COMPLEX a(DIMENSION%neigd,0:DIMENSION%lmd),ax(DIMENSION%neigd)
-    COMPLEX b(DIMENSION%neigd,0:DIMENSION%lmd),bx(DIMENSION%neigd), ylm( (atoms%lmaxd+1)**2 )
+    COMPLEX a(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2)),ax(input%neig)
+    COMPLEX b(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2)),bx(input%neig), ylm( (atoms%lmaxd+1)**2 )
     REAL vmult(3),vsmult(3),f(0:atoms%lmaxd,SIZE(lapw%k1,1)),g(0:atoms%lmaxd,SIZE(lapw%k1,1))
     !     ..
     !     ..

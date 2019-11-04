@@ -14,9 +14,9 @@ module m_io_hybrid
   !public:: open_hybrid_io,read_cmt,write_cmt
 contains
 
-  SUBROUTINE open_hybrid_io1(DIMENSION,l_real)
+  SUBROUTINE open_hybrid_io1(l_real)
     implicit none
-    TYPE(t_dimension),INTENT(IN):: dimension
+
     LOGICAL,INTENT(IN)          :: l_real
     LOGICAL :: opened=.false.
 
@@ -24,15 +24,15 @@ contains
     opened=.true.
 
     !print *,"Open olap.mat"
-    id_olap=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"olap.mat")
+    id_olap=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"olap.mat")
     !print *,"Open z.mat"
-    id_z=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"z.mat")
+    id_z=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"z.mat")
   END SUBROUTINE open_hybrid_io1
 
 
-  SUBROUTINE open_hybrid_io1b(DIMENSION,l_real)
+  SUBROUTINE open_hybrid_io1b(l_real)
     implicit none
-    TYPE(t_dimension),INTENT(IN):: dimension
+
     LOGICAL,INTENT(IN)          :: l_real
     LOGICAL :: opened=.false.
 
@@ -40,26 +40,26 @@ contains
     opened=.true.
 
     !print *,"Open v_x.mat"
-    id_v_x=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"v_x.mat")
+    id_v_x=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"v_x.mat")
   END SUBROUTINE open_hybrid_io1b
 
 
-  SUBROUTINE open_hybrid_io2(hybrid,DIMENSION,atoms,l_real)
+  SUBROUTINE open_hybrid_io2(hybrid,input,atoms,l_real)
     IMPLICIT NONE
     TYPE(t_hybrid),INTENT(IN)   :: hybrid
-    TYPE(t_dimension),INTENT(IN):: dimension
+    TYPE(t_input),INTENT(IN):: input
     TYPE(t_atoms),INTENT(IN)    :: atoms
     LOGICAL,INTENT(IN)          :: l_real
     INTEGER:: irecl_coulomb
     LOGICAL :: opened=.FALSE.
 
-    
+
 
     if (opened) return
     opened=.true.
     OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-         &     recl=dimension%neigd*hybrid%maxlmindx*atoms%nat*16)
-  
+         &     recl=input%neig*hybrid%maxlmindx*atoms%nat*16)
+
 #ifdef CPP_NOSPMVEC
     irecl_coulomb = hybrid%maxbasm1 * (hybrid%maxbasm1+1) * 8 / 2
     if (.not.l_real) irecl_coulomb =irecl_coulomb *2
@@ -78,7 +78,7 @@ contains
     id_coulomb_spm=778
 #endif
   END SUBROUTINE open_hybrid_io2
-  
+
   subroutine write_cmt(cmt,nk)
     implicit none
     complex,INTENT(IN):: cmt(:,:,:)
@@ -114,7 +114,7 @@ contains
     real,intent(in) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
     real,intent(in) :: coulomb_mtir(:)
     integer,intent(in) :: nk
-    
+
     !print *, "write coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
     write(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine write_coulomb_spm_r
@@ -125,7 +125,7 @@ contains
     complex,intent(in) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
     complex,intent(in) :: coulomb_mtir(:)
     integer,intent(in) :: nk
-    
+
     write(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine write_coulomb_spm_c
 
@@ -135,7 +135,7 @@ contains
     real,intent(out) :: coulomb_mt2(:,:,:,:), coulomb_mt3(:,:,:)
     real,intent(out) :: coulomb_mtir(:)
     integer,intent(in) :: nk
-    
+
     !print *, "read coulomb",nk,size(coulomb_mt1),size(coulomb_mt2),size(coulomb_mt3),size(coulomb_mtir)
     read(id_coulomb_spm,rec=nk) coulomb_mt1,coulomb_mt2,coulomb_mt3,coulomb_mtir
   end subroutine read_coulomb_spm_r
@@ -156,22 +156,22 @@ contains
 
     read(id_coulomb,rec=nk) coulomb
   end subroutine read_coulomb_r
-  
+
   subroutine read_coulomb_c(nk,coulomb)
     implicit none
     complex,intent(out) :: coulomb(:)
     integer,intent(in) :: nk
-    
+
     read(id_coulomb,rec=nk) coulomb
   end subroutine read_coulomb_c
 
 
-  
+
   subroutine read_olap(mat,rec)
     implicit none
     TYPE(t_mat),INTENT(INOUT):: mat
     INTEGER,INTENT(IN)           :: rec
-    
+
     CALL read_matrix(mat,rec,id_olap)
   END subroutine read_olap
 
@@ -179,7 +179,7 @@ contains
     implicit none
     TYPE(t_mat),INTENT(IN)   :: mat
     INTEGER,INTENT(IN)           :: rec
-    
+
     CALL write_matrix(mat,rec,id_olap)
   END subroutine write_olap
 
@@ -188,7 +188,7 @@ contains
     TYPE(t_mat),INTENT(INOUT):: mat
     INTEGER,INTENT(IN)           :: rec
     !print *,"read z:",rec
-    
+
     CALL read_matrix(mat,rec,id_z)
   END subroutine read_z
 
@@ -204,7 +204,7 @@ contains
     implicit none
     TYPE(t_mat),INTENT(INOUT):: mat
     INTEGER,INTENT(IN)           :: rec
-    
+
     CALL read_matrix(mat,rec,id_v_x)
   END subroutine read_v_x
 
@@ -212,11 +212,11 @@ contains
     implicit none
     TYPE(t_mat),INTENT(IN)   :: mat
     INTEGER,INTENT(IN)           :: rec
-    
+
     CALL write_matrix(mat,rec,id_v_x)
   END subroutine write_v_x
 
-  
- 
+
+
 
 end module m_io_hybrid

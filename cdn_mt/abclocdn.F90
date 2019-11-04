@@ -46,8 +46,8 @@ CONTAINS
     REAL,    INTENT (IN) :: alo1(:),blo1(:),clo1(:)
     COMPLEX, INTENT (IN) :: ylm( (atoms%lmaxd+1)**2 )
     COMPLEX, INTENT (IN) :: ccchi(2)
-    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (INOUT) :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT (INOUT) :: ccof(-atoms%llod:,:,:,:)!(-atoms%llod:atoms%llod,nobd,atoms%nlod,atoms%nat)
     REAL,    OPTIONAL, INTENT (IN)    :: fgp(3)
 

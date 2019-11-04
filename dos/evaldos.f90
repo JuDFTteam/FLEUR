@@ -1,7 +1,7 @@
       MODULE m_evaldos
       CONTAINS
       SUBROUTINE evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                         dimension,efermiarg,bandgap,l_mcd,mcd,slab,orbcomp)
+                         efermiarg,bandgap,l_mcd,mcd,slab,orbcomp)
 !----------------------------------------------------------------------
 !
 !     vk: k-vectors
@@ -30,7 +30,7 @@
       USE m_cdn_io
       IMPLICIT NONE
       INTEGER,INTENT(IN)             :: eig_id
-      TYPE(t_dimension),INTENT(IN)   :: dimension
+      
       TYPE(t_oneD),INTENT(IN)        :: oneD
       TYPE(t_banddos),INTENT(IN)     :: banddos
       TYPE(t_input),INTENT(IN)       :: input
@@ -59,8 +59,8 @@
 
       INTEGER  itria(3,2*kpts%nkpt),itetra(4,6*kpts%nkpt)
       REAL     voltet(6*kpts%nkpt),kx(kpts%nkpt),vkr(3,kpts%nkpt)
-      REAL     ev(dimension%neigd,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
-      REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(dimension%neigd,kpts%nkpt)
+      REAL     ev(input%neig,kpts%nkpt),e(ned),gpart(ned,atoms%ntype),atr(2*kpts%nkpt)
+      REAL     e_grid(ned+1),spect(ned,3*atoms%ntype),ferwe(input%neig,kpts%nkpt)
       REAL,    ALLOCATABLE :: qal(:,:,:),qval(:,:,:),qlay(:,:,:),g(:,:)
       REAL,    ALLOCATABLE :: mcd_local(:,:,:)
       REAL,    ALLOCATABLE :: qvac(:,:)
@@ -81,11 +81,11 @@
            qdim = 23
         END IF
       ENDIF
-      ALLOCATE( qal(qdim,dimension%neigd,kpts%nkpt),&
-     &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,dimension%neigd,kpts%nkpt),&
-     &          qlay(dimension%neigd,vacuum%layerd,2))
+      ALLOCATE( qal(qdim,input%neig,kpts%nkpt),&
+     &          qval(vacuum%nstars*vacuum%layers*vacuum%nvac,input%neig,kpts%nkpt),&
+     &          qlay(input%neig,vacuum%layerd,2))
       IF (l_mcd) THEN
-         ALLOCATE(mcd_local(3*atoms%ntype*ncored,dimension%neigd,kpts%nkpt) )
+         ALLOCATE(mcd_local(3*atoms%ntype*ncored,input%neig,kpts%nkpt) )
       ELSE
          ALLOCATE(mcd_local(0,0,0))
       ENDIF
@@ -147,7 +147,7 @@
             qval(:,:,k) = 0.0
 
             ntb = max(ntb,results%neig(k,jspin))
-            IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,dimension%neigd/))
+            IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,input%neig/))
             IF (.NOT.l_orbcomp) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(dos%qal(0:,:,:,k,jspin),(/lmax*atoms%ntype,size(dos%qal,3)/))
                qal(lmax*atoms%ntype+2,:,k)=dos%qvac(:,1,k,jspin) ! vacuum 1
@@ -162,7 +162,7 @@
                      DO l = 1, results%neig(k,jspin)
                         qal(i,l,k) = orbcomp%comp(l,i,n_orb,k,jspin)*orbcomp%qmtp(l,n_orb,k,jspin)/10000.
                      END DO
-                     DO l = results%neig(k,jspin)+1, dimension%neigd
+                     DO l = results%neig(k,jspin)+1, input%neig
                         qal(i,l,k) = 0.0
                      END DO
                   END DO
@@ -173,7 +173,7 @@
 !     otherwise, write vacuum charge in correct arrays
 !
             IF ((.NOT.input%film).AND.(banddos%ndir.NE.-3)) THEN
-               DO n = 1,dimension%neigd
+               DO n = 1,input%neig
                   qal(lmax*atoms%ntype+2,n,k) = 0.0
                   qal(lmax*atoms%ntype+3,n,k) = 0.0
                ENDDO
@@ -195,7 +195,7 @@
 !     in the noco case, qis has been calculated in pwden and is read in from tmp_dos
 !
             IF ((.NOT.noco%l_noco).AND.(banddos%ndir.NE.-3)) THEN
-               DO i = 1 , dimension%neigd
+               DO i = 1 , input%neig
                   qal(lmax*atoms%ntype+1,i,k) = 1.
                   DO nl = 1 , atoms%ntype
                      l1 = lmax*(nl-1) + 1
@@ -216,7 +216,7 @@
             DO i = 1 , results%neig(k,jspin)
                ev(i,k) = results%eig(i,k,jspin)*hartree_to_ev_const - efermi
             ENDDO
-            DO i = results%neig(k,jspin) + 1, dimension%neigd
+            DO i = results%neig(k,jspin) + 1, input%neig
                ev(i,k) = 9.9e+99
             ENDDO
 !
@@ -293,7 +293,7 @@
                         qal(:,1:ntb,1:kpts%nkpt),e, g)
             ELSE
               write(*,*) efermi
-              CALL tetra_dos(lmax,atoms%ntype,dimension%neigd,ned,ntetra,kpts%nkpt,&
+              CALL tetra_dos(lmax,atoms%ntype,input%neig,ned,ntetra,kpts%nkpt,&
                             itetra,efermi,voltet,e,results%neig(:,jspin), ev,qal, g)
               IF (input%jspins.EQ.1) g(:,:) = 2 * g(:,:)
             ENDIF
@@ -302,7 +302,7 @@
 !     DOS calculation: use histogram method
 !
             IF ( .not.l_mcd ) THEN
-            CALL dos_bin(input%jspins,qdim,ned,emin,emax,dimension%neigd,kpts%nkpt,&
+            CALL dos_bin(input%jspins,qdim,ned,emin,emax,input%neig,kpts%nkpt,&
                  results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
             ELSE
             CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&

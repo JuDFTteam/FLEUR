@@ -8,7 +8,7 @@ MODULE m_fleur_vdW
   IMPLICIT NONE
   PUBLIC fleur_vdW,priv_fleur_vdW
 CONTAINS
-  SUBROUTINE fleur_vdW(mpi,atoms,sphhar,stars,input,DIMENSION,      &
+  SUBROUTINE fleur_vdW(mpi,atoms,sphhar,stars,input,      &
        cell,sym,oneD,vacuum,    &
        qpw,rho,vpw_total,vr_total)
     !Interface to Juelich vdW-code
@@ -24,7 +24,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
+    
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sym),INTENT(IN)       :: sym
@@ -55,7 +55,7 @@ CONTAINS
     IF (l_core) THEN
        WRITE(6,*) "VdW contribution without core charge"       
        ! read the core charge
-       CALL readCoreDensity(input,atoms,dimension,rhc,tec,qintc)
+       CALL readCoreDensity(input,atoms,rhc,tec,qintc)
        DO j=1,input%jspins
           DO n=1,atoms%ntype
              ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/atoms%rmsh(1,n) ) / atoms%dx(n) + 1 )

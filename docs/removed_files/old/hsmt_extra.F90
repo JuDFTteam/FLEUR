@@ -8,7 +8,7 @@ MODULE m_hsmt_extra
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_extra(DIMENSION,atoms,sym,isp,n_size,n_rank,input,nintsp,sub_comm,&
+  SUBROUTINE hsmt_extra(atoms,sym,isp,n_size,n_rank,input,nintsp,sub_comm,&
        hlpmsize,lmaxb,noco,l_socfirst, lapw,cell,el, fj,gj,gk,vk,tlmplm,usdus, vs_mmp,oneD,& !in
        kveclo,l_real,aa_r,bb_r,aa_c,bb_c) !out/inout
     USE m_constants, ONLY : tpi_const,fpi_const
@@ -23,7 +23,7 @@ CONTAINS
     USE m_hsmt_hlptomat
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)     :: oneD
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -74,7 +74,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER kvec(2*(2*atoms%llod+1),atoms%nlod )
     REAL alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
-    REAL bmrot(3,3),gkrot(DIMENSION%nvd,3),vmult(3),v(3)
+    REAL bmrot(3,3),gkrot(lapw%dim_nvd(),3),vmult(3),v(3)
     REAL qssbti(3)
     REAL, ALLOCATABLE :: ar(:,:,:),ai(:,:,:),br(:,:,:),bi(:,:,:)
     REAL, ALLOCATABLE :: rph(:,:),cph(:,:)
@@ -93,12 +93,12 @@ CONTAINS
     ab_dim=1
     IF ( noco%l_noco .AND. (.NOT. noco%l_ss) )  ALLOCATE ( aahlp(hlpmsize),bbhlp(hlpmsize) )
     IF (noco%l_ss) ab_dim=2
-    ALLOCATE(ar(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim),ai(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim))
-    ALLOCATE(br(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim),bi(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim))
+    ALLOCATE(ar(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim),ai(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim))
+    ALLOCATE(br(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim),bi(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim))
     ALLOCATE(alo(-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,ab_dim))
     ALLOCATE(blo(-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,ab_dim))
     ALLOCATE(clo(-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod,ab_dim))
-    ALLOCATE(rph(DIMENSION%nvd,ab_dim),cph(DIMENSION%nvd,ab_dim))
+    ALLOCATE(rph(lapw%dim_nvd(),ab_dim),cph(lapw%dim_nvd(),ab_dim))
     ALLOCATE(nkvec(atoms%nlod,ab_dim))
     na = 0
     nkvecprevats = 0

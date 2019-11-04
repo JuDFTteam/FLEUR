@@ -1,6 +1,6 @@
 MODULE m_forcea21
 CONTAINS
-  SUBROUTINE force_a21(input,atoms,DIMENSION,sym,oneD,cell,&
+  SUBROUTINE force_a21(input,atoms,sym,oneD,cell,&
                        we,jsp,epar,ne,eig,usdus,eigVecCoeffs,aveccof,bveccof,cveccof,f_a21,f_b4,results)
 
     ! ************************************************************
@@ -34,7 +34,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_dimension),INTENT(IN)    :: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)         :: oneD
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_cell),INTENT(IN)         :: cell
@@ -47,7 +47,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT(IN)    :: we(ne),epar(0:atoms%lmaxd,atoms%ntype)
-    REAL,    INTENT(IN)    :: eig(DIMENSION%neigd)
+    REAL,    INTENT(IN)    :: eig(input%neig)
     COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
@@ -73,7 +73,7 @@ CONTAINS
 
     CALL timestart("force_a21")
 
-    lmplmd = (dimension%lmd* (dimension%lmd+3))/2
+    lmplmd = (atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2
     mlotot = 0 ; mlolotot = 0
     DO n = 1, atoms%ntype
        mlotot = mlotot + atoms%nlo(n)
@@ -83,10 +83,10 @@ CONTAINS
     mlolot_d = MAX(mlolotot,1)
     ALLOCATE ( tlmplm%tdd(0:lmplmd,atoms%ntype,1),tlmplm%tuu(0:lmplmd,atoms%ntype,1),&
          tlmplm%tdu(0:lmplmd,atoms%ntype,1),tlmplm%tud(0:lmplmd,atoms%ntype,1),&
-         tlmplm%tuulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
-         tlmplm%tdulo(0:DIMENSION%lmd,-atoms%llod:atoms%llod,mlot_d,1),&
+         tlmplm%tuulo(0:atoms%lmaxd*(atoms%lmaxd+2),-atoms%llod:atoms%llod,mlot_d,1),&
+         tlmplm%tdulo(0:atoms%lmaxd*(atoms%lmaxd+2),-atoms%llod:atoms%llod,mlot_d,1),&
          tlmplm%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,mlolot_d,1),&
-         a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:DIMENSION%lmd,0:DIMENSION%lmd,atoms%ntype,1) )
+         a21(3,atoms%nat),b4(3,atoms%nat),tlmplm%ind(0:atoms%lmaxd*(atoms%lmaxd+2),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%ntype,1) )
     !
     IF(atoms%n_u.GT.0) THEN
        ALLOCATE(v_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u))

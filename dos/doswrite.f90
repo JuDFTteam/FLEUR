@@ -11,14 +11,14 @@ MODULE m_doswrite
   !-- now read data from tmp_dos and write to vacdos&dosinp .. dw
   !
 CONTAINS
-  SUBROUTINE doswrite(eig_id,DIMENSION,kpts,atoms,vacuum,input,banddos,&
+  SUBROUTINE doswrite(eig_id,kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
     USE m_evaldos
     USE m_cdninf
     USE m_types
     IMPLICIT NONE
   
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)      :: oneD
     TYPE(t_banddos),INTENT(IN)   :: banddos
     TYPE(t_sliceplot),INTENT(IN) :: sliceplot
@@ -41,7 +41,7 @@ CONTAINS
 
     !    locals
     REAL    :: wk,bkpt(3)
-    REAL    :: eig(DIMENSION%neigd)
+    REAL    :: eig(input%neig)
     INTEGER :: ne,ikpt,kspin,j,i,n
     COMPLEX, ALLOCATABLE :: ac(:,:),bc(:,:)
 
@@ -105,7 +105,7 @@ CONTAINS
     !     write DOS/VACDOS     
     IF (banddos%dos.AND.(banddos%ndir.LT.0)) THEN
        CALL evaldos(eig_id,input,banddos,vacuum,kpts,atoms,sym,noco,oneD,cell,results,dos,&
-                    DIMENSION,results%ef,results%bandgap,banddos%l_mcd,mcd,slab,orbcomp)
+                    results%ef,results%bandgap,banddos%l_mcd,mcd,slab,orbcomp)
     END IF
 
     !     Now write to vacwave if nstm=3 
@@ -113,7 +113,7 @@ CONTAINS
     IF (vacuum%nstm.EQ.3) THEN
        call juDFT_error("nstm=3 not implemented in doswrite")
        !OPEN (89,file='tmp_vacwave',status='old',access='direct')!, recl=reclength_vw)
-       ALLOCATE ( ac(n2max,DIMENSION%neigd),bc(n2max,DIMENSION%neigd) )
+       ALLOCATE ( ac(n2max,input%neig),bc(n2max,input%neig) )
        DO ikpt = 1,kpts%nkpt
           WRITE(*,*) 'Read rec',ikpt,'from vacwave'
           READ(89,rec=ikpt) wk,ne,bkpt(1),bkpt(2),eig,ac,bc

@@ -1,6 +1,6 @@
 MODULE m_force_a4
 CONTAINS
-  SUBROUTINE force_a4(atoms,sym,sphhar,input,DIMENSION,&
+  SUBROUTINE force_a4(atoms,sym,sphhar,input,&
        &                    vr,&
        &                    force)
     !
@@ -19,7 +19,7 @@ CONTAINS
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_dimension),INTENT(IN) :: dimension
+    
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
@@ -52,7 +52,7 @@ CONTAINS
     ycomp1(2,1) = CMPLX(0.0,-s23)
     ycomp1(3,1) = czero
     !     --->    read in core density
-    CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
+    CALL readCoreDensity(input,atoms,rhoc,tec,qintc)
 
     DO jsp = 1,input%jspins
        na = 1

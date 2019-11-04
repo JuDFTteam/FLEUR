@@ -8,7 +8,7 @@ MODULE m_mpi_bc_all
 CONTAINS
   SUBROUTINE mpi_bc_all(&
        mpi,stars,sphhar,atoms,sym,&
-       kpts,DIMENSION,input,field,banddos,sliceplot,&
+       kpts,input,field,banddos,sliceplot,&
        vacuum,cell,enpara,noco,oneD,&
         hybrid)
     !
@@ -17,7 +17,7 @@ CONTAINS
     IMPLICIT NONE
     INCLUDE 'mpif.h'
     TYPE(t_mpi),INTENT(INOUT)        :: mpi
-    TYPE(t_dimension),INTENT(INOUT)  :: dimension
+    
     TYPE(t_oneD),INTENT(INOUT)       :: oneD
     TYPE(t_hybrid),INTENT(INOUT)     :: hybrid
     TYPE(t_enpara),INTENT(INOUT)     :: enpara
@@ -57,7 +57,7 @@ CONTAINS
        i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp
        i(35)=hybrid%bands1 ; i(36)=input%maxiter ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
        i(39)=input%kcrel;i(40)=banddos%s_cell_x;i(41)=banddos%s_cell_y;i(42)=banddos%s_cell_z; i(43)=sliceplot%iplot
-       i(44)=atoms%nlotot;i(45)=dimension%nbasfcn
+       i(44)=atoms%nlotot;i(45)=lapw%dim_nbasfcn()
 
        r(1)=cell%omtil ; r(2)=cell%area ; r(3)=vacuum%delz ; r(4)=cell%z1 ; r(5)=input%alpha
        r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta; r(9)=noco%phi; r(10)=vacuum%tworkf
@@ -94,7 +94,7 @@ CONTAINS
      atoms%ntype=i(3) ; banddos%orbCompAtom=i(38);banddos%s_cell_x=i(40);banddos%s_cell_y=i(41);banddos%s_cell_z=i(42)
      input%coretail_lmax=i(2) ; input%kcrel=i(39)
      stars%kimax=i(25);stars%kimax2=i(26)
-    atoms%nlotot=i(44);dimension%nbasfcn=i(45)
+    atoms%nlotot=i(44);lapw%dim_nbasfcn()=i(45)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     input%minDistance=r(29)

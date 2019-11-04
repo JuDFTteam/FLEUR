@@ -6,7 +6,7 @@ CONTAINS
 
 SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
                               oneD,hybrid,cell,banddos,sliceplot,xcpot,&
-                              noco,dimension,enpara,sphhar)
+                              noco,enpara,sphhar)
 
    USE m_types
    USE m_xmlOutput
@@ -14,7 +14,7 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
    TYPE(t_mpi),       INTENT(IN) :: mpi
    TYPE(t_input),     INTENT(IN) :: input
    TYPE(t_sym),       INTENT(IN) :: sym
-   TYPE(t_stars),     INTENT(IN) :: stars 
+   TYPE(t_stars),     INTENT(IN) :: stars
    TYPE(t_atoms),     INTENT(IN) :: atoms
    TYPE(t_vacuum),    INTENT(IN) :: vacuum
    TYPE(t_kpts),      INTENT(IN) :: kpts
@@ -25,7 +25,7 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
    TYPE(t_sliceplot), INTENT(IN) :: sliceplot
    CLASS(t_xcpot),    INTENT(IN) :: xcpot
    TYPE(t_noco),      INTENT(IN) :: noco
-   TYPE(t_dimension), INTENT(IN) :: dimension
+
    TYPE(t_enpara),    INTENT(IN) :: enpara
    TYPE(t_sphhar),    INTENT(IN) :: sphhar
 
@@ -42,7 +42,7 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
    CALL writeXMLElementFormPoly('atomsInCell',(/'nat  ','ntype','jmtd ','n_u  '/),&
                                 attributes(:4),reshape((/3,6,6,6,8,8,8,8/),(/4,2/)))
 
-   WRITE(attributes(1),'(i0)') dimension%nvd
+   WRITE(attributes(1),'(i0)') lapw_dim_nvd
    WRITE(attributes(2),'(i0)') atoms%lmaxd
    WRITE(attributes(3),'(i0)') atoms%nlotot
    CALL writeXMLElementFormPoly('basis',(/'nvd   ','lmaxd ','nlotot'/),&
@@ -53,7 +53,7 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
    CALL writeXMLElementFormPoly('density',(/'ng3','ng2'/),&
                                 attributes(:2),reshape((/7,6,8,8/),(/2,2/)))
 
-   WRITE(attributes(1),'(i0)') dimension%neigd
+   WRITE(attributes(1),'(i0)') input%neig
    CALL writeXMLElementFormPoly('bands',(/'numbands'/),&
                                 attributes(:1),reshape((/9,8/),(/1,2/)))
 

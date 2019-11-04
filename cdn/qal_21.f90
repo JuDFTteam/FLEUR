@@ -5,7 +5,7 @@ MODULE m_qal21
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE qal_21(dimension,atoms,input,noccbd,ev_list,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+  SUBROUTINE qal_21(atoms,input,noccbd,ev_list,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
 
     USE m_types_setup
     USE m_types_dos
@@ -14,7 +14,7 @@ CONTAINS
     USE m_rotdenmat
     use m_constants
     IMPLICIT NONE
-    TYPE(t_dimension),         INTENT(IN)    :: dimension
+    
     TYPE(t_input),             INTENT(IN)    :: input
     TYPE(t_noco),              INTENT(IN)    :: noco
     TYPE(t_atoms),             INTENT(IN)    :: atoms
@@ -37,9 +37,9 @@ CONTAINS
     COMPLEX qlo(noccbd,atoms%nlod,atoms%nlod,atoms%ntype)
     COMPLEX qaclo(noccbd,atoms%nlod,atoms%ntype),qbclo(noccbd,atoms%nlod,atoms%ntype)
     COMPLEX qcloa(noccbd,atoms%nlod,atoms%ntype),qclob(noccbd,atoms%nlod,atoms%ntype)
-    COMPLEX qal21(0:3,atoms%ntype,dimension%neigd)
+    COMPLEX qal21(0:3,atoms%ntype,input%neig)
     COMPLEX q_loc(2,2),q_hlp(2,2),chi(2,2)
-    REAL    qmat(0:3,atoms%ntype,dimension%neigd,4)
+    REAL    qmat(0:3,atoms%ntype,input%neig,4)
 
     !     .. Intrinsic Functions ..
     INTRINSIC conjg

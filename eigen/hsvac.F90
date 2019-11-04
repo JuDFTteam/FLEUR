@@ -11,14 +11,14 @@ CONTAINS
   !Overlap matrix
   !-----------------------------------------------------------
   SUBROUTINE hsvac(&
-       vacuum,stars,DIMENSION, mpi,jsp,input,v,evac,cell,&
+       vacuum,stars, mpi,jsp,input,v,evac,cell,&
        lapw,sym, noco,hmat,smat)
  
 
     USE m_vacfun
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
@@ -46,15 +46,15 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     INTEGER:: nv2(input%jspins)
-    INTEGER kvac(2,DIMENSION%nv2d,input%jspins)
-    INTEGER map2(DIMENSION%nvd,input%jspins)
-    COMPLEX tddv(DIMENSION%nv2d,DIMENSION%nv2d),tduv(DIMENSION%nv2d,DIMENSION%nv2d)
-    COMPLEX tudv(DIMENSION%nv2d,DIMENSION%nv2d),tuuv(DIMENSION%nv2d,DIMENSION%nv2d)
+    INTEGER kvac(2,lapw%dim_nv2d(),input%jspins)
+    INTEGER map2(lapw%dim_nvd(),input%jspins)
+    COMPLEX tddv(lapw%dim_nv2d(),lapw%dim_nv2d()),tduv(lapw%dim_nv2d(),lapw%dim_nv2d())
+    COMPLEX tudv(lapw%dim_nv2d(),lapw%dim_nv2d()),tuuv(lapw%dim_nv2d(),lapw%dim_nv2d())
     COMPLEX vxy_help(stars%ng2-1)
-    COMPLEX a(DIMENSION%nvd,input%jspins),b(DIMENSION%nvd,input%jspins)
-    REAL ddnv(DIMENSION%nv2d,input%jspins),dudz(DIMENSION%nv2d,input%jspins)
-    REAL duz(DIMENSION%nv2d,input%jspins), udz(DIMENSION%nv2d,input%jspins)
-    REAL uz(DIMENSION%nv2d,input%jspins)
+    COMPLEX a(lapw%dim_nvd(),input%jspins),b(lapw%dim_nvd(),input%jspins)
+    REAL ddnv(lapw%dim_nv2d(),input%jspins),dudz(lapw%dim_nv2d(),input%jspins)
+    REAL duz(lapw%dim_nv2d(),input%jspins), udz(lapw%dim_nv2d(),input%jspins)
+    REAL uz(lapw%dim_nv2d(),input%jspins)
     !     ..
 
 
@@ -72,7 +72,7 @@ CONTAINS
              END IF
           ENDDO
           nv2(jspin) = nv2(jspin) + 1
-          IF (nv2(jspin)>DIMENSION%nv2d)  CALL juDFT_error("hsvac:dimension%nv2d",calledby ="hsvac")
+          IF (nv2(jspin)>lapw%dim_nv2d())  CALL juDFT_error("hsvac:lapw%dim_nv2d()",calledby ="hsvac")
           kvac(1:2,nv2(jspin),jspin) = lapw%gvec(1:2,k,jspin)
           map2(k,jspin) = nv2(jspin)
        ENDDO k_loop

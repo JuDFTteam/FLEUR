@@ -3,7 +3,7 @@
       CONTAINS
       SUBROUTINE dimen7(&
      &                  input,sym,stars,&
-     &                  atoms,sphhar,dimension,vacuum,&
+     &                  atoms,sphhar,vacuum,&
      &                  kpts,oneD,hybrid,cell)
 
 !
@@ -53,7 +53,7 @@
       TYPE(t_stars),INTENT(INOUT)   :: stars
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_sphhar),INTENT(INOUT)  :: sphhar
-      TYPE(t_dimension),INTENT(INOUT) :: dimension
+      
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
@@ -146,7 +146,7 @@
       atoms%lmaxd = 0
       atoms%jmtd  = 0
       rmtmax      = 0.0
-      dimension%neigd = 0
+      input%neig = 0
       atoms%lmaxd = maxval(atoms%lmax)
       atoms%jmtd  = maxval(atoms%jri)
       rmtmax      = maxval(atoms%rmt)
@@ -156,7 +156,7 @@
           IF (atoms%llo(ilo,n).LT.0) THEN
              atoms%llo(ilo,n) = -atoms%llo(ilo,n) - 1
           ELSE
-             dimension%neigd = dimension%neigd + atoms%neq(n)*(2*abs(atoms%llo(ilo,n)) +1)
+             input%neig = input%neig + atoms%neq(n)*(2*abs(atoms%llo(ilo,n)) +1)
           ENDIF
 !-apw
           atoms%llod = max(abs(atoms%llo(ilo,n)),atoms%llod)
@@ -167,18 +167,18 @@
      &      (atoms%nz(n).GE.57.AND.atoms%nz(n).LE.79)) nstate = 9
         IF ((atoms%nz(n).GE.58.AND.atoms%nz(n).LE.71) .OR.&
      &      (atoms%nz(n).GE.90.AND.atoms%nz(n).LE.103)) nstate = 16
-        dimension%neigd = dimension%neigd + nstate*atoms%neq(n)
+        input%neig = input%neig + nstate*atoms%neq(n)
 !
       ENDDO
       CALL ylmnorm_init(atoms%lmaxd)
 !      IF (mod(lmaxd,2).NE.0) lmaxd = lmaxd + 1
-      IF (2*DIMENSION%neigd.LT.MAX(5.0,input%zelec)) THEN
-        WRITE(6,*) dimension%neigd,' states estimated in dimen7 ...'
-        DIMENSION%neigd = MAX(5,NINT(0.75*input%zelec))
-        WRITE(6,*) 'changed dimension%neigd to ',dimension%neigd
+      IF (2*input%neig.LT.MAX(5.0,input%zelec)) THEN
+        WRITE(6,*) input%neig,' states estimated in dimen7 ...'
+        input%neig = MAX(5,NINT(0.75*input%zelec))
+        WRITE(6,*) 'changed input%neig to ',input%neig
       ENDIF
-      IF (noco%l_soc .and. (.not. noco%l_noco)) dimension%neigd=2*dimension%neigd
-      IF (noco%l_soc .and. noco%l_ss) dimension%neigd=(3*dimension%neigd)/2
+      IF (noco%l_soc .and. (.not. noco%l_noco)) input%neig=2*input%neig
+      IF (noco%l_soc .and. noco%l_ss) input%neig=(3*input%neig)/2
        ! not as accurate, but saves much time
 
       rmtmax = rmtmax*stars%gmax
@@ -344,7 +344,7 @@
         ENDIF
       ENDIF
 
-      dimension%neigd = max(dimension%neigd,input%gw_neigd)
+      input%neig = max(input%neig,input%gw_neigd)
 
 !
 ! Using the k-point generator also for creation of q-points for the
@@ -361,14 +361,14 @@
 !
 ! now proceed as usual
 !
-      CALL inpeig_dim(input,cell,noco,oneD,kpts,dimension,stars,latnam)
+      CALL inpeig_dim(input,cell,noco,oneD,kpts,stars,latnam)
       vacuum%layerd = max(vacuum%layerd,1)
       atoms%ntype = atoms%ntype
-      IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
+      IF (noco%l_noco) input%neig = 2*input%neig
 
       atoms%nlod = max(atoms%nlod,2) ! for chkmt
       input%jspins=input%jspins
-      !CALL parawrite(sym,stars,atoms,sphhar,DIMENSION,vacuum,kpts,oneD,input)
+      !CALL parawrite(sym,stars,atoms,sphhar,vacuum,kpts,oneD,input)
 
       DEALLOCATE( sym%mrot,sym%tau,&
      & atoms%lmax,sym%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&

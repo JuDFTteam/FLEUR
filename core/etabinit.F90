@@ -13,7 +13,7 @@ MODULE m_etabinit
   !     ntab & ltab transport this info to core.F        gb`02
   !------------------------------------------------------------
 CONTAINS
-  SUBROUTINE etabinit(atoms,DIMENSION,input, vr,&
+  SUBROUTINE etabinit(atoms,input, vr,&
        etab,ntab,ltab,nkmust)
 
     USE m_constants, ONLY : c_light
@@ -21,7 +21,7 @@ CONTAINS
     USE m_differ
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_input),INTENT(IN)       :: input
     !

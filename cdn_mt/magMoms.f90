@@ -8,7 +8,7 @@ MODULE m_magMoms
 
 CONTAINS
 
-SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
+SUBROUTINE magMoms(input,atoms,noco,vTot,moments)
 
    USE m_types
    USE m_xmlOutput
@@ -16,7 +16,7 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
 
    IMPLICIT NONE
 
-   TYPE(t_dimension), INTENT(IN) :: dimension
+   
    TYPE(t_input), INTENT(IN)     :: input
    TYPE(t_atoms), INTENT(IN)     :: atoms
    TYPE(t_noco), INTENT(INOUT)   :: noco

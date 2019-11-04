@@ -97,7 +97,7 @@ CONTAINS
     TYPE(t_dos), INTENT(INOUT)    :: dos
 
     REAL,INTENT(IN)   :: we(:) !(nobd) 
-    REAL,INTENT(IN)   :: eig(:)!(dimension%neigd)
+    REAL,INTENT(IN)   :: eig(:)!(input%neig)
     INTEGER, INTENT(IN) :: ev_list(ne)
     !----->  BASIS FUNCTION INFORMATION
     INTEGER,INTENT(IN):: ne

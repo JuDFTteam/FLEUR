@@ -8,7 +8,7 @@ MODULE m_checkdopall
 
 CONTAINS
 
-SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
                        cell,potden,ispin)
 
    USE m_sphpts
@@ -21,7 +21,7 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
    IMPLICIT NONE
 
    TYPE(t_input),INTENT(IN)     :: input
-   TYPE(t_dimension),INTENT(IN) :: dimension
+   
    TYPE(t_sphhar),intent(in)    :: sphhar      
    TYPE(t_stars),INTENT(IN)     :: stars
    TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -47,13 +47,13 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
       DO ivac = 1,vacuum%nvac
          signum = 3.0 - 2.0*ivac
          xp(3,:npd) = signum*cell%z1/cell%amat(3,3)
-         CALL checkdop(xp,npd,0,0,ivac,1,ispin,dimension,atoms,&
+         CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
                        sphhar,stars,sym,vacuum,cell,oneD,potden)
       END DO
    ELSE IF (oneD%odi%d1) THEN
       npd = min(SIZE(xp,2),25)
       CALL cylpts(xp,npd,cell%z1)
-      CALL checkdop(xp,npd,0,0,ivac,1,ispin,dimension,atoms,&
+      CALL checkdop(xp,npd,0,0,ivac,1,ispin,atoms,&
                     sphhar,stars,sym,vacuum,cell,oneD,potden)
    END IF
 
@@ -62,7 +62,7 @@ SUBROUTINE checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
    DO n = 1, atoms%ntype
       CALL sphpts(xp,SIZE(xp,2),atoms%rmt(n),atoms%pos(1,nat))
       CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
-                    dimension,atoms,sphhar,stars,sym,vacuum,cell,oneD,potden)
+                    atoms,sphhar,stars,sym,vacuum,cell,oneD,potden)
       nat = nat + atoms%neq(n)
    END DO
 

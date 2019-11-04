@@ -69,13 +69,13 @@ CONTAINS
     REAL,INTENT(OUT)    ::  w_iks(:,:,:)
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: idxeig(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
-    INTEGER, INTENT (IN) :: idxjsp(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
-    INTEGER, INTENT (IN) :: idxkpt(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
-    INTEGER, INTENT (IN) ::  INDEX(:)!(dimension%neigd*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) :: idxeig(:)!(input%neig*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) :: idxjsp(:)!(input%neig*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) :: idxkpt(:)!(input%neig*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) ::  INDEX(:)!(input%neig*kpts%nkpt*dimension%jspd)
     INTEGER, INTENT (IN) ::     ne(:,:)!(kpts%nkpt,dimension%jspd)
-    REAL,    INTENT (IN) ::      e(:)!(kpts%nkpt*dimension%neigd*dimension%jspd)
-    REAL,    INTENT (INOUT) ::  we(:)!(kpts%nkpt*dimension%neigd*dimension%jspd)
+    REAL,    INTENT (IN) ::      e(:)!(kpts%nkpt*input%neig*dimension%jspd)
+    REAL,    INTENT (INOUT) ::  we(:)!(kpts%nkpt*input%neig*dimension%jspd)
 
     !--- J constants
     !--- J constants

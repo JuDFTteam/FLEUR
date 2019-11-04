@@ -7,7 +7,7 @@ MODULE m_kerker
 
 CONTAINS
 
-  SUBROUTINE kerker( field, DIMENSION, mpi, &
+  SUBROUTINE kerker( field,  mpi, &
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
        oneD, inDen, outDen, precon_v  )
 
@@ -35,7 +35,7 @@ CONTAINS
     TYPE(t_cell),      INTENT(in)    :: cell
     TYPE(t_sphhar),    INTENT(in)    :: sphhar
     TYPE(t_field),     INTENT(inout) :: field
-    TYPE(t_dimension), INTENT(in)    :: DIMENSION
+    
     TYPE(t_mpi),       INTENT(in)    :: mpi
     TYPE(t_atoms),     INTENT(in)    :: atoms 
     TYPE(t_potden),    INTENT(inout) :: outDen
@@ -57,7 +57,7 @@ CONTAINS
     CALL mpi_bc_potden( mpi, stars, sphhar, atoms, input, vacuum, oneD, noco, resDen )
 #endif
     IF ( .NOT. input%film ) THEN
-       CALL vgen_coulomb( 1, mpi, DIMENSION, oneD, input, field, vacuum, sym, stars, cell, &
+       CALL vgen_coulomb( 1, mpi,  oneD, input, field, vacuum, sym, stars, cell, &
             sphhar, atoms, resDen, vYukawa )
     ELSE
        if( mpi%irank == 0 ) then 

@@ -5,7 +5,7 @@
 !                  m. weinert   jan. 1987
 !*********************************************************************
       CONTAINS
-      SUBROUTINE inpeig_dim(input,cell,noco, oneD,kpts,dimension,stars,latnam)
+      SUBROUTINE inpeig_dim(input,cell,noco, oneD,kpts,stars,latnam)
 
       USE m_constants, ONLY : pi_const,tpi_const
       USE m_types_input
@@ -21,7 +21,7 @@
       TYPE(t_cell),INTENT(INOUT)      :: cell
       TYPE(t_noco),INTENT(INOUT)      :: noco
       TYPE(t_stars),INTENT(INOUT)     :: stars
-      TYPE(t_dimension),INTENT(INOUT) :: dimension
+      
       TYPE(t_kpts),INTENT(INOUT)      :: kpts
       TYPE(t_oneD),INTENT(INOUT)      :: oneD
       CHARACTER(len=*),INTENT(IN)     :: latnam
@@ -30,7 +30,7 @@
       REAL  s1,s2,scale,bk(3)
       LOGICAL xyu,l_k
    !     ..
-      kpts%nkpt = 0 ; dimension%nvd = 0 ; dimension%nv2d = 0
+      kpts%nkpt = 0
       stars%kq1_fft = 0 ; stars%kq2_fft = 0 ; stars%kq3_fft = 0
       !cell%aamat=matmul(transpose(cell%amat),cell%amat)
       cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
@@ -54,11 +54,11 @@
 8030     FORMAT (4f10.5)
 8040     FORMAT (i5,f20.10)
 8050     FORMAT (i5,f20.10,3x,l1)
-         
+
          kpts%nkpt = MAX(kpts%nkpt,kpts%nkpt)
 8060     FORMAT (i5,f20.10)
          IF (scale.EQ.0.0) scale = 1.0
-         
+
          DO nk = 1,kpts%nkpt
             IF(input%film.AND..NOT.oneD%odd%d1) THEN
                READ (41,fmt=8080) (bk(i),i=1,2)
@@ -100,14 +100,12 @@
             stars%kq1_fft = MAX(kq1,stars%kq1_fft)
             stars%kq2_fft = MAX(kq2,stars%kq2_fft)
             stars%kq3_fft = MAX(kq3,stars%kq3_fft)
-            
-            DIMENSION%nvd = MAX(DIMENSION%nvd,nv)
-            DIMENSION%nv2d = MAX(DIMENSION%nv2d,nv2)
-            
+
+        
          ENDDO ! k=pts
          REWIND(41)
          READ (41,*)
-         
+
          CLOSE (41)
       ELSE
          kpts%nkpt=0

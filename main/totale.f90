@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_totale
 CONTAINS
-  SUBROUTINE totale(mpi,atoms,sphhar,stars,vacuum,DIMENSION, &
+  SUBROUTINE totale(mpi,atoms,sphhar,stars,vacuum, &
        sym,input,noco,cell,oneD, xcpot,hybrid,vTot,vCoul,it,den,results)
     !
     !     ***************************************************
@@ -62,7 +62,7 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)         :: cell
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(IN)        :: atoms
-    TYPE(t_dimension),INTENT(IN)    :: dimension
+    
     TYPE(t_potden),INTENT(IN)       :: vTot,vCoul
     TYPE(t_potden),INTENT(IN)       :: den
     !     ..
@@ -141,7 +141,7 @@ CONTAINS
 
        IF (input%l_f) THEN
           ! core contribution to force: needs TOTAL POTENTIAL and core charge
-          CALL force_a4(atoms,sym,sphhar,input,DIMENSION, vTot%mt, results%force)
+          CALL force_a4(atoms,sym,sphhar,input, vTot%mt, results%force)
 
        ENDIF
 

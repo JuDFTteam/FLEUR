@@ -1,6 +1,6 @@
 MODULE m_mcdinit
 CONTAINS
-  SUBROUTINE mcd_init(atoms,input,DIMENSION,vr,g,f,mcd,itype,jspin)
+  SUBROUTINE mcd_init(atoms,input,vr,g,f,mcd,itype,jspin)
 
     !-----------------------------------------------------------------------
     !
@@ -18,7 +18,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
+    
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_mcd),INTENT(INOUT)    :: mcd

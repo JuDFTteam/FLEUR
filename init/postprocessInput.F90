@@ -10,7 +10,7 @@ CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
      oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,forcetheo_data,&
-     noco,DIMENSION,sphhar,l_kpts)
+     noco,sphhar,l_kpts)
 
   USE m_juDFT
   USE m_types
@@ -50,7 +50,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
   CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT) :: xcpot
   TYPE(t_noco),     INTENT(INOUT) :: noco
-  TYPE(t_dimension),INTENT(INOUT) :: dimension
+  
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   TYPE(t_field),    INTENT(INOUT) :: field
   LOGICAL,          INTENT   (IN) :: l_kpts

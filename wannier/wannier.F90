@@ -8,7 +8,7 @@ MODULE m_wannier
   USE m_juDFT
 CONTAINS
   SUBROUTINE wannier(&
-       DIMENSION,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
+       mpi,input,kpts,sym,atoms,stars,vacuum,sphhar,oneD,&
        wann,noco,cell,enpara,banddos,sliceplot,vTot,results,&
        eig_idList,l_real,nkpt)
     !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -114,7 +114,7 @@ CONTAINS
     INTEGER stt(MPI_STATUS_SIZE)
 #endif
 
-    TYPE(t_dimension), INTENT(IN) :: DIMENSION
+    
     TYPE(t_mpi),       INTENT(IN) :: mpi
     TYPE(t_input),     INTENT(IN) :: input
     TYPE(t_kpts),      INTENT(IN) :: kpts
@@ -144,11 +144,11 @@ CONTAINS
     INTEGER :: jsp_start,jsp_end,nrec,nrec1,nrec_b,nbands,nbands_b
     INTEGER :: nodeu,noded,n_size,na,n_rank,nbnd,numbands
     INTEGER :: i1,i2,i3,in,lda
-    INTEGER :: n_bands(0:DIMENSION%neigd),nslibd,nslibd_b
+    INTEGER :: n_bands(0:input%neig),nslibd,nslibd_b
     CHARACTER(len=8) :: dop,iop,name(10)
     REAL    :: wronk,phase
     COMPLEX :: c_phase
-    REAL    :: eig(DIMENSION%neigd),eig_b(DIMENSION%neigd)
+    REAL    :: eig(input%neig),eig_b(input%neig)
     REAL    :: efermi
     LOGICAL :: l_p0,l_bkpts,l_proj,l_amn,l_mmn
 !!! energy window boundaries
@@ -243,7 +243,7 @@ CONTAINS
     REAL :: theta_i, thetab_i, phi_i, phib_i
     REAL :: dalph,db1,db2,coph,siph
     REAL :: zero_taual(3,atoms%nat),bqpt(3)
-    REAL :: eig_qb(DIMENSION%neigd)
+    REAL :: eig_qb(input%neig)
 
     REAL,ALLOCATABLE :: qdiff(:,:), we_qb(:)                
     REAL,ALLOCATABLE :: energies(:,:,:)  
@@ -299,7 +299,7 @@ CONTAINS
 
     !----<gwf
 
-    lmplmd = (dimension%lmd* (dimension%lmd+3))/2
+    lmplmd = (atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2
 
 
     !-----initializations
@@ -361,12 +361,12 @@ CONTAINS
 
     IF(wann%l_updown)THEN            
        CALL wann_updown(&
-            DIMENSION,wann,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
+            wann,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
             oneD,noco,cell,vTot,&
             enpara,eig_idList(1),l_real,&
             mpi%mpi_comm,atoms%l_dulo,noco%l_noco,noco%l_ss,&
-            atoms%lmaxd,atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,&
-            DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,&
+            atoms%lmaxd,atoms%ntype,input%neig,atoms%nat,sym%nop,&
+            lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,&
             atoms%nlod,atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
@@ -381,7 +381,7 @@ CONTAINS
             atoms%ulo_der,stars%ustep,stars%ig,stars%mx1,&
             stars%mx2,stars%mx3,stars%rgphs,&
             sliceplot%slice,sliceplot%kk,sliceplot%nnne,cell%z1,&
-            DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,&
+            lapw%dim_nv2d(),vacuum%nmzxy,vacuum%nmz,vacuum%delz,&
             stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
             sphhar%memd,atoms%lnonsph,sphhar%clnu,lmplmd,&
@@ -402,11 +402,11 @@ CONTAINS
     IF(wann%l_matrixuHu)THEN
        wannTemp = wann
        CALL wann_uHu(&
-            DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
+            stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
             banddos,oneD,noco,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
-            atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,&
-            input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,&
+            atoms%ntype,input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),&
+            input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,&
             atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
@@ -420,7 +420,7 @@ CONTAINS
             sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,stars%ustep,&
             stars%ig,stars%mx1,stars%mx2,stars%mx3,&
             stars%rgphs,sliceplot%slice,&
-            sliceplot%kk,sliceplot%nnne,cell%z1,DIMENSION%nv2d,&
+            sliceplot%kk,sliceplot%nnne,cell%z1,lapw%dim_nv2d(),&
             vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,&
             cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
@@ -445,11 +445,11 @@ CONTAINS
     IF(wann%l_matrixuHu_dmi)THEN
        wannTemp = wann
        CALL wann_uHu_dmi(&
-            DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
+            stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
             banddos,oneD,noco,cell,vTot,wannTemp,enpara,eig_idList,&
             l_real,atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,&
-            atoms%ntype,DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,&
-            input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,&
+            atoms%ntype,input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),&
+            input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,&
             atoms%ntype,cell%omtil,atoms%nlo,atoms%llo,&
             atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,&
             atoms%lmax,sym%invsat,sym%invsatnr,nkpt,atoms%taual,&
@@ -463,7 +463,7 @@ CONTAINS
             sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,stars%ustep,&
             stars%ig,stars%mx1,stars%mx2,stars%mx3,&
             stars%rgphs,sliceplot%slice,&
-            sliceplot%kk,sliceplot%nnne,cell%z1,DIMENSION%nv2d,&
+            sliceplot%kk,sliceplot%nnne,cell%z1,lapw%dim_nv2d(),&
             vacuum%nmzxy,vacuum%nmz,vacuum%delz,sym%zrfs,stars%ig2,&
             cell%area,sym%tau,atoms%zatom,stars%ng2,stars%kv2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,results%ef,noco%l_soc,&
@@ -541,7 +541,7 @@ CONTAINS
     IF(l_p0)THEN
        WRITE (*,*) 'fermi energy:',efermi
        WRITE (*,*) 'emin,emax=',sliceplot%e1s,sliceplot%e2s
-       WRITE (*,*) 'nbasfcn =',DIMENSION%nbasfcn
+       WRITE (*,*) 'nbasfcn =',lapw%dim_nbasfcn()
     ENDIF
 
     IF((.NOT.wann%l_matrixmmn).AND.(.NOT.wann%l_wann_plot).AND.&
@@ -767,7 +767,7 @@ CONTAINS
 
                 !            WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
                 !            innerEig_idList(iqpt_b)=open_eig(mpi%mpi_comm,
-                !     +                  DIMENSION%nbasfcn,DIMENSION%neigd,
+                !     +                  lapw%dim_nbasfcn(),input%neig,
                 !     +                  nkpts,wannierspin,atoms%lmaxd,
                 !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
                 !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
@@ -783,7 +783,7 @@ CONTAINS
           eig_id = eig_idList(qptibz)
 
           !        WRITE(fending,'("_",i4.4)')qptibz
-          !        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
+          !        eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),input%neig,
           !     +                  nkpts,wannierspin,atoms%lmaxd,
           !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
           !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
@@ -798,7 +798,7 @@ CONTAINS
           eig_id = eig_idList(qptibz)
 
           !        WRITE(fending,'("_",i4.4)')qptibz
-          !        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
+          !        eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),input%neig,
           !     +                  nkpts,wannierspin,atoms%lmaxd,
           !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
           !     +                  noco%l_noco,.FALSE.,l_real,noco%l_soc,.FALSE.,
@@ -891,9 +891,9 @@ CONTAINS
           IF(l_p0)THEN         
              CALL wann_write_eig(&
                   eig_id,l_real,&
-                  atoms%lmaxd,atoms%ntype,atoms%nlod,DIMENSION%neigd,&
-                  DIMENSION%nvd,wannierspin,&
-                  mpi%isize,jspin,DIMENSION%nbasfcn,atoms%nlotot,&
+                  atoms%lmaxd,atoms%ntype,atoms%nlod,input%neig,&
+                  lapw%dim_nvd(),wannierspin,&
+                  mpi%isize,jspin,lapw%dim_nbasfcn(),atoms%nlotot,&
                   noco%l_ss,noco%l_noco,nrec,fullnkpts,&
                   wann%l_bzsym,wann%l_byindex,wann%l_bynumber,&
                   wann%l_byenergy,&
@@ -1126,8 +1126,8 @@ CONTAINS
 
           ENDIF !l_matrixmmn
           zzMat%l_real = l_real
-          zzMat%matsize1 = DIMENSION%nbasfcn
-          zzMat%matsize2 = DIMENSION%neigd
+          zzMat%matsize1 = lapw%dim_nbasfcn()
+          zzMat%matsize2 = input%neig
           IF(l_real) THEN
              IF(.NOT.ALLOCATED(zzMat%data_r))&
                ALLOCATE (zzMat%data_r(zzMat%matsize1,zzMat%matsize2))
@@ -1175,10 +1175,10 @@ CONTAINS
              i_rec = i_rec + 1
              IF (MOD(i_rec-1,mpi%isize).EQ.mpi%irank) THEN
 
-                ALLOCATE ( we(DIMENSION%neigd),eigg(DIMENSION%neigd) )
+                ALLOCATE ( we(input%neig),eigg(input%neig) )
 
                 n_start=1
-                n_end=DIMENSION%neigd
+                n_end=input%neig
 
 
                 ! read information of diagonalization for fixed q-point iqpt
@@ -1189,9 +1189,9 @@ CONTAINS
 
                 CALL cdn_read(&
                      eig_id,&
-                     DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
-                     kptibz,jspin,DIMENSION%nbasfcn,&
-                     noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,&
+                     lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
+                     kptibz,jspin,lapw%dim_nbasfcn(),&
+                     noco%l_ss,noco%l_noco,input%neig,n_start,n_end,&
                      nbands,eigg,zzMat)
 
 
@@ -1232,7 +1232,7 @@ CONTAINS
                    !     >            noco%l_noco,noco%l_soc,
                    !     >            atoms%ntype,atoms%neq,atoms%nlotot,
                    !     >            kveclo,jspin,
-                   !     >            oper,sym%nop,sym%mrot,DIMENSION%nvd,nv,
+                   !     >            oper,sym%nop,sym%mrot,lapw%dim_nvd(),nv,
                    !     >            shiftkpt(:,ikpt),
                    !     >            sym%tau,
                    !     x            lapw%bkpt,k1(:,:),k2(:,:),k3(:,:),
@@ -1280,19 +1280,19 @@ CONTAINS
 #ifdef CPP_TOPO
                 IF(wann%l_surfcurr)THEN
                    !         call wann_surfcurr_int(
-                   !     >        DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,vacuum%nmzxyd,stars%ng2,sphhar%ntypsd,
+                   !     >        lapw%dim_nv2d(),jspin,oneD%odi,oneD%ods,stars%ng3,vacuum%nmzxyd,stars%ng2,sphhar%ntypsd,
                    !     >        atoms%ntype,atoms%lmaxd,atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,stars%ng3,vacuum%nvac,
                    !     >        vacuum%nmz,vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,sym%symor,
                    !     >        sym%invs,sym%invs2,cell%z1,vacuum%delz,sym%ngopr,sym%ntypsy,atoms%jri,atoms%pos,atoms%zatom,
                    !     >        atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,sliceplot%kk,
-                   !     >        DIMENSION%nvd,atoms%nlod,atoms%llod,nv(jspin),lmd,lapw%bkpt,cell%omtil,atoms%nlo,atoms%llo,
+                   !     >        lapw%dim_nvd(),atoms%nlod,atoms%llod,nv(jspin),lmd,lapw%bkpt,cell%omtil,atoms%nlo,atoms%llo,
                    !     >        k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
                    !     >        vz(:,:,jspin2),
-                   !     >        nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,ff,gg,flo,acof,bcof,ccof,z,
+                   !     >        nslibd,lapw%dim_nbasfcn(),input%neig,ff,gg,flo,acof,bcof,ccof,z,
                    !     >        surfcurr(:,:,:,ikpt))
 
                    CALL wann_surfcurr_int2(&
-                        DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,&
+                        lapw%dim_nv2d(),jspin,oneD%odi,oneD%ods,stars%ng3,&
                         vacuum%nmzxyd,&
                         stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,&
                         atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,&
@@ -1303,9 +1303,9 @@ CONTAINS
                         sym%ntypsy,atoms%jri,atoms%pos,atoms%taual,&
                         atoms%zatom,atoms%rmt,atoms%lmax,sym%mrot,sym%tau,&
                         atoms%rmsh,sym%invtab,cell%amat,cell%bmat,cell%bbmat,&
-                        ikpt,DIMENSION%nvd,lapw%nv(jspin),lapw%bkpt,cell%omtil,&
+                        ikpt,lapw%dim_nvd(),lapw%nv(jspin),lapw%bkpt,cell%omtil,&
                         lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,z,&
+                        nslibd,lapw%dim_nbasfcn(),input%neig,z,&
                         dirfacs,&
                         surfcurr(:,:,:,ikpt))
 
@@ -1345,12 +1345,12 @@ CONTAINS
                         nablamat(:,:,:,ikpt))
                    IF(input%film.AND..NOT.oneD%odi%d1)THEN
                       CALL wann_nabla_vac(&
-                           cell%z1,vacuum%nmzd,DIMENSION%nv2d,&
+                           cell%z1,vacuum%nmzd,lapw%dim_nv2d(),&
                            stars%mx1,stars%mx2,stars%mx3,&
                            stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,&
                            stars%ig2,cell%area,cell%bmat,cell%bbmat,enpara%evac0(:,jspin),&
                            lapw%bkpt,vz(:,:,jspin2),nslibd,jspin,lapw%k1,lapw%k2,lapw%k3,&
-                           wannierspin,DIMENSION%nvd,DIMENSION%nbasfcn,DIMENSION%neigd,z,nv,&
+                           wannierspin,lapw%dim_nvd(),lapw%dim_nbasfcn(),input%neig,z,nv,&
                            cell%omtil,&
                            nablamat(:,:,:,ikpt))
                    ENDIF
@@ -1414,9 +1414,9 @@ CONTAINS
 
                    CALL wann_mmkb_int(&
                         cmplx_1,addnoco,addnoco,&
-                        DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,&
+                        lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                         stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,&
+                        lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
                         lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
                         lapw%nv(jspin),zMat,nslibd,&
                         nbnd,&
@@ -1439,26 +1439,26 @@ CONTAINS
 
                       CALL wann_mmk0_vac(&
                            noco%l_noco,atoms%nlotot,qpt_i,&
-                           cell%z1,vacuum%nmzd,DIMENSION%nv2d,&
+                           cell%z1,vacuum%nmzd,lapw%dim_nv2d(),&
                            stars%mx1,stars%mx2,stars%mx3,&
                            stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,&
                            stars%ig2,cell%area,cell%bmat,&
                            cell%bbmat,enpara%evac0(:,jspin),lapw%bkpt,vz(:,:,jspin2),&
-                           nslibd,jspin,lapw%k1,lapw%k2,lapw%k3,wannierspin,DIMENSION%nvd,&
-                           DIMENSION%nbasfcn,DIMENSION%neigd,zMat,lapw%nv,cell%omtil,&
+                           nslibd,jspin,lapw%k1,lapw%k2,lapw%k3,wannierspin,lapw%dim_nvd(),&
+                           lapw%dim_nbasfcn(),input%neig,zMat,lapw%nv,cell%omtil,&
                            mmn(:,:,ikpt))
                    ELSEIF (oneD%odi%d1) THEN
 
                       CALL wann_mmk0_od_vac(&
-                           DIMENSION, oneD, vacuum, stars, cell,&
+                            oneD, vacuum, stars, cell,&
                            noco%l_noco,atoms%nlotot,&
-                           cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,&
+                           cell%z1,vacuum%nmzxyd,vacuum%nmzd,lapw%dim_nv2d(),&
                            stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,&
                            stars%ig,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,&
                            oneD%odi%n2d,cell%bbmat,enpara%evac0(1,jspin),lapw%bkpt,oneD%odi%M,&
                            oneD%odi%mb,vz(:,1,jspin2),oneD%odi,&
-                           nslibd,jspin,lapw%k1,lapw%k2,lapw%k3,wannierspin,DIMENSION%nvd,&
-                           cell%area,DIMENSION%nbasfcn,DIMENSION%neigd,zMat,lapw%nv,&
+                           nslibd,jspin,lapw%k1,lapw%k2,lapw%k3,wannierspin,lapw%dim_nvd(),&
+                           cell%area,lapw%dim_nbasfcn(),input%neig,zMat,lapw%nv,&
                            stars%sk2,stars%phi2,cell%omtil,qpt_i,&
                            mmn(:,:,ikpt))
 
@@ -1505,7 +1505,7 @@ CONTAINS
                 !***************************************************************
                 IF (wann%l_matrixmmn .AND.&
                      (.NOT.wann%l_skipkov)) THEN   !  vanderbilt procedure Mmn matrix
-                   ALLOCATE ( we_b(DIMENSION%neigd) )
+                   ALLOCATE ( we_b(input%neig) )
 
 !!! the cycle by the nearest neighbors (nntot) for each kpoint
 
@@ -1524,13 +1524,13 @@ CONTAINS
 
 
                       n_start=1
-                      n_end=DIMENSION%neigd
+                      n_end=input%neig
                       call lapw_b%init(input,noco,kpts,atoms,sym,kptibz_b,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
                       CALL cdn_read(&
                            eig_id,&
-                           DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
-                           kptibz_b,jspin,DIMENSION%nbasfcn,&
-                           noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,&
+                           lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd?&
+                           kptibz_b,jspin,lapw%dim_nbasfcn(),&
+                           noco%l_ss,noco%l_noco,input%neig,n_start,n_end,&
                            nbands_b,eigg,zzMat)
 
 
@@ -1566,7 +1566,7 @@ CONTAINS
                          !     >            noco%l_noco,noco%l_soc,
                          !     >            atoms%ntype,atoms%neq,atoms%nlotot,
                          !     >            kveclo_b,jspin,
-                         !     >            oper_b,sym%nop,sym%mrot,DIMENSION%nvd,
+                         !     >            oper_b,sym%nop,sym%mrot,lapw%dim_nvd(),
                          !     >            nv_b,
                          !     >            shiftkpt(:,bpt(ikpt_b,ikpt)),
                          !     >            sym%tau,
@@ -1622,9 +1622,9 @@ CONTAINS
 
                       CALL wann_mmkb_int(&
                            cmplx_1,addnoco,addnoco2,&
-                           DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,&
+                           lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                            stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                           lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,&
+                           lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
                            lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),&
                            lapw_b%nv(jspin),zMat_b,nslibd_b,&
                            nbnd,&
@@ -1654,7 +1654,7 @@ CONTAINS
 
                          CALL wann_mmkb_vac(&
                               cmplx_1,noco%l_noco,atoms%nlotot,qpt_i,&
-                              nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,&
+                              nbnd,cell%z1,vacuum%nmzd,lapw%dim_nv2d(),&
                               stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,&
                               vacuum%delz,stars%ig2,cell%area,cell%bmat,&
@@ -1663,17 +1663,17 @@ CONTAINS
                               lapw%bkpt,lapw_b%bkpt,vz(:,:,jspin2),vz(:,:,jspin2_b),&
                               nslibd,nslibd_b,jspin,jspin_b,&
                               lapw%k1,lapw%k2,lapw%k3,lapw_b%k1,lapw_b%k2,lapw_b%k3,&
-                              wannierspin,DIMENSION%nvd,&
-                              DIMENSION%nbasfcn,DIMENSION%neigd,zMat,zMat_b,&
+                              wannierspin,lapw%dim_nvd(),&
+                              lapw%dim_nbasfcn(),input%neig,zMat,zMat_b,&
                               lapw%nv,lapw_b%nv,cell%omtil,&
                               gb(:,ikpt_b,ikpt),&
                               mmnk(:,:,ikpt_b,ikpt))
                       ELSEIF (oneD%odi%d1) THEN
 
                          CALL wann_mmkb_od_vac(&
-                              DIMENSION,oneD,vacuum,stars,cell,&
+                              oneD,vacuum,stars,cell,&
                               cmplx_1,noco%l_noco,atoms%nlotot,&
-                              nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,&
+                              nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,lapw%dim_nv2d(),&
                               stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,&
                               stars%ig,vacuum%nmzxy,&
                               vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,&
@@ -1681,8 +1681,8 @@ CONTAINS
                               lapw%bkpt,lapw_b%bkpt,oneD%odi%M,oneD%odi%mb,&
                               vz(:,1,jspin2),vz(:,1,jspin2_b),oneD%odi,&
                               nslibd,nslibd_b,jspin,jspin_b,lapw%k1,lapw%k2,lapw%k3,lapw_b%k1,lapw_b%k2,lapw_b%k3,&
-                              wannierspin,DIMENSION%nvd,cell%area,DIMENSION%nbasfcn,&
-                              DIMENSION%neigd,&
+                              wannierspin,lapw%dim_nvd(),cell%area,lapw%dim_nbasfcn(),&
+                              input%neig,&
                               zMat,zMat_b,lapw%nv,lapw_b%nv,stars%sk2,stars%phi2,cell%omtil,&
                               gb(:,ikpt_b,ikpt),qpt_i,&
                               .FALSE.,1,&
@@ -1709,7 +1709,7 @@ CONTAINS
                    !*******************************************c 
                    !          START Q-NEIGHBOR LOOP            c
                    !*******************************************c      
-                   ALLOCATE ( we_qb(DIMENSION%neigd) )
+                   ALLOCATE ( we_qb(input%neig) )
 
                    DO iqpt_b=1,nntot_q 
                       IF(.NOT.l_gwf) EXIT              ! old functionality
@@ -1736,7 +1736,7 @@ CONTAINS
                       IF (wann%l_bzsym) qptibz_b=irreduc_q(qptibz_b)
 
                       n_start=1
-                      n_end=DIMENSION%neigd
+                      n_end=input%neig
 
                       ! read in diagonalization information from corresponding
                       ! eig file to q-point iqpt_b at a given k-point ikpt.
@@ -1747,9 +1747,9 @@ CONTAINS
                       CALL lapw_qb%init(input,noco,kpts,atoms,sym,kptibz,cell,(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
                       CALL cdn_read(&
                            innerEig_idList(iqpt_b),&
-                           DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd? !kptibz_b2?&
-                           kptibz,jspin_b,DIMENSION%nbasfcn,&
-                           noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,&
+                           lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, &!wannierspin instead of DIMENSION%jspd? !kptibz_b2?&
+                           kptibz,jspin_b,lapw%dim_nbasfcn(),&
+                           noco%l_ss,noco%l_noco,input%neig,n_start,&
                            n_end,&
                            nbands_qb,eigg,   &
                            zzMat)
@@ -1952,9 +1952,9 @@ CONTAINS
                          ! and lattice vectors G(k,q) (k1...) and G(k,q+b) (k1_qb...)
                          IF(wann%l_sgwf) CALL wann_mmkb_int(&
                               interchi,addnoco,addnoco2,&
-                              DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,&
+                              lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                              lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,&
+                              lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
                               lapw_qb%k1(:,jspin_b),lapw_qb%k2(:,jspin_b),lapw_qb%k3(:,jspin_b),&
                               lapw_qb%nv(jspin_b),zMat_qb,nslibd_qb,&
                               nbnd,&
@@ -1963,9 +1963,9 @@ CONTAINS
                               mmnk_q(:,:,iqpt_b,ikpt))                        
                          IF(wann%l_socgwf) CALL wann_mmkb_int(&
                               interchi,addnoco,addnoco2,&
-                              DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,&
+                              lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                              lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,&
+                              lapw%nv(jspin),input%neig,lapw%dim_nbasfcn(),zMat,nslibd,&
                               lapw_qb%k1(:,jspin_b),lapw_qb%k2(:,jspin_b),lapw_qb%k3(:,jspin_b),&
                               lapw_qb%nv(jspin_b),zMat_qb,nslibd_qb,&
                               nbnd,&
@@ -1977,7 +1977,7 @@ CONTAINS
                          IF (input%film .AND. .NOT.oneD%odi%d1) THEN
                             IF(wann%l_sgwf) CALL wann_mmkb_vac(&                   
                                  vacchi,noco%l_noco,atoms%nlotot,sign_q*2.*lapw%bkpt,&
-                                 nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,&
+                                 nbnd,cell%z1,vacuum%nmzd,lapw%dim_nv2d(),&
                                  stars%mx1,stars%mx2,stars%mx3,&
                                  stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,&
                                  vacuum%delz,stars%ig2,cell%area,cell%bmat,&
@@ -1987,14 +1987,14 @@ CONTAINS
                                  vz(:,:,jspin2),vz(:,:,jspin2_b),&
                                  nslibd,nslibd_qb,jspin,jspin_b,&
                                  lapw%k1,lapw%k2,lapw%k3,lapw_qb%k1,lapw_qb%k2,lapw_qb%k3,&
-                                 wannierspin,DIMENSION%nvd,&
-                                 DIMENSION%nbasfcn,DIMENSION%neigd,zMat,zMat_qb,lapw%nv,&
+                                 wannierspin,lapw%dim_nvd(),&
+                                 lapw%dim_nbasfcn(),input%neig,zMat,zMat_qb,lapw%nv,&
                                  lapw_qb%nv,cell%omtil,&
                                  sign_q*gb_q(:,iqpt_b,iqpt)/2,&
                                  mmnk_q(:,:,iqpt_b,ikpt))
                             IF(wann%l_socgwf) CALL wann_mmkb_vac(&  
                                  vacchi,noco%l_noco,atoms%nlotot,qpt_i,&
-                                 nbnd,cell%z1,vacuum%nmzd,DIMENSION%nv2d,&
+                                 nbnd,cell%z1,vacuum%nmzd,lapw%dim_nv2d(),&
                                  stars%mx1,stars%mx2,stars%mx3,&
                                  stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,&
                                  vacuum%delz,stars%ig2,cell%area,cell%bmat,&
@@ -2003,8 +2003,8 @@ CONTAINS
                                  vz(:,:,jspin2),vz(:,:,jspin2_b),&
                                  nslibd,nslibd_qb,jspin,jspin_b,&
                                  lapw%k1,lapw%k2,lapw%k3,lapw_qb%k1,lapw_qb%k2,lapw_qb%k3,&
-                                 wannierspin,DIMENSION%nvd,&
-                                 DIMENSION%nbasfcn,DIMENSION%neigd,zMat,zMat_qb,lapw%nv,&
+                                 wannierspin,lapw%dim_nvd(),&
+                                 lapw%dim_nbasfcn(),input%neig,zMat,zMat_qb,lapw%nv,&
                                  lapw_qb%nv,cell%omtil,&
                                  (/ 0, 0, 0 /),&
                                  mmnk_q(:,:,iqpt_b,ikpt))
@@ -2017,9 +2017,9 @@ CONTAINS
                             ! be provided.
                          ELSEIF (oneD%odi%d1) THEN
                             IF(wann%l_sgwf) CALL wann_mmkb_od_vac(&
-                                 DIMENSION,oneD,vacuum,stars,cell,&
+                                 oneD,vacuum,stars,cell,&
                                  vacchi,noco%l_noco,atoms%nlotot, &          
-                                 nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,&
+                                 nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,lapw%dim_nv2d(),&
                                  stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,&
                                  stars%ig,vacuum%nmzxy,&
                                  vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,&
@@ -2029,16 +2029,16 @@ CONTAINS
                                  vz(:,1,jspin2),vz(:,1,jspin2_b),oneD%odi,&
                                  nslibd,nslibd_qb,jspin,jspin_b,&
                                  lapw%k1,lapw%k2,lapw%k3,lapw_qb%k1,lapw_qb%k2,lapw_qb%k3,&
-                                 wannierspin,DIMENSION%nvd,cell%area,DIMENSION%nbasfcn,&
-                                 DIMENSION%neigd,zMat,zMat_qb,lapw%nv,lapw_qb%nv,stars%sk2,&
+                                 wannierspin,lapw%dim_nvd(),cell%area,lapw%dim_nbasfcn(),&
+                                 input%neig,zMat,zMat_qb,lapw%nv,lapw_qb%nv,stars%sk2,&
                                  stars%phi2,cell%omtil,&
                                  sign_q*gb_q(:,iqpt_b,iqpt)/2,sign_q*2.*lapw%bkpt, &
                                  .TRUE.,sign_q,&
                                  mmnk_q(:,:,iqpt_b,ikpt))
                             IF(wann%l_socgwf) CALL wann_mmkb_od_vac(   &
-                                 DIMENSION,oneD,vacuum,stars,cell,&                
+                                 oneD,vacuum,stars,cell,&                
                                  vacchi,noco%l_noco,atoms%nlotot,&           
-                                 nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,DIMENSION%nv2d,&
+                                 nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,lapw%dim_nv2d(),&
                                  stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,&
                                  stars%ig,vacuum%nmzxy,&
                                  vacuum%nmz,vacuum%delz,stars%ig2,oneD%odi%n2d,&
@@ -2048,8 +2048,8 @@ CONTAINS
                                  vz(:,1,jspin2),vz(:,1,jspin2_b),oneD%odi,&
                                  nslibd,nslibd_qb,jspin,jspin_b,&
                                  lapw%k1,lapw%k2,lapw%k3,lapw_qb%k1,lapw_qb%k2,lapw_qb%k3,&
-                                 wannierspin,DIMENSION%nvd,cell%area,DIMENSION%nbasfcn,&
-                                 DIMENSION%neigd,zMat,zMat_qb,lapw%nv,lapw_qb%nv,stars%sk2,&
+                                 wannierspin,lapw%dim_nvd(),cell%area,lapw%dim_nbasfcn(),&
+                                 input%neig,zMat,zMat_qb,lapw%nv,lapw_qb%nv,stars%sk2,&
                                  stars%phi2,cell%omtil,&
                                  (/ 0, 0, 0 /),qpt_i, &
                                  .FALSE.,1,&
@@ -2089,8 +2089,8 @@ CONTAINS
                             WRITE (6,*) 'we(nnne)=',we(sliceplot%nnne)
 
                             CALL wann_plot(&
-                                 DIMENSION,oneD,vacuum,stars,cell,atoms,&
-                                 DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,&
+                                 oneD,vacuum,stars,cell,atoms,&
+                                 lapw%dim_nv2d(),jspin,oneD%odi,oneD%ods,stars%ng3,&
                                  vacuum%nmzxyd,&
                                  stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,&
                                  atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,&
@@ -2100,11 +2100,11 @@ CONTAINS
                                  sym%ngopr,sym%ntypsy,atoms%jri,atoms%pos,atoms%zatom,&
                                  atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,&
                                  cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,&
-                                 sliceplot%kk,DIMENSION%nvd,atoms%nlod,atoms%llod,&
+                                 sliceplot%kk,lapw%dim_nvd(),atoms%nlod,atoms%llod,&
                                  lapw%nv(jspin),lmd,lapw%bkpt,cell%omtil,atoms%nlo,atoms%llo,&
                                  lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),enpara%evac0(:,jspin),&
                                  vz(:,:,jspin2),&
-                                 nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,&
+                                 nslibd,lapw%dim_nbasfcn(),input%neig,&
                                  ff(:,:,:,:,jspin),&
                                  gg(:,:,:,:,jspin),flo,acof,bcof,ccof,zMat,&
                                  stars%mx1,stars%mx2,stars%mx3,stars%ig,stars%ig2,&
@@ -2116,8 +2116,8 @@ CONTAINS
                       ELSE ! not sliceplot%slice
 
                          CALL wann_plot(&
-                              DIMENSION,oneD,vacuum,stars,cell,atoms,&
-                              DIMENSION%nv2d,jspin,oneD%odi,oneD%ods,stars%ng3,&
+                              oneD,vacuum,stars,cell,atoms,&
+                              lapw%dim_nv2d(),jspin,oneD%odi,oneD%ods,stars%ng3,&
                               vacuum%nmzxyd,&
                               stars%ng2,sphhar%ntypsd,atoms%ntype,atoms%lmaxd,&
                               atoms%jmtd,atoms%ntype,atoms%nat,vacuum%nmzd,atoms%neq,&
@@ -2127,11 +2127,11 @@ CONTAINS
                               sym%ngopr,sym%ntypsy,atoms%jri,atoms%pos,atoms%zatom,&
                               atoms%lmax,sym%mrot,sym%tau,atoms%rmsh,sym%invtab,&
                               cell%amat,cell%bmat,cell%bbmat,ikpt,sliceplot%nnne,&
-                              sliceplot%kk,DIMENSION%nvd,atoms%nlod,atoms%llod,&
+                              sliceplot%kk,lapw%dim_nvd(),atoms%nlod,atoms%llod,&
                               lapw%nv(jspin),lmd,lapw%bkpt,cell%omtil,atoms%nlo,atoms%llo,&
                               lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),enpara%evac0(:,jspin),&
                               vz(:,:,jspin2),&
-                              nslibd,DIMENSION%nbasfcn,DIMENSION%neigd,&
+                              nslibd,lapw%dim_nbasfcn(),input%neig,&
                               ff(:,:,:,:,jspin),&
                               gg(:,:,:,:,jspin),flo,acof,bcof,ccof,zMat,&
                               stars%mx1,stars%mx2,stars%mx3,stars%ig,stars%ig2,&
@@ -2501,7 +2501,7 @@ CONTAINS
 
        CALL timeStop("Wannier total")
        CALL wann_postproc(&
-            DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
+            stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
             lapw,oneD,noco,cell,vTot,enpara,sliceplot,eig_id,l_real,&                !eig_id is used here after closing the files?!&
             wann,fullnkpts,l_proj,results%ef,wann%l_sgwf,fullnqpts)
 

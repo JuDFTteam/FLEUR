@@ -59,7 +59,7 @@ CONTAINS
     this%firstloop=.FALSE.
   END FUNCTION forcetheo_next_job
 
-  FUNCTION forcetheo_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+  FUNCTION forcetheo_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
     USE m_types_atoms
     USE m_types_oneD
@@ -79,7 +79,7 @@ CONTAINS
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco

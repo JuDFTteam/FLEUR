@@ -115,18 +115,18 @@ CONTAINS
 
    END SUBROUTINE zMat_init
 
-   SUBROUTINE results_init(thisResults,dimension,input,atoms,kpts,noco)
+   SUBROUTINE results_init(thisResults,input,atoms,kpts,noco)
 
      USE m_types_atoms
      USE m_types_input
      USE m_types_noco
      USE m_types_dimension
-      USE m_types_kpts
-
+     USE m_types_kpts
+     USE m_types_lapw
       IMPLICIT NONE
 
       CLASS(t_results),      INTENT(INOUT) :: thisResults
-      TYPE(t_dimension),     INTENT(IN)    :: dimension
+      
       TYPE(t_input),         INTENT(IN)    :: input
       TYPE(t_atoms),         INTENT(IN)    :: atoms
       TYPE(t_kpts),          INTENT(IN)    :: kpts
@@ -153,8 +153,8 @@ CONTAINS
       thisResults%bandgap         = 0.0
       thisResults%ef              = 0.0
 
-      neigd2 = MIN(dimension%neigd,dimension%nbasfcn)
-!   neigd2 = dimension%neigd
+      neigd2 = MIN(input%neig,lapw_dim_nbasfcn)
+!   neigd2 = input%neig
       IF (noco%l_soc.AND.(.NOT.noco%l_noco)) neigd2 = 2*neigd2
 
       ALLOCATE (thisResults%force(3,atoms%ntype,input%jspins));thisResults%force=0.0

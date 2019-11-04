@@ -10,12 +10,12 @@ MODULE m_writexcstuff
   !
 CONTAINS
   SUBROUTINE write_xcstuff(&
-       &                         sphhar,atoms,dimension,sym,&
+       &                         sphhar,atoms,sym,&
        &                         stars,vacuum,input)
 
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_sym),INTENT(IN)         :: sym

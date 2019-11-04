@@ -7,7 +7,7 @@
 MODULE m_wann_postproc
 CONTAINS 
   SUBROUTINE wann_postproc(&
-       DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
+       stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,&
        lapw,oneD,noco,cell,vTot,enpara,sliceplot,eig_id,l_real,&
        wann, fullnkpts, l_proj,ef,l_sgwf,fullnqpts)
     !     <          fermi_weights)
@@ -53,7 +53,7 @@ CONTAINS
 #endif
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
+    
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -77,7 +77,7 @@ CONTAINS
     LOGICAL,      INTENT(in) :: l_proj
     REAL,    INTENT (in) :: ef
     LOGICAL, INTENT (in) :: l_sgwf
-    !      real,intent(inout)   :: fermi_weights(:,:,:) !(dimension%neigd,nkptd,jspd)
+    !      real,intent(inout)   :: fermi_weights(:,:,:) !(input%neig,nkptd,jspd)
 
     CHARACTER(len=12) :: fending
     INTEGER :: i,nkpts,ikpt,nkqpts,iqpt
@@ -162,14 +162,14 @@ CONTAINS
 
        !         call wann_plotw90(i,wann%band_min,wann%band_max,numbands,nwfs,
        !     >   atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,
-       !     >      dimension%neigd,atoms%nat,sym%nop,dimension%nvd,jspd,dimension%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,
+       !     >      input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),jspd,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,
        !     >      nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,
        !     >      sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,
        !     >      noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,
        !     >      size(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,
        !     >      sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,
        !     >      stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,
-       !     >      cell%z1,dimension%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,
+       !     >      cell%z1,lapw%dim_nv2d(),vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,
        !     >      cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,irecl)
 
     ENDIF
@@ -244,7 +244,7 @@ CONTAINS
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             l_nocosoc,wann%band_min,wann%band_max,&
-            DIMENSION%neigd,wann%l_socmmn0,wann%l_ndegen,ndegen,&
+            input%neig,wann%l_socmmn0,wann%l_ndegen,ndegen,&
             wann%wan90version,wann%l_unformatted)
     ENDIF
 
@@ -253,7 +253,7 @@ CONTAINS
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             noco%l_soc,wann%band_min,wann%band_max,&
-            DIMENSION%neigd,.FALSE.,&
+            input%neig,.FALSE.,&
             wann%wan90version)
     ENDIF
 
@@ -266,7 +266,7 @@ CONTAINS
             'WF1.orbcomp','orbcomp.1',&
             rvecnum,rvec,kpoints,&
             1,fullnkpts,input%film,&
-            noco%l_soc,wann%band_min,wann%band_max,DIMENSION%neigd,&
+            noco%l_soc,wann%band_min,wann%band_max,input%neig,&
             wann%wan90version)
        IF( input%jspins.EQ.2 )THEN
           spinspin=2
@@ -277,7 +277,7 @@ CONTAINS
                'WF2.orbcomp','orbcomp.2',&
                rvecnum,rvec,kpoints,&
                spinspin,fullnkpts,input%film,&
-               noco%l_soc,wann%band_min,wann%band_max,DIMENSION%neigd,&
+               noco%l_soc,wann%band_min,wann%band_max,input%neig,&
                wann%wan90version)
        ENDIF
     ENDIF
@@ -288,7 +288,7 @@ CONTAINS
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             l_nocosoc,wann%band_min,wann%band_max,&
-            DIMENSION%neigd,.FALSE.,wann%wan90version)
+            input%neig,.FALSE.,wann%wan90version)
     ENDIF
 
 
@@ -298,7 +298,7 @@ CONTAINS
             'anglmomrs.1',.FALSE.,&
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
-            noco%l_soc,wann%band_min,wann%band_max,DIMENSION%neigd,&
+            noco%l_soc,wann%band_min,wann%band_max,input%neig,&
             .FALSE.,wann%wan90version)
     ENDIF
 
@@ -307,7 +307,7 @@ CONTAINS
        CALL wann_offdiposop_rs(&
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
-            noco%l_soc,wann%band_min,wann%band_max,DIMENSION%neigd,&
+            noco%l_soc,wann%band_min,wann%band_max,input%neig,&
             .FALSE.)
     ENDIF
 
@@ -315,7 +315,7 @@ CONTAINS
        CALL wann_fft5(&
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
-            noco%l_soc,wann%band_min,wann%band_max,DIMENSION%neigd,&
+            noco%l_soc,wann%band_min,wann%band_max,input%neig,&
             .FALSE.)
     ENDIF
 
@@ -324,7 +324,7 @@ CONTAINS
             'WF1.perturb'  ,'perturbrs.1'  ,.FALSE.,&
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
-            noco%l_soc,wann%band_min,wann%band_max,DIMENSION%neigd,&
+            noco%l_soc,wann%band_min,wann%band_max,input%neig,&
             .FALSE.)
     ENDIF
 
@@ -334,13 +334,13 @@ CONTAINS
                'WF1.socspicom','socspicomrs.1',.TRUE.,&
                rvecnum,rvec,kpoints,&
                input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
-               noco%l_soc,wann%band_min,wann%band_max,DIMENSION%neigd,&
+               noco%l_soc,wann%band_min,wann%band_max,input%neig,&
                .FALSE.)
        ELSE
           CALL wann_fft6(&
                rvecnum,rvec,kpoints,&
                input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
-               noco%l_soc,wann%band_min,wann%band_max,DIMENSION%neigd,&
+               noco%l_soc,wann%band_min,wann%band_max,input%neig,&
                .FALSE.)
        ENDIF
     ENDIF
@@ -352,7 +352,7 @@ CONTAINS
             atoms%ntype,atoms%neq,rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             noco%l_soc,wann%band_min,wann%band_max,&
-            DIMENSION%neigd,.FALSE.)
+            input%neig,.FALSE.)
     ENDIF
 #endif
     IF (wann%l_nablapaulirs.AND.mpi%irank==0)THEN
@@ -360,7 +360,7 @@ CONTAINS
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             noco%l_soc,wann%band_min,wann%band_max,&
-            DIMENSION%neigd,.FALSE.,wann%wan90version)
+            input%neig,.FALSE.,wann%wan90version)
     ENDIF
 
     IF (wann%l_pauli.AND.mpi%irank==0)THEN
@@ -368,7 +368,7 @@ CONTAINS
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             l_nocosoc,wann%band_min,wann%band_max,&
-            DIMENSION%neigd,.FALSE.,wann%l_ndegen,ndegen,&
+            input%neig,.FALSE.,wann%l_ndegen,ndegen,&
             wann%wan90version,wann%l_unformatted)
     ENDIF
 
@@ -377,7 +377,7 @@ CONTAINS
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             noco%l_soc,wann%band_min,wann%band_max,&
-            DIMENSION%neigd,.FALSE.,wann%l_ndegen,ndegen,wann%wan90version,&
+            input%neig,.FALSE.,wann%l_ndegen,ndegen,wann%wan90version,&
             wann%l_unformatted)
     ENDIF
 
@@ -386,23 +386,23 @@ CONTAINS
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film,oneD%odi%d1,&
             noco%l_soc,wann%band_min,wann%band_max,&
-            DIMENSION%neigd,.FALSE.,wann%wan90version)
+            input%neig,.FALSE.,wann%wan90version)
     ENDIF
 
     IF(wann%l_plot_umdat)THEN
        CALL wann_plot_um_dat(&
-            DIMENSION,stars,vacuum,atoms,sphhar,input,sym,mpi,&
+            stars,vacuum,atoms,sphhar,input,sym,mpi,&
             lapw,oneD,noco,cell,vTot,enpara,eig_id,l_real,&
             mpi%mpi_comm,i,wann%band_min,wann%band_max,noco%l_soc,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
-            DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,&
+            input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
             cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
             sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
             sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
-            cell%z1,DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
+            cell%z1,lapw%dim_nv2d(),vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,wann%l_proj_plot,&
             wann%wan90version)
     ENDIF
@@ -416,14 +416,14 @@ CONTAINS
             vTot,&
             noco%l_soc,wann%unigrid,i,wann%band_min,wann%band_max,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
-            DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,&
+            input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
             cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
             sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
             sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
-            cell%z1,DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
+            cell%z1,lapw%dim_nv2d(),vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,wann%l_proj_plot,&
             wann%wan90version)
     ENDIF
@@ -433,14 +433,14 @@ CONTAINS
        CALL wannier_to_lapw_kpts(&
             unigrid,i,wann%band_min,wann%band_max,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
-            DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,&
+            input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
             nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
             sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
             sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
-            cell%z1,DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
+            cell%z1,lapw%dim_nv2d(),vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,wann%l_proj_plot,irecl)
 #else
        CALL juDFT_error("not yet tested in this release",calledby&
@@ -452,14 +452,14 @@ CONTAINS
        CALL wannier_lapw_gfleur(&
             gfthick,gfcut,i,wann%band_min,wann%band_max,&
             atoms%l_dulo,noco%l_noco,noco%l_ss,atoms%lmaxd,atoms%ntype,&
-            DIMENSION%neigd,atoms%nat,sym%nop,DIMENSION%nvd,input%jspins,DIMENSION%nbasfcn,atoms%llod,atoms%nlod,atoms%ntype,&
+            input%neig,atoms%nat,sym%nop,lapw%dim_nvd(),input%jspins,lapw%dim_nbasfcn(),atoms%llod,atoms%nlod,atoms%ntype,&
             nwdd,cell%omtil,atoms%nlo,atoms%llo,atoms%lapw_l,sym%invtab,sym%mrot,sym%ngopr,atoms%neq,atoms%lmax,&
             sym%invsat,sym%invsatnr,kpts%nkpt,atoms%taual,atoms%rmt,cell%amat,cell%bmat,cell%bbmat,noco%alph,&
             noco%beta,noco%qss,stars%sk2,stars%phi2,oneD%odi,oneD%ods,mpi%irank,mpi%isize,stars%ng3,vacuum%nmzxyd,vacuum%nmzd,&
             SIZE(atoms%rmsh,1),sphhar%nlhd,stars%ng3,vacuum%nvac,sym%invs,sym%invs2,input%film,sphhar%nlh,atoms%jri,sphhar%ntypsd,&
             sym%ntypsy,input%jspins,kpts%nkpt,atoms%dx,stars%ng2,atoms%rmsh,sliceplot%e1s,sliceplot%e2s,atoms%ulo_der,&
             stars%ustep,stars%ig,stars%mx1,stars%mx2,stars%mx3,stars%rgphs,sliceplot%slice,sliceplot%kk,sliceplot%nnne,&
-            cell%z1,DIMENSION%nv2d,vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
+            cell%z1,lapw%dim_nv2d(),vacuum%nmzxy,vacuum%nmz,vacuum%delz,stars%ig2,cell%area,sym%tau,atoms%zatom,stars%ng2,sym%nop2,&
             cell%volint,sym%symor,atoms%pos,ef,wann%l_bzsym,wann%l_proj_plot,irecl)
 #else
        CALL juDFT_error("not yet tested in this release",calledby&
@@ -475,7 +475,7 @@ CONTAINS
        CALL juDFT_error("not yet tested in this release",calledby&
             ="wann_postproc")
        !         call wann_plot_from_lapw(
-       !     >     dimension%nv2d,input%jspins,oneD%odi,oneD%ods,stars%ng3,vacuum%nmzxyd,stars%ng2,
+       !     >     lapw%dim_nv2d(),input%jspins,oneD%odi,oneD%ods,stars%ng3,vacuum%nmzxyd,stars%ng2,
        !     >     sphhar%ntypsd,
        !     >     atoms%ntype,atoms%lmaxd,size(atoms%rmsh,1),atoms%nat,vacuum%nmzd,atoms%neq,stars%ng3,vacuum%nvac,
        !     >     vacuum%nmz,vacuum%nmzxy,stars%ng2,sym%nop,sym%nop2,cell%volint,input%film,sliceplot%slice,sym%symor,

@@ -9,7 +9,7 @@ MODULE m_hsmt_nonsph_GPU
 
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_nonsph_GPU(DIMENSION,atoms,sym,SUB_COMM, n_size,n_rank,input,isp,nintsp,&
+  SUBROUTINE hsmt_nonsph_GPU(atoms,sym,SUB_COMM, n_size,n_rank,input,isp,nintsp,&
        hlpmsize,noco,l_socfirst, lapw, cell,tlmplm, fj,gj,gk,vk,oneD,l_real,aa_r,aa_c)
 
 #include"cpp_double.h"
@@ -23,7 +23,7 @@ CONTAINS
         USE cublas
 #endif
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)     :: oneD
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -64,7 +64,7 @@ CONTAINS
     !     .. Local Arrays ..
     COMPLEX,ALLOCATABLE :: aa_block(:,:)
     COMPLEX,ALLOCATABLE :: dtd(:,:),dtu(:,:),utd(:,:),utu(:,:)
-    REAL   :: bmrot(3,3),gkrot(DIMENSION%nvd,3),vmult(3),v(3)
+    REAL   :: bmrot(3,3),gkrot(lapw%dim_nvd(),3),vmult(3),v(3)
     COMPLEX:: ylm( (atoms%lmaxd+1)**2 ),chi(2,2)
     !     ..
 #if defined(_OPENACC)
@@ -96,9 +96,9 @@ CONTAINS
 
     ab_dim=1
     IF (noco%l_ss) ab_dim=2
-    ALLOCATE(a(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim),b(DIMENSION%nvd,0:DIMENSION%lmd,ab_dim))
-    ALLOCATE(ax(DIMENSION%nvd,0:DIMENSION%lmd),bx(DIMENSION%nvd,0:DIMENSION%lmd))
-    ALLOCATE(c_ph(DIMENSION%nvd,ab_dim))
+    ALLOCATE(a(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim),b(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2),ab_dim))
+    ALLOCATE(ax(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2)),bx(lapw%dim_nvd(),0:atoms%lmaxd*(atoms%lmaxd+2)))
+    ALLOCATE(c_ph(lapw%dim_nvd(),ab_dim))
 
 
     !$acc data copy(aa_r,aa_c) copyin(tlmplm, tlmplm%tdd, tlmplm%tdu, tlmplm%tud,tlmplm%tuu, tlmplm%ind, atoms,atoms%lnonsph,lapw,lapw%nv,noco ) create(utu,utd,dtu,dtd,ax,bx,a,b,aa_block,aahlp)
@@ -289,7 +289,7 @@ CONTAINS
                                !comments below must be reactivated
                                !aahlp(ii+1:ii+ki) = aahlp(ii+1:ii+ki)+MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:,iintsp))+MATMUL(CONJG(bx(:ki,:lmp)),b(ki,:lmp,iintsp))
                             ELSE                    ! components for <2||2> block unused
-                               !aa_tmphlp(:ki) = MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:DIMENSION%lmd)),b(ki,:lmp,iintsp))
+                               !aa_tmphlp(:ki) = MATMUL(CONJG(ax(:ki,:lmp)),a(ki,:lmp,iintsp))+MATMUL(CONJG(bx(:ki,:atoms%lmaxd*(atoms%lmaxd+2))),b(ki,:lmp,iintsp))
                                !--->                   spin-down spin-down part
                                ij = ii + lapw%nv(1)
                                aa_c(ij+1:ij+ki)=aa_c(ij+1:ij+ki)+chi22*aa_tmphlp(:ki)

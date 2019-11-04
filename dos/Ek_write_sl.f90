@@ -1,14 +1,14 @@
 MODULE m_Ekwritesl
   use m_juDFT
 CONTAINS
-  SUBROUTINE Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspin,sym,cell,dos,slab,orbcomp,results)
+  SUBROUTINE Ek_write_sl(eig_id,kpts,atoms,vacuum,input,jspin,sym,cell,dos,slab,orbcomp,results)
     !-----------------------------------------------------------------
     !-- now write E(k) for all kpts if on T3E
     !-- now read data from tmp_dos and write of E(k) in  ek_orbcomp
     !-----------------------------------------------------------------
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_sym),INTENT(IN)         :: sym
@@ -39,7 +39,7 @@ CONTAINS
     IF (slab%nsl.GT.slab%nsld)  THEN
        CALL juDFT_error("nsl.GT.nsld",calledby="Ek_write_sl")
     ENDIF
-    ALLOCATE(eig(dimension%neigd))
+    ALLOCATE(eig(input%neig))
     !  --->     open files for a bandstucture with an orbital composition
     !  --->     in the case of the film geometry
     !

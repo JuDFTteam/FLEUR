@@ -88,7 +88,7 @@ CONTAINS
   END SUBROUTINE chase_distance
 
 #ifdef CPP_CHASE
-    SUBROUTINE init_chase(mpi,DIMENSION,input,atoms,kpts,noco,l_real)
+    SUBROUTINE init_chase(mpi,input,atoms,kpts,noco,l_real)
     USE m_types_mpimat
     USE m_types_setup
     USE m_types_mpi
@@ -98,7 +98,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_mpi),               INTENT(IN)    :: mpi
-    TYPE(t_dimension),         INTENT(IN)    :: dimension
+    
     TYPE(t_input),             INTENT(IN)    :: input
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     TYPE(t_kpts),              INTENT(IN)    :: kpts
@@ -116,9 +116,9 @@ CONTAINS
     !ENDIF
     
     IF (TRIM(juDFT_string_for_argument("-diag"))=="chase") THEN
-       nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
-       nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
-       chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,input%jspins,&
+       nevd = min(input%neig,lapw%dim_nvd()+atoms%nlotot)
+       nexd = min(max(nevd/4, 45),lapw%dim_nvd()+atoms%nlotot-nevd) !dimensioning for workspace
+       chase_eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),nevd+nexd,kpts%nkpt,input%jspins,&
                              noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
     END IF
   END SUBROUTINE init_chase

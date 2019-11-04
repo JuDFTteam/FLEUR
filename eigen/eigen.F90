@@ -18,7 +18,7 @@ CONTAINS
    !>
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
-   SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+   SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx)
 
 #include"cpp_double.h"
@@ -46,7 +46,7 @@ CONTAINS
       TYPE(t_results),INTENT(INOUT):: results
       CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_mpi),INTENT(IN)       :: mpi
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_hybrid),INTENT(INOUT) :: hybrid
       TYPE(t_enpara),INTENT(INOUT) :: enpara
@@ -103,9 +103,9 @@ CONTAINS
       character(len=300)        :: errmsg
 
       call ud%init(atoms,input%jspins)
-      ALLOCATE(eig(DIMENSION%neigd))
+      ALLOCATE(eig(input%neig))
       ALLOCATE(bkpt(3))
-      ALLOCATE(eigBuffer(DIMENSION%neigd,kpts%nkpt,input%jspins))
+      ALLOCATE(eigBuffer(input%neig,kpts%nkpt,input%jspins))
       ALLOCATE(nvBuffer(kpts%nkpt,MERGE(1,input%jspins,noco%l_noco)),nvBufferTemp(kpts%nkpt,MERGE(1,input%jspins,noco%l_noco)))
 
       l_real=sym%invs.AND..NOT.noco%l_noco
@@ -124,7 +124,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
+      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,td,ud)
 
       neigBuffer = 0
       results%neig = 0
@@ -140,7 +140,7 @@ CONTAINS
             ! Set up lapw list
             CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,mpi,DIMENSION,hybrid,enpara,input,vacuum,noco,sym,&
+            CALL eigen_hssetup(jsp,mpi,hybrid,enpara,input,vacuum,noco,sym,&
                                stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
@@ -171,16 +171,16 @@ CONTAINS
                PRINT *,"TODO"
 !             STOP "TODO"
                PRINT *,"BASIS:", lapw%nv(jsp), atoms%nlotot
-               IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybrid,dimension,kpts,jsp,results,xcpot,noco,hmat)
+               IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybrid,input,kpts,jsp,results,xcpot,noco,hmat)
 
                IF(hybrid%l_subvxc) THEN
-                  CALL subvxc(lapw,kpts%bk(:,nk),DIMENSION,input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
+                  CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
                               sym,cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
                END IF
             END IF ! hybrid%l_hybrid
 
             l_wu=.FALSE.
-            ne_all=DIMENSION%neigd
+            ne_all=input%neig
             IF(ne_all < 0) ne_all = lapw%nmat
             IF(ne_all > lapw%nmat) ne_all = lapw%nmat
 
@@ -211,7 +211,7 @@ CONTAINS
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
             CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
-              
+
             CALL smat%free()
             CALL hmat%free()
             DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
@@ -224,7 +224,7 @@ CONTAINS
             ! Collect number of all eigenvalues
             ne_found=ne_all
             CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, mpi%sub_comm,ierr)
-            ne_all=MIN(DIMENSION%neigd,ne_all)
+            ne_all=MIN(input%neig,ne_all)
 #else
             ne_found=ne_all
 #endif
@@ -233,7 +233,7 @@ CONTAINS
             END IF
             IF (mpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
-                ! eigenvalues. 
+                ! eigenvalues.
                 CALL write_eig(eig_id, nk,jsp,ne_found,ne_all,&
                            eig(:ne_all),n_start=mpi%n_size,n_end=mpi%n_rank,zMat=zMat)
                 eigBuffer(:ne_all,nk,jsp) = eig(:ne_all)
@@ -249,7 +249,7 @@ CONTAINS
             CALL timestop("EV output")
 
             IF (banddos%unfoldband) THEN
-               IF(modulo (kpts%nkpt,mpi%n_size).NE.0) call juDFT_error("number kpts needs to be multiple of number mpi threads",& 
+               IF(modulo (kpts%nkpt,mpi%n_size).NE.0) call juDFT_error("number kpts needs to be multiple of number mpi threads",&
                    hint=errmsg, calledby="eigen.F90")
                CALL calculate_plot_w_n(banddos,cell,kpts,smat_unfold,zMat,lapw,nk,jsp,eig,results,input,atoms,unfoldingBuffer,mpi)
                CALL smat_unfold%free()
@@ -263,7 +263,7 @@ CONTAINS
          END DO  k_loop
       END DO ! spin loop ends
 
-      neigd2 = MIN(dimension%neigd,dimension%nbasfcn)
+      neigd2 = MIN(input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
       IF (banddos%unfoldband) THEN
          results%unfolding_weights = CMPLX(0.0,0.0)
@@ -301,4 +301,3 @@ CONTAINS
       enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)
    END SUBROUTINE eigen
 END MODULE m_eigen
-

@@ -7,7 +7,7 @@ MODULE m_cdngen
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
-                  dimension,kpts,atoms,sphhar,stars,sym,&
+                  kpts,atoms,sphhar,stars,sym,&
                   enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                   archiveType, xcpot,outDen,EnergyDen)
 
@@ -49,7 +49,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    ! Type instance arguments
    TYPE(t_results),INTENT(INOUT)    :: results
    TYPE(t_mpi),INTENT(IN)           :: mpi
-   TYPE(t_dimension),INTENT(IN)     :: dimension
+   
    TYPE(t_oneD),INTENT(IN)          :: oneD
    TYPE(t_enpara),INTENT(INOUT)     :: enpara
    TYPE(t_banddos),INTENT(IN)       :: banddos
@@ -95,11 +95,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    LOGICAL               :: l_error, perform_MetaGGA
 
    CALL regCharges%init(input,atoms)
-   CALL dos%init(dimension%neigd,input,atoms,kpts,vacuum)
+   CALL dos%init(input%neig,input,atoms,kpts,vacuum)
    CALL moments%init(input,atoms)
-   CALL mcd%init1(banddos,dimension,input,atoms,kpts)
-   CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
-   CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
+   CALL mcd%init1(banddos,input,atoms,kpts)
+   CALL slab%init(banddos,atoms,cell,input,kpts)
+   CALL orbcomp%init(input,banddos,atoms,kpts)
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
@@ -116,7 +116,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,jspmax
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
-      CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+      CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
    END DO
    call val_den%copyPotDen(outDen)
@@ -124,7 +124,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
       CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars,&
-                             vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
+                             vacuum,  sphhar, sym, vTot, oneD, results, EnergyDen)
    endif
 
    IF (mpi%irank == 0) THEN
@@ -140,9 +140,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          CALL closeBandDOSFile(banddosFile_id)
 #endif
          CALL timestart("cdngen: dos")
-         CALL doswrite(eig_id,dimension,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
+         CALL doswrite(eig_id,kpts,atoms,vacuum,input,banddos,sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
          IF (banddos%dos.AND.(banddos%ndir == -3)) THEN
-            CALL Ek_write_sl(eig_id,dimension,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab,orbcomp,results)
+            CALL Ek_write_sl(eig_id,kpts,atoms,vacuum,input,jspmax,sym,cell,dos,slab,orbcomp,results)
          END IF
          CALL timestop("cdngen: dos")
       END IF
@@ -166,10 +166,10 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then
-      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+      CALL cdncore(mpi,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
    else
-      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+      CALL cdncore(mpi,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results)
    endif
    call core_den%subPotDen(outDen, val_den)
@@ -186,7 +186,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
          noco_new = noco
 
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
-         CALL magMoms(dimension,input,atoms,noco_new,vTot,moments)
+         CALL magMoms(input,atoms,noco_new,vTot,moments)
 
          noco = noco_new
 

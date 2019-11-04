@@ -15,7 +15,7 @@ MODULE m_mix
 
 contains
 
-  SUBROUTINE mix_charge( field, DIMENSION,  mpi, l_writehistory,&
+  SUBROUTINE mix_charge( field,   mpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
        oneD, archiveType, xcpot, iteration, inDen, outDen, results )
 
@@ -44,7 +44,7 @@ contains
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
-    type(t_dimension), intent(in)    :: dimension
+    
     type(t_mpi),       intent(in)    :: mpi
     TYPE(t_atoms),TARGET,INTENT(in)  :: atoms 
     class(t_xcpot), intent(in)       :: xcpot
@@ -88,7 +88,7 @@ contains
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 )  THEN 
        CALL timestart("Preconditioner")
-       CALL kerker( field, DIMENSION, mpi, &
+       CALL kerker( field,  mpi, &
                     stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
                     oneD, inDen, outDen, fsm(it) )
        !Store modified density in history

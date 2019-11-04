@@ -50,7 +50,7 @@ CONTAINS
     REAL,INTENT(IN)      :: e_min
     !     ..
     !     .. Array Arguments ..
-    !REAL,    INTENT (OUT):: w(:,:,:) !(dimension%neigd,kpts%nkpt,dimension%jspd)
+    !REAL,    INTENT (OUT):: w(:,:,:) !(input%neig,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
     REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv

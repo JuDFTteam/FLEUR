@@ -12,7 +12,7 @@ USE m_juDFT
 
 CONTAINS
 
-SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
+SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,vacuum,&
                  input,cell,xcpot,noco,oneD)
 
    USE m_constants
@@ -30,7 +30,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
    TYPE(t_mpi),INTENT(IN)      :: mpi
    TYPE(t_atoms),INTENT(IN)    :: atoms
-   TYPE(t_dimension),INTENT(IN):: DIMENSION
+   
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
    TYPE(t_sym),INTENT(IN)      :: sym
    TYPE(t_stars),INTENT(IN)    :: stars
@@ -148,7 +148,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
                END DO
             END DO
          ELSE
-            CALL atom2(DIMENSION,atoms,xcpot,input,n,jrc(n),rnot,qdel,&
+            CALL atom2(atoms,xcpot,input,n,jrc(n),rnot,qdel,&
                        rhoss,nst(n),lnum(1,n),eig(1,1,n),vbar(1,n),.true.)
             DO ispin = 1, input%jspins
                DO i = 1, jrc(n) ! atoms%msh
@@ -189,7 +189,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    END IF ! mpi%irank == 0
 
    DO ispin = 1, input%jspins
-      CALL cdnovlp(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
+      CALL cdnovlp(mpi,sphhar,stars,atoms,sym,vacuum,&
                    cell,input,oneD,l_st,ispin,rh1(:,:,ispin),&
                    den%pw,den%vacxy,den%mt,den%vacz)
       !roa-
@@ -214,7 +214,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
       IF (input%vchk) THEN
          DO ispin = 1, input%jspins
             WRITE (6,'(a8,i2)') 'spin No.',ispin
-            CALL checkDOPAll(input,dimension,sphhar,stars,atoms,sym,vacuum,oneD,&
+            CALL checkDOPAll(input,sphhar,stars,atoms,sym,vacuum,oneD,&
                            cell,den,ispin)
          END DO ! ispin = 1, input%jspins
       END IF ! input%vchk

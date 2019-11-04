@@ -33,10 +33,10 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT (OUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(dimension%neigd)
+    REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(input%neig)
     !     ..
     !     .. Local Scalars ..
     COMPLEX cexp,phase,c_0,c_1,c_2

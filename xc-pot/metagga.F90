@@ -46,7 +46,7 @@ CONTAINS
 
 
    SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
-         vacuum, DIMENSION, sphhar, sym, vTot, oneD, results, EnergyDen)
+         vacuum,  sphhar, sym, vTot, oneD, results, EnergyDen)
       ! calculates the energy density
       ! EnergyDen = \sum_i n_i(r) \varepsilon_i
       ! where n_i(r) is the one-particle density
@@ -76,7 +76,7 @@ CONTAINS
       TYPE(t_enpara),    INTENT(in)           :: enpara
       TYPE(t_stars),     INTENT(in)           :: stars
       TYPE(t_vacuum),    INTENT(in)           :: vacuum
-      TYPE(t_dimension), INTENT(in)           :: DIMENSION
+      
       TYPE(t_sphhar),    INTENT(in)           :: sphhar
       TYPE(t_sym),       INTENT(in)           :: sym
       TYPE(t_potden),    INTENT(in)           :: vTot
@@ -96,7 +96,7 @@ CONTAINS
 
 
       CALL regCharges%init(input, atoms)
-      CALL dos%init(DIMENSION%neigd,input,atoms,kpts, vacuum)
+      CALL dos%init(input%neig,input,atoms,kpts, vacuum)
       CALL moments%init(input,    atoms)
       tmp_results = results
 
@@ -108,7 +108,7 @@ CONTAINS
          CALL calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
 
          CALL cdnval(eig_id, mpi, kpts, jspin, noco, input, banddos, cell, atoms, &
-            enpara, stars, vacuum, DIMENSION, sphhar, sym, vTot, oneD, cdnvalJob, &
+            enpara, stars, vacuum,  sphhar, sym, vTot, oneD, cdnvalJob, &
             EnergyDen, regCharges, dos, tmp_results, moments)
       ENDDO
 

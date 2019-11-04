@@ -8,13 +8,13 @@ MODULE m_hssrwu
   !                r. wu  1992
   !*********************************************************************
 CONTAINS
-  SUBROUTINE hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
+  SUBROUTINE hssr_wu(atoms,sym, jsp,el,ne,usdus,lapw,input,&
        tlmplm,acof,bcof,ccof, h_r,s_r,h_c,s_c)
     !
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    
     TYPE(t_sym),INTENT(IN)         :: sym
     TYPE(t_atoms),INTENT(IN)       :: atoms
     TYPE(t_usdus),INTENT(IN)       :: usdus
@@ -27,12 +27,12 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
-    COMPLEX, INTENT (IN) :: acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat)
-    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat)
+    COMPLEX, INTENT (IN) :: acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (IN) :: bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (IN) :: ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat)
 
-    REAL,    OPTIONAL,INTENT (INOUT) :: h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd)
-    COMPLEX, OPTIONAL,INTENT (INOUT) :: h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd)
+    REAL,    OPTIONAL,INTENT (INOUT) :: h_r(input%neig,input%neig),s_r(input%neig,input%neig)
+    COMPLEX, OPTIONAL,INTENT (INOUT) :: h_c(input%neig,input%neig),s_c(input%neig,input%neig)
 
     !     ..
     !     .. Local Scalars ..
@@ -50,8 +50,8 @@ CONTAINS
 
     l_real=PRESENT(h_r)
 
-    ALLOCATE ( a(DIMENSION%neigd,0:DIMENSION%lmd),ax(DIMENSION%neigd) )
-    ALLOCATE ( b(DIMENSION%neigd,0:DIMENSION%lmd),bx(DIMENSION%neigd) )
+    ALLOCATE ( a(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2)),ax(input%neig) )
+    ALLOCATE ( b(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2)),bx(input%neig) )
     na = 0
     DO n = 1,atoms%ntype        ! loop over atom-types
        lwn = atoms%lmax(n)
@@ -62,7 +62,7 @@ CONTAINS
              CALL timestart("hssr_wu: spherical")
              IF (sym%invsat(na).EQ.0) invsfct = 1.0
              IF (sym%invsat(na).EQ.1) invsfct = SQRT(2.0)
-             DO lm = 0, DIMENSION%lmd
+             DO lm = 0, atoms%lmaxd*(atoms%lmaxd+2)
                 DO ke = 1, ne
                    a(ke,lm) = invsfct*acof(ke,lm,na)
                    b(ke,lm) = invsfct*bcof(ke,lm,na)

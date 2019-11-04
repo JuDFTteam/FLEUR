@@ -149,7 +149,7 @@ CONTAINS
 #endif    
   END SUBROUTINE dmi_dist
 
-  FUNCTION dmi_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+  FUNCTION dmi_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
@@ -158,7 +158,7 @@ CONTAINS
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
@@ -174,7 +174,7 @@ CONTAINS
     IF (this%q_done==0) RETURN
   
     this%evsum(0,this%q_done)=results%seigv
-    CALL ssomat(this%evsum(1:,this%q_done),this%theta,this%phi,eig_id,DIMENSION,atoms,kpts,sym,&
+    CALL ssomat(this%evsum(1:,this%q_done),this%theta,this%phi,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results) 
     skip=.TRUE.
   END FUNCTION  dmi_eval

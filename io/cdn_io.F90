@@ -722,11 +722,11 @@ MODULE m_cdn_io
 
    END SUBROUTINE
 
-   SUBROUTINE readCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
+   SUBROUTINE readCoreDensity(input,atoms,rhcs,tecs,qints)
 
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_input),INTENT(IN)     :: input
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      
 
       REAL, INTENT(OUT) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
       REAL, INTENT(OUT) :: tecs(:,:)!(atoms%ntype,input%jspins)
@@ -751,7 +751,7 @@ MODULE m_cdn_io
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-            CALL readCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
+            CALL readCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
             CALL closeCDNPOT_HDF(fileID)
             RETURN
          ELSE
@@ -795,11 +795,11 @@ MODULE m_cdn_io
 
    END SUBROUTINE readCoreDensity
 
-   SUBROUTINE writeCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
+   SUBROUTINE writeCoreDensity(input,atoms,rhcs,tecs,qints)
 
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_input),INTENT(IN)     :: input
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      
 
       REAL, INTENT(IN) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
       REAL, INTENT(IN) :: tecs(:,:)!(atoms%ntype,input%jspins)
@@ -820,7 +820,7 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-         CALL writeCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
+         CALL writeCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
          CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN

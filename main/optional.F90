@@ -6,7 +6,7 @@
 MODULE m_optional
   USE m_juDFT
 CONTAINS
-  SUBROUTINE OPTIONAL(mpi, atoms,sphhar,vacuum,DIMENSION,&
+  SUBROUTINE OPTIONAL(mpi, atoms,sphhar,vacuum,&
        stars,input,sym, cell, sliceplot, xcpot, noco, oneD)
     !
     !----------------------------------------
@@ -70,7 +70,7 @@ CONTAINS
 
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
+
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_stars),INTENT(IN)    :: stars
@@ -106,7 +106,7 @@ CONTAINS
        IF (sliceplot%iplot.NE.0) THEN
           CALL timestart("Plotting")
           IF (input%strho) CALL juDFT_error("strho = T and iplot=/=0",calledby = "optional")
-          CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
+          CALL plotdop(oneD,stars,vacuum,sphhar,atoms,&
                        input,sym,cell,sliceplot,noco)
           CALL timestop("Plotting")
        END IF
@@ -132,7 +132,7 @@ CONTAINS
        input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
-       CALL stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
+       CALL stden(mpi,sphhar,stars,atoms,sym,vacuum,&
                   input,cell,xcpot,noco,oneD)
        !
        input%total=strho
@@ -144,7 +144,7 @@ CONTAINS
        !
        IF (input%swsp) THEN
           CALL timestart("optional: spin polarized density")
-          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dimension)
+          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
           !
           CALL timestop("optional: spin polarized density")
        END IF

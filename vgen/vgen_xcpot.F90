@@ -9,7 +9,7 @@ MODULE m_vgen_xcpot
 
 CONTAINS
 
-   SUBROUTINE vgen_xcpot(hybrid, input, xcpot, dimension, atoms, sphhar, stars, vacuum, sym, &
+   SUBROUTINE vgen_xcpot(hybrid, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
                           cell, oneD, sliceplot, mpi, noco, den, denRot, EnergyDen, vTot, vx, results)
 
       !     ***********************************************************
@@ -39,7 +39,7 @@ CONTAINS
       CLASS(t_xcpot), INTENT(INOUT)           :: xcpot
       TYPE(t_hybrid), INTENT(IN)              :: hybrid
       TYPE(t_mpi), INTENT(IN)              :: mpi
-      TYPE(t_dimension), INTENT(IN)              :: dimension
+      
       TYPE(t_oneD), INTENT(IN)              :: oneD
       TYPE(t_sliceplot), INTENT(IN)              :: sliceplot
       TYPE(t_input), INTENT(IN)              :: input
@@ -91,7 +91,7 @@ CONTAINS
                   CALL vvacxc(ifftd2, stars, vacuum, xcpot, input, noco, Den, vTot, exc)
                ELSE
                   CALL judft_error("OneD broken")
-                  ! CALL vvacxc(stars,oneD%M,vacuum,odi%n2d,dimension,ifftd2,&
+                  ! CALL vvacxc(stars,oneD%M,vacuum,odi%n2d,ifftd2,&
                   !             xcpot,input,odi%nq2,odi%nst2,den,noco,odi%kimax2%igf,&
                   !             odl%pgf,vTot%vacxy,vTot%vacz,excxy,excz)
                END IF
@@ -131,7 +131,7 @@ CONTAINS
          CALL timestop("Vxc in MT")
 
          ! check continuity of total potential
-         IF (input%vchk) CALL checkDOPAll(input, dimension, sphhar, stars, atoms, sym, vacuum, oneD, cell, vTot, 1)
+         IF (input%vchk) CALL checkDOPAll(input,  sphhar, stars, atoms, sym, vacuum, oneD, cell, vTot, 1)
 
          ! TOTAL
          IF (PRESENT(results)) THEN

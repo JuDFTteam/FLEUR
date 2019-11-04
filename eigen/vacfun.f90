@@ -32,16 +32,16 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     INTEGER, INTENT (IN) :: nv2(:)!(input%jspins)
-    INTEGER, INTENT (IN) :: kvac(:,:,:)!(2,dimension%nv2d,input%jspins)
+    INTEGER, INTENT (IN) :: kvac(:,:,:)!(2,lapw%dim_nv2d(),input%jspins)
     COMPLEX, INTENT (IN) :: vxy(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,nvac,:)
-    COMPLEX, INTENT (OUT):: tddv(:,:),tduv(:,:)!(dimension%nv2d,dimension%nv2d)
-    COMPLEX, INTENT (OUT):: tudv(:,:),tuuv(:,:)!(dimension%nv2d,dimension%nv2d)
+    COMPLEX, INTENT (OUT):: tddv(:,:),tduv(:,:)!(lapw%dim_nv2d(),lapw%dim_nv2d())
+    COMPLEX, INTENT (OUT):: tudv(:,:),tuuv(:,:)!(lapw%dim_nv2d(),lapw%dim_nv2d())
     REAL,ALLOCATABLE,INTENT (IN) :: vz(:,:,:) !(vacuum%nmzd,2,4) ,
     REAL,    INTENT (IN) :: evac(:,:)!(2,input%jspins)
     REAL,    INTENT (IN) :: bkpt(3) 
-    REAL,    INTENT (OUT):: udz(:,:),uz(:,:)!(dimension%nv2d,input%jspins)
-    REAL,    INTENT (OUT):: dudz(:,:),duz(:,:)!(dimension%nv2d,input%jspins)
-    REAL,    INTENT (OUT):: ddnv(:,:)!(dimension%nv2d,input%jspins)
+    REAL,    INTENT (OUT):: udz(:,:),uz(:,:)!(lapw%dim_nv2d(),input%jspins)
+    REAL,    INTENT (OUT):: dudz(:,:),duz(:,:)!(lapw%dim_nv2d(),input%jspins)
+    REAL,    INTENT (OUT):: ddnv(:,:)!(lapw%dim_nv2d(),input%jspins)
     !     ..
     !     .. Local Scalars ..
     REAL ev,scale,xv,yv,vzero,fac

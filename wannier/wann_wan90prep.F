@@ -8,7 +8,7 @@
       use m_juDFT
       USE m_types
 c**********************************************************
-c         prepares WF//spin12(jspin)//.win for 
+c         prepares WF//spin12(jspin)//.win for
 c         input to wannier90 and creates bkpts file
 c                FF, September 2006
 c**********************************************************
@@ -25,7 +25,7 @@ c**********************************************************
       use m_wann_get_mp
       use m_wann_get_kpts
       use m_wann_get_qpts
-      use m_wann_gwf_tools, only : get_index_kq,get_dimension,get_shift
+      use m_wann_gwf_tools, only : get_index_kq,get_shift,get_dimension
       use m_wann_gwf_auxbrav
 
       IMPLICIT NONE
@@ -152,7 +152,7 @@ c*********************************************************
       endif
 
 c*********************************************************
-c     Find out the structure of q-point set.              
+c     Find out the structure of q-point set.
 c*********************************************************
       IF(l_sgwf.or.l_socgwf)THEN
       call wann_get_mp(
@@ -166,7 +166,7 @@ c*******************************************************
 c     Write information to WF//spin12(jspin)//.win
 c*******************************************************
       if(l_ms) nqptd = nqpts
-         
+
       do jspin=1,jspins
 c        proj file provides num_wann and num_bands
          l_file=.false.
@@ -188,7 +188,7 @@ c        proj file provides num_wann and num_bands
          close(712)
 
          do iqpt=1,nqptd
-            win_filename = 'WF'//spin12(jspin)      
+            win_filename = 'WF'//spin12(jspin)
             if(l_ms) then
               write(win_filename,'("WF",a1,"_",i4.4)')spin12(jspin),iqpt
             endif
@@ -197,7 +197,7 @@ c        proj file provides num_wann and num_bands
      >               num_iter,jspin,ntype,ntypd,natd,nkpts,neq,num,amat,
      >               kpoints,zatom,taual,namat,3)
          enddo
-            
+
       enddo!jspin
 
       amat_ang=amat*bohr
@@ -271,7 +271,7 @@ c******************************************************
       allocate(kqpoints(arr_len,nkqpts))
       kqpoints = 0.
       do iqpt=1,nqpts
-         do ikpt=1,nkpts 
+         do ikpt=1,nkpts
             ikqpt = get_index_kq(ikpt,iqpt,nkpts)
             kqpoints(1,ikqpt) = kpoints(1,ikpt)
             kqpoints(2,ikqpt) = kpoints(2,ikpt)
@@ -424,9 +424,9 @@ c******************************************************
          write(911,*)"! optional parameters for plotting"
          if(jspin.eq.1)then
             write(911,*)"spin=up"
-         else   
+         else
             write(911,*)"spin=down"
-         endif   
+         endif
          write(911,*)"!restart=plot"
          write(911,*)"!wannier_plot=true"
          write(911,*)"!wannier_plot_supercell=3"
@@ -450,19 +450,19 @@ c******************************************************
          if(rdim.eq.3) then
             do dim=1,3
                write(911,*)amat(:,dim)
-            enddo   
+            enddo
          elseif(rdim.eq.4)then
             do dim=1,4
                write(911,'(4f14.8)')amat(:,dim)
-            enddo             
+            enddo
          elseif(rdim.eq.5)then
             do dim=1,5
                write(911,'(5f14.8)')amat(:,dim)
-            enddo             
+            enddo
          elseif(rdim.eq.6)then
             do dim=1,6
                write(911,'(6f13.7)')amat(:,dim)
-            enddo             
+            enddo
          endif
          write(911,*)"end unit_cell_cart"
          write(911,*)
@@ -477,15 +477,15 @@ c******************************************************
             at=nint(zatom(iter))
             do i=1,neq(iter)
                nn=nn+1
-             if(rdim.eq.3) write(911,*)namat(at),taual(:,nn)   
+             if(rdim.eq.3) write(911,*)namat(at),taual(:,nn)
              if(rdim.eq.4) write(911,'(1x,a2,2x,4f12.6)')
      >                     namat(at),taual(:,nn)
              if(rdim.eq.5) write(911,'(1x,a2,2x,5f12.6)')
      >                     namat(at),taual(:,nn)
              if(rdim.eq.6) write(911,'(1x,a2,2x,6f12.6)')
      >                     namat(at),taual(:,nn)
-            enddo   
-         enddo   
+            enddo
+         enddo
          write(911,*)"end atoms_frac"
          write(911,*)
 
@@ -543,7 +543,7 @@ c******************************************************
          write(911,*)
 
          write(911,*)"wvfn_formatted=.true."
-        
+
          close(911)
 
 

@@ -20,7 +20,7 @@ MODULE m_rotate_int_den_to_local
   !     Philipp Kurz 99/11/01
   !**********************************************************************
 CONTAINS
-  SUBROUTINE rotate_int_den_to_local(DIMENSION,sym,stars,atoms,sphhar,vacuum,&
+  SUBROUTINE rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,&
        cell,input,noco,oneD,den)
     !******** ABBREVIATIONS ***********************************************
     !     ifft3    : size of the 3d real space mesh
@@ -41,7 +41,7 @@ CONTAINS
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    
     TYPE(t_noco),INTENT(IN)        :: noco
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input

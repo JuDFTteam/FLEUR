@@ -11,7 +11,7 @@ MODULE m_dimens
 CONTAINS
   SUBROUTINE dimens(&
        &                  input,sym,stars,&
-       &                  atoms,sphhar,dimension,vacuum,&
+       &                  atoms,sphhar,vacuum,&
        &                  kpts,oneD,hybrid)
 
     USE m_types_input
@@ -33,7 +33,7 @@ CONTAINS
     TYPE(t_stars),INTENT(INOUT) :: stars
     TYPE(t_atoms),INTENT(INOUT) :: atoms
     TYPE(t_sphhar),INTENT(INOUT) :: sphhar
-    TYPE(t_dimension),INTENT(INOUT) :: dimension
+    
     TYPE(t_vacuum),INTENT(INOUT) :: vacuum
     TYPE(t_kpts),INTENT(INOUT) :: kpts
     TYPE(t_oneD),INTENT(INOUT) :: oneD
@@ -54,7 +54,7 @@ CONTAINS
        !call first_glance to generate k-points
        CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n10)
 
-       CALL dimen7(input,sym,stars,atoms,sphhar,dimension,vacuum,kpts,&
+       CALL dimen7(input,sym,stars,atoms,sphhar,vacuum,kpts,&
                    oneD,hybrid,cell)
     !     in case of a parallel calculation we have to broadcast
     vacuum%nmzd = 250

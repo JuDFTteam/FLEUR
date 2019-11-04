@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2016 Peter Grï¿½nberg Institut, Forschungszentrum Jï¿½lich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,11 +7,11 @@ MODULE m_hsmt_simple
   use m_juDFT
   implicit none
 CONTAINS
-  SUBROUTINE hsmt_simple(jspin,bkpt,DIMENSION,input,sym,cell,atoms,lapw,td,noco,usdus,enpara,hmat,smat)
+  SUBROUTINE hsmt_simple(jspin,bkpt,input,sym,cell,atoms,lapw,td,noco,usdus,enpara,hmat,smat)
     use m_types
     use m_hsmt_fjgj
     USE m_hsmt_blas
-    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+    
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
@@ -33,12 +33,12 @@ CONTAINS
 
 
     
-    ALLOCATE(fj(dimension%nbasfcn,0:atoms%lmaxd,atoms%ntype,input%jspins))
-    ALLOCATE(gj(dimension%nbasfcn,0:atoms%lmaxd,atoms%ntype,input%jspins))
+    ALLOCATE(fj(lapw%dim_nbasfcn(),0:atoms%lmaxd,atoms%ntype,input%jspins))
+    ALLOCATE(gj(lapw%dim_nbasfcn(),0:atoms%lmaxd,atoms%ntype,input%jspins))
     DO jsp=jspin,jspin
 
        !Set up the k+G+qss vectors
-       ALLOCATE(vk(dimension%nbasfcn,3,1),gk(dimension%nbasfcn,3,1))
+       ALLOCATE(vk(lapw%dim_nbasfcn(),3,1),gk(lapw%dim_nbasfcn(),3,1))
 
        DO k = 1,lapw%nv(jsp)
           v=bkpt+(/lapw%k1(k,jsp),lapw%k2(k,jsp),lapw%k3(k,jsp)/)!-noco%qss/2
