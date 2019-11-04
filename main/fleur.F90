@@ -458,12 +458,12 @@ CONTAINS
 !Plots of mixed density       
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
-                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
-                               cell, noco, outDen, PLOT_MIXDEN_Y_CORE, sliceplot)
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_MIXDEN_Y_CORE, sliceplot)
 !!               CDN subtracted by core charge
-                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
-                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
+!                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
 
