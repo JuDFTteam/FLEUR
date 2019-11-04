@@ -256,9 +256,9 @@ CONTAINS
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN            
           CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                          noco, vTot, PLOT_POT_TOT, sliceplot)      
-!          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
-!          CALL subPotDen(vxcForPlotting,vTot,vCoul)
-!          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
+          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
+          CALL subPotDen(vxcForPlotting,vTot,vCoul)
+          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
        END IF 
 
 #ifdef CPP_MPI
@@ -390,8 +390,8 @@ CONTAINS
                 CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
 !!               CDN subtracted by core charge
-!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
-!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
+                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
           IF (input%l_rdmft) THEN
@@ -455,15 +455,15 @@ CONTAINS
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
             sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
-       
+!Plots of mixed density       
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
                 CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, outDen, PLOT_MIXDEN_Y_CORE, sliceplot)
 !!               CDN subtracted by core charge
-!                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
-!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
+                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
 
@@ -507,59 +507,14 @@ CONTAINS
        END IF
 
   !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
-!!       IF(sliceplot%iplot.NE.0) THEN
-!!          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
-!!       END IF
+       IF(sliceplot%iplot.NE.0) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+       END IF
 
 
     END DO scfloop ! DO WHILE (l_cont)
 
-!    DIVERGENCE; TODO: Remove all the B_field stuff and put it into its own routine.
 
-    DO i=1,3
-       CALL xcB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-       ALLOCATE(xcB(i)%pw_w,mold=xcB(i)%pw)
-    ENDDO
-
-    CALL dummyDen%init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_POTTOT)
-    ALLOCATE(dummyDen%pw_w,mold=dummyDen%pw)
-
-    DO i=1,3
-       CALL matrixsplit(stars,atoms,sphhar,vacuum,input,noco,2.0,vtot,dummyDen,xcB(1),xcB(2),xcB(3))
-    END DO
-
-    CALL divB%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-!init(stars,atoms,sphhar,vacuum,noco,1,POTDEN_TYPE_DEN)
-    ALLOCATE(divB%pw_w,mold=divB%pw)
-    
-    DO i=1,atoms%ntype
-       CALL divergence(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,divB)
-    END DO
-
-!    CALL vDiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-!    ALLOCATE(vDiv%pw_w(SIZE(vDiv%pw,1),size(vDiv%pw,2)))
-!    vDiv%pw_w = CMPLX(0.0,0.0)
-
-!    CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,divB,vDiv)
-
-!    DO i=1,3
-!       CALL graddiv(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-!       ALLOCATE(graddiv(i)%pw_w,mold=graddiv(i)%pw)
-!       CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-!       ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
-!    ENDDO
-
-!    DO i=1,atoms%ntype
-!       CALL divpotgrad(input%jspins,i,stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft,atoms,sphhar,sym,stars,cell,vacuum,noco,vDiv,graddiv)
-!    END DO
-
-!    DO i=1,3
-!       CALL corrB(i)%addPotDen(xcB(i), graddiv(i))
-!    END DO
-
-    CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                        noco, divB)!, vDiv, graddiv(1), graddiv(2), graddiv(3), &
-                        !corrB(1), corrB(2), corrB(3))
 
     CALL add_usage_data("Iterations",iter)
 
