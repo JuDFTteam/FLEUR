@@ -122,7 +122,7 @@ CONTAINS
          ELSE
             exch(iband, iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
          END IF
-         IF (iband <= hybrid%nobd(nk)) THEN
+         IF (iband <= hybrid%nobd(nk,jsp)) THEN
             results%te_hfex%valence = results%te_hfex%valence - a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband)
          END IF
          IF (hybrid%l_calhf) THEN

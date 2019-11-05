@@ -149,7 +149,7 @@ CONTAINS
 
          END DO
 
-         DO iband1 = 1, hybrid%nobd(nkqpt)
+         DO iband1 = 1, hybrid%nobd(nkqpt,jsp)
             where (iarr > 0)
             z_help(:) = z_kqpt%data_c(iarr(:), iband1)
             elsewhere
@@ -404,7 +404,7 @@ CONTAINS
 
          END DO
 
-         DO iband1 = 1, hybrid%nobd(nkqpt)
+         DO iband1 = 1, hybrid%nobd(nkqpt,jsp)
             where (iarr > 0)
             z_help(:) = z_kqpt%data_r(iarr(:), iband1)
             elsewhere
