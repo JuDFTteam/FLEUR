@@ -239,7 +239,7 @@ CONTAINS
             ! are Fourier transformed, so that the exchange can be calculated
             ! in Fourier space
             IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-               iband1 = hybrid%nobd(nkqpt)
+               iband1 = hybrid%nobd(nkqpt,jsp)
 
                exch_vv = exch_vv + &
                          dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
@@ -273,7 +273,7 @@ CONTAINS
             call timestart("exchange matrix")
             DO n1 = 1, hybrid%nbands(nk)
                DO iband = 1, psize
-                  IF ((ibando + iband - 1) > hybrid%nobd(nkqpt)) CYCLE
+                  IF ((ibando + iband - 1) > hybrid%nobd(nkqpt,jsp)) CYCLE
 
                   cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(ikpt)
 

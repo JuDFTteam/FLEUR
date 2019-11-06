@@ -23,7 +23,7 @@ MODULE m_types_hybrid
       REAL                   ::  tolerance1  !only read in
       REAL, ALLOCATABLE      ::  basm1(:,:,:,:)
       COMPLEX, ALLOCATABLE   ::  d_wgn2(:,:,:,:)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:)
+      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:,:)
       REAL, ALLOCATABLE      ::  div_vv(:,:,:)
    CONTAINS
       procedure :: set_num_radfun_per_l => set_num_radfun_per_l_hybrid
