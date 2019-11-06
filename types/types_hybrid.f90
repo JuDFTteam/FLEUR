@@ -16,7 +16,6 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  num_radfun_per_l(:,:)
       INTEGER, ALLOCATABLE   ::  select1(:,:)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
-      INTEGER, ALLOCATABLE   ::  num_rad_bas_fun(:,:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
       INTEGER, ALLOCATABLE   ::  map(:,:)
       INTEGER, ALLOCATABLE   ::  tvec(:,:,:)

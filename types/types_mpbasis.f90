@@ -2,10 +2,11 @@ module m_types_mpbasis
    implicit none
 
    type t_mpbasis
-      INTEGER, ALLOCATABLE   ::  gptm(:,:) ! (3, num_gpts)
-      INTEGER, ALLOCATABLE   ::  ngptm(:)
-      INTEGER, ALLOCATABLE   ::  gptm_ptr(:,:)
-      REAL                   ::  g_cutoff
+      INTEGER, ALLOCATABLE   :: gptm(:,:) ! (3, num_gpts)
+      INTEGER, ALLOCATABLE   :: ngptm(:)
+      INTEGER, ALLOCATABLE   :: gptm_ptr(:,:)
+      REAL                   :: g_cutoff
+      INTEGER, ALLOCATABLE   :: num_rad_bas_fun(:,:)
    CONTAINS
       procedure :: num_gpts => mpbasis_num_gpts
       procedure :: gen_gvec => mpbasis_gen_gvec

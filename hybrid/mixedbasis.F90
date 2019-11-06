@@ -102,7 +102,7 @@ CONTAINS
 
       ! Deallocate arrays which might have been allocated in a previous run of this subroutine
       IF (ALLOCATED(mpbasis%ngptm)) deallocate(mpbasis%ngptm)
-      IF (ALLOCATED(hybrid%num_rad_bas_fun)) deallocate(hybrid%num_rad_bas_fun)
+      IF (ALLOCATED(mpbasis%num_rad_bas_fun)) deallocate(mpbasis%num_rad_bas_fun)
       IF (ALLOCATED(mpbasis%gptm_ptr)) deallocate(mpbasis%gptm_ptr)
       IF (ALLOCATED(mpbasis%gptm)) deallocate(mpbasis%gptm)
       IF (ALLOCATED(hybrid%basm1)) deallocate(hybrid%basm1)
@@ -135,10 +135,10 @@ CONTAINS
          WRITE (6, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
       END IF
 
-      allocate(hybrid%num_rad_bas_fun(0:maxval(hybrid%lcutm1), atoms%ntype))
+      allocate(mpbasis%num_rad_bas_fun(0:maxval(hybrid%lcutm1), atoms%ntype))
       allocate(seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
       allocate(selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
-      hybrid%num_rad_bas_fun = 0    !!! 01/12/10 jij%M.b.
+      mpbasis%num_rad_bas_fun = 0    !!! 01/12/10 jij%M.b.
 
       ! determine maximal indices of (radial) mixed-basis functions (->num_rad_bas_fun)
       ! (will be reduced later-on due to overlap)
@@ -191,11 +191,11 @@ CONTAINS
                WRITE (6, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
             hybrid%max_indx_p_1 = MAX(hybrid%max_indx_p_1, M)
-            hybrid%num_rad_bas_fun(l, itype) = n*input%jspins
+            mpbasis%num_rad_bas_fun(l, itype) = n*input%jspins
          END DO
       END DO
 
-      allocate(hybrid%basm1(atoms%jmtd, maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      allocate(hybrid%basm1(atoms%jmtd, maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
       hybrid%basm1 = 0
 
       ! Define product bases and reduce them according to overlap
@@ -215,7 +215,7 @@ CONTAINS
 
          ng = atoms%jri(itype)
          DO l = 0, hybrid%lcutm1(itype)
-            n = hybrid%num_rad_bas_fun(l, itype)
+            n = mpbasis%num_rad_bas_fun(l, itype)
             ! allow for zero product-basis functions for
             ! current l-quantum number
             IF (n == 0) THEN
@@ -292,13 +292,13 @@ CONTAINS
 
             ! Get rid of linear dependencies (eigenvalue <= hybrid%tolerance1)
             nn = 0
-            DO i = 1, hybrid%num_rad_bas_fun(l, itype)
+            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                IF (eig(i) > hybrid%tolerance1) THEN
                   nn = nn + 1
                   ihelp(nn) = i
                END IF
             END DO
-            hybrid%num_rad_bas_fun(l, itype) = nn
+            mpbasis%num_rad_bas_fun(l, itype) = nn
             eig = eig(ihelp)
             eigv(:,:) = eigv(:,ihelp)
 
@@ -335,7 +335,7 @@ CONTAINS
                nn = nn + 1
                deallocate(olap)
                allocate(olap(nn, nn))
-               hybrid%num_rad_bas_fun(l, itype) = nn
+               mpbasis%num_rad_bas_fun(l, itype) = nn
             END IF
 
             ! Check orthonormality of product basis
@@ -373,14 +373,14 @@ CONTAINS
             deallocate(olap, eigv, work, eig, ihelp)
 
          END DO !l
-         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(hybrid%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype))
+         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpbasis%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype))
       END DO ! itype
 
-      allocate(basmhlp(atoms%jmtd, maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
-      basmhlp(1:atoms%jmtd, 1:maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype) &
-         = hybrid%basm1(1:atoms%jmtd, 1:maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
+      allocate(basmhlp(atoms%jmtd, maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      basmhlp(1:atoms%jmtd, 1:maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype) &
+         = hybrid%basm1(1:atoms%jmtd, 1:maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
       deallocate(hybrid%basm1)
-      allocate(hybrid%basm1(atoms%jmtd, maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      allocate(hybrid%basm1(atoms%jmtd, maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
       hybrid%basm1 = basmhlp
 
       deallocate(basmhlp, seleco, selecu, selecmat)
@@ -406,7 +406,7 @@ CONTAINS
             ! determine radial function with the largest moment
             ! this function is used to build the linear combinations
             rdum = 0
-            DO i = 1, hybrid%num_rad_bas_fun(l, itype)
+            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                rdum1 = intgrf(atoms%rmsh(:ng, itype)**(l + 1)*hybrid%basm1(:ng, i, l, itype), &
                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
                IF (ABS(rdum1) > rdum) THEN
@@ -418,25 +418,25 @@ CONTAINS
             ! rearrange order of radial functions such that the last function possesses the largest moment
             j = 0
             bashlp(:ng) = hybrid%basm1(:ng, n, l, itype)
-            DO i = 1, hybrid%num_rad_bas_fun(l, itype)
+            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                IF (i == n) CYCLE
                j = j + 1
                hybrid%basm1(:ng, j, l, itype) = hybrid%basm1(:ng, i, l, itype)
             END DO
-            hybrid%basm1(:ng, hybrid%num_rad_bas_fun(l, itype), l, itype) = bashlp(:ng)
+            hybrid%basm1(:ng, mpbasis%num_rad_bas_fun(l, itype), l, itype) = bashlp(:ng)
 
          END DO
 
          DO l = 0, hybrid%lcutm1(itype)
             IF (mpi%irank == 0) WRITE (6, '(6X,A)') lchar(l)//':'
 
-            IF (hybrid%num_rad_bas_fun(l, itype) == 0) THEN
+            IF (mpbasis%num_rad_bas_fun(l, itype) == 0) THEN
                IF (mpi%irank == 0) WRITE (6, '(6X,A,'':   0 ->    '')') lchar(l)
                CYCLE
             END IF
 
-            n = hybrid%num_rad_bas_fun(l, itype)
-            DO i = 1, hybrid%num_rad_bas_fun(l, itype)
+            n = mpbasis%num_rad_bas_fun(l, itype)
+            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                IF (i == n) CYCLE
                ! calculate moment of radial function i
                rdum1 = intgrf(atoms%rmsh(:ng, itype)**(l + 1)*hybrid%basm1(:ng, i, l, itype), &
@@ -470,8 +470,8 @@ CONTAINS
 
             ! test orthogonality
             rdum = 0
-            DO i = 1, hybrid%num_rad_bas_fun(l, itype)
-               DO j = 1, hybrid%num_rad_bas_fun(l, itype)
+            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
+               DO j = 1, mpbasis%num_rad_bas_fun(l, itype)
                   rdum1 = intgrf(hybrid%basm1(:ng, i, l, itype)*hybrid%basm1(:ng, j, l, itype), &
                                  atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
                   IF (i /= j) THEN
@@ -489,7 +489,7 @@ CONTAINS
       END DO
 
       DO itype = 1, atoms%ntype
-         IF (ANY(hybrid%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype) == 0)) call judft_error('any hybrid%num_rad_bas_fun eq 0', calledby='mixedbasis')
+         IF (ANY(mpbasis%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype) == 0)) call judft_error('any mpbasis%num_rad_bas_fun eq 0', calledby='mixedbasis')
       END DO
 
       !count basis functions
@@ -498,7 +498,7 @@ CONTAINS
          DO i = 1, atoms%neq(itype)
             DO l = 0, hybrid%lcutm1(itype)
                DO M = -l, l
-                  DO j = 1, hybrid%num_rad_bas_fun(l, itype)
+                  DO j = 1, mpbasis%num_rad_bas_fun(l, itype)
                      hybrid%nbasp = hybrid%nbasp + 1
                   END DO
                END DO

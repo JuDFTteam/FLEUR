@@ -577,7 +577,7 @@ CONTAINS
 !     - arrays -
 
       INTEGER                 ::  rrot(3, 3), invrot(3, 3)
-      INTEGER                 ::  pnt(maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%nat)
+      INTEGER                 ::  pnt(maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%nat)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  rkpt(3), rkpthlp(3), rtaual(3), trans(3)
       REAL                    ::  arg
@@ -602,7 +602,7 @@ CONTAINS
          DO i = 1, nbands
             DO j = 1, nobd
                CALL desymmetrize(vecin1(:hybrid%nbasp, j, i), hybrid%nbasp, 1, 1, &
-                                 atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%num_rad_bas_fun, sym)
+                                 atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_rad_bas_fun, sym)
             END DO
          END DO
       else
@@ -661,11 +661,11 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
             DO l = 0, hybrid%lcutm1(itype)
-               DO n = 1, hybrid%num_rad_bas_fun(l, itype)
+               DO n = 1, mpbasis%num_rad_bas_fun(l, itype)
                   i = i + 1
                   pnt(n, l, ic) = i
                END DO
-               i = i + hybrid%num_rad_bas_fun(l, itype)*2*l
+               i = i + mpbasis%num_rad_bas_fun(l, itype)*2*l
             END DO
          END DO
       END DO
@@ -684,7 +684,7 @@ CONTAINS
             cdum = cexp*exp(-img*tpi_const*dot_product(g, atoms%taual(:, rcent)))
 
             DO l = 0, hybrid%lcutm1(itype)
-               nn = hybrid%num_rad_bas_fun(l, itype)
+               nn = mpbasis%num_rad_bas_fun(l, itype)
                DO n = 1, nn
 
                   i1 = pnt(n, l, ic)
@@ -740,7 +740,7 @@ CONTAINS
             DO j = 1, nobd
 
                CALL symmetrize(vecout1(:, j, i), dim, 1, 1, .false., &
-                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%num_rad_bas_fun, sym)
+                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_rad_bas_fun, sym)
 
                CALL commonphase(phase(j, i), vecout1(:, j, i), dim)
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
