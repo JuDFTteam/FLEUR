@@ -137,7 +137,6 @@ CONTAINS
 
       allocate(hybrid%nindxm1(0:maxval(hybrid%lcutm1), atoms%ntype))
       allocate(seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd), selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
-      allocate(selecmat(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
       hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
 
       ! determine maximal indices of (radial) mixed-basis functions (->nindxm1)
@@ -164,14 +163,7 @@ CONTAINS
             !
             ! valence * valence
             !
-
-            ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
-            selecmat = RESHAPE( [((((seleco(n1, l1) .AND. selecu(n2, l2), &
-                                     n1=1, maxval(hybrid%num_radfun_per_l)), &
-                                     l1=0, atoms%lmaxd), &
-                                     n2=1, maxval(hybrid%num_radfun_per_l)), &
-                                     l2=0, atoms%lmaxd)], &
-                                     [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
+            selecmat = calc_selecmat(seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
@@ -596,4 +588,26 @@ CONTAINS
          END DO
       END DO
    end subroutine gen_bas_fun
+
+   function calc_selecmat(seleco, selecu) result(selecmat)
+      ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
+      implicit NONE
+      LOGICAL, intent(in)           ::  seleco(:,:), selecu(:,:)
+      LOGICAL                       ::  selecmat(maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, &
+                                                 maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1))
+      integer                       :: n1, l1, n2, l2
+
+
+      ! column-major means left-most index varies the fastest
+      do l2=0,atoms%lmaxd
+         do n2=1,maxval(hybrid%num_radfun_per_l))
+            do l1=0,atoms%lmaxd
+               do n1=1,maxval(hybrid%num_radfun_per_l))
+                  selecmat(n1,l1,n2,l2) = seleco(n1, l1) .AND. selecu(n2, l2)
+               enddo
+            enddo
+         enddo
+      enddo
+
+   end function calc_selecmat
 END MODULE m_mixedbasis
