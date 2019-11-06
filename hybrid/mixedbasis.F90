@@ -591,6 +591,7 @@ CONTAINS
 
    function calc_selecmat(atoms,hybrid,seleco, selecu) result(selecmat)
       use m_types
+      use m_judft
       ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
       implicit NONE
 
@@ -599,6 +600,10 @@ CONTAINS
       LOGICAL, intent(in)           :: seleco(:,:), selecu(:,:)
       LOGICAL  ::  selecmat(maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, &
                             maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1)
+
+
+       LOGICAL  ::  selecmat_old(maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, &
+                             maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1)
 
       integer                       :: n1, l1, n2, l2
 
@@ -614,5 +619,15 @@ CONTAINS
          enddo
       enddo
 
+
+      selecmat_old = RESHAPE( [((((seleco(n1, l1) .AND. selecu(n2, l2), &
+                                           n1=1, maxval(hybrid%num_radfun_per_l)), &
+                                           l1=0, atoms%lmaxd), &
+                                           n2=1, maxval(hybrid%num_radfun_per_l)), &
+                                           l2=0, atoms%lmaxd)], &
+                                           [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
+
+      write (*,*) "equal", all(selecmat == selecmat_old)
+      call judft_error("meh")
    end function calc_selecmat
 END MODULE m_mixedbasis
