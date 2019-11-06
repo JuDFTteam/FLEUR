@@ -372,7 +372,7 @@
              ELSE
              WRITE (18,99001)  e(i),totdos,g(i,lmax*atoms%ntype+1), &
                   g(i,lmax*atoms%ntype+2),g(i,lmax*atoms%ntype+3), (gpart(i,l),l=1,atoms%ntype)
-             IF(banddos%projdos.NE.0) WRITE (1337,99001)  e(i),(g(i,l),l=banddos%projdos,banddos%projdos+lmax)
+             IF(banddos%projdos.NE.0) WRITE (1337,99001)  e(i),(g(i,l),l=lmax*(banddos%projdos-1)+1,lmax*banddos%projdos)
           ENDIF
        ELSEIF (n_orb == 0) THEN
           DO nl = 1, slab%nsld
