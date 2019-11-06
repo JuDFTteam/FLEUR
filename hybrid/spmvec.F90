@@ -26,9 +26,9 @@ CONTAINS
       INTEGER, INTENT(IN) ::  ikpt
 
       ! - arrays -
-      REAL, INTENT(IN) ::  coulomb_mt1(maxval(hybrid%nindxm1) - 1, maxval(hybrid%nindxm1) - 1,&
+      REAL, INTENT(IN) ::  coulomb_mt1(maxval(hybrid%num_rad_bas_fun) - 1, maxval(hybrid%num_rad_bas_fun) - 1,&
      &                                    0:maxval(hybrid%lcutm1), atoms%ntype)
-      REAL, INTENT(IN) ::  coulomb_mt2(maxval(hybrid%nindxm1) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
+      REAL, INTENT(IN) ::  coulomb_mt2(maxval(hybrid%num_rad_bas_fun) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
      &                                    0:maxval(hybrid%lcutm1) + 1, atoms%nat)
       REAL, INTENT(IN) ::  coulomb_mt3(:, :, :)
       REAL, INTENT(IN) ::  coulomb_mtir(:)
@@ -53,7 +53,7 @@ CONTAINS
 
       vecinhlp = vecin
 
-      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%nindxm1, 1, vecinhlp)
+      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%num_rad_bas_fun, 1, vecinhlp)
 
       ibasm = 0
       iatom = 0
@@ -62,7 +62,7 @@ CONTAINS
             iatom = iatom + 1
             DO l = 0, hybrid%lcutm1(itype)
                DO m = -l, l
-                  ibasm = ibasm + hybrid%nindxm1(l, itype) - 1
+                  ibasm = ibasm + hybrid%num_rad_bas_fun(l, itype) - 1
                END DO
             END DO
          END DO
@@ -77,13 +77,13 @@ CONTAINS
             DO l = 0, hybrid%lcutm1(itype)
                DO m = -l, l
                   indx1 = indx1 + 1
-                  indx2 = indx2 + hybrid%nindxm1(l, itype) - 1
+                  indx2 = indx2 + hybrid%num_rad_bas_fun(l, itype) - 1
                   indx3 = indx3 + 1
 
-                  vecout(indx1:indx2) = matmul(coulomb_mt1(:hybrid%nindxm1(l, itype) - 1, :hybrid%nindxm1(l, itype) - 1, l, itype),&
+                  vecout(indx1:indx2) = matmul(coulomb_mt1(:hybrid%num_rad_bas_fun(l, itype) - 1, :hybrid%num_rad_bas_fun(l, itype) - 1, l, itype),&
          &                vecinhlp(indx1:indx2))
 
-                 vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%nindxm1(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
+                 vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%num_rad_bas_fun(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
 
                   indx1 = indx2
                END DO
@@ -98,14 +98,14 @@ CONTAINS
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
-            ishift = sum([((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
+            ishift = sum([((2*l + 1)*(hybrid%num_rad_bas_fun(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
                l = 0
                m = 0
 
                indx1 = indx0 + 1
-               indx2 = indx1 + hybrid%nindxm1(l, itype) - 2
+               indx2 = indx1 + hybrid%num_rad_bas_fun(l, itype) - 2
 
                iatom1 = 0
                indx3 = ibasm
@@ -116,7 +116,7 @@ CONTAINS
                      indx4 = indx3 + (ieq1 - 1)*ishift1 + 1
                      IF (iatom == iatom1) CYCLE
 
-               vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt3(:hybrid%nindxm1(l, itype) - 1, iatom1, iatom)*vecinhlp(indx4)
+               vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt3(:hybrid%num_rad_bas_fun(l, itype) - 1, iatom1, iatom)*vecinhlp(indx4)
 
                   END DO
                   indx3 = indx3 + atoms%neq(itype1)*ishift1
@@ -124,7 +124,7 @@ CONTAINS
 
                IF (indx3 /= hybrid%nbasp) call judft_error('spmvec: error counting index indx3')
 
-                     vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%nindxm1(l, itype) - 1, 0, maxval(hybrid%lcutm1) + 1, iatom)*vecinhlp(indx3 + 1)
+                     vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%num_rad_bas_fun(l, itype) - 1, 0, maxval(hybrid%lcutm1) + 1, iatom)*vecinhlp(indx3 + 1)
 
                indx0 = indx0 + ishift
             END DO
@@ -144,7 +144,7 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
             DO l = 0, hybrid%lcutm1(itype)
-               n = hybrid%nindxm1(l, itype)
+               n = hybrid%num_rad_bas_fun(l, itype)
                DO m = -l, l
                   indx1 = indx1 + 1
                   indx2 = indx2 + 1
@@ -162,12 +162,12 @@ CONTAINS
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
-            ishift = sum([((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
+            ishift = sum([((2*l + 1)*(hybrid%num_rad_bas_fun(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
                indx1 = indx0 + 1
-               indx2 = indx1 + hybrid%nindxm1(0, itype) - 2
-                     vecout(hybrid%nbasp + 1) = vecout(hybrid%nbasp + 1) + dot_product(coulomb_mt2(:hybrid%nindxm1(0, itype) - 1, 0, maxval(hybrid%lcutm1) + 1, iatom), vecinhlp(indx1:indx2))
+               indx2 = indx1 + hybrid%num_rad_bas_fun(0, itype) - 2
+                     vecout(hybrid%nbasp + 1) = vecout(hybrid%nbasp + 1) + dot_product(coulomb_mt2(:hybrid%num_rad_bas_fun(0, itype) - 1, 0, maxval(hybrid%lcutm1) + 1, iatom), vecinhlp(indx1:indx2))
 
                indx0 = indx0 + ishift
             END DO
@@ -184,15 +184,15 @@ CONTAINS
                iatom1 = 0
                indx2 = 0
                DO itype1 = 1, atoms%ntype
-                  ishift1 = sum([((2*l + 1)*(hybrid%nindxm1(l, itype1) - 1), l=0, hybrid%lcutm1(itype1))])
+                  ishift1 = sum([((2*l + 1)*(hybrid%num_rad_bas_fun(l, itype1) - 1), l=0, hybrid%lcutm1(itype1))])
                   DO ieq1 = 1, atoms%neq(itype1)
                      iatom1 = iatom1 + 1
                      IF (iatom1 == iatom) CYCLE
 
                      indx3 = indx2 + (ieq1 - 1)*ishift1 + 1
-                     indx4 = indx3 + hybrid%nindxm1(0, itype1) - 2
+                     indx4 = indx3 + hybrid%num_rad_bas_fun(0, itype1) - 2
 
-      vecout(indx1) = vecout(indx1) + dot_product(coulomb_mt3(:hybrid%nindxm1(0, itype1) - 1, iatom, iatom1), vecinhlp(indx3:indx4))
+      vecout(indx1) = vecout(indx1) + dot_product(coulomb_mt3(:hybrid%num_rad_bas_fun(0, itype1) - 1, iatom, iatom1), vecinhlp(indx3:indx4))
 
                   END DO
                   indx2 = indx2 + atoms%neq(itype1)*ishift1
@@ -203,7 +203,7 @@ CONTAINS
          IF (indx0 /= hybrid%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%nindxm1,&
+      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%num_rad_bas_fun,&
      &             2,&
      &             vecout)
 
@@ -232,9 +232,9 @@ CONTAINS
       INTEGER, INTENT(IN) ::  ikpt
 
       ! - arrays -
-      REAL, INTENT(IN) ::  coulomb_mt1(maxval(hybrid%nindxm1) - 1, maxval(hybrid%nindxm1) - 1,&
+      REAL, INTENT(IN) ::  coulomb_mt1(maxval(hybrid%num_rad_bas_fun) - 1, maxval(hybrid%num_rad_bas_fun) - 1,&
      &                                    0:maxval(hybrid%lcutm1), atoms%ntype)
-      COMPLEX, INTENT(IN) ::  coulomb_mt2(maxval(hybrid%nindxm1) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
+      COMPLEX, INTENT(IN) ::  coulomb_mt2(maxval(hybrid%num_rad_bas_fun) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
      &                                    0:maxval(hybrid%lcutm1) + 1, atoms%nat)
       COMPLEX, INTENT(IN) ::  coulomb_mt3(:, :, :)
       COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
@@ -254,13 +254,13 @@ CONTAINS
       COMPLEX, PARAMETER  ::  img = (0.0, 1.0)
       ! - local arrays -
 
-      REAL                ::  vecr(maxval(hybrid%nindxm1) - 1), veci(maxval(hybrid%nindxm1) - 1)
+      REAL                ::  vecr(maxval(hybrid%num_rad_bas_fun) - 1), veci(maxval(hybrid%num_rad_bas_fun) - 1)
       COMPLEX             ::  vecinhlp(hybrid%nbasm(ikpt))
       COMPLEX, ALLOCATABLE ::  coulhlp(:, :)
 
       vecinhlp = vecin
 
-      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%nindxm1, 1, vec_c=vecinhlp)
+      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%num_rad_bas_fun, 1, vec_c=vecinhlp)
 
       ibasm = 0
       iatom = 0
@@ -269,7 +269,7 @@ CONTAINS
             iatom = iatom + 1
             DO l = 0, hybrid%lcutm1(itype)
                DO m = -l, l
-                  ibasm = ibasm + hybrid%nindxm1(l, itype) - 1
+                  ibasm = ibasm + hybrid%num_rad_bas_fun(l, itype) - 1
                END DO
             END DO
          END DO
@@ -284,13 +284,13 @@ CONTAINS
             DO l = 0, hybrid%lcutm1(itype)
                DO m = -l, l
                   indx1 = indx1 + 1
-                  indx2 = indx2 + hybrid%nindxm1(l, itype) - 1
+                  indx2 = indx2 + hybrid%num_rad_bas_fun(l, itype) - 1
                   indx3 = indx3 + 1
 
-                  vecout(indx1:indx2) = matmul(coulomb_mt1(:hybrid%nindxm1(l, itype) - 1, :hybrid%nindxm1(l, itype) - 1, l, itype),&
+                  vecout(indx1:indx2) = matmul(coulomb_mt1(:hybrid%num_rad_bas_fun(l, itype) - 1, :hybrid%num_rad_bas_fun(l, itype) - 1, l, itype),&
          &                vecinhlp(indx1:indx2))
 
-                 vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%nindxm1(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
+                 vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%num_rad_bas_fun(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
 
                   indx1 = indx2
                END DO
@@ -305,14 +305,14 @@ CONTAINS
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
-            ishift = sum([((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
+            ishift = sum([((2*l + 1)*(hybrid%num_rad_bas_fun(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
                l = 0
                m = 0
 
                indx1 = indx0 + 1
-               indx2 = indx1 + hybrid%nindxm1(l, itype) - 2
+               indx2 = indx1 + hybrid%num_rad_bas_fun(l, itype) - 2
 
                iatom1 = 0
                indx3 = ibasm
@@ -324,7 +324,7 @@ CONTAINS
                      IF (iatom == iatom1) CYCLE
 
                      vecout(indx1:indx2) = vecout(indx1:indx2)&
-          &                              + coulomb_mt3(:hybrid%nindxm1(l, itype) - 1, iatom1, iatom)*vecinhlp(indx4)
+          &                              + coulomb_mt3(:hybrid%num_rad_bas_fun(l, itype) - 1, iatom1, iatom)*vecinhlp(indx4)
 
                   END DO
                   indx3 = indx3 + atoms%neq(itype1)*ishift1
@@ -332,7 +332,7 @@ CONTAINS
 
                IF (indx3 /= hybrid%nbasp) call judft_error('spmvec: error counting index indx3')
 
-                     vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%nindxm1(l, itype) - 1, 0, maxval(hybrid%lcutm1) + 1, iatom)*vecinhlp(indx3 + 1)
+                     vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:hybrid%num_rad_bas_fun(l, itype) - 1, 0, maxval(hybrid%lcutm1) + 1, iatom)*vecinhlp(indx3 + 1)
 
                indx0 = indx0 + ishift
             END DO
@@ -352,7 +352,7 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
             DO l = 0, hybrid%lcutm1(itype)
-               n = hybrid%nindxm1(l, itype)
+               n = hybrid%num_rad_bas_fun(l, itype)
                DO m = -l, l
                   indx1 = indx1 + 1
                   indx2 = indx2 + 1
@@ -370,12 +370,12 @@ CONTAINS
          iatom = 0
          indx0 = 0
          DO itype = 1, atoms%ntype
-            ishift = sum([((2*l + 1)*(hybrid%nindxm1(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
+            ishift = sum([((2*l + 1)*(hybrid%num_rad_bas_fun(l, itype) - 1), l=0, hybrid%lcutm1(itype))])
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
                indx1 = indx0 + 1
-               indx2 = indx1 + hybrid%nindxm1(0, itype) - 2
-                     vecout(hybrid%nbasp + 1) = vecout(hybrid%nbasp + 1) + dot_product(coulomb_mt2(:hybrid%nindxm1(0, itype) - 1, 0, maxval(hybrid%lcutm1) + 1, iatom), vecinhlp(indx1:indx2))
+               indx2 = indx1 + hybrid%num_rad_bas_fun(0, itype) - 2
+                     vecout(hybrid%nbasp + 1) = vecout(hybrid%nbasp + 1) + dot_product(coulomb_mt2(:hybrid%num_rad_bas_fun(0, itype) - 1, 0, maxval(hybrid%lcutm1) + 1, iatom), vecinhlp(indx1:indx2))
 
                indx0 = indx0 + ishift
             END DO
@@ -392,15 +392,15 @@ CONTAINS
                iatom1 = 0
                indx2 = 0
                DO itype1 = 1, atoms%ntype
-                  ishift1 = sum([((2*l + 1)*(hybrid%nindxm1(l, itype1) - 1), l=0, hybrid%lcutm1(itype1))])
+                  ishift1 = sum([((2*l + 1)*(hybrid%num_rad_bas_fun(l, itype1) - 1), l=0, hybrid%lcutm1(itype1))])
                   DO ieq1 = 1, atoms%neq(itype1)
                      iatom1 = iatom1 + 1
                      IF (iatom1 == iatom) CYCLE
 
                      indx3 = indx2 + (ieq1 - 1)*ishift1 + 1
-                     indx4 = indx3 + hybrid%nindxm1(0, itype1) - 2
+                     indx4 = indx3 + hybrid%num_rad_bas_fun(0, itype1) - 2
 
-      vecout(indx1) = vecout(indx1) + dot_product(coulomb_mt3(:hybrid%nindxm1(0, itype1) - 1, iatom, iatom1), vecinhlp(indx3:indx4))
+      vecout(indx1) = vecout(indx1) + dot_product(coulomb_mt3(:hybrid%num_rad_bas_fun(0, itype1) - 1, iatom, iatom1), vecinhlp(indx3:indx4))
 
                   END DO
                   indx2 = indx2 + atoms%neq(itype1)*ishift1
@@ -411,7 +411,7 @@ CONTAINS
          IF (indx0 /= hybrid%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%nindxm1,&
+      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%num_rad_bas_fun,&
      &             2,&
      &             vec_c=vecout)
 

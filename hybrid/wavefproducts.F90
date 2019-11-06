@@ -238,7 +238,7 @@ CONTAINS
                      DO iband = bandi, bandf
                         DO iband1 = 1, mnobd
                            cdum = carr(iband1, iband)*cexp
-                           DO i = 1, hybrid%nindxm1(l, itype)
+                           DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                               j = lm + i
                               cprod(j, iband1, iband) = cprod(j, iband1, iband) + hybdat%prodm(i, n, l, itype)*cdum
                            END DO
@@ -246,12 +246,12 @@ CONTAINS
                         END DO
                      END DO
 
-                     lm = lm + hybrid%nindxm1(l, itype) ! go to lm start index for next m-quantum number
+                     lm = lm + hybrid%num_rad_bas_fun(l, itype) ! go to lm start index for next m-quantum number
 
                   END DO
 
                END DO
-               lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+               lm_0 = lm_0 + hybrid%num_rad_bas_fun(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
                IF (lm /= lm_0) STOP 'wavefproducts: counting of lm-index incorrect (bug?)'
             END DO
          END DO
@@ -512,7 +512,7 @@ CONTAINS
       iiatom = 0
 
       DO itype = 1, atoms%ntype
-         ioffset = sum((/((2*ll + 1)*hybrid%nindxm1(ll, itype), ll=0, hybrid%lcutm1(itype))/))
+         ioffset = sum((/((2*ll + 1)*hybrid%num_rad_bas_fun(ll, itype), ll=0, hybrid%lcutm1(itype))/))
          lm_0 = lm_00
          DO ieq = 1, atoms%neq(itype)
             iatom1 = iatom1 + 1
@@ -601,7 +601,7 @@ CONTAINS
 
                         END DO  !m1
 
-                        ishift = -2*m*hybrid%nindxm1(l, itype)
+                        ishift = -2*m*hybrid%num_rad_bas_fun(l, itype)
 
                         ! go to lm mixed basis startindx for l and m
                         lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
@@ -620,7 +620,7 @@ CONTAINS
 !                       cos2  = rdum2*rfac2
                               add1 = rdum1*rfac2 + rdum2*rfac1
                               add2 = rdum2*rfac2 - rdum1*rfac1
-                              DO i = 1, hybrid%nindxm1(l, itype)
+                              DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                                  j = lm1 + i
                                  cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*add1!( cos1 + sin2 )
                                  j = lm2 + i
@@ -631,12 +631,12 @@ CONTAINS
                         END DO  !iband
 
                         ! go to lm start index for next m-quantum number
-                        lm = lm + hybrid%nindxm1(l, itype)
+                        lm = lm + hybrid%num_rad_bas_fun(l, itype)
 
                      END DO  !m
 
                   END DO !n
-                  lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+                  lm_0 = lm_0 + hybrid%num_rad_bas_fun(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
                   IF (lm /= lm_0) STOP 'wavefproducts: counting of lm-index incorrect (bug?)'
                END DO !l
 
@@ -864,7 +864,7 @@ CONTAINS
                         DO iband = bandi, bandf
                            DO ibando = 1, mnobd
                               rdum = rarr1(ibando, iband)
-                              DO i = 1, hybrid%nindxm1(l, itype)
+                              DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                                  j = lm1 + i
                                  cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                               END DO  !i -> loop over mixed basis functions
@@ -872,7 +872,7 @@ CONTAINS
                         END DO  !iband
 
                         ! go to lm start index for next m-quantum number
-                        lm = lm + hybrid%nindxm1(l, itype)
+                        lm = lm + hybrid%num_rad_bas_fun(l, itype)
 
                      END DO  ! m=-l,-1
 
@@ -949,7 +949,7 @@ CONTAINS
                      DO iband = bandi, bandf
                         DO ibando = 1, mnobd
                            rdum = rarr1(ibando, iband)
-                           DO i = 1, hybrid%nindxm1(l, itype)
+                           DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                               j = lm1 + i
                               cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                            END DO  !i -> loop over mixed basis functions
@@ -957,7 +957,7 @@ CONTAINS
                      END DO  !iband
 
                      ! go to lm start index for next m-quantum number
-                     lm = lm + hybrid%nindxm1(l, itype)
+                     lm = lm + hybrid%num_rad_bas_fun(l, itype)
 
                      !
                      ! case: m>0
@@ -1158,7 +1158,7 @@ CONTAINS
                         DO iband = bandi, bandf
                            DO ibando = 1, mnobd
                               rdum = rarr1(ibando, iband)
-                              DO i = 1, hybrid%nindxm1(l, itype)
+                              DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                                  j = lm1 + i
                                  cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                               END DO  !i -> loop over mixed basis functions
@@ -1166,12 +1166,12 @@ CONTAINS
                         END DO  !iband
 
                         ! go to lm start index for next m-quantum number
-                        lm = lm + hybrid%nindxm1(l, itype)
+                        lm = lm + hybrid%num_rad_bas_fun(l, itype)
 
                      END DO  ! m=1,l
 
                   END DO !n
-                  lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the m start index of the next l-quantum number
+                  lm_0 = lm_0 + hybrid%num_rad_bas_fun(l, itype)*(2*l + 1) ! go to the m start index of the next l-quantum number
                   IF (lm /= lm_0) STOP 'wavefproducts: counting of lm-index incorrect (bug?)'
                END DO !l
 
@@ -1534,7 +1534,7 @@ CONTAINS
       iiatom = 0
 
       DO itype = 1, atoms%ntype
-         ioffset = sum((/((2*ll + 1)*hybrid%nindxm1(ll, itype), ll=0, hybrid%lcutm1(itype))/))
+         ioffset = sum((/((2*ll + 1)*hybrid%num_rad_bas_fun(ll, itype), ll=0, hybrid%lcutm1(itype))/))
          lm_0 = lm_00
          DO ieq = 1, atoms%neq(itype)
             iatom1 = iatom1 + 1
@@ -1628,7 +1628,7 @@ CONTAINS
 
                         END DO  !m1
 
-                        ishift = -2*m*hybrid%nindxm1(l, itype)
+                        ishift = -2*m*hybrid%num_rad_bas_fun(l, itype)
 
                         ! go to lm mixed basis startindx for l and m
                         lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
@@ -1647,7 +1647,7 @@ CONTAINS
 !                       cos2  = rdum2*rfac2
                               add1 = rdum1*rfac2 + rdum2*rfac1
                               add2 = rdum2*rfac2 - rdum1*rfac1
-                              DO i = 1, hybrid%nindxm1(l, itype)
+                              DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                                  j = lm1 + i
                                  cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*add1!( cos1 + sin2 )
                                  j = lm2 + i
@@ -1658,12 +1658,12 @@ CONTAINS
                         END DO  !iband
 
                         ! go to lm start index for next m-quantum number
-                        lm = lm + hybrid%nindxm1(l, itype)
+                        lm = lm + hybrid%num_rad_bas_fun(l, itype)
 
                      END DO  !m
 
                   END DO !n
-                  lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+                  lm_0 = lm_0 + hybrid%num_rad_bas_fun(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
                   IF (lm /= lm_0) STOP 'wavefproducts_inv5: counting of lm-index incorrect (bug?)'
                END DO !l
                call timestop("iatom1 neq iatom2")
@@ -1892,7 +1892,7 @@ CONTAINS
                         DO iband = bandi, bandf
                            DO ibando = bandoi, bandof
                               rdum = rarr2(ibando, iband)
-                              DO i = 1, hybrid%nindxm1(l, itype)
+                              DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                                  j = lm1 + i
                                  cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                               END DO  !i -> loop over mixed basis functions
@@ -1900,7 +1900,7 @@ CONTAINS
                         END DO  !iband
 
                         ! go to lm start index for next m-quantum number
-                        lm = lm + hybrid%nindxm1(l, itype)
+                        lm = lm + hybrid%num_rad_bas_fun(l, itype)
 
                      END DO  ! m=-l,-1
 
@@ -1977,7 +1977,7 @@ CONTAINS
                      DO iband = bandi, bandf
                         DO ibando = bandoi, bandof
                            rdum = rarr2(ibando, iband)
-                           DO i = 1, hybrid%nindxm1(l, itype)
+                           DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                               j = lm1 + i
                               cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                            END DO  !i -> loop over mixed basis functions
@@ -1985,7 +1985,7 @@ CONTAINS
                      END DO  !iband
 
                      ! go to lm start index for next m-quantum number
-                     lm = lm + hybrid%nindxm1(l, itype)
+                     lm = lm + hybrid%num_rad_bas_fun(l, itype)
 
                      !
                      ! case: m>0
@@ -2186,7 +2186,7 @@ CONTAINS
                         DO iband = bandi, bandf
                            DO ibando = bandoi, bandof
                               rdum = rarr2(ibando, iband)
-                              DO i = 1, hybrid%nindxm1(l, itype)
+                              DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                                  j = lm1 + i
                                  cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                               END DO  !i -> loop over mixed basis functions
@@ -2194,12 +2194,12 @@ CONTAINS
                         END DO  !iband
 
                         ! go to lm start index for next m-quantum number
-                        lm = lm + hybrid%nindxm1(l, itype)
+                        lm = lm + hybrid%num_rad_bas_fun(l, itype)
 
                      END DO  ! m=1,l
 
                   END DO !n
-                  lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the m start index of the next l-quantum number
+                  lm_0 = lm_0 + hybrid%num_rad_bas_fun(l, itype)*(2*l + 1) ! go to the m start index of the next l-quantum number
                   IF (lm /= lm_0) STOP 'wavefproducts_inv5: counting of lm-index incorrect (bug?)'
                END DO !l
 
@@ -2526,7 +2526,7 @@ CONTAINS
                      DO iband = bandi, bandf
                         DO iband1 = bandoi, bandof
                            cdum = carr2(iband1, iband)*cexp
-                           DO i = 1, hybrid%nindxm1(l, itype)
+                           DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                               j = lm + i
                               cprod(j, iband1, iband) = cprod(j, iband1, iband) + hybdat%prodm(i, n, l, itype)*cdum
                            END DO
@@ -2534,12 +2534,12 @@ CONTAINS
                         END DO
                      END DO
 
-                     lm = lm + hybrid%nindxm1(l, itype) ! go to lm start index for next m-quantum number
+                     lm = lm + hybrid%num_rad_bas_fun(l, itype) ! go to lm start index for next m-quantum number
 
                   END DO
 
                END DO
-               lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+               lm_0 = lm_0 + hybrid%num_rad_bas_fun(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
                IF (lm /= lm_0) STOP 'wavefproducts_noinv2: counting of lm-index incorrect (bug?)'
             END DO
          END DO

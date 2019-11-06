@@ -303,15 +303,15 @@ CONTAINS
 
                         END DO  !m1
 
-                        DO i = 1, hybrid%nindxm1(l, itype)
+                        DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                            cprod(i+lm,:,:) = cprod(i+lm,:,:) &
                                  + hybdat%prodm(i, n, l, itype)*carr *atom_phase
                         ENDDO
-                        lm = lm + hybrid%nindxm1(l, itype) ! go to lm start index for next m-quantum number
+                        lm = lm + hybrid%num_rad_bas_fun(l, itype) ! go to lm start index for next m-quantum number
                      END DO
                   ENDIF
                END DO
-               lm_0 = lm_0 + hybrid%nindxm1(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+               lm_0 = lm_0 + hybrid%num_rad_bas_fun(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
                IF (lm /= lm_0) call juDFT_error('wavefproducts_noinv2: counting of lm-index incorrect (bug?)')
             END DO
          END DO

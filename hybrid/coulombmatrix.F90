@@ -101,9 +101,9 @@ CONTAINS
 
       REAL                       :: q(3), q1(3), q2(3)
       REAL                       :: integrand(atoms%jmtd), primf1(atoms%jmtd), primf2(atoms%jmtd)
-      REAL                       :: mat(maxval(hybrid%nindxm1)*(maxval(hybrid%nindxm1) + 1)/2)
-      REAL                       :: moment(maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), atoms%ntype), &
-                                    moment2(maxval(hybrid%nindxm1), atoms%ntype)
+      REAL                       :: mat(maxval(hybrid%num_rad_bas_fun)*(maxval(hybrid%num_rad_bas_fun) + 1)/2)
+      REAL                       :: moment(maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype), &
+                                    moment2(maxval(hybrid%num_rad_bas_fun), atoms%ntype)
       REAL                       :: sphbes_var(atoms%jmtd, 0:maxval(hybrid%lcutm1))
       REAL                       :: sphbesmoment1(atoms%jmtd, 0:maxval(hybrid%lcutm1))
       REAL                       :: rarr(0:hybrid%lexp + 1), rarr1(0:maxval(hybrid%lcutm1))
@@ -310,13 +310,13 @@ CONTAINS
       call timestart("calc moments of MT")
       DO itype = 1, atoms%ntype
          DO l = 0, hybrid%lcutm1(itype)
-            DO i = 1, hybrid%nindxm1(l, itype)
+            DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                ! note that hybrid%basm1 already contains the factor rgrid
                moment(i, l, itype) = intgrf(atoms%rmsh(:, itype)**(l + 1)*hybrid%basm1(:, i, l, itype), &
                                             atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
             END DO
          END DO
-         DO i = 1, hybrid%nindxm1(0, itype)
+         DO i = 1, hybrid%num_rad_bas_fun(0, itype)
             moment2(i, itype) = intgrf(atoms%rmsh(:, itype)**3*hybrid%basm1(:, i, 0, itype), &
                                        atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
          END DO
@@ -327,8 +327,8 @@ CONTAINS
       ! Look for different qnorm = |k+G|, definition of qnrm and pqnrm.
       CALL getnorm(kpts, mpbasis%gptm, mpbasis%ngptm, mpbasis%gptm_ptr, qnrm, nqnrm, pqnrm, cell)
       allocate(sphbesmoment(0:hybrid%lexp, atoms%ntype, nqnrm), &
-                olap(maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), atoms%ntype, nqnrm), &
-                integral(maxval(hybrid%nindxm1), 0:maxval(hybrid%lcutm1), atoms%ntype, nqnrm))
+                olap(maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype, nqnrm), &
+                integral(maxval(hybrid%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype, nqnrm))
       sphbes_var = 0
       sphbesmoment = 0
       sphbesmoment1 = 0
@@ -380,7 +380,7 @@ CONTAINS
                END DO
             END IF
             DO l = 0, hybrid%lcutm1(itype)
-               DO n = 1, hybrid%nindxm1(l, itype)
+               DO n = 1, hybrid%num_rad_bas_fun(l, itype)
                   ! note that hybrid%basm1 already contains one factor rgrid
                   olap(n, l, itype, iqnrm) = &
                      intgrf(atoms%rmsh(:, itype)*hybrid%basm1(:, n, l, itype)*sphbes_var(:, l), &
@@ -422,7 +422,7 @@ CONTAINS
             DO ineq = 1, atoms%neq(itype)
                ! Here the diagonal block matrices do not depend on ineq. In (1b) they do depend on ineq, though,
                DO l = 0, hybrid%lcutm1(itype)
-                  DO n2 = 1, hybrid%nindxm1(l, itype)
+                  DO n2 = 1, hybrid%num_rad_bas_fun(l, itype)
                      ! note that hybrid%basm1 already contains the factor rgrid
                      CALL primitivef(primf1, hybrid%basm1(:, n2, l, itype) &
                                      *atoms%rmsh(:, itype)**(l + 1), atoms%rmsh, atoms%dx, &
@@ -446,7 +446,7 @@ CONTAINS
 
                   ! distribute mat for m=-l,l on coulomb in block-matrix form
                   DO M = -l, l
-                     DO n2 = 1, hybrid%nindxm1(l, itype)
+                     DO n2 = 1, hybrid%num_rad_bas_fun(l, itype)
                         ix = ix + 1
                         iy = iy0
                         DO n1 = 1, n2
@@ -487,7 +487,7 @@ CONTAINS
                   DO l2 = 0, hybrid%lcutm1(itype2)
                      DO m2 = -l2, l2
                         lm2 = lm2 + 1
-                        DO n2 = 1, hybrid%nindxm1(l2, itype2)
+                        DO n2 = 1, hybrid%num_rad_bas_fun(l2, itype2)
                            ix = ix + 1
 
                            iy = 0
@@ -499,7 +499,7 @@ CONTAINS
                                  DO l1 = 0, hybrid%lcutm1(itype1)
                                     DO m1 = -l1, l1
                                        lm1 = lm1 + 1
-                                       DO n1 = 1, hybrid%nindxm1(l1, itype1)
+                                       DO n1 = 1, hybrid%num_rad_bas_fun(l1, itype1)
                                           iy = iy + 1
                                           IF (iy > ix) EXIT lp2 ! Don't cross the diagonal!
                                           rdum = (-1)**(l2 + m2)*moment(n1, l1, itype1)*moment(n2, l2, itype2)*gmat(lm1, lm2)
@@ -528,7 +528,7 @@ CONTAINS
                !symmetrize makes the Coulomb matrix real symmetric
                CALL symmetrize(coulmat, hybrid%nbasp, hybrid%nbasp, 3, .FALSE., &
                                atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
-                               hybrid%nindxm1, sym)
+                               hybrid%num_rad_bas_fun, sym)
             ENDIF
 
             coulomb(:hybrid%nbasp*(hybrid%nbasp + 1)/2, ikpt) = packmat(coulmat)
@@ -654,7 +654,7 @@ CONTAINS
                            cdum = (4*pi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
                                   *EXP(CMPLX(0.0, 1.0)*2*pi_const &
                                        *dot_PRODUCT(mpbasis%gptm(:, igptp), atoms%taual(:, ic)))
-                           DO n = 1, hybrid%nindxm1(l, itype)
+                           DO n = 1, hybrid%num_rad_bas_fun(l, itype)
                               iy = iy + 1
 
                               IF (ikpt == 1 .AND. igpt == 1) THEN
@@ -682,7 +682,7 @@ CONTAINS
 
             IF (sym%invs) THEN
                CALL symmetrize(coulmat, hybrid%nbasp, mpbasis%ngptm(ikpt), 1, .FALSE., &
-                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%nindxm1, sym)
+                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), hybrid%num_rad_bas_fun, sym)
             ENDIF
 
             M = hybrid%nbasp*(hybrid%nbasp + 1)/2
@@ -1108,7 +1108,7 @@ CONTAINS
                      carr2(:, 2), igpt2, ikpt, isym, .FALSE., POINTER(ikpt, :, :, :), &
                      sym, rrot(:, :, isym), invrrot(:, :, isym), mpbasis, hybrid, &
                      kpts, maxval(hybrid%lcutm1), atoms, hybrid%lcutm1, &
-                     hybrid%nindxm1, maxval(hybrid%nindxm1), dwgn(:, :, :, isym), &
+                     hybrid%num_rad_bas_fun, maxval(hybrid%num_rad_bas_fun), dwgn(:, :, :, isym), &
                      hybrid%nbasp, nbasm1)
                   IF (iarr(igpt1) == 0) THEN
                      CALL bramat_trafo( &
@@ -1116,7 +1116,7 @@ CONTAINS
                         carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
                         sym, rrot(:, :, isym), invrrot(:, :, isym), mpbasis, hybrid, &
                         kpts, maxval(hybrid%lcutm1), atoms, hybrid%lcutm1, &
-                        hybrid%nindxm1, maxval(hybrid%nindxm1), &
+                        hybrid%num_rad_bas_fun, maxval(hybrid%num_rad_bas_fun), &
                         dwgn(:, :, :, isym), hybrid%nbasp, nbasm1)
                      l = (hybrid%nbasp + igpt1 - 1)*(hybrid%nbasp + igpt1)/2
                      coulomb(l + 1:l + hybrid%nbasp + igpt1, ikpt) = carr2(:hybrid%nbasp + igpt1, 1)
@@ -1232,18 +1232,18 @@ CONTAINS
       ! rearrange coulomb matrix
       !
 
-      allocate(coulomb_mt1(maxval(hybrid%nindxm1) - 1, maxval(hybrid%nindxm1) - 1, 0:maxval(hybrid%lcutm1), atoms%ntype, 1))
+      allocate(coulomb_mt1(maxval(hybrid%num_rad_bas_fun) - 1, maxval(hybrid%num_rad_bas_fun) - 1, 0:maxval(hybrid%lcutm1), atoms%ntype, 1))
       ic = (maxval(hybrid%lcutm1) + 1)**2*atoms%nat
       idum = ic + maxval(mpbasis%ngptm)
       idum = (idum*(idum + 1))/2
       if (sym%invs) THEN
-         allocate(coulomb_mt2_r(maxval(hybrid%nindxm1) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1) + 1, atoms%nat, 1))
-         allocate(coulomb_mt3_r(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat, 1))
+         allocate(coulomb_mt2_r(maxval(hybrid%num_rad_bas_fun) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1) + 1, atoms%nat, 1))
+         allocate(coulomb_mt3_r(maxval(hybrid%num_rad_bas_fun) - 1, atoms%nat, atoms%nat, 1))
          allocate(coulomb_mtir_r(ic + maxval(mpbasis%ngptm), ic + maxval(mpbasis%ngptm), 1))
          allocate(coulombp_mtir_r(idum, 1))
       else
-         allocate(coulomb_mt2_c(maxval(hybrid%nindxm1) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1) + 1, atoms%nat, 1))
-         allocate(coulomb_mt3_c(maxval(hybrid%nindxm1) - 1, atoms%nat, atoms%nat, 1))
+         allocate(coulomb_mt2_c(maxval(hybrid%num_rad_bas_fun) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1) + 1, atoms%nat, 1))
+         allocate(coulomb_mt3_c(maxval(hybrid%num_rad_bas_fun) - 1, atoms%nat, atoms%nat, 1))
          allocate(coulomb_mtir_c(ic + maxval(mpbasis%ngptm), ic + maxval(mpbasis%ngptm), 1))
          allocate(coulombp_mtir_c(idum, 1))
       endif
@@ -1268,7 +1268,7 @@ CONTAINS
 
             !
             ! store m-independent part of Coulomb matrix in MT spheres
-            ! in coulomb_mt1(:hybrid%nindxm1(l,itype)-1,:hybrid%nindxm1(l,itype)-1,l,itype)
+            ! in coulomb_mt1(:hybrid%num_rad_bas_fun(l,itype)-1,:hybrid%num_rad_bas_fun(l,itype)-1,l,itype)
             !
             call timestart("m-indep. part of coulomb mtx")
             indx1 = 0
@@ -1277,18 +1277,18 @@ CONTAINS
                   DO l = 0, hybrid%lcutm1(itype)
 
                      IF (ineq == 1) THEN
-                        DO n = 1, hybrid%nindxm1(l, itype) - 1
+                        DO n = 1, hybrid%num_rad_bas_fun(l, itype) - 1
                            if (coulhlp%l_real) THEN
-                              coulomb_mt1(n, 1:hybrid%nindxm1(l, itype) - 1, l, itype, ikpt0) &
-                                 = coulhlp%data_r(indx1 + n, indx1 + 1:indx1 + hybrid%nindxm1(l, itype) - 1)
+                              coulomb_mt1(n, 1:hybrid%num_rad_bas_fun(l, itype) - 1, l, itype, ikpt0) &
+                                 = coulhlp%data_r(indx1 + n, indx1 + 1:indx1 + hybrid%num_rad_bas_fun(l, itype) - 1)
                            else
-                              coulomb_mt1(n, 1:hybrid%nindxm1(l, itype) - 1, l, itype, ikpt0) &
-                                 = coulhlp%data_c(indx1 + n, indx1 + 1:indx1 + hybrid%nindxm1(l, itype) - 1)
+                              coulomb_mt1(n, 1:hybrid%num_rad_bas_fun(l, itype) - 1, l, itype, ikpt0) &
+                                 = coulhlp%data_c(indx1 + n, indx1 + 1:indx1 + hybrid%num_rad_bas_fun(l, itype) - 1)
                            end if
                         END DO
                      END IF
 
-                     indx1 = indx1 + (2*l + 1)*hybrid%nindxm1(l, itype)
+                     indx1 = indx1 + (2*l + 1)*hybrid%num_rad_bas_fun(l, itype)
                   END DO
                END DO
             END DO
@@ -1296,7 +1296,7 @@ CONTAINS
 
             !
             ! store m-dependent and atom-dependent part of Coulomb matrix in MT spheres
-            ! in coulomb_mt2(:hybrid%nindxm1(l,itype)-1,-l:l,l,iatom)
+            ! in coulomb_mt2(:hybrid%num_rad_bas_fun(l,itype)-1,-l:l,l,iatom)
             !
             call timestart("m-dep. part of coulomb mtx")
             indx1 = 0
@@ -1307,14 +1307,14 @@ CONTAINS
                   DO l = 0, hybrid%lcutm1(itype)
                      DO M = -l, l
                         if (coulhlp%l_real) THEN
-                           coulomb_mt2_r(:hybrid%nindxm1(l, itype) - 1, M, l, iatom, ikpt0) &
-                              = coulhlp%data_r(indx1 + 1:indx1 + hybrid%nindxm1(l, itype) - 1, indx1 + hybrid%nindxm1(l, itype))
+                           coulomb_mt2_r(:hybrid%num_rad_bas_fun(l, itype) - 1, M, l, iatom, ikpt0) &
+                              = coulhlp%data_r(indx1 + 1:indx1 + hybrid%num_rad_bas_fun(l, itype) - 1, indx1 + hybrid%num_rad_bas_fun(l, itype))
                         else
-                           coulomb_mt2_c(:hybrid%nindxm1(l, itype) - 1, M, l, iatom, ikpt0) &
-                              = coulhlp%data_c(indx1 + 1:indx1 + hybrid%nindxm1(l, itype) - 1, indx1 + hybrid%nindxm1(l, itype))
+                           coulomb_mt2_c(:hybrid%num_rad_bas_fun(l, itype) - 1, M, l, iatom, ikpt0) &
+                              = coulhlp%data_c(indx1 + 1:indx1 + hybrid%num_rad_bas_fun(l, itype) - 1, indx1 + hybrid%num_rad_bas_fun(l, itype))
                         endif
 
-                        indx1 = indx1 + hybrid%nindxm1(l, itype)
+                        indx1 = indx1 + hybrid%num_rad_bas_fun(l, itype)
 
                      END DO
                   END DO
@@ -1330,21 +1330,21 @@ CONTAINS
             IF (ikpt == 1) THEN
                !
                ! store the contribution of the G=0 plane wave with the MT l=0 functions in
-               ! coulomb_mt2(:hybrid%nindxm1(l=0,itype),0,maxval(hybrid%lcutm1)+1,iatom)
+               ! coulomb_mt2(:hybrid%num_rad_bas_fun(l=0,itype),0,maxval(hybrid%lcutm1)+1,iatom)
                !
                ic = 0
                iatom = 0
                DO itype = 1, atoms%ntype
                   DO ineq = 1, atoms%neq(itype)
                      iatom = iatom + 1
-                     DO n = 1, hybrid%nindxm1(0, itype) - 1
+                     DO n = 1, hybrid%num_rad_bas_fun(0, itype) - 1
                         if (coulhlp%l_real) THEN
                            coulomb_mt2_r(n, 0, maxval(hybrid%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_r(ic + n, hybrid%nbasp + 1)
                         else
                            coulomb_mt2_c(n, 0, maxval(hybrid%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_c(ic + n, hybrid%nbasp + 1)
                         endif
                      END DO
-                     ic = ic + SUM([((2*l + 1)*hybrid%nindxm1(l, itype), l=0, hybrid%lcutm1(itype))])
+                     ic = ic + SUM([((2*l + 1)*hybrid%num_rad_bas_fun(l, itype), l=0, hybrid%lcutm1(itype))])
                   END DO
                END DO
 
@@ -1355,24 +1355,24 @@ CONTAINS
                iatom = 0
                ic = 0
                DO itype = 1, atoms%ntype
-                  ishift = SUM([((2*l + 1)*hybrid%nindxm1(l, itype), l=0, hybrid%lcutm1(itype))])
+                  ishift = SUM([((2*l + 1)*hybrid%num_rad_bas_fun(l, itype), l=0, hybrid%lcutm1(itype))])
                   DO ineq = 1, atoms%neq(itype)
                      iatom = iatom + 1
-                     ic1 = ic + hybrid%nindxm1(0, itype)
+                     ic1 = ic + hybrid%num_rad_bas_fun(0, itype)
 
                      iatom1 = 0
                      ic2 = 0
                      DO itype1 = 1, atoms%ntype
-                        ishift1 = SUM([((2*l1 + 1)*hybrid%nindxm1(l1, itype1), l1=0, hybrid%lcutm1(itype1))])
+                        ishift1 = SUM([((2*l1 + 1)*hybrid%num_rad_bas_fun(l1, itype1), l1=0, hybrid%lcutm1(itype1))])
                         DO ineq1 = 1, atoms%neq(itype1)
                            iatom1 = iatom1 + 1
                            ic3 = ic2 + 1
-                           ic4 = ic3 + hybrid%nindxm1(0, itype1) - 2
+                           ic4 = ic3 + hybrid%num_rad_bas_fun(0, itype1) - 2
 
                            IF (sym%invs) THEN
-                              coulomb_mt3_r(:hybrid%nindxm1(0, itype1) - 1, iatom, iatom1, ikpt0) = coulhlp%data_r(ic1, ic3:ic4)
+                              coulomb_mt3_r(:hybrid%num_rad_bas_fun(0, itype1) - 1, iatom, iatom1, ikpt0) = coulhlp%data_r(ic1, ic3:ic4)
                            ELSE
-                              coulomb_mt3_c(:hybrid%nindxm1(0, itype1) - 1, iatom, iatom1, ikpt0) &
+                              coulomb_mt3_c(:hybrid%num_rad_bas_fun(0, itype1) - 1, iatom, iatom1, ikpt0) &
                                  = CONJG(coulhlp%data_c(ic1, ic3:ic4))
                            ENDIF
                            ic2 = ic2 + ishift1
@@ -1389,17 +1389,17 @@ CONTAINS
                   DO ineq = 1, atoms%neq(itype)
                      iatom = iatom + 1
                      if (sym%invs) THEN
-                        IF (MAXVAL(ABS(coulomb_mt2_r(:hybrid%nindxm1(0, itype) - 1, 0, 0, &
+                        IF (MAXVAL(ABS(coulomb_mt2_r(:hybrid%num_rad_bas_fun(0, itype) - 1, 0, 0, &
                                                      iatom, ikpt0) &
-                                       - coulomb_mt3_r(:hybrid%nindxm1(0, itype) - 1, iatom, &
+                                       - coulomb_mt3_r(:hybrid%num_rad_bas_fun(0, itype) - 1, iatom, &
                                                        iatom, ikpt0))) &
                             > 1E-08) &
                            call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
 
                      else
-                        IF (MAXVAL(ABS(coulomb_mt2_c(:hybrid%nindxm1(0, itype) - 1, 0, 0, &
+                        IF (MAXVAL(ABS(coulomb_mt2_c(:hybrid%num_rad_bas_fun(0, itype) - 1, 0, 0, &
                                                      iatom, ikpt0) &
-                                       - coulomb_mt3_c(:hybrid%nindxm1(0, itype) - 1, iatom, &
+                                       - coulomb_mt3_c(:hybrid%num_rad_bas_fun(0, itype) - 1, iatom, &
                                                        iatom, ikpt0))) &
                             > 1E-08) &
                            call judft_error('coulombmatrix: coulomb_mt2 and coulomb_mt3 are inconsistent')
@@ -1433,7 +1433,7 @@ CONTAINS
                DO l = 0, hybrid%lcutm1(itype)
                   DO M = -l, l
                      indx1 = indx1 + 1
-                     indx3 = indx3 + hybrid%nindxm1(l, itype)
+                     indx3 = indx3 + hybrid%num_rad_bas_fun(l, itype)
 
                      indx2 = 0
                      indx4 = 0
@@ -1442,7 +1442,7 @@ CONTAINS
                            DO l1 = 0, hybrid%lcutm1(itype1)
                               DO m1 = -l1, l1
                                  indx2 = indx2 + 1
-                                 indx4 = indx4 + hybrid%nindxm1(l1, itype1)
+                                 indx4 = indx4 + hybrid%num_rad_bas_fun(l1, itype1)
                                  IF (indx4 < indx3) CYCLE
                                  IF (calc_mt(ikpt)) THEN
                                     IF (sym%invs) THEN
@@ -1578,7 +1578,7 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             DO l = 0, hybrid%lcutm1(itype)
                DO M = -l, l
-                  DO i = 1, hybrid%nindxm1(l, itype)
+                  DO i = 1, hybrid%num_rad_bas_fun(l, itype)
                      j = j + 1
                      IF (l == 0) THEN
                         coeff(j) = SQRT(4*pi_const) &
@@ -1610,19 +1610,19 @@ CONTAINS
       IF (sym%invs) THEN
          CALL symmetrize(coeff, 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
-                         hybrid%nindxm1, sym)
+                         hybrid%num_rad_bas_fun, sym)
          CALL symmetrize(claplace, 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
-                         hybrid%nindxm1, sym)
+                         hybrid%num_rad_bas_fun, sym)
          CALL symmetrize(cderiv(:, -1), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
-                         hybrid%nindxm1, sym)
+                         hybrid%num_rad_bas_fun, sym)
          CALL symmetrize(cderiv(:, 0), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
-                         hybrid%nindxm1, sym)
+                         hybrid%num_rad_bas_fun, sym)
          CALL symmetrize(cderiv(:, 1), 1, nbasm1(1), 2, .FALSE., &
                          atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
-                         hybrid%nindxm1, sym)
+                         hybrid%num_rad_bas_fun, sym)
       ENDIF
       ! Subtract head contributions from coulomb(:nn,1) to obtain the body
       l = 0
@@ -1641,10 +1641,10 @@ CONTAINS
 
          CALL desymmetrize(coeff, 1, nbasm1(1), 2, &
                            atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
-                           hybrid%nindxm1, sym)
+                           hybrid%num_rad_bas_fun, sym)
          CALL symmetrize(coeff, nbasm1(1), 1, 1, .FALSE., &
                          atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
-                         hybrid%nindxm1, sym)
+                         hybrid%num_rad_bas_fun, sym)
       ENDIF
       ! Explicit normalization here in order to prevent failure of the diagonalization in diagonalize_coulomb
       ! due to inaccuracies in the overlap matrix (which can make it singular).
