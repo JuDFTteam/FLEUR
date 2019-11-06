@@ -627,7 +627,7 @@ CONTAINS
                                            l2=0, atoms%lmaxd)], &
                                            [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
 
-      write (*,*) "equal", all(selecmat == selecmat_old)
+      write (*,*) "equal", all(selecmat .eqv. selecmat_old)
       call judft_error("meh")
    end function calc_selecmat
 END MODULE m_mixedbasis
