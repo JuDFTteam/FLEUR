@@ -184,11 +184,11 @@ MODULE m_add_selfen
             ENDDO
          ENDDO
          CALL vmat%free()
-         !Test throw out elements smaller than 1e-6
+         !Test throw out elements smaller than 1e-4
          DO ispin = 1, input%jspins
             DO m = -l, l
                DO mp=-l, l
-                  IF(ABS(mmpMat(m,mp,i_hia,ispin)).LT.1e-6) mmpMat(m,mp,i_hia,ispin) = 0.0
+                  IF(ABS(mmpMat(m,mp,i_hia,ispin)).LT.1e-4) mmpMat(m,mp,i_hia,ispin) = 0.0
                ENDDO
             ENDDO
          ENDDO
