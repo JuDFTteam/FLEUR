@@ -460,7 +460,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpbasis,hybrid,input,sym,kpts,dimension,atoms,mpi,noco,cell,oneD,results,jspin,enpara,eig_id,&
+         CALL HF_setup(mpbasis,hybrid,input,sym,kpts,dimension,atoms,mpi,noco,&
+                       cell,oneD,results,jspin,enpara,eig_id,&
                        hybdat,sym%invs,vTot%mt(:,0,:,:),eig_irr)
 
          results%neig(:,:) = highestState(:,:) + 1
