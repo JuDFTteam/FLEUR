@@ -84,8 +84,8 @@ MODULE m_crystalfield
          IF(l_debug) THEN
             WRITE(*,*) "UP"
             WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,1)
-            WRITE(*,*) "DOWN"
-            WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
+            IF(input%jspins.EQ.2) WRITE(*,*) "DOWN"
+            IF(input%jspins.EQ.2) WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
          ENDIF
          !Remove LDA+U potential
          i_u = atoms%n_u+i_hia !position in the v%mmpmat array
@@ -113,8 +113,8 @@ MODULE m_crystalfield
          IF(l_debug) THEN
             WRITE(*,*) "UP-REMOVED"
             WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,1)
-            WRITE(*,*) "DOWN-REMOVED"
-            WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
+            IF(input%jspins.EQ.2) WRITE(*,*) "DOWN-REMOVED"
+            IF(input%jspins.EQ.2) WRITE(*,"(7f7.3)") h_loc(-3:3,-3:3,i_hia,2)
          ENDIF
          ex = 0.0
          DO m= -l, l
@@ -123,8 +123,8 @@ MODULE m_crystalfield
             ENDDO
          ENDDO
          IF(l_debug) THEN
-            WRITE(*,*) "Exchange (eV)"
-            WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const*0.5
+            IF(input%jspins.EQ.2) WRITE(*,*) "Exchange (eV)"
+            IF(input%jspins.EQ.2) WRITE(*,"(7f7.3)") ex(-3:3,-3:3)*hartree_to_ev_const*0.5
          ENDIF
          !------------------------------------------------------------------------------------
          ! If states move close to the cutoff we get some shift in the results on the diagonal
