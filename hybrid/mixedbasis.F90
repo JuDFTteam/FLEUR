@@ -163,7 +163,7 @@ CONTAINS
             !
             ! valence * valence
             !
-            selecmat = calc_selecmat(seleco, selecu)
+            selecmat = calc_selecmat(atoms, hybrid, seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
