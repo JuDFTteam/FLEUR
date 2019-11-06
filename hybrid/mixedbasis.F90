@@ -166,9 +166,12 @@ CONTAINS
             !
 
             ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
-            selecmat = RESHAPE((/((((seleco(n1, l1) .AND. selecu(n2, l2), &
-                                     n1=1, maxval(hybrid%num_radfun_per_l)), l1=0, atoms%lmaxd), n2=1, maxval(hybrid%num_radfun_per_l)), l2=0, atoms%lmaxd)/), &
-                               [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
+            selecmat = RESHAPE( [((((seleco(n1, l1) .AND. selecu(n2, l2), &
+                                     n1=1, maxval(hybrid%num_radfun_per_l)), &
+                                     l1=0, atoms%lmaxd), &
+                                     n2=1, maxval(hybrid%num_radfun_per_l)), &
+                                     l2=0, atoms%lmaxd)], &
+                                     [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
@@ -210,8 +213,7 @@ CONTAINS
             seleco(3:,:) = .TRUE.
             selecu(3:,:) = .TRUE.
          END IF
-         IF (atoms%ntype > 1 .AND. mpi%irank == 0)&
-              &    WRITE (6, '(6X,A,I3)') 'Atom type', itype
+
          ng = atoms%jri(itype)
          DO l = 0, hybrid%lcutm1(itype)
             n = hybrid%nindxm1(l, itype)
