@@ -589,9 +589,12 @@ CONTAINS
       END DO
    end subroutine gen_bas_fun
 
-   function calc_selecmat(seleco, selecu) result(selecmat)
+   function calc_selecmat(atoms,hybrid,seleco, selecu) result(selecmat)
+      use m_types
       ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
       implicit NONE
+      type(t_atoms), intent(in)     :: atoms
+      type(t_hybrid), intent(in)    :: hybrid
       LOGICAL, intent(in)           ::  seleco(:,:), selecu(:,:)
       LOGICAL                       ::  selecmat(maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, &
                                                  maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1))
@@ -600,9 +603,9 @@ CONTAINS
 
       ! column-major means left-most index varies the fastest
       do l2=0,atoms%lmaxd
-         do n2=1,maxval(hybrid%num_radfun_per_l))
+         do n2=1,maxval(hybrid%num_radfun_per_l)
             do l1=0,atoms%lmaxd
-               do n1=1,maxval(hybrid%num_radfun_per_l))
+               do n1=1,maxval(hybrid%num_radfun_per_l)
                   selecmat(n1,l1,n2,l2) = seleco(n1, l1) .AND. selecu(n2, l2)
                enddo
             enddo
