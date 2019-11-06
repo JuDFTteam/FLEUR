@@ -593,12 +593,13 @@ CONTAINS
       use m_types
       ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
       implicit NONE
-      LOGICAL                       ::  selecmat(maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, &
-                                                 maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1)
 
       type(t_atoms), intent(in)     :: atoms
       type(t_hybrid), intent(in)    :: hybrid
-      LOGICAL, intent(in)           ::  seleco(:,:), selecu(:,:)
+      LOGICAL, intent(in)           :: seleco(:,:), selecu(:,:)
+      LOGICAL  ::  selecmat(maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, &
+                            maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1)
+
       integer                       :: n1, l1, n2, l2
 
 
