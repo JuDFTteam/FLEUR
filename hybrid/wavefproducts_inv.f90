@@ -57,7 +57,7 @@ CONTAINS
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
       call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
-                                atoms, kpts, nk, iq, hybdat, hybrid,&
+                                atoms, kpts, nk, iq, hybdat, mpbasis, hybrid,&
                                 sym, nkqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
@@ -227,7 +227,7 @@ CONTAINS
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
-                                   atoms, kpts, nk, iq, hybdat, hybrid,&
+                                   atoms, kpts, nk, iq, hybdat, mpbasis, hybrid,&
                                    sym, nkqpt, cprod)
      use m_types
      use m_judft
@@ -235,6 +235,7 @@ CONTAINS
      use m_constants
      implicit NONE
      TYPE(t_dimension), INTENT(IN) :: dimension
+     TYPE(t_mpbasis), INTENT(IN)   :: mpbasis
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
      TYPE(t_sym), INTENT(IN)       :: sym
      TYPE(t_kpts), INTENT(IN)      :: kpts

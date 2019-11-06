@@ -51,7 +51,7 @@ CONTAINS
                                          nkqpt, cprod)
 
       call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                  dimension, atoms, hybrid, hybdat, kpts, &
+                                  dimension, atoms, mpbasis, hybrid, hybdat, kpts, &
                                   nkqpt, cprod)
       call timestop("wavefproducts_noinv5")
 
@@ -201,7 +201,7 @@ CONTAINS
 
 
    subroutine wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                     dimension, atoms, hybrid, hybdat, kpts, &
+                                     dimension, atoms, mpbasis, hybrid, hybdat, kpts, &
                                      nkqpt, cprod)
       use m_types
       USE m_constants
@@ -212,6 +212,7 @@ CONTAINS
       TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
+      TYPE(t_mpbasis), INTENT(IN)     :: mpbasis
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 

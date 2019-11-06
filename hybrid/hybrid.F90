@@ -118,7 +118,8 @@ CONTAINS
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
-            CALL HF_setup(hybrid, input, sym, kpts, dimension, atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id, &
+            CALL HF_setup(mpbasis,hybrid, input, sym, kpts, dimension, atoms, &
+                          mpi, noco, cell, oneD, results, jsp, enpara, eig_id, &
                           hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
 

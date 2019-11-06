@@ -8,7 +8,7 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(hybrid, input, sym, kpts, DIMENSION, atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
+   SUBROUTINE hf_setup(mpbasis, hybrid, input, sym, kpts, DIMENSION, atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
                        hybdat, l_real, vr0, eig_irr)
       USE m_types
       USE m_eig66_io
@@ -20,6 +20,7 @@ CONTAINS
 
       IMPLICIT NONE
 
+      TYPE(t_mpbasis), INTENT(in)   :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_dimension), INTENT(IN)    :: dimension
