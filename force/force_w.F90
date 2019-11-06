@@ -98,6 +98,7 @@ CONTAINS
        results%force_old(:,:)=forcetot !Store for next iteration
        results%force=0.0
        l_relax=sum<input%force_converged
+       l_relax=l_relax.and.(input%mindistance<=results%last_distance)
        IF (.NOT.l_relax) THEN
           WRITE (6,8020) input%force_converged,sum
 8020      FORMAT ('No new postions, force convergence required=',f8.5,'; max force distance=',f8.5)
