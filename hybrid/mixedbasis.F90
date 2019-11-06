@@ -136,7 +136,8 @@ CONTAINS
       END IF
 
       allocate(hybrid%nindxm1(0:maxval(hybrid%lcutm1), atoms%ntype))
-      allocate(seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd), selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
+      allocate(seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
+      allocate(selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
       hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
 
       ! determine maximal indices of (radial) mixed-basis functions (->nindxm1)
@@ -163,6 +164,12 @@ CONTAINS
             !
             ! valence * valence
             !
+            if(.not. allocated(selecmat)) then
+               allocate(selecmat(maxval(hybrid%num_radfun_per_l), &
+                                 0:atoms%lmaxd, &
+                                 maxval(hybrid%num_radfun_per_l), &
+                                 0:atoms%lmaxd))
+            endif
             selecmat = calc_selecmat(atoms, hybrid, seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
@@ -590,23 +597,18 @@ CONTAINS
    end subroutine gen_bas_fun
 
    function calc_selecmat(atoms,hybrid,seleco, selecu) result(selecmat)
+      ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
       use m_types
       use m_judft
-      ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
       implicit NONE
 
-      type(t_atoms), intent(in)     :: atoms
-      type(t_hybrid), intent(in)    :: hybrid
-      LOGICAL, intent(in)           :: seleco(:,:), selecu(:,:)
-      LOGICAL  ::  selecmat(maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, &
-                            maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1)
-
-
-       LOGICAL  ::  selecmat_old(maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, &
-                             maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1)
-
+      type(t_atoms),  intent(in) :: atoms
+      type(t_hybrid), intent(in) :: hybrid
+      LOGICAL, intent(in) :: seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd)
+      LOGICAL, intent(in) :: selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd)
+      LOGICAL  ::  selecmat(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, &
+                            maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd)
       integer                       :: n1, l1, n2, l2
-
 
       ! column-major means left-most index varies the fastest
       do l2=0,atoms%lmaxd
@@ -618,16 +620,5 @@ CONTAINS
             enddo
          enddo
       enddo
-
-
-      selecmat_old = RESHAPE( [((((seleco(n1, l1) .AND. selecu(n2, l2), &
-                                           n1=1, maxval(hybrid%num_radfun_per_l)), &
-                                           l1=0, atoms%lmaxd), &
-                                           n2=1, maxval(hybrid%num_radfun_per_l)), &
-                                           l2=0, atoms%lmaxd)], &
-                                           [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
-
-      write (*,*) "equal", all(selecmat .eqv. selecmat_old)
-      call judft_error("meh")
    end function calc_selecmat
 END MODULE m_mixedbasis
