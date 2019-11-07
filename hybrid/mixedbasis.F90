@@ -235,36 +235,35 @@ CONTAINS
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
-                  IF (l < ABS(l1 - l2) .OR. l > l1 + l2) CYCLE
+                  IF (l >= ABS(l1 - l2) .AND. l <= l1 + l2) THEN
+                     DO n1 = 1, hybrid%num_radfun_per_l(l1, itype)
+                        DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
 
-                  DO n1 = 1, hybrid%num_radfun_per_l(l1, itype)
-                     DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
+                           IF (selecmat(n1, l1, n2, l2)) THEN
+                              DO jspin = 1, input%jspins
+                                 i = i + 1
+                                 IF (i > n_radbasfn) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
-                        IF (selecmat(n1, l1, n2, l2)) THEN
-                           DO jspin = 1, input%jspins
-                              i = i + 1
-                              IF (i > n_radbasfn) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
+                                 hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) &
+                                    = (bas1(:n_grid_pt, n1, l1, itype, jspin) &
+                                       *bas1(:n_grid_pt, n2, l2, itype, jspin) &
+                                       + bas2(:n_grid_pt, n1, l1, itype, jspin) &
+                                       *bas2(:n_grid_pt, n2, l2, itype, jspin))/atoms%rmsh(:n_grid_pt, itype)
 
-                              hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) &
-                                 = (bas1(:n_grid_pt, n1, l1, itype, jspin) &
-                                    *bas1(:n_grid_pt, n2, l2, itype, jspin) &
-                                    + bas2(:n_grid_pt, n1, l1, itype, jspin) &
-                                    *bas2(:n_grid_pt, n2, l2, itype, jspin))/atoms%rmsh(:n_grid_pt, itype)
+                                 !normalize radbasfn_mt
+                                 rdum = SQRT(intgrf(hybrid%radbasfn_mt(:,i, l, itype)**2, &
+                                                    atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
 
-                              !normalize radbasfn_mt
-                              rdum = SQRT(intgrf(hybrid%radbasfn_mt(:,i, l, itype)**2, &
-                                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
+                                 hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) = hybrid%radbasfn_mt(:n_grid_pt, i, l, itype)/rdum
 
-                              hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) = hybrid%radbasfn_mt(:n_grid_pt, i, l, itype)/rdum
+                              END DO !jspin
+                              ! prevent double counting of products (a*b = b*a)
+                              selecmat(n2, l2, n1, l1) = .FALSE.
+                           END IF
 
-                           END DO !jspin
-                           ! prevent double counting of products (a*b = b*a)
-                           selecmat(n2, l2, n1, l1) = .FALSE.
-                        END IF
-
-                     END DO !n2
-                  END DO !n1
-
+                        END DO !n2
+                     END DO !n1
+                  ENDIF
                END DO !l2
             END DO  !l1
 
