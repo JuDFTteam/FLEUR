@@ -220,8 +220,11 @@ CONTAINS
             END IF
 
             ! set up the overlap matrix
-            allocate(olap(n_radbasfn, n_radbasfn), eigv(n_radbasfn, n_radbasfn), work(3*n_radbasfn), eig(n_radbasfn), ihelp(n_radbasfn))
-            ihelp = 1 ! initialize to avoid a segfault
+            allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
+            allocate(eigv(n_radbasfn, n_radbasfn), source=0.0)
+            allocate(work(3*n_radbasfn), source=0.0)
+            allocate(eig(n_radbasfn), source=0.0)
+            allocate(ihelp(n_radbasfn), source=1)
             i_basfn = 0
 
             ! valence*valence
@@ -268,7 +271,6 @@ CONTAINS
             ! with a eigenvalue greater then hybrid%tolerance1 are retained
 
             ! Calculate overlap
-            olap = 0
             DO n2 = 1, n_radbasfn
                DO n1 = 1, n2
                   olap(n1, n2) = intgrf(hybrid%radbasfn_mt(:,n1, l, itype)*hybrid%radbasfn_mt(:,n2, l, itype), &
@@ -615,7 +617,7 @@ CONTAINS
    function calc_radbas_norm(atoms, hybrid, i_basfn, itype, gridf) result(norm)
       use m_types
       implicit NONE
-      type(t_atoms), intent(in)  :: atom
+      type(t_atoms), intent(in)  :: atoms
       type(t_hybrid), intent(in) :: hybrid
       integer, intent(in)        :: i_basfn, itype
       real, intent(in)           ::  gridf(:,:)
