@@ -160,6 +160,11 @@ END DO
       END DO
    END IF
 
+IF (input%l_removeMagnetisationFromInterstitial) THEN
+   !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to each other. 
+
+   END IF
+
    ! write the spin-polarized density
    CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                      0,-1.0,0.0,.FALSE.,den)

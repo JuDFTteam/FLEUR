@@ -150,6 +150,7 @@
       <xsd:attribute default="F" name="l_J" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="swsp" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="lflip" type="FleurBool" use="optional"/>
+     <xsd:attribute default="F" name="l_removeMagnetisationFromInterstitial" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.0" name="fixed_moment" type="xsd:string" use="optional"/>
    </xsd:complexType>
 

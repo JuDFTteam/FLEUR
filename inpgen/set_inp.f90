@@ -141,7 +141,7 @@
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
       sliceplot%slice= .false. ;  input%swsp  = .false.
-      input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
+      input%lflip= .false. ; input%l_removeMagnetisationFromInterstitial=.FALSE. ;banddos%vacdos= .false. ; input%integ = .false.
       sliceplot%iplot= 0
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.

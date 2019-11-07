@@ -43,6 +43,9 @@ CONTAINS
        !
        !       sm1+/_ = (sm+/_) + alpha* F(sm)
        !                +/-0.5alpha(spinf-1)( F(sm+) + F(sm-) )
+       ! The F(sm+) and F(sm-) terms do not only include diagonal elements of the density matrices (as one could think) 
+       ! but also contain off-diag. elements (jspins=3,4) of the density matrices in the fully noncolinear case. 
+       ! Choosing a spinf>1 therefore might be helpful when it comes to converging noncolinear systems.
     END IF
 
   END SUBROUTINE stmix

@@ -188,9 +188,9 @@ SUBROUTINE w_inpXML(&
    130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'" coretail_lmax="',i0,'"/>')
    WRITE (fileNum,130) input%ctail,input%frcor,input%kcrel,input%coretail_lmax
 
-!      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
-   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
-   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip
+!      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"  l_removeMagnetisationFromInterstitial="F"/>
+   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'" l_removeMagnetisationFromInterstitial="',l1,'"/>')
+   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip, input%l_removeMagnetisationFromInterstitial
 
    !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
