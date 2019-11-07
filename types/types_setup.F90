@@ -419,6 +419,7 @@ MODULE m_types_setup
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps
       INTEGER :: rdmftStatesBelow
+      LOGICAL :: l_removeMagnetisationFromInterstitial
       INTEGER :: rdmftStatesAbove
       INTEGER :: rdmftFunctional
    END TYPE t_input
