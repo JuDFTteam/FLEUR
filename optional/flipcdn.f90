@@ -114,7 +114,7 @@ IF (input%l_removeMagnetisationFromInterstitial) THEN
    
    !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to each other. 
       den%pw(:,2)=den%pw(:,1)
-      IF (noco%l_noco=.TRUE.) THEN
+      IF (noco%l_noco.EQ..TRUE.) THEN
          den%pw(:,3)=0.0
          den%pw(:,4)=0.0
       END IF
