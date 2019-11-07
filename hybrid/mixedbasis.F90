@@ -72,7 +72,6 @@ CONTAINS
       REAL                            ::  rdum, rdum1, norm
 
       ! - local arrays -
-      INTEGER, ALLOCATABLE            ::  ihelp(:)
 
       REAL                            ::  bashlp(atoms%jmtd)
 
@@ -223,7 +222,6 @@ CONTAINS
             allocate(eigv(n_radbasfn, n_radbasfn), source=0.0)
             allocate(work(3*n_radbasfn), source=0.0)
             allocate(eig(n_radbasfn), source=0.0)
-            allocate(ihelp(n_radbasfn), source=1)
             i_basfn = 0
 
             ! valence*valence
@@ -248,7 +246,7 @@ CONTAINS
                                       ) / atoms%rmsh(:n_grid_pt, itype)
 
                                  !normalize radbasfn_mt
-                                 norm = calc_radbas_norm(atoms, hybrid, i_basfn, itype, gridf)
+                                 norm = calc_radbas_norm(atoms, hybrid, l, i_basfn, itype, gridf)
                                  hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) &
                                  = hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype)/norm
 
@@ -270,22 +268,12 @@ CONTAINS
             ! with a eigenvalue greater then hybrid%tolerance1 are retained
 
             ! Calculate overlap
-            call calc_olap_radbasfn(atoms, hybrid, itype, n_radbasfn, gridf)
+            call calc_olap_radbasfn(atoms, hybrid, l, itype, n_radbasfn, gridf, olap)
 
             ! Diagonalize
             CALL diagonalize(eigv, eig, olap)
 
-            ! Get rid of linear dependencies (eigenvalue <= hybrid%tolerance1)
-            nn = 0
-            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
-               IF (eig(i) > hybrid%tolerance1) THEN
-                  nn = nn + 1
-                  ihelp(nn) = i
-               END IF
-            END DO
-            mpbasis%num_rad_bas_fun(l, itype) = nn
-            eig = eig(ihelp)
-            eigv(:,:) = eigv(:,ihelp)
+            call filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
 
             DO i = 1, n_grid_pt
                hybrid%radbasfn_mt(i, 1:nn, l, itype) = MATMUL(hybrid%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
@@ -355,7 +343,7 @@ CONTAINS
                WRITE (6, '(6X,A,I4,'' ->'',I4,''   ('',ES8.1,'' )'')') lchar(l)//':', n_radbasfn, nn, SQRT(rdum)/nn
             END IF
 
-            deallocate(olap, eigv, work, eig, ihelp)
+            deallocate(olap, eigv, work, eig)
 
          END DO !l
          IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpbasis%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype))
@@ -607,31 +595,33 @@ CONTAINS
       enddo
    end function calc_selecmat
 
-   function calc_radbas_norm(atoms, hybrid, i_basfn, itype, gridf) result(norm)
+   function calc_radbas_norm(atoms, hybrid, l, i_basfn, itype, gridf) result(norm)
+      USE m_intgrf, ONLY: intgrf
       use m_types
       implicit NONE
       type(t_atoms), intent(in)  :: atoms
       type(t_hybrid), intent(in) :: hybrid
-      integer, intent(in)        :: i_basfn, itype
+      integer, intent(in)        :: l, i_basfn, itype
       real, intent(in)           :: gridf(:,:)
 
       real                       :: norm
 
-      norm = SQRT(
+      norm = SQRT( &
                   intgrf(hybrid%radbasfn_mt(:,i_basfn, l, itype)**2, &
                          atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype,&
                          itype, gridf)&
                  )
    end function calc_radbas_norm
 
-   subroutine calc_olap_radbasfn(atoms, hybrid, itype, n_radbasfn, gridf)
+   subroutine calc_olap_radbasfn(atoms, hybrid, l, itype, n_radbasfn, gridf, olap)
+      USE m_intgrf, ONLY: intgrf
       use m_types
       implicit NONE
-      type(atoms), intent(in)          :: atoms
-      type(hybrid), intent(in)         :: hybrid
-      integer, intent(in)              :: itype, n_radbasfn
-      real, intent(in)                 :: gridf(:,:)
-      real, intent(inout), allocatable :: olap(:,:)
+      type(t_atoms), intent(in)          :: atoms
+      type(t_hybrid), intent(in)         :: hybrid
+      integer, intent(in)                :: l, itype, n_radbasfn
+      real, intent(in)                   :: gridf(:,:)
+      real, intent(inout), allocatable   :: olap(:,:)
 
       integer  :: n1, n2
 
@@ -648,4 +638,32 @@ CONTAINS
          END DO
       END DO
    end subroutine calc_olap_radbasfn
+
+   subroutine filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
+
+                  ! Get rid of linear dependencies (eigenvalue <= hybrid%tolerance1)
+      use m_types
+      implicit none
+      type(t_hybrid), intent(in)     :: hybrid
+      integer, intent(in)          :: l, itype, n_radbasfn
+      real, intent(inout)          :: eig(:), eigv(:,:)
+      type(t_mpbasis), intent(inout) :: mpbasis
+
+      integer              :: num_radbasfn, i_bas
+      integer, allocatable :: remaining_basfn(:)
+
+      allocate(remaining_basfn(n_radbasfn), source=1)
+      num_radbasfn = 0
+
+      DO i_bas = 1, mpbasis%num_rad_bas_fun(l, itype)
+         IF (eig(i_bas) > hybrid%tolerance1) THEN
+            num_radbasfn = num_radbasfn + 1
+            remaining_basfn(num_radbasfn) = i_bas
+         END IF
+      END DO
+
+      mpbasis%num_rad_bas_fun(l, itype) = num_radbasfn
+      eig = eig(remaining_basfn)
+      eigv(:,:) = eigv(:,remaining_basfn)
+   end subroutine filter_radbasfn
 END MODULE m_mixedbasis
