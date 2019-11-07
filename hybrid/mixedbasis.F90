@@ -275,6 +275,7 @@ CONTAINS
 
             call filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
 
+            nn = mpbasis%num_rad_bas_fun(l, itype)
             DO i = 1, n_grid_pt
                hybrid%radbasfn_mt(i, 1:nn, l, itype) = MATMUL(hybrid%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
             END DO
