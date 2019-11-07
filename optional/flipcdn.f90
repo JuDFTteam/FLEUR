@@ -162,9 +162,9 @@ END DO
 
 IF (input%l_removeMagnetisationFromInterstitial) THEN
    !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to each other. 
-      den(:,:,:,2)=den(:,:,:,1)
-      den(:,:,:,3)=0.0
-      den(:,:,:,4)=0.0
+      den%pw(:,2)=den%pw(:,1)
+      den%pw(:,3)=0.0
+      den%pw(:,4)=0.0
    END IF
 
    ! write the spin-polarized density
