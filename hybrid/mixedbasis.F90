@@ -275,10 +275,8 @@ CONTAINS
 
             call filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
 
+            call trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv, hybrid)
             nn = mpbasis%num_rad_bas_fun(l, itype)
-            DO i = 1, n_grid_pt
-               hybrid%radbasfn_mt(i, 1:nn, l, itype) = MATMUL(hybrid%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
-            END DO
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
             IF (l == 0) THEN
@@ -667,4 +665,21 @@ CONTAINS
       eig = eig(remaining_basfn)
       eigv(:,:) = eigv(:,remaining_basfn)
    end subroutine filter_radbasfn
+
+   subroutine trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv, hybrid)
+      use m_types
+      implicit NONE
+      type(t_mpbasis), intent(in)   :: mpbasis
+      integer, intent(in)           :: n_radbasfn, n_grid_pt, l, itype
+      real, intent(in)              :: eig(:), eigv(:,:)
+      type(t_hybrid), intent(inout) :: hybrid
+
+      integer :: nn, i
+
+      nn = mpbasis%num_rad_bas_fun(l, itype)
+      DO i = 1, n_grid_pt
+         hybrid%radbasfn_mt(i, 1:nn, l, itype) &
+            = MATMUL(hybrid%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
+      END DO
+   end subroutine trafo_to_orthonorm_bas
 END MODULE m_mixedbasis
