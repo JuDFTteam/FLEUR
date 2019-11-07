@@ -246,16 +246,14 @@ CONTAINS
                                       ) / atoms%rmsh(:n_grid_pt, itype)
 
                                  !normalize radbasfn_mt
-                                 norm = SQRT(intgrf(hybrid%radbasfn_mt(:,i_basfn, l, itype)**2, &
-                                                    atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
-
-                                 hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) = hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype)/norm
+                                 norm = calc_radbas_norm(atoms, hybrid, i_basfn, itype, gridf)
+                                 hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) &
+                                 = hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype)/norm
 
                               END DO !jspin
                               ! prevent double counting of products (a*b = b*a)
                               selecmat(n2, l2, n1, l1) = .FALSE.
                            END IF
-
                         END DO !n2
                      END DO !n1
                   ENDIF
@@ -613,4 +611,21 @@ CONTAINS
          enddo
       enddo
    end function calc_selecmat
+
+   function calc_radbas_norm(atoms, hybrid, i_basfn, itype, gridf) result(norm)
+      use m_types
+      implicit NONE
+      type(t_atoms), intent(in)  :: atom
+      type(t_hybrid), intent(in) :: hybrid
+      integer, intent(in)        :: i_basfn, itype
+      real, intent(in)           ::  gridf(:,:)
+
+      real                       :: norm
+
+      norm = SQRT(
+                  intgrf(hybrid%radbasfn_mt(:,i_basfn, l, itype)**2, &
+                         atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype,&
+                         itype, gridf)&
+                 )
+   end function calc_radbas_norm
 END MODULE m_mixedbasis
