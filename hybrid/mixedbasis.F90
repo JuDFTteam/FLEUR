@@ -72,7 +72,7 @@ CONTAINS
       REAL                            ::  rdum, rdum1, norm
 
       ! - local arrays -
-      INTEGER, ALLOCATABLE             ::  ihelp(:)
+      INTEGER, ALLOCATABLE            ::  ihelp(:)
 
       REAL                            ::  bashlp(atoms%jmtd)
 
@@ -220,7 +220,6 @@ CONTAINS
             END IF
 
             ! set up the overlap matrix
-            allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
             allocate(eigv(n_radbasfn, n_radbasfn), source=0.0)
             allocate(work(3*n_radbasfn), source=0.0)
             allocate(eig(n_radbasfn), source=0.0)
@@ -271,13 +270,7 @@ CONTAINS
             ! with a eigenvalue greater then hybrid%tolerance1 are retained
 
             ! Calculate overlap
-            DO n2 = 1, n_radbasfn
-               DO n1 = 1, n2
-                  olap(n1, n2) = intgrf(hybrid%radbasfn_mt(:,n1, l, itype)*hybrid%radbasfn_mt(:,n2, l, itype), &
-                                        atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-                  olap(n2, n1) = olap(n1, n2)
-               END DO
-            END DO
+            call calc_olap_radbasfn(atoms, hybrid, itype, n_radbasfn, gridf)
 
             ! Diagonalize
             CALL diagonalize(eigv, eig, olap)
@@ -620,7 +613,7 @@ CONTAINS
       type(t_atoms), intent(in)  :: atoms
       type(t_hybrid), intent(in) :: hybrid
       integer, intent(in)        :: i_basfn, itype
-      real, intent(in)           ::  gridf(:,:)
+      real, intent(in)           :: gridf(:,:)
 
       real                       :: norm
 
@@ -630,4 +623,29 @@ CONTAINS
                          itype, gridf)&
                  )
    end function calc_radbas_norm
+
+   subroutine calc_olap_radbasfn(atoms, hybrid, itype, n_radbasfn, gridf)
+      use m_types
+      implicit NONE
+      type(atoms), intent(in)          :: atoms
+      type(hybrid), intent(in)         :: hybrid
+      integer, intent(in)              :: itype, n_radbasfn
+      real, intent(in)                 :: gridf(:,:)
+      real, intent(inout), allocatable :: olap(:,:)
+
+      integer  :: n1, n2
+
+      if(.not. allocated(olap) .or. any(shape(olap) /= n_radbasfn)) then
+         if(allocated(olap)) deallocate(olap)
+         allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
+      endif
+
+      DO n2 = 1, n_radbasfn
+         DO n1 = 1, n2
+            olap(n1, n2) = intgrf(hybrid%radbasfn_mt(:,n1, l, itype)*hybrid%radbasfn_mt(:,n2, l, itype), &
+                                  atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+            olap(n2, n1) = olap(n1, n2)
+         END DO
+      END DO
+   end subroutine calc_olap_radbasfn
 END MODULE m_mixedbasis
