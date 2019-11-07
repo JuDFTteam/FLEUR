@@ -87,8 +87,10 @@ CONTAINS
          DO nn = 1, n
             IF (hmat%l_real) THEN
                hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*v_x%data_r(nn, n)
+               v_x%data_r(n, nn) = v_x%data_r(nn, n)
             ELSE
                hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*v_x%data_c(nn, n)
+               v_x%data_c(n, nn) = CONJG(v_x%data_c(nn, n))
             ENDIF
          END DO
       END DO
