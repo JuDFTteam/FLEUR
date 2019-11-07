@@ -280,34 +280,11 @@ CONTAINS
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
             IF (l == 0) THEN
-
-               ! Check if radbasfn_mt must be reallocated
-               IF (nn + 1 > SIZE(mpbasis%radbasfn_mt, 2)) THEN
-                  allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
-                  basmhlp(:,1:nn, :,:) = mpbasis%radbasfn_mt
-                  deallocate(mpbasis%radbasfn_mt)
-                  allocate(mpbasis%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
-                  mpbasis%radbasfn_mt(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
-                  deallocate(basmhlp)
-               END IF
-
-               mpbasis%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) = atoms%rmsh(:n_grid_pt, itype)/SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
-               DO i = nn, 1, -1
-                  DO j = i + 1, nn + 1
-                     mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                                                      - intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)*mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
-                                                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
-                                                      *mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
-
-                  END DO
-                  mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                                                   /SQRT(intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, &
-                                                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
-               END DO
-               nn = nn + 1
+               call add_l0_fun(atoms, hybrid, n_grid_pt, itype, gridf, mpbasis)
+               mpbasis%num_rad_bas_fun(0, itype) = mpbasis%num_rad_bas_fun(0, itype)+1
                deallocate(olap)
-               allocate(olap(nn, nn))
-               mpbasis%num_rad_bas_fun(l, itype) = nn
+               allocate(olap(mpbasis%num_rad_bas_fun(0, itype),&
+                             mpbasis%num_rad_bas_fun(0, itype)))
             END IF
 
             ! Check orthonormality of product basis
@@ -646,8 +623,8 @@ CONTAINS
       use m_types
       implicit none
       type(t_hybrid), intent(in)     :: hybrid
-      integer, intent(in)          :: l, itype, n_radbasfn
-      real, intent(inout)          :: eig(:), eigv(:,:)
+      integer, intent(in)            :: l, itype, n_radbasfn
+      real, intent(inout)            :: eig(:), eigv(:,:)
       type(t_mpbasis), intent(inout) :: mpbasis
 
       integer              :: num_radbasfn, i_bas
@@ -683,4 +660,46 @@ CONTAINS
             = MATMUL(mpbasis%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
       END DO
    end subroutine trafo_to_orthonorm_bas
+
+   subroutine add_l0_fun(atoms, hybrid, n_grid_pt, itype, gridf, mpbasis)
+      use m_types
+      USE m_intgrf, ONLY: intgrf
+      implicit none
+      type(t_atoms), intent(in)       :: atoms
+      type(t_hybrid), intent(in)      :: hybrid
+      integer, intent(in)             :: n_grid_pt, itype
+      real, intent(in)                :: gridf(:,:)
+      type(t_mpbasis), intent(inout)  :: mpbasis
+
+      integer                         :: nn, i, j
+      REAL, ALLOCATABLE               ::  basmhlp(:,:,:,:)
+
+      nn = mpbasis%num_rad_bas_fun(0, itype)
+      ! Check if radbasfn_mt must be reallocated
+      IF (nn + 1 > SIZE(mpbasis%radbasfn_mt, 2)) THEN
+         allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
+         basmhlp(:,1:nn, :,:) = mpbasis%radbasfn_mt
+         deallocate(mpbasis%radbasfn_mt)
+         allocate(mpbasis%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
+         mpbasis%radbasfn_mt(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
+         deallocate(basmhlp)
+      END IF
+
+      mpbasis%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) = atoms%rmsh(:n_grid_pt, itype)/SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
+      DO i = nn, 1, -1
+         DO j = i + 1, nn + 1
+            mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                                             - intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)*mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
+                                                      atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
+                                             *mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
+
+         END DO
+         mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                                          /SQRT(intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, &
+                                                       atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
+      END DO
+      nn = nn + 1
+
+      mpbasis%num_rad_bas_fun(0, itype) = nn
+   end subroutine add_l0_fun
 END MODULE m_mixedbasis
