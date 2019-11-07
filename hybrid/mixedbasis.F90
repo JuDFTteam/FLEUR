@@ -67,18 +67,13 @@ CONTAINS
       TYPE(t_usdus)                   ::  usdus
 
       ! local scalars
-      INTEGER                         ::  ikpt, jspin, itype, l1, l2, l, n_radbasfn, igpt, n1, n2, nn, i, j, n_grid_pt
-      INTEGER                         ::  m, nk
-      INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
-      REAL                            ::  rdum, rdum1
+      INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, n1, n2, nn
+      INTEGER                         ::  m, nk, i_basfn, i, j, n_grid_pt
+      REAL                            ::  rdum, rdum1, norm
 
       ! - local arrays -
-      INTEGER                          ::  g(3)
       INTEGER, ALLOCATABLE             ::  ihelp(:)
-      INTEGER, ALLOCATABLE             ::  ptr(:)           ! pointer for array sorting
-      INTEGER, ALLOCATABLE             ::  unsrt_pgptm(:,:) ! unsorted pointers to g vectors
 
-      REAL                            ::  kvec(3)
       REAL                            ::  bashlp(atoms%jmtd)
 
 
@@ -86,7 +81,6 @@ CONTAINS
       REAL, ALLOCATABLE               ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
       REAL, ALLOCATABLE               ::  basmhlp(:,:,:,:)
       REAL, ALLOCATABLE               ::  gridf(:,:), vr0(:,:,:)
-      REAL, ALLOCATABLE               ::  length_kg(:,:) ! length of the vectors k + G
 
       LOGICAL, ALLOCATABLE            ::  selecmat(:,:,:,:)
       LOGICAL, ALLOCATABLE            ::  seleco(:,:), selecu(:,:)
@@ -228,7 +222,7 @@ CONTAINS
             ! set up the overlap matrix
             allocate(olap(n_radbasfn, n_radbasfn), eigv(n_radbasfn, n_radbasfn), work(3*n_radbasfn), eig(n_radbasfn), ihelp(n_radbasfn))
             ihelp = 1 ! initialize to avoid a segfault
-            i = 0
+            i_basfn = 0
 
             ! valence*valence
             selecmat =  calc_selecmat(atoms, hybrid, seleco, selecu)
@@ -241,20 +235,21 @@ CONTAINS
 
                            IF (selecmat(n1, l1, n2, l2)) THEN
                               DO jspin = 1, input%jspins
-                                 i = i + 1
-                                 IF (i > n_radbasfn) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
+                                 i_basfn = i_basfn + 1
+                                 IF (i_basfn > n_radbasfn) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
-                                 hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) &
-                                    = (bas1(:n_grid_pt, n1, l1, itype, jspin) &
-                                       *bas1(:n_grid_pt, n2, l2, itype, jspin) &
-                                       + bas2(:n_grid_pt, n1, l1, itype, jspin) &
-                                       *bas2(:n_grid_pt, n2, l2, itype, jspin))/atoms%rmsh(:n_grid_pt, itype)
+                                 hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) &
+                                    = (   bas1(:n_grid_pt, n1, l1, itype, jspin) &
+                                          * bas1(:n_grid_pt, n2, l2, itype, jspin) &
+                                          + bas2(:n_grid_pt, n1, l1, itype, jspin) &
+                                          * bas2(:n_grid_pt, n2, l2, itype, jspin) &
+                                       )/atoms%rmsh(:n_grid_pt, itype)
 
                                  !normalize radbasfn_mt
-                                 rdum = SQRT(intgrf(hybrid%radbasfn_mt(:,i, l, itype)**2, &
+                                 norm = SQRT(intgrf(hybrid%radbasfn_mt(:,i_basfn, l, itype)**2, &
                                                     atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
 
-                                 hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) = hybrid%radbasfn_mt(:n_grid_pt, i, l, itype)/rdum
+                                 hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) = hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype)/norm
 
                               END DO !jspin
                               ! prevent double counting of products (a*b = b*a)
@@ -267,7 +262,7 @@ CONTAINS
                END DO !l2
             END DO  !l1
 
-            IF (i /= n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
+            IF (i_basfn /= n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
             ! In order to get ride of the linear dependencies in the
             ! radial functions radbasfn_mt belonging to fixed l and itype
