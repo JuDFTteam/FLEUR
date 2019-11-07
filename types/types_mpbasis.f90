@@ -7,6 +7,7 @@ module m_types_mpbasis
       INTEGER, ALLOCATABLE   :: gptm_ptr(:,:)
       REAL                   :: g_cutoff
       INTEGER, ALLOCATABLE   :: num_rad_bas_fun(:,:)
+      REAL, ALLOCATABLE      :: radbasfn_mt(:,:,:,:)
    CONTAINS
       procedure :: num_gpts => mpbasis_num_gpts
       procedure :: gen_gvec => mpbasis_gen_gvec
