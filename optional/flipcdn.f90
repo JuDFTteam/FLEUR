@@ -110,6 +110,17 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
          na = na + atoms%neq(itype)
    END DO
 
+IF (input%l_removeMagnetisationFromInterstitial) THEN
+   
+   !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to each other. 
+      den%pw(:,2)=den%pw(:,1)
+      IF (noco%l_noco=.TRUE.) THEN
+         den%pw(:,3)=0.0
+         den%pw(:,4)=0.0
+      END IF
+   END IF
+
+
    ! for LDA+U: flip density matrix
    IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
       DO i_u = 1, atoms%n_u
@@ -158,13 +169,6 @@ END DO
             END DO
          END IF
       END DO
-   END IF
-
-IF (input%l_removeMagnetisationFromInterstitial) THEN
-   !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to each other. 
-      den%pw(:,2)=den%pw(:,1)
-      den%pw(:,3)=0.0
-      den%pw(:,4)=0.0
    END IF
 
    ! write the spin-polarized density
