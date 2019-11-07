@@ -240,10 +240,10 @@ CONTAINS
 
                                  hybrid%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) &
                                     = (   bas1(:n_grid_pt, n1, l1, itype, jspin) &
-                                          * bas1(:n_grid_pt, n2, l2, itype, jspin) &
-                                          + bas2(:n_grid_pt, n1, l1, itype, jspin) &
-                                          * bas2(:n_grid_pt, n2, l2, itype, jspin) &
-                                       )/atoms%rmsh(:n_grid_pt, itype)
+                                        * bas1(:n_grid_pt, n2, l2, itype, jspin) &
+                                        + bas2(:n_grid_pt, n1, l1, itype, jspin) &
+                                        * bas2(:n_grid_pt, n2, l2, itype, jspin) &
+                                      ) / atoms%rmsh(:n_grid_pt, itype)
 
                                  !normalize radbasfn_mt
                                  norm = SQRT(intgrf(hybrid%radbasfn_mt(:,i_basfn, l, itype)**2, &
