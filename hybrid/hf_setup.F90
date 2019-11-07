@@ -250,7 +250,7 @@ CONTAINS
                                  hybdat%prod%n1(n,l,itype) = n1
                                  hybdat%prod%n2(n,l,itype) = n2
                                  DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
-                                    hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*hybrid%basm1(:ng, i, l, itype), atoms%jri, &
+                                    hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*hybrid%radbasfn_mt(:ng, i, l, itype), atoms%jri, &
                                                                           atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
                                  END DO
                               END IF

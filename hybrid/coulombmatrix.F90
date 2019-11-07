@@ -311,13 +311,13 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO l = 0, hybrid%lcutm1(itype)
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
-               ! note that hybrid%basm1 already contains the factor rgrid
-               moment(i, l, itype) = intgrf(atoms%rmsh(:, itype)**(l + 1)*hybrid%basm1(:, i, l, itype), &
+               ! note that hybrid%radbasfn_mt already contains the factor rgrid
+               moment(i, l, itype) = intgrf(atoms%rmsh(:, itype)**(l + 1)*hybrid%radbasfn_mt(:, i, l, itype), &
                                             atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
             END DO
          END DO
          DO i = 1, mpbasis%num_rad_bas_fun(0, itype)
-            moment2(i, itype) = intgrf(atoms%rmsh(:, itype)**3*hybrid%basm1(:, i, 0, itype), &
+            moment2(i, itype) = intgrf(atoms%rmsh(:, itype)**3*hybrid%radbasfn_mt(:, i, 0, itype), &
                                        atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
          END DO
       END DO
@@ -381,13 +381,13 @@ CONTAINS
             END IF
             DO l = 0, hybrid%lcutm1(itype)
                DO n = 1, mpbasis%num_rad_bas_fun(l, itype)
-                  ! note that hybrid%basm1 already contains one factor rgrid
+                  ! note that hybrid%radbasfn_mt already contains one factor rgrid
                   olap(n, l, itype, iqnrm) = &
-                     intgrf(atoms%rmsh(:, itype)*hybrid%basm1(:, n, l, itype)*sphbes_var(:, l), &
+                     intgrf(atoms%rmsh(:, itype)*hybrid%radbasfn_mt(:, n, l, itype)*sphbes_var(:, l), &
                             atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
 
                   integral(n, l, itype, iqnrm) = &
-                     intgrf(atoms%rmsh(:, itype)*hybrid%basm1(:, n, l, itype)*sphbesmoment1(:, l), &
+                     intgrf(atoms%rmsh(:, itype)*hybrid%radbasfn_mt(:, n, l, itype)*sphbesmoment1(:, l), &
                             atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
 
                END DO
@@ -423,12 +423,12 @@ CONTAINS
                ! Here the diagonal block matrices do not depend on ineq. In (1b) they do depend on ineq, though,
                DO l = 0, hybrid%lcutm1(itype)
                   DO n2 = 1, mpbasis%num_rad_bas_fun(l, itype)
-                     ! note that hybrid%basm1 already contains the factor rgrid
-                     CALL primitivef(primf1, hybrid%basm1(:, n2, l, itype) &
+                     ! note that hybrid%radbasfn_mt already contains the factor rgrid
+                     CALL primitivef(primf1, hybrid%radbasfn_mt(:, n2, l, itype) &
                                      *atoms%rmsh(:, itype)**(l + 1), atoms%rmsh, atoms%dx, &
                                      atoms%jri, atoms%jmtd, itype, atoms%ntype)
                      ! -itype is to enforce inward integration
-                     CALL primitivef(primf2, hybrid%basm1(:atoms%jri(itype), n2, l, itype) &
+                     CALL primitivef(primf2, hybrid%radbasfn_mt(:atoms%jri(itype), n2, l, itype) &
                                      /atoms%rmsh(:atoms%jri(itype), itype)**l, atoms%rmsh, atoms%dx, &
                                      atoms%jri, atoms%jmtd, -itype, atoms%ntype)
 
@@ -436,7 +436,7 @@ CONTAINS
                      primf2 = primf2*atoms%rmsh(:, itype)**(l + 1)
 
                      DO n1 = 1, n2
-                        integrand = hybrid%basm1(:, n1, l, itype)*(primf1 + primf2)
+                        integrand = hybrid%radbasfn_mt(:, n1, l, itype)*(primf1 + primf2)
                         !                 call intgr0( (4*pimach())/(2*l+1)*integrand,rmsh(1,itype),dx(itype),jri(itype),mat(n2*(n2-1)/2+n1) )
                         mat(n2*(n2 - 1)/2 + n1) = (4*pi_const)/(2*l + 1) &
                                                   *intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, &
@@ -1582,18 +1582,18 @@ CONTAINS
                      j = j + 1
                      IF (l == 0) THEN
                         coeff(j) = SQRT(4*pi_const) &
-                                   *intgrf(atoms%rmsh(:, itype)*hybrid%basm1(:, i, 0, itype), &
+                                   *intgrf(atoms%rmsh(:, itype)*hybrid%radbasfn_mt(:, i, 0, itype), &
                                            atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
                                    /SQRT(cell%vol)
 
                         claplace(j) = -SQRT(4*pi_const) &
-                                      *intgrf(atoms%rmsh(:, itype)**3*hybrid%basm1(:, i, 0, itype), &
+                                      *intgrf(atoms%rmsh(:, itype)**3*hybrid%radbasfn_mt(:, i, 0, itype), &
                                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
                                       /SQRT(cell%vol)
 
                      ELSE IF (l == 1) THEN
                         cderiv(j, M) = -SQRT(4*pi_const/3)*CMPLX(0.0, 1.0) &
-                                       *intgrf(atoms%rmsh(:, itype)**2*hybrid%basm1(:, i, 1, itype), &
+                                       *intgrf(atoms%rmsh(:, itype)**2*hybrid%radbasfn_mt(:, i, 1, itype), &
                                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
                                        /SQRT(cell%vol)
                      END IF

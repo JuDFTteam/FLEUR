@@ -105,7 +105,7 @@ CONTAINS
       IF (ALLOCATED(mpbasis%num_rad_bas_fun)) deallocate(mpbasis%num_rad_bas_fun)
       IF (ALLOCATED(mpbasis%gptm_ptr)) deallocate(mpbasis%gptm_ptr)
       IF (ALLOCATED(mpbasis%gptm)) deallocate(mpbasis%gptm)
-      IF (ALLOCATED(hybrid%basm1)) deallocate(hybrid%basm1)
+      IF (ALLOCATED(hybrid%radbasfn_mt)) deallocate(hybrid%radbasfn_mt)
 
       CALL usdus%init(atoms, input%jspins)
       call hybrid%set_num_radfun_per_l(atoms)
@@ -195,7 +195,7 @@ CONTAINS
          END DO
       END DO
 
-      allocate(hybrid%basm1(atoms%jmtd,&
+      allocate(hybrid%radbasfn_mt(atoms%jmtd,&
                             maxval(mpbasis%num_rad_bas_fun), &
                             0:maxval(hybrid%lcutm1), &
                             atoms%ntype), source=0.0)
@@ -249,17 +249,17 @@ CONTAINS
                               i = i + 1
                               IF (i > n_radbasfn) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
-                              hybrid%basm1(:n_grid_pt, i, l, itype) &
+                              hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) &
                                  = (bas1(:n_grid_pt, n1, l1, itype, jspin) &
                                     *bas1(:n_grid_pt, n2, l2, itype, jspin) &
                                     + bas2(:n_grid_pt, n1, l1, itype, jspin) &
                                     *bas2(:n_grid_pt, n2, l2, itype, jspin))/atoms%rmsh(:n_grid_pt, itype)
 
-                              !normalize basm1
-                              rdum = SQRT(intgrf(hybrid%basm1(:,i, l, itype)**2, &
+                              !normalize radbasfn_mt
+                              rdum = SQRT(intgrf(hybrid%radbasfn_mt(:,i, l, itype)**2, &
                                                  atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
 
-                              hybrid%basm1(:n_grid_pt, i, l, itype) = hybrid%basm1(:n_grid_pt, i, l, itype)/rdum
+                              hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) = hybrid%radbasfn_mt(:n_grid_pt, i, l, itype)/rdum
 
                            END DO !jspin
                            ! prevent double counting of products (a*b = b*a)
@@ -275,7 +275,7 @@ CONTAINS
             IF (i /= n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
             ! In order to get ride of the linear dependencies in the
-            ! radial functions basm1 belonging to fixed l and itype
+            ! radial functions radbasfn_mt belonging to fixed l and itype
             ! the overlap matrix is diagonalized and those eigenvectors
             ! with a eigenvalue greater then hybrid%tolerance1 are retained
 
@@ -283,7 +283,7 @@ CONTAINS
             olap = 0
             DO n2 = 1, n_radbasfn
                DO n1 = 1, n2
-                  olap(n1, n2) = intgrf(hybrid%basm1(:,n1, l, itype)*hybrid%basm1(:,n2, l, itype), &
+                  olap(n1, n2) = intgrf(hybrid%radbasfn_mt(:,n1, l, itype)*hybrid%radbasfn_mt(:,n2, l, itype), &
                                         atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
                   olap(n2, n1) = olap(n1, n2)
                END DO
@@ -305,33 +305,33 @@ CONTAINS
             eigv(:,:) = eigv(:,ihelp)
 
             DO i = 1, n_grid_pt
-               hybrid%basm1(i, 1:nn, l, itype) = MATMUL(hybrid%basm1(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
+               hybrid%radbasfn_mt(i, 1:nn, l, itype) = MATMUL(hybrid%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
             END DO
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
             IF (l == 0) THEN
 
-               ! Check if basm1 must be reallocated
-               IF (nn + 1 > SIZE(hybrid%basm1, 2)) THEN
+               ! Check if radbasfn_mt must be reallocated
+               IF (nn + 1 > SIZE(hybrid%radbasfn_mt, 2)) THEN
                   allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
-                  basmhlp(:,1:nn, :,:) = hybrid%basm1
-                  deallocate(hybrid%basm1)
-                  allocate(hybrid%basm1(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
-                  hybrid%basm1(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
+                  basmhlp(:,1:nn, :,:) = hybrid%radbasfn_mt
+                  deallocate(hybrid%radbasfn_mt)
+                  allocate(hybrid%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
+                  hybrid%radbasfn_mt(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
                   deallocate(basmhlp)
                END IF
 
-               hybrid%basm1(:n_grid_pt, nn + 1, 0, itype) = atoms%rmsh(:n_grid_pt, itype)/SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
+               hybrid%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) = atoms%rmsh(:n_grid_pt, itype)/SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
                DO i = nn, 1, -1
                   DO j = i + 1, nn + 1
-                     hybrid%basm1(:n_grid_pt, i, 0, itype) = hybrid%basm1(:n_grid_pt, i, 0, itype) &
-                                                      - intgrf(hybrid%basm1(:n_grid_pt, i, 0, itype)*hybrid%basm1(:n_grid_pt, j, 0, itype), &
+                     hybrid%radbasfn_mt(:n_grid_pt, i, 0, itype) = hybrid%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                                                      - intgrf(hybrid%radbasfn_mt(:n_grid_pt, i, 0, itype)*hybrid%radbasfn_mt(:n_grid_pt, j, 0, itype), &
                                                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
-                                                      *hybrid%basm1(:n_grid_pt, j, 0, itype)
+                                                      *hybrid%radbasfn_mt(:n_grid_pt, j, 0, itype)
 
                   END DO
-                  hybrid%basm1(:n_grid_pt, i, 0, itype) = hybrid%basm1(:n_grid_pt, i, 0, itype) &
-                                                   /SQRT(intgrf(hybrid%basm1(:n_grid_pt, i, 0, itype)**2, &
+                  hybrid%radbasfn_mt(:n_grid_pt, i, 0, itype) = hybrid%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                                                   /SQRT(intgrf(hybrid%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, &
                                                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
                END DO
                nn = nn + 1
@@ -344,7 +344,7 @@ CONTAINS
             rdum = 0
             DO i = 1, nn
                DO j = 1, i
-                  rdum1 = intgrf(hybrid%basm1(:,i, l, itype)*hybrid%basm1(:,j, l, itype), &
+                  rdum1 = intgrf(hybrid%radbasfn_mt(:,i, l, itype)*hybrid%radbasfn_mt(:,j, l, itype), &
                                  atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
 
                   IF (i == j) THEN
@@ -380,10 +380,10 @@ CONTAINS
 
       allocate(basmhlp(atoms%jmtd, maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
       basmhlp(1:atoms%jmtd, 1:maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype) &
-         = hybrid%basm1(1:atoms%jmtd, 1:maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
-      deallocate(hybrid%basm1)
-      allocate(hybrid%basm1(atoms%jmtd, maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
-      hybrid%basm1 = basmhlp
+         = hybrid%radbasfn_mt(1:atoms%jmtd, 1:maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
+      deallocate(hybrid%radbasfn_mt)
+      allocate(hybrid%radbasfn_mt(atoms%jmtd, maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      hybrid%radbasfn_mt = basmhlp
 
       deallocate(basmhlp, seleco, selecu, selecmat)
 
@@ -409,7 +409,7 @@ CONTAINS
             ! this function is used to build the linear combinations
             rdum = 0
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
-               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%basm1(:n_grid_pt, i, l, itype), &
+               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%radbasfn_mt(:n_grid_pt, i, l, itype), &
                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
                IF (ABS(rdum1) > rdum) THEN
                   n_radbasfn = i
@@ -419,13 +419,13 @@ CONTAINS
 
             ! rearrange order of radial functions such that the last function possesses the largest moment
             j = 0
-            bashlp(:n_grid_pt) = hybrid%basm1(:n_grid_pt, n_radbasfn, l, itype)
+            bashlp(:n_grid_pt) = hybrid%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                IF (i == n_radbasfn) CYCLE
                j = j + 1
-               hybrid%basm1(:n_grid_pt, j, l, itype) = hybrid%basm1(:n_grid_pt, i, l, itype)
+               hybrid%radbasfn_mt(:n_grid_pt, j, l, itype) = hybrid%radbasfn_mt(:n_grid_pt, i, l, itype)
             END DO
-            hybrid%basm1(:n_grid_pt, mpbasis%num_rad_bas_fun(l, itype), l, itype) = bashlp(:n_grid_pt)
+            hybrid%radbasfn_mt(:n_grid_pt, mpbasis%num_rad_bas_fun(l, itype), l, itype) = bashlp(:n_grid_pt)
 
          END DO
 
@@ -441,28 +441,28 @@ CONTAINS
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                IF (i == n_radbasfn) CYCLE
                ! calculate moment of radial function i
-               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%basm1(:n_grid_pt, i, l, itype), &
+               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%radbasfn_mt(:n_grid_pt, i, l, itype), &
                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
 
-               rdum = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%basm1(:n_grid_pt, n_radbasfn, l, itype), &
+               rdum = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype), &
                              atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
 
-               bashlp(:n_grid_pt) = hybrid%basm1(:n_grid_pt, n_radbasfn, l, itype)
+               bashlp(:n_grid_pt) = hybrid%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
 
                IF (SQRT(rdum**2 + rdum1**2) <= 1E-06 .AND. mpi%irank == 0) &
                   WRITE (6, *) 'Warning: Norm is smaller thann 1E-06!'
 
                ! change function n_radbasfn such that n_radbasfn is orthogonal to i
-               ! since the functions basm1 have been orthogonal on input
+               ! since the functions radbasfn_mt have been orthogonal on input
                ! the linear combination does not destroy the orthogonality to the residual functions
-               hybrid%basm1(:n_grid_pt, n_radbasfn, l, itype) = rdum/SQRT(rdum**2 + rdum1**2)*bashlp(:n_grid_pt) &
-                                                + rdum1/SQRT(rdum**2 + rdum1**2)*hybrid%basm1(:n_grid_pt, i, l, itype)
+               hybrid%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype) = rdum/SQRT(rdum**2 + rdum1**2)*bashlp(:n_grid_pt) &
+                                                + rdum1/SQRT(rdum**2 + rdum1**2)*hybrid%radbasfn_mt(:n_grid_pt, i, l, itype)
 
                ! combine basis function i and n_radbasfn so that they possess no momemt
-               hybrid%basm1(:n_grid_pt, i, l, itype) = rdum1/SQRT(rdum**2 + rdum1**2)*bashlp(:n_grid_pt) &
-                                                - rdum/SQRT(rdum**2 + rdum1**2)*hybrid%basm1(:n_grid_pt, i, l, itype)
+               hybrid%radbasfn_mt(:n_grid_pt, i, l, itype) = rdum1/SQRT(rdum**2 + rdum1**2)*bashlp(:n_grid_pt) &
+                                                - rdum/SQRT(rdum**2 + rdum1**2)*hybrid%radbasfn_mt(:n_grid_pt, i, l, itype)
 
-               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%basm1(:n_grid_pt, i, l, itype), &
+               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%radbasfn_mt(:n_grid_pt, i, l, itype), &
                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
 
                IF (rdum1 > 1E-10) call judft_error('moment of radial function does not vanish', calledby='mixedbasis')
@@ -474,7 +474,7 @@ CONTAINS
             rdum = 0
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                DO j = 1, mpbasis%num_rad_bas_fun(l, itype)
-                  rdum1 = intgrf(hybrid%basm1(:n_grid_pt, i, l, itype)*hybrid%basm1(:n_grid_pt, j, l, itype), &
+                  rdum1 = intgrf(hybrid%radbasfn_mt(:n_grid_pt, i, l, itype)*hybrid%radbasfn_mt(:n_grid_pt, j, l, itype), &
                                  atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
                   IF (i /= j) THEN
                      rdum = rdum + rdum1
@@ -485,7 +485,7 @@ CONTAINS
             END DO
             IF (mpi%irank == 0) &
                WRITE (6, '(6x,I4,'' ->'',f10.5,''   ('',ES8.1,'' )'')') n_radbasfn, &
-               intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%basm1(:n_grid_pt, n_radbasfn, l, itype), atoms%jri, &
+               intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*hybrid%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype), atoms%jri, &
                       atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf), rdum
          END DO
       END DO
