@@ -231,11 +231,7 @@ CONTAINS
             i = 0
 
             ! valence*valence
-
-            ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
-            selecmat = RESHAPE((/((((seleco(n1, l1) .AND. selecu(n2, l2), &
-                                     n1=1, maxval(hybrid%num_radfun_per_l)), l1=0, atoms%lmaxd), n2=1, maxval(hybrid%num_radfun_per_l)), l2=0, atoms%lmaxd)/), &
-                               [maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1, maxval(hybrid%num_radfun_per_l), atoms%lmaxd + 1])
+            selecmat =  calc_selecmat(atoms, hybrid, seleco, selecu
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
