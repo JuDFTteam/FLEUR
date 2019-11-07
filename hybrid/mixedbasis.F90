@@ -624,10 +624,12 @@ CONTAINS
 
       integer  :: n1, n2
 
-      if(.not. allocated(olap) .or. any(shape(olap) /= n_radbasfn)) then
-         if(allocated(olap)) deallocate(olap)
-         allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
+      if(allocated(olap)) then
+         if(any(shape(olap) /= n_radbasfn)) then
+            deallocate(olap)
+         endif
       endif
+      if(.not. allocated(olap)) allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
 
       DO n2 = 1, n_radbasfn
          DO n1 = 1, n2
