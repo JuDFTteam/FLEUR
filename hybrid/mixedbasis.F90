@@ -262,7 +262,7 @@ CONTAINS
 
             IF (i_basfn /= n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
-            ! In order to get ride of the linear dependencies in the
+            ! In order to get rid of the linear dependencies in the
             ! radial functions radbasfn_mt belonging to fixed l and itype
             ! the overlap matrix is diagonalized and those eigenvectors
             ! with a eigenvalue greater then hybrid%tolerance1 are retained
