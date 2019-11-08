@@ -186,7 +186,7 @@ CONTAINS
                CALL int_nv(ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, veff, workden, results%te_veff)
             END DO
 
-            IF (xcpot%is_hybrid().AND.hybrid%l_addhf) THEN
+            IF (xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
 
                ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,input%jspins), rhoc_vx(atoms%jmtd))
                ALLOCATE(tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins))
