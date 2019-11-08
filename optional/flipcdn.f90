@@ -116,8 +116,7 @@ IF (input%l_removeMagnetisationFromInterstitial) THEN
       den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value 
       den%pw(:,1)=den%pw(:,2)
       IF (noco%l_noco) THEN
-         den%pw(:,3)=0.0
-         den%pw(:,4)=0.0
+         den%pw(:,3)=CMPLX(0.0,0.0)
       END IF
    END IF
 
