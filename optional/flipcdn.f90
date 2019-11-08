@@ -112,9 +112,10 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 
 IF (input%l_removeMagnetisationFromInterstitial) THEN
    
-   !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to each other. 
-      den%pw(:,2)=den%pw(:,1)
-      IF (noco%l_noco.EQ..TRUE.) THEN
+   !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their former mean value. 
+      den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value 
+      den%pw(:,1)=den%pw(:,2)
+      IF (noco%l_noco) THEN
          den%pw(:,3)=0.0
          den%pw(:,4)=0.0
       END IF
