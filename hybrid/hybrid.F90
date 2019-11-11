@@ -43,12 +43,12 @@ CONTAINS
       INTEGER, INTENT(IN)    :: eig_id
 
       ! local variables
-      INTEGER           :: jsp, nk
+      INTEGER           :: jsp, nk, err
       TYPE(t_hybdat)    :: hybdat
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
-
+      character(len=999):: msg
       REAL, ALLOCATABLE :: eig_irr(:, :)
 
       ! open(7465, file="iter_translator.txt", position="append")
@@ -82,8 +82,27 @@ CONTAINS
 
       !In first iteration allocate some memory
       IF (init_vex) THEN
-         allocate(hybrid%ne_eig(kpts%nkpt), hybrid%nbands(kpts%nkpt), hybrid%nobd(kpts%nkptf, input%jspins), source=0)
+         if(allocated(hybrid%ne_eig)) deallocate(hybrid%ne_eig)
+         allocate(hybrid%ne_eig(kpts%nkpt), source=0)
+
+         write (*,*) "allocated(hybrid%nbands): ",allocated(hybrid%nbands)
+         write (*,*) "shape(hybrid%nbands)", shape(hybrid%nbands)
+         if(allocated(hybrid%nbands)) deallocate(hybrid%nbands, stat=err, errmsg=msg)
+
+         if(err /= 0) THEN
+            write (*,*) "errorcode", err
+            write (*,*) "errormessage", msg
+         endif
+
+         allocate(hybrid%nbands(kpts%nkpt), source=0)
+
+         if(allocated(hybrid%nobd)) deallocate(hybrid%nobd)
+         allocate(hybrid%nobd(kpts%nkptf, input%jspins), source=0)
+
+         if(allocated(hybrid%nbasm)) deallocate(hybrid%nbasm)
          allocate(hybrid%nbasm(kpts%nkptf), source=0)
+
+         if(allocated(hybrid%nbasm)) deallocate(hybrid%nbasm)
          allocate(hybrid%div_vv(DIMENSION%neigd, kpts%nkpt, input%jspins), source=0.0)
          init_vex = .FALSE.
       END IF
