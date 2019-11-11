@@ -69,7 +69,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
    END IF
 
    ! read the charge density 
-   CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+   CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
    ! flip cdn for each atom with rotation angles given
@@ -172,7 +172,7 @@ END DO
    END IF
 
    ! write the spin-polarized density
-   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+   CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                      0,-1.0,0.0,.FALSE.,den)
 
    ! read enpara and  flip lines
