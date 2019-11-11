@@ -282,36 +282,7 @@ CONTAINS
             call add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf, nn, mpbasis)
 
             ! Check orthonormality of product basis
-            rdum = 0
-            DO i = 1, nn
-               DO j = 1, i
-                  rdum1 = intgrf(mpbasis%radbasfn_mt(:,i, l, itype)*mpbasis%radbasfn_mt(:,j, l, itype), &
-                                 atoms, itype, gridf)
-
-                  IF (i == j) THEN
-                     rdum1 = ABS(1 - rdum1)
-                     rdum = rdum + rdum1**2
-                  ELSE
-                     rdum1 = ABS(rdum1)
-                     rdum = rdum + 2*rdum1**2
-                  END IF
-
-                  IF (rdum1 > 1e-6) THEN
-                     IF (mpi%irank == 0) THEN
-                        WRITE (6, '(A)') 'mixedbasis: Bad orthonormality of ' &
-                           //lchar(l)//'-product basis. Increase tolerance.'
-                        WRITE (6, '(12X,A,F9.6,A,2(I3.3,A))') 'Deviation of', &
-                           rdum1, ' occurred for (', i, ',', j, ')-overlap.'
-                     END IF
-                     CALL judft_error("Bad orthonormality of product basis", hint='Increase tolerance', calledby='mixedbasis')
-                  END IF
-
-               END DO
-            END DO
-
-            IF (mpi%irank == 0) THEN
-               WRITE (6, '(6X,A,I4,'' ->'',I4,''   ('',ES8.1,'' )'')') lchar(l)//':', n_radbasfn, nn, SQRT(rdum)/nn
-            END IF
+            call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
 
             deallocate(olap, eigv, work, eig)
 
@@ -669,6 +640,7 @@ CONTAINS
 
       integer                         :: i, j
       REAL, ALLOCATABLE               :: basmhlp(:,:,:,:)
+      real                            :: norm
 
       IF (l == 0) THEN
 
@@ -682,21 +654,32 @@ CONTAINS
             deallocate(basmhlp)
          END IF
 
-         mpbasis%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) = atoms%rmsh(:n_grid_pt, itype)/SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
+         ! add l = 0 function
+         mpbasis%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) &
+           = atoms%rmsh(:n_grid_pt, itype) / SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
+
+         ! perform gram-schmidt orthonormalization
          DO i = nn, 1, -1
             DO j = i + 1, nn + 1
-               mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                                                - intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)*mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
-                                                         atoms, itype, gridf) &
-                                                *mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
+               mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                  = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                     - intgrf( &
+                                mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                              * mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
+                              atoms, itype, gridf) &
+                       * mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
 
             END DO
-            mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                                             /SQRT(intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, &
-                                                          atoms, itype, gridf))
+
+            ! renormalize
+            norm = SQRT(intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, atoms, itype, gridf))
+            mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+               = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) / norm
          END DO
          nn = nn + 1
          mpbasis%num_rad_bas_fun(l, itype) = nn
       END IF
    end subroutine add_l0_fun
+
+
 END MODULE m_mixedbasis

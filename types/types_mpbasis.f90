@@ -9,8 +9,9 @@ module m_types_mpbasis
       INTEGER, ALLOCATABLE   :: num_rad_bas_fun(:,:)
       REAL, ALLOCATABLE      :: radbasfn_mt(:,:,:,:)
    CONTAINS
-      procedure :: num_gpts => mpbasis_num_gpts
-      procedure :: gen_gvec => mpbasis_gen_gvec
+      procedure :: num_gpts             => mpbasis_num_gpts
+      procedure :: gen_gvec             => mpbasis_gen_gvec
+      procedure :: check_orthonormality => mpbasis_check_orthonormality
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
@@ -157,4 +158,61 @@ contains
          WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
       END IF
    end subroutine mpbasis_gen_gvec
+
+   subroutine mpbasis_check_orthonormality(mpbasis, atoms, mpi, l, itype, gridf)
+      USE m_intgrf, ONLY: intgrf
+      use m_types_setup
+      use m_types_mpi
+      use m_judft
+      implicit none
+      class(t_mpbasis)          :: mpbasis
+      type(t_atoms), intent(in) :: atoms
+      type(t_mpi), intent(in)   :: mpi
+      integer, intent(in)       :: itype, l
+      real, intent(in)          :: gridf(:,:)
+
+      real              :: overlap, error, cum_err_sq
+      integer           :: i, j, n_radbasfn
+
+      CHARACTER, PARAMETER :: lchar(0:38) = ['s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', &
+                                             'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
+                                             'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x']
+
+
+      n_radbasfn = mpbasis%num_rad_bas_fun(l, itype)
+
+      cum_err_sq = 0
+      DO i = 1, n_radbasfn
+         DO j = 1, i
+            overlap = intgrf(mpbasis%radbasfn_mt(:,i, l, itype)*mpbasis%radbasfn_mt(:,j, l, itype), &
+                           atoms, itype, gridf)
+
+            IF (i == j) THEN
+               error = ABS(1 - overlap)
+               cum_err_sq = cum_err_sq + overlap**2
+            ELSE
+               error = ABS(overlap)
+               cum_err_sq = cum_err_sq + 2*error**2
+            END IF
+
+            IF (error > 1e-6) THEN
+               IF (mpi%irank == 0) THEN
+                  WRITE (6, '(A)') 'mixedbasis: Bad orthonormality of ' &
+                     //lchar(l)//'-product basis. Increase tolerance.'
+                  WRITE (6, '(12X,A,F9.6,A,2(I3.3,A))') 'Deviation of', &
+                     error, ' occurred for (', i, ',', j, ')-overlap.'
+               END IF
+               CALL judft_error("Bad orthonormality of product basis", &
+                                 hint='Increase tolerance', &
+                                 calledby='mixedbasis%check_orthonormality')
+            END IF
+
+         END DO
+      END DO
+
+      IF (mpi%irank == 0) THEN
+         WRITE (6, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
+                    lchar(l) // ':', n_radbasfn, SQRT(cum_err_sq)/n_radbasfn
+      END IF
+   end subroutine mpbasis_check_orthonormality
 end module m_types_mpbasis
