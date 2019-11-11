@@ -286,7 +286,7 @@ CONTAINS
             DO i = 1, nn
                DO j = 1, i
                   rdum1 = intgrf(mpbasis%radbasfn_mt(:,i, l, itype)*mpbasis%radbasfn_mt(:,j, l, itype), &
-                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                                 atoms, itype, gridf)
 
                   IF (i == j) THEN
                      rdum1 = ABS(1 - rdum1)
@@ -351,7 +351,7 @@ CONTAINS
             rdum = 0
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
-                              atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                              atoms, itype, gridf)
                IF (ABS(rdum1) > rdum) THEN
                   n_radbasfn = i
                   rdum = rdum1
@@ -383,10 +383,10 @@ CONTAINS
                IF (i == n_radbasfn) CYCLE
                ! calculate moment of radial function i
                rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
-                              atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                              atoms, itype, gridf)
 
                rdum = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype), &
-                             atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                             atoms, itype, gridf)
 
                bashlp(:n_grid_pt) = mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
 
@@ -404,7 +404,7 @@ CONTAINS
                                                 - rdum/SQRT(rdum**2 + rdum1**2)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype)
 
                rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
-                              atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                              atoms, itype, gridf)
 
                IF (rdum1 > 1E-10) call judft_error('moment of radial function does not vanish', calledby='mixedbasis')
 
@@ -416,7 +416,7 @@ CONTAINS
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                DO j = 1, mpbasis%num_rad_bas_fun(l, itype)
                   rdum1 = intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype)*mpbasis%radbasfn_mt(:n_grid_pt, j, l, itype), &
-                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                                 atoms, itype, gridf)
                   IF (i /= j) THEN
                      rdum = rdum + rdum1
                   ELSE
@@ -426,8 +426,8 @@ CONTAINS
             END DO
             IF (mpi%irank == 0) &
                WRITE (6, '(6x,I4,'' ->'',f10.5,''   ('',ES8.1,'' )'')') n_radbasfn, &
-               intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype), atoms%jri, &
-                      atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf), rdum
+               intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype), &
+                      atoms, itype, gridf), rdum
          END DO
       END DO
 
@@ -531,7 +531,7 @@ CONTAINS
             DO l = 0, atoms%lmax(itype)
                DO i = 1, hybrid%num_radfun_per_l(l, itype)
                   norm = sqrt(intgrf(bas1(:,i, l, itype, jspin)**2 + bas2(:,i, l, itype, jspin)**2, &
-                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
+                                atoms, itype, gridf))
                   bas1(:atoms%jri(itype), i, l, itype, jspin) = bas1(:atoms%jri(itype), i, l, itype, jspin)/norm
                   bas2(:atoms%jri(itype), i, l, itype, jspin) = bas2(:atoms%jri(itype), i, l, itype, jspin)/norm
                END DO
@@ -579,7 +579,7 @@ CONTAINS
 
       norm = SQRT( &
                   intgrf(mpbasis%radbasfn_mt(:,i_basfn, l, itype)**2, &
-                         atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype,&
+                         atoms,&
                          itype, gridf)&
                  )
    end function calc_radbas_norm
@@ -606,7 +606,7 @@ CONTAINS
       DO n2 = 1, n_radbasfn
          DO n1 = 1, n2
             olap(n1, n2) = intgrf(mpbasis%radbasfn_mt(:,n1, l, itype)*mpbasis%radbasfn_mt(:,n2, l, itype), &
-                                  atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                                  atoms, itype, gridf)
             olap(n2, n1) = olap(n1, n2)
          END DO
       END DO
@@ -687,13 +687,13 @@ CONTAINS
             DO j = i + 1, nn + 1
                mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
                                                 - intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)*mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
-                                                         atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
+                                                         atoms, itype, gridf) &
                                                 *mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
 
             END DO
             mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
                                              /SQRT(intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, &
-                                                          atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
+                                                          atoms, itype, gridf))
          END DO
          nn = nn + 1
          mpbasis%num_rad_bas_fun(l, itype) = nn

@@ -125,13 +125,13 @@ CONTAINS
             kb = 1.0/ws*wronskian(hybdat%bas1_MT(1, l, itype), hybdat%drbas1_MT(1, l, itype), hybdat%bas1_MT(p, l, itype), hybdat%drbas1_MT(p, l, itype))
 
             integrand = hybdat%bas1(:, 2, l, itype)*hybdat%bas1(:, 2, l, itype) + hybdat%bas2(:, 2, l, itype)*hybdat%bas2(:, 2, l, itype)
-            olap_udot = intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+            olap_udot = intgrf(integrand, atoms, itype, hybdat%gridf)
 
             integrand = hybdat%bas1(:, 1, l, itype)*hybdat%bas1(:, p, l, itype) + hybdat%bas2(:, 1, l, itype)*hybdat%bas2(:, p, l, itype)
-            olap_uulo = intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+            olap_uulo = intgrf(integrand, atoms, itype, hybdat%gridf)
 
             integrand = hybdat%bas1(:, 2, l, itype)*hybdat%bas1(:, p, l, itype) + hybdat%bas2(:, 2, l, itype)*hybdat%bas2(:, p, l, itype)
-            olap_udotulo = intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+            olap_udotulo = intgrf(integrand, atoms, itype, hybdat%gridf)
 
             rdum = ka**2 + (kb**2)*olap_udot + 1.0 + 2.0*ka*olap_uulo + 2.0*kb*olap_udotulo
             clo(ilo, itype) = 1.0/sqrt(rdum)
@@ -502,8 +502,8 @@ CONTAINS
 
                            iintegrand = atoms%rmsh(:, itype)*(hybdat%bas1(:, p, l, itype)*iu1(:, i, iband) + hybdat%bas2(:, p, l, itype)*iu2(:, i, iband))
 
-                           carr2(i, iband) = intgrf(rintegrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf) &
-                                             + img*intgrf(iintegrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                           carr2(i, iband) = intgrf(rintegrand, atoms, itype, hybdat%gridf) &
+                                             + img*intgrf(iintegrand, atoms, itype, hybdat%gridf)
 
                         END DO
                      END DO
@@ -543,8 +543,8 @@ CONTAINS
 
                         iintegrand = atoms%rmsh(:, itype)*(u1_lo(:, ilo, itype)*iu1(:, i, iband) + u2_lo(:, ilo, itype)*iu2(:, i, iband))
 
-                        carr2(i, iband) = intgrf(rintegrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf) &
-                                          + img*intgrf(iintegrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                        carr2(i, iband) = intgrf(rintegrand, atoms, itype, hybdat%gridf) &
+                                          + img*intgrf(iintegrand, atoms, itype, hybdat%gridf)
 
                      END DO
                   END DO
@@ -592,8 +592,8 @@ CONTAINS
                                                                     - iu1(:, i, iband1)*ru1(:, j, iband2) - iu2(:, i, iband1)*ru2(:, j, iband2))
 
                               olap_ibsc(i, j, iband2, iband1) = olap_ibsc(i, j, iband2, iband1) &
-                                                                + intgrf(rintegrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf) &
-                                                                + img*intgrf(iintegrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                                                                + intgrf(rintegrand, atoms, itype, hybdat%gridf) &
+                                                                + img*intgrf(iintegrand, atoms, itype, hybdat%gridf)
 
                            END DO
                         END DO
@@ -880,9 +880,9 @@ CONTAINS
                   DO n1 = 1, hybrid%num_radfun_per_l(l - 1, itype)
                      ic = ic + 1
                      qmat1(n1, n2, l, itype) = intgrf(dbas1(:)*hybdat%bas1(:, n1, l - 1, itype) + &
-                                                      dbas2(:)*hybdat%bas2(:, n1, l - 1, itype), atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf) &
+                                                      dbas2(:)*hybdat%bas2(:, n1, l - 1, itype), atoms, itype, hybdat%gridf) &
                                                + intgrf((hybdat%bas1(:, n2, l, itype)*hybdat%bas1(:, n1, l - 1, itype) + hybdat%bas2(:, n2, l, itype)*hybdat%bas2(:, n1, l - 1, itype)) &
-                                                        /atoms%rmsh(:, itype), atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)*(l + 1)
+                                                        /atoms%rmsh(:, itype), atoms, itype, hybdat%gridf)*(l + 1)
 
                   END DO
                END IF
@@ -890,9 +890,9 @@ CONTAINS
                   DO n1 = 1, hybrid%num_radfun_per_l(l + 1, itype)
 
                      qmat2(n1, n2, l, itype) = intgrf(dbas1(:)*hybdat%bas1(:, n1, l + 1, itype) + dbas2(:)*hybdat%bas2(:, n1, l + 1, itype), &
-                                                      atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf) &
+                                                      atoms, itype, hybdat%gridf) &
                                                - intgrf((hybdat%bas1(:, n2, l, itype)*hybdat%bas1(:, n1, l + 1, itype) + hybdat%bas2(:, n2, l, itype)*hybdat%bas2(:, n1, l + 1, itype)) &
-                                                        /atoms%rmsh(:, itype), atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)*l
+                                                        /atoms%rmsh(:, itype), atoms, itype, hybdat%gridf)*l
 
                   END DO
                END IF

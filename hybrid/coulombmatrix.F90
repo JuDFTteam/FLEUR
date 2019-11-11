@@ -313,12 +313,12 @@ CONTAINS
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
                ! note that mpbasis%radbasfn_mt already contains the factor rgrid
                moment(i, l, itype) = intgrf(atoms%rmsh(:, itype)**(l + 1)*mpbasis%radbasfn_mt(:, i, l, itype), &
-                                            atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                                            atoms, itype, gridf)
             END DO
          END DO
          DO i = 1, mpbasis%num_rad_bas_fun(0, itype)
             moment2(i, itype) = intgrf(atoms%rmsh(:, itype)**3*mpbasis%radbasfn_mt(:, i, 0, itype), &
-                                       atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                                       atoms, itype, gridf)
          END DO
       END DO
       call timestop("calc moments of MT")
@@ -384,11 +384,11 @@ CONTAINS
                   ! note that mpbasis%radbasfn_mt already contains one factor rgrid
                   olap(n, l, itype, iqnrm) = &
                      intgrf(atoms%rmsh(:, itype)*mpbasis%radbasfn_mt(:, n, l, itype)*sphbes_var(:, l), &
-                            atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                            atoms, itype, gridf)
 
                   integral(n, l, itype, iqnrm) = &
                      intgrf(atoms%rmsh(:, itype)*mpbasis%radbasfn_mt(:, n, l, itype)*sphbesmoment1(:, l), &
-                            atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+                            atoms, itype, gridf)
 
                END DO
             END DO
@@ -439,8 +439,7 @@ CONTAINS
                         integrand = mpbasis%radbasfn_mt(:, n1, l, itype)*(primf1 + primf2)
                         !                 call intgr0( (4*pimach())/(2*l+1)*integrand,rmsh(1,itype),dx(itype),jri(itype),mat(n2*(n2-1)/2+n1) )
                         mat(n2*(n2 - 1)/2 + n1) = (4*pi_const)/(2*l + 1) &
-                                                  *intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, &
-                                                          atoms%ntype, itype, gridf)
+                                                  *intgrf(integrand, atoms, itype, gridf)
                      END DO
                   END DO
 
@@ -1583,18 +1582,18 @@ CONTAINS
                      IF (l == 0) THEN
                         coeff(j) = SQRT(4*pi_const) &
                                    *intgrf(atoms%rmsh(:, itype)*mpbasis%radbasfn_mt(:, i, 0, itype), &
-                                           atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
+                                           atoms, itype, gridf) &
                                    /SQRT(cell%vol)
 
                         claplace(j) = -SQRT(4*pi_const) &
                                       *intgrf(atoms%rmsh(:, itype)**3*mpbasis%radbasfn_mt(:, i, 0, itype), &
-                                              atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
+                                              atoms, itype, gridf) &
                                       /SQRT(cell%vol)
 
                      ELSE IF (l == 1) THEN
                         cderiv(j, M) = -SQRT(4*pi_const/3)*CMPLX(0.0, 1.0) &
                                        *intgrf(atoms%rmsh(:, itype)**2*mpbasis%radbasfn_mt(:, i, 1, itype), &
-                                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
+                                               atoms, itype, gridf) &
                                        /SQRT(cell%vol)
                      END IF
                   END DO

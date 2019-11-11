@@ -100,7 +100,7 @@
                         integrand = hybdat%core1(:, i, l, itype)*hybdat%core1(:, j, l, itype)&
                &                  + hybdat%core2(:, i, l, itype)*hybdat%core2(:, j, l, itype)
                         IF (mpi%irank == 0) WRITE (6, '(F10.6)', advance='no')&
-               &           intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+               &           intgrf(integrand, atoms, itype, hybdat%gridf)
                      END DO
                      IF (mpi%irank == 0) WRITE (6, *)
                   END DO
@@ -130,7 +130,7 @@
                &                  + hybdat%core2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
 
                         olapcb(j) = &
-               &              intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+               &              intgrf(integrand, atoms, itype, hybdat%gridf)
 
                         IF (mpi%irank == 0)&
                &          WRITE (6, '(F10.6)', advance='no') olapcb(j)
@@ -211,7 +211,7 @@
                &                  + hybdat%bas2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
 
                         IF (mpi%irank == 0) WRITE (6, '(F10.6)', advance='no')&
-               &              intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+               &              intgrf(integrand, atoms, itype, hybdat%gridf)
                      END DO
                      IF (mpi%irank == 0) WRITE (6, *)
                   END DO

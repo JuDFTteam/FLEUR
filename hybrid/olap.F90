@@ -187,7 +187,7 @@ CONTAINS
                   olapmt(n1, n2, l, itype) = intgrf( &
          &                            bas1(:, n1, l, itype)*bas1(:, n2, l, itype)&
          &                           + bas2(:, n1, l, itype)*bas2(:, n2, l, itype),&
-         &                            atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+         &                            atoms, itype, gridf)
 !               olapmt(n2,n1,l,itype) = olapmt(n1,n2,l,itype)
                END DO
             END DO

@@ -2278,9 +2278,10 @@ CONTAINS
                         DO j = 1, n
                            ! Integration over r
                            integrand = fprod(:, j)*sum_primf
-                           integral(i, j) = fpi_const/(2*l + 1)* &
-                                            intgrf(integrand, jri, jmtd, rmsh, &
-                                                   dx, ntype, itype, gridf)
+                           call juDFT_error("stop the following line has to be reimplemented:")
+                           ! integral(i, j) = fpi_const/(2*l + 1)* &
+                           !                  intgrf(integrand, jri, jmtd, rmsh, &
+                           !                         dx, ntype, itype, gridf)
                         END DO
 
                      END DO
@@ -2512,7 +2513,8 @@ CONTAINS
 
                                     integrand = rprod*sum_primf
 
-                                    rdum1 = rdum*intgrf(integrand, jri, jmtd, rmsh, dx, ntype, itype, gridf)
+                                    call juDFT_error("stop the following line has to be reimplemented:")
+                                    !rdum1 = rdum*intgrf(integrand, jri, jmtd, rmsh, dx, ntype, itype, gridf)
 
                                     iatom = iatom0
                                     DO ieq = 1, neq(itype)

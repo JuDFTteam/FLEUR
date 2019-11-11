@@ -19,20 +19,21 @@ CONTAINS
    ! Before first use of this function it has to be initialized with
    ! intgrf_init.
 
-   FUNCTION intgrf(f, jri, jmtd, rmsh, dx, ntype, itype, gridf)
+   FUNCTION intgrf(f, atoms, itype, gridf)
       use m_juDFT
+      use m_types_setup
       IMPLICIT NONE
 
-      REAL                   :: intgrf
-      INTEGER, INTENT(IN)  :: itype, ntype, jmtd
-      INTEGER, INTENT(IN)  :: jri(ntype)
-      REAL, INTENT(IN)  :: dx(ntype), rmsh(jmtd, ntype)
-      REAL, INTENT(IN)  :: gridf(jmtd, ntype)
+      REAL                 :: intgrf
+      type(t_atoms)        :: atoms
+      INTEGER, INTENT(IN)  :: itype
+      REAL, INTENT(IN)  :: gridf(atoms%jmtd, atoms%ntype)
       REAL, INTENT(IN)  :: f(*)
       !     - local -
       TYPE(intgrf_out)     :: fct_res
 
-      fct_res = pure_intgrf(f, jri, jmtd, rmsh, dx, ntype, itype, gridf)
+      fct_res = pure_intgrf(f, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, &
+                            atoms%ntype, itype, gridf)
       IF (fct_res%ierror == NEGATIVE_EXPONENT_WARNING) THEN
          write (6, *) 'intgrf: Warning!'// &
             'Negative exponent x in extrapolation a+c*r**x'

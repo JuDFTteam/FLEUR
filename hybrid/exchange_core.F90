@@ -157,8 +157,7 @@ CONTAINS
                         primf2(:atoms%jri(itype)) = primf2(:atoms%jri(itype))*atoms%rmsh(:atoms%jri(itype), itype)**(l + 1)
                         DO j = 1, n
                            integrand = fprod(:, j)*(primf1 + primf2)
-                           integral(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, &
-                                                                       atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                           integral(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, atoms, itype, hybdat%gridf)
                         END DO
                      END DO
 
@@ -345,8 +344,7 @@ CONTAINS
                         primf2(:atoms%jri(itype)) = primf2(:atoms%jri(itype))*atoms%rmsh(:atoms%jri(itype), itype)**(l + 1)
                         DO j = 1, n
                            integrand = fprod(:, j)*(primf1 + primf2)
-                           integral(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, &
-                                                                       atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                           integral(i, j) = fpi_const/(2*l + 1)*intgrf(integrand, atoms, itype, hybdat%gridf)
                         END DO
                      END DO
 
@@ -510,8 +508,7 @@ CONTAINS
 
                                     integrand = rprod*(primf1 + primf2)
 
-                                    rdum1 = rdum*intgrf(integrand, atoms%jri, atoms%jmtd, &
-                                                        atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                                    rdum1 = rdum*intgrf(integrand, atoms, itype, hybdat%gridf)
 
                                     iatom = iatom0
                                     DO ieq = 1, atoms%neq(itype)
@@ -692,7 +689,7 @@ CONTAINS
 
                                     integrand = rprod*(primf1 + primf2)
 
-                                    rdum2 = rdum1*intgrf(integrand, atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                                    rdum2 = rdum1*intgrf(integrand, atoms, itype, hybdat%gridf)
 
                                     iatom = iatom0
                                     DO ieq = 1, atoms%neq(itype)
