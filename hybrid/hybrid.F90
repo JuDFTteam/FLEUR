@@ -85,13 +85,12 @@ CONTAINS
          if(allocated(hybrid%ne_eig)) deallocate(hybrid%ne_eig)
          allocate(hybrid%ne_eig(kpts%nkpt), source=0)
 
-         write (*,*) "allocated(hybrid%nbands): ",allocated(hybrid%nbands)
-         write (*,*) "shape(hybrid%nbands)", shape(hybrid%nbands)
-         if(allocated(hybrid%nbands)) deallocate(hybrid%nbands, stat=err, errmsg=msg)
-
-         if(err /= 0) THEN
-            write (*,*) "errorcode", err
-            write (*,*) "errormessage", msg
+         if(allocated(hybrid%nbands)) then
+            deallocate(hybrid%nbands, stat=err, errmsg=msg)
+            if(err /= 0) THEN
+               write (*,*) "errorcode", err
+               write (*,*) "errormessage", msg
+            endif
          endif
 
          allocate(hybrid%nbands(kpts%nkpt), source=0)
@@ -102,7 +101,7 @@ CONTAINS
          if(allocated(hybrid%nbasm)) deallocate(hybrid%nbasm)
          allocate(hybrid%nbasm(kpts%nkptf), source=0)
 
-         if(allocated(hybrid%nbasm)) deallocate(hybrid%nbasm)
+         if(allocated(hybrid%div_vv)) deallocate(hybrid%div_vv)
          allocate(hybrid%div_vv(DIMENSION%neigd, kpts%nkpt, input%jspins), source=0.0)
          init_vex = .FALSE.
       END IF
