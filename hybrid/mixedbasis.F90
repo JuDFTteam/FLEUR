@@ -395,15 +395,13 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO i = 1, atoms%neq(itype)
             DO l = 0, hybrid%lcutm1(itype)
-               hybrid%nbasp = hybrid%nbasp + (2*l+1) * mpbasis%num_rad_bas_fun(l, itype)   
+               hybrid%nbasp = hybrid%nbasp + (2*l+1) * mpbasis%num_rad_bas_fun(l, itype)
             END DO
          END DO
       END DO
       hybrid%maxbasm1 = hybrid%nbasp + maxval(mpbasis%ngptm)
-      DO nk = 1, kpts%nkptf
-         if(.not. allocated(hybrid%nbasm)) call judft_error("hybrid%nbasm not alloced")
-         hybrid%nbasm(nk) = hybrid%nbasp + mpbasis%ngptm(nk)
-      END DO
+
+      hybrid%nbasm = hybrid%nbasp + mpbasis%ngptm
 
       hybrid%maxlmindx = MAXVAL([(SUM([(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
 
