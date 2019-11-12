@@ -388,9 +388,7 @@ CONTAINS
          ENDDO
       END DO
 
-      DO itype = 1, atoms%ntype
-         IF (ANY(mpbasis%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype) == 0)) call judft_error('any mpbasis%num_rad_bas_fun eq 0', calledby='mixedbasis')
-      END DO
+      call mpbasis%check_radbasfn(atoms, hybrid)
 
       !count basis functions
       hybrid%nbasp = 0

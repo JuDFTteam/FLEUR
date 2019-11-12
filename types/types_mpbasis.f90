@@ -12,6 +12,7 @@ module m_types_mpbasis
       procedure :: num_gpts             => mpbasis_num_gpts
       procedure :: gen_gvec             => mpbasis_gen_gvec
       procedure :: check_orthonormality => mpbasis_check_orthonormality
+      procedure :: check_radbasfn       => mpbasis_check_radbasfn
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
@@ -55,18 +56,18 @@ contains
 
       ! a first run for the determination of the dimensions of the fields gptm,pgptm
 
-      DO
+      do
          n = n + 1
          l_found_new_gpt = .FALSE.
-         DO x = -n, n
+         do x = -n, n
             n1 = n - ABS(x)
-            DO y = -n1, n1
+            do y = -n1, n1
                n2 = n1 - ABS(y)
-               DO z = -n2, n2, MAX(2*n2, 1)
+               do z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
                   IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
-                  DO ikpt = 1, kpts%nkptf
+                  do ikpt = 1, kpts%nkptf
                      IF (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
                         IF (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
@@ -76,12 +77,12 @@ contains
                         mpbasis%ngptm(ikpt) = mpbasis%ngptm(ikpt) + 1
                         l_found_new_gpt = .TRUE.
                      END IF
-                  END DO ! k-loop
-               END DO
-            END DO
-         END DO
+                  enddo ! k-loop
+               enddo
+            enddo
+         enddo
          IF (.NOT. l_found_new_gpt) EXIT
-      END DO
+      enddo
 
       allocate(mpbasis%gptm(3,i)) ! i = gptmd
       allocate(mpbasis%gptm_ptr(maxval(mpbasis%ngptm), kpts%nkptf))
@@ -100,18 +101,18 @@ contains
       length_kG = 0
       unsrt_pgptm = 0
 
-      DO
+      do
          n = n + 1
          l_found_new_gpt = .FALSE.
-         DO x = -n, n
+         do x = -n, n
             n1 = n - ABS(x)
-            DO y = -n1, n1
+            do y = -n1, n1
                n2 = n1 - ABS(y)
-               DO z = -n2, n2, MAX(2*n2, 1)
+               do z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
                   IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
-                  DO ikpt = 1, kpts%nkptf
+                  do ikpt = 1, kpts%nkptf
                      kvec = kpts%bkf(:,ikpt)
 
                      IF (norm2(MATMUL(kvec + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
@@ -129,26 +130,26 @@ contains
                         ! Save length of vector k + G for array sorting
                         length_kG(mpbasis%ngptm(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
                      END IF
-                  END DO
-               END DO
-            END DO
-         END DO
+                  enddo
+               enddo
+            enddo
+         enddo
          IF (.NOT. l_found_new_gpt) EXIT
-      END DO
+      enddo
 
       ! Sort pointers in array, so that shortest |k+G| comes first
-      DO ikpt = 1, kpts%nkptf
+      do ikpt = 1, kpts%nkptf
          allocate(ptr(mpbasis%ngptm(ikpt)))
          ! Divide and conquer algorithm for arrays > 1000 entries
          divconq = MAX(0, INT(1.443*LOG(0.001*mpbasis%ngptm(ikpt))))
          ! create pointers which correspond to a sorted array
          CALL rorderpf(ptr, length_kG(1:mpbasis%ngptm(ikpt), ikpt), mpbasis%ngptm(ikpt), divconq)
          ! rearrange old pointers
-         DO igpt = 1, mpbasis%ngptm(ikpt)
+         do igpt = 1, mpbasis%ngptm(ikpt)
             mpbasis%gptm_ptr(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
-         END DO
+         enddo
          deallocate(ptr)
-      END DO
+      enddo
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(/A)') 'Mixed basis'
@@ -182,8 +183,8 @@ contains
       n_radbasfn = mpbasis%num_rad_bas_fun(l, itype)
 
       cum_err_sq = 0
-      DO i = 1, n_radbasfn
-         DO j = 1, i
+      do i = 1, n_radbasfn
+         do j = 1, i
             overlap = intgrf(mpbasis%radbasfn_mt(:,i, l, itype)*mpbasis%radbasfn_mt(:,j, l, itype), &
                            atoms, itype, gridf)
 
@@ -207,12 +208,30 @@ contains
                                  calledby='mixedbasis%check_orthonormality')
             END IF
 
-         END DO
-      END DO
+         enddo
+      enddo
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
                     lchar(l) // ':', n_radbasfn, SQRT(cum_err_sq)/n_radbasfn
       END IF
    end subroutine mpbasis_check_orthonormality
+
+   subroutine mpbasis_check_radbasfn(mpbasis, atoms, hybrid)
+      use m_judft
+      use m_types_hybrid
+      use m_types_setup
+      implicit none
+      class(t_mpbasis), intent(in) :: mpbasis
+      type(t_atoms), intent(in)    :: atoms
+      type(t_hybrid), intent(in)   :: hybrid
+
+      integer :: itype
+
+      do itype = 1, atoms%ntype
+         IF (ANY(mpbasis%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype) == 0)) THEN
+            call judft_error('any mpbasis%num_rad_bas_fun eq 0', calledby='mixedbasis')
+         endif
+      enddo
+   end subroutine mpbasis_check_radbasfn
 end module m_types_mpbasis
