@@ -268,7 +268,7 @@ CONTAINS
             ! with a eigenvalue greater then hybrid%tolerance1 are retained
 
             ! Calculate overlap
-            call calc_olap_radbasfn(atoms, mpbasis, l, itype, gridf, olap)
+            call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
 
             ! Diagonalize
             CALL diagonalize(eigv, eig, olap)

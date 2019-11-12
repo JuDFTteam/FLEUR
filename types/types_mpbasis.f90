@@ -13,6 +13,7 @@ module m_types_mpbasis
       procedure :: gen_gvec             => mpbasis_gen_gvec
       procedure :: check_orthonormality => mpbasis_check_orthonormality
       procedure :: check_radbasfn       => mpbasis_check_radbasfn
+      procedure :: calc_olap_radbasfn   => mpbasis_calc_olap_radbasfn
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
@@ -234,4 +235,33 @@ contains
          endif
       enddo
    end subroutine mpbasis_check_radbasfn
+
+   subroutine mpbasis_calc_olap_radbasfn(mpbasis, atoms, l, itype, gridf, olap)
+      USE m_intgrf, ONLY: intgrf
+      use m_types
+      implicit NONE
+      class(t_mpbasis), intent(in)       :: mpbasis
+      type(t_atoms), intent(in)          :: atoms
+      integer, intent(in)                :: l, itype
+      real, intent(in)                   :: gridf(:,:)
+      real, intent(inout), allocatable   :: olap(:,:)
+
+      integer  :: n1, n2, n_radbasfn
+
+      n_radbasfn = mpbasis%num_radbasfn(l, itype)
+      if(allocated(olap)) then
+         if(any(shape(olap) /= n_radbasfn)) then
+            deallocate(olap)
+         endif
+      endif
+      if(.not. allocated(olap)) allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
+
+      DO n2 = 1, n_radbasfn
+         DO n1 = 1, n2
+            olap(n1, n2) = intgrf(mpbasis%radbasfn_mt(:,n1, l, itype)*mpbasis%radbasfn_mt(:,n2, l, itype), &
+                                  atoms, itype, gridf)
+            olap(n2, n1) = olap(n1, n2)
+         END DO
+      END DO
+   end subroutine mpbasis_calc_olap_radbasfn
 end module m_types_mpbasis
