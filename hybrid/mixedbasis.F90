@@ -271,7 +271,7 @@ CONTAINS
             call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
 
             ! Diagonalize
-            CALL diagonalize(eigv, eig, olap)
+            call mpbasis_diagonialize_olap(olap, eig, eigv)
 
             call mpbasis%filter_radbasfn(l, itype, n_radbasfn, eig, eigv)
 

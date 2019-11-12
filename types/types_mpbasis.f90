@@ -269,11 +269,10 @@ contains
 
    subroutine mpbasis_filter_radbasfn(mpbasis, l, itype, n_radbasfn, eig, eigv)
       ! Get rid of linear dependencies (eigenvalue <= mpbasis%linear_dep_tol)
-      use m_types
       implicit none
-      class(t_mpbasis), intent(inout) :: mpbasis
-      integer, intent(in)             :: l, itype, n_radbasfn
-      real, intent(inout)             :: eig(:), eigv(:,:)
+      class(t_mpbasis), intent(inout)       :: mpbasis
+      integer, intent(in)                   :: l, itype, n_radbasfn
+      real, intent(inout)                   :: eig(:), eigv(:,:)
 
       integer              :: num_radbasfn, i_bas
       integer, allocatable :: remaining_basfn(:)
@@ -292,4 +291,39 @@ contains
       eig = eig(remaining_basfn)
       eigv(:,:) = eigv(:,remaining_basfn)
    end subroutine mpbasis_filter_radbasfn
+
+   subroutine mpbasis_diagonialize_olap(olap, eig_val, eig_vec)
+      use m_judft
+      implicit NONE
+      real, intent(in)  :: olap(:,:)
+      real, allocatable :: eig_val(:), eig_vec(:,:)
+
+      integer              :: n, size_iwork, info
+      real                 :: size_work
+      integer, allocatable :: iwork(:)
+      real, allocatable    :: work(:)
+
+      if(size(olap, dim=1) /= size(olap, dim=2)) then
+         call juDFT_error("only square matrices can be diagonalized")
+      endif
+
+      n = size(olap, dim=1)
+
+      if(size(eig_val) /= n) deallocate(eig_val)
+      if(.not. allocated(eig_val)) allocate(eig_val(n))
+
+      eig_vec = olap
+      ! get sizes of work arrays
+      call dsyevd('V', 'U', n, eig_vec, n, eig_val,&
+                  size_work, -1, size_iwork, -1, info)
+      if(info /= 0) call juDFT_error("diagonalization for size failed")
+
+      allocate(work(int(size_work)))
+      allocate(iwork(size_iwork))
+
+      call dsyevd('V', 'U', n, eig_vec, n, eig_val,&
+                  work, int(size_work), iwork, size_iwork, info)
+      if(info /= 0) call juDFT_error("diagonalization failed")
+
+   end subroutine mpbasis_diagonialize_olap
 end module m_types_mpbasis
