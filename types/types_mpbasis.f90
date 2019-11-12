@@ -6,7 +6,7 @@ module m_types_mpbasis
       INTEGER, ALLOCATABLE   :: ngptm(:)
       INTEGER, ALLOCATABLE   :: gptm_ptr(:,:)
       REAL                   :: g_cutoff
-      INTEGER, ALLOCATABLE   :: num_rad_bas_fun(:,:)
+      INTEGER, ALLOCATABLE   :: num_radbasfn(:,:)
       REAL, ALLOCATABLE      :: radbasfn_mt(:,:,:,:)
    CONTAINS
       procedure :: num_gpts             => mpbasis_num_gpts
@@ -180,7 +180,7 @@ contains
                                              'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x']
 
 
-      n_radbasfn = mpbasis%num_rad_bas_fun(l, itype)
+      n_radbasfn = mpbasis%num_radbasfn(l, itype)
 
       cum_err_sq = 0
       do i = 1, n_radbasfn
@@ -229,8 +229,8 @@ contains
       integer :: itype
 
       do itype = 1, atoms%ntype
-         IF (ANY(mpbasis%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype) == 0)) THEN
-            call judft_error('any mpbasis%num_rad_bas_fun eq 0', calledby='mixedbasis')
+         IF (ANY(mpbasis%num_radbasfn(0:hybrid%lcutm1(itype), itype) == 0)) THEN
+            call judft_error('any mpbasis%num_radbasfn eq 0', calledby='mixedbasis')
          endif
       enddo
    end subroutine mpbasis_check_radbasfn

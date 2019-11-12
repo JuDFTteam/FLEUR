@@ -95,7 +95,7 @@ CONTAINS
 
       ! Deallocate arrays which might have been allocated in a previous run of this subroutine
       IF (ALLOCATED(mpbasis%ngptm)) deallocate(mpbasis%ngptm)
-      IF (ALLOCATED(mpbasis%num_rad_bas_fun)) deallocate(mpbasis%num_rad_bas_fun)
+      IF (ALLOCATED(mpbasis%num_radbasfn)) deallocate(mpbasis%num_radbasfn)
       IF (ALLOCATED(mpbasis%gptm_ptr)) deallocate(mpbasis%gptm_ptr)
       IF (ALLOCATED(mpbasis%gptm)) deallocate(mpbasis%gptm)
       IF (ALLOCATED(mpbasis%radbasfn_mt)) deallocate(mpbasis%radbasfn_mt)
@@ -128,12 +128,12 @@ CONTAINS
          WRITE (6, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
       END IF
 
-      allocate(mpbasis%num_rad_bas_fun(0:maxval(hybrid%lcutm1), atoms%ntype))
+      allocate(mpbasis%num_radbasfn(0:maxval(hybrid%lcutm1), atoms%ntype))
       allocate(seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
       allocate(selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
-      mpbasis%num_rad_bas_fun = 0    !!! 01/12/10 jij%M.b.
+      mpbasis%num_radbasfn = 0    !!! 01/12/10 jij%M.b.
 
-      ! determine maximal indices of (radial) mixed-basis functions (->num_rad_bas_fun)
+      ! determine maximal indices of (radial) mixed-basis functions (->num_radbasfn)
       ! (will be reduced later-on due to overlap)
       hybrid%max_indx_p_1 = 0
       DO itype = 1, atoms%ntype
@@ -184,12 +184,12 @@ CONTAINS
                WRITE (6, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
             hybrid%max_indx_p_1 = MAX(hybrid%max_indx_p_1, M)
-            mpbasis%num_rad_bas_fun(l, itype) = n_radbasfn*input%jspins
+            mpbasis%num_radbasfn(l, itype) = n_radbasfn*input%jspins
          END DO
       END DO
 
       allocate(mpbasis%radbasfn_mt(atoms%jmtd,&
-                            maxval(mpbasis%num_rad_bas_fun), &
+                            maxval(mpbasis%num_radbasfn), &
                             0:maxval(hybrid%lcutm1), &
                             atoms%ntype), source=0.0)
 
@@ -210,7 +210,7 @@ CONTAINS
 
          n_grid_pt = atoms%jri(itype)
          DO l = 0, hybrid%lcutm1(itype)
-            n_radbasfn = mpbasis%num_rad_bas_fun(l, itype)
+            n_radbasfn = mpbasis%num_radbasfn(l, itype)
             ! allow for zero product-basis functions for
             ! current l-quantum number
             IF (n_radbasfn == 0) THEN
@@ -276,7 +276,7 @@ CONTAINS
             call filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
 
             call trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv)
-            nn = mpbasis%num_rad_bas_fun(l, itype)
+            nn = mpbasis%num_radbasfn(l, itype)
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
             call add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf, nn, mpbasis)
@@ -287,14 +287,14 @@ CONTAINS
             deallocate(olap, eigv, work, eig)
 
          END DO !l
-         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpbasis%num_rad_bas_fun(0:hybrid%lcutm1(itype), itype))
+         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpbasis%num_radbasfn(0:hybrid%lcutm1(itype), itype))
       END DO ! itype
 
-      allocate(basmhlp(atoms%jmtd, maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
-      basmhlp(1:atoms%jmtd, 1:maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype) &
-         = mpbasis%radbasfn_mt(1:atoms%jmtd, 1:maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
+      allocate(basmhlp(atoms%jmtd, maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      basmhlp(1:atoms%jmtd, 1:maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), 1:atoms%ntype) &
+         = mpbasis%radbasfn_mt(1:atoms%jmtd, 1:maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
       deallocate(mpbasis%radbasfn_mt)
-      allocate(mpbasis%radbasfn_mt(atoms%jmtd, maxval(mpbasis%num_rad_bas_fun), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      allocate(mpbasis%radbasfn_mt(atoms%jmtd, maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype))
       mpbasis%radbasfn_mt = basmhlp
 
       deallocate(basmhlp, seleco, selecu, selecmat)
@@ -320,7 +320,7 @@ CONTAINS
             ! determine radial function with the largest moment
             ! this function is used to build the linear combinations
             max_momentum = 0
-            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
+            DO i = 1, mpbasis%num_radbasfn(l, itype)
                momentum = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
                               atoms, itype, gridf)
                IF (ABS(momentum) > max_momentum) THEN
@@ -332,13 +332,13 @@ CONTAINS
             ! rearrange order of radial functions such that the last function possesses the largest moment
             bashlp(:n_grid_pt) = mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
             mpbasis%radbasfn_mt(:n_grid_pt,&
-                                n_radbasfn:mpbasis%num_rad_bas_fun(l, itype)-1,&
+                                n_radbasfn:mpbasis%num_radbasfn(l, itype)-1,&
                                 :, itype)&
                =  mpbasis%radbasfn_mt(:n_grid_pt,&
-                                      n_radbasfn+1:mpbasis%num_rad_bas_fun(l, itype),&
+                                      n_radbasfn+1:mpbasis%num_radbasfn(l, itype),&
                                       :, itype)
             mpbasis%radbasfn_mt(:n_grid_pt, &
-                                mpbasis%num_rad_bas_fun(l, itype),&
+                                mpbasis%num_radbasfn(l, itype),&
                                 l, itype) &
                = bashlp(:n_grid_pt)
          END DO
@@ -346,12 +346,12 @@ CONTAINS
          DO l = 0, hybrid%lcutm1(itype)
             IF (mpi%irank == 0) WRITE (6, '(6X,A)') lchar(l)//':'
 
-            IF (mpbasis%num_rad_bas_fun(l, itype) == 0) THEN
+            IF (mpbasis%num_radbasfn(l, itype) == 0) THEN
                IF (mpi%irank == 0) WRITE (6, '(6X,A,'':   0 ->    '')') lchar(l)
                CYCLE
             END IF
 
-            n_radbasfn = mpbasis%num_rad_bas_fun(l, itype)
+            n_radbasfn = mpbasis%num_radbasfn(l, itype)
             DO i = 1, n_radbasfn-1
                ! calculate moment of radial function i
                rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
@@ -395,7 +395,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO i = 1, atoms%neq(itype)
             DO l = 0, hybrid%lcutm1(itype)
-               hybrid%nbasp = hybrid%nbasp + (2*l+1) * mpbasis%num_rad_bas_fun(l, itype)
+               hybrid%nbasp = hybrid%nbasp + (2*l+1) * mpbasis%num_radbasfn(l, itype)
             END DO
          END DO
       END DO
@@ -547,7 +547,7 @@ CONTAINS
 
       integer  :: n1, n2, n_radbasfn
 
-      n_radbasfn = mpbasis%num_rad_bas_fun(l, itype)
+      n_radbasfn = mpbasis%num_radbasfn(l, itype)
       if(allocated(olap)) then
          if(any(shape(olap) /= n_radbasfn)) then
             deallocate(olap)
@@ -580,14 +580,14 @@ CONTAINS
       allocate(remaining_basfn(n_radbasfn), source=1)
       num_radbasfn = 0
 
-      DO i_bas = 1, mpbasis%num_rad_bas_fun(l, itype)
+      DO i_bas = 1, mpbasis%num_radbasfn(l, itype)
          IF (eig(i_bas) > hybrid%tolerance1) THEN
             num_radbasfn = num_radbasfn + 1
             remaining_basfn(num_radbasfn) = i_bas
          END IF
       END DO
 
-      mpbasis%num_rad_bas_fun(l, itype) = num_radbasfn
+      mpbasis%num_radbasfn(l, itype) = num_radbasfn
       eig = eig(remaining_basfn)
       eigv(:,:) = eigv(:,remaining_basfn)
    end subroutine filter_radbasfn
@@ -601,7 +601,7 @@ CONTAINS
 
       integer :: nn, i
 
-      nn = mpbasis%num_rad_bas_fun(l, itype)
+      nn = mpbasis%num_radbasfn(l, itype)
       DO i = 1, n_grid_pt
          mpbasis%radbasfn_mt(i, 1:nn, l, itype) &
             = MATMUL(mpbasis%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
@@ -658,7 +658,7 @@ CONTAINS
                = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) / norm
          END DO
          nn = nn + 1
-         mpbasis%num_rad_bas_fun(l, itype) = nn
+         mpbasis%num_radbasfn(l, itype) = nn
       END IF
    end subroutine add_l0_fun
 
