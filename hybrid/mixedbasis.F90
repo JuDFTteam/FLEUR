@@ -384,23 +384,7 @@ CONTAINS
             END DO
 
             ! test orthogonality
-            rdum = 0
-            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
-               DO j = 1, mpbasis%num_rad_bas_fun(l, itype)
-                  rdum1 = intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype)*mpbasis%radbasfn_mt(:n_grid_pt, j, l, itype), &
-                                 atoms, itype, gridf)
-                  IF (i /= j) THEN
-                     rdum = rdum + rdum1
-                  ELSE
-                     rdum = rdum + ABS(1 - rdum1)
-                  END IF
-               END DO
-            END DO
-            IF (mpi%irank == 0) &
-               WRITE (6, '(6x,I4,'' ->'',f10.5,''   ('',ES8.1,'' )'')') n_radbasfn, &
-               intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype), &
-                      atoms, itype, gridf), rdum
-         END DO
+            call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
       END DO
 
       DO itype = 1, atoms%ntype
