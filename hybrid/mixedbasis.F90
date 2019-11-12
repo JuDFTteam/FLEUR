@@ -273,7 +273,7 @@ CONTAINS
             ! Diagonalize
             CALL diagonalize(eigv, eig, olap)
 
-            call filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
+            call mpbasis%filter_radbasfn(l, itype, n_radbasfn, eig, eigv)
 
             call trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv)
             nn = mpbasis%num_radbasfn(l, itype)
@@ -536,34 +536,6 @@ CONTAINS
                  )
    end function calc_radbas_norm
 
-
-   subroutine filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
-
-                  ! Get rid of linear dependencies (eigenvalue <= mpbasis%linear_dep_tol)
-      use m_types
-      implicit none
-      type(t_hybrid), intent(in)     :: hybrid
-      integer, intent(in)            :: l, itype, n_radbasfn
-      real, intent(inout)            :: eig(:), eigv(:,:)
-      type(t_mpbasis), intent(inout) :: mpbasis
-
-      integer              :: num_radbasfn, i_bas
-      integer, allocatable :: remaining_basfn(:)
-
-      allocate(remaining_basfn(n_radbasfn), source=1)
-      num_radbasfn = 0
-
-      DO i_bas = 1, mpbasis%num_radbasfn(l, itype)
-         IF (eig(i_bas) > mpbasis%linear_dep_tol) THEN
-            num_radbasfn = num_radbasfn + 1
-            remaining_basfn(num_radbasfn) = i_bas
-         END IF
-      END DO
-
-      mpbasis%num_radbasfn(l, itype) = num_radbasfn
-      eig = eig(remaining_basfn)
-      eigv(:,:) = eigv(:,remaining_basfn)
-   end subroutine filter_radbasfn
 
    subroutine trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv)
       use m_types

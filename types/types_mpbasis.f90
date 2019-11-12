@@ -15,6 +15,7 @@ module m_types_mpbasis
       procedure :: check_orthonormality => mpbasis_check_orthonormality
       procedure :: check_radbasfn       => mpbasis_check_radbasfn
       procedure :: calc_olap_radbasfn   => mpbasis_calc_olap_radbasfn
+      procedure :: filter_radbasfn      => mpbasis_filter_radbasfn
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
@@ -265,4 +266,30 @@ contains
          END DO
       END DO
    end subroutine mpbasis_calc_olap_radbasfn
+
+   subroutine mpbasis_filter_radbasfn(mpbasis, l, itype, n_radbasfn, eig, eigv)
+      ! Get rid of linear dependencies (eigenvalue <= mpbasis%linear_dep_tol)
+      use m_types
+      implicit none
+      class(t_mpbasis), intent(inout) :: mpbasis
+      integer, intent(in)             :: l, itype, n_radbasfn
+      real, intent(inout)             :: eig(:), eigv(:,:)
+
+      integer              :: num_radbasfn, i_bas
+      integer, allocatable :: remaining_basfn(:)
+
+      allocate(remaining_basfn(n_radbasfn), source=1)
+      num_radbasfn = 0
+
+      DO i_bas = 1, mpbasis%num_radbasfn(l, itype)
+         IF (eig(i_bas) > mpbasis%linear_dep_tol) THEN
+            num_radbasfn = num_radbasfn + 1
+            remaining_basfn(num_radbasfn) = i_bas
+         END IF
+      END DO
+
+      mpbasis%num_radbasfn(l, itype) = num_radbasfn
+      eig = eig(remaining_basfn)
+      eigv(:,:) = eigv(:,remaining_basfn)
+   end subroutine mpbasis_filter_radbasfn
 end module m_types_mpbasis
