@@ -400,4 +400,41 @@ contains
          mpbasis%num_radbasfn(l, itype) = nn
       END IF
    end subroutine mpbasis_add_l0_fun
+
+   subroutine mpbasis_reduce_linear_dep(mpbasis, atoms, mpi, hybrid, l, itype, gridf)
+      use m_types_setup
+      use m_types_hybrid
+      use m_types_mpi
+      implicit none
+      class(t_mpbasis)              :: mpbasis
+      type(t_atoms), intent(in)     :: atoms
+      type(t_mpi), intent(in)       :: mpi
+      type(t_hybrid), intent(in)    :: hybrid
+      integer, intent(in)           :: l, itype
+
+      REAL, ALLOCATABLE             :: olap(:,:), eig(:), eigv(:,:)
+      REAL                          :: gridf(:,:)
+      integer                       :: full_n_radbasfn, n_grid_pt
+
+      full_n_radbasfn = mpbasis%num_radbasfn(l, itype)
+      n_grid_pt = atoms%jri(itype)
+
+      ! Calculate overlap
+      call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
+
+      ! Diagonalize
+      call mpbasis_diagonialize_olap(olap, eig, eigv)
+
+      call mpbasis%filter_radbasfn(l, itype, full_n_radbasfn, eig, eigv)
+
+      call mpbasis%trafo_to_orthonorm_bas(full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
+
+      ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
+      call mpbasis%add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf)
+
+      ! Check orthonormality of product basis
+      call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
+
+      deallocate(olap, eigv, eig)
+   end subroutine
 end module m_types_mpbasis

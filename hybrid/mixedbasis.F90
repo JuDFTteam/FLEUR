@@ -267,23 +267,7 @@ CONTAINS
             ! the overlap matrix is diagonalized and those eigenvectors
             ! with a eigenvalue greater then mpbasis%linear_dep_tol are retained
 
-            ! Calculate overlap
-            call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
-
-            ! Diagonalize
-            call mpbasis_diagonialize_olap(olap, eig, eigv)
-
-            call mpbasis%filter_radbasfn(l, itype, full_n_radbasfn, eig, eigv)
-
-            call mpbasis%trafo_to_orthonorm_bas(full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
-
-            ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
-            call mpbasis%add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf)
-
-            ! Check orthonormality of product basis
-            call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
-
-            deallocate(olap, eigv, work, eig)
+            call mpbasis%reduce_linear_dep()
 
          END DO !l
          IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpbasis%num_radbasfn(0:hybrid%lcutm1(itype), itype))
