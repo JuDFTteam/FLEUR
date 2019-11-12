@@ -268,7 +268,7 @@ CONTAINS
             ! with a eigenvalue greater then hybrid%tolerance1 are retained
 
             ! Calculate overlap
-            call calc_olap_radbasfn(atoms, mpbasis, l, itype, n_radbasfn, gridf, olap)
+            call calc_olap_radbasfn(atoms, mpbasis, l, itype, gridf, olap)
 
             ! Diagonalize
             CALL diagonalize(eigv, eig, olap)
@@ -400,11 +400,13 @@ CONTAINS
          END DO
       END DO
       hybrid%maxbasm1 = hybrid%nbasp + maxval(mpbasis%ngptm)
-
       hybrid%nbasm = hybrid%nbasp + mpbasis%ngptm
 
-      hybrid%maxlmindx = MAXVAL([(SUM([(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
-
+      hybrid%maxlmindx = 0
+      do itype = 1,atoms%ntype
+         hybrid%maxlmindx = max(hybrdi%maxlmindx,
+                                SUM([hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype)]))
+      enddo
    END SUBROUTINE mixedbasis
 
    subroutine gen_bas_fun(atoms, enpara, gridf, input, hybrid, mpi, vr0, usdus, bas1, bas2)
@@ -533,18 +535,19 @@ CONTAINS
                  )
    end function calc_radbas_norm
 
-   subroutine calc_olap_radbasfn(atoms, mpbasis, l, itype, n_radbasfn, gridf, olap)
+   subroutine calc_olap_radbasfn(atoms, mpbasis, l, itype, gridf, olap)
       USE m_intgrf, ONLY: intgrf
       use m_types
       implicit NONE
       type(t_atoms), intent(in)          :: atoms
-      type(t_mpbasis), intent(in)         :: mpbasis
-      integer, intent(in)                :: l, itype, n_radbasfn
+      type(t_mpbasis), intent(in)        :: mpbasis
+      integer, intent(in)                :: l, itype
       real, intent(in)                   :: gridf(:,:)
       real, intent(inout), allocatable   :: olap(:,:)
 
-      integer  :: n1, n2
+      integer  :: n1, n2, n_radbasfn
 
+      n_radbasfn = mpbasis%num_rad_bas_fun(l, itype)
       if(allocated(olap)) then
          if(any(shape(olap) /= n_radbasfn)) then
             deallocate(olap)
