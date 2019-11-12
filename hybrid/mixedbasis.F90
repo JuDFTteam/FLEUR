@@ -385,6 +385,7 @@ CONTAINS
 
             ! test orthogonality
             call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
+         ENDDO
       END DO
 
       DO itype = 1, atoms%ntype
