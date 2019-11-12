@@ -330,14 +330,17 @@ CONTAINS
             END DO
 
             ! rearrange order of radial functions such that the last function possesses the largest moment
-            j = 0
             bashlp(:n_grid_pt) = mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
-            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
-               IF (i == n_radbasfn) CYCLE
-               j = j + 1
-               mpbasis%radbasfn_mt(:n_grid_pt, j, l, itype) = mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype)
-            END DO
-            mpbasis%radbasfn_mt(:n_grid_pt, mpbasis%num_rad_bas_fun(l, itype), l, itype) = bashlp(:n_grid_pt)
+            mpbasis%radbasfn_mt(:n_grid_pt,&
+                                n_radbasfn:mpbasis%num_rad_bas_fun(l, itype)-1,&
+                                :, itype)&
+               =  mpbasis%radbasfn_mt(:n_grid_pt,&
+                                      n_radbasfn+1:mpbasis%num_rad_bas_fun(l, itype),&
+                                      :, itype)
+            mpbasis%radbasfn_mt(:n_grid_pt, &
+                                mpbasis%num_rad_bas_fun(l, itype),&
+                                l, itype) &
+               = bashlp(:n_grid_pt)
 
          END DO
 
