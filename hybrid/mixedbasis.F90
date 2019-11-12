@@ -67,7 +67,7 @@ CONTAINS
       TYPE(t_usdus)                   ::  usdus
 
       ! local scalars
-      INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, n1, n2, nn
+      INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2, nn
       INTEGER                         ::  m, nk, i_basfn, i, j, n_grid_pt
       REAL                            ::  rdum, rdum1, norm, max_momentum, momentum
 
@@ -210,7 +210,7 @@ CONTAINS
 
          n_grid_pt = atoms%jri(itype)
          DO l = 0, hybrid%lcutm1(itype)
-            n_radbasfn = mpbasis%num_radbasfn(l, itype)
+            full_n_radbasfn = mpbasis%num_radbasfn(l, itype)
             ! allow for zero product-basis functions for
             ! current l-quantum number
             IF (n_radbasfn == 0) THEN
@@ -219,9 +219,9 @@ CONTAINS
             END IF
 
             ! set up the overlap matrix
-            allocate(eigv(n_radbasfn, n_radbasfn), source=0.0)
-            allocate(work(3*n_radbasfn), source=0.0)
-            allocate(eig(n_radbasfn), source=0.0)
+            allocate(eigv(full_n_radbasfn, full_n_radbasfn), source=0.0)
+            allocate(work(3*full_n_radbasfn), source=0.0)
+            allocate(eig(full_n_radbasfn), source=0.0)
             i_basfn = 0
 
             ! valence*valence
@@ -236,7 +236,7 @@ CONTAINS
                            IF (selecmat(n1, l1, n2, l2)) THEN
                               DO jspin = 1, input%jspins
                                  i_basfn = i_basfn + 1
-                                 IF (i_basfn > n_radbasfn) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
+                                 IF (i_basfn > full_n_radbasfn) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
                                  mpbasis%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) &
                                     = (   bas1(:n_grid_pt, n1, l1, itype, jspin) &
@@ -260,7 +260,7 @@ CONTAINS
                END DO !l2
             END DO  !l1
 
-            IF (i_basfn /= n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
+            IF (i_basfn /= full_n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
             ! In order to get rid of the linear dependencies in the
             ! radial functions radbasfn_mt belonging to fixed l and itype
@@ -273,9 +273,9 @@ CONTAINS
             ! Diagonalize
             call mpbasis_diagonialize_olap(olap, eig, eigv)
 
-            call mpbasis%filter_radbasfn(l, itype, n_radbasfn, eig, eigv)
+            call mpbasis%filter_radbasfn(l, itype, full_n_radbasfn, eig, eigv)
 
-            call trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv)
+            call trafo_to_orthonorm_bas(mpbasis, full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
             nn = mpbasis%num_radbasfn(l, itype)
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
@@ -547,6 +547,11 @@ CONTAINS
       integer :: nn, i
 
       nn = mpbasis%num_radbasfn(l, itype)
+
+      write (*,*) "nn = ", nn
+      write (*,*) "n_radbasfn = ", n_radbasfn
+      write (*,*) "radbasfn_mt shape = ", shape(mpbasis%radbasfn_mt(i, 1:n_radbasfn, l, itype))
+      write (*,*) "eigv shape = ", shape(eigv(:,1:nn))
       DO i = 1, n_grid_pt
          mpbasis%radbasfn_mt(i, 1:nn, l, itype) &
             = MATMUL(mpbasis%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
