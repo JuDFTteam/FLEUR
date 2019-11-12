@@ -219,9 +219,6 @@ CONTAINS
             END IF
 
             ! set up the overlap matrix
-            allocate(eigv(full_n_radbasfn, full_n_radbasfn), source=0.0)
-            allocate(work(3*full_n_radbasfn), source=0.0)
-            allocate(eig(full_n_radbasfn), source=0.0)
             i_basfn = 0
 
             ! valence*valence

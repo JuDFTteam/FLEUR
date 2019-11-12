@@ -312,7 +312,9 @@ contains
 
       n = size(olap, dim=1)
 
-      if(size(eig_val) /= n) deallocate(eig_val)
+      if(allocated(eig_val)) then
+         if(size(eig_val) /= n) deallocate(eig_val)
+      endif
       if(.not. allocated(eig_val)) allocate(eig_val(n))
 
       eig_vec = olap
