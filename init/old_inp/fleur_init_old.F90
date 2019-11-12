@@ -100,7 +100,7 @@ CONTAINS
     ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),atoms%ngopr(atoms%nat) )
     ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
     ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
-    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2),atoms%nflip(atoms%ntype) )
+    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2))
     ALLOCATE ( atoms%ncst(atoms%ntype) )
     ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
     ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
