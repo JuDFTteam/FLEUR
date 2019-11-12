@@ -267,7 +267,7 @@ CONTAINS
             ! the overlap matrix is diagonalized and those eigenvectors
             ! with a eigenvalue greater then mpbasis%linear_dep_tol are retained
 
-            call mpbasis%reduce_linear_dep()
+            call mpbasis%reduce_linear_dep(atoms, mpi, hybrid, l, itype, gridf)
 
          END DO !l
          IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpbasis%num_radbasfn(0:hybrid%lcutm1(itype), itype))

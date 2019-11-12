@@ -18,6 +18,7 @@ module m_types_mpbasis
       procedure :: filter_radbasfn        => mpbasis_filter_radbasfn
       procedure :: trafo_to_orthonorm_bas => mpbasis_trafo_to_orthonorm_bas
       procedure :: add_l0_fun             => mpbasis_add_l0_fun
+      procedure :: reduce_linear_dep      => mpbasis_reduce_linear_dep
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
