@@ -363,7 +363,7 @@ CONTAINS
                bashlp(:n_grid_pt) = mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
 
                IF (SQRT(rdum**2 + rdum1**2) <= 1E-06 .AND. mpi%irank == 0) &
-                  WRITE (6, *) 'Warning: Norm is smaller thann 1E-06!'
+                  WRITE (6, *) 'Warning: Norm is smaller than 1E-06!'
 
                ! change function n_radbasfn such that n_radbasfn is orthogonal to i
                ! since the functions radbasfn_mt have been orthogonal on input
