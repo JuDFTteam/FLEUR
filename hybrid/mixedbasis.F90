@@ -69,7 +69,7 @@ CONTAINS
       ! local scalars
       INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, n1, n2, nn
       INTEGER                         ::  m, nk, i_basfn, i, j, n_grid_pt
-      REAL                            ::  rdum, rdum1, norm
+      REAL                            ::  rdum, rdum1, norm, max_momentum, momentum
 
       ! - local arrays -
 
@@ -319,13 +319,13 @@ CONTAINS
          DO l = 0, hybrid%lcutm1(itype)
             ! determine radial function with the largest moment
             ! this function is used to build the linear combinations
-            rdum = 0
+            max_momentum = 0
             DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
-               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
+               momentum = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
                               atoms, itype, gridf)
-               IF (ABS(rdum1) > rdum) THEN
+               IF (ABS(momentum) > max_momentum) THEN
                   n_radbasfn = i
-                  rdum = rdum1
+                  max_momentum = momentum
                END IF
             END DO
 
