@@ -265,7 +265,7 @@ CONTAINS
             ! In order to get rid of the linear dependencies in the
             ! radial functions radbasfn_mt belonging to fixed l and itype
             ! the overlap matrix is diagonalized and those eigenvectors
-            ! with a eigenvalue greater then hybrid%tolerance1 are retained
+            ! with a eigenvalue greater then mpbasis%linear_dep_tol are retained
 
             ! Calculate overlap
             call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
@@ -538,12 +538,12 @@ CONTAINS
 
    subroutine filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
 
-                  ! Get rid of linear dependencies (eigenvalue <= hybrid%tolerance1)
+                  ! Get rid of linear dependencies (eigenvalue <= mpbasis%linear_dep_tol)
       use m_types
       implicit none
       type(t_hybrid), intent(in)     :: hybrid
-      integer, intent(in)          :: l, itype, n_radbasfn
-      real, intent(inout)          :: eig(:), eigv(:,:)
+      integer, intent(in)            :: l, itype, n_radbasfn
+      real, intent(inout)            :: eig(:), eigv(:,:)
       type(t_mpbasis), intent(inout) :: mpbasis
 
       integer              :: num_radbasfn, i_bas
@@ -553,7 +553,7 @@ CONTAINS
       num_radbasfn = 0
 
       DO i_bas = 1, mpbasis%num_radbasfn(l, itype)
-         IF (eig(i_bas) > hybrid%tolerance1) THEN
+         IF (eig(i_bas) > mpbasis%linear_dep_tol) THEN
             num_radbasfn = num_radbasfn + 1
             remaining_basfn(num_radbasfn) = i_bas
          END IF

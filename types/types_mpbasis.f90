@@ -8,6 +8,7 @@ module m_types_mpbasis
       REAL                   :: g_cutoff
       INTEGER, ALLOCATABLE   :: num_radbasfn(:,:)
       REAL, ALLOCATABLE      :: radbasfn_mt(:,:,:,:)
+      REAL                   :: linear_dep_tol  !only read in
    CONTAINS
       procedure :: num_gpts             => mpbasis_num_gpts
       procedure :: gen_gvec             => mpbasis_gen_gvec

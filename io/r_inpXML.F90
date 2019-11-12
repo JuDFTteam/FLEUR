@@ -1313,7 +1313,7 @@ CONTAINS
       END IF
 
       mpbasis%g_cutoff = input%rkmax - 0.5
-      hybrid%tolerance1 = 1.0e-4
+      mpbasis%linear_dep_tol = 1.0e-4
       hybrid%ewaldlambda = 3
       hybrid%lexp = 16
       hybrid%bands1 = DIMENSION%neigd
@@ -1323,7 +1323,7 @@ CONTAINS
          IF (hybrid%l_hybrid) CALL judft_error("Mixed product basis input missing in inp.xml")
       ELSE
          mpbasis%g_cutoff=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
-         hybrid%tolerance1=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
+         mpbasis%linear_dep_tol=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
          hybrid%ewaldlambda=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
          hybrid%lexp=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
          hybrid%bands1=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))

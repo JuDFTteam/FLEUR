@@ -294,7 +294,7 @@
 
 !HF   added for HF and hybrid functionals
       mpbasis%g_cutoff       = input%rkmax - 0.5
-      hybrid%tolerance1   = 1e-4
+      mpbasis%linear_dep_tol   = 1e-4
       taual_hyb   = atoms%taual
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
       ALLOCATE(hybrid%lcutm1(atoms%ntype))
