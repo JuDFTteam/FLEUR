@@ -404,7 +404,7 @@ CONTAINS
 
       hybrid%maxlmindx = 0
       do itype = 1,atoms%ntype
-         hybrid%maxlmindx = max(hybrdi%maxlmindx,
+         hybrid%maxlmindx = max(hybrid%maxlmindx,
                                 SUM([hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype)]))
       enddo
    END SUBROUTINE mixedbasis
@@ -535,34 +535,6 @@ CONTAINS
                  )
    end function calc_radbas_norm
 
-   subroutine calc_olap_radbasfn(atoms, mpbasis, l, itype, gridf, olap)
-      USE m_intgrf, ONLY: intgrf
-      use m_types
-      implicit NONE
-      type(t_atoms), intent(in)          :: atoms
-      type(t_mpbasis), intent(in)        :: mpbasis
-      integer, intent(in)                :: l, itype
-      real, intent(in)                   :: gridf(:,:)
-      real, intent(inout), allocatable   :: olap(:,:)
-
-      integer  :: n1, n2, n_radbasfn
-
-      n_radbasfn = mpbasis%num_radbasfn(l, itype)
-      if(allocated(olap)) then
-         if(any(shape(olap) /= n_radbasfn)) then
-            deallocate(olap)
-         endif
-      endif
-      if(.not. allocated(olap)) allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
-
-      DO n2 = 1, n_radbasfn
-         DO n1 = 1, n2
-            olap(n1, n2) = intgrf(mpbasis%radbasfn_mt(:,n1, l, itype)*mpbasis%radbasfn_mt(:,n2, l, itype), &
-                                  atoms, itype, gridf)
-            olap(n2, n1) = olap(n1, n2)
-         END DO
-      END DO
-   end subroutine calc_olap_radbasfn
 
    subroutine filter_radbasfn(hybrid, l, itype, n_radbasfn, eig, eigv, mpbasis)
 
