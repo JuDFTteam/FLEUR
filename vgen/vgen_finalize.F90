@@ -42,7 +42,14 @@ CONTAINS
        END DO
     ELSEIF(noco%l_noco) THEN
        CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
-       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
+       IF (noco%l_mtnocoPot) THEN
+          !Included for testing 
+          !denRot%phi_mt=0.0 
+          !denRot%theta_mt=0.0
+          !denRot%theta_pw=0.0
+          !denRot%phi_pw=0.0
+          CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
+       END IF
     ENDIF
 
   !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
