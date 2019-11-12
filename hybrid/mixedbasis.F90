@@ -404,8 +404,9 @@ CONTAINS
 
       hybrid%maxlmindx = 0
       do itype = 1,atoms%ntype
-         hybrid%maxlmindx = max(hybrid%maxlmindx,
-                                SUM([hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype)]))
+         hybrid%maxlmindx = max(hybrid%maxlmindx,&
+                                SUM([(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))])&
+                                )
       enddo
    END SUBROUTINE mixedbasis
 

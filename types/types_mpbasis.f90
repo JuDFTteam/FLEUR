@@ -239,7 +239,7 @@ contains
 
    subroutine mpbasis_calc_olap_radbasfn(mpbasis, atoms, l, itype, gridf, olap)
       USE m_intgrf, ONLY: intgrf
-      use m_types
+      use m_types_setup
       implicit NONE
       class(t_mpbasis), intent(in)       :: mpbasis
       type(t_atoms), intent(in)          :: atoms

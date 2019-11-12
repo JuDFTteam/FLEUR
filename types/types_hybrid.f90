@@ -20,7 +20,6 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  map(:,:)
       INTEGER, ALLOCATABLE   ::  tvec(:,:,:)
       INTEGER, ALLOCATABLE   ::  nbasm(:)
-      REAL                   ::  tolerance1  !only read in
       !REAL, ALLOCATABLE      ::  radbasfn_mt(:,:,:,:)
       COMPLEX, ALLOCATABLE   ::  d_wgn2(:,:,:,:)
       INTEGER, ALLOCATABLE   ::  ne_eig(:)
