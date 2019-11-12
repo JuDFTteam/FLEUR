@@ -9,7 +9,7 @@ module m_mpmom
   !     Coulomb potential. This is used in the preconditioning of
   !     the SCF iteration for metallic systems.
   !
-  !     qlmo(m,l,n) : mult.mom. of the mufftn-tin charge density
+  !     qlmo(m,l,n) : mult.mom. of the muffin-tin charge density
   !     qlmp(m,l,n) : mult.mom. of the plane-wave charge density
   !     qlm (m,l,n) : (output) difference of the former quantities
   !     

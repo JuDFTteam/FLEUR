@@ -27,7 +27,7 @@ MODULE m_plot
    !------------------------------------------------
 
    PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
-             matrixplot, makeplots, procplot, getMTSphere
+             matrixplot, makeplots, procplot, getMTSphere, savtxt
 
 CONTAINS
 
@@ -200,16 +200,16 @@ CONTAINS
    
       ! Calculate the charge and magnetization densities in the muffin tins.
       DO ityp = 1,atoms%ntype
+         theta   = noco%beta(ityp)
+         phi     = noco%alph(ityp)
          DO ilh = 0,sphhar%nlh(atoms%ntypsy(ityp))
             DO iri = 1,atoms%jri(ityp)
                IF (SIZE(denmat%mt,4).LE.2) THEN 
                   cdnup   = rho(iri,ilh,ityp,1)
                   cdndown = rho(iri,ilh,ityp,2)
-                  theta   = noco%beta(ityp)
-                  phi     = noco%alph(ityp)
+
                   chden   = cdnup + cdndown
                   mgden   = cdnup - cdndown
-
                   rho(iri,ilh,ityp,1) = chden
                   rho(iri,ilh,ityp,2) = mgden*COS(phi)*SIN(theta)
                   rho(iri,ilh,ityp,3) = mgden*SIN(phi)*SIN(theta)
@@ -343,28 +343,9 @@ CONTAINS
          END DO
       END IF
       
-      ! Correction for the case of plotting the total potential.
-      ! Needed due to the different definitons of density/potential matrices in
-      ! FLEUR:
-      !
-      ! rhoMat = 0.5*((n    +m_z,m_x+i*m_y),(m_x-i*m_y,n    -m_z))
-      !   vMat =     ((V_eff+B_z,B_x-i*B_y),(B_x+i*m_y,V_eff-B_z))
-      
-      IF (factor==2.0) THEN
-      
-         rho(:,0:,1:,:) = rho(:,0:,1:,:)/2.0
-         qpw(1:,:) = qpw(1:,:)/2.0
-         rht(1:,1:,:) = rht(1:,1:,:)/2.0
-         rhtxy(1:,1:,1:,:) = rhtxy(1:,1:,1:,:)/2.0
-         
-         rho(:,0:,1:,3) = -rho(:,0:,1:,3)
-         qpw(1:,3) = -qpw(1:,3)
-         rht(1:,1:,3) = -rht(1:,1:,3)
-         rhtxy(1:,1:,1:,3) = -rhtxy(1:,1:,1:,3)
-         
-      END IF
 
-      ! Initialize the four output densities.
+
+      ! Initialize and save the four output densities.
       IF (factor==1.0) THEN
          CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
                                       atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
@@ -382,6 +363,26 @@ CONTAINS
                                       atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,&
                                       stars%ng2)
+
+         cden%mt(:,0:,1:,1) = rho(:,0:,1:,1)
+         cden%pw(1:,1) = qpw(1:,1)
+         cden%vacz(1:,1:,1) = rht(1:,1:,1)
+         cden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,1)
+
+         mxden%mt(:,0:,1:,1) = rho(:,0:,1:,2)
+         mxden%pw(1:,1) = qpw(1:,2)
+         mxden%vacz(1:,1:,1) = rht(1:,1:,2)
+         mxden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
+
+         myden%mt(:,0:,1:,1) = rho(:,0:,1:,3)
+         myden%pw(1:,1) = qpw(1:,3)
+         myden%vacz(1:,1:,1) = rht(1:,1:,3)
+         myden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
+   
+         mzden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
+         mzden%pw(1:,1) = qpw(1:,4)
+         mzden%vacz(1:,1:,1) = rht(1:,1:,4)
+         mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
       ELSE
          CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
                                       atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
@@ -399,28 +400,54 @@ CONTAINS
                                       atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
-      END IF
+
+         ! Correction for the case of plotting the total potential.
+         ! Needed due to the different definitons of density/potential matrices in
+         ! FLEUR:
+         ! 
+         ! rhoMat = 0.5*((n    +m_z,m_x+i*m_y),(m_x-i*m_y,n    -m_z))
+         !   vMat =     ((V_eff+B_z,B_x-i*B_y),(B_x+i*m_y,V_eff-B_z))
       
-      ! Save the four densities to the outputs of the function.
-      cden%mt(:,0:,1:,1) = rho(:,0:,1:,1)
-      cden%pw(1:,1) = qpw(1:,1)
-      cden%vacz(1:,1:,1) = rht(1:,1:,1)
-      cden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,1)
+         rho(:,0:,1:,:) = rho(:,0:,1:,:)/2.0
+         qpw(1:,:) = qpw(1:,:)/2.0
+         rht(1:,1:,:) = rht(1:,1:,:)/2.0
+         rhtxy(1:,1:,1:,:) = rhtxy(1:,1:,1:,:)/2.0
+         
+         rho(:,0:,1:,3) = -rho(:,0:,1:,3)
+         qpw(1:,3) = -qpw(1:,3)
+         rht(1:,1:,3) = -rht(1:,1:,3)
+         rhtxy(1:,1:,1:,3) = -rhtxy(1:,1:,1:,3)
 
-      mxden%mt(:,0:,1:,1) = rho(:,0:,1:,2)
-      mxden%pw(1:,1) = qpw(1:,2)
-      mxden%vacz(1:,1:,1) = rht(1:,1:,2)
-      mxden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
+         cden%mt(:,0:,1:,1) = rho(:,0:,1:,1)
+         cden%pw(1:,1) = qpw(1:,1)
+         cden%vacz(1:,1:,1) = rht(1:,1:,1)
+         cden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,1)
 
-      myden%mt(:,0:,1:,1) = rho(:,0:,1:,3)
-      myden%pw(1:,1) = qpw(1:,3)
-      myden%vacz(1:,1:,1) = rht(1:,1:,3)
-      myden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
+         mxden%mt(:,0:,1:,1) = rho(:,0:,1:,2)
+         mxden%pw(1:,1) = qpw(1:,2)
+         mxden%vacz(1:,1:,1) = rht(1:,1:,2)
+         mxden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
+
+         myden%mt(:,0:,1:,1) = rho(:,0:,1:,3)
+         myden%pw(1:,1) = qpw(1:,3)
+         myden%vacz(1:,1:,1) = rht(1:,1:,3)
+         myden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
    
-      mzden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
-      mzden%pw(1:,1) = qpw(1:,4)
-      mzden%vacz(1:,1:,1) = rht(1:,1:,4)
-      mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
+         mzden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
+         mzden%pw(1:,1) = qpw(1:,4)
+         mzden%vacz(1:,1:,1) = rht(1:,1:,4)
+         mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
+        
+         !DO ityp=1, atoms%ntype
+         !   DO iri=1, atoms%jri(ityp)
+         !      cden%mt(iri,0:,ityp,:) = cden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
+         !      mxden%mt(iri,0:,ityp,:) = mxden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
+         !      myden%mt(iri,0:,ityp,:) = myden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
+         !      mzden%mt(iri,0:,ityp,:) = mzden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
+         !   END DO
+         !END DO
+
+      END IF
 
       DEALLOCATE (rho, qpw, rht, rhtxy, cdomvz, cdomvxy, &
                   cdom, fftwork, ris, rvacxy)
@@ -431,7 +458,6 @@ CONTAINS
                      noco, score, potnorm, denName, denf, denA1, denA2, denA3)
       USE m_outcdn
       USE m_xsf_io
-      USE m_cdn_io
 
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
@@ -572,7 +598,7 @@ CONTAINS
          outFilenames(4) = TRIM(denName) // '_A3'
          IF (polar) THEN
             outFilenames(5) = TRIM(denName) // '_Aabs'
-            outFilenames(6) = TRIM(denName) // '_Atha'
+            outFilenames(6) = TRIM(denName) // '_Atheta'
             outFilenames(7) = TRIM(denName) // '_Aphi'
          END IF
       END IF
@@ -614,17 +640,36 @@ CONTAINS
 
          !Open the file
          IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo
-         DO i = 1, numOutFiles
-            IF (xsf) THEN
+
+         IF (xsf) THEN
+            DO i = 1, numOutFiles
                CALL xsf_WRITE_header(nfile+i,twodim,filename,vec1,vec2,vec3,zero,grid)
-            ELSE
-               IF (numOutFiles.NE.1) THEN
-                  OPEN (nfile+i,file = filename//outFilenames(i),form='formatted')
-               ELSE
-                  OPEN (nfile+i,file = filename,form='formatted')
-               END IF
+            END DO
+         ELSE
+            OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted')
+         END IF
+         
+         IF (twodim) THEN
+            IF (numOutFiles.EQ.1) THEN
+               WRITE(nfile,'(3a15)') 'x','y','f'
+            ELSE IF (numOutFiles.EQ.2) THEN
+               WRITE(nfile,'(4a15)') 'x','y','f','g'
+            ELSE IF (numOutFiles.EQ.4) THEN
+               WRITE(nfile,'(6a15)') 'x','y','f','A1','A2','A3'
+            ELSE 
+               WRITE(nfile,'(9a15)') 'x','y','f','A1','A2','A3','|A|','theta','phi'
             END IF
-         END DO
+         ELSE
+            IF (numOutFiles.EQ.1) THEN
+               WRITE(nfile,'(4a15)') 'x','y','z','f'
+            ELSE IF (numOutFiles.EQ.2) THEN
+               WRITE(nfile,'(5a15)') 'x','y','z','f','g'
+            ELSE IF (numOutFiles.EQ.4) THEN
+               WRITE(nfile,'(7a15)') 'x','y','z','f','A1','A2','A3'
+            ELSE 
+               WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
+            END IF
+         END IF
 
          !loop over all points
          DO iz = 0, grid(3)-1
@@ -691,62 +736,81 @@ CONTAINS
                      xdnout(5) = SQRT(ABS(xdnout(2)**2+xdnout(3)**2+xdnout(4)**2))
                      IF (xdnout(5)<eps) THEN
                         xdnout(5)= 0.0
-                        xdnout(6)= -tpi_const
-                        xdnout(7)= -tpi_const
+                        !xdnout(6)= -tpi_const
+                        !xdnout(7)= -tpi_const
+                        xdnout(6)= 0.0
+                        xdnout(7)= 0.0
                      ELSE
                         DO j = 1, 3
                            help(j) = xdnout(1+j)/xdnout(5) 
                         END DO
-                        IF (help(3)<0.5) THEN
+                        !IF (help(3)<0.5) THEN
                            xdnout(6)= ACOS(help(3))
-                        ELSE
-                           xdnout(6)= pi_const/2.0-ASIN(help(3))
-                        END IF
+                        !ELSE
+                        !   xdnout(6)= pi_const/2.0-ASIN(help(3))
+                        !END IF
                         IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
-                           xdnout(7)= -tpi_const
+                           !xdnout(7)= -tpi_const
+                           xdnout(7)= 0.0
                         ELSE
-                           IF ( ABS(help(1)) > ABS(help(2)) ) THEN
-                              xdnout(7)= ABS(ATAN(help(2)/help(1)))
+                           !IF ( ABS(help(1)) > ABS(help(2)) ) THEN
+                           !   xdnout(7)= ABS(ATAN(help(2)/help(1)))
+                           !ELSE
+                           !   xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
+                           !END IF
+                           !IF (help(2)<0.0) THEN
+                           !   xdnout(7)= -xdnout(7)
+                           !END IF
+                           !IF (help(1)<0.0) THEN
+                           !   xdnout(7)= pi_const-xdnout(7)
+                           !END IF
+                           !phi0=0
+                           !DO WHILE (xdnout(7)-pi_const*phi0 > +pi_const)
+                           !   xdnout(7)= xdnout(7)-tpi_const
+                           !END DO
+                           !DO WHILE (xdnout(7)-pi_const*phi0 < -pi_const)
+                           !   xdnout(7)= xdnout(7)+tpi_const
+                           !END DO
+                           !IF (ABS(xdnout(2)-xdnout(3))<eps) THEN
+                           !   IF (xdnout(2)>0) THEN
+                           !      xdnout(7)=pi_const/4.0
+                           !   ELSE
+                           !      xdnout(7)=-3*pi_const/4.0
+                           !   END IF 
+                           IF (xdnout(2)>eps) THEN
+                              xdnout(7)=ATAN(xdnout(3)/xdnout(2))
+                           ELSE IF (ABS(xdnout(2))<eps) THEN
+                              xdnout(7)=SIGN(1.0, xdnout(3))*pi_const/2.0 
+                           ELSE IF ((xdnout(2)<-eps).AND.(xdnout(3)>=0.0)) THEN
+                              xdnout(7)=ATAN(xdnout(3)/xdnout(2))+pi_const 
                            ELSE
-                              xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
+                              xdnout(7)=ATAN(xdnout(3)/xdnout(2))-pi_const 
                            END IF
-                           IF (help(2)<0.0) THEN
-                              xdnout(7)= -xdnout(7)
-                           END IF
-                           IF (help(1)<0.0) THEN
-                              xdnout(7)= pi_const-xdnout(7)
-                           END IF
-                           DO WHILE (xdnout(7)-pi_const*phi0 > +pi_const)
-                              xdnout(7)= xdnout(7)-tpi_const
-                           END DO
-                           DO WHILE (xdnout(7)-pi_const*phi0 < -pi_const)
-                              xdnout(7)= xdnout(7)+tpi_const
-                           END DO
                         END IF
                      END IF
                      xdnout(6)= xdnout(6)/pi_const
                      xdnout(7)= xdnout(7)/pi_const
                   END IF ! (polar)
-
-                  DO i = 1, numOutFiles
-                     IF (xsf) THEN
+                  IF (xsf) THEN
+                     DO i = 1, numOutFiles
                         WRITE(nfile+i,*) xdnout(i)
-                     ELSE
-                        WRITE(nfile+i,'(4e15.7)') point ,xdnout(i)
-                     END IF
-                  END DO
-
-               END DO
-            END DO
+                     END DO
+                  ELSE
+                     WRITE(nfile,'(10e15.7)') point ,xdnout
+                  END IF
+               END DO !x-loop
+            END DO !y-loop
          END DO !z-loop
 
-         DO i = 1, numOutFiles
-            IF (xsf) THEN
+
+         IF (xsf) THEN
+            DO i = 1, numOutFiles
                CALL xsf_WRITE_endblock(nfile+i,twodim)
-            ELSE
-               CLOSE(nfile+i)
-            END IF
-         END DO
+            END DO
+         ELSE
+            CLOSE(nfile)
+         END IF
+
       END DO !nplot  
       
       CLOSE(18)
@@ -1006,8 +1070,8 @@ CONTAINS
    END SUBROUTINE procplot
 
    SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                        noco, div)!, phiPot, divGrx, divGry, divGrz, &
-                        !xcBmodx, xcBmody, xcBmodz) 
+                        noco, div, phi, divGrx, divGry, divGrz, &
+                        xcBmodx, xcBmody, xcBmodz, div2) 
 
       IMPLICIT NONE
 
@@ -1020,33 +1084,34 @@ CONTAINS
       TYPE(t_sym),       INTENT(IN)    :: sym
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(IN)    :: div!, phiPot, divGrx, divGry, divGrz, &
-                                          !xcBmodx, xcBmody, xcBmodz
-      CHARACTER(len=20) :: divName
-      divName='divergence'
+      TYPE(t_potden),    INTENT(IN)    :: div, phi, divGrx, divGry, divGrz, &
+                                          xcBmodx, xcBmody, xcBmodz, div2
+
+      LOGICAL                          :: xsf
+
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .FALSE., divName, div)
+                  .FALSE., .FALSE., 'div                 ', div)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'modPot', phiPot)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'phiDiv              ', phi)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'divPotx', divGrx)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'gradPhiDiv          ', divGrx, divGrx, divGry, divGrz)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'divPoty', divGry)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .TRUE., 'bCorrected          ', xcBmodx, xcBmodx, xcBmody, xcBmodz)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'divPotz', divGrz)
+      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+                  .FALSE., .FALSE., 'divCorrected        ', div2)
 
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'xcBmodx', xcBmodx)
-
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'xcBmody', xcBmody)
-
-      !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-      !            .FALSE., .TRUE., 'xcBmodz', xcBmodz)
+      INQUIRE(file="div.xsf",exist=xsf)
+    
+      IF (xsf) THEN
+         OPEN  (120, FILE='gradPhiDiv_f.xsf', STATUS='OLD')
+         CLOSE (120, STATUS="DELETE")
+         OPEN  (120, FILE='bCorrected_f.xsf', STATUS='OLD')
+         CLOSE (120, STATUS="DELETE")
+      END IF 
       
    END SUBROUTINE plotBtest
 

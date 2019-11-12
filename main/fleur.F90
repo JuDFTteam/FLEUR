@@ -65,9 +65,8 @@ CONTAINS
    USE m_dwigner
    USE m_ylm
    USE m_metagga
-   USE m_divergence
-   USE m_rotate_mt_den_tofrom_local
    USE m_plot
+   USE m_xcBfield
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -100,9 +99,10 @@ CONTAINS
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
-    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting, vDiv
-    TYPE(t_potden)                  :: inDen, outDen, EnergyDen, divB, dummyDen
-    TYPE(t_potden),     dimension(3):: xcB, graddiv, corrB
+    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen, dummyDen
+    TYPE(t_potden), DIMENSION(3)    :: testDen, testGrad
+
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
 
@@ -514,7 +514,23 @@ CONTAINS
 
     END DO scfloop ! DO WHILE (l_cont)
 
+    ! Test: Build a field, for which the theoretical divergence etc. are known and
+    ! compare with the result of the routine.
 
+    CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
+    !CALL makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,testDen)
+    !CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, 1.0, inDen, dummyDen, testDen(1), testDen(2), testDen(3))
+    !CALL checkplotinp()
+    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDen             ', dummyDen, testDen(1), testDen(2), testDen(3))
+    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
+    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenz            ', testDen(3))
+    !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
+    DO i=1,3
+       CALL testGrad(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+       ALLOCATE(testGrad(i)%pw_w,mold=testGrad(i)%pw)
+    ENDDO
+    CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,testDen(2),testGrad)
+    CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testGrad            ', testGrad(1), testGrad(1), testGrad(2), testGrad(3))
 
     CALL add_usage_data("Iterations",iter)
 
@@ -524,32 +540,32 @@ CONTAINS
 
     CALL juDFT_end("all done",mpi%irank)
     
-  CONTAINS
-    SUBROUTINE priv_geo_end(mpi)
-      TYPE(t_mpi),INTENT(IN)::mpi
-      LOGICAL :: l_exist
-      !Check if a new input was generated
-      INQUIRE (file='inp_new',exist=l_exist)
-      IF (l_exist) THEN
-         CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
-      END IF
-      !check for inp.xml
-      INQUIRE (file='inp_new.xml',exist=l_exist)
-      IF (.NOT.l_exist) RETURN
-      IF (mpi%irank==0) THEN
-         CALL system('mv inp.xml inp_old.xml')
-         CALL system('mv inp_new.xml inp.xml')
-         INQUIRE (file='qfix',exist=l_exist)
+   CONTAINS
+      SUBROUTINE priv_geo_end(mpi)
+         TYPE(t_mpi),INTENT(IN)::mpi
+         LOGICAL :: l_exist
+         !Check if a new input was generated
+         INQUIRE (file='inp_new',exist=l_exist)
          IF (l_exist) THEN
-            OPEN(2,file='qfix')
-            WRITE(2,*)"F"
-            CLOSE(2)
-            PRINT *,"qfix set to F"
+            CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
+         END IF
+         !check for inp.xml
+         INQUIRE (file='inp_new.xml',exist=l_exist)
+         IF (.NOT.l_exist) RETURN
+         IF (mpi%irank==0) THEN
+            CALL system('mv inp.xml inp_old.xml')
+            CALL system('mv inp_new.xml inp.xml')
+            INQUIRE (file='qfix',exist=l_exist)
+            IF (l_exist) THEN
+               OPEN(2,file='qfix')
+               WRITE(2,*)"F"
+               CLOSE(2)
+               PRINT *,"qfix set to F"
+            ENDIF
+            CALL mixing_history_reset(mpi)
          ENDIF
-         call mixing_history_reset(mpi)
-      ENDIF
-      CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
-    END SUBROUTINE priv_geo_end
+         CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
+      END SUBROUTINE priv_geo_end
     
-  END SUBROUTINE fleur_execute
+   END SUBROUTINE fleur_execute
 END MODULE m_fleur
