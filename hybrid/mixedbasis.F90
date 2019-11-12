@@ -395,11 +395,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO i = 1, atoms%neq(itype)
             DO l = 0, hybrid%lcutm1(itype)
-               DO M = -l, l
-                  DO j = 1, mpbasis%num_rad_bas_fun(l, itype)
-                     hybrid%nbasp = hybrid%nbasp + 1
-                  END DO
-               END DO
+               hybrid%nbasp = hybrid%nbasp + (2*l+1) * mpbasis%num_rad_bas_fun(l, itype)   
             END DO
          END DO
       END DO
