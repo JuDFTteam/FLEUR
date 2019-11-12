@@ -275,7 +275,7 @@ CONTAINS
 
             call mpbasis%filter_radbasfn(l, itype, n_radbasfn, eig, eigv)
 
-            call trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv)
+            call trafo_to_orthonorm_bas(mpbasis, n_grid_pt, l, itype, eig, eigv)
             nn = mpbasis%num_radbasfn(l, itype)
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
@@ -537,19 +537,19 @@ CONTAINS
    end function calc_radbas_norm
 
 
-   subroutine trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv)
+   subroutine trafo_to_orthonorm_bas(mpbasis, n_grid_pt, l, itype, eig, eigv)
       use m_types
       implicit NONE
       type(t_mpbasis), intent(inout)   :: mpbasis
-      integer, intent(in)           :: n_radbasfn, n_grid_pt, l, itype
-      real, intent(in)              :: eig(:), eigv(:,:)
+      integer, intent(in)              :: n_grid_pt, l, itype
+      real, intent(in)                 :: eig(:), eigv(:,:)
 
       integer :: nn, i
 
       nn = mpbasis%num_radbasfn(l, itype)
       DO i = 1, n_grid_pt
          mpbasis%radbasfn_mt(i, 1:nn, l, itype) &
-            = MATMUL(mpbasis%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
+            = MATMUL(mpbasis%radbasfn_mt(i, 1:nn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
       END DO
    end subroutine trafo_to_orthonorm_bas
 
