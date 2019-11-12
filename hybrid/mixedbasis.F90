@@ -67,7 +67,7 @@ CONTAINS
       TYPE(t_usdus)                   ::  usdus
 
       ! local scalars
-      INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2, nn
+      INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2
       INTEGER                         ::  m, nk, i_basfn, i, j, n_grid_pt
       REAL                            ::  rdum, rdum1, norm, max_momentum, momentum
 
@@ -275,11 +275,10 @@ CONTAINS
 
             call mpbasis%filter_radbasfn(l, itype, full_n_radbasfn, eig, eigv)
 
-            call trafo_to_orthonorm_bas(mpbasis, full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
-            nn = mpbasis%num_radbasfn(l, itype)
+            call mpbasis%trafo_to_orthonorm_bas(full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
 
             ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
-            call add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf, nn, mpbasis)
+            call mpbasis%add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf)
 
             ! Check orthonormality of product basis
             call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
@@ -535,82 +534,4 @@ CONTAINS
                          itype, gridf)&
                  )
    end function calc_radbas_norm
-
-
-   subroutine trafo_to_orthonorm_bas(mpbasis, n_radbasfn, n_grid_pt, l, itype, eig, eigv)
-      use m_types
-      implicit NONE
-      type(t_mpbasis), intent(inout)   :: mpbasis
-      integer, intent(in)           :: n_radbasfn, n_grid_pt, l, itype
-      real, intent(in)              :: eig(:), eigv(:,:)
-
-      integer :: nn, i
-
-      nn = mpbasis%num_radbasfn(l, itype)
-
-      write (*,*) "nn = ", nn
-      write (*,*) "n_radbasfn = ", n_radbasfn
-      write (*,*) "radbasfn_mt shape = ", shape(mpbasis%radbasfn_mt(i, 1:n_radbasfn, l, itype))
-      write (*,*) "eigv shape = ", shape(eigv(:,1:nn))
-      DO i = 1, n_grid_pt
-         mpbasis%radbasfn_mt(i, 1:nn, l, itype) &
-            = MATMUL(mpbasis%radbasfn_mt(i, 1:n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
-      END DO
-   end subroutine trafo_to_orthonorm_bas
-
-   subroutine add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf, nn, mpbasis)
-      use m_types
-      USE m_intgrf, ONLY: intgrf
-      implicit none
-      type(t_atoms), intent(in)       :: atoms
-      type(t_hybrid), intent(in)      :: hybrid
-      integer, intent(in)             :: n_grid_pt, l, itype
-      real, intent(in)                :: gridf(:,:)
-      integer, intent(inout)          :: nn
-      type(t_mpbasis), intent(inout)  :: mpbasis
-
-      integer                         :: i, j
-      REAL, ALLOCATABLE               :: basmhlp(:,:,:,:)
-      real                            :: norm
-
-      IF (l == 0) THEN
-
-         ! Check if radbasfn_mt must be reallocated
-         IF (nn + 1 > SIZE(mpbasis%radbasfn_mt, 2)) THEN
-            allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
-            basmhlp(:,1:nn, :,:) = mpbasis%radbasfn_mt
-            deallocate(mpbasis%radbasfn_mt)
-            allocate(mpbasis%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
-            mpbasis%radbasfn_mt(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
-            deallocate(basmhlp)
-         END IF
-
-         ! add l = 0 function
-         mpbasis%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) &
-           = atoms%rmsh(:n_grid_pt, itype) / SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
-
-         ! perform gram-schmidt orthonormalization
-         DO i = nn, 1, -1
-            DO j = i + 1, nn + 1
-               mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                  = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                     - intgrf( &
-                                mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                              * mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
-                              atoms, itype, gridf) &
-                       * mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
-
-            END DO
-
-            ! renormalize
-            norm = SQRT(intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, atoms, itype, gridf))
-            mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-               = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) / norm
-         END DO
-         nn = nn + 1
-         mpbasis%num_radbasfn(l, itype) = nn
-      END IF
-   end subroutine add_l0_fun
-
-
 END MODULE m_mixedbasis

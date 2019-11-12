@@ -10,12 +10,14 @@ module m_types_mpbasis
       REAL, ALLOCATABLE      :: radbasfn_mt(:,:,:,:)
       REAL                   :: linear_dep_tol  !only read in
    CONTAINS
-      procedure :: num_gpts             => mpbasis_num_gpts
-      procedure :: gen_gvec             => mpbasis_gen_gvec
-      procedure :: check_orthonormality => mpbasis_check_orthonormality
-      procedure :: check_radbasfn       => mpbasis_check_radbasfn
-      procedure :: calc_olap_radbasfn   => mpbasis_calc_olap_radbasfn
-      procedure :: filter_radbasfn      => mpbasis_filter_radbasfn
+      procedure :: num_gpts               => mpbasis_num_gpts
+      procedure :: gen_gvec               => mpbasis_gen_gvec
+      procedure :: check_orthonormality   => mpbasis_check_orthonormality
+      procedure :: check_radbasfn         => mpbasis_check_radbasfn
+      procedure :: calc_olap_radbasfn     => mpbasis_calc_olap_radbasfn
+      procedure :: filter_radbasfn        => mpbasis_filter_radbasfn
+      procedure :: trafo_to_orthonorm_bas => mpbasis_trafo_to_orthonorm_bas
+      procedure :: add_l0_fun             => mpbasis_add_l0_fun
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
@@ -326,4 +328,76 @@ contains
       if(info /= 0) call juDFT_error("diagonalization failed")
 
    end subroutine mpbasis_diagonialize_olap
+
+   subroutine mpbasis_trafo_to_orthonorm_bas(mpbasis, full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
+      implicit NONE
+      class(t_mpbasis), intent(inout)  :: mpbasis
+      integer, intent(in)              :: full_n_radbasfn, n_grid_pt, l, itype
+      real, intent(in)                 :: eig(:), eigv(:,:)
+
+      integer :: nn, i
+
+      ! reduced number of basis functions
+      nn = mpbasis%num_radbasfn(l, itype)
+
+      DO i = 1, n_grid_pt
+         mpbasis%radbasfn_mt(i, 1:nn, l, itype) &
+            = MATMUL(mpbasis%radbasfn_mt(i, 1:full_n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
+      END DO
+   end subroutine mpbasis_trafo_to_orthonorm_bas
+
+   subroutine mpbasis_add_l0_fun(mpbasis, atoms, hybrid, n_grid_pt, l, itype, gridf)
+      use m_types_setup
+      use m_types_hybrid
+      USE m_intgrf, ONLY: intgrf
+      implicit none
+      class(t_mpbasis), intent(inout) :: mpbasis
+      type(t_atoms), intent(in)       :: atoms
+      type(t_hybrid), intent(in)      :: hybrid
+      integer, intent(in)             :: n_grid_pt, l, itype
+      real, intent(in)                :: gridf(:,:)
+
+      integer                         :: i, j, nn
+      REAL, ALLOCATABLE               :: basmhlp(:,:,:,:)
+      real                            :: norm
+
+      nn = mpbasis%num_radbasfn(l, itype)
+      IF (l == 0) THEN
+
+         ! Check if radbasfn_mt must be reallocated
+         IF (nn + 1 > SIZE(mpbasis%radbasfn_mt, 2)) THEN
+            allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
+            basmhlp(:,1:nn, :,:) = mpbasis%radbasfn_mt
+            deallocate(mpbasis%radbasfn_mt)
+            allocate(mpbasis%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
+            mpbasis%radbasfn_mt(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
+            deallocate(basmhlp)
+         END IF
+
+         ! add l = 0 function
+         mpbasis%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) &
+           = atoms%rmsh(:n_grid_pt, itype) / SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
+
+         ! perform gram-schmidt orthonormalization
+         DO i = nn, 1, -1
+            DO j = i + 1, nn + 1
+               mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                  = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                     - intgrf( &
+                                mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                              * mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
+                              atoms, itype, gridf) &
+                       * mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
+
+            END DO
+
+            ! renormalize
+            norm = SQRT(intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, atoms, itype, gridf))
+            mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+               = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) / norm
+         END DO
+         nn = nn + 1
+         mpbasis%num_radbasfn(l, itype) = nn
+      END IF
+   end subroutine mpbasis_add_l0_fun
 end module m_types_mpbasis
