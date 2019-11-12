@@ -341,7 +341,6 @@ CONTAINS
                                 mpbasis%num_rad_bas_fun(l, itype),&
                                 l, itype) &
                = bashlp(:n_grid_pt)
-
          END DO
 
          DO l = 0, hybrid%lcutm1(itype)
@@ -353,8 +352,7 @@ CONTAINS
             END IF
 
             n_radbasfn = mpbasis%num_rad_bas_fun(l, itype)
-            DO i = 1, mpbasis%num_rad_bas_fun(l, itype)
-               IF (i == n_radbasfn) CYCLE
+            DO i = 1, n_radbasfn-1
                ! calculate moment of radial function i
                rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
                               atoms, itype, gridf)
