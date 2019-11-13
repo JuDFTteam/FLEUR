@@ -25,8 +25,8 @@ jt::testrun_seq("$executable ",$workdir);
 #now test output
 $result=jt::test_grepexists("$workdir/out","it=  1  is completed");
 
-$result+=jt::test_grepnumber("$workdir/out", "    total energy=", ".*= *([^ ]*)", -579.9795770982, 0.0001);
-$result+=jt::test_grepnumber("$workdir/out", "HF total energy=",  ".*= *([^ ]*)", -592.0669689430, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "    total energy=", ".*= *([^ ]*)", -569.8053210563, 0.0001);
+$result+=jt::test_grepnumber("$workdir/out", "HF total energy=",  ".*= *([^ ]*)", 580.0376501381, 0.0001);
 
 $result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "13: *([^ ]*)", 0.000002, 0.0001);
 $result+=jt::test_grepnumber("$workdir/out", "distance of charge densitie", "14: *([^ ]*)", 0.512727,      0.0001);
