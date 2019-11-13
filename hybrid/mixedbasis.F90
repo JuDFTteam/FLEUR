@@ -496,22 +496,4 @@ CONTAINS
          enddo
       enddo
    end function calc_selecmat
-
-   function calc_radbas_norm(atoms, mpbasis, l, i_basfn, itype, gridf) result(norm)
-      USE m_intgrf, ONLY: intgrf
-      use m_types
-      implicit NONE
-      type(t_atoms), intent(in)   :: atoms
-      type(t_mpbasis), intent(in) :: mpbasis
-      integer, intent(in)         :: l, i_basfn, itype
-      real, intent(in)            :: gridf(:,:)
-
-      real                        :: norm
-
-      norm = SQRT( &
-                  intgrf(mpbasis%radbasfn_mt(:,i_basfn, l, itype)**2, &
-                         atoms,&
-                         itype, gridf)&
-                 )
-   end function calc_radbas_norm
 END MODULE m_mixedbasis
