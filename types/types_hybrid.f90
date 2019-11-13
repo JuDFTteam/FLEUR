@@ -37,9 +37,9 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE :: n1(:,:,:)
       INTEGER, ALLOCATABLE :: n2(:,:,:)
    contains
-      procedure  :: init   => init_prodtype
-      procedure  :: free   => free_prodtype
-      procedure  :: set_nl => set_nl_prodtype
+      procedure  :: init   => prodtype_init
+      procedure  :: free   => prodtype_free
+      procedure  :: set_nl => prodtype_set_nl
    END TYPE t_prodtype
 
    TYPE t_hybdat
@@ -142,7 +142,7 @@ contains
 
    END FUNCTION gptnorm
 
-   subroutine init_prodtype(prod, hybrid, atoms)
+   subroutine prodtype_init(prod, hybrid, atoms)
       use m_types_setup
       use m_judft
       implicit none
@@ -152,19 +152,19 @@ contains
       integer                    :: ok
 
       ALLOCATE (prod%l1(hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
-      IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%l1')
+      IF (ok /= 0) call judft_error('prodtype_init: failure allocation prod%l1')
 
       ALLOCATE (prod%l2, mold=prod%l1, stat=ok)
-      IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%l2')
+      IF (ok /= 0) call judft_error('prodtype_init: failure allocation prod%l2')
 
       ALLOCATE (prod%n1, mold=prod%l1, stat=ok)
-      IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%n1')
+      IF (ok /= 0) call judft_error('prodtype_init: failure allocation prod%n1')
 
       ALLOCATE (prod%n2, mold=prod%l1, stat=ok)
-      IF (ok /= 0) call judft_error('init_prodtype: failure allocation prod%n2')
-   end subroutine init_prodtype
+      IF (ok /= 0) call judft_error('prodtype_init: failure allocation prod%n2')
+   end subroutine prodtype_init
 
-   subroutine free_prodtype(prod)
+   subroutine prodtype_free(prod)
       use m_types_setup
       implicit NONE
       class(t_prodtype)          :: prod
@@ -173,9 +173,9 @@ contains
       IF(ALLOCATED(prod%l2)) DEALLOCATE (prod%l2)
       IF(ALLOCATED(prod%n1)) DEALLOCATE (prod%n1)
       IF(ALLOCATED(prod%n2)) DEALLOCATE (prod%n2)
-   end subroutine free_prodtype
+   end subroutine prodtype_free
 
-   subroutine set_nl_prodtype(prod,n,l,itype,n1,l1,n2,l2)
+   subroutine prodtype_set_nl(prod,n,l,itype,n1,l1,n2,l2)
       use m_types_setup
       implicit NONE
       class(t_prodtype)    :: prod
@@ -187,7 +187,7 @@ contains
       n1 = prod%n1(n,l,itype) ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
       n2 = prod%n2(n,l,itype) !
 
-   end subroutine set_nl_prodtype
+   end subroutine prodtype_set_nl
 
    subroutine set_num_radfun_per_l_hybrid(hybrid, atoms)
       use m_types_setup
