@@ -177,7 +177,7 @@ contains
 
     if (dosf) then
        vCoul%pw(:,:)=0.0
-    end do
+    end if
 
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
