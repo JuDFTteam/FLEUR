@@ -161,7 +161,9 @@ MODULE m_types_setup
       !lda_u information(ntype)
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
-      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
+      REAL, ALLOCATABLE :: flipSpinPhi(:) !<flip magnetisation of this atom by angle phi
+      REAL, ALLOCATABLE :: flipSpinTheta(:)
+      LOGICAL, ALLOCATABLE :: flipSpinScale(:)
    CONTAINS
       procedure :: nsp => calc_nsp_atom
    END TYPE t_atoms
@@ -417,6 +419,7 @@ MODULE m_types_setup
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps
       INTEGER :: rdmftStatesBelow
+      LOGICAL :: l_removeMagnetisationFromInterstitial
       INTEGER :: rdmftStatesAbove
       INTEGER :: rdmftFunctional
    END TYPE t_input

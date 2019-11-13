@@ -188,9 +188,9 @@ SUBROUTINE w_inpXML(&
    130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'" coretail_lmax="',i0,'"/>')
    WRITE (fileNum,130) input%ctail,input%frcor,input%kcrel,input%coretail_lmax
 
-!      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
-   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
-   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip
+!      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"  l_removeMagnetisationFromInterstitial="F"/>
+   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'" l_removeMagnetisationFromInterstitial="',l1,'"/>')
+   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip, input%l_removeMagnetisationFromInterstitial
 
    !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
@@ -460,10 +460,10 @@ SUBROUTINE w_inpXML(&
       IF(iAtomType.EQ.-1) THEN
          EXIT
       END IF
-!      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
-      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
+!      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpinPhi="0.0" flipSpinTheta="0.0" flipSpinScale=F>
+      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpinPhi="',f0.8,'" flipSpinTheta="',f0.8,'" flipSpinScale="',l1,'">')
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
-      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
+      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%flipSpinPhi(iAtomType),atoms%flipSpinTheta(iAtomType),atoms%flipSpinScale(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
       310 FORMAT('         <mtSphere radius="',f0.8,'" gridPoints="',i0,'" logIncrement="',f0.8,'"/>')

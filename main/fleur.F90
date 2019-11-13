@@ -147,12 +147,12 @@ CONTAINS
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     IF(mpi%irank.EQ.0) THEN
-       CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+       CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,results%ef,l_qfix,inDen)
        CALL timestart("Qfix")
        CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
-       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
     
@@ -256,9 +256,9 @@ CONTAINS
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN            
           CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                          noco, vTot, PLOT_POT_TOT, sliceplot)      
-!          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
-!          CALL subPotDen(vxcForPlotting,vTot,vCoul)
-!          CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC
+          !CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
+          !CALL subPotDen(vxcForPlotting,vTot,vCoul)
+          !CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC)
        END IF 
 
 #ifdef CPP_MPI
@@ -387,10 +387,10 @@ CONTAINS
            
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
-                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
-                               cell, noco, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
+               ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
 !!               CDN subtracted by core charge
-!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
 !                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
           END IF 
 
@@ -455,11 +455,11 @@ CONTAINS
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
             sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
-       
+!Plots of mixed density       
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
-                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
-                               cell, noco, outDen, PLOT_MIXDEN_Y_CORE, sliceplot)
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_MIXDEN_Y_CORE, sliceplot)
 !!               CDN subtracted by core charge
 !                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
 !                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
@@ -507,9 +507,9 @@ CONTAINS
        END IF
 
   !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
-!!       IF(sliceplot%iplot.NE.0) THEN
-!!          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
-!!       END IF
+       IF(sliceplot%iplot.NE.0) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+       END IF
 
 
     END DO scfloop ! DO WHILE (l_cont)

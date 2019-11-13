@@ -110,6 +110,10 @@ CONTAINS
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
     DO n=1,atoms%ntype
+       DO i=1,atoms%jri(n)
+          vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
+       ENDDO
+
        CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
           vup   = ch(imesh,1)
@@ -128,9 +132,6 @@ CONTAINS
 
        CALL mt_from_grid(atoms,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
 
-       DO i=1,atoms%jri(n)
-          vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
-       ENDDO
     END DO
     CALL finish_mt_grid()
   END SUBROUTINE rotate_mt_den_from_local

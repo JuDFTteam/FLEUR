@@ -47,7 +47,7 @@ contains
        archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     END IF
 
-    CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+    CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                      CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
 
     IF ( typmag < atoms%ntype ) THEN 

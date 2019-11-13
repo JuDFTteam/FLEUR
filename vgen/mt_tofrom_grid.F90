@@ -149,7 +149,7 @@ CONTAINS
          ENDIF
          !Set charge to minimum value
          IF (PRESENT(ch)) THEN
-            WHERE (ABS(ch_tmp) < d_15) ch_tmp = d_15
+            WHERE (ABS(ch_tmp(:nsp,1:2)) < d_15) ch_tmp(:nsp,1:2) = d_15
             ch(kt + 1:kt + nsp, :) = ch_tmp(:nsp, :)
          ENDIF
          kt = kt + nsp

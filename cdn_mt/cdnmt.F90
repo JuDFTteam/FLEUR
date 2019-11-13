@@ -191,7 +191,7 @@ CONTAINS
                    !rho21(j,0,itype) = rho21(j,0,itype)+ conjg(cs)/(atoms%neq(itype)*sfp_const)
                    rho21=CONJG(cs)/(atoms%neq(itype)*sfp_const)
                    rho(j,0,itype,3)=rho(j,0,itype,3)+REAL(rho21)
-                   rho(j,0,itype,4)=rho(j,0,itype,4)+imag(rho21)
+                   rho(j,0,itype,4)=rho(j,0,itype,4)+aimag(rho21)
                 ENDDO
              ENDDO
 
@@ -210,7 +210,7 @@ CONTAINS
                          !rho21(j,lh,itype)= rho21(j,lh,itype)+ CONJG(cs)/atoms%neq(itype)
                          rho21=CONJG(cs)/atoms%neq(itype)
                          rho(j,lh,itype,3)=rho(j,lh,itype,3)+REAL(rho21)
-                         rho(j,lh,itype,4)=rho(j,lh,itype,4)+imag(rho21)
+                         rho(j,lh,itype,4)=rho(j,lh,itype,4)+aimag(rho21)
                       ENDDO
                    ENDDO
                 ENDDO
