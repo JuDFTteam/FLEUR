@@ -202,9 +202,9 @@ SUBROUTINE w_inpXML(&
    END IF
 
    IF (l_nocoOpt.OR.l_explicit) THEN
-160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,&
+160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_mtNocoPot="',l1,&
            '" mix_b="',f0.8,'">')
-      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, noco%mix_b
+      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, noco%l_mtNocoPot ,noco%mix_b
       162 FORMAT('         <qss>',f0.10,' ',f0.10,' ',f0.10,'</qss>')
       WRITE(fileNum,162) noco%qss(1), noco%qss(2), noco%qss(3)
       WRITE (fileNum,'(a)') '      </nocoParams>'

@@ -517,7 +517,7 @@ CONTAINS
     ! Test: Build a field, for which the theoretical divergence etc. are known and
     ! compare with the result of the routine.
 
-    CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
+    !CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
     !CALL makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,testDen)
     !CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, 1.0, inDen, dummyDen, testDen(1), testDen(2), testDen(3))
     !CALL checkplotinp()
@@ -525,12 +525,12 @@ CONTAINS
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenz            ', testDen(3))
     !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
-    DO i=1,3
-       CALL testGrad(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-       ALLOCATE(testGrad(i)%pw_w,mold=testGrad(i)%pw)
-    ENDDO
-    CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,testDen(2),testGrad)
-    CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testGrad            ', testGrad(1), testGrad(1), testGrad(2), testGrad(3))
+    !DO i=1,3
+    !   CALL testGrad(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+    !   ALLOCATE(testGrad(i)%pw_w,mold=testGrad(i)%pw)
+    !ENDDO
+    !CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,testDen(2),testGrad)
+    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testGrad            ', testGrad(1), testGrad(1), testGrad(2), testGrad(3))
 
     CALL add_usage_data("Iterations",iter)
 
