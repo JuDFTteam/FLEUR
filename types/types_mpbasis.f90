@@ -72,23 +72,23 @@ contains
                n2 = n1 - ABS(y)
                do z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
+                  if ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
                   do ikpt = 1, kpts%nkptf
-                     IF (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
-                        IF (.NOT. l_found_kg_in_sphere) THEN
+                     if (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
+                        if (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
                            l_found_kg_in_sphere = .TRUE.
-                        END IF
+                        END if
 
                         mpbasis%ngptm(ikpt) = mpbasis%ngptm(ikpt) + 1
                         l_found_new_gpt = .TRUE.
-                     END IF
+                     END if
                   enddo ! k-loop
                enddo
             enddo
          enddo
-         IF (.NOT. l_found_new_gpt) EXIT
+         if (.NOT. l_found_new_gpt) EXIT
       enddo
 
       allocate(mpbasis%gptm(3,i)) ! i = gptmd
@@ -117,17 +117,17 @@ contains
                n2 = n1 - ABS(y)
                do z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  IF ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
+                  if ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
                   do ikpt = 1, kpts%nkptf
                      kvec = kpts%bkf(:,ikpt)
 
-                     IF (norm2(MATMUL(kvec + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
-                        IF (.NOT. l_found_kg_in_sphere) THEN
+                     if (norm2(MATMUL(kvec + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
+                        if (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
                            mpbasis%gptm(:,i) = g
                            l_found_kg_in_sphere = .TRUE.
-                        END IF
+                        END if
 
                         mpbasis%ngptm(ikpt) = mpbasis%ngptm(ikpt) + 1
                         l_found_new_gpt = .TRUE.
@@ -136,12 +136,12 @@ contains
                         unsrt_pgptm(mpbasis%ngptm(ikpt), ikpt) = i
                         ! Save length of vector k + G for array sorting
                         length_kG(mpbasis%ngptm(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
-                     END IF
+                     END if
                   enddo
                enddo
             enddo
          enddo
-         IF (.NOT. l_found_new_gpt) EXIT
+         if (.NOT. l_found_new_gpt) EXIT
       enddo
 
       ! Sort pointers in array, so that shortest |k+G| comes first
@@ -158,13 +158,13 @@ contains
          deallocate(ptr)
       enddo
 
-      IF (mpi%irank == 0) THEN
+      if (mpi%irank == 0) THEN
          WRITE (6, '(/A)') 'Mixed basis'
          WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpbasis%num_gpts()
          WRITE (6, *)
          WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpbasis%g_cutoff/2*input%rkmax):'
          WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
-      END IF
+      END if
    end subroutine mpbasis_gen_gvec
 
    subroutine mpbasis_check_orthonormality(mpbasis, atoms, mpi, l, itype, gridf)
@@ -179,49 +179,43 @@ contains
       integer, intent(in)       :: itype, l
       real, intent(in)          :: gridf(:,:)
 
-      real              :: overlap, error, cum_err_sq
-      integer           :: i, j, n_radbasfn
+      real, allocatable :: olap(:,:)
+      integer           :: i, n_radbasfn, err_loc(2)
 
       CHARACTER, PARAMETER :: lchar(0:38) = ['s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', &
                                              'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
                                              'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x']
 
       call timestart("check mpbasis orthonormality")
-      n_radbasfn = mpbasis%num_radbasfn(l, itype)
 
-      cum_err_sq = 0
-      do i = 1, n_radbasfn
-         do j = 1, i
-            overlap = intgrf(mpbasis%radbasfn_mt(:,i, l, itype)*mpbasis%radbasfn_mt(:,j, l, itype), &
-                           atoms, itype, gridf)
+      ! calculate overlap matrix
+      call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
 
-            IF (i == j) THEN
-               error = ABS(1 - overlap)
-               cum_err_sq = cum_err_sq + overlap**2
-            ELSE
-               error = ABS(overlap)
-               cum_err_sq = cum_err_sq + 2*error**2
-            END IF
-
-            IF (error > 1e-6) THEN
-               IF (mpi%irank == 0) THEN
-                  WRITE (6, '(A)') 'mixedbasis: Bad orthonormality of ' &
-                     //lchar(l)//'-product basis. Increase tolerance.'
-                  WRITE (6, '(12X,A,F9.6,A,2(I3.3,A))') 'Deviation of', &
-                     error, ' occurred for (', i, ',', j, ')-overlap.'
-               END IF
-               CALL judft_error("Bad orthonormality of product basis", &
-                                 hint='Increase tolerance', &
-                                 calledby='mixedbasis%check_orthonormality')
-            END IF
-
-         enddo
+      !subtract identity-matrix
+      do i = 1,size(olap, dim=1)
+         olap(i,i) = olap(i,i) - 1.0
       enddo
 
-      IF (mpi%irank == 0) THEN
+      ! check if (olap - identity) is zero-matrix
+      if(norm2(olap) > 1e-6) then
+         if (mpi%irank == 0) THEN
+            err_loc = maxloc(abs(olap))
+            WRITE (6, '(A)') 'mixedbasis: Bad orthonormality of ' &
+               //lchar(l)//'-product basis. Increase tolerance.'
+            WRITE (6, '(12X,A,F9.6,A,2(I3.3,A))') 'Deviation of', &
+                        maxval(abs(olap)), ' occurred for (', &
+                        err_loc(1), ',', err_loc(2), ')-overlap.'
+         endif
+         CALL judft_error("Bad orthonormality of product basis", &
+                           hint='Increase tolerance', &
+                           calledby='mixedbasis%check_orthonormality')
+      endif
+
+      if (mpi%irank == 0) THEN
+         n_radbasfn = mpbasis%num_radbasfn(l, itype)
          WRITE (6, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
-                    lchar(l) // ':', n_radbasfn, SQRT(cum_err_sq)/n_radbasfn
-      END IF
+                    lchar(l) // ':', n_radbasfn, norm2(olap)/n_radbasfn
+      END if
       call timestop("check mpbasis orthonormality")
    end subroutine mpbasis_check_orthonormality
 
@@ -237,7 +231,7 @@ contains
       integer :: itype
 
       do itype = 1, atoms%ntype
-         IF (ANY(mpbasis%num_radbasfn(0:hybrid%lcutm1(itype), itype) == 0)) THEN
+         if (ANY(mpbasis%num_radbasfn(0:hybrid%lcutm1(itype), itype) == 0)) THEN
             call judft_error('any mpbasis%num_radbasfn eq 0', calledby='mixedbasis')
          endif
       enddo
@@ -292,10 +286,10 @@ contains
       num_radbasfn = 0
 
       do i_bas = 1, mpbasis%num_radbasfn(l, itype)
-         IF (eig(i_bas) > mpbasis%linear_dep_tol) THEN
+         if (eig(i_bas) > mpbasis%linear_dep_tol) THEN
             num_radbasfn = num_radbasfn + 1
             remaining_basfn(num_radbasfn) = i_bas
-         END IF
+         END if
       END do
 
       mpbasis%num_radbasfn(l, itype) = num_radbasfn
@@ -380,17 +374,17 @@ contains
 
       call timestart("add l0 to mpbasis")
       nn = mpbasis%num_radbasfn(l, itype)
-      IF (l == 0) THEN
+      if (l == 0) THEN
 
          ! Check if radbasfn_mt must be reallocated
-         IF (nn + 1 > SIZE(mpbasis%radbasfn_mt, 2)) THEN
+         if (nn + 1 > SIZE(mpbasis%radbasfn_mt, 2)) THEN
             allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
             basmhlp(:,1:nn, :,:) = mpbasis%radbasfn_mt
             deallocate(mpbasis%radbasfn_mt)
             allocate(mpbasis%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
             mpbasis%radbasfn_mt(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
             deallocate(basmhlp)
-         END IF
+         END if
 
          ! add l = 0 function
          mpbasis%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) &
@@ -416,7 +410,7 @@ contains
          END do
          nn = nn + 1
          mpbasis%num_radbasfn(l, itype) = nn
-      END IF
+      END if
       call timestop("add l0 to mpbasis")
    end subroutine mpbasis_add_l0_fun
 
