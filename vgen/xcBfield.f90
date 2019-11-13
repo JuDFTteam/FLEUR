@@ -17,20 +17,22 @@ MODULE m_xcBfield
    ! consistent source-free fields.
    !-----------------------------------------------------------------------------
 
-   PUBLIC :: makeBxc, sourcefree, builddivtest
+   PUBLIC :: makeBxc, sourcefree, builddivtest ! TODO: Build a routine to pack A_vec 
+                                               !       back into the matrix correctly. 
 
 CONTAINS
-   SUBROUTINE makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,bxc)
+   SUBROUTINE makeVectorField(stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec)
       
       ! Contructs the exchange-correlation magnetic field from the total poten-
-      ! tial matrix. Only used for the implementation of source free fields and   
-      ! therefore only applicable in a fully non-collinear description of magne-
-      ! tism.
+      ! tial matrix or the magnetic density for the density matrix. Only used for
+      ! the implementation of source free fields and therefore only applicable in
+      ! a fully non-collinear description of magnetism.
       ! 
-      ! Assumes the following form for the potential matrix:
-      ! V_mat = V*Id_(2x2) + sigma_vec*B_vec
+      ! Assumes the following form for the density/potential matrix:
+      ! rho_mat = n*Id_(2x2) + conj(sigma_vec)*m_vec
+      ! V_mat   = V*Id_(2x2) + sigma_vec*B_vec
       ! 
-      ! B_vec is saved as a density type with an additional r^2-factor.
+      ! A_vec is saved as a density type with an additional r^2-factor.
 
       TYPE(t_stars),                INTENT(IN)  :: stars
       TYPE(t_atoms),                INTENT(IN)  :: atoms
@@ -38,8 +40,9 @@ CONTAINS
       TYPE(t_vacuum),               INTENT(IN)  :: vacuum
       TYPE(t_input),                INTENT(IN)  :: input
       TYPE(t_noco),                 INTENT(IN)  :: noco
-      TYPE(t_potden),               INTENT(IN)  :: vTot
-      TYPE(t_potden), DIMENSION(3), INTENT(OUT) :: bxc
+      TYPE(t_potden),               INTENT(IN)  :: denmat
+      REAL,                         INTENT(IN)  :: factor
+      TYPE(t_potden), DIMENSION(3), INTENT(OUT) :: aVec
 
       TYPE(t_potden), DIMENSION(4)              :: dummyDen
       INTEGER                                   :: i, itype, ir
@@ -54,28 +57,31 @@ CONTAINS
          ALLOCATE(dummyDen(i)%pw_w,mold=dummyDen(i)%pw)
       ENDDO
 
-      CALL matrixsplit(stars,atoms,sphhar,vacuum,input,noco,2.0,vtot, &
+      CALL matrixsplit(stars,atoms,sphhar,vacuum,input,noco,factor,denmat, &
                        dummyDen(1),dummyDen(2),dummyDen(3),dummyDen(4))
-      
-      ! Initialize and fill the magnetic field.
-      DO itype=1,atoms%ntype
-         DO ir=1,atoms%jri(itype)
-            r2=atoms%rmsh(ir,itype)**2
-            DO i=1,3
-               CALL bxc(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd, &
-                           atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
-                           POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-               ALLOCATE(bxc(i)%pw_w,mold=bxc(i)%pw)
 
-               bxc(i)%mt(:,0:,:,:)      = dummyDen(i+1)%mt(:,0:,:,:)
-               bxc(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
-               bxc(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
-               bxc(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
-            ENDDO
-         END DO
-      END DO
+      r2=1.0
+      
+      ! Initialize and fill the vector field.
+      DO i=1,3
+         CALL aVec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd, &
+                     atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
+                     POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         ALLOCATE(aVec(i)%pw_w,mold=aVec(i)%pw)
+         DO itype=1,atoms%ntype
+            DO ir=1,atoms%jri(itype)
+               IF (factor==2.0) THEN 
+                  r2=atoms%rmsh(ir,itype)**2
+               END IF 
+               aVec(i)%mt(ir,0:,itype,:) = dummyDen(i+1)%mt(ir,0:,itype,:)*r2
+            END DO !ir
+         END DO !itype
+         aVec(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
+         aVec(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
+         aVec(i)%vacxy(1:,1:,1:,:) = dummyDen(i+1)%vacxy(1:,1:,1:,:)
+      END DO !i
      
-   END SUBROUTINE makeBxc
+   END SUBROUTINE makeVectorField
 
    SUBROUTINE sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc)
       USE m_vgen_coulomb
@@ -87,6 +93,9 @@ CONTAINS
       ! b) Solve the Poisson equation (nabla_vec*nabla_vec)phi=-4*pi*d.
       ! c) Construct an auxiliary vector field C_vec=(nabla_vec phi)/(4*pi).
       ! d) Build A_vec_sf=A_vec+C_vec, which is source free by construction.
+      !       
+      ! Note: A_vec is assumed to be a density with an additional factor of r^2.
+      !       A field of the same form will also be calculated.  
 
       TYPE(t_mpi),                  INTENT(IN)     :: mpi
       TYPE(t_dimension),            INTENT(IN)     :: dimension
@@ -100,12 +109,12 @@ CONTAINS
       TYPE(t_sym),                  INTENT(IN)     :: sym
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
-      TYPE(t_potden), DIMENSION(3), INTENT(IN)     :: bxc
+      TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: bxc
       
       TYPE(t_atoms)                                :: atloc
       TYPE(t_potden)                               :: div,phi,checkdiv
       TYPE(t_potden), DIMENSION(3)                 :: cvec, corrB
-      INTEGER                                      :: n, jr
+      INTEGER                                      :: n, jr, lh, lhmax
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
@@ -113,33 +122,41 @@ CONTAINS
       ALLOCATE(div%pw_w,mold=div%pw)
       
       CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+
+      div%mt(:,2:,:,:)=0.0
+      div%mt(:,0,:,:)=0.0
  
       atloc=atoms
-      atloc%zatom=0.0
+      atloc%zatom=0.0 !Local atoms variable with no charges; needed for the potential generation.
       eps=1.e-10
 
       CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
-      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,div,phi)
-
-      DO n=1, atoms%ntype
+      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
+   
+      DO n=1,atoms%ntype   
          lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-         DO lh=0, lhmax
-            phi%mt(:,lh,n,1) = phi%mt(:,lh,n,1)*atoms%rmsh(:, n)**2
+         DO jr = 1, atoms%jri(n)
+            DO lh=0, lhmax
+               !IF (ABS(phi%mt(jr,lh,n,1))<eps) THEN
+               IF (lh/=1) THEN
+                  phi%mt(jr,lh,n,:)=0.0
+               END IF
+            END DO
          END DO
       END DO
 
       DO i=1,3
-         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
       ENDDO
 
       CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
 
       DO i=1,3
-         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+         CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
          CALL corrB(i)%addPotDen(bxc(i),cvec(i))
       ENDDO
@@ -151,9 +168,9 @@ CONTAINS
       
       CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
 
-      !CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-      !               noco, div, phi, cvec(1), cvec(2), cvec(3), &
-      !               corrB(1), corrB(2), corrB(3), checkdiv)
+      CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                     noco, div, phi, cvec(1), cvec(2), cvec(3), &
+                     corrB(1), corrB(2), corrB(3), checkdiv)
 
    END SUBROUTINE sourcefree
 
@@ -226,9 +243,9 @@ CONTAINS
 	            !print *, th/pi_const
 	            !print *, ph/pi_const
 	            !(r/atoms%rmt(n))
-	            A_temp(kt+k,1,1)=(r**2)*r*SIN(th)*COS(ph)
-	            A_temp(kt+k,2,1)=(r**2)*r*SIN(th)*SIN(ph)
-	            A_temp(kt+k,3,1)=(r**2)*r*COS(th)
+	            A_temp(kt+k,1,1)=(r**2)*r**2!*SIN(th)*COS(ph)
+	            A_temp(kt+k,2,1)=(r**2)*r**2!*SIN(th)*SIN(ph)
+	            A_temp(kt+k,3,1)=(r**2)*r**2!*COS(th)
             ENDDO ! k
             kt = kt + nsp
          END DO ! ir
@@ -285,10 +302,6 @@ CONTAINS
             END DO
          END DO
       END DO !z-loop
-
-      !DO i=1,ifftxc3
-         !A_temp(i,:,:)=0.5
-      !END DO
 
       DO i=1,3
          CALL pw_from_grid(.TRUE.,stars,.TRUE.,A_temp(:,i,:),Avec(i)%pw,Avec(i)%pw_w)

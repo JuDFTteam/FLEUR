@@ -74,8 +74,6 @@ contains
 #endif
     integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 
-
-
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
 

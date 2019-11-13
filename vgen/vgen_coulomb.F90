@@ -11,7 +11,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, mpi, dimension, oneD, input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, den, vCoul, results )
+             cell, sphhar, atoms, dosf, den, vCoul, results )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator                           
     !----------------------------------------------------------------------------
@@ -50,6 +50,7 @@ contains
     type(t_cell),       intent(in)               :: cell
     type(t_sphhar),     intent(in)               :: sphhar
     type(t_atoms),      intent(in)               :: atoms 
+    LOGICAL,            INTENT(IN)               :: dosf
     type(t_potden),     intent(in)               :: den
     type(t_potden),     intent(inout)            :: vCoul
     type(t_results),    intent(inout), optional  :: results
@@ -174,7 +175,9 @@ contains
     call timestop("interstitial")
     end if ! mpi%irank == 0
 
-
+    if (dosf) then
+       vCoul%pw(:,:)=0.0
+    end do
 
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )

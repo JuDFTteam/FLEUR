@@ -9,7 +9,7 @@ MODULE m_divergence
    PUBLIC :: mt_div, pw_div, divergence, mt_grad, pw_grad, divpotgrad
 
 CONTAINS
-   SUBROUTINE mt_div(n,atoms,sphhar,sym,bxc,div)
+   SUBROUTINE mt_div(atoms,sphhar,sym,bxc,div)
       USE m_mt_tofrom_grid
 
       !--------------------------------------------------------------------------
@@ -25,68 +25,72 @@ CONTAINS
 
       IMPLICIT NONE
    
-      INTEGER,                      INTENT(IN)    :: n
       TYPE(t_atoms),                INTENT(IN)    :: atoms
       TYPE(t_sphhar),               INTENT(IN)    :: sphhar
       TYPE(t_sym),                  INTENT(IN)    :: sym
-      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: bxc
+      TYPE(t_potden), DIMENSION(3), INTENT(INOUT) :: bxc
       TYPE(t_potden),               INTENT(INOUT) :: div
    
-      TYPE(t_gradients)                           :: gradx, grady, gradz
+      TYPE(t_gradients)                           :: gradx, grady, gradz                        
 
-      REAL, ALLOCATABLE :: thet(:), phi(:), div_temp(:, :), div_temp2(:, :)
+      REAL, ALLOCATABLE :: thet(:), phi(:), div_temp(:, :)
       REAL :: r, th, ph, eps
-      INTEGER :: jr, k, nsp, kt, i, lh, lhmax
+      INTEGER :: jr, k, nsp, kt, i, lh, lhmax, n
 
       nsp = atoms%nsp()
-      lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-      eps=1.e-10
+      eps=1.e-12
 
-      ALLOCATE (gradx%gr(3,atoms%jri(n)*nsp,1),grady%gr(3,atoms%jri(n)*nsp,1), &
-                gradz%gr(3,atoms%jri(n)*nsp,1))
-      ALLOCATE (div_temp(atoms%jri(n)*nsp,1))
-      ALLOCATE (div_temp2(atoms%jri(n)*nsp,1))
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
-      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(1)%mt(:,0:,n,:), n, gradx)
-      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(2)%mt(:,0:,n,:), n, grady)
-      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(3)%mt(:,0:,n,:), n, gradz)
-
-      kt = 0
-      DO jr = 1, atoms%jri(n)
-         r =atoms%rmsh(jr, n)
-         DO k = 1, nsp
-            th = thet(k)
-            ph = phi(k)
-            div_temp(kt+k,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+k,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+k,1) + COS(th)*gradz%gr(1,kt+k,1))&
-                               +(COS(th)*COS(ph)*gradx%gr(2,kt+k,1) + COS(th)*SIN(ph)*grady%gr(2,kt+k,1) - SIN(th)*gradz%gr(2,kt+k,1))/r&
-                               -(SIN(ph)*gradx%gr(3,kt+k,1)         - COS(ph)*grady%gr(3,kt+k,1))/(r*SIN(th))
-         ENDDO ! k
-         kt = kt+nsp
-      ENDDO ! jr
-    
-      CALL mt_from_grid(atoms, sphhar, n, 1, div_temp, div%mt(:,0:,n,:))
-
-      DO jr = 1, atoms%jri(n)
-         DO lh=0, lhmax
-            IF (ABS(div%mt(jr,lh,n,1))<eps) THEN
-               div%mt(jr,lh,n,:)=0.0
-            END IF
-         END DO
+      DO i=1,3
+         bxc(i)%mt(:,1:,:,:)=0.0
       END DO
 
-      kt = 0
-      DO jr = 1, atoms%jri(n)
-         r =atoms%rmsh(jr, n)
+      DO n = 1, atoms%ntype
+         ALLOCATE (gradx%gr(3,atoms%jri(n)*nsp,1),grady%gr(3,atoms%jri(n)*nsp,1), &
+                   gradz%gr(3,atoms%jri(n)*nsp,1))
+         ALLOCATE (div_temp(atoms%jri(n)*nsp,1))
+         div_temp=0.0
+         CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(1)%mt(:,0:,n,:), n, gradx)
+         CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(2)%mt(:,0:,n,:), n, grady)
+         CALL mt_to_grid(.TRUE., 1, atoms, sphhar, bxc(3)%mt(:,0:,n,:), n, gradz)
+         kt = 0
+         DO jr = 1, atoms%jri(n)
+            r = atoms%rmsh(jr, n)
+            DO k = 1, nsp
+               th = thet(k)
+               ph = phi(k)
+               div_temp(kt+k,1) = (SIN(th)*COS(ph)*gradx%gr(1,kt+k,1) + SIN(th)*SIN(ph)*grady%gr(1,kt+k,1) + COS(th)*gradz%gr(1,kt+k,1))&
+                                  +(COS(th)*COS(ph)*gradx%gr(2,kt+k,1) + COS(th)*SIN(ph)*grady%gr(2,kt+k,1) - SIN(th)*gradz%gr(2,kt+k,1))/r&
+                                  -(SIN(ph)*gradx%gr(3,kt+k,1)         - COS(ph)*grady%gr(3,kt+k,1))/(r*SIN(th))
+            END DO !k
+            kt = kt+nsp
+         END DO !jr
+    
+         CALL mt_from_grid(atoms, sphhar, n, 1, div_temp, div%mt(:,0:,n,:))
+         DEALLOCATE(gradx%gr,grady%gr,gradz%gr,div_temp)
+      END DO !n
+      
+      !DO n = 1, atoms%ntype
+      !   lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+      !   DO jr = 1, atoms%jri(n)
+      !      DO lh=0, lhmax
+      !         IF (ABS(div%mt(jr,lh,n,1))<eps) THEN
+      !         IF (lh/=1) THEN
+      !            div%mt(jr,lh,n,:)=0.0
+      !         END IF
+      !      END DO
+      !   END DO
+      !END DO
 
-         div%mt(jr,0:,n,:) = div%mt(jr,0:,n,:)*r**2
-
-         kt = kt+nsp
-      ENDDO ! jr
-
-      CALL mt_to_grid(.FALSE., 1, atoms, sphhar, div%mt(:,0:,n,:), n, gradx, div_temp2)
+      DO n = 1, atoms%ntype
+         lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+         DO lh = 0, lhmax
+            div%mt(:,lh,n,1) = div%mt(:,lh,n,1)*atoms%rmsh(:, n)**2
+         ENDDO !lh
+      ENDDO !n
 
       CALL finish_mt_grid
    
@@ -155,15 +159,10 @@ CONTAINS
       TYPE(t_sym),                  INTENT(IN)    :: sym
       TYPE(t_cell),                 INTENT(IN)    :: cell
       TYPE(t_noco),                 INTENT(IN)    :: noco
-      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: bxc
+      TYPE(t_potden), DIMENSION(3), INTENT(INOUT) :: bxc
       TYPE(t_potden),               INTENT(INOUT) :: div
 
-      INTEGER                                     :: n
-
-      DO n=1,atoms%ntype
-         CALL mt_div(n,atoms,sphhar,sym,bxc,div)
-      END DO
-
+      CALL mt_div(atoms,sphhar,sym,bxc,div)
       CALL pw_div(stars,sym,cell,noco,bxc,div)
       
    END SUBROUTINE divergence
@@ -191,6 +190,7 @@ CONTAINS
       TYPE(t_potden), INTENT(IN)                  :: den
       TYPE(t_potden), dimension(3), INTENT(INOUT) :: gradphi
 
+      TYPE(t_potden)                              :: denloc
       TYPE(t_gradients)                           :: grad
 
       REAL, ALLOCATABLE :: thet(:), phi(:), grad_temp(:, :, :)
@@ -205,9 +205,15 @@ CONTAINS
       ALLOCATE (grad_temp(atoms%jri(n)*nsp,1,3))
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
+      denloc=den
+
+      DO lh=0, lhmax
+         denloc%mt(:,lh,n,1) = denloc%mt(:,lh,n,1)*atoms%rmsh(:, n)**2
+      END DO ! lh
+
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
-      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, den%mt(:,0:,n,:), n, grad)
+      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, denloc%mt(:,0:,n,:), n, grad)
 
       kt = 0
       DO jr = 1, atoms%jri(n)
@@ -226,6 +232,9 @@ CONTAINS
          CALL mt_from_grid(atoms, sphhar, n, 1, grad_temp(:,:,i), gradphi(i)%mt(:,0:,n,:))
          DO lh=0, lhmax
             gradphi(i)%mt(:,lh,n,1) = gradphi(i)%mt(:,lh,n,1)*atoms%rmsh(:, n)**2
+            IF ((sphhar%llh(lh,1)/=0).AND.(sphhar%llh(lh,1)/=2)) THEN
+               gradphi(i)%mt(:,lh,n,1) = 0.0
+            END IF
          END DO ! lh
       END DO ! i
 

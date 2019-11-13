@@ -1096,10 +1096,10 @@ CONTAINS
                   .FALSE., .TRUE., 'phiDiv              ', phi)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'gradPhiDiv          ', divGrx, divGrx, divGry, divGrz)
+                  .FALSE., .FALSE., 'gradPhiDiv          ', divGrx, divGrx, divGry, divGrz)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'bCorrected          ', xcBmodx, xcBmodx, xcBmody, xcBmodz)
+                  .FALSE., .FALSE., 'bCorrected          ', xcBmodx, xcBmodx, xcBmody, xcBmodz)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'divCorrected        ', div2)
