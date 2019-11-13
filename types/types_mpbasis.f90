@@ -185,7 +185,7 @@ contains
                                              'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
                                              'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x']
 
-
+      call timestart("check mpbasis orthonormality")
       n_radbasfn = mpbasis%num_radbasfn(l, itype)
 
       cum_err_sq = 0
@@ -221,6 +221,7 @@ contains
          WRITE (6, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
                     lchar(l) // ':', n_radbasfn, SQRT(cum_err_sq)/n_radbasfn
       END IF
+      call timestop("check mpbasis orthonormality")
    end subroutine mpbasis_check_orthonormality
 
    subroutine mpbasis_check_radbasfn(mpbasis, atoms, hybrid)
@@ -244,6 +245,7 @@ contains
    subroutine mpbasis_calc_olap_radbasfn(mpbasis, atoms, l, itype, gridf, olap)
       USE m_intgrf, ONLY: intgrf
       use m_types_setup
+      use m_judft
       implicit NONE
       class(t_mpbasis), intent(in)       :: mpbasis
       type(t_atoms), intent(in)          :: atoms
@@ -252,6 +254,8 @@ contains
       real, intent(inout), allocatable   :: olap(:,:)
 
       integer  :: n1, n2, n_radbasfn
+
+      call timestart("calc mpbasis overlap")
 
       n_radbasfn = mpbasis%num_radbasfn(l, itype)
       if(allocated(olap)) then
@@ -268,10 +272,12 @@ contains
             olap(n2, n1) = olap(n1, n2)
          END DO
       END DO
+      call timestop("calc mpbasis overlap")
    end subroutine mpbasis_calc_olap_radbasfn
 
    subroutine mpbasis_filter_radbasfn(mpbasis, l, itype, n_radbasfn, eig, eigv)
       ! Get rid of linear dependencies (eigenvalue <= mpbasis%linear_dep_tol)
+      use m_judft
       implicit none
       class(t_mpbasis), intent(inout)       :: mpbasis
       integer, intent(in)                   :: l, itype, n_radbasfn
@@ -280,6 +286,7 @@ contains
       integer              :: num_radbasfn, i_bas
       integer, allocatable :: remaining_basfn(:)
 
+      call timestart("filer mpbasis")
       allocate(remaining_basfn(n_radbasfn), source=1)
       num_radbasfn = 0
 
@@ -293,6 +300,7 @@ contains
       mpbasis%num_radbasfn(l, itype) = num_radbasfn
       eig = eig(remaining_basfn)
       eigv(:,:) = eigv(:,remaining_basfn)
+      call timestop("filer mpbasis")
    end subroutine mpbasis_filter_radbasfn
 
    subroutine mpbasis_diagonialize_olap(olap, eig_val, eig_vec)
@@ -306,6 +314,7 @@ contains
       integer, allocatable :: iwork(:)
       real, allocatable    :: work(:)
 
+      call timestart("diagonalize overlap")
       if(size(olap, dim=1) /= size(olap, dim=2)) then
          call juDFT_error("only square matrices can be diagonalized")
       endif
@@ -329,10 +338,11 @@ contains
       call dsyevd('V', 'U', n, eig_vec, n, eig_val,&
                   work, int(size_work), iwork, size_iwork, info)
       if(info /= 0) call juDFT_error("diagonalization failed")
-
+      call timestop("diagonalize overlap")
    end subroutine mpbasis_diagonialize_olap
 
    subroutine mpbasis_trafo_to_orthonorm_bas(mpbasis, full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
+      use m_judft
       implicit NONE
       class(t_mpbasis), intent(inout)  :: mpbasis
       integer, intent(in)              :: full_n_radbasfn, n_grid_pt, l, itype
@@ -340,6 +350,7 @@ contains
 
       integer :: nn, i
 
+      call timestart("transform to reduced mpbasis")
       ! reduced number of basis functions
       nn = mpbasis%num_radbasfn(l, itype)
 
@@ -347,12 +358,14 @@ contains
          mpbasis%radbasfn_mt(i, 1:nn, l, itype) &
             = MATMUL(mpbasis%radbasfn_mt(i, 1:full_n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
       END DO
+      call timestop("transform to reduced mpbasis")
    end subroutine mpbasis_trafo_to_orthonorm_bas
 
    subroutine mpbasis_add_l0_fun(mpbasis, atoms, hybrid, n_grid_pt, l, itype, gridf)
       use m_types_setup
       use m_types_hybrid
       USE m_intgrf, ONLY: intgrf
+      use m_judft
       implicit none
       class(t_mpbasis), intent(inout) :: mpbasis
       type(t_atoms), intent(in)       :: atoms
@@ -364,6 +377,7 @@ contains
       REAL, ALLOCATABLE               :: basmhlp(:,:,:,:)
       real                            :: norm
 
+      call timestart("add l0 to mpbasis")
       nn = mpbasis%num_radbasfn(l, itype)
       IF (l == 0) THEN
 
@@ -402,12 +416,14 @@ contains
          nn = nn + 1
          mpbasis%num_radbasfn(l, itype) = nn
       END IF
+      call timestop("add l0 to mpbasis")
    end subroutine mpbasis_add_l0_fun
 
    subroutine mpbasis_reduce_linear_dep(mpbasis, atoms, mpi, hybrid, l, itype, gridf)
       use m_types_setup
       use m_types_hybrid
       use m_types_mpi
+      use m_judft
       implicit none
       class(t_mpbasis)              :: mpbasis
       type(t_atoms), intent(in)     :: atoms
@@ -419,6 +435,7 @@ contains
       REAL                          :: gridf(:,:)
       integer                       :: full_n_radbasfn, n_grid_pt
 
+      call timestart("reduce lin. dep. mpbasis")
       full_n_radbasfn = mpbasis%num_radbasfn(l, itype)
       n_grid_pt = atoms%jri(itype)
 
@@ -439,5 +456,6 @@ contains
       call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
 
       deallocate(olap, eigv, eig)
+      call timestop("reduce lin. dep. mpbasis")
    end subroutine
 end module m_types_mpbasis
