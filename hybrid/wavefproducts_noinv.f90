@@ -265,7 +265,7 @@ CONTAINS
 
             DO l = 0, hybrid%lcutm1(itype)
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
-                  call hybdat%prod%set_nl(n,l,itype, n1,l1,n2,l2)
+                  call mpbasis%set_nl(n,l,itype, n1,l1,n2,l2)
 
                   IF (mod(l1 + l2 + l, 2) == 0) THEN
                      offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations

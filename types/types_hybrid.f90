@@ -30,18 +30,6 @@ MODULE m_types_hybrid
       procedure :: set_num_radfun_per_l => set_num_radfun_per_l_hybrid
    END TYPE t_hybrid
 
-
-   TYPE t_prodtype
-      INTEGER, ALLOCATABLE :: l1(:,:,:)
-      INTEGER, ALLOCATABLE :: l2(:,:,:)
-      INTEGER, ALLOCATABLE :: n1(:,:,:)
-      INTEGER, ALLOCATABLE :: n2(:,:,:)
-   contains
-      procedure  :: init   => prodtype_init
-      procedure  :: free   => prodtype_free
-      procedure  :: set_nl => prodtype_set_nl
-   END TYPE t_prodtype
-
    TYPE t_hybdat
       INTEGER                :: lmaxcd, maxindxc
       INTEGER                :: maxfac
@@ -56,11 +44,10 @@ MODULE m_types_hybrid
       REAL, ALLOCATABLE      :: bas1(:,:,:,:), bas2(:,:,:,:)
       REAL, ALLOCATABLE      :: bas1_MT(:,:,:), drbas1_MT(:,:,:)
       REAL, ALLOCATABLE      :: prodm(:,:,:,:)
-      TYPE(t_PRODTYPE)       :: prod
       INTEGER, ALLOCATABLE   :: pntgptd(:)
       INTEGER, ALLOCATABLE   :: pntgpt(:,:,:,:)
       INTEGER, ALLOCATABLE   :: nindxp1(:,:)
-      COMPLEX, ALLOCATABLE   ::  stepfunc(:,:,:)
+      COMPLEX, ALLOCATABLE   :: stepfunc(:,:,:)
    contains
       procedure  :: set_stepfunction => set_stepfunction
    END TYPE t_hybdat
@@ -141,53 +128,6 @@ contains
       gptnorm = norm2(matmul(gpt(:), bmat(:,:)))
 
    END FUNCTION gptnorm
-
-   subroutine prodtype_init(prod, hybrid, atoms)
-      use m_types_setup
-      use m_judft
-      implicit none
-      class(t_prodtype)          :: prod
-      type(t_hybrid), intent(in) :: hybrid
-      type(t_atoms),  intent(in) :: atoms
-      integer                    :: ok
-
-      ALLOCATE (prod%l1(hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
-      IF (ok /= 0) call judft_error('prodtype_init: failure allocation prod%l1')
-
-      ALLOCATE (prod%l2, mold=prod%l1, stat=ok)
-      IF (ok /= 0) call judft_error('prodtype_init: failure allocation prod%l2')
-
-      ALLOCATE (prod%n1, mold=prod%l1, stat=ok)
-      IF (ok /= 0) call judft_error('prodtype_init: failure allocation prod%n1')
-
-      ALLOCATE (prod%n2, mold=prod%l1, stat=ok)
-      IF (ok /= 0) call judft_error('prodtype_init: failure allocation prod%n2')
-   end subroutine prodtype_init
-
-   subroutine prodtype_free(prod)
-      use m_types_setup
-      implicit NONE
-      class(t_prodtype)          :: prod
-
-      IF(ALLOCATED(prod%l1)) DEALLOCATE (prod%l1)
-      IF(ALLOCATED(prod%l2)) DEALLOCATE (prod%l2)
-      IF(ALLOCATED(prod%n1)) DEALLOCATE (prod%n1)
-      IF(ALLOCATED(prod%n2)) DEALLOCATE (prod%n2)
-   end subroutine prodtype_free
-
-   subroutine prodtype_set_nl(prod,n,l,itype,n1,l1,n2,l2)
-      use m_types_setup
-      implicit NONE
-      class(t_prodtype)    :: prod
-      integer, intent(in)  :: n, l, itype
-      integer, intent(out) :: n1, l1, n2, l2
-
-      l1 = prod%l1(n,l,itype) !
-      l2 = prod%l2(n,l,itype) ! current basis-function product
-      n1 = prod%n1(n,l,itype) ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
-      n2 = prod%n2(n,l,itype) !
-
-   end subroutine prodtype_set_nl
 
    subroutine set_num_radfun_per_l_hybrid(hybrid, atoms)
       use m_types_setup

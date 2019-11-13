@@ -20,7 +20,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_mpbasis), INTENT(in)   :: mpbasis
+      TYPE(t_mpbasis), INTENT(inout)   :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_dimension), INTENT(IN)    :: dimension
@@ -220,10 +220,10 @@ CONTAINS
          allocate(hybdat%prodm(maxval(mpbasis%num_radbasfn), hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
-         call hybdat%prod%init(hybrid, atoms)
+         call mpbasis%init(hybrid, atoms)
 
-         basprod = 0; hybdat%prodm = 0; hybdat%prod%l1 = 0; hybdat%prod%l2 = 0
-         hybdat%prod%n1 = 0; hybdat%prod%n2 = 0
+         basprod = 0; hybdat%prodm = 0; mpbasis%l1 = 0; mpbasis%l2 = 0
+         mpbasis%n1 = 0; mpbasis%n2 = 0
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE(hybdat%nindxp1) ! for spinpolarized systems
          ALLOCATE (hybdat%nindxp1(0:maxval(hybrid%lcutm1), atoms%ntype))
          hybdat%nindxp1 = 0
@@ -245,10 +245,10 @@ CONTAINS
                               IF (MOD(l1 + l2 + l, 2) == 0) THEN
                                  hybdat%nindxp1(l, itype) = hybdat%nindxp1(l, itype) + 1
                                  n = hybdat%nindxp1(l, itype)
-                                 hybdat%prod%l1(n,l,itype) = l1
-                                 hybdat%prod%l2(n,l,itype) = l2
-                                 hybdat%prod%n1(n,l,itype) = n1
-                                 hybdat%prod%n2(n,l,itype) = n2
+                                 mpbasis%l1(n,l,itype) = l1
+                                 mpbasis%l2(n,l,itype) = l2
+                                 mpbasis%n1(n,l,itype) = n1
+                                 mpbasis%n2(n,l,itype) = n2
                                  DO i = 1, mpbasis%num_radbasfn(l, itype)
                                     hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*mpbasis%radbasfn_mt(:ng, i, l, itype), &
                                                                           atoms, itype, hybdat%gridf)

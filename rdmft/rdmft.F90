@@ -454,7 +454,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
          IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE (hybdat%pntgpt)
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE (hybdat%prodm)
 
-         call hybdat%prod%free()
+         call mpbasis%free()
 
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE (hybdat%nindxp1)
 

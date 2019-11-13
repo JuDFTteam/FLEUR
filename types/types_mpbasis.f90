@@ -2,13 +2,18 @@ module m_types_mpbasis
    implicit none
 
    type t_mpbasis
-      INTEGER, ALLOCATABLE   :: gptm(:,:) ! (3, num_gpts)
-      INTEGER, ALLOCATABLE   :: ngptm(:)
-      INTEGER, ALLOCATABLE   :: gptm_ptr(:,:)
-      REAL                   :: g_cutoff
-      INTEGER, ALLOCATABLE   :: num_radbasfn(:,:)
-      REAL, ALLOCATABLE      :: radbasfn_mt(:,:,:,:)
-      REAL                   :: linear_dep_tol  !only read in
+      integer, allocatable   :: gptm(:, :) ! (3, num_gpts)
+      integer, allocatable   :: ngptm(:)
+      integer, allocatable   :: gptm_ptr(:, :)
+      real                   :: g_cutoff
+      integer, allocatable   :: num_radbasfn(:, :)
+      real, allocatable      :: radbasfn_mt(:, :, :, :)
+      real                   :: linear_dep_tol  !only read in
+
+      integer, allocatable   :: l1(:, :, :) !(n, l, itype)
+      integer, allocatable   :: l2(:, :, :) !(n, l, itype)
+      integer, allocatable   :: n1(:, :, :) !(n, l, itype)
+      integer, allocatable   :: n2(:, :, :) !(n, l, itype)
    CONTAINS
       procedure :: num_gpts               => mpbasis_num_gpts
       procedure :: gen_gvec               => mpbasis_gen_gvec
@@ -20,6 +25,9 @@ module m_types_mpbasis
       procedure :: add_l0_fun             => mpbasis_add_l0_fun
       procedure :: reduce_linear_dep      => mpbasis_reduce_linear_dep
       procedure :: normalize              => mpbasis_normalize
+      procedure :: set_nl                 => mpbasis_set_nl
+      procedure :: free                   => mpbasis_free
+      procedure :: init                   => mpbasis_init
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
@@ -27,7 +35,7 @@ contains
       class(t_mpbasis), intent(in) :: mpbasis
       integer    :: mpbasis_num_gpts
 
-      mpbasis_num_gpts = size(mpbasis%gptm,dim=2)
+      mpbasis_num_gpts = size(mpbasis%gptm, dim=2)
    end function mpbasis_num_gpts
 
    subroutine mpbasis_gen_gvec(mpbasis, cell, kpts, mpi)
@@ -42,16 +50,15 @@ contains
       type(t_kpts), intent(in)       :: kpts
       type(t_mpi), intent(in)        :: mpi
 
-
       integer :: i, n, n1, n2, divconq
       integer :: x, y, z, ikpt, igpt
       integer :: g(3)
       real    :: longest_k, kvec(3)
       logical :: l_found_new_gpt, l_found_kg_in_sphere
 
-      INTEGER, ALLOCATABLE            ::  unsrt_pgptm(:,:) ! unsorted pointers to g vectors
-      REAL, ALLOCATABLE               ::  length_kg(:,:) ! length of the vectors k + G
-      INTEGER, ALLOCATABLE            ::  ptr(:)
+      integer, allocatable            ::  unsrt_pgptm(:, :) ! unsorted pointers to g vectors
+      real, allocatable               ::  length_kg(:, :) ! length of the vectors k + G
+      integer, allocatable            ::  ptr(:)
 
       allocate(mpbasis%ngptm(kpts%nkptf))
 
@@ -59,7 +66,7 @@ contains
       i = 0
       n = -1
 
-      longest_k = MAXVAL([(norm2(MATMUL(kpts%bkf(:,ikpt), cell%bmat)), ikpt=1, kpts%nkptf)])
+      longest_k = MAXVAL([(norm2(MATMUL(kpts%bkf(:, ikpt), cell%bmat)), ikpt=1, kpts%nkptf)])
 
       ! a first run for the determination of the dimensions of the fields gptm,pgptm
 
@@ -75,7 +82,7 @@ contains
                   if ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
                   do ikpt = 1, kpts%nkptf
-                     if (norm2(MATMUL(kpts%bkf(:,ikpt) + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
+                     if (norm2(MATMUL(kpts%bkf(:, ikpt) + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
                         if (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
                            l_found_kg_in_sphere = .TRUE.
@@ -91,10 +98,10 @@ contains
          if (.NOT. l_found_new_gpt) EXIT
       enddo
 
-      allocate(mpbasis%gptm(3,i)) ! i = gptmd
+      allocate(mpbasis%gptm(3, i)) ! i = gptmd
       allocate(mpbasis%gptm_ptr(maxval(mpbasis%ngptm), kpts%nkptf))
 
-      ! Allocate and initialize arrays needed for G vector ordering
+      ! allocate and initialize arrays needed for G vector ordering
       allocate(unsrt_pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
       allocate(length_kG(maxval(mpbasis%ngptm), kpts%nkptf))
 
@@ -120,12 +127,12 @@ contains
                   if ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpbasis%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
                   do ikpt = 1, kpts%nkptf
-                     kvec = kpts%bkf(:,ikpt)
+                     kvec = kpts%bkf(:, ikpt)
 
                      if (norm2(MATMUL(kvec + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
                         if (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
-                           mpbasis%gptm(:,i) = g
+                           mpbasis%gptm(:, i) = g
                            l_found_kg_in_sphere = .TRUE.
                         END if
 
@@ -177,9 +184,9 @@ contains
       type(t_atoms), intent(in) :: atoms
       type(t_mpi), intent(in)   :: mpi
       integer, intent(in)       :: itype, l
-      real, intent(in)          :: gridf(:,:)
+      real, intent(in)          :: gridf(:, :)
 
-      real, allocatable :: olap(:,:)
+      real, allocatable :: olap(:, :)
       integer           :: i, n_radbasfn, err_loc(2)
 
       CHARACTER, PARAMETER :: lchar(0:38) = ['s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', &
@@ -192,29 +199,29 @@ contains
       call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
 
       !subtract identity-matrix
-      do i = 1,size(olap, dim=1)
-         olap(i,i) = olap(i,i) - 1.0
+      do i = 1, size(olap, dim=1)
+         olap(i, i) = olap(i, i) - 1.0
       enddo
 
       ! check if (olap - identity) is zero-matrix
-      if(norm2(olap) > 1e-6) then
+      if (norm2(olap) > 1e-6) then
          if (mpi%irank == 0) THEN
             err_loc = maxloc(abs(olap))
             WRITE (6, '(A)') 'mixedbasis: Bad orthonormality of ' &
-               //lchar(l)//'-product basis. Increase tolerance.'
+               //lchar(l)//'-mpbasisuct basis. Increase tolerance.'
             WRITE (6, '(12X,A,F9.6,A,2(I3.3,A))') 'Deviation of', &
-                        maxval(abs(olap)), ' occurred for (', &
-                        err_loc(1), ',', err_loc(2), ')-overlap.'
+               maxval(abs(olap)), ' occurred for (', &
+               err_loc(1), ',', err_loc(2), ')-overlap.'
          endif
-         CALL judft_error("Bad orthonormality of product basis", &
-                           hint='Increase tolerance', &
-                           calledby='mixedbasis%check_orthonormality')
+         CALL judft_error("Bad orthonormality of mpbasisuct basis", &
+                          hint='Increase tolerance', &
+                          calledby='mixedbasis%check_orthonormality')
       endif
 
       if (mpi%irank == 0) THEN
          n_radbasfn = mpbasis%num_radbasfn(l, itype)
          WRITE (6, '(6X,A,I4,''   ('',ES8.1,'' )'')') &
-                    lchar(l) // ':', n_radbasfn, norm2(olap)/n_radbasfn
+            lchar(l)//':', n_radbasfn, norm2(olap)/n_radbasfn
       END if
       call timestop("check mpbasis orthonormality")
    end subroutine mpbasis_check_orthonormality
@@ -245,24 +252,24 @@ contains
       class(t_mpbasis), intent(in)       :: mpbasis
       type(t_atoms), intent(in)          :: atoms
       integer, intent(in)                :: l, itype
-      real, intent(in)                   :: gridf(:,:)
-      real, intent(inout), allocatable   :: olap(:,:)
+      real, intent(in)                   :: gridf(:, :)
+      real, intent(inout), allocatable   :: olap(:, :)
 
       integer  :: n1, n2, n_radbasfn
 
       call timestart("calc mpbasis overlap")
 
       n_radbasfn = mpbasis%num_radbasfn(l, itype)
-      if(allocated(olap)) then
-         if(any(shape(olap) /= n_radbasfn)) then
+      if (allocated(olap)) then
+         if (any(shape(olap) /= n_radbasfn)) then
             deallocate(olap)
          endif
       endif
-      if(.not. allocated(olap)) allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
+      if (.not. allocated(olap)) allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
 
       do n2 = 1, n_radbasfn
          do n1 = 1, n2
-            olap(n1, n2) = intgrf(mpbasis%radbasfn_mt(:,n1, l, itype)*mpbasis%radbasfn_mt(:,n2, l, itype), &
+            olap(n1, n2) = intgrf(mpbasis%radbasfn_mt(:, n1, l, itype)*mpbasis%radbasfn_mt(:, n2, l, itype), &
                                   atoms, itype, gridf)
             olap(n2, n1) = olap(n1, n2)
          END do
@@ -276,7 +283,7 @@ contains
       implicit none
       class(t_mpbasis), intent(inout)       :: mpbasis
       integer, intent(in)                   :: l, itype, n_radbasfn
-      real, intent(inout)                   :: eig(:), eigv(:,:)
+      real, intent(inout)                   :: eig(:), eigv(:, :)
 
       integer              :: num_radbasfn, i_bas
       integer, allocatable :: remaining_basfn(:)
@@ -294,15 +301,15 @@ contains
 
       mpbasis%num_radbasfn(l, itype) = num_radbasfn
       eig = eig(remaining_basfn)
-      eigv(:,:) = eigv(:,remaining_basfn)
+      eigv(:, :) = eigv(:, remaining_basfn)
       call timestop("filer mpbasis")
    end subroutine mpbasis_filter_radbasfn
 
    subroutine mpbasis_diagonialize_olap(olap, eig_val, eig_vec)
       use m_judft
       implicit NONE
-      real, intent(in)  :: olap(:,:)
-      real, allocatable :: eig_val(:), eig_vec(:,:)
+      real, intent(in)  :: olap(:, :)
+      real, allocatable :: eig_val(:), eig_vec(:, :)
 
       integer              :: n, size_iwork, info
       real                 :: size_work
@@ -310,29 +317,29 @@ contains
       real, allocatable    :: work(:)
 
       call timestart("diagonalize overlap")
-      if(size(olap, dim=1) /= size(olap, dim=2)) then
+      if (size(olap, dim=1) /= size(olap, dim=2)) then
          call juDFT_error("only square matrices can be diagonalized")
       endif
 
       n = size(olap, dim=1)
 
-      if(allocated(eig_val)) then
-         if(size(eig_val) /= n) deallocate(eig_val)
+      if (allocated(eig_val)) then
+         if (size(eig_val) /= n) deallocate(eig_val)
       endif
-      if(.not. allocated(eig_val)) allocate(eig_val(n))
+      if (.not. allocated(eig_val)) allocate(eig_val(n))
 
       eig_vec = olap
       ! get sizes of work arrays
-      call dsyevd('V', 'U', n, eig_vec, n, eig_val,&
+      call dsyevd('V', 'U', n, eig_vec, n, eig_val, &
                   size_work, -1, size_iwork, -1, info)
-      if(info /= 0) call juDFT_error("diagonalization for size failed")
+      if (info /= 0) call juDFT_error("diagonalization for size failed")
 
       allocate(work(int(size_work)))
       allocate(iwork(size_iwork))
 
-      call dsyevd('V', 'U', n, eig_vec, n, eig_val,&
+      call dsyevd('V', 'U', n, eig_vec, n, eig_val, &
                   work, int(size_work), iwork, size_iwork, info)
-      if(info /= 0) call juDFT_error("diagonalization failed")
+      if (info /= 0) call juDFT_error("diagonalization failed")
       call timestop("diagonalize overlap")
    end subroutine mpbasis_diagonialize_olap
 
@@ -341,7 +348,7 @@ contains
       implicit NONE
       class(t_mpbasis), intent(inout)  :: mpbasis
       integer, intent(in)              :: full_n_radbasfn, n_grid_pt, l, itype
-      real, intent(in)                 :: eig(:), eigv(:,:)
+      real, intent(in)                 :: eig(:), eigv(:, :)
 
       integer :: nn, i
 
@@ -351,7 +358,7 @@ contains
 
       do i = 1, n_grid_pt
          mpbasis%radbasfn_mt(i, 1:nn, l, itype) &
-            = MATMUL(mpbasis%radbasfn_mt(i, 1:full_n_radbasfn, l, itype), eigv(:,1:nn))/SQRT(eig(:nn))
+            = MATMUL(mpbasis%radbasfn_mt(i, 1:full_n_radbasfn, l, itype), eigv(:, 1:nn))/SQRT(eig(:nn))
       END do
       call timestop("transform to reduced mpbasis")
    end subroutine mpbasis_trafo_to_orthonorm_bas
@@ -366,10 +373,10 @@ contains
       type(t_atoms), intent(in)       :: atoms
       type(t_hybrid), intent(in)      :: hybrid
       integer, intent(in)             :: n_grid_pt, l, itype
-      real, intent(in)                :: gridf(:,:)
+      real, intent(in)                :: gridf(:, :)
 
       integer                         :: i, j, nn
-      REAL, ALLOCATABLE               :: basmhlp(:,:,:,:)
+      real, allocatable               :: basmhlp(:, :, :, :)
       real                            :: norm
 
       call timestart("add l0 to mpbasis")
@@ -379,34 +386,34 @@ contains
          ! Check if radbasfn_mt must be reallocated
          if (nn + 1 > SIZE(mpbasis%radbasfn_mt, 2)) THEN
             allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
-            basmhlp(:,1:nn, :,:) = mpbasis%radbasfn_mt
+            basmhlp(:, 1:nn, :, :) = mpbasis%radbasfn_mt
             deallocate(mpbasis%radbasfn_mt)
             allocate(mpbasis%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
-            mpbasis%radbasfn_mt(:,1:nn, :,:) = basmhlp(:,1:nn, :,:)
+            mpbasis%radbasfn_mt(:, 1:nn, :, :) = basmhlp(:, 1:nn, :, :)
             deallocate(basmhlp)
          END if
 
          ! add l = 0 function
          mpbasis%radbasfn_mt(:n_grid_pt, nn + 1, 0, itype) &
-           = atoms%rmsh(:n_grid_pt, itype) / SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
+            = atoms%rmsh(:n_grid_pt, itype)/SQRT(atoms%rmsh(n_grid_pt, itype)**3/3)
 
          ! perform gram-schmidt orthonormalization
          do i = nn, 1, -1
             do j = i + 1, nn + 1
                mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
                   = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                     - intgrf( &
-                                mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-                              * mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
-                              atoms, itype, gridf) &
-                       * mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
+                    - intgrf( &
+                    mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
+                    *mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype), &
+                    atoms, itype, gridf) &
+                    *mpbasis%radbasfn_mt(:n_grid_pt, j, 0, itype)
 
             END do
 
             ! renormalize
             norm = SQRT(intgrf(mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)**2, atoms, itype, gridf))
             mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) &
-               = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype) / norm
+               = mpbasis%radbasfn_mt(:n_grid_pt, i, 0, itype)/norm
          END do
          nn = nn + 1
          mpbasis%num_radbasfn(l, itype) = nn
@@ -426,8 +433,8 @@ contains
       type(t_hybrid), intent(in)    :: hybrid
       integer, intent(in)           :: l, itype
 
-      REAL, ALLOCATABLE             :: olap(:,:), eig(:), eigv(:,:)
-      REAL                          :: gridf(:,:)
+      real, allocatable             :: olap(:, :), eig(:), eigv(:, :)
+      real                          :: gridf(:, :)
       integer                       :: full_n_radbasfn, n_grid_pt
 
       call timestart("reduce lin. dep. mpbasis")
@@ -447,7 +454,7 @@ contains
       ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
       call mpbasis%add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf)
 
-      ! Check orthonormality of product basis
+      ! Check orthonormality of mpbasisuct basis
       call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
 
       deallocate(olap, eigv, eig)
@@ -463,23 +470,72 @@ contains
       class(t_mpbasis), intent(inout):: mpbasis
       type(t_atoms), intent(in)      :: atoms
       type(t_hybrid), intent(in)     :: hybrid
-      real, intent(in)               :: gridf(:,:)
+      real, intent(in)               :: gridf(:, :)
 
       integer                        :: l, i_basfn, itype
       real                           :: norm
 
       do itype = 1, atoms%ntype
          do l = 0, hybrid%lcutm1(itype)
-            do i_basfn =1,mpbasis%num_radbasfn(l, itype)
+            do i_basfn = 1, mpbasis%num_radbasfn(l, itype)
                norm = SQRT( &
-                           intgrf(mpbasis%radbasfn_mt(:,i_basfn, l, itype)**2, &
-                                  atoms, itype, gridf)&
-                          )
+                      intgrf(mpbasis%radbasfn_mt(:, i_basfn, l, itype)**2, &
+                             atoms, itype, gridf) &
+                      )
 
                mpbasis%radbasfn_mt(:atoms%jri(itype), i_basfn, l, itype) &
-                  = mpbasis%radbasfn_mt(:atoms%jri(itype), i_basfn, l, itype) / norm
+                  = mpbasis%radbasfn_mt(:atoms%jri(itype), i_basfn, l, itype)/norm
             end do
          end do
       end do
    end subroutine mpbasis_normalize
+
+   subroutine mpbasis_init(mpbasis, hybrid, atoms)
+      use m_types_setup
+      use m_types_hybrid
+      use m_judft
+      implicit none
+      class(t_mpbasis)           :: mpbasis
+      type(t_hybrid), intent(in) :: hybrid
+      type(t_atoms), intent(in)  :: atoms
+
+      integer                    :: ok
+
+      if(.not. allocated(mpbasis%l1)) then
+         allocate(mpbasis%l1(hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
+         if (ok /= 0) call judft_error('mpbasis_init: failure allocation mpbasis%l1')
+
+         allocate(mpbasis%l2, mold=mpbasis%l1, stat=ok)
+         if (ok /= 0) call judft_error('mpbasis_init: failure allocation mpbasis%l2')
+
+         allocate(mpbasis%n1, mold=mpbasis%l1, stat=ok)
+         if (ok /= 0) call judft_error('mpbasis_init: failure allocation mpbasis%n1')
+
+         allocate(mpbasis%n2, mold=mpbasis%l1, stat=ok)
+         if (ok /= 0) call judft_error('mpbasis_init: failure allocation mpbasis%n2')
+      endif
+   end subroutine mpbasis_init
+
+   subroutine mpbasis_free(mpbasis)
+      implicit NONE
+      class(t_mpbasis)          :: mpbasis
+
+      if (allocated(mpbasis%l1)) deallocate(mpbasis%l1)
+      if (allocated(mpbasis%l2)) deallocate(mpbasis%l2)
+      if (allocated(mpbasis%n1)) deallocate(mpbasis%n1)
+      if (allocated(mpbasis%n2)) deallocate(mpbasis%n2)
+   end subroutine mpbasis_free
+
+   subroutine mpbasis_set_nl(mpbasis, n, l, itype, n1, l1, n2, l2)
+      implicit NONE
+      class(t_mpbasis)    :: mpbasis
+      integer, intent(in)  :: n, l, itype
+      integer, intent(out) :: n1, l1, n2, l2
+
+      l1 = mpbasis%l1(n, l, itype) !
+      l2 = mpbasis%l2(n, l, itype) ! current basis-function mpbasisuct
+      n1 = mpbasis%n1(n, l, itype) ! = bas(:,n1,l1,itype)*bas(:,n2,l2,itype) = b1*b2
+      n2 = mpbasis%n2(n, l, itype) !
+
+   end subroutine mpbasis_set_nl
 end module m_types_mpbasis
