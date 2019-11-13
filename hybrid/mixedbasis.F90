@@ -242,10 +242,6 @@ CONTAINS
                                         * bas2(:n_grid_pt, n2, l2, itype, jspin) &
                                       ) / atoms%rmsh(:n_grid_pt, itype)
 
-                                 !normalize radbasfn_mt
-                                 norm = calc_radbas_norm(atoms, mpbasis, l, i_basfn, itype, gridf)
-                                 mpbasis%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) &
-                                 = mpbasis%radbasfn_mt(:n_grid_pt, i_basfn, l, itype)/norm
 
                               END DO !jspin
                               ! prevent double counting of products (a*b = b*a)
@@ -256,6 +252,9 @@ CONTAINS
                   ENDIF
                END DO !l2
             END DO  !l1
+
+            !normalize radbasfn_mt
+            call mpbasis%normalize(atoms, hybrid, gridf)
 
             IF (i_basfn /= full_n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
