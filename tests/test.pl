@@ -17,7 +17,8 @@ my $executable=shift;
 
 #check MPI environment
 my $mpi=shift;
-if ($mpi){
+if ($mpi="sequential"){
+} elsif ($mpi){
     if ($ENV{"juDFT_MPI"}) {
 	    $mpi=$ENV{"juDFT_MPI"};	
     }  
@@ -30,6 +31,9 @@ if ($executable=~/_MPI/){
 }else{
     #no mpi executable...
     $mpi='';
+}
+if ($mpi="sequential"){
+    $mpi=""
 }
 print "MPI:$mpi\n";
 

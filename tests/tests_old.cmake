@@ -6,8 +6,8 @@ set(SerialParallelTests SiHybridGamma SiHybridGammaNoInv SiHybrid8kpt_sym
    PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML   )
 
-set(SerialOnlyTests Fe_bct_LO Fe_fcc)# TiO2eels TiO2eelsXML)
-set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
+set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 Fe_bct_LO Fe_fcc)# TiO2eels TiO2eelsXML)
+set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip) 
 
 set(Testdirs ${SerialParallelTests} ${SerialOnlyTests})
 set(ParTestdirs ${SerialParallelTests})
@@ -52,7 +52,10 @@ if (${FLEUR_USE_MPI})
       set(mpi_exec "mpirun -n 2")
    endif()
    foreach(test ${ParTestdirs})
-    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl
-${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
+    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
+   endforeach(test)
+   set(mpi_exec "sequential")
+   foreach(test ${SerialOnlyTests})
+    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
    endforeach(test)
 endif()
