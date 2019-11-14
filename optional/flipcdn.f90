@@ -19,7 +19,7 @@ MODULE m_flipcdn
 !      
 !     Removed integer nflip switch and added angles phi/theta 
 !     (and an additional spin scale switch)
-!     which define spin flip for each atom individually. 
+!     which defines spin flip for each atom individually. 
 !     => Magnetisation axis can now be chosen independet 
 !     of spin quantization axis.
 !     R. Hilgers, Okt. 2019
@@ -80,9 +80,10 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
          DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                 IF (noco%l_mtNocoPot) THEN
-                   rhodummy=CMPLX(den%mt(j,lh,itype,3),0)
+                   rhodummy=CMPLX(den%mt(j,lh,itype,3),den%mt(j,lh,itype,4))
                    CALL rot_den_mat(atoms%flipSpinPhi(itype),atoms%flipSpinTheta(itype),den%mt(j,lh,itype,1),den%mt(j,lh,itype,2),rhodummy)
                    den%mt(j,lh,itype,3)=REAL(rhodummy)
+		   den%mt(j,lh,itype,4)=AIMAG(rhodummy)
                 ELSE
                    IF (atoms%flipSpinTheta(itype).EQ.(pimach()).AND.atoms%flipSpinPhi(itype).EQ.0) THEN
                       rhodummyR = den%mt(j,lh,itype,1)
@@ -112,7 +113,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
 
 IF (input%l_removeMagnetisationFromInterstitial) THEN
    
-   !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their former mean value. 
+   !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their mean value. 
       den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value 
       den%pw(:,1)=den%pw(:,2)
       IF (noco%l_noco) THEN

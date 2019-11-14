@@ -161,7 +161,7 @@ MODULE m_types_setup
       !lda_u information(ntype)
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
-      REAL, ALLOCATABLE :: flipSpinPhi(:) !<flip magnetisation of this atom by angle phi
+      REAL, ALLOCATABLE :: flipSpinPhi(:) !<flip magnetisation of an atom by angle phi
       REAL, ALLOCATABLE :: flipSpinTheta(:)
       LOGICAL, ALLOCATABLE :: flipSpinScale(:)
    CONTAINS

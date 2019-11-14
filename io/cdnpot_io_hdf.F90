@@ -2465,8 +2465,8 @@ MODULE m_cdnpot_io_hdf
          den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
             frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
          DEALLOCATE(frTemp)
-      ELSE
-         ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,4))
+      ELSE 
+         ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:4))
          dimsInt(:4)=(/jmtd,nlhd+1,ntype,4/)
          CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
          CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),frTemp)
