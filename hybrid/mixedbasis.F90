@@ -417,6 +417,7 @@ CONTAINS
 
       INTEGER :: itype, jspin, i, l, ilo, ok
       INTEGER :: n_grid_pt, noded, nodem
+      INTEGER :: l_idx(0:atoms%lmaxd)
       u  = 0.0
       du = 0.0
 
@@ -448,7 +449,10 @@ CONTAINS
                CALL radflo(atoms, itype, jspin, enpara%ello0(1, 1, jspin), vr0(:,itype, jspin), &
                            u, du, mpi, usdus, uuilon, duilon, ulouilopn, flo)
 
+               l_idx = 2
                DO ilo = 1, atoms%nlo(itype)
+                  l = atoms%llo(ilo, itype)
+                  l_idx(l) = l_idx(l) + 1
                   bas1(1:n_grid_pt, 2+ilo, atoms%llo(ilo, itype), itype, jspin) = flo(1:n_grid_pt, 1, ilo)
                   bas2(1:n_grid_pt, 2+ilo, atoms%llo(ilo, itype), itype, jspin) = flo(1:n_grid_pt, 2, ilo)
                END DO
