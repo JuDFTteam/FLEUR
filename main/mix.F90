@@ -72,7 +72,6 @@ contains
           inDen%mmpMat=outDen%mmpMat
        ENDIF
     ENDIF
-    print *,"A:",mpi%irank,maxval(abs(inden%mmpmat))
 
     CALL timestart("Reading of distances")
     CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
@@ -96,7 +95,6 @@ contains
        CALL timestop("Preconditioner")
     END IF
     if (atoms%n_u>0.and.mpi%irank.ne.0.and.input%ldaulinmix) inden%mmpMat=0.0
-    print *,"A2:",mpi%irank,maxval(abs(inden%mmpmat))
     CALL timestart("Mixing")
     !mixing of the densities
     SELECT CASE(input%imix)
@@ -131,8 +129,6 @@ contains
        CALL judft_error("Unknown Mixing schema")
     END SELECT
     CALL timestop("Mixing")
-
-    print *,"B:",mpi%irank,maxval(abs(inden%mmpmat))
 
     CALL timestart("Postprocessing")
     !extracte mixed density
@@ -187,7 +183,6 @@ contains
     IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(mpi)
 
     CALL timestop("Postprocessing")
-  print *,"C:",mpi%irank,maxval(abs(inden%mmpmat))
 
     CALL timestop("Charge Density Mixing")
   END SUBROUTINE mix_charge
