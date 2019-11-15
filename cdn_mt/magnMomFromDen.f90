@@ -51,8 +51,15 @@ SUBROUTINE magnMomFromDen(dimension,input,atoms,noco,den,moments)
 !!Print Results
 DO i=1 , atoms%ntype
    moments(1)=dummyResults(i,1)-dummyResults(i,2)
-   moments(2:3)=dummyReults(i,3:4)
-   write (*,*) "Magnetic Moment of Atom " i ": mx=" moments(1) " my=" moments(2) " mz=" moments(3) 		
+   moments(2:3)=dummyResults(i,3:4)
+   write(*,*) "Magnetic Moment of Atom "
+   write(*,*) i 
+   write(*,*) " mx=" 
+   write(*,*) moments(1) 
+   write(*,*) " my=" 
+   write(*,*) moments(2) 
+   write(*,*) " mz=" 
+   write(*,*) moments(3) 		
 END DO
 
 !!!!Normalization?
