@@ -99,9 +99,6 @@ CONTAINS
                zMat(nk)%data_c(:nbasfcn,:DIMENSION%neigd2) = zDebug_c(:nbasfcn,:DIMENSION%neigd2)
             END IF
 
-            WRITE(9333,*) SHAPE(eig_irr)
-            WRITE(9333,*) SHAPE(results%eig)
-
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybrid%ne_eig(nk) = results%neig(nk, jsp)
          END DO
