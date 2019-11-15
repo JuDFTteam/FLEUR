@@ -195,7 +195,6 @@ CONTAINS
       call timestop("calc convolution")
 
       call timestop("wavefproducts_noinv5 IR")
-      call save_npy("cprod_noinv.npy", cprod)
    end subroutine wavefproducts_noinv5_IS
 
 
