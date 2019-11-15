@@ -162,7 +162,6 @@ CONTAINS
          END DO
       END DO
       call timestop("step function")
-      call save_npy("stepfunc_noinv.npy", hybdat%stepfunc)
 
       call timestart("hybrid gptm")
       ic = nbasm_mt

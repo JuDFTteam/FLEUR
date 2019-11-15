@@ -197,10 +197,6 @@ CONTAINS
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
             CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
-            ! call hmat%save_npy(gen_filename("hmat", iter=iter, kpt=nk, ext=".npy"))
-            ! call smat%save_npy(gen_filename("smat", iter=iter, kpt=nk, ext=".npy"))
-            ! call zmat%save_npy(gen_filename("zmat", iter=iter, kpt=nk, ext=".npy"))
-            ! call save_npy(gen_filename("eig", iter=iter, kpt=nk, ext=".npy"), eig)
 
             CALL smat%free()
             CALL hmat%free()
