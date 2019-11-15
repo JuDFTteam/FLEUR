@@ -98,7 +98,7 @@ CONTAINS
                zMat(nk)%data_c = 0.0
                zMat(nk)%data_c(:nbasfcn,:DIMENSION%neigd2) = zDebug_c(:nbasfcn,:DIMENSION%neigd2)
             END IF
-
+            ! just for lichuan
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybrid%ne_eig(nk) = results%neig(nk, jsp)
          END DO
