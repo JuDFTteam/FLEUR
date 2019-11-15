@@ -192,7 +192,6 @@ CONTAINS
         END DO
      END DO
      call timestop("step function")
-     call save_npy("stepfunc_inv.npy", real(hybdat%stepfunc))
 
      call timestart("hybrid gptm")
      ic = nbasm_mt
@@ -223,7 +222,6 @@ CONTAINS
      deallocate(z0, pointer, gpt0)
      CALL timestop("wavefproducts_inv5 IR")
 
-     call save_npy("cprod_inv.npy", cprod)
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
