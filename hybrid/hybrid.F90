@@ -145,7 +145,7 @@ CONTAINS
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
                CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, l_zref)
                CALL hsfock(nk, atoms, mpbasis, hybrid, lapw, DIMENSION, kpts, jsp, input, hybdat, eig_irr, sym, cell, &
-                           noco, results, iterHF, MAXVAL(hybrid%nobd(:,jsp)), xcpot, mpi)
+                           noco, results, MAXVAL(hybrid%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO
          CALL timestop("Calculation of non-local HF potential")

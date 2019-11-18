@@ -45,7 +45,7 @@ MODULE m_hsfock
 CONTAINS
 
    SUBROUTINE hsfock(nk, atoms, mpbasis, hybrid, lapw, dimension, kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
-                     results, it, mnobd, xcpot, mpi)
+                     results, mnobd, xcpot, mpi)
 
       USE m_types
       USE m_symm_hf
@@ -76,7 +76,6 @@ CONTAINS
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
-      INTEGER, INTENT(IN)    :: it
       INTEGER, INTENT(IN)    :: nk
       INTEGER, INTENT(IN)    :: mnobd
 

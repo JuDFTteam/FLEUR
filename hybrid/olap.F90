@@ -127,7 +127,7 @@ CONTAINS
                dg = gpt(:, i) - gpt(:, j)
                g = gptnorm(dg, cell%bmat)
                olap_c(k) = 0
-               IF (g == 0) THEN
+               IF (abs(g) < 1e-10) THEN
                   DO itype = 1, atoms%ntype
                      r = atoms%rmt(itype)
                      olap_c(k) = olap_c(k) - atoms%neq(itype)*fpi_const*r**3/3/cell%omtil

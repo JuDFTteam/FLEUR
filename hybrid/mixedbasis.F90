@@ -163,7 +163,7 @@ CONTAINS
                                  maxval(mpbasis%num_radfun_per_l), &
                                  0:atoms%lmaxd))
             endif
-            selecmat = calc_selecmat(atoms, mpbasis, hybrid, seleco, selecu)
+            selecmat = calc_selecmat(atoms, mpbasis, seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
@@ -222,7 +222,7 @@ CONTAINS
             i_basfn = 0
 
             ! valence*valence
-            selecmat =  calc_selecmat(atoms, mpbasis, hybrid, seleco, selecu)
+            selecmat =  calc_selecmat(atoms, mpbasis,seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
@@ -476,7 +476,7 @@ CONTAINS
       END DO
    end subroutine gen_bas_fun
 
-   function calc_selecmat(atoms,mpbasis,hybrid,seleco, selecu) result(selecmat)
+   function calc_selecmat(atoms,mpbasis,seleco, selecu) result(selecmat)
       ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
       use m_types
       use m_judft
@@ -484,7 +484,6 @@ CONTAINS
 
       type(t_atoms),  intent(in) :: atoms
       TYPE(t_mpbasis), intent(in) :: mpbasis
-      type(t_hybrid), intent(in) :: hybrid
       LOGICAL, intent(in) :: seleco(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
       LOGICAL, intent(in) :: selecu(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
       LOGICAL  ::  selecmat(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, &
