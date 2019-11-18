@@ -214,7 +214,7 @@ CONTAINS
       IF (l_real) THEN
          DO n1 = 1, hybrid%nobd(nk,jsp)
             DO n2 = 1, hybrid%nbands(nk)
-               ex_vv_r(n2, n1, nk) = ex_vv_r(n2, n1, nk) - exchange(n1, n2)
+               ex_vv_r(n2, n1, nk) = ex_vv_r(n2, n1, nk) - real(exchange(n1, n2))
                IF (n1 /= n2) sum_offdia = sum_offdia + 2*ABS(exchange(n1, n2))
             END DO
          END DO
@@ -228,7 +228,7 @@ CONTAINS
       END IF
 
       DO n1 = 1, hybrid%nobd(nk,jsp)
-         results%te_hfex%core = results%te_hfex%core - results%w_iks(n1, nk, jsp)*exchange(n1, n1)
+         results%te_hfex%core = results%te_hfex%core - real(results%w_iks(n1, nk, jsp)*exchange(n1, n1))
       END DO
 
       WRITE (6, '(A,F20.15)') 'sum of the absolut real part of the non diagonal elements', sum_offdia
@@ -395,7 +395,7 @@ CONTAINS
       ENDIF
 
       DO n1 = 1, hybrid%nobd(nk,jsp)
-         results%te_hfex%core = results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1)
+         results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1))
       END DO
 
       ! add the core-valence contribution to the exchange matrix mat_ex
@@ -404,7 +404,7 @@ CONTAINS
       ic = 0
       sum_offdia = 0
       IF (mat_ex%l_real) THEN
-         mat_ex%data_r = mat_ex%data_r + exchange/nsymop
+         mat_ex%data_r = real(mat_ex%data_r + exchange/nsymop)
       ELSE
          mat_ex%data_c = mat_ex%data_c + CONJG(exchange)/nsymop
       END IF
@@ -547,12 +547,12 @@ CONTAINS
       ! add core exchange contributions to the te_hfex
 
       DO icst1 = 1, ncstd
-         results%te_hfex%core = results%te_hfex%core - a_ex*kpts%wtkpt(nk)*exch(icst1, icst1)
+         results%te_hfex%core = real(results%te_hfex%core - a_ex*kpts%wtkpt(nk)*exch(icst1, icst1))
       END DO
 
    END SUBROUTINE exchange_cccc
 
-   SUBROUTINE exchange_cccv(nk, atoms, hybdat, mpbasis, hybrid, DIMENSION, maxbands, ncstd, &
+   SUBROUTINE exchange_cccv(nk, atoms, hybdat, mpbasis, hybrid, DIMENSION, ncstd, &
                             bkpt, sym, mpi, exch_cv_r, exch_cv_c, l_real)
 
       USE m_constants
@@ -573,7 +573,6 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
       ! - scalars -
       INTEGER, INTENT(IN)    ::  nk, ncstd
-      INTEGER, INTENT(IN)    :: maxbands
 
       ! - arays -
       REAL, INTENT(IN)    ::  bkpt(:)
@@ -581,8 +580,8 @@ CONTAINS
       REAL, INTENT(INOUT) ::  exch_cv_r(:, :, :)!(maxbands,ncstd,nkpti)
       COMPLEX, INTENT(INOUT) ::  exch_cv_c(:, :, :) !(maxbands,ncstd,nkpti)
       ! - local scalars -
-      INTEGER               ::  itype, ieq, icst, icst1, icst2, iatom, iatom0
-      INTEGER               ::    iatom1, iband
+      INTEGER               ::  itype, ieq, icst, icst1, iatom, iatom0
+      INTEGER               ::  iband
       INTEGER               ::  l1, l2, l, ll, llmax
       INTEGER               ::  lm2, lmp2
       INTEGER               ::  m1, m2, mm, m
@@ -598,7 +597,7 @@ CONTAINS
       REAL                  ::  integrand(atoms%jmtd)
       COMPLEX               ::  cexp(atoms%nat)
       COMPLEX               ::  exch(hybrid%nbands(nk), ncstd)
-      COMPLEX               ::  cmt(DIMENSION%neigd, hybrid%maxlmindx, atoms%nat), carr(hybrid%nbands(nk))
+      COMPLEX               ::  cmt(DIMENSION%neigd, hybrid%maxlmindx, atoms%nat)
 
       IF (mpi%irank == 0) THEN
          WRITE (6, '(//A)') '### core-core-core-valence exchange  ###'
@@ -732,7 +731,7 @@ CONTAINS
       IF (l_real) THEN
          DO icst = 1, ncstd
             DO iband = 1, hybrid%nbands(nk)
-               exch_cv_r(iband, icst, nk) = exch_cv_r(iband, icst, nk) - exch(iband, icst)
+               exch_cv_r(iband, icst, nk) = real(exch_cv_r(iband, icst, nk) - exch(iband, icst))
             END DO
          END DO
       ELSE
