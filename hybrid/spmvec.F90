@@ -4,11 +4,11 @@ CONTAINS
    !Note this module contains a real/complex version of spmvec
 
    SUBROUTINE spmvec_invs(&
-  &           atoms, mpbasis, hybrid,&
-  &           hybdat, ikpt, kpts, cell,&
-  &           coulomb_mt1, coulomb_mt2, coulomb_mt3,&
-  &           coulomb_mtir, vecin,&
-  &           vecout)
+              atoms, mpbasis, hybrid,&
+              hybdat, ikpt, kpts, cell,&
+              coulomb_mt1, coulomb_mt2, coulomb_mt3,&
+              coulomb_mtir, vecin,&
+              vecout)
 
       USE m_wrapper
       USE m_constants
@@ -27,9 +27,9 @@ CONTAINS
 
       ! - arrays -
       REAL, INTENT(IN) ::  coulomb_mt1(maxval(mpbasis%num_radbasfn) - 1, maxval(mpbasis%num_radbasfn) - 1,&
-     &                                    0:maxval(hybrid%lcutm1), atoms%ntype)
+                                          0:maxval(hybrid%lcutm1), atoms%ntype)
       REAL, INTENT(IN) ::  coulomb_mt2(maxval(mpbasis%num_radbasfn) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
-     &                                    0:maxval(hybrid%lcutm1) + 1, atoms%nat)
+                                          0:maxval(hybrid%lcutm1) + 1, atoms%nat)
       REAL, INTENT(IN) ::  coulomb_mt3(:, :, :)
       REAL, INTENT(IN) ::  coulomb_mtir(:)
       REAL, INTENT(IN) ::  vecin(:)!(hybrid%nbasm)
@@ -82,7 +82,7 @@ CONTAINS
                   indx3 = indx3 + 1
 
                   vecout(indx1:indx2) = matmul(coulomb_mt1(:mpbasis%num_radbasfn(l, itype) - 1, :mpbasis%num_radbasfn(l, itype) - 1, l, itype),&
-         &                vecinhlp(indx1:indx2))
+                          vecinhlp(indx1:indx2))
 
                  vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:mpbasis%num_radbasfn(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
 
@@ -136,7 +136,7 @@ CONTAINS
       ! compute vecout for the index-range from ibasm+1:nbasm
 
       indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
-     &                                      itype=1, atoms%ntype)/)) + mpbasis%n_g(ikpt)
+                                            itype=1, atoms%ntype)/)) + mpbasis%n_g(ikpt)
       CALL dspmv('U', indx1, 1.0, coulomb_mtir, vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + 1:), 1)
 
       iatom = 0
@@ -210,11 +210,11 @@ CONTAINS
    END SUBROUTINE spmvec_invs
 
    SUBROUTINE spmvec_noinvs(&
-    &           atoms, mpbasis, hybrid,&
-    &           ikpt, kpts, &
-    &           coulomb_mt1, coulomb_mt2, coulomb_mt3,&
-    &           coulomb_mtir, vecin,&
-    &           vecout)
+                atoms, mpbasis, hybrid,&
+                ikpt, kpts, &
+                coulomb_mt1, coulomb_mt2, coulomb_mt3,&
+                coulomb_mtir, vecin,&
+                vecout)
 
       USE m_wrapper
       USE m_constants
@@ -231,9 +231,9 @@ CONTAINS
 
       ! - arrays -
       REAL, INTENT(IN) ::  coulomb_mt1(maxval(mpbasis%num_radbasfn) - 1, maxval(mpbasis%num_radbasfn) - 1,&
-     &                                    0:maxval(hybrid%lcutm1), atoms%ntype)
+                                          0:maxval(hybrid%lcutm1), atoms%ntype)
       COMPLEX, INTENT(IN) ::  coulomb_mt2(maxval(mpbasis%num_radbasfn) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
-     &                                    0:maxval(hybrid%lcutm1) + 1, atoms%nat)
+                                          0:maxval(hybrid%lcutm1) + 1, atoms%nat)
       COMPLEX, INTENT(IN) ::  coulomb_mt3(:, :, :)
       COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
       COMPLEX, INTENT(IN) ::  vecin(:)!(hybrid%nbasm)
@@ -284,7 +284,7 @@ CONTAINS
                   indx3 = indx3 + 1
 
                   vecout(indx1:indx2) = matmul(coulomb_mt1(:mpbasis%num_radbasfn(l, itype) - 1, :mpbasis%num_radbasfn(l, itype) - 1, l, itype),&
-         &                vecinhlp(indx1:indx2))
+                          vecinhlp(indx1:indx2))
 
                  vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:mpbasis%num_radbasfn(l, itype) - 1, m, l, iatom)*vecinhlp(indx3)
 
@@ -320,7 +320,7 @@ CONTAINS
                      IF (iatom == iatom1) CYCLE
 
                      vecout(indx1:indx2) = vecout(indx1:indx2)&
-          &                              + coulomb_mt3(:mpbasis%num_radbasfn(l, itype) - 1, iatom1, iatom)*vecinhlp(indx4)
+                                         + coulomb_mt3(:mpbasis%num_radbasfn(l, itype) - 1, iatom1, iatom)*vecinhlp(indx4)
 
                   END DO
                   indx3 = indx3 + atoms%neq(itype1)*ishift1
@@ -339,7 +339,7 @@ CONTAINS
       ! compute vecout for the index-range from ibasm+1:nbasm
 
       indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
-     &                                      itype=1, atoms%ntype)/)) + mpbasis%n_g(ikpt)
+                                            itype=1, atoms%ntype)/)) + mpbasis%n_g(ikpt)
       call zhpmv('U', indx1, (1.0, 0.0), coulomb_mtir, vecinhlp(ibasm + 1), 1, (0.0, 0.0), vecout(ibasm + 1), 1)
 
       iatom = 0
@@ -408,8 +408,8 @@ CONTAINS
       END IF
 
       CALL reorder(hybrid%nbasm(ikpt), atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn,&
-     &             2,&
-     &             vec_c=vecout)
+                   2,&
+                   vec_c=vecout)
      call timestop("spmvec_noinvs")
    END SUBROUTINE spmvec_noinvs
 
