@@ -161,9 +161,20 @@ MODULE m_types_setup
       !lda_u information(ntype)
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
-      REAL, ALLOCATABLE :: flipSpinPhi(:) !<flip magnetisation of an atom by angle phi
+      !flipSpinTheta and flipSpinPhi are the angles which are given
+      !in the input to rotate the charge den by these polar angles.
+      !Typical one needs ntype angles.
+      REAL, ALLOCATABLE :: flipSpinPhi(:) 
       REAL, ALLOCATABLE :: flipSpinTheta(:)
+      !Logical switch which decides if the rotated cdn should be scaled.
+      !Yet untested feature.
       LOGICAL, ALLOCATABLE :: flipSpinScale(:)
+      !Angles which are calculated by magnMomFromDen.f90
+      !to be able to rotate the cdn so that the Spin-Quantization Axis
+      !and the magnetization align.
+      !Typical one needs ntype angles.
+      REAL, ALLOCATABLE :: phi_mt_avg(:)
+      REAL, ALLOCATABLE :: theta_mt_avg(:)
    CONTAINS
       procedure :: nsp => calc_nsp_atom
    END TYPE t_atoms

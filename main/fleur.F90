@@ -113,6 +113,7 @@ CONTAINS
     INTEGER :: iter,iterHF,i
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
+    REAL    :: moments(3)
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -387,7 +388,7 @@ CONTAINS
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
-          CALL magnMomFromDen(input,atoms,noco,outDen)
+          !CALL magnMomFromDen(nput,atoms,noco,Outden,moments)
            
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
