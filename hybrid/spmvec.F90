@@ -211,7 +211,7 @@ CONTAINS
 
    SUBROUTINE spmvec_noinvs(&
     &           atoms, mpbasis, hybrid,&
-    &           hybdat, ikpt, kpts, &
+    &           ikpt, kpts, &
     &           coulomb_mt1, coulomb_mt2, coulomb_mt3,&
     &           coulomb_mtir, vecin,&
     &           vecout)
@@ -221,7 +221,6 @@ CONTAINS
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpbasis), INTENT(IN)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_kpts), INTENT(IN)     :: kpts
@@ -248,14 +247,11 @@ CONTAINS
       INTEGER             ::  l
       INTEGER             ::  n, m
 
-      REAL                ::  gnorm
-
       COMPLEX, PARAMETER  ::  img = (0.0, 1.0)
       ! - local arrays -
 
       REAL                ::  vecr(maxval(mpbasis%num_radbasfn) - 1), veci(maxval(mpbasis%num_radbasfn) - 1)
       COMPLEX             ::  vecinhlp(hybrid%nbasm(ikpt))
-      COMPLEX, ALLOCATABLE ::  coulhlp(:, :)
 
       call timestart("spmvec_noinvs")
       vecinhlp = vecin
