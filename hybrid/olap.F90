@@ -112,7 +112,7 @@ CONTAINS
                      DO ineq = 1, atoms%neq(itype)
                         icent = icent + 1
                         olap_r(k) = olap_r(k) - real(fgr* &
-             &               exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
+                             exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
                      END DO
                   END DO
                END IF
@@ -140,7 +140,7 @@ CONTAINS
                      DO ineq = 1, atoms%neq(itype)
                         icent = icent + 1
                         olap_c(k) = olap_c(k) - fgr* &
-             &               exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
+                             exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
                      END DO
                   END DO
                END IF
@@ -154,8 +154,8 @@ CONTAINS
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
    SUBROUTINE wfolap_init(olappw, olapmt, gpt,&
-  &                       atoms, mpbasis, cell,&
-  &                       bas1, bas2)
+                          atoms, mpbasis, cell,&
+                          bas1, bas2)
 
       USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_types
@@ -167,7 +167,7 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)       :: gpt(:, :)!(3,ngpt)
       REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
-     &                            bas2(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+                                  bas2(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
       REAL, INTENT(OUT)         :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
       TYPE(t_mat), INTENT(INOUT):: olappw
 
@@ -185,9 +185,9 @@ CONTAINS
                DO n1 = 1, nn!n2
                   !IF( n1 .gt. 2 .or. n2 .gt. 2) CYCLE
                   olapmt(n1, n2, l, itype) = intgrf( &
-         &                            bas1(:, n1, l, itype)*bas1(:, n2, l, itype)&
-         &                           + bas2(:, n1, l, itype)*bas2(:, n2, l, itype),&
-         &                            atoms, itype, gridf)
+                                      bas1(:, n1, l, itype)*bas1(:, n2, l, itype)&
+                                     + bas2(:, n1, l, itype)*bas2(:, n2, l, itype),&
+                                      atoms, itype, gridf)
 !               olapmt(n2,n1,l,itype) = olapmt(n1,n2,l,itype)
                END DO
             END DO
@@ -227,9 +227,9 @@ CONTAINS
                DO M = -l, l
                   nn = mpbasis%num_radfun_per_l(l, itype)
                   wfolap_inv = wfolap_inv + &
-         &                 dot_product(cmt1(lm + 1:lm + nn, iatom),&
-         &                               matmul(olapmt(:nn, :nn, l, itype),&
-         &                                       cmt2(lm + 1:lm + nn, iatom)))
+                           dot_product(cmt1(lm + 1:lm + nn, iatom),&
+                                         matmul(olapmt(:nn, :nn, l, itype),&
+                                                 cmt2(lm + 1:lm + nn, iatom)))
                   lm = lm + nn
                END DO
             END DO
@@ -279,9 +279,9 @@ CONTAINS
                DO M = -l, l
                   nn = mpbasis%num_radfun_per_l(l, itype)
                   wfolap_noinv = wfolap_noinv + &
-         &                 dot_product(cmt1(lm + 1:lm + nn, iatom),&
-         &                               matmul(olapmt(:nn, :nn, l, itype),&
-         &                                       cmt2(lm + 1:lm + nn, iatom)))
+                           dot_product(cmt1(lm + 1:lm + nn, iatom),&
+                                         matmul(olapmt(:nn, :nn, l, itype),&
+                                                 cmt2(lm + 1:lm + nn, iatom)))
                   lm = lm + nn
                END DO
             END DO

@@ -130,8 +130,8 @@ CONTAINS
       call timestop("read_z")
 
       g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
-     &  + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-     &  + maxval(abs(mpbasis%g(:,mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq))), dim=2) + 1
+        + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+        + maxval(abs(mpbasis%g(:,mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq))), dim=2) + 1
 
       call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
 

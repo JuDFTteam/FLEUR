@@ -364,7 +364,7 @@ CONTAINS
                         ! however, also in the latter case the trace of the spatial rotations
                         ! for two symmetry equivalent states must be equivalent
                         IF (all(abs(trace(:sym%nop, ic1) - trace(:sym%nop, ic2)) <= 1E-8))&
-           &            THEN
+                        THEN
                            symequivalent(ic2, ic1) = .true.
                         END IF
                      END IF
@@ -390,9 +390,9 @@ CONTAINS
                DO n2 = 1, nn
                   DO n1 = 1, nn
                      olapmt(n1, n2, l, itype) = intgrf( &
-          &                        hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype)&
-          &                       + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype),&
-          &                        atoms, itype, hybdat%gridf)
+                                   hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype)&
+                                  + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype),&
+                                   atoms, itype, hybdat%gridf)
                   END DO
                END DO
             END DO
@@ -412,11 +412,11 @@ CONTAINS
                      nn = mpbasis%num_radfun_per_l(l, itype)
                      DO iband1 = 1, hybrid%nbands(nk)
                         carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
-           &                                cmt(iband1, lm + 1:lm + nn, iatom))
+                                            cmt(iband1, lm + 1:lm + nn, iatom))
                         DO iband2 = 1, iband1
                            wavefolap(iband2, iband1)&
-            &            = wavefolap(iband2, iband1)&
-            &            + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
+                         = wavefolap(iband2, iband1)&
+                         + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
                         END DO
                      END DO
                      lm = lm + nn
@@ -445,8 +445,8 @@ CONTAINS
                IF (ndb2 == 0) CYCLE
                ic2 = ic2 + 1
                IF (any(abs(wavefolap(iband1:iband1 + ndb1 - 1,&
-        &                             iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
-!     &          .and. ndb1 .eq. ndb2 ) THEN
+                                      iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
+!                .and. ndb1 .eq. ndb2 ) THEN
                   symequivalent(ic2, ic1) = .true.
                END IF
             END DO
@@ -501,7 +501,7 @@ CONTAINS
       pi = pimach()
 
       IF (hybdat%lmaxcd > atoms%lmaxd) STOP &
-     & 'symm_hf: The very impropable case that hybdat%lmaxcd > atoms%lmaxd occurs'
+       'symm_hf: The very impropable case that hybdat%lmaxcd > atoms%lmaxd occurs'
 
       iatom = 0
       iatom0 = 0
@@ -521,7 +521,7 @@ CONTAINS
                g = nint(rotkpt - kpts%bkf(:, nk))
 
                cdum = exp(-2*pi*img*dot_product(rotkpt, sym%tau(:, iisym)))* &
-        &               exp(2*pi*img*dot_product(g, atoms%taual(:, ratom)))
+                        exp(2*pi*img*dot_product(g, atoms%taual(:, ratom)))
             END DO
          END DO
          iatom0 = iatom0 + atoms%neq(itype)
@@ -548,7 +548,7 @@ CONTAINS
 !     - local arrays -
       INTEGER               ::  rrot(3, 3, sym%nsym)
       INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf),&
-     &                          symop(kpts%nkptf)
+                                symop(kpts%nkptf)
       INTEGER, ALLOCATABLE  ::  psym(:)!,help(:)
       REAL                  ::  rotkpt(3)
 

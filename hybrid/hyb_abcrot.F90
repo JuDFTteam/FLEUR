@@ -2,7 +2,7 @@
 MODULE m_hyb_abcrot
 CONTAINS
    SUBROUTINE hyb_abcrot(hybrid, atoms, neig, sym,&
-  &                 acof, bcof, ccof)
+                    acof, bcof, ccof)
 !     ***************************************************************
 !     * This routine transforms a/b/cof which are given wrt rotated *
 !     * MT functions (according to invsat/ngopr) into a/b/cof wrt   *

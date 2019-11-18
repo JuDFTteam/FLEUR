@@ -3,11 +3,11 @@
       CONTAINS
 
          SUBROUTINE checkolap(atoms, hybdat,&
-        &                  mpbasis,hybrid,&
-        &                  nkpti, kpts,&
-        &                  dimension, mpi, &
-        &                  input, sym, noco,&
-        &                  cell, lapw, jsp)
+                           mpbasis,hybrid,&
+                           nkpti, kpts,&
+                           dimension, mpi, &
+                           input, sym, noco,&
+                           cell, lapw, jsp)
             USE m_util, ONLY: chr, sphbessel, harmonicsr
             use m_intgrf, only:  intgrf, intgrf_init
             USE m_constants
@@ -65,9 +65,9 @@
             COMPLEX, ALLOCATABLE   ::  carr1(:, :), carr2(:, :), carr3(:, :)
 
             CHARACTER, PARAMETER    ::  lchar(0:38) =&
-           &          (/'s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',&
-           &            'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x',&
-           &            'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
+                      (/'s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',&
+                        'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x',&
+                        'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
             LOGICAL                 ::  l_mism = .true.
 
             allocate(z(nkpti))
@@ -92,16 +92,16 @@
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|core>'
             DO itype = 1, atoms%ntype
                IF (atoms%ntype > 1 .AND. mpi%irank == 0) &
-            &     WRITE (6, '(A,I3)') ' Atom type', itype
+                  WRITE (6, '(A,I3)') ' Atom type', itype
                DO l = 0, hybdat%lmaxc(itype)
                   DO i = 1, hybdat%nindxc(l, itype)
                      IF (mpi%irank == 0)&
-              &        WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
+                       WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
                      DO j = 1, i
                         integrand = hybdat%core1(:, i, l, itype)*hybdat%core1(:, j, l, itype)&
-               &                  + hybdat%core2(:, i, l, itype)*hybdat%core2(:, j, l, itype)
+                                  + hybdat%core2(:, i, l, itype)*hybdat%core2(:, j, l, itype)
                         IF (mpi%irank == 0) WRITE (6, '(F10.6)', advance='no')&
-               &           intgrf(integrand, atoms, itype, hybdat%gridf)
+                           intgrf(integrand, atoms, itype, hybdat%gridf)
                      END DO
                      IF (mpi%irank == 0) WRITE (6, *)
                   END DO
@@ -110,31 +110,31 @@
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|basis>'
             allocate(olapcb(maxval(mpbasis%num_radfun_per_l)), olapcv(maxval(hybrid%nbands), nkpti),&
-           &          olapcv_avg(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
-           &          olapcv_max(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
-           &          olapcv_loc(2, -hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype))
+                      olapcv_avg(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+                      olapcv_max(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
+                      olapcv_loc(2, -hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype))
 
             DO itype = 1, atoms%ntype
                IF (atoms%ntype > 1 .AND. mpi%irank == 0) &
-            &     WRITE (6, '(A,I3)') ' Atom type', itype
+                  WRITE (6, '(A,I3)') ' Atom type', itype
                DO l = 0, hybdat%lmaxc(itype)
                   IF (l > atoms%lmax(itype)) EXIT ! very improbable case
                   IF (mpi%irank == 0) &
-             &        WRITE (6, "(9X,'u(',A,')',4X,'udot(',A,')',:,3X,'ulo(',A,"//&
-             &                "') ...')") (lchar(l), i=1, min(3, mpbasis%num_radfun_per_l(l, itype)))
+                      WRITE (6, "(9X,'u(',A,')',4X,'udot(',A,')',:,3X,'ulo(',A,"//&
+                              "') ...')") (lchar(l), i=1, min(3, mpbasis%num_radfun_per_l(l, itype)))
                   DO i = 1, hybdat%nindxc(l, itype)
                      IF (mpi%irank == 0)&
-              &        WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
+                       WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
                      DO j = 1, mpbasis%num_radfun_per_l(l, itype)
 
                         integrand = hybdat%core1(:, i, l, itype)*hybdat%bas1(:, j, l, itype)&
-               &                  + hybdat%core2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
+                                  + hybdat%core2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
 
                         olapcb(j) = &
-               &              intgrf(integrand, atoms, itype, hybdat%gridf)
+                              intgrf(integrand, atoms, itype, hybdat%gridf)
 
                         IF (mpi%irank == 0)&
-               &          WRITE (6, '(F10.6)', advance='no') olapcb(j)
+                          WRITE (6, '(F10.6)', advance='no') olapcb(j)
                      END DO
 
                      lm = sum([(mpbasis%num_radfun_per_l(j, itype)*(2*j + 1), j=0, l - 1)])
@@ -144,13 +144,13 @@
                         DO j = 1, mpbasis%num_radfun_per_l(l, itype)
                            lm = lm + 1
                            olapcv(:, :) = olapcv(:, :) + &
-                &                        olapcb(j)*cmt(:maxval(hybrid%nbands), lm, iatom, :nkpti)
+                                         olapcb(j)*cmt(:maxval(hybrid%nbands), lm, iatom, :nkpti)
                         END DO
                         rdum = sum(abs(olapcv(:, :))**2)
                         rdum1 = maxval(abs(olapcv(:, :)))
                         iarr = maxloc(abs(olapcv(:, :)))
                         olapcv_avg(m, i, l, itype) = &
-               &                sqrt(rdum/nkpti/sum(hybrid%nbands(:nkpti))*nkpti)
+                                sqrt(rdum/nkpti/sum(hybrid%nbands(:nkpti))*nkpti)
                         olapcv_max(m, i, l, itype) = rdum1
                         olapcv_loc(:, m, i, l, itype) = iarr
                      END DO
@@ -168,7 +168,7 @@
                      DO i = 1, hybdat%nindxc(l, itype)
                         WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
                         WRITE (6, '('//chr(2*l + 1)//'F10.6)') &
-               &                                        olapcv_avg(-l:l, i, l, itype)
+                                                        olapcv_avg(-l:l, i, l, itype)
                      END DO
                   END DO
                END DO
@@ -180,9 +180,9 @@
                      DO i = 1, hybdat%nindxc(l, itype)
                         WRITE (6, '(1x,I1,A,2X)', advance='no') i + l, lchar(l)
                         WRITE (6, '('//chr(2*l + 1)//&
-               &                 '(F10.6,'' ('',I3.3,''/'',I4.3,'')''))')&
-               &                          (olapcv_max(m, i, l, itype),&
-               &                           olapcv_loc(:, m, i, l, itype), m=-l, l)
+                                 '(F10.6,'' ('',I3.3,''/'',I4.3,'')''))')&
+                                          (olapcv_max(m, i, l, itype),&
+                                           olapcv_loc(:, m, i, l, itype), m=-l, l)
                      END DO
                   END DO
                END DO
@@ -194,7 +194,7 @@
 
             DO itype = 1, atoms%ntype
                IF (atoms%ntype > 1 .AND. mpi%irank == 0) &
-            &     WRITE (6, '(A,I3)') ' Atom type', itype
+                  WRITE (6, '(A,I3)') ' Atom type', itype
                DO l = 0, atoms%lmax(itype)
                   DO i = 1, mpbasis%num_radfun_per_l(l, itype)
                      IF (mpi%irank == 0) THEN
@@ -209,10 +209,10 @@
                      END IF
                      DO j = 1, i
                         integrand = hybdat%bas1(:, i, l, itype)*hybdat%bas1(:, j, l, itype)&
-               &                  + hybdat%bas2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
+                                  + hybdat%bas2(:, i, l, itype)*hybdat%bas2(:, j, l, itype)
 
                         IF (mpi%irank == 0) WRITE (6, '(F10.6)', advance='no')&
-               &              intgrf(integrand, atoms, itype, hybdat%gridf)
+                              intgrf(integrand, atoms, itype, hybdat%gridf)
                      END DO
                      IF (mpi%irank == 0) WRITE (6, *)
                   END DO
@@ -222,7 +222,7 @@
             IF (.not. l_mism) RETURN
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') &
-           &          'Mismatch of wave functions at the MT-sphere boundaries'
+                      'Mismatch of wave functions at the MT-sphere boundaries'
             allocate(carr1(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
             allocate(carr2(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
             allocate(carr3(maxval(hybrid%nbands), (atoms%lmaxd + 1)**2))
@@ -250,7 +250,7 @@
                         gpt = lapw%gvec(:,igpt, jsp)
 
                         cexp = exp(img*2*pi_const* &
-               &                   dot_product(kpts%bkf(:, ikpt) + gpt, atoms%taual(:, iatom)))
+                                   dot_product(kpts%bkf(:, ikpt) + gpt, atoms%taual(:, iatom)))
                         q = matmul(kpts%bkf(:, ikpt) + gpt, cell%bmat)
 
                         qnorm = norm2(q)
@@ -300,7 +300,7 @@
                      END DO
                      rarr = sqrt(rarr/(4*pi_const))
                      !             WRITE(outtext,'(I6,4X,F14.12,''  ('',F14.12,'')'')') &
-                     !    &              ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
+                     !                   ikpt,sum(rarr(:1)**2/nbands(ikpt)),maxval(rarr(:1))
                      !             CALL writeout(outtext,mpi%irank)
 !             IF( iatom .eq. 6 ) THEN
 !               cdum = exp(2*pi*img*dot_product(bkf(:,ikpt),[0.0,0.0,1.0] ))
@@ -310,7 +310,7 @@
 !                   lm = lm + 1
 !                   DO iband = 1,nbands(ikpt)
 !                     WRITE(700+ikpt,'(3i4,6f15.10)') iband,l,m,carr2(iband,lm),carr3(iband,lm),
-!      &                                              carr2(iband,lm)/(carr3(iband,lm))
+!                                                     carr2(iband,lm)/(carr3(iband,lm))
 !                   END DO
 !                 END DO
 !               END DO

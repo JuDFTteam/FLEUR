@@ -164,8 +164,8 @@ CONTAINS
      call timestop("read_z")
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
-    &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-    &  + maxval(abs(mpbasis%g(:, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq))), dim=2) + 1
+       + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
+       + maxval(abs(mpbasis%g(:, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq))), dim=2) + 1
 
      call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
      !
@@ -432,10 +432,10 @@ CONTAINS
                                    DO ibando = bandoi, bandof
 
                                       rarr3(1, ibando, iband) = rarr3(1, ibando, iband)&
-               &                    + rdum1*cmt(ibando, lmp2, iatom1) + rdum2*cmt(ibando, lmp2, iatom2)
+                                    + rdum1*cmt(ibando, lmp2, iatom1) + rdum2*cmt(ibando, lmp2, iatom2)
 
                                       rarr3(2, ibando, iband) = rarr3(2, ibando, iband)&
-               &                    + rdum1*cmt(ibando, lmp2, iatom2) - rdum2*cmt(ibando, lmp2, iatom1)
+                                    + rdum1*cmt(ibando, lmp2, iatom2) - rdum2*cmt(ibando, lmp2, iatom1)
 
                                    END DO  !ibando
                                 END DO  !iband
@@ -453,10 +453,10 @@ CONTAINS
                                    ! loop over occupied bands
                                    DO ibando = bandoi, bandof
                                       rarr3(1, ibando, iband) = rarr3(1, ibando, iband)&
-               &                    + rdum1*cmt(ibando, lmp1, iatom1) + rdum2*cmt(ibando, lmp1, iatom2)
+                                    + rdum1*cmt(ibando, lmp1, iatom1) + rdum2*cmt(ibando, lmp1, iatom2)
 
                                       rarr3(2, ibando, iband) = rarr3(2, ibando, iband)&
-               &                    + rdum1*cmt(ibando, lmp1, iatom2) - rdum2*cmt(ibando, lmp1, iatom1)
+                                    + rdum1*cmt(ibando, lmp1, iatom2) - rdum2*cmt(ibando, lmp1, iatom1)
                                    END DO  !ibando
                                 END DO  !iband
                              END IF  ! rdum .ne. 0

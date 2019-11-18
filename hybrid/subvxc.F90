@@ -350,7 +350,7 @@ CONTAINS
 
                   DO ilo = 1, atoms%nlo(itype)
 #ifdef CPP_OLDINTEL
-                     CALL judft_error("no LOs & hybrid with old intel compiler!", calledby="subvxc.F90")
+                     CALL judft_error("no LOs   hybrid with old intel compiler!", calledby="subvxc.F90")
 #else
                      l1 = atoms%llo(ilo, itype)
                      DO ikvec = 1, invsfct*(2*l1 + 1)

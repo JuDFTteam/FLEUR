@@ -6,7 +6,7 @@ MODULE m_hybrid_core
 
 CONTAINS
    SUBROUTINE corewf(atoms, jsp, input, dimension,&
-  &                   vr, lmaxcd, maxindxc, mpi, lmaxc, nindxc, core1, core2, eig_c)
+                      vr, lmaxcd, maxindxc, mpi, lmaxc, nindxc, core1, core2, eig_c)
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
@@ -47,8 +47,8 @@ CONTAINS
 
       ! generate relativistic core wave functions( ->core1r,core2r )
       CALL calcorewf(dimension, input, jsp, atoms,&
-     &                ncstd, vr,&
-     &                lmaxc, nindxcr, core1r, core2r, eig_cr, mpi)
+                      ncstd, vr,&
+                      lmaxc, nindxcr, core1r, core2r, eig_cr, mpi)
 
       nindxc = 0
 
@@ -58,11 +58,11 @@ CONTAINS
       nindxc(0, :) = nindxcr(0, :)
       DO itype = 1, atoms%ntype
          core1(:, :nindxc(0, itype), 0, itype)&
-      &    = core1r(:, 0, :nindxc(0, itype), itype)
+           = core1r(:, 0, :nindxc(0, itype), itype)
          core2(:, :nindxc(0, itype), 0, itype)&
-      &    = core2r(:, 0, :nindxc(0, itype), itype)
+           = core2r(:, 0, :nindxc(0, itype), itype)
          eig_c(:nindxc(0, itype), 0, itype)&
-      &    = eig_cr(0, :nindxc(0, itype), itype)
+           = eig_cr(0, :nindxc(0, itype), itype)
       END DO
 
       DO itype = 1, atoms%ntype
@@ -73,43 +73,43 @@ CONTAINS
                DO i = 1, nindxcr(l, itype), 2
                   nindxc(l, itype) = nindxc(l, itype) + 1
                   core1(:atoms%jri(itype), nindxc(l, itype), l, itype) =&
-         &                       (weight1*core1r(:atoms%jri(itype), l, i, itype) +&
-         &                        weight2*core1r(:atoms%jri(itype), l, i + 1, itype))&
-         &                       /(weight1 + weight2)
+                                 (weight1*core1r(:atoms%jri(itype), l, i, itype) +&
+                                  weight2*core1r(:atoms%jri(itype), l, i + 1, itype))&
+                                 /(weight1 + weight2)
                   core2(:atoms%jri(itype), nindxc(l, itype), l, itype) =&
-         &                       (weight1*core2r(:atoms%jri(itype), l, i, itype) + &
-         &                        weight2*core2r(:atoms%jri(itype), l, i + 1, itype))&
-         &                       /(weight1 + weight2)
+                                 (weight1*core2r(:atoms%jri(itype), l, i, itype) + &
+                                  weight2*core2r(:atoms%jri(itype), l, i + 1, itype))&
+                                 /(weight1 + weight2)
 
                   eig_c(nindxc(l, itype), l, itype) =&
-         &                       (weight1*eig_cr(l, i, itype) +&
-         &                        weight2*eig_cr(l, i + 1, itype))&
-         &                       /(weight1 + weight2)
+                                 (weight1*eig_cr(l, i, itype) +&
+                                  weight2*eig_cr(l, i + 1, itype))&
+                                 /(weight1 + weight2)
                END DO
             ELSE
                DO i = 1, nindxcr(l, itype) - 1, 2
                   nindxc(l, itype) = nindxc(l, itype) + 1
                   core1(:atoms%jri(itype), nindxc(l, itype), l, itype) =&
-         &                       (weight1*core1r(:atoms%jri(itype), l, i, itype) +&
-         &                        weight2*core1r(:atoms%jri(itype), l, i + 1, itype))&
-         &                       /(weight1 + weight2)
+                                 (weight1*core1r(:atoms%jri(itype), l, i, itype) +&
+                                  weight2*core1r(:atoms%jri(itype), l, i + 1, itype))&
+                                 /(weight1 + weight2)
                   core2(:atoms%jri(itype), nindxc(l, itype), l, itype) =&
-         &                       (weight1*core2r(:atoms%jri(itype), l, i, itype) + &
-         &                        weight2*core2r(:atoms%jri(itype), l, i + 1, itype))&
-         &                       /(weight1 + weight2)
+                                 (weight1*core2r(:atoms%jri(itype), l, i, itype) + &
+                                  weight2*core2r(:atoms%jri(itype), l, i + 1, itype))&
+                                 /(weight1 + weight2)
 
                   eig_c(nindxc(l, itype), l, itype) =&
-         &                       (weight1*eig_cr(l, i, itype) +&
-         &                        weight2*eig_cr(l, i + 1, itype))&
-         &                       /(weight1 + weight2)
+                                 (weight1*eig_cr(l, i, itype) +&
+                                  weight2*eig_cr(l, i + 1, itype))&
+                                 /(weight1 + weight2)
                END DO
                nindxc(l, itype) = nindxc(l, itype) + 1
                core1(:atoms%jri(itype), nindxc(l, itype), l, itype)&
-        &        = core1r(:atoms%jri(itype), l, nindxcr(l, itype), itype)
+                 = core1r(:atoms%jri(itype), l, nindxcr(l, itype), itype)
                core2(:atoms%jri(itype), nindxc(l, itype), l, itype)&
-        &        = core2r(:atoms%jri(itype), l, nindxcr(l, itype), itype)
+                 = core2r(:atoms%jri(itype), l, nindxcr(l, itype), itype)
                eig_c(nindxc(l, itype), l, itype)&
-        &        = eig_cr(l, nindxcr(l, itype), itype)
+                 = eig_cr(l, nindxcr(l, itype), itype)
             END IF
 
          END DO
@@ -118,13 +118,13 @@ CONTAINS
       deallocate(nindxcr, core1r, core2r, eig_cr)
 
       IF (maxindxc /= maxval(nindxc))&
-     &   call judft_error('corewf: counting error nindxc')
+         call judft_error('corewf: counting error nindxc')
 
    END SUBROUTINE corewf
 
    SUBROUTINE calcorewf(dimension, input, jspin, atoms,&
-  &                     ncstd, vr,&
-  &                     lmaxc, nindxcr, core1, core2, eig_c, mpi)
+                        ncstd, vr,&
+                        lmaxc, nindxcr, core1, core2, eig_c, mpi)
 
       USE m_intgr, ONLY: intgr3, intgr0, intgr1
       USE m_constants, ONLY: c_light
@@ -188,7 +188,7 @@ CONTAINS
          dxx = atoms%dx(itype)
          bmu = 0.0
          CALL setcor(itype, input%jspins, atoms, input, bmu,&
-      &               nst, kappa, nprnc, occ_h)
+                      nst, kappa, nprnc, occ_h)
 
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins*occ_h(1:nst, jspin)
@@ -284,9 +284,9 @@ CONTAINS
                nindxcr(NINT(fl), itype) = nindxcr(NINT(fl), itype) + 1
 
                core1(:atoms%jri(itype), NINT(fl), nindxcr(NINT(fl), itype), itype)&
-        &                                                 = a(:atoms%jri(itype))
+                                                          = a(:atoms%jri(itype))
                core2(:atoms%jri(itype), NINT(fl), nindxcr(NINT(fl), itype), itype)&
-        &                                                 = b(:atoms%jri(itype))
+                                                          = b(:atoms%jri(itype))
 
                eig_c(NINT(fl), nindxcr(NINT(fl), itype), itype) = e
 
@@ -300,8 +300,8 @@ CONTAINS
       END DO
 
 8000  FORMAT(/, /, 10x, 'z=', f4.0, 5x, 'r(1)=', e14.6, 5x, 'dx=', f8.6, 5x,&
-      &       'm.t.index=', i4, /, 15x, 'n', 4x, 'l', 5x, 'j', 4x, 'energy', 7x,&
-      &       'weight')
+              'm.t.index=', i4, /, 15x, 'n', 4x, 'l', 5x, 'j', 4x, 'energy', 7x,&
+              'weight')
 8010  FORMAT(12x, 2f5.0, f6.1, f10.4, f10.0)
 
    END SUBROUTINE calcorewf

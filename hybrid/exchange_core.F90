@@ -319,7 +319,7 @@ CONTAINS
       ENDIF
       !       DO icst = 1,ncstd
       !         IF ( irank == 0 )
-      !      &    WRITE(6,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
+      !           WRITE(6,'(    ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,1X,F12.5)')bkpt,icst,REAL(exch(icst,icst))*(-27.211608)
       !       END DO
 
       ! add core exchange contributions to the te_hfex

@@ -10,10 +10,10 @@ MODULE m_wavefproducts
    PUBLIC wavefproducts_inv, wavefproducts_inv5
 CONTAINS
 
-   SUBROUTINE wavefproducts_noinv(bandi, bandf, nk, iq, dimension, input, jsp,&                  !cprod,&
-  &                 cell, atoms, hybrid, hybdat,&
-  &                 kpts, mnobd,&
-  &                 lapw, sym, noco, nbasm_mt, nkqpt, cprod)
+   SUBROUTINE wavefproducts_noinv(bandi, bandf, nk, iq, dimension, input, jsp,                   !cprod,&
+                    cell, atoms, hybrid, hybdat,&
+                    kpts, mnobd,&
+                    lapw, sym, noco, nbasm_mt, nkqpt, cprod)
 
       USE m_constants
       USE m_util, ONLY: modulo1
@@ -272,12 +272,12 @@ CONTAINS
    END SUBROUTINE wavefproducts_noinv
 
    SUBROUTINE wavefproducts_inv(&
-  &                  bandi, bandf, dimension, input, jsp, atoms,&
-  &                  lapw, kpts,&
-  &                  nk, iq, hybdat, mnobd, hybrid,&
-  &                  parent, cell,&
-  &                  nbasm_mt, sym, noco,&
-  &                  nkqpt, cprod)
+                     bandi, bandf, dimension, input, jsp, atoms,&
+                     lapw, kpts,&
+                     nk, iq, hybdat, mnobd, hybrid,&
+                     parent, cell,&
+                     nbasm_mt, sym, noco,&
+                     nkqpt, cprod)
 
       USE m_util, ONLY: modulo1
       USE m_wrapper
@@ -1198,14 +1198,14 @@ CONTAINS
    END SUBROUTINE wavefproducts_inv
 
    SUBROUTINE wavefproducts_inv5(&
-  &                    bandi, bandf, bandoi, bandof,&
-  &                    dimension, input, jsp, atoms,&
-  &                    lapw, kpts,&
-  &                    nk, iq, hybdat, mnobd, hybrid,&
-  &                    parent, cell,&
-  &                    nbasm_mt, sym,&
-  &                    noco,&
-  &                    nkqpt, cprod)
+                       bandi, bandf, bandoi, bandof,&
+                       dimension, input, jsp, atoms,&
+                       lapw, kpts,&
+                       nk, iq, hybdat, mnobd, hybrid,&
+                       parent, cell,&
+                       nbasm_mt, sym,&
+                       noco,&
+                       nkqpt, cprod)
 
       USE m_util, ONLY: modulo1
       USE m_olap, ONLY: gptnorm
@@ -1322,14 +1322,14 @@ CONTAINS
       call timestop("read_z")
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
-     &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%g(1, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
+           + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
+           + maxval(abs(mpbasis%g(1, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
       g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
-     &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%g(2, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
+           + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
+           + maxval(abs(mpbasis%g(2, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
       g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
-     &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%g(3, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
+           + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
+           + maxval(abs(mpbasis%g(3, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation pointer'
@@ -1593,10 +1593,10 @@ CONTAINS
                                     DO ibando = bandoi, bandof
 
                                        rarr3(1, ibando, iband) = rarr3(1, ibando, iband)&
-                &                    + rdum1*cmt(ibando, lmp2, iatom1) + rdum2*cmt(ibando, lmp2, iatom2)
+                                     + rdum1*cmt(ibando, lmp2, iatom1) + rdum2*cmt(ibando, lmp2, iatom2)
 
                                        rarr3(2, ibando, iband) = rarr3(2, ibando, iband)&
-                &                    + rdum1*cmt(ibando, lmp2, iatom2) - rdum2*cmt(ibando, lmp2, iatom1)
+                                     + rdum1*cmt(ibando, lmp2, iatom2) - rdum2*cmt(ibando, lmp2, iatom1)
 
                                     END DO  !ibando
                                  END DO  !iband
@@ -1614,10 +1614,10 @@ CONTAINS
                                     ! loop over occupied bands
                                     DO ibando = bandoi, bandof
                                        rarr3(1, ibando, iband) = rarr3(1, ibando, iband)&
-                &                    + rdum1*cmt(ibando, lmp1, iatom1) + rdum2*cmt(ibando, lmp1, iatom2)
+                                     + rdum1*cmt(ibando, lmp1, iatom1) + rdum2*cmt(ibando, lmp1, iatom2)
 
                                        rarr3(2, ibando, iband) = rarr3(2, ibando, iband)&
-                &                    + rdum1*cmt(ibando, lmp1, iatom2) - rdum2*cmt(ibando, lmp1, iatom1)
+                                     + rdum1*cmt(ibando, lmp1, iatom2) - rdum2*cmt(ibando, lmp1, iatom1)
                                     END DO  !ibando
                                  END DO  !iband
                               END IF  ! rdum .ne. 0
@@ -2216,16 +2216,16 @@ CONTAINS
    END SUBROUTINE wavefproducts_inv5
 
    SUBROUTINE wavefproducts_noinv5(&
-  &                      bandi, bandf, bandoi, bandof,&
-  &                      nk, iq, dimension, input, jsp,&
-  &                      cell, atoms, hybrid,&
-  &                      hybdat,&
-  &                      kpts,&
-  &                      mnobd,&
-  &                      lapw, sym,&
-  &                      nbasm_mt,&
-  &                      noco,&
-  &                      nkqpt, cprod)
+                         bandi, bandf, bandoi, bandof,&
+                         nk, iq, dimension, input, jsp,&
+                         cell, atoms, hybrid,&
+                         hybdat,&
+                         kpts,&
+                         mnobd,&
+                         lapw, sym,&
+                         nbasm_mt,&
+                         noco,&
+                         nkqpt, cprod)
 
       USE m_constants
       USE m_util, ONLY: modulo1
@@ -2333,14 +2333,14 @@ CONTAINS
       call timestop("read_z")
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
-     &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%g(1, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
+           + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
+           + maxval(abs(mpbasis%g(1, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
       g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
-     &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%g(2, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
+           + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
+           + maxval(abs(mpbasis%g(2, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
       g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
-     &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%g(3, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
+           + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
+           + maxval(abs(mpbasis%g(3, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq)))) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_noinv2: error allocation pointer'

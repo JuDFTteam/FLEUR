@@ -99,8 +99,8 @@ CONTAINS
                   DO i = 1, ndb
                      if (l_real) THEN
                         cmt_out(lm1:lm2:nn, iatom1, i) = cdum* &
-     &                       matmul(cmt(bandi + i - 1, lm1:lm2:nn, iatom),&
-     &                       sym%d_wgn(-l:l, -l:l, l, iop))
+                             matmul(cmt(bandi + i - 1, lm1:lm2:nn, iatom),&
+                             sym%d_wgn(-l:l, -l:l, l, iop))
                      else
                         IF (trs) THEN
                            cmthlp(:2*l + 1) = CONJG(cmt(bandi + i - 1, lm1:lm2:nn, iatom))
@@ -244,7 +244,7 @@ CONTAINS
                   DO i = 1, nbands
                      if (l_real) THEN
                         cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom),&
-             &                             hybrid%d_wgn2(-l:l, -l:l, l, iop))
+                                           hybrid%d_wgn2(-l:l, -l:l, l, iop))
                      else
                         IF (trs) THEN
                            cmthlp(:2*l + 1) = conjg(cmt(i, lm1:lm2:nn, iatom))
@@ -438,7 +438,7 @@ CONTAINS
          CALL commonphase(cfac, mat, dim1*dim2)
          mat = mat/cfac
          IF (any(abs(aimag(mat)) > 1e-8)) &
-     &STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
+      STOP 'symmetrize: Residual imaginary part. Symmetrization failed.'
       END IF
 
    END SUBROUTINE symmetrize
@@ -578,16 +578,16 @@ CONTAINS
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
-     &                                 -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1))
+                                       -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1))
 !       COMPLEX                 ::  vecin1(dim,nobd,nbands),vecout1(dim,nobd,nbands)
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
 
       call timestart("bra trafo")
 
       allocate(vecin1(dim, nobd, nbands), &
-     &           vecout1(dim, nobd, nbands), stat=ok)
+                 vecout1(dim, nobd, nbands), stat=ok)
       IF (ok /= 0) &
-     &             call judft_error('bra_trafo2: error allocating vecin1 or vecout1')
+                   call judft_error('bra_trafo2: error allocating vecin1 or vecout1')
       vecin1 = 0; vecout1 = 0
 
       IF (maxval(hybrid%lcutm1) > atoms%lmaxd) call judft_error('bra_trafo2: maxlcutm > atoms%lmaxd')   ! very improbable case
@@ -812,17 +812,17 @@ CONTAINS
 !     - arrays -
       INTEGER, INTENT(IN)      ::  rrot(:,:), invrrot(:,:)
       INTEGER, INTENT(IN)      :: lcutm(atoms%ntype),&
-     &                            nindxm(0:maxlcutm, atoms%ntype)
+                                  nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)      :: nbasm(:)
       INTEGER, INTENT(IN)      ::  pointer(&
-     &                          minval(mpbasis%g(1, :)) - 1:maxval(mpbasis%g(1, :)) + 1,&
-     &                          minval(mpbasis%g(2, :)) - 1:maxval(mpbasis%g(2, :)) + 1,&
-     &                          minval(mpbasis%g(3, :)) - 1:maxval(mpbasis%g(3, :)) + 1)
+                                minval(mpbasis%g(1, :)) - 1:maxval(mpbasis%g(1, :)) + 1,&
+                                minval(mpbasis%g(2, :)) - 1:maxval(mpbasis%g(2, :)) + 1,&
+                                minval(mpbasis%g(3, :)) - 1:maxval(mpbasis%g(3, :)) + 1)
 
       COMPLEX, INTENT(IN)      ::  vecin(:)
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
-     &                                 -maxlcutm:maxlcutm,&
-     &                                         0:maxlcutm)
+                                       -maxlcutm:maxlcutm,&
+                                               0:maxlcutm)
       COMPLEX, INTENT(OUT)     ::  vecout(nbasm(ikpt0))
 
 !     - private scalars -
@@ -834,7 +834,7 @@ CONTAINS
       COMPLEX                 ::  cexp, cdum
 !     - private arrays -
       INTEGER                 ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
-     &                            g1(3), iarr(mpbasis%n_g(ikpt0))
+                                  g1(3), iarr(mpbasis%n_g(ikpt0))
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
       COMPLEX                 ::  carr(mpbasis%n_g(ikpt0))
