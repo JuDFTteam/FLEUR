@@ -346,7 +346,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpbasis,hybrid,xcpot)
 
-   CALL hf_init(hybrid,atoms,input,DIMENSION,hybdat)
+   CALL hf_init(mpbasis,hybrid,atoms,input,DIMENSION,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
@@ -474,14 +474,14 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             parent = 0
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
-            CALL symm_hf(kpts,ikpt,sym,dimension,hybdat,eig_irr,atoms,hybrid,cell,lapw,jspin,&
+            CALL symm_hf(kpts,ikpt,sym,dimension,hybdat,eig_irr,atoms,mpbasis,hybrid,cell,lapw,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
             CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpbasis,hybrid,cell,dimension,input,jspin,hybdat,mnobd,lapw,&
                                      eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nsest,indx_sest,&
                                      mpi,exMat)
-            CALL exchange_vccv1(ikpt,atoms,hybrid,hybdat,dimension,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
+            CALL exchange_vccv1(ikpt,atoms,mpbasis,hybrid,hybdat,dimension,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
 
             !Start of workaround for increased functionality of symmetrizeh (call it))
 

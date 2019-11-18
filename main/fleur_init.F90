@@ -206,7 +206,7 @@
 
              CALL timestart("postprocessInput")
              CALL postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
-                                   oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
+                                   oneD,mpbasis,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
                                    noco,dimension,enpara,sphhar,l_opti,l_kpts)
              CALL timestop("postprocessInput")
 
@@ -229,7 +229,7 @@
 
 #ifdef CPP_MPI
              CALL initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
-                  DIMENSION,cell,sym,xcpot,noco,oneD,hybrid,&
+                  DIMENSION,cell,sym,xcpot,noco,oneD,mpbasis,hybrid,&
                   kpts,enpara,sphhar,mpi,obsolete)
 
 #endif

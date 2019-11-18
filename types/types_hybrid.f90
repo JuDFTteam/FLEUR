@@ -13,7 +13,6 @@ MODULE m_types_hybrid
       INTEGER                ::  maxbasm1
       INTEGER                ::  max_indx_p_1
       INTEGER                ::  maxlmindx
-      INTEGER, ALLOCATABLE   ::  num_radfun_per_l(:,:)
       INTEGER, ALLOCATABLE   ::  select1(:,:)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
@@ -27,7 +26,6 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  nobd(:,:)
       REAL, ALLOCATABLE      ::  div_vv(:,:,:)
    CONTAINS
-      procedure :: set_num_radfun_per_l => set_num_radfun_per_l_hybrid
    END TYPE t_hybrid
 
    TYPE t_hybdat
@@ -128,21 +126,4 @@ contains
       gptnorm = norm2(matmul(gpt(:), bmat(:,:)))
 
    END FUNCTION gptnorm
-
-   subroutine set_num_radfun_per_l_hybrid(hybrid, atoms)
-      use m_types_setup
-      implicit NONE
-      class(t_hybrid) :: hybrid
-      type(t_atoms)   :: atoms
-      integer :: itype, ilo
-
-      ! there is always at least two: u and u_dot
-      hybrid%num_radfun_per_l = 2
-      DO itype = 1, atoms%ntype
-         DO ilo = 1, atoms%nlo(itype)
-            hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) &
-              = hybrid%num_radfun_per_l(atoms%llo(ilo, itype), itype) + 1
-         END DO
-      END DO
-   end subroutine set_num_radfun_per_l_hybrid
 END MODULE m_types_hybrid

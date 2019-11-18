@@ -51,6 +51,7 @@ CONTAINS
       REAL                ::  vecinhlp(hybrid%nbasm(ikpt))
       REAL, ALLOCATABLE ::  coulhlp(:, :)
 
+      call timestart("spmvec_invs")
       vecinhlp = vecin
 
       CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, 1, vecinhlp)
@@ -206,7 +207,7 @@ CONTAINS
       CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn,&
      &             2,&
      &             vecout)
-
+     call timestop("spmvec_invs")
    END SUBROUTINE spmvec_invs
 
    SUBROUTINE spmvec_noinvs(&
@@ -258,6 +259,7 @@ CONTAINS
       COMPLEX             ::  vecinhlp(hybrid%nbasm(ikpt))
       COMPLEX, ALLOCATABLE ::  coulhlp(:, :)
 
+      call timestart("spmvec_noinvs")
       vecinhlp = vecin
 
       CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, 1, vec_c=vecinhlp)
@@ -414,7 +416,7 @@ CONTAINS
       CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn,&
      &             2,&
      &             vec_c=vecout)
-
+     call timestop("spmvec_noinvs")
    END SUBROUTINE spmvec_noinvs
 
    SUBROUTINE reorder(nbasm, nbasp, atoms, lcutm, maxlcutm, nindxm, imode, vec_r, vec_c)

@@ -177,14 +177,14 @@ CONTAINS
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
          CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell, dimension, &
-                       hybrid, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
+                       mpbasis, hybrid, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
          CALL corewf(atoms, jsp, input, DIMENSION, vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
 
          ! check olap between core-basis/core-valence/basis-basis
-         CALL checkolap(atoms, hybdat, hybrid, kpts%nkpt, kpts, dimension, mpi, &
+         CALL checkolap(atoms, hybdat, mpbasis, hybrid, kpts%nkpt, kpts, dimension, mpi, &
                         input, sym, noco, cell, lapw, jsp)
 
          ! set up pointer pntgpt
@@ -230,8 +230,8 @@ CONTAINS
                ll = l2
                DO l1 = 0, ll
                   IF (ABS(l1 - l2) <= hybrid%lcutm1(itype)) THEN
-                     DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
-                        nn = hybrid%num_radfun_per_l(l1, itype)
+                     DO n2 = 1, mpbasis%num_radfun_per_l(l2, itype)
+                        nn = mpbasis%num_radfun_per_l(l1, itype)
                         IF (l1 == l2) nn = n2
                         DO n1 = 1, nn
                            ! Calculate all basis-function hybdat%products to obtain
@@ -269,7 +269,7 @@ CONTAINS
             hybrid%nobd(nk,jsp) = COUNT(results%w_iks(:hybrid%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
-         hybrid%maxlmindx = MAXVAL([(SUM([(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
+         hybrid%maxlmindx = MAXVAL([(SUM([(mpbasis%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
          hybrid%nbands = MIN(hybrid%bands1, DIMENSION%neigd)
 
       ENDIF ! hybrid%l_calhf

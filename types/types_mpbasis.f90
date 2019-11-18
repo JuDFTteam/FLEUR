@@ -9,6 +9,7 @@ module m_types_mpbasis
       integer, allocatable   :: num_radbasfn(:, :)
       real, allocatable      :: radbasfn_mt(:, :, :, :)
       real                   :: linear_dep_tol  !only read in
+      INTEGER, ALLOCATABLE   :: num_radfun_per_l(:,:)
 
       integer, allocatable   :: l1(:, :, :) !(n, l, itype)
       integer, allocatable   :: l2(:, :, :) !(n, l, itype)
@@ -28,6 +29,7 @@ module m_types_mpbasis
       procedure :: set_nl                 => mpbasis_set_nl
       procedure :: free                   => mpbasis_free
       procedure :: init                   => mpbasis_init
+      procedure :: set_num_radfun_per_l   => set_num_radfun_per_l_mpbasis
    end type t_mpbasis
 contains
    function mpbasis_num_gpts(mpbasis)
@@ -538,4 +540,21 @@ contains
       n2 = mpbasis%n2(n, l, itype) !
 
    end subroutine mpbasis_set_nl
+
+   subroutine set_num_radfun_per_l_mpbasis(mpbasis, atoms)
+      use m_types_setup
+      implicit NONE
+      class(t_mpbasis) :: mpbasis
+      type(t_atoms)   :: atoms
+      integer :: itype, ilo
+
+      ! there is always at least two: u and u_dot
+      mpbasis%num_radfun_per_l = 2
+      DO itype = 1, atoms%ntype
+         DO ilo = 1, atoms%nlo(itype)
+            mpbasis%num_radfun_per_l(atoms%llo(ilo, itype), itype) &
+              = mpbasis%num_radfun_per_l(atoms%llo(ilo, itype), itype) + 1
+         END DO
+      END DO
+   end subroutine set_num_radfun_per_l_mpbasis
 end module m_types_mpbasis

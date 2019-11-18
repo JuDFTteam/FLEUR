@@ -8,7 +8,7 @@ MODULE m_subvxc
 
 CONTAINS
 
-   SUBROUTINE subvxc(lapw, bk, DIMENSION, input, jsp, vr0, atoms, usdus, hybrid, el, ello, sym, &
+   SUBROUTINE subvxc(lapw, bk, DIMENSION, input, jsp, vr0, atoms, usdus, mpbasis, hybrid, el, ello, sym, &
                      cell, sphhar, stars, xcpot, mpi, oneD, hmat, vx)
 
       USE m_types
@@ -28,6 +28,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_oneD), INTENT(IN)    :: oneD
+      TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -68,7 +69,7 @@ CONTAINS
       INTEGER               ::  gg(3)
       INTEGER               ::  pointer_lo(atoms%nlod, atoms%ntype)
 
-      REAL                  ::  integ(0:sphhar%nlhd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd)
+      REAL                  ::  integ(0:sphhar%nlhd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
       REAL                  ::  grid(atoms%jmtd)
       REAL                  ::  vr(atoms%jmtd, 0:sphhar%nlhd)
       REAL                  ::  f(atoms%jmtd, 2, 0:atoms%lmaxd), g(atoms%jmtd, 2, 0:atoms%lmaxd)
@@ -76,8 +77,8 @@ CONTAINS
       REAL                  ::  uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
       REAL                  ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
 
-      REAL                  ::  bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
-      REAL                  ::  bas2(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL                  ::  bas1(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL                  ::  bas2(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX               ::  vpw(stars%ng3)
       COMPLEX               ::  vxc(hmat%matsize1*(hmat%matsize1 + 1)/2)
@@ -98,7 +99,7 @@ CONTAINS
       vxc = 0
 
       ! Calculate radial functions
-      hybrid%num_radfun_per_l = 2
+      mpbasis%num_radfun_per_l = 2
       DO itype = 1, atoms%ntype
 
          ! Generate the radial basis-functions for each l
@@ -125,10 +126,10 @@ CONTAINS
                         usdus, uuilon, duilon, ulouilopn, flo, .TRUE.)
 
             DO i = 1, atoms%nlo(itype)
-               hybrid%num_radfun_per_l(atoms%llo(i, itype), itype) = hybrid%num_radfun_per_l(atoms%llo(i, itype), itype) + 1
-               pointer_lo(i, itype) = hybrid%num_radfun_per_l(atoms%llo(i, itype), itype)
-               bas1(:, hybrid%num_radfun_per_l(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 1, i)
-               bas2(:, hybrid%num_radfun_per_l(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 2, i)
+               mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype) = mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype) + 1
+               pointer_lo(i, itype) = mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype)
+               bas1(:, mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 1, i)
+               bas2(:, mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 2, i)
             END DO
          END IF
       END DO
@@ -320,11 +321,11 @@ CONTAINS
             DO ilharm = 0, nlharm
                i = 0
                DO l1 = 0, atoms%lmax(itype)
-                  DO p1 = 1, hybrid%num_radfun_per_l(l1, itype)
+                  DO p1 = 1, mpbasis%num_radfun_per_l(l1, itype)
                      i = i + 1
                      j = 0
                      DO l2 = 0, atoms%lmax(itype)
-                        DO p2 = 1, hybrid%num_radfun_per_l(l2, itype)
+                        DO p2 = 1, mpbasis%num_radfun_per_l(l2, itype)
                            j = j + 1
                            IF (j <= i) THEN
                               DO igrid = 1, atoms%jri(itype)
@@ -361,7 +362,7 @@ CONTAINS
                                  pp1 = p1
                               END IF
 
-                              IF (hybrid%num_radfun_per_l(l1, itype) <= 2) call judft_error('subvxc: error hybrid%num_radfun_per_l')
+                              IF (mpbasis%num_radfun_per_l(l1, itype) <= 2) call judft_error('subvxc: error mpbasis%num_radfun_per_l')
 
                               lm = 0
 

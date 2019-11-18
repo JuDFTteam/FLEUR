@@ -243,7 +243,7 @@ CONTAINS
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            lmstart(l, itype) = sum([(hybrid%num_radfun_per_l(ll, itype)*(2*ll+1), ll=0, l-1)])
+            lmstart(l, itype) = sum([(mpbasis%num_radfun_per_l(ll, itype)*(2*ll+1), ll=0, l-1)])
          END DO
       END DO
 
@@ -280,7 +280,7 @@ CONTAINS
                         DO m1 = -l1, l1
                            m2 = m1 + m ! Gaunt condition -m1+m2-m=0
                            IF (abs(m2) <= l2) THEN
-                              lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
+                              lm2 = lm2_0 + n2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
                                              * outer_prod(cmt(bandoi:bandof, lm2, ic), &
@@ -290,7 +290,7 @@ CONTAINS
 
                            m2 = m1 - m ! switch role of b1 and b2
                            IF (abs(m2) <= l2 .and. offdiag) THEN
-                              lm2 = lm2_0 + n2 + (m2 + l2)*hybrid%num_radfun_per_l(l2, itype)
+                              lm2 = lm2_0 + n2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
                                              * outer_prod(cmt(bandoi:bandof, lm1, ic),&
@@ -298,7 +298,7 @@ CONTAINS
                               END IF
                            END IF
 
-                           lm1 = lm1 + hybrid%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
+                           lm1 = lm1 + mpbasis%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
                         END DO  !m1
 

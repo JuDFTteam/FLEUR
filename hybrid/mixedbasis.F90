@@ -101,7 +101,7 @@ CONTAINS
       IF (ALLOCATED(mpbasis%radbasfn_mt)) deallocate(mpbasis%radbasfn_mt)
 
       CALL usdus%init(atoms, input%jspins)
-      call hybrid%set_num_radfun_per_l(atoms)
+      call mpbasis%set_num_radfun_per_l(atoms)
 
       ! initialize gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
@@ -114,7 +114,7 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      call gen_bas_fun(atoms, enpara, gridf, input, hybrid, mpi, vr0, usdus, bas1, bas2)
+      call gen_bas_fun(atoms, enpara, gridf, input, mpbasis, hybrid, mpi, vr0, usdus, bas1, bas2)
 
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
@@ -129,8 +129,8 @@ CONTAINS
       END IF
 
       allocate(mpbasis%num_radbasfn(0:maxval(hybrid%lcutm1), atoms%ntype))
-      allocate(seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
-      allocate(selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd))
+      allocate(seleco(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd))
+      allocate(selecu(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd))
       mpbasis%num_radbasfn = 0    !!! 01/12/10 jij%M.b.
 
       ! determine maximal indices of (radial) mixed-basis functions (->num_radbasfn)
@@ -145,7 +145,7 @@ CONTAINS
          selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
 
          ! include local orbitals
-         IF (maxval(hybrid%num_radfun_per_l) >= 3) THEN
+         IF (maxval(mpbasis%num_radfun_per_l) >= 3) THEN
             seleco(3:,:) = .TRUE.
             selecu(3:,:) = .TRUE.
          END IF
@@ -158,18 +158,18 @@ CONTAINS
             ! valence * valence
             !
             if(.not. allocated(selecmat)) then
-               allocate(selecmat(maxval(hybrid%num_radfun_per_l), &
+               allocate(selecmat(maxval(mpbasis%num_radfun_per_l), &
                                  0:atoms%lmaxd, &
-                                 maxval(hybrid%num_radfun_per_l), &
+                                 maxval(mpbasis%num_radfun_per_l), &
                                  0:atoms%lmaxd))
             endif
-            selecmat = calc_selecmat(atoms, hybrid, seleco, selecu)
+            selecmat = calc_selecmat(atoms, mpbasis, hybrid, seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
                   IF (l >= ABS(l1 - l2) .AND. l <= l1 + l2) THEN
-                     DO n1 = 1, hybrid%num_radfun_per_l(l1, itype)
-                        DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
+                     DO n1 = 1, mpbasis%num_radfun_per_l(l1, itype)
+                        DO n2 = 1, mpbasis%num_radfun_per_l(l2, itype)
                            M = M + 1
                            IF (selecmat(n1, l1, n2, l2)) THEN
                               n_radbasfn = n_radbasfn + 1
@@ -203,7 +203,7 @@ CONTAINS
          seleco(2, 0:hybrid%select1(2, itype)) = .TRUE.
          selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
          ! include lo's
-         IF (maxval(hybrid%num_radfun_per_l) >= 3) THEN
+         IF (maxval(mpbasis%num_radfun_per_l) >= 3) THEN
             seleco(3:,:) = .TRUE.
             selecu(3:,:) = .TRUE.
          END IF
@@ -222,13 +222,13 @@ CONTAINS
             i_basfn = 0
 
             ! valence*valence
-            selecmat =  calc_selecmat(atoms, hybrid, seleco, selecu)
+            selecmat =  calc_selecmat(atoms, mpbasis, hybrid, seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
                   IF (l >= ABS(l1 - l2) .AND. l <= l1 + l2) THEN
-                     DO n1 = 1, hybrid%num_radfun_per_l(l1, itype)
-                        DO n2 = 1, hybrid%num_radfun_per_l(l2, itype)
+                     DO n1 = 1, mpbasis%num_radfun_per_l(l1, itype)
+                        DO n2 = 1, mpbasis%num_radfun_per_l(l2, itype)
 
                            IF (selecmat(n1, l1, n2, l2)) THEN
                               DO jspin = 1, input%jspins
@@ -384,12 +384,12 @@ CONTAINS
       hybrid%maxlmindx = 0
       do itype = 1,atoms%ntype
          hybrid%maxlmindx = max(hybrid%maxlmindx,&
-                                SUM([(hybrid%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))])&
+                                SUM([(mpbasis%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))])&
                                 )
       enddo
    END SUBROUTINE mixedbasis
 
-   subroutine gen_bas_fun(atoms, enpara, gridf, input, hybrid, mpi, vr0, usdus, bas1, bas2)
+   subroutine gen_bas_fun(atoms, enpara, gridf, input, mpbasis, hybrid, mpi, vr0, usdus, bas1, bas2)
       use m_judft
       use m_types
       USE m_radfun, ONLY: radfun
@@ -400,6 +400,7 @@ CONTAINS
       type(t_enpara), intent(in)       :: enpara
       type(t_input), intent(in)        :: input
       type(t_hybrid), intent(in)       :: hybrid
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       type(t_mpi), intent(in)          :: mpi
       type(t_usdus), intent(inout)     :: usdus
 
@@ -423,7 +424,7 @@ CONTAINS
 
       ! this is 5-D array. it could cause Problems in bigger systems
       allocate(bas1(atoms%jmtd,    &
-                    maxval(hybrid%num_radfun_per_l), &
+                    maxval(mpbasis%num_radfun_per_l), &
                     0:atoms%lmaxd, &
                     atoms%ntype,   &
                     input%jspins),   source=0.0, stat=ok)
@@ -464,7 +465,7 @@ CONTAINS
       DO jspin = 1, input%jspins
          DO itype = 1, atoms%ntype
             DO l = 0, atoms%lmax(itype)
-               DO i = 1, hybrid%num_radfun_per_l(l, itype)
+               DO i = 1, mpbasis%num_radfun_per_l(l, itype)
                   norm = sqrt(intgrf(bas1(:,i, l, itype, jspin)**2 + bas2(:,i, l, itype, jspin)**2, &
                                 atoms, itype, gridf))
                   bas1(:atoms%jri(itype), i, l, itype, jspin) = bas1(:atoms%jri(itype), i, l, itype, jspin)/norm
@@ -475,25 +476,26 @@ CONTAINS
       END DO
    end subroutine gen_bas_fun
 
-   function calc_selecmat(atoms,hybrid,seleco, selecu) result(selecmat)
+   function calc_selecmat(atoms,mpbasis,hybrid,seleco, selecu) result(selecmat)
       ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
       use m_types
       use m_judft
       implicit NONE
 
       type(t_atoms),  intent(in) :: atoms
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       type(t_hybrid), intent(in) :: hybrid
-      LOGICAL, intent(in) :: seleco(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd)
-      LOGICAL, intent(in) :: selecu(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd)
-      LOGICAL  ::  selecmat(maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, &
-                            maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd)
+      LOGICAL, intent(in) :: seleco(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
+      LOGICAL, intent(in) :: selecu(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
+      LOGICAL  ::  selecmat(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, &
+                            maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
       integer                       :: n1, l1, n2, l2
 
       ! column-major means left-most index varies the fastest
       do l2=0,atoms%lmaxd
-         do n2=1,maxval(hybrid%num_radfun_per_l)
+         do n2=1,maxval(mpbasis%num_radfun_per_l)
             do l1=0,atoms%lmaxd
-               do n1=1,maxval(hybrid%num_radfun_per_l)
+               do n1=1,maxval(mpbasis%num_radfun_per_l)
                   selecmat(n1,l1,n2,l2) = seleco(n1, l1) .AND. selecu(n2, l2)
                enddo
             enddo

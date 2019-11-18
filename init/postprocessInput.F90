@@ -9,7 +9,7 @@ MODULE m_postprocessInput
 CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
-     oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
+     oneD,mpbasis,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
      noco,DIMENSION,enpara,sphhar,l_opti,l_kpts)
 
   USE m_juDFT
@@ -36,7 +36,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_od_kptsgen
   USE m_gen_bz
   USE m_nocoInputCheck
-  USE m_kpoints   
+  USE m_kpoints
   USE m_types_forcetheo_extended
   USE m_relaxio
 
@@ -46,12 +46,13 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CLASS(t_forcetheo),INTENT(IN)   :: forcetheo
   TYPE(t_input),    INTENT(INOUT) :: input
   TYPE(t_sym),      INTENT(INOUT) :: sym
-  TYPE(t_stars),    INTENT(INOUT) :: stars 
+  TYPE(t_stars),    INTENT(INOUT) :: stars
   TYPE(t_atoms),    INTENT(INOUT) :: atoms
   TYPE(t_vacuum),   INTENT(INOUT) :: vacuum
   TYPE(t_obsolete), INTENT(INOUT) :: obsolete
   TYPE(t_kpts),     INTENT(INOUT) :: kpts
   TYPE(t_oneD),     INTENT(INOUT) :: oneD
+ TYPE(t_mpbasis), intent(inout) :: mpbasis
   TYPE(t_hybrid),   INTENT(INOUT) :: hybrid
   TYPE(t_cell),     INTENT(INOUT) :: cell
   TYPE(t_banddos),  INTENT(INOUT) :: banddos
@@ -70,7 +71,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   INTEGER              :: ios, ntst, ierr
   REAL                 :: rmtmax, zp, radius, dr
   LOGICAL              :: l_vca, l_test
- 
+
   INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
   REAL,    ALLOCATABLE :: rmt1(:)
 
@@ -230,9 +231,9 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Calculate missing kpts parameters
      CALL kpoints(oneD,sym,cell,input,noco,banddos,kpts,l_kpts)
-    
+
      ! Generate missing general parameters
-     
+
      minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
      IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
      IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
@@ -244,7 +245,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         dimension%neigd = minNeigd
      END IF
 
-   
+
      !cell%aamat=matmul(transpose(cell%amat),cell%amat)
      cell%bbmat=matmul(cell%bmat,transpose(cell%bmat))
 
@@ -352,7 +353,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
                        atoms%nat,atoms%nat,nq1,cell%amat,cell%bmat,atoms%taual,&
                        sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
                        atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
-                       sphhar%mlh,sphhar%clnu)        
+                       sphhar%mlh,sphhar%clnu)
         ii = 1
         DO i = 1,atoms%ntype
            atoms%nlhtyp(i) = nlhtp1(ii)
@@ -421,8 +422,8 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Initialize missing hybrid functionals arrays
 
-     ALLOCATE (hybrid%num_radfun_per_l(0:atoms%lmaxd,atoms%ntype))
-   
+     ALLOCATE (mpbasis%num_radfun_per_l(0:atoms%lmaxd,atoms%ntype))
+
      ! Generate lattice harmonics
 
      IF (.NOT.oneD%odd%d1) THEN
@@ -509,7 +510,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Generate stars
 
-     CALL timestart("strgn") 
+     CALL timestart("strgn")
      IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
         CALL strgn1(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
         IF (oneD%odd%d1) THEN
@@ -518,7 +519,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      ELSE
         CALL strgn2(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot)
      END IF
-     CALL timestop("strgn") 
+     CALL timestop("strgn")
 
      ! Other small stuff
 
@@ -539,7 +540,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
 
      CALL prp_xcfft(stars,input,cell,xcpot)
- 
+
   END IF !(mpi%irank.EQ.0)
 #ifdef CPP_MPI
   CALL MPI_BCAST(sliceplot%iplot,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
@@ -547,10 +548,10 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CALL MPI_BCAST(noco%l_noco,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
 
-  CALL timestart("stepf") 
+  CALL timestart("stepf")
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
-  CALL timestop("stepf") 
-  IF (sliceplot%iplot.EQ.0) THEN   
+  CALL timestop("stepf")
+  IF (sliceplot%iplot.EQ.0) THEN
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
@@ -561,7 +562,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 #ifdef CPP_MPI
   CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 #endif
-  IF (.not.noco%l_noco) & 
+  IF (.not.noco%l_noco) &
   CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

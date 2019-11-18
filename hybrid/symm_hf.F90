@@ -66,7 +66,7 @@ CONTAINS
 
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, hybrid, cell, &
+   SUBROUTINE symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, mpbasis, hybrid, cell, &
                       lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
@@ -82,6 +82,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
       TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN) :: hybrid
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -278,11 +279,12 @@ CONTAINS
          IF (ok /= 0) call judft_error('symm: failure allocation rep_v')
 
          call olappw%alloc(z%l_real, lapw%nv(jsp), lapw%nv(jsp))
-         allocate(olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
+         allocate(olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
 
          olapmt = 0
-         CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, hybrid, cell, hybdat%bas1, hybdat%bas2)
+         CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, mpbasis, &
+                          hybrid, cell, hybdat%bas1, hybdat%bas2)
 
          allocate(cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation cmthlp/cpwhlp')
@@ -299,16 +301,16 @@ CONTAINS
                   cpwhlp = 0
 
                   CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms, hybrid, kpts, sym, jsp, dimension, cell, lapw)
+                                       i, ndb, nk, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, dimension, cell, lapw)
 
                   DO iband = 1, ndb
                      carr1 = cmt(iband + i - 1, :, :)
                      IF (z%l_real) THEN
                         rep_d(iband, ic, isym) = wfolap_inv(carr1, z%data_r(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                            cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_r, olapmt, atoms, hybrid)
+                                                            cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_r, olapmt, atoms, mpbasis, hybrid)
                      else
                         rep_d(iband, ic, isym) = wfolap_noinv(carr1, z%data_c(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                              cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_c, olapmt, atoms, hybrid)
+                                                              cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_c, olapmt, atoms, mpbasis, hybrid)
                      endif
                   END DO
 
@@ -378,13 +380,13 @@ CONTAINS
          !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
          IF (allocated(olapmt)) deallocate(olapmt)
-         allocate(olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
+         allocate(olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
          olapmt = 0
 
          DO itype = 1, atoms%ntype
             DO l = 0, atoms%lmax(itype)
-               nn = hybrid%num_radfun_per_l(l, itype)
+               nn = mpbasis%num_radfun_per_l(l, itype)
                DO n2 = 1, nn
                   DO n1 = 1, nn
                      olapmt(n1, n2, l, itype) = intgrf( &
@@ -396,7 +398,7 @@ CONTAINS
             END DO
          END DO
 
-         allocate(wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(maxval(hybrid%num_radfun_per_l)), stat=ok)
+         allocate(wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(maxval(mpbasis%num_radfun_per_l)), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
          wavefolap = 0
 
@@ -407,7 +409,7 @@ CONTAINS
                lm = 0
                DO l = 0, atoms%lmax(itype)
                   DO M = -l, l
-                     nn = hybrid%num_radfun_per_l(l, itype)
+                     nn = mpbasis%num_radfun_per_l(l, itype)
                      DO iband1 = 1, hybrid%nbands(nk)
                         carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
            &                                cmt(iband1, lm + 1:lm + nn, iatom))

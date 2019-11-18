@@ -15,7 +15,7 @@ MODULE m_gen_wavf
 
 CONTAINS
 
-   SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, dimension, hybrid, vr0, &
+   SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, dimension, mpbasis, hybrid, vr0, &
                        hybdat, noco, oneD, mpi, input, jsp, zmat)
 
       ! nkpti      ::     number of irreducible k-points
@@ -36,6 +36,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_oneD), INTENT(IN)    :: oneD
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)    :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
@@ -158,7 +159,7 @@ CONTAINS
 
 #if CPP_DEBUG
       ! consistency check
-      IF (.not. all(iarr == hybrid%num_radfun_per_l)) call judft_error('gen_wavf: counting error')
+      IF (.not. all(iarr == mpbasis%num_radfun_per_l)) call judft_error('gen_wavf: counting error')
 #endif
 
 8000  FORMAT(1x, /, /, ' wavefunction parameters for atom type', i3, ':', /, t32, 'radial function', t79, &
@@ -216,7 +217,7 @@ CONTAINS
                   ! number l in the list of all local orbitals of the atom type
                   idum = 0
                   map_lo = 0
-                  IF (hybrid%num_radfun_per_l(l, itype) > 2) THEN
+                  IF (mpbasis%num_radfun_per_l(l, itype) > 2) THEN
                      DO j = 1, atoms%nlo(itype)
                         IF (atoms%llo(j, itype) == l) THEN
                            idum = idum + 1
@@ -227,7 +228,7 @@ CONTAINS
 
                   DO M = -l, l
                      lm = ll + M
-                     DO i = 1, hybrid%num_radfun_per_l(l, itype)
+                     DO i = 1, mpbasis%num_radfun_per_l(l, itype)
                         indx = indx + 1
                         IF (i == 1) THEN
                            cmt(:, indx, iatom) = cdum*acof(:, lm, iatom)
@@ -261,7 +262,7 @@ CONTAINS
             IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
                iop = kpts%bksym(ikpt)
                CALL waveftrafo_genwavf(cmthlp, zhlp%data_r, zhlp%data_c, cmt(:, :, :), zmat(1)%l_real, zmat(ikpt0)%data_r(:, :), &
-                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1, dimension, &
+                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1, dimension, &
                                        hybrid%nbands(ikpt0), cell, lapw(ikpt0), lapw(ikpt), .true.)
 
                CALL write_cmt(cmthlp, ikpt)

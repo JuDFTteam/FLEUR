@@ -258,7 +258,7 @@ CONTAINS
           CALL timestop("Updating energy parameters")
           IF(.not.input%eig66(1))THEN
             CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
+                     cell,enpara,banddos,noco,oneD,mpbasis,hybrid,iter,eig_id,results,inDen,vTemp,vx)
           ENDIF
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id

@@ -154,21 +154,22 @@ CONTAINS
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
    SUBROUTINE wfolap_init(olappw, olapmt, gpt,&
-  &                       atoms, hybrid, cell,&
+  &                       atoms, mpbasis, hybrid, cell,&
   &                       bas1, bas2)
 
       USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_types
       IMPLICIT NONE
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
 !     - arrays -
       INTEGER, INTENT(IN)       :: gpt(:, :)!(3,ngpt)
-      REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
-     &                            bas2(atoms%jmtd, maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
-      REAL, INTENT(OUT)         :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)         ::  bas1(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype),&
+     &                            bas2(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(OUT)         :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
       TYPE(t_mat), INTENT(INOUT):: olappw
 
 !     - local -
@@ -180,7 +181,7 @@ CONTAINS
       olapmt = 0
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            nn = hybrid%num_radfun_per_l(l, itype)
+            nn = mpbasis%num_radfun_per_l(l, itype)
             DO n2 = 1, nn
                DO n1 = 1, nn!n2
                   !IF( n1 .gt. 2 .or. n2 .gt. 2) CYCLE
@@ -198,11 +199,12 @@ CONTAINS
 
    END SUBROUTINE wfolap_init
 
-   FUNCTION wfolap_inv(cmt1, cpw1, cmt2, cpw2, ngpt1, ngpt2, olappw, olapmt, atoms, hybrid)
+   FUNCTION wfolap_inv(cmt1, cpw1, cmt2, cpw2, ngpt1, ngpt2, olappw, olapmt, atoms, mpbasis,hybrid)
 
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -214,7 +216,7 @@ CONTAINS
       REAL, INTENT(IN)        :: cpw1(:)
       COMPLEX, INTENT(IN)     :: cpw2(:)
       REAL, INTENT(IN)        :: olappw(:,:)
-      REAL, INTENT(IN)        :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)        :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
       COMPLEX                :: carr(ngpt1), cdum
@@ -228,7 +230,7 @@ CONTAINS
             lm = 0
             DO l = 0, atoms%lmax(itype)
                DO M = -l, l
-                  nn = hybrid%num_radfun_per_l(l, itype)
+                  nn = mpbasis%num_radfun_per_l(l, itype)
                   wfolap_inv = wfolap_inv + &
          &                 dot_product(cmt1(lm + 1:lm + nn, iatom),&
          &                               matmul(olapmt(:nn, :nn, l, itype),&
@@ -251,11 +253,12 @@ CONTAINS
 !       wfolap = wfolap + cdum
 
    END FUNCTION wfolap_inv
-   FUNCTION wfolap_noinv(cmt1, cpw1, cmt2, cpw2, ngpt1, ngpt2, olappw, olapmt, atoms, hybrid)
+   FUNCTION wfolap_noinv(cmt1, cpw1, cmt2, cpw2, ngpt1, ngpt2, olappw, olapmt, atoms, mpbasis, hybrid)
 
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -267,7 +270,7 @@ CONTAINS
       COMPLEX, INTENT(IN)     :: cpw1(:)
       COMPLEX, INTENT(IN)     :: cpw2(:)
       COMPLEX, INTENT(IN)     :: olappw(:,:)
-      REAL, INTENT(IN)        :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)        :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
       COMPLEX                :: carr(ngpt1), cdum
@@ -281,7 +284,7 @@ CONTAINS
             lm = 0
             DO l = 0, atoms%lmax(itype)
                DO M = -l, l
-                  nn = hybrid%num_radfun_per_l(l, itype)
+                  nn = mpbasis%num_radfun_per_l(l, itype)
                   wfolap_noinv = wfolap_noinv + &
          &                 dot_product(cmt1(lm + 1:lm + nn, iatom),&
          &                               matmul(olapmt(:nn, :nn, l, itype),&
@@ -306,11 +309,12 @@ CONTAINS
    END FUNCTION wfolap_noinv
 
    FUNCTION wfolap1(cmt1, cpw1, cmt2, cpw2, ngpt1, ngpt2, olappw, olapmt,&
-  &                atoms, hybrid)
+  &                atoms, mpbasis,hybrid)
 
       USE m_types
       IMPLICIT NONE
 
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -329,7 +333,7 @@ CONTAINS
 #else
       COMPLEX, INTENT(IN)     :: olappw(:,:)
 #endif
-      REAL, INTENT(IN)        :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)        :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
@@ -342,7 +346,7 @@ CONTAINS
             lm = 0
             DO l = 0, atoms%lmax(itype)
                DO M = -l, l
-                  nn = hybrid%num_radfun_per_l(l, itype)
+                  nn = mpbasis%num_radfun_per_l(l, itype)
                   wfolap1 = wfolap1 + &
          &                  dot_product(cmt1(lm + 1:lm + nn, iatom),&
          &                                matmul(olapmt(:nn, :nn, l, itype),&
@@ -358,10 +362,11 @@ CONTAINS
    END FUNCTION wfolap1
 
    FUNCTION wfolap2(cmt1, cpw1, cmt2, cpw2, ngpt1, ngpt2, olappw, olapmt,&
-  &                atoms, hybrid)
+  &                atoms, mpbasis, hybrid)
       USE m_types
       IMPLICIT NONE
 
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -381,7 +386,7 @@ CONTAINS
 #else
       COMPLEX, INTENT(IN)     :: olappw(:,:)
 #endif
-      REAL, INTENT(IN)        :: olapmt(maxval(hybrid%num_radfun_per_l), maxval(hybrid%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL, INTENT(IN)        :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, ic, l, m, lm, nn
 
@@ -393,7 +398,7 @@ CONTAINS
             lm = 0
             DO l = 0, atoms%lmax(itype)
                DO M = -l, l
-                  nn = hybrid%num_radfun_per_l(l, itype)
+                  nn = mpbasis%num_radfun_per_l(l, itype)
                   wfolap2 = wfolap2 + &
          &                 dot_product(cmt1(lm + 1:lm + nn, ic),&
          &                               matmul(olapmt(:nn, :nn, l, itype),&

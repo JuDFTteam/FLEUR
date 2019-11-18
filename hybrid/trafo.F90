@@ -9,7 +9,7 @@ MODULE m_trafo
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
-                              nk, iop, atoms, hybrid, kpts, sym, &
+                              nk, iop, atoms, mpbasis, hybrid, kpts, sym, &
                               jsp, dimension, cell, lapw)
 
       USE m_constants
@@ -19,6 +19,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_mpbasis), INTENT(IN)     :: mpbasis
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_sym), INTENT(IN)         :: sym
       TYPE(t_cell), INTENT(IN)        :: cell
@@ -94,7 +95,7 @@ CONTAINS
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
-               nn = hybrid%num_radfun_per_l(l, itype)
+               nn = mpbasis%num_radfun_per_l(l, itype)
                DO n = 1, nn
                   lm1 = lm0 + n
                   lm2 = lm0 + n + 2*l*nn
@@ -151,7 +152,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_genwavf( &
       cmt_out, z_rout, z_cout, cmt, l_real, z_r, z_c, nk, iop, atoms, &
-      hybrid, kpts, sym, jsp, nbasfcn, dimension, nbands, &
+      mpbasis, hybrid, kpts, sym, jsp, nbasfcn, dimension, nbands, &
       cell, lapw_nk, lapw_rkpt, phase)
 
       use m_juDFT
@@ -161,6 +162,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_mpbasis), INTENT(IN)    :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -238,7 +240,7 @@ CONTAINS
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
-               nn = hybrid%num_radfun_per_l(l, itype)
+               nn = mpbasis%num_radfun_per_l(l, itype)
                DO n = 1, nn
                   lm1 = lm0 + n
                   lm2 = lm0 + n + 2*l*nn

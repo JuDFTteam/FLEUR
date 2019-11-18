@@ -131,7 +131,7 @@ CONTAINS
 
          CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpbasis, hybrid, xcpot)
 
-         CALL hf_init(hybrid, atoms, input, DIMENSION, hybdat)
+         CALL hf_init(mpbasis, hybrid, atoms, input, DIMENSION, hybdat)
          CALL timestop("Preparation for Hybrid functionals")
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, input%jspins

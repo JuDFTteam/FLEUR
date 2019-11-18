@@ -77,7 +77,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_dimension), INTENT(IN)    :: dimension
-      TYPE(t_mpbasis), intent(in)  :: mpbasis
+      TYPE(t_mpbasis), intent(inout)  :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
@@ -276,7 +276,7 @@ CONTAINS
                   IF ((ibando + iband - 1) > hybrid%nobd(nkqpt,jsp)) CYCLE
 
                   cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(ikpt)
-
+                  call timestart("spare matrix products")
                   IF (mat_ex%l_real) THEN
                      carr1_v_r(:n) = 0
                      CALL spmvec_invs(atoms, mpbasis, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
@@ -286,7 +286,9 @@ CONTAINS
                      CALL spmvec_noinvs(atoms, mpbasis, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
                                         coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
                   END IF
+                  call timestop("spare matrix products")
 
+                  call timestart("dot prod")
                   IF (mat_ex%l_real) THEN
                      DO n2 = 1, nsest(n1)!n1
                         nn2 = indx_sest(n2, n1)
@@ -300,6 +302,7 @@ CONTAINS
                                            dot_product(carr1_v_c(:n), cprod_vv_c(:n, iband, nn2))
                      END DO !n2
                   END IF
+                  call timestop("dot prod")
                END DO
             END DO  !n1
             call timestop("exchange matrix")
@@ -325,7 +328,7 @@ CONTAINS
          END IF
 
          IF (zero_order) THEN
-            CALL dwavefproducts(dcprod, nk, 1, hybrid%nbands(nk), 1, hybrid%nbands(nk), .false., atoms, hybrid, &
+            CALL dwavefproducts(dcprod, nk, 1, hybrid%nbands(nk), 1, hybrid%nbands(nk), .false., atoms, mpbasis, hybrid, &
                                 cell, hybdat, kpts, kpts%nkpt, lapw, dimension, jsp, eig_irr)
 
             ! make dcprod hermitian
@@ -337,7 +340,7 @@ CONTAINS
             END DO
 
             IF (ibs_corr) THEN
-               CALL ibs_correction(nk, atoms, dimension, input, jsp, hybdat, hybrid, lapw, kpts, kpts%nkpt, cell, mnobd, &
+               CALL ibs_correction(nk, atoms, dimension, input, jsp, hybdat, mpbasis, hybrid, lapw, kpts, kpts%nkpt, cell, mnobd, &
                                    sym, proj_ibsc, olap_ibsc)
             END IF
          END IF
