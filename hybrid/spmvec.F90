@@ -5,7 +5,7 @@ CONTAINS
 
    SUBROUTINE spmvec_invs(&
               atoms, mpbasis, hybrid,&
-              hybdat, ikpt, kpts, cell,&
+              ikpt, &
               coulomb_mt1, coulomb_mt2, coulomb_mt3,&
               coulomb_mtir, vecin,&
               vecout)
@@ -15,11 +15,8 @@ CONTAINS
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
-      TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
-      TYPE(t_cell), INTENT(IN)     :: cell
-      TYPE(t_kpts), INTENT(IN)     :: kpts
+      TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_atoms), INTENT(IN)    :: atoms
 
       ! - scalars -
@@ -39,17 +36,11 @@ CONTAINS
       INTEGER             ::  itype, ieq, iatom, ishift
       INTEGER             ::  itype1, ieq1, iatom1, ishift1
       INTEGER             ::  indx0, indx1, indx2, indx3, indx4
-      INTEGER             ::  i, ibasm, igptm
-      INTEGER             ::  l
-      INTEGER             ::  n, m
-
-      REAL                ::  gnorm
-
-      COMPLEX, PARAMETER  ::  img = (0.0, 1.0)
+      INTEGER             ::  ibasm
+      INTEGER             ::  l, n, m
       ! - local arrays -
 
       REAL                ::  vecinhlp(hybrid%nbasm(ikpt))
-      REAL, ALLOCATABLE ::  coulhlp(:, :)
 
       call timestart("spmvec_invs")
       vecinhlp = vecin

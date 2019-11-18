@@ -279,7 +279,7 @@ CONTAINS
                   call timestart("spare matrix products")
                   IF (mat_ex%l_real) THEN
                      carr1_v_r(:n) = 0
-                     CALL spmvec_invs(atoms, mpbasis, hybrid, hybdat, ikpt0, kpts, cell, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
+                     CALL spmvec_invs(atoms, mpbasis, hybrid, ikpt0, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
                                       coulomb_mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                   ELSE
                      carr1_v_c(:n) = 0
