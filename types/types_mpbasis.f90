@@ -3,18 +3,18 @@ module m_types_mpbasis
 
    type t_mpbasis
       integer, allocatable   :: g(:, :) ! (3, num_gpts)
-      integer, allocatable   :: ngptm(:)
-      integer, allocatable   :: gptm_ptr(:, :)
+      integer, allocatable   :: ngptm(:) ! (ik)
+      integer, allocatable   :: gptm_ptr(:, :) ! (ig, ik)
       real                   :: g_cutoff
       integer, allocatable   :: num_radbasfn(:, :)
       real, allocatable      :: radbasfn_mt(:, :, :, :)
       real                   :: linear_dep_tol  !only read in
       INTEGER, ALLOCATABLE   :: num_radfun_per_l(:,:)
 
-      integer, allocatable   :: l1(:, :, :) !(n, l, itype)
-      integer, allocatable   :: l2(:, :, :) !(n, l, itype)
-      integer, allocatable   :: n1(:, :, :) !(n, l, itype)
-      integer, allocatable   :: n2(:, :, :) !(n, l, itype)
+      integer, allocatable   :: l1(:,:,:) !(n, l, itype)
+      integer, allocatable   :: l2(:,:,:) !(n, l, itype)
+      integer, allocatable   :: n1(:,:,:) !(n, l, itype)
+      integer, allocatable   :: n2(:,:,:) !(n, l, itype)
    CONTAINS
       procedure :: num_gpts               => mpbasis_num_gpts
       procedure :: gen_gvec               => mpbasis_gen_gvec

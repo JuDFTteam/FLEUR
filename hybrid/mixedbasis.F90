@@ -400,7 +400,7 @@ CONTAINS
       type(t_enpara), intent(in)       :: enpara
       type(t_input), intent(in)        :: input
       type(t_hybrid), intent(in)       :: hybrid
-      TYPE(t_mpbasis), intent(in) :: mpbasis
+      TYPE(t_mpbasis), intent(in)      :: mpbasis
       type(t_mpi), intent(in)          :: mpi
       type(t_usdus), intent(inout)     :: usdus
 
