@@ -73,6 +73,8 @@ CONTAINS
    USE m_eig66_io
    USE m_chase_diag
    USE m_writeBasis
+
+   USE m_magnMomFromDen
    !$ USE omp_lib
    IMPLICIT NONE
 
@@ -111,6 +113,7 @@ CONTAINS
     INTEGER :: iter,iterHF,i
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
+
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr(2),n
@@ -384,6 +387,7 @@ CONTAINS
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
+          CALL magnMomFromDen(input,atoms,noco,outDen)
            
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge

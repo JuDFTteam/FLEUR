@@ -11,13 +11,14 @@
 
 MODULE m_magnMomFromDen
 CONTAINS
-SUBROUTINE magnMomFromDen(dimension,input,atoms,noco,den,moments)
+SUBROUTINE magnMomFromDen(input,atoms,noco,den)
    USE m_constants
    USE m_types
+   USE m_constants
    USE m_intgr
    IMPLICIT NONE
 
-   TYPE(t_dimension), INTENT(IN) ::  dimension
+!   TYPE(t_dimension), INTENT(IN) ::  dimension
    TYPE(t_input), INTENT(IN)     ::  input
    TYPE(t_atoms), INTENT(IN)     ::  atoms
    TYPE(t_noco), INTENT(IN)      ::  noco
@@ -41,25 +42,27 @@ SUBROUTINE magnMomFromDen(dimension,input,atoms,noco,den,moments)
    DO i=1, atoms%ntype 
       DO j=1, jsp
 !!!!Integration
-         !DO l=1, lmax
-            CALL intgr3(den%mt(:,0,i,j), atoms%rmsh(1,i),atoms%dx(i),atoms%jri(i),dummyResults(i,j))
-         !END DO
+           CALL intgr3(den%mt(:,0,i,j), atoms%rmsh(:,i),atoms%dx(i),atoms%jri(i),dummyResults(i,j))
 !!!!Considering Lattice harmonics integral (Only L=0 component does not vanish and has a factor of sqrt(4*Pi))
-        dummyResults(:,:)=SQRT(4*pimach())*dummyResults(:,:) 
+          dummyResults(i,j)=dummyResults(i,j)*sfp_const
       END DO
    END DO 
+
 !!Print Results
 DO i=1 , atoms%ntype
-   moments(1)=dummyResults(i,1)-dummyResults(i,2)
-   moments(2:3)=dummyResults(i,3:4)
+   moments(3)=dummyResults(i,1)-dummyResults(i,2)
+   moments(1:2)=2*dummyResults(i,3:4)
    write(*,*) "Magnetic Moment of Atom "
    write(*,*) i 
-   write(*,*) " mx=" 
-   write(*,*) moments(1) 
    write(*,*) " my=" 
-   write(*,*) moments(2) 
+   write(*,*) moments(2)!/ (4*pimach()*atoms%rmt**3) *3
+
+   write(*,*) " mx=" 
+   write(*,*) moments(1)!/(4*pimach()*atoms%rmt**3)*3
+
    write(*,*) " mz=" 
-   write(*,*) moments(3) 		
+   write(*,*) moments(3)
+
 END DO
 
 !!!!Normalization?
