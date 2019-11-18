@@ -54,7 +54,7 @@ CONTAINS
       call timestart("spmvec_invs")
       vecinhlp = vecin
 
-      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, 1, vecinhlp)
+      CALL reorder(hybrid%nbasm(ikpt), atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, 1, vecinhlp)
 
       ibasm = 0
       iatom = 0
@@ -204,7 +204,7 @@ CONTAINS
          IF (indx0 /= hybrid%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn,&
+      CALL reorder(hybrid%nbasm(ikpt), atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn,&
      &             2,&
      &             vecout)
      call timestop("spmvec_invs")
@@ -262,7 +262,7 @@ CONTAINS
       call timestart("spmvec_noinvs")
       vecinhlp = vecin
 
-      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, 1, vec_c=vecinhlp)
+      CALL reorder(hybrid%nbasm(ikpt), atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, 1, vec_c=vecinhlp)
 
       ibasm = 0
       iatom = 0
