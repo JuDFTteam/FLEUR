@@ -211,7 +211,7 @@ CONTAINS
 
    SUBROUTINE spmvec_noinvs(&
     &           atoms, mpbasis, hybrid,&
-    &           hybdat, ikpt, kpts, cell,&
+    &           hybdat, ikpt, kpts, &
     &           coulomb_mt1, coulomb_mt2, coulomb_mt3,&
     &           coulomb_mtir, vecin,&
     &           vecout)
@@ -224,7 +224,6 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpbasis), INTENT(IN)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
-      TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_kpts), INTENT(IN)     :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
 
@@ -534,6 +533,6 @@ CONTAINS
          END DO
       END IF
       !IR must not be rearranged
-      call timestop("reorder")  
+      call timestop("reorder")
    END SUBROUTINE reorder
 END MODULE
