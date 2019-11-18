@@ -237,16 +237,16 @@ CONTAINS
       allocate(pgptm1(maxval(mpbasis%ngptm),kpts%nkptf), source=0) !in mixedbasis
       allocate(iarr(maxval(mpbasis%ngptm)), source=0)
       allocate(POINTER(kpts%nkpt,&
-                      MINVAL(mpbasis%gptm(1, :)) - 1:MAXVAL(mpbasis%gptm(1, :)) + 1, &
-                      MINVAL(mpbasis%gptm(2, :)) - 1:MAXVAL(mpbasis%gptm(2, :)) + 1, &
-                      MINVAL(mpbasis%gptm(3, :)) - 1:MAXVAL(mpbasis%gptm(3, :)) + 1), &
+                      MINVAL(mpbasis%g(1, :)) - 1:MAXVAL(mpbasis%g(1, :)) + 1, &
+                      MINVAL(mpbasis%g(2, :)) - 1:MAXVAL(mpbasis%g(2, :)) + 1, &
+                      MINVAL(mpbasis%g(3, :)) - 1:MAXVAL(mpbasis%g(3, :)) + 1), &
                       source=0)
       allocate(ngptm1, mold=mpbasis%ngptm)
       ngptm1 = 0
 
       DO ikpt = 1, kpts%nkpt
          DO igpt = 1, mpbasis%ngptm(ikpt)
-            g = mpbasis%gptm(:, mpbasis%gptm_ptr(igpt, ikpt))
+            g = mpbasis%g(:, mpbasis%gptm_ptr(igpt, ikpt))
             POINTER(ikpt, g(1), g(2), g(3)) = igpt
          END DO
          iarr = 0
@@ -256,7 +256,7 @@ CONTAINS
                j = j + 1
                pgptm1(j, ikpt) = igpt
                DO isym1 = 1, nsym1(ikpt)
-                  g = MATMUL(rrot(:, :, sym1(isym1, ikpt)), mpbasis%gptm(:, mpbasis%gptm_ptr(igpt, ikpt)))
+                  g = MATMUL(rrot(:, :, sym1(isym1, ikpt)), mpbasis%g(:, mpbasis%gptm_ptr(igpt, ikpt)))
                   i = POINTER(ikpt, g(1), g(2), g(3))
                   IF (i == 0) call judft_error('coulombmatrix: zero pointer (bug?)')
                   iarr(i) = 1
@@ -325,7 +325,7 @@ CONTAINS
 
       call timestart("getnorm")
       ! Look for different qnorm = |k+G|, definition of qnrm and pqnrm.
-      CALL getnorm(kpts, mpbasis%gptm, mpbasis%ngptm, mpbasis%gptm_ptr, qnrm, nqnrm, pqnrm, cell)
+      CALL getnorm(kpts, mpbasis%g, mpbasis%ngptm, mpbasis%gptm_ptr, qnrm, nqnrm, pqnrm, cell)
       allocate(sphbesmoment(0:hybrid%lexp, atoms%ntype, nqnrm), &
                 olap(maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype, nqnrm), &
                 integral(maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype, nqnrm))
@@ -572,7 +572,7 @@ CONTAINS
                igpt = pgptm1(igpt0, ikpt)
                igptp = mpbasis%gptm_ptr(igpt, ikpt)
                ix = hybrid%nbasp + igpt
-               q = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), cell%bmat)
+               q = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp), cell%bmat)
                qnorm = norm2(q)
                iqnrm = pqnrm(igpt, ikpt)
                IF (ABS(qnrm(iqnrm) - qnorm) > 1e-12) then
@@ -581,7 +581,7 @@ CONTAINS
 
                call timestart("harmonics")
                call ylm4(2, MATMUL(kpts%bk(:, kpts%nkpt), cell%bmat), y1)
-               call ylm4(2, MATMUL(mpbasis%gptm(:, igptp), cell%bmat), y2)
+               call ylm4(2, MATMUL(mpbasis%g(:, igptp), cell%bmat), y2)
                call ylm4(hybrid%lexp, q, y)
                call timestop("harmonics")
                y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
@@ -604,7 +604,7 @@ CONTAINS
                               DO ineq1 = 1, atoms%neq(itype1)
                                  ic1 = ic1 + 1
                                  cexp = 4*pi_const*EXP(CMPLX(0.0, 1.0)*2*pi_const &
-                                                       *(dot_PRODUCT(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), atoms%taual(:, ic1)) &
+                                                       *(dot_PRODUCT(kpts%bk(:, ikpt) + mpbasis%g(:, igptp), atoms%taual(:, ic1)) &
                                                          - dot_PRODUCT(kpts%bk(:, ikpt), atoms%taual(:, ic))))
 
                                  lm1 = 0
@@ -623,7 +623,7 @@ CONTAINS
 
                                  ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
                                  IF (ikpt == 1 .AND. l <= 2) THEN
-                                    cexp = EXP(CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT(mpbasis%gptm(:, igptp), atoms%taual(:, ic1))) &
+                                    cexp = EXP(CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT(mpbasis%g(:, igptp), atoms%taual(:, ic1))) &
                                            *gmat(lm, 1)*4*pi_const/cell%vol
                                     csumf(lm) = csumf(lm) - cexp*SQRT(4*pi_const)* &
                                                 CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
@@ -652,7 +652,7 @@ CONTAINS
                            idum = ix*(ix - 1)/2
                            cdum = (4*pi_const)**2*CMPLX(0.0, 1.0)**(l)*y(lm) &
                                   *EXP(CMPLX(0.0, 1.0)*2*pi_const &
-                                       *dot_PRODUCT(mpbasis%gptm(:, igptp), atoms%taual(:, ic)))
+                                       *dot_PRODUCT(mpbasis%g(:, igptp), atoms%taual(:, ic)))
                            DO n = 1, mpbasis%num_radbasfn(l, itype)
                               iy = iy + 1
 
@@ -719,7 +719,7 @@ CONTAINS
          smat = 0
          DO igpt2 = 1, mpbasis%num_gpts()
             DO igpt1 = 1, igpt2
-               g = mpbasis%gptm(:, igpt2) - mpbasis%gptm(:, igpt1)
+               g = mpbasis%g(:, igpt2) - mpbasis%g(:, igpt1)
                gnorm = gptnorm(g, cell%bmat)
                IF (abs(gnorm) < 1e-12) THEN
                   DO itype = 1, atoms%ntype
@@ -751,14 +751,14 @@ CONTAINS
                igptp2 = mpbasis%gptm_ptr(igpt2, ikpt)
                ix = hybrid%nbasp + igpt2
                iy = hybrid%nbasp
-               q2 = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp2), cell%bmat)
+               q2 = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp2), cell%bmat)
                rdum2 = SUM(q2**2)
                IF (abs(rdum2) > 1e-12) rdum2 = 4*pi_const/rdum2
 
                DO igpt1 = 1, igpt2
                   igptp1 = mpbasis%gptm_ptr(igpt1, ikpt)
                   iy = iy + 1
-                  q1 = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp1), cell%bmat)
+                  q1 = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp1), cell%bmat)
                   idum = ix*(ix - 1)/2 + iy
                   rdum1 = SUM(q1**2)
                   IF (abs(rdum1) > 1e-12) rdum1 = 4*pi_const/rdum1
@@ -792,7 +792,7 @@ CONTAINS
             DO igpt = 1, mpbasis%ngptm(ikpt)
                igptp = mpbasis%gptm_ptr(igpt, ikpt)
                iqnrm = pqnrm(igpt, ikpt)
-               q = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), cell%bmat)
+               q = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp), cell%bmat)
 
                call timestart("harmonics")
                call ylm4(hybrid%lexp, q, y)
@@ -808,7 +808,7 @@ CONTAINS
                END DO
                DO ic = 1, atoms%nat
                   carr2b(ic, igpt) = EXP(-CMPLX(0.0, 1.0)*2*pi_const* &
-                                         dot_PRODUCT(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), atoms%taual(:, ic)))
+                                         dot_PRODUCT(kpts%bk(:, ikpt) + mpbasis%g(:, igptp), atoms%taual(:, ic)))
                END DO
             END DO
 
@@ -897,7 +897,7 @@ CONTAINS
             ix = hybrid%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
             igptp2 = mpbasis%gptm_ptr(igpt2, 1)
-            q2 = MATMUL(mpbasis%gptm(:, igptp2), cell%bmat)
+            q2 = MATMUL(mpbasis%g(:, igptp2), cell%bmat)
             qnorm2 = norm2(q2)
             iy = hybrid%nbasp + 1
             DO igpt1 = 2, igpt2
@@ -905,7 +905,7 @@ CONTAINS
                idum = ix*(ix - 1)/2 + iy
                iqnrm1 = pqnrm(igpt1, 1)
                igptp1 = mpbasis%gptm_ptr(igpt1, 1)
-               q1 = MATMUL(mpbasis%gptm(:, igptp1), cell%bmat)
+               q1 = MATMUL(mpbasis%g(:, igptp1), cell%bmat)
                qnorm1 = norm2(q1)
                rdum1 = dot_PRODUCT(q1, q2)/(qnorm1*qnorm2)
                ic1 = 0
@@ -917,8 +917,8 @@ CONTAINS
                         DO ineq2 = 1, atoms%neq(itype2)
                            ic2 = ic2 + 1
                            cdum = EXP(CMPLX(0.0, 1.0)*2*pi_const* &
-                                      (-dot_PRODUCT(mpbasis%gptm(:, igptp1), atoms%taual(:, ic1)) &
-                                       + dot_PRODUCT(mpbasis%gptm(:, igptp2), atoms%taual(:, ic2))))
+                                      (-dot_PRODUCT(mpbasis%g(:, igptp1), atoms%taual(:, ic1)) &
+                                       + dot_PRODUCT(mpbasis%g(:, igptp2), atoms%taual(:, ic2))))
                            coulomb(idum, 1) = coulomb(idum, 1) + rdum*cdum*( &
                                               -sphbesmoment(1, itype1, iqnrm1) &
                                               *sphbesmoment(1, itype2, iqnrm2)*rdum1/3 &
@@ -951,7 +951,7 @@ CONTAINS
                   DO itype2 = 1, atoms%ntype
                      DO ineq2 = 1, atoms%neq(itype2)
                         ic2 = ic2 + 1
-                        cdum = EXP(CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT(mpbasis%gptm(:, igptp2), atoms%taual(:, ic2)))
+                        cdum = EXP(CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT(mpbasis%g(:, igptp2), atoms%taual(:, ic2)))
                         coulomb(idum, 1) = coulomb(idum, 1) &
                                            + rdum*cdum*atoms%rmt(itype1)**3*( &
                                            +sphbesmoment(0, itype2, iqnrm2)/30*atoms%rmt(itype1)**2 &
@@ -1001,7 +1001,7 @@ CONTAINS
 
             DO igpt = 1, mpbasis%ngptm(ikpt)
                igptp = mpbasis%gptm_ptr(igpt, ikpt)
-               q = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp), cell%bmat)
+               q = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp), cell%bmat)
                call timestart("harmonics")
                call ylm4(hybrid%lexp, q, carr2(:, igpt))
                call timestop("harmonics")
@@ -1012,14 +1012,14 @@ CONTAINS
                ix = hybrid%nbasp + igpt2
                igptp2 = mpbasis%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
-               q2 = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp2), cell%bmat)
+               q2 = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp2), cell%bmat)
                y2 = CONJG(carr2(:, igpt2))
                iy = hybrid%nbasp
                DO igpt1 = 1, igpt2
                   iy = iy + 1
                   igptp1 = mpbasis%gptm_ptr(igpt1, ikpt)
                   iqnrm1 = pqnrm(igpt1, ikpt)
-                  q1 = MATMUL(kpts%bk(:, ikpt) + mpbasis%gptm(:, igptp1), cell%bmat)
+                  q1 = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp1), cell%bmat)
                   y1 = carr2(:, igpt1)
                   cexp1 = 0
                   ic = 0
@@ -1028,7 +1028,7 @@ CONTAINS
                         ic = ic + 1
                         cexp1(itype) = cexp1(itype) + &
                                        EXP(CMPLX(0.0, 1.0)*2*pi_const*dot_PRODUCT( &
-                                           (mpbasis%gptm(:, igptp2) - mpbasis%gptm(:, igptp1)), atoms%taual(:, ic)))
+                                           (mpbasis%g(:, igptp2) - mpbasis%g(:, igptp1)), atoms%taual(:, ic)))
                      ENDDO
                   ENDDO
                   lm = 0
@@ -1160,7 +1160,7 @@ CONTAINS
          !calculate IR overlap-matrix
          CALL olapm%alloc(sym%invs, mpbasis%ngptm(ikpt), mpbasis%ngptm(ikpt), 0.0)
 
-         CALL olap_pw(olapm, mpbasis%gptm(:, mpbasis%gptm_ptr(:mpbasis%ngptm(ikpt), ikpt)), mpbasis%ngptm(ikpt), atoms, cell)
+         CALL olap_pw(olapm, mpbasis%g(:, mpbasis%gptm_ptr(:mpbasis%ngptm(ikpt), ikpt)), mpbasis%ngptm(ikpt), atoms, cell)
 
          !         !calculate eigenvalues of olapm
          !         ALLOCATE( eval(ngptm(ikpt)),evec(ngptm(ikpt),ngptm(ikpt)) )
@@ -1566,7 +1566,7 @@ CONTAINS
 
       n = nbasm1(1)
       nn = n*(n + 1)/2
-      CALL olap_pw(olap, mpbasis%gptm(:, mpbasis%gptm_ptr(:mpbasis%ngptm(1), 1)), mpbasis%ngptm(1), atoms, cell)
+      CALL olap_pw(olap, mpbasis%g(:, mpbasis%gptm_ptr(:mpbasis%ngptm(1), 1)), mpbasis%ngptm(1), atoms, cell)
 
       ! Define coefficients (coeff) and their derivatives (cderiv,claplace)
       coeff = 0

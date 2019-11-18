@@ -2,7 +2,7 @@ module m_types_mpbasis
    implicit none
 
    type t_mpbasis
-      integer, allocatable   :: gptm(:, :) ! (3, num_gpts)
+      integer, allocatable   :: g(:, :) ! (3, num_gpts)
       integer, allocatable   :: ngptm(:)
       integer, allocatable   :: gptm_ptr(:, :)
       real                   :: g_cutoff
@@ -35,7 +35,7 @@ contains
       class(t_mpbasis), intent(in) :: mpbasis
       integer    :: mpbasis_num_gpts
 
-      mpbasis_num_gpts = size(mpbasis%gptm, dim=2)
+      mpbasis_num_gpts = size(mpbasis%g, dim=2)
    end function mpbasis_num_gpts
 
    subroutine mpbasis_gen_gvec(mpbasis, cell, kpts, mpi)
@@ -68,7 +68,7 @@ contains
 
       longest_k = MAXVAL([(norm2(MATMUL(kpts%bkf(:, ikpt), cell%bmat)), ikpt=1, kpts%nkptf)])
 
-      ! a first run for the determination of the dimensions of the fields gptm,pgptm
+      ! a first run for the determination of the dimensions of the fields g,pgptm
 
       do
          n = n + 1
@@ -98,14 +98,14 @@ contains
          if (.NOT. l_found_new_gpt) EXIT
       enddo
 
-      allocate(mpbasis%gptm(3, i)) ! i = gptmd
+      allocate(mpbasis%g(3, i)) ! i = gptmd
       allocate(mpbasis%gptm_ptr(maxval(mpbasis%ngptm), kpts%nkptf))
 
       ! allocate and initialize arrays needed for G vector ordering
       allocate(unsrt_pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
       allocate(length_kG(maxval(mpbasis%ngptm), kpts%nkptf))
 
-      mpbasis%gptm = 0
+      mpbasis%g = 0
       mpbasis%gptm_ptr = 0
       mpbasis%ngptm = 0
 
@@ -132,7 +132,7 @@ contains
                      if (norm2(MATMUL(kvec + g, cell%bmat)) <= mpbasis%g_cutoff) THEN
                         if (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
-                           mpbasis%gptm(:, i) = g
+                           mpbasis%g(:, i) = g
                            l_found_kg_in_sphere = .TRUE.
                         END if
 

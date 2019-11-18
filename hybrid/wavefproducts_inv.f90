@@ -165,7 +165,7 @@ CONTAINS
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
     &  + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-    &  + maxval(abs(mpbasis%gptm(:, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq))), dim=2) + 1
+    &  + maxval(abs(mpbasis%g(:, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq))), dim=2) + 1
 
      call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
      !
@@ -193,7 +193,7 @@ CONTAINS
      END DO
      call timestop("step function")
 
-     call timestart("hybrid gptm")
+     call timestart("hybrid g")
      ic = nbasm_mt
      DO igptm = 1, mpbasis%ngptm(iq)
         rarr2 = 0
@@ -201,7 +201,7 @@ CONTAINS
         iigptm = mpbasis%gptm_ptr(igptm, iq)
 
         DO ig1 = 1, lapw%nv(jsp)
-           g = lapw%gvec(:, ig1, jsp) + mpbasis%gptm(:, iigptm) - g_t
+           g = lapw%gvec(:, ig1, jsp) + mpbasis%g(:, iigptm) - g_t
            ig2 = pointer(g(1), g(2), g(3))
 
            IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
@@ -216,7 +216,7 @@ CONTAINS
         END DO
         cprod(ic, :, :) = rarr2(:, :)
      END DO
-     call timestop("hybrid gptm")
+     call timestop("hybrid g")
      call timestop("calc convolution")
 
      deallocate(z0, pointer, gpt0)

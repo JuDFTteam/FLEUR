@@ -707,10 +707,10 @@ CONTAINS
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt0)
          igptp = mpbasis%gptm_ptr(igptm, ikpt0)
-         g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
+         g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
          igptm2 = 0
          DO i = 1, mpbasis%ngptm(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -719,12 +719,12 @@ CONTAINS
             WRITE (*, *) ikpt0, ikpt1, g1
             WRITE (*, *) mpbasis%ngptm(ikpt0), mpbasis%ngptm(ikpt1)
             WRITE (*, *)
-            WRITE (*, *) igptp, mpbasis%gptm(:, igptp)
+            WRITE (*, *) igptp, mpbasis%g(:, igptp)
             WRITE (*, *) g
             WRITE (*, *) rrot
             WRITE (*, *) "Failed tests:", g1
             DO i = 1, mpbasis%ngptm(ikpt1)
-               WRITE (*, *) mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1))
+               WRITE (*, *) mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1))
             ENDDO
             call judft_error('bra_trafo2: G-point not found in G-point set.')
          END IF
@@ -947,10 +947,10 @@ CONTAINS
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
-         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          igptm2 = 0
          DO i = 1, mpbasis%ngptm(ikpt0)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -958,7 +958,7 @@ CONTAINS
 !         igptm2 = pntgptm(g1(1),g1(2),g1(3),ikpt0)
          IF (igptm2 == 0) call judft_error('matrixtrafo: G point not found in G-point set.')
 
-         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), sym%tau(:, iisym)))
+         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp), sym%tau(:, iisym)))
 
          matout1(:, nbasp + igptm) = cdum*matin1(:, nbasp + igptm2)
 
@@ -997,10 +997,10 @@ CONTAINS
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
-         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          igptm2 = 0
          DO i = 1, mpbasis%ngptm(ikpt0)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -1009,8 +1009,8 @@ CONTAINS
          IF (igptm2 == 0) call judft_error('matrixtrafo: G point not found in G-point set.')
          iarr(igptm) = igptm2
          carr(igptm) = exp(-img*tpi_const* &
-      &              dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), sym%tau(:, iisym)))
-!        cdum  = exp(-img * 2*pi * dot_product(bk(:,ikpt1)+gptm(:,igptp),tau(:,isym)))
+      &              dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp), sym%tau(:, iisym)))
+!        cdum  = exp(-img * 2*pi * dot_product(bk(:,ikpt1)+g(:,igptp),tau(:,isym)))
 !        matout1(nbasp+igptm,:) = cdum * matin1(nbasp+igptm2,:)
       END DO
       DO i2 = 1, nbasm(ikpt1)
@@ -1172,10 +1172,10 @@ CONTAINS
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt0)
          igptp = mpbasis%gptm_ptr(igptm, ikpt0)
-         g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
+         g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
          igptm1 = 0
          DO i = 1, mpbasis%ngptm(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = mpbasis%gptm_ptr(i, ikpt1)
                EXIT
@@ -1183,7 +1183,7 @@ CONTAINS
          END DO
          IF (igptm1 == 0) call judft_error('matrixtrafo1: G point not found in G-point set.')
 
-         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp1), sym%tau(:, iisym)))
+         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp1), sym%tau(:, iisym)))
 
          matout1(:, nbasp + igptm) = cdum*matin1(:, nbasp + igptm1)
 
@@ -1228,10 +1228,10 @@ CONTAINS
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt0)
          igptp = mpbasis%gptm_ptr(igptm, ikpt0)
-         g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
+         g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
          igptm1 = 0
          DO i = 1, mpbasis%ngptm(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = mpbasis%gptm_ptr(i, ikpt1)
                EXIT
@@ -1239,7 +1239,7 @@ CONTAINS
          END DO
          IF (igptm1 == 0) call judft_error('matrixtrafo1: G point not found in G-point set.')
          iarr(igptm) = igptm1
-         carr(igptm) = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp1), sym%tau(:, iisym)))
+         carr(igptm) = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp1), sym%tau(:, iisym)))
       END DO
       DO i2 = 1, nbasm(ikpt0)
          DO i1 = 1, mpbasis%ngptm(ikpt0)
@@ -1444,10 +1444,10 @@ CONTAINS
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
-         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          igptm2 = 0
          DO i = 1, mpbasis%ngptm(ikpt0)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
@@ -1456,7 +1456,7 @@ CONTAINS
       &               call judft_error('ket_trafo: G point not found in G-point set.')
 
          cdum = exp(img*tpi_const* &
-      &              dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), sym%tau(:, iisym)))
+      &              dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp), sym%tau(:, iisym)))
 
          vecout1(nbasp + igptm) = cdum*vecin1(nbasp + igptm2)
 
@@ -1606,10 +1606,10 @@ CONTAINS
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt0)
          igptp = mpbasis%gptm_ptr(igptm, ikpt0)
-         g1 = matmul(rrot, mpbasis%gptm(:, igptp)) + g
+         g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
          igptm1 = 0
          DO i = 1, mpbasis%ngptm(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%gptm(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
+            IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = mpbasis%gptm_ptr(i, ikpt1)
                EXIT
@@ -1617,7 +1617,7 @@ CONTAINS
          END DO
          IF (igptm1 == 0) call judft_error('ket_trafo: G point not found in G-point set.')
 
-         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp1), sym%tau(:, iisym)))
+         cdum = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp1), sym%tau(:, iisym)))
 
          vecout1(nbasp + igptm) = cdum*vecin1(nbasp + igptm1)
 
@@ -1689,9 +1689,9 @@ CONTAINS
      &                            nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)      :: nbasm(:)
       INTEGER, INTENT(IN)      ::  pointer(&
-     &                          minval(mpbasis%gptm(1, :)) - 1:maxval(mpbasis%gptm(1, :)) + 1,&
-     &                          minval(mpbasis%gptm(2, :)) - 1:maxval(mpbasis%gptm(2, :)) + 1,&
-     &                          minval(mpbasis%gptm(3, :)) - 1:maxval(mpbasis%gptm(3, :)) + 1)
+     &                          minval(mpbasis%g(1, :)) - 1:maxval(mpbasis%g(1, :)) + 1,&
+     &                          minval(mpbasis%g(2, :)) - 1:maxval(mpbasis%g(2, :)) + 1,&
+     &                          minval(mpbasis%g(3, :)) - 1:maxval(mpbasis%g(3, :)) + 1)
 
       COMPLEX, INTENT(IN)      ::  vecin(:)
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
@@ -1738,12 +1738,12 @@ CONTAINS
 
       DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
-         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          igptm2 = pointer(g1(1), g1(2), g1(3))
          IF (igptm2 == igptm_in) THEN
             igptm_out = igptm
             IF (writevec) THEN
-               cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), trans))
+               cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp), trans))
                EXIT
             ELSE
                RETURN
@@ -1807,9 +1807,9 @@ CONTAINS
       ! PW
       DO igptm = 1, mpbasis%ngptm(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
-         g1 = matmul(invrrot, mpbasis%gptm(:, igptp) - g)
+         g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          iarr(igptm) = pointer(g1(1), g1(2), g1(3))
-         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%gptm(:, igptp), trans))
+         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp), trans))
       END DO
       DO i1 = 1, mpbasis%ngptm(ikpt1)
          vecout(nbasp + i1) = carr(i1)*vecin1(nbasp + iarr(i1))

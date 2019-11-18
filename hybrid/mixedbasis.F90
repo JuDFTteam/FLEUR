@@ -97,7 +97,7 @@ CONTAINS
       IF (ALLOCATED(mpbasis%ngptm)) deallocate(mpbasis%ngptm)
       IF (ALLOCATED(mpbasis%num_radbasfn)) deallocate(mpbasis%num_radbasfn)
       IF (ALLOCATED(mpbasis%gptm_ptr)) deallocate(mpbasis%gptm_ptr)
-      IF (ALLOCATED(mpbasis%gptm)) deallocate(mpbasis%gptm)
+      IF (ALLOCATED(mpbasis%g)) deallocate(mpbasis%g)
       IF (ALLOCATED(mpbasis%radbasfn_mt)) deallocate(mpbasis%radbasfn_mt)
 
       CALL usdus%init(atoms, input%jspins)

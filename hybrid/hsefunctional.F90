@@ -950,10 +950,10 @@ CONTAINS
    ! maxlcutm    - maximum of all these l cutoffs
    ! nindxm      - number of radial functions of mixed basis
    ! maxindxm    - maximum of these numbers
-   ! gptm        - reciprocal lattice vectors of the mixed basis (internal coord.)
+   ! g        - reciprocal lattice vectors of the mixed basis (internal coord.)
    ! ngptm       - number of vectors (for treated k-vector)
    ! pgptm       - pointer to the appropriate g-vector (for treated k-vector)
-   ! gptmd       - dimension of gptm
+   ! gptmd       - dimension of g
    ! basm        - mixed basis functions (mt + inter) for treated k-vector
    ! lexp        - cutoff of spherical harmonics expansion of plane wave
    ! noGPts      - no g-vectors used for Fourier trafo
@@ -965,7 +965,7 @@ CONTAINS
       ! Input
       rmsh, rmt, dx, jri, jmtd, bk, &
       bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-      nindxm, maxindxm, gptm, ngptm, pgptm, gptmd, &
+      nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
       basm, noGPts, irank, &
       ! Output
       potential, muffintin, interstitial)
@@ -987,7 +987,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(ntype)
       INTEGER, INTENT(IN)    :: jri(:)
-      INTEGER, INTENT(IN)    :: gptm(:,:)
+      INTEGER, INTENT(IN)    :: g(:,:)
       INTEGER, INTENT(IN)    :: ngptm
       INTEGER, INTENT(IN)    :: pgptm(:)
 
@@ -1015,7 +1015,7 @@ CONTAINS
 
       ! private arrays
       INTEGER                :: gPts(3, noGPts)                              ! g vectors (internal units)
-      INTEGER                :: gPts_gptm(3, noGpts, gptmd)                   ! gPts - gptm
+      INTEGER                :: gPts_gptm(3, noGpts, gptmd)                   ! gPts - g
       INTEGER                :: natdPtr(ntype + 1)                            ! pointer to all atoms of one type
       REAL, ALLOCATABLE   :: gridf(:, :)                                  ! grid for radial integration
       REAL                   :: k_G(3, noGPts)                               ! k + G
@@ -1023,7 +1023,7 @@ CONTAINS
       REAL                   :: arg(noGPts)                                 ! abs(k+G)^2 / (4*omega^2)
       REAL                   :: sphbesK_Gr(noGPts, jmtd, 0:maxlcutm, ntype)    ! spherical bessel function of abs(k+G)r
       TYPE(intgrf_out)       :: intgrMT(noGPts, maxindxm, 0:maxlcutm, ntype)   ! integration in muffin-tin
-      REAL                   :: abs_dg(noGpts, gptmd)                        ! abs(gPts - gptm)
+      REAL                   :: abs_dg(noGpts, gptmd)                        ! abs(gPts - g)
       COMPLEX                :: imgl(0:maxlcutm)                            ! i^l
       COMPLEX                :: Ylm(noGPts, (maxlcutm + 1)**2)                 ! spherical harmonics for k+G and all lm
       COMPLEX                :: expIGR(noGPts, ntype, MAXVAL(neq))            ! exp(-iGR) for all atom types
@@ -1082,7 +1082,7 @@ CONTAINS
 !                                                            0
       IF (ngptm < noGpts) call juDFT_error( 'hsefunctional: error calculating Fourier coefficients, noGpts too large')
 
-      gPts(:, :) = gptm(:, pgptm(1:noGPts))
+      gPts(:, :) = g(:, pgptm(1:noGPts))
 #ifndef __PGI
 
       gpoints:FORALL (cg=1:noGPts)
@@ -1145,7 +1145,7 @@ CONTAINS
       ! Calculate the difference of the G vectors and its absolute value
       FORALL (cg2=1:gptmd)
 
-      gPts_gptm(:, cg, cg2) = gPts(:, cg) - gptm(:, cg2)
+      gPts_gptm(:, cg, cg2) = gPts(:, cg) - g(:, cg2)
       abs_dg(cg, cg2) = gptnorm(gPts_gptm(:, cg, cg2), bmat)
 
       END FORALL
@@ -1220,9 +1220,9 @@ CONTAINS
          REAL, INTENT(IN)    :: abs_dg(:,:)
          COMPLEX             :: calculateSummation(noGPts, gptmd)
          INTEGER             :: cn, ci                                     ! counter variables
-         REAL                :: abs_dgR(noGPts, gptmd, ntype)               ! abs(gPts - gptm)*R (R: radius MT)
+         REAL                :: abs_dgR(noGPts, gptmd, ntype)               ! abs(gPts - g)*R (R: radius MT)
          REAL                :: inter_atom(noGPts, gptmd, ntype)            ! inter-atom interaction for interstitial
-         COMPLEX             :: expIdGR(noGPts, gptmd, ntype, MAXVAL(neq))   ! exp(-i(gPts-gptm)R)
+         COMPLEX             :: expIdGR(noGPts, gptmd, ntype, MAXVAL(neq))   ! exp(-i(gPts-g)R)
          COMPLEX             :: sumExpIdGR(noGPts, gptmd, ntype)            ! sum over atom of same type
 
          atoms:FORALL (cn=1:ntype)
@@ -1284,10 +1284,10 @@ CONTAINS
    ! maxlcutm    - maximum of all these l cutoffs
    ! nindxm      - number of radial functions of mixed basis
    ! maxindxm    - maximum of these numbers
-   ! gptm        - reciprocal lattice vectors of the mixed basis (internal coord.)
+   ! g        - reciprocal lattice vectors of the mixed basis (internal coord.)
    ! ngptm       - number of vectors (for treated k-vector)
    ! pgptm       - pointer to the appropriate g-vector (for treated k-vector)
-   ! gptmd       - dimension of gptm
+   ! gptmd       - dimension of g
    ! basm        - mixed basis functions (mt + inter) for treated k-vector
    ! lexp        - cutoff of spherical harmonics expansion of plane wave
    ! noGPts      - no g-vectors used for Fourier trafo
@@ -1298,7 +1298,7 @@ CONTAINS
       ! Input
       rmsh, rmt, dx, jri, jmtd, bk, ikpt, nkptf, &
       bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-      nindxm, maxindxm, gptm, ngptm, pgptm, gptmd, &
+      nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
       nbasp, basm, noGPts, invsat, invsatnr, irank, &
       ! Output
       potential, fourier_trafo)
@@ -1321,7 +1321,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(:)
       INTEGER, INTENT(IN)    :: jri(:)
-      INTEGER, INTENT(IN)    :: gptm(:,:)
+      INTEGER, INTENT(IN)    :: g(:,:)
       INTEGER, INTENT(IN)    :: ngptm, nbasp
       INTEGER, INTENT(IN)    :: pgptm(:)
       INTEGER, INTENT(IN)    :: invsat(:), invsatnr(:)
@@ -1441,7 +1441,7 @@ CONTAINS
 !                                                            0
          IF (ngptm < noGpts) call juDFT_error( 'hsefunctional: error calculating Fourier coefficients, noGpts too large')
 
-         gPts(:, :) = gptm(:, pgptm(1:noGPts))
+         gPts(:, :) = g(:, pgptm(1:noGPts))
 
          gpoints:FORALL (cg=1:noGPts)
          ntypesA:FORALL (cn=1:ntype)
@@ -1617,10 +1617,10 @@ CONTAINS
    ! maxlcutm - maximum of all these l cutoffs
    ! nindxm   - number of radial functions of mixed basis
    ! maxindxm - maximum of these numbers
-   ! gptm     - reciprocal lattice vectors of the mixed basis (internal coord.)
+   ! g     - reciprocal lattice vectors of the mixed basis (internal coord.)
    ! ngptm    - number of vectors
    ! pgptm    - pointer to the appropriate g-vector
-   ! gptmd    - dimension of gptm
+   ! gptmd    - dimension of g
    ! basm     - radial mixed basis functions (mt + inter)
    ! lexp     - cutoff of spherical harmonics expansion of plane wave
    ! maxbasm  - maximum number of mixed basis functions
@@ -1633,7 +1633,7 @@ CONTAINS
       ! Input
       rmsh, rmt, dx, jri, jmtd, nkptf, nkptd, nkpti, bk, &
       bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-      nindxm, maxindxm, gptm, ngptm, pgptm, gptmd, &
+      nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
       basm, lexp, maxbasm, nbasm, invsat, invsatnr, irank, &
       ! Input & output
       coulomb)
@@ -1656,7 +1656,7 @@ CONTAINS
       INTEGER, INTENT(IN)    :: lcutm(:)
       INTEGER, INTENT(IN)    :: nindxm(0:maxlcutm, ntype), neq(ntype)
       INTEGER, INTENT(IN)    :: jri(:)
-      INTEGER, INTENT(IN)    :: gptm(:,:)
+      INTEGER, INTENT(IN)    :: g(:,:)
       INTEGER, INTENT(IN)    :: ngptm(:)
       INTEGER, INTENT(IN)    :: pgptm(:,:)
       INTEGER, INTENT(IN)    :: nbasm(:)
@@ -1734,7 +1734,7 @@ CONTAINS
             ! Input
             rmsh, rmt, dx, jri, jmtd, bk(:, ikpt), &
             bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-            nindxm, maxindxm, gptm, ngptm(ikpt), pgptm(:, ikpt), gptmd, &
+            nindxm, maxindxm, g, ngptm(ikpt), pgptm(:, ikpt), gptmd, &
             basm, noGPts, irank, &
             ! Output
             potential, muffintin, interstitial)
@@ -1822,10 +1822,10 @@ CONTAINS
    ! maxlcutm - maximum of all these l cutoffs
    ! nindxm   - number of radial functions of mixed basis
    ! maxindxm - maximum of these numbers
-   ! gptm     - reciprocal lattice vectors of the mixed basis (internal coord.)
+   ! g     - reciprocal lattice vectors of the mixed basis (internal coord.)
    ! ngptm    - number of vectors
    ! pgptm    - pointer to the appropriate g-vector
-   ! gptmd    - dimension of gptm
+   ! gptmd    - dimension of g
    ! basm     - radial mixed basis functions (mt + inter)
    ! nbasm    - number of mixed basis function
    ! nobd     - dimension of occupied bands
@@ -1842,7 +1842,7 @@ CONTAINS
    FUNCTION dynamic_hse_adjustment( &
       rmsh, rmt, dx, jri, jmtd, bk, ikpt, nkptf, bmat, vol, &
       ntype, neq, natd, taual, lcutm, maxlcutm, nindxm, maxindxm, &
-      gptm, ngptm, pgptm, gptmd, basm, nbasm, &
+      g, ngptm, pgptm, gptmd, basm, nbasm, &
       nobd, nbands, nsst, ibando, psize, indx, invsat, invsatnr, irank, &
       cprod_r, cprod_c, l_real, wl_iks, n_q)
 
@@ -1865,7 +1865,7 @@ CONTAINS
       INTEGER, INTENT(IN)  :: lcutm(:)
       INTEGER, INTENT(IN)  :: nindxm(0:maxlcutm, ntype), neq(ntype)
       INTEGER, INTENT(IN)  :: jri(:)
-      INTEGER, INTENT(IN)  :: gptm(:,:)
+      INTEGER, INTENT(IN)  :: g(:,:)
       INTEGER, INTENT(IN)  :: ngptm
       INTEGER, INTENT(IN)  :: pgptm(:)
       INTEGER, INTENT(IN)  :: nsst(:), indx(:,:)
@@ -1920,7 +1920,7 @@ CONTAINS
       CALL calculate_fourier_transform_once( &
          rmsh, rmt, dx, jri, jmtd, bk, ikpt, nkptf, &
          bmat, vol, ntype, neq, natd, taual, lcutm, maxlcutm, &
-         nindxm, maxindxm, gptm, ngptm, pgptm, gptmd, &
+         nindxm, maxindxm, g, ngptm, pgptm, gptmd, &
          nbasp, basm, noGPts, invsat, invsatnr, irank, &
          potential, fourier_trafo)
 

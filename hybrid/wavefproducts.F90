@@ -138,7 +138,7 @@ CONTAINS
 
       DO igpt = 1, mpbasis%ngptm(iq)
          igptp = mpbasis%gptm_ptr(igpt, iq)
-         ghelp = mpbasis%gptm(:, igptp) - g_t(:)
+         ghelp = mpbasis%g(:, igptp) - g_t(:)
          DO i = 1, lapw%nv(jsp)
             gsum(:) = ghelp + gpt_nk(:, i)
             IF (all(abs(gsum) <= hybdat%pntgptd)) THEN
@@ -393,7 +393,7 @@ CONTAINS
 
       DO igpt = 1, mpbasis%ngptm(iq)
          igptp = mpbasis%gptm_ptr(igpt, iq)
-         ghelp = mpbasis%gptm(:, igptp) - g_t(:)
+         ghelp = mpbasis%g(:, igptp) - g_t(:)
          DO i = 1, lapw%nv(jsp)
             gsum(:) = ghelp + gpt_nk(:, i)
             IF (all(abs(gsum) <= hybdat%pntgptd)) THEN
@@ -1323,13 +1323,13 @@ CONTAINS
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
      &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(1, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%g(1, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
       g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(2, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%g(2, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
       g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(3, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%g(3, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation pointer'
@@ -1364,9 +1364,9 @@ CONTAINS
       DO ig1 = 1, lapw%nv(jsp)
          DO igptm = 1, mpbasis%ngptm(iq)
             iigptm = mpbasis%gptm_ptr(igptm, iq)
-            g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
+            g(1) = lapw%k1(ig1, jsp) + mpbasis%g(1, iigptm) - g_t(1)
+            g(2) = lapw%k2(ig1, jsp) + mpbasis%g(2, iigptm) - g_t(2)
+            g(3) = lapw%k3(ig1, jsp) + mpbasis%g(3, iigptm) - g_t(3)
             IF (pointer(g(1), g(2), g(3)) == 0) THEN
                ic = ic + 1
                gpt0(:, ic) = g
@@ -1397,7 +1397,7 @@ CONTAINS
       END DO
       call timestop("step function")
 
-      call timestart("hybrid gptm")
+      call timestart("hybrid g")
       ic = nbasm_mt
       DO igptm = 1, mpbasis%ngptm(iq)
          rarr2 = 0
@@ -1405,9 +1405,9 @@ CONTAINS
          iigptm = mpbasis%gptm_ptr(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
+            g(1) = lapw%k1(ig1, jsp) + mpbasis%g(1, iigptm) - g_t(1)
+            g(2) = lapw%k2(ig1, jsp) + mpbasis%g(2, iigptm) - g_t(2)
+            g(3) = lapw%k3(ig1, jsp) + mpbasis%g(3, iigptm) - g_t(3)
 
             ig2 = pointer(g(1), g(2), g(3))
 
@@ -1425,7 +1425,7 @@ CONTAINS
          END DO
          cprod(ic, :, :) = rarr2(:, :)
       END DO
-      call timestop("hybrid gptm")
+      call timestop("hybrid g")
       call timestop("calc convolution")
 
       WRITE (2005, *) 'Point B'
@@ -2334,13 +2334,13 @@ CONTAINS
 
       g(1) = maxval(abs(lapw%k1(:lapw%nv(jsp), jsp))) &
      &     + maxval(abs(lapw_nkqpt%k1(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(1, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%g(1, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
       g(2) = maxval(abs(lapw%k2(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k2(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(2, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%g(2, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
       g(3) = maxval(abs(lapw%k3(:lapw%nv(jsp), jsp)))&
      &     + maxval(abs(lapw_nkqpt%k3(:lapw_nkqpt%nv(jsp), jsp)))&
-     &     + maxval(abs(mpbasis%gptm(3, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
+     &     + maxval(abs(mpbasis%g(3, mpbasis%gptm_ptr(:mpbasis%ngptm(iq), iq)))) + 1
 
       ALLOCATE (pointer(-g(1):g(1), -g(2):g(2), -g(3):g(3)), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_noinv2: error allocation pointer'
@@ -2374,9 +2374,9 @@ CONTAINS
       DO ig1 = 1, lapw%nv(jsp)
          DO igptm = 1, mpbasis%ngptm(iq)
             iigptm = mpbasis%gptm_ptr(igptm, iq)
-            g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
+            g(1) = lapw%k1(ig1, jsp) + mpbasis%g(1, iigptm) - g_t(1)
+            g(2) = lapw%k2(ig1, jsp) + mpbasis%g(2, iigptm) - g_t(2)
+            g(3) = lapw%k3(ig1, jsp) + mpbasis%g(3, iigptm) - g_t(3)
             IF (pointer(g(1), g(2), g(3)) == 0) THEN
                ic = ic + 1
                gpt0(:, ic) = g
@@ -2406,7 +2406,7 @@ CONTAINS
       END DO
       call timestop("step function")
 
-      call timestart("hybrid gptm")
+      call timestart("hybrid g")
       ic = nbasm_mt
       DO igptm = 1, mpbasis%ngptm(iq)
          carr2 = 0
@@ -2414,9 +2414,9 @@ CONTAINS
          iigptm = mpbasis%gptm_ptr(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g(1) = lapw%k1(ig1, jsp) + mpbasis%gptm(1, iigptm) - g_t(1)
-            g(2) = lapw%k2(ig1, jsp) + mpbasis%gptm(2, iigptm) - g_t(2)
-            g(3) = lapw%k3(ig1, jsp) + mpbasis%gptm(3, iigptm) - g_t(3)
+            g(1) = lapw%k1(ig1, jsp) + mpbasis%g(1, iigptm) - g_t(1)
+            g(2) = lapw%k2(ig1, jsp) + mpbasis%g(2, iigptm) - g_t(2)
+            g(3) = lapw%k3(ig1, jsp) + mpbasis%g(3, iigptm) - g_t(3)
 
             ig2 = pointer(g(1), g(2), g(3))
 
@@ -2434,7 +2434,7 @@ CONTAINS
          END DO
          cprod(ic, :, :) = carr2(:, :)
       END DO
-      call timestop("hybrid gptm")
+      call timestop("hybrid g")
       DEALLOCATE (z0, pointer, gpt0)
       call timestop("calc convolution")
 

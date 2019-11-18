@@ -244,7 +244,7 @@ CONTAINS
                exch_vv = exch_vv + &
                          dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
-                                                hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, maxval(mpbasis%num_radbasfn), mpbasis%gptm, &
+                                                hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, maxval(mpbasis%num_radbasfn), mpbasis%g, &
                                                 mpbasis%ngptm(ikpt0), mpbasis%gptm_ptr(:, ikpt0), mpbasis%num_gpts(), mpbasis%radbasfn_mt, &
                                                 hybrid%nbasm(ikpt0), iband1, hybrid%nbands(nk), nsest, ibando, psize, indx_sest, &
                                                 atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
