@@ -173,7 +173,7 @@ CONTAINS
      !
 
      !(1) prepare list of G vectors
-     call prep_list_of_gvec(lapw, mpbasis, hybrid, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
+     call prep_list_of_gvec(lapw, mpbasis, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
 
      !(2) calculate convolution
      call timestart("calc convolution")
