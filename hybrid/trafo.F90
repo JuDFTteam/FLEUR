@@ -124,7 +124,7 @@ CONTAINS
       z_out = 0
 
       DO igpt = 1, lapw%nv(jsp)
-         g = matmul(invrrot, lapw%gvec(:, igpt, jsp) + g1)
+         g = INT(matmul(invrrot, lapw%gvec(:, igpt, jsp) + g1))
 !determine number of g
          igpt1 = 0
          DO i = 1, lapw%nv(jsp)
@@ -305,7 +305,7 @@ CONTAINS
                   WRITE (*, *) zhlp
                   call judft_error('waveftrafo1: Residual imaginary part.')
                END IF
-               z_rout(:, i) = zhlp(:, i)/cdum
+               z_rout(:, i) = real(zhlp(:, i)/cdum)
                cmt_out(i, :, :) = cmt_out(i, :, :)/cdum
             else
                z_cout(:, i) = zhlp(:, i)
@@ -313,7 +313,7 @@ CONTAINS
          END DO
       ELSE
          if (l_real) THEN
-            z_rout = zhlp
+            z_rout = real(zhlp)
          else
             z_cout = zhlp
          endif
@@ -758,7 +758,7 @@ CONTAINS
       endif
 
       if (l_real) THEN
-         vecout_r = vecout1
+         vecout_r = real(vecout1)
       else
          vecout_c = vecout1
       endif
@@ -1266,7 +1266,7 @@ CONTAINS
    SUBROUTINE ket_trafo(&
   &        vecout, vecin, ikpt0, isym, lreal, lsymmetrize,&
   &        atoms, kpts, sym,&
-  &        mpbasis, hybrid, cell, maxindxm, nindxm, nbasm,&
+  &        mpbasis, cell, maxindxm, nindxm, nbasm,&
   &        ngptmall, nbasp, lcutm, maxlcutm)
 
       USE m_constants
@@ -1276,7 +1276,6 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
       type(t_mpbasis), intent(in)  :: mpbasis
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -1301,7 +1300,7 @@ CONTAINS
       ! -local scalars -
       INTEGER               ::  iatom, iatom1, iiatom, itype, ieq, ieq1, ic, l,&
      &                          n, i, nn, i1, i2, j1, j2
-      INTEGER               ::  igptm, igptm1, igptm2, igptp, igptp1, ikpt1,&
+      INTEGER               ::  igptm, igptm2, igptp, igptp1, ikpt1,&
      &                          isymi, iisym
       INTEGER               ::  m1, m2
 
@@ -1318,9 +1317,6 @@ CONTAINS
       COMPLEX               ::  vecin1(nbasm(ikpt0))
       COMPLEX               ::  vecout1(nbasm(ikpt0))
       COMPLEX               ::  dwgn(-maxlcutm:maxlcutm,&
-     &                                  -maxlcutm:maxlcutm,&
-     &                                          0:maxlcutm)
-      COMPLEX               ::  dwgninv(-maxlcutm:maxlcutm,&
      &                                  -maxlcutm:maxlcutm,&
      &                                          0:maxlcutm)
 
@@ -1473,7 +1469,7 @@ CONTAINS
 
    SUBROUTINE ket_trafo1(vecout, vecin, ikpt0, isym, lreal, lsymmetrize, &
                          atoms, kpts, sym, mpbasis, hybrid, &
-                         maxindxm, nindxm, nbasm, ngptmall, nbasp, lcutm, maxlcutm)
+                         maxindxm, nindxm, nbasm, nbasp, lcutm, maxlcutm)
 
       USE m_constants
       USE m_util, ONLY: modulo1
@@ -1497,18 +1493,16 @@ CONTAINS
 
       INTEGER, INTENT(IN)  ::  nbasm(:)
       INTEGER, INTENT(IN)  ::  nindxm(0:maxlcutm, atoms%ntype)
-      INTEGER, INTENT(IN)  ::  ngptmall
       INTEGER, INTENT(IN)  ::  lcutm(:)
 
       COMPLEX, INTENT(IN)  ::  vecin(:)
       COMPLEX, INTENT(OUT) ::  vecout(nbasm(ikpt0))
 
       ! -local scalars -
-      INTEGER               ::  iatom, iatom1, iiatom, itype, ieq, ieq1, ic, l,&
+      INTEGER               ::  iatom, iatom1, iiatom, itype, ieq, ic, l,&
      &                          n, i, nn, i1, i2, j1, j2
-      INTEGER               ::  igptm, igptm1, igptm2, igptp, igptp1, ikpt1,&
-     &                          isymi, iisym
-      INTEGER               ::  m1, m2
+      INTEGER               ::  igptm, igptm1, igptp, igptp1, ikpt1,&
+     &                          iisym
 
       COMPLEX               ::  cexp, cdum
       COMPLEX, PARAMETER   ::  img = (0.0, 1.0)
@@ -1517,7 +1511,7 @@ CONTAINS
       INTEGER               ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3), g1(3)
       INTEGER               ::  rrot(3, 3)
 
-      REAL                  ::  rkpt(3), rkpthlp(3), rtaual(3)
+      REAL                  ::  rkpt(3), rkpthlp(3)
 
       COMPLEX               ::  vecin1(nbasm(ikpt0))
       COMPLEX               ::  vecout1(nbasm(ikpt0))
@@ -1658,7 +1652,7 @@ CONTAINS
          ELSE IF (rdum > rmax) THEN; cfac = carr(i)/rdum; rmax = rdum
          END IF
       END DO
-      IF (cfac == 0 .and. all(carr /= 0)) THEN
+      IF (abs(cfac) < 1e-10 .and. all(abs(carr) > 1e-10)) THEN
          WRITE (999, *) carr
          call judft_error('commonphase: Could not determine common phase factor. (Wrote carr to fort.999)')
       END IF
@@ -1702,7 +1696,7 @@ CONTAINS
 
 !     - private scalars -
       INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
-      INTEGER                 ::  igptm, igptm2, igptp, iiop, isym
+      INTEGER                 ::  igptm, igptm2, igptp, isym
       INTEGER                 ::  ikpt1, rcent
       LOGICAL                 ::  trs
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
