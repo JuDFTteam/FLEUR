@@ -154,14 +154,13 @@ CONTAINS
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
    SUBROUTINE wfolap_init(olappw, olapmt, gpt,&
-  &                       atoms, mpbasis, hybrid, cell,&
+  &                       atoms, mpbasis, cell,&
   &                       bas1, bas2)
 
       USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_types
       IMPLICIT NONE
       TYPE(t_mpbasis), intent(in) :: mpbasis
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)   :: atoms
 

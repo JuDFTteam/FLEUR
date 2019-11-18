@@ -413,13 +413,13 @@ CONTAINS
          IF (indx0 /= hybrid%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybrid%nbasm(ikpt), hybrid%nbasp, atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn,&
+      CALL reorder(hybrid%nbasm(ikpt), atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn,&
      &             2,&
      &             vec_c=vecout)
      call timestop("spmvec_noinvs")
    END SUBROUTINE spmvec_noinvs
 
-   SUBROUTINE reorder(nbasm, nbasp, atoms, lcutm, maxlcutm, nindxm, imode, vec_r, vec_c)
+   SUBROUTINE reorder(nbasm, atoms, lcutm, maxlcutm, nindxm, imode, vec_r, vec_c)
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
@@ -427,7 +427,7 @@ CONTAINS
 
       ! - scalars -
       INTEGER, INTENT(IN)   ::  maxlcutm
-      INTEGER, INTENT(IN)   ::  nbasm, nbasp
+      INTEGER, INTENT(IN)   ::  nbasm
       INTEGER, INTENT(IN)   ::  imode
 
       ! - arrays -

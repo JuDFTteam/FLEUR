@@ -284,7 +284,7 @@ CONTAINS
 
          olapmt = 0
          CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, mpbasis, &
-                          hybrid, cell, hybdat%bas1, hybdat%bas2)
+                          cell, hybdat%bas1, hybdat%bas2)
 
          allocate(cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation cmthlp/cpwhlp')
