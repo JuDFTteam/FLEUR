@@ -29,7 +29,7 @@ CONTAINS
          DO j = 1, i
             dg = gpt(:, j) - gpt(:, i)
             g = gptnorm(dg, cell%bmat)
-            IF (g == 0) THEN
+            IF (abs(g) < 1e-10) THEN
                DO itype = 1, atoms%ntype
                   r = atoms%rmt(itype)
                   if (olap%l_real) THEN
@@ -46,7 +46,7 @@ CONTAINS
                   DO ineq = 1, atoms%neq(itype)
                      icent = icent + 1
                      if (olap%l_real) THEN
-                        olap%data_r(i, j) = olap%data_r(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
+                        olap%data_r(i, j) = real(olap%data_r(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
                      else
                         olap%data_c(i, j) = olap%data_c(i, j) - fgr*exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
                      endif
@@ -99,7 +99,7 @@ CONTAINS
                dg = gpt(:, i) - gpt(:, j)
                g = gptnorm(dg, cell%bmat)
                olap_r(k) = 0
-               IF (g == 0) THEN
+               IF (abs(g) < 1e-10) THEN
                   DO itype = 1, atoms%ntype
                      r = atoms%rmt(itype)
                      olap_r(k) = olap_r(k) - atoms%neq(itype)*fpi_const*r**3/3/cell%omtil

@@ -1473,7 +1473,7 @@ CONTAINS
 
    SUBROUTINE ket_trafo1(vecout, vecin, ikpt0, isym, lreal, lsymmetrize, &
                          atoms, kpts, sym, mpbasis, hybrid, &
-                         cell, maxindxm, nindxm, nbasm, ngptmall, nbasp, lcutm, maxlcutm)
+                         maxindxm, nindxm, nbasm, ngptmall, nbasp, lcutm, maxlcutm)
 
       USE m_constants
       USE m_util, ONLY: modulo1
@@ -1484,7 +1484,6 @@ CONTAINS
       TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -1702,9 +1701,9 @@ CONTAINS
       COMPLEX, INTENT(OUT)     ::  vecout(nbasm(ikpt0))
 
 !     - private scalars -
-      INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2, m1
-      INTEGER                 ::  m2, igptm, igptm2, igptp, iiop, isym
-      INTEGER                 ::  ikpt1, isymi, rcent
+      INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
+      INTEGER                 ::  igptm, igptm2, igptp, iiop, isym
+      INTEGER                 ::  ikpt1, rcent
       LOGICAL                 ::  trs
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
       COMPLEX                 ::  cexp, cdum

@@ -30,7 +30,7 @@ contains
       implicit none
       integer, intent(in)  :: n
       integer        :: identity(n, n)
-      integer        :: i, j
+      integer        :: i
       identity = 0
       do i = 1, n
          identity(i, i) = 1
@@ -344,7 +344,7 @@ contains
       real, intent(in)  :: mat1(:), mat2(:, :)
       real        :: matmat_dpdm(size(mat2, 1), size(mat2, 1))
       real, allocatable :: vec(:), vec2(:)
-      integer        :: nn, n, k1, i
+      integer        :: nn, n, i
       n = size(mat2, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       if (size(mat2, 2) /= n) &
          call juDFT_error( 'matmat_dpdm: dimensions of second input array differ.')
@@ -364,7 +364,7 @@ contains
       real, intent(in)  :: mat1(:, :), mat2(:)
       real        :: matmat_dmdp(size(mat1, 1), size(mat1, 1))
       real, allocatable :: vec(:), vec2(:)
-      integer        :: nn, n, k1, i
+      integer        :: nn, n, i
       n = size(mat1, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       if (size(mat1, 2) /= n) &
          call juDFT_error( 'matmat_dmdp: dimensions of first input array differ.')
@@ -402,7 +402,7 @@ contains
       complex              :: matmat_dpzm(size(mat2, 1), size(mat2, 1))
       real, allocatable :: vecr(:), veci(:)
       complex, allocatable :: vec2(:)
-      integer        :: nn, n, k1, i
+      integer        :: nn, n, i
       n = size(mat2, 1)
       nn = n*(n + 1)/2; allocate(vecr(n), veci(n), vec2(n))
       if (size(mat2, 2) /= n) &
@@ -425,7 +425,7 @@ contains
       complex, intent(in)  :: mat2(:)
       complex              :: matmat_dmzp(size(mat1, 1), size(mat1, 1))
       complex, allocatable :: vec1(:), vec(:)
-      integer        :: nn, n, k1, i
+      integer        :: nn, n, i
       n = size(mat1, 1); nn = n*(n + 1)/2; allocate(vec(n), vec1(n))
       if (size(mat1, 2) /= n) &
          call juDFT_error( 'matmat_dmzp: dimensions of first input array differ.')
@@ -465,7 +465,7 @@ contains
       real, intent(in)  :: mat2(:, :)
       complex              :: matmat_zpdm(size(mat2, 1), size(mat2, 1))
       complex, allocatable :: vec(:), vec2(:)
-      integer        :: nn, n, k1, i
+      integer        :: nn, n, i
       n = size(mat2, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       if (size(mat2, 2) /= n) &
          call juDFT_error( 'matmat_zpdm: dimensions of second input array differ.')
@@ -487,7 +487,7 @@ contains
       complex              :: matmat_zmdp(size(mat1, 1), size(mat1, 1))
       complex, allocatable :: vec1(:)
       real, allocatable :: vecr(:), veci(:)
-      integer        :: nn, n, k1, i
+      integer        :: nn, n, i
       n = size(mat1, 1); nn = n*(n + 1)/2
       allocate(vecr(n), veci(n), vec1(n))
       if (size(mat1, 2) /= n) &
@@ -528,7 +528,7 @@ contains
       complex, intent(in)  :: mat1(:), mat2(:, :)
       complex              :: matmat_zpzm(size(mat2, 1), size(mat2, 2))
       complex, allocatable :: vec(:), vec2(:)
-      integer        :: nn, n, k1, i, n2
+      integer        :: nn, n, i, n2
       n = size(mat2, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       n2 = size(mat2, 2)
       if (size(mat1) /= nn) &
@@ -547,7 +547,7 @@ contains
       complex, intent(in)  :: mat1(:, :), mat2(:)
       complex              :: matmat_zmzp(size(mat1, 1), size(mat1, 1))
       complex, allocatable :: vec(:), vec2(:)
-      integer        :: nn, n, k1, i
+      integer        :: nn, n, i
       n = size(mat1, 1); nn = n*(n + 1)/2; allocate(vec(n), vec2(n))
       if (size(mat1, 2) /= n) &
          call juDFT_error( 'matmat_zmzp: dimensions of first input array differ.')
