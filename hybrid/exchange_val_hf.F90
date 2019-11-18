@@ -258,7 +258,7 @@ CONTAINS
                CALL bra_trafo2(mat_ex%l_real, carr3_vv_r(:hybrid%nbasm(ikpt0), :, :), cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
                                carr3_vv_c(:hybrid%nbasm(ikpt0), :, :), cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), &
                                hybrid%nbasm(ikpt0), psize, hybrid%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
-                               mpbasis, hybrid, kpts, cell, atoms, phase_vv)
+                               mpbasis, hybrid, kpts, atoms, phase_vv)
                IF (mat_ex%l_real) THEN
                   cprod_vv_r(:hybrid%nbasm(ikpt0), :, :) = carr3_vv_r(:hybrid%nbasm(ikpt0), :, :)
                ELSE

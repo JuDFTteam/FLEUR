@@ -10,7 +10,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
                               nk, iop, atoms, mpbasis, hybrid, kpts, sym, &
-                              jsp, dimension, cell, lapw)
+                              jsp, lapw)
 
       USE m_constants
       USE m_wrapper
@@ -18,11 +18,9 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_mpbasis), INTENT(IN)     :: mpbasis
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_sym), INTENT(IN)         :: sym
-      TYPE(t_cell), INTENT(IN)        :: cell
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_lapw), INTENT(IN)        :: lapw
@@ -42,15 +40,14 @@ CONTAINS
 !     - local -
 
 !     - scalars -
-      INTEGER                 ::  iatom, iatom1, iiatom, itype, igpt, igpt1, ieq, ieq1, iiop
-      INTEGER                 ::  i, l, n, nn, lm0, lm1, lm2, m1, m2
+      INTEGER                 ::  iatom, iatom1, iiatom, itype, igpt, igpt1, ieq, iiop
+      INTEGER                 ::  i, l, n, nn, lm0, lm1, lm2
       COMPLEX                 ::  cdum
-      COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
 
 !     - arrays -
       REAL                    ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
-      REAL                    ::  tau1(3), rtaual(3), rkpt(3), rkpthlp(3), trans(3)
+      REAL                    ::  tau1(3), rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
       LOGICAL                 ::  trs
 
@@ -153,7 +150,7 @@ CONTAINS
    SUBROUTINE waveftrafo_genwavf( &
       cmt_out, z_rout, z_cout, cmt, l_real, z_r, z_c, nk, iop, atoms, &
       mpbasis, hybrid, kpts, sym, jsp, nbasfcn, dimension, nbands, &
-      cell, lapw_nk, lapw_rkpt, phase)
+      lapw_nk, lapw_rkpt, phase)
 
       use m_juDFT
       USE m_constants
@@ -165,7 +162,6 @@ CONTAINS
       TYPE(t_mpbasis), INTENT(IN)    :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw_nk, lapw_rkpt
@@ -185,8 +181,8 @@ CONTAINS
 !        - local -
 
 !     - scalars -
-      INTEGER                 ::  itype, iatom, iatom1, iiatom, igpt, igpt1, ieq, ieq1, iiop
-      INTEGER                 ::  i, l, n, nn, lm0, lm1, lm2, m1, m2
+      INTEGER                 ::  itype, iatom, iatom1, iiatom, igpt, igpt1, ieq, iiop
+      INTEGER                 ::  i, l, n, nn, lm0, lm1, lm2
       COMPLEX                 ::  cdum
       LOGICAL                 ::  trs
 
@@ -351,8 +347,8 @@ CONTAINS
       COMPLEX, INTENT(INOUT) ::  mat(dim1,dim2)
 
 !     -local scalars -
-      INTEGER               ::  i, j, itype, ieq, ic, ic1, i1, i2, l, m, n, nn, ifac, ishift
-      REAL                  ::  rfac, rdum, rmax
+      INTEGER               ::  i, j, itype, ieq, ic, ic1, l, m, n, nn, ifac, ishift
+      REAL                  ::  rfac
       COMPLEX               ::  img = (0.0, 1.0)
 
 !     - local arrays -
@@ -468,7 +464,7 @@ CONTAINS
       COMPLEX, INTENT(INOUT)   ::  mat(dim1,dim2)
 
 !     - local scalars -
-      INTEGER                 ::  ifac, i, j, itype, ieq, ic, ic1, i1, i2, l, m, n, nn, ishift
+      INTEGER                 ::  ifac, i, j, itype, ieq, ic, ic1, l, m, n, nn, ishift
       REAL                    ::  rfac1, rfac2
       COMPLEX                 ::  img = (0.0, 1.0)
 !     - local arrays -
@@ -538,7 +534,7 @@ CONTAINS
    SUBROUTINE bra_trafo2( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
       dim, nobd, nbands, ikpt0, ikpt1, iop, sym, &
-      mpbasis, hybrid, kpts, cell, atoms, &
+      mpbasis, hybrid, kpts, atoms, &
       phase)
 
       !  ikpt0  ::  parent of ikpt1
@@ -552,7 +548,6 @@ CONTAINS
       type(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
-      TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -572,8 +567,8 @@ CONTAINS
 !          - local -
 
 !     - scalars -
-      INTEGER                 ::  nrkpt, rcent, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2, m1, m2, ok
-      INTEGER                 ::  igptm, igptm2, igptp, icent1, iiatom, iiop, inviop
+      INTEGER                 ::  nrkpt, rcent, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2, ok
+      INTEGER                 ::  igptm, igptm2, igptp, iiatom, iiop, inviop
       COMPLEX                 ::  cexp, cdum
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
 !     - arrays -
@@ -581,8 +576,7 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3), invrot(3, 3)
       INTEGER                 ::  pnt(maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%nat)
       INTEGER                 ::  g(3), g1(3)
-      REAL                    ::  rkpt(3), rkpthlp(3), rtaual(3), trans(3)
-      REAL                    ::  arg
+      REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
      &                                 -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1))
 !       COMPLEX                 ::  vecin1(dim,nobd,nbands),vecout1(dim,nobd,nbands)

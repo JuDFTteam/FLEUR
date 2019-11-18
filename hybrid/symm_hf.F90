@@ -301,7 +301,7 @@ CONTAINS
                   cpwhlp = 0
 
                   CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, dimension, cell, lapw)
+                                       i, ndb, nk, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, lapw)
 
                   DO iband = 1, ndb
                      carr1 = cmt(iband + i - 1, :, :)
