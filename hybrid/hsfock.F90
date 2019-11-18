@@ -176,7 +176,7 @@ CONTAINS
             call judft_error('HSE not implemented in hsfock')
          ELSE
             CALL exchange_vccv1(nk, atoms, mpbasis, hybrid, hybdat, dimension, jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
-            CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, mpi, results)
+            CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
          END IF
 
          deallocate(n_q)

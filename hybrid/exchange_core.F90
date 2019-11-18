@@ -411,7 +411,7 @@ CONTAINS
 
    END SUBROUTINE exchange_vccv1
 
-   SUBROUTINE exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, mpi, results)
+   SUBROUTINE exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
 
       USE m_constants
       USE m_util
@@ -424,7 +424,6 @@ CONTAINS
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
-      TYPE(t_mpi), INTENT(IN)   :: mpi
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
