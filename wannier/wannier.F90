@@ -1258,7 +1258,7 @@ CONTAINS
 
 
                 CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,&
-                     noco,jspin,oneD,acof,bcof,ccof,zMat)
+                     noco,jspin2,oneD,acof,bcof,ccof,zMat)
 
 
                 CALL wann_abinv(atoms, acof,bcof,ccof)
@@ -1596,7 +1596,7 @@ CONTAINS
 !!! get the band-dependent k-dependent ab coeff.
 
                       CALL abcof(input,atoms,sym,cell,lapw_b,&
-                           noccbd_b,usdus,noco,jspin,oneD,&
+                           noccbd_b,usdus,noco,jspin2,oneD,&
                            acof_b,bcof_b,ccof_b,zMat_b)
 
 
