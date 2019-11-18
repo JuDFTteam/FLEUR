@@ -241,19 +241,23 @@ CONTAINS
 
       call timestart("wavefproducts_noinv5 MT")
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
+      call timestart("set lmstart")
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
             lmstart(l, itype) = sum([(mpbasis%num_radfun_per_l(ll, itype)*(2*ll+1), ll=0, l-1)])
          END DO
       END DO
+      call timestop("set lmstart")
 
       ! read in cmt coefficients from direct access file cmt
+      call timestart("read_cmt")
       call read_cmt(cmt_nk(:,:,:), nk)
       call read_cmt(cmt(:,:,:), nkqpt)
+      call timestop("read_cmt")
 
       lm_0 = 0
       ic = 0
-
+      call timestart("loop over l, l1, l2, n, n1, n2")
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
@@ -315,6 +319,7 @@ CONTAINS
             END DO
          END DO
       END DO
+      call timestop("loop over l, l1, l2, n, n1, n2")
       call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT
 end module m_wavefproducts_noinv

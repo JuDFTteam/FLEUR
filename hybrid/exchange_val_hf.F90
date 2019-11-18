@@ -288,7 +288,7 @@ CONTAINS
                   END IF
                   call timestop("spare matrix products")
 
-                  call timestart("dot prod")
+                  call timestart("exch_vv dot prod")
                   IF (mat_ex%l_real) THEN
                      DO n2 = 1, nsest(n1)!n1
                         nn2 = indx_sest(n2, n1)
@@ -302,7 +302,7 @@ CONTAINS
                                            dot_product(carr1_v_c(:n), cprod_vv_c(:n, iband, nn2))
                      END DO !n2
                   END IF
-                  call timestop("dot prod")
+                  call timestop("exch_vv dot prod")
                END DO
             END DO  !n1
             call timestop("exchange matrix")
