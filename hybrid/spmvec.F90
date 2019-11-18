@@ -243,11 +243,10 @@ CONTAINS
       INTEGER             ::  itype, ieq, iatom, ishift
       INTEGER             ::  itype1, ieq1, iatom1, ishift1
       INTEGER             ::  indx0, indx1, indx2, indx3, indx4
-      INTEGER             ::  i, ibasm, igptm
+      INTEGER             ::  ibasm
       INTEGER             ::  l
       INTEGER             ::  n, m
 
-      COMPLEX, PARAMETER  ::  img = (0.0, 1.0)
       ! - local arrays -
 
       REAL                ::  vecr(maxval(mpbasis%num_radbasfn) - 1), veci(maxval(mpbasis%num_radbasfn) - 1)
