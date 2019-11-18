@@ -20,7 +20,7 @@ MODULE m_exchange_core
 CONTAINS
 
    SUBROUTINE exchange_vccv(nk, atoms, mpbasis, hybrid, hybdat, DIMENSION, jsp, lapw, &
-                            maxbands, mnobd, mpi, degenerat, symequivalent, results, &
+                            mnobd, mpi, degenerat, symequivalent, results, &
                             ex_vv_r, ex_vv_c, l_real)
 
       USE m_constants
@@ -42,7 +42,7 @@ CONTAINS
 
       !     -scalars -
       INTEGER, INTENT(IN)      :: jsp
-      INTEGER, INTENT(IN)      ::nk, maxbands, mnobd
+      INTEGER, INTENT(IN)      ::nk, mnobd
       !     - arays -
       INTEGER, INTENT(IN)      ::  degenerat(:)
       LOGICAL, INTENT(IN)      :: l_real
@@ -59,7 +59,6 @@ CONTAINS
       REAL                    ::  rdum
       REAL                    ::  sum_offdia
 
-      COMPLEX                 ::  cdum
 
       !     - local arrays -
       INTEGER, ALLOCATABLE     ::  larr(:), larr2(:)
@@ -268,14 +267,11 @@ CONTAINS
       !     - local scalars -
       INTEGER                 ::  iatom, ieq, itype, ic, l, l1, l2
       INTEGER                 ::  ll, lm, m1, m2, p1, p2, n, n1, n2, nn2, i, j
-      INTEGER                 ::  iband1, iband2, ndb1, ndb2, ic1, ic2
       INTEGER                 ::  m
 
-      REAL                    ::  time1, time2
       REAL                    ::  rdum
       REAL                    ::  sum_offdia
 
-      COMPLEX                 ::  cdum
       !     - local arrays -
       INTEGER, ALLOCATABLE     ::  larr(:), larr2(:)
       INTEGER, ALLOCATABLE     ::  parr(:), parr2(:)
@@ -289,7 +285,6 @@ CONTAINS
       COMPLEX                 ::  exchange(hybrid%nbands(nk), hybrid%nbands(nk))
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 
-      LOGICAL                 ::  ldum(hybrid%nbands(nk), hybrid%nbands(nk))
 
       ! read in mt wavefunction coefficients from file cmt
 
