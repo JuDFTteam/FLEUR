@@ -19,9 +19,9 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    USE m_juDFT
    IMPLICIT NONE
 
-!   TYPE(t_dimension), INTENT(IN) ::  dimension
+
    TYPE(t_input), INTENT(IN)     ::  input
-   TYPE(t_atoms), INTENT(INOUT)     ::  atoms
+   TYPE(t_atoms), INTENT(INOUT)  ::  atoms
    TYPE(t_noco), INTENT(IN)      ::  noco
    TYPE(t_potden),INTENT(IN)     ::  den
    REAL, INTENT(OUT)             ::  moments(atoms%ntype,3)

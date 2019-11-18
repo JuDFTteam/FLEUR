@@ -388,7 +388,7 @@ CONTAINS
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
-          !CALL magnMomFromDen(nput,atoms,noco,Outden,moments)
+
            
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
