@@ -209,7 +209,6 @@ CONTAINS
 
 !     - scalars -
       COMPLEX                :: wfolap_inv
-      INTEGER, INTENT(IN)     :: ngpt1, ngpt2
 !     - arrays -
       COMPLEX, INTENT(IN)     :: cmt1(:,:), cmt2(:,:)
       REAL, INTENT(IN)        :: cpw1(:)
@@ -218,7 +217,6 @@ CONTAINS
       REAL, INTENT(IN)        :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
-      REAL                   :: rarr1(ngpt1), rarr2(ngpt1), rdum1, rdum2
 
       wfolap_inv = 0
       iatom = 0
