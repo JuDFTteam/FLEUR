@@ -68,15 +68,13 @@ CONTAINS
 
       ! local scalars
       INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2
-      INTEGER                         ::  m, nk, i_basfn, i, j, n_grid_pt
-      REAL                            ::  rdum, rdum1, norm, max_momentum, momentum
+      INTEGER                         ::  m, i_basfn, i, n_grid_pt
+      REAL                            ::  rdum, rdum1, max_momentum, momentum
 
       ! - local arrays -
 
       REAL                            ::  bashlp(atoms%jmtd)
 
-
-      REAL, ALLOCATABLE               ::  olap(:,:), work(:), eig(:), eigv(:,:)
       REAL, ALLOCATABLE               ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
       REAL, ALLOCATABLE               ::  basmhlp(:,:,:,:)
       REAL, ALLOCATABLE               ::  gridf(:,:), vr0(:,:,:)
@@ -114,7 +112,7 @@ CONTAINS
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      call gen_bas_fun(atoms, enpara, gridf, input, mpbasis, hybrid, mpi, vr0, usdus, bas1, bas2)
+      call gen_bas_fun(atoms, enpara, gridf, input, mpbasis, mpi, vr0, usdus, bas1, bas2)
 
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
@@ -389,7 +387,7 @@ CONTAINS
       enddo
    END SUBROUTINE mixedbasis
 
-   subroutine gen_bas_fun(atoms, enpara, gridf, input, mpbasis, hybrid, mpi, vr0, usdus, bas1, bas2)
+   subroutine gen_bas_fun(atoms, enpara, gridf, input, mpbasis, mpi, vr0, usdus, bas1, bas2)
       use m_judft
       use m_types
       USE m_radfun, ONLY: radfun
@@ -399,7 +397,6 @@ CONTAINS
       type(t_atoms), intent(in)        :: atoms
       type(t_enpara), intent(in)       :: enpara
       type(t_input), intent(in)        :: input
-      type(t_hybrid), intent(in)       :: hybrid
       TYPE(t_mpbasis), intent(in)      :: mpbasis
       type(t_mpi), intent(in)          :: mpi
       type(t_usdus), intent(inout)     :: usdus
