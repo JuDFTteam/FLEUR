@@ -307,7 +307,7 @@ CONTAINS
                      carr1 = cmt(iband + i - 1, :, :)
                      IF (z%l_real) THEN
                         rep_d(iband, ic, isym) = wfolap_inv(carr1, z%data_r(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                            cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_r, olapmt, atoms, mpbasis, hybrid)
+                                                            cpwhlp(:, iband), olappw%data_r, olapmt, atoms, mpbasis)
                      else
                         rep_d(iband, ic, isym) = wfolap_noinv(carr1, z%data_c(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
                                                               cpwhlp(:, iband), olappw%data_c, olapmt, atoms, mpbasis)

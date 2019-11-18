@@ -199,13 +199,12 @@ CONTAINS
 
    END SUBROUTINE wfolap_init
 
-   FUNCTION wfolap_inv(cmt1, cpw1, cmt2, cpw2, ngpt1, ngpt2, olappw, olapmt, atoms, mpbasis,hybrid)
+   FUNCTION wfolap_inv(cmt1, cpw1, cmt2, cpw2, olappw, olapmt, atoms, mpbasis)
 
       USE m_wrapper
       USE m_types
       IMPLICIT NONE
       TYPE(t_mpbasis), intent(in) :: mpbasis
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
 !     - scalars -
@@ -219,7 +218,6 @@ CONTAINS
       REAL, INTENT(IN)        :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
-      COMPLEX                :: carr(ngpt1), cdum
       REAL                   :: rarr1(ngpt1), rarr2(ngpt1), rdum1, rdum2
 
       wfolap_inv = 0
@@ -273,7 +271,7 @@ CONTAINS
       REAL, INTENT(IN)        :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 !     - local -
       INTEGER                :: itype, ieq, iatom, l, m, lm, nn
-      REAL                   :: rdum1, rdum2
+
       wfolap_noinv = 0
       iatom = 0
       DO itype = 1, atoms%ntype
