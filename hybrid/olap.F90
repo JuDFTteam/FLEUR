@@ -111,8 +111,8 @@ CONTAINS
                      fgr = fpi_const*(sin(r) - r*cos(r))/g**3/cell%omtil
                      DO ineq = 1, atoms%neq(itype)
                         icent = icent + 1
-                        olap_r(k) = olap_r(k) - fgr* &
-             &               exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent)))
+                        olap_r(k) = olap_r(k) - real(fgr* &
+             &               exp(img*tpi_const*dot_product(dg, atoms%taual(:, icent))))
                      END DO
                   END DO
                END IF
@@ -360,56 +360,4 @@ CONTAINS
       wfolap1 = wfolap1 + dot_product(cpw1, matmul(olappw, cpw2))
 
    END FUNCTION wfolap1
-
-   FUNCTION wfolap2(cmt1, cpw1, cmt2, cpw2, ngpt1, ngpt2, olappw, olapmt,&
-  &                atoms, mpbasis, hybrid)
-      USE m_types
-      IMPLICIT NONE
-
-      TYPE(t_mpbasis), intent(in) :: mpbasis
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
-      TYPE(t_atoms), INTENT(IN)   :: atoms
-
-!     - scalars -
-      COMPLEX                :: wfolap2
-      INTEGER, INTENT(IN)     :: ngpt1, ngpt2
-!     - arrays -
-      COMPLEX, INTENT(IN)     :: cmt1(:,:),cmt2(:,:)
-! #if ( defined(CPP_INVERSION) )
-!       REAL,INTENT(IN)        :: cpw1(:)
-! #else
-      COMPLEX, INTENT(IN)     :: cpw1(:)
-! #endif
-      COMPLEX, INTENT(IN)     :: cpw2(:)
-#if ( defined(CPP_INVERSION) )
-      REAL, INTENT(IN)        :: olappw(:,:)
-#else
-      COMPLEX, INTENT(IN)     :: olappw(:,:)
-#endif
-      REAL, INTENT(IN)        :: olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
-!     - local -
-      INTEGER                :: itype, ieq, ic, l, m, lm, nn
-
-      wfolap2 = 0
-      ic = 0
-      DO itype = 1, atoms%ntype
-         DO ieq = 1, atoms%neq(itype)
-            ic = ic + 1
-            lm = 0
-            DO l = 0, atoms%lmax(itype)
-               DO M = -l, l
-                  nn = mpbasis%num_radfun_per_l(l, itype)
-                  wfolap2 = wfolap2 + &
-         &                 dot_product(cmt1(lm + 1:lm + nn, ic),&
-         &                               matmul(olapmt(:nn, :nn, l, itype),&
-         &                                       cmt2(lm + 1:lm + nn, ic)))
-                  lm = lm + nn
-               END DO
-            END DO
-         END DO
-      END DO
-
-      wfolap2 = wfolap2 + dot_product(cpw1, matmul(olappw, cpw2))
-
-   END FUNCTION wfolap2
 END MODULE m_olap
