@@ -3,7 +3,7 @@ module m_types_mpbasis
 
    type t_mpbasis
       integer, allocatable   :: g(:, :) ! (3, num_gpts)
-      integer, allocatable   :: ngptm(:) ! (ik)
+      integer, allocatable   :: n_g(:) ! (ik)
       integer, allocatable   :: gptm_ptr(:, :) ! (ig, ik)
       real                   :: g_cutoff
       integer, allocatable   :: num_radbasfn(:, :)
@@ -62,9 +62,9 @@ contains
       real, allocatable               ::  length_kg(:, :) ! length of the vectors k + G
       integer, allocatable            ::  ptr(:)
 
-      allocate(mpbasis%ngptm(kpts%nkptf))
+      allocate(mpbasis%n_g(kpts%nkptf))
 
-      mpbasis%ngptm = 0
+      mpbasis%n_g = 0
       i = 0
       n = -1
 
@@ -90,7 +90,7 @@ contains
                            l_found_kg_in_sphere = .TRUE.
                         END if
 
-                        mpbasis%ngptm(ikpt) = mpbasis%ngptm(ikpt) + 1
+                        mpbasis%n_g(ikpt) = mpbasis%n_g(ikpt) + 1
                         l_found_new_gpt = .TRUE.
                      END if
                   enddo ! k-loop
@@ -101,15 +101,15 @@ contains
       enddo
 
       allocate(mpbasis%g(3, i)) ! i = gptmd
-      allocate(mpbasis%gptm_ptr(maxval(mpbasis%ngptm), kpts%nkptf))
+      allocate(mpbasis%gptm_ptr(maxval(mpbasis%n_g), kpts%nkptf))
 
       ! allocate and initialize arrays needed for G vector ordering
-      allocate(unsrt_pgptm(maxval(mpbasis%ngptm), kpts%nkptf))
-      allocate(length_kG(maxval(mpbasis%ngptm), kpts%nkptf))
+      allocate(unsrt_pgptm(maxval(mpbasis%n_g), kpts%nkptf))
+      allocate(length_kG(maxval(mpbasis%n_g), kpts%nkptf))
 
       mpbasis%g = 0
       mpbasis%gptm_ptr = 0
-      mpbasis%ngptm = 0
+      mpbasis%n_g = 0
 
       i = 0
       n = -1
@@ -138,13 +138,13 @@ contains
                            l_found_kg_in_sphere = .TRUE.
                         END if
 
-                        mpbasis%ngptm(ikpt) = mpbasis%ngptm(ikpt) + 1
+                        mpbasis%n_g(ikpt) = mpbasis%n_g(ikpt) + 1
                         l_found_new_gpt = .TRUE.
 
                         ! Position of the vector is saved as pointer
-                        unsrt_pgptm(mpbasis%ngptm(ikpt), ikpt) = i
+                        unsrt_pgptm(mpbasis%n_g(ikpt), ikpt) = i
                         ! Save length of vector k + G for array sorting
-                        length_kG(mpbasis%ngptm(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
+                        length_kG(mpbasis%n_g(ikpt), ikpt) = norm2(MATMUL(kvec + g, cell%bmat))
                      END if
                   enddo
                enddo
@@ -155,13 +155,13 @@ contains
 
       ! Sort pointers in array, so that shortest |k+G| comes first
       do ikpt = 1, kpts%nkptf
-         allocate(ptr(mpbasis%ngptm(ikpt)))
+         allocate(ptr(mpbasis%n_g(ikpt)))
          ! Divide and conquer algorithm for arrays > 1000 entries
-         divconq = MAX(0, INT(1.443*LOG(0.001*mpbasis%ngptm(ikpt))))
+         divconq = MAX(0, INT(1.443*LOG(0.001*mpbasis%n_g(ikpt))))
          ! create pointers which correspond to a sorted array
-         CALL rorderpf(ptr, length_kG(1:mpbasis%ngptm(ikpt), ikpt), mpbasis%ngptm(ikpt), divconq)
+         CALL rorderpf(ptr, length_kG(1:mpbasis%n_g(ikpt), ikpt), mpbasis%n_g(ikpt), divconq)
          ! rearrange old pointers
-         do igpt = 1, mpbasis%ngptm(ikpt)
+         do igpt = 1, mpbasis%n_g(ikpt)
             mpbasis%gptm_ptr(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
          enddo
          deallocate(ptr)
@@ -172,7 +172,7 @@ contains
          WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpbasis%num_gpts()
          WRITE (6, *)
          WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpbasis%g_cutoff/2*input%rkmax):'
-         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%ngptm)
+         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpbasis%n_g)
       END if
    end subroutine mpbasis_gen_gvec
 

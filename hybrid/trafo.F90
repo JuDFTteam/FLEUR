@@ -707,11 +707,11 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpbasis%ngptm(ikpt0)
+      DO igptm = 1, mpbasis%n_g(ikpt0)
          igptp = mpbasis%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
          igptm2 = 0
-         DO i = 1, mpbasis%ngptm(ikpt1)
+         DO i = 1, mpbasis%n_g(ikpt1)
             IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
@@ -719,13 +719,13 @@ CONTAINS
          END DO
          IF (igptm2 == 0) THEN
             WRITE (*, *) ikpt0, ikpt1, g1
-            WRITE (*, *) mpbasis%ngptm(ikpt0), mpbasis%ngptm(ikpt1)
+            WRITE (*, *) mpbasis%n_g(ikpt0), mpbasis%n_g(ikpt1)
             WRITE (*, *)
             WRITE (*, *) igptp, mpbasis%g(:, igptp)
             WRITE (*, *) g
             WRITE (*, *) rrot
             WRITE (*, *) "Failed tests:", g1
-            DO i = 1, mpbasis%ngptm(ikpt1)
+            DO i = 1, mpbasis%n_g(ikpt1)
                WRITE (*, *) mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1))
             ENDDO
             call judft_error('bra_trafo2: G-point not found in G-point set.')
@@ -810,7 +810,7 @@ CONTAINS
 
       ! - local arrays -
       INTEGER               ::  pnt(maxindxm, 0:maxlcutm, atoms%nat),&
-     &                          g(3), g1(3), iarr(mpbasis%ngptm(ikpt0))
+     &                          g(3), g1(3), iarr(mpbasis%n_g(ikpt0))
       INTEGER               ::  rot(3, 3), invrot(3, 3), rrot(3, 3), invrrot(3, 3)
 
       REAL                  ::  rkpt(3), rkpthlp(3), rtaual(3)
@@ -824,7 +824,7 @@ CONTAINS
       COMPLEX               ::  dwgninv(-maxlcutm:maxlcutm,&
      &                                  -maxlcutm:maxlcutm,&
      &                                          0:maxlcutm)
-      COMPLEX               ::  carr(mpbasis%ngptm(ikpt0))
+      COMPLEX               ::  carr(mpbasis%n_g(ikpt0))
 
 !     Transform back to unsymmetrized product basis in case of inversion symmetry.
       matin1 = matin
@@ -947,11 +947,11 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpbasis%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%n_g(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          igptm2 = 0
-         DO i = 1, mpbasis%ngptm(ikpt0)
+         DO i = 1, mpbasis%n_g(ikpt0)
             IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
@@ -997,11 +997,11 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpbasis%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%n_g(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          igptm2 = 0
-         DO i = 1, mpbasis%ngptm(ikpt0)
+         DO i = 1, mpbasis%n_g(ikpt0)
             IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
@@ -1016,7 +1016,7 @@ CONTAINS
 !        matout1(nbasp+igptm,:) = cdum * matin1(nbasp+igptm2,:)
       END DO
       DO i2 = 1, nbasm(ikpt1)
-         DO i1 = 1, mpbasis%ngptm(ikpt1)
+         DO i1 = 1, mpbasis%n_g(ikpt1)
             matout1(nbasp + i1, i2) = carr(i1)*matin1(nbasp + iarr(i1), i2)
          END DO
       END DO
@@ -1076,7 +1076,7 @@ CONTAINS
 
       ! - local arrays -
       INTEGER               ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
-     &                          g1(3), iarr(mpbasis%ngptm(ikpt0))
+     &                          g1(3), iarr(mpbasis%n_g(ikpt0))
       INTEGER               ::  rrot(3, 3)
 
       REAL                  ::  rkpt(3), rkpthlp(3), rtaual(3)
@@ -1090,7 +1090,7 @@ CONTAINS
       COMPLEX               ::  dwgninv(-maxlcutm:maxlcutm,&
      &                                  -maxlcutm:maxlcutm,&
      &                                          0:maxlcutm)
-      COMPLEX               ::  carr(mpbasis%ngptm(ikpt0))
+      COMPLEX               ::  carr(mpbasis%n_g(ikpt0))
 
       IF (maxlcutm > atoms%lmaxd) call judft_error('matrixtrafo1: maxlcutm .gt. atoms%lmaxd')
 
@@ -1172,11 +1172,11 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpbasis%ngptm(ikpt0)
+      DO igptm = 1, mpbasis%n_g(ikpt0)
          igptp = mpbasis%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
          igptm1 = 0
-         DO i = 1, mpbasis%ngptm(ikpt1)
+         DO i = 1, mpbasis%n_g(ikpt1)
             IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = mpbasis%gptm_ptr(i, ikpt1)
@@ -1228,11 +1228,11 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpbasis%ngptm(ikpt0)
+      DO igptm = 1, mpbasis%n_g(ikpt0)
          igptp = mpbasis%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
          igptm1 = 0
-         DO i = 1, mpbasis%ngptm(ikpt1)
+         DO i = 1, mpbasis%n_g(ikpt1)
             IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = mpbasis%gptm_ptr(i, ikpt1)
@@ -1244,7 +1244,7 @@ CONTAINS
          carr(igptm) = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp1), sym%tau(:, iisym)))
       END DO
       DO i2 = 1, nbasm(ikpt0)
-         DO i1 = 1, mpbasis%ngptm(ikpt0)
+         DO i1 = 1, mpbasis%n_g(ikpt0)
             matout1(nbasp + i1, i2) = carr(i1)*matin1(nbasp + iarr(i1), i2)
          END DO
       END DO
@@ -1444,11 +1444,11 @@ CONTAINS
       ENDDO
 
       ! PW
-      DO igptm = 1, mpbasis%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%n_g(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          igptm2 = 0
-         DO i = 1, mpbasis%ngptm(ikpt0)
+         DO i = 1, mpbasis%n_g(ikpt0)
             IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt0)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
@@ -1606,11 +1606,11 @@ CONTAINS
       ENDDO
 
       ! PW
-      DO igptm = 1, mpbasis%ngptm(ikpt0)
+      DO igptm = 1, mpbasis%n_g(ikpt0)
          igptp = mpbasis%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
          igptm1 = 0
-         DO i = 1, mpbasis%ngptm(ikpt1)
+         DO i = 1, mpbasis%n_g(ikpt1)
             IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm1 = i
                igptp1 = mpbasis%gptm_ptr(i, ikpt1)
@@ -1710,10 +1710,10 @@ CONTAINS
       COMPLEX                 ::  cexp, cdum
 !     - private arrays -
       INTEGER                 ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
-     &                            g1(3), iarr(mpbasis%ngptm(ikpt0))
+     &                            g1(3), iarr(mpbasis%n_g(ikpt0))
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
-      COMPLEX                 ::  carr(mpbasis%ngptm(ikpt0))
+      COMPLEX                 ::  carr(mpbasis%n_g(ikpt0))
 
       IF (iop <= sym%nop) THEN
          isym = iop
@@ -1738,7 +1738,7 @@ CONTAINS
          END IF
       END DO
 
-      DO igptm = 1, mpbasis%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%n_g(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          igptm2 = pointer(g1(1), g1(2), g1(3))
@@ -1807,13 +1807,13 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpbasis%ngptm(ikpt1)
+      DO igptm = 1, mpbasis%n_g(ikpt1)
          igptp = mpbasis%gptm_ptr(igptm, ikpt1)
          g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
          iarr(igptm) = pointer(g1(1), g1(2), g1(3))
          carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp), trans))
       END DO
-      DO i1 = 1, mpbasis%ngptm(ikpt1)
+      DO i1 = 1, mpbasis%n_g(ikpt1)
          vecout(nbasp + i1) = carr(i1)*vecin1(nbasp + iarr(i1))
       END DO
 

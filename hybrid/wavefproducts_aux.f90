@@ -26,7 +26,7 @@ CONTAINS
       pointer = 0
       ic = 0
       DO ig1 = 1, lapw%nv(jsp)
-         DO igptm = 1, mpbasis%ngptm(iq)
+         DO igptm = 1, mpbasis%n_g(iq)
             iigptm = mpbasis%gptm_ptr(igptm, iq)
             g = lapw%gvec(:,ig1,jsp) + mpbasis%g(:, iigptm) - g_t
             IF (pointer(g(1), g(2), g(3)) == 0) THEN

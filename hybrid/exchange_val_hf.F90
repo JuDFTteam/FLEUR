@@ -140,10 +140,10 @@ CONTAINS
       COMPLEX              :: coulomb_mt2_c(maxval(mpbasis%num_radbasfn) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1) + 1, atoms%nat)
       COMPLEX              :: coulomb_mt3_c(maxval(mpbasis%num_radbasfn) - 1, atoms%nat, atoms%nat)
 
-      REAL                 :: coulomb_mtir_r(((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%ngptm))* &
-                                             ((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%ngptm) + 1)/2)
-      COMPLEX              :: coulomb_mtir_c(((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%ngptm))* &
-                                             ((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%ngptm) + 1)/2)
+      REAL                 :: coulomb_mtir_r(((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%n_g))* &
+                                             ((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%n_g) + 1)/2)
+      COMPLEX              :: coulomb_mtir_c(((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%n_g))* &
+                                             ((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%n_g) + 1)/2)
 
       LOGICAL              :: occup(dimension%neigd)
       CALL timestart("valence exchange calculation")
@@ -204,7 +204,7 @@ CONTAINS
 
          ikpt0 = pointer_EIBZ(ikpt)
 
-         n = hybrid%nbasp + mpbasis%ngptm(ikpt0)
+         n = hybrid%nbasp + mpbasis%n_g(ikpt0)
          IF (hybrid%nbasm(ikpt0) /= n) call judft_error('error hybrid%nbasm')
          nn = n*(n + 1)/2
 
@@ -245,7 +245,7 @@ CONTAINS
                          dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
                                                 hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, maxval(mpbasis%num_radbasfn), mpbasis%g, &
-                                                mpbasis%ngptm(ikpt0), mpbasis%gptm_ptr(:, ikpt0), mpbasis%num_gpts(), mpbasis%radbasfn_mt, &
+                                                mpbasis%n_g(ikpt0), mpbasis%gptm_ptr(:, ikpt0), mpbasis%num_gpts(), mpbasis%radbasfn_mt, &
                                                 hybrid%nbasm(ikpt0), iband1, hybrid%nbands(nk), nsest, ibando, psize, indx_sest, &
                                                 atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
                                                 cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))

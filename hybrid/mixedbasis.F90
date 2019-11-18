@@ -94,7 +94,7 @@ CONTAINS
       IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version", calledby='mixedbasis')
 
       ! Deallocate arrays which might have been allocated in a previous run of this subroutine
-      IF (ALLOCATED(mpbasis%ngptm)) deallocate(mpbasis%ngptm)
+      IF (ALLOCATED(mpbasis%n_g)) deallocate(mpbasis%n_g)
       IF (ALLOCATED(mpbasis%num_radbasfn)) deallocate(mpbasis%num_radbasfn)
       IF (ALLOCATED(mpbasis%gptm_ptr)) deallocate(mpbasis%gptm_ptr)
       IF (ALLOCATED(mpbasis%g)) deallocate(mpbasis%g)
@@ -378,8 +378,8 @@ CONTAINS
             END DO
          END DO
       END DO
-      hybrid%maxbasm1 = hybrid%nbasp + maxval(mpbasis%ngptm)
-      hybrid%nbasm = hybrid%nbasp + mpbasis%ngptm
+      hybrid%maxbasm1 = hybrid%nbasp + maxval(mpbasis%n_g)
+      hybrid%nbasm = hybrid%nbasp + mpbasis%n_g
 
       hybrid%maxlmindx = 0
       do itype = 1,atoms%ntype

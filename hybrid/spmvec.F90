@@ -136,7 +136,7 @@ CONTAINS
       ! compute vecout for the index-range from ibasm+1:nbasm
 
       indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
-     &                                      itype=1, atoms%ntype)/)) + mpbasis%ngptm(ikpt)
+     &                                      itype=1, atoms%ntype)/)) + mpbasis%n_g(ikpt)
       CALL dspmv('U', indx1, 1.0, coulomb_mtir, vecinhlp(ibasm + 1:), 1, 0.0, vecout(ibasm + 1:), 1)
 
       iatom = 0
@@ -345,7 +345,7 @@ CONTAINS
       ! compute vecout for the index-range from ibasm+1:nbasm
 
       indx1 = sum((/(((2*l + 1)*atoms%neq(itype), l=0, hybrid%lcutm1(itype)),&
-     &                                      itype=1, atoms%ntype)/)) + mpbasis%ngptm(ikpt)
+     &                                      itype=1, atoms%ntype)/)) + mpbasis%n_g(ikpt)
       call zhpmv('U', indx1, (1.0, 0.0), coulomb_mtir, vecinhlp(ibasm + 1), 1, (0.0, 0.0), vecout(ibasm + 1), 1)
 
       iatom = 0
