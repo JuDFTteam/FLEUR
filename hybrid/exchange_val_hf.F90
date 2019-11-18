@@ -283,7 +283,7 @@ CONTAINS
                                       coulomb_mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                   ELSE
                      carr1_v_c(:n) = 0
-                     CALL spmvec_noinvs(atoms, mpbasis, hybrid, ikpt0, kpts, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
+                     CALL spmvec_noinvs(atoms, mpbasis, hybrid, ikpt0, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
                                         coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
                   END IF
                   call timestop("spare matrix products")

@@ -211,7 +211,7 @@ CONTAINS
 
    SUBROUTINE spmvec_noinvs(&
                 atoms, mpbasis, hybrid,&
-                ikpt, kpts, &
+                ikpt, &
                 coulomb_mt1, coulomb_mt2, coulomb_mt3,&
                 coulomb_mtir, vecin,&
                 vecout)
@@ -223,7 +223,6 @@ CONTAINS
       IMPLICIT NONE
       TYPE(t_mpbasis), INTENT(IN)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
-      TYPE(t_kpts), INTENT(IN)     :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
 
       ! - scalars -
@@ -249,7 +248,6 @@ CONTAINS
 
       ! - local arrays -
 
-      REAL                ::  vecr(maxval(mpbasis%num_radbasfn) - 1), veci(maxval(mpbasis%num_radbasfn) - 1)
       COMPLEX             ::  vecinhlp(hybrid%nbasm(ikpt))
 
       call timestart("spmvec_noinvs")
