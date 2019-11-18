@@ -204,9 +204,8 @@ CONTAINS
          IF (indx0 /= hybrid%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybrid%nbasm(ikpt), atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn,&
-     &             2,&
-     &             vecout)
+      CALL reorder(hybrid%nbasm(ikpt), atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+                   mpbasis%num_radbasfn,2, vecout)
      call timestop("spmvec_invs")
    END SUBROUTINE spmvec_invs
 
@@ -445,6 +444,7 @@ CONTAINS
       REAL                  ::  vechlp_r(nbasm)
       COMPLEX               ::  vechlp_c(nbasm)
 
+      call timestart("reorder")
       l_real = PRESENT(vec_r)
 
       IF (imode /= 1 .and. imode /= 2) call judft_error('reorder: imode equals neither 1 nor 2')
@@ -534,6 +534,6 @@ CONTAINS
          END DO
       END IF
       !IR must not be rearranged
-
+      call timestop("reorder")  
    END SUBROUTINE reorder
 END MODULE
