@@ -451,8 +451,8 @@ CONTAINS
                DO ilo = 1, atoms%nlo(itype)
                   l = atoms%llo(ilo, itype)
                   l_idx(l) = l_idx(l) + 1
-                  bas1(1:n_grid_pt, 2+ilo, atoms%llo(ilo, itype), itype, jspin) = flo(1:n_grid_pt, 1, ilo)
-                  bas2(1:n_grid_pt, 2+ilo, atoms%llo(ilo, itype), itype, jspin) = flo(1:n_grid_pt, 2, ilo)
+                  bas1(1:n_grid_pt, l_idx(l), atoms%llo(ilo, itype), itype, jspin) = flo(1:n_grid_pt, 1, ilo)
+                  bas2(1:n_grid_pt, l_idx(l), atoms%llo(ilo, itype), itype, jspin) = flo(1:n_grid_pt, 2, ilo)
                END DO
             END IF
          END DO
