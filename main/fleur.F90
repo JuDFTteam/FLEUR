@@ -74,7 +74,7 @@ CONTAINS
    USE m_chase_diag
    USE m_writeBasis
 
-   USE m_magnMomFromDen
+   USE m_alignSpinAxisMagn
    !$ USE omp_lib
    IMPLICIT NONE
 
@@ -113,7 +113,6 @@ CONTAINS
     INTEGER :: iter,iterHF,i
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
-    REAL, ALLOCATABLE    :: moments(:,:)
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -252,6 +251,9 @@ CONTAINS
 !!$                END IF
        !---< gwf
 
+!Rot For Testing
+       CALL rotateMagnetToSpinAxis(noco,vacuum,sphhar,stars&
+               ,sym,oneD,cell,input,atoms,inDen)
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
                  obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
@@ -388,12 +390,6 @@ CONTAINS
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
-          ALLOCATE(moments(atoms%ntype,3))
-          CALL magnMomFromDen(input,atoms,noco,Outden,moments)
-          write(*,*)atoms%phi_mt_avg
-          write(*,*)atoms%theta_mt_avg
-          write(*,*) moments
-          DEALLOCATE(moments)
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
                ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &

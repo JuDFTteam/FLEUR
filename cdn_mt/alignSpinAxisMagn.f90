@@ -16,7 +16,7 @@ USE m_flipcdn
 
 CONTAINS
 SUBROUTINE rotateMagnetToSpinAxis(noco,vacuum,sphhar,stars&
-,sym,oneD,cell,moments,input,atoms,den)
+,sym,oneD,cell,input,atoms,den)
    TYPE(t_input), INTENT(INOUT)  :: input
    TYPE(t_atoms), INTENT(INOUT)  :: atoms
    TYPE(t_noco), INTENT(IN)      :: noco
@@ -29,7 +29,7 @@ SUBROUTINE rotateMagnetToSpinAxis(noco,vacuum,sphhar,stars&
    TYPE(t_potden), INTENT(INOUT) :: den 
 
 
-   REAL                          :: moments(3)
+   REAL                          :: moments(atoms%ntype,3)
 
    CALL magnMomFromDen(input,atoms,noco,den,moments)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,atoms%phi_mt_avg,atoms%theta_mt_avg,den)
@@ -38,7 +38,7 @@ END SUBROUTINE rotateMagnetToSpinAxis
 
 
 SUBROUTINE rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars&
-,sym,oneD,cell,moments,input,atoms,den)
+,sym,oneD,cell,input,atoms,den)
    TYPE(t_input), INTENT(INOUT)  :: input
    TYPE(t_atoms), INTENT(INOUT)  :: atoms
    TYPE(t_noco), INTENT(IN)	 :: noco
