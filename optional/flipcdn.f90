@@ -245,6 +245,8 @@ END DO
    END IF
 
 
+IF(PRESENT(optDen)) optDen=den 
+
 END SUBROUTINE flipcdn
 
 END MODULE m_flipcdn

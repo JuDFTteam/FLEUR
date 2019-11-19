@@ -27,13 +27,15 @@ SUBROUTINE rotateMagnetToSpinAxis(noco,vacuum,sphhar,stars&
    TYPE(t_oneD),INTENT(IN)       :: oneD
    TYPE(t_cell),INTENT(IN)       :: cell
    TYPE(t_potden), INTENT(INOUT) :: den 
-
-
    REAL                          :: moments(atoms%ntype,3)
-
+   REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)   
+   
+   phiTemp=atoms%phi_mt_avg
+   thetaTemp=atoms%theta_mt_avg
    CALL magnMomFromDen(input,atoms,noco,den,moments)
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,atoms%phi_mt_avg,atoms%theta_mt_avg,den)
-
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-atoms%phi_mt_avg,-atoms%theta_mt_avg,den)
+   atoms%phi_mt_avg=atoms%phi_mt_avg+phiTemp
+   atoms%theta_mt_avg=atoms%theta_mt_avg+thetaTemp
 END SUBROUTINE rotateMagnetToSpinAxis
 
 
@@ -51,7 +53,7 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars&
    TYPE(t_potden), INTENT(INOUT) :: den 
 
 
-   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-atoms%phi_mt_avg,-atoms%theta_mt_avg,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,atoms%phi_mt_avg,atoms%theta_mt_avg,den)
    atoms%flipSpinPhi=0
    atoms%flipSpinTheta=0
 

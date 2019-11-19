@@ -87,8 +87,8 @@ DEALLOCATE(dummyResults)
                 phi = ATAN(my/mx) - pi_const
              ENDIF
           ENDIF
-     atoms%phi_mt_avg(i)=phi+atoms%phi_mt_avg(i)
-     atoms%theta_mt_avg(i)=theta+atoms%theta_mt_avg(i)
+     atoms%phi_mt_avg(i)=phi
+     atoms%theta_mt_avg(i)=theta
    ENDDO
 
 END SUBROUTINE magnMomFromDen
