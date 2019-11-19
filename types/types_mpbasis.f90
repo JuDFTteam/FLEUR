@@ -276,6 +276,7 @@ contains
             olap(n2, n1) = olap(n1, n2)
          END do
       END do
+      if(any(isnan(olap))) call juDFT_error("Mixed-product basis olap is nan")
       call timestop("calc mpbasis overlap")
    end subroutine mpbasis_calc_olap_radbasfn
 

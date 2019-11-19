@@ -276,7 +276,7 @@ CONTAINS
                   IF ((ibando + iband - 1) > hybrid%nobd(nkqpt,jsp)) CYCLE
 
                   cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(ikpt)
-                  call timestart("spare matrix products")
+                  call timestart("sparse matrix products")
                   IF (mat_ex%l_real) THEN
                      carr1_v_r(:n) = 0
                      CALL spmvec_invs(atoms, mpbasis, hybrid, ikpt0, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
@@ -286,7 +286,7 @@ CONTAINS
                      CALL spmvec_noinvs(atoms, mpbasis, hybrid, ikpt0, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
                                         coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
                   END IF
-                  call timestop("spare matrix products")
+                  call timestop("sparse matrix products")
 
                   call timestart("exch_vv dot prod")
                   IF (mat_ex%l_real) THEN
