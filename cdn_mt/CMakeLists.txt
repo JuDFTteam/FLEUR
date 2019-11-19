@@ -25,5 +25,6 @@ cdn_mt/setabc1locdn.f90
 cdn_mt/setabc1locdn1.f90
 cdn_mt/calcDenCoeffs.f90
 cdn_mt/magnMomFromDen.f90
+cdn_mt/alignSpinAxisMagn.f90
 )
 

@@ -113,7 +113,7 @@ CONTAINS
     INTEGER :: iter,iterHF,i
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
-    REAL    :: moments(3)
+    REAL, ALLOCATABLE    :: moments(:,:)
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -126,7 +126,7 @@ CONTAINS
     CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
                     banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
     CALL timestop("Initialization")
-
+    
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
       CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
     END IF
@@ -388,8 +388,12 @@ CONTAINS
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
                       archiveType,xcpot,outDen,EnergyDen)
-
-           
+          ALLOCATE(moments(atoms%ntype,3))
+          CALL magnMomFromDen(input,atoms,noco,Outden,moments)
+          write(*,*)atoms%phi_mt_avg
+          write(*,*)atoms%theta_mt_avg
+          write(*,*) moments
+          DEALLOCATE(moments)
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
                ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &

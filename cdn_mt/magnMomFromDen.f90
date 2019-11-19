@@ -31,13 +31,6 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    REAL                          :: eps=1E-10
 
    REAL, ALLOCATABLE             ::  dummyResults(:,:)
-  IF(.NOT.ALLOCATED(atoms%phi_mt_avg).AND..NOT.ALLOCATED(atoms%theta_mt_avg)) THEN
-     ALLOCATE(atoms%phi_mt_avg(atoms%ntype),atoms%theta_mt_avg(atoms%ntype))
-  ELSE IF (ALLOCATED(atoms%phi_mt_avg).AND.ALLOCATED(atoms%theta_mt_avg))THEN
-
-  ELSE
-     CALL judft_error("Allocation error", calledby="magnMomFromDen.f90")
-  END IF
 
   ALLOCATE(dummyResults(SIZE(den%mt,3),SIZE(den%mt,4)))
 
@@ -97,9 +90,6 @@ DEALLOCATE(dummyResults)
      atoms%phi_mt_avg(i)=phi
      atoms%theta_mt_avg(i)=theta
    ENDDO
-
-
-
 
 END SUBROUTINE magnMomFromDen
 END MODULE m_magnMomFromDen

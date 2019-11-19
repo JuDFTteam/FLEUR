@@ -223,6 +223,8 @@ CONTAINS
       ALLOCATE(atoms%flipSpinPhi(atoms%ntype))
       ALLOCATE(atoms%flipSpinTheta(atoms%ntype))
       ALLOCATE(atoms%flipSpinScale(atoms%ntype))
+      ALLOCATE(atoms%phi_mt_avg(atoms%ntype))
+      ALLOCATE(atoms%theta_mt_avg(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
