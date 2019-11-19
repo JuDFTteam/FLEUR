@@ -105,6 +105,7 @@ CONTAINS
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
     INTEGER :: iter,iterHF,i
+    INTEGER :: wannierspin
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
@@ -162,7 +163,16 @@ CONTAINS
 
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco
-    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
+    if(noco%l_soc.and.input%l_wann)then
+    !! Weed up and down spinor components for SOC MLWFs.
+    !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
+    !! Make sure we always get up and down spinors when SOC=true.
+       wannierspin=2
+    else
+       wannierspin = input%jspins       
+    endif
+    
+    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,wannierspin,&
                     noco%l_noco,.NOT.INPUT%eig66(1),l_real,noco%l_soc,INPUT%eig66(1),mpi%n_size)
 
 #ifdef CPP_CHASE
