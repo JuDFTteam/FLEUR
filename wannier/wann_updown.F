@@ -869,7 +869,7 @@ c****************************************************************
 
 
 
-      call judft_error("cdn_read in wann_updown")
+!      call judft_error("cdn_read in wann_updown")
          nrec=0
       enddo !jspin
       call cpu_time(delta1)
