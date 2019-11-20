@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2016 Peter GrÃ¼nberg Institut, Forschungszentrum JÃ¼lich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -58,7 +58,11 @@ CONTAINS
        !cut of argument string
        env=ADJUSTL(env(INDEX(env//' ',TRIM(ADJUSTL(arg)))+1:))//' '
        i=INDEX(env,' ') !find first blank
-       argstring=TRIM(env(:i))
+       IF (i<1) THEN 
+          argstring=trim(env)
+       ELSE
+          argstring=TRIM(env(:i))
+       ENDIF
     END IF
     
   END FUNCTION juDFT_string_for_argument
