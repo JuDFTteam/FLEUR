@@ -175,9 +175,9 @@ contains
     call timestop("interstitial")
     end if ! mpi%irank == 0
 
-    if (dosf) then
-       vCoul%pw(:,:)=0.0
-    end if
+    !if (dosf) then
+    !   vCoul%pw(:,:)=0.0
+    !end if
 
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )

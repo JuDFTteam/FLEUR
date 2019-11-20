@@ -13,15 +13,11 @@ MODULE m_plot
    ! 
    ! Based on the older plotting routines pldngen.f90 and plotdop.f90 that were
    ! originally called by optional.F90 and are now used in the scf-loop instead.
-   ! At the cost of no reduced postprocess functionality, this allowed us to re-
-   ! move I/O (using plot.hdf files) from the plotting routine completely.
+   ! At the cost of reduced postprocess functionality, this allowed us to re-
+   ! move I/O (using plot.hdf/text files) from the plotting routine completely.
    ! 
    ! TODO:
    ! - plot_inp files are still in use and should be replaced by a plotting type.
-   ! - Only the .xsf format for xcrysden is supported right now. Further exten-
-   !   sion should include several plotting options, most importantly a way to
-   !   neatly plot vectorial quantities like the magnetisation density as vectors
-   !   on a grid.
    ! 
    ! A. Neukirchen & R. Hilgers, September 2019 
    !------------------------------------------------
@@ -1048,52 +1044,6 @@ CONTAINS
       END IF
 
    END SUBROUTINE procplot
-
-   SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                        noco, div, phi, divGrx, divGry, divGrz, &
-                        xcBmodx, xcBmody, xcBmodz, div2) 
-
-      IMPLICIT NONE
-
-      TYPE(t_stars),     INTENT(IN)    :: stars
-      TYPE(t_atoms),     INTENT(IN)    :: atoms
-      TYPE(t_sphhar),    INTENT(IN)    :: sphhar
-      TYPE(t_vacuum),    INTENT(IN)    :: vacuum
-      TYPE(t_input),     INTENT(IN)    :: input
-      TYPE(t_oneD),      INTENT(IN)    :: oneD
-      TYPE(t_sym),       INTENT(IN)    :: sym
-      TYPE(t_cell),      INTENT(IN)    :: cell
-      TYPE(t_noco),      INTENT(IN)    :: noco
-      TYPE(t_potden),    INTENT(IN)    :: div, phi, divGrx, divGry, divGrz, &
-                                          xcBmodx, xcBmody, xcBmodz, div2
-
-      LOGICAL                          :: xsf
-
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .FALSE., 'div                 ', div)
-
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .TRUE., 'phiDiv              ', phi)
-
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .FALSE., 'gradPhiDiv          ', divGrx, divGrx, divGry, divGrz)
-
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .FALSE., 'bCorrected          ', xcBmodx, xcBmodx, xcBmody, xcBmodz)
-
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
-                  .FALSE., .FALSE., 'divCorrected        ', div2)
-
-      INQUIRE(file="div.xsf",exist=xsf)
-    
-      IF (xsf) THEN
-         OPEN  (120, FILE='gradPhiDiv_f.xsf', STATUS='OLD')
-         CLOSE (120, STATUS="DELETE")
-         OPEN  (120, FILE='bCorrected_f.xsf', STATUS='OLD')
-         CLOSE (120, STATUS="DELETE")
-      END IF 
-      
-   END SUBROUTINE plotBtest
 
    SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, denmat, plot_const, sliceplot) 
