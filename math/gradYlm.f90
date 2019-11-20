@@ -26,29 +26,29 @@ CONTAINS
      d21 = r * (exp(h)-1) ; d32 = d21 * exp(h) ; d43 = d32 * exp(h)
      d31 = d21 + d32      ; d42 = d32 + d43
      d41 = d31 + d43
-     df(1) =   d31*d41 / (d21*d32*d42) * f(2) + ( -1d0/d21 - 1d0/d31 - 1d0/d41) * f(1)&
+     df(1) =   d31*d41 / (d21*d32*d42) * f(2) + ( -1.0/d21 - 1.0/d31 - 1.0/d41) * f(1)&
     &        - d21*d41 / (d31*d32*d43) * f(3) + d21*d31 / (d41*d42*d43) * f(4)
-     df(2) = - d32*d42 / (d21*d31*d41) * f(1) + (  1d0/d21 - 1d0/d32 - 1d0/d42) * f(2)&
+     df(2) = - d32*d42 / (d21*d31*d41) * f(1) + (  1.0/d21 - 1.0/d32 - 1.0/d42) * f(2)&
     &        + d21*d42 / (d31*d32*d43) * f(3) - d21*d32 / (d41*d42*d43) * f(4)
      df1   =   d32*d43 / (d21*d31*d41) * f(1) - d31*d43 / (d21*d32*d42) * f(2) +&
-    &  ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(3) + d31*d32 / (d41*d42*d43) * f(4)
+    &  ( 1.0/d31 + 1.0/d32 - 1.0/d43 ) * f(3) + d31*d32 / (d41*d42*d43) * f(4)
      do i = 3, n - 2
         d21 = d32 ; d32 = d43 ; d43 = d43 * exp(h)
         d31 = d42 ; d42 = d42 * exp(h)
         d41 = d41 * exp(h)
-        df2   = - d32*d42 / (d21*d31*d41) * f(i-1) + ( 1d0/d21 - 1d0/d32 - 1d0/d42) * f(i) + &
+        df2   = - d32*d42 / (d21*d31*d41) * f(i-1) + ( 1.0/d21 - 1.0/d32 - 1.0/d42) * f(i) + &
     &             d21*d42 / (d31*d32*d43) * f(i+1) - d21*d32 / (d41*d42*d43) * f(i+2)
         df(i) = ( df1 + df2 ) / 2
         df1   = d32*d43 / (d21*d31*d41) * f(i-1) - d31*d43 / (d21*d32*d42) * f(i) +&
-    &    ( 1d0/d31 + 1d0/d32 - 1d0/d43 ) * f(i+1) + d31*d32 / (d41*d42*d43) * f(i+2)
+    &    ( 1.0/d31 + 1.0/d32 - 1.0/d43 ) * f(i+1) + d31*d32 / (d41*d42*d43) * f(i+2)
      enddo
      df(n-1) = df1
      df(n)   = - d42*d43 / (d21*d31*d41) * f(n-3) + d41*d43 / (d21*d32*d42) * f(n-2) -&
-    &            d41*d42 / (d31*d32*d43) * f(n-1) + ( 1d0/d41 + 1d0/d42 + 1d0/d43 ) * f(n)
+    &            d41*d42 / (d31*d32*d43) * f(n-1) + ( 1.0/d41 + 1.0/d42 + 1.0/d43 ) * f(n)
      ! for first two points use Lagrange interpolation of second order for log(f(i))
      ! or, as a fall-back, Lagrange interpolation with the conditions f(1), f(2), f(3), f'(3).
-     s = sign(1d0,f(1))
-     if(sign(1d0,f(2)) /= s .or. sign(1d0,f(3))  /= s .or. any(f(:3) == 0)) then
+     s = sign(1.0,f(1))
+     if(sign(1.0,f(2)) /= s .or. sign(1.0,f(3))  /= s .or. any(f(:3) == 0)) then
         d21   = r * (exp(h)-1)
         d32   = d21 * exp(h)
         d31   = d21 + d32
