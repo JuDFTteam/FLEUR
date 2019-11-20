@@ -6,7 +6,7 @@
 MODULE m_divergence
    USE m_types
    PRIVATE
-   PUBLIC :: mt_div, pw_div, divergence, mt_grad, pw_grad, divpotgrad
+   PUBLIC :: mt_div, pw_div, divergence, divergence2, mt_grad, pw_grad, divpotgrad, divpotgrad2
 
 CONTAINS
    SUBROUTINE mt_div(atoms,sphhar,sym,bxc,div)
@@ -43,10 +43,6 @@ CONTAINS
       ALLOCATE (thet(atoms%nsp()),phi(atoms%nsp()))
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
-
-      DO i=1,3
-         bxc(i)%mt(:,1:,:,:)=0.0
-      END DO
 
       DO n = 1, atoms%ntype
          ALLOCATE (gradx%gr(3,atoms%jri(n)*nsp,1),grady%gr(3,atoms%jri(n)*nsp,1), &
@@ -167,6 +163,62 @@ CONTAINS
       
    END SUBROUTINE divergence
 
+   SUBROUTINE divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+
+      !--------------------------------------------------------------------------
+      ! Use the two divergence subroutines above to now put the complete diver-  
+      ! gence of a field into a t_potden variable.                                         
+      !--------------------------------------------------------------------------   
+      USE m_lh_tofrom_lm
+      USE m_gradYlm
+
+      IMPLICIT NONE
+
+      TYPE(t_stars),                INTENT(IN)    :: stars
+      TYPE(t_atoms),                INTENT(IN)    :: atoms
+      TYPE(t_sphhar),               INTENT(IN)    :: sphhar
+      TYPE(t_vacuum),               INTENT(IN)    :: vacuum
+      TYPE(t_sym),                  INTENT(IN)    :: sym
+      TYPE(t_cell),                 INTENT(IN)    :: cell
+      TYPE(t_noco),                 INTENT(IN)    :: noco
+      TYPE(t_potden), DIMENSION(3), INTENT(INOUT) :: bxc
+      TYPE(t_potden),               INTENT(INOUT) :: div
+
+      INTEGER :: i,iType,indmax
+      COMPLEX, ALLOCATABLE :: flm(:,:,:),grsflm1(:,:,:,:),grsflm2(:,:,:,:),grsflm3(:,:,:,:),divflm(:,:,:) ! (iR,lm,n[,x,i])
+
+      indmax=(atoms%lmaxd+1)**2
+      
+      ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype))
+      ALLOCATE(divflm(atoms%jmtd,indmax,atoms%ntype))
+
+      DO i=1,3
+         DO iType=1, atoms%ntype
+            CALL lh_to_lm(atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm(:,:,iType))
+         END DO
+         IF (i==1) THEN
+            CALL gradYlm(atoms,flm,grsflm1)
+         ELSE IF (i==2) THEN
+            CALL gradYlm(atoms,flm,grsflm2)
+         ELSE
+            CALL gradYlm(atoms,flm,grsflm3)
+         END IF
+      END DO
+
+      DEALLOCATE(flm)
+
+      CALL divYlm(grsflm1(:,:,:,:),grsflm2(:,:,:,:),grsflm3(:,:,:,:), divflm)
+
+      DO iType=1, atoms%ntype
+         CALL lh_from_lm(atoms, sphhar, iType, divflm(:,1:indmax,iType), div%mt(:,0:,iType,1))
+      END DO
+
+      DEALLOCATE(divflm,grsflm1,grsflm2,grsflm3)
+
+      CALL pw_div(stars,sym,cell,noco,bxc,div)
+      
+   END SUBROUTINE divergence2
+
    SUBROUTINE mt_grad(n,atoms,sphhar,sym,den,gradphi)
       !-----------------------------------------------------------------------------
       !By use of the cartesian components of a field, its radial/angular derivati-  
@@ -232,9 +284,9 @@ CONTAINS
          CALL mt_from_grid(atoms, sphhar, n, 1, grad_temp(:,:,i), gradphi(i)%mt(:,0:,n,:))
          DO lh=0, lhmax
             gradphi(i)%mt(:,lh,n,1) = gradphi(i)%mt(:,lh,n,1)*atoms%rmsh(:, n)**2
-            IF ((sphhar%llh(lh,1)/=0).AND.(sphhar%llh(lh,1)/=2)) THEN
-               gradphi(i)%mt(:,lh,n,1) = 0.0
-            END IF
+            !IF ((sphhar%llh(lh,1)/=0).AND.(sphhar%llh(lh,1)/=2)) THEN
+            !   gradphi(i)%mt(:,lh,n,1) = 0.0
+            !END IF
          END DO ! lh
       END DO ! i
 
@@ -318,4 +370,59 @@ CONTAINS
 
    END SUBROUTINE divpotgrad
 
+   SUBROUTINE divpotgrad2(stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
+
+      USE m_types
+      USE m_lh_tofrom_lm
+      USE m_gradYlm
+      USE m_constants
+
+      IMPLICIT NONE
+      !-----------------------------------------------------------------------------
+      !Use the two gradient subroutines above to now put the complete gradient      
+      !of a potential into a t_potden variable.                                     
+      !-----------------------------------------------------------------------------  
+      TYPE(t_stars),INTENT(IN)                    :: stars 
+      TYPE(t_atoms), INTENT(IN)                   :: atoms
+      TYPE(t_sphhar), INTENT(IN)                  :: sphhar
+      TYPE(t_vacuum),INTENT(IN)                   :: vacuum
+      TYPE(t_sym), INTENT(IN)                     :: sym
+      TYPE(t_cell),INTENT(IN)                     :: cell
+      TYPE(t_noco), INTENT(IN)                    :: noco
+      TYPE(t_potden), INTENT(IN)                  :: pot
+      TYPE(t_potden), dimension(3), INTENT(INOUT) :: grad
+
+      TYPE(t_potden)                              :: denloc
+      INTEGER :: i,iType,indmax,lh,lhmax
+      COMPLEX, ALLOCATABLE :: flm(:,:,:),grsflm(:,:,:,:) ! (iR,lm,n[,x,i])
+
+      indmax=(atoms%lmaxd+1)**2
+
+      ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype))
+
+      denloc=pot
+
+      DO iType=1,atoms%ntype
+         lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:iType - 1)) + 1))
+         DO lh=0, lhmax
+            denloc%mt(:,lh,iType,1) = denloc%mt(:,lh,iType,1)*atoms%rmsh(:, iType)**2
+         END DO ! lh
+         CALL lh_to_lm(atoms, sphhar, iType, denloc%mt(:,:,iType,1), flm(:,:,iType))
+      END DO
+
+      CALL gradYlm(atoms,flm,grsflm)
+
+      DEALLOCATE(flm)
+    
+      DO i=1,3
+         DO iType=1,atoms%ntype
+            CALL lh_from_lm(atoms, sphhar, iType, grsflm(:,1:indmax,iType,i)/(4.0*pi_const), grad(i)%mt(:,0:,iType,1))
+         END DO
+      END DO
+
+      DEALLOCATE(grsflm)
+
+      CALL pw_grad(stars,cell,noco,sym,pot,grad)
+
+   END SUBROUTINE divpotgrad2
 END MODULE m_divergence

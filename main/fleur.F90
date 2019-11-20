@@ -522,12 +522,21 @@ CONTAINS
 
     !CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
    !CALL makeVectorField(stars,atoms,sphhar,vacuum,input,noco,inDen,1.0,testDen)
-   !CALL makeVectorField(stars,atoms,sphhar,vacuum,input,noco,vtot,2.0,testDen)
+   CALL makeVectorField(stars,atoms,sphhar,vacuum,input,noco,vtot,2.0,testDen)
+   
+   !testDen(3)%mt(:,1,:,1)=testDen(3)%mt(:,0,:,1)*atoms%rmsh 
+   testDen(3)%mt(:,1:,:,:)=0.0
+   !testDen(3)%mt(:,2:,:,:)=0.0
+   !testDen(3)%mt(:,0,:,:)=0.0
+   testDen(2)%mt(:,:,:,:)=0.0
+   testDen(1)%mt(:,:,:,:)=0.0
+   !testDen(3)%mt(:,0,:,1)*atoms%rmsh
+   !testDen(3)%mt(:,0,:,1)=0.0
     !CALL checkplotinp()
    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDen             ', testDen(1), testDen(1), testDen(2), testDen(3))
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenz            ', testDen(3))
-   !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
+   CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
     !DO i=1,3
        !CALL testGrad(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
        !ALLOCATE(testGrad(i)%pw_w,mold=testGrad(i)%pw)
@@ -535,18 +544,18 @@ CONTAINS
     !CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,testDen(3),testGrad)
     !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testGrad            ', testGrad(1), testGrad(1), testGrad(2), testGrad(3))
    
-   ALLOCATE (flh(atoms%jri(1),0:sphhar%nlh(atoms%ntypsy(1))),flm(atoms%jri(1),sphhar%nlh(atoms%ntypsy(1))+1),flh2(atoms%jri(1),0:sphhar%nlh(atoms%ntypsy(1))))
-   flh=inDen%mt(:,:,1,1)
-   flh(:,1)=-flh(:,0)
-   flh(:,2)=0*flh(:,0)
-   flh(:,3)=flh(:,0)
-   flh(:,4)=flh(:,0)
-   flh(:,5)=2*flh(:,0)
-   flh(:,6)=3*flh(:,0)
-   flh(:,7)=4*flh(:,0)
-   flh(:,8)=5*flh(:,0)
-   CALL lh_to_lm(atoms, sphhar, 1, flh, flm) 
-   CALL lh_from_lm(atoms, sphhar, 1, flm, flh2) 
+   !ALLOCATE (flh(atoms%jri(1),0:sphhar%nlh(atoms%ntypsy(1))),flm(atoms%jri(1),sphhar%nlh(atoms%ntypsy(1))+1),flh2(atoms%jri(1),0:sphhar%nlh(atoms%ntypsy(1))))
+   !flh=inDen%mt(:,:,1,1)
+   !flh(:,1)=-flh(:,0)
+   !flh(:,2)=0*flh(:,0)
+   !flh(:,3)=flh(:,0)
+   !flh(:,4)=flh(:,0)
+   !flh(:,5)=2*flh(:,0)
+   !flh(:,6)=3*flh(:,0)
+   !flh(:,7)=4*flh(:,0)
+   !flh(:,8)=5*flh(:,0)
+   !CALL lh_to_lm(atoms, sphhar, 1, flh, flm) 
+   !CALL lh_from_lm(atoms, sphhar, 1, flm, flh2) 
     
     CALL add_usage_data("Iterations",iter)
 

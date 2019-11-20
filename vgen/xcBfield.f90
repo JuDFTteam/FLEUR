@@ -112,19 +112,22 @@ CONTAINS
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: bxc
       
       TYPE(t_atoms)                                :: atloc
-      TYPE(t_potden)                               :: div,phi,checkdiv
-      TYPE(t_potden), DIMENSION(3)                 :: cvec, corrB
+      TYPE(t_potden)                               :: div,div2,phi,checkdiv
+      TYPE(t_potden), DIMENSION(3)                 :: cvec, cvec2, corrB
       INTEGER                                      :: n, jr, lh, lhmax
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
-      
-      CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
 
-      div%mt(:,2:,:,:)=0.0
-      div%mt(:,0,:,:)=0.0
+      CALL div2%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
+                                  atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
+                                  vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+      ALLOCATE(div2%pw_w,mold=div%pw)
+      
+      !CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+      CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div2)
  
       atloc=atoms
       atloc%zatom=0.0 !Local atoms variable with no charges; needed for the potential generation.
@@ -134,26 +137,27 @@ CONTAINS
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
-      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
+      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div2,phi)
    
-      DO n=1,atoms%ntype   
-         lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-         DO jr = 1, atoms%jri(n)
-            DO lh=0, lhmax
-               !IF (ABS(phi%mt(jr,lh,n,1))<eps) THEN
-               IF (lh/=1) THEN
-                  phi%mt(jr,lh,n,:)=0.0
-               END IF
-            END DO
-         END DO
-      END DO
+      !DO n=1,atoms%ntype   
+       !  lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+        ! DO jr = 1, atoms%jri(n)
+         !   DO lh=0, lhmax
+          !     !IF (ABS(phi%mt(jr,lh,n,1))<eps) THEN
+           !    IF (lh/=1) THEN
+            !      phi%mt(jr,lh,n,:)=0.0
+             !  END IF
+            !END DO
+        ! END DO
+     ! END DO
 
       DO i=1,3
          CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
       ENDDO
 
-      CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
+      !CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
+      CALL divpotgrad2(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
 
       DO i=1,3
          CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -166,7 +170,10 @@ CONTAINS
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(checkdiv%pw_w,mold=checkdiv%pw)
       
-      CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
+      CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
+
+      !checkdiv%mt(:,2:,:,:)=0.0
+      !checkdiv%mt(:,0,:,:)=0.0
 
       CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                      noco, div, phi, cvec(1), cvec(2), cvec(3), &

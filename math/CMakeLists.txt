@@ -33,6 +33,7 @@ math/ExpSave.f90
 math/intgr.F90
 math/ylm4.F90
 math/lh_tofrom_lm.f90
+math/gradYlm.f90
 )
 if (FLEUR_USE_FFTMKL)
    set(fleur_F90 ${fleur_F90} math/mkl_dfti.f90)

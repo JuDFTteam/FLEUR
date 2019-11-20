@@ -438,15 +438,6 @@ CONTAINS
          mzden%vacz(1:,1:,1) = rht(1:,1:,4)
          mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
         
-         !DO ityp=1, atoms%ntype
-         !   DO iri=1, atoms%jri(ityp)
-         !      cden%mt(iri,0:,ityp,:) = cden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
-         !      mxden%mt(iri,0:,ityp,:) = mxden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
-         !      myden%mt(iri,0:,ityp,:) = myden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
-         !      mzden%mt(iri,0:,ityp,:) = mzden%mt(iri,0:,ityp,:) * atoms%rmsh(iri,ityp)**2
-         !   END DO
-         !END DO
-
       END IF
 
       DEALLOCATE (rho, qpw, rht, rhtxy, cdomvz, cdomvxy, &
@@ -736,55 +727,44 @@ CONTAINS
                      xdnout(5) = SQRT(ABS(xdnout(2)**2+xdnout(3)**2+xdnout(4)**2))
                      IF (xdnout(5)<eps) THEN
                         xdnout(5)= 0.0
-                        !xdnout(6)= -tpi_const
-                        !xdnout(7)= -tpi_const
-                        xdnout(6)= 0.0
-                        xdnout(7)= 0.0
+                        xdnout(6)= -tpi_const
+                        xdnout(7)= -tpi_const
                      ELSE
                         DO j = 1, 3
                            help(j) = xdnout(1+j)/xdnout(5) 
                         END DO
-                        !IF (help(3)<0.5) THEN
+                        IF (help(3)<0.5) THEN
                            xdnout(6)= ACOS(help(3))
-                        !ELSE
-                        !   xdnout(6)= pi_const/2.0-ASIN(help(3))
-                        !END IF
-                        IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
-                           !xdnout(7)= -tpi_const
-                           xdnout(7)= 0.0
                         ELSE
-                           !IF ( ABS(help(1)) > ABS(help(2)) ) THEN
-                           !   xdnout(7)= ABS(ATAN(help(2)/help(1)))
-                           !ELSE
-                           !   xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
-                           !END IF
-                           !IF (help(2)<0.0) THEN
-                           !   xdnout(7)= -xdnout(7)
-                           !END IF
-                           !IF (help(1)<0.0) THEN
-                           !   xdnout(7)= pi_const-xdnout(7)
-                           !END IF
-                           !phi0=0
-                           !DO WHILE (xdnout(7)-pi_const*phi0 > +pi_const)
-                           !   xdnout(7)= xdnout(7)-tpi_const
-                           !END DO
-                           !DO WHILE (xdnout(7)-pi_const*phi0 < -pi_const)
-                           !   xdnout(7)= xdnout(7)+tpi_const
-                           !END DO
-                           !IF (ABS(xdnout(2)-xdnout(3))<eps) THEN
-                           !   IF (xdnout(2)>0) THEN
-                           !      xdnout(7)=pi_const/4.0
-                           !   ELSE
-                           !      xdnout(7)=-3*pi_const/4.0
-                           !   END IF 
-                           IF (xdnout(2)>eps) THEN
-                              xdnout(7)=ATAN(xdnout(3)/xdnout(2))
-                           ELSE IF (ABS(xdnout(2))<eps) THEN
-                              xdnout(7)=SIGN(1.0, xdnout(3))*pi_const/2.0 
-                           ELSE IF ((xdnout(2)<-eps).AND.(xdnout(3)>=0.0)) THEN
-                              xdnout(7)=ATAN(xdnout(3)/xdnout(2))+pi_const 
+                           xdnout(6)= pi_const/2.0-ASIN(help(3))
+                        END IF
+                        IF (SQRT(ABS(help(1)**2+help(2)**2)) < eps) THEN
+                           xdnout(7)= -tpi_const
+                        ELSE
+                           IF ( ABS(help(1)) > ABS(help(2)) ) THEN
+                              xdnout(7)= ABS(ATAN(help(2)/help(1)))
                            ELSE
-                              xdnout(7)=ATAN(xdnout(3)/xdnout(2))-pi_const 
+                              xdnout(7)= pi_const/2.0-ABS(ATAN(help(1)/help(2)))
+                           END IF
+                           IF (help(2)<0.0) THEN
+                              xdnout(7)= -xdnout(7)
+                           END IF
+                           IF (help(1)<0.0) THEN
+                              xdnout(7)= pi_const-xdnout(7)
+                           END IF
+                           phi0=0
+                           DO WHILE (xdnout(7)-pi_const*phi0 > +pi_const)
+                              xdnout(7)= xdnout(7)-tpi_const
+                           END DO
+                           DO WHILE (xdnout(7)-pi_const*phi0 < -pi_const)
+                              xdnout(7)= xdnout(7)+tpi_const
+                           END DO
+                           IF (ABS(xdnout(2)-xdnout(3))<eps) THEN
+                              IF (xdnout(2)>0) THEN
+                                 xdnout(7)=pi_const/4.0
+                              ELSE
+                                 xdnout(7)=-3*pi_const/4.0
+                              END IF
                            END IF
                         END IF
                      END IF

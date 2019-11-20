@@ -6,7 +6,7 @@ vgen/modcyli.f
 vgen/modcylk.f
 vgen/od_mkgxyz3.f
 vgen/od_mkgz.f
-vgen/sphcoord.f
+vgen/pol_angle.f
 vgen/vacp5_0.f
 vgen/vacp5_z.f
 vgen/visp5_0.f
