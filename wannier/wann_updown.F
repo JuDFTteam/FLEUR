@@ -904,6 +904,7 @@ c...we work only within the energy window
       eig(:) = 0.
 
       do jspin=1,wannierspin
+       jspin2=min(input%jspins,jspin)
        nslibd=0
        !print*,"bands used:"
        do i = 1,nbands
@@ -911,8 +912,8 @@ c...we work only within the energy window
      &       and.wann%l_bynumber)
      &    .or.(eigg(i,1).ge.e1s.and.eigg(i,1).le.e2s.
      &       and.wann%l_byenergy)
-     &    .or.(i.ge.wann%band_min(jspin).and.
-     &        (i.le.wann%band_max(jspin))
+     &    .or.(i.ge.wann%band_min(jspin2).and.
+     &        (i.le.wann%band_max(jspin2))
      &       .and.wann%l_byindex))then
 
            !print*,i
@@ -922,7 +923,7 @@ c...we work only within the energy window
              funbas=lapw%nv(1)+atoms%nlotot
              funbas=funbas+lapw%nv(2)+atoms%nlotot
            else
-             funbas=lapw%nv(jspin)+atoms%nlotot
+             funbas=lapw%nv(jspin2)+atoms%nlotot
            endif
            IF (zzMat(jspin)%l_real) THEN
               do j = 1,funbas
