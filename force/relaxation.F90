@@ -194,7 +194,7 @@ CONTAINS
     dist(:,:) = pos(:,:,n_old+1)-pos(:,:,n_old)
     DO i = 1, SIZE(pos,2)
        DO j = 1, 3
-          IF(ABS(dist(j,i).LT.eps)) dist(j,i) = eps ! To avoid calculation of 0.0/0.0 below.
+          IF(ABS(dist(j,i)).LT.eps) dist(j,i) = eps ! To avoid calculation of 0.0/0.0 below.
        END DO
     END DO
 
