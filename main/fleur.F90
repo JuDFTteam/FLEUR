@@ -252,8 +252,8 @@ CONTAINS
        !---< gwf
 
 !Rot For Testing
-       CALL rotateMagnetToSpinAxis(noco,vacuum,sphhar,stars&
-               ,sym,oneD,cell,input,atoms,inDen)
+       CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
+               ,sym,oneD,cell,noco,input,atoms,inDen)
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
                  obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)

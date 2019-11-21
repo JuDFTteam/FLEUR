@@ -6,6 +6,7 @@
 
 MODULE m_rotate_mt_den_tofrom_local
   USE m_juDFT
+  USE m_sphcoord
   USE m_types
   USE m_constants
   use m_mt_tofrom_grid
@@ -49,31 +50,7 @@ CONTAINS
           rho_up  = (rhotot + magmom)/2
           rho_down= (rhotot - magmom)/2
 
-          IF (ABS(mz) .LE. eps) THEN
-             theta = pi_const/2
-          ELSEIF (mz .GE. 0.0) THEN
-             theta = ATAN(SQRT(mx**2 + my**2)/mz)
-          ELSE
-             theta = ATAN(SQRT(mx**2 + my**2)/mz) + pi_const
-          ENDIF
-
-          IF (ABS(mx) .LE. eps) THEN
-             IF (ABS(my) .LE. eps) THEN
-                phi = 0.0
-             ELSEIF (my .GE. 0.0) THEN
-                phi = pi_const/2
-             ELSE
-                phi = -pi_const/2
-             ENDIF
-          ELSEIF (mx .GE. 0.0) THEN
-             phi = ATAN(my/mx)
-          ELSE
-             IF (my .GE. 0.0) THEN
-                phi = ATAN(my/mx) + pi_const
-             ELSE
-                phi = ATAN(my/mx) - pi_const
-             ENDIF
-          ENDIF
+          CALL sphcoord(mx,my,mz,theta,phi)
           
           ch(imesh,1) = rho_up
           ch(imesh,2) = rho_down

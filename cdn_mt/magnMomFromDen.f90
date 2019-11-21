@@ -17,6 +17,7 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    USE m_constants
    USE m_intgr
    USE m_juDFT
+   USE m_sphcoord
    IMPLICIT NONE
 
 
@@ -27,8 +28,8 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    REAL, INTENT(OUT)             ::  moments(atoms%ntype,3)
 
    INTEGER                       ::  jsp,i,j
-   REAL                          ::  phi,theta, mx,my,mz
-   REAL                          :: eps=1E-10
+   REAL                          ::  mx,my,mz
+   REAL                          ::  eps=1E-10
 
    REAL, ALLOCATABLE             ::  dummyResults(:,:)
 
@@ -62,33 +63,7 @@ DEALLOCATE(dummyResults)
       mx=moments(i,1)
       my=moments(i,2)
       mz=moments(i,3)
-          IF (ABS(mz) .LE. eps) THEN
-             theta = pi_const/2
-          ELSEIF (mz .GE. 0.0) THEN
-             theta = ATAN(SQRT(mx**2 + my**2)/mz)
-          ELSE
-             theta = ATAN(SQRT(mx**2 + my**2)/mz) + pi_const
-          ENDIF
-
-          IF (ABS(mx) .LE. eps) THEN
-             IF (ABS(my) .LE. eps) THEN
-                phi = 0.0
-             ELSEIF (my .GE. 0.0) THEN
-                phi = pi_const/2
-             ELSE
-                phi = -pi_const/2
-             ENDIF
-          ELSEIF (mx .GE. 0.0) THEN
-             phi = ATAN(my/mx)
-          ELSE
-             IF (my .GE. 0.0) THEN
-                phi = ATAN(my/mx) + pi_const
-             ELSE
-                phi = ATAN(my/mx) - pi_const
-             ENDIF
-          ENDIF
-     atoms%phi_mt_avg(i)=phi
-     atoms%theta_mt_avg(i)=theta
+      CALL sphcoord(mx,my,mz,atoms%theta_mt_avg(i),atoms%phi_mt_avg(i))
    ENDDO
 
 END SUBROUTINE magnMomFromDen
