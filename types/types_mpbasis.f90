@@ -215,7 +215,7 @@ contains
                maxval(abs(olap)), ' occurred for (', &
                err_loc(1), ',', err_loc(2), ')-overlap.'
          endif
-         CALL judft_error("Bad orthonormality of mpbasisuct basis", &
+         CALL judft_error("Bad orthonormality of mpbasis", &
                           hint='Increase tolerance', &
                           calledby='mixedbasis%check_orthonormality')
       endif
