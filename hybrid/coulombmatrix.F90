@@ -817,6 +817,7 @@ CONTAINS
             allocate(carr2(atoms%nat, (hybrid%lexp + 1)**2), &
                       structconst1(atoms%nat, (2*hybrid%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
+
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybrid%nbasp + igpt2
@@ -824,6 +825,7 @@ CONTAINS
                iqnrm2 = pqnrm(igpt2, ikpt)
                ic2 = 0
                carr2 = 0
+               call timestart("itype loops")
                DO itype2 = 1, atoms%ntype
                   DO ineq2 = 1, atoms%neq(itype2)
                      ic2 = ic2 + 1
@@ -858,7 +860,9 @@ CONTAINS
                      END DO
                   END DO
                END DO
+               call timestop("itype loops")
 
+               call timestart("igpt1")
                iy = hybrid%nbasp
                DO igpt1 = 1, igpt2
                   iy = iy + 1
@@ -883,6 +887,7 @@ CONTAINS
                   idum = ix*(ix - 1)/2 + iy
                   coulomb(idum, ikpt) = coulomb(idum, ikpt) + csum/cell%vol
                END DO
+               call timestop("igpt1")
             END DO
             deallocate(carr2, carr2a, carr2b, structconst1)
             call timestop("loop over plane waves")
@@ -998,15 +1003,15 @@ CONTAINS
          l_warn = (mpi%irank == 0)
          call timestart("loop 2")
          DO ikpt = ikptmin, ikptmax!1,nkpt
-
+            call timestart("harmonics setup")
             DO igpt = 1, mpbasis%n_g(ikpt)
                igptp = mpbasis%gptm_ptr(igpt, ikpt)
                q = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp), cell%bmat)
-               call timestart("harmonics")
                call ylm4(hybrid%lexp, q, carr2(:, igpt))
-               call timestop("harmonics")
             END DO
+            call timestart("harmonics setup")
 
+            call timestart("q loop")
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                ix = hybrid%nbasp + igpt2
@@ -1052,7 +1057,7 @@ CONTAINS
                   coulomb(idum, ikpt) = coulomb(idum, ikpt) + (4*pi_const)**3*cdum/cell%vol
                END DO
             END DO
-
+            call timestop("q loop")
          END DO
          call timestop("loop 2")
          deallocate(carr2)
@@ -1151,6 +1156,8 @@ CONTAINS
       END IF
 
       ! transform Coulomb matrix to the biorthogonal set
+      ! REFACTORING HINT: THIS IS DONE WTIH THE INVERSE OF OLAP
+      ! IT CAN EASILY BE REWRITTEN AS A LINEAR SYSTEM
       IF (mpi%irank == 0) WRITE (6, '(A)', advance='no') 'Transform to biorthogonal set...'
       CALL cpu_TIME(time1)
       call timestop("gap 1:")
@@ -1158,7 +1165,9 @@ CONTAINS
       DO ikpt = ikptmin, ikptmax
 
          !calculate IR overlap-matrix
+         call timestart("olapm alloc")
          CALL olapm%alloc(sym%invs, mpbasis%n_g(ikpt), mpbasis%n_g(ikpt), 0.0)
+         call timestop("olapm alloc")
 
          CALL olap_pw(olapm, mpbasis%g(:, mpbasis%gptm_ptr(:mpbasis%n_g(ikpt), ikpt)), mpbasis%n_g(ikpt), atoms, cell)
 
@@ -1201,6 +1210,7 @@ CONTAINS
          !unpack matrix coulomb
          CALL coulhlp%from_packed(sym%invs, nbasm1(ikpt), REAL(coulomb(:, ikpt)), coulomb(:, ikpt))
 
+         call timestart("multiply inverse rhs")
          if (olapm%l_real) THEN
             !multiply with inverse olap from right hand side
             coulhlp%data_r(:, hybrid%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybrid%nbasp + 1:), olapm%data_r)
@@ -1213,7 +1223,7 @@ CONTAINS
             coulhlp%data_c(hybrid%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybrid%nbasp + 1:, :))
          end if
          coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt) + 1))/2, ikpt) = coulhlp%to_packed()
-
+         call timestop("multiply inverse rhs")
       END DO
       call timestop("calc eigenvalues olap_pw")
 

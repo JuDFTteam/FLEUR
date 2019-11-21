@@ -7,7 +7,7 @@ CONTAINS
 !     olap_pw calculates full overlap matrix
 
    SUBROUTINE olap_pw(olap, gpt, ngpt, atoms, cell)
-
+      use m_juDFT
       USE m_constants
       USE m_types
       IMPLICIT NONE
@@ -25,6 +25,7 @@ CONTAINS
       COMPLEX, PARAMETER        :: img = (0.0, 1.0)
       INTEGER                  :: dg(3)
 
+      call timestart("olap_pw")
       DO i = 1, ngpt
          DO j = 1, i
             dg = gpt(:, j) - gpt(:, i)
@@ -62,7 +63,7 @@ CONTAINS
             endif
          END DO
       END DO
-
+      call timestop("olap_pw")
    END SUBROUTINE olap_pw
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
