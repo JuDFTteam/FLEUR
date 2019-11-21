@@ -55,7 +55,7 @@ CONTAINS
           CALL ylm4(&
                &                   atoms%lmaxd,rx(:,k),&
                &                   ylm)
-          CALL polangle(&
+          CALL pol_angle(&
                &                       rx(1,k),rx(2,k),rx(3,k),&
                &                       thet(k),phi(k))
 

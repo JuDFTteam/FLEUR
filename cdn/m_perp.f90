@@ -59,7 +59,7 @@ CONTAINS
     absmag=SQRT(mx*mx+my*my+mz*mz)
     WRITE  (6,8025) mx,my,mz,absmag
     !---> determine the polar angles of the moment vector in the local frame
-    CALL polangle(mx,my,mz,betah,alphh)
+    CALL pol_angle(mx,my,mz,betah,alphh)
     WRITE  (6,8026) betah,alphh
 8025 FORMAT(2x,'--> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
 8026 FORMAT(2x,'-->',10x,' delta beta=',f9.5,&
@@ -76,7 +76,7 @@ CONTAINS
        mx = 2*REAL(rho21)
        my = 2*AIMAG(rho21)
        mz = rho11 - rho22
-       CALL polangle(mx,my,mz,betah,alphh)
+       CALL pol_angle(mx,my,mz,betah,alphh)
        WRITE  (6,8027) noco%beta(itype),noco%alph(itype)-alphdiff
        WRITE  (6,8028) betah,alphh-alphdiff
 8027   FORMAT(2x,'-->',10x,' input noco%beta=',f9.5, '  input noco%alpha=',f9.5)
@@ -103,7 +103,7 @@ CONTAINS
           mz_mix = (-1.0) * mz_mix
        ENDIF
        ! calculate angles alpha and beta in global frame
-       CALL polangle(mx_mix,my_mix,mz_mix,betah,alphh)
+       CALL pol_angle(mx_mix,my_mix,mz_mix,betah,alphh)
        WRITE  (6,8029) betah,alphh-alphdiff
 8029   FORMAT(2x,'-->',10x,' new noco%beta  =',f9.5, '  new noco%alpha  =',f9.5)
        noco%alph(itype) = alphh

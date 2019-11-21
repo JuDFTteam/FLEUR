@@ -50,7 +50,7 @@ CONTAINS
           rho_up  = (rhotot + magmom)/2
           rho_down= (rhotot - magmom)/2
 
-          CALL polangle(mx,my,mz,theta,phi)
+          CALL pol_angle(mx,my,mz,theta,phi)
           
           ch(imesh,1) = rho_up
           ch(imesh,2) = rho_down
