@@ -14,10 +14,9 @@ CONTAINS
 SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    USE m_constants
    USE m_types
-   USE m_constants
    USE m_intgr
    USE m_juDFT
-   USE m_sphcoord
+   USE m_polangle
    IMPLICIT NONE
 
 
@@ -63,7 +62,8 @@ DEALLOCATE(dummyResults)
       mx=moments(i,1)
       my=moments(i,2)
       mz=moments(i,3)
-      CALL sphcoord(mx,my,mz,atoms%theta_mt_avg(i),atoms%phi_mt_avg(i))
+      CALL polangle(mx,my,mz,atoms%theta_mt_avg(i),atoms%phi_mt_avg(i))
+      !IF(mx<0)atoms%theta_mt_avg(i)=-atoms%theta_mt_avg(i)
    ENDDO
 
 END SUBROUTINE magnMomFromDen

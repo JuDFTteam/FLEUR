@@ -10,7 +10,7 @@ CONTAINS
        &                   rx,nsp,dograds,sym,&
        &                   ylh,thet,phi,ylht1,ylht2,ylhf1,ylhf2,ylhtf)
     !
-    USE m_sphcoord
+    USE m_polangle
     USE m_ylm
     USE m_dylm
     USE m_types
@@ -55,7 +55,7 @@ CONTAINS
           CALL ylm4(&
                &                   atoms%lmaxd,rx(:,k),&
                &                   ylm)
-          CALL sphcoord(&
+          CALL polangle(&
                &                       rx(1,k),rx(2,k),rx(3,k),&
                &                       thet(k),phi(k))
 

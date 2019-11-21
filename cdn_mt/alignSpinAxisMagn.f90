@@ -31,8 +31,8 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    REAL                          :: moments(atoms%ntype,3)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)   
    
-   phiTemp=atoms%phi_mt_avg
-   thetaTemp=atoms%theta_mt_avg
+   phiTemp=mod(atoms%phi_mt_avg,2*pimach())
+   thetaTemp=mod(atoms%theta_mt_avg,2*pimach())
    CALL magnMomFromDen(input,atoms,noco,den,moments)
    write(*,*) "mx1"
    write(*,*) moments(1,1)
@@ -43,12 +43,12 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    write(*,*) "mz2"
    write(*,*) moments(2,3)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-atoms%phi_mt_avg,-atoms%theta_mt_avg,den)
-   noco%alph=atoms%phi_mt_avg+noco%alph
-   noco%beta=atoms%theta_mt_avg+noco%beta
+   noco%alph=mod(atoms%phi_mt_avg+noco%alph,2*pimach())
+   noco%beta=mod(atoms%theta_mt_avg+noco%beta,2*pimach())
 
 
-   atoms%phi_mt_avg=atoms%phi_mt_avg+phiTemp
-   atoms%theta_mt_avg=atoms%theta_mt_avg+thetaTemp
+   atoms%phi_mt_avg=mod(atoms%phi_mt_avg+phiTemp,2*pimach())
+   atoms%theta_mt_avg=mod(atoms%theta_mt_avg+thetaTemp,2*pimach())
    write(*,*) "Phi Total"
    write(*,*) atoms%phi_mt_avg
    write(*,*) "Theta Total"

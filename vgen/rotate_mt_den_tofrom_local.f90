@@ -6,7 +6,7 @@
 
 MODULE m_rotate_mt_den_tofrom_local
   USE m_juDFT
-  USE m_sphcoord
+  USE m_polangle
   USE m_types
   USE m_constants
   use m_mt_tofrom_grid
@@ -50,7 +50,7 @@ CONTAINS
           rho_up  = (rhotot + magmom)/2
           rho_down= (rhotot - magmom)/2
 
-          CALL sphcoord(mx,my,mz,theta,phi)
+          CALL polangle(mx,my,mz,theta,phi)
           
           ch(imesh,1) = rho_up
           ch(imesh,2) = rho_down
