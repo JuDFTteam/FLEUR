@@ -530,6 +530,13 @@
          CALL add_usage_data("gpu_per_node",0)
 #endif
 
+          INQUIRE (file='wann_inp',exist=l_wann_inp)
+          input%l_wann = input%l_wann.OR.l_wann_inp
+ 
+          IF(input%l_wann) THEN
+            CALL wann_read_inp(DIMENSION,input,noco,(mpi%irank.EQ.0),wann)
+          END IF
+
           CALL results%init(dimension,input,atoms,kpts,noco)
 
           IF (mpi%irank.EQ.0) THEN
@@ -540,11 +547,7 @@
           !new check mode will only run the init-part of FLEUR
           IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
 
-          INQUIRE (file='wann_inp',exist=l_wann_inp)
-          input%l_wann = input%l_wann.OR.l_wann_inp
-          IF(input%l_wann) THEN
-            CALL wann_read_inp(DIMENSION,input,noco,(mpi%irank.EQ.0),wann)
-          END IF
+
 
 
         END SUBROUTINE fleur_init
