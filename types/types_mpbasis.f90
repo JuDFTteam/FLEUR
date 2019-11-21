@@ -6,10 +6,10 @@ module m_types_mpbasis
       integer, allocatable   :: n_g(:) ! (ik)
       integer, allocatable   :: gptm_ptr(:, :) ! (ig, ik)
       real                   :: g_cutoff
-      integer, allocatable   :: num_radbasfn(:, :)
-      real, allocatable      :: radbasfn_mt(:,:,:,:)
+      integer, allocatable   :: num_radbasfn(:, :) !(l,itype)
+      real, allocatable      :: radbasfn_mt(:,:,:,:) !(jri,n,l,itype)
       real                   :: linear_dep_tol  !only read in
-      INTEGER, ALLOCATABLE   :: num_radfun_per_l(:,:)
+      INTEGER, ALLOCATABLE   :: num_radfun_per_l(:,:) !(l,itype)
 
       integer, allocatable   :: l1(:,:,:) !(n, l, itype)
       integer, allocatable   :: l2(:,:,:) !(n, l, itype)
