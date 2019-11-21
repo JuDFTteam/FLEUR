@@ -44,19 +44,23 @@ CONTAINS
       REAL, ALLOCATABLE:: work(:)
       INTEGER, allocatable::ipiv(:)
 
-      IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) .OR. (mat%matsize1 .NE. vec%matsize1)) &
+      IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) &
+          .OR. (mat%matsize1 .NE. vec%matsize1)) &
          CALL judft_error("Invalid matices in t_mat_lproblem")
       IF (mat%l_real) THEN
          IF (ALL(ABS(mat%data_r - TRANSPOSE(mat%data_r)) < 1E-8)) THEN
             !Matrix is symmetric
-            CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, vec%data_r, vec%matsize1, INFO)
+            CALL DPOSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1,&
+                                vec%data_r, vec%matsize1, INFO)
             IF (INFO > 0) THEN
                !Matrix was not positive definite
                lwork = -1; ALLOCATE (work(1))
-        CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, vec%data_r, vec%matsize1, WORK, LWORK, INFO)
+               CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
+                           vec%data_r, vec%matsize1, WORK, LWORK, INFO)
                lwork = INT(work(1))
                DEALLOCATE (work); ALLOCATE (ipiv(mat%matsize1), work(lwork))
-        CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, vec%data_r, vec%matsize1, WORK, LWORK, INFO)
+               CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
+                           vec%data_r, vec%matsize1, WORK, LWORK, INFO)
                IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
             END IF
          ELSE
@@ -112,7 +116,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL:: global_size1, global_size2
 
       IF (PRESENT(global_size1) .AND. PRESENT(global_size2)) THEN
-        IF ((global_size1.NE.templ%matsize1).OR.(global_size2.NE.templ%matsize2)) CALL judft_error("BUG:Invalid change of size in init by template")
+         IF ((global_size1 .NE. templ%matsize1) .OR. (global_size2 .NE. templ%matsize2)) CALL judft_error("BUG:Invalid change of size in init by template")
       END IF
       mat%l_real = templ%l_real
       mat%matsize1 = templ%matsize1
@@ -139,7 +143,7 @@ CONTAINS
       IF (present(matsize1)) mat%matsize1 = matsize1
       IF (present(matsize2)) mat%matsize2 = matsize2
 
-    IF (mat%matsize1<0) CALL judft_error("Cannot allocate memory for mat datatype that is not initialized",hint="This is a BUG in FLEUR, please report")
+      IF (mat%matsize1 < 0) CALL judft_error("Cannot allocate memory for mat datatype that is not initialized", hint="This is a BUG in FLEUR, please report")
       IF (mat%matsize2 < 0) mat%matsize2 = mat%matsize1 !Square by default
 
       IF (allocated(mat%data_r)) deallocate (mat%data_r)
@@ -165,7 +169,7 @@ CONTAINS
       CLASS(t_mat), INTENT(IN)           ::mat2
       CLASS(t_mat), INTENT(OUT), OPTIONAL ::res
 
-    if (mat1%matsize2.ne.mat2%matsize1) CALL judft_error("Cannot multiply matrices because of non-matching dimensions",hint="This is a BUG in FLEUR, please report")
+      if (mat1%matsize2 .ne. mat2%matsize1) CALL judft_error("Cannot multiply matrices because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
 
       IF (present(res)) THEN
          call res%alloc(mat1%l_real, mat1%matsize1, mat2%matsize2)
@@ -175,11 +179,11 @@ CONTAINS
             res%data_c = matmul(mat1%data_c(:mat1%matsize1, :mat1%matsize2), mat2%data_c(:mat2%matsize1, :mat2%matsize2))
          ENDIF
       else
-       if (mat1%matsize1.ne.mat1%matsize2) CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions",hint="This is a BUG in FLEUR, please report")
+         if (mat1%matsize1 .ne. mat1%matsize2) CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
          if (mat1%l_real) THEN
-          mat1%data_r(:mat1%matsize1,:mat1%matsize2)=matmul(mat1%data_r(:mat1%matsize1,:mat1%matsize2),mat2%data_r(:mat2%matsize1,:mat2%matsize2))
+            mat1%data_r(:mat1%matsize1, :mat1%matsize2) = matmul(mat1%data_r(:mat1%matsize1, :mat1%matsize2), mat2%data_r(:mat2%matsize1, :mat2%matsize2))
          ELSE
-          mat1%data_c(:mat1%matsize1,:mat1%matsize2)=matmul(mat1%data_c(:mat1%matsize1,:mat1%matsize2),mat2%data_c(:mat2%matsize1,:mat2%matsize2))
+            mat1%data_c(:mat1%matsize1, :mat1%matsize2) = matmul(mat1%data_c(:mat1%matsize1, :mat1%matsize2), mat2%data_c(:mat2%matsize1, :mat2%matsize2))
          ENDIF
       end IF
    end SUBROUTINE t_mat_multiply
@@ -196,7 +200,7 @@ CONTAINS
             res%data_c = transpose(mat1%data_c(:mat1%matsize1, :mat1%matsize2))
          ENDIF
       else
-       if (mat1%matsize1.ne.mat1%matsize2) CALL judft_error("Cannot transpose matrices inplace because of non-matching dimensions",hint="This is a BUG in FLEUR, please report")
+         if (mat1%matsize1 .ne. mat1%matsize2) CALL judft_error("Cannot transpose matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
          IF (mat1%l_real) THEN
             mat1%data_r(:mat1%matsize1, :mat1%matsize2) = transpose(mat1%data_r(:mat1%matsize1, :mat1%matsize2))
          ELSE
@@ -206,6 +210,7 @@ CONTAINS
    end SUBROUTINE t_mat_transpose
 
    SUBROUTINE t_mat_from_packed(mat1, l_real, matsize, packed_r, packed_c)
+      use m_judft
       CLASS(t_mat), INTENT(INOUT)       :: mat1
       INTEGER, INTENT(IN)               :: matsize
       LOGICAL, INTENT(IN)               :: l_real
@@ -213,6 +218,7 @@ CONTAINS
       COMPLEX, INTENT(IN)               :: packed_c(:)
 
       INTEGER:: n, nn, i
+      call timestart("t_mat_from_packed")
       call mat1%alloc(l_real, matsize, matsize)
       i = 1
       DO n = 1, matsize
@@ -227,6 +233,7 @@ CONTAINS
             i = i + 1
          end DO
       end DO
+      call timestop("t_mat_from_packed")
    end SUBROUTINE t_mat_from_packed
 
    function t_mat_to_packed(mat) result(packed)
@@ -258,7 +265,11 @@ CONTAINS
       integer, allocatable   :: ipiv(:)
       complex, allocatable    :: work_c(:)
 
-    if (mat%matsize1.ne.mat%matsize2) call judft_error("Can only invert square matrices",hint="This is a BUG in FLEUR, please report")
+      call timestart("invert matrix")
+      if (mat%matsize1 .ne. mat%matsize2) then
+         call judft_error("Can only invert square matrices", &
+                          hint="This is a BUG in FLEUR, please report")
+      endif
       ALLOCATE (ipiv(mat%matsize1))
 
       if (mat%l_real) THEN
@@ -274,6 +285,7 @@ CONTAINS
          call zgetri(mat%matsize1, mat%data_c, size(mat%data_c, 1), ipiv, work_c, size(work_c), info)
          if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
       end if
+      call timestop("invert matrix")
    end subroutine t_mat_inverse
 
    SUBROUTINE t_mat_move(mat, mat1)
