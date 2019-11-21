@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.28">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.31">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
    
@@ -25,6 +25,7 @@
          <xsd:enumeration value="0.28"/>
          <xsd:enumeration value="0.29"/>
          <xsd:enumeration value="0.30"/>
+         <xsd:enumeration value="0.31"/>
       </xsd:restriction>
    </xsd:simpleType>
 
