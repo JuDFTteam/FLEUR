@@ -55,6 +55,23 @@ c--->    small. therefore, make sure that vx is not to small.
          IF ( vx.LT.0 ) phi = pi - phi
          IF ( vy.LT.0 ) phi = -phi
       ENDIF
-
+      IF(phi<0) phi=phi+2*pi
+      IF(theta<0) theta=theta + 2*pi
+      IF(theta>pi) THEN 
+         theta=theta-pi
+         phi=phi+pi
+      END IF
+      phi=mod(phi,2*pi)
+         
       END SUBROUTINE pol_angle
+
+
+      SUBROUTINE sphericaltocart(r,theta,phi,x,y,z)
+      IMPLICIT NONE
+      REAL, INTENT(IN) :: r,theta,phi
+      REAL, INTENT(OUT):: x,y,z
+      x=r*SIN(theta)*COS(phi)
+      y=r*SIN(theta)*SIN(phi)
+      z=r*COS(theta)
+      END SUBROUTINE sphericaltocart
       END MODULE m_polangle

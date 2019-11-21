@@ -14,6 +14,7 @@ USE m_magnMomFromDen
 USE m_types
 USE m_flipcdn
 USE m_constants
+USE m_polangle
 
 CONTAINS
 SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
@@ -28,11 +29,14 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    TYPE(t_oneD),INTENT(IN)       :: oneD
    TYPE(t_cell),INTENT(IN)       :: cell
    TYPE(t_potden), INTENT(INOUT) :: den 
+
    REAL                          :: moments(atoms%ntype,3)
    REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)   
+!!TEMP
+!   REAL :: x,y,z
    
-   phiTemp=mod(atoms%phi_mt_avg,2*pimach())
-   thetaTemp=mod(atoms%theta_mt_avg,2*pimach())
+   phiTemp=noco%alph
+   thetaTemp=noco%beta
    CALL magnMomFromDen(input,atoms,noco,den,moments)
    write(*,*) "mx1"
    write(*,*) moments(1,1)
@@ -43,16 +47,23 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    write(*,*) "mz2"
    write(*,*) moments(2,3)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-atoms%phi_mt_avg,-atoms%theta_mt_avg,den)
-   noco%alph=mod(atoms%phi_mt_avg+noco%alph,2*pimach())
-   noco%beta=mod(atoms%theta_mt_avg+noco%beta,2*pimach())
-
-
-   atoms%phi_mt_avg=mod(atoms%phi_mt_avg+phiTemp,2*pimach())
-   atoms%theta_mt_avg=mod(atoms%theta_mt_avg+thetaTemp,2*pimach())
-   write(*,*) "Phi Total"
+  !write (*,*)"mx                my                     mz"
+  !CALL sphericaltocart(SQRT(moments(1,1)**2+moments(1,2)**2+moments(1,3)**2),thetaTemp(1),phiTemp(1),x,y,z)
+   !write(*,*) x,y,z
+   !CALL sphericaltocart(SQRT(moments(2,1)**2+moments(2,2)**2+moments(2,3)**2),thetaTemp(2),phiTemp(2),x,y,z)
+   !write(*,*) x,y,z
+   write(*,*) "atoms%phi_mt_avg"
    write(*,*) atoms%phi_mt_avg
-   write(*,*) "Theta Total"
+   write(*,*) "atoms%theta_mt_avg"
    write(*,*) atoms%theta_mt_avg
+   noco%alph=mod(atoms%phi_mt_avg+phiTemp,2*pimach())
+   noco%beta=mod(atoms%theta_mt_avg+thetaTemp,2*pimach())
+   atoms%phi_mt_avg=noco%alph
+   atoms%theta_mt_avg=noco%beta
+   write(*,*) "Noco Phi"
+   write(*,*) noco%alph
+   write(*,*) "Noco Theta"
+   write(*,*) noco%beta
 
 END SUBROUTINE rotateMagnetToSpinAxis
 
@@ -61,7 +72,7 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars&
 ,sym,oneD,cell,input,atoms,den)
    TYPE(t_input), INTENT(INOUT)  :: input
    TYPE(t_atoms), INTENT(INOUT)  :: atoms
-   TYPE(t_noco), INTENT(IN)	 :: noco
+   TYPE(t_noco), INTENT(INOUT)	 :: noco
    TYPE(t_stars),INTENT(IN)	 :: stars
    TYPE(t_vacuum),INTENT(IN)     :: vacuum
    TYPE(t_sphhar),INTENT(IN)     :: sphhar
@@ -74,7 +85,8 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars&
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,atoms%phi_mt_avg,atoms%theta_mt_avg,den)
    atoms%flipSpinPhi=0
    atoms%flipSpinTheta=0
-
+   noco%alph=0
+   noco%beta=0
 
 END SUBROUTINE rotateMagnetFromSpinAxis
 
