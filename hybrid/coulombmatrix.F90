@@ -1009,7 +1009,7 @@ CONTAINS
                q = MATMUL(kpts%bk(:, ikpt) + mpbasis%g(:, igptp), cell%bmat)
                call ylm4(hybrid%lexp, q, carr2(:, igpt))
             END DO
-            call timestart("harmonics setup")
+            call timestop("harmonics setup")
 
             call timestart("q loop")
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
