@@ -38,7 +38,7 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v)
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v, iterHF)
 
       USE m_judft
       USE m_loddop, ONLY: loddop
@@ -62,6 +62,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_potden), INTENT(IN)    :: v
 
+      integer, intent(in) :: iterHF
 
       ! local type variables
       TYPE(t_usdus)                   ::  usdus
@@ -261,7 +262,7 @@ CONTAINS
             ! the overlap matrix is diagonalized and those eigenvectors
             ! with a eigenvalue greater then mpbasis%linear_dep_tol are retained
 
-            call mpbasis%reduce_linear_dep(atoms, mpi, hybrid, l, itype, gridf)
+            call mpbasis%reduce_linear_dep(atoms, mpi, hybrid, l, itype, gridf, iterHF)
 
          END DO !l
          IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpbasis%num_radbasfn(0:hybrid%lcutm1(itype), itype))
@@ -273,6 +274,8 @@ CONTAINS
       deallocate(mpbasis%radbasfn_mt)
       allocate(mpbasis%radbasfn_mt(atoms%jmtd, maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype))
       mpbasis%radbasfn_mt = basmhlp
+
+      call save_npy("radbasfn_mt_iterHF=" // int2str(iterHF) // ".npy", mpbasis%radbasfn_mt)
 
       deallocate(basmhlp, seleco, selecu, selecmat)
 

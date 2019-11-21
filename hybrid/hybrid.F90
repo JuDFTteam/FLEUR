@@ -124,7 +124,8 @@ CONTAINS
 
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
-         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v)
+         write (*,*) "iterHF = ", iterHF
+         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
          CALL open_hybrid_io2(mpbasis, hybrid, DIMENSION, atoms, sym%invs)

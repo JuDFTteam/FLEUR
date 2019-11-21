@@ -340,7 +340,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
 !   CALL open_hybrid_io1(DIMENSION,sym%invs)
 
-   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpbasis,hybrid,enpara,mpi,vTot)
+   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpbasis,hybrid,enpara,mpi,vTot, iterHF)
 
    CALL open_hybrid_io2(mpbasis, hybrid,DIMENSION,atoms,sym%invs)
 

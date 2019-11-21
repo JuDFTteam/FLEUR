@@ -7,7 +7,7 @@ module m_types_mpbasis
       integer, allocatable   :: gptm_ptr(:, :) ! (ig, ik)
       real                   :: g_cutoff
       integer, allocatable   :: num_radbasfn(:, :)
-      real, allocatable      :: radbasfn_mt(:, :, :, :)
+      real, allocatable      :: radbasfn_mt(:,:,:,:)
       real                   :: linear_dep_tol  !only read in
       INTEGER, ALLOCATABLE   :: num_radfun_per_l(:,:)
 
@@ -273,6 +273,9 @@ contains
          do n1 = 1, n2
             olap(n1, n2) = intgrf(mpbasis%radbasfn_mt(:, n1, l, itype)*mpbasis%radbasfn_mt(:, n2, l, itype), &
                                   atoms, itype, gridf)
+            if(isnan(olap(n1,n2))) then
+               write (*,*) "nan at", n1, n2
+            endif
             olap(n2, n1) = olap(n1, n2)
          END do
       END do
@@ -424,7 +427,7 @@ contains
       call timestop("add l0 to mpbasis")
    end subroutine mpbasis_add_l0_fun
 
-   subroutine mpbasis_reduce_linear_dep(mpbasis, atoms, mpi, hybrid, l, itype, gridf)
+   subroutine mpbasis_reduce_linear_dep(mpbasis, atoms, mpi, hybrid, l, itype, gridf, iterHF)
       use m_types_setup
       use m_types_hybrid
       use m_types_mpi
@@ -434,7 +437,7 @@ contains
       type(t_atoms), intent(in)     :: atoms
       type(t_mpi), intent(in)       :: mpi
       type(t_hybrid), intent(in)    :: hybrid
-      integer, intent(in)           :: l, itype
+      integer, intent(in)           :: l, itype, iterHF
 
       real, allocatable             :: olap(:, :), eig(:), eigv(:, :)
       real                          :: gridf(:, :)
@@ -446,6 +449,8 @@ contains
 
       ! Calculate overlap
       call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
+      call save_npy("olap_l=" // int2str(l) // "_itype=" // int2str(itype) // "_iterHF=" // int2str(iterHF) // ".npy", &
+                    olap)
 
       ! Diagonalize
       call mpbasis_diagonialize_olap(olap, eig, eigv)
