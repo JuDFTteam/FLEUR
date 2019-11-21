@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_sliceplot
-  USE m_judft 
+  USE m_judft
   USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
@@ -64,7 +64,7 @@ CONTAINS
     numberNodes = xml%GetNumberOfNodes(xPathA)
 
     IF (numberNodes.EQ.1) THEN
-       this%iplot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
+       this%iplot = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
        this%plpot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
     END IF
 
