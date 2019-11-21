@@ -6,13 +6,14 @@
 
 MODULE m_types_lapw
   USE m_judft
+  IMPLICIT NONE
   PRIVATE
   !These dimensions should be set once per call of FLEUR
   !They can be queried by the functions lapw%dim_nvd,...
   !You probably should avoid using the variables directly
-  integer :: lapw_dim_nvd
-  integer :: lapw_dim_nv2d
-  integer :: lapw_dim_nbasfcn
+  integer,save :: lapw_dim_nvd
+  integer,save :: lapw_dim_nv2d
+  integer,save :: lapw_dim_nbasfcn
 
   TYPE t_lapw
      INTEGER :: nv(2)
@@ -56,13 +57,13 @@ CONTAINS
   end subroutine
 
   INTEGER function dim_nvd()
-    dim_nvd=nvd
+    dim_nvd=lapw_dim_nvd
   end function
   INTEGER function dim_nv2d()
-    dim_nv2d=nv2d
+    dim_nv2d=lapw_dim_nv2d
   end function
   INTEGER function dim_nbasfcn()
-    dim_basfcn=nbasfcn
+    dim_nbasfcn=lapw_dim_nbasfcn
   end function
 
   SUBROUTINE lapw_alloc(lapw,cell,input,noco)

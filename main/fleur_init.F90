@@ -146,6 +146,7 @@ CONTAINS
     CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
     call make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
     call lapw_dim(kpts,cell,input,noco,oneD,forcetheo,atoms)
+    call input%init(noco,lapw_dim_nbasfcn)
     call oned%init(atoms) !call again, because make_stars modified it :-)
     ! Store structure data
     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
@@ -170,22 +171,6 @@ CONTAINS
     !
     !--> determine more dimensions
     !
-  ! Generate missing general parameters
-
-    minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
-    IF (noco%l_soc.and.(.not.noco%l_noco)) minNeigd = 2 * minNeigd
-    IF (noco%l_soc.and.noco%l_ss) minNeigd=(3*minNeigd)/2
-    IF ((input%neig.NE.-1).AND.(input%neig.LT.minNeigd)) THEN
-      IF (input%neig>0) THEN
-        WRITE(*,*) 'numbands is too small. Setting parameter to default value.'
-        WRITE(*,*) 'changed numbands (input%neig) to ',minNeigd
-      ENDIF
-      input%neig = minNeigd
-    END IF
-    IF(input%neig.EQ.-1) THEN
-      input%neig = lapw_dim_nvd + atoms%nlotot
-    END IF
-    IF (noco%l_noco) input%neig = 2*input%neig
 
 
 
