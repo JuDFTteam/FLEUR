@@ -27,8 +27,11 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
    integer           :: i,ios,n,neigd_min,joblistlen
    character(len=30) :: task
    real              :: version_real
+#ifdef CPP_MPI
+          INCLUDE 'mpif.h'
+#endif
 
-    l_p0=(mpi%irank==0)
+   l_p0=(mpi%irank==0)
 !-----some defaults
    wann%l_perpmagatlres=.false.
    wann%l_atomlist=.false.
@@ -436,10 +439,10 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
 #ifdef CPP_MPI
       jobListlen=SIZE(wann%jobList)
       CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(wannier%band_min,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-      CALL MPI_BCAST(wannier%band_max,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_min,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_max,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 
-      if(mpi%rank.ne.0)then
+      if(mpi%irank>0)then
         allocate(wann%jobList(jobListlen))
       endif
 #endif      
