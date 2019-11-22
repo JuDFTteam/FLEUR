@@ -8,10 +8,11 @@ MODULE m_checkInputParams
 
 CONTAINS
 
-SUBROUTINE checkInputParams(mpi,input,dimension,atoms,noco,xcpot,oneD)
+SUBROUTINE checkInputParams(mpi,input,dimension,atoms,noco,xcpot,oneD,forcetheo)
 
    USE m_juDFT
    USE m_types
+   USE m_types_forcetheo_extended
 
    TYPE(t_mpi),           INTENT(IN)    :: mpi
    TYPE(t_input),         INTENT(IN)    :: input
@@ -20,6 +21,7 @@ SUBROUTINE checkInputParams(mpi,input,dimension,atoms,noco,xcpot,oneD)
    TYPE(t_noco),          INTENT(IN)    :: noco
    CLASS(t_xcpot),        INTENT(IN)    :: xcpot
    TYPE(t_oneD),          INTENT(IN)    :: oneD
+   CLASS(t_forcetheo),    INTENT(IN)    :: forcetheo
 
    IF(mpi%irank.NE.0) RETURN
 
@@ -32,6 +34,14 @@ SUBROUTINE checkInputParams(mpi,input,dimension,atoms,noco,xcpot,oneD)
       CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
                        calledby ="fleur", hint="Use a supercell or a different functional")
    END IF
+
+   SELECT TYPE(forcetheo)
+      TYPE IS(t_forcetheo_mae)
+         IF(.NOT.noco%l_soc) CALL juDFT_warn('MAE force theorem without l_soc only works for special cases.',&
+                                             calledby = 'checkInputParams',hint='If you know what you do deactivate this stop.')
+   END SELECT
+
+   
 
 END SUBROUTINE checkInputParams
 
