@@ -7,13 +7,13 @@
 module m_wann_read_inp
 
 contains
-subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
+subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
 !********************************************
 !     Read the Wannier input file 'wann_inp'.
 !     Frank Freimuth
 !********************************************
    use m_judft
-   use m_types_setup
+   use m_types
 
    implicit none
 
@@ -21,13 +21,14 @@ subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
    TYPE(t_input),intent(inout) :: input
    TYPE(t_noco),      INTENT(INOUT) :: noco
    TYPE(t_wann), intent(inout) :: wann
-   logical,intent(in)          :: l_p0
+   TYPE(t_mpi),intent(in)          :: mpi
 
-   logical           :: l_file,l_orbcompinp
-   integer           :: i,ios,n,neigd_min
+   logical           :: l_file,l_orbcompinp,l_p0
+   integer           :: i,ios,n,neigd_min,joblistlen
    character(len=30) :: task
    real              :: version_real
 
+    l_p0=(mpi%irank==0)
 !-----some defaults
    wann%l_perpmagatlres=.false.
    wann%l_atomlist=.false.
@@ -432,7 +433,18 @@ subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
 
    ELSE IF (input%l_inpXML) THEN
 
+#ifdef CPP_MPI
+      jobListlen=SIZE(wann%jobList)
+      CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wannier%band_min,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wannier%band_max,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+
+      if(mpi%rank.ne.0)then
+        allocate(wann%jobList(jobListlen))
+      endif
+#endif      
       DO i = 1, SIZE(wann%jobList)
+         CALL MPI_BCAST(jobList(i),20,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
          task = TRIM(ADJUSTL(wann%jobList(i)))
          if(l_p0) write(6,*)"task ",i,":",task
          if(task(1:1).eq.'!')cycle
