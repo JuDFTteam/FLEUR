@@ -443,7 +443,7 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
       CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
       CALL MPI_BCAST(wann%band_min,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
       CALL MPI_BCAST(wann%band_max,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-
+      CALL MPI_BCAST(wann%l_byindex,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
       if(mpi%irank>0)then
         allocate(wann%jobList(jobListlen))
       endif
