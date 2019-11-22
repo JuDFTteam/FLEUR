@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     !     ..
     !     .. Local Scalars ..
-    REAL sum
+    REAL maxAbsForceDist
     INTEGER i,jsp,n,nat1,ierr
     REAL eps_force
     LOGICAL :: l_new,l_forceConverged
@@ -94,13 +94,13 @@ CONTAINS
 
 
        !Check convergence of force by comparing force with old_force
-       sum=MAXVAL(ABS(forcetot - results%force_old))
+       maxAbsForceDist=MAXVAL(ABS(forcetot - results%force_old))
        results%force_old(:,:)=forcetot !Store for next iteration
        results%force=0.0
-       l_forceConverged=sum<input%force_converged
+       l_forceConverged=maxAbsForceDist<input%force_converged
        l_forceConverged=l_forceConverged.and.(results%last_distance.LE.input%mindistance)
        IF (.NOT.l_forceConverged) THEN
-          WRITE (6,8020) input%force_converged,sum
+          WRITE (6,8020) input%force_converged,maxAbsForceDist
 8020      FORMAT ('No new postions, force convergence required=',f8.5,'; max force distance=',f8.5)
        END IF
     ENDIF
