@@ -367,6 +367,11 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      ALLOCATE(sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
      ALLOCATE(sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd))
 
+     sphhar%llh(:,:) = -100
+     sphhar%mlh(:,:,:) = -100000
+     sphhar%nlh(:) = -100
+     sphhar%nmem(:,:) = -100
+
      ! Dimensioning of stars
 
      IF (input%film.OR.(sym%namgrp.ne.'any ')) THEN
