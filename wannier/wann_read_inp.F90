@@ -28,7 +28,9 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
    character(len=30) :: task
    real              :: version_real
 #ifdef CPP_MPI
+          integer :: ierr(3)
           INCLUDE 'mpif.h'
+          
 #endif
 
    l_p0=(mpi%irank==0)
