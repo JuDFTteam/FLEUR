@@ -31,13 +31,21 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    TYPE(t_potden), INTENT(INOUT) :: den 
 
    REAL                          :: moments(atoms%ntype,3)
-   REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype)   
+   REAL                          :: phiTemp(atoms%ntype),thetaTemp(atoms%ntype),pi
+   INTEGER                       :: i
+   pi=pimach()   
 !!TEMP
 !   REAL :: x,y,z
    
    phiTemp=noco%alph
    thetaTemp=noco%beta
    CALL magnMomFromDen(input,atoms,noco,den,moments)
+  ! DO i=1, atoms%ntype
+     ! IF (abs(atoms%theta_mt_avg(i)).LE. 0.001) THEN 
+     !    atoms%phi_mt_avg(i)=0.0
+     !    atoms%theta_mt_avg(i)=0.0
+     ! END IF
+  ! END DO
    write(*,*) "mx1"
    write(*,*) moments(1,1)
    write(*,*) "mz1"
@@ -60,16 +68,28 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
    noco%beta=mod(atoms%theta_mt_avg+thetaTemp,2*pimach())
    atoms%phi_mt_avg=noco%alph
    atoms%theta_mt_avg=noco%beta
+ 
+   DO i=1, atoms%ntype
+      IF(noco%alph(i)<0) noco%alph(i)=noco%alph(i)+2*pi
+      IF(noco%beta(i)<0) THEN
+         noco%beta(i)=-noco%beta(i) 
+         noco%alph=noco%alph+pi 
+END IF
+      IF(noco%beta(i)>pi) THEN 
+         noco%beta(i)=pi-mod(noco%beta(i),pi)
+         noco%alph(i)=noco%alph(i)+pi
+      END IF
+      noco%alph=mod(noco%alph,2*pi)
+   End Do
    write(*,*) "Noco Phi"
    write(*,*) noco%alph
    write(*,*) "Noco Theta"
    write(*,*) noco%beta
-
 END SUBROUTINE rotateMagnetToSpinAxis
 
 
 SUBROUTINE rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars&
-,sym,oneD,cell,input,atoms,den)
+,sym,oneD,cell,input,atoms,den,inDen)
    TYPE(t_input), INTENT(INOUT)  :: input
    TYPE(t_atoms), INTENT(INOUT)  :: atoms
    TYPE(t_noco), INTENT(INOUT)	 :: noco
@@ -79,10 +99,12 @@ SUBROUTINE rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars&
    TYPE(t_sym),INTENT(IN)        :: sym
    TYPE(t_oneD),INTENT(IN)	 :: oneD
    TYPE(t_cell),INTENT(IN)	 :: cell
-   TYPE(t_potden), INTENT(INOUT) :: den 
+   TYPE(t_potden), INTENT(INOUT) :: den, inDen
 
 
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,atoms%phi_mt_avg,atoms%theta_mt_avg,den)
+   CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,atoms%phi_mt_avg,atoms%theta_mt_avg,inDen)
+  
    atoms%flipSpinPhi=0
    atoms%flipSpinTheta=0
    noco%alph=0

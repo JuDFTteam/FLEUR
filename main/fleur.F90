@@ -251,9 +251,10 @@ CONTAINS
 !!$                END IF
        !---< gwf
 
-!Rot For Testing
-       CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
+!START Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
+       IF(.FALSE.)CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
                ,sym,oneD,cell,noco,input,atoms,inDen)
+!END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
                  obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
@@ -428,8 +429,9 @@ CONTAINS
           ENDIF
 #endif
           CALL timestop("generation of new charge density (total)")
-
-             
+!START Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
+IF (.FALSE.) CALL rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars,sym,oneD,cell,input,atoms,outDen,inDen)
+!END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
 !!$             !----> output potential and potential difference
 !!$             IF (obsolete%disp) THEN
 !!$                reap = .FALSE.

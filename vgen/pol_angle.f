@@ -27,7 +27,7 @@ C     .. Local Scalars ..
 C     ..
 
       pi = pimach()
-      eps = 1.0e-8
+      eps = 1.0e-9
 
       vxy  = sqrt(vx**2 + vy**2)
       vxyz = sqrt(vx**2 + vy**2 + vz**2)
