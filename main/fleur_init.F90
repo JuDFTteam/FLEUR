@@ -534,7 +534,7 @@
           input%l_wann = input%l_wann.OR.l_wann_inp
  
           IF(input%l_wann) THEN
-            CALL wann_read_inp(DIMENSION,input,noco,(mpi%irank.EQ.0),wann)
+            CALL wann_read_inp(DIMENSION,input,noco,mpi,wann)
           END IF
 
           CALL results%init(dimension,input,atoms,kpts,noco)
