@@ -43,7 +43,7 @@ CONTAINS
     ELSEIF(noco%l_noco) THEN
        CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
        IF (noco%l_mtnocoPot) THEN
-          CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
+          CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,noco,vtot)
        END IF
     ENDIF
 

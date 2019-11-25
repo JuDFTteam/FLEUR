@@ -135,13 +135,10 @@ CONTAINS
          CALL timestart("Vxc in MT")
       END IF
       
-      IF (noco%l_mtNocoPot) THEN
-      CALL vmt_xc(mpi, sphhar, atoms, denRot, xcpot, input, sym, &
-                  EnergyDen, vTot, vx, exc)
-      ELSE
+
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
-                  EnergyDen, vTot, vx, exc)
-      END IF
+                  EnergyDen, noco,vTot, vx, exc)
+
       ! add MT EXX potential to vr
       IF (mpi%irank == 0) THEN
          CALL timestop("Vxc in MT")

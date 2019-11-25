@@ -28,7 +28,6 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
 
    INTEGER                       ::  jsp,i,j
    REAL                          ::  mx,my,mz
-   REAL                          ::  eps=1E-14
 
    REAL, ALLOCATABLE             ::  dummyResults(:,:)
 

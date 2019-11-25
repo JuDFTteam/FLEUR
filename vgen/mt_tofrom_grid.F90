@@ -53,7 +53,7 @@ CONTAINS
       !ENDIF
    END SUBROUTINE init_mt_grid
 
-   SUBROUTINE mt_to_grid(dograds, jspins, atoms, sphhar, den_mt, n, grad, ch)
+   SUBROUTINE mt_to_grid(dograds, jspins, atoms, sphhar, den_mt, n, noco ,grad, ch)
       USE m_grdchlh
       USE m_mkgylm
       IMPLICIT NONE
@@ -64,6 +64,7 @@ CONTAINS
       INTEGER, INTENT(IN)          :: n, jspins
       REAL, INTENT(OUT), OPTIONAL  :: ch(:, :)
       TYPE(t_gradients), INTENT(INOUT):: grad
+      TYPE(t_noco), INTENT(IN)     :: noco
 
       REAL, ALLOCATABLE :: chlh(:, :, :), chlhdr(:, :, :), chlhdrr(:, :, :)
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)

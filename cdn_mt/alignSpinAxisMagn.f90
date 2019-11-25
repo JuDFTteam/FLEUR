@@ -46,24 +46,24 @@ SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
      !    atoms%theta_mt_avg(i)=0.0
      ! END IF
   ! END DO
-   write(*,*) "mx1"
-   write(*,*) moments(1,1)
-   write(*,*) "mz1"
-   write(*,*) moments(1,3)
-   write(*,*) "mx2"
-   write(*,*) moments(2,1)
-   write(*,*) "mz2"
-   write(*,*) moments(2,3)
+   !write(*,*) "mx1"
+   !write(*,*) moments(1,1)
+   !write(*,*) "mz1"
+   !write(*,*) moments(1,3)
+   !write(*,*) "mx2"
+   !write(*,*) moments(2,1)
+   !write(*,*) "mz2"
+   !write(*,*) moments(2,3)
    CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,-atoms%phi_mt_avg,-atoms%theta_mt_avg,den)
   !write (*,*)"mx                my                     mz"
   !CALL sphericaltocart(SQRT(moments(1,1)**2+moments(1,2)**2+moments(1,3)**2),thetaTemp(1),phiTemp(1),x,y,z)
    !write(*,*) x,y,z
    !CALL sphericaltocart(SQRT(moments(2,1)**2+moments(2,2)**2+moments(2,3)**2),thetaTemp(2),phiTemp(2),x,y,z)
    !write(*,*) x,y,z
-   write(*,*) "atoms%phi_mt_avg"
-   write(*,*) atoms%phi_mt_avg
-   write(*,*) "atoms%theta_mt_avg"
-   write(*,*) atoms%theta_mt_avg
+   !write(*,*) "atoms%phi_mt_avg"
+   !!write(*,*) atoms%phi_mt_avg
+   !write(*,*) "atoms%theta_mt_avg"
+   !write(*,*) atoms%theta_mt_avg
    noco%alph=mod(atoms%phi_mt_avg+phiTemp,2*pimach())
    noco%beta=mod(atoms%theta_mt_avg+thetaTemp,2*pimach())
    atoms%phi_mt_avg=noco%alph

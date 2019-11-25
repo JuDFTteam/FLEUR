@@ -48,8 +48,6 @@ vgen/b_field.F90
 vgen/write_xcstuff.f90
 vgen/xy_av_den.f90
 vgen/VYukawaFilm.f90
-vgen/divergence.f90
-vgen/xcBfield.f90
 )
 #vdW Stuff
 set(fleur_F90 ${fleur_F90}
