@@ -65,20 +65,22 @@ CONTAINS
       REAL, INTENT(OUT), OPTIONAL  :: ch(:, :)
       TYPE(t_gradients), INTENT(INOUT):: grad
       TYPE(t_noco), INTENT(IN)     :: noco
-      REAL                         :: mm
+      REAL                         :: mm,dentot
 
       REAL, ALLOCATABLE :: chlh(:, :, :), chlhdr(:, :, :), chlhdrr(:, :, :)
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
-      REAL, ALLOCATABLE :: m(:,:,:), dm(:,:,:), ddm(:,:,:,:), den1(:,:),den2(:,:),dentot(:,:)
-      INTEGER:: nd, lh, js, jr, kt, k, nsp
+      REAL, ALLOCATABLE :: m(:,:,:), dm(:,:,:), ddm(:,:,:,:),den_work(:,:,:)
+      INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i
 
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
       nsp = atoms%nsp()
 
       ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspins))
-      ALLOCATE (ch_tmp(nsp, jspins))
+      ALLOCATE (ch_tmp(nsp, jspins))         
+      ALLOCATE (den_work(atoms%jmtd, 0:sphhar%nlhd, jspins))
+      
       IF (dograds) THEN
          ALLOCATE (chdr(nsp, jspins), chdt(nsp, jspins), chdf(nsp, jspins), chdrr(nsp, jspins), &
                    chdtt(nsp, jspins), chdff(nsp, jspins), chdtf(nsp, jspins), chdrt(nsp, jspins), &
@@ -90,7 +92,7 @@ CONTAINS
       !Allocations in case mtNocoPot is True 
       IF (noco%l_mtNocoPot) THEN
          !General Noco Allocations
-         ALLOCATE(den1(atoms%jmtd, 0:sphhar%nlhd),den2(atoms%jmtd, 0:sphhar%nlhd),dentot(atoms%jmtd, 0:sphhar%nlhd))
+
          IF (dograds) THEN
          !Dograds part
             ALLOCATE(m(3,atoms%jmtd, 0:sphhar%nlhd),dm(3,atoms%jmtd, &
@@ -103,13 +105,14 @@ CONTAINS
 
       !Calc magnetization
       IF(noco%l_mtNocoPot) THEN
-         IF (dograds) THEN
-         !Dograds part
-
-         ELSE
-        !No dograds part
-         
-         END IF
+         DO i=1,atoms%jmtd
+            DO j=0,sphhar%nlhd
+               dentot=0.5*(den_mt(i,j,1)+den_mt(i,j,2))
+               mm=SQRT((0.5*(den_mt(i,j,1)-den_mt(i,j,2)))**2+den_mt(i,j,3)**2+den_mt(i,j,4)**2)
+               den_work(i,j,1)=dentot+mm
+               den_work(i,j,2)=dentot-mm
+            END DO
+         END DO 
 
       END IF 
 
@@ -122,7 +125,7 @@ CONTAINS
 
          DO js = 1, jspins
             DO jr = 1, atoms%jri(n)
-               chlh(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
+               chlh(jr, lh, js) = den_work(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
             ENDDO
             IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
                                                  chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh, js))
