@@ -85,6 +85,18 @@ CONTAINS
          ALLOCATE (chlhdrr(atoms%jmtd, 0:sphhar%nlhd, jspins))
       ENDIF
 
+      !Allocations in case mtNocoPot is True 
+      IF (noco%l_mtNocoPot) THEN
+         IF (dograds) THEN
+         !Dograds part
+
+         ELSE
+        !No dograds part
+         
+         END IF
+      END IF
+
+
       DO lh = 0, sphhar%nlh(nd)
          !         calculates gradients of radial charge densities of l=> 0.
          !         rho*ylh/r**2 is charge density. chlh=rho/r**2.
@@ -100,6 +112,19 @@ CONTAINS
 
          ENDDO ! js
       ENDDO   ! lh
+      
+      !Calc magnetization
+      IF(noco%l_mtNocoPot) 
+         IF (dograds) THEN
+         !Dograds part
+
+         ELSE
+        !No dograds part
+         
+         END IF
+
+      END IF 
+
 
       kt = 0
       DO jr = 1, atoms%jri(n)
