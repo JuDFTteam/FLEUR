@@ -6,7 +6,7 @@
 
 MODULE m_types_mpimat
   USE m_judft
-  USE m_types_rcmat
+  USE m_types_mat
   IMPLICIT NONE
   PRIVATE
   INTEGER,PARAMETER    :: DEFAULT_BLOCKSIZE=64

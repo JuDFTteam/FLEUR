@@ -318,7 +318,3 @@ CONTAINS
       ENDIF
    END SUBROUTINE t_mat_clear
 END MODULE m_types_mat
-
-MODULE m_types_rcmat
-   USE m_types_mat
-END MODULE m_types_rcmat
