@@ -65,13 +65,13 @@ CONTAINS
       REAL, INTENT(OUT), OPTIONAL  :: ch(:, :)
       TYPE(t_gradients), INTENT(INOUT):: grad
       TYPE(t_noco), INTENT(IN)     :: noco
-      REAL                         :: mm,dentot
+      REAL                         :: dentot
 
       REAL, ALLOCATABLE :: chlh(:, :, :), chlhdr(:, :, :), chlhdrr(:, :, :)
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
-      REAL, ALLOCATABLE :: m(:,:,:), dm(:,:,:), ddm(:,:,:,:),den_work(:,:,:)
+      REAL, ALLOCATABLE :: dm(:,:,:), ddm(:,:,:,:),den_work(:,:,:), mm(:,:)
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i
 
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
@@ -95,11 +95,11 @@ CONTAINS
 
          IF (dograds) THEN
          !Dograds part
-            ALLOCATE(m(3,atoms%jmtd, 0:sphhar%nlhd),dm(3,atoms%jmtd, &
+            ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd),dm(3,atoms%jmtd, &
                      0:sphhar%nlhd),ddm(3,3,atoms%jmtd, 0:sphhar%nlhd))
          ELSE
         !No dograds part
-         ALLOCATE(m(3,atoms%jmtd, 0:sphhar%nlhd))
+         ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd))
          END IF
       END IF
 
@@ -108,9 +108,9 @@ CONTAINS
          DO i=1,atoms%jmtd
             DO j=0,sphhar%nlhd
                dentot=0.5*(den_mt(i,j,1)+den_mt(i,j,2))
-               mm=SQRT((0.5*(den_mt(i,j,1)-den_mt(i,j,2)))**2+den_mt(i,j,3)**2+den_mt(i,j,4)**2)
-               den_work(i,j,1)=dentot+mm
-               den_work(i,j,2)=dentot-mm
+               mm(i,j)=SQRT((0.5*(den_mt(i,j,1)-den_mt(i,j,2)))**2+den_mt(i,j,3)**2+den_mt(i,j,4)**2)
+               den_work(i,j,1)=dentot+mm(i,j)
+               den_work(i,j,2)=dentot-mm(i,j)
             END DO
          END DO 
 
