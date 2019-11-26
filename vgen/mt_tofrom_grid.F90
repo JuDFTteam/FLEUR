@@ -65,12 +65,13 @@ CONTAINS
       REAL, INTENT(OUT), OPTIONAL  :: ch(:, :)
       TYPE(t_gradients), INTENT(INOUT):: grad
       TYPE(t_noco), INTENT(IN)     :: noco
+      REAL                         :: mm
 
       REAL, ALLOCATABLE :: chlh(:, :, :), chlhdr(:, :, :), chlhdrr(:, :, :)
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
-      REAL, ALLOCATABLE :: m(:,:,:), dm(:,:,:), ddm(:,:,:,:) 
+      REAL, ALLOCATABLE :: m(:,:,:), dm(:,:,:), ddm(:,:,:,:), den1(:,:),den2(:,:),dentot(:,:)
       INTEGER:: nd, lh, js, jr, kt, k, nsp
 
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
@@ -88,6 +89,8 @@ CONTAINS
 
       !Allocations in case mtNocoPot is True 
       IF (noco%l_mtNocoPot) THEN
+         !General Noco Allocations
+         ALLOCATE(den1(atoms%jmtd, 0:sphhar%nlhd),den2(atoms%jmtd, 0:sphhar%nlhd),dentot(atoms%jmtd, 0:sphhar%nlhd))
          IF (dograds) THEN
          !Dograds part
             ALLOCATE(m(3,atoms%jmtd, 0:sphhar%nlhd),dm(3,atoms%jmtd, &
@@ -97,6 +100,18 @@ CONTAINS
          ALLOCATE(m(3,atoms%jmtd, 0:sphhar%nlhd))
          END IF
       END IF
+
+      !Calc magnetization
+      IF(noco%l_mtNocoPot) THEN
+         IF (dograds) THEN
+         !Dograds part
+
+         ELSE
+        !No dograds part
+         
+         END IF
+
+      END IF 
 
 
       DO lh = 0, sphhar%nlh(nd)
@@ -115,17 +130,6 @@ CONTAINS
          ENDDO ! js
       ENDDO   ! lh
       
-      !Calc magnetization
-      IF(noco%l_mtNocoPot) THEN
-         IF (dograds) THEN
-         !Dograds part
-
-         ELSE
-        !No dograds part
-         
-         END IF
-
-      END IF 
 
 
       kt = 0
