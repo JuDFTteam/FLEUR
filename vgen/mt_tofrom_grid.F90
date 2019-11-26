@@ -70,6 +70,7 @@ CONTAINS
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
+      REAL, ALLOCATABLE :: m(:,:,:), dm(:,:,:), ddm(:,:,:,:) 
       INTEGER:: nd, lh, js, jr, kt, k, nsp
 
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
@@ -89,10 +90,11 @@ CONTAINS
       IF (noco%l_mtNocoPot) THEN
          IF (dograds) THEN
          !Dograds part
-
+            ALLOCATE(m(3,atoms%jmtd, 0:sphhar%nlhd),dm(3,atoms%jmtd, &
+                     0:sphhar%nlhd),ddm(3,3,atoms%jmtd, 0:sphhar%nlhd))
          ELSE
         !No dograds part
-         
+         ALLOCATE(m(3,atoms%jmtd, 0:sphhar%nlhd))
          END IF
       END IF
 
@@ -114,7 +116,7 @@ CONTAINS
       ENDDO   ! lh
       
       !Calc magnetization
-      IF(noco%l_mtNocoPot) 
+      IF(noco%l_mtNocoPot) THEN
          IF (dograds) THEN
          !Dograds part
 
