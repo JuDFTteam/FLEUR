@@ -778,7 +778,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        jsp_start=jspin5; jsp_end=jspin5
        nrec5=0
        if(.not.l_noco) nrec5 = (jspin5-1)*nkpts
-       CALL judft_error("TODO:wann_uHu")
+!       CALL judft_error("TODO:wann_uHu")
 !       call cdn_read0(eig_id,irank,isize,jspin5,wannierspin,l_noco,
 !     <                ello,evac,epar,wk,n_bands,n_size)
 
@@ -1085,7 +1085,7 @@ c$$$        nslibd=0
 
         eigg = 0.
         call cpu_time(t0)
-        call judft_error("BUG not implement")
+!        call judft_error("BUG not implement")
 !        CALL cdn_read(
 !     >                eig_id,
 !     >                nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
