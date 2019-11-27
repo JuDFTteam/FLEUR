@@ -409,7 +409,7 @@ CONTAINS
              length_zfft(1) = stars%kq1_fft
              length_zfft(2) = stars%kq2_fft
              length_zfft(3) = stars%kq3_fft
-             call fft_interface(3,length_zfft,zfft,forw)
+             call fft_interface(3,length_zfft,zfft,forw,iv1d(1:lapw%nv(jspin),jspin))
              psir = real(zfft)
              psii = aimag(zfft)
              !--------------------------------
@@ -443,7 +443,7 @@ CONTAINS
                    length_zfft(1) = stars%kq1_fft
                    length_zfft(2) = stars%kq2_fft
                    length_zfft(3) = stars%kq3_fft
-                   call fft_interface(3,length_zfft,zfft,forw)
+                   call fft_interface(3,length_zfft,zfft,forw,iv1d(1:lapw%nv(jspin),jspin))
                    kpsir = real(zfft)
                    kpsii = aimag(zfft)
                    !--------------------------------

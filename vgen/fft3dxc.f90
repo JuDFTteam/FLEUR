@@ -63,7 +63,7 @@ CONTAINS
       length_zfft(1) = k1d
       length_zfft(2) = k2d
       length_zfft(3) = k3d
-      call fft_interface(3, length_zfft, zfft, forw)
+      call fft_interface(3, length_zfft, zfft, forw, igfft2(0:kimax-1))
       afft = real(zfft)
       bfft = aimag(zfft)
 
