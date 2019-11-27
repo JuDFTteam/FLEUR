@@ -107,10 +107,11 @@ CONTAINS
       IF(noco%l_mtNocoPot) THEN
          DO i=1,atoms%jmtd
             DO j=0,sphhar%nlhd
+               den_work(i,j,:)=0
                dentot=0.5*(den_mt(i,j,1)+den_mt(i,j,2))
                mm(i,j)=SQRT((0.5*(den_mt(i,j,1)-den_mt(i,j,2)))**2+den_mt(i,j,3)**2+den_mt(i,j,4)**2)
-               den_work(i,j,1)=dentot+mm(i,j)
-               den_work(i,j,2)=dentot-mm(i,j)
+               den_work(i,j,1)=dentot-mm(i,j)
+               den_work(i,j,2)=dentot+mm(i,j)
             END DO
          END DO 
 
