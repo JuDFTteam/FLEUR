@@ -1141,9 +1141,10 @@ c$$$        nslibd=0
                   zMat_b%data_r(:,nslibd_b) = zzMat%data_r(:,i)
     !           enddo
             ELSE
-               do j = 1,funbas
-                  zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
-               enddo
+    !           do j = 1,funbas
+    !              zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
+            zMat_b%data_c(:,nslibd_b) = zzMat%data_c(:,i)
+    !           enddo
             END IF
           endif
         enddo
