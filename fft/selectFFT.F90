@@ -29,7 +29,7 @@ MODULE m_selectFFT
 
       INTEGER :: fftRoutine
 
-      fftRoutine = 0
+      fftRoutine = defaultFFT_const
 
 #ifdef CPP_FFT_MKL
       fftRoutine = mklFFT_const
