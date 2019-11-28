@@ -778,6 +778,20 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
    endif !l_byindex?
 
 
+!!! Consistency checks
+   if(wann%l_mmn0.and.wann%l_updown)then
+!!! updown-mmn0 makes sense only when wannierspin=2, i.e., the calculation
+!!! needs to be spin-polarized (jspins=2), or, in the case jspins=1 it makes sense when l_soc=true,
+!!! because then wannierspin=2 as well. When spin-orbit coupling is added during Wannier interpolation
+!!! we can construct the matrix elements of the pauli matrix in the case jspins=1 from the WF1.mmn0, and
+!!! we do not need the updown.mmn0 for this.
+      if(input%jspins.eq.1 .and. .not. noco%l_soc)then
+         call juDFT_error("no updown-mmn0 when soc=F and jspins=1",calledby="wann_read_inp.F90")
+      endif
+         
+   endif
+
+
 
 end subroutine wann_read_inp
 
