@@ -71,7 +71,7 @@ CONTAINS
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
-      REAL, ALLOCATABLE :: dm(:,:,:), ddm(:,:,:,:),den_work(:,:,:), mm(:,:)
+      REAL, ALLOCATABLE :: dm(:,:,:), ddm(:,:,:,:),den_work1(:,:,:), mm(:,:),dden(:,:,:,:),ddden(:,:,:,:)
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i
 
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
@@ -79,7 +79,7 @@ CONTAINS
 
       ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspins))
       ALLOCATE (ch_tmp(nsp, jspins))         
-      ALLOCATE (den_work(atoms%jmtd, 0:sphhar%nlhd, jspins))
+      ALLOCATE (den_work1(atoms%jmtd, 0:sphhar%nlhd, jspins))
       
       IF (dograds) THEN
          ALLOCATE (chdr(nsp, jspins), chdt(nsp, jspins), chdf(nsp, jspins), chdrr(nsp, jspins), &
@@ -97,6 +97,7 @@ CONTAINS
          !Dograds part
             ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd),dm(3,atoms%jmtd, &
                      0:sphhar%nlhd),ddm(3,3,atoms%jmtd, 0:sphhar%nlhd))
+            ALLOCATE( dden(3,atoms%jmtd,sphhar%nlhd,4))
          ELSE
         !No dograds part
          ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd))
@@ -107,11 +108,11 @@ CONTAINS
       IF(noco%l_mtNocoPot) THEN
          DO i=1,atoms%jmtd
             DO j=0,sphhar%nlhd
-               den_work(i,j,:)=0
+               den_work1(i,j,:)=0
                dentot=0.5*(den_mt(i,j,1)+den_mt(i,j,2))
                mm(i,j)=SQRT((0.5*(den_mt(i,j,1)-den_mt(i,j,2)))**2+den_mt(i,j,3)**2+den_mt(i,j,4)**2)
-               den_work(i,j,1)=dentot-mm(i,j)
-               den_work(i,j,2)=dentot+mm(i,j)
+               den_work1(i,j,1)=dentot-mm(i,j)
+               den_work1(i,j,2)=dentot+mm(i,j)
             END DO
          END DO 
 
@@ -126,12 +127,30 @@ CONTAINS
 
          DO js = 1, jspins
             DO jr = 1, atoms%jri(n)
-               chlh(jr, lh, js) = den_work(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
+               chlh(jr, lh, js) = den_work1(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
+            
+            IF (.NOT.noco%l_mtNocoPot) THEN
+               IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
+                                                 chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
+            ELSE
+            !TODO
+               IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
+                                                 mm(1,lh)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n)), ndvgrd, dm(1,1,lh), ddm(1,1,1,lh))
+           
+               
+               END IF
             ENDDO
-            IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
-                                                 chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh, js))
-
          ENDDO ! js
+         IF (noco%l_mtNocoPot) THEN
+            IF (dograds)THEN
+               chlhdr(1, lh, :)=0
+               chlhdr(1, lh, 1)=chlhdr(1, lh, 1)-dm(1,1,lh)
+               chlhdr(1, lh, 2)=chlhdr(1, lh, 2)+dm(1,1,lh)
+               chlhdrr(1, lh, :)=0
+               chlhdrr(1, lh, 1)=chlhdrr(1, lh, 1)-ddm(1,1,1,lh)
+               chlhdrr(1, lh, 2)=chlhdrr(1, lh, 2)+ddm(1,1,1,lh)
+            END IF
+         END IF
       ENDDO   ! lh
       
 
