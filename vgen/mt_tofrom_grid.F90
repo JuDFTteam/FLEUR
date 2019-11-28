@@ -136,21 +136,9 @@ CONTAINS
             !TODO
                IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(:, n), &
                                                  mm(:,lh), ndvgrd, dm(1,:,lh), ddm(1,1,:,lh))
-           
-               
                END IF
             ENDDO
          ENDDO ! js
-         IF (noco%l_mtNocoPot) THEN
-            IF (dograds)THEN
-               chlhdr(1, lh, :)=0
-               chlhdr(1, lh, 1)=chlhdr(1, lh, 1)-dm(1,1,lh)
-               chlhdr(1, lh, 2)=chlhdr(1, lh, 2)+dm(1,1,lh)
-               chlhdrr(1, lh, :)=0
-               chlhdrr(1, lh, 1)=chlhdrr(1, lh, 1)-ddm(1,1,1,lh)
-               chlhdrr(1, lh, 2)=chlhdrr(1, lh, 2)+ddm(1,1,1,lh)
-            END IF
-         END IF
       ENDDO   ! lh
       
 
@@ -183,11 +171,22 @@ CONTAINS
                DO lh = 0, sphhar%nlh(nd)
                   !
                   DO k = 1, nsp
+                  IF (noco%l_mtNocoPot)THEN
+                     IF (jsp<3) THEN
+                     chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*(chlhdr(jr, lh, js)+((-1)**jsp)*dm(1,jr,lh))
+                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*(chlhdrr(jr, lh, js)+((-1)**jsp)*ddm(1,1,jr,lh))
+                     ELSE
+                     chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)*0
+                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)*0
+                     END IF
+                  ELSE
                      chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)
                      chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)
+                  END IF              
                   ENDDO
 
                   DO k = 1, nsp
+                  IF (.NOT.noco%l_mtNocoPot) THEN
                      chdrt(k, js) = chdrt(k, js) + ylht(k, lh, nd)*chlhdr(jr, lh, js)
                      chdrf(k, js) = chdrf(k, js) + ylhf(k, lh, nd)*chlhdr(jr, lh, js)
                      chdt(k, js) = chdt(k, js) + ylht(k, lh, nd)*chlh(jr, lh, js)
@@ -195,6 +194,11 @@ CONTAINS
                      chdtt(k, js) = chdtt(k, js) + ylhtt(k, lh, nd)*chlh(jr, lh, js)
                      chdff(k, js) = chdff(k, js) + ylhff(k, lh, nd)*chlh(jr, lh, js)
                      chdtf(k, js) = chdtf(k, js) + ylhtf(k, lh, nd)*chlh(jr, lh, js)
+                  ELSE
+
+
+
+                  END IF
                   ENDDO
                ENDDO ! lh
             ENDDO   ! js
