@@ -275,7 +275,7 @@ CONTAINS
 
          ! read in cmt and z at current k-point (nk)
          CALL read_cmt(cmt, nk)
-         call read_z(z, nk)
+         call read_z(z, kpts%nkptf*(jsp - 1) + nk)
 
          ALLOCATE (rep_d(maxndb, nddb, nsymop), stat=ok)
          IF (ok /= 0) STOP 'symm: failure allocation rep_v'

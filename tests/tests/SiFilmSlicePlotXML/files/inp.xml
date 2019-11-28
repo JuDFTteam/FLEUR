@@ -51,7 +51,7 @@
       <checks vchk="F" cdinf="F" disp="F"/>
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
-      <plotting iplot="T" score="F" plplot="F"/>
+      <plotting iplot="2" score="F" plplot="F"/>
       <chargeDensitySlicing numkpt="2" minEigenval="-0.28" maxEigenval="-0.14" nnne="0" pallst="T"/>
       <specialOutput eonly="F" bmt="F"/>
    </output>

@@ -264,15 +264,17 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
  ENDIF
 
+    IF(.not.input%eig66(1))THEN
     !Put w_iks into eig-file
-    DO jsp = 1,nspins
+     DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
           IF (mpi%irank == 0) CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
 #ifdef CPP_MPI
           CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
        ENDDO
-    ENDDO
+     ENDDO
+    ENDIF    
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&

@@ -134,13 +134,13 @@ CONTAINS
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
         INTEGER ierr(3), i
-        CALL MPI_INIT_THREAD(MPI_THREAD_SERIALIZED,i,ierr)
+        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
         CALL judft_init()
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
-           !$    IF (i<MPI_THREAD_SERIALIZED) THEN
+           !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
-           !$       WRITE(*,*) "Linked MPI version does not support OpenMP."
+           !$       WRITE(*,*) "Linked MPI version does not support multithreading."
            !$       WRITE(*,*) ""
            !$       WRITE(*,*) "To solve this problem please do one of:"
            !$       WRITE(*,*) "   1. Link an adequate MPI version."

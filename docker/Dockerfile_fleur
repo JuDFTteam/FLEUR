@@ -1,5 +1,7 @@
-FROM ubuntu:18.10
+FROM iffregistry.fz-juelich.de/fleur/fleur/intel-libs
 MAINTAINER d.wortmann@fz-juelich.de
 
-COPY ../fleur /home
-COPY ../inpgen /home
+COPY fleur /home
+RUN echo "#!/bin/sh \n if [ -r /mnt/inp.xml ] ; then cd /mnt ; ulimit -s unlimited ;/home/fleur \$@; else echo 'You should provide your working directory by specifying e.g. -v \$PWD:/mnt ' ; fi " >/home/fleur.sh ; chmod a+x /home/fleur.sh
+ENTRYPOINT ["/home/fleur.sh"]
+

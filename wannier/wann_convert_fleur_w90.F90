@@ -3,6 +3,7 @@
       subroutine wann_convert_fleur_w90(jspins_in,l_nocosoc,wann)
       use m_types
       use m_juDFT
+      use m_constants
       IMPLICIT NONE
       integer,intent(in) :: jspins_in
       logical,intent(in) :: l_nocosoc
@@ -26,12 +27,17 @@
       real :: a,b
       real :: s_real,s_img
       complex,parameter   :: ci=(0.0,1.0)
-      integer :: dummy1,dummy2,dummy3
-      integer :: spin1,spin2,num_dims,ikpt,dir,ii,jj
+      integer :: dummy1,dummy2,dummy3,dummy4,dummy5,dummy6
+      integer :: spin1,spin2,spinmat_dims,ikpt,dir,ii,jj
       real :: conversionfactor
-      real,parameter      :: hart=27.21138505
+!      real,parameter      :: hart=27.21138505  !take from m_constants
       integer :: jj_tmp,ii_tmp,j_tmp,i_tmp,dir_tmp,ikpt_tmp,test_tmp
       integer :: write_bands,firstband
+      integer :: map3(3)
+      
+      do ik=1,3
+         map3(ik)=ik
+      enddo   
 
       if(l_nocosoc)then
          jspins=1
@@ -51,26 +57,38 @@
       num_bands1=wann%band_max(1)-wann%band_min(1)+1
       num_bands2=wann%band_max(2)-wann%band_min(2)+1
 
-      num_bands=num_bands1+num_bands2
+      if(l_nocosoc)then
+        num_bands=num_bands1
+      else  !assume that we use socinterpol
+         num_bands=num_bands1+num_bands2
+      endif   
+
 
       if(nbnd.ne.num_bands1) then
         write(*,*)"num_bands1=",num_bands1
         write(*,*)"nbnd=",nbnd
         call juDFT_error('discrepancy convert fleur_w90')
       endif   
+      
+      ! Defaults
       filestoread=1
-
-
       l_conjg=.false.
       l_spinmat=.false.
       l_paulimat=.false.
+      num_compos=3
+      write_bands=num_bands
       if(wann%l_mmn0_unf_to_spn_unf)then
          l_readunf=.true.
          readform='unformatted'
          l_writeunf=.true.
          writeform='unformatted'
          filenameread(1)='updown.mmn0_unf'
-         filestoread=3
+         if(jspins_in.eq.1.and..not.l_nocosoc)then
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
+         else         
+            filestoread=3
+         endif         
          if(l_nocosoc)then
              filenameread(2)='WF1.socmmn0_unf'
              filenameread(3)='WF2.socmmn0_unf'
@@ -82,18 +100,19 @@
          l_conjg=.true.
          conversionfactor=1.0
          l_paulimat=.true.
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         
       elseif(wann%l_mmn0_to_spn_unf)then
          l_readunf=.false.
          readform='formatted'
          l_writeunf=.true.
          writeform='unformatted'
          filenameread(1)='updown.mmn0'
-         filestoread=3
+         if(jspins_in.eq.1.and..not.l_nocosoc)then
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
+         else
+            filestoread=3
+         endif
          if(l_nocosoc)then
             filenameread(2)='WF1.socmmn0'
             filenameread(3)='WF2.socmmn0'
@@ -105,18 +124,19 @@
          l_conjg=.true.
          conversionfactor=1.0
          l_paulimat=.true.
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         
       elseif(wann%l_mmn0_to_spn)then
          l_readunf=.false.
          readform='formatted'
          l_writeunf=.false.
          writeform='formatted'
          filenameread(1)='updown.mmn0'
-         filestoread=3
+         if(jspins_in.eq.1.and..not.l_nocosoc)then
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
+         else
+            filestoread=3
+         endif
          if(l_nocosoc)then
             filenameread(2)='WF1.socmmn0'
             filenameread(3)='WF2.socmmn0'
@@ -129,18 +149,14 @@
          conversionfactor=1.0
          l_paulimat=.true.
 
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+        
       elseif(wann%l_mmn0_to_spn2)then ! when socinterpolation is used
          l_readunf=.false.
          readform='formatted'
          l_writeunf=.false.
          writeform='formatted'
          filenameread(1)='updown.mmn0'
-         filestoread=3
+         
          if(l_nocosoc)then
             filenameread(2)='WF1.socmmn0'
             filenameread(3)='WF2.socmmn0'
@@ -162,7 +178,12 @@
          l_writeunf=.false.
          writeform='formatted'
          filenameread(1)='updown.mmn0_unf'
-         filestoread=3
+         if(jspins_in.eq.1.and..not.l_nocosoc)then
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
+         else
+            filestoread=3
+         endif
          if(l_nocosoc)then
             filenameread(2)='WF1.socmmn0_unf'
             filenameread(3)='WF2.socmmn0_unf'
@@ -175,11 +196,7 @@
          conversionfactor=1.0
          l_paulimat=.true.
 
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+        
       elseif(wann%l_perpmag_unf_to_tor_unf)then
          l_readunf=.true.
          readform='unformatted'
@@ -188,12 +205,10 @@
          filestoread=1
          filenameread(1)='updown.perpmag_unf'
          filenamewrite='WF1.tor'
-         conversionfactor=hart
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         conversionfactor=hartree_to_ev_const
+         map3(1)=2
+         map3(2)=1
+        
       elseif(wann%l_perpmag_to_tor_unf)then
          l_readunf=.false.
          readform='formatted'
@@ -202,12 +217,10 @@
          filestoread=1
          filenameread(1)='updown.perpmag'
          filenamewrite='WF1.tor'
-         conversionfactor=hart
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         conversionfactor=hartree_to_ev_const
+         map3(1)=2
+         map3(2)=1
+        
       elseif(wann%l_perpmag_to_tor)then
          l_readunf=.false.
          readform='formatted'
@@ -216,12 +229,10 @@
          filestoread=1
          filenameread(1)='updown.perpmag'
          filenamewrite='WF1.tor'
-         conversionfactor=hart
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         conversionfactor=hartree_to_ev_const
+         map3(1)=2
+         map3(2)=1
+         
       elseif(wann%l_perpmag_unf_to_tor)then
          l_readunf=.true.
          readform='unformatted'
@@ -230,12 +241,10 @@
          filestoread=1
          filenameread(1)='updown.perpmag_unf'
          filenamewrite='WF1.tor'
-         conversionfactor=hart
-         if(l_nocosoc)then
-            write_bands=num_bands1
-         else
-            write_bands=num_bands
-         endif
+         conversionfactor=hartree_to_ev_const
+         map3(1)=2
+         map3(2)=1
+        
       elseif(wann%l_hsomtxvec_unf_to_lmpzsoc_unf)then
          l_readunf=.true.
          readform='unformatted'
@@ -246,9 +255,10 @@
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
          l_conjg=.true.
-         conversionfactor=hart         
+         spinmat_dims=3
+         conversionfactor=hartree_to_ev_const         
 !         write_bands=num_bands1
-         write_bands=num_bands
+         
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')      
       elseif(wann%l_hsomtxvec_to_lmpzsoc_unf)then
          l_readunf=.false.
@@ -256,13 +266,14 @@
          l_writeunf=.true.
          writeform='unformatted'
          filestoread=1
+         spinmat_dims=3
          filenameread(1)='WF1.hsomtxvec'
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !         write_bands=num_bands1
-         write_bands=num_bands
+        
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
       elseif(wann%l_hsomtxvec_to_lmpzsoc)then
          l_readunf=.false.
@@ -273,10 +284,11 @@
          filenameread(1)='WF1.hsomtxvec'
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
+         spinmat_dims=3
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !         write_bands=num_bands1
-         write_bands=num_bands
+        
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
       elseif(wann%l_hsomtxvec_unf_to_lmpzsoc)then
          l_readunf=.true.
@@ -287,16 +299,76 @@
          filenameread(1)='WF1.hsomtxvec_unf'
          filenamewrite='WF1.lmpzsoc'
          l_spinmat=.true.
+         spinmat_dims=3
          l_conjg=.true.
-         conversionfactor=hart
+         conversionfactor=hartree_to_ev_const
 !         write_bands=num_bands1
-         write_bands=num_bands
+        
          if(l_nocosoc) call juDFT_error('noco_or_soc and hsomtxvec')   
+      elseif(wann%l_hsomtx_unf_to_hsoc_unf)then
+         l_readunf=.true.
+         readform='unformatted'
+         l_writeunf=.true.
+         writeform='unformatted'
+         filestoread=1
+         filenameread(1)='WF1.hsomtx_unf'
+         filenamewrite='WF1.hsoc'
+         l_spinmat=.true.
+         num_compos=1
+           spinmat_dims=1
+         l_conjg=.true.
+         conversionfactor=hartree_to_ev_const         
+!       
+            
+      elseif(wann%l_hsomtx_to_hsoc_unf)then
+         l_readunf=.false.
+         readform='formatted'
+         l_writeunf=.true.
+         writeform='unformatted'
+         filestoread=1
+         filenameread(1)='WF1.hsomtx'
+         filenamewrite='WF1.hsoc'
+         l_spinmat=.true.
+         num_compos=1
+           spinmat_dims=1
+         l_conjg=.true.
+         conversionfactor=hartree_to_ev_const
+!         
+      elseif(wann%l_hsomtx_to_hsoc)then
+         l_readunf=.false.
+         readform='formatted'
+         l_writeunf=.false.
+         writeform='formatted'
+         filestoread=1
+         filenameread(1)='WF1.hsomtx'
+         filenamewrite='WF1.hsoc'
+         l_spinmat=.true.
+         num_compos=1
+           spinmat_dims=1
+         l_conjg=.true.
+         conversionfactor=hartree_to_ev_const
+!       
+      elseif(wann%l_hsomtx_unf_to_hsoc)then
+         l_readunf=.true.
+         readform='unformatted'
+         l_writeunf=.false.
+         writeform='formatted'
+         filestoread=1
+         num_compos=1
+         filenameread(1)='WF1.hsomtx_unf'
+         filenamewrite='WF1.hsoc'
+         l_spinmat=.true.
+           spinmat_dims=1
+         l_conjg=.true.
+         conversionfactor=hartree_to_ev_const
+!       
+         
+         
       endif   
 
 !---- read data in fleur-format
       spn_in=916
-      num_compos=3
+    
       do fileidx=1,filestoread
          write(*,*)"fileidx=",fileidx
          write(*,*)"filenameread(fileidx)=",filenameread(fileidx)
@@ -304,10 +376,17 @@
       if(l_readunf)then
          header=trim(filenameread(fileidx))
         if(l_spinmat)then
-           num_dims=3
-           allocate( matrix6(2,2,num_bands1,num_bands1,3,num_kpts) )
+           
+           allocate( matrix6(2,2,num_bands1,num_bands1,spinmat_dims,num_kpts) )
+           
+           if(spinmat_dims==1)then
+            read(spn_in)dummy1,dummy2,dummy3,dummy4,dummy5
+           else
+            read(spn_in)dummy1,dummy2,dummy3,dummy4,dummy5,dummy6
+           endif
+           
            do nkp=1,num_kpts
-               read(spn_in)matrix6(:,:,:,:,:,nkp)
+            read(spn_in)matrix6(:,:,:,:,:,nkp)
            enddo 
         else
 	  read(spn_in)nbnd,fullnkpts,nwfs
@@ -318,29 +397,46 @@
           allocate(oper_o(num_bands,num_bands,num_kpts,num_compos) )
           oper_o=cmplx(0.0,0.0)
           endif
-          write(*,*)"before read(spn_in):nbnd,fullnkpts,fileidx=",nbnd,fullnkpts,fileidx 
-	  read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,fileidx)
+          write(*,*)"before read(spn_in):nbnd,fullnkpts,fileidx=",nbnd,fullnkpts,fileidx
+          if(.not.l_nocosoc  .and.  fileidx==1  )then
+             if(jspins_in==1)then
+                if(.not.l_paulimat) call juDFT_error("check it",calledby="wann_convert_fleur_w90")
+                read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,2)
+             else
+               read(spn_in)oper_o(1:nbnd,1+nbnd:2*nbnd,1:fullnkpts,fileidx)
+             endif  
+          else
+	        read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,fileidx)
+	      endif
         endif
       else
         if(l_spinmat)then
            spin1=2
            spin2=2
-           num_dims=3
+           
 !          num_bands=nbnd
-           allocate( matrix6(2,2,num_bands,num_bands,3,num_kpts) )
+           allocate( matrix6(2,2,num_bands,num_bands,spinmat_dims,num_kpts) )
            num_bands1=nbnd
            num_bands2=nbnd
+           read(spn_in,*)header
+           read(spn_in,*)
            do ikpt=1,num_kpts
-            do dir=1,num_dims  
+            do dir=1,spinmat_dims  
              do i = 1,num_bands2
               do j = 1,num_bands1
                do ii=1,spin1
                 do jj=1,spin2
+                 if(spinmat_dims==3)then
        read (spn_in,'(6i5,3x,2f18.12)') jj_tmp,ii_tmp,j_tmp,i_tmp,dir_tmp,ikpt_tmp,   a,    b
                 test_tmp=abs(jj_tmp-jj)+abs(ii_tmp-ii)+abs(j_tmp-j)+abs(i_tmp-i)+abs(dir_tmp-dir)+abs(ikpt_tmp-ikpt)
                   if(test_tmp.ne.0)call juDFT_error('convert: test_tmp')
-                  matrix6(jj,ii,j,i,dir,ikpt) = cmplx(a,b)                 
-
+                  matrix6(jj,ii,j,i,dir,ikpt) = cmplx(a,b)
+                 else
+                 read (spn_in,'(5i5,3x,2f18.12)') jj_tmp,ii_tmp,j_tmp,i_tmp,ikpt_tmp,   a,    b
+                test_tmp=abs(jj_tmp-jj)+abs(ii_tmp-ii)+abs(j_tmp-j)+abs(i_tmp-i)+abs(ikpt_tmp-ikpt)
+                  if(test_tmp.ne.0)call juDFT_error('convert: test_tmp')
+                  matrix6(jj,ii,j,i,dir,ikpt) = cmplx(a,b)
+                 endif
                 enddo !jj 
                enddo !ii
               enddo !j
@@ -366,6 +462,7 @@
 
            if(.not.allocated(oper_o))then
            allocate(oper_o(num_bands,num_bands,num_kpts,num_compos) )
+           oper_o=cmplx(0.0,0.0)
            endif
            
 
@@ -396,12 +493,12 @@
 !         num_bands=2*num_bands
 !         write(*,*)"num_bands1,num_bands2,num_bands=",num_bands1,
 !     &                   num_bands2,num_bands
-         allocate( oper_o(num_bands,num_bands,num_kpts,3) )
+         allocate( oper_o(num_bands,num_bands,num_kpts,spinmat_dims) )
          if(.false.)then
 !   Old variant with num_bands1==num_bands2:
            if(num_bands1.ne.num_bands2) call juDFT_error('convert: num_bands1.ne.num_bands2')
            do ikpt=1,fullnkpts
-            do dir=1,num_dims  
+            do dir=1,spinmat_dims  
              do i = 1,num_bands2
               do j = 1,num_bands2
                do ii=1,spin1
@@ -416,10 +513,25 @@
         else   
           if(num_bands1.ne.num_bands2) call juDFT_error('convert: num_bands1.ne.num_bands2')
 
-
-          write(*,*)"before first loop, fullnkpts,num_dims,num_bands1=",num_kpts,num_dims,num_bands1
+          if(l_nocosoc)then !compute the full SOC-matrix
            do ikpt=1,num_kpts
-            do dir=1,num_dims  
+            do dir=1,spinmat_dims   
+             do i = 1,num_bands1
+              do j = 1,num_bands1
+                 oper_o(j,i,ikpt,dir)=matrix6(1,1,j,i,dir,ikpt)+ &
+                                    matrix6(1,2,j,i,dir,ikpt)+ &
+                                    matrix6(2,1,j,i,dir,ikpt)+ &
+                                    matrix6(2,2,j,i,dir,ikpt)
+              enddo !j
+             enddo !i
+            enddo !dir
+           enddo !ikpt
+          else !rewrite the SOC-matrix for the purpose of socinterpol
+
+
+          write(*,*)"before first loop, fullnkpts,num_dims,num_bands1=",num_kpts,spinmat_dims,num_bands1
+           do ikpt=1,num_kpts
+            do dir=1,spinmat_dims  
 
              do i = 1,num_bands1
               do j = 1,num_bands1
@@ -448,7 +560,7 @@
 
             enddo !dir 
            enddo !ikpt
-
+          endif !nocosoc?
         endif   
 
 !        write(*,*)"oper_o=",oper_o(2,1,1,2)
@@ -469,14 +581,28 @@
               enddo   
              enddo
             else
-             do i=1,num_bands1
-              do j=1,num_bands1
-                 oper_o(j,i,nkp,3)=oper_o(j,i,nkp,2)
-              enddo   
-             enddo
+
 
 !             write(*,*)"paulimat conversion:"
 !             write(*,*)"num_bands1=",num_bands1
+
+
+             if(jspins_in.eq.1)then
+              do i=1,num_bands1
+               do j=1,num_bands1
+                 oper_o(j,i,nkp,3)=oper_o(j,i,nkp,2)
+               enddo   
+              enddo
+              
+              oper_o(:,:,nkp,1)=cmplx(0.0,0.0)
+              do i=1,num_bands1
+               do j=1,num_bands1
+                 oper_o(j,i+nbnd,nkp,1)=oper_o(j,i,nkp,2)
+               enddo   
+              enddo
+              
+              
+             endif
 
              do i=1,num_bands1
               do j=1,num_bands1
@@ -484,21 +610,28 @@
               enddo   
              enddo
 
+
+             do i=1,num_bands1
+              do j=1,num_bands1
+                 oper_o(j,i,nkp,3)=oper_o(j,i,nkp,2)
+              enddo   
+             enddo
+
 !             do i=1,num_bands1
 !                write(*,*)"i,oper_o=",i,oper_o(i,i,nkp,3)
 !             enddo !i
 
-             do i=1,num_bands1
-              do j=1,num_bands1
-                 oper_o(j,i+num_bands1,nkp,1)=oper_o(j,i,nkp,1)
-              enddo   
-             enddo
+!             do i=1,num_bands1
+!              do j=1,num_bands1
+!                 oper_o(j,i+num_bands1,nkp,1)=oper_o(j,i,nkp,1)
+!              enddo   
+!             enddo
 
-             do i=1,num_bands1
-              do j=1,num_bands1
-                 oper_o(j,i,nkp,1)=cmplx(0.0,0.0)
-              enddo   
-             enddo
+!             do i=1,num_bands1
+!              do j=1,num_bands1
+!                 oper_o(j,i,nkp,1)=cmplx(0.0,0.0)
+!              enddo   
+!             enddo
 
             endif  
          endif
@@ -546,7 +679,7 @@
             do n = 1, m
               counter = counter + 1
               do compo=1,num_compos
-                oper_temp(compo, counter)=oper_o(n, m, ik, compo)
+                oper_temp(compo, counter)=oper_o(n, m, ik, map3(compo))
 !              oper_o(n, m, ik, compo) = oper_temp(compo, counter)
 !              oper_o(m, n, ik, compo) = conjg(oper_temp(compo, counter))
               enddo !compo
@@ -566,8 +699,8 @@
           do m = 1, write_bands
             do n = 1, m
               do compo=1,num_compos
-                  s_real=real(oper_o(n, m, ik, compo))*conversionfactor
-                  s_img=imag(oper_o(n, m, ik, compo))*conversionfactor
+                  s_real=real(oper_o(n, m, ik, map3(compo)))*conversionfactor
+                  s_img=imag(oper_o(n, m, ik, map3(compo)))*conversionfactor
                   write (spn_in, *) s_real, s_img   !,compo,n, m, ik 
 !               oper_o(n, m, ik, compo) = cmplx(s_real, s_img, dp)
               ! Read upper-triangular part, now build the rest
