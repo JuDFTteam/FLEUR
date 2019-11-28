@@ -790,7 +790,11 @@ subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
       endif
          
    endif
-
+   if(wann%l_socmat.and.input%jspins==1)then
+      if(noco%l_soc)then
+        call juDFT_error("Not yet implemented: jspins=1&& socmat=T&& soc=T",calledby="wann_read_inp.F90")
+      endif
+   endif
 
 
 end subroutine wann_read_inp
