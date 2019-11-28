@@ -340,7 +340,7 @@
              sym%nsym = 2*sym%nop
           END IF
 
-          CALL checkInputParams(mpi,input,dimension,atoms,noco,xcpot,oneD,forcetheo)
+          CALL checkInputParams(mpi,input,dimension,atoms,sym,noco,xcpot,oneD,forcetheo)
 
           ! Initializations for Wannier functions (start)
           IF (mpi%irank.EQ.0) THEN
