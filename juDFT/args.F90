@@ -56,7 +56,7 @@ CONTAINS
        !Not found so must be in environment variable
        CALL GET_ENVIRONMENT_VARIABLE("juDFT",env,status=i)
        !cut of argument string
-       env=ADJUSTL(env(INDEX(env//' ',TRIM(ADJUSTL(arg)))+1:))//' '
+       env=ADJUSTL(env(INDEX(env//' ',TRIM(ADJUSTL(arg)))+LEN(TRIM(ADJUSTL(arg))):))//' '
        i=INDEX(env,' ') !find first blank
        IF (i<1) THEN 
           argstring=trim(env)
