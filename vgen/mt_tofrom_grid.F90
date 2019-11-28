@@ -115,7 +115,7 @@ CONTAINS
                den_work1(i,j,2)=dentot+mm(i,j)
             END DO
          END DO 
-
+      mm(:,lh)=mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
       END IF 
 
 
@@ -135,7 +135,7 @@ CONTAINS
             ELSE
             !TODO
                IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
-                                                 mm(1,lh)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n)), ndvgrd, dm(1,1,lh), ddm(1,1,1,lh))
+                                                 mm(1,lh), ndvgrd, dm(1,1,lh), ddm(1,1,1,lh))
            
                
                END IF
