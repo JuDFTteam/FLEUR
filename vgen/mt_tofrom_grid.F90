@@ -173,8 +173,8 @@ CONTAINS
                   DO k = 1, nsp
                   IF (noco%l_mtNocoPot)THEN
                      IF (js<3) THEN
-                     chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*(chlhdr(jr, lh, js)+((-1)**jsp)*dm(1,jr,lh))
-                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*(chlhdrr(jr, lh, js)+((-1)**jsp)*ddm(1,1,jr,lh))
+                     chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*(chlhdr(jr, lh, js)+((-1)**js)*dm(1,jr,lh))
+                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*(chlhdrr(jr, lh, js)+((-1)**js)*ddm(1,1,jr,lh))
                      ELSE
                      chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)*0
                      chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)*0
