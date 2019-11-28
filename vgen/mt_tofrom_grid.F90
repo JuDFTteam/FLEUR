@@ -134,8 +134,8 @@ CONTAINS
                                                  chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
             ELSE
             !TODO
-               IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
-                                                 mm(1,lh), ndvgrd, dm(1,1,lh), ddm(1,1,1,lh))
+               IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(:, n), &
+                                                 mm(:,lh), ndvgrd, dm(1,:,lh), ddm(1,1,:,lh))
            
                
                END IF
