@@ -72,6 +72,7 @@ CONTAINS
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
       REAL, ALLOCATABLE :: dm(:,:,:), ddm(:,:,:,:),den_work1(:,:,:), mm(:,:),dden(:,:,:,:),ddden(:,:,:,:)
+      REAL, ALLOCATABLE :: chlhtot(:,:),chlhdrtot(:,:),chlhdrrtot(:,:)
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i
 
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
@@ -98,6 +99,7 @@ CONTAINS
             ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd),dm(3,atoms%jmtd, &
                      0:sphhar%nlhd),ddm(3,3,atoms%jmtd, 0:sphhar%nlhd))
             ALLOCATE( dden(3,atoms%jmtd,sphhar%nlhd,4))
+            ALLOCATE(chlhtot(atoms%jmtd, 0:sphhar%nlhd),chlhdrtot(atoms%jmtd, 0:sphhar%nlhd),chlhdrrtot(atoms%jmtd, 0:sphhar%nlhd))
          ELSE
         !No dograds part
          ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd))
@@ -172,10 +174,17 @@ CONTAINS
                DO lh = 0, sphhar%nlh(nd)
                   !
                   IF (noco%l_mtNocoPot) THEN
-                      IF (js<3) THEN
-                         chlhdr(jr, lh, js)=chlhdr(jr, lh, js)+((-1)**js)*dm(1,jr,lh)
-                         chlh(jr,lh,js)=chlh(jr, lh, js)+((-1)**js)*mm(jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrr(jr, lh, js)+((-1)**js)*ddm(1,1,jr,lh)
+                      IF (js.EQ.1) THEN
+                         chlhtot(jr,lh)=0.5*(chlh(jr, lh, 1)+chlh(jr, lh, 2))
+                         chlhdrtot(jr,lh)=0.5*(chlhdr(jr, lh, 1)+chlhdr(jr, lh, 2))
+                         chlhdrrtot(jr,lh)=0.5*(chlhdrr(jr, lh, 1)+chlhdrr(jr, lh, 2))
+                         chlh(jr,lh,js)=chlhtot(jr,lh)+((-1)**js)*mm(jr,lh)
+                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)+((-1)**js)*dm(1,jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)+((-1)**js)*ddm(1,1,jr,lh)
+                      ELSE IF (js.EQ.2) THEN
+                         chlh(jr,lh,js)=chlhtot(jr,lh)+((-1)**js)*mm(jr,lh)
+                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)+((-1)**js)*dm(1,jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)+((-1)**js)*ddm(1,1,jr,lh)
                       ELSE
                          chlhdr(jr, lh, js)=0
                          chlh(jr,lh,js)=0
