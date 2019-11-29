@@ -53,7 +53,7 @@ CONTAINS
       
    END SUBROUTINE plotBtest
 
-   SUBROUTINE buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,itest,Avec,denMat,factor)
+   SUBROUTINE buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,itest,Avec,icut,denMat,factor)
       USE m_mt_tofrom_grid
       USE m_pw_tofrom_grid
       USE m_xcBfield
@@ -70,6 +70,7 @@ CONTAINS
       TYPE(t_cell),                 INTENT(IN)     :: cell
       INTEGER,                      INTENT(IN)     :: itest
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: Avec
+      INTEGER,                      INTENT(OUT)    :: icut(atoms%ntype)
       TYPE(t_potden), OPTIONAL,     INTENT(IN)     :: denMat
       REAL,           OPTIONAL,     INTENT(IN)     :: factor
 
@@ -81,12 +82,14 @@ CONTAINS
       REAL                            :: vec1(3), vec2(3), vec3(3), zero(3), point(3)
       INTEGER                         :: grid(3)
 
+      icut=1
+
       IF (itest.EQ.0) THEN 
          RETURN
       END IF
     
       IF (PRESENT(denMat)) THEN 
-         CALL makeVectorField(stars,atoms,sphhar,vacuum,input,noco,denMat,factor,Avec)
+         CALL makeVectorField(stars,atoms,sphhar,vacuum,input,noco,denMat,factor,Avec,icut)
          RETURN
       END IF
 
@@ -205,6 +208,7 @@ CONTAINS
 
    SUBROUTINE sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,itest,denMat,factor)
       USE m_xcBfield
+      USE m_divergence
       
       TYPE(t_mpi),                  INTENT(IN)     :: mpi
       TYPE(t_dimension),            INTENT(IN)     :: dimension
@@ -224,16 +228,22 @@ CONTAINS
  
       TYPE(t_potden), DIMENSION(3)                 :: aVec, cvec, corrB
       TYPE(t_potden)                               :: div, phi, checkdiv
+      INTEGER                                      :: i, n, lh, l, icut(3,0:sphhar%nlhd,atoms%ntype)
+      REAL                                         :: difftests(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+      REAL                                         :: g(atoms%jmtd)
 
       ! Test: Build a field and either compare with theoretical results or check,
       !       whether the sourcefree routine made it sourcefree.
 
       IF (PRESENT(denMat)) THEN
-        CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,1,aVec,denMat,factor)
-        CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,div,phi,cvec,corrB,checkdiv)
+        CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,1,aVec,icut,denMat,factor)
+        DO i=1,3
+           aVec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
+        END DO
+        CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,icut,div,phi,cvec,corrB,checkdiv)
         CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, aVec, div, phi, cvec, corrB, checkdiv)
       ELSE
-        CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,0,aVec)
+        CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,0,aVec,icut)
         RETURN
       END IF
 
@@ -247,6 +257,23 @@ CONTAINS
       !testDen(3)%mt(:,0,:,1)=0.0
 
       END SUBROUTINE sftest
+
+      SUBROUTINE difftester(atoms,n,l,f,g)
+         USE m_types
+         USE m_grdchlh
+         IMPLICIT NONE
+         TYPE(t_atoms), INTENT(IN) :: atoms
+         INTEGER, INTENT(IN) :: n,l
+         REAL, INTENT(IN) :: f(atoms%jri(n))
+         REAL, INTENT(OUT) :: g(atoms%jri(n))
+
+         REAL :: dfr(atoms%jri(n)), d2fr2(atoms%jri(n))
+         
+         CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), f, 5, dfr, d2fr2)
+
+         g=(dfr-l*f/atoms%rmsh(:, n))!/(atoms%rmsh(1, n)**l) !must NOT be divergent towards the core
+
+      END SUBROUTINE difftester
 
 !   SUBROUTINE lhlmtest()
 !     ALLOCATE (flh(atoms%jri(1),0:sphhar%nlh(atoms%ntypsy(1))),flm(atoms%jri(1),sphhar%nlh(atoms%ntypsy(1))+1),flh2(atoms%jri(1),0:sphhar%nlh(atoms%ntypsy(1))))

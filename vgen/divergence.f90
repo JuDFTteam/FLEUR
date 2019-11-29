@@ -184,7 +184,7 @@ CONTAINS
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT) :: bxc
       TYPE(t_potden),               INTENT(INOUT) :: div
 
-      INTEGER :: i,iType,indmax
+      INTEGER :: i,iType,indmax, lh
       COMPLEX, ALLOCATABLE :: flm(:,:,:),grsflm1(:,:,:,:),grsflm2(:,:,:,:),grsflm3(:,:,:,:),divflm(:,:,:) ! (iR,lm,n[,x,i])
 
       indmax=(atoms%lmaxd+1)**2

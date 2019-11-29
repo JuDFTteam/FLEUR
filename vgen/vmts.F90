@@ -2,7 +2,7 @@ module m_vmts
 
 contains
 
-  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vpw, rho, potdenType, vr )
+  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vpw, rho, potdenType, vr )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients 
@@ -33,7 +33,7 @@ contains
 #include"cpp_double.h"
     use m_constants
     use m_types
-    use m_intgr, only : intgr2
+    use m_intgr, only : intgr2, intgrt
     use m_phasy1
     use m_sphbes
     use m_od_phasy
@@ -48,6 +48,7 @@ contains
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
     type(t_oneD),   intent(in)        :: oneD
+    LOGICAL,            INTENT(IN)               :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: potdenType
@@ -59,8 +60,8 @@ contains
     complex                           :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     real                              :: green_factor, termsR
     real                              :: green_1    (1:atoms%jmtd), green_2    (1:atoms%jmtd)
-    real                              :: integrand_1(1:atoms%jmtd), integrand_2(1:atoms%jmtd)
-    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)
+    real                              :: integrand_1(1:atoms%jmtd), integrand_2(1:atoms%jmtd), integrand_3 (1:atoms%jmtd)
+    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd), integral_3 (1:atoms%jmtd)
     real                              :: sbf(0:atoms%lmaxd)
     real, allocatable, dimension(:,:) :: il, kl
     
@@ -135,8 +136,6 @@ contains
     deallocate( c_b )
 #endif
 
-
-
     ! SPHERE INTERIOR CONTRIBUTION to the coefficients calculated from the 
     ! values of the sphere Coulomb/Yukawa potential on the sphere boundary
 
@@ -171,6 +170,10 @@ contains
         integrand_2(1:imax) = green_2(1:imax) * rho(1:imax,lh,n)
         call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
         call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        if (dosf) then
+           call intgrt(integrand_1(1:imax),atoms%rmsh(:,n),imax,integral_1(1:imax))
+           call intgrt(integrand_2(1:imax),atoms%rmsh(:,n),imax,integral_2(1:imax))
+        end if
         termsR = integral_2(imax) + ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
         vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )

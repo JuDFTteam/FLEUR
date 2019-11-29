@@ -175,10 +175,6 @@ contains
     call timestop("interstitial")
     end if ! mpi%irank == 0
 
-    !if (dosf) then
-    !   vCoul%pw(:,:)=0.0
-    !end if
-
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
 #ifdef CPP_MPI
@@ -186,15 +182,11 @@ contains
     call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, mpi%mpi_comm, ierr )
     CALL MPI_BARRIER(mpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-    call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), &
+    call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
                den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
     call timestop( "MT-spheres" )
 
-
-
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
-
-
 
     if ( mpi%irank == 0 ) then
       CHECK_CONTINUITY: if ( input%vchk ) then

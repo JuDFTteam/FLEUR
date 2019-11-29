@@ -13,6 +13,10 @@ MODULE m_intgr
   !     decaying exponential between the first mesh point and infinity.
   !     y contains the nmz function values tabulated at a spacing of h.
   !
+  ! intgrt:
+  !    Uses the basic trapezoidal rule of integration. Indefinite.
+  !                                                 - A. Neukirchen, '19
+  !
   !            integrator:      ---- input ----      output
   !    intgr0:   definite       y r0        h jri  | z
   !    intgr1: indefinite       y r1        h jri  | z(jri)
@@ -20,7 +24,8 @@ MODULE m_intgr
   !    intgr3:   definite       y rmsh(jri) h jri  | z
   !    intgz0:   definite       y tail      n nmz  ! z
   !    intgz1: indefinite       y tail      n nmz  ! z(nmz)
-  !
+  !    intgrt: indefinite       y x         jri    | z(jri)
+  !    
   !                                                            m. weinert
   !**********************************************************************
 
@@ -472,6 +477,19 @@ MODULE m_intgr
 
   end subroutine intgz1ComplexReverse
 
+   SUBROUTINE intgrt(y,x,jri,z)
+      INTEGER,    INTENT (IN)  :: jri
+      REAL,       INTENT (IN)  :: x(jri), y(jri)
+      REAL,       INTENT (OUT) :: z(jri)
 
+      INTEGER                  :: i
+
+      z=0.0
+
+      DO i=2, jri
+         z(i:)=z(i:)+(y(i-1)+y(i))*(x(i)-x(i-1))/2.0
+      END DO
+
+   END SUBROUTINE intgrt
 
 END MODULE m_intgr

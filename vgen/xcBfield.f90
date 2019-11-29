@@ -21,7 +21,7 @@ MODULE m_xcBfield
                                  !       back into the matrix correctly. 
 
 CONTAINS
-   SUBROUTINE makeVectorField(stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec)
+   SUBROUTINE makeVectorField(stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec,icut)
       
       ! Contructs the exchange-correlation magnetic field from the total poten-
       ! tial matrix or the magnetic density for the density matrix. Only used for
@@ -43,10 +43,14 @@ CONTAINS
       TYPE(t_potden),               INTENT(IN)  :: denmat
       REAL,                         INTENT(IN)  :: factor
       TYPE(t_potden), DIMENSION(3), INTENT(OUT) :: aVec
+      INTEGER,                      INTENT(OUT) :: icut(3,0:sphhar%nlhd,atoms%ntype)
 
       TYPE(t_potden), DIMENSION(4)              :: dummyDen
-      INTEGER                                   :: i, itype, ir
-      REAL                                      :: r2
+      INTEGER                                   :: i, itype, ir, lh
+      REAL                                      :: r2(atoms%jmtd), fcut
+
+      fcut=1.e-12
+      icut=1
       
       ! Initialize and fill a dummy density array, that takes the initial result
       ! of matrixsplit.
@@ -68,13 +72,15 @@ CONTAINS
                      atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE., &
                      POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(aVec(i)%pw_w,mold=aVec(i)%pw)
+         aVec(i)%mt(:,:,:,:) = dummyDen(i+1)%mt(:,:,:,:)
          DO itype=1,atoms%ntype
-            DO ir=1,atoms%jri(itype)
+            DO lh=0, sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:itype - 1)) + 1))
                IF (factor==2.0) THEN 
-                  r2=atoms%rmsh(ir,itype)**2
+                  r2=atoms%rmsh(:,itype)**2
                END IF 
-               aVec(i)%mt(ir,0:,itype,:) = dummyDen(i+1)%mt(ir,0:,itype,:)*r2
-            END DO !ir
+               aVec(i)%mt(:,lh,itype,1) = aVec(i)%mt(:,lh,itype,1)*r2
+               !WHERE (ABS(aVec(i)%mt(ir,0:,itype,:)/r2) < fcut) aVec(i)%mt(ir,0:,itype,:) = 0.0
+            END DO !lh
          END DO !itype
          aVec(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
          aVec(i)%vacz(1:,1:,:)     = dummyDen(i+1)%vacz(1:,1:,:)
@@ -83,8 +89,10 @@ CONTAINS
      
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)
+   SUBROUTINE sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,icut,div,phi,cvec,corrB,checkdiv)
       USE m_vgen_coulomb
+      USE m_gradYlm
+      USE m_grdchlh
 
       ! Takes a vectorial quantity, i.e. a t_potden variable of dimension 3, and
       ! makes it into a source free vector field as follows:
@@ -110,48 +118,48 @@ CONTAINS
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: bxc
+      INTEGER,                      INTENT(IN)     :: icut(3,0:sphhar%nlhd,atoms%ntype)
       TYPE(t_potden),               INTENT(OUT)    :: div, phi, checkdiv
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: cvec, corrB
       
+      TYPE(t_potden)                               :: divloc
       TYPE(t_atoms)                                :: atloc
-      INTEGER                                      :: n, jr, lh, lhmax
+      INTEGER                                      :: n, jr, lh, lhmax, jcut
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
-      
-      !CALL divergence(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+
       CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
  
       atloc=atoms
       atloc%zatom=0.0 !Local atoms variable with no charges; needed for the potential generation.
-      eps=1.e-10
+
+      fcut=1.e-6
+
+      !DO n=1,atoms%ntype   
+         !lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+         !DO lh=0, lhmax
+            !div%mt(:,lh,n,1)=div%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
+            !WHERE (ABS(div%mt(:,lh,n,1))<MAXVAL(ABS(div%mt(:,lh,n,1)))*fcut) div%mt(:,lh,n,1)=0.0
+         !END DO
+         !DO lh=0, lhmax
+            !div%mt(:,lh,n,1)=div%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
+         !END DO
+      !END DO
 
       CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
 
       CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
-   
-      !DO n=1,atoms%ntype   
-       !  lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-        ! DO jr = 1, atoms%jri(n)
-         !   DO lh=0, lhmax
-          !     !IF (ABS(phi%mt(jr,lh,n,1))<eps) THEN
-           !    IF (lh/=1) THEN
-            !      phi%mt(jr,lh,n,:)=0.0
-             !  END IF
-            !END DO
-        ! END DO
-     ! END DO
 
       DO i=1,3
          CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
       ENDDO
 
-      !CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
       CALL divpotgrad2(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
 
       DO i=1,3
@@ -167,8 +175,15 @@ CONTAINS
       
       CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
 
-      !checkdiv%mt(:,2:,:,:)=0.0
-      !checkdiv%mt(:,0,:,:)=0.0
+      !DO n=1,atoms%ntype   
+         !lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+         !DO lh=0, lhmax
+            !checkdiv%mt(:,lh,n,1)=checkdiv%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
+         !END DO
+         !DO lh=0, lhmax
+            !checkdiv%mt(:,lh,n,1)=checkdiv%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
+         !END DO
+      !END DO
 
    END SUBROUTINE sourcefree
 

@@ -194,8 +194,8 @@ CONTAINS
                 rDerFshMtre(:) = 0.
                 rDerFshMtim(:) = 0.
                 ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
-                !CALL grdchlh(1,1,atoms%jri(itype),atoms%dx(itype),atoms%rmsh(1, itype),REAL(r2FshMt(:, lmInput, itype))/(atoms%rmsh(:,itype)**2),6,rDerFshMtre,rDerJunk)
-                !CALL grdchlh(1,1,atoms%jri(itype),atoms%dx(itype),atoms%rmsh(1, itype),AIMAG(r2FshMt(:, lmInput, itype))/(atoms%rmsh(:,itype)**2),6,rDerFshMtim,rDerJunk)
+                !CALL grdchlh(1,1,atoms%jri(itype),atoms%dx(itype),atoms%rmsh(1, itype),REAL(r2FshMt(:, lmInput, itype)),6,rDerFshMtre,rDerJunk)
+                !CALL grdchlh(1,1,atoms%jri(itype),atoms%dx(itype),atoms%rmsh(1, itype),AIMAG(r2FshMt(:, lmInput, itype)),6,rDerFshMtim,rDerJunk)
                 call Derivative( real(r2FshMt(:, lmInput, itype)), itype, atoms, rDerFshMtre )
                 call Derivative( aimag(r2FshMt(:, lmInput, itype)), itype, atoms, rDerFshMtim )
                 do imesh = 1, atoms%jri(itype)
@@ -235,8 +235,6 @@ CONTAINS
    SUBROUTINE divYlm(gradMtx, gradMty, gradMtz, divMt)
       COMPLEX, INTENT(IN) :: gradMtx(:,:,:,:), gradMty(:,:,:,:), gradMtz(:,:,:,:) !r,lm,n,x
       COMPLEX, INTENT(OUT) :: divMt(:,:,:)
-
-      !ALLOCATE (divMT(SIZE(gradMtx,1),SIZE(gradMtx,2),SIZE(gradMtx,3)))
 
       divMT(:,:,:)=gradMtx(:,:,:,1)+gradMty(:,:,:,2)+gradMtz(:,:,:,3)
 
