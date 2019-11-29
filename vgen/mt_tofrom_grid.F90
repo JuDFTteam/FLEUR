@@ -72,13 +72,13 @@ CONTAINS
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
       REAL, ALLOCATABLE :: dm(:,:,:), ddm(:,:,:,:),den_work1(:,:,:), mm(:,:),dden(:,:,:,:),ddden(:,:,:,:)
-      REAL, ALLOCATABLE :: chlhtot(:,:),chlhdrtot(:,:),chlhdrrtot(:,:)
+      REAL, ALLOCATABLE :: chlhtot(:,:),chlhdrtot(:,:),chlhdrrtot(:,:),chlh2(:,:,:)
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i
 
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
       nsp = atoms%nsp()
 
-      ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspins))
+      ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspins),chlh2(atoms%jmtd, 0:sphhar%nlhd, jspins))
       ALLOCATE (ch_tmp(nsp, jspins))         
       ALLOCATE (den_work1(atoms%jmtd, 0:sphhar%nlhd, jspins))
       
@@ -118,8 +118,7 @@ CONTAINS
             END DO
          END DO 
       mm(:,lh)=mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
-      END IF 
-
+      END IF
 
       DO lh = 0, sphhar%nlh(nd)
          !         calculates gradients of radial charge densities of l=> 0.
@@ -129,7 +128,7 @@ CONTAINS
 
          DO js = 1, jspins
             DO jr = 1, atoms%jri(n)
-               chlh(jr, lh, js) = den_work1(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
+               chlh(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
             
             IF (.NOT.noco%l_mtNocoPot) THEN
                IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
@@ -143,8 +142,16 @@ CONTAINS
             ENDDO
          ENDDO ! js
       ENDDO   ! lh
-      
 
+IF(noco%l_mtNocoPot)THEN
+     DO lh = 0, sphhar%nlh(nd)
+       DO js = 1, jspins
+            DO jr = 1, atoms%jri(n)
+               chlh2(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
+            ENDDO
+         ENDDO ! js
+      ENDDO   ! lh
+END IF
 
       kt = 0
       DO jr = 1, atoms%jri(n)
@@ -155,8 +162,12 @@ CONTAINS
          DO js = 1, jspins
             DO lh = 0, sphhar%nlh(nd)
                DO k = 1, nsp
-                  ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh(jr, lh, js)
-               ENDDO
+                  IF(noco%l_mtNocoPot) THEN
+                     ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh2(jr, lh, js)
+                  ELSE
+                     ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh(jr, lh, js)
+                  END IF
+                  ENDDO
             ENDDO
          ENDDO
          IF (dograds) THEN
@@ -178,18 +189,18 @@ CONTAINS
                          chlhtot(jr,lh)=0.5*(chlh(jr, lh, 1)+chlh(jr, lh, 2))
                          chlhdrtot(jr,lh)=0.5*(chlhdr(jr, lh, 1)+chlhdr(jr, lh, 2))
                          chlhdrrtot(jr,lh)=0.5*(chlhdrr(jr, lh, 1)+chlhdrr(jr, lh, 2))
-                         chlh(jr,lh,js)=chlhtot(jr,lh)+((-1)**js)*mm(jr,lh)
-                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)+((-1)**js)*dm(1,jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)+((-1)**js)*ddm(1,1,jr,lh)
+                         chlh(jr,lh,js)=chlhtot(jr,lh)-((-1)**js)*mm(jr,lh)
+                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)-((-1)**js)*dm(1,jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)-((-1)**js)*ddm(1,1,jr,lh)
                       ELSE IF (js.EQ.2) THEN
-                         chlh(jr,lh,js)=chlhtot(jr,lh)+((-1)**js)*mm(jr,lh)
-                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)+((-1)**js)*dm(1,jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)+((-1)**js)*ddm(1,1,jr,lh)
+                         chlh(jr,lh,js)=chlhtot(jr,lh)-((-1)**js)*mm(jr,lh)
+                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)-((-1)**js)*dm(1,jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)-((-1)**js)*ddm(1,1,jr,lh)
                       ELSE
                          chlhdr(jr, lh, js)=0
                          chlh(jr,lh,js)=0
                          chlhdrr(jr, lh, js)=0
-                     END IF
+                     END IF  
                   END IF
                   DO k = 1, nsp
                      chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)
@@ -207,7 +218,6 @@ CONTAINS
                   ENDDO
                ENDDO ! lh
             ENDDO   ! js
-
             CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
                         ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
          ENDIF
