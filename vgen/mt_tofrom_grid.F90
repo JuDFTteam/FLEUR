@@ -129,7 +129,7 @@ CONTAINS
 
          DO js = 1, jspins
             DO jr = 1, atoms%jri(n)
-               chlh(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
+               chlh(jr, lh, js) = den_work1(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
             
             IF (.NOT.noco%l_mtNocoPot) THEN
                IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
