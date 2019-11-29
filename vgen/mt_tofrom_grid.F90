@@ -127,15 +127,16 @@ CONTAINS
 
          DO js = 1, jspins
             DO jr = 1, atoms%jri(n)
-               chlh(jr, lh, js) = den_work1(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
+               chlh(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
             
             IF (.NOT.noco%l_mtNocoPot) THEN
                IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
                                                  chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
             ELSE
-            !TODO
                IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(:, n), &
                                                  mm(:,lh), ndvgrd, dm(1,:,lh), ddm(1,1,:,lh))
+               IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
+                                                 chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
                END IF
             ENDDO
          ENDDO ! js
@@ -170,23 +171,23 @@ CONTAINS
             DO js = 1, jspins
                DO lh = 0, sphhar%nlh(nd)
                   !
-                  DO k = 1, nsp
-                  IF (noco%l_mtNocoPot)THEN
-                     IF (js<3) THEN
-                     chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*(chlhdr(jr, lh, js)+((-1)**js)*dm(1,jr,lh))
-                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*(chlhdrr(jr, lh, js)+((-1)**js)*ddm(1,1,jr,lh))
-                     ELSE
-                     chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)*0
-                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)*0
+                  IF (noco%l_mtNocoPot) THEN
+                      IF (js<3) THEN
+                         chlhdr(jr, lh, js)=chlhdr(jr, lh, js)+((-1)**js)*dm(1,jr,lh)
+                         chlh(jr,lh,js)=chlh(jr, lh, js)+((-1)**js)*mm(jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrr(jr, lh, js)+((-1)**js)*ddm(1,1,jr,lh)
+                      ELSE
+                         chlhdr(jr, lh, js)=0
+                         chlh(jr,lh,js)=0
+                         chlhdrr(jr, lh, js)=0
                      END IF
-                  ELSE
+                  END IF
+                  DO k = 1, nsp
                      chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)
-                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)
-                  END IF              
+                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)             
                   ENDDO
 
                   DO k = 1, nsp
-                  IF (.NOT.noco%l_mtNocoPot) THEN
                      chdrt(k, js) = chdrt(k, js) + ylht(k, lh, nd)*chlhdr(jr, lh, js)
                      chdrf(k, js) = chdrf(k, js) + ylhf(k, lh, nd)*chlhdr(jr, lh, js)
                      chdt(k, js) = chdt(k, js) + ylht(k, lh, nd)*chlh(jr, lh, js)
@@ -194,11 +195,6 @@ CONTAINS
                      chdtt(k, js) = chdtt(k, js) + ylhtt(k, lh, nd)*chlh(jr, lh, js)
                      chdff(k, js) = chdff(k, js) + ylhff(k, lh, nd)*chlh(jr, lh, js)
                      chdtf(k, js) = chdtf(k, js) + ylhtf(k, lh, nd)*chlh(jr, lh, js)
-                  ELSE
-
-
-
-                  END IF
                   ENDDO
                ENDDO ! lh
             ENDDO   ! js
