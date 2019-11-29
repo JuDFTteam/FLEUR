@@ -187,4 +187,32 @@ CONTAINS
 
    END SUBROUTINE sourcefree
 
+   SUBROUTINE correctPot(vTot,c)
+      USE m_types
+
+      TYPE(t_potden),               INTENT(INOUT) :: vTot !      
+      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: c !global frame
+
+      vTot%mt(:,0:,:,1)=vTot%mt(:,0:,:,1)+c(3)%mt(:,0:,:,1)
+      vTot%mt(:,0:,:,2)=vTot%mt(:,0:,:,2)-c(3)%mt(:,0:,:,1)
+      vTot%mt(:,0:,:,3)=vTot%mt(:,0:,:,3)+c(1)%mt(:,0:,:,1)
+      vTot%mt(:,0:,:,4)=vTot%mt(:,0:,:,4)+c(2)%mt(:,0:,:,1)
+
+      vTot%pw(1:,1)=vTot%pw(1:,1)+c(3)%pw(1:,1)
+      vTot%pw(1:,2)=vTot%pw(1:,2)-c(3)%pw(1:,1)
+      vTot%pw(1:,3)=vTot%pw(1:,3)+c(1)%pw(1:,1)
+      vTot%pw(1:,4)=vTot%pw(1:,4)+c(2)%pw(1:,1)
+
+      vTot%vacz(1:,1:,1)=vTot%vacz(1:,1:,1)+c(3)%vacz(1:,1:,1)
+      vTot%vacz(1:,1:,2)=vTot%vacz(1:,1:,2)-c(3)%vacz(1:,1:,1)
+      vTot%vacz(1:,1:,3)=vTot%vacz(1:,1:,3)+c(1)%vacz(1:,1:,1)
+      vTot%vacz(1:,1:,4)=vTot%vacz(1:,1:,4)+c(2)%vacz(1:,1:,1)
+
+      vTot%vacxy(1:,1:,1:,1)=vTot%vacxy(1:,1:,1:,1)+c(3)%vacxy(1:,1:,1:,1)
+      vTot%vacxy(1:,1:,1:,2)=vTot%vacxy(1:,1:,1:,2)-c(3)%vacxy(1:,1:,1:,1)
+      vTot%vacxy(1:,1:,1:,3)=vTot%vacxy(1:,1:,1:,3)+c(1)%vacxy(1:,1:,1:,1)
+      vTot%vacxy(1:,1:,1:,4)=vTot%vacxy(1:,1:,1:,4)+c(2)%vacxy(1:,1:,1:,1)
+
+   END SUBROUTINE
+
 END MODULE m_xcBfield

@@ -48,7 +48,7 @@ contains
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
     type(t_oneD),   intent(in)        :: oneD
-    LOGICAL,            INTENT(IN)               :: dosf
+    LOGICAL,        INTENT(IN)        :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: potdenType
@@ -60,8 +60,8 @@ contains
     complex                           :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
     real                              :: green_factor, termsR
     real                              :: green_1    (1:atoms%jmtd), green_2    (1:atoms%jmtd)
-    real                              :: integrand_1(1:atoms%jmtd), integrand_2(1:atoms%jmtd), integrand_3 (1:atoms%jmtd)
-    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd), integral_3 (1:atoms%jmtd)
+    real                              :: integrand_1(1:atoms%jmtd), integrand_2(1:atoms%jmtd)
+    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)
     real                              :: sbf(0:atoms%lmaxd)
     real, allocatable, dimension(:,:) :: il, kl
     

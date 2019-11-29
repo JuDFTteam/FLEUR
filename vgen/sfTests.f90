@@ -40,7 +40,7 @@ CONTAINS
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'divCorrected        ', div2)
 
-      INQUIRE(file="div.xsf",exist=xsf)
+      INQUIRE(file="bInitial_f.xsf",exist=xsf)
     
       IF (xsf) THEN
          OPEN  (120, FILE='bInitial_f.xsf', STATUS='OLD')
