@@ -239,6 +239,16 @@ CONTAINS
       COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
       COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
 
+      write (*,*) "Drop output for aiXcelerate"
+      open (701,file="microb.dat",form="unformatted",access="sequential")
+      write (701) bandi, bandf, bandoi, bandof, nk, iq, nkqpt
+      write (701) shape(cprod),cprod
+      write (701) dimension
+      write (701) kpts
+      write (701) atoms
+      write (701) mpbasis
+      write (701) hybrid
+      close(701)
       call timestart("wavefproducts_noinv5 MT")
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
       call timestart("set lmstart")

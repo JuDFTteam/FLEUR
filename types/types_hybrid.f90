@@ -26,6 +26,8 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  nobd(:,:)
       REAL, ALLOCATABLE      ::  div_vv(:,:,:)
    CONTAINS
+      procedure :: write_hybrid
+      generic   :: write(unformatted) => write_hybrid
    END TYPE t_hybrid
 
    TYPE t_hybdat
@@ -126,4 +128,16 @@ contains
       gptnorm = norm2(matmul(gpt(:), bmat(:,:)))
 
    END FUNCTION gptnorm
+   subroutine write_hybrid(hybrid, unit, iostat, iomsg)
+      implicit NONE
+      class(t_hybrid), intent(in)   :: hybrid
+      integer, intent(in)         :: unit         ! Internal unit to write to.
+      integer, intent(out)        :: iostat      ! non zero on error, etc.
+      character(*), intent(inout) :: iomsg  ! define if iostat non zero.
+
+      write(unit, iostat=iostat, iomsg=iomsg) hybrid%maxbasm1, hybrid%maxlmindx
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(hybrid%lcutm1)
+      write(unit, iostat=iostat, iomsg=iomsg) hybrid%lcutm1
+   end subroutine write_hybrid
 END MODULE m_types_hybrid

@@ -275,7 +275,7 @@ CONTAINS
       allocate(mpbasis%radbasfn_mt(atoms%jmtd, maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype))
       mpbasis%radbasfn_mt = basmhlp
 
-      call save_npy("radbasfn_mt_iterHF=" // int2str(iterHF) // ".npy", mpbasis%radbasfn_mt)
+      call save_npy("radbasfn_mt_before_iterHF=" // int2str(iterHF) // ".npy", mpbasis%radbasfn_mt)
 
       deallocate(basmhlp, seleco, selecu, selecmat)
 
@@ -364,6 +364,7 @@ CONTAINS
             END DO
 
             ! test orthogonality
+            call save_npy("radbasfn_mt_after_iterHF=" // int2str(iterHF) // ".npy", mpbasis%radbasfn_mt)
             call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
          ENDDO
       END DO

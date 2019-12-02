@@ -164,6 +164,8 @@ MODULE m_types_setup
       INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
    CONTAINS
       procedure :: nsp => calc_nsp_atom
+      procedure :: write_atoms
+      generic   :: write(unformatted) => write_atoms
    END TYPE t_atoms
 
    TYPE t_cell
@@ -667,4 +669,23 @@ CONTAINS
 
       nsp = (self%lmaxd+1+MOD(self%lmaxd+1,2))*(2*self%lmaxd+1)
    end function
+
+   subroutine write_atoms(atoms, unit, iostat, iomsg)
+      implicit none
+      class(t_atoms), intent(in)   :: atoms
+      integer, intent(in)         :: unit         ! Internal unit to write to.
+      integer, intent(out)        :: iostat      ! non zero on error, etc.
+      character(*), intent(inout) :: iomsg  ! define if iostat non zero.
+      write(unit, iostat=iostat, iomsg=iomsg) atoms%ntype, atoms%nat, atoms%nlod, atoms%lmaxd
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(atoms%neq)
+      write(unit, iostat=iostat, iomsg=iomsg) atoms%neq
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(atoms%lmax)
+      write(unit, iostat=iostat, iomsg=iomsg) atoms%lmax
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(atoms%taual)
+      write(unit, iostat=iostat, iomsg=iomsg) atoms%taual
+   end subroutine write_atoms
+      
 END MODULE m_types_setup
