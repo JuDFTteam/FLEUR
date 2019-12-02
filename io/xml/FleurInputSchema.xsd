@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.28">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.31">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
    
@@ -25,6 +25,7 @@
          <xsd:enumeration value="0.28"/>
          <xsd:enumeration value="0.29"/>
          <xsd:enumeration value="0.30"/>
+         <xsd:enumeration value="0.31"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -537,6 +538,7 @@
             <xsd:element name="kPointCount" type="KPointCountType"/>
             <xsd:element name="kPointList" type="KPointListType"/>
             <xsd:element name="kPointDensity" type="KPointDensityType"/>
+            <xsd:element name="kPointListFile" type="KPointListFileType"/>
          </xsd:choice>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointSet" type="AltKPointSetType"/>
       </xsd:sequence>

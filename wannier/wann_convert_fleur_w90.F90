@@ -84,7 +84,8 @@
          writeform='unformatted'
          filenameread(1)='updown.mmn0_unf'
          if(jspins_in.eq.1.and..not.l_nocosoc)then
-            filestoread=2
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
          else         
             filestoread=3
          endif         
@@ -107,7 +108,8 @@
          writeform='unformatted'
          filenameread(1)='updown.mmn0'
          if(jspins_in.eq.1.and..not.l_nocosoc)then
-            filestoread=2
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
          else
             filestoread=3
          endif
@@ -130,7 +132,8 @@
          writeform='formatted'
          filenameread(1)='updown.mmn0'
          if(jspins_in.eq.1.and..not.l_nocosoc)then
-            filestoread=2
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
          else
             filestoread=3
          endif
@@ -176,7 +179,8 @@
          writeform='formatted'
          filenameread(1)='updown.mmn0_unf'
          if(jspins_in.eq.1.and..not.l_nocosoc)then
-            filestoread=2
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
          else
             filestoread=3
          endif
@@ -395,7 +399,12 @@
           endif
           write(*,*)"before read(spn_in):nbnd,fullnkpts,fileidx=",nbnd,fullnkpts,fileidx
           if(.not.l_nocosoc  .and.  fileidx==1  )then
-            read(spn_in)oper_o(1:nbnd,1+nbnd:2*nbnd,1:fullnkpts,fileidx)
+             if(jspins_in==1)then
+                if(.not.l_paulimat) call juDFT_error("check it",calledby="wann_convert_fleur_w90")
+                read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,2)
+             else
+               read(spn_in)oper_o(1:nbnd,1+nbnd:2*nbnd,1:fullnkpts,fileidx)
+             endif  
           else
 	        read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,fileidx)
 	      endif
@@ -584,6 +593,15 @@
                  oper_o(j,i,nkp,3)=oper_o(j,i,nkp,2)
                enddo   
               enddo
+              
+              oper_o(:,:,nkp,1)=cmplx(0.0,0.0)
+              do i=1,num_bands1
+               do j=1,num_bands1
+                 oper_o(j,i+nbnd,nkp,1)=oper_o(j,i,nkp,2)
+               enddo   
+              enddo
+              
+              
              endif
 
              do i=1,num_bands1

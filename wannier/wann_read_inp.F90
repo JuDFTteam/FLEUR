@@ -7,13 +7,13 @@
 module m_wann_read_inp
 
 contains
-subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
+subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
 !********************************************
 !     Read the Wannier input file 'wann_inp'.
 !     Frank Freimuth
 !********************************************
    use m_judft
-   use m_types_setup
+   use m_types
 
    implicit none
 
@@ -21,13 +21,19 @@ subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
    TYPE(t_input),intent(inout) :: input
    TYPE(t_noco),      INTENT(INOUT) :: noco
    TYPE(t_wann), intent(inout) :: wann
-   logical,intent(in)          :: l_p0
+   TYPE(t_mpi),intent(in)          :: mpi
 
-   logical           :: l_file,l_orbcompinp
-   integer           :: i,ios,n,neigd_min
+   logical           :: l_file,l_orbcompinp,l_p0
+   integer           :: i,ios,n,neigd_min,joblistlen
    character(len=30) :: task
    real              :: version_real
+#ifdef CPP_MPI
+          integer :: ierr(3)
+          INCLUDE 'mpif.h'
+          
+#endif
 
+   l_p0=(mpi%irank==0)
 !-----some defaults
    wann%l_perpmagatlres=.false.
    wann%l_atomlist=.false.
@@ -432,7 +438,20 @@ subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
 
    ELSE IF (input%l_inpXML) THEN
 
+#ifdef CPP_MPI
+      jobListlen=SIZE(wann%jobList)
+      CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_min,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_max,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%l_byindex,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+      if(mpi%irank>0)then
+        allocate(wann%jobList(jobListlen))
+      endif
+#endif      
       DO i = 1, SIZE(wann%jobList)
+#ifdef CPP_MPI
+         CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
+#endif     
          task = TRIM(ADJUSTL(wann%jobList(i)))
          if(l_p0) write(6,*)"task ",i,":",task
          if(task(1:1).eq.'!')cycle
@@ -758,6 +777,24 @@ subroutine wann_read_inp(DIMENSION,input,noco,l_p0,wann)
 
    endif !l_byindex?
 
+
+!!! Consistency checks
+   if(wann%l_mmn0.and.wann%l_updown)then
+!!! updown-mmn0 makes sense only when wannierspin=2, i.e., the calculation
+!!! needs to be spin-polarized (jspins=2), or, in the case jspins=1 it makes sense when l_soc=true,
+!!! because then wannierspin=2 as well. When spin-orbit coupling is added during Wannier interpolation
+!!! we can construct the matrix elements of the pauli matrix in the case jspins=1 from the WF1.mmn0, and
+!!! we do not need the updown.mmn0 for this.
+      if(input%jspins.eq.1 .and. .not. noco%l_soc)then
+         call juDFT_error("no updown-mmn0 when soc=F and jspins=1",calledby="wann_read_inp.F90")
+      endif
+         
+   endif
+   if(wann%l_socmat.and.input%jspins==1)then
+      if(noco%l_soc)then
+        call juDFT_error("Not yet implemented: jspins=1&& socmat=T&& soc=T",calledby="wann_read_inp.F90")
+      endif
+   endif
 
 
 end subroutine wann_read_inp

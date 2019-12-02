@@ -154,7 +154,7 @@ SUBROUTINE w_inpXML(&
       REWIND (fileNum)
 
       WRITE (fileNum,'(a)') '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.30">'
+      WRITE (fileNum,'(a)') '<fleurInput fleurInputVersion="0.31">'
    END IF
 
    IF(PRESENT(name_opt)) THEN

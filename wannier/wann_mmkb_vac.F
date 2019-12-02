@@ -48,13 +48,20 @@ c     .. scalar Arguments..
 
 c     ..array arguments..
       real,    intent (in) :: bkpt(3),bkpt_b(3),evac(2),evac_b(2)
-      integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      integer, intent (in) :: ig2(n3d),nv(jspd),nv_b(jspd)
+!      integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      integer, intent (in) :: ig(-k1d:,-k2d:,-k3d:)
+!      integer, intent (in) :: ig2(n3d)
+      integer, intent (in) :: ig2(:)!ig2(n3d)      
+!      integer, intent (in) :: nv(jspd),nv_b(jspd)
+      integer, intent (in) :: nv(:),nv_b(:)      
       real,    intent (in) :: vz(nmzd,2),vz_b(nmzd,2)
       real,    intent (in) :: bbmat(3,3),bmat(3,3)
-      integer, intent (in) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
-      integer,intent(in)::k1_b(nvd,jspd),k2_b(nvd,jspd),k3_b(nvd,jspd)
-      complex, intent (inout) :: mmn(nbnd,nbnd)
+!      integer, intent (in) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
+      integer, intent (in) :: k1(:,:),k2(:,:),k3(:,:)      
+!      integer,intent(in)::k1_b(nvd,jspd),k2_b(nvd,jspd),k3_b(nvd,jspd)
+      integer,intent(in)::k1_b(:,:),k2_b(:,:),k3_b(:,:)      
+!      complex, intent (inout) :: mmn(nbnd,nbnd)
+      complex, intent (inout) :: mmn(:,:)
 
 c     ..basis wavefunctions in the vacuum
       complex, allocatable :: ac(:,:),bc(:,:),ac_b(:,:),bc_b(:,:)

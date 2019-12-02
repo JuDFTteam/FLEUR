@@ -94,9 +94,11 @@ contains
        CALL mixing_history_store(fsm(it))
        CALL timestop("Preconditioner")
     END IF
+
     if (atoms%n_u>0.and.mpi%irank.ne.0.and.input%ldaulinmix) inden%mmpMat=0.0
-    CALL timestart("Mixing")
+
     !mixing of the densities
+    CALL timestart("Mixing")
     SELECT CASE(input%imix)
     CASE(0)
        IF (mpi%irank==0) WRITE( 6, fmt='(a,f10.5,a,f10.5)' ) &
@@ -183,7 +185,6 @@ contains
     IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(mpi)
 
     CALL timestop("Postprocessing")
-
     CALL timestop("Charge Density Mixing")
   END SUBROUTINE mix_charge
 

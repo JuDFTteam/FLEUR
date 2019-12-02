@@ -22,7 +22,9 @@ foreach(ADD_String "-lwannier;-lmkl_intel_lp64;-lmkl_sequential;-lmkl_core" )
             LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE TELL_ME
             )
 
-     message("TELL_ME=${TELL_ME}")
+     if(DEFINED ENV{VERBOSE})
+        message("TELL_ME=${TELL_ME}")
+     endif()
 
 
      if (FLEUR_USE_WANN)

@@ -344,7 +344,3 @@ CONTAINS
       endif
    end subroutine t_mat_save_npy
 END MODULE m_types_mat
-
-MODULE m_types_rcmat
-   USE m_types_mat
-END MODULE m_types_rcmat

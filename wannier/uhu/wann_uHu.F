@@ -778,7 +778,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        jsp_start=jspin5; jsp_end=jspin5
        nrec5=0
        if(.not.l_noco) nrec5 = (jspin5-1)*nkpts
-       CALL judft_error("TODO:wann_uHu")
+!       CALL judft_error("TODO:wann_uHu")
 !       call cdn_read0(eig_id,irank,isize,jspin5,wannierspin,l_noco,
 !     <                ello,evac,epar,wk,n_bands,n_size)
 
@@ -1085,7 +1085,7 @@ c$$$        nslibd=0
 
         eigg = 0.
         call cpu_time(t0)
-        call judft_error("BUG not implement")
+!        call judft_error("BUG not implement")
 !        CALL cdn_read(
 !     >                eig_id,
 !     >                nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
@@ -1141,9 +1141,10 @@ c$$$        nslibd=0
                   zMat_b%data_r(:,nslibd_b) = zzMat%data_r(:,i)
     !           enddo
             ELSE
-               do j = 1,funbas
-                  zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
-               enddo
+    !           do j = 1,funbas
+    !              zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
+            zMat_b%data_c(:,nslibd_b) = zzMat%data_c(:,i)
+    !           enddo
             END IF
           endif
         enddo
@@ -1473,9 +1474,9 @@ c      endif
      >  vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
      >  jspin,jspin_b,doublespin,
 !     >      k1_b,k2_b,k3_b,
-     >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
+     >  lapw_b%k1,lapw_b%k2,lapw_b%k3,
 !     >      k1_b2,k2_b2,k3_b2,
-     >  lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k3(:,jspin),
+     >  lapw_b2%k1,lapw_b2%k2,lapw_b2%k3,
      >  wannierspin,nvd,nbasfcn,neigd,
      >            zMat_b,zMat_b2,
      >            lapw_b%nv,!nv_b,
