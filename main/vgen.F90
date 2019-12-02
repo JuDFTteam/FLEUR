@@ -57,6 +57,7 @@ CONTAINS
 
       TYPE(t_potden)                    :: workden,denRot
 
+      INTEGER :: i
       COMPLEX :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,noco%l_mperp))
 
       if (mpi%irank==0) WRITE (6,FMT=8000)
@@ -75,6 +76,7 @@ CONTAINS
       ENDIF
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
+
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
 #else

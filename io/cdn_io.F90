@@ -1048,30 +1048,30 @@ MODULE m_cdn_io
          ! Write stars to stars file
          STOP 'CDN_STREAM_MODE not yet implemented!'
       ELSE
-         OPEN (51,file='stars',form='unformatted',status='unknown')
-         WRITE (51) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
-         IF(l_ExtData) THEN
-            IF (.NOT.l_xcExtended) THEN
-               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
-                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
-                          stars%igfft2,stars%pgfft2
-            ELSE
-               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
-                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
-                          stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
-            END IF
-         ELSE
-            IF (.NOT.l_xcExtended) THEN
-               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
-                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
-                          stars%igfft2,stars%pgfft2
-            ELSE
-               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
-                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
-                          stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
-            END IF
-         END IF
-         CLOSE (51)
+!         OPEN (51,file='stars',form='unformatted',status='unknown')
+!         WRITE (51) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
+!         IF(l_ExtData) THEN
+!            IF (.NOT.l_xcExtended) THEN
+!               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
+!                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+!                          stars%igfft2,stars%pgfft2
+!            ELSE
+!               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
+!                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+!                          stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
+!            END IF
+!         ELSE
+!            IF (.NOT.l_xcExtended) THEN
+!               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
+!                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+!                          stars%igfft2,stars%pgfft2
+!            ELSE
+!               WRITE (51) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
+!                          stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+!                          stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
+!            END IF
+!         END IF
+!         CLOSE (51)
       END IF
    END SUBROUTINE writeStars
 
@@ -1143,51 +1143,51 @@ MODULE m_cdn_io
       END IF
 
       IF (mode.EQ.CDN_DIRECT_MODE) THEN
-         INQUIRE(FILE='stars',EXIST=l_exist)
-         IF(.NOT.l_exist) THEN
+!         INQUIRE(FILE='stars',EXIST=l_exist)
+!         IF(.NOT.l_exist) THEN
             l_error = .TRUE.
             RETURN
-         END IF
-         OPEN (51,file='stars',form='unformatted',status='unknown')
+!         END IF
+!         OPEN (51,file='stars',form='unformatted',status='unknown')
 
-         READ (51,IOSTAT=ioStatus) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
-         IF (ioStatus.NE.0) THEN
-            l_error = .TRUE.
-            RETURN
-         END IF
+!         READ (51,IOSTAT=ioStatus) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
+!         IF (ioStatus.NE.0) THEN
+!            l_error = .TRUE.
+!            RETURN
+!         END IF
 
-         IF (l_ExtData) THEN
-            IF (.NOT.l_xcExtended) THEN
-               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
-                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
-                                         stars%igfft2,stars%pgfft2
-               stars%ft2_gfx = 0.0
-               stars%ft2_gfy = 0.0
-            ELSE
-               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
-                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
-                                         stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
-            END IF
-         ELSE
-            IF (.NOT.l_xcExtended) THEN
-               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
-                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
-                                         stars%igfft2,stars%pgfft2
-               stars%ft2_gfx = 0.0
-               stars%ft2_gfy = 0.0
-            ELSE
-               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
-                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
-                                         stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
-            END IF
-         END IF
+!         IF (l_ExtData) THEN
+!            IF (.NOT.l_xcExtended) THEN
+!               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
+!                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+!                                         stars%igfft2,stars%pgfft2
+!               stars%ft2_gfx = 0.0
+!               stars%ft2_gfy = 0.0
+!            ELSE
+!               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%phi2,stars%kv3,stars%kv2,&
+!                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+!                                         stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
+!            END IF
+!         ELSE
+!            IF (.NOT.l_xcExtended) THEN
+!               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
+!                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+!                                         stars%igfft2,stars%pgfft2
+!               stars%ft2_gfx = 0.0
+!               stars%ft2_gfy = 0.0
+!            ELSE
+!               READ (51,IOSTAT=ioStatus) stars%nstr,stars%nstr2,stars%rgphs,stars%sk3,stars%sk2,stars%kv3,stars%kv2,&
+!                                         stars%ig,stars%ig2,igz,stars%kimax,stars%igfft,stars%pgfft,stars%kimax2,&
+!                                         stars%igfft2,stars%pgfft2,stars%ft2_gfx,stars%ft2_gfy
+!            END IF
+!         END IF
 
-         IF (ioStatus.NE.0) THEN
-            l_error = .TRUE.
-            RETURN
-         END IF
+!         IF (ioStatus.NE.0) THEN
+!            l_error = .TRUE.
+!            RETURN
+!         END IF
 
-         CLOSE (51)
+!         CLOSE (51)
       END IF
 
    END SUBROUTINE readStars
@@ -1224,13 +1224,13 @@ MODULE m_cdn_io
          ! Write stars to stars file
          STOP 'CDN_STREAM_MODE not yet implemented!'
       ELSE
-         OPEN (14,file='wkf2',form='unformatted',status='unknown')
+!         OPEN (14,file='wkf2',form='unformatted',status='unknown')
 
-         WRITE (14) stars%ng3,ifftd
-         WRITE (14) (stars%ustep(i),i=1,stars%ng3)
-         WRITE (14) (stars%ufft(i),i=0,ifftd-1)
+!         WRITE (14) stars%ng3,ifftd
+!         WRITE (14) (stars%ustep(i),i=1,stars%ng3)
+!         WRITE (14) (stars%ufft(i),i=0,ifftd-1)
 
-         CLOSE (14)
+!         CLOSE (14)
       END IF
 
    END SUBROUTINE writeStepfunction
@@ -1302,25 +1302,25 @@ MODULE m_cdn_io
       END IF
 
       IF (mode.EQ.CDN_DIRECT_MODE) THEN
-         INQUIRE(FILE='wkf2',EXIST=l_exist)
-         IF(.NOT.l_exist) THEN
+!         INQUIRE(FILE='wkf2',EXIST=l_exist)
+!         IF(.NOT.l_exist) THEN
             l_error = .TRUE.
             RETURN
-         END IF
-         OPEN (14,file='wkf2',form='unformatted',status='unknown')
-         ng3temp=0;ifftdTemp=0
-         READ (14,IOSTAT=ioStatus) ng3Temp, ifftdTemp
-         IF (ng3Temp.NE.stars%ng3) ioStatus = 1
-         IF (ifftdTemp.NE.ifftd) ioStatus = 1
-         IF (ioStatus.NE.0) THEN
-            l_error = .TRUE.
-            CLOSE (14)
-            RETURN
-         END IF
-         READ (14) (stars%ustep(i),i=1,stars%ng3)
-         READ (14) (stars%ufft(i),i=0,ifftd-1)
+!         END IF
+!         OPEN (14,file='wkf2',form='unformatted',status='unknown')
+!         ng3temp=0;ifftdTemp=0
+!         READ (14,IOSTAT=ioStatus) ng3Temp, ifftdTemp
+!         IF (ng3Temp.NE.stars%ng3) ioStatus = 1
+!         IF (ifftdTemp.NE.ifftd) ioStatus = 1
+!         IF (ioStatus.NE.0) THEN
+!            l_error = .TRUE.
+!            CLOSE (14)
+!            RETURN
+!         END IF
+!         READ (14) (stars%ustep(i),i=1,stars%ng3)
+!         READ (14) (stars%ufft(i),i=0,ifftd-1)
 
-         CLOSE (14)
+!         CLOSE (14)
       END IF
 
    END SUBROUTINE readStepfunction

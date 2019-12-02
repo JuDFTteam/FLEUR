@@ -87,8 +87,10 @@ CONTAINS
          DO nn = 1, n
             IF (hmat%l_real) THEN
                hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*v_x%data_r(nn, n)
+               v_x%data_r(n, nn) = v_x%data_r(nn, n)
             ELSE
                hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*v_x%data_c(nn, n)
+               v_x%data_c(n, nn) = CONJG(v_x%data_c(nn, n))
             ENDIF
          END DO
       END DO
@@ -106,7 +108,7 @@ CONTAINS
 
       CALL z%init(olap%l_real, nbasfcn, dimension%neigd)
 
-      CALL read_z(z, kpts%nkpt*(jsp - 1) + nk)
+      CALL read_z(z, kpts%nkptf*(jsp - 1) + nk)
 
       ! calculate exchange contribution of current k-point nk to total energy (te_hfex)
       ! in the case of a spin-unpolarized calculation the factor 2 is added in eigen.F90
@@ -122,7 +124,7 @@ CONTAINS
          ELSE
             exch(iband, iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
          END IF
-         IF (iband <= hybrid%nobd(nk)) THEN
+         IF (iband <= hybrid%nobd(nk,jsp)) THEN
             results%te_hfex%valence = results%te_hfex%valence - a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband)
          END IF
          IF (hybrid%l_calhf) THEN

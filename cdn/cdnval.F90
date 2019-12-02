@@ -215,13 +215,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
          CALL pwden(stars,kpts,banddos,oneD,input,mpi,noco,cell,atoms,sym,ikpt,&
-                    jspin,lapw,noccbd,we,eig,den,results,force%f_b8,zMat,dos)
+                    jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-         IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,lapw,slab,oneD,zMat)
+         IF (l_dosNdir.AND.PRESENT(slab)) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab,oneD,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
             CALL vacden(vacuum,dimension,stars,oneD, kpts,input,sym,cell,atoms,noco,banddos,&
-                        gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,lapw,enpara%evac,eig,den,zMat,dos)
+                        gVacMap,we,ikpt,jspin,vTot%vacz(:,:,jspin),noccbd,ev_list,lapw,enpara%evac,eig,den,zMat,dos)
          END IF
       END IF
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,dos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
@@ -251,19 +251,19 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
-         CALL eparas(ispin,atoms,noccbd,mpi,ikpt,noccbd,we,eig,&
+         CALL eparas(ispin,atoms,noccbd,ev_list,mpi,ikpt,noccbd,we,eig,&
                      skip_t,cdnvalJob%l_evp,eigVecCoeffs,usdus,regCharges,dos,banddos%l_mcd,mcd)
 
-         IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+         IF (noco%l_mperp.AND.(ispin==jsp_end)) CALL qal_21(dimension,atoms,input,noccbd,ev_list,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
 
 
          ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
          IF (l_dosNdir) THEN
-            IF (PRESENT(slab)) CALL q_mt_sl(ispin,atoms,noccbd,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
+            IF (PRESENT(slab)) CALL q_mt_sl(ispin,atoms,noccbd,ev_list,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab)
 
             IF (banddos%l_orb.AND.ANY((/banddos%alpha,banddos%beta,banddos%gamma/).NE.0.0)) THEN
                CALL abcrot2(atoms,banddos,noccbd,eigVecCoeffs,ispin) ! rotate ab-coeffs
-               IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
+               IF (PRESENT(orbcomp)) CALL orb_comp(ispin,ikpt,noccbd,ev_list,atoms,noccbd,usdus,eigVecCoeffs,orbcomp)
             END IF
          ENDIF
          CALL calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs)

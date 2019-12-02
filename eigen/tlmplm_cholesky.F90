@@ -13,8 +13,6 @@ CONTAINS
     USE m_tlmplm
     USE m_types
     USE m_radovlp
-    USE m_gaunt, ONLY: gaunt2
-    USE m_constants, ONLY: lmaxU_const
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -62,7 +60,6 @@ CONTAINS
 
 
     td%h_off=0.0
-    !$    call gaunt2(atoms%lmaxd)
     !$OMP PARALLEL DO DEFAULT(NONE)&
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
@@ -136,11 +133,9 @@ CONTAINS
                 ENDDO
              ENDDO
           END DO
-
-          !Now add diagonal contribution to matrices
           IF (jsp<3) THEN
              !Create Cholesky decomposition of local hamiltonian
-             
+
              !--->    Add diagonal terms to make matrix positive definite
              DO lp = 0,atoms%lnonsph(n)
                 DO mp = -lp,lp
@@ -193,7 +188,7 @@ CONTAINS
   END SUBROUTINE tlmplm_cholesky
 
 
-   
+
 
 
   SUBROUTINE tlmplm_constrained(atoms,v,enpara,input,ud,noco,td)
@@ -207,16 +202,16 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT):: td
     TYPE(t_usdus),INTENT(INOUT) :: ud
     TYPE(t_noco),INTENT(IN)     :: noco
-    
+
     REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
     COMPLEX :: c
-    INTEGER :: n,l,s  
-      
-    
+    INTEGER :: n,l,s
+
+
     ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
          dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
     CALL rad_ovlp(atoms,ud,input,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
-    
+
     DO  n = 1,atoms%ntype
        !If we do  a constraint calculation, we have to calculate the
        !local spin off-diagonal contributions
@@ -229,8 +224,8 @@ CONTAINS
           td%h_off(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + dun21(l,n)*c
           td%h_off(l+s,l+s,n,1)     =td%h_off(l+s,l+s,n,1) + ddn21(l,n)*c
        ENDDO
-       
-       
+
+
        !then ispin=2,jspin=1 case
        DO l=0,atoms%lnonsph(n)
           c=(-0.5)*CMPLX(noco%b_con(1,n),-noco%b_con(2,n))
@@ -241,6 +236,5 @@ CONTAINS
        ENDDO
     END DO
   END SUBROUTINE tlmplm_constrained
-  
+
   END MODULE m_tlmplm_cholesky
-  

@@ -170,13 +170,18 @@ CONTAINS
     ENDDO ! DO nk 
 
 #ifdef CPP_MPI
-    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
-    CALL MPI_ALLREDUCE(eigBuffer(:2*dimension%neigd,:,:),results%eig(:2*dimension%neigd,:,:),&
-                       2*dimension%neigd*kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
+    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
+    CALL MPI_ALLREDUCE(eigBuffer(:2*dimension%neigd,:,1:input%jspins),&
+                     results%eig(:2*dimension%neigd,:,1:input%jspins),&
+        2*dimension%neigd*kpts%nkpt*input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
+                       
+                       
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #else
-    results%neig(:,:) = neigBuffer(:,:)
-    results%eig(:2*dimension%neigd,:,:) = eigBuffer(:2*dimension%neigd,:,:)
+    results%neig(:,1:input%jspins) = neigBuffer(:,1:input%jspins)
+    results%eig(:2*dimension%neigd,:,1:input%jspins) = eigBuffer(:2*dimension%neigd,:,1:input%jspins)
+!    results%neig(:,:) = neigBuffer(:,:)
+!    results%eig(:2*dimension%neigd,:,:) = eigBuffer(:2*dimension%neigd,:,:)
 #endif
 
     RETURN

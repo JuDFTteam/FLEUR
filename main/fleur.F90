@@ -107,7 +107,8 @@ CONTAINS
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
-    INTEGER :: iter,iterHF
+    INTEGER :: iter,iterHF,i
+    INTEGER :: wannierspin
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
 #ifdef CPP_MPI
@@ -144,6 +145,7 @@ CONTAINS
 
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     IF(mpi%irank.EQ.0) THEN
@@ -170,6 +172,14 @@ CONTAINS
 
     ! Open/allocate eigenvector storage (start)
     l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
+    if(noco%l_soc.and.input%l_wann)then
+    	 !! Weed up and down spinor components for SOC MLWFs.
+    	 !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
+    	 !! Make sure we always get up and down spinors when SOC=true.
+       wannierspin=2
+    else
+       wannierspin = input%jspins       
+    endif
     eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
                     noco%l_noco,.NOT.INPUT%eig66(1),l_real,noco%l_soc,INPUT%eig66(1),mpi%n_size)
 

@@ -6,7 +6,7 @@ MODULE m_vacden
   !     *************************************************************
 CONTAINS
   SUBROUTINE vacden(vacuum,DIMENSION,stars,oneD,kpts,input,sym,cell,atoms,noco,banddos,&
-                    gVacMap,we,ikpt,jspin,vz,ne,lapw,evac,eig,den,zMat,dos)
+                    gVacMap,we,ikpt,jspin,vz,ne,ev_list,lapw,evac,eig,den,zMat,dos)
 
     !***********************************************************************
     !     ****** change vacden(....,q) for vacuum density of states shz Jan.96
@@ -70,6 +70,7 @@ CONTAINS
     INTEGER,PARAMETER    :: n2max=13
     REAL,PARAMETER        :: emax=2.0/hartree_to_ev_const
     !     .. Array Arguments ..
+    INTEGER, INTENT(IN)     :: ev_list(ne)
     REAL,    INTENT(IN)     :: evac(2,input%jspins)
     REAL,    INTENT(IN)     :: we(DIMENSION%neigd)
     REAL                    :: vz(vacuum%nmzd,2) ! Note this breaks the INTENT(IN) from cdnval. It may be read from a file in this subroutine.
@@ -530,7 +531,7 @@ CONTAINS
                 ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
                 ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
                 qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
-                dos%qvac(n,ivac,ikpt,jspin) = dos%qvac(n,ivac,ikpt,jspin) + qout*cell%area
+                dos%qvac(ev_list(n),ivac,ikpt,jspin) = dos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
              END DO
              aae=-aa*vacuum%tworkf*2/3
              bbe=-bb*vacuum%tworkf*2/3
@@ -578,7 +579,7 @@ CONTAINS
                             qout = REAL(CONJG(ac_1(l,m,n,ispin))*ac_1(l,m,n,ispin) +&
                                  tei_1(l,m,ispin)*CONJG(bc_1(l,m,n,ispin))*&
                                  bc_1(l,m,n,ispin))
-                            dos%qvac(n,ivac,ikpt,ispin) = dos%qvac(n,ivac,ikpt,ispin)+qout*cell%area
+                            dos%qvac(ev_list(n),ivac,ikpt,ispin) = dos%qvac(ev_list(n),ivac,ikpt,ispin)+qout*cell%area
                          END DO
                          DO  jz = 1,vacuum%nmz
                             ui = u_1(jz,l,m,ispin)
@@ -599,7 +600,7 @@ CONTAINS
                          ab=ab + we(n)*CONJG(ac(l,n,ispin))*bc(l,n,ispin)
                          ba=ba + we(n)*CONJG(bc(l,n,ispin))*ac(l,n,ispin)
                          qout = REAL(CONJG(ac(l,n,ispin))*ac(l,n,ispin)+tei(l,ispin)*CONJG(bc(l,n,ispin))*bc(l,n,ispin))
-                         dos%qvac(n,ivac,ikpt,ispin) = dos%qvac(n,ivac,ikpt,ispin) + qout*cell%area
+                         dos%qvac(ev_list(n),ivac,ikpt,ispin) = dos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
                       END DO
                       DO jz = 1,vacuum%nmz
                          ui = u(jz,l,ispin)
@@ -624,7 +625,7 @@ CONTAINS
                          ba = ba + we(n)*CONJG(bc_1(l,m,n,jspin))*ac_1(l,m,n,jspin)
                          qout = REAL(CONJG(ac_1(l,m,n,jspin))*ac_1(l,m,n,jspin)+&
                               tei_1(l,m,jspin)*CONJG(bc_1(l,m,n,jspin))*bc_1(l,m,n,jspin))
-                         dos%qvac(n,ivac,ikpt,jspin) = dos%qvac(n,ivac,ikpt,jspin)+qout*cell%area
+                         dos%qvac(ev_list(n),ivac,ikpt,jspin) = dos%qvac(ev_list(n),ivac,ikpt,jspin)+qout*cell%area
                       END DO
                       DO  jz = 1,vacuum%nmz
                          ui = u_1(jz,l,m,jspin)
@@ -645,7 +646,7 @@ CONTAINS
                       ab = ab + we(n)*CONJG(ac(l,n,jspin))*bc(l,n,jspin)
                       ba = ba + we(n)*CONJG(bc(l,n,jspin))*ac(l,n,jspin)
                       qout = REAL(CONJG(ac(l,n,jspin))*ac(l,n,jspin)+tei(l,jspin)*CONJG(bc(l,n,jspin))*bc(l,n,jspin))
-                      dos%qvac(n,ivac,ikpt,jspin) = dos%qvac(n,ivac,ikpt,jspin) + qout*cell%area
+                      dos%qvac(ev_list(n),ivac,ikpt,jspin) = dos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
                    END DO
                    DO  jz = 1,vacuum%nmz
                       ui = u(jz,l,jspin)
@@ -695,7 +696,7 @@ CONTAINS
                             ll = ll+1
                          END DO
                          CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                         dos%qvlay(n,jj,ivac,ikpt,jspin) = dos%qvlay(n,jj,ivac,ikpt,jspin) + RESULT(1)
+                         dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
                       ELSE
                          ui = u(vacuum%izlay(jj,1),l,jspin)       
                          uei = ue(vacuum%izlay(jj,1),l,jspin)
@@ -706,7 +707,7 @@ CONTAINS
                               bb*dduei*dduei+(ab+ba)*ddui*dduei+&
                               2*aae*ui*ddui+2*bbe*uei*dduei+&
                               (abe+bae)*(ui*dduei+uei*ddui))
-                         dos%qvlay(n,jj,ivac,ikpt,jspin) = dos%qvlay(n,jj,ivac,ikpt,jspin) +yy (1)
+                         dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) +yy (1)
                       END IF
                    END DO
                 END DO
@@ -746,11 +747,11 @@ CONTAINS
                                   ll = ll+1
                                END DO
                                CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                               dos%qvlay(n,jj,ivac,ikpt,ispin) = dos%qvlay(n,jj,ivac,ikpt,ispin) + RESULT(1)
+                               dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + RESULT(1)
                             ELSE
                                ui = u(vacuum%izlay(jj,1),l,ispin)       
                                uei = ue(vacuum%izlay(jj,1),l,ispin)
-                               dos%qvlay(n,jj,ivac,ikpt,ispin) = dos%qvlay(n,jj,ivac,ikpt,ispin) + REAL(&
+                               dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,ispin) + REAL(&
                                     aa*ui*ui+bb*uei*uei+(ab+ba)*ui*uei)
 
                             END IF
@@ -806,13 +807,13 @@ CONTAINS
                                   ll = ll+1
                                END DO
                                CALL qsf(vacuum%delz,yy,RESULT,ll-1,0)
-                               dos%qvlay(n,jj,ivac,ikpt,jspin) = dos%qvlay(n,jj,ivac,ikpt,jspin) + RESULT(1)
+                               dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) + RESULT(1)
                             ELSE
                                ui = u(vacuum%izlay(jj,1),l,jspin)       
                                uei = ue(vacuum%izlay(jj,1),l,jspin)
                                uj = u(vacuum%izlay(jj,1),l1,jspin)
                                uej = ue(vacuum%izlay(jj,1),l1,jspin)
-                               dos%qvlay(n,jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
+                               dos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
                             END IF
                          END DO
                       END DO
@@ -1205,9 +1206,9 @@ CONTAINS
                          uej = ue(vacuum%izlay(jj,1),l1,jspin)
                          t1 = aa*ui*uj + bb*uei*uej +ba*ui*uej + ab*uei*uj
                          IF (ind2.GE.2.AND.ind2.LE.vacuum%nstars) &
-                              dos%qstars(ind2-1,n,jj,ivac,ikpt,jspin) = dos%qstars(ind2-1,n,jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
+                              dos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin) = dos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
                          IF (ind2p.GE.2.AND.ind2p.LE.vacuum%nstars) &
-                              dos%qstars(ind2p-1,n,jj,ivac,ikpt,jspin) = dos%qstars(ind2p-1,n,jj,ivac,ikpt,jspin) +CONJG(t1)*phs/stars%nstr2(ind2p)
+                              dos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) = dos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) +CONJG(t1)*phs/stars%nstr2(ind2p)
                       END DO
                    END IF
                 ENDDO

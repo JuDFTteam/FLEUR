@@ -30,8 +30,8 @@ contains
     TYPE(t_sym) :: sym_hlp
 
     IF (input%l_wann) THEN
-       IF (kpts%specificationType.NE.2) THEN
-          CALL juDFT_error('l_wann only with kPointMesh', calledby = 'kpoints')
+       IF (kpts%specificationType.NE.2 .AND. kpts%specificationType.NE.3) THEN
+          CALL juDFT_error('l_wann only with kPointMesh or kPointListFile', calledby = 'kpoints')
        END IF
     END IF
 

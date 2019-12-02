@@ -20,7 +20,7 @@ c*******************************************c
       CONTAINS
       SUBROUTINE wann_uHu(
      >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
-     >      banddos,oneD,noco,cell,vTot,wann,
+     >      banddos,oneD,noco,cell,vTot,wann,enpara,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -47,7 +47,7 @@ c*******************************************c
       use m_wann_projmethod
       use m_wann_abinv
       use m_wann_kptsrotate
-      use m_wann_read_inp
+!      use m_wann_read_inp  !Call wann_read_inp in fleur_init
       use m_matmul,only : matmul3,matmul3r
       use m_wann_maxbnd
       use m_wann_uHu_tlmplm
@@ -85,6 +85,7 @@ c*******************************************c
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: vTot
       TYPE(t_wann),INTENT(INOUT)   :: wann
+      TYPE(t_enpara),INTENT(IN) :: enpara
 
 c     ..scalar arguments..
       character(len=20),intent(in) :: param_file
@@ -182,8 +183,8 @@ c     ..local arrays..
       real    :: eig(neigd),eig_b(neigd),eig_b2(neigd)
       real    :: uuilon(nlod,ntypd),duilon(nlod,ntypd)
       real    :: ulouilopn(nlod,nlod,ntypd)
-      real    :: ello(nlod,ntypd,max(2,jspd)),evac(2,max(2,jspd))
-      real    :: epar(0:lmaxd,ntypd,max(2,jspd)),evdu(2,max(jspd,2))
+      real    :: evac(2,max(2,jspd))
+      real    :: evdu(2,max(jspd,2))
       real    :: qpt_i(3),qptb_i(3)
       real    :: alph_i(ntypd),alphb_i(ntypd)
       real    :: beta_i(ntypd),betab_i(ntypd)
@@ -290,7 +291,7 @@ c     ..initializations..
       
 
 c-----read the input file to determine what to do
-      call wann_read_inp(input,l_p0,wann)
+!      call wann_read_inp(input,l_p0,wann) !Call wann_read_inp in fleur_init
 
       if(wann%l_byenergy.and.wann%l_byindex) CALL juDFT_error
      +     ("byenergy.and.byindex",calledby ="wannier")
@@ -777,7 +778,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        jsp_start=jspin5; jsp_end=jspin5
        nrec5=0
        if(.not.l_noco) nrec5 = (jspin5-1)*nkpts
-       CALL judft_error("TODO:wann_uHu")
+!       CALL judft_error("TODO:wann_uHu")
 !       call cdn_read0(eig_id,irank,isize,jspin5,wannierspin,l_noco,
 !     <                ello,evac,epar,wk,n_bands,n_size)
 
@@ -850,18 +851,18 @@ c            uHuold = cmplx(0.,0.)
 c...compute the l-dependent, k-independent radial MT- basis functions
 
          call radfun(
-     >              l,n,jspin4,epar(l,n,jspin3),vr(1,n,jspin3),atoms,
-     <              ff(n,:,:,l,jspin4),gg(n,:,:,l,jspin4),usdus,
-     <              nodeu,noded,wronk)
+     >    l,n,jspin4,enpara%el0(l,n,jspin3),vr(1,n,jspin3),atoms,
+     <    ff(n,:,:,l,jspin4),gg(n,:,:,l,jspin4),usdus,
+     <    nodeu,noded,wronk)
 
    30  continue
 c...and the local orbital radial functions
        do ilo = 1, nlo(n)
 
          call radflo(
-     >             atoms,n,jspin4,ello(:,:,jspin3),vr(1,n,jspin3),
-     >             ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),mpi,
-     <             usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
+     >      atoms,n,jspin4,enpara%ello0(:,:,jspin3),vr(1,n,jspin3),
+     >      ff(n,1:,1:,0:,jspin4),gg(n,1:,1:,0:,jspin4),mpi,
+     <      usdus,uuilon,duilon,ulouilopn,flo(n,:,:,:,jspin4))
 
        enddo
 c       na = na + neq(n)
@@ -878,12 +879,13 @@ c       na = na + neq(n)
      >        memd,nlhd,ntypsd,ntypd,jmtd,lmaxd,jspd,ntype,dx,
      >        rmsh,jri,lmax,ntypsy,natd,lnonsph,lmd,lmplmd,clnu,
      >        mlh,nmem,llh,nlh,neq,irank,mlotot,mlolotot,
-     >        vTot%mt(:,:,:,jspin3),nlod,llod,loplod,ello(1,1,jspin3),
+     >        vTot%mt(:,:,:,jspin3),nlod,llod,loplod,
+     >        enpara%ello0(1,1,jspin3),
      >        llo,nlo,lo1l,l_dulo,ulo_der,ff(:,:,:,:,jspin),
      >        gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
      >        ff(:,:,:,:,jspin_b),gg(:,:,:,:,jspin_b),
      >        flo(:,:,:,:,jspin_b),kdiff,kdiff,nntot,nntot,bmat,bbmat,
-     >        vr(1,1,jspin3),epar(0,1,jspin3),invsat,
+     >        vr(1,1,jspin3),enpara%el0(0,1,jspin3),invsat,
      >        l_skip_sph,l_skip_non,l_skip_loc,
      <        tuu(:,:,:,:,tspin2),tud(:,:,:,:,tspin2),
      >        tdu(:,:,:,:,tspin2),tdd(:,:,:,:,tspin2),
@@ -911,11 +913,11 @@ c       na = na + neq(n)
      >     ntypd,jmtd,lmaxd,jspd,
      >     ntype,dx,rmsh,jri,lmax,natd,
      >     lmd,lmplmd,neq,irank,
-     >     nlod,llod,loplod,ello,llo,nlo,lo1l,l_dulo,ulo_der,
+     >     nlod,llod,loplod,enpara%ello0,llo,nlo,lo1l,l_dulo,ulo_der,
      >     ff(:,:,:,:,jspin),gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
      >     ff(:,:,:,:,jspin_b),gg(:,:,:,:,jspin_b),flo(:,:,:,:,jspin_b),
      >     kdiff,kdiff,nntot,nntot,bmat,bbmat,
-     >     vr,epar,jspin,jspin_b,jspins,
+     >     vr,enpara%el0,jspin,jspin_b,jspins,
      >     .true.,theta_i,phi_i,alph_i,beta_i,l_noco,l_skip_loc,
      <     tuu_soc,tud_soc,
      >     tdu_soc,tdd_soc,
@@ -1030,36 +1032,36 @@ c      if (mod(i_rec-1,isize).eq.irank) then
      &      nbands,eigg,zzMat)
 
 
-
-        do i = 1,nbands
-          if((eigg(i).ge.e1s.and.nslibd.lt.numbands
-     & .and.wann%l_bynumber)
-     &.or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
-     &.or.(i.ge.wann%band_min(jspin)
-     &                 .and.
-     &       (i.le.wann%band_max(jspin))
-     &                 .and.
-     &       wann%l_byindex))then
-            nslibd = nslibd + 1
-            eig(nslibd) = eigg(i)
-            we(nslibd) = we(i)
-            if(l_noco)then
-    !           funbas =        nv(1) + nlotot
-    !           funbas = funbas+nv(2) + nlotot
-            else
-    !           funbas = nv(jspin) + nlotot
-            endif
-            IF (zzMat%l_real) THEN
-    !           do j = 1,funbas
-                  zMat%data_r(:,nslibd) = zzMat%data_r(:,i)
-    !           enddo
-            ELSE
-    !           do j = 1,funbas
-                  zMat%data_c(:,nslibd) = zzMat%data_c(:,i)
-    !           enddo
-            END IF
-          endif
-        enddo
+c$$$        nslibd=0
+!        do i = 1,nbands
+!          if((eigg(i).ge.e1s.and.nslibd.lt.numbands
+!     & .and.wann%l_bynumber)
+!     &.or.(eigg(i).ge.e1s.and.eigg(i).le.e2s.and.wann%l_byenergy)
+!     &.or.(i.ge.wann%band_min(jspin)
+!     &                 .and.
+!     &       (i.le.wann%band_max(jspin))
+!     &                 .and.
+!     &       wann%l_byindex))then
+!            nslibd = nslibd + 1
+!            eig(nslibd) = eigg(i)
+!            we(nslibd) = we(i)
+!            if(l_noco)then
+!    !           funbas =        nv(1) + nlotot
+!    !           funbas = funbas+nv(2) + nlotot
+!            else
+!    !           funbas = nv(jspin) + nlotot
+!            endif
+!            IF (zzMat%l_real) THEN
+!    !           do j = 1,funbas
+!                  zMat%data_r(:,nslibd) = zzMat%data_r(:,i)
+!    !           enddo
+!            ELSE
+!    !           do j = 1,funbas
+!                  zMat%data_c(:,nslibd) = zzMat%data_c(:,i)
+!    !           enddo
+!            END IF
+!          endif
+!        enddo
 
 
 
@@ -1083,7 +1085,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
         eigg = 0.
         call cpu_time(t0)
-        call judft_error("BUG not implement")
+!        call judft_error("BUG not implement")
 !        CALL cdn_read(
 !     >                eig_id,
 !     >                nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
@@ -1139,9 +1141,10 @@ c      if (mod(i_rec-1,isize).eq.irank) then
                   zMat_b%data_r(:,nslibd_b) = zzMat%data_r(:,i)
     !           enddo
             ELSE
-               do j = 1,funbas
-                  zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
-               enddo
+    !           do j = 1,funbas
+    !              zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
+            zMat_b%data_c(:,nslibd_b) = zzMat%data_c(:,i)
+    !           enddo
             END IF
           endif
         enddo
@@ -1367,8 +1370,8 @@ c      endif
          call wann_uHu_sph(
      >        cmplx(1.,0.),nbnd,llod,nslibd_b,nslibd_b2,nlod,natd,ntypd,
      >        lmd,jmtd,taual,nop,lmax,ntype,neq,nlo,llo,
-     >        acof_b,bcof_b,ccof_b,bkpt_b2,
-     >        acof_b2,bcof_b2,ccof_b2,bkpt_b,bkpt,
+     >        acof_b,bcof_b,ccof_b,lapw_b2%bkpt,
+     >        acof_b2,bcof_b2,ccof_b2,lapw_b%bkpt,lapw%bkpt,
      >        gb(:,ikpt_b,ikpt),gb(:,ikpt_b2,ikpt),
      <        tuu(:,:,:,:,tspin2),tud(:,:,:,:,tspin2),
      >        tdu(:,:,:,:,tspin2),tdd(:,:,:,:,tspin2),
@@ -1393,8 +1396,8 @@ c      endif
          call wann_uHu_sph(
      >        cmplx(1.,0.),nbnd,llod,nslibd_b,nslibd_b2,nlod,natd,ntypd,
      >        lmd,jmtd,taual,nop,lmax,ntype,neq,nlo,llo,
-     >        acof_b,bcof_b,ccof_b,bkpt_b2,
-     >        acof_b2,bcof_b2,ccof_b2,bkpt_b,bkpt,
+     >        acof_b,bcof_b,ccof_b,lapw_b2%bkpt,
+     >        acof_b2,bcof_b2,ccof_b2,lapw_b%bkpt,lapw%bkpt,
      >        gb(:,ikpt_b,ikpt),gb(:,ikpt_b2,ikpt),
      <        tuu_soc,tud_soc,
      >        tdu_soc,tdd_soc,
@@ -1445,7 +1448,7 @@ c      endif
 !     >  k1_b2(:,jspin_b),k2_b2(:,jspin_b),k3_b2(:,jspin_b),
      >  lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k3(:,jspin),
      >  gb(:,ikpt_b2,ikpt),
-     >  bkpt,bbmat,vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
+     >  lapw%bkpt,bbmat,vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
      >  ustep,ig,jspin.eq.jspin_b,sign2,
      >  uHu(:,:,ikpt_b2,ikpt_b,i_rec))
             call cpu_time(t1)
@@ -1465,16 +1468,16 @@ c      endif
             call cpu_time(t0)
             call wann_uHu_vac(
      >            cmplx(1.,0.),l_noco,l_soc,zrfs,jspins,nlotot,qpt_i,
-     >            nbnd,z1,nmzxyd,nmzd,n2d,nv2d,k1d,k2d,k3d,n3d,nvac,ig,
-     >            rgphs,nmzxy,nmz,delz,ig2,nq2,kv2,area,bmat,bbmat,
-     >            evac(:,jspin4),evac(:,jspin4_b),bkpt_b,bkpt_b2,
-     >            vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
-     >            jspin,jspin_b,doublespin,
+     >  nbnd,z1,nmzxyd,nmzd,n2d,nv2d,k1d,k2d,k3d,n3d,nvac,ig,
+     >  rgphs,nmzxy,nmz,delz,ig2,nq2,kv2,area,bmat,bbmat,
+     >  evac(:,jspin4),evac(:,jspin4_b),lapw_b%bkpt,lapw_b2%bkpt,
+     >  vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
+     >  jspin,jspin_b,doublespin,
 !     >      k1_b,k2_b,k3_b,
-     >      lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
+     >  lapw_b%k1,lapw_b%k2,lapw_b%k3,
 !     >      k1_b2,k2_b2,k3_b2,
-     >      lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k3(:,jspin),
-     >      wannierspin,nvd,nbasfcn,neigd,
+     >  lapw_b2%k1,lapw_b2%k2,lapw_b2%k3,
+     >  wannierspin,nvd,nbasfcn,neigd,
      >            zMat_b,zMat_b2,
      >            lapw_b%nv,!nv_b,
      >            lapw_b2%nv,! nv_b2,
@@ -1491,14 +1494,14 @@ c      endif
      >            DIMENSION,oneD,vacuum,stars,cell,
      >            cmplx(1.,0.),l_noco,l_soc,jspins,nlotot,nbnd,z1,
      >            nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,ig,nmzxy,nmz,
-     >            delz,ig2,bbmat,evac(1,jspin4),evac(1,jspin4_b),bkpt_b,
-     >            bkpt_b2,odi,vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
-     >            jspin,jspin_b,doublespin,
+     >  delz,ig2,bbmat,evac(1,jspin4),evac(1,jspin4_b),lapw_b%bkpt,
+     >  lapw_b2%bkpt,odi,vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
+     >  jspin,jspin_b,doublespin,
 !     >            k1_b,k2_b,k3_b,
      >   lapw_b%k1(:,:),lapw_b%k2(:,:),lapw_b%k3(:,:),
 !     >            k1_b2,k2_b2,k3_b2,
      >   lapw_b2%k1(:,:),lapw_b2%k2(:,:),lapw_b2%k3(:,:),
-     >          wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
+     >  wannierspin,nvd,area,nbasfcn,neigd,zMat_b,zMat_b2,
      >            lapw_b%nv,!nv_b,
      >            lapw_b2%nv,!nv_b2,
      >            sk2,phi2,omtil,gb(:,ikpt_b,ikpt),

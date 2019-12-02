@@ -14,7 +14,7 @@ CONTAINS
     !     Frank Freimuth
     !**************************************************
     USE m_types
-    USE m_wann_read_inp
+!    USE m_wann_read_inp   !Call wann_read_inp now in fleur-init
     USE m_wann_projgen
     USE m_wann_kpointgen
     USE m_wann_w90kpointgen
@@ -42,7 +42,7 @@ CONTAINS
     l_nocosoc=noco%l_noco.OR.noco%l_soc
 
     !-----read the input file to determine what to do
-    CALL wann_read_inp(input,.TRUE.,wann)
+!    CALL wann_read_inp(input,.TRUE.,wann) !call wann_read_inp now in fleur_init
 
     !-----generate projection-definition-file
     IF(wann%l_projgen) THEN

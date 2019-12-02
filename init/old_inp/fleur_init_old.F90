@@ -185,7 +185,7 @@ CONTAINS
        INQUIRE(file="cdn1",exist=l_opti)
        IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
        l_opti=.NOT.l_opti
-       IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
+       IF ((sliceplot%iplot.NE.0).OR.(input%strho).OR.(input%swsp).OR.&
             &    (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
        !
 

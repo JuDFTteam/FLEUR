@@ -195,7 +195,8 @@ CONTAINS
       ! Check version of inp.xml
       versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
       IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
-         (TRIM(ADJUSTL(versionString)).NE.'0.29').AND.(TRIM(ADJUSTL(versionString)).NE.'0.30')) THEN
+         (TRIM(ADJUSTL(versionString)).NE.'0.29').AND.(TRIM(ADJUSTL(versionString)).NE.'0.30').AND.&
+         (TRIM(ADJUSTL(versionString)).NE.'0.31')) THEN
          CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
       END IF
 
@@ -2148,7 +2149,7 @@ CONTAINS
       input%vchk = .FALSE.
       input%cdinf = .FALSE.
 
-      sliceplot%iplot = .FALSE.
+      sliceplot%iplot = 0
       input%score = .FALSE.
       sliceplot%plpot = .FALSE.
 
@@ -2186,7 +2187,7 @@ CONTAINS
          numberNodes = xmlGetNumberOfNodes(xPathA)
 
          IF (numberNodes.EQ.1) THEN
-            sliceplot%iplot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
+            sliceplot%iplot = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
             input%score = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
             sliceplot%plpot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
          END IF

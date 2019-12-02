@@ -92,7 +92,7 @@ the test and might lead to the configuration to fail.
 
 Command line option to compile external libraries:
   -external # : download and compile external libraries before building FLEUR
-                currently 'hdf5' and 'libxc' are possible options. The switch 
+                currently 'hdf5','libxc' and 'chase' are possible options. The switch 
                 can be specified multiple times
 
 Options to specify Fortran/Linker flags:

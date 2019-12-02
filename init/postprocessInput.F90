@@ -310,6 +310,10 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
         dimension%neigd = dimension%nvd + atoms%nlotot
      END IF
 
+     IF(dimension%neigd.GT.(dimension%nvd + atoms%nlotot)) THEN
+        dimension%neigd = dimension%nvd + atoms%nlotot
+     END IF
+
      obsolete%lepr = 0
 
      IF (noco%l_noco) dimension%neigd = 2*dimension%neigd
@@ -409,6 +413,11 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      ALLOCATE(sphhar%llh(0:sphhar%nlhd,sphhar%ntypsd))
      ALLOCATE(sphhar%mlh(sphhar%memd,0:sphhar%nlhd,sphhar%ntypsd))
      ALLOCATE(sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd))
+
+     sphhar%llh(:,:) = -100
+     sphhar%mlh(:,:,:) = -100000
+     sphhar%nlh(:) = -100
+     sphhar%nmem(:,:) = -100
 
      ! Dimensioning of stars
 
@@ -570,7 +579,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      INQUIRE(file="cdn1",exist=l_opti)
      if (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
      l_opti=.not.l_opti
-     IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
+     IF ((sliceplot%iplot.NE.0).OR.(input%strho).OR.(input%swsp).OR.&
          (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
 
      IF (.NOT.l_opti) THEN
@@ -593,7 +602,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CALL timestart("stepf") 
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
   CALL timestop("stepf") 
-  IF (.NOT.sliceplot%iplot) THEN   
+  IF (sliceplot%iplot.EQ.0) THEN   
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)

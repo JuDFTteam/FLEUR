@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.28">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.31">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
    
@@ -25,6 +25,7 @@
          <xsd:enumeration value="0.28"/>
          <xsd:enumeration value="0.29"/>
          <xsd:enumeration value="0.30"/>
+         <xsd:enumeration value="0.31"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -591,6 +592,7 @@
             <xsd:element name="kPointCount" type="KPointCountType"/>
             <xsd:element name="kPointList" type="KPointListType"/>
             <xsd:element name="kPointDensity" type="KPointDensityType"/>
+            <xsd:element name="kPointListFile" type="KPointListFileType"/>
          </xsd:choice>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointSet" type="AltKPointSetType"/>
       </xsd:sequence>
@@ -634,7 +636,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="PlottingType">
-      <xsd:attribute default="F" name="iplot" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0" name="iplot" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="score" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="plplot" type="FleurBool" use="optional"/>
    </xsd:complexType>

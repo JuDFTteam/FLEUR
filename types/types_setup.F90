@@ -340,7 +340,7 @@ MODULE m_types_setup
       REAL                  ::  tolerance1  !only read in
       REAL, ALLOCATABLE   ::  basm1(:, :, :, :)
       COMPLEX, ALLOCATABLE   ::  d_wgn2(:, :, :, :)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:)                   !alloc in eigen_HF_init
+      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:,:)                   !alloc in eigen_HF_init
       REAL, ALLOCATABLE   ::  div_vv(:, :, :)
    END TYPE t_hybrid
 
@@ -473,7 +473,7 @@ MODULE m_types_setup
    END TYPE t_input
 
    TYPE t_sliceplot
-      LOGICAL :: iplot
+      INTEGER :: iplot
       LOGICAL :: slice
       LOGICAL :: plpot
       INTEGER :: kk

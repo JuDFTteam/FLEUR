@@ -34,7 +34,7 @@ CONTAINS
     REAL,    INTENT (IN) :: alo1(atoms%nlod,atoms%ntype),blo1(atoms%nlod,atoms%ntype)
     REAL,    INTENT (IN) :: clo1(atoms%nlod,atoms%ntype)
     COMPLEX, INTENT (IN) :: ylm( (atoms%lmaxd+1)**2 )
-    INTEGER, INTENT (IN) :: kvec(2*(2*atoms%llod+1) ,atoms%nat)
+    INTEGER, INTENT (IN) :: kvec(2*(2*atoms%llod+1) ,atoms%nlod)
     LOGICAL, INTENT (OUT) :: enough(atoms%nat)
     COMPLEX, INTENT (INOUT) :: bascof_lo(3,-atoms%llod:atoms%llod,4*atoms%llod+2,atoms%nlod,atoms%nat)
     INTEGER, INTENT (INOUT) :: nkvec(atoms%nlod,atoms%nat)

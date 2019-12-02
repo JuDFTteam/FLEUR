@@ -9,7 +9,7 @@
       subroutine wann_write_amn(
      >               mpi_comm,l_p0,filename,title,
      >               nbnd,fullnkpts,nwfs,
-     >               irank,isize,l_freeformat,
+     >               irank,isize,l_freeformat,l_unfname,
      <               amn,l_unformatted)
 c**********************************************************
 c     This subroutine is used to write several matrices to 
@@ -37,6 +37,7 @@ c**********************************************************
 
       integer, intent(in)    :: irank,isize
       logical, intent(in)    :: l_freeformat
+      logical, intent(in)    :: l_unfname
 
       complex, intent(inout) :: amn(:,:,:)
 
@@ -80,7 +81,11 @@ c******************************************************
 
       if(l_p0)then
        if(l_unformatted)then
-          open (305,file=filename,form='unformatted')
+          if(l_unfname)then
+            open (305,file=trim(filename)//'_unf',form='unformatted')
+          else
+            open (305,file=filename,form='unformatted')
+          endif
        elseif(l_freeformat)then
           open(305,file=filename,recl=1000)
        else

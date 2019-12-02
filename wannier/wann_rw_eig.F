@@ -23,7 +23,7 @@ c****************************************************************
      >              irreduc,odi,band_min,band_max,numbands,
      >              e1s,e2s,ef,l_paulimag,nkpt,    
      <              nbnd,kpoints,l_gwf,iqpt)
-
+      use m_constants
       use m_cdnread, only:cdn_read
       use m_types
 
@@ -67,7 +67,7 @@ c****************************************************************
       INTEGER, INTENT(IN) :: iqpt
       CHARACTER(len=12) :: fname
 ! END QPOINTS
-      real,parameter   :: hartree=27.21138505
+!      real,parameter   :: hartree=27.21138505  !now in module constants
 
       TYPE(t_mat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
@@ -150,7 +150,7 @@ c****************************************************************
            nkbnd = nkbnd + 1
            if(l_bynumber.or.l_byindex)then
               write (306,'(2i12,f19.13)') nkbnd,ikpt,(eig(i)-ef)*
-     &                                    hartree
+     &                                    hartree_to_ev_const
            endif
            if(l_paulimag.and..false.)then
               if(eig(i).le.ef)then
@@ -193,7 +193,7 @@ c****************************************************************
                 if(eig(i).ge.e1s .and. nkbnd.lt.nbnd)then
                      nkbnd = nkbnd + 1
                   write (306,'(2i12,f19.13)')nkbnd,ikpt,(eig(i)-ef)*
-     &                                       hartree
+     &                  hartree_to_ev_const
                 endif
               enddo 
          enddo   

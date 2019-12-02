@@ -140,7 +140,7 @@
       input%gauss= .false. ; input%tria  = .false. 
       sliceplot%slice= .false. ;  input%swsp  = .false.
       input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
-      sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
+      sliceplot%iplot= 0 ; input%score = .false. ; sliceplot%plpot = .false.
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
@@ -396,10 +396,6 @@
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
    
       IF (noco%l_ss) input%ctail = .FALSE.
-      noco%l_mperp = .FALSE.
-      noco%l_constr = .FALSE.
-      noco%mix_b = 0.0
-      noco%qss = 0.0
 
       noco%l_relax(:) = .FALSE.
       noco%alphInit(:) = 0.0
