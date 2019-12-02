@@ -17,8 +17,7 @@ MODULE m_xcBfield
    ! consistent source-free fields.
    !-----------------------------------------------------------------------------
 
-   PUBLIC :: makeBxc, sourcefree ! TODO: Build a routine to pack A_vec 
-                                 !       back into the matrix correctly. 
+   PUBLIC :: makeBxc, sourcefree
 
 CONTAINS
    SUBROUTINE makeVectorField(stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec,icut)
@@ -126,6 +125,10 @@ CONTAINS
       TYPE(t_atoms)                                :: atloc
       INTEGER                                      :: n, jr, lh, lhmax, jcut
 
+      DO i=1,3
+         bxc(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
+      END DO
+
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -161,6 +164,10 @@ CONTAINS
       ENDDO
 
       CALL divpotgrad2(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
+
+      DO i=1,3
+         cvec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
+      END DO
 
       DO i=1,3
          CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
