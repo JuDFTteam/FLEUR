@@ -113,8 +113,8 @@ CONTAINS
                den_work1(i,j,:)=0
                dentot=0.5*(den_mt(i,j,1)+den_mt(i,j,2))
                mm(i,j)=SQRT((0.5*(den_mt(i,j,1)-den_mt(i,j,2)))**2+den_mt(i,j,3)**2+den_mt(i,j,4)**2)
-               den_work1(i,j,1)=dentot-mm(i,j)
-               den_work1(i,j,2)=dentot+mm(i,j)
+               den_work1(i,j,1)=dentot+mm(i,j)
+               den_work1(i,j,2)=dentot-mm(i,j)
             END DO
          END DO 
       mm(:,lh)=mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
