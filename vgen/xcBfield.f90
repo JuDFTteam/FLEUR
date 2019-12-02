@@ -10,11 +10,10 @@ MODULE m_xcBfield
    USE m_divergence
    
    !-----------------------------------------------------------------------------
-   ! When finished, this module will contain all the operations on exchange-cor-
-   ! relation B-fields, that are currenlty done in fleur.F90 after the scf-loop.
-   ! This way, the whole modification towards source-free fields can be done by
-   ! one call, either as a postprocess test or in the scf-loop to achieve self-
-   ! consistent source-free fields.
+   ! This module contains all the operations on exchange-correlation B-fields 
+   ! that are necessary to project out source terms. This way, the whole modifi-
+   ! cation towards source-free fields can be done by one call, either as a post-
+   ! process test or in the scf-loop to achieve said fields self-consistently.
    !-----------------------------------------------------------------------------
 
    PUBLIC :: makeBxc, sourcefree
@@ -25,13 +24,16 @@ CONTAINS
       ! Contructs the exchange-correlation magnetic field from the total poten-
       ! tial matrix or the magnetic density for the density matrix. Only used for
       ! the implementation of source free fields and therefore only applicable in
-      ! a fully non-collinear description of magnetism.
+      ! a (fully) non-collinear description of magnetism.
       ! 
       ! Assumes the following form for the density/potential matrix:
       ! rho_mat = n*Id_(2x2) + conj(sigma_vec)*m_vec
       ! V_mat   = V*Id_(2x2) + sigma_vec*B_vec
       ! 
       ! A_vec is saved as a density type with an additional r^2-factor.
+      ! 
+      ! TODO: How do we constuct B when not only it is saved to the density
+      !       matrix (SOC, LDA+U etc.)?
 
       TYPE(t_stars),                INTENT(IN)  :: stars
       TYPE(t_atoms),                INTENT(IN)  :: atoms
@@ -88,7 +90,7 @@ CONTAINS
      
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,icut,div,phi,cvec,corrB,checkdiv)
+   SUBROUTINE sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,icut,div,phi,cvec,corrB,checkdiv)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
@@ -97,7 +99,7 @@ CONTAINS
       ! makes it into a source free vector field as follows:
       ! 
       ! a) Build the divergence d of the vector field A_vec as d=nabla_vec*A_vec.
-      ! b) Solve the Poisson equation (nabla_vec*nabla_vec)phi=-4*pi*d.
+      ! b) Solve the Poisson equation (nabla_vec*nabla_vec)phi=-4*pi*d for phi.
       ! c) Construct an auxiliary vector field C_vec=(nabla_vec phi)/(4*pi).
       ! d) Build A_vec_sf=A_vec+C_vec, which is source free by construction.
       !       
@@ -116,7 +118,7 @@ CONTAINS
       TYPE(t_sym),                  INTENT(IN)     :: sym
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
-      TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: bxc
+      TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: aVec
       INTEGER,                      INTENT(IN)     :: icut(3,0:sphhar%nlhd,atoms%ntype)
       TYPE(t_potden),               INTENT(OUT)    :: div, phi, checkdiv
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: cvec, corrB
@@ -126,7 +128,7 @@ CONTAINS
       INTEGER                                      :: n, jr, lh, lhmax, jcut
 
       DO i=1,3
-         bxc(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
+         aVec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
       END DO
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
@@ -134,7 +136,7 @@ CONTAINS
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
 
-      CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+      CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
  
       atloc=atoms
       atloc%zatom=0.0 !Local atoms variable with no charges; needed for the potential generation.
@@ -172,7 +174,7 @@ CONTAINS
       DO i=1,3
          CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
-         CALL corrB(i)%addPotDen(bxc(i),cvec(i))
+         CALL corrB(i)%addPotDen(aVec(i),cvec(i))
       ENDDO
       
       CALL checkdiv%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
@@ -196,9 +198,18 @@ CONTAINS
 
    SUBROUTINE correctPot(vTot,c)
       USE m_types
+      
+      ! Takes a vectorial quantity c and saves its components into the appro
+      ! priate components of the potential matrix V. 
+      ! 
+      ! An initial V_mat = V*Id_(2x2) + sigma_vec*B_vec will become
+      !            V_mat = V*Id_(2x2) + sigma_vec*(B_vec+C_vec)
+      ! 
+      ! TODO: Both quantities are assumed to be in the global frame of refe-
+      !       rence. Make sure this is true. Also: consider SOC, LDA+U etc.
 
-      TYPE(t_potden),               INTENT(INOUT) :: vTot !      
-      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: c !global frame
+      TYPE(t_potden),               INTENT(INOUT) :: vTot      
+      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: c
 
       vTot%mt(:,0:,:,1)=vTot%mt(:,0:,:,1)+c(3)%mt(:,0:,:,1)
       vTot%mt(:,0:,:,2)=vTot%mt(:,0:,:,2)-c(3)%mt(:,0:,:,1)
