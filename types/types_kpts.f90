@@ -38,8 +38,57 @@ MODULE m_types_kpts
       procedure :: get_nk => kpts_get_nk
       procedure :: to_first_bz => kpts_to_first_bz
       procedure :: is_kpt => kpts_is_kpt
+      procedure :: write_kpts
+      generic   :: write(unformatted) => write_kpts
    ENDTYPE t_kpts
 contains
+   subroutine write_kpts(dtv, unit, iostat, iomsg)
+      implicit NONE
+      class(t_kpts), intent(in)   :: dtv
+      integer, intent(in)         :: unit         ! Internal unit to write to.
+      integer, intent(out)        :: iostat      ! non zero on error, etc.
+      character(*), intent(inout) :: iomsg  ! define if iostat non zero.
+
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%nkpt, dtv%ntet, dtv%posScale, dtv%l_gamma
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%bk)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%bk
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%wtkpt)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%wtkpt
+
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%nkptf, dtv%nkpt3, dtv%kPointDensity
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%bkf)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%bkf
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%bkp)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%bkp
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%bksym)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%bksym
+
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%numSpecialPoints
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%specialPointIndices)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%specialPointIndices
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%specialPointNames)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%specialPointNames
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%specialPoints)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%specialPoints
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%ntetra)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%ntetra
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%voltet)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%voltet
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%sc_list)
+      write(unit, iostat=iostat, iomsg=iomsg) dtv%sc_list
+   end subroutine write_kpts
+
    function kpts_get_nk(kpts, kpoint) result(ret_idx)
       ! get the index of a kpoint
       implicit NONE
