@@ -40,53 +40,115 @@ MODULE m_types_kpts
       procedure :: is_kpt => kpts_is_kpt
       procedure :: write_kpts
       generic   :: write(unformatted) => write_kpts
+      procedure :: read_kpts
+      generic   :: read(unformatted) => read_kpts
    ENDTYPE t_kpts
 contains
-   subroutine write_kpts(dtv, unit, iostat, iomsg)
+   subroutine read_kpts(kpts, unit, iostat, iomsg)
       implicit NONE
-      class(t_kpts), intent(in)   :: dtv
+      class(t_kpts), intent(inout)   :: kpts
       integer, intent(in)         :: unit         ! Internal unit to write to.
       integer, intent(out)        :: iostat      ! non zero on error, etc.
       character(*), intent(inout) :: iomsg  ! define if iostat non zero.
 
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%nkpt, dtv%ntet, dtv%posScale, dtv%l_gamma
+      integer :: shape_1d(1), shape_2d(2), shape_3d(3)
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%bk)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%bk
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%nkpt, kpts%ntet, kpts%posScale, kpts%l_gamma
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%wtkpt)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%wtkpt
+      read(unit, iostat=iostat, iomsg=iomsg) shape_2d
+      allocate(kpts%bk(shape_2d(1), shape_2d(2)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%bk
 
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%nkptf, dtv%nkpt3, dtv%kPointDensity
+      read(unit, iostat=iostat, iomsg=iomsg) shape_1d
+      allocate(kpts%wtkpt(shape_1d(1)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%wtkpt
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%bkf)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%bkf
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%nkptf, kpts%nkpt3, kpts%kPointDensity
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%bkp)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%bkp
+      read(unit, iostat=iostat, iomsg=iomsg) shape_2d
+      allocate(kpts%bkf(shape_2d(1), shape_2d(2)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%bkf
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%bksym)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%bksym
+      read(unit, iostat=iostat, iomsg=iomsg) shape_1d
+      allocate(kpts%bkp(shape_1d(1)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%bkp
 
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%numSpecialPoints
+      read(unit, iostat=iostat, iomsg=iomsg) shape_1d
+      allocate(kpts%bksym(shape_1d(1)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%bksym
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%specialPointIndices)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%specialPointIndices
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%numSpecialPoints
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%specialPointNames)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%specialPointNames
+      read(unit, iostat=iostat, iomsg=iomsg) shape_1d
+      allocate(kpts%specialPointIndices(shape_1d(1)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%specialPointIndices
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%specialPoints)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%specialPoints
+      read(unit, iostat=iostat, iomsg=iomsg) shape_1d
+      allocate(kpts%specialPointNames(shape_1d(1)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%specialPointNames
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%ntetra)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%ntetra
+      read(unit, iostat=iostat, iomsg=iomsg) shape_2d
+      allocate(kpts%specialPoints(shape_2d(1), shape_2d(2)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%specialPoints
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%voltet)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%voltet
+      read(unit, iostat=iostat, iomsg=iomsg) shape_2d
+      allocate(kpts%ntetra(shape_2d(1), shape_2d(2)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%ntetra
 
-      write(unit, iostat=iostat, iomsg=iomsg) shape(dtv%sc_list)
-      write(unit, iostat=iostat, iomsg=iomsg) dtv%sc_list
+      read(unit, iostat=iostat, iomsg=iomsg) shape_1d
+      allocate(kpts%voltet(shape_2d(1)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%voltet
+
+      read(unit, iostat=iostat, iomsg=iomsg) shape_2d
+      allocate(kpts%sc_list(shape_2d(1), shape_2d(2)))
+      read(unit, iostat=iostat, iomsg=iomsg) kpts%sc_list
+   end subroutine read_kpts
+
+   subroutine write_kpts(kpts, unit, iostat, iomsg)
+      implicit NONE
+      class(t_kpts), intent(in)   :: kpts
+      integer, intent(in)         :: unit         ! Internal unit to write to.
+      integer, intent(out)        :: iostat      ! non zero on error, etc.
+      character(*), intent(inout) :: iomsg  ! define if iostat non zero.
+
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%nkpt, kpts%ntet, kpts%posScale, kpts%l_gamma
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%bk)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%bk
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%wtkpt)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%wtkpt
+
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%nkptf, kpts%nkpt3, kpts%kPointDensity
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%bkf)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%bkf
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%bkp)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%bkp
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%bksym)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%bksym
+
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%numSpecialPoints
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%specialPointIndices)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%specialPointIndices
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%specialPointNames)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%specialPointNames
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%specialPoints)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%specialPoints
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%ntetra)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%ntetra
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%voltet)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%voltet
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(kpts%sc_list)
+      write(unit, iostat=iostat, iomsg=iomsg) kpts%sc_list
    end subroutine write_kpts
 
    function kpts_get_nk(kpts, kpoint) result(ret_idx)
