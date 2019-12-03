@@ -81,7 +81,6 @@ message("Flags: ${CMAKE_Fortran_FLAGS}")
 
 set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};juDFT")
 
-
 if (${FLEUR_USE_SERIAL})
    #Serial executables
    add_executable(fleur ${fleur_SRC} ${c_filesFleur})
