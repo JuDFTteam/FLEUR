@@ -71,105 +71,93 @@ CONTAINS
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
-      REAL, ALLOCATABLE :: dm(:,:,:), ddm(:,:,:,:),den_work1(:,:,:), mm(:,:),dden(:,:,:,:),ddden(:,:,:,:)
-      REAL, ALLOCATABLE :: chlhtot(:,:),chlhdrtot(:,:),chlhdrrtot(:,:),chlh2(:,:,:)
-      INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i
+      REAL, ALLOCATABLE :: drm(:,:), drrm(:,:), mm(:,:)
+      REAL, ALLOCATABLE :: chlhtot(:,:),chlhdrtot(:,:),chlhdrrtot(:,:)
+      INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i,jspV
+      
+      !This snippet is crucial to determine over which spins (Only diagonals in colinear case or also off diags in non colin case.) 
+      IF (noco%l_mtNocoPot) THEN 
+         jspV=4
+      ELSE 
+         jspV=jspins
+      END IF
 
+      !Defining some constants
       nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
       nsp = atoms%nsp()
 
-      ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspins),chlh2(atoms%jmtd, 0:sphhar%nlhd, jspins))
-      ALLOCATE (ch_tmp(nsp, jspins))         
-      ALLOCATE (den_work1(atoms%jmtd, 0:sphhar%nlhd, jspins))
+      !General Allocations
+      ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspV))
+      ALLOCATE (ch_tmp(nsp, jspV))         
       
+      !Allocations in dograds case
       IF (dograds) THEN
-         ALLOCATE (chdr(nsp, jspins), chdt(nsp, jspins), chdf(nsp, jspins), chdrr(nsp, jspins), &
-                   chdtt(nsp, jspins), chdff(nsp, jspins), chdtf(nsp, jspins), chdrt(nsp, jspins), &
-                   chdrf(nsp, jspins))
-         ALLOCATE (chlhdr(atoms%jmtd, 0:sphhar%nlhd, jspins))
-         ALLOCATE (chlhdrr(atoms%jmtd, 0:sphhar%nlhd, jspins))
+         ALLOCATE (chdr(nsp, jspV), chdt(nsp, jspV), chdf(nsp, jspV), chdrr(nsp, jspV), &
+                   chdtt(nsp, jspV), chdff(nsp, jspV), chdtf(nsp, jspV), chdrt(nsp, jspV), &
+                   chdrf(nsp, jspV))
+         ALLOCATE (chlhdr(atoms%jmtd, 0:sphhar%nlhd, jspV))
+         ALLOCATE (chlhdrr(atoms%jmtd, 0:sphhar%nlhd, jspV))
       ENDIF
 
-      !Allocations in case mtNocoPot is True 
+      !Allocations in mtNoco case
       IF (noco%l_mtNocoPot) THEN
          !General Noco Allocations
-
-         IF (dograds) THEN
-         !Dograds part
-            ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd),dm(3,atoms%jmtd, &
-                     0:sphhar%nlhd),ddm(3,3,atoms%jmtd, 0:sphhar%nlhd))
-            ALLOCATE( dden(3,atoms%jmtd,sphhar%nlhd,4))
-            ALLOCATE(chlhtot(atoms%jmtd, 0:sphhar%nlhd),chlhdrtot(atoms%jmtd, 0:sphhar%nlhd),chlhdrrtot(atoms%jmtd, 0:sphhar%nlhd))
-         ELSE
-        !No dograds part
          ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd))
+         
+         !Allocations in case one uses e.g. GGA with mtNoco
+         IF (dograds) THEN
+            ALLOCATE(drm(atoms%jmtd,0:sphhar%nlhd),drrm(atoms%jmtd, 0:sphhar%nlhd))
+            ALLOCATE(chlhtot(atoms%jmtd, 0:sphhar%nlhd),chlhdrtot(atoms%jmtd, 0:sphhar%nlhd),chlhdrrtot(atoms%jmtd, 0:sphhar%nlhd))
          END IF
       END IF
 
-      !Calc magnetization
-      IF(noco%l_mtNocoPot) THEN
-         DO i=1,atoms%jmtd
-            DO j=0,sphhar%nlhd
-               den_work1(i,j,:)=0
-               dentot=0.5*(den_mt(i,j,1)+den_mt(i,j,2))
-               mm(i,j)=SQRT((0.5*(den_mt(i,j,1)-den_mt(i,j,2)))**2+den_mt(i,j,3)**2+den_mt(i,j,4)**2)
-               den_work1(i,j,1)=dentot+mm(i,j)
-               den_work1(i,j,2)=dentot-mm(i,j)
-            END DO
-         END DO 
-      mm(:,lh)=mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
-      END IF
+      !Calc magnetization (This is necessary only in mtNoco case)
+      IF(noco%l_mtNocoPot) mm(:,:)=SQRT((0.5*(den_mt(:,:,1)-den_mt(:,:,2)))**2+4*den_mt(:,:,3)**2+4*den_mt(:,:,4)**2)
 
+
+      !Loop to calculate chlh and necessary gradients (if needed)
       DO lh = 0, sphhar%nlh(nd)
          !         calculates gradients of radial charge densities of l=> 0.
          !         rho*ylh/r**2 is charge density. chlh=rho/r**2.
          !         charge density=sum(chlh*ylh).
          !         chlhdr=d(chlh)/dr, chlhdrr=dd(chlh)/drr.
 
-         DO js = 1, jspins
+         !Scaling of the magnetic moments in the same way the charge density is scaled in chlh.
+         IF(noco%l_mtNocoPot) mm(:,lh)=mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
+
+         DO js = 1, jspV
             DO jr = 1, atoms%jri(n)
                chlh(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
-            
-            IF (.NOT.noco%l_mtNocoPot) THEN
-               IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
+               !Necessary gradients
+               IF (dograds) THEN
+                  !Colinear case only needs radial derivatives of chlh
+                  CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
                                                  chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
-            ELSE
-               IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(:, n), &
-                                                 mm(:,lh), ndvgrd, dm(1,:,lh), ddm(1,1,:,lh))
-               IF (dograds) CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), &
-                                                 chlh(1, lh, js), ndvgrd, chlhdr(1, lh, js), chlhdrr(1, lh,js))
-               END IF
+                  IF (noco%l_mtNocoPot) THEN
+                  !Noco case also needs radial derivatives of mm
+                     CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(:, n), &
+                                                 mm(:,lh), ndvgrd, drm(:,lh), drrm(:,lh))
+                 END IF
+              END IF
             ENDDO
          ENDDO ! js
       ENDDO   ! lh
 
-IF(noco%l_mtNocoPot)THEN
-     DO lh = 0, sphhar%nlh(nd)
-       DO js = 1, jspins
-            DO jr = 1, atoms%jri(n)
-               chlh2(jr, lh, js) = den_mt(jr, lh, js)/(atoms%rmsh(jr, n)*atoms%rmsh(jr, n))
-            ENDDO
-         ENDDO ! js
-      ENDDO   ! lh
-END IF
-
+      !The following Loop maps chlh on the k-Grid using the lattice harmonics ylh
       kt = 0
       DO jr = 1, atoms%jri(n)
          ! charge density (on extended grid for all jr)
          ! following are at points on jr-th sphere.
          ch_tmp(:, :) = 0.0
-         !  generate the densities on an angular mesh
-         DO js = 1, jspins
+         !  generate the densities on an angular mesh (ch_tmp is needed in mkgylm call later on)
+         DO js = 1, jspV
             DO lh = 0, sphhar%nlh(nd)
                DO k = 1, nsp
-                  IF(noco%l_mtNocoPot) THEN
-                     ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh2(jr, lh, js)
-                  ELSE
                      ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh(jr, lh, js)
-                  END IF
                   ENDDO
             ENDDO
          ENDDO
+         !Initialize derivatives of ch on grid if needed. 
          IF (dograds) THEN
             chdr(:, :) = 0.0     ! d(ch)/dr
             chdt(:, :) = 0.0     ! d(ch)/dtheta
@@ -181,32 +169,38 @@ END IF
             chdrt(:, :) = 0.0     ! d(d(ch)/dr)dt
             chdrf(:, :) = 0.0     ! d(d(ch)/dr)df
             !  generate the derivatives on an angular mesh
-            DO js = 1, jspins
+            DO js = 1, jspV
                DO lh = 0, sphhar%nlh(nd)
-                  !
+
+                  !The following snippet maps chlh and its radial derivatives on a colinear system
+                  !using mm and its radial derivatives. 
                   IF (noco%l_mtNocoPot) THEN
                       IF (js.EQ.1) THEN
                          chlhtot(jr,lh)=0.5*(chlh(jr, lh, 1)+chlh(jr, lh, 2))
                          chlhdrtot(jr,lh)=0.5*(chlhdr(jr, lh, 1)+chlhdr(jr, lh, 2))
                          chlhdrrtot(jr,lh)=0.5*(chlhdrr(jr, lh, 1)+chlhdrr(jr, lh, 2))
-                         chlh(jr,lh,js)=chlhtot(jr,lh)-((-1)**js)*mm(jr,lh)
-                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)-((-1)**js)*dm(1,jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)-((-1)**js)*ddm(1,1,jr,lh)
+                         chlh(jr,lh,js)=chlhtot(jr,lh)+mm(jr,lh)
+                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)+drm(jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)+drrm(jr,lh)
                       ELSE IF (js.EQ.2) THEN
-                         chlh(jr,lh,js)=chlhtot(jr,lh)-((-1)**js)*mm(jr,lh)
-                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)-((-1)**js)*dm(1,jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)-((-1)**js)*ddm(1,1,jr,lh)
+                         chlh(jr,lh,js)=chlhtot(jr,lh)-mm(jr,lh)
+                         chlhdr(jr, lh, js)=chlhdrtot(jr,lh)-drm(jr,lh)
+                         chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)-drrm(jr,lh)
                       ELSE
                          chlhdr(jr, lh, js)=0
                          chlh(jr,lh,js)=0
                          chlhdrr(jr, lh, js)=0
                      END IF  
                   END IF
+
+                  !The following loop brings chlhdr and chlhdrr on the k-grid. 
                   DO k = 1, nsp
                      chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)
                      chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)             
                   ENDDO
 
+                  !This loop calculates the other derviatives of ch (Angular terms) on the k-grid  
+                  !by using the lattice harmonics derivatives and chlh with its derivatives.
                   DO k = 1, nsp
                      chdrt(k, js) = chdrt(k, js) + ylht(k, lh, nd)*chlhdr(jr, lh, js)
                      chdrf(k, js) = chdrf(k, js) + ylhf(k, lh, nd)*chlhdr(jr, lh, js)
@@ -218,6 +212,8 @@ END IF
                   ENDDO
                ENDDO ! lh
             ENDDO   ! js
+
+            !Makegradients
             CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
                         ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
          ENDIF
