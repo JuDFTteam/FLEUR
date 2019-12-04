@@ -490,8 +490,6 @@ contains
 
       ! Calculate overlap
       call mpbasis%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
-      call save_npy("olap_l=" // int2str(l) // "_itype=" // int2str(itype) // "_iterHF=" // int2str(iterHF) // ".npy", &
-                    olap)
 
       ! Diagonalize
       call mpbasis_diagonialize_olap(olap, eig, eigv)

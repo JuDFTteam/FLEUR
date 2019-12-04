@@ -45,14 +45,15 @@ CONTAINS
       nkqpt = kpts%get_nk(kqpt)
       IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
 
-      call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
-                                         dimension, input, jsp, cell, atoms, mpbasis, hybrid,&
-                                         hybdat, kpts, lapw, sym, nbasm_mt, noco,&
-                                         nkqpt, cprod)
+      !call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
+      !                                   dimension, input, jsp, cell, atoms, mpbasis, hybrid,&
+      !                                   hybdat, kpts, lapw, sym, nbasm_mt, noco,&
+      !                                   nkqpt, cprod)
 
       call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
                                   dimension, atoms, mpbasis, hybrid, hybdat, kpts, &
                                   nkqpt, cprod)
+      call judft_error("today we only use the muffin-tin")
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
