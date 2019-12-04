@@ -24,7 +24,7 @@ the relevant information.
 or/and
 
 B) Provide a bugfix. If the bug is only present in the development branch/ is due
-to a new feature under development. Please simply commit your bug to the development branch.
+to a new feature under development simply commit your fix to the development branch.
 If you are fixing a bug in a release-version, please:
 * check out the git release branch: ```git checkout --track origin/release```
 * create a bugfix branch: ```git checkout -b bugfix_SOME_NAME_HERE```
