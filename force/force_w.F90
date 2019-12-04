@@ -99,6 +99,7 @@ CONTAINS
        results%force=0.0
        l_forceConverged=maxAbsForceDist<input%force_converged
        l_forceConverged=l_forceConverged.and.(results%last_distance.LE.input%mindistance)
+       l_forceConverged=l_forceConverged.and.(results%last_distance.GE.0.0) ! In the first iteration results%last_distance is initialized to -1.0.
        IF (.NOT.l_forceConverged) THEN
           WRITE (6,8020) input%force_converged,maxAbsForceDist
 8020      FORMAT ('No new postions, force convergence required=',f8.5,'; max force distance=',f8.5)
