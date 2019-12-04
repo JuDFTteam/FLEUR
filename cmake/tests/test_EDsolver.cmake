@@ -11,6 +11,8 @@ foreach(ADD_STRING "-larpack_ifort"
           LINK_LIBRARIES ${TEST_LIBRARIES})
      if (FLEUR_USE_ARPACK)
           set(FLEUR_ARPACK_LIBRARIES ${TEST_LIBRARIES})
+     else()
+          set(FLEUR_ARPACK_LIBRARIES ${FLEUR_LIBRARIES})
      endif()
    endif()
 endforeach()
@@ -20,6 +22,19 @@ message("ARPACK Library found:${FLEUR_USE_ARPACK}")
 #Test if the EDsolver library is already present
 try_compile(FLEUR_USE_EDSOLVER ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_EDsolver.f90
             LINK_LIBRARIES ${FLEUR_ARPACK_LIBRARIES})
+if (NOT FLEUR_USE_EDSOLVER)
+   if(FLEUR_USE_ARPACK)
+      #try adding -lEDsolver to the linker options
+      set(TEST_LIBRARIES "${FLEUR_ARPACK_LIBRARIES};-lEDsolver")
+      try_compile(FLEUR_USE_EDSOLVER ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_EDsolver.f90
+               LINK_LIBRARIES ${TEST_LIBRARIES})
+      if(FLEUR_USE_EDSOLVER)
+         set(FLEUR_EDSOLVER_LIBRARIES ${TEST_LIBRARIES})
+      else()
+         set(FLEUR_EDSOLVER_LIBRARIES ${FLEUR_ARPACK_LIBRARIES})
+      endif()
+   endif()
+endif()
 message("EDsolver Library found:${FLEUR_USE_EDSOLVER}")
 
 
@@ -62,7 +77,7 @@ if (DEFINED CLI_FLEUR_USE_EDSOLVER)
 endif()
 
 if (FLEUR_USE_EDSOLVER)
-   set(FLEUR_LINK_LIBRARIES ${FLEUR_ARPACK_LIBRARIES})
+   set(FLEUR_LINK_LIBRARIES ${FLEUR_EDSOLVER_LIBRARIES})
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_EDSOLVER")
    set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_EDSOLVER")
    if  (FLEUR_COMPILE_EDSOLVER)
