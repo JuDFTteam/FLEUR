@@ -42,7 +42,6 @@ include(forcetheorem/CMakeLists.txt)
 include(rdmft/CMakeLists.txt)
 include(kpoints/CMakeLists.txt)
 include(ldahia/CMakeLists.txt)
-include(intersite/CMakeLists.txt)
 include(greensf/CMakeLists.txt)
 
 
