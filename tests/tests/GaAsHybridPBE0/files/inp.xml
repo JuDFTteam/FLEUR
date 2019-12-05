@@ -33,14 +33,14 @@
    </cell>
    <xcFunctional name="pbe0" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Ga-1" element="Ga" atomicNumber="31" coreStates="7" magMom=".00000000" flipSpin="T">
+      <species name="Ga-1" element="Ga" atomicNumber="31" coreStates="7" magMom=".00000000" flipSpinPhi=".00000000" flipSpinTheta="0.000000" flipSpinScale="F">
          <mtSphere radius="2.24000000" gridPoints="741" logIncrement=".01700000"/>
          <atomicCutoffs lmax="8" lnonsphr="8"/>
          <energyParameters s="4" p="4" d="4" f="4"/>
          <prodBasis lcutm="4" lcutwf="8" select="4 0 4 2"/>
          <lo type="SCLO" l="2" n="3" eDeriv="0"/>
       </species>
-      <species name="As-1" element="As" atomicNumber="33" coreStates="7" magMom=".00000000" flipSpin="T">
+      <species name="As-1" element="As" atomicNumber="33" coreStates="7" magMom=".00000000" flipSpinPhi=".00000000" flipSpinTheta="0.000000" flipSpinScale="F">
          <mtSphere radius="2.24000000" gridPoints="741" logIncrement=".01700000"/>
          <atomicCutoffs lmax="8" lnonsphr="8"/>
          <energyParameters s="4" p="4" d="4" f="4"/>
