@@ -183,8 +183,8 @@ c     ..local arrays..
       real    :: eig(neigd),eig_b(neigd),eig_b2(neigd)
       real    :: uuilon(nlod,ntypd),duilon(nlod,ntypd)
       real    :: ulouilopn(nlod,nlod,ntypd)
-      real    :: ello(nlod,ntypd,max(2,jspd)),evac(2,max(2,jspd))
-      real    :: epar(0:lmaxd,ntypd,max(2,jspd)),evdu(2,max(jspd,2))
+      real    :: evac(2,max(2,jspd))
+      real    :: evdu(2,max(jspd,2))
       real    :: qpt_i(3),qptb_i(3)
       real    :: alph_i(ntypd),alphb_i(ntypd)
       real    :: beta_i(ntypd),betab_i(ntypd)
@@ -778,7 +778,7 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
        jsp_start=jspin5; jsp_end=jspin5
        nrec5=0
        if(.not.l_noco) nrec5 = (jspin5-1)*nkpts
-       CALL judft_error("TODO:wann_uHu")
+!       CALL judft_error("TODO:wann_uHu")
 !       call cdn_read0(eig_id,irank,isize,jspin5,wannierspin,l_noco,
 !     <                ello,evac,epar,wk,n_bands,n_size)
 
@@ -879,12 +879,13 @@ c       na = na + neq(n)
      >        memd,nlhd,ntypsd,ntypd,jmtd,lmaxd,jspd,ntype,dx,
      >        rmsh,jri,lmax,ntypsy,natd,lnonsph,lmd,lmplmd,clnu,
      >        mlh,nmem,llh,nlh,neq,irank,mlotot,mlolotot,
-     >        vTot%mt(:,:,:,jspin3),nlod,llod,loplod,ello(1,1,jspin3),
+     >        vTot%mt(:,:,:,jspin3),nlod,llod,loplod,
+     >        enpara%ello0(1,1,jspin3),
      >        llo,nlo,lo1l,l_dulo,ulo_der,ff(:,:,:,:,jspin),
      >        gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
      >        ff(:,:,:,:,jspin_b),gg(:,:,:,:,jspin_b),
      >        flo(:,:,:,:,jspin_b),kdiff,kdiff,nntot,nntot,bmat,bbmat,
-     >        vr(1,1,jspin3),epar(0,1,jspin3),invsat,
+     >        vr(1,1,jspin3),enpara%el0(0,1,jspin3),invsat,
      >        l_skip_sph,l_skip_non,l_skip_loc,
      <        tuu(:,:,:,:,tspin2),tud(:,:,:,:,tspin2),
      >        tdu(:,:,:,:,tspin2),tdd(:,:,:,:,tspin2),
@@ -912,11 +913,11 @@ c       na = na + neq(n)
      >     ntypd,jmtd,lmaxd,jspd,
      >     ntype,dx,rmsh,jri,lmax,natd,
      >     lmd,lmplmd,neq,irank,
-     >     nlod,llod,loplod,ello,llo,nlo,lo1l,l_dulo,ulo_der,
+     >     nlod,llod,loplod,enpara%ello0,llo,nlo,lo1l,l_dulo,ulo_der,
      >     ff(:,:,:,:,jspin),gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
      >     ff(:,:,:,:,jspin_b),gg(:,:,:,:,jspin_b),flo(:,:,:,:,jspin_b),
      >     kdiff,kdiff,nntot,nntot,bmat,bbmat,
-     >     vr,epar,jspin,jspin_b,jspins,
+     >     vr,enpara%el0,jspin,jspin_b,jspins,
      >     .true.,theta_i,phi_i,alph_i,beta_i,l_noco,l_skip_loc,
      <     tuu_soc,tud_soc,
      >     tdu_soc,tdd_soc,
@@ -1084,7 +1085,7 @@ c$$$        nslibd=0
 
         eigg = 0.
         call cpu_time(t0)
-        call judft_error("BUG not implement")
+!        call judft_error("BUG not implement")
 !        CALL cdn_read(
 !     >                eig_id,
 !     >                nvd,jspd,irank,isize,kptibz_b,jspin,nbasfcn, !wannierspin instead of jspd?
@@ -1140,9 +1141,10 @@ c$$$        nslibd=0
                   zMat_b%data_r(:,nslibd_b) = zzMat%data_r(:,i)
     !           enddo
             ELSE
-               do j = 1,funbas
-                  zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
-               enddo
+    !           do j = 1,funbas
+    !              zMat_b%data_c(j,nslibd_b) = zzMat%data_c(j,i)
+            zMat_b%data_c(:,nslibd_b) = zzMat%data_c(:,i)
+    !           enddo
             END IF
           endif
         enddo
@@ -1472,9 +1474,9 @@ c      endif
      >  vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
      >  jspin,jspin_b,doublespin,
 !     >      k1_b,k2_b,k3_b,
-     >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
+     >  lapw_b%k1,lapw_b%k2,lapw_b%k3,
 !     >      k1_b2,k2_b2,k3_b2,
-     >  lapw_b2%k1(:,jspin),lapw_b2%k2(:,jspin),lapw_b2%k3(:,jspin),
+     >  lapw_b2%k1,lapw_b2%k2,lapw_b2%k3,
      >  wannierspin,nvd,nbasfcn,neigd,
      >            zMat_b,zMat_b2,
      >            lapw_b%nv,!nv_b,

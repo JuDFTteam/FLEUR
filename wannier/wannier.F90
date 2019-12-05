@@ -1258,7 +1258,7 @@ CONTAINS
 
 
                 CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,&
-                     noco,jspin,oneD,acof,bcof,ccof,zMat)
+                     noco,jspin2,oneD,acof,bcof,ccof,zMat)
 
 
                 CALL wann_abinv(atoms, acof,bcof,ccof)
@@ -1414,10 +1414,10 @@ CONTAINS
                    CALL wann_mmkb_int(&
                         cmplx_1,addnoco,addnoco,&
                         DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,&
-                        stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,&
-                        lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                        lapw%nv(jspin),zMat,nslibd,&
+                        stars%ng3,lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
+                        lapw%nv(jspin2),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,&
+                        lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
+                        lapw%nv(jspin2),zMat,nslibd,&
                         nbnd,&
                         stars%rgphs,stars%ustep,stars%ig,(/ 0,0,0 /),&
                         mmn(:,:,ikpt))
@@ -1442,8 +1442,8 @@ CONTAINS
                            stars%mx1,stars%mx2,stars%mx3,&
                            stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,vacuum%delz,&
                            stars%ig2,cell%area,cell%bmat,&
-                           cell%bbmat,enpara%evac0(:,jspin),lapw%bkpt,vz(:,:,jspin2),&
-                           nslibd,jspin,lapw%k1,lapw%k2,lapw%k3,wannierspin,DIMENSION%nvd,&
+                           cell%bbmat,enpara%evac0(:,jspin2),lapw%bkpt,vz(:,:,jspin2),&
+                           nslibd,jspin2,lapw%k1,lapw%k2,lapw%k3,wannierspin,DIMENSION%nvd,&
                            DIMENSION%nbasfcn,DIMENSION%neigd,zMat,lapw%nv,cell%omtil,&
                            mmn(:,:,ikpt))
                    ELSEIF (oneD%odi%d1) THEN
@@ -1596,7 +1596,7 @@ CONTAINS
 !!! get the band-dependent k-dependent ab coeff.
 
                       CALL abcof(input,atoms,sym,cell,lapw_b,&
-                           noccbd_b,usdus,noco,jspin,oneD,&
+                           noccbd_b,usdus,noco,jspin2,oneD,&
                            acof_b,bcof_b,ccof_b,zMat_b)
 
 
@@ -1622,10 +1622,10 @@ CONTAINS
                       CALL wann_mmkb_int(&
                            cmplx_1,addnoco,addnoco2,&
                            DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,&
-                           stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),&
-                           lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,&
-                           lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),&
-                           lapw_b%nv(jspin),zMat_b,nslibd_b,&
+                           stars%ng3,lapw%k1(:,jspin2),lapw%k2(:,jspin2),lapw%k3(:,jspin2),&
+                           lapw%nv(jspin2),DIMENSION%neigd,DIMENSION%nbasfcn,zMat,nslibd,&
+                           lapw_b%k1(:,jspin2),lapw_b%k2(:,jspin2),lapw_b%k3(:,jspin2),&
+                           lapw_b%nv(jspin2),zMat_b,nslibd_b,&
                            nbnd,&
                            stars%rgphs,stars%ustep,stars%ig,gb(:,ikpt_b,ikpt),&
                            mmnk(:,:,ikpt_b,ikpt))
@@ -1657,10 +1657,10 @@ CONTAINS
                               stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,&
                               vacuum%delz,stars%ig2,cell%area,cell%bmat,&
-                              cell%bbmat,enpara%evac0(:,jspin),&
-                              enpara%evac0(:,jspin_b),&
+                              cell%bbmat,enpara%evac0(:,jspin2),&
+                              enpara%evac0(:,jspin2_b),&
                               lapw%bkpt,lapw_b%bkpt,vz(:,:,jspin2),vz(:,:,jspin2_b),&
-                              nslibd,nslibd_b,jspin,jspin_b,&
+                              nslibd,nslibd_b,jspin2,jspin2_b,&
                               lapw%k1,lapw%k2,lapw%k3,lapw_b%k1,lapw_b%k2,lapw_b%k3,&
                               wannierspin,DIMENSION%nvd,&
                               DIMENSION%nbasfcn,DIMENSION%neigd,zMat,zMat_b,&

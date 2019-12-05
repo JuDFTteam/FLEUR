@@ -330,7 +330,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    IF(ALLOCATED(hybrid%nobd)) DEALLOCATE(hybrid%nobd)
    IF(ALLOCATED(hybrid%nbasm)) DEALLOCATE(hybrid%nbasm)
    IF(ALLOCATED(hybrid%div_vv)) DEALLOCATE(hybrid%div_vv)
-   ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf))
+   ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf,input%jspins))
    ALLOCATE(hybrid%nbasm(kpts%nkptf))
    ALLOCATE(hybrid%div_vv(DIMENSION%neigd,kpts%nkpt,input%jspins))
    l_restart = .FALSE.
@@ -463,7 +463,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          results%neig(:,:) = highestState(:,:) + 1
 
-         mnobd = MAXVAL(hybrid%nobd)
+         mnobd = MAXVAL(hybrid%nobd(:,jsp))
 
          DO ikpt = 1,kpts%nkpt
 

@@ -15,14 +15,14 @@ MODULE m_pw_tofrom_grid
   
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
-   SUBROUTINE init_pw_grid(dograds,stars,sym,cell)
-      USE m_prpxcfftmap
-      USE m_types
-      IMPLICIT NONE
-      LOGICAL,INTENT(IN)            :: dograds
-      TYPE(t_stars),INTENT(IN)      :: stars
-      TYPE(t_sym),INTENT(IN)        :: sym
-      TYPE(t_cell),INTENT(IN)       :: cell
+  SUBROUTINE init_pw_grid(dograds,stars,sym,cell)
+    USE m_prpxcfftmap
+    USE m_types
+    IMPLICIT NONE
+    LOGICAL,INTENT(IN)            :: dograds
+    TYPE(t_stars),INTENT(IN)      :: stars
+    TYPE(t_sym),INTENT(IN)        :: sym
+    TYPE(t_cell),INTENT(IN)       :: cell
     
       !---> set up pointer for backtransformation of from g-vector in
       !     positive domain of xc density fftbox into stars.
@@ -31,11 +31,11 @@ CONTAINS
       !     in principle this can also be done in main program once.
       !     it is done here to save memory.
       
-      ifftd=27*stars%mx1*stars%mx2*stars%mx3
-      ifftxc3  = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
-      IF (dograds) THEN
-         CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
-      ENDIF
+    ifftd=27*stars%mx1*stars%mx2*stars%mx3
+    ifftxc3  = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
+    IF (dograds) THEN
+       CALL prp_xcfft_map(stars,sym, cell, igxc_fft,gxc_fft)
+    ENDIF
        
   END SUBROUTINE init_pw_grid
   

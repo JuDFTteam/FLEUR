@@ -194,7 +194,8 @@ CONTAINS
       ! Check version of inp.xml
       versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
       IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
-         (TRIM(ADJUSTL(versionString)).NE.'0.29').AND.(TRIM(ADJUSTL(versionString)).NE.'0.30')) THEN
+         (TRIM(ADJUSTL(versionString)).NE.'0.29').AND.(TRIM(ADJUSTL(versionString)).NE.'0.30').AND.&
+         (TRIM(ADJUSTL(versionString)).NE.'0.31')) THEN
          CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
       END IF
 

@@ -22,6 +22,11 @@ MODULE m_vmatgen
   !
   !     Philipp Kurz 99/11/01
   !   
+  !     Extended for the investigation of the exch-corr B-field, which is 
+  !     analogously saved as a potden type with 3 integers (i.e. in com-
+  !     ponent space.
+  !     
+  !     A.Neukirchen 05.09.2019
   !**********************************************************************
 CONTAINS
   SUBROUTINE vmatgen(stars,atoms,vacuum,sym,input,den,vTot)
@@ -64,7 +69,7 @@ CONTAINS
     ifft2 = SIZE(den%phi_vacxy,1) 
     
     ALLOCATE ( vis(ifft3,4),fftwork(ifft3))
-      
+    
     !---> fouriertransform the spin up and down potential
     !---> in the interstitial, vpw, to real space (vis)
     DO jspin = 1,input%jspins

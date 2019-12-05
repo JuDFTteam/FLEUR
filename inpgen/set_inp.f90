@@ -398,10 +398,6 @@
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
    
       IF (noco%l_ss) input%ctail = .FALSE.
-      noco%l_mperp = .FALSE.
-      noco%l_constr = .FALSE.
-      noco%mix_b = 0.0
-      noco%qss = 0.0
 
       noco%l_relax(:) = .FALSE.
       noco%alphInit(:) = 0.0

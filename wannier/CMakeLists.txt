@@ -51,6 +51,8 @@ wannier/wann_nabla_rs.f
 wannier/wann_nocoplot.F
 #wannier/wann_orbmag.F
 wannier/wann_pauli_rs.F
+wannier/wann_gabeffgagaunt.f
+wannier/wann_perpmag.f
 wannier/wann_perpmag_rs.f
 wannier/wann_plot.F
 wannier/wann_plot_from_lapw.f
@@ -93,7 +95,7 @@ wannier/bs_comfort.F
 )
 set(fleur_F90 ${fleur_F90}
 wannier/init_wannier_defaults.f90
-wannier/wann_read_inp.f90
+wannier/wann_read_inp.F90
 wannier/wann_convert_fleur_w90.F90
 wannier/wann_optional.f90
 wannier/wann_abinv.f90

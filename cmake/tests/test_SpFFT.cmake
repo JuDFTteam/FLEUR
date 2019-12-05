@@ -1,0 +1,11 @@
+#First check if we can compile with SpFFT
+try_compile(FLEUR_USE_SPFFT ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_SpFFT.f90
+LINK_LIBRARIES ${FLEUR_LIBRARIES}
+            )
+
+message("SpFFT found:${FLEUR_USE_SPFFT}")
+if (FLEUR_USE_SPFFT)
+   set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_SPFFT")
+   set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_SPFFT")
+endif()
+

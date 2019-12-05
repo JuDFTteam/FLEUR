@@ -83,7 +83,12 @@
          l_writeunf=.true.
          writeform='unformatted'
          filenameread(1)='updown.mmn0_unf'
-         filestoread=3
+         if(jspins_in.eq.1.and..not.l_nocosoc)then
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
+         else         
+            filestoread=3
+         endif         
          if(l_nocosoc)then
              filenameread(2)='WF1.socmmn0_unf'
              filenameread(3)='WF2.socmmn0_unf'
@@ -102,7 +107,12 @@
          l_writeunf=.true.
          writeform='unformatted'
          filenameread(1)='updown.mmn0'
-         filestoread=3
+         if(jspins_in.eq.1.and..not.l_nocosoc)then
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
+         else
+            filestoread=3
+         endif
          if(l_nocosoc)then
             filenameread(2)='WF1.socmmn0'
             filenameread(3)='WF2.socmmn0'
@@ -121,7 +131,12 @@
          l_writeunf=.false.
          writeform='formatted'
          filenameread(1)='updown.mmn0'
-         filestoread=3
+         if(jspins_in.eq.1.and..not.l_nocosoc)then
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
+         else
+            filestoread=3
+         endif
          if(l_nocosoc)then
             filenameread(2)='WF1.socmmn0'
             filenameread(3)='WF2.socmmn0'
@@ -141,7 +156,7 @@
          l_writeunf=.false.
          writeform='formatted'
          filenameread(1)='updown.mmn0'
-         filestoread=3
+         
          if(l_nocosoc)then
             filenameread(2)='WF1.socmmn0'
             filenameread(3)='WF2.socmmn0'
@@ -163,7 +178,12 @@
          l_writeunf=.false.
          writeform='formatted'
          filenameread(1)='updown.mmn0_unf'
-         filestoread=3
+         if(jspins_in.eq.1.and..not.l_nocosoc)then
+            filestoread=1
+            filenameread(1)='WF1.mmn0_unf'
+         else
+            filestoread=3
+         endif
          if(l_nocosoc)then
             filenameread(2)='WF1.socmmn0_unf'
             filenameread(3)='WF2.socmmn0_unf'
@@ -379,7 +399,12 @@
           endif
           write(*,*)"before read(spn_in):nbnd,fullnkpts,fileidx=",nbnd,fullnkpts,fileidx
           if(.not.l_nocosoc  .and.  fileidx==1  )then
-            read(spn_in)oper_o(1:nbnd,1+nbnd:2*nbnd,1:fullnkpts,fileidx)
+             if(jspins_in==1)then
+                if(.not.l_paulimat) call juDFT_error("check it",calledby="wann_convert_fleur_w90")
+                read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,2)
+             else
+               read(spn_in)oper_o(1:nbnd,1+nbnd:2*nbnd,1:fullnkpts,fileidx)
+             endif  
           else
 	        read(spn_in)oper_o(1:nbnd,1:nbnd,1:fullnkpts,fileidx)
 	      endif
@@ -556,18 +581,39 @@
               enddo   
              enddo
             else
-             do i=1,num_bands1
-              do j=1,num_bands1
-                 oper_o(j,i,nkp,3)=oper_o(j,i,nkp,2)
-              enddo   
-             enddo
+
 
 !             write(*,*)"paulimat conversion:"
 !             write(*,*)"num_bands1=",num_bands1
 
+
+             if(jspins_in.eq.1)then
+              do i=1,num_bands1
+               do j=1,num_bands1
+                 oper_o(j,i,nkp,3)=oper_o(j,i,nkp,2)
+               enddo   
+              enddo
+              
+              oper_o(:,:,nkp,1)=cmplx(0.0,0.0)
+              do i=1,num_bands1
+               do j=1,num_bands1
+                 oper_o(j,i+nbnd,nkp,1)=oper_o(j,i,nkp,2)
+               enddo   
+              enddo
+              
+              
+             endif
+
              do i=1,num_bands1
               do j=1,num_bands1
                  oper_o(j+num_bands1,i+num_bands1,nkp,3)=-1.0*oper_o(j,i,nkp,3)
+              enddo   
+             enddo
+
+
+             do i=1,num_bands1
+              do j=1,num_bands1
+                 oper_o(j,i,nkp,3)=oper_o(j,i,nkp,2)
               enddo   
              enddo
 

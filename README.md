@@ -3,16 +3,41 @@ Welcome to the source code of FLEUR
 
 Please note that the documentation of the
 code can be found at the [FLEUR Homepage]
-(http://www.flapw.de/pm/index.php?n=User-Documentation.Documentation).
+(http://www.flapw.de/).
 
 For further instructions on Installation/Usage,
 please check the [FLEUR Homepage]
-(http://www.flapw.de/pm/index.php?n=User-Documentation.Documentation).
+(http://www.flapw.de/).
 
-The rest of this document summarizes only the 
-structure of the FLEUR source code. Did
-we mention to check the Homepage?
 
+## Bugs in FLEUR
+
+You might experience bugs in FLEUR :-).
+
+If you find a bug you should:
+
+A)  Report this bug by generating an Issue. Please describe in 
+detail the relevant input and what happens. You should consider using 
+the bug-template for your issue as this will help you providing us with 
+the relevant information.
+
+or/and
+
+B) Provide a bugfix. If the bug is only present in the development branch/ is due
+to a new feature under development simply commit your fix to the development branch.
+If you are fixing a bug in a release-version, please:
+* check out the git release branch: ```git checkout --track origin/release```
+* create a bugfix branch: ```git checkout -b bugfix_SOME_NAME_HERE```
+* apply your changes, test them and commit them
+* push your bugfix branch to the server: ``` git push -u origin bugfix_SOME_NAME_HERE```
+* create a merge request on the gitlab to have you bugfix merged with the release branch
+* check out the develop branch: ```git checkout develop```
+* merge your fix into the develop branch: ```git merge bugfix_SOME_NAME_HERE```
+
+
+
+
+## Structure of the source code 
 The source of FLEUR is organized in several 
 subdirectories. Some of them collect code 
 specific for particular features, others code

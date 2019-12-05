@@ -86,6 +86,11 @@ PROGRAM inpgen
       OPEN (bfh,file='bfh.txt',form='formatted',status='unknown')
 
       noco%l_ss = .FALSE.
+      noco%l_mperp = .FALSE.
+      noco%l_constr = .FALSE.
+      noco%mix_b = 0.0
+      noco%qss = 0.0
+
       CALL struct_input(&
      &                  infh,errfh,warnfh,symfh,symfn,bfh,&
      &                  natmax,nop48,&
