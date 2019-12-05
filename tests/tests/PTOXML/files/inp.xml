@@ -7,7 +7,7 @@
       <cutoffs Kmax="4.50000000" Gmax="12.00000000" GmaxXC="10.00000000" numbands="0"/>
       <scfLoop itmax="1" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0"/>
-      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
+      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F"  lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F" soc66="T"/>
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
       <bzIntegration valenceElectrons="42.00000000" mode="hist" fermiSmearingEnergy=".00331000">
