@@ -28,12 +28,12 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Co-1" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpin="T">
+      <species name="Co-1" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F" >
          <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
       </species>
-      <species name="Co-2" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpin="T">
+      <species name="Co-2" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F">
          <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="4" p="4" d="3" f="4"/>

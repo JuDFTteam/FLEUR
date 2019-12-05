@@ -25,7 +25,7 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Fe-1" element="Fe" atomicNumber="26" coreStates="4" magMom="2.20000000" flipSpin="T">
+      <species name="Fe-1" element="Fe" atomicNumber="26" coreStates="4" magMom="2.20000000" flipSpinPhi="0.00000000" flipSpinTheta="Pi" flipSpinScale="F">
          <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="4" p="4" d="3" f="4"/>

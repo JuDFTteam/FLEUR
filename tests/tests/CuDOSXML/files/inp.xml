@@ -24,7 +24,7 @@
    </cell>
    <xcFunctional name="pz" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Cu-1" element="Cu" atomicNumber="29" coreStates="7" magMom=".00000000" flipSpin="T">
+      <species name="Cu-1" element="Cu" atomicNumber="29" coreStates="7" magMom=".00000000"  flipSpinPhi=".00000000" flipSpinTheta="0.00000" flipSpinScale="F">
          <mtSphere radius="2.20000000" gridPoints="935" logIncrement=".01300000"/>
          <atomicCutoffs lmax="12" lnonsphr="8"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
