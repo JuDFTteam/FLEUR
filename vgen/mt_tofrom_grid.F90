@@ -153,7 +153,7 @@ CONTAINS
          DO js = 1, jspV
             DO lh = 0, sphhar%nlh(nd)
                DO k = 1, nsp
-                     ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh(jr, lh, js)
+                      ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh(jr, lh, js)
                   ENDDO
             ENDDO
          ENDDO
