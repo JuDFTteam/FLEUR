@@ -890,7 +890,7 @@ CONTAINS
 
    END SUBROUTINE matrixplot
 
-   SUBROUTINE procplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE procplot(stars, atoms, sphhar, sliceplot,vacuum, input, oneD, sym, cell, &
                        noco, denmat, plot_const) 
    
       ! According to iplot, we process which exact plots we make after we assured 
@@ -902,6 +902,7 @@ CONTAINS
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
+      TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_vacuum),    INTENT(IN)    :: vacuum
       TYPE(t_input),     INTENT(IN)    :: input
       TYPE(t_oneD),      INTENT(IN)    :: oneD
@@ -921,7 +922,8 @@ CONTAINS
       ! Additive term for iplot: 2
       IF (plot_const.EQ.1) THEN
          factor = 1.0
-         denName = 'denIn'
+         IF(sliceplot%slice) denName='slice'
+         IF(.NOT.sliceplot%slice)denName = 'denIn'
          score = .FALSE.
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
@@ -1154,7 +1156,7 @@ CONTAINS
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
       IF (allowplot) THEN  
          CALL checkplotinp()
-         CALL  procplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+         CALL  procplot(stars, atoms, sphhar,sliceplot, vacuum, input, oneD, sym, cell, &
                         noco, denmat, plot_const) 
       END IF
       CALL timestop("Plotting iplot plots")
