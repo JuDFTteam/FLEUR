@@ -9,7 +9,7 @@ MODULE m_divergence
    PUBLIC :: mt_div, pw_div, divergence
 
 CONTAINS
-   SUBROUTINE mt_div(jspins,n,atoms,sphhar,sym,xcB,div)
+   SUBROUTINE mt_div(jspins,n,atoms,sphhar,noco,sym,xcB,div)
    !-----------------------------------------------------------------------------!
    !By use of the cartesian components of a field, its radial/angular derivati-  !
    !ves in the muffin tin at each spherical grid point and the corresponding an- !
@@ -28,6 +28,7 @@ CONTAINS
    TYPE(t_atoms), INTENT(IN)                   :: atoms
    TYPE(t_sphhar), INTENT(IN)                  :: sphhar
    TYPE(t_sym), INTENT(IN)                     :: sym
+   TYPE(t_noco), INTENT(IN)                    :: noco
    TYPE(t_potden), dimension(3), INTENT(INOUT) :: xcB
    TYPE(t_potden), INTENT(INOUT)               :: div
 
@@ -135,7 +136,7 @@ CONTAINS
 
    CALL div%init(stars,atoms,sphhar,vacuum,noco,jspins,1001)
 
-   CALL mt_div(jspins,n,atoms,sphhar,sym,xcB,div)
+   CALL mt_div(jspins,n,atoms,sphhar,noco,sym,xcB,div)
    CALL pw_div(ifftxc3,jspins,stars,cell,noco,sym,xcB,div)
       
    END SUBROUTINE divergence
