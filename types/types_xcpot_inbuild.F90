@@ -19,13 +19,13 @@ MODULE m_types_xcpot_inbuild
    LOGICAL,PARAMETER:: priv_LDA(20)=[&
                        .FALSE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
                        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
-                       .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.]
+                       .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TRUE.]
 
 
    LOGICAL,PARAMETER:: priv_gga(20)=[&
                        .TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
                        .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
-                       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.,.TRUE.]
+                       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.,.FALSE.]
 
    LOGICAL,PARAMETER:: priv_hybrid(20)=[&
                        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
@@ -261,7 +261,7 @@ CONTAINS
          ELSEIF (xcpot%is_name("hf")) THEN
             ! Hartree-Fock  calculation: X-alpha potential is added to generate a rational local potential,
             !                            later it is subtracted again
-            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_vxc')
+!            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_vxc')
             CALL vxcxal(xcpot%data%krla,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
             !         vxc=0
          ELSEIF (xcpot%is_name("exx")) THEN
@@ -339,9 +339,12 @@ CONTAINS
             CALL excvwn(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
          ELSEIF (xcpot%is_name("pz")) THEN     ! Perdew,Zunger correlation
             CALL excpz(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
-         ELSEIF (xcpot%is_name("hf") .OR. xcpot%is_name("exx")) THEN
-            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_exc')
-            exc=0
+         ELSEIF (xcpot%is_name("hf")) THEN
+!            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_exc')
+!            exc=0
+            CALL excxal(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
+         ELSEIF (xcpot%is_name("exx")) THEN
+            CALL juDFT_error('EXX should now be treated as a GGA functional', calledby='xcpot_get_exc')
          ELSE
             CALL juDFT_error("Unkown LDA potential",calledby="type xcpot")
          ENDIF
