@@ -840,7 +840,6 @@ CONTAINS
                            lm2 = l2**2 + (m2+l2) +1 ! lm2 = lm2+1 as analytic sum
                            cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            IF (abs(cdum) > 1e-12) THEN
-                              lm1 = 0
                               DO l1 = 0, hybrid%lexp
                                  l = l1 + l2
                                  DO m1 = -l1, l1
