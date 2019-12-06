@@ -225,7 +225,7 @@ CONTAINS
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
-      INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll
+      INTEGER                 ::  lm, lm1, lm2, m1, m2, i, ll, j, k
       INTEGER                 ::  itype, ieq, ic1, m
 
       COMPLEX                 ::  atom_phase
