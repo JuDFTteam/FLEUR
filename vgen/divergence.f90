@@ -164,13 +164,15 @@ CONTAINS
    END SUBROUTINE divergence
 
    SUBROUTINE divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
-
-      !--------------------------------------------------------------------------
-      ! Use the two divergence subroutines above to now put the complete diver-  
-      ! gence of a field into a t_potden variable.                                         
-      !--------------------------------------------------------------------------   
       USE m_lh_tofrom_lm
       USE m_gradYlm
+
+      !--------------------------------------------------------------------------
+      ! Use the interstitial/vacuum divergence subroutine and an external MT-gra-
+      ! dient routine from juPhon to assemble the divergence of a field into a
+      ! t_potden variable. The MT-gradient is first calculated in sperical har-
+      ! monics coefficients.                                         
+      !--------------------------------------------------------------------------   
 
       IMPLICIT NONE
 
@@ -377,11 +379,15 @@ CONTAINS
       USE m_gradYlm
       USE m_constants
 
+      !--------------------------------------------------------------------------
+      ! Use the interstitial/vacuum gradient subroutine and an external MT-gra-
+      ! dient routine from juPhon to assemble the gradient of a potenital into a
+      ! t_potden variable. The MT-gradient is first calculated in sperical har-
+      ! monics coefficients.                                         
+      !--------------------------------------------------------------------------   
+
       IMPLICIT NONE
-      !-----------------------------------------------------------------------------
-      !Use the two gradient subroutines above to now put the complete gradient      
-      !of a potential into a t_potden variable.                                     
-      !-----------------------------------------------------------------------------  
+ 
       TYPE(t_stars),INTENT(IN)                    :: stars 
       TYPE(t_atoms), INTENT(IN)                   :: atoms
       TYPE(t_sphhar), INTENT(IN)                  :: sphhar

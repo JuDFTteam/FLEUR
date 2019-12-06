@@ -209,6 +209,7 @@ CONTAINS
    SUBROUTINE sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,itest,denMat,factor)
       USE m_xcBfield
       USE m_divergence
+      USE m_analysistests
       
       TYPE(t_mpi),                  INTENT(IN)     :: mpi
       TYPE(t_dimension),            INTENT(IN)     :: dimension
@@ -229,17 +230,20 @@ CONTAINS
       TYPE(t_potden), DIMENSION(3)                 :: aVec, cvec, corrB
       TYPE(t_potden)                               :: div, phi, checkdiv
       INTEGER                                      :: i, n, lh, l, icut(3,0:sphhar%nlhd,atoms%ntype)
-      REAL                                         :: difftests(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
       REAL                                         :: g(atoms%jmtd)
+
+      REAL :: radii(atoms%jmtd,atoms%ntype), funcsr(atoms%jmtd,atoms%ntype,3), trueder(atoms%jmtd,atoms%ntype,3), trueint(atoms%jmtd,atoms%ntype,3), &
+              testders(atoms%jmtd,atoms%ntype,3,5), testints(atoms%jmtd,atoms%ntype,3,5)
+
+      CALL buildfunctions(atoms,radii,funcsr,trueder,trueint)
+      CALL derivtest(atoms,radii,funcsr,testders)
+      CALL integtest(atoms,radii,funcsr,testints)
 
       ! Test: Build a field and either compare with theoretical results or check,
       !       whether the sourcefree routine made it sourcefree.
 
       IF (PRESENT(denMat)) THEN
         CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,1,aVec,icut,denMat,factor)
-        DO i=1,3
-           aVec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
-        END DO
         CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,icut,div,phi,cvec,corrB,checkdiv)
         CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, aVec, div, phi, cvec, corrB, checkdiv)
       ELSE

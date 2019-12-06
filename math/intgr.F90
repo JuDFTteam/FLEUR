@@ -483,13 +483,106 @@ MODULE m_intgr
       REAL,       INTENT (OUT) :: z(jri)
 
       INTEGER                  :: i
+      REAL :: alpha, h
 
-      z=0.0
+      z = zero
+      h=LOG(x(2))-LOG(x(1))
+      IF (y(1)*y(2).GT.zero) THEN 
+         alpha = 1.0 + log(y(2)/y(1))/h
+         IF (alpha.GT.zero) z(1) = x(1)*y(1)/alpha
+      ENDIF
+
+      z=z(1)
 
       DO i=2, jri
          z(i:)=z(i:)+(y(i-1)+y(i))*(x(i)-x(i-1))/2.0
       END DO
 
    END SUBROUTINE intgrt
+
+   SUBROUTINE intgrtlog(y,x,jri,z)
+      INTEGER,    INTENT (IN)  :: jri
+      REAL,       INTENT (IN)  :: x(jri), y(jri)
+      REAL,       INTENT (OUT) :: z(jri)
+
+      INTEGER                  :: i
+      REAL                     :: logr(jri),rf(jri)
+      REAL                     :: dr, alpha
+
+      logr=LOG(x)
+      dr=x(2)-x(1)
+      rf=x*y
+
+      DO i=2, jri
+         z(i:)=z(i:)+(rf(i-1)+rf(i))*dr/2.0
+      END DO
+
+   END SUBROUTINE intgrtlog
+
+
+  ! Testwise: optional integrators for source-free purposes.
+  SUBROUTINE intgr4(y,rmsh,h,jri,z)
+
+      ! Modified version of intgr2 with a different approach to the first few
+      ! points. For point 1 through 6 we use the trapezoid integrator.
+
+      INTEGER, INTENT (IN) :: jri
+      REAL,    INTENT (IN) :: h
+      REAL,    INTENT (IN) :: rmsh(jri), y(jri)
+      REAL,    INTENT (OUT):: z(jri)
+
+      REAL    :: dr, r(7)
+      INTEGER :: i, j
+      REAL    :: yr(7)
+
+      CALL intgrt(y(1:nr1),rmsh(1:nr1),nr1,z(1:nr1))
+
+      !--->    simpson integration, j>nr-1
+      dr = exp(h)
+      DO i = 1,7
+         r(i) = rmsh(i)
+         yr(i) = rmsh(i)*y(i)
+      ENDDO
+
+      DO i = 1,nr
+         r(i) = h*ih(i)*r(i)/h0
+      ENDDO
+      DO j = nr,jri
+         z(j) = z(j-nr1) + CPP_BLAS_sdot(nr,r,1,y(j-nr1),1)
+         DO i = 1,7
+            r(i) = dr*r(i)
+         ENDDO
+      ENDDO
+
+      RETURN
+   END SUBROUTINE intgr4
+
+  SUBROUTINE intgr5(y,x,h,jri,z)
+
+      INTEGER, INTENT (IN) :: jri
+      REAL,    INTENT (IN) :: h
+      REAL,    INTENT (IN) :: x(jri), y(jri)
+      REAL,    INTENT (OUT):: z(jri)
+
+      REAL    :: dr, r(7), alpha
+      INTEGER :: i, j
+      REAL    :: yr(7)
+
+      z(1) = zero
+      IF (y(1)*y(2).GT.zero) THEN 
+         alpha = 1.0 + log(y(2)/y(1))/h
+         IF (alpha.GT.zero) z(1) = x(1)*y(1)/alpha
+      ENDIF
+
+      z(2)=z(1)+h*(x(1)*y(1)+x(2)*y(2))/2
+      z(3)=z(1)+h*(x(1)*y(1)+4*x(2)*y(2)+x(3)*y(3))/3.
+      z(4)=z(1)+3*h*(x(1)*y(1)+3*x(2)*y(2)+3*x(3)*y(3)+x(4)*y(4))/8.
+
+      DO j = 5,jri
+         z(j) = z(j-4) + 2*h*(7*x(j-4)*y(j-4)+32*x(j-3)*y(j-3)+12*x(j-2)*y(j-2)+32*x(j-1)*y(j-1)+7*x(j)*y(j))/45
+      ENDDO
+
+      RETURN
+   END SUBROUTINE intgr5
 
 END MODULE m_intgr

@@ -33,7 +33,7 @@ contains
 #include"cpp_double.h"
     use m_constants
     use m_types
-    use m_intgr, only : intgr2, intgrt
+    use m_intgr!, only : intgr2, intgrt, intgr5
     use m_phasy1
     use m_sphbes
     use m_od_phasy
@@ -170,10 +170,19 @@ contains
         integrand_2(1:imax) = green_2(1:imax) * rho(1:imax,lh,n)
         call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
         call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
-        if (dosf) then
-           call intgrt(integrand_1(1:imax),atoms%rmsh(:,n),imax,integral_1(1:imax))
-           call intgrt(integrand_2(1:imax),atoms%rmsh(:,n),imax,integral_2(1:imax))
-        end if
+        ! Source-free testwise
+        !if (dosf) then
+           !if (l==5) THEN
+            !  integrand_2(1:300)=integrand_2(1:300)*(atoms%rmsh(1:300,n)/atoms%rmsh(300,n))**l
+           !end if
+           !call intgrt(integrand_1(1:imax),atoms%rmsh(:,n),imax,integral_1(1:imax))
+           !call intgrt(integrand_2(1:imax),atoms%rmsh(:,n),imax,integral_2(1:imax))
+           !vtl(lh,n)=(0.0,0.0)
+           !call intgr4(integrand_1(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_1(1:imax))
+           !call intgr4(integrand_2(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_2(1:imax))
+           !call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
+           !call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        !end if
         termsR = integral_2(imax) + ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
         vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )

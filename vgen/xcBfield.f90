@@ -94,6 +94,8 @@ CONTAINS
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
+      USE m_sphpts
+      USE m_checkdop
 
       ! Takes a vectorial quantity, i.e. a t_potden variable of dimension 3, and
       ! makes it into a source free vector field as follows:
@@ -125,11 +127,12 @@ CONTAINS
       
       TYPE(t_potden)                               :: divloc
       TYPE(t_atoms)                                :: atloc
-      INTEGER                                      :: n, jr, lh, lhmax, jcut
+      INTEGER                                      :: n, jr, lh, lhmax, jcut, nat
+      REAL                                         :: xp(3,dimension%nspd)
 
-      DO i=1,3
-         aVec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
-      END DO
+      !DO i=1,3
+      !   aVec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
+      !END DO
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
@@ -143,6 +146,7 @@ CONTAINS
 
       fcut=1.e-6
 
+      !div%mt(:300,25,:,1)=0.0
       !DO n=1,atoms%ntype   
          !lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
          !DO lh=0, lhmax
@@ -167,9 +171,9 @@ CONTAINS
 
       CALL divpotgrad2(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
 
-      DO i=1,3
-         cvec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
-      END DO
+      !DO i=1,3
+      !   cvec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
+      !END DO
 
       DO i=1,3
          CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -184,15 +188,33 @@ CONTAINS
       
       CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
 
-      !DO n=1,atoms%ntype   
-         !lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-         !DO lh=0, lhmax
-            !checkdiv%mt(:,lh,n,1)=checkdiv%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-         !END DO
-         !DO lh=0, lhmax
-            !checkdiv%mt(:,lh,n,1)=checkdiv%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
-         !END DO
-      !END DO
+      nat=1
+      DO n=1,atoms%ntype   
+         lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+         DO lh=0, lhmax
+            aVec(3)%mt(:,lh,n,1)=aVec(3)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
+            div%mt(:,lh,n,1)=div%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)   
+            checkdiv%mt(:,lh,n,1)=checkdiv%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
+            cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
+            cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
+            cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
+         END DO
+
+         DO lh=0, lhmax
+            aVec(3)%mt(:,lh,n,1)=aVec(3)%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
+            div%mt(:,lh,n,1)=div%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)      
+            checkdiv%mt(:,lh,n,1)=checkdiv%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
+            cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
+            cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
+            cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
+         END DO
+
+         CALL sphpts(xp,dimension%nspd,atoms%rmt(n),atoms%pos(1,nat))
+         CALL checkdop(xp,dimension%nspd,n,nat,0,-1,1,dimension,atoms,sphhar,stars,sym,vacuum,cell,oneD,div)
+         CALL checkdop(xp,dimension%nspd,n,nat,0,-1,1,dimension,atoms,sphhar,stars,sym,vacuum,cell,oneD,phi)
+         nat = nat + atoms%neq(n)
+
+      END DO
 
    END SUBROUTINE sourcefree
 

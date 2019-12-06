@@ -66,7 +66,6 @@ CONTAINS
    USE m_ylm
    USE m_metagga
    USE m_plot
-   USE m_sfTests
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -513,9 +512,6 @@ CONTAINS
        END IF
 
     END DO scfloop ! DO WHILE (l_cont)
-
-    !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,inDen,1.0)
-    CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,vTot,2.0)
     
     CALL add_usage_data("Iterations",iter)
 
