@@ -266,6 +266,8 @@ CONTAINS
             atom_phase = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:,iq), atoms%taual(:,ic)))
 
             DO l = 0, hybrid%lcutm1(itype)
+               !$OMP PARALLEL PRIVATE(m, carr, lm1, m1, m2, lm2, i,j,k, &
+               !$OMP lm, n1, l1, n2, l2, offdiag, lm1_0, lm2_0)
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
                   call mpbasis%set_nl(n,l,itype, n1,l1,n2,l2)
 
@@ -277,8 +279,7 @@ CONTAINS
                      lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
                      lm = lm_0
-                     !$OMP PARALLEL DO PRIVATE(m, carr, lm1, m1, m2, lm2, i,j,k, &
-                     !$OMP lm)
+                     !$OMP DO
                      DO m = -l, l
                         carr = 0.0
 
@@ -318,9 +319,10 @@ CONTAINS
                            end do
                         end do
                      END DO
-                     !$OMP END PARALLEL DO
+                     !$OMP END  DO
                   ENDIF
                END DO
+               !$OMP END PARALLEL
                lm_0 = lm_0 + mpbasis%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
             END DO
          END DO
