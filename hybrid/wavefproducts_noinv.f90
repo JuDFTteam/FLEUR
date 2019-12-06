@@ -277,6 +277,8 @@ CONTAINS
                      lm2_0 = lmstart(l2, itype) ! (corresponding to l1 and l2)
 
                      lm = lm_0
+                     !$OMP PARALLEL DO PRIVATE(m, carr, lm1, m1, m2, lm2, i,j,k, &
+                     !$OMP lm)
                      DO m = -l, l
                         carr = 0.0
 
@@ -305,6 +307,8 @@ CONTAINS
                            lm1 = lm1 + mpbasis%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
                         END DO  !m1
+
+                        lm = lm_0 + (m+l) * mpbasis%num_radbasfn(l,itype)
                         do k = 1,bandf-bandi+1
                            do j = bandoi, bandof
                               DO i = 1, mpbasis%num_radbasfn(l, itype)
@@ -313,12 +317,11 @@ CONTAINS
                               ENDDO
                            end do
                         end do
-                        lm = lm + mpbasis%num_radbasfn(l, itype) ! go to lm start index for next m-quantum number
                      END DO
+                     !$OMP END PARALLEL DO
                   ENDIF
                END DO
                lm_0 = lm_0 + mpbasis%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
-               IF (lm /= lm_0) call juDFT_error('wavefproducts_noinv2: counting of lm-index incorrect (bug?)')
             END DO
          END DO
       END DO
