@@ -94,9 +94,6 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    REAL                                 :: sumOcc, addCharge, subCharge, addChargeWeight, subChargeWeight
    REAL                                 :: rhs, totz, theta
    REAL, PARAMETER                      :: degenEps = 0.00001
-   REAL, PARAMETER                      :: convCrit = 1.0e-6
-   REAL, PARAMETER                      :: minOcc = 1.0e-8
-   LOGICAL                              :: converged, l_qfix, l_zref
    REAL, PARAMETER                      :: convCrit = 5.0e-6
    REAL, PARAMETER                      :: minOcc = 1.0e-13
    LOGICAL                              :: converged, l_qfix, l_restart, l_zref
@@ -268,7 +265,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    ALLOCATE(zintn_rSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
    ALLOCATE(vmdSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
-   
+
    zintn_rSSDen(:,:,:) = 0.0
    vmdSSDen(:,:,:) = 0.0
 
@@ -346,7 +343,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
                DO i = 1, atoms%jri(iType)
                   mt(i,iType) = singleStateDen%mt(i,0,iType,jsp)
                END DO
-            
+
                DO j = 1,atoms%jri(iType)
                   dpj(j) = mt(j,iType)/atoms%rmsh(j,iType)
                END DO
