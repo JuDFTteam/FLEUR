@@ -201,7 +201,7 @@ CONTAINS
    END SUBROUTINE divergence2
 
 
-   SUBROUTINE mt_grad(n,atoms,sphhar,sym,den,gradphi)
+   SUBROUTINE mt_grad(n,atoms,sphhar,noco,sym,den,gradphi)
       !-----------------------------------------------------------------------------
       !By use of the cartesian components of a field, its radial/angular derivati-  
       !ves in the muffin tin at each spherical grid point and the corresponding an- 
@@ -220,6 +220,7 @@ CONTAINS
       INTEGER, INTENT(IN)                         :: n
       TYPE(t_atoms), INTENT(IN)                   :: atoms
       TYPE(t_sphhar), INTENT(IN)                  :: sphhar
+      TYPE(t_noco), INTENT(IN)                    :: noco
       TYPE(t_sym), INTENT(IN)                     :: sym
       TYPE(t_potden), INTENT(IN)                  :: den
       TYPE(t_potden), dimension(3), INTENT(INOUT) :: gradphi
@@ -247,7 +248,7 @@ CONTAINS
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
-      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, denloc%mt(:,0:,n,:), n, grad)
+      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, denloc%mt(:,0:,n,:), n, noco, grad)
 
       kt = 0
       DO jr = 1, atoms%jri(n)
@@ -346,7 +347,7 @@ CONTAINS
       INTEGER :: n
 
       DO n=1,atoms%ntype
-         CALL mt_grad(n,atoms,sphhar,sym,pot,grad)
+         CALL mt_grad(n,atoms,sphhar,noco,sym,pot,grad)
       END DO
       CALL pw_grad(stars,cell,noco,sym,pot,grad)
 
