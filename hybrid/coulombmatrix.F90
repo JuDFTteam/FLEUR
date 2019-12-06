@@ -835,6 +835,7 @@ CONTAINS
                         structconst1(ic1, :) = structconst(:, ic1, ic2, ikpt)
                      END DO
                      DO l2 = 0, hybrid%lexp
+                        ! !$OMP PARALLEL DO PRIVATE(m2, lm2, cdum, lm1, l1, l)
                         DO m2 = -l2, l2
                            lm2 = l2**2 + (m2+l2) +1 ! lm2 = lm2+1 as analytic sum
                            cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
@@ -842,11 +843,9 @@ CONTAINS
                               lm1 = 0
                               DO l1 = 0, hybrid%lexp
                                  l = l1 + l2
-                                 M = -l1 - m2 !first loop of m1
-                                 lm = l**2 + l + M
                                  DO m1 = -l1, l1
                                     lm1 = l1**2 + (m1+l1)+1 ! lm1 = lm1+1 as ana-sum
-                                    lm = l**2 + l + M + (m1+l1) + 1
+                                    lm = l**2 + l -l1 - m2 + (m1+l1) + 1
                                     cdum1 = cdum*gmat(lm1, lm2)
                                     DO ic1 = 1, atoms%nat
                                        carr2(ic1, lm1) = carr2(ic1, lm1) + cdum1*structconst1(ic1, lm)
