@@ -49,7 +49,8 @@ MODULE m_types_greensfCoeffs
          COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
 
          CONTAINS
-            PROCEDURE, PASS :: init => greensfCoeffs_init
+            PROCEDURE, PASS :: init    =>  greensfCoeffs_init
+            PROCEDURE       :: eMesh   =>  getEnergyMesh
       END TYPE t_greensfCoeffs
 
    PUBLIC t_greensfCoeffs
@@ -108,6 +109,27 @@ MODULE m_types_greensfCoeffs
          END IF
 
       END SUBROUTINE greensfCoeffs_init
+
+      SUBROUTINE getEnergyMesh(this,ne,eMesh)
+
+         IMPLICIT NONE
+
+         CLASS(t_greensfCoeffs),    INTENT(IN)  :: this
+         INTEGER,                   INTENT(OUT) :: ne
+         REAL, ALLOCATABLE,         INTENT(OUT) :: eMesh(:)
+
+         INTEGER :: ie
+
+         ne = this%ne
+
+         IF(ALLOCATED(eMesh)) DEALLOCATE(eMesh)
+         ALLOCATE(eMesh(ne))
+
+         DO ie = 1, ne
+            eMesh(ie) = (ie-1)*this%del+this%e_bot
+         ENDDO
+
+      END SUBROUTINE getEnergyMesh
 
 
 END MODULE m_types_greensfCoeffs
