@@ -138,9 +138,10 @@ CONTAINS
       IF (mpi%irank == 0) THEN
          CALL timestart("Vxc in MT")
       END IF
+      
 
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
-                  EnergyDen, vTot, vx, exc)
+                  EnergyDen, noco,vTot, vx, exc)
 
       ! add MT EXX potential to vr
       IF (mpi%irank == 0) THEN

@@ -207,12 +207,10 @@ c***************************************c
        ! yl1(lm) for b1 and yl2(lm) for b2
        yl1 = cmplx(0.,0.)
        bkrot=MATMUL(bpt,bmat)
-!       call cotra3(bpt,bkrot,bmat)
        call ylm4(lwn,bkrot,yl1)
 
        yl2 = cmplx(0.,0.)
        bkrot=MATMUL(bpt2,bmat)
-!       call cotra3(bpt2,bkrot,bmat)
        call ylm4(lwn,bkrot,yl2)
        call cpu_time(t0)
        t33 = t33 + t0-t1

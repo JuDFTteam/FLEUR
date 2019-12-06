@@ -18,8 +18,8 @@ MODULE m_intgr
   !    intgr1: indefinite       y r1        h jri  | z(jri)
   !    intgr2: indefinite       y rmsh(jri) h jri  | z(jri)
   !    intgr3:   definite       y rmsh(jri) h jri  | z
-  !    intgz0:   definite       y tail      n nmz  ! z
-  !    intgz1: indefinite       y tail      n nmz  ! z(nmz)
+  !    intgz0:   definite       y tail      n nmz  | z
+  !    intgz1: indefinite       y tail      n nmz  | z(nmz)
   !
   !                                                            m. weinert
   !**********************************************************************

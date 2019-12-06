@@ -40,10 +40,11 @@ MODULE m_pot_io
 
    CONTAINS
 
-   SUBROUTINE readPotential(stars,vacuum,atoms,sphhar,input,sym,archiveType,&
+   SUBROUTINE readPotential(stars,noco,vacuum,atoms,sphhar,input,sym,archiveType,&
                             iter,fr,fpw,fz,fzxy)
 
       TYPE(t_stars),INTENT(IN)  :: stars
+      TYPE(t_noco),INTENT(IN)       :: noco
       TYPE(t_vacuum),INTENT(IN) :: vacuum
       TYPE(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_sphhar),INTENT(IN) :: sphhar
@@ -103,7 +104,7 @@ MODULE m_pot_io
                              currentStructureIndex,currentStepfunctionIndex)
 
             CALL readPotentialHDF(fileID, archiveName, potentialType,&
-                                  iter,fr,fpw,fz,fzxy)
+                                  iter,fr,fpw,fz,fzxy,noco%l_mtNocoPot)
 
             CALL closeCDNPOT_HDF(fileID)
          ELSE
@@ -159,7 +160,7 @@ MODULE m_pot_io
 
    END SUBROUTINE readPotential
 
-   SUBROUTINE writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
+   SUBROUTINE writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                              iter,pot,fpw)
 
       TYPE(t_stars),INTENT(IN)      :: stars
@@ -169,6 +170,7 @@ MODULE m_pot_io
       TYPE(t_sphhar),INTENT(IN)     :: sphhar
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_sym),INTENT(IN)        :: sym
+      TYPE(t_noco),INTENT(IN)       :: noco
       TYPE(t_oneD),INTENT(IN)       :: oneD
       TYPE(t_potden), INTENT(INOUT) :: pot
 
@@ -225,7 +227,7 @@ MODULE m_pot_io
          END IF
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-                                currentStepfunctionIndex,iter,pot,fpw)
+                                currentStepfunctionIndex,iter,pot,fpw,noco%l_mtNocoPot)
 
          IF(l_storeIndices) THEN
             CALL writePOTHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,&

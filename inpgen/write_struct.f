@@ -89,7 +89,6 @@
       na = 0
       DO nn = 1, ntype
          DO n = 1, neq(nn)
-           !CALL cotra0(pos(:,natmap(na+n)),posc,amat)
            posc=matmul(amat,pos(:,natmap(na+n)))
 !           DO i = 1, 2
 !             IF (posc(i).LT.0) posc(i) = posc(i) + amat(i,i)
