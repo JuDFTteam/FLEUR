@@ -835,10 +835,9 @@ CONTAINS
                         structconst1(ic1, :) = structconst(:, ic1, ic2, ikpt)
                      END DO
                      DO l2 = 0, hybrid%lexp
-                        idum = 1
                         DO m2 = -l2, l2
                            lm2 = lm2 + 1
-                           cdum = idum*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
+                           cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            IF (abs(cdum) > 1e-12) THEN
                               lm1 = 0
                               DO l1 = 0, hybrid%lexp
@@ -855,7 +854,6 @@ CONTAINS
                                  END DO
                               END DO
                            END IF
-                           idum = -idum !factor (-1)**(l+M)
                         END DO
                      END DO
                   END DO
