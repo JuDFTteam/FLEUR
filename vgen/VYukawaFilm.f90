@@ -110,7 +110,7 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, &
+    call Vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, .FALSE., &
                VYukawa%pw(:,1), den%mt(:,0:,:,1), VYukawa%potdenType, &
                VYukawa%mt(:,0:,:,1) )
 
@@ -951,7 +951,7 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, &
+    call Vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, .FALSE., &
                VYukawaModification%pw(:,1), den%mt(:,0:,:,1), VYukawaModification%potdenType, &
                VYukawaModification%mt(:,0:,:,1) )
 
