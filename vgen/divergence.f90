@@ -70,52 +70,50 @@ CONTAINS
 
    END SUBROUTINE mt_div
 
-   SUBROUTINE pw_div(ifftxc3,jspins,stars,cell,noco,sym,xcB,div)
-   !-----------------------------------------------------------------------------!
-   !By use of the cartesian components of a field, its radial/angular derivati-  !
-   !ves in the muffin tin at each spherical grid point and the corresponding an- !
-   !gles:                                                                        !
-   !                                                                             !
-   !Make the divergence of said field in real space and store it as a source     !
-   !density, again represented by mt-coefficients in a potden.                   !
-   !                                                                             !
-   !Code by A. Neukirchen, September 2019                                        !
-   !-----------------------------------------------------------------------------! 
-   USE m_pw_tofrom_grid
+   SUBROUTINE pw_div(stars,sym,cell,noco,bxc,div)
+      USE m_pw_tofrom_grid
+      !--------------------------------------------------------------------------
+      !By use of the cartesian components of a field and its cartesian derivatives  
+      !in the interstitial/vacuum region at each grid point:                        
+      !                                                                             
+      !Make the divergence of said field in real space and store it as a source     
+      !density, again represented by pw-coefficients in a potden.                   
+      !                                                                             
+      !Code by A. Neukirchen, September 2019                                        
+      !--------------------------------------------------------------------------
 
-   IMPLICIT NONE
-   
-   INTEGER, INTENT(IN)                         :: jspins, ifftxc3
-   TYPE(t_sym), INTENT(IN)                     :: sym
-   TYPE(t_noco), INTENT(IN)                    :: noco
-   TYPE(t_stars),INTENT(IN)                    :: stars
-   TYPE(t_cell),INTENT(IN)                     :: cell
-   TYPE(t_potden), dimension(3), INTENT(INOUT) :: xcB
-   TYPE(t_potden), INTENT(INOUT)               :: div
 
-   TYPE(t_gradients)                           :: gradx, grady, gradz
+      IMPLICIT NONE
 
-   REAL, ALLOCATABLE :: div_temp(:, :)
-   INTEGER :: i, nsp
+      TYPE(t_stars),                INTENT(IN)    :: stars   
+      TYPE(t_sym),                  INTENT(IN)    :: sym
+      TYPE(t_cell),                 INTENT(IN)    :: cell
+      TYPE(t_noco),                 INTENT(IN)    :: noco
+      TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: bxc
+      TYPE(t_potden),               INTENT(INOUT) :: div
 
-   nsp = 3*ifftxc3
+      TYPE(t_gradients)                           :: gradx,grady,gradz
+     
+      REAL, ALLOCATABLE :: div_temp(:, :)
+      INTEGER :: i,ifftxc3
 
-   ALLOCATE (gradx%gr(3,nsp,jspins),grady%gr(3,nsp,jspins),gradz%gr(3,nsp,jspins))
-   ALLOCATE (div_temp(nsp,jspins))
+      ifftxc3=stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
 
-   CALL init_pw_grid(.TRUE.,stars,sym,cell)
+      ALLOCATE (div_temp(ifftxc3,1))
 
-   CALL pw_to_grid(.TRUE.,jspins,noco%l_noco,stars,cell,xcB(1)%pw,gradx)
-   CALL pw_to_grid(.TRUE.,jspins,noco%l_noco,stars,cell,xcB(2)%pw,grady)
-   CALL pw_to_grid(.TRUE.,jspins,noco%l_noco,stars,cell,xcB(3)%pw,gradz)
+      CALL init_pw_grid(.TRUE.,stars,sym,cell)
 
-   DO i = 1, nsp
+      CALL pw_to_grid(.TRUE.,1,.FALSE.,stars,cell,bxc(1)%pw,gradx)
+      CALL pw_to_grid(.TRUE.,1,.FALSE.,stars,cell,bxc(2)%pw,grady)
+      CALL pw_to_grid(.TRUE.,1,.FALSE.,stars,cell,bxc(3)%pw,gradz)
+
+      DO i = 1, ifftxc3
          div_temp(i,1)=gradx%gr(1,i,1)+grady%gr(2,i,1)+gradz%gr(3,i,1)
-   ENDDO ! i
-    
-   CALL pw_from_grid(.TRUE.,stars,.TRUE.,div_temp,div%pw,div%pw_w)
+      ENDDO ! i
+       
+      CALL pw_from_grid(.TRUE.,stars,.TRUE.,div_temp,div%pw,div%pw_w)
 
-   CALL finish_pw_grid()
+      CALL finish_pw_grid()
    
    END SUBROUTINE pw_div
 
