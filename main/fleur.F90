@@ -225,8 +225,6 @@ CONTAINS
        IF (noco%l_soc) dimension%neigd2 = dimension%neigd*2
 
        !HF
-       !$ num_threads = omp_get_max_threads()
-       !$ call omp_set_num_threads(1)
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
@@ -245,7 +243,6 @@ CONTAINS
        IF(.not.input%eig66(1))THEN
           CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
        END IF
-       !$ call omp_set_num_threads(num_threads)
 
        !#endif
 

@@ -14,6 +14,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    USE m_types
    USE m_juDFT
    USE m_constants
+   USE m_intgr, ONLY : intgr3
    USE m_eig66_io
 #ifndef CPP_OLDINTEL
    USE m_cdnval
@@ -80,18 +81,20 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_mat)                          :: exMat, zMat, olap, trafo, invtrafo, tmpMat, exMatLAPW
    TYPE(t_lapw)                         :: lapw
    TYPE(t_hybdat)                       :: hybdat
-   INTEGER                              :: ikpt,ikpt_i,iband_i, iBand, jkpt, jBand, iAtom, i, na, itype, lh, j
+   INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, i, na, itype, lh, j
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
    INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF, mnobd
-   INTEGER                              :: iState, iStep, numStates, maxHistoryLength, numRelevantStates
+   INTEGER                              :: iState, iStep, numStates, numRelevantStates, convIter
+   INTEGER                              :: maxHistoryLength
    REAL                                 :: fix, potDenInt, fermiEnergyTemp, spinDegenFac
    REAL                                 :: rdmftFunctionalValue, occStateI, gradSum
    REAL                                 :: exchangeTerm, lagrangeMultiplier, equalityCriterion
-   REAL                                 :: mixParam, rdmftEnergy
-   REAL                                 :: sumOcc, tempOcc, addCharge, subCharge, addChargeWeight, subChargeWeight
+   REAL                                 :: mixParam, rdmftEnergy, occSum
+   REAL                                 :: sumOcc, addCharge, subCharge, addChargeWeight, subChargeWeight
+   REAL                                 :: rhs, totz, theta
    REAL, PARAMETER                      :: degenEps = 0.00001
-   REAL, PARAMETER                      :: convCrit = 1.0e-6
-   REAL, PARAMETER                      :: minOcc = 1.0e-8
+   REAL, PARAMETER                      :: convCrit = 5.0e-6
+   REAL, PARAMETER                      :: minOcc = 1.0e-13
    LOGICAL                              :: converged, l_qfix, l_restart, l_zref
    CHARACTER(LEN=20)                    :: filename
 
@@ -105,9 +108,15 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    REAL                                 :: wl_iks(dimension%neigd,kpts%nkptf)
 
+   REAL                                 :: vmd(atoms%ntype), zintn_r(atoms%ntype), dpj(atoms%jmtd), mt(atoms%jmtd,atoms%ntype)
+
    REAL, ALLOCATABLE                    :: overallVCoulSSDen(:,:,:)
    REAL, ALLOCATABLE                    :: vTotSSDen(:,:,:)
    REAL, ALLOCATABLE                    :: dEdOcc(:,:,:)
+
+   REAL, ALLOCATABLE                    :: zintn_rSSDen(:,:,:)
+   REAL, ALLOCATABLE                    :: vmdSSDen(:,:,:)
+
 
    REAL, ALLOCATABLE                    :: exDiag(:,:,:)
    REAL, ALLOCATABLE                    :: eig_irr(:,:)
@@ -195,12 +204,15 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       END DO
    END DO
 
+   IF (ANY(results%w_iksRDMFT(:,:,:).NE.0.0)) THEN
+      results%w_iks(:,:,:) = results%w_iksRDMFT(:,:,:)
+   END IF
+
    ! Move occupations of relevant states well into allowed region
    numRelevantStates = SUM(highestState(:,:)) - SUM(lowestState(:,:)) + input%jspins*kpts%nkpt
    ALLOCATE(occupationVec(numRelevantStates))
    occupationVec(:) = 0.0
    sumOcc = 0.0
-   tempOcc = 0.0
    addCharge = 0.0
    subCharge = 0.0
    addChargeWeight = 0.0
@@ -213,12 +225,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             iState = iState + 1
             occupationVec(iState) = results%w_iks(iBand,ikpt,jsp) / (kpts%wtkpt(ikpt))
             sumOcc = sumOcc + results%w_iks(iBand,ikpt,jsp)
-            IF(occupationVec(iState).LT.0.01) THEN
-               addCharge = addCharge + (0.01-occupationVec(iState))*kpts%wtkpt(ikpt)
+            IF(occupationVec(iState).LT.0.0001) THEN
+               addCharge = addCharge + (0.0001-occupationVec(iState))*kpts%wtkpt(ikpt)
                addChargeWeight = addChargeWeight + kpts%wtkpt(ikpt)
             END IF
-            IF(occupationVec(iState).GT.0.99) THEN
-               subCharge = subCharge + (occupationVec(iState)-0.99)*kpts%wtkpt(ikpt)
+            IF(occupationVec(iState).GT.0.9999) THEN
+               subCharge = subCharge + (occupationVec(iState)-0.9999)*kpts%wtkpt(ikpt)
                subChargeWeight = subChargeWeight + kpts%wtkpt(ikpt)
             END IF
          END DO
@@ -230,14 +242,13 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       DO ikpt = 1, kpts%nkpt
          DO iBand = lowestState(ikpt,jspin), highestState(ikpt,jspin)
             iState = iState + 1
-            IF(occupationVec(iState).LT.0.01) THEN
+            IF(occupationVec(iState).LT.0.0001) THEN
                occupationVec(iState) = occupationVec(iState) + 0.5*(subCharge+addCharge)*(kpts%wtkpt(ikpt)/addChargeWeight)
             END IF
-            IF(occupationVec(iState).GT.0.99) THEN
+            IF(occupationVec(iState).GT.0.9999) THEN
                occupationVec(iState) = occupationVec(iState) - 0.5*(subCharge+addCharge)*(kpts%wtkpt(ikpt)/subChargeWeight)
             END IF
             results%w_iks(iBand,ikpt,jsp) = occupationVec(iState) * kpts%wtkpt(ikpt)
-            tempOcc = tempOcc + occupationVec(iState) * kpts%wtkpt(ikpt)
          END DO
       END DO
    END DO
@@ -250,6 +261,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    ALLOCATE(overallVCoulSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
    ALLOCATE(vTotSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
    ALLOCATE(dEdOcc(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
+
+   ALLOCATE(zintn_rSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
+   ALLOCATE(vmdSSDen(MAXVAL(results%neig(1:kpts%nkpt,1:input%jspins)),kpts%nkpt,input%jspins))
+   
+   zintn_rSSDen(:,:,:) = 0.0
+   vmdSSDen(:,:,:) = 0.0
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
@@ -279,23 +296,25 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    vTotSSDen = 0.0
 
    ! Calculate all single state densities
-   CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
 
    numStates = 0
    DO jspin = 1, input%jspins
       jsp = MERGE(1,jspin,noco%l_noco)
+
+      CALL cdnvalJob%init(mpi,input,kpts,noco,results,jsp)
+
       DO ikpt_i = 1, SIZE(mpi%k_list)
          ikpt= mpi%k_list(ikpt_i)
-         DO iBand_i = 1,size(cdnvalJOB%ev_list)
-            iband=mpi%ev_list(iband_i)
-            IF (iband>highestState(ikpt,jsp)) CYCLE
+         DO iBand = 1, highestState(ikpt,jsp)
             numStates = numStates + 1
             ! Construct cdnvalJob object for this state
             ! (Reasonable parallelization is not yet done - should be placed over the loops enclosing this section)
+
             cdnvalJob%k_list=[ikpt]
-            cdnvalJob%ev_list=[iband]
+!            cdnvalJob%ev_list=[iBand]
+            cdnvalJob%weights(:,:) = 0.0
             cdnvalJob%weights(iBand,ikpt) = spinDegenFac
-     
+
             ! Call cdnval to construct density
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
@@ -317,6 +336,30 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             potDenInt = 0.0
             CALL int_nv(jsp,stars,vacuum,atoms,sphhar,cell,sym,input,oneD,vTotTemp,singleStateDen,potDenInt)
             vTotSSDen(iBand,ikpt,jsp) = potDenInt
+
+            mt(:,:) = 0.0
+            DO iType = 1, atoms%ntype
+               DO i = 1, atoms%jri(iType)
+                  mt(i,iType) = singleStateDen%mt(i,0,iType,jsp)
+               END DO
+            
+               DO j = 1,atoms%jri(iType)
+                  dpj(j) = mt(j,iType)/atoms%rmsh(j,iType)
+               END DO
+               CALL intgr3(dpj,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),rhs)
+
+               zintn_r(iType) = atoms%neq(iType)*atoms%zatom(iType)*sfp_const*rhs/2.0
+               zintn_rSSDen(iBand,ikpt,jsp) = zintn_rSSDen(iBand,ikpt,jsp) + zintn_r(iType)
+
+               CALL intgr3(mt(1,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),totz)
+
+!               vmd(iType) = atoms%rmt(iType)*vCoul%mt(atoms%jri(iType),0,iType,1)/sfp_const + atoms%zatom(iType) - totz*sfp_const
+               vmd(iType) = -totz*sfp_const
+               vmd(iType) = -atoms%neq(iType)*atoms%zatom(iType)*vmd(iType)/ (2.0*atoms%rmt(iType))
+
+               vmdSSDen(iBand,ikpt,jsp) = vmdSSDen(iBand,ikpt,jsp) + vmd(iType)
+            END DO
+
          END DO
       END DO
    END DO
@@ -350,13 +393,15 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
+   maxHistoryLength = 7*numStates
+   maxHistoryLength = 5*numStates
+
    ALLOCATE(parent(kpts%nkptf))
    ALLOCATE(exDiag(dimension%neigd,ikpt,input%jspins))
    ALLOCATE(lastGradient(numStates+1))
    ALLOCATE(lastParameters(numStates+1))
    lastGradient = 0.0
    lastParameters = 0.0
-   maxHistoryLength = 17!7
    ALLOCATE(gradientCorrections(numStates+1,maxHistoryLength))
    ALLOCATE(paramCorrections(numStates+1,maxHistoryLength))
    gradientCorrections = 0.0
@@ -365,15 +410,19 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    ! Occupation number optimization loop
 
+   convIter = 0
+
    converged = .FALSE.
    DO WHILE (.NOT.converged)
 
       WRITE(*,*) 'RDMFT: convergence loop start'
+      convIter = convIter + 1
+      WRITE(*,'(a,i7)') 'convIter: ', convIter
 
       DO jspin = 1, input%jspins
          DO ikpt = 1,kpts%nkpt
             WRITE(*,*) 'jspin, ikpt: ', jspin, ikpt
-            WRITE(*,'(8f10.5)') results%w_iks(1:10,ikpt,jspin)
+            WRITE(*,'(10f11.6)') results%w_iks(1:10,ikpt,jspin)
          END DO
       END DO
 
@@ -381,9 +430,10 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       CALL overallDen%resetPotDen()
       jspmax = input%jspins
       IF (noco%l_mperp) jspmax = 1
+
       DO jspin = 1,jspmax
          CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
-         CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+         CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
                      sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments)
       END DO
 
@@ -556,6 +606,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
       ! Calculate total energy derivative with respect to occupations (dEdOcc)
 
+      occSum = 0.0
       gradSum = 0.0
       DO ispin = 1, input%jspins
          isp = MERGE(1,ispin,noco%l_noco)
@@ -564,30 +615,54 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             DO iBand = 1, highestState(ikpt,isp)
                occStateI = results%w_iks(iBand,ikpt,isp) / (kpts%wtkpt(ikpt))!*kpts%nkptf)
                occStateI = MAX(occStateI,minOcc)
+
+               occStateI = MIN(occStateI,1.0-minOcc)
+
 !               IF(occStateI.LT.1.0e-7) occStateI = 5.0e-4 ! This is preliminary. I have to discuss what do do here.
 !               occStateI = cdnvalJob%weights(iBand,ikpt)
                rdmftFunctionalValue = 0.5*0.5*SQRT(1.0/occStateI) ! for Müller functional derivative
 
+
+               !!! Test start
+!                  occStateI = MIN(occStateI,1.0-minOcc)
+!                  rdmftFunctionalValue = 0.5 * 0.5*pi_const*COS(0.5*pi_const*occStateI)
+
+!                  rdmftFunctionalValue = ASIN(SQRT(occStateI)) * 2.0 / pi_const
+!                  rdmftFunctionalValue = (SIN(rdmftFunctionalValue*pi_const/2.0)) * (COS(rdmftFunctionalValue*pi_const/2.0))**2.0 * pi_const
+               !!! Test 2:
+!                  occStateI = MIN(occStateI,1.0-minOcc)
+!                  rdmftFunctionalValue = ASIN(SQRT(occStateI)) * 2.0 / pi_const
+!                  rdmftFunctionalValue = COS(rdmftFunctionalValue*pi_const/2.0) * pi_const / 4.0
+               !!! Test end
+
+               occSum = occSum + results%w_iks(iBand,ikpt,isp)
+
                exchangeTerm = - rdmftFunctionalValue * exDiag(iBand,ikpt,isp) * kpts%wtkpt(ikpt) * spinDegenFac !*kpts%nkptf
 
                dEdOcc(iBand,ikpt,isp) = +((spinDegenFac * results%eig(iBand,ikpt,isp)) - vTotSSDen(iBand,ikpt,isp) + &
-                                              overallVCoulSSDen(iBand,ikpt,isp) + exchangeTerm)
+                                          overallVCoulSSDen(iBand,ikpt,isp) - &
+                                          zintn_rSSDen(iBand,ikpt,isp) + vmdSSDen(iBand,ikpt,isp) + exchangeTerm )
+
+               theta = ASIN(SQRT(occStateI))! * 2.0 /  pi_const
+               dEdOcc(iBand,ikpt,isp) = 2.0 * sin(theta) * cos(theta) * dEdOcc(iBand,ikpt,isp)
+!               dEdOcc(iBand,ikpt,isp) = dEdOcc(iBand,ikpt,isp) + 2.0 * COS(theta) * exDiag(iBand,ikpt,isp) * kpts%wtkpt(ikpt) * spinDegenFac
 
                WRITE(*,*) 'ENERGY GRADIENT CONTRIBUTIONS'
-               WRITE(*,*) 'ispin, ikpt, iBand', ispin, ikpt, iBand
+               WRITE(*,*) 'ispin, ikpt, iBand, weight', ispin, ikpt, iBand, results%w_iks(iBand,ikpt,isp)
                WRITE(*,*) 'results%eig(iBand,ikpt,isp)', results%eig(iBand,ikpt,isp)
                WRITE(*,*) 'vTotSSDen(iBand,ikpt,isp)', vTotSSDen(iBand,ikpt,isp)
                WRITE(*,*) 'overallVCoulSSDen(iBand,ikpt,isp)', overallVCoulSSDen(iBand,ikpt,isp)
+               WRITE(*,*) 'zintn_rSSDen(iBand,ikpt,isp)', zintn_rSSDen(iBand,ikpt,isp)
+               WRITE(*,*) 'vmdSSDen(iBand,ikpt,isp)', vmdSSDen(iBand,ikpt,isp)
                WRITE(*,*) 'exchangeTerm', exchangeTerm
                WRITE(*,*) 'exDiag(iBand,ikpt,isp)', exDiag(iBand,ikpt,isp)
                WRITE(*,*) 'rdmftFunctionalValue', rdmftFunctionalValue
 
-
-               gradSum = gradSum + dEdOcc(iBand,ikpt,isp) ! * results%w_iks(iBand,ikpt,isp)
+               gradSum = gradSum + dEdOcc(iBand,ikpt,isp) !* results%w_iks(iBand,ikpt,isp))
             END DO
          END DO
       END DO
-      lagrangeMultiplier = -gradSum / numStates !(input%zelec/(2.0/REAL(input%jspins)))
+      lagrangeMultiplier = -gradSum / numStates ! occSum  !(input%zelec/(2.0/REAL(input%jspins)))
 
    WRITE(*,*) 'lagrangeMultiplier: ', lagrangeMultiplier
 
@@ -613,10 +688,25 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
                iState = iState + 1
                occStateI = results%w_iks(iBand,ikpt,isp) / kpts%wtkpt(ikpt)
+
                occStateI = MAX(occStateI,minOcc)
+               occStateI = MIN(occStateI,1.0-minOcc)
+
+               theta = ASIN(SQRT(occStateI))! * 2.0 /  pi_const
+
+               WRITE(7865,'(i7,4f15.10)'), iState, occStateI, theta, sin(theta), cos(theta)
+
+!               occStateI = MAX(occStateI,minOcc)
                equalityLinCombi(iState) = kpts%wtkpt(ikpt)
+
+!               dEdOcc(iBand,ikpt,isp) = dEdOcc(iBand,ikpt,isp) + lagrangeMultiplier
+
+!               dEdOcc(iBand,ikpt,isp) = 2.0 * sin(theta) * cos(theta) * dEdOcc(iBand,ikpt,isp)
+
                gradient(iState) = dEdOcc(iBand,ikpt,isp) + lagrangeMultiplier
+
                gradient(numStates+1) = gradient(numStates+1) + occStateI * kpts%wtkpt(ikpt)
+!               parameters(iState) = theta !occStateI
                parameters(iState) = occStateI
             END DO
          END DO
@@ -625,29 +715,40 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       gradient(numStates+1) = gradient(numStates+1) - equalityCriterion ! This should actually always be 0.0
       parameters(numStates+1) = lagrangeMultiplier
 
+      WRITE(*,*) 'gradient(numStates+1): ', gradient(numStates+1)
+
       mixParam = 0.01 / MAXVAL(ABS(gradient(:numStates)))
+!      mixParam = MIN(0.0002,mixParam)
       WRITE(*,*) 'mixParam: ', mixParam
 
       CALL bfgs_b2(numStates+1,gradient,lastGradient,minConstraints,maxConstraints,enabledConstraints,parameters,&
                    lastParameters,equalityLinCombi,equalityCriterion,maxHistoryLength,paramCorrections,&
                    gradientCorrections,iStep,mixParam,converged,convCrit)
 
+      WRITE(3555,*) 'Occupation numbers:'
       iState = 0
       DO ispin = 1, input%jspins
          isp = MERGE(1,ispin,noco%l_noco)
          DO ikpt = 1, kpts%nkpt
             DO iBand = lowestState(ikpt,isp), highestState(ikpt,isp)
                iState = iState + 1
-               results%w_iks(iBand,ikpt,isp) = MERGE(parameters(iState) * kpts%wtkpt(ikpt),0.0,parameters(iState).GT.minOcc)
+!               parameters(iState) = (SIN(parameters(iState)*0.5*pi_const))**2.0
+               WRITE(3555,'(3i7,f15.10)') iBand, ikpt, isp, parameters(iState)
+               results%w_iks(iBand,ikpt,isp) = parameters(iState) * kpts%wtkpt(ikpt)
+!               results%w_iks(iBand,ikpt,isp) = MERGE(parameters(iState) * kpts%wtkpt(ikpt),0.0,parameters(iState).GT.minOcc)
             END DO
          END DO
       END DO
+
+      WRITE(3555,'(a,f15.10)') 'total occupation: ', SUM(parameters(:numStates))
 
       DEALLOCATE (enabledConstraints,maxConstraints,minConstraints)
       DEALLOCATE (parameters,gradient,equalityLinCombi)
 
 
    END DO ! WHILE (.NOT.converged)
+
+   WRITE(2503,*) 'convIter: ', convIter
 
    WRITE(*,*) 'RDMFT: convergence loop end'
 
@@ -674,14 +775,68 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             rdmftEnergy = rdmftEnergy + exchangeTerm + &
                           occStateI * ((spinDegenFac*results%eig(iBand,ikpt,isp)) - vTotSSDen(iBand,ikpt,isp) + &
-                                       overallVCoulSSDen(iBand,ikpt,isp))
+                                       0.5*overallVCoulSSDen(iBand,ikpt,isp))
+
+               WRITE(2505,*) 'ENERGY CONTRIBUTIONS'
+               WRITE(2505,*) 'ispin, ikpt, iBand, weight', ispin, ikpt, iBand, results%w_iks(iBand,ikpt,isp)
+               WRITE(2505,*) 'results%eig(iBand,ikpt,isp)', occStateI * spinDegenFac * results%eig(iBand,ikpt,isp)
+               WRITE(2505,*) 'vTotSSDen(iBand,ikpt,isp)', - occStateI * vTotSSDen(iBand,ikpt,isp)
+               WRITE(2505,*) 'overallVCoulSSDen(iBand,ikpt,isp)', occStateI * overallVCoulSSDen(iBand,ikpt,isp)
+               WRITE(2505,*) 'exchangeTerm', exchangeTerm
+               WRITE(2505,*) 'exDiag(iBand,ikpt,isp)', exDiag(iBand,ikpt,isp)
+               WRITE(2505,*) 'rdmftFunctionalValue', rdmftFunctionalValue
+
          END DO
       END DO
    END DO
 
+   results%w_iksRDMFT(:,:,:) = results%w_iks(:,:,:)
    results%neig(:,:) = neigTemp(:,:)
 
+
+   ! Madelung term (taken from totale):
+
+   mt=0.0
+   DO iType = 1, atoms%ntype
+      DO i = 1, atoms%jri(iType)
+         mt(i,iType) = outDen%mt(i,0,iType,1) + outDen%mt(i,0,iType,input%jspins)
+      END DO
+   END DO
+   IF (input%jspins.EQ.1) mt=mt/2.0 !we just added the same value twice
+
+   DO iType = 1, atoms%ntype
+      DO j = 1,atoms%jri(iType)
+         dpj(j) = mt(j,iType)/atoms%rmsh(j,iType)
+      END DO
+      CALL intgr3(dpj,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),rhs)
+
+      zintn_r(iType) = atoms%neq(iType)*atoms%zatom(iType)*sfp_const*rhs/2.
+      rdmftEnergy = rdmftEnergy - zintn_r(iType)
+
+      CALL intgr3(mt(1,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),totz)
+
+      vmd(iType) = atoms%rmt(iType)*vCoul%mt(atoms%jri(iType),0,iType,1)/sfp_const + atoms%zatom(iType) - totz*sfp_const
+      vmd(iType) = -atoms%neq(iType)*atoms%zatom(iType)*vmd(iType)/ (2.0*atoms%rmt(iType))
+
+      rdmftEnergy = rdmftEnergy + vmd(iType)
+
+      WRITE(2505,*) '======================================='
+      WRITE(2505,*) 'iType: ', iType
+      WRITE(2505,*) 'zintn_r(iType): ', zintn_r(iType)
+      WRITE(2505,*) 'vmd(iType): ', vmd(iType)
+      WRITE(2505,*) '======================================='
+
+   END DO
+
+
    WRITE(6,'(a,f20.10,a)') 'RDMFT energy: ', rdmftEnergy, ' Htr'
+
+   WRITE(2505,*) '======================================='
+   WRITE(2505,*) 'convIter: ', convIter
+   WRITE(2505,'(a,f20.10,a)') 'RDMFT energy: ', rdmftEnergy, ' Htr'
+   WRITE(2505,*) '======================================='
+   WRITE(2505,*) '======================================='
+   WRITE(2505,*) '======================================='
 
 #endif
 END SUBROUTINE rdmft
