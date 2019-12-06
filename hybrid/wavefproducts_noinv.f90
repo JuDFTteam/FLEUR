@@ -255,9 +255,13 @@ CONTAINS
       call read_cmt(cmt(:,:,:), nkqpt)
       call timestop("read_cmt")
 
+
+      call timestart("loop over l, l1, l2, n, n1, n2")
+      !$OMP PARALLEL PRIVATE(m, carr, lm1, m1, m2, lm2, i,j,k, &
+      !$OMP lm, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, itype, ieq, &
+      !$OMP ic, lm_0)
       lm_0 = 0
       ic = 0
-      call timestart("loop over l, l1, l2, n, n1, n2")
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
@@ -266,8 +270,7 @@ CONTAINS
             atom_phase = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:,iq), atoms%taual(:,ic)))
 
             DO l = 0, hybrid%lcutm1(itype)
-               !$OMP PARALLEL PRIVATE(m, carr, lm1, m1, m2, lm2, i,j,k, &
-               !$OMP lm, n1, l1, n2, l2, offdiag, lm1_0, lm2_0)
+
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
                   call mpbasis%set_nl(n,l,itype, n1,l1,n2,l2)
 
@@ -322,11 +325,11 @@ CONTAINS
                      !$OMP END  DO
                   ENDIF
                END DO
-               !$OMP END PARALLEL
                lm_0 = lm_0 + mpbasis%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
             END DO
          END DO
       END DO
+      !$OMP END PARALLEL
       call timestop("loop over l, l1, l2, n, n1, n2")
       call timestop("wavefproducts_noinv5 MT")
    end subroutine wavefproducts_noinv_MT
