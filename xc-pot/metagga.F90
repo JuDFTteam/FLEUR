@@ -97,7 +97,8 @@ CONTAINS
 
       CALL regCharges%init(input, atoms)
       CALL dos%init(input,        atoms, DIMENSION, kpts, vacuum)
-      CALL moments%init(input,    atoms)
+!      CALL moments%init(input,    atoms)
+      CALL moments%init(mpi,input,sphhar,atoms)
       tmp_results = results
 
       DO jspin = 1,input%jspins

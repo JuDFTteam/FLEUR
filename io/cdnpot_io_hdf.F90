@@ -1690,7 +1690,11 @@ MODULE m_cdnpot_io_hdf
 
             dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
+            ! Note: The last dimension of den%mt (input%jspins) is temporary to
+            ! avoid segmentation faults if l_mperp is set to true but there
+            ! already is a data set with l_mperp=false. At the moment this is ok
+            ! since the offdiagonal parts are never read.
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,0:,:,:input%jspins))
             CALL h5dclose_f(frSetID, hdfError)
 
             dimsInt(:3)=(/2,ng3,input%jspins/)
@@ -1861,7 +1865,12 @@ MODULE m_cdnpot_io_hdf
          CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
          CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
          CALL h5sclose_f(frSpaceID,hdfError)
-         CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
+         ! Note: The last dimension of den%mt (input%jspins) is temporary to
+         ! avoid segmentation faults if l_mperp is set to true but there
+         ! already is a data set with l_mperp=false. At the moment this is ok
+         ! since the offdiagonal parts are never read.
+         CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,0:,:,:input%jspins))
+         ! CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
          CALL h5dclose_f(frSetID, hdfError)
 
          dims(:3)=(/2,ng3,input%jspins/)

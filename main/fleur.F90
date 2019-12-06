@@ -200,10 +200,10 @@ CONTAINS
        dimension%neigd2 = dimension%neigd
        IF (noco%l_soc) dimension%neigd2 = dimension%neigd*2
 
+       IF (hybrid%l_hybrid) THEN
        !HF
        !$ num_threads = omp_get_max_threads()
        !$ call omp_set_num_threads(1)
-       IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
              CALL calc_hybrid(eig_id,hybrid,kpts,atoms,input,DIMENSION,mpi,noco,&
@@ -213,6 +213,7 @@ CONTAINS
              call mixing_history_reset(mpi)
              iter = 0
           END IF
+       !$ call omp_set_num_threads(num_threads)
        ENDIF
        !RDMFT
        IF(input%l_rdmft) THEN
@@ -220,8 +221,6 @@ CONTAINS
        END IF
 
        CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
-       !$ call omp_set_num_threads(num_threads)
-
        !#endif
 
 !!$             DO pc = 1, wann%nparampts

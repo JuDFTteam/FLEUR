@@ -22,7 +22,7 @@ module m_mpmom
 
 contains
 
-  subroutine mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm )
+  subroutine mpmom( input, mpi, atoms, sphhar, stars, sym, cell, oneD, qpw, rho, potdenType, qlm,l_coreCharge )
 
     use m_types
     implicit none
@@ -39,6 +39,7 @@ contains
     complex,         intent(in)   :: qpw(:)      !(stars%ng3)
     integer,         intent(in)   :: potdenType
     complex,         intent(out)  :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
+    LOGICAL, OPTIONAL, INTENT(IN) :: l_coreCharge
 
     integer                       :: j, jm, lh, mb, mem, mems, n, nd, l, nat, m
     complex                       :: qlmo(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
@@ -46,7 +47,8 @@ contains
 
     ! multipole moments of original charge density
     if ( mpi%irank == 0 ) then
-      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
+!      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
+      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
@@ -80,7 +82,8 @@ contains
   end subroutine mpmom
 
 
-  subroutine mt_moments( input, atoms, sphhar, rho, potdenType, qlmo )
+!  subroutine mt_moments( input, atoms, sphhar, rho, potdenType, qlmo )
+  subroutine mt_moments( input, atoms, sphhar, rho, potdenType,qlmo,l_coreCharge)
     ! multipole moments of original charge density
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
@@ -97,15 +100,21 @@ contains
     real,           intent(in)        :: rho(: ,0:, :)
     integer,        intent(in)        :: potdenType
     complex,        intent(out)       :: qlmo(-atoms%lmaxd:,0:,:)
+    LOGICAL, OPTIONAL, INTENT(IN)     :: l_coreCharge
 
     integer                           :: n, ns, jm, nl, l, j, mb, m, nat, i, imax, lmax
     real                              :: fint
     real                              :: f( maxval( atoms%jri ) )
     real, allocatable, dimension(:,:) :: il, kl
+    LOGICAL                           :: l_subtractCoreCharge
 
     if ( potdenType == POTDEN_TYPE_POTYUK ) then
       allocate( il(0:atoms%lmaxd, 1:atoms%jmtd), kl(0:atoms%lmaxd, 1:atoms%jmtd) )
     end if
+
+    l_subtractCoreCharge = .TRUE.
+    if ( potdenType == POTDEN_TYPE_POTYUK ) l_subtractCoreCharge = .FALSE.
+    IF(PRESENT(l_coreCharge)) l_subtractCoreCharge = l_coreCharge
 
     qlmo = 0.0
     nat = 1
@@ -138,7 +147,8 @@ contains
           qlmo(m,l,n) = qlmo(m,l,n) + sphhar%clnu(mb,nl,ns) * fint
         end do
       end do
-      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
+!      if ( potdenType /= POTDEN_TYPE_POTYUK ) then
+      if (l_subtractCoreCharge) then
         qlmo(0,0,n) = qlmo(0,0,n) - atoms%zatom(n) / sfp_const
       end if
       nat = nat + atoms%neq(n)
@@ -147,7 +157,8 @@ contains
   end subroutine mt_moments
 
 
-  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw, potdenType, qlmp_out )
+!  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw, potdenType, qlmp_out )
+  subroutine pw_moments( input, mpi, stars, atoms, cell, sym, oneD, qpw_in, potdenType, qlmp_out )
     ! multipole moments of the interstitial charge in the spheres
 
     use m_phasy1
@@ -166,7 +177,7 @@ contains
     type(t_stars),    intent(in)   :: stars
     type(t_cell),     intent(in)   :: cell
     type(t_atoms),    intent(in)   :: atoms
-    complex,          intent(in)   :: qpw(:)
+    complex,          intent(in)   :: qpw_in(:)
     integer,          intent(in)   :: potdenType
     complex,          intent(out)  :: qlmp_out(-atoms%lmaxd:,0:,:)
 
@@ -175,6 +186,7 @@ contains
     complex                        :: pylm(( maxval( atoms%lmax ) + 1 ) ** 2, atoms%ntype)
     real                           :: sk3r, rl2
     real                           :: aj(0:maxval( atoms%lmax ) + 1 )
+    complex                        :: qpw(stars%ng3)
     logical                        :: od
     real                           :: il(0:maxval( atoms%lmax ) + 1 )
     real                           :: kl(0:maxval( atoms%lmax ) + 1 )
@@ -183,6 +195,7 @@ contains
 #endif
     complex                        :: qlmp(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
 
+    qpw = qpw_in(:stars%ng3)
     qlmp = 0.0
     if ( mpi%irank == 0 ) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
@@ -195,6 +208,10 @@ contains
         end if
       end do
     end if
+
+#ifdef CPP_MPI
+    call MPI_BCAST( qpw, size(qpw), MPI_DOUBLE_COMPLEX, 0, mpi%mpi_comm, ierr )
+#endif
 
     ! q/=0 terms: see (A16) (Coulomb case) or (A18) (Yukawa case)
     od = oneD%odi%d1
