@@ -27,4 +27,7 @@ math/ExpSave.f90
 math/intgr.F90
 math/ylm4.F90
 math/grule.f90
+math/lh_tofrom_lm.f90
+math/gradYlm.f90
+math/analysistests.f90
 )

@@ -11,7 +11,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, mpi, dimension, oneD, input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, den, vCoul, results )
+             cell, sphhar, atoms, dosf, den, vCoul, results )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator                           
     !----------------------------------------------------------------------------
@@ -50,6 +50,7 @@ contains
     type(t_cell),       intent(in)               :: cell
     type(t_sphhar),     intent(in)               :: sphhar
     type(t_atoms),      intent(in)               :: atoms 
+    LOGICAL,            INTENT(IN)               :: dosf
     type(t_potden),     intent(in)               :: den
     type(t_potden),     intent(inout)            :: vCoul
     type(t_results),    intent(inout), optional  :: results
@@ -174,8 +175,6 @@ contains
     call timestop("interstitial")
     end if ! mpi%irank == 0
 
-
-
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
 #ifdef CPP_MPI
@@ -183,15 +182,11 @@ contains
     call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, mpi%mpi_comm, ierr )
     CALL MPI_BARRIER(mpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-    call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vCoul%pw(:,ispin), &
+    call vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vCoul%pw(:,ispin), &
                den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
     call timestop( "MT-spheres" )
 
-
-
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
-
-
 
     if ( mpi%irank == 0 ) then
       CHECK_CONTINUITY: if ( input%vchk ) then
