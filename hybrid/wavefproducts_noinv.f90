@@ -53,7 +53,6 @@ CONTAINS
       call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
                                   dimension, atoms, mpbasis, hybrid, hybdat, kpts, &
                                   nkqpt, cprod)
-      call judft_error("today we only use the muffin-tin")
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
