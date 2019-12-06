@@ -135,7 +135,7 @@ CONTAINS
    CALL div%init(stars,atoms,sphhar,vacuum,noco,jspins,1001)
 
    CALL mt_div(jspins,n,atoms,sphhar,noco,sym,xcB,div)
-   CALL pw_div(stars,sym,cell,noco,bxc,div)
+   CALL pw_div(stars,sym,cell,noco,xcB,div)
       
    END SUBROUTINE divergence
 
