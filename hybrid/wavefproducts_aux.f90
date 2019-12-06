@@ -58,14 +58,14 @@ CONTAINS
    function outer_prod(x,y) result(outer)
       implicit NONE
       complex, intent(in) :: x(:), y(:)
-      complex, allocatable :: x_mat(:,:), y_mat(:,:), outer(:,:)
+      complex :: outer(size(x),size(y))
+      integer  :: i,j
 
-      allocate(x_mat(size(x), 1)      )
-      allocate(y_mat(1,      size(y)) )
-
-      x_mat(:,1) =x
-      y_mat(1,:) = y
-      outer = matmul(x_mat,y_mat)
-
+      do j = 1,size(y)
+         do i = 1,size(x)
+            outer(i,j) = x(i) * y(j)
+         enddo
+      enddo
    end function outer_prod
+
 end module m_wavefproducts_aux
