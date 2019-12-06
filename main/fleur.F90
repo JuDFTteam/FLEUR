@@ -411,8 +411,7 @@ CONTAINS
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum, &
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                      archiveType,xcpot,outDen,EnergyDen)
-                      ,gOnsite,hub1)
+                      archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1)
           !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
           outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:) = inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:)
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
