@@ -38,6 +38,7 @@ MODULE m_types_misc
       TYPE(t_energy_hf)    ::  te_hfex
       REAL                 ::  te_hfex_loc(2)
       REAL, ALLOCATABLE    :: w_iks(:,:,:)
+      REAL, ALLOCATABLE    :: w_iksRDMFT(:,:,:)
       REAL, ALLOCATABLE    :: eig(:,:,:)
       INTEGER, ALLOCATABLE :: neig(:,:) ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
 
@@ -140,6 +141,11 @@ CONTAINS
       thisResults%w_iks = 0.0
       thisResults%neig = 0
       thisResults%eig = 0.0
+
+      IF(input%l_rdmft) THEN
+         ALLOCATE (thisResults%w_iksRDMFT(neigd2,kpts%nkpt,input%jspins))
+         thisResults%w_iksRDMFT = 0.0
+      END IF
 
    END SUBROUTINE results_init
 
