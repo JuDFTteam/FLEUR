@@ -305,11 +305,14 @@ CONTAINS
                            lm1 = lm1 + mpbasis%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
                         END DO  !m1
-
-                        DO i = 1, mpbasis%num_radbasfn(l, itype)
-                           cprod(i+lm,:,:) = cprod(i+lm,:,:) &
-                                 + hybdat%prodm(i, n, l, itype)*carr *atom_phase
-                        ENDDO
+                        do k = 1,bandf-bandi+1
+                           do j = bandoi, bandof
+                              DO i = 1, mpbasis%num_radbasfn(l, itype)
+                                 cprod(i+lm,j,k) = cprod(i+lm,j,k) &
+                                       + hybdat%prodm(i, n, l, itype)*carr(j,k) *atom_phase
+                              ENDDO
+                           end do
+                        end do
                         lm = lm + mpbasis%num_radbasfn(l, itype) ! go to lm start index for next m-quantum number
                      END DO
                   ENDIF
