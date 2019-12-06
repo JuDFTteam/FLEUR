@@ -845,7 +845,7 @@ CONTAINS
                                  M = -l1 - m2 !first loop of m1
                                  lm = l**2 + l + M
                                  DO m1 = -l1, l1
-                                    lm1 = lm1 + 1
+                                    lm1 = l1**2 + (m1+l1)+1 ! lm1 = lm1+1 as ana-sum
                                     lm = lm + 1
                                     cdum1 = cdum*gmat(lm1, lm2)
                                     DO ic1 = 1, atoms%nat
