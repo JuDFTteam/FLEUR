@@ -60,7 +60,7 @@ CONTAINS
       length_zfft(1) = 3*stars%mx1
       length_zfft(2) = 3*stars%mx2
       length_zfft(3) = 3*stars%mx3
-      call fft_interface(3, length_zfft, zfft, forw)
+      call fft_interface(3, length_zfft, zfft, forw, stars%igfft(0:stars%kimax, 2))
 
       afft = real(zfft)
       bfft = aimag(zfft)

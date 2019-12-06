@@ -14,7 +14,7 @@ CONTAINS
     !     Frank Freimuth
     !**************************************************
     USE m_types
-    USE m_wann_read_inp
+!    USE m_wann_read_inp   !Call wann_read_inp now in fleur-init
     USE m_wann_projgen
     USE m_wann_kpointgen
     USE m_wann_w90kpointgen
@@ -23,6 +23,7 @@ CONTAINS
     USE m_wann_wan90prep
     USE m_wann_dipole3
     USE m_wann_dipole
+    USE m_wann_convert_fleur_w90
 
     IMPLICIT NONE
 
@@ -41,7 +42,7 @@ CONTAINS
     l_nocosoc=noco%l_noco.OR.noco%l_soc
 
     !-----read the input file to determine what to do
-    CALL wann_read_inp(input,.TRUE.,wann)
+!    CALL wann_read_inp(input,.TRUE.,wann) !call wann_read_inp now in fleur_init
 
     !-----generate projection-definition-file
     IF(wann%l_projgen) THEN
@@ -96,6 +97,35 @@ CONTAINS
             atoms%neq,atoms%zatom)
        wann%l_stopopt=.TRUE.
     ENDIF
+
+
+    !---- convert files from fleur-format to wannier90 format
+      IF(wann%l_mmn0_unf_to_spn_unf.or. &
+       wann%l_mmn0_to_spn_unf.or. &
+       wann%l_mmn0_to_spn.or. &
+       wann%l_mmn0_to_spn2.or. &
+       wann%l_mmn0_unf_to_spn.or. &
+
+       wann%l_perpmag_unf_to_tor_unf.or. &
+       wann%l_perpmag_to_tor_unf.or. &
+       wann%l_perpmag_to_tor.or. &
+       wann%l_perpmag_unf_to_tor.or. &
+
+      wann%l_hsomtx_unf_to_hsoc_unf.or. &
+      wann%l_hsomtx_to_hsoc_unf.or. &
+      wann%l_hsomtx_to_hsoc.or. &
+      wann%l_hsomtx_unf_to_hsoc .or.&
+
+      wann%l_hsomtxvec_unf_to_lmpzsoc_unf.or. &
+      wann%l_hsomtxvec_to_lmpzsoc_unf.or. &
+      wann%l_hsomtxvec_to_lmpzsoc.or. &
+      wann%l_hsomtxvec_unf_to_lmpzsoc)then
+
+         call wann_convert_fleur_w90(input%jspins,l_nocosoc,wann)
+
+         wann%l_stopopt=.true.
+    ENDIF
+
 
     IF(wann%l_stopopt)  CALL juDFT_end("wann_optional done",1) ! The 1 is temporarily. Should be mpi%irank.
 

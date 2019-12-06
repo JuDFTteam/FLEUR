@@ -22,6 +22,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_juDFT
    USE m_prpqfftmap
    USE m_cdnval
+   USE m_plot
    USE m_cdn_io
    USE m_wrtdop
    USE m_cdntot
@@ -160,8 +161,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF (sliceplot%slice) THEN
       IF (mpi%irank == 0) THEN
-         CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+         CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,.FALSE.,outDen,'cdn_slice')
+         IF (sliceplot%iplot.EQ.1) CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, outDen, 1, sliceplot) 
       END IF
       CALL juDFT_end("slice OK",mpi%irank)
    END IF
@@ -177,9 +179,9 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
 
-   IF(.TRUE.) CALL denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, outDen)
+   IF(.FALSE.) CALL denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, outDen) ! There should be a switch in the inp file for this
    IF(mpi%irank.EQ.0) THEN
-      IF(.TRUE.) CALL resMoms(input,atoms,sphhar,noco,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
+      IF(.FALSE.) CALL resMoms(input,atoms,sphhar,noco,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)

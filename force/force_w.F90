@@ -23,10 +23,10 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     !     ..
     !     .. Local Scalars ..
-    REAL sum
+    REAL maxAbsForceDist
     INTEGER i,jsp,n,nat1,ierr
     REAL eps_force
-    LOGICAL :: l_new,l_relax
+    LOGICAL :: l_new,l_forceConverged
     !     ..
     !     .. Local Arrays ..
     REAL forcetot(3,atoms%ntype)
@@ -94,19 +94,21 @@ CONTAINS
 
 
        !Check convergence of force by comparing force with old_force
-       sum=MAXVAL(ABS(forcetot - results%force_old))
+       maxAbsForceDist=MAXVAL(ABS(forcetot - results%force_old))
        results%force_old(:,:)=forcetot !Store for next iteration
        results%force=0.0
-       l_relax=sum<input%force_converged
-       IF (.NOT.l_relax) THEN
-          WRITE (6,8020) input%force_converged,sum
+       l_forceConverged=maxAbsForceDist<input%force_converged
+       l_forceConverged=l_forceConverged.and.(results%last_distance.LE.input%mindistance)
+       l_forceConverged=l_forceConverged.and.(results%last_distance.GE.0.0) ! In the first iteration results%last_distance is initialized to -1.0.
+       IF (.NOT.l_forceConverged) THEN
+          WRITE (6,8020) input%force_converged,maxAbsForceDist
 8020      FORMAT ('No new postions, force convergence required=',f8.5,'; max force distance=',f8.5)
        END IF
     ENDIF
 #ifdef CPP_MPI
-    CALL MPI_BCAST(l_relax,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(l_forceConverged,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
-    IF (l_relax.AND.input%l_f) CALL relaxation(mpi,input,atoms,cell,sym,forcetot,results%tote)
+    IF (l_forceConverged.AND.input%l_f) CALL relaxation(mpi,input,atoms,cell,sym,forcetot,results%tote)
 
   END SUBROUTINE force_w
 END MODULE m_forcew

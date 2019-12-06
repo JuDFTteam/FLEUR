@@ -322,6 +322,14 @@ SUBROUTINE slab_init(thisSlab,banddos,dimension,atoms,cell,input,kpts)
    END IF
    thisSlab%nsld = nsld
 
+   thisSlab%nmtsl = 0
+   thisSlab%nslat = 0
+   thisSlab%zsl = 0.0
+   thisSlab%volsl = 0.0
+   thisSlab%volintsl = 0.0
+   thisSlab%qintsl = 0.0
+   thisSlab%qmtsl = 0.0
+
 END SUBROUTINE slab_init
 
 

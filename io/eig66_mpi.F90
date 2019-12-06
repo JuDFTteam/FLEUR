@@ -121,21 +121,21 @@ CONTAINS
 #else
          ALLOCATE(real_data_ptr(length))
 #endif         
-      	CALL MPI_WIN_CREATE(real_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+      	CALL MPI_WIN_CREATE(real_data_ptr, length*type_size,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
     ELSEIF(PRESENT(int_data_ptr)) THEN
 #ifdef CPP_MPI_ALLOC
        CALL C_F_POINTER(ptr,int_data_ptr,(/length/type_size/))
 #else
        ALLOCATE(int_data_ptr(length))
 #endif         
-      	CALL MPI_WIN_CREATE(int_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+      	CALL MPI_WIN_CREATE(int_data_ptr, length*type_size,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
     ELSE
 #ifdef CPP_MPI_ALLOC       
        CALL C_F_POINTER(ptr,cmplx_data_ptr,(/length/type_size/))
 #else
        ALLOCATE(cmplx_data_ptr(length))
 #endif   
-       CALL MPI_WIN_CREATE(cmplx_data_ptr, length,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
+       CALL MPI_WIN_CREATE(cmplx_data_ptr, length*type_size,slot_size*type_size,Mpi_INFO_NULL, MPI_COMM,handle, e)
     ENDIF
 #endif
     END SUBROUTINE priv_create_memory
@@ -180,7 +180,6 @@ CONTAINS
        ! Get current values
        CALL  MPI_GET(neig,1,MPI_INTEGER,pe,slot,1,MPI_INTEGER,d%neig_handle,e)
        CALL MPI_WIN_UNLOCK(pe,d%neig_handle,e)
-
     ENDIF
     IF (PRESENT(eig).or.PRESENT(w_iks)) THEN
        ALLOCATE(tmp_real(MIN(SIZE(eig),d%size_eig)))
@@ -204,6 +203,7 @@ CONTAINS
        ALLOCATE(tmp_real(tmp_size))
        ALLOCATE(tmp_cmplx(tmp_size))
        DO n=1,zmat%matsize2
+          n1=n
           IF (PRESENT(list)) THEN
              IF (n>SIZE(list)) CYCLE
              n1=list(n)

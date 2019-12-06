@@ -32,7 +32,8 @@ CONTAINS
       USE m_checkdopall
       USE m_cdn_io
       USE m_convol
-      use m_cdntot
+      USE m_cdntot
+      USE m_intgr
 
       IMPLICIT NONE
 
@@ -56,10 +57,13 @@ CONTAINS
       TYPE(t_results), INTENT(INOUT), OPTIONAL :: results
 
       ! Local type instances
-      TYPE(t_potden) :: workDen, exc, veff
-      real, allocatable :: tmp_mt(:,:,:), tmp_is(:,:)
+      TYPE(t_potden)    :: workDen, exc, veff
+      REAL, ALLOCATABLE :: tmp_mt(:,:,:), tmp_is(:,:)
+      REAL, ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
+      REAL, ALLOCATABLE :: tec(:,:), qintc(:,:)
       ! Local Scalars
-      INTEGER ifftd, ifftd2, ifftxc3d, ispin, i
+      INTEGER :: ifftd, ifftd2, ifftxc3d, ispin, i, iType
+      REAL    :: dpdot
 #ifdef CPP_MPI
       include 'mpif.h'
       integer:: ierr
@@ -134,9 +138,10 @@ CONTAINS
       IF (mpi%irank == 0) THEN
          CALL timestart("Vxc in MT")
       END IF
+      
 
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
-                  EnergyDen, vTot, vx, exc)
+                  EnergyDen, noco,vTot, vx, exc)
 
       ! add MT EXX potential to vr
       IF (mpi%irank == 0) THEN
@@ -156,16 +161,13 @@ CONTAINS
             END IF
 
             veff = vTot
-            IF (xcpot%is_hybrid() .AND. hybrid%l_subvxc) THEN
+            IF (xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
                DO ispin = 1, input%jspins
                   CALL convol(stars, vx%pw_w(:, ispin), vx%pw(:, ispin), stars%ufft)
                END DO
                veff%pw = vTot%pw - xcpot%get_exchange_weight()*vx%pw
                veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight()*vx%pw_w
                veff%mt = vTot%mt - xcpot%get_exchange_weight()*vx%mt
-               exc%pw = exc%pw - xcpot%get_exchange_weight()*exc%pw
-               exc%pw_w = exc%pw_w - xcpot%get_exchange_weight()*exc%pw_w
-               exc%mt = exc%mt - xcpot%get_exchange_weight()*exc%mt
             END IF
 
             DO ispin = 1, input%jspins
@@ -181,6 +183,26 @@ CONTAINS
 8050           FORMAT(/, 10x, 'density-effective potential integrals for spin ', i2,/)
                CALL int_nv(ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, veff, workden, results%te_veff)
             END DO
+
+            IF (xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
+
+               ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,input%jspins), rhoc_vx(atoms%jmtd))
+               ALLOCATE(tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins))
+               CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
+               DEALLOCATE(tec,qintc)
+
+               DO ispin = 1, input%jspins
+                   DO iType = 1,atoms%ntype
+                      rhoc_vx(:atoms%jri(iType)) = rhoc(:atoms%jri(iType),iType,ispin) * &
+                                                   vx%mt(:atoms%jri(iType),0,iType,ispin) / sfp_const
+                      CALL intgr3(rhoc_vx,atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),dpdot)
+                      results%te_veff = results%te_veff + xcpot%get_exchange_weight() * dpdot*atoms%neq(iType)
+                   END DO
+               END DO
+
+               DEALLOCATE(rhoc,rhoc_vx)
+
+            END IF
 
             WRITE (6, FMT=8060) results%te_veff
 8060        FORMAT(/, 10x, 'total density-effective potential integral :', t40, ES20.10)

@@ -21,6 +21,12 @@ MODULE m_vmatgen
   !     stars and written to file potmat.
   !
   !     Philipp Kurz 99/11/01
+  !   
+  !     Extended for the investigation of the exch-corr B-field, which is 
+  !     analogously saved as a potden type with 3 integers (i.e. in com-
+  !     ponent space.
+  !     
+  !     A.Neukirchen 05.09.2019
   !**********************************************************************
 CONTAINS
   SUBROUTINE vmatgen(stars,atoms,vacuum,sym,input,den,vTot)
@@ -49,11 +55,10 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_potden),INTENT(IN) :: den
     TYPE(t_potden),INTENT(INOUT):: vTot
-
  
     !     ..
     !     .. Local Scalars ..
-    INTEGER imeshpt,ipot,jspin,ig2 ,ig3,ivac,ifft2,ifft3,imz,iter
+    INTEGER imeshpt,ipot,jspin,ig2 ,ig3,ivac,ifft2,ifft3,imz,iter,i
     REAL    vup,vdown,veff,beff,vziw,theta,phi
     !     ..
     !     .. Local Arrays ..
@@ -63,9 +68,7 @@ CONTAINS
     IF (ifft3.NE.SIZE(den%theta_pw)) CALL judft_error("Wrong size of angles")
     ifft2 = SIZE(den%phi_vacxy,1) 
     
-    
     ALLOCATE ( vis(ifft3,4),fftwork(ifft3))
-      
     
     !---> fouriertransform the spin up and down potential
     !---> in the interstitial, vpw, to real space (vis)
@@ -80,7 +83,7 @@ CONTAINS
        vdown = vis(imeshpt,2)
        theta = den%theta_pw(imeshpt)
        phi   = den%phi_pw(imeshpt)
-       !--->    at first determine the effective potential and magnetic field
+       !--->    at first determine the effective potential and magnetic fields
        veff  = (vup + vdown)/2.0
        beff  = (vup - vdown)/2.0
        !--->    now calculate the matrix potential, which is hermitian.
@@ -97,6 +100,7 @@ CONTAINS
        DO ipot = 1,4
           vis(imeshpt,ipot) =  vis(imeshpt,ipot) * stars%ufft(imeshpt-1)
        ENDDO
+
     ENDDO
 
     !---> Fouriertransform the matrix potential back to reciprocal space
@@ -104,6 +108,7 @@ CONTAINS
        fftwork=0.0
        CALL fft3d(vis(:,ipot),fftwork, vTot%pw_w(1,ipot), stars,-1)
     ENDDO
+    
     CALL fft3d(vis(:,3),vis(:,4), vTot%pw_w(1,3), stars,-1)
 
     IF (.NOT. input%film) RETURN
@@ -112,7 +117,6 @@ CONTAINS
 
  
     ALLOCATE(vvacxy(ifft2,vacuum%nmzxyd,2,4))
-
     
        !--->    fouriertransform the spin up and down potential
        !--->    in the vacuum, vz & vxy, to real space (vvacxy)

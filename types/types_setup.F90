@@ -161,7 +161,20 @@ MODULE m_types_setup
       !lda_u information(ntype)
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
-      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
+      !flipSpinTheta and flipSpinPhi are the angles which are given
+      !in the input to rotate the charge den by these polar angles.
+      !Typical one needs ntype angles.
+      REAL, ALLOCATABLE :: flipSpinPhi(:) 
+      REAL, ALLOCATABLE :: flipSpinTheta(:)
+      !Logical switch which decides if the rotated cdn should be scaled.
+      !Yet untested feature.
+      LOGICAL, ALLOCATABLE :: flipSpinScale(:)
+      !Angles which are calculated by magnMomFromDen.f90
+      !to be able to rotate the cdn so that the Spin-Quantization Axis
+      !and the magnetization align.
+      !Typical one needs ntype angles.
+      REAL, ALLOCATABLE :: phi_mt_avg(:)
+      REAL, ALLOCATABLE :: theta_mt_avg(:)
    CONTAINS
       procedure :: nsp => calc_nsp_atom
    END TYPE t_atoms
@@ -315,7 +328,7 @@ MODULE m_types_setup
       REAL                  ::  tolerance1  !only read in
       REAL, ALLOCATABLE   ::  basm1(:, :, :, :)
       COMPLEX, ALLOCATABLE   ::  d_wgn2(:, :, :, :)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:)                   !alloc in eigen_HF_init
+      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:,:)                   !alloc in eigen_HF_init
       REAL, ALLOCATABLE   ::  div_vv(:, :, :)
    END TYPE t_hybrid
 
@@ -354,6 +367,7 @@ MODULE m_types_setup
    END TYPE t_noco
 
    TYPE t_input
+      LOGICAL :: eig66(2)
       LOGICAL :: strho
       LOGICAL :: cdinf
       LOGICAL :: vchk
@@ -369,6 +383,7 @@ MODULE m_types_setup
       INTEGER :: gw
       INTEGER :: gw_neigd
       INTEGER :: qfix
+      INTEGER :: numBandsKPoints
       REAL    :: forcealpha !< mixing parameter for geometry optimzer
       REAL    :: epsdisp !< minimal displacement. If all displacements are < epsdisp stop
       REAL    :: epsforce !< minimal force. If all forces <epsforce stop
@@ -386,7 +401,6 @@ MODULE m_types_setup
       INTEGER:: kcrel
       LOGICAL:: frcor
       LOGICAL:: lflip
-      LOGICAL:: score
       LOGICAL:: swsp
       LOGICAL:: tria
       LOGICAL:: integ
@@ -416,12 +430,13 @@ MODULE m_types_setup
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps
       INTEGER :: rdmftStatesBelow
+      LOGICAL :: l_removeMagnetisationFromInterstitial
       INTEGER :: rdmftStatesAbove
       INTEGER :: rdmftFunctional
    END TYPE t_input
 
    TYPE t_sliceplot
-      LOGICAL :: iplot
+      INTEGER :: iplot
       LOGICAL :: slice
       LOGICAL :: plpot
       INTEGER :: kk
@@ -559,6 +574,23 @@ MODULE m_types_setup
       INTEGER :: wan90version
       INTEGER :: oc_num_orbs
       INTEGER, ALLOCATABLE :: oc_orbs(:)
+      LOGICAL :: l_mmn0_unf_to_spn_unf
+      LOGICAL :: l_mmn0_to_spn_unf
+      LOGICAL :: l_mmn0_to_spn
+      LOGICAL :: l_mmn0_to_spn2
+      LOGICAL :: l_mmn0_unf_to_spn
+      LOGICAL :: l_perpmag_unf_to_tor_unf 
+      LOGICAL :: l_perpmag_to_tor_unf
+      LOGICAL :: l_perpmag_to_tor
+      LOGICAL :: l_perpmag_unf_to_tor
+      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc_unf
+      LOGICAL :: l_hsomtxvec_to_lmpzsoc_unf
+      LOGICAL :: l_hsomtxvec_to_lmpzsoc
+      LOGICAL :: l_hsomtxvec_unf_to_lmpzsoc
+      LOGICAL :: l_hsomtx_unf_to_hsoc_unf
+      LOGICAL :: l_hsomtx_to_hsoc_unf
+      LOGICAL :: l_hsomtx_to_hsoc
+      LOGICAL :: l_hsomtx_unf_to_hsoc
       LOGICAL :: l_unformatted
       LOGICAL :: l_oc_f
       LOGICAL :: l_ndegen
@@ -586,9 +618,13 @@ MODULE m_types_setup
       LOGICAL :: l_perpmagrs
       LOGICAL :: l_perpmag
       LOGICAL :: l_perpmagat
+      INTEGER :: perpmagl
+      LOGICAL :: l_perpmagatlres
       LOGICAL :: l_perpmagatrs
       LOGICAL :: l_socmatrs
       LOGICAL :: l_socmat
+      LOGICAL :: l_socmatvec
+      LOGICAL :: l_socmatvecrs
       LOGICAL :: l_soctomom
       LOGICAL :: l_kptsreduc2
       LOGICAL :: l_nablapaulirs

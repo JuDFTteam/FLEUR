@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.28">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.31">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
    
@@ -24,6 +24,8 @@
          <xsd:enumeration value="0.27"/>
          <xsd:enumeration value="0.28"/>
          <xsd:enumeration value="0.29"/>
+         <xsd:enumeration value="0.30"/>
+         <xsd:enumeration value="0.31"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -149,6 +151,7 @@
       <xsd:attribute default="F" name="l_J" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="swsp" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="lflip" type="FleurBool" use="optional"/>
+     <xsd:attribute default="F" name="l_removeMagnetisationFromInterstitial" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.0" name="fixed_moment" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
@@ -390,7 +393,9 @@
       <xsd:attribute name="atomicNumber" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="coreStates" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="0.0" name="magMom" type="xsd:string" use="optional"/>
-      <xsd:attribute default="F" name="flipSpin" type="FleurBool" use="optional"/>
+      <xsd:attribute name="flipSpinPhi" type="xsd:string" use="required"/>
+      <xsd:attribute name="flipSpinTheta"   type="xsd:string" use="required"/>
+      <xsd:attribute name="flipSpinScale"  type="FleurBool" use="required"/>
       <xsd:attribute name="magField" type="xsd:double" use="optional"/>
       <xsd:attribute name="vcaAddCharge" type="xsd:double" use="optional"/>
    </xsd:complexType>
@@ -536,6 +541,7 @@
             <xsd:element name="kPointCount" type="KPointCountType"/>
             <xsd:element name="kPointList" type="KPointListType"/>
             <xsd:element name="kPointDensity" type="KPointDensityType"/>
+            <xsd:element name="kPointListFile" type="KPointListFileType"/>
          </xsd:choice>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="altKPointSet" type="AltKPointSetType"/>
       </xsd:sequence>
@@ -559,7 +565,7 @@
       <xsd:attribute default="99" name="maxIterBroyd" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="imix" type="MixingEnum" use="required"/>
       <xsd:attribute name="alpha" type="xsd:string" use="required"/>
-      <xsd:attribute default="0.0" name="preconditioning_param" type="xsd:string" use="optional"/>
+      <xsd:attribute default="0.0" name="precondParam" type="xsd:string" use="optional"/>
       <xsd:attribute default="2.0" name="spinf" type="xsd:string" use="optional"/>
       <xsd:attribute default="0.0" name="minDistance" type="xsd:string" use="optional"/>
       <xsd:attribute name="maxTimeToStartIter" type="xsd:string" use="optional"/>
@@ -579,9 +585,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="PlottingType">
-      <xsd:attribute default="F" name="iplot" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="score" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="plplot" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0" name="iplot" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ChargeDensitySlicingType">
@@ -597,7 +601,7 @@
       <xsd:attribute name="forcealpha" type="xsd:string" use="optional" default="0" />
       <xsd:attribute name="epsdisp" type="xsd:string" use="optional" default="0.001"/>
       <xsd:attribute name="epsforce" type="xsd:string" use="optional" default="0.001"/>
-      <xsd:attribute name="forcemix" type="xsd:integer" use="optional" default="3" />
+      <xsd:attribute name="forcemix" type="ForceMixEnum" use="optional" default="BFGS" />
       <xsd:attribute name="qfix" type="xsd:integer" use="optional" default="0" />
       <xsd:attribute name="force_converged" type="xsd:string" use="optional" default="0.00001" />
    </xsd:complexType>
@@ -828,7 +832,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="UnfoldingBandType">
-      <xsd:attribute name="unfoldband" type="FleurBool" use="required"/>
+      <xsd:attribute name="unfoldBand" type="FleurBool" use="required"/>
       <xsd:attribute name="supercellX" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="supercellY" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="supercellZ" type="xsd:positiveInteger" use="required"/>
@@ -937,10 +941,18 @@
          <xsd:enumeration value="Broyden1"/>
          <xsd:enumeration value="Broyden2"/>
          <xsd:enumeration value="Anderson"/>
-	 <xsd:enumeration value="Pulay"/>
-	 <xsd:enumeration value="rPulay"/>
-	 <xsd:enumeration value="pPulay"/>
-	 <xsd:enumeration value="aPulay"/>
+         <xsd:enumeration value="Pulay"/>
+         <xsd:enumeration value="rPulay"/>
+         <xsd:enumeration value="pPulay"/>
+         <xsd:enumeration value="aPulay"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="ForceMixEnum">
+      <xsd:restriction base="xsd:string">
+         <xsd:enumeration value="straight"/>
+         <xsd:enumeration value="CG"/>
+         <xsd:enumeration value="BFGS"/>
       </xsd:restriction>
    </xsd:simpleType>
 

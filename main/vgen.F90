@@ -57,13 +57,16 @@ CONTAINS
 
       TYPE(t_potden)                    :: workden,denRot
 
+      INTEGER :: i
+
       if (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
-
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
       ALLOCATE(vx%pw_w,mold=vTot%pw)
+      vx%pw_w = 0.0
+
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
 #else
@@ -77,7 +80,7 @@ CONTAINS
       !sum up both spins in den into workden
       CALL den%sum_both_spin(workden)
 
-      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,workden,vCoul,results)
+      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
 
       CALL vCoul%copy_both_spin(vTot)
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
@@ -86,7 +89,7 @@ CONTAINS
          CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
          denRot=den
          CALL rotate_int_den_to_local(DIMENSION,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
-         IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,denrot)         
+         IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)         
       ENDIF
 
       CALL vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&

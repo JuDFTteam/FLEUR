@@ -100,7 +100,7 @@ CONTAINS
     ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),atoms%ngopr(atoms%nat) )
     ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
     ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
-    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2),atoms%nflip(atoms%ntype) )
+    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2))
     ALLOCATE ( atoms%ncst(atoms%ntype) )
     ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
     ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
@@ -134,6 +134,9 @@ CONTAINS
     stars%sk2(:) = 0.0 ; stars%phi2(:) = 0.0
     !-odim
 
+    atoms%nlo(:) = 0
+    atoms%llo(:,:) = -1
+    input%eig66(1)=.FALSE.
     ! HF/hybrid functionals/EXX
     ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
 
@@ -181,7 +184,7 @@ CONTAINS
        INQUIRE(file="cdn1",exist=l_opti)
        IF (noco%l_noco) INQUIRE(file="rhomat_inp",exist=l_opti)
        l_opti=.NOT.l_opti
-       IF ((sliceplot%iplot).OR.(input%strho).OR.(input%swsp).OR.&
+       IF ((sliceplot%iplot.NE.0).OR.(input%strho).OR.(input%swsp).OR.&
             &    (input%lflip).OR.(input%l_bmt)) l_opti = .TRUE.
        !
 
@@ -192,6 +195,7 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_BCAST(namex,4,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(l_krla,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%eig66(1),1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
 #ifndef CPP_OLDINTEL
     CALL mpi_dist_forcetheorem(mpi,forcetheo)

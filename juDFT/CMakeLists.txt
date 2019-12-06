@@ -41,6 +41,7 @@ sysinfo.F90
 check_arguments.F90
 check_para.F90
 xmlOutput.F90
+npy.f90
 )
 if (JUDFT_USE_MPI) 
   target_compile_definitions(juDFT PUBLIC CPP_MPI)
@@ -52,7 +53,9 @@ if (JUDFT_USE_HDF5)
   endif() 
 endif()
 if (JUDFT_USE_HDF5MPI)
-  target_compile_definitions(juDFT PUBLIC CPP_HDFMPI)
+  if (JUDFT_USE_MPI) 
+    target_compile_definitions(juDFT PUBLIC CPP_HDFMPI)
+  endif()
 endif()
 if (JUDFT_USE_COLLECT)
   target_compile_definitions(juDFT PUBLIC CPP_ALLOW_USAGE_DATA)

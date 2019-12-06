@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.30">
+   <comment>
+      GaAs bulk zinc-blende structure                                                 
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.23330000" Gmax="10.73330000" GmaxXC="8.93330000" numbands="60"/>
+      <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="25" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="99"/>
+      <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
+      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
+      <prodBasis gcutm="3.09900000" tolerance=".00010000" ewaldlambda="3" lexp="16" bands="50"/>
+      <expertModes gw="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
+      <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+      <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000">
+         <kPointMesh nx="2" ny="2" nz="2" gamma="T"/>
+         <altKPointSet purpose="bands">
+            <kPointCount count="   240" gamma="F"/>
+         </altKPointSet>
+      </bzIntegration>
+      <energyParameterLimits ellow="-3.80000000" elup="11.00000000"/>
+   </calculationSetup>
+   <cell>
+      <symmetryFile filename="sym.out"/>
+      <bulkLattice scale="1.0000000000" latnam="any">
+         <bravaisMatrix>
+            <row-1>.000000000000000 5.310000000000000 5.310000000000000</row-1>
+            <row-2>5.310000000000000 .000000000000000 5.310000000000000</row-2>
+            <row-3>5.310000000000000 5.310000000000000 .000000000000000</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <xcFunctional name="pbe0" relativisticCorrections="F"/>
+   <atomSpecies>
+      <species name="Ga-1" element="Ga" atomicNumber="31" coreStates="7" magMom=".00000000" flipSpinPhi=".00000000" flipSpinTheta="0.000000" flipSpinScale="F">
+         <mtSphere radius="2.24000000" gridPoints="741" logIncrement=".01700000"/>
+         <atomicCutoffs lmax="8" lnonsphr="8"/>
+         <energyParameters s="4" p="4" d="4" f="4"/>
+         <prodBasis lcutm="4" lcutwf="8" select="4 0 4 2"/>
+         <lo type="SCLO" l="2" n="3" eDeriv="0"/>
+      </species>
+      <species name="As-1" element="As" atomicNumber="33" coreStates="7" magMom=".00000000" flipSpinPhi=".00000000" flipSpinTheta="0.000000" flipSpinScale="F">
+         <mtSphere radius="2.24000000" gridPoints="741" logIncrement=".01700000"/>
+         <atomicCutoffs lmax="8" lnonsphr="8"/>
+         <energyParameters s="4" p="4" d="4" f="4"/>
+         <prodBasis lcutm="4" lcutwf="8" select="4 0 4 2"/>
+         <lo type="SCLO" l="2" n="3" eDeriv="0"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Ga-1">
+         <relPos label="                   1">-1.000/8.000 -1.000/8.000 -1.000/8.000</relPos>
+         <force calculate="F" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="As-1">
+         <relPos label="                   2">1.000/8.000 1.000/8.000 1.000/8.000</relPos>
+         <force calculate="F" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" vacdos="F" slice="F" mcd="F">
+      <checks vchk="F" cdinf="F"/>
+      <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
+      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" />
+      <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
+      <specialOutput eonly="F" bmt="F"/>
+      <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>
+   </output>
+ <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>

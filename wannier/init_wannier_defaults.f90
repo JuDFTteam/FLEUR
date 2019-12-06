@@ -28,6 +28,7 @@ SUBROUTINE initWannierDefaults(wann)
    wann%oc_num_orbs = 0
 !        integer,allocatable :: oc_orbs(:)
 
+   wann%l_perpmagatlres= .FALSE.
    wann%l_unformatted = .FALSE.
    wann%l_oc_f = .FALSE.
    wann%l_ndegen = .FALSE.
@@ -60,6 +61,8 @@ SUBROUTINE initWannierDefaults(wann)
    wann%l_perpmagatrs = .FALSE.
    wann%l_socmatrs = .FALSE.
    wann%l_socmat = .FALSE.
+   wann%l_socmatvecrs = .FALSE.
+   wann%l_socmatvec = .FALSE.
    wann%l_soctomom = .FALSE.
    wann%l_kptsreduc2 = .FALSE.
    wann%l_nablapaulirs = .FALSE.
@@ -115,6 +118,25 @@ SUBROUTINE initWannierDefaults(wann)
    wann%l_skipkov = .FALSE.
    wann%l_matrixuHu = .FALSE.
    wann%l_matrixuHu_dmi = .FALSE.
+
+   wann%l_mmn0_unf_to_spn_unf= .FALSE.   
+   wann%l_mmn0_to_spn_unf= .FALSE.
+   wann%l_mmn0_to_spn= .FALSE.
+   wann%l_mmn0_to_spn2= .FALSE.
+   wann%l_mmn0_unf_to_spn= .FALSE.
+   wann%l_perpmag_unf_to_tor_unf= .FALSE.
+   wann%l_perpmag_to_tor_unf= .FALSE.
+   wann%l_perpmag_to_tor= .FALSE.
+   wann%l_perpmag_unf_to_tor= .FALSE.
+   wann%l_hsomtxvec_unf_to_lmpzsoc_unf= .FALSE.
+   wann%l_hsomtxvec_to_lmpzsoc_unf= .FALSE.
+   wann%l_hsomtxvec_to_lmpzsoc= .FALSE.
+   wann%l_hsomtxvec_unf_to_lmpzsoc= .FALSE.
+   wann%l_hsomtx_unf_to_hsoc_unf= .FALSE.
+   wann%l_hsomtx_to_hsoc_unf= .FALSE.
+   wann%l_hsomtx_to_hsoc= .FALSE.
+   wann%l_hsomtx_unf_to_hsoc= .FALSE.
+
 
    wann%ikptstart = 1
    wann%band_min(1:2) = -1

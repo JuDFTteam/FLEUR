@@ -140,7 +140,8 @@ SUBROUTINE xmlValidateDoc()
    errorStatus = 0
    errorStatus = validateXMLDocument()
    IF(errorStatus.NE.0) THEN
-      CALL juDFT_error("XML document cannot be validated against Schema.",calledby="xmlValidateDoc")
+      CALL juDFT_error("XML document cannot be validated against Schema.",&
+                       calledby="xmlValidateDoc",hint="See hints in lines directly above this error message.")
    END IF
 
 END SUBROUTINE xmlValidateDoc

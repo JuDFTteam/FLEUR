@@ -28,12 +28,12 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Co-1" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpin="T">
+      <species name="Co-1" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F" >
          <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
       </species>
-      <species name="Co-2" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpin="T">
+      <species name="Co-2" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F">
          <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
@@ -55,7 +55,7 @@
       <checks vchk="F" cdinf="F"/>
       <densityOfStates ndir="-1" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".00500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
-      <plotting iplot="F" score="F" plplot="F"/>
+      <plotting iplot="0"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
       <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>

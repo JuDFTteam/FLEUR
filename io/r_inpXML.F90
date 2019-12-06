@@ -123,13 +123,15 @@ CONTAINS
       INTEGER            :: mrotTemp(3,3,48)
       REAL               :: tauTemp(3,48)
       REAL               :: bk(3)
-      LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
+      LOGICAL            :: l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
       LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), tempReal
       REAL               :: ldau_phi(4),ldau_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
       LOGICAL            :: l_amf(4)
+      REAL               :: flipSpinPhi,flipSpinTheta
+      LOGICAL            :: flipSpinScale
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
@@ -192,7 +194,8 @@ CONTAINS
       ! Check version of inp.xml
       versionString = xmlGetAttributeValue('/fleurInput/@fleurInputVersion')
       IF((TRIM(ADJUSTL(versionString)).NE.'0.27').AND.(TRIM(ADJUSTL(versionString)).NE.'0.28').AND.&
-         (TRIM(ADJUSTL(versionString)).NE.'0.29')) THEN
+         (TRIM(ADJUSTL(versionString)).NE.'0.29').AND.(TRIM(ADJUSTL(versionString)).NE.'0.30').AND.&
+         (TRIM(ADJUSTL(versionString)).NE.'0.31')) THEN
          CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
       END IF
 
@@ -218,7 +221,11 @@ CONTAINS
       ALLOCATE(atoms%nlo(atoms%ntype))
       ALLOCATE(atoms%ncst(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%nflip(atoms%ntype))
+      ALLOCATE(atoms%flipSpinPhi(atoms%ntype))
+      ALLOCATE(atoms%flipSpinTheta(atoms%ntype))
+      ALLOCATE(atoms%flipSpinScale(atoms%ntype))
+      ALLOCATE(atoms%phi_mt_avg(atoms%ntype))
+      ALLOCATE(atoms%theta_mt_avg(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
@@ -344,7 +351,7 @@ CONTAINS
       END SELECT
 
       input%alpha = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
-input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@preconditioning_param'))
+      input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@precondParam'))
       input%spinf = evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
 
       ! Get parameters for core electrons
@@ -364,6 +371,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       noco%l_noco = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_noco'))
       input%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
       input%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
+      input%l_removeMagnetisationFromInterstitial=evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_removeMagnetisationFromInterstitial'))
       input%fixed_moment=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
 
   IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
@@ -672,13 +680,26 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       input%l_f = .FALSE.
       input%qfix = 0
+      input%forcemix = 2 ! BFGS is default.
 
       IF (numberNodes.EQ.1) THEN
          input%l_f = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
          input%forcealpha = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
          input%epsdisp = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
          input%epsforce = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
-         input%forcemix = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix'))
+
+         valueString = TRIM(ADJUSTL(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcemix')))
+         SELECT CASE (valueString)
+         CASE ('straight')
+            input%forcemix = 0
+         CASE ('CG')
+            input%forcemix = 1
+         CASE ('BFGS')
+            input%forcemix = 2
+         CASE DEFAULT
+            CALL juDFT_error('Error: unknown force mixing scheme selected!', calledby='r_inpXML')
+         END SELECT
+
          input%force_converged = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@force_converged'))
          input%qfix = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@qfix'))
       END IF
@@ -1138,7 +1159,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
 
       IF (input%film.AND..NOT.oneD%odd%d1) THEN
          cell%vol = (cell%omtil/cell%amat(3,3))*vacuum%dvac
-         cell%area = cell%omtil/cell%amat(3,3)
+         cell%area = cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1)
          !-odim
       ELSE IF (oneD%odd%d1) THEN
          cell%area = tpi_const*cell%amat(3,3)
@@ -1340,7 +1361,10 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
          coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
          magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
-         flipSpin = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
+         flipSpinPhi = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinPhi'))
+         flipSpinTheta = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinTheta'))
+         flipSpinScale = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinScale'))
+     
 
          ! Attributes of mtSphere element of species
          radius = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/mtSphere/@radius'))
@@ -1410,17 +1434,15 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
                noel(iType) = namat_const(atoms%nz(iType))
                atoms%rmt(iType) = radius
                atoms%jri(iType) = gridPoints
+               atoms%flipSpinPhi(itype) = flipSpinPhi               
+               atoms%flipSpinTheta(itype) =flipSpinTheta
+               atoms%flipSpinScale(itype) =flipSpinScale 
                atoms%dx(iType) = logIncrement
                atoms%lmax(iType) = lmax
                atoms%nlo(iType) = speciesNLO(iSpecies)
                atoms%ncst(iType) = coreStates
                atoms%lnonsph(iType) = lnonsphr
                atoms%lapw_l(iType) = lmaxAPW
-               IF (flipSpin) THEN
-                  atoms%nflip(iType) = 1
-               ELSE
-                  atoms%nflip(iType) = 0
-               ENDIF
                atoms%bmu(iType) = magMom
                DO i = 1, numU
                   atoms%n_u = atoms%n_u + 1
@@ -1911,9 +1933,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
       input%vchk = .FALSE.
       input%cdinf = .FALSE.
 
-      sliceplot%iplot = .FALSE.
-      input%score = .FALSE.
-      sliceplot%plpot = .FALSE.
+      sliceplot%iplot = 0
 
       input%eonly = .FALSE.
       input%l_bmt = .FALSE.
@@ -1949,9 +1969,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          numberNodes = xmlGetNumberOfNodes(xPathA)
 
          IF (numberNodes.EQ.1) THEN
-            sliceplot%iplot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
-            input%score = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
-            sliceplot%plpot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
+            sliceplot%iplot = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
          END IF
 
          ! Read in optional specialOutput switches
@@ -2155,7 +2173,7 @@ input%preconditioning_param = evaluateFirstOnly(xmlGetAttributeValue('/fleurInpu
          numberNodes = xmlGetNumberOfNodes(xPathA)
 
          IF (numberNodes.EQ.1) THEN
-            banddos%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldband'))
+            banddos%unfoldband = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@unfoldBand'))
             banddos%s_cell_x = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellX'))
             banddos%s_cell_y = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellY'))
             banddos%s_cell_z = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@supercellZ'))

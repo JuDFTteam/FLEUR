@@ -1,0 +1,15 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/sym.out",$workdir);
+
+jt::testrun("$executable ",$workdir);
+
+#now test output
+#$result=jt::test_grepexists("$workdir/out","it=  1  is completed");
+
+$result+=jt::test_grepexists("$workdir/bands_sc.1","0.91625.*0.94323");
+$result+=jt::test_grepexists("$workdir/bands_sc.1","14.16776.*0.034036");
+$result+=jt::test_grepexists("$workdir/bands_sc.2","18.195862.*0.622318");
+$result+=jt::test_grepexists("$workdir/bands_sc.2","27.134829.*0.009426");
+jt::stageresult($workdir,$result,"1");

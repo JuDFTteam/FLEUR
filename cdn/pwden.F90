@@ -7,7 +7,7 @@
 MODULE m_pwden
 CONTAINS
   SUBROUTINE pwden(stars,kpts,banddos,oneD, input,mpi,noco,cell,atoms,sym, &
-       ikpt,jspin,lapw,ne,we,eig,den,results,f_b8,zMat,dos)
+       ikpt,jspin,lapw,ne,ev_list,we,eig,den,results,f_b8,zMat,dos)
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !     In this subroutine the star function expansion coefficients of
     !     the plane wave charge density is determined.
@@ -98,6 +98,7 @@ CONTAINS
 
     REAL,INTENT(IN)   :: we(:) !(nobd) 
     REAL,INTENT(IN)   :: eig(:)!(dimension%neigd)
+    INTEGER, INTENT(IN) :: ev_list(ne)
     !----->  BASIS FUNCTION INFORMATION
     INTEGER,INTENT(IN):: ne
     !----->  CHARGE DENSITY INFORMATION
@@ -408,7 +409,7 @@ CONTAINS
              length_zfft(1) = stars%kq1_fft
              length_zfft(2) = stars%kq2_fft
              length_zfft(3) = stars%kq3_fft
-             call fft_interface(3,length_zfft,zfft,forw)
+             call fft_interface(3,length_zfft,zfft,forw,iv1d(1:lapw%nv(jspin),jspin))
              psir = real(zfft)
              psii = aimag(zfft)
              !--------------------------------
@@ -442,7 +443,7 @@ CONTAINS
                    length_zfft(1) = stars%kq1_fft
                    length_zfft(2) = stars%kq2_fft
                    length_zfft(3) = stars%kq3_fft
-                   call fft_interface(3,length_zfft,zfft,forw)
+                   call fft_interface(3,length_zfft,zfft,forw,iv1d(1:lapw%nv(jspin),jspin))
                    kpsir = real(zfft)
                    kpsii = aimag(zfft)
                    !--------------------------------
@@ -494,7 +495,7 @@ CONTAINS
              ENDDO
              DO istr = 1,stars%ng3_fft
                 CALL pwint(stars,atoms,sym, oneD,cell,istr,x)
-                dos%qis(nu,ikpt,1) = dos%qis(nu,ikpt,1) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
+                dos%qis(ev_list(nu),ikpt,1) = dos%qis(ev_list(nu),ikpt,1) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
              ENDDO
 
              cwk=0.0
@@ -504,7 +505,7 @@ CONTAINS
              ENDDO
              DO istr = 1,stars%ng3_fft
                 CALL pwint(stars,atoms,sym, oneD,cell, istr, x)
-                dos%qis(nu,ikpt,input%jspins) = dos%qis(nu,ikpt,input%jspins) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
+                dos%qis(ev_list(nu),ikpt,input%jspins) = dos%qis(ev_list(nu),ikpt,input%jspins) + REAL(cwk(istr)*x)/cell%omtil/REAL(ifftq3)
              ENDDO
           ENDIF
        ELSE

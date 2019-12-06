@@ -63,11 +63,13 @@ CONTAINS
           ! modify as needed
           !alpha = (250.0/(MAXVAL(atoms%zatom)*input%xa))*((330./input%thetad)**2)
           CALL simple_step(input%forcealpha,0.25,force,displace)
-       ELSEIF (input%forcemix==1) THEN
+       ELSE IF (input%forcemix==1) THEN
           CALL simple_cg(pos,force,displace)
-       ELSE
+       ELSE IF (input%forcemix==2) THEN
           CALL simple_bfgs(pos,force,displace)
-       ENDIF
+       ELSE
+          CALL juDFT_error('unkown mixing scheme for forces', calledby='relaxation')
+       END IF
 
        !Check for convergence of forces/displacements
        l_conv=.TRUE.
@@ -89,10 +91,10 @@ CONTAINS
     CALL MPI_BCAST(l_conv,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
 #endif
     IF (l_conv) THEN
-       CALL judft_end("Structual relaxation: Done",mpi%irank)
+       CALL judft_end("Structural relaxation: Done",mpi%irank)
     ELSE
        CALL mixing_history_reset(mpi)
-       CALL judft_end("Structual relaxation: new displacements generated",mpi%irank)
+       CALL judft_end("Structural relaxation: new displacements generated",mpi%irank)
     END IF
   END SUBROUTINE relaxation
 
@@ -141,7 +143,7 @@ CONTAINS
     DO n = 2,hist_length
        ! differences
        p(:) = RESHAPE(pos(:,:,n)-pos(:,:,n-1),(/SIZE(p)/))
-       y(:) = RESHAPE(force(:,:,n)-force(:,:,n-1),(/SIZE(p)/))
+       y(:) = RESHAPE(force(:,:,n-1)-force(:,:,n),(/SIZE(p)/))
        ! get necessary inner products and H|y>
        py = DOT_PRODUCT(p,y)
        v = MATMUL(y,h)
@@ -181,11 +183,22 @@ CONTAINS
     REAL,INTENT(OUT) :: shift(:,:)
 
     REAL                :: f1(3,SIZE(pos,2)),f2(3,SIZE(pos,2))
-    INTEGER             :: n_old
+    REAL                :: dist(3,SIZE(pos,2))
+    REAL                :: eps
+    INTEGER             :: n_old, i, j
+
+    eps = 1.0e-9
 
     n_old = SIZE(pos,3)-1
 
-    f1 = (force(:,:,n_old+1)-force(:,:,n_old))/(pos(:,:,n_old+1)-pos(:,:,n_old))
+    dist(:,:) = pos(:,:,n_old+1)-pos(:,:,n_old)
+    DO i = 1, SIZE(pos,2)
+       DO j = 1, 3
+          IF(ABS(dist(j,i)).LT.eps) dist(j,i) = eps ! To avoid calculation of 0.0/0.0 below.
+       END DO
+    END DO
+
+    f1 = (force(:,:,n_old+1)-force(:,:,n_old))/dist
     f2 = force(:,:,n_old+1)-f1*pos(:,:,n_old+1)
     shift = -1.*f2/f1-force(:,:,n_old+1)
   END SUBROUTINE simple_cg

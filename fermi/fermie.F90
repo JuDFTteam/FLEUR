@@ -7,8 +7,7 @@ MODULE m_fermie
   !            or fermi-function                                    p.kurz
   !----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE fermie(eig_id, mpi,kpts,obsolete,&
-       input, noco,e_min,cell,results)
+  SUBROUTINE fermie(eig_id,mpi,kpts,input,noco,e_min,cell,results)
 
     !---------------------------------------------------f--------------------
     !
@@ -39,13 +38,12 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
-    TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_mpi),INTENT(IN)   :: mpi
-    TYPE(t_obsolete),INTENT(IN)   :: obsolete
-    TYPE(t_input),INTENT(IN)   :: input
-    TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_cell),INTENT(IN)   :: cell
-    TYPE(t_kpts),INTENT(IN)   :: kpts
+    TYPE(t_results), INTENT(INOUT) :: results
+    TYPE(t_mpi),     INTENT(IN)    :: mpi
+    TYPE(t_input),   INTENT(IN)    :: input
+    TYPE(t_noco),    INTENT(IN)    :: noco
+    TYPE(t_cell),    INTENT(IN)    :: cell
+    TYPE(t_kpts),    INTENT(IN)    :: kpts
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: eig_id
@@ -61,8 +59,9 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     !
-    INTEGER, ALLOCATABLE :: idxeig(:),idxjsp(:),idxkpt(:),INDEX(:)
-    REAL,    ALLOCATABLE :: e(:),eig(:,:,:),we(:)
+    INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
+    REAL    :: e(SIZE(results%w_iks)),we(SIZE(results%w_iks))
+    REAL,    ALLOCATABLE :: eig(:,:,:)
     INTEGER ne(kpts%nkpt,SIZE(results%w_iks,3))
     CHARACTER(LEN=20)    :: attributes(5)
 
@@ -73,6 +72,7 @@ CONTAINS
     INCLUDE 'mpif.h'
     INTEGER, PARAMETER :: comm = MPI_COMM_SELF
     INTEGER*4 :: nv_mpi(2),idum1d(0),idum2d(0,0)
+    INTEGER ierr
 #endif
 
     !     ..
@@ -94,14 +94,11 @@ CONTAINS
     !***********************************************************************
     !     .. Data statements ..
     DATA del/1.0e-6/
-    !     ..
-    n=SIZE(results%w_iks) !size of list of all eigenvalues
-    ALLOCATE (idxeig(n),idxjsp(n),idxkpt(n),INDEX(n),e(n),we(n) )
+
     ALLOCATE (eig(SIZE(results%w_iks,1),SIZE(results%w_iks,2),SIZE(results%w_iks,3)))
 
     ! initiliaze e
     e = 0
-
 
     IF ( mpi%irank == 0 ) WRITE (6,FMT=8000)
 8000 FORMAT (/,/,1x,'fermi energy and band-weighting factors:')
@@ -125,23 +122,29 @@ CONTAINS
     IF (mpi%irank == 0) CALL openXMLElementNoAttributes('eigenvalues')
     DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
-          CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
-          IF ( mpi%irank == 0 ) THEN
+          IF (mpi%irank == 0) THEN
+             CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
              WRITE (6,'(a2,3f10.5,f12.6)') 'at',kpts%bk(:,k),kpts%wtkpt(k)
              WRITE (6,'(i5,a14)') ne(k,jsp),' eigenvalues :' 
              WRITE (6,'(8f12.6)') (eig(i,k,jsp),i=1,ne(k,jsp))
-             attributes = ''
-             WRITE(attributes(1),'(i0)') jsp
-             WRITE(attributes(2),'(i0)') k
-             WRITE(attributes(3),'(f15.8)') kpts%bk(1,k)
-             WRITE(attributes(4),'(f15.8)') kpts%bk(2,k)
-             WRITE(attributes(5),'(f15.8)') kpts%bk(3,k)
-             CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,eig(1:ne(k,jsp),k,jsp))
+             IF(.NOT.judft_was_argument("-minimalOutput")) THEN
+                attributes = ''
+                WRITE(attributes(1),'(i0)') jsp
+                WRITE(attributes(2),'(i0)') k
+                WRITE(attributes(3),'(f15.8)') kpts%bk(1,k)
+                WRITE(attributes(4),'(f15.8)') kpts%bk(2,k)
+                WRITE(attributes(5),'(f15.8)') kpts%bk(3,k)
+                CALL writeXMLElementPoly('eigenvaluesAt',(/'spin','ikpt','k_x ','k_y ','k_z '/),attributes,eig(1:ne(k,jsp),k,jsp))
+             END IF
           END IF
+#ifdef CPP_MPI
+          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
        END DO
     ENDDO
     !finished reading of eigenvalues
     IF (mpi%irank == 0) CALL closeXMLElement('eigenvalues')
+  IF (mpi%irank == 0) THEN 
 
     IF (ABS(input%fixed_moment)<1E-6) THEN
        !this is a standard calculation
@@ -253,21 +256,25 @@ CONTAINS
        ENDIF
        efermi = results%ef
     enddo
-    DEALLOCATE ( idxeig,idxjsp,idxkpt,index,e,eig,we )
+    DEALLOCATE (eig)
 
     attributes = ''
     WRITE(attributes(1),'(f20.10)') results%ef
     WRITE(attributes(2),'(a)') 'Htr'
     IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
+ ENDIF
 
+    IF(.not.input%eig66(1))THEN
     !Put w_iks into eig-file
-    IF (mpi%n_rank == 0) THEN
-       DO jsp = 1,nspins
-          DO  k = 1,kpts%nkpt
-             CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
-          ENDDO
+     DO jsp = 1,nspins
+       DO  k = 1,kpts%nkpt
+          IF (mpi%irank == 0) CALL write_eig(eig_id,k,jsp,w_iks=results%w_iks(:,k,jsp))
+#ifdef CPP_MPI
+          CALL MPI_BARRIER(mpi%mpi_comm,ierr)
+#endif
        ENDDO
-    ENDIF
+     ENDDO
+    ENDIF    
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&

@@ -24,7 +24,7 @@
 
    CONTAINS
       SUBROUTINE vmt_xc(mpi,sphhar,atoms,&
-                        den,xcpot,input,sym,EnergyDen,vTot,vx,exc)
+                        den,xcpot,input,sym,EnergyDen,noco,vTot,vx,exc)
 #include"cpp_double.h"
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
@@ -41,6 +41,7 @@
          TYPE(t_sphhar),INTENT(IN)      :: sphhar
          TYPE(t_atoms),INTENT(IN)       :: atoms
          TYPE(t_potden),INTENT(IN)      :: den,EnergyDen
+         TYPE(t_noco), INTENT(IN)       :: noco
          TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc
 #ifdef CPP_MPI
          include "mpif.h"
@@ -87,7 +88,7 @@
          ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
          IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
 
-         CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot,sym)
+         CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot%needs_grad(),sym)
 
 #ifdef CPP_MPI
          n_start=mpi%irank+1
@@ -105,7 +106,7 @@
          call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
             loc_n = loc_n + 1
-            CALL mt_to_grid(xcpot, input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,grad,ch)
+            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,noco,grad,ch)
 
             !
             !         calculate the ex.-cor. potential
@@ -133,7 +134,7 @@
             ENDIF
 
             !Add postprocessing for libxc
-            IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num=n)
+            IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,noco,n,v_xc,grad, atom_num=n)
 
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))

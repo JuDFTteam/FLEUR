@@ -211,14 +211,14 @@ CONTAINS
       !      ic         = 0
       sum_offdia = 0
       IF (l_real) THEN
-         DO n1 = 1, hybrid%nobd(nk)
+         DO n1 = 1, hybrid%nobd(nk,jsp)
             DO n2 = 1, hybrid%nbands(nk)
                ex_vv_r(n2, n1, nk) = ex_vv_r(n2, n1, nk) - exchange(n1, n2)
                IF (n1 /= n2) sum_offdia = sum_offdia + 2*ABS(exchange(n1, n2))
             END DO
          END DO
       ELSE
-         DO n1 = 1, hybrid%nobd(nk)
+         DO n1 = 1, hybrid%nobd(nk,jsp)
             DO n2 = 1, hybrid%nbands(nk)
                ex_vv_c(n2, n1, nk) = ex_vv_c(n2, n1, nk) - exchange(n1, n2)
                IF (n1 /= n2) sum_offdia = sum_offdia + 2*ABS(exchange(n1, n2))
@@ -226,7 +226,7 @@ CONTAINS
          END DO
       END IF
 
-      DO n1 = 1, hybrid%nobd(nk)
+      DO n1 = 1, hybrid%nobd(nk,jsp)
          results%te_hfex%core = results%te_hfex%core - results%w_iks(n1, nk, jsp)*exchange(n1, n1)
       END DO
 
@@ -391,7 +391,7 @@ CONTAINS
          END IF
       ENDIF
 
-      DO n1 = 1, hybrid%nobd(nk)
+      DO n1 = 1, hybrid%nobd(nk,jsp)
          results%te_hfex%core = results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1)
       END DO
 
@@ -496,8 +496,8 @@ CONTAINS
                                  CALL primitivef(primf1, rprod(:)*atoms%rmsh(:, itype)**(ll + 1), atoms%rmsh, atoms%dx, atoms%jri, atoms%jmtd, itype, atoms%ntype)
                                  CALL primitivef(primf2, rprod(:atoms%jri(itype))/atoms%rmsh(:atoms%jri(itype), itype)**ll, atoms%rmsh, atoms%dx, atoms%jri, atoms%jmtd, -itype, atoms%ntype)  ! -itype is to enforce inward integration
 
-                                 primf1 = primf1/atoms%rmsh(:, itype)**ll
-                                 primf2 = primf2*atoms%rmsh(:, itype)**(ll + 1)
+                                 primf1(:atoms%jri(itype)) = primf1(:atoms%jri(itype))/atoms%rmsh(:atoms%jri(itype), itype)**ll
+                                 primf2(:atoms%jri(itype)) = primf2(:atoms%jri(itype))*atoms%rmsh(:atoms%jri(itype), itype)**(ll + 1)
 
                                  DO n1 = 1, hybdat%nindxc(l1, itype)
 

@@ -51,13 +51,13 @@
       CHARACTER(len=80), INTENT (IN) :: title
  
       INTEGER nel,i,j, nkptOld
-      REAL    kmax,dtild,dvac1,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
+      REAL    kmax,dtild,n1,n2,gam,kmax0,dtild0,dvac0,sumWeight
       REAL    recVecLength, kPointDen(3)
       LOGICAL l_test,l_gga,l_exists, l_explicit, l_kpts
       REAL     dx0(atoms%ntype), rmtTemp(atoms%ntype)
       REAL     a1Temp(3),a2Temp(3),a3Temp(3) 
       INTEGER  div(3)
-      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype),nlo0(atoms%ntype),llo0(atoms%nlod,atoms%ntype)
+      INTEGER jri0(atoms%ntype),lmax0(atoms%ntype)
       CHARACTER(len=1)  :: ch_rw
       CHARACTER(len=4)  :: namex
       CHARACTER(len=3)  :: noel(atoms%ntype)
@@ -65,8 +65,7 @@
       CHARACTER(len=3)  :: latnamTemp
       CHARACTER(LEN=20) :: filename
       INTEGER  nu,iofile
-      INTEGER  iggachk
-      INTEGER  n ,iostat, errorStatus
+      INTEGER  n, errorStatus
       REAL     scpos ,zc
 
       TYPE(t_banddos)::banddos
@@ -88,7 +87,6 @@
       REAL     ::  taual_hyb(3,atoms%nat)
       INTEGER  ::  bands
       LOGICAL  ::  l_gamma
-      INTEGER  :: nkpt3(3)
 !HF
 
       INTEGER :: xmlElectronStates(29,atoms%ntype)
@@ -120,7 +118,9 @@
       ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype))
       ALLOCATE(atoms%ncst(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%nflip(atoms%ntype))
+      ALLOCATE(atoms%flipSpinPhi(atoms%ntype))
+      ALLOCATE(atoms%flipSpinScale(atoms%ntype))
+      ALLOCATE(atoms%flipSpinTheta(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
@@ -136,26 +136,26 @@
       atoms%ulo_der = 0
       ch_rw = 'w'
       sym%namgrp= 'any ' 
-      banddos%dos   = .false. ; banddos%l_mcd = .false. ; banddos%unfoldband = .FALSE. ; input%secvar = .false.
+      banddos%dos   = .false. ; banddos%l_mcd = .false. ; input%secvar = .false.
       input%vchk = .false. ; input%cdinf = .false. 
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false. 
       sliceplot%slice= .false. ;  input%swsp  = .false.
-      input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
-      sliceplot%iplot= .false. ; input%score = .false. ; sliceplot%plpot = .false.
+      input%lflip= .false. ; input%l_removeMagnetisationFromInterstitial=.FALSE. ;banddos%vacdos= .false. ; input%integ = .false.
+      sliceplot%iplot= 0
       input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
-      input%itmax = 9 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
+      input%itmax = 15 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
       input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
       input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0 
       nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
-      banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
+      banddos%ndir = 0 ; vacuum%layers = 0 ; vacuum%izlay(:,:) = 0
       banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
-      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix=0
+      input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix = 2 ! BFGS is default.
       sliceplot%e1s = 0.0 ; sliceplot%e2s = 0.0 ; banddos%e1_dos = 0.5 ; banddos%e2_dos = -0.5 ; input%tkb = 0.001
       banddos%sig_dos = 0.015 ; vacuum%tworkf = 0.0 ; input%scaleCell = 1.0 ; scpos = 1.0
       input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
@@ -163,7 +163,9 @@
       kpts%numSpecialPoints = 0
       input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
       input%l_wann = .FALSE.
-
+      input%numBandsKPoints = 240
+      banddos%unfoldband = .FALSE. ; banddos%s_cell_x = 1 ; banddos%s_cell_y = 1 ; banddos%s_cell_z = 1
+      atoms%flipSpinTheta(:)=0.0; atoms%flipSpinPhi(:)=0.0; atoms%flipSpinScale=.FALSE.
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
       oneD%odd%k3 = 0 ; oneD%odd%n2d= 0 ; oneD%odd%nq2 = 0 ; oneD%odd%nn2d = 0 
@@ -360,7 +362,7 @@
 
       IF (kpts%nkpt == 0) THEN     ! set some defaults for the k-points
         IF (input%film) THEN
-          cell%area = cell%omtil / vacuum%dvac
+          cell%area = ABS(cell%amat(1,1)*cell%amat(2,2)-cell%amat(1,2)*cell%amat(2,1))
           kpts%nkpt = MAX(nint((3600/cell%area)/sym%nop2),1)
         ELSE
           kpts%nkpt = MAX(nint((216000/cell%omtil)/sym%nop),1)
@@ -396,10 +398,6 @@
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
    
       IF (noco%l_ss) input%ctail = .FALSE.
-      noco%l_mperp = .FALSE.
-      noco%l_constr = .FALSE.
-      noco%mix_b = 0.0
-      noco%qss = 0.0
 
       noco%l_relax(:) = .FALSE.
       noco%alphInit(:) = 0.0

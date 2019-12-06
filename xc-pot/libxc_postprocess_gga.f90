@@ -6,7 +6,7 @@
 MODULE m_libxc_postprocess_gga
 CONTAINS
 
-   SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num)
+   SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sphhar,noco,n,v_xc,grad, atom_num)
       USE m_mt_tofrom_grid
       USE m_types
       use m_judft_string
@@ -15,6 +15,7 @@ CONTAINS
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_atoms),INTENT(IN)    :: atoms
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
+      TYPE(t_noco),INTENT(IN)     :: noco
       INTEGER,INTENT(IN)          :: n
       REAL,INTENT(INOUT)          :: v_xc(:,:)
       TYPE(t_gradients),INTENT(IN):: grad
@@ -35,7 +36,7 @@ CONTAINS
          vsigma_mt(i,:,:)=vsigma_mt(i,:,:)*atoms%rmsh(i,n)**2
       ENDDO
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
-      CALL mt_to_grid(xcpot,n_sigma,atoms,sphhar,vsigma_mt,n,grad=grad_vsigma)
+      CALL mt_to_grid(xcpot%needs_grad(),n_sigma,atoms,sphhar,vsigma_mt,n,noco,grad=grad_vsigma)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_mt
@@ -60,10 +61,10 @@ CONTAINS
       n_sigma=MERGE(1,3,SIZE(v_xc,2)==1) !See in _mt routine
       ALLOCATE(vsigma_g(stars%ng3,n_sigma),vsigma(nsp,n_sigma)); vsigma_g=0.0
       vsigma=TRANSPOSE(grad%vsigma) !create a (nsp,n_sigma) matrix
-      CALL pw_from_grid(xcpot,stars,.FALSE.,vsigma,vsigma_g)
+      CALL pw_from_grid(xcpot%needs_grad(),stars,.FALSE.,vsigma,vsigma_g)
       !vsigma_g(:,1)=vsigma_g(:,1)*stars%nstr(:)
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
-      CALL pw_to_grid(xcpot,n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma)
+      CALL pw_to_grid(xcpot%needs_grad(),n_sigma,.false.,stars,cell,vsigma_g,grad_vsigma,xcpot)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_pw

@@ -81,7 +81,7 @@ CONTAINS
 
       !In first iteration allocate some memory
       IF (init_vex) THEN
-         ALLOCATE (hybrid%ne_eig(kpts%nkpt), hybrid%nbands(kpts%nkpt), hybrid%nobd(kpts%nkptf))
+         ALLOCATE (hybrid%ne_eig(kpts%nkpt), hybrid%nbands(kpts%nkpt), hybrid%nobd(kpts%nkptf,input%jspins))
          ALLOCATE (hybrid%nbasm(kpts%nkptf))
          ALLOCATE (hybrid%div_vv(DIMENSION%neigd, kpts%nkpt, input%jspins))
          init_vex = .FALSE.
@@ -125,7 +125,7 @@ CONTAINS
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
                CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, l_zref)
                CALL hsfock(nk, atoms, hybrid, lapw, DIMENSION, kpts, jsp, input, hybdat, eig_irr, sym, cell, &
-                           noco, results, iterHF, MAXVAL(hybrid%nobd), xcpot, mpi)
+                           noco, results, iterHF, MAXVAL(hybrid%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO
          CALL timestop("Calculation of non-local HF potential")

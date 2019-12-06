@@ -7,26 +7,35 @@
 module m_wann_read_inp
 
 contains
-subroutine wann_read_inp(input,l_p0,wann)
+subroutine wann_read_inp(DIMENSION,input,noco,mpi,wann)
 !********************************************
 !     Read the Wannier input file 'wann_inp'.
 !     Frank Freimuth
 !********************************************
    use m_judft
-   use m_types_setup
+   use m_types
 
    implicit none
 
-   TYPE(t_input), intent(in)   :: input
+   TYPE(t_dimension), INTENT(INOUT) :: DIMENSION
+   TYPE(t_input),intent(inout) :: input
+   TYPE(t_noco),      INTENT(INOUT) :: noco
    TYPE(t_wann), intent(inout) :: wann
-   logical,intent(in)          :: l_p0
+   TYPE(t_mpi),intent(in)          :: mpi
 
-   logical           :: l_file,l_orbcompinp
-   integer           :: i,ios,n
+   logical           :: l_file,l_orbcompinp,l_p0
+   integer           :: i,ios,n,neigd_min,joblistlen
    character(len=30) :: task
    real              :: version_real
+#ifdef CPP_MPI
+          integer :: ierr(3)
+          INCLUDE 'mpif.h'
+          
+#endif
 
+   l_p0=(mpi%irank==0)
 !-----some defaults
+   wann%l_perpmagatlres=.false.
    wann%l_atomlist=.false.
    wann%l_ndegen=.false.
    wann%l_orbitalmom=.false.
@@ -53,6 +62,7 @@ subroutine wann_read_inp(input,l_p0,wann)
    wann%l_perpmagatrs=.false.
    wann%l_socmatrs=.false.
    wann%l_socmat=.false.
+   wann%l_socmatvec=.false.
    wann%l_soctomom=.false.
    wann%l_kptsreduc2=.false.
    wann%l_nablars=.false.
@@ -110,6 +120,23 @@ subroutine wann_read_inp(input,l_p0,wann)
    wann%l_matrixuHu_dmi=.false.
    wann%ikptstart=1
    wann%wan90version=2 ! Set the standard to Wannier90-1.2
+   wann%l_mmn0_unf_to_spn_unf=.false.
+   wann%l_mmn0_to_spn_unf=.false.
+   wann%l_mmn0_to_spn=.false.
+   wann%l_mmn0_to_spn2=.false.
+   wann%l_mmn0_unf_to_spn=.false.
+   wann%l_perpmag_unf_to_tor_unf=.false.
+   wann%l_perpmag_to_tor_unf=.false.
+   wann%l_perpmag_to_tor=.false.
+   wann%l_perpmag_unf_to_tor=.false.
+   wann%l_hsomtxvec_unf_to_lmpzsoc_unf=.false.
+   wann%l_hsomtxvec_to_lmpzsoc_unf=.false.
+   wann%l_hsomtxvec_to_lmpzsoc=.false.
+   wann%l_hsomtxvec_unf_to_lmpzsoc=.false.
+   wann%l_hsomtx_unf_to_hsoc_unf=.false.
+   wann%l_hsomtx_to_hsoc_unf=.false.
+   wann%l_hsomtx_to_hsoc=.false.
+   wann%l_hsomtx_unf_to_hsoc=.false.
 
 !-----read the input file 'wann_inp'
    l_file=.false.
@@ -159,6 +186,8 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_ndegen=.true.
          elseif(trim(task).eq.'unformatted')then
             wann%l_unformatted=.true.
+         elseif(trim(task).eq.'eig66')then
+            input%eig66(1)=.true.       
          elseif(trim(task).eq.'orbcomp')then
             wann%l_orbcomp=.true.
          elseif(trim(task).eq.'orbcomprs')then
@@ -201,8 +230,53 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_perpmagat=.true.
          elseif(trim(task).eq.'perpmagatrs')then
             wann%l_perpmagatrs=.true.
+         elseif(trim(task).eq.'mmn0_unf_to_spn_unf')then
+            wann%l_mmn0_unf_to_spn_unf=.true.
+         elseif(trim(task).eq.'mmn0_to_spn_unf')then
+            wann%l_mmn0_to_spn_unf=.true.
+         elseif(trim(task).eq.'mmn0_to_spn')then
+            wann%l_mmn0_to_spn=.true.
+         elseif(trim(task).eq.'mmn0_to_spn2')then
+            wann%l_mmn0_to_spn2=.true.
+         elseif(trim(task).eq.'mmn0_unf_to_spn')then
+            wann%l_mmn0_unf_to_spn=.true.
+         elseif(trim(task).eq.'perpmag_unf_to_tor_unf')then
+            wann%l_perpmag_unf_to_tor_unf=.true.
+         elseif(trim(task).eq.'perpmag_to_tor_unf')then
+            wann%l_perpmag_to_tor_unf=.true.
+         elseif(trim(task).eq.'perpmag_to_tor')then
+            wann%l_perpmag_to_tor=.true.
+         elseif(trim(task).eq.'perpmag_unf_to_tor')then
+            wann%l_perpmag_unf_to_tor=.true.
+         elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc_unf')then
+            wann%l_hsomtxvec_unf_to_lmpzsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc_unf')then
+            wann%l_hsomtxvec_to_lmpzsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc')then
+            wann%l_hsomtxvec_to_lmpzsoc=.true.
+         elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
+            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
+            wann%l_hsomtx_unf_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
+            wann%l_hsomtx_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc')then
+            wann%l_hsomtx_to_hsoc=.true.
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
+            wann%l_hsomtx_unf_to_hsoc=.true.
+            
+         elseif(trim(task).eq.'perpmagatlres')then
+            wann%l_perpmagatlres=.true.
+	    backspace(916)
+            read(916,*,iostat=ios)task,wann%perpmagl
+            if (ios /= 0) &
+               CALL juDFT_error ("error reading perpmagl", &
+                               calledby="wann_read_inp")   
+            
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
+         elseif(trim(task).eq.'socmatvec')then
+            wann%l_socmatvec=.true.  
          elseif(trim(task).eq.'socmatrs')then
             wann%l_socmatrs=.true.
          elseif(trim(task).eq.'soctomom')then
@@ -364,7 +438,20 @@ subroutine wann_read_inp(input,l_p0,wann)
 
    ELSE IF (input%l_inpXML) THEN
 
+#ifdef CPP_MPI
+      jobListlen=SIZE(wann%jobList)
+      CALL MPI_BCAST(jobListlen,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_min,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%band_max,2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+      CALL MPI_BCAST(wann%l_byindex,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+      if(mpi%irank>0)then
+        allocate(wann%jobList(jobListlen))
+      endif
+#endif      
       DO i = 1, SIZE(wann%jobList)
+#ifdef CPP_MPI
+         CALL MPI_BCAST(wann%jobList(i),20,MPI_CHARACTER,0,mpi%mpi_comm,ierr)
+#endif     
          task = TRIM(ADJUSTL(wann%jobList(i)))
          if(l_p0) write(6,*)"task ",i,":",task
          if(task(1:1).eq.'!')cycle
@@ -398,6 +485,8 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_ndegen=.true.
          elseif(trim(task).eq.'unformatted')then
             wann%l_unformatted=.true.
+         elseif(trim(task).eq.'eig66')then
+            input%eig66(1)=.true.        
          elseif(trim(task).eq.'orbcomp')then
             wann%l_orbcomp=.true.
          elseif(trim(task).eq.'orbcomprs')then
@@ -440,8 +529,53 @@ subroutine wann_read_inp(input,l_p0,wann)
             wann%l_perpmagat=.true.
          elseif(trim(task).eq.'perpmagatrs')then
             wann%l_perpmagatrs=.true.
+         elseif(trim(task).eq.'mmn0_unf_to_spn_unf')then
+            wann%l_mmn0_unf_to_spn_unf=.true.
+         elseif(trim(task).eq.'mmn0_to_spn_unf')then
+            wann%l_mmn0_to_spn_unf=.true.
+         elseif(trim(task).eq.'mmn0_to_spn')then
+            wann%l_mmn0_to_spn=.true.
+         elseif(trim(task).eq.'mmn0_to_spn2')then
+            wann%l_mmn0_to_spn2=.true.
+         elseif(trim(task).eq.'mmn0_unf_to_spn')then
+            wann%l_mmn0_unf_to_spn=.true.
+         elseif(trim(task).eq.'perpmag_unf_to_tor_unf')then
+            wann%l_perpmag_unf_to_tor_unf=.true.
+         elseif(trim(task).eq.'perpmag_to_tor_unf')then
+            wann%l_perpmag_to_tor_unf=.true.
+         elseif(trim(task).eq.'perpmag_to_tor')then
+            wann%l_perpmag_to_tor=.true.
+         elseif(trim(task).eq.'perpmag_unf_to_tor')then
+            wann%l_perpmag_unf_to_tor=.true.
+         elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc_unf')then
+            wann%l_hsomtxvec_unf_to_lmpzsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc_unf')then
+            wann%l_hsomtxvec_to_lmpzsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtxvec_to_lmpzsoc')then
+            wann%l_hsomtxvec_to_lmpzsoc=.true.
+         elseif(trim(task).eq.'hsomtxvec_unf_to_lmpzsoc')then
+            wann%l_hsomtxvec_unf_to_lmpzsoc=.true.  
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc_unf')then
+            wann%l_hsomtx_unf_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc_unf')then
+            wann%l_hsomtx_to_hsoc_unf=.true.
+         elseif(trim(task).eq.'hsomtx_to_hsoc')then
+            wann%l_hsomtx_to_hsoc=.true.
+         elseif(trim(task).eq.'hsomtx_unf_to_hsoc')then
+            wann%l_hsomtx_unf_to_hsoc=.true.
+            
+         elseif(trim(task).eq.'perpmagatlres')then
+            wann%l_perpmagatlres=.true.
+	    backspace(916)
+            read(916,*,iostat=ios)task,wann%perpmagl
+            if (ios /= 0) &
+               CALL juDFT_error ("error reading perpmagl", &
+                               calledby="wann_read_inp")   
+            
          elseif(trim(task).eq.'socmat')then
             wann%l_socmat=.true.
+         elseif(trim(task).eq.'socmatvec')then
+            wann%l_socmatvec=.true.
          elseif(trim(task).eq.'socmatrs')then
             wann%l_socmatrs=.true.
          elseif(trim(task).eq.'soctomom')then
@@ -616,6 +750,52 @@ subroutine wann_read_inp(input,l_p0,wann)
        wann%atomlist(n)=n
      enddo
    endif      
+
+
+!---- check if we need to increase the neigd parameter
+   if(wann%l_byindex)then
+   if(noco%l_soc.OR.noco%l_noco)then
+      neigd_min=wann%band_max(1)
+   else   
+      neigd_min=max(wann%band_max(1),wann%band_max(2))
+   endif !noco,soc?
+   if(l_p0)then
+      write(*,*)"In wann_read_inp: input-neigd=",DIMENSION%neigd
+      write(*,*)"In wann_read_inp: we require at least neigd_min=",neigd_min
+      if(neigd_min>DIMENSION%neigd)then
+         write(*,*)"we increase neigd..."
+      else
+         write(*,*)"we leave neigd unchanged"
+      endif      
+   endif !l_p0?
+   if(neigd_min>DIMENSION%neigd)then
+         DIMENSION%neigd=neigd_min
+   endif    
+   if(l_p0)then
+      write(*,*)"In wann_read_inp: output-neigd=",DIMENSION%neigd
+   endif
+
+   endif !l_byindex?
+
+
+!!! Consistency checks
+   if(wann%l_mmn0.and.wann%l_updown)then
+!!! updown-mmn0 makes sense only when wannierspin=2, i.e., the calculation
+!!! needs to be spin-polarized (jspins=2), or, in the case jspins=1 it makes sense when l_soc=true,
+!!! because then wannierspin=2 as well. When spin-orbit coupling is added during Wannier interpolation
+!!! we can construct the matrix elements of the pauli matrix in the case jspins=1 from the WF1.mmn0, and
+!!! we do not need the updown.mmn0 for this.
+      if(input%jspins.eq.1 .and. .not. noco%l_soc)then
+         call juDFT_error("no updown-mmn0 when soc=F and jspins=1",calledby="wann_read_inp.F90")
+      endif
+         
+   endif
+   if(wann%l_socmat.and.input%jspins==1)then
+      if(noco%l_soc)then
+        call juDFT_error("Not yet implemented: jspins=1&& socmat=T&& soc=T",calledby="wann_read_inp.F90")
+      endif
+   endif
+
 
 end subroutine wann_read_inp
 
