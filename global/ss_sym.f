@@ -49,7 +49,6 @@
 ! ----> rotate qss by symmetry element and form the dot-product
 !       with unrotated vector (q1 . qss) 
 !
-!        CALL cotra3(qss,q1,rrot)
          q1=matmul(qss,rrot)  
 !
 ! ----> if qss is unchanged, accept this symmetry element

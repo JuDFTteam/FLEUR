@@ -188,9 +188,9 @@ SUBROUTINE w_inpXML(&
    130 FORMAT('      <coreElectrons ctail="',l1,'" frcor="',l1,'" kcrel="',i0,'" coretail_lmax="',i0,'"/>')
    WRITE (fileNum,130) input%ctail,input%frcor,input%kcrel,input%coretail_lmax
 
-!      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
-   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'"/>')
-   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip
+!      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"  l_removeMagnetisationFromInterstitial="F"/>
+   140 FORMAT('      <magnetism jspins="',i0,'" l_noco="',l1,'" swsp="',l1,'" lflip="',l1,'" l_removeMagnetisationFromInterstitial="',l1,'"/>')
+   WRITE (fileNum,140) input%jspins,noco%l_noco,input%swsp,input%lflip, input%l_removeMagnetisationFromInterstitial
 
    !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
@@ -202,9 +202,9 @@ SUBROUTINE w_inpXML(&
    END IF
 
    IF (l_nocoOpt.OR.l_explicit) THEN
-160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,&
+160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,'" l_mtNocoPot="',l1,&
            '" mix_b="',f0.8,'">')
-      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, noco%mix_b
+      WRITE (fileNum,160) noco%l_ss, noco%l_mperp, noco%l_constr, noco%l_mtNocoPot ,noco%mix_b
       162 FORMAT('         <qss>',f0.10,' ',f0.10,' ',f0.10,'</qss>')
       WRITE(fileNum,162) noco%qss(1), noco%qss(2), noco%qss(3)
       WRITE (fileNum,'(a)') '      </nocoParams>'
@@ -460,10 +460,10 @@ SUBROUTINE w_inpXML(&
       IF(iAtomType.EQ.-1) THEN
          EXIT
       END IF
-!      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
-      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpin="',l1,'">')
+!      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpinPhi="0.0" flipSpinTheta="0.0" flipSpinScale=F>
+      300 FORMAT('      <species name="',a,'" element="',a,'" atomicNumber="',i0,'" coreStates="',i0,'" magMom="',f0.8,'" flipSpinPhi="',f0.8,'" flipSpinTheta="',f0.8,'" flipSpinScale="',l1,'">')
       speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
-      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%nflip(iAtomType)
+      WRITE (fileNum,300) TRIM(ADJUSTL(speciesName)),TRIM(ADJUSTL(noel(iAtomType))),atoms%nz(iAtomType),atoms%ncst(iAtomType),atoms%bmu(iAtomType),atoms%flipSpinPhi(iAtomType),atoms%flipSpinTheta(iAtomType),atoms%flipSpinScale(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
       310 FORMAT('         <mtSphere radius="',f0.8,'" gridPoints="',i0,'" logIncrement="',f0.8,'"/>')
@@ -679,9 +679,9 @@ SUBROUTINE w_inpXML(&
    395 FORMAT('      <unfoldingBand unfoldBand="',l1,'" supercellX="',i0,'" supercellY="',i0,'" supercellZ="',i0,'"/>')
    WRITE (fileNum,395) banddos%unfoldband, banddos%s_cell_x, banddos%s_cell_y, banddos%s_cell_z
 
-!      <plotting iplot="0" score="F" plplot="F"/>
-   400 FORMAT('      <plotting iplot="',i0,'" score="',l1,'" plplot="',l1,'"/>')
-   WRITE (fileNum,400) sliceplot%iplot,input%score,sliceplot%plpot
+!      <plotting iplot="0">
+   400 FORMAT('      <plotting iplot="',i0,'"/>')
+   WRITE (fileNum,400) sliceplot%iplot
 
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
    410 FORMAT('      <chargeDensitySlicing numkpt="',i0,'" minEigenval="',f0.8,'" maxEigenval="',f0.8,'" nnne="',i0,'" pallst="',l1,'"/>')

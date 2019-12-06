@@ -151,6 +151,7 @@
       <xsd:attribute default="F" name="l_J" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="swsp" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="lflip" type="FleurBool" use="optional"/>
+     <xsd:attribute default="F" name="l_removeMagnetisationFromInterstitial" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.0" name="fixed_moment" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
@@ -392,7 +393,9 @@
       <xsd:attribute name="atomicNumber" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="coreStates" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="0.0" name="magMom" type="xsd:string" use="optional"/>
-      <xsd:attribute default="F" name="flipSpin" type="FleurBool" use="optional"/>
+      <xsd:attribute name="flipSpinPhi" type="xsd:string" use="required"/>
+      <xsd:attribute name="flipSpinTheta"   type="xsd:string" use="required"/>
+      <xsd:attribute name="flipSpinScale"  type="FleurBool" use="required"/>
       <xsd:attribute name="magField" type="xsd:double" use="optional"/>
       <xsd:attribute name="vcaAddCharge" type="xsd:double" use="optional"/>
    </xsd:complexType>
@@ -583,8 +586,6 @@
 
    <xsd:complexType name="PlottingType">
       <xsd:attribute default="0" name="iplot" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute default="F" name="score" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="plplot" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ChargeDensitySlicingType">

@@ -1539,7 +1539,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              date,time,distance,fermiEnergy,l_qfix,iter,den)
+                              date,time,distance,fermiEnergy,l_qfix,iter,den,l_mtNoco)
 
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: den
@@ -1552,6 +1552,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT (IN)         :: date, time, iter
       REAL,    INTENT (IN)         :: fermiEnergy, distance
       LOGICAL, INTENT (IN)         :: l_qfix
+      LOGICAL, INTENT (IN)         :: l_mtNoco
 
       INTEGER                      :: i, iVac
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
@@ -1690,7 +1691,7 @@ MODULE m_cdnpot_io_hdf
 
             dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,:,:,:input%jspins))
             CALL h5dclose_f(frSetID, hdfError)
 
             dimsInt(:3)=(/2,ng3,input%jspins/)
@@ -1751,15 +1752,25 @@ MODULE m_cdnpot_io_hdf
 
             CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
             CALL io_write_attlog0(groupID,'l_qfix',l_qfix)
-
-            dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
-            dimsInt = dims
-            CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
-            CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
-            CALL h5sclose_f(frSpaceID,hdfError)
-            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
-            CALL h5dclose_f(frSetID, hdfError)
-
+            
+            IF (.NOT.l_mtNoco) THEN
+               dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
+               dimsInt = dims
+               CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
+               CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
+               CALL h5sclose_f(frSpaceID,hdfError)
+               CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,:,:,:input%jspins))
+               CALL h5dclose_f(frSetID, hdfError)
+            ELSE
+               dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins+2/)
+               dimsInt = dims
+               CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
+               CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
+               CALL h5sclose_f(frSpaceID,hdfError)
+               CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,:,:,:4))
+               CALL h5dclose_f(frSetID, hdfError)
+            END IF
+            
             dims(:3)=(/2,ng3,input%jspins/)
             dimsInt = dims
             CALL h5screate_simple_f(3,dims(:3),fpwSpaceID,hdfError)
@@ -1856,13 +1867,23 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
          CALL io_write_attlog0(groupID,'l_qfix',l_qfix)
 
-         dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
-         dimsInt = dims
-         CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
-         CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
-         CALL h5sclose_f(frSpaceID,hdfError)
-         CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt)
-         CALL h5dclose_f(frSetID, hdfError)
+         IF(.NOT.l_mtNoco) THEN
+            dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
+            dimsInt = dims
+            CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
+            CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
+            CALL h5sclose_f(frSpaceID,hdfError)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,:,:,:input%jspins))
+            CALL h5dclose_f(frSetID, hdfError)
+         ELSE
+            dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins+2/)
+            dimsInt = dims
+            CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
+            CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
+            CALL h5sclose_f(frSpaceID,hdfError)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,:,:,:4))
+            CALL h5dclose_f(frSetID, hdfError)
+         END IF
 
          dims(:3)=(/2,ng3,input%jspins/)
          dimsInt = dims
@@ -1946,7 +1967,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 starsIndex, latharmsIndex, structureIndex,stepfunctionIndex,&
-                                iter,pot,fpw)
+                                iter,pot,fpw,l_mtNoco)
 
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: pot
@@ -1959,7 +1980,7 @@ MODULE m_cdnpot_io_hdf
       INTEGER, INTENT (IN)         :: iter
 
       COMPLEX, INTENT (IN)         :: fpw(:,:)
-
+      LOGICAL, INTENT (IN)         :: l_mtNoco
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz, nvac, od_nq2, nmzxy
       INTEGER                      :: hdfError
@@ -2092,6 +2113,8 @@ MODULE m_cdnpot_io_hdf
          ELSE
             CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
+          
+         IF (.NOT.l_mtNoco)THEN
             dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             dimsInt = dims
             CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
@@ -2099,6 +2122,15 @@ MODULE m_cdnpot_io_hdf
             CALL h5sclose_f(frSpaceID,hdfError)
             CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),pot%mt)
             CALL h5dclose_f(frSetID, hdfError)
+         ELSE
+            dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins+2/)
+            dimsInt = dims
+            CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
+            CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
+            CALL h5sclose_f(frSpaceID,hdfError)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),pot%mt)
+            CALL h5dclose_f(frSetID, hdfError)
+         END IF
 
             dims(:3)=(/2,ng3,input%jspins/)
             dimsInt = dims
@@ -2141,14 +2173,25 @@ MODULE m_cdnpot_io_hdf
          CALL io_write_attint0(archiveID,'iter',iter)
 
          CALL h5gcreate_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
+          
+         IF (.NOT.l_mtNoco)THEN
+            dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
+            dimsInt = dims
+            CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
+            CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
+            CALL h5sclose_f(frSpaceID,hdfError)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),pot%mt)
+            CALL h5dclose_f(frSetID, hdfError)
+         ELSE
+            dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins+2/)
+            dimsInt = dims
+            CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
+            CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
+            CALL h5sclose_f(frSpaceID,hdfError)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),pot%mt)
+            CALL h5dclose_f(frSetID, hdfError)
+         END IF
 
-         dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
-         dimsInt = dims
-         CALL h5screate_simple_f(4,dims(:4),frSpaceID,hdfError)
-         CALL h5dcreate_f(groupID, "fr", H5T_NATIVE_DOUBLE, frSpaceID, frSetID, hdfError)
-         CALL h5sclose_f(frSpaceID,hdfError)
-         CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),pot%mt)
-         CALL h5dclose_f(frSetID, hdfError)
 
          dims(:3)=(/2,ng3,input%jspins/)
          dimsInt = dims
@@ -2184,7 +2227,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePotentialHDF
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum, oneD,&
-                             archiveName, densityType,fermiEnergy,l_qfix,l_DimChange,den)
+                             archiveName, densityType,fermiEnergy,l_qfix,l_DimChange,den,l_mtNoco)
 
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_stars),INTENT(IN)     :: stars
@@ -2200,7 +2243,7 @@ MODULE m_cdnpot_io_hdf
 
       REAL,    INTENT (OUT)        :: fermiEnergy
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
-
+      LOGICAL, INTENT (IN)         :: l_mtNoco
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER               :: previousDensityIndex, jspins
       INTEGER               :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
@@ -2413,14 +2456,25 @@ MODULE m_cdnpot_io_hdf
       END IF
 
       den%mt = 0.0
-      ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,jspins))
-      dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
-      CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-      CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),frTemp)
-      CALL h5dclose_f(frSetID, hdfError)
-      den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
-         frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
-      DEALLOCATE(frTemp)
+      IF (.NOT.l_mtNoco) THEN
+         ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,jspins))
+         dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
+         CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
+         CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),frTemp)
+         CALL h5dclose_f(frSetID, hdfError)
+         den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
+            frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
+         DEALLOCATE(frTemp)
+      ELSE 
+         ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:4))
+         dimsInt(:4)=(/jmtd,nlhd+1,ntype,4/)
+         CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
+         CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),frTemp)
+         CALL h5dclose_f(frSetID, hdfError)
+         den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:4) =&
+            frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:4)
+         DEALLOCATE(frTemp)
+      END IF
 
       den%pw = CMPLX(0.0,0.0)
       ALLOCATE(fpwTemp(ng3,jspins))
@@ -2517,11 +2571,12 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE readDensityHDF
 
    SUBROUTINE readPotentialHDF(fileID, archiveName, potentialType,&
-                               iter,fr,fpw,fz,fzxy)
+                               iter,fr,fpw,fz,fzxy,l_mtnoco)
 
       INTEGER(HID_T), INTENT(IN)   :: fileID
       INTEGER, INTENT(IN)          :: potentialType
       CHARACTER(LEN=*), INTENT(IN) :: archiveName
+      LOGICAL , INTENT(IN)         :: l_mtNoco 
 
       INTEGER, INTENT (OUT)        :: iter
 
@@ -2611,10 +2666,18 @@ MODULE m_cdnpot_io_hdf
       CALL io_read_attint0(groupBID,'ng2',ng2)
       CALL h5gclose_f(groupBID, hdfError)
 
+      IF (.NOT.l_mtNoco) THEN
       dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
       CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
       CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
       CALL h5dclose_f(frSetID, hdfError)
+      ELSE 
+      dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins+2/)
+      CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
+      CALL io_read_real4(frSetID,(/1,1,1,1/),dimsInt(:4),fr)
+      CALL h5dclose_f(frSetID, hdfError)
+      END IF
+
 
       dimsInt(:3)=(/2,ng3,jspins/)
       CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)

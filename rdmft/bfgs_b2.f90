@@ -23,6 +23,8 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
                    lastParameters,equalityLinCombi,equalityCriterion,maxHistoryLength,paramCorrections,&
                    gradientCorrections,iStep,mixParam,l_converged,convCrit)
 
+   USE m_constants
+
    IMPLICIT NONE
 
    INTEGER,        INTENT(IN)    :: vecLength
@@ -30,7 +32,7 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
    INTEGER,        INTENT(INOUT) :: iStep ! The index of the bfgs_b iteration
    REAL,           INTENT(IN)    :: mixParam
    REAL,           INTENT(IN)    :: equalityCriterion
-   REAL,           INTENT(IN)    :: gradient(vecLength)
+   REAL,           INTENT(INOUT)    :: gradient(vecLength)
    REAL,           INTENT(INOUT) :: lastGradient(vecLength)
    REAL,           INTENT(IN)    :: minConstraints(vecLength)
    REAL,           INTENT(IN)    :: maxConstraints(vecLength)
@@ -47,7 +49,7 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
    INTEGER                :: historyLength
    REAL, PARAMETER        :: eps = 1.0e-10
    REAL, PARAMETER        :: largeEps = 1.0e-6
-   REAL                   :: temp, norm, subspaceEqualityCrit
+   REAL                   :: temp, norm, subspaceEqualityCrit, maxDisp, dampingFactor
    REAL                   :: ddot
 
    LOGICAL                :: converged
@@ -73,11 +75,27 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
    WRITE(*,*) 'bfgs_b2 (input): parameters(:vecLength): ', parameters(:vecLength)
    WRITE(*,*) 'bfgs_b2 (input): gradient(:vecLength): ', gradient(:vecLength)
 
+   WRITE(5000,*) '========================================================================='
+   WRITE(5000,*) 'ENTERED BFGS_B2: '
+
+   !!! Test start
+!   DO i = 1, vecLength - 1
+!      IF(ABS(gradient(i)).LT.eps) CYCLE
+!      gradient(i) = sqrt(ABS(gradient(i)))*2.0*ATAN(gradient(i))/pi_const
+!   END DO
+   !!! Test end
+
    l_converged = .FALSE.
 
    ! 0. Add last data pair to history iff it is not obviously destructive for the positive definiteness of the Hessian matrix
 
    IF(ANY(lastGradient(:).NE.0.0).OR.ANY(lastParameters(:).NE.0.0)) THEN
+
+      WRITE(2501,'(a,12f10.6)'), '    gradient: ', gradient(:)
+      WRITE(2501,'(a,12f10.6)'), 'lastGradient: ', lastGradient(:)
+      WRITE(2502,'(a,12f10.6)'), '    parameters: ', parameters(:)
+      WRITE(2502,'(a,12f10.6)'), 'lastParameters: ', lastParameters(:)
+
       lastGradCorrection(:) = gradient(:) - lastGradient(:)
       lastParamCorrection(:) = parameters(:) - lastParameters(:)
       temp = ddot(vecLength,lastParamCorrection(:),1,lastGradCorrection(:),1)
@@ -90,7 +108,12 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
       END IF
 
       ! Check for convergence and return if converged
-      IF(ALL(ABS(lastGradCorrection(:)).LT.convCrit).AND.ALL(ABS(lastParamCorrection(:)).LT.convCrit)) THEN
+      WRITE(*,*) 'MAXVAL(ABS(lastGradCorrection(:))): ', MAXVAL(ABS(lastGradCorrection(:)))
+      WRITE(*,*) 'MAXVAL(ABS(lastParamCorrection(:))): ', MAXVAL(ABS(lastParamCorrection(:)))
+      WRITE(*,*) 'MAXVAL(ABS(lastGradCorrection(:vecLength-1))): ', MAXVAL(ABS(lastGradCorrection(:vecLength-1)))
+      WRITE(*,*) 'MAXVAL(ABS(lastParamCorrection(:vecLength-1))): ', MAXVAL(ABS(lastParamCorrection(:vecLength-1)))
+!      IF(ALL(ABS(lastGradCorrection(:)).LT.convCrit).AND.ALL(ABS(lastParamCorrection(:)).LT.convCrit)) THEN
+      IF(ALL(ABS(lastParamCorrection(:vecLength-1)).LT.convCrit)) THEN
          l_converged = .TRUE.
          RETURN
       END IF
@@ -165,8 +188,19 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
    prelimNextPoint(:) = parameters(:)
    prelimGradient(:) = gradient(:)
 
+   WRITE(5300,*) '=========================================================='
+   WRITE(5300,*) 'bfgs_b2: Starting next point search: '
+   WRITE(5300,*) '=========================================================='
+
    converged = .FALSE.
    DO WHILE (.NOT.converged)
+
+      WRITE(5300,*) 'Point A: '
+      WRITE(5300,*) 'prelimNextPoint: '
+      WRITE(5300,'(5f20.10)') prelimNextPoint(:)
+      WRITE(5300,*) 'prelimGradient: '
+      WRITE(5300,'(5f20.10)') prelimGradient(:)
+
 
       ! Determine free parameters (parameters not on boundaries with a gradient pointing outwards)
       numFixedParams = 0
@@ -203,6 +237,16 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
       tempMatC(:,:) = 0.0
       subspaceInvHessMat(:,:) = 0.0
 
+      WRITE(5000,*) '========================================================================='
+      WRITE(5000,*) 'prelimNextPoint: '
+      WRITE(5000,'(5f20.10)') prelimNextPoint(:)
+      WRITE(5000,*) 'prelimGradient: '
+      WRITE(5000,'(5f20.10)') prelimGradient(:)
+      WRITE(5000,*) 'subspaceBasis: '
+      DO i = 1, SIZE(subspaceBasis,2)
+         WRITE(5000,'(5f20.10)') subspaceBasis(:,i)
+      END DO
+
       CALL dgemm('N','N',vecLength,numFreeParams,vecLength,1.0,invHessMat(:,:),vecLength,subspaceBasis(:,:),vecLength,0.0,tempMatC(:,:),vecLength)
       CALL dgemm('N','N',numFreeParams,numFreeParams,vecLength,1.0,TRANSPOSE(subspaceBasis(:,:)),numFreeParams,tempMatC(:,:),vecLength,0.0,subspaceInvHessMat(:,:),numFreeParams)
       
@@ -212,15 +256,44 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
       ! Calculate next point (ignoring constraints)
 
       tempVecA(:) = 0.0
+
+      WRITE(5000,*) 'numFreeParams: ', numFreeParams
+      WRITE(5000,*) 'subspaceInvHessMat: '
+      DO i = 1, SIZE(subspaceInvHessMat,2)
+         WRITE(5000,'(5f20.10)') subspaceInvHessMat(:,i)
+      END DO
+      WRITE(5000,*) '-subspaceGrad: '
+      WRITE(5000,'(5f20.10)') -subspaceGrad(:numFreeParams)
+      WRITE(5000,*) 'tempVecA: '
+      WRITE(5000,'(5f20.10)') tempVecA(:numFreeParams)
+
       CALL dgemv('N',numFreeParams,numFreeParams,1.0,subspaceInvHessMat(:,:),numFreeParams,-subspaceGrad(:numFreeParams),1,0.0,tempVecA(:numFreeParams),1)
+
+      WRITE(5000,*) '----------------------------'
+      WRITE(5000,*) 'tempVecA: '
+      WRITE(5000,'(5f20.10)') tempVecA(:numFreeParams)
+      WRITE(5000,*) 'prelimNextPoint: '
+      WRITE(5000,'(5f20.10)') prelimNextPoint(:)
+
+      !!! TEST START
+!      temp = SQRT(ddot(numFreeParams,tempVecA(:numFreeParams),1,tempVecA(:numFreeParams),1))
+      temp = MAXVAL(ABS(tempVecA(:numFreeParams-1)))
+      maxDisp = 0.05
+      IF (temp.GT.maxDisp) tempVecA(:numFreeParams) = tempVecA(:numFreeParams) / (temp/maxDisp)
+      dampingFactor = 0.8
+      !!! TEST END
 
       j = 1
       DO i = 1, vecLength
          IF(freeParams(i)) THEN
-            prelimNextPoint(i) = prelimNextPoint(i) + tempVecA(j)
+            prelimNextPoint(i) = prelimNextPoint(i) + dampingFactor * tempVecA(j)
+!            prelimNextPoint(i) = prelimNextPoint(i) + tempVecA(j)
             j = j + 1
          END IF
       END DO
+
+      WRITE(5000,*) 'prelimNextPoint: '
+      WRITE(5000,'(5f20.10)') prelimNextPoint(:)
 
       DEALLOCATE(subspaceInvHessMat)
 
@@ -229,10 +302,10 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
       DO i = 1, vecLength
          IF (enabledConstraints(i).AND.freeParams(i)) THEN
             IF(prelimNextPoint(i).LT.minConstraints(i)-eps) THEN
-               converged = .FALSE.
+!               converged = .FALSE.
             END IF
             IF(prelimNextPoint(i).GT.maxConstraints(i)+eps) THEN
-               converged = .FALSE.
+!               converged = .FALSE.
             END IF
             IF(prelimNextPoint(i).LT.minConstraints(i)) THEN
                prelimNextPoint(i) = minConstraints(i)
@@ -243,6 +316,10 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
          END IF
       END DO
 
+      WRITE(5000,*) 'prelimNextPoint: '
+      WRITE(5000,'(5f20.10)') prelimNextPoint(:)
+      WRITE(5000,*) 'prelimGradient: '
+      WRITE(5000,'(5f20.10)') prelimGradient(:)
 
       ! If not converged calculate prelimGradient for next point according to quadratic model
       IF(.NOT.converged) THEN
@@ -252,6 +329,14 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
          prelimGradient(:) = prelimGradient(:) + diffGrad(:)
       END IF
 
+      ! Test: Set the gradient entry for the Lagrange multiplier explicitly
+      ! (I hope this makes the approach more stable. The here introduced data is not automatically obtained)
+      temp = ddot(vecLength,equalityLinCombi(:vecLength),1,prelimNextPoint(:vecLength),1)
+      prelimGradient(vecLength) = temp - equalityCriterion   ! derivative with respect to the Lagrange parameter
+
+      WRITE(5000,*) 'prelimGradient: '
+      WRITE(5000,'(5f20.10)') prelimGradient(:)
+
    END DO
 
    ! 3. Project prelimNextPoint onto the allowed subspace given by the equality constraints
@@ -259,8 +344,16 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
 
    ! Determine free parameters (parameters not on boundaries with a gradient pointing outwards)
 
+!   WRITE(5200,*) '=========================================================='
+!   WRITE(5200,*) 'bfgs_b2: Starting charge constraint ensurance: '
+!   WRITE(5200,*) '=========================================================='
+
    converged = .FALSE.
    DO WHILE (.NOT.converged)
+
+!      WRITE(5200,*) 'Point A: '
+!      WRITE(5200,*) 'prelimNextPoint: '
+!      WRITE(5200,'(5f20.10)') prelimNextPoint(:)
 
       freeParams(:) = .TRUE.
       numFixedParams = 0
@@ -297,10 +390,17 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
             subspaceEqualityCrit = subspaceEqualityCrit - prelimNextPoint(i) * equalityLinCombi(i)
          END IF
       END DO
+
       temp = ddot(numFreeParams,subspaceLinCombi(:),1,subspaceNextPoint(:),1)
       converged = .TRUE.
       IF(ABS(temp - subspaceEqualityCrit).GT.largeEps) THEN
          converged = .FALSE.
+
+!         WRITE(5100,*) 'subspaceNextPoint(:): '
+!         WRITE(5100,*) subspaceNextPoint(:)
+!         WRITE(5100,*) 'subspaceEqualityCrit: ', subspaceEqualityCrit
+!         WRITE(5100,*) 'temp: ', temp
+
          subspaceNextPoint(:) = subspaceNextPoint(:) * subspaceEqualityCrit / temp
       END IF
       j = 1
@@ -310,6 +410,16 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
             j = j + 1
          END IF
       END DO
+
+      ! Also ensure that the equality criterion is fulfilled for the whole space.
+      ! (This is only for pathological cases)
+
+      temp = ddot(vecLength,equalityLinCombi(:vecLength),1,prelimNextPoint(:vecLength),1)
+      IF(ABS(temp - equalityCriterion).GT.largeEps) THEN
+         converged = .FALSE.
+         prelimNextPoint(:vecLength) = prelimNextPoint(:vecLength) * equalityCriterion / temp
+      END IF
+
    END DO
 
    ! 4. Update lastParameters, lastGradient, parameters
@@ -317,6 +427,7 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
    lastParameters(:) = parameters(:)
    lastGradient(:) = gradient(:)
    parameters(:) = prelimNextPoint(:)
+!   parameters(:) = 0.25*(prelimNextPoint(:) - lastParameters(:)) + lastParameters(:)
 
    DEALLOCATE(tempMatB)
    DEALLOCATE(invHessMat)

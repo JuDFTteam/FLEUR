@@ -40,7 +40,6 @@
       ALLOCATE ( rsyp(3,nosyp),del(nosyp),d(nosyp),nk(nosyp) ) 
       DO i = 1,nosyp
         syp1(:) = syp(:,i)
-        !CALL cotra3(syp1,rsyp1,bmat)
         rsyp1=matmul(syp1,bmat)
         rsyp(:,i) = rsyp1(:)
       ENDDO

@@ -33,7 +33,7 @@
    </cell>
    <xcFunctional name="pbe0" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="K-1" element="K" atomicNumber="19" coreStates="4" magMom=".00000000" flipSpin="T">
+      <species name="K-1" element="K" atomicNumber="19" coreStates="4" magMom=".00000000" flipSpinPhi=".00000000" flipSpinTheta="0.000000" flipSpinScale="F">
          <mtSphere radius="2.80000000" gridPoints="925" logIncrement=".01300000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
@@ -41,7 +41,7 @@
          <lo type="SCLO" l="0" n="3" eDeriv="0"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
       </species>
-      <species name="Cl-1" element="Cl" atomicNumber="17" coreStates="4" magMom=".00000000" flipSpin="T">
+      <species name="Cl-1" element="Cl" atomicNumber="17" coreStates="4" magMom=".00000000" flipSpinPhi=".00000000" flipSpinTheta="0.000000" flipSpinScale="F">
          <mtSphere radius="2.54000000" gridPoints="841" logIncrement=".01400000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <energyParameters s="3" p="3" d="3" f="4"/>
@@ -63,7 +63,7 @@
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
       <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
-      <plotting iplot="0" score="F" plplot="F"/>
+      <plotting iplot="0" />
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
       <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>

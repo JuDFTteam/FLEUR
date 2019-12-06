@@ -4,16 +4,16 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_pw_tofrom_grid
-  USE m_types
-  PRIVATE
-  REAL,PARAMETER:: d_15=1.e-15
+   USE m_types
+   PRIVATE
+   REAL,PARAMETER:: d_15=1.e-15
 
-  INTEGER :: ifftd,ifftxc3
-  !----->  fft  information  for xc potential + energy
-  INTEGER, ALLOCATABLE :: igxc_fft(:)
-  REAL,    ALLOCATABLE :: gxc_fft(:,:) !gxc_fft(ig,idm)
+   INTEGER :: ifftd,ifftxc3
+   !----->  fft  information  for xc potential + energy
+   INTEGER, ALLOCATABLE :: igxc_fft(:)
+   REAL,    ALLOCATABLE :: gxc_fft(:,:) !gxc_fft(ig,idm)
   
-  PUBLIC :: init_pw_grid,pw_to_grid,pw_from_grid,finish_pw_grid
+   PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
   SUBROUTINE init_pw_grid(dograds,stars,sym,cell)
     USE m_prpxcfftmap
@@ -24,13 +24,12 @@ CONTAINS
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_cell),INTENT(IN)       :: cell
     
-    !---> set up pointer for backtransformation of from g-vector in
-    !     positive domain of xc density fftbox into stars.
-    !     also the x,y,z components of the g-vectors are set up to calculate
-    !     derivatives.
-    !     in principle this can also be done in main program once.
-    !     it is done here to save memory.
-    !
+      !---> set up pointer for backtransformation of from g-vector in
+      !     positive domain of xc density fftbox into stars.
+      !     also the x,y,z components of the g-vectors are set up to calculate
+      !     derivatives.
+      !     in principle this can also be done in main program once.
+      !     it is done here to save memory.
       
     ifftd=27*stars%mx1*stars%mx2*stars%mx3
     ifftxc3  = stars%kxc1_fft*stars%kxc2_fft*stars%kxc3_fft
@@ -231,7 +230,14 @@ CONTAINS
                rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),grad)
        ELSE
           !Dummy rho (only possible if grad is used for libxc mode)
-          CALL mkgxyz3 (RESHAPE((/0.0/),(/1,1/)),rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
+          !CALL mkgxyz3 (RESHAPE((/0.0/),(/1,1/)),rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
+          !     rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),grad)
+
+          IF (dograds.and.(.not.PRESENT(xcpot))) THEN
+             ALLOCATE(grad%gr(3,ifftxc3,1))
+          END IF
+
+          CALL mkgxyz3 (0*rhd1(0:,:,1),rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
                rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),grad)
        END IF
        

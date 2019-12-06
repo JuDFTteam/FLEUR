@@ -7,19 +7,19 @@ jt::copyfile("files/plot_inp",$workdir);
 jt::testrun($executable,$workdir);
 
 #now test output
-$result=jt::test_fileexists("$workdir/plot.xsf");
+$result=jt::test_fileexists("$workdir/denIn.xsf");
 # unit cell
-$result+=jt::test_grepexists("$workdir/plot.xsf",".0000000 11.36143");
-$result+=jt::test_grepexists("$workdir/plot.xsf","1.93419");
+$result+=jt::test_grepexists("$workdir/denIn.xsf",".0000000 11.36143");
+$result+=jt::test_grepexists("$workdir/denIn.xsf","1.93419");
 # atom positions
-$result+=jt::test_grepexists("$workdir/plot.xsf","3.35012");
-$result+=jt::test_grepexists("$workdir/plot.xsf",".39481");
-$result+=jt::test_grepexists("$workdir/plot.xsf","2.23341");
+$result+=jt::test_grepexists("$workdir/denIn.xsf","3.35012");
+$result+=jt::test_grepexists("$workdir/denIn.xsf",".39481");
+$result+=jt::test_grepexists("$workdir/denIn.xsf","2.23341");
 # density values
-$result+=jt::test_grepexists("$workdir/plot.xsf","2.080311663"); # line 24
-$result+=jt::test_grepexists("$workdir/plot.xsf","1.275515247"); # line 289
-$result+=jt::test_grepexists("$workdir/plot.xsf","7.9874788"); # line 521
-$result+=jt::test_grepexists("$workdir/plot.xsf","10.2889353");  # line 523
-$result+=jt::test_grepexists("$workdir/plot.xsf","1.367227396"); # line 3018
+$result+=jt::test_grepexists("$workdir/denIn.xsf","2.080311663"); # line 24
+$result+=jt::test_grepexists("$workdir/denIn.xsf","1.275515247"); # line 289
+$result+=jt::test_grepexists("$workdir/denIn.xsf","7.9874788"); # line 521
+$result+=jt::test_grepexists("$workdir/denIn.xsf","10.2889353");  # line 523
+$result+=jt::test_grepexists("$workdir/denIn.xsf","1.367227396"); # line 3018
 
 jt::stageresult($workdir,$result,"2");

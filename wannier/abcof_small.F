@@ -231,7 +231,6 @@ c  ----> construct a and b coefficients
                  ENDDO
                ENDDO
                fkp=MATMUL(fkr,bmat)
-!               CALL cotra3(fkr,fkp,bmat)
 c     ----> generate spherical harmonics
                CALL ylm4(
      >                   lmax(n),fkp,
