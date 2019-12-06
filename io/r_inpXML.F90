@@ -127,12 +127,15 @@ CONTAINS
       REAL               :: tauTemp(3,48)
       REAL               :: bk(3)
       LOGICAL            :: flipSpin, l_eV, invSym, l_qfix, relaxX, relaxY, relaxZ
-      LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp,onsiteGF_loff,intersiteGF_loff,intersiteGF_lnn
+      LOGICAL            :: coreConfigPresent, l_enpara, l_orbcomp, tempBool, l_nocoinp
+      LOGICAL				 :: onsiteGF_loff,intersiteGF_loff,intersiteGF_lnn
       REAL               :: magMom, radius, logIncrement, qsc(3), latticeScale, dr
       REAL               :: aTemp, zp, rmtmax, sumWeight, ldau_u(4), ldau_j(4), hub1_u(4), hub1_j(4), hub1_occ(4),hub1_val(4,5),hub1_exc(4,3),hub1_mom(4,3), tempReal
       REAL               :: ldau_phi(4),ldau_theta(4), hub1_phi(4),hub1_theta(4)
       REAL               :: weightScale, eParamUp, eParamDown
       LOGICAL            :: l_amf(4), hub1_amf(4),l_found, j0_avgexc, j0_eDependence
+      REAL               :: flipSpinPhi,flipSpinTheta
+      LOGICAL            :: flipSpinScale
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
       INTEGER            :: lcutm,lcutwf,hybSelect(4)
       REAL               :: evac0Temp(2,2)
@@ -222,7 +225,11 @@ CONTAINS
       ALLOCATE(atoms%nlo(atoms%ntype))
       ALLOCATE(atoms%ncst(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%nflip(atoms%ntype))
+      ALLOCATE(atoms%flipSpinPhi(atoms%ntype))
+      ALLOCATE(atoms%flipSpinTheta(atoms%ntype))
+      ALLOCATE(atoms%flipSpinScale(atoms%ntype))
+      ALLOCATE(atoms%phi_mt_avg(atoms%ntype))
+      ALLOCATE(atoms%theta_mt_avg(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(4*atoms%ntype))
       ALLOCATE(atoms%j0(atoms%ntype))
@@ -372,6 +379,7 @@ CONTAINS
       noco%l_noco = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_noco'))
       input%swsp = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@swsp'))
       input%lflip = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
+      input%l_removeMagnetisationFromInterstitial=evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_removeMagnetisationFromInterstitial'))
       input%fixed_moment=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
 
   IF (ABS(input%fixed_moment)>1E-8.AND.(input%jspins==1.OR.noco%l_noco)) CALL judft_error("Fixed moment only in collinear calculations with two spins")
@@ -1429,7 +1437,10 @@ CONTAINS
          atomicNumber = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@atomicNumber'))
          coreStates = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreStates'))
          magMom = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@magMom'))
-         flipSpin = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpin'))
+         flipSpinPhi = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinPhi'))
+         flipSpinTheta = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinTheta'))
+         flipSpinScale = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@flipSpinScale'))
+     
 
          ! Attributes of mtSphere element of species
          radius = evaluateFirstOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/mtSphere/@radius'))
@@ -1499,17 +1510,15 @@ CONTAINS
                noel(iType) = namat_const(atoms%nz(iType))
                atoms%rmt(iType) = radius
                atoms%jri(iType) = gridPoints
+               atoms%flipSpinPhi(itype) = flipSpinPhi               
+               atoms%flipSpinTheta(itype) =flipSpinTheta
+               atoms%flipSpinScale(itype) =flipSpinScale 
                atoms%dx(iType) = logIncrement
                atoms%lmax(iType) = lmax
                atoms%nlo(iType) = speciesNLO(iSpecies)
                atoms%ncst(iType) = coreStates
                atoms%lnonsph(iType) = lnonsphr
                atoms%lapw_l(iType) = lmaxAPW
-               IF (flipSpin) THEN
-                  atoms%nflip(iType) = -1
-               ELSE
-                  atoms%nflip(iType) = 0
-               ENDIF
                atoms%bmu(iType) = magMom
                DO i = 1, numU
                   atoms%n_u = atoms%n_u + 1
@@ -2150,8 +2159,6 @@ CONTAINS
       input%cdinf = .FALSE.
 
       sliceplot%iplot = 0
-      input%score = .FALSE.
-      sliceplot%plpot = .FALSE.
 
       input%eonly = .FALSE.
       input%l_bmt = .FALSE.
@@ -2188,8 +2195,6 @@ CONTAINS
 
          IF (numberNodes.EQ.1) THEN
             sliceplot%iplot = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
-            input%score = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
-            sliceplot%plpot = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
          END IF
 
          ! Read in optional specialOutput switches

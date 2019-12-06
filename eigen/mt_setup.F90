@@ -43,7 +43,7 @@ CONTAINS
 
     DO jsp=1,MERGE(4,input%jspins,noco%l_mtNocoPot)
        !CALL tlmplm_cholesky(sphhar,atoms,DIMENSION,enpara, jsp,1,mpi,vTot%mt(:,0,1,jsp),input,vTot%mmpMat, td,ud)
-       CALL tlmplm_cholesky(sphhar,atoms,noco,enpara,jsp,jsp,mpi,vTot,input,td,ud)
+       CALL tlmplm_cholesky(sphhar,atoms,noco,enpara,jsp,mpi,vTot,input,td,ud)
        IF (input%l_f) CALL write_tlmplm(td,vTot%mmpMat,atoms%n_u+atoms%n_hia>0,jsp,jsp,input%jspins)
     END DO
     CALL timestop("tlmplm")

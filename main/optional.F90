@@ -13,9 +13,7 @@ CONTAINS
     ! this routine is called by: fleur.F90
     !
     ! optional --+-- plot -+- loddop
-    !            |         +- outcdn -+- cotra0
-    !            |                    +- cotra1
-    !            |                    +- starf2 -- spgrot
+    !            |         +- outcdn -+- starf2 -- spgrot
     !            |                    +- starf3
     !            |                    +- ylm3
     !            +-- stden -+- atom2 -+- setcor
@@ -40,10 +38,8 @@ CONTAINS
     !            |          +- points -- qranf
     !            |          +- sphpts -- qranf
     !            |          +- checkdop -+- starf3
-    !            |                       +- cotra0
     !            |                       +- starf2 -- spgrot
     !            |                       +- fitchk
-    !            |                       +- cotra1
     !            |                       +- ylm3
     !            +-- cdnsp -+- readDensity
     !            |          +- writeDensity
@@ -56,13 +52,12 @@ CONTAINS
     !                     +- wrtdop
     !----------------------------------------
     USE m_bmt
-    USE m_plotdop
     USE m_stden
     USE m_cdnsp
     USE m_flipcdn
     USE m_cdn_io
     USE m_types
-    USE m_pldngen
+
    
     IMPLICIT NONE
     !     ..
@@ -94,24 +89,14 @@ CONTAINS
     !     ..
     it = 1
 
-    IF ((sliceplot%iplot.NE.0 ).AND. (mpi%irank==0) ) THEN
-       IF (noco%l_noco) THEN
-          CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
-               cell,input,noco,oneD,sliceplot)
-       ENDIF
-    ENDIF
+ !   IF ((sliceplot%iplot.NE.0 ).AND. (mpi%irank==0) ) THEN
+ !      IF (noco%l_noco) THEN
+ !         CALL pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
+ !              cell,input,noco,oneD,sliceplot)
+ !      ENDIF
+ !   ENDIF
 
        
-    IF (mpi%irank == 0) THEN
-       IF (sliceplot%plpot) input%score = .FALSE.
-       IF (sliceplot%iplot.NE.0) THEN
-          CALL timestart("Plotting")
-          IF (input%strho) CALL juDFT_error("strho = T and iplot=/=0",calledby = "optional")
-          CALL plotdop(oneD,dimension,stars,vacuum,sphhar,atoms,&
-                       input,sym,cell,sliceplot,noco)
-          CALL timestop("Plotting")
-       END IF
-    ENDIF ! mpi%irank == 0
     !
     !     --->generate starting charge density
     !
@@ -168,7 +153,6 @@ CONTAINS
 
     ENDIF ! mpi%irank == 0
 
-    IF (sliceplot%iplot.NE.0)      CALL juDFT_end("density plot o.k.",mpi%irank)
     IF (input%strho)          CALL juDFT_end("starting density generated",mpi%irank)
     IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
     IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)

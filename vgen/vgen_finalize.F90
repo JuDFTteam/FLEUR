@@ -31,13 +31,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER i,js,n
 
-    !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
-    
-    DO js = 1,SIZE(vtot%mt,4)
-       DO n = 1,atoms%ntype
-          vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
-       ENDDO
-    ENDDO     ! js =1,input%jspins
+  
     
     ! Rescale vTot%pw_w with number of stars
     IF (.NOT.noco%l_noco) THEN
@@ -48,8 +42,18 @@ CONTAINS
        END DO
     ELSEIF(noco%l_noco) THEN
        CALL vmatgen(stars,atoms,vacuum,sym,input,denRot,vTot)
-       IF (noco%l_mtnocoPot) CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,vtot)
+       IF (noco%l_mtnocoPot) THEN
+          CALL rotate_mt_den_from_local(atoms,sphhar,sym,denRot,noco,vtot)
+       END IF
     ENDIF
+
+  !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
+    
+ DO js = 1,input%jspins !Used input%jspins instead of SIZE(vtot%mt,4) since the off diag, elements of VTot%mt need no rescaling. 
+       DO n = 1,atoms%ntype
+          vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
+       ENDDO
+    ENDDO     ! js =1,input%jspins
 
     ! Rescale vCoul%pw_w with number of stars
     DO js = 1, SIZE(vCoul%pw_w,2)
@@ -61,10 +65,19 @@ CONTAINS
     !Copy first vacuum into second vacuum if this was not calculated before 
     IF (vacuum%nvac==1) THEN
        vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
+!       DO i=1,3
+!          xcB(i)%vacz(:,2,:)  = xcB(i)%vacz(:,1,:)
+!       ENDDO
        IF (sym%invs) THEN
           vTot%vacxy(:,:,2,:)  = CMPLX(vTot%vacxy(:,:,1,:))
+!          DO i=1,3
+!             xcB(i)%vacxy(:,:,2,:)  = CMPLX(xcB(i)%vacxy(:,:,1,:))
+!          ENDDO
        ELSE
           vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
+!          DO i=1,3
+!             xcB(i)%vacxy(:,:,2,:)  = xcB(i)%vacxy(:,:,1,:)
+!          ENDDO
        ENDIF
     ENDIF
  

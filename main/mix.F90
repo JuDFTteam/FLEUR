@@ -187,13 +187,13 @@ contains
 
 
     !write out mixed density
-    IF (mpi%irank==0) CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+    IF (mpi%irank==0) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,.TRUE.,inDen)
 
 #ifdef CPP_HDF
     IF (mpi%irank==0.and.judft_was_argument("-last_extra")) THEN
        CALL system("rm cdn_last.hdf")
-       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
             1,results%last_distance,results%ef,.TRUE.,inDen,'cdn_last')
 
     END IF

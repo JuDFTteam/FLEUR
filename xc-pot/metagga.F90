@@ -231,7 +231,7 @@ CONTAINS
       call undo_vgen_finalize(vTot_corrected, atoms, noco, stars)
 
       call set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot_corrected)
-      call set_kinED_mt(mpi,   sphhar,    atoms, sym, core_den, val_den, &
+      call set_kinED_mt(mpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
                            xcpot, EnergyDen, input, vTot_corrected)
    end subroutine set_kinED
 
@@ -267,7 +267,7 @@ CONTAINS
       xcpot%kinED%set = .True.
    end subroutine set_kinED_is
 
-   subroutine set_kinED_mt(mpi,   sphhar,    atoms, sym, core_den, val_den, &
+   subroutine set_kinED_mt(mpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
                            xcpot, EnergyDen, input, vTot)
       use m_types
       use m_mt_tofrom_grid
@@ -276,6 +276,7 @@ CONTAINS
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
       TYPE(t_sym), INTENT(IN)        :: sym
+      TYPE(t_noco), INTENT(IN)       :: noco
       TYPE(t_potden),INTENT(IN)      :: core_den, val_den, EnergyDen, vTot
       CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
       TYPE(t_input),INTENT(IN)       :: input
@@ -317,19 +318,19 @@ CONTAINS
             vTot_mt(jr,0:,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
          enddo
          CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar, EnergyDen%mt(:, 0:, n, :), &
-                         n,     tmp_grad,     ED_rs)
+                         n,  noco,   tmp_grad,     ED_rs)
          CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar, vTot_mt(:,0:,:), &
-                         n,     tmp_grad,     vTot_rs)
+                         n,     noco,tmp_grad,     vTot_rs)
          
          tmp_sphhar%nlhd = sphhar%nlhd
          tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
 
          CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, tmp_sphhar, vTot_mt(:,0:0,:), &
-                         n,     tmp_grad,     vTot0_rs)
+                         n,    noco, tmp_grad,     vTot0_rs)
          CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar, &
-                         core_den%mt(:,0:,n,:), n, tmp_grad, core_den_rs)
+                         core_den%mt(:,0:,n,:), n,noco, tmp_grad, core_den_rs)
          CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar, &
-                         val_den%mt(:,0:,n,:), n, tmp_grad, val_den_rs)
+                         val_den%mt(:,0:,n,:), n,noco, tmp_grad, val_den_rs)
          
          call calc_kinEnergyDen_mt(ED_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
                                    xcpot%kinED%mt(:,:,loc_n))

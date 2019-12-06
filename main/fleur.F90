@@ -4,9 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleur
-  IMPLICIT NONE
+   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE fleur_execute(mpi_comm)
+   SUBROUTINE fleur_execute(mpi_comm)
 
     !     ***************************************************************
     !
@@ -36,45 +36,50 @@ CONTAINS
     !----------------------------------------
     ! this routine is the main PROGRAM
 
-    USE m_types
-    USE m_constants
-    USE m_fleur_init
-    USE m_optional
-    USE m_cdn_io
-    USE m_mixing_history
-    USE m_qfix
-    USE m_vgen
-    USE m_writexcstuff
-    USE m_vmatgen
-    USE m_eigen
-    USE m_eigenso
-    USE m_fermie
-    USE m_cdngen
-    USE m_totale
-    USE m_potdis
-    USE m_mix
-    USE m_xmlOutput
-    USE m_juDFT_time
-    USE m_calc_hybrid
-    USE m_rdmft
-    USE m_io_hybrid
-    USE m_wann_optional
-    USE m_wannier
-    USE m_bs_comfort
-    USE m_dwigner
-    USE m_ylm
-    USE m_metagga
-    USE m_hubbard1_setup
-#ifdef CPP_MPI
-    USE m_mpi_bc_potden
-#endif
-    USE m_eig66_io
-    USE m_chase_diag
-    USE m_writeBasis
-    !$ USE omp_lib
-    IMPLICIT NONE
+   USE m_types
+   USE m_constants
+   USE m_fleur_init
+   USE m_optional
+   USE m_cdn_io
+   USE m_mixing_history
+   USE m_qfix
+   USE m_vgen
+   USE m_vgen_coulomb
+   USE m_writexcstuff
+   USE m_vmatgen
+   USE m_eigen
+   USE m_eigenso
+   USE m_fermie
+   USE m_cdngen
+   USE m_totale
+   USE m_potdis
+   USE m_mix
+   USE m_xmlOutput
+   USE m_juDFT_time
+   USE m_calc_hybrid
+   USE m_rdmft
+   USE m_io_hybrid
+   USE m_wann_optional
+   USE m_wannier
+   USE m_bs_comfort
+   USE m_dwigner
+   USE m_ylm
+   USE m_metagga
+   USE m_plot
+   USE m_hubbard1_setup
 
-    INTEGER, INTENT(IN)             :: mpi_comm
+#ifdef CPP_MPI
+   USE m_mpi_bc_potden
+#endif
+   USE m_eig66_io
+   USE m_chase_diag
+   USE m_writeBasis
+
+   USE m_alignSpinAxisMagn
+   !$ USE omp_lib
+   IMPLICIT NONE
+
+   INTEGER, INTENT(IN)             :: mpi_comm
 
     TYPE(t_input)                   :: input
     TYPE(t_field)                   :: field, field2
@@ -97,8 +102,10 @@ CONTAINS
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
-    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp
-    TYPE(t_potden)                  :: inDen, outDen, EnergyDen
+    TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen, dummyDen
+    TYPE(t_potden), DIMENSION(3)    :: testDen, testGrad
+
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
     TYPE(t_greensf)                 :: gOnsite
@@ -111,6 +118,7 @@ CONTAINS
     INTEGER :: wannierspin
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix
+
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
     INTEGER :: ierr(2),n
@@ -122,7 +130,7 @@ CONTAINS
     CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
                     banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,hub1,l_opti)
     CALL timestop("Initialization")
-
+    
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
       CALL juDFT_error('Currently no preconditioner for 1D calculations', calledby = 'fleur')
     END IF
@@ -145,18 +153,24 @@ CONTAINS
 
     ! Initialize and load inDen density (start)
     CALL inDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-
+    
     archiveType = CDN_ARCHIVE_TYPE_CDN1_const
     IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
     IF(mpi%irank.EQ.0) THEN
-       CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+       CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                         0,results%ef,l_qfix,inDen)
        CALL timestart("Qfix")
        CALL qfix(mpi,stars,atoms,sym,vacuum, sphhar,input,cell,oneD,inDen,noco%l_noco,.FALSE.,.false.,fix)
        CALL timestop("Qfix")
-       CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
                          0,-1.0,results%ef,.FALSE.,inDen)
     END IF
+    
+    IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
+       CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                      noco, inDen, PLOT_INPDEN, sliceplot) 
+    END IF 
+
     ! Initialize and load inDen density (end)
 
     ! Initialize potentials (start)
@@ -257,10 +271,22 @@ CONTAINS
 !!$                END IF
        !---< gwf
 
+!START Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
+       IF(.FALSE.)CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
+               ,sym,oneD,cell,noco,input,atoms,inDen)
+!END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
                  obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
+
+       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN            
+          CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+                         noco, vTot, PLOT_POT_TOT, sliceplot)      
+          !CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vCoul,PLOT_POT_COU)
+          !CALL subPotDen(vxcForPlotting,vTot,vCoul)
+          !CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,vxcForPlotting,PLOT_POT_VXC)
+       END IF 
 
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
@@ -385,8 +411,19 @@ CONTAINS
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum, &
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                      archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1)
+                      archiveType,xcpot,outDen,EnergyDen)
+                      ,gOnsite,hub1)
+          !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
           outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:) = inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:)
+          IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
+!               CDN including core charge
+               ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
+!!               CDN subtracted by core charge
+               ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
+          END IF 
+
           IF (input%l_rdmft) THEN
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
@@ -416,8 +453,9 @@ CONTAINS
           ENDIF
 #endif
           CALL timestop("generation of new charge density (total)")
-
-             
+!START Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
+IF (.FALSE.) CALL rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars,sym,oneD,cell,input,atoms,outDen,inDen)
+!END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
 !!$             !----> output potential and potential difference
 !!$             IF (obsolete%disp) THEN
 !!$                reap = .FALSE.
@@ -447,7 +485,18 @@ CONTAINS
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
             sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1%l_runthisiter)
-       
+!Plots of mixed density       
+       IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
+!               CDN including core charge
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_MIXDEN_Y_CORE, sliceplot)
+!!               CDN subtracted by core charge
+!                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
+!                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+!                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
+          END IF 
+
+
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
@@ -508,7 +557,31 @@ CONTAINS
           IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
        END IF
 
+  !Break SCF loop if Plots were generated in ongoing run (iplot=/=0).
+       IF(sliceplot%iplot.NE.0) THEN
+          CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+       END IF
+
+
     END DO scfloop ! DO WHILE (l_cont)
+
+    ! Test: Build a field, for which the theoretical divergence etc. are known and
+    ! compare with the result of the routine.
+
+    !CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
+    !CALL makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,testDen)
+    !CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, 1.0, inDen, dummyDen, testDen(1), testDen(2), testDen(3))
+    !CALL checkplotinp()
+    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDen             ', dummyDen, testDen(1), testDen(2), testDen(3))
+    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
+    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenz            ', testDen(3))
+    !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
+    !DO i=1,3
+    !   CALL testGrad(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+    !   ALLOCATE(testGrad(i)%pw_w,mold=testGrad(i)%pw)
+    !ENDDO
+    !CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,testDen(2),testGrad)
+    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testGrad            ', testGrad(1), testGrad(1), testGrad(2), testGrad(3))
 
     CALL add_usage_data("Iterations",iter)
 
@@ -517,32 +590,32 @@ CONTAINS
     CALL close_eig(eig_id)
     CALL juDFT_end("all done",mpi%irank)
     
-  CONTAINS
-    SUBROUTINE priv_geo_end(mpi)
-      TYPE(t_mpi),INTENT(IN)::mpi
-      LOGICAL :: l_exist
-      !Check if a new input was generated
-      INQUIRE (file='inp_new',exist=l_exist)
-      IF (l_exist) THEN
-         CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
-      END IF
-      !check for inp.xml
-      INQUIRE (file='inp_new.xml',exist=l_exist)
-      IF (.NOT.l_exist) RETURN
-      IF (mpi%irank==0) THEN
-         CALL system('mv inp.xml inp_old.xml')
-         CALL system('mv inp_new.xml inp.xml')
-         INQUIRE (file='qfix',exist=l_exist)
+   CONTAINS
+      SUBROUTINE priv_geo_end(mpi)
+         TYPE(t_mpi),INTENT(IN)::mpi
+         LOGICAL :: l_exist
+         !Check if a new input was generated
+         INQUIRE (file='inp_new',exist=l_exist)
          IF (l_exist) THEN
-            OPEN(2,file='qfix')
-            WRITE(2,*)"F"
-            CLOSE(2)
-            PRINT *,"qfix set to F"
+            CALL juDFT_end(" GEO new inp created ! ",mpi%irank)
+         END IF
+         !check for inp.xml
+         INQUIRE (file='inp_new.xml',exist=l_exist)
+         IF (.NOT.l_exist) RETURN
+         IF (mpi%irank==0) THEN
+            CALL system('mv inp.xml inp_old.xml')
+            CALL system('mv inp_new.xml inp.xml')
+            INQUIRE (file='qfix',exist=l_exist)
+            IF (l_exist) THEN
+               OPEN(2,file='qfix')
+               WRITE(2,*)"F"
+               CLOSE(2)
+               PRINT *,"qfix set to F"
+            ENDIF
+            CALL mixing_history_reset(mpi)
          ENDIF
-         call mixing_history_reset(mpi)
-      ENDIF
-      CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
-    END SUBROUTINE priv_geo_end
+         CALL juDFT_end(" GEO new inp.xml created ! ",mpi%irank)
+      END SUBROUTINE priv_geo_end
     
-  END SUBROUTINE fleur_execute
+   END SUBROUTINE fleur_execute
 END MODULE m_fleur

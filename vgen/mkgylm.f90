@@ -4,76 +4,81 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mkgylm
+   !-----------------------------------------------------------------------------
+   ! Using the components and derivatives of a charge density rho in spherical
+   ! coordinates on the real space grid, make the following quantaties:
+   ! 
+   ! gr(js):      [partial_r (rho),partial_theta (rho),partial_phi (rho)]
+   ! sigma:       |grad(rho)|^2 for jspins==1, otherwise three components, namely
+   !              |grad(rho_up)|^2,grad(rho_up)*grad(rho_down),|grad(rho_down)|^2 
+   ! laplace(js): laplace(rho_js)
+   ! 
+   ! and these older components:
+   ! agrt/u/d:    |grad(rho)| for total density/spin-up/spin-down
+   ! g2rt/u/d:    laplace(rho)
+   ! gggrt/u/d:   (grad(rho))*(grad(|grad(rho)|)) [scalar product]
+   ! gzgr:        (grad(zeta))*(grad(rho)) for zeta=(rho_up-rho_down)/rho 
+   ! 
+   ! which are used to calculate gradient contributions to the xc potential and
+   ! energy.
+   ! 
+   ! rh is rho, rhd[i][j] are the partial derivatives along one/two directions.
+   ! rv and thet are the radius and polar angles and t/f in derivatives stand for
+   ! theta/phi.
+   ! 
+   ! Modified so only allocated old quantities require calculations. A.N. 2019
+   ! 
+   ! Quantities fo libxc are calculated as well. D.W./M.R. 2018
+   ! 
+   ! Original script by T.A. 1996
+   !-----------------------------------------------------------------------------
 CONTAINS
    SUBROUTINE mkgylm(jspins,rv,thet,nsp, rh,rhdr,rhdt,rhdf,rhdrr,rhdtt,rhdff, rhdtf,rhdrt,rhdrf,grad,kt)
-      !c.....------------------------------------------------------------------
-      !c     by use of charge density and its polar coord. gradient components
-      !c     c    calculate agr and others used to evaluate gradient
-      !c     c    contributions to potential and energy. t.a. 1996.
-      !c.....------------------------------------------------------------------
-      !c     ro=sum(ro*ylh), rdr=sum(drr*ylh), drdr=sum(ddrr*ylh),
-      !c     c    rdt=sum(ro*ylht1), rdtt=sum(ro*ylht2), ...
-      !c     c    rdf=sum(ro*ylhf1), rdff=sum(ro*ylhf2), ...
-      !c     c    rdtf=sum(ro*ylhtf), rdff=sum(ro*ylhf2), ...
-      !c     c    rdrt=sum(drr*ylht1),rdrf=sum(drr*ylhf1),!
-      !c     agr: abs(grad(ro)), g2r: laplacian(ro),
-      !c     c    gggr: grad(ro)*grad(agr),
-      !c     c    grgru,d: grad(ro)*grad(rou),for rod., gzgr: grad(zeta)*grad(ro).
-      !
-      !c     dagrr,-t,-f: d(agr)/dr, d(agr)/dth/r, d(agr)/dfi/r/sint.
-      !c.....------------------------------------------------------------------
       USE m_types
       IMPLICIT NONE
-      !C     ..
-      !C     .. Arguments ..
-      REAL,    INTENT (IN) :: rv
-      REAL,    INTENT (IN) :: thet(:)
-      REAL,    INTENT (IN) :: rh(:,:),rhdr(:,:)
-      REAL,    INTENT (IN) :: rhdf(:,:),rhdrr(:,:)
-      REAL,    INTENT (IN) :: rhdtt(:,:),rhdff(:,:)
-      REAL,    INTENT (IN) :: rhdtf(:,:),rhdrt(:,:)
-      REAL,    INTENT (IN) :: rhdrf(:,:),rhdt(:,:)
-      TYPE(t_gradients),INTENT(INOUT) :: grad
-      INTEGER,INTENT(IN)              :: jspins,nsp
-      INTEGER,INTENT(IN)              :: kt !index of first point to use in gradients
+      REAL, INTENT (IN)                :: rv
+      REAL, INTENT (IN)                :: thet(:)
+      REAL, INTENT (IN)                :: rh(:,:)
+      REAL, INTENT (IN)                :: rhdr(:,:),rhdt(:,:),rhdf(:,:)
+      REAL, INTENT (IN)                :: rhdrr(:,:),rhdtt(:,:),rhdff(:,:)
+      REAL, INTENT (IN)                :: rhdtf(:,:),rhdrf(:,:),rhdrt(:,:)
+      TYPE(t_gradients), INTENT(INOUT) :: grad
+      INTEGER, INTENT(IN)              :: jspins,nsp
+      INTEGER, INTENT(IN)              :: kt !index of first point to use in gradients
 
-      !C     ..
-      !C     .. Locals ..
+      REAL dagrf,dagrfd,dagrfu,dagrr,dagrrd,dagrru,dagrt, &
+           dagrtd,dagrtu,drdr,dzdfs,dzdr,dzdtr,grf,grfd,grfu,grr, &
+           grrd,grru,grt,grtd,grtu,rdf,rdfd,rdff,rdffd,rdffu,rdfu, &
+           rdr,rdrd,rdrf,rdrfd,rdrfu,rdrrd,rdrru,rdrt,rdrtd,rdrtu, &
+           rdru,rdt,rdtd,rdtf,rdtfd,rdtfu,rdtt,rdttd,rdttu,rdtu, &
+           ro,ro2,rod,rou,rv1,rv2,rv3,rvsin1,sint1,sint2,tant1
+      REAL, PARAMETER  :: chsml = 1.e-10
       INTEGER i,js,fac
-      REAL    chsml, dagrf,dagrfd,dagrfu,dagrr,dagrrd,dagrru,dagrt,&
-         dagrtd,dagrtu,drdr,dzdfs,dzdr,dzdtr,grf,grfd,grfu,grr,&
-         grrd,grru,grt,grtd,grtu,rdf,rdfd,rdff,rdffd,rdffu,rdfu,&
-         rdr,rdrd,rdrf,rdrfd,rdrfu,rdrrd,rdrru,rdrt,rdrtd,rdrtu,&
-         rdru,rdt,rdtd,rdtf,rdtfd,rdtfu,rdtt,rdttd,rdttu,rdtu,&
-         ro,ro2,rod,rou,rv1,rv2,rv3,rvsin1,sint1,sint2,tant1
-
-      chsml = 1.e-10
 
       rv1 = rv
       rv2 = rv1**2
       rv3 = rv1**3
 
+      ! Gradients for libxc calculations.
       IF (ALLOCATED(grad%gr)) THEN
-         !      Gradients for libxc
          DO js=1,jspins
             DO i=1,nsp
                grad%gr(:,kt+i,js)=[rhdr(i,js),rhdt(i,js),rhdf(i,js)]
-            ENDDO
-         ENDDO
-         !contracted gradients for libxc
+            END DO
+         END DO
+         ! Use contracted gradients only for libxc.
          IF (ALLOCATED(grad%sigma)) THEN
-            !     Contracted gradients for libxc
             IF (jspins==1) THEN
                DO i=1,nsp
                   grad%sigma(1,kt+i)= dot_PRODUCT(grad%gr(:,kt+i,1),grad%gr(:,kt+i,1))
-               ENDDO
+               END DO
             ELSE
                DO i=1,nsp
                   grad%sigma(1,kt+i)= dot_PRODUCT(grad%gr(:,kt+i,1),grad%gr(:,kt+i,1))
                   grad%sigma(2,kt+i)= dot_PRODUCT(grad%gr(:,kt+i,1),grad%gr(:,kt+i,2))
                   grad%sigma(3,kt+i)= dot_PRODUCT(grad%gr(:,kt+i,2),grad%gr(:,kt+i,2))
-               ENDDO
-            ENDIF
+               END DO
+            END IF
          END IF
          IF (ALLOCATED(grad%laplace)) THEN
             !Lapacian of density
@@ -86,7 +91,15 @@ CONTAINS
                ENDDO
             ENDDO
          ENDIF
-         RETURN !Do not calculate arrays for in-build GGA
+         ! Cartesian components of the gradient for sourcefree calculations. TODO: Need phi here as well.
+         !IF (ALLOCATED(grad%grxyz)) THEN
+         !   grad%grxyz=SIN(th)*COS(ph)*grad%gr(1,kt+k,1) + COS(th)*COS(ph)*grad%gr(2,kt+k,1)/r - SIN(ph)*grad%gr(3,kt+k,1)/(r*SIN(th))
+         !END IF
+         RETURN ! Do not calculate arrays for in-build GGA.
+      END IF
+
+      IF (ALLOCATED(grad%gr)) THEN
+         
       END IF
       !     Old code for in-build xcpots
       IF(allocated(grad%agrt)) THEN

@@ -602,12 +602,12 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   CALL timestart("stepf") 
   CALL stepf(sym,stars,atoms,oneD,input,cell,vacuum,mpi)
   CALL timestop("stepf") 
-  IF (sliceplot%iplot.EQ.0) THEN   
+  !IF (sliceplot%iplot.EQ.0) THEN   
      IF (mpi%irank.EQ.0) THEN
         CALL convn(DIMENSION,atoms,stars)
         CALL e_field(atoms,DIMENSION,stars,sym,vacuum,cell,input,field%efield)
      END IF !(mpi%irank.EQ.0)
-  END IF
+  !END IF
 
   !At some point this should be enabled for noco as well
 #ifdef CPP_MPI

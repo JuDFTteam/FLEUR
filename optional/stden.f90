@@ -208,10 +208,8 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
       ! Write superposed density onto density file
       den%iter = 0
-      archiveType = CDN_ARCHIVE_TYPE_CDN1_const
-      IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
 
-      CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
                         1,-1.0,0.0,.TRUE.,den)
       ! Check continuity
       IF (input%vchk) THEN

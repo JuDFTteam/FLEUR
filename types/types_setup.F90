@@ -186,7 +186,20 @@ MODULE m_types_setup
       TYPE(t_gfelementtype), ALLOCATABLE::gfelem(:)
       TYPE(t_j0calctype), ALLOCATABLE::j0(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
-      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
+      !flipSpinTheta and flipSpinPhi are the angles which are given
+      !in the input to rotate the charge den by these polar angles.
+      !Typical one needs ntype angles.
+      REAL, ALLOCATABLE :: flipSpinPhi(:) 
+      REAL, ALLOCATABLE :: flipSpinTheta(:)
+      !Logical switch which decides if the rotated cdn should be scaled.
+      !Yet untested feature.
+      LOGICAL, ALLOCATABLE :: flipSpinScale(:)
+      !Angles which are calculated by magnMomFromDen.f90
+      !to be able to rotate the cdn so that the Spin-Quantization Axis
+      !and the magnetization align.
+      !Typical one needs ntype angles.
+      REAL, ALLOCATABLE :: phi_mt_avg(:)
+      REAL, ALLOCATABLE :: theta_mt_avg(:)
    CONTAINS
       procedure :: nsp => calc_nsp_atom
    END TYPE t_atoms
@@ -415,7 +428,6 @@ MODULE m_types_setup
       INTEGER:: kcrel
       LOGICAL:: frcor
       LOGICAL:: lflip
-      LOGICAL:: score
       LOGICAL:: swsp
       LOGICAL:: tria
       LOGICAL:: integ
@@ -468,6 +480,7 @@ MODULE m_types_setup
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps
       INTEGER :: rdmftStatesBelow
+      LOGICAL :: l_removeMagnetisationFromInterstitial
       INTEGER :: rdmftStatesAbove
       INTEGER :: rdmftFunctional
    END TYPE t_input

@@ -100,6 +100,7 @@ CONTAINS
        DO ipot = 1,4
           vis(imeshpt,ipot) =  vis(imeshpt,ipot) * stars%ufft(imeshpt-1)
        ENDDO
+
     ENDDO
 
     !---> Fouriertransform the matrix potential back to reciprocal space

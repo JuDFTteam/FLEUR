@@ -136,9 +136,9 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 
     !-------------------------write potential--------------------
     IF(input%gw==1) THEN
-       CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot,vTot%pw_w)
-       CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul,vCoul%pw_w)
-       CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot,vTot%pw_w)
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul,vCoul%pw_w)
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
     END IF
 
 

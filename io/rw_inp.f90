@@ -46,7 +46,7 @@
       CHARACTER(len=12),INTENT(OUT):: relcor
       REAL,INTENT(IN),OPTIONAL     :: dtild_opt
       CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
-
+      
 
 
       CHARACTER(len=8) :: name(10)
@@ -71,10 +71,11 @@
       INTEGER  ::nw,idsprs
       INTEGER ieq,i,k,na,n,ilo
       REAL s3,ah,a,hs2,rest
-      LOGICAL l_hyb,l_sym,ldum
+      LOGICAL l_hyb,l_sym,ldum,ldum2
       INTEGER :: ierr, intDummy
 ! ..
 !...  Local Arrays
+      INTEGER :: nflip(atoms%ntype)
       CHARACTER :: helpchar(atoms%ntype)
       CHARACTER(len=  4) :: chntype
       CHARACTER(len= 41) :: chform
@@ -587,14 +588,14 @@
       chform = '(6x,l1,'//chntype//'i3 )'
 !      chform = '(6x,l1,23i3 )'
       READ (UNIT=5,FMT=chform,END=99,ERR=99)&
-     &                                   input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+     &                                   input%lflip, (nflip(i),i=1,atoms%ntype) !atoms%nflip not supported in old inp file anymore =>Dummy variable
 !-
       chform = '("swsp=",l1,'//chntype//'f6.2)'
 !      chform = '("swsp=",l1,23f6.2)'
       WRITE (6,FMT=chform) input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
       chform = '("lflip=",l1,'//chntype//'i3 )'
 !      chform = '("lflip=",l1,23i3 )'
-      WRITE (6,FMT=chform) input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+      WRITE (6,FMT=chform) input%lflip, (nflip(i),i=1,atoms%ntype)!atoms%nflip not supported in old inp file anymore =>Dummy variable
 !-roa
 !+stm
       READ (UNIT=5,FMT=8075,END=99,ERR=99)&
@@ -622,16 +623,16 @@
       END IF
 !
       band = .false.
-      READ (UNIT=5,FMT=8050,END=992,ERR=992) ldum,input%score,sliceplot%plpot,band
-      WRITE (6,9240) ldum,input%score,sliceplot%plpot,band
+      READ (UNIT=5,FMT=8050,END=992,ERR=992) ldum,ldum2,ldum2,band
+      WRITE (6,9240) ldum,ldum2,ldum2,band
       sliceplot%iplot=MERGE(1,0,ldum)
       IF (band) THEN
         banddos%dos=.true. ; banddos%ndir = -4
       ENDIF
       GOTO 993
  992  BACKSPACE(5)
-      READ (UNIT=5,FMT=8050,END=99,ERR=99) ldum,input%score,sliceplot%plpot
-      WRITE (6,9240) ldum,input%score,sliceplot%plpot,band
+      READ (UNIT=5,FMT=8050,END=99,ERR=99) ldum,ldum2,ldum2
+      WRITE (6,9240) ldum,ldum2,ldum2,band
       sliceplot%iplot=MERGE(1,0,ldum)
 !
  993  READ (UNIT=5,FMT='(i3,2f10.6,6x,i3,8x,l1)',END=99,ERR=99)&
@@ -915,7 +916,7 @@
       chform = '("swsp=",l1,'//chntype//'f6.2)'
       WRITE (5,FMT=chform) input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
       chform = '("lflip=",l1,'//chntype//'i3 )'
-      WRITE (5,FMT=chform) input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+      WRITE (5,FMT=chform) input%lflip, (nflip(i),i=1,atoms%ntype)!atoms%nflip not supported in old inp file anymore =>Dummy variable
 !-roa
 !+stm
       WRITE (5,9210) banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&
@@ -935,7 +936,7 @@
         WRITE (5,*)
       END IF
       band = .false.
-      WRITE (5,9240) ldum,input%score,sliceplot%plpot,band
+      WRITE (5,9240) ldum,ldum2,ldum2,band
  9240 FORMAT ('iplot=',l1,',score=',l1,',plpot=',l1,',band=',l1)
       WRITE (5,9250) sliceplot%kk,sliceplot%e1s,sliceplot%e2s,sliceplot%nnne,input%pallst
  9250 FORMAT (i3,2f10.6,',nnne=',i3,',pallst=',l1)
