@@ -18,6 +18,7 @@ CONTAINS
     USE m_vmatgen
     USE m_types
     USE m_rotate_mt_den_tofrom_local
+    USE m_sfTests
     IMPLICIT NONE
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
@@ -80,6 +81,10 @@ CONTAINS
 !          ENDDO
        ENDIF
     ENDIF
+
+    ! Source-free testwise
+    !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,inDen,1.0)
+    !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,vTot,2.0)
  
   END SUBROUTINE vgen_finalize
 END MODULE m_vgen_finalize
