@@ -284,7 +284,7 @@ CONTAINS
     INTEGER,INTENT(IN)       :: jspins, potden_type
  
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
-         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mtnocopot,potden_type,&
+         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mtnocopot.OR.noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 

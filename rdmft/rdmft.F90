@@ -270,7 +270,8 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
-   CALL moments%init(input,atoms)
+!   CALL moments%init(input,atoms)
+   CALL moments%init(mpi,input,sphhar,atoms)
    CALL overallDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
    CALL overallVCoul%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTCOUL)
    IF (ALLOCATED(vTot%pw_w)) DEALLOCATE (vTot%pw_w)
@@ -694,7 +695,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
                theta = ASIN(SQRT(occStateI))! * 2.0 /  pi_const
 
-               WRITE(7865,'(i7,4f15.10)'), iState, occStateI, theta, sin(theta), cos(theta)
+               WRITE(7865,'(i7,4f15.10)') iState, occStateI, theta, sin(theta), cos(theta)
 
 !               occStateI = MAX(occStateI,minOcc)
                equalityLinCombi(iState) = kpts%wtkpt(ikpt)

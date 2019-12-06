@@ -257,6 +257,7 @@ CONTAINS
        IF(input%l_rdmft) THEN
           CALL open_hybrid_io1(DIMENSION,sym%invs)
        END IF
+
        IF(.not.input%eig66(1))THEN
           CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
        END IF
