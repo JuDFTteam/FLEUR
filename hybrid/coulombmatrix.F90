@@ -835,7 +835,6 @@ CONTAINS
                         structconst1(ic1, :) = structconst(:, ic1, ic2, ikpt)
                      END DO
                      DO l2 = 0, hybrid%lexp
-                        ! !$OMP PARALLEL DO PRIVATE(m2, lm2, cdum, lm1, l1, l)
                         DO m2 = -l2, l2
                            lm2 = l2**2 + (m2+l2) +1 ! lm2 = lm2+1 as analytic sum
                            cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
