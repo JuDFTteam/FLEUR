@@ -75,7 +75,7 @@ MODULE m_tetraWeight
 
       ELSE IF( efermi>=etetra(2) ) THEN
 
-         C1     = ( efermi-etetra(1) ) * ( efermi-etetra(2) )/( e(3,1)*e(3,2) )
+         C1     = ( efermi-etetra(1) )**2/( e(4,1)*e(3,1) )
 
          C2     = ( efermi-etetra(1) )*( efermi-etetra(2) )*( etetra(3)-efermi )/( e(3,1)*e(3,2)*e(4,1) )
 
