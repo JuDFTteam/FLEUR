@@ -471,8 +471,6 @@ CONTAINS
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
             sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
-<<<<<<< HEAD
-=======
 !Plots of mixed density       
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
@@ -482,9 +480,7 @@ CONTAINS
 !                CALL makeplots(sym,stars,vacuum,atoms,sphhar,input,cell,oneD,noco,sliceplot,inDen,PLOT_MIXDEN_N_CORE)
 !                CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
 !                               cell, noco, outDen, PLOT_OUTDEN_N_CORE, sliceplot)
-          END IF 
-
->>>>>>> develop
+       END IF 
 
        IF(mpi%irank == 0) THEN
          WRITE (6,FMT=8130) iter
