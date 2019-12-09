@@ -58,7 +58,7 @@ CONTAINS
 #endif
     IF ( .NOT. input%film ) THEN
        CALL vgen_coulomb( 1, mpi, DIMENSION, oneD, input, field, vacuum, sym, stars, cell, &
-            sphhar, atoms, resDen, vYukawa )
+            sphhar, atoms, .FALSE., resDen, vYukawa )
     ELSE
        if( mpi%irank == 0 ) then 
           call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )

@@ -334,7 +334,6 @@
                 !
                 ! Transform intern coordinates to cartesian:
                 !
-                !CALL cotra0(atoms%taual(1,na),atoms%pos(1,na),cell%amat)
                 atoms%pos(:,na)=MATMUL(cell%amat,atoms%taual(:,na))
              ENDDO  ! l.o. equivalent atoms (n1)
           ENDDO     ! loop over atom-types (n)

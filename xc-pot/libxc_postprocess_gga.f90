@@ -6,7 +6,7 @@
 MODULE m_libxc_postprocess_gga
 CONTAINS
 
-   SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sphhar,n,v_xc,grad, atom_num)
+   SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sphhar,noco,n,v_xc,grad, atom_num)
       USE m_mt_tofrom_grid
       USE m_types
       use m_judft_string
@@ -15,6 +15,7 @@ CONTAINS
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
       TYPE(t_atoms),INTENT(IN)    :: atoms
       TYPE(t_sphhar),INTENT(IN)   :: sphhar
+      TYPE(t_noco),INTENT(IN)     :: noco
       INTEGER,INTENT(IN)          :: n
       REAL,INTENT(INOUT)          :: v_xc(:,:)
       TYPE(t_gradients),INTENT(IN):: grad
@@ -35,7 +36,7 @@ CONTAINS
          vsigma_mt(i,:,:)=vsigma_mt(i,:,:)*atoms%rmsh(i,n)**2
       ENDDO
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
-      CALL mt_to_grid(xcpot%needs_grad(),n_sigma,atoms,sphhar,vsigma_mt,n,grad=grad_vsigma)
+      CALL mt_to_grid(xcpot%needs_grad(),n_sigma,atoms,sphhar,vsigma_mt,n,noco,grad=grad_vsigma)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_mt

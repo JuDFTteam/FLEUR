@@ -105,7 +105,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%jri(atoms%ntype),atoms%dx(atoms%ntype),atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%lmax(atoms%ntype),atoms%nlo(atoms%ntype),atoms%lnonsph(atoms%ntype))
       ALLOCATE(atoms%ncst(atoms%ntype),atoms%lda_u(4*atoms%ntype))
-      ALLOCATE(atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),atoms%neq(atoms%ntype))
+      ALLOCATE(atoms%bmu(atoms%ntype),atoms%neq(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype),atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat))
       ALLOCATE(atoms%numStatesProvided(atoms%ntype))

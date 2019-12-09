@@ -57,9 +57,7 @@
 ! ----> rotate n1 and n2 by symmetry element and form the cross-product
 !       of the rotated vectors (nn1,nn2) --> ssqa
 !
-!        CALL cotra0(n1,nn1,rrot)
          nn1=matmul(rrot,n1)
-!        CALL cotra0(n2,nn2,rrot)
          nn2=matmul(rrot,n2)
 
         CALL cross(nn1,nn2,

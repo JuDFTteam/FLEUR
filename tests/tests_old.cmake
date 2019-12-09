@@ -6,8 +6,8 @@ set(SerialParallelTests SiHybridGamma SiHybridGammaNoInv SiHybrid8kpt_sym
    PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML   )
 
-set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 Fe_bct_LO Fe_fcc CoUnfold)# TiO2eels TiO2eelsXML)
-set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
+set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 Fe_bct_LO Fe_fcc CoUnfold gw1Interface gw2Iterface)# TiO2eels TiO2eelsXML)
+set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip) 
 
 set(Testdirs ${SerialOnlyTests} ${SerialParallelTests})
 set(ParTestdirs ${SerialParallelTests})

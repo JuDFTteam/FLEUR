@@ -67,6 +67,9 @@ MODULE m_types_xcpot
       REAL,ALLOCATABLE :: vsigma(:,:)
       REAL,ALLOCATABLE :: gr(:,:,:)
       REAL,ALLOCATABLE :: laplace(:,:)
+      !For sourcefree calculations, the cartesian components of the gradient
+      !on the spherical grid are needed (no spin dependency needed though).
+      REAL,ALLOCATABLE :: grxyz(:)
    END TYPE t_gradients
 CONTAINS
    SUBROUTINE kED_alloc_mt(kED,nsp_x_jmtd, jspins, n_start, n_types, n_stride)
