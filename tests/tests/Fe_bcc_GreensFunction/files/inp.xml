@@ -17,7 +17,7 @@
          <contourSemicircle n="128" eb="-0.99" et="0.0" alpha="0.25"/>
       </greensFunction>
       <bzIntegration valenceElectrons="16.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-         <kPointMesh nx="11" ny="11" nz="11" gamma="T"/>
+         <kPointMesh nx="5" ny="5" nz="5" gamma="T"/>
       </bzIntegration>
       <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
    </calculationSetup>

@@ -9,7 +9,7 @@ jt::testrun("$executable ",$workdir);
 $result=jt::test_grepexists("$workdir/out","it=  1  is completed");
 $result+=jt::test_fileexists("$workdir/gfDOS.001");
 #The results here are temporary as the tetrahedron method is not used completely consistently atm
-$result+=jt::test_grepnumber("$workdir/out","Spin-Up trace:",": *([^ ]*)",4.0216,0.0005);
-$result+=jt::test_grepnumber("$workdir/out","Spin-Down trace:",": *([^ ]*)",1.8577,0.0005);
+$result+=jt::test_grepnumber("$workdir/out","Spin-Up trace:",": *([^ ]*)",4.0483,0.0005);
+$result+=jt::test_grepnumber("$workdir/out","Spin-Down trace:",": *([^ ]*)",1.8534,0.0005);
 
 jt::stageresult($workdir,$result,"1");
