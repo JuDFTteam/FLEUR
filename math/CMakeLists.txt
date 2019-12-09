@@ -23,8 +23,12 @@ math/qranf.f90
 math/differentiate.f90
 math/SphBessel.f90
 math/DoubleFactorial.f90
+math/LattHarmsSphHarmsConv.f90
 math/ExpSave.f90
 math/intgr.F90
 math/ylm4.F90
 math/grule.f90
+math/lh_tofrom_lm.f90
+math/gradYlm.f90
+math/analysistests.f90
 )

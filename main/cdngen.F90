@@ -31,12 +31,14 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_xmlOutput
    USE m_magMoms
    USE m_orbMagMoms
+   USE m_resMoms
    USE m_cdncore
    USE m_doswrite
    USE m_Ekwritesl
    USE m_banddos_io
    USE m_metagga
    USE m_unfold_band_kpts
+   USE m_denMultipoleExp
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -97,7 +99,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,dimension,kpts,vacuum)
-   CALL moments%init(input,atoms)
+   CALL moments%init(mpi,input,sphhar,atoms)
    CALL mcd%init1(banddos,dimension,input,atoms,kpts)
    CALL slab%init(banddos,dimension,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,dimension,atoms,kpts)
@@ -176,6 +178,11 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    endif
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
+
+   IF(.FALSE.) CALL denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, outDen) ! There should be a switch in the inp file for this
+   IF(mpi%irank.EQ.0) THEN
+      IF(.FALSE.) CALL resMoms(input,atoms,sphhar,noco,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
+   END IF
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
 

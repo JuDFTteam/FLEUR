@@ -67,6 +67,8 @@ CONTAINS
    USE m_metagga
    USE m_plot
 
+
+
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -102,8 +104,7 @@ CONTAINS
     TYPE(t_coreSpecInput)           :: coreSpecInput
     TYPE(t_wann)                    :: wann
     TYPE(t_potden)                  :: vTot, vx, vCoul, vTemp, vxcForPlotting
-    TYPE(t_potden)                  :: inDen, outDen, EnergyDen, dummyDen
-    TYPE(t_potden), DIMENSION(3)    :: testDen, testGrad
+    TYPE(t_potden)                  :: inDen, outDen, EnergyDen
 
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
@@ -119,6 +120,8 @@ CONTAINS
     INCLUDE 'mpif.h'
     INTEGER :: ierr(2),n
 #endif
+    REAL, ALLOCATABLE :: flh(:,:),flh2(:,:)
+    COMPLEX, ALLOCATABLE :: flm(:,:) 
 
     mpi%mpi_comm = mpi_comm
 
@@ -241,6 +244,7 @@ CONTAINS
        IF(input%l_rdmft) THEN
           CALL open_hybrid_io1(DIMENSION,sym%invs)
        END IF
+
        IF(.not.input%eig66(1))THEN
           CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
        END IF
@@ -259,8 +263,8 @@ CONTAINS
        !---< gwf
 
 !START Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
-       IF(.FALSE.)CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
-               ,sym,oneD,cell,noco,input,atoms,inDen)
+    !   IF(.FALSE.)CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
+    !          ,sym,oneD,cell,noco,input,atoms,inDen)
 !END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
        CALL timestart("generation of potential")
        CALL vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
@@ -437,7 +441,7 @@ CONTAINS
 #endif
           CALL timestop("generation of new charge density (total)")
 !START Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
-IF (.FALSE.) CALL rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars,sym,oneD,cell,input,atoms,outDen,inDen)
+!IF (.FALSE.) CALL rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars,sym,oneD,cell,input,atoms,outDen,inDen)
 !END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
 !!$             !----> output potential and potential difference
 !!$             IF (obsolete%disp) THEN
@@ -525,26 +529,7 @@ IF (.FALSE.) CALL rotateMagnetFromSpinAxis(noco,vacuum,sphhar,stars,sym,oneD,cel
           CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
        END IF
 
-
     END DO scfloop ! DO WHILE (l_cont)
-
-    ! Test: Build a field, for which the theoretical divergence etc. are known and
-    ! compare with the result of the routine.
-
-    !CALL builddivtest(stars,atoms,sphhar,vacuum,sym,cell,1,testDen)
-    !CALL makeBxc(stars,atoms,sphhar,vacuum,input,noco,vTot,testDen)
-    !CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, 1.0, inDen, dummyDen, testDen(1), testDen(2), testDen(3))
-    !CALL checkplotinp()
-    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDen             ', dummyDen, testDen(1), testDen(2), testDen(3))
-    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDeny            ', testDen(2))
-    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testDenz            ', testDen(3))
-    !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,testDen)
-    !DO i=1,3
-    !   CALL testGrad(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTTOT,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
-    !   ALLOCATE(testGrad(i)%pw_w,mold=testGrad(i)%pw)
-    !ENDDO
-    !CALL divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,testDen(2),testGrad)
-    !CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, .FALSE., .FALSE., 'testGrad            ', testGrad(1), testGrad(1), testGrad(2), testGrad(3))
 
     CALL add_usage_data("Iterations",iter)
 

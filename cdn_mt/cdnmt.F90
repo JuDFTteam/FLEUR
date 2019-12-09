@@ -38,7 +38,7 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
     !     ..
     !     .. Local Scalars ..
-    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu
+    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb
     INTEGER ilo,ilop,i
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
@@ -63,11 +63,11 @@ CONTAINS
        ENDIF
     ENDIF
 
-    !$OMP PARALLEL DEFAULT(none) &
-    !$OMP SHARED(usdus,rho,moments,qmtl) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
-    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
-    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
+!    !$OMP PARALLEL DEFAULT(none) &
+!    !$OMP SHARED(usdus,rho,moments,qmtl) &
+!    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
+!    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
+!    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
     ELSE
@@ -77,7 +77,7 @@ CONTAINS
 
     qmtl = 0
     
-    !$OMP DO
+!    !$OMP DO
     DO itype = 1,atoms%ntype
        na = 1
        DO i = 1, itype - 1
@@ -88,11 +88,13 @@ CONTAINS
           DO l = 0,atoms%lmax(itype)
              CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr(1,itype,ispin),atoms,&
                   f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
+             llp = (l* (l+1))/2 + l
              DO j = 1,atoms%jri(itype)
                 s = denCoeffs%uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
                      +   denCoeffs%dd(l,itype,ispin)*( g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin) )&
                      + 2*denCoeffs%du(l,itype,ispin)*( f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin) )
                 rho(j,0,itype,ispin) = rho(j,0,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
+                moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
              ENDDO
           ENDDO
 
@@ -110,7 +112,7 @@ CONTAINS
                denCoeffs%cclo(1,1,itype,ispin),denCoeffs%acnmt(0,1,1,itype,ispin),&
                denCoeffs%bcnmt(0,1,1,itype,ispin),denCoeffs%ccnmt(1,1,1,itype,ispin),&
                f(1,1,0,ispin),g(1,1,0,ispin),&
-               rho(:,0:,itype,ispin),qmtllo)
+               rho(:,0:,itype,ispin),qmtllo,moments%rhoLRes(:,0:,:,itype,ispin))
 
 
           !--->       l-decomposed density for each atom type
@@ -146,6 +148,7 @@ CONTAINS
                            + denCoeffs%dunmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*f(j,1,lp,ispin)&
                            + g(j,2,l,ispin)*f(j,2,lp,ispin) )
                       rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ s/atoms%neq(itype)
+                      moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin)+ s/atoms%neq(itype)
                    ENDDO
                 ENDDO
              ENDDO
@@ -183,6 +186,7 @@ CONTAINS
              !--->        calculate off-diagonal part of the density matrix
              !--->        spherical component
              DO l = 0,atoms%lmax(itype)
+                llp = (l* (l+1))/2 + l
                 DO j = 1,atoms%jri(itype)
                    cs = denCoeffsOffdiag%uu21(l,itype)*( f(j,1,l,2)*f(j,1,l,1) +f(j,2,l,2)*f(j,2,l,1) )&
                         + denCoeffsOffdiag%ud21(l,itype)*( f(j,1,l,2)*g(j,1,l,1) +f(j,2,l,2)*g(j,2,l,1) )&
@@ -192,6 +196,8 @@ CONTAINS
                    rho21=CONJG(cs)/(atoms%neq(itype)*sfp_const)
                    rho(j,0,itype,3)=rho(j,0,itype,3)+REAL(rho21)
                    rho(j,0,itype,4)=rho(j,0,itype,4)+aimag(rho21)
+                   moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3)+ REAL(conjg(cs)/(atoms%neq(itype)*sfp_const))
+                   moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4)+ AIMAG(conjg(cs)/(atoms%neq(itype)*sfp_const))
                 ENDDO
              ENDDO
 
@@ -201,6 +207,7 @@ CONTAINS
                 DO l = 0,atoms%lmax(itype)
                    DO lp = 0,atoms%lmax(itype)
                       llp = lp*(atoms%lmax(itype)+1)+l+1
+                      llpb = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
                       DO j = 1,atoms%jri(itype)
                          cs = denCoeffsOffdiag%uunmt21(llp,lh,itype)*(f(j,1,lp,2)*f(j,1,l,1)&
                               + f(j,2,lp,2)*f(j,2,l,1) )+ denCoeffsOffdiag%udnmt21(llp,lh,itype)*(f(j,1,lp,2)*g(j,1,l,1)&
@@ -211,6 +218,8 @@ CONTAINS
                          rho21=CONJG(cs)/atoms%neq(itype)
                          rho(j,lh,itype,3)=rho(j,lh,itype,3)+REAL(rho21)
                          rho(j,lh,itype,4)=rho(j,lh,itype,4)+aimag(rho21)
+                         moments%rhoLRes(j,lh,llpb,itype,3)= moments%rhoLRes(j,lh,llpb,itype,3) + REAL(conjg(cs)/atoms%neq(itype))
+                         moments%rhoLRes(j,lh,llpb,itype,4)= moments%rhoLRes(j,lh,llpb,itype,4) + AIMAG(conjg(cs)/atoms%neq(itype))
                       ENDDO
                    ENDDO
                 ENDDO
@@ -220,9 +229,9 @@ CONTAINS
        ENDIF ! noco%l_mperp
 
     ENDDO ! end of loop over atom types
-    !$OMP END DO
+!    !$OMP END DO
     DEALLOCATE ( f,g)
-    !$OMP END PARALLEL
+!    !$OMP END PARALLEL
 
     WRITE (6,FMT=8000)
 8000 FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&

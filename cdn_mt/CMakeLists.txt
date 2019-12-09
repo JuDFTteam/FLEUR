@@ -10,10 +10,13 @@ cdn_mt/abcof3.F90
 cdn_mt/abcrot2.f90
 cdn_mt/cdnmt.F90
 cdn_mt/cdncore.F90
+cdn_mt/denMultipoleExp.f90
 cdn_mt/magMoms.f90
+cdn_mt/magDiMom.f90
 cdn_mt/orbMagMoms.f90
 cdn_mt/orb_comp2.f90
 cdn_mt/radfun.f90
+cdn_mt/resMoms.f90
 cdn_mt/rhomt.f90
 cdn_mt/rhomt21.f90
 cdn_mt/rhomtlo.f90
