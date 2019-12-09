@@ -94,7 +94,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #endif
 
    ! Local Scalars
-   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,ne
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
@@ -103,8 +103,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    REAL,ALLOCATABLE :: we(:),eig(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
-   REAL,    ALLOCATABLE :: resWeights(:,:)
-   REAL,    ALLOCATABLE :: dosWeights(:,:)
+   REAL,    ALLOCATABLE :: dosWeights(:,:),resWeights(:,:),eMesh(:)
    INTEGER, ALLOCATABLE :: dosBound(:,:)
 
    TYPE (t_lapw)             :: lapw
@@ -184,6 +183,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    jsp = MERGE(1,jspin,noco%l_noco)
 
+   !Get the energy mesh for the tetrahedron method
+   IF(atoms%n_gf>0) CALL greensfCoeffs%eMesh(ne,eMesh)
+
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
 
@@ -231,10 +233,10 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
          CALL timestart("TetrahedronWeights")
          ALLOCATE(dosWeights(greensfCoeffs%ne,noccbd))
-         ALLOCATE(dosBound(noccbd,2))
          ALLOCATE(resWeights(greensfCoeffs%ne,noccbd))
-         CALL tetrahedronInit(ikpt,kpts,input,noccbd,results%eig(ev_list,:,jsp),&
-                              greensfCoeffs,results%ef,resWeights,dosWeights,dosBound)
+         resWeights = 0.0
+         ALLOCATE(dosBound(noccbd,2))
+         CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),noccbd,eMesh,ne,input%film,dosWeights,bounds=dosBound,dos=.TRUE.)
          CALL timestop("TetrahedronWeights")
       ENDIF
       DO ispin = jsp_start, jsp_end

@@ -1,4 +1,4 @@
-MODULE m_tetrahedronInitNew
+MODULE m_tetrahedronInit
 
    !------------------------------------------------------------------------------------
    !This module provides the weights for the linear tetrahedron/triangular method
@@ -162,7 +162,6 @@ MODULE m_tetrahedronInitNew
 
             CALL getWeightSingleBand(eMesh,etetra,ne,ncorn,ikpt,kpts%ntetra(:,itet),&
                                      kpts%voltet(itet)*fac,film,.FALSE.,weights(:,iband))
-
             !---------------------------------------------------------------------------
             ! For the dos we want to avoid the formulas for the numerical
             ! derivatives at the endpoints so we calculate additional energy points here
@@ -317,4 +316,4 @@ MODULE m_tetrahedronInitNew
 
    END SUBROUTINE getWeightSingleBand
 
-END MODULE m_tetrahedronInitNew
+END MODULE m_tetrahedronInit

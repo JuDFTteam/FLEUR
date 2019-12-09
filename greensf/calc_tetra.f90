@@ -84,7 +84,7 @@ MODULE m_calc_tetra
 
       IF(ABS(sumvol-volbz).GT.1E-12) CALL juDFT_error("calc_tetra failed", calledby="calc_tetra")
       input%gfTet = .TRUE.
-      kpts%voltet = kpts%voltet*kpts%ntet/volbz
+      kpts%voltet = kpts%voltet/volbz
 
       !Reallocate the tetraeder arrays
       ALLOCATE(itet(4,kpts%ntet))
