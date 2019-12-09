@@ -7,8 +7,6 @@ greensf/greensfImag21.f90
 greensf/angles.f90
 greensf/onsite.f90
 greensf/kkintgr.f90
-greensf/dosWeights.f90
-greensf/resWeights.f90
 greensf/kk_cutoff.f90
 greensf/gfcalc.f90
 greensf/crystalfield.f90
