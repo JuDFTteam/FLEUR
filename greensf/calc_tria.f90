@@ -35,12 +35,14 @@ MODULE m_calc_tria
       !IF(.NOT.l_tria) CALL juDFT_warn("Triangles may not cover whol BZ",calledby="calc_tria")
 
       input%gfTet = .TRUE.
-      !Write to types_kpts
-      kpts%ntria = ntria
-      ALLOCATE(kpts%itria(3,kpts%ntria))
-      kpts%itria = itria
-      ALLOCATE(kpts%voltria(kpts%ntria))
-      kpts%voltria = atr(:)/as
+      !Write to types_kpts (the same arrays as in bulk case)
+      kpts%ntet = ntria
+      IF(ALLOCATED(kpts%ntetra)) DEALLOCATE(kpts%ntetra)
+      ALLOCATE(kpts%ntetra(3,kpts%ntet))
+      kpts%ntetra = itria
+      IF(ALLOCATED(kpts%voltet)) DEALLOCATE(kpts%voltet)
+      ALLOCATE(kpts%voltet(kpts%ntet))
+      kpts%voltet = atr(:)/as
 
       CALL timestop("Calculation of Triangles")
 
