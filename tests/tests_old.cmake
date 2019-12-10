@@ -35,6 +35,13 @@ if (${FLEUR_USE_LIBXC})
    set(Testdirs ${Testdirs} CuBulkLibXC Fe_bct_LibXC Diamond_SCAN)
    set(ParTestdirs ${ParTestdirs} CuBulkLibXC Fe_bct_LibXC Diamond_SCAN)
 endif()
+
+#Tests for EDsolver
+if (${FLEUR_USE_EDSOLVER})
+   set(Testdirs ${Testdirs} Gd_Hubbard1)
+   set(ParTestdirs ${ParTestdirs} Gd_Hubbard1)
+endif()
+
 #The serial tests
 if (${FLEUR_USE_SERIAL})
    foreach(test ${Testdirs})
