@@ -66,6 +66,7 @@ CONTAINS
    USE m_ylm
    USE m_metagga
    USE m_plot
+   USE m_hubbard1_setup
 
 
 
@@ -108,6 +109,9 @@ CONTAINS
 
     CLASS(t_xcpot),     ALLOCATABLE :: xcpot
     CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
+    TYPE(t_greensf)                 :: gOnsite
+    TYPE(t_greensf)                 :: gIntersite
+    TYPE(t_hub1ham)                 :: hub1
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
@@ -127,7 +131,7 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,DIMENSION,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
-                    banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,l_opti)
+                    banddos,obsolete,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,hub1,l_opti)
     CALL timestop("Initialization")
     
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
@@ -141,11 +145,13 @@ CONTAINS
        IF(mpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
        CALL wann_optional(input,kpts,atoms,sym,cell,oneD,noco,wann)
     END IF
-  
+
     iter     = 0
     iterHF   = 0
+    hub1%iter  = 0
+    hub1%l_runthisiter = .FALSE.
     l_cont = (iter < input%itmax)
-    
+
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
 
     ! Initialize and load inDen density (start)
@@ -177,28 +183,35 @@ CONTAINS
     CALL vTemp%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT)
     ! Initialize potentials (end)
 
+    ! Initialize Green's function (start)
+    CALL gOnsite%init(input,lmaxU_const,atoms,noco)
+    ! Initialize Green's function (end)
+
     ! Open/allocate eigenvector storage (start)
-    l_real=sym%invs.AND..NOT.noco%l_noco
+    l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
     if(noco%l_soc.and.input%l_wann)then
-    !! Weed up and down spinor components for SOC MLWFs.
-    !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
-    !! Make sure we always get up and down spinors when SOC=true.
+    	 !! Weed up and down spinor components for SOC MLWFs.
+    	 !! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
+    	 !! Make sure we always get up and down spinors when SOC=true.
        wannierspin=2
     else
        wannierspin = input%jspins       
     endif
-    
-    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,wannierspin,&
+    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,input%jspins,&
                     noco%l_noco,.NOT.INPUT%eig66(1),l_real,noco%l_soc,INPUT%eig66(1),mpi%n_size)
 
 #ifdef CPP_CHASE
-    CALL init_chase(mpi,dimension,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
+    CALL init_chase(mpi,dimension,input,atoms,kpts,noco,.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0))
 #endif
     ! Open/allocate eigenvector storage (end)
 
     scfloop:DO WHILE (l_cont)
 
        iter = iter + 1
+       IF(hub1%l_runthisiter.AND.atoms%n_hia>0) THEN
+          hub1%iter = hub1%iter + 1
+          CALL hubbard1_setup(atoms,input,sym,mpi,noco,vTot,gOnsite,hub1,results,inDen)
+       ENDIF
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
 
@@ -282,19 +295,20 @@ CONTAINS
 #ifdef CPP_MPI
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
-
        CALL forcetheo%start(vtot,mpi%irank==0)
        forcetheoloop:DO WHILE(forcetheo%next_job(iter==input%itmax,atoms,noco))
 
           CALL timestart("gen. of hamil. and diag. (total)")
           CALL timestart("eigen")
           vTemp = vTot
+          vTemp%mmpMat = 0.0 !To avoid errors later on (When ldaUAdjEnpara is T the density
+                             !is carried over after vgen)
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
           IF(.not.input%eig66(1))THEN
             CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx)
+                     cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inDen,vTemp,vx,hub1)
           ENDIF             
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -320,7 +334,7 @@ CONTAINS
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
           IF (noco%l_soc.AND..NOT.noco%l_noco.AND..NOT.INPUT%eig66(1)) &
              CALL eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                          obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results)
+                          obsolete,sym,cell,noco,input,kpts, oneD,vTot,enpara,results,hub1)
           CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI
@@ -401,7 +415,9 @@ CONTAINS
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum, &
                       dimension,kpts,atoms,sphhar,stars,sym,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                      archiveType,xcpot,outDen,EnergyDen)
+                      archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1)
+          !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
+          outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:) = inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:)
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
                ! CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, &
@@ -468,11 +484,10 @@ CONTAINS
 
        CALL enpara%mix(mpi,atoms,vacuum,input,vTot%mt(:,0,:,:),vtot%vacz)
        field2 = field
-
        ! mix input and output densities
        CALL mix_charge(field2,DIMENSION,mpi,(iter==input%itmax.OR.judft_was_argument("-mix_io")),&
             stars,atoms,sphhar,vacuum,input,&
-            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results)
+            sym,cell,noco,oneD,archiveType,xcpot,iter,inDen,outDen,results,hub1%l_runthisiter)
 !Plots of mixed density       
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN        
 !               CDN including core charge
@@ -489,11 +504,21 @@ CONTAINS
          WRITE (6,FMT=8130) iter
 8130     FORMAT (/,5x,'******* it=',i3,'  is completed********',/,/)
          WRITE(*,*) "Iteration:",iter," Distance:",results%last_distance
+         !Write out information if a hubbard 1 Iteration was performed
+         IF(hub1%l_runthisiter)  THEN
+            WRITE(*,*) "Hubbard 1 Iteration: ", hub1%iter," Distance: ", results%last_mmpMatdistance
+            WRITE(6,*) "nmmp occupation distance: ", results%last_occdistance
+            WRITE(6,*) "nmmp element distance: ", results%last_mmpMatdistance
+            WRITE(6,FMT=8140) hub1%iter
+8140        FORMAT (/,5x,'******* Hubbard 1 it=',i3,'  is completed********',/,/)
+         ENDIF
          CALL timestop("Iteration")
        END IF ! mpi%irank.EQ.0
           
 #ifdef CPP_MPI
        CALL MPI_BCAST(results%last_distance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(results%last_occdistance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(results%last_mmpMatdistance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
        CALL MPI_BARRIER(mpi%mpi_comm,ierr)
 #endif
        CALL priv_geo_end(mpi)
@@ -512,9 +537,20 @@ CONTAINS
           END IF
        ELSE
           l_cont = l_cont.AND.(iter < input%itmax)
-          ! MetaGGAs need a at least 2 iterations
+         ! MetaGGAs need a at least 2 iterations
           l_cont = l_cont.AND.((input%mindistance<=results%last_distance).OR.input%l_f & 
                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
+          !If we have converged run hia if the density matrix has not converged
+          IF(atoms%n_hia>0) THEN
+             hub1%l_runthisiter = .NOT.l_cont.AND.(input%minoccDistance<=results%last_occdistance&
+                                  .OR.input%minmatDistance<=results%last_mmpMatdistance)
+             !Run after first overall iteration to generate a starting density matrix
+             hub1%l_runthisiter = hub1%l_runthisiter.OR.(iter==1.AND.(hub1%iter == 0&
+                                  .AND.ALL(vTot%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:).EQ.0.0)))
+             hub1%l_runthisiter = hub1%l_runthisiter.AND.(iter < input%itmax)
+             !Prevent that the scf loop terminates
+             l_cont = l_cont.OR.hub1%l_runthisiter
+          ENDIF
           CALL check_time_for_next_iteration(iter,l_cont)
        END IF
 
@@ -536,7 +572,6 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL closeXMLElement('scfLoop')
 
     CALL close_eig(eig_id)
-
     CALL juDFT_end("all done",mpi%irank)
     
    CONTAINS

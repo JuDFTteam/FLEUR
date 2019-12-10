@@ -59,6 +59,8 @@ MODULE m_types_misc
       REAL                 :: e_ldau    !<total energy contribution of LDA+U
       REAL                 :: tote
       REAL                 :: last_distance
+      REAL                 :: last_mmpMatdistance !Distance measure for LDA+HIA
+      REAL                 :: last_occdistance    !Distance measure for LDA+HIA
       REAL                 :: bandgap
       COMPLEX, ALLOCATABLE    :: unfolding_weights(:,:,:) !weights for unfolding a supercell bandstructure
       TYPE(t_energy_hf)    ::  te_hfex
@@ -148,6 +150,8 @@ CONTAINS
 
       thisResults%tote            = 0.0
       thisResults%last_distance   = -1.0
+      thisResults%last_mmpMatdistance = 1.0
+      thisResults%last_occdistance    = 1.0
       thisResults%bandgap         = 0.0
       thisResults%ef              = 0.0
 

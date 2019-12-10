@@ -11,7 +11,7 @@ MODULE m_cdnmt
   !***********************************************************************
 CONTAINS
   SUBROUTINE cdnmt(mpi,jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
-                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1,l_dftspinpol)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -26,6 +26,8 @@ CONTAINS
     TYPE(t_atoms),   INTENT(IN)    :: atoms
     TYPE(t_enpara),  INTENT(IN)    :: enpara
     TYPE(t_moments), INTENT(INOUT) :: moments
+    TYPE(t_hub1ham), OPTIONAL, INTENT(INOUT) :: hub1
+    LOGICAL,         INTENT(IN)    :: l_dftspinpol
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
@@ -39,12 +41,13 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb
-    INTEGER ilo,ilop,i
+    INTEGER ilo,ilop,i,i_hia,i_exc
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
+    LOGICAL l_hia
     !     ..
     !     .. Local Arrays ..
-    REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd)
+    REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd),vrTmp(atoms%jmtd)
     CHARACTER(LEN=20) :: attributes(6)
 
     !     ..
@@ -64,8 +67,8 @@ CONTAINS
     ENDIF
 
 !    !$OMP PARALLEL DEFAULT(none) &
-!    !$OMP SHARED(usdus,rho,moments,qmtl) &
-!    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
+!    !$OMP SHARED(usdus,rho,moments,qmtl,hub1) &
+!    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_dftspinpol)&
 !    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
 !    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)
     IF (noco%l_mperp) THEN
@@ -86,8 +89,25 @@ CONTAINS
        !--->    spherical component
        DO ispin = jsp_start,jsp_end
           DO l = 0,atoms%lmax(itype)
-             CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr(1,itype,ispin),atoms,&
-                  f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
+
+             !Check if the orbital is treated with Hubbard 1
+             l_hia=.FALSE.
+             DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+                IF(atoms%lda_u(i)%atomType.EQ.itype.AND.atoms%lda_u(i)%l.EQ.l) THEN
+                   l_hia=.TRUE.
+                ENDIF
+             ENDDO
+
+             !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
+             !the correlated orbitals with a non-spin-polarized basis
+             IF(l_hia.AND.jspd.EQ.2.AND..NOT.l_dftspinpol) THEN
+                vrTmp = (vr(:,itype,1) + vr(:,itype,2))/2.0 
+             ELSE
+                vrTmp = vr(:,itype,ispin)
+             ENDIF
+
+             CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vrTmp,atoms,&
+                   f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
              llp = (l* (l+1))/2 + l
              DO j = 1,atoms%jri(itype)
                 s = denCoeffs%uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
@@ -124,6 +144,16 @@ CONTAINS
           END DO
           moments%chmom(itype,ispin) = qmtt
 
+          !Get the magnetic moment for the shells where we defined additional exchange splittings for DFT+Hubbard 1
+          IF(PRESENT(hub1)) THEN
+            DO i_hia = 1, atoms%n_hia 
+               IF(atoms%lda_u(atoms%n_u+i_hia)%atomType.NE.itype) CYCLE
+               DO i_exc = 1, hub1%n_exc_given(i_hia)
+                  hub1%mag_mom(i_hia,i_exc) = hub1%mag_mom(i_hia,i_exc) + (-1)**(ispin-1) *  qmtl(hub1%exc_l(i_hia,i_exc),ispin,itype)
+               ENDDO
+            ENDDO
+          ENDIF
+
           !+soc
           !--->       spherical angular component
           IF (noco%l_soc) THEN
@@ -154,6 +184,7 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO ! end of spin loop (ispin = jsp_start,jsp_end)
+
 
        IF (noco%l_mperp) THEN
 

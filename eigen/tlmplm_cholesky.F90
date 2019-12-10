@@ -12,6 +12,7 @@ CONTAINS
        jspin,mpi,v,input,td,ud)
     USE m_tlmplm
     USE m_types
+    USE m_radovlp
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_noco),INTENT(IN)     :: noco
@@ -35,7 +36,7 @@ CONTAINS
     LOGICAL OK
     !     ..
     !     .. Local Arrays ..
-
+    REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
 
     REAL,PARAMETER:: e_shift_min=0.5
     REAL,PARAMETER:: e_shift_max=65.0
@@ -46,11 +47,17 @@ CONTAINS
     td%e_shift(:,jsp)=0.0
     IF (jsp<3) td%e_shift(:,jsp)=e_shift_min
 
+    !Calculate overlap integrals
+    !For the off-diagonal LDA+U contributions
+    IF(jsp>=3) THEN
+        ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype),&
+                 dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype) )
+        CALL rad_ovlp(atoms,ud,input,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
+    ENDIF
 
     td%tdulo(:,:,:,jsp) = CMPLX(0.0,0.0)
     td%tuulo(:,:,:,jsp) = CMPLX(0.0,0.0)
     td%tuloulo(:,:,:,jsp) = CMPLX(0.0,0.0)
-
 
 
     td%h_off=0.0
@@ -58,7 +65,7 @@ CONTAINS
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input)
+    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input,uun21,udn21,dun21,ddn21)
     DO  n = 1,atoms%ntype
        CALL tlmplm(n,sphhar,atoms,enpara,jspin,mpi,v,input,td,ud)
        OK=.FALSE.
@@ -95,9 +102,9 @@ CONTAINS
                 END DO
              END DO
           ENDDO
-          !Include contribution from LDA+U
-          DO i_u=1,atoms%n_u
-             IF (n.NE.atoms%lda_u(i_u)%atomtype) CYCLE
+          !Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
+          DO i_u=1,atoms%n_u+atoms%n_hia
+             IF (n.NE.atoms%lda_u(i_u)%atomType) CYCLE
              !Found a "U" for this atom type
              l=atoms%lda_u(i_u)%l
              lp=atoms%lda_u(i_u)%l
@@ -105,12 +112,28 @@ CONTAINS
                 lm = l* (l+1) + m
                 DO mp = -lp,lp
                    lmp = lp* (lp+1) + mp
-                   td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp) + v%mmpMat(m,mp,i_u,jsp)
-                   td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp)+ v%mmpMat(m,mp,i_u,jsp)*ud%ddn(lp,n,jsp)
+                   !------------------------------------------------------------------------
+                   ! Currently for jsp >= 3 the convention is:
+                   !      -jsp=3 => real part of the off-diagonal hamiltonian
+                   !      -jsp=4 => imaginary part of the off-diagonal hamiltonian
+                   !------------------------------------------------------------------------
+                   IF (jsp < 3) THEN
+                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + v%mmpMat(m,mp,i_u,jsp)
+                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
+                   ELSE IF(jsp.EQ.3) THEN
+                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + REAL(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + REAL(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + REAL(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + REAL(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                   ELSE
+                     td%h_loc(lm,lmp,n,jsp)     =td%h_loc(lm,lmp,n,jsp)     + AIMAG(v%mmpMat(m,mp,i_u,3)) * uun21(l,n)
+                     td%h_loc(lm+s,lmp,n,jsp)   =td%h_loc(lm+s,lmp,n,jsp)   + AIMAG(v%mmpMat(m,mp,i_u,3)) * dun21(l,n)
+                     td%h_loc(lm,lmp+s,n,jsp)   =td%h_loc(lm,lmp+s,n,jsp)   + AIMAG(v%mmpMat(m,mp,i_u,3)) * udn21(l,n)
+                     td%h_loc(lm+s,lmp+s,n,jsp) =td%h_loc(lm+s,lmp+s,n,jsp) + AIMAG(v%mmpMat(m,mp,i_u,3)) * ddn21(l,n)
+                   ENDIF
                 ENDDO
              ENDDO
           END DO
-
           IF (jsp<3) THEN
              !Create Cholesky decomposition of local hamiltonian
 
@@ -198,9 +221,9 @@ CONTAINS
        DO l=0,atoms%lnonsph(n)
           c=(-0.5)*CMPLX(noco%b_con(1,n),noco%b_con(2,n))
           td%h_off(l  ,l  ,n,1)     =td%h_off(l  ,l  ,n,1) + uun21(l,n)*c
-          td%h_loc(l  ,l+s,n,1)     =td%h_off(l  ,l+s,n,1) + udn21(l,n)*c
-          td%h_loc(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + dun21(l,n)*c
-          td%h_loc(l+s,l+s,n,1)     =td%h_off(l+s,l+s,n,1) + ddn21(l,n)*c
+          td%h_off(l  ,l+s,n,1)     =td%h_off(l  ,l+s,n,1) + udn21(l,n)*c
+          td%h_off(l+s,l  ,n,1)     =td%h_off(l+s,l  ,n,1) + dun21(l,n)*c
+          td%h_off(l+s,l+s,n,1)     =td%h_off(l+s,l+s,n,1) + ddn21(l,n)*c
        ENDDO
 
 
@@ -208,9 +231,9 @@ CONTAINS
        DO l=0,atoms%lnonsph(n)
           c=(-0.5)*CMPLX(noco%b_con(1,n),-noco%b_con(2,n))
           td%h_off(l  ,l  ,n,2)     =td%h_off(l  ,l  ,n,2) + uun21(l,n)*c
-          td%h_loc(l  ,l+s,n,2)     =td%h_off(l  ,l+s,n,2) + udn21(l,n)*c
-          td%h_loc(l+s,l  ,n,2)     =td%h_off(l+s,l  ,n,2) + dun21(l,n)*c
-          td%h_loc(l+s,l+s,n,2)     =td%h_off(l+s,l+s,n,2) + ddn21(l,n)*c
+          td%h_off(l  ,l+s,n,2)     =td%h_off(l  ,l+s,n,2) + udn21(l,n)*c
+          td%h_off(l+s,l  ,n,2)     =td%h_off(l+s,l  ,n,2) + dun21(l,n)*c
+          td%h_off(l+s,l+s,n,2)     =td%h_off(l+s,l+s,n,2) + ddn21(l,n)*c
        ENDDO
     END DO
   END SUBROUTINE tlmplm_constrained

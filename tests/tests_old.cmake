@@ -2,7 +2,7 @@ enable_testing()
 
 set(SerialParallelTests CuBulk CuBulkXML SiLOXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML
 Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML Fe_fccXML
-GaAsMultiUForceXML SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML )#SiHybridGamma)
+GaAsMultiUForceXML SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML Fe_bcc_GreensFunction )#SiHybridGamma)
 
 set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 Fe_bct_LO Fe_fcc CoUnfold gw1Interface gw2Interface)# TiO2eels TiO2eelsXML)
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip) 
@@ -35,6 +35,13 @@ if (${FLEUR_USE_LIBXC})
    set(Testdirs ${Testdirs} CuBulkLibXC Fe_bct_LibXC Diamond_SCAN)
    set(ParTestdirs ${ParTestdirs} CuBulkLibXC Fe_bct_LibXC Diamond_SCAN)
 endif()
+
+#Tests for EDsolver
+if (${FLEUR_USE_EDSOLVER})
+   set(Testdirs ${Testdirs} Gd_Hubbard1 Gd_Hubbard1_SOC)
+   set(ParTestdirs ${ParTestdirs} Gd_Hubbard1 Gd_Hubbard1_SOC)
+endif()
+
 #The serial tests
 if (${FLEUR_USE_SERIAL})
    foreach(test ${Testdirs})

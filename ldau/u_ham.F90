@@ -10,7 +10,7 @@ MODULE m_uham
   !     For details see Eq.(21) of Shick et al. PRB 60, 10765 (1999)  |
   !     Sets up the LDA + U Hamilton matrix with eigenvalues in the   |
   !     diagonal:                                                     |
-  !  s     ---       *s,j'  s,j    ..   *s,j'  s,j    s            s |
+  !  s     ---       *s,j'  s,j    ..   *s,j'  s,j    s            s  |
   ! H    = >      [ A      A    + <u|u> B      B    ] V     + d    e  |
   !  j',j  -- m,m'   l,m'   l,m          l,m'   l,m    m,m'    j,j' j |
   !                                                                   |
