@@ -32,9 +32,9 @@ MODULE m_available_solvers
   INTEGER,PARAMETER:: diag_magma=-6
 #endif
 #ifdef CPP_CHASE
-  INTEGER,PARAMETER:: diag_chase=7
+  INTEGER,PARAMETER:: diag_chase=207
 #else
-  INTEGER,PARAMETER:: diag_chase=-7
+  INTEGER,PARAMETER:: diag_chase=-207
 #endif
 #ifdef CPP_CUSOLVER
   INTEGER,PARAMETER:: diag_cusolver=8
