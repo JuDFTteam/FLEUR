@@ -19,7 +19,7 @@ CONTAINS
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
-                    cell,enpara,banddos,noco,oneD,mpbasis,hybrid,iter,eig_id,results,inden,v,vx)
+                    cell,enpara,banddos,noco,oneD,mpbasis,hybrid,iter,eig_id,results,inden,v,vx,hub1)
 
 #include"cpp_double.h"
       USE m_types
@@ -61,7 +61,9 @@ CONTAINS
       TYPE(t_kpts),INTENT(INOUT)   :: kpts
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
-      TYPE(t_potden),INTENT(IN)    :: inden,vx
+      TYPE(t_potden),INTENT(IN)    :: inden !
+      TYPE(t_hub1ham),INTENT(INOUT):: hub1
+      TYPE(t_potden), INTENT(IN)   :: vx
       TYPE(t_potden),INTENT(INOUT) :: v    !u_setup will modify the potential matrix
 
 #ifdef CPP_MPI
@@ -109,7 +111,7 @@ CONTAINS
       ALLOCATE(eigBuffer(DIMENSION%neigd,kpts%nkpt,input%jspins))
       ALLOCATE(nvBuffer(kpts%nkpt,MERGE(1,input%jspins,noco%l_noco)),nvBufferTemp(kpts%nkpt,MERGE(1,input%jspins,noco%l_noco)))
 
-      l_real=sym%invs.AND..NOT.noco%l_noco
+      l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
 
       ! check if z-reflection trick can be used
       l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
@@ -125,7 +127,7 @@ CONTAINS
       ! Set up and solve the eigenvalue problem
       !   loop over spins
       !     set up k-point independent t(l'm',lm) matrices
-      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,inden,v,mpi,results,DIMENSION,td,ud)
+      CALL mt_setup(atoms,sym,sphhar,input,noco,enpara,hub1,inden,v,mpi,results,DIMENSION,td,ud)
 
       neigBuffer = 0
       results%neig = 0

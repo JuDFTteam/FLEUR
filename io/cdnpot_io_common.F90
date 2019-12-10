@@ -82,12 +82,13 @@ MODULE m_cdnpot_io_common
       IF(atoms%lmaxd.NE.refAtoms%lmaxd) l_same = .FALSE.
       IF(atoms%jmtd.NE.refAtoms%jmtd) l_same = .FALSE.
       IF(atoms%n_u.NE.refAtoms%n_u) l_same = .FALSE.
+      IF(atoms%n_hia.NE.refAtoms%n_hia) l_same = .FALSE.
       IF(vacuum%dvac.NE.refVacuum%dvac) l_same = .FALSE.
       IF(sym%nop.NE.refSym%nop) l_same = .FALSE.
       IF(sym%nop2.NE.refSym%nop2) l_same = .FALSE.
 
-      IF(atoms%n_u.EQ.refAtoms%n_u) THEN
-         DO i = 1, atoms%n_u
+      IF(atoms%n_u.EQ.refAtoms%n_u.AND.atoms%n_hia.EQ.refAtoms%n_hia) THEN
+         DO i = 1, atoms%n_u+atoms%n_hia
             IF (atoms%lda_u(i)%atomType.NE.refAtoms%lda_u(i)%atomType) l_same = .FALSE.
             IF (atoms%lda_u(i)%l.NE.refAtoms%lda_u(i)%l) l_same = .FALSE.
          END DO

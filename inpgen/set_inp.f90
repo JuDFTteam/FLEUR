@@ -162,7 +162,7 @@
       input%scaleA1 = 1.0 ; input%scaleA2 = 1.0 ; input%scaleC = 1.0
       zc = 0.0 ; vacuum%locx(:) = 0.0 ;  vacuum%locy(:) = 0.0
       kpts%numSpecialPoints = 0
-      input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0
+      input%ldauLinMix = .FALSE. ; input%ldauMixParam = 0.05 ; input%ldauSpinf = 1.0; input%ldauAdjEnpara = .FALSE.
       input%l_wann = .FALSE.
       input%numBandsKPoints = 240
       banddos%unfoldband = .FALSE. ; banddos%s_cell_x = 1 ; banddos%s_cell_y = 1 ; banddos%s_cell_z = 1

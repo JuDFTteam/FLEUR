@@ -10,8 +10,7 @@ CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts,&
      oneD,mpbasis,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,&
-     noco,DIMENSION,enpara,sphhar,l_opti,l_kpts)
-
+     noco,hub1,DIMENSION,enpara,sphhar,l_opti,l_kpts)
   USE m_juDFT
   USE m_types
   USE m_constants
@@ -37,6 +36,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   USE m_gen_bz
   USE m_nocoInputCheck
   USE m_kpoints
+  USE m_calc_tetra
   USE m_types_forcetheo_extended
   USE m_relaxio
 
@@ -63,6 +63,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
   TYPE(t_enpara)   ,INTENT(INOUT) :: enpara
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   TYPE(t_field),    INTENT(INOUT) :: field
+  TYPE(t_hub1ham),  INTENT(INOUT) :: hub1
   LOGICAL,          INTENT  (OUT) :: l_opti
   LOGICAL,          INTENT   (IN) :: l_kpts
 
@@ -161,8 +162,54 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      IF (atoms%n_u.GT.0) THEN
         IF (input%secvar) CALL juDFT_error("LDA+U and sevcar not implemented",calledby ="postprocessInput")
-        IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
+        !IF (noco%l_mperp) CALL juDFT_error("LDA+U and l_mperp not implemented",calledby ="postprocessInput")
      END IF
+
+     !  Check lda+hia stuff
+     !TODO: REAL energy mesh should be finer than the complex one if we have a equidistant mesh
+     !      LO+LDA+HIA? 
+     !      LDA+U and LDA+HIA not on the same orbital
+     
+     DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+        n = atoms%lda_u(i)%atomType
+        l = atoms%lda_u(i)%l
+        IF(atoms%n_u.GE.1) THEN
+           DO j = 1, atoms%n_u
+              IF(atoms%lda_u(j)%atomType.EQ.n.AND.atoms%lda_u(j)%l.EQ.l) &
+                 CALL juDFT_error("LDA+U and LDA+Hubbard1 should not be used on the same orbital",calledby="postprocessInput")
+           END DO
+        END IF
+        IF (atoms%nlo(n).GE.1) THEN
+           DO j = 1, atoms%nlo(n)
+              IF ((ABS(atoms%llo(j,n)).EQ.l) .AND. (.NOT.atoms%l_dulo(j,n)) ) &
+                 WRITE (*,*) 'LO and LDA+Hubbard1 for same l not implemented/tested'
+           END DO
+        END IF
+     END DO
+
+     IF (atoms%n_hia.GT.0) THEN
+        IF (input%secvar) CALL juDFT_error("LDA+Hubbard1 and sevcar not implemented",calledby ="postprocessInput")
+        !IF (noco%l_mperp) CALL juDFT_error("LDA+Hubbard1 and l_mperp not implemented",calledby ="postprocessInput")
+        IF (noco%l_soc.AND..NOT.noco%l_spav) CALL juDFT_warn("LDA+Hubbard1 with SOC and non averaged SOC potential not tested",calledby ="postprocessInput")
+     END IF
+     !greens function
+     IF(atoms%n_gf.GT.0) THEN
+       IF(input%gf_mode.EQ.0) CALL juDFT_error("You have specified no energy contour in the inp.xml file",&
+                                                hint="Please add the greensFunction element to the calulationSetup",calledby="postprocessInput")
+       IF(input%gf_elup.GT.1.0) CALL juDFT_warn("Cutoff for the Greens function calculation should never be higher"//&
+                                                "than 1htr above efermi",calledby="postprocessInput")
+       IF(input%gf_elup.LT.input%gf_ellow) CALL juDFT_error("Not a valid energy grid elup<ellow",calledby="postprocessInput")
+       !Maybe add check for dense enough grid
+       IF(ANY(atoms%gfelem(:atoms%n_gf)%l.LT.2)) CALL juDFT_warn("Green's function for s and p orbitals not tested",calledby="postprocessInput")
+       IF(ANY(atoms%gfelem(:atoms%n_gf)%l.GT.3)) CALL juDFT_warn("Green's function only implemented for l<3",calledby="postprocessInput")
+       IF(input%l_gfmperp.AND..NOT.(noco%l_noco.AND.noco%l_mperp)) CALL juDFT_error("Off-diagonal GF elements only in noco calculations with noco%l_mperp=T",calledby="postprocessInput")
+
+       DO i = 1, atoms%n_j0
+          IF(atoms%j0(i)%l_min.GT.atoms%j0(i)%l_max) CALL juDFT_error("Not a valid configuration for J0-calculation l_min>l_max", &
+                                                                    calledby="postprocessInput")
+          IF(atoms%j0(i)%l_eDependence.AND.input%gf_mode.NE.3) CALL juDFT_error("Energy dependence of J0 only available with contourDOS",calledby="postprocessInput")
+       ENDDO
+     ENDIF
 
      ! Check DOS related stuff (from inped)
 
@@ -467,7 +514,7 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
 
      ! Calculate additional symmetry information
 
-     IF (atoms%n_u.GT.0) THEN
+     IF (atoms%n_u+atoms%n_gf.GT.0) THEN
         CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
      END IF
 
@@ -489,12 +536,12 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,obsolete,kpts
      CALL apply_displacements(cell,input,vacuum,oneD,sym,noco,atoms)
 
      !Calculate kpoint in the full BZ
-     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2) THEN
+     IF (kpts%l_gamma.and. banddos%ndir .eq. 0.and.kpts%specificationType==2.AND.atoms%n_gf==0) THEN
         CALL gen_bz(kpts,sym)
      ELSE
         kpts%nkptf=0
      ENDIF
-
+     
      ! Missing xc functionals initializations
      IF (xcpot%needs_grad()) THEN
         ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))

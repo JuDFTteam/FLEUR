@@ -18,6 +18,7 @@ do
 	-external) shift;external_lib="$external_lib $1";;
 	-hdf5) shift; CLI_USE_HDF5=$1;;
 	-wannier) shift; CLI_USE_WANNIER=$1;;
+   -edsolver) shift; CLI_USE_EDSOLVER=$1;;
 	-mpi) shift; CLI_USE_MPI=$1;;
 	-magma) shift; CLI_USE_MAGMA=$1;;
 	-gpu) shift; CLI_USE_GPU=$1;;
@@ -83,10 +84,11 @@ General options:
  
 Command line options to switch on/off features. These options overwrite the results of 
 the test and might lead to the configuration to fail. 
-  -hdf5    [TRUE|FALSE] : use HDF5 library
-  -wannier [TRUE|FALSE] : use Wannier90 library
-  -mpi     [TRUE|FALSE] : compile the MPI parallel version
-  -libxc   [TRUE|FALSE] : use libxc library
+  -hdf5     [TRUE|FALSE] : use HDF5 library
+  -wannier  [TRUE|FALSE] : use Wannier90 library
+  -mpi      [TRUE|FALSE] : compile the MPI parallel version
+  -libxc    [TRUE|FALSE] : use libxc library
+  -edsolver [TRUE|FALSE] : use the Exact Diagonalization library by Jindrich Kolorenc
 
 Command line option to compile external libraries:
   -external # : download and compile external libraries before building FLEUR

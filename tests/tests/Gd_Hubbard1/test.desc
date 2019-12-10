@@ -1,0 +1,10 @@
+$test_name="Fleur Gd Hubbard 1";
+$test_code="Fleur";
+%test_requirements=("SOC",0);
+$test_stages=1;
+$test_desc=<<EOF
+Simple testthe Hubbard 1 method without SOC:
+1. Generate starting density, run 2 Iterations with one Hubbard iteration in between
+   for f-orbitals. Ensure that the density matrix is reasonable
+EOF
+;

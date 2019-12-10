@@ -351,7 +351,7 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,DIMENSION,atoms,noco,jspin,n
    IF(ALLOCATED(thisEigVecCoeffs%bcof)) DEALLOCATE(thisEigVecCoeffs%bcof)
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
 
-   IF (noco%l_mperp) THEN
+   IF (noco%l_mperp.OR.input%l_gfmperp) THEN
       ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:dimension%lmd,atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
@@ -493,7 +493,6 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
    ALLOCATE(thisCdnvalJob%noccbd(kpts%nkpt))
    thisCdnvalJob%noccbd = 0
-
 
    ! determine bands to be used for each k point, MPI process
    DO ikpt_i = 1,SIZE(thisCdnvalJob%k_list)

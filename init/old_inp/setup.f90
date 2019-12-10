@@ -124,7 +124,7 @@
              DEALLOCATE (lmx1,nlhtp1)
           END IF
           !+odim
-          IF (atoms%n_u.GT.0) THEN
+          IF (atoms%n_u.GT.0.OR.atoms%n_gf.GT.0) THEN
              CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3, sym%d_wgn)
           ENDIF
           !
