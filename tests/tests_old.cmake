@@ -38,8 +38,8 @@ endif()
 
 #Tests for EDsolver
 if (${FLEUR_USE_EDSOLVER})
-   set(Testdirs ${Testdirs} Gd_Hubbard1)
-   set(ParTestdirs ${ParTestdirs} Gd_Hubbard1)
+   set(Testdirs ${Testdirs} Gd_Hubbard1 Gd_Hubbard1_SOC)
+   set(ParTestdirs ${ParTestdirs} Gd_Hubbard1 Gd_Hubbard1_SOC)
 endif()
 
 #The serial tests
