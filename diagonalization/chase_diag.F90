@@ -434,11 +434,12 @@ CONTAINS
     CALL zmat%copy(hmat,1,1)
 
     !Distribute eigenvalues over PEs
-    ne=0
-    DO i=myid+1,nev,np
-       ne=ne+1
-       eig(ne)=eigenvalues(i)
-    ENDDO
+    !ne=0
+    !DO i=myid+1,nev,np
+    !   ne=ne+1
+    !   eig(ne)=eigenvalues(i)
+    !ENDDO
+    eig(:)=eigenvalues(:size(eig))
 
     CALL CPU_TIME(t4)
 
