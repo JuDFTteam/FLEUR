@@ -117,7 +117,7 @@ c     intgrf_init.
       INTEGER, INTENT(IN)  :: jri(ntype)
       REAL   , INTENT(IN)  :: dx(ntype),rmsh(jmtd,ntype)
       REAL   , INTENT(IN)  :: gridf(jmtd,ntype)
-      REAL   , INTENT(IN)  :: f(*)
+      REAL   , INTENT(IN)  :: f(:)
 c     - local -
       TYPE(intgrf_out)     :: fct_res
 
@@ -149,7 +149,7 @@ c     can be used within forall loops
       INTEGER, INTENT(IN)  :: jri(ntype)
       REAL   , INTENT(IN)  :: dx(ntype),rmsh(jmtd,ntype)
       REAL   , INTENT(IN)  :: gridf(jmtd,ntype)
-      REAL   , INTENT(IN)  :: f(*)
+      REAL   , INTENT(IN)  :: f(:)
 c     - local -
       INTEGER              :: n
       REAL                 :: r1,h,a,x
