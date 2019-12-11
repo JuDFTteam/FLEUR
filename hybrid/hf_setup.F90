@@ -69,6 +69,7 @@ CONTAINS
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
          allocate(eig_irr(DIMENSION%neigd2, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
+         if(allocated(hybdat%kveclo_eig)) deallocate(hybdat%kveclo_eig)
          allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
          eig_irr = 0
@@ -214,6 +215,7 @@ CONTAINS
 
          allocate(basprod(atoms%jmtd), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
+         IF(ALLOCATED(hybdat%prodm)) DEALLOCATE(hybdat%prodm)
          allocate(hybdat%prodm(maxval(mpbasis%num_radbasfn), hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
