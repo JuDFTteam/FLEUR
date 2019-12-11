@@ -106,6 +106,7 @@ MODULE m_cdnpot_io_common
          DO i = 1, atoms%nat
             IF(ANY(ABS(atoms%pos(:,i)-refAtoms%pos(:,i)).GT.1e-10)) l_same = .FALSE.
          END DO
+         IF(ANY(ABS(atoms%rmt(:atoms%ntype)-refAtoms%rmt(:atoms%ntype)).GT.1e-10)) l_same = .FALSE.
       END IF
 
       ! NOTE: This subroutine certainly is not yet complete. Especially symmetry should

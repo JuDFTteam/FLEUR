@@ -5,13 +5,11 @@
    </comment>
    <calculationSetup>
       <cutoffs Kmax="4.50000000" Gmax="12.00000000" GmaxXC="10.00000000" numbands="0"/>
-      <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
-      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="99"/>
-      <magnetism jspins="1" l_noco="F" swsp="F" lflip="F"/>
-      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
-      <expertModes gw="0" secvar="F"/>
-      <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
-      <ldaU l_linMix="F" mixParam=".100000" spinf="2.000000"/>
+      <scfLoop itmax="1" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
+      <coreElectrons ctail="T" frcor="F" kcrel="0"/>
+      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F"  lflip="F"/>
+      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F" soc66="T"/>
+      <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
       <bzIntegration valenceElectrons="42.00000000" mode="hist" fermiSmearingEnergy=".00331000">
          <kPointList name="default" count="1">
             <kPoint weight="    8.000000">    0.250000     0.250000     0.250000</kPoint>
@@ -141,8 +139,8 @@
    <output dos="F" band="F" vacdos="F" slice="F" mcd="F">
       <checks vchk="F" cdinf="F"/>
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
-      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
-      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000000" locy1=".00000000" locx2=".00000000" locy2=".00000000" nstm="0" tworkf=".00000000"/>
+      <plotting iplot="0"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
       <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>

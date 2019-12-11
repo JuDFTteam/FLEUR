@@ -10,15 +10,16 @@ CONTAINS
        mpi,stars,sphhar,atoms,sym,&
        kpts,input,field,banddos,sliceplot,&
        vacuum,cell,enpara,noco,oneD,&
-        hybrid)
+       mpbasis, hybrid)
     !
     !**********************************************************************
     USE m_types
     IMPLICIT NONE
     INCLUDE 'mpif.h'
     TYPE(t_mpi),INTENT(INOUT)        :: mpi
-    
+
     TYPE(t_oneD),INTENT(INOUT)       :: oneD
+    TYPE(t_mpbasis), intent(inout)   :: mpbasis
     TYPE(t_hybrid),INTENT(INOUT)     :: hybrid
     TYPE(t_enpara),INTENT(INOUT)     :: enpara
     TYPE(t_banddos),INTENT(INOUT)    :: banddos
@@ -39,7 +40,7 @@ CONTAINS
     !     .. Local Arrays ..
     INTEGER i(45),ierr(3)
     REAL    r(34)
-    LOGICAL l(45)
+    LOGICAL l(46)
     !     ..
     !     .. External Subroutines..
 #ifdef CPP_MPI
@@ -63,7 +64,7 @@ CONTAINS
        r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta; r(9)=noco%phi; r(10)=vacuum%tworkf
        r(11)=vacuum%locx(1) ; r(12)=vacuum%locx(2); r(13)=vacuum%locy(1) ; r(14)=vacuum%locy(2)
        r(15)=input%sigma ; r(16)=field%efield%zsigma ; r(17)=noco%mix_b; r(18)=cell%vol
-       r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
+       r(19)=cell%volint ; r(20)=mpbasis%g_cutoff ; r(21)=mpbasis%linear_dep_tol ; r(22)=0.0
        r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=field%efield%vslope
        r(27)=0.0 ; r(28)=0.0!r(27)=aMix_VHSE() ; r(28)=omega_VHSE()
        r(29)=input%minDistance ;  r(31)=input%ldauMixParam ; r(32)=input%ldauSpinf
@@ -80,7 +81,7 @@ CONTAINS
        l(38)=field%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=field%efield%dirichlet
        l(43)=field%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
-
+       l(46)=input%l_removeMagnetisationFromInterstitial
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -99,7 +100,7 @@ CONTAINS
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     input%minDistance=r(29)
     input%delgau=r(24) ; input%tkb=r(25) ; field%efield%vslope=r(26)
-    cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21)
+    cell%volint=r(19) ; mpbasis%g_cutoff=r(20) ; mpbasis%linear_dep_tol=r(21)
     input%sigma=r(15) ; field%efield%zsigma=r(16); noco%mix_b=r(17); cell%vol=r(18);
     vacuum%locx(1)=r(11); vacuum%locx(2)=r(12); vacuum%locy(1)=r(13); vacuum%locy(2)=r(14)
     sliceplot%e1s=r(6) ; sliceplot%e2s=r(7) ; noco%theta=r(8); noco%phi=r(9); vacuum%tworkf=r(10)
@@ -123,6 +124,7 @@ CONTAINS
     banddos%unfoldband=l(35)
     noco%l_mtNocoPot=l(36)
     noco%l_spav=l(15)
+    input%l_removeMagnetisationFromInterstitial=l(46)
     !
     ! -> Broadcast the arrays:
     IF (field%efield%l_segmented) THEN

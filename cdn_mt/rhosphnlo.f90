@@ -6,7 +6,7 @@
 
 MODULE m_rhosphnlo
   !***********************************************************************
-  ! Add the local orbital contributions to the charge density. The 
+  ! Add the local orbital contributions to the charge density. The
   ! corresponding summation of the pure apw contribuions is done in
   ! cdnval.
   ! Philipp Kurz 99/04
@@ -26,7 +26,7 @@ CONTAINS
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,    INTENT (IN) :: itype 
+    INTEGER,    INTENT (IN) :: itype
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN) :: aclo(atoms%nlod),bclo(atoms%nlod),cclo(atoms%nlod,atoms%nlod)
@@ -38,11 +38,12 @@ CONTAINS
     REAL,    INTENT (IN) :: f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd)
     REAL,    INTENT (INOUT) :: qmtllo(0:atoms%lmaxd)
     REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd)
+    REAL,    INTENT (INOUT) :: rhoLRes(atoms%jmtd,0:sphhar%nlhd,0:(atoms%lmaxd*(atoms%lmaxd+1))/2+atoms%lmaxd)
     !     ..
     !     .. Local Scalars ..
     REAL dsdum,usdum ,c_1,c_2
-    INTEGER j,l,lh,lo,lop,lp,nodedum
-    REAL dus,ddn,c
+    INTEGER j,l,lh,lo,lop,lp,nodedum,llp
+    REAL dus,ddn,c,temp
     !     ..
     !     .. Local Arrays ..
     REAL,    ALLOCATABLE :: flo(:,:,:),glo(:,:)
@@ -92,16 +93,21 @@ CONTAINS
 
     DO lo = 1,atoms%nlo(itype)
        l = atoms%llo(lo,itype)
+       llp = (l* (l+1))/2 + l
        DO j = 1,atoms%jri(itype)
-          rho(j,0) = rho(j,0) + c_2 *&
-               (aclo(lo) * ( f(j,1,l)*flo(j,1,lo) +f(j,2,l)*flo(j,2,lo) ) +&
-               bclo(lo) * ( g(j,1,l)*flo(j,1,lo) +g(j,2,l)*flo(j,2,lo) ) )
+          temp = c_2 *&
+                 (aclo(lo) * ( f(j,1,l)*flo(j,1,lo) +f(j,2,l)*flo(j,2,lo) ) +&
+                 bclo(lo) * ( g(j,1,l)*flo(j,1,lo) +g(j,2,l)*flo(j,2,lo) ) )
+          rho(j,0) = rho(j,0) + temp
+          rhoLRes(j,0,llp) = rhoLRes(j,0,llp) + temp
        END DO
        DO lop = 1,atoms%nlo(itype)
           IF (atoms%llo(lop,itype).EQ.l) THEN
              DO j = 1,atoms%jri(itype)
-                rho(j,0) = rho(j,0) + c_2 * cclo(lop,lo) *&
+                temp = c_2 * cclo(lop,lo) *&
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
+                rho(j,0) = rho(j,0) + temp
+                rhoLRes(j,0,llp) = rhoLRes(j,0,llp) + temp
              END DO
           END IF
        END DO
@@ -113,18 +119,27 @@ CONTAINS
     DO lh = 1,sphhar%nlh(sym%ntypsy(atoms%nat))
        DO lp = 0,atoms%lmax(itype)
           DO lo = 1,atoms%nlo(itype)
+             l = atoms%llo(lo,itype)
+             llp = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
              DO j = 1,atoms%jri(itype)
-                rho(j,lh) = rho(j,lh) + c_1 * (&
+                temp = c_1 * (&
                      acnmt(lp,lo,lh) * (f(j,1,lp)*flo(j,1,lo) +f(j,2,lp)*flo(j,2,lo) ) +&
                      bcnmt(lp,lo,lh) * (g(j,1,lp)*flo(j,1,lo) +g(j,2,lp)*flo(j,2,lo) ) )
+                rho(j,lh) = rho(j,lh) + temp
+                rhoLRes(j,lh,llp) = rhoLRes(j,lh,llp) + temp
              END DO
           END DO
        END DO
        DO lo = 1,atoms%nlo(itype)
+          l = atoms%llo(lo,itype)
           DO lop = 1,atoms%nlo(itype)
+             lp = atoms%llo(lop,itype)
+             llp = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
              DO j = 1,atoms%jri(itype)
-                rho(j,lh) = rho(j,lh) + c_1 * ccnmt(lop,lo,lh) *&
+                temp = c_1 * ccnmt(lop,lo,lh) *&
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
+                rho(j,lh) = rho(j,lh) + temp
+                rhoLRes(j,lh,llp) = rhoLRes(j,lh,llp) + temp
              END DO
           END DO
        END DO

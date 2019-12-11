@@ -15,7 +15,7 @@ SUBROUTINE checkInputParams(mpi,input,atoms,noco,xcpot,oneD)
 
    TYPE(t_mpi),           INTENT(IN)    :: mpi
    TYPE(t_input),         INTENT(IN)    :: input
-   
+
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_noco),          INTENT(IN)    :: noco
    CLASS(t_xcpot),        INTENT(IN)    :: xcpot
@@ -33,6 +33,7 @@ SUBROUTINE checkInputParams(mpi,input,atoms,noco,xcpot,oneD)
                        calledby ="fleur", hint="Use a supercell or a different functional")
    END IF
 
+  
 END SUBROUTINE checkInputParams
 
 

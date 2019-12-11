@@ -17,10 +17,11 @@ MODULE m_constants
    REAL,             PARAMETER :: fpi_const=4.*3.1415926535897932
    REAL,             PARAMETER :: sfp_const=sqrt(4.*3.1415926535897932)
    complex,          parameter :: ImagUnit=(0.0,1.0)
+   complex,          parameter :: cmplx_0 = (0.0,0.0)
    REAL,             PARAMETER :: hartree_to_ev_const=27.21138602 ! value from 2014 CODATA recommended values. Uncertainty is 0.00000017
    REAL,             PARAMETER :: eVac0Default_const = -0.25
-   CHARACTER(len=9), PARAMETER :: version_const = 'fleur 30'
-   CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 3.1          (www.max-centre.eu)'
+   CHARACTER(len=9), PARAMETER :: version_const = 'fleur 31'
+   CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 4.0          (www.max-centre.eu)'
 
    INTEGER, PARAMETER :: POTDEN_TYPE_OTHER     = 0    ! POTDEN_TYPE <= 0 ==> undefined
    INTEGER, PARAMETER :: POTDEN_TYPE_POTTOT    = 1    ! 0 < POTDEN_TYPE <= 1000 ==> potential
@@ -29,6 +30,16 @@ MODULE m_constants
    INTEGER, PARAMETER :: POTDEN_TYPE_POTYUK    = 4
    INTEGER, PARAMETER :: POTDEN_TYPE_EnergyDen = 5
    INTEGER, PARAMETER :: POTDEN_TYPE_DEN       = 1001 ! 1000 < POTDEN_TYPE ==> density
+
+   INTEGER, PARAMETER :: PLOT_INPDEN=1
+   INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE=2
+   INTEGER, PARAMETER :: PLOT_INPDEN_N_CORE=3
+   INTEGER, PARAMETER :: PLOT_MIXDEN_Y_CORE=4
+   INTEGER, PARAMETER :: PLOT_MIXDEN_N_CORE=5
+   INTEGER, PARAMETER :: PLOT_POT_TOT=7
+   INTEGER, PARAMETER :: PLOT_POT_EXT=8
+   INTEGER, PARAMETER :: PLOT_POT_COU=9
+   INTEGER, PARAMETER :: PLOT_POT_VXC=10
 
    CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&
         'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',&
@@ -79,12 +90,11 @@ MODULE m_constants
    REAL ELEMENTAL FUNCTION c_light(fac)
       IMPLICIT NONE
       !  This subprogram supplies the value of c according to
-      !  NIST standard 13.1.99 
+      !  NIST standard 13.1.99
       !  Hartree and Rydbergs changed by fac = 1.0 or 2.0
 
       REAL, INTENT (IN) :: fac
-      c_light = 137.0359895e0 * fac 
-      !c_light = 1e6*fac
+      c_light = 137.0359895e0 * fac
    END FUNCTION c_light
 
 END MODULE m_constants

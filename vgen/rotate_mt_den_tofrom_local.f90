@@ -6,15 +6,17 @@
 
 MODULE m_rotate_mt_den_tofrom_local
   USE m_juDFT
+  USE m_polangle
   USE m_types
   USE m_constants
   use m_mt_tofrom_grid
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE rotate_mt_den_to_local(atoms,sphhar,sym,den)
+  SUBROUTINE rotate_mt_den_to_local(atoms,sphhar,sym,noco,den)
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_sphhar),INTENT(IN) :: sphhar
     TYPE(t_sym),INTENT(IN)    :: sym
+    TYPE(t_noco), INTENT(IN)  :: noco
     TYPE(t_potden),INTENT(INOUT) :: den
 
 
@@ -35,7 +37,7 @@ CONTAINS
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,den%mt(:,0:,n,:),n,grad,ch)
+       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,den%mt(:,0:,n,:),n,noco,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
 
           rho_11  = ch(imesh,1)
@@ -50,31 +52,7 @@ CONTAINS
           rho_up  = (rhotot + magmom)/2
           rho_down= (rhotot - magmom)/2
 
-          IF (ABS(mz) .LE. eps) THEN
-             theta = pi_const/2
-          ELSEIF (mz .GE. 0.0) THEN
-             theta = ATAN(SQRT(mx**2 + my**2)/mz)
-          ELSE
-             theta = ATAN(SQRT(mx**2 + my**2)/mz) + pi_const
-          ENDIF
-
-          IF (ABS(mx) .LE. eps) THEN
-             IF (ABS(my) .LE. eps) THEN
-                phi = 0.0
-             ELSEIF (my .GE. 0.0) THEN
-                phi = pi_const/2
-             ELSE
-                phi = -pi_const/2
-             ENDIF
-          ELSEIF (mx .GE. 0.0) THEN
-             phi = ATAN(my/mx)
-          ELSE
-             IF (my .GE. 0.0) THEN
-                phi = ATAN(my/mx) + pi_const
-             ELSE
-                phi = ATAN(my/mx) - pi_const
-             ENDIF
-          ENDIF
+          CALL pol_angle(mx,my,mz,theta,phi)
 
           ch(imesh,1) = rho_up
           ch(imesh,2) = rho_down
@@ -90,11 +68,12 @@ CONTAINS
     CALL finish_mt_grid()
   END SUBROUTINE rotate_mt_den_to_local
 
-  SUBROUTINE rotate_mt_den_from_local(atoms,sphhar,sym,den,vtot)
+  SUBROUTINE rotate_mt_den_from_local(atoms,sphhar,sym,den,noco,vtot)
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_sphhar),INTENT(IN) :: sphhar
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_potden),INTENT(IN) :: den
+    TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_potden),INTENT(INOUT) :: vtot
 
     TYPE(t_xcpot_inbuild)     :: xcpot !local xcpot that is LDA to indicate we do not need gradients
@@ -112,7 +91,11 @@ CONTAINS
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,vtot%mt(:,0:,n,:),n,grad,ch)
+       DO i=1,atoms%jri(n)
+          vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
+       ENDDO
+
+       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,vtot%mt(:,0:,n,:),n,noco,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
           vup   = ch(imesh,1)
           vdown = ch(imesh,2)
@@ -125,14 +108,13 @@ CONTAINS
           ch(imesh,3) = beff*SIN(theta)*COS(phi)
           ch(imesh,4) = beff*SIN(theta)*SIN(phi)
        ENDDO
+
        vtot%mt(:,0:,n,:)=0.0
 
        CALL mt_from_grid(atoms,sym,sphhar,n,4,ch,vtot%mt(:,0:,n,:))
 
-       DO i=1,atoms%jri(n)
-          vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
-       ENDDO
     END DO
     CALL finish_mt_grid()
   END SUBROUTINE rotate_mt_den_from_local
+
 END MODULE m_rotate_mt_den_tofrom_local

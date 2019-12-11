@@ -1,5 +1,5 @@
 MODULE m_tlmplm
-
+  use m_judft
   IMPLICIT NONE
   !*********************************************************************
   !     sets up the local Hamiltonian, i.e. the Hamiltonian in the
@@ -26,17 +26,17 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
-    INTEGER, INTENT (IN) :: n,jspin,jsp !atom index,physical spin&spin index for data
+    INTEGER, INTENT (IN) :: n,jspin !atom index,physical spin&spin index for data
 
     REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:)
     INTEGER,ALLOCATABLE :: indt(:)
     REAL,ALLOCATABLE    :: vr0(:,:)
-   
+
 
     COMPLEX  :: cil
     REAL     :: temp
     INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
-    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2
+    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2,jsp
 
     ALLOCATE( dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
     ALLOCATE( dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
@@ -49,7 +49,7 @@ CONTAINS
     ALLOCATE( vr0(SIZE(v%mt,1),0:SIZE(v%mt,2)-1))
 
 
-    
+    jsp=jspin
     vr0=v%mt(:,:,n,jsp)
     IF (jsp<3) vr0(:,0)=0.0
 

@@ -21,9 +21,9 @@ CONTAINS
     USE m_types_mixvector
     USE m_constants
 
-#ifdef CPP_MPI    
+#ifdef CPP_MPI
     USE m_mpi_bc_potden
-#endif    
+#endif
     IMPLICIT NONE
 
     TYPE(t_oneD),      INTENT(in)    :: oneD
@@ -35,9 +35,9 @@ CONTAINS
     TYPE(t_cell),      INTENT(in)    :: cell
     TYPE(t_sphhar),    INTENT(in)    :: sphhar
     TYPE(t_field),     INTENT(inout) :: field
-    
+
     TYPE(t_mpi),       INTENT(in)    :: mpi
-    TYPE(t_atoms),     INTENT(in)    :: atoms 
+    TYPE(t_atoms),     INTENT(in)    :: atoms
     TYPE(t_potden),    INTENT(inout) :: outDen
     TYPE(t_potden),    INTENT(in)    :: inDen
     TYPE(t_mixvector), INTENT(INOUT) :: precon_v
@@ -49,7 +49,7 @@ CONTAINS
 
     CALL resDen%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
     CALL vYukawa%init( stars, atoms, sphhar, vacuum, noco, input%jspins, 4 )
-    MPI0_b: IF( mpi%irank == 0 ) THEN 
+    MPI0_b: IF( mpi%irank == 0 ) THEN
        CALL resDen%subPotDen( outDen, inDen )
        IF( input%jspins == 2 ) CALL resDen%SpinsToChargeAndMagnetisation()
     END IF MPI0_b
@@ -58,9 +58,9 @@ CONTAINS
 #endif
     IF ( .NOT. input%film ) THEN
        CALL vgen_coulomb( 1, mpi,  oneD, input, field, vacuum, sym, stars, cell, &
-            sphhar, atoms, resDen, vYukawa )
+            sphhar, atoms, .FALSE., resDen, vYukawa )
     ELSE
-       if( mpi%irank == 0 ) then 
+       if( mpi%irank == 0 ) then
           call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
           call resDenMod%copyPotDen( resDen )
        end if

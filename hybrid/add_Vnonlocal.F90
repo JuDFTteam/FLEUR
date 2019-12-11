@@ -45,7 +45,7 @@ CONTAINS
    SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybrid, input, kpts, jsp, results, xcpot, noco, hmat)
 
       USE m_symm_hf, ONLY: symm_hf
-      USE m_util, ONLY: intgrf, intgrf_init
+      USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_exchange_valence_hf
       USE m_exchange_core
       USE m_symmetrizeh
@@ -87,8 +87,10 @@ CONTAINS
          DO nn = 1, n
             IF (hmat%l_real) THEN
                hmat%data_r(nn, n) = hmat%data_r(nn, n) - a_ex*v_x%data_r(nn, n)
+               v_x%data_r(n, nn) = v_x%data_r(nn, n)
             ELSE
                hmat%data_c(nn, n) = hmat%data_c(nn, n) - a_ex*v_x%data_c(nn, n)
+               v_x%data_c(n, nn) = CONJG(v_x%data_c(nn, n))
             ENDIF
          END DO
       END DO
@@ -122,7 +124,7 @@ CONTAINS
          ELSE
             exch(iband, iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
          END IF
-         IF (iband <= hybrid%nobd(nk)) THEN
+         IF (iband <= hybrid%nobd(nk,jsp)) THEN
             results%te_hfex%valence = results%te_hfex%valence - a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband)
          END IF
          IF (hybrid%l_calhf) THEN

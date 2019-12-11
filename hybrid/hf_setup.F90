@@ -8,20 +8,21 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(hybrid, input, sym, kpts, DIMENSION, atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
-                       hybdat, it, l_real, vr0, eig_irr)
+   SUBROUTINE hf_setup(mpbasis, hybrid, input, sym, kpts,  atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
+                       hybdat, l_real, vr0, eig_irr)
       USE m_types
       USE m_eig66_io
       USE m_util
+      USE m_intgrf
       USE m_checkolap
-      USE m_read_core
+      USE m_hybrid_core
       USE m_gen_wavf
 
       IMPLICIT NONE
 
+      TYPE(t_mpbasis), INTENT(inout)   :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_kpts), INTENT(IN)    :: kpts
-      TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_noco), INTENT(IN)    :: noco
@@ -33,7 +34,6 @@ CONTAINS
       TYPE(t_results), INTENT(INOUT) :: results
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
 
-      INTEGER, INTENT(IN)    :: it
       INTEGER, INTENT(IN)    :: jsp, eig_id_hf
       REAL, INTENT(IN)    :: vr0(:, :, :)
       LOGICAL, INTENT(IN)    :: l_real
@@ -46,7 +46,7 @@ CONTAINS
 
       ! local scalars
       INTEGER :: ok, nk, nrec1, i, j, ll, l1, l2, ng, itype, n, l, n1, n2, nn
-      INTEGER :: nbasfcn
+      INTEGER :: nbasfcn, n_dim
       LOGICAL :: l_exist
 
       ! local arrays
@@ -54,7 +54,6 @@ CONTAINS
       REAL, ALLOCATABLE :: basprod(:)
       INTEGER              :: degenerat(merge(input%neig*2,input%neig,noco%l_soc) + 1, kpts%nkpt)
       LOGICAL              :: skip_kpt(kpts%nkpt)
-      INTEGER              :: g(3)
 
       REAL :: zDebug_r(lapw_dim_nbasfcn,input%neig)
       COMPLEX :: zDebug_c(lapw_dim_nbasfcn,input%neig)
@@ -65,16 +64,12 @@ CONTAINS
          ! Preparations for HF and hybrid functional calculation
          CALL timestart("gen_bz and gen_wavf")
 
-         WRITE(9333,*) lapw%dim_nbasfcn(), input%neig, atoms%nlotot, kpts%nkpt
-         WRITE(9333,*) ALLOCATED(hybdat%kveclo_eig)
-
-         ALLOCATE (zmat(kpts%nkptf), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation z_c'
-         ALLOCATE (eig_irr(merge(input%neig*2,input%neig,noco%l_soc), kpts%nkpt), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation eig_irr'
-         IF(ALLOCATED(hybdat%kveclo_eig)) DEALLOCATE (hybdat%kveclo_eig) ! for spinpolarized systems
-         ALLOCATE (hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%kveclo_eig'
+         allocate(zmat(kpts%nkptf), stat=ok)
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
+         allocate(eig_irr(inputneigd, kpts%nkpt), stat=ok)
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
+         allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')
          eig_irr = 0
          hybdat%kveclo_eig = 0
 
@@ -103,9 +98,6 @@ CONTAINS
                zMat(nk)%data_c(:nbasfcn,:input%neig) = zDebug_c(:nbasfcn,:input%neig)
             END IF
 
-            WRITE(9333,*) SHAPE(eig_irr)
-            WRITE(9333,*) SHAPE(results%eig)
-
             eig_irr(:, nk) = results%eig(:, nk, jsp)
             hybrid%ne_eig(nk) = results%neig(nk, jsp)
          END DO
@@ -129,7 +121,7 @@ CONTAINS
             WRITE (6, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
          END IF
          degenerat = 1
-         hybrid%nobd = 0
+         hybrid%nobd(:,jsp) = 0
          DO nk = 1, kpts%nkpt
             DO i = 1, hybrid%ne_eig(nk)
                DO j = i + 1, hybrid%ne_eig(nk)
@@ -163,35 +155,35 @@ CONTAINS
             END DO
 
             DO i = 1, hybrid%ne_eig(nk)
-               IF (results%w_iks(i, nk, jsp) > 0.0) hybrid%nobd(nk) = hybrid%nobd(nk) + 1
+               IF (results%w_iks(i, nk, jsp) > 0.0) hybrid%nobd(nk,jsp) = hybrid%nobd(nk,jsp) + 1
             END DO
 
-            IF (hybrid%nobd(nk) > hybrid%nbands(nk)) THEN
+            IF (hybrid%nobd(nk,jsp) > hybrid%nbands(nk)) THEN
                WRITE (*, *) 'k-point: ', nk
                WRITE (*, *) 'number of bands:          ', hybrid%nbands(nk)
-               WRITE (*, *) 'number of occupied bands: ', hybrid%nobd(nk)
+               WRITE (*, *) 'number of occupied bands: ', hybrid%nobd(nk,jsp)
                CALL judft_warn("More occupied bands than total no of bands!?")
-               hybrid%nbands(nk) = hybrid%nobd(nk)
+               hybrid%nbands(nk) = hybrid%nobd(nk,jsp)
             END IF
-            PRINT *, "bands:", nk, hybrid%nobd(nk), hybrid%nbands(nk), hybrid%ne_eig(nk)
+            PRINT *, "bands:", nk, hybrid%nobd(nk,jsp), hybrid%nbands(nk), hybrid%ne_eig(nk)
          END DO
 
          ! spread hybrid%nobd from IBZ to whole BZ
          DO nk = 1, kpts%nkptf
             i = kpts%bkp(nk)
-            hybrid%nobd(nk) = hybrid%nobd(i)
+            hybrid%nobd(nk,jsp) = hybrid%nobd(i,jsp)
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
-         CALL gen_wavf(kpts%nkpt, kpts, it, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell, dimension, &
-                       hybrid, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
+         CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell,  &
+                       mpbasis, hybrid, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
-         CALL corewf(atoms, jsp, input, DIMENSION, vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
+         CALL corewf(atoms, jsp, input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
 
          ! check olap between core-basis/core-valence/basis-basis
-         CALL checkolap(atoms, hybdat, hybrid, kpts%nkpt, kpts, dimension, mpi, skip_kpt, &
+         CALL checkolap(atoms, hybdat, mpbasis, hybrid, kpts%nkpt, kpts,  mpi, &
                         input, sym, noco, cell, lapw, jsp)
 
          ! set up pointer pntgpt
@@ -202,36 +194,34 @@ CONTAINS
          hybdat%pntgptd = 0
          DO nk = 1, kpts%nkptf
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
-            hybdat%pntgptd(1) = MAXVAL((/(ABS(lapw%k1(i, jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(1)/))
-            hybdat%pntgptd(2) = MAXVAL((/(ABS(lapw%k2(i, jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(2)/))
-            hybdat%pntgptd(3) = MAXVAL((/(ABS(lapw%k3(i, jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(3)/))
+            do n_dim = 1,3
+               hybdat%pntgptd(n_dim) = MAXVAL([(ABS(lapw%gvec(n_dim,i,jsp)), i=1, lapw%nv(jsp)), hybdat%pntgptd(n_dim)])
+            end do
          END DO
 
          IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE(hybdat%pntgpt) ! for spinpolarized systems
          ALLOCATE (hybdat%pntgpt(-hybdat%pntgptd(1):hybdat%pntgptd(1), -hybdat%pntgptd(2):hybdat%pntgptd(2), &
                                  -hybdat%pntgptd(3):hybdat%pntgptd(3), kpts%nkptf), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation pntgpt'
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation pntgpt')
          hybdat%pntgpt = 0
          DO nk = 1, kpts%nkptf
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
             DO i = 1, lapw%nv(jsp)
-               g = (/lapw%k1(i, jsp), lapw%k2(i, jsp), lapw%k3(i, jsp)/)
-               hybdat%pntgpt(g(1), g(2), g(3), nk) = i
+               hybdat%pntgpt(lapw%gvec(1,i,jsp), lapw%gvec(2,i,jsp), lapw%gvec(3,i,jsp), nk) = i
             END DO
          END DO
 
-         ALLOCATE (basprod(atoms%jmtd), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation basprod'
-         IF(ALLOCATED(hybdat%prodm)) DEALLOCATE(hybdat%prodm) ! for spinpolarized systems
-         ALLOCATE (hybdat%prodm(hybrid%maxindxm1, hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%prodm'
-         IF(ALLOCATED(hybdat%prod)) DEALLOCATE(hybdat%prod) ! for spinpolarized systems
-         ALLOCATE (hybdat%prod(hybrid%maxindxp1, 0:hybrid%maxlcutm1, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%prod'
-         basprod = 0; hybdat%prodm = 0; hybdat%prod%l1 = 0; hybdat%prod%l2 = 0
-         hybdat%prod%n1 = 0; hybdat%prod%n2 = 0
+         allocate(basprod(atoms%jmtd), stat=ok)
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
+         allocate(hybdat%prodm(maxval(mpbasis%num_radbasfn), hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
+         IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
+
+         call mpbasis%init(hybrid, atoms)
+
+         basprod = 0; hybdat%prodm = 0; mpbasis%l1 = 0; mpbasis%l2 = 0
+         mpbasis%n1 = 0; mpbasis%n2 = 0
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE(hybdat%nindxp1) ! for spinpolarized systems
-         ALLOCATE (hybdat%nindxp1(0:hybrid%maxlcutm1, atoms%ntype))
+         ALLOCATE (hybdat%nindxp1(0:maxval(hybrid%lcutm1), atoms%ntype))
          hybdat%nindxp1 = 0
          DO itype = 1, atoms%ntype
             ng = atoms%jri(itype)
@@ -239,8 +229,8 @@ CONTAINS
                ll = l2
                DO l1 = 0, ll
                   IF (ABS(l1 - l2) <= hybrid%lcutm1(itype)) THEN
-                     DO n2 = 1, hybrid%nindx(l2, itype)
-                        nn = hybrid%nindx(l1, itype)
+                     DO n2 = 1, mpbasis%num_radfun_per_l(l2, itype)
+                        nn = mpbasis%num_radfun_per_l(l1, itype)
                         IF (l1 == l2) nn = n2
                         DO n1 = 1, nn
                            ! Calculate all basis-function hybdat%products to obtain
@@ -251,13 +241,13 @@ CONTAINS
                               IF (MOD(l1 + l2 + l, 2) == 0) THEN
                                  hybdat%nindxp1(l, itype) = hybdat%nindxp1(l, itype) + 1
                                  n = hybdat%nindxp1(l, itype)
-                                 hybdat%prod(n, l, itype)%l1 = l1
-                                 hybdat%prod(n, l, itype)%l2 = l2
-                                 hybdat%prod(n, l, itype)%n1 = n1
-                                 hybdat%prod(n, l, itype)%n2 = n2
-                                 DO i = 1, hybrid%nindxm1(l, itype)
-                                    hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*hybrid%basm1(:ng, i, l, itype), atoms%jri, &
-                                                                          atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                                 mpbasis%l1(n,l,itype) = l1
+                                 mpbasis%l2(n,l,itype) = l2
+                                 mpbasis%n1(n,l,itype) = n1
+                                 mpbasis%n2(n,l,itype) = n2
+                                 DO i = 1, mpbasis%num_radbasfn(l, itype)
+                                    hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*mpbasis%radbasfn_mt(:ng, i, l, itype), &
+                                                                          atoms, itype, hybdat%gridf)
                                  END DO
                               END IF
                            END DO
@@ -267,7 +257,7 @@ CONTAINS
                END DO
             END DO
          END DO
-         DEALLOCATE (basprod)
+         deallocate(basprod)
          CALL timestop("gen_bz and gen_wavf")
 
       ELSE IF (hybrid%l_hybrid) THEN ! hybrid%l_calhf is false
@@ -275,10 +265,10 @@ CONTAINS
          !DO nk = n_start,kpts%nkpt,n_stride
          DO nk = 1, kpts%nkpt, 1
             hybrid%ne_eig(nk) = results%neig(nk, jsp)
-            hybrid%nobd(nk) = COUNT(results%w_iks(:hybrid%ne_eig(nk), nk, jsp) > 0.0)
+            hybrid%nobd(nk,jsp) = COUNT(results%w_iks(:hybrid%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
-         hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%nindx(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
+         hybrid%maxlmindx = MAXVAL([(SUM([(mpbasis%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
          hybrid%nbands = MIN(hybrid%bands1, input%neig)
 
       ENDIF ! hybrid%l_calhf

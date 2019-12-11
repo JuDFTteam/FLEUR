@@ -15,7 +15,7 @@ MODULE m_types_xcpot_inbuild
                                 'l91 ','x-a ','wign','mjw ','hl  ','bh  ','vwn ','pz  ', &
                                 'pw91','pbe ','rpbe','Rpbe','wc  ','PBEs', &
                                 'pbe0','hse ','vhse','lhse','exx ','hf  ']
-   
+
    TYPE, EXTENDS(t_xcpot_inbuild_nf):: t_xcpot_inbuild
    CONTAINS
       !overloading t_xcpot:
@@ -25,7 +25,7 @@ MODULE m_types_xcpot_inbuild
    PUBLIC t_xcpot_inbuild
  CONTAINS
 
- 
+
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
 !
       USE m_xcxal, ONLY : vxcxal
@@ -109,7 +109,7 @@ MODULE m_types_xcpot_inbuild
          ELSEIF (xcpot%is_name("hf")) THEN
             ! Hartree-Fock  calculation: X-alpha potential is added to generate a rational local potential,
             !                            later it is subtracted again
-            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_vxc')
+!            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_vxc')
             CALL vxcxal(xcpot%data%krla,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
             !         vxc=0
          ELSEIF (xcpot%is_name("exx")) THEN
@@ -140,13 +140,13 @@ MODULE m_types_xcpot_inbuild
       USE m_excpw91
       USE m_excepbe
       IMPLICIT NONE
-      
+
       CLASS(t_xcpot_inbuild),INTENT(IN)     :: xcpot
       INTEGER, INTENT (IN)                  :: jspins
       REAL,INTENT (IN)                      :: rh(:,:)
       REAL, INTENT (OUT)                    :: exc(:)
       TYPE(t_gradients),OPTIONAL,INTENT(IN) ::grad
-      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call
       REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
 
 !c
@@ -187,9 +187,12 @@ MODULE m_types_xcpot_inbuild
             CALL excvwn(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
          ELSEIF (xcpot%is_name("pz")) THEN     ! Perdew,Zunger correlation
             CALL excpz(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
-         ELSEIF (xcpot%is_name("hf") .OR. xcpot%is_name("exx")) THEN
-            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_exc')
-            exc=0
+         ELSEIF (xcpot%is_name("hf")) THEN
+!            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_exc')
+!            exc=0
+            CALL excxal(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
+         ELSEIF (xcpot%is_name("exx")) THEN
+            CALL juDFT_error('EXX should now be treated as a GGA functional', calledby='xcpot_get_exc')
          ELSE
             CALL juDFT_error("Unkown LDA potential",calledby="type xcpot")
          ENDIF

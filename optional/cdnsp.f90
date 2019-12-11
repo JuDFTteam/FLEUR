@@ -58,7 +58,7 @@
 
           input%jspins=1
           CALL readCoreDensity(input,atoms,rhoc,tec,qintc)
-          CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+          CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                            CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
           input%jspins=2
 
@@ -106,7 +106,7 @@
              ENDDO
           ENDIF
           !     ----> write the spin-polarized density
-          CALL writeDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
+          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                             CDN_INPUT_DEN_const,0,-1.0,0.0,.FALSE.,den)
           !
           !     -----> This part is only used for testing th e magnetic moment in

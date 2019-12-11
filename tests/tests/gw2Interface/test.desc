@@ -1,0 +1,8 @@
+$test_name="GW=2 switch for Si";
+$test_code="Fleur";
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Fleur with one step:
+1.Generate a starting density and run 1 iteration with gw=1 and compare several quantities written out
+EOF
+;

@@ -5,9 +5,9 @@
 !--------------------------------------------------------------------------------
 
 !< This module collects all the type definitions. It can be used if no circular dependencies occur, i.e. in all
-!! places not defining a type 
+!! places not defining a type
 MODULE m_types
-  USE m_types_rcmat
+  USE m_types_mat
   USE m_types_xcpot
   USE m_types_lapw
   USE m_types_mpi
@@ -26,5 +26,6 @@ MODULE m_types
   USE m_types_denCoeffsOffdiag
   USE m_types_force
   USE m_types_forcetheo
+  USE m_types_hybrid
+  USE m_types_mpbasis
 END MODULE m_types
-

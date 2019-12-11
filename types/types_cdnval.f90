@@ -105,6 +105,8 @@ PRIVATE
       REAL, ALLOCATABLE    :: stdn(:,:)
       REAL, ALLOCATABLE    :: svdn(:,:)
 
+      REAL, ALLOCATABLE    :: rhoLRes(:,:,:,:,:)
+
       CONTAINS
          PROCEDURE,PASS :: init => moments_init
    END TYPE t_moments
@@ -399,14 +401,17 @@ SUBROUTINE mcd_init1(thisMCD,banddos,input,atoms,kpts)
 
 END SUBROUTINE mcd_init1
 
-SUBROUTINE moments_init(thisMoments,input,atoms)
+SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
 
    USE m_types_setup
+   USE m_types_mpi
 
    IMPLICIT NONE
 
    CLASS(t_moments),      INTENT(INOUT) :: thisMoments
+   TYPE(t_mpi),           INTENT(IN)    :: mpi
    TYPE(t_input),         INTENT(IN)    :: input
+   TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_atoms),         INTENT(IN)    :: atoms
 
    ALLOCATE(thisMoments%chmom(atoms%ntype,input%jspins))
@@ -422,6 +427,11 @@ SUBROUTINE moments_init(thisMoments,input,atoms)
 
    thisMoments%stdn = 0.0
    thisMoments%svdn = 0.0
+
+   IF(mpi%irank.EQ.0) THEN
+      ALLOCATE(thisMoments%rhoLRes(atoms%jmtd,0:sphhar%nlhd,0:(atoms%lmaxd*(atoms%lmaxd+1))/2+atoms%lmaxd,atoms%ntype,4))
+      thisMoments%rhoLRes = 0.0
+   END IF
 
 END SUBROUTINE moments_init
 

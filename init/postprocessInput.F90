@@ -44,13 +44,14 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   TYPE(t_vacuum),   INTENT(INOUT) :: vacuum
   TYPE(t_kpts),     INTENT(INOUT) :: kpts
   TYPE(t_oneD),     INTENT(INOUT) :: oneD
+ TYPE(t_mpbasis), intent(inout) :: mpbasis
   TYPE(t_hybrid),   INTENT(INOUT) :: hybrid
   TYPE(t_cell),     INTENT(INOUT) :: cell
   TYPE(t_banddos),  INTENT(INOUT) :: banddos
   TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot
   CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT) :: xcpot
   TYPE(t_noco),     INTENT(INOUT) :: noco
-  
+
   TYPE(t_sphhar)   ,INTENT  (OUT) :: sphhar
   TYPE(t_field),    INTENT(INOUT) :: field
   LOGICAL,          INTENT   (IN) :: l_kpts

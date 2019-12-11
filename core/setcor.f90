@@ -30,6 +30,9 @@ CONTAINS
     CHARACTER(len=13) :: fname
     !     ..
 
+    kappa(:) = -100
+    nprnc(:) = -100
+
     l_clf = .FALSE.  
     WRITE(fname,"('corelevels.',i2.2)") NINT(atoms%zatom(itype))
     INQUIRE (file=fname, exist=l_clf)
@@ -206,7 +209,7 @@ CONTAINS
        ENDIF
     ENDIF
 
-    ! modify default electron configuration according to explicitely provided setting in inp.xml
+    ! modify default electron configuration according to explicitly provided setting in inp.xml
     IF(input%l_inpXML) THEN
        nst = max(nst,atoms%numStatesProvided(itype))
        IF (atoms%numStatesProvided(itype).NE.0) THEN

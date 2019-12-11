@@ -11,14 +11,14 @@ use m_types
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++
 !  plot the charge density for fleur  code output
-!     
+!
 !  if twodim = .false. a 3-D plot with nplot layers in z-direction
 !  is constructed; the 3x3 matrix gives the 3 vectors of the cell ..
 !  .gustav
 !
-!  Changed the input/output for easier use. 
-!  This subroutine uses the file plot_inp for input. 
-!  The old plotin-file is still supported by the old subroutine at the 
+!  Changed the input/output for easier use.
+!  This subroutine uses the file plot_inp for input.
+!  The old plotin-file is still supported by the old subroutine at the
 !  end of the module
 !                     Juelich, 21.1.06 DW
 !
@@ -38,7 +38,7 @@ SUBROUTINE plotdop(oneD,stars,vacuum,sphhar,atoms,&
    IMPLICIT NONE
 
    TYPE(t_oneD),                INTENT(IN)    :: oneD
-   
+
    TYPE(t_stars),               INTENT(IN)    :: stars
    TYPE(t_vacuum),              INTENT(IN)    :: vacuum
    TYPE(t_sphhar),              INTENT(IN)    :: sphhar
@@ -74,8 +74,8 @@ SUBROUTINE plotdop(oneD,stars,vacuum,sphhar,atoms,&
    NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
    oldform = .false.
-   INQUIRE(file ="plotin",exist = oldform) 
-   IF (oldform) THEN 
+   INQUIRE(file ="plotin",exist = oldform)
+   IF (oldform) THEN
       CALL juDFT_error("Use of plotin file no longer supported",calledby = "plotdop")
    END IF
 
@@ -168,9 +168,9 @@ SUBROUTINE plotdop(oneD,stars,vacuum,sphhar,atoms,&
       END IF
    END DO
 
-   IF (noco%l_ss) THEN 
-      qssc = MATMUL(TRANSPOSE(cell%bmat),noco%qss) 
-   END IF 
+   IF (noco%l_ss) THEN
+      qssc = MATMUL(TRANSPOSE(cell%bmat),noco%qss)
+   END IF
 
    ! Open the plot_inp file for input
    OPEN (18,file='plot_inp')
@@ -258,7 +258,7 @@ SUBROUTINE plotdop(oneD,stars,vacuum,sphhar,atoms,&
                   IF (.NOT.twodim) point = point + vec3*REAL(iz)/(grid(3)-1)
 
                   ! Set region specific parameters for point
-                  
+
                   ! Get MT sphere for point if point is in MT sphere
                   CALL getMTSphere(input,cell,atoms,oneD,point,nt,na,pt)
                   IF (na.NE.0) THEN
@@ -290,14 +290,14 @@ SUBROUTINE plotdop(oneD,stars,vacuum,sphhar,atoms,&
                   END DO
 
                   IF (na.NE.0) THEN
-                     IF (noco%l_ss) THEN 
+                     IF (noco%l_ss) THEN
                         ! rotate magnetization "backward"
                         angss = DOT_PRODUCT(qssc,pt-atoms%pos(:,na))
                         help(1) = xdnout(2)
                         help(2) = xdnout(3)
-                        xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss) 
-                        xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss) 
-                        ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0. 
+                        xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss)
+                        xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss)
+                        ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0.
                      END IF
                   END IF
 
@@ -318,7 +318,7 @@ SUBROUTINE plotdop(oneD,stars,vacuum,sphhar,atoms,&
                         xdnout(7)= -tpi_const
                      ELSE
                         DO j = 1, 3
-                           help(j) = xdnout(1+j)/xdnout(5) 
+                           help(j) = xdnout(1+j)/xdnout(5)
                         END DO
                         IF (help(3)<0.5) THEN
                            xdnout(6)= ACOS(help(3))
@@ -375,8 +375,8 @@ SUBROUTINE plotdop(oneD,stars,vacuum,sphhar,atoms,&
             CLOSE(nfile+i)
          END IF
       END DO
-   END DO !nplot  
-    
+   END DO !nplot
+
    CLOSE(18)
    IF (xsf) THEN
       DO i = 1, numOutFiles

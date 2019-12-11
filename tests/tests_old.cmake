@@ -1,14 +1,15 @@
 enable_testing()
 
-#set(SerialParallelTests CuBulk CuBulkXML SiLOXML Fe_1l Fe_1lXML Fe-Atom CuBand CuBandXML CuDOS CuDOSXML
-#Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOCXML PTO-SOC PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML Fe_fccXML
-#GaAsMultiUForceXML SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML )#SiHybridGamma)
+set(SerialParallelTests SiHybridGammaNoInv SiHybrid8kpt_sym
+   SiHybrid8kpt_nosym CuBulkXML SiLOXML  Fe_1lXML
+   CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
+   PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
+   SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML   )
 
-set(SerialParallelTests CuBulkXML SiLOXML Fe_1lXML CuBandXML CuDOSXML Fe_bctXML PTOXML Fe_1l_SOCXML PTO-SOCXML Fe_bct_SOCXML Fe_fccXML
-GaAsMultiUForceXML Fe_bct_LOXML )#SiHybridGamma)
-set(InpgenTests Si_plain Si_full_para)# Si_kpt Si_kden Si_round_trip)
+set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 Fe_fcc CoUnfold gw1Interface gw2Iterface)# TiO2eels TiO2eelsXML)
+set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
-set(Testdirs ${SerialParallelTests} ${SerialOnlyTests})
+set(Testdirs ${SerialOnlyTests} ${SerialParallelTests})
 set(ParTestdirs ${SerialParallelTests})
 set(InpTestdirs ${InpgenTests})
 
@@ -51,7 +52,10 @@ if (${FLEUR_USE_MPI})
       set(mpi_exec "mpirun -n 2")
    endif()
    foreach(test ${ParTestdirs})
-    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl
-${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
+    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
+   endforeach(test)
+   set(mpi_exec "sequential")
+   foreach(test ${SerialOnlyTests})
+    add_test("FLEUR_MPI:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl ${test} "${CMAKE_BINARY_DIR}/fleur_MPI" "${mpi_exec}")
    endforeach(test)
 endif()

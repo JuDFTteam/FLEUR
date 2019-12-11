@@ -869,7 +869,7 @@ c****************************************************************
 
 
 
-      call judft_error("cdn_read in wann_updown")
+!      call judft_error("cdn_read in wann_updown")
          nrec=0
       enddo !jspin
       call cpu_time(delta1)
@@ -904,6 +904,7 @@ c...we work only within the energy window
       eig(:) = 0.
 
       do jspin=1,wannierspin
+       jspin2=min(input%jspins,jspin)
        nslibd=0
        !print*,"bands used:"
        do i = 1,nbands
@@ -911,8 +912,8 @@ c...we work only within the energy window
      &       and.wann%l_bynumber)
      &    .or.(eigg(i,1).ge.e1s.and.eigg(i,1).le.e2s.
      &       and.wann%l_byenergy)
-     &    .or.(i.ge.wann%band_min(jspin).and.
-     &        (i.le.wann%band_max(jspin))
+     &    .or.(i.ge.wann%band_min(jspin2).and.
+     &        (i.le.wann%band_max(jspin2))
      &       .and.wann%l_byindex))then
 
            !print*,i
@@ -922,7 +923,7 @@ c...we work only within the energy window
              funbas=lapw%nv(1)+atoms%nlotot
              funbas=funbas+lapw%nv(2)+atoms%nlotot
            else
-             funbas=lapw%nv(jspin)+atoms%nlotot
+             funbas=lapw%nv(jspin2)+atoms%nlotot
            endif
            IF (zzMat(jspin)%l_real) THEN
               do j = 1,funbas
@@ -994,7 +995,7 @@ c...for the lapws and local orbitals, summed by the basis functions
       do jspin=1,wannierspin
 
          CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,
-     +              noco,jspin,oneD,acof(1:,0:,1:,jspin),
+     +      noco,min(jspin,input%jspins),oneD,acof(1:,0:,1:,jspin),
      +              bcof(1:,0:,1:,jspin),ccof(-llod:,1:,1:,1:,jspin),
      +              zMat(jspin))
 
@@ -1182,9 +1183,9 @@ c$$$       enddo !i
       addnoco2 = addnoco      ! TODO: correct for addnoco2
       call wann_mmkb_int(
      >         cmplx(1.,0.),addnoco,addnoco2,
-     > nvd,k1d,k2d,k3d,
-     >         n3d,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
-     > lapw%nv(jspin),neigd,nbasfcn,zMat(1),nslibd,
+     > DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,
+     > stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
+     > lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat(1),nslibd,
      > lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
      >         lapw%nv(jspin),zMat(2),nslibd,
      >         nbnd,
@@ -1214,7 +1215,8 @@ c         call wann_mmk0_vac(
 c     >           z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
 c     >           ig,nmz,delz,ig2,area,bmat,
 c     >           bbmat,evac(:,jspin),bkpt,vz(:,:,jspin2),
-c     >           nslibd,jspin,k1,k2,k3,wannierspin,nvd,
+c     >           nslibd,jspin,lapw%k1(:,jspin),lapw%k2(:,jspin),
+c     >           lapw%k3(:,jspin),wannierspin,nvd,
 c     >           nbasfcn,neigd,z,nv,omtil,
 c     <           mmn(1:noccbd,1:noccbd,ikpt))
 
@@ -1225,7 +1227,8 @@ c     >           z1,nmzxyd,nmzd,nv2d,k1d,k2d,k3d,n2d,n3d,
 c     >           ig,nmzxy,nmz,delz,ig2,odi%n2d,
 c     >           bbmat,evac(1,jspin),bkpt,odi%M,odi%mb,
 c     >           vz(:,1,jspin2),odi,
-c     >           nslibd,jspin,k1,k2,k3,wannierspin,nvd,area,
+c     >           nslibd,jspin,lapw%k1(:,jspin),lapw%k2(:,jspin),
+c     >           lapw%k3(:,jspin),wannierspin,nvd,area,
 c     >           nbasfcn,neigd,z,nv,sk2,phi2,omtil,qss,
 c     <           mmn(1:noccbd,1:noccbd,ikpt))
 

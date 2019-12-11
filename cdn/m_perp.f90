@@ -36,7 +36,7 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER iri
     REAL b_xavh,scale,b_con_outx,b_con_outy,mx,my,mz,&
-         &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix
+         &     alphh,betah,mz_tmp,mx_mix,my_mix,mz_mix,absmag
     REAL    rho11,rho22, alphdiff
     COMPLEX rho21
     !     ..
@@ -56,11 +56,12 @@ CONTAINS
     mx = 2*REAL(qa21(itype))
     my = 2*AIMAG(qa21(itype))
     mz = chmom(itype,1) - chmom(itype,2)
-    WRITE  (6,8025) mx,my
+    absmag=SQRT(mx*mx+my*my+mz*mz)
+    WRITE  (6,8025) mx,my,mz,absmag
     !---> determine the polar angles of the moment vector in the local frame
     CALL pol_angle(mx,my,mz,betah,alphh)
     WRITE  (6,8026) betah,alphh
-8025 FORMAT(2x,'--> local frame: ','mx=',f9.5,' my=',f9.5)
+8025 FORMAT(2x,'--> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
 8026 FORMAT(2x,'-->',10x,' delta beta=',f9.5,&
          &                   '  delta alpha=',f9.5)
 

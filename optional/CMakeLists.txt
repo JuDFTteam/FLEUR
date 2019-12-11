@@ -7,7 +7,6 @@ optional/bmt.f90
 optional/cdnsp.f90
 optional/flipcdn.f90
 optional/outcdn.f90
-optional/pldngen.f90
-optional/plotdop.f90
 optional/stden.f90
+optional/plot.f90
 )

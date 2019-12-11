@@ -2,7 +2,7 @@ module m_vmts
 
 contains
 
-  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vpw, rho, potdenType, vr )
+  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vpw, rho, potdenType, vr )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients 
@@ -33,7 +33,7 @@ contains
 #include"cpp_double.h"
     use m_constants
     use m_types
-    use m_intgr, only : intgr2
+    use m_intgr!, only : intgr2, intgrt, intgr5
     use m_phasy1
     use m_sphbes
     use m_od_phasy
@@ -48,6 +48,7 @@ contains
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
     type(t_oneD),   intent(in)        :: oneD
+    LOGICAL,        INTENT(IN)        :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: potdenType
@@ -73,8 +74,6 @@ contains
     external MPI_REDUCE
 #endif
     integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
-
-
 
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
@@ -137,8 +136,6 @@ contains
     deallocate( c_b )
 #endif
 
-
-
     ! SPHERE INTERIOR CONTRIBUTION to the coefficients calculated from the 
     ! values of the sphere Coulomb/Yukawa potential on the sphere boundary
 
@@ -173,6 +170,19 @@ contains
         integrand_2(1:imax) = green_2(1:imax) * rho(1:imax,lh,n)
         call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
         call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        ! Source-free testwise
+        !if (dosf) then
+           !if (l==5) THEN
+            !  integrand_2(1:300)=integrand_2(1:300)*(atoms%rmsh(1:300,n)/atoms%rmsh(300,n))**l
+           !end if
+           !call intgrt(integrand_1(1:imax),atoms%rmsh(:,n),imax,integral_1(1:imax))
+           !call intgrt(integrand_2(1:imax),atoms%rmsh(:,n),imax,integral_2(1:imax))
+           !vtl(lh,n)=(0.0,0.0)
+           !call intgr4(integrand_1(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_1(1:imax))
+           !call intgr4(integrand_2(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_2(1:imax))
+           !call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
+           !call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        !end if
         termsR = integral_2(imax) + ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
         vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )

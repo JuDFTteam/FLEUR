@@ -61,6 +61,7 @@
           TYPE(t_noco),      INTENT(INOUT) :: noco
           TYPE(t_stars),     INTENT(INOUT) :: stars
           TYPE(t_oneD),      INTENT(INOUT) :: oneD
+          TYPE(t_mpbasis), intent(inout) :: mpbasis
           TYPE(t_hybrid),    INTENT(INOUT) :: hybrid
           TYPE(t_kpts),      INTENT(INOUT) :: kpts
           REAL,              INTENT(OUT)   :: a1(3)
@@ -333,7 +334,6 @@
                 !
                 ! Transform intern coordinates to cartesian:
                 !
-                !CALL cotra0(atoms%taual(1,na),atoms%pos(1,na),cell%amat)
                 atoms%pos(:,na)=MATMUL(cell%amat,atoms%taual(:,na))
              ENDDO  ! l.o. equivalent atoms (n1)
           ENDDO     ! loop over atom-types (n)

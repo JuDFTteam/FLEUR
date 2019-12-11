@@ -15,7 +15,7 @@ CONTAINS
     !     Makes necessary for the construction of the wannier functions
     !     (W90: Yates, Mostofi, Marzari, Souza, Vanderbilt '06 f90 code)
     !     ab initio preliminaries: constructs the overlaps of the periodic
-    !     parts of the wavefunctions and the projections of the 
+    !     parts of the wavefunctions and the projections of the
     !     wavefunctions
     !     onto a set of starting wfs, i.e. atomic-like orbitals.
     !                                                            YM 06
@@ -52,9 +52,9 @@ CONTAINS
     !     Needed for sorting by number and sorting by energy.
     !     Not needed for sorting by index.
     !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-    !     Extension to case of higher-dimensional Wannier functions        
+    !     Extension to case of higher-dimensional Wannier functions
     !     according to the formalism in PRB 91, 184413 (2015)
-    !     Jan-Philipp Hanke                                         
+    !     Jan-Philipp Hanke
     !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
     USE m_types
     USE m_wann_mmnk_symm
@@ -114,7 +114,7 @@ CONTAINS
     INTEGER stt(MPI_STATUS_SIZE)
 #endif
 
-    
+
     TYPE(t_mpi),       INTENT(IN) :: mpi
     TYPE(t_input),     INTENT(IN) :: input
     TYPE(t_kpts),      INTENT(IN) :: kpts
@@ -178,8 +178,8 @@ CONTAINS
     REAL     :: duilon(atoms%nlod,atoms%ntype)
     REAL     :: ulouilopn(atoms%nlod,atoms%nlod,atoms%ntype)
 !!! the Mmn matrices
-    COMPLEX, ALLOCATABLE :: mmnk(:,:,:,:),mmn(:,:,:)           
-    COMPLEX, ALLOCATABLE :: amn(:,:,:),nablamat(:,:,:,:)        
+    COMPLEX, ALLOCATABLE :: mmnk(:,:,:,:),mmn(:,:,:)
+    COMPLEX, ALLOCATABLE :: amn(:,:,:),nablamat(:,:,:,:)
     COMPLEX, ALLOCATABLE :: soctomom(:,:,:,:)
     COMPLEX, ALLOCATABLE :: surfcurr(:,:,:,:)
     COMPLEX, ALLOCATABLE :: socmmn(:,:,:)
@@ -245,18 +245,18 @@ CONTAINS
     REAL :: zero_taual(3,atoms%nat),bqpt(3)
     REAL :: eig_qb(input%neig)
 
-    REAL,ALLOCATABLE :: qdiff(:,:), we_qb(:)                
-    REAL,ALLOCATABLE :: energies(:,:,:)  
+    REAL,ALLOCATABLE :: qdiff(:,:), we_qb(:)
+    REAL,ALLOCATABLE :: energies(:,:,:)
     REAL,ALLOCATABLE :: zero_qdiff(:,:)
 
 
-    INTEGER,ALLOCATABLE :: irreduc_q(:),mapqoper(:)        
-    INTEGER,ALLOCATABLE :: shiftqpt(:,:),pair_to_do_q(:,:)  
-    INTEGER,ALLOCATABLE :: maptopair_q(:,:,:)              
-    INTEGER,ALLOCATABLE :: gb_q(:,:,:),bpt_q(:,:)         
+    INTEGER,ALLOCATABLE :: irreduc_q(:),mapqoper(:)
+    INTEGER,ALLOCATABLE :: shiftqpt(:,:),pair_to_do_q(:,:)
+    INTEGER,ALLOCATABLE :: maptopair_q(:,:,:)
+    INTEGER,ALLOCATABLE :: gb_q(:,:,:),bpt_q(:,:)
 
-    INTEGER :: nntot_q = 1                               
-    INTEGER :: fullnqpts = 1                                
+    INTEGER :: nntot_q = 1
+    INTEGER :: fullnqpts = 1
     INTEGER :: funit_start = 5000
     INTEGER :: qptibz, qptibz_b, oper_q, oper_qb
     INTEGER :: qpt,iqpt_help, iqpt, iqpt_b
@@ -268,23 +268,23 @@ CONTAINS
     INTEGER :: n1,n2,ii,jj,lmplmd
 
     COMPLEX :: interchi,vacchi,amnchi
-    COMPLEX :: phasfac,phasfac2,cmplx_1                                 
+    COMPLEX :: phasfac,phasfac2,cmplx_1
 
     COMPLEX,ALLOCATABLE :: chi(:)
-    COMPLEX,ALLOCATABLE :: acof_qb(:,:,:)                 
-    COMPLEX,ALLOCATABLE :: bcof_qb(:,:,:)                   
-    COMPLEX,ALLOCATABLE :: ccof_qb(:,:,:,:)                 
-    COMPLEX,ALLOCATABLE :: mmnk_q(:,:,:,:)                 
+    COMPLEX,ALLOCATABLE :: acof_qb(:,:,:)
+    COMPLEX,ALLOCATABLE :: bcof_qb(:,:,:)
+    COMPLEX,ALLOCATABLE :: ccof_qb(:,:,:,:)
+    COMPLEX,ALLOCATABLE :: mmnk_q(:,:,:,:)
     COMPLEX,ALLOCATABLE :: m_int(:,:,:,:)
     COMPLEX,ALLOCATABLE :: m_sph(:,:,:,:)
     COMPLEX,ALLOCATABLE :: m_vac(:,:,:,:)
-    COMPLEX,ALLOCATABLE :: ujug_q(:,:,:,:),ujdg_q(:,:,:,:) 
-    COMPLEX,ALLOCATABLE :: djug_q(:,:,:,:),djdg_q(:,:,:,:) 
-    COMPLEX,ALLOCATABLE :: ujulog_q(:,:,:,:,:)              
-    COMPLEX,ALLOCATABLE :: djulog_q(:,:,:,:,:)             
-    COMPLEX,ALLOCATABLE :: ulojug_q(:,:,:,:,:)             
-    COMPLEX,ALLOCATABLE :: ulojdg_q(:,:,:,:,:)             
-    COMPLEX,ALLOCATABLE :: ulojulog_q(:,:,:,:,:,:)         
+    COMPLEX,ALLOCATABLE :: ujug_q(:,:,:,:),ujdg_q(:,:,:,:)
+    COMPLEX,ALLOCATABLE :: djug_q(:,:,:,:),djdg_q(:,:,:,:)
+    COMPLEX,ALLOCATABLE :: ujulog_q(:,:,:,:,:)
+    COMPLEX,ALLOCATABLE :: djulog_q(:,:,:,:,:)
+    COMPLEX,ALLOCATABLE :: ulojug_q(:,:,:,:,:)
+    COMPLEX,ALLOCATABLE :: ulojdg_q(:,:,:,:,:)
+    COMPLEX,ALLOCATABLE :: ulojulog_q(:,:,:,:,:,:)
 
     CHARACTER(len=30) fname
 
@@ -322,7 +322,7 @@ CONTAINS
 
     ! do we have to construct GWF ?
     l_gwf = .FALSE.
-    l_gwf = wann%l_sgwf.OR.wann%l_socgwf 
+    l_gwf = wann%l_sgwf.OR.wann%l_socgwf
 
     l_nochi = .FALSE.
     INQUIRE(file='l_nochi',exist=l_nochi)
@@ -359,7 +359,7 @@ CONTAINS
        ENDIF
     ENDIF
 
-    IF(wann%l_updown)THEN            
+    IF(wann%l_updown)THEN
        CALL wann_updown(&
             wann,mpi,input,kpts,sym,atoms,stars,vacuum,sphhar, &
             oneD,noco,cell,vTot,&
@@ -584,7 +584,7 @@ CONTAINS
     ENDIF
 
     !**********************************************************
-    !cccccccccccccc   read in the bqpts file  ccccccccccccccccc         
+    !cccccccccccccc   read in the bqpts file  ccccccccccccccccc
     !**********************************************************
     IF ((wann%l_matrixmmn).AND.(l_gwf.OR.wann%l_ms)) THEN
        l_bqpts = .FALSE.
@@ -621,8 +621,8 @@ CONTAINS
     ! of q-points is twice as large compared to k-BZ. Thus,
     ! the G-vectors connecting neighbors across the boundary
     ! need to be doubled
-    IF(wann%l_sgwf) gb_q = 2*gb_q    
-    IF(wann%l_socgwf) gb_q = 2*gb_q 
+    IF(wann%l_sgwf) gb_q = 2*gb_q
+    IF(wann%l_socgwf) gb_q = 2*gb_q
 
     IF(wann%l_finishgwf) GOTO 9110
     !********************************************************
@@ -639,7 +639,7 @@ CONTAINS
     ENDIF
 
     ! do the same for q-points to construct GWFs
-    IF(wann%l_matrixmmn.AND.l_gwf)THEN 
+    IF(wann%l_matrixmmn.AND.l_gwf)THEN
        ALLOCATE(maptopair_q(3,fullnqpts,nntot_q))
        ALLOCATE(pair_to_do_q(fullnqpts,nntot_q))
        CALL wann_mmnk_symm(input,kpts,&
@@ -742,7 +742,7 @@ CONTAINS
 
        ALLOCATE(innerEig_idList(nntot_q))
 
-       qptibz=iqpt                          
+       qptibz=iqpt
        IF(wann%l_bzsym .AND. l_gwf) qptibz=irreduc_q(iqpt)
        IF(wann%l_bzsym .AND. l_gwf) oper_q=mapqoper(iqpt)
 
@@ -754,7 +754,7 @@ CONTAINS
        IF(wann%l_sgwf.OR.wann%l_ms) THEN
           qpt_i(:) = wann%param_vec(:,qptibz)
           alph_i(:) = wann%param_alpha(:,qptibz)
-       ELSEIF(wann%l_socgwf) THEN 
+       ELSEIF(wann%l_socgwf) THEN
           IF(wann%l_dim(2)) phi_i = tpi_const*wann%param_vec(2,qptibz)
           IF(wann%l_dim(3)) theta_i = tpi_const*wann%param_vec(3,qptibz)
        ENDIF
@@ -814,7 +814,7 @@ CONTAINS
 
 
        !****************************************************
-       ! cycle by spins starts! 
+       ! cycle by spins starts!
        !****************************************************
        DO doublespin=1,doublespin_max   ! cycle by spins
 
@@ -838,7 +838,7 @@ CONTAINS
           !...read number of bands and wannier functions from file proj
 
           !..reading the proj.1 / proj.2 / proj file
-          l_proj=.FALSE.  
+          l_proj=.FALSE.
           DO j=jspin,0,-1
              INQUIRE(file=TRIM('proj'//spin012(j)),exist=l_proj)
              IF(l_proj)THEN
@@ -888,7 +888,7 @@ CONTAINS
 
           !..write individual files if multi-spiral mode wann%l_ms=T
           !*************************************************************
-          IF(l_p0)THEN         
+          IF(l_p0)THEN
              CALL wann_write_eig(&
                   eig_id,l_real,&
                   atoms%lmaxd,atoms%ntype,atoms%nlod,input%neig,&
@@ -901,10 +901,10 @@ CONTAINS
                   wann%band_max(jspin),&
                   numbands,&
                   sliceplot%e1s,sliceplot%e2s,efermi,.FALSE.,nkpts,&
-                  nbnd,kpoints,l_gwf,iqpt)       
+                  nbnd,kpoints,l_gwf,iqpt)
 
              IF(oneD%odi%d1)THEN
-                kpoints(:)=kpoints(:)*cell%bmat(3,3)         
+                kpoints(:)=kpoints(:)*cell%bmat(3,3)
              ENDIF
           ENDIF!l_p0
 
@@ -943,7 +943,7 @@ CONTAINS
           ENDIF
 
           IF(wann%l_anglmom)THEN
-             IF(.NOT.ALLOCATED(anglmom))THEN  
+             IF(.NOT.ALLOCATED(anglmom))THEN
                 ALLOCATE ( anglmom(3,nbnd,nbnd,fullnkpts) )
                 anglmom=CMPLX(0.,0.)
              ENDIF
@@ -1259,7 +1259,7 @@ CONTAINS
 
 
                 CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,&
-                     noco,jspin,oneD,acof,bcof,ccof,zMat)
+                     noco,jspin2,oneD,acof,bcof,ccof,zMat)
 
 
                 CALL wann_abinv(atoms,sym, acof,bcof,ccof)
@@ -1375,7 +1375,7 @@ CONTAINS
 
                          DO m = 1,nslibd
                             DO n = 1,nslibd
-                               DO dir=1,3  
+                               DO dir=1,3
 
 #if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
                                   VALUE=phasust*z(i+addnoco,m)*CONJG(z(j+addnoco,n))
@@ -1597,7 +1597,7 @@ CONTAINS
 !!! get the band-dependent k-dependent ab coeff.
 
                       CALL abcof(input,atoms,sym,cell,lapw_b,&
-                           noccbd_b,usdus,noco,jspin,oneD,&
+                           noccbd_b,usdus,noco,jspin2,oneD,&
                            acof_b,bcof_b,ccof_b,zMat_b)
 
 
@@ -1658,10 +1658,10 @@ CONTAINS
                               stars%mx1,stars%mx2,stars%mx3,&
                               stars%ng3,vacuum%nvac,stars%ig,vacuum%nmz,&
                               vacuum%delz,stars%ig2,cell%area,cell%bmat,&
-                              cell%bbmat,enpara%evac0(:,jspin),&
-                              enpara%evac0(:,jspin_b),&
+                              cell%bbmat,enpara%evac0(:,jspin2),&
+                              enpara%evac0(:,jspin2_b),&
                               lapw%bkpt,lapw_b%bkpt,vz(:,:,jspin2),vz(:,:,jspin2_b),&
-                              nslibd,nslibd_b,jspin,jspin_b,&
+                              nslibd,nslibd_b,jspin2,jspin2_b,&
                               lapw%k1,lapw%k2,lapw%k3,lapw_b%k1,lapw_b%k2,lapw_b%k3,&
                               wannierspin,lapw%dim_nvd(),&
                               lapw%dim_nbasfcn(),input%neig,zMat,zMat_b,&
@@ -1706,12 +1706,12 @@ CONTAINS
 
                 IF (wann%l_matrixmmn) THEN   !  vanderbilt procedure Mmn matrix
 
-                   !*******************************************c 
+                   !*******************************************c
                    !          START Q-NEIGHBOR LOOP            c
-                   !*******************************************c      
+                   !*******************************************c
                    ALLOCATE ( we_qb(input%neig) )
 
-                   DO iqpt_b=1,nntot_q 
+                   DO iqpt_b=1,nntot_q
                       IF(.NOT.l_gwf) EXIT              ! old functionality
 
                       qptibz_b = bpt_q(iqpt_b,iqpt)
@@ -1859,8 +1859,8 @@ CONTAINS
                             db1 = theta_i/2.
                             db2 = thetab_i/2.
                          ENDIF
-                         coph = COS(dalph)    
-                         siph = SIN(dalph)     
+                         coph = COS(dalph)
+                         siph = SIN(dalph)
                          phasfac = CMPLX(coph,siph)
                          phasfac2= CMPLX(coph,-siph)
 
@@ -1910,7 +1910,7 @@ CONTAINS
                       ! the spin-dependent phase exp(+/- tau*b/2) and the ujugaunt integrals
                       ! calculated especially for the q-points before. then, q and q+b
                       ! take the role of k and k+b and the same for G(q+b) and G(k+b)
-                      IF(wann%l_sgwf) CALL wann_mmkb_sph( &        
+                      IF(wann%l_sgwf) CALL wann_mmkb_sph( &
                            nbnd,atoms%llod,nslibd,nslibd_qb,atoms%nlod,atoms%nat,&
                            atoms%ntype,lmd,atoms%jmtd,sign_q*atoms%taual/2.0,sym%nop,&
                            atoms%lmax,atoms%ntype,atoms%neq,atoms%nlo,atoms%llo,&
@@ -1921,10 +1921,10 @@ CONTAINS
                            ulojulog_q,qdiff,       &
                            nntot_q,chi,&
                            mmnk_q(:,:,iqpt_b,ikpt))
-                      IF(wann%l_socgwf) CALL wann_mmkb_sph( &        
+                      IF(wann%l_socgwf) CALL wann_mmkb_sph( &
                            nbnd,atoms%llod,nslibd,nslibd_qb,atoms%nlod,atoms%nat,&
                            atoms%ntype,lmd,atoms%jmtd,&
-                           zero_taual,sym%nop,atoms%lmax,         &                
+                           zero_taual,sym%nop,atoms%lmax,         &
                            atoms%ntype,atoms%neq,atoms%nlo,atoms%llo,acof,bcof,ccof,&
                            (/ 0.0, phib_i/tpi_const, thetab_i/tpi_const /),&
                            acof_qb,bcof_qb,ccof_qb,gb_q(:,iqpt_b,iqpt),&
@@ -1959,8 +1959,8 @@ CONTAINS
                               lapw_qb%nv(jspin_b),zMat_qb,nslibd_qb,&
                               nbnd,&
                               stars%rgphs,stars%ustep,stars%ig,&
-                              sign_q*gb_q(:,iqpt_b,iqpt)/2,   &   
-                              mmnk_q(:,:,iqpt_b,ikpt))                        
+                              sign_q*gb_q(:,iqpt_b,iqpt)/2,   &
+                              mmnk_q(:,:,iqpt_b,ikpt))
                          IF(wann%l_socgwf) CALL wann_mmkb_int(&
                               interchi,addnoco,addnoco2,&
                               lapw%dim_nvd(),stars%mx1,stars%mx2,stars%mx3,&
@@ -1969,13 +1969,13 @@ CONTAINS
                               lapw_qb%k1(:,jspin_b),lapw_qb%k2(:,jspin_b),lapw_qb%k3(:,jspin_b),&
                               lapw_qb%nv(jspin_b),zMat_qb,nslibd_qb,&
                               nbnd,&
-                              stars%rgphs,stars%ustep,stars%ig,(/ 0, 0, 0 /),  &    
-                              mmnk_q(:,:,iqpt_b,ikpt))!m_int(:,:,iqpt_b,ikpt))      
+                              stars%rgphs,stars%ustep,stars%ig,(/ 0, 0, 0 /),  &
+                              mmnk_q(:,:,iqpt_b,ikpt))!m_int(:,:,iqpt_b,ikpt))
 
 
                          ! vacuum contribution in film calculation
                          IF (input%film .AND. .NOT.oneD%odi%d1) THEN
-                            IF(wann%l_sgwf) CALL wann_mmkb_vac(&                   
+                            IF(wann%l_sgwf) CALL wann_mmkb_vac(&
                                  vacchi,noco%l_noco,atoms%nlotot,sign_q*2.*lapw%bkpt,&
                                  nbnd,cell%z1,vacuum%nmzd,lapw%dim_nv2d(),&
                                  stars%mx1,stars%mx2,stars%mx3,&
@@ -1992,7 +1992,7 @@ CONTAINS
                                  lapw_qb%nv,cell%omtil,&
                                  sign_q*gb_q(:,iqpt_b,iqpt)/2,&
                                  mmnk_q(:,:,iqpt_b,ikpt))
-                            IF(wann%l_socgwf) CALL wann_mmkb_vac(&  
+                            IF(wann%l_socgwf) CALL wann_mmkb_vac(&
                                  vacchi,noco%l_noco,atoms%nlotot,qpt_i,&
                                  nbnd,cell%z1,vacuum%nmzd,lapw%dim_nv2d(),&
                                  stars%mx1,stars%mx2,stars%mx3,&
@@ -2013,12 +2013,12 @@ CONTAINS
                             ! q-point plays role of k-point with proper prefactor of (-/+ 1/2).
                             ! moreover, the k-point ikpt is treated like qss in the subroutine
                             ! such that a correction for sign and factor has to appear as well.
-                            ! lattice vectors G(k,q) (k1...) and G(k,q+b) (k1_qb...) need to 
+                            ! lattice vectors G(k,q) (k1...) and G(k,q+b) (k1_qb...) need to
                             ! be provided.
                          ELSEIF (oneD%odi%d1) THEN
                             IF(wann%l_sgwf) CALL wann_mmkb_od_vac(&
                                  oneD,vacuum,stars,cell,&
-                                 vacchi,noco%l_noco,atoms%nlotot, &          
+                                 vacchi,noco%l_noco,atoms%nlotot, &
                                  nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,lapw%dim_nv2d(),&
                                  stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,&
                                  stars%ig,vacuum%nmzxy,&
@@ -2036,8 +2036,8 @@ CONTAINS
                                  .TRUE.,sign_q,&
                                  mmnk_q(:,:,iqpt_b,ikpt))
                             IF(wann%l_socgwf) CALL wann_mmkb_od_vac(   &
-                                 oneD,vacuum,stars,cell,&                
-                                 vacchi,noco%l_noco,atoms%nlotot,&           
+                                 oneD,vacuum,stars,cell,&
+                                 vacchi,noco%l_noco,atoms%nlotot,&
                                  nbnd,cell%z1,vacuum%nmzxyd,vacuum%nmzd,lapw%dim_nv2d(),&
                                  stars%mx1,stars%mx2,stars%mx3,stars%ng2,stars%ng3,&
                                  stars%ig,vacuum%nmzxy,&
@@ -2065,7 +2065,7 @@ CONTAINS
                    ENDDO !iqpt_b, q-neighbors
                    !**************************************************c
                    !              END Q-NEIGHBOR LOOP                 c
-                   !**************************************************c     
+                   !**************************************************c
 
                    DEALLOCATE ( we_qb )
 
@@ -2142,7 +2142,7 @@ CONTAINS
                          IF(wann%l_plot_symm.AND.wann%l_bzsym)THEN
                             DO kplot=1,fullnkpts
                                IF(irreduc(kplot).EQ.kptibz)THEN
-                                  plotoper=mapkoper(kplot) 
+                                  plotoper=mapkoper(kplot)
                                   IF(plotoper.LT.0)THEN
                                      plotoper=-plotoper
                                      l_conjugate=.TRUE.
@@ -2195,7 +2195,7 @@ CONTAINS
           IF(doublespin.EQ.3 .OR. doublespin.EQ.4) GOTO 912
 
           IF(wann%l_nabla)THEN
-            
+
              nablamat=nablamat*hescale
              CALL wann_write_nabla(&
                   mpi%mpi_comm,l_p0,spin12(jspin)//'.nabl',&
@@ -2233,7 +2233,7 @@ CONTAINS
                   nbnd,fullnkpts,nbnd,&
                   mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
                   mmn,wann%l_unformatted)
-          ENDIF !noco%l_soc and l_mmn0  
+          ENDIF !noco%l_soc and l_mmn0
 
           IF(wann%l_orbcomp)THEN
              num_angl=9
@@ -2316,7 +2316,7 @@ CONTAINS
           ENDIF !l_proj
 
           !*********************************************************
-          !.....write down the mmn0 matrix 
+          !.....write down the mmn0 matrix
           !*********************************************************
 
           IF(wann%l_mmn0)THEN
@@ -2327,11 +2327,11 @@ CONTAINS
                   nbnd,fullnkpts,nbnd,&
                   mpi%irank,mpi%isize,.FALSE.,.TRUE.,&
                   mmn,wann%l_unformatted)
-          ENDIF !wann%l_mmn0  
+          ENDIF !wann%l_mmn0
 
 
           !*****************************************************
-          !.....write down the matrix M^{k,b}_{mn} 
+          !.....write down the matrix M^{k,b}_{mn}
           !*****************************************************
 
           ! 912   continue
@@ -2339,7 +2339,7 @@ CONTAINS
              CALL wann_write_mmnk(&
                   mpi%mpi_comm,jspin2,l_p0,fullnkpts,nntot,wann,&
                   maptopair,pair_to_do,nbnd,bpt,gb,&
-                  mpi%isize,mpi%irank,"            ",&      
+                  mpi%isize,mpi%irank,"            ",&
                   mmnk,wann%l_unformatted)
           ENDIF !wann%l_matrixmmn
 
@@ -2425,7 +2425,7 @@ CONTAINS
           ENDIF
        ENDIF
 
-       IF (wann%l_matrixmmn.AND.ALLOCATED(mmnk))THEN 
+       IF (wann%l_matrixmmn.AND.ALLOCATED(mmnk))THEN
           DEALLOCATE ( mmnk )
        ENDIF
 
@@ -2440,7 +2440,7 @@ CONTAINS
        ENDIF
 
        IF(wann%l_anglmom.AND.ALLOCATED(anglmom))THEN
-          DEALLOCATE ( anglmom )  
+          DEALLOCATE ( anglmom )
        ENDIF
 
        IF ((wann%l_projmethod.OR.wann%l_bestproj)&
@@ -2449,7 +2449,7 @@ CONTAINS
        ENDIF
 
        DEALLOCATE(innerEig_idList)
-       
+
     ENDDO ! iqpt, q-points
        !************************************************c
        !               END Q LOOP                       c
@@ -2458,7 +2458,7 @@ CONTAINS
        IF(ALLOCATED(pair_to_do))DEALLOCATE(pair_to_do,maptopair)
 
        DEALLOCATE ( vr,vz)
-       DEALLOCATE ( ff,gg ) 
+       DEALLOCATE ( ff,gg )
        IF (wann%l_bzsym)  DEALLOCATE(irreduc,mapkoper)
        IF (wann%l_bzsym.AND.l_gwf)  DEALLOCATE(irreduc_q,mapqoper)
        IF(ALLOCATED(pair_to_do_q))&
@@ -2472,7 +2472,7 @@ CONTAINS
 
        ! correct for previously introduced factor of 2 in the
        ! G-vectors connecting neighbors across the BZ boundary
-       IF(wann%l_sgwf) gb_q = gb_q/2 
+       IF(wann%l_sgwf) gb_q = gb_q/2
        IF(wann%l_socgwf) gb_q = gb_q/2
 
        ! set up input files for wannier90 --> HDWFs

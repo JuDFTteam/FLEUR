@@ -19,15 +19,14 @@ CONTAINS
 
       USE m_types
       USE m_util, ONLY: modulo1
-
       IMPLICIT NONE
 
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_kpts), INTENT(IN)    :: kpts
       INTEGER, INTENT(IN)    :: nk
       INTEGER, INTENT(OUT)   :: nsymop
-      INTEGER, INTENT(INOUT) :: rrot(3, 3, sym%nsym)
-      INTEGER, INTENT(INOUT) :: psym(sym%nsym) ! Note: psym is only filled up to index nsymop
+      INTEGER, INTENT(INOUT) :: rrot(:,:,:) ! 3,3,sym%nsym
+      INTEGER, INTENT(INOUT) :: psym(:) ! Note: psym is only filled up to index nsymop
 
       INTEGER :: i
       REAL    :: rotkpt(3)
@@ -68,22 +67,23 @@ CONTAINS
 
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(kpts, nk, sym, input, hybdat, eig_irr, atoms, hybrid, cell, &
-                      lapw, jsp, mpi, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
+   SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, atoms, mpbasis, hybrid, cell, &
+                      lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
       USE m_constants
       USE m_types
-      USE m_util, ONLY: modulo1, intgrf, intgrf_init
-      USE m_olap, ONLY: wfolap_inv, wfolap_noinv, wfolap1, wfolap_init
+      USE m_util, ONLY: modulo1
+      use m_intgrf, only: intgrf, intgrf_init
+      USE m_olap, ONLY: wfolap_inv, wfolap_noinv, wfolap_init
       USE m_trafo, ONLY: waveftrafo_symm
       USE m_io_hybrid
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
-      TYPE(t_mpi), INTENT(IN)   :: mpi
       TYPE(t_input), INTENT(IN)   :: input
+      TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN) :: hybrid
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -98,21 +98,20 @@ CONTAINS
       INTEGER, INTENT(IN)              :: nsymop
 
 !     - arrays -
-      INTEGER, INTENT(IN)              :: rrot(3, 3, sym%nsym)
-      INTEGER, INTENT(IN)              :: psym(sym%nsym)
+      INTEGER, INTENT(IN)              :: rrot(:,:,:)
+      INTEGER, INTENT(IN)              :: psym(:)
       INTEGER, INTENT(OUT)             :: parent(kpts%nkptf)
       INTEGER, INTENT(OUT)             :: nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
       INTEGER, ALLOCATABLE, INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER, ALLOCATABLE, INTENT(OUT) :: n_q(:)
 
-      REAL, INTENT(IN)                 :: eig_irr(input%neig, kpts%nkpt)
+      REAL, INTENT(IN)                 :: eig_irr(:,:)
 
 !     - local scalars -
       INTEGER                         :: ikpt, ikpt1, iop, isym, iisym, m
       INTEGER                         :: itype, ieq, iatom, ratom
       INTEGER                         :: iband, iband1, iband2, iatom0
       INTEGER                         :: i, j, ic, ic1, ic2
-      INTEGER                         :: irecl_cmt, irecl_z
       INTEGER                         :: ok
       INTEGER                         :: l, lm
       INTEGER                         :: n1, n2, nn
@@ -129,7 +128,6 @@ CONTAINS
       INTEGER                         :: neqvkpt(kpts%nkptf)
       INTEGER                         :: list(kpts%nkptf)
       INTEGER                         :: degenerat(hybrid%ne_eig(nk))
-      INTEGER, ALLOCATABLE             :: help(:)
 
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE             :: olapmt(:, :, :, :)
@@ -174,7 +172,7 @@ CONTAINS
                   EXIT
                END IF
             END DO
-            IF (nrkpt == 0) STOP 'symm: Difference vector not found !'
+            IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
             IF (list(nrkpt) /= 0) THEN
                list(nrkpt) = 0
@@ -197,7 +195,7 @@ CONTAINS
       END DO
       nkpt_EIBZ = ic
 
-      ALLOCATE (pointer_EIBZ(nkpt_EIBZ))
+      allocate(pointer_EIBZ(nkpt_EIBZ))
       ic = 0
       DO ikpt = 1, kpts%nkptf
          IF (parent(ikpt) == ikpt) THEN
@@ -211,7 +209,7 @@ CONTAINS
       ! determine the factor n_q, that means the number of symmetrie operations of the little group of bk(:,nk)
       ! which keep q (in EIBZ) invariant
 
-      ALLOCATE (n_q(nkpt_EIBZ))
+      allocate(n_q(nkpt_EIBZ))
 
       ic = 0
       n_q = 0
@@ -233,7 +231,7 @@ CONTAINS
             END DO
          END IF
       END DO
-      IF (ic /= nkpt_EIBZ) STOP 'symm: failure EIBZ'
+      IF (ic /= nkpt_EIBZ) call judft_error('symm: failure EIBZ')
 
       ! calculate degeneracy:
       ! degenerat(i) = 1 state i  is not degenerat,
@@ -280,18 +278,19 @@ CONTAINS
          CALL read_cmt(cmt, nk)
          call read_z(z, kpts%nkptf*(jsp - 1) + nk)
 
-         ALLOCATE (rep_d(maxndb, nddb, nsymop), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation rep_v'
+         allocate(rep_d(maxndb, nddb, nsymop), stat=ok)
+         IF (ok /= 0) call judft_error('symm: failure allocation rep_v')
 
          call olappw%alloc(z%l_real, lapw%nv(jsp), lapw%nv(jsp))
-         ALLOCATE (olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation olapmt'
+         allocate(olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
+         IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
 
          olapmt = 0
-         CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, hybrid, cell, hybdat%bas1, hybdat%bas2)
+         CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, mpbasis, &
+                          cell, hybdat%bas1, hybdat%bas2)
 
-         ALLOCATE (cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation cmthlp/cpwhlp'
+         allocate(cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
+         IF (ok /= 0) call judft_error('symm: failure allocation cmthlp/cpwhlp')
 
          DO isym = 1, nsymop
             iop = psym(isym)
@@ -305,16 +304,16 @@ CONTAINS
                   cpwhlp = 0
 
                   CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms, hybrid, kpts, sym, jsp, input, cell, lapw)
+                                       i, ndb, nk, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, lapw)
 
                   DO iband = 1, ndb
                      carr1 = cmt(iband + i - 1, :, :)
                      IF (z%l_real) THEN
                         rep_d(iband, ic, isym) = wfolap_inv(carr1, z%data_r(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                            cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_r, olapmt, atoms, hybrid)
+                                                            cpwhlp(:, iband), olappw%data_r, olapmt, atoms, mpbasis)
                      else
                         rep_d(iband, ic, isym) = wfolap_noinv(carr1, z%data_c(:lapw%nv(jsp), iband + i - 1), cmthlp(:, :, iband), &
-                                                              cpwhlp(:, iband), lapw%nv(jsp), lapw%nv(jsp), olappw%data_c, olapmt, atoms, hybrid)
+                                                              cpwhlp(:, iband), olappw%data_c, olapmt, atoms, mpbasis)
                      endif
                   END DO
 
@@ -323,11 +322,11 @@ CONTAINS
 
          END DO
 
-         DEALLOCATE (cmthlp, cpwhlp)
+         deallocate(cmthlp, cpwhlp)
 
          ! calculate trace of irrecudible representation
-         ALLOCATE (trace(sym%nsym, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation trace'
+         allocate(trace(sym%nsym, nddb), stat=ok)
+         IF (ok /= 0) call judft_error('symm: failure allocation trace')
 
          ic = 0
          trace = 0
@@ -347,8 +346,8 @@ CONTAINS
 
          ! determine symmetry equivalent bands/irreducible representations by comparing the trace
 
-         ALLOCATE (symequivalent(nddb, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation symequivalent'
+         allocate(symequivalent(nddb, nddb), stat=ok)
+         IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
 
          ic1 = 0
          symequivalent = .false.
@@ -368,7 +367,7 @@ CONTAINS
                         ! however, also in the latter case the trace of the spatial rotations
                         ! for two symmetry equivalent states must be equivalent
                         IF (all(abs(trace(:sym%nop, ic1) - trace(:sym%nop, ic2)) <= 1E-8))&
-           &            THEN
+                        THEN
                            symequivalent(ic2, ic1) = .true.
                         END IF
                      END IF
@@ -383,27 +382,27 @@ CONTAINS
          CALL read_cmt(cmt, nk)
          !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
-         IF (allocated(olapmt)) deallocate (olapmt)
-         ALLOCATE (olapmt(hybrid%maxindx, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation olapmt'
+         IF (allocated(olapmt)) deallocate(olapmt)
+         allocate(olapmt(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), stat=ok)
+         IF (ok /= 0) call judft_error('symm: failure allocation olapmt')
          olapmt = 0
 
          DO itype = 1, atoms%ntype
             DO l = 0, atoms%lmax(itype)
-               nn = hybrid%nindx(l, itype)
+               nn = mpbasis%num_radfun_per_l(l, itype)
                DO n2 = 1, nn
                   DO n1 = 1, nn
                      olapmt(n1, n2, l, itype) = intgrf( &
-          &                        hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype)&
-          &                       + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype),&
-          &                        atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, hybdat%gridf)
+                                   hybdat%bas1(:, n1, l, itype)*hybdat%bas1(:, n2, l, itype)&
+                                  + hybdat%bas2(:, n1, l, itype)*hybdat%bas2(:, n2, l, itype),&
+                                   atoms, itype, hybdat%gridf)
                   END DO
                END DO
             END DO
          END DO
 
-         ALLOCATE (wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(hybrid%maxindx), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation wfolap/maxindx'
+         allocate(wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(maxval(mpbasis%num_radfun_per_l)), stat=ok)
+         IF (ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
          wavefolap = 0
 
          iatom = 0
@@ -413,14 +412,14 @@ CONTAINS
                lm = 0
                DO l = 0, atoms%lmax(itype)
                   DO M = -l, l
-                     nn = hybrid%nindx(l, itype)
+                     nn = mpbasis%num_radfun_per_l(l, itype)
                      DO iband1 = 1, hybrid%nbands(nk)
                         carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
-           &                                cmt(iband1, lm + 1:lm + nn, iatom))
+                                            cmt(iband1, lm + 1:lm + nn, iatom))
                         DO iband2 = 1, iband1
                            wavefolap(iband2, iband1)&
-            &            = wavefolap(iband2, iband1)&
-            &            + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
+                         = wavefolap(iband2, iband1)&
+                         + dot_product(cmt(iband2, lm + 1:lm + nn, iatom), carr(:nn))
                         END DO
                      END DO
                      lm = lm + nn
@@ -435,8 +434,8 @@ CONTAINS
             END DO
          END DO
 
-         ALLOCATE (symequivalent(nddb, nddb), stat=ok)
-         IF (ok /= 0) STOP 'symm: failure allocation symequivalent'
+         allocate(symequivalent(nddb, nddb), stat=ok)
+         IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
          symequivalent = .false.
          ic1 = 0
          DO iband1 = 1, hybrid%nbands(nk)
@@ -449,8 +448,8 @@ CONTAINS
                IF (ndb2 == 0) CYCLE
                ic2 = ic2 + 1
                IF (any(abs(wavefolap(iband1:iband1 + ndb1 - 1,&
-        &                             iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
-!     &          .and. ndb1 .eq. ndb2 ) THEN
+                                      iband2:iband2 + ndb2 - 1)) > 1E-9)) THEN
+!                .and. ndb1 .eq. ndb2 ) THEN
                   symequivalent(ic2, ic1) = .true.
                END IF
             END DO
@@ -484,7 +483,7 @@ CONTAINS
             ndb2 = degenerat(iband2 - i)
             ! only upper triangular part
             IF (symequivalent(ic2, ic1) .and. iband2 <= iband1) THEN
-!            IF( ndb1 .ne. ndb2 ) STOP 'symm_hf: failure symequivalent'
+!            IF( ndb1 .ne. ndb2 ) call judft_error('symm_hf: failure symequivalent')
                nsest(iband1) = nsest(iband1) + 1
                indx_sest(nsest(iband1), iband1) = iband2
             END IF
@@ -505,7 +504,7 @@ CONTAINS
       pi = pimach()
 
       IF (hybdat%lmaxcd > atoms%lmaxd) STOP &
-     & 'symm_hf: The very impropable case that hybdat%lmaxcd > atoms%lmaxd occurs'
+       'symm_hf: The very impropable case that hybdat%lmaxcd > atoms%lmaxd occurs'
 
       iatom = 0
       iatom0 = 0
@@ -525,7 +524,7 @@ CONTAINS
                g = nint(rotkpt - kpts%bkf(:, nk))
 
                cdum = exp(-2*pi*img*dot_product(rotkpt, sym%tau(:, iisym)))* &
-        &               exp(2*pi*img*dot_product(g, atoms%taual(:, ratom)))
+                        exp(2*pi*img*dot_product(g, atoms%taual(:, ratom)))
             END DO
          END DO
          iatom0 = iatom0 + atoms%neq(itype)
@@ -537,6 +536,7 @@ CONTAINS
 
       USE m_util, ONLY: modulo1
       USE m_types
+      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -551,7 +551,7 @@ CONTAINS
 !     - local arrays -
       INTEGER               ::  rrot(3, 3, sym%nsym)
       INTEGER               ::  neqvkpt(kpts%nkptf), list(kpts%nkptf), parent(kpts%nkptf),&
-     &                          symop(kpts%nkptf)
+                                symop(kpts%nkptf)
       INTEGER, ALLOCATABLE  ::  psym(:)!,help(:)
       REAL                  ::  rotkpt(3)
 
@@ -570,7 +570,7 @@ CONTAINS
       ! psym   :: points to the symmetry-operation
 
       ic = 0
-      ALLOCATE (psym(sym%nsym))
+      allocate(psym(sym%nsym))
 
       DO iop = 1, sym%nsym
          rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))
@@ -601,7 +601,7 @@ CONTAINS
 
       neqvkpt = 0
 
-!       list = (/ (ikpt-1, ikpt=1,nkpt) /)
+!       list = [(ikpt-1, ikpt=1,nkpt) ]
       DO ikpt = 1, kpts%nkptf
          list(ikpt) = ikpt - 1
       END DO
@@ -623,7 +623,7 @@ CONTAINS
                   EXIT
                END IF
             END DO
-            IF (nrkpt == 0) STOP 'symm: Difference vector not found !'
+            IF (nrkpt == 0) call judft_error('symm: Difference vector not found !')
 
             IF (list(nrkpt) /= 0) THEN
                list(nrkpt) = 0

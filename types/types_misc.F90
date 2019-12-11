@@ -18,32 +18,6 @@ MODULE m_types_misc
       REAL :: core
    END TYPE t_energy_hf
 
-   TYPE prodtype
-      INTEGER :: l1,l2,n1,n2
-   END TYPE prodtype
-
-   TYPE t_hybdat
-      INTEGER              :: lmaxcd,maxindxc
-      REAL,  ALLOCATABLE   ::  gridf(:,:)                                    !alloc in util.F
-      INTEGER , ALLOCATABLE::  nindxc(:,:)                                   !alloc in eigen_HF_init
-      INTEGER,ALLOCATABLE  :: lmaxc(:)                                       !alloc in eigen_HF_init
-      REAL,    ALLOCATABLE ::  core1(:,:,:,:),core2(:,:,:,:)                 !alloc in eigen_HF_init
-      REAL,    ALLOCATABLE ::  eig_c(:,:,:)                                  !alloc in eigen_HF_init
-      INTEGER , ALLOCATABLE::  kveclo_eig(:,:)                               !alloc in eigen_HF_setup
-      INTEGER              ::  maxfac
-      REAL,    ALLOCATABLE ::  sfac(:),fac(:)                                !alloc in eigen_HF_init
-      REAL,    ALLOCATABLE ::  gauntarr(:,:,:,:,:,:)                         !alloc in eigen_HF_init
-      REAL,    ALLOCATABLE ::  bas1(:,:,:,:),bas2(:,:,:,:)                   !alloc in eigen_HF_init
-      REAL ,   ALLOCATABLE ::  bas1_MT(:,:,:),drbas1_MT(:,:,:)               !alloc in eigen_HF_init
-      REAL, ALLOCATABLE    ::  prodm(:,:,:,:)                                !alloc in eigen_HF_setup
-      TYPE(PRODTYPE),ALLOCATABLE :: prod(:,:,:)                              !alloc in eigen_HF_setup
-      INTEGER, ALLOCATABLE :: pntgptd(:)                                     !alloc in eigen_HF_setup
-      INTEGER, ALLOCATABLE :: pntgpt(:,:,:,:)                                !alloc in eigen_HF_setup
-      INTEGER,ALLOCATABLE   ::  nindxp1(:,:)
-      REAL, ALLOCATABLE   ::  stepfunc_r(:,:,:)
-      COMPLEX,ALLOCATABLE ::  stepfunc_c(:,:,:)
-   END TYPE t_hybdat
-
    TYPE t_results
       REAL, ALLOCATABLE    :: force(:,:,:)   !< Forces calculated on all atoms (for each spin)
       REAL, ALLOCATABLE    :: force_old(:,:) !< Forces on all atoms from last iteration
@@ -64,6 +38,7 @@ MODULE m_types_misc
       TYPE(t_energy_hf)    ::  te_hfex
       REAL                 ::  te_hfex_loc(2)
       REAL, ALLOCATABLE    :: w_iks(:,:,:)
+      REAL, ALLOCATABLE    :: w_iksRDMFT(:,:,:)
       REAL, ALLOCATABLE    :: eig(:,:,:)
       INTEGER, ALLOCATABLE :: neig(:,:) ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
 
@@ -95,7 +70,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      CLASS(t_zMat),      INTENT(INOUT) :: thisZMat
+   CLASS(t_zMat),      INTENT(INOUT) :: thisZMat
       LOGICAL,            INTENT(IN)    :: l_real
       INTEGER,            INTENT(IN)    :: nbasfcn,nbands
 
@@ -126,7 +101,7 @@ CONTAINS
       IMPLICIT NONE
 
       CLASS(t_results),      INTENT(INOUT) :: thisResults
-      
+
       TYPE(t_input),         INTENT(IN)    :: input
       TYPE(t_atoms),         INTENT(IN)    :: atoms
       TYPE(t_kpts),          INTENT(IN)    :: kpts
@@ -169,6 +144,11 @@ CONTAINS
       thisResults%w_iks = 0.0
       thisResults%neig = 0
       thisResults%eig = 0.0
+
+      IF(input%l_rdmft) THEN
+         ALLOCATE (thisResults%w_iksRDMFT(neigd2,kpts%nkpt,input%jspins))
+         thisResults%w_iksRDMFT = 0.0
+      END IF
 
    END SUBROUTINE results_init
 

@@ -53,10 +53,11 @@
       TYPE(t_stars),INTENT(INOUT)   :: stars
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_sphhar),INTENT(INOUT)  :: sphhar
-      
+
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
+      TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_cell),INTENT(INOUT)     :: cell
 

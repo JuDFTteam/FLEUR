@@ -8,7 +8,7 @@ MODULE m_eigenso
   !     makes spin-orbit matrix elements solves e.v. and put it on 'eig'
   !
   !     Tree:  eigenso-|- readPotential
-  !                    |- spnorb  : sets up s-o parameters 
+  !                    |- spnorb  : sets up s-o parameters
   !                    |    |- soinit - sorad  : radial part
   !                    |    |- sgml            : diagonal angular parts
   !                    |    |- anglso          : non-diagonal -"-
@@ -25,7 +25,7 @@ CONTAINS
 
     USE m_types
     USE m_eig66_io, ONLY : read_eig,write_eig
-    USE m_spnorb 
+    USE m_spnorb
     USE m_alineso
     USE m_judft
 #ifdef CPP_MPI
@@ -34,7 +34,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)        :: mpi
-    
+
     TYPE(t_oneD),INTENT(IN)       :: oneD
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
@@ -55,7 +55,7 @@ CONTAINS
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: eig_id       
+    INTEGER, INTENT (IN) :: eig_id
     !     ..
     !     ..
     !     .. Local Scalars ..
@@ -78,7 +78,7 @@ CONTAINS
     TYPE(t_lapw)::lapw
 
     INTEGER :: ierr
-    
+
     !  ..
 
     INQUIRE (4649,opened=l_socvec)
@@ -94,7 +94,7 @@ CONTAINS
          usdus%ddn(0:atoms%lmaxd,atoms%ntype,input%jspins),&
          usdus%ulos(atoms%nlod,atoms%ntype,input%jspins),usdus%dulos(atoms%nlod,atoms%ntype,input%jspins),&
          usdus%uulon(atoms%nlod,atoms%ntype,input%jspins),usdus%dulon(atoms%nlod,atoms%ntype,input%jspins))
-   
+
     IF (input%l_wann.OR.l_socvec) THEN
        wannierspin = 2
     ELSE
@@ -155,7 +155,7 @@ CONTAINS
           ELSE
              CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
              DO jspin = 1,wannierspin
-                CALL timestart("eigenso: write_eig")  
+                CALL timestart("eigenso: write_eig")
                 zmat%data_c=zso(:,:nsz,jspin)
                 CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz),zmat=zmat)
                 eigBuffer(:nsz,nk,jspin) = eig_so(:nsz)
@@ -165,7 +165,7 @@ CONTAINS
           ENDIF ! (input%eonly) ELSE
        ENDIF ! n_rank == 0
        DEALLOCATE (zso)
-    ENDDO ! DO nk 
+    ENDDO ! DO nk
 
 #ifdef CPP_MPI
     CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)

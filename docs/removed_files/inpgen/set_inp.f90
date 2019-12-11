@@ -69,9 +69,11 @@
       REAL     scpos ,zc
 
       TYPE(t_banddos)::banddos
+      TYPE(t_obsolete)::obsolete
       TYPE(t_sliceplot)::sliceplot
       TYPE(t_oneD)::oneD
       TYPE(t_stars)::stars
+      TYPE(t_mpbasis) :: mpbasis
       TYPE(t_hybrid)::hybrid
       TYPE(t_xcpot_inbuild)::xcpot
       TYPE(t_kpts)::kpts
@@ -117,7 +119,9 @@
       ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype))
       ALLOCATE(atoms%ncst(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%nflip(atoms%ntype))
+      ALLOCATE(atoms%flipSpinPhi(atoms%ntype))
+      ALLOCATE(atoms%flipSpinScale(atoms%ntype))
+      ALLOCATE(atoms%flipSpinTheta(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(atoms%ntype))
       ALLOCATE(atoms%bmu(atoms%ntype))
@@ -138,18 +142,18 @@
       input%l_bmt= .false. ; input%eonly  = .false.
       input%gauss= .false. ; input%tria  = .false.
       sliceplot%slice= .false. ;  input%swsp  = .false.
-      input%lflip= .false. ; banddos%vacdos= .false. ; input%integ = .false.
-      sliceplot%iplot= 0 ; input%score = .false. ; sliceplot%plpot = .false.
-      input%pallst = .false. ;  vacuum%starcoeff = .false.
+      input%lflip= .false. ; input%l_removeMagnetisationFromInterstitial=.FALSE. ;banddos%vacdos= .false. ; input%integ = .false.
+      sliceplot%iplot= 0
+      input%pallst = .false. ; obsolete%lwb = .false. ; vacuum%starcoeff = .false.
       input%strho  = .false.  ; input%l_f = .false. ; atoms%l_geo(:) = .true.
       noco%l_noco = noco%l_ss ;   input%jspins = 1
       input%itmax = 15 ; input%maxiter = 99 ; input%imix = 7 ; input%alpha = 0.05
       input%preconditioning_param = 0.0 ; input%minDistance = 1.0e-5
-      input%spinf = 2.0 ;  input%coretail_lmax = 0
+      input%spinf = 2.0 ; obsolete%lepr = 0 ; input%coretail_lmax = 0
       sliceplot%kk = 0 ; sliceplot%nnne = 0  ; vacuum%nstars = 0 ; vacuum%nstm = 0
       nu = 5 ; vacuum%layerd = 1 ; iofile = 6
       ALLOCATE(vacuum%izlay(vacuum%layerd,2))
-      banddos%ndir = 0 ; vacuum%layers = 0 ; atoms%nflip(:) = 1 ; vacuum%izlay(:,:) = 0
+      banddos%ndir = 0 ; vacuum%layers = 0 ; vacuum%izlay(:,:) = 0
       banddos%e_mcd_lo = -10.0 ; banddos%e_mcd_up = 0.0
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
       input%epsdisp = 0.00001 ; input%epsforce = 0.00001 ; input%forcealpha = 1.0 ; input%forcemix = 2 ! BFGS is default.
@@ -162,7 +166,7 @@
       input%l_wann = .FALSE.
       input%numBandsKPoints = 240
       banddos%unfoldband = .FALSE. ; banddos%s_cell_x = 1 ; banddos%s_cell_y = 1 ; banddos%s_cell_z = 1
-
+      atoms%flipSpinTheta(:)=0.0; atoms%flipSpinPhi(:)=0.0; atoms%flipSpinScale=.FALSE.
 !+odim
       oneD%odd%mb = 0 ; oneD%odd%M = 0 ; oneD%odd%m_cyl = 0 ; oneD%odd%chi = 0 ; oneD%odd%rot = 0
       oneD%odd%k3 = 0 ; oneD%odd%n2d= 0 ; oneD%odd%nq2 = 0 ; oneD%odd%nn2d = 0
@@ -291,8 +295,8 @@
       ENDIF
 
 !HF   added for HF and hybrid functionals
-      hybrid%gcutm1       = input%rkmax - 0.5
-      hybrid%tolerance1   = 1e-4
+      mpbasis%g_cutoff       = input%rkmax - 0.5
+      mpbasis%linear_dep_tol   = 1e-4
       taual_hyb   = atoms%taual
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
       ALLOCATE(hybrid%lcutm1(atoms%ntype))
@@ -326,7 +330,7 @@
       stars%gmax    = real(NINT(stars%gmax    * 10  ) / 10.)
       input%rkmax   = real(NINT(input%rkmax   * 10  ) / 10.)
       xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
-      hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
+      mpbasis%g_cutoff = real(NINT(mpbasis%g_cutoff * 10  ) / 10.)
       IF (input%film) THEN
        vacuum%dvac = real(NINT(vacuum%dvac*100)/100.)
        dtild = real(NINT(dtild*100)/100.)
@@ -336,8 +340,8 @@
 !
       CALL lapw_input(&
      &                infh,nline,xl_buffer,bfh,buffer,&
-     &                input%jspins,input%kcrel,kpts%nkpt,div,kpts%kPointDensity,&
-     &                input%frcor,input%ctail,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
+     &                input%jspins,input%kcrel,obsolete%ndvgrd,kpts%nkpt,div,kpts%kPointDensity,&
+     &                input%frcor,input%ctail,obsolete%chng,input%tria,input%rkmax,stars%gmax,xcpot%gmaxxc,&
      &                vacuum%dvac,dtild,input%tkb,namex,relcor)
 
       stars%gmaxInit = stars%gmax
@@ -395,10 +399,6 @@
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
 
       IF (noco%l_ss) input%ctail = .FALSE.
-      noco%l_mperp = .FALSE.
-      noco%l_constr = .FALSE.
-      noco%mix_b = 0.0
-      noco%qss = 0.0
 
       noco%l_relax(:) = .FALSE.
       noco%alphInit(:) = 0.0
@@ -469,8 +469,8 @@
          filename = 'inp.xml'
 
          CALL w_inpXML(&
-     &                 atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-     &                 cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
+     &                 atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
+     &                 cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,div,l_gamma,&
      &                 noel,namex,relcor,a1Temp,a2Temp,a3Temp,dtild,input%comment,&
      &                 xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
      &                 atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&

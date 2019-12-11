@@ -28,7 +28,7 @@ CONTAINS
     !     Types, these variables contain a lot of data!
     TYPE(t_mpi)    ,INTENT(INOUT)  :: mpi
     TYPE(t_input)    ,INTENT(INOUT):: input
-    
+
     TYPE(t_atoms)    ,INTENT(OUT)  :: atoms
     TYPE(t_sphhar)   ,INTENT(OUT)  :: sphhar
     TYPE(t_cell)     ,INTENT(OUT)  :: cell
@@ -38,10 +38,11 @@ CONTAINS
     TYPE(t_vacuum)   ,INTENT(OUT)  :: vacuum
     TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
     TYPE(t_banddos)  ,INTENT(OUT)  :: banddos
-    TYPE(t_obsolete) ,INTENT(OUT)  :: obsolete 
+    TYPE(t_obsolete) ,INTENT(OUT)  :: obsolete
     TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
     CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE  :: xcpot
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
+    TYPE(t_mpbasis), intent(inout) :: mpbasis
     TYPE(t_hybrid)   ,INTENT(OUT)  :: hybrid
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
     TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
@@ -100,7 +101,7 @@ CONTAINS
     ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),atoms%ngopr(atoms%nat) )
     ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
     ALLOCATE ( stars%nstr2(stars%ng2),atoms%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
-    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2),atoms%nflip(atoms%ntype) )
+    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2))
     ALLOCATE ( atoms%ncst(atoms%ntype) )
     ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
     ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
@@ -138,7 +139,7 @@ CONTAINS
     atoms%llo(:,:) = -1
     input%eig66(1)=.FALSE.
     ! HF/hybrid functionals/EXX
-    ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
+    ALLOCATE ( mpbasis%num_radfun_per_l(0:atoms%lmaxd,atoms%ntype) )
 
     kpts%specificationType = 0
     atoms%numStatesProvided(:) = 0
@@ -165,7 +166,7 @@ CONTAINS
        !-t3e
        CALL inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
             cell,sliceplot,noco,&
-            stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
+            stars,oneD,mpbasis,hybrid,kpts,a1,a2,a3,namex,relcor)
        !
        IF (xcpot%needs_grad()) THEN
           ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
@@ -247,8 +248,8 @@ CONTAINS
              hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
              hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
           END DO
-          hybrid%gcutm1 = input%rkmax - 0.5
-          hybrid%tolerance1 = 1.0e-4
+          mpbasis%g_cutoff = input%rkmax - 0.5
+          mpbasis%linear_dep_tol = 1.0e-4
           hybrid%ewaldlambda = 3
           hybrid%lexp = 16
           hybrid%bands1 = max( nint(input%zelec)*10, 60 )
@@ -268,7 +269,7 @@ CONTAINS
           sym%symSpecType = 3
           CALL w_inpXML(&
                atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
+               cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,kpts%nkpt3,kpts%l_gamma,&
                noel,namex,relcor,a1,a2,a3,cell%amat(3,3),input%comment,&
                xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
                atomTypeSpecies,speciesRepAtomType,.FALSE.,filename,&

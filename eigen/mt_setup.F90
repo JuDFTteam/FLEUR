@@ -16,11 +16,11 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_results),INTENT(INOUT):: results
     TYPE(t_mpi),INTENT(IN)       :: mpi
-    
+
     TYPE(t_enpara),INTENT(INOUT) :: enpara
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_noco),INTENT(IN)      :: noco
-    TYPE(t_sym),INTENT(IN)       :: sym  
+    TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_potden),INTENT(IN)    :: inDen

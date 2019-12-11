@@ -20,7 +20,7 @@ CONTAINS
     USE m_elpa_onenode
     USE m_scalapack
     USE m_elemental
-!    USE m_chase_diag
+    USE m_chase_diag
     USE m_types_mpimat
     USE m_types_gpumat
 !    USE m_matrix_copy
@@ -71,7 +71,7 @@ CONTAINS
        CALL lapack_diag(hmat,smat,ne,eig,ev)
     CASE (diag_chase)
        IF (.NOT.(PRESENT(ikpt).AND.PRESENT(jsp).AND.PRESENT(iter))) CALL judft_error("Optional arguments must be present for chase in eigen_diag")
-!       CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
+       CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
     CASE (diag_debugout)
        CALL diag_writeout(smat,hmat)
     CASE default

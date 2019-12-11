@@ -57,7 +57,6 @@ CONTAINS
       USE m_constants, ONLY : pimach
       USE m_grule
       USE m_juDFT_stop
-!$    USE omp_lib
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: lmaxd
@@ -67,7 +66,6 @@ CONTAINS
       REAL :: p(0:lmaxd+1,0:lmaxd+1),x((3*lmaxd)/4+1)
 
       if (allocated(w)) return
-!$    if (omp_in_parallel() .and. omp_get_num_threads() > 1) call juDFT_error("BUG IN GAUNT!!")
       n = (3*lmaxd)/4+1
       ALLOCATE(w(n),  source=0.0)
       ALLOCATE(yr(n,(lmaxd+1)**2), source=0.0)

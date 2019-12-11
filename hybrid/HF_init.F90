@@ -4,51 +4,48 @@ MODULE m_hf_init
    !     preparations for HF and hybrid functional calculation
    !
 CONTAINS
-   SUBROUTINE hf_init(hybrid, kpts, atoms, input, DIMENSION, hybdat, l_real)
+   SUBROUTINE hf_init(mpbasis, hybrid, atoms, input, DIMENSION, hybdat)
       USE m_types
-      USE m_read_core
+      USE m_hybrid_core
       USE m_util
+      use m_intgrf
       USE m_io_hybrid
       IMPLICIT NONE
+      TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT)     :: hybrid
-      TYPE(t_kpts), INTENT(IN)          :: kpts
       TYPE(t_atoms), INTENT(IN)         :: atoms
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_dimension), INTENT(IN)     :: DIMENSION
       TYPE(t_hybdat), INTENT(OUT)       :: hybdat
-      LOGICAL, INTENT(IN)               :: l_real
 
-      INTEGER:: itype, ieq, l, m, i, nk, l1, l2, m1, m2, ok
+      INTEGER:: l, m, i, l1, l2, m1, m2, ok
 
       !initialize hybdat%gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, hybdat%gridf)
 
       !Alloc variables
-      ALLOCATE (hybdat%lmaxc(atoms%ntype))
-      ALLOCATE (hybdat%bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype))
-      ALLOCATE (hybdat%bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype))
-      ALLOCATE (hybdat%bas1_MT(hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype))
-      ALLOCATE (hybdat%drbas1_MT(hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype))
-
-      !sym%tau = oneD%ods%tau
+      allocate(hybdat%lmaxc(atoms%ntype), source=0)
+      allocate(hybdat%bas1(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas2(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas1_MT(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%drbas1_MT(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
 
       ! preparations for core states
       CALL core_init(dimension, input, atoms, hybdat%lmaxcd, hybdat%maxindxc)
-      ALLOCATE (hybdat%nindxc(0:hybdat%lmaxcd, atoms%ntype), stat=ok)
-      IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%nindxc'
-      ALLOCATE (hybdat%core1(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), stat=ok)
-      IF (ok /= 0) STOP 'eigen_hf: failure allocation core1'
-      ALLOCATE (hybdat%core2(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), stat=ok)
-      IF (ok /= 0) STOP 'eigen_hf: failure allocation core2'
-      ALLOCATE (hybdat%eig_c(hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), stat=ok)
-      IF (ok /= 0) STOP 'eigen_hf: failure allocation hybdat%eig_c'
-      hybdat%nindxc = 0; hybdat%core1 = 0; hybdat%core2 = 0; hybdat%eig_c = 0
+      allocate(hybdat%nindxc(0:hybdat%lmaxcd, atoms%ntype), stat=ok, source=0)
+      IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%nindxc')
+      allocate(hybdat%core1(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), stat=ok, source=0.0)
+      IF (ok /= 0) call judft_error('eigen_hf: failure allocation core1')
+      allocate(hybdat%core2(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), stat=ok, source=0.0)
+      IF (ok /= 0) call judft_error('eigen_hf: failure allocation core2')
+      allocate(hybdat%eig_c(hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), stat=ok, source=0.0)
+      IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%eig_c')
 
       ! pre-calculate gaunt coefficients
 
-      hybdat%maxfac = max(2*atoms%lmaxd + hybrid%maxlcutm1 + 1, 2*hybdat%lmaxcd + 2*atoms%lmaxd + 1)
-      ALLOCATE (hybdat%fac(0:hybdat%maxfac), hybdat%sfac(0:hybdat%maxfac), stat=ok)
-      IF (ok /= 0) STOP 'eigen_hf: failure allocation fac,hybdat%sfac'
+      hybdat%maxfac = max(2*atoms%lmaxd + maxval(hybrid%lcutm1) + 1, 2*hybdat%lmaxcd + 2*atoms%lmaxd + 1)
+      allocate(hybdat%fac(0:hybdat%maxfac), hybdat%sfac(0:hybdat%maxfac), stat=ok, source=0.0)
+      IF (ok /= 0) call judft_error('eigen_hf: failure allocation fac,hybdat%sfac')
       hybdat%fac(0) = 1
       hybdat%sfac(0) = 1
       DO i = 1, hybdat%maxfac
@@ -56,12 +53,14 @@ CONTAINS
          hybdat%sfac(i) = hybdat%sfac(i - 1)*sqrt(i*1.0) ! hybdat%sfac(i)   = sqrt(i!)
       END DO
 
-      ALLOCATE (hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:hybrid%maxlcutm1, -atoms%lmaxd:atoms%lmaxd, -hybrid%maxlcutm1:hybrid%maxlcutm1), stat=ok)
-      IF (ok /= 0) STOP 'eigen: failure allocation hybdat%gauntarr'
-      hybdat%gauntarr = 0
+      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:maxval(hybrid%lcutm1),&
+                           -atoms%lmaxd:atoms%lmaxd, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1)),&
+                            stat=ok, source=0.0)
+      IF (ok /= 0) call judft_error('eigen: failure allocation hybdat%gauntarr')
+
       DO l2 = 0, atoms%lmaxd
          DO l1 = 0, atoms%lmaxd
-            DO l = abs(l1 - l2), min(l1 + l2, hybrid%maxlcutm1)
+            DO l = abs(l1 - l2), min(l1 + l2, maxval(hybrid%lcutm1))
                DO m = -l, l
                   DO m1 = -l1, l1
                      m2 = m1 + m ! Gaunt condition -m1+m2-m = 0
