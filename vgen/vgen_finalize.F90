@@ -5,8 +5,9 @@
 !--------------------------------------------------------------------------------
 MODULE m_vgen_finalize
   USE m_juDFT
+   USE m_xcBfield
 CONTAINS
-  SUBROUTINE vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+  SUBROUTINE vgen_finalize(mpi,dimension,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -20,6 +21,11 @@ CONTAINS
     USE m_rotate_mt_den_tofrom_local
     USE m_sfTests
     IMPLICIT NONE
+      TYPE(t_mpi),       INTENT(IN)     :: mpi
+      TYPE(t_dimension), INTENT(IN)     :: dimension
+      TYPE(t_oneD),      INTENT(IN)     :: oneD
+      TYPE(t_field),                INTENT(INOUT)  :: field
+      TYPE(t_cell),      INTENT(IN)     :: cell
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
     TYPE(t_sym),INTENT(IN)          :: sym
@@ -31,6 +37,9 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER i,js,n
+
+      TYPE(t_potden) :: div, phi, checkdiv
+      TYPE(t_potden), DIMENSION(3) :: cvec, corrB, bxc
 
   
     
@@ -48,6 +57,17 @@ CONTAINS
        END IF
     ENDIF
 
+    ! Source-free testwise
+    !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,inDen,1.0)
+    !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,vTot,2.0)
+
+    ! Once it is tested:
+    !IF (noco%l_mtnocoPot.AND.(.FALSE.)) THEN ! l_sf will go here
+       !CALL makeVectorField(stars,atoms,sphhar,vacuum,input,noco,vTot,2.0,bxc)
+       !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)
+       !CALL correctPot(vTot,cvec)
+    !END IF
+  
   !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
     
  DO js = 1,input%jspins !Used input%jspins instead of SIZE(vtot%mt,4) since the off diag, elements of VTot%mt need no rescaling. 
@@ -66,25 +86,12 @@ CONTAINS
     !Copy first vacuum into second vacuum if this was not calculated before 
     IF (vacuum%nvac==1) THEN
        vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
-!       DO i=1,3
-!          xcB(i)%vacz(:,2,:)  = xcB(i)%vacz(:,1,:)
-!       ENDDO
        IF (sym%invs) THEN
           vTot%vacxy(:,:,2,:)  = CMPLX(vTot%vacxy(:,:,1,:))
-!          DO i=1,3
-!             xcB(i)%vacxy(:,:,2,:)  = CMPLX(xcB(i)%vacxy(:,:,1,:))
-!          ENDDO
        ELSE
           vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
-!          DO i=1,3
-!             xcB(i)%vacxy(:,:,2,:)  = xcB(i)%vacxy(:,:,1,:)
-!          ENDDO
        ENDIF
     ENDIF
-
-    ! Source-free testwise
-    !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,inDen,1.0)
-    !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,vTot,2.0)
  
   END SUBROUTINE vgen_finalize
 END MODULE m_vgen_finalize

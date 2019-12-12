@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_magMoms
-
+IMPLICIT NONE
 CONTAINS
 
 SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
@@ -14,7 +14,7 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
    USE m_xmlOutput
    USE m_m_perp
 
-   IMPLICIT NONE
+ 
 
    TYPE(t_dimension), INTENT(IN) :: dimension
    TYPE(t_input), INTENT(IN)     :: input
