@@ -7,6 +7,6 @@ jt::copyfile("files/kpts_gw",$workdir);
 jt::testrun("$executable ",$workdir);
 
 #now test output
-$result+=jt::test_grepexists("$workdir/out","0.50000.*0.37500");
+$result=jt::test_grepexists("$workdir/out","0.50000.*0.37500");
 $result+=jt::test_fileexists("$workdir/eig_gw.hdf");
 jt::stageresult($workdir,$result,"1");
