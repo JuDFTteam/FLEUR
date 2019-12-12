@@ -69,7 +69,7 @@ CONTAINS
 
       ! local scalars
       INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2
-      INTEGER                         ::  m, i_basfn, i, n_grid_pt
+      INTEGER                         ::  m, i_basfn, i, n_grid_pt,j
       REAL                            ::  rdum, rdum1, max_momentum, momentum
 
       ! - local arrays -
@@ -289,6 +289,7 @@ CONTAINS
 
          WRITE (6, '(/,17x,A)') 'moment  (quality of orthonormality)'
       END IF
+
       DO itype = 1, atoms%ntype
          n_grid_pt = atoms%jri(itype)
 
@@ -307,19 +308,16 @@ CONTAINS
                END IF
             END DO
 
-            ! rearrange order of radial functions such that the last function possesses the largest moment
-            bashlp(:n_grid_pt) = mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
-            mpbasis%radbasfn_mt(:n_grid_pt,&
-                                n_radbasfn:mpbasis%num_radbasfn(l, itype)-1,&
-                                :, itype)&
-               =  mpbasis%radbasfn_mt(:n_grid_pt,&
-                                      n_radbasfn+1:mpbasis%num_radbasfn(l, itype),&
-                                      :, itype)
-            mpbasis%radbasfn_mt(:n_grid_pt, &
-                                mpbasis%num_radbasfn(l, itype),&
-                                l, itype) &
-               = bashlp(:n_grid_pt)
+            j = 0
+            bashlp(:atoms%jri(itype)) = mpbasis%radbasfn_mt(:atoms%jri(itype), n_radbasfn, l, itype)
+            DO i = 1, mpbasis%num_radbasfn(l, itype)
+               IF (i == n_radbasfn) CYCLE
+               j = j + 1
+               mpbasis%radbasfn_mt(:atoms%jri(itype), j, l, itype) = mpbasis%radbasfn_mt(:atoms%jri(itype), i, l, itype)
+            END DO
+            mpbasis%radbasfn_mt(:atoms%jri(itype), mpbasis%num_radbasfn(l, itype), l, itype) = bashlp(:atoms%jri(itype))
          END DO
+
 
          DO l = 0, hybrid%lcutm1(itype)
             IF (mpi%irank == 0) WRITE (6, '(6X,A)') lchar(l)//':'
@@ -360,10 +358,10 @@ CONTAINS
 
                IF (mpi%irank == 0) WRITE (6, '(6x,I4,'' ->  '',ES8.1)') i, rdum1
             END DO
-
-            ! test orthogonality
             call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
          ENDDO
+
+
       END DO
 
       call mpbasis%check_radbasfn(atoms, hybrid)

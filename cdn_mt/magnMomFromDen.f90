@@ -8,8 +8,12 @@
 !
 !
 ! Robin Hilgers, Nov '19
+! Modified for usability with the potential matrix; A. Neukirchen, Dec '19
 
 MODULE m_magnMomFromDen
+
+IMPLICIT NONE
+
 CONTAINS
 SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    USE m_constants
@@ -17,8 +21,7 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    USE m_intgr
    USE m_juDFT
    USE m_polangle
-   IMPLICIT NONE
-
+   USE m_constants
 
    TYPE(t_input), INTENT(IN)     ::  input
    TYPE(t_atoms), INTENT(IN)     ::  atoms
@@ -28,10 +31,12 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    REAL,INTENT(OUT)              :: theta_mt_avg(atoms%ntype)
    REAL,INTENT(OUT)              :: phi_mt_avg(atoms%ntype)
 
-   INTEGER                       ::  jsp,i,j
+   INTEGER                       ::  jsp,i,j,ir
    REAL                          ::  mx,my,mz
 
+   TYPE(t_potden)                ::  denloc
    REAL, ALLOCATABLE             ::  dummyResults(:,:)
+
 
   ALLOCATE(dummyResults(SIZE(den%mt,3),SIZE(den%mt,4)))
 
@@ -44,7 +49,14 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    DO i=1, atoms%ntype
       DO j=1, jsp
 !!Integration over r
-           CALL intgr3(den%mt(:,0,i,j), atoms%rmsh(:,i),atoms%dx(i),atoms%jri(i),dummyResults(i,j))
+           IF (den%potdenType<=1000) THEN
+              DO ir=1, atoms%jri(i)
+                 denloc%mt(ir,:,i,j)=den%mt(ir,:,i,j)*atoms%rmsh(ir,i)
+              END DO
+           ELSE
+              denloc=den
+           END IF
+           CALL intgr3(denloc%mt(:,0,i,j), atoms%rmsh(:,i),atoms%dx(i),atoms%jri(i),dummyResults(i,j))
 !!Considering Lattice harmonics integral (Only L=0 component does not vanish and has a factor of sqrt(4*Pi))
           dummyResults(i,j)=dummyResults(i,j)*sfp_const
       END DO
@@ -56,15 +68,22 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    END IF
       moments(3,i)=dummyResults(i,1)-dummyResults(i,2)
    END DO
+
 DEALLOCATE(dummyResults)
+
+IF (den%potdenType<=1000) THEN
+   moments=moments/2
+END IF
 
 !!Calculation of Angles
    DO i=1 , atoms%ntype
       mx=moments(1,i)
       my=moments(2,i)
       mz=moments(3,i)
-      CALL pol_angle(mx,my,mz,theta_mt_avg(i),phi_mt_avg(i))
-      IF(mx<0) theta_mt_avg(i)=-theta_mt_avg(i)
+      IF (den%potdenType>1000) THEN
+         CALL pol_angle(mx,my,mz,theta_mt_avg(i),phi_mt_avg(i))
+      END IF
+      IF(mx<0) theta_mt_avg(i)=-atoms%theta_mt_avg(i)
    ENDDO
 
 END SUBROUTINE magnMomFromDen

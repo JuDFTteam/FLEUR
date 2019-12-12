@@ -175,7 +175,7 @@ CONTAINS
           WRITE (6,FMT=8050) n,vmd(n)
           results%tote = results%tote + vmd(n)
        ENDDO
-       IF (atoms%n_u.GT.0) THEN
+       IF (atoms%n_u+atoms%n_hia.GT.0) THEN
           WRITE ( 6,FMT=8090) results%e_ldau
           results%tote = results%tote - results%e_ldau             ! gu test
        ENDIF
@@ -223,7 +223,7 @@ CONTAINS
           CALL writeXMLElementFormPoly('MadelungTerm',(/'value'/),(/vmd(n)/),reshape((/33,20/),(/1,2/)))
           CALL closeXMLElement('atomTypeDependentContributions')
        END DO
-       IF (atoms%n_u.GT.0) THEN
+       IF (atoms%n_u+atoms%n_hia.GT.0) THEN
           CALL writeXMLElementFormPoly('dftUCorrection',(/'value'/),(/results%e_ldau/),reshape((/34,20/),(/1,2/)))
        END IF
        CALL writeXMLElementFormPoly('tkbTimesEntropy',(/'value'/),(/results%ts/),reshape((/33,20/),(/1,2/)))

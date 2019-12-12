@@ -1,9 +1,9 @@
 MODULE m_lh_tofrom_lm
+   IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE lh_to_lm(sym,atoms, lathar, iType, flh, flm)
       USE m_types
-      IMPLICIT NONE
 
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_atoms),  INTENT(IN)    :: atoms

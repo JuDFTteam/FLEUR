@@ -30,7 +30,7 @@
       USE m_cdn_io
       IMPLICIT NONE
       INTEGER,INTENT(IN)             :: eig_id
-      
+
       TYPE(t_oneD),INTENT(IN)        :: oneD
       TYPE(t_banddos),INTENT(IN)     :: banddos
       TYPE(t_input),INTENT(IN)       :: input
@@ -52,7 +52,7 @@
 !    locals
       INTEGER, PARAMETER ::  lmax= 4, ned = 1301
       INTEGER  i,s,v,index,jspin,k,l,l1,l2,ln,n,nl,ntb,ntria,ntetra
-      INTEGER  icore,qdim,n_orb,ncored
+      INTEGER  icore,qdim,n_orb,ncored,jsp
       REAL     as,de,efermi,emax,emin,qmt,sigma,totdos,efermiPrev
       REAL     e_up,e_lo,e_test1,e_test2,fac,sumwei,dk,eFermiCorrection
       LOGICAL  l_tria,l_orbcomp,l_error
@@ -146,7 +146,8 @@
             qal(:,:,k) = 0.0
             qval(:,:,k) = 0.0
 
-            ntb = max(ntb,results%neig(k,jspin))
+            jsp = MERGE(1,jspin,noco%l_noco)
+            ntb = max(ntb,results%neig(k,jsp))
             IF (l_mcd) mcd_local(:,:,k) = RESHAPE(mcd%mcd(:,1:ncored,:,k,jspin),(/3*atoms%ntype*ncored,input%neig/))
             IF (.NOT.l_orbcomp) THEN
                qal(1:lmax*atoms%ntype,:,k)=reshape(dos%qal(0:,:,:,k,jspin),(/lmax*atoms%ntype,size(dos%qal,3)/))
@@ -159,7 +160,7 @@
                   qal(slab%nsld+1:2*slab%nsld,:,k) = slab%qmtsl(:,:,k,jspin)
                ELSE
                   DO i = 1, 23
-                     DO l = 1, results%neig(k,jspin)
+                     DO l = 1, results%neig(k,jsp)
                         qal(i,l,k) = orbcomp%comp(l,i,n_orb,k,jspin)*orbcomp%qmtp(l,n_orb,k,jspin)/10000.
                      END DO
                      DO l = results%neig(k,jspin)+1, input%neig
@@ -178,7 +179,7 @@
                   qal(lmax*atoms%ntype+3,n,k) = 0.0
                ENDDO
             ELSEIF ( banddos%vacdos .and. input%film ) THEN
-               DO i = 1,results%neig(k,jspin)
+               DO i = 1,results%neig(k,jsp)
                   DO v = 1,vacuum%nvac
                      DO l = 1,vacuum%layers
                         index = (l-1)*vacuum%nstars + (v-1)*(vacuum%nstars*vacuum%layers) + 1
@@ -213,8 +214,8 @@
 !
 !---- >     convert eigenvalues to ev and shift them by efermi
 !
-            DO i = 1 , results%neig(k,jspin)
-               ev(i,k) = results%eig(i,k,jspin)*hartree_to_ev_const - efermi
+            DO i = 1 , results%neig(k,jsp)
+               ev(i,k) = results%eig(i,k,jsp)*hartree_to_ev_const - efermi
             ENDDO
             DO i = results%neig(k,jspin) + 1, input%neig
                ev(i,k) = 9.9e+99
@@ -272,6 +273,7 @@
  67          CONTINUE                       ! tetrahedron-information read or created
            ENDIF
          ENDIF
+
 !
         IF ( .not.l_mcd ) THEN
          ALLOCATE (g(ned,qdim))
@@ -306,7 +308,7 @@
                  results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev,qal, g)
             ELSE
             CALL dos_bin(input%jspins,3*atoms%ntype*ncored,ned,emin,emax,ntb,kpts%nkpt,&
-                 results%neig(:,jspin),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
+                 results%neig(:,jsp),kpts%wtkpt(1:kpts%nkpt),ev(1:ntb,1:kpts%nkpt), mcd_local(1:3*atoms%ntype*ncored,1:ntb,1:kpts%nkpt), g)
             ENDIF
          ENDIF
 !
@@ -343,6 +345,7 @@
 
 !**** write out DOS
          OPEN (18,FILE='DOS'//spin12(jspin))
+         IF (atoms%ntype >= 20.AND.banddos%projdos.NE.0) OPEN (1337,FILE="PROJDOS"//spin12(jspin))
 
          DO i = 1 , ned
            totdos = 0.0
@@ -359,6 +362,7 @@
              ELSE
              WRITE (18,99001)  e(i),totdos,g(i,lmax*atoms%ntype+1), &
                   g(i,lmax*atoms%ntype+2),g(i,lmax*atoms%ntype+3), (gpart(i,l),l=1,atoms%ntype)
+             IF(banddos%projdos.NE.0) WRITE (1337,99001)  e(i),(g(i,l),l=lmax*(banddos%projdos-1)+1,lmax*banddos%projdos)
           ENDIF
        ELSEIF (n_orb == 0) THEN
           DO nl = 1, slab%nsld
@@ -373,6 +377,7 @@
            ENDIF
          ENDDO
          CLOSE (18)
+         IF (atoms%ntype >= 20.AND.banddos%projdos.NE.0) CLOSE (1337)
 
          ELSE
            write(*,'(4f15.8)') ((mcd%e_mcd(n,jspin,i),n=1,atoms%ntype),i=1,ncored)

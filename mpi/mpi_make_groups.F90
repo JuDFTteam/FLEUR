@@ -46,7 +46,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)       :: mpi
-    
+
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_kpts),INTENT(IN)      :: kpts
@@ -189,7 +189,7 @@ CONTAINS
         USE m_types
       IMPLICIT NONE
       type(t_mpi),INTENT(IN)         :: mpi
-      
+
       TYPE(t_kpts),INTENT(IN)        :: kpts
       TYPE(t_atoms),INTENT(IN)       :: atoms
       TYPE(t_noco),INTENT(IN)        :: noco
@@ -213,7 +213,7 @@ CONTAINS
       mem = mem + (atoms%lmaxd*(atoms%lmaxd+2)+1)*(2*atoms%llod+1)*max(mlotot,1)*2 ! tlmplm%tuulo ...
       mem = mem + (2*atoms%llod+1)**2 * max(mlolotot,1)    ! tlmplm%tuloulo
       IF (noco%l_noco) mem = mem * 2                      ! both spins
-      mem = mem + 49*atoms%n_u*input%jspins*2                      ! lda+U, *2 for complex
+      mem = mem + 49*(atoms%n_u+atoms%n_hia)*input%jspins*2                      ! lda+U, *2 for complex
       mem = mem+INT((lapw_dim_nbasfcn*2+(atoms%lmaxd*(atoms%lmaxd+2)+1)*atoms%ntype)*0.5)+1 ! tlmplm%ind, *0.5 for integer
 
       matsz = lapw_dim_nbasfcn * CEILING(REAL(lapw_dim_nbasfcn)/n_size) ! size of a, b

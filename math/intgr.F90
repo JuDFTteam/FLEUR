@@ -510,8 +510,15 @@ MODULE m_intgr
       REAL                     :: dr, alpha
 
       logr=LOG(x)
-      dr=x(2)-x(1)
+      dr=logr(2)-logr(1)
       rf=x*y
+
+      IF (y(1)*y(2).GT.zero) THEN 
+         alpha = 1.0 + log(y(2)/y(1))/dr
+         IF (alpha.GT.zero) z(1) = x(1)*y(1)/alpha
+      ENDIF
+
+      z=z(1)
 
       DO i=2, jri
          z(i:)=z(i:)+(rf(i-1)+rf(i))*dr/2.0
@@ -584,5 +591,58 @@ MODULE m_intgr
 
       RETURN
    END SUBROUTINE intgr5
+
+  SUBROUTINE intgr6(y,x,h,jri,z)
+
+      INTEGER, INTENT (IN) :: jri
+      REAL,    INTENT (IN) :: h
+      REAL,    INTENT (IN) :: x(jri), y(jri)
+      REAL,    INTENT (OUT):: z(jri)
+
+      REAL    :: dr, r(7), alpha
+      INTEGER :: i, j
+      REAL    :: yr(7)
+
+      z(1) = zero
+      IF (y(1)*y(2).GT.zero) THEN 
+         alpha = 1.0 + log(y(2)/y(1))/h
+         IF (alpha.GT.zero) z(1) = x(1)*y(1)/alpha
+      ENDIF
+
+      z(2)=z(1)+h*(x(1)*y(1)+x(2)*y(2))/2
+      z(3)=z(1)+h*(x(1)*y(1)+4*x(2)*y(2)+x(3)*y(3))/3.
+
+      DO j = 4,jri
+         z(j) = z(j-3) + 3*h*(x(j-3)*y(j-3)+3*x(j-2)*y(j-2)+3*x(j-1)*y(j-1)+x(j)*y(j))/8.
+      ENDDO
+
+      RETURN
+   END SUBROUTINE intgr6
+
+  SUBROUTINE intgr7(y,x,h,jri,z)
+
+      INTEGER, INTENT (IN) :: jri
+      REAL,    INTENT (IN) :: h
+      REAL,    INTENT (IN) :: x(jri), y(jri)
+      REAL,    INTENT (OUT):: z(jri)
+
+      REAL    :: dr, r(7), alpha
+      INTEGER :: i, j
+      REAL    :: yr(7)
+
+      z(1) = zero
+      IF (y(1)*y(2).GT.zero) THEN 
+         alpha = 1.0 + log(y(2)/y(1))/h
+         IF (alpha.GT.zero) z(1) = x(1)*y(1)/alpha
+      ENDIF
+
+      z(2)=z(1)+h*(x(1)*y(1)+x(2)*y(2))/2
+
+      DO j = 3,jri
+         z(j) = z(j-2) + h*(x(j-2)*y(j-2)+4*x(j-1)*y(j-1)+x(j)*y(j))/3.
+      ENDDO
+
+      RETURN
+   END SUBROUTINE intgr7
 
 END MODULE m_intgr

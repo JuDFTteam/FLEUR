@@ -371,6 +371,9 @@
       READ (UNIT=5,FMT=7110,END=99,ERR=99)
       WRITE (6,9060)
       atoms%n_u = 0
+      atoms%n_hia = 0
+      atoms%n_gf = 0
+      atoms%n_j0 = 0
       DO n=1,atoms%ntype
 !
          READ (UNIT=5,FMT=7140,END=99,ERR=99) noel(n),atoms%nz(n),&

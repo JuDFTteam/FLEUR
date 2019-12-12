@@ -28,7 +28,7 @@ CONTAINS
       type(t_atoms)        :: atoms
       INTEGER, INTENT(IN)  :: itype
       REAL, INTENT(IN)  :: gridf(atoms%jmtd, atoms%ntype)
-      REAL, INTENT(IN)  :: f(*)
+      REAL, INTENT(IN)  :: f(:)
       !     - local -
       TYPE(intgrf_out)     :: fct_res
 
@@ -60,7 +60,7 @@ CONTAINS
       INTEGER, INTENT(IN)  :: jri(ntype)
       REAL, INTENT(IN)  :: dx(ntype), rmsh(jmtd, ntype)
       REAL, INTENT(IN)  :: gridf(jmtd, ntype)
-      REAL, INTENT(IN)  :: f(*)
+      REAL, INTENT(IN)  :: f(:)
       !     - local -
       INTEGER                :: n
       REAL                   :: r1, h, a, x

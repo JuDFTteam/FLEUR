@@ -17,7 +17,7 @@ contains
 
   SUBROUTINE mix_charge( field,   mpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
-       oneD, archiveType, xcpot, iteration, inDen, outDen, results )
+       oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia)
 
     use m_juDFT
     use m_constants
@@ -53,6 +53,7 @@ contains
     type(t_potden),    intent(inout) :: inDen
     integer,           intent(in)    :: archiveType, iteration
     LOGICAL,           INTENT(IN)    :: l_writehistory
+    LOGICAL,           INTENT(IN)    :: l_runhia
 
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
@@ -60,18 +61,26 @@ contains
     TYPE(t_mixvector)                :: fsm_mag
     LOGICAL                          :: l_densitymatrix
     INTEGER                          :: it,maxiter
+    INTEGER                          :: indStartHIA, indEndHIA
 
 
     CALL timestart("Charge Density Mixing")
     l_densitymatrix=.FALSE.
+    !The density/potential matrices for DFT+U are split into two parts
+    ! 1:atoms%n_u Are the elements for normal DFT+U 
+    ! atoms%n_u+1:atoms%n_u+atoms%n_hia are the elements for DFT+Hubbard 1
+    !The latter are never mixed and held constant
+    indStartHIA = atoms%n_u + 1 
+    indEndHIA = atoms%n_u + atoms%n_hia
+
     IF (atoms%n_u>0) THEN
        l_densitymatrix=.NOT.input%ldaulinmix
-       IF (mpi%irank==0) CALL u_mix(input,atoms,inDen%mmpMat,outDen%mmpMat)
-       IF (ALL(inDen%mmpMat==0.0)) THEN
+       IF (mpi%irank==0) CALL u_mix(input,atoms,noco,inDen%mmpMat,outDen%mmpMat)
+       IF (ALL(inDen%mmpMat(:,:,1:atoms%n_u,:)==0.0)) THEN
           l_densitymatrix=.FALSE.
           inDen%mmpMat=outDen%mmpMat
        ENDIF
-    ENDIF
+    ENDIF 
 
     CALL timestart("Reading of distances")
     CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,stars,cell,sphhar,atoms,sym)
@@ -95,7 +104,7 @@ contains
        CALL timestop("Preconditioner")
     END IF
 
-    if (atoms%n_u>0.and.mpi%irank.ne.0.and.input%ldaulinmix) inden%mmpMat=0.0
+    if (atoms%n_u>0.and.mpi%irank.ne.0.and.input%ldaulinmix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
 
     !mixing of the densities
     CALL timestart("Mixing")
@@ -137,17 +146,27 @@ contains
     inDen%pw=0.0;inDen%mt=0.0
     IF (ALLOCATED(inDen%vacz)) inden%vacz=0.0
     IF (ALLOCATED(inDen%vacxy)) inden%vacxy=0.0
-    IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat=0.0
+    IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
     CALL sm(it)%to_density(inDen)
     IF (atoms%n_u>0.AND..NOT.l_densitymatrix.AND..NOT.input%ldaulinmix) THEN
        !No density matrix was present
        !but is now created...
-       inden%mmpMAT=outden%mmpMat
+       inden%mmpMAT(:,:,:atoms%n_u,:)=outden%mmpMat(:,:,:atoms%n_u,:)
        CALL mixing_history_reset(mpi)
        CALL mixvector_reset()
     ENDIF
 
-    if(iteration == 1 .and. xcpot%vx_is_MetaGGA()) then
+    IF(atoms%n_hia>0) THEN
+      !For LDA+HIA we don't use any mixing of the density matrices we just pass it on
+      inDen%mmpMat(:,:,indStartHIA:indEndHIA,:) = outDen%mmpMat(:,:,indStartHIA:indEndHIA,:)
+    ENDIF
+
+    IF (atoms%n_hia>0.AND.l_runhia) THEN
+      CALL mixing_history_reset(mpi)
+      CALL mixvector_reset()
+    ENDIF
+
+    if(iteration == 1 .and. xcpot%vx_is_MetaGGA()) then 
        CALL mixing_history_reset(mpi)
        CALL mixvector_reset()
     endif

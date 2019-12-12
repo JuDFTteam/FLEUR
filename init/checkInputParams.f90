@@ -28,6 +28,11 @@ SUBROUTINE checkInputParams(mpi,input,atoms,noco,xcpot,oneD)
                       calledby = 'checkInputParams',hint='If you know what you do deactivate this stop.')
    END IF
 
+   IF(noco%l_noco.AND.noco%l_mtNocoPot.AND.ANY(atoms%nlo(:).GT.0)) THEN
+      CALL juDFT_warn('In Fully Fully noco (l_mtNocoPot) contributions to LOs are not taken into account!',&
+                      calledby = 'checkInputParams',hint='If you know what you do deactivate this stop.')
+   END IF
+
    IF (((xcpot%is_hybrid().OR.input%l_rdmft)).AND.((input%film.OR.oneD%odi%d1))) THEN
       CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
                        calledby ="fleur", hint="Use a supercell or a different functional")

@@ -9,7 +9,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,&
                   enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen)
+                  archiveType, xcpot,outDen,EnergyDen,gOnsite,hub1)
 
    !*****************************************************
    !    Charge density generator
@@ -39,6 +39,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    USE m_metagga
    USE m_unfold_band_kpts
    USE m_denMultipoleExp
+   USE m_gfcalc
+   USE m_angles
 #ifdef CPP_MPI
    USE m_mpi_bc_potden
 #endif
@@ -68,6 +70,8 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_atoms),INTENT(IN)         :: atoms
    TYPE(t_coreSpecInput),INTENT(IN) :: coreSpecInput
    TYPE(t_potden),INTENT(IN)        :: vTot
+   TYPE(t_greensf),OPTIONAL,INTENT(INOUT)    :: gOnsite
+   TYPE(t_hub1ham),OPTIONAL,INTENT(INOUT)    :: hub1
    CLASS(t_xcpot),INTENT(INOUT)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
 
@@ -84,6 +88,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_slab)          :: slab
    TYPE(t_orbcomp)       :: orbcomp
    TYPE(t_cdnvalJob)     :: cdnvalJob
+   TYPE(t_greensfCoeffs) :: greensfCoeffs
    TYPE(t_potden)        :: val_den, core_den
 
 
@@ -96,6 +101,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error, perform_MetaGGA
+   REAL                  :: angle(sym%nop)
 
    CALL regCharges%init(input,atoms)
    CALL dos%init(input,atoms,kpts,vacuum)
@@ -103,6 +109,16 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    CALL mcd%init1(banddos,input,atoms,kpts)
    CALL slab%init(banddos,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,atoms,kpts)
+
+   IF(atoms%n_gf.GT.0.AND.PRESENT(gOnsite)) THEN
+      !Only calculate the greens function when needed
+      CALL greensfCoeffs%init(input,lmaxU_const,atoms,noco,results%ef)
+      CALL gOnsite%getEnergyContour(input,mpi,greensfCoeffs%e_bot,greensfCoeffs%e_top,results%ef)
+      gOnsite%gmmpMat = 0.0
+      IF(atoms%n_hia.GT.0.AND.mpi%irank==0) hub1%mag_mom = 0.0
+   ENDIF
+
+   IF(atoms%n_gf+atoms%n_u.GT.0.AND.noco%l_mperp) CALL angles(sym,angle)
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
@@ -120,10 +136,16 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,coreSpecInput,mcd,slab,orbcomp)
+                  sphhar,sym,vTot,oneD,cdnvalJob,outDen,regCharges,dos,results,moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle)
    END DO
-   call val_den%copyPotDen(outDen)
 
+   IF(PRESENT(gOnsite).AND.mpi%irank.EQ.0) THEN
+      IF(atoms%n_gf.GT.0) THEN
+        CALL postProcessGF(gOnsite,greensfCoeffs,atoms,input,sym,noco,vTot,hub1,results,angle)
+      ENDIF
+   ENDIF
+
+   call val_den%copyPotDen(outDen)
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
       CALL calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars,&

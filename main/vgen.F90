@@ -57,12 +57,22 @@ CONTAINS
       TYPE(t_potden)                    :: workden,denRot
 
       INTEGER :: i
+      COMPLEX :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,noco%l_mperp))
 
       if (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
+
+      IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN
+         !In this case we need the last mmpmat after vgen
+         mmpmat = vTot%mmpmat
+      ENDIF
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
+      IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN
+         !In this case we need the last mmpmat after vgen
+         vTot%mmpmat = mmpmat
+      ENDIF
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
 
@@ -95,7 +105,7 @@ CONTAINS
                       cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
-      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+      CALL vgen_finalize(mpi,dimension,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)

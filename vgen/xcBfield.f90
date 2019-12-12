@@ -9,6 +9,8 @@ MODULE m_xcBfield
    USE m_plot
    USE m_divergence
 
+   IMPLICIT NONE
+
    !-----------------------------------------------------------------------------
    ! This module contains all the operations on exchange-correlation B-fields
    ! that are necessary to project out source terms. This way, the whole modifi-
@@ -16,7 +18,7 @@ MODULE m_xcBfield
    ! process test or in the scf-loop to achieve said fields self-consistently.
    !-----------------------------------------------------------------------------
 
-   PUBLIC :: makeBxc, sourcefree
+   PUBLIC :: makeVectorField, sourcefree, correctPot
 
 CONTAINS
    SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec,icut)
@@ -44,14 +46,12 @@ CONTAINS
       TYPE(t_potden),               INTENT(IN)  :: denmat
       REAL,                         INTENT(IN)  :: factor
       TYPE(t_potden), DIMENSION(3), INTENT(OUT) :: aVec
-      INTEGER,                      INTENT(OUT) :: icut(3,0:sphhar%nlhd,atoms%ntype)
 
       TYPE(t_potden), DIMENSION(4)              :: dummyDen
       INTEGER                                   :: i, itype, ir, lh
       REAL                                      :: r2(atoms%jmtd), fcut
 
       fcut=1.e-12
-      icut=1
 
       ! Initialize and fill a dummy density array, that takes the initial result
       ! of matrixsplit.
@@ -80,7 +80,6 @@ CONTAINS
                   r2=atoms%rmsh(:,itype)**2
                END IF
                aVec(i)%mt(:,lh,itype,1) = aVec(i)%mt(:,lh,itype,1)*r2
-               !WHERE (ABS(aVec(i)%mt(ir,0:,itype,:)/r2) < fcut) aVec(i)%mt(ir,0:,itype,:) = 0.0
             END DO !lh
          END DO !itype
          aVec(i)%pw(1:,:)          = dummyDen(i+1)%pw(1:,:)
@@ -120,7 +119,6 @@ CONTAINS
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: aVec
-      INTEGER,                      INTENT(IN)     :: icut(3,0:sphhar%nlhd,atoms%ntype)
       TYPE(t_potden),               INTENT(OUT)    :: div, phi, checkdiv
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: cvec, corrB
 
@@ -129,10 +127,6 @@ CONTAINS
       INTEGER                                      :: n, jr, lh, lhmax, jcut, nat
       REAL                                         :: xp(3,(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1))
 
-      !DO i=1,3
-      !   aVec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
-      !END DO
-
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -140,23 +134,10 @@ CONTAINS
 
       CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
 
+      ! Local atoms variable with no charges;
+      ! needed for the potential generation from the divergence.
       atloc=atoms
-      atloc%zatom=0.0 !Local atoms variable with no charges; needed for the potential generation.
-
-      fcut=1.e-6
-
-      !div%mt(:300,25,:,1)=0.0
-      !DO n=1,atoms%ntype
-         !lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
-         !DO lh=0, lhmax
-            !div%mt(:,lh,n,1)=div%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            !WHERE (ABS(div%mt(:,lh,n,1))<MAXVAL(ABS(div%mt(:,lh,n,1)))*fcut) div%mt(:,lh,n,1)=0.0
-         !END DO
-         !DO lh=0, lhmax
-            !div%mt(:,lh,n,1)=div%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
-         !END DO
-      !END DO
-
+      atloc%zatom=0.0
       CALL phi%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_POTCOUL,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(phi%pw_w(SIZE(phi%pw,1),size(phi%pw,2)))
       phi%pw_w = CMPLX(0.0,0.0)
@@ -169,10 +150,6 @@ CONTAINS
       ENDDO
 
       CALL divpotgrad2(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
-
-      !DO i=1,3
-      !   cvec(i)%mt(:,atoms%lmaxd**2:,:,:)=0.0
-      !END DO
 
       DO i=1,3
          CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -187,32 +164,13 @@ CONTAINS
 
       CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
 
-      nat=1
       DO n=1,atoms%ntype
          lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
          DO lh=0, lhmax
-            aVec(3)%mt(:,lh,n,1)=aVec(3)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            div%mt(:,lh,n,1)=div%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
-            checkdiv%mt(:,lh,n,1)=checkdiv%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
             cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
             cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
             cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)/(atoms%rmsh(:, n)**2)
          END DO
-
-         DO lh=0, lhmax
-            aVec(3)%mt(:,lh,n,1)=aVec(3)%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
-            div%mt(:,lh,n,1)=div%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
-            checkdiv%mt(:,lh,n,1)=checkdiv%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
-            cvec(1)%mt(:,lh,n,1)=cvec(1)%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
-            cvec(2)%mt(:,lh,n,1)=cvec(2)%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
-            cvec(3)%mt(:,lh,n,1)=cvec(3)%mt(:,lh,n,1)*(atoms%rmsh(:, n)**2)
-         END DO
-
-         CALL sphpts(xp,size(xp,2),atoms%rmt(n),atoms%pos(1,nat))
-         CALL checkdop(xp,size(xp,2),n,nat,0,-1,1,atoms,sphhar,stars,sym,vacuum,cell,oneD,div)
-         CALL checkdop(xp,size(xp,2),n,nat,0,-1,1,atoms,sphhar,stars,sym,vacuum,cell,oneD,phi)
-         nat = nat + atoms%neq(n)
-
       END DO
 
    END SUBROUTINE sourcefree
@@ -232,6 +190,8 @@ CONTAINS
       TYPE(t_potden),               INTENT(INOUT) :: vTot
       TYPE(t_potden), DIMENSION(3), INTENT(IN)    :: c
 
+      REAL :: pwr(SIZE(vTot%pw(1:,3))), pwi(SIZE(vTot%pw(1:,3)))
+
       vTot%mt(:,0:,:,1)=vTot%mt(:,0:,:,1)+c(3)%mt(:,0:,:,1)
       vTot%mt(:,0:,:,2)=vTot%mt(:,0:,:,2)-c(3)%mt(:,0:,:,1)
       vTot%mt(:,0:,:,3)=vTot%mt(:,0:,:,3)+c(1)%mt(:,0:,:,1)
@@ -239,19 +199,26 @@ CONTAINS
 
       vTot%pw(1:,1)=vTot%pw(1:,1)+c(3)%pw(1:,1)
       vTot%pw(1:,2)=vTot%pw(1:,2)-c(3)%pw(1:,1)
-      vTot%pw(1:,3)=vTot%pw(1:,3)+c(1)%pw(1:,1)
-      vTot%pw(1:,4)=vTot%pw(1:,4)+c(2)%pw(1:,1)
+      pwr=REAL(vTot%pw(1:,3)) + REAL(c(1)%pw(1:,1)) - AIMAG(c(2)%pw(1:,1))
+      pwi=AIMAG(vTot%pw(1:,3)) + AIMAG(c(1)%pw(1:,1)) + REAL(c(2)%pw(1:,1))
+      vTot%pw(1:,3)=CMPLX(pwr,pwi)
 
-      vTot%vacz(1:,1:,1)=vTot%vacz(1:,1:,1)+c(3)%vacz(1:,1:,1)
-      vTot%vacz(1:,1:,2)=vTot%vacz(1:,1:,2)-c(3)%vacz(1:,1:,1)
-      vTot%vacz(1:,1:,3)=vTot%vacz(1:,1:,3)+c(1)%vacz(1:,1:,1)
-      vTot%vacz(1:,1:,4)=vTot%vacz(1:,1:,4)+c(2)%vacz(1:,1:,1)
+      vTot%pw_w(1:,1)=vTot%pw_w(1:,1)+c(3)%pw_w(1:,1)
+      vTot%pw_w(1:,2)=vTot%pw_w(1:,2)-c(3)%pw_w(1:,1)
+      pwr=REAL(vTot%pw_w(1:,3)) + REAL(c(1)%pw_w(1:,1)) - AIMAG(c(2)%pw_w(1:,1))
+      pwi=AIMAG(vTot%pw_w(1:,3)) + AIMAG(c(1)%pw_w(1:,1)) + REAL(c(2)%pw_w(1:,1))
+      vTot%pw_w(1:,3)=CMPLX(pwr,pwi)
 
-      vTot%vacxy(1:,1:,1:,1)=vTot%vacxy(1:,1:,1:,1)+c(3)%vacxy(1:,1:,1:,1)
-      vTot%vacxy(1:,1:,1:,2)=vTot%vacxy(1:,1:,1:,2)-c(3)%vacxy(1:,1:,1:,1)
-      vTot%vacxy(1:,1:,1:,3)=vTot%vacxy(1:,1:,1:,3)+c(1)%vacxy(1:,1:,1:,1)
-      vTot%vacxy(1:,1:,1:,4)=vTot%vacxy(1:,1:,1:,4)+c(2)%vacxy(1:,1:,1:,1)
+      !vTot%vacz(1:,1:,1)=vTot%vacz(1:,1:,1)+c(3)%vacz(1:,1:,1)
+      !vTot%vacz(1:,1:,2)=vTot%vacz(1:,1:,2)-c(3)%vacz(1:,1:,1)
+      !vTot%vacz(1:,1:,3)=vTot%vacz(1:,1:,3)+c(1)%vacz(1:,1:,1)
+      !vTot%vacz(1:,1:,4)=vTot%vacz(1:,1:,4)+c(2)%vacz(1:,1:,1)
 
-   END SUBROUTINE
+      !vTot%vacxy(1:,1:,1:,1)=vTot%vacxy(1:,1:,1:,1)+c(3)%vacxy(1:,1:,1:,1)
+      !vTot%vacxy(1:,1:,1:,2)=vTot%vacxy(1:,1:,1:,2)-c(3)%vacxy(1:,1:,1:,1)
+      !vTot%vacxy(1:,1:,1:,3)=vTot%vacxy(1:,1:,1:,3)+c(1)%vacxy(1:,1:,1:,1)
+      !vTot%vacxy(1:,1:,1:,4)=vTot%vacxy(1:,1:,1:,4)+c(2)%vacxy(1:,1:,1:,1)
+
+   END SUBROUTINE correctPot
 
 END MODULE m_xcBfield

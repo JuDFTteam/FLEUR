@@ -37,6 +37,7 @@ CONTAINS
     REAL     :: temp
     INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
     INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2,jsp
+    LOGICAL l_remove
 
     ALLOCATE( dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
     ALLOCATE( dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
@@ -54,7 +55,7 @@ CONTAINS
     IF (jsp<3) vr0(:,0)=0.0
 
     DO i=MERGE(1,jspin,jspin>2),MERGE(2,jspin,jspin>2)
-       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo)
+       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo,input%l_dftspinpol)
     ENDDO
     IF (jspin>2) THEN
        jspin1=1
@@ -73,6 +74,15 @@ CONTAINS
        lp1 = (lp* (lp+1))/2
        DO l = 0,lp
           lpl = lp1 + l
+          !----------------------------------------------------------------------------
+          ! Remove non-spherical components for the orbitals treated with DFT+Hubbard-1
+          !----------------------------------------------------------------------------
+          l_remove=.FALSE.
+          IF(l.EQ.lp) THEN
+             DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+               IF(atoms%lda_u(i)%atomType.EQ.n.AND.atoms%lda_u(i)%l.EQ.l) l_remove=.TRUE.
+             ENDDO
+          ENDIF
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)
@@ -80,7 +90,7 @@ CONTAINS
              lamda = sphhar%llh(lh,nsym)
              lmin = lp - l
              lmx = lp + l
-             IF ((mod(lamda+lmx,2).EQ.1) .OR. (lamda.LT.lmin) .OR. (lamda.GT.lmx)) THEN
+             IF ((mod(lamda+lmx,2).EQ.1) .OR. (lamda.LT.lmin) .OR. (lamda.GT.lmx) .OR. l_remove) THEN
                 uvu(lpl,lh) = 0.0
                 dvd(lpl,lh) = 0.0
                 uvd(lpl,lh) = 0.0

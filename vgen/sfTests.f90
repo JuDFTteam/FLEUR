@@ -1,11 +1,9 @@
 MODULE m_sfTests
-  IMPLICIT NONE
+   IMPLICIT NONE
 CONTAINS
    SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, xcB, div, phi, cvec, corrB, div2)
       USE m_plot
-
-      IMPLICIT NONE
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -54,12 +52,10 @@ CONTAINS
 
    END SUBROUTINE plotBtest
 
-   SUBROUTINE buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,itest,Avec,icut,denMat,factor)
+   SUBROUTINE buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,itest,Avec,denMat,factor)
       USE m_mt_tofrom_grid
       USE m_pw_tofrom_grid
       USE m_xcBfield
-
-      IMPLICIT NONE
 
       TYPE(t_stars),                INTENT(IN)     :: stars
       TYPE(t_atoms),                INTENT(IN)     :: atoms
@@ -71,7 +67,6 @@ CONTAINS
       TYPE(t_cell),                 INTENT(IN)     :: cell
       INTEGER,                      INTENT(IN)     :: itest
       TYPE(t_potden), DIMENSION(3), INTENT(OUT)    :: Avec
-      INTEGER,                      INTENT(OUT)    :: icut(atoms%ntype)
       TYPE(t_potden), OPTIONAL,     INTENT(IN)     :: denMat
       REAL,           OPTIONAL,     INTENT(IN)     :: factor
 
@@ -83,7 +78,6 @@ CONTAINS
       REAL                            :: vec1(3), vec2(3), vec3(3), zero(3), point(3)
       INTEGER                         :: grid(3)
 
-      icut=1
 
       IF (itest.EQ.0) THEN
          RETURN
@@ -228,7 +222,7 @@ CONTAINS
 
       TYPE(t_potden), DIMENSION(3)                 :: aVec, cvec, corrB
       TYPE(t_potden)                               :: div, phi, checkdiv
-      INTEGER                                      :: i, n, lh, l, icut(3,0:sphhar%nlhd,atoms%ntype)
+      INTEGER                                      :: i, n, lh, l
       REAL                                         :: g(atoms%jmtd)
 
       REAL :: radii(atoms%jmtd,atoms%ntype), funcsr(atoms%jmtd,atoms%ntype,3), trueder(atoms%jmtd,atoms%ntype,3), trueint(atoms%jmtd,atoms%ntype,3), &
@@ -246,7 +240,7 @@ CONTAINS
         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,icut,div,phi,cvec,corrB,checkdiv)
         CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, aVec, div, phi, cvec, corrB, checkdiv)
       ELSE
-        CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,0,aVec,icut)
+        CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,0,aVec)
         RETURN
       END IF
 
@@ -264,7 +258,7 @@ CONTAINS
       SUBROUTINE difftester(atoms,n,l,f,g)
          USE m_types
          USE m_grdchlh
-         IMPLICIT NONE
+
          TYPE(t_atoms), INTENT(IN) :: atoms
          INTEGER, INTENT(IN) :: n,l
          REAL, INTENT(IN) :: f(atoms%jri(n))

@@ -120,7 +120,7 @@
 !
 ! search for operations which leave taual invariant
 !
-               IF (input%l_f.OR.(atoms%n_u.GT.0)) THEN 
+               IF (input%l_f.OR.(atoms%n_u+atoms%n_gf.GT.0)) THEN 
                   DO j3 = -2,2
                      sr(3) = gaminv(3) + real(j3)
                      DO j2 = -2,2
@@ -159,7 +159,7 @@
 !------------------------- FORCE PART -------------------------------
 !+gu this is the remainder of spgset necessary for force calculations
 !
-      IF (input%l_f.OR.(atoms%n_u.GT.0)) THEN
+      IF (input%l_f.OR.(atoms%n_u.GT.0).OR.(atoms%n_gf.GT.0)) THEN
 
       WRITE (6,FMT=&
      &  '(//,"list of operations which leave taual invariant",/)')
@@ -223,7 +223,7 @@
          sym%invsatnr(na) = 0
       END DO
 
-      IF (.not.(noco%l_soc.and.atoms%n_u>0)) THEN
+      IF (.not.(noco%l_soc.and.((atoms%n_u+atoms%n_hia>0)))) THEN
       IF (sym%invs) THEN
          WRITE (6,FMT=*)
          nat1 = 1

@@ -48,10 +48,11 @@ MODULE m_types_potden
   END TYPE t_potden
 
 CONTAINS
-  subroutine collect(this,mpi_comm)
+  subroutine collect(this,mpi_comm,l_collmmp)
     use m_mpi_bc_tool
     implicit none
     class(t_potden),INTENT(INOUT) :: this
+    LOGICAL, OPTIONAL, INTENT(IN) :: l_collmmp
     integer :: mpi_comm
 #ifdef CPP_MPI
     include 'mpif.h'
@@ -82,10 +83,19 @@ CONTAINS
     endif
     !density matrix
     if (allocated(this%mmpMat)) then
-       ALLOCATE(ctmp(size(this%mmpMat)))
-       CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
-       if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
-       deallocate(ctmp)
+       IF(PRESENT(l_collmmp)) THEN
+         IF(l_collmmp) THEN
+           ALLOCATE(ctmp(size(this%mmpMat)))
+           CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+           if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
+           deallocate(ctmp)
+         ENDIF
+       ELSE
+         ALLOCATE(ctmp(size(this%mmpMat)))
+         CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+         if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
+         deallocate(ctmp)
+       ENDIF
     endif
 #endif
   end subroutine collect
@@ -279,7 +289,7 @@ CONTAINS
     INTEGER,INTENT(IN)       :: jspins, potden_type
  
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
-         atoms%n_u,jspins,noco%l_noco,noco%l_mtnocopot.OR.noco%l_mperp,potden_type,&
+         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mtnocopot.OR.noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
@@ -307,7 +317,7 @@ CONTAINS
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
 
-    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jspins))
+    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraDim)))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)

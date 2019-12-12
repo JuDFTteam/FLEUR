@@ -10,3 +10,6 @@
 [submodule "external/wannier90"]
 	path = external/wannier90
 	url = https://github.com/wannier-developers/wannier90.git
+[submodule "edsolver-library"]
+	path = external/edsolver-library
+	url = gitlab@iffgit.fz-juelich.de:janssen/edsolver-library.git

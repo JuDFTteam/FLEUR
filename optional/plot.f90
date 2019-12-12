@@ -8,6 +8,8 @@ MODULE m_plot
    USE m_juDFT
    USE m_constants
 
+   IMPLICIT NONE
+
    !-----------------------------------------------------------------------------
    ! A general purpose plotting routine for FLEUR.
    !
@@ -23,7 +25,7 @@ MODULE m_plot
    !------------------------------------------------
 
    PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
-             matrixplot, makeplots, procplot, getMTSphere, savtxt
+             matrixplot, makeplots, procplot, getMTSphere
 
 CONTAINS
 
@@ -74,8 +76,6 @@ CONTAINS
       ! the densities n/m are defined as (rho_up+-rho_down), V_eff/B_eff are de-
       ! fined as (V_up+-V_down)/2.
       !--------------------------------------------------------------------------
-
-      IMPLICIT NONE
 
       TYPE(t_stars),  INTENT(IN)  :: stars
       TYPE(t_atoms),  INTENT(IN)  :: atoms
@@ -471,8 +471,6 @@ CONTAINS
       !          ---> rho_f.xsf, rho_A1.xsf, rho_A2.xsf, rho_A3.xsf
       !                                [n(r_vec),m_vec(r_vec)]
 
-      IMPLICIT NONE
-
       TYPE(t_stars),               INTENT(IN) :: stars
       TYPE(t_atoms),               INTENT(IN) :: atoms
       TYPE(t_sphhar),              INTENT(IN) :: sphhar
@@ -807,8 +805,6 @@ CONTAINS
       ! plane wave representation, splits it into two spinless ones, which are
       ! then passed on to the savxsf routine to get 2 .xsf files out.
 
-      IMPLICIT NONE
-
       TYPE(t_stars),     INTENT(IN) :: stars
       TYPE(t_atoms),     INTENT(IN) :: atoms
       TYPE(t_sphhar),    INTENT(IN) :: sphhar
@@ -840,8 +836,6 @@ CONTAINS
       ! sphere/ plane wave representation and splits it into four spinless ones,
       ! which are then passed on to the savxsf routine to get 4 .xsf files out.
 
-      IMPLICIT NONE
-
       TYPE(t_stars),     INTENT(IN) :: stars
       TYPE(t_atoms),     INTENT(IN) :: atoms
       TYPE(t_sphhar),    INTENT(IN) :: sphhar
@@ -872,8 +866,6 @@ CONTAINS
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
       ! identifier n is done.
-
-      IMPLICIT NONE
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -1053,10 +1045,7 @@ CONTAINS
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
       ! whether the plot_inp is there and no oldform is given. If that is not the
-      ! case, we throw an error/create a plot_inp.
-
-      IMPLICIT NONE
-
+      ! case, we create a plot_inp.
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -1095,8 +1084,6 @@ CONTAINS
    SUBROUTINE getMTSphere(input, cell, atoms, oneD, point, iType, iAtom, pt)
 
       ! Old subroutine originally from plotdop.f90, which is needed in savxsf.
-
-      IMPLICIT NONE
 
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_cell),  INTENT(IN)    :: cell

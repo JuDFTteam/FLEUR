@@ -125,7 +125,7 @@ PRIVATE
       INTEGER, ALLOCATABLE :: k_list(:)
       INTEGER, ALLOCATABLE :: ev_list(:)
       INTEGER, ALLOCATABLE :: noccbd(:)    ! Attention, these are for all k-points and all states
-      REAL,    ALLOCATABLE :: weights(:,:) ! 
+      REAL,    ALLOCATABLE :: weights(:,:) !
 
 
       CONTAINS
@@ -290,7 +290,7 @@ SUBROUTINE slab_init(thisSlab,banddos,atoms,cell,input,kpts)
 
    CLASS(t_slab),      INTENT(INOUT) :: thisSlab
    TYPE(t_banddos),    INTENT(IN)    :: banddos
-   
+
    TYPE(t_atoms),      INTENT(IN)    :: atoms
    TYPE(t_cell),       INTENT(IN)    :: cell
    TYPE(t_input),      INTENT(IN)    :: input
@@ -340,7 +340,7 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,noco,jspin,noccbd)
    IMPLICIT NONE
 
    CLASS(t_eigVecCoeffs), INTENT(INOUT) :: thisEigVecCoeffs
-   
+
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_input),         INTENT(IN)    :: input
@@ -351,7 +351,7 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,noco,jspin,noccbd)
    IF(ALLOCATED(thisEigVecCoeffs%bcof)) DEALLOCATE(thisEigVecCoeffs%bcof)
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
 
-   IF (noco%l_mperp) THEN
+   IF (noco%l_mperp.OR.input%l_gfmperp) THEN
       ALLOCATE (thisEigVecCoeffs%acof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%bcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
@@ -376,7 +376,7 @@ SUBROUTINE mcd_init1(thisMCD,banddos,input,atoms,kpts)
 
    CLASS(t_mcd),          INTENT(INOUT) :: thisMCD
    TYPE(t_banddos),       INTENT(IN)    :: banddos
-   
+
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_kpts),          INTENT(IN)    :: kpts
@@ -445,7 +445,7 @@ SUBROUTINE orbcomp_init(thisOrbcomp,input,banddos,atoms,kpts)
    CLASS(t_orbcomp),      INTENT(INOUT) :: thisOrbcomp
    TYPE(t_input),         INTENT(IN)    :: input
    TYPE(t_banddos),       INTENT(IN)    :: banddos
-   
+
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_kpts),          INTENT(IN)    :: kpts
 
@@ -477,7 +477,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
    TYPE(t_kpts),                   INTENT(IN)    :: kpts
    TYPE(t_noco),                   INTENT(IN)    :: noco
    TYPE(t_results),                INTENT(IN)    :: results
- 
+
 
    INTEGER,                        INTENT(IN)    :: jspin
 
@@ -488,12 +488,11 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
    thisCdnvalJob%l_evp=mpi%n_size>1
    thisCdnvalJob%k_list=mpi%k_list !includes allocate
    thisCdnvalJob%ev_list=mpi%ev_list
-   
+
    thisCdnvalJob%weights = results%w_iks(:,:,jsp)*2.0/input%jspins
 
    ALLOCATE(thisCdnvalJob%noccbd(kpts%nkpt))
    thisCdnvalJob%noccbd = 0
-
 
    ! determine bands to be used for each k point, MPI process
    DO ikpt_i = 1,SIZE(thisCdnvalJob%k_list)
@@ -581,7 +580,7 @@ SUBROUTINE gVacMap_init(thisGVacMap,sym,atoms,vacuum,stars,lapw,input,cell,kpts,
    IMPLICIT NONE
 
    CLASS(t_gVacMap),      INTENT(INOUT) :: thisGVacMap
-   
+
    TYPE(t_sym),           INTENT(IN)    :: sym
    TYPE(t_atoms),         INTENT(IN)    :: atoms
    TYPE(t_vacuum),        INTENT(IN)    :: vacuum

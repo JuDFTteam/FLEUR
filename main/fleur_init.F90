@@ -9,7 +9,7 @@ CONTAINS
   SUBROUTINE fleur_init(mpi,&
        input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
        sliceplot,banddos,enpara,xcpot,results,kpts,hybrid,&
-       oneD,coreSpecInput,wann)
+       oneD,coreSpecInput,hub1,wann)
     USE m_types
     USE m_fleurinput_read_xml
     USE m_fleurinput_mpi_bc
@@ -43,7 +43,7 @@ CONTAINS
     USE m_fleurinput_postprocess
     use m_make_forcetheo
     use m_lapwdim
-    use m_gaunt
+    use m_gaunt, only: gaunt_init
 #ifdef CPP_MPI
     !USE m_mpi_bc_all,  ONLY : mpi_bc_all
 #ifndef CPP_OLDINTEL
@@ -77,7 +77,7 @@ CONTAINS
     TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
     TYPE(t_wann)     ,INTENT(OUT):: wann
     CLASS(t_forcetheo),ALLOCATABLE,INTENT(OUT)::forcetheo
-
+    TYPE(t_hub1ham)  ,INTENT(OUT):: hub1
     type(t_enparaXML)::enparaXML
     TYPE(t_forcetheo_data)::forcetheo_data
 
@@ -154,7 +154,7 @@ CONTAINS
     CALL convn(atoms,stars)
     if (mpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
     if (mpi%isize>1) call field%mpi_bc(mpi%mpi_comm,0)
-    
+
     !At some point this should be enabled for noco as well
     IF (.not.noco%l_noco) &
     CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)
