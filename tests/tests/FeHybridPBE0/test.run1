@@ -9,18 +9,19 @@ jt::testrun("$executable ",$workdir);
 
 # Test of total energy from 1st HF iteration
 # old fleur result: -1272.7289406343, new fleur result: -1272.7289406361
-$result=jt::test_grepnumber("$workdir/out","HF total energy="," *= *([^ ]*)",-1272.72894063,0.000001);
+$result=jt::test_grepnumber("$workdir/out","HF total energy="," *= *([^ ]*)",-1272.7324763242,0.000001);
 # Test of total energy from 2nd HF iteration
 # old fleur result: -1272.7334295568, new fleur result -1272.7324763241
 # Differences probably due to recomputation of mixed product basis in every HF iteration in new fleur
 # Note: Only with the new fleur we obtain convergence for this setup. The old fleur seems to have
 # problems here.
- $result+=jt::test_grepexists("$workdir/out","HF total energy.*-1272.73247");
+ $result+=jt::test_grepexists("$workdir/out","HF total energy.*-1272.72894");
 
 # Test of magnetic moment from 1st HF iteration
-$result+=jt::test_grepexists("$workdir/out","mm.*3.4003");
+$result+=jt::test_grepnumber("$workdir/out","mm       1",".*mm       1 *([^ ]*)",3.42075,0.01);
+#$result+=jt::test_grepexists("$workdir/out","mm.*3.4003");
 # Test of magnetic moment from 2nd HF iteration
-$result+=jt::test_grepexists("$workdir/out","mm.*3.4207");
+$result+=jt::test_grepexists("$workdir/out","mm.*3.4003");
 
 
 jt::stageresult($workdir,$result,"1");
