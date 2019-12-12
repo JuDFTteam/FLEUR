@@ -72,7 +72,7 @@
          <ldaU l="1" U="-5.0" J="0.9" l_amf="F"/>
          <ldaU l="2" U="8.0" J="0.9" l_amf="F"/>
       </species>
-      <species name="As-2" element="As" atomicNumber="33" flipSpin="T">
+      <species name="As-2" element="As" atomicNumber="33" >
          <mtSphere radius="2.21000000" gridPoints="731" logIncrement=".01700000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
 	 <electronConfig>

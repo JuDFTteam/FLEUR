@@ -284,7 +284,7 @@ MODULE m_types_atoms
        this%zatom(n) = this%nz(n)
        this%flipSpinPhi(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPaths))//'/@flipSpinPhi'))
        this%flipSpinTheta(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinTheta'))
-       this%flipSpinScale(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinScale'))
+       this%flipSpinScale(n) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinScale'))
 
        this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
        !Now the xml elements

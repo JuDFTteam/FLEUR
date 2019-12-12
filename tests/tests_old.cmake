@@ -6,7 +6,7 @@ set(SerialParallelTests SiHybridGammaNoInv SiHybrid8kpt_sym
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML   )
 
-set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 Fe_fcc CoUnfold gw1Interface gw2Iterface)# TiO2eels TiO2eelsXML)
+set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 CoUnfold gw1Interface gw2Iterface)# TiO2eels TiO2eelsXML)
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
 set(Testdirs ${SerialOnlyTests} ${SerialParallelTests})
@@ -22,7 +22,7 @@ endif()
 #The inpgen tests
 #if (${INPGEN})
 foreach(test ${InpTestdirs})
- add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen2/inpgen2 -f inp_simple")
+ add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen2/inpgen2")
 endforeach(test)
 #endif()
 

@@ -339,7 +339,7 @@ CONTAINS
        xPathA = '/fleurInput/output/plotting'
        numberNodes = xml%GetNumberOfNodes(xPathA)
        IF (numberNodes.EQ.1) THEN
-          this%score = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
+          !this%score = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@score'))
        END IF
        ! Read in optional specialOutput switches
        xPathA = '/fleurInput/output/specialOutput'

@@ -5,12 +5,12 @@
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.60000000" Gmax="10.80000000" GmaxXC="9.00000000" numbands="0"/>
-      <scfLoop itmax="2" minDistance=".00000000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
+      <scfLoop itmax="2" minDistance=".00100000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="99"/>
       <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F"/>
       <expertModes gw="0" pot8="F" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="T" forcealpha="1.00000000" />
+      <geometryOptimization l_f="T" forcealpha="1.00000000" force_converged="0.00002" />
       <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000">
       <kPointList name="default" count="1">
           <kPoint weight="    8.000000">    0.375000     0.375000     0.250000</kPoint>
@@ -73,7 +73,7 @@
          <ldaU l="1" U="-5.0" J="0.9" l_amf="F"/>
          <ldaU l="2" U="8.0" J="0.9" l_amf="F"/>
       </species>
-      <species name="As-2" element="As" atomicNumber="33" flipSpin="T">
+      <species name="As-2" element="As" atomicNumber="33" >
          <mtSphere radius="2.21000000" gridPoints="731" logIncrement=".01700000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
 	 <electronConfig>

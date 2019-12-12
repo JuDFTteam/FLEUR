@@ -44,7 +44,7 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Fe-1" element="Fe" atomicNumber="26" flipSpin="T">
+      <species name="Fe-1" element="Fe" atomicNumber="26" >
          <mtSphere radius="2.59000000" gridPoints="623" logIncrement=".01900000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <electronConfig>

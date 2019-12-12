@@ -3,7 +3,7 @@
 jt::copyfile("files/inp_simple",$workdir);
 
 #jt::testrun("$executable ",$workdir);
-jt::testrun("$executable  2>&1 >outshell ; cat outshell",$workdir);
+jt::testrun("$executable -f inp_simple 2>&1 >outshell ; cat outshell",$workdir);
 $result=jt::test_grep_error("$workdir/outshell");
 
 #now test output

@@ -70,7 +70,7 @@
    </cell>
    <xcFunctional name="wc" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Pb-1" element="Pb" atomicNumber="82" flipSpin="T">
+      <species name="Pb-1" element="Pb" atomicNumber="82" >
          <mtSphere radius="2.10000000" gridPoints="853" logIncrement=".01600000"/>
          <atomicCutoffs lmax="12" lnonsphr="8"/>
          <electronConfig>
@@ -82,7 +82,7 @@
          <energyParameters s="6" p="6" d="6" f="5"/>
          <lo type="SCLO" l="2" n="5" eDeriv="0"/>
       </species>
-      <species name="Ti-2" element="Ti" atomicNumber="22" flipSpin="T">
+      <species name="Ti-2" element="Ti" atomicNumber="22" >
          <mtSphere radius="1.95000000" gridPoints="517" logIncrement=".02300000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig>
@@ -94,7 +94,7 @@
          <energyParameters s="4" p="4" d="3" f="4"/>
          <lo type="SCLO" l="1" n="3" eDeriv="0"/>
       </species>
-      <species name="O -3" element="O" atomicNumber="8" flipSpin="T">
+      <species name="O -3" element="O" atomicNumber="8" >
          <mtSphere radius="1.35000000" gridPoints="293" logIncrement=".03500000"/>
          <atomicCutoffs lmax="6" lnonsphr="4"/>
          <electronConfig>
@@ -105,7 +105,7 @@
          </electronConfig>
          <energyParameters s="2" p="2" d="3" f="4"/>
       </species>
-      <species name="O -4" element="O" atomicNumber="8" flipSpin="T">
+      <species name="O -4" element="O" atomicNumber="8" >
          <mtSphere radius="1.35000000" gridPoints="293" logIncrement=".03500000"/>
          <atomicCutoffs lmax="6" lnonsphr="4"/>
          <electronConfig>

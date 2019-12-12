@@ -21,9 +21,9 @@ MODULE m_types_xml
      INTEGER:: id
    CONTAINS
      PROCEDURE        :: init
-     PROCEDURE,NOPASS :: GetNumberOfNodes  
-     PROCEDURE,NOPASS :: SetAttributeValue  
-     PROCEDURE,NOPASS :: GetAttributeValue  
+     PROCEDURE,NOPASS :: GetNumberOfNodes
+     PROCEDURE,NOPASS :: SetAttributeValue
+     PROCEDURE,NOPASS :: GetAttributeValue
      PROCEDURE,NOPASS :: getIntegerSequenceFromString
      PROCEDURE        :: read_q_list
      PROCEDURE,NOPASS :: popFirstStringToken
@@ -43,7 +43,7 @@ CONTAINS
   SUBROUTINE init(xml)
     USE iso_c_binding
     CLASS(t_xml),INTENT(IN)::xml
-   
+
     INTEGER                        :: errorStatus
     CHARACTER(LEN=200,KIND=c_char) :: schemaFilename, docFilename
     INTEGER                        :: i,numberNodes
@@ -55,13 +55,13 @@ CONTAINS
          INTEGER(c_int) dropInputSchema
        END FUNCTION dropInputSchema
     END INTERFACE
-    
+
     errorStatus = 0
     errorStatus = dropInputSchema()
     IF(errorStatus.NE.0) THEN
        CALL juDFT_error('Error: Cannot print out FleurInputSchema.xsd')
     END IF
-  
+
     schemaFilename = "FleurInputSchema.xsd"//C_NULL_CHAR
     docFilename = "inp.xml"//C_NULL_CHAR
     CALL InitInterface()
@@ -69,13 +69,13 @@ CONTAINS
     CALL ParseDoc(docFilename)
     CALL ValidateDoc()
     CALL InitXPath()
-    
+
     ! Check version of inp.xml
     versionString = xml%GetAttributeValue('/fleurInput/@fleurInputVersion')
     IF((TRIM(ADJUSTL(versionString)).NE.'0.30')) THEN
        CALL juDFT_error('version number of inp.xml file is not compatible with this fleur version')
     END IF
-    
+
     ! Read in constants
     xPathA = '/fleurInput/constants/constant'
     numberNodes = xml%GetNumberOfNodes(xPathA)
@@ -101,7 +101,7 @@ CONTAINS
   FUNCTION get_nlo(xml)
   CLASS(t_xml),INTENT(IN)::xml
   INTEGER,ALLOCATABLE::get_nlo(:)
-  
+
   INTEGER n
   ALLOCATE(get_nlo(xml%get_ntype()))
   DO n=1,xml%get_ntype()
@@ -113,7 +113,7 @@ CONTAINS
     CLASS(t_xml),INTENT(IN)::xml
     INTEGER::itype
     CHARACTER(len=:),ALLOCATABLE::speciesPath
-    
+
     INTEGER           :: i
     CHARACTER(len=200)::xpath,species
     !First determine name of species from group
@@ -130,7 +130,7 @@ CONTAINS
     WRITE(xpath,*) itype
     CALL judft_error("No species found for name "//TRIM(species)//" used in atom group "//TRIM(xpath))
   END FUNCTION speciesPath
-    
+
 
 
   FUNCTION groupPath(itype)
@@ -144,7 +144,7 @@ CONTAINS
 
   INTEGER FUNCTION get_nat(xml)
     CLASS(t_xml),INTENT(IN)::xml
-    
+
     INTEGER ntype,n
     CHARACTER(len=100)::xpath
     get_nat=0
@@ -158,7 +158,7 @@ CONTAINS
 
   INTEGER FUNCTION get_ntype(xml)
     CLASS(t_xml),INTENT(IN)::xml
-    
+
     get_ntype=xml%getNumberOfNodes('/fleurInput/atomGroups/atomGroup')
   END FUNCTION get_ntype
 
@@ -166,7 +166,7 @@ CONTAINS
      CLASS(t_xml),INTENT(IN):: xml
      INTEGER,intent(in)     :: nat
      CHARACTER(len=:),ALLOCATABLE::posPath
-     
+
      INTEGER na,n
      CHARACTER(len=100)::xpath,xpath2
      na=nat
@@ -176,7 +176,7 @@ CONTAINS
         IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/absPos')>0) xpath=TRIM(ADJUSTL(xPath))//'/absPos'
         IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))//'/filmPos')>0) xpath=TRIM(ADJUSTL(xPath))//'/filmPos'
         IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPath)))<na) THEN
-           na=na-xml%getNumberOfNodes(TRIM(ADJUSTL(xPath))) 
+           na=na-xml%getNumberOfNodes(TRIM(ADJUSTL(xPath)))
         ELSE
            WRITE(xpath2,"(a,a,i0,a)") TRIM(ADJUSTL(xpath)),'[',na,']'
            posPath=TRIM(xpath2)
@@ -327,7 +327,7 @@ CONTAINS
 
    END FUNCTION countStringTokens
 
-  
+
   FUNCTION read_q_list(xml,path)RESULT(q)
       IMPLICIT NONE
       CLASS(t_xml),INTENT(IN)::xml
@@ -376,7 +376,7 @@ CONTAINS
   SUBROUTINE InitInterface()
 
     USE iso_c_binding
- 
+
     IMPLICIT NONE
 
     INTEGER :: errorStatus
@@ -399,7 +399,7 @@ CONTAINS
   SUBROUTINE ParseSchema(schemaFilename)
 
     USE iso_c_binding
-  
+
     IMPLICIT NONE
 
     CHARACTER(LEN=200,KIND=c_char), INTENT(IN) :: schemaFilename
@@ -425,7 +425,7 @@ CONTAINS
   SUBROUTINE ParseDoc(docFilename)
 
     USE iso_c_binding
-    
+
     IMPLICIT NONE
 
     CHARACTER(LEN=200,KIND=c_char), INTENT(IN) :: docFilename
@@ -451,7 +451,7 @@ CONTAINS
   SUBROUTINE ValidateDoc()
 
     USE iso_c_binding
-    
+
     IMPLICIT NONE
 
     INTEGER :: errorStatus
@@ -474,7 +474,7 @@ CONTAINS
   SUBROUTINE InitXPath()
 
     USE iso_c_binding
-   
+
     IMPLICIT NONE
 
     INTEGER :: errorStatus
@@ -497,7 +497,7 @@ CONTAINS
   FUNCTION GetNumberOfNodes(xPath)
 
     USE iso_c_binding
-  
+
     IMPLICIT NONE
 
     INTEGER :: GetNumberOfNodes
@@ -518,7 +518,7 @@ CONTAINS
   FUNCTION GetAttributeValue(xPath)
 
     USE iso_c_binding
-    
+
     IMPLICIT NONE
 
     CHARACTER(LEN=:),ALLOCATABLE :: GetAttributeValue
@@ -538,7 +538,11 @@ CONTAINS
        END FUNCTION getXMLAttributeValue
     END INTERFACE
 
-
+    IF (GetNumberOfNodes(xPath)<1) THEN
+      call judft_warn("Invalid xPath:"//xPath)
+      GetAttributeValue=""
+      RETURN
+    ENDIF
 
     c_string = getXMLAttributeValue(TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
 
@@ -565,7 +569,7 @@ CONTAINS
   SUBROUTINE SetAttributeValue(xPath,VALUE)
 
     USE iso_c_binding
-   
+
     IMPLICIT NONE
 
     CHARACTER(LEN=*, KIND=c_char), INTENT(IN) :: xPath
@@ -595,7 +599,7 @@ CONTAINS
   SUBROUTINE FreeResources()
 
     USE iso_c_binding
-   
+
     IMPLICIT NONE
 
     INTEGER :: errorStatus

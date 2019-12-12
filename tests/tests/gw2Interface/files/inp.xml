@@ -35,7 +35,7 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom=".00000000" flipSpin="T">
+      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom=".00000000" >
          <mtSphere radius="2.17000000" gridPoints="717" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="3" p="3" d="3" f="4"/>

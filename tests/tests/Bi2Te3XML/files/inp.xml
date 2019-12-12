@@ -27,13 +27,13 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Bi-1" element="Bi" atomicNumber="83" coreStates="19" magMom="1.00000000" flipSpin="T">
+      <species name="Bi-1" element="Bi" atomicNumber="83" coreStates="19" magMom="1.00000000" >
          <mtSphere radius="2.83000000" gridPoints="681" logIncrement=".01900000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <energyParameters s="6" p="6" d="6" f="4"/>
          <lo type="SCLO" l="2" n="5" eDeriv="0"/>
       </species>
-      <species name="Te-1" element="Te" atomicNumber="52" coreStates="14" magMom="0.00000000" flipSpin="T">
+      <species name="Te-1" element="Te" atomicNumber="52" coreStates="14" magMom="0.00000000" >
          <mtSphere radius="2.83000000" gridPoints="681" logIncrement=".01900000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <energyParameters s="5" p="5" d="4" f="4"/>

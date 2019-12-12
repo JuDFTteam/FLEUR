@@ -26,19 +26,19 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Ni-1" element="Ni" atomicNumber="28" coreStates="7" magMom="1.10000000" flipSpin="T">
+      <species name="Ni-1" element="Ni" atomicNumber="28" coreStates="7" magMom="1.10000000" >
          <mtSphere radius="2.46000000" gridPoints="817" logIncrement=".01500000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
          <ldaU l="2" U="8.0" J="0.9" l_amf="F"/>
       </species>
-      <species name="Ni-2" element="Ni" atomicNumber="28" coreStates="7" magMom="-1.10000000" flipSpin="T">
+      <species name="Ni-2" element="Ni" atomicNumber="28" coreStates="7" magMom="-1.10000000" >
          <mtSphere radius="2.46000000" gridPoints="817" logIncrement=".01500000"/>
          <atomicCutoffs lmax="10" lnonsphr="8"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
          <ldaU l="2" U="8.0" J="0.9" l_amf="F"/>
       </species>
-      <species name="O-2" element="O" atomicNumber="8" coreStates="1" magMom=".00000000" flipSpin="T">
+      <species name="O-2" element="O" atomicNumber="8" coreStates="1" magMom=".00000000" >
          <mtSphere radius="1.39000000" gridPoints="463" logIncrement=".02200000"/>
          <atomicCutoffs lmax="6" lnonsphr="4"/>
          <energyParameters s="2" p="2" d="3" f="4"/>

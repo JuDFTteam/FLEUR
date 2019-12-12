@@ -113,7 +113,7 @@ CONTAINS
                denCoeffs%cclo(1,1,itype,ispin),denCoeffs%acnmt(0,1,1,itype,ispin),&
                denCoeffs%bcnmt(0,1,1,itype,ispin),denCoeffs%ccnmt(1,1,1,itype,ispin),&
                f(1,1,0,ispin),g(1,1,0,ispin),&
-               rho(:,0:,itype,ispin),qmtllo,moments%rhoLRes(:,0:,:,itype,ispin))
+               rho(:,0:,itype,ispin),moments%rhoLRes(:,0:,:,itype,ispin),qmtllo)
 
 
           !--->       l-decomposed density for each atom type

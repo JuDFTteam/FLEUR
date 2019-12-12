@@ -65,7 +65,7 @@ CONTAINS
 
     IF (numberNodes.EQ.1) THEN
        this%iplot = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
-       this%plpot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
+       !this%plpot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plplot'))
     END IF
 
     xPathA = '/fleurInput/output/chargeDensitySlicing'
