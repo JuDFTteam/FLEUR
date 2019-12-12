@@ -18,7 +18,7 @@ MODULE m_xcBfield
    ! process test or in the scf-loop to achieve said fields self-consistently.
    !-----------------------------------------------------------------------------
 
-   PUBLIC :: makeBxc, sourcefree
+   PUBLIC :: makeVectorField, sourcefree, correctPot
 
 CONTAINS
    SUBROUTINE makeVectorField(stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec)
@@ -125,7 +125,7 @@ CONTAINS
       
       TYPE(t_potden)                               :: divloc
       TYPE(t_atoms)                                :: atloc
-      INTEGER                                      :: n, jr, lh, lhmax, jcut, nat
+      INTEGER                                      :: n, i, jr, lh, lhmax, jcut, nat
       REAL                                         :: xp(3,dimension%nspd)
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &
@@ -220,6 +220,6 @@ CONTAINS
       !vTot%vacxy(1:,1:,1:,3)=vTot%vacxy(1:,1:,1:,3)+c(1)%vacxy(1:,1:,1:,1)
       !vTot%vacxy(1:,1:,1:,4)=vTot%vacxy(1:,1:,1:,4)+c(2)%vacxy(1:,1:,1:,1)
 
-   END SUBROUTINE
+   END SUBROUTINE correctPot
 
 END MODULE m_xcBfield
