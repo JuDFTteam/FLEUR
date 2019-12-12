@@ -10,6 +10,7 @@
 ! Robin Hilgers, Nov '19
 
 MODULE m_magnMomFromDen
+IMPLICIT NONE
 CONTAINS
 SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    USE m_constants
@@ -17,7 +18,7 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    USE m_intgr
    USE m_juDFT
    USE m_polangle
-   IMPLICIT NONE
+
 
 
    TYPE(t_input), INTENT(IN)     ::  input

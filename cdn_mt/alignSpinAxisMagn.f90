@@ -10,6 +10,8 @@
 ! Robin Hilgers, Nov '19
 MODULE m_alignSpinAxisMagn
 
+IMPLICIT NONE
+
 USE m_magnMomFromDen
 USE m_types
 USE m_flipcdn

@@ -1,0 +1,13 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp-2.xml","$workdir/inp.xml");
+jt::copyfile("files/sym.out",$workdir);
+
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_fileexists("$workdir/out");
+$result+=jt::test_grepnumber("$workdir/out","dist","distance of spin densities for it=    1:     ",1.6457,0.00001);
+
+jt::stageresult($workdir,$result,"2");
+
