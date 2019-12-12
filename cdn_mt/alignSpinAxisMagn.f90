@@ -10,13 +10,13 @@
 ! Robin Hilgers, Nov '19
 MODULE m_alignSpinAxisMagn
 
-IMPLICIT NONE
 
 USE m_magnMomFromDen
 USE m_types
 USE m_flipcdn
 USE m_constants
 USE m_polangle
+IMPLICIT NONE
 
 CONTAINS
 SUBROUTINE rotateMagnetToSpinAxis(vacuum,sphhar,stars&
