@@ -125,8 +125,8 @@ CONTAINS
 
       ! read in z at k-point nk and nkqpt
       call timestart("read_z")
-      call read_z(z_nk, nk)
-      call read_z(z_kqpt, nkqpt)
+      call read_z(z_nk, kpts%nkptf*(jsp - 1) + nk)
+      call read_z(z_kqpt, kpts%nkptf*(jsp - 1) + nkqpt)
       call timestop("read_z")
 
       g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
