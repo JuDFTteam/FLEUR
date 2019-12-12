@@ -1,2 +1,3 @@
 cmd: "make"
 cwd: "$HOME/eclipse/fleur/build.debug"
+errorMatch: "(?<file>[\\/0-9a-zA-Z\\._]+)\\((?<line>\\d+)\\): error"

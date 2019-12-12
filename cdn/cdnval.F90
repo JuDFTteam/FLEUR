@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle)
+                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -51,6 +51,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    USE m_corespec_io, only : corespec_init
    USE m_corespec_eval, only : corespec_gaunt,corespec_rme,corespec_dos,corespec_ddscs
    USE m_xmlOutput
+
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
@@ -174,7 +175,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
       IF (noco%l_mperp.OR.input%l_gfmperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
       IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,29,input%jspins,jspin,results%ef,&
-                                        dimension%msh,vTot%mt(:,0,:,:),f,g)
+                                        atoms%msh,vTot%mt(:,0,:,:),f,g)
    END DO
    DEALLOCATE (f,g,flo)
 

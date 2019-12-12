@@ -131,7 +131,7 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
-                    banddos,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann,hub1)
+                    banddos,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,hub1,wann)
     CALL timestop("Initialization")
 
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN

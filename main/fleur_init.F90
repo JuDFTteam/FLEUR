@@ -16,7 +16,6 @@ CONTAINS
     USE m_judft
     USE m_juDFT_init
     USE m_init_wannier_defaults
-    USE m_postprocessInput
     USE m_gen_map
     USE m_dwigner
     !USE m_gen_bz

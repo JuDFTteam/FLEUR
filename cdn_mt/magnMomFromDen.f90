@@ -83,7 +83,7 @@ END IF
       IF (den%potdenType>1000) THEN
          CALL pol_angle(mx,my,mz,theta_mt_avg(i),phi_mt_avg(i))
       END IF
-      IF(mx<0) theta_mt_avg(i)=-atoms%theta_mt_avg(i)
+      IF(mx<0) theta_mt_avg(i)=-theta_mt_avg(i)
    ENDDO
 
 END SUBROUTINE magnMomFromDen

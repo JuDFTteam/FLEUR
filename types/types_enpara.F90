@@ -109,7 +109,7 @@ CONTAINS
     LOGICAL ::  l_done(0:atoms%lmaxd,atoms%ntype,input%jspins)
     LOGICAL ::  lo_done(atoms%nlod,atoms%ntype,input%jspins)
     REAL    ::  vbar,vz0,rj,tr
-    INTEGER ::  n,jsp,l,ilo,j,ivac,irank
+    INTEGER ::  n,jsp,l,ilo,j,ivac,irank,i
     CHARACTER(LEN=20)    :: attributes(5)
     REAL ::  e_lo(0:3,atoms%ntype)!Store info on branches to do IO after OMP
     REAL ::  e_up(0:3,atoms%ntype)
@@ -246,7 +246,7 @@ CONTAINS
        !Set the energy parameters to the same value
        !We want the shell where Hubbard 1 is applied to
        !be non spin-polarized
-       IF(mpi%irank.EQ.0) THEN
+       IF(irank.EQ.0) THEN
           WRITE(6,FMT=*)
           WRITE(6,"(A)") "For Hubbard 1 we treat the correlated shell to be non spin-polarized"
        ENDIF
@@ -262,13 +262,13 @@ CONTAINS
             enpara%el0(4:,n,1) = enpara%el0(3,n,1)
             enpara%el0(4:,n,2) = enpara%el0(3,n,1)
           ENDIF
-          IF(mpi%irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1)
+          IF(irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A4,f16.10)") "New energy parameter atom ", n, " l ", l, "--> ", enpara%el0(l,n,1)
        ENDDO
     ENDIF
 
     IF(input%ldauAdjEnpara.AND.atoms%n_u+atoms%n_hia>0) THEN
        !If requested we can adjust the energy parameters to the LDA+U potential correction
-       IF(mpi%irank.EQ.0) THEN
+       IF(irank.EQ.0) THEN
           WRITE(6,FMT=*)
           WRITE(6,"(A)") "LDA+U corrections for the energy parameters"
        ENDIF
@@ -282,7 +282,7 @@ CONTAINS
                 tr = tr + REAL(v%mmpMat(i,i,j,jsp))
              ENDDO
              enpara%el0(l,n,jsp) = enpara%el0(l,n,jsp) + tr/REAL(2*l+1)
-             IF(mpi%irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A6,I1,A4,f16.10)")&
+             IF(irank.EQ.0) WRITE(6,"(A27,I3,A3,I1,A6,I1,A4,f16.10)")&
                                "New energy parameter atom ", n, " l ", l, " spin ", jsp,"--> ", enpara%el0(l,n,jsp)
           ENDDO
        ENDDO

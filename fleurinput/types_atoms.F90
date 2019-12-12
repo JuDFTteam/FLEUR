@@ -12,6 +12,24 @@ MODULE m_types_atoms
   USE m_types_fleurinput_base
   IMPLICIT NONE
   PRIVATE
+
+   TYPE t_gfelementtype
+      SEQUENCE
+      !defines the l and atomType elements for given greens function element (used for mapping index in types_greensf)
+      INTEGER l
+      INTEGER lp
+      INTEGER atomType
+      INTEGER atomTypep
+   END TYPE t_gfelementtype
+
+   TYPE t_j0calctype
+      INTEGER atomType  !atom Type for which to calculate J0
+      INTEGER l_min     !Minimum l considered
+      INTEGER l_max     !Maximum l considered
+      LOGICAL l_avgexc  !Determines wether we average over the exchange splittings for all l
+      LOGICAL l_eDependence  !Switch to output J0 with variating fermi energy (only with contourDOS)
+   END TYPE
+
   TYPE t_utype
       SEQUENCE
       REAL :: u, j         ! the actual U and J parameters
@@ -33,6 +51,10 @@ MODULE m_types_atoms
       INTEGER:: lmaxd
       ! no of lda+us
       INTEGER ::n_u
+      INTEGER :: n_hia
+      INTEGER :: n_j0
+      ! no of greens function calculations (in total)
+      INTEGER :: n_gf
       ! dimensions
       INTEGER :: jmtd
       INTEGER :: msh=0 !core state mesh was in dimension
@@ -95,6 +117,11 @@ MODULE m_types_atoms
       LOGICAL, ALLOCATABLE :: relcor(:)
       !lda_u information(ntype)
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
+      TYPE(t_utype),ALLOCATABLE::lda_hia(:)
+      !j0 calc information
+      TYPE(t_gfelementtype), ALLOCATABLE::gfelem(:)
+      TYPE(t_j0calctype), ALLOCATABLE::j0(:)
+
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       !flipSpinTheta and flipSpinPhi are the angles which are given
       !in the input to rotate the charge den by these polar angles.
@@ -112,7 +139,7 @@ MODULE m_types_atoms
       procedure :: mpi_bc=>mpi_bc_atoms
    END TYPE t_atoms
 
-   PUBLIC :: t_atoms
+   PUBLIC :: t_atoms,t_utype
 
  CONTAINS
    subroutine mpi_bc_atoms(this,mpi_comm,irank)
@@ -126,7 +153,7 @@ MODULE m_types_atoms
      else
         rank=0
      end if
-
+     print *,"Attention, HUB1 parameters not in BC"
      call mpi_bc(this%ntype,rank,mpi_comm)
      call mpi_bc(this%nat,rank,mpi_comm)
      call mpi_bc(this%nlod,rank,mpi_comm)
@@ -257,6 +284,8 @@ MODULE m_types_atoms
     ALLOCATE(this%label(this%nat))
     ALLOCATE(this%pos(3,this%nat))
     ALLOCATE(this%rmt(this%ntype))
+    ALLOCATE(this%j0(this%ntype))
+    ALLOCATE(this%gfelem(4*This%ntype))
     ALLOCATE(this%econf(this%ntype))
     ALLOCATE(this%ncv(this%ntype)) ! For what is this?
     ALLOCATE(this%lapw_l(this%ntype)) ! Where do I put this?
@@ -523,5 +552,46 @@ MODULE m_types_atoms
     where (abs(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
     this%pos(:,:) = matmul(cell%amat,this%taual(:,:))
   end subroutine init_atoms
+   SUBROUTINE add_gfjob(nType,lmin,lmax,atoms,l_off,l_inter,l_nn)
 
+         USE m_juDFT
+
+         INTEGER,          INTENT(IN)     :: nType
+         INTEGER,          INTENT(IN)     :: lmin
+         INTEGER,          INTENT(IN)     :: lmax
+         TYPE(t_atoms),    INTENT(INOUT)  :: atoms
+         LOGICAL,          INTENT(IN)     :: l_off !l!=lp
+         LOGICAL,          INTENT(IN)     :: l_inter
+         LOGICAL,          INTENT(IN)     :: l_nn
+
+         INTEGER l,lp,i_gf
+         LOGICAL l_found
+
+         IF(l_inter) CALL juDFT_error("Intersite greens function not yet implemented",calledby="add_gfjob")
+
+         !TODO: add the nearest neighbours jobs
+
+         DO l = lmin, lmax
+            DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
+               !Check if this job has already been added
+               l_found = .FALSE.
+               DO i_gf = 1, atoms%n_gf
+                  IF(atoms%gfelem(i_gf)%l.NE.l) CYCLE
+                  IF(atoms%gfelem(i_gf)%lp.NE.lp) CYCLE
+                  IF(atoms%gfelem(i_gf)%atomType.NE.nType) CYCLE
+                  IF(atoms%gfelem(i_gf)%atomTypep.NE.nType) CYCLE
+                  l_found = .TRUE.
+               ENDDO
+               IF(l_found) CYCLE !This job is already in the array
+
+               atoms%n_gf = atoms%n_gf + 1
+               atoms%gfelem(atoms%n_gf)%l = l
+               atoms%gfelem(atoms%n_gf)%atomType = nType
+               atoms%gfelem(atoms%n_gf)%lp = lp
+               atoms%gfelem(atoms%n_gf)%atomTypep = nType !For now
+
+            ENDDO
+         ENDDO
+
+      END SUBROUTINE add_gfjob
  END MODULE m_types_atoms

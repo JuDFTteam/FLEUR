@@ -27,6 +27,8 @@ MODULE m_types_input
      INTEGER :: coretail_lmax =0
      INTEGER :: itmax =9
      REAL    :: minDistance=1.0e-5
+     REAL    :: minoccDistance !Distances for the density matrix in DFT+Hubbard 1 case
+     REAL    :: minmatDistance
      INTEGER :: maxiter=99
      INTEGER :: imix=7
      INTEGER :: gw=0
@@ -68,6 +70,29 @@ MODULE m_types_input
      LOGICAL :: ldauLinMix=.FALSE.
      REAL    :: ldauMixParam=0.1
      REAL    :: ldauSpinf=2.0
+     LOGICAL :: ldauAdjEnpara
+      LOGICAL :: l_dftspinpol
+      LOGICAL :: l_gfsphavg
+      LOGICAL :: l_gfmperp
+      LOGICAL :: l_resolvent
+      LOGICAL :: l_hist
+      INTEGER :: gf_ne
+      REAL    :: gf_ellow
+      REAL    :: gf_elup
+      INTEGER :: gf_mode
+      INTEGER :: gf_n
+      REAL    :: gf_alpha
+      REAL    :: gf_et
+      REAL    :: gf_eb
+      INTEGER :: gf_n1
+      INTEGER :: gf_n2
+      INTEGER :: gf_n3
+      INTEGER :: gf_nmatsub
+      REAL    :: gf_sigma
+      LOGICAL :: gf_anacont
+      LOGICAL :: gf_dosfermi
+      LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
+      LOGICAL :: gfTet !This switch will be true iff the tetrahedron were calculated from the equdistant grid
      LOGICAL :: l_rdmft=.FALSE.
      REAL    :: rdmftOccEps=0.0
      INTEGER :: rdmftStatesBelow=0
@@ -297,6 +322,8 @@ CONTAINS
        this%ldauLinMix = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_linMix'))
        this%ldauMixParam = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixParam'))
        this%ldauSpinf = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinf'))
+       this%ldauAdjEnpara = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_adjEnpara'))
+
     END IF
     ! Read in RDMFT parameters
     xPathA = '/fleurInput/calculationSetup/rdmft'

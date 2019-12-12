@@ -21,7 +21,7 @@ MODULE m_xcBfield
    PUBLIC :: makeVectorField, sourcefree, correctPot
 
 CONTAINS
-   SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec,icut)
+   SUBROUTINE makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,denmat,factor,aVec)
 
       ! Contructs the exchange-correlation magnetic field from the total poten-
       ! tial matrix or the magnetic density for the density matrix. Only used for
@@ -89,7 +89,7 @@ CONTAINS
 
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,icut,div,phi,cvec,corrB,checkdiv)
+   SUBROUTINE sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,div,phi,cvec,corrB,checkdiv)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
@@ -124,7 +124,7 @@ CONTAINS
 
       TYPE(t_potden)                               :: divloc
       TYPE(t_atoms)                                :: atloc
-      INTEGER                                      :: n, jr, lh, lhmax, jcut, nat
+      INTEGER                                      :: n, jr, lh, lhmax, jcut, nat ,i
       REAL                                         :: xp(3,(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1))
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype, &

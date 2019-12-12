@@ -32,6 +32,5 @@ init/prp_qfft.f90
 init/prp_xcfft.f90
 init/stepf.F90
 init/strgn.f90
-init/postprocessInput.F90
 init/lapw_dim.F90
 )

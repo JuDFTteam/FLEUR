@@ -84,7 +84,7 @@ CONTAINS
       END IF
 
       IF (PRESENT(denMat)) THEN
-         CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,denMat,factor,Avec,icut)
+         CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,denMat,factor,Avec)
          RETURN
       END IF
 
@@ -236,8 +236,8 @@ CONTAINS
       !       whether the sourcefree routine made it sourcefree.
 
       IF (PRESENT(denMat)) THEN
-        CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,1,aVec,icut,denMat,factor)
-        CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,icut,div,phi,cvec,corrB,checkdiv)
+        CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,1,aVec,denMat,factor)
+        CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,div,phi,cvec,corrB,checkdiv)
         CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, aVec, div, phi, cvec, corrB, checkdiv)
       ELSE
         CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,0,aVec)

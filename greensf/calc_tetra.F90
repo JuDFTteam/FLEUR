@@ -17,7 +17,7 @@ MODULE m_calc_tetra
       TYPE(t_input), INTENT(INOUT) :: input
       TYPE(t_sym),   INTENT(IN)    :: sym
       TYPE(t_cell),  INTENT(IN)    :: cell
-
+#ifdef CPP_HENNING
       INTEGER p(0:kpts%nkpt3(1),0:kpts%nkpt3(2),0:kpts%nkpt3(3))
       INTEGER tetra(4,24), ntetra,k1,k2,k3,ikpt,itetra,iarr(3)
       REAL kcorn(8),vol
@@ -100,7 +100,7 @@ MODULE m_calc_tetra
       kpts%voltet = vtet
 
       CALL timestop("Calculation of Tetrahedra")
-
+#endif
    END SUBROUTINE calc_tetra
 
 
@@ -118,7 +118,7 @@ MODULE m_calc_tetra
 
       REAL rlv(3,3),diag(4),d(3)
       INTEGER idmin
-
+#ifdef CPP_HENNING
       !Calculate the lengths of the three diagonals
       rlv(:,1) = cell%bmat(:,1) / kpts%nkpt3
       rlv(:,2) = cell%bmat(:,2) / kpts%nkpt3
@@ -154,6 +154,7 @@ MODULE m_calc_tetra
         tetra(:,ntetra+1:ntetra+6) = reshape ( [ 2,6,4,5, 1,2,4,5, 1,3,4,5, 3,7,4,5, 7,8,4,5, 6,8,4,5 ], [ 4,6 ] )
         ntetra                     = ntetra + 6
       endif
+#endif
    END SUBROUTINE get_tetra
 
    REAL FUNCTION det(m)
@@ -162,6 +163,5 @@ MODULE m_calc_tetra
             m(2,1)*m(3,2)*m(1,3) - m(1,3)*m(2,2)*m(3,1) - &
             m(2,3)*m(3,2)*m(1,1) - m(2,1)*m(1,2)*m(3,3)
    END FUNCTION det
-
 
 END MODULE m_calc_tetra

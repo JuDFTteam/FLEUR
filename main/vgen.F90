@@ -105,7 +105,7 @@ CONTAINS
                       cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
-      CALL vgen_finalize(mpi,dimension,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+      CALL vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)

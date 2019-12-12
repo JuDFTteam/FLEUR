@@ -9,7 +9,7 @@ MODULE m_tlmplm_cholesky
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm_cholesky(sphhar,atoms,sym,noco,enpara,&
-       jspin,jsp,mpi,v,input,td,ud)
+       jspin,mpi,v,input,td,ud)
     USE m_tlmplm
     USE m_types
     USE m_radovlp
@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_enpara),INTENT(IN)   :: enpara
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: jspin,jsp !physical spin&spin index for data
+    INTEGER, INTENT (IN) :: jspin!physical spin&spin index for data
     !     ..
     TYPE(t_potden),INTENT(IN)    :: v
     TYPE(t_tlmplm),INTENT(INOUT) :: td
@@ -32,7 +32,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL temp
-    INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in
+    INTEGER i,l,lm,lmin,lmin0,lmp,lmplm,lp,info,in,jsp
     INTEGER lpl ,mp,n,m,s,i_u
     LOGICAL OK
     !     ..
@@ -44,6 +44,7 @@ CONTAINS
 
 
     !     ..e_shift
+    jsp=jspin
     td%e_shift(:,jsp)=0.0
     IF (jsp<3) td%e_shift(:,jsp)=e_shift_min
 
@@ -65,7 +66,7 @@ CONTAINS
     !$OMP PRIVATE(temp,i,l,lm,lmin,lmin0,lmp)&
     !$OMP PRIVATE(lmplm,lp,m,mp,n)&
     !$OMP PRIVATE(OK,s,in,info)&
-    !$OMP SHARED(atoms,jspin,jsp,sphhar,enpara,td,ud,v,mpi,input,uun21,udn21,dun21,ddn21)
+    !$OMP SHARED(atoms,jspin,jsp,sym,sphhar,enpara,td,ud,v,mpi,input,uun21,udn21,dun21,ddn21)
     DO  n = 1,atoms%ntype
        CALL tlmplm(n,sphhar,atoms,sym,enpara,jspin,jsp,mpi,v,input,td,ud)
        OK=.FALSE.

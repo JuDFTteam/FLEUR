@@ -405,7 +405,7 @@
             <xsd:element name="relPos" type="AtomPosType"/>
             <xsd:element name="absPos" type="AtomPosType"/>
             <xsd:element name="filmPos" type="AtomPosType"/>
-         </xsd:choice> 
+         </xsd:choice>
          <xsd:element maxOccurs="1" minOccurs="0" name="mtSphere" type="MTSphereType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="atomicCutoffs" type="AtomicCutoffsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="energyParameters" type="EnergyParametersType"/>
@@ -645,7 +645,7 @@
       <xsd:attribute default="0.05" name="mixParam" type="xsd:double" use="optional"/>
       <xsd:attribute default="1.00" name="spinf" type="xsd:double" use="optional"/>
       <xsd:attribute default="F" name="l_adjEnpara" type="FleurBool" use="optional"/>
-   </xsd:complexType>   
+   </xsd:complexType>
 
    <xsd:complexType name="LdaHIAGeneralType">
       <xsd:attribute default="100.0" name="beta" type="xsd:double" use="optional"/>

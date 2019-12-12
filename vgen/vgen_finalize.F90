@@ -7,7 +7,7 @@ MODULE m_vgen_finalize
   USE m_juDFT
    USE m_xcBfield
 CONTAINS
-  SUBROUTINE vgen_finalize(mpi,dimension,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+  SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -21,16 +21,15 @@ CONTAINS
     USE m_rotate_mt_den_tofrom_local
     USE m_sfTests
     IMPLICIT NONE
-      TYPE(t_mpi),       INTENT(IN)     :: mpi
-      TYPE(t_dimension), INTENT(IN)     :: dimension
-      TYPE(t_oneD),      INTENT(IN)     :: oneD
-      TYPE(t_field),                INTENT(INOUT)  :: field
-      TYPE(t_cell),      INTENT(IN)     :: cell
+    TYPE(t_mpi),       INTENT(IN)     :: mpi
+    TYPE(t_oneD),      INTENT(IN)     :: oneD
+    TYPE(t_field),                INTENT(INOUT)  :: field
+    TYPE(t_cell),      INTENT(IN)     :: cell
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_stars),INTENT(IN)        :: stars
-    TYPE(t_atoms),INTENT(IN)        :: atoms 
+    TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot
@@ -41,8 +40,8 @@ CONTAINS
       TYPE(t_potden) :: div, phi, checkdiv
       TYPE(t_potden), DIMENSION(3) :: cvec, corrB, bxc
 
-  
-    
+
+
     ! Rescale vTot%pw_w with number of stars
     IF (.NOT.noco%l_noco) THEN
        DO js=1,SIZE(vtot%pw_w,2)
@@ -67,10 +66,10 @@ CONTAINS
        !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)
        !CALL correctPot(vTot,cvec)
     !END IF
-  
+
   !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
-    
- DO js = 1,input%jspins !Used input%jspins instead of SIZE(vtot%mt,4) since the off diag, elements of VTot%mt need no rescaling. 
+
+ DO js = 1,input%jspins !Used input%jspins instead of SIZE(vtot%mt,4) since the off diag, elements of VTot%mt need no rescaling.
        DO n = 1,atoms%ntype
           vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
        ENDDO
@@ -83,7 +82,7 @@ CONTAINS
        END DO
     END DO
 
-    !Copy first vacuum into second vacuum if this was not calculated before 
+    !Copy first vacuum into second vacuum if this was not calculated before
     IF (vacuum%nvac==1) THEN
        vTot%vacz(:,2,:)  = vTot%vacz(:,1,:)
        IF (sym%invs) THEN
@@ -92,6 +91,6 @@ CONTAINS
           vTot%vacxy(:,:,2,:)  = vTot%vacxy(:,:,1,:)
        ENDIF
     ENDIF
- 
+
   END SUBROUTINE vgen_finalize
 END MODULE m_vgen_finalize

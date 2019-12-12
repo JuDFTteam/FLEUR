@@ -21,6 +21,7 @@ MODULE m_types_banddos
      REAL    :: e1_dos=0.5
      REAL    :: e2_dos=-0.5
      REAL    :: sig_dos=0.015
+     INTEGER :: projdos !selects one atomtype and prints the projected dos if there are to many atoms
      REAL    :: e_mcd_lo =-10.0
      REAL    :: e_mcd_up= 0.0
      LOGICAL :: unfoldband =.FALSE.
