@@ -25,7 +25,7 @@ MODULE m_plot
    !------------------------------------------------
 
    PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
-             matrixplot, makeplots, procplot, getMTSphere, savtxt
+             matrixplot, makeplots, procplot, getMTSphere
 
 CONTAINS
 
