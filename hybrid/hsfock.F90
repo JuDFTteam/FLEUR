@@ -7,6 +7,16 @@
 MODULE m_hsfock
 
    USE m_judft
+   USE m_types
+   USE m_intgrf
+   USE m_wrapper
+   USE m_io_hybrid
+   USE m_hsefunctional
+   USE m_symm_hf
+   USE m_exchange_valence_hf
+   USE m_exchange_core
+   USE m_symmetrizeh
+
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 !     This module is the driver routine for the calculation of the Hartree    c
 !     Fock exchange term by using the mixed basis set.                        c
@@ -46,16 +56,6 @@ CONTAINS
 
    SUBROUTINE hsfock(nk, atoms, mpbasis, hybrid, lapw, dimension, kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
                      results, mnobd, xcpot, mpi)
-
-      USE m_types
-      USE m_symm_hf
-      USE m_intgrf, ONLY: intgrf, intgrf_init
-      USE m_exchange_valence_hf
-      USE m_exchange_core
-      USE m_symmetrizeh
-      USE m_wrapper
-      USE m_hsefunctional, ONLY: exchange_vccvHSE, exchange_ccccHSE
-      USE m_io_hybrid
 
       IMPLICIT NONE
 

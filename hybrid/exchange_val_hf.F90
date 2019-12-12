@@ -51,6 +51,10 @@
 
 MODULE m_exchange_valence_hf
 
+   USE m_constants
+   USE m_types
+   USE m_util
+
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
    INTEGER, PARAMETER:: maxmem = 600
 
@@ -60,14 +64,12 @@ CONTAINS
                                   eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, mat_ex)
 
-      USE m_types
       USE m_wrapper
-      USE m_constants
       USE m_trafo
       USE m_wavefproducts
       USE m_olap
       USE m_spmvec
-      USE m_hsefunctional, ONLY: dynamic_hse_adjustment
+      USE m_hsefunctional
       USE m_io_hybrid
       USE m_kp_perturbation
 
@@ -447,10 +449,6 @@ CONTAINS
    END SUBROUTINE exchange_valence_hf
 
    SUBROUTINE calc_divergence(cell, kpts, divergence)
-
-      USE m_util, ONLY: cerf
-      USE m_types
-      USE m_constants
 
       IMPLICIT NONE
 
