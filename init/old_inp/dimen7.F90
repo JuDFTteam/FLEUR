@@ -4,11 +4,11 @@
       SUBROUTINE dimen7(&
      &                  input,sym,stars,&
      &                  atoms,sphhar,dimension,vacuum,&
-     &                  obsolete,kpts,oneD,hybrid,cell)
+     &                  obsolete,kpts,oneD,mpbasis,hybrid,cell)
 
 !
 ! This program reads the input files of the flapw-programm (inp & kpts)
-! and creates a file 'fl7para' that contains dimensions 
+! and creates a file 'fl7para' that contains dimensions
 ! for the main flapw-programm.
 !
 
@@ -35,7 +35,7 @@
 !
       TYPE(t_input),INTENT(INOUT)   :: input
       TYPE(t_sym),INTENT(INOUT)     :: sym
-      TYPE(t_stars),INTENT(INOUT)   :: stars 
+      TYPE(t_stars),INTENT(INOUT)   :: stars
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_sphhar),INTENT(INOUT)  :: sphhar
       TYPE(t_dimension),INTENT(INOUT) :: dimension
@@ -43,9 +43,10 @@
       TYPE(t_obsolete),INTENT(INOUT) :: obsolete
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
+      TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_cell),INTENT(INOUT)     :: cell
- 
+
       TYPE(t_noco)      :: noco
       TYPE(t_sliceplot) :: sliceplot
       TYPE(t_banddos)   :: banddos
@@ -55,23 +56,23 @@
 !
 !-------------------------------------------------------------------
 ! ..  Local Scalars ..
-      REAL   :: thetad,xa,epsdisp,epsforce ,rmtmax,arltv1,arltv2,arltv3   
+      REAL   :: thetad,xa,epsdisp,epsforce ,rmtmax,arltv1,arltv2,arltv3
       REAL   :: s,r,d ,idsprs
       INTEGER :: ok,ilo,n,nstate,i,j,na,n1,n2,jrc,nopd,symfh
       INTEGER :: nmopq(3)
-      
+
       CHARACTER(len=1) :: rw
-      CHARACTER(len=4) :: namex 
+      CHARACTER(len=4) :: namex
       CHARACTER(len=7) :: symfn
       CHARACTER(len=12):: relcor
       LOGICAL  ::l_kpts,l_qpts,l_inpexist,l_tmp(2)
 ! ..
-      REAL    :: a1(3),a2(3),a3(3)  
+      REAL    :: a1(3),a2(3),a3(3)
       REAL    :: q(3)
 
       CHARACTER(len=3), ALLOCATABLE :: noel(:)
-      LOGICAL, ALLOCATABLE :: error(:) 
-     
+      LOGICAL, ALLOCATABLE :: error(:)
+
       INTEGER ntp1,ii
       INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
 
@@ -80,8 +81,8 @@
 
       EXTERNAL prp_xcfft_box,parawrite
 !     ..
-      
-    
+
+
 !---> First, check whether an inp-file exists
 !
       INQUIRE (file='inp',exist=l_inpexist)
@@ -110,18 +111,18 @@
      & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
      & hybrid%lcutwf(atoms%ntype), STAT=ok)
 !
-!---> read complete input and calculate nvacd,llod,lmaxd,jmtd,neigd and 
+!---> read complete input and calculate nvacd,llod,lmaxd,jmtd,neigd and
 !
       CALL rw_inp('r',&
      &            atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+     &                  cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,&
      &                  noel,namex,relcor,a1,a2,a3)
 
 !---> pk non-collinear
 !---> read the angle and spin-spiral information from nocoinp
       noco%qss = 0.0
       noco%l_ss = .false.
-      IF (noco%l_noco) THEN 
+      IF (noco%l_noco) THEN
          CALL inpnoco(atoms,input,vacuum,noco)
       ENDIF
 
@@ -163,8 +164,8 @@
         DIMENSION%neigd = MAX(5,NINT(0.75*input%zelec))
         WRITE(6,*) 'changed dimension%neigd to ',dimension%neigd
       ENDIF
-      IF (noco%l_soc .and. (.not. noco%l_noco)) dimension%neigd=2*dimension%neigd 
-      IF (noco%l_soc .and. noco%l_ss) dimension%neigd=(3*dimension%neigd)/2  
+      IF (noco%l_soc .and. (.not. noco%l_noco)) dimension%neigd=2*dimension%neigd
+      IF (noco%l_soc .and. noco%l_ss) dimension%neigd=(3*dimension%neigd)/2
        ! not as accurate, but saves much time
 
       rmtmax = rmtmax*stars%gmax
@@ -181,7 +182,7 @@
             jrc = jrc + 1
             r = r*d
          ENDDO
-         dimension%msh = max( dimension%msh, jrc ) 
+         dimension%msh = max( dimension%msh, jrc )
       ENDDO
 !
 ! ---> now, set the lattice harmonics, determine nlhd
@@ -195,7 +196,7 @@
       IF (oneD%odd%d1) cell%omtil = cell%amat(3,3)*pimach()*(vacuum%dvac**2)/4.
 !+odim
       cell%bmat=tpi_const*cell%bmat
-    
+
       na = 0
       DO n = 1,atoms%ntype
         DO n1 = 1,atoms%neq(n)
@@ -236,7 +237,7 @@
               atoms%nat,ntp1,nq1,cell%amat,cell%bmat,atoms%taual,&
               sphhar%nlhd,sphhar%memd,sphhar%ntypsd,.true.,nlhtp1,&
               atoms%ntypsy,sphhar%nlh,sphhar%llh,sphhar%nmem,&
-              sphhar%mlh,sphhar%clnu)        
+              sphhar%mlh,sphhar%clnu)
         ii = 1
         DO i = 1,atoms%ntype
           atoms%nlhtyp(i) = nlhtp1(ii)
@@ -248,23 +249,23 @@
 !
 ! Check if symmetry is compatible with SOC or SSDW
 !
-      IF (noco%l_soc .and. (.not.noco%l_noco)) THEN  
+      IF (noco%l_soc .and. (.not.noco%l_noco)) THEN
         ! test symmetry for spin-orbit coupling
         ALLOCATE ( error(sym%nop) )
         CALL soc_sym(sym%nop,sym%mrot,noco%theta,noco%phi,cell%amat,error)
         IF ( ANY(error(:)) ) THEN
           WRITE(*,fmt='(1x)')
-          WRITE(*,fmt='(A)') 'Symmetry incompatible with SOC spin-quantization axis ,'  
-          WRITE(*,fmt='(A)') 'do not perform self-consistent calculations !'    
+          WRITE(*,fmt='(A)') 'Symmetry incompatible with SOC spin-quantization axis ,'
+          WRITE(*,fmt='(A)') 'do not perform self-consistent calculations !'
           WRITE(*,fmt='(1x)')
           IF ( input%eonly .or. (noco%l_soc.and.noco%l_ss) .or. input%gw.ne.0 ) THEN  ! .or. .
-            CONTINUE 
-          ELSE 
+            CONTINUE
+          ELSE
             IF (input%itmax>1) THEN
                CALL juDFT_error("symmetry & SOC",calledby ="dimen7")
-            ENDIF 
-          ENDIF 
-        ENDIF           
+            ENDIF
+          ENDIF
+        ENDIF
         DEALLOCATE ( error )
       ENDIF
       IF (noco%l_ss) THEN  ! test symmetry for spin-spiral
@@ -330,7 +331,7 @@
           ENDIF
         ENDIF
       ENDIF
-      
+
       dimension%neigd = max(dimension%neigd,input%gw_neigd)
 
 !

@@ -8,7 +8,7 @@ MODULE m_subvxc
 
 CONTAINS
 
-   SUBROUTINE subvxc(lapw, bk, DIMENSION, input, jsp, vr0, atoms, usdus, hybrid, el, ello, sym, &
+   SUBROUTINE subvxc(lapw, bk, DIMENSION, input, jsp, vr0, atoms, usdus, mpbasis, hybrid, el, ello, sym, &
                      cell, sphhar, stars, xcpot, mpi, oneD, hmat, vx)
 
       USE m_types
@@ -28,6 +28,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_oneD), INTENT(IN)    :: oneD
+      TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -44,10 +45,10 @@ CONTAINS
       INTEGER, INTENT(IN) :: jsp
 
       ! Array Arguments
-      REAL, INTENT(IN) :: vr0(atoms%jmtd, atoms%ntype, input%jspins)               ! just for radial functions
+      REAL, INTENT(IN) :: vr0(:,:,:)               ! just for radial functions
       REAL, INTENT(IN) :: el(0:atoms%lmaxd, atoms%ntype, input%jspins)
-      REAL, INTENT(IN) :: ello(atoms%nlod, atoms%ntype, input%jspins)
-      REAL, INTENT(IN) :: bk(3)
+      REAL, INTENT(IN) :: ello(:,:,:)
+      REAL, INTENT(IN) :: bk(:)
 
       ! Local Scalars
       INTEGER               ::  ic, indx, m, ig1, ig2, n, nn
@@ -68,7 +69,7 @@ CONTAINS
       INTEGER               ::  gg(3)
       INTEGER               ::  pointer_lo(atoms%nlod, atoms%ntype)
 
-      REAL                  ::  integ(0:sphhar%nlhd, hybrid%maxindx, 0:atoms%lmaxd, hybrid%maxindx, 0:atoms%lmaxd)
+      REAL                  ::  integ(0:sphhar%nlhd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
       REAL                  ::  grid(atoms%jmtd)
       REAL                  ::  vr(atoms%jmtd, 0:sphhar%nlhd)
       REAL                  ::  f(atoms%jmtd, 2, 0:atoms%lmaxd), g(atoms%jmtd, 2, 0:atoms%lmaxd)
@@ -76,8 +77,8 @@ CONTAINS
       REAL                  ::  uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
       REAL                  ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
 
-      REAL                  ::  bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
-      REAL                  ::  bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype)
+      REAL                  ::  bas1(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
+      REAL                  ::  bas2(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX               ::  vpw(stars%ng3)
       COMPLEX               ::  vxc(hmat%matsize1*(hmat%matsize1 + 1)/2)
@@ -98,7 +99,7 @@ CONTAINS
       vxc = 0
 
       ! Calculate radial functions
-      hybrid%nindx = 2
+      mpbasis%num_radfun_per_l = 2
       DO itype = 1, atoms%ntype
 
          ! Generate the radial basis-functions for each l
@@ -107,7 +108,7 @@ CONTAINS
          WRITE (6, '(a)') '  l    energy            value        '// &
             'derivative    nodes          value        derivative    nodes       norm        wronskian'
          DO l = 0, atoms%lmax(itype)
-            CALL radfun(l, itype, jsp, el(l, itype, jsp), vr0(1, itype, jsp), atoms, f(1, 1, l), g(1, 1, l), usdus, nodeu, noded, wronk)
+            CALL radfun(l, itype, jsp, el(l, itype, jsp), vr0(:, itype, jsp), atoms, f(1, 1, l), g(1, 1, l), usdus, nodeu, noded, wronk)
             WRITE (6, FMT=8010) l, el(l, itype, jsp), usdus%us(l, itype, jsp), &
                usdus%dus(l, itype, jsp), nodeu, usdus%uds(l, itype, jsp), usdus%duds(l, itype, jsp), noded, &
                usdus%ddn(l, itype, jsp), wronk
@@ -121,14 +122,14 @@ CONTAINS
 
          ! Generate the extra radial basis-functions for the local orbitals, if there are any.
          IF (atoms%nlo(itype) >= 1) THEN
-            CALL radflo(atoms, itype, jsp, ello(1, 1, jsp), vr0(1, itype, jsp), f, g, mpi, &
+            CALL radflo(atoms, itype, jsp, ello(:,:, jsp), vr0(:, itype, jsp), f, g, mpi, &
                         usdus, uuilon, duilon, ulouilopn, flo, .TRUE.)
 
             DO i = 1, atoms%nlo(itype)
-               hybrid%nindx(atoms%llo(i, itype), itype) = hybrid%nindx(atoms%llo(i, itype), itype) + 1
-               pointer_lo(i, itype) = hybrid%nindx(atoms%llo(i, itype), itype)
-               bas1(:, hybrid%nindx(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 1, i)
-               bas2(:, hybrid%nindx(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 2, i)
+               mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype) = mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype) + 1
+               pointer_lo(i, itype) = mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype)
+               bas1(:, mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 1, i)
+               bas2(:, mpbasis%num_radfun_per_l(atoms%llo(i, itype), itype), atoms%llo(i, itype), itype) = flo(:, 2, i)
             END DO
          END IF
       END DO
@@ -136,13 +137,13 @@ CONTAINS
       ! Compute APW coefficients
 
       ! Calculate bascof
-      ALLOCATE (ahlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), bhlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'subvxc: error in allocation of ahlp/bhlp'
+      allocate(ahlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), bhlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), stat=ok)
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of ahlp/bhlp')
 #ifndef CPP_OLDINTEL
       CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, ahlp, bhlp, bascof_lo)
 #endif
-      ALLOCATE (bascof(DIMENSION%nvd, 2*(DIMENSION%lmd + 1), atoms%nat), stat=ok)
-      IF (ok /= 0) STOP 'subvxc: error in allocation of bascof'
+      allocate(bascof(DIMENSION%nvd, 2*(DIMENSION%lmd + 1), atoms%nat), stat=ok)
+      IF (ok /= 0) call judft_error('subvxc: error in allocation of bascof')
 
       bascof = 0
       ic = 0
@@ -167,7 +168,7 @@ CONTAINS
          END DO
       END DO
 
-      DEALLOCATE (ahlp, bhlp)
+      deallocate(ahlp, bhlp)
 
       ! Loop over atom types
       iatom = 0
@@ -258,7 +259,7 @@ CONTAINS
                DO i = 1, j
                   ic = ic + 1
                   vxc(ic) = vxc(ic) + carr1(i, j)
-                  ! vxc(ic) = vxc(ic) + conjg(dotprod ( bascof(i,:nnbas,iatom),carr(:nnbas) ))
+                  ! vxc(ic) = vxc(ic) + conjg(dot_product ( bascof(i,:nnbas,iatom),carr(:nnbas) ))
                END DO
             END DO
          END DO
@@ -276,17 +277,14 @@ CONTAINS
       DO ig1 = 1, lapw%nv(jsp)
          DO ig2 = 1, ig1
             ic = ic + 1
-            gg(1) = lapw%k1(ig1, jsp) - lapw%k1(ig2, jsp)
-            gg(2) = lapw%k2(ig1, jsp) - lapw%k2(ig2, jsp)
-            gg(3) = lapw%k3(ig1, jsp) - lapw%k3(ig2, jsp)
+            gg = lapw%gvec(:,ig1,jsp) - lapw%gvec(:,ig2,jsp)
             istar = stars%ig(gg(1), gg(2), gg(3))
             IF (istar /= 0) THEN
                vxc(ic) = vxc(ic) + stars%rgphs(gg(1), gg(2), gg(3))*vpw(istar)
             ELSE
                IF (mpi%irank == 0) THEN
                   WRITE (6, '(A,/6I5)') 'Warning: Gi-Gj not in any star:', &
-                     lapw%k1(ig1, jsp), lapw%k2(ig1, jsp), lapw%k3(ig1, jsp), &
-                     lapw%k1(ig2, jsp), lapw%k2(ig2, jsp), lapw%k3(ig2, jsp)
+                     lapw%gvec(:,ig1, jsp), lapw%gvec(:,ig2, jsp)
                END IF
             END IF
          END DO
@@ -323,11 +321,11 @@ CONTAINS
             DO ilharm = 0, nlharm
                i = 0
                DO l1 = 0, atoms%lmax(itype)
-                  DO p1 = 1, hybrid%nindx(l1, itype)
+                  DO p1 = 1, mpbasis%num_radfun_per_l(l1, itype)
                      i = i + 1
                      j = 0
                      DO l2 = 0, atoms%lmax(itype)
-                        DO p2 = 1, hybrid%nindx(l2, itype)
+                        DO p2 = 1, mpbasis%num_radfun_per_l(l2, itype)
                            j = j + 1
                            IF (j <= i) THEN
                               DO igrid = 1, atoms%jri(itype)
@@ -352,7 +350,7 @@ CONTAINS
 
                   DO ilo = 1, atoms%nlo(itype)
 #ifdef CPP_OLDINTEL
-                     CALL judft_error("no LOs & hybrid with old intel compiler!", calledby="subvxc.F90")
+                     CALL judft_error("no LOs   hybrid with old intel compiler!", calledby="subvxc.F90")
 #else
                      l1 = atoms%llo(ilo, itype)
                      DO ikvec = 1, invsfct*(2*l1 + 1)
@@ -364,7 +362,7 @@ CONTAINS
                                  pp1 = p1
                               END IF
 
-                              IF (hybrid%nindx(l1, itype) <= 2) STOP 'subvxc: error hybrid%nindx'
+                              IF (mpbasis%num_radfun_per_l(l1, itype) <= 2) call judft_error('subvxc: error mpbasis%num_radfun_per_l')
 
                               lm = 0
 
@@ -403,7 +401,7 @@ CONTAINS
                               END DO ! l2 ->  loop over APW
 
                               ! calcualte matrix-elements with local orbitals at the same atom
-                              IF (ic /= icentry + lapw%nv(jsp)) STOP 'subvxc: error counting ic'
+                              IF (ic /= icentry + lapw%nv(jsp)) call judft_error('subvxc: error counting ic')
 
                               ic = ic + ikvecprevat
 
@@ -511,8 +509,7 @@ CONTAINS
 
       CALL timestop("subvxc")
 
-      DEALLOCATE (bascof)
+      deallocate(bascof)
 
    END SUBROUTINE subvxc
 END MODULE m_subvxc
-

@@ -1,13 +1,13 @@
 MODULE m_gradYlm
+   IMPLICIT NONE
 
 CONTAINS
 
-  ! Not from me, taken from Spex, ask Christoph! Calculates derivative of a function with scalar argument lying on a muffin-tin mesh
+  ! Derivative routine from Spex.
+  ! Calculates derivative of a function with scalar argument lying on a muffin-tin mesh
   subroutine Derivative(f, itype, atoms, df)
 
     use m_types
-
-    implicit none
 
      type(t_atoms), intent(in)  :: atoms
 
@@ -87,8 +87,6 @@ CONTAINS
     use m_gaunt, only : gaunt1
     use m_types
     USE m_grdchlh
-
-    implicit none
 
     ! Type parameter
     ! ***************

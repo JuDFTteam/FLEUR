@@ -15,7 +15,6 @@ math/points.f
 math/qsf.f
 math/sphbes.f
 math/sphpts.f
-math/util.F
 math/difcub.f
 )
 set(fleur_F90 ${fleur_F90}

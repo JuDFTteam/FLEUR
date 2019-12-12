@@ -13,7 +13,7 @@ CONTAINS
   SUBROUTINE dimens(&
        &                  mpi,input,sym,stars,&
        &                  atoms,sphhar,dimension,vacuum,&
-       &                  obsolete,kpts,oneD,hybrid)
+       &                  obsolete,kpts,oneD,mpbasis,hybrid)
 
     USE m_types
     USE m_dimen7
@@ -23,7 +23,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(INOUT) :: mpi
     TYPE(t_input),INTENT(INOUT) :: input
     TYPE(t_sym),INTENT(INOUT) :: sym
-    TYPE(t_stars),INTENT(INOUT) :: stars 
+    TYPE(t_stars),INTENT(INOUT) :: stars
     TYPE(t_atoms),INTENT(INOUT) :: atoms
     TYPE(t_sphhar),INTENT(INOUT) :: sphhar
     TYPE(t_dimension),INTENT(INOUT) :: dimension
@@ -31,8 +31,9 @@ CONTAINS
     TYPE(t_obsolete),INTENT(INOUT) :: obsolete
     TYPE(t_kpts),INTENT(INOUT) :: kpts
     TYPE(t_oneD),INTENT(INOUT) :: oneD
+    TYPE(t_mpbasis), intent(inout) :: mpbasis
     TYPE(t_hybrid),INTENT(INOUT) :: hybrid
- 
+
     TYPE(t_cell)     :: cell
 
     LOGICAL l_kpts,l_qpts,l_inpexist,ldum
@@ -60,7 +61,7 @@ CONTAINS
        CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n10)
 
        CALL dimen7(input,sym,stars,atoms,sphhar,dimension,vacuum,obsolete,kpts,&
-                   oneD,hybrid,cell)
+                   oneD,mpbasis,hybrid,cell)
     ENDIF
     !     in case of a parallel calculation we have to broadcast
 #ifdef CPP_MPI

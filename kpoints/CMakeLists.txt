@@ -4,7 +4,6 @@ kpoints/brzone.f
 kpoints/divi.f
 kpoints/fulstar.f
 kpoints/kprep.f
-kpoints/kptgen_hybrid.f
 kpoints/kptmop.f
 kpoints/kpttet.f
 kpoints/kvecon.f
@@ -20,4 +19,5 @@ kpoints/kpoints.f90
 kpoints/unfoldBandKPTS.f90
 kpoints/gen_bz.F90
 kpoints/brzone2.f90
+kpoints/kptgen_hybrid.f90
 )

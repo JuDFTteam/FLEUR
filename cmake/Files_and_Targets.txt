@@ -41,30 +41,33 @@ include(wannier/uhu/CMakeLists.txt)
 include(forcetheorem/CMakeLists.txt)
 include(rdmft/CMakeLists.txt)
 include(kpoints/CMakeLists.txt)
+include(ldahia/CMakeLists.txt)
+include(greensf/CMakeLists.txt)
+include(tetra/CMakeLists.txt)
 
 
 include(tests/tests_old.cmake)
 #include(tests/tests_new.cmake)
 
-set(inpgen_F77 ${inpgen_F77} 
+set(inpgen_F77 ${inpgen_F77}
 inpgen/element.f inpgen/atom_input.f inpgen/crystal.f inpgen/lattice2.f inpgen/setab.f inpgen/super_check.f
 inpgen/atom_sym.f inpgen/generator.f inpgen/read_record.f inpgen/soc_or_ssdw.f inpgen/symproperties.f
 inpgen/bravais_symm.f  inpgen/set_atom_core.f inpgen/spg_gen.f global/triang.f
 inpgen/lapw_input.f  inpgen/struct_input.f inpgen/write_struct.f
 io/calculator.f global/ss_sym.f global/soc_sym.f math/inv3.f  io/rw_symfile.f
-kpoints/kptgen_hybrid.f kpoints/od_kptsgen.f kpoints/bravais.f kpoints/divi.f kpoints/brzone.f
+kpoints/od_kptsgen.f kpoints/bravais.f kpoints/divi.f kpoints/brzone.f
 kpoints/kptmop.f kpoints/kpttet.f init/bandstr1.F kpoints/ordstar.f kpoints/fulstar.f kpoints/kprep.f
 kpoints/tetcon.f kpoints/kvecon.f init/boxdim.f global/radsra.f global/differ.f math/inwint.f
 math/outint.f)
 
 set(inpgen_F90  ${inpgen_F90} global/constants.f90 io/xsf_io.f90
-eigen/orthoglo.F90  math/ylm4.F90 mpi/mpi_bc_tool.F90
+eigen/orthoglo.F90  math/ylm4.F90 mpi/mpi_bc_tool.F90 kpoints/kptgen_hybrid.f90
 global/sort.f90 global/chkmt.f90 inpgen/inpgen.f90 inpgen/set_inp.f90 inpgen/inpgen_help.f90 io/rw_inp.f90  global/find_enpara.f90
 inpgen/closure.f90  math/intgr.F90
-io/w_inpXML.f90 kpoints/julia.f90 global/utility.F90 
+io/w_inpXML.f90 kpoints/julia.f90 global/utility.F90
 init/compile_descr.F90 kpoints/kpoints.f90 io/xmlOutput.F90 kpoints/brzone2.f90 cdn/slab_dim.f90 cdn/slabgeom.f90 dos/nstm3.f90 cdn/int_21.f90
 cdn/int_21lo.f90 cdn_mt/rhomt21.f90 cdn_mt/rhonmt21.f90 force/force_a21.F90 force/force_a21_lo.f90 force/force_a21_U.f90 force/force_a12.f90
-eigen/tlmplm_store.F90 xc-pot/gaunt.f90 kpoints/unfoldBandKPTS.f90 math/grule.f90)
+eigen/tlmplm_store.F90 xc-pot/gaunt.f90 kpoints/unfoldBandKPTS.f90 math/ExpSave.f90 greensf/ind_greensf.f90 math/grule.f90 hybrid/util/intgrf.f90 hybrid/util/rorder.f90 hybrid/util/util.f90)
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 
@@ -107,13 +110,13 @@ set_target_properties(inpgen PROPERTIES Fortran_MODULE_DIRECTORY modules/inpgen 
 include(cmake/docker.txt)
 
 
-#if (${FLEUR_USE_SERIAL})        
-#install(TARGETS fleur inpgen 
+#if (${FLEUR_USE_SERIAL})
+#install(TARGETS fleur inpgen
 #        CONFIGURATIONS Release
 #        DESTINATION bin)
 #endif()
-#if (${FLEUR_USE_MPI})        
-#install(TARGETS fleur_MPI 
+#if (${FLEUR_USE_MPI})
+#install(TARGETS fleur_MPI
 #        CONFIGURATIONS Release
 #        DESTINATION bin)
 #endif()

@@ -61,7 +61,7 @@ contains
     real                              :: green_factor, termsR
     real                              :: green_1    (1:atoms%jmtd), green_2    (1:atoms%jmtd)
     real                              :: integrand_1(1:atoms%jmtd), integrand_2(1:atoms%jmtd)
-    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)
+    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)!, integral_3 (1:atoms%jmtd)
     real                              :: sbf(0:atoms%lmaxd)
     real, allocatable, dimension(:,:) :: il, kl
     
@@ -168,24 +168,26 @@ contains
         end if
         integrand_1(1:imax) = green_1(1:imax) * rho(1:imax,lh,n)
         integrand_2(1:imax) = green_2(1:imax) * rho(1:imax,lh,n)
-        call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
-        call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        if (.not.dosf) THEN
+         call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
+         call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
         ! Source-free testwise
-        !if (dosf) then
+        else
            !if (l==5) THEN
-            !  integrand_2(1:300)=integrand_2(1:300)*(atoms%rmsh(1:300,n)/atoms%rmsh(300,n))**l
-           !end if
-           !call intgrt(integrand_1(1:imax),atoms%rmsh(:,n),imax,integral_1(1:imax))
-           !call intgrt(integrand_2(1:imax),atoms%rmsh(:,n),imax,integral_2(1:imax))
-           !vtl(lh,n)=(0.0,0.0)
+            !  integrand_2(1:300)=integrand_2(1:300)*(atoms%rmsh(1:300,n)/atoms%rmsh(300,n))**(4*l)
+          !end if
+           call intgrtlog(integrand_1(1:imax),atoms%rmsh(:,n),imax,integral_1(1:imax))
+           call intgrtlog(integrand_2(1:imax),atoms%rmsh(:,n),imax,integral_2(1:imax))
            !call intgr4(integrand_1(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_1(1:imax))
            !call intgr4(integrand_2(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_2(1:imax))
            !call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
            !call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
-        !end if
+           !integral_3(1:imax)=(integral_2(imax)-integral_2(1:imax))*green_1(imax)
+        end if
         termsR = integral_2(imax) + ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
         vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )
+
       end do
       nat = nat + atoms%neq(n)
     end do

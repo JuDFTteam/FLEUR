@@ -148,8 +148,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
 
    ! for LDA+U: flip density matrix
-   IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u>0) THEN
-      DO i_u = 1, atoms%n_u
+   IF (ANY(den%mmpMat(:,:,:,:).NE.0.0).AND.atoms%n_u+atoms%n_hia>0) THEN
+      DO i_u = 1, atoms%n_u+atoms%n_hia
          itype = atoms%lda_u(i_u)%atomType
         IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
             DO m = -3,3

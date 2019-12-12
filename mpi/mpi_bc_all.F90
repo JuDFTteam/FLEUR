@@ -10,7 +10,7 @@ CONTAINS
        mpi,stars,sphhar,atoms,obsolete,sym,&
        kpts,DIMENSION,input,field,banddos,sliceplot,&
        vacuum,cell,enpara,noco,oneD,&
-        hybrid)
+       mpbasis, hybrid, hub1)
     !
     !**********************************************************************
     USE m_types
@@ -19,6 +19,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(INOUT)        :: mpi
     TYPE(t_dimension),INTENT(INOUT)  :: dimension
     TYPE(t_oneD),INTENT(INOUT)       :: oneD
+    TYPE(t_mpbasis), intent(inout)   :: mpbasis
     TYPE(t_hybrid),INTENT(INOUT)     :: hybrid
     TYPE(t_enpara),INTENT(INOUT)     :: enpara
     TYPE(t_obsolete),INTENT(INOUT)   :: obsolete
@@ -34,37 +35,38 @@ CONTAINS
     TYPE(t_kpts),INTENT(INOUT)       :: kpts
     TYPE(t_sphhar),INTENT(INOUT)     :: sphhar
     TYPE(t_atoms),INTENT(INOUT)      :: atoms
+    TYPE(t_hub1ham),INTENT(INOUT)    :: hub1
     !     .. Scalar Arguments ..
     INTEGER n
     REAL rdum
     !     .. Local Arrays ..
-    INTEGER i(45),ierr(3)
+    INTEGER i(47),ierr(3)
     REAL    r(34)
-    LOGICAL l(46)
+    LOGICAL l(48)
     !     ..
     !     .. External Subroutines..
-#ifdef CPP_MPI    
+#ifdef CPP_MPI
     EXTERNAL MPI_BCAST
 
     call priv_mpi_bc_stars(mpi,stars)
-    
+
     IF (mpi%irank.EQ.0) THEN
        i(1)=1 ; i(2)=input%coretail_lmax;i(3)=atoms%ntype  ; i(5)=1
-       i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr 
+       i(7)=stars%ng2 ; i(8)=stars%ng3 ; i(9)=vacuum%nmz ; i(10)=vacuum%nmzxy ; i(11)=obsolete%lepr
        i(12)=input%jspins ; i(13)=vacuum%nvac ; i(14)=input%itmax ; i(15)=sliceplot%kk ; i(16)=vacuum%layers
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
        i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = stars%kimax ; i(26) = stars%kimax2
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
-       i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp 
+       i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp
        i(35)=hybrid%bands1 ; i(36)=input%maxiter ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
        i(39)=input%kcrel;i(40)=banddos%s_cell_x;i(41)=banddos%s_cell_y;i(42)=banddos%s_cell_z; i(43)=sliceplot%iplot
-       i(44)=atoms%nlotot;i(45)=dimension%nbasfcn
+       i(44)=atoms%nlotot;i(45)=dimension%nbasfcn;i(46)=atoms%n_hia;i(47)=atoms%n_gf
 
        r(1)=cell%omtil ; r(2)=cell%area ; r(3)=vacuum%delz ; r(4)=cell%z1 ; r(5)=input%alpha
-       r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta; r(9)=noco%phi; r(10)=vacuum%tworkf 
+       r(6)=sliceplot%e1s ; r(7)=sliceplot%e2s ; r(8)=noco%theta; r(9)=noco%phi; r(10)=vacuum%tworkf
        r(11)=vacuum%locx(1) ; r(12)=vacuum%locx(2); r(13)=vacuum%locy(1) ; r(14)=vacuum%locy(2)
        r(15)=input%sigma ; r(16)=field%efield%zsigma ; r(17)=noco%mix_b; r(18)=cell%vol
-       r(19)=cell%volint ; r(20)=hybrid%gcutm1 ; r(21)=hybrid%tolerance1 ; r(22)=0.0
+       r(19)=cell%volint ; r(20)=mpbasis%g_cutoff ; r(21)=mpbasis%linear_dep_tol ; r(22)=0.0
        r(23)=0.0 ; r(24)=input%delgau ; r(25)=input%tkb ; r(26)=field%efield%vslope
        r(27)=0.0 ; r(28)=0.0!r(27)=aMix_VHSE() ; r(28)=omega_VHSE()
        r(29)=input%minDistance ; r(30)=obsolete%chng ; r(31)=input%ldauMixParam ; r(32)=input%ldauSpinf
@@ -73,7 +75,7 @@ CONTAINS
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
        l(11)=banddos%dos ; l(12) = hybrid%l_hybrid ; l(13)=banddos%vacdos ; l(14)=input%integ; l(15)=noco%l_spav
-       l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip 
+       l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
        l(29)=oneD%odd%d1 ; l(32)=input%ctail ; l(33)=banddos%l_orb
@@ -81,27 +83,27 @@ CONTAINS
        l(38)=field%efield%l_segmented
        l(39)=sym%symor ; l(40)=input%frcor ; l(41)=input%tria ; l(42)=field%efield%dirichlet
        l(43)=field%efield%l_dirichlet_coeff ; l(44)=input%l_coreSpec ; l(45)=input%ldauLinMix
-       l(46)=input%l_removeMagnetisationFromInterstitial
-       
+       l(46)=input%l_removeMagnetisationFromInterstitial; l(47)=input%ldauAdjEnpara ; l(48)=banddos%band
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
     hybrid%bands1=i(35) ;  input%imix=i(37);input%maxiter=i(36)
     input%gw=i(31) ; input%gw_neigd=i(32) ; hybrid%ewaldlambda=i(33) ; hybrid%lexp=i(34)
     vacuum%nstars=i(27) ; vacuum%nstm=i(28) ; oneD%odd%nq2=i(29) ; oneD%odd%nop=i(30)
-    atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24) 
+    atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24)
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
     input%jspins=i(12) ; vacuum%nvac=i(13) ; input%itmax=i(14) ; sliceplot%kk=i(15) ; vacuum%layers=i(16)
     stars%ng2=i(7) ; stars%ng3=i(8) ; vacuum%nmz=i(9) ; vacuum%nmzxy=i(10) ; obsolete%lepr=i(11)
-     atoms%ntype=i(3) ; banddos%orbCompAtom=i(38);banddos%s_cell_x=i(40);banddos%s_cell_y=i(41);banddos%s_cell_z=i(42) ;sliceplot%iplot=i(43)
-     input%coretail_lmax=i(2) ; input%kcrel=i(39)
-     stars%kimax=i(25);stars%kimax2=i(26)
+    atoms%ntype=i(3) ; banddos%orbCompAtom=i(38);banddos%s_cell_x=i(40);banddos%s_cell_y=i(41);banddos%s_cell_z=i(42);sliceplot%iplot=i(43)
+    input%coretail_lmax=i(2) ; input%kcrel=i(39)
+    stars%kimax=i(25);stars%kimax2=i(26)
     atoms%nlotot=i(44);dimension%nbasfcn=i(45)
+    atoms%n_hia=i(46);atoms%n_gf=i(47)
     !
     CALL MPI_BCAST(r,SIZE(r),MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     input%minDistance=r(29) ; obsolete%chng=r(30)
     input%delgau=r(24) ; input%tkb=r(25) ; field%efield%vslope=r(26)
-    cell%volint=r(19) ; hybrid%gcutm1=r(20) ; hybrid%tolerance1=r(21) 
+    cell%volint=r(19) ; mpbasis%g_cutoff=r(20) ; mpbasis%linear_dep_tol=r(21)
     input%sigma=r(15) ; field%efield%zsigma=r(16); noco%mix_b=r(17); cell%vol=r(18);
     vacuum%locx(1)=r(11); vacuum%locx(2)=r(12); vacuum%locy(1)=r(13); vacuum%locy(2)=r(14)
     sliceplot%e1s=r(6) ; sliceplot%e2s=r(7) ; noco%theta=r(8); noco%phi=r(9); vacuum%tworkf=r(10)
@@ -115,16 +117,16 @@ CONTAINS
     oneD%odd%d1=l(29) ; input%ctail=l(32)
     noco%l_noco=l(25) ; noco%l_ss=l(26) ; noco%l_mperp=l(27) ; noco%l_constr=l(28)
     input%pallst=l(21) ; sliceplot%slice=l(22) ; noco%l_soc=l(23) ; vacuum%starcoeff=l(24)
-    input%strho=l(16) ; input%swsp=l(17) ; input%lflip=l(18)  
+    input%strho=l(16) ; input%swsp=l(17) ; input%lflip=l(18)
     banddos%dos=l(11) ; hybrid%l_hybrid=l(12) ; banddos%vacdos=l(13) ; banddos%l_orb=l(33) ; banddos%l_mcd=l(34)
-    input%integ=l(14) 
+    input%integ=l(14)
     sym%invs=l(6) ; sym%invs2=l(7) ; input%l_bmt=l(8) ; input%l_f=l(9) ; input%cdinf=l(10)
     input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
     field%efield%l_segmented = l(38) ; sym%symor=l(39); field%efield%dirichlet = l(40)
     field%efield%l_dirichlet_coeff = l(41) ; input%l_coreSpec=l(44) ; input%ldauLinMix=l(45)
     banddos%unfoldband=l(35)
     noco%l_mtNocoPot=l(36)
-    noco%l_spav=l(15)
+    noco%l_spav=l(15); input%ldauAdjEnpara=l(47); banddos%band=l(48)
     input%l_removeMagnetisationFromInterstitial=l(46)
     !
     ! -> Broadcast the arrays:
@@ -143,8 +145,8 @@ CONTAINS
        CALL MPI_BCAST (field%efield%C1,n,MPI_REAL,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST (field%efield%C2,n,MPI_REAL,0,mpi%mpi_comm,ierr)
     END IF
-   
-   
+
+
     n = sphhar%memd*(sphhar%nlhd+1)*sphhar%ntypsd
     CALL MPI_BCAST(sphhar%clnu,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sphhar%mlh,n,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -162,7 +164,7 @@ CONTAINS
     CALL MPI_BCAST(sym%invsatnr,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%ngopr,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sym%mrot,9*sym%nop,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   
+
     n = (2*stars%mx1+1)*(2*stars%mx2+1)*(2*stars%mx3+1)
     CALL MPI_BCAST(input%ellow,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%elup,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -192,7 +194,7 @@ CONTAINS
     CALL MPI_BCAST(kpts%nkptf,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%bk,3*kpts%nkpt,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%wtkpt,kpts%nkpt,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(kpts%ntetra,kpts%ntet,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(kpts%ntetra,4*kpts%ntet,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(kpts%voltet,kpts%ntet,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     !
 
@@ -203,7 +205,7 @@ CONTAINS
     CALL MPI_BCAST(sym%invtab,sym%nop,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(sym%invsatnr,atoms%nat,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(vacuum%izlay,vacuum%layerd*2,MPI_INTEGER,0,mpi%mpi_comm,ierr)
- 
+
     CALL MPI_BCAST(atoms%zatom,atoms%ntype,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(field%efield%sig_b,2,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(input%zelec,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
@@ -225,15 +227,45 @@ CONTAINS
     CALL MPI_BCAST(noco%l_relax,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%l_geo,atoms%ntype,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(noco%qss,3,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%l,atoms%n_u,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%u,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%j,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%l_amf,atoms%n_u,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%atomType,atoms%n_u,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%phi,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
-    CALL MPI_BCAST(atoms%lda_u(:)%theta,atoms%n_u,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+
+    CALL MPI_BCAST(atoms%lda_u(:)%l,atoms%n_u+atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%u,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%j,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%l_amf,atoms%n_u+atoms%n_hia,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%atomType,atoms%n_u+atoms%n_hia,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%phi,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%lda_u(:)%theta,atoms%n_u+atoms%n_hia,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(atoms%lapw_l,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
- 
+
+    CALL MPI_BCAST(atoms%gfelem(:)%l,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%gfelem(:)%atomType,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%gfelem(:)%lp,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(atoms%gfelem(:)%atomTypep,atoms%n_gf,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+
+    CALL MPI_BCAST(input%minoccDistance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%minmatDistance,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_mode,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_ne,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_sigma,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_gf,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_dftspinpol,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gfTet,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_anacont,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_dosfermi,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_gfsphavg,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_gfmperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_resolvent,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%l_hist,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_ellow,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_elup,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_n,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_n1,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_n2,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_n3,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_nmatsub,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_alpha,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_et,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
+    CALL MPI_BCAST(input%gf_eb,1,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     n = 7*7*3*sym%nop
     CALL MPI_BCAST(sym%d_wgn,n,MPI_DOUBLE_COMPLEX,0,mpi%mpi_comm,ierr)
     CALL MPI_BCAST(oneD%nstr1,oneD%odd%n2d,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -275,7 +307,7 @@ CONTAINS
        CALL MPI_BCAST(kpts%numSpecialPoints,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
        CALL MPI_BCAST(kpts%specialPoints,3*kpts%numSpecialPoints,MPI_DOUBLE_PRECISION,0,mpi%mpi_comm,ierr)
     END IF
- 
+
     IF(banddos%unfoldband) THEN
        IF(mpi%irank.NE.0) THEN
           ALLOCATE(kpts%sc_list(13,kpts%nkpt))
@@ -296,7 +328,7 @@ CONTAINS
     include 'mpif.h'
 
     INTEGER :: i(18),ierr,ft2_gf_dim
-    
+
     i(1)=stars%ng2 ; i(2)=stars%ng3 ; i(3)=stars%mx1 ; i(4)=stars%mx2 ; i(5)=stars%mx3
     i(6) = stars%kimax ; i(7) = stars%kimax2 ; i(8)=size(stars%ft2_gfy)
     i(9) = stars%kq1_fft;i(10) = stars%kq2_fft;i(11) = stars%kq3_fft;i(12)=stars%kmxq_fft

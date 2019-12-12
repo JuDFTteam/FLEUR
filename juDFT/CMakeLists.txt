@@ -14,7 +14,7 @@ option(JUDFT_COMPILE_HDF5 "HDF5 is compiled as submodule" OFF)
 
 
 if (${JUDFT_USE_HDF5})
-set(judft_HDF 
+set(judft_HDF
 hdf_accessprp.F90
 hdf_tools.F90
 hdf_tools_attr.F90
@@ -28,7 +28,7 @@ set(judft_HDF "")
 endif()
 
 add_library(juDFT STATIC
-${judft_HDF} 
+${judft_HDF}
 usage_data.F90
 info.F90
 init.F90
@@ -43,17 +43,17 @@ check_para.F90
 xmlOutput.F90
 npy.f90
 )
-if (JUDFT_USE_MPI) 
+if (JUDFT_USE_MPI)
   target_compile_definitions(juDFT PUBLIC CPP_MPI)
 endif()
 if (JUDFT_USE_HDF5)
   target_compile_definitions(juDFT PUBLIC CPP_HDF)
-  if (JUDFT_COMPILE_HDF5) 
+  if (JUDFT_COMPILE_HDF5)
       target_link_libraries(juDFT PUBLIC hdf5_fortran-static)
-  endif() 
+  endif()
 endif()
 if (JUDFT_USE_HDF5MPI)
-  if (JUDFT_USE_MPI) 
+  if (JUDFT_USE_MPI)
     target_compile_definitions(juDFT PUBLIC CPP_HDFMPI)
   endif()
 endif()

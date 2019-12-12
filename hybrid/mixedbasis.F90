@@ -38,14 +38,13 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, DIMENSION, input, cell, sym, xcpot, hybrid, enpara, mpi, v, l_restart)
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v, iterHF)
 
       USE m_judft
-      USE m_radfun, ONLY: radfun
-      USE m_radflo, ONLY: radflo
       USE m_loddop, ONLY: loddop
-      USE m_util, ONLY: intgrf_init, intgrf, rorderpf
-      USE m_read_core
+      USE m_intgrf, ONLY: intgrf_init, intgrf
+      use m_rorder, only: rorderpf
+      USE m_hybrid_core
       USE m_wrapper
       USE m_eig66_io
       USE m_types
@@ -54,368 +53,72 @@ CONTAINS
 
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_dimension), INTENT(IN)    :: dimension
+      TYPE(t_mpbasis), intent(inout)  :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_potden), INTENT(IN)    :: v
 
-      LOGICAL, INTENT(INOUT) :: l_restart
+      integer, intent(in) :: iterHF
 
       ! local type variables
       TYPE(t_usdus)                   ::  usdus
 
       ! local scalars
-      INTEGER                         ::  ilo, ikpt, ispin, itype, l1, l2, l, n, igpt, n1, n2, nn, i, j, ic, ng
-      INTEGER                         ::  jsp, nodem, noded, m, nk, ok, x, y, z, maxindxc, lmaxcd
-      INTEGER                         ::  divconq ! use Divide & Conquer algorithm for array sorting (>0: yes, =0: no)
-      REAL                            ::  gcutm, wronk, rdum, rdum1, rdum2
-
-      LOGICAL                         ::  ldum, ldum1
+      INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2
+      INTEGER                         ::  m, i_basfn, i, n_grid_pt,j
+      REAL                            ::  rdum, rdum1, max_momentum, momentum
 
       ! - local arrays -
-      INTEGER                         ::  g(3)
-      INTEGER                         ::  lmaxc(atoms%ntype)
-      INTEGER, ALLOCATABLE             ::  nindxc(:, :)
-      INTEGER, ALLOCATABLE             ::  ihelp(:)
-      INTEGER, ALLOCATABLE             ::  ptr(:)           ! pointer for array sorting
-      INTEGER, ALLOCATABLE             ::  unsrt_pgptm(:, :) ! unsorted pointers to g vectors
 
-      REAL                            ::  kvec(3)
-      REAL                            ::  flo(atoms%jmtd, 2, atoms%nlod)
-      REAL                            ::  uuilon(atoms%nlod, atoms%ntype), duilon(atoms%nlod, atoms%ntype)
-      REAL                            ::  ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
-      REAL                            ::  potatom(atoms%jmtd, atoms%ntype)
       REAL                            ::  bashlp(atoms%jmtd)
 
-      REAL, ALLOCATABLE               ::  f(:, :, :), df(:, :, :)
-      REAL, ALLOCATABLE               ::  olap(:, :), work(:), eig(:), eigv(:, :)
-      REAL, ALLOCATABLE               ::  bas1(:, :, :, :, :), bas2(:, :, :, :, :)
-      REAL, ALLOCATABLE               ::  basmhlp(:, :, :, :)
-      REAL, ALLOCATABLE               ::  gridf(:, :), vr0(:, :, :)
-      REAL, ALLOCATABLE               ::  core1(:, :, :, :, :), core2(:, :, :, :, :)
-      REAL, ALLOCATABLE               ::  eig_c(:, :, :, :)
-      REAL, ALLOCATABLE               ::  length_kg(:, :) ! length of the vectors k + G
+      REAL, ALLOCATABLE               ::  bas1(:,:,:,:,:), bas2(:,:,:,:,:)
+      REAL, ALLOCATABLE               ::  basmhlp(:,:,:,:)
+      REAL, ALLOCATABLE               ::  gridf(:,:), vr0(:,:,:)
 
-      LOGICAL, ALLOCATABLE            ::  selecmat(:, :, :, :)
-      LOGICAL, ALLOCATABLE            ::  seleco(:, :), selecu(:, :)
+      LOGICAL, ALLOCATABLE            ::  selecmat(:,:,:,:)
+      LOGICAL, ALLOCATABLE            ::  seleco(:,:), selecu(:,:)
 
       CHARACTER, PARAMETER            :: lchar(0:38) = (/'s', 'p', 'd', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', &
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', &
                                                          'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'/)
 
-      CHARACTER(len=2)                ::  nchar
-      CHARACTER(len=2)                ::  noel(atoms%ntype)
-      CHARACTER(len=10)               ::  fname(atoms%ntype)
-      ! writing to a file
-      INTEGER, PARAMETER              ::  iounit = 125
-      CHARACTER(10), PARAMETER        ::  ioname = 'mixbas'
-      LOGICAL                         ::  l_found
 
       IF (mpi%irank == 0) WRITE (6, '(//A,I2,A)') '### subroutine: mixedbasis ###'
 
       IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version", calledby='mixedbasis')
 
       ! Deallocate arrays which might have been allocated in a previous run of this subroutine
-      IF (ALLOCATED(hybrid%ngptm)) DEALLOCATE (hybrid%ngptm)
-      IF (ALLOCATED(hybrid%ngptm1)) DEALLOCATE (hybrid%ngptm1)
-      IF (ALLOCATED(hybrid%nindxm1)) DEALLOCATE (hybrid%nindxm1)
-      IF (ALLOCATED(hybrid%pgptm)) DEALLOCATE (hybrid%pgptm)
-      IF (ALLOCATED(hybrid%pgptm1)) DEALLOCATE (hybrid%pgptm1)
-      IF (ALLOCATED(hybrid%gptm)) DEALLOCATE (hybrid%gptm)
-      IF (ALLOCATED(hybrid%basm1)) DEALLOCATE (hybrid%basm1)
+      IF (ALLOCATED(mpbasis%n_g)) deallocate(mpbasis%n_g)
+      IF (ALLOCATED(mpbasis%num_radbasfn)) deallocate(mpbasis%num_radbasfn)
+      IF (ALLOCATED(mpbasis%gptm_ptr)) deallocate(mpbasis%gptm_ptr)
+      IF (ALLOCATED(mpbasis%g)) deallocate(mpbasis%g)
+      IF (ALLOCATED(mpbasis%radbasfn_mt)) deallocate(mpbasis%radbasfn_mt)
 
       CALL usdus%init(atoms, input%jspins)
-
-      ! If restart is specified read file if it already exists. If not create it.
-      IF (l_restart) THEN
-
-         ! Test if file exists
-         INQUIRE (FILE=ioname, EXIST=l_found)
-
-         IF (l_found .AND. .FALSE.) THEN !reading not working yet
-            ! Open file
-            OPEN (UNIT=iounit, FILE=ioname, FORM='unformatted', STATUS='old')
-
-            ! Read array sizes
-            !READ(iounit) kpts%nkptf,hybrid%gptmd
-            READ (iounit) hybrid%maxgptm, hybrid%maxindx
-            ! Allocate necessary array size and read arrays
-            ALLOCATE (hybrid%ngptm(kpts%nkptf), hybrid%gptm(3, hybrid%gptmd))
-            ALLOCATE (hybrid%pgptm(hybrid%maxgptm, kpts%nkptf))
-            READ (iounit) hybrid%ngptm, hybrid%gptm, hybrid%pgptm, hybrid%nindx
-
-            ! Read array sizes
-            READ (iounit) hybrid%maxgptm1, hybrid%maxlcutm1, hybrid%maxindxm1, hybrid%maxindxp1
-            ! Allocate necessary array size and read arrays
-            ALLOCATE (hybrid%ngptm1(kpts%nkptf), hybrid%pgptm1(hybrid%maxgptm1, kpts%nkptf))
-            ALLOCATE (hybrid%nindxm1(0:hybrid%maxlcutm1, atoms%ntype))
-            ALLOCATE (hybrid%basm1(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
-            READ (iounit) hybrid%ngptm1, hybrid%pgptm1, hybrid%nindxm1
-            READ (iounit) hybrid%basm1
-
-            CLOSE (iounit)
-
-            RETURN
-         END IF
-      END IF
-
-      hybrid%maxindx = 0
-      DO itype = 1, atoms%ntype
-         DO l = 0, atoms%lmax(itype)
-            hybrid%maxindx = MAX(hybrid%maxindx, 2 + COUNT(atoms%llo(:atoms%nlo(itype), itype) == l))
-         END DO
-      END DO
-      ! maxindx = maxval(nlo) + 2
+      call mpbasis%set_num_radfun_per_l(atoms)
 
       ! initialize gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
-      ALLOCATE (vr0(atoms%jmtd, atoms%ntype, input%jspins))
+      allocate(vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
 
-      vr0(:, :, :) = v%mt(:, 0, :, :)
+      vr0(:,:,:) = v%mt(:,0, :,:)
 
       ! calculate radial basisfunctions u and u' with
       ! the spherical part of the potential vr0 and store them in
       ! bas1 = large component ,bas2 = small component
 
-      ALLOCATE (f(atoms%jmtd, 2, 0:atoms%lmaxd), df(atoms%jmtd, 2, 0:atoms%lmaxd))
-      ALLOCATE (bas1(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins))
-      ALLOCATE (bas2(atoms%jmtd, hybrid%maxindx, 0:atoms%lmaxd, atoms%ntype, input%jspins))
-
-      DO itype = 1, atoms%ntype
-         ng = atoms%jri(itype)
-         DO ispin = 1, input%jspins
-            DO l = 0, atoms%lmax(itype)
-               CALL radfun(l, itype, ispin, enpara%el0(l, itype, ispin), vr0(:, itype, ispin), atoms, &
-                           f(:, :, l), df(:, :, l), usdus, nodem, noded, wronk)
-            END DO
-            bas1(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = f(1:ng, 1, 0:atoms%lmaxd)
-            bas2(1:ng, 1, 0:atoms%lmaxd, itype, ispin) = f(1:ng, 2, 0:atoms%lmaxd)
-            bas1(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 1, 0:atoms%lmaxd)
-            bas2(1:ng, 2, 0:atoms%lmaxd, itype, ispin) = df(1:ng, 2, 0:atoms%lmaxd)
-
-            hybrid%nindx(:, itype) = 2
-            ! generate radial functions for local orbitals
-            IF (atoms%nlo(itype) >= 1) THEN
-               CALL radflo(atoms, itype, ispin, enpara%ello0(1, 1, ispin), vr0(:, itype, ispin), &
-                           f, df, mpi, usdus, uuilon, duilon, ulouilopn, flo)
-
-               DO ilo = 1, atoms%nlo(itype)
-                  hybrid%nindx(atoms%llo(ilo, itype), itype) = hybrid%nindx(atoms%llo(ilo, itype), itype) + 1
-                  bas1(1:ng, hybrid%nindx(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 1, ilo)
-                  bas2(1:ng, hybrid%nindx(atoms%llo(ilo, itype), itype), atoms%llo(ilo, itype), itype, ispin) = flo(1:ng, 2, ilo)
-               END DO
-            END IF
-         END DO
-      END DO
-
-      DEALLOCATE (f, df)
-
-      ! the radial functions are normalized
-      DO ispin = 1, input%jspins
-         DO itype = 1, atoms%ntype
-            DO l = 0, atoms%lmax(itype)
-               DO i = 1, hybrid%nindx(l, itype)
-                  rdum = intgrf(bas1(:, i, l, itype, ispin)**2 + bas2(:, i, l, itype, ispin)**2, &
-                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-                  bas1(:atoms%jri(itype), i, l, itype, ispin) = bas1(:atoms%jri(itype), i, l, itype, ispin)/SQRT(rdum)
-                  bas2(:atoms%jri(itype), i, l, itype, ispin) = bas2(:atoms%jri(itype), i, l, itype, ispin)/SQRT(rdum)
-               END DO
-            END DO
-         END DO
-      END DO
+      call gen_bas_fun(atoms, enpara, gridf, input, mpbasis, mpi, vr0, usdus, bas1, bas2)
 
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      gcutm = hybrid%gcutm1
-      ALLOCATE (hybrid%ngptm(kpts%nkptf))
-
-      hybrid%ngptm = 0
-      i = 0
-      n = -1
-
-      rdum1 = MAXVAL((/(SQRT(SUM(MATMUL(kpts%bkf(:, ikpt), cell%bmat)**2)), ikpt=1, kpts%nkptf)/))
-
-      ! a first run for the determination of the dimensions of the fields gptm,pgptm
-
-      DO
-         n = n + 1
-         ldum = .FALSE.
-         DO x = -n, n
-            n1 = n - ABS(x)
-            DO y = -n1, n1
-               n2 = n1 - ABS(y)
-               DO z = -n2, n2, MAX(2*n2, 1)
-                  g = (/x, y, z/)
-                  rdum = SQRT(SUM(MATMUL(g, cell%bmat)**2)) - rdum1
-                  IF (rdum > gcutm) CYCLE
-                  ldum1 = .FALSE.
-                  DO ikpt = 1, kpts%nkptf
-                     kvec = kpts%bkf(:, ikpt)
-                     rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
-
-                     IF (rdum <= gcutm**2) THEN
-                        IF (.NOT. ldum1) THEN
-                           i = i + 1
-                           ldum1 = .TRUE.
-                        END IF
-
-                        hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
-                        ldum = .TRUE.
-                     END IF
-                  END DO
-               END DO
-            END DO
-         END DO
-         IF (.NOT. ldum) EXIT
-      END DO
-
-      hybrid%gptmd = i
-      hybrid%maxgptm = MAXVAL(hybrid%ngptm)
-
-      ALLOCATE (hybrid%gptm(3, hybrid%gptmd))
-      ALLOCATE (hybrid%pgptm(hybrid%maxgptm, kpts%nkptf))
-
-      hybrid%gptm = 0
-      hybrid%pgptm = 0
-      hybrid%ngptm = 0
-
-      i = 0
-      n = -1
-
-      ! Allocate and initialize arrays needed for G vector ordering
-      ALLOCATE (unsrt_pgptm(hybrid%maxgptm, kpts%nkptf))
-      ALLOCATE (length_kG(hybrid%maxgptm, kpts%nkptf))
-      length_kG = 0
-      unsrt_pgptm = 0
-
-      DO
-         n = n + 1
-         ldum = .FALSE.
-         DO x = -n, n
-            n1 = n - ABS(x)
-            DO y = -n1, n1
-               n2 = n1 - ABS(y)
-               DO z = -n2, n2, MAX(2*n2, 1)
-                  g = (/x, y, z/)
-                  rdum = SQRT(SUM(MATMUL(g, cell%bmat)**2)) - rdum1
-                  IF (rdum > gcutm) CYCLE
-                  ldum1 = .FALSE.
-                  DO ikpt = 1, kpts%nkptf
-                     kvec = kpts%bkf(:, ikpt)
-                     rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
-
-                     IF (rdum <= (gcutm)**2) THEN
-                        IF (.NOT. ldum1) THEN
-                           i = i + 1
-                           hybrid%gptm(:, i) = g
-                           ldum1 = .TRUE.
-                        END IF
-
-                        hybrid%ngptm(ikpt) = hybrid%ngptm(ikpt) + 1
-                        ldum = .TRUE.
-
-                        ! Position of the vector is saved as pointer
-                        unsrt_pgptm(hybrid%ngptm(ikpt), ikpt) = i
-                        ! Save length of vector k + G for array sorting
-                        length_kG(hybrid%ngptm(ikpt), ikpt) = rdum
-                     END IF
-                  END DO
-               END DO
-            END DO
-         END DO
-         IF (.NOT. ldum) EXIT
-      END DO
-
-      ! Sort pointers in array, so that shortest |k+G| comes first
-      DO ikpt = 1, kpts%nkptf
-         ALLOCATE (ptr(hybrid%ngptm(ikpt)))
-         ! Divide and conquer algorithm for arrays > 1000 entries
-         divconq = MAX(0, INT(1.443*LOG(0.001*hybrid%ngptm(ikpt))))
-         ! create pointers which correspond to a sorted array
-         CALL rorderpf(ptr, length_kG(1:hybrid%ngptm(ikpt), ikpt), hybrid%ngptm(ikpt), divconq)
-         ! rearrange old pointers
-         DO igpt = 1, hybrid%ngptm(ikpt)
-            hybrid%pgptm(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
-         END DO
-         DEALLOCATE (ptr)
-      END DO
-      DEALLOCATE (unsrt_pgptm)
-      DEALLOCATE (length_kG)
-
-      ! construct IR mixed basis set for the representation of the non local exchange elements with cutoff gcutm1
-
-      ! first run to determine dimension of pgptm1
-      ALLOCATE (hybrid%ngptm1(kpts%nkptf))
-      hybrid%ngptm1 = 0
-      DO igpt = 1, hybrid%gptmd
-         g = hybrid%gptm(:, igpt)
-         DO ikpt = 1, kpts%nkptf
-            kvec = kpts%bkf(:, ikpt)
-            rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
-            IF (rdum <= hybrid%gcutm1**2) THEN
-               hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
-            END IF
-         END DO
-      END DO
-      hybrid%maxgptm1 = MAXVAL(hybrid%ngptm1)
-
-      ALLOCATE (hybrid%pgptm1(hybrid%maxgptm1, kpts%nkptf))
-      hybrid%pgptm1 = 0
-      hybrid%ngptm1 = 0
-
-      ! Allocate and initialize arrays needed for G vector ordering
-      ALLOCATE (unsrt_pgptm(hybrid%maxgptm1, kpts%nkptf))
-      ALLOCATE (length_kG(hybrid%maxgptm1, kpts%nkptf))
-      length_kG = 0
-      unsrt_pgptm = 0
-      DO igpt = 1, hybrid%gptmd
-         g = hybrid%gptm(:, igpt)
-         DO ikpt = 1, kpts%nkptf
-            kvec = kpts%bkf(:, ikpt)
-            rdum = SUM(MATMUL(kvec + g, cell%bmat)**2)
-            IF (rdum <= hybrid%gcutm1**2) THEN
-               hybrid%ngptm1(ikpt) = hybrid%ngptm1(ikpt) + 1
-               unsrt_pgptm(hybrid%ngptm1(ikpt), ikpt) = igpt
-               length_kG(hybrid%ngptm1(ikpt), ikpt) = rdum
-            END IF
-         END DO
-      END DO
-
-      ! Sort pointers in array, so that shortest |k+G| comes first
-      DO ikpt = 1, kpts%nkptf
-         ALLOCATE (ptr(hybrid%ngptm1(ikpt)))
-         ! Divide and conquer algorithm for arrays > 1000 entries
-         divconq = MAX(0, INT(1.443*LOG(0.001*hybrid%ngptm1(ikpt))))
-         ! create pointers which correspond to a sorted array
-         CALL rorderpf(ptr, length_kG(1:hybrid%ngptm1(ikpt), ikpt), hybrid%ngptm1(ikpt), divconq)
-         ! rearrange old pointers
-         DO igpt = 1, hybrid%ngptm1(ikpt)
-            hybrid%pgptm1(igpt, ikpt) = unsrt_pgptm(ptr(igpt), ikpt)
-         END DO
-         DEALLOCATE (ptr)
-      END DO
-      DEALLOCATE (unsrt_pgptm)
-      DEALLOCATE (length_kG)
-
-      IF (mpi%irank == 0) THEN
-         WRITE (6, '(/A)') 'Mixed basis'
-         WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', hybrid%gptmd
-         WRITE (6, *)
-         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (hybrid%gcutm1/2*input%rkmax):'
-         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', hybrid%maxgptm
-         WRITE (6, *)
-         WRITE (6, *)
-         WRITE (6, '(3x,A)') 'IR Plane-wave basis for non-local exchange potential:'
-         WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', hybrid%maxgptm1
-         WRITE (6, *)
-      END IF
+      call mpbasis%gen_gvec(cell, kpts, mpi)
 
       ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
 
@@ -424,16 +127,14 @@ CONTAINS
          WRITE (6, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
       END IF
 
-      hybrid%maxlcutm1 = MAXVAL(hybrid%lcutm1)
+      allocate(mpbasis%num_radbasfn(0:maxval(hybrid%lcutm1), atoms%ntype))
+      allocate(seleco(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd))
+      allocate(selecu(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd))
+      mpbasis%num_radbasfn = 0    !!! 01/12/10 jij%M.b.
 
-      ALLOCATE (hybrid%nindxm1(0:hybrid%maxlcutm1, atoms%ntype))
-      ALLOCATE (seleco(hybrid%maxindx, 0:atoms%lmaxd), selecu(hybrid%maxindx, 0:atoms%lmaxd))
-      ALLOCATE (selecmat(hybrid%maxindx, 0:atoms%lmaxd, hybrid%maxindx, 0:atoms%lmaxd))
-      hybrid%nindxm1 = 0    !!! 01/12/10 jij%M.b.
-
-      ! determine maximal indices of (radial) mixed-basis functions (->nindxm1)
+      ! determine maximal indices of (radial) mixed-basis functions (->num_radbasfn)
       ! (will be reduced later-on due to overlap)
-      hybrid%maxindxp1 = 0
+      hybrid%max_indx_p_1 = 0
       DO itype = 1, atoms%ntype
          seleco = .FALSE.
          selecu = .FALSE.
@@ -443,32 +144,34 @@ CONTAINS
          selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
 
          ! include local orbitals
-         IF (hybrid%maxindx >= 3) THEN
-            seleco(3:, :) = .TRUE.
-            selecu(3:, :) = .TRUE.
+         IF (maxval(mpbasis%num_radfun_per_l) >= 3) THEN
+            seleco(3:,:) = .TRUE.
+            selecu(3:,:) = .TRUE.
          END IF
 
          DO l = 0, hybrid%lcutm1(itype)
-            n = 0
+            n_radbasfn = 0
             M = 0
 
             !
             ! valence * valence
             !
-
-            ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
-            selecmat = RESHAPE((/((((seleco(n1, l1) .AND. selecu(n2, l2), &
-                                     n1=1, hybrid%maxindx), l1=0, atoms%lmaxd), n2=1, hybrid%maxindx), l2=0, atoms%lmaxd)/), &
-                               (/hybrid%maxindx, atoms%lmaxd + 1, hybrid%maxindx, atoms%lmaxd + 1/))
+            if(.not. allocated(selecmat)) then
+               allocate(selecmat(maxval(mpbasis%num_radfun_per_l), &
+                                 0:atoms%lmaxd, &
+                                 maxval(mpbasis%num_radfun_per_l), &
+                                 0:atoms%lmaxd))
+            endif
+            selecmat = calc_selecmat(atoms, mpbasis, seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
                   IF (l >= ABS(l1 - l2) .AND. l <= l1 + l2) THEN
-                     DO n1 = 1, hybrid%nindx(l1, itype)
-                        DO n2 = 1, hybrid%nindx(l2, itype)
+                     DO n1 = 1, mpbasis%num_radfun_per_l(l1, itype)
+                        DO n2 = 1, mpbasis%num_radfun_per_l(l2, itype)
                            M = M + 1
                            IF (selecmat(n1, l1, n2, l2)) THEN
-                              n = n + 1
+                              n_radbasfn = n_radbasfn + 1
                               selecmat(n2, l2, n1, l1) = .FALSE. ! prevent double counting of products (a*b = b*a)
                            END IF
                         END DO
@@ -476,17 +179,18 @@ CONTAINS
                   END IF
                END DO
             END DO
-            IF (n == 0 .AND. mpi%irank == 0) &
+            IF (n_radbasfn == 0 .AND. mpi%irank == 0) &
                WRITE (6, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
-            hybrid%maxindxp1 = MAX(hybrid%maxindxp1, M)
-            hybrid%nindxm1(l, itype) = n*input%jspins
+            hybrid%max_indx_p_1 = MAX(hybrid%max_indx_p_1, M)
+            mpbasis%num_radbasfn(l, itype) = n_radbasfn*input%jspins
          END DO
       END DO
-      hybrid%maxindxm1 = MAXVAL(hybrid%nindxm1)
 
-      ALLOCATE (hybrid%basm1(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
-      hybrid%basm1 = 0
+      allocate(mpbasis%radbasfn_mt(atoms%jmtd,&
+                            maxval(mpbasis%num_radbasfn), &
+                            0:maxval(hybrid%lcutm1), &
+                            atoms%ntype), source=0.0)
 
       ! Define product bases and reduce them according to overlap
 
@@ -498,185 +202,80 @@ CONTAINS
          seleco(2, 0:hybrid%select1(2, itype)) = .TRUE.
          selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
          ! include lo's
-         IF (hybrid%maxindx >= 3) THEN
-            seleco(3:, :) = .TRUE.
-            selecu(3:, :) = .TRUE.
+         IF (maxval(mpbasis%num_radfun_per_l) >= 3) THEN
+            seleco(3:,:) = .TRUE.
+            selecu(3:,:) = .TRUE.
          END IF
-         IF (atoms%ntype > 1 .AND. mpi%irank == 0)&
-              &    WRITE (6, '(6X,A,I3)') 'Atom type', itype
-         ng = atoms%jri(itype)
+
+         n_grid_pt = atoms%jri(itype)
          DO l = 0, hybrid%lcutm1(itype)
-            n = hybrid%nindxm1(l, itype)
+            full_n_radbasfn = mpbasis%num_radbasfn(l, itype)
             ! allow for zero product-basis functions for
             ! current l-quantum number
-            IF (n == 0) THEN
+            IF (n_radbasfn == 0) THEN
                IF (mpi%irank == 0) WRITE (6, '(6X,A,'':   0 ->   0'')') lchar(l)
                CYCLE
             END IF
 
             ! set up the overlap matrix
-            ALLOCATE (olap(n, n), eigv(n, n), work(3*n), eig(n), ihelp(n))
-            ihelp = 1 ! initialize to avoid a segfault
-            i = 0
+            i_basfn = 0
 
             ! valence*valence
-
-            ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
-            selecmat = RESHAPE((/((((seleco(n1, l1) .AND. selecu(n2, l2), &
-                                     n1=1, hybrid%maxindx), l1=0, atoms%lmaxd), n2=1, hybrid%maxindx), l2=0, atoms%lmaxd)/), &
-                               (/hybrid%maxindx, atoms%lmaxd + 1, hybrid%maxindx, atoms%lmaxd + 1/))
+            selecmat =  calc_selecmat(atoms, mpbasis,seleco, selecu)
 
             DO l1 = 0, atoms%lmax(itype)
                DO l2 = 0, atoms%lmax(itype)
-                  IF (l < ABS(l1 - l2) .OR. l > l1 + l2) CYCLE
+                  IF (l >= ABS(l1 - l2) .AND. l <= l1 + l2) THEN
+                     DO n1 = 1, mpbasis%num_radfun_per_l(l1, itype)
+                        DO n2 = 1, mpbasis%num_radfun_per_l(l2, itype)
 
-                  DO n1 = 1, hybrid%nindx(l1, itype)
-                     DO n2 = 1, hybrid%nindx(l2, itype)
+                           IF (selecmat(n1, l1, n2, l2)) THEN
+                              DO jspin = 1, input%jspins
+                                 i_basfn = i_basfn + 1
+                                 IF (i_basfn > full_n_radbasfn) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
-                        IF (selecmat(n1, l1, n2, l2)) THEN
-                           DO ispin = 1, input%jspins
-                              i = i + 1
-                              IF (i > n) call judft_error('got too many product functions', hint='This is a BUG, please report', calledby='mixedbasis')
+                                 mpbasis%radbasfn_mt(:n_grid_pt, i_basfn, l, itype) &
+                                    = (   bas1(:n_grid_pt, n1, l1, itype, jspin) &
+                                        * bas1(:n_grid_pt, n2, l2, itype, jspin) &
+                                        + bas2(:n_grid_pt, n1, l1, itype, jspin) &
+                                        * bas2(:n_grid_pt, n2, l2, itype, jspin) &
+                                      ) / atoms%rmsh(:n_grid_pt, itype)
 
-                              hybrid%basm1(:ng, i, l, itype) &
-                                 = (bas1(:ng, n1, l1, itype, ispin) &
-                                    *bas1(:ng, n2, l2, itype, ispin) &
-                                    + bas2(:ng, n1, l1, itype, ispin) &
-                                    *bas2(:ng, n2, l2, itype, ispin))/atoms%rmsh(:ng, itype)
 
-                              !normalize basm1
-                              rdum = SQRT(intgrf(hybrid%basm1(:, i, l, itype)**2, &
-                                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
-
-                              hybrid%basm1(:ng, i, l, itype) = hybrid%basm1(:ng, i, l, itype)/rdum
-
-                           END DO !ispin
-                           ! prevent double counting of products (a*b = b*a)
-                           selecmat(n2, l2, n1, l1) = .FALSE.
-                        END IF
-
-                     END DO !n2
-                  END DO !n1
-
+                              END DO !jspin
+                              ! prevent double counting of products (a*b = b*a)
+                              selecmat(n2, l2, n1, l1) = .FALSE.
+                           END IF
+                        END DO !n2
+                     END DO !n1
+                  ENDIF
                END DO !l2
             END DO  !l1
 
-            IF (i /= n) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
+            !normalize radbasfn_mt
+            call mpbasis%normalize(atoms, hybrid, gridf)
 
-            ! In order to get ride of the linear dependencies in the
-            ! radial functions basm1 belonging to fixed l and itype
+            IF (i_basfn /= full_n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
+
+            ! In order to get rid of the linear dependencies in the
+            ! radial functions radbasfn_mt belonging to fixed l and itype
             ! the overlap matrix is diagonalized and those eigenvectors
-            ! with a eigenvalue greater then hybrid%tolerance1 are retained
+            ! with a eigenvalue greater then mpbasis%linear_dep_tol are retained
 
-            ! Calculate overlap
-            olap = 0
-            DO n2 = 1, n
-               DO n1 = 1, n2
-                  olap(n1, n2) = intgrf(hybrid%basm1(:, n1, l, itype)*hybrid%basm1(:, n2, l, itype), &
-                                        atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-                  olap(n2, n1) = olap(n1, n2)
-               END DO
-            END DO
-
-            ! Diagonalize
-            CALL diagonalize(eigv, eig, olap)
-
-            ! Get rid of linear dependencies (eigenvalue <= hybrid%tolerance1)
-            nn = 0
-            DO i = 1, hybrid%nindxm1(l, itype)
-               IF (eig(i) > hybrid%tolerance1) THEN
-                  nn = nn + 1
-                  ihelp(nn) = i
-               END IF
-            END DO
-            hybrid%nindxm1(l, itype) = nn
-            eig = eig(ihelp)
-            eigv(:, :) = eigv(:, ihelp)
-
-            DO i = 1, ng
-               hybrid%basm1(i, 1:nn, l, itype) = MATMUL(hybrid%basm1(i, 1:n, l, itype), eigv(:, 1:nn))/SQRT(eig(:nn))
-            END DO
-
-            ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
-            IF (l == 0) THEN
-
-               ! Check if basm1 must be reallocated
-               IF (nn + 1 > SIZE(hybrid%basm1, 2)) THEN
-                  ALLOCATE (basmhlp(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
-                  basmhlp(:, 1:nn, :, :) = hybrid%basm1
-                  DEALLOCATE (hybrid%basm1)
-                  ALLOCATE (hybrid%basm1(atoms%jmtd, nn + 1, 0:hybrid%maxlcutm1, atoms%ntype))
-                  hybrid%basm1(:, 1:nn, :, :) = basmhlp(:, 1:nn, :, :)
-                  DEALLOCATE (basmhlp)
-               END IF
-
-               hybrid%basm1(:ng, nn + 1, 0, itype) = atoms%rmsh(:ng, itype)/SQRT(atoms%rmsh(ng, itype)**3/3)
-               DO i = nn, 1, -1
-                  DO j = i + 1, nn + 1
-                     hybrid%basm1(:ng, i, 0, itype) = hybrid%basm1(:ng, i, 0, itype) &
-                                                      - intgrf(hybrid%basm1(:ng, i, 0, itype)*hybrid%basm1(:ng, j, 0, itype), &
-                                                               atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf) &
-                                                      *hybrid%basm1(:ng, j, 0, itype)
-
-                  END DO
-                  hybrid%basm1(:ng, i, 0, itype) = hybrid%basm1(:ng, i, 0, itype) &
-                                                   /SQRT(intgrf(hybrid%basm1(:ng, i, 0, itype)**2, &
-                                                                atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf))
-               END DO
-               nn = nn + 1
-               DEALLOCATE (olap)
-               ALLOCATE (olap(nn, nn))
-               hybrid%nindxm1(l, itype) = nn
-            END IF
-
-            ! Check orthonormality of product basis
-            rdum = 0
-            DO i = 1, nn
-               DO j = 1, i
-                  rdum1 = intgrf(hybrid%basm1(:, i, l, itype)*hybrid%basm1(:, j, l, itype), &
-                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-
-                  IF (i == j) THEN
-                     rdum1 = ABS(1 - rdum1)
-                     rdum = rdum + rdum1**2
-                  ELSE
-                     rdum1 = ABS(rdum1)
-                     rdum = rdum + 2*rdum1**2
-                  END IF
-
-                  IF (rdum1 > 1e-6) THEN
-                     IF (mpi%irank == 0) THEN
-                        WRITE (6, '(A)') 'mixedbasis: Bad orthonormality of ' &
-                           //lchar(l)//'-product basis. Increase tolerance.'
-                        WRITE (6, '(12X,A,F9.6,A,2(I3.3,A))') 'Deviation of', &
-                           rdum1, ' occurred for (', i, ',', j, ')-overlap.'
-                     END IF
-                     CALL judft_error("Bad orthonormality of product basis", hint='Increase tolerance', calledby='mixedbasis')
-                  END IF
-
-               END DO
-            END DO
-
-            IF (mpi%irank == 0) THEN
-               WRITE (6, '(6X,A,I4,'' ->'',I4,''   ('',ES8.1,'' )'')') lchar(l)//':', n, nn, SQRT(rdum)/nn
-            END IF
-
-            DEALLOCATE (olap, eigv, work, eig, ihelp)
+            call mpbasis%reduce_linear_dep(atoms, mpi, hybrid, l, itype, gridf, iterHF)
 
          END DO !l
-         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(hybrid%nindxm1(0:hybrid%lcutm1(itype), itype))
+         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpbasis%num_radbasfn(0:hybrid%lcutm1(itype), itype))
       END DO ! itype
 
-      hybrid%maxindxm1 = MAXVAL(hybrid%nindxm1)
+      allocate(basmhlp(atoms%jmtd, maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      basmhlp(1:atoms%jmtd, 1:maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), 1:atoms%ntype) &
+         = mpbasis%radbasfn_mt(1:atoms%jmtd, 1:maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
+      deallocate(mpbasis%radbasfn_mt)
+      allocate(mpbasis%radbasfn_mt(atoms%jmtd, maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      mpbasis%radbasfn_mt = basmhlp
 
-      ALLOCATE (basmhlp(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
-      basmhlp(1:atoms%jmtd, 1:hybrid%maxindxm1, 0:hybrid%maxlcutm1, 1:atoms%ntype) &
-         = hybrid%basm1(1:atoms%jmtd, 1:hybrid%maxindxm1, 0:hybrid%maxlcutm1, 1:atoms%ntype)
-      DEALLOCATE (hybrid%basm1)
-      ALLOCATE (hybrid%basm1(atoms%jmtd, hybrid%maxindxm1, 0:hybrid%maxlcutm1, atoms%ntype))
-      hybrid%basm1 = basmhlp
-
-      DEALLOCATE (basmhlp, seleco, selecu, selecmat)
+      deallocate(basmhlp, seleco, selecu, selecmat)
 
       !
       ! now we build linear combinations of the radial functions
@@ -690,200 +289,212 @@ CONTAINS
 
          WRITE (6, '(/,17x,A)') 'moment  (quality of orthonormality)'
       END IF
+
       DO itype = 1, atoms%ntype
-         ng = atoms%jri(itype)
+         n_grid_pt = atoms%jri(itype)
 
          IF (atoms%ntype > 1 .AND. mpi%irank == 0) WRITE (6, '(6X,A,I3)') 'Atom type', itype
 
          DO l = 0, hybrid%lcutm1(itype)
             ! determine radial function with the largest moment
             ! this function is used to build the linear combinations
-            rdum = 0
-            DO i = 1, hybrid%nindxm1(l, itype)
-               rdum1 = intgrf(atoms%rmsh(:ng, itype)**(l + 1)*hybrid%basm1(:ng, i, l, itype), &
-                              atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-               IF (ABS(rdum1) > rdum) THEN
-                  n = i
-                  rdum = rdum1
+            max_momentum = 0
+            DO i = 1, mpbasis%num_radbasfn(l, itype)
+               momentum = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
+                              atoms, itype, gridf)
+               IF (ABS(momentum) > max_momentum) THEN
+                  n_radbasfn = i
+                  max_momentum = momentum
                END IF
             END DO
 
-            ! rearrange order of radial functions such that the last function possesses the largest moment
             j = 0
-            bashlp(:ng) = hybrid%basm1(:ng, n, l, itype)
-            DO i = 1, hybrid%nindxm1(l, itype)
-               IF (i == n) CYCLE
+            bashlp(:atoms%jri(itype)) = mpbasis%radbasfn_mt(:atoms%jri(itype), n_radbasfn, l, itype)
+            DO i = 1, mpbasis%num_radbasfn(l, itype)
+               IF (i == n_radbasfn) CYCLE
                j = j + 1
-               hybrid%basm1(:ng, j, l, itype) = hybrid%basm1(:ng, i, l, itype)
+               mpbasis%radbasfn_mt(:atoms%jri(itype), j, l, itype) = mpbasis%radbasfn_mt(:atoms%jri(itype), i, l, itype)
             END DO
-            hybrid%basm1(:ng, hybrid%nindxm1(l, itype), l, itype) = bashlp(:ng)
-
+            mpbasis%radbasfn_mt(:atoms%jri(itype), mpbasis%num_radbasfn(l, itype), l, itype) = bashlp(:atoms%jri(itype))
          END DO
+
 
          DO l = 0, hybrid%lcutm1(itype)
             IF (mpi%irank == 0) WRITE (6, '(6X,A)') lchar(l)//':'
 
-            IF (hybrid%nindxm1(l, itype) == 0) THEN
+            IF (mpbasis%num_radbasfn(l, itype) == 0) THEN
                IF (mpi%irank == 0) WRITE (6, '(6X,A,'':   0 ->    '')') lchar(l)
                CYCLE
             END IF
 
-            n = hybrid%nindxm1(l, itype)
-            DO i = 1, hybrid%nindxm1(l, itype)
-               IF (i == n) CYCLE
+            n_radbasfn = mpbasis%num_radbasfn(l, itype)
+            DO i = 1, n_radbasfn-1
                ! calculate moment of radial function i
-               rdum1 = intgrf(atoms%rmsh(:ng, itype)**(l + 1)*hybrid%basm1(:ng, i, l, itype), &
-                              atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
+                              atoms, itype, gridf)
 
-               rdum = intgrf(atoms%rmsh(:ng, itype)**(l + 1)*hybrid%basm1(:ng, n, l, itype), &
-                             atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+               rdum = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype), &
+                             atoms, itype, gridf)
 
-               bashlp(:ng) = hybrid%basm1(:ng, n, l, itype)
+               bashlp(:n_grid_pt) = mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype)
 
                IF (SQRT(rdum**2 + rdum1**2) <= 1E-06 .AND. mpi%irank == 0) &
-                  WRITE (6, *) 'Warning: Norm is smaller thann 1E-06!'
+                  WRITE (6, *) 'Warning: Norm is smaller than 1E-06!'
 
-               ! change function n such that n is orthogonal to i
-               ! since the functions basm1 have been orthogonal on input
+               ! change function n_radbasfn such that n_radbasfn is orthogonal to i
+               ! since the functions radbasfn_mt have been orthogonal on input
                ! the linear combination does not destroy the orthogonality to the residual functions
-               hybrid%basm1(:ng, n, l, itype) = rdum/SQRT(rdum**2 + rdum1**2)*bashlp(:ng) &
-                                                + rdum1/SQRT(rdum**2 + rdum1**2)*hybrid%basm1(:ng, i, l, itype)
+               mpbasis%radbasfn_mt(:n_grid_pt, n_radbasfn, l, itype) = rdum/SQRT(rdum**2 + rdum1**2)*bashlp(:n_grid_pt) &
+                                                + rdum1/SQRT(rdum**2 + rdum1**2)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype)
 
-               ! combine basis function i and n so that they possess no momemt
-               hybrid%basm1(:ng, i, l, itype) = rdum1/SQRT(rdum**2 + rdum1**2)*bashlp(:ng) &
-                                                - rdum/SQRT(rdum**2 + rdum1**2)*hybrid%basm1(:ng, i, l, itype)
+               ! combine basis function i and n_radbasfn so that they possess no momemt
+               mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype) = rdum1/SQRT(rdum**2 + rdum1**2)*bashlp(:n_grid_pt) &
+                                                - rdum/SQRT(rdum**2 + rdum1**2)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype)
 
-               rdum1 = intgrf(atoms%rmsh(:ng, itype)**(l + 1)*hybrid%basm1(:ng, i, l, itype), &
-                              atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
+               rdum1 = intgrf(atoms%rmsh(:n_grid_pt, itype)**(l + 1)*mpbasis%radbasfn_mt(:n_grid_pt, i, l, itype), &
+                              atoms, itype, gridf)
 
                IF (rdum1 > 1E-10) call judft_error('moment of radial function does not vanish', calledby='mixedbasis')
 
                IF (mpi%irank == 0) WRITE (6, '(6x,I4,'' ->  '',ES8.1)') i, rdum1
             END DO
+            call mpbasis%check_orthonormality(atoms, mpi, l, itype, gridf)
+         ENDDO
 
-            ! test orthogonality
-            rdum = 0
-            DO i = 1, hybrid%nindxm1(l, itype)
-               DO j = 1, hybrid%nindxm1(l, itype)
-                  rdum1 = intgrf(hybrid%basm1(:ng, i, l, itype)*hybrid%basm1(:ng, j, l, itype), &
-                                 atoms%jri, atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf)
-                  IF (i /= j) THEN
-                     rdum = rdum + rdum1
-                  ELSE
-                     rdum = rdum + ABS(1 - rdum1)
-                  END IF
-               END DO
-            END DO
-            IF (mpi%irank == 0) &
-               WRITE (6, '(6x,I4,'' ->'',f10.5,''   ('',ES8.1,'' )'')') n, &
-               intgrf(atoms%rmsh(:ng, itype)**(l + 1)*hybrid%basm1(:ng, n, l, itype), atoms%jri, &
-                      atoms%jmtd, atoms%rmsh, atoms%dx, atoms%ntype, itype, gridf), rdum
-         END DO
+
       END DO
 
-      DO itype = 1, atoms%ntype
-         IF (ANY(hybrid%nindxm1(0:hybrid%lcutm1(itype), itype) == 0)) call judft_error('any hybrid%nindxm1 eq 0', calledby='mixedbasis')
-      END DO
+      call mpbasis%check_radbasfn(atoms, hybrid)
 
       !count basis functions
       hybrid%nbasp = 0
       DO itype = 1, atoms%ntype
          DO i = 1, atoms%neq(itype)
             DO l = 0, hybrid%lcutm1(itype)
-               DO M = -l, l
-                  DO j = 1, hybrid%nindxm1(l, itype)
-                     hybrid%nbasp = hybrid%nbasp + 1
-                  END DO
+               hybrid%nbasp = hybrid%nbasp + (2*l+1) * mpbasis%num_radbasfn(l, itype)
+            END DO
+         END DO
+      END DO
+      hybrid%maxbasm1 = hybrid%nbasp + maxval(mpbasis%n_g)
+      hybrid%nbasm = hybrid%nbasp + mpbasis%n_g
+
+      hybrid%maxlmindx = 0
+      do itype = 1,atoms%ntype
+         hybrid%maxlmindx = max(hybrid%maxlmindx,&
+                                SUM([(mpbasis%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))])&
+                                )
+      enddo
+   END SUBROUTINE mixedbasis
+
+   subroutine gen_bas_fun(atoms, enpara, gridf, input, mpbasis, mpi, vr0, usdus, bas1, bas2)
+      use m_judft
+      use m_types
+      USE m_radfun, ONLY: radfun
+      USE m_radflo, ONLY: radflo
+      USE m_intgrf,   ONLY: intgrf
+      implicit NONE
+      type(t_atoms), intent(in)        :: atoms
+      type(t_enpara), intent(in)       :: enpara
+      type(t_input), intent(in)        :: input
+      TYPE(t_mpbasis), intent(in)      :: mpbasis
+      type(t_mpi), intent(in)          :: mpi
+      type(t_usdus), intent(inout)     :: usdus
+
+      REAL, ALLOCATABLE, INTENT(INOUT) :: bas1(:,:,:,:,:), bas2(:,:,:,:,:)
+      REAL, intent(in)                 :: vr0(:,:,:), gridf(:,:)
+
+      REAL    ::   u(atoms%jmtd, 2, 0:atoms%lmaxd)
+      REAL    ::  du(atoms%jmtd, 2, 0:atoms%lmaxd)
+      REAL    :: flo(atoms%jmtd, 2, atoms%nlod)
+
+      REAL    :: uuilon(atoms%nlod, atoms%ntype)
+      REAL    :: duilon(atoms%nlod, atoms%ntype)
+      REAL    :: ulouilopn(atoms%nlod, atoms%nlod, atoms%ntype)
+      REAL    :: wronk, norm
+
+      INTEGER :: itype, jspin, i, l, ilo, ok
+      INTEGER :: n_grid_pt, noded, nodem
+      INTEGER :: l_idx(0:atoms%lmaxd)
+      u  = 0.0
+      du = 0.0
+
+      ! this is 5-D array. it could cause Problems in bigger systems
+      allocate(bas1(atoms%jmtd,    &
+                    maxval(mpbasis%num_radfun_per_l), &
+                    0:atoms%lmaxd, &
+                    atoms%ntype,   &
+                    input%jspins),   source=0.0, stat=ok)
+      if(ok /= 0) call judft_error("Can't allocate bas1 array. Stat= " // int2str(ok))
+
+      allocate(bas2, source=bas1, stat=ok)
+      if(ok /= 0) call judft_error("Can't allocate bas1 array. Stat= " // int2str(ok))
+
+      DO itype = 1, atoms%ntype
+         n_grid_pt = atoms%jri(itype) ! number of radial gridpoints
+         DO jspin = 1, input%jspins
+            DO l = 0, atoms%lmax(itype)
+               CALL radfun(l, itype, jspin, enpara%el0(l, itype, jspin), vr0(:,itype, jspin), atoms, &
+                           u(:,:,l), du(:,:,l), usdus, nodem, noded, wronk)
+            END DO
+            bas1(1:n_grid_pt, 1, 0:atoms%lmaxd, itype, jspin)  = u(1:n_grid_pt, 1, 0:atoms%lmaxd)
+            bas2(1:n_grid_pt, 1, 0:atoms%lmaxd, itype, jspin)  = u(1:n_grid_pt, 2, 0:atoms%lmaxd)
+            bas1(1:n_grid_pt, 2, 0:atoms%lmaxd, itype, jspin) = du(1:n_grid_pt, 1, 0:atoms%lmaxd)
+            bas2(1:n_grid_pt, 2, 0:atoms%lmaxd, itype, jspin) = du(1:n_grid_pt, 2, 0:atoms%lmaxd)
+
+            ! generate radial functions for local orbitals
+            IF (atoms%nlo(itype) >= 1) THEN
+               CALL radflo(atoms, itype, jspin, enpara%ello0(1, 1, jspin), vr0(:,itype, jspin), &
+                           u, du, mpi, usdus, uuilon, duilon, ulouilopn, flo)
+
+               l_idx = 2
+               DO ilo = 1, atoms%nlo(itype)
+                  l = atoms%llo(ilo, itype)
+                  l_idx(l) = l_idx(l) + 1
+                  bas1(1:n_grid_pt, l_idx(l), atoms%llo(ilo, itype), itype, jspin) = flo(1:n_grid_pt, 1, ilo)
+                  bas2(1:n_grid_pt, l_idx(l), atoms%llo(ilo, itype), itype, jspin) = flo(1:n_grid_pt, 2, ilo)
+               END DO
+            END IF
+         END DO
+      END DO
+
+      ! the radial functions are normalized
+      DO jspin = 1, input%jspins
+         DO itype = 1, atoms%ntype
+            DO l = 0, atoms%lmax(itype)
+               DO i = 1, mpbasis%num_radfun_per_l(l, itype)
+                  norm = sqrt(intgrf(bas1(:,i, l, itype, jspin)**2 + bas2(:,i, l, itype, jspin)**2, &
+                                atoms, itype, gridf))
+                  bas1(:atoms%jri(itype), i, l, itype, jspin) = bas1(:atoms%jri(itype), i, l, itype, jspin)/norm
+                  bas2(:atoms%jri(itype), i, l, itype, jspin) = bas2(:atoms%jri(itype), i, l, itype, jspin)/norm
                END DO
             END DO
          END DO
       END DO
-      hybrid%maxbasm1 = hybrid%nbasp + hybrid%maxgptm
-      DO nk = 1, kpts%nkptf
-         hybrid%nbasm(nk) = hybrid%nbasp + hybrid%ngptm(nk)
-      END DO
+   end subroutine gen_bas_fun
 
-      hybrid%maxlmindx = MAXVAL((/(SUM((/(hybrid%nindx(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))/)), itype=1, atoms%ntype)/))
+   function calc_selecmat(atoms,mpbasis,seleco, selecu) result(selecmat)
+      ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
+      use m_types
+      use m_judft
+      implicit NONE
 
-      !
-      !
-      ! Write all information to a file to enable restarting
-      !
-      IF (l_restart .AND. mpi%irank == 0) THEN
+      type(t_atoms),  intent(in) :: atoms
+      TYPE(t_mpbasis), intent(in) :: mpbasis
+      LOGICAL, intent(in) :: seleco(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
+      LOGICAL, intent(in) :: selecu(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
+      LOGICAL  ::  selecmat(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, &
+                            maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd)
+      integer                       :: n1, l1, n2, l2
 
-         OPEN (UNIT=iounit, FILE=ioname, FORM='unformatted', STATUS='replace')
-
-         WRITE (iounit) kpts%nkptf, hybrid%gptmd
-         WRITE (iounit) hybrid%maxgptm, hybrid%maxindx
-         WRITE (iounit) hybrid%ngptm, hybrid%gptm, hybrid%pgptm, hybrid%nindx
-
-         WRITE (iounit) hybrid%maxgptm1, hybrid%maxlcutm1, hybrid%maxindxm1, hybrid%maxindxp1
-         WRITE (iounit) hybrid%ngptm1, hybrid%pgptm1, hybrid%nindxm1
-         WRITE (iounit) hybrid%basm1
-
-         CLOSE (iounit)
-
-         l_restart = .FALSE.
-
-      END IF
-
-   END SUBROUTINE mixedbasis
-
-   SUBROUTINE read_atompotential(atoms, fname, potential)
-
-      USE m_types
-      IMPLICIT NONE
-      TYPE(t_atoms), INTENT(IN)   :: atoms
-
-      ! - scalars -
-      CHARACTER(10), INTENT(IN) ::   fname(atoms%ntype)
-
-      ! - arrays -
-      REAL, INTENT(OUT)::   potential(atoms%jmtd, atoms%ntype)
-      ! - local scalars -
-      INTEGER                 ::   i, j, itype, ic, m
-      REAL                    ::   rdum, r, n
-      ! - local arrays -
-      REAL, ALLOCATABLE    ::   v_atom(:), r_atom(:)
-
-      potential = 0
-      DO itype = 1, atoms%ntype
-         OPEN (331, file=fname(itype), form='formatted')
-
-         ic = 0
-         DO
-            READ (331, *) rdum
-            ic = ic + 1
-            IF (rdum > (atoms%rmt(itype) + 0.2)) EXIT
-         END DO
-
-         ALLOCATE (v_atom(ic), r_atom(ic))
-         REWIND (331)
-
-         DO i = 1, ic
-            READ (331, *) r_atom(i), v_atom(i)
-         END DO
-
-         ! transfer potential from grid used in the atom program
-         ! to those used here
-         DO i = 1, atoms%jri(itype)
-            r = atoms%rmsh(i, itype)
-            DO j = 1, ic - 1
-               IF (r_atom(j) > r) THEN
-                  M = (v_atom(j) - v_atom(j + 1))/(r_atom(j) - r_atom(j + 1))
-                  n = v_atom(j) - M*r_atom(j)
-                  potential(i, itype) = n + M*r
-                  !               WRITE(333,'(4f25.10)') n + m*r_atom(j),v_atom(j),n + m*r_atom(j+1),v_atom(j+1)
-                  EXIT
-               END IF
-            END DO
-         END DO
-
-         DEALLOCATE (v_atom, r_atom)
-         CLOSE (331)
-      END DO
-
-   END SUBROUTINE read_atompotential
-
+      ! column-major means left-most index varies the fastest
+      do l2=0,atoms%lmaxd
+         do n2=1,maxval(mpbasis%num_radfun_per_l)
+            do l1=0,atoms%lmaxd
+               do n1=1,maxval(mpbasis%num_radfun_per_l)
+                  selecmat(n1,l1,n2,l2) = seleco(n1, l1) .AND. selecu(n2, l2)
+               enddo
+            enddo
+         enddo
+      enddo
+   end function calc_selecmat
 END MODULE m_mixedbasis
-

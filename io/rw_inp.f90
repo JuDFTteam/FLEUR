@@ -9,7 +9,7 @@
       CONTAINS
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+     &                  cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt)
 
 !*********************************************************************
@@ -19,7 +19,7 @@
 !*********************************************************************
       USE m_calculator
       USE m_types
-  
+
       IMPLICIT NONE
 ! ..
 ! ..   Arguments ..
@@ -27,22 +27,23 @@
 
       TYPE(t_input),INTENT(INOUT)   :: input
       TYPE(t_sym),INTENT(INOUT)     :: sym
-      TYPE(t_stars),INTENT(INOUT)   :: stars 
+      TYPE(t_stars),INTENT(INOUT)   :: stars
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_obsolete),INTENT(INOUT) :: obsolete
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
+      TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_banddos),INTENT(INOUT)  :: banddos
       TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
       TYPE(t_xcpot_inbuild),INTENT(INOUT)    :: xcpot
       TYPE(t_noco),INTENT(INOUT)     :: noco
-    
+
       REAL,INTENT(INOUT)           :: a1(3),a2(3),a3(3)
       CHARACTER(len=3),INTENT(OUT) :: noel(atoms%ntype)
-      CHARACTER(len=4),INTENT(OUT) :: namex 
+      CHARACTER(len=4),INTENT(OUT) :: namex
       CHARACTER(len=12),INTENT(OUT):: relcor
       REAL,INTENT(IN),OPTIONAL     :: dtild_opt
       CHARACTER(len=8),INTENT(IN),OPTIONAL:: name_opt(10)
@@ -67,7 +68,7 @@
 !-odim
 ! ..
 ! ..  Local Variables
-      REAL     ::scpos  ,zc,dtild   
+      REAL     ::scpos  ,zc,dtild
       INTEGER  ::nw,idsprs
       INTEGER ieq,i,k,na,n,ilo
       REAL s3,ah,a,hs2,rest
@@ -96,14 +97,14 @@
       IF (ch_rw.eq.'r') THEN
 !--------------------------------------------------------------------
       OPEN (5,file='inp',form='formatted',status='old')
-      
+
       !default not read in in old inp-file
       input%qfix=2
 !
       a1(:) = 0
       a2(:) = 0
       a3(:) = 0
-      
+
 
       WRITE (6,*) '-------- dump of inp-file ------------'
 !
@@ -297,7 +298,7 @@
       ENDIF
       ! set mixing and screening for variable HSE functional
       WRITE (6,9040) namex,relcor
-     
+
 ! look what comes in the next two lines
 !
       READ (UNIT=5,FMT=7182,END=77,ERR=77) ch_test
@@ -323,9 +324,9 @@
          GOTO 78
       ELSEIF ( ch_test .eq. 'gcu' ) then              ! HF
         BACKSPACE (5)
-        READ (UNIT=5,FMT=7999,END=99,ERR=99) hybrid%gcutm1,hybrid%tolerance1,&
+        READ (UNIT=5,FMT=7999,END=99,ERR=99) mpbasis%g_cutoff,mpbasis%linear_dep_tol,&
      &     hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
-        WRITE (6,9999) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+        WRITE (6,9999) mpbasis%g_cutoff,mpbasis%linear_dep_tol,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
  7999   FORMAT (6x,f8.5,6x,f10.8,8x,i2,6x,i2,7x,i4)
  9999   FORMAT ('gcutm=',f8.5,',mtol=',f10.8,',lambda=',i2,&
      &          ',lexp=',i2,',bands=',i4)
@@ -362,6 +363,9 @@
       READ (UNIT=5,FMT=7110,END=99,ERR=99)
       WRITE (6,9060)
       atoms%n_u = 0
+      atoms%n_hia = 0
+      atoms%n_gf = 0
+      atoms%n_j0 = 0
       DO n=1,atoms%ntype
 !
          READ (UNIT=5,FMT=7140,END=99,ERR=99) noel(n),atoms%nz(n),&
@@ -410,7 +414,7 @@
  7161     FORMAT (i2,8x,l1,5x,i2,5x,60i3)
           WRITE (6,9091) atoms%neq(n),atoms%l_geo(n),atoms%nlo(n),&
      &                                    (atoms%llo(ilo,n),ilo=1,atoms%nlo(n))
-        END IF 
+        END IF
 !
          DO ieq=1,atoms%neq(n)
             na = na + 1
@@ -474,7 +478,7 @@
         IF(ldum)           CALL juDFT_error&
      &       ("QGpsi exists but gw /= 2 in inp.",calledby ="rw_inp")
       ENDIF
-  
+
       BACKSPACE(5)                                         ! Make sure that input%vchk,input%cdinf,obsolete%pot8 are all given.
       READ (UNIT=5,FMT=7220,END=99,ERR=99) input%vchk,input%cdinf,ldum
       if (ldum) call judft_error("pot8 not longer supported")
@@ -482,9 +486,9 @@
  7220 FORMAT (5x,l1,1x,6x,l1,1x,5x,l1,1x,3x,i1,1x,9x,i4)
 !
       DO i=1,100 ; line(i:i)=' ' ; ENDDO
-      
+
       input%eig66(2)=.false.
-      
+
       READ (UNIT=5,FMT=6000,END=99,ERR=99)&
      &                idum,ldum,input%l_f,input%eonly,input%eig66(1)!,input%eig66(2)
       WRITE (6,9130) 0,.false.,input%l_f,input%eonly,input%eig66(1)!,input%eig66(2)
@@ -513,7 +517,7 @@
 !
       READ (UNIT=5,FMT='(f10.5)',END=99,ERR=99) input%rkmax
       WRITE (6,FMT='(f10.5,1x,A)') input%rkmax, '=kmax'
-     
+
       READ (UNIT=5,FMT=8010,END=99,ERR=99) input%gauss,input%delgau,input%tria
       WRITE (6,9160) input%gauss,input%delgau,input%tria
  8010 FORMAT (6x,l1,f10.5,5x,l1)
@@ -549,7 +553,7 @@
 !!$        chform= '(40x,l1,1x,'//chntype//'a1)'
 !!$        CALL judft_error("soc_opt no longer supported")
 !!$      ENDIF
-    
+
       READ (UNIT=5,FMT=8050,END=99,ERR=99)&
      &                 input%frcor,sliceplot%slice,input%ctail
       input%coretail_lmax=99
@@ -559,7 +563,7 @@
       input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
       WRITE (6,9170)  input%frcor,sliceplot%slice,input%ctail
  8050 FORMAT (6x,l1,7x,l1,7x,l1,6x,l1,7x,i1,5x,l1,5x,l1)
-      
+
       ! check if itmax consists of 2 or 3 digits
       READ(unit=5,FMT='(8x,a)') check
       BACKSPACE 5
@@ -575,8 +579,8 @@
         WRITE (6,9180) input%itmax,input%maxiter,input%imix,input%alpha,input%spinf
  8061   FORMAT (6x,i3,9x,i3,6x,i2,7x,f6.2,7x,f6.2)
       END IF
-      
-      input%preconditioning_param = 0.0 
+
+      input%preconditioning_param = 0.0
 
       chform = '(5x,l1,'//chntype//'f6.2)'
 !      chform = '(5x,l1,23f6.2)'
@@ -638,7 +642,7 @@
 !
       READ (UNIT=5,FMT=8090,END=99,ERR=99) !
                      !input%xa,input%thetad,input%epsdisp,input%epsforce
-      WRITE (6,*) "No relaxation with old input anymore" 
+      WRITE (6,*) "No relaxation with old input anymore"
       !input%xa,input%thetad,input%epsdisp,input%epsforce
  8090 FORMAT (3x,f10.5,8x,f10.5,9x,f10.5,10x,f10.5)
 !
@@ -658,7 +662,7 @@
      &     END=98,ERR=98) banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
 
       kpts%posScale = 1.0
- 
+
 ! added for exact-exchange or hybrid functional calculations:
 ! read in the number of k-points and nx,ny and nz given in the last line
 ! of the input file,
@@ -675,7 +679,7 @@
             WRITE(*,*) ''
             CALL juDFT_error("Invalid declaration of k-point set (1)",calledby="rw_inp")
          END IF
-      
+
          IF( kpts%nkpt3(1)*kpts%nkpt3(2)*kpts%nkpt3(3) .ne. idum ) THEN
             WRITE(*,*) ''
             WRITE(*,*) 'nx*ny*nz is not equal to nkpt.'
@@ -690,14 +694,14 @@
 
       IF(namex=='exx ') THEN
          CALL judft_error("No EXX calculations in this FLEUR version")
-        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) hybrid%gcutm2,hybrid%tolerance2,hybrid%bands2
+        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) mpbasis%g_cutoff2,hybrid%tolerance2,hybrid%bands2
 
         !DO i=1,atoms%ntype
           !READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
             !END IF=98,ERR=98) hybrid%lcutm2(i),hybrid%select2(1,i),hybrid%select2(2,i),&
             !           hybrid%select2(3,i),hybrid%select2(4,i)
         !END DO
-        
+
         !ALLOCATE( hybrid%l_exxc(maxval(atoms%ncst),atoms%ntype) )
         !DO i=1,atoms%ntype
    !       READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98)(hybrid%l_exxc(k,i),k=1,atoms%ncst(i))
@@ -787,7 +791,7 @@
       ENDIF
       IF( namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
      &    .OR. namex.EQ.'vhse' ) THEN
-        WRITE (5,9999) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+        WRITE (5,9999) mpbasis%g_cutoff,mpbasis%linear_dep_tol,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
         l_hyb = .true.
       END IF
 
@@ -897,7 +901,7 @@
       WRITE (5,9140) 1,obsolete%lepr
 
       WRITE (5,'(a)') 'ellow, elup, valence electrons:'
-      
+
       WRITE (5,9150) input%ellow,input%elup,input%zelec
 9150  FORMAT (4f10.5)
       WRITE (5,fmt='(f10.5,1x,A)') input%rkmax, '=kmax'

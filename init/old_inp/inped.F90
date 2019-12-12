@@ -28,7 +28,7 @@
       CONTAINS
         SUBROUTINE inped(atoms,obsolete,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
-                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor)
+                         stars,oneD,mpbasis,hybrid,kpts,a1,a2,a3,namex,relcor)
           USE m_rwinp
           USE m_chkmt
           USE m_inpnoco
@@ -51,12 +51,13 @@
           TYPE(t_noco),      INTENT(INOUT) :: noco
           TYPE(t_stars),     INTENT(INOUT) :: stars
           TYPE(t_oneD),      INTENT(INOUT) :: oneD
+          TYPE(t_mpbasis), intent(inout) :: mpbasis
           TYPE(t_hybrid),    INTENT(INOUT) :: hybrid
           TYPE(t_kpts),      INTENT(INOUT) :: kpts
           REAL,              INTENT(OUT)   :: a1(3)
           REAL,              INTENT(OUT)   :: a2(3)
           REAL,              INTENT(OUT)   :: a3(3)
-          CHARACTER(len=4),  INTENT(OUT)   :: namex 
+          CHARACTER(len=4),  INTENT(OUT)   :: namex
           CHARACTER(len=12), INTENT(OUT)   :: relcor
 
           !     .. Local Scalars ..
@@ -84,7 +85,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,obsolete,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3)
+               cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts, noel,namex,relcor,a1,a2,a3)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!
@@ -247,7 +248,7 @@
 !!$          xcpot%krla = 0
 !!$          IF (relcor.EQ.'relativistic') THEN
 !!$             xcpot%krla = 1
-!!$           
+!!$
 !!$          ENDIF
 
 !!$          IF (xcpot%icorr.EQ.0) WRITE(6,*) 'WARNING: using X-alpha for XC!'
@@ -259,7 +260,7 @@
 
           IF (xcpot%needs_grad()) THEN
              obsolete%ndvgrd = MAX(obsolete%ndvgrd,3)
-            
+
 
              !        iggachk: removed; triggered via idsprs (see below)
              !                 idsprs-0(mt,l=0),-l(nmt),-i(interstitial),-v(vacuum)
@@ -274,7 +275,7 @@
           ENDIF
           !-guta
           !     specification of atoms
-          
+
           cell%volint = cell%vol
 
           DO  n = 1,atoms%ntype
@@ -425,7 +426,7 @@
 8240      FORMAT (/,10x,'number of valence electrons=',f10.5,/,10x, 'temperature broadening     =',f10.5)
           WRITE (6,FMT=*) 'itmax=',input%itmax,' broy_sv=',input%maxiter,' imix=',input%imix
           WRITE (6,FMT=*) 'alpha=',input%alpha,' spinf=',input%spinf
-    
+
           IF ((.NOT.sym%invs).AND.input%secvar) THEN
              WRITE(6,*)'The second variation is not implemented in the'
              WRITE(6,*)'complex version of the program.'

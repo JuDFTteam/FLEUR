@@ -68,6 +68,23 @@ MODULE m_types_setup
       LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
    END TYPE t_utype
 
+   TYPE t_gfelementtype
+      SEQUENCE
+      !defines the l and atomType elements for given greens function element (used for mapping index in types_greensf)
+      INTEGER l
+      INTEGER lp
+      INTEGER atomType
+      INTEGER atomTypep
+   END TYPE t_gfelementtype
+
+   TYPE t_j0calctype
+      INTEGER atomType  !atom Type for which to calculate J0
+      INTEGER l_min     !Minimum l considered
+      INTEGER l_max     !Maximum l considered
+      LOGICAL l_avgexc  !Determines wether we average over the exchange splittings for all l
+      LOGICAL l_eDependence  !Switch to output J0 with variating fermi energy (only with contourDOS)
+   END TYPE
+
    !
    ! Type for the electric field
    !
@@ -84,7 +101,11 @@ MODULE m_types_setup
       !lmaxd=maxval(lmax)
       INTEGER:: lmaxd
       ! no of lda+us
-      INTEGER ::n_u
+      INTEGER :: n_u
+      INTEGER :: n_hia
+      INTEGER :: n_j0
+      ! no of greens function calculations (in total)
+      INTEGER :: n_gf
       ! dimensions
       INTEGER :: jmtd
       !No of element
@@ -159,7 +180,11 @@ MODULE m_types_setup
       INTEGER, ALLOCATABLE :: krla(:)
       LOGICAL, ALLOCATABLE :: relcor(:)
       !lda_u information(ntype)
-      TYPE(t_utype), ALLOCATABLE::lda_u(:)
+      TYPE(t_utype),ALLOCATABLE::lda_u(:)
+      TYPE(t_utype),ALLOCATABLE::lda_hia(:)
+      !j0 calc information
+      TYPE(t_gfelementtype), ALLOCATABLE::gfelem(:)
+      TYPE(t_j0calctype), ALLOCATABLE::j0(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
       !flipSpinTheta and flipSpinPhi are the angles which are given
       !in the input to rotate the charge den by these polar angles.
@@ -177,6 +202,8 @@ MODULE m_types_setup
       REAL, ALLOCATABLE :: theta_mt_avg(:)
    CONTAINS
       procedure :: nsp => calc_nsp_atom
+      procedure :: write_atoms
+      generic   :: write(unformatted) => write_atoms
    END TYPE t_atoms
 
    TYPE t_cell
@@ -293,44 +320,6 @@ MODULE m_types_setup
       REAL, POINTER :: pgft1xy(:)
    END TYPE t_oneD
 
-   TYPE t_hybrid
-      LOGICAL               ::  l_hybrid = .false.
-      LOGICAL               ::  l_subvxc = .false.
-      LOGICAL               ::  l_calhf = .false.
-      LOGICAL               ::  l_addhf = .false.
-      INTEGER               ::  ewaldlambda
-      INTEGER               ::  lexp = 0
-      INTEGER               ::  bands1 !Only read in
-      INTEGER               ::  nbasp
-      INTEGER               ::  maxlcutm1
-      INTEGER               ::  maxindxm1
-      INTEGER               ::  maxbasm1
-      INTEGER               ::  maxindxp1
-      INTEGER               ::  maxgptm
-      INTEGER               ::  maxgptm1
-      INTEGER               ::  maxindx
-      INTEGER               ::  maxlmindx
-      INTEGER               ::  gptmd
-      INTEGER, ALLOCATABLE   ::  nindx(:, :)
-      INTEGER, ALLOCATABLE   ::  select1(:, :)
-      INTEGER, ALLOCATABLE   ::  lcutm1(:)
-      INTEGER, ALLOCATABLE   ::  nindxm1(:, :)
-      INTEGER, ALLOCATABLE   ::  gptm(:, :)
-      INTEGER, ALLOCATABLE   ::  ngptm1(:)
-      INTEGER, ALLOCATABLE   ::  pgptm1(:, :)
-      INTEGER, ALLOCATABLE   ::  ngptm(:)
-      INTEGER, ALLOCATABLE   ::  pgptm(:, :)
-      INTEGER, ALLOCATABLE   ::  lcutwf(:)
-      INTEGER, ALLOCATABLE   ::  map(:, :)
-      INTEGER, ALLOCATABLE   ::  tvec(:, :, :)
-      INTEGER, ALLOCATABLE ::  nbasm(:)
-      REAL                  ::  gcutm1
-      REAL                  ::  tolerance1  !only read in
-      REAL, ALLOCATABLE   ::  basm1(:, :, :, :)
-      COMPLEX, ALLOCATABLE   ::  d_wgn2(:, :, :, :)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:), nbands(:), nobd(:,:)                   !alloc in eigen_HF_init
-      REAL, ALLOCATABLE   ::  div_vv(:, :, :)
-   END TYPE t_hybrid
 
    TYPE t_dimension
       INTEGER :: nspd
@@ -378,6 +367,8 @@ MODULE m_types_setup
       INTEGER :: coretail_lmax
       INTEGER :: itmax
       REAL    :: minDistance
+      REAL    :: minoccDistance !Distances for the density matrix in DFT+Hubbard 1 case
+      REAL    :: minmatDistance
       INTEGER :: maxiter
       INTEGER :: imix
       INTEGER :: gw
@@ -427,6 +418,29 @@ MODULE m_types_setup
       LOGICAL :: ldauLinMix
       REAL    :: ldauMixParam
       REAL    :: ldauSpinf
+      LOGICAL :: ldauAdjEnpara
+      LOGICAL :: l_dftspinpol
+      LOGICAL :: l_gfsphavg
+      LOGICAL :: l_gfmperp
+      LOGICAL :: l_resolvent
+      LOGICAL :: l_hist
+      INTEGER :: gf_ne
+      REAL    :: gf_ellow
+      REAL    :: gf_elup
+      INTEGER :: gf_mode
+      INTEGER :: gf_n
+      REAL    :: gf_alpha
+      REAL    :: gf_et
+      REAL    :: gf_eb
+      INTEGER :: gf_n1
+      INTEGER :: gf_n2
+      INTEGER :: gf_n3
+      INTEGER :: gf_nmatsub
+      REAL    :: gf_sigma
+      LOGICAL :: gf_anacont
+      LOGICAL :: gf_dosfermi
+      LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
+      LOGICAL :: gfTet !This switch will be true iff the tetrahedron were calculated from the equdistant grid
       LOGICAL :: l_rdmft
       REAL    :: rdmftOccEps
       INTEGER :: rdmftStatesBelow
@@ -456,6 +470,7 @@ MODULE m_types_setup
       REAL    :: e1_dos
       REAL    :: e2_dos
       REAL    :: sig_dos
+      INTEGER :: projdos !selects one atomtype and prints the projected dos if there are to many atoms
       REAL    :: e_mcd_lo
       REAL    :: e_mcd_up
       LOGICAL :: unfoldband
@@ -718,4 +733,65 @@ CONTAINS
 
       nsp = (self%lmaxd+1+MOD(self%lmaxd+1,2))*(2*self%lmaxd+1)
    end function
+
+   subroutine write_atoms(atoms, unit, iostat, iomsg)
+      implicit none
+      class(t_atoms), intent(in)   :: atoms
+      integer, intent(in)         :: unit         ! Internal unit to write to.
+      integer, intent(out)        :: iostat      ! non zero on error, etc.
+      character(*), intent(inout) :: iomsg  ! define if iostat non zero.
+      write(unit, iostat=iostat, iomsg=iomsg) atoms%ntype, atoms%nat, atoms%nlod, atoms%lmaxd
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(atoms%neq)
+      write(unit, iostat=iostat, iomsg=iomsg) atoms%neq
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(atoms%lmax)
+      write(unit, iostat=iostat, iomsg=iomsg) atoms%lmax
+
+      write(unit, iostat=iostat, iomsg=iomsg) shape(atoms%taual)
+      write(unit, iostat=iostat, iomsg=iomsg) atoms%taual
+   end subroutine write_atoms
+      
+   SUBROUTINE add_gfjob(nType,lmin,lmax,atoms,l_off,l_inter,l_nn)
+
+         USE m_juDFT
+
+         INTEGER,          INTENT(IN)     :: nType
+         INTEGER,          INTENT(IN)     :: lmin
+         INTEGER,          INTENT(IN)     :: lmax
+         TYPE(t_atoms),    INTENT(INOUT)  :: atoms
+         LOGICAL,          INTENT(IN)     :: l_off !l!=lp
+         LOGICAL,          INTENT(IN)     :: l_inter
+         LOGICAL,          INTENT(IN)     :: l_nn
+
+         INTEGER l,lp,i_gf
+         LOGICAL l_found
+
+         IF(l_inter) CALL juDFT_error("Intersite greens function not yet implemented",calledby="add_gfjob")
+
+         !TODO: add the nearest neighbours jobs
+
+         DO l = lmin, lmax
+            DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
+               !Check if this job has already been added
+               l_found = .FALSE.
+               DO i_gf = 1, atoms%n_gf
+                  IF(atoms%gfelem(i_gf)%l.NE.l) CYCLE
+                  IF(atoms%gfelem(i_gf)%lp.NE.lp) CYCLE
+                  IF(atoms%gfelem(i_gf)%atomType.NE.nType) CYCLE
+                  IF(atoms%gfelem(i_gf)%atomTypep.NE.nType) CYCLE
+                  l_found = .TRUE.
+               ENDDO
+               IF(l_found) CYCLE !This job is already in the array 
+
+               atoms%n_gf = atoms%n_gf + 1
+               atoms%gfelem(atoms%n_gf)%l = l
+               atoms%gfelem(atoms%n_gf)%atomType = nType
+               atoms%gfelem(atoms%n_gf)%lp = lp
+               atoms%gfelem(atoms%n_gf)%atomTypep = nType !For now
+
+            ENDDO
+         ENDDO
+
+      END SUBROUTINE add_gfjob
 END MODULE m_types_setup

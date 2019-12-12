@@ -51,7 +51,7 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
    REAL d,del,fix,h,r,rnot,z,bm,qdel,va
    REAL denz1(1,1),vacxpot(1,1),vacpot(1,1) 
    INTEGER i,ivac,iza,j,jr,k,n,n1,ispin 
-   INTEGER nw,ilo,natot,nat 
+   INTEGER nw,ilo,natot,nat,archiveType 
 
    ! Local Arrays
    REAL,    ALLOCATABLE :: vbar(:,:)
@@ -208,9 +208,9 @@ SUBROUTINE stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
 
       ! Write superposed density onto density file
       den%iter = 0
+
       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,CDN_INPUT_DEN_const,&
                         1,-1.0,0.0,.TRUE.,den)
-
       ! Check continuity
       IF (input%vchk) THEN
          DO ispin = 1, input%jspins

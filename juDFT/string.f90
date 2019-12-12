@@ -44,7 +44,7 @@ contains
       write (ret_str,*) num
       ret_str = strip(ret_str)
    end function int2str
-   
+
    function float2str(num) result(ret_str)
       implicit none
       real, intent(in)               :: num
@@ -58,4 +58,25 @@ contains
       endif
       ret_str = strip(ret_str)
    end function float2str
+
+   function gen_filename(base, iter, kpt, ext) result(out_str)
+      implicit none
+      character(len=*), intent(in)           :: base
+      integer, intent(in), optional          :: iter, kpt
+      character(len=*), intent(in), optional :: ext
+      character(len=:), allocatable          :: out_str
+
+      out_str = base
+      if(present(iter)) out_str = out_str // "_it=" // int2str(iter)
+      if(present(kpt))  out_str = out_str // "_kpt=" // int2str(kpt)
+
+      if(present(ext)) then
+         if(ext(1:1) == ".") then
+            out_str = out_str // ext
+         else
+            out_str = out_str // "." // ext
+         endif
+      endif
+   end function gen_filename
+
 end module m_juDFT_string

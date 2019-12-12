@@ -10,14 +10,14 @@ MODULE m_symmetrizeh
 
 CONTAINS
 
-   SUBROUTINE symmetrizeh(atoms, bk, DIMENSION, jsp, lapw, sym, kveclo, cell, nsymop, psym, hmat)
+   SUBROUTINE symmetrizeh(atoms, bk, jsp, lapw, sym, kveclo, cell, nsymop, psym, hmat)
 
       USE m_constants
       USE m_types
+      USE m_juDFT
 
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)    :: DIMENSION
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -29,12 +29,12 @@ CONTAINS
 
       ! arrays
       INTEGER, INTENT(IN)    :: kveclo(atoms%nlotot)
-      INTEGER, INTENT(IN)    :: psym(nsymop)
-      REAL, INTENT(IN)    :: bk(3)
+      INTEGER, INTENT(IN)    :: psym(:)
+      REAL, INTENT(IN)    :: bk(:)
 
       ! local scalars
       INTEGER               ::  ilotot, itype, itype1, ilo, ilo1
-      INTEGER               ::  iatom, iatom1, iiatom, iiatom1
+      INTEGER               ::  iatom, iatom1, iiatom
       INTEGER               ::  i, ieq, ieq1, m
       INTEGER               ::  igpt_lo, igpt_lo1, igpt_lo2, igpt1_lo1
       INTEGER               ::  igpt1_lo2, isym, iop, ic, ic1, ic2
@@ -48,7 +48,6 @@ CONTAINS
       INTEGER               ::  l_lo(atoms%nlotot)
       INTEGER               ::  itype_lo(atoms%nlotot)
       INTEGER               ::  gpt_lo(3, atoms%nlotot), gpthlp(3), g(3)
-      INTEGER               ::  indx(DIMENSION%nbasfcn, DIMENSION%nbasfcn)
       INTEGER               ::  lo_indx(atoms%nlod, atoms%nat)
       INTEGER               ::  rot(3, 3, nsymop), rrot(3, 3, nsymop)
 
@@ -57,7 +56,7 @@ CONTAINS
       INTEGER, ALLOCATABLE   ::  map(:, :)
 
       REAL                  ::  rtaual(3), kghlp(3)
-      REAL                  ::  rotkpthlp(3), rotkpt(3)
+      REAL                  ::  rotkpt(3)
       REAL                  ::  trans(3, nsymop)
       COMPLEX, ALLOCATABLE   ::  c_lo(:, :, :, :), c_rot(:, :, :, :, :), y(:)
       COMPLEX, ALLOCATABLE   ::  cfac(:, :), chelp(:, :)
@@ -96,7 +95,7 @@ CONTAINS
       END DO
 
       ! caclulate mapping of atoms
-      ALLOCATE (map(nsymop, atoms%nat))
+      allocate(map(nsymop, atoms%nat))
       map = 0
       iatom = 0
       iiatom = 0
@@ -111,7 +110,7 @@ CONTAINS
                      iatom1 = iiatom + ieq1
                   END IF
                END DO
-               IF (iatom1 == 0) STOP 'symmetrizeh_new: error finding rotated atomic position'
+               IF (iatom1 == 0) call judft_error('symmetrizeh_new: error finding rotated atomic position')
                map(isym, iatom) = iatom1
             END DO
          END DO
@@ -119,8 +118,8 @@ CONTAINS
       END DO
 
       ! initialze pointer_apw and the apw part of cfac
-      ALLOCATE (pointer_apw(lapw%nv(jsp), nsymop), cfac(lapw%nv(jsp) + atoms%nlotot, nsymop), stat=ok)
-      IF (ok /= 0) STOP 'symmetrizeh_new: failure allocation pointer_apw,cfac'
+      allocate(pointer_apw(lapw%nv(jsp), nsymop), cfac(lapw%nv(jsp) + atoms%nlotot, nsymop), stat=ok)
+      IF (ok /= 0) call judft_error('symmetrizeh_new: failure allocation pointer_apw,cfac')
 
       pointer_apw = 0
       cfac = 0
@@ -152,7 +151,7 @@ CONTAINS
                DO i = 1, lapw%nv(jsp)
                   WRITE (6, *) i, lapw%gvec(:, i, jsp)
                ENDDO
-               STOP 'symmetrizeh_new: rotated G point not found'
+               call judft_error('symmetrizeh_new: rotated G point not found')
             END IF
             pointer_apw(igpt, isym) = nrgpt
             cfac(igpt, isym) = EXP(-2*pi_const*img*(dot_PRODUCT(bk(:) + gpthlp(:), trans(:, isym))))
@@ -251,12 +250,12 @@ CONTAINS
 
          ! calculate expansion coefficients for local orbitals
          IF (hmat%l_real) THEN
-            ALLOCATE (c_lo(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat), stat=ok)
+            allocate(c_lo(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat), stat=ok)
          ELSE
-            ALLOCATE (c_lo(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat), stat=ok)
+            allocate(c_lo(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat), stat=ok)
          END IF
 
-         IF (ok /= 0) STOP 'symmetrizeh_new: failure allocation c_lo'
+         IF (ok /= 0) call judft_error('symmetrizeh_new: failure allocation c_lo')
 
          iatom = 0
          ilotot = 0
@@ -270,7 +269,7 @@ CONTAINS
 
                   DO ilo = 1, atoms%nlo(itype)
                      l = atoms%llo(ilo, itype)
-                     ALLOCATE (y((l + 1)**2))
+                     allocate(y((l + 1)**2))
                      lo_indx(ilo, iatom) = ilotot + 1
 
                      DO igpt_lo = 1, invsfct*(2*l + 1)
@@ -296,20 +295,20 @@ CONTAINS
                            END DO
                         END IF
                      END DO
-                     DEALLOCATE (y)
+                     deallocate(y)
                   END DO
                END IF
             END DO
          END DO
 
-         IF (ilotot /= atoms%nlotot) STOP 'symmetrizeh_new: failure counting local orbitals(ilotot)'
+         IF (ilotot /= atoms%nlotot) call judft_error('symmetrizeh_new: failure counting local orbitals(ilotot)')
 
          IF (hmat%l_real) THEN
-            ALLOCATE (c_rot(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat, nsymop))
-            ALLOCATE (chelp(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2))
+            allocate(c_rot(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2, atoms%nlod, atoms%nat, nsymop))
+            allocate(chelp(4*MAXVAL(l_lo) + 2, 4*MAXVAL(l_lo) + 2))
          ELSE
-            ALLOCATE (c_rot(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat, nsymop))
-            ALLOCATE (chelp(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1))
+            allocate(c_rot(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1, atoms%nlod, atoms%nat, nsymop))
+            allocate(chelp(2*MAXVAL(l_lo) + 1, 2*MAXVAL(l_lo) + 1))
          END IF
 
          DO isym = 1, nsymop
@@ -336,7 +335,7 @@ CONTAINS
 
                      DO ilo = 1, atoms%nlo(itype)
                         l = atoms%llo(ilo, itype)
-                        ALLOCATE (y((l + 1)**2))
+                        allocate(y((l + 1)**2))
 
                         DO igpt_lo = 1, invsfct*(2*l + 1)
                            ilotot = ilotot + 1
@@ -367,14 +366,14 @@ CONTAINS
 
                         idum = invsfct*(2*l + 1)
 
-                        ALLOCATE (ipiv(idum))
+                        allocate(ipiv(idum))
 
                         chelp(:idum, :idum) = c_lo(:idum, :idum, ilo, ratom)
 
                         CALL ZGESV(idum, idum, chelp(:idum, :idum), idum, ipiv, c_rot(:idum, :idum, ilo, ratom, isym), idum, ok)
 
-                        IF (ok /= 0) STOP 'symmetrizeh_new: failure zgesv'
-                        DEALLOCATE (ipiv, y)
+                        IF (ok /= 0) call judft_error('symmetrizeh_new: failure zgesv')
+                        deallocate(ipiv, y)
                      END DO
                   END IF
                END DO
@@ -548,7 +547,7 @@ CONTAINS
          use m_judft
          IMPLICIT NONE
          INTEGER, INTENT(IN)    :: ll
-         REAL, INTENT(IN)       :: rvec(3)
+         REAL, INTENT(IN)       :: rvec(:)
          COMPLEX, INTENT(OUT)   :: Y((ll + 1)**2)
          REAL                  :: stheta, ctheta, sphi, cphi, r, rvec1(3)
          INTEGER               :: l, lm
@@ -562,7 +561,7 @@ CONTAINS
          ctheta = 0
          sphi = 0
          cphi = 0
-         r = SQRT(SUM(rvec**2))
+         r = norm2(rvec)
          IF (r > 1e-16) THEN
             rvec1 = rvec/r
             ctheta = rvec1(3)

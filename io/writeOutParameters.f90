@@ -40,8 +40,9 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,obsolete,kpts,&
    WRITE(attributes(2),'(i0)') atoms%ntype
    WRITE(attributes(3),'(i0)') atoms%jmtd
    WRITE(attributes(4),'(i0)') atoms%n_u
-   CALL writeXMLElementFormPoly('atomsInCell',(/'nat  ','ntype','jmtd ','n_u  '/),&
-                                attributes(:4),reshape((/3,6,6,6,8,8,8,8/),(/4,2/)))
+   WRITE(attributes(5),'(i0)') atoms%n_hia
+   CALL writeXMLElementFormPoly('atomsInCell',(/'nat  ','ntype','jmtd ','n_u  ','n_hia'/),&
+                                attributes(:5),reshape((/3,6,6,6,6,8,8,8,8,8/),(/5,2/)))
 
    WRITE(attributes(1),'(i0)') dimension%nvd
    WRITE(attributes(2),'(i0)') atoms%lmaxd

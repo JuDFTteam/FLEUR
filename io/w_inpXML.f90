@@ -18,7 +18,7 @@ MODULE m_winpXML
 CONTAINS
 SUBROUTINE w_inpXML(&
 &                   atoms,obsolete,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-&                   cell,sym,xcpot,noco,oneD,hybrid,kpts,div,l_gamma,&
+&                   cell,sym,xcpot,noco,oneD,mpbasis,hybrid,kpts,div,l_gamma,&
 &                   noel,namex,relcor,a1,a2,a3,dtild_opt,name_opt,&
 &                   xmlElectronStates,xmlPrintCoreStates,xmlCoreOccs,&
 &                   atomTypeSpecies,speciesRepAtomType,l_outFile,filename,&
@@ -35,12 +35,13 @@ SUBROUTINE w_inpXML(&
 
    TYPE(t_input),INTENT(IN)   :: input
    TYPE(t_sym),INTENT(IN)     :: sym
-   TYPE(t_stars),INTENT(IN)   :: stars 
+   TYPE(t_stars),INTENT(IN)   :: stars
    TYPE(t_atoms),INTENT(IN)   :: atoms
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
    TYPE(t_obsolete),INTENT(IN) :: obsolete
    TYPE(t_kpts),INTENT(IN)     :: kpts
    TYPE(t_oneD),INTENT(IN)     :: oneD
+   TYPE(t_mpbasis), intent(inout) :: mpbasis
    TYPE(t_hybrid),INTENT(IN)   :: hybrid
    TYPE(t_cell),INTENT(IN)     :: cell
    TYPE(t_banddos),INTENT(IN)  :: banddos
@@ -133,7 +134,7 @@ SUBROUTINE w_inpXML(&
    l_relcor=.true.
    IF(relcor.EQ.'relativi') THEN
       l_relcor=.true.
-   ELSE 
+   ELSE
       l_relcor=.false.
    END IF
 
@@ -198,7 +199,7 @@ SUBROUTINE w_inpXML(&
 
    IF (l_explicit.OR.hybrid%l_hybrid) THEN
       155 FORMAT('      <prodBasis gcutm="',f0.8,'" tolerance="',f0.8,'" ewaldlambda="',i0,'" lexp="',i0,'" bands="',i0,'"/>')
-      WRITE (fileNum,155) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+      WRITE (fileNum,155) mpbasis%g_cutoff,mpbasis%linear_dep_tol,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
    END IF
 
    IF (l_nocoOpt.OR.l_explicit) THEN
@@ -667,7 +668,7 @@ SUBROUTINE w_inpXML(&
    370 FORMAT('      <checks vchk="',l1,'" cdinf="',l1,'"/>')
    WRITE (fileNum,370) input%vchk,input%cdinf
 
-!      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>  
+!      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>
    380 FORMAT('      <densityOfStates ndir="',i0,'" minEnergy="',f0.8,'" maxEnergy="',f0.8,'" sigma="',f0.8,'"/>')
    WRITE (fileNum,380) banddos%ndir,banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
 

@@ -62,8 +62,8 @@ CONTAINS
     CALL pol_angle(mx,my,mz,betah,alphh)
     WRITE  (6,8026) betah,alphh
 8025 FORMAT(2x,'--> local frame: ','mx=',f9.5,' my=',f9.5,' mz=',f9.5,' |m|=',f9.5)
-8026 FORMAT(2x,'-->',10x,' delta beta=',f9.5,&
-         &                   '  delta alpha=',f9.5)
+8026 FORMAT(2x,'-->',10x,' local beta=',f9.5,&
+         &                   '  local alpha=',f9.5)
 
     IF (noco%l_relax(itype)) THEN
        !--->    rotate the (total (integrated) density matrix to obtain

@@ -44,12 +44,12 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, hybrid, lapw, dimension, kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
-                     results, it, mnobd, xcpot, mpi)
+   SUBROUTINE hsfock(nk, atoms, mpbasis, hybrid, lapw, dimension, kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
+                     results, mnobd, xcpot, mpi)
 
       USE m_types
       USE m_symm_hf
-      USE m_util, ONLY: intgrf, intgrf_init
+      USE m_intgrf, ONLY: intgrf, intgrf_init
       USE m_exchange_valence_hf
       USE m_exchange_core
       USE m_symmetrizeh
@@ -69,25 +69,23 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw
+      TYPE(t_mpbasis), intent(inout)  :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_results), INTENT(INOUT) :: results
 
       ! scalars
       INTEGER, INTENT(IN)    :: jsp
-      INTEGER, INTENT(IN)    :: it
       INTEGER, INTENT(IN)    :: nk
       INTEGER, INTENT(IN)    :: mnobd
 
       ! arrays
-      REAL, INTENT(IN)    :: eig_irr(dimension%neigd, kpts%nkpt)
+      REAL, INTENT(IN)    :: eig_irr(:,:)
 
       ! local scalars
-      INTEGER                 ::  i, j, ic, ic1, l, itype, n, nn
-      INTEGER                 ::  iband, iband1, iband2
+      INTEGER                 ::  i, j, l, itype
+      INTEGER                 ::  iband
       INTEGER                 ::  ikpt, ikpt0
-      INTEGER                 ::  irec
-      INTEGER                 ::  irecl_olap, irecl_z, irecl_vx
       INTEGER                 ::  nbasfcn
       INTEGER                 ::  nsymop
       INTEGER                 ::  nkpt_EIBZ
@@ -107,8 +105,6 @@ CONTAINS
       REAL                    ::  wl_iks(dimension%neigd, kpts%nkptf)
 
       TYPE(t_mat)             :: olap, trafo, invtrafo, ex, tmp, v_x, z
-      COMPLEX                 ::  exch(dimension%neigd, dimension%neigd)
-      COMPLEX, ALLOCATABLE     ::  carr(:)
 
       CALL timestart("total time hsfock")
 
@@ -142,19 +138,19 @@ CONTAINS
       call timestop("read in olap")
 
       IF (hybrid%l_calhf) THEN
-         ncstd = sum((/((hybdat%nindxc(l, itype)*(2*l + 1)*atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, atoms%ntype)/))
+         ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, atoms%ntype)])
          IF (nk == 1 .and. mpi%irank == 0) WRITE (*, *) 'calculate new HF matrix'
          IF (nk == 1 .and. jsp == 1 .and. input%imix > 10) CALL system('rm -f broyd*')
          ! calculate all symmetrie operations, which yield k invariant
 
-         ALLOCATE (parent(kpts%nkptf), stat=ok)
-         IF (ok /= 0) STOP 'mhsfock: failure allocation parent'
+         allocate(parent(kpts%nkptf), stat=ok)
+         IF (ok /= 0) call judft_error('mhsfock: failure allocation parent')
          parent = 0
 
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
-         CALL symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, hybrid, cell, lapw, jsp, mpi, &
+         CALL symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, mpbasis, hybrid, cell, lapw, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
@@ -169,26 +165,26 @@ CONTAINS
          ! calculate contribution from valence electrons to the
          ! HF exchange
          ex%l_real = sym%invs
-         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
-                                  eig_irr, results, parent, pointer_EIBZ, n_q, wl_iks, it, xcpot, noco, nsest, indx_sest, &
+         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpbasis, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
+                                  eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, ex)
 
          CALL timestart("core exchange calculation")
 
          ! calculate contribution from the core states to the HF exchange
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-            STOP "HSE not implemented in hsfock"
+            call judft_error('HSE not implemented in hsfock')
          ELSE
-            CALL exchange_vccv1(nk, atoms, hybrid, hybdat, dimension, jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
-            CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, mpi, results)
+            CALL exchange_vccv1(nk, atoms, mpbasis, hybrid, hybdat, dimension, jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
+            CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
          END IF
 
-         DEALLOCATE (n_q)
+         deallocate(n_q)
          CALL timestop("core exchange calculation")
 
          CALL timestart("time for performing T^-1*mat_ex*T^-1*")
          !calculate trafo from wavefunctions to APW basis
-         IF (dimension%neigd < hybrid%nbands(nk)) STOP " mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)"
+         IF (dimension%neigd < hybrid%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
 
          call z%init(olap%l_real, nbasfcn, dimension%neigd)
          call read_z(z, kpts%nkptf*(jsp - 1) + nk)
@@ -216,7 +212,7 @@ CONTAINS
          CALL timestop("time for performing T^-1*mat_ex*T^-1*")
 
          call timestart("symmetrizeh")
-         CALL symmetrizeh(atoms, kpts%bkf(:, nk), dimension, jsp, lapw, sym, hybdat%kveclo_eig, cell, nsymop, psym, v_x)
+         CALL symmetrizeh(atoms, kpts%bkf(:, nk), jsp, lapw, sym, hybdat%kveclo_eig, cell, nsymop, psym, v_x)
          call timestop("symmetrizeh")
 
          CALL write_v_x(v_x, kpts%nkpt*(jsp - 1) + nk)
