@@ -1,9 +1,9 @@
 MODULE m_lh_tofrom_lm
+   IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE lh_to_lm(atoms, lathar, iType, flh, flm)
       USE m_types
-      IMPLICIT NONE
 
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)    :: lathar
@@ -50,7 +50,6 @@ CONTAINS
 
    SUBROUTINE lh_from_lm(atoms, lathar, iType, flm, flh)
       USE m_types
-      IMPLICIT NONE
 
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)    :: lathar
