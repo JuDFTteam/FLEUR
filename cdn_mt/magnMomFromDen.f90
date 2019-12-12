@@ -10,9 +10,13 @@
 ! Robin Hilgers, Nov '19
 
 MODULE m_magnMomFromDen
+
 IMPLICIT NONE
+
 CONTAINS
+
 SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
+   
    USE m_constants
    USE m_types
    USE m_intgr
@@ -25,7 +29,7 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    TYPE(t_atoms), INTENT(INOUT)  ::  atoms
    TYPE(t_noco), INTENT(IN)      ::  noco
    TYPE(t_potden),INTENT(IN)     ::  den
-   REAL, INTENT(OUT)             ::  moments(atoms%ntype,3)
+   REAL, INTENT(OUT)             ::  moments(3,atoms%ntype)
 
    INTEGER                       ::  jsp,i,j
    REAL                          ::  mx,my,mz
@@ -51,7 +55,7 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
 !!Assign results
    DO i=1 , atoms%ntype
    IF (noco%l_mtNocoPot) THEN
-      moments(i,1:2)=2*dummyResults(i,3:4)
+      moments(1:2,i)=2*dummyResults(i,3:4)
    END IF
       moments(i,3)=dummyResults(i,1)-dummyResults(i,2)
    END DO
@@ -59,9 +63,9 @@ DEALLOCATE(dummyResults)
 
 !!Calculation of Angles
    DO i=1 , atoms%ntype
-      mx=moments(i,1)
-      my=moments(i,2)
-      mz=moments(i,3)
+      mx=moments(1,i)
+      my=moments(2,i)
+      mz=moments(3,i)
       CALL pol_angle(mx,my,mz,atoms%theta_mt_avg(i),atoms%phi_mt_avg(i))
       IF(mx<0) atoms%theta_mt_avg(i)=-atoms%theta_mt_avg(i)
    ENDDO
