@@ -30,7 +30,7 @@ MODULE m_types_forcetheo
      LOGICAL :: l_IO
    CONTAINS
      PROCEDURE :: start   =>forcetheo_start
-     PROCEDURE :: next_job=>forcetheo_next_job 
+     PROCEDURE :: next_job=>forcetheo_next_job
      PROCEDURE :: eval    =>forcetheo_eval
      PROCEDURE :: postprocess => forcetheo_postprocess
   END TYPE t_forcetheo
@@ -66,20 +66,19 @@ CONTAINS
     USE m_types_input
     USE m_types_noco
     USE m_types_sym
-    USE m_types_cell  
+    USE m_types_cell
     USE m_types_mpi
     USE m_types_potden
     USE m_types_misc
     USE m_types_kpts
     USE m_types_enpara
-    use m_types_dimension
-    
+
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    
+
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
@@ -99,6 +98,5 @@ CONTAINS
     CLASS(t_forcetheo),INTENT(INOUT):: this
   END SUBROUTINE forcetheo_postprocess
 
-  
-END MODULE m_types_forcetheo
 
+END MODULE m_types_forcetheo

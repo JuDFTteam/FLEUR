@@ -57,7 +57,6 @@
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
-      TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
       TYPE(t_cell),INTENT(INOUT)     :: cell
 
@@ -115,7 +114,7 @@
       ALLOCATE (&
      & atoms%lmax(atoms%ntype),sym%ntypsy(atoms%nat),atoms%neq(atoms%ntype),atoms%nlhtyp(atoms%ntype),&
      & atoms%rmt(atoms%ntype),atoms%zatom(atoms%ntype),atoms%jri(atoms%ntype),atoms%dx(atoms%ntype), &
-     & atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),&
+     & atoms%nlo(atoms%ntype),atoms%llo(atoms%nlod,atoms%ntype),atoms%bmu(atoms%ntype),&
      & noel(atoms%ntype),vacuum%izlay(vacuum%layerd,2),atoms%econf(atoms%ntype),atoms%lnonsph(atoms%ntype),&
      & atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),&
      & atoms%nz(atoms%ntype),atoms%relax(3,atoms%ntype),&
@@ -372,7 +371,7 @@
       !CALL parawrite(sym,stars,atoms,sphhar,vacuum,kpts,oneD,input)
 
       DEALLOCATE( sym%mrot,sym%tau,&
-     & atoms%lmax,sym%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%nflip,atoms%bmu,noel,&
+     & atoms%lmax,sym%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%bmu,noel,&
      & vacuum%izlay,atoms%econf,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & atoms%l_geo,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,noco%b_con,sphhar%clnu,sphhar%nlh,&
      & sphhar%llh,sphhar%nmem,sphhar%mlh,hybrid%select1,hybrid%lcutm1,&

@@ -16,9 +16,10 @@
 !     It is done directly without employing the mixed basis set.
 
 MODULE m_exchange_core
+      USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE exchange_vccv1(nk, atoms, mpbasis, hybrid, hybdat, jsp, lapw, &
+   SUBROUTINE exchange_vccv1(nk, input,atoms, mpbasis, hybrid, hybdat, jsp, lapw, &
                              nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
 
       USE m_constants
@@ -28,7 +29,7 @@ CONTAINS
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
-
+      TYPE(t_input),INTENT(IN)::     input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
       TYPE(t_mpi), INTENT(IN)   :: mpi

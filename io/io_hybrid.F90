@@ -59,7 +59,7 @@ contains
     if (opened) return
     opened=.true.
     OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-         &     recl=dimension%neigd*hybrid%maxlmindx*atoms%nat*16)
+         &     recl=input%neig*hybrid%maxlmindx*atoms%nat*16)
 
 #ifdef CPP_NOSPMVEC
     irecl_coulomb = hybrid%maxbasm1 * (hybrid%maxbasm1+1) * 8 / 2

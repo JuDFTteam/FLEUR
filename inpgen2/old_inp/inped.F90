@@ -61,7 +61,6 @@
           TYPE(t_noco),      INTENT(INOUT) :: noco
           TYPE(t_stars),     INTENT(INOUT) :: stars
           TYPE(t_oneD),      INTENT(INOUT) :: oneD
-          TYPE(t_mpbasis), intent(inout) :: mpbasis
           TYPE(t_hybrid),    INTENT(INOUT) :: hybrid
           TYPE(t_kpts),      INTENT(INOUT) :: kpts
           REAL,              INTENT(OUT)   :: a1(3)

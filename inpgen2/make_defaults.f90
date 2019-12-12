@@ -13,7 +13,7 @@ MODULE m_make_defaults
 !  help in the out-file.                                        gb`02
 !---------------------------------------------------------------------
 CONTAINS
-  
+
   SUBROUTINE make_defaults(atoms,sym,cell,vacuum,input,stars,&
                    xcpot,noco,hybrid)
     USE m_types_atoms
@@ -25,21 +25,21 @@ CONTAINS
     USE m_types_stars
     USE m_types_noco
     USE m_types_hybrid
-    
-    
+
+
       TYPE(t_atoms),INTENT(IN)    ::atoms
       TYPE(t_sym),INTENT(IN)      ::sym
       TYPE(t_cell),INTENT(IN)     ::cell
-      
-      
+
+
       TYPE(t_vacuum),INTENT(INOUT)::vacuum
       TYPE(t_input),INTENT(INOUT) ::input
       TYPE(t_stars),INTENT(INOUT) ::stars
       TYPE(t_xcpot_inbuild_nf),INTENT(INOUT) ::xcpot
       TYPE(t_noco),INTENT(INOUT)  ::noco
       TYPE(t_hybrid),INTENT(INOUT)::hybrid
-      
-      
+
+
       integer :: n
       !
       !input
@@ -48,22 +48,22 @@ CONTAINS
       IF (noco%l_ss) noco%l_noco=.TRUE.
       IF (noco%l_noco) input%jspins = 2
       !check for magnetism
-      DO n=1,atoms%ntype 
+      DO n=1,atoms%ntype
          IF (ANY(atoms%econf(n)%occupation(:,1).NE.atoms%econf(n)%occupation(:,2))) input%jspins=2
       ENDDO
-     
 
-       
+
+
       IF ( ANY(atoms%nlo(:).NE.0) ) THEN
         input%ellow = -1.8
       ELSE
-        input%ellow = -0.8  
+        input%ellow = -0.8
       ENDIF
       IF (input%film) THEN
          input%elup = 0.5
       ELSE
          input%elup = 1.0
-      ENDIF 
+      ENDIF
       IF (hybrid%l_hybrid) THEN
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
@@ -95,7 +95,7 @@ CONTAINS
       xcpot%gmaxxc  = merge(xcpot%gmaxxc,3.0*input%rkmax,xcpot%gmaxxc>0)
       xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
       xcpot%l_inbuild=.true.
-      if (xcpot%icorr==0) call xcpot%init(atoms%ntype) 
+      if (xcpot%icorr==0) call xcpot%init(atoms%ntype)
 
       !
       !vacuum
@@ -108,7 +108,7 @@ CONTAINS
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
       !IF (oneD%odd%d1) vacuum%nvac = 1
-   
+
       !
       !noco
       !
@@ -120,11 +120,11 @@ CONTAINS
       noco%alph(:) = 0.0
       noco%beta(:) = 0.0
       noco%b_con(:,:) = 0.0
-      
+
       !
       !hybrid
       !
-      hybrid%gcutm1       = input%rkmax - 0.5
+      !hybrid%gcutm1       = input%rkmax - 0.5
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
       ALLOCATE(hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype))
@@ -135,8 +135,8 @@ CONTAINS
       hybrid%select1(3,:) = 4
       hybrid%select1(4,:) = 2
       !hybrid%l_hybrid = l_hyb
-      hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
-    
+      !hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
+
 
     END SUBROUTINE make_defaults
   END MODULE m_make_defaults

@@ -264,7 +264,7 @@ CONTAINS
     IF (mpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
  ENDIF
 
-    IF(.not.input%eig66(1))THEN
+    !IF(.not.input%eig66(1))THEN
     !Put w_iks into eig-file
      DO jsp = 1,nspins
        DO  k = 1,kpts%nkpt
@@ -274,7 +274,7 @@ CONTAINS
 #endif
        ENDDO
      ENDDO
-    ENDIF    
+    !ENDIF    
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&

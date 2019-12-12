@@ -12,6 +12,7 @@ CONTAINS
    SUBROUTINE calc_hybrid(eig_id, mpbasis, hybrid, kpts, atoms, input,  mpi, noco, cell, oneD, &
                           enpara, results, sym, xcpot, v, iterHF)
 
+      USE m_types_hybdat
       USE m_types
       USE m_mixedbasis
       USE m_coulombmatrix
@@ -106,7 +107,7 @@ CONTAINS
       END IF
 
       hybrid%l_subvxc = (hybrid%l_subvxc .AND. hybrid%l_addhf)
-      IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(input%neigd, kpts%nkpt, input%jspins))
+      IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(input%neig, kpts%nkpt, input%jspins))
 
       IF (hybrid%l_calhf) THEN
          iterHF = iterHF + 1
@@ -127,7 +128,7 @@ CONTAINS
          CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-         CALL open_hybrid_io2(mpbasis, hybrid,  atoms, sym%invs)
+         CALL open_hybrid_io2(mpbasis, hybrid, input, atoms, sym%invs)
 
          CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpbasis, hybrid, xcpot)
 

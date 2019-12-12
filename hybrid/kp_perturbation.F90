@@ -1,4 +1,5 @@
 MODULE m_kp_perturbation
+  USE m_types_hybdat
 
 CONTAINS
 
@@ -21,7 +22,6 @@ CONTAINS
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
-
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT)   :: hybrid
@@ -156,9 +156,9 @@ CONTAINS
          const = fpi_const*(atoms%rmt(itype)**2)/2/sqrt(cell%omtil)
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
-            IF ((atoms%invsat(iatom) == 0) .or. (atoms%invsat(iatom) == 1)) THEN
-               IF (atoms%invsat(iatom) == 0) invsfct = 1
-               IF (atoms%invsat(iatom) == 1) THEN
+            IF ((sym%invsat(iatom) == 0) .or. (sym%invsat(iatom) == 1)) THEN
+               IF (sym%invsat(iatom) == 0) invsfct = 1
+               IF (sym%invsat(iatom) == 1) THEN
                   invsfct = 2
                   iatom1 = sym%invsatnr(iatom)
                END IF
@@ -706,7 +706,7 @@ CONTAINS
 !
    SUBROUTINE dwavefproducts( &
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
-      atoms, mpbasis, hybrid, &
+      input,atoms, mpbasis, hybrid, &
       cell, &
       hybdat, kpts, nkpti, lapw, &
        jsp, &
@@ -717,7 +717,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
-
+      TYPE(t_input),INTENT(IN)     ::input
       TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -745,7 +745,7 @@ CONTAINS
       !
       CALL momentum_matrix( &
          dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
-         atoms, mpbasis, hybrid, &
+         input,atoms, mpbasis, hybrid, &
          cell, &
          hybdat, kpts, lapw, &
           jsp)
@@ -780,7 +780,7 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix( &
       momentum, nk, bandi1, bandf1, bandi2, bandf2, &
-      atoms, mpbasis, hybrid, &
+      input,atoms, mpbasis, hybrid, &
       cell, &
       hybdat, kpts, lapw, &
        jsp)
@@ -794,7 +794,7 @@ CONTAINS
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
-
+      TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid

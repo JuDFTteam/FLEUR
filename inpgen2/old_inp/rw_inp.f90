@@ -83,7 +83,7 @@
       REAL     ::scpos  ,zc,dtild
       INTEGER  ::nw,idsprs,ncst
       INTEGER ieq,i,k,na,n,ilo
-      REAL s3,ah,a,hs2,rest
+      REAL s3,ah,a,hs2,rest,rdum,rdum1
       LOGICAL l_hyb,l_sym,ldum
       INTEGER :: ierr, intDummy
 ! ..
@@ -331,9 +331,10 @@
          GOTO 78
       ELSEIF ( ch_test .eq. 'gcu' ) then              ! HF
         BACKSPACE (5)
-        READ (UNIT=5,FMT=7999,END=99,ERR=99) hybrid%gcutm1,hybrid%tolerance1,&
+        call judft_warn("Hybrid parameters not supported in old input")
+        READ (UNIT=5,FMT=7999,END=99,ERR=99) rdum1,rdum,&
      &     hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
-        WRITE (6,9999) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+        WRITE (6,9999) rdum1,rdum,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
  7999   FORMAT (6x,f8.5,6x,f10.8,8x,i2,6x,i2,7x,i4)
  9999   FORMAT ('gcutm=',f8.5,',mtol=',f10.8,',lambda=',i2,&
      &          ',lexp=',i2,',bands=',i4)
@@ -594,14 +595,14 @@
       chform = '(6x,l1,'//chntype//'i3 )'
 !      chform = '(6x,l1,23i3 )'
       READ (UNIT=5,FMT=chform,END=99,ERR=99)&
-     &                                   input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+     &                                   input%lflip
 !-
       chform = '("swsp=",l1,'//chntype//'f6.2)'
 !      chform = '("swsp=",l1,23f6.2)'
       WRITE (6,FMT=chform) input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
       chform = '("lflip=",l1,'//chntype//'i3 )'
 !      chform = '("lflip=",l1,23i3 )'
-      WRITE (6,FMT=chform) input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+      WRITE (6,FMT=chform) input%lflip
 !-roa
 !+stm
       READ (UNIT=5,FMT=8075,END=99,ERR=99)&
@@ -795,7 +796,7 @@
 !      ENDIF
       IF( namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
      &    .OR. namex.EQ.'vhse' ) THEN
-        WRITE (5,9999) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+        WRITE (5,9999) 0.0,0.0,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
         l_hyb = .true.
       END IF
 
@@ -921,7 +922,7 @@
       chform = '("swsp=",l1,'//chntype//'f6.2)'
       WRITE (5,FMT=chform) input%swsp, (atoms%bmu(i),i=1,atoms%ntype)
       chform = '("lflip=",l1,'//chntype//'i3 )'
-      WRITE (5,FMT=chform) input%lflip, (atoms%nflip(i),i=1,atoms%ntype)
+      WRITE (5,FMT=chform) input%lflip, (.false.,i=1,atoms%ntype)
 !-roa
 !+stm
       WRITE (5,9210) banddos%vacdos,vacuum%layers,input%integ,vacuum%starcoeff,vacuum%nstars,&

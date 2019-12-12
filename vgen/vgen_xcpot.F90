@@ -40,7 +40,7 @@ CONTAINS
       CLASS(t_xcpot), INTENT(INOUT)           :: xcpot
       TYPE(t_hybrid), INTENT(IN)              :: hybrid
       TYPE(t_mpi), INTENT(IN)              :: mpi
-      
+
       TYPE(t_oneD), INTENT(IN)              :: oneD
       TYPE(t_sliceplot), INTENT(IN)              :: sliceplot
       TYPE(t_input), INTENT(IN)              :: input
@@ -126,7 +126,7 @@ CONTAINS
       IF (mpi%irank == 0) THEN
          CALL timestart("Vxc in MT")
       END IF
-      
+
 
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
                   EnergyDen, noco,vTot, vx, exc)
@@ -176,7 +176,7 @@ CONTAINS
 
                ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,input%jspins), rhoc_vx(atoms%jmtd))
                ALLOCATE(tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins))
-               CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
+               CALL readCoreDensity(input,atoms,rhoc,tec,qintc)
                DEALLOCATE(tec,qintc)
 
                DO ispin = 1, input%jspins

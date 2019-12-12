@@ -149,7 +149,7 @@ CONTAINS
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
-         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, atoms, mpbasis, hybrid, cell, lapw, jsp, &
+         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpbasis, hybrid, cell, lapw, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
@@ -174,7 +174,7 @@ CONTAINS
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
             call judft_error('HSE not implemented in hsfock')
          ELSE
-            CALL exchange_vccv1(nk, atoms, mpbasis, hybrid, hybdat,  jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
+            CALL exchange_vccv1(nk, input,atoms, mpbasis, hybrid, hybdat,  jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
             CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
          END IF
 

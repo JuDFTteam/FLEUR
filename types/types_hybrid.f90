@@ -1,34 +1,7 @@
 MODULE m_types_hybrid
    IMPLICIT NONE
 
-   TYPE t_hybrid
-      LOGICAL                ::  l_hybrid = .false.
-      LOGICAL                ::  l_subvxc = .false.
-      LOGICAL                ::  l_calhf = .false.
-      LOGICAL                ::  l_addhf = .false.
-      INTEGER                ::  ewaldlambda
-      INTEGER                ::  lexp = 0
-      INTEGER                ::  bands1 !Only read in
-      INTEGER                ::  nbasp
-      INTEGER                ::  maxbasm1
-      INTEGER                ::  max_indx_p_1
-      INTEGER                ::  maxlmindx
-      INTEGER, ALLOCATABLE   ::  select1(:,:)
-      INTEGER, ALLOCATABLE   ::  lcutm1(:)
-      INTEGER, ALLOCATABLE   ::  lcutwf(:)
-      INTEGER, ALLOCATABLE   ::  map(:,:)
-      INTEGER, ALLOCATABLE   ::  tvec(:,:,:)
-      INTEGER, ALLOCATABLE   ::  nbasm(:)
-      !REAL, ALLOCATABLE      ::  radbasfn_mt(:,:,:,:)
-      COMPLEX, ALLOCATABLE   ::  d_wgn2(:,:,:,:)
-      INTEGER, ALLOCATABLE   ::  ne_eig(:)
-      INTEGER, ALLOCATABLE   ::  nbands(:)
-      INTEGER, ALLOCATABLE   ::  nobd(:,:)
-      REAL, ALLOCATABLE      ::  div_vv(:,:,:)
-   CONTAINS
-      procedure :: write_hybrid
-      generic   :: write(unformatted) => write_hybrid
-   END TYPE t_hybrid
+
 
    TYPE t_hybdat
       INTEGER                :: lmaxcd, maxindxc
@@ -54,7 +27,8 @@ MODULE m_types_hybrid
 
 contains
    subroutine set_stepfunction(hybdat, cell, atoms, g, svol)
-      use m_types_setup
+      use m_types_cell
+      use m_types_atoms
       use m_judft
       implicit none
       class(t_hybdat),INTENT(INOUT) :: hybdat
@@ -85,7 +59,8 @@ contains
 
    !private subroutine
    FUNCTION stepfunction(cell, atoms, g)
-      USE m_types_setup
+      USE m_types_cell
+      USE m_types_atoms
       USE m_constants
       IMPLICIT NONE
 
@@ -128,16 +103,5 @@ contains
       gptnorm = norm2(matmul(gpt(:), bmat(:,:)))
 
    END FUNCTION gptnorm
-   subroutine write_hybrid(hybrid, unit, iostat, iomsg)
-      implicit NONE
-      class(t_hybrid), intent(in)   :: hybrid
-      integer, intent(in)         :: unit         ! Internal unit to write to.
-      integer, intent(out)        :: iostat      ! non zero on error, etc.
-      character(*), intent(inout) :: iomsg  ! define if iostat non zero.
 
-      write(unit, iostat=iostat, iomsg=iomsg) hybrid%maxbasm1, hybrid%maxlmindx
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(hybrid%lcutm1)
-      write(unit, iostat=iostat, iomsg=iomsg) hybrid%lcutm1
-   end subroutine write_hybrid
 END MODULE m_types_hybrid

@@ -4,18 +4,18 @@ MODULE m_hf_init
    !     preparations for HF and hybrid functional calculation
    !
 CONTAINS
-   SUBROUTINE hf_init(mpbasis, hybrid, atoms, input, DIMENSION, hybdat)
+   SUBROUTINE hf_init(mpbasis, hybrid, atoms, input,  hybdat)
       USE m_types
       USE m_hybrid_core
       USE m_util
       use m_intgrf
       USE m_io_hybrid
+      USE m_types_hybdat
       IMPLICIT NONE
       TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT)     :: hybrid
       TYPE(t_atoms), INTENT(IN)         :: atoms
       TYPE(t_input), INTENT(IN)         :: input
-      TYPE(t_dimension), INTENT(IN)     :: DIMENSION
       TYPE(t_hybdat), INTENT(OUT)       :: hybdat
 
       INTEGER:: l, m, i, l1, l2, m1, m2, ok
@@ -31,7 +31,7 @@ CONTAINS
       allocate(hybdat%drbas1_MT(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
 
       ! preparations for core states
-      CALL core_init(dimension, input, atoms, hybdat%lmaxcd, hybdat%maxindxc)
+      CALL core_init( input, atoms, hybdat%lmaxcd, hybdat%maxindxc)
       allocate(hybdat%nindxc(0:hybdat%lmaxcd, atoms%ntype), stat=ok, source=0)
       IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%nindxc')
       allocate(hybdat%core1(atoms%jmtd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype), stat=ok, source=0.0)

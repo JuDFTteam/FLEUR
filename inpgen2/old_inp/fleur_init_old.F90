@@ -38,7 +38,7 @@ CONTAINS
     IMPLICIT NONE
     !     Types, these variables contain a lot of data!
     TYPE(t_input)    ,INTENT(INOUT):: input
-    
+
     TYPE(t_atoms)    ,INTENT(OUT)  :: atoms
     TYPE(t_sphhar)   ,INTENT(OUT)  :: sphhar
     TYPE(t_cell)     ,INTENT(OUT)  :: cell
@@ -92,7 +92,7 @@ CONTAINS
     ALLOCATE ( atoms%ncv(atoms%ntype),atoms%neq(atoms%ntype),sym%ngopr(atoms%nat) )
     ALLOCATE ( sphhar%nlh(sphhar%ntypsd),sphhar%nmem(0:sphhar%nlhd,sphhar%ntypsd) )
     ALLOCATE ( stars%nstr2(stars%ng2),sym%ntypsy(atoms%nat),stars%nstr(stars%ng3) )
-    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2),atoms%nflip(atoms%ntype) )
+    ALLOCATE ( stars%igfft(0:stars%kimax,2),stars%igfft2(0:stars%kimax2,2) )
     ALLOCATE ( atoms%econf(atoms%ntype) )
     ALLOCATE ( vacuum%izlay(vacuum%layerd,2) )
     ALLOCATE ( sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat) )
@@ -126,7 +126,7 @@ CONTAINS
     !-odim
 
     ! HF/hybrid functionals/EXX
-    ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
+    !ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
 
     input%l_coreSpec = .FALSE.
 

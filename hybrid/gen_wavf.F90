@@ -261,7 +261,7 @@ CONTAINS
             IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
                iop = kpts%bksym(ikpt)
                CALL waveftrafo_genwavf(cmthlp, zhlp%data_r, zhlp%data_c, cmt(:, :, :), zmat(1)%l_real, zmat(ikpt0)%data_r(:, :), &
-                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1, &
+                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1,input, &
                                        hybrid%nbands(ikpt0), lapw(ikpt0), lapw(ikpt), .true.)
 
                CALL write_cmt(cmthlp, ikpt)

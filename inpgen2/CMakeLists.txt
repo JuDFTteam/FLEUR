@@ -85,7 +85,6 @@ ${FLEUR_SRC}/types/types_regionCharges.f90
 ${FLEUR_SRC}/types/types_dos.f90
 ${FLEUR_SRC}/types/types_denCoeffsOffdiag.f90
 ${FLEUR_SRC}/types/types_gpumat.F90
-${FLEUR_SRC}/types/types_dimension.f90
 
 ${FLEUR_SRC}/io/nocoInputCheck.F90
 ${FLEUR_SRC}/eigen/orthoglo.F90

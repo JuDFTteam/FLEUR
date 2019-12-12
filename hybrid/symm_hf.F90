@@ -10,7 +10,9 @@
 !                                             M.Betzinger (09/07)     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE m_symm_hf
-use m_judft
+  use m_judft
+  USE m_types_hybdat
+
 #define irreps .false.
 
 CONTAINS
@@ -67,7 +69,7 @@ CONTAINS
 
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, atoms, mpbasis, hybrid, cell, &
+   SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input,atoms, mpbasis, hybrid, cell, &
                       lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
@@ -304,7 +306,7 @@ CONTAINS
                   cpwhlp = 0
 
                   CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, lapw)
+                                       i, ndb, nk, iop, atoms,input, mpbasis, hybrid, kpts, sym, jsp, lapw)
 
                   DO iband = 1, ndb
                      carr1 = cmt(iband + i - 1, :, :)

@@ -172,7 +172,7 @@ CONTAINS
 
       DO i=1,3
          DO iType=1, atoms%ntype
-            CALL lh_to_lm(atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm(:,:,iType))
+            CALL lh_to_lm(sym,atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm(:,:,iType))
          END DO
          IF (i==1) THEN
             CALL gradYlm(atoms,flm,grsflm1)
@@ -188,7 +188,7 @@ CONTAINS
       CALL divYlm(grsflm1(:,:,:,:),grsflm2(:,:,:,:),grsflm3(:,:,:,:), divflm)
 
       DO iType=1, atoms%ntype
-         CALL lh_from_lm(atoms, sphhar, iType, divflm(:,1:indmax,iType), div%mt(:,0:,iType,1))
+         CALL lh_from_lm(sym,atoms, sphhar, iType, divflm(:,1:indmax,iType), div%mt(:,0:,iType,1))
       END DO
 
       DEALLOCATE(divflm,grsflm1,grsflm2,grsflm3)
@@ -231,7 +231,7 @@ CONTAINS
       INTEGER :: i, jr, k, nsp, kt, lh, lhmax
 
       nsp = atoms%nsp()
-      lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
+      lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
       eps=1.e-10
 
       ALLOCATE (grad%gr(3,atoms%jri(n)*nsp,1))
@@ -246,7 +246,7 @@ CONTAINS
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
-      CALL mt_to_grid(.TRUE., 1, atoms, sphhar, denloc%mt(:,0:,n,:), n, noco, grad)
+      CALL mt_to_grid(.TRUE., 1, atoms, sym,sphhar, denloc%mt(:,0:,n,:), n, noco, grad)
 
       kt = 0
       DO jr = 1, atoms%jri(n)
@@ -262,7 +262,7 @@ CONTAINS
       ENDDO ! jr
 
       DO i=1,3
-         CALL mt_from_grid(atoms, sphhar, n, 1, grad_temp(:,:,i), gradphi(i)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms, sym,sphhar, n, 1, grad_temp(:,:,i), gradphi(i)%mt(:,0:,n,:))
          DO lh=0, lhmax
             gradphi(i)%mt(:,lh,n,1) = gradphi(i)%mt(:,lh,n,1)*atoms%rmsh(:, n)**2
             !IF ((sphhar%llh(lh,1)/=0).AND.(sphhar%llh(lh,1)/=2)) THEN
@@ -388,11 +388,11 @@ CONTAINS
       denloc=pot
 
       DO iType=1,atoms%ntype
-         lhmax=sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:iType - 1)) + 1))
+         lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:iType - 1)) + 1))
          DO lh=0, lhmax
             denloc%mt(:,lh,iType,1) = denloc%mt(:,lh,iType,1)*atoms%rmsh(:, iType)**2
          END DO ! lh
-         CALL lh_to_lm(atoms, sphhar, iType, denloc%mt(:,:,iType,1), flm(:,:,iType))
+         CALL lh_to_lm(sym,atoms, sphhar, iType, denloc%mt(:,:,iType,1), flm(:,:,iType))
       END DO
 
       CALL gradYlm(atoms,flm,grsflm)
@@ -401,7 +401,7 @@ CONTAINS
 
       DO i=1,3
          DO iType=1,atoms%ntype
-            CALL lh_from_lm(atoms, sphhar, iType, grsflm(:,1:indmax,iType,i)/(4.0*pi_const), grad(i)%mt(:,0:,iType,1))
+            CALL lh_from_lm(sym,atoms, sphhar, iType, grsflm(:,1:indmax,iType,i)/(4.0*pi_const), grad(i)%mt(:,0:,iType,1))
          END DO
       END DO
 

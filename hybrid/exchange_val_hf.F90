@@ -327,8 +327,8 @@ CONTAINS
          END IF
 
          IF (zero_order) THEN
-            CALL dwavefproducts(dcprod, nk, 1, hybrid%nbands(nk), 1, hybrid%nbands(nk), .false., atoms, hybrid, &
-                                cell, hybdat, kpts, kpts%nkpt, lapw, input, jsp, eig_irr)
+            CALL dwavefproducts(dcprod, nk, 1, hybrid%nbands(nk), 1, hybrid%nbands(nk), .false., input,atoms, mpbasis,hybrid, &
+                                cell, hybdat, kpts, kpts%nkpt, lapw, jsp, eig_irr)
 
             ! make dcprod hermitian
             DO n1 = 1, hybrid%nbands(nk)

@@ -154,9 +154,7 @@ CONTAINS
     CALL convn(atoms,stars)
     if (mpi%irank==0) CALL e_field(atoms,stars,sym,vacuum,cell,input,field%efield)
     if (mpi%isize>1) call field%mpi_bc(mpi%mpi_comm,0)
-    ! Initialize missing hybrid functionals arrays
-    ALLOCATE (hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
-
+    
     !At some point this should be enabled for noco as well
     IF (.not.noco%l_noco) &
     CALL transform_by_moving_atoms(mpi,stars,atoms,vacuum, cell, sym, sphhar,input,oned,noco)

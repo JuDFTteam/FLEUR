@@ -36,12 +36,12 @@ MODULE m_coulombmatrix
 CONTAINS
 
    SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, mpbasis, hybrid, xcpot)
-
+      USE m_types_hybdat
       USE m_types
       USE m_juDFT
       USE m_constants, ONLY: pi_const
       USE m_olap, ONLY: olap_pw
-      use m_types_hybrid, only: gptnorm
+      use m_types_hybdat, only: gptnorm
       USE m_trafo, ONLY: symmetrize, bramat_trafo
       USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef

@@ -95,7 +95,6 @@ CONTAINS
      USE m_types_atoms
      USE m_types_input
      USE m_types_noco
-     USE m_types_dimension
      USE m_types_kpts
      USE m_types_lapw
       IMPLICIT NONE

@@ -1,7 +1,8 @@
 MODULE m_sfTests
+  IMPLICIT NONE
 CONTAINS
    SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                        noco, xcB, div, phi, cvec, corrB, div2) 
+                        noco, xcB, div, phi, cvec, corrB, div2)
       USE m_plot
 
       IMPLICIT NONE
@@ -21,7 +22,7 @@ CONTAINS
       LOGICAL                          :: xsf
 
       CALL checkplotinp()
-      
+
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'bInitial            ', xcB(1), xcB(1), xcB(2), xcB(3))
 
@@ -41,7 +42,7 @@ CONTAINS
                   .FALSE., .FALSE., 'divCorrected        ', div2)
 
       INQUIRE(file="bInitial_f.xsf",exist=xsf)
-    
+
       IF (xsf) THEN
          OPEN  (120, FILE='bInitial_f.xsf', STATUS='OLD')
          CLOSE (120, STATUS="DELETE")
@@ -49,8 +50,8 @@ CONTAINS
          CLOSE (120, STATUS="DELETE")
          OPEN  (120, FILE='bCorrected_f.xsf', STATUS='OLD')
          CLOSE (120, STATUS="DELETE")
-      END IF 
-      
+      END IF
+
    END SUBROUTINE plotBtest
 
    SUBROUTINE buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,itest,Avec,icut,denMat,factor)
@@ -84,12 +85,12 @@ CONTAINS
 
       icut=1
 
-      IF (itest.EQ.0) THEN 
+      IF (itest.EQ.0) THEN
          RETURN
       END IF
-    
-      IF (PRESENT(denMat)) THEN 
-         CALL makeVectorField(stars,atoms,sphhar,vacuum,input,noco,denMat,factor,Avec,icut)
+
+      IF (PRESENT(denMat)) THEN
+         CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,denMat,factor,Avec,icut)
          RETURN
       END IF
 
@@ -105,7 +106,7 @@ CONTAINS
          ! Temporary.
          Avec(i)%pw    = 0
          Avec(i)%pw_w  = CMPLX(0.0,0.0)
-         Avec(i)%vacxy = 0 
+         Avec(i)%vacxy = 0
          Avec(i)%vacz  = 0
       END DO
 
@@ -142,9 +143,9 @@ CONTAINS
             kt = kt + nsp
          END DO ! ir
 
-         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,1,:), Avec(1)%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,2,:), Avec(2)%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms, sphhar, n, 1, A_temp(:,3,:), Avec(3)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sym, sphhar, n, 1, A_temp(:,1,:), Avec(1)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sym, sphhar, n, 1, A_temp(:,2,:), Avec(2)%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sym, sphhar, n, 1, A_temp(:,3,:), Avec(3)%mt(:,0:,n,:))
 
          !print *, 'A_z*r^2 3rd entry before fromto grid'
          !print *, A_temp(3,3,1)
@@ -159,7 +160,7 @@ CONTAINS
          !   ENDDO ! k
          !   kt = kt + nsp
          !END DO ! ir
-         
+
          !print *, 'A_z*r^2 3rd entry after fromto grid'
          !print *, A_temp(3,3,1)
          DEALLOCATE (A_temp)
@@ -184,7 +185,7 @@ CONTAINS
                point = zero + vec1*REAL(i)/(grid(1)-1) +&
                               vec2*REAL(j)/(grid(2)-1) +&
                               vec3*REAL(k)/(grid(3)-1)
-      
+
                ind = k*grid(2)*grid(1) + j*grid(1) + i + 1
 
                A_temp(ind,1,1)=SIN(i*2*pi_const/grid(1))
@@ -206,14 +207,12 @@ CONTAINS
 
    END SUBROUTINE buildAtest
 
-   SUBROUTINE sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,itest,denMat,factor)
+   SUBROUTINE sftest(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,itest,denMat,factor)
       USE m_xcBfield
       USE m_divergence
       USE m_analysistests
-      
-      TYPE(t_mpi),                  INTENT(IN)     :: mpi
-      TYPE(t_dimension),            INTENT(IN)     :: dimension
       TYPE(t_field),                INTENT(INOUT)  :: field
+      TYPE(t_mpi),                  INTENT(IN)     :: mpi
       TYPE(t_stars),                INTENT(IN)     :: stars
       TYPE(t_atoms),                INTENT(IN)     :: atoms
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar
@@ -226,7 +225,7 @@ CONTAINS
       INTEGER,                      INTENT(IN)     :: itest
       TYPE(t_potden), OPTIONAL,     INTENT(IN)     :: denMat
       REAL,           OPTIONAL,     INTENT(IN)     :: factor
- 
+
       TYPE(t_potden), DIMENSION(3)                 :: aVec, cvec, corrB
       TYPE(t_potden)                               :: div, phi, checkdiv
       INTEGER                                      :: i, n, lh, l, icut(3,0:sphhar%nlhd,atoms%ntype)
@@ -244,14 +243,14 @@ CONTAINS
 
       IF (PRESENT(denMat)) THEN
         CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,1,aVec,icut,denMat,factor)
-        CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,icut,div,phi,cvec,corrB,checkdiv)
+        CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,icut,div,phi,cvec,corrB,checkdiv)
         CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, aVec, div, phi, cvec, corrB, checkdiv)
       ELSE
         CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,0,aVec,icut)
         RETURN
       END IF
 
-      !testDen(3)%mt(:,1,:,1)=testDen(3)%mt(:,0,:,1)*atoms%rmsh 
+      !testDen(3)%mt(:,1,:,1)=testDen(3)%mt(:,0,:,1)*atoms%rmsh
       !testDen(3)%mt(:,1:,:,:)=0.0
       !testDen(3)%mt(:,2:,:,:)=0.0
       !testDen(3)%mt(:,0,:,:)=0.0
@@ -272,7 +271,7 @@ CONTAINS
          REAL, INTENT(OUT) :: g(atoms%jri(n))
 
          REAL :: dfr(atoms%jri(n)), d2fr2(atoms%jri(n))
-         
+
          CALL grdchlh(1, 1, atoms%jri(n), atoms%dx(n), atoms%rmsh(1, n), f, 5, dfr, d2fr2)
 
          g=(dfr-l*f/atoms%rmsh(:, n))!/(atoms%rmsh(1, n)**l) !must NOT be divergent towards the core
@@ -290,8 +289,8 @@ CONTAINS
 !     flh(:,6)=3*flh(:,0)
 !     flh(:,7)=4*flh(:,0)
 !     flh(:,8)=5*flh(:,0)
-!     CALL lh_to_lm(atoms, sphhar, 1, flh, flm) 
-!     CALL lh_from_lm(atoms, sphhar, 1, flm, flh2) 
+!     CALL lh_to_lm(atoms, sphhar, 1, flh, flm)
+!     CALL lh_from_lm(atoms, sphhar, 1, flm, flh2)
 
 !   END SUBROUTINE lhlmtest
 

@@ -98,7 +98,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
    LOGICAL               :: l_error, perform_MetaGGA
 
    CALL regCharges%init(input,atoms)
-   CALL dos%init(input%neig,input,atoms,kpts,vacuum)
+   CALL dos%init(input,atoms,kpts,vacuum)
    CALL moments%init(mpi,input,sphhar,atoms)
    CALL mcd%init1(banddos,input,atoms,kpts)
    CALL slab%init(banddos,atoms,cell,input,kpts)
@@ -181,7 +181,7 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
    IF(.FALSE.) CALL denMultipoleExp(input, mpi, atoms, sphhar, stars, sym, cell, oneD, outDen) ! There should be a switch in the inp file for this
    IF(mpi%irank.EQ.0) THEN
-      IF(.FALSE.) CALL resMoms(input,atoms,sphhar,noco,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
+      IF(.FALSE.) CALL resMoms(sym,input,atoms,sphhar,noco,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
 
    CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)

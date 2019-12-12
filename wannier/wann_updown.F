@@ -75,8 +75,8 @@ c****************************************************************************
 
 #endif
 
-      
-      TYPE(t_wann),      INTENT(INOUT) :: wann    
+
+      TYPE(t_wann),      INTENT(INOUT) :: wann
       TYPE(t_mpi),INTENT(IN)    :: mpi
       TYPE(t_input),INTENT(IN)  :: input
       TYPE(t_kpts),      INTENT(IN) :: kpts
@@ -128,7 +128,7 @@ c****************************************************************************
       type (od_inp), intent (in) :: odi
       type (od_sym), intent (in) :: ods
       real, intent(in) :: theta,phi
-     
+
 cccccccccccccccccc   local variables   cccccccccccccccccccc
 !      type(t_wann) :: wann  !now input variable
       integer :: lmd,nlotot,n,nmat,iter,ikpt
@@ -253,15 +253,15 @@ c..wf-hamiltonian in real space (hopping in the same unit cell)
       real,parameter      :: bohrtocm=0.529177e-8
       real,parameter      :: condquant=7.7480917e-5
       real                :: dirfacs(3)
-      complex,allocatable :: ubeffug(:,:,:) 
-      complex,allocatable :: ubeffdg(:,:,:) 
-      complex,allocatable :: dbeffug(:,:,:) 
-      complex,allocatable :: dbeffdg(:,:,:) 
-      complex,allocatable :: ubeffulog(:,:,:,:) 
-      complex,allocatable :: dbeffulog(:,:,:,:) 
-      complex,allocatable :: ulobeffug(:,:,:,:) 
-      complex,allocatable :: ulobeffdg(:,:,:,:) 
-      complex,allocatable :: ulobeffulog(:,:,:,:,:) 
+      complex,allocatable :: ubeffug(:,:,:)
+      complex,allocatable :: ubeffdg(:,:,:)
+      complex,allocatable :: dbeffug(:,:,:)
+      complex,allocatable :: dbeffdg(:,:,:)
+      complex,allocatable :: ubeffulog(:,:,:,:)
+      complex,allocatable :: dbeffulog(:,:,:,:)
+      complex,allocatable :: ulobeffug(:,:,:,:)
+      complex,allocatable :: ulobeffdg(:,:,:,:)
+      complex,allocatable :: ulobeffulog(:,:,:,:,:)
       integer :: spinloop1,spinloop2,ilop
       integer :: alerr
 
@@ -391,7 +391,7 @@ c*********************************************************
           enddo
         enddo
       enddo
-    
+
 cccccccccccccccc   end of the potential part  ccccccccccc
       wannierspin=jspd
       if(l_soc) wannierspin=2
@@ -438,14 +438,14 @@ cccccccccccccccc   end of the potential part  ccccccccccc
          if (alerr /= 0) call juDFT_error('alerr: 17',
      &         calledby='wann_updown')
 c****************************************************
-c     jspin=1 
+c     jspin=1
 c****************************************************
       jspin=1
 
 c...read number of bands and wannier functions from file proj
 
 c..reading the proj.1 / proj.2 / proj file
-       l_proj=.false.  
+       l_proj=.false.
        do j=jspin,0,-1
          inquire(file=trim('proj'//spin012(j)),exist=l_proj)
          if(l_proj)then
@@ -463,7 +463,7 @@ c..reading the proj.1 / proj.2 / proj file
        else
           CALL juDFT_error("no proj/proj.1/proj.2",
      +                     calledby ="wann_updown")
-       endif  
+       endif
 
 
        jspin2=jspin
@@ -477,12 +477,12 @@ cccccccccccc   read in the eigenvalues and vectors   cccccc
 !          CALL judft_error("TODO:wann_updown")
 !         call cdn_read0(eig_id,irank,isize,jspin,jspd,l_noco,
  !    <                  ello,evac,epar,wk,n_bands,n_size)
- 
+
         CALL cdn_read0(eig_id,mpi%irank,mpi%isize,jspin5,
      >   input%jspins, !wannierspin instead of DIMENSION%jspd?&
      >  noco%l_noco, n_bands,n_size)
- 
- 
+
+
        enddo
 
        jspin=1
@@ -782,10 +782,10 @@ c****************************************************************
      &                     1:nlod,-llod:llod,1:ntype),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 43',
      &         calledby='wann_updown')
-         
-         
+
+
          call wann_gabeffgagaunt(
-     >            vTot,         
+     >            vTot,
      >            wann%l_perpmagatlres,wann%perpmagl,
      >            neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
      >            nmem,ntype,ntypd,bbmat,bmat,
@@ -794,8 +794,8 @@ c****************************************************************
      <            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      <            dbeffulog,
      <            ulobeffug,ulobeffdg,ulobeffulog)
-      endif   
-    
+      endif
+
 
 
       i_rec = 0 ; n_rank = 0
@@ -814,12 +814,12 @@ c****************************************************************
 c****************************************************************
 c     Obtain eigenvectors for the two spin channels.
 c****************************************************************
-      
+
       allocate ( eigg(neigd,2),stat=alerr  )
          if (alerr /= 0) call juDFT_error('alerr: 44',
      &         calledby='wann_updown')
-      
-      
+
+
       call cpu_time(delta)
       do jspin=1,wannierspin
          if(jspin.eq.1)nrec=0
@@ -875,7 +875,7 @@ c****************************************************************
       call cpu_time(delta1)
       time_rw=time_rw+delta1-delta
       nslibd = 0
-      
+
       jspin=1
 
 c...we work only within the energy window
@@ -958,7 +958,7 @@ c***********************************************************
         else
           nsfactor=cmplx(1.0,0.0)
         endif
-      enddo !jspin 
+      enddo !jspin
 c      print*,"bkpt1=",bkpt
 
 c******************************************************************
@@ -972,8 +972,8 @@ c...the overlap matrix Mmn which is computed for each k- and b-point
      & ccof(-llod:llod,noccbd,nlod,natd,wannierspin),stat=alerr )
          if (alerr /= 0) call juDFT_error('alerr: 49',
      &         calledby='wann_updown')
-     
-     
+
+
 
       acof(:,:,:,:) = cmplx(0.,0.) ; bcof(:,:,:,:) = cmplx(0.,0.)
       ccof(:,:,:,:,:) = cmplx(0.,0.)
@@ -1052,7 +1052,7 @@ c...for the lapws and local orbitals, summed by the basis functions
      >            ulobeffug,ulobeffdg,ulobeffulog,
      >            acof,bcof,ccof,
      <            perpmag(:,:,ikpt))
-      endif   
+      endif
 
 #ifdef CPP_TOPO
 
@@ -1073,11 +1073,11 @@ c...for the lapws and local orbitals, summed by the basis functions
      >       dirfacs,amat,
      >       ntype,lmaxd,lmax,natd,
      >       neq,noccbd,lmd,natd,llod,nlod,
-     >       nlo,llo, 
+     >       nlo,llo,
      >       acof,bcof,ccof,
      >       us,dus,duds,uds,
      >       ulos,dulos,
-     >       rmt,pos, 
+     >       rmt,pos,
      &       surfcurr(:,:,:,ikpt))
         write(6,*)"dirfacs=",dirfacs
       endif
@@ -1086,7 +1086,7 @@ c...for the lapws and local orbitals, summed by the basis functions
          call wann_nabla_updown(
      >       jspin,ntype,lmaxd,lmax,natd,
      >       jmtd,jri,rmsh,dx,neq,
-     >       noccbd,lmd,natd,llod,nlod, 
+     >       noccbd,lmd,natd,llod,nlod,
      >       ff(:,:,:,:,1),gg(:,:,:,:,1),
      >       ff(:,:,:,:,2),gg(:,:,:,:,2),
      >       acof(:,:,:,1),bcof(:,:,:,1),
@@ -1132,13 +1132,13 @@ c-->     determine index and phase factor
                value=phasust*zzConjgTemp
                nablamat(dir,m,n,ikpt) = nablamat(dir,m,n,ikpt) -
      +                                  value*b2(dir)
-              enddo 
+              enddo
              enddo
             enddo
 
  42        continue
  41      continue
-      endif   
+      endif
 #endif
 
 c***************************************************
@@ -1167,25 +1167,25 @@ c$$$            do m = 1,nslibd
 c$$$             do n = 1,nslibd
 c$$$#if ( !defined(CPP_INVERSION) || defined(CPP_SOC) )
 c$$$              mmn(m,n,ikpt) =
-c$$$     =        mmn(m,n,ikpt) + 
+c$$$     =        mmn(m,n,ikpt) +
 c$$$     +          phasust*z(i,m,1)*conjg(z(j+addnoco,n,2))
 c$$$#else
 c$$$              mmn(m,n,ikpt) =
-c$$$     =        mmn(m,n,ikpt) + 
+c$$$     =        mmn(m,n,ikpt) +
 c$$$     +          phasust*cmplx(z(i,m,1)*z(j+addnoco,n,2),0.0)
 c$$$#endif
 c$$$             enddo !n
 c$$$            enddo !m
 c$$$
 c$$$  22     continue
-c$$$       enddo !i  
+c$$$       enddo !i
 
       addnoco2 = addnoco      ! TODO: correct for addnoco2
       call wann_mmkb_int(
      >         cmplx(1.,0.),addnoco,addnoco2,
-     > DIMENSION%nvd,stars%mx1,stars%mx2,stars%mx3,
+     >         nvd,stars%mx1,stars%mx2,stars%mx3,
      > stars%ng3,lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
-     > lapw%nv(jspin),DIMENSION%neigd,DIMENSION%nbasfcn,zMat(1),nslibd,
+     > lapw%nv(jspin),neigd,nbasfcn,zMat(1),nslibd,
      > lapw%k1(:,jspin),lapw%k2(:,jspin),lapw%k3(:,jspin),
      >         lapw%nv(jspin),zMat(2),nslibd,
      >         nbnd,
@@ -1271,17 +1271,17 @@ c******************************************************
 !     >      2,2,nbnd,nbnd,fullnkpts,
 !     >      irank,isize,
 !     <      hsomtx)
-     
+
         call wann_write_matrix5(
      >      mpi_comm,l_p0,'WF1.hsomtx',
      >      'Matrix elements of spin-orbit coupling',
      >      nbnd,nbnd,2,2,fullnkpts,
      >      irank,isize,wann%l_unformatted,
      <      hsomtx)
-     
-     
+
+
       endif
-      
+
       if(wann%l_socmatvec)then
         call wann_write_matrix6(
      >      mpi_comm,l_p0,'WF1.hsomtxvec',
@@ -1298,7 +1298,7 @@ c******************************************************
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.false.,.true.,
      <      mmn,wann%l_unformatted)
-      endif !l_soc and l_mmn0  
+      endif !l_soc and l_mmn0
 
       if(wann%l_perpmag)then
         call wann_write_amn(
@@ -1307,7 +1307,7 @@ c******************************************************
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,.true.,.true.,
      <      perpmag,wann%l_unformatted)
-      endif !l_soc and l_mmn0  
+      endif !l_soc and l_mmn0
 
       if(wann%l_surfcurr)then
         surfcurr=conjg(surfcurr/cmplx(0.0,2.0))
@@ -1320,13 +1320,13 @@ c******************************************************
      >      nbnd,fullnkpts,nbnd,
      >      irank,isize,
      <      surfcurr)
-      endif 
+      endif
 
       if( allocated (nablamat) ) deallocate( nablamat )
       deallocate ( mmn )
 
       deallocate(flo)
- 
+
       deallocate ( vr,vz )
       deallocate ( ff,gg )
       if (wann%l_bzsym)  deallocate(irreduc,mapkoper)

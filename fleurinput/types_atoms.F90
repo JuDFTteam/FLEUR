@@ -96,7 +96,14 @@ MODULE m_types_atoms
       !lda_u information(ntype)
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
-      INTEGER, ALLOCATABLE :: nflip(:) !<flip magnetisation of this atom
+      !flipSpinTheta and flipSpinPhi are the angles which are given
+      !in the input to rotate the charge den by these polar angles.
+      !Typical one needs ntype angles.
+      REAL, ALLOCATABLE :: flipSpinPhi(:)
+      REAL, ALLOCATABLE :: flipSpinTheta(:)
+      !Logical switch which decides if the rotated cdn should be scaled.
+      !Yet untested feature.
+      LOGICAL, ALLOCATABLE :: flipSpinScale(:)
    CONTAINS
       PROCEDURE :: init=>init_atoms
       PROCEDURE :: nsp => calc_nsp_atom
@@ -158,7 +165,9 @@ MODULE m_types_atoms
      call mpi_bc(this%krla,rank,mpi_comm)
      call mpi_bc(this%relcor,rank,mpi_comm)
      call mpi_bc(this%relax,rank,mpi_comm)
-     call mpi_bc(this%nflip,rank,mpi_comm)
+     call mpi_bc(this%flipSpinPhi,rank,mpi_comm)
+     call mpi_bc(this%flipSpinTheta,rank,mpi_comm)
+     call mpi_bc(this%flipSpinScale,rank,mpi_comm)
 
 #ifdef CPP_MPI
      CALL mpi_COMM_RANK(mpi_comm,myrank,ierr)
@@ -236,7 +245,9 @@ MODULE m_types_atoms
     ALLOCATE(this%lmax(this%ntype))
     ALLOCATE(this%nlo(this%ntype))
     ALLOCATE(this%lnonsph(this%ntype))
-    ALLOCATE(this%nflip(this%ntype))
+    ALLOCATE(this%flipSpinPhi(this%ntype))
+    ALLOCATE(this%flipSpinTheta(this%ntype))
+    ALLOCATE(this%flipSpinScale(this%ntype))
     ALLOCATE(this%l_geo(this%ntype))
     ALLOCATE(this%lda_u(4*this%ntype))
     ALLOCATE(this%bmu(this%ntype))
@@ -271,12 +282,10 @@ MODULE m_types_atoms
           this%zatom(n) = 1.0e-10
        END IF
        this%zatom(n) = this%nz(n)
+       this%flipSpinPhi(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPaths))//'/@flipSpinPhi'))
+       this%flipSpinTheta(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinTheta'))
+       this%flipSpinScale(n) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xpaths))//'/@flipSpinScale'))
 
-       IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@flipSpin'))) THEN
-          this%nflip(n) = 1
-       ELSE
-          this%nflip(n) = 0
-       ENDIF
        this%bmu(n) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPaths))//'/@magMom'))
        !Now the xml elements
        !mtSphere

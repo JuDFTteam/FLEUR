@@ -127,7 +127,7 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
-                    banddos,obsolete,enpara,xcpot,results,kpts,mpbasis,hybrid,oneD,coreSpecInput,wann,l_opti)
+                    banddos,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,wann)
     CALL timestop("Initialization")
 
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN
@@ -188,8 +188,8 @@ CONTAINS
        wannierspin = input%jspins
     endif
 
-    eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,kpts%nkpt,wannierspin,&
-                    noco%l_noco,.NOT.INPUT%eig66(1),l_real,noco%l_soc,INPUT%eig66(1),mpi%n_size)
+    eig_id=open_eig(mpi%mpi_comm,lapw_dim_nbasfcn,input%neig,kpts%nkpt,wannierspin,&
+                    noco%l_noco,.true.,l_real,noco%l_soc,.false.,mpi%n_size)
 
 #ifdef CPP_CHASE
     CALL init_chase(mpi,input,atoms,kpts,noco,sym%invs.AND..NOT.noco%l_noco)
@@ -243,9 +243,9 @@ CONTAINS
           CALL open_hybrid_io1(sym%invs)
        END IF
 
-       IF(.not.input%eig66(1))THEN
+       !IF(.not.input%eig66(1))THEN
           CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
-       END IF
+       !END IF
 
        !#endif
 
@@ -290,10 +290,10 @@ CONTAINS
           CALL timestart("Updating energy parameters")
           CALL enpara%update(mpi%mpi_comm,atoms,vacuum,input,vToT)
           CALL timestop("Updating energy parameters")
-          IF(.not.input%eig66(1))THEN
-            CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,DIMENSION,vacuum,input,&
+          !IF(.not.input%eig66(1))THEN
+            CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
                      cell,enpara,banddos,noco,oneD,mpbasis,hybrid,iter,eig_id,results,inDen,vTemp,vx)
-          ENDIF
+          !ENDIF
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
           CALL timestop("eigen")

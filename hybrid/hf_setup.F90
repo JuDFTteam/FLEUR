@@ -66,7 +66,7 @@ CONTAINS
 
          allocate(zmat(kpts%nkptf), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
-         allocate(eig_irr(inputneigd, kpts%nkpt), stat=ok)
+         allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
          allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%kveclo_eig')

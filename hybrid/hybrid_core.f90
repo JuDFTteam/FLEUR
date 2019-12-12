@@ -5,14 +5,13 @@ MODULE m_hybrid_core
    ! (core basis functions can be read in once during an iteration)
 
 CONTAINS
-   SUBROUTINE corewf(atoms, jsp, input, dimension,&
+   SUBROUTINE corewf(atoms, jsp, input,&
                       vr, lmaxcd, maxindxc, mpi, lmaxc, nindxc, core1, core2, eig_c)
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -42,11 +41,11 @@ CONTAINS
       REAL, ALLOCATABLE          ::  core1r(:, :, :, :), core2r(:, :, :, :)
       REAL, ALLOCATABLE          ::  eig_cr(:, :, :)
 
-      ncstd = maxval(atoms%ncst)
+      ncstd = maxval(atoms%econf%num_core_states)
       allocate(nindxcr(0:ncstd, atoms%ntype), stat=ok)
 
       ! generate relativistic core wave functions( ->core1r,core2r )
-      CALL calcorewf(dimension, input, jsp, atoms,&
+      CALL calcorewf( input, jsp, atoms,&
                       ncstd, vr,&
                       lmaxc, nindxcr, core1r, core2r, eig_cr, mpi)
 
@@ -122,19 +121,17 @@ CONTAINS
 
    END SUBROUTINE corewf
 
-   SUBROUTINE calcorewf(dimension, input, jspin, atoms,&
+   SUBROUTINE calcorewf( input, jspin, atoms,&
                         ncstd, vr,&
                         lmaxc, nindxcr, core1, core2, eig_c, mpi)
 
       USE m_intgr, ONLY: intgr3, intgr0, intgr1
       USE m_constants, ONLY: c_light
-      USE m_setcor
       USE m_differ
       USE m_types
       IMPLICIT NONE
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -156,9 +153,9 @@ CONTAINS
       LOGICAL, SAVE        :: first = .true.
 
       !  - local arrays -
-      INTEGER              :: kappa(dimension%nstd), nprnc(dimension%nstd)
-      REAL                 :: vrd(dimension%msh)
-      REAL                 :: occ(dimension%nstd), occ_h(dimension%nstd, 2), a(dimension%msh), b(dimension%msh)
+      INTEGER              :: kappa(29), nprnc(29)
+      REAL                 :: vrd(atoms%msh)
+      REAL                 :: occ(29), occ_h(29, 2), a(atoms%msh), b(atoms%msh)
       REAL, ALLOCATABLE, SAVE:: vr0(:, :, :)
 
       !   - intrinsic functions -
@@ -187,8 +184,7 @@ CONTAINS
          z = atoms%zatom(itype)
          dxx = atoms%dx(itype)
          bmu = 0.0
-         CALL setcor(itype, input%jspins, atoms, input, bmu,&
-                      nst, kappa, nprnc, occ_h)
+         call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
 
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins*occ_h(1:nst, jspin)
@@ -198,10 +194,10 @@ CONTAINS
          rnot = atoms%rmsh(1, itype)
          d = exp(atoms%dx(itype))
          ncmsh = nint(log((atoms%rmt(itype) + 10.0)/rnot)/dxx + 1)
-         ncmsh = min(ncmsh, dimension%msh)
+         ncmsh = min(ncmsh, atoms%msh)
          rn = rnot*(d**(ncmsh - 1))
 
-         nst = atoms%ncst(itype)
+         nst = atoms%econf(itype)%num_core_states
 
          DO korb = 1, nst
             IF (occ(korb) > 0) THEN
@@ -229,8 +225,7 @@ CONTAINS
          z = atoms%zatom(itype)
          dxx = atoms%dx(itype)
          bmu = 0.0
-         CALL setcor(itype, input%jspins, atoms, input, bmu, nst, kappa, nprnc, occ_h)
-
+         call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins*occ_h(1:nst, jspin)
          ELSE
@@ -239,7 +234,7 @@ CONTAINS
          rnot = atoms%rmsh(1, itype)
          d = exp(atoms%dx(itype))
          ncmsh = nint(log((atoms%rmt(itype) + 10.0)/rnot)/dxx + 1)
-         ncmsh = min(ncmsh, dimension%msh)
+         ncmsh = min(ncmsh, atoms%msh)
          rn = rnot*(d**(ncmsh - 1))
          IF (mpi%irank == 0) THEN
             WRITE (6, FMT=8000) z, rnot, dxx, atoms%jri(itype)
@@ -269,7 +264,7 @@ CONTAINS
             END DO
          END IF
 
-         nst = atoms%ncst(itype)
+         nst = atoms%econf(itype)%num_core_states
 
          DO korb = 1, nst
             IF (occ(korb) > 0) THEN
@@ -306,16 +301,14 @@ CONTAINS
 
    END SUBROUTINE calcorewf
 
-   SUBROUTINE core_init(dimension, input, atoms, lmaxcd, maxindxc)
+   SUBROUTINE core_init(input, atoms, lmaxcd, maxindxc)
 
       USE m_intgr, ONLY: intgr3, intgr0, intgr1
       USE m_constants, ONLY: c_light
-      USE m_setcor
       USE m_differ
       USE m_types
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_atoms), INTENT(IN)       :: atoms
       INTEGER, INTENT(OUT)            :: maxindxc, lmaxcd
@@ -326,9 +319,9 @@ CONTAINS
       REAL                 :: d, dxx, rn, rnot, z
 
       !  - local arrays -
-      INTEGER              :: kappa(dimension%nstd), nprnc(dimension%nstd)
-      INTEGER              :: nindxcr(0:dimension%nstd, atoms%ntype)
-      REAL                 :: occ(dimension%nstd), occ_h(dimension%nstd, 2)
+      INTEGER              :: kappa(29), nprnc(29)
+      INTEGER              :: nindxcr(0:29, atoms%ntype)
+      REAL                 :: occ(29), occ_h(29, 2)
       INTEGER              :: lmaxc(atoms%ntype)
 
       !   - intrinsic functions -
@@ -343,17 +336,17 @@ CONTAINS
          z = atoms%zatom(itype)
          dxx = atoms%dx(itype)
          bmu = 0.0
-         CALL setcor(itype, input%jspins, atoms, input, bmu, nst, kappa, nprnc, occ_h)
 
+         call atoms%econf(itype)%get_core(nst,kappa,nprnc,occ_h)
          occ(1:nst) = occ_h(1:nst, 1)
 
          rnot = atoms%rmsh(1, itype)
          d = exp(atoms%dx(itype))
          ncmsh = nint(log((atoms%rmt(itype) + 10.0)/rnot)/dxx + 1)
-         ncmsh = min(ncmsh, dimension%msh)
+         ncmsh = min(ncmsh, atoms%msh)
          rn = rnot*(d**(ncmsh - 1))
 
-         nst = atoms%ncst(itype)
+         nst = atoms%econf(itype)%num_core_states
 
          DO korb = 1, nst
             IF (occ(korb) > 0) THEN

@@ -36,9 +36,9 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
    TYPE(t_stars),INTENT(IN)    :: stars
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-   TYPE(t_atoms),INTENT(IN) :: atoms
+   TYPE(t_atoms),INTENT(IN)    :: atoms
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-   TYPE(t_input),INTENT(INOUT) :: input
+   TYPE(t_input),INTENT(IN)    :: input
    TYPE(t_sym),INTENT(IN)      :: sym
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_oneD),INTENT(IN)     :: oneD

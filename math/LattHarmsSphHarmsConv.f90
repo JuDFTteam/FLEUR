@@ -2,12 +2,12 @@ MODULE m_lattHarmsSphHarmsConv
 
 CONTAINS
 
-SUBROUTINE lattHarmsRepToSphHarms(atoms, lattHarms, iType, funcLattHarms, funcSphHarms)
+SUBROUTINE lattHarmsRepToSphHarms(sym,atoms, lattHarms, iType, funcLattHarms, funcSphHarms)
 
    USE m_types
 
    IMPLICIT NONE
-
+   TYPE(t_sym),    INTENT(IN)    :: sym
    TYPE(t_atoms),  INTENT(IN)    :: atoms
    TYPE(t_sphhar), INTENT(IN)    :: lattHarms
    INTEGER,        INTENT(IN)    :: iType
@@ -17,7 +17,7 @@ SUBROUTINE lattHarmsRepToSphHarms(atoms, lattHarms, iType, funcLattHarms, funcSp
    INTEGER :: iAtom, iLH, ns, l, iM, m, lm, iR
 
    iAtom = SUM(atoms%neq(:iType-1)) + 1
-   ns = atoms%ntypsy(iAtom)
+   ns = sym%ntypsy(iAtom)
 
    funcSphHarms = CMPLX(0.0,0.0)
 

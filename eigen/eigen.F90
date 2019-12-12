@@ -19,7 +19,7 @@ CONTAINS
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
-                    cell,enpara,banddos,noco,oneD,hybrid,iter,eig_id,results,inden,v,vx)
+                    cell,enpara,banddos,noco,oneD,mpbasis,hybrid,iter,eig_id,results,inden,v,vx)
 
 #include"cpp_double.h"
       USE m_types
@@ -158,7 +158,7 @@ CONTAINS
                IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybrid,input,kpts,jsp,results,xcpot,noco,hmat)
 
                IF(hybrid%l_subvxc) THEN
-                  CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,hybrid,enpara%el0,enpara%ello0,&
+                  CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,mpbasis,hybrid,enpara%el0,enpara%ello0,&
                               sym,cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
                END IF
             END IF ! hybrid%l_hybrid

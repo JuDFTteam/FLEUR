@@ -11,5 +11,4 @@ MODULE m_types_setup
   use m_types_fleurinput
   USE m_types_stars
   USE m_types_sphhar
-  USE m_types_dimension
 END MODULE m_types_setup

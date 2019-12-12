@@ -50,13 +50,13 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ineq = 1, atoms%neq(itype)
             iatom = iatom + 1
-            iop = atoms%ngopr(iatom)
+            iop = sym%ngopr(iatom)
 !                                    l                        l    l
 ! inversion of spherical harmonics: Y (pi-theta,pi+phi) = (-1)  * Y (theta,phi)
 !                                    m                             m
             ifac = 1
-            IF (atoms%invsat(iatom) == 2) THEN
-               iop = atoms%ngopr(sym%invsatnr(iatom))
+            IF (sym%invsat(iatom) == 2) THEN
+               iop = sym%ngopr(sym%invsatnr(iatom))
 
                ifac = -1
             ENDIF

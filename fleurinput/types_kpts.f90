@@ -34,12 +34,48 @@ MODULE m_types_kpts
      PROCEDURE :: print_xml
      PROCEDURE :: read_xml=>read_xml_kpts
      PROCEDURE :: mpi_bc => mpi_bc_kpts
+       procedure :: get_nk => kpts_get_nk
+      procedure :: to_first_bz => kpts_to_first_bz
+      procedure :: is_kpt => kpts_is_kpt
   ENDTYPE t_kpts
 
   PUBLIC :: t_kpts
 CONTAINS
 
 
+   function kpts_get_nk(kpts, kpoint) result(ret_idx)
+      ! get the index of a kpoint
+      implicit NONE
+      class(t_kpts), intent(in)    :: kpts
+      real, intent(in)            :: kpoint(3)
+      integer                     :: idx, ret_idx
+
+      DO idx = 1, kpts%nkptf
+         IF (all(abs(kpoint - kpts%bkf(:,idx)) < 1E-06)) THEN
+            ret_idx = idx
+            return
+         END IF
+      END DO
+      ret_idx = 0
+   end function kpts_get_nk
+
+   function kpts_to_first_bz(kpts, kpoint) result(out_point)
+      implicit NONE
+      class(t_kpts), intent(in)  :: kpts
+      real, intent(in)           :: kpoint(3)
+      real                       :: out_point(3)
+
+      out_point = kpoint - floor(kpoint)
+   end function kpts_to_first_bz
+
+   function kpts_is_kpt(kpts, kpoint) result(is_kpt)
+      implicit none
+      class(t_kpts), intent(in)  :: kpts
+      real, intent(in)           :: kpoint(3)
+      logical                    :: is_kpt
+
+      is_kpt = kpts%get_nk(kpoint) > 0
+   end function kpts_is_kpt
   SUBROUTINE mpi_bc_kpts(this,mpi_comm,irank)
     USE m_mpi_bc_tool
     CLASS(t_kpts),INTENT(INOUT)::this
@@ -68,17 +104,17 @@ CONTAINS
     CALL mpi_bc(this%voltet,rank,mpi_comm)
     CALL mpi_bc(this%sc_list ,rank,mpi_comm)
   END SUBROUTINE mpi_bc_kpts
-  
+
   SUBROUTINE read_xml_kpts(this,xml)
     USE m_types_xml
     USE m_calculator
     CLASS(t_kpts),INTENT(inout):: this
     TYPE(t_xml),INTENT(IN)   :: xml
-    
-    
+
+
     INTEGER:: number_sets,n
     CHARACTER(len=200)::str,path,path2
-    
+
 
 
      number_sets = xml%GetNumberOfNodes('/fleurInput/calculationSetup/bzIntegration/kPointList')
@@ -150,7 +186,7 @@ CONTAINS
     WRITE(fh,205) adjustl(trim(kpts%name)),kpts%nkpt
     IF (kpts%numSpecialPoints<2) THEN
        DO n=1,kpts%nkpt
-206       FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>') 
+206       FORMAT('            <kPoint weight="',f12.6,'">',f12.6,' ',f12.6,' ',f12.6,'</kPoint>')
           WRITE (fh,206) kpts%wtkpt(n), kpts%bk(:,n)
        END DO
        IF (kpts%ntet>0) THEN

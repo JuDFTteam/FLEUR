@@ -9,7 +9,7 @@ MODULE m_postprocessInput
 CONTAINS
 
 SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
-     oneD,hybrid,cell,banddos,sliceplot,xcpot,forcetheo,forcetheo_data,&
+     oneD,cell,banddos,sliceplot,xcpot,forcetheo,forcetheo_data,&
      noco,sphhar,l_kpts)
 
   USE m_juDFT
@@ -44,8 +44,6 @@ SUBROUTINE postprocessInput(mpi,input,field,sym,stars,atoms,vacuum,kpts,&
   TYPE(t_vacuum),   INTENT(INOUT) :: vacuum
   TYPE(t_kpts),     INTENT(INOUT) :: kpts
   TYPE(t_oneD),     INTENT(INOUT) :: oneD
- TYPE(t_mpbasis), intent(inout) :: mpbasis
-  TYPE(t_hybrid),   INTENT(INOUT) :: hybrid
   TYPE(t_cell),     INTENT(INOUT) :: cell
   TYPE(t_banddos),  INTENT(INOUT) :: banddos
   TYPE(t_sliceplot),INTENT(INOUT) :: sliceplot

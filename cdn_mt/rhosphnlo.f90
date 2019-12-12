@@ -13,7 +13,7 @@ MODULE m_rhosphnlo
   !***********************************************************************
 CONTAINS
   SUBROUTINE rhosphnlo(itype,atoms,sphhar,sym, uloulopn,dulon,uulon,&
-       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,qmtllo)
+       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,rholres,qmtllo)
 
     USE m_constants, ONLY : c_light,sfp_const
     USE m_radsra

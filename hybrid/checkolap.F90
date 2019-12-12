@@ -5,7 +5,7 @@
          SUBROUTINE checkolap(atoms, hybdat,&
                            mpbasis,hybrid,&
                            nkpti, kpts,&
-                           dimension, mpi, &
+                            mpi, &
                            input, sym, noco,&
                            cell, lapw, jsp)
             USE m_util, ONLY: chr, sphbessel, harmonicsr
@@ -13,12 +13,13 @@
             USE m_constants
             USE m_types
             USE m_io_hybrid
+            USE m_types_hybdat
+
             IMPLICIT NONE
 
             TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
             TYPE(t_mpi), INTENT(IN)         :: mpi
-            TYPE(t_dimension), INTENT(IN)   :: dimension
             TYPE(t_mpbasis), intent(in) :: mpbasis
             TYPE(t_hybrid), INTENT(IN)      :: hybrid
             TYPE(t_input), INTENT(IN)       :: input

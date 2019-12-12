@@ -9,6 +9,7 @@
 ! Author: M. Schlipf 2009
 MODULE m_hsefunctional
    USE m_judft
+   USE m_types_hybdat
    IMPLICIT NONE
 
 #ifdef __PGI
@@ -971,7 +972,7 @@ CONTAINS
       potential, muffintin, interstitial)
 
       USE m_constants
-      USE m_types_hybrid, ONLY: gptnorm
+      USE m_types_hybdat, ONLY: gptnorm
       USE m_util, ONLY: sphbessel
       use m_intgrf, only: pure_intgrf, intgrf_init, intgrf_out,NEGATIVE_EXPONENT_WARNING, NEGATIVE_EXPONENT_ERROR
       IMPLICIT NONE

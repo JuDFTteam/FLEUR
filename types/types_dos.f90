@@ -19,30 +19,29 @@ MODULE m_types_dos
    CONTAINS
      PROCEDURE,PASS :: init => dos_init
   END TYPE t_dos
-  
+
 CONTAINS
 
-SUBROUTINE dos_init(thisDOS,neigd,input,atoms,kpts,vacuum)
+SUBROUTINE dos_init(thisDOS,input,atoms,kpts,vacuum)
   USE m_types_input
   USE m_types_atoms
   USE m_types_vacuum
   USE m_types_kpts
   IMPLICIT NONE
   CLASS(t_dos),           INTENT(INOUT) :: thisDOS
-  INTEGER        ,        INTENT(IN)    :: neigd
   TYPE(t_input),          INTENT(IN)    :: input
   TYPE(t_atoms),          INTENT(IN)    :: atoms
   TYPE(t_kpts),           INTENT(IN)    :: kpts
   TYPE(t_vacuum),         INTENT(IN)    :: vacuum
-  
-  ALLOCATE(thisDOS%jsym(neigd,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%ksym(neigd,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qis(neigd,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qal(0:3,atoms%ntype,neigd,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qvac(neigd,2,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qvlay(neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
-  ALLOCATE(thisDOS%qstars(vacuum%nstars,neigd,vacuum%layerd,2,kpts%nkpt,input%jspins))
-  
+
+  ALLOCATE(thisDOS%jsym(input%neig,kpts%nkpt,input%jspins))
+  ALLOCATE(thisDOS%ksym(input%neig,kpts%nkpt,input%jspins))
+  ALLOCATE(thisDOS%qis(input%neig,kpts%nkpt,input%jspins))
+  ALLOCATE(thisDOS%qal(0:3,atoms%ntype,input%neig,kpts%nkpt,input%jspins))
+  ALLOCATE(thisDOS%qvac(input%neig,2,kpts%nkpt,input%jspins))
+  ALLOCATE(thisDOS%qvlay(input%neig,vacuum%layerd,2,kpts%nkpt,input%jspins))
+  ALLOCATE(thisDOS%qstars(vacuum%nstars,input%neig,vacuum%layerd,2,kpts%nkpt,input%jspins))
+
   thisDOS%jsym = 0
   thisDOS%ksym = 0
   thisDOS%qis = 0.0
@@ -50,7 +49,7 @@ SUBROUTINE dos_init(thisDOS,neigd,input,atoms,kpts,vacuum)
   thisDOS%qvac = 0.0
   thisDOS%qvlay = 0.0
   thisDOS%qstars = CMPLX(0.0,0.0)
-  
+
 END SUBROUTINE dos_init
 
 END MODULE m_types_dos

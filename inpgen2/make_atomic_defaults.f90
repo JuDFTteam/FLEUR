@@ -26,10 +26,10 @@ CONTAINS
       TYPE(t_vacuum),INTENT(IN)   :: vacuum
       TYPE(t_cell),INTENT(IN)     :: cell
       TYPE(t_oneD),INTENT(IN)     :: oneD
-      
+
       INTEGER :: i,l,id,n,nn
       INTEGER :: element_species(120)
-      
+
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap(atoms%ntype)
       element_species=0
@@ -40,7 +40,9 @@ CONTAINS
       ALLOCATE(atoms%lmax(atoms%ntype))
       ALLOCATE(atoms%nlo(atoms%ntype))
       ALLOCATE(atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%nflip(atoms%ntype))
+      ALLOCATE(atoms%flipSpinPhi(atoms%ntype))
+      ALLOCATE(atoms%flipspinTheta(atoms%ntype))
+      ALLOCATE(atoms%flipSpinScale(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype))
       ALLOCATE(atoms%lda_u(atoms%ntype))
       ALLOCATE(atoms%econf(atoms%ntype))
@@ -52,11 +54,15 @@ CONTAINS
 
       atoms%lapw_l=0
       atoms%speciesname=""
-      
+
       atoms%nz(:) = NINT(atoms%zatom(:))
       atoms%rmt(:) = 999.9
       atoms%ulo_der = 0
-      atoms%l_geo(:) = .TRUE.; atoms%nflip(:) = 1
+      atoms%l_geo(:) = .TRUE.;
+      atoms%flipSpinPhi=0.0
+      atoms%flipSpinTheta=0.0
+      atoms%flipSpinScale=.FALSE.
+
       atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
 
       !Determine MT-radii
@@ -84,20 +90,19 @@ CONTAINS
          atoms%nlo(n)=len_TRIM(ap(n)%lo)/2
          DO i=1,atoms%nlo(n)
             DO l = 0, 3
-               !Setting of llo will be redone below 
-               IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l         
+               !Setting of llo will be redone below
+               IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
             ENDDO
          ENDDO
          CALL atoms%econf(n)%init(ap(n)%econfig)
          if (abs(ap(n)%bmu)>1E-8) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
          !atoms%ncst(n)=econfig_count_core(econfig)
-         
-         
-         atoms%nflip(n)=1
+
+
          atoms%lda_u(n)%l=-1
          atoms%l_geo(n)=.FALSE.
          atoms%relax(:,n)=1
-         
+
          ! rounding
          atoms%dx(:)   = REAL(NINT(atoms%dx(:)   * 1000) / 1000.)
          !Generate species-names
@@ -116,17 +121,17 @@ CONTAINS
       ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype));atoms%llo=-1
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       atoms%ulo_der=0
-         
+
       CALL enpara%init(atoms%ntype,atoms%nlod,2,.TRUE.,atoms%nz)
       DO n=1,atoms%ntype
          DO i=1,atoms%nlo(n)
             DO l = 0, 3
-               IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l         
+               IF (ap(n)%lo(2*i:2*i) == lotype(l)) atoms%llo(i,n) = l
             ENDDO
          ENDDO
          CALL enpara%set_quantum_numbers(n,atoms,ap(n)%econfig,ap(n)%lo)
       END DO
-         
+
 
     END SUBROUTINE make_atomic_defaults
   END MODULE m_make_atomic_defaults
