@@ -7,10 +7,16 @@ set(SerialParallelTests SiHybridGammaNoInv SiHybrid8kpt_sym
    SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML 
    Fe_bcc_GreensFunction Fe_1l_GreensFunction)
 
-set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 Fe_bct_LO Fe_fcc CoUnfold gw1Interface gw2Iterface)# TiO2eels TiO2eelsXML)
-set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
-set(Testdirs ${SerialOnlyTests} ${SerialParallelTests})
+set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 Fe_bct_LO Fe_fcc CoUnfold)# TiO2eels TiO2eelsXML)
+set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip) 
+
+if (${FLEUR_USE_HDF5})
+   set(SerialOnlyTests ${SerialOnlyTests} gw1Interface gw2Interface)
+endif()
+
+set(Testdirs ${SerialParallelTests} ${SerialOnlyTests})
+
 set(ParTestdirs ${SerialParallelTests})
 set(InpTestdirs ${InpgenTests})
 
