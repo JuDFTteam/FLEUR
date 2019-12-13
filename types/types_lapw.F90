@@ -56,13 +56,13 @@ CONTAINS
     lapw_dim_nbasfcn=nbasfcn_in
   end subroutine
 
-  INTEGER function dim_nvd()
+  PURE INTEGER function dim_nvd()
     dim_nvd=lapw_dim_nvd
   end function
-  INTEGER function dim_nv2d()
+  PURE INTEGER function dim_nv2d()
     dim_nv2d=lapw_dim_nv2d
   end function
-  INTEGER function dim_nbasfcn()
+  PURE INTEGER function dim_nbasfcn()
     dim_nbasfcn=lapw_dim_nbasfcn
   end function
 
