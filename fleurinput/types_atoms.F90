@@ -50,11 +50,11 @@ MODULE m_types_atoms
       !lmaxd=maxval(lmax)
       INTEGER:: lmaxd
       ! no of lda+us
-      INTEGER ::n_u
-      INTEGER :: n_hia
-      INTEGER :: n_j0
+      INTEGER ::n_u=0
+      INTEGER :: n_hia=0
+      INTEGER :: n_j0=0
       ! no of greens function calculations (in total)
-      INTEGER :: n_gf
+      INTEGER :: n_gf=0
       ! dimensions
       INTEGER :: jmtd
       INTEGER :: msh=0 !core state mesh was in dimension

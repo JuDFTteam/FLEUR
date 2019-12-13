@@ -30,7 +30,9 @@ MODULE m_checks
       ENDIF
       !Check for IO options not available in parallel
 #ifdef CPP_MPI
-      CALL MPI_COMM_SIZE(MPI_COMM_WORLD,irank,ierr)
+      CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
+      CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,ierr)
+      
       IF (irank.EQ.0) THEN
          IF (isize>1) THEN
             IF (TRIM(juDFT_string_for_argument("-eig"))=="-mem") CALL judft_error(&
