@@ -7,11 +7,11 @@
       MODULE m_nmat_rot
 
 ! Calculate the Wigner rotation matrices for complex spherical
-! harmonics for all space-group rotations and l=1,2,3. Needed 
+! harmonics for all space-group rotations and l=1,2,3. Needed
 ! for the calculation of the density matrix in nmat.
 !
-! also allows to use rotated "n_mmp_mat" file by specifying a 
-! "n_mmp_rot" file (see its use in u_mix or u_setup) 
+! also allows to use rotated "n_mmp_mat" file by specifying a
+! "n_mmp_rot" file (see its use in u_mix or u_setup)
 !                                                       gb10
       CONTAINS
       SUBROUTINE nmat_rot(
@@ -24,9 +24,9 @@
       IMPLICIT NONE
 
 ! .. arguments:
-      INTEGER, INTENT(IN)  :: l_in,n_u,jspins,lty(n_u)
-      REAL,    INTENT(IN)  :: alpha(n_u),beta(n_u),gamma(n_u)
-      COMPLEX, INTENT(INOUT) :: n_mmp(-3:3,-3:3,n_u,jspins)
+      INTEGER, INTENT(IN)  :: l_in,n_u,jspins,lty(:)
+      REAL,    INTENT(IN)  :: alpha(:),beta(:),gamma(:)
+      COMPLEX, INTENT(INOUT) :: n_mmp(-lmaxU_const:,-lmaxU_const:,:,:)
 
 ! .. local variables:
       INTEGER ns,signum,ispin,n
@@ -42,9 +42,10 @@
 
       REAL dmat(3,3),dmati(3,3)
 
-      
+      IF (ALL(ABS(alpha)<1E-10).AND.ALL(ABS(beta)<1E-10)
+     +     .AND.ALL(ABS(gamma)<1E-10)) RETURN
 
-      
+
       DO n = 1, n_u
 
       co_bh = cos(beta(n)*0.5)
@@ -61,11 +62,11 @@
             fac_l_mp = fac(l+mp) * fac(l-mp)
 
             zaehler = sqrt( real(fac_l_m * fac_l_mp) )
-            phase_a = exp( - ImagUnit * alpha(n) * mp ) 
+            phase_a = exp( - ImagUnit * alpha(n) * mp )
             x_lo = max(0, m-mp)
             x_up = min(l-mp, l+m)
 
-            bas = zaehler * phase_a * phase_g 
+            bas = zaehler * phase_a * phase_g
             d(m,mp) = cmplx(0.0,0.0)
             DO x = x_lo,x_up
               fac_lmpx = fac(l-mp-x)
@@ -73,7 +74,7 @@
               fac_x    = fac(x)
               fac_xmpm = fac(x+mp-m)
               nenner = fac_lmpx * fac_lmx * fac_x * fac_xmpm
-              e_c = 2*l + m - mp - 2*x 
+              e_c = 2*l + m - mp - 2*x
               e_s = 2*x + mp - m
               IF (e_c.EQ.0) THEN
                 cp = 1.0
@@ -98,7 +99,7 @@
         d_wig(:,:,l,n) = d(:,:)
 
       ENDDO ! l
-      ENDDO ! n 
+      ENDDO ! n
 
       DO ispin = 1, jspins
         DO n = 1, n_u
@@ -119,7 +120,7 @@
 
       INTEGER, INTENT (IN) :: n
       INTEGER :: i
- 
+
       fac = 0
       IF (n.LT.0) RETURN
       fac = 1
@@ -129,5 +130,5 @@
       ENDDO
 
       END FUNCTION  fac
-      
+
       END MODULE m_nmat_rot

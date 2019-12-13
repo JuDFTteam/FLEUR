@@ -27,7 +27,11 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_tlmplm),INTENT(IN)     :: td
-    REAL,INTENT(IN)               :: fj(:,0:,:,:),gj(:,0:,:,:)
+#if defined CPP_GPU
+    REAL,MANAGED,INTENT(IN)    :: fj(:,:,:,:),gj(:,:,:,:)
+#else
+    REAL,INTENT(IN)            :: fj(:,0:,:,:),gj(:,0:,:,:)
+#endif
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN)          :: n
     COMPLEX                       :: chi_one,chi(2,2)
@@ -37,7 +41,7 @@ CONTAINS
     CALL hmat_tmp%clear()
     !The spin1,2 matrix is calculated(real part of potential)
     CALL hsmt_nonsph(n,mpi,sym,atoms,3,1,1,chi_one,noco,cell,lapw,td,&
-         fj(:,0:,1,:),gj(:,0:,2,:),hmat_tmp)
+         fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
 
     CALL hsmt_spinor(3,n,noco,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
@@ -52,7 +56,7 @@ CONTAINS
     !The spin1,2 matrix is calculated(imag part of potential)
     chi_one=CMPLX(0.,1.)
     CALL hsmt_nonsph(n,mpi,sym,atoms,4,1,1,chi_one,noco,cell,lapw,td,&
-         fj(:,0:,1,:),gj(:,0:,2,:),hmat_tmp)
+         fj(:,0:,1,:),gj(:,0:,1,:),hmat_tmp)
 
     CALL hsmt_spinor(3,n,noco,chi) 
     CALL hsmt_distspins(chi,hmat_tmp,hmat)

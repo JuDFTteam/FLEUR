@@ -11,7 +11,7 @@ MODULE m_cdnmt
   !***********************************************************************
 CONTAINS
   SUBROUTINE cdnmt(mpi,jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
-                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho)
+                   vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1,l_dftspinpol)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
     USE m_radfun
@@ -26,6 +26,8 @@ CONTAINS
     TYPE(t_atoms),   INTENT(IN)    :: atoms
     TYPE(t_enpara),  INTENT(IN)    :: enpara
     TYPE(t_moments), INTENT(INOUT) :: moments
+    TYPE(t_hub1ham), OPTIONAL, INTENT(INOUT) :: hub1
+    LOGICAL,         INTENT(IN)    :: l_dftspinpol
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
@@ -38,13 +40,14 @@ CONTAINS
     TYPE (t_denCoeffsOffdiag), INTENT(IN) :: denCoeffsOffdiag
     !     ..
     !     .. Local Scalars ..
-    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu
-    INTEGER ilo,ilop,i
+    INTEGER itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb
+    INTEGER ilo,ilop,i,i_hia,i_exc
     REAL s,wronk,sumlm,qmtt
     COMPLEX cs
+    LOGICAL l_hia
     !     ..
     !     .. Local Arrays ..
-    REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd)
+    REAL qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd),vrTmp(atoms%jmtd)
     CHARACTER(LEN=20) :: attributes(6)
 
     !     ..
@@ -63,11 +66,11 @@ CONTAINS
        ENDIF
     ENDIF
 
-    !$OMP PARALLEL DEFAULT(none) &
-    !$OMP SHARED(usdus,rho,moments,qmtl) &
-    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar)&
-    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
-    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,cs)
+!    !$OMP PARALLEL DEFAULT(none) &
+!    !$OMP SHARED(usdus,rho,moments,qmtl,hub1) &
+!    !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_dftspinpol)&
+!    !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd)&
+!    !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,s,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)
     IF (noco%l_mperp) THEN
        ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
     ELSE
@@ -77,7 +80,7 @@ CONTAINS
 
     qmtl = 0
     
-    !$OMP DO
+!    !$OMP DO
     DO itype = 1,atoms%ntype
        na = 1
        DO i = 1, itype - 1
@@ -86,13 +89,32 @@ CONTAINS
        !--->    spherical component
        DO ispin = jsp_start,jsp_end
           DO l = 0,atoms%lmax(itype)
-             CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vr(1,itype,ispin),atoms,&
-                  f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
+
+             !Check if the orbital is treated with Hubbard 1
+             l_hia=.FALSE.
+             DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+                IF(atoms%lda_u(i)%atomType.EQ.itype.AND.atoms%lda_u(i)%l.EQ.l) THEN
+                   l_hia=.TRUE.
+                ENDIF
+             ENDDO
+
+             !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
+             !the correlated orbitals with a non-spin-polarized basis
+             IF(l_hia.AND.jspd.EQ.2.AND..NOT.l_dftspinpol) THEN
+                vrTmp = (vr(:,itype,1) + vr(:,itype,2))/2.0 
+             ELSE
+                vrTmp = vr(:,itype,ispin)
+             ENDIF
+
+             CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vrTmp,atoms,&
+                   f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
+             llp = (l* (l+1))/2 + l
              DO j = 1,atoms%jri(itype)
                 s = denCoeffs%uu(l,itype,ispin)*( f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin) )&
                      +   denCoeffs%dd(l,itype,ispin)*( g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin) )&
                      + 2*denCoeffs%du(l,itype,ispin)*( f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin) )
                 rho(j,0,itype,ispin) = rho(j,0,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
+                moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
              ENDDO
           ENDDO
 
@@ -110,7 +132,7 @@ CONTAINS
                denCoeffs%cclo(1,1,itype,ispin),denCoeffs%acnmt(0,1,1,itype,ispin),&
                denCoeffs%bcnmt(0,1,1,itype,ispin),denCoeffs%ccnmt(1,1,1,itype,ispin),&
                f(1,1,0,ispin),g(1,1,0,ispin),&
-               rho(:,0:,itype,ispin),qmtllo)
+               rho(:,0:,itype,ispin),qmtllo,moments%rhoLRes(:,0:,:,itype,ispin))
 
 
           !--->       l-decomposed density for each atom type
@@ -121,6 +143,16 @@ CONTAINS
              qmtt = qmtt + qmtl(l,ispin,itype)
           END DO
           moments%chmom(itype,ispin) = qmtt
+
+          !Get the magnetic moment for the shells where we defined additional exchange splittings for DFT+Hubbard 1
+          IF(PRESENT(hub1)) THEN
+            DO i_hia = 1, atoms%n_hia 
+               IF(atoms%lda_u(atoms%n_u+i_hia)%atomType.NE.itype) CYCLE
+               DO i_exc = 1, hub1%n_exc_given(i_hia)
+                  hub1%mag_mom(i_hia,i_exc) = hub1%mag_mom(i_hia,i_exc) + (-1)**(ispin-1) *  qmtl(hub1%exc_l(i_hia,i_exc),ispin,itype)
+               ENDDO
+            ENDDO
+          ENDIF
 
           !+soc
           !--->       spherical angular component
@@ -146,11 +178,13 @@ CONTAINS
                            + denCoeffs%dunmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*f(j,1,lp,ispin)&
                            + g(j,2,l,ispin)*f(j,2,lp,ispin) )
                       rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ s/atoms%neq(itype)
+                      moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin)+ s/atoms%neq(itype)
                    ENDDO
                 ENDDO
              ENDDO
           ENDDO
        ENDDO ! end of spin loop (ispin = jsp_start,jsp_end)
+
 
        IF (noco%l_mperp) THEN
 
@@ -183,6 +217,7 @@ CONTAINS
              !--->        calculate off-diagonal part of the density matrix
              !--->        spherical component
              DO l = 0,atoms%lmax(itype)
+                llp = (l* (l+1))/2 + l
                 DO j = 1,atoms%jri(itype)
                    cs = denCoeffsOffdiag%uu21(l,itype)*( f(j,1,l,2)*f(j,1,l,1) +f(j,2,l,2)*f(j,2,l,1) )&
                         + denCoeffsOffdiag%ud21(l,itype)*( f(j,1,l,2)*g(j,1,l,1) +f(j,2,l,2)*g(j,2,l,1) )&
@@ -191,7 +226,9 @@ CONTAINS
                    !rho21(j,0,itype) = rho21(j,0,itype)+ conjg(cs)/(atoms%neq(itype)*sfp_const)
                    rho21=CONJG(cs)/(atoms%neq(itype)*sfp_const)
                    rho(j,0,itype,3)=rho(j,0,itype,3)+REAL(rho21)
-                   rho(j,0,itype,4)=rho(j,0,itype,4)+imag(rho21)
+                   rho(j,0,itype,4)=rho(j,0,itype,4)+aimag(rho21)
+                   moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3)+ REAL(conjg(cs)/(atoms%neq(itype)*sfp_const))
+                   moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4)+ AIMAG(conjg(cs)/(atoms%neq(itype)*sfp_const))
                 ENDDO
              ENDDO
 
@@ -201,6 +238,7 @@ CONTAINS
                 DO l = 0,atoms%lmax(itype)
                    DO lp = 0,atoms%lmax(itype)
                       llp = lp*(atoms%lmax(itype)+1)+l+1
+                      llpb = (MAX(l,lp)* (MAX(l,lp)+1))/2 + MIN(l,lp)
                       DO j = 1,atoms%jri(itype)
                          cs = denCoeffsOffdiag%uunmt21(llp,lh,itype)*(f(j,1,lp,2)*f(j,1,l,1)&
                               + f(j,2,lp,2)*f(j,2,l,1) )+ denCoeffsOffdiag%udnmt21(llp,lh,itype)*(f(j,1,lp,2)*g(j,1,l,1)&
@@ -210,7 +248,9 @@ CONTAINS
                          !rho21(j,lh,itype)= rho21(j,lh,itype)+ CONJG(cs)/atoms%neq(itype)
                          rho21=CONJG(cs)/atoms%neq(itype)
                          rho(j,lh,itype,3)=rho(j,lh,itype,3)+REAL(rho21)
-                         rho(j,lh,itype,4)=rho(j,lh,itype,4)+imag(rho21)
+                         rho(j,lh,itype,4)=rho(j,lh,itype,4)+aimag(rho21)
+                         moments%rhoLRes(j,lh,llpb,itype,3)= moments%rhoLRes(j,lh,llpb,itype,3) + REAL(conjg(cs)/atoms%neq(itype))
+                         moments%rhoLRes(j,lh,llpb,itype,4)= moments%rhoLRes(j,lh,llpb,itype,4) + AIMAG(conjg(cs)/atoms%neq(itype))
                       ENDDO
                    ENDDO
                 ENDDO
@@ -220,9 +260,9 @@ CONTAINS
        ENDIF ! noco%l_mperp
 
     ENDDO ! end of loop over atom types
-    !$OMP END DO
+!    !$OMP END DO
     DEALLOCATE ( f,g)
-    !$OMP END PARALLEL
+!    !$OMP END PARALLEL
 
     WRITE (6,FMT=8000)
 8000 FORMAT (/,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',&

@@ -103,13 +103,14 @@ CONTAINS
     CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
   END SUBROUTINE  jij_start
 
-  LOGICAL FUNCTION jij_next_job(this,lastiter,noco)
+  LOGICAL FUNCTION jij_next_job(this,lastiter,atoms,noco)
     USE m_types_setup
     USE m_xmlOutput
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
+    TYPE(t_atoms),INTENT(IN)            :: atoms
     !Stuff that might be modified...
     TYPE(t_noco),INTENT(INOUT) :: noco
 
@@ -117,7 +118,7 @@ CONTAINS
     INTEGER:: n
 
     IF (.NOT.lastiter) THEN
-       jij_next_job=this%t_forcetheo%next_job(lastiter,noco)
+       jij_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco)
        RETURN
     ENDIF
     
@@ -178,6 +179,7 @@ CONTAINS
                RESHAPE((/1,1,5,5,5,6,4,18,4,4,2,15/),(/6,2/)))
     ENDDO
     CALL closeXMLElement('Forcetheorem_JIJ')
+    CALL judft_end("Forcetheorem: Jij")
   END SUBROUTINE jij_postprocess
 
 
@@ -286,10 +288,10 @@ c-------------------------------------------------------------------
         w=0
         nqvect=0
         nshort=0 
-        ReJq=0.d0
-        ImJq=0.d0
+        ReJq=0.0
+        ImJq=0.0
         sqsin=(sin(thetaJ))**2
-        tpi = 2.d0 * pimach()
+        tpi = 2.0 * pimach()
         limit=nmagn-1
         IF (nmagn.gt.mtypes) limit=mtypes
 
@@ -374,7 +376,7 @@ c...
             DO ii=1,2
             Dabsq(:)=ABS(q(:,nn,qcount)+((-1)**ii)*q(:,nnn,qcount))
             IDabsq(:)=NINT(Dabsq(:))
-            divi(:)=ABS(Dabsq(:)/FLOAT(IDabsq(:))-1.d0) 
+            divi(:)=ABS(Dabsq(:)/FLOAT(IDabsq(:))-1.0) 
               IF(((Dabsq(1).LT.tol).OR.(divi(1).LT.tol)).AND.
      &           ((Dabsq(2).LT.tol).OR.(divi(2).LT.tol)).AND.
      &           ((Dabsq(3).LT.tol).OR.(divi(3).LT.tol)))THEN
@@ -396,12 +398,12 @@ c...
 c...      Now calculate Jq=Re(Jq)+i*Im(Jq)
               mu=1
            DO imt=1,mtypes
-              ReJq(mu,mu,qcount)=-2.d0*(seigv(mu,mu,qcount,1)
+              ReJq(mu,mu,qcount)=-2.0*(seigv(mu,mu,qcount,1)
      &                -seigv0(mu,mu,1))/(M(mu)*M(mu)*sqsin)
-              ImJq(mu,mu,qcount)=0.d0
+              ImJq(mu,mu,qcount)=0.0
                DO remt=mu+1,mu+nmagtype(imt)-1
                ReJq(remt,remt,qcount)=ReJq(mu,mu,qcount)
-               ImJq(remt,remt,qcount)=0.d0
+               ImJq(remt,remt,qcount)=0.0
                ENDDO!remt
            mu=mu+nmagtype(imt)
            ENDDO !imt
@@ -410,10 +412,10 @@ c...      Now calculate Jq=Re(Jq)+i*Im(Jq)
             DO nu=mu+1,nmagn
               ReJq(mu,nu,qcount)=((seigv0(mu,nu,2)-
      &        seigv(mu,nu,qcount,1))/(M(mu)*M(nu)*sqsin))
-     &        -(0.5d0*M(mu)*ReJq(mu,mu,qcount)/M(nu))-
-     &        (0.5d0*M(nu)*ReJq(nu,nu,qcount)/M(mu))
+     &        -(0.5*M(mu)*ReJq(mu,mu,qcount)/M(nu))-
+     &        (0.5*M(nu)*ReJq(nu,nu,qcount)/M(mu))
               IF(invs)THEN
-               ImJq(mu,nu,qcount)=0.d0
+               ImJq(mu,nu,qcount)=0.0
               ELSE  
                ImJq(mu,nu,qcount)=((seigv(mu,nu,qcount,2)
      &         -seigv(mu,nu,qcount,1))/
@@ -478,7 +480,7 @@ c ... for one magnetic atom per unit cell
        qcount=nqpt-1
        lwork=2*nshort 
        ALLOCATE (Cmat(qcount,nshort),DelE(qcount),work(lwork))
-          Cmat=0.d0
+          Cmat=0.0
        IF (nshort.GE.nqpt)THEN 
         WRITE(*,*) ' Please supply the data for', nshort,
      & 'q-points different from zero' 
@@ -491,7 +493,7 @@ c ... for one magnetic atom per unit cell
             scp=(q(1,1,n)*R(1,atsh,nn)    
      &          +q(2,1,n)*R(2,atsh,nn)
      &          +q(3,1,n)*R(3,atsh,nn))*tpi
-            Cmat(n,nn)=Cmat(n,nn)-1.d0+cos(scp)
+            Cmat(n,nn)=Cmat(n,nn)-1.0+cos(scp)
             ENDDO
            ENDDO
           DelE(n)=ReJq(1,1,n)*2000 ! multiply by 2000 to get [mRy/muB**2]
@@ -503,7 +505,7 @@ c ... for one magnetic atom per unit cell
      & work,lwork,info)
 
 c      The routine dgels returns the solution, J(n), in the array DelE(n)  
-       Tc=0.d0
+       Tc=0.0
       DO n=1,nshort
       Tc=Tc+nat(n)*DelE(n) !Mean-field Tc=1/3*(Sum_i(J_0,i))
       WRITE(115,5005) n,lenR(n),DelE(n) ! J in units [mRy/muB**2]
@@ -526,7 +528,7 @@ c... Perform the back-Fourier transform
              wrJ=0
           DO atsh=1,nat(nnn)
           IF(atsh.gt.shmax) STOP 'jcoff2:increase shmax!' 
-          J=0.d0  
+          J=0.0  
           DO n=1,nqpt-1
            DO nn=1,nop
             IF(w(nn,n).EQ.1)THEN
@@ -538,7 +540,7 @@ c... Perform the back-Fourier transform
             ENDIF
            ENDDO !nn
           ENDDO !n (qpts)
-      J=(J/float(nqvect))*2000.d0 ! J in units [mRy/muB**2]
+      J=(J/float(nqvect))*2000.0 ! J in units [mRy/muB**2]
       DO i=1,wrJ !A check for non-equivalent sub-shells
        IF(ABS(J-Jw(i)).LE.(tol))GOTO 55
       ENDDO
@@ -564,7 +566,7 @@ c...  In case of only one magnetic atom per unit cell, calculate the mean-field 
        mu=mu+nmagtype(imt)
       ENDDO !imt
           IF(nmagn.EQ.1) THEN
-          Tc=157.889*M(1)*M(1)*Tc/3.d0
+          Tc=157.889*M(1)*M(1)*Tc/3.0
           WRITE(115,*) '# Tc(mean field)= ',Tc
           ENDIF 
  5008     FORMAT(i4,i4,7(1x,f14.10))

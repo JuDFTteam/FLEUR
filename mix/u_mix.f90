@@ -12,7 +12,7 @@ MODULE m_umix
   ! --------------------------------------------------------
   ! Extension to multiple U per atom type by G.M. 2017
 CONTAINS
-  SUBROUTINE u_mix(input,atoms,n_mmp_in,n_mmp_out)
+  SUBROUTINE u_mix(input,atoms,noco,n_mmp_in,n_mmp_out)
 
     USE m_types
     USE m_cdn_io
@@ -24,42 +24,26 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms),INTENT(IN)   :: atoms
-    COMPLEX, INTENT (INOUT)    :: n_mmp_out(-3:3,-3:3,atoms%n_u,input%jspins)
-    COMPLEX, INTENT (INOUT)    :: n_mmp_in (-3:3,-3:3,atoms%n_u,input%jspins)
+    TYPE(t_noco),INTENT(IN)   :: noco
+    COMPLEX, INTENT (INOUT)    :: n_mmp_out(-3:3,-3:3,atoms%n_u,MERGE(3,input%jspins,noco%l_mperp))
+    COMPLEX, INTENT (INOUT)    :: n_mmp_in (-3:3,-3:3,atoms%n_u,MERGE(3,input%jspins,noco%l_mperp))
     !
     ! ... Locals ...
-    INTEGER j,k,iofl,l,itype,ios,i_u,jsp,lty(atoms%n_u)
-    REAL alpha,spinf,gam,del,sum1,sum2,mix_u, uParam, jParam
-    REAL    theta(atoms%n_u),phi(atoms%n_u),zero(atoms%n_u)
-    LOGICAL n_exist
+    INTEGER j,k,iofl,l,itype,ios,i_u,jsp
+    REAL alpha,spinf,gam,del,sum1,sum2,sum3,mix_u, uParam, jParam
+    REAL    zero(atoms%n_u)
     CHARACTER(LEN=20)   :: attributes(6)
     COMPLEX,ALLOCATABLE :: n_mmp(:,:,:,:)
     !
     ! check for possible rotation of n_mmp
     !
-    INQUIRE (file='n_mmp_rot',exist=n_exist)
-    IF (n_exist) THEN
-       OPEN (68,file='n_mmp_rot',status='old',form='formatted')
-       DO i_u = 1, atoms%n_u
-          l = atoms%lda_u(i_u)%l
-          READ(68,*,iostat=ios) theta(i_u),phi(i_u)
-          IF (ios == 0) THEN
-             lty(i_u) = l
-          ELSE
-             IF (i_u == 1)  CALL juDFT_error("ERROR reading n_mmp_rot", calledby ="u_mix")
-             theta(i_u) = theta(i_u-1) ; phi(i_u) = phi(i_u-1)
-             lty(i_u) = lty(i_u-1)
-          END IF
-       END DO
-       CLOSE (68)
-       zero = 0.0
-       CALL nmat_rot(zero,-theta,-phi,3,atoms%n_u,input%jspins,lty,n_mmp_out)
-    END IF
+    !zero=0.0
+    !CALL nmat_rot(zero,-atoms%lda_u%theta,-atoms%lda_u%phi,3,atoms%n_u,input%jspins,atoms%lda_u%l,n_mmp_out)
 
     ! Write out n_mmp_out to out.xml file
 
     CALL openXMLElementNoAttributes('ldaUDensityMatrix')
-    DO jsp = 1, input%jspins
+    DO jsp = 1, MERGE(3,input%jspins,noco%l_mperp)
        DO i_u = 1, atoms%n_u
           l = atoms%lda_u(i_u)%l
           itype = atoms%lda_u(i_u)%atomType
@@ -88,7 +72,7 @@ CONTAINS
 
        ! mix here straight with given mixing factors
 
-       ALLOCATE (n_mmp(-3:3,-3:3,MAX(1,atoms%n_u),input%jspins))
+       ALLOCATE (n_mmp(-3:3,-3:3,MAX(1,atoms%n_u),MERGE(3,input%jspins,noco%l_mperp)))
        n_mmp = CMPLX(0.0,0.0)
 
        alpha = input%ldauMixParam
@@ -107,6 +91,7 @@ CONTAINS
           WRITE (6,'(a16,f12.6)') 'n_mmp distance =',sum1
        ELSE
           sum2 = 0.0
+          sum3 = 0.0
           gam = 0.5 * alpha * (1.0 + spinf)
           del = 0.5 * alpha * (1.0 - spinf)
           DO i_u = 1,atoms%n_u
@@ -114,6 +99,7 @@ CONTAINS
                 DO k = -3,3
                    sum1 = sum1 + ABS(n_mmp_out(k,j,i_u,1) - n_mmp_in(k,j,i_u,1))
                    sum2 = sum2 + ABS(n_mmp_out(k,j,i_u,2) - n_mmp_in(k,j,i_u,2))
+                   IF(noco%l_mperp) sum3 = sum3 + ABS(n_mmp_out(k,j,i_u,3) - n_mmp_in(k,j,i_u,3))
 
                    n_mmp(k,j,i_u,1) =       gam * n_mmp_out(k,j,i_u,1) + &
                                       (1.0-gam) * n_mmp_in (k,j,i_u,1) + &
@@ -124,11 +110,16 @@ CONTAINS
                                       (1.0-gam) * n_mmp_in (k,j,i_u,2) + &
                                             del * n_mmp_out(k,j,i_u,1) - &
                                             del * n_mmp_in (k,j,i_u,1)
+                   IF(noco%l_mperp) THEN
+                      n_mmp(k,j,i_u,3) =       alpha * n_mmp_out(k,j,i_u,3) + &
+                                         (1.0-alpha) * n_mmp_in (k,j,i_u,3)
+                   ENDIF
                 END DO
              END DO
           END DO
           WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 1 =',sum1
           WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
+          IF(noco%l_mperp) WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 3 =',sum3
        ENDIF
        n_mmp_in = n_mmp
        DEALLOCATE (n_mmp)
@@ -156,13 +147,25 @@ CONTAINS
                 END DO
              END DO
           END DO
-          DO j=-3,3
-             WRITE(6,'(14f12.6)') (n_mmp_in(k,j,1,2),k=-3,3)
-          END DO
+          !DO j=-3,3
+          !   WRITE(6,'(14f12.6)') (n_mmp_in(k,j,1,2),k=-3,3)
+          !END DO
           WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 2 =',sum2
-          DO j=-3,3
-             WRITE(6,'(14f12.6)') (n_mmp_out(k,j,1,2),k=-3,3)
-          END DO
+          !DO j=-3,3
+          !   WRITE(6,'(14f12.6)') (n_mmp_out(k,j,1,2),k=-3,3)
+          !END DO
+          IF(noco%l_mperp) THEN
+            !Spin off-diagonal
+            sum3 = 0.0
+            DO i_u = 1, atoms%n_u
+               DO j = -3,3
+                  DO k = -3,3
+                     sum3 = sum3 + ABS(n_mmp_out(k,j,i_u,3) - n_mmp_in(k,j,i_u,3))
+                  END DO
+               END DO
+            END DO
+            WRITE (6,'(a23,f12.6)') 'n_mmp distance spin 3 =',sum3
+          ENDIF
        END IF
     END IF ! input%ldauLinMix
 

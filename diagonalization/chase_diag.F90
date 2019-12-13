@@ -89,9 +89,7 @@ CONTAINS
 
 #ifdef CPP_CHASE
     SUBROUTINE init_chase(mpi,DIMENSION,input,atoms,kpts,noco,l_real)
-    USE m_types_mpimat
     USE m_types
-    USE m_types_mpi
     USE m_judft
     USE m_eig66_io
 
@@ -125,8 +123,8 @@ CONTAINS
 #endif
   
    SUBROUTINE chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
-     USE m_types_mpimat
-    USE m_types
+    USE m_types_mpimat
+    USE m_types_mat
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
@@ -164,7 +162,7 @@ CONTAINS
 #ifdef CPP_CHASE  
   SUBROUTINE chase_diag_noMPI(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
 
-    USE m_types
+    USE m_types_mat
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
@@ -312,7 +310,7 @@ CONTAINS
 
   SUBROUTINE chase_diag_MPI(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
     use m_types_mpimat
-    USE m_types
+    USE m_types_mat
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
@@ -376,9 +374,10 @@ CONTAINS
     nev = MIN(ne,hmat%global_size1)
     nex = min(max(nev/4, 45), hmat%global_size1-nev) !dimensioning for workspace
 
+    CALL hmat%generate_full_matrix()
     CALL priv_init_chasempimat(hmat,chase_mat,nev,nex)
     
-    CALL chase_mat%generate_full_matrix()
+    !CALL chase_mat%generate_full_matrix()
     ALLOCATE(eigenvalues(nev+nex))
     eigenvalues = 0.0
     !ALLOCATE(t_mpimat::zmatTemp)
@@ -436,11 +435,12 @@ CONTAINS
     CALL zmat%copy(hmat,1,1)
 
     !Distribute eigenvalues over PEs
-    ne=0
-    DO i=myid+1,nev,np
-       ne=ne+1
-       eig(ne)=eigenvalues(i)
-    ENDDO
+    !ne=0
+    !DO i=myid+1,nev,np
+    !   ne=ne+1
+    !   eig(ne)=eigenvalues(i)
+    !ENDDO
+    eig(:)=eigenvalues(:size(eig))
 
     CALL CPU_TIME(t4)
 
@@ -455,6 +455,7 @@ CONTAINS
 
   SUBROUTINE priv_init_chasempimat(hmat,mat,nev,nex)
     USE m_types_mpimat
+    USE m_types_mat
     IMPLICIT NONE
     TYPE(t_mpimat),INTENT(INOUT)::hmat,mat
     INTEGER,INTENT(IN)          :: nev,nex

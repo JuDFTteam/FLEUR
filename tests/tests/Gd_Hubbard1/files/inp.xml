@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.30">
+   <comment>
+      hcp Gadolinium                                                                  
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.00000000" Gmax="10.00000000" GmaxXC="8.90000000" numbands="125"/>
+      <scfLoop itmax="2" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
+      <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
+      <expertModes gw="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
+      <greensFunction l_sphavg="T" l_mperp="F" l_resolv="F">
+         <realAxis ne="5400" ellow="-1.0" elup="1.0"/>
+         <contourSemicircle n="128" et="0.0" alpha="1.0"/>
+      </greensFunction>
+      <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+      <bzIntegration valenceElectrons="36.00000000" mode="hist" fermiSmearingEnergy=".00100000">
+         <kPointMesh nx="5" ny="5" nz="3" gamma="T"/>
+         <altKPointSet purpose="bands">
+            <kPointCount count="   240" gamma="F"/>
+         </altKPointSet>
+      </bzIntegration>
+      <energyParameterLimits ellow="-1.80000000" elup="1.00000000"/>
+   </calculationSetup>
+   <cell>
+      <symmetryFile filename="sym.out"/>
+      <bulkLattice scale="1.0000000000" latnam="hex">
+         <a1 scale="1.0000000000">6.8597086470</a1>
+         <c scale="1.0000000000">10.9549358120</c>
+      </bulkLattice>
+   </cell>
+   <xcFunctional name="pbe" relativisticCorrections="F"/>
+   <atomSpecies>
+      <species name="Gd-1" element="Gd" atomicNumber="64" coreStates="14" magMom="7.10000000">
+         <mtSphere radius="2.80000000" gridPoints="925" logIncrement=".01400000"/>
+         <atomicCutoffs lmax="12" lnonsphr="10"/>
+         <energyParameters s="6" p="6" d="5" f="4"/>
+         <ldaHIA l="3" U="6.7" J="0.7" l_amf="F" init_occ="7.0">
+	 	<exc l="2" J="0.0952" init_mom="0.5"/>
+	 </ldaHIA>
+         <lo type="SCLO" l="0" n="5" eDeriv="0"/>
+         <lo type="SCLO" l="1" n="5" eDeriv="0"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Gd-1">
+         <relPos label="                   1">1.000/3.000 1.000/3.000 1.000/4.000</relPos>
+         <relPos label="                   2">-1.000/3.000 -1.000/3.000 -1.000/4.000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="T" band="F" vacdos="F" slice="F" mcd="F">
+      <checks vchk="F" cdinf="F"/>
+      <densityOfStates ndir="-2" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
+      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0"/>
+      <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
+      <specialOutput eonly="F" bmt="F"/>
+      <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>
+   </output>
+ <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>

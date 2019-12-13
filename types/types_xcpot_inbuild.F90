@@ -15,11 +15,17 @@ MODULE m_types_xcpot_inbuild
                                 'l91 ','x-a ','wign','mjw ','hl  ','bh  ','vwn ','pz  ', &
                                 'pw91','pbe ','rpbe','Rpbe','wc  ','PBEs', &
                                 'pbe0','hse ','vhse','lhse','exx ','hf  ']
+   
+   LOGICAL,PARAMETER:: priv_LDA(20)=[&
+                       .FALSE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
+                       .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
+                       .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TRUE.]
+
 
    LOGICAL,PARAMETER:: priv_gga(20)=[&
                        .TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
                        .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
-                       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.,.TRUE.]
+                       .TRUE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.,.FALSE.]
 
    LOGICAL,PARAMETER:: priv_hybrid(20)=[&
                        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
@@ -43,16 +49,23 @@ MODULE m_types_xcpot_inbuild
 
    CONTAINS
       !overloading t_xcpot:
-      PROCEDURE        :: is_lda=>xcpot_is_lda
-      PROCEDURE        :: is_gga=>xcpot_is_gga
-      PROCEDURE        :: is_hybrid=>xcpot_is_hybrid
-      PROCEDURE        :: get_exchange_weight=>xcpot_get_exchange_weight
-      PROCEDURE        :: get_vxc=>xcpot_get_vxc
-      PROCEDURE        :: get_exc=>xcpot_get_exc
+      PROCEDURE        :: vx_is_LDA => xcpot_vx_is_LDA
+      PROCEDURE        :: vx_is_GGA => xcpot_vx_is_GGA
+
+      PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
+      PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
+      
+      PROCEDURE        :: exc_is_LDA => xcpot_exc_is_LDA
+      PROCEDURE        :: exc_is_gga => xcpot_exc_is_gga
+      PROCEDURE        :: is_hybrid  => xcpot_is_hybrid
+
+      PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
+      PROCEDURE        :: get_vxc             => xcpot_get_vxc
+      PROCEDURE        :: get_exc             => xcpot_get_exc
       !not overloaded
-      PROCEDURE        :: get_name=>xcpot_get_name
-      PROCEDURE        :: is_name=>xcpot_is_name
-      PROCEDURE        :: init=>xcpot_init
+      PROCEDURE        :: get_name => xcpot_get_name
+      PROCEDURE        :: is_name  => xcpot_is_name
+      PROCEDURE        :: init     => xcpot_init
    END TYPE t_xcpot_inbuild
    PUBLIC t_xcpot_inbuild
 CONTAINS
@@ -92,9 +105,9 @@ CONTAINS
          xcpot%data%uk=0.8040
       ENDIF
       IF (xcpot%is_name("PBEs")) THEN     ! pbe_sol
-         xcpot%data%um=0.123456790123456d0
+         xcpot%data%um=0.123456790123456
       ELSE
-         xcpot%data%um=0.2195149727645171e0
+         xcpot%data%um=0.2195149727645171
       ENDIF
       xcpot%data%is_hse=xcpot%is_name("hse").OR.xcpot%is_name("lhse").OR.xcpot%is_name("vhse")
       xcpot%data%is_rpbe=xcpot%is_name("Rpbe") !Rpbe
@@ -106,18 +119,43 @@ CONTAINS
       xcpot%DATA%exchange_weight=xcpot%get_exchange_weight()
 
    END SUBROUTINE xcpot_init
+  
+   !! LDA
+   logical function xcpot_exc_is_lda(xcpot)
+      implicit none
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_exc_is_lda= xcpot%vxc_is_lda()
+   end function xcpot_exc_is_lda
    
-   LOGICAL FUNCTION xcpot_is_lda(xcpot)
-      IMPLICIT NONE
+   logical function xcpot_vx_is_lda(xcpot)
+      implicit none
       CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
-      xcpot_is_lda = (.not. xcpot%is_gga()) .and. (.not. xcpot%is_hybrid())
-   END FUNCTION xcpot_is_lda
+      xcpot_vx_is_lda=(.not. xcpot%vxc_is_gga()) .and. (.not. xcpot%is_hybrid())
+   end function xcpot_vx_is_lda
 
-   LOGICAL FUNCTION xcpot_is_gga(xcpot)
+   logical function xcpot_vc_is_lda(xcpot)
+      implicit none
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_vc_is_lda=(.not. xcpot%vxc_is_gga()) .and. (.not. xcpot%is_hybrid())
+   end function xcpot_vc_is_lda
+
+   logical function xcpot_vx_is_gga(xcpot)
+      implicit none
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_vx_is_gga=priv_gga(xcpot%icorr)
+   end function xcpot_vx_is_gga
+
+   logical function xcpot_vc_is_gga(xcpot)
+      implicit none
+      CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
+      xcpot_vc_is_gga=priv_gga(xcpot%icorr)
+   end function xcpot_vc_is_gga
+
+   LOGICAL FUNCTION xcpot_exc_is_gga(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot_inbuild),INTENT(IN):: xcpot
-      xcpot_is_gga=priv_gga(xcpot%icorr)
-   END FUNCTION xcpot_is_gga
+      xcpot_exc_is_gga = xcpot%vxc_is_gga()
+   END FUNCTION xcpot_exc_is_gga
 
    LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
       IMPLICIT NONE
@@ -139,8 +177,7 @@ CONTAINS
       IF (xcpot%is_name("vhse")) a_ex=amix_hse
    END FUNCTION xcpot_get_exchange_weight
 
-
-   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad)
+   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad, kinED_KS)
 !
       USE m_xcxal, ONLY : vxcxal
       USE m_xcwgn, ONLY : vxcwgn
@@ -166,6 +203,7 @@ CONTAINS
 !c
       REAL, INTENT (OUT) :: vx (:,:)
       REAL, INTENT (OUT) :: vxc(:,:)
+      REAL, INTENT(IN),OPTIONAL:: kinED_KS(:,:)
 
       ! optional arguments for GGA
       TYPE(t_gradients),INTENT(INOUT),OPTIONAL::grad
@@ -187,7 +225,7 @@ CONTAINS
       vxc(:,:) = 0.0
       ngrid=SIZE(rh,1)
 
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%needs_grad()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          IF (xcpot%is_name("l91")) THEN    ! local pw91
             CALL vxcl91(jspins,ngrid,ngrid,rh,grad%agrt(:ngrid),grad%agru(:ngrid),grad%agrd(:ngrid), grad%g2rt(:ngrid),&
@@ -223,7 +261,7 @@ CONTAINS
          ELSEIF (xcpot%is_name("hf")) THEN
             ! Hartree-Fock  calculation: X-alpha potential is added to generate a rational local potential,
             !                            later it is subtracted again
-            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_vxc')
+!            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_vxc')
             CALL vxcxal(xcpot%data%krla,jspins, ngrid,ngrid,rh(:ngrid,:), vx(:ngrid,:),vxc(:ngrid,:))
             !         vxc=0
          ELSEIF (xcpot%is_name("exx")) THEN
@@ -236,13 +274,13 @@ CONTAINS
 !
 !-----> hartree units
 !
-      vx=hrtr_half*vx
-      vxc=hrtr_half*vxc
+      vx  = hrtr_half*vx
+      vxc = hrtr_half*vxc
 
    END SUBROUTINE xcpot_get_vxc
 
 !***********************************************************************
-   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh, exc,grad)
+   SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinED_KS, mt_call)
 !***********************************************************************
       USE m_xcxal, ONLY : excxal
       USE m_xcwgn, ONLY : excwgn
@@ -254,22 +292,15 @@ CONTAINS
       USE m_excpw91
       USE m_excepbe
       IMPLICIT NONE
-!c
-!c---> running mode parameters
-!c
-      CLASS(t_xcpot_inbuild),INTENT(IN) :: xcpot
-      INTEGER, INTENT (IN)     :: jspins
-!c
-!c---> charge density
-!c
-      REAL,INTENT (IN) :: rh(:,:)
-!c
-!c---> xc energy density
-!c
-      REAL, INTENT (OUT) :: exc(:)
+      
+      CLASS(t_xcpot_inbuild),INTENT(IN)     :: xcpot
+      INTEGER, INTENT (IN)                  :: jspins
+      REAL,INTENT (IN)                      :: rh(:,:)
+      REAL, INTENT (OUT)                    :: exc(:)
+      TYPE(t_gradients),OPTIONAL,INTENT(IN) ::grad
+      LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call    
+      REAL, INTENT(IN), OPTIONAL            :: kinED_KS(:,:)
 
-      ! optional arguments for GGA
-      TYPE(t_gradients),OPTIONAL,INTENT(IN)::grad
 !c
 !c ---> local scalars
       INTEGER :: ngrid
@@ -284,7 +315,7 @@ CONTAINS
 !c
       exc(:) = 0.0
       ngrid=SIZE(rh,1)
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%exc_is_gga()) THEN
          IF (.NOT.PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
          IF (xcpot%is_name("l91")) THEN  ! local pw91
             CALL excl91(jspins,ngrid,ngrid,rh(:ngrid,:),grad%agrt,grad%agru,grad%agrd,grad%g2rt,grad%g2ru,grad%g2rd,grad%gggrt,grad%gggru,grad%gggrd,grad%gzgr, exc, isprsv,sprsv)
@@ -308,9 +339,12 @@ CONTAINS
             CALL excvwn(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
          ELSEIF (xcpot%is_name("pz")) THEN     ! Perdew,Zunger correlation
             CALL excpz(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
-         ELSEIF (xcpot%is_name("hf") .OR. xcpot%is_name("exx")) THEN
-            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_exc')
-            exc=0
+         ELSEIF (xcpot%is_name("hf")) THEN
+!            CALL juDFT_error('HF should now be treated as a GGA functional', calledby='xcpot_get_exc')
+!            exc=0
+            CALL excxal(iofile,xcpot%data%krla,jspins, ngrid,ngrid,rh, exc)
+         ELSEIF (xcpot%is_name("exx")) THEN
+            CALL juDFT_error('EXX should now be treated as a GGA functional', calledby='xcpot_get_exc')
          ELSE
             CALL juDFT_error("Unkown LDA potential",calledby="type xcpot")
          ENDIF

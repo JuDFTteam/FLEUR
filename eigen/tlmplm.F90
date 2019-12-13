@@ -1,5 +1,5 @@
 MODULE m_tlmplm
-
+  use m_judft
   IMPLICIT NONE
   !*********************************************************************
   !     sets up the local Hamiltonian, i.e. the Hamiltonian in the
@@ -7,7 +7,7 @@ MODULE m_tlmplm
   !*********************************************************************
 CONTAINS
   SUBROUTINE tlmplm(n,sphhar,atoms,enpara,&
-       jspin,jsp,mpi,v,input,td,ud)
+       jspin,mpi,v,input,td,ud)
     USE m_constants
     USE m_intgr, ONLY : intgr3
     USE m_genMTBasis
@@ -25,7 +25,7 @@ CONTAINS
     TYPE(t_tlmplm),INTENT(INOUT) :: td
     TYPE(t_usdus),INTENT(INOUT)  :: ud
 
-    INTEGER, INTENT (IN) :: n,jspin,jsp !atom index,physical spin&spin index for data
+    INTEGER, INTENT (IN) :: n,jspin !atom index,physical spin&spin index for data
 
     REAL, ALLOCATABLE   :: dvd(:,:),dvu(:,:),uvd(:,:),uvu(:,:),f(:,:,:,:),g(:,:,:,:),x(:),flo(:,:,:)
     INTEGER,ALLOCATABLE :: indt(:)
@@ -35,7 +35,8 @@ CONTAINS
     COMPLEX  :: cil
     REAL     :: temp
     INTEGER i,l,l2,lamda,lh,lm,lmin,lmin0,lmp,lmpl,lmplm,lmx,lmxx,lp,info,in
-    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2
+    INTEGER lp1,lpl ,mem,mems,mp,mu,nh,na,m,nsym,s,i_u,jspin1,jspin2,jsp
+    LOGICAL l_remove
 
     ALLOCATE( dvd(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
     ALLOCATE( dvu(0:atoms%lmaxd*(atoms%lmaxd+3)/2,0:sphhar%nlhd ))
@@ -48,12 +49,12 @@ CONTAINS
     ALLOCATE( vr0(SIZE(v%mt,1),0:SIZE(v%mt,2)-1))
 
 
-    
+    jsp=jspin
     vr0=v%mt(:,:,n,jsp)
     IF (jsp<3) vr0(:,0)=0.0
 
     DO i=MERGE(1,jspin,jspin>2),MERGE(2,jspin,jspin>2)
-       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo)
+       CALL genMTBasis(atoms,enpara,v,mpi,n,i,ud,f(:,:,:,i),g(:,:,:,i),flo,input%l_dftspinpol)
     ENDDO
     IF (jspin>2) THEN
        jspin1=1
@@ -72,6 +73,15 @@ CONTAINS
        lp1 = (lp* (lp+1))/2
        DO l = 0,lp
           lpl = lp1 + l
+          !----------------------------------------------------------------------------
+          ! Remove non-spherical components for the orbitals treated with DFT+Hubbard-1
+          !----------------------------------------------------------------------------
+          l_remove=.FALSE.
+          IF(l.EQ.lp) THEN
+             DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+               IF(atoms%lda_u(i)%atomType.EQ.n.AND.atoms%lda_u(i)%l.EQ.l) l_remove=.TRUE.
+             ENDDO
+          ENDIF
           !--->    loop over non-spherical components of the potential: must
           !--->    satisfy the triangular conditions and that l'+l+lamda even
           !--->    (conditions from the gaunt coefficient)
@@ -79,7 +89,7 @@ CONTAINS
              lamda = sphhar%llh(lh,nsym)
              lmin = lp - l
              lmx = lp + l
-             IF ((mod(lamda+lmx,2).EQ.1) .OR. (lamda.LT.lmin) .OR. (lamda.GT.lmx)) THEN
+             IF ((mod(lamda+lmx,2).EQ.1) .OR. (lamda.LT.lmin) .OR. (lamda.GT.lmx) .OR. l_remove) THEN
                 uvu(lpl,lh) = 0.0
                 dvd(lpl,lh) = 0.0
                 uvd(lpl,lh) = 0.0
@@ -183,10 +193,9 @@ CONTAINS
     !
     !--->   set up the t-matrices for the local orbitals,
     !--->   if there are any
-    IF (atoms%nlo(n).GE.1) THEN
+    IF (atoms%nlo(n).GE.1.AND.jspin<3) THEN
        CALL tlo(atoms,sphhar,jspin,jsp,n,enpara,1,input,v%mt(1,0,n,jsp),&
             na,flo,f(:,:,:,jspin),g(:,:,:,jspin),ud, ud%uuilon(:,:,jspin),ud%duilon(:,:,jspin),ud%ulouilopn(:,:,:,jspin), td)
-
     ENDIF
   END SUBROUTINE tlmplm
 END MODULE m_tlmplm

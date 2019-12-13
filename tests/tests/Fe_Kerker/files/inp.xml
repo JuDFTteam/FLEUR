@@ -5,12 +5,11 @@
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.50000000" Gmax="10.50000000" GmaxXC="8.70000000" numbands="0"/>
-      <scfLoop itmax="3" minDistance=".00000000" maxIterBroyd="99" imix="Anderson" alpha=".15000000" preconditioning_param="1.2" spinf="2.00000000"/>
+      <scfLoop itmax="3" minDistance=".00000000" maxIterBroyd="99" imix="Anderson" alpha=".15000000" precondParam="1.2" spinf="2.00000000"/>
       <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
       <magnetism jspins="2" l_noco="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F"/>
       <expertModes gw="0" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
       <bzIntegration valenceElectrons="144.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointCount count="17" gamma="F"/>
@@ -26,7 +25,7 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Fe-1" element="Fe" atomicNumber="26" coreStates="4" magMom="2.20000000" flipSpin="T">
+      <species name="Fe-1" element="Fe" atomicNumber="26" coreStates="4" magMom="2.20000000" flipSpinPhi="0.00000000" flipSpinTheta="Pi" flipSpinScale="F">
          <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
@@ -64,7 +63,7 @@
       <checks vchk="F" cdinf="F"/>
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
-      <plotting iplot="F" score="F" plplot="F"/>
+      <plotting iplot="0"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput eonly="F" bmt="F"/>
       <magneticCircularDichroism energyLo="-10.00000000" energyUp=".00000000"/>

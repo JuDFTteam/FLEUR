@@ -4,7 +4,7 @@ MODULE m_cdntot
 !     vacuum, and mt regions      c.l.fu
 !     ********************************************************
 CONTAINS
-   SUBROUTINE cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
+   SUBROUTINE integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, integrand, &
                                    q, qis, qmt, qvac, qtot, qistot)
       USE m_intgr, ONLY : intgr3
       USE m_constants
@@ -28,7 +28,6 @@ CONTAINS
       REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
       COMPLEX                   :: x(stars%ng3)
       
-      CALL timestart("cdntot")
       qtot = 0.0
       qistot = 0.0
       DO jsp = 1,input%jspins
@@ -73,7 +72,55 @@ CONTAINS
          q(jsp) = q(jsp) + qis(jsp)
          qtot = qtot + q(jsp)
       END DO ! loop over spins
-   END SUBROUTINE cdntot_integrate
+   END SUBROUTINE integrate_cdn
+
+   SUBROUTINE integrate_realspace(xcpot, atoms, sym, sphhar, input, &
+                                  stars, cell, oneD, vacuum, noco, mt, is, hint)
+      use m_types
+      use m_mt_tofrom_grid
+      use m_pw_tofrom_grid
+      use m_constants
+      implicit none
+      CLASS(t_xcpot), INTENT(inout)   :: xcpot
+      TYPE(t_atoms),INTENT(IN)      :: atoms
+      TYPE(t_sym), INTENT(in)       :: sym
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      TYPE(t_input), INTENT(IN)     :: input
+      TYPE(t_stars), INTENT(IN)     :: stars
+      TYPE(t_cell), INTENT(IN)      :: cell
+      TYPE(t_oneD), INTENT(in)      :: oneD
+      TYPE(t_vacuum), INTENT(in)    :: vacuum
+      TYPE(t_noco), INTENT(in)      :: noco
+      real, intent(inout)           :: mt(:,:,:), is(:,:)
+      character(len=*), intent(in), optional :: hint
+      integer                       :: n_atm, i
+
+      TYPE(t_potden)                :: tmp_potden
+      REAL                          :: q(input%jspins), qis(input%jspins), &
+                                       qmt(atoms%ntype,input%jspins), qvac(2,input%jspins),&
+                                       qtot, qistot
+
+      call tmp_potden%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
+      call init_mt_grid(input%jspins, atoms, sphhar, xcpot%needs_grad(), sym)
+      do n_atm =1,atoms%ntype
+         call mt_from_grid(atoms, sphhar, n_atm, input%jspins, mt(:,:,n_atm), &
+                           tmp_potden%mt(:,0:,n_atm,:))
+
+         do i=1,atoms%jri(n_atm)
+            tmp_potden%mt(i,:,n_atm,:) = tmp_potden%mt(i,:,n_atm,:) * atoms%rmsh(i,n_atm)**2
+         enddo
+      enddo
+      call finish_mt_grid()
+
+      call init_pw_grid(xcpot%needs_grad(), stars, sym, cell)
+      call pw_from_grid(xcpot%needs_grad(), stars, .False., is, tmp_potden%pw)
+      call finish_pw_grid()
+
+      call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, tmp_potden, &
+                                   q, qis, qmt, qvac, qtot, qistot)
+
+      call print_cdn_inte(q, qis, qmt, qvac, qtot, qistot, hint)
+   END SUBROUTINE integrate_realspace
 
    SUBROUTINE cdntot(stars,atoms,sym,vacuum,input,cell,oneD,&
                      den,l_printData,qtot,qistot)
@@ -110,7 +157,8 @@ CONTAINS
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
       
-      call cdntot_integrate(stars,atoms,sym,vacuum,input,cell,oneD, den, &
+      CALL timestart("cdntot")
+      call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
  
       IF (input%film) THEN
@@ -154,4 +202,29 @@ CONTAINS
 
       CALL timestop("cdntot")
    END SUBROUTINE cdntot
+
+   SUBROUTINE print_cdn_inte(q, qis, qmt, qvac, qtot, qistot, hint)
+      use  ieee_arithmetic
+      implicit none
+      REAL, INTENT(in)                       :: q(:), qis(:), qmt(:,:), qvac(:,:), qtot, qistot
+      character(len=*), intent(in), optional :: hint
+      integer                                :: n_mt
+      
+
+      if(present(hint)) write (*,*) "DEN of ", hint
+      write (*,*) "q   = ", q
+      write (*,*) "qis = ", qis
+
+      write (*,*) "qmt"
+      do n_mt = 1,size(qmt, dim=1)
+         write (*,*) "mt = ", n_mt, qmt(n_mt,:)
+      enddo
+
+      if(.not. any(ieee_is_nan(qvac))) then
+         write (*, *) "qvac",    qvac
+      endif
+      write (*, *) "qtot",    qtot
+      write (*, *) "qis_tot", qistot
+      write (*, *) "-------------------------"
+   END SUBROUTINE print_cdn_inte
 END MODULE m_cdntot

@@ -68,13 +68,6 @@ MODULE m_nocoInputCheck
          CALL juDFT_error("Coretail option cannot be used!!!",calledby="nocoInputCheck")
       END IF
 
-!---> make sure score is false
-      IF (input%score) THEN
-         WRITE (6,*) 'This non-collinear version of the flapw program'
-         WRITE (6,*) 'cannot be used with the score option!! '
-         CALL juDFT_error("score must be false!!!",calledby ="nocoInputCheck")
-      END IF
-
 !---> make sure that moments are not relaxed and constrained
       l_relax_any = .FALSE.
       DO itype = 1,atoms%ntype
@@ -86,6 +79,7 @@ MODULE m_nocoInputCheck
          WRITE (6,*)'moment option has been switched on!!!'
 !          CALL juDFT_error("relaxation of moments and constraint are sw
       ENDIF
+      if (l_relax_any.or.noco%l_constr) CALL judft_warn("Constraint moments and relaxations are untested in this version!")
 !---> make sure that perp. component of mag. is calculated if needed
       IF ( (l_relax_any .or. noco%l_constr) .and. (.not. noco%l_mperp) ) THEN
          WRITE (6,*)'The relaxation of the moment is switched on for at'

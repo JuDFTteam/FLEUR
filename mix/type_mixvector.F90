@@ -20,7 +20,7 @@ MODULE m_types_mixvector
   TYPE(t_sphhar),POINTER :: sphhar
   TYPE(t_atoms),POINTER  :: atoms  =>null()
   INTEGER                :: jspins,nvac
-  LOGICAL                :: l_noco,invs,invs2,l_mtnocopot
+  LOGICAL                :: l_noco,invs,invs2,l_mtnocopot,l_mperp,l_ldau
   INTEGER                :: pw_length !The shape of the local arrays
   INTEGER                :: pw_start(3)=0,pw_stop(3) !First and last index for spin
   INTEGER                :: mt_length,mt_length_g
@@ -108,7 +108,7 @@ CONTAINS
   SUBROUTINE mixvector_reset()
     IMPLICIT NONE
     atoms=>NULL()
-    DEALLOCATE(g_mt)
+    IF (ALLOCATED(g_mt)) DEALLOCATE(g_mt)
     IF (ALLOCATED(g_vac)) DEALLOCATE(g_vac)
     IF (ALLOCATED(g_misc)) DEALLOCATE(g_misc)
   END SUBROUTINE mixvector_reset
@@ -172,10 +172,9 @@ CONTAINS
                 ENDDO
              ENDIF
           ENDIF
-          IF (js>2) RETURN
-          IF (misc_here) THEN
-             vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,j))-1)=RESHAPE(REAL(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
-             vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,j)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,j))-1)=RESHAPE(AIMAG(den%mmpMat(:,:,:,j)),(/SIZE(den%mmpMat(:,:,:,j))/))
+          IF (misc_here.AND.(js<3.OR.l_mperp)) THEN
+             vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,1:atoms%n_u,j))-1)=RESHAPE(REAL(den%mmpMat(:,:,1:atoms%n_u,j)),(/SIZE(den%mmpMat(:,:,1:atoms%n_u,j))/))
+             vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,1:atoms%n_u,j)):misc_start(js)+2*SIZE(den%mmpMat(:,:,1:atoms%n_u,j))-1)=RESHAPE(AIMAG(den%mmpMat(:,:,1:atoms%n_u,j)),(/SIZE(den%mmpMat(:,:,1:atoms%n_u,j))/))
           END IF
        END IF
     END DO
@@ -238,12 +237,12 @@ CONTAINS
               ENDIF
               ENDDO
            ENDIF
-           IF (misc_here.AND.js<3) THEN
-              den%mmpMat(:,:,:,js)=RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,:,js))-1),vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,:,js)):misc_start(js)+2*SIZE(den%mmpMat(:,:,:,js))-1)),SHAPE(den%mmpMat(:,:,:,js)))
+           IF (misc_here.AND.(js<3.OR.l_mperp)) THEN
+              den%mmpMat(:,:,1:atoms%n_u,js)=RESHAPE(CMPLX(vec%vec_misc(misc_start(js):misc_start(js)+SIZE(den%mmpMat(:,:,1:atoms%n_u,js))-1),vec%vec_misc(misc_start(js)+SIZE(den%mmpMat(:,:,1:atoms%n_u,js)):misc_start(js)+2*SIZE(den%mmpMat(:,:,1:atoms%n_u,js))-1)),SHAPE(den%mmpMat(:,:,1:atoms%n_u,js)))
            END IF
         END IF
      ENDDO
-     call den%collect(mix_mpi_comm)
+     call den%collect(mix_mpi_comm,l_ldau)
     
   END SUBROUTINE mixvector_to_density
 
@@ -291,7 +290,7 @@ CONTAINS
                 mvec%vec_vac(vac_start(js)+SIZE(g_vac):vac_stop(js))=g_vac(:vac_stop(js)-vac_start(js)-SIZE(g_vac)+1)*vec%vec_vac(vac_start(js)+SIZE(g_vac):vac_stop(js))
              ENDIF
           ENDIF
-          IF (misc_here.AND.(js<3)) THEN
+          IF (misc_here.AND.(js<3.OR.l_mperp)) THEN
              mvec%vec_misc(misc_start(js):misc_stop(js))=g_misc*vec%vec_misc(misc_start(js):misc_stop(js))
           END IF
        ENDIF
@@ -470,12 +469,14 @@ CONTAINS
     jspins=input%jspins
     nvac=vacuum%nvac
     l_noco=noco%l_noco
+    l_mperp=noco%l_mperp
     l_mtnocopot=noco%l_mtnocopot
     invs=sym%invs
     invs2=sym%invs2
     stars=>stars_i;cell=>cell_i;sphhar=>sphhar_i;atoms=>atoms_i
     
     vac_here=input%film
+    l_ldau=l_densitymatrix
     misc_here=l_densitymatrix
     CALL init_storage_mpi(mpi_comm)
     
@@ -524,7 +525,7 @@ CONTAINS
              vac_length=vac_length+len
              vac_stop(js)=vac_length
           ENDIF
-          IF (misc_here.AND.(js<3)) THEN
+          IF (misc_here.AND.(js<3.OR.l_mperp)) THEN
              len = 7*7*2*atoms%n_u
              misc_start(js)=misc_length+1
              misc_length = misc_length + len

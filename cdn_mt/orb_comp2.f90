@@ -1,6 +1,6 @@
 MODULE m_orbcomp
 CONTAINS
-  SUBROUTINE orb_comp(jspin,ikpt,nobd,atoms,ne,usdus,eigVecCoeffs,orbcomp)
+  SUBROUTINE orb_comp(jspin,ikpt,nobd,ev_list,atoms,ne,usdus,eigVecCoeffs,orbcomp)
     !***********************************************************************
     !     Calculates an orbital composition of eigen states
     !     
@@ -40,6 +40,8 @@ CONTAINS
 
     !	..Scalar Argument
     INTEGER, INTENT  (IN) :: nobd,ne,jspin,ikpt
+
+    INTEGER, INTENT (IN) :: ev_list(nobd)
 
     !	..Local Scalars 
     INTEGER  n,mt,ityp,imt,lm,lo
@@ -321,8 +323,8 @@ CONTAINS
                 sum = sum + comp(lm)
              ENDDO
              cf = 100.0/sum 
-             orbcomp%qmtp(n,mt,ikpt,jspin) = sum*100.0         
-             orbcomp%comp(n,:,mt,ikpt,jspin) = comp(:)*cf
+             orbcomp%qmtp(ev_list(n),mt,ikpt,jspin) = sum*100.0         
+             orbcomp%comp(ev_list(n),:,mt,ikpt,jspin) = comp(:)*cf
              !----------------------------------------------------
           ENDDO ! bands (n)
        ENDDO    ! atoms (imt) -> mt (=atoms%nat)

@@ -31,6 +31,9 @@ CONTAINS
     ENDIF
     INQUIRE(file=filename,exist=l_fileexist)
     IF (.NOT.l_fileexist) RETURN !No previous data
+#ifdef __PGI
+    PRINT *,"Warning PGI compiler does not support reading of history"
+#else
     OPEN(888,file=filename,status='old',form='unformatted')
     READ(888) iter_stored
     IF (.NOT.ALLOCATED(sm_store)) ALLOCATE(sm_store(maxiter),fsm_store(maxiter))
@@ -39,6 +42,7 @@ CONTAINS
        READ(888) fsm_store(n)
     ENDDO
     CLOSE(888)
+#endif    
   END SUBROUTINE mixing_history_open
 
   SUBROUTINE mixing_history_close(mpi)
@@ -110,7 +114,7 @@ CONTAINS
     TYPE(t_mpi),INTENT(in)::mpi
     iter_stored=0
     PRINT *, "Reset of history"
-    IF (mpi%irank==0) CALL system('rm mixing_history*')
+    IF (mpi%irank==0) CALL system('rm -f mixing_history*')
   END SUBROUTINE mixing_history_reset
 
   subroutine mixing_history_limit(len)

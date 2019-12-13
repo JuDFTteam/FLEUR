@@ -2,7 +2,7 @@ module m_vmts
 
 contains
 
-  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, vpw, rho, potdenType, vr )
+  subroutine vmts( input, mpi, stars, sphhar, atoms, sym, cell, oneD, dosf, vpw, rho, potdenType, vr )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients 
@@ -33,7 +33,7 @@ contains
 #include"cpp_double.h"
     use m_constants
     use m_types
-    use m_intgr, only : intgr2
+    use m_intgr!, only : intgr2, intgrt, intgr5
     use m_phasy1
     use m_sphbes
     use m_od_phasy
@@ -48,6 +48,7 @@ contains
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
     type(t_oneD),   intent(in)        :: oneD
+    LOGICAL,        INTENT(IN)        :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: potdenType
@@ -60,7 +61,7 @@ contains
     real                              :: green_factor, termsR
     real                              :: green_1    (1:atoms%jmtd), green_2    (1:atoms%jmtd)
     real                              :: integrand_1(1:atoms%jmtd), integrand_2(1:atoms%jmtd)
-    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)
+    real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)!, integral_3 (1:atoms%jmtd)
     real                              :: sbf(0:atoms%lmaxd)
     real, allocatable, dimension(:,:) :: il, kl
     
@@ -73,8 +74,6 @@ contains
     external MPI_REDUCE
 #endif
     integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
-
-
 
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
@@ -93,7 +92,7 @@ contains
     !$omp& private( k, cp, pylm, nat, n, sbf, nd, lh, sm, jm, m, lm, l ) &
     !$omp& private( vtl_loc )
     !$ allocate(vtl_loc(0:sphhar%nlhd,atoms%ntype)) 
-    !$ vtl_loc(:,:) = cmplx(0.d0,0.d0)
+    !$ vtl_loc(:,:) = cmplx(0.0,0.0)
     !$omp do
     do k = mpi%irank+2, stars%ng3, mpi%isize
       cp = vpw(k) * stars%nstr(k)
@@ -137,8 +136,6 @@ contains
     deallocate( c_b )
 #endif
 
-
-
     ! SPHERE INTERIOR CONTRIBUTION to the coefficients calculated from the 
     ! values of the sphere Coulomb/Yukawa potential on the sphere boundary
 
@@ -171,11 +168,26 @@ contains
         end if
         integrand_1(1:imax) = green_1(1:imax) * rho(1:imax,lh,n)
         integrand_2(1:imax) = green_2(1:imax) * rho(1:imax,lh,n)
-        call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
-        call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        if (.not.dosf) THEN
+         call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
+         call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+        ! Source-free testwise
+        else
+           !if (l==5) THEN
+            !  integrand_2(1:300)=integrand_2(1:300)*(atoms%rmsh(1:300,n)/atoms%rmsh(300,n))**(4*l)
+          !end if
+           call intgrtlog(integrand_1(1:imax),atoms%rmsh(:,n),imax,integral_1(1:imax))
+           call intgrtlog(integrand_2(1:imax),atoms%rmsh(:,n),imax,integral_2(1:imax))
+           !call intgr4(integrand_1(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_1(1:imax))
+           !call intgr4(integrand_2(1:imax),atoms%rmsh(:,n),atoms%dx(n),imax,integral_2(1:imax))
+           !call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
+           !call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
+           !integral_3(1:imax)=(integral_2(imax)-integral_2(1:imax))*green_1(imax)
+        end if
         termsR = integral_2(imax) + ( vtl(lh,n) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
         vr(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                            + green_2(1:imax) *            integral_1(1:imax)   )
+
       end do
       nat = nat + atoms%neq(n)
     end do

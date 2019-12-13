@@ -35,34 +35,49 @@ CONTAINS
     !     .. Local Scalars ..
     REAL ddn1,e ,ulops,dulops,duds1
     INTEGER i,j,ir,jspin,l,noded,nodeu,ilo,ilop
+    LOGICAL l_hia
     !     ..
     !     .. Local Arrays ..
     REAL, ALLOCATABLE :: p(:,:),pd(:,:),q(:,:),qd(:,:),plo(:,:)
     REAL, ALLOCATABLE :: plop(:,:),glo(:,:),fint(:),pqlo(:,:)
     REAL, ALLOCATABLE :: filo(:,:)
-    REAL, ALLOCATABLE :: v0(:),vso(:,:),qlo(:,:)
+    REAL, ALLOCATABLE :: v0(:),vso(:,:),qlo(:,:),vrTmp(:)
     !     ..
     
     IF (atoms%jri(ntyp)>atoms%jmtd)  CALL juDFT_error("atoms%jri(ntyp).GT.atoms%jmtd",calledby ="sorad")
     ALLOCATE ( p(atoms%jmtd,2),pd(atoms%jmtd,2),q(atoms%jmtd,2),plo(atoms%jmtd,2),fint(atoms%jmtd),&
-         &   qlo(atoms%jmtd,2),plop(atoms%jmtd,2),qd(atoms%jmtd,2),v0(atoms%jmtd),vso(atoms%jmtd,2) )
-    !
-    DO l = 0,atoms%lmax(ntyp) 
+         &   qlo(atoms%jmtd,2),plop(atoms%jmtd,2),qd(atoms%jmtd,2),v0(atoms%jmtd),vso(atoms%jmtd,2),vrTmp(atoms%jmtd) )
 
+    p = 0.0 ; pd = 0.0 ; q = 0.0 ; plo = 0.0 ; fint = 0.0
+    qlo = 0.0 ; plop = 0.0 ; qd = 0.0 ; v0 = 0.0 ; vso = 0.0; vrTmp = 0.0
+    
+
+    DO l = 0,atoms%lmax(ntyp) 
+       l_hia=.FALSE.
+       DO i = atoms%n_u+1, atoms%n_u+atoms%n_hia
+          IF(atoms%lda_u(i)%atomType.EQ.ntyp.AND.atoms%lda_u(i)%l.EQ.l) THEN
+             l_hia=.TRUE.
+          ENDIF
+       ENDDO
        DO jspin = 1,input%jspins
+          IF(l_hia.AND.input%jspins.EQ.2.AND..NOT.input%l_dftspinpol) THEN
+             vrTmp = (vr(:,1)+vr(:,2))/2.0
+          ELSE
+             vrTmp = vr(:,jspin)
+          ENDIF
           !
           !--->    calculate normalized function at e: p and q 
           !
           e = enpara%el0(l,ntyp,jspin)
           CALL radsra(&
-               e,l,vr(:,jspin),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
+               e,l,vrTmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                usdus%us(l,ntyp,jspin),usdus%dus(l,ntyp,jspin),&
                nodeu,p(:,jspin),q(:,jspin))
           !                     
           !--->    calculate orthogonal energy derivative at e : pd and qd
           !
           CALL radsrd(&
-               e,l,vr(:,jspin),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
+               e,l,vrTmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                usdus%uds(l,ntyp,jspin),usdus%duds(l,ntyp,jspin),&
                usdus%ddn(l,ntyp,jspin),noded,pd(:,jspin),qd(:,jspin),&
                p(:,jspin),q(:,jspin),usdus%dus(l,ntyp,jspin))
@@ -130,6 +145,7 @@ CONTAINS
                 !+apw+lo
                 IF (atoms%l_dulo(ilo,ntyp).OR.atoms%ulo_der(ilo,ntyp).GE.1) THEN !  calculate energy derivative (of order atoms%ulo_der) at e
                    ALLOCATE (glo(atoms%jmtd,2),pqlo(atoms%jmtd,2),filo(atoms%jmtd,2))
+                   glo = 0.0 ; pqlo = 0.0 ; filo = 0.0
                    pqlo(1:atoms%jri(ntyp),1)=plo(1:atoms%jri(ntyp),jspin)
                    pqlo(1:atoms%jri(ntyp),2)=qlo(1:atoms%jri(ntyp),jspin)
                    i = atoms%ulo_der(ilo,ntyp)
@@ -190,6 +206,7 @@ CONTAINS
                       !+apw+lo
                       IF (atoms%l_dulo(ilo,ntyp).OR.atoms%ulo_der(ilo,ntyp).GE.1) THEN ! calculate orthogonal energy derivative at e
                          ALLOCATE (glo(atoms%jmtd,2),pqlo(atoms%jmtd,2),filo(atoms%jmtd,2))
+                         glo = 0.0 ; pqlo = 0.0 ; filo = 0.0
                          pqlo(1:atoms%jri(ntyp),1)=plop(1:atoms%jri(ntyp),jspin)
                          pqlo(1:atoms%jri(ntyp),2)=q(1:atoms%jri(ntyp),1)
                          i = atoms%ulo_der(ilo,ntyp)

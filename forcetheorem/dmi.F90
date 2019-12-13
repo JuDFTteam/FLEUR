@@ -62,16 +62,19 @@ CONTAINS
     CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
   END SUBROUTINE  dmi_start
 
-  LOGICAL FUNCTION dmi_next_job(this,lastiter,noco)
+  LOGICAL FUNCTION dmi_next_job(this,lastiter,atoms,noco)
     USE m_types_setup
     USE m_xmlOutput
+    USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
+    TYPE(t_atoms),INTENT(IN)            :: atoms
     !Stuff that might be modified...
     TYPE(t_noco),INTENT(INOUT) :: noco
+    INTEGER                    :: itype
     IF (.NOT.lastiter) THEN
-       dmi_next_job=this%t_forcetheo%next_job(lastiter,noco)
+       dmi_next_job=this%t_forcetheo%next_job(lastiter,atoms,noco)
        RETURN
     ENDIF
     !OK, now we start the DMI-loop
@@ -81,10 +84,15 @@ CONTAINS
     
     !Now modify the noco-file
     noco%qss=this%qvec(:,this%q_done)
+    noco%l_spav=.true.
+    !Modify the alpha-angles
+    DO iType = 1,atoms%ntype
+       noco%alph(iType) = noco%alphInit(iType) + tpi_const*dot_PRODUCT(noco%qss,atoms%taual(:,SUM(atoms%neq(:itype-1))+1))
+    END DO
     IF (.NOT.this%l_io) RETURN
   
     IF (this%q_done.NE.1) CALL closeXMLElement('Forcetheorem_Loop_DMI')
-    CALL openXMLElementPoly('Forcetheorem_Loop_DMI',(/'Q-vec:'/),(/this%q_done/))
+    CALL openXMLElementPoly('Forcetheorem_Loop_DMI',(/'Q-vec'/),(/this%q_done/))
   END FUNCTION dmi_next_job
 
   SUBROUTINE dmi_postprocess(this)

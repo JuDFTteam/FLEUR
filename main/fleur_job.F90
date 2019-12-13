@@ -130,18 +130,17 @@ CONTAINS
     SUBROUTINE fleur_job_init()
       USE m_fleur_help
       use m_judft
-        INTEGER:: i
         INTEGER:: irank=0
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
-        INTEGER ierr(3)
-        CALL MPI_INIT_THREAD(MPI_THREAD_SERIALIZED,i,ierr)
+        INTEGER ierr(3), i
+        CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,i,ierr)
         CALL judft_init()
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         IF(irank.EQ.0) THEN
-           !$    IF (i<MPI_THREAD_SERIALIZED) THEN
+           !$    IF (i<MPI_THREAD_FUNNELED) THEN
            !$       WRITE(*,*) ""
-           !$       WRITE(*,*) "Linked MPI version does not support OpenMP."
+           !$       WRITE(*,*) "Linked MPI version does not support multithreading."
            !$       WRITE(*,*) ""
            !$       WRITE(*,*) "To solve this problem please do one of:"
            !$       WRITE(*,*) "   1. Link an adequate MPI version."
@@ -163,9 +162,10 @@ CONTAINS
         TYPE(t_job),INTENT(IN) ::jobs(:)
 
         INTEGER:: njob=1
-        INTEGER:: irank=0,ierr
+        INTEGER:: irank=0
 
 #ifdef CPP_MPI
+        INTEGER:: ierr
       INCLUDE 'mpif.h'
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
 
@@ -227,7 +227,7 @@ CONTAINS
         jobs%mpi_comm=MPI_UNDEFINED
         CALL MPI_COMM_SPLIT(MPI_COMM_WORLD,i,irank,new_comm,ierr)
         IF (i.LE.size(jobs)) THEN
-            PRINT* ,"PE:",irank," works on job ",i," in ",jobs(i)%directory
+            if(size(jobs) > 1) PRINT* ,"PE:",irank," works on job ",i," in ",jobs(i)%directory
             jobs(i)%mpi_comm=new_comm
         ENDIF
 

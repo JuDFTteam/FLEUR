@@ -10,7 +10,6 @@
       <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F"/>
       <expertModes gw="0" pot8="F" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <bzIntegration valenceElectrons="24.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointMesh nx="3" ny="3" nz="1" gamma="F"/>
       </bzIntegration>
@@ -25,7 +24,7 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom=".00000000" flipSpin="T">
+      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom=".00000000" flipSpinPhi=".00000000" flipSpinTheta="0.000000" flipSpinScale="F">
          <mtSphere radius="2.16000000" gridPoints="521" logIncrement=".02200000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="3" p="3" d="3" f="4"/>
@@ -52,7 +51,7 @@
       <checks vchk="F" cdinf="F" disp="F"/>
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
-      <plotting iplot="F" score="F" plplot="F"/>
+      <plotting iplot="2"/>
       <chargeDensitySlicing numkpt="2" minEigenval="-0.28" maxEigenval="-0.14" nnne="0" pallst="T"/>
       <specialOutput eonly="F" bmt="F"/>
    </output>

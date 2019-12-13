@@ -131,15 +131,16 @@ CONTAINS
     END SUBROUTINE priv_writetofile
   END SUBROUTINE close_eig
 
-  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zmat)
+  SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,list,zmat)
     IMPLICIT NONE
     INTEGER, INTENT(IN)            :: id,nk,jspin
     INTEGER, INTENT(OUT),OPTIONAL  :: neig
     REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-    INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
+    INTEGER, INTENT(IN),OPTIONAL   :: list(:)
     TYPE(t_mat),OPTIONAL  :: zmat
 
-    INTEGER::nrec, arrayStart
+    INTEGER::nrec, arrayStart,arrayStop,i
+    INTEGER,ALLOCATABLE :: ind(:)
     TYPE(t_data_mem),POINTER:: d
     CALL priv_find_data(id,d)
 
@@ -161,23 +162,37 @@ CONTAINS
     
     !data from d%eig_vec
 
-    arrayStart = 1
-    IF(PRESENT(n_start)) THEN
-       arrayStart = (n_start-1)*zMat%matsize1+1
-    END IF
+   
 
     IF (PRESENT(zmat)) THEN
-      
+       IF(PRESENT(list)) THEN
+          ind=list
+       ELSE
+          ALLOCATE(ind(zmat%matsize2))
+          ind=[(i,i=1,SIZE(ind))]
+       END IF
        IF (zmat%l_real) THEN
           IF (.NOT.ALLOCATED(d%eig_vecr)) THEN
              IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read real/complex vectors from memory")
-             zmat%data_r=REAL(RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%data_r)-1,nrec),SHAPE(zmat%data_r)))
+             DO i=1,SIZE(ind)
+                arrayStart=(ind(i)-1)*zMat%matsize1+1
+                arrayStop=ind(i)*zMat%matsize1
+                zmat%data_r(:,i)=REAL(d%eig_vecc(arrayStart:arrayStop,nrec))
+             ENDDO
           ELSE
-             zmat%data_r=RESHAPE(d%eig_vecr(arrayStart:arrayStart+SIZE(zmat%data_r)-1,nrec),SHAPE(zmat%data_r))
+             DO i=1,SIZE(ind)
+                arrayStart=(ind(i)-1)*zMat%matsize1+1
+                arrayStop=ind(i)*zMat%matsize1
+                zmat%data_r(:,i)=d%eig_vecr(arrayStart:arrayStop,nrec)
+             ENDDO
           ENDIF
        ELSE !TYPE is (COMPLEX)
           IF (.NOT.ALLOCATED(d%eig_vecc)) CALL juDFT_error("BUG: can not read complex vectors from memory", calledby = "eig66_mem")
-          zmat%data_c=RESHAPE(d%eig_vecc(arrayStart:arrayStart+SIZE(zmat%data_c)-1,nrec),SHAPE(zmat%data_c))
+          DO i=1,SIZE(ind)
+             arrayStart=(ind(i)-1)*zMat%matsize1+1
+             arrayStop=ind(i)*zMat%matsize1
+             zmat%data_c(:,i)=d%eig_vecc(arrayStart:arrayStop,nrec)
+          END DO
        END IF
     ENDIF
   END SUBROUTINE read_eig

@@ -23,7 +23,7 @@ c****************************************************************
      >              irreduc,odi,band_min,band_max,numbands,
      >              e1s,e2s,ef,l_paulimag,nkpt,    
      <              nbnd,kpoints,l_gwf,iqpt)
-
+      use m_constants
       use m_cdnread, only:cdn_read
       use m_types
 
@@ -67,7 +67,7 @@ c****************************************************************
       INTEGER, INTENT(IN) :: iqpt
       CHARACTER(len=12) :: fname
 ! END QPOINTS
-      real,parameter   :: hartree=27.21138505
+!      real,parameter   :: hartree=27.21138505  !now in module constants
 
       TYPE(t_mat) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
@@ -137,8 +137,7 @@ c****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
+     <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
 
@@ -151,7 +150,7 @@ c****************************************************************
            nkbnd = nkbnd + 1
            if(l_bynumber.or.l_byindex)then
               write (306,'(2i12,f19.13)') nkbnd,ikpt,(eig(i)-ef)*
-     &                                    hartree
+     &                                    hartree_to_ev_const
            endif
            if(l_paulimag.and..false.)then
               if(eig(i).le.ef)then
@@ -185,8 +184,7 @@ c****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              0,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
+     <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
 
 
@@ -195,7 +193,7 @@ c****************************************************************
                 if(eig(i).ge.e1s .and. nkbnd.lt.nbnd)then
                      nkbnd = nkbnd + 1
                   write (306,'(2i12,f19.13)')nkbnd,ikpt,(eig(i)-ef)*
-     &                                       hartree
+     &                  hartree_to_ev_const
                 endif
               enddo 
          enddo   
@@ -211,8 +209,7 @@ c*****************************************************************
      >              lmaxd,ntypd,nlod,neigd,nvd,jspd,
      >              irank,isize,kptibz,jspin,nbasfcn,nlotot,
      >              l_ss,l_noco,nrec,
-     <              nmat,nv,ello,evdu,epar,
-     <              k1,k2,k3,bkpt,wk,nbands,eig,zMat,
+     <              nmat,nbands,eig,zMat,
      >              l_gwf,iqpt)
       USE m_judft
       USE m_types
@@ -225,13 +222,8 @@ c*****************************************************************
       LOGICAL, INTENT (IN) :: l_ss,l_noco,l_gwf
 
       INTEGER, INTENT (OUT) :: nbands,nmat
-      REAL,    INTENT (OUT) :: wk
-
-      INTEGER, INTENT (OUT) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
-      INTEGER, INTENT (OUT) :: nv(jspd)
-      REAL,    INTENT (OUT) :: bkpt(3),eig(neigd)
-      REAL,    INTENT (OUT) :: ello(nlod,ntypd,jspd),evdu(2,jspd)
-      REAL,    INTENT (OUT) :: epar(0:lmaxd,ntypd,jspd)
+  
+      REAL,    INTENT (OUT) :: eig(neigd)
 
       TYPE(t_mat), INTENT (INOUT) :: zMat !z(nbasfcn,noccbd) !can be real/complex
 
@@ -240,12 +232,11 @@ c*****************************************************************
       n_start=1
       n_end=neigd
 
-!      CALL cdn_read(
-!     >              eig_id,
-!     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
-!     >              l_ss,l_noco,neigd,n_start,n_end,
-!     <              nmat,nv,ello,evdu,epar,
-!     <              bkpt,wk,nbands,eig,zMat)
-      CALL judft_error("BUG: wann_read in wann_rw_eig not implemented")
+      CALL cdn_read(
+     >              eig_id,
+     >              nvd,jspd,irank,isize,kptibz,jspin,nbasfcn,
+     >              l_ss,l_noco,neigd,n_start,n_end,
+     <              nbands,eig,zMat)
+!      CALL judft_error("BUG: wann_read in wann_rw_eig not implemented")
       END SUBROUTINE wann_read_eig  
       END MODULE m_wann_rw_eig

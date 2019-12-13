@@ -34,6 +34,7 @@ c**************************c
       integer          :: ikpt_b,ikpt_b2
       character(len=3) :: spin12(2)
       integer          :: cpu_index
+      character(len=60)             :: header
       data   spin12/'WF1' , 'WF2'/
 
 #ifdef CPP_MPI
@@ -60,6 +61,8 @@ c******************************************************
 c      uHu = uHu_in
 #endif
       endif
+
+      header='Elements uHu at k+b1 and k+b2'
 
 c******************************************************
 c     Write mmnk matrix to file.
@@ -94,21 +97,25 @@ c******************************************************
         open (305,file=spin12(jspin2)//trim(fending)//'.uHu'
      >                               //trim(ftype))
         write (305,*) 'Elements uHu at k+b1 and k+b2'
-        write (305,'(3i5)') nbnd,fullnkpts,nntot,nntot2
+        write (305,'(4i5)') nbnd,fullnkpts,nntot,nntot2
+        write (305,*)"   "
+        write (305,*)"   "
         do ikpt = 1,fullnkpts
          do ikpt_b = 1,nntot
           do ikpt_b2 = 1,nntot2
-             write(305,'(i6,i6,i6)')ikpt,ikpt_b,ikpt_b2
+    !         write(305,'(i6,i6,i6)')ikpt,ikpt_b,ikpt_b2
            do i = 1,nbnd
             do j = 1,nbnd
              if(isize.gt.1) then
              write (305,'(2f24.18)')
      &          real(uHu(j,i,ikpt_b2,ikpt_b,ikpt)),
-     &         -aimag(uHu(j,i,ikpt_b2,ikpt_b,ikpt))
+!     &         -aimag(uHu(j,i,ikpt_b2,ikpt_b,ikpt))
+     &         aimag(uHu(j,i,ikpt_b2,ikpt_b,ikpt))
              else
              write (305,'(2f24.18)')
      &          real(uHu_in(j,i,ikpt_b2,ikpt_b,ikpt)),
-     &         -aimag(uHu_in(j,i,ikpt_b2,ikpt_b,ikpt))
+!     &         -aimag(uHu_in(j,i,ikpt_b2,ikpt_b,ikpt))
+     &         aimag(uHu_in(j,i,ikpt_b2,ikpt_b,ikpt))
              endif
             enddo
            enddo
@@ -119,15 +126,27 @@ c******************************************************
        else
         open (305,file=spin12(jspin2)//trim(fending)//'.uHu'
      >                               //trim(ftype),form='unformatted')
-        write (305) nbnd,fullnkpts,nntot,nntot2
-        write (305) bpt,gb
-        if(isize.gt.1) then
-        write (305) conjg(uHu)
-        else
-        write (305) conjg(uHu_in)
-        endif
-        close (305)
+        write (305) header
+        write (305) nbnd,fullnkpts,nntot !,nntot2
+!        write (305) bpt,gb
+        do ikpt = 1,fullnkpts
+         do ikpt_b = 1,nntot
+          do ikpt_b2 = 1,nntot2
+           if(isize.gt.1) then
+!        write (305) conjg(uHu)
+             write (305) uHu(:,:,ikpt_b2,ikpt_b,ikpt)
+           else
+!        write (305) conjg(uHu_in)
+             write (305) uHu_in(:,:,ikpt_b2,ikpt_b,ikpt)
+           endif
+           
+          enddo
+         enddo
+        enddo
+        
+        close(305)
        endif
+       
 
        if((trim(ftype).ne.'_kq').and.l_check) then
         write(*,*)'perform symcheck...'

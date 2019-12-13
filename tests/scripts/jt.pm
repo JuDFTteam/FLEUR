@@ -17,7 +17,7 @@ sub initlog($$$){
     print LOG "Starting\n";
     print  "Configuration: $config_name\n";
     print  "Test: $test_name\n";
-    print  "Workdir: $workdir\n";     
+    print  "Workdir: $workdir\n";
 }
 
 sub stoplog($){
@@ -35,7 +35,7 @@ sub copyfile($$){
 
     system("cp $from $to");
     my $res=system("diff -q $from $to");
-    
+
     if ($res==0) {print LOG "Done\n";}
        else {print LOG "Failed\n";}
 }
@@ -65,7 +65,7 @@ sub testrun($$){
 
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Running $ex:";
-    
+
     if (system("cd $dir;$ex")==0){
 	print LOG "Done\n";}
        else {
@@ -75,11 +75,31 @@ sub testrun($$){
     print LOG "Finished execution\n";
 }
 
+sub testrun_seq($$){
+    my $ex=shift;
+    my $dir=shift;
+
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Running $ex:";
+
+    my $omps=$ENV{'OMP_NUM_THREADS'};
+    $ENV{'OMP_NUM_THREADS'}=1;
+    if (system("cd $dir;$ex")==0){
+      print LOG "Done\n";}
+    else {
+      print LOG "Failed\n";
+    }
+    $ENV{'OMP_NUM_THREADS'}=$omps;
+
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Finished execution\n";
+}
+
 sub test_fileexists($){
     my $file=shift;
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Testing for $file:";
-    
+
     if (-r $file){
 	print LOG "Exists\n";
 	return 0;
@@ -114,12 +134,12 @@ sub test_grepnumber($$$$$){
     print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
     print LOG "Grep for $grepfor in $file:";
 
-    my $l=`grep \"$grepfor\" $file`;
+    my $l=`grep \"$grepfor\" $file|tail -1`;
 
-    
+
     $l=~m/$reg/s;
 
-    
+
     print LOG "$1 == $value:";
 
     if (abs($1-$value)<$tol){
@@ -131,14 +151,14 @@ sub test_grepnumber($$$$$){
     }
 }
 
-       
+
 
 
 sub stageresult($$$){
     my $workdir=shift;
     my $result=shift;
     my $stage=shift;
-    
+
     system("rm -f $workdir/test_$stage.*");
     if ($result==0){
 	system("touch $workdir/test_$stage.ok");
@@ -147,7 +167,7 @@ sub stageresult($$$){
 	system("touch $workdir/test_$stage.failed");
 	print "Stage $stage failed\n";
     }
-    
+
 }
 
 sub testresult($){
@@ -194,4 +214,4 @@ sub test_grep_error($){
         return 0;
     }
 
-}    
+}

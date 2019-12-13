@@ -20,7 +20,7 @@ CONTAINS
    !!     TE_EXC :   charge density-ex-corr.energy density integral
 
    SUBROUTINE vgen(hybrid,field,input,xcpot,DIMENSION,atoms,sphhar,stars,vacuum,sym,&
-                   obsolete,cell,oneD,sliceplot,mpi,results,noco,den,vTot,vx,vCoul)
+                   obsolete,cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul)
 
       USE m_types
       USE m_rotate_int_den_to_local
@@ -35,7 +35,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT)  :: results
-      CLASS(t_xcpot),    INTENT(IN)     :: xcpot
+      CLASS(t_xcpot),    INTENT(INOUT)  :: xcpot
       TYPE(t_hybrid),    INTENT(IN)     :: hybrid
       TYPE(t_mpi),       INTENT(IN)     :: mpi
       TYPE(t_dimension), INTENT(IN)     :: dimension
@@ -45,37 +45,52 @@ CONTAINS
       TYPE(t_input),     INTENT(IN)     :: input
       TYPE(t_field),     INTENT(INOUT)  :: field  !efield can be modified
       TYPE(t_vacuum),    INTENT(IN)     :: vacuum
-      TYPE(t_noco),      INTENT(IN)     :: noco
+      TYPE(t_noco),      INTENT(INOUT)  :: noco
       TYPE(t_sym),       INTENT(IN)     :: sym
       TYPE(t_stars),     INTENT(IN)     :: stars
       TYPE(t_cell),      INTENT(IN)     :: cell
       TYPE(t_sphhar),    INTENT(IN)     :: sphhar
       TYPE(t_atoms),     INTENT(IN)     :: atoms
+      TYPE(t_potden),    INTENT(IN)     :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT)  :: den
       TYPE(t_potden),    INTENT(INOUT)  :: vTot,vx,vCoul
 
       TYPE(t_potden)                    :: workden,denRot
 
+      INTEGER :: i
+      COMPLEX :: mmpmat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,atoms%n_u+atoms%n_hia),MERGE(3,input%jspins,noco%l_mperp))
+
       if (mpi%irank==0) WRITE (6,FMT=8000)
 8000  FORMAT (/,/,t10,' p o t e n t i a l   g e n e r a t o r',/)
 
+      IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN
+         !In this case we need the last mmpmat after vgen
+         mmpmat = vTot%mmpmat
+      ENDIF
       CALL vTot%resetPotDen()
       CALL vCoul%resetPotDen()
       CALL vx%resetPotDen()
+      IF(atoms%n_u+atoms%n_hia>0.AND.input%ldaUAdjEnpara) THEN
+         !In this case we need the last mmpmat after vgen
+         vTot%mmpmat = mmpmat
+      ENDIF
       ALLOCATE(vx%pw_w,mold=vTot%pw)
+      vx%pw_w = 0.0
+
 #ifndef CPP_OLDINTEL
       ALLOCATE(vTot%pw_w,mold=vTot%pw)
 #else
-      ALLOCATE( vTot%pw_w(size(vTot%pw,1),size(vTot%pw,2)) )
+      ALLOCATE( vTot%pw_w(size(vTot%pw,1),size(vTot%pw,2)))
 #endif
-      ALLOCATE(vCoul%pw_w(SIZE(den%pw,1),1))
+      ALLOCATE(vCoul%pw_w(SIZE(vCoul%pw,1),size(vCoul%pw,2)))
+      vCoul%pw_w = CMPLX(0.0,0.0)
 
       CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
 
       !sum up both spins in den into workden
       CALL den%sum_both_spin(workden)
 
-      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,workden,vCoul,results)
+      CALL vgen_coulomb(1,mpi,dimension,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
 
       CALL vCoul%copy_both_spin(vTot)
       vCoul%mt(:,:,:,input%jspins)=vCoul%mt(:,:,:,1)
@@ -84,14 +99,14 @@ CONTAINS
          CALL denRot%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
          denRot=den
          CALL rotate_int_den_to_local(DIMENSION,sym,stars,atoms,sphhar,vacuum,cell,input,noco,oneD,denRot)
-         IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,denrot)         
+         IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)         
       ENDIF
 
       CALL vgen_xcpot(hybrid,input,xcpot,dimension,atoms,sphhar,stars,vacuum,sym,&
-                      obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,vTot,vx,results)
+                      obsolete,cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...
-      CALL vgen_finalize(atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+      CALL vgen_finalize(mpi,dimension,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL bfield(input,noco,atoms,field,vTot)
@@ -101,7 +116,5 @@ CONTAINS
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vCoul)
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,vx)
 #endif
-
    END SUBROUTINE vgen
-
 END MODULE m_vgen

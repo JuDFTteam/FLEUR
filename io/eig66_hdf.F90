@@ -182,25 +182,31 @@ CONTAINS
      END SUBROUTINE close_eig
 #ifdef CPP_HDF
      !----------------------------------------------------------------------
-     SUBROUTINE priv_r_vec(d,nk,jspin,n_start,n_end,z)
+     SUBROUTINE priv_r_vec(d,nk,jspin,list,z)
 
        USE m_hdf_tools
        IMPLICIT NONE
        TYPE(t_data_HDF),INTENT(IN)::d
        INTEGER, INTENT(IN)  :: nk,jspin
-       INTEGER, INTENT(IN)  :: n_start,n_end
+       INTEGER, OPTIONAL,INTENT(IN)  :: list(:)
        REAL,    INTENT(OUT) :: z(:,:)
 
        INTEGER :: nmat
-       INTEGER i,j,neig_l
+       INTEGER i
 
-       neig_l = n_end - n_start + 1
 
        nmat=SIZE(z,1)
        !read eigenvectors
-       CALL io_read_real2(d%evsetid,(/1,1,n_start,nk,jspin/),&
-            &                           (/1,nmat,neig_l,1,1/),&
-            &                           z(:nmat,:neig_l) )
+       IF (.NOT.PRESENT(list)) THEN
+          ! read all eigenvectors
+          CALL io_read_real2(d%evsetid,(/1,1,1,nk,jspin/),&
+               (/1,nmat,SIZE(z,2),1,1/),z(:nmat,:) )
+       ELSE
+          DO i=1,SIZE(list)
+             CALL io_read_real1(d%evsetid,(/1,1,list(i),nk,jspin/),&
+                  &                      (/1,nmat,1,1,1/),z(:nmat,i))
+          ENDDO
+       END IF
 
      END SUBROUTINE priv_r_vec
 
@@ -283,47 +289,49 @@ CONTAINS
 
      !----------------------------------------------------------------------
      SUBROUTINE priv_r_vecc(&
-          &                     d,nk,jspin,n_start,n_end,z)
+          &                     d,nk,jspin,list,z)
 
        USE m_hdf_tools
        IMPLICIT NONE
        TYPE(t_data_HDF),INTENT(IN)::d
        INTEGER, INTENT(IN)  :: nk,jspin
-       INTEGER, INTENT(IN)  :: n_start,n_end
+       INTEGER,OPTIONAL, INTENT(IN)  :: list(:)
        COMPLEX, INTENT(OUT) :: z(:,:)
 
        REAL, ALLOCATABLE :: z1(:,:,:)
-       INTEGER i,j,neig_l
+       INTEGER i,j
        INTEGER :: nmat
     
-       neig_l = n_end - n_start + 1
 
        nmat=SIZE(z,1)
 
-       ! read eigenvectors
-       ALLOCATE (z1(2,nmat,neig_l))
-       CALL io_read_real3(d%evsetid,(/1,1,n_start,nk,jspin/),&
-            &                      (/2,nmat,neig_l,1,1/),z1)
-
-       DO i=1,neig_l
-          DO j=1,nmat
-             z(j,i) = CMPLX( z1(1,j,i) ,z1(2,j,i) )
+       IF (.NOT.PRESENT(list)) THEN
+          ! read all eigenvectors
+          ALLOCATE (z1(2,nmat,SIZE(z,2)))
+          CALL io_read_real3(d%evsetid,(/1,1,1,nk,jspin/),&
+               &                      (/2,nmat,SIZE(z,2),1,1/),z1)
+          DO i=1,SIZE(z,2)
+             z(:,i) = CMPLX( z1(1,:,i) ,z1(2,:,i) )
           ENDDO
-       ENDDO
-
-       DEALLOCATE (z1)
-
+       ELSE
+          ALLOCATE (z1(2,nmat,1))
+          DO i=1,SIZE(list)
+              CALL io_read_real3(d%evsetid,(/1,1,list(i),nk,jspin/),&
+               &                      (/2,nmat,1,1,1/),z1)
+              z(:,i) = CMPLX( z1(1,:,1) ,z1(2,:,1) )
+           ENDDO
+        END IF
      END SUBROUTINE priv_r_vecc
      !-----------------------------------------------------------------------
 
 #endif
 
-     SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,n_start,n_end,zMat)
+     SUBROUTINE read_eig(id,nk,jspin,neig,eig,w_iks,list,zMat)
        IMPLICIT NONE
        INTEGER, INTENT(IN)            :: id,nk,jspin
        INTEGER, INTENT(OUT),OPTIONAL  :: neig
        REAL,    INTENT(OUT),OPTIONAL  :: eig(:),w_iks(:)
-       INTEGER, INTENT(IN),OPTIONAL   :: n_start,n_end
+       INTEGER, INTENT(IN),OPTIONAL   :: list(:)
        TYPE(t_mat),OPTIONAL  :: zmat
 
 #ifdef CPP_HDF
@@ -348,14 +356,11 @@ CONTAINS
           ENDIF
        ENDIF
 
-       IF (PRESENT(n_start)) THEN
-          IF (.NOT.PRESENT(n_end)) CALL juDFT_error("BUG3 in read_eig")
-          IF (PRESENT(zMat)) THEN
-             IF (zmat%l_real) THEN
-                CALL priv_r_vec(d,nk,jspin,n_start,n_end,zmat%data_r)
-             ELSE
-                CALL priv_r_vecc(d,nk,jspin,n_start,n_end,zmat%data_c)
-             ENDIF
+       IF (PRESENT(zMat)) THEN
+          IF (zmat%l_real) THEN
+             CALL priv_r_vec(d,nk,jspin,list,zmat%data_r)
+          ELSE
+             CALL priv_r_vecc(d,nk,jspin,list,zmat%data_c)
           ENDIF
        ENDIF
 #endif

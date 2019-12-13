@@ -16,7 +16,7 @@ CONTAINS
 #ifdef CPP_MAGMA
     use magma
 #endif    
-    use m_types
+    use m_types_mat
     IMPLICIT NONE
 
     ! ... Arguments ...

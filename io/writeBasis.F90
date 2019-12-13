@@ -38,9 +38,9 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
       TYPE(t_atoms),INTENT(INOUT)   :: atoms
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_cell),INTENT(IN)       :: cell
-      TYPE(t_potden), INTENT(IN)    :: vTot
-      TYPE(t_potden), INTENT(IN)    :: vCoul
-      TYPE(t_potden), INTENT(IN)    :: vx
+      TYPE(t_potden), INTENT(INOUT) :: vTot
+      TYPE(t_potden), INTENT(INOUT) :: vCoul
+      TYPE(t_potden), INTENT(INOUT) :: vx
       TYPE(t_mpi), INTENT(IN)       :: mpi
       TYPE(t_results), INTENT(INOUT):: results
       INTEGER, INTENT(IN)           :: eig_id
@@ -131,10 +131,18 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
        ALLOCATE ( g(atoms%jmtd,2,0:atoms%lmaxd,1:input%jspins) )
     ENDIF
     ALLOCATE (flo(atoms%jmtd,2,atoms%nlod))
+    flo(:,:,:) = 0.0
 
 
+    !-------------------------write potential--------------------
+    IF(input%gw==1) THEN
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot,vTot%pw_w)
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul,vCoul%pw_w)
+       CALL writePotential(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx,vx%pw_w)
+    END IF
 
-      l_real=sym%invs.AND..NOT.noco%l_noco
+
+      l_real=sym%invs.AND..NOT.noco%l_noco.AND..NOT.(noco%l_soc.AND.atoms%n_u+atoms%n_hia>0)
 !     check if z-reflection trick can be used
       l_zref=(sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
 !     IF (mpi%n_size > 1) l_zref = .FALSE.
@@ -342,7 +350,7 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
 	    write(itype_name , '(2a,i0)') TRIM(ADJUSTL(jsp_name)),'/itype_',itype
 	    CALL h5gcreate_f(fileID, TRIM(ADJUSTL(itype_name)), itypeGroupID, hdfError)
 
-            CALL genMTBasis(atoms,enpara,vTot,mpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo)
+            CALL genMTBasis(atoms,enpara,vTot,mpi,itype,jsp,usdus,f(:,:,0:,jsp),g(:,:,0:,jsp),flo,input%l_dftspinpol)
 	    dims(:3)=(/atoms%jmtd,2,atoms%lmaxd+1/)
 	    dimsInt = dims
 	    CALL h5screate_simple_f(3,dims(:3),itypeSpaceID,hdfError)
@@ -434,11 +442,12 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
     version = 1
     filename = 'eig_gw.hdf'
 
+
     IF(input%gw==2) THEN
-    INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
-    IF(l_exist) THEN
-       CALL system('rm '//TRIM(ADJUSTL(filename)))       
-    END IF
+      INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
+      IF(l_exist) THEN
+        CALL system('rm '//TRIM(ADJUSTL(filename)))       
+      END IF
 
       CALL h5fcreate_f(TRIM(ADJUSTL(filename)), H5F_ACC_TRUNC_F, fileID, hdfError, H5P_DEFAULT_F, H5P_DEFAULT_F)
 
@@ -630,10 +639,6 @@ SUBROUTINE writeBasis(input,noco,kpts,atoms,sym,cell,enpara,vTot,vCoul,vx,mpi,DI
        CALL h5gclose_f(jspGroupID, hdfError)
    END DO
    CALL h5fclose_f(fileID, hdfError)  
-!-------------------------write potential--------------------
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_TOT_const,vTot%iter,vTot%mt,vTot%pw_w,vTot%vacz,vTot%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_COUL_const,vCoul%iter,vCoul%mt,vCoul%pw_w,vCoul%vacz,vCoul%vacxy)
-   CALL writePotential(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,POT_ARCHIVE_TYPE_X_const,vx%iter,vx%mt,vx%pw_w,vx%vacz,vx%vacxy)
 
    END IF
    

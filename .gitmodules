@@ -1,0 +1,15 @@
+[submodule "external/hdf5-git"]
+	path = external/hdf5-git
+	url = https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git
+[submodule "external/libxc-git"]
+	path = external/libxc-git
+	url = https://gitlab.com/libxc/libxc.git
+[submodule "docs/katacoda-tutorials"]
+	path = docs/katacoda-tutorials
+	url = gitlab@iffgit.fz-juelich.de:fleur/katacoda-tutorials.git
+[submodule "external/wannier90"]
+	path = external/wannier90
+	url = https://github.com/wannier-developers/wannier90.git
+[submodule "edsolver-library"]
+	path = external/edsolver-library
+	url = gitlab@iffgit.fz-juelich.de:janssen/edsolver-library.git

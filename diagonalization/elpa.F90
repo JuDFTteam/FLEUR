@@ -18,15 +18,15 @@ CONTAINS
     ! ne ....... number of ev's searched (and found) on this node
     !            On input, overall number of ev's searched,
     !            On output, local number of ev's found
-    ! eig ...... eigenvalues, output
-    ! ev ....... eigenvectors, output
+    ! eig ...... all eigenvalues, output
+    ! ev ....... local eigenvectors, output
     !
     !----------------------------------------------------
 
 #include"cpp_double.h"
     USE m_juDFT
     USE m_types_mpimat
-    USE m_types
+    USE m_types_mat
 #ifdef CPP_ELPA  
     USE elpa1
 #ifdef CPP_ELPA2
@@ -192,19 +192,19 @@ CONTAINS
        n_col = indxl2g(i,     nb, hmat%blacsdata%mycol, 0, hmat%blacsdata%npcol)
        n_row = numroc (n_col, nb, hmat%blacsdata%myrow, 0, hmat%blacsdata%nprow)
        IF (hmat%l_real) THEN
-          hmat%data_r(n_row+1:hmat%matsize1,i) = 0.d0 
+          hmat%data_r(n_row+1:hmat%matsize1,i) = 0.0 
        ELSE
-          hmat%data_c(n_row+1:hmat%matsize1,i) = 0.d0
+          hmat%data_c(n_row+1:hmat%matsize1,i) = 0.0
        ENDIF
     ENDDO
  
     ! Use the ev_dist array to store the calculated values for the lower part.
     IF (hmat%l_real) THEN
-       CALL pdtran(hmat%global_size1,hmat%global_size1,1.d0,hmat%data_r,1,1,&
-                         hmat%blacsdata%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacsdata%blacs_desc)
+       CALL pdtran(hmat%global_size1,hmat%global_size1,1.0,hmat%data_r,1,1,&
+                         hmat%blacsdata%blacs_desc,0.0,ev_dist%data_r,1,1,ev_dist%blacsdata%blacs_desc)
     ELSE
-       CALL pztranc(hmat%global_size1,hmat%global_size2,cmplx(1.d0,0.d0),hmat%data_c,1,1,&
-                         hmat%blacsdata%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacsdata%blacs_desc)
+       CALL pztranc(hmat%global_size1,hmat%global_size2,cmplx(1.0,0.0),hmat%data_c,1,1,&
+                         hmat%blacsdata%blacs_desc,cmplx(0.0,0.0),ev_dist%data_c,1,1,ev_dist%blacsdata%blacs_desc)
     ENDIF
 
     ! Copy the calculated values to the lower part of the H matrix
@@ -259,11 +259,11 @@ CONTAINS
 
     ! 2b. tmp2 = ev_dist**T
     IF (hmat%l_real) THEN
-       CALL pdtran(ev_dist%global_size1,ev_dist%global_size1,1.d0,ev_dist%data_r,1,1,&
-                          ev_dist%blacsdata%blacs_desc,0.d0,tmp2_r,1,1,ev_dist%blacsdata%blacs_desc)
+       CALL pdtran(ev_dist%global_size1,ev_dist%global_size1,1.0,ev_dist%data_r,1,1,&
+                          ev_dist%blacsdata%blacs_desc,0.0,tmp2_r,1,1,ev_dist%blacsdata%blacs_desc)
     ELSE
        CALL pztranc(ev_dist%global_size1,ev_dist%global_size1,cmplx(1.0,0.0),ev_dist%data_c,1,1,&
-                          ev_dist%blacsdata%blacs_desc,cmplx(0.d0,0.d0),tmp2_c,1,1,ev_dist%blacsdata%blacs_desc)
+                          ev_dist%blacsdata%blacs_desc,cmplx(0.0,0.0),tmp2_c,1,1,ev_dist%blacsdata%blacs_desc)
     ENDIF
 
     ! 2c. A =  U**-T * tmp2 ( = U**-T * Aorig * U**-1 )
@@ -307,11 +307,11 @@ CONTAINS
     ! Set lower half from upper half
 
     IF (hmat%l_real) THEN
-       CALL pdtran(hmat%global_size1,hmat%global_size1,1.d0,hmat%data_r,1,1,&
-                          hmat%blacsdata%blacs_desc,0.d0,ev_dist%data_r,1,1,ev_dist%blacsdata%blacs_desc)
+       CALL pdtran(hmat%global_size1,hmat%global_size1,1.0,hmat%data_r,1,1,&
+                          hmat%blacsdata%blacs_desc,0.0,ev_dist%data_r,1,1,ev_dist%blacsdata%blacs_desc)
     ELSE
        CALL pztranc(hmat%global_size1,hmat%global_size1,cmplx(1.0,0.0),hmat%data_c,1,1,&
-                          hmat%blacsdata%blacs_desc,cmplx(0.d0,0.d0),ev_dist%data_c,1,1,ev_dist%blacsdata%blacs_desc)
+                          hmat%blacsdata%blacs_desc,cmplx(0.0,0.0),ev_dist%data_c,1,1,ev_dist%blacsdata%blacs_desc)
     ENDIF
 
 
@@ -396,11 +396,11 @@ CONTAINS
 
     ! mult_ah_b_complex needs the transpose of U**-1, thus tmp2 = (U**-1)**T
     IF (hmat%l_real) THEN
-       CALL pdtran(smat%global_size1,smat%global_size1,1.d0,smat%data_r,1,1,&
-                         smat%blacsdata%blacs_desc,0.d0,tmp2_r,1,1,smat%blacsdata%blacs_desc)
+       CALL pdtran(smat%global_size1,smat%global_size1,1.0,smat%data_r,1,1,&
+                         smat%blacsdata%blacs_desc,0.0,tmp2_r,1,1,smat%blacsdata%blacs_desc)
     ELSE
-       CALL pztranc(smat%global_size1,smat%global_size1,cmplx(1.d0,0.d0),smat%data_c,1,1,&
-                         smat%blacsdata%blacs_desc,cmplx(0.d0,0.d0),tmp2_c,1,1,smat%blacsdata%blacs_desc)
+       CALL pztranc(smat%global_size1,smat%global_size1,cmplx(1.0,0.0),smat%data_c,1,1,&
+                         smat%blacsdata%blacs_desc,cmplx(0.0,0.0),tmp2_c,1,1,smat%blacsdata%blacs_desc)
     ENDIF
 
 #if defined (CPP_ELPA_201705003)
@@ -453,21 +453,23 @@ CONTAINS
     CALL MPI_COMM_FREE(mpi_comm_cols,err)
 #endif
     !
-    !     Put those eigenvalues expected by chani to eig, i.e. for
-    !     process i these are eigenvalues i+1, np+i+1, 2*np+i+1...
-    !     Only num=num2/np eigenvalues per process
+    !     Each process has all eigenvalues in output
+    eig(:num2) = eig2(:num2)    
+    DEALLOCATE(eig2)
+    !
+    !
+    !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
+    !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
+    !     Only num=num2/np eigenvectors per process
     !
     num=FLOOR(REAL(num2)/np)
     IF (myid.LT.num2-(num2/np)*np) num=num+1
     ne=0
     DO i=myid+1,num2,np
        ne=ne+1
-       eig(ne)=eig2(i)
+       !eig(ne)=eig2(i)
     ENDDO
-    DEALLOCATE(eig2)
     !
-    !     Redistribute eigvec from ScaLAPACK distribution to each process
-    !     having all eigenvectors corresponding to his eigenvalues as above
     !
     ALLOCATE(t_mpimat::ev)
     CALL ev%init(hmat%l_real,hmat%global_size1,hmat%global_size1,hmat%blacsdata%mpi_com,.FALSE.)

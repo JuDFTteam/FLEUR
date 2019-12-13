@@ -1,0 +1,21 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+jt::copyfile("files/sym.out",$workdir);
+
+jt::testrun("$executable ",$workdir);
+
+#now test output
+
+# Test of total energy from 1st HF iteration
+# old fleur result: -1063.8587731760, new fleur result: -1063.8587731477
+$result=jt::test_grepnumber("$workdir/out","HF total energy="," *= *([^ ]*)",-1063.8383730939,0.000001);
+# Test of total energy from 2nd HF iteration
+# old fleur result: -1063.8383758584, new fleur result -1063.8383730939
+# Differences probably due to recomputation of mixed product basis in every HF iteration in ne fleur
+ $result+=jt::test_grepexists("$workdir/out","HF total energy.*-1063.85877");
+
+# Test of bandgap from 2nd HF iteration
+$result+=jt::test_grepexists("$workdir/out","bandgap.*0.2771");
+
+jt::stageresult($workdir,$result,"1");

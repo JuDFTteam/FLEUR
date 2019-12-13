@@ -5,7 +5,7 @@ MODULE m_qal21
   !***********************************************************************
   !
 CONTAINS
-  SUBROUTINE qal_21(dimension,atoms,input,noccbd,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+  SUBROUTINE qal_21(dimension,atoms,input,noccbd,ev_list,noco,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
 
     USE m_types_setup
     USE m_types_dos
@@ -24,6 +24,8 @@ CONTAINS
 
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: noccbd,ikpt
+
+    INTEGER, INTENT (IN) :: ev_list(noccbd)
 
     !     .. Local Scalars ..
     INTEGER i,l,lo,lop ,natom,nn,ntyp
@@ -152,10 +154,10 @@ CONTAINS
        state : DO i = 1, noccbd
           lls : DO l = 0,3
              CALL rot_den_mat(noco%alph(n),noco%beta(n),&
-                  dos%qal(l,n,i,ikpt,1),dos%qal(l,n,i,ikpt,2),qal21(l,n,i))
+                  dos%qal(l,n,ev_list(i),ikpt,1),dos%qal(l,n,ev_list(i),ikpt,2),qal21(l,n,i))
              IF (.FALSE.) THEN
-                IF (n==1) WRITE(*,'(3i3,4f10.5)') l,n,i,qal21(l,n,i),dos%qal(l,n,i,ikpt,:)
-                q_loc(1,1) = dos%qal(l,n,i,ikpt,1); q_loc(2,2) = dos%qal(l,n,i,ikpt,2)
+                IF (n==1) WRITE(*,'(3i3,4f10.5)') l,n,i,qal21(l,n,i),dos%qal(l,n,ev_list(i),ikpt,:)
+                q_loc(1,1) = dos%qal(l,n,ev_list(i),ikpt,1); q_loc(2,2) = dos%qal(l,n,ev_list(i),ikpt,2)
                 q_loc(1,2) = qal21(l,n,i); q_loc(2,1) = CONJG(q_loc(1,2))
                 q_hlp = MATMUL( TRANSPOSE( CONJG(chi) ) ,q_loc)
                 q_loc = MATMUL(q_hlp,chi)

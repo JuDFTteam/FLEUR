@@ -8,7 +8,7 @@ CONTAINS
   !
   !***********************************************************************
   !
-  SUBROUTINE q_mt_sl(jsp,atoms,nobd,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
+  SUBROUTINE q_mt_sl(jsp,atoms,nobd,ev_list,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
     USE m_types_setup
     USE m_types_usdus
     USE m_types_cdnval, ONLY: t_eigVecCoeffs, t_slab
@@ -21,6 +21,9 @@ CONTAINS
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: nobd,jsp      
     INTEGER, INTENT (IN) :: ne,ikpt ,skip_t,noccbd
+
+    INTEGER, INTENT (IN) :: ev_list(nobd)
+
     !     ..
     !     .. Local Scalars ..
     INTEGER i,l,lo ,natom,nn,ntyp,nt1,nt2,m
@@ -136,7 +139,7 @@ CONTAINS
           DO ntyp = 1,atoms%ntype
              qq = qq + qmttot(ntyp,i)*slab%nmtsl(ntyp,nl)
           ENDDO
-          slab%qmtsl(nl,i,ikpt,jsp) = qq
+          slab%qmtsl(nl,ev_list(i),ikpt,jsp) = qq
        ENDDO
     ENDDO
     !        DO ntyp = 1,ntype

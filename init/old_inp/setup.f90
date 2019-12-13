@@ -124,7 +124,7 @@
              DEALLOCATE (lmx1,nlhtp1)
           END IF
           !+odim
-          IF (atoms%n_u.GT.0) THEN
+          IF (atoms%n_u.GT.0.OR.atoms%n_gf.GT.0) THEN
              CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3, sym%d_wgn)
           ENDIF
           !
@@ -142,7 +142,7 @@
 
           ! Store structure data
 
-          CALL storeStructureIfNew(input, atoms, cell, vacuum, oneD, sym)
+          CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym,mpi,sphhar,noco)
 
           !+odim
           IF (input%film.OR.(sym%namgrp.NE.'any ')) THEN
@@ -173,7 +173,7 @@
           !
         ENDIF ! (mpi%irank == 0)
           CALL stepf(sym,stars,atoms,oneD, input,cell, vacuum,mpi)
-          IF (.NOT.sliceplot%iplot) THEN
+          IF (sliceplot%iplot.EQ.0) THEN
              IF ( mpi%irank == 0 ) THEN
                 CALL convn(DIMENSION,atoms,stars)
 

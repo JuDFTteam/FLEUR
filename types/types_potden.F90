@@ -42,15 +42,17 @@ MODULE m_types_potden
      procedure :: ChargeAndMagnetisationToSpins
      procedure :: addPotDen
      procedure :: subPotDen
+     procedure :: copyPotDen
      procedure :: distribute
      procedure :: collect
   END TYPE t_potden
 
 CONTAINS
-  subroutine collect(this,mpi_comm)
+  subroutine collect(this,mpi_comm,l_collmmp)
     use m_mpi_bc_tool
     implicit none
     class(t_potden),INTENT(INOUT) :: this
+    LOGICAL, OPTIONAL, INTENT(IN) :: l_collmmp
     integer :: mpi_comm
 #ifdef CPP_MPI
     include 'mpif.h'
@@ -81,10 +83,19 @@ CONTAINS
     endif
     !density matrix
     if (allocated(this%mmpMat)) then
-       ALLOCATE(ctmp(size(this%mmpMat)))
-       CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
-       if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
-       deallocate(ctmp)
+       IF(PRESENT(l_collmmp)) THEN
+         IF(l_collmmp) THEN
+           ALLOCATE(ctmp(size(this%mmpMat)))
+           CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+           if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
+           deallocate(ctmp)
+         ENDIF
+       ELSE
+         ALLOCATE(ctmp(size(this%mmpMat)))
+         CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,mpi_comm,ierr)
+         if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
+         deallocate(ctmp)
+       ENDIF
     endif
 #endif
   end subroutine collect
@@ -205,6 +216,10 @@ CONTAINS
 
     PotDen3%iter       = PotDen1%iter
     PotDen3%potdenType = PotDen1%potdenType
+    
+    ! implicit allocation would break the bounds staring at 0
+    if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
+    
     PotDen3%mt         = PotDen1%mt + PotDen2%mt
     PotDen3%pw         = PotDen1%pw + PotDen2%pw
     PotDen3%vacz       = PotDen1%vacz + PotDen2%vacz
@@ -223,6 +238,10 @@ CONTAINS
  
     PotDen3%iter       = PotDen1%iter
     PotDen3%potdenType = PotDen1%potdenType
+
+    ! implicit allocation would break the bounds staring at 0
+    if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
+    
     PotDen3%mt         = PotDen1%mt - PotDen2%mt
     PotDen3%pw         = PotDen1%pw - PotDen2%pw
     PotDen3%vacz       = PotDen1%vacz - PotDen2%vacz
@@ -232,6 +251,25 @@ CONTAINS
     end if
  
   end subroutine
+
+  subroutine copyPotDen( PotDenCopy, PotDen )
+  
+    implicit none
+    class(t_potden), intent(in)    :: PotDen
+    class(t_potden), intent(inout) :: PotDenCopy
+
+    PotDenCopy%iter       = PotDen%iter
+    PotDenCopy%potdenType = PotDen%potdenType
+    
+    ! implicit allocation would break the bounds staring at 0
+    if(.not. allocated(PotDenCopy%mt)) allocate(PotDenCopy%mt, mold=PotDen%mt)
+    
+    PotDenCopy%mt         = PotDen%mt
+    PotDenCopy%pw         = PotDen%pw
+    PotDenCopy%vacz       = PotDen%vacz
+    PotDenCopy%vacxy      = PotDen%vacxy
+
+  end subroutine copyPotDen
 
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,jspins,potden_type)
     USE m_judft
@@ -246,7 +284,7 @@ CONTAINS
     INTEGER,INTENT(IN)       :: jspins, potden_type
  
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,&
-         atoms%n_u,jspins,noco%l_noco,noco%l_mtnocopot,potden_type,&
+         atoms%n_u+atoms%n_hia,jspins,noco%l_noco,noco%l_mtnocopot.OR.noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
   END SUBROUTINE init_potden_types
 
@@ -274,7 +312,7 @@ CONTAINS
     ALLOCATE (pd%vacz(nmzd,2,MERGE(4,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%vacxy(nmzxyd,n2d-1,2,MERGE(3,jspins,nocoExtraDim)),stat=err(4))
 
-    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),jspins))
+    ALLOCATE (pd%mmpMat(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,MAX(1,n_u),MERGE(3,jspins,nocoExtraDim)))
 
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)

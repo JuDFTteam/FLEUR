@@ -50,7 +50,7 @@ CONTAINS
 
   SUBROUTINE juDFT_error(message,calledby,hint,no,warning,file,line)
     USE m_judft_usage
-    USE m_xmloutput
+    USE m_judft_xmloutput
     IMPLICIT NONE
     CHARACTER*(*),INTENT(IN)          :: message
     CHARACTER*(*),OPTIONAL,INTENT(IN) :: calledby,hint
@@ -60,13 +60,21 @@ CONTAINS
     INTEGER,INTENT(IN),OPTIONAL       :: line
 
     LOGICAL                       :: callstop,warn,first_pe
+    LOGICAL                       :: l_mpi=.FALSE.
     INTEGER                       :: isize,irank,e,i
     CHARACTER(len=100),ALLOCATABLE::message_list(:)
 #ifdef CPP_MPI
     include 'mpif.h'
     LOGICAL :: first_parallel
-    CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,e)
-    CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,e)
+    CALL MPI_INITIALIZED(l_mpi,e)
+    IF (l_mpi) THEN
+       CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,e)
+       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,e)
+    ELSE
+       first_pe=.TRUE.
+       isize=1
+       irank=0
+    ENDIF
 #else
     first_pe=.TRUE.
     isize=1
@@ -87,7 +95,7 @@ CONTAINS
     ENDIF
     
 #ifdef CPP_MPI
-    CALL collect_messages(message,message_list,first_pe)
+    if (l_mpi) CALL collect_messages(message,message_list,first_pe)
 #endif
     
     IF (first_pe) THEN
@@ -114,18 +122,20 @@ CONTAINS
           ENDIF
        ENDIF
 #ifdef CPP_MPI
-       WRITE(0,'(a,i0,a,i0)') "Error from PE:",irank,"/",isize
-       first_parallel=.TRUE.
-       DO i=0,isize-1
-          IF (i==irank) CYCLE
-          IF (LEN_TRIM(message_list(i))>1)THEN
-             IF (first_parallel) THEN
-                WRITE(0,'(2a)') "Other PEs with error messages:"
-                first_parallel=.FALSE.
+       IF (l_mpi) THEN
+          WRITE(0,'(a,i0,a,i0)') "Error from PE:",irank,"/",isize
+          first_parallel=.TRUE.
+          DO i=0,isize-1
+             IF (i==irank) CYCLE
+             IF (LEN_TRIM(message_list(i))>1)THEN
+                IF (first_parallel) THEN
+                   WRITE(0,'(2a)') "Other PEs with error messages:"
+                   first_parallel=.FALSE.
+                END IF
+                WRITE(0,'(a,i4,2a)') "  ",i,"-",message_list(i)
              END IF
-             WRITE(0,'(a,i4,2a)') "  ",i,"-",message_list(i)
-          END IF
-       END DO
+          END DO
+       END IF
 #endif
        WRITE(0,'(2a)') "*****************************************"
        
@@ -174,18 +184,20 @@ CONTAINS
   SUBROUTINE juDFT_END(message, irank, l_endXML)
     ! If irank is present every mpi process has to call this routine.
     ! Otherwise only a single mpi process is allowed to call the routine.
-    USE m_xmlOutput
+    USE m_judft_xmlOutput
     USE m_judft_usage
     IMPLICIT NONE
-#ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-    INTEGER :: ierr
-#endif
     CHARACTER*(*), INTENT(IN)      :: message
     INTEGER, OPTIONAL, INTENT(IN)  :: irank
     LOGICAL, OPTIONAL, INTENT(IN)  :: l_endXML
 
-    LOGICAL l_endXML_local
+    LOGICAL l_endXML_local, is_root
+    LOGICAL :: l_mpi=.false.
+#ifdef CPP_MPI
+    INCLUDE 'mpif.h'
+    INTEGER :: ierr
+    CALL MPI_INITIALIZED(l_mpi,ierr)
+#endif
 
     l_endXML_local = .TRUE.
     IF(PRESENT(l_endXML)) THEN
@@ -201,25 +213,40 @@ CONTAINS
        END IF
     END IF
     IF (TRIM(message)=="") STOP ! simple stop if no end message is given
-    WRITE(0,*)
-    WRITE(0,*) "*****************************************"
-    WRITE(0,*) "Run finished successfully"
-    WRITE(0,*) "Stop message:"
-    WRITE(0,*) "  ",message
-    WRITE(0,*) "*****************************************"
+    
+    if(present(irank)) then
+       is_root = (irank == 0)
+    else
+       is_root = .True.
+    endif
+
+    IF(is_root) THEN
+       WRITE(0,*)
+       WRITE(0,*) "*****************************************"
+       WRITE(0,*) "Run finished successfully"
+       WRITE(0,*) "Stop message:"
+       WRITE(0,*) "  ",message
+       WRITE(0,*) "*****************************************"
+    ENDIF
     CALL writetimes()
     CALL print_memory_info(0,.true.)
     CALL send_usage_data()
 #ifdef CPP_MPI
-    IF(PRESENT(irank)) THEN
-       write (*,*) "Going into post send barrier"
-       CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
-       CALL MPI_FINALIZE(ierr)
-    ELSE
-       CALL juDFT_STOP(0)
-    END IF
+    IF (l_mpi) THEN
+       IF(PRESENT(irank)) THEN
+          CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+          CALL MPI_ERRHANDLER_SET(MPI_COMM_WORLD,MPI_ERRORS_RETURN,ierr)
+          CALL MPI_FINALIZE(ierr)
+       ELSE
+          CALL juDFT_STOP(0)
+       END IF
+    ENDIF
 #endif
-    STOP 'OK'
+    if(is_root) then
+       STOP 'OK'
+    else
+       STOP
+    endif
   END SUBROUTINE juDFT_END
 
   !this is a private subroutine that stops the calculations
@@ -228,15 +255,15 @@ CONTAINS
 #ifdef __INTEL_COMPILER
     USE ifcore
 #endif
-#ifdef CPP_MPI
-    INCLUDE 'mpif.h'
-#endif
     INTEGER, OPTIONAL, INTENT(IN)  :: errorCode
     INTEGER :: error
     LOGICAL :: calltrace
     LOGICAL,ALLOCATABLE::a(:)
+    LOGICAL :: l_mpi=.FALSE.
 #ifdef CPP_MPI
     INTEGER :: ierr
+    INCLUDE 'mpif.h'
+    CALL mpi_initialized(l_mpi,ierr)
 #endif
     error = 0
 
@@ -253,18 +280,22 @@ CONTAINS
 #elif (defined(CPP_AIX)&&!defined(__PGI))
        CALL xl__trbk()
 #endif
-       DEALLOCATE(a)!will generate an error that can be found by the compiler
+       ! cause an error, so that the compiler generates a stacktrace
+       DEALLOCATE(a)
     ENDIF
 
 #if defined(CPP_MPI)
-    IF(error.EQ.0) THEN
-       WRITE(0,*) ""
-       WRITE(0,*) "Terminating all MPI processes."
-       WRITE(0,*) "Note: This is a normal procedure."
-       WRITE(0,*) "      Error messages in the following lines can be ignored."
-       WRITE(0,*) ""
-    END IF
-    CALL MPI_ABORT(MPI_COMM_WORLD,error,ierr)
+    IF (l_mpi) THEN
+       IF(error.EQ.0) THEN
+          WRITE(0,*) ""
+          WRITE(0,*) "Terminating all MPI processes."
+          WRITE(0,*) "Note: This is a normal procedure."
+          WRITE(0,*) "      Error messages in the following lines can be ignored."
+          WRITE(0,*) ""
+       END IF
+       CALL MPI_ERRHANDLER_SET(MPI_COMM_WORLD,MPI_ERRORS_RETURN,ierr)
+       CALL MPI_ABORT(MPI_COMM_WORLD,error,ierr)
+    ENDIF
 #endif
     STOP 'juDFT-STOPPED'
   END SUBROUTINE juDFT_stop

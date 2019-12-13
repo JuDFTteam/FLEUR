@@ -13,7 +13,6 @@
          <qss>0.0 0.0 0.0</qss>
       </nocoParams>
       <expertModes gw="0" pot8="F" eig66="F" lpr="0" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="F" xa="2.00000000" thetad="330.00000000" epsdisp=".00001000" epsforce=".00001000"/>
       <bzIntegration valenceElectrons="16.00000000" mode="hist" fermiSmearingEnergy=".00100000">
          <kPointCount count="5" gamma="F"/>
       </bzIntegration>
@@ -28,7 +27,7 @@
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Fe-1" element="Fe" atomicNumber="26" coreStates="7" magMom="2.20000000" flipSpin="T">
+      <species name="Fe-1" element="Fe" atomicNumber="26" coreStates="7" magMom="2.20000000" flipSpinPhi=".00000000" flipSpinTheta="0.000000" flipSpinScale="F">
          <mtSphere radius="2.35000000" gridPoints="565" logIncrement=".02100000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
          <energyParameters s="4" p="4" d="3" f="4"/>
@@ -50,7 +49,7 @@
       <checks vchk="F" cdinf="F" disp="F"/>
       <densityOfStates ndir="0" minEnergy="-.50000000" maxEnergy=".50000000" sigma=".01500000"/>
       <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1=".00000000" locy1=".00000000" locx2=".00000000" locy2=".00000000" nstm="0" tworkf=".00000000"/>
-      <plotting iplot="F" score="F" plplot="F"/>
+      <plotting iplot="0"/>
       <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
       <specialOutput form66="F" eonly="F" bmt="F"/>
    </output>

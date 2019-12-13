@@ -17,8 +17,8 @@ CONTAINS
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
-                                 dimension,cell,sym,xcpot,noco,oneD,hybrid,&
-                                 kpts,enpara,sphhar,mpi,obsolete)
+                                 dimension,cell,sym,xcpot,noco,oneD,mpbasis,hybrid,&
+                                 kpts,enpara,sphhar,mpi,obsolete, hub1)
 
    USE m_types
 
@@ -27,11 +27,12 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_mpi),      INTENT(INOUT) :: mpi
    TYPE(t_input),    INTENT(INOUT) :: input
    TYPE(t_sym),      INTENT(INOUT) :: sym
-   TYPE(t_stars),    INTENT(INOUT) :: stars 
+   TYPE(t_stars),    INTENT(INOUT) :: stars
    TYPE(t_atoms),    INTENT(INOUT) :: atoms
    TYPE(t_vacuum),   INTENT(INOUT) :: vacuum
    TYPE(t_kpts),     INTENT(INOUT) :: kpts
    TYPE(t_oneD),     INTENT(INOUT) :: oneD
+   TYPE(t_mpbasis), intent(inout) :: mpbasis
    TYPE(t_hybrid),   INTENT(INOUT) :: hybrid
    TYPE(t_cell),     INTENT(INOUT) :: cell
    TYPE(t_banddos),  INTENT(INOUT) :: banddos
@@ -42,6 +43,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    TYPE(t_enpara),   INTENT(INOUT) :: enpara
    TYPE(t_sphhar),   INTENT(INOUT) :: sphhar
    TYPE(t_obsolete), INTENT(INOUT) :: obsolete
+   TYPE(t_hub1ham),  INTENT(INOUT) :: hub1
 #ifdef CPP_MPI
    INCLUDE 'mpif.h'
 
@@ -51,7 +53,6 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
 
    CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%ntype,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%nat,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%nlod,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(atoms%lmaxd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -82,10 +83,9 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
    CALL MPI_BCAST(dimension%nspd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%numSpecialPoints,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(kpts%nkpt,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(kpts%ntet,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-   CALL MPI_BCAST(input%jspins,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(input%l_wann,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
+   CALL MPI_BCAST(input%l_rdmft,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%layerd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%nmzxyd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(vacuum%nmzd,1,MPI_INTEGER,0,mpi%mpi_comm,ierr)
@@ -105,14 +105,14 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(atoms%nz(atoms%ntype),atoms%zatom(atoms%ntype)) !nz and zatom have the same content!
       ALLOCATE(atoms%jri(atoms%ntype),atoms%dx(atoms%ntype),atoms%rmt(atoms%ntype))
       ALLOCATE(atoms%lmax(atoms%ntype),atoms%nlo(atoms%ntype),atoms%lnonsph(atoms%ntype))
-      ALLOCATE(atoms%ncst(atoms%ntype),atoms%lda_u(4*atoms%ntype))
-      ALLOCATE(atoms%nflip(atoms%ntype),atoms%bmu(atoms%ntype),atoms%neq(atoms%ntype))
+      ALLOCATE(atoms%ncst(atoms%ntype),atoms%lda_u(4*atoms%ntype),atoms%gfelem(4*atoms%ntype))
+      ALLOCATE(atoms%bmu(atoms%ntype),atoms%neq(atoms%ntype))
       ALLOCATE(atoms%l_geo(atoms%ntype),atoms%relax(3,atoms%ntype))
       ALLOCATE(atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat))
       ALLOCATE(atoms%numStatesProvided(atoms%ntype))
       ALLOCATE(atoms%rmsh(atoms%jmtd,atoms%ntype))
       ALLOCATE(atoms%volmts(atoms%ntype))
-   
+
       ALLOCATE(atoms%ncv(atoms%ntype))
       ALLOCATE(atoms%ngopr(atoms%nat))
       ALLOCATE(atoms%lapw_l(atoms%ntype))
@@ -127,7 +127,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(noco%l_relax(atoms%ntype),noco%b_con(2,atoms%ntype))
       ALLOCATE(noco%alphInit(atoms%ntype),noco%alph(atoms%ntype),noco%beta(atoms%ntype))
 
-  
+
       ALLOCATE(kpts%specialPoints(3,kpts%numSpecialPoints))
       ALLOCATE(kpts%specialPointNames(kpts%numSpecialPoints))
       ALLOCATE(kpts%bk(3,kpts%nkpt))
@@ -135,7 +135,7 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(kpts%ntetra(4,kpts%ntet))
       ALLOCATE(kpts%voltet(kpts%ntet))
 
-    
+
       ALLOCATE(sym%mrot(3,3,sym%nop),sym%tau(3,sym%nop))
       ALLOCATE(sym%invarop(atoms%nat,sym%nop),sym%invarind(atoms%nat))
       ALLOCATE(sym%multab(sym%nop,sym%nop),sym%invtab(sym%nop))
@@ -170,11 +170,11 @@ SUBROUTINE initParallelProcesses(atoms,vacuum,input,stars,sliceplot,banddos,&
       ALLOCATE(oneD%invtab1(oneD%odd%nop),oneD%multab1(oneD%odd%nop,oneD%odd%nop))
       ALLOCATE(oneD%igfft1(0:oneD%odd%nn2d-1,2),oneD%pgfft1(0:oneD%odd%nn2d-1))
 
-      ALLOCATE(hybrid%nindx(0:atoms%lmaxd,atoms%ntype))
+      ALLOCATE(mpbasis%num_radfun_per_l(0:atoms%lmaxd,atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
 
-      IF (xcpot%is_gga()) THEN
+      IF (xcpot%needs_grad()) THEN
          ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))
          ALLOCATE (oneD%pgft1x(0:oneD%odd%nn2d-1),oneD%pgft1xx(0:oneD%odd%nn2d-1),&
                    oneD%pgft1xy(0:oneD%odd%nn2d-1),&

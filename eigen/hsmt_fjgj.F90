@@ -44,7 +44,7 @@ CONTAINS
              gg = rk(k)*gb(l)
              IF ( apw(l) ) THEN
                 fj(k,l,ispin) = 1.0*con1 * ff / us(l,ispin)
-                gj(k,l,ispin) = 0.0d0
+                gj(k,l,ispin) = 0.0
              ELSE
                 IF (l_flag) THEN
                    DO jspin = 1, jspins
@@ -167,9 +167,9 @@ CONTAINS
              gg = lapw%rk(k,intspin)*gb(l)
              IF ( apw(l) ) THEN
                 fj(k,l,ispin,intspin) = 1.0*con1 * ff / usdus%us(l,n,ispin)
-                gj(k,l,ispin,intspin) = 0.0d0
+                gj(k,l,ispin,intspin) = 0.0
              ELSE
-                IF (noco%l_constr.or.l_socfirst) THEN
+                IF (noco%l_constr.or.l_socfirst.OR.noco%l_mtNocoPot) THEN
                    DO jspin = 1, input%jspins
                       fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
                       gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )

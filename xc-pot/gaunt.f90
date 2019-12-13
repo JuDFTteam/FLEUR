@@ -1,15 +1,15 @@
 MODULE m_gaunt
 !*********************************************************************
-!     Modified module to include old gaunt2 subroutine
+!     Modified module to include old gaunt_init subroutine
 !     the private arrays are allocated and computed in the first call to gaunt1
 !                                            Daniel Wortmann
 !*********************************************************************
    PRIVATE
    INTEGER,SAVE         :: lmaxdp
    REAL,SAVE,ALLOCATABLE::w(:),yr(:,:)
-   PUBLIC gaunt1,gaunt2
+   PUBLIC gaunt1, gaunt_init
 CONTAINS
-   REAL FUNCTION gaunt1(lp,l,ls,mp,m,ms,lmaxd)
+   FUNCTION gaunt1(lp,l,ls,mp,m,ms,lmaxd)
 !*********************************************************************
 !     gaunt computes the integral of conjg(y(lp,mp))*y(l,m)*y(ls,ms)
 !     for lp+l+ls .lt. 2*ngntd
@@ -21,49 +21,35 @@ CONTAINS
 !     modified to use calculated points and weights
 !     to make it dynamic.   (m.w.  jan. 1982)
 !*********************************************************************
+      USE m_judft
       IMPLICIT NONE
-!     ..
-!     .. Scalar Arguments ..
-      INTEGER,INTENT(IN):: l,lp,ls,m,mp,ms,lmaxd
-!     ..
-!     .. Local Scalars ..
-      REAL :: zero
+      INTEGER,INTENT(IN) :: l,lp,ls,m,mp,ms,lmaxd
+      REAL               :: gaunt1
       INTEGER :: i,il,ilp,ils,n
-!     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC mod
-!     ..
-!     .. Data statements ..
-      DATA zero/0.0e0/
-!     ..
+
+
       n= (3*lmaxd)/4+1
-
 ! heck if this is first call to subroutine
-      IF ( .NOT. ALLOCATED(YR)) CALL gaunt2(lmaxd)
+      IF(.NOT. ALLOCATED(YR)) CALL gaunt_init(lmaxd)
 ! heck if the previous call of the subroutine was with the same lmaxd
-      IF( lmaxd /= lmaxdp ) THEN
-         DEALLOCATE(yr,w)
-         CALL gaunt2(lmaxd)
-      END IF
+      IF(lmaxd > lmaxdp) call juDFT_error("Can't calc gaunt. lmaxd too high")
 
-      gaunt1 = zero
+      gaunt1 = 0.0
       IF (mp /= (m+ms)) RETURN
       IF (MOD((l+lp+ls),2) == 1) RETURN
       IF ((l+lp-ls) < 0) RETURN
       IF ((l-lp+ls) < 0) RETURN
       IF ((lp-l+ls) < 0) RETURN
-      il = l* (l+1) + m + 1
-      ilp = lp* (lp+1) + mp + 1
-      ils = ls* (ls+1) + ms + 1
-      DO i = 1,n
-         gaunt1 = gaunt1 + w(i)*yr(i,ilp)*yr(i,il)*yr(i,ils)
-      END DO
-      RETURN
+
+      il  = l  * (l  + 1) + m  + 1
+      ilp = lp * (lp + 1) + mp + 1
+      ils = ls * (ls + 1) + ms + 1
+
+      gaunt1 = dot_product(w, yr(:,ilp)*yr(:,il)*yr(:,ils))
    END FUNCTION
 
 !     private subroutine for initializing the private arrays!
-   SUBROUTINE gaunt2( &
-      lmaxd)
+   SUBROUTINE gaunt_init(lmaxd)
 !**********************************************************************
 !     sets up values needed for gaunt1
 !        m. weinert  january 1982
@@ -71,27 +57,18 @@ CONTAINS
       USE m_constants, ONLY : pimach
       USE m_grule
       USE m_juDFT_stop
-!$    USE omp_lib
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: lmaxd
-!     ..
-!     .. Local Scalars ..
       REAL :: a,cd,cth,fac,fpi,rf,sgm,sth,t
-      INTEGER :: k,l,lm,lomax,m,nn
+      INTEGER :: k,l,lm,lomax,m
       INTEGER :: n,lmax1d
-!     ..
-!     .. Local Arrays ..
       REAL :: p(0:lmaxd+1,0:lmaxd+1),x((3*lmaxd)/4+1)
-!     ..
-!     .. Intrinsic Functions ..
-      INTRINSIC sqrt
-!     ..
-      if (allocated(w)) return
-!$    if (omp_in_parallel()) call juDFT_error("BUG IN GAUNT!!")
-      ALLOCATE(w((3*lmaxd)/4+1),yr((3*lmaxd)/4+1,(lmaxd+1)**2))
 
+      if (allocated(w)) return
       n = (3*lmaxd)/4+1
+      ALLOCATE(w(n),  source=0.0)
+      ALLOCATE(yr(n,(lmaxd+1)**2), source=0.0)
       lmaxdp = lmaxd
       lmax1d = lmaxd+1
 
@@ -99,8 +76,7 @@ CONTAINS
       rf = fpi** (1./3.)
       lomax = lmax1d - 1
 !--->    obtain gauss-legendre points and weights
-      nn = 2*n
-      CALL grule(nn,x,w)
+      CALL grule(2*n,x,w)
 !--->    generate associated legendre functions for m.ge.0
       DO  k = 1,n
          cth = x(k)
@@ -133,7 +109,5 @@ CONTAINS
             ENDDO
          ENDDO
       ENDDO
-      RETURN
    END SUBROUTINE
-
 END MODULE

@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_magMoms
-
+IMPLICIT NONE
 CONTAINS
 
 SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
@@ -14,7 +14,7 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
    USE m_xmlOutput
    USE m_m_perp
 
-   IMPLICIT NONE
+ 
 
    TYPE(t_dimension), INTENT(IN) :: dimension
    TYPE(t_input), INTENT(IN)     :: input
@@ -36,8 +36,8 @@ SUBROUTINE magMoms(dimension,input,atoms,noco,vTot,moments)
    END DO
 
    8000 FORMAT (/,/,10x,'spin density at the nucleus:',/,10x,'type',t25,&
-                'input%total',t42,'valence',t65,'core',t90,&
-                'majority valence and input%total density',/)
+                'total',t42,'valence',t65,'core',t90,&
+                'majority valence and total density',/)
    8010 FORMAT (i13,2x,3e20.8,5x,2e20.8)
 
    WRITE (6,FMT=8020)

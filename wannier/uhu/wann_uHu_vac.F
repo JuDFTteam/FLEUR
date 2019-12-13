@@ -28,7 +28,7 @@ c***************************************c
 
       implicit none
 
-      TYPE(t_zmat), INTENT(IN) :: zMat, zMat_b
+      TYPE(t_mat), INTENT(IN) :: zMat, zMat_b
 
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco,l_soc,zrfs
@@ -45,14 +45,19 @@ c     ..array arguments..
       real,    intent (in) :: qss(3)
       real,    intent (in) :: vz(nmzd,2,4)
       real,    intent (in) :: bbmat(3,3),bmat(3,3)
-      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+!      complex, intent (in) :: rgphs(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      complex, intent (in) :: rgphs(-k1d:,-k2d:,-k3d:)
+!      integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      integer, intent (in) :: ig(-k1d:,-k2d:,-k3d:)
       integer, intent (in) :: ig2(n3d),nv(jspd),nv_b(jspd)
       integer, intent (in) :: kv2(2,n2d)
       integer, intent (in) :: gb(3),gb2(3)
-      integer, intent (in) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
-      integer, intent (in) :: k1_b(nvd,jspd),k2_b(nvd,jspd)
-      integer, intent (in) :: k3_b(nvd,jspd)
+!      integer, intent (in) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
+      integer, intent (in) :: k1(:,:),k2(:,:),k3(:,:)      
+!      integer, intent (in) :: k1_b(nvd,jspd),k2_b(nvd,jspd)
+!      integer, intent (in) :: k3_b(nvd,jspd)
+      integer, intent (in) :: k1_b(:,:),k2_b(:,:)
+      integer, intent (in) :: k3_b(:,:)      
       complex, intent (in) :: vzxy(nmzxyd,n2d-1,2)
       complex, intent (inout) :: uHu(nbnd,nbnd)
 
@@ -276,13 +281,13 @@ c-----> loop over basis functions
 
          IF(zMat%l_real) THEN
             do n = 1,nslibd
-               ac(l,n) = ac(l,n) + zMat%z_r(k+addnoco,n)*av
-               bc(l,n) = bc(l,n) + zMat%z_r(k+addnoco,n)*bv
+               ac(l,n) = ac(l,n) + zMat%data_r(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%data_r(k+addnoco,n)*bv
             enddo
          ELSE
             do n = 1,nslibd
-               ac(l,n) = ac(l,n) + zMat%z_c(k+addnoco,n)*av
-               bc(l,n) = bc(l,n) + zMat%z_c(k+addnoco,n)*bv
+               ac(l,n) = ac(l,n) + zMat%data_c(k+addnoco,n)*av
+               bc(l,n) = bc(l,n) + zMat%data_c(k+addnoco,n)*bv
             enddo
          END IF
       enddo
@@ -323,13 +328,13 @@ c-----> loop over basis functions
 
          IF(zMat_b%l_real) THEN
             do n = 1,nslibd_b
-               ac_b(l,n) = ac_b(l,n) + zMat_b%z_r(k+addnoco2,n)*av
-               bc_b(l,n) = bc_b(l,n) + zMat_b%z_r(k+addnoco2,n)*bv
+               ac_b(l,n) = ac_b(l,n) + zMat_b%data_r(k+addnoco2,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%data_r(k+addnoco2,n)*bv
             enddo
          ELSE
             do n = 1,nslibd_b
-               ac_b(l,n) = ac_b(l,n) + zMat_b%z_c(k+addnoco2,n)*av
-               bc_b(l,n) = bc_b(l,n) + zMat_b%z_c(k+addnoco2,n)*bv
+               ac_b(l,n) = ac_b(l,n) + zMat_b%data_c(k+addnoco2,n)*av
+               bc_b(l,n) = bc_b(l,n) + zMat_b%data_c(k+addnoco2,n)*bv
             enddo
          END IF
       enddo

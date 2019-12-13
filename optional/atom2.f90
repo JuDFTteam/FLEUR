@@ -217,7 +217,7 @@ CONTAINS
                rhoss(i, ispin) = rhoss(i, ispin)/(fpi_const*rad(i)**2)
             ENDDO
          ENDDO
-         IF (xcpot%is_gga()) THEN
+         IF (xcpot%needs_grad()) THEN
             CALL potl0(xcpot, input%jspins, atoms%dx(ntyp), rad, rhoss, vxc)
          ELSE
             CALL xcpot%get_vxc(input%jspins, rhoss, vxc, vx)
