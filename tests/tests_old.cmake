@@ -1,13 +1,16 @@
 enable_testing()
 
-set(SerialParallelTests SiHybridGammaNoInv SiHybrid8kpt_sym
-   SiHybrid8kpt_nosym CuBulkXML SiLOXML  Fe_1lXML
+set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML
-   Fe_bcc_GreensFunction Fe_1l_GreensFunction)
+   )
+#Currently disabled Tests (Hybrid+Greenfct)
+# SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
+# KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0
+# Fe_bcc_GreensFunction Fe_1l_GreensFunction
 
-set(SerialOnlyTests KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 CoUnfold gw1Interface gw2Iterface)# TiO2eels TiO2eelsXML)
+set(SerialOnlyTests  CoUnfold gw1Interface gw2Iterface)# TiO2eels TiO2eelsXML)
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
 set(Testdirs ${SerialOnlyTests} ${SerialParallelTests})
