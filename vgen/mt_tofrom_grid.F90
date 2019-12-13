@@ -187,8 +187,8 @@ CONTAINS
                          chlhdr(jr, lh, js)=chlhdrtot(jr,lh)-drm(jr,lh)
                          chlhdrr(jr, lh, js)=chlhdrrtot(jr,lh)-drrm(jr,lh)
                       ELSE
-                         chlhdr(jr, lh, js)=0
                          chlh(jr,lh,js)=0
+                         chlhdr(jr, lh, js)=0
                          chlhdrr(jr, lh, js)=0
                      END IF
                   END IF
