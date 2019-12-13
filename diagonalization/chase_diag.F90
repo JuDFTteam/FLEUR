@@ -1,4 +1,3 @@
-!--------------------------------------------------------------------------------
 ! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -376,9 +375,10 @@ CONTAINS
     nev = MIN(ne,hmat%global_size1)
     nex = min(max(nev/4, 45), hmat%global_size1-nev) !dimensioning for workspace
 
+    CALL hmat%generate_full_matrix()
     CALL priv_init_chasempimat(hmat,chase_mat,nev,nex)
 
-    CALL chase_mat%generate_full_matrix()
+    !CALL chase_mat%generate_full_matrix()
     ALLOCATE(eigenvalues(nev+nex))
     eigenvalues = 0.0
     !ALLOCATE(t_mpimat::zmatTemp)

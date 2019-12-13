@@ -38,7 +38,7 @@ SUBROUTINE checkInputParams(mpi,input,atoms,noco,xcpot,oneD)
                        calledby ="fleur", hint="Use a supercell or a different functional")
    END IF
 
-  
+
 END SUBROUTINE checkInputParams
 
 
