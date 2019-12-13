@@ -29,7 +29,8 @@ MODULE m_make_stars
      USE m_types_mpi
      use m_types_noco
      use m_mpi_bc_tool
-
+     USE m_types_stars
+     
      class(t_stars),intent(INOUT) :: stars
      type(t_sym),intent(in)::sym
      type(t_atoms),intent(in)::atoms
