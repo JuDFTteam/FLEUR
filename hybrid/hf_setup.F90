@@ -17,6 +17,7 @@ CONTAINS
       USE m_checkolap
       USE m_hybrid_core
       USE m_gen_wavf
+      use m_types_hybdat
 
       IMPLICIT NONE
 
