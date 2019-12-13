@@ -236,7 +236,7 @@ MODULE m_types_atoms
      same_species=same_species.AND.atoms%nlo(n)==atoms%nlo(nn)
      IF (atoms%nlo(n)==atoms%nlo(nn)) same_species=same_species.AND.ALL(atoms%llo(:,n)==atoms%llo(:,nn))
      same_species=same_species.AND.atoms%lapw_l(n)==atoms%lapw_l(nn)
-     same_species=same_species.AND.atoms%l_geo(n)==atoms%l_geo(nn)
+     same_species=same_species.AND.atoms%l_geo(n).eqv.atoms%l_geo(nn)
      same_species=same_species.AND.TRIM(atoms%econf(n)%coreconfig)==TRIM(atoms%econf(nn)%coreconfig)
      same_species=same_species.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
      same_species=same_species.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
