@@ -8,7 +8,7 @@ option(INPGEN_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
 #set(JUFDT_COMPILEOPTS "-r8")
 
 
-set(FLEUR_SRC "/Users/wortmann/eclipse/fleur/")
+set(FLEUR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
 add_executable(inpgen2
 dropDefaults.c
