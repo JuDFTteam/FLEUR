@@ -272,15 +272,15 @@ CONTAINS
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real_fixed2
 
-  SUBROUTINE mpi_bc_real_3(irank,mpi_comm,r)!Special routine for non-allocatable 3x3 arrays
+  SUBROUTINE mpi_bc_real_3(irank,mpi_comm,r3)!Special routine for non-allocatable 3x3 arrays
     IMPLICIT NONE
-    REAL,INTENT(INOUT)   :: r(3)
+    REAL,INTENT(INOUT)   :: r3(3)
     INTEGER,INTENT(IN)   :: mpi_comm,irank
 
     INTEGER:: ierr=0
 #ifdef CPP_MPI
 
-    CALL MPI_BCAST(r,3,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
+    CALL MPI_BCAST(r3,3,MPI_DOUBLE_PRECISION,irank,mpi_comm,ierr)
 #endif
     IF (ierr.NE.0) CALL judft_error("MPI_BCAST failed")
   END SUBROUTINE mpi_bc_real_3
