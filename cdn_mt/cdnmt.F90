@@ -127,11 +127,11 @@ CONTAINS
           END DO
 
           CALL rhosphnlo(itype,atoms,sphhar,sym,&
-               usdus%uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
-               usdus%uulon(1,itype,ispin),enpara%ello0(1,itype,ispin),&
-               vr(1,itype,ispin),denCoeffs%aclo(1,itype,ispin),denCoeffs%bclo(1,itype,ispin),&
-               denCoeffs%cclo(1,1,itype,ispin),denCoeffs%acnmt(0,1,1,itype,ispin),&
-               denCoeffs%bcnmt(0,1,1,itype,ispin),denCoeffs%ccnmt(1,1,1,itype,ispin),&
+               usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),&
+               usdus%uulon(:,itype,ispin),enpara%ello0(:,itype,ispin),&
+               vr(1,itype,ispin),denCoeffs%aclo(:,itype,ispin),denCoeffs%bclo(:,itype,ispin),&
+               denCoeffs%cclo(:,:,itype,ispin),denCoeffs%acnmt(0,:,:,itype,ispin),&
+               denCoeffs%bcnmt(0,:,:,itype,ispin),denCoeffs%ccnmt(:,:,:,itype,ispin),&
                f(1,1,0,ispin),g(1,1,0,ispin),&
                rho(:,0:,itype,ispin),moments%rhoLRes(:,0:,:,itype,ispin),qmtllo)
 

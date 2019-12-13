@@ -43,7 +43,7 @@ CONTAINS
     endif
     nprnc(:nst)=econf%nprnc(:nst)
     kappa(:nst)=econf%kappa(:nst)
-    occupation(:nst,:)=econf%occupation(:nst,:)
+    occupation(:nst,:)=econf%occupation(:nst,:SIZE(occupation,2))
     if (size(occupation,2)==1) occupation=occupation*2
   END SUBROUTINE get_core
 

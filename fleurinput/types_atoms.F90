@@ -45,7 +45,7 @@ MODULE m_types_atoms
       INTEGER :: nat
       !<dimensions of LO's
       INTEGER ::nlod
-      INTEGER ::llod
+      INTEGER ::llod=0
       INTEGER ::nlotot
       !lmaxd=maxval(lmax)
       INTEGER:: lmaxd
@@ -291,6 +291,7 @@ MODULE m_types_atoms
     ALLOCATE(this%lapw_l(this%ntype)) ! Where do I put this?
     this%nlod=MAXVAL(xml%get_nlo())
     ALLOCATE(this%llo(this%nlod,this%ntype))
+    this%llo=0
     ALLOCATE(this%ulo_der(this%nlod,this%ntype))
     ALLOCATE(this%speciesname(this%ntype))
     this%lapw_l(:) = -1
@@ -450,7 +451,7 @@ MODULE m_types_atoms
     ENDDO
 
     ! Check the LO stuff and call setlomap (from inped):
-    this%llod=maxval(this%llo)
+    IF (SIZE(this%llo,1)>0) this%llod=MAXVAL(this%llo)
     ALLOCATE(this%lo1l(0:this%llod,this%ntype))
     ALLOCATE(this%nlol(0:this%llod,this%ntype))
     ALLOCATE(this%l_dulo(this%nlod,this%ntype))
@@ -534,7 +535,7 @@ MODULE m_types_atoms
     END DO
     this%nlotot = 0
     DO n = 1, this%ntype
-       DO l = 1,this%nlo(n)
+       DO l = 1,this%nlo(n) 
           this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
        END DO
     END DO
