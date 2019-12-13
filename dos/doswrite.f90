@@ -13,9 +13,9 @@ MODULE m_doswrite
 CONTAINS
   SUBROUTINE doswrite(eig_id,kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,sym,cell,dos,mcd,results,slab,orbcomp,oneD)
+    USE m_types
     USE m_evaldos
     USE m_cdninf
-    USE m_types
     IMPLICIT NONE
   
     

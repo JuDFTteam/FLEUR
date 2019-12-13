@@ -15,12 +15,16 @@ MODULE m_symm_hf
 
 #define irreps .false.
 
+   USE m_constants
+   USE m_types
+   USE m_util
+   USE m_intgrf
+   USE m_io_hybrid
+
 CONTAINS
 
    SUBROUTINE symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
-      USE m_types
-      USE m_util, ONLY: modulo1
       IMPLICIT NONE
 
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -73,13 +77,9 @@ CONTAINS
                       lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
-      USE m_constants
-      USE m_types
-      USE m_util, ONLY: modulo1
-      use m_intgrf, only: intgrf, intgrf_init
-      USE m_olap, ONLY: wfolap_inv, wfolap_noinv, wfolap_init
-      USE m_trafo, ONLY: waveftrafo_symm
-      USE m_io_hybrid
+      USE m_olap
+      USE m_trafo
+
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
