@@ -47,12 +47,6 @@ SUBROUTINE checkInputParams(mpi,input,dimension,atoms,sym,noco,xcpot,oneD,forcet
                                              calledby = 'checkInputParams',hint='If you know what you do deactivate this stop.')
    END SELECT
 
-   IF(input%film.AND.noco%l_ss.AND..NOT.sym%zrfs) THEN
-      CALL juDFT_warn("'film + spin spiral + no z reflection symmetry' is temporarily broken.", calledby="checkInputParams")
-   END IF
-
-   
-
 END SUBROUTINE checkInputParams
 
 
