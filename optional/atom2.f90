@@ -23,7 +23,7 @@ CONTAINS
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
-      
+
       TYPE(t_atoms), INTENT(IN)      :: atoms
       CLASS(t_xcpot), INTENT(IN)     :: xcpot
       TYPE(t_input), INTENT(IN)      :: input
@@ -37,7 +37,7 @@ CONTAINS
 !     .. Local Scalars ..
       REAL c, d, delrv, dist, distol, e, fisr, fj, fl, fn, h,&
      &     p, p1, pmax, pmin, r, r3, rn, rnot, z, zero, bmu_l, rho
-      INTEGER i, inr0, it, itmax, k, l, n, ispin, kk, ierr, msh_l
+      INTEGER i, inr0, it, itmax, k, l, n, ispin, kk, ierr, msh_l,isp
       LOGICAL conv, lastit, l_start
 !     ..
 !     .. Local Arrays ..
@@ -79,6 +79,18 @@ CONTAINS
       !CALL setcor(ntyp, input%jspins, atoms, input, bmu_l, nst, kappa, nprnc, occ)
       CALL atoms%econf(ntyp)%get_core(nst,nprnc,kappa,occ,l_valence)
 
+      if (input%jspins == 2) THEN
+         bmu_l=sign(1.,sum(occ(:nst,1)-occ(:nst,2)))
+         if (any(bmu_l*(occ(:nst,1)-occ(:nst,2))<-1.E-5)) call judft_warn("Inconsistent polarization of starting density")
+         if (bmu_l<0) THEN
+            DO i=1,nst
+               bmu_l=occ(i,1)
+               occ(i,1)=occ(i,2)
+               occ(i,2)=bmu_l
+            ENDDO
+            bmu_l=-1
+         ENDIF
+      ENDIF
 !
 !--->   for electric field case (sigma.ne.0), add the extra charge
 !--->   to the uppermost level; ignore the possible problem that
@@ -262,8 +274,9 @@ CONTAINS
       conv = .false.
 !     list eigenvalues
 190   IF (conv) WRITE (6, FMT=8040) it, dist
-      DO ispin = 1, input%jspins
-         WRITE (6, '(a8,i2)') 'spin No.', ispin
+      DO isp = 1, input%jspins
+         ispin=merge(isp,3-isp,bmu_l>0)
+         WRITE (6, '(a8,i2)') 'spin No.',ispin
          DO k = 1, nst
             fj = iabs(kappa(k)) - 0.5e0
             l = fj + 0.5e0*isign(1, kappa(k)) + 0.01e0
@@ -285,6 +298,19 @@ CONTAINS
       &       'occ.   eigenvalue (har)  <r>  ',/)
 8050  FORMAT(3x, i1, i5, i5, f6.1, 2(3x, f7.2, 1x, 2f12.6))
 8060  FORMAT('it,dist,p=', i4, 2f12.5)
+
+      IF (bmu_l<0) THEN
+         DO i=1,nst
+            bmu_l=eig(i,1)
+            eig(i,1)=eig(i,2)
+            eig(i,2)=bmu_l
+         ENDDO
+         DO i=1,size(rhoss,1)
+            bmu_l=rhoss(i,1)
+            rhoss(1,i)=rhoss(2,i)
+            rhoss(2,i)=bmu_l
+         ENDDO
+      ENDIF
 
    END SUBROUTINE atom2
 END MODULE m_atom2

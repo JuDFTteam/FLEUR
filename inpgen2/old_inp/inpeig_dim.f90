@@ -13,7 +13,6 @@
       USE m_types_noco
       USE m_types_oneD
       USE m_types_kpts
-      USE m_types_dimension
       USE m_types_stars
       use m_apwsdim
       IMPLICIT NONE
@@ -21,7 +20,7 @@
       TYPE(t_cell),INTENT(INOUT)      :: cell
       TYPE(t_noco),INTENT(INOUT)      :: noco
       TYPE(t_stars),INTENT(INOUT)     :: stars
-      
+
       TYPE(t_kpts),INTENT(INOUT)      :: kpts
       TYPE(t_oneD),INTENT(INOUT)      :: oneD
       CHARACTER(len=*),INTENT(IN)     :: latnam
@@ -101,7 +100,7 @@
             stars%kq2_fft = MAX(kq2,stars%kq2_fft)
             stars%kq3_fft = MAX(kq3,stars%kq3_fft)
 
-        
+
          ENDDO ! k=pts
          REWIND(41)
          READ (41,*)

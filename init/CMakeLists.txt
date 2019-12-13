@@ -1,12 +1,12 @@
 set(fleur_F77 ${fleur_F77}
-init/bandstr1.F
+#init/bandstr1.F
 init/boxdim.f
 #init/convn_dim.f
 init/gtest.f
 init/ifft235.f
 init/lhcal.f
 init/local_sym.f
-init/mod_symdata.f
+#init/mod_symdata.f
 init/od_chisym.f
 init/prp_xcfft_box.f
 init/ptsym.f

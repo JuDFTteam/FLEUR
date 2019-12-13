@@ -28,6 +28,8 @@ read_inpgen_input.f90
 super_check.f90
 make_kpoints.f90
 read_old_inp.f90
+ss_sym.f
+mod_symdata.f
 old_inp/apws_dim.f90
 old_inp/dimen7.F90
 old_inp/dimens.F90
@@ -42,6 +44,7 @@ old_inp/setup.f90
 old_inp/rw_noco.f90
 old_inp/rw_symfile.f
 old_inp/spg2set.f
+old_inp/inpeig.f90
 
 ${FLEUR_SRC}/init/compile_descr.F90
 ${FLEUR_SRC}/global/sort.f90
@@ -99,8 +102,6 @@ ${FLEUR_SRC}/cdn_mt/rhonmt21.f90
 ${FLEUR_SRC}/xc-pot/gaunt.f90
 ${FLEUR_SRC}/math/grule.f90
 ${FLEUR_SRC}/init/ifft235.f
-${FLEUR_SRC}/init/mod_symdata.f
-${FLEUR_SRC}/init/inpeig.f90
 ${FLEUR_SRC}/kpoints/gkptwgt.f90
 ${FLEUR_SRC}/init/local_sym.f
 ${FLEUR_SRC}/init/lhcal.f
@@ -113,7 +114,6 @@ ${FLEUR_SRC}/global/utility.F90
 ${FLEUR_SRC}/global/radsra.f
 ${FLEUR_SRC}/global/differ.f
 ${FLEUR_SRC}/global/soc_sym.f
-${FLEUR_SRC}/global/ss_sym.f
 ${FLEUR_SRC}/math/inwint.f
 ${FLEUR_SRC}/math/outint.f
 ${FLEUR_SRC}/math/intgr.F90

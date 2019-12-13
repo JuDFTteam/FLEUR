@@ -14,7 +14,7 @@ core/inconi.f
 core/inconz.f
 core/kernel1.f
 core/kernel2.f
-core/nshell.f
+#core/nshell.f
 core/nwrfst.f
 core/rinvgj.f
 core/rsimp.f
@@ -25,5 +25,4 @@ core/ccdnup.f90
 core/cored.F90
 core/coredr.F90
 core/etabinit.F90
-#core/setcor.f90
 )

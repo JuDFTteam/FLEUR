@@ -115,7 +115,7 @@ CONTAINS
 
     ! local scalars
     INTEGER :: eig_id,archiveType, num_threads
-    INTEGER :: iter,iterHF,i
+    INTEGER :: iter,iterHF,i,n
     INTEGER :: wannierspin
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
     REAL    :: fix

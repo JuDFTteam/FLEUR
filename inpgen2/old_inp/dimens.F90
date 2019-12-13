@@ -19,7 +19,6 @@ CONTAINS
     USE m_types_stars
     USE m_types_atoms
     USE m_types_sphhar
-    USE m_types_dimension
     USE m_types_vacuum
     USE m_types_kpts
     USE m_types_oned
@@ -33,7 +32,7 @@ CONTAINS
     TYPE(t_stars),INTENT(INOUT) :: stars
     TYPE(t_atoms),INTENT(INOUT) :: atoms
     TYPE(t_sphhar),INTENT(INOUT) :: sphhar
-    
+
     TYPE(t_vacuum),INTENT(INOUT) :: vacuum
     TYPE(t_kpts),INTENT(INOUT) :: kpts
     TYPE(t_oneD),INTENT(INOUT) :: oneD

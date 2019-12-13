@@ -26,7 +26,6 @@
       USE m_types_stars
       USE m_types_atoms
       USE m_types_sphhar
-      USE m_types_dimension
       USE m_types_vacuum
       USE m_types_kpts
       USE m_types_oneD

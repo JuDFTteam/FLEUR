@@ -26,7 +26,6 @@ CONTAINS
     TYPE(t_stars),INTENT(INOUT) :: stars
     TYPE(t_atoms),INTENT(INOUT) :: atoms
     TYPE(t_sphhar),INTENT(INOUT) :: sphhar
-    TYPE(t_dimension),INTENT(INOUT) :: dimension
     TYPE(t_vacuum),INTENT(INOUT) :: vacuum
     TYPE(t_obsolete),INTENT(INOUT) :: obsolete
     TYPE(t_kpts),INTENT(INOUT) :: kpts

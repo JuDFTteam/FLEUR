@@ -12,7 +12,6 @@ CONTAINS
        sliceplot,banddos,enpara,xcpot,kpts,hybrid,&
        oneD,grid)
     USE m_types_input
-    USE m_types_dimension
     USE m_types_atoms
     USE m_types_sphhar
     USE m_types_cell
