@@ -26,9 +26,9 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)   :: cell
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_noco),INTENT(IN)   :: noco
-    TYPE(t_oneD),INTENT(IN)   :: oneD
+    TYPE(t_oneD),INTENT(INOUT):: oneD
     TYPE(t_input),INTENT(IN)  :: input
-    
+
     integer :: nsymt
     integer,allocatable::nrot(:),locops(:,:)
 
@@ -40,7 +40,7 @@ CONTAINS
        ! thus the symmetry operations are doubled
        sym%nsym = 2*sym%nop
     END IF
-    
+
     !Generated wigner symbols for LDA+U
     IF (ALLOCATED(sym%d_wgn)) DEALLOCATE(sym%d_wgn)
     ALLOCATE(sym%d_wgn(-3:3,-3:3,3,sym%nop))
@@ -65,7 +65,7 @@ CONTAINS
      CALL mapatom(sym,atoms,cell,input,noco)
      !CALL od_mapatom(oneD,atoms,sym,cell)
   END IF
- 
+
 
 END SUBROUTINE make_sym
 END MODULE m_make_sym
