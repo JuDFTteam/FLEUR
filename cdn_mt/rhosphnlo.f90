@@ -29,16 +29,16 @@ CONTAINS
     INTEGER,    INTENT (IN) :: itype
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: aclo(atoms%nlod),bclo(atoms%nlod),cclo(atoms%nlod,atoms%nlod)
-    REAL,    INTENT (IN) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: dulon(atoms%nlod),uulon(atoms%nlod),vr(atoms%jmtd)
-    REAL,    INTENT (IN) :: uloulopn(atoms%nlod,atoms%nlod),ello(atoms%nlod)
-    REAL,    INTENT (IN) :: f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd)
-    REAL,    INTENT (INOUT) :: qmtllo(0:atoms%lmaxd)
-    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd)
-    REAL,    INTENT (INOUT) :: rhoLRes(atoms%jmtd,0:sphhar%nlhd,0:(atoms%lmaxd*(atoms%lmaxd+1))/2+atoms%lmaxd)
+    REAL,    INTENT (IN) :: aclo(:),bclo(:),cclo(:,:)
+    REAL,    INTENT (IN) :: acnmt(0:,:,:)
+    REAL,    INTENT (IN) :: bcnmt(0:,:,:)
+    REAL,    INTENT (IN) :: ccnmt(:,:,:)
+    REAL,    INTENT (IN) :: dulon(:),uulon(:),vr(:)
+    REAL,    INTENT (IN) :: uloulopn(:,:),ello(:)
+    REAL,    INTENT (IN) :: f(:,:,0:),g(:,:,0:)
+    REAL,    INTENT (INOUT) :: qmtllo(0:)
+    REAL,    INTENT (INOUT) :: rho(:,0:)
+    REAL,    INTENT (INOUT) :: rhoLRes(:,0:,0:)
     !     ..
     !     .. Local Scalars ..
     REAL dsdum,usdum ,c_1,c_2

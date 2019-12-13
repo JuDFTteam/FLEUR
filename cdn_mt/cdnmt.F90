@@ -129,11 +129,11 @@ CONTAINS
           CALL rhosphnlo(itype,atoms,sphhar,sym,&
                usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),&
                usdus%uulon(:,itype,ispin),enpara%ello0(:,itype,ispin),&
-               vr(1,itype,ispin),denCoeffs%aclo(:,itype,ispin),denCoeffs%bclo(:,itype,ispin),&
-               denCoeffs%cclo(:,:,itype,ispin),denCoeffs%acnmt(0,:,:,itype,ispin),&
-               denCoeffs%bcnmt(0,:,:,itype,ispin),denCoeffs%ccnmt(:,:,:,itype,ispin),&
-               f(1,1,0,ispin),g(1,1,0,ispin),&
-               rho(:,0:,itype,ispin),moments%rhoLRes(:,0:,:,itype,ispin),qmtllo)
+               vr(:,itype,ispin),denCoeffs%aclo(:,itype,ispin),denCoeffs%bclo(:,itype,ispin),&
+               denCoeffs%cclo(:,:,itype,ispin),denCoeffs%acnmt(0:,:,:,itype,ispin),&
+               denCoeffs%bcnmt(0:,:,:,itype,ispin),denCoeffs%ccnmt(:,:,:,itype,ispin),&
+               f(:,:,0:,ispin),g(:,:,0:,ispin),&
+               rho(:,0:,itype,ispin),moments%rhoLRes(:,0:,0:,itype,ispin),qmtllo)
 
 
           !--->       l-decomposed density for each atom type
@@ -158,9 +158,9 @@ CONTAINS
           !+soc
           !--->       spherical angular component
           IF (noco%l_soc) THEN
-             CALL orbmom2(atoms,itype,ispin,usdus%ddn(0,itype,ispin),&
-                          orb,usdus%uulon(1,itype,ispin),usdus%dulon(1,itype,ispin),&
-                          usdus%uloulopn(1,1,itype,ispin),moments%clmom(1,itype,ispin))!keep
+             CALL orbmom2(atoms,itype,ispin,usdus%ddn(0:,itype,ispin),&
+                          orb,usdus%uulon(:,itype,ispin),usdus%dulon(:,itype,ispin),&
+                          usdus%uloulopn(:,:,itype,ispin),moments%clmom(:,itype,ispin))!keep
           ENDIF
           !-soc
           !--->       non-spherical components

@@ -32,11 +32,11 @@ MODULE m_types_atoms
 
   TYPE t_utype
       SEQUENCE
-      REAL :: u, j         ! the actual U and J parameters
-      REAL :: theta,phi   !the rotation angles by which the density metrics is rotated
-      INTEGER :: l        ! the l quantum number to which this U parameter belongs
-      INTEGER :: atomType ! The atom type to which this U parameter belongs
-      LOGICAL :: l_amf ! logical switch to choose the "around mean field" LDA+U limit
+      REAL :: u=0.0, j=0.0         ! the actual U and J parameters
+      REAL :: theta=0.0,phi=0.0   !the rotation angles by which the density metrics is rotated
+      INTEGER :: l=-1        ! the l quantum number to which this U parameter belongs
+      INTEGER :: atomType=0 ! The atom type to which this U parameter belongs
+      LOGICAL :: l_amf=.false. ! logical switch to choose the "around mean field" LDA+U limit
    END TYPE t_utype
    TYPE,EXTENDS(t_fleurinput_base):: t_atoms
       !<no of types
