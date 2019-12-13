@@ -275,7 +275,7 @@ CONTAINS
 !     list eigenvalues
 190   IF (conv) WRITE (6, FMT=8040) it, dist
       DO isp = 1, input%jspins
-         ispin=merge(isp,3-isp,bmu_l>0)
+         ispin=merge(isp,3-isp,(bmu_l>0).or.(input%jspins<2))
          WRITE (6, '(a8,i2)') 'spin No.',ispin
          DO k = 1, nst
             fj = iabs(kappa(k)) - 0.5e0
@@ -299,7 +299,7 @@ CONTAINS
 8050  FORMAT(3x, i1, i5, i5, f6.1, 2(3x, f7.2, 1x, 2f12.6))
 8060  FORMAT('it,dist,p=', i4, 2f12.5)
 
-      IF (bmu_l<0) THEN
+      IF (input%jspins>1.and.bmu_l<0) THEN
          DO i=1,nst
             bmu_l=eig(i,1)
             eig(i,1)=eig(i,2)

@@ -111,8 +111,11 @@ MODULE m_types_noco
 
       ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       ALLOCATE(this%l_relax(ntype),this%b_con(2,ntype))
+      this%l_relax=.false.; this%b_con=0.0
       ALLOCATE(this%alphInit(ntype),this%alph(ntype),this%beta(ntype))
+      this%alphInit=0.0;this%alph=0.0;this%beta=0.0
       ALLOCATE(this%socscale(ntype))
+      this%socscale=0.0
 
       DO itype=1,ntype
         this%socscale(Itype)=1.0

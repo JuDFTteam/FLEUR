@@ -11,7 +11,7 @@ MODULE m_types_sliceplot
   PRIVATE
   PUBLIC:: t_sliceplot
   TYPE,EXTENDS(t_fleurinput_base) ::t_sliceplot
-     LOGICAL :: iplot=.FALSE.
+     INTEGER :: iplot=0
      LOGICAL :: slice=.FALSE.
      LOGICAL :: plpot=.FALSE.
      INTEGER :: kk=0

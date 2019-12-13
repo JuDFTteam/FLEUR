@@ -9,12 +9,11 @@ set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 # KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0
 # Fe_bcc_GreensFunction Fe_1l_GreensFunction
+#  CoUnfold
 
-set(SerialOnlyTests  CoUnfold gw1Interface gw2Iterface)# TiO2eels TiO2eelsXML)
+set(SerialOnlyTests  )
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
-set(SerialOnlyTests  Fe_bct_LO Fe_fcc CoUnfold)# TiO2eels TiO2eelsXML)
-set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
 if (${FLEUR_USE_HDF5})
    set(SerialOnlyTests ${SerialOnlyTests} gw1Interface gw2Interface)

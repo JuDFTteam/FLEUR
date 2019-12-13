@@ -9,7 +9,7 @@ jt::testrun($executable,$workdir);
 
 #now test output
 $result=jt::test_grepexists("$workdir/out","it= 12  is completed");
-$result+=jt::test_grepnumber("$workdir/out","first approx. to ef",".*: *([^ ]*)",0.126,0.001);
-$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-4204.7140,0.0001);
+$result+=jt::test_grepnumber("$workdir/out","first approx. to ef",".*: *([^ ]*)",0.121,0.001);
+$result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-4204.7186,0.0001);
 
 jt::stageresult($workdir,$result,"2");
