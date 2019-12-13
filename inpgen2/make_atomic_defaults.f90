@@ -57,7 +57,6 @@ CONTAINS
 
       atoms%nz(:) = NINT(atoms%zatom(:))
       atoms%rmt(:) = 999.9
-      atoms%ulo_der = 0
       atoms%l_geo(:) = .TRUE.;
       atoms%flipSpinPhi=0.0
       atoms%flipSpinTheta=0.0
