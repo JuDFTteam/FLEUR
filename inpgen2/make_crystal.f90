@@ -46,7 +46,7 @@ CONTAINS
     !---> read in atomic positions and shift to (-1/2,1/2] in lattice
     !---> coords. also read in identification (atomic) number (atomid)
     !---> to distinguish different atom types (need not be atomic number)
-    DO n=1,atoms%nat
+    DO n=1,size(atompos,2)
        atompos(:,n) = atompos(:,n) - ANINT( atompos(:,n) - eps7 )
     ENDDO
 
