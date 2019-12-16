@@ -70,7 +70,7 @@ MODULE m_types_input
      LOGICAL :: ldauLinMix=.FALSE.
      REAL    :: ldauMixParam=0.1
      REAL    :: ldauSpinf=2.0
-     LOGICAL :: ldauAdjEnpara
+     LOGICAL :: ldauAdjEnpara=.false.
       LOGICAL :: l_dftspinpol=.false.
       LOGICAL :: l_gfsphavg=.false.
       LOGICAL :: l_gfmperp=.false.
