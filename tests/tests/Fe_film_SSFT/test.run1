@@ -1,0 +1,10 @@
+#juDFT Testscript
+
+jt::copyfile("files/inp.xml",$workdir);
+
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_grep_lastnumber("$workdir/out","total energy=","= *([^ ]*)",-1270.42430970000,0.00001);
+
+jt::stageresult($workdir,$result,"1");
