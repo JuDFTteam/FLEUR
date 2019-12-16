@@ -71,11 +71,11 @@ MODULE m_types_input
      REAL    :: ldauMixParam=0.1
      REAL    :: ldauSpinf=2.0
      LOGICAL :: ldauAdjEnpara
-      LOGICAL :: l_dftspinpol
-      LOGICAL :: l_gfsphavg
-      LOGICAL :: l_gfmperp
-      LOGICAL :: l_resolvent
-      LOGICAL :: l_hist
+      LOGICAL :: l_dftspinpol=.false.
+      LOGICAL :: l_gfsphavg=.false.
+      LOGICAL :: l_gfmperp=.false.
+      LOGICAL :: l_resolvent=.false.
+      LOGICAL :: l_hist=.false.
       INTEGER :: gf_ne
       REAL    :: gf_ellow
       REAL    :: gf_elup
@@ -89,10 +89,10 @@ MODULE m_types_input
       INTEGER :: gf_n3
       INTEGER :: gf_nmatsub
       REAL    :: gf_sigma
-      LOGICAL :: gf_anacont
-      LOGICAL :: gf_dosfermi
-      LOGICAL :: l_gf !this switch is used to make sure, that all bands are included in the calculation
-      LOGICAL :: gfTet !This switch will be true iff the tetrahedron were calculated from the equdistant grid
+      LOGICAL :: gf_anacont=.false.
+      LOGICAL :: gf_dosfermi=.false.
+      LOGICAL :: l_gf =.false. !this switch is used to make sure, that all bands are included in the calculation
+      LOGICAL :: gfTet=.false. !This switch will be true iff the tetrahedron were calculated from the equdistant grid
      LOGICAL :: l_rdmft=.FALSE.
      REAL    :: rdmftOccEps=0.0
      INTEGER :: rdmftStatesBelow=0
