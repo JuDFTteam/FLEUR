@@ -151,7 +151,32 @@ sub test_grepnumber($$$$$){
     }
 }
 
+sub test_grep_lastnumber($$$$$){
+    my $file=shift;
+    my $grepfor=shift;
+    my $reg=shift;
+    my $value=shift;
+    my $tol=shift;
 
+    print LOG POSIX::strftime("%m/%d/%Y %H:%M:%S--", localtime);
+    print LOG "Grep for $grepfor in $file:";
+
+    my $l=`grep \"$grepfor\" $file | tail -1`;
+
+
+    $l=~m/$reg/s;
+
+
+    print LOG "$1 == $value:";
+
+    if (abs($1-$value)<$tol){
+        print LOG "ok\n";
+        return 0;
+    }else{
+	print LOG "failed\n";
+        return 1;
+    }
+}       
 
 
 sub stageresult($$$){
