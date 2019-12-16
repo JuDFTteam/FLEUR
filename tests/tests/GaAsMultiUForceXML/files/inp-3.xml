@@ -10,7 +10,7 @@
       <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
       <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F"/>
       <expertModes gw="0" pot8="F" isec1="99" secvar="F"/>
-      <geometryOptimization l_f="T" forcealpha="1.00000000" force_converged="0.00002" />
+      <geometryOptimization l_f="T" forcealpha="1.00000000" force_converged="0.2" />
       <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000">
       <kPointList name="default" count="1">
           <kPoint weight="    8.000000">    0.375000     0.375000     0.250000</kPoint>
