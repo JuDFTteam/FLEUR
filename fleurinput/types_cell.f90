@@ -24,7 +24,7 @@ MODULE m_types_cell
      !square of bbmat
      REAL::bbmat(3, 3),aamat(3,3)
      !d-value
-     REAL::z1
+     REAL::z1=0.0
      !volume of cell
      REAL::vol
      !volume of interstitial

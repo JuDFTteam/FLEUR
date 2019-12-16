@@ -109,12 +109,6 @@ MODULE m_types_atoms
       !labels
       CHARACTER(LEN=20), ALLOCATABLE :: label(:)
       CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
-      !name and other data of explicitely provided xc functional
-      CHARACTER(len=4), ALLOCATABLE :: namex(:)
-      INTEGER, ALLOCATABLE :: icorr(:)
-      INTEGER, ALLOCATABLE :: igrd(:)
-      INTEGER, ALLOCATABLE :: krla(:)
-      LOGICAL, ALLOCATABLE :: relcor(:)
       !lda_u information(ntype)
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
       TYPE(t_utype),ALLOCATABLE::lda_hia(:)
@@ -186,11 +180,6 @@ MODULE m_types_atoms
      call mpi_bc(this%bmu,rank,mpi_comm)
      call mpi_bc(this%pos,rank,mpi_comm)
      call mpi_bc(this%taual,rank,mpi_comm)
-     !call mpi_bc(this% namex,rank,mpi_comm)
-     call mpi_bc(this%icorr,rank,mpi_comm)
-     call mpi_bc(this%igrd,rank,mpi_comm)
-     call mpi_bc(this%krla,rank,mpi_comm)
-     call mpi_bc(this%relcor,rank,mpi_comm)
      call mpi_bc(this%relax,rank,mpi_comm)
      call mpi_bc(this%flipSpinPhi,rank,mpi_comm)
      call mpi_bc(this%flipSpinTheta,rank,mpi_comm)
@@ -535,7 +524,7 @@ MODULE m_types_atoms
     END DO
     this%nlotot = 0
     DO n = 1, this%ntype
-       DO l = 1,this%nlo(n) 
+       DO l = 1,this%nlo(n)
           this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
        END DO
     END DO

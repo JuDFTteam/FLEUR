@@ -30,6 +30,10 @@ CONTAINS
 
       qtot = 0.0
       qistot = 0.0
+      qvac=0.0
+      q=0.0
+      qis=0.0
+      qmt=0.0
       DO jsp = 1,input%jspins
          q(jsp) = 0.0
 !     -----mt charge
