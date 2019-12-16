@@ -3,6 +3,7 @@
 
 jt::copyfile("files/inp-3.xml","$workdir/inp.xml");
 
+jt::testrun("rm mixi*",$workdir);
 jt::testrun($executable,$workdir);
 
 #now test output

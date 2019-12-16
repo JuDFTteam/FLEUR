@@ -54,8 +54,8 @@ MODULE m_types_mixvector
      PROCEDURE :: multiply_dot_mask
      PROCEDURE :: read_unformatted
      PROCEDURE :: write_unformatted
-     GENERIC :: READ(UNFORMATTED) =>read_unformatted
-     GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
+     !GENERIC :: READ(UNFORMATTED) =>read_unformatted
+     !GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
   END TYPE t_mixvector
 
   INTERFACE OPERATOR (*)
