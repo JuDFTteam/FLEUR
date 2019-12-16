@@ -1,0 +1,11 @@
+$test_name="Fe monolayer fcc (110): spin spiral energy";
+$test_code="Fleur";
+$test_stages=1;
+$test_desc=<<EOF
+Simple test of Fleur which converges a spin spiral in
+bulk Fe.
+This test was callibrated via MaX-R4 release becuase
+MaX-R4 was shown to give the same results as version 26d.
+Uses: spin spiral force theorem
+EOF
+;
