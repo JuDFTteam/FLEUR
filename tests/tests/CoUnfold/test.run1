@@ -1,7 +1,7 @@
 #juDFT Testscript
 
 jt::copyfile("files/inp.xml",$workdir);
-jt::copyfile("files/sym.out",$workdir);
+jt::copyfile("files/sym.xml",$workdir);
 
 jt::testrun("$executable ",$workdir);
 

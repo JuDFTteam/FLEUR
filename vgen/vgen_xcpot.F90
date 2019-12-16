@@ -9,8 +9,8 @@ MODULE m_vgen_xcpot
 
 CONTAINS
 
-   SUBROUTINE vgen_xcpot(hybrid, input, xcpot, dimension, atoms, sphhar, stars, vacuum, sym, &
-                         obsolete, cell, oneD, sliceplot, mpi, noco, den, denRot, EnergyDen, vTot, vx, results)
+   SUBROUTINE vgen_xcpot(hybrid, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
+                          cell, oneD, sliceplot, mpi, noco, den, denRot, EnergyDen, vTot, vx, results)
 
       !     ***********************************************************
       !     FLAPW potential generator                           *
@@ -40,9 +40,8 @@ CONTAINS
       CLASS(t_xcpot), INTENT(INOUT)           :: xcpot
       TYPE(t_hybrid), INTENT(IN)              :: hybrid
       TYPE(t_mpi), INTENT(IN)              :: mpi
-      TYPE(t_dimension), INTENT(IN)              :: dimension
+
       TYPE(t_oneD), INTENT(IN)              :: oneD
-      TYPE(t_obsolete), INTENT(IN)              :: obsolete
       TYPE(t_sliceplot), INTENT(IN)              :: sliceplot
       TYPE(t_input), INTENT(IN)              :: input
       TYPE(t_vacuum), INTENT(IN)              :: vacuum
@@ -96,7 +95,7 @@ CONTAINS
                   CALL vvacxc(ifftd2, stars, vacuum, xcpot, input, noco, Den, vTot, exc)
                ELSE
                   CALL judft_error("OneD broken")
-                  ! CALL vvacxc(stars,oneD%M,vacuum,odi%n2d,dimension,ifftd2,&
+                  ! CALL vvacxc(stars,oneD%M,vacuum,odi%n2d,ifftd2,&
                   !             xcpot,input,odi%nq2,odi%nst2,den,noco,odi%kimax2%igf,&
                   !             odl%pgf,vTot%vacxy,vTot%vacz,excxy,excz)
                END IF
@@ -104,11 +103,11 @@ CONTAINS
                IF (oneD%odi%d1) THEN
                   CALL judft_error("OneD broken")
                   ! CALL vvacxcg(ifftd2,stars,vacuum,noco,oneD,&
-                  !              cell,xcpot,input,obsolete,workDen, ichsmrg,&
+                  !              cell,xcpot,input,workDen, ichsmrg,&
                   !              vTot%vacxy,vTot%vacz,rhmn, exc%vacxy,exc%vacz)
 
                ELSE
-                  CALL vvacxcg(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input, obsolete, Den, vTot, exc)
+                  CALL vvacxcg(ifftd2, stars, vacuum, noco, oneD, cell, xcpot, input,  Den, vTot, exc)
                END IF
             END IF
             CALL timestop("Vxc in vacuum")
@@ -116,19 +115,8 @@ CONTAINS
 
          ! interstitial region
          CALL timestart("Vxc in interstitial")
-
-         IF ((.NOT. obsolete%lwb) .OR. (.not. xcpot%needs_grad())) THEN
-            ! no White-Bird-trick
             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen, vTot, vx, exc)
-
-         ELSE
-            ! White-Bird-trick
-            WRITE (6, '(a)') "W+B trick cancelled out. visxcwb uses at present common block cpgft3.", &
-               "visxcwb needs to be reprogrammed according to visxcg.f"
-            CALL juDFT_error("visxcwb", calledby="vgen")
-         END IF
-
-         CALL timestop("Vxc in interstitial")
+      CALL timestop("Vxc in interstitial")
       END IF !irank==0
 
       !
@@ -138,7 +126,7 @@ CONTAINS
       IF (mpi%irank == 0) THEN
          CALL timestart("Vxc in MT")
       END IF
-      
+
 
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
                   EnergyDen, noco,vTot, vx, exc)
@@ -148,7 +136,7 @@ CONTAINS
          CALL timestop("Vxc in MT")
 
          ! check continuity of total potential
-         IF (input%vchk) CALL checkDOPAll(input, dimension, sphhar, stars, atoms, sym, vacuum, oneD, cell, vTot, 1)
+         IF (input%vchk) CALL checkDOPAll(input,  sphhar, stars, atoms, sym, vacuum, oneD, cell, vTot, 1)
 
          ! TOTAL
          IF (PRESENT(results)) THEN
@@ -188,7 +176,7 @@ CONTAINS
 
                ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,input%jspins), rhoc_vx(atoms%jmtd))
                ALLOCATE(tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins))
-               CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
+               CALL readCoreDensity(input,atoms,rhoc,tec,qintc)
                DEALLOCATE(tec,qintc)
 
                DO ispin = 1, input%jspins

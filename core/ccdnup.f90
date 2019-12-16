@@ -23,7 +23,7 @@ CONTAINS
     REAL,    INTENT (IN) :: sume
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: rhochr(:),rhospn(:)!(dimension%msh)
+    REAL,    INTENT (IN) :: rhochr(:),rhospn(:)!(atoms%msh)
     REAL,    INTENT (IN) :: vrs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT) :: tecs(:,:)!(atoms%ntype,input%jspins)
     REAL,    INTENT (OUT) :: qints(:,:)!(atoms%ntype,input%jspins)

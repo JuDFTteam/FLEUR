@@ -13,7 +13,7 @@ SUBROUTINE genNewNocoInp(input,atoms,noco,noco_new)
    USE m_juDFT
    USE m_types
    USE m_constants
-   USE m_rwnoco
+   !USE m_rwnoco
 
    IMPLICIT NONE
 
@@ -47,9 +47,10 @@ SUBROUTINE genNewNocoInp(input,atoms,noco,noco_new)
       iatom= iatom + atoms%neq(iType)
    END DO
 
+   CALL judft_error("BUG:noco-write feature not implemented at present")
    OPEN (24,file='nocoinp',form='formatted', status='unknown')
    REWIND (24)
-   CALL rw_noco_write(atoms,noco_new, input)
+   !CALL rw_noco_write(atoms,noco_new, input)
    CLOSE (24)
 
 END SUBROUTINE genNewNocoInp

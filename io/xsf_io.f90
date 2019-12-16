@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_xsf_io
-  USE m_types
+  USE m_types_atoms
   !-----------------------------------------------
   ! DESC:subroutines to write xsf-files for xcrysden
   !                 Daniel Wortmann, (06-01-26)

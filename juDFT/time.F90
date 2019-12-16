@@ -201,7 +201,7 @@ CONTAINS
             sum_time = sum_time + times(i)
             times(i) = 0.0
          ENDDO
-         WRITE (fid, "(t77,'Sum: ',f5.1,'%')") sum_time/timer%time*100.
+         WRITE (fid, "(t77,'Sum: ',f5.1,'%')") sum_time/max(1E-10,timer%time*100.)
          WRITE (fid, *)
          WRITE (fid, *) "-------------------------------------------------"
          WRITE (fid, *)
@@ -598,7 +598,7 @@ CONTAINS
          WRITE (timestring, "(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec')") time, ihours, iminutes, INT(seconds)
       ELSE
          WRITE (timestring, "(f9.2,'sec= ',i3,'h ',i2,'min ',i2,'sec ->',1x,f5.1,'%')") &
-            time, ihours, iminutes, INT(seconds), time/ttime*100.0
+            time, ihours, iminutes, INT(seconds), time/max(1E-10,ttime*100.0)
       ENDIF
    END FUNCTION timestring
 

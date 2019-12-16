@@ -2,7 +2,7 @@
       CONTAINS
         SUBROUTINE checkdop(&
              &                    p,np,n,na,ivac,iflag,jsp,&
-             &                    DIMENSION,atoms,sphhar,stars,sym,&
+             &                    atoms,sphhar,stars,sym,&
              &                    vacuum,cell,oneD,potden)
           ! ************************************************************
           !     subroutines checks the continuity of coulomb           *
@@ -23,8 +23,8 @@
           IMPLICIT NONE
           !     ..
           !     .. Scalar Arguments ..
-          TYPE(t_dimension),INTENT(IN) :: dimension
-          type(t_sphhar),intent(in)    :: sphhar      
+          
+          type(t_sphhar),intent(in)    :: sphhar
           TYPE(t_stars),INTENT(IN)     :: stars
           TYPE(t_atoms),INTENT(IN)     :: atoms
           TYPE(t_sym),INTENT(IN)       :: sym
@@ -37,7 +37,7 @@
           !-odim
           !+odim
           !     .. Array Arguments ..
-          REAL,    INTENT (IN) :: p(3,DIMENSION%nspd)
+          REAL,    INTENT (IN) :: p(:,:)!(3,DIMENSION%nspd)
           !     ..
           !     .. Local Scalars ..
           REAL av,dms,rms,s,ir2,help,phi
@@ -47,12 +47,12 @@
           !     ..
           !     .. Local Arrays ..
           COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm( (atoms%lmaxd+1)**2 )
-          REAL rcc(3),v1(DIMENSION%nspd),v2(DIMENSION%nspd),x(3),ri(3)
+          REAL rcc(3),v1(SIZE(p,2)),v2(SIZE(p,2)),x(3),ri(3)
 
           l_cdn = .FALSE. ! By default we assume that the input is a potential.
           IF (potden%potdenType.LE.0) CALL juDFT_error('unknown potden type', calledby='checkdop')
           IF (potden%potdenType.GT.1000) l_cdn = .TRUE. ! potdenTypes > 1000 are reserved for densities
-          
+
 
           !     ..
           !     ..
@@ -90,7 +90,7 @@
              DO  j = 1,np
                 IF (.NOT.oneD%odi%d1) THEN
                    CALL starf2(&
-                        &           sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1,j),sym%invtab,&
+                        &           sym%nop2,stars%ng2,stars%kv2,sym%mrot,sym%symor,sym%tau,p(1:3,j),sym%invtab,&
                         &           sf2)!keep
                    v2(j) = potden%vacz(1,ivac,jsp)
                    DO  k = 2,stars%ng2
@@ -142,8 +142,8 @@
           ENDIF
           ir2 = 1.0
           IF (l_cdn) ir2 = 1.0 / ( atoms%rmt(n)*atoms%rmt(n) )
-          nd = atoms%ntypsy(na)
-          nopa = atoms%ngopr(na)
+          nd = sym%ntypsy(na)
+          nopa = sym%ngopr(na)
           IF (oneD%odi%d1) THEN
              nopa = oneD%ods%ngopr(na)
              nopa = oneD%ods%invtab(nopa)
@@ -183,7 +183,7 @@
                 ENDDO
                 help = help + potden%mt(atoms%jri(n),lh,n,jsp) * s
              ENDDO
-             v2(j) = help * ir2 
+             v2(j) = help * ir2
              IF (j.LE.8) THEN
                 rcc=MATMUL(cell%bmat,p(:,j))/tpi_const
 

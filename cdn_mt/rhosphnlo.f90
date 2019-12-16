@@ -6,14 +6,14 @@
 
 MODULE m_rhosphnlo
   !***********************************************************************
-  ! Add the local orbital contributions to the charge density. The 
+  ! Add the local orbital contributions to the charge density. The
   ! corresponding summation of the pure apw contribuions is done in
   ! cdnval.
   ! Philipp Kurz 99/04
   !***********************************************************************
 CONTAINS
-  SUBROUTINE rhosphnlo(itype,atoms,sphhar, uloulopn,dulon,uulon,&
-       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,qmtllo,rhoLRes)
+  SUBROUTINE rhosphnlo(itype,atoms,sphhar,sym, uloulopn,dulon,uulon,&
+       ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,rholres,qmtllo)
 
     USE m_constants, ONLY : c_light,sfp_const
     USE m_radsra
@@ -22,21 +22,23 @@ CONTAINS
     IMPLICIT NONE
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
+    TYPE(t_sym),INTENT(IN)      :: sym
+
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,    INTENT (IN) :: itype 
+    INTEGER,    INTENT (IN) :: itype
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: aclo(atoms%nlod),bclo(atoms%nlod),cclo(atoms%nlod,atoms%nlod)
-    REAL,    INTENT (IN) :: acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd)
-    REAL,    INTENT (IN) :: dulon(atoms%nlod),uulon(atoms%nlod),vr(atoms%jmtd)
-    REAL,    INTENT (IN) :: uloulopn(atoms%nlod,atoms%nlod),ello(atoms%nlod)
-    REAL,    INTENT (IN) :: f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd)
-    REAL,    INTENT (INOUT) :: qmtllo(0:atoms%lmaxd)
-    REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd)
-    REAL,    INTENT (INOUT) :: rhoLRes(atoms%jmtd,0:sphhar%nlhd,0:(atoms%lmaxd*(atoms%lmaxd+1))/2+atoms%lmaxd)
+    REAL,    INTENT (IN) :: aclo(:),bclo(:),cclo(:,:)
+    REAL,    INTENT (IN) :: acnmt(0:,:,:)
+    REAL,    INTENT (IN) :: bcnmt(0:,:,:)
+    REAL,    INTENT (IN) :: ccnmt(:,:,:)
+    REAL,    INTENT (IN) :: dulon(:),uulon(:),vr(:)
+    REAL,    INTENT (IN) :: uloulopn(:,:),ello(:)
+    REAL,    INTENT (IN) :: f(:,:,0:),g(:,:,0:)
+    REAL,    INTENT (INOUT) :: qmtllo(0:)
+    REAL,    INTENT (INOUT) :: rho(:,0:)
+    REAL,    INTENT (INOUT) :: rhoLRes(:,0:,0:)
     !     ..
     !     .. Local Scalars ..
     REAL dsdum,usdum ,c_1,c_2
@@ -114,7 +116,7 @@ CONTAINS
     !---> add the contribution of the local orbitals and flapw - lo cross-
     !---> terms to the non-spherical chargedensity inside the muffin tins.
 
-    DO lh = 1,sphhar%nlh(atoms%ntypsy(atoms%nat))
+    DO lh = 1,sphhar%nlh(sym%ntypsy(atoms%nat))
        DO lp = 0,atoms%lmax(itype)
           DO lo = 1,atoms%nlo(itype)
              l = atoms%llo(lo,itype)

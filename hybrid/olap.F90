@@ -1,4 +1,5 @@
 MODULE m_olap
+      USE m_types_hybdat
 
 CONTAINS
 

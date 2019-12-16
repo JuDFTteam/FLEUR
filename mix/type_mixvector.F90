@@ -7,7 +7,7 @@ MODULE m_types_mixvector
   !TODO!!!
   ! LDA+U
   ! Noco (third spin)
-  
+
   use m_types
   implicit none
 #ifdef CPP_MPI
@@ -19,6 +19,7 @@ MODULE m_types_mixvector
   TYPE(t_cell),POINTER   :: cell
   TYPE(t_sphhar),POINTER :: sphhar
   TYPE(t_atoms),POINTER  :: atoms  =>null()
+  TYPE(t_sym),POINTER    :: sym  =>null()
   INTEGER                :: jspins,nvac
   LOGICAL                :: l_noco,invs,invs2,l_mtnocopot,l_mperp,l_ldau
   INTEGER                :: pw_length !The shape of the local arrays
@@ -39,7 +40,7 @@ MODULE m_types_mixvector
   INTEGER                :: mt_size=1
   LOGICAL                :: l_pot=.FALSE. !Is this a potential?
   REAL,ALLOCATABLE       :: g_mt(:),g_vac(:),g_misc(:)
-  
+
   TYPE,PUBLIC:: t_mixvector
      REAL,ALLOCATABLE       :: vec_pw(:)
      REAL,ALLOCATABLE       :: vec_mt(:)
@@ -53,8 +54,8 @@ MODULE m_types_mixvector
      PROCEDURE :: multiply_dot_mask
      PROCEDURE :: read_unformatted
      PROCEDURE :: write_unformatted
-     GENERIC :: READ(UNFORMATTED) =>read_unformatted
-     GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
+     !GENERIC :: READ(UNFORMATTED) =>read_unformatted
+     !GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
   END TYPE t_mixvector
 
   INTERFACE OPERATOR (*)
@@ -102,18 +103,19 @@ CONTAINS
     IF (misc_here) WRITE(unit) this%vec_misc
   END SUBROUTINE write_unformatted
 
-  
+
 
 
   SUBROUTINE mixvector_reset()
     IMPLICIT NONE
     atoms=>NULL()
+    sym=>NULL()
     IF (ALLOCATED(g_mt)) DEALLOCATE(g_mt)
     IF (ALLOCATED(g_vac)) DEALLOCATE(g_vac)
     IF (ALLOCATED(g_misc)) DEALLOCATE(g_misc)
   END SUBROUTINE mixvector_reset
 
-  
+
   SUBROUTINE mixvector_from_density(vec,den,swapspin)
     USE m_types
     IMPLICIT NONE
@@ -131,7 +133,7 @@ CONTAINS
           !PW part
           IF (pw_here) THEN
              vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)=REAL(den%pw(:,j))
-             IF ((.NOT.invs).or.(js==3)) THEN
+             IF ((.NOT.sym%invs).or.(js==3)) THEN
                 vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1)=AIMAG(den%pw(:,j))
              ENDIF
           ENDIF
@@ -143,7 +145,7 @@ CONTAINS
                 ii=ii+SIZE(den%vacz,1)
                 vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,js)))=RESHAPE(REAL(den%vacxy(:,:,iv,j)),(/SIZE(den%vacxy(:,:,iv,j))/))
                 ii=ii+SIZE(den%vacxy(:,:,iv,j))
-                IF ((.NOT.invs2).or.(js==3))THEN
+                IF ((.NOT.sym%invs2).or.(js==3))THEN
                    vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,j)))=RESHAPE(AIMAG(den%vacxy(:,:,iv,j)),(/SIZE(den%vacxy(:,:,iv,j))/))
                    ii=ii+SIZE(den%vacxy(:,:,iv,j))
                 ENDIF
@@ -158,14 +160,14 @@ CONTAINS
              !This PE stores some(or all) MT data
              ii=mt_start(js)-1
              DO n=mt_rank+1,atoms%ntype,mt_size
-                DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
+                DO l=0,sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n-1))+1))
                    vec%vec_mt(ii+1:ii+atoms%jri(n))=den%mt(:atoms%jri(n),l,n,j)
                    ii=ii+atoms%jri(n)
                 ENDDO
              ENDDO
-             IF (js==3) THEN !Imaginary part 
+             IF (js==3) THEN !Imaginary part
                 DO n=mt_rank+1,atoms%ntype,mt_size
-                   DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
+                   DO l=0,sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n-1))+1))
                       vec%vec_mt(ii+1:ii+atoms%jri(n))=den%mt(:atoms%jri(n),l,n,4)
                       ii=ii+atoms%jri(n)
                    ENDDO
@@ -192,7 +194,7 @@ CONTAINS
         IF (spin_here(js)) THEN
            !PW part
            IF (pw_here) THEN
-              IF (invs.and.js<3) THEN
+              IF (sym%invs.and.js<3) THEN
                  den%pw(:,js)=vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)
               ELSE
                  den%pw(:,js)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1),vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1))
@@ -202,14 +204,14 @@ CONTAINS
               !This PE stores some(or all) MT data
               ii=mt_start(js)
               DO n=mt_rank+1,atoms%ntype,mt_size
-                 DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
+                 DO l=0,sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n-1))+1))
                     den%mt(:atoms%jri(n),l,n,js)=vec%vec_mt(ii:ii+atoms%jri(n)-1)
                     ii=ii+atoms%jri(n)
                  ENDDO
               ENDDO
               IF (js==3) THEN !Imaginary part comes as 4th spin
                  DO n=mt_rank+1,atoms%ntype,mt_size
-                    DO l=0,sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
+                    DO l=0,sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n-1))+1))
                        den%mt(:atoms%jri(n),l,n,4)=vec%vec_mt(ii:ii+atoms%jri(n)-1)
                        ii=ii+atoms%jri(n)
                     ENDDO
@@ -222,7 +224,7 @@ CONTAINS
               DO iv=1,nvac
                  den%vacz(:,iv,js)=vec%vec_vac(ii+1:ii+SIZE(den%vacz,1))
                  ii=ii+SIZE(den%vacz,1)
-                 IF (invs2.and.js<3)THEN
+                 IF (sym%invs2.and.js<3)THEN
                     den%vacxy(:,:,iv,js)=RESHAPE(vec%vec_vac(ii+1:ii+SIZE(den%vacxy(:,:,iv,js))),SHAPE(den%vacxy(:,:,iv,js)))
                     ii=ii+SIZE(den%vacxy(:,:,iv,js))
                  ELSE
@@ -243,7 +245,7 @@ CONTAINS
         END IF
      ENDDO
      call den%collect(mix_mpi_comm,l_ldau)
-    
+
   END SUBROUTINE mixvector_to_density
 
 
@@ -258,13 +260,13 @@ CONTAINS
     COMPLEX,ALLOCATABLE::pw(:),pw_w(:)
     mvec=vec
     IF (pw_here) ALLOCATE(pw(stars%ng3),pw_w(stars%ng3))
-    
+
     DO js=1,MERGE(jspins,3,.NOT.l_noco)
        IF (spin_here(js)) THEN
           !PW part
           IF (pw_here) THEN
              !Put back on g-grid and use convol
-             IF (invs.and.js<3) THEN
+             IF (sym%invs.and.js<3) THEN
                 pw(:)=vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)
              ELSE
                 pw(:)=CMPLX(vec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1),vec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1))
@@ -272,14 +274,14 @@ CONTAINS
              CALL convol(stars,pw_w,pw,stars%ufft)
              pw_w=pw_w*cell%omtil
              mvec%vec_pw(pw_start(js):pw_start(js)+stars%ng3-1)=REAL(pw_w)
-             IF ((.NOT.invs).or.(js==3)) THEN 
+             IF ((.NOT.sym%invs).or.(js==3)) THEN
                 mvec%vec_pw(pw_start(js)+stars%ng3:pw_start(js)+2*stars%ng3-1)=AIMAG(pw_w)
              ENDIF
           ENDIF
           IF (mt_here.AND.(js<3.OR.l_mtnocopot)) THEN
              !This PE stores some(or all) MT data
              mvec%vec_mt(mt_start(js):mt_start(js)+SIZE(g_mt)-1)=g_mt*vec%vec_mt(mt_start(js):mt_start(js)+SIZE(g_mt)-1)
-             IF (js==3) THEN    
+             IF (js==3) THEN
                 !Here we have a the imaginary part as well
                 mvec%vec_mt(mt_start(js)+SIZE(g_mt):mt_stop(js))=g_mt*vec%vec_mt(mt_start(js)+SIZE(g_mt):mt_stop(js))
              ENDIF
@@ -295,7 +297,7 @@ CONTAINS
           END IF
        ENDIF
     END DO
-   
+
   END FUNCTION mixvector_metric
 
 
@@ -305,27 +307,27 @@ CONTAINS
     TYPE(t_oned),INTENT(in)::oneD
     TYPE(t_vacuum),INTENT(in)::vacuum
 
-    
+
     INTEGER:: i,n,l,j,ivac,iz,iv2c,k2,iv2
     REAL:: dxn,dxn2,dxn4,dvol,volnstr2
     REAL,allocatable:: wght(:)
-    
+
     IF (mt_here) THEN
        !This PE stores some(or all) MT data
-       ALLOCATE(g_mt(mt_length_g)) 
+       ALLOCATE(g_mt(mt_length_g))
        i=0
        DO n =mt_rank+1,atoms%ntype,mt_size
           dxn = atoms%neq(n) * atoms%dx(n) / 3.0
           dxn2 =2.0 * dxn
           dxn4 =4.0 * dxn
-          DO l = 0, sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))
+          DO l = 0, sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n-1))+1))
              i = i + 1
              g_mt(i) = dxn / atoms%rmsh(1,n)
              IF (.NOT.l_pot) THEN
                 DO j = 2, atoms%jri(n) - 1, 2
                    i = i + 2
-                   g_mt(i-1) = dxn4 / atoms%rmsh(j,n) 
-                   g_mt(i) = dxn2 / atoms%rmsh(j+1,n) 
+                   g_mt(i-1) = dxn4 / atoms%rmsh(j,n)
+                   g_mt(i) = dxn2 / atoms%rmsh(j+1,n)
                 END DO
                 ! CHANGE JR 96/12/01
                 ! take care when jri(n) is even
@@ -335,7 +337,7 @@ CONTAINS
                 ! for the potential multiply by r^4
                 DO j = 2, atoms%jri(n) - 1, 2
                    i = i + 2
-                   g_mt(i-1) = dxn4 * atoms%rmsh(j,n)**3 
+                   g_mt(i-1) = dxn4 * atoms%rmsh(j,n)**3
                    g_mt(i) = dxn2 * atoms%rmsh(j+1,n)**3
                 END DO
                 i = i + 1 - MOD(atoms%jri(n),2)
@@ -347,7 +349,7 @@ CONTAINS
     i=0
     IF (vac_here) THEN
        iv2 = 2
-       IF (invs2) iv2 = 1
+       IF (sym%invs2) iv2 = 1
 
        ALLOCATE(g_vac(vac_length_g),wght(vacuum%nmzd))
        dvol = cell%area*vacuum%delz
@@ -394,12 +396,12 @@ CONTAINS
        ALLOCATE(g_misc(misc_length_g))
        g_misc=1.0
     END IF
-    
-    
+
+
   END SUBROUTINE init_metric
-    
-  
-  
+
+
+
   SUBROUTINE init_storage_mpi(mpi_comm)
     IMPLICIT NONE
     INTEGER,INTENT(in):: mpi_comm
@@ -420,7 +422,7 @@ CONTAINS
     CALL mpi_comm_size(new_comm,isize,err)
     CALL mpi_comm_free(new_comm,err)
 
-    !Now distribute data   
+    !Now distribute data
     IF(isize==1) return !No further parallelism
     !Split off the pw-part
     pw_here=(irank==0)
@@ -443,10 +445,10 @@ CONTAINS
     mt_size=isize
 #endif
   END SUBROUTINE init_storage_mpi
-      
 
-  
-  SUBROUTINE mixvector_init(mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars_i,cell_i,sphhar_i,atoms_i)
+
+
+  SUBROUTINE mixvector_init(mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,stars_i,cell_i,sphhar_i,atoms_i,sym_i)
     USE m_types
     IMPLICIT NONE
     INTEGER,INTENT(IN)               :: mpi_comm
@@ -455,14 +457,14 @@ CONTAINS
     TYPE(t_input),INTENT(IN)         :: input
     TYPE(t_vacuum),INTENT(IN),TARGET :: vacuum
     TYPE(t_noco),INTENT(IN)          :: noco
-    TYPE(t_sym),INTENT(IN)           :: sym
     TYPE(t_stars),INTENT(IN),TARGET  :: stars_i
     TYPE(t_cell),INTENT(IN),TARGET   :: cell_i
     TYPE(t_sphhar),INTENT(IN),TARGET :: sphhar_i
     TYPE(t_atoms),INTENT(IN),TARGET  :: atoms_i
+    TYPE(t_sym),INTENT(IN),TARGET    :: sym_i
 
     INTEGER::js,n,len
-    
+
 
     !Store pointers to data-types
     if (associated(atoms)) return !was done before...
@@ -471,15 +473,13 @@ CONTAINS
     l_noco=noco%l_noco
     l_mperp=noco%l_mperp
     l_mtnocopot=noco%l_mtnocopot
-    invs=sym%invs
-    invs2=sym%invs2
-    stars=>stars_i;cell=>cell_i;sphhar=>sphhar_i;atoms=>atoms_i
-    
+    stars=>stars_i;cell=>cell_i;sphhar=>sphhar_i;atoms=>atoms_i;sym=>sym_i
+
     vac_here=input%film
     l_ldau=l_densitymatrix
     misc_here=l_densitymatrix
     CALL init_storage_mpi(mpi_comm)
-    
+
     pw_length=0;mt_length=0;vac_length=0;misc_length=0
     mt_length_g=0;vac_length_g=0;misc_length_g=0
     DO js=1,MERGE(jspins,3,.NOT.l_noco)
@@ -487,7 +487,7 @@ CONTAINS
           !Now calculate the length of the vectors
           IF (pw_here) THEN
              pw_start(js)=pw_length+1
-             IF (invs.and.js<3) THEN
+             IF (sym%invs.and.js<3) THEN
                 pw_length=pw_length+stars%ng3
              ELSE
                 pw_length=pw_length+2*stars%ng3
@@ -499,13 +499,13 @@ CONTAINS
              len=0
              !This PE stores some(or all) MT data
              DO n=mt_rank+1,atoms%ntype,mt_size
-                len=len+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
+                len=len+(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
              ENDDO
              mt_length_g=MAX(len,mt_length_g)
              IF (js==3) THEN
                 !need to store imaginary part as well...
                 DO n=mt_rank+1,atoms%ntype,mt_size
-                   len=len+(sphhar%nlh(atoms%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
+                   len=len+(sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n-1))+1))+1)*atoms%jri(n)
                 ENDDO
              ENDIF
              IF (js<3.OR.noco%l_mtnocopot) mt_length=mt_length+len
@@ -515,7 +515,7 @@ CONTAINS
              !This PE stores vac-data
              vac_start(js)=vac_length+1
              len=0
-             IF (invs2.and.js<3) THEN
+             IF (sym%invs2.and.js<3) THEN
                 len=len+vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
              ELSE
                 len=len+2*vacuum%nmzxyd * ( oneD%odi%n2d - 1 ) * vacuum%nvac + vacuum%nmzd * vacuum%nvac
@@ -542,7 +542,7 @@ CONTAINS
     ALLOCATE( vec%vec_pw(pw_length) )
     ALLOCATE( vec%vec_mt(mt_length) )
     ALLOCATE( vec%vec_vac(vac_length) )
-    ALLOCATE( vec%vec_misc(misc_length) )   
+    ALLOCATE( vec%vec_misc(misc_length) )
   END SUBROUTINE mixvector_alloc
 
 
@@ -566,7 +566,7 @@ CONTAINS
 
       INTEGER:: js
       REAL:: fac
-      
+
       vecout=vec
       DO js=1,MERGE(jspins,3,.NOT.l_noco)
          IF (SIZE(scalar)<js) THEN
@@ -584,25 +584,25 @@ CONTAINS
     FUNCTION add_vectors(vec1,vec2)RESULT(vecout)
       TYPE(t_mixvector),INTENT(IN)::vec1,vec2
       TYPE(t_mixvector)           ::vecout
-      
+
       vecout=vec1
       vecout%vec_pw=vecout%vec_pw+vec2%vec_pw
       vecout%vec_mt=vecout%vec_mt+vec2%vec_mt
       vecout%vec_vac=vecout%vec_vac+vec2%vec_vac
       vecout%vec_misc=vecout%vec_misc+vec2%vec_misc
     END FUNCTION add_vectors
-    
+
     FUNCTION subtract_vectors(vec1,vec2)RESULT(vecout)
       TYPE(t_mixvector),INTENT(IN)::vec1,vec2
       TYPE(t_mixvector)           ::vecout
-      
+
       vecout=vec1
       vecout%vec_pw=vecout%vec_pw-vec2%vec_pw
       vecout%vec_mt=vecout%vec_mt-vec2%vec_mt
       vecout%vec_vac=vecout%vec_vac-vec2%vec_vac
       vecout%vec_misc=vecout%vec_misc-vec2%vec_misc
     END FUNCTION subtract_vectors
-    
+
     FUNCTION multiply_dot(vec1,vec2)RESULT(dprod)
       TYPE(t_mixvector),INTENT(IN)::vec1,vec2
       REAL                        ::dprod,dprod_tmp
@@ -614,7 +614,7 @@ CONTAINS
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(dprod,dprod_tmp,1,MPI_DOUBLE_PRECISION,MPI_SUM,mix_mpi_comm,ierr)
       dprod=dprod_tmp
-#endif      
+#endif
     END FUNCTION multiply_dot
 
     FUNCTION multiply_dot_mask(vec1,vec2,mask,spin)RESULT(dprod)

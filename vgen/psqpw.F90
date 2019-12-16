@@ -192,7 +192,8 @@ contains
           q2(1) = q2(1) * cell%area
           qvac = qvac + q2(1) * 2. / real( vacuum%nvac )
         end do
-        qvac = qvac - 2 * input%sigma
+        !TODO: reactivate electric fields
+        !qvac = qvac - 2 * input%sigma
       else
         qvac = 0.0
         do nz = 1, vacuum%nmz

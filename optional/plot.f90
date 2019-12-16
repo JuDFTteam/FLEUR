@@ -12,16 +12,16 @@ MODULE m_plot
 
    !-----------------------------------------------------------------------------
    ! A general purpose plotting routine for FLEUR.
-   ! 
+   !
    ! Based on the older plotting routines pldngen.f90 and plotdop.f90 that were
    ! originally called by optional.F90 and are now used in the scf-loop instead.
    ! At the cost of reduced postprocess functionality, this allowed us to re-
    ! move I/O (using plot.hdf/text files) from the plotting routine completely.
-   ! 
+   !
    ! TODO:
    ! - plot_inp files are still in use and should be replaced by a plotting type.
-   ! 
-   ! A. Neukirchen & R. Hilgers, September 2019 
+   !
+   ! A. Neukirchen & R. Hilgers, September 2019
    !------------------------------------------------
 
    PUBLIC :: checkplotinp, vectorsplit, matrixsplit, savxsf, vectorplot, &
@@ -33,16 +33,16 @@ CONTAINS
 
       !--------------------------------------------------------------------------
       ! Checks for existing plot input. If an ancient plotin file is used, an
-      ! error is called. If no usable plot_inp exists, a new one is generated. 
+      ! error is called. If no usable plot_inp exists, a new one is generated.
       !--------------------------------------------------------------------------
 
       LOGICAL :: oldform,newform
 
       oldform=.FALSE.
-      INQUIRE(file="plotin",exist = oldform) 
+      INQUIRE(file="plotin",exist = oldform)
       INQUIRE(file="plot_inp",exist = newform)
 
-      IF (oldform) THEN 
+      IF (oldform) THEN
          CALL juDFT_error("Use of plotin file no longer supported", &
                           calledby="plot")
       END IF
@@ -60,19 +60,19 @@ CONTAINS
          WRITE(20,*) "  grid(1)=30  grid(2)=30  grid(3)=30  "
          WRITE(20,*) "  zero(1)=0.0 zero(2)=0.0 zero(3)=0.5 "
          WRITE(20,*) "  filename ='plot2' /"
-         CLOSE(20)   
+         CLOSE(20)
       END IF
 
    END SUBROUTINE checkplotinp
-   
+
    SUBROUTINE vectorsplit(stars, atoms, sphhar, vacuum, input, factor, denmat, &
                           cden,mden)
 
       !--------------------------------------------------------------------------
       ! Takes a spin-polarized density vector and rearranges it into two plottable
       ! seperate ones, i.e. (rho_up, rho_down) ---> n, m.
-      ! 
-      ! Can also be applied to a potential with an additional factor, i.e. while 
+      !
+      ! Can also be applied to a potential with an additional factor, i.e. while
       ! the densities n/m are defined as (rho_up+-rho_down), V_eff/B_eff are de-
       ! fined as (V_up+-V_down)/2.
       !--------------------------------------------------------------------------
@@ -85,7 +85,7 @@ CONTAINS
       REAL,           INTENT(IN)  :: factor
       TYPE(t_potden), INTENT(IN)  :: denmat
       TYPE(t_potden), INTENT(OUT) :: cden, mden
-      
+
       IF (factor==1.0) THEN
          CALL cden%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,&
                                       atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,&
@@ -105,7 +105,7 @@ CONTAINS
                                       POTDEN_TYPE_POTTOT,vacuum%nmzd,&
                                       vacuum%nmzxyd,stars%ng2)
       END IF
-      
+
       cden%mt(:,0:,1:,1) = (denmat%mt(:,0:,1:,1)+denmat%mt(:,0:,1:,2))/factor
       cden%pw(1:,1) = (denmat%pw(1:,1)+denmat%pw(1:,2))/factor
       cden%vacz(1:,1:,1) = (denmat%vacz(1:,1:,1)+denmat%vacz(1:,1:,2))/factor
@@ -118,27 +118,29 @@ CONTAINS
 
    END SUBROUTINE vectorsplit
 
-   SUBROUTINE matrixsplit(stars, atoms, sphhar, vacuum, input, noco, factor, &
+   SUBROUTINE matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco, factor, &
                           denmat, cden, mxden, myden, mzden)
       USE m_fft2d
       USE m_fft3d
-      USE m_rotdenmat 
+      USE m_rotdenmat
 
       !--------------------------------------------------------------------------
       ! Takes a 2x2 density matrix and rearranges it into four plottable seperate
       ! ones, i.e. ((rho_11, rho_12),(rho_21, rho_22)) ---> n, mx, my, mz.
-      ! 
+      !
       ! This is an adaptation of the old pldngen.f90 by P. Kurz.
-      ! 
-      ! Can also be applied to a potential with additional factors, i.e. while 
+      !
+      ! Can also be applied to a potential with additional factors, i.e. while
       ! the densities n/m are defined as (rho_up+-rho_down), V_eff/B_eff are de-
       ! fined as (V_up+-V_down)/2 and while rho_21 is of the form a-i*b, for the
       ! potential we have a+i*b.
-      ! 
+      !
       ! TODO: Find out, whether the latter form of rho is still valid. Having the
       ! additive rho_21=m_x+i*m_y would be nicer and more convenient/consistent.
       !--------------------------------------------------------------------------
 
+      IMPLICIT NONE
+      TYPE(t_sym),    INTENT(IN)  :: sym
       TYPE(t_stars),  INTENT(IN)  :: stars
       TYPE(t_atoms),  INTENT(IN)  :: atoms
       TYPE(t_sphhar), INTENT(IN)  :: sphhar
@@ -148,7 +150,7 @@ CONTAINS
       REAL,           INTENT(IN)  :: factor
       TYPE(t_potden), INTENT(IN)  :: denmat
       TYPE(t_potden), INTENT(OUT) :: cden, mxden, myden, mzden
-      
+
       ! Local scalars: iteration indices, matrix elements etc.
       INTEGER iden, ivac, ifft2, ifft3, imz, ityp, iri, ilh, imesh
       REAL cdnup, cdndown, chden, mgden, theta, phi, rhotot, mx, my, mz
@@ -173,7 +175,7 @@ CONTAINS
                 cdom(stars%ng3), fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1), &
                 ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4), &
                 rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxyd,2,4))
-                
+
       rho(:,:,:,:) = zero; qpw(:,:) = czero; cdom(:) = czero
 
       IF (input%film) THEN
@@ -191,14 +193,14 @@ CONTAINS
          cdomvz(:,:) = CMPLX(denmat%vacz(:,:,3),denmat%vacz(:,:,4))
          cdomvxy = denmat%vacxy(:,:,:,3)
       END IF
-   
+
       ! Calculate the charge and magnetization densities in the muffin tins.
       DO ityp = 1,atoms%ntype
          theta   = noco%beta(ityp)
          phi     = noco%alph(ityp)
-         DO ilh = 0,sphhar%nlh(atoms%ntypsy(ityp))
+         DO ilh = 0,sphhar%nlh(sym%ntypsy(ityp))
             DO iri = 1,atoms%jri(ityp)
-               IF (SIZE(denmat%mt,4).LE.2) THEN 
+               IF (SIZE(denmat%mt,4).LE.2) THEN
                   cdnup   = rho(iri,ilh,ityp,1)
                   cdndown = rho(iri,ilh,ityp,2)
 
@@ -208,7 +210,7 @@ CONTAINS
                   rho(iri,ilh,ityp,2) = mgden*COS(phi)*SIN(theta)
                   rho(iri,ilh,ityp,3) = mgden*SIN(phi)*SIN(theta)
                   rho(iri,ilh,ityp,4) = mgden*COS(theta)
-               ELSE 
+               ELSE
                   cdn11 = rho(iri,ilh,ityp,1)
                   cdn22 = rho(iri,ilh,ityp,2)
                   cdn21 = CMPLX(denmat%mt(iri,ilh,ityp,3), &
@@ -219,10 +221,10 @@ CONTAINS
 
                   rho(iri,ilh,ityp,1) = cdn11 + cdn22
                   rho(iri,ilh,ityp,2) = 2.0*REAL(cdn21)
-                  !! Note: The minus sign in the following line is temporary to 
+                  !! Note: The minus sign in the following line is temporary to
                   !!       adjust for differences in the offdiagonal part of the
                   !!       density between this FLEUR version and ancient v0.26 .
-                  !! 
+                  !!
                   !! TODO: Should that still be here? It effectively amounts to a
                   !!       conjugation of the density matrix.
                   rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
@@ -317,7 +319,7 @@ CONTAINS
                mx      =  2*rho_21r
                my      = -2*rho_21i
                mz      = (rho_11-rho_22)
-   
+
                rht(imz,ivac,1) = rhotot
                rht(imz,ivac,2) = mx
                rht(imz,ivac,3) = my
@@ -336,7 +338,7 @@ CONTAINS
             END DO
          END DO
       END IF
-      
+
 
 
       ! Initialize and save the four output densities.
@@ -372,7 +374,7 @@ CONTAINS
          myden%pw(1:,1) = qpw(1:,3)
          myden%vacz(1:,1:,1) = rht(1:,1:,3)
          myden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
-   
+
          mzden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
          mzden%pw(1:,1) = qpw(1:,4)
          mzden%vacz(1:,1:,1) = rht(1:,1:,4)
@@ -398,15 +400,15 @@ CONTAINS
          ! Correction for the case of plotting the total potential.
          ! Needed due to the different definitons of density/potential matrices in
          ! FLEUR:
-         ! 
+         !
          ! rhoMat = 0.5*((n    +m_z,m_x+i*m_y),(m_x-i*m_y,n    -m_z))
          !   vMat =     ((V_eff+B_z,B_x-i*B_y),(B_x+i*m_y,V_eff-B_z))
-      
+
          rho(:,0:,1:,:) = rho(:,0:,1:,:)/2.0
          qpw(1:,:) = qpw(1:,:)/2.0
          rht(1:,1:,:) = rht(1:,1:,:)/2.0
          rhtxy(1:,1:,1:,:) = rhtxy(1:,1:,1:,:)/2.0
-         
+
          rho(:,0:,1:,3) = -rho(:,0:,1:,3)
          qpw(1:,3) = -qpw(1:,3)
          rht(1:,1:,3) = -rht(1:,1:,3)
@@ -426,12 +428,12 @@ CONTAINS
          myden%pw(1:,1) = qpw(1:,3)
          myden%vacz(1:,1:,1) = rht(1:,1:,3)
          myden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
-   
+
          mzden%mt(:,0:,1:,1) = rho(:,0:,1:,4)
          mzden%pw(1:,1) = qpw(1:,4)
          mzden%vacz(1:,1:,1) = rht(1:,1:,4)
          mzden%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
-        
+
       END IF
 
       DEALLOCATE (rho, qpw, rht, rhtxy, cdomvz, cdomvxy, &
@@ -446,20 +448,20 @@ CONTAINS
 
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
-      ! according to a scheme given in plot_inp. 
-      ! 
+      ! according to a scheme given in plot_inp.
+      !
       ! This is an adaptation of the old plotdop.f90 by P. Kurz.
-      ! 
+      !
       ! Naming convention:
       !  The output .xsf files will have names composed of the plotted density
       !  (c.f. identifier) and an optional tag. For a scalar density, only said
-      !  density is plotted. For a spin-polarized density with an up and down 
+      !  density is plotted. For a spin-polarized density with an up and down
       !  component, f denotes the sum of both densities and g denotes their
       !  difference u-d possibly with additional modifying factors as explained
       !  above in vector-/matrixsplit. f and g are to be understood as scalar
-      !  fields f(r_vec) and g(r_vec). For a density matrix, f is still the 
+      !  fields f(r_vec) and g(r_vec). For a density matrix, f is still the
       !  scalar part. Aditionally, three vector components A_[1-3] arise.
-      ! 
+      !
       !   E.g.: scalar density rho (n(r_vec))
       !          ---> rho.xsf (n(r_vec))
       !         spin-polarized density rho (n_up(r_vec),n_down(r_vec))
@@ -528,7 +530,7 @@ CONTAINS
       END IF
 
       DO i = 1, numInDen
-         
+
          ! TODO: Does this work as intended?
          IF ((numInDen.NE.4).AND.(score)) THEN
             OPEN (17,file='cdnc',form='unformatted',status='old')
@@ -551,9 +553,9 @@ CONTAINS
          END IF
       END DO
 
-      IF (noco%l_ss) THEN 
-         qssc = MATMUL(TRANSPOSE(cell%bmat),noco%qss) 
-      END IF 
+      IF (noco%l_ss) THEN
+         qssc = MATMUL(TRANSPOSE(cell%bmat),noco%qss)
+      END IF
 
       ! Open the plot_inp file for input
       OPEN (18,file='plot_inp')
@@ -631,7 +633,7 @@ CONTAINS
          ELSE
             OPEN (nfile,file = TRIM(ADJUSTL(denName))//'_'//filename,form='formatted')
          END IF
-         
+
          IF (twodim) THEN
             IF (numOutFiles.EQ.1) THEN
                WRITE(nfile,'(3a15)') 'x','y','f'
@@ -639,7 +641,7 @@ CONTAINS
                WRITE(nfile,'(4a15)') 'x','y','f','g'
             ELSE IF (numOutFiles.EQ.4) THEN
                WRITE(nfile,'(6a15)') 'x','y','f','A1','A2','A3'
-            ELSE 
+            ELSE
                WRITE(nfile,'(9a15)') 'x','y','f','A1','A2','A3','|A|','theta','phi'
             END IF
          ELSE
@@ -649,7 +651,7 @@ CONTAINS
                WRITE(nfile,'(5a15)') 'x','y','z','f','g'
             ELSE IF (numOutFiles.EQ.4) THEN
                WRITE(nfile,'(7a15)') 'x','y','z','f','A1','A2','A3'
-            ELSE 
+            ELSE
                WRITE(nfile,'(10a15)') 'x','y','z','f','A1','A2','A3','|A|','theta','phi'
             END IF
          END IF
@@ -664,7 +666,7 @@ CONTAINS
                   IF (.NOT.twodim) point = point + vec3*REAL(iz)/(grid(3)-1)
 
                   ! Set region specific parameters for point
-                     
+
                   ! Get MT sphere for point if point is in MT sphere
                   CALL getMTSphere(input,cell,atoms,oneD,point,nt,na,pt)
                   IF (na.NE.0) THEN
@@ -689,20 +691,20 @@ CONTAINS
                   END IF
 
                   DO i = 1, numInDen
-                     CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,& 
+                     CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
                                  vacuum,sphhar,atoms,sym,cell,oneD,&
                                  den(i),xdnout(i))
                   END DO
 
                   IF (na.NE.0) THEN
-                     IF (noco%l_ss) THEN 
+                     IF (noco%l_ss) THEN
                         ! rotate magnetization "backward"
                         angss = DOT_PRODUCT(qssc,pt-atoms%pos(:,na))
                         help(1) = xdnout(2)
                         help(2) = xdnout(3)
-                        xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss) 
-                        xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss) 
-                        ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0. 
+                        xdnout(2) = +help(1)*COS(angss)+help(2)*SIN(angss)
+                        xdnout(3) = -help(1)*SIN(angss)+help(2)*COS(angss)
+                        ! xdnout(2)=0. ; xdnout(3)=0. ; xdnout(4)=0.
                      END IF
                   END IF
 
@@ -723,7 +725,7 @@ CONTAINS
                         xdnout(7)= -tpi_const
                      ELSE
                         DO j = 1, 3
-                           help(j) = xdnout(1+j)/xdnout(5) 
+                           help(j) = xdnout(1+j)/xdnout(5)
                         END DO
                         IF (help(3)<0.5) THEN
                            xdnout(6)= ACOS(help(3))
@@ -783,8 +785,8 @@ CONTAINS
             CLOSE(nfile)
          END IF
 
-      END DO !nplot  
-      
+      END DO !nplot
+
       CLOSE(18)
       IF (xsf) THEN
          DO i = 1, numOutFiles
@@ -802,7 +804,7 @@ CONTAINS
       ! Takes a spin-polarized t_potden variable, i.e. a 2D vector in MT-sphere/
       ! plane wave representation, splits it into two spinless ones, which are
       ! then passed on to the savxsf routine to get 2 .xsf files out.
-     
+
       TYPE(t_stars),     INTENT(IN) :: stars
       TYPE(t_atoms),     INTENT(IN) :: atoms
       TYPE(t_sphhar),    INTENT(IN) :: sphhar
@@ -850,7 +852,7 @@ CONTAINS
 
       TYPE(t_potden)                   :: cden, mxden, myden, mzden
 
-      CALL matrixsplit(stars, atoms, sphhar, vacuum, input, noco, factor, &
+      CALL matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco, factor, &
                        denmat, cden, mxden, myden, mzden)
 
       CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
@@ -859,11 +861,11 @@ CONTAINS
    END SUBROUTINE matrixplot
 
    SUBROUTINE procplot(stars, atoms, sphhar, sliceplot,vacuum, input, oneD, sym, cell, &
-                       noco, denmat, plot_const) 
-   
-      ! According to iplot, we process which exact plots we make after we assured 
-      ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with 
-      ! identifier n is done. 
+                       noco, denmat, plot_const)
+
+      ! According to iplot, we process which exact plots we make after we assured
+      ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
+      ! identifier n is done.
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -883,7 +885,7 @@ CONTAINS
       CHARACTER (len=20) :: denName
       LOGICAL            :: score, potnorm
 
-      ! Plotting the input density matrix as n / n, m / n, mx, my, mz. 
+      ! Plotting the input density matrix as n / n, m / n, mx, my, mz.
       ! Plot identifier: PLOT_INPDEN = 1
       ! Additive term for iplot: 2
       IF (plot_const.EQ.1) THEN
@@ -908,7 +910,7 @@ CONTAINS
          END IF
       END IF
 
-      ! Plotting the output density matrix as n / n, m / n, mx, my, mz. 
+      ! Plotting the output density matrix as n / n, m / n, mx, my, mz.
       ! Plot identifier: PLOT_OUTDEN_Y_CORE = 2
       ! No core subtraction done!
       ! Additive term for iplot: 4
@@ -930,10 +932,10 @@ CONTAINS
          ELSE
             CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
-         END IF      
+         END IF
       END IF
 
-      ! Plotting the output density matrix as n / n, m / n, mx, my, mz. 
+      ! Plotting the output density matrix as n / n, m / n, mx, my, mz.
       ! Plot identifier: PLOT_OUTDEN_N_CORE = 3
       ! Core subtraction done!
       ! Additive term for iplot: 8
@@ -955,10 +957,10 @@ CONTAINS
          ELSE
             CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
-         END IF      
+         END IF
       END IF
 
-      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz. 
+      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz.
       ! Plot identifier: PLOT_MIXDEN_Y_CORE = 4
       ! No core subtraction done!
       ! Additive term for iplot: 16
@@ -980,10 +982,10 @@ CONTAINS
          ELSE
             CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
-         END IF      
+         END IF
       END IF
 
-      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz. 
+      ! Plotting the mixed density matrix as n / n, m / n, mx, my, mz.
       ! Plot identifier: PLOT_MIXDEN_N_CORE = 5
       ! Core subtraction done!
       ! Additive term for iplot: 32
@@ -1005,11 +1007,11 @@ CONTAINS
          ELSE
             CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
-         END IF      
+         END IF
       END IF
 
-              
-      ! Plotting the total potential as vTot / v_eff, B_eff / v_eff, 
+
+      ! Plotting the total potential as vTot / v_eff, B_eff / v_eff,
       ! B_xc_1, B_xc_2, B_xc_3.
       ! Plot identifier: PLOT_POT_TOT = 7
       ! No core subtraction done!
@@ -1032,16 +1034,16 @@ CONTAINS
          ELSE
             CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
-         END IF      
+         END IF
       END IF
 
    END SUBROUTINE procplot
 
    SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
-                        noco, denmat, plot_const, sliceplot) 
-  
+                        noco, denmat, plot_const, sliceplot)
+
       ! Checks, based on the iplot switch that is given in the input, whether or
-      ! not plots should be made. Before the plot command is processed, we check 
+      ! not plots should be made. Before the plot command is processed, we check
       ! whether the plot_inp is there and no oldform is given. If that is not the
       ! case, we create a plot_inp.
 
@@ -1059,22 +1061,22 @@ CONTAINS
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
 
       LOGICAL :: allowplot
-      
+
       ! The check is done via bitwise operations. If the i-th position of iplot
       ! in binary representation (2^n == n-th position) has a 1, the correspon-
       ! ding plot with number 2^n is plotted.
-      ! 
-      ! E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted 
+      !
+      ! E.g.: If the plots with identifying constants 1,2 and 4 are to be plotted
       ! and none else, iplot would need to be 2^1 + 2^2 + 2^3 = 2 + 4 + 8 = 14.
       ! iplot=1 or any odd number will *always* plot all possible options.
-      
-      CALL timestart("Plotting iplot plots")       
+
+      CALL timestart("Plotting iplot plots")
 
       allowplot=BTEST(sliceplot%iplot,plot_const).OR.(MODULO(sliceplot%iplot,2).EQ.1)
-      IF (allowplot) THEN  
+      IF (allowplot) THEN
          CALL checkplotinp()
          CALL  procplot(stars, atoms, sphhar,sliceplot, vacuum, input, oneD, sym, cell, &
-                        noco, denmat, plot_const) 
+                        noco, denmat, plot_const)
       END IF
       CALL timestop("Plotting iplot plots")
    END SUBROUTINE makeplots
@@ -1127,7 +1129,7 @@ CONTAINS
       iType = 0
       iAtom = 0
       pt(:) = point(:)
-  
+
    END SUBROUTINE getMTSphere
 
 END MODULE m_plot

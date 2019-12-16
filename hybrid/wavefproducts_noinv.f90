@@ -1,15 +1,15 @@
 module m_wavefproducts_noinv
+      USE m_types_hybdat
 
 CONTAINS
    SUBROUTINE wavefproducts_noinv5(bandi, bandf, bandoi, bandof, nk, iq, &
-                                   dimension, input, jsp, cell, atoms, mpbasis, hybrid,&
+                                    input, jsp, cell, atoms, mpbasis, hybrid,&
                                    hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                    nkqpt, cprod)
       USE m_types
       use m_juDFT
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_noco), INTENT(IN)        :: noco
       TYPE(t_sym), INTENT(IN)         :: sym
@@ -46,19 +46,19 @@ CONTAINS
       IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
 
       call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
-                                        dimension, input, jsp, cell, atoms, mpbasis, hybrid,&
+                                         input, jsp, cell, atoms, mpbasis, hybrid,&
                                         hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                         nkqpt, cprod)
 
       call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                  dimension, atoms, mpbasis, hybrid, hybdat, kpts, &
+                                   input,atoms, mpbasis, hybrid, hybdat, kpts, &
                                   nkqpt, cprod)
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
 
    subroutine wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t, &
-                                      dimension, input, jsp, cell, atoms, mpbasis, hybrid,&
+                                       input, jsp, cell, atoms, mpbasis, hybrid,&
                                       hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                       nkqpt, cprod)
       use m_types
@@ -67,7 +67,6 @@ CONTAINS
       use m_judft
       use m_io_hybrid
       implicit NONE
-      TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_noco), INTENT(IN)        :: noco
       TYPE(t_sym), INTENT(IN)         :: sym
@@ -119,9 +118,9 @@ CONTAINS
       !
       CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
       nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
-      call z_nk%alloc(.false., nbasfcn, dimension%neigd)
+      call z_nk%alloc(.false., nbasfcn, input%neig)
       nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)
-      call z_kqpt%alloc(.false., nbasfcn, dimension%neigd)
+      call z_kqpt%alloc(.false., nbasfcn, input%neig)
 
       ! read in z at k-point nk and nkqpt
       call timestart("read_z")
@@ -199,7 +198,7 @@ CONTAINS
 
 
    subroutine wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                     dimension, atoms, mpbasis, hybrid, hybdat, kpts, &
+                                      input,atoms, mpbasis, hybrid, hybdat, kpts, &
                                      nkqpt, cprod)
       use m_types
       USE m_constants
@@ -207,7 +206,7 @@ CONTAINS
       use m_judft
       use m_wavefproducts_aux
       IMPLICIT NONE
-      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input),INTENT(IN)         :: input
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_mpbasis), INTENT(IN)     :: mpbasis
@@ -236,8 +235,8 @@ CONTAINS
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX                 ::  carr(bandoi:bandof, bandf - bandi + 1)
-      COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
 
       call timestart("wavefproducts_noinv5 MT")
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)

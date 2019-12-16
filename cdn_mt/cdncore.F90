@@ -8,7 +8,7 @@ MODULE m_cdncore
 
 CONTAINS
 
-SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+SUBROUTINE cdncore(mpi,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
 
    USE m_constants
@@ -29,7 +29,7 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
 
 
    TYPE(t_mpi),        INTENT(IN)              :: mpi
-   TYPE(t_dimension),  INTENT(IN)              :: dimension
+   
    TYPE(t_oneD),       INTENT(IN)              :: oneD
    TYPE(t_input),      INTENT(IN)              :: input
    TYPE(t_vacuum),     INTENT(IN)              :: vacuum
@@ -49,10 +49,10 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
    REAL                             :: seig, rhoint, momint
    LOGICAL, PARAMETER               :: l_st=.FALSE.
 
-   REAL                             :: rh(dimension%msh,atoms%ntype,input%jspins)
+   REAL                             :: rh(atoms%msh,atoms%ntype,input%jspins)
    REAL                             :: qint(atoms%ntype,input%jspins)
    REAL                             :: tec(atoms%ntype,input%jspins)
-   REAL                             :: rhTemp(dimension%msh,atoms%ntype,input%jspins)
+   REAL                             :: rhTemp(atoms%msh,atoms%ntype,input%jspins)
 
 
    results%seigc = 0.0
@@ -76,10 +76,10 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
       qint = 0.0
       IF (input%frcor) THEN
          IF (mpi%irank==0) THEN
-            CALL readCoreDensity(input,atoms,dimension,rh,tec,qint)
+            CALL readCoreDensity(input,atoms,rh,tec,qint)
          END IF
 #ifdef CPP_MPI
-         CALL mpi_bc_coreDen(mpi,atoms,input,dimension,rh,tec,qint)
+         CALL mpi_bc_coreDen(mpi,atoms,input,rh,tec,qint)
 #endif
       END IF
    END IF
@@ -89,9 +89,9 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
       IF (input%kcrel==0) THEN
          DO jspin = 1,input%jspins
             IF(PRESENT(EnergyDen)) THEN
-               CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
+               CALL cored(input,jspin,atoms,outDen%mt,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
             ELSE
-               CALL cored(input,jspin,atoms,outDen%mt,dimension,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig)
+               CALL cored(input,jspin,atoms,outDen%mt,sphhar,vTot%mt(:,0,:,jspin), qint,rh ,tec,seig)
             ENDIF
 
             rhTemp(:,:,jspin) = rh(:,:,jspin)
@@ -99,7 +99,7 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
          END DO
       ELSE
          IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic core calculations")
-         CALL coredr(input,atoms,seig, outDen%mt,dimension,sphhar,vTot%mt(:,0,:,:),qint,rh)
+         CALL coredr(input,atoms,seig, outDen%mt,sphhar,vTot%mt(:,0,:,:),qint,rh)
          results%seigc = results%seigc + seig
       END IF
    END IF
@@ -135,7 +135,7 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
          IF (input%ctail) THEN
             IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for ctail")
             !+gu hope this works as well
-            CALL cdnovlp(mpi,sphhar,stars,atoms,sym,dimension,vacuum,&
+            CALL cdnovlp(mpi,sphhar,stars,atoms,sym,vacuum,&
                          cell,input,oneD,l_st,jspin,rh(:,:,jspin),&
                          outDen%pw,outDen%vacxy,outDen%mt,outDen%vacz)
          ELSE IF (mpi%irank==0) THEN
@@ -148,7 +148,7 @@ SUBROUTINE cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
 
    IF (input%kcrel==0) THEN
       IF (mpi%irank==0) THEN
-         CALL writeCoreDensity(input,atoms,dimension,rhTemp,tec,qint)
+         CALL writeCoreDensity(input,atoms,rhTemp,tec,qint)
       END IF
       IF ((input%gw==1 .or. input%gw==3).AND.(mpi%irank==0)) CLOSE(15)
    END IF

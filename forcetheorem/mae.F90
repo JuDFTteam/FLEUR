@@ -8,6 +8,8 @@ MODULE m_types_mae
   USE m_types
   USE m_types_forcetheo
   USE m_judft
+  IMPLICIT NONE
+  PRIVATE
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_mae
      INTEGER :: directions_done
      REAL,ALLOCATABLE:: theta(:)
@@ -21,9 +23,11 @@ MODULE m_types_mae
      PROCEDURE :: init   => mae_init !not overloaded
      PROCEDURE :: dist   => mae_dist !not overloaded
   END TYPE t_forcetheo_mae
-
+  PUBLIC t_forcetheo_mae
 CONTAINS
-  SUBROUTINE mae_init(this,cell,sym,theta_s,phi_s)
+ 
+
+  SUBROUTINE mae_init(this,theta,phi,cell,sym)
     USE m_calculator
     USE m_socsym
     USE m_types
@@ -31,13 +35,13 @@ CONTAINS
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_cell),INTENT(IN)             :: cell
     TYPE(t_sym),INTENT(IN)              :: sym
-    CHARACTER(len=*),INTENT(INOUT)      :: theta_s,phi_s
+    REAL,INTENT(in)                     :: theta(:),phi(:)
 
     INTEGER::n
     LOGICAL::error(sym%nop)
     
-    CALL evaluateList(this%theta,theta_s)
-    CALL evaluateList(this%phi,phi_s)
+    this%phi=phi
+    this%theta=theta
 
     IF (SIZE(this%phi).NE.SIZE(this%theta)) CALL &
          judft_error("Lists for theta/phi must have the same length in MAE force theorem calculations")
@@ -87,7 +91,7 @@ CONTAINS
        IF (this%l_io) CALL openXMLElementPoly('Forcetheorem_Loop_MAE',(/'No'/),(/this%directions_done/))
   END FUNCTION mae_next_job
 
-  FUNCTION mae_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+  FUNCTION mae_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
     USE m_types
     IMPLICIT NONE
@@ -95,7 +99,7 @@ CONTAINS
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco

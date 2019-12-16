@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.29">
+<fleurInput fleurInputVersion="0.30">
    <comment>
       hcp Cobalt                                                                      
    </comment>
@@ -15,27 +15,82 @@
       <expertModes gw="0" isec1="99" secvar="F"/>
       <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
       <bzIntegration valenceElectrons="18.00000000" mode="hist" fermiSmearingEnergy=".00100000">
-         <kPointMesh nx="3" ny="3" nz="3" gamma="F"/>
+         <kPointList name="default"  count="   10">
+         <kPoint weight="0.222222">0.000000            0.333333            0.333333</kPoint>
+         <kPoint weight="0.222222">0.333333            0.333333            0.333333</kPoint>
+         <kPoint weight="0.074074">0.333333            0.666667            0.333333</kPoint>
+         <kPoint weight="0.074074">0.000000            0.000000            0.333333</kPoint>
+         <kPoint weight="0.074074">0.666667            0.333333            0.333333</kPoint>
+         <kPoint weight="0.111111">0.000000            0.333333            0.000000</kPoint>
+         <kPoint weight="0.111111">0.333333            0.333333            0.000000</kPoint>
+         <kPoint weight="0.037037">0.333333            0.666667            0.000000</kPoint>
+         <kPoint weight="0.037037">0.000000            0.000000            0.000000</kPoint>
+         <kPoint weight="0.037037">0.666667            0.333333            0.000000</kPoint>
+      </kPointList>
       </bzIntegration>
       <energyParameterLimits ellow="-.80000000" elup="1.00000000"/>
+<symmetryOperations>
+<symOp>
+<row-1>     1    0    0        0.00000 </row-1>
+<row-2>     0    1    0        0.00000 </row-2>
+<row-3>     0    0    1        0.00000 </row-3>
+</symOp>
+<symOp>
+<row-1>     0    1    0        0.00000 </row-1>
+<row-2>    -1   -1    0        0.00000 </row-2>
+<row-3>     0    0    1        0.00000 </row-3>
+</symOp>
+<symOp>
+<row-1>    -1   -1    0        0.00000 </row-1>
+<row-2>     1    0    0        0.00000 </row-2>
+<row-3>     0    0    1        0.00000 </row-3>
+</symOp>
+<symOp>
+<row-1>     1    0    0        0.00000 </row-1>
+<row-2>     0    1    0        0.00000 </row-2>
+<row-3>     0    0   -1        0.50000 </row-3>
+</symOp>
+<symOp>
+<row-1>     0    1    0        0.00000 </row-1>
+<row-2>    -1   -1    0        0.00000 </row-2>
+<row-3>     0    0   -1        0.50000 </row-3>
+</symOp>
+<symOp>
+<row-1>    -1   -1    0        0.00000 </row-1>
+<row-2>     1    0    0        0.00000 </row-2>
+<row-3>     0    0   -1        0.50000 </row-3>
+</symOp>
+</symmetryOperations>
    </calculationSetup>
    <cell>
-      <symmetryFile filename="sym.out"/>
-      <bulkLattice scale="1.0000000000" latnam="hex">
-         <a1 scale="1.0000000000">4.7182701200</a1>
-         <c scale="1.0000000000">7.6171300900</c>
+      <bulkLattice scale="1.0000000000" >
+      <bravaisMatrix>
+	  <row-1>4.086142   -2.359135    0.000000</row-1>
+          <row-2>4.086142    2.359135    0.000000</row-2>
+          <row-3>0.000000    0.000000    7.617130</row-3>
+      </bravaisMatrix>
       </bulkLattice>
    </cell>
    <xcFunctional name="pbe" relativisticCorrections="F"/>
    <atomSpecies>
-      <species name="Co-1" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F" >
+      <species name="Co-1" element="Co" atomicNumber="27"  flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F" >
          <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig>
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2)</coreConfig>
+            <valenceConfig>(4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d5/2)" spinUp="2.30000000" spinDown="0.70000000"/>
+         </electronConfig>
          <energyParameters s="4" p="4" d="3" f="4"/>
       </species>
-      <species name="Co-2" element="Co" atomicNumber="27" coreStates="7" magMom="1.60000000" flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F">
+      <species name="Co-2" element="Co" atomicNumber="27"   flipSpinPhi=".00000000" flipSpinTheta="Pi" flipSpinScale="F">
          <mtSphere radius="2.28000000" gridPoints="755" logIncrement=".01600000"/>
          <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig>
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2)</coreConfig>
+            <valenceConfig>(4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d5/2)" spinUp="2.30000000" spinDown="0.70000000"/>
+         </electronConfig>
          <energyParameters s="4" p="4" d="3" f="4"/>
       </species>
    </atomSpecies>

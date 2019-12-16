@@ -12,7 +12,7 @@ c     e. wimmer   nov.1984    c.l.fu  1987
 c     *********************************************************
       USE m_boxdim
       USE m_spgrot
-      USE m_types, ONLY : od_dim
+      USE m_types_oneD
       USE m_ifft, ONLY : i2357
       IMPLICIT NONE
 

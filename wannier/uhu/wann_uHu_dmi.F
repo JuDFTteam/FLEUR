@@ -19,7 +19,7 @@ c*******************************************c
       USE m_juDFT
       CONTAINS
       SUBROUTINE wann_uHu_dmi(
-     >      DIMENSION,stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
+     >      stars,vacuum,atoms,sphhar,input,kpts,sym,mpi,
      >      banddos,oneD,noco,cell,vTot,wann,enpara,
      >      eig_idList,l_real,l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
@@ -71,7 +71,7 @@ c*******************************************c
       integer stt(MPI_STATUS_SIZE)
 #endif
 
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
       TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -675,13 +675,13 @@ c*****************************************************************c
 
 !            WRITE(fending,'("_",i4.4)')bpt_q(iqpt_b,iqpt)
 !            innerEig_idList(iqpt_b)=open_eig(mpi%mpi_comm,
-!     +                  DIMENSION%nbasfcn,DIMENSION%neigd,
+!     +                  lapw%dim_nbasfcn(),input%neig,
 !     +                  nkpts,wannierspin,atoms%lmaxd,
 !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
 !     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
 !     +                  mpi%n_size,filename=trim(fstart)//fending,
 !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  ncored=29,nsld=atoms%nat,
 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
           enddo
@@ -689,13 +689,13 @@ c*****************************************************************c
         eig_id = eig_idList(qptibz)
 
 !        WRITE(fending,'("_",i4.4)')qptibz
-!        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
+!        eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),input%neig,
 !     +                  nkpts,wannierspin,atoms%lmaxd,
 !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
 !     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
 !     +                  mpi%n_size,filename=trim(fstart)//fending,
 !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  ncored=29,nsld=atoms%nat,
 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
        ELSEIF(l_ms) THEN
@@ -703,13 +703,13 @@ c*****************************************************************c
         eig_id = eig_idList(qptibz)
 
 !        WRITE(fending,'("_",i4.4)')qptibz
-!        eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,DIMENSION%neigd,
+!        eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),input%neig,
 !     +                  nkpts,wannierspin,atoms%lmaxd,
 !     +                  atoms%nlod,atoms%ntype,atoms%nlotot,
 !     +                  l_noco,.FALSE.,l_real,l_soc,.FALSE.,
 !     +                  mpi%n_size,filename=trim(fstart)//fending,
 !     +                  layers=vacuum%layers,nstars=vacuum%nstars,
-!     +                  ncored=DIMENSION%nstd,nsld=atoms%nat,
+!     +                  ncored=29,nsld=atoms%nat,
 !     +                  nat=atoms%nat,l_dos=banddos%dos.OR.input%cdinf,
 !     +                  l_mcd=banddos%l_mcd,l_orb=banddos%l_orb)
        ELSE
@@ -950,9 +950,9 @@ c      if (mod(i_rec-1,isize).eq.irank) then
 
       zzMat%l_real = l_real
 !      zzMat%nbasfcn = nbasfcn
-      zzMat%matsize1 = DIMENSION%nbasfcn
+      zzMat%matsize1 = lapw%dim_nbasfcn()
 !      zzMat%nbands = neigd
-      zzMat%matsize2 = DIMENSION%neigd
+      zzMat%matsize2 = input%neig
       
       IF(l_real) THEN
 !         ALLOCATE (zzMat%z_r(zzMat%nbasfcn,zzMat%nbands))
@@ -1015,7 +1015,7 @@ c      if (mod(i_rec-1,isize).eq.irank) then
           if (wann%l_bzsym) kptibz_b=irreduc(kptibz_b)
 
           n_start=1
-          n_end=DIMENSION%neigd
+          n_end=input%neig
 
         eigg = 0.
         call cpu_time(t0)
@@ -1033,9 +1033,9 @@ c      if (mod(i_rec-1,isize).eq.irank) then
      &           .AND..NOT.noco%l_noco.and.mpi%n_size==1),mpi)
         CALL cdn_read(
      &        eig_id,
-     &      DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
-     &    kptibz_b,jspin,DIMENSION%nbasfcn,
-     &    noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     &      lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?
+     &    kptibz_b,jspin,lapw%dim_nbasfcn(),
+     &    noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
      &   nbands_b,eigg,zzMat)
 
 
@@ -1138,7 +1138,7 @@ c***********************************************************
 
 !      DEALLOCATE(lapw_b%k1,lapw_b%k2,lapw_b%k3)
 
-      call wann_abinv(atoms,
+      call wann_abinv(atoms,sym,
      X        acof_b,bcof_b,ccof_b)
       call cpu_time(t1)
       t_abcof = t_abcof + t1 - t0
@@ -1199,9 +1199,9 @@ c***********************************************************
 
           CALL cdn_read(
      &   eig_id,
-     &   DIMENSION%nvd,input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?&
-     &   qptibz_b,jspin,DIMENSION%nbasfcn,
-     &   noco%l_ss,noco%l_noco,DIMENSION%neigd,n_start,n_end,
+     &   lapw%dim_nvd(),input%jspins,mpi%irank,mpi%isize, !wannierspin instead of DIMENSION%jspd?&
+     &   qptibz_b,jspin,lapw%dim_nbasfcn(),
+     &   noco%l_ss,noco%l_noco,input%neig,n_start,n_end,
      &   nbands_b2,eigg,zzMat)
 
 
@@ -1283,7 +1283,7 @@ c***********************************************************
 
     !  DEALLOCATE(lapw_b2%k1,lapw_b2%k2,lapw_b2%k3)
 
-      call wann_abinv(atoms,
+      call wann_abinv(atoms,sym,
      X        acof_b2,bcof_b2,ccof_b2)
       call cpu_time(t1)
       t_abcof = t_abcof + t1 - t0
@@ -1446,7 +1446,7 @@ c**************************************c
 
             call cpu_time(t0)
             call wann_uHu_od_vac(
-     >            DIMENSION,oneD,vacuum,stars,cell,
+     >            oneD,vacuum,stars,cell,
      >            chi,l_noco,l_soc,jspins,nlotot,nbnd,z1,nmzxyd,nmzd,
      >            nv2d,k1d,k2d,k3d,n2d,n3d,ig,nmzxy,nmz,delz,ig2,
      >            bbmat,evac(1,jspin),evac(1,jspin_b),

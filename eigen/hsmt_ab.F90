@@ -104,7 +104,7 @@ CONTAINS
     ab_size=lmax*(lmax+2)+1
     ab=0.0
     
-    np = sym%invtab(atoms%ngopr(na))
+    np = sym%invtab(sym%ngopr(na))
     !--->          set up phase factors
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
     c_ph_dev=c_ph   
@@ -137,7 +137,7 @@ CONTAINS
        print*, "Ooooops, TODO in hsmt_ab"
        !DO k = 1,lapw%nv(1)
        !   !determine also the abc coeffs for LOs
-       !   invsfct=MERGE(1,2,atoms%invsat(na).EQ.0)
+       !   invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
        !   term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
        !   DO lo = 1,atoms%nlo(n)
        !      l = atoms%llo(lo,n)
@@ -207,7 +207,7 @@ CONTAINS
     l_apw=ALL(gj==0.0)
     ab=0.0
     
-    np = sym%invtab(atoms%ngopr(na))
+    np = sym%invtab(sym%ngopr(na))
     !--->          set up phase factors
     CALL lapw%phase_factors(iintsp,atoms%taual(:,na),noco%qss,c_ph(:,iintsp))
     
@@ -224,7 +224,7 @@ CONTAINS
        END DO
     END IF
     !$OMP PARALLEL DO DEFAULT(none) &
-    !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fj,gj,abclo,cell,atoms) &
+    !$OMP& SHARED(lapw,gkrot,lmax,c_ph,iintsp,ab,fj,gj,abclo,cell,atoms,sym) &
     !$OMP& SHARED(alo1,blo1,clo1,ab_size,na,n) &
     !$OMP& PRIVATE(k,vmult,ylm,l,ll1,m,lm,term,invsfct,lo,nkvec)
     DO k = 1,lapw%nv(iintsp)
@@ -242,7 +242,7 @@ CONTAINS
        END DO
        IF (PRESENT(abclo)) THEN
           !determine also the abc coeffs for LOs
-          invsfct=MERGE(1,2,atoms%invsat(na).EQ.0)
+          invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
           term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)*c_ph(k,iintsp)
           DO lo = 1,atoms%nlo(n)
              l = atoms%llo(lo,n)

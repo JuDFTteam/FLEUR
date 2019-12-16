@@ -45,7 +45,7 @@ CONTAINS
     na = sum(atoms%neq(:n-1))
     DO nn = 1,atoms%neq(n)
        na = na + 1
-       IF ((atoms%invsat(na).EQ.0) .OR. (atoms%invsat(na).EQ.1)) THEN
+       IF ((sym%invsat(na).EQ.0) .OR. (sym%invsat(na).EQ.1)) THEN
           
           
           IF (atoms%nlo(n).GE.1) THEN
@@ -58,7 +58,7 @@ CONTAINS
              !--->       hamiltonian matrix, if they are used for this atom.
              
              CALL slomat(&
-                  input,atoms,mpi,lapw,cell,noco,n,na,&
+                  input,atoms,sym,mpi,lapw,cell,noco,n,na,&
                   isp,ud, alo1,blo1,clo1,fj,gj,&
                   iintsp,jintsp,chi,smat)
              CALL hlomat(input,atoms,mpi,lapw,ud,tlmplm,sym,cell,noco,isp,&

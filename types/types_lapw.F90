@@ -6,7 +6,15 @@
 
 MODULE m_types_lapw
   USE m_judft
+  IMPLICIT NONE
   PRIVATE
+  !These dimensions should be set once per call of FLEUR
+  !They can be queried by the functions lapw%dim_nvd,...
+  !You probably should avoid using the variables directly
+  integer,save :: lapw_dim_nvd
+  integer,save :: lapw_dim_nv2d
+  integer,save :: lapw_dim_nbasfcn
+
   TYPE t_lapw
      INTEGER :: nv(2)
      INTEGER :: num_local_cols(2)
@@ -30,11 +38,34 @@ MODULE m_types_lapw
      PROCEDURE,PASS :: init =>lapw_init
      PROCEDURE,PASS :: alloc =>lapw_alloc
      PROCEDURE,PASS :: phase_factors =>lapw_phase_factors
+     PROCEDURE,NOPASS:: dim_nvd
+     PROCEDURE,NOPASS:: dim_nv2d
+     PROCEDURE,NOPASS:: dim_nbasfcn
+     PROCEDURE,NOPASS:: init_dim=>lapw_init_dim
   END TYPE t_lapw
-  PUBLIC :: t_lapw
+  PUBLIC :: t_lapw,lapw_dim_nbasfcn,lapw_dim_nvd,lapw_dim_nv2d
 
 
 CONTAINS
+
+  subroutine lapw_init_dim(nvd_in,nv2d_in,nbasfcn_in)
+    IMPLICIT NONE
+    INTEGER,INTENT(IN)      :: nvd_in,nv2d_in,nbasfcn_in
+    lapw_dim_nvd=nvd_in
+    lapw_dim_nv2d=nv2d_in
+    lapw_dim_nbasfcn=nbasfcn_in
+  end subroutine
+
+  PURE INTEGER function dim_nvd()
+    dim_nvd=lapw_dim_nvd
+  end function
+  PURE INTEGER function dim_nv2d()
+    dim_nv2d=lapw_dim_nv2d
+  end function
+  PURE INTEGER function dim_nbasfcn()
+    dim_nbasfcn=lapw_dim_nbasfcn
+  end function
+
   SUBROUTINE lapw_alloc(lapw,cell,input,noco)
     !
     !*********************************************************************
@@ -42,7 +73,7 @@ CONTAINS
     !     bkpt is the k-point given in internal units
     !*********************************************************************
     USE m_boxdim
-    USE m_types_setup
+    USE m_types_fleurinput
 
     IMPLICIT NONE
     TYPE(t_cell),INTENT(IN)      :: cell
@@ -125,7 +156,7 @@ CONTAINS
     USE m_types_mpi
     USE m_sort
     USE m_boxdim
-    USE m_types_setup
+    USE m_types_fleurinput
     USE m_types_kpts
     IMPLICIT NONE
 
@@ -137,7 +168,7 @@ CONTAINS
     TYPE(t_kpts),INTENT(IN)        :: kpts
     TYPE(t_mpi),INTENT(IN),OPTIONAL:: mpi
     CLASS(t_lapw),INTENT(INOUT)    :: lapw
-    !     .. 
+    !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT  (IN) :: nk
     LOGICAL, INTENT (IN)  :: l_zref
@@ -220,7 +251,7 @@ CONTAINS
           lapw%gvec(:,n,ispin) = gvec(:,index3(n))
           lapw%rk(n,ispin)     = rk(index3(n))
        ENDDO
-       !--->    determine pairs of K-vectors, where K_z = K'_-z to use 
+       !--->    determine pairs of K-vectors, where K_z = K'_-z to use
        !--->    z-reflection
        IF (l_zref) THEN
           n=0
@@ -228,7 +259,7 @@ CONTAINS
              DO j=1,i
                 IF (ALL(lapw%gvec(1:2,i,ispin).EQ.lapw%gvec(1:2,j,ispin)).AND.&
                      (lapw%gvec(3,i,ispin).EQ.-lapw%gvec(3,j,ispin))) THEN
-                   n=n+1 
+                   n=n+1
                    lapw%matind(n,1)=i
                    lapw%matind(n,2)=j
                 ENDIF
@@ -252,7 +283,7 @@ CONTAINS
 
                 i = 1
                 j = 1
-                DO n = 1, nred 
+                DO n = 1, nred
                    IF (lapw%matind(n,1).EQ.lapw%matind(n,2)) THEN
                       index3(lapw%matind(n,1)) = n_inner + i
                       i = i + 1
@@ -323,7 +354,7 @@ CONTAINS
   CONTAINS
 
     SUBROUTINE priv_lo_basis_setup(lapw,atoms,sym,noco,cell)
-      USE m_types_setup
+      USE m_types_fleurinput
 
       IMPLICIT NONE
       TYPE(t_lapw),INTENT(INOUT):: lapw
@@ -345,9 +376,9 @@ CONTAINS
       DO n=1,atoms%ntype
          DO nn=1,atoms%neq(n)
             na=na+1
-            if (atoms%invsat(na)>1) cycle
-            !np = MERGE(oneD%ods%ngopr(na),sym%invtab(atoms%ngopr(na)),oneD%odi%d1)
-            np=sym%invtab(atoms%ngopr(na))
+            if (sym%invsat(na)>1) cycle
+            !np = MERGE(oneD%ods%ngopr(na),sym%invtab(sym%ngopr(na)),oneD%odi%d1)
+            np=sym%invtab(sym%ngopr(na))
             CALL priv_vec_for_lo(atoms,sym,na,n,np,noco,lapw,cell)
             DO lo = 1,atoms%nlo(n)
                lapw%index_lo(lo,na)=iindex
@@ -362,7 +393,7 @@ CONTAINS
 
   SUBROUTINE lapw_phase_factors(lapw,iintsp,tau,qss,cph)
     USE m_constants
-    USE m_types_setup
+    USE m_types_fleurinput
     IMPLICIT NONE
     CLASS(t_lapw),INTENT(in):: lapw
     INTEGER,INTENT(IN)     :: iintsp
@@ -377,13 +408,13 @@ CONTAINS
     END DO
   END SUBROUTINE lapw_phase_factors
 
-  
+
   SUBROUTINE priv_vec_for_lo(atoms,sym,na,&
        n,np,noco, lapw,cell)
     USE m_constants,ONLY: tpi_const,fpi_const
     USE m_orthoglo
     USE m_ylm
-    USE m_types_setup
+    USE m_types_fleurinput
     IMPLICIT NONE
     TYPE(t_noco),INTENT(IN)   :: noco
     TYPE(t_sym),INTENT(IN)    :: sym
@@ -392,12 +423,12 @@ CONTAINS
     TYPE(t_lapw),INTENT(INOUT):: lapw
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: na,n,np 
+    INTEGER, INTENT (IN) :: na,n,np
     !     ..
     !     .. Array Arguments ..
     !     ..
     !     .. Local Scalars ..
-    COMPLEX term1 
+    COMPLEX term1
     REAL th,con1
     INTEGER l,lo ,mind,ll1,lm,iintsp,k,nkmin,ntyp,lmp,m,nintsp
     LOGICAL linind,enough,l_lo1,l_real
@@ -463,7 +494,7 @@ CONTAINS
                 enough = .TRUE.
                 term1 = con1* ((atoms%rmt(ntyp)**2)/2)* CMPLX(rph(k,iintsp),cph(k,iintsp))
                 DO lo = 1,atoms%nlo(ntyp)
-                   IF (atoms%invsat(na).EQ.0) THEN
+                   IF (sym%invsat(na).EQ.0) THEN
                       IF ((nkvec(lo,iintsp)).LT. (2*atoms%llo(lo,ntyp)+1)) THEN
                          enough = .FALSE.
                          nkvec(lo,iintsp) = nkvec(lo,iintsp) + 1
@@ -481,7 +512,7 @@ CONTAINS
                          ENDIF
                       ENDIF
                    ELSE
-                      IF ((atoms%invsat(na).EQ.1) .OR. (atoms%invsat(na).EQ.2)) THEN
+                      IF ((sym%invsat(na).EQ.1) .OR. (sym%invsat(na).EQ.2)) THEN
                          IF (nkvec(lo,iintsp).LT.2*(2*atoms%llo(lo,ntyp)+1)) THEN
                             enough = .FALSE.
                             nkvec(lo,iintsp) = nkvec(lo,iintsp) + 1
@@ -511,10 +542,10 @@ CONTAINS
                    WRITE (6,FMT=*) 'clo coefficient-vectors. the linear independence'
                    WRITE (6,FMT=*) 'quality, linindq, is set: ',linindq
                    WRITE (6,FMT=*) 'this value might be to large.'
-                   WRITE(*,*) na,k,lapw%nv 
+                   WRITE(*,*) na,k,lapw%nv
                    CALL juDFT_error("not enough lin. indep. clo-vectors" ,calledby ="vec_for_lo")
                 END IF
-             ! -- >        end of abccoflo-part           
+             ! -- >        end of abccoflo-part
           ENDDO
        ENDIF
 
@@ -522,8 +553,8 @@ CONTAINS
        enough=.TRUE.
        DO lo = 1,atoms%nlo(ntyp)
           IF (nkvec(lo,1).EQ.nkvec(lo,nintsp)) THEN   ! k-vec accepted by both spin channels
-             IF (atoms%invsat(na).EQ.0) THEN
-                IF ( nkvec(lo,1).LT.(2*atoms%llo(lo,ntyp)+1) ) THEN 
+             IF (sym%invsat(na).EQ.0) THEN
+                IF ( nkvec(lo,1).LT.(2*atoms%llo(lo,ntyp)+1) ) THEN
                    enough=.FALSE.
                 ENDIF
              ELSE

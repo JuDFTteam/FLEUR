@@ -29,7 +29,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: ne,jspin 
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: we(:)!(dimension%neigd)
+    REAL,    INTENT (IN) :: we(:)!(input%neig)
     COMPLEX, INTENT (INOUT) :: n_mmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_u)
     !     ..
     !     .. Local Scalars ..

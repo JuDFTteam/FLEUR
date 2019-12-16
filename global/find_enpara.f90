@@ -11,13 +11,12 @@ MODULE m_find_enpara
   PUBLIC:: find_enpara
 
 CONTAINS
- 
+
   !> Function to determine the energy parameter given the quantum number and the potential
   !! Different schemes are implemented. Nqn (main quantum number) is used as a switch.
   !! This code was previously in lodpot.f
-  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)RESULT(e)
+  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
     USE m_types_setup
-    USE m_types_mpi
     USE m_radsra
     USE m_differ
     USE m_constants
@@ -26,17 +25,15 @@ CONTAINS
     INTEGER,INTENT(IN):: l,n,nqn,jsp
     REAL,INTENT(OUT) :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_mpi),INTENT(IN)  ::mpi
     REAL,INTENT(IN):: vr(:)
 
-    IF (nqn>0) e=priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)
-    IF (nqn<0) e=priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)
+    IF (nqn>0) e=priv_method1(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)
+    IF (nqn<0) e=priv_method2(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)
   END FUNCTION find_enpara
 
 
-  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)RESULT(e)
+  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
     USE m_types_setup
-    USE m_types_mpi
     USE m_radsra
     USE m_differ
     USE m_constants
@@ -45,7 +42,6 @@ CONTAINS
     INTEGER,INTENT(IN):: l,n,nqn,jsp
     REAL,INTENT(OUT)  :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_mpi),INTENT(IN)  ::mpi
     REAL,INTENT(IN):: vr(:)
 
 
@@ -55,12 +51,12 @@ CONTAINS
     REAL   d,rn,fl,fn,fj,t2,rr,t1,ldmt,us,dus,c
     LOGICAL start
     !     ..
-    !     .. Local Arrays .. 
+    !     .. Local Arrays ..
     REAL, ALLOCATABLE :: f(:,:),vrd(:)
     CHARACTER(LEN=20)    :: attributes(6)
     c=c_light(1.0)
 
-    !Core potential setup done for each n,l now 
+    !Core potential setup done for each n,l now
     d = EXP(atoms%dx(n))
     ! set up core-mesh
     rn = atoms%rmt(n)
@@ -85,10 +81,10 @@ CONTAINS
 
     node = nqn - (l+1)
     IF (node<0) CALL judft_error("Error in setup of energy-parameters",hint="This could e.g. happen if you try to use 1p-states")
-    e = 0.0 
+    e = 0.0
     ! determine upper edge
     nodeu = -1 ; start = .TRUE.
-    DO WHILE ( nodeu <= node ) 
+    DO WHILE ( nodeu <= node )
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
             atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
        IF  ( ( nodeu > node ) .AND. start ) THEN
@@ -106,7 +102,7 @@ CONTAINS
     IF (node /= 0) THEN
        ! determine lower edge
        nodeu = node + 1
-       DO WHILE ( nodeu >= node ) 
+       DO WHILE ( nodeu >= node )
           CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
                atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
           e = e - 0.01
@@ -114,7 +110,7 @@ CONTAINS
        ENDDO
        e_lo = e
     ELSE
-       e_lo = -9.99 
+       e_lo = -9.99
     ENDIF
     ! calculate core
     e  = (e_up+e_lo)/2
@@ -126,16 +122,15 @@ CONTAINS
        fn = REAL(nqn) ; fl = REAL(l) ; fj = fl-0.5
        CALL differ(fn,fl,fj,c,atoms%zatom(n),atoms%dx(n),atoms%rmsh(1,n),&
             rn,d,msh,vrd, e1, f(:,1),f(:,2),ierr)
-       e = (2.0*e + e1 ) / 3.0      
+       e = (2.0*e + e1 ) / 3.0
     ENDIF
-    
 
-   
+
+
   END FUNCTION priv_method1
 
-  REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,mpi,vr,e_lo,e_up)RESULT(e)
+  REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
     USE m_types_setup
-    USE m_types_mpi
     USE m_radsra
     USE m_differ
     USE m_constants
@@ -144,7 +139,6 @@ CONTAINS
     INTEGER,INTENT(IN):: l,n,nqn,jsp
     REAL,INTENT(OUT)  :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_mpi),INTENT(IN)  ::mpi
     REAL,INTENT(IN):: vr(:)
 
     INTEGER j,ilo,i
@@ -153,14 +147,14 @@ CONTAINS
     REAL   d,rn,fl,fn,fj,t2,rr,t1,ldmt,us,dus,c
     LOGICAL start
     !     ..
-    !     .. Local Arrays .. 
+    !     .. Local Arrays ..
 
     REAL, ALLOCATABLE :: f(:,:),vrd(:)
     CHARACTER(LEN=20)    :: attributes(6)
-    
+
     c=c_light(1.0)
 
-    !Core potential setup done for each n,l now 
+    !Core potential setup done for each n,l now
     d = EXP(atoms%dx(n))
     ! set up core-mesh
     rn = atoms%rmt(n)
@@ -249,7 +243,7 @@ CONTAINS
     ! determince notches by intersection
     ldmt= -99.0 !ldmt = logarithmic derivative @ MT boundary
     lnd = -l-1
-    DO WHILE ( ABS(ldmt-lnd) .GE. 1E-07) 
+    DO WHILE ( ABS(ldmt-lnd) .GE. 1E-07)
        e = (e_up+e_lo)/2
        CALL radsra(e,l,vr(:),atoms%rmsh(1,n),&
             atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
@@ -263,5 +257,5 @@ CONTAINS
     END DO
 
      END FUNCTION priv_method2
-  
+
 END MODULE m_find_enpara

@@ -16,9 +16,10 @@
 !     It is done directly without employing the mixed basis set.
 
 MODULE m_exchange_core
+      USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE exchange_vccv1(nk, atoms, mpbasis, hybrid, hybdat, DIMENSION, jsp, lapw, &
+   SUBROUTINE exchange_vccv1(nk, input,atoms, mpbasis, hybrid, hybdat, jsp, lapw, &
                              nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
 
       USE m_constants
@@ -28,11 +29,10 @@ CONTAINS
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
-
+      TYPE(t_input),INTENT(IN)::     input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
       TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_dimension), INTENT(IN)   :: DIMENSION
       TYPE(t_mpbasis), intent(in)   :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -65,7 +65,7 @@ CONTAINS
       REAL, ALLOCATABLE        ::  fprod(:, :), fprod2(:, :)
       REAL, ALLOCATABLE        ::  integral(:, :)
 
-      COMPLEX                 ::  cmt(DIMENSION%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       COMPLEX                 ::  exchange(hybrid%nbands(nk), hybrid%nbands(nk))
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 

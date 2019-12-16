@@ -15,7 +15,7 @@
       CONTAINS
         SUBROUTINE cdnsp(&
              &                 atoms,input,vacuum,sphhar,&
-             &                 stars,sym,noco,oneD,cell,DIMENSION)
+             &                 stars,sym,noco,oneD,cell)
 
           USE m_intgr, ONLY : intgr3
           USE m_constants
@@ -32,7 +32,7 @@
           TYPE(t_noco),INTENT(IN)      :: noco
           TYPE(t_oneD),INTENT(IN)      :: oneD
           TYPE(t_cell),INTENT(IN)      :: cell
-          TYPE(t_dimension),INTENT(IN) :: DIMENSION
+
 
           ! local type instances
           TYPE(t_potden)               :: den
@@ -40,7 +40,7 @@
           !     .. Local Scalars ..
           REAL dummy,p,pp,qtot1,qtot2,spmtot,qval,sfp,fermiEnergyTemp
           INTEGER i,ivac,j,k,lh,n,na,jsp_new
-          INTEGER ios 
+          INTEGER ios
           LOGICAL n_exist,l_qfix
           !     ..
           !     .. Local Arrays ..
@@ -57,7 +57,7 @@
           CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
 
           input%jspins=1
-          CALL readCoreDensity(input,atoms,dimension,rhoc,tec,qintc)
+          CALL readCoreDensity(input,atoms,rhoc,tec,qintc)
           CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                            CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
           input%jspins=2
@@ -79,7 +79,7 @@
                 den%mt(j,0,n,jsp_new) = pp*den%mt(j,0,n,1) + rhoc(j,n,1)/ (2.*sfp)
                 den%mt(j,0,n,1)       =  p*den%mt(j,0,n,1) + rhoc(j,n,1)/ (2.*sfp)
              ENDDO
-             DO lh = 1,sphhar%nlh(atoms%ntypsy(na))
+             DO lh = 1,sphhar%nlh(sym%ntypsy(na))
                 DO j = 1,atoms%jri(n)
                    den%mt(j,lh,n,jsp_new) = pp*den%mt(j,lh,n,1)
                    den%mt(j,lh,n,1)       =  p*den%mt(j,lh,n,1)
@@ -109,7 +109,7 @@
           CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN1_const,&
                             CDN_INPUT_DEN_const,0,-1.0,0.0,.FALSE.,den)
           !
-          !     -----> This part is only used for testing th e magnetic moment in 
+          !     -----> This part is only used for testing th e magnetic moment in
           !     ----->   each sphere
           !
           DO n = 1,atoms%ntype

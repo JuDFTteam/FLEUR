@@ -54,14 +54,13 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, mpbasis, hybrid, lapw, dimension, kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
+   SUBROUTINE hsfock(nk, atoms, mpbasis, hybrid, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
                      results, mnobd, xcpot, mpi)
 
       IMPLICIT NONE
 
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -102,7 +101,7 @@ CONTAINS
       INTEGER, ALLOCATABLE     ::  pointer_EIBZ(:)
       INTEGER, ALLOCATABLE     ::  n_q(:)
 
-      REAL                    ::  wl_iks(dimension%neigd, kpts%nkptf)
+      REAL                    ::  wl_iks(input%neig, kpts%nkptf)
 
       TYPE(t_mat)             :: olap, trafo, invtrafo, ex, tmp, v_x, z
 
@@ -150,13 +149,13 @@ CONTAINS
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
-         CALL symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, mpbasis, hybrid, cell, lapw, jsp, &
+         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpbasis, hybrid, cell, lapw, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
          ! remove weights(wtkpt) in w_iks
          DO ikpt = 1, kpts%nkptf
-            DO iband = 1, dimension%neigd
+            DO iband = 1, input%neig
                ikpt0 = kpts%bkp(ikpt)
                wl_iks(iband, ikpt) = results%w_iks(iband, ikpt0, jsp)/(kpts%wtkpt(ikpt0)*kpts%nkptf)
             END DO
@@ -165,7 +164,7 @@ CONTAINS
          ! calculate contribution from valence electrons to the
          ! HF exchange
          ex%l_real = sym%invs
-         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpbasis, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
+         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpbasis, hybrid, cell,  input, jsp, hybdat, mnobd, lapw, &
                                   eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, ex)
 
@@ -175,7 +174,7 @@ CONTAINS
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
             call judft_error('HSE not implemented in hsfock')
          ELSE
-            CALL exchange_vccv1(nk, atoms, mpbasis, hybrid, hybdat, dimension, jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
+            CALL exchange_vccv1(nk, input,atoms, mpbasis, hybrid, hybdat,  jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
             CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
          END IF
 
@@ -184,9 +183,9 @@ CONTAINS
 
          CALL timestart("time for performing T^-1*mat_ex*T^-1*")
          !calculate trafo from wavefunctions to APW basis
-         IF (dimension%neigd < hybrid%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
+         IF (input%neig < hybrid%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
 
-         call z%init(olap%l_real, nbasfcn, dimension%neigd)
+         call z%init(olap%l_real, nbasfcn, input%neig)
          call read_z(z, kpts%nkptf*(jsp - 1) + nk)
          z%matsize2 = hybrid%nbands(nk) ! reduce "visible matsize" for the following computations
 

@@ -10,12 +10,12 @@ MODULE m_writexcstuff
   !
 CONTAINS
   SUBROUTINE write_xcstuff(&
-       &                         sphhar,atoms,dimension,sym,&
+       &                         sphhar,atoms,sym,&
        &                         stars,vacuum,input)
 
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_vacuum),INTENT(IN)      :: vacuum
     TYPE(t_sym),INTENT(IN)         :: sym
@@ -30,11 +30,11 @@ CONTAINS
     !
     OPEN (741,file='fleur2tddft.dat',&
          &         form='unformatted',status='unknown')
-    WRITE (741)  sphhar%memd,atoms%lmaxd,dimension%nspd,sphhar%nlhd,atoms%ntype,sym%nsymt
+    WRITE (741)  sphhar%memd,atoms%lmaxd,sphhar%nlhd,atoms%ntype,sym%nsymt
     WRITE (741) input%jspins,stars%ng3,stars%ng2,vacuum%nmzxyd,vacuum%nmzd,atoms%jmtd,&
          &          input%jspins,stars%ng3,stars%ng2,vacuum%nvac,atoms%ntype,sphhar%ntypsd,atoms%nat,&
          &          sym%invs,sym%invs2,input%film
-    WRITE (741)   sphhar%clnu, sphhar%nmem,sphhar%nlh,sphhar%mlh,sphhar%llh,atoms%jri,atoms%ntypsy,atoms%neq
+    WRITE (741)   sphhar%clnu, sphhar%nmem,sphhar%nlh,sphhar%mlh,sphhar%llh,atoms%jri,sym%ntypsy,atoms%neq
     WRITE (741)  stars%mx1,stars%mx2,stars%mx3,stars%ng3,stars%kimax
     WRITE (741)  stars%igfft,stars%pgfft,stars%nstr
     WRITE (741)  stars%kv3,stars%ig

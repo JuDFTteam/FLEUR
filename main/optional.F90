@@ -6,8 +6,8 @@
 MODULE m_optional
   USE m_juDFT
 CONTAINS
-  SUBROUTINE OPTIONAL(mpi, atoms,sphhar,vacuum,DIMENSION,&
-       stars,input,sym, cell, sliceplot,obsolete, xcpot, noco, oneD)
+  SUBROUTINE OPTIONAL(mpi, atoms,sphhar,vacuum,&
+       stars,input,sym, cell, sliceplot, xcpot, noco, oneD)
     !
     !----------------------------------------
     ! this routine is called by: fleur.F90
@@ -58,16 +58,15 @@ CONTAINS
     USE m_cdn_io
     USE m_types
 
-   
+
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..
 
     TYPE(t_mpi),INTENT(IN)      :: mpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_dimension),INTENT(IN):: DIMENSION
+
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
-    TYPE(t_obsolete),INTENT(IN) :: obsolete
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_stars),INTENT(IN)    :: stars
     TYPE(t_oneD),INTENT(IN)     :: oneD
@@ -96,7 +95,7 @@ CONTAINS
  !      ENDIF
  !   ENDIF
 
-       
+
     !
     !     --->generate starting charge density
     !
@@ -114,12 +113,12 @@ CONTAINS
 #endif
     ENDIF
     IF (strho) THEN
-       strho=input%total 
+       strho=input%total
        input%total = .FALSE.
        !
        CALL timestart("generation of start-density")
-       CALL stden(mpi,sphhar,stars,atoms,sym,DIMENSION,vacuum,&
-                  input,cell,xcpot,obsolete,noco,oneD)
+       CALL stden(mpi,sphhar,stars,atoms,sym,vacuum,&
+                  input,cell,xcpot,noco,oneD)
        !
        input%total=strho
        CALL timestop("generation of start-density")
@@ -130,7 +129,7 @@ CONTAINS
        !
        IF (input%swsp) THEN
           CALL timestart("optional: spin polarized density")
-          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,dimension)
+          CALL cdnsp(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell)
           !
           CALL timestop("optional: spin polarized density")
        END IF
@@ -145,8 +144,8 @@ CONTAINS
           CALL timestop('optional: flip magnetic moments')
        END IF
 
- 
- 
+
+
        IF (input%l_bmt) THEN
           CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym,oneD)
        ENDIF
@@ -157,6 +156,6 @@ CONTAINS
     IF (input%swsp)           CALL juDFT_end("spin polarised density generated",mpi%irank)
     IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",mpi%irank)
     IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',mpi%irank)
-    
+
   END SUBROUTINE OPTIONAL
 END MODULE m_optional

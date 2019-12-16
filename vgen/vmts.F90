@@ -105,7 +105,7 @@ contains
       nat = 1
       do n = 1, atoms%ntype
         call sphbes( atoms%lmax(n), stars%sk3(k) * atoms%rmt(n), sbf )
-        nd = atoms%ntypsy(nat)
+        nd = sym%ntypsy(nat)
         do lh = 0, sphhar%nlh(nd)
           l = sphhar%llh(lh,nd)
           sm = (0.0,0.0)
@@ -146,7 +146,7 @@ contains
 
     nat = 1
     do n = 1, atoms%ntype
-      nd = atoms%ntypsy(nat)
+      nd = sym%ntypsy(nat)
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(nd), nd)
       if ( potdenType == POTDEN_TYPE_POTYUK ) then

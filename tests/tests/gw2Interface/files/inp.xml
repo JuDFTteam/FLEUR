@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurInput fleurInputVersion="0.31">
    <comment>
-      Si bulk                                                                         
+      Si bulk
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.70000000" Gmax="11.10000000" GmaxXC="9.20000000" numbands="0"/>

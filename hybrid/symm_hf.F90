@@ -10,6 +10,8 @@
 !                                             M.Betzinger (09/07)     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE m_symm_hf
+  use m_judft
+  USE m_types_hybdat
 
 #define irreps .false.
 
@@ -55,7 +57,8 @@ CONTAINS
          rotkpt = matmul(rrot(:, :, i), kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         rotkpt = modulo1(rotkpt, kpts%nkpt3)
+         call judft_error("Missing functionality")
+         !rotkpt = modulo1(rotkpt, kpts%nkpt3)
 
          !check if rotkpt is identical to bk(:,nk)
          IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
@@ -70,7 +73,7 @@ CONTAINS
 
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(kpts, nk, sym, dimension, hybdat, eig_irr, atoms, mpbasis, hybrid, cell, &
+   SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input,atoms, mpbasis, hybrid, cell, &
                       lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
@@ -81,7 +84,7 @@ CONTAINS
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
-      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN) :: hybrid
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -131,7 +134,7 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE             :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                         :: cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       COMPLEX                         :: carr1(hybrid%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
@@ -160,7 +163,8 @@ CONTAINS
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
             !transfer rotkpt into BZ
-            rotkpt = modulo1(rotkpt, kpts%nkpt3)
+            call judft_error("Missing functionality")
+            !rotkpt = modulo1(rotkpt, kpts%nkpt3)
 
             !determine number of rotkpt
             nrkpt = 0
@@ -219,7 +223,8 @@ CONTAINS
                rotkpt = matmul(rrot(:, :, isym), kpts%bkf(:, ikpt))
 
                !transfer rotkpt into BZ
-               rotkpt = modulo1(rotkpt, kpts%nkpt3)
+               call judft_error("Missing functionality")
+               !rotkpt = modulo1(rotkpt, kpts%nkpt3)
 
                !check if rotkpt is identical to bk(:,ikpt)
                IF (maxval(abs(rotkpt - kpts%bkf(:, ikpt))) <= 1E-06) THEN
@@ -301,7 +306,7 @@ CONTAINS
                   cpwhlp = 0
 
                   CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms, mpbasis, hybrid, kpts, sym, jsp, lapw)
+                                       i, ndb, nk, iop, atoms,input, mpbasis, hybrid, kpts, sym, jsp, lapw)
 
                   DO iband = 1, ndb
                      carr1 = cmt(iband + i - 1, :, :)
@@ -573,7 +578,8 @@ CONTAINS
          rotkpt = matmul(rrot(:, :, iop), kpts%bkf(:, nk))
 
          !transfer rotkpt into BZ
-         rotkpt = modulo1(rotkpt, kpts%nkpt3)
+         call judft_error("Missing functionality")
+         !rotkpt = modulo1(rotkpt, kpts%nkpt3)
 
          !check if rotkpt is identical to bk(:,nk)
          IF (maxval(abs(rotkpt - kpts%bkf(:, nk))) <= 1E-07) THEN
@@ -608,7 +614,8 @@ CONTAINS
             rotkpt = matmul(rrot(:, :, psym(iop)), kpts%bkf(:, ikpt))
 
             !transfer rotkpt into BZ
-            rotkpt = modulo1(rotkpt, kpts%nkpt3)
+            call judft_error("Missing functionality")
+            !rotkpt = modulo1(rotkpt, kpts%nkpt3)
 
             !determine number of rotkpt
             nrkpt = 0

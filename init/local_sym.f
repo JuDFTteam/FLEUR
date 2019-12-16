@@ -37,7 +37,7 @@
      >                     lmaxd,lmax,nops,mrot,tau,
      >                     natd,ntype,neq,amat,bmat,pos,
      X                     nlhd,memd,ntypsd,l_dim,
-     <                     nlhtyp,ntypsy,nlh,llh,nmem,mlh,clnu)
+     <                     nlhtyp,nlh,llh,nmem,mlh,clnu)
 
       USE m_ptsym
       USE m_lhcal
@@ -52,7 +52,6 @@
       LOGICAL, INTENT (IN) :: l_dim
       INTEGER              :: nlhd,memd,ntypsd
       INTEGER              :: nlhtyp(ntype)
-      INTEGER, INTENT(OUT) :: ntypsy(natd)
       INTEGER, INTENT(OUT) :: llh(0:nlhd,ntypsd),nmem(0:nlhd,ntypsd)
       INTEGER, INTENT(OUT) ::  mlh(memd,0:nlhd,ntypsd),nlh(ntypsd)
       COMPLEX, INTENT(OUT) :: clnu(memd,0:nlhd,ntypsd)
@@ -179,15 +178,7 @@
          ENDDO
       ENDDO
 
-      na = 0
-      DO n = 1, ntype
-         DO nn = 1,neq(n)
-            na = na + 1
-            ntypsy(na) = typsym(na)
-!            ntypsy(na) = typsym(na-nn+1)
-         ENDDO
-      ENDDO
-
+ 
 !---> output results
       DO n = 1, nsymt
         WRITE (6,'(/," --- Local symmetry",i3,":",i4,

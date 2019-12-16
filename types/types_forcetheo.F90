@@ -21,12 +21,16 @@
 !! forcetheorem/mae.F90
 
 MODULE m_types_forcetheo
+  USE m_juDFT
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC:: t_forcetheo
   TYPE :: t_forcetheo
      LOGICAL,PRIVATE :: firstloop
      LOGICAL :: l_IO
    CONTAINS
      PROCEDURE :: start   =>forcetheo_start
-     PROCEDURE :: next_job=>forcetheo_next_job 
+     PROCEDURE :: next_job=>forcetheo_next_job
      PROCEDURE :: eval    =>forcetheo_eval
      PROCEDURE :: postprocess => forcetheo_postprocess
   END TYPE t_forcetheo
@@ -43,7 +47,8 @@ CONTAINS
   END SUBROUTINE forcetheo_start
 
   LOGICAL FUNCTION forcetheo_next_job(this,lastiter,atoms,noco)
-    USE m_types_setup
+    USE m_types_atoms
+    USE m_types_noco
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     LOGICAL,INTENT(IN)                  :: lastiter
@@ -54,21 +59,26 @@ CONTAINS
     this%firstloop=.FALSE.
   END FUNCTION forcetheo_next_job
 
-  FUNCTION forcetheo_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+  FUNCTION forcetheo_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
-    USE m_types_setup
+    USE m_types_atoms
+    USE m_types_oneD
+    USE m_types_input
+    USE m_types_noco
+    USE m_types_sym
+    USE m_types_cell
     USE m_types_mpi
     USE m_types_potden
     USE m_types_misc
     USE m_types_kpts
     USE m_types_enpara
-    
+
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
@@ -88,6 +98,5 @@ CONTAINS
     CLASS(t_forcetheo),INTENT(INOUT):: this
   END SUBROUTINE forcetheo_postprocess
 
-  
-END MODULE m_types_forcetheo
 
+END MODULE m_types_forcetheo

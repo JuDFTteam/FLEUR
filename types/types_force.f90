@@ -111,7 +111,7 @@ SUBROUTINE force_init2(thisForce,noccbd,input,atoms)
 
 END SUBROUTINE force_init2
 
-SUBROUTINE addContribsA21A12(thisForce,input,atoms,dimension,sym,cell,oneD,enpara,&
+SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell,oneD,enpara,&
                              usdus,eigVecCoeffs,noccbd,ispin,eig,we,results)
 
    USE m_types_setup
@@ -127,7 +127,7 @@ SUBROUTINE addContribsA21A12(thisForce,input,atoms,dimension,sym,cell,oneD,enpar
    CLASS(t_force),       INTENT(INOUT) :: thisForce
    TYPE(t_input),        INTENT(IN)    :: input
    TYPE(t_atoms),        INTENT(IN)    :: atoms
-   TYPE(t_dimension),    INTENT(IN)    :: dimension
+   
    TYPE(t_sym),          INTENT(IN)    :: sym
    TYPE(t_cell),         INTENT(IN)    :: cell
    TYPE(t_oneD),         INTENT(IN)    :: oneD
@@ -143,11 +143,11 @@ SUBROUTINE addContribsA21A12(thisForce,input,atoms,dimension,sym,cell,oneD,enpar
    REAL,                 INTENT(IN)    :: we(noccbd)
 
    IF (.NOT.input%l_useapw) THEN
-      CALL force_a12(atoms,noccbd,sym,dimension,cell,oneD,&
+      CALL force_a12(atoms,noccbd,sym,cell,oneD,&
                      we,ispin,noccbd,usdus,eigVecCoeffs,thisForce%acoflo,thisForce%bcoflo,&
                      thisForce%e1cof,thisForce%e2cof,thisForce%f_a12,results)
    END IF
-   CALL force_a21(input,atoms,dimension,sym,oneD,cell,we,ispin,&
+   CALL force_a21(input,atoms,sym,oneD,cell,we,ispin,&
                   enpara%el0(0:,:,ispin),noccbd,eig,usdus,eigVecCoeffs,&
                   thisForce%aveccof,thisForce%bveccof,thisForce%cveccof,&
                   thisForce%f_a21,thisForce%f_b4,results)

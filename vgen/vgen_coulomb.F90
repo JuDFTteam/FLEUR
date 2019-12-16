@@ -10,15 +10,15 @@ module m_vgen_coulomb
 
 contains
 
-  subroutine vgen_coulomb( ispin, mpi, dimension, oneD, input, field, vacuum, sym, stars, &
+  subroutine vgen_coulomb( ispin, mpi,  oneD, input, field, vacuum, sym, stars, &
              cell, sphhar, atoms, dosf, den, vCoul, results )
     !----------------------------------------------------------------------------
-    ! FLAPW potential generator                           
+    ! FLAPW potential generator
     !----------------------------------------------------------------------------
-    ! Generates the Coulomb or Yukawa potential and optionally the 
+    ! Generates the Coulomb or Yukawa potential and optionally the
     ! density-potential integrals
     ! vCoul%potdenType = POTDEN_TYPE_POTYUK -> Yukawa case
-    ! It takes a spin variable to indicate in which spin-channel the charge 
+    ! It takes a spin variable to indicate in which spin-channel the charge
     ! resides.
     !----------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ contains
 
     integer,            intent(in)               :: ispin
     type(t_mpi),        intent(in)               :: mpi
-    type(t_dimension),  intent(in)               :: dimension
+
     type(t_oneD),       intent(in)               :: oneD
     type(t_input),      intent(in)               :: input
     type(t_field),      intent(inout)            :: field
@@ -49,7 +49,7 @@ contains
     type(t_stars),      intent(in)               :: stars
     type(t_cell),       intent(in)               :: cell
     type(t_sphhar),     intent(in)               :: sphhar
-    type(t_atoms),      intent(in)               :: atoms 
+    type(t_atoms),      intent(in)               :: atoms
     LOGICAL,            INTENT(IN)               :: dosf
     type(t_potden),     intent(in)               :: den
     type(t_potden),     intent(inout)            :: vCoul
@@ -67,15 +67,15 @@ contains
     include 'mpif.h'
     integer:: ierr
 #endif
- 
-    
+
+
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
 
 
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
-    call timestart( "psqpw" )      
+    call timestart( "psqpw" )
     call psqpw( mpi, atoms, sphhar, stars, vacuum,  cell, input, sym, oneD, &
          den%pw(:,ispin), den%mt(:,:,:,ispin), den%vacz(:,:,ispin), .false., vCoul%potdenType, psq )
     call timestop( "psqpw" )
@@ -96,10 +96,10 @@ contains
              oneD, den%vacz(:,:,ispin), den%vacxy(:,:,:,ispin), psq, &
              vCoul%vacz(:,:,ispin), sym, vCoul%vacxy(:,:,:,ispin), vCoul%pw(:,ispin) )
         call timestop( "Vacuum" )
-        !---> generation of the vacuum warped potential components and       
+        !---> generation of the vacuum warped potential components and
       elseif ( input%film .and. .not. oneD%odi%d1 ) then
         !     ----> potential in the  vacuum  region
-        call timestart( "Vacuum" ) 
+        call timestart( "Vacuum" )
         call vvac( vacuum, stars, cell, sym, input, field, psq, den%vacz(:,:,ispin), vCoul%vacz(:,:,ispin), rhobar, sig1dh, vz1dh )
         call vvacis( stars, vacuum, sym, cell, psq, input, field, vCoul%vacxy(:,:,:,ispin) )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vacxy(:,:,:,ispin), vCoul%vacxy(:,:,:,ispin), alphm )
@@ -115,7 +115,7 @@ contains
       ! in case of a film:
       if ( input%film .and. .not.oneD%odi%d1 ) then
         ! create v(z) for each 2-d reciprocal vector
-        ivfft = 3 * stars%mx3 
+        ivfft = 3 * stars%mx3
         ani = 1.0 / real( ivfft )
         do irec2 = 1, stars%ng2
           i = 0
@@ -168,7 +168,7 @@ contains
           ! if( abs( real( psq(1) ) ) * cell%omtil < 0.01 ) vCoul%pw(1,ispin) = 0.0
           ! there is a better option now using qfix in mix
         else
-          vCoul%pw(1,ispin) = cmplx(0.0,0.0) 
+          vCoul%pw(1,ispin) = cmplx(0.0,0.0)
           vCoul%pw(2:stars%ng3,ispin) = fpi_const * psq(2:stars%ng3) / stars%sk3(2:stars%ng3) ** 2
         end if
       end if
@@ -191,7 +191,7 @@ contains
     if ( mpi%irank == 0 ) then
       CHECK_CONTINUITY: if ( input%vchk ) then
         call timestart( "checking" )
-        call checkDOPAll( input, dimension, sphhar, stars, atoms, sym, vacuum, oneD, &
+        call checkDOPAll( input,  sphhar, stars, atoms, sym, vacuum, oneD, &
                           cell, vCoul, ispin )
         call timestop( "checking" )
       end if CHECK_CONTINUITY

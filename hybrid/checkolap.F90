@@ -5,7 +5,7 @@
          SUBROUTINE checkolap(atoms, hybdat,&
                            mpbasis,hybrid,&
                            nkpti, kpts,&
-                           dimension, mpi, &
+                            mpi, &
                            input, sym, noco,&
                            cell, lapw, jsp)
             USE m_util, ONLY: chr, sphbessel, harmonicsr
@@ -13,12 +13,13 @@
             USE m_constants
             USE m_types
             USE m_io_hybrid
+            USE m_types_hybdat
+
             IMPLICIT NONE
 
             TYPE(t_hybdat), INTENT(IN)   :: hybdat
 
             TYPE(t_mpi), INTENT(IN)         :: mpi
-            TYPE(t_dimension), INTENT(IN)   :: dimension
             TYPE(t_mpbasis), intent(in) :: mpbasis
             TYPE(t_hybrid), INTENT(IN)      :: hybrid
             TYPE(t_input), INTENT(IN)       :: input
@@ -59,7 +60,7 @@
             REAL, ALLOCATABLE   :: olapcv_avg(:, :, :, :), olapcv_max(:, :, :, :)
             TYPE(t_mat), ALLOCATABLE :: z(:)
 
-            COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat, nkpti)
+            COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat, nkpti)
             COMPLEX                 ::  y((atoms%lmaxd + 1)**2)
             COMPLEX, ALLOCATABLE   ::  olapcv(:, :)
             COMPLEX, ALLOCATABLE   ::  carr1(:, :), carr2(:, :), carr3(:, :)
@@ -74,7 +75,7 @@
             DO ikpt = 1, nkpti
                CALL lapw%init(input, noco, kpts, atoms, sym, ikpt, cell, sym%zrfs)
                nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-               call z(ikpt)%alloc(sym%invs, nbasfcn, dimension%neigd)
+               call z(ikpt)%alloc(sym%invs, nbasfcn, input%neig)
             ENDDO
 
             IF (mpi%irank == 0) WRITE (6, '(//A)') '### checkolap ###'

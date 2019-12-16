@@ -1,4 +1,3 @@
-!--------------------------------------------------------------------------------
 ! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -21,7 +20,7 @@ IMPLICIT NONE
     end subroutine chase_c
   end interface
 
-  interface 
+  interface
     subroutine chase_r( h, n, v, ritzv, nev, nex, deg, tol, mode, opt ) bind( c, name = 'dchase_' )
       use, intrinsic :: iso_c_binding
       real(c_double_complex)        :: h(n,*), v(n,*)
@@ -31,22 +30,22 @@ IMPLICIT NONE
     end subroutine chase_r
   end interface
 
-  !MPI 
-  INTERFACE 
+  !MPI
+  INTERFACE
      SUBROUTINE mpi_dchase_init( mpi_comm, n, nev, nex, xoff,yoff,xlen,ylen,npr,npc,myrow,mycol) BIND( c, name = 'dchase_init' )
        USE, INTRINSIC :: iso_c_binding
        INTEGER(c_int) :: mpi_comm, n, nev, nex, xoff,yoff,xlen,ylen,myrow,mycol,npr,npc
      END SUBROUTINE mpi_dchase_init
   END INTERFACE
 
-  INTERFACE 
+  INTERFACE
      SUBROUTINE mpi_zchase_init( mpi_comm, n, nev, nex, xoff,yoff,xlen,ylen,npr,npc,myrow,mycol) BIND( c, name = 'zchase_init' )
        USE, INTRINSIC :: iso_c_binding
        INTEGER(c_int) :: mpi_comm, n, nev, nex, xoff,yoff,xlen,ylen,myrow,mycol,npr,npc
      END SUBROUTINE mpi_zchase_init
   END INTERFACE
- 
-  INTERFACE 
+
+  INTERFACE
      SUBROUTINE mpi_chase_r(h, v, ritzv, deg, tol, mode, opt ) BIND( c, name = 'dchase_solve' )
        USE, INTRINSIC :: iso_c_binding
        REAL(c_double_complex)        :: h(*), v(*)
@@ -55,9 +54,9 @@ IMPLICIT NONE
        CHARACTER(len=1,kind=c_char)  :: mode, opt
      END SUBROUTINE mpi_chase_r
   END INTERFACE
- 
 
-  INTERFACE 
+
+  INTERFACE
      SUBROUTINE mpi_chase_c(h, v, ritzv, deg, tol, mode, opt ) BIND( c, name = 'zchase_solve' )
        USE, INTRINSIC :: iso_c_binding
        COMPLEX(c_double_complex)     :: h(*), v(*)
@@ -66,16 +65,16 @@ IMPLICIT NONE
        CHARACTER(len=1,kind=c_char)  :: mode, opt
      END SUBROUTINE mpi_chase_c
   END INTERFACE
-  
 
-  PRIVATE 
+
+  PRIVATE
 
   INTEGER         :: chase_eig_id
   PUBLIC init_chase
 #endif
   REAL            :: scale_distance
   REAL            :: tol
-  
+
   PUBLIC chase_distance,chase_diag
 
 CONTAINS
@@ -83,20 +82,22 @@ CONTAINS
   SUBROUTINE chase_distance(dist)
     IMPLICIT NONE
     REAL,INTENT(in)::dist
-    
+
     tol=MAX(1E-8,dist*scale_distance)
   END SUBROUTINE chase_distance
 
 #ifdef CPP_CHASE
-    SUBROUTINE init_chase(mpi,DIMENSION,input,atoms,kpts,noco,l_real)
-    USE m_types
+    SUBROUTINE init_chase(mpi,input,atoms,kpts,noco,l_real)
+    USE m_types_mpimat
+    USE m_types_setup
+    USE m_types_mpi
     USE m_judft
     USE m_eig66_io
 
     IMPLICIT NONE
 
     TYPE(t_mpi),               INTENT(IN)    :: mpi
-    TYPE(t_dimension),         INTENT(IN)    :: dimension
+
     TYPE(t_input),             INTENT(IN)    :: input
     TYPE(t_atoms),             INTENT(IN)    :: atoms
     TYPE(t_kpts),              INTENT(IN)    :: kpts
@@ -105,23 +106,23 @@ CONTAINS
 
     INTEGER                                  :: nevd, nexd
     CHARACTER(len=1000)::arg
-    
-   
+
+
     scale_distance=1E-3
     !IF (judft_was_argument("-chase_tol_scale")) THEN
     !   arg=juDFT_string_for_argument("-chase_tol_scale")
     !   READ(arg,*) scale_distance
     !ENDIF
-    
+
     IF (TRIM(juDFT_string_for_argument("-diag"))=="chase") THEN
-       nevd = min(dimension%neigd,dimension%nvd+atoms%nlotot)
-       nexd = min(max(nevd/4, 45),dimension%nvd+atoms%nlotot-nevd) !dimensioning for workspace
-       chase_eig_id=open_eig(mpi%mpi_comm,DIMENSION%nbasfcn,nevd+nexd,kpts%nkpt,input%jspins,&
+       nevd = min(input%neig,lapw%dim_nvd()+atoms%nlotot)
+       nexd = min(max(nevd/4, 45),lapw%dim_nvd()+atoms%nlotot-nevd) !dimensioning for workspace
+       chase_eig_id=open_eig(mpi%mpi_comm,lapw%dim_nbasfcn(),nevd+nexd,kpts%nkpt,input%jspins,&
                              noco%l_noco,.TRUE.,l_real,noco%l_soc,.FALSE.,mpi%n_size)
     END IF
   END SUBROUTINE init_chase
 #endif
-  
+
    SUBROUTINE chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
     USE m_types_mpimat
     USE m_types_mat
@@ -157,9 +158,9 @@ CONTAINS
           CALL judft_error("Inconsistent matrix setup")
        END SELECT
     END SELECT
-#endif    
+#endif
   END SUBROUTINE chase_diag
-#ifdef CPP_CHASE  
+#ifdef CPP_CHASE
   SUBROUTINE chase_diag_noMPI(hmat,smat,ikpt,jsp,iter,ne,eig,zmat)
 
     USE m_types_mat
@@ -206,7 +207,7 @@ CONTAINS
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
 
-       ! --> now reduce a * z = eig * b * z to the standard form a' * z' = eig * z' 
+       ! --> now reduce a * z = eig * b * z to the standard form a' * z' = eig * z'
        ! --> where a' = (l)^-1 * a * (l^t)^-1 and z' = l^t * z
        CALL dsygst(1,'U',smat%matsize1,hmat%data_r,SIZE(hmat%data_r,1),smat%data_r,SIZE(smat%data_r,1),info)
        IF (info.NE.0) THEN
@@ -260,7 +261,7 @@ CONTAINS
           CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
        ENDIF
 
-       ! --> now reduce a * z = eig * b * z to the standard form a' * z' = eig * z' 
+       ! --> now reduce a * z = eig * b * z to the standard form a' * z' = eig * z'
        ! --> where a' = (l)^-1 * a * (l^t)^-1 and z' = l^t * z
        CALL zhegst(1,'U',smat%matsize1,hmat%data_c,SIZE(hmat%data_c,1),smat%data_c,SIZE(smat%data_c,1),info)
        IF (info.NE.0) THEN
@@ -314,7 +315,7 @@ CONTAINS
     USE m_judft
     USE iso_c_binding
     USE m_eig66_io
-    
+
     !Simple driver to solve Generalized Eigenvalue Problem using the ChASE library
     IMPLICIT NONE
 
@@ -376,13 +377,13 @@ CONTAINS
 
     CALL hmat%generate_full_matrix()
     CALL priv_init_chasempimat(hmat,chase_mat,nev,nex)
-    
+
     !CALL chase_mat%generate_full_matrix()
     ALLOCATE(eigenvalues(nev+nex))
     eigenvalues = 0.0
     !ALLOCATE(t_mpimat::zmatTemp)
     CALL zMatTemp%init(hmat%l_real,hmat%global_size1,nev+nex,MPI_COMM_SELF,.TRUE.) !Generate a pseudo-distributed matrix
-    
+
     IF (hmat%l_real) THEN
        IF(iter.EQ.1) THEN
           CALL CPU_TIME(t2)
@@ -406,14 +407,14 @@ CONTAINS
           CALL CPU_TIME(t3)
        END IF
     ENDIF
-    
+
     ne = nev
     IF (myid==0) CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
          eigenvalues(:(nev+nex)),zmat=zMatTemp)
 
     CALL hmat%from_non_dist(zmattemp)
     call zmatTemp%free()
-    
+
     ! --> recover the generalized eigenvectors z by solving z' = l^t * z
     IF (smat%l_real) THEN
        CALL pdtrtrs('U','N','N',hmat%global_size1,hmat%global_size1,smat%data_r,1,1,smat%blacsdata%blacs_desc,&
@@ -479,7 +480,7 @@ CONTAINS
     mat%global_size1=hmat%global_size1
     mat%global_size2=hmat%global_size1
     mat%l_real=hmat%l_real
-   
+
     !Determine rank and no of processors
     CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com,myid,ierr)
     CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com,np,ierr)
@@ -497,7 +498,7 @@ CONTAINS
     CALL MPI_ALLREDUCE(rowlen,nbr,1,MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
     CALL MPI_ALLREDUCE(collen,nbc,1,MPI_INTEGER,MPI_MAX,mat%blacsdata%mpi_com,ierr)
 
-    
+
     ALLOCATE(iusermap(mat%blacsdata%nprow,mat%blacsdata%npcol))
     iusermap=-2
     !Get BLACS ranks for all MPI ranks
@@ -508,7 +509,7 @@ CONTAINS
     ! Create the Grid
     CALL BLACS_GRIDMAP(mat%blacsdata%blacs_desc(2),iusermap,mat%blacsdata%nprow,mat%blacsdata%nprow,mat%blacsdata%npcol)
 
-   
+
     !Now create the matrix
     mat%matsize1=numroc(mat%global_size1,nbr,myrow,0,mat%blacsdata%nprow)
     mat%matsize2=numroc(mat%global_size1,nbc,mycol,0,mat%blacsdata%npcol)
@@ -531,8 +532,8 @@ CONTAINS
     !Copy data from hmat
     CALL mat%copy(hmat,1,1)
 
-    
-    
+
+
   END SUBROUTINE priv_init_chasempimat
 
 

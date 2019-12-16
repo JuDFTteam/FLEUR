@@ -110,7 +110,7 @@ MODULE m_corespec_eval
                           msh,vr,f,g)
 
     USE m_constants, ONLY : c_light
-    USE m_setcor
+    !USE m_setcor
     USE m_differ
     USE m_intgr, ONLY : intgr3
     USE m_dr2fdr
@@ -167,8 +167,8 @@ MODULE m_corespec_eval
   ! core setup
     bmu = 0.0
 
-    CALL setcor(itype,jspins,atoms,input,bmu,nst,kappa,nprnc,occ)
-
+    !CALL setcor(itype,jspins,atoms,input,bmu,nst,kappa,nprnc,occ)
+    CALL atoms%econf(itype)%get_core(nst,nprnc,kappa,occ)
   ! extend core potential
     vrd(1:nr) = vr(1:nr,itype,jspin)
     t2 = vrd(nr)/(nr-msh)

@@ -6,7 +6,7 @@
 
 MODULE m_mpi_bc_coreden
 CONTAINS
-   SUBROUTINE mpi_bc_coreden(mpi,atoms,input,dimension,&
+   SUBROUTINE mpi_bc_coreden(mpi,atoms,input,&
                              rhcs,tecs,qints)
 
    USE m_types
@@ -16,7 +16,7 @@ CONTAINS
    TYPE(t_mpi),INTENT(IN)       :: mpi
    TYPE(t_atoms),INTENT(IN)     :: atoms
    TYPE(t_input),INTENT(IN)     :: input
-   TYPE(t_dimension),INTENT(IN) :: DIMENSION
+   
 
    REAL, INTENT(INOUT) :: rhcs(atoms%jmtd,atoms%ntype,input%jspins)
    REAL, INTENT(INOUT) :: tecs(atoms%ntype,input%jspins)

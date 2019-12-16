@@ -1,10 +1,10 @@
 module m_mpmom
   !     ***********************************************************
-  !     calculation of the multipole moments of the original charge 
-  !     density minus the interstitial charge density 
-  !     for each atom type 
-  !     
-  !     For yukawa_residual = .true. the subroutines calculate the 
+  !     calculation of the multipole moments of the original charge
+  !     density minus the interstitial charge density
+  !     for each atom type
+  !
+  !     For yukawa_residual = .true. the subroutines calculate the
   !     multipole moments for the Yukawa potential instead of the
   !     Coulomb potential. This is used in the preconditioning of
   !     the SCF iteration for metallic systems.
@@ -12,12 +12,12 @@ module m_mpmom
   !     qlmo(m,l,n) : mult.mom. of the muffin-tin charge density
   !     qlmp(m,l,n) : mult.mom. of the plane-wave charge density
   !     qlm (m,l,n) : (output) difference of the former quantities
-  !     
+  !
   !     references:
   !     for both the Coulomb and the Yukawa pseudo charge density:
   !     F. Tran, P. Blaha: Phys. Rev. B 83, 235118 (2011)
   !     or see the original paper for the normal Coulomb case only:
-  !     M. Weinert: J.Math.Phys. 22(11) (1981) p.2434 eq. (10)-(15) 
+  !     M. Weinert: J.Math.Phys. 22(11) (1981) p.2434 eq. (10)-(15)
   !     ***********************************************************
 
 contains
@@ -48,7 +48,7 @@ contains
     ! multipole moments of original charge density
     if ( mpi%irank == 0 ) then
 !      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
-      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
+      call mt_moments( input, atoms, sym,sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
@@ -61,7 +61,7 @@ contains
       nat = 1
       do n = 1, atoms%ntype
         write( 6, fmt=8000 ) n
-        nd = atoms%ntypsy(nat)
+        nd = sym%ntypsy(nat)
         do lh = 0, sphhar%nlh(nd)
           l = sphhar%llh(lh,nd)
           mems = sphhar%nmem(lh,nd)
@@ -83,7 +83,7 @@ contains
 
 
 !  subroutine mt_moments( input, atoms, sphhar, rho, potdenType, qlmo )
-  subroutine mt_moments( input, atoms, sphhar, rho, potdenType,qlmo,l_coreCharge)
+  subroutine mt_moments( input, atoms, sym,sphhar, rho, potdenType,qlmo,l_coreCharge)
     ! multipole moments of original charge density
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
@@ -97,6 +97,7 @@ contains
     type(t_input),  intent(in)        :: input
     type(t_sphhar), intent(in)        :: sphhar
     type(t_atoms),  intent(in)        :: atoms
+    type(t_sym),    intent(in)        :: sym
     real,           intent(in)        :: rho(: ,0:, :)
     integer,        intent(in)        :: potdenType
     complex,        intent(out)       :: qlmo(-atoms%lmaxd:,0:,:)
@@ -119,7 +120,7 @@ contains
     qlmo = 0.0
     nat = 1
     do n = 1, atoms%ntype
-      ns = atoms%ntypsy(nat)
+      ns = sym%ntypsy(nat)
       jm = atoms%jri(n)
       imax = atoms%jri(n)
       lmax = sphhar%llh(sphhar%nlh(ns), ns)
@@ -200,7 +201,7 @@ contains
     if ( mpi%irank == 0 ) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
       do n = 1, atoms%ntype
-        if ( potdenType /= POTDEN_TYPE_POTYUK ) then  
+        if ( potdenType /= POTDEN_TYPE_POTYUK ) then
           qlmp(0,0,n) = qpw(1) * stars%nstr(1) * atoms%volmts(n) / sfp_const
         else
           call ModSphBessel( il(0:1), kl(0:1), input%preconditioning_param * atoms%rmt(n), 1 )
@@ -224,7 +225,7 @@ contains
       else
         call phasy1( atoms, stars, sym, cell, k, pylm )
       end if
-     
+
       nqpw = qpw(k) * stars%nstr(k)
       do n = 1, atoms%ntype
         sk3r = stars%sk3(k) * atoms%rmt(n)
@@ -240,7 +241,7 @@ contains
           if ( potdenType == POTDEN_TYPE_POTYUK ) then
             cil = ( stars%sk3(k) * il(l) * aj(l+1) + input%preconditioning_param * il(l+1) * aj(l) ) * ( DoubleFactorial( l ) / input%preconditioning_param ** l ) * sk3i
           else
-            cil = aj(l+1) * sk3i * rl2  
+            cil = aj(l+1) * sk3i * rl2
             rl2 = rl2 * atoms%rmt(n)
           end if
           ll1 = l * ( l + 1 ) + 1

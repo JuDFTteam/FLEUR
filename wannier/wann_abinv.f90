@@ -6,7 +6,7 @@
 
 MODULE m_wann_abinv
 CONTAINS
-  SUBROUTINE wann_abinv(atoms,acof,bcof,ccof)
+  SUBROUTINE wann_abinv(atoms,sym,acof,bcof,ccof)
     !     ***************************************************************
     !     Transform acof,bcof,ccof in case of atoms related by inversion
     !     symmetry to obtain the coefficients in the global frame.
@@ -18,6 +18,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     TYPE(t_atoms),INTENT(IN) :: atoms
+    TYPE(t_sym),INTENT(IN)   :: sym
 
     COMPLEX, INTENT (INOUT) :: acof(:,0:,:)
     COMPLEX, INTENT (INOUT) :: bcof(:,0:,:)
@@ -30,7 +31,7 @@ CONTAINS
     DO itype=1,atoms%ntype
        DO ineq=1,atoms%neq(itype)
           iatom=iatom+1
-          IF(atoms%invsat(iatom).NE.2) CYCLE
+          IF(sym%invsat(iatom).NE.2) CYCLE
           DO l=1,atoms%lmax(itype),2
              acof(:,l**2:l*(l+2),iatom) = (-1)**l *&
                   acof(:,l**2:l*(l+2),iatom)

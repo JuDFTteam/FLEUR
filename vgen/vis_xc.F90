@@ -62,13 +62,15 @@ CONTAINS
 
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
-
+#ifdef CPP_LIBXC
       if(perform_MetaGGA .and. xcpot%kinED%set) then
          CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinED_KS=xcpot%kinED%is)
       else
          CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
       endif
-
+#else
+        CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
+#endif
       IF (xcpot%needs_grad()) THEN
          SELECT TYPE(xcpot)
          TYPE IS (t_xcpot_libxc)
@@ -82,12 +84,16 @@ CONTAINS
       !calculate the ex.-cor energy density
       IF (ALLOCATED(exc%pw_w)) THEN
          ALLOCATE ( e_xc(SIZE(rho,1),1) ); e_xc=0.0
-
+#ifdef CPP_LIBXC
          IF(xcpot%kinED%set) THEN
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, xcpot%kinED%is, mt_call=.False.)
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
          ENDIF
+
+#else
+         CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
+#endif
          CALL pw_from_grid(xcpot%needs_grad(),stars,.TRUE.,e_xc,exc%pw,exc%pw_w)
       ENDIF
 

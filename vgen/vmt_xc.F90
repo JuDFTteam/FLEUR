@@ -77,7 +77,10 @@
             IF (ANY(lda_atom)) THEN
                IF((.NOT.xcpot%is_name("pw91"))) &
                   CALL judft_warn("Using locally LDA only possible with pw91 functional")
-               CALL xcpot_tmp%init("l91",.FALSE.,atoms%ntype)
+               !TODO: check this code and the functionality
+               !xcpot_tmp%inbuild_name="l91"
+               !xcpot_tmp%l_relativistic=.FALSE.
+               CALL xcpot_tmp%init(atoms%ntype)
                ALLOCATE(xcl(SIZE(v_xc,1),SIZE(v_xc,2)))
             ENDIF
          CLASS DEFAULT
@@ -103,20 +106,26 @@
          n_stride=1
 #endif
          loc_n = 0
-         call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
+         !TODO: MetaGGA
+         !call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
             loc_n = loc_n + 1
-            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sphhar,den%mt(:,0:,n,:),n,noco,grad,ch)
+            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,den%mt(:,0:,n,:),n,noco,grad,ch)
 
             !
             !         calculate the ex.-cor. potential
+#ifdef CPP_LIBXC
             if(perform_MetaGGA .and. xcpot%kinED%set) then
-               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
+              CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
                    , v_x(:nsp*atoms%jri(n),:),grad, kinED_KS=xcpot%kinED%mt(:,:,loc_n))
             else
                CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
                   , v_x(:nsp*atoms%jri(n),:),grad)
             endif
+#else
+               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
+                  , v_x(:nsp*atoms%jri(n),:),grad)
+#endif
             IF (lda_atom(n)) THEN
                ! Use local part of pw91 for this atom
                CALL xcpot_tmp%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),xcl(:nsp*atoms%jri(n),:),v_x(:nsp*atoms%jri(n),:),grad)
@@ -134,17 +143,17 @@
             ENDIF
 
             !Add postprocessing for libxc
-            IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sphhar,noco,n,v_xc,grad, atom_num=n)
+            IF (l_libxc.AND.xcpot%needs_grad()) CALL libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_xc,grad, atom_num=n)
 
-            CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
-            CALL mt_from_grid(atoms,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
 
             IF (ALLOCATED(exc%mt)) THEN
                !
                !           calculate the ex.-cor energy density
                !
-               
+#ifdef CPP_LIBXC
                IF(perform_MetaGGA .and. xcpot%kinED%set) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, &
@@ -153,7 +162,10 @@
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)
                ENDIF
-   
+#else
+               CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
+                       e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)
+#endif
                !write (*,*) "cut first ", cut_ratio, " number of points"
                !where(cut_mask) e_xc(:,1) = 0.0
 
@@ -168,7 +180,7 @@
                      nt=nt+nsp
                   END DO
                ENDIF
-               CALL mt_from_grid(atoms,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
+               CALL mt_from_grid(atoms,sym,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
          ENDDO
 

@@ -64,7 +64,7 @@ CONTAINS
     na = 1
     DO n = 1,atoms%ntype
        lmx(n) = MIN( atoms%lmax(n) , l_cutoff )
-       ntypsy_o(n) = atoms%ntypsy(na)
+       ntypsy_o(n) = sym%ntypsy(na)
        na = na + atoms%neq(n)
     END DO
     !

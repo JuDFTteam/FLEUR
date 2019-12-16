@@ -8,7 +8,7 @@ MODULE m_eigenso
   !     makes spin-orbit matrix elements solves e.v. and put it on 'eig'
   !
   !     Tree:  eigenso-|- readPotential
-  !                    |- spnorb  : sets up s-o parameters 
+  !                    |- spnorb  : sets up s-o parameters
   !                    |    |- soinit - sorad  : radial part
   !                    |    |- sgml            : diagonal angular parts
   !                    |    |- anglso          : non-diagonal -"-
@@ -20,12 +20,12 @@ MODULE m_eigenso
   !**********************************************************************
   !
 CONTAINS
-  SUBROUTINE eigenso(eig_id,mpi,DIMENSION,stars,vacuum,atoms,sphhar,&
-                     obsolete,sym,cell,noco,input,kpts,oneD,vTot,enpara,results,hub1)
+  SUBROUTINE eigenso(eig_id,mpi,stars,vacuum,atoms,sphhar,&
+                     sym,cell,noco,input,kpts,oneD,vTot,enpara,results,hub1)
 
     USE m_types
     USE m_eig66_io, ONLY : read_eig,write_eig
-    USE m_spnorb 
+    USE m_spnorb
     USE m_alineso
     USE m_judft
 #ifdef CPP_MPI
@@ -34,9 +34,8 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)        :: mpi
-    TYPE(t_dimension),INTENT(IN)  :: DIMENSION
+
     TYPE(t_oneD),INTENT(IN)       :: oneD
-    TYPE(t_obsolete),INTENT(IN)   :: obsolete
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_vacuum),INTENT(IN)     :: vacuum
     TYPE(t_noco),INTENT(IN)       :: noco
@@ -57,7 +56,7 @@ CONTAINS
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: eig_id       
+    INTEGER, INTENT (IN) :: eig_id
     !     ..
     !     ..
     !     .. Local Scalars ..
@@ -80,7 +79,7 @@ CONTAINS
     TYPE(t_lapw)::lapw
 
     INTEGER :: ierr
-    
+
     !  ..
 
     INQUIRE (4649,opened=l_socvec)
@@ -96,7 +95,7 @@ CONTAINS
          usdus%ddn(0:atoms%lmaxd,atoms%ntype,input%jspins),&
          usdus%ulos(atoms%nlod,atoms%ntype,input%jspins),usdus%dulos(atoms%nlod,atoms%ntype,input%jspins),&
          usdus%uulon(atoms%nlod,atoms%ntype,input%jspins),usdus%dulon(atoms%nlod,atoms%ntype,input%jspins))
-   
+
     IF (input%l_wann.OR.l_socvec) THEN
        wannierspin = 2
     ELSE
@@ -119,8 +118,8 @@ CONTAINS
     !
 
 
-    ALLOCATE (eig_so(2*DIMENSION%neigd))
-    ALLOCATE (eigBuffer(2*DIMENSION%neigd,kpts%nkpt,wannierspin))
+    ALLOCATE (eig_so(2*input%neig))
+    ALLOCATE (eigBuffer(2*input%neig,kpts%nkpt,wannierspin))
     ALLOCATE (neigBuffer(kpts%nkpt,wannierspin))
     results%eig = 1.0e300
     eigBuffer = 1.0e300
@@ -134,10 +133,10 @@ CONTAINS
         nk=mpi%k_list(nk_i)
      !DO nk = mpi%n_start,n_end,n_stride
        CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,.FALSE., mpi)
-       ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*DIMENSION%neigd,wannierspin))
+       ALLOCATE( zso(lapw%nv(1)+atoms%nlotot,2*input%neig,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
        CALL timestart("eigenso: alineso")
-       CALL alineso(eig_id,lapw, mpi,DIMENSION,atoms,sym,kpts,&
+       CALL alineso(eig_id,lapw, mpi,atoms,sym,kpts,&
             input,noco,cell,oneD,nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (mpi%irank.EQ.0) THEN
@@ -157,7 +156,7 @@ CONTAINS
           ELSE
              CALL zmat%alloc(.FALSE.,SIZE(zso,1),nsz)
              DO jspin = 1,wannierspin
-                CALL timestart("eigenso: write_eig")  
+                CALL timestart("eigenso: write_eig")
                 zmat%data_c=zso(:,:nsz,jspin)
                 CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz),zmat=zmat)
                 eigBuffer(:nsz,nk,jspin) = eig_so(:nsz)
@@ -167,21 +166,16 @@ CONTAINS
           ENDIF ! (input%eonly) ELSE
        ENDIF ! n_rank == 0
        DEALLOCATE (zso)
-    ENDDO ! DO nk 
+    ENDDO ! DO nk
 
 #ifdef CPP_MPI
-    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*input%jspins,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
-    CALL MPI_ALLREDUCE(eigBuffer(:2*dimension%neigd,:,1:input%jspins),&
-                     results%eig(:2*dimension%neigd,:,1:input%jspins),&
-        2*dimension%neigd*kpts%nkpt*input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
-                       
-                       
+    CALL MPI_ALLREDUCE(neigBuffer,results%neig,kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,mpi%mpi_comm,ierr)
+    CALL MPI_ALLREDUCE(eigBuffer(:2*input%neig,:,:),results%eig(:2*input%neig,:,:),&
+                       2*input%neig*kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,mpi%mpi_comm,ierr)
     CALL MPI_BARRIER(mpi%MPI_COMM,ierr)
 #else
-    results%neig(:,1:input%jspins) = neigBuffer(:,1:input%jspins)
-    results%eig(:2*dimension%neigd,:,1:input%jspins) = eigBuffer(:2*dimension%neigd,:,1:input%jspins)
-!    results%neig(:,:) = neigBuffer(:,:)
-!    results%eig(:2*dimension%neigd,:,:) = eigBuffer(:2*dimension%neigd,:,:)
+    results%neig(:,:) = neigBuffer(:,:)
+    results%eig(:2*input%neig,:,:) = eigBuffer(:2*input%neig,:,:)
 #endif
 
     RETURN

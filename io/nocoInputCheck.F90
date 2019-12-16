@@ -11,7 +11,10 @@ MODULE m_nocoInputCheck
    SUBROUTINE nocoInputCheck(atoms,input,vacuum,noco)
 
       USE m_juDFT
-      USE m_types
+      USE m_types_atoms
+      USE m_types_input
+      USE m_types_vacuum
+      USE m_types_noco
 
       IMPLICIT NONE
 

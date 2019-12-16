@@ -198,7 +198,7 @@ CONTAINS
          kpts%bk(:, ikpt) = bk(:, ikpt)
          kpts%wtkpt(ikpt) = neqkpt(ikpt)
       END DO
-      kpts%posScale = 1.0
+      !kpts%posScale = 1.0
 
    CONTAINS
 

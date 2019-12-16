@@ -47,7 +47,7 @@ SUBROUTINE calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs
    CALL timestart("cdnval: rho(n)mtlo")
    CALL rhomtlo(atoms,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
 
-   CALL rhonmtlo(atoms,sphhar,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
+   CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,eigVecCoeffs,denCoeffs,ispin)
    CALL timestop("cdnval: rho(n)mtlo")
 
 END SUBROUTINE calcDenCoeffs

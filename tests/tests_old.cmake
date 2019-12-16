@@ -1,20 +1,24 @@
 enable_testing()
 
-set(SerialParallelTests CuBulk CuBulkXML SiLOXML Fe_1l Fe_1lXML Fe-Atom CuBand
-   CuBandXML CuDOS CuDOSXML Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOCXML PTO-SOC
-   PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
-   SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML 
-   Fe_bcc_GreensFunction Fe_1l_GreensFunction FePt_film_SSFT
-   FePt_film_SSFT_LO Fe_film_SSFT Fe_film_SS_conv Fe_bulk_SS_conv)
+set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
+   CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
+   PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
+   SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML
+   )
+#Currently disabled Tests (Hybrid+Greenfct)
+# SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
+# KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0
+# Fe_bcc_GreensFunction Fe_1l_GreensFunction
+#  CoUnfold
+
+set(SerialOnlyTests  )
+set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
 
-set(SerialOnlyTests SiHybridGammaNoInv SiHybrid8kpt_sym SiHybrid8kpt_nosym
-                    KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0 Fe_bct_LO Fe_fcc CoUnfold)# TiO2eels TiO2eelsXML)
-set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip) 
-
-if (${FLEUR_USE_HDF5})
-   set(SerialOnlyTests ${SerialOnlyTests} gw1Interface gw2Interface)
-endif()
+#Removed GW tests 
+#if (${FLEUR_USE_HDF5})
+#   set(SerialOnlyTests ${SerialOnlyTests} gw1Interface gw2Interface)
+#endif()
 
 set(Testdirs ${SerialParallelTests} ${SerialOnlyTests})
 
@@ -30,7 +34,7 @@ endif()
 #The inpgen tests
 #if (${INPGEN})
 foreach(test ${InpTestdirs})
- add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen")
+ add_test("INPGEN:${test}" ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.pl "inpgen/${test}" "${CMAKE_BINARY_DIR}/inpgen2/inpgen2")
 endforeach(test)
 #endif()
 

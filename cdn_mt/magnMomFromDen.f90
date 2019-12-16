@@ -3,9 +3,9 @@
 ! This file is part of FLEUR and avhttps://gcc.gnu.org/onlinedocs/gfortran/SQRT.htmlailable as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !------------------------------------------------------------------------------
-! This routine calculates the magnetic moments and the corresponding directions 
-! (angles) according to the Atoms in the system. 
-! 
+! This routine calculates the magnetic moments and the corresponding directions
+! (angles) according to the Atoms in the system.
+!
 !
 ! Robin Hilgers, Nov '19
 ! Modified for usability with the potential matrix; A. Neukirchen, Dec '19
@@ -15,9 +15,7 @@ MODULE m_magnMomFromDen
 IMPLICIT NONE
 
 CONTAINS
-
-SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
-   
+SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
    USE m_constants
    USE m_types
    USE m_intgr
@@ -26,27 +24,29 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
    USE m_constants
 
    TYPE(t_input), INTENT(IN)     ::  input
-   TYPE(t_atoms), INTENT(INOUT)  ::  atoms
+   TYPE(t_atoms), INTENT(IN)     ::  atoms
    TYPE(t_noco), INTENT(IN)      ::  noco
    TYPE(t_potden),INTENT(IN)     ::  den
    REAL, INTENT(OUT)             ::  moments(3,atoms%ntype)
+   REAL,INTENT(OUT)              :: theta_mt_avg(atoms%ntype)
+   REAL,INTENT(OUT)              :: phi_mt_avg(atoms%ntype)
 
    INTEGER                       ::  jsp,i,j,ir
    REAL                          ::  mx,my,mz
-   
+
    TYPE(t_potden)                ::  denloc
    REAL, ALLOCATABLE             ::  dummyResults(:,:)
-   
+
 
   ALLOCATE(dummyResults(SIZE(den%mt,3),SIZE(den%mt,4)))
 
   IF(noco%l_mtNocoPot) THEN
      jsp=4
-  ELSE 
+  ELSE
      jsp=input%jspins
   END IF
 !!Loop over Spins and Atoms
-   DO i=1, atoms%ntype 
+   DO i=1, atoms%ntype
       DO j=1, jsp
 !!Integration over r
            IF (den%potdenType<=1000) THEN
@@ -60,15 +60,15 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments)
 !!Considering Lattice harmonics integral (Only L=0 component does not vanish and has a factor of sqrt(4*Pi))
           dummyResults(i,j)=dummyResults(i,j)*sfp_const
       END DO
-   END DO 
+   END DO
 !!Assign results
    DO i=1 , atoms%ntype
    IF (noco%l_mtNocoPot) THEN
       moments(1:2,i)=2*dummyResults(i,3:4)
    END IF
-      moments(i,3)=dummyResults(i,1)-dummyResults(i,2)
+      moments(3,i)=dummyResults(i,1)-dummyResults(i,2)
    END DO
-   
+
 DEALLOCATE(dummyResults)
 
 IF (den%potdenType<=1000) THEN
@@ -81,9 +81,9 @@ END IF
       my=moments(2,i)
       mz=moments(3,i)
       IF (den%potdenType>1000) THEN
-         CALL pol_angle(mx,my,mz,atoms%theta_mt_avg(i),atoms%phi_mt_avg(i))
+         CALL pol_angle(mx,my,mz,theta_mt_avg(i),phi_mt_avg(i))
       END IF
-      IF(mx<0) atoms%theta_mt_avg(i)=-atoms%theta_mt_avg(i)
+      IF(mx<0) theta_mt_avg(i)=-theta_mt_avg(i)
    ENDDO
 
 END SUBROUTINE magnMomFromDen

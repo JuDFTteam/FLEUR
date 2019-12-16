@@ -46,7 +46,7 @@ CONTAINS
           nt= natom
           DO na= 1,atoms%neq(nn)
              nt= nt+1
-             IF (atoms%ntypsy(nt)==ns) THEN
+             IF (sym%ntypsy(nt)==ns) THEN
 
                 DO lh = 1,sphhar%nlh(ns)
                    lv = sphhar%llh(lh,ns)
@@ -90,7 +90,7 @@ CONTAINS
                    ENDDO ! l
                 ENDDO ! lh
 
-             ENDIF ! (atoms%ntypsy(nt)==ns)
+             ENDIF ! (sym%ntypsy(nt)==ns)
           ENDDO ! na
           natom= natom + atoms%neq(nn)
        ENDDO ! nn

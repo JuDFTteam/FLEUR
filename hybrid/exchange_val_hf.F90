@@ -60,7 +60,7 @@ MODULE m_exchange_valence_hf
 
 CONTAINS
 
-   SUBROUTINE exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpbasis, hybrid, cell, dimension, input, jsp, hybdat, mnobd, lapw, &
+   SUBROUTINE exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpbasis, hybrid, cell, input, jsp, hybdat, mnobd, lapw, &
                                   eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, mat_ex)
 
@@ -78,7 +78,6 @@ CONTAINS
       TYPE(t_results), INTENT(IN)    :: results
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_mpbasis), intent(inout)  :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
@@ -147,7 +146,7 @@ CONTAINS
       COMPLEX              :: coulomb_mtir_c(((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%n_g))* &
                                              ((maxval(hybrid%lcutm1) + 1)**2*atoms%nat + maxval(mpbasis%n_g) + 1)/2)
 
-      LOGICAL              :: occup(dimension%neigd)
+      LOGICAL              :: occup(input%neig)
       CALL timestart("valence exchange calculation")
 
       IF (initialize) THEN !it .eq. 1 .and. nk .eq. 1) THEN
@@ -227,11 +226,11 @@ CONTAINS
          DO ibando = 1, mnobd, psize
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, dimension, input, jsp, atoms, &
+               CALL wavefproducts_inv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, input, jsp, atoms, &
                                        lapw, kpts, nk, ikpt0, hybdat, mpbasis, hybrid, cell, hybrid%nbasp, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
-               CALL wavefproducts_noinv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, dimension, input, jsp, &!jsp,&
+               CALL wavefproducts_noinv5(1, hybrid%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, input, jsp, &!jsp,&
                                          cell, atoms, mpbasis, hybrid, hybdat, kpts, lapw, sym, hybrid%nbasp, noco, nkqpt, cprod_vv_c)
             END IF
 
@@ -249,7 +248,7 @@ CONTAINS
                                                 hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, maxval(mpbasis%num_radbasfn), mpbasis%g, &
                                                 mpbasis%n_g(ikpt0), mpbasis%gptm_ptr(:, ikpt0), mpbasis%num_gpts(), mpbasis%radbasfn_mt, &
                                                 hybrid%nbasm(ikpt0), iband1, hybrid%nbands(nk), nsest, ibando, psize, indx_sest, &
-                                                atoms%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
+                                                sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybrid%nbasm(ikpt0), :, :), &
                                                 cprod_vv_c(:hybrid%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
             END IF
 
@@ -330,8 +329,8 @@ CONTAINS
          END IF
 
          IF (zero_order) THEN
-            CALL dwavefproducts(dcprod, nk, 1, hybrid%nbands(nk), 1, hybrid%nbands(nk), .false., atoms, mpbasis, hybrid, &
-                                cell, hybdat, kpts, kpts%nkpt, lapw, dimension, jsp, eig_irr)
+            CALL dwavefproducts(dcprod, nk, 1, hybrid%nbands(nk), 1, hybrid%nbands(nk), .false., input,atoms, mpbasis,hybrid, &
+                                cell, hybdat, kpts, kpts%nkpt, lapw, jsp, eig_irr)
 
             ! make dcprod hermitian
             DO n1 = 1, hybrid%nbands(nk)
@@ -342,7 +341,7 @@ CONTAINS
             END DO
 
             IF (ibs_corr) THEN
-               CALL ibs_correction(nk, atoms, dimension, input, jsp, hybdat, mpbasis, hybrid, lapw, kpts, kpts%nkpt, cell, mnobd, &
+               CALL ibs_correction(nk, atoms, input, jsp, hybdat, mpbasis, hybrid, lapw, kpts, kpts%nkpt, cell, mnobd, &
                                    sym, proj_ibsc, olap_ibsc)
             END IF
          END IF
@@ -466,9 +465,10 @@ CONTAINS
       cdum = sqrt(expo)*rrad
       divergence = cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum)
       rrad = rrad**2
-      kv1 = cell%bmat(1, :)/kpts%nkpt3(1)
-      kv2 = cell%bmat(2, :)/kpts%nkpt3(2)
-      kv3 = cell%bmat(3, :)/kpts%nkpt3(3)
+      call judft_error("Missing functionality")
+      !kv1 = cell%bmat(1, :)/kpts%nkpt3(1)
+      !kv2 = cell%bmat(2, :)/kpts%nkpt3(2)
+      !kv3 = cell%bmat(3, :)/kpts%nkpt3(3)
       n = 1
       found = .true.
 

@@ -53,12 +53,13 @@ CONTAINS
       !ENDIF
    END SUBROUTINE init_mt_grid
 
-   SUBROUTINE mt_to_grid(dograds, jspins, atoms, sphhar, den_mt, n, noco ,grad, ch)
+   SUBROUTINE mt_to_grid(dograds, jspins, atoms, sym,sphhar, den_mt, n, noco ,grad, ch)
       USE m_grdchlh
       USE m_mkgylm
       IMPLICIT NONE
       LOGICAL, INTENT(IN)          :: dograds
       TYPE(t_atoms), INTENT(IN)    :: atoms
+      TYPE(t_sym), INTENT(IN)      :: sym
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       REAL, INTENT(IN)             :: den_mt(:, 0:, :)
       INTEGER, INTENT(IN)          :: n, jspins
@@ -74,22 +75,21 @@ CONTAINS
       REAL, ALLOCATABLE :: drm(:,:), drrm(:,:), mm(:,:)
       REAL, ALLOCATABLE :: chlhtot(:,:),chlhdrtot(:,:),chlhdrrtot(:,:)
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i,jspV
-      
-      !This snippet is crucial to determine over which spins (Only diagonals in colinear case or also off diags in non colin case.) 
-      IF (noco%l_mtNocoPot) THEN 
+
+      !This snippet is crucial to determine over which spins (Only diagonals in colinear case or also off diags in non colin case.)
+      IF (noco%l_mtNocoPot) THEN
          jspV=4
-      ELSE 
+      ELSE
          jspV=jspins
       END IF
 
-      !Defining some constants
-      nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
       nsp = atoms%nsp()
 
       !General Allocations
       ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspV))
-      ALLOCATE (ch_tmp(nsp, jspV))         
-      
+      ALLOCATE (ch_tmp(nsp, jspV))
+
       !Allocations in dograds case
       IF (dograds) THEN
          ALLOCATE (chdr(nsp, jspV), chdt(nsp, jspV), chdf(nsp, jspV), chdrr(nsp, jspV), &
@@ -103,7 +103,7 @@ CONTAINS
       IF (noco%l_mtNocoPot) THEN
          !General Noco Allocations
          ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd))
-         
+
          !Allocations in case one uses e.g. GGA with mtNoco
          IF (dograds) THEN
             ALLOCATE(drm(atoms%jmtd,0:sphhar%nlhd),drrm(atoms%jmtd, 0:sphhar%nlhd))
@@ -157,7 +157,7 @@ CONTAINS
                   ENDDO
             ENDDO
          ENDDO
-         !Initialize derivatives of ch on grid if needed. 
+         !Initialize derivatives of ch on grid if needed.
          IF (dograds) THEN
             chdr(:, :) = 0.0     ! d(ch)/dr
             chdt(:, :) = 0.0     ! d(ch)/dtheta
@@ -173,7 +173,7 @@ CONTAINS
                DO lh = 0, sphhar%nlh(nd)
 
                   !The following snippet maps chlh and its radial derivatives on a colinear system
-                  !using mm and its radial derivatives. 
+                  !using mm and its radial derivatives.
                   IF (noco%l_mtNocoPot) THEN
                       IF (js.EQ.1) THEN
                          chlhtot(jr,lh)=0.5*(chlh(jr, lh, 1)+chlh(jr, lh, 2))
@@ -190,16 +190,16 @@ CONTAINS
                          chlhdr(jr, lh, js)=0
                          chlh(jr,lh,js)=0
                          chlhdrr(jr, lh, js)=0
-                     END IF  
+                     END IF
                   END IF
 
-                  !The following loop brings chlhdr and chlhdrr on the k-grid. 
+                  !The following loop brings chlhdr and chlhdrr on the k-grid.
                   DO k = 1, nsp
                      chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)
-                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)             
+                     chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)
                   ENDDO
 
-                  !This loop calculates the other derviatives of ch (Angular terms) on the k-grid  
+                  !This loop calculates the other derviatives of ch (Angular terms) on the k-grid
                   !by using the lattice harmonics derivatives and chlh with its derivatives.
                   DO k = 1, nsp
                      chdrt(k, js) = chdrt(k, js) + ylht(k, lh, nd)*chlhdr(jr, lh, js)
@@ -227,9 +227,10 @@ CONTAINS
 
    END SUBROUTINE mt_to_grid
 
-   SUBROUTINE mt_from_grid(atoms, sphhar, n, jspins, v_in, vr)
+   SUBROUTINE mt_from_grid(atoms, sym, sphhar, n, jspins, v_in, vr)
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_sphhar), INTENT(IN):: sphhar
       INTEGER, INTENT(IN)       :: jspins, n
       REAL, INTENT(IN)          :: v_in(:, :)
@@ -239,7 +240,7 @@ CONTAINS
       INTEGER :: js, kt, lh, jr, nd, nsp
 
       nsp = atoms%nsp()
-      nd = atoms%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
+      nd = sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1)
 
       DO js = 1, jspins
          !

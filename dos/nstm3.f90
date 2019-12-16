@@ -14,6 +14,7 @@ CONTAINS
 
     USE m_sort
     USE m_types_setup
+
     USE m_types_lapw
     USE m_types_kpts
     IMPLICIT NONE
@@ -34,7 +35,7 @@ CONTAINS
     !     .. Array  Arguments ..
     REAL,    INTENT (IN) :: evac(2)
     REAL,    INTENT (IN) :: vz(:,:)!(vacuum%nmzd,2)
-    INTEGER, INTENT (OUT) :: gvac1d(:),gvac2d(:) !(dimension%nv2d)
+    INTEGER, INTENT (OUT) :: gvac1d(:),gvac2d(:) !(lapw%dim_nv2d())
     !     ..
     !     .. Local Scalars
     INTEGER n2,k,j,i,ivac

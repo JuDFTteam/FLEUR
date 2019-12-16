@@ -15,7 +15,7 @@ c     Find out minimal set of k-point-pairs that have to be
 c     calculated; map symmetry-related k-point-pairs to this
 c     minimal set.
 c     Frank Freimuth
-c******************************************************************      
+c******************************************************************
       subroutine wann_mmnk_symm(input,kpts,
      >               fullnkpts,nntot,bpt,gb,l_bzsym,
      >               irreduc,mapkoper,l_p0,film,nop,
@@ -83,8 +83,8 @@ c-----Test for nonsymmorphic space groups
       endif
 
       do 10 ikpt = 1,fullnkpts  ! loop by k-points starts
-        l_nosymm1=.false. 
-        kptibz=ikpt 
+        l_nosymm1=.false.
+        kptibz=ikpt
         if(l_bzsym) then
            kptibz=irreduc(ikpt)
            oper=mapkoper(ikpt)
@@ -94,13 +94,13 @@ c-----Test for nonsymmorphic space groups
            else
               sign=1
            endif
-           if( 
-     &          any( abs(tau(:,oper)).gt.1.e-6 ) 
+           if(
+     &          any( abs(tau(:,oper)).gt.1.e-6 )
      &         )l_nosymm1=.true.
         endif
 
         do 15 ikpt_b = 1,nntot
-         l_nosymm2=.false.  
+         l_nosymm2=.false.
          if(index(ikpt,ikpt_b).eq.1)cycle
          kptibz_b=bpt(ikpt_b,ikpt)
          if(l_bzsym) then
@@ -112,8 +112,8 @@ c-----Test for nonsymmorphic space groups
             else
                sign_b=1
             endif
-            if( 
-     &          any( abs(tau(:,oper_b)).gt.1.e-6 ) 
+            if(
+     &          any( abs(tau(:,oper_b)).gt.1.e-6 )
      &         )l_nosymm2=.true.
          endif
 
@@ -135,7 +135,7 @@ c***************************************************************
             maptopair(3,ikpt,ikpt_b)=1
 c            print*,"conjugation"
             num_conj=num_conj+1
-           goto 15  
+           goto 15
          endif
         enddo !ikpt_k
 c****************************************************************
@@ -164,7 +164,7 @@ c         if(all(gb(:,ikpt_b,ikpt).eq.0))then
                   ngis_b=-1
                else
                   ngis_b=1
-               endif 
+               endif
                do ky=1,nntot
                 if(bpt(ky,repkpt).eq.repkpt_bb)then
                  repkpt_b=ky
@@ -179,7 +179,7 @@ c         if(all(gb(:,ikpt_b,ikpt).eq.0))then
                    if( any(   abs(brot).gt.1e-6       )   )cycle
                   endif
                   if(sign*ngis*multtab(invtab(oper),repo).eq.
-     &               sign_b*ngis_b*multtab(invtab(oper_b),repo_b))then  
+     &               sign_b*ngis_b*multtab(invtab(oper_b),repo_b))then
                     maptopair(1,ikpt,ikpt_b)=repkpt
                     maptopair(2,ikpt,ikpt_b)=repkpt_b
                     maptopair(3,ikpt,ikpt_b)=2+(1-ngis*sign)/2
@@ -187,14 +187,14 @@ c         if(all(gb(:,ikpt_b,ikpt).eq.0))then
                     num_rot=num_rot+1
                     goto 15
                   endif
-                 endif                   
-                endif   
-               enddo    
-              endif   
-             enddo 
-           endif   
-          enddo   
-c        endif !gb=0   
+                 endif
+                endif
+               enddo
+              endif
+             enddo
+           endif
+          enddo
+c        endif !gb=0
         endif
 
  33     continue
@@ -202,9 +202,9 @@ c        endif !gb=0
         index(ikpt,ikpt_b)=1
         num_pair=num_pair+1
         pair_to_do(ikpt,ikpt_b)=num_pair
-        
+
 15    continue !loop over nearest neighbor k-points
-10    continue ! end of cycle by the k-points  
+10    continue ! end of cycle by the k-points
 
       if(l_p0)then
       write(6,*)"pairs to calculate: ",num_pair
@@ -220,7 +220,7 @@ c        endif !gb=0
 
 c*****************************************************************
 c     determine difference vectors that occur on the k-mesh
-c*****************************************************************      
+c*****************************************************************
       if (l_bzsym) then
          l_file=.false.
          IF(.NOT.l_q)THEN
@@ -234,56 +234,47 @@ c*****************************************************************
            IF(.NOT.l_file)  CALL juDFT_error
      +        ("w90qpts not found, needed if bzsym",calledby
      +        ="wann_mmnk_symm")
-           open(412,file='w90qpts',form='formatted')            
+           open(412,file='w90qpts',form='formatted')
          ENDIF
          read(412,*)fullnkpts_tmp,scale
          do k=1,fullnkpts
                read(412,*)kpoints(:,k)
-         enddo   
+         enddo
          kpoints=kpoints/scale
          close(412)
-      else   
+      else
             IF(.not.l_q)THEN
-              IF(.NOT.input%l_inpXML) THEN
-                 open(412,file='kpts',form='formatted')
-                 read(412,*)fullnkpts_tmp,scale
-                 do k=1,fullnkpts
-                    read(412,*)kpoints(:,k)
-                 enddo   
-                 kpoints(:,:)=kpoints/scale
-              ELSE
                  fullnkpts_tmp = kpts%nkpt
                  do k=1,fullnkpts
                     kpoints(:,k) = kpts%bk(:,k)
-                 enddo   
-              END IF
+                 enddo
             ELSE
               open(412,file=param_file,form='formatted')
               read(412,*)fullnkpts_tmp,scale
               do k=1,fullnkpts
                  read(412,*)kpoints(:,k)
-              enddo   
+              enddo
               kpoints(:,:)=kpoints/scale
             ENDIF
 
             if (film.and..not.l_onedimens) kpoints(3,:)=0.0
             close(412)
       endif
-      
+
       if(l_p0)then
          IF(.not.l_q) THEN
            print*,"vectors combining nearest neighbor k-points:"
          ELSE
            print*,"vectors combining nearest neighbor q-points:"
          ENDIF
-      endif   
+      endif
       ky=1
       do k=1,fullnkpts
          do kx=1,nntot
             kdiffvec=kpoints(:,bpt(kx,k))+gb(:,kx,k)-kpoints(:,k)
             do ikpt=1,ky-1
                if(all(abs(kdiff(:,ikpt)-kdiffvec).le.0.0001))goto 200
-            enddo 
+            enddo
             IF(ky>nntot)  CALL juDFT_error("problem in wann_mmnk_symm"
      +           ,calledby ="wann_mmnk_symm")
             kdiff(:,ky)=kdiffvec(:)
@@ -295,7 +286,7 @@ c*****************************************************************
  200        continue
 
          enddo
-      enddo   
+      enddo
       end subroutine
       SUBROUTINE close_pt(
      >                    nops,mrot,

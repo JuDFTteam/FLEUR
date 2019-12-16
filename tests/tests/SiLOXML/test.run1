@@ -1,7 +1,6 @@
 #juDFT Testscript
 
 jt::copyfile("files/inp.xml",$workdir);
-jt::copyfile("files/sym.out",$workdir);
 
 jt::testrun("$executable",$workdir);
 
@@ -11,6 +10,6 @@ $result=jt::test_grepexists("$workdir/out","it=  6  is completed");
 $result+=jt::test_grepnumber("$workdir/out","first approx. to ef",'.*: *([^ ]*)',0.18481,0.0001);
 $result+=jt::test_grepnumber("$workdir/out","bandgap",".*: *([^ ]*)",0.08353,0.0001);
 $result+=jt::test_grepnumber("$workdir/out","total energy=",".*= *([^ ]*)",-580.064565,0.0001);
-$result+=jt::test_grepnumber("$workdir/out","distance of charge densitie","6: *([^ ]*)",0.025832,0.0001);
+$result+=jt::test_grepnumber("$workdir/out","distance of charge densitie","6: *([^ ]*)",0.0261,0.0001);
 
 jt::stageresult($workdir,$result,"1");

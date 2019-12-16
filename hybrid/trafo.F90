@@ -5,11 +5,11 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_trafo
-
+  use m_judft
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
-                              nk, iop, atoms, mpbasis, hybrid, kpts, sym, &
+                              nk, iop, atoms, input,mpbasis, hybrid, kpts, sym, &
                               jsp, lapw)
 
       USE m_constants
@@ -18,6 +18,7 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
 
+      TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_mpbasis), INTENT(IN)     :: mpbasis
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_sym), INTENT(IN)         :: sym
@@ -149,8 +150,8 @@ CONTAINS
 
    SUBROUTINE waveftrafo_genwavf( &
       cmt_out, z_rout, z_cout, cmt, l_real, z_r, z_c, nk, iop, atoms, &
-      mpbasis, hybrid, kpts, sym, jsp, nbasfcn, dimension, nbands, &
-      lapw_nk, lapw_rkpt, phase)
+      mpbasis, hybrid, kpts, sym, jsp, nbasfcn, input, nbands, &
+       lapw_nk, lapw_rkpt, phase)
 
       use m_juDFT
       USE m_constants
@@ -158,7 +159,7 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_mpbasis), INTENT(IN)    :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
@@ -190,7 +191,7 @@ CONTAINS
       INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  tau1(3), rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  zhlp(nbasfcn, dimension%neigd2)
+      COMPLEX                 ::  zhlp(nbasfcn, input%neig)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
       if (l_real) THEN
@@ -363,7 +364,7 @@ CONTAINS
          nn = sum([((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))])
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            IF (atoms%invsat(ic) == 0) THEN
+            IF (sym%invsat(ic) == 0) THEN
 ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
 ! invsat(atom) = 0, invsatnr(atom) = 0
 ! but we need invsatnr(atom) = natom
@@ -477,7 +478,7 @@ CONTAINS
          nn = sum([((2*l + 1)*nindxm(l, itype), l=0, lcutm(itype))])
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            IF (atoms%invsat(ic) == 0) THEN
+            IF (sym%invsat(ic) == 0) THEN
                ! if the structure is inversion-symmetric, but the equivalent atom belongs to a different unit cell
                ! invsat(atom) = 0, invsatnr(atom) =0
                ! but we need invsatnr(atom) = natom

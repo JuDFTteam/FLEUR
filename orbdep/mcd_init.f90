@@ -1,6 +1,6 @@
 MODULE m_mcdinit
 CONTAINS
-  SUBROUTINE mcd_init(atoms,input,DIMENSION,vr,g,f,mcd,itype,jspin)
+  SUBROUTINE mcd_init(atoms,input,vr,g,f,mcd,itype,jspin)
 
     !-----------------------------------------------------------------------
     !
@@ -13,12 +13,12 @@ CONTAINS
     USE m_nabla
     USE m_dr2fdr
     USE m_constants, ONLY : c_light
-    USE m_setcor
+    !USE m_setcor
     USE m_differ
     USE m_types
     IMPLICIT NONE
 
-    TYPE(t_dimension),INTENT(IN) :: DIMENSION
+    
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_mcd),INTENT(INOUT)    :: mcd
@@ -36,9 +36,9 @@ CONTAINS
     ! Locals ...
 
     INTEGER kap,mue,iri,l,ispin,i,icore,korb,nst,n_core,ierr
-    REAL  c,t2,e,fj,fl,fn ,d,ms,rn ,bmu
-    INTEGER kappa(DIMENSION%nstd),nprnc(DIMENSION%nstd),l_core(DIMENSION%nstd)
-    REAL vrd(DIMENSION%msh),occ(DIMENSION%nstd,1),a(DIMENSION%msh),b(DIMENSION%msh),j_core(DIMENSION%nstd),e_mcd1(DIMENSION%nstd)
+    REAL  c,t2,e,fj,fl,fn ,d,ms,rn 
+    INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states)),l_core(maxval(atoms%econf%num_states))
+    REAL vrd(atoms%msh),occ(maxval(atoms%econf%num_states),2),a(atoms%msh),b(atoms%msh),j_core(maxval(atoms%econf%num_states)),e_mcd1(maxval(atoms%econf%num_states))
     REAL gv1(atoms%jmtd)
     REAL, ALLOCATABLE :: gc(:,:,:),fc(:,:,:)
     REAL, ALLOCATABLE :: gv(:,:,:,:),fv(:,:,:,:),dgv(:,:,:,:)
@@ -46,14 +46,13 @@ CONTAINS
     !-----------------------------------------------------------------------
 
     c = c_light(1.0)
-    ALLOCATE ( gc(atoms%jri(itype),atoms%ncst(itype),input%jspins) )
-    ALLOCATE ( fc(atoms%jri(itype),atoms%ncst(itype),input%jspins) )
+    ALLOCATE ( gc(atoms%jri(itype),atoms%econf(itype)%num_core_states,input%jspins) )
+    ALLOCATE ( fc(atoms%jri(itype),atoms%econf(itype)%num_core_states,input%jspins) )
 
     ! core setup
 
     mcd%ncore(itype) = 0
-    bmu = 0.0
-    CALL setcor(itype,1,atoms,input,bmu, nst,kappa,nprnc,occ)
+    CALL atoms%econf(itype)%get_core(nst,nprnc,kappa,occ)
 
     DO ispin = jspin, jspin
 
@@ -62,24 +61,24 @@ CONTAINS
        DO iri = 1, atoms%jri(itype)
           vrd(iri) = vr(iri,itype,ispin)
        ENDDO
-       t2 = vrd(atoms%jri(itype)) / (atoms%jri(itype) - DIMENSION%msh)
-       DO iri = atoms%jri(itype) + 1, DIMENSION%msh
+       t2 = vrd(atoms%jri(itype)) / (atoms%jri(itype) - atoms%msh)
+       DO iri = atoms%jri(itype) + 1, atoms%msh
           vrd(iri) =  vrd(atoms%jri(itype))  + t2* ( iri-atoms%jri(itype) )
        ENDDO
 
        ! calculate core
 
        n_core = 0
-       DO korb = 1, atoms%ncst(itype)
+       DO korb = 1, atoms%econf(itype)%num_core_states
           IF (occ(korb,1).GT.0) THEN
              fn = nprnc(korb)
              fj = iabs(kappa(korb)) - .5e0
              fl = fj + (.5e0)*isign(1,kappa(korb))
              e = -2* (atoms%zatom(itype)/ (fn+fl))**2
              d = EXP(atoms%dx(itype))
-             rn = atoms%rmsh(1,itype)*( d**(DIMENSION%msh-1) )
+             rn = atoms%rmsh(1,itype)*( d**(atoms%msh-1) )
              CALL differ(fn,fl,fj,c,atoms%zatom(itype),atoms%dx(itype),atoms%rmsh(1,itype),&
-                  rn,d,DIMENSION%msh,vrd, e, a,b,ierr)
+                  rn,d,atoms%msh,vrd, e, a,b,ierr)
              IF (ierr/=0)  CALL juDFT_error("error in core-levels", calledby="mcd_init")
              IF ( (e.LE.mcd%emcd_up).AND.(e.GE.mcd%emcd_lo) ) THEN
                 WRITE(*,*) 'good    ev = ',e
@@ -107,7 +106,7 @@ CONTAINS
        DO i = 1, 2
           DO iri = 3*(itype-1)+1 , 3*(itype-1)+3
              DO l = 1, (l_max+1)**2
-                DO icore = 1, DIMENSION%nstd
+                DO icore = 1, maxval(atoms%econf%num_states)
                    mcd%m_mcd(icore,l,iri,i) = CMPLX(0.0,0.0)
                 ENDDO
              ENDDO
@@ -139,14 +138,14 @@ CONTAINS
 
              DO i = 1, 2
                 !              write(*,*) j_core(icore),l_core(icore),l_max,ms
-                CALL nabla(itype,icore,atoms%jri(itype),atoms%dx(itype),DIMENSION%nstd,atoms%ntype,&
+                CALL nabla(itype,icore,atoms%jri(itype),atoms%dx(itype),maxval(atoms%econf%num_states),atoms%ntype,&
                      j_core(icore),l_core(icore),l_max,ms,atoms%rmsh(:,itype),gc(:,icore,ispin),&
                      gv(:,0:,ispin,i),dgv(:,0:,ispin,i), mcd%m_mcd(:,:,:,i) )
              ENDDO
 
              DO i = 1, 2*icore*l_core(icore)
                 mcd%ncore(itype) = mcd%ncore(itype) + 1
-                IF (mcd%ncore(itype)>DIMENSION%nstd)  CALL juDFT_error("dimension%nstd too small" ,calledby ="mcd_init")
+                IF (mcd%ncore(itype)>maxval(atoms%econf%num_states))  CALL juDFT_error("maxval(atoms%econf%num_states) too small" ,calledby ="mcd_init")
                 mcd%e_mcd(itype,ispin,mcd%ncore(itype)) = e_mcd1(icore)
              ENDDO
           ENDDO

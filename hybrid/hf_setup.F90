@@ -8,7 +8,7 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(mpbasis, hybrid, input, sym, kpts, DIMENSION, atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
+   SUBROUTINE hf_setup(mpbasis, hybrid, input, sym, kpts,  atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
                        hybdat, l_real, vr0, eig_irr)
       USE m_types
       USE m_eig66_io
@@ -17,13 +17,13 @@ CONTAINS
       USE m_checkolap
       USE m_hybrid_core
       USE m_gen_wavf
+      use m_types_hybdat
 
       IMPLICIT NONE
 
       TYPE(t_mpbasis), INTENT(inout)   :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_kpts), INTENT(IN)    :: kpts
-      TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_noco), INTENT(IN)    :: noco
@@ -53,11 +53,11 @@ CONTAINS
       ! local arrays
 
       REAL, ALLOCATABLE :: basprod(:)
-      INTEGER              :: degenerat(DIMENSION%neigd2 + 1, kpts%nkpt)
+      INTEGER              :: degenerat(merge(input%neig*2,input%neig,noco%l_soc) + 1, kpts%nkpt)
       LOGICAL              :: skip_kpt(kpts%nkpt)
 
-      REAL :: zDebug_r(DIMENSION%nbasfcn,DIMENSION%neigd2)
-      COMPLEX :: zDebug_c(DIMENSION%nbasfcn,DIMENSION%neigd2)
+      REAL :: zDebug_r(lapw_dim_nbasfcn,input%neig)
+      COMPLEX :: zDebug_c(lapw_dim_nbasfcn,input%neig)
 
       skip_kpt = .FALSE.
 
@@ -67,7 +67,7 @@ CONTAINS
 
          allocate(zmat(kpts%nkptf), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation z_c')
-         allocate(eig_irr(DIMENSION%neigd2, kpts%nkpt), stat=ok)
+         allocate(eig_irr(input%neig, kpts%nkpt), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation eig_irr')
          if(allocated(hybdat%kveclo_eig)) deallocate(hybdat%kveclo_eig)
          allocate(hybdat%kveclo_eig(atoms%nlotot, kpts%nkpt), stat=ok)
@@ -77,8 +77,8 @@ CONTAINS
 
          INQUIRE(file ="z",exist= l_exist)
          IF(l_exist) THEN
-            IF (l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=DIMENSION%nbasfcn*DIMENSION%neigd2*8)
-            IF (.NOT.l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=DIMENSION%nbasfcn*DIMENSION%neigd2*16)
+            IF (l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=lapw%dim_nbasfcn()*input%neig*8)
+            IF (.NOT.l_real) OPEN(unit=993,file='z',form='unformatted',access='direct',recl=lapw%dim_nbasfcn()*input%neig*16)
          END IF
 
          ! Reading the eig file
@@ -86,18 +86,18 @@ CONTAINS
             nrec1 = kpts%nkpt*(jsp - 1) + nk
             CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, sym%zrfs)
             nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
-            CALL zMat(nk)%init(l_real, nbasfcn, dimension%neigd2)
+            CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
             CALL read_eig(eig_id_hf, nk, jsp, zmat=zMat(nk))
 
             IF(l_exist.AND.zmat(1)%l_real) THEN
                READ(993,rec=nk) zDebug_r(:,:)
                zMat(nk)%data_r = 0.0
-               zMat(nk)%data_r(:nbasfcn,:DIMENSION%neigd2) = zDebug_r(:nbasfcn,:DIMENSION%neigd2)
+               zMat(nk)%data_r(:nbasfcn,:input%neig) = zDebug_r(:nbasfcn,:input%neig)
             END IF
             IF(l_exist.AND..NOT.zmat(1)%l_real) THEN
                READ(993,rec=nk) zDebug_c(:,:)
                zMat(nk)%data_c = 0.0
-               zMat(nk)%data_c(:nbasfcn,:DIMENSION%neigd2) = zDebug_c(:nbasfcn,:DIMENSION%neigd2)
+               zMat(nk)%data_c(:nbasfcn,:input%neig) = zDebug_c(:nbasfcn,:input%neig)
             END IF
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
@@ -109,7 +109,7 @@ CONTAINS
          !Allocate further space
          DO nk = kpts%nkpt + 1, kpts%nkptf
             nbasfcn = zMat(kpts%bkp(nk))%matsize1
-            CALL zMat(nk)%init(l_real, nbasfcn, dimension%neigd2)
+            CALL zMat(nk)%init(l_real, nbasfcn, merge(input%neig*2,input%neig,noco%l_soc))
          END DO
 
          !determine degenerate states at each k-point
@@ -177,15 +177,15 @@ CONTAINS
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
-         CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell, dimension, &
+         CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell,  &
                        mpbasis, hybrid, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
-         CALL corewf(atoms, jsp, input, DIMENSION, vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
+         CALL corewf(atoms, jsp, input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
 
          ! check olap between core-basis/core-valence/basis-basis
-         CALL checkolap(atoms, hybdat, mpbasis, hybrid, kpts%nkpt, kpts, dimension, mpi, &
+         CALL checkolap(atoms, hybdat, mpbasis, hybrid, kpts%nkpt, kpts,  mpi, &
                         input, sym, noco, cell, lapw, jsp)
 
          ! set up pointer pntgpt
@@ -272,7 +272,7 @@ CONTAINS
          END DO
 
          hybrid%maxlmindx = MAXVAL([(SUM([(mpbasis%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
-         hybrid%nbands = MIN(hybrid%bands1, DIMENSION%neigd)
+         hybrid%nbands = MIN(hybrid%bands1, input%neig)
 
       ENDIF ! hybrid%l_calhf
 

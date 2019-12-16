@@ -38,8 +38,8 @@ CONTAINS
     READ(888) iter_stored
     IF (.NOT.ALLOCATED(sm_store)) ALLOCATE(sm_store(maxiter),fsm_store(maxiter))
     DO n=1,MIN(iter_stored,maxiter)
-       READ(888) sm_store(n)
-       READ(888) fsm_store(n)
+       !READ(888) sm_store(n)
+       !READ(888) fsm_store(n)
     ENDDO
     CLOSE(888)
 #endif    
@@ -62,8 +62,8 @@ CONTAINS
     OPEN(888,file=filename,form='unformatted',status='replace')
     WRITE(888) iter_stored
     DO n=1,iter_stored
-       WRITE(888) sm_store(n)
-       WRITE(888) fsm_store(n)
+       !WRITE(888) sm_store(n)
+       !WRITE(888) fsm_store(n)
     ENDDO
     CLOSE(888)
     DEALLOCATE(sm_store,fsm_store)

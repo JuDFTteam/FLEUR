@@ -5,7 +5,7 @@
       PRIVATE
       PUBLIC :: e_field
       CONTAINS
-      SUBROUTINE e_field(atoms, DIMENSION, stars, sym, vacuum, cell, input,efield)
+      SUBROUTINE e_field(atoms,  stars, sym, vacuum, cell, input,efield)
 !
 !*********************************************************************
 !     sets the values of the sheets of charge for external electric
@@ -18,12 +18,11 @@
 !*********************************************************************
 
       USE m_types
-      USE m_setcor, ONLY: setcor
+      !USE m_setcor, ONLY: setcor
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
       TYPE(t_atoms), INTENT (IN)    :: atoms
-      TYPE(t_dimension),INTENT(IN)  :: dimension
       Type(t_stars),INTENT(IN)      :: stars
       TYPE(t_sym),INTENT(IN)        :: sym
       TYPE(t_vacuum),INTENT(IN)     :: vacuum
@@ -37,9 +36,6 @@
       REAL  qn,qe,bmu
       INTEGER n,iwd,nst,nc
 !     ..
-!     .. Local Array ..
-      INTEGER kappa(dimension%nstd),nprnc(dimension%nstd)
-      REAL occ(dimension%nstd,1)
 !     ..
 !     .. Local Parameters ..
       INTEGER, PARAMETER :: pTOP = 1, pBOT = 2, pTOPBOT = 3
@@ -59,12 +55,8 @@
 !---> core electrons
       DO n = 1,atoms%ntype
          IF (atoms%zatom(n).GE.1.0) THEN
-            bmu = 0.0
-            CALL setcor(n,1,atoms,input,bmu, nst,kappa,nprnc,occ)
-            DO nc=1,atoms%ncst(n)
-              qe=qe+atoms%neq(n)*occ(nc,1)
-            ENDDO
-            WRITE (6,"(A, I4, A, F12.8)") 'neq= ',atoms%neq(n),'  ncore= ',qe
+            qe=qe+atoms%neq(n)*atoms%econf(n)%core_electrons
+            WRITE (6,*) 'neq= ',atoms%neq(n),'  ncore= ',qe
          ENDIF
       ENDDO
 !---> semi-core and valence electrons
@@ -260,7 +252,7 @@
 
         REAL ::   tmp
         INTEGER :: i
-   
+
         ! New format
         ALLOCATE(E%sigEF(3*k1d, 3*k2d, nvac))
         E%sigEF = 0.0
@@ -759,7 +751,7 @@
             END DO
           END IF
         END SUBROUTINE print_efield
-      
+
         SUBROUTINE V_seg_EF(&
      &                      efield,&
      &                      vacuum, stars)

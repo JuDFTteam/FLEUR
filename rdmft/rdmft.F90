@@ -8,7 +8,7 @@ MODULE m_rdmft
 
 CONTAINS
 
-SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,dimension,&
+SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
                  sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpbasis,hybrid,results,coreSpecInput,archiveType,outDen)
 
    USE m_types
@@ -54,7 +54,6 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_enpara),        INTENT(INOUT) :: enpara
    TYPE(t_stars),         INTENT(IN)    :: stars
    TYPE(t_vacuum),        INTENT(IN)    :: vacuum
-   TYPE(t_dimension),     INTENT(IN)    :: dimension
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_sym),           INTENT(IN)    :: sym
    TYPE(t_field),         INTENT(INOUT) :: field
@@ -99,15 +98,15 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    LOGICAL                              :: converged, l_qfix, l_restart, l_zref
    CHARACTER(LEN=20)                    :: filename
 
-   INTEGER                              :: nsest(dimension%neigd) ! probably too large
-   INTEGER                              :: indx_sest(dimension%neigd,dimension%neigd) ! probably too large
+   INTEGER                              :: nsest(input%neig) ! probably too large
+   INTEGER                              :: indx_sest(input%neig,input%neig) ! probably too large
    INTEGER                              :: rrot(3,3,sym%nsym)
    INTEGER                              :: psym(sym%nsym) ! Note: psym is only filled up to index nsymop
    INTEGER                              :: lowestState(kpts%nkpt,input%jspins)
    INTEGER                              :: highestState(kpts%nkpt,input%jspins)
    INTEGER                              :: neigTemp(kpts%nkpt,input%jspins)
 
-   REAL                                 :: wl_iks(dimension%neigd,kpts%nkptf)
+   REAL                                 :: wl_iks(input%neig,kpts%nkptf)
 
    REAL                                 :: vmd(atoms%ntype), zintn_r(atoms%ntype), dpj(atoms%jmtd), mt(atoms%jmtd,atoms%ntype)
 
@@ -270,8 +269,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    vmdSSDen(:,:,:) = 0.0
 
    CALL regCharges%init(input,atoms)
-   CALL dos%init(input,atoms,dimension,kpts,vacuum)
-!   CALL moments%init(input,atoms)
+   CALL dos%init(input,atoms,kpts,vacuum)
    CALL moments%init(mpi,input,sphhar,atoms)
    CALL overallDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
    CALL overallVCoul%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTCOUL)
@@ -321,7 +319,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
             CALL singleStateDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
-            CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+            CALL cdnval(eig_id,mpi,kpts,jsp,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
                         sphhar,sym,vTot,oneD,cdnvalJob,singleStateDen,regCharges,dos,results,moments)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
@@ -377,20 +375,21 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    IF(ALLOCATED(hybrid%div_vv)) DEALLOCATE(hybrid%div_vv)
    ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf,input%jspins))
    ALLOCATE(hybrid%nbasm(kpts%nkptf))
-   ALLOCATE(hybrid%div_vv(DIMENSION%neigd,kpts%nkpt,input%jspins))
+   ALLOCATE(hybrid%div_vv(input%neig,kpts%nkpt,input%jspins))
+
    l_zref = (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
    iterHF = 0
    hybrid%l_calhf = .TRUE.
 
-!   CALL open_hybrid_io1(DIMENSION,sym%invs)
+!   CALL open_hybrid_io1(sym%invs)
 
    CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpbasis,hybrid,enpara,mpi,vTot, iterHF)
 
-   CALL open_hybrid_io2(mpbasis, hybrid,DIMENSION,atoms,sym%invs)
+   CALL open_hybrid_io2(mpbasis, hybrid,input,atoms,sym%invs)
 
    CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpbasis,hybrid,xcpot)
 
-   CALL hf_init(mpbasis,hybrid,atoms,input,DIMENSION,hybdat)
+   CALL hf_init(mpbasis,hybrid,atoms,input,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
@@ -398,7 +397,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    maxHistoryLength = 5*numStates
 
    ALLOCATE(parent(kpts%nkptf))
-   ALLOCATE(exDiag(dimension%neigd,ikpt,input%jspins))
+   ALLOCATE(exDiag(input%neig,ikpt,input%jspins))
    ALLOCATE(lastGradient(numStates+1))
    ALLOCATE(lastParameters(numStates+1))
    lastGradient = 0.0
@@ -434,11 +433,11 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
       DO jspin = 1,jspmax
          CALL cdnvalJob%init(mpi,input,kpts,noco,results,jspin)
-         CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,dimension,&
+         CALL cdnval(eig_id,mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,vacuum,&
                      sphhar,sym,vTot,oneD,cdnvalJob,overallDen,regCharges,dos,results,moments)
       END DO
 
-      CALL cdncore(mpi,dimension,oneD,input,vacuum,noco,sym,&
+      CALL cdncore(mpi,oneD,input,vacuum,noco,sym,&
                    stars,cell,sphhar,atoms,vTot,overallDen,moments,results)
       IF (mpi%irank.EQ.0) THEN
          CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,overallDen,noco%l_noco,.TRUE.,.true.,fix)
@@ -452,7 +451,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
       CALL overallVCoul%resetPotDen()
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
-      CALL vgen_coulomb(1,mpi,DIMENSION,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,overallDen,overallVCoul)
+      CALL vgen_coulomb(1,mpi,oneD,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,overallDen,overallVCoul)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1),stars%ufft)   ! Is there a problem with a second spin?!
 #ifdef CPP_MPI
       CALL mpi_bc_potden(mpi,stars,sphhar,atoms,input,vacuum,oneD,noco,overallVCoul)
@@ -511,7 +510,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpbasis,hybrid,input,sym,kpts,dimension,atoms,mpi,noco,&
+         CALL HF_setup(mpbasis,hybrid,input,sym,kpts,atoms,mpi,noco,&
                        cell,oneD,results,jspin,enpara,eig_id,&
                        hybdat,sym%invs,vTot%mt(:,0,:,:),eig_irr)
 
@@ -525,14 +524,14 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             parent = 0
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
-            CALL symm_hf(kpts,ikpt,sym,dimension,hybdat,eig_irr,atoms,mpbasis,hybrid,cell,lapw,jspin,&
+            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpbasis,hybrid,cell,lapw,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
-            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpbasis,hybrid,cell,dimension,input,jspin,hybdat,mnobd,lapw,&
+            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpbasis,hybrid,cell,input,jspin,hybdat,mnobd,lapw,&
                                      eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nsest,indx_sest,&
                                      mpi,exMat)
-            CALL exchange_vccv1(ikpt,atoms,mpbasis,hybrid,hybdat,dimension,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
+            CALL exchange_vccv1(ikpt,input,atoms,mpbasis,hybrid,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
 
             !Start of workaround for increased functionality of symmetrizeh (call it))
 
@@ -555,7 +554,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
                olap%data_c = conjg(olap%data_c)
             END IF
 
-            CALL zMat%init(olap%l_real,nbasfcn,dimension%neigd)
+            CALL zMat%init(olap%l_real,nbasfcn,input%neig)
 
             CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybrid%nbands(ikpt))],neig=nbands,zmat=zMat)
 
@@ -762,7 +761,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
-   CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,DIMENSION,kpts,atoms,sphhar,stars,sym,&
+   CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,kpts,atoms,sphhar,stars,sym,&
                enpara,cell,noco,vTot,results,oneD,coreSpecInput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy

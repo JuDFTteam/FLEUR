@@ -10,7 +10,7 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(mpi,jspd,atoms,sphhar,noco,jsp_start,jsp_end,enpara,&
+  SUBROUTINE cdnmt(mpi,jspd,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,&
                    vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1,l_dftspinpol)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
@@ -24,6 +24,7 @@ CONTAINS
     TYPE(t_noco),    INTENT(IN)    :: noco
     TYPE(t_sphhar),  INTENT(IN)    :: sphhar
     TYPE(t_atoms),   INTENT(IN)    :: atoms
+    TYPE(t_sym),   INTENT(IN)      :: sym
     TYPE(t_enpara),  INTENT(IN)    :: enpara
     TYPE(t_moments), INTENT(INOUT) :: moments
     TYPE(t_hub1ham), OPTIONAL, INTENT(INOUT) :: hub1
@@ -79,7 +80,7 @@ CONTAINS
     ENDIF
 
     qmtl = 0
-    
+
 !    !$OMP DO
     DO itype = 1,atoms%ntype
        na = 1
@@ -98,10 +99,10 @@ CONTAINS
                 ENDIF
              ENDDO
 
-             !In the case of a spin-polarized calculation with Hubbard 1 we want to treat 
+             !In the case of a spin-polarized calculation with Hubbard 1 we want to treat
              !the correlated orbitals with a non-spin-polarized basis
              IF(l_hia.AND.jspd.EQ.2.AND..NOT.l_dftspinpol) THEN
-                vrTmp = (vr(:,itype,1) + vr(:,itype,2))/2.0 
+                vrTmp = (vr(:,itype,1) + vr(:,itype,2))/2.0
              ELSE
                 vrTmp = vr(:,itype,ispin)
              ENDIF
@@ -125,14 +126,14 @@ CONTAINS
              qmtllo(l) = 0.0
           END DO
 
-          CALL rhosphnlo(itype,atoms,sphhar,&
-               usdus%uloulopn(1,1,itype,ispin),usdus%dulon(1,itype,ispin),&
-               usdus%uulon(1,itype,ispin),enpara%ello0(1,itype,ispin),&
-               vr(1,itype,ispin),denCoeffs%aclo(1,itype,ispin),denCoeffs%bclo(1,itype,ispin),&
-               denCoeffs%cclo(1,1,itype,ispin),denCoeffs%acnmt(0,1,1,itype,ispin),&
-               denCoeffs%bcnmt(0,1,1,itype,ispin),denCoeffs%ccnmt(1,1,1,itype,ispin),&
-               f(1,1,0,ispin),g(1,1,0,ispin),&
-               rho(:,0:,itype,ispin),qmtllo,moments%rhoLRes(:,0:,:,itype,ispin))
+          CALL rhosphnlo(itype,atoms,sphhar,sym,&
+               usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),&
+               usdus%uulon(:,itype,ispin),enpara%ello0(:,itype,ispin),&
+               vr(:,itype,ispin),denCoeffs%aclo(:,itype,ispin),denCoeffs%bclo(:,itype,ispin),&
+               denCoeffs%cclo(:,:,itype,ispin),denCoeffs%acnmt(0:,:,:,itype,ispin),&
+               denCoeffs%bcnmt(0:,:,:,itype,ispin),denCoeffs%ccnmt(:,:,:,itype,ispin),&
+               f(:,:,0:,ispin),g(:,:,0:,ispin),&
+               rho(:,0:,itype,ispin),moments%rhoLRes(:,0:,0:,itype,ispin),qmtllo)
 
 
           !--->       l-decomposed density for each atom type
@@ -146,7 +147,7 @@ CONTAINS
 
           !Get the magnetic moment for the shells where we defined additional exchange splittings for DFT+Hubbard 1
           IF(PRESENT(hub1)) THEN
-            DO i_hia = 1, atoms%n_hia 
+            DO i_hia = 1, atoms%n_hia
                IF(atoms%lda_u(atoms%n_u+i_hia)%atomType.NE.itype) CYCLE
                DO i_exc = 1, hub1%n_exc_given(i_hia)
                   hub1%mag_mom(i_hia,i_exc) = hub1%mag_mom(i_hia,i_exc) + (-1)**(ispin-1) *  qmtl(hub1%exc_l(i_hia,i_exc),ispin,itype)
@@ -157,13 +158,13 @@ CONTAINS
           !+soc
           !--->       spherical angular component
           IF (noco%l_soc) THEN
-             CALL orbmom2(atoms,itype,ispin,usdus%ddn(0,itype,ispin),&
-                          orb,usdus%uulon(1,itype,ispin),usdus%dulon(1,itype,ispin),&
-                          usdus%uloulopn(1,1,itype,ispin),moments%clmom(1,itype,ispin))!keep
+             CALL orbmom2(atoms,itype,ispin,usdus%ddn(0:,itype,ispin),&
+                          orb,usdus%uulon(:,itype,ispin),usdus%dulon(:,itype,ispin),&
+                          usdus%uloulopn(:,:,itype,ispin),moments%clmom(:,itype,ispin))!keep
           ENDIF
           !-soc
           !--->       non-spherical components
-          nd = atoms%ntypsy(na)
+          nd = sym%ntypsy(na)
           DO lh = 1,sphhar%nlh(nd)
              DO l = 0,atoms%lmax(itype)
                 DO lp = 0,l
@@ -233,7 +234,7 @@ CONTAINS
              ENDDO
 
              !--->        non-spherical components
-             nd = atoms%ntypsy(na)
+             nd = sym%ntypsy(na)
              DO lh = 1,sphhar%nlh(nd)
                 DO l = 0,atoms%lmax(itype)
                    DO lp = 0,atoms%lmax(itype)
@@ -287,6 +288,6 @@ CONTAINS
    ENDIF !(mpi%irank==0) THEN
     CALL timestop("cdnmt")
 
- 
+
   END SUBROUTINE cdnmt
 END MODULE m_cdnmt

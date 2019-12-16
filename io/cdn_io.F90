@@ -543,8 +543,8 @@ MODULE m_cdn_io
             atomsTemp%ntype = atoms%ntype
             ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
             sphharTemp%nlh(:) = sphhar%nlh(:)
-            ALLOCATE (atomsTemp%ntypsy(SIZE(atoms%ntypsy)))
-            atomsTemp%ntypsy(:) = atoms%ntypsy(:)
+            ALLOCATE (symTemp%ntypsy(SIZE(sym%ntypsy)))
+            symTemp%ntypsy(:) = sym%ntypsy(:)
             ALLOCATE (atomsTemp%jri(SIZE(atoms%jri)))
             atomsTemp%jri(:) = atoms%jri(:)
             ALLOCATE (atomsTemp%neq(SIZE(atoms%neq)))
@@ -590,7 +590,7 @@ MODULE m_cdn_io
             REWIND iUnit
 
             DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp)
-            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%zatom, atomsTemp%ntypsy, sphharTemp%nlh)
+            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%zatom, symTemp%ntypsy, sphharTemp%nlh)
             DEALLOCATE (atomsTemp%rmt, atomsTemp%dx)
          END IF
 
@@ -606,8 +606,8 @@ MODULE m_cdn_io
             atomsTemp%ntype = atoms%ntype
             ALLOCATE (sphharTemp%nlh(SIZE(sphhar%nlh)))
             sphharTemp%nlh(:) = sphhar%nlh(:)
-            ALLOCATE (atomsTemp%ntypsy(SIZE(atoms%ntypsy)))
-            atomsTemp%ntypsy(:) = atoms%ntypsy(:)
+            ALLOCATE (symTemp%ntypsy(SIZE(sym%ntypsy)))
+            symTemp%ntypsy(:) = sym%ntypsy(:)
             ALLOCATE (atomsTemp%jri(SIZE(atoms%jri)))
             atomsTemp%jri(:) = atoms%jri(:)
             ALLOCATE (atomsTemp%neq(SIZE(atoms%neq)))
@@ -631,7 +631,7 @@ MODULE m_cdn_io
                         iUnit,iterTemp,frTemp,fpwTemp,fzTemp,fzxyTemp)
 
             DEALLOCATE (fzTemp, frTemp, fzxyTemp, fpwTemp)
-            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, atomsTemp%ntypsy, sphharTemp%nlh)
+            DEALLOCATE (atomsTemp%neq, atomsTemp%jri, symTemp%ntypsy, sphharTemp%nlh)
          END IF
 
          ! Write the density
@@ -725,11 +725,11 @@ MODULE m_cdn_io
 
    END SUBROUTINE
 
-   SUBROUTINE readCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
+   SUBROUTINE readCoreDensity(input,atoms,rhcs,tecs,qints)
 
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_input),INTENT(IN)     :: input
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      
 
       REAL, INTENT(OUT) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
       REAL, INTENT(OUT) :: tecs(:,:)!(atoms%ntype,input%jspins)
@@ -754,7 +754,7 @@ MODULE m_cdn_io
          IF (l_exist) THEN
             CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                              currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-            CALL readCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
+            CALL readCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
             CALL closeCDNPOT_HDF(fileID)
             RETURN
          ELSE
@@ -798,11 +798,11 @@ MODULE m_cdn_io
 
    END SUBROUTINE readCoreDensity
 
-   SUBROUTINE writeCoreDensity(input,atoms,dimension,rhcs,tecs,qints)
+   SUBROUTINE writeCoreDensity(input,atoms,rhcs,tecs,qints)
 
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_input),INTENT(IN)     :: input
-      TYPE(t_dimension),INTENT(IN) :: DIMENSION
+      
 
       REAL, INTENT(IN) :: rhcs(:,:,:)!(atoms%jmtd,atoms%ntype,input%jspins)
       REAL, INTENT(IN) :: tecs(:,:)!(atoms%ntype,input%jspins)
@@ -823,7 +823,7 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
          CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                           currentStepfunctionIndex,readDensityIndex,lastDensityIndex)
-         CALL writeCoreDensityHDF(fileID,input,atoms,dimension,rhcs,tecs,qints)
+         CALL writeCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
          CALL closeCDNPOT_HDF(fileID)
 #endif
       ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN

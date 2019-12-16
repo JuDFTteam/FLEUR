@@ -31,7 +31,7 @@ module m_types_mpbasis
       procedure :: init                   => mpbasis_init
       procedure :: set_num_radfun_per_l   => set_num_radfun_per_l_mpbasis
       procedure :: write_mpbasis
-      generic   :: write(unformatted) => write_mpbasis
+      !generic   :: write(unformatted) => write_mpbasis
    end type t_mpbasis
 contains
    subroutine write_mpbasis(mpbasis, unit, iostat, iomsg)

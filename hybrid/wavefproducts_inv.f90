@@ -1,10 +1,11 @@
 module m_wavefproducts_inv
+      USE m_types_hybdat
 
    USE m_constants
    USE m_judft
    USE m_types
-   USE m_types_hybrid, ONLY: gptnorm
-   USE m_util, ONLY: modulo1
+   USE m_types_hybrid
+   USE m_util
    USE m_io_hybrid
    USE m_wrapper
    USE m_constants
@@ -12,14 +13,13 @@ module m_wavefproducts_inv
    USE m_wavefproducts_aux
 
 CONTAINS
-   SUBROUTINE wavefproducts_inv5(bandi, bandf, bandoi, bandof, dimension, input,&
+   SUBROUTINE wavefproducts_inv5(bandi, bandf, bandoi, bandof, input,&
                                  jsp, atoms, lapw, kpts, nk, iq, hybdat, mpbasis, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
 
 
       IMPLICIT NONE
-      TYPE(t_dimension), INTENT(IN) :: dimension
       TYPE(t_mpbasis), intent(in)  :: mpbasis
       TYPE(t_hybrid), INTENT(IN)    :: hybrid
       TYPE(t_input), INTENT(IN)     :: input
@@ -57,24 +57,23 @@ CONTAINS
 
 
 
-      call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
+      call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof,  input,&
                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpbasis, hybrid,&
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
-      call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
-                                atoms, kpts, nk, iq, hybdat, mpbasis, hybrid,&
+      call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof,&
+                                input,atoms, kpts, nk, iq, hybdat, mpbasis, hybrid,&
                                 sym, nkqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
 
    END SUBROUTINE wavefproducts_inv5
 
-   subroutine wavefproducts_inv_IS(bandi, bandf, bandoi, bandof, dimension, input,&
+   subroutine wavefproducts_inv_IS(bandi, bandf, bandoi, bandof,  input,&
                                  jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpbasis, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
      implicit NONE
-     TYPE(t_dimension), INTENT(IN) :: dimension
      TYPE(t_mpbasis), intent(in)  :: mpbasis
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
      TYPE(t_input), INTENT(IN)     :: input
@@ -119,9 +118,9 @@ CONTAINS
      !
      CALL lapw_nkqpt%init(input, noco, kpts, atoms, sym, nkqpt, cell, sym%zrfs)
      nbasfcn = calc_number_of_basis_functions(lapw, atoms, noco)
-     call z_nk%alloc(.true., nbasfcn, dimension%neigd)
+     call z_nk%alloc(.true., nbasfcn, input%neig)
      nbasfcn = calc_number_of_basis_functions(lapw_nkqpt, atoms, noco)
-     call z_kqpt%alloc(.true., nbasfcn, dimension%neigd)
+     call z_kqpt%alloc(.true., nbasfcn, input%neig)
 
      ! read in z at k-point nk and nkqpt
      call timestart("read_z")
@@ -190,12 +189,12 @@ CONTAINS
 
    end subroutine wavefproducts_inv_IS
 
-   subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof, dimension,&
-                                   atoms, kpts, nk, iq, hybdat, mpbasis, hybrid,&
+   subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof,&
+                                   input,atoms, kpts, nk, iq, hybdat, mpbasis, hybrid,&
                                    sym, nkqpt, cprod)
 
      implicit NONE
-     TYPE(t_dimension), INTENT(IN) :: dimension
+     TYPE(t_input),INTENT(IN)      :: input
      TYPE(t_mpbasis), INTENT(IN)   :: mpbasis
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
      TYPE(t_sym), INTENT(IN)       :: sym
@@ -229,8 +228,8 @@ CONTAINS
      ! - local arrays -
      INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
 
-     REAL                    ::    cmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat)
-     REAL                    ::    cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+     REAL                    ::    cmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
+     REAL                    ::    cmt(input%neig, hybrid%maxlmindx, atoms%nat)
      REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
      REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
 
@@ -246,8 +245,8 @@ CONTAINS
      END DO
 
      ! read in cmt coefficient at k-point nk
-     allocate(ccmt_nk(dimension%neigd, hybrid%maxlmindx, atoms%nat), &
-               ccmt(dimension%neigd, hybrid%maxlmindx, atoms%nat), &
+     allocate(ccmt_nk(input%neig, hybrid%maxlmindx, atoms%nat), &
+               ccmt(input%neig, hybrid%maxlmindx, atoms%nat), &
                source=cmplx(0.0, 0.0), stat=ok)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt')
 

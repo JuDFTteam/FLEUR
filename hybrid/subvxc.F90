@@ -8,7 +8,7 @@ MODULE m_subvxc
 
 CONTAINS
 
-   SUBROUTINE subvxc(lapw, bk, DIMENSION, input, jsp, vr0, atoms, usdus, mpbasis, hybrid, el, ello, sym, &
+   SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpbasis, hybrid, el, ello, sym, &
                      cell, sphhar, stars, xcpot, mpi, oneD, hmat, vx)
 
       USE m_types
@@ -26,7 +26,6 @@ CONTAINS
 
       CLASS(t_xcpot), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_dimension), INTENT(IN)    :: dimension
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
@@ -83,7 +82,7 @@ CONTAINS
       COMPLEX               ::  vpw(stars%ng3)
       COMPLEX               ::  vxc(hmat%matsize1*(hmat%matsize1 + 1)/2)
       COMPLEX               ::  vrmat(hybrid%maxlmindx, hybrid%maxlmindx)
-      COMPLEX               ::  carr(hybrid%maxlmindx, DIMENSION%nvd), carr1(DIMENSION%nvd, DIMENSION%nvd)
+      COMPLEX               ::  carr(hybrid%maxlmindx, lapw%dim_nvd()), carr1(lapw%dim_nvd(), lapw%dim_nvd())
       COMPLEX, ALLOCATABLE  ::  ahlp(:, :, :), bhlp(:, :, :)
       COMPLEX, ALLOCATABLE  ::  bascof(:, :, :)
 #ifndef CPP_OLDINTEL
@@ -137,13 +136,13 @@ CONTAINS
       ! Compute APW coefficients
 
       ! Calculate bascof
-      allocate(ahlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), bhlp(DIMENSION%nvd, 0:DIMENSION%lmd, atoms%nat), stat=ok)
-      IF (ok /= 0) call judft_error('subvxc: error in allocation of ahlp/bhlp')
+      ALLOCATE (ahlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), bhlp(lapw%dim_nvd(), 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok)
+      IF (ok /= 0) STOP 'subvxc: error in allocation of ahlp/bhlp'
 #ifndef CPP_OLDINTEL
       CALL abcof3(input, atoms, sym, jsp, cell, bk, lapw, usdus, oneD, ahlp, bhlp, bascof_lo)
 #endif
-      allocate(bascof(DIMENSION%nvd, 2*(DIMENSION%lmd + 1), atoms%nat), stat=ok)
-      IF (ok /= 0) call judft_error('subvxc: error in allocation of bascof')
+      ALLOCATE (bascof(lapw%dim_nvd(), 2*(atoms%lmaxd*(atoms%lmaxd+2) + 1), atoms%nat), stat=ok)
+      IF (ok /= 0) STOP 'subvxc: error in allocation of bascof'
 
       bascof = 0
       ic = 0
@@ -174,7 +173,7 @@ CONTAINS
       iatom = 0
       DO itype = 1, atoms%ntype
 
-         typsym = atoms%ntypsy(SUM(atoms%neq(:itype - 1)) + 1)
+         typsym = sym%ntypsy(SUM(atoms%neq(:itype - 1)) + 1)
          nlharm = sphhar%nlh(typsym)
 
          ! Calculate vxc = vtot - vcoul
@@ -301,7 +300,7 @@ CONTAINS
 
          DO itype = 1, atoms%ntype
 
-            typsym = atoms%ntypsy(SUM(atoms%neq(:itype - 1)) + 1)
+            typsym = sym%ntypsy(SUM(atoms%neq(:itype - 1)) + 1)
             nlharm = sphhar%nlh(typsym)
 
             ! Calculate vxc = vtot - vcoul
@@ -343,10 +342,10 @@ CONTAINS
 
             DO ieq = 1, atoms%neq(itype)
                iatom = iatom + 1
-               IF ((atoms%invsat(iatom) == 0) .OR. (atoms%invsat(iatom) == 1)) THEN
+               IF ((sym%invsat(iatom) == 0) .OR. (sym%invsat(iatom) == 1)) THEN
 
-                  IF (atoms%invsat(iatom) == 0) invsfct = 1
-                  IF (atoms%invsat(iatom) == 1) invsfct = 2
+                  IF (sym%invsat(iatom) == 0) invsfct = 1
+                  IF (sym%invsat(iatom) == 1) invsfct = 2
 
                   DO ilo = 1, atoms%nlo(itype)
 #ifdef CPP_OLDINTEL
@@ -487,7 +486,7 @@ CONTAINS
                   END DO  ! ilo
                   ikvecprevat = ikvecprevat + ikvecat
                   ikvecat = 0
-               END IF ! atoms%invsat(iatom)
+               END IF ! sym%invsat(iatom)
             END DO ! ieq
          END DO !itype
       END IF ! if any atoms%llo

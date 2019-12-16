@@ -1,0 +1,353 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
+MODULE m_pldngen
+
+!**********************************************************************
+!     This subroutine generates the charge and magetization densities
+!     (mx,my,mz) and writes them to the files cdn, mdnx, mdny, mdnz.
+!     These files are needed to generate plots of the density.
+!
+!    i) The components of the hermitian density matrix (rho_11, rho_22,
+!     rho_21) are reloaded from the file rhomat_inp.
+!    ii) The density matrix in fouriertransformed to real space.
+!    iii) The charge and magnetization density (n, mx, my, mz) are
+!     calculated on the real space mesh.
+!    iv) n, mx, my, and mz are Fouriertransformed and stored in terms
+!     of stars.
+!
+!     Philipp Kurz 99/10/29
+!**********************************************************************
+
+CONTAINS
+
+SUBROUTINE pldngen(mpi,sym,stars,atoms,sphhar,vacuum,&
+                   cell,input,noco,oneD,sliceplot)
+
+          !******** ABBREVIATIONS ***********************************************
+          !     ifft3    : size of the 3d real space mesh
+          !     ifft2    : size of the 2d real space mesh
+          !     rpw      : first diagonal components of the interstitial density
+          !                matrix
+          !                later charge and mag. density (n, mx, my, mz)
+          !                all stored in terms of 3d-stars
+          !     ris      : first componets of the density matrix
+          !                later charge and mag. density (n, mx, my, mz)
+          !                all stored on real space mesh
+          !**********************************************************************
+
+   USE m_juDFT
+   USE m_constants
+   USE m_cdn_io
+   USE m_loddop
+   USE m_wrtdop
+   USE m_qfix
+   USE m_fft2d
+   USE m_fft3d
+   USE m_types
+   USE m_rotdenmat 
+
+   IMPLICIT NONE
+
+   TYPE(t_mpi),INTENT(IN)    :: mpi
+   TYPE(t_sym),INTENT(IN)    :: sym
+   TYPE(t_stars),INTENT(IN)  :: stars
+   TYPE(t_vacuum),INTENT(IN) :: vacuum
+   TYPE(t_atoms),INTENT(IN)  :: atoms
+   TYPE(t_sphhar),INTENT(IN) :: sphhar
+   TYPE(t_input),INTENT(IN)  :: input
+   TYPE(t_cell),INTENT(IN)   :: cell
+   TYPE(t_oneD),INTENT(IN)    :: oneD
+   TYPE(t_noco),INTENT(IN)   :: noco
+   TYPE(t_sliceplot),INTENT(IN):: sliceplot
+
+   ! Local type instances
+   TYPE(t_input)  :: inp
+   TYPE(t_potden) :: den
+
+   ! Local Scalars
+   INTEGER iden,ivac,ifft2,ifft3,archiveType
+   INTEGER imz,ityp,iri,ilh,imesh,iter
+   REAL cdnup,cdndown,chden,mgden,theta,phi,zero,rho_11,rziw,fermiEnergyTemp
+   REAL rho_22,rho_21r,rho_21i,rhotot,mx,my,mz,fix,vz_r,vz_i
+   COMPLEX czero
+
+   ! Local Arrays
+   !---> off-diagonal part of the density matrix
+   COMPLEX, ALLOCATABLE :: cdom(:),cdomvz(:,:),cdomvxy(:,:,:)
+   COMPLEX, ALLOCATABLE :: qpw(:,:),rhtxy(:,:,:,:)
+   REAL,    ALLOCATABLE :: rht(:,:,:),rho(:,:,:,:)
+   REAL,    ALLOCATABLE :: rvacxy(:,:,:,:),ris(:,:),fftwork(:)
+
+   !---> for testing: output of offdiag. output density matrix. to plot the
+   !---> offdiag. part of the output density matrix, that part has to be
+   !---> written the file rhomt21 in cdnmt.
+   LOGICAL :: l_qfix
+   REAL    :: cdn11, cdn22
+   COMPLEX :: cdn21
+   !---> end of test part
+
+   iter = 0 ! This is not clean!
+
+   zero = 0.0 ; czero = CMPLX(0.0,0.0)
+   ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
+   ifft2 = 9*stars%mx1*stars%mx2
+
+   ALLOCATE (qpw(stars%ng3,4),rhtxy(vacuum%nmzxyd,stars%ng2-1,2,4),&
+             cdom(stars%ng3),cdomvz(vacuum%nmzd,2),cdomvxy(vacuum%nmzxyd,stars%ng2-1,2),&
+             ris(0:27*stars%mx1*stars%mx2*stars%mx3-1,4),fftwork(0:27*stars%mx1*stars%mx2*stars%mx3-1),&
+             rvacxy(0:9*stars%mx1*stars%mx2-1,vacuum%nmzxyd,2,4),&
+             rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,4),rht(vacuum%nmzd,2,4) )
+
+   !---> initialize arrays for the density matrix
+   rho(:,:,:,:) = zero ; qpw(:,:) = czero ; cdom(:) = czero
+   IF (input%film) THEN
+      cdomvz(:,:) = czero ;    rhtxy(:,:,:,:) = czero
+      cdomvxy(:,:,:) = czero ; rht(:,:,:) = zero
+   END IF
+
+   IF (input%jspins .NE. 2) THEN
+      WRITE (6,*) 'This is the non-collinear version of the flapw-'
+      WRITE (6,*) 'program. It can only perform spin-polarized'
+      WRITE (6,*) 'calculations.'
+      CALL juDFT_error("jspins not equal 2",calledby = "pldngen",hint=&
+                       "This is the non-collinear version of the flapw-"//&
+                       ' PROGRAM. It can ONLY perform spin-polarized '//&
+                       'calculations.')
+   END IF
+
+   !---> reload the density matrix from file rhomat_inp
+   archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+   IF (noco%l_noco) archiveType = CDN_ARCHIVE_TYPE_NOCO_const
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+   IF (.NOT.sliceplot%slice) THEN
+      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                       0,fermiEnergyTemp,l_qfix,den)
+   ELSE
+      CALL readDensity(stars,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,CDN_INPUT_DEN_const,&
+                       0,fermiEnergyTemp,l_qfix,den,'cdn_slice')
+   END IF
+   rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
+   qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
+   rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
+   rhtxy(1:,1:,1:,:input%jspins) = den%vacxy(1:,1:,1:,:input%jspins)
+   IF(noco%l_noco) THEN
+      cdom = den%pw(:,3)
+      cdomvz(:,:) = CMPLX(den%vacz(:,:,3),den%vacz(:,:,4))
+      cdomvxy = den%vacxy(:,:,:,3)
+   END IF
+
+   IF (.NOT. sliceplot%slice) THEN
+      CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
+      den%iter = iter
+      den%mt(:,0:,1:,:input%jspins) = rho(:,0:,1:,:input%jspins)
+      den%pw(1:,:input%jspins) = qpw(1:,:input%jspins)
+      den%vacz(1:,1:,:input%jspins) = rht(1:,1:,:input%jspins)
+      den%vacxy(1:,1:,1:,:input%jspins) = rhtxy(1:,1:,1:,:input%jspins)
+      IF(noco%l_noco) THEN
+         den%pw(:,3) = cdom
+         den%vacz(:,:,3) = REAL(cdomvz(:,:))
+         den%vacz(:,:,4) = AIMAG(cdomvz(:,:))
+         den%vacxy(:,:,:,3) = cdomvxy
+      END IF
+      CALL qfix(mpi,stars,atoms,sym,vacuum,sphhar,input,cell,oneD,den,noco%l_noco,.FALSE.,.true.,fix)
+      rho(:,0:,1:,:input%jspins) = den%mt(:,0:,1:,:input%jspins)
+      qpw(1:,:input%jspins) = den%pw(1:,:input%jspins)
+      rht(1:,1:,:input%jspins) = den%vacz(1:,1:,:input%jspins)
+      rhtxy(1:,1:,1:,:input%jspins) = den%vacxy(1:,1:,1:,:input%jspins)
+      IF(noco%l_noco) THEN
+         cdom = den%pw(:,3)
+         cdomvz(:,:) = CMPLX(den%vacz(:,:,3),den%vacz(:,:,4))
+         cdomvxy = den%vacxy(:,:,:,3)
+      END IF
+   END IF
+
+   !---> calculate the charge and magnetization density in the muffin tins
+   DO ityp = 1,atoms%ntype
+      DO ilh = 0,sphhar%nlh(sym%ntypsy(ityp))
+         DO iri = 1,atoms%jri(ityp)
+            IF (SIZE(den%mt,4).LE.2) THEN 
+               cdnup   = rho(iri,ilh,ityp,1)
+               cdndown = rho(iri,ilh,ityp,2)
+               theta = noco%beta(ityp)
+               phi   = noco%alph(ityp)
+               chden  = cdnup + cdndown
+               mgden  = cdnup - cdndown
+               rho(iri,ilh,ityp,1) = chden
+               rho(iri,ilh,ityp,2) = mgden*COS(phi)*SIN(theta)
+               rho(iri,ilh,ityp,3) = mgden*SIN(phi)*SIN(theta)
+               rho(iri,ilh,ityp,4) = mgden*COS(theta)
+            ELSE 
+               !--->            for testing: output of offdiag. output density matrix
+               cdn11 = rho(iri,ilh,ityp,1)
+               cdn22 = rho(iri,ilh,ityp,2)
+               cdn21 = CMPLX(den%mt(iri,ilh,ityp,3),den%mt(iri,ilh,ityp,4))
+               CALL rot_den_mat(noco%alph(ityp),noco%beta(ityp),cdn11,cdn22,cdn21)
+               rho(iri,ilh,ityp,1) = cdn11 + cdn22
+               rho(iri,ilh,ityp,2) = 2.0*REAL(cdn21)
+               ! Note: The minus sign in the following line is temporary to adjust for differences in the offdiagonal
+               !       part of the density between this fleur version and ancient (v0.26) fleur.
+               rho(iri,ilh,ityp,3) = -2.0*AIMAG(cdn21)
+               rho(iri,ilh,ityp,4) = cdn11 - cdn22
+               !--->            end of test part
+            END IF
+         END DO
+      END DO
+   END DO
+
+
+   !---> fouriertransform the diagonal part of the density matrix
+   !---> in the interstitial, qpw, to real space (ris)
+   DO iden = 1,2
+      CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,1)
+   END DO
+   !---> fouriertransform the off-diagonal part of the density matrix
+   CALL fft3d(ris(0,3),ris(0,4),cdom(1),stars,+1)
+
+   !---> calculate the charge and magnetization density on the
+   !---> real space mesh
+   DO imesh = 0,ifft3-1
+      rho_11  = ris(imesh,1)
+      rho_22  = ris(imesh,2)
+      rho_21r = ris(imesh,3)
+      rho_21i = ris(imesh,4)
+      rhotot  = rho_11 + rho_22
+      mx      =  2*rho_21r
+      my      = -2*rho_21i
+      mz      = (rho_11-rho_22)
+
+      ris(imesh,1) = rhotot
+      ris(imesh,2) = mx
+      ris(imesh,3) = my
+      ris(imesh,4) = mz
+   END DO
+
+   !---> Fouriertransform the density matrix back to reciprocal space
+   DO iden = 1,4
+      fftwork=zero
+      CALL fft3d(ris(0,iden),fftwork,qpw(1,iden),stars,-1)
+   END DO
+
+   !---> fouriertransform the diagonal part of the density matrix
+   !---> in the vacuum, rz & rxy, to real space (rvacxy)
+   IF (input%film) THEN
+      DO iden = 1,2
+         DO ivac = 1,vacuum%nvac
+            DO imz = 1,vacuum%nmzxyd
+               rziw = 0.0
+               CALL fft2d(stars,rvacxy(0,imz,ivac,iden),fftwork,rht(imz,ivac,iden),&
+                          rziw,rhtxy(imz,1,ivac,iden),vacuum%nmzxyd,1)
+            END DO
+         END DO
+      END DO
+      !--->    fouriertransform the off-diagonal part of the density matrix
+      DO ivac = 1,vacuum%nvac
+         DO imz = 1,vacuum%nmzxyd
+            rziw = 0.0
+            vz_r = REAL(cdomvz(imz,ivac))
+            vz_i = AIMAG(cdomvz(imz,ivac))
+            CALL fft2d(stars,rvacxy(0,imz,ivac,3),rvacxy(0,imz,ivac,4),&
+                       vz_r,vz_i,cdomvxy(imz,1,ivac),vacuum%nmzxyd,1)
+         END DO
+      END DO
+
+      !--->    calculate the four components of the matrix potential on
+      !--->    real space mesh
+      DO ivac = 1,vacuum%nvac
+         DO imz = 1,vacuum%nmzxyd
+            DO imesh = 0,ifft2-1
+               rho_11  = rvacxy(imesh,imz,ivac,1)
+               rho_22  = rvacxy(imesh,imz,ivac,2)
+               rho_21r = rvacxy(imesh,imz,ivac,3)
+               rho_21i = rvacxy(imesh,imz,ivac,4)
+               rhotot  = rho_11 + rho_22
+               mx      =  2*rho_21r
+               my      = -2*rho_21i
+               mz      = (rho_11-rho_22)
+
+               rvacxy(imesh,imz,ivac,1) = rhotot
+               rvacxy(imesh,imz,ivac,2) = mx
+               rvacxy(imesh,imz,ivac,3) = my
+               rvacxy(imesh,imz,ivac,4) = mz
+            END DO
+         END DO
+         DO imz = vacuum%nmzxyd+1,vacuum%nmzd
+            rho_11  = rht(imz,ivac,1)
+            rho_22  = rht(imz,ivac,2)
+            rho_21r = REAL(cdomvz(imz,ivac))
+            rho_21i = AIMAG(cdomvz(imz,ivac))
+            rhotot  = rho_11 + rho_22
+            mx      =  2*rho_21r
+            my      = -2*rho_21i
+            mz      = (rho_11-rho_22)
+
+            rht(imz,ivac,1) = rhotot
+            rht(imz,ivac,2) = mx
+            rht(imz,ivac,3) = my
+            rht(imz,ivac,4) = mz
+         END DO
+      END DO
+      !--->    Fouriertransform the matrix potential back to reciprocal space
+      DO iden = 1,4
+         DO ivac = 1,vacuum%nvac
+            DO imz = 1,vacuum%nmzxyd
+               fftwork=zero
+               CALL fft2d(stars,rvacxy(0,imz,ivac,iden),fftwork,rht(imz,ivac,iden),&
+                          rziw,rhtxy(imz,1,ivac,iden),vacuum%nmzxyd,-1)
+            END DO
+         END DO
+      END DO
+   END IF
+
+   !---> save charge density to file cdn
+   inp=input
+   inp%jspins=1
+
+   CALL den%init(stars,atoms,sphhar,vacuum,noco,inp%jspins,POTDEN_TYPE_DEN)
+   den%iter = iter
+   den%mt(:,0:,1:,1:1) = rho(:,0:,1:,1:1)
+   den%pw(1:,1:1) = qpw(1:,1:1)
+   den%vacz(1:,1:,1:1) = rht(1:,1:,1:1)
+   den%vacxy(1:,1:,1:,1:1) = rhtxy(1:,1:,1:,1:1)
+   IF(noco%l_noco) THEN
+      den%pw(:,3) = cdom
+      den%vacz(:,:,3) = REAL(cdomvz(:,:))
+      den%vacz(:,:,4) = AIMAG(cdomvz(:,:))
+      den%vacxy(:,:,:,3) = cdomvxy
+   END IF
+
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                     0,-1.0,0.0,.FALSE.,den)
+
+   !---> save mx to file mdnx
+   den%mt(:,0:,1:,1) = rho(:,0:,1:,2)
+   den%pw(1:,1) = qpw(1:,2)
+   den%vacz(1:,1:,1) = rht(1:,1:,2)
+   den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,2)
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                     0,-1.0,0.0,.FALSE.,den,'mdnx')
+
+   !---> save my to file mdny
+   den%mt(:,0:,1:,1) = rho(:,0:,1:,3)
+   den%pw(1:,1) = qpw(1:,3)
+   den%vacz(1:,1:,1) = rht(1:,1:,3)
+   den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,3)
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                     0,-1.0,0.0,.FALSE.,den,'mdny')
+
+   !---> save mz to file mdnz
+   den%mt(:,0:,1:,1) = rho(:,0:,1:,4)
+   den%pw(1:,1) = qpw(1:,4)
+   den%vacz(1:,1:,1) = rht(1:,1:,4)
+   den%vacxy(1:,1:,1:,1) = rhtxy(1:,1:,1:,4)
+   CALL writeDensity(stars,vacuum,atoms,cell,sphhar,inp,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                     0,-1.0,0.0,.FALSE.,den,'mdnz')
+
+   DEALLOCATE (qpw,rhtxy,cdom,cdomvz,cdomvxy,ris,fftwork,rvacxy,rho,rht)
+
+END SUBROUTINE pldngen
+
+END MODULE m_pldngen

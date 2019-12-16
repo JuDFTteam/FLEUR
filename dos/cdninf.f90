@@ -47,16 +47,16 @@ CONTAINS
     INTEGER,INTENT(IN):: ikpt,jspin ,nbands 
     !
     !     STM Arguments
-    COMPLEX, INTENT (IN) ::qstars(:,:,:,:) !(vacuum%nstars,DIMENSION%neigd,vacuum%layerd,2)
+    COMPLEX, INTENT (IN) ::qstars(:,:,:,:) !(vacuum%nstars,input%neig,vacuum%layerd,2)
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT (IN) :: qvlay(:,:,:) !DIMENSION%neigd,vacuum%layerd,2)
-    REAL,    INTENT (IN) :: qis(:,:,:)!(DIMENSION%neigd,kpts%nkpt,DIMENSION%jspd) 
-    REAL,    INTENT (IN) :: qvac(:,:,:,:) !(DIMENSION%neigd,2,kpts%nkpt,DIMENSION%jspd)
+    REAL,    INTENT (IN) :: qvlay(:,:,:) !input%neig,vacuum%layerd,2)
+    REAL,    INTENT (IN) :: qis(:,:,:)!(input%neig,kpts%nkpt,DIMENSION%jspd) 
+    REAL,    INTENT (IN) :: qvac(:,:,:,:) !(input%neig,2,kpts%nkpt,DIMENSION%jspd)
     REAL,    INTENT (IN) :: bkpt(3)
-    REAL,    INTENT (IN) :: eig(:)!(DIMENSION%neigd)
+    REAL,    INTENT (IN) :: eig(:)!(input%neig)
     REAL,    INTENT (IN) :: qal(0:,:,:)!(0:3,atoms%ntype,neigd)
-    INTEGER, INTENT (IN) :: jsym(:)!(DIMENSION%neigd)
+    INTEGER, INTENT (IN) :: jsym(:)!(input%neig)
     INTEGER, INTENT (IN) :: ksym(:)!(neigd)
     !     ..
     !     .. Local Scalars ..

@@ -27,9 +27,13 @@ CONTAINS
       INTEGER                   :: jsp, j, ivac, nz, n
       REAL                      :: q2(vacuum%nmz), w, rht1(vacuum%nmzd,2,input%jspins)
       COMPLEX                   :: x(stars%ng3)
-      
+
       qtot = 0.0
       qistot = 0.0
+      qvac=0.0
+      q=0.0
+      qis=0.0
+      qmt=0.0
       DO jsp = 1,input%jspins
          q(jsp) = 0.0
 !     -----mt charge
@@ -103,7 +107,7 @@ CONTAINS
       call tmp_potden%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
       call init_mt_grid(input%jspins, atoms, sphhar, xcpot%needs_grad(), sym)
       do n_atm =1,atoms%ntype
-         call mt_from_grid(atoms, sphhar, n_atm, input%jspins, mt(:,:,n_atm), &
+         call mt_from_grid(atoms, sym, sphhar, n_atm, input%jspins, mt(:,:,n_atm), &
                            tmp_potden%mt(:,0:,n_atm,:))
 
          do i=1,atoms%jri(n_atm)
@@ -156,11 +160,11 @@ CONTAINS
       REAL qmt(atoms%ntype,input%jspins),qvac(2,input%jspins)
       INTEGER, ALLOCATABLE :: lengths(:,:)
       CHARACTER(LEN=20) :: attributes(6), names(6)
-      
+
       CALL timestart("cdntot")
       call integrate_cdn(stars,atoms,sym,vacuum,input,cell,oneD, den, &
                                    q, qis, qmt, qvac, qtot, qistot)
- 
+
       IF (input%film) THEN
          ALLOCATE(lengths(4+vacuum%nvac,2))
       ELSE
@@ -209,7 +213,7 @@ CONTAINS
       REAL, INTENT(in)                       :: q(:), qis(:), qmt(:,:), qvac(:,:), qtot, qistot
       character(len=*), intent(in), optional :: hint
       integer                                :: n_mt
-      
+
 
       if(present(hint)) write (*,*) "DEN of ", hint
       write (*,*) "q   = ", q

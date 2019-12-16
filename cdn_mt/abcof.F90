@@ -33,10 +33,10 @@ CONTAINS
     INTEGER, INTENT (IN) :: jspin
     !     ..
     !     .. Array Arguments ..
-    COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
-    COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:dimension%lmd,atoms%nat)
+    COMPLEX, INTENT (OUT) :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+    COMPLEX, INTENT (OUT) :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT (OUT) :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(dimension%neigd)
+    REAL,    OPTIONAL, INTENT (IN) :: eig(:)!(input%neig)
     !     ..
     !     .. Local Scalars ..
     COMPLEX cexp,phase,c_0,c_1,c_2
@@ -127,7 +127,7 @@ CONTAINS
                 natom = natom + atoms%neq(i)
              ENDDO
              natom = natom + nn
-             IF ((atoms%invsat(natom).EQ.0) .OR. (atoms%invsat(natom).EQ.1)) THEN
+             IF ((sym%invsat(natom).EQ.0) .OR. (sym%invsat(natom).EQ.1)) THEN
                 !--->        loop over lapws
                 IF (zmat%l_real) THEN
                    ALLOCATE ( work_r(ne) )
@@ -201,7 +201,7 @@ CONTAINS
                    IF (oneD%odi%d1) THEN
                       inap = oneD%ods%ngopr(natom)
                    ELSE
-                      nap = atoms%ngopr(natom)
+                      nap = sym%ngopr(natom)
                       inap = sym%invtab(nap)
                    END IF
                    DO j = 1,3
@@ -258,7 +258,7 @@ CONTAINS
                          ENDIF
 
                          IF (noco%l_soc.AND.sym%invs) THEN
-                            IF (atoms%invsat(natom).EQ.1) THEN
+                            IF (sym%invsat(natom).EQ.1) THEN
                                jatom = sym%invsatnr(natom)
                                lmp = ll1 - m
                                inv_f = (-1)**(l-m)
@@ -317,7 +317,7 @@ CONTAINS
        DO n = 1,atoms%ntype
           DO nn = 1,atoms%neq(n)
              iatom = iatom + 1
-             IF (atoms%invsat(iatom).EQ.1) THEN
+             IF (sym%invsat(iatom).EQ.1) THEN
                 jatom = sym%invsatnr(iatom)
                 cexp = EXP(tpi_const*ImagUnit*DOT_PRODUCT(atoms%taual(:,jatom)&
                      &             + atoms%taual(:,iatom),lapw%bkpt))

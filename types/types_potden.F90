@@ -273,7 +273,12 @@ CONTAINS
 
   SUBROUTINE init_potden_types(pd,stars,atoms,sphhar,vacuum,noco,jspins,potden_type)
     USE m_judft
-    USE m_types_setup
+    USE m_types_atoms
+    USE m_types_stars
+    USE m_types_vacuum
+    USE m_types_noco
+    USE m_types_sphhar
+       
     IMPLICIT NONE
     CLASS(t_potden),INTENT(OUT):: pd 
     TYPE(t_atoms),INTENT(IN) :: atoms
@@ -371,7 +376,7 @@ CONTAINS
 !!$       mapmt=0
 !!$       na = 1
 !!$       DO n = 1,atoms%ntype
-!!$          DO l = 0,sphhar%nlh(atoms%ntypsy(na))
+!!$          DO l = 0,sphhar%nlh(sym%ntypsy(na))
 !!$             DO i = 1,atoms%jri(n)
 !!$                mapmt = mapmt +1
 !!$                j = j + 1

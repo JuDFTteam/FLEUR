@@ -6,8 +6,8 @@
 
 MODULE m_flipcdn
 !     *******************************************************
-!     this subroutine reads the charge density and flips the 
-!     magnetic moment within the m.t.sphere for each atom 
+!     this subroutine reads the charge density and flips the
+!     magnetic moment within the m.t.sphere for each atom
 !     according to the variable nflip. This variable is read in
 !     the main program
 !  TODO; (Test)           nflip = -1 : flip spin in sphere
@@ -16,11 +16,11 @@ MODULE m_flipcdn
 !                            r.pentcheva,kfa,Feb'96
 !
 !     Extension to multiple U per atom type by G.M. 2017
-!      
-!     Removed integer nflip switch and added angles phi/theta 
+!
+!     Removed integer nflip switch and added angles phi/theta
 !     (and an additional spin scale switch)
-!     which defines spin flip for each atom individually. 
-!     => Magnetisation axis can now be chosen independet 
+!     which defines spin flip for each atom individually.
+!     => Magnetisation axis can now be chosen independet
 !     of spin quantization axis.
 !     R. Hilgers, Okt. 2019
 !     *******************************************************
@@ -36,9 +36,9 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
    TYPE(t_stars),INTENT(IN)    :: stars
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
-   TYPE(t_atoms),INTENT(IN) :: atoms
+   TYPE(t_atoms),INTENT(IN)    :: atoms
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
-   TYPE(t_input),INTENT(INOUT) :: input
+   TYPE(t_input),INTENT(IN)    :: input
    TYPE(t_sym),INTENT(IN)      :: sym
    TYPE(t_noco),INTENT(IN)     :: noco
    TYPE(t_oneD),INTENT(IN)     :: oneD
@@ -46,7 +46,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    REAL, OPTIONAL, INTENT(IN)  :: phi(atoms%ntype)
    REAL, OPTIONAL, INTENT(IN)  :: theta(atoms%ntype)
    TYPE(t_potden), OPTIONAL,INTENT(INOUT) :: optDen
- 
+
    ! Local type instance
    TYPE(t_potden)            :: den
 
@@ -61,7 +61,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
 
 
-!Flipcdn by optional given angle if lflip is false but routine is called. 
+!Flipcdn by optional given angle if lflip is false but routine is called.
    DO k=1, atoms%ntype
       IF(.NOT.input%lflip.AND.PRESENT(phi).AND.present(theta)) THEN
          rotAnglePhi(k)=phi(k)
@@ -79,18 +79,18 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
 
 
 
-   DO itype=1, atoms%ntype 
+   DO itype=1, atoms%ntype
       l_flip(itype)=MERGE(.TRUE.,.FALSE.,(rotAnglePhi(itype).NE.0.0) .OR.(rotAngleTheta(itype).NE.0.0))
    END DO
    !rot_den_mat(alph,beta,rho11,rho22,rho21)
-   IF(.NOT.PRESENT(optDen)) THEN 
+   IF(.NOT.PRESENT(optDen)) THEN
       CALL den%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
          IF(noco%l_noco) THEN
       archiveType = CDN_ARCHIVE_TYPE_NOCO_const
    ELSE
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
    END IF
-      ! read the charge density 
+      ! read the charge density
        CALL readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,archiveType,&
                     CDN_INPUT_DEN_const,0,fermiEnergyTemp,l_qfix,den)
    ELSE
@@ -103,7 +103,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    DO itype = 1, atoms%ntype
       IF (l_flip(itype).AND.(.NOT.scaleSpin(itype))) THEN
          ! spherical and non-spherical m.t. charge density
-         DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
+         DO lh = 0,sphhar%nlh(sym%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                 IF (noco%l_mtNocoPot) THEN
                    rhodummy=CMPLX(den%mt(j,lh,itype,3),den%mt(j,lh,itype,4))
@@ -116,7 +116,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
                       den%mt(j,lh,itype,1) = den%mt(j,lh,itype,input%jspins)
                       den%mt(j,lh,itype,input%jspins) = rhodummyR
                    ELSE
-                      !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by theta=Pi/2 are allowed. 
+                      !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by theta=Pi/2 are allowed.
                       CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi and flipSpinPhi=0 is currently not supported.",&
                          calledby="flipcdn")
                    END IF
@@ -125,7 +125,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
          END DO
       ELSE IF (l_flip(itype).AND.scaleSpin(itype)) THEN
          IF((rotAngleTheta(itype).NE.(pimach()) .OR.rotAnglePhi(itype).NE.0.0)) CALL judft_error("Spinscaling in combination with flipSpin is currently only implemented using flipSpinTheta=Pi and flipSpinPhi=0.0.",calledby="flipcdn")
-         DO lh = 0,sphhar%nlh(atoms%ntypsy(na))
+         DO lh = 0,sphhar%nlh(sym%ntypsy(na))
             DO j = 1,atoms%jri(itype)
                rhodummy = den%mt(j,lh,itype,1) + den%mt(j,lh,itype,input%jspins)
                rhodumms = den%mt(j,lh,itype,1) - den%mt(j,lh,itype,input%jspins)
@@ -138,8 +138,8 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
    END DO
 
    IF (input%l_removeMagnetisationFromInterstitial) THEN
-!!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their mean value. 
-      den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value 
+!!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their mean value.
+      den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value
       den%pw(:,1)=den%pw(:,2)
       IF (noco%l_noco) THEN
          den%pw(:,3)=CMPLX(0.0,0.0)
@@ -175,7 +175,7 @@ SUBROUTINE flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco,oneD,cell,phi,theta,
                        den%mmpMat(m,mp,i_u,1) = den%mmpMat(m,mp,i_u,input%jspins)
                        den%mmpMat(m,mp,i_u,input%jspins) = rhodummyR
                     ELSE
-                       !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by Pi degrees are allowed. 
+                       !Since in non-noco case the den-matrices are only initialized with two diagonal components we cannot perform flips where off-diagonal elements arise in non-noco case => Only rotations by Pi degrees are allowed.
                        CALL judft_error("l_mtNocoPot=F in combination with spin flips different from flipSpinTheta=Pi, flipSpinPhi=0 is currently not supported.",&
                          calledby="flipcdn")
                     END IF
@@ -218,7 +218,7 @@ END DO
       END DO
 
       REWIND 40
-      i = 0 
+      i = 0
       DO ispin = 1,input%jspins
          i = i + 2
          WRITE (40,'(a)') TRIM(clines(i-1))
@@ -245,7 +245,7 @@ END DO
    END IF
 
 
-IF(PRESENT(optDen)) optDen=den 
+IF(PRESENT(optDen)) optDen=den
 
 END SUBROUTINE flipcdn
 

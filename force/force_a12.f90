@@ -5,7 +5,7 @@ MODULE m_forcea12
 ! ************************************************************
 !
 CONTAINS
-  SUBROUTINE force_a12(atoms,nobd,sym, DIMENSION, cell,oneD,&
+  SUBROUTINE force_a12(atoms,nobd,sym,  cell,oneD,&
                        we,jsp,ne,usdus,eigVecCoeffs,acoflo,bcoflo,e1cof,e2cof,f_a12,results)
     USE m_types_setup
     USE m_types_misc
@@ -16,7 +16,7 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT)   :: results
-    TYPE(t_dimension),INTENT(IN)    :: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)         :: oneD
     TYPE(t_sym),INTENT(IN)          :: sym
     TYPE(t_cell),INTENT(IN)         :: cell
@@ -44,7 +44,7 @@ CONTAINS
     !     ..
     !     .. Local Arrays ..
     COMPLEX forc_a12(3),gv(3)
-    COMPLEX acof_flapw(nobd,0:DIMENSION%lmd),bcof_flapw(nobd,0:DIMENSION%lmd)
+    COMPLEX acof_flapw(nobd,0:atoms%lmaxd*(atoms%lmaxd+2)),bcof_flapw(nobd,0:atoms%lmaxd*(atoms%lmaxd+2))
     REAL aaa(2),bbb(2),ccc(2),ddd(2),eee(2),fff(2),gvint(3),starsum(3),vec(3),vecsum(3)
     !     ..
     !     .. Statement Functions ..

@@ -7,7 +7,7 @@
 MODULE m_aline
   USE m_juDFT
 CONTAINS
-  SUBROUTINE aline(eig_id, nk,atoms,DIMENSION,sym,&
+  SUBROUTINE aline(eig_id, nk,atoms,sym,&
        cell,input, jsp,el,usdus,lapw,tlmplm, noco, oneD,eig,ne,zMat,hmat,smat)
     !************************************************************************
     !*                                                                      *
@@ -34,7 +34,7 @@ CONTAINS
     USE m_eig66_io
     USE m_types
     IMPLICIT NONE
-    TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+    
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
@@ -54,7 +54,7 @@ CONTAINS
     !     ..
     !     .. Array Arguments ..
     REAL,    INTENT (IN)  :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
-    REAL,    INTENT (OUT) :: eig(DIMENSION%neigd)
+    REAL,    INTENT (OUT) :: eig(input%neig)
     TYPE(t_mat),INTENT(IN):: hmat,smat
 
     !     ..
@@ -79,10 +79,10 @@ CONTAINS
     l_real=zMat%l_real
 
 
-    lhelp= MAX(lapw%nmat,(DIMENSION%neigd+2)*DIMENSION%neigd)
+    lhelp= MAX(lapw%nmat,(input%neig+2)*input%neig)
     CALL read_eig(eig_id,nk,jsp,neig=ne, eig=eig,zmat=zmat)
     IF (l_real) THEN
-       ALLOCATE ( h_r(DIMENSION%neigd,DIMENSION%neigd),s_r(DIMENSION%neigd,DIMENSION%neigd) )
+       ALLOCATE ( h_r(input%neig,input%neig),s_r(input%neig,input%neig) )
        h_r = 0.0 ; s_r=0.0
        ALLOCATE ( help_r(lhelp) )
     ELSE
@@ -91,7 +91,7 @@ CONTAINS
        ! multiplication with a and b matrices.
 
        zmat%data_c=conjg(zmat%data_c)
-       ALLOCATE ( h_c(DIMENSION%neigd,DIMENSION%neigd),s_c(DIMENSION%neigd,DIMENSION%neigd) )
+       ALLOCATE ( h_c(input%neig,input%neig),s_c(input%neig,input%neig) )
        h_c = 0.0 ; s_c=0.0
        ALLOCATE ( help_r(lhelp) )
     ENDIF
@@ -126,8 +126,8 @@ CONTAINS
        END DO
     END DO
 
-    ALLOCATE ( acof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat),bcof(DIMENSION%neigd,0:DIMENSION%lmd,atoms%nat) )
-    ALLOCATE ( ccof(-atoms%llod:atoms%llod,DIMENSION%neigd,atoms%nlod,atoms%nat) ) 
+    ALLOCATE ( acof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat),bcof(input%neig,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat) )
+    ALLOCATE ( ccof(-atoms%llod:atoms%llod,input%neig,atoms%nlod,atoms%nat) ) 
 
     !     conjugate again for use with abcof; finally use cdotc to revert again
     IF (.NOT.l_real) zMat%data_c = CONJG(zMat%data_c)
@@ -140,10 +140,10 @@ CONTAINS
     !
     CALL timestart("aline: hssr_wu")
     IF (l_real) THEN
-       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
+       CALL hssr_wu(atoms,sym, jsp,el,ne,usdus,lapw,input,&
             tlmplm, acof,bcof,ccof, h_r,s_r)
     ELSE
-       CALL hssr_wu(atoms,DIMENSION,sym, jsp,el,ne,usdus,lapw,input,&
+       CALL hssr_wu(atoms,sym, jsp,el,ne,usdus,lapw,input,&
             tlmplm, acof,bcof,ccof, h_c=h_c,s_c=s_c)
     ENDIF
 
@@ -154,10 +154,10 @@ CONTAINS
     !
     IF (l_real) THEN
        !---> LAPACK call
-       CALL CPP_LAPACK_ssygv(1,'V','L',ne,h_r,DIMENSION%neigd,s_r,DIMENSION%neigd,eig,help_r,lhelp,info)
+       CALL CPP_LAPACK_ssygv(1,'V','L',ne,h_r,input%neig,s_r,input%neig,eig,help_r,lhelp,info)
     ELSE
        ALLOCATE ( rwork(MAX(1,3*ne-2)) )
-       CALL CPP_LAPACK_chegv(1,'V','L',ne,h_c,DIMENSION%neigd,s_c,DIMENSION%neigd,eig,help_c,lhelp,rwork,info)
+       CALL CPP_LAPACK_chegv(1,'V','L',ne,h_c,input%neig,s_c,input%neig,eig,help_c,lhelp,rwork,info)
        DEALLOCATE ( rwork )
     ENDIF
     IF (info /= 0) THEN

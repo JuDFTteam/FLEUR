@@ -1,6 +1,6 @@
 MODULE m_force_a3
 CONTAINS
-  SUBROUTINE force_a3(atoms,sphhar,&
+  SUBROUTINE force_a3(atoms,sym,sphhar,&
        &                    input,&
        &                    rho,vr,&
        &                    force)
@@ -15,6 +15,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)   :: atoms
+    TYPE(t_sym),INTENT(IN)     :: sym
     !     .. Array Arguments ..
     REAL,    INTENT (IN) ::  vr(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (IN) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
@@ -53,7 +54,7 @@ CONTAINS
                 forc_a3(i) = czero
              END DO
              !
-             nd = atoms%ntypsy(na)
+             nd = sym%ntypsy(na)
              !
              lat_har: DO lh = 1,sphhar%nlh(nd)
                 lindex = sphhar%llh(lh,nd)

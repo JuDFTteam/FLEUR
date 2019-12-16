@@ -54,14 +54,14 @@ CONTAINS
 
     !The total nucleii charge
     zc=SUM(atoms%neq(:)*atoms%zatom(:))
-    zc = zc + 2*input%sigma
+    !zc = zc + 2*input%sigma !TODO : reactivate fields
 
     IF (fixtotal) THEN
        !-roa
        fix = zc/qtot
        na = 1
        DO n = 1,atoms%ntype
-          lh = sphhar%nlh(atoms%ntypsy(na))
+          lh = sphhar%nlh(sym%ntypsy(na))
           jm = atoms%jri(n)
           den%mt(:jm,0:lh,n,:) = fix*den%mt(:jm,0:lh,n,:)
           na = na + atoms%neq(n)

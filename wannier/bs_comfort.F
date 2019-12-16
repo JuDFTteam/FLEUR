@@ -8,14 +8,14 @@
 
       CONTAINS
 
-      SUBROUTINE bs_comfort(eig_id,DIMENSION,input,noco,nkpt,param)
+      SUBROUTINE bs_comfort(eig_id,input,noco,nkpt,param)
 
       USE m_types
       USE m_eig66_io, ONLY : read_eig
 
       IMPLICIT NONE
 
-      TYPE(t_dimension), INTENT(IN)   :: DIMENSION
+      
       TYPE(t_input),     INTENT(IN)   :: input
       TYPE(t_noco),      INTENT(IN)   :: noco
 
@@ -39,7 +39,7 @@ c---> pk non-collinear
       ENDIF
 c---> pk non-collinear
 
-      ALLOCATE (eig(DIMENSION%neigd,nkpt,nspins))
+      ALLOCATE (eig(input%neig,nkpt,nspins))
       ALLOCATE (ne(nkpt,nspins))
 
       DO jsp = 1, nspins
@@ -47,14 +47,14 @@ c---> pk non-collinear
             CALL read_eig(eig_id,k,jsp,neig=ne(k,jsp),eig=eig(:,k,jsp))
          END DO ! k = 1,nkpt
 
-         DO i = 1, DIMENSION%neigd
+         DO i = 1, input%neig
             DO k = 1, nkpt
                WRITE(776+jsp,*) param,k,eig(i,k,jsp)
             END DO
             WRITE(776+jsp,*)
          END DO
 
-         DO i = 1, DIMENSION%neigd
+         DO i = 1, input%neig
             DO k = 1, nkpt
                IF (k.eq.param) WRITE(778+jsp,*) param,k,eig(i,k,jsp)
             END DO

@@ -30,7 +30,7 @@ CONTAINS
     INTEGER, INTENT (IN) :: itype,ne,isp
     !     ..
     !     .. Array Arguments ..
-    REAL,    INTENT(IN)    :: we(ne),eig(:)!(dimension%neigd)
+    REAL,    INTENT(IN)    :: we(ne),eig(:)!(input%neig)
     REAL,    INTENT(INOUT) :: a21(3,atoms%nat)
     COMPLEX, INTENT(IN)    :: aveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
     COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)

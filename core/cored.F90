@@ -1,6 +1,6 @@
 MODULE m_cored
 CONTAINS
-   SUBROUTINE cored(input, jspin, atoms, rho, DIMENSION, sphhar, vr, qint, rhc, tec, seig, EnergyDen)
+   SUBROUTINE cored(input, jspin, atoms, rho,  sphhar, vr, qint, rhc, tec, seig, EnergyDen)
       !     *******************************************************
       !     *****   set up the core densities for compounds.  *****
       !     *****                      d.d.koelling           *****
@@ -8,12 +8,12 @@ CONTAINS
       USE m_juDFT
       USE m_intgr, ONLY : intgr3,intgr0,intgr1
       USE m_constants, ONLY : c_light,sfp_const
-      USE m_setcor
+      !USE m_setcor
       USE m_differ
       USE m_types
       USE m_xmlOutput
       IMPLICIT NONE
-      TYPE(t_dimension),INTENT(IN)   :: DIMENSION
+      
       TYPE(t_input),INTENT(IN)       :: input
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
@@ -25,7 +25,7 @@ CONTAINS
       !     .. Array Arguments ..
       REAL, INTENT(IN)              :: vr(atoms%jmtd,atoms%ntype)
       REAL, INTENT(INOUT)           :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-      REAL, INTENT(INOUT)           :: rhc(DIMENSION%msh,atoms%ntype,input%jspins)
+      REAL, INTENT(INOUT)           :: rhc(atoms%msh,atoms%ntype,input%jspins)
       REAL, INTENT(INOUT)           :: qint(atoms%ntype,input%jspins)
       REAL, INTENT(INOUT)           :: tec(atoms%ntype,input%jspins)
       REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
@@ -37,11 +37,11 @@ CONTAINS
       !     ..
       !     .. Local Arrays ..
 
-      REAL rhcs(DIMENSION%msh),rhoc(DIMENSION%msh),rhoss(DIMENSION%msh),vrd(DIMENSION%msh),f(0:3)
-      REAL rhcs_aux(DIMENSION%msh), rhoss_aux(DIMENSION%msh) !> quantities for energy density calculations
-      REAL occ(DIMENSION%nstd),a(DIMENSION%msh),b(DIMENSION%msh),ain(DIMENSION%msh),ahelp(DIMENSION%msh)
-      REAL occ_h(DIMENSION%nstd,2)
-      INTEGER kappa(DIMENSION%nstd),nprnc(DIMENSION%nstd)
+      REAL rhcs(atoms%msh),rhoc(atoms%msh),rhoss(atoms%msh),vrd(atoms%msh),f(0:3)
+      REAL rhcs_aux(atoms%msh), rhoss_aux(atoms%msh) !> quantities for energy density calculations
+      REAL occ(maxval(atoms%econf%num_states)),a(atoms%msh),b(atoms%msh),ain(atoms%msh),ahelp(atoms%msh)
+      REAL occ_h(maxval(atoms%econf%num_states),2)
+      INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
       CHARACTER(LEN=20) :: attributes(6)
       REAL stateEnergies(29)
       !     ..
@@ -53,7 +53,7 @@ CONTAINS
          DO  n = 1,atoms%ntype
             rnot = atoms%rmsh(1,n) ; dxx = atoms%dx(n)
             ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/rnot ) / dxx + 1 )
-            ncmsh = MIN( ncmsh, DIMENSION%msh )
+            ncmsh = MIN( ncmsh, atoms%msh )
             !     --->    update spherical charge density
             DO  i = 1,atoms%jri(n)
                rhoc(i) = rhc(i,n,jspin)
@@ -81,7 +81,10 @@ CONTAINS
          !         rn = rmt(jatom)
          dxx = atoms%dx(jatom)
          bmu = 0.0
-         CALL setcor(jatom,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
+         !CALL setcor(jatom,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
+         CALL atoms%econf(jatom)%get_core(nst,nprnc,kappa,occ_h)
+
+         
          IF ((bmu > 99.)) THEN
             occ(1:nst) = input%jspins *  occ_h(1:nst,jspin)
          ELSE
@@ -90,7 +93,7 @@ CONTAINS
          rnot = atoms%rmsh(1,jatom)
          d = EXP(atoms%dx(jatom))
          ncmsh = NINT( LOG( (atoms%rmt(jatom)+10.0)/rnot ) / dxx + 1 )
-         ncmsh = MIN( ncmsh, DIMENSION%msh )
+         ncmsh = MIN( ncmsh, atoms%msh )
          rn = rnot* (d** (ncmsh-1))
          WRITE (6,FMT=8000) z,rnot,dxx,atoms%jri(jatom)
          DO  j = 1,atoms%jri(jatom)
@@ -124,7 +127,7 @@ CONTAINS
             ENDDO
          END IF
 
-         nst = atoms%ncst(jatom)        ! for lda+U
+         nst = atoms%econf(jatom)%num_core_states        ! for lda+U
 
          IF (input%gw==1 .OR. input%gw==3)&
               &                      WRITE(15) nst,atoms%rmsh(1:atoms%jri(jatom),jatom)
@@ -183,7 +186,7 @@ CONTAINS
          ENDIF
 
          rhc(1:ncmsh,jatom,jspin)   = rhoss(1:ncmsh) / input%jspins
-         rhc(ncmsh+1:DIMENSION%msh,jatom,jspin) = 0.0
+         rhc(ncmsh+1:atoms%msh,jatom,jspin) = 0.0
 
          seig = seig + atoms%neq(jatom)*sume
          DO  i = 1,nm
@@ -217,7 +220,7 @@ CONTAINS
          CALL openXMLElementForm('coreStates',(/'atomType     ','atomicNumber ','spin         ','kinEnergy    ',&
                                                 'eigValSum    ','lostElectrons'/),&
                                  attributes,RESHAPE((/8,12,4,9,9,13,6,3,1,18,18,9/),(/6,2/)))
-         DO korb = 1, atoms%ncst(jatom)
+         DO korb = 1, atoms%econf(jatom)%num_core_states
             fj = iabs(kappa(korb)) - .5e0
             weight = 2*fj + 1.e0
             IF (bmu > 99.) weight = occ(korb)

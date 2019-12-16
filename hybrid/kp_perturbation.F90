@@ -1,10 +1,11 @@
 MODULE m_kp_perturbation
+  USE m_types_hybdat
 
 CONTAINS
 
    SUBROUTINE ibs_correction( &
       nk, atoms, &
-      dimension, input, jsp, &
+       input, jsp, &
       hybdat, mpbasis,hybrid, &
       lapw, kpts, nkpti, &
       cell, mnobd, &
@@ -21,9 +22,7 @@ CONTAINS
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
-
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT)   :: hybrid
       TYPE(t_input), INTENT(IN)   :: input
@@ -86,8 +85,8 @@ CONTAINS
       COMPLEX, ALLOCATABLE   ::  cmt_lo(:, :, :, :)
       COMPLEX, ALLOCATABLE   ::  cmt_apw(:, :, :)
       TYPE(t_mat)           ::  z
-      REAL                  ::  work_r(dimension%neigd)
-      COMPLEX               ::  work_c(dimension%neigd)
+      REAL                  ::  work_r(input%neig)
+      COMPLEX               ::  work_c(input%neig)
 
       !CALL intgrf_init(atoms%ntype,atoms%jmtd,atoms%jri,atoms%dx,atoms%rmsh,hybdat%gridf)
 
@@ -146,7 +145,7 @@ CONTAINS
       END DO
 
       ! calculate lo wavefunction coefficients
-      allocate(cmt_lo(dimension%neigd, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
+      allocate(cmt_lo(input%neig, -atoms%llod:atoms%llod, atoms%nlod, atoms%nat))
       cmt_lo = 0
       iatom = 0
       ic = 0
@@ -157,9 +156,9 @@ CONTAINS
          const = fpi_const*(atoms%rmt(itype)**2)/2/sqrt(cell%omtil)
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
-            IF ((atoms%invsat(iatom) == 0) .or. (atoms%invsat(iatom) == 1)) THEN
-               IF (atoms%invsat(iatom) == 0) invsfct = 1
-               IF (atoms%invsat(iatom) == 1) THEN
+            IF ((sym%invsat(iatom) == 0) .or. (sym%invsat(iatom) == 1)) THEN
+               IF (sym%invsat(iatom) == 0) invsfct = 1
+               IF (sym%invsat(iatom) == 1) THEN
                   invsfct = 2
                   iatom1 = sym%invsatnr(iatom)
                END IF
@@ -223,7 +222,7 @@ CONTAINS
       END DO
       idum = maxval(lmp_start)
 
-      allocate(cmt_apw(dimension%neigd, idum, atoms%nat))
+      allocate(cmt_apw(input%neig, idum, atoms%nat))
       cmt_apw = 0
       DO i = 1, lapw%nv(jsp)
          kvec = kpts%bk(:, nk) + lapw%gvec(:, i, jsp)
@@ -707,10 +706,10 @@ CONTAINS
 !
    SUBROUTINE dwavefproducts( &
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
-      atoms, mpbasis, hybrid, &
+      input,atoms, mpbasis, hybrid, &
       cell, &
       hybdat, kpts, nkpti, lapw, &
-      dimension, jsp, &
+       jsp, &
       eig_irr)
 
       USE m_wrapper
@@ -718,8 +717,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
-
-      TYPE(t_dimension), INTENT(IN)   :: dimension
+      TYPE(t_input),INTENT(IN)     ::input
       TYPE(t_mpbasis), intent(in) :: mpbasis
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -747,10 +745,10 @@ CONTAINS
       !
       CALL momentum_matrix( &
          dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
-         atoms, mpbasis, hybrid, &
+         input,atoms, mpbasis, hybrid, &
          cell, &
          hybdat, kpts, lapw, &
-         dimension, jsp)
+          jsp)
 
       !                                                __
       !  Calculate expansion coefficients -i < uj | \/ | ui > / ( ei - ej ) for periodic function ui
@@ -782,10 +780,10 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix( &
       momentum, nk, bandi1, bandf1, bandi2, bandf2, &
-      atoms, mpbasis, hybrid, &
+      input,atoms, mpbasis, hybrid, &
       cell, &
       hybdat, kpts, lapw, &
-      dimension, jsp)
+       jsp)
 
       USE m_olap
       USE m_wrapper
@@ -796,10 +794,9 @@ CONTAINS
       USE m_types
       USE m_io_hybrid
       IMPLICIT NONE
-
+      TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpbasis), intent(in) :: mpbasis
-      TYPE(t_dimension), INTENT(IN)   :: dimension
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -834,7 +831,7 @@ CONTAINS
       COMPLEX                 ::  cvec1(hybrid%maxlmindx), cvec2(hybrid%maxlmindx), cvec3(hybrid%maxlmindx)
       COMPLEX                 ::  cmt1(hybrid%maxlmindx, bandi1:bandf1), cmt2(hybrid%maxlmindx, bandi2:bandf2)
       COMPLEX                 ::  carr1(3), carr2(3)
-      COMPLEX                 ::  cmt(dimension%neigd, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
       REAL                    ::  olap_r(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
       COMPLEX                 ::  olap_c(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
       REAL                    ::  vec1_r(lapw%nv(jsp)), vec2_r(lapw%nv(jsp)), vec3_r(lapw%nv(jsp))

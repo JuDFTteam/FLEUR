@@ -9,9 +9,10 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id, mpbasis, hybrid, kpts, atoms, input, DIMENSION, mpi, noco, cell, oneD, &
+   SUBROUTINE calc_hybrid(eig_id, mpbasis, hybrid, kpts, atoms, input,  mpi, noco, cell, oneD, &
                           enpara, results, sym, xcpot, v, iterHF)
 
+      USE m_types_hybdat
       USE m_types
       USE m_mixedbasis
       USE m_coulombmatrix
@@ -25,7 +26,6 @@ CONTAINS
 
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
-      TYPE(t_dimension), INTENT(IN)    :: DIMENSION
       TYPE(t_oneD), INTENT(IN)    :: oneD
       type(t_mpbasis), intent(inout) :: mpbasis
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
@@ -57,7 +57,7 @@ CONTAINS
 
       CALL timestart("Hybrid code")
       INQUIRE (file="v_x.mat", exist=hybrid%l_addhf)
-      CALL open_hybrid_io1(DIMENSION, sym%invs)
+      CALL open_hybrid_io1( sym%invs)
 
       IF (kpts%nkptf == 0) THEN
          CALL judft_error("kpoint-set of full BZ not available", &
@@ -77,7 +77,7 @@ CONTAINS
       results%te_hfex%core = 0
 
       !Check if we are converged well enough to calculate a new potential
-      CALL open_hybrid_io1b(DIMENSION, sym%invs)
+      CALL open_hybrid_io1b( sym%invs)
       hybrid%l_addhf = .TRUE.
 
       !In first iteration allocate some memory
@@ -102,12 +102,12 @@ CONTAINS
          allocate(hybrid%nbasm(kpts%nkptf), source=0)
 
          if(allocated(hybrid%div_vv)) deallocate(hybrid%div_vv)
-         allocate(hybrid%div_vv(DIMENSION%neigd, kpts%nkpt, input%jspins), source=0.0)
+         allocate(hybrid%div_vv(input%neig, kpts%nkpt, input%jspins), source=0.0)
          init_vex = .FALSE.
       END IF
 
       hybrid%l_subvxc = (hybrid%l_subvxc .AND. hybrid%l_addhf)
-      IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(DIMENSION%neigd2, kpts%nkpt, input%jspins))
+      IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(input%neig, kpts%nkpt, input%jspins))
 
       IF (hybrid%l_calhf) THEN
          iterHF = iterHF + 1
@@ -128,16 +128,16 @@ CONTAINS
          CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-         CALL open_hybrid_io2(mpbasis, hybrid, DIMENSION, atoms, sym%invs)
+         CALL open_hybrid_io2(mpbasis, hybrid, input, atoms, sym%invs)
 
          CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpbasis, hybrid, xcpot)
 
-         CALL hf_init(mpbasis, hybrid, atoms, input, DIMENSION, hybdat)
+         CALL hf_init(mpbasis, hybrid, atoms, input,  hybdat)
          CALL timestop("Preparation for Hybrid functionals")
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
-            CALL HF_setup(mpbasis,hybrid, input, sym, kpts, dimension, atoms, &
+            CALL HF_setup(mpbasis,hybrid, input, sym, kpts,  atoms, &
                           mpi, noco, cell, oneD, results, jsp, enpara, eig_id, &
                           hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
@@ -145,7 +145,7 @@ CONTAINS
             DO nk = 1, kpts%nkpt
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
                CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, l_zref)
-               CALL hsfock(nk, atoms, mpbasis, hybrid, lapw, DIMENSION, kpts, jsp, input, hybdat, eig_irr, sym, cell, &
+               CALL hsfock(nk, atoms, mpbasis, hybrid, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
                            noco, results, MAXVAL(hybrid%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO

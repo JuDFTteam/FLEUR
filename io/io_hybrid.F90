@@ -14,9 +14,9 @@ module m_io_hybrid
   !public:: open_hybrid_io,read_cmt,write_cmt
 contains
 
-  SUBROUTINE open_hybrid_io1(DIMENSION,l_real)
+  SUBROUTINE open_hybrid_io1(l_real)
     implicit none
-    TYPE(t_dimension),INTENT(IN):: dimension
+
     LOGICAL,INTENT(IN)          :: l_real
     LOGICAL :: opened=.false.
 
@@ -24,15 +24,15 @@ contains
     opened=.true.
 
     !print *,"Open olap.mat"
-    id_olap=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"olap.mat")
+    id_olap=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"olap.mat")
     !print *,"Open z.mat"
-    id_z=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"z.mat")
+    id_z=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"z.mat")
   END SUBROUTINE open_hybrid_io1
 
 
-  SUBROUTINE open_hybrid_io1b(DIMENSION,l_real)
+  SUBROUTINE open_hybrid_io1b(l_real)
     implicit none
-    TYPE(t_dimension),INTENT(IN):: dimension
+
     LOGICAL,INTENT(IN)          :: l_real
     LOGICAL :: opened=.false.
 
@@ -40,15 +40,15 @@ contains
     opened=.true.
 
     !print *,"Open v_x.mat"
-    id_v_x=OPEN_MATRIX(l_real,DIMENSION%nbasfcn,1,1,"v_x.mat")
+    id_v_x=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"v_x.mat")
   END SUBROUTINE open_hybrid_io1b
 
 
-  SUBROUTINE open_hybrid_io2(mpbasis, hybrid,DIMENSION,atoms,l_real)
+  SUBROUTINE open_hybrid_io2(mpbasis,hybrid,input,atoms,l_real)
     IMPLICIT NONE
     type(t_mpbasis), intent(in) :: mpbasis
     TYPE(t_hybrid),INTENT(IN)   :: hybrid
-    TYPE(t_dimension),INTENT(IN):: dimension
+    TYPE(t_input),INTENT(IN):: input
     TYPE(t_atoms),INTENT(IN)    :: atoms
     LOGICAL,INTENT(IN)          :: l_real
     INTEGER:: irecl_coulomb
@@ -59,7 +59,7 @@ contains
     if (opened) return
     opened=.true.
     OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-         &     recl=dimension%neigd*hybrid%maxlmindx*atoms%nat*16)
+         &     recl=input%neig*hybrid%maxlmindx*atoms%nat*16)
 
 #ifdef CPP_NOSPMVEC
     irecl_coulomb = hybrid%maxbasm1 * (hybrid%maxbasm1+1) * 8 / 2

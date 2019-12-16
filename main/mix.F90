@@ -15,7 +15,7 @@ MODULE m_mix
 
 contains
 
-  SUBROUTINE mix_charge( field, DIMENSION,  mpi, l_writehistory,&
+  SUBROUTINE mix_charge( field,   mpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
        oneD, archiveType, xcpot, iteration, inDen, outDen, results, l_runhia)
 
@@ -39,12 +39,12 @@ contains
     type(t_input),     intent(in)    :: input
     type(t_vacuum),    intent(in)    :: vacuum
     type(t_noco),      intent(in)    :: noco
-    type(t_sym),       intent(in)    :: sym
+    TYPE(t_sym),TARGET,INTENT(in)    :: sym
     TYPE(t_stars),TARGET,INTENT(in)  :: stars
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
     type(t_field),     intent(inout) :: field
-    type(t_dimension), intent(in)    :: dimension
+    
     type(t_mpi),       intent(in)    :: mpi
     TYPE(t_atoms),TARGET,INTENT(in)  :: atoms
     class(t_xcpot), intent(in)       :: xcpot
@@ -83,7 +83,7 @@ contains
     ENDIF 
 
     CALL timestart("Reading of distances")
-    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,sym,stars,cell,sphhar,atoms)
+    CALL mixvector_init(mpi%mpi_comm,l_densitymatrix,oneD,input,vacuum,noco,stars,cell,sphhar,atoms,sym)
 
     CALL mixing_history_open(mpi,input%maxiter)
 
@@ -96,7 +96,7 @@ contains
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 )  THEN
        CALL timestart("Preconditioner")
-       CALL kerker( field, DIMENSION, mpi, &
+       CALL kerker( field,  mpi, &
                     stars, atoms, sphhar, vacuum, input, sym, cell, noco, &
                     oneD, inDen, outDen, fsm(it) )
        !Store modified density in history

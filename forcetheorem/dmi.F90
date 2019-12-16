@@ -5,10 +5,11 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_dmi
-
   USE m_types
   USE m_types_forcetheo
   USE m_judft
+  IMPLICIT NONE
+  PRIVATE
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_dmi
      INTEGER :: q_done
      REAL,ALLOCATABLE:: qvec(:,:)
@@ -23,20 +24,21 @@ MODULE m_types_dmi
      PROCEDURE :: init   => dmi_init !not overloaded
      PROCEDURE :: dist   => dmi_dist !not overloaded
   END TYPE t_forcetheo_dmi
-
+  PUBLIC t_forcetheo_dmi
 CONTAINS
 
-  SUBROUTINE dmi_init(this,q,theta_s,phi_s)
+
+  SUBROUTINE dmi_init(this,q,theta,phi)
     USE m_calculator
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
     REAL,INTENT(in)                     :: q(:,:)
-    CHARACTER(len=*),INTENT(INOUT)      :: theta_s,phi_s
+    REAL,INTENT(IN)                     :: theta(:),phi(:)
 
-    CALL evaluateList(this%theta,theta_s)
-    CALL evaluateList(this%phi,phi_s)
-
+    this%theta=theta
+    this%phi=phi
+    
     IF (SIZE(this%phi).NE.SIZE(this%theta)) CALL &
          judft_error("Lists for theta/phi must have the same length in DMI force theorem calculations")
 
@@ -147,7 +149,7 @@ CONTAINS
 #endif    
   END SUBROUTINE dmi_dist
 
-  FUNCTION dmi_eval(this,eig_id,DIMENSION,atoms,kpts,sym,&
+  FUNCTION dmi_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results)RESULT(skip)
      USE m_types
      USE m_ssomat
@@ -156,7 +158,7 @@ CONTAINS
     LOGICAL :: skip
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: mpi
-    TYPE(t_dimension),INTENT(IN)   :: dimension
+    
     TYPE(t_oneD),INTENT(IN)        :: oneD
     TYPE(t_input),INTENT(IN)       :: input
     TYPE(t_noco),INTENT(IN)        :: noco
@@ -172,7 +174,7 @@ CONTAINS
     IF (this%q_done==0) RETURN
   
     this%evsum(0,this%q_done)=results%seigv
-    CALL ssomat(this%evsum(1:,this%q_done),this%theta,this%phi,eig_id,DIMENSION,atoms,kpts,sym,&
+    CALL ssomat(this%evsum(1:,this%q_done),this%theta,this%phi,eig_id,atoms,kpts,sym,&
        cell,noco, input,mpi, oneD,enpara,v,results) 
     skip=.TRUE.
   END FUNCTION  dmi_eval

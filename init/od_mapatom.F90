@@ -32,8 +32,8 @@
       DO n = 1,atoms%ntype
         n2 = n1 + atoms%neq(n) - 1
         IF (atoms%neq(n).EQ.1) THEN
-           atoms%ngopr(n2) = 1
-           WRITE (6,FMT=8010) n2,n2,atoms%ngopr(n2)
+           sym%ngopr(n2) = 1
+           WRITE (6,FMT=8010) n2,n2,sym%ngopr(n2)
            n1 = n1 + atoms%neq(n)
            CYCLE
         END IF
@@ -42,8 +42,8 @@
                   pps =matmul(sym%mrot(:,:,np1),atoms%taual(:,n1))
                   pps(3) = pps(3)+sym%tau(3,np1)/cell%amat(3,3)
                   IF (all(abs(atoms%taual(:,na)-pps(:)).LE.1.e-4 )) THEN
-                      atoms%ngopr(na) = np1
-                      WRITE (6,FMT=8010) na,n1,atoms%ngopr(na)
+                      sym%ngopr(na) = np1
+                      WRITE (6,FMT=8010) na,n1,sym%ngopr(na)
  8010                 FORMAT (5x,'atom',i3,' can be mapped into atom', i3,' through group  operation',i4)
                       CYCLE
                    END IF
@@ -80,7 +80,7 @@
       END DO
 
       DO na = 1,atoms%nat
-         atoms%invsat(na) = 0
+         sym%invsat(na) = 0
          sym%invsatnr(na) = 0
       END DO
 
@@ -90,7 +90,7 @@
          DO n = 1,atoms%ntype
             nat2 = nat1 + atoms%neq(n) - 1
             DO na = nat1,nat2 - 1
-               IF (atoms%invsat(na).EQ.0) THEN
+               IF (sym%invsat(na).EQ.0) THEN
                   naloop:DO na2 = na + 1,nat2
                      DO i = 1,3
                         sum_taual(i) = atoms%taual(i,na) + atoms%taual(i,na2)
@@ -103,8 +103,8 @@
                            sum_tau_lat(3) = sum_taual(3) + real(iz)
                            norm = sqrt(dot_product(matmul(sum_tau_lat,aamat),sum_tau_lat))
                            IF (norm.LT.del) THEN
-                              atoms%invsat(na) = 1
-                              atoms%invsat(na2) = 2
+                              sym%invsat(na) = 1
+                              sym%invsat(na2) = 2
                               sym%invsatnr(na)  = na2
                               sym%invsatnr(na2) = na
                               WRITE (6,FMT=9000) n,na,na2
@@ -119,7 +119,7 @@
             nat1 = nat1 + atoms%neq(n)
          END DO
       END IF
-      WRITE (6,FMT=*) atoms%invsat
+      WRITE (6,FMT=*) sym%invsat
  9000 FORMAT ('atom type',i3,': atom',i3,' can be mapped into atom',i3, ' via 3d inversion')
 
       END SUBROUTINE od_mapatom
