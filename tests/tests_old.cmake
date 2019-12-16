@@ -15,9 +15,10 @@ set(SerialOnlyTests  )
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
 
-if (${FLEUR_USE_HDF5})
-   set(SerialOnlyTests ${SerialOnlyTests} gw1Interface gw2Interface)
-endif()
+#Removed GW tests 
+#if (${FLEUR_USE_HDF5})
+#   set(SerialOnlyTests ${SerialOnlyTests} gw1Interface gw2Interface)
+#endif()
 
 set(Testdirs ${SerialParallelTests} ${SerialOnlyTests})
 
