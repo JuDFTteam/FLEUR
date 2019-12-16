@@ -1,0 +1,15 @@
+#juDFT Testscript
+#The following arguments are passed: executable, working directory
+
+jt::copyfile("files/inp2.xml","$workdir/inp.xml");
+jt::copyfile("files/JUDFT_WARN_ONLY", "$workdir");
+
+jt::testrun("rm mixing_history",$workdir);
+jt::testrun($executable,$workdir);
+
+#now test output
+$result=jt::test_grepexists("$workdir/out.xml","Forcetheorem_SSDISP qvectors=");
+$result+=jt::test_grepnumber("$workdir/out.xml",'Entry q=\"1',"ev-sum=.([^ ]*)...",-37.4629893,0.000001);
+$result+=jt::test_grepnumber("$workdir/out.xml",'Entry q=\"2',"ev-sum=.([^ ]*)...",-37.4373989,0.000001);
+
+jt::stageresult($workdir,$result,"2");

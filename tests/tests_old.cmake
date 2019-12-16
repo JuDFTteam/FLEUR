@@ -4,7 +4,8 @@ set(SerialParallelTests CuBulk CuBulkXML SiLOXML Fe_1l Fe_1lXML Fe-Atom CuBand
    CuBandXML CuDOS CuDOSXML Fe_bct Fe_bctXML PTO PTOXML Fe_1l_SOCXML PTO-SOC
    PTO-SOCXML Fe_bct_SOC Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    SiFilmPlotXML SiFilmSlicePlotXML CoMCDXML Fe_Kerker Fe_bct_LOXML 
-   Fe_bcc_GreensFunction Fe_1l_GreensFunction)
+   Fe_bcc_GreensFunction Fe_1l_GreensFunction FePt_film_SSFT
+   FePt_film_SSFT_LO Fe_film_SSFT Fe_film_SS_conv Fe_bulk_SS_conv)
 
 
 set(SerialOnlyTests SiHybridGammaNoInv SiHybrid8kpt_sym SiHybrid8kpt_nosym
