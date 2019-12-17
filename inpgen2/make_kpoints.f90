@@ -353,7 +353,7 @@ CONTAINS
           rlsymr(:,:,i)=REAL(TRANSPOSE(sym%mrot(:,:,i)))
        ENDDO
 
-       talfa=MATMUL(bltv,sym%tau(:,:nsym))
+       talfa(:,:nsym)=MATMUL(bltv,sym%tau(:,:nsym))
        DO i = 1, nsym
           ccr(:,:,i) = MATMUL(MATMUL(binv(:,:),rlsymr(:,:,i)),bltv(:,:))
        END DO
