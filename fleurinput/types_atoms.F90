@@ -213,22 +213,23 @@ MODULE m_types_atoms
      IMPLICIT NONE
      CLASS(t_atoms),INTENT(IN)::atoms
      INTEGER,INTENT(in)::n,nn
-
+     LOGICAL same
      IF (n>atoms%ntype.OR.nn>atoms%ntype) CALL judft_error("Same species checked for non-existing atom")
 
-     same_species=atoms%nz(n)==atoms%nz(nn)
-     same_species=same_species.AND.atoms%jri(n)==atoms%jri(nn)
-     same_species=same_species.AND.atoms%dx(n)==atoms%dx(nn)
-     same_species=same_species.AND.atoms%rmt(n)==atoms%rmt(nn)
-     same_species=same_species.AND.atoms%lmax(n)==atoms%lmax(nn)
-     same_species=same_species.AND.atoms%lnonsph(n)==atoms%lnonsph(nn)
-     same_species=same_species.AND.atoms%nlo(n)==atoms%nlo(nn)
-     IF (atoms%nlo(n)==atoms%nlo(nn)) same_species=same_species.AND.ALL(atoms%llo(:,n)==atoms%llo(:,nn))
-     same_species=same_species.AND.atoms%lapw_l(n)==atoms%lapw_l(nn)
-     same_species=same_species.AND.atoms%l_geo(n).eqv.atoms%l_geo(nn)
-     same_species=same_species.AND.TRIM(atoms%econf(n)%coreconfig)==TRIM(atoms%econf(nn)%coreconfig)
-     same_species=same_species.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
-     same_species=same_species.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
+     same=atoms%nz(n)==atoms%nz(nn)
+     same=same.AND.atoms%jri(n)==atoms%jri(nn)
+     same=same.AND.atoms%dx(n)==atoms%dx(nn)
+     same=same.AND.atoms%rmt(n)==atoms%rmt(nn)
+     same=same.AND.atoms%lmax(n)==atoms%lmax(nn)
+     same=same.AND.atoms%lnonsph(n)==atoms%lnonsph(nn)
+     same=same.AND.atoms%nlo(n)==atoms%nlo(nn)
+     IF (atoms%nlo(n)==atoms%nlo(nn)) same=same.AND.ALL(atoms%llo(:,n)==atoms%llo(:,nn))
+     same=same.AND.atoms%lapw_l(n)==atoms%lapw_l(nn)
+     same=same.AND.(atoms%l_geo(n).eqv.atoms%l_geo(nn))
+     same=same.AND.TRIM(atoms%econf(n)%coreconfig)==TRIM(atoms%econf(nn)%coreconfig)
+     same=same.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
+     same=same.AND.TRIM(atoms%econf(n)%valenceconfig)==TRIM(atoms%econf(nn)%valenceconfig)
+     same_species=same
   END FUNCTION
   PURE FUNCTION calc_nsp_atom(self) RESULT(nsp)
     IMPLICIT NONE
