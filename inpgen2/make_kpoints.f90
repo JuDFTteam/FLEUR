@@ -35,11 +35,11 @@ CONTAINS
 
     !set name
     IF (INDEX(str,"#")>0) THEN
-       name=trim(adjustl(str(INDEX(str,"#")+1:)))
-       str=str(:INDEX(str,"#")-1)
+       name=str(:INDEX(str,"#")-1)
+       str=trim(adjustl(str(INDEX(str,"#")+1:)))
     END IF
-
     str=ADJUSTL(str)
+    PRINT* ,name,'###',str
     DO WHILE(INDEX(str,'@')>0)
        IF (INDEX(str,'tria@')==1) THEN
           tria=.TRUE.
@@ -54,6 +54,7 @@ CONTAINS
           str=str(5:)
        ENDIF
     END DO
+    PRINT* ,name,'###',str
     IF (INDEX(str,'den=')==1) THEN
        str=str(5:)
        READ(str,*) den
@@ -245,7 +246,7 @@ CONTAINS
     USE m_kpttet
     USE m_types_cell
     USE m_types_sym
-    !USE m_kptgen_hybrid
+    USE m_kptgen_hybrid
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
@@ -310,8 +311,7 @@ CONTAINS
 
     IF (l_gamma) THEN
        IF (tria) CALL judft_error("tria and l_gamma incompatible")
-       CALL judft_error("l_gamma not supported at present")
-       !CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss)
+       CALL kptgen_hybrid(film,grid,cell,sym,kpts,l_soc_or_ss)
     ELSE
        !------------------------------------------------------------
        !

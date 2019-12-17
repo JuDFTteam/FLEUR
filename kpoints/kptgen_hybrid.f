@@ -9,7 +9,7 @@
       USE m_juDFT
 
       CONTAINS
-      
+
 ! this programm generates an aequdistant kpoint set including the
 ! Gamma point; it is reduced to IBZ and written in kpts (M.B.)
 
@@ -18,8 +18,10 @@
 
       SUBROUTINE kptgen_hybrid(film,grid,cell,sym,kpts,l_soc)
 
-      USE m_types
-  
+      USE m_types_cell
+      USE m_types_sym
+      USE m_types_kpts
+
       IMPLICIT NONE
 
       LOGICAL,INTENT(IN)           :: film
@@ -44,7 +46,7 @@
       REAL,ALLOCATABLE      ::  rarr(:)
       LOGICAL               ::  ldum
 
-  
+
       nkpt=grid(1)*grid(2)*grid(3)
       ALLOCATE( bk(3,nkpt),bkhlp(3,nkpt) )
 
@@ -58,7 +60,7 @@
           END DO
         END DO
       END DO
-      
+
       IF( ikpt .ne. nkpt) STOP 'failure: number of k-points'
 
       IF( sym%invs .or. l_soc ) THEN
@@ -66,7 +68,7 @@
       ELSE
         nsym = 2*sym%nop
       END IF
-      
+
       ALLOCATE( rot(3,3,nsym),rtau(3,nsym) )
 
       DO i=1,sym%nop
@@ -82,7 +84,7 @@
       IF(any(rot(:,:,1)-reshape((/1,0,0,0,1,0,0,0,1/),(/3,3/)).ne.0))
      &  STOP 'kptgen: First symmetry operation is not the identity.'
 
-      ALLOCATE( rrot(3,3,nsym),invtab(nsym) )    
+      ALLOCATE( rrot(3,3,nsym),invtab(nsym) )
 
       invtab = 0
 
@@ -100,7 +102,7 @@
           END IF
         END DO
         IF(invtab(i).eq.0) STOP 'kptgen: inverse operation not found.'
-        
+
       END DO
 
 
@@ -119,7 +121,7 @@
       pkpt(grid(1)+1,    :     ,    :     ) = pkpt(1,:,:)
       pkpt(    :     ,grid(2)+1,    :     ) = pkpt(:,1,:)
       pkpt(    :     ,    :     ,grid(3)+1) = pkpt(:,:,1)
-      
+
       IF(any(pkpt.eq.0)) THEN
          CALL juDFT_error('kptgen: Definition of pkpt-pointer failed.',
      &                    calledby='kptgen_hybrid')
@@ -139,7 +141,7 @@
             ldum = .true.
           END IF
           iarr2 = modulo(iarr2,grid) + 1
-          IF(any(iarr2.gt.grid)) 
+          IF(any(iarr2.gt.grid))
      &    STOP 'kptgen: pointer indices exceed pointer dimensions.'
           j     = pkpt(iarr2(1),iarr2(2),iarr2(3))
           IF(j.eq.0) STOP 'kptgen: k-point index is zero (bug?)'
@@ -149,7 +151,7 @@
           symkpt(j) = k
         END DO
       END DO
-      IF(ldum) 
+      IF(ldum)
      &STOP 'kptgen: Some symmetry operations are incompatible
      & with k-point set.'
       i = 0
@@ -170,14 +172,14 @@
       kptp         = iarr(kptp)
       kptp(iarr)   = kptp
       symkpt(iarr) = symkpt
-      DO i=1,grid(1)+1 
+      DO i=1,grid(1)+1
         DO j=1,grid(2)+1
-          DO k=1,grid(3)+1 
+          DO k=1,grid(3)+1
             pkpt(i,j,k) = iarr(pkpt(i,j,k))
           END DO
         END DO
       END DO
-   
+
       ALLOCATE( neqkpt(nkpti) )
       neqkpt = 0
       DO ikpt0 = 1,nkpti
@@ -192,12 +194,12 @@
       if (allocated(kpts%wtkpt)) deallocate(kpts%wtkpt)
       ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt))
 
-      
+
       DO ikpt=1,nkpti
          kpts%bk(:,ikpt)=bk(:,ikpt)
          kpts%wtkpt(ikpt)=neqkpt(ikpt)
       END DO
-      
+
       CONTAINS
 
       ! Returns least common multiple of the integers iarr(1:n).
@@ -248,7 +250,7 @@
       END DO
       DEALLOCATE ( prim,expo )
       END FUNCTION kgv
-      
+
 
 c     ifc seems to have problems transposing integer arrays. this is a fix.
       FUNCTION transpose_int ( a )
@@ -283,7 +285,7 @@ c     function modulo1 maps kpoint into first BZ
         WRITE(6,'(A,F5.3,2('','',F5.3),A)') 'modulo1: argument (',
      &           kpoint,') is not an element of the k-point set.'
         CALL juDFT_error(
-     +     'modulo1: argument not an element of k-point set.', 
+     +     'modulo1: argument not an element of k-point set.',
      +     calledby = 'kptgen_hybrid:modulo1')
       END IF
       modulo1 = modulo(help,nkpt3)*1.0/nkpt3
@@ -291,5 +293,5 @@ c     function modulo1 maps kpoint into first BZ
       END FUNCTION modulo1
 
       END SUBROUTINE kptgen_hybrid
-      
+
       END MODULE m_kptgen_hybrid
