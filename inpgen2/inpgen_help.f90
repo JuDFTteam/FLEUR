@@ -48,11 +48,12 @@ CONTAINS
     WRITE(*,'(a)')"inpgen usage info:"
     WRITE(*,'(a)')"The following command line options are known:"
     WRITE(*,'(a)')""
-    CALL print_argument("-genEnpara")
-    CALL print_argument("-explicit")
-    CALL print_argument("-noco")
-    CALL print_argument("-electronConfig")
-    CALL print_argument("-fast_defaults")
+    !CALL print_argument("-genEnpara")
+    !CALL print_argument("-explicit")
+    !CALL print_argument("-noco")
+    !CALL print_argument("-electronConfig")
+    !CALL print_argument("-fast_defaults")
+    CALL print_argument("-f")
     CALL print_argument("-inp.xml")
     CALL print_argument("-inp")
     CALL print_argument("-k")
