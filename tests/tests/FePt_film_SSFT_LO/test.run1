@@ -5,6 +5,6 @@ jt::copyfile("files/inp.xml",$workdir);
 jt::testrun($executable,$workdir);
 
 #now test output
-$result=jt::test_grep_lastnumber("$workdir/out","total energy=","= *([^ ]*)",-19706.9942914555,0.0001);
+$result=jt::test_grep_lastnumber("$workdir/out","total energy=","= *([^ ]*)",-19706.9922262005,0.0001);
 
 jt::stageresult($workdir,$result,"1");
