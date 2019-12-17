@@ -340,7 +340,7 @@ CONTAINS
     CASE ("He","he","HE")
        str="(1s1/2) "//str
     CASE ("Ne","ne","NE")
-       str="(1s1/2) (2s1/2) (2p1/2) "//str
+       str="(1s1/2) (2s1/2) (2p1/2) (2p3/2) "//str
     CASE ("Ar","ar","AR")
        str="(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) "//str
     CASE ("Kr","kr","KR")
