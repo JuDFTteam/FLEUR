@@ -39,7 +39,6 @@ CONTAINS
        str=trim(adjustl(str(INDEX(str,"#")+1:)))
     END IF
     str=ADJUSTL(str)
-    PRINT* ,name,'###',str
     DO WHILE(INDEX(str,'@')>0)
        IF (INDEX(str,'tria@')==1) THEN
           tria=.TRUE.
@@ -54,7 +53,6 @@ CONTAINS
           str=str(5:)
        ENDIF
     END DO
-    PRINT* ,name,'###',str
     IF (INDEX(str,'den=')==1) THEN
        str=str(5:)
        READ(str,*) den
