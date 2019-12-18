@@ -95,8 +95,10 @@ CONTAINS
       xcpot%gmaxxc  = merge(xcpot%gmaxxc,3.0*input%rkmax,xcpot%gmaxxc>0)
       xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
       xcpot%l_inbuild=.true.
-      if (xcpot%icorr==0) call xcpot%init(atoms%ntype)
-
+      if (xcpot%icorr==0) THEN
+        xcpot%inbuild_name="pbe"
+        call xcpot%init(atoms%ntype)
+      endif
       !
       !vacuum
       !

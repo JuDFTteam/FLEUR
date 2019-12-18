@@ -2,6 +2,7 @@ package judft_tests;
 @EXPORT="";
 
 use jt;
+use List::Util qw(min);
 
 #This runs a single test
 sub execute_test($$$$){

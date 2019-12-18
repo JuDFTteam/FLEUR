@@ -60,6 +60,7 @@ ${FLEUR_SRC}/kpoints/fulstar.f
 ${FLEUR_SRC}/kpoints/tetcon.f
 ${FLEUR_SRC}/kpoints/kvecon.f
 ${FLEUR_SRC}/kpoints/kprep.f
+${FLEUR_SRC}/kpoints/kptgen_hybrid.f
 
 ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/matmul.f

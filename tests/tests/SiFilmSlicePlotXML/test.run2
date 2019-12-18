@@ -6,9 +6,11 @@ jt::copyfile("files/inp-2.xml","$workdir/inp.xml");
 jt::testrun($executable,$workdir);
 
 #now test output
-$result+=min(jt::test_fileexists("$workdir/cdn_slice"),jt::test_fileexists("$workdir/cdn_slice.hdf"));
+$result=min(jt::test_fileexists("$workdir/cdn_slice"),jt::test_fileexists("$workdir/cdn_slice.hdf"));
+
 #now test output
-$result=jt::test_fileexists("$workdir/slice.xsf");
+
+$result+=jt::test_fileexists("$workdir/slice.xsf");
 # unit cell
 $result+=jt::test_grepexists("$workdir/slice.xsf",".0000000 11.36143");
 $result+=jt::test_grepexists("$workdir/slice.xsf","1.93419");

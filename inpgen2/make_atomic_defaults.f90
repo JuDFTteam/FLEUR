@@ -71,7 +71,7 @@ CONTAINS
 
       !Now set the defaults
       DO n=1,atoms%ntype
-         id=NINT(atoms%zatom(n)-atoms%nz(n)*100)
+         id=NINT((atoms%zatom(n)-atoms%nz(n))*100)
          IF (id>0) THEN
             ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),id)
             !This specific atom also has a rmt given?

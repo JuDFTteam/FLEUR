@@ -12,7 +12,7 @@ MODULE m_types_stars
   !The stars
   TYPE:: t_stars
       !max-length of star
-      REAL :: gmax
+      REAL :: gmax=0.0
       !no of 3d-stars
       INTEGER :: ng3
       !no of 2d-stars
