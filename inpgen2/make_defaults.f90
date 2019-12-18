@@ -96,7 +96,7 @@ CONTAINS
       xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
       xcpot%l_inbuild=.true.
       if (xcpot%icorr==0) THEN
-        xcpot%inbuild_name="pbe"
+        xcpot%inbuild_name=merge(hybrid%l_hybrid,"pbe0","pbe")
         call xcpot%init(atoms%ntype)
       endif
       !
