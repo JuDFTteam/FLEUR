@@ -142,6 +142,11 @@ sub test_grepnumber($$$$$){
 
     print LOG "$1 == $value:";
 
+    if ($1=="") { 
+	print LOG "failed\n";
+	return 1;
+    }
+
     if (abs($1-$value)<$tol){
 	print LOG "ok\n";
 	return 0;
@@ -168,6 +173,11 @@ sub test_grep_lastnumber($$$$$){
 
 
     print LOG "$1 == $value:";
+
+    if ($1=="") { 
+	print LOG "failed\n";
+	return 1;
+    }
 
     if (abs($1-$value)<$tol){
         print LOG "ok\n";
