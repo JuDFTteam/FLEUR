@@ -91,7 +91,6 @@ MODULE m_types_input
       REAL    :: gf_sigma
       LOGICAL :: gf_anacont=.false.
       LOGICAL :: gf_dosfermi=.false.
-      LOGICAL :: l_gf =.false. !this switch is used to make sure, that all bands are included in the calculation
       LOGICAL :: gfTet=.false. !This switch will be true iff the tetrahedron were calculated from the equdistant grid
      LOGICAL :: l_rdmft=.FALSE.
      REAL    :: rdmftOccEps=0.0
