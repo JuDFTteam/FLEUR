@@ -30,49 +30,9 @@ module m_types_mpbasis
       procedure :: free                   => mpbasis_free
       procedure :: init                   => mpbasis_init
       procedure :: set_num_radfun_per_l   => set_num_radfun_per_l_mpbasis
-      procedure :: write_mpbasis
       !generic   :: write(unformatted) => write_mpbasis
    end type t_mpbasis
 contains
-   subroutine write_mpbasis(mpbasis, unit, iostat, iomsg)
-      implicit NONE
-      class(t_mpbasis), intent(in)   :: mpbasis
-      integer, intent(in)         :: unit         ! Internal unit to write to.
-      integer, intent(out)        :: iostat      ! non zero on error, etc.
-      character(*), intent(inout) :: iomsg  ! define if iostat non zero.
-
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%g_cutoff, mpbasis%linear_dep_tol
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%g)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%g
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%n_g)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%n_g
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%gptm_ptr)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%gptm_ptr
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%num_radbasfn)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%num_radbasfn
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%radbasfn_mt)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%radbasfn_mt
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%num_radfun_per_l)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%num_radfun_per_l
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%l1)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%l1
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%l1)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%l2
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%n1)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%n1
-
-      write(unit, iostat=iostat, iomsg=iomsg) shape(mpbasis%n2)
-      write(unit, iostat=iostat, iomsg=iomsg) mpbasis%n2
-   end subroutine write_mpbasis
    function mpbasis_num_gpts(mpbasis)
       implicit NONE
       class(t_mpbasis), intent(in) :: mpbasis

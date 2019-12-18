@@ -179,10 +179,10 @@ SUBROUTINE w_inpXML(&
    150 FORMAT('      <soc theta="',f0.8,'" phi="',f0.8,'" l_soc="',l1,'" spav="',l1,'"/>')
    WRITE (fileNum,150) noco%theta,noco%phi,noco%l_soc,noco%l_spav
 
-!   IF (l_explicit.OR.hybrid%l_hybrid) THEN
-!      155 FORMAT('      <prodBasis gcutm="',f0.8,'" tolerance="',f0.8,'" ewaldlambda="',i0,'" lexp="',i0,'" bands="',i0,'"/>')
-!      WRITE (fileNum,155) hybrid%gcutm1,hybrid%tolerance1,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
-!   END IF
+   IF (l_explicit.OR.hybrid%l_hybrid) THEN
+      155 FORMAT('      <prodBasis gcutm="',f0.8,'" tolerance="',f0.8,'" ewaldlambda="',i0,'" lexp="',i0,'" bands="',i0,'"/>')
+      WRITE (fileNum,155) hybrid%g_cutoff,hybrid%linear_dep_tol,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+   END IF
 
    IF (l_nocoOpt.OR.l_explicit) THEN
 160   FORMAT('      <nocoParams l_ss="',l1,'" l_mperp="',l1,'" l_constr="',l1,&
@@ -344,12 +344,12 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,320) atoms%lmax(iAtomType),atoms%lnonsph(iAtomType)
 
 
-!      IF(l_explicit.OR.hybrid%l_hybrid) THEN
-!         315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
-!         line = ''
-!         WRITE(line,'(i0,1x,i0,1x,i0,1x,i0)') hybrid%select1(1:4,iAtomType)
-!         WRITE (fileNum,315) hybrid%lcutm1(iAtomType), hybrid%lcutwf(iAtomType), TRIM(ADJUSTL(line))
-!      END IF
+      IF(l_explicit.OR.hybrid%l_hybrid) THEN
+         315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
+         line = ''
+         WRITE(line,'(i0,1x,i0,1x,i0,1x,i0)') hybrid%select1(1:4,iAtomType)
+         WRITE (fileNum,315) hybrid%lcutm1(iAtomType), hybrid%lcutwf(iAtomType), TRIM(ADJUSTL(line))
+      END IF
 
 
          WRITE (fileNum,'(a)') '         <electronConfig>'
