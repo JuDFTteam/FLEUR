@@ -319,19 +319,19 @@ CONTAINS
          do jr=1,atoms%jri(n)
             vTot_mt(jr,0:,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
          enddo
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar, EnergyDen%mt(:, 0:, n, :), &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar,.TRUE., EnergyDen%mt(:, 0:, n, :), &
                          n,  noco,   tmp_grad,     ED_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar, vTot_mt(:,0:,:), &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar,.TRUE., vTot_mt(:,0:,:), &
                          n,     noco,tmp_grad,     vTot_rs)
 
          tmp_sphhar%nlhd = sphhar%nlhd
          tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
 
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, tmp_sphhar, vTot_mt(:,0:0,:), &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, tmp_sphhar,.TRUE., vTot_mt(:,0:0,:), &
                          n,    noco, tmp_grad,     vTot0_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar, &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar,.TRUE., &
                          core_den%mt(:,0:,n,:), n,noco, tmp_grad, core_den_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar, &
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sphhar,.TRUE., &
                          val_den%mt(:,0:,n,:), n,noco, tmp_grad, val_den_rs)
 
          call calc_kinEnergyDen_mt(ED_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &

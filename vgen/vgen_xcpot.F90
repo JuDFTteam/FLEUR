@@ -126,7 +126,11 @@ CONTAINS
       IF (mpi%irank == 0) THEN
          CALL timestart("Vxc in MT")
       END IF
-
+      IF (noco%l_noco) THEN
+            workDen = denRot
+         ELSE
+            workden = den
+         END IF
 
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
                   EnergyDen, noco,vTot, vx, exc)
@@ -142,11 +146,6 @@ CONTAINS
          IF (PRESENT(results)) THEN
             ! CALCULATE THE INTEGRAL OF n1*Veff1 + n2*Veff2
             ! Veff = Vcoulomb + Vxc
-            IF (noco%l_noco) THEN
-               workDen = denRot
-            ELSE
-               workden = den
-            END IF
 
             veff = vTot
             IF (xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN

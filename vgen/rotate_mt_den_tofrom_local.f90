@@ -37,7 +37,7 @@ CONTAINS
 
     CALL init_mt_grid(4,atoms,sphhar,xcpot%needs_grad(),sym)
     DO n=1,atoms%ntype
-       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,den%mt(:,0:,n,:),n,noco,grad,ch)
+       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,.FALSE.,den%mt(:,0:,n,:),n,noco,grad,ch)
        DO imesh = 1,nsp*atoms%jri(n)
 
           rho_11  = ch(imesh,1)
@@ -82,10 +82,11 @@ CONTAINS
     INTEGER :: n,nsp,imesh,i
     REAL    :: vup,vdown,veff,beff
     REAL    :: theta,phi
-    REAL,ALLOCATABLE :: ch(:,:)
+    REAL,ALLOCATABLE :: ch(:,:),chtmp(:,:)
 
     nsp=atoms%nsp()
     ALLOCATE(ch(nsp*atoms%jmtd,4))
+    ALLOCATE(chtmp(nsp*atoms%jmtd,2))
     xcpot%l_inbuild=.TRUE.
     CALL xcpot%init(1)
 
@@ -95,10 +96,10 @@ CONTAINS
           vtot%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
        ENDDO
 
-       CALL mt_to_grid(xcpot%needs_grad(),4,atoms,sym,sphhar,vtot%mt(:,0:,n,:),n,noco,grad,ch)
+       CALL mt_to_grid(xcpot%needs_grad(),2,atoms,sym,sphhar,.FALSE.,vtot%mt(:,0:,n,:),n,noco,grad,chtmp(:,1:2))
        DO imesh = 1,nsp*atoms%jri(n)
-          vup   = ch(imesh,1)
-          vdown = ch(imesh,2)
+          vup   = chtmp(imesh,1)
+          vdown = chtmp(imesh,2)
           theta = den%theta_mt(imesh,n)
           phi   = den%phi_mt(imesh,n)
           veff  = (vup + vdown)/2.0

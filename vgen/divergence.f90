@@ -46,9 +46,9 @@ CONTAINS
 
    CALL init_mt_grid(jspins, atoms,sphhar, .TRUE., sym)
 
-   CALL mt_to_grid(.TRUE., jspins, atoms, sym,sphhar, xcB(1)%mt(:,0:,n,:), n, noco,gradx)
-   CALL mt_to_grid(.TRUE., jspins, atoms, sym,sphhar, xcB(2)%mt(:,0:,n,:), n, noco,grady)
-   CALL mt_to_grid(.TRUE., jspins, atoms, sym,sphhar, xcB(3)%mt(:,0:,n,:), n, noco,gradz)
+   CALL mt_to_grid(.TRUE., jspins, atoms, sym,sphhar,.FALSE., xcB(1)%mt(:,0:,n,:), n, noco,gradx)
+   CALL mt_to_grid(.TRUE., jspins, atoms, sym,sphhar,.FALSE., xcB(2)%mt(:,0:,n,:), n, noco,grady)
+   CALL mt_to_grid(.TRUE., jspins, atoms, sym,sphhar,.FALSE., xcB(3)%mt(:,0:,n,:), n, noco,gradz)
 
    kt = 0
    DO jr = 1, atoms%jri(n)
@@ -246,7 +246,7 @@ CONTAINS
 
       CALL init_mt_grid(1, atoms, sphhar, .TRUE., sym, thet, phi)
 
-      CALL mt_to_grid(.TRUE., 1, atoms, sym,sphhar, denloc%mt(:,0:,n,:), n, noco, grad)
+      CALL mt_to_grid(.TRUE., 1, atoms, sym,sphhar, .FALSE.,denloc%mt(:,0:,n,:), n, noco, grad)
 
       kt = 0
       DO jr = 1, atoms%jri(n)
