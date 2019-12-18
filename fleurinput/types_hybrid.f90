@@ -34,6 +34,8 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  nbands(:)
       INTEGER, ALLOCATABLE   ::  nobd(:,:)
       REAL, ALLOCATABLE      ::  div_vv(:,:,:)
+      real                   :: g_cutoff
+      real                   :: linear_dep_tol
     CONTAINS
       PROCEDURE :: read_xml =>read_xml_hybrid
       PROCEDURE :: mpi_bc =>mpi_bc_hybrid
