@@ -1,0 +1,11 @@
+$test_name="FeBCCFlip: Flipcdn and noco in MT tes";
+$test_code="Fleur";
+$test_stages=2;
+$test_desc=<<EOF
+Simple test of Fleur with three steps:
+1.Generate a rotated starting density and run 1 iteration
+2.Calculate magnetization
+Uses: LDA+U,forces
+EOF
+;
+
