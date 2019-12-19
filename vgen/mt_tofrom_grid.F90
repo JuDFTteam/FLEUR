@@ -251,7 +251,7 @@ CONTAINS
          END DO
          
       ELSE
-         ch(:,1:jspV)=ch_calc(:,1:jspV)
+         ch(:,1:jspins)=ch_calc(:,1:jspins)
 
       EnD IF
    END SUBROUTINE mt_to_grid
