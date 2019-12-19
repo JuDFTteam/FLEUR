@@ -79,21 +79,21 @@ CONTAINS
          PRINT *,"WARNING, large default rkmax has been reduced. Check input"
          input%rkmax=4.5
       ENDIF
-      input%rkmax   = real(NINT(input%rkmax   * 10  ) / 10.)
+      input%rkmax   = round_to_deci(input%rkmax   ,1)
       IF (noco%l_ss) input%ctail = .FALSE.
       input%zelec=dot_product(atoms%econf(:)%valence_electrons,atoms%neq(:))
       !
       ! stars
       !
       stars%gmax     = merge(stars%gmax,3.0*input%rkmax,stars%gmax>0)
-      stars%gmax     = real(NINT(stars%gmax    * 10  ) / 10.)
+      stars%gmax     = round_to_deci(stars%gmax    ,1)
       input%gmax     = stars%gmax
 
       !
       !xcpot
       !
       xcpot%gmaxxc  = merge(xcpot%gmaxxc,3.0*input%rkmax,xcpot%gmaxxc>0)
-      xcpot%gmaxxc  = real(NINT(xcpot%gmaxxc  * 10  ) / 10.)
+      xcpot%gmaxxc  = round_to_deci(xcpot%gmaxxc  ,1)
       xcpot%l_inbuild=.true.
       if (xcpot%icorr==0) THEN
          if(hybrid%l_hybrid) then
@@ -109,7 +109,7 @@ CONTAINS
       IF (.not.input%film) THEN
          vacuum%dvac = cell%amat(3,3)
       Else
-         vacuum%dvac = REAL(NINT(vacuum%dvac*100)/100.)
+         vacuum%dvac = round_to_deci(vacuum%dvac,2)
       ENDIF
       vacuum%nvac = 2
       IF (sym%zrfs.OR.sym%invs) vacuum%nvac = 1
