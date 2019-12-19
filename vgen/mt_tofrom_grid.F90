@@ -53,13 +53,14 @@ CONTAINS
       !ENDIF
    END SUBROUTINE init_mt_grid
 
-   SUBROUTINE mt_to_grid(dograds, jspins, atoms, sym,sphhar, den_mt, n, noco ,grad, ch)
+   SUBROUTINE mt_to_grid(dograds, jspins, atoms, sym,sphhar,rotch, den_mt, n, noco ,grad, ch)
       USE m_grdchlh
       USE m_mkgylm
       IMPLICIT NONE
       LOGICAL, INTENT(IN)          :: dograds
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_sym), INTENT(IN)      :: sym
+      LOGICAL, INTENT(IN)          :: rotch
       TYPE(t_sphhar), INTENT(IN)   :: sphhar
       REAL, INTENT(IN)             :: den_mt(:, 0:, :)
       INTEGER, INTENT(IN)          :: n, jspins
@@ -68,8 +69,12 @@ CONTAINS
       TYPE(t_noco), INTENT(IN)     :: noco
       REAL                         :: dentot
 
+
+
+      REAL    :: rho_11,rho_22,rho_21r,rho_21i,mx,my,mz,magmom
+      REAL    :: rhotot,rho_up,rho_down
       REAL, ALLOCATABLE :: chlh(:, :, :), chlhdr(:, :, :), chlhdrr(:, :, :)
-      REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :)
+      REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :),ch_calc(:,:)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
       REAL, ALLOCATABLE :: drm(:,:), drrm(:,:), mm(:,:)
@@ -88,7 +93,7 @@ CONTAINS
 
       !General Allocations
       ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspV))
-      ALLOCATE (ch_tmp(nsp, jspV))
+      ALLOCATE (ch_tmp(nsp, jspV),ch_calc(nsp*atoms%jmtd, jspV))
 
       !Allocations in dograds case
       IF (dograds) THEN
@@ -153,8 +158,8 @@ CONTAINS
          DO js = 1, jspV
             DO lh = 0, sphhar%nlh(nd)
                DO k = 1, nsp
-                      ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh(jr, lh, js)
-                  ENDDO
+                     ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh(jr, lh, js)
+               ENDDO
             ENDDO
          ENDDO
          !Initialize derivatives of ch on grid if needed.
@@ -213,18 +218,42 @@ CONTAINS
                ENDDO ! lh
             ENDDO   ! js
 
-            !Makegradients
-            CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
+            !Makegradients 
+            IF(jspins>2) CALL mkgylm(2, atoms%rmsh(jr, n), thet, nsp, &
                         ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
-         ENDIF
+            IF(jspins.LE.2)CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
+                        ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
+               ENDIF
          !Set charge to minimum value
          IF (PRESENT(ch)) THEN
             WHERE (ABS(ch_tmp(:nsp,:)) < d_15) ch_tmp(:nsp,:) = d_15
-            ch(kt + 1:kt + nsp, :) = ch_tmp(:nsp, :)
+            ch_calc(kt + 1:kt + nsp, :) = ch_tmp(:nsp, :)
          ENDIF
          kt = kt + nsp
       END DO
 
+      !Rotation to local if needed (Indicated by rotch)
+      IF (rotch.AND.noco%l_mtNocoPot.AND.(.NOT.dograds)) THEN
+          DO jr = 1,nsp*atoms%jri(n)
+             rho_11  = ch_calc(jr,1)
+             rho_22  = ch_calc(jr,2)
+             rho_21r = ch_calc(jr,3)
+             rho_21i = ch_calc(jr,4)
+             mx      =  2*rho_21r
+             my      = -2*rho_21i
+             mz      = (rho_11-rho_22)
+             magmom  = SQRT(mx**2 + my**2 + mz**2)
+             rhotot  = rho_11 + rho_22
+             rho_up  = (rhotot + magmom)/2
+             rho_down= (rhotot - magmom)/2
+             ch(jr,1) = rho_up
+             ch(jr,2) = rho_down
+         END DO
+         
+      ELSE
+         ch(:,1:jspV)=ch_calc(:,1:jspV)
+
+      EnD IF
    END SUBROUTINE mt_to_grid
 
    SUBROUTINE mt_from_grid(atoms, sym, sphhar, n, jspins, v_in, vr)

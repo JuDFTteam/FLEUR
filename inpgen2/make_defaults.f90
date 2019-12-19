@@ -131,7 +131,6 @@ CONTAINS
       !
       !hybrid
       !
-      !hybrid%gcutm1       = input%rkmax - 0.5
       ALLOCATE(hybrid%lcutwf(atoms%ntype))
       ALLOCATE(hybrid%lcutm1(atoms%ntype))
       ALLOCATE(hybrid%select1(4,atoms%ntype))
@@ -141,9 +140,7 @@ CONTAINS
       hybrid%select1(2,:) = 0
       hybrid%select1(3,:) = 4
       hybrid%select1(4,:) = 2
-      !hybrid%l_hybrid = l_hyb
-      !hybrid%gcutm1 = real(NINT(hybrid%gcutm1 * 10  ) / 10.)
-
-
+      hybrid%g_cutoff = round_to_deci(input%rkmax - 0.5,1)
+      hybrid%linear_dep_tol = 1e-4
     END SUBROUTINE make_defaults
   END MODULE m_make_defaults

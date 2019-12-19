@@ -192,7 +192,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos.OR.input%l_gf)
+      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos.OR.atoms%n_gf>0)
       noccbd = SIZE(ev_list)
       we  = cdnvalJob%weights(ev_list,ikpt)
       eig = results%eig(ev_list,ikpt,jsp)

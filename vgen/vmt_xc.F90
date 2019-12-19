@@ -110,7 +110,8 @@
          !call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
             loc_n = loc_n + 1
-            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,den%mt(:,0:,n,:),n,noco,grad,ch)
+
+            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,.True.,den%mt(:,0:,n,:),n,noco,grad,ch(:,1:input%jspins))
 
             !
             !         calculate the ex.-cor. potential
@@ -147,7 +148,6 @@
 
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vTot%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
-
 
             IF (ALLOCATED(exc%mt)) THEN
                !

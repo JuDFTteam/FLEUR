@@ -118,7 +118,7 @@ CONTAINS
                 IF(TRIM(ADJUSTL(line)).NE.'') THEN
                    atom_Label(i) = TRIM(ADJUSTL(line))
                 ELSE
-                   WRITE(atom_Label(i),'(i0)') n
+                   WRITE(atom_Label(i),'(i0)') i
                 END IF
              END DO
           ELSE

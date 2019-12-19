@@ -127,7 +127,6 @@ CONTAINS
          CALL timestart("Vxc in MT")
       END IF
 
-
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
                   EnergyDen, noco,vTot, vx, exc)
 
@@ -147,7 +146,6 @@ CONTAINS
             ELSE
                workden = den
             END IF
-
             veff = vTot
             IF (xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
                DO ispin = 1, input%jspins
