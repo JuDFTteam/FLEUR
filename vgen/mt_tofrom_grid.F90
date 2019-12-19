@@ -231,7 +231,9 @@ CONTAINS
          ENDIF
          kt = kt + nsp
       END DO
-      IF (rotch.AND.noco%l_mtNocoPot) THEN
+
+      !Rotation to local if needed (Indicated by rotch)
+      IF (rotch.AND.noco%l_mtNocoPot.AND.(.NOT.dograds)) THEN
           DO jr = 1,nsp*atoms%jri(n)
              rho_11  = ch_calc(jr,1)
              rho_22  = ch_calc(jr,2)
@@ -249,7 +251,7 @@ CONTAINS
          END DO
          
       ELSE
-         ch(:,:)=ch_calc(:,:)
+         ch(:,1:jspV)=ch_calc(:,1:jspV)
 
       EnD IF
    END SUBROUTINE mt_to_grid

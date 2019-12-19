@@ -111,7 +111,7 @@
          DO n = n_start,atoms%ntype,n_stride
             loc_n = loc_n + 1
 
-            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,.True.,den%mt(:,0:,n,:),n,noco,grad,ch(:,1:2))
+            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,.True.,den%mt(:,0:,n,:),n,noco,grad,ch(:,1:input%jspins))
 
             !
             !         calculate the ex.-cor. potential
