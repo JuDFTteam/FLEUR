@@ -25,6 +25,7 @@ CONTAINS
     USE m_types_stars
     USE m_types_noco
     USE m_types_hybrid
+    USE m_juDFT
 
 
       TYPE(t_atoms),INTENT(IN)    ::atoms
