@@ -93,7 +93,7 @@ CONTAINS
 
       !General Allocations
       ALLOCATE (chlh(atoms%jmtd, 0:sphhar%nlhd, jspV))
-      ALLOCATE (ch_tmp(nsp, jspV),ch_calc(nsp*atoms%jri(n), jspV))
+      ALLOCATE (ch_tmp(nsp, jspV),ch_calc(nsp*atoms%jmtd, jspV))
 
       !Allocations in dograds case
       IF (dograds) THEN
