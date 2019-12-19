@@ -37,7 +37,7 @@ CONTAINS
          vsigma_mt(i,:,:)=vsigma_mt(i,:,:)*atoms%rmsh(i,n)**2
       ENDDO
       ALLOCATE(grad_vsigma%gr(3,nsp,n_sigma))
-      CALL mt_to_grid(xcpot%needs_grad(),n_sigma,atoms,sym,sphhar,vsigma_mt,n,noco,grad=grad_vsigma)
+      CALL mt_to_grid(xcpot%needs_grad(),n_sigma,atoms,sym,sphhar,.TRUE.,vsigma_mt,n,noco,grad=grad_vsigma)
 
       CALL libxc_postprocess_gga(transpose(grad%vsigma),grad,grad_vsigma,v_xc)
    END SUBROUTINE libxc_postprocess_gga_mt
