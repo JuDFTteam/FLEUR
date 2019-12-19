@@ -2,7 +2,7 @@ jt::copyfile("files/inp.xml","$workdir/inp.xml");
 jt::copyfile("files/kpts.xml","$workdir/kpts.xml");
 jt::copyfile("files/sym.xml","$workdir/sym.xml");
 
-jt::testrun($executable,$workdir);
+jt::testrun("$executable ",$workdir);
 jt::testrun("rm inp.xml",$workdir);
 
 $result+=jt::test_fileexists("$workdir/out");
