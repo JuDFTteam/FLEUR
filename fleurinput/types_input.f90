@@ -27,8 +27,8 @@ MODULE m_types_input
      INTEGER :: coretail_lmax =0
      INTEGER :: itmax =9
      REAL    :: minDistance=1.0e-5
-     REAL    :: minoccDistance !Distances for the density matrix in DFT+Hubbard 1 case
-     REAL    :: minmatDistance
+     REAL    :: minoccDistance=1.0e-2 !Distances for the density matrix in DFT+Hubbard 1 case
+     REAL    :: minmatDistance=1.0e-3
      INTEGER :: maxiter=99
      INTEGER :: imix=7
      INTEGER :: gw=0
@@ -79,7 +79,7 @@ MODULE m_types_input
       INTEGER :: gf_ne
       REAL    :: gf_ellow
       REAL    :: gf_elup
-      INTEGER :: gf_mode
+      INTEGER :: gf_mode=-1
       INTEGER :: gf_n
       REAL    :: gf_alpha
       REAL    :: gf_et
