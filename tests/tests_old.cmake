@@ -1,10 +1,10 @@
 enable_testing()
 
-set(SerialParallelTests  Fe_bcc_FlipcdnLDA CuBulkXML SiLOXML  Fe_1lXML
+set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    SiFilmPlotXML  CoMCDXML Fe_Kerker Fe_bct_LOXML
-   FePt_film_SSFT FePt_film_SSFT_LO )
+   FePt_film_SSFT FePt_film_SSFT_LO ) #Fe_bcc_FlipcdnLDA
 #Currently disabled Tests (Hybrid+Greenfct)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 # KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0
