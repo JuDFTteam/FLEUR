@@ -13,7 +13,7 @@ MODULE m_types_sym
   !> Type to contain the symmetry information
   TYPE,EXTENDS(t_fleurinput_base):: t_sym
      !No of sym ops
-     INTEGER ::nop
+     INTEGER :: nop = -1
      !Rot-matrices (3,3,nop)
      INTEGER, ALLOCATABLE::mrot(:, :, :)
      !translation vectors (3,nop)
@@ -46,7 +46,7 @@ MODULE m_types_sym
       INTEGER, ALLOCATABLE::ntypsy(:)
       !atom mapped to by inversion (nat
       INTEGER, ALLOCATABLE ::invsat(:)
-   
+
      !
      ! Hybrid specific stuff TODO
      !
@@ -94,16 +94,16 @@ CONTAINS
       CALL mpi_bc(this%ngopr,rank,mpi_comm)
      call mpi_bc(this%ntypsy,rank,mpi_comm)
     end subroutine mpi_bc_sym
-  
+
   SUBROUTINE read_xml_sym(this,xml)
     USE m_types_xml
     USE m_calculator
     CLASS(t_sym),INTENT(inout):: this
     TYPE(t_xml),INTENT(IN)  :: xml
-    
+
     INTEGER:: number_sets,n
     CHARACTER(len=200)::str,path,path2
-    
+
 
 
     this%nop = xml%GetNumberOfNodes('/fleurInput/calculationSetup/symmetryOperations/symOp')
@@ -112,7 +112,7 @@ CONTAINS
     ALLOCATE(this%tau(3,this%nop))
 
     IF (this%nop<1) CALL judft_error("No symmetries in inp.xml")
-    
+
     DO n=1,this%nop
        WRITE(path,"(a,i0,a)") '/fleurInput/calculationSetup/symmetryOperations/symOp[',n,']'
        str=xml%GetAttributeValue(TRIM(path)//'/row-1')
@@ -123,7 +123,7 @@ CONTAINS
        READ(str,*) this%mrot(3,:,n),this%tau(3,n)
     ENDDO
   END SUBROUTINE read_xml_sym
-    
+
 
   SUBROUTINE print_xml(sym,fh,filename)
     CLASS(t_sym),INTENT(IN)   :: sym
@@ -133,7 +133,7 @@ CONTAINS
     INTEGER::i
 
     IF (PRESENT(filename)) OPEN(fh,file=filename,status='replace',action='write')
-    
+
     WRITE(fh,'(a)') '      <symmetryOperations>'
     DO i = 1, sym%nop
        WRITE(fh,'(a)') '         <symOp>'
@@ -159,7 +159,7 @@ CONTAINS
     CLASS(t_sym),INTENT(INOUT):: sym
     TYPE(t_cell),INTENT(IN)   :: cell
     LOGICAL,INTENT(IN)        :: film
-   
+
 
 
     INTEGER :: invsop, zrfsop, invs2op, magicinv,n,i,j,nn
@@ -176,7 +176,7 @@ CONTAINS
     ALLOCATE ( sym%invtab(sym%nop),sym%multab(sym%nop,sym%nop) )
     CALL sym%check_close(optype)
 
-    !---> determine properties of symmmetry operations, 
+    !---> determine properties of symmmetry operations,
     ! Code previously in symproperties
     sym%symor=.NOT.(ANY(ABS(sym%tau(:,:sym%nop))>eps12))
 
@@ -214,7 +214,7 @@ CONTAINS
     !if z-axis is not orthogonal we will not use z-reflect and 2d-invs
     IF ( cell%amat(3,1)==0.00 .AND. cell%amat(3,2)==0.00 .AND.cell%amat(1,3)==0.00 .AND.cell%amat(2,3)==0.00 ) THEN
        zorth= .TRUE.
-    ELSE       
+    ELSE
        zorth= .FALSE.
        ! reset the following...
        sym%zrfs    = .FALSE.
@@ -294,20 +294,20 @@ CONTAINS
        ENDDO
     ENDIF
 
-       
+
     !---> redo to ensure proper mult. table and mapping functions
     CALL sym%check_close(optype)
- 
+
 
   END SUBROUTINE init
 
   FUNCTION closure(sym)RESULT(lclose)
     CLASS(t_sym),INTENT(IN):: sym
     LOGICAL                :: lclose
-  
+
    !INTEGER, INTENT (IN)  :: mops           ! number of operations of the bravais lattice
    !INTEGER, INTENT (IN)  :: sym%nop           ! number of operations in space group
-   !INTEGER, INTENT (IN)  :: sym%mrot(3,3,mops) ! refer to the operations of the 
+   !INTEGER, INTENT (IN)  :: sym%mrot(3,3,mops) ! refer to the operations of the
    !REAL,    INTENT (IN)  :: sym%tau(3,mops)    ! bravais lattice
     !LOGICAL, INTENT (OUT) :: lclose
 
@@ -318,7 +318,7 @@ CONTAINS
 
    ! loop over all operations
    DO j = 1, sym%nop
-    
+
       map(1:sym%nop) = 0
 
       ! multiply {R_j|t_j}{R_i|t_i}
@@ -350,7 +350,7 @@ CONTAINS
    END DO
 
    lclose = .true.
-   
+
  END FUNCTION closure
 
 SUBROUTINE check_close(sym,optype)
