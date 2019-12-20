@@ -16,18 +16,18 @@ MODULE m_types_atoms
    TYPE t_gfelementtype
       SEQUENCE
       !defines the l and atomType elements for given greens function element (used for mapping index in types_greensf)
-      INTEGER l
-      INTEGER lp
-      INTEGER atomType
-      INTEGER atomTypep
+      INTEGER :: l=-1
+      INTEGER :: lp=-1
+      INTEGER :: atomType=0
+      INTEGER :: atomTypep=0
    END TYPE t_gfelementtype
 
    TYPE t_j0calctype
-      INTEGER atomType  !atom Type for which to calculate J0
-      INTEGER l_min     !Minimum l considered
-      INTEGER l_max     !Maximum l considered
-      LOGICAL l_avgexc  !Determines wether we average over the exchange splittings for all l
-      LOGICAL l_eDependence  !Switch to output J0 with variating fermi energy (only with contourDOS)
+      INTEGER :: atomType=0  !atom Type for which to calculate J0
+      INTEGER :: l_min=-1     !Minimum l considered
+      INTEGER :: l_max=-1     !Maximum l considered
+      LOGICAL :: l_avgexc=.false.  !Determines wether we average over the exchange splittings for all l
+      LOGICAL :: l_eDependence=.false.  !Switch to output J0 with variating fermi energy (only with contourDOS)
    END TYPE
 
   TYPE t_utype
@@ -51,7 +51,9 @@ MODULE m_types_atoms
       INTEGER:: lmaxd
       ! no of lda+us
       INTEGER ::n_u=0
+      ! no of lda+hubbard1s
       INTEGER :: n_hia=0
+      ! no of j0 calculations
       INTEGER :: n_j0=0
       ! no of greens function calculations (in total)
       INTEGER :: n_gf=0
@@ -88,7 +90,7 @@ MODULE m_types_atoms
       LOGICAL, ALLOCATABLE::l_dulo(:, :)
       !no of sphhar for atom type(ntype
       INTEGER, ALLOCATABLE ::nlhtyp(:)
-      !Calaculate forces for this atom?
+      !Calculate forces for this atom?
       LOGICAL, ALLOCATABLE :: l_geo(:)
       !MT-Radius (ntype)
       REAL, ALLOCATABLE CPP_MANAGED::rmt(:)
@@ -109,11 +111,13 @@ MODULE m_types_atoms
       !labels
       CHARACTER(LEN=20), ALLOCATABLE :: label(:)
       CHARACTER(len=20), ALLOCATABLE :: speciesName(:)
-      !lda_u information(ntype)
+      !lda_u information(4*ntype)
+      !lda+hubbard1 information is attached behind lda+u
+      !so the dimension actually used is atoms%n_u+atoms%n_hia
       TYPE(t_utype), ALLOCATABLE::lda_u(:)
-      TYPE(t_utype),ALLOCATABLE::lda_hia(:)
-      !j0 calc information
+      !greens function information(4*ntype)
       TYPE(t_gfelementtype), ALLOCATABLE::gfelem(:)
+      !j0 calc information(4*ntype)
       TYPE(t_j0calctype), ALLOCATABLE::j0(:)
 
       INTEGER, ALLOCATABLE :: relax(:, :) !<(3,ntype)
@@ -129,6 +133,7 @@ MODULE m_types_atoms
       PROCEDURE :: init=>init_atoms
       PROCEDURE :: nsp => calc_nsp_atom
       PROCEDURE :: same_species
+      PROCEDURE :: add_gfjob
       PROCEDURE :: read_xml => read_xml_atoms
       procedure :: mpi_bc=>mpi_bc_atoms
    END TYPE t_atoms
@@ -543,14 +548,15 @@ MODULE m_types_atoms
     where (abs(this%pos(3,:)-this%taual(3,:))>0.5) this%taual(3,:) = this%taual(3,:) / cell%amat(3,3)
     this%pos(:,:) = matmul(cell%amat,this%taual(:,:))
   end subroutine init_atoms
-   SUBROUTINE add_gfjob(nType,lmin,lmax,atoms,l_off,l_inter,l_nn)
+
+  subroutine add_gfjob(this,nType,lmin,lmax,l_off,l_inter,l_nn)
 
          USE m_juDFT
 
+         CLASS(t_atoms),   INTENT(INOUT)  :: this
          INTEGER,          INTENT(IN)     :: nType
          INTEGER,          INTENT(IN)     :: lmin
          INTEGER,          INTENT(IN)     :: lmax
-         TYPE(t_atoms),    INTENT(INOUT)  :: atoms
          LOGICAL,          INTENT(IN)     :: l_off !l!=lp
          LOGICAL,          INTENT(IN)     :: l_inter
          LOGICAL,          INTENT(IN)     :: l_nn
@@ -566,20 +572,20 @@ MODULE m_types_atoms
             DO lp = MERGE(lmin,l,l_off), MERGE(lmax,l,l_off)
                !Check if this job has already been added
                l_found = .FALSE.
-               DO i_gf = 1, atoms%n_gf
-                  IF(atoms%gfelem(i_gf)%l.NE.l) CYCLE
-                  IF(atoms%gfelem(i_gf)%lp.NE.lp) CYCLE
-                  IF(atoms%gfelem(i_gf)%atomType.NE.nType) CYCLE
-                  IF(atoms%gfelem(i_gf)%atomTypep.NE.nType) CYCLE
+               DO i_gf = 1, this%n_gf
+                  IF(this%gfelem(i_gf)%l.NE.l) CYCLE
+                  IF(this%gfelem(i_gf)%lp.NE.lp) CYCLE
+                  IF(this%gfelem(i_gf)%atomType.NE.nType) CYCLE
+                  IF(this%gfelem(i_gf)%atomTypep.NE.nType) CYCLE
                   l_found = .TRUE.
                ENDDO
                IF(l_found) CYCLE !This job is already in the array
 
-               atoms%n_gf = atoms%n_gf + 1
-               atoms%gfelem(atoms%n_gf)%l = l
-               atoms%gfelem(atoms%n_gf)%atomType = nType
-               atoms%gfelem(atoms%n_gf)%lp = lp
-               atoms%gfelem(atoms%n_gf)%atomTypep = nType !For now
+               this%n_gf = this%n_gf + 1
+               this%gfelem(this%n_gf)%l = l
+               this%gfelem(this%n_gf)%atomType = nType
+               this%gfelem(this%n_gf)%lp = lp
+               this%gfelem(this%n_gf)%atomTypep = nType !For now
 
             ENDDO
          ENDDO

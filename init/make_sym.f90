@@ -41,10 +41,10 @@ CONTAINS
        sym%nsym = 2*sym%nop
     END IF
 
-    !Generated wigner symbols for LDA+U
+    !Generated wigner symbols for LDA+U (includes DFT+HubbardI)
     IF (ALLOCATED(sym%d_wgn)) DEALLOCATE(sym%d_wgn)
     ALLOCATE(sym%d_wgn(-3:3,-3:3,3,sym%nop))
-    IF (atoms%n_u.GT.0) THEN
+    IF (atoms%n_u+atoms%n_hia.GT.0) THEN
        CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,sym%d_wgn)
     END IF
 
