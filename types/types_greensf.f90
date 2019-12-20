@@ -28,7 +28,7 @@ MODULE m_types_greensf
       TYPE t_greensf
 
          !Energy contour parameters
-         INTEGER  :: mode  !Determines the shape of the contour (more information in kkintgr.f90)
+         INTEGER  :: mode = -1  !Determines the shape of the contour (more information in kkintgr.f90)
          INTEGER  :: nz    !number of points in the contour
          INTEGER  :: nmatsub
 
