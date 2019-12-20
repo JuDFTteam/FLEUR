@@ -128,7 +128,7 @@ CONTAINS
          !         chlhdr=d(chlh)/dr, chlhdrr=dd(chlh)/drr.
 
          !Scaling of the magnetic moments in the same way the charge density is scaled in chlh.
-         IF(noco%l_mtNocoPot) mm(:,lh)=mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
+         IF(noco%l_mtNocoPot) mm(:,lh)=0.5*mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
 
          DO js = 1, jspV
             DO jr = 1, atoms%jri(n)
@@ -162,6 +162,7 @@ CONTAINS
                ENDDO
             ENDDO
          ENDDO
+
          !Initialize derivatives of ch on grid if needed.
          IF (dograds) THEN
             chdr(:, :) = 0.0     ! d(ch)/dr
@@ -249,7 +250,6 @@ CONTAINS
              ch(jr,1) = rho_up
              ch(jr,2) = rho_down
          END DO
-         
       ELSE
          ch(:,1:jspins)=ch_calc(:,1:jspins)
 
