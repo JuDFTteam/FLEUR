@@ -1,10 +1,10 @@
 jt::copyfile("files/inp2.xml","$workdir/inp.xml");
 
-jt::testrun($executable,$workdir);
+jt::testrun("$executable ",$workdir);
 
-$result=jt::test_grep_lastnumber("$workdir/out","mx=",".*= *([^ ]*)",2.116,0.001);
+$result=jt::test_grep_lastnumber("$workdir/out","mx=","mx *= *([^ ]*)",2.116,0.001);
 
-jt::stageresult($workdir,$result,"2");
+jt::stageresult($workdir,$result,2);
 
 
 
