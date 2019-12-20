@@ -217,13 +217,13 @@ CONTAINS
                   ENDDO
                ENDDO ! lh
             ENDDO   ! js
-
+         !Rotation to local if needed (Indicated by rotch)
             !Makegradients 
             IF(jspins>2) CALL mkgylm(2, atoms%rmsh(jr, n), thet, nsp, &
                         ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
             IF(jspins.LE.2)CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
                         ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
-               ENDIF
+
          !Set charge to minimum value
          IF (PRESENT(ch)) THEN
             WHERE (ABS(ch_tmp(:nsp,:)) < d_15) ch_tmp(:nsp,:) = d_15
@@ -233,7 +233,7 @@ CONTAINS
       END DO
 
       !Rotation to local if needed (Indicated by rotch)
-      IF (rotch.AND.noco%l_mtNocoPot.AND.(.NOT.dograds)) THEN
+      IF (rotch.AND.noco%l_mtNocoPot) THEN
           DO jr = 1,nsp*atoms%jri(n)
              rho_11  = ch_calc(jr,1)
              rho_22  = ch_calc(jr,2)
