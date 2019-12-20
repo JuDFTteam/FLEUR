@@ -15,13 +15,13 @@ MODULE m_types_hybrid
       LOGICAL                ::  l_subvxc = .false.
       LOGICAL                ::  l_calhf = .false.
       LOGICAL                ::  l_addhf = .false.
-      INTEGER                ::  ewaldlambda
-      INTEGER                ::  lexp = 0
-      INTEGER                ::  bands1 !Only read in
-      INTEGER                ::  nbasp
-      INTEGER                ::  maxbasm1
-      INTEGER                ::  max_indx_p_1 !new
-      INTEGER                ::  maxlmindx
+      INTEGER                ::  ewaldlambda = -1
+      INTEGER                ::  lexp = -1
+      INTEGER                ::  bands1 = -1 !Only read in
+      INTEGER                ::  nbasp = -1
+      INTEGER                ::  maxbasm1 = -1
+      INTEGER                ::  max_indx_p_1 = -1 !new
+      INTEGER                ::  maxlmindx = -1
       INTEGER, ALLOCATABLE   ::  select1(:,:)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
@@ -34,8 +34,8 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  nbands(:)
       INTEGER, ALLOCATABLE   ::  nobd(:,:)
       REAL, ALLOCATABLE      ::  div_vv(:,:,:)
-      real                   :: g_cutoff
-      real                   :: linear_dep_tol
+      real                   :: g_cutoff = 0.0
+      real                   :: linear_dep_tol = 0.0
     CONTAINS
       PROCEDURE :: read_xml =>read_xml_hybrid
       PROCEDURE :: mpi_bc =>mpi_bc_hybrid
@@ -107,7 +107,7 @@ MODULE m_types_hybrid
      CHARACTER(len=100)::xPathA
 
      ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
-     ALLOCATE(this%lcutm1(ntype),this%lcutwf(ntype),this%select1(4,ntype))
+     ALLOCATE(this%lcutm1(ntype),this%lcutwf(ntype),this%select1(4,ntype), source=0)
      numberNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
      IF (numberNodes==1) THEN
          !this%gcutm1=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
