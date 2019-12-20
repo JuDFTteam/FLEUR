@@ -233,7 +233,7 @@ CONTAINS
       END DO
 
       !Rotation to local if needed (Indicated by rotch)
-      IF (rotch.AND.noco%l_mtNocoPot.AND.(.NOT.dograds)) THEN
+      IF (rotch.AND.noco%l_mtNocoPot) THEN
           DO jr = 1,nsp*atoms%jri(n)
              rho_11  = ch_calc(jr,1)
              rho_22  = ch_calc(jr,2)
