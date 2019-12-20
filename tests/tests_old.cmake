@@ -4,7 +4,7 @@ set(SerialParallelTests  CuBulkXML SiLOXML  Fe_1lXML
    CuBandXML  CuDOSXML  Fe_bctXML  PTOXML Fe_1l_SOCXML
    PTO-SOCXML  Fe_bct_SOCXML Fe_fccXML GaAsMultiUForceXML
    SiFilmPlotXML  CoMCDXML Fe_Kerker Fe_bct_LOXML
-   FePt_film_SSFT FePt_film_SSFT_LO Fe_bcc_FlipcdnLDA )
+FePt_film_SSFT FePt_film_SSFT_LO)# Fe_bcc_FlipcdnLDA )
 #Currently disabled Tests (Hybrid+Greenfct)
 # SiHybridGammaNoInv SiHybrid8kpt_sym  SiHybrid8kpt_nosym
 # KClHybridPBE0 GaAsHybridPBE0 FeHybridPBE0
@@ -15,7 +15,7 @@ set(SerialOnlyTests  )
 set(InpgenTests Si_plain Si_plain_explicit Si_full_para)# Si_kpt Si_kden Si_round_trip)
 
 
-#Removed GW tests 
+#Removed GW tests
 #if (${FLEUR_USE_HDF5})
 #   set(SerialOnlyTests ${SerialOnlyTests} gw1Interface gw2Interface)
 #endif()
