@@ -36,7 +36,7 @@ CONTAINS
     COMPLEX, INTENT (IN) :: vxy(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,nvac,:)
     COMPLEX, INTENT (OUT):: tddv(:,:),tduv(:,:)!(lapw%dim_nv2d(),lapw%dim_nv2d())
     COMPLEX, INTENT (OUT):: tudv(:,:),tuuv(:,:)!(lapw%dim_nv2d(),lapw%dim_nv2d())
-    REAL,ALLOCATABLE,INTENT (IN) :: vz(:,:,:) !(vacuum%nmzd,2,4) ,
+    REAL,    INTENT (IN) :: vz(:,:,:) !(vacuum%nmzd,2,4) ,
     REAL,    INTENT (IN) :: evac(:,:)!(2,input%jspins)
     REAL,    INTENT (IN) :: bkpt(3) 
     REAL,    INTENT (OUT):: udz(:,:),uz(:,:)!(lapw%dim_nv2d(),input%jspins)
@@ -72,9 +72,9 @@ CONTAINS
           v(3) = 0.0
           ev = evac(ivac,jspin) - 0.5*dot_product(v,matmul(v,cell%bbmat))
           vzero = vz(vacuum%nmzd,ivac,jspin)
-          CALL vacuz(ev,vz(1,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&
+          CALL vacuz(ev,vz(1:,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&
                uz(ik,jspin),duz(ik,jspin),u(1,ik,jspin))
-          CALL vacudz(ev,vz(1,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&
+          CALL vacudz(ev,vz(1:,ivac,jspin),vzero,vacuum%nmz,vacuum%delz,&
                udz(ik,jspin),dudz(ik,jspin),ddnv(ik,jspin),&
                ud(1,ik,jspin),duz(ik,jspin),u(1,ik,jspin))
           !--->       make sure the solutions satisfy the wronksian
