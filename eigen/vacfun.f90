@@ -87,6 +87,11 @@ CONTAINS
        enddo
     ENDDO
     !--->    set up the tuuv, etc. matrices
+    !$OMP PARALLEL DO DEFAULT(none) &
+    !$OMP& COLLAPSE(2) &
+    !$OMP& SHARED(tuuv,tddv,tudv,tduv,ddnv,vz) &
+    !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,kvac,vacuum,u,vxy,tail,fac,np1,ivac,ipot,ud) &
+    !$OMP& PRIVATE(i1,i2,i3,ind3,phase,ind2,x,xv,yv)
     DO  ik = 1,nv2(jspin1)
        DO  jk = 1,nv2(jspin2)
 
@@ -210,8 +215,9 @@ CONTAINS
              ENDIF
 
           ENDIF
-       enddo
-    enddo
+       ENDDO
+    ENDDO
+    !$OMP END PARALLEL DO
 
   END SUBROUTINE vacfun
 END MODULE m_vacfun
