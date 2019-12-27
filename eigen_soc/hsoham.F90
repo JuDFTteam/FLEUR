@@ -2,6 +2,8 @@ MODULE m_hsoham
   !
   !*********************************************************************
   ! set up spin-orbit contribution to hamiltonian
+  !
+  ! OpenMP parrallelization restored (U.Alekseeva 12.2019)
   !*********************************************************************
   !
 CONTAINS
@@ -55,23 +57,22 @@ CONTAINS
     !---> update hamiltonian matrices: upper triangle
     !
 
-    ALLOCATE ( c_b((atoms%lmaxd+2)*atoms%lmaxd,nat_l),&
-               c_a((atoms%lmaxd+2)*atoms%lmaxd,nat_l),&
-               c_c(-atoms%llod:atoms%llod, atoms%nlod, nat_l) )
     DO i1 = 1,2
        jsp = i1
        IF (input%jspins.EQ.1) jsp = 1
        DO j1 = 1,2
           jsp1 = j1
           IF (input%jspins.EQ.1) jsp1 = 1
-          !!$OMP PARALLEL DEFAULT(none)&
-          !!$OMP PRIVATE(j,na,na_g,n,nn,l,m,m1,ilo,i,lwn,ilop)& 
-          !!$OMP PRIVATE(c_a,c_b,c_c,c_1,c_2,c_3,c_4,c_5) &
-          !!$OMP SHARED(hsomtx,i1,jsp,j1,jsp1,nsz,atoms)& 
-          !!$OMP SHARED(ahelp,bhelp,chelp,noco,nat_start,nat_stop,nat_l)&
-          !!$OMP SHARED(rsoc)
-          !!$OMP DO 
-
+          !$OMP PARALLEL DEFAULT(none)&
+          !$OMP& PRIVATE(na,na_g,n,nn,l,ll1,m,lm,m1,lm1,ilo,i,lwn,ilop)& 
+          !$OMP& PRIVATE(c_a,c_b,c_c,c_1,c_2,c_3,c_4,c_5) &
+          !$OMP& SHARED(hsomtx,i1,jsp,j1,jsp1,nsz,atoms)& 
+          !$OMP& SHARED(ahelp,bhelp,chelp,noco,nat_start,nat_stop,nat_l)&
+          !$OMP& SHARED(rsoc)
+          ALLOCATE ( c_b((atoms%lmaxd+2)*atoms%lmaxd,nat_l),&
+               c_a((atoms%lmaxd+2)*atoms%lmaxd,nat_l),&
+               c_c(-atoms%llod:atoms%llod, atoms%nlod, nat_l) ) 
+          !$OMP DO
           DO j = 1,nsz(jsp1)
              !
              ! prepare \sum_m' conjg( xhelp(m',l,na,j,jsp1) ) * soangl(l,m,i1,l,m',j1)
@@ -180,13 +181,13 @@ CONTAINS
              !!i
           ENDDO
           !!j
-          !!$OMP END DO
-          !!$OMP END PARALLEL
+          !$OMP END DO
+          DEALLOCATE ( c_b,c_a,c_c) 
+          !$OMP END PARALLEL
        ENDDO
        !!jsp1
     ENDDO
     !!jsp
-    DEALLOCATE (c_a,c_b,c_c)
     !
     !---> update hamiltonian matrices: lower triangle
     !
