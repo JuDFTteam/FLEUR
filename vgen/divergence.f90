@@ -117,6 +117,10 @@ CONTAINS
 
    END SUBROUTINE pw_div
 
+   SUBROUTINE vac_div(stars,sym,cell,noco,bxc,div)
+
+   END SUBROUTINE vac_div
+
    SUBROUTINE divergence(jspins,n,ifftxc3,atoms,sphhar,sym,stars,cell,vacuum,noco,xcB,div)
    USE m_types
    IMPLICIT NONE
@@ -139,7 +143,7 @@ CONTAINS
 
    END SUBROUTINE divergence
 
-   SUBROUTINE divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+   SUBROUTINE divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
       USE m_lh_tofrom_lm
       USE m_gradYlm
 
@@ -152,6 +156,7 @@ CONTAINS
 
       IMPLICIT NONE
 
+      TYPE(t_input), INTENT(IN)                   :: input
       TYPE(t_stars),                INTENT(IN)    :: stars
       TYPE(t_atoms),                INTENT(IN)    :: atoms
       TYPE(t_sphhar),               INTENT(IN)    :: sphhar
@@ -161,6 +166,8 @@ CONTAINS
       TYPE(t_noco),                 INTENT(IN)    :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT) :: bxc
       TYPE(t_potden),               INTENT(INOUT) :: div
+
+      TYPE(t_potden), DIMENSION(3)                :: grad
 
       INTEGER :: i,iType,indmax, lh
       COMPLEX, ALLOCATABLE :: flm(:,:,:),grsflm1(:,:,:,:),grsflm2(:,:,:,:),grsflm3(:,:,:,:),divflm(:,:,:) ! (iR,lm,n[,x,i])
@@ -194,6 +201,20 @@ CONTAINS
       DEALLOCATE(divflm,grsflm1,grsflm2,grsflm3)
 
       CALL pw_div(stars,sym,cell,noco,bxc,div)
+
+      IF (input%film) THEN
+         div%vacxy=CMPLX(0.0,0.0)
+         div%vacz=0.0
+         CALL vac_grad(vacuum,stars,bxc(1),grad,9*stars%mx1*stars%mx2)
+         div%vacxy=div%vacxy+grad(1)%vacxy
+         div%vacz=div%vacz+grad(1)%vacz
+         CALL vac_grad(vacuum,stars,bxc(2),grad,9*stars%mx1*stars%mx2)
+         div%vacxy=div%vacxy+grad(2)%vacxy
+         div%vacz=div%vacz+grad(2)%vacz
+         CALL vac_grad(vacuum,stars,bxc(3),grad,9*stars%mx1*stars%mx2)
+         div%vacxy=div%vacxy+grad(3)%vacxy
+         div%vacz=div%vacz+grad(3)%vacz
+      END IF
 
 
    END SUBROUTINE divergence2
@@ -322,7 +343,185 @@ CONTAINS
 
    END SUBROUTINE pw_grad
 
-   SUBROUTINE divpotgrad(stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
+   SUBROUTINE vac_grad(vacuum,stars,den,grad,ifftd2)
+
+      USE m_constants
+      USE m_grdchlh
+      USE m_fft2d
+      USE m_types
+
+      IMPLICIT NONE
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_potden),INTENT(IN)    :: den
+      TYPE(t_potden),INTENT(INOUT),DIMENSION(3) :: grad
+      !     ..
+      !     .. Scalar Arguments ..
+      INTEGER, INTENT (IN) :: ifftd2
+       
+      !     ..
+      !     .. Local Scalars ..
+      INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip
+      REAL    :: rhti,zro,d_15
+      !     ..
+      !     .. Local Arrays ..
+      REAL :: fgz(3)
+      REAL, ALLOCATABLE :: af2(:),bf2(:)
+      REAL, ALLOCATABLE :: rhdx(:),rhdy(:),rhdz(:)
+      REAL, ALLOCATABLE :: rhtdz(:),rhtdzz(:)
+      REAL, ALLOCATABLE :: rxydzr(:),rxydzi(:)
+      REAL, ALLOCATABLE :: rxydzzr(:),rxydzzi(:),rhtxyr(:),rhtxyi(:)
+      REAL, ALLOCATABLE :: rhtxc(:,:),dummy(:)
+      COMPLEX, ALLOCATABLE :: fgxy(:,:),rxydz(:,:),rxydzz(:),cqpw(:)   
+    
+      d_15     = 1.e-15
+      zro      = 0.0
+      nt       = ifftd2
+
+      ALLOCATE (rxydz(vacuum%nmzxy,stars%ng2-1))
+      ALLOCATE (rhtdz(vacuum%nmzd),rhtdzz(vacuum%nmzd))
+    
+      DO ivac=1,vacuum%nvac 
+
+         ! the charge density in vacuum is expanded in 2-dim stars on a mesh
+         ! in z-direction. the g||.ne.zero-components expand from 1 to nmzxy
+         ! the g||.eq.zero-components expand from 1 to nmz
+         ! first we calculate vxc in the warping region 
+
+         !
+         ! calculate first (rhtdz) & second (rhtdzz) derivative of den%vacz(1:nmz)
+         !
+         ALLOCATE ( dummy(vacuum%nmz) )
+    
+         CALL grdchlh(0,1,vacuum%nmz,vacuum%delz,dummy,den%vacz(1,ivac,1),6,&
+                     rhtdz(1),rhtdzz(1))
+         DEALLOCATE ( dummy )
+         ALLOCATE ( rhtxyr(vacuum%nmzxy), rhtxyi(vacuum%nmzxy),dummy(vacuum%nmzxy) )
+         ALLOCATE ( rxydzr(vacuum%nmzxy), rxydzi(vacuum%nmzxy) )
+         ALLOCATE ( rxydzzr(vacuum%nmzxy),rxydzzi(vacuum%nmzxy) )
+    
+         DO iq = 1, stars%ng2-1
+         !
+         ! calculate first (rxydz) & second (rxydzz) derivative of den%vacxy:
+         !
+            DO ip=1,vacuum%nmzxy
+               rhtxyr(ip)=den%vacxy(ip,iq,ivac,1)
+            ENDDO
+            CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyr,6, rxydzr,rxydzzr) 
+    
+            DO ip=1,vacuum%nmzxy
+               rhtxyi(ip)=aimag(den%vacxy(ip,iq,ivac,js))
+            ENDDO
+               
+            CALL grdchlh(0,1,vacuum%nmzxy,vacuum%delz,dummy,rhtxyi,6, rxydzi,rxydzzi)
+    
+            DO ip=1,vacuum%nmzxy
+               rxydz(ip,iq)=cmplx(rxydzr(ip),rxydzi(ip))
+            ENDDO
+   
+         ENDDO ! loop over 2D stars (iq)
+    
+         DEALLOCATE ( rhtxyr,rhtxyi,rxydzr,rxydzi,rxydzzr,rxydzzi )
+         DEALLOCATE ( dummy )
+    
+         ALLOCATE ( rhdx(0:ifftd2-1),rhdy(0:ifftd2-1) )
+         ALLOCATE ( rhdz(0:ifftd2-1))
+    
+         ALLOCATE ( cqpw(stars%ng2-1),af2(0:ifftd2-1) )
+         ALLOCATE ( fgxy(stars%ng2-1,3),bf2(0:ifftd2-1) )
+     
+         af2=0.0
+         DO ip = 1,vacuum%nmzxy
+            ! loop over warping region
+    
+            ! Transform charge and magnetization to real-space.
+    
+            CALL fft2d(stars, af2(0),bf2, den%vacz(ip,ivac,1),0.,&
+                       den%vacxy(ip,1,ivac,1), vacuum%nmzxyd,+1)
+    
+            ! calculate derivatives with respect to x,y in g-space 
+            ! and transform them to real-space.  
+    
+            DO iq=1,stars%ng2-1
+               cqpw(iq)=ImagUnit*den%vacxy(ip,iq,ivac,js)
+            ENDDO
+    
+            rhti = 0.0                    
+            ! d(rho)/atoms%dx is obtained by a FFT of i*gx*den%vacxy
+            ! (den%vacz is set to zero and gx is included in 
+            ! dn/atoms =  FFT(0,i*gx*den%vacxy)
+            CALL fft2d(stars, rhdx(0),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfx)
+    
+            rhti = 0.0
+            CALL fft2d(    &               ! dn/dy =  FFT(0,i*gy*den%vacxy)&
+                        stars, rhdy(0),bf2, zro,rhti,cqpw, 1,+1,stars%ft2_gfy)
+    
+            rhti = 0.0
+            CALL fft2d(     &              ! dn/dz = FFT(rhtdz,rxydz)&
+                      stars, rhdz(0),bf2, rhtdz(ip),rhti,rxydz(ip,1), vacuum%nmzxyd,+1) 
+    
+            !
+            ! set minimal value of af2 to 1.0e-15
+            !
+    
+            !af2=max(af2,10e-13)
+    
+            DO i=0,stars%kimax2
+               af2(i)=max(af2(i),d_15)
+            ENDDO
+    
+            !
+            !           ----> 2-d back fft to g space
+            !
+            bf2=0.0
+            CALL fft2d(stars, rhdx,bf2, fgz(1),rhti,fgxy(:,1), 1,-1)
+            CALL fft2d(stars, rhdy,bf2, fgz(2),rhti,fgxy(:,2), 1,-1)
+            CALL fft2d(stars, rhdz,bf2, fgz(3),rhti,fgxy(:,3), 1,-1)
+    
+            ! the g||.eq.zero component is added to grad%vacz
+            !
+            grad(1)%vacz(ip,ivac,1) = fgz(1) + grad(1)%vacz(ip,ivac,1)
+            grad(2)%vacz(ip,ivac,1) = fgz(2) + grad(2)%vacz(ip,ivac,1)
+            grad(3)%vacz(ip,ivac,1) = fgz(3) + grad(3)%vacz(ip,ivac,1)
+            !
+            ! the g||.ne.zero components are added to grad%vacxy
+            !
+            DO irec2 = 1,stars%ng2-1
+               grad(1)%vacxy(ip,irec2,ivac,1)=grad(1)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,1)
+               grad(2)%vacxy(ip,irec2,ivac,1)=grad(2)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,2)
+               grad(3)%vacxy(ip,irec2,ivac,1)=grad(3)%vacxy(ip,irec2,ivac,1)+fgxy(irec2,3)
+            ENDDO
+    
+         END DO ! ip=1,vacuum%nmzxy 
+         DEALLOCATE ( rhdx,rhdy,rhdz)
+         DEALLOCATE ( cqpw,fgxy)
+    
+         ! now treat the non-warping region 
+    
+         nmzdiff = vacuum%nmz - vacuum%nmzxy
+    
+         ! The non-warping region runs from nmzxy+1 to nmz.
+         ! The values from nmz0 to nmzxy are taken into account in order
+         ! to get the real-space derivative smooth around nmzxy+1. 
+    
+         nmz0= vacuum%nmzxy+1+(6/2)-6
+         IF (nmz0 <= 0) THEN ! usually vacuum%nmzxy>6 
+            nmz0= 1
+         END IF
+    
+         DEALLOCATE ( af2)
+
+         DO ip = vacuum%nmzxy + 1,vacuum%nmz
+            grad(3)%vacz(ip,ivac,1) = grad(3)%vacz(ip,ivac,1) + rhtdz(ip-vacuum%nmzxy)
+         ENDDO
+
+         DEALLOCATE ( bf2)
+
+      ENDDO    ! loop over vacua (ivac)
+
+   END SUBROUTINE vac_grad
+
+   SUBROUTINE divpotgrad(input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
 
       USE m_types
       USE m_constants
@@ -332,6 +531,7 @@ CONTAINS
       !Use the two gradient subroutines above to now put the complete gradient
       !of a potential into a t_potden variable.
       !-----------------------------------------------------------------------------
+      TYPE(t_input), INTENT(IN)                   :: input
       TYPE(t_stars),INTENT(IN)                    :: stars
       TYPE(t_atoms), INTENT(IN)                   :: atoms
       TYPE(t_sphhar), INTENT(IN)                  :: sphhar
@@ -347,11 +547,16 @@ CONTAINS
       DO n=1,atoms%ntype
          CALL mt_grad(n,atoms,sphhar,noco,sym,pot,grad)
       END DO
+
       CALL pw_grad(stars,cell,noco,sym,pot,grad)
+
+      IF (input%film) THEN
+         CALL vac_grad(vacuum,stars,pot,grad,9*stars%mx1*stars%mx2)
+      END IF
 
    END SUBROUTINE divpotgrad
 
-   SUBROUTINE divpotgrad2(stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
+   SUBROUTINE divpotgrad2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
 
       USE m_types
       USE m_lh_tofrom_lm
@@ -367,6 +572,7 @@ CONTAINS
 
       IMPLICIT NONE
 
+      TYPE(t_input), INTENT(IN)                   :: input
       TYPE(t_stars),INTENT(IN)                    :: stars
       TYPE(t_atoms), INTENT(IN)                   :: atoms
       TYPE(t_sphhar), INTENT(IN)                  :: sphhar
@@ -408,6 +614,10 @@ CONTAINS
       DEALLOCATE(grsflm)
 
       CALL pw_grad(stars,cell,noco,sym,pot,grad)
+
+      IF (input%film) THEN
+         CALL vac_grad(vacuum,stars,pot,grad,9*stars%mx1*stars%mx2)
+      END IF
 
    END SUBROUTINE divpotgrad2
 END MODULE m_divergence

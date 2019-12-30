@@ -132,7 +132,7 @@ CONTAINS
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
 
-      CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
+      CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
 
       ! Local atoms variable with no charges;
       ! needed for the potential generation from the divergence.
@@ -149,7 +149,7 @@ CONTAINS
          ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
       ENDDO
 
-      CALL divpotgrad2(stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
+      CALL divpotgrad2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
 
       DO i=1,3
          CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
@@ -162,7 +162,7 @@ CONTAINS
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(checkdiv%pw_w,mold=checkdiv%pw)
 
-      CALL divergence2(stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
+      CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,corrB,checkdiv)
 
       DO n=1,atoms%ntype
          lhmax=sphhar%nlh(sym%ntypsy(SUM(atoms%neq(:n - 1)) + 1))
