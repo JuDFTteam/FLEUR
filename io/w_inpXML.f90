@@ -344,12 +344,7 @@ SUBROUTINE w_inpXML(&
       WRITE (fileNum,320) atoms%lmax(iAtomType),atoms%lnonsph(iAtomType)
 
 
-      IF(l_explicit.OR.hybrid%l_hybrid) THEN
-         315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
-         line = ''
-         WRITE(line,'(i0,1x,i0,1x,i0,1x,i0)') hybrid%select1(1:4,iAtomType)
-         WRITE (fileNum,315) hybrid%lcutm1(iAtomType), hybrid%lcutwf(iAtomType), TRIM(ADJUSTL(line))
-      END IF
+
 
 
          WRITE (fileNum,'(a)') '         <electronConfig>'
@@ -376,7 +371,12 @@ SUBROUTINE w_inpXML(&
          321 FORMAT('         <energyParameters s="',i0,'" p="',i0,'" d="',i0,'" f="',i0,'"/>')
          WRITE (fileNum,321) enpara%qn_el(0:3,iAtomType,1)
       !END IF
-
+      IF(l_explicit.OR.hybrid%l_hybrid) THEN
+         315 FORMAT('         <prodBasis lcutm="',i0,'" lcutwf="',i0,'" select="',a,'"/>')
+         line = ''
+         WRITE(line,'(i0,1x,i0,1x,i0,1x,i0)') hybrid%select1(1:4,iAtomType)
+         WRITE (fileNum,315) hybrid%lcutm1(iAtomType), hybrid%lcutwf(iAtomType), TRIM(ADJUSTL(line))
+      END IF
 
       IF (uIndices(1,iAtomType).NE.-1) THEN
 !         <ldaU l="2" U="5.5" J="0.9" l_amf="F"/>
