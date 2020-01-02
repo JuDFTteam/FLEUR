@@ -61,21 +61,21 @@ MODULE m_types_oneD
       TYPE(od_sym) :: ods
       TYPE(od_lda) :: odl
       TYPE(od_gga) :: odg
-      INTEGER, POINTER :: ig1(:, :)
-      INTEGER, POINTER :: kv1(:, :)
-      INTEGER, POINTER :: nstr1(:)
-      INTEGER, POINTER :: ngopr1(:)
-      REAL, POINTER :: mrot1(:, :, :)
-      REAL, POINTER :: tau1(:, :)
-      INTEGER, POINTER :: invtab1(:)
-      INTEGER, POINTER :: multab1(:, :)
-      INTEGER, POINTER :: igfft1(:, :)
-      REAL, POINTER :: pgfft1(:)
-      REAL, POINTER :: pgft1x(:)
-      REAL, POINTER :: pgft1y(:)
-      REAL, POINTER :: pgft1xx(:)
-      REAL, POINTER :: pgft1yy(:)
-      REAL, POINTER :: pgft1xy(:)
+      INTEGER, POINTER :: ig1(:, :) => null()
+      INTEGER, POINTER :: kv1(:, :) => null()
+      INTEGER, POINTER :: nstr1(:) => null()
+      INTEGER, POINTER :: ngopr1(:) => null()
+      REAL, POINTER :: mrot1(:, :, :) => null()
+      REAL, POINTER :: tau1(:, :) => null()
+      INTEGER, POINTER :: invtab1(:) => null()
+      INTEGER, POINTER :: multab1(:, :) => null()
+      INTEGER, POINTER :: igfft1(:, :) => null()
+      REAL, POINTER :: pgfft1(:) => null()
+      REAL, POINTER :: pgft1x(:) => null()
+      REAL, POINTER :: pgft1y(:) => null()
+      REAL, POINTER :: pgft1xx(:) => null()
+      REAL, POINTER :: pgft1yy(:) => null()
+      REAL, POINTER :: pgft1xy(:) => null()
     contains
       procedure :: read_xml=>read_xml_oneD
       PROCEDURE :: mpi_bc=>mpi_bc_oneD
