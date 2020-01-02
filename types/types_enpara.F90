@@ -126,6 +126,7 @@ CONTAINS
     IF (irank  == 0) CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
 
     l_done = .FALSE.;lo_done=.FALSE.
+    elo_lo = 0.0; elo_up = 0.0
     DO jsp = 1,input%jspins
        !$OMP PARALLEL DO DEFAULT(none) &
        !$OMP SHARED(atoms,enpara,jsp,l_done,v,lo_done,e_lo,e_up,elo_lo,elo_up) &
