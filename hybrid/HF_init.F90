@@ -4,7 +4,7 @@ MODULE m_hf_init
    !     preparations for HF and hybrid functional calculation
    !
 CONTAINS
-   SUBROUTINE hf_init(mpbasis, hybrid, atoms, input,  hybdat)
+   SUBROUTINE hf_init(mpdata, hybrid, atoms, input,  hybdat)
       USE m_types
       USE m_hybrid_core
       USE m_util
@@ -12,7 +12,7 @@ CONTAINS
       USE m_io_hybrid
       USE m_types_hybdat
       IMPLICIT NONE
-      TYPE(t_mpbasis), intent(inout) :: mpbasis
+      TYPE(t_mpdata), intent(inout) :: mpdata
       TYPE(t_hybrid), INTENT(INOUT)     :: hybrid
       TYPE(t_atoms), INTENT(IN)         :: atoms
       TYPE(t_input), INTENT(IN)         :: input
@@ -25,10 +25,10 @@ CONTAINS
 
       !Alloc variables
       allocate(hybdat%lmaxc(atoms%ntype), source=0)
-      allocate(hybdat%bas1(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%bas2(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%bas1_MT(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
-      allocate(hybdat%drbas1_MT(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas1(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas2(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%bas1_MT(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
+      allocate(hybdat%drbas1_MT(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), source=0.0)
 
       ! preparations for core states
       CALL core_init( input, atoms, hybdat%lmaxcd, hybdat%maxindxc)

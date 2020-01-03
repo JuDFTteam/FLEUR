@@ -19,7 +19,7 @@ MODULE m_exchange_core
       USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE exchange_vccv1(nk, input,atoms, mpbasis, hybrid, hybdat, jsp, lapw, &
+   SUBROUTINE exchange_vccv1(nk, input,atoms, mpdata, hybrid, hybdat, jsp, lapw, &
                              nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
 
       USE m_constants
@@ -33,7 +33,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
       TYPE(t_mpi), INTENT(IN)   :: mpi
-      TYPE(t_mpbasis), intent(in)   :: mpbasis
+      TYPE(t_mpdata), intent(in)   :: mpdata
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
@@ -93,7 +93,7 @@ CONTAINS
                      DO l2 = 0, atoms%lmax(itype)
                         IF (l < ABS(l1 - l2) .OR. l > l1 + l2) CYCLE
 
-                        DO p2 = 1, mpbasis%num_radfun_per_l(l2, itype)
+                        DO p2 = 1, mpdata%num_radfun_per_l(l2, itype)
                            n = n + 1
                            M = SIZE(fprod, 2)
                            IF (n > M) THEN
@@ -142,8 +142,8 @@ CONTAINS
                                  ll = larr(i)
                                  IF (ABS(m2) > ll) CYCLE
 
-                                 lm = SUM([((2*l2 + 1)*mpbasis%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) &
-                                      + (m2 + ll)*mpbasis%num_radfun_per_l(ll, itype) + parr(i)
+                                 lm = SUM([((2*l2 + 1)*mpdata%num_radfun_per_l(l2, itype), l2=0, ll - 1)]) &
+                                      + (m2 + ll)*mpdata%num_radfun_per_l(ll, itype) + parr(i)
 
                                  carr(i, n1) = cmt(n1, lm, iatom)*gaunt(l1, ll, l, m1, m2, M, hybdat%maxfac, hybdat%fac, hybdat%sfac)
 

@@ -3,7 +3,7 @@ module m_wavefproducts_noinv
 
 CONTAINS
    SUBROUTINE wavefproducts_noinv5(bandi, bandf, bandoi, bandof, nk, iq, &
-                                    input, jsp, cell, atoms, mpbasis, hybrid,&
+                                    input, jsp, cell, atoms, mpdata, hybrid,&
                                    hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                    nkqpt, cprod)
       USE m_types
@@ -17,7 +17,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_lapw), INTENT(IN)        :: lapw
-      TYPE(t_mpbasis), intent(in)     :: mpbasis
+      TYPE(t_mpdata), intent(in)     :: mpdata
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
@@ -46,19 +46,19 @@ CONTAINS
       IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
 
       call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
-                                         input, jsp, cell, atoms, mpbasis, hybrid,&
+                                         input, jsp, cell, atoms, mpdata, hybrid,&
                                         hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                         nkqpt, cprod)
 
       call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                   input,atoms, mpbasis, hybrid, hybdat, kpts, &
+                                   input,atoms, mpdata, hybrid, hybdat, kpts, &
                                   nkqpt, cprod)
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
 
    subroutine wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t, &
-                                       input, jsp, cell, atoms, mpbasis, hybrid,&
+                                       input, jsp, cell, atoms, mpdata, hybrid,&
                                       hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                       nkqpt, cprod)
       use m_types
@@ -74,7 +74,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_lapw), INTENT(IN)        :: lapw
-      TYPE(t_mpbasis), intent(in)  :: mpbasis
+      TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
@@ -130,7 +130,7 @@ CONTAINS
 
       g = maxval(abs(lapw%gvec(:,:lapw%nv(jsp), jsp)), dim=2) &
         + maxval(abs(lapw_nkqpt%gvec(:,:lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-        + maxval(abs(mpbasis%g(:,mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq))), dim=2) + 1
+        + maxval(abs(mpdata%g(:,mpdata%gptm_ptr(:mpdata%n_g(iq), iq))), dim=2) + 1
 
       call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
 
@@ -139,7 +139,7 @@ CONTAINS
       !
 
       !(1) prepare list of G vectors
-      call prep_list_of_gvec(lapw, mpbasis, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
+      call prep_list_of_gvec(lapw, mpdata, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
 
       !(2) calculate convolution
       call timestart("calc convolution")
@@ -164,13 +164,13 @@ CONTAINS
 
       call timestart("hybrid g")
       ic = nbasm_mt
-      DO igptm = 1, mpbasis%n_g(iq)
+      DO igptm = 1, mpdata%n_g(iq)
          carr = 0
          ic = ic + 1
-         iigptm = mpbasis%gptm_ptr(igptm, iq)
+         iigptm = mpdata%gptm_ptr(igptm, iq)
 
          DO ig1 = 1, lapw%nv(jsp)
-            g = lapw%gvec(:,ig1, jsp) + mpbasis%g(:,iigptm) - g_t
+            g = lapw%gvec(:,ig1, jsp) + mpdata%g(:,iigptm) - g_t
             ig2 = pointer(g(1), g(2), g(3))
 
             IF (ig2 == 0) call juDFT_error('wavefproducts_noinv2: pointer undefined')
@@ -198,7 +198,7 @@ CONTAINS
 
 
    subroutine wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                      input,atoms, mpbasis, hybrid, hybdat, kpts, &
+                                      input,atoms, mpdata, hybrid, hybdat, kpts, &
                                      nkqpt, cprod)
       use m_types
       USE m_constants
@@ -209,7 +209,7 @@ CONTAINS
       TYPE(t_input),INTENT(IN)         :: input
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
-      TYPE(t_mpbasis), INTENT(IN)     :: mpbasis
+      TYPE(t_mpdata), INTENT(IN)     :: mpdata
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
@@ -243,7 +243,7 @@ CONTAINS
       call timestart("set lmstart")
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            lmstart(l, itype) = sum([(mpbasis%num_radfun_per_l(ll, itype)*(2*ll+1), ll=0, l-1)])
+            lmstart(l, itype) = sum([(mpdata%num_radfun_per_l(ll, itype)*(2*ll+1), ll=0, l-1)])
          END DO
       END DO
       call timestop("set lmstart")
@@ -271,7 +271,7 @@ CONTAINS
             DO l = 0, hybrid%lcutm1(itype)
 
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
-                  call mpbasis%set_nl(n,l,itype, n1,l1,n2,l2)
+                  call mpdata%set_nl(n,l,itype, n1,l1,n2,l2)
 
                   IF (mod(l1 + l2 + l, 2) == 0) THEN
                      offdiag = (l1 /= l2) .or. (n1 /= n2) ! offdiag=true means that b1*b2 and b2*b1 are different combinations
@@ -289,7 +289,7 @@ CONTAINS
                         DO m1 = -l1, l1
                            m2 = m1 + m ! Gaunt condition -m1+m2-m=0
                            IF (abs(m2) <= l2) THEN
-                              lm2 = lm2_0 + n2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                              lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(1, l1, l2, l, m1, m) &
                                              * outer_prod(cmt(bandoi:bandof, lm2, ic), &
@@ -299,7 +299,7 @@ CONTAINS
 
                            m2 = m1 - m ! switch role of b1 and b2
                            IF (abs(m2) <= l2 .and. offdiag) THEN
-                              lm2 = lm2_0 + n2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                              lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                               IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                  carr = carr + hybdat%gauntarr(2, l1, l2, l, m1, m) &
                                              * outer_prod(cmt(bandoi:bandof, lm1, ic),&
@@ -307,14 +307,14 @@ CONTAINS
                               END IF
                            END IF
 
-                           lm1 = lm1 + mpbasis%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
+                           lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
                         END DO  !m1
 
-                        lm = lm_0 + (m+l) * mpbasis%num_radbasfn(l,itype)
+                        lm = lm_0 + (m+l) * mpdata%num_radbasfn(l,itype)
                         do k = 1,bandf-bandi+1
                            do j = bandoi, bandof
-                              DO i = 1, mpbasis%num_radbasfn(l, itype)
+                              DO i = 1, mpdata%num_radbasfn(l, itype)
                                  cprod(i+lm,j,k) = cprod(i+lm,j,k) &
                                        + hybdat%prodm(i, n, l, itype)*carr(j,k) *atom_phase
                               ENDDO
@@ -324,7 +324,7 @@ CONTAINS
                      !$OMP END  DO
                   ENDIF
                END DO
-               lm_0 = lm_0 + mpbasis%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+               lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
             END DO
          END DO
       END DO

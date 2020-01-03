@@ -9,7 +9,7 @@ MODULE m_rdmft
 CONTAINS
 
 SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpbasis,hybrid,results,coreSpecInput,archiveType,outDen)
+                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybrid,results,coreSpecInput,archiveType,outDen)
 
    USE m_types
    USE m_juDFT
@@ -62,7 +62,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_noco),          INTENT(INOUT) :: noco
    TYPE(t_xcpot_inbuild), INTENT(INOUT) :: xcpot
-   TYPE(t_mpbasis),       intent(inout) :: mpbasis
+   TYPE(t_mpdata),       intent(inout) :: mpdata
    TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
@@ -383,13 +383,13 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
 !   CALL open_hybrid_io1(sym%invs)
 
-   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpbasis,hybrid,enpara,mpi,vTot, iterHF)
+   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpdata,hybrid,enpara,mpi,vTot, iterHF)
 
-   CALL open_hybrid_io2(mpbasis, hybrid,input,atoms,sym%invs)
+   CALL open_hybrid_io2(mpdata, hybrid,input,atoms,sym%invs)
 
-   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpbasis,hybrid,xcpot)
+   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpdata,hybrid,xcpot)
 
-   CALL hf_init(mpbasis,hybrid,atoms,input,hybdat)
+   CALL hf_init(mpdata,hybrid,atoms,input,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
@@ -504,13 +504,13 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
          IF(ALLOCATED(hybdat%pntgpt)) DEALLOCATE (hybdat%pntgpt)
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE (hybdat%prodm)
 
-         call mpbasis%free()
+         call mpdata%free()
 
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE (hybdat%nindxp1)
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpbasis,hybrid,input,sym,kpts,atoms,mpi,noco,&
+         CALL HF_setup(mpdata,hybrid,input,sym,kpts,atoms,mpi,noco,&
                        cell,oneD,results,jspin,enpara,eig_id,&
                        hybdat,sym%invs,vTot%mt(:,0,:,:),eig_irr)
 
@@ -524,14 +524,14 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             parent = 0
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
-            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpbasis,hybrid,cell,lapw,jspin,&
+            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybrid,cell,lapw,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
-            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpbasis,hybrid,cell,input,jspin,hybdat,mnobd,lapw,&
+            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpdata,hybrid,cell,input,jspin,hybdat,mnobd,lapw,&
                                      eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nsest,indx_sest,&
                                      mpi,exMat)
-            CALL exchange_vccv1(ikpt,input,atoms,mpbasis,hybrid,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
+            CALL exchange_vccv1(ikpt,input,atoms,mpdata,hybrid,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
 
             !Start of workaround for increased functionality of symmetrizeh (call it))
 

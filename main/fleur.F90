@@ -100,7 +100,7 @@ CONTAINS
     TYPE(t_kpts)                    :: kpts
     TYPE(t_mpinp)                   :: mpinp
     TYPE(t_hybrid)                  :: hybrid
-    TYPE(t_mpbasis)                 :: mpbasis
+    TYPE(t_mpdata)                 :: mpdata
     TYPE(t_oneD)                    :: oneD
     TYPE(t_mpi)                     :: mpi
     TYPE(t_coreSpecInput)           :: coreSpecInput
@@ -245,7 +245,7 @@ CONTAINS
        IF (hybrid%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
-             CALL calc_hybrid(eig_id,mpbasis,hybrid,kpts,atoms,input,mpi,noco,&
+             CALL calc_hybrid(eig_id,mpdata,hybrid,kpts,atoms,input,mpi,noco,&
                               cell,oneD,enpara,results,sym,xcpot,vTot,iterHF)
           END SELECT
           IF(hybrid%l_calhf) THEN
@@ -308,7 +308,7 @@ CONTAINS
           CALL timestop("Updating energy parameters")
           !IF(.not.input%eig66(1))THEN
             CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,mpbasis,hybrid,iter,eig_id,results,inDen,vTemp,vx,hub1)
+                     cell,enpara,banddos,noco,oneD,mpdata,hybrid,iter,eig_id,results,inDen,vTemp,vx,hub1)
           !ENDIF
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -431,7 +431,7 @@ CONTAINS
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
                    CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpbasis,hybrid,results,coreSpecInput,archiveType,outDen)
+                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybrid,results,coreSpecInput,archiveType,outDen)
              END SELECT
           END IF
 

@@ -14,13 +14,13 @@ module m_wavefproducts_inv
 
 CONTAINS
    SUBROUTINE wavefproducts_inv5(bandi, bandf, bandoi, bandof, input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, mpbasis, hybrid,&
+                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
 
 
       IMPLICIT NONE
-      TYPE(t_mpbasis), intent(in)  :: mpbasis
+      TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybrid), INTENT(IN)    :: hybrid
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_noco), INTENT(IN)      :: noco
@@ -58,11 +58,11 @@ CONTAINS
 
 
       call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof,  input,&
-                                jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpbasis, hybrid,&
+                                jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybrid,&
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
       call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof,&
-                                input,atoms, kpts, nk, iq, hybdat, mpbasis, hybrid,&
+                                input,atoms, kpts, nk, iq, hybdat, mpdata, hybrid,&
                                 sym, nkqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
@@ -70,11 +70,11 @@ CONTAINS
    END SUBROUTINE wavefproducts_inv5
 
    subroutine wavefproducts_inv_IS(bandi, bandf, bandoi, bandof,  input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpbasis, hybrid,&
+                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybrid,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
      implicit NONE
-     TYPE(t_mpbasis), intent(in)  :: mpbasis
+     TYPE(t_mpdata), intent(in)  :: mpdata
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
      TYPE(t_input), INTENT(IN)     :: input
      TYPE(t_noco), INTENT(IN)      :: noco
@@ -130,7 +130,7 @@ CONTAINS
 
      g = maxval(abs(lapw%gvec(:, :lapw%nv(jsp), jsp)), dim=2) &
        + maxval(abs(lapw_nkqpt%gvec(:, :lapw_nkqpt%nv(jsp), jsp)), dim=2)&
-       + maxval(abs(mpbasis%g(:, mpbasis%gptm_ptr(:mpbasis%n_g(iq), iq))), dim=2) + 1
+       + maxval(abs(mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(iq), iq))), dim=2) + 1
 
      call hybdat%set_stepfunction(cell, atoms, g, sqrt(cell%omtil))
      !
@@ -138,7 +138,7 @@ CONTAINS
      !
 
      !(1) prepare list of G vectors
-     call prep_list_of_gvec(lapw, mpbasis, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
+     call prep_list_of_gvec(lapw, mpdata, g, g_t, iq, jsp, pointer, gpt0, ngpt0)
 
      !(2) calculate convolution
      call timestart("calc convolution")
@@ -160,13 +160,13 @@ CONTAINS
 
      call timestart("hybrid g")
      ic = nbasm_mt
-     DO igptm = 1, mpbasis%n_g(iq)
+     DO igptm = 1, mpdata%n_g(iq)
         rarr2 = 0
         ic = ic + 1
-        iigptm = mpbasis%gptm_ptr(igptm, iq)
+        iigptm = mpdata%gptm_ptr(igptm, iq)
 
         DO ig1 = 1, lapw%nv(jsp)
-           g = lapw%gvec(:, ig1, jsp) + mpbasis%g(:, iigptm) - g_t
+           g = lapw%gvec(:, ig1, jsp) + mpdata%g(:, iigptm) - g_t
            ig2 = pointer(g(1), g(2), g(3))
 
            IF (ig2 == 0) call juDFT_error('wavefproducts_inv5: pointer undefined')
@@ -190,12 +190,12 @@ CONTAINS
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof,&
-                                   input,atoms, kpts, nk, iq, hybdat, mpbasis, hybrid,&
+                                   input,atoms, kpts, nk, iq, hybdat, mpdata, hybrid,&
                                    sym, nkqpt, cprod)
 
      implicit NONE
      TYPE(t_input),INTENT(IN)      :: input
-     TYPE(t_mpbasis), INTENT(IN)   :: mpbasis
+     TYPE(t_mpdata), INTENT(IN)   :: mpdata
      TYPE(t_hybrid), INTENT(IN)    :: hybrid
      TYPE(t_sym), INTENT(IN)       :: sym
      TYPE(t_kpts), INTENT(IN)      :: kpts
@@ -240,7 +240,7 @@ CONTAINS
      ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
      DO itype = 1, atoms%ntype
         DO l = 0, atoms%lmax(itype)
-           lmstart(l, itype) = sum([(mpbasis%num_radfun_per_l(ll, itype)*(2*ll + 1), ll=0, l - 1)])
+           lmstart(l, itype) = sum([(mpdata%num_radfun_per_l(ll, itype)*(2*ll + 1), ll=0, l - 1)])
         END DO
      END DO
 
@@ -285,10 +285,10 @@ CONTAINS
            DO l = 0, atoms%lmax(itype)
               DO m = -l, l
                  rdum = (-1)**(l + m)
-                 DO p = 1, mpbasis%num_radfun_per_l(l, itype)
+                 DO p = 1, mpdata%num_radfun_per_l(l, itype)
                     lm1 = lm1 + 1
                     ! lm index at l,-m
-                    lm2 = lm1 - 2*m*mpbasis%num_radfun_per_l(l, itype)
+                    lm2 = lm1 - 2*m*mpdata%num_radfun_per_l(l, itype)
 
                     IF (iatom == iiatom) THEN
                        IF (m < 0) THEN
@@ -335,7 +335,7 @@ CONTAINS
      iiatom = 0
 
      DO itype = 1, atoms%ntype
-        ioffset = sum([((2*ll + 1)*mpbasis%num_radbasfn(ll, itype), ll=0, hybrid%lcutm1(itype))])
+        ioffset = sum([((2*ll + 1)*mpdata%num_radbasfn(ll, itype), ll=0, hybrid%lcutm1(itype))])
         lm_0 = lm_00
         DO ieq = 1, atoms%neq(itype)
            iatom1 = iatom1 + 1
@@ -354,10 +354,10 @@ CONTAINS
                  DO n = 1, hybdat%nindxp1(l, itype)
 
                     ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                    l1 = mpbasis%l1(n,l,itype)
-                    l2 = mpbasis%l2(n,l,itype)
-                    p1 = mpbasis%n1(n,l,itype)
-                    p2 = mpbasis%n2(n,l,itype)
+                    l1 = mpdata%l1(n,l,itype)
+                    l2 = mpdata%l2(n,l,itype)
+                    p1 = mpdata%n1(n,l,itype)
+                    p2 = mpdata%n2(n,l,itype)
 
                     ! condition for Gaunt coefficients
                     IF (mod(l + l1 + l2, 2) /= 0) CYCLE
@@ -383,7 +383,7 @@ CONTAINS
                           ! Gaunt condition -m1+m2-m=0
                           m2 = m1 + m
                           IF (abs(m2) <= l2) THEN
-                             lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                             lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                              ! precalculated Gaunt coefficient
                              rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
                              IF (abs(rdum) > 1e-12) THEN
@@ -406,7 +406,7 @@ CONTAINS
 
                           m2 = m1 - m ! switch role of b1 and b2
                           IF (abs(m2) <= l2 .and. offdiag) THEN
-                             lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                             lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                              rdum = hybdat%gauntarr(2, l1, l2, l, m1, m) ! precalculated Gaunt coefficient
                              IF (abs(rdum) > 1e-12) THEN
                                 DO iband = bandi, bandf
@@ -425,11 +425,11 @@ CONTAINS
                           END IF  ! abs(m2) .le. l2 .and. offdiag
 
                           ! go to lmp start index for next m1-quantum number
-                          lmp1 = lmp1 + mpbasis%num_radfun_per_l(l1, itype)
+                          lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
 
                        END DO  !m1
 
-                       ishift = -2*m*mpbasis%num_radbasfn(l, itype)
+                       ishift = -2*m*mpdata%num_radbasfn(l, itype)
 
                        ! go to lm mixed basis startindx for l and m
                        lm1 = lm + (iatom1 - 1 - iiatom)*ioffset
@@ -444,7 +444,7 @@ CONTAINS
                              rdum2 = rarr3(2, ibando, iband)
                              add1 = rdum1*rfac2 + rdum2*rfac1
                              add2 = rdum2*rfac2 - rdum1*rfac1
-                             DO i = 1, mpbasis%num_radbasfn(l, itype)
+                             DO i = 1, mpdata%num_radbasfn(l, itype)
                                 j = lm1 + i
                                 cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*add1
                                 j = lm2 + i
@@ -455,12 +455,12 @@ CONTAINS
                        END DO  !iband
 
                        ! go to lm start index for next m-quantum number
-                       lm = lm + mpbasis%num_radbasfn(l, itype)
+                       lm = lm + mpdata%num_radbasfn(l, itype)
 
                     END DO  !m
 
                  END DO !n
-                 lm_0 = lm_0 + mpbasis%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
+                 lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the lm start index of the next l-quantum number
                  IF (lm /= lm_0) call juDFT_error('wavefproducts_inv5: counting of lm-index incorrect (bug?)')
               END DO !l
               call timestop("iatom1 neq iatom2")
@@ -475,10 +475,10 @@ CONTAINS
                  DO n = 1, hybdat%nindxp1(l, itype)
 
                     ! determine l1,p1 and l2,p2 for the basis functions, which can generate l
-                    l1 = mpbasis%l1(n,l,itype)
-                    l2 = mpbasis%l2(n,l,itype)
-                    p1 = mpbasis%n1(n,l,itype)
-                    p2 = mpbasis%n2(n,l,itype)
+                    l1 = mpdata%l1(n,l,itype)
+                    l2 = mpdata%l2(n,l,itype)
+                    p1 = mpdata%n1(n,l,itype)
+                    p2 = mpdata%n2(n,l,itype)
 
                     ! condition for Gaunt coefficients
                     IF (mod(l + l1 + l2, 2) /= 0) CYCLE
@@ -511,11 +511,11 @@ CONTAINS
                        ! calculate the contributions which are identical for m>0 and m <0
                        rarr2 = 0.0
                        IF (abs(m) <= l2) THEN
-                          lmp1 = lp1 + l1*mpbasis%num_radfun_per_l(l1, itype)
+                          lmp1 = lp1 + l1*mpdata%num_radfun_per_l(l1, itype)
                           IF (mod(l1, 2) == 0) THEN
-                             lmp2 = lp2 + (m + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                             lmp2 = lp2 + (m + l2)*mpdata%num_radfun_per_l(l2, itype)
                           ELSE
-                             lmp2 = lp2 + (-m + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                             lmp2 = lp2 + (-m + l2)*mpdata%num_radfun_per_l(l2, itype)
                           END IF
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
@@ -546,11 +546,11 @@ CONTAINS
 
                        IF (abs(m) <= l1) THEN
                           IF (mod(l2, 2) == 0) THEN
-                             lmp3 = lp1 + (m + l1)*mpbasis%num_radfun_per_l(l1, itype)
+                             lmp3 = lp1 + (m + l1)*mpdata%num_radfun_per_l(l1, itype)
                           ELSE
-                             lmp3 = lp1 + (-m + l1)*mpbasis%num_radfun_per_l(l1, itype)
+                             lmp3 = lp1 + (-m + l1)*mpdata%num_radfun_per_l(l1, itype)
                           END IF
-                          lmp2 = lp2 + l2*mpbasis%num_radfun_per_l(l2, itype)
+                          lmp2 = lp2 + l2*mpdata%num_radfun_per_l(l2, itype)
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
                           IF (abs(rdum) > 1e-12) THEN
@@ -586,7 +586,7 @@ CONTAINS
                        DO m1 = -l1, l1
                           monepm1 = -monepm1
                           IF (m1 == 0) THEN
-                             lmp1 = lmp1 + mpbasis%num_radfun_per_l(l1, itype)
+                             lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                              CYCLE
                           END IF
                           ! (-1)**(l1+m1)
@@ -596,9 +596,9 @@ CONTAINS
                              rdum = hybdat%gauntarr(1, l1, l2, l, m1, m)
                              IF (abs(rdum) > 1e-12) THEN
                                 IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                   lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                 ELSE
-                                   lmp2 = lp2 + (-m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (-m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                 END IF
                                 rdum = rdum/sqrt(2.0)
@@ -614,11 +614,11 @@ CONTAINS
                              IF (offdiag) THEN
                                 rdum = hybdat%gauntarr(1, l2, l1, l, m2, -m)
                                 IF (abs(rdum) > 1e-12) THEN
-                                   lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                    IF (sign(1, m2) + sign(1, m1) /= 0) THEN
                                       lmp3 = lmp1
                                    ELSE
-                                      lmp3 = lmp1 - 2*m1*mpbasis%num_radfun_per_l(l1, itype)
+                                      lmp3 = lmp1 - 2*m1*mpdata%num_radfun_per_l(l1, itype)
                                       fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                    END IF
                                    rdum = moneplm*rdum/sqrt(2.0)
@@ -641,9 +641,9 @@ CONTAINS
                              IF (abs(rdum) > 1e-12) THEN
 
                                 IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                   lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                 ELSE
-                                   lmp2 = lp2 + (-m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (-m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))
                                 END IF
                                 rdum = moneplm*rdum/sqrt(2.0)
@@ -660,11 +660,11 @@ CONTAINS
                              IF (offdiag) THEN
                                 rdum = hybdat%gauntarr(1, l2, l1, l, m2, m)
                                 IF (abs(rdum) > 1e-12) THEN
-                                   lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                    IF (sign(1, m1) + sign(1, m2) /= 0) THEN
                                       lmp3 = lmp1
                                    ELSE
-                                      lmp3 = lmp1 - 2*m1*mpbasis%num_radfun_per_l(l1, itype)
+                                      lmp3 = lmp1 - 2*m1*mpdata%num_radfun_per_l(l1, itype)
                                       fac = 1/2.*monepl1m1*(sign(1, m1) - sign(1, m2))
                                    END IF
                                    rdum = rdum/sqrt(2.0)
@@ -681,7 +681,7 @@ CONTAINS
                           END IF  ! abs(m2) .le. l2 .and. m1 .ne. 0
 
                           !go to lmp start index for next m1-quantum number
-                          lmp1 = lmp1 + mpbasis%num_radfun_per_l(l1, itype)
+                          lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                        END DO  ! m1
 
                        ! go to lm mixed basis startindx for l and m
@@ -689,7 +689,7 @@ CONTAINS
                        DO iband = bandi, bandf
                           DO ibando = bandoi, bandof
                              rdum = rarr2(ibando, iband)
-                             DO i = 1, mpbasis%num_radbasfn(l, itype)
+                             DO i = 1, mpdata%num_radbasfn(l, itype)
                                 j = lm1 + i
                                 cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                              END DO  !i -> loop over mixed basis functions
@@ -697,7 +697,7 @@ CONTAINS
                        END DO  !iband
 
                        ! go to lm start index for next m-quantum number
-                       lm = lm + mpbasis%num_radbasfn(l, itype)
+                       lm = lm + mpdata%num_radbasfn(l, itype)
 
                     END DO  ! m=-l,-1
 
@@ -717,15 +717,15 @@ CONTAINS
                        IF (abs(m2) <= l2) THEN
 
                           IF (mod(l, 2) == 0) THEN
-                             lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                             lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                              !lmp3 and lmp4 are variables, which avoid an if clause in the loop
                              lmp3 = lmp2
                              lmp4 = lmp1
                           ELSE
-                             lmp2 = lp2 + (-m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                             lmp2 = lp2 + (-m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                              !lmp3 and lmp3 are variables, which avoid an if clause in the loop
-                             lmp3 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
-                             lmp4 = lmp1 - 2*m1*mpbasis%num_radfun_per_l(l1, itype)
+                             lmp3 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                             lmp4 = lmp1 - 2*m1*mpdata%num_radfun_per_l(l1, itype)
 
                              fac1 = monepl1*monepm1 ! (-1)**(l1+m1)
                              fac2 = monepl2*monepm1 ! (-1)**(l2+m1)
@@ -766,7 +766,7 @@ CONTAINS
                        END IF  ! abs(m2).le.l2
 
                        ! go to lmp start index for next m1-quantum number
-                       lmp1 = lmp1 + mpbasis%num_radfun_per_l(l1, itype)
+                       lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                     END DO  !m1
 
                     ! go to lm mixed basis startindx for l and m
@@ -774,7 +774,7 @@ CONTAINS
                     DO iband = bandi, bandf
                        DO ibando = bandoi, bandof
                           rdum = rarr2(ibando, iband)
-                          DO i = 1, mpbasis%num_radbasfn(l, itype)
+                          DO i = 1, mpdata%num_radbasfn(l, itype)
                              j = lm1 + i
                              cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                           END DO  !i -> loop over mixed basis functions
@@ -782,7 +782,7 @@ CONTAINS
                     END DO  !iband
 
                     ! go to lm start index for next m-quantum number
-                    lm = lm + mpbasis%num_radbasfn(l, itype)
+                    lm = lm + mpdata%num_radbasfn(l, itype)
 
                     !
                     ! case: m>0
@@ -797,11 +797,11 @@ CONTAINS
                        ! calculate the contributions which are identical for m>0 and m <0
                        rarr2 = 0.0
                        IF (abs(m) <= l2) THEN
-                          lmp1 = lp1 + l1*mpbasis%num_radfun_per_l(l1, itype)
+                          lmp1 = lp1 + l1*mpdata%num_radfun_per_l(l1, itype)
                           IF (mod(l1, 2) == 0) THEN
-                             lmp2 = lp2 + (m + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                             lmp2 = lp2 + (m + l2)*mpdata%num_radfun_per_l(l2, itype)
                           ELSE
-                             lmp2 = lp2 + (-m + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                             lmp2 = lp2 + (-m + l2)*mpdata%num_radfun_per_l(l2, itype)
                           END IF
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, 0, m)
@@ -832,11 +832,11 @@ CONTAINS
 
                        IF (abs(m) <= l1) THEN
                           IF (mod(l2, 2) == 0) THEN
-                             lmp3 = lp1 + (m + l1)*mpbasis%num_radfun_per_l(l1, itype)
+                             lmp3 = lp1 + (m + l1)*mpdata%num_radfun_per_l(l1, itype)
                           ELSE
-                             lmp3 = lp1 + (-m + l1)*mpbasis%num_radfun_per_l(l1, itype)
+                             lmp3 = lp1 + (-m + l1)*mpdata%num_radfun_per_l(l1, itype)
                           END IF
-                          lmp2 = lp2 + l2*mpbasis%num_radfun_per_l(l2, itype)
+                          lmp2 = lp2 + l2*mpdata%num_radfun_per_l(l2, itype)
 
                           rdum = hybdat%gauntarr(1, l1, l2, l, -m, m)
                           IF (abs(rdum) > 1e-12) THEN
@@ -872,7 +872,7 @@ CONTAINS
                        DO m1 = -l1, l1
                           monepm1 = -monepm1
                           IF (m1 == 0) THEN
-                             lmp1 = lmp1 + mpbasis%num_radfun_per_l(l1, itype)
+                             lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                              CYCLE
                           END IF
                           m2 = m1 + m
@@ -883,9 +883,9 @@ CONTAINS
                              IF (abs(rdum) > 1e-12) THEN
 
                                 IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                   lmp2 = lp2 + (-m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (-m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                 ELSE
-                                   lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                    fac = -moneplm*monepl1m1*(sign(1, m2) - sign(1, m1))/2
                                 END IF
 
@@ -903,9 +903,9 @@ CONTAINS
                              IF (offdiag) THEN
                                 rdum = hybdat%gauntarr(2, l1, l2, l, m1, -m)
                                 IF (abs(rdum) > 1e-12) THEN
-                                   lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                    IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                      lmp3 = lmp1 - 2*m1*mpbasis%num_radfun_per_l(l1, itype)
+                                      lmp3 = lmp1 - 2*m1*mpdata%num_radfun_per_l(l1, itype)
                                    ELSE
                                       lmp3 = lmp1
                                       fac = 1/2.*monepl1m1*(sign(1, m2) - sign(1, m1))
@@ -931,9 +931,9 @@ CONTAINS
                              IF (abs(rdum) > 1e-12) THEN
 
                                 IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                   lmp2 = lp2 + (-m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (-m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                 ELSE
-                                   lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                    fac = 1/2.*moneplm*monepl1m1*(sign(1, m1) - sign(1, m2))
                                 END IF
                                 rdum = monepl1m1*rdum/sqrt(2.0)
@@ -949,9 +949,9 @@ CONTAINS
                              IF (offdiag) THEN
                                 rdum = hybdat%gauntarr(2, l1, l2, l, m1, m)
                                 IF (abs(rdum) > 1e-12) THEN
-                                   lmp2 = lp2 + (m2 + l2)*mpbasis%num_radfun_per_l(l2, itype)
+                                   lmp2 = lp2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
                                    IF (sign(1, m2) + sign(1, m1) /= 0) THEN
-                                      lmp3 = lmp1 - 2*m1*mpbasis%num_radfun_per_l(l1, itype)
+                                      lmp3 = lmp1 - 2*m1*mpdata%num_radfun_per_l(l1, itype)
                                    ELSE
                                       lmp3 = lmp1
                                       fac = -monepl1m1*(sign(1, m1) - sign(1, m2))/2
@@ -971,7 +971,7 @@ CONTAINS
                           END IF  !  abs(m2) .le. l2 .and. m2 .ne. 0
 
                           !go to lmp start index for next m1-quantum number
-                          lmp1 = lmp1 + mpbasis%num_radfun_per_l(l1, itype)
+                          lmp1 = lmp1 + mpdata%num_radfun_per_l(l1, itype)
                        END DO  ! m1
 
                        ! multiply rarr2 by (-1)**(l+m+1)
@@ -983,7 +983,7 @@ CONTAINS
                        DO iband = bandi, bandf
                           DO ibando = bandoi, bandof
                              rdum = rarr2(ibando, iband)
-                             DO i = 1, mpbasis%num_radbasfn(l, itype)
+                             DO i = 1, mpdata%num_radbasfn(l, itype)
                                 j = lm1 + i
                                 cprod(j, ibando, iband) = cprod(j, ibando, iband) + hybdat%prodm(i, n, l, itype)*rdum
                              END DO  !i -> loop over mixed basis functions
@@ -991,12 +991,12 @@ CONTAINS
                        END DO  !iband
 
                        ! go to lm start index for next m-quantum number
-                       lm = lm + mpbasis%num_radbasfn(l, itype)
+                       lm = lm + mpdata%num_radbasfn(l, itype)
 
                     END DO  ! m=1,l
 
                  END DO !n
-                 lm_0 = lm_0 + mpbasis%num_radbasfn(l, itype)*(2*l + 1) ! go to the m start index of the next l-quantum number
+                 lm_0 = lm_0 + mpdata%num_radbasfn(l, itype)*(2*l + 1) ! go to the m start index of the next l-quantum number
                  IF (lm /= lm_0) call juDFT_error('wavefproducts_inv5: counting of lm-index incorrect (bug?)')
               END DO !l
 

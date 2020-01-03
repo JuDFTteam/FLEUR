@@ -6,7 +6,7 @@ CONTAINS
    SUBROUTINE ibs_correction( &
       nk, atoms, &
        input, jsp, &
-      hybdat, mpbasis,hybrid, &
+      hybdat, mpdata,hybrid, &
       lapw, kpts, nkpti, &
       cell, mnobd, &
       sym, &
@@ -23,7 +23,7 @@ CONTAINS
       USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_mpbasis), intent(inout) :: mpbasis
+      TYPE(t_mpdata), intent(inout) :: mpdata
       TYPE(t_hybrid), INTENT(INOUT)   :: hybrid
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_sym), INTENT(IN)   :: sym
@@ -69,10 +69,10 @@ CONTAINS
                                u2_lo(atoms%jmtd, atoms%nlod, atoms%ntype)
       REAL                  ::  kvec(3), qvec(3)
       REAL                  ::  sbes(0:atoms%lmaxd + 1), dsbes(0:atoms%lmaxd + 1)
-      REAL                  ::  bas1_tmp(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype), &
-                               bas2_tmp(atoms%jmtd, maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype)
-      REAL                  ::  bas1_MT_tmp(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype), &
-                               drbas1_MT_tmp(maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype)
+      REAL                  ::  bas1_tmp(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype), &
+                               bas2_tmp(atoms%jmtd, maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype)
+      REAL                  ::  bas1_MT_tmp(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype), &
+                               drbas1_MT_tmp(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd + 1, atoms%ntype)
       REAL                  ::  ru1(atoms%jmtd, 3, mnobd), ru2(atoms%jmtd, 3, mnobd)
       REAL                  ::  iu1(atoms%jmtd, 3, mnobd), iu2(atoms%jmtd, 3, mnobd)
       REAL                  ::  rintegrand(atoms%jmtd), iintegrand(atoms%jmtd), &
@@ -111,12 +111,12 @@ CONTAINS
       ! with this the local orbitals have a trivial k-dependence
 
       ! compute radial lo matching coefficients
-      mpbasis%num_radfun_per_l = 2
+      mpdata%num_radfun_per_l = 2
       DO itype = 1, atoms%ntype
          DO ilo = 1, atoms%nlo(itype)
             l = atoms%llo(ilo, itype)
-            mpbasis%num_radfun_per_l(l, itype) = mpbasis%num_radfun_per_l(l, itype) + 1
-            p = mpbasis%num_radfun_per_l(l, itype)
+            mpdata%num_radfun_per_l(l, itype) = mpdata%num_radfun_per_l(l, itype) + 1
+            p = mpdata%num_radfun_per_l(l, itype)
 
             ws = -wronskian(hybdat%bas1_MT(1, l, itype), hybdat%drbas1_MT(1, l, itype), hybdat%bas1_MT(2, l, itype), hybdat%drbas1_MT(2, l, itype))
 
@@ -411,12 +411,12 @@ CONTAINS
       iatom = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
-            mpbasis%num_radfun_per_l = 2
+            mpdata%num_radfun_per_l = 2
             iatom = iatom + 1
             DO ilo = 1, atoms%nlo(itype)
                l1 = atoms%llo(ilo, itype)
-               mpbasis%num_radfun_per_l(l1, itype) = mpbasis%num_radfun_per_l(l1, itype) + 1
-               p1 = mpbasis%num_radfun_per_l(l1, itype)
+               mpdata%num_radfun_per_l(l1, itype) = mpdata%num_radfun_per_l(l1, itype) + 1
+               p1 = mpdata%num_radfun_per_l(l1, itype)
 
                l2 = l1 + 1
                lm2 = l2**2
@@ -706,7 +706,7 @@ CONTAINS
 !
    SUBROUTINE dwavefproducts( &
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
-      input,atoms, mpbasis, hybrid, &
+      input,atoms, mpdata, hybrid, &
       cell, &
       hybdat, kpts, nkpti, lapw, &
        jsp, &
@@ -718,7 +718,7 @@ CONTAINS
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_input),INTENT(IN)     ::input
-      TYPE(t_mpbasis), intent(in) :: mpbasis
+      TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -745,7 +745,7 @@ CONTAINS
       !
       CALL momentum_matrix( &
          dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
-         input,atoms, mpbasis, hybrid, &
+         input,atoms, mpdata, hybrid, &
          cell, &
          hybdat, kpts, lapw, &
           jsp)
@@ -780,7 +780,7 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix( &
       momentum, nk, bandi1, bandf1, bandi2, bandf2, &
-      input,atoms, mpbasis, hybrid, &
+      input,atoms, mpdata, hybrid, &
       cell, &
       hybdat, kpts, lapw, &
        jsp)
@@ -796,7 +796,7 @@ CONTAINS
       IMPLICIT NONE
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
-      TYPE(t_mpbasis), intent(in) :: mpbasis
+      TYPE(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -823,8 +823,8 @@ CONTAINS
       INTEGER                 ::  gpt(3, lapw%nv(jsp))
 
       REAL                    ::  fcoeff((atoms%lmaxd + 1)**2, -1:1), gcoeff((atoms%lmaxd + 1)**2, -1:1)
-      REAL                    ::  qmat1(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), dbas1(atoms%jmtd)
-      REAL                    ::  qmat2(maxval(mpbasis%num_radfun_per_l), maxval(mpbasis%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), dbas2(atoms%jmtd)
+      REAL                    ::  qmat1(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), dbas1(atoms%jmtd)
+      REAL                    ::  qmat2(maxval(mpdata%num_radfun_per_l), maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd, atoms%ntype), dbas2(atoms%jmtd)
       REAL                    ::  qg(lapw%nv(jsp), 3)
 
       COMPLEX                 ::  hlp(3, 3)
@@ -868,7 +868,7 @@ CONTAINS
       ic = 0
       DO itype = 1, atoms%ntype
          DO l = 0, atoms%lmax(itype)
-            DO n2 = 1, mpbasis%num_radfun_per_l(l, itype)
+            DO n2 = 1, mpdata%num_radfun_per_l(l, itype)
                !ic = ic + 1
                CALL derivative(dbas1, hybdat%bas1(:, n2, l, itype), atoms, itype)
                dbas1 = dbas1 - hybdat%bas1(:, n2, l, itype)/atoms%rmsh(:, itype)
@@ -877,7 +877,7 @@ CONTAINS
                dbas2 = dbas2 - hybdat%bas2(:, n2, l, itype)/atoms%rmsh(:, itype)
 
                IF (l /= 0) THEN
-                  DO n1 = 1, mpbasis%num_radfun_per_l(l - 1, itype)
+                  DO n1 = 1, mpdata%num_radfun_per_l(l - 1, itype)
                      ic = ic + 1
                      qmat1(n1, n2, l, itype) = intgrf(dbas1(:)*hybdat%bas1(:, n1, l - 1, itype) + &
                                                       dbas2(:)*hybdat%bas2(:, n1, l - 1, itype), atoms, itype, hybdat%gridf) &
@@ -887,7 +887,7 @@ CONTAINS
                   END DO
                END IF
                IF (l /= atoms%lmax(itype)) THEN
-                  DO n1 = 1, mpbasis%num_radfun_per_l(l + 1, itype)
+                  DO n1 = 1, mpdata%num_radfun_per_l(l + 1, itype)
 
                      qmat2(n1, n2, l, itype) = intgrf(dbas1(:)*hybdat%bas1(:, n1, l + 1, itype) + dbas2(:)*hybdat%bas2(:, n1, l + 1, itype), &
                                                       atoms, itype, hybdat%gridf) &
@@ -913,7 +913,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            nn = sum([((2*l + 1)*mpbasis%num_radfun_per_l(l, itype), l=0, atoms%lmax(itype))])
+            nn = sum([((2*l + 1)*mpdata%num_radfun_per_l(l, itype), l=0, atoms%lmax(itype))])
             DO iband1 = bandi1, bandf1
                cmt1(:nn, iband1) = cmt(iband1, :nn, ic)
             ENDDO
@@ -925,11 +925,11 @@ CONTAINS
                cvec1 = 0; cvec2 = 0; cvec3 = 0
                ! build up left vector(s) ( -> cvec1/2/3 )
                lm_0 = 0              ! we start with s-functions (l=0)
-               lm_1 = mpbasis%num_radfun_per_l(0, itype) ! we start with p-functions (l=0+1)
+               lm_1 = mpdata%num_radfun_per_l(0, itype) ! we start with p-functions (l=0+1)
                lm = 0
                DO l = 0, atoms%lmax(itype) - 1
-                  n0 = mpbasis%num_radfun_per_l(l, itype)
-                  n1 = mpbasis%num_radfun_per_l(l + 1, itype)
+                  n0 = mpdata%num_radfun_per_l(l, itype)
+                  n1 = mpdata%num_radfun_per_l(l + 1, itype)
                   DO M = -l, l
                      lm = lm + 1
                      lm0 = lm_0 + (M + l)*n0
@@ -944,12 +944,12 @@ CONTAINS
                   lm_1 = lm_1 + (2*l + 3)*n1
                END DO
 
-               lm_0 = mpbasis%num_radfun_per_l(0, itype) ! we start with p-functions (l=1)
+               lm_0 = mpdata%num_radfun_per_l(0, itype) ! we start with p-functions (l=1)
                lm_1 = 0              ! we start with s-functions (l=1-1)
                lm = 1
                DO l = 1, atoms%lmax(itype)
-                  n0 = mpbasis%num_radfun_per_l(l, itype)
-                  n1 = mpbasis%num_radfun_per_l(l - 1, itype)
+                  n0 = mpdata%num_radfun_per_l(l, itype)
+                  n1 = mpdata%num_radfun_per_l(l - 1, itype)
                   DO M = -l, l
                      lm = lm + 1
                      lm0 = lm_0 + (M + l)*n0

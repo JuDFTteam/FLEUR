@@ -9,7 +9,7 @@ MODULE m_trafo
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
-                              nk, iop, atoms, input,mpbasis, hybrid, kpts, sym, &
+                              nk, iop, atoms, input,mpdata, hybrid, kpts, sym, &
                               jsp, lapw)
 
       USE m_constants
@@ -19,7 +19,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_input), INTENT(IN)       :: input
-      TYPE(t_mpbasis), INTENT(IN)     :: mpbasis
+      TYPE(t_mpdata), INTENT(IN)     :: mpdata
       TYPE(t_hybrid), INTENT(IN)      :: hybrid
       TYPE(t_sym), INTENT(IN)         :: sym
       TYPE(t_kpts), INTENT(IN)        :: kpts
@@ -93,7 +93,7 @@ CONTAINS
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
-               nn = mpbasis%num_radfun_per_l(l, itype)
+               nn = mpdata%num_radfun_per_l(l, itype)
                DO n = 1, nn
                   lm1 = lm0 + n
                   lm2 = lm0 + n + 2*l*nn
@@ -150,7 +150,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_genwavf( &
       cmt_out, z_rout, z_cout, cmt, l_real, z_r, z_c, nk, iop, atoms, &
-      mpbasis, hybrid, kpts, sym, jsp, nbasfcn, input, nbands, &
+      mpdata, hybrid, kpts, sym, jsp, nbasfcn, input, nbands, &
        lapw_nk, lapw_rkpt, phase)
 
       use m_juDFT
@@ -160,7 +160,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_input), INTENT(IN)   :: input
-      TYPE(t_mpbasis), INTENT(IN)    :: mpbasis
+      TYPE(t_mpdata), INTENT(IN)    :: mpdata
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -237,7 +237,7 @@ CONTAINS
 
             lm0 = 0
             DO l = 0, atoms%lmax(itype)
-               nn = mpbasis%num_radfun_per_l(l, itype)
+               nn = mpdata%num_radfun_per_l(l, itype)
                DO n = 1, nn
                   lm1 = lm0 + n
                   lm2 = lm0 + n + 2*l*nn
@@ -535,7 +535,7 @@ CONTAINS
    SUBROUTINE bra_trafo2( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
       dim, nobd, nbands, ikpt0, ikpt1, iop, sym, &
-      mpbasis, hybrid, kpts, atoms, &
+      mpdata, hybrid, kpts, atoms, &
       phase)
 
       !  ikpt0  ::  parent of ikpt1
@@ -546,7 +546,7 @@ CONTAINS
       USE m_util
       USE m_types
       IMPLICIT NONE
-      type(t_mpbasis), intent(in)  :: mpbasis
+      type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -575,7 +575,7 @@ CONTAINS
 !     - arrays -
 
       INTEGER                 ::  rrot(3, 3), invrot(3, 3)
-      INTEGER                 ::  pnt(maxval(mpbasis%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%nat)
+      INTEGER                 ::  pnt(maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%nat)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
@@ -599,7 +599,7 @@ CONTAINS
          DO i = 1, nbands
             DO j = 1, nobd
                CALL desymmetrize(vecin1(:hybrid%nbasp, j, i), hybrid%nbasp, 1, 1, &
-                                 atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, sym)
+                                 atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpdata%num_radbasfn, sym)
             END DO
          END DO
       else
@@ -658,11 +658,11 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
             DO l = 0, hybrid%lcutm1(itype)
-               DO n = 1, mpbasis%num_radbasfn(l, itype)
+               DO n = 1, mpdata%num_radbasfn(l, itype)
                   i = i + 1
                   pnt(n, l, ic) = i
                END DO
-               i = i + mpbasis%num_radbasfn(l, itype)*2*l
+               i = i + mpdata%num_radbasfn(l, itype)*2*l
             END DO
          END DO
       END DO
@@ -681,7 +681,7 @@ CONTAINS
             cdum = cexp*exp(-img*tpi_const*dot_product(g, atoms%taual(:, rcent)))
 
             DO l = 0, hybrid%lcutm1(itype)
-               nn = mpbasis%num_radbasfn(l, itype)
+               nn = mpdata%num_radbasfn(l, itype)
                DO n = 1, nn
 
                   i1 = pnt(n, l, ic)
@@ -702,26 +702,26 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpbasis%n_g(ikpt0)
-         igptp = mpbasis%gptm_ptr(igptm, ikpt0)
-         g1 = matmul(rrot, mpbasis%g(:, igptp)) + g
+      DO igptm = 1, mpdata%n_g(ikpt0)
+         igptp = mpdata%gptm_ptr(igptm, ikpt0)
+         g1 = matmul(rrot, mpdata%g(:, igptp)) + g
          igptm2 = 0
-         DO i = 1, mpbasis%n_g(ikpt1)
-            IF (maxval(abs(g1 - mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
+         DO i = 1, mpdata%n_g(ikpt1)
+            IF (maxval(abs(g1 - mpdata%g(:, mpdata%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
          END DO
          IF (igptm2 == 0) THEN
             WRITE (*, *) ikpt0, ikpt1, g1
-            WRITE (*, *) mpbasis%n_g(ikpt0), mpbasis%n_g(ikpt1)
+            WRITE (*, *) mpdata%n_g(ikpt0), mpdata%n_g(ikpt1)
             WRITE (*, *)
-            WRITE (*, *) igptp, mpbasis%g(:, igptp)
+            WRITE (*, *) igptp, mpdata%g(:, igptp)
             WRITE (*, *) g
             WRITE (*, *) rrot
             WRITE (*, *) "Failed tests:", g1
-            DO i = 1, mpbasis%n_g(ikpt1)
-               WRITE (*, *) mpbasis%g(:, mpbasis%gptm_ptr(i, ikpt1))
+            DO i = 1, mpdata%n_g(ikpt1)
+               WRITE (*, *) mpdata%g(:, mpdata%gptm_ptr(i, ikpt1))
             ENDDO
             call judft_error('bra_trafo2: G-point not found in G-point set.')
          END IF
@@ -737,7 +737,7 @@ CONTAINS
             DO j = 1, nobd
 
                CALL symmetrize(vecout1(:, j, i), dim, 1, 1, .false., &
-                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpbasis%num_radbasfn, sym)
+                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpdata%num_radbasfn, sym)
 
                CALL commonphase(phase(j, i), vecout1(:, j, i), dim)
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
@@ -792,13 +792,13 @@ CONTAINS
 
    SUBROUTINE bramat_trafo( &
       vecout, igptm_out, vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
-      rrot, invrrot, mpbasis, hybrid, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, dwgn, nbasp, nbasm)
+      rrot, invrrot, mpdata, hybrid, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, dwgn, nbasp, nbasm)
 
       USE m_constants
       USE m_util
       USE m_types
       IMPLICIT NONE
-      type(t_mpbasis), intent(in) :: mpbasis
+      type(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -816,9 +816,9 @@ CONTAINS
                                   nindxm(0:maxlcutm, atoms%ntype)
       INTEGER, INTENT(IN)      :: nbasm(:)
       INTEGER, INTENT(IN)      ::  pointer(&
-                                minval(mpbasis%g(1, :)) - 1:maxval(mpbasis%g(1, :)) + 1,&
-                                minval(mpbasis%g(2, :)) - 1:maxval(mpbasis%g(2, :)) + 1,&
-                                minval(mpbasis%g(3, :)) - 1:maxval(mpbasis%g(3, :)) + 1)
+                                minval(mpdata%g(1, :)) - 1:maxval(mpdata%g(1, :)) + 1,&
+                                minval(mpdata%g(2, :)) - 1:maxval(mpdata%g(2, :)) + 1,&
+                                minval(mpdata%g(3, :)) - 1:maxval(mpdata%g(3, :)) + 1)
 
       COMPLEX, INTENT(IN)      ::  vecin(:)
       COMPLEX, INTENT(IN)      ::  dwgn(-maxlcutm:maxlcutm,&
@@ -835,10 +835,10 @@ CONTAINS
       COMPLEX                 ::  cexp, cdum
 !     - private arrays -
       INTEGER                 ::  pnt(maxindxm, 0:maxlcutm, atoms%nat), g(3),&
-                                  g1(3), iarr(mpbasis%n_g(ikpt0))
+                                  g1(3), iarr(mpdata%n_g(ikpt0))
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  vecin1(nbasm(ikpt0))
-      COMPLEX                 ::  carr(mpbasis%n_g(ikpt0))
+      COMPLEX                 ::  carr(mpdata%n_g(ikpt0))
 
       IF (iop <= sym%nop) THEN
          isym = iop
@@ -863,14 +863,14 @@ CONTAINS
          END IF
       END DO
 
-      DO igptm = 1, mpbasis%n_g(ikpt1)
-         igptp = mpbasis%gptm_ptr(igptm, ikpt1)
-         g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
+      DO igptm = 1, mpdata%n_g(ikpt1)
+         igptp = mpdata%gptm_ptr(igptm, ikpt1)
+         g1 = matmul(invrrot, mpdata%g(:, igptp) - g)
          igptm2 = pointer(g1(1), g1(2), g1(3))
          IF (igptm2 == igptm_in) THEN
             igptm_out = igptm
             IF (writevec) THEN
-               cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp), trans))
+               cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
                EXIT
             ELSE
                RETURN
@@ -932,13 +932,13 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpbasis%n_g(ikpt1)
-         igptp = mpbasis%gptm_ptr(igptm, ikpt1)
-         g1 = matmul(invrrot, mpbasis%g(:, igptp) - g)
+      DO igptm = 1, mpdata%n_g(ikpt1)
+         igptp = mpdata%gptm_ptr(igptm, ikpt1)
+         g1 = matmul(invrrot, mpdata%g(:, igptp) - g)
          iarr(igptm) = pointer(g1(1), g1(2), g1(3))
-         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpbasis%g(:, igptp), trans))
+         carr(igptm) = exp(-img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + mpdata%g(:, igptp), trans))
       END DO
-      DO i1 = 1, mpbasis%n_g(ikpt1)
+      DO i1 = 1, mpdata%n_g(ikpt1)
          vecout(nbasp + i1) = carr(i1)*vecin1(nbasp + iarr(i1))
       END DO
 

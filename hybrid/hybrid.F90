@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id, mpbasis, hybrid, kpts, atoms, input,  mpi, noco, cell, oneD, &
+   SUBROUTINE calc_hybrid(eig_id, mpdata, hybrid, kpts, atoms, input,  mpi, noco, cell, oneD, &
                           enpara, results, sym, xcpot, v, iterHF)
 
       USE m_types_hybdat
@@ -27,7 +27,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
-      type(t_mpbasis), intent(inout) :: mpbasis
+      type(t_mpdata), intent(inout) :: mpdata
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
@@ -125,19 +125,19 @@ CONTAINS
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
          write (*,*) "iterHF = ", iterHF
-         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpbasis, hybrid, enpara, mpi, v, iterHF)
+         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpdata, hybrid, enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-         CALL open_hybrid_io2(mpbasis, hybrid, input, atoms, sym%invs)
+         CALL open_hybrid_io2(mpdata, hybrid, input, atoms, sym%invs)
 
-         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpbasis, hybrid, xcpot)
+         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybrid, xcpot)
 
-         CALL hf_init(mpbasis, hybrid, atoms, input,  hybdat)
+         CALL hf_init(mpdata, hybrid, atoms, input,  hybdat)
          CALL timestop("Preparation for Hybrid functionals")
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
-            CALL HF_setup(mpbasis,hybrid, input, sym, kpts,  atoms, &
+            CALL HF_setup(mpdata,hybrid, input, sym, kpts,  atoms, &
                           mpi, noco, cell, oneD, results, jsp, enpara, eig_id, &
                           hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
@@ -145,7 +145,7 @@ CONTAINS
             DO nk = 1, kpts%nkpt
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
                CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, l_zref)
-               CALL hsfock(nk, atoms, mpbasis, hybrid, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
+               CALL hsfock(nk, atoms, mpdata, hybrid, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
                            noco, results, MAXVAL(hybrid%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO

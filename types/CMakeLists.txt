@@ -25,7 +25,7 @@ types/types_dos.f90
 types/types_denCoeffsOffdiag.f90
 types/types_force.f90
 types/types_gpumat.F90
-types/types_mpbasis.f90
+types/types_mpdata.f90
 types/types_hybdat.f90
 types/types_greensf.f90
 types/types_greensfCoeffs.f90
@@ -55,7 +55,7 @@ types/types_regionCharges.f90
 types/types_dos.f90
 types/types_denCoeffsOffdiag.f90
 types/types_force.f90
-types/types_mpbasis.f90
+types/types_mpdata.f90
 types/types_greensf.f90
 types/types_greensfCoeffs.f90
 types/types_hub1ham.f90

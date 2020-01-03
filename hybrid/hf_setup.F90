@@ -8,7 +8,7 @@ MODULE m_hf_setup
 
 CONTAINS
 
-   SUBROUTINE hf_setup(mpbasis, hybrid, input, sym, kpts,  atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
+   SUBROUTINE hf_setup(mpdata, hybrid, input, sym, kpts,  atoms, mpi, noco, cell, oneD, results, jsp, enpara, eig_id_hf, &
                        hybdat, l_real, vr0, eig_irr)
       USE m_types
       USE m_eig66_io
@@ -21,7 +21,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_mpbasis), INTENT(inout)   :: mpbasis
+      TYPE(t_mpdata), INTENT(inout)   :: mpdata
       TYPE(t_hybrid), INTENT(INOUT) :: hybrid
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -178,14 +178,14 @@ CONTAINS
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
          CALL gen_wavf(kpts%nkpt, kpts, sym, atoms, enpara%el0(:, :, jsp), enpara%ello0(:, :, jsp), cell,  &
-                       mpbasis, hybrid, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
+                       mpdata, hybrid, vr0, hybdat, noco, oneD, mpi, input, jsp, zmat)
 
          ! generate core wave functions (-> core1/2(jmtd,hybdat%nindxc,0:lmaxc,ntype) )
          CALL corewf(atoms, jsp, input,  vr0, hybdat%lmaxcd, hybdat%maxindxc, mpi, &
                      hybdat%lmaxc, hybdat%nindxc, hybdat%core1, hybdat%core2, hybdat%eig_c)
 
          ! check olap between core-basis/core-valence/basis-basis
-         CALL checkolap(atoms, hybdat, mpbasis, hybrid, kpts%nkpt, kpts,  mpi, &
+         CALL checkolap(atoms, hybdat, mpdata, hybrid, kpts%nkpt, kpts,  mpi, &
                         input, sym, noco, cell, lapw, jsp)
 
          ! set up pointer pntgpt
@@ -216,13 +216,13 @@ CONTAINS
          allocate(basprod(atoms%jmtd), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE(hybdat%prodm)
-         allocate(hybdat%prodm(maxval(mpbasis%num_radbasfn), hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
+         allocate(hybdat%prodm(maxval(mpdata%num_radbasfn), hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
-         call mpbasis%init(hybrid, atoms)
+         call mpdata%init(hybrid, atoms)
 
-         basprod = 0; hybdat%prodm = 0; mpbasis%l1 = 0; mpbasis%l2 = 0
-         mpbasis%n1 = 0; mpbasis%n2 = 0
+         basprod = 0; hybdat%prodm = 0; mpdata%l1 = 0; mpdata%l2 = 0
+         mpdata%n1 = 0; mpdata%n2 = 0
          IF(ALLOCATED(hybdat%nindxp1)) DEALLOCATE(hybdat%nindxp1) ! for spinpolarized systems
          ALLOCATE (hybdat%nindxp1(0:maxval(hybrid%lcutm1), atoms%ntype))
          hybdat%nindxp1 = 0
@@ -232,8 +232,8 @@ CONTAINS
                ll = l2
                DO l1 = 0, ll
                   IF (ABS(l1 - l2) <= hybrid%lcutm1(itype)) THEN
-                     DO n2 = 1, mpbasis%num_radfun_per_l(l2, itype)
-                        nn = mpbasis%num_radfun_per_l(l1, itype)
+                     DO n2 = 1, mpdata%num_radfun_per_l(l2, itype)
+                        nn = mpdata%num_radfun_per_l(l1, itype)
                         IF (l1 == l2) nn = n2
                         DO n1 = 1, nn
                            ! Calculate all basis-function hybdat%products to obtain
@@ -244,12 +244,12 @@ CONTAINS
                               IF (MOD(l1 + l2 + l, 2) == 0) THEN
                                  hybdat%nindxp1(l, itype) = hybdat%nindxp1(l, itype) + 1
                                  n = hybdat%nindxp1(l, itype)
-                                 mpbasis%l1(n,l,itype) = l1
-                                 mpbasis%l2(n,l,itype) = l2
-                                 mpbasis%n1(n,l,itype) = n1
-                                 mpbasis%n2(n,l,itype) = n2
-                                 DO i = 1, mpbasis%num_radbasfn(l, itype)
-                                    hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*mpbasis%radbasfn_mt(:ng, i, l, itype), &
+                                 mpdata%l1(n,l,itype) = l1
+                                 mpdata%l2(n,l,itype) = l2
+                                 mpdata%n1(n,l,itype) = n1
+                                 mpdata%n2(n,l,itype) = n2
+                                 DO i = 1, mpdata%num_radbasfn(l, itype)
+                                    hybdat%prodm(i, n, l, itype) = intgrf(basprod(:ng)*mpdata%radbasfn_mt(:ng, i, l, itype), &
                                                                           atoms, itype, hybdat%gridf)
                                  END DO
                               END IF
@@ -271,7 +271,7 @@ CONTAINS
             hybrid%nobd(nk,jsp) = COUNT(results%w_iks(:hybrid%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
-         hybrid%maxlmindx = MAXVAL([(SUM([(mpbasis%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
+         hybrid%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
          hybrid%nbands = MIN(hybrid%bands1, input%neig)
 
       ENDIF ! hybrid%l_calhf

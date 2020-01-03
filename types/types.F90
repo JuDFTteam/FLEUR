@@ -28,7 +28,7 @@ MODULE m_types
   USE m_types_forcetheo
   USE m_types_hybrid
   USE m_types_mpinp
-  USE m_types_mpbasis
+  USE m_types_mpdata
   USE m_types_greensf
   USE m_types_greensfCoeffs
   USE m_types_hub1ham

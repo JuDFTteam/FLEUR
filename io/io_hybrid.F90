@@ -44,9 +44,9 @@ contains
   END SUBROUTINE open_hybrid_io1b
 
 
-  SUBROUTINE open_hybrid_io2(mpbasis,hybrid,input,atoms,l_real)
+  SUBROUTINE open_hybrid_io2(mpdata,hybrid,input,atoms,l_real)
     IMPLICIT NONE
-    type(t_mpbasis), intent(in) :: mpbasis
+    type(t_mpdata), intent(in) :: mpdata
     TYPE(t_hybrid),INTENT(IN)   :: hybrid
     TYPE(t_input),INTENT(IN):: input
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -69,11 +69,11 @@ contains
 #else
     ! if the sparse matrix technique is used, several entries of the
     ! matrix vanish so that the size of each entry is smaller
-    irecl_coulomb = ( atoms%ntype*(maxval(hybrid%lcutm1)+1)*(maxval(mpbasis%num_radbasfn)-1)**2&
-         +   atoms%nat *(maxval(hybrid%lcutm1)+2)*(2*maxval(hybrid%lcutm1)+1)*(maxval(mpbasis%num_radbasfn)-1)&
-         +   (maxval(mpbasis%num_radbasfn)-1)*atoms%nat**2&
-         +   ((maxval(hybrid%lcutm1)+1)**2*atoms%nat+maxval(mpbasis%n_g))&
-         *((maxval(hybrid%lcutm1)+1)**2*atoms%nat+maxval(mpbasis%n_g)+1)/2 )*8
+    irecl_coulomb = ( atoms%ntype*(maxval(hybrid%lcutm1)+1)*(maxval(mpdata%num_radbasfn)-1)**2&
+         +   atoms%nat *(maxval(hybrid%lcutm1)+2)*(2*maxval(hybrid%lcutm1)+1)*(maxval(mpdata%num_radbasfn)-1)&
+         +   (maxval(mpdata%num_radbasfn)-1)*atoms%nat**2&
+         +   ((maxval(hybrid%lcutm1)+1)**2*atoms%nat+maxval(mpdata%n_g))&
+         *((maxval(hybrid%lcutm1)+1)**2*atoms%nat+maxval(mpdata%n_g)+1)/2 )*8
     if (.not.l_real) irecl_coulomb =irecl_coulomb *2
     OPEN(unit=778,file='coulomb1',form='unformatted',access='direct', recl=irecl_coulomb)
     id_coulomb_spm=778
