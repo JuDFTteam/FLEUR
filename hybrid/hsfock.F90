@@ -10,7 +10,7 @@ MODULE m_hsfock
    USE m_types
    USE m_intgrf
    USE m_wrapper
-   USE m_io_hybrid
+   USE m_io_hybinp
    USE m_hsefunctional
    USE m_symm_hf
    USE m_exchange_valence_hf
@@ -54,7 +54,7 @@ MODULE m_hsfock
 
 CONTAINS
 
-   SUBROUTINE hsfock(nk, atoms, mpdata, hybrid, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
+   SUBROUTINE hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, noco, &
                      results, mnobd, xcpot, mpi)
 
       IMPLICIT NONE
@@ -69,7 +69,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw
       TYPE(t_mpdata), intent(inout)  :: mpdata
-      TYPE(t_hybrid), INTENT(INOUT) :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_results), INTENT(INOUT) :: results
 
@@ -93,7 +93,7 @@ CONTAINS
       REAL                    ::  a_ex
 
       ! local arrays
-      INTEGER                 ::  nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
+      INTEGER                 ::  nsest(hybinp%nbands(nk)), indx_sest(hybinp%nbands(nk), hybinp%nbands(nk))
       INTEGER                 ::  rrot(3, 3, sym%nsym)
       INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
 
@@ -136,7 +136,7 @@ CONTAINS
       END IF
       call timestop("read in olap")
 
-      IF (hybrid%l_calhf) THEN
+      IF (hybinp%l_calhf) THEN
          ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, atoms%ntype)])
          IF (nk == 1 .and. mpi%irank == 0) WRITE (*, *) 'calculate new HF matrix'
          IF (nk == 1 .and. jsp == 1 .and. input%imix > 10) CALL system('rm -f broyd*')
@@ -149,7 +149,7 @@ CONTAINS
          CALL timestart("symm_hf")
          CALL symm_hf_init(sym, kpts, nk, nsymop, rrot, psym)
 
-         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybrid, cell, lapw, jsp, &
+         CALL symm_hf(kpts, nk, sym,  hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, lapw, jsp, &
                       rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, pointer_EIBZ, nsest, indx_sest)
          CALL timestop("symm_hf")
 
@@ -164,7 +164,7 @@ CONTAINS
          ! calculate contribution from valence electrons to the
          ! HF exchange
          ex%l_real = sym%invs
-         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybrid, cell,  input, jsp, hybdat, mnobd, lapw, &
+         CALL exchange_valence_hf(nk, kpts, nkpt_EIBZ, sym, atoms, mpdata, hybinp, cell,  input, jsp, hybdat, mnobd, lapw, &
                                   eig_irr, results, pointer_EIBZ, n_q, wl_iks, xcpot, noco, nsest, indx_sest, &
                                   mpi, ex)
 
@@ -174,7 +174,7 @@ CONTAINS
          IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
             call judft_error('HSE not implemented in hsfock')
          ELSE
-            CALL exchange_vccv1(nk, input,atoms, mpdata, hybrid, hybdat,  jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
+            CALL exchange_vccv1(nk, input,atoms, mpdata, hybinp, hybdat,  jsp, lapw, nsymop, nsest, indx_sest, mpi, a_ex, results, ex)
             CALL exchange_cccc(nk, atoms, hybdat, ncstd, sym, kpts, a_ex, results)
          END IF
 
@@ -183,19 +183,19 @@ CONTAINS
 
          CALL timestart("time for performing T^-1*mat_ex*T^-1*")
          !calculate trafo from wavefunctions to APW basis
-         IF (input%neig < hybrid%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
+         IF (input%neig < hybinp%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
 
          call z%init(olap%l_real, nbasfcn, input%neig)
          call read_z(z, kpts%nkptf*(jsp - 1) + nk)
-         z%matsize2 = hybrid%nbands(nk) ! reduce "visible matsize" for the following computations
+         z%matsize2 = hybinp%nbands(nk) ! reduce "visible matsize" for the following computations
 
          call olap%multiply(z, trafo)
 
-         CALL invtrafo%alloc(olap%l_real, hybrid%nbands(nk), nbasfcn)
+         CALL invtrafo%alloc(olap%l_real, hybinp%nbands(nk), nbasfcn)
          CALL trafo%TRANSPOSE(invtrafo)
          IF (.NOT. invtrafo%l_real) invtrafo%data_c = CONJG(invtrafo%data_c)
 
-         DO i = 1, hybrid%nbands(nk)
+         DO i = 1, hybinp%nbands(nk)
             DO j = 1, i - 1
                IF (ex%l_real) THEN
                   ex%data_r(i, j) = ex%data_r(j, i)
@@ -215,7 +215,7 @@ CONTAINS
          call timestop("symmetrizeh")
 
          CALL write_v_x(v_x, kpts%nkpt*(jsp - 1) + nk)
-      END IF ! hybrid%l_calhf
+      END IF ! hybinp%l_calhf
 
       CALL timestop("total time hsfock")
 

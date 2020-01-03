@@ -15,7 +15,7 @@ MODULE m_types_fleurinput
   USE m_types_field
   USE m_types_sliceplot
   USE m_types_banddos
-  USE m_types_hybrid
+  USE m_types_hybinp
   USE m_types_oneD
   USE m_types_coreSpecInput
   USE m_types_wannier
@@ -28,7 +28,7 @@ MODULE m_types_fleurinput
 CONTAINS
   !Subroutine does nothing, only here for copy-paste code...
   SUBROUTINE dummy_subroutine_that_should_never_be_used(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
+       sliceplot,banddos,hybinp,oneD,coreSpecInput,wann,&
        xcpot,forcetheo_data,kpts,enparaXML)
     TYPE(t_cell),INTENT(IN)::cell
     TYPE(t_sym),INTENT(IN)::sym
@@ -39,7 +39,7 @@ CONTAINS
     TYPE(t_field),INTENT(IN)::field
     TYPE(t_sliceplot),INTENT(IN)::sliceplot
     TYPE(t_banddos),INTENT(IN)::banddos
-    TYPE(t_hybrid),INTENT(IN)::hybrid
+    TYPE(t_hybinp),INTENT(IN)::hybinp
     TYPE(t_oneD),INTENT(IN)::oneD
     TYPE(t_coreSpecInput),INTENT(IN)::coreSpecInput
     TYPE(t_wann),INTENT(IN)::wann

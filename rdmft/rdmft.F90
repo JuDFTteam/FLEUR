@@ -9,7 +9,7 @@ MODULE m_rdmft
 CONTAINS
 
 SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybrid,results,coreSpecInput,archiveType,outDen)
+                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybinp,results,coreSpecInput,archiveType,outDen)
 
    USE m_types
    USE m_juDFT
@@ -30,7 +30,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    USE m_coulombmatrix
    USE m_hf_init
    USE m_hf_setup
-   USE m_io_hybrid
+   USE m_io_hybinp
    USE m_symm_hf
    USE m_exchange_valence_hf
    USE m_exchange_core
@@ -63,7 +63,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_noco),          INTENT(INOUT) :: noco
    TYPE(t_xcpot_inbuild), INTENT(INOUT) :: xcpot
    TYPE(t_mpdata),       intent(inout) :: mpdata
-   TYPE(t_hybrid),        INTENT(INOUT) :: hybrid
+   TYPE(t_hybinp),        INTENT(INOUT) :: hybinp
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
    TYPE(t_potden),        INTENT(INOUT) :: outDen
@@ -368,28 +368,28 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    WRITE(*,*) 'RDMFT: HF initializations start'
 
-   IF(ALLOCATED(hybrid%ne_eig)) DEALLOCATE(hybrid%ne_eig)
-   IF(ALLOCATED(hybrid%nbands)) DEALLOCATE(hybrid%nbands)
-   IF(ALLOCATED(hybrid%nobd)) DEALLOCATE(hybrid%nobd)
-   IF(ALLOCATED(hybrid%nbasm)) DEALLOCATE(hybrid%nbasm)
-   IF(ALLOCATED(hybrid%div_vv)) DEALLOCATE(hybrid%div_vv)
-   ALLOCATE(hybrid%ne_eig(kpts%nkpt),hybrid%nbands(kpts%nkpt),hybrid%nobd(kpts%nkptf,input%jspins))
-   ALLOCATE(hybrid%nbasm(kpts%nkptf))
-   ALLOCATE(hybrid%div_vv(input%neig,kpts%nkpt,input%jspins))
+   IF(ALLOCATED(hybinp%ne_eig)) DEALLOCATE(hybinp%ne_eig)
+   IF(ALLOCATED(hybinp%nbands)) DEALLOCATE(hybinp%nbands)
+   IF(ALLOCATED(hybinp%nobd)) DEALLOCATE(hybinp%nobd)
+   IF(ALLOCATED(hybinp%nbasm)) DEALLOCATE(hybinp%nbasm)
+   IF(ALLOCATED(hybinp%div_vv)) DEALLOCATE(hybinp%div_vv)
+   ALLOCATE(hybinp%ne_eig(kpts%nkpt),hybinp%nbands(kpts%nkpt),hybinp%nobd(kpts%nkptf,input%jspins))
+   ALLOCATE(hybinp%nbasm(kpts%nkptf))
+   ALLOCATE(hybinp%div_vv(input%neig,kpts%nkpt,input%jspins))
 
    l_zref = (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
    iterHF = 0
-   hybrid%l_calhf = .TRUE.
+   hybinp%l_calhf = .TRUE.
 
-!   CALL open_hybrid_io1(sym%invs)
+!   CALL open_hybinp_io1(sym%invs)
 
-   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpdata,hybrid,enpara,mpi,vTot, iterHF)
+   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpdata,hybinp,enpara,mpi,vTot, iterHF)
 
-   CALL open_hybrid_io2(mpdata, hybrid,input,atoms,sym%invs)
+   CALL open_hybinp_io2(mpdata, hybinp,input,atoms,sym%invs)
 
-   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpdata,hybrid,xcpot)
+   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpdata,hybinp,xcpot)
 
-   CALL hf_init(mpdata,hybrid,atoms,input,hybdat)
+   CALL hf_init(mpdata,hybinp,atoms,input,hybdat)
 
    WRITE(*,*) 'RDMFT: HF initializations end'
 
@@ -510,13 +510,13 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          results%neig(:,:) = neigTemp(:,:)
 
-         CALL HF_setup(mpdata,hybrid,input,sym,kpts,atoms,mpi,noco,&
+         CALL HF_setup(mpdata,hybinp,input,sym,kpts,atoms,mpi,noco,&
                        cell,oneD,results,jspin,enpara,eig_id,&
                        hybdat,sym%invs,vTot%mt(:,0,:,:),eig_irr)
 
          results%neig(:,:) = highestState(:,:) + 1
 
-         mnobd = MAXVAL(hybrid%nobd(:,jsp))
+         mnobd = MAXVAL(hybinp%nobd(:,jsp))
 
          DO ikpt = 1,kpts%nkpt
 
@@ -524,14 +524,14 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             parent = 0
             CALL symm_hf_init(sym,kpts,ikpt,nsymop,rrot,psym)
-            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybrid,cell,lapw,jspin,&
+            CALL symm_hf(kpts,ikpt,sym,hybdat,eig_irr,input,atoms,mpdata,hybinp,cell,lapw,jspin,&
                          rrot,nsymop,psym,nkpt_EIBZ,n_q,parent,pointer_EIBZ,nsest,indx_sest)
 
             exMat%l_real=sym%invs
-            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpdata,hybrid,cell,input,jspin,hybdat,mnobd,lapw,&
+            CALL exchange_valence_hf(ikpt,kpts,nkpt_EIBZ, sym,atoms,mpdata,hybinp,cell,input,jspin,hybdat,mnobd,lapw,&
                                      eig_irr,results,pointer_EIBZ,n_q,wl_iks,xcpot,noco,nsest,indx_sest,&
                                      mpi,exMat)
-            CALL exchange_vccv1(ikpt,input,atoms,mpdata,hybrid,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
+            CALL exchange_vccv1(ikpt,input,atoms,mpdata,hybinp,hybdat,jspin,lapw,nsymop,nsest,indx_sest,mpi,1.0,results,exMat)
 
             !Start of workaround for increased functionality of symmetrizeh (call it))
 
@@ -556,18 +556,18 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             CALL zMat%init(olap%l_real,nbasfcn,input%neig)
 
-            CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybrid%nbands(ikpt))],neig=nbands,zmat=zMat)
+            CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybinp%nbands(ikpt))],neig=nbands,zmat=zMat)
 
 !            CALL read_z(zMat,kpts%nkpt*(jspin-1)+ikpt)
-            zMat%matsize2 = hybrid%nbands(ikpt) ! reduce "visible matsize" for the following computations
+            zMat%matsize2 = hybinp%nbands(ikpt) ! reduce "visible matsize" for the following computations
 
             CALL olap%multiply(zMat,trafo)
 
-            CALL invtrafo%alloc(olap%l_real,hybrid%nbands(ikpt),nbasfcn)
+            CALL invtrafo%alloc(olap%l_real,hybinp%nbands(ikpt),nbasfcn)
             CALL trafo%TRANSPOSE(invtrafo)
             IF(.NOT.invtrafo%l_real) invtrafo%data_c = CONJG(invtrafo%data_c)
 
-            DO i = 1, hybrid%nbands(ikpt)
+            DO i = 1, hybinp%nbands(ikpt)
                DO j = 1, i-1
                   IF (exMat%l_real) THEN
                      exMat%data_r(i,j)=exMat%data_r(j,i)
@@ -755,7 +755,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    WRITE(*,*) 'RDMFT: convergence loop end'
 
-   hybrid%l_calhf = .FALSE.
+   hybinp%l_calhf = .FALSE.
 
    ! Calculate final overall density
 

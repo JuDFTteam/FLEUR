@@ -15,7 +15,7 @@ CONTAINS
   !! 4. The vacuum part is added (in hsvac())
   !! 5. The matrices are copied to the final matrix, in the noco-case the full matrix is constructed from the 4-parts.
   
-  SUBROUTINE eigen_hssetup(isp,mpi,hybrid,enpara,input,vacuum,noco,sym,&
+  SUBROUTINE eigen_hssetup(isp,mpi,hybinp,enpara,input,vacuum,noco,sym,&
        stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat_final,hmat_final)
     USE m_types
     USE m_types_mpimat
@@ -29,7 +29,7 @@ CONTAINS
     INTEGER,INTENT(IN)           :: isp
     TYPE(t_mpi),INTENT(IN)       :: mpi
     
-    TYPE(t_hybrid),INTENT(IN)    :: hybrid
+    TYPE(t_hybinp),INTENT(IN)    :: hybinp
     TYPE(t_enpara),INTENT(IN)    :: enpara
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum

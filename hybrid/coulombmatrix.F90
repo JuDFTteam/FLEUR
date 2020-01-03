@@ -35,7 +35,7 @@ MODULE m_coulombmatrix
 
 CONTAINS
 
-   SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybrid, xcpot)
+   SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, xcpot)
       USE m_types_hybdat
       USE m_types
       USE m_juDFT
@@ -47,7 +47,7 @@ CONTAINS
       use m_util, only: primitivef
       USE m_hsefunctional, ONLY: change_coulombmatrix
       USE m_wrapper
-      USE m_io_hybrid
+      USE m_io_hybinp
       use m_ylm
       use m_sphbes, only: sphbes
       IMPLICIT NONE
@@ -55,7 +55,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)     :: xcpot
       TYPE(t_mpi), INTENT(IN)       :: mpi
       TYPE(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybrid), INTENT(INOUT) :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_sym), INTENT(IN)       :: sym
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_kpts), INTENT(IN)      :: kpts
@@ -102,24 +102,24 @@ CONTAINS
       REAL                       :: q(3), q1(3), q2(3)
       REAL                       :: integrand(atoms%jmtd), primf1(atoms%jmtd), primf2(atoms%jmtd)
       REAL                       :: mat(maxval(mpdata%num_radbasfn)*(maxval(mpdata%num_radbasfn) + 1)/2)
-      REAL                       :: moment(maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype), &
+      REAL                       :: moment(maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%ntype), &
                                     moment2(maxval(mpdata%num_radbasfn), atoms%ntype)
-      REAL                       :: sphbes_var(atoms%jmtd, 0:maxval(hybrid%lcutm1))
-      REAL                       :: sphbesmoment1(atoms%jmtd, 0:maxval(hybrid%lcutm1))
-      REAL                       :: rarr(0:hybrid%lexp + 1), rarr1(0:maxval(hybrid%lcutm1))
+      REAL                       :: sphbes_var(atoms%jmtd, 0:maxval(hybinp%lcutm1))
+      REAL                       :: sphbesmoment1(atoms%jmtd, 0:maxval(hybinp%lcutm1))
+      REAL                       :: rarr(0:hybinp%lexp + 1), rarr1(0:maxval(hybinp%lcutm1))
       REAL, ALLOCATABLE   :: gmat(:, :), qnrm(:)
       REAL, ALLOCATABLE   :: sphbesmoment(:, :, :)
       REAL, ALLOCATABLE   :: sphbes0(:, :, :)
       REAL, ALLOCATABLE   :: olap(:, :, :, :), integral(:, :, :, :)
       REAL, ALLOCATABLE   :: gridf(:, :)
-      REAL                       :: facA(0:MAX(2*atoms%lmaxd + maxval(hybrid%lcutm1) + 1, 4*MAX(maxval(hybrid%lcutm1), hybrid%lexp) + 1))
-      REAL                       :: facB(0:MAX(2*atoms%lmaxd + maxval(hybrid%lcutm1) + 1, 4*MAX(maxval(hybrid%lcutm1), hybrid%lexp) + 1))
-      REAL                       :: facC(-1:MAX(2*atoms%lmaxd + maxval(hybrid%lcutm1) + 1, 4*MAX(maxval(hybrid%lcutm1), hybrid%lexp) + 1))
+      REAL                       :: facA(0:MAX(2*atoms%lmaxd + maxval(hybinp%lcutm1) + 1, 4*MAX(maxval(hybinp%lcutm1), hybinp%lexp) + 1))
+      REAL                       :: facB(0:MAX(2*atoms%lmaxd + maxval(hybinp%lcutm1) + 1, 4*MAX(maxval(hybinp%lcutm1), hybinp%lexp) + 1))
+      REAL                       :: facC(-1:MAX(2*atoms%lmaxd + maxval(hybinp%lcutm1) + 1, 4*MAX(maxval(hybinp%lcutm1), hybinp%lexp) + 1))
 
       COMPLEX     :: cexp1(atoms%ntype), csumf(9)
-      COMPLEX     :: structconst((2*hybrid%lexp + 1)**2, atoms%nat, atoms%nat, kpts%nkpt)             ! nw = 1
-      COMPLEX     :: y((hybrid%lexp + 1)**2), y1((hybrid%lexp + 1)**2), y2((hybrid%lexp + 1)**2)
-      COMPLEX     :: dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1), sym%nsym)
+      COMPLEX     :: structconst((2*hybinp%lexp + 1)**2, atoms%nat, atoms%nat, kpts%nkpt)             ! nw = 1
+      COMPLEX     :: y((hybinp%lexp + 1)**2), y1((hybinp%lexp + 1)**2), y2((hybinp%lexp + 1)**2)
+      COMPLEX     :: dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1), sym%nsym)
       COMPLEX, ALLOCATABLE   :: smat(:, :)
       COMPLEX, ALLOCATABLE   :: coulmat(:, :)
       COMPLEX, ALLOCATABLE   :: carr2(:, :), carr2a(:, :), carr2b(:, :)
@@ -143,7 +143,7 @@ CONTAINS
 
       svol = SQRT(cell%vol)
       fcoulfac = 4*pi_const/cell%vol
-      maxfac = MAX(2*atoms%lmaxd + maxval(hybrid%lcutm1) + 1, 4*MAX(maxval(hybrid%lcutm1), hybrid%lexp) + 1)
+      maxfac = MAX(2*atoms%lmaxd + maxval(hybinp%lcutm1) + 1, 4*MAX(maxval(hybinp%lcutm1), hybinp%lexp) + 1)
 
       facA(0) = 1                    !
       facB(0) = 1                    ! Define:
@@ -156,10 +156,10 @@ CONTAINS
 
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
-      nbasm1 = hybrid%nbasp + mpdata%n_g(:)
+      nbasm1 = hybinp%nbasp + mpdata%n_g(:)
 
       !     Calculate the structure constant
-      CALL structureconstant(structconst, cell, hybrid, atoms, kpts, mpi)
+      CALL structureconstant(structconst, cell, hybinp, atoms, kpts, mpi)
 
       IF (mpi%irank == 0) WRITE (6, '(//A)') '### subroutine: coulombmatrix ###'
 
@@ -170,7 +170,7 @@ CONTAINS
       call timestart("coulomb allocation")
       IF (ALLOCATED(coulomb)) deallocate(coulomb)
 
-      allocate(coulomb(hybrid%maxbasm1*(hybrid%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
+      allocate(coulomb(hybinp%maxbasm1*(hybinp%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
       coulomb = 0
       call timestop("coulomb allocation")
@@ -187,15 +187,15 @@ CONTAINS
          IF (isym <= sym%nop) THEN
             inviop = sym%invtab(isym)
             rrot(:, :, isym) = TRANSPOSE(sym%mrot(:, :, inviop))
-            DO l = 0, maxval(hybrid%lcutm1)
-               dwgn(:, :, l, isym) = TRANSPOSE(hybrid%d_wgn2(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), &
-                                                             -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), l, isym))
+            DO l = 0, maxval(hybinp%lcutm1)
+               dwgn(:, :, l, isym) = TRANSPOSE(hybinp%d_wgn2(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), &
+                                                             -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), l, isym))
             END DO
          ELSE
             inviop = isym - sym%nop
             rrot(:, :, isym) = -rrot(:, :, inviop)
             dwgn(:, :, :, isym) = dwgn(:, :, :, inviop)
-            DO l = 0, maxval(hybrid%lcutm1)
+            DO l = 0, maxval(hybinp%lcutm1)
                DO m1 = -l, l
                   DO m2 = -l, -1
                      cdum = dwgn(m1, m2, l, isym)
@@ -233,7 +233,7 @@ CONTAINS
          nsym1(ikpt) = isym1
       END DO
       ! Define reduced lists of G points -> pgptm1(:,ikpt), ikpt=1,..,nkpt
-      !if(allocated(pgptm1)) deallocate(hybrid%pgptm1)
+      !if(allocated(pgptm1)) deallocate(hybinp%pgptm1)
       allocate(pgptm1(maxval(mpdata%n_g),kpts%nkptf), source=0) !in mixedbasis
       allocate(iarr(maxval(mpdata%n_g)), source=0)
       allocate(POINTER(kpts%nkpt,&
@@ -284,11 +284,11 @@ CONTAINS
 
       call timestart("define gmat")
       ! Define gmat (symmetric)
-      i = (hybrid%lexp + 1)**2
+      i = (hybinp%lexp + 1)**2
       allocate(gmat(i, i))
       gmat = 0
       lm1 = 0
-      DO l1 = 0, hybrid%lexp
+      DO l1 = 0, hybinp%lexp
          DO m1 = -l1, l1
             lm1 = lm1 + 1
             lm2 = 0
@@ -309,7 +309,7 @@ CONTAINS
       ! Calculate moments of MT functions
       call timestart("calc moments of MT")
       DO itype = 1, atoms%ntype
-         DO l = 0, hybrid%lcutm1(itype)
+         DO l = 0, hybinp%lcutm1(itype)
             DO i = 1, mpdata%num_radbasfn(l, itype)
                ! note that mpdata%radbasfn_mt already contains the factor rgrid
                moment(i, l, itype) = intgrf(atoms%rmsh(:, itype)**(l + 1)*mpdata%radbasfn_mt(:, i, l, itype), &
@@ -326,9 +326,9 @@ CONTAINS
       call timestart("getnorm")
       ! Look for different qnorm = |k+G|, definition of qnrm and pqnrm.
       CALL getnorm(kpts, mpdata%g, mpdata%n_g, mpdata%gptm_ptr, qnrm, nqnrm, pqnrm, cell)
-      allocate(sphbesmoment(0:hybrid%lexp, atoms%ntype, nqnrm), &
-                olap(maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype, nqnrm), &
-                integral(maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype, nqnrm))
+      allocate(sphbesmoment(0:hybinp%lexp, atoms%ntype, nqnrm), &
+                olap(maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%ntype, nqnrm), &
+                integral(maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%ntype, nqnrm))
       sphbes_var = 0
       sphbesmoment = 0
       sphbesmoment1 = 0
@@ -361,14 +361,14 @@ CONTAINS
                   sphbesmoment1(i, 0) = atoms%rmsh(i, itype)**2/3 + (rdum**2 - atoms%rmsh(i, itype)**2)/2
                END DO
             ELSE
-               call sphbes(hybrid%lexp + 1, qnorm*rdum, rarr)
-               DO l = 0, hybrid%lexp
+               call sphbes(hybinp%lexp + 1, qnorm*rdum, rarr)
+               DO l = 0, hybinp%lexp
                   sphbesmoment(l, itype, iqnrm) = rdum**(l + 2)*rarr(l + 1)/qnorm
                END DO
                DO i = ng, 1, -1
                   rdum = atoms%rmsh(i, itype)
-                  call sphbes(hybrid%lcutm1(itype) + 1, qnorm*rdum, rarr)
-                  DO l = 0, hybrid%lcutm1(itype)
+                  call sphbes(hybinp%lcutm1(itype) + 1, qnorm*rdum, rarr)
+                  DO l = 0, hybinp%lcutm1(itype)
                      sphbes_var(i, l) = rarr(l)
                      IF (l /= 0) THEN; rdum1 = -rdum**(1 - l)*rarr(l - 1)
                      ELSE; rdum1 = -COS(qnorm*rdum)/qnorm
@@ -379,7 +379,7 @@ CONTAINS
                   END DO
                END DO
             END IF
-            DO l = 0, hybrid%lcutm1(itype)
+            DO l = 0, hybinp%lcutm1(itype)
                DO n = 1, mpdata%num_radbasfn(l, itype)
                   ! note that mpdata%radbasfn_mt already contains one factor rgrid
                   olap(n, l, itype, iqnrm) = &
@@ -421,7 +421,7 @@ CONTAINS
          DO itype = 1, atoms%ntype
             DO ineq = 1, atoms%neq(itype)
                ! Here the diagonal block matrices do not depend on ineq. In (1b) they do depend on ineq, though,
-               DO l = 0, hybrid%lcutm1(itype)
+               DO l = 0, hybinp%lcutm1(itype)
                   DO n2 = 1, mpdata%num_radbasfn(l, itype)
                      ! note that mpdata%radbasfn_mt already contains the factor rgrid
                      CALL primitivef(primf1, mpdata%radbasfn_mt(:, n2, l, itype) &
@@ -465,7 +465,7 @@ CONTAINS
 
          !       (1b) r,r' in different MT
 
-         allocate(coulmat(hybrid%nbasp, hybrid%nbasp), stat=ok)
+         allocate(coulmat(hybinp%nbasp, hybinp%nbasp), stat=ok)
          IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
          coulmat = 0
 
@@ -483,7 +483,7 @@ CONTAINS
                DO ineq2 = 1, atoms%neq(itype2)
                   ic2 = ic2 + 1
                   lm2 = 0
-                  DO l2 = 0, hybrid%lcutm1(itype2)
+                  DO l2 = 0, hybinp%lcutm1(itype2)
                      DO m2 = -l2, l2
                         lm2 = lm2 + 1
                         DO n2 = 1, mpdata%num_radbasfn(l2, itype2)
@@ -495,7 +495,7 @@ CONTAINS
                               DO ineq1 = 1, atoms%neq(itype1)
                                  ic1 = ic1 + 1
                                  lm1 = 0
-                                 DO l1 = 0, hybrid%lcutm1(itype1)
+                                 DO l1 = 0, hybinp%lcutm1(itype1)
                                     DO m1 = -l1, l1
                                        lm1 = lm1 + 1
                                        DO n1 = 1, mpdata%num_radbasfn(l1, itype1)
@@ -525,12 +525,12 @@ CONTAINS
 
             IF (sym%invs) THEN
                !symmetrize makes the Coulomb matrix real symmetric
-               CALL symmetrize(coulmat, hybrid%nbasp, hybrid%nbasp, 3, .FALSE., &
-                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+               CALL symmetrize(coulmat, hybinp%nbasp, hybinp%nbasp, 3, .FALSE., &
+                               atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                                mpdata%num_radbasfn, sym)
             ENDIF
 
-            coulomb(:hybrid%nbasp*(hybrid%nbasp + 1)/2, ikpt) = packmat(coulmat)
+            coulomb(:hybinp%nbasp*(hybinp%nbasp + 1)/2, ikpt) = packmat(coulmat)
 
          END IF
          call timestop("MT-MT part")
@@ -559,7 +559,7 @@ CONTAINS
          !     (2b) r,r' in same MT
          !     (2c) r,r' in different MT
 
-         allocate(coulmat(hybrid%nbasp, maxval(mpdata%n_g)), stat=ok)
+         allocate(coulmat(hybinp%nbasp, maxval(mpdata%n_g)), stat=ok)
          IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
          coulmat = 0
 
@@ -571,7 +571,7 @@ CONTAINS
             DO igpt0 = igptmin(ikpt), igptmax(ikpt) !1,ngptm1(ikpt)
                igpt = pgptm1(igpt0, ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
-               ix = hybrid%nbasp + igpt
+               ix = hybinp%nbasp + igpt
                q = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp), cell%bmat)
                qnorm = norm2(q)
                iqnrm = pqnrm(igpt, ikpt)
@@ -582,7 +582,7 @@ CONTAINS
                call timestart("harmonics")
                call ylm4(2, MATMUL(kpts%bk(:, kpts%nkpt), cell%bmat), y1)
                call ylm4(2, MATMUL(mpdata%g(:, igptp), cell%bmat), y2)
-               call ylm4(hybrid%lexp, q, y)
+               call ylm4(hybinp%lexp, q, y)
                call timestop("harmonics")
                y1 = CONJG(y1); y2 = CONJG(y2); y = CONJG(y)
 
@@ -592,7 +592,7 @@ CONTAINS
                   DO ineq = 1, atoms%neq(itype)
                      ic = ic + 1
                      lm = 0
-                     DO l = 0, hybrid%lcutm1(itype)
+                     DO l = 0, hybinp%lcutm1(itype)
                         DO M = -l, l
                            lm = lm + 1
 
@@ -608,7 +608,7 @@ CONTAINS
                                                          - dot_PRODUCT(kpts%bk(:, ikpt), atoms%taual(:, ic))))
 
                                  lm1 = 0
-                                 DO l1 = 0, hybrid%lexp
+                                 DO l1 = 0, hybinp%lexp
                                     l2 = l + l1 ! for structconst
                                     idum = 1
                                     cdum = sphbesmoment(l1, itype1, iqnrm)*CMPLX(0.0, 1.0)**(l1)*cexp
@@ -657,13 +657,13 @@ CONTAINS
                               iy = iy + 1
 
                               IF (ikpt == 1 .AND. igpt == 1) THEN
-                                 IF (l == 0) coulmat(iy, ix - hybrid%nbasp) = &
+                                 IF (l == 0) coulmat(iy, ix - hybinp%nbasp) = &
                                     -cdum*moment2(n, itype)/6/svol         ! (2a)
-                                 coulmat(iy, ix - hybrid%nbasp) = coulmat(iy, ix - hybrid%nbasp) &
+                                 coulmat(iy, ix - hybinp%nbasp) = coulmat(iy, ix - hybinp%nbasp) &
                                                                   + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                                                                      + csum*moment(n, l, itype))/svol          ! (2c)
                               ELSE
-                                 coulmat(iy, ix - hybrid%nbasp) = &
+                                 coulmat(iy, ix - hybinp%nbasp) = &
                                     (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
                                      - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                                      + csum*moment(n, l, itype))/svol          ! (2c)
@@ -680,15 +680,15 @@ CONTAINS
             END DO
 
             IF (sym%invs) THEN
-               CALL symmetrize(coulmat, hybrid%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
-                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpdata%num_radbasfn, sym)
+               CALL symmetrize(coulmat, hybinp%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
+                               atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
             ENDIF
 
-            M = hybrid%nbasp*(hybrid%nbasp + 1)/2
+            M = hybinp%nbasp*(hybinp%nbasp + 1)/2
             DO i = 1, mpdata%n_g(ikpt)
-               DO j = 1, hybrid%nbasp + i
+               DO j = 1, hybinp%nbasp + i
                   M = M + 1
-                  IF (j <= hybrid%nbasp) coulomb(M, ikpt) = coulmat(j, i)
+                  IF (j <= hybinp%nbasp) coulomb(M, ikpt) = coulmat(j, i)
                END DO
             END DO
          END DO
@@ -749,8 +749,8 @@ CONTAINS
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
-               ix = hybrid%nbasp + igpt2
-               iy = hybrid%nbasp
+               ix = hybinp%nbasp + igpt2
+               iy = hybinp%nbasp
                q2 = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp2), cell%bmat)
                rdum2 = SUM(q2**2)
                IF (abs(rdum2) > 1e-12) rdum2 = 4*pi_const/rdum2
@@ -787,7 +787,7 @@ CONTAINS
          DO ikpt = ikptmin, ikptmax!1,kpts%nkpt
 
             ! group together quantities which depend only on l,m and igpt -> carr2a
-            allocate(carr2a((hybrid%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(atoms%nat, maxval(mpdata%n_g)))
+            allocate(carr2a((hybinp%lexp + 1)**2, maxval(mpdata%n_g)), carr2b(atoms%nat, maxval(mpdata%n_g)))
             carr2a = 0; carr2b = 0
             DO igpt = 1, mpdata%n_g(ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
@@ -795,12 +795,12 @@ CONTAINS
                q = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp), cell%bmat)
 
                call timestart("harmonics")
-               call ylm4(hybrid%lexp, q, y)
+               call ylm4(hybinp%lexp, q, y)
                call timestop("harmonics")
 
                y = CONJG(y)
                lm = 0
-               DO l = 0, hybrid%lexp
+               DO l = 0, hybinp%lexp
                   DO M = -l, l
                      lm = lm + 1
                      carr2a(lm, igpt) = 4*pi_const*CMPLX(0.0, 1.0)**(l)*y(lm)
@@ -814,13 +814,13 @@ CONTAINS
 
             !finally we can loop over the plane waves (G: igpt1,igpt2)
             call timestart("loop over plane waves")
-            allocate(carr2(atoms%nat, (hybrid%lexp + 1)**2), &
-                      structconst1(atoms%nat, (2*hybrid%lexp + 1)**2))
+            allocate(carr2(atoms%nat, (hybinp%lexp + 1)**2), &
+                      structconst1(atoms%nat, (2*hybinp%lexp + 1)**2))
             carr2 = 0; structconst1 = 0
 
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
-               ix = hybrid%nbasp + igpt2
+               ix = hybinp%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
                ic2 = 0
@@ -834,12 +834,12 @@ CONTAINS
                      DO ic1 = 1, atoms%nat
                         structconst1(ic1, :) = structconst(:, ic1, ic2, ikpt)
                      END DO
-                     DO l2 = 0, hybrid%lexp
+                     DO l2 = 0, hybinp%lexp
                         DO m2 = -l2, l2
                            lm2 = l2**2 + (m2+l2) +1 ! lm2 = lm2+1 as analytic sum
                            cdum = (-1)**(l2+m2)*sphbesmoment(l2, itype2, iqnrm2)*cexp*carr2a(lm2, igpt2)
                            IF (abs(cdum) > 1e-12) THEN
-                              DO l1 = 0, hybrid%lexp
+                              DO l1 = 0, hybinp%lexp
                                  l = l1 + l2
                                  DO m1 = -l1, l1
                                     lm1 = l1**2 + (m1+l1)+1 ! lm1 = lm1+1 as ana-sum
@@ -858,7 +858,7 @@ CONTAINS
                call timestop("itype loops")
 
                call timestart("igpt1")
-               iy = hybrid%nbasp
+               iy = hybinp%nbasp
                DO igpt1 = 1, igpt2
                   iy = iy + 1
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -870,7 +870,7 @@ CONTAINS
                         ic = ic + 1
                         cexp = carr2b(ic, igpt1)
                         lm = 0
-                        DO l = 0, hybrid%lexp
+                        DO l = 0, hybinp%lexp
                            cdum = cexp*sphbesmoment(l, itype, iqnrm1)
                            DO M = -l, l
                               lm = lm + 1
@@ -894,12 +894,12 @@ CONTAINS
          rdum = (4*pi_const)**(1.5)/cell%vol**2*gmat(1, 1)
          DO igpt0 = 1, ngptm1(1)
             igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
-            ix = hybrid%nbasp + igpt2
+            ix = hybinp%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
             igptp2 = mpdata%gptm_ptr(igpt2, 1)
             q2 = MATMUL(mpdata%g(:, igptp2), cell%bmat)
             qnorm2 = norm2(q2)
-            iy = hybrid%nbasp + 1
+            iy = hybinp%nbasp + 1
             DO igpt1 = 2, igpt2
                iy = iy + 1
                idum = ix*(ix - 1)/2 + iy
@@ -937,10 +937,10 @@ CONTAINS
             END DO
          END DO
          ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
-         iy = hybrid%nbasp + 1
+         iy = hybinp%nbasp + 1
          DO igpt0 = 1, ngptm1(1)
             igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
-            ix = hybrid%nbasp + igpt2
+            ix = hybinp%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
             igptp2 = mpdata%gptm_ptr(igpt2, 1)
             qnorm2 = qnrm(iqnrm2)
@@ -963,8 +963,8 @@ CONTAINS
             END DO
          END DO
          ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
-         iy = hybrid%nbasp + 1
-         ix = hybrid%nbasp + 1
+         iy = hybinp%nbasp + 1
+         ix = hybinp%nbasp + 1
          idum = ix*(ix - 1)/2 + iy
          DO itype1 = 1, atoms%ntype
             DO ineq1 = 1, atoms%neq(itype1)
@@ -983,13 +983,13 @@ CONTAINS
 
          ! Calculate sphbesintegral
          call timestart("sphbesintegral")
-         allocate(sphbes0(-1:hybrid%lexp + 2, atoms%ntype, nqnrm),&
-              &           carr2((hybrid%lexp + 1)**2, maxval(mpdata%n_g)))
+         allocate(sphbes0(-1:hybinp%lexp + 2, atoms%ntype, nqnrm),&
+              &           carr2((hybinp%lexp + 1)**2, maxval(mpdata%n_g)))
          sphbes0 = 0; carr2 = 0
          DO iqnrm = 1, nqnrm
             DO itype = 1, atoms%ntype
                rdum = qnrm(iqnrm)*atoms%rmt(itype)
-               call sphbes(hybrid%lexp + 2, rdum, sphbes0(0, itype, iqnrm))
+               call sphbes(hybinp%lexp + 2, rdum, sphbes0(0, itype, iqnrm))
                IF (abs(rdum) > 1e-12) sphbes0(-1, itype, iqnrm) = COS(rdum)/rdum
             END DO
          END DO
@@ -1002,19 +1002,19 @@ CONTAINS
             DO igpt = 1, mpdata%n_g(ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
                q = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp), cell%bmat)
-               call ylm4(hybrid%lexp, q, carr2(:, igpt))
+               call ylm4(hybinp%lexp, q, carr2(:, igpt))
             END DO
             call timestop("harmonics setup")
 
             call timestart("q loop")
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
-               ix = hybrid%nbasp + igpt2
+               ix = hybinp%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
                q2 = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp2), cell%bmat)
                y2 = CONJG(carr2(:, igpt2))
-               iy = hybrid%nbasp
+               iy = hybinp%nbasp
                DO igpt1 = 1, igpt2
                   iy = iy + 1
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -1033,12 +1033,12 @@ CONTAINS
                   ENDDO
                   lm = 0
                   cdum = 0
-                  DO l = 0, hybrid%lexp
+                  DO l = 0, hybinp%lexp
                      cdum1 = 0
                      DO itype = 1, atoms%ntype
                         cdum1 = cdum1 + cexp1(itype)*sphbessel_integral( &
                                 atoms, itype, qnrm, nqnrm, &
-                                iqnrm1, iqnrm2, l, hybrid, &
+                                iqnrm1, iqnrm2, l, hybinp, &
                                 sphbes0, l_warn, l_warned) &
                                 /(2*l + 1)
                         l_warn = l_warn .AND. .NOT. l_warned ! only warn once
@@ -1072,7 +1072,7 @@ CONTAINS
          ! All elements are needed so send all data to all processes treating the
          ! respective k-points
 
-         allocate(carr2(hybrid%maxbasm1, 2), iarr(maxval(mpdata%n_g)))
+         allocate(carr2(hybinp%maxbasm1, 2), iarr(maxval(mpdata%n_g)))
          allocate(nsym_gpt(mpdata%num_gpts(), kpts%nkpt), &
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
@@ -1084,11 +1084,11 @@ CONTAINS
                lsym = ((igptmin(ikpt) <= igpt0) .AND. &
                        (igptmax(ikpt) >= igpt0))
                igpt2 = pgptm1(igpt0, ikpt)
-               j = (hybrid%nbasp + igpt2 - 1)*(hybrid%nbasp + igpt2)/2
-               i = hybrid%nbasp + igpt2
+               j = (hybinp%nbasp + igpt2 - 1)*(hybinp%nbasp + igpt2)/2
+               i = hybinp%nbasp + igpt2
                carr2(1:i, 2) = coulomb(j + 1:j + i, ikpt)
                j = j + i
-               DO i = hybrid%nbasp + igpt2 + 1, nbasm1(ikpt)
+               DO i = hybinp%nbasp + igpt2 + 1, nbasm1(ikpt)
                   j = j + i - 1
                   IF (sym%invs) THEN
                      carr2(i, 2) = coulomb(j, ikpt)
@@ -1105,20 +1105,20 @@ CONTAINS
                   CALL bramat_trafo( &
                      carr2(:, 1), igpt1, &
                      carr2(:, 2), igpt2, ikpt, isym, .FALSE., POINTER(ikpt, :, :, :), &
-                     sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, hybrid, &
-                     kpts, maxval(hybrid%lcutm1), atoms, hybrid%lcutm1, &
+                     sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, hybinp, &
+                     kpts, maxval(hybinp%lcutm1), atoms, hybinp%lcutm1, &
                      mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), dwgn(:, :, :, isym), &
-                     hybrid%nbasp, nbasm1)
+                     hybinp%nbasp, nbasm1)
                   IF (iarr(igpt1) == 0) THEN
                      CALL bramat_trafo( &
                         carr2(:, 1), igpt1, &
                         carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
-                        sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, hybrid, &
-                        kpts, maxval(hybrid%lcutm1), atoms, hybrid%lcutm1, &
+                        sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, hybinp, &
+                        kpts, maxval(hybinp%lcutm1), atoms, hybinp%lcutm1, &
                         mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), &
-                        dwgn(:, :, :, isym), hybrid%nbasp, nbasm1)
-                     l = (hybrid%nbasp + igpt1 - 1)*(hybrid%nbasp + igpt1)/2
-                     coulomb(l + 1:l + hybrid%nbasp + igpt1, ikpt) = carr2(:hybrid%nbasp + igpt1, 1)
+                        dwgn(:, :, :, isym), hybinp%nbasp, nbasm1)
+                     l = (hybinp%nbasp + igpt1 - 1)*(hybinp%nbasp + igpt1)/2
+                     coulomb(l + 1:l + hybinp%nbasp + igpt1, ikpt) = carr2(:hybinp%nbasp + igpt1, 1)
                      iarr(igpt1) = 1
                      IF (lsym) THEN
                         ic = ic + 1
@@ -1147,7 +1147,7 @@ CONTAINS
          ! the normal Coulomb matrix
          !
       ELSE
-         IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, mpdata, hybrid, nbasm1, gridf, coulomb)
+         IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, nbasm1, gridf, coulomb)
       END IF
 
       ! transform Coulomb matrix to the biorthogonal set
@@ -1208,14 +1208,14 @@ CONTAINS
          call timestart("multiply inverse rhs")
          if (olapm%l_real) THEN
             !multiply with inverse olap from right hand side
-            coulhlp%data_r(:, hybrid%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybrid%nbasp + 1:), olapm%data_r)
+            coulhlp%data_r(:, hybinp%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybinp%nbasp + 1:), olapm%data_r)
             !multiply with inverse olap from left side
-            coulhlp%data_r(hybrid%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybrid%nbasp + 1:, :))
+            coulhlp%data_r(hybinp%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybinp%nbasp + 1:, :))
          else
             !multiply with inverse olap from right hand side
-            coulhlp%data_c(:, hybrid%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybrid%nbasp + 1:), olapm%data_c)
+            coulhlp%data_c(:, hybinp%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybinp%nbasp + 1:), olapm%data_c)
             !multiply with inverse olap from left side
-            coulhlp%data_c(hybrid%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybrid%nbasp + 1:, :))
+            coulhlp%data_c(hybinp%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybinp%nbasp + 1:, :))
          end if
          coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt) + 1))/2, ikpt) = coulhlp%to_packed()
          call timestop("multiply inverse rhs")
@@ -1236,17 +1236,17 @@ CONTAINS
       ! rearrange coulomb matrix
       !
 
-      allocate(coulomb_mt1(maxval(mpdata%num_radbasfn) - 1, maxval(mpdata%num_radbasfn) - 1, 0:maxval(hybrid%lcutm1), atoms%ntype, 1))
-      ic = (maxval(hybrid%lcutm1) + 1)**2*atoms%nat
+      allocate(coulomb_mt1(maxval(mpdata%num_radbasfn) - 1, maxval(mpdata%num_radbasfn) - 1, 0:maxval(hybinp%lcutm1), atoms%ntype, 1))
+      ic = (maxval(hybinp%lcutm1) + 1)**2*atoms%nat
       idum = ic + maxval(mpdata%n_g)
       idum = (idum*(idum + 1))/2
       if (sym%invs) THEN
-         allocate(coulomb_mt2_r(maxval(mpdata%num_radbasfn) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1) + 1, atoms%nat, 1))
+         allocate(coulomb_mt2_r(maxval(mpdata%num_radbasfn) - 1, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1) + 1, atoms%nat, 1))
          allocate(coulomb_mt3_r(maxval(mpdata%num_radbasfn) - 1, atoms%nat, atoms%nat, 1))
          allocate(coulomb_mtir_r(ic + maxval(mpdata%n_g), ic + maxval(mpdata%n_g), 1))
          allocate(coulombp_mtir_r(idum, 1))
       else
-         allocate(coulomb_mt2_c(maxval(mpdata%num_radbasfn) - 1, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1) + 1, atoms%nat, 1))
+         allocate(coulomb_mt2_c(maxval(mpdata%num_radbasfn) - 1, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1) + 1, atoms%nat, 1))
          allocate(coulomb_mt3_c(maxval(mpdata%num_radbasfn) - 1, atoms%nat, atoms%nat, 1))
          allocate(coulomb_mtir_c(ic + maxval(mpdata%n_g), ic + maxval(mpdata%n_g), 1))
          allocate(coulombp_mtir_c(idum, 1))
@@ -1278,7 +1278,7 @@ CONTAINS
             indx1 = 0
             DO itype = 1, atoms%ntype
                DO ineq = 1, atoms%neq(itype)
-                  DO l = 0, hybrid%lcutm1(itype)
+                  DO l = 0, hybinp%lcutm1(itype)
 
                      IF (ineq == 1) THEN
                         DO n = 1, mpdata%num_radbasfn(l, itype) - 1
@@ -1308,7 +1308,7 @@ CONTAINS
             DO itype = 1, atoms%ntype
                DO ineq = 1, atoms%neq(itype)
                   iatom = iatom + 1
-                  DO l = 0, hybrid%lcutm1(itype)
+                  DO l = 0, hybinp%lcutm1(itype)
                      DO M = -l, l
                         if (coulhlp%l_real) THEN
                            coulomb_mt2_r(:mpdata%num_radbasfn(l, itype) - 1, M, l, iatom, ikpt0) &
@@ -1334,7 +1334,7 @@ CONTAINS
             IF (ikpt == 1) THEN
                !
                ! store the contribution of the G=0 plane wave with the MT l=0 functions in
-               ! coulomb_mt2(:mpdata%num_radbasfn(l=0,itype),0,maxval(hybrid%lcutm1)+1,iatom)
+               ! coulomb_mt2(:mpdata%num_radbasfn(l=0,itype),0,maxval(hybinp%lcutm1)+1,iatom)
                !
                ic = 0
                iatom = 0
@@ -1343,12 +1343,12 @@ CONTAINS
                      iatom = iatom + 1
                      DO n = 1, mpdata%num_radbasfn(0, itype) - 1
                         if (coulhlp%l_real) THEN
-                           coulomb_mt2_r(n, 0, maxval(hybrid%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_r(ic + n, hybrid%nbasp + 1)
+                           coulomb_mt2_r(n, 0, maxval(hybinp%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_r(ic + n, hybinp%nbasp + 1)
                         else
-                           coulomb_mt2_c(n, 0, maxval(hybrid%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_c(ic + n, hybrid%nbasp + 1)
+                           coulomb_mt2_c(n, 0, maxval(hybinp%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_c(ic + n, hybinp%nbasp + 1)
                         endif
                      END DO
-                     ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, hybrid%lcutm1(itype))])
+                     ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, hybinp%lcutm1(itype))])
                   END DO
                END DO
 
@@ -1359,7 +1359,7 @@ CONTAINS
                iatom = 0
                ic = 0
                DO itype = 1, atoms%ntype
-                  ishift = SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, hybrid%lcutm1(itype))])
+                  ishift = SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, hybinp%lcutm1(itype))])
                   DO ineq = 1, atoms%neq(itype)
                      iatom = iatom + 1
                      ic1 = ic + mpdata%num_radbasfn(0, itype)
@@ -1367,7 +1367,7 @@ CONTAINS
                      iatom1 = 0
                      ic2 = 0
                      DO itype1 = 1, atoms%ntype
-                        ishift1 = SUM([((2*l1 + 1)*mpdata%num_radbasfn(l1, itype1), l1=0, hybrid%lcutm1(itype1))])
+                        ishift1 = SUM([((2*l1 + 1)*mpdata%num_radbasfn(l1, itype1), l1=0, hybinp%lcutm1(itype1))])
                         DO ineq1 = 1, atoms%neq(itype1)
                            iatom1 = iatom1 + 1
                            ic3 = ic2 + 1
@@ -1423,7 +1423,7 @@ CONTAINS
          ic = 0
          DO itype = 1, atoms%ntype
             DO ineq = 1, atoms%neq(itype)
-               DO l = 0, hybrid%lcutm1(itype)
+               DO l = 0, hybinp%lcutm1(itype)
                   DO M = -l, l
                      ic = ic + 1
                   END DO
@@ -1434,7 +1434,7 @@ CONTAINS
          indx1 = 0; indx2 = 0; indx3 = 0; indx4 = 0
          DO itype = 1, atoms%ntype
             DO ineq = 1, atoms%neq(itype)
-               DO l = 0, hybrid%lcutm1(itype)
+               DO l = 0, hybinp%lcutm1(itype)
                   DO M = -l, l
                      indx1 = indx1 + 1
                      indx3 = indx3 + mpdata%num_radbasfn(l, itype)
@@ -1443,7 +1443,7 @@ CONTAINS
                      indx4 = 0
                      DO itype1 = 1, atoms%ntype
                         DO ineq1 = 1, atoms%neq(itype1)
-                           DO l1 = 0, hybrid%lcutm1(itype1)
+                           DO l1 = 0, hybinp%lcutm1(itype1)
                               DO m1 = -l1, l1
                                  indx2 = indx2 + 1
                                  indx4 = indx4 + mpdata%num_radbasfn(l1, itype1)
@@ -1465,10 +1465,10 @@ CONTAINS
                      DO igpt = 1, mpdata%n_g(ikpt)
                         indx2 = indx2 + 1
                         IF (sym%invs) THEN
-                           coulomb_mtir_r(indx1, indx2, ikpt1) = coulhlp%data_r(indx3, hybrid%nbasp + igpt)
+                           coulomb_mtir_r(indx1, indx2, ikpt1) = coulhlp%data_r(indx3, hybinp%nbasp + igpt)
                            coulomb_mtir_r(indx2, indx1, ikpt1) = coulomb_mtir_r(indx1, indx2, ikpt1)
                         ELSE
-                           coulomb_mtir_c(indx1, indx2, ikpt1) = coulhlp%data_c(indx3, hybrid%nbasp + igpt)
+                           coulomb_mtir_c(indx1, indx2, ikpt1) = coulhlp%data_c(indx3, hybinp%nbasp + igpt)
                            coulomb_mtir_c(indx2, indx1, ikpt1) = CONJG(coulomb_mtir_c(indx1, indx2, ikpt1))
                         ENDIF
 
@@ -1487,12 +1487,12 @@ CONTAINS
          !
          if (sym%invs) THEN
             coulomb_mtir_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), ikpt1) &
-               = coulhlp%data_r(hybrid%nbasp + 1:nbasm1(ikpt), hybrid%nbasp + 1:nbasm1(ikpt))
+               = coulhlp%data_r(hybinp%nbasp + 1:nbasm1(ikpt), hybinp%nbasp + 1:nbasm1(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
             coulombp_mtir_r(:ic2*(ic2 + 1)/2, ikpt0) = packmat(coulomb_mtir_r(:ic2, :ic2, ikpt1))
          else
             coulomb_mtir_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), ikpt1) &
-               = coulhlp%data_c(hybrid%nbasp + 1:nbasm1(ikpt), hybrid%nbasp + 1:nbasm1(ikpt))
+               = coulhlp%data_c(hybinp%nbasp + 1:nbasm1(ikpt), hybinp%nbasp + 1:nbasm1(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
             coulombp_mtir_c(:ic2*(ic2 + 1)/2, ikpt0) = packmat(coulomb_mtir_c(:ic2, :ic2, ikpt1))
          end if
@@ -1538,7 +1538,7 @@ CONTAINS
    !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .
    !     For this we must subtract from coulomb(:,1) the spherical average of a term that comes
    !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
-   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybrid, nbasm1, gridf, coulomb)
+   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, nbasm1, gridf, coulomb)
 
       USE m_types
       USE m_constants
@@ -1553,7 +1553,7 @@ CONTAINS
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybrid), INTENT(IN)    :: hybrid
+      TYPE(t_hybinp), INTENT(IN)    :: hybinp
 
       INTEGER, INTENT(IN)    :: nbasm1(:)
       REAL, INTENT(IN)    :: gridf(:,:)
@@ -1580,7 +1580,7 @@ CONTAINS
       j = 0
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
-            DO l = 0, hybrid%lcutm1(itype)
+            DO l = 0, hybinp%lcutm1(itype)
                DO M = -l, l
                   DO i = 1, mpdata%num_radbasfn(l, itype)
                      j = j + 1
@@ -1607,25 +1607,25 @@ CONTAINS
          END DO
       END DO
       IF (olap%l_real) THEN
-         coeff(hybrid%nbasp + 1:n) = olap%data_r(1, 1:n - hybrid%nbasp)
+         coeff(hybinp%nbasp + 1:n) = olap%data_r(1, 1:n - hybinp%nbasp)
       else
-         coeff(hybrid%nbasp + 1:n) = olap%data_c(1, 1:n - hybrid%nbasp)
+         coeff(hybinp%nbasp + 1:n) = olap%data_c(1, 1:n - hybinp%nbasp)
       END IF
       IF (sym%invs) THEN
          CALL symmetrize(coeff, 1, nbasm1(1), 2, .FALSE., &
-                         atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+                         atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
          CALL symmetrize(claplace, 1, nbasm1(1), 2, .FALSE., &
-                         atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+                         atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
          CALL symmetrize(cderiv(:, -1), 1, nbasm1(1), 2, .FALSE., &
-                         atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+                         atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
          CALL symmetrize(cderiv(:, 0), 1, nbasm1(1), 2, .FALSE., &
-                         atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+                         atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
          CALL symmetrize(cderiv(:, 1), 1, nbasm1(1), 2, .FALSE., &
-                         atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+                         atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
       ENDIF
       ! Subtract head contributions from coulomb(:nn,1) to obtain the body
@@ -1639,20 +1639,20 @@ CONTAINS
                                  + CONJG(claplace(i))*coeff(j))/2)
          END DO
       END DO
-      coeff(hybrid%nbasp + 1) = 1.0
-      coeff(hybrid%nbasp + 2:) = 0.0
+      coeff(hybinp%nbasp + 1) = 1.0
+      coeff(hybinp%nbasp + 2:) = 0.0
       IF (sym%invs) THEN
 
          CALL desymmetrize(coeff, 1, nbasm1(1), 2, &
-                           atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+                           atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                            mpdata%num_radbasfn, sym)
          CALL symmetrize(coeff, nbasm1(1), 1, 1, .FALSE., &
-                         atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), &
+                         atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                          mpdata%num_radbasfn, sym)
       ENDIF
       ! Explicit normalization here in order to prevent failure of the diagonalization in diagonalize_coulomb
       ! due to inaccuracies in the overlap matrix (which can make it singular).
-      !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybrid%nbasp))**2) + dot_product ( coeff(hybrid%nbasp+1:), MATMUL(olap,coeff(hybrid%nbasp+1:)) ) ) )
+      !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybinp%nbasp))**2) + dot_product ( coeff(hybinp%nbasp+1:), MATMUL(olap,coeff(hybinp%nbasp+1:)) ) ) )
 
    END SUBROUTINE subtract_sphaverage
 
@@ -1676,7 +1676,7 @@ CONTAINS
 #define ADDSHELL1 40
 #define ADDSHELL2 0
 
-   SUBROUTINE structureconstant(structconst, cell, hybrid, atoms, kpts, mpi)
+   SUBROUTINE structureconstant(structconst, cell, hybinp, atoms, kpts, mpi)
 
       USE m_constants, ONLY: pi_const
       USE m_rorder, ONLY: rorderp, rorderpf
@@ -1687,7 +1687,7 @@ CONTAINS
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
 
-      TYPE(t_hybrid), INTENT(INOUT)   :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT)   :: hybinp
 
       TYPE(t_cell), INTENT(IN)   :: cell
 
@@ -1713,15 +1713,15 @@ CONTAINS
 
       LOGICAL, SAVE          ::  first = .TRUE.
       ! - local arrays -
-      INTEGER                   ::  conv(0:2*hybrid%lexp)
+      INTEGER                   ::  conv(0:2*hybinp%lexp)
       INTEGER, ALLOCATABLE     ::  pnt(:), ptsh(:, :)
 
       REAL                      ::  rc(3), ra(3), k(3), ki(3), ka(3)
-      REAL                      ::  convpar(0:2*hybrid%lexp), g(0:2*hybrid%lexp)
+      REAL                      ::  convpar(0:2*hybinp%lexp), g(0:2*hybinp%lexp)
       REAL, ALLOCATABLE     ::  radsh(:)
 
-      COMPLEX                   ::  y((2*hybrid%lexp + 1)**2)
-      COMPLEX                   ::  shlp((2*hybrid%lexp + 1)**2, kpts%nkpt)
+      COMPLEX                   ::  y((2*hybinp%lexp + 1)**2)
+      COMPLEX                   ::  shlp((2*hybinp%lexp + 1)**2, kpts%nkpt)
 
       call timestart("calc struc_const.")
 
@@ -1730,13 +1730,13 @@ CONTAINS
       rdum = cell%vol**(1.0/3) ! define "average lattice parameter"
 
       ! ewaldlambda = ewaldscale
-      scale = hybrid%ewaldlambda/rdum
+      scale = hybinp%ewaldlambda/rdum
 
       !       lambda = ewaldlambda / rdum
 
       pref = 4*pi_const/(scale**3*cell%vol)
 
-      DO l = 0, 2*hybrid%lexp
+      DO l = 0, 2*hybinp%lexp
          convpar(l) = CONVPARAM/scale**(l + 1)
       END DO
 
@@ -1765,7 +1765,7 @@ CONTAINS
                                                                    *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12))))))))))))
       g(7) = rexp/a**8*(1 + a*(1 + a/2*(1 + a/3*(1 + a/4*(1 + a/5*(1 + a/6 &
                                                                    *(1 + a/7*(1 + a/8*(1 + a/9*(1 + a/10*(1 + a/11*(1 + a/12*(1 + a/13)))))))))))))
-      DO l = 8, 2*hybrid%lexp
+      DO l = 8, 2*hybinp%lexp
          g(l) = a**(-l - 1)
       END DO
       IF (ANY(g > convpar/10)) THEN ! one digit more accuracy for real-space sum
@@ -1828,7 +1828,7 @@ CONTAINS
             call timestop("rorderpf")
             ptsh = ptsh(:, pnt)
             radsh = radsh(pnt)
-            maxl = 2*hybrid%lexp
+            maxl = 2*hybinp%lexp
             a1 = HUGE(a1)  ! stupid initial value
             ishell = 1
             conv = HUGE(i)
@@ -1916,14 +1916,14 @@ CONTAINS
       CALL getshells(ptsh, nptsh, radsh, nshell, rrad, cell%bmat, first)
       call timestop("determince reciproc. shell")
       ! minimum nonzero reciprocal-shell radius (needed in routines concerning the non-local hartree-fock exchange)
-      !hybrid%radshmin = radsh(2)
+      !hybinp%radshmin = radsh(2)
       !
       !     Fourier-space sum
       !
       call timestart("fourierspace sum")
       DO ikpt = 1, kpts%nkpt
          k = kpts%bk(:, ikpt)
-         maxl = MIN(7, hybrid%lexp*2)
+         maxl = MIN(7, hybinp%lexp*2)
          ishell = 1
          conv = HUGE(i)
          DO i = 1, nptsh
@@ -1998,7 +1998,7 @@ CONTAINS
       DO i = 2, atoms%nat
          structconst(:, i, i, :) = structconst(:, 1, 1, :)
       END DO
-      DO l = 0, 2*hybrid%lexp
+      DO l = 0, 2*hybinp%lexp
          structconst(l**2 + 1:(l + 1)**2, :, :, :) = structconst(l**2 + 1:(l + 1)**2, :, :, :)*scale**(l + 1)
       END DO
 
@@ -2173,16 +2173,16 @@ CONTAINS
 
    END SUBROUTINE getnorm
 
-   FUNCTION sphbessel_integral(atoms, itype, qnrm, nqnrm, iqnrm1, iqnrm2, l, hybrid, &
+   FUNCTION sphbessel_integral(atoms, itype, qnrm, nqnrm, iqnrm1, iqnrm2, l, hybinp, &
                                sphbes0, l_warnin, l_warnout)
 
       USE m_types
       IMPLICIT NONE
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
       INTEGER, INTENT(IN)  :: itype, nqnrm, iqnrm1, iqnrm2, l
-      REAL, INTENT(IN)  :: qnrm(nqnrm), sphbes0(-1:hybrid%lexp + 2, atoms%ntype, nqnrm)
+      REAL, INTENT(IN)  :: qnrm(nqnrm), sphbes0(-1:hybinp%lexp + 2, atoms%ntype, nqnrm)
       LOGICAL, INTENT(IN), OPTIONAL  ::  l_warnin
       LOGICAL, INTENT(OUT), OPTIONAL  ::  l_warnout
       REAL                  :: sphbessel_integral

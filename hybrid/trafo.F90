@@ -9,7 +9,7 @@ MODULE m_trafo
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
-                              nk, iop, atoms, input,mpdata, hybrid, kpts, sym, &
+                              nk, iop, atoms, input,mpdata, hybinp, kpts, sym, &
                               jsp, lapw)
 
       USE m_constants
@@ -20,7 +20,7 @@ CONTAINS
 
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_mpdata), INTENT(IN)     :: mpdata
-      TYPE(t_hybrid), INTENT(IN)      :: hybrid
+      TYPE(t_hybinp), INTENT(IN)      :: hybinp
       TYPE(t_sym), INTENT(IN)         :: sym
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
@@ -35,7 +35,7 @@ CONTAINS
       LOGICAL, INTENT(IN)      ::  l_real
       REAL, INTENT(IN)         ::  z_r(:,:)
       COMPLEX, INTENT(IN)      ::  z_c(:,:)
-      COMPLEX, INTENT(OUT)     ::  cmt_out(hybrid%maxlmindx, atoms%nat, ndb)
+      COMPLEX, INTENT(OUT)     ::  cmt_out(hybinp%maxlmindx, atoms%nat, ndb)
       COMPLEX, INTENT(OUT)     ::  z_out(lapw%nv(jsp), ndb)
 
 !     - local -
@@ -86,8 +86,8 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
-            iatom1 = hybrid%map(iatom, iop)
-            tau1 = hybrid%tvec(:, iatom, iop)
+            iatom1 = hybinp%map(iatom, iop)
+            tau1 = hybinp%tvec(:, iatom, iop)
 
             cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt, tau1))
 
@@ -150,7 +150,7 @@ CONTAINS
 
    SUBROUTINE waveftrafo_genwavf( &
       cmt_out, z_rout, z_cout, cmt, l_real, z_r, z_c, nk, iop, atoms, &
-      mpdata, hybrid, kpts, sym, jsp, nbasfcn, input, nbands, &
+      mpdata, hybinp, kpts, sym, jsp, nbasfcn, input, nbands, &
        lapw_nk, lapw_rkpt, phase)
 
       use m_juDFT
@@ -161,7 +161,7 @@ CONTAINS
 
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_mpdata), INTENT(IN)    :: mpdata
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -230,8 +230,8 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             iatom = iatom + 1
 
-            iatom1 = hybrid%map(iatom, iop)
-            tau1 = hybrid%tvec(:, iatom, iop)
+            iatom1 = hybinp%map(iatom, iop)
+            tau1 = hybinp%tvec(:, iatom, iop)
 
             cdum = exp(-ImagUnit*tpi_const*dot_product(rkpt, tau1))
 
@@ -245,14 +245,14 @@ CONTAINS
                   DO i = 1, nbands
                      if (l_real) THEN
                         cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmt(i, lm1:lm2:nn, iatom),&
-                                           hybrid%d_wgn2(-l:l, -l:l, l, iop))
+                                           hybinp%d_wgn2(-l:l, -l:l, l, iop))
                      else
                         IF (trs) THEN
                            cmthlp(:2*l + 1) = conjg(cmt(i, lm1:lm2:nn, iatom))
                         ELSE
                            cmthlp(:2*l + 1) = cmt(i, lm1:lm2:nn, iatom)
                         END IF
-                        cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmthlp(:2*l + 1), hybrid%d_wgn2(-l:l, -l:l, l, iop))
+                        cmt_out(i, lm1:lm2:nn, iatom1) = cdum*matmul(cmthlp(:2*l + 1), hybinp%d_wgn2(-l:l, -l:l, l, iop))
                      endif
 
                   END DO
@@ -535,7 +535,7 @@ CONTAINS
    SUBROUTINE bra_trafo2( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
       dim, nobd, nbands, ikpt0, ikpt1, iop, sym, &
-      mpdata, hybrid, kpts, atoms, &
+      mpdata, hybinp, kpts, atoms, &
       phase)
 
       !  ikpt0  ::  parent of ikpt1
@@ -547,7 +547,7 @@ CONTAINS
       USE m_types
       IMPLICIT NONE
       type(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -575,11 +575,11 @@ CONTAINS
 !     - arrays -
 
       INTEGER                 ::  rrot(3, 3), invrot(3, 3)
-      INTEGER                 ::  pnt(maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%nat)
+      INTEGER                 ::  pnt(maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%nat)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
-      COMPLEX                 ::  dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1),&
-                                       -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1))
+      COMPLEX                 ::  dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
+                                       -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
 !       COMPLEX                 ::  vecin1(dim,nobd,nbands),vecout1(dim,nobd,nbands)
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
 
@@ -591,15 +591,15 @@ CONTAINS
                    call judft_error('bra_trafo2: error allocating vecin1 or vecout1')
       vecin1 = 0; vecout1 = 0
 
-      IF (maxval(hybrid%lcutm1) > atoms%lmaxd) call judft_error('bra_trafo2: maxlcutm > atoms%lmaxd')   ! very improbable case
+      IF (maxval(hybinp%lcutm1) > atoms%lmaxd) call judft_error('bra_trafo2: maxlcutm > atoms%lmaxd')   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       if (l_real) THEN
          vecin1 = vecin_r
          DO i = 1, nbands
             DO j = 1, nobd
-               CALL desymmetrize(vecin1(:hybrid%nbasp, j, i), hybrid%nbasp, 1, 1, &
-                                 atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpdata%num_radbasfn, sym)
+               CALL desymmetrize(vecin1(:hybinp%nbasp, j, i), hybinp%nbasp, 1, 1, &
+                                 atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
             END DO
          END DO
       else
@@ -612,8 +612,8 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iop))
          trans = sym%tau(:, iop)
 
-         dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1)) &
-            = hybrid%d_wgn2(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1), inviop)
+         dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1)) &
+            = hybinp%d_wgn2(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1), inviop)
 
       ELSE
          iiop = iop - sym%nop
@@ -622,8 +622,8 @@ CONTAINS
          invrot = sym%mrot(:, :, sym%invtab(iiop))
          trans = sym%tau(:, iiop)
 
-         dwgn(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1)) &
-            = conjg(hybrid%d_wgn2(-maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1), 0:maxval(hybrid%lcutm1), inviop))
+         dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1)) &
+            = conjg(hybinp%d_wgn2(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1), inviop))
 
       END IF
 
@@ -657,7 +657,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            DO l = 0, hybrid%lcutm1(itype)
+            DO l = 0, hybinp%lcutm1(itype)
                DO n = 1, mpdata%num_radbasfn(l, itype)
                   i = i + 1
                   pnt(n, l, ic) = i
@@ -676,11 +676,11 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
 
-            rcent = hybrid%map(ic, iop)
+            rcent = hybinp%map(ic, iop)
 
             cdum = cexp*exp(-img*tpi_const*dot_product(g, atoms%taual(:, rcent)))
 
-            DO l = 0, hybrid%lcutm1(itype)
+            DO l = 0, hybinp%lcutm1(itype)
                nn = mpdata%num_radbasfn(l, itype)
                DO n = 1, nn
 
@@ -727,7 +727,7 @@ CONTAINS
          END IF
          cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g1, trans(:)))
 
-         vecout1(hybrid%nbasp + igptm, :, :) = cdum*vecin1(hybrid%nbasp + igptm2, :, :)
+         vecout1(hybinp%nbasp + igptm, :, :) = cdum*vecin1(hybinp%nbasp + igptm2, :, :)
       END DO
 
       deallocate(vecin1)
@@ -737,7 +737,7 @@ CONTAINS
             DO j = 1, nobd
 
                CALL symmetrize(vecout1(:, j, i), dim, 1, 1, .false., &
-                               atoms, hybrid%lcutm1, maxval(hybrid%lcutm1), mpdata%num_radbasfn, sym)
+                               atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
 
                CALL commonphase(phase(j, i), vecout1(:, j, i), dim)
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
@@ -792,14 +792,14 @@ CONTAINS
 
    SUBROUTINE bramat_trafo( &
       vecout, igptm_out, vecin, igptm_in, ikpt0, iop, writevec, pointer, sym, &
-      rrot, invrrot, mpdata, hybrid, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, dwgn, nbasp, nbasm)
+      rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, dwgn, nbasp, nbasm)
 
       USE m_constants
       USE m_util
       USE m_types
       IMPLICIT NONE
       type(t_mpdata), intent(in) :: mpdata
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -912,7 +912,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            rcent = hybrid%map(ic, sym%invtab(isym))
+            rcent = hybinp%map(ic, sym%invtab(isym))
             cdum = cexp*exp(img*tpi_const*dot_product(g, atoms%taual(:, ic))) !rcent)))
             cdum = conjg(cdum)
             DO l = 0, lcutm(itype)

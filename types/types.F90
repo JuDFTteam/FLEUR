@@ -26,7 +26,7 @@ MODULE m_types
   USE m_types_denCoeffsOffdiag
   USE m_types_force
   USE m_types_forcetheo
-  USE m_types_hybrid
+  USE m_types_hybinp
   USE m_types_mpinp
   USE m_types_mpdata
   USE m_types_greensf

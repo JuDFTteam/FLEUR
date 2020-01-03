@@ -19,7 +19,7 @@ MODULE m_exchange_core
       USE m_types_hybdat
 
 CONTAINS
-   SUBROUTINE exchange_vccv1(nk, input,atoms, mpdata, hybrid, hybdat, jsp, lapw, &
+   SUBROUTINE exchange_vccv1(nk, input,atoms, mpdata, hybinp, hybdat, jsp, lapw, &
                              nsymop, nsest, indx_sest, mpi, a_ex, results, mat_ex)
 
       USE m_constants
@@ -27,14 +27,14 @@ CONTAINS
       use m_intgrf
       USE m_wrapper
       USE m_types
-      USE m_io_hybrid
+      USE m_io_hybinp
       IMPLICIT NONE
       TYPE(t_input),INTENT(IN)::     input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results
       TYPE(t_mpi), INTENT(IN)   :: mpi
       TYPE(t_mpdata), intent(in)   :: mpdata
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_lapw), INTENT(IN)   :: lapw
 
@@ -65,8 +65,8 @@ CONTAINS
       REAL, ALLOCATABLE        ::  fprod(:, :), fprod2(:, :)
       REAL, ALLOCATABLE        ::  integral(:, :)
 
-      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                 ::  exchange(hybrid%nbands(nk), hybrid%nbands(nk))
+      COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                 ::  exchange(hybinp%nbands(nk), hybinp%nbands(nk))
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 
 
@@ -85,7 +85,7 @@ CONTAINS
             DO l1 = 0, hybdat%lmaxc(itype)
                DO p1 = 1, hybdat%nindxc(l1, itype)
 
-                  DO l = 0, hybrid%lcutm1(itype)
+                  DO l = 0, hybinp%lcutm1(itype)
 
                      ! Define core-valence product functions
 
@@ -115,7 +115,7 @@ CONTAINS
 
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                     allocate(integral(n, n), carr(n, hybrid%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
+                     allocate(integral(n, n), carr(n, hybinp%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
 
                      DO i = 1, n
                         CALL primitivef(primf1, fprod(:atoms%jri(itype), i)*atoms%rmsh(:atoms%jri(itype), itype)**(l + 1), atoms%rmsh, atoms%dx, atoms%jri, atoms%jmtd, itype, atoms%ntype)
@@ -136,7 +136,7 @@ CONTAINS
                            m2 = m1 + M
 
                            carr = 0
-                           DO n1 = 1, hybrid%nbands(nk)
+                           DO n1 = 1, hybinp%nbands(nk)
 
                               DO i = 1, n
                                  ll = larr(i)
@@ -173,7 +173,7 @@ CONTAINS
          END IF
       ENDIF
 
-      DO n1 = 1, hybrid%nobd(nk,jsp)
+      DO n1 = 1, hybinp%nobd(nk,jsp)
          results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1))
       END DO
 
@@ -199,7 +199,7 @@ CONTAINS
       USE m_gaunt
       USE m_trafo
       USE m_types
-      USE m_io_hybrid
+      USE m_io_hybinp
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_results), INTENT(INOUT)   :: results

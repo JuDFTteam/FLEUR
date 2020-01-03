@@ -9,7 +9,7 @@ CONTAINS
   !> Collection of code for old-style inp-file treatment
   SUBROUTINE fleur_init_old(&
        input,atoms,sphhar,cell,stars,sym,noco,vacuum,&
-       sliceplot,banddos,enpara,xcpot,kpts,hybrid,&
+       sliceplot,banddos,enpara,xcpot,kpts,hybinp,&
        oneD,grid)
     USE m_types_input
     USE m_types_atoms
@@ -24,7 +24,7 @@ CONTAINS
     USE m_types_enpara
     USE m_types_xcpot_inbuild_nofunction
     USE m_types_kpts
-    USE m_types_hybrid
+    USE m_types_hybinp
     USE m_types_oned
 
 
@@ -50,7 +50,7 @@ CONTAINS
     TYPE(t_enpara)   ,INTENT(OUT)  :: enpara
     TYPE(t_xcpot_inbuild_nf),INTENT(OUT)  :: xcpot
     TYPE(t_kpts)     ,INTENT(INOUT):: kpts
-    TYPE(t_hybrid)   ,INTENT(OUT)  :: hybrid
+    TYPE(t_hybinp)   ,INTENT(OUT)  :: hybinp
     TYPE(t_oneD)     ,INTENT(OUT)  :: oneD
     INTEGER,INTENT(OUT)::grid(3)
 
@@ -70,7 +70,7 @@ CONTAINS
     relcor = '            '
 
     CALL dimens(input,sym,stars,atoms,sphhar,vacuum,&
-         kpts,oneD,hybrid)
+         kpts,oneD,hybinp)
     stars%kimax2= (2*stars%mx1+1)* (2*stars%mx2+1)-1
     stars%kimax = (2*stars%mx1+1)* (2*stars%mx2+1)* (2*stars%mx3+1)-1
     !-odim
@@ -124,8 +124,8 @@ CONTAINS
     stars%sk2(:) = 0.0 ; stars%phi2(:) = 0.0
     !-odim
 
-    ! HF/hybrid functionals/EXX
-    !ALLOCATE ( hybrid%nindx(0:atoms%lmaxd,atoms%ntype) )
+    ! HF/hybinp functionals/EXX
+    !ALLOCATE ( hybinp%nindx(0:atoms%lmaxd,atoms%ntype) )
 
     input%l_coreSpec = .FALSE.
 
@@ -135,7 +135,7 @@ CONTAINS
 
     CALL inped(atoms,vacuum,input,banddos,xcpot,sym,&
          cell,sliceplot,noco,&
-         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
+         stars,oneD,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
     !
     IF (xcpot%needs_grad()) THEN
        ALLOCATE (stars%ft2_gfx(0:stars%kimax2),stars%ft2_gfy(0:stars%kimax2))

@@ -1,7 +1,7 @@
 
 MODULE m_hyb_abcrot
 CONTAINS
-   SUBROUTINE hyb_abcrot(hybrid, atoms, neig, sym,&
+   SUBROUTINE hyb_abcrot(hybinp, atoms, neig, sym,&
                     acof, bcof, ccof)
 !     ***************************************************************
 !     * This routine transforms a/b/cof which are given wrt rotated *
@@ -14,7 +14,7 @@ CONTAINS
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
-      TYPE(t_hybrid), INTENT(IN) :: hybrid
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_atoms), INTENT(IN)  :: atoms
 !     ..
@@ -34,9 +34,9 @@ CONTAINS
 !***** COMPLEX, ALLOCATABLE :: d_wgn(:,:,:,:) !put into module m_savewigner
 !
 
-      IF (.NOT. ALLOCATED(hybrid%d_wgn2)) THEN    !calculate sym%d_wgn only once
+      IF (.NOT. ALLOCATED(hybinp%d_wgn2)) THEN    !calculate sym%d_wgn only once
          PRINT *, "calculate wigner-matrix"
-         call judft_error('WIGNER MATRIX should be available in hybrid part')
+         call judft_error('WIGNER MATRIX should be available in hybinp part')
          !IF (.NOT.oneD%odi%d1) THEN
          !  allocate(sym%d_wgn(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,atoms%lmaxd,sym%nop))
          !  CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,sym%d_wgn)
@@ -63,9 +63,9 @@ CONTAINS
             DO l = 1, atoms%lmax(itype)
 !  replaced d_wgn by conjg(d_wgn),FF October 2006
                DO i = 1, neig
-                  acof(i, l**2:l*(l + 2), iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)),&
+                  acof(i, l**2:l*(l + 2), iatom) = ifac**l*matmul(conjg(hybinp%d_wgn2(-l:l, -l:l, l, iop)),&
                                                                   acof(i, l**2:l*(l + 2), iatom))
-                  bcof(i, l**2:l*(l + 2), iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)),&
+                  bcof(i, l**2:l*(l + 2), iatom) = ifac**l*matmul(conjg(hybinp%d_wgn2(-l:l, -l:l, l, iop)),&
                                                                   bcof(i, l**2:l*(l + 2), iatom))
                ENDDO
             ENDDO
@@ -73,7 +73,7 @@ CONTAINS
                l = atoms%llo(ilo, itype)
                IF (l > 0) THEN
                   DO i = 1, neig
-                     ccof(-l:l, i, ilo, iatom) = ifac**l*matmul(conjg(hybrid%d_wgn2(-l:l, -l:l, l, iop)), &
+                     ccof(-l:l, i, ilo, iatom) = ifac**l*matmul(conjg(hybinp%d_wgn2(-l:l, -l:l, l, iop)), &
                                                                 ccof(-l:l, i, ilo, iatom))
                   ENDDO
                ENDIF

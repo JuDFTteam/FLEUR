@@ -8,7 +8,7 @@ MODULE m_subvxc
 
 CONTAINS
 
-   SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybrid, el, ello, sym, &
+   SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybinp, el, ello, sym, &
                      cell, sphhar, stars, xcpot, mpi, oneD, hmat, vx)
 
       USE m_types
@@ -28,7 +28,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybrid), INTENT(INOUT) :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_stars), INTENT(IN)    :: stars
@@ -81,8 +81,8 @@ CONTAINS
 
       COMPLEX               ::  vpw(stars%ng3)
       COMPLEX               ::  vxc(hmat%matsize1*(hmat%matsize1 + 1)/2)
-      COMPLEX               ::  vrmat(hybrid%maxlmindx, hybrid%maxlmindx)
-      COMPLEX               ::  carr(hybrid%maxlmindx, lapw%dim_nvd()), carr1(lapw%dim_nvd(), lapw%dim_nvd())
+      COMPLEX               ::  vrmat(hybinp%maxlmindx, hybinp%maxlmindx)
+      COMPLEX               ::  carr(hybinp%maxlmindx, lapw%dim_nvd()), carr1(lapw%dim_nvd(), lapw%dim_nvd())
       COMPLEX, ALLOCATABLE  ::  ahlp(:, :, :), bhlp(:, :, :)
       COMPLEX, ALLOCATABLE  ::  bascof(:, :, :)
 #ifndef CPP_OLDINTEL
@@ -349,7 +349,7 @@ CONTAINS
 
                   DO ilo = 1, atoms%nlo(itype)
 #ifdef CPP_OLDINTEL
-                     CALL judft_error("no LOs   hybrid with old intel compiler!", calledby="subvxc.F90")
+                     CALL judft_error("no LOs   hybinp with old intel compiler!", calledby="subvxc.F90")
 #else
                      l1 = atoms%llo(ilo, itype)
                      DO ikvec = 1, invsfct*(2*l1 + 1)

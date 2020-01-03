@@ -42,7 +42,7 @@ MODULE m_add_vnonlocal
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 CONTAINS
 
-   SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybrid, input, kpts, jsp, results, xcpot, noco, hmat)
+   SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybinp, input, kpts, jsp, results, xcpot, noco, hmat)
 
       USE m_symm_hf, ONLY: symm_hf
       USE m_intgrf, ONLY: intgrf, intgrf_init
@@ -52,14 +52,14 @@ CONTAINS
       USE m_wrapper
       USE m_hsefunctional, ONLY: exchange_vccvHSE, exchange_ccccHSE
       USE m_types
-      USE m_io_hybrid
+      USE m_io_hybinp
 
       IMPLICIT NONE
 
       TYPE(t_results), INTENT(INOUT) :: results
       CLASS(t_xcpot), INTENT(IN)    :: xcpot
       TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_hybrid), INTENT(INOUT) :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_lapw), INTENT(IN)    :: lapw
       TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -95,7 +95,7 @@ CONTAINS
          END DO
       END DO
       ! calculate HF energy
-      IF (hybrid%l_calhf) THEN
+      IF (hybinp%l_calhf) THEN
          WRITE (6, '(A)') new_line('n')//new_line('n')//' ###     '//'        diagonal HF exchange elements (eV)              ###'
 
          WRITE (6, '(A)') new_line('n')//'         k-point      '//'band          tail           pole       total(valence+core)'
@@ -118,19 +118,19 @@ CONTAINS
 
       CALL v_x%multiply(z, tmp)
 
-      DO iband = 1, hybrid%nbands(nk)
+      DO iband = 1, hybinp%nbands(nk)
          IF (z%l_real) THEN
             exch(iband, iband) = dot_product(z%data_r(:z%matsize1, iband), tmp%data_r(:, iband))
          ELSE
             exch(iband, iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
          END IF
-         IF (iband <= hybrid%nobd(nk,jsp)) THEN
+         IF (iband <= hybinp%nobd(nk,jsp)) THEN
             results%te_hfex%valence = results%te_hfex%valence - a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband)
          END IF
-         IF (hybrid%l_calhf) THEN
+         IF (hybinp%l_calhf) THEN
             WRITE (6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
-               kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybrid%div_vv(iband, nk, jsp))*(-27.211608), &
-               hybrid%div_vv(iband, nk, jsp)*(-27.211608), REAL(exch(iband, iband))*(-27.211608)
+               kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybinp%div_vv(iband, nk, jsp))*(-27.211608), &
+               hybinp%div_vv(iband, nk, jsp)*(-27.211608), REAL(exch(iband, iband))*(-27.211608)
          END IF
       END DO
    END SUBROUTINE add_vnonlocal

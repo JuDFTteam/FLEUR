@@ -20,7 +20,7 @@ CONTAINS
 
     TYPE(t_oneD),INTENT(INOUT)       :: oneD
     TYPE(t_mpdata), intent(inout)   :: mpdata
-    TYPE(t_hybrid),INTENT(INOUT)     :: hybrid
+    TYPE(t_hybinp),INTENT(INOUT)     :: hybrid
     TYPE(t_enpara),INTENT(INOUT)     :: enpara
     TYPE(t_banddos),INTENT(INOUT)    :: banddos
     TYPE(t_sliceplot),INTENT(INOUT)  :: sliceplot
@@ -56,8 +56,8 @@ CONTAINS
        i(17)=sliceplot%nnne ; i(18)=banddos%ndir ; i(19)=stars%mx1 ; i(20)=stars%mx2 ; i(21)=stars%mx3
        i(22)=atoms%n_u ; i(23) = sym%nop2 ; i(24) = sym%nsymt ; i(25) = stars%kimax ; i(26) = stars%kimax2
        i(27)=vacuum%nstars ; i(28)=vacuum%nstm ; i(29)=oneD%odd%nq2 ; i(30)=oneD%odd%nop
-       i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybrid%ewaldlambda ; i(34)=hybrid%lexp
-       i(35)=hybrid%bands1 ; i(36)=input%maxiter ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
+       i(31)=input%gw ; i(32)=input%gw_neigd ; i(33)=hybinp%ewaldlambda ; i(34)=hybinp%lexp
+       i(35)=hybinp%bands1 ; i(36)=input%maxiter ; i(37)=input%imix ; i(38)=banddos%orbCompAtom
        i(39)=input%kcrel;i(40)=banddos%s_cell_x;i(41)=banddos%s_cell_y;i(42)=banddos%s_cell_z; i(43)=sliceplot%iplot
        i(44)=atoms%nlotot;i(45)=lapw%dim_nbasfcn();i(46)=atoms%n_hia;i(47)=atoms%n_gf
 
@@ -73,7 +73,7 @@ CONTAINS
 
        l(1)=input%eonly ; l(2)=input%l_useapw ; l(3)=input%secvar ; l(4)=sym%zrfs ; l(5)=input%film
        l(6)=sym%invs ; l(7)=sym%invs2 ; l(8)=input%l_bmt ; l(9)=input%l_f ; l(10)=input%cdinf
-       l(11)=banddos%dos ; l(12) = hybrid%l_hybrid ; l(13)=banddos%vacdos ; l(14)=input%integ; l(15)=noco%l_spav
+       l(11)=banddos%dos ; l(12) = hybinp%l_hybrid ; l(13)=banddos%vacdos ; l(14)=input%integ; l(15)=noco%l_spav
        l(16)=input%strho ; l(17)=input%swsp ; l(18)=input%lflip
        l(21)=input%pallst ; l(22)=sliceplot%slice ; l(23)=noco%l_soc ; l(24)=vacuum%starcoeff
        l(25)=noco%l_noco ; l(26)=noco%l_ss; l(27)=noco%l_mperp; l(28)=noco%l_constr
@@ -86,8 +86,8 @@ CONTAINS
     ENDIF
     !
     CALL MPI_BCAST(i,SIZE(i),MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    hybrid%bands1=i(35) ;  input%imix=i(37);input%maxiter=i(36)
-    input%gw=i(31) ; input%gw_neigd=i(32) ; hybrid%ewaldlambda=i(33) ; hybrid%lexp=i(34)
+    hybinp%bands1=i(35) ;  input%imix=i(37);input%maxiter=i(36)
+    input%gw=i(31) ; input%gw_neigd=i(32) ; hybinp%ewaldlambda=i(33) ; hybinp%lexp=i(34)
     vacuum%nstars=i(27) ; vacuum%nstm=i(28) ; oneD%odd%nq2=i(29) ; oneD%odd%nop=i(30)
     atoms%n_u=i(22) ; sym%nop2=i(23) ; sym%nsymt = i(24)
     sliceplot%nnne=i(17) ; banddos%ndir=i(18) ; stars%mx1=i(19) ; stars%mx2=i(20) ; stars%mx3=i(21)
@@ -117,7 +117,7 @@ CONTAINS
     noco%l_noco=l(25) ; noco%l_ss=l(26) ; noco%l_mperp=l(27) ; noco%l_constr=l(28)
     input%pallst=l(21) ; sliceplot%slice=l(22) ; noco%l_soc=l(23) ; vacuum%starcoeff=l(24)
     input%strho=l(16) ; input%swsp=l(17) ; input%lflip=l(18)
-    banddos%dos=l(11) ; hybrid%l_hybrid=l(12) ; banddos%vacdos=l(13) ; banddos%l_orb=l(33) ; banddos%l_mcd=l(34)
+    banddos%dos=l(11) ; hybinp%l_hybrid=l(12) ; banddos%vacdos=l(13) ; banddos%l_orb=l(33) ; banddos%l_mcd=l(34)
     input%integ=l(14)
     sym%invs=l(6) ; sym%invs2=l(7) ; input%l_bmt=l(8) ; input%l_f=l(9) ; input%cdinf=l(10)
     input%eonly=l(1)  ; input%secvar=l(3) ; sym%zrfs=l(4) ; input%film=l(5)
@@ -282,10 +282,10 @@ CONTAINS
     ENDIF
     !--- HF<
     CALL MPI_BCAST(kpts%nkpt3,3,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-    IF(hybrid%l_hybrid) THEN
-       CALL MPI_BCAST(hybrid%lcutwf,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(hybrid%select1,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
-       CALL MPI_BCAST(hybrid%lcutm1,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+    IF(hybinp%l_hybrid) THEN
+       CALL MPI_BCAST(hybinp%lcutwf,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(hybinp%select1,4*atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
+       CALL MPI_BCAST(hybinp%lcutm1,atoms%ntype,MPI_INTEGER,0,mpi%mpi_comm,ierr)
     END IF
     !--- HF>
 

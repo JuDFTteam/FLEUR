@@ -9,7 +9,7 @@ MODULE m_vgen_xcpot
 
 CONTAINS
 
-   SUBROUTINE vgen_xcpot(hybrid, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
+   SUBROUTINE vgen_xcpot(hybinp, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
                           cell, oneD, sliceplot, mpi, noco, den, denRot, EnergyDen, vTot, vx, results)
 
       !     ***********************************************************
@@ -38,7 +38,7 @@ CONTAINS
       IMPLICIT NONE
 
       CLASS(t_xcpot), INTENT(INOUT)           :: xcpot
-      TYPE(t_hybrid), INTENT(IN)              :: hybrid
+      TYPE(t_hybinp), INTENT(IN)              :: hybinp
       TYPE(t_mpi), INTENT(IN)              :: mpi
 
       TYPE(t_oneD), INTENT(IN)              :: oneD
@@ -147,7 +147,7 @@ CONTAINS
                workden = den
             END IF
             veff = vTot
-            IF (xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
+            IF (xcpot%is_hybrid() .AND. hybinp%l_subvxc) THEN
                DO ispin = 1, input%jspins
                   CALL convol(stars, vx%pw_w(:, ispin), vx%pw(:, ispin), stars%ufft)
                END DO
@@ -170,7 +170,7 @@ CONTAINS
                CALL int_nv(ispin, stars, vacuum, atoms, sphhar, cell, sym, input, oneD, veff, workden, results%te_veff)
             END DO
 
-            IF (xcpot%is_hybrid().AND.hybrid%l_subvxc) THEN
+            IF (xcpot%is_hybrid() .AND. hybinp%l_subvxc) THEN
 
                ALLOCATE(rhoc(atoms%jmtd,atoms%ntype,input%jspins), rhoc_vx(atoms%jmtd))
                ALLOCATE(tec(atoms%ntype,input%jspins),qintc(atoms%ntype,input%jspins))

@@ -1,4 +1,4 @@
-MODULE m_types_hybrid
+MODULE m_types_hybinp
    IMPLICIT NONE
 
 
@@ -104,4 +104,4 @@ contains
 
    END FUNCTION gptnorm
 
-END MODULE m_types_hybrid
+END MODULE m_types_hybinp

@@ -4,24 +4,24 @@ module m_wavefproducts_inv
    USE m_constants
    USE m_judft
    USE m_types
-   USE m_types_hybrid
+   USE m_types_hybinp
    USE m_util
-   USE m_io_hybrid
+   USE m_io_hybinp
    USE m_wrapper
    USE m_constants
-   USE m_io_hybrid
+   USE m_io_hybinp
    USE m_wavefproducts_aux
 
 CONTAINS
    SUBROUTINE wavefproducts_inv5(bandi, bandf, bandoi, bandof, input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybrid,&
+                                 jsp, atoms, lapw, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
 
 
       IMPLICIT NONE
       TYPE(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybrid), INTENT(IN)    :: hybrid
+      TYPE(t_hybinp), INTENT(IN)    :: hybinp
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_noco), INTENT(IN)      :: noco
       TYPE(t_sym), INTENT(IN)       :: sym
@@ -38,7 +38,7 @@ CONTAINS
       INTEGER, INTENT(OUT)     :: nkqpt
 
       ! - arrays -
-      REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      REAL, INTENT(OUT)        ::    cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       ! - local scalars -
       INTEGER                 ::    g_t(3)
@@ -58,11 +58,11 @@ CONTAINS
 
 
       call wavefproducts_inv_IS(bandi, bandf, bandoi, bandof,  input,&
-                                jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybrid,&
+                                jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                 cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
       call wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof,&
-                                input,atoms, kpts, nk, iq, hybdat, mpdata, hybrid,&
+                                input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                 sym, nkqpt, cprod)
 
       CALL timestop("wavefproducts_inv5")
@@ -70,12 +70,12 @@ CONTAINS
    END SUBROUTINE wavefproducts_inv5
 
    subroutine wavefproducts_inv_IS(bandi, bandf, bandoi, bandof,  input,&
-                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybrid,&
+                                 jsp, atoms, lapw, kpts, nk, iq, g_t, hybdat, mpdata, hybinp,&
                                  cell, nbasm_mt, sym, noco, nkqpt, cprod)
 
      implicit NONE
      TYPE(t_mpdata), intent(in)  :: mpdata
-     TYPE(t_hybrid), INTENT(IN)    :: hybrid
+     TYPE(t_hybinp), INTENT(IN)    :: hybinp
      TYPE(t_input), INTENT(IN)     :: input
      TYPE(t_noco), INTENT(IN)      :: noco
      TYPE(t_sym), INTENT(IN)       :: sym
@@ -92,7 +92,7 @@ CONTAINS
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(OUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+     REAL, INTENT(OUT)        ::    cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
      ! - local scalars -
      INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm
@@ -158,7 +158,7 @@ CONTAINS
      END DO
      call timestop("step function")
 
-     call timestart("hybrid g")
+     call timestart("hybinp g")
      ic = nbasm_mt
      DO igptm = 1, mpdata%n_g(iq)
         rarr2 = 0
@@ -181,7 +181,7 @@ CONTAINS
         END DO
         cprod(ic, :, :) = rarr2(:, :)
      END DO
-     call timestop("hybrid g")
+     call timestop("hybinp g")
      call timestop("calc convolution")
 
      deallocate(z0, pointer, gpt0)
@@ -190,13 +190,13 @@ CONTAINS
    end subroutine wavefproducts_inv_IS
 
    subroutine wavefproducts_inv5_MT(bandi, bandf, bandoi, bandof,&
-                                   input,atoms, kpts, nk, iq, hybdat, mpdata, hybrid,&
+                                   input,atoms, kpts, nk, iq, hybdat, mpdata, hybinp,&
                                    sym, nkqpt, cprod)
 
      implicit NONE
      TYPE(t_input),INTENT(IN)      :: input
      TYPE(t_mpdata), INTENT(IN)   :: mpdata
-     TYPE(t_hybrid), INTENT(IN)    :: hybrid
+     TYPE(t_hybinp), INTENT(IN)    :: hybinp
      TYPE(t_sym), INTENT(IN)       :: sym
      TYPE(t_kpts), INTENT(IN)      :: kpts
      TYPE(t_atoms), INTENT(IN)     :: atoms
@@ -208,7 +208,7 @@ CONTAINS
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(INOUT)        ::    cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+     REAL, INTENT(INOUT)        ::    cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
      ! - local scalars -
      INTEGER                 ::    i, iband
@@ -228,8 +228,8 @@ CONTAINS
      ! - local arrays -
      INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
 
-     REAL                    ::    cmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
-     REAL                    ::    cmt(input%neig, hybrid%maxlmindx, atoms%nat)
+     REAL                    ::    cmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
+     REAL                    ::    cmt(input%neig, hybinp%maxlmindx, atoms%nat)
      REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
      REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
 
@@ -245,8 +245,8 @@ CONTAINS
      END DO
 
      ! read in cmt coefficient at k-point nk
-     allocate(ccmt_nk(input%neig, hybrid%maxlmindx, atoms%nat), &
-               ccmt(input%neig, hybrid%maxlmindx, atoms%nat), &
+     allocate(ccmt_nk(input%neig, hybinp%maxlmindx, atoms%nat), &
+               ccmt(input%neig, hybinp%maxlmindx, atoms%nat), &
                source=cmplx(0.0, 0.0), stat=ok)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt')
 
@@ -335,7 +335,7 @@ CONTAINS
      iiatom = 0
 
      DO itype = 1, atoms%ntype
-        ioffset = sum([((2*ll + 1)*mpdata%num_radbasfn(ll, itype), ll=0, hybrid%lcutm1(itype))])
+        ioffset = sum([((2*ll + 1)*mpdata%num_radbasfn(ll, itype), ll=0, hybinp%lcutm1(itype))])
         lm_0 = lm_00
         DO ieq = 1, atoms%neq(itype)
            iatom1 = iatom1 + 1
@@ -349,7 +349,7 @@ CONTAINS
            IF (iatom1 /= iatom2) THEN
               call timestart("iatom1 neq iatom2")
               ! loop over l of mixed basis
-              DO l = 0, hybrid%lcutm1(itype)
+              DO l = 0, hybinp%lcutm1(itype)
                  ! loop over basis functions products, which belong to l
                  DO n = 1, hybdat%nindxp1(l, itype)
 
@@ -469,7 +469,7 @@ CONTAINS
 
               ! loop over l of mixed basis
               monepl = -1
-              DO l = 0, hybrid%lcutm1(itype)
+              DO l = 0, hybinp%lcutm1(itype)
                  monepl = -monepl
                  ! loop over basis functions products, which belong to l
                  DO n = 1, hybdat%nindxp1(l, itype)

@@ -12,7 +12,7 @@ CONTAINS
   SUBROUTINE dimens(&
        &                  input,sym,stars,&
        &                  atoms,sphhar,vacuum,&
-       &                  kpts,oneD,hybrid)
+       &                  kpts,oneD,hybinp)
 
     USE m_types_input
     USE m_types_sym
@@ -22,7 +22,7 @@ CONTAINS
     USE m_types_vacuum
     USE m_types_kpts
     USE m_types_oned
-    USE m_types_hybrid
+    USE m_types_hybinp
     USE m_types_cell
     USE m_dimen7
     USE m_firstglance
@@ -36,7 +36,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(INOUT) :: vacuum
     TYPE(t_kpts),INTENT(INOUT) :: kpts
     TYPE(t_oneD),INTENT(INOUT) :: oneD
-    TYPE(t_hybrid),INTENT(INOUT) :: hybrid
+    TYPE(t_hybinp),INTENT(INOUT) :: hybinp
 
     TYPE(t_cell)     :: cell
 
@@ -54,7 +54,7 @@ CONTAINS
        CALL first_glance(n1,n2,n3,n5,n6,input%itmax,l_kpts,l_qpts,ldum,n7,n8,n10)
 
        CALL dimen7(input,sym,stars,atoms,sphhar,vacuum,kpts,&
-                   oneD,hybrid,cell)
+                   oneD,hybinp,cell)
     !     in case of a parallel calculation we have to broadcast
     vacuum%nmzd = 250
     vacuum%nmzxyd = 100

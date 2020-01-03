@@ -6,7 +6,7 @@ CONTAINS
    SUBROUTINE ibs_correction( &
       nk, atoms, &
        input, jsp, &
-      hybdat, mpdata,hybrid, &
+      hybdat, mpdata,hybinp, &
       lapw, kpts, nkpti, &
       cell, mnobd, &
       sym, &
@@ -20,11 +20,11 @@ CONTAINS
       USE m_util
       use m_intgrf
       USE m_types
-      USE m_io_hybrid
+      USE m_io_hybinp
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybrid), INTENT(INOUT)   :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT)   :: hybinp
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -40,7 +40,7 @@ CONTAINS
       ! - arrays -
 
       COMPLEX, INTENT(INOUT)::  olap_ibsc(:,:,:,:)
-      COMPLEX, INTENT(INOUT)::  proj_ibsc(:, :, :)!(3,mnobd,hybrid%nbands(nk))
+      COMPLEX, INTENT(INOUT)::  proj_ibsc(:, :, :)!(3,mnobd,hybinp%nbands(nk))
       ! - local scalars -
       INTEGER               ::  i, itype, ieq, iatom, iatom1, iband, iband1
       INTEGER               ::  iband2, ilo, ibas, ic, ikpt, ikvec, invsfct
@@ -79,7 +79,7 @@ CONTAINS
                                integrand(atoms%jmtd)
 
       COMPLEX               ::  f(atoms%jmtd, mnobd)
-      COMPLEX               ::  carr(3), carr2(3, hybrid%nbands(nk))
+      COMPLEX               ::  carr(3), carr2(3, hybinp%nbands(nk))
       COMPLEX               ::  ylm((atoms%lmaxd + 2)**2)
       COMPLEX, ALLOCATABLE   ::  u1(:, :, :, :, :), u2(:, :, :, :, :)
       COMPLEX, ALLOCATABLE   ::  cmt_lo(:, :, :, :)
@@ -182,7 +182,7 @@ CONTAINS
                         cdum2 = cdum1*conjg(ylm(lm))
                         if (z%l_real) THEN
                            work_r = z%data_r(ibas, :)
-                           DO iband = 1, hybrid%nbands(nk)
+                           DO iband = 1, hybinp%nbands(nk)
                               cmt_lo(iband, M, ilo, iatom) = cmt_lo(iband, M, ilo, iatom) + cdum2*work_r(iband)
                               IF (invsfct == 2) THEN
                                  ! the factor (-1)**l is necessary as we do not calculate
@@ -192,7 +192,7 @@ CONTAINS
                            END DO
                         else
                            work_c = z%data_c(ibas, :)
-                           DO iband = 1, hybrid%nbands(nk)
+                           DO iband = 1, hybinp%nbands(nk)
                               cmt_lo(iband, M, ilo, iatom) = cmt_lo(iband, M, ilo, iatom) + cdum2*work_c(iband)
                               IF (invsfct == 2) THEN
                                  ! the factor (-1)**l is necessary as we do not calculate
@@ -266,12 +266,12 @@ CONTAINS
                         cdum = (-1)**(p + 1)*enum/denom
                         if (z%l_real) THEN
                            work_r = z%data_r(i, :)
-                           DO iband = 1, hybrid%nbands(nk)
+                           DO iband = 1, hybinp%nbands(nk)
                               cmt_apw(iband, lmp, iatom) = cmt_apw(iband, lmp, iatom) + cdum*work_r(iband)
                            END DO
                         else
                            work_c = z%data_c(i, :)
-                           DO iband = 1, hybrid%nbands(nk)
+                           DO iband = 1, hybinp%nbands(nk)
                               cmt_apw(iband, lmp, iatom) = cmt_apw(iband, lmp, iatom) + cdum*work_c(iband)
                            END DO
                         end if
@@ -286,9 +286,9 @@ CONTAINS
       ! construct radial functions (complex) for the first order
       ! incomplete basis set correction
 
-      allocate(u1(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybrid%nbands
+      allocate(u1(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybinp%nbands
       IF (ok /= 0) call judft_error('kp_perturbation: failure allocation u1')
-      allocate(u2(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybrid%nbands
+      allocate(u2(atoms%jmtd, 3, mnobd, (atoms%lmaxd + 1)**2, atoms%nat), stat=ok)!hybinp%nbands
       IF (ok /= 0) call judft_error('kp_perturbation: failure allocation u2')
       u1 = 0; u2 = 0
 
@@ -309,13 +309,13 @@ CONTAINS
                      lmp2 = 2*l2**2 + p1
                      DO m2 = -l2, l2
                         carr = gauntvec(l1, m1, l2, m2, atoms)
-                        DO iband = 1, mnobd! hybrid%nbands
+                        DO iband = 1, mnobd! hybinp%nbands
                            carr2(1:3, iband) = carr2(1:3, iband) + carr*cmt_apw(iband, lmp2, iatom)
                         END DO
                         lmp2 = lmp2 + 2
                      END DO
 
-                     DO iband = 1, mnobd! hybrid%nbands
+                     DO iband = 1, mnobd! hybinp%nbands
                         DO i = 1, 3
                            DO ig = 1, atoms%jri(itype)
                               ! the r factor is already included in bas1
@@ -331,13 +331,13 @@ CONTAINS
                         lmp2 = 2*l2**2 + p1
                         DO m2 = -l2, l2
                            carr = gauntvec(l1, m1, l2, m2, atoms)
-                           DO iband = 1, mnobd! hybrid%nbands
+                           DO iband = 1, mnobd! hybinp%nbands
                               carr2(1:3, iband) = carr2(1:3, iband) + carr*cmt_apw(iband, lmp2, iatom)
                            END DO
                            lmp2 = lmp2 + 2
                         END DO
 
-                        DO iband = 1, mnobd! hybrid%nbands
+                        DO iband = 1, mnobd! hybinp%nbands
                            DO i = 1, 3
                               DO ig = 1, atoms%jri(itype)
                                  ! the r factor is already included in bas1
@@ -357,13 +357,13 @@ CONTAINS
                         DO p2 = 1, 2
                            lmp2 = lmp2 + 1
                            rdum = w(p1, l1, p2, l2, itype, bas1_MT_tmp, drbas1_MT_tmp, atoms%rmt)
-                           DO iband = 1, mnobd! hybrid%nbands
+                           DO iband = 1, mnobd! hybinp%nbands
                               carr2(1:3, iband) = carr2(1:3, iband) + img*carr*rdum*cmt_apw(iband, lmp2, iatom)
                            END DO
                         END DO
                      END DO
 
-                     DO iband = 1, mnobd! hybrid%nbands
+                     DO iband = 1, mnobd! hybinp%nbands
                         DO i = 1, 3
                            DO ig = 1, atoms%jri(itype)
                               u1(ig, i, iband, lm1, iatom) = u1(ig, i, iband, lm1, iatom) + bas1_tmp(ig, p1, l1, itype)*carr2(i, iband)/atoms%rmsh(ig, itype)
@@ -381,13 +381,13 @@ CONTAINS
                            DO p2 = 1, 2
                               lmp2 = lmp2 + 1
                               rdum = w(p1, l1, p2, l2, itype, bas1_MT_tmp, drbas1_MT_tmp, atoms%rmt)
-                              DO iband = 1, mnobd! hybrid%nbands
+                              DO iband = 1, mnobd! hybinp%nbands
                                  carr2(1:3, iband) = carr2(1:3, iband) + img*carr*rdum*cmt_apw(iband, lmp2, iatom)
                               END DO
                            END DO
                         END DO
 
-                        DO iband = 1, mnobd! hybrid%nbands
+                        DO iband = 1, mnobd! hybinp%nbands
                            DO i = 1, 3
                               DO ig = 1, atoms%jri(itype)
                                  u1(ig, i, iband, lm1, iatom) = u1(ig, i, iband, lm1, iatom) &
@@ -495,7 +495,7 @@ CONTAINS
                   DO p = 1, 2
                      lmp = lmp + 1
 
-                     DO iband = 1, mnobd! hybrid%nbands
+                     DO iband = 1, mnobd! hybinp%nbands
                         DO i = 1, 3
 
                            rintegrand = atoms%rmsh(:, itype)*(hybdat%bas1(:, p, l, itype)*ru1(:, i, iband) + hybdat%bas2(:, p, l, itype)*ru2(:, i, iband))
@@ -508,9 +508,9 @@ CONTAINS
                         END DO
                      END DO
 
-                     DO iband1 = 1, hybrid%nbands(nk)
+                     DO iband1 = 1, hybinp%nbands(nk)
                         cdum = conjg(cmt_apw(iband1, lmp, iatom))
-                        DO iband2 = 1, mnobd! hybrid%nbands
+                        DO iband2 = 1, mnobd! hybinp%nbands
                            proj_ibsc(1:3, iband2, iband1) = proj_ibsc(1:3, iband2, iband1) + cdum*carr2(1:3, iband2)
                         END DO
                      END DO
@@ -536,7 +536,7 @@ CONTAINS
                   ru2 = real(u2(:, :, :, lm, iatom))
                   iu2 = aimag(u2(:, :, :, lm, iatom))
 
-                  DO iband = 1, mnobd! hybrid%nbands
+                  DO iband = 1, mnobd! hybinp%nbands
                      DO i = 1, 3
 
                         rintegrand = atoms%rmsh(:, itype)*(u1_lo(:, ilo, itype)*ru1(:, i, iband) + u2_lo(:, ilo, itype)*ru2(:, i, iband))
@@ -549,9 +549,9 @@ CONTAINS
                      END DO
                   END DO
 
-                  DO iband1 = 1, hybrid%nbands(nk)
+                  DO iband1 = 1, hybinp%nbands(nk)
                      cdum = conjg(cmt_lo(iband1, M, ilo, iatom))
-                     DO iband2 = 1, mnobd! hybrid%nbands
+                     DO iband2 = 1, mnobd! hybinp%nbands
                         proj_ibsc(1:3, iband2, iband1) = proj_ibsc(1:3, iband2, iband1) + cdum*carr2(1:3, iband2)
                      END DO
                   END DO
@@ -580,7 +580,7 @@ CONTAINS
                   ru2 = real(u2(:, :, :, lm, iatom))
                   iu2 = aimag(u2(:, :, :, lm, iatom))
 
-                  DO iband1 = 1, mnobd ! hybrid%nbands
+                  DO iband1 = 1, mnobd ! hybinp%nbands
                      DO iband2 = 1, mnobd!iband1
                         DO i = 1, 3
                            DO j = 1, 3
@@ -706,7 +706,7 @@ CONTAINS
 !
    SUBROUTINE dwavefproducts( &
       dcprod, nk, bandi1, bandf1, bandi2, bandf2, lwrite, &
-      input,atoms, mpdata, hybrid, &
+      input,atoms, mpdata, hybinp, &
       cell, &
       hybdat, kpts, nkpti, lapw, &
        jsp, &
@@ -719,7 +719,7 @@ CONTAINS
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_input),INTENT(IN)     ::input
       TYPE(t_mpdata), intent(in) :: mpdata
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -745,7 +745,7 @@ CONTAINS
       !
       CALL momentum_matrix( &
          dcprod, nk, bandi1, bandf1, bandi2, bandf2, &
-         input,atoms, mpdata, hybrid, &
+         input,atoms, mpdata, hybinp, &
          cell, &
          hybdat, kpts, lapw, &
           jsp)
@@ -780,7 +780,7 @@ CONTAINS
 !
    SUBROUTINE momentum_matrix( &
       momentum, nk, bandi1, bandf1, bandi2, bandf2, &
-      input,atoms, mpdata, hybrid, &
+      input,atoms, mpdata, hybinp, &
       cell, &
       hybdat, kpts, lapw, &
        jsp)
@@ -792,12 +792,12 @@ CONTAINS
       USE m_dr2fdr
       USE m_constants
       USE m_types
-      USE m_io_hybrid
+      USE m_io_hybinp
       IMPLICIT NONE
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpdata), intent(in) :: mpdata
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -828,10 +828,10 @@ CONTAINS
       REAL                    ::  qg(lapw%nv(jsp), 3)
 
       COMPLEX                 ::  hlp(3, 3)
-      COMPLEX                 ::  cvec1(hybrid%maxlmindx), cvec2(hybrid%maxlmindx), cvec3(hybrid%maxlmindx)
-      COMPLEX                 ::  cmt1(hybrid%maxlmindx, bandi1:bandf1), cmt2(hybrid%maxlmindx, bandi2:bandf2)
+      COMPLEX                 ::  cvec1(hybinp%maxlmindx), cvec2(hybinp%maxlmindx), cvec3(hybinp%maxlmindx)
+      COMPLEX                 ::  cmt1(hybinp%maxlmindx, bandi1:bandf1), cmt2(hybinp%maxlmindx, bandi2:bandf2)
       COMPLEX                 ::  carr1(3), carr2(3)
-      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
       REAL                    ::  olap_r(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
       COMPLEX                 ::  olap_c(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
       REAL                    ::  vec1_r(lapw%nv(jsp)), vec2_r(lapw%nv(jsp)), vec3_r(lapw%nv(jsp))

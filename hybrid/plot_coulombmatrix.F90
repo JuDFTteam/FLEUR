@@ -22,7 +22,7 @@
           ic = 0
           DO itype = 1, atoms%ntype
              DO ineq = 1, atoms%neq(itype)
-                DO l = 0, hybrid%lcutm1(itype)
+                DO l = 0, hybinp%lcutm1(itype)
                    DO M = -l, l
                       WRITE (700 + ikpt, *) l, M
                       DO n = 1, mpdata%num_radbasfn(l, itype)
@@ -39,7 +39,7 @@
           ic2 = 0
           DO itype = 1, atoms%ntype
              DO ineq = 1, atoms%neq(itype)
-                DO l = 0, hybrid%lcutm1(itype)
+                DO l = 0, hybinp%lcutm1(itype)
                    DO M = -l, l
                       DO n = 1, mpdata%num_radbasfn(l, itype) - 1
                          ic2 = ic2 + 1
@@ -53,7 +53,7 @@
           ic1 = 0
           DO itype = 1, atoms%ntype
              DO ineq = 1, atoms%neq(itype)
-                DO l = 0, hybrid%lcutm1(itype)
+                DO l = 0, hybinp%lcutm1(itype)
                    DO M = -l, l
                       DO n = 1, mpdata%num_radbasfn(l, itype) - 1
                          coulhlp1(ic + n, ic + 1:ic + mpdata%num_radbasfn(l, itype) - 1) &
@@ -85,16 +85,16 @@
                    coulhlp1(nbasp + 1, ic + 1:ic + mpdata%num_radbasfn(0, itype) - 1) &
                       = coulhlp(nbasp + 1, ic1 + 1:ic1 + mpdata%num_radbasfn(0, itype) - 1)
                    ic = ic + SUM((/((2*l + 1)*(mpdata%num_radbasfn(l, itype) - 1), &
-                                    l=0, hybrid%lcutm1(itype))/))
+                                    l=0, hybinp%lcutm1(itype))/))
                    ic1 = ic1 + SUM((/((2*l + 1)*mpdata%num_radbasfn(l, itype), &
-                                      l=0, hybrid%lcutm1(itype))/))
+                                      l=0, hybinp%lcutm1(itype))/))
                 END DO
              END DO
 
              ic2 = 0
              DO itype = 1, atoms%ntype
                 DO ineq = 1, atoms%neq(itype)
-                   DO l = 0, hybrid%lcutm1(itype)
+                   DO l = 0, hybinp%lcutm1(itype)
                       DO M = -l, l
                          DO n = 1, mpdata%num_radbasfn(l, itype) - 1
                             ic2 = ic2 + 1
@@ -107,7 +107,7 @@
              ic1 = 0
              DO itype = 1, atoms%ntype
                 DO ineq = 1, atoms%neq(itype)
-                   DO l = 0, hybrid%lcutm1(itype)
+                   DO l = 0, hybinp%lcutm1(itype)
                       DO M = -l, l
                          ic2 = ic2 + 1
 
@@ -120,9 +120,9 @@
                          ic4 = 0
                          DO itype1 = 1, atoms%ntype
                             ishift = SUM((/((2*l2 + 1)*mpdata%num_radbasfn(l2, itype1), &
-                                            l2=0, hybrid%lcutm1(itype1))/))
+                                            l2=0, hybinp%lcutm1(itype1))/))
                             ishift1 = SUM((/((2*l2 + 1)*(mpdata%num_radbasfn(l2, itype1) - 1), &
-                                             l2=0, hybrid%lcutm1(itype1))/))
+                                             l2=0, hybinp%lcutm1(itype1))/))
                             DO ineq1 = 1, atoms%neq(itype1)
                                ic5 = ic3 + (ineq1 - 1)*ishift + 1
                                ic6 = ic5 + mpdata%num_radbasfn(0, itype1) - 2
@@ -152,7 +152,7 @@
           ic2 = 0
           DO itype = 1, atoms%ntype
              DO ineq = 1, atoms%neq(itype)
-                DO l = 0, hybrid%lcutm1(itype)
+                DO l = 0, hybinp%lcutm1(itype)
                    DO M = -l, l
                       DO n = 1, mpdata%num_radbasfn(l, itype) - 1
                          ic2 = ic2 + 1
@@ -165,7 +165,7 @@
           ic1 = 0
           DO itype = 1, atoms%ntype
              DO ineq = 1, atoms%neq(itype)
-                DO l = 0, hybrid%lcutm1(itype)
+                DO l = 0, hybinp%lcutm1(itype)
                    DO M = -l, l
                       ic2 = ic2 + 1
 
@@ -175,7 +175,7 @@
                       ic4 = ic2
                       DO itype1 = 1, atoms%ntype
                          DO ineq1 = 1, atoms%neq(itype1)
-                            DO l1 = 0, hybrid%lcutm1(itype1)
+                            DO l1 = 0, hybinp%lcutm1(itype1)
                                DO m1 = -l1, l1
                                   ic3 = ic3 + mpdata%num_radbasfn(l1, itype1)
                                   IF (ic3 < ic1) CYCLE
@@ -212,7 +212,7 @@
           ic = 0
           DO itype = 1, atoms%ntype
              DO ineq = 1, atoms%neq(itype)
-                DO l = 0, hybrid%lcutm1(itype)
+                DO l = 0, hybinp%lcutm1(itype)
 
                    DO M = -l, l
                       WRITE (800 + ikpt, *) l, M

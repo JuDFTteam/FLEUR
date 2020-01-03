@@ -4,17 +4,17 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-module m_io_hybrid
+module m_io_hybinp
   use m_io_matrix
   use m_judft
   use m_types
   implicit none
   !private
   integer,save :: id_olap,id_z,id_v_x,id_coulomb,id_coulomb_spm
-  !public:: open_hybrid_io,read_cmt,write_cmt
+  !public:: open_hybinp_io,read_cmt,write_cmt
 contains
 
-  SUBROUTINE open_hybrid_io1(l_real)
+  SUBROUTINE open_hybinp_io1(l_real)
     implicit none
 
     LOGICAL,INTENT(IN)          :: l_real
@@ -27,10 +27,10 @@ contains
     id_olap=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"olap.mat")
     !print *,"Open z.mat"
     id_z=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"z.mat")
-  END SUBROUTINE open_hybrid_io1
+  END SUBROUTINE open_hybinp_io1
 
 
-  SUBROUTINE open_hybrid_io1b(l_real)
+  SUBROUTINE open_hybinp_io1b(l_real)
     implicit none
 
     LOGICAL,INTENT(IN)          :: l_real
@@ -41,13 +41,13 @@ contains
 
     !print *,"Open v_x.mat"
     id_v_x=OPEN_MATRIX(l_real,lapw_dim_nbasfcn,1,1,"v_x.mat")
-  END SUBROUTINE open_hybrid_io1b
+  END SUBROUTINE open_hybinp_io1b
 
 
-  SUBROUTINE open_hybrid_io2(mpdata,hybrid,input,atoms,l_real)
+  SUBROUTINE open_hybinp_io2(mpdata,hybinp,input,atoms,l_real)
     IMPLICIT NONE
     type(t_mpdata), intent(in) :: mpdata
-    TYPE(t_hybrid),INTENT(IN)   :: hybrid
+    TYPE(t_hybinp),INTENT(IN)   :: hybinp
     TYPE(t_input),INTENT(IN):: input
     TYPE(t_atoms),INTENT(IN)    :: atoms
     LOGICAL,INTENT(IN)          :: l_real
@@ -59,26 +59,26 @@ contains
     if (opened) return
     opened=.true.
     OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-         &     recl=input%neig*hybrid%maxlmindx*atoms%nat*16)
+         &     recl=input%neig*hybinp%maxlmindx*atoms%nat*16)
 
 #ifdef CPP_NOSPMVEC
-    irecl_coulomb = hybrid%maxbasm1 * (hybrid%maxbasm1+1) * 8 / 2
+    irecl_coulomb = hybinp%maxbasm1 * (hybinp%maxbasm1+1) * 8 / 2
     if (.not.l_real) irecl_coulomb =irecl_coulomb *2
     OPEN(unit=778,file='coulomb',form='unformatted',access='direct', recl=irecl_coulomb)
     id_coulomb=778
 #else
     ! if the sparse matrix technique is used, several entries of the
     ! matrix vanish so that the size of each entry is smaller
-    irecl_coulomb = ( atoms%ntype*(maxval(hybrid%lcutm1)+1)*(maxval(mpdata%num_radbasfn)-1)**2&
-         +   atoms%nat *(maxval(hybrid%lcutm1)+2)*(2*maxval(hybrid%lcutm1)+1)*(maxval(mpdata%num_radbasfn)-1)&
+    irecl_coulomb = ( atoms%ntype*(maxval(hybinp%lcutm1)+1)*(maxval(mpdata%num_radbasfn)-1)**2&
+         +   atoms%nat *(maxval(hybinp%lcutm1)+2)*(2*maxval(hybinp%lcutm1)+1)*(maxval(mpdata%num_radbasfn)-1)&
          +   (maxval(mpdata%num_radbasfn)-1)*atoms%nat**2&
-         +   ((maxval(hybrid%lcutm1)+1)**2*atoms%nat+maxval(mpdata%n_g))&
-         *((maxval(hybrid%lcutm1)+1)**2*atoms%nat+maxval(mpdata%n_g)+1)/2 )*8
+         +   ((maxval(hybinp%lcutm1)+1)**2*atoms%nat+maxval(mpdata%n_g))&
+         *((maxval(hybinp%lcutm1)+1)**2*atoms%nat+maxval(mpdata%n_g)+1)/2 )*8
     if (.not.l_real) irecl_coulomb =irecl_coulomb *2
     OPEN(unit=778,file='coulomb1',form='unformatted',access='direct', recl=irecl_coulomb)
     id_coulomb_spm=778
 #endif
-  END SUBROUTINE open_hybrid_io2
+  END SUBROUTINE open_hybinp_io2
 
   subroutine write_cmt(cmt,nk)
     implicit none
@@ -220,4 +220,4 @@ contains
 
 
 
-end module m_io_hybrid
+end module m_io_hybinp

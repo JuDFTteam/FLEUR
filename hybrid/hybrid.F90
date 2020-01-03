@@ -4,12 +4,12 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_calc_hybrid
+MODULE m_calc_hybinp
    USE m_judft
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id, mpdata, hybrid, kpts, atoms, input,  mpi, noco, cell, oneD, &
+   SUBROUTINE calc_hybinp(eig_id, mpdata, hybinp, kpts, atoms, input,  mpi, noco, cell, oneD, &
                           enpara, results, sym, xcpot, v, iterHF)
 
       USE m_types_hybdat
@@ -20,7 +20,7 @@ CONTAINS
       USE m_hf_setup
       USE m_hsfock
       USE m_eig66_io
-      USE m_io_hybrid
+      USE m_io_hybinp
 
       IMPLICIT NONE
 
@@ -28,7 +28,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
       type(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybrid), INTENT(INOUT) :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_enpara), INTENT(IN)    :: enpara
@@ -55,9 +55,9 @@ CONTAINS
       ! write (7465,*) iter, iterHF
       ! close(7465)
 
-      CALL timestart("Hybrid code")
-      INQUIRE (file="v_x.mat", exist=hybrid%l_addhf)
-      CALL open_hybrid_io1( sym%invs)
+      CALL timestart("hybinp code")
+      INQUIRE (file="v_x.mat", exist=hybinp%l_addhf)
+      CALL open_hybinp_io1( sym%invs)
 
       IF (kpts%nkptf == 0) THEN
          CALL judft_error("kpoint-set of full BZ not available", &
@@ -65,51 +65,51 @@ CONTAINS
       END IF
 
       !Check if new non-local potential shall be generated
-      hybrid%l_subvxc = hybrid%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
+      hybinp%l_subvxc = hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
       !If this is the first iteration loop we can not calculate a new non-local potential
-      hybrid%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < input%minDistance)
-      IF (.NOT. hybrid%l_calhf) THEN
-         hybrid%l_subvxc = hybrid%l_subvxc .AND. hybrid%l_addhf
-         CALL timestop("Hybrid code")
+      hybinp%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < input%minDistance)
+      IF (.NOT. hybinp%l_calhf) THEN
+         hybinp%l_subvxc = hybinp%l_subvxc .AND. hybinp%l_addhf
+         CALL timestop("hybinp code")
          RETURN
       ENDIF
 
       results%te_hfex%core = 0
 
       !Check if we are converged well enough to calculate a new potential
-      CALL open_hybrid_io1b( sym%invs)
-      hybrid%l_addhf = .TRUE.
+      CALL open_hybinp_io1b( sym%invs)
+      hybinp%l_addhf = .TRUE.
 
       !In first iteration allocate some memory
       IF (init_vex) THEN
-         if(allocated(hybrid%ne_eig)) deallocate(hybrid%ne_eig)
-         allocate(hybrid%ne_eig(kpts%nkpt), source=0)
+         if(allocated(hybinp%ne_eig)) deallocate(hybinp%ne_eig)
+         allocate(hybinp%ne_eig(kpts%nkpt), source=0)
 
-         if(allocated(hybrid%nbands)) then
-            deallocate(hybrid%nbands, stat=err, errmsg=msg)
+         if(allocated(hybinp%nbands)) then
+            deallocate(hybinp%nbands, stat=err, errmsg=msg)
             if(err /= 0) THEN
                write (*,*) "errorcode", err
                write (*,*) "errormessage", msg
             endif
          endif
 
-         allocate(hybrid%nbands(kpts%nkpt), source=0)
+         allocate(hybinp%nbands(kpts%nkpt), source=0)
 
-         if(allocated(hybrid%nobd)) deallocate(hybrid%nobd)
-         allocate(hybrid%nobd(kpts%nkptf, input%jspins), source=0)
+         if(allocated(hybinp%nobd)) deallocate(hybinp%nobd)
+         allocate(hybinp%nobd(kpts%nkptf, input%jspins), source=0)
 
-         if(allocated(hybrid%nbasm)) deallocate(hybrid%nbasm)
-         allocate(hybrid%nbasm(kpts%nkptf), source=0)
+         if(allocated(hybinp%nbasm)) deallocate(hybinp%nbasm)
+         allocate(hybinp%nbasm(kpts%nkptf), source=0)
 
-         if(allocated(hybrid%div_vv)) deallocate(hybrid%div_vv)
-         allocate(hybrid%div_vv(input%neig, kpts%nkpt, input%jspins), source=0.0)
+         if(allocated(hybinp%div_vv)) deallocate(hybinp%div_vv)
+         allocate(hybinp%div_vv(input%neig, kpts%nkpt, input%jspins), source=0.0)
          init_vex = .FALSE.
       END IF
 
-      hybrid%l_subvxc = (hybrid%l_subvxc .AND. hybrid%l_addhf)
+      hybinp%l_subvxc = (hybinp%l_subvxc .AND. hybinp%l_addhf)
       IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(input%neig, kpts%nkpt, input%jspins))
 
-      IF (hybrid%l_calhf) THEN
+      IF (hybinp%l_calhf) THEN
          iterHF = iterHF + 1
 
          !Delete broyd files
@@ -119,25 +119,25 @@ CONTAINS
 
          l_zref = (sym%zrfs .AND. (SUM(ABS(kpts%bk(3, :kpts%nkpt))) < 1e-9) .AND. .NOT. noco%l_noco)
 
-         CALL timestart("Preparation for Hybrid functionals")
-         !    CALL juDFT_WARN ("Hybrid functionals not working in this version")
+         CALL timestart("Preparation for hybinp functionals")
+         !    CALL juDFT_WARN ("hybinp functionals not working in this version")
 
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
          write (*,*) "iterHF = ", iterHF
-         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpdata, hybrid, enpara, mpi, v, iterHF)
+         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpdata, hybinp, enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-         CALL open_hybrid_io2(mpdata, hybrid, input, atoms, sym%invs)
+         CALL open_hybinp_io2(mpdata, hybinp, input, atoms, sym%invs)
 
-         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybrid, xcpot)
+         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, xcpot)
 
-         CALL hf_init(mpdata, hybrid, atoms, input,  hybdat)
-         CALL timestop("Preparation for Hybrid functionals")
+         CALL hf_init(mpdata, hybinp, atoms, input,  hybdat)
+         CALL timestop("Preparation for hybinp functionals")
          CALL timestart("Calculation of non-local HF potential")
          DO jsp = 1, input%jspins
             call timestart("HF_setup")
-            CALL HF_setup(mpdata,hybrid, input, sym, kpts,  atoms, &
+            CALL HF_setup(mpdata,hybinp, input, sym, kpts,  atoms, &
                           mpi, noco, cell, oneD, results, jsp, enpara, eig_id, &
                           hybdat, sym%invs, v%mt(:, 0, :, :), eig_irr)
             call timestop("HF_setup")
@@ -145,14 +145,14 @@ CONTAINS
             DO nk = 1, kpts%nkpt
                !DO nk = mpi%n_start,kpts%nkpt,mpi%n_stride
                CALL lapw%init(input, noco, kpts, atoms, sym, nk, cell, l_zref)
-               CALL hsfock(nk, atoms, mpdata, hybrid, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
-                           noco, results, MAXVAL(hybrid%nobd(:,jsp)), xcpot, mpi)
+               CALL hsfock(nk, atoms, mpdata, hybinp, lapw,  kpts, jsp, input, hybdat, eig_irr, sym, cell, &
+                           noco, results, MAXVAL(hybinp%nobd(:,jsp)), xcpot, mpi)
             END DO
          END DO
          CALL timestop("Calculation of non-local HF potential")
          CALL close_eig(eig_id)
 
       ENDIF
-      CALL timestop("Hybrid code")
-   END SUBROUTINE calc_hybrid
-END MODULE m_calc_hybrid
+      CALL timestop("hybinp code")
+   END SUBROUTINE calc_hybinp
+END MODULE m_calc_hybinp

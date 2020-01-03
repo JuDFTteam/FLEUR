@@ -812,9 +812,9 @@ CONTAINS
       IF(numberNodes.EQ.1) THEN
          xcpot%gmaxxc = evaluateFirstOnly(xmlGetAttributeValue(xPathA))
       END IF
-      hybrid%l_hybrid=xcpot%is_hybrid()
+      hybinp%l_hybrid=xcpot%is_hybrid()
 
-      ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
+      ALLOCATE(hybinp%lcutm1(atoms%ntype),hybinp%lcutwf(atoms%ntype),hybinp%select1(4,atoms%ntype))
 
       obsolete%lwb=.FALSE.
       IF (xcpot%needs_grad()) THEN
@@ -828,19 +828,19 @@ CONTAINS
 
       mpbasis%g_cutoff = input%rkmax - 0.5
       mpbasis%linear_dep_tol = 1.0e-4
-      hybrid%ewaldlambda = 3
-      hybrid%lexp = 16
-      hybrid%bands1 = DIMENSION%neigd
+      hybinp%ewaldlambda = 3
+      hybinp%lexp = 16
+      hybinp%bands1 = DIMENSION%neigd
 
       numberNodes = xmlGetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
       IF (numberNodes==0) THEN
-         IF (hybrid%l_hybrid) CALL judft_error("Mixed product basis input missing in inp.xml")
+         IF (hybinp%l_hybrid) CALL judft_error("Mixed product basis input missing in inp.xml")
       ELSE
          mpbasis%g_cutoff=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
          mpbasis%linear_dep_tol=evaluateFirstOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
-         hybrid%ewaldlambda=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
-         hybrid%lexp=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
-         hybrid%bands1=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
+         hybinp%ewaldlambda=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
+         hybinp%lexp=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
+         hybinp%bands1=evaluateFirstIntOnly(xmlGetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
       ENDIF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1152,7 +1152,7 @@ CONTAINS
          speciesEParams(3) = evaluateFirstIntOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/energyParameters/@f'))
 
          ! Parameters for hybrid functionals
-         IF (hybrid%l_hybrid) THEN
+         IF (hybinp%l_hybrid) THEN
             WRITE(xPathA,*) '/fleurInput/atomSpecies/species[',iSpecies,']/prodBasis'
             numberNodes = xmlGetNumberOfNodes(TRIM(ADJUSTL(xPathA)))
             IF (numberNodes.NE.1) CALL judft_error("Parameters for mixed basis are missing for some specified")
@@ -1375,13 +1375,13 @@ CONTAINS
                   END DO
                END DO
                !Hybrid functional stuff
-               hybrid%lcutm1(iType) = 4
-               hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
-               hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
-               IF (hybrid%l_hybrid) THEN
-                  hybrid%lcutm1(iType)=lcutm
-                  hybrid%lcutwf(iType)=lcutwf
-                  hybrid%select1(:,iType)=hybSelect
+               hybinp%lcutm1(iType) = 4
+               hybinp%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
+               hybinp%select1(:,iType) = (/4, 0, 4, 2 /)
+               IF (hybinp%l_hybrid) THEN
+                  hybinp%lcutm1(iType)=lcutm
+                  hybinp%lcutwf(iType)=lcutwf
+                  hybinp%select1(:,iType)=hybSelect
                ENDIF
                ! Explicit xc functional
                SELECT TYPE(xcpot)

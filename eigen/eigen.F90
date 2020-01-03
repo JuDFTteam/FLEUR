@@ -19,7 +19,7 @@ CONTAINS
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
-                    cell,enpara,banddos,noco,oneD,mpdata,hybrid,iter,eig_id,results,inden,v,vx,hub1)
+                    cell,enpara,banddos,noco,oneD,mpdata,hybinp,iter,eig_id,results,inden,v,vx,hub1)
 
 #include"cpp_double.h"
       USE m_types
@@ -31,7 +31,7 @@ CONTAINS
       !USE m_hsefunctional
       USE m_mt_setup
       USE m_util
-      USE m_io_hybrid
+      USE m_io_hybinp
       !USE m_icorrkeys
       USE m_eig66_io, ONLY : open_eig, write_eig, close_eig,read_eig
       USE m_xmlOutput
@@ -49,7 +49,7 @@ CONTAINS
 
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybrid),INTENT(INOUT) :: hybrid
+      TYPE(t_hybinp),INTENT(INOUT) :: hybinp
       TYPE(t_enpara),INTENT(INOUT) :: enpara
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -101,7 +101,7 @@ CONTAINS
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
       CLASS(t_mat), ALLOCATABLE :: smat_unfold !used for unfolding bandstructure
 
-      ! Variables for HF or hybrid functional calculation
+      ! Variables for HF or hybinp functional calculation
       INTEGER                   :: comm(kpts%nkpt),irank2(kpts%nkpt),isize2(kpts%nkpt), dealloc_stat
       character(len=300)        :: errmsg
 
@@ -143,27 +143,27 @@ CONTAINS
             ! Set up lapw list
             CALL lapw%init(input,noco, kpts,atoms,sym,nk,cell,l_zref, mpi)
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,mpi,hybrid,enpara,input,vacuum,noco,sym,&
+            CALL eigen_hssetup(jsp,mpi,hybinp,enpara,input,vacuum,noco,sym,&
                                stars,cell,sphhar,atoms,ud,td,v,lapw,l_real,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             nvBuffer(nk,jsp) = lapw%nv(jsp)
 
-            IF(hybrid%l_hybrid.OR.input%l_rdmft) THEN
+            IF(hybinp%l_hybrid.OR.input%l_rdmft) THEN
 
                ! Write overlap matrix smat to direct access file olap
                ! print *,"Wrong overlap matrix used, fix this later"
                CALL write_olap(smat,(jsp-1)*kpts%nkpt+nk) ! Note: At this moment this only works without MPI parallelization
-            END IF ! hybrid%l_hybrid.OR.input%l_rdmft
+            END IF ! hybinp%l_hybrid.OR.input%l_rdmft
 
-            IF(hybrid%l_hybrid) THEN
-               IF (hybrid%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybrid,input,kpts,jsp,results,xcpot,noco,hmat)
+            IF(hybinp%l_hybrid) THEN
+               IF (hybinp%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybinp,input,kpts,jsp,results,xcpot,noco,hmat)
 
-               IF(hybrid%l_subvxc) THEN
-                  CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,mpdata,hybrid,enpara%el0,enpara%ello0,&
+               IF(hybinp%l_subvxc) THEN
+                  CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,mpdata,hybinp,enpara%el0,enpara%ello0,&
                               sym,cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
                END IF
-            END IF ! hybrid%l_hybrid
+            END IF ! hybinp%l_hybrid
 
             l_wu=.FALSE.
             ne_all=input%neig
@@ -277,11 +277,11 @@ CONTAINS
          END DO
       END IF
 
-      !IF (hybrid%l_hybrid.OR.hybrid%l_calhf) CALL close_eig(eig_id)
+      !IF (hybinp%l_hybrid.OR.hybinp%l_calhf) CALL close_eig(eig_id)
 
-      IF( input%jspins .EQ. 1 .AND. hybrid%l_hybrid ) THEN
+      IF( input%jspins .EQ. 1 .AND. hybinp%l_hybrid ) THEN
          results%te_hfex%valence = 2*results%te_hfex%valence
-         IF(hybrid%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
+         IF(hybinp%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
       END IF
       enpara%epara_min = MINVAL(enpara%el0)
       enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)

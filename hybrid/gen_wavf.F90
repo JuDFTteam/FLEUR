@@ -15,7 +15,7 @@ MODULE m_gen_wavf
 
 CONTAINS
 
-   SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybrid, vr0, &
+   SUBROUTINE gen_wavf(nkpti, kpts, sym, atoms, el_eig, ello_eig, cell, mpdata, hybinp, vr0, &
                        hybdat, noco, oneD, mpi, input, jsp, zmat)
 
       ! nkpti      ::     number of irreducible k-points
@@ -28,7 +28,7 @@ CONTAINS
       USE m_olap
       USE m_types
       USE m_hyb_abcrot
-      USE m_io_hybrid
+      USE m_io_hybinp
 
       IMPLICIT NONE
 
@@ -36,7 +36,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpdata), intent(in) :: mpdata
-      TYPE(t_hybrid), INTENT(IN)    :: hybrid
+      TYPE(t_hybinp), INTENT(IN)    :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -176,9 +176,9 @@ CONTAINS
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation bcof')
       allocate(ccof(-atoms%llod:atoms%llod, input%neig, atoms%nlod, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation ccof')
-      allocate(cmt(input%neig, hybrid%maxlmindx, atoms%nat), stat=ok)
+      allocate(cmt(input%neig, hybinp%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: Failure allocation cmt')
-      allocate(cmthlp(input%neig, hybrid%maxlmindx, atoms%nat), stat=ok)
+      allocate(cmthlp(input%neig, hybinp%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation cmthlp')
 
       DO ikpt0 = 1, nkpti
@@ -188,14 +188,14 @@ CONTAINS
          ! abcof calculates the wavefunction coefficients
          ! stored in acof,bcof,ccof
          lapw(ikpt0)%nmat = lapw(ikpt0)%nv(jsp) + atoms%nlotot
-         CALL abcof(input, atoms, sym, cell, lapw(ikpt0), hybrid%nbands(ikpt0), usdus, noco, jsp, &!hybdat%kveclo_eig(:,ikpt0),&
-                    oneD, acof(:hybrid%nbands(ikpt0), :, :), bcof(:hybrid%nbands(ikpt0), :, :), &
-                    ccof(:, :hybrid%nbands(ikpt0), :, :), zmat(ikpt0))
+         CALL abcof(input, atoms, sym, cell, lapw(ikpt0), hybinp%nbands(ikpt0), usdus, noco, jsp, &!hybdat%kveclo_eig(:,ikpt0),&
+                    oneD, acof(:hybinp%nbands(ikpt0), :, :), bcof(:hybinp%nbands(ikpt0), :, :), &
+                    ccof(:, :hybinp%nbands(ikpt0), :, :), zmat(ikpt0))
 
          ! MT wavefunction coefficients are calculated in a local coordinate system rotate them in the global one
 
-         CALL hyb_abcrot(hybrid, atoms, hybrid%nbands(ikpt0), sym, acof(:hybrid%nbands(ikpt0), :, :), &
-                         bcof(:hybrid%nbands(ikpt0), :, :), ccof(:, :hybrid%nbands(ikpt0), :, :))
+         CALL hyb_abcrot(hybinp, atoms, hybinp%nbands(ikpt0), sym, acof(:hybinp%nbands(ikpt0), :, :), &
+                         bcof(:hybinp%nbands(ikpt0), :, :), ccof(:, :hybinp%nbands(ikpt0), :, :))
 
          ! decorate acof, bcof, ccof with coefficient i**l and store them
          ! in the field cmt(neigd,nkpt,maxlmindx,nat), i.e.
@@ -261,8 +261,8 @@ CONTAINS
             IF ((kpts%bkp(ikpt) == ikpt0) .AND. (ikpt0 /= ikpt)) THEN
                iop = kpts%bksym(ikpt)
                CALL waveftrafo_genwavf(cmthlp, zhlp%data_r, zhlp%data_c, cmt(:, :, :), zmat(1)%l_real, zmat(ikpt0)%data_r(:, :), &
-                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, mpdata, hybrid, kpts, sym, jsp, zmat(ikpt0)%matsize1,input, &
-                                       hybrid%nbands(ikpt0), lapw(ikpt0), lapw(ikpt), .true.)
+                                       zmat(ikpt0)%data_c(:, :), ikpt0, iop, atoms, mpdata, hybinp, kpts, sym, jsp, zmat(ikpt0)%matsize1,input, &
+                                       hybinp%nbands(ikpt0), lapw(ikpt0), lapw(ikpt), .true.)
 
                CALL write_cmt(cmthlp, ikpt)
                CALL write_z(zhlp, kpts%nkptf*(jsp - 1) + ikpt)

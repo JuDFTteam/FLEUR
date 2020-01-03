@@ -3,7 +3,7 @@ MODULE m_fleurinput_read_xml
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
+       sliceplot,banddos,hybinp,oneD,coreSpecInput,wann,&
        xcpot,forcetheo_data,kpts,enparaXML)
     USE m_types_xml
 
@@ -16,7 +16,7 @@ CONTAINS
     TYPE(t_field),INTENT(OUT),OPTIONAL::field
     TYPE(t_sliceplot),INTENT(OUT),OPTIONAL::sliceplot
     TYPE(t_banddos),INTENT(OUT),OPTIONAL::banddos
-    TYPE(t_hybrid),INTENT(OUT),OPTIONAL::hybrid
+    TYPE(t_hybinp),INTENT(OUT),OPTIONAL::hybinp
     TYPE(t_oneD),INTENT(OUT),OPTIONAL::oneD
     TYPE(t_coreSpecInput),INTENT(OUT),OPTIONAL::coreSpecInput
     TYPE(t_wann),INTENT(OUT),OPTIONAL::wann
@@ -40,7 +40,7 @@ CONTAINS
     if (present(field)) call field%read_xml(xml)
     if (present(sliceplot)) call sliceplot%read_xml(xml)
     if (present(banddos)) call banddos%read_xml(xml)
-    if (present(hybrid)) call hybrid%read_xml(xml)
+    if (present(hybinp)) call hybinp%read_xml(xml)
     if (present(oneD)) call oneD%read_xml(xml)
     if (present(coreSpecInput)) call coreSpecInput%read_xml(xml)
     if (present(wann)) call wann%read_xml(xml)

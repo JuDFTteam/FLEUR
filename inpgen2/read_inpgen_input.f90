@@ -13,7 +13,7 @@ MODULE m_read_inpgen_input
 CONTAINS
 
   SUBROUTINE read_inpgen_input(atom_pos,atom_id,atom_label,kpts_str,&
-       input,sym,noco,vacuum,stars,xcpot,cell,hybrid)
+       input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
     !Subroutine reads the old-style input for inpgen
     use m_atompar
     USE m_types_input
@@ -23,7 +23,7 @@ CONTAINS
     USE m_types_stars
     USE m_types_xcpot_inbuild_nofunction
     USE m_types_cell
-    USE m_types_hybrid
+    USE m_types_hybinp
     USE m_process_lattice_namelist
 
     use m_inv3
@@ -37,7 +37,7 @@ CONTAINS
     TYPE(t_stars),INTENT(OUT)    :: stars
     TYPE(t_xcpot_inbuild_nf),INTENT(OUT)    :: xcpot
     TYPE(t_cell),INTENT(OUT)     :: cell
-    TYPE(t_hybrid),INTENT(OUT)   :: hybrid
+    TYPE(t_hybinp),INTENT(OUT)   :: hybinp
 
 
     !locals
@@ -77,7 +77,7 @@ CONTAINS
           CASE ('latt')
              CALL process_lattice(line,a1,a2,a3,aa,scale,mat)
           CASE('inpu')
-             CALL process_input(line,input%film,sym%symor,hybrid%l_hybrid)
+             CALL process_input(line,input%film,sym%symor,hybinp%l_hybrid)
           CASE('atom')
              CALL read_atom_params_old(98,ap)
              call add_atompar(ap)
@@ -190,14 +190,14 @@ CONTAINS
       end if
     end SUBROUTINE process_kpts
 
-    SUBROUTINE process_input(line,film,symor,hybrid)
+    SUBROUTINE process_input(line,film,symor,hybinp)
       CHARACTER(len=*),INTENT(in)::line
-      LOGICAL,INTENT(out)::film,symor,hybrid
+      LOGICAL,INTENT(out)::film,symor,hybinp
 
       INTEGER :: ios
       LOGICAL :: cartesian, cal_symm, checkinp,inistop,oldfleur
       NAMELIST /input/ film, cartesian, cal_symm, checkinp, inistop,&
-                      symor, oldfleur, hybrid
+                      symor, oldfleur, hybinp
       cartesian=.FALSE.
       cal_symm=.FALSE.
       oldfleur=.FALSE.

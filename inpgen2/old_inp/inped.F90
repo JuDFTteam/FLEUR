@@ -28,7 +28,7 @@
       CONTAINS
         SUBROUTINE inped(atoms,vacuum,input,banddos,xcpot,sym,&
                          cell,sliceplot,noco,&
-                         stars,oneD,hybrid,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
+                         stars,oneD,hybinp,kpts,a1,a2,a3,namex,relcor,latnam,namgrp,grid)
           USE m_rwinp
           !USE m_chkmt
           USE m_inpnoco
@@ -44,7 +44,7 @@
           USE m_types_noco
           USE m_types_stars
           USE m_types_oneD
-          USE m_types_hybrid
+          USE m_types_hybinp
           USE m_types_kpts
           USE m_setlomap
           IMPLICIT NONE
@@ -61,7 +61,7 @@
           TYPE(t_noco),      INTENT(INOUT) :: noco
           TYPE(t_stars),     INTENT(INOUT) :: stars
           TYPE(t_oneD),      INTENT(INOUT) :: oneD
-          TYPE(t_hybrid),    INTENT(INOUT) :: hybrid
+          TYPE(t_hybinp),    INTENT(INOUT) :: hybinp
           TYPE(t_kpts),      INTENT(INOUT) :: kpts
           REAL,              INTENT(OUT)   :: a1(3)
           REAL,              INTENT(OUT)   :: a2(3)
@@ -96,7 +96,7 @@
           na = 0
 
           CALL rw_inp('r',atoms,vacuum,input,stars,sliceplot,banddos,&
-               cell,sym,xcpot,noco,oneD,hybrid,kpts, noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)
+               cell,sym,xcpot,noco,oneD,hybinp,kpts, noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)
 
           input%l_core_confpot=.TRUE. !this is the former CPP_CORE switch!
           input%l_useapw=.FALSE.      !this is the former CPP_APW switch!

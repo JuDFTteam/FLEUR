@@ -13,9 +13,9 @@ IMPLICIT NONE
 
 CONTAINS
 
-SUBROUTINE readLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDenVec,inDenVecMet,diffDenVecMet)
+SUBROUTINE readLastIterInAndDiffDen(hybinp,vecLen,nextIter,alpha,inDenVec,diffDenVec,inDenVecMet,diffDenVecMet)
 
-   TYPE(t_hybrid), INTENT(IN)  :: hybrid
+   TYPE(t_hybinp), INTENT(IN)  :: hybinp
    INTEGER,        INTENT(IN)  :: vecLen
    INTEGER,        INTENT(OUT) :: nextIter
    REAL,           INTENT(OUT) :: alpha
@@ -28,7 +28,7 @@ SUBROUTINE readLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDe
 
    ! At the moment broyden IO is mode independent
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (57,file='hf_broyd',form='unformatted',status='unknown')
    ELSE
       OPEN (57,file='broyd',form='unformatted',status='unknown')
@@ -44,9 +44,9 @@ SUBROUTINE readLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDe
 
 END SUBROUTINE readLastIterInAndDiffDen
 
-SUBROUTINE writeLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffDenVec,inDenVecMet,diffDenVecMet)
+SUBROUTINE writeLastIterInAndDiffDen(hybinp,vecLen,nextIter,alpha,inDenVec,diffDenVec,inDenVecMet,diffDenVecMet)
 
-   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    INTEGER,        INTENT(IN) :: nextIter,vecLen
    REAL,           INTENT(IN) :: alpha
    REAL,           INTENT(IN) :: inDenVec(vecLen), diffDenVec(vecLen)
@@ -58,7 +58,7 @@ SUBROUTINE writeLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffD
 
    ! At the moment broyden IO is mode independent
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (57,file='hf_broyd',form='unformatted',status='unknown')
    ELSE
       OPEN (57,file='broyd',form='unformatted',status='unknown')
@@ -74,10 +74,10 @@ SUBROUTINE writeLastIterInAndDiffDen(hybrid,vecLen,nextIter,alpha,inDenVec,diffD
 
 END SUBROUTINE writeLastIterInAndDiffDen
 
-SUBROUTINE readUVec(input,hybrid,vecLen,relIter,currentIter,uVec)
+SUBROUTINE readUVec(input,hybinp,vecLen,relIter,currentIter,uVec)
 
    TYPE(t_input),  INTENT(IN)  :: input
-   TYPE(t_hybrid), INTENT(IN)  :: hybrid
+   TYPE(t_hybinp), INTENT(IN)  :: hybinp
    INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
    REAL,           INTENT(OUT) :: uVec(vecLen)
 
@@ -90,7 +90,7 @@ SUBROUTINE readUVec(input,hybrid,vecLen,relIter,currentIter,uVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -107,10 +107,10 @@ SUBROUTINE readUVec(input,hybrid,vecLen,relIter,currentIter,uVec)
 
 END SUBROUTINE readUVec
 
-SUBROUTINE writeUVec(input,hybrid,vecLen,currentIter,uVec)
+SUBROUTINE writeUVec(input,hybinp,vecLen,currentIter,uVec)
 
    TYPE(t_input),  INTENT(IN) :: input
-   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    INTEGER,        INTENT(IN) :: vecLen, currentIter
    REAL,           INTENT(IN) :: uVec(vecLen)
 
@@ -123,7 +123,7 @@ SUBROUTINE writeUVec(input,hybrid,vecLen,currentIter,uVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -140,10 +140,10 @@ SUBROUTINE writeUVec(input,hybrid,vecLen,currentIter,uVec)
 
 END SUBROUTINE writeUVec
 
-SUBROUTINE readVVec(input,hybrid,vecLen,relIter,currentIter,dfivi,vVec)
+SUBROUTINE readVVec(input,hybinp,vecLen,relIter,currentIter,dfivi,vVec)
 
    TYPE(t_input),  INTENT(IN)  :: input
-   TYPE(t_hybrid), INTENT(IN)  :: hybrid
+   TYPE(t_hybinp), INTENT(IN)  :: hybinp
    INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
    REAL,           INTENT(OUT) :: dfivi
    REAL,           INTENT(OUT) :: vVec(vecLen)
@@ -157,7 +157,7 @@ SUBROUTINE readVVec(input,hybrid,vecLen,relIter,currentIter,dfivi,vVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -174,10 +174,10 @@ SUBROUTINE readVVec(input,hybrid,vecLen,relIter,currentIter,dfivi,vVec)
 
 END SUBROUTINE readVVec
 
-SUBROUTINE writeVVec(input,hybrid,vecLen,currentIter,dfivi,vVec)
+SUBROUTINE writeVVec(input,hybinp,vecLen,currentIter,dfivi,vVec)
 
    TYPE(t_input),  INTENT(IN) :: input
-   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    INTEGER,        INTENT(IN) :: vecLen, currentIter
    REAL,           INTENT(IN) :: dfivi
    REAL,           INTENT(IN) :: vVec(vecLen)
@@ -191,7 +191,7 @@ SUBROUTINE writeVVec(input,hybrid,vecLen,currentIter,dfivi,vVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -216,10 +216,10 @@ END SUBROUTINE writeVVec
 
 
 
-SUBROUTINE readDeltaNVec(input,hybrid,vecLen,relIter,currentIter,deltaNVec)
+SUBROUTINE readDeltaNVec(input,hybinp,vecLen,relIter,currentIter,deltaNVec)
 
    TYPE(t_input),  INTENT(IN)  :: input
-   TYPE(t_hybrid), INTENT(IN)  :: hybrid
+   TYPE(t_hybinp), INTENT(IN)  :: hybinp
    INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
    REAL,           INTENT(OUT) :: deltaNVec(vecLen)
 
@@ -232,7 +232,7 @@ SUBROUTINE readDeltaNVec(input,hybrid,vecLen,relIter,currentIter,deltaNVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd_DN',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -252,10 +252,10 @@ SUBROUTINE readDeltaNVec(input,hybrid,vecLen,relIter,currentIter,deltaNVec)
 
 END SUBROUTINE readDeltaNVec
 
-SUBROUTINE writeDeltaNVec(input,hybrid,vecLen,currentIter,deltaNVec)
+SUBROUTINE writeDeltaNVec(input,hybinp,vecLen,currentIter,deltaNVec)
 
    TYPE(t_input),  INTENT(IN) :: input
-   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    INTEGER,        INTENT(IN) :: vecLen, currentIter
    REAL,           INTENT(IN) :: deltaNVec(vecLen)
 
@@ -268,7 +268,7 @@ SUBROUTINE writeDeltaNVec(input,hybrid,vecLen,currentIter,deltaNVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd_DN',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -287,10 +287,10 @@ SUBROUTINE writeDeltaNVec(input,hybrid,vecLen,currentIter,deltaNVec)
 
 END SUBROUTINE writeDeltaNVec
 
-SUBROUTINE readDeltaFVec(input,hybrid,vecLen,relIter,currentIter,deltaFVec)
+SUBROUTINE readDeltaFVec(input,hybinp,vecLen,relIter,currentIter,deltaFVec)
 
    TYPE(t_input),  INTENT(IN)  :: input
-   TYPE(t_hybrid), INTENT(IN)  :: hybrid
+   TYPE(t_hybinp), INTENT(IN)  :: hybinp
    INTEGER,        INTENT(IN)  :: vecLen, relIter, currentIter
    REAL,           INTENT(OUT) :: deltaFVec(vecLen)
 
@@ -303,7 +303,7 @@ SUBROUTINE readDeltaFVec(input,hybrid,vecLen,relIter,currentIter,deltaFVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd_DF',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -323,10 +323,10 @@ SUBROUTINE readDeltaFVec(input,hybrid,vecLen,relIter,currentIter,deltaFVec)
 
 END SUBROUTINE readDeltaFVec
 
-SUBROUTINE writeDeltaFVec(input,hybrid,vecLen,currentIter,deltaFVec)
+SUBROUTINE writeDeltaFVec(input,hybinp,vecLen,currentIter,deltaFVec)
 
    TYPE(t_input),  INTENT(IN) :: input
-   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    INTEGER,        INTENT(IN) :: vecLen, currentIter
    REAL,           INTENT(IN) :: deltaFVec(vecLen)
 
@@ -339,7 +339,7 @@ SUBROUTINE writeDeltaFVec(input,hybrid,vecLen,currentIter,deltaFVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd_DF',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -359,11 +359,11 @@ SUBROUTINE writeDeltaFVec(input,hybrid,vecLen,currentIter,deltaFVec)
 END SUBROUTINE writeDeltaFVec
 
 
-SUBROUTINE writeBroydenOverlapExt(input,hybrid,currentIter,historyLength,&
+SUBROUTINE writeBroydenOverlapExt(input,hybinp,currentIter,historyLength,&
                                   dNdNLast,dFdFLast,dNdFLast,dFdNLast)
 
    TYPE(t_input),  INTENT(IN) :: input
-   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    INTEGER,        INTENT(IN) :: currentIter, historyLength
    REAL,           INTENT(IN) :: dNdNLast(input%maxIter)
    REAL,           INTENT(IN) :: dFdFLast(input%maxIter)
@@ -375,7 +375,7 @@ SUBROUTINE writeBroydenOverlapExt(input,hybrid,currentIter,historyLength,&
    recLen = 8*4*input%maxIter    ! sizeOfReal*numberOfVectors*vectorLength
    recLen = recLen + 2*8         ! storage for currentIter, historyLength
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broydOvlp',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -396,11 +396,11 @@ SUBROUTINE writeBroydenOverlapExt(input,hybrid,currentIter,historyLength,&
 
 END SUBROUTINE writeBroydenOverlapExt
 
-SUBROUTINE readBroydenOverlaps(input,hybrid,currentIter,historyLength,&
+SUBROUTINE readBroydenOverlaps(input,hybinp,currentIter,historyLength,&
                                dNdNMat,dFdFMat,dNdFMat,dFdNMat)
 
    TYPE(t_input),  INTENT(IN)    :: input
-   TYPE(t_hybrid), INTENT(IN)    :: hybrid
+   TYPE(t_hybinp), INTENT(IN)    :: hybinp
    INTEGER,        INTENT(IN)    :: currentIter, historyLength
    REAL,           INTENT(INOUT) :: dNdNMat(historyLength,historyLength)
    REAL,           INTENT(INOUT) :: dFdFMat(historyLength,historyLength)
@@ -419,7 +419,7 @@ SUBROUTINE readBroydenOverlaps(input,hybrid,currentIter,historyLength,&
    recLen = 8*4*input%maxIter    ! sizeOfReal*numberOfVectors*vectorLength
    recLen = recLen + 2*8         ! storage for currentIter, historyLength
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broydOvlp',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -502,12 +502,12 @@ SUBROUTINE resetBroydenHistory()
 
 END SUBROUTINE resetBroydenHistory
 
-LOGICAL FUNCTION initBroydenHistory(input,hybrid, vecLen)
+LOGICAL FUNCTION initBroydenHistory(input,hybinp, vecLen)
 ! Initializes a Broyden history
 ! returns true if there already exists a Broyden history
 
    TYPE(t_input),  INTENT(IN) :: input
-   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    INTEGER,        INTENT(IN) :: vecLen
 
    INTEGER*8                  :: recLen
@@ -517,7 +517,7 @@ LOGICAL FUNCTION initBroydenHistory(input,hybrid, vecLen)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -531,12 +531,12 @@ LOGICAL FUNCTION initBroydenHistory(input,hybrid, vecLen)
 
 END FUNCTION initBroydenHistory
 
-LOGICAL FUNCTION initBroydenHistory2(input,hybrid, vecLen)
+LOGICAL FUNCTION initBroydenHistory2(input,hybinp, vecLen)
 ! Initializes a Broyden history
 ! returns true if there already exists a Broyden history
 
    TYPE(t_input),  INTENT(IN) :: input
-   TYPE(t_hybrid), INTENT(IN) :: hybrid
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    INTEGER,        INTENT(IN) :: vecLen
 
    INTEGER*8                  :: recLen
@@ -546,7 +546,7 @@ LOGICAL FUNCTION initBroydenHistory2(input,hybrid, vecLen)
 
    recLen=(vecLen+1)*8
 
-   IF (hybrid%l_calhf) THEN
+   IF (hybinp%l_calhf) THEN
       OPEN (59,file='hf_broyd_DF',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
       OPEN (60,file='hf_broyd_DN',access='direct',&

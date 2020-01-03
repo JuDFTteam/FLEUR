@@ -229,19 +229,19 @@ contains
       call timestop("check mpdata orthonormality")
    end subroutine mpdata_check_orthonormality
 
-   subroutine mpdata_check_radbasfn(mpdata, atoms, hybrid)
+   subroutine mpdata_check_radbasfn(mpdata, atoms, hybinp)
       use m_judft
-      use m_types_hybrid
+      use m_types_hybinp
       use m_types_setup
       implicit none
       class(t_mpdata), intent(in) :: mpdata
       type(t_atoms), intent(in)    :: atoms
-      type(t_hybrid), intent(in)   :: hybrid
+      type(t_hybinp), intent(in)   :: hybinp
 
       integer :: itype
 
       do itype = 1, atoms%ntype
-         if (ANY(mpdata%num_radbasfn(0:hybrid%lcutm1(itype), itype) == 0)) THEN
+         if (ANY(mpdata%num_radbasfn(0:hybinp%lcutm1(itype), itype) == 0)) THEN
             call judft_error('any mpdata%num_radbasfn eq 0', calledby='mixedbasis')
          endif
       enddo
@@ -370,15 +370,15 @@ contains
       call timestop("transform to reduced mpdata")
    end subroutine mpdata_trafo_to_orthonorm_bas
 
-   subroutine mpdata_add_l0_fun(mpdata, atoms, hybrid, n_grid_pt, l, itype, gridf)
+   subroutine mpdata_add_l0_fun(mpdata, atoms, hybinp, n_grid_pt, l, itype, gridf)
       use m_types_setup
-      use m_types_hybrid
+      use m_types_hybinp
       use m_intgrf, only: intgrf
       use m_judft
       implicit none
       class(t_mpdata), intent(inout) :: mpdata
       type(t_atoms), intent(in)       :: atoms
-      type(t_hybrid), intent(in)      :: hybrid
+      type(t_hybinp), intent(in)      :: hybinp
       integer, intent(in)             :: n_grid_pt, l, itype
       real, intent(in)                :: gridf(:, :)
 
@@ -392,10 +392,10 @@ contains
 
          ! Check if radbasfn_mt must be reallocated
          if (nn + 1 > SIZE(mpdata%radbasfn_mt, 2)) THEN
-            allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
+            allocate(basmhlp(atoms%jmtd, nn + 1, 0:maxval(hybinp%lcutm1), atoms%ntype))
             basmhlp(:, 1:nn, :, :) = mpdata%radbasfn_mt
             deallocate(mpdata%radbasfn_mt)
-            allocate(mpdata%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybrid%lcutm1), atoms%ntype))
+            allocate(mpdata%radbasfn_mt(atoms%jmtd, nn + 1, 0:maxval(hybinp%lcutm1), atoms%ntype))
             mpdata%radbasfn_mt(:, 1:nn, :, :) = basmhlp(:, 1:nn, :, :)
             deallocate(basmhlp)
          END if
@@ -428,16 +428,16 @@ contains
       call timestop("add l0 to mpdata")
    end subroutine mpdata_add_l0_fun
 
-   subroutine mpdata_reduce_linear_dep(mpdata, atoms, mpi, hybrid, l, itype, gridf, iterHF)
+   subroutine mpdata_reduce_linear_dep(mpdata, atoms, mpi, hybinp, l, itype, gridf, iterHF)
       use m_types_setup
-      use m_types_hybrid
+      use m_types_hybinp
       use m_types_mpi
       use m_judft
       implicit none
       class(t_mpdata)              :: mpdata
       type(t_atoms), intent(in)     :: atoms
       type(t_mpi), intent(in)       :: mpi
-      type(t_hybrid), intent(in)    :: hybrid
+      type(t_hybinp), intent(in)    :: hybinp
       integer, intent(in)           :: l, itype, iterHF
 
       real, allocatable             :: olap(:, :), eig(:), eigv(:, :)
@@ -459,7 +459,7 @@ contains
       call mpdata%trafo_to_orthonorm_bas(full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
 
       ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
-      call mpdata%add_l0_fun(atoms, hybrid, n_grid_pt, l, itype, gridf)
+      call mpdata%add_l0_fun(atoms, hybinp, n_grid_pt, l, itype, gridf)
 
       ! Check orthonormality of mpdatauct basis
       call mpdata%check_orthonormality(atoms, mpi, l, itype, gridf)
@@ -468,22 +468,22 @@ contains
       call timestop("reduce lin. dep. mpdata")
    end subroutine
 
-   subroutine mpdata_normalize(mpdata, atoms, hybrid, gridf)
+   subroutine mpdata_normalize(mpdata, atoms, hybinp, gridf)
       use m_intgrf, only: intgrf
-      use m_types_hybrid
+      use m_types_hybinp
       use m_types_setup
       implicit NONE
 
       class(t_mpdata), intent(inout):: mpdata
       type(t_atoms), intent(in)      :: atoms
-      type(t_hybrid), intent(in)     :: hybrid
+      type(t_hybinp), intent(in)     :: hybinp
       real, intent(in)               :: gridf(:, :)
 
       integer                        :: l, i_basfn, itype
       real                           :: norm
 
       do itype = 1, atoms%ntype
-         do l = 0, hybrid%lcutm1(itype)
+         do l = 0, hybinp%lcutm1(itype)
             do i_basfn = 1, mpdata%num_radbasfn(l, itype)
                norm = SQRT( &
                       intgrf(mpdata%radbasfn_mt(:, i_basfn, l, itype)**2, &
@@ -497,19 +497,19 @@ contains
       end do
    end subroutine mpdata_normalize
 
-   subroutine mpdata_init(mpdata, hybrid, atoms)
+   subroutine mpdata_init(mpdata, hybinp, atoms)
       use m_types_setup
-      use m_types_hybrid
+      use m_types_hybinp
       use m_judft
       implicit none
       class(t_mpdata)           :: mpdata
-      type(t_hybrid), intent(in) :: hybrid
+      type(t_hybinp), intent(in) :: hybinp
       type(t_atoms), intent(in)  :: atoms
 
       integer                    :: ok
 
       if(.not. allocated(mpdata%l1)) then
-         allocate(mpdata%l1(hybrid%max_indx_p_1, 0:maxval(hybrid%lcutm1), atoms%ntype), stat=ok)
+         allocate(mpdata%l1(hybinp%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%l1')
 
          allocate(mpdata%l2, mold=mpdata%l1, stat=ok)

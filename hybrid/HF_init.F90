@@ -1,19 +1,19 @@
 
 MODULE m_hf_init
    !
-   !     preparations for HF and hybrid functional calculation
+   !     preparations for HF and hybinp functional calculation
    !
 CONTAINS
-   SUBROUTINE hf_init(mpdata, hybrid, atoms, input,  hybdat)
+   SUBROUTINE hf_init(mpdata, hybinp, atoms, input,  hybdat)
       USE m_types
-      USE m_hybrid_core
+      USE m_hybinp_core
       USE m_util
       use m_intgrf
-      USE m_io_hybrid
+      USE m_io_hybinp
       USE m_types_hybdat
       IMPLICIT NONE
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybrid), INTENT(INOUT)     :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT)     :: hybinp
       TYPE(t_atoms), INTENT(IN)         :: atoms
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_hybdat), INTENT(OUT)       :: hybdat
@@ -43,7 +43,7 @@ CONTAINS
 
       ! pre-calculate gaunt coefficients
 
-      hybdat%maxfac = max(2*atoms%lmaxd + maxval(hybrid%lcutm1) + 1, 2*hybdat%lmaxcd + 2*atoms%lmaxd + 1)
+      hybdat%maxfac = max(2*atoms%lmaxd + maxval(hybinp%lcutm1) + 1, 2*hybdat%lmaxcd + 2*atoms%lmaxd + 1)
       allocate(hybdat%fac(0:hybdat%maxfac), hybdat%sfac(0:hybdat%maxfac), stat=ok, source=0.0)
       IF (ok /= 0) call judft_error('eigen_hf: failure allocation fac,hybdat%sfac')
       hybdat%fac(0) = 1
@@ -53,14 +53,14 @@ CONTAINS
          hybdat%sfac(i) = hybdat%sfac(i - 1)*sqrt(i*1.0) ! hybdat%sfac(i)   = sqrt(i!)
       END DO
 
-      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:maxval(hybrid%lcutm1),&
-                           -atoms%lmaxd:atoms%lmaxd, -maxval(hybrid%lcutm1):maxval(hybrid%lcutm1)),&
+      ALLOCATE(hybdat%gauntarr(2, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:maxval(hybinp%lcutm1),&
+                           -atoms%lmaxd:atoms%lmaxd, -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1)),&
                             stat=ok, source=0.0)
       IF (ok /= 0) call judft_error('eigen: failure allocation hybdat%gauntarr')
 
       DO l2 = 0, atoms%lmaxd
          DO l1 = 0, atoms%lmaxd
-            DO l = abs(l1 - l2), min(l1 + l2, maxval(hybrid%lcutm1))
+            DO l = abs(l1 - l2), min(l1 + l2, maxval(hybinp%lcutm1))
                DO m = -l, l
                   DO m1 = -l1, l1
                      m2 = m1 + m ! Gaunt condition -m1+m2-m = 0

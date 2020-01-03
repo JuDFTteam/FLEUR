@@ -298,25 +298,25 @@
       mpbasis%g_cutoff       = input%rkmax - 0.5
       mpbasis%linear_dep_tol   = 1e-4
       taual_hyb   = atoms%taual
-      ALLOCATE(hybrid%lcutwf(atoms%ntype))
-      ALLOCATE(hybrid%lcutm1(atoms%ntype))
-      ALLOCATE(hybrid%select1(4,atoms%ntype))
-      hybrid%lcutwf      = atoms%lmax - atoms%lmax / 10
-      hybrid%ewaldlambda = 3
-      hybrid%lexp        = 16
-      hybrid%lcutm1 = 4
-      hybrid%select1(1,:) = 4
-      hybrid%select1(2,:) = 0
-      hybrid%select1(3,:) = 4
-      hybrid%select1(4,:) = 2
+      ALLOCATE(hybinp%lcutwf(atoms%ntype))
+      ALLOCATE(hybinp%lcutm1(atoms%ntype))
+      ALLOCATE(hybinp%select1(4,atoms%ntype))
+      hybinp%lcutwf      = atoms%lmax - atoms%lmax / 10
+      hybinp%ewaldlambda = 3
+      hybinp%lexp        = 16
+      hybinp%lcutm1 = 4
+      hybinp%select1(1,:) = 4
+      hybinp%select1(2,:) = 0
+      hybinp%select1(3,:) = 4
+      hybinp%select1(4,:) = 2
       bands       = max( nint(input%zelec)*10, 60 )
       l_gamma     = .false.
-      hybrid%l_hybrid = l_hyb
+      hybinp%l_hybrid = l_hyb
       IF (l_hyb) THEN
          input%ellow = input%ellow -  2.0
          input%elup  = input%elup  + 10.0
          input%gw_neigd = bands
-         hybrid%bands1 = ceiling(0.75*bands)
+         hybinp%bands1 = ceiling(0.75*bands)
          l_gamma = .true.
          input%minDistance = 1.0e-5
       ELSE

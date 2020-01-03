@@ -27,7 +27,7 @@ MODULE m_types_xcpot_inbuild_nofunction
                        .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,&
                        .TRUE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.,.TRUE.]
 
-   LOGICAL,PARAMETER:: priv_hybrid(20)=[&
+   LOGICAL,PARAMETER:: priv_hybinp(20)=[&
                        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
                        .FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,&
                        .TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.]
@@ -52,7 +52,7 @@ MODULE m_types_xcpot_inbuild_nofunction
 
       PROCEDURE        :: exc_is_LDA => xcpot_exc_is_LDA
       PROCEDURE        :: exc_is_gga => xcpot_exc_is_gga
-      PROCEDURE        :: is_hybrid  => xcpot_is_hybrid
+      PROCEDURE        :: is_hybinp  => xcpot_is_hybinp
 
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc             => xcpot_get_vxc
@@ -197,11 +197,11 @@ MODULE m_types_xcpot_inbuild_nofunction
       xcpot_exc_is_gga = xcpot%vxc_is_gga()
    END FUNCTION xcpot_exc_is_gga
 
-   LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
+   LOGICAL FUNCTION xcpot_is_hybinp(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot_inbuild_nf),INTENT(IN):: xcpot
-      xcpot_is_hybrid=priv_hybrid(xcpot%icorr)
-   END FUNCTION xcpot_is_hybrid
+      xcpot_is_hybinp=priv_hybinp(xcpot%icorr)
+   END FUNCTION xcpot_is_hybinp
 
    FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
       USE m_judft

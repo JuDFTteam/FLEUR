@@ -8,7 +8,7 @@ MODULE m_fleur_init
 CONTAINS
   SUBROUTINE fleur_init(mpi,&
        input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-       sliceplot,banddos,enpara,xcpot,results,kpts,mpinp,hybrid,&
+       sliceplot,banddos,enpara,xcpot,results,kpts,mpinp,hybinp,&
        oneD,coreSpecInput,hub1,wann)
     USE m_types
     USE m_fleurinput_read_xml
@@ -73,7 +73,7 @@ CONTAINS
     TYPE(t_results)  ,INTENT(OUT):: results
     TYPE(t_kpts)     ,INTENT(OUT):: kpts
     TYPE(t_mpinp)    ,INTENT(OUT):: mpinp
-    TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
+    TYPE(t_hybinp)   ,INTENT(OUT):: hybinp
     TYPE(t_oneD)     ,INTENT(OUT):: oneD
     TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
     TYPE(t_wann)     ,INTENT(OUT):: wann
@@ -129,14 +129,14 @@ CONTAINS
     !Only PE==0 reads the input and does basic postprocessing
     IF (mpi%irank.EQ.0) THEN
       CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
-      sliceplot,banddos,hybrid,oneD,coreSpecInput,wann,&
+      sliceplot,banddos,hybinp,oneD,coreSpecInput,wann,&
       xcpot,forcetheo_data,kpts,enparaXML)
       call fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
       Banddos,Oned,Xcpot,Kpts)
     END IF
     !Distribute input to all PE
     CALL fleurinput_mpi_bc(Cell,Sym,Atoms,Input,Noco,Vacuum,Field,&
-         Sliceplot,Banddos,Hybrid,Oned,Corespecinput,Wann,&
+         Sliceplot,Banddos,hybinp,Oned,Corespecinput,Wann,&
          Xcpot,Forcetheo_data,Kpts,Enparaxml,Mpi%Mpi_comm)
 
     !Remaining init is done using all PE
@@ -164,7 +164,7 @@ CONTAINS
     IF (mpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-            cell,sym,xcpot,noco,oneD,mpinp,hybrid,kpts,enpara,&
+            cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,&
             .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
     END IF
     !
@@ -175,7 +175,7 @@ CONTAINS
 
     IF (mpi%irank.EQ.0) THEN
        CALL writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
-            oneD,hybrid,cell,banddos,sliceplot,xcpot,&
+            oneD,hybinp,cell,banddos,sliceplot,xcpot,&
             noco,enpara,sphhar)
        CALL fleur_info(kpts)
        CALL deleteDensities()
@@ -213,7 +213,7 @@ CONTAINS
     !new check mode will only run the init-part of FLEUR
     IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
   CONTAINS
-    SUBROUTINE init_hybrid()
+    SUBROUTINE init_hybinp()
       IF (xcpot%is_hybrid().OR.input%l_rdmft) THEN
          IF (input%film.OR.oneD%odi%d1) THEN
             CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
@@ -226,34 +226,34 @@ CONTAINS
 
          !calculate whole Brilloun zone
          !CALL gen_bz(kpts,sym)
-         CALL gen_map(atoms,sym,oneD,hybrid)
+         CALL gen_map(atoms,sym,oneD,hybinp)
 
          ! calculate d_wgn
-         ALLOCATE (hybrid%d_wgn2(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,sym%nsym))
-         CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,hybrid%d_wgn2(:,:,1:,:sym%nop))
-         hybrid%d_wgn2(:,:,0,:) = 1
+         ALLOCATE (hybinp%d_wgn2(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,sym%nsym))
+         CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,hybinp%d_wgn2(:,:,1:,:sym%nop))
+         hybinp%d_wgn2(:,:,0,:) = 1
 
          DO isym = sym%nop+1,sym%nsym
             iisym = isym - sym%nop
             DO l = 0,atoms%lmaxd
                DO m2 = -l,l
                   DO m1 = -l,-1
-                     cdum                  = hybrid%d_wgn2( m1,m2,l,iisym)
-                     hybrid%d_wgn2( m1,m2,l,isym) = hybrid%d_wgn2(-m1,m2,l,iisym)*(-1)**m1
-                     hybrid%d_wgn2(-m1,m2,l,isym) = cdum                  *(-1)**m1
+                     cdum                  = hybinp%d_wgn2( m1,m2,l,iisym)
+                     hybinp%d_wgn2( m1,m2,l,isym) = hybinp%d_wgn2(-m1,m2,l,iisym)*(-1)**m1
+                     hybinp%d_wgn2(-m1,m2,l,isym) = cdum                  *(-1)**m1
                   END DO
-                  hybrid%d_wgn2(0,m2,l,isym) = hybrid%d_wgn2(0,m2,l,iisym)
+                  hybinp%d_wgn2(0,m2,l,isym) = hybinp%d_wgn2(0,m2,l,iisym)
                END DO
             END DO
          END DO
       ELSE
-         hybrid%l_calhf = .FALSE.
-         ALLOCATE(hybrid%map(0,0),hybrid%tvec(0,0,0),hybrid%d_wgn2(0,0,0,0))
+         hybinp%l_calhf = .FALSE.
+         ALLOCATE(hybinp%map(0,0),hybinp%tvec(0,0,0),hybinp%d_wgn2(0,0,0,0))
          IF(input%l_rdmft) THEN
-            hybrid%l_calhf = .FALSE.
+            hybinp%l_calhf = .FALSE.
          END IF
       ENDIF
-    END SUBROUTINE init_hybrid
+    END SUBROUTINE init_hybinp
 
     SUBROUTINE init_wannier()
       ! Initializations for Wannier functions (start)

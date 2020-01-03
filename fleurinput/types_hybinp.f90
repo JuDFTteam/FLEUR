@@ -4,13 +4,13 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_types_hybrid
+MODULE m_types_hybinp
    USE m_judft
    USE m_types_fleurinput_base
    IMPLICIT NONE
    PRIVATE
 
-   TYPE, EXTENDS(t_fleurinput_base):: t_hybrid
+   TYPE, EXTENDS(t_fleurinput_base):: t_hybinp
       LOGICAL                ::  l_hybrid = .false.
       LOGICAL                ::  l_subvxc = .false.
       LOGICAL                ::  l_calhf = .false.
@@ -35,16 +35,16 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  nobd(:, :)
       REAL, ALLOCATABLE      ::  div_vv(:, :, :)
    CONTAINS
-      PROCEDURE :: read_xml => read_xml_hybrid
-      PROCEDURE :: mpi_bc => mpi_bc_hybrid
-   END TYPE t_hybrid
-   PUBLIC t_hybrid
+      PROCEDURE :: read_xml => read_xml_hybinp
+      PROCEDURE :: mpi_bc => mpi_bc_hybinp
+   END TYPE t_hybinp
+   PUBLIC t_hybinp
 
 CONTAINS
 
-   SUBROUTINE mpi_bc_hybrid(this, mpi_comm, irank)
+   SUBROUTINE mpi_bc_hybinp(this, mpi_comm, irank)
       USE m_mpi_bc_tool
-      CLASS(t_hybrid), INTENT(INOUT)::this
+      CLASS(t_hybinp), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
       INTEGER ::rank
@@ -93,10 +93,10 @@ CONTAINS
       CALL mpi_bc(this%nobd, rank, mpi_comm)
       CALL mpi_bc(this%div_vv, rank, mpi_comm)
 
-   END SUBROUTINE mpi_bc_hybrid
-   SUBROUTINE read_xml_hybrid(this, xml)
+   END SUBROUTINE mpi_bc_hybinp
+   SUBROUTINE read_xml_hybinp(this, xml)
       USE m_types_xml
-      CLASS(t_hybrid), INTENT(INout):: this
+      CLASS(t_hybinp), INTENT(INout):: this
       TYPE(t_xml), INTENT(in)     :: xml
 
       INTEGER::numberNodes, ntype, itype
@@ -136,5 +136,5 @@ CONTAINS
       else
          this%l_hybrid = .False.
       endif
-   END SUBROUTINE read_xml_hybrid
-END MODULE m_types_hybrid
+   END SUBROUTINE read_xml_hybinp
+END MODULE m_types_hybinp

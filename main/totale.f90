@@ -6,7 +6,7 @@
 MODULE m_totale
 CONTAINS
   SUBROUTINE totale(mpi,atoms,sphhar,stars,vacuum, &
-       sym,input,noco,cell,oneD, xcpot,hybrid,vTot,vCoul,it,den,results)
+       sym,input,noco,cell,oneD, xcpot,hybinp,vTot,vCoul,it,den,results)
     !
     !     ***************************************************
     !     subroutine calculates the total energy 
@@ -29,7 +29,7 @@ CONTAINS
     !     TOTE    :   total energy due to all electrons
     !     TOTE = SEIGC + SEIGSCV + TE_VCOUL/2 -TE_VEFF + TE_EXC + VMD
     !
-    !     if HF calculation/hybrid-functional calculation :
+    !     if HF calculation/hybinp-functional calculation :
     !     TOTE = SEIGC + SEIGSCV + TE_VCOUL/2 -TE_VEFF + TE_EXC_loc + VMD - 1/2 E_FOCK
     !
     !     E_FOCK: sum of diagonal elements of fock matrix
@@ -53,7 +53,7 @@ CONTAINS
     TYPE(t_results),INTENT(INOUT)   :: results
     CLASS(t_xcpot),INTENT(IN)       :: xcpot
     TYPE(t_oneD),INTENT(IN)         :: oneD
-    TYPE(t_hybrid),INTENT(IN)       :: hybrid
+    TYPE(t_hybinp),INTENT(IN)       :: hybinp
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
@@ -180,7 +180,7 @@ CONTAINS
           results%tote = results%tote - results%e_ldau             ! gu test
        ENDIF
        ! print 'HF' before total energy to make it grepable
-       IF ( .NOT. hybrid%l_calhf ) THEN
+       IF ( .NOT. hybinp%l_calhf ) THEN
           WRITE ( 6,FMT=8060) results%tote
        ELSE
           WRITE ( 6,FMT=8061) results%tote
@@ -190,7 +190,7 @@ CONTAINS
        !          extrapolated for T->0
        !
        ! print 'HF' before all energies to make them grepable
-       IF ( .NOT. hybrid%l_calhf ) THEN
+       IF ( .NOT. hybinp%l_calhf ) THEN
           WRITE ( 6,FMT=8065) results%ts
           WRITE ( 6,FMT=8070) results%tote-results%ts
           WRITE ( 6,FMT=8080) results%tote-0.5e0*results%ts
@@ -203,7 +203,7 @@ CONTAINS
        WRITE(attributes(1),'(f20.10)') results%tote
        WRITE(attributes(2),'(a)') 'Htr'
        WRITE(attributes(3),'(a)') 'HF'
-       IF (hybrid%l_calhf) THEN
+       IF (hybinp%l_calhf) THEN
           CALL openXMLElementForm('totalEnergy',(/'value  ','units  ','comment'/),attributes,reshape((/40,20/),(/1,2/)))
        ELSE
           CALL openXMLElementForm('totalEnergy',(/'value','units'/),attributes(1:2),reshape((/40,20/),(/1,2/)))

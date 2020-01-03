@@ -9,7 +9,7 @@
       CONTAINS
       SUBROUTINE rw_inp(&
      &                  ch_rw,atoms,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+     &                  cell,sym,xcpot,noco,oneD,hybinp,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)!,name_opt)
 
 !*********************************************************************
@@ -25,7 +25,7 @@
       USE m_types_vacuum
       USE m_types_kpts
       USE m_types_oneD
-      USE m_types_hybrid
+      USE m_types_hybinp
       USE m_types_cell
       USE m_types_banddos
       USE m_types_sliceplot
@@ -45,7 +45,7 @@
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
-      TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
+      TYPE(t_hybinp),INTENT(INOUT)   :: hybinp
       TYPE(t_cell),INTENT(INOUT)     :: cell
       TYPE(t_banddos),INTENT(INOUT)  :: banddos
       TYPE(t_sliceplot),INTENT(INOUT):: sliceplot
@@ -93,7 +93,7 @@
       CHARACTER(len= 41) :: chform
       CHARACTER(len=100) :: line
 
-!     added for HF and hybrid functionals
+!     added for HF and hybinp functionals
       REAL                  ::  aMix,omega
       INTEGER               :: idum
       CHARACTER (len=1)     ::  check
@@ -331,10 +331,10 @@
          GOTO 78
       ELSEIF ( ch_test .eq. 'gcu' ) then              ! HF
         BACKSPACE (5)
-        call judft_warn("Hybrid parameters not supported in old input")
+        call judft_warn("hybinp parameters not supported in old input")
         READ (UNIT=5,FMT=7999,END=99,ERR=99) rdum1,rdum,&
-     &     hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
-        WRITE (6,9999) rdum1,rdum,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+     &     hybinp%ewaldlambda,hybinp%lexp,hybinp%bands1
+        WRITE (6,9999) rdum1,rdum,hybinp%ewaldlambda,hybinp%lexp,hybinp%bands1
  7999   FORMAT (6x,f8.5,6x,f10.8,8x,i2,6x,i2,7x,i4)
  9999   FORMAT ('gcutm=',f8.5,',mtol=',f10.8,',lambda=',i2,&
      &          ',lexp=',i2,',bands=',i4)
@@ -405,17 +405,17 @@
 !---> calculate force on this atom.
 !---> p.kurz 97-06-05
 !
-!     add parameters lcutm and select for HF and hybrid functionals
+!     add parameters lcutm and select for HF and hybinp functionals
         IF ( namex=='hf  ' .OR. namex=='pbe0' .OR. namex=='exx '&
      &       .OR. namex=='hse ' .OR. namex=='vhse' ) THEN
           l_hyb = .TRUE.
           READ (UNIT=5,FMT=7160,END=99,ERR=99) atoms%neq(n),&
-     &                  atoms%l_geo(n),hybrid%lcutm1(n),hybrid%select1(1,n),hybrid%select1(2,n),&
-     &                  hybrid%select1(3,n),hybrid%select1(4,n),atoms%nlo(n),&
+     &                  atoms%l_geo(n),hybinp%lcutm1(n),hybinp%select1(1,n),hybinp%select1(2,n),&
+     &                  hybinp%select1(3,n),hybinp%select1(4,n),atoms%nlo(n),&
      &                  (atoms%llo(ilo,n),ilo=1,atoms%nlo(n))
  7160     FORMAT (i2,8x,l1,7x,i2,8x,i2,1x,i2,1x,i2,1x,i2,5x,i2,5x,60i3)
-          WRITE (6,9090) atoms%neq(n),atoms%l_geo(n),hybrid%lcutm1(n),hybrid%select1(1,n),&
-     &       hybrid%select1(2,n),hybrid%select1(3,n),hybrid%select1(4,n),atoms%nlo(n),&
+          WRITE (6,9090) atoms%neq(n),atoms%l_geo(n),hybinp%lcutm1(n),hybinp%select1(1,n),&
+     &       hybinp%select1(2,n),hybinp%select1(3,n),hybinp%select1(4,n),atoms%nlo(n),&
      &       (atoms%llo(ilo,n),ilo=1,atoms%nlo(n))
         ELSE
           READ (UNIT=5,FMT=7161,END=99,ERR=99) atoms%neq(n),&
@@ -507,8 +507,8 @@
       WRITE (chntype,'(i4)') 2*atoms%ntype
       chform = '('//chntype//'i3 )'
       READ (UNIT=5,FMT=chform,END=99,ERR=99) &
-     &                (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
-      WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybrid%lcutwf(n),n=1,atoms%ntype)
+     &                (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybinp%lcutwf(n),n=1,atoms%ntype)
+      WRITE (6,FMT=chform) (atoms%lnonsph(n),n=1,atoms%ntype)!,(hybinp%lcutwf(n),n=1,atoms%ntype)
  6010 FORMAT (25i3)
 !
       READ (UNIT=5,FMT=6010,END=99,ERR=99) nw
@@ -671,7 +671,7 @@
      &     END=98,ERR=98) banddos%e2_dos,banddos%e1_dos,banddos%sig_dos
 
 
-! added for exact-exchange or hybrid functional calculations:
+! added for exact-exchange or hybinp functional calculations:
 ! read in the number of k-points and nx,ny and nz given in the last line
 ! of the input file,
 ! we demand that the values given there are consistent with the kpts-file
@@ -702,17 +702,17 @@
 
       IF(namex=='exx ') THEN
          CALL judft_error("No EXX calculations in this FLEUR version")
-        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) hybrid%gcutm2,hybrid%tolerance2,hybrid%bands2
+        !READ (UNIT=5,FMT='(7x,f8.5,7x,f10.8,7x,i3)',END=98,ERR=98) hybinp%gcutm2,hybinp%tolerance2,hybinp%bands2
 
         !DO i=1,atoms%ntype
           !READ (UNIT=5,FMT='(7x,i2,9x,i2,1x,i2,1x,i2,1x,i2)',&
-            !END IF=98,ERR=98) hybrid%lcutm2(i),hybrid%select2(1,i),hybrid%select2(2,i),&
-            !           hybrid%select2(3,i),hybrid%select2(4,i)
+            !END IF=98,ERR=98) hybinp%lcutm2(i),hybinp%select2(1,i),hybinp%select2(2,i),&
+            !           hybinp%select2(3,i),hybinp%select2(4,i)
         !END DO
 
-        !ALLOCATE( hybrid%l_exxc(maxval(atoms%ncst),atoms%ntype) )
+        !ALLOCATE( hybinp%l_exxc(maxval(atoms%ncst),atoms%ntype) )
         !DO i=1,atoms%ntype
-   !       READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98)(hybrid%l_exxc(k,i),k=1,atoms%ncst(i))
+   !       READ(UNIT=5,FMT='(60(2x,l1))',END=98,ERR=98)(hybinp%l_exxc(k,i),k=1,atoms%ncst(i))
        ! END DO
       END IF
 
@@ -799,7 +799,7 @@
 !      ENDIF
       IF( namex.EQ.'hf  ' .OR. namex .EQ. 'exx ' .OR. namex .EQ. 'hse '&
      &    .OR. namex.EQ.'vhse' ) THEN
-        WRITE (5,9999) 0.0,0.0,hybrid%ewaldlambda,hybrid%lexp,hybrid%bands1
+        WRITE (5,9999) 0.0,0.0,hybinp%ewaldlambda,hybinp%lexp,hybinp%bands1
         l_hyb = .true.
       END IF
 
@@ -842,8 +842,8 @@
          END IF
 !-lda_u
         IF ( l_hyb ) THEN
-          WRITE (5,9090) atoms%neq(n),atoms%l_geo(n),hybrid%lcutm1(n),hybrid%select1(1,n),&
-     &          hybrid%select1(2,n),hybrid%select1(3,n),hybrid%select1(4,n),atoms%nlo(n),&
+          WRITE (5,9090) atoms%neq(n),atoms%l_geo(n),hybinp%lcutm1(n),hybinp%select1(1,n),&
+     &          hybinp%select1(2,n),hybinp%select1(3,n),hybinp%select1(4,n),atoms%nlo(n),&
      &          (atoms%llo(ilo,n),ilo=1,atoms%nlo(n))
  9090     FORMAT ( i2,',force =',l1,',lcutm=',i2,',select=',&
      &        i2,',',i2,';',i2,',',i2,',nlo=',i2,',llo=',60i3 )
@@ -899,7 +899,7 @@
         WRITE (chntype,'(i3)') 2*atoms%ntype
         chform = '('//chntype//'i3 )'
         WRITE (5,FMT=chform) &
-     &        (atoms%lnonsph(n),n=1,atoms%ntype),(hybrid%lcutwf(n),n=1,atoms%ntype)
+     &        (atoms%lnonsph(n),n=1,atoms%ntype),(hybinp%lcutwf(n),n=1,atoms%ntype)
       ELSE
          WRITE (chntype,'(i3)') atoms%ntype
          chform = '('//chntype//'i3 )'

@@ -19,7 +19,7 @@ MODULE m_symm_hf
    USE m_types
    USE m_util
    USE m_intgrf
-   USE m_io_hybrid
+   USE m_io_hybinp
 
 CONTAINS
 
@@ -73,7 +73,7 @@ CONTAINS
 
    END SUBROUTINE symm_hf_init
 
-   SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input,atoms, mpdata, hybrid, cell, &
+   SUBROUTINE symm_hf(kpts, nk, sym, hybdat, eig_irr, input,atoms, mpdata, hybinp, cell, &
                       lapw, jsp, rrot, nsymop, psym, nkpt_EIBZ, n_q, parent, &
                       pointer_EIBZ, nsest, indx_sest)
 
@@ -86,7 +86,7 @@ CONTAINS
 
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_mpdata), intent(in) :: mpdata
-      TYPE(t_hybrid), INTENT(IN) :: hybrid
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_kpts), INTENT(IN)   :: kpts
@@ -103,7 +103,7 @@ CONTAINS
       INTEGER, INTENT(IN)              :: rrot(:,:,:)
       INTEGER, INTENT(IN)              :: psym(:)
       INTEGER, INTENT(OUT)             :: parent(kpts%nkptf)
-      INTEGER, INTENT(OUT)             :: nsest(hybrid%nbands(nk)), indx_sest(hybrid%nbands(nk), hybrid%nbands(nk))
+      INTEGER, INTENT(OUT)             :: nsest(hybinp%nbands(nk)), indx_sest(hybinp%nbands(nk), hybinp%nbands(nk))
       INTEGER, ALLOCATABLE, INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER, ALLOCATABLE, INTENT(OUT) :: n_q(:)
 
@@ -129,13 +129,13 @@ CONTAINS
 !     - local arrays -
       INTEGER                         :: neqvkpt(kpts%nkptf)
       INTEGER                         :: list(kpts%nkptf)
-      INTEGER                         :: degenerat(hybrid%ne_eig(nk))
+      INTEGER                         :: degenerat(hybinp%ne_eig(nk))
 
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE             :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(input%neig, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                         :: carr1(hybrid%maxlmindx, atoms%nat)
+      COMPLEX                         :: cmt(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                         :: carr1(hybinp%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
       COMPLEX, ALLOCATABLE             :: cpwhlp(:, :)
@@ -246,15 +246,15 @@ CONTAINS
 
       WRITE (6, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
 
-      DO i = 1, hybrid%nbands(nk)
-         DO j = i + 1, hybrid%nbands(nk)
+      DO i = 1, hybinp%nbands(nk)
+         DO j = i + 1, hybinp%nbands(nk)
             IF (abs(eig_irr(i, nk) - eig_irr(j, nk)) <= tolerance) THEN
                degenerat(i) = degenerat(i) + 1
             END IF
          END DO
       END DO
 
-      DO i = 1, hybrid%ne_eig(nk)
+      DO i = 1, hybinp%ne_eig(nk)
          IF (degenerat(i) /= 1 .or. degenerat(i) /= 0) THEN
             degenerat(i + 1:i + degenerat(i) - 1) = 0
          END IF
@@ -267,8 +267,8 @@ CONTAINS
       nddb = count(degenerat >= 1)
 
       WRITE (6, *) ' Degenerate states:'
-      DO iband = 1, hybrid%nbands(nk)/5 + 1
-         WRITE (6, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybrid%nbands(nk)))
+      DO iband = 1, hybinp%nbands(nk)/5 + 1
+         WRITE (6, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybinp%nbands(nk)))
       END DO
 
       IF (irreps) THEN
@@ -291,14 +291,14 @@ CONTAINS
          CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, mpdata, &
                           cell, hybdat%bas1, hybdat%bas2)
 
-         allocate(cmthlp(hybrid%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
+         allocate(cmthlp(hybinp%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation cmthlp/cpwhlp')
 
          DO isym = 1, nsymop
             iop = psym(isym)
 
             ic = 0
-            DO i = 1, hybrid%nbands(nk)
+            DO i = 1, hybinp%nbands(nk)
                ndb = degenerat(i)
                IF (ndb >= 1) THEN
                   ic = ic + 1
@@ -306,7 +306,7 @@ CONTAINS
                   cpwhlp = 0
 
                   CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms,input, mpdata, hybrid, kpts, sym, jsp, lapw)
+                                       i, ndb, nk, iop, atoms,input, mpdata, hybinp, kpts, sym, jsp, lapw)
 
                   DO iband = 1, ndb
                      carr1 = cmt(iband + i - 1, :, :)
@@ -332,7 +332,7 @@ CONTAINS
 
          ic = 0
          trace = 0
-         DO iband = 1, hybrid%nbands(nk)
+         DO iband = 1, hybinp%nbands(nk)
             ndb = degenerat(iband)
             IF (ndb >= 1) THEN
                ic = ic + 1
@@ -353,12 +353,12 @@ CONTAINS
 
          ic1 = 0
          symequivalent = .false.
-         DO iband1 = 1, hybrid%nbands(nk)
+         DO iband1 = 1, hybinp%nbands(nk)
             ndb1 = degenerat(iband1)
             IF (ndb1 >= 1) THEN
                ic1 = ic1 + 1
                ic2 = 0
-               DO iband2 = 1, hybrid%nbands(nk)
+               DO iband2 = 1, hybinp%nbands(nk)
                   ndb2 = degenerat(iband2)
                   IF (ndb2 >= 1) THEN
                      ic2 = ic2 + 1
@@ -403,7 +403,7 @@ CONTAINS
             END DO
          END DO
 
-         allocate(wavefolap(hybrid%nbands(nk), hybrid%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
+         allocate(wavefolap(hybinp%nbands(nk), hybinp%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
          wavefolap = 0
 
@@ -415,7 +415,7 @@ CONTAINS
                DO l = 0, atoms%lmax(itype)
                   DO M = -l, l
                      nn = mpdata%num_radfun_per_l(l, itype)
-                     DO iband1 = 1, hybrid%nbands(nk)
+                     DO iband1 = 1, hybinp%nbands(nk)
                         carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
                                             cmt(iband1, lm + 1:lm + nn, iatom))
                         DO iband2 = 1, iband1
@@ -430,7 +430,7 @@ CONTAINS
             END DO
          END DO
 
-         DO iband1 = 1, hybrid%nbands(nk)
+         DO iband1 = 1, hybinp%nbands(nk)
             DO iband2 = 1, iband1
                wavefolap(iband1, iband2) = conjg(wavefolap(iband2, iband1))
             END DO
@@ -440,12 +440,12 @@ CONTAINS
          IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
          symequivalent = .false.
          ic1 = 0
-         DO iband1 = 1, hybrid%nbands(nk)
+         DO iband1 = 1, hybinp%nbands(nk)
             ndb1 = degenerat(iband1)
             IF (ndb1 == 0) CYCLE
             ic1 = ic1 + 1
             ic2 = 0
-            DO iband2 = 1, hybrid%nbands(nk)
+            DO iband2 = 1, hybinp%nbands(nk)
                ndb2 = degenerat(iband2)
                IF (ndb2 == 0) CYCLE
                ic2 = ic2 + 1
@@ -466,7 +466,7 @@ CONTAINS
       ic1 = 0
       indx_sest = 0
       nsest = 0
-      DO iband1 = 1, hybrid%nbands(nk)
+      DO iband1 = 1, hybinp%nbands(nk)
          ndb1 = degenerat(iband1)
          IF (ndb1 >= 1) ic1 = ic1 + 1
          i = 0
@@ -475,7 +475,7 @@ CONTAINS
          END DO
          ndb1 = degenerat(iband1 - i)
          ic2 = 0
-         DO iband2 = 1, hybrid%nbands(nk)
+         DO iband2 = 1, hybinp%nbands(nk)
             ndb2 = degenerat(iband2)
             IF (ndb2 >= 1) ic2 = ic2 + 1
             i = 0
@@ -521,7 +521,7 @@ CONTAINS
                   iisym = isym - sym%nop
                END IF
 
-               ratom = hybrid%map(iatom, isym)
+               ratom = hybinp%map(iatom, isym)
                rotkpt = matmul(rrot(:, :, isym), kpts%bkf(:, nk))
                g = nint(rotkpt - kpts%bkf(:, nk))
 

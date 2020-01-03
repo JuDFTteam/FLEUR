@@ -49,12 +49,12 @@
 !===> Local Variables
       INTEGER :: n, ng, op, nbuffer, ios,nop2
       REAL    :: shift(3),rdummy(3,3),z_max,z_min,mat(3,3),x(3)
-      LOGICAL :: oldfleurset,l_symfile,l_gen,hybrid
+      LOGICAL :: oldfleurset,l_symfile,l_gen,hybinp
       CHARACTER(len=10)        :: chtmp
       CHARACTER(len=3)         :: ch_test
 !===> namelists
       NAMELIST /input/ film, cartesian, cal_symm, checkinp, inistop,
-     &                 symor, oldfleur, hybrid
+     &                 symor, oldfleur, hybinp
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -80,7 +80,7 @@
 
       symor     = .false.   ! =T select the largest symmorphic subgroup
 
-      hybrid    = .false.   ! =T create inp file for hybrid functionals, too
+      hybinp    = .false.   ! =T create inp file for hybinp functionals, too
       l_ss      = .false.   ! =T spin-spiral calculation ... may affect
       l_soc     = .false.   ! =T spin-orbit interaction ... the symmetry
 
@@ -122,7 +122,7 @@
       l_hyb = .FALSE.
       IF ( buffer(1:6)=='&input' ) THEN      ! get namelist 'input'
         READ (bfh,input)
-        l_hyb       = hybrid
+        l_hyb       = hybinp
         IF ( index(buffer,'oldfleur')>0 ) oldfleurset = .true.
         op = 0 
         IF ( op > 0 ) THEN

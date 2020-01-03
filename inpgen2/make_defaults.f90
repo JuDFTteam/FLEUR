@@ -15,7 +15,7 @@ MODULE m_make_defaults
 CONTAINS
 
    SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, &
-                            xcpot, noco, mpinp, hybrid)
+                            xcpot, noco, mpinp, hybinp)
       USE m_types_atoms
       USE m_types_cell
       USE m_types_sym
@@ -25,7 +25,7 @@ CONTAINS
       USE m_types_stars
       USE m_types_noco
       USE m_types_mpinp
-      USE m_types_hybrid
+      USE m_types_hybinp
       USE m_juDFT
 
       TYPE(t_atoms), INTENT(IN)    ::atoms
@@ -38,7 +38,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild_nf), INTENT(INOUT) ::xcpot
       TYPE(t_noco), INTENT(INOUT)  ::noco
       TYPE(t_mpinp), INTENT(INOUT) ::mpinp
-      TYPE(t_hybrid), INTENT(INOUT)::hybrid
+      TYPE(t_hybinp), INTENT(INOUT)::hybinp
 
       integer :: n
       !
@@ -62,7 +62,7 @@ CONTAINS
       ELSE
          input%elup = 1.0
       ENDIF
-      IF (hybrid%l_hybrid) THEN
+      IF (hybinp%l_hybrid) THEN
          input%ellow = input%ellow - 2.0
          input%elup = input%elup + 10.0
          input%gw_neigd = max(nint(input%zelec)*10, 60)
@@ -94,7 +94,7 @@ CONTAINS
       xcpot%gmaxxc = round_to_deci(xcpot%gmaxxc, 1)
       xcpot%l_inbuild = .true.
       if (xcpot%icorr == 0) THEN
-         if (hybrid%l_hybrid) then
+         if (hybinp%l_hybrid) then
             xcpot%inbuild_name = "pbe0"
          else
             xcpot%inbuild_name = "pbe"
@@ -126,17 +126,17 @@ CONTAINS
       noco%b_con(:, :) = 0.0
 
       !
-      !hybrid
+      !hybinp
       !
-      ALLOCATE (hybrid%lcutwf(atoms%ntype))
-      ALLOCATE (hybrid%lcutm1(atoms%ntype))
-      ALLOCATE (hybrid%select1(4, atoms%ntype))
-      hybrid%lcutwf = atoms%lmax - atoms%lmax/10
-      hybrid%lcutm1 = 4
-      hybrid%select1(1, :) = 4
-      hybrid%select1(2, :) = 0
-      hybrid%select1(3, :) = 4
-      hybrid%select1(4, :) = 2
+      ALLOCATE (hybinp%lcutwf(atoms%ntype))
+      ALLOCATE (hybinp%lcutm1(atoms%ntype))
+      ALLOCATE (hybinp%select1(4, atoms%ntype))
+      hybinp%lcutwf = atoms%lmax - atoms%lmax/10
+      hybinp%lcutm1 = 4
+      hybinp%select1(1, :) = 4
+      hybinp%select1(2, :) = 0
+      hybinp%select1(3, :) = 4
+      hybinp%select1(4, :) = 2
       mpinp%g_cutoff = round_to_deci(input%rkmax - 0.5, 1)
       mpinp%linear_dep_tol = 1e-4
    END SUBROUTINE make_defaults

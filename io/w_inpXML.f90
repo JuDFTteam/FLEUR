@@ -18,7 +18,7 @@ MODULE m_winpXML
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, &
-      cell, sym, xcpot, noco, oneD, mpinp, hybrid, kpts, enpara, &
+      cell, sym, xcpot, noco, oneD, mpinp, hybinp, kpts, enpara, &
       l_explicitIn, l_includeIn, filename)
 
       use m_types_input
@@ -29,7 +29,7 @@ CONTAINS
       use m_types_kpts
       use m_types_oneD
       use m_types_mpinp
-      use m_types_hybrid
+      use m_types_hybinp
       use m_types_cell
       use m_types_banddos
       use m_types_sliceplot
@@ -56,7 +56,7 @@ CONTAINS
       TYPE(t_oneD), INTENT(IN)     :: oneD
 
       TYPE(t_mpinp), INTENT(IN)    :: mpinp
-      TYPE(t_hybrid), INTENT(IN)   :: hybrid
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_banddos), INTENT(IN)  :: banddos
       TYPE(t_sliceplot), INTENT(IN):: sliceplot
@@ -104,7 +104,7 @@ CONTAINS
       CHARACTER(len=41) :: chform
       CHARACTER(len=100) :: line
 
-!     added for HF and hybrid functionals
+!     added for HF and hybinp functionals
       REAL                  ::  aMix, omega
       INTEGER               :: idum
       CHARACTER(len=1)     ::  check
@@ -176,9 +176,9 @@ CONTAINS
 150   FORMAT('      <soc theta="', f0.8, '" phi="', f0.8, '" l_soc="', l1, '" spav="', l1, '"/>')
       WRITE (fileNum, 150) noco%theta, noco%phi, noco%l_soc, noco%l_spav
 
-      IF (l_explicit .OR. hybrid%l_hybrid) THEN
+      IF (l_explicit .OR. hybinp%l_hybrid) THEN
 155      FORMAT('      <prodBasis gcutm="', f0.8, '" tolerance="', f0.8, '" ewaldlambda="', i0, '" lexp="', i0, '" bands="', i0, '"/>')
-         WRITE (fileNum, 155) mpinp%g_cutoff, mpinp%linear_dep_tol, hybrid%ewaldlambda, hybrid%lexp, hybrid%bands1
+         WRITE (fileNum, 155) mpinp%g_cutoff, mpinp%linear_dep_tol, hybinp%ewaldlambda, hybinp%lexp, hybinp%bands1
       END IF
 
       IF (l_nocoOpt .OR. l_explicit) THEN
@@ -364,11 +364,11 @@ CONTAINS
 321      FORMAT('         <energyParameters s="', i0, '" p="', i0, '" d="', i0, '" f="', i0, '"/>')
          WRITE (fileNum, 321) enpara%qn_el(0:3, iAtomType, 1)
          !END IF
-         IF (l_explicit .OR. hybrid%l_hybrid) THEN
+         IF (l_explicit .OR. hybinp%l_hybrid) THEN
 315         FORMAT('         <prodBasis lcutm="', i0, '" lcutwf="', i0, '" select="', a, '"/>')
             line = ''
-            WRITE (line, '(i0,1x,i0,1x,i0,1x,i0)') hybrid%select1(1:4, iAtomType)
-            WRITE (fileNum, 315) hybrid%lcutm1(iAtomType), hybrid%lcutwf(iAtomType), TRIM(ADJUSTL(line))
+            WRITE (line, '(i0,1x,i0,1x,i0,1x,i0)') hybinp%select1(1:4, iAtomType)
+            WRITE (fileNum, 315) hybinp%lcutm1(iAtomType), hybinp%lcutwf(iAtomType), TRIM(ADJUSTL(line))
          END IF
 
          IF (uIndices(1, iAtomType) .NE. -1) THEN

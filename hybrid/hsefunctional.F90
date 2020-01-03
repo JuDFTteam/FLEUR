@@ -55,9 +55,9 @@ CONTAINS
 
    ! Calculate the enhancement factor of the HSE03 functional
    ! References:
-   ! [1] Heyd, Scuseria, Ernzerhof: Hybrid functionals based on a screened Coulomb potential,
+   ! [1] Heyd, Scuseria, Ernzerhof: hybinp functionals based on a screened Coulomb potential,
    !     J. Chem. Phys. 118 (2003) 8207-8215
-   ! [2] Heyd, Scuseria: Assessment and validation of a screened Coulomb hybrid density
+   ! [2] Heyd, Scuseria: Assessment and validation of a screened Coulomb hybinp density
    !     functional, J. Chem. Phys. 120 (2004) 7274-7280
    ! [3] Ernzerhof, Perdew: Generalized gradient approximation to the angle- and system-
    !     averaged exchange hole, J. Chem. Phys. 109 (1998) 3313-3319

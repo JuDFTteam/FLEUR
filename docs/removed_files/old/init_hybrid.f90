@@ -17,20 +17,20 @@
              !
              ! calculate d_wgn
              !
-             ALLOCATE (hybrid%d_wgn2(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,sym%nsym))
-             CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,hybrid%d_wgn2(:,:,1:,:sym%nop))
-             hybrid%d_wgn2(:,:,0,:) = 1
+             ALLOCATE (hybinp%d_wgn2(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,sym%nsym))
+             CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,hybinp%d_wgn2(:,:,1:,:sym%nop))
+             hybinp%d_wgn2(:,:,0,:) = 1
 
              DO isym = sym%nop+1,sym%nsym
                 iisym = isym - sym%nop
                 DO l = 0,atoms%lmaxd
                    DO m2 = -l,l
                       DO m1 = -l,-1
-                         cdum                  = hybrid%d_wgn2( m1,m2,l,iisym)
-                         hybrid%d_wgn2( m1,m2,l,isym) = hybrid%d_wgn2(-m1,m2,l,iisym)*(-1)**m1
-                         hybrid%d_wgn2(-m1,m2,l,isym) = cdum                  *(-1)**m1
+                         cdum                  = hybinp%d_wgn2( m1,m2,l,iisym)
+                         hybinp%d_wgn2( m1,m2,l,isym) = hybinp%d_wgn2(-m1,m2,l,iisym)*(-1)**m1
+                         hybinp%d_wgn2(-m1,m2,l,isym) = cdum                  *(-1)**m1
                       END DO
-                      hybrid%d_wgn2(0,m2,l,isym) = hybrid%d_wgn2(0,m2,l,iisym)
+                      hybinp%d_wgn2(0,m2,l,isym) = hybinp%d_wgn2(0,m2,l,iisym)
                    END DO
                 END DO
              END DO

@@ -10,15 +10,15 @@ MODULE m_make_kpoints
   private
   public :: make_kpoints
 CONTAINS
-  SUBROUTINE make_kpoints(kpts,cell,sym,hybrid,film,l_socorss,str)
+  SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,str)
     USE m_types_kpts
     USE m_types_cell
     USE m_types_sym
-    use m_types_hybrid
+    use m_types_hybinp
     TYPE(t_kpts),INTENT(out)   :: kpts
     TYPE(t_cell),INTENT(in)    :: cell
     TYPE(t_sym),INTENT(in)     :: sym
-    TYPE(t_hybrid), intent(in) :: hybrid
+    TYPE(t_hybinp), intent(in) :: hybinp
     LOGICAL,INTENT(in)::l_socorss,film
     CHARACTER(len=*),INTENT(inout)::str
 
@@ -56,7 +56,7 @@ CONTAINS
        ENDIF
     END DO
 
-    l_gamma = l_gamma .or. hybrid%l_hybrid
+    l_gamma = l_gamma .or. hybinp%l_hybrid
 
     IF (INDEX(str,'den=')==1) THEN
        str=str(5:)

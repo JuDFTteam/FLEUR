@@ -8,24 +8,24 @@ CONTAINS
 ! which the atom iatom is mapped via the symmetry operation isym
 ! tvec is the translation, which maps R R_a + tau back in the unit cell
 !
-   SUBROUTINE gen_map(atoms, sym, oneD, hybrid)
+   SUBROUTINE gen_map(atoms, sym, oneD, hybinp)
       USE m_types
       USE m_juDFT
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_oneD), INTENT(IN)  :: oneD
-      TYPE(t_hybrid), INTENT(INOUT)::hybrid
+      TYPE(t_hybinp), INTENT(INOUT)::hybinp
       ! private scalars
       INTEGER                           :: iatom, first_eq_atom, itype, ieq, isym, iisym, ieq1
       INTEGER                           :: ratom, ok
       ! private arrays
       REAL                              :: rtaual(3)
 
-      ALLOCATE (hybrid%map(atoms%nat, sym%nsym), stat=ok)
+      ALLOCATE (hybinp%map(atoms%nat, sym%nsym), stat=ok)
       IF (ok /= 0) call judft_error('gen_map: error during allocation of map')
 
-      ALLOCATE (hybrid%tvec(3, atoms%nat, sym%nsym), stat=ok)
+      ALLOCATE (hybinp%tvec(3, atoms%nat, sym%nsym), stat=ok)
       IF (ok /= 0) call judft_error('gen_map: error during allocation of tvec')
 
       iatom = 0
@@ -47,8 +47,8 @@ CONTAINS
                DO ieq1 = 1, atoms%neq(itype)
                   IF (all(abs(modulo(rtaual - atoms%taual(:, first_eq_atom + ieq1) + 1e-12, 1.0)) < 1e-10)) THEN
                      ratom = first_eq_atom + ieq1
-                     hybrid%map(iatom, isym) = ratom
-                     hybrid%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
+                     hybinp%map(iatom, isym) = ratom
+                     hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
                   END IF
                END DO
                IF (ratom == 0) call judft_error('eigen_hf: ratom not found')

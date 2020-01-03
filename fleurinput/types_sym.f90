@@ -48,7 +48,7 @@ MODULE m_types_sym
       INTEGER, ALLOCATABLE ::invsat(:)
 
      !
-     ! Hybrid specific stuff TODO
+     ! hybinp specific stuff TODO
      !
      INTEGER ::nsymt
      INTEGER :: nsym

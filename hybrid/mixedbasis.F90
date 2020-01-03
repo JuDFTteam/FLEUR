@@ -6,7 +6,7 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! This subroutine generates the mixed basis set used to evaluate the  !
-! exchange term in HF/hybrid functional calculations or EXX           !
+! exchange term in HF/hybinp functional calculations or EXX           !
 ! calculations. In the latter case a second mixed basis set is setup  !
 ! for the OEP integral equation.                                      !
 ! In all cases the mixed basis consists of IR plane waves             !
@@ -38,13 +38,13 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpdata, hybrid, enpara, mpi, v, iterHF)
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpdata, hybinp, enpara, mpi, v, iterHF)
 
       USE m_judft
       USE m_loddop, ONLY: loddop
       USE m_intgrf, ONLY: intgrf_init, intgrf
       use m_rorder, only: rorderpf
-      USE m_hybrid_core
+      USE m_hybinp_core
       USE m_wrapper
       USE m_eig66_io
       USE m_types
@@ -54,7 +54,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_mpdata), intent(inout)  :: mpdata
-      TYPE(t_hybrid), INTENT(INOUT) :: hybrid
+      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_cell), INTENT(IN)    :: cell
@@ -127,21 +127,21 @@ CONTAINS
          WRITE (6, '(A)') 'Reduction due to overlap (quality of orthonormality, should be < 1.0E-06)'
       END IF
 
-      allocate(mpdata%num_radbasfn(0:maxval(hybrid%lcutm1), atoms%ntype))
+      allocate(mpdata%num_radbasfn(0:maxval(hybinp%lcutm1), atoms%ntype))
       allocate(seleco(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd))
       allocate(selecu(maxval(mpdata%num_radfun_per_l), 0:atoms%lmaxd))
       mpdata%num_radbasfn = 0    !!! 01/12/10 jij%M.b.
 
       ! determine maximal indices of (radial) mixed-basis functions (->num_radbasfn)
       ! (will be reduced later-on due to overlap)
-      hybrid%max_indx_p_1 = 0
+      hybinp%max_indx_p_1 = 0
       DO itype = 1, atoms%ntype
          seleco = .FALSE.
          selecu = .FALSE.
-         seleco(1, 0:hybrid%select1(1, itype)) = .TRUE.
-         selecu(1, 0:hybrid%select1(3, itype)) = .TRUE.
-         seleco(2, 0:hybrid%select1(2, itype)) = .TRUE.
-         selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
+         seleco(1, 0:hybinp%select1(1, itype)) = .TRUE.
+         selecu(1, 0:hybinp%select1(3, itype)) = .TRUE.
+         seleco(2, 0:hybinp%select1(2, itype)) = .TRUE.
+         selecu(2, 0:hybinp%select1(4, itype)) = .TRUE.
 
          ! include local orbitals
          IF (maxval(mpdata%num_radfun_per_l) >= 3) THEN
@@ -149,7 +149,7 @@ CONTAINS
             selecu(3:,:) = .TRUE.
          END IF
 
-         DO l = 0, hybrid%lcutm1(itype)
+         DO l = 0, hybinp%lcutm1(itype)
             n_radbasfn = 0
             M = 0
 
@@ -182,14 +182,14 @@ CONTAINS
             IF (n_radbasfn == 0 .AND. mpi%irank == 0) &
                WRITE (6, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
-            hybrid%max_indx_p_1 = MAX(hybrid%max_indx_p_1, M)
+            hybinp%max_indx_p_1 = MAX(hybinp%max_indx_p_1, M)
             mpdata%num_radbasfn(l, itype) = n_radbasfn*input%jspins
          END DO
       END DO
 
       allocate(mpdata%radbasfn_mt(atoms%jmtd,&
                             maxval(mpdata%num_radbasfn), &
-                            0:maxval(hybrid%lcutm1), &
+                            0:maxval(hybinp%lcutm1), &
                             atoms%ntype), source=0.0)
 
       ! Define product bases and reduce them according to overlap
@@ -197,10 +197,10 @@ CONTAINS
       DO itype = 1, atoms%ntype
          seleco = .FALSE.
          selecu = .FALSE.
-         seleco(1, 0:hybrid%select1(1, itype)) = .TRUE.
-         selecu(1, 0:hybrid%select1(3, itype)) = .TRUE.
-         seleco(2, 0:hybrid%select1(2, itype)) = .TRUE.
-         selecu(2, 0:hybrid%select1(4, itype)) = .TRUE.
+         seleco(1, 0:hybinp%select1(1, itype)) = .TRUE.
+         selecu(1, 0:hybinp%select1(3, itype)) = .TRUE.
+         seleco(2, 0:hybinp%select1(2, itype)) = .TRUE.
+         selecu(2, 0:hybinp%select1(4, itype)) = .TRUE.
          ! include lo's
          IF (maxval(mpdata%num_radfun_per_l) >= 3) THEN
             seleco(3:,:) = .TRUE.
@@ -208,7 +208,7 @@ CONTAINS
          END IF
 
          n_grid_pt = atoms%jri(itype)
-         DO l = 0, hybrid%lcutm1(itype)
+         DO l = 0, hybinp%lcutm1(itype)
             full_n_radbasfn = mpdata%num_radbasfn(l, itype)
             ! allow for zero product-basis functions for
             ! current l-quantum number
@@ -253,7 +253,7 @@ CONTAINS
             END DO  !l1
 
             !normalize radbasfn_mt
-            call mpdata%normalize(atoms, hybrid, gridf)
+            call mpdata%normalize(atoms, hybinp, gridf)
 
             IF (i_basfn /= full_n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
@@ -262,17 +262,17 @@ CONTAINS
             ! the overlap matrix is diagonalized and those eigenvectors
             ! with a eigenvalue greater then mpdata%linear_dep_tol are retained
 
-            call mpdata%reduce_linear_dep(atoms, mpi, hybrid, l, itype, gridf, iterHF)
+            call mpdata%reduce_linear_dep(atoms, mpi, hybinp, l, itype, gridf, iterHF)
 
          END DO !l
-         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpdata%num_radbasfn(0:hybrid%lcutm1(itype), itype))
+         IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpdata%num_radbasfn(0:hybinp%lcutm1(itype), itype))
       END DO ! itype
 
-      allocate(basmhlp(atoms%jmtd, maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype))
-      basmhlp(1:atoms%jmtd, 1:maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), 1:atoms%ntype) &
-         = mpdata%radbasfn_mt(1:atoms%jmtd, 1:maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), 1:atoms%ntype)
+      allocate(basmhlp(atoms%jmtd, maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%ntype))
+      basmhlp(1:atoms%jmtd, 1:maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), 1:atoms%ntype) &
+         = mpdata%radbasfn_mt(1:atoms%jmtd, 1:maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), 1:atoms%ntype)
       deallocate(mpdata%radbasfn_mt)
-      allocate(mpdata%radbasfn_mt(atoms%jmtd, maxval(mpdata%num_radbasfn), 0:maxval(hybrid%lcutm1), atoms%ntype))
+      allocate(mpdata%radbasfn_mt(atoms%jmtd, maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%ntype))
       mpdata%radbasfn_mt = basmhlp
 
       deallocate(basmhlp, seleco, selecu, selecmat)
@@ -295,7 +295,7 @@ CONTAINS
 
          IF (atoms%ntype > 1 .AND. mpi%irank == 0) WRITE (6, '(6X,A,I3)') 'Atom type', itype
 
-         DO l = 0, hybrid%lcutm1(itype)
+         DO l = 0, hybinp%lcutm1(itype)
             ! determine radial function with the largest moment
             ! this function is used to build the linear combinations
             max_momentum = 0
@@ -319,7 +319,7 @@ CONTAINS
          END DO
 
 
-         DO l = 0, hybrid%lcutm1(itype)
+         DO l = 0, hybinp%lcutm1(itype)
             IF (mpi%irank == 0) WRITE (6, '(6X,A)') lchar(l)//':'
 
             IF (mpdata%num_radbasfn(l, itype) == 0) THEN
@@ -364,23 +364,23 @@ CONTAINS
 
       END DO
 
-      call mpdata%check_radbasfn(atoms, hybrid)
+      call mpdata%check_radbasfn(atoms, hybinp)
 
       !count basis functions
-      hybrid%nbasp = 0
+      hybinp%nbasp = 0
       DO itype = 1, atoms%ntype
          DO i = 1, atoms%neq(itype)
-            DO l = 0, hybrid%lcutm1(itype)
-               hybrid%nbasp = hybrid%nbasp + (2*l+1) * mpdata%num_radbasfn(l, itype)
+            DO l = 0, hybinp%lcutm1(itype)
+               hybinp%nbasp = hybinp%nbasp + (2*l+1) * mpdata%num_radbasfn(l, itype)
             END DO
          END DO
       END DO
-      hybrid%maxbasm1 = hybrid%nbasp + maxval(mpdata%n_g)
-      hybrid%nbasm = hybrid%nbasp + mpdata%n_g
+      hybinp%maxbasm1 = hybinp%nbasp + maxval(mpdata%n_g)
+      hybinp%nbasm = hybinp%nbasp + mpdata%n_g
 
-      hybrid%maxlmindx = 0
+      hybinp%maxlmindx = 0
       do itype = 1,atoms%ntype
-         hybrid%maxlmindx = max(hybrid%maxlmindx,&
+         hybinp%maxlmindx = max(hybinp%maxlmindx,&
                                 SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))])&
                                 )
       enddo

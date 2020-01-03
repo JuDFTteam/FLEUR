@@ -5,7 +5,7 @@ IMPLICIT NONE
 CONTAINS
 
 SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
-                              oneD,hybrid,cell,banddos,sliceplot,xcpot,&
+                              oneD,hybinp,cell,banddos,sliceplot,xcpot,&
                               noco,enpara,sphhar)
 
    USE m_types
@@ -19,7 +19,7 @@ SUBROUTINE writeOutParameters(mpi,input,sym,stars,atoms,vacuum,kpts,&
    TYPE(t_vacuum),    INTENT(IN) :: vacuum
    TYPE(t_kpts),      INTENT(IN) :: kpts
    TYPE(t_oneD),      INTENT(IN) :: oneD
-   TYPE(t_hybrid),    INTENT(IN) :: hybrid
+   TYPE(t_hybinp),    INTENT(IN) :: hybinp
    TYPE(t_cell),      INTENT(IN) :: cell
    TYPE(t_banddos),   INTENT(IN) :: banddos
    TYPE(t_sliceplot), INTENT(IN) :: sliceplot

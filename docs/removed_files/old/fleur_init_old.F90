@@ -233,7 +233,7 @@ CONTAINS
           ALLOCATE(noel(atoms%ntype),atomTypeSpecies(atoms%ntype),speciesRepAtomType(atoms%ntype))
           ALLOCATE(xmlElectronStates(29,atoms%ntype),xmlPrintCoreStates(29,atoms%ntype))
           ALLOCATE(xmlCoreOccs(1,1,1),atoms%label(atoms%nat))
-          ALLOCATE(hybrid%lcutm1(atoms%ntype),hybrid%lcutwf(atoms%ntype),hybrid%select1(4,atoms%ntype))
+          ALLOCATE(hybinp%lcutm1(atoms%ntype),hybinp%lcutwf(atoms%ntype),hybinp%select1(4,atoms%ntype))
           filename = 'inpConverted.xml'
           xmlElectronStates = noState_const
           xmlPrintCoreStates = .FALSE.
@@ -245,15 +245,15 @@ CONTAINS
              atomTypeSpecies(iType) = iType
              speciesRepAtomType(iType) = iType
 
-             hybrid%lcutm1(iType) = 4
-             hybrid%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
-             hybrid%select1(:,iType) = (/4, 0, 4, 2 /)
+             hybinp%lcutm1(iType) = 4
+             hybinp%lcutwf(iType) = atoms%lmax(iType) - atoms%lmax(iType) / 10
+             hybinp%select1(:,iType) = (/4, 0, 4, 2 /)
           END DO
           mpbasis%g_cutoff = input%rkmax - 0.5
           mpbasis%linear_dep_tol = 1.0e-4
-          hybrid%ewaldlambda = 3
-          hybrid%lexp = 16
-          hybrid%bands1 = max( nint(input%zelec)*10, 60 )
+          hybinp%ewaldlambda = 3
+          hybinp%lexp = 16
+          hybinp%bands1 = max( nint(input%zelec)*10, 60 )
 
           numSpecies = SIZE(speciesRepAtomType)
           ALLOCATE(atoms%speciesName(numSpecies))

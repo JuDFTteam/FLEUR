@@ -30,7 +30,7 @@ PROGRAM inpgen
   USE m_types_noco
   USE m_types_vacuum
   USE m_types_banddos
-  USE m_types_hybrid
+  USE m_types_hybinp
   USE m_types_xcpot_inbuild_nofunction
   USE m_types_forcetheo
   USE m_types_kpts
@@ -56,7 +56,7 @@ PROGRAM inpgen
       TYPE(t_vacuum)   :: vacuum
       TYPE(t_banddos)  :: banddos
       TYPE(t_mpinp)    :: mpinp
-      TYPE(t_hybrid)   :: hybrid
+      TYPE(t_hybinp)   :: hybinp
       TYPE(t_xcpot_inbuild_nf)::xcpot
       TYPE(t_enpara)   :: enpara
       TYPE(t_forcetheo):: forcetheo
@@ -93,12 +93,12 @@ PROGRAM inpgen
 
       IF (judft_was_argument("-inp")) THEN
          call read_old_inp(input,atoms,cell,stars,sym,noco,vacuum,forcetheo,&
-              sliceplot,banddos,enpara,xcpot,kpts,hybrid, oneD)
+              sliceplot,banddos,enpara,xcpot,kpts,hybinp, oneD)
          l_fullinput=.TRUE.
       ELSEIF (judft_was_argument("-inp.xml")) THEN
          !not yet
          call Fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,&
-         sliceplot=Sliceplot,banddos=Banddos,hybrid=Hybrid,oned=Oned,xcpot=Xcpot,kpts=Kpts)
+         sliceplot=Sliceplot,banddos=Banddos,hybinp=hybinp,oned=Oned,xcpot=Xcpot,kpts=Kpts)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
@@ -107,7 +107,7 @@ PROGRAM inpgen
          !read the input
 
          CALL read_inpgen_input(atompos,atomid,atomlabel,kpts_str,&
-              input,sym,noco,vacuum,stars,xcpot,cell,hybrid)
+              input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
          l_fullinput=.FALSE.
       ELSE
          CALL judft_error("You should either specify -inp,-inp.xml or -f command line options. Check -h if unsure")
@@ -123,12 +123,12 @@ PROGRAM inpgen
 
          !Set all defaults that have not been specified before or can not be specified in inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
-                   xcpot,noco,mpinp,hybrid)
+                   xcpot,noco,mpinp,hybinp)
       ENDIF
       !
       ! k-points can also be modified here
       !
-      call make_kpoints(kpts,cell,sym,hybrid,input%film,noco%l_ss.or.noco%l_soc,kpts_str)
+      call make_kpoints(kpts,cell,sym,hybinp,input%film,noco%l_ss.or.noco%l_soc,kpts_str)
       !
       !Now the IO-section
       !
@@ -138,7 +138,7 @@ PROGRAM inpgen
          !CALL dump_FleurInputSchema()
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-              cell,sym,xcpot,noco,oneD,mpinp,hybrid,kpts,enpara,&
+              cell,sym,xcpot,noco,oneD,mpinp,hybinp,kpts,enpara,&
               l_explicit,l_include,"inp.xml")
          if (.not.l_include(1)) CALL sym%print_XML(99,"sym.xml")
       ENDIF

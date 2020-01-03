@@ -4,7 +4,7 @@
       SUBROUTINE dimen7(&
      &                  input,sym,stars,&
      &                  atoms,sphhar,vacuum,&
-     &                  kpts,oneD,hybrid,cell)
+     &                  kpts,oneD,hybinp,cell)
 
 !
 ! This program reads the input files of the flapw-programm (inp & kpts)
@@ -29,7 +29,7 @@
       USE m_types_vacuum
       USE m_types_kpts
       USE m_types_oneD
-      USE m_types_hybrid
+      USE m_types_hybinp
       USE m_types_cell
       USE m_types_noco
       USE m_types_banddos
@@ -56,7 +56,7 @@
       TYPE(t_vacuum),INTENT(INOUT)   :: vacuum
       TYPE(t_kpts),INTENT(INOUT)     :: kpts
       TYPE(t_oneD),INTENT(INOUT)     :: oneD
-      TYPE(t_hybrid),INTENT(INOUT)   :: hybrid
+      TYPE(t_hybinp),INTENT(INOUT)   :: hybinp
       TYPE(t_cell),INTENT(INOUT)     :: cell
 
       TYPE(t_noco)      :: noco
@@ -88,7 +88,7 @@
       INTEGER ntp1,ii,grid(3)
       INTEGER, ALLOCATABLE :: lmx1(:), nq1(:), nlhtp1(:)
 
-!     added for HF and hybrid functionals
+!     added for HF and hybinp functionals
       LOGICAL          ::  l_gamma=.false.
       character(len=4) :: latnam,namgrp
       real             :: scalecell
@@ -121,14 +121,14 @@
      & atoms%lda_u(atoms%ntype),noco%l_relax(atoms%ntype),&
      & noco%b_con(2,atoms%ntype),&
      & sphhar%clnu(1,1,1),sphhar%nlh(1),sphhar%llh(1,1),sphhar%nmem(1,1),sphhar%mlh(1,1,1),&
-     & hybrid%select1(4,atoms%ntype),hybrid%lcutm1(atoms%ntype),&
-     & hybrid%lcutwf(atoms%ntype), STAT=ok)
+     & hybinp%select1(4,atoms%ntype),hybinp%lcutm1(atoms%ntype),&
+     & hybinp%lcutwf(atoms%ntype), STAT=ok)
 !
 !---> read complete input and calculate nvacd,llod,lmaxd,jmtd,neigd and
 !
       CALL rw_inp('r',&
      &            atoms,vacuum,input,stars,sliceplot,banddos,&
-     &                  cell,sym,xcpot,noco,oneD,hybrid,kpts,&
+     &                  cell,sym,xcpot,noco,oneD,hybinp,kpts,&
      &                  noel,namex,relcor,a1,a2,a3,latnam,grid,namgrp,scalecell)
 
 !---> pk non-collinear
@@ -373,8 +373,8 @@
      & atoms%lmax,sym%ntypsy,atoms%neq,atoms%nlhtyp,atoms%rmt,atoms%zatom,atoms%jri,atoms%dx,atoms%nlo,atoms%llo,atoms%bmu,noel,&
      & vacuum%izlay,atoms%econf,atoms%lnonsph,atoms%taual,atoms%pos,atoms%nz,atoms%relax,&
      & atoms%l_geo,noco%alph,noco%beta,atoms%lda_u,noco%l_relax,noco%b_con,sphhar%clnu,sphhar%nlh,&
-     & sphhar%llh,sphhar%nmem,sphhar%mlh,hybrid%select1,hybrid%lcutm1,&
-     & hybrid%lcutwf)
+     & sphhar%llh,sphhar%nmem,sphhar%mlh,hybinp%select1,hybinp%lcutm1,&
+     & hybinp%lcutwf)
 
       RETURN
       END SUBROUTINE dimen7

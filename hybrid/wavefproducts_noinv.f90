@@ -3,7 +3,7 @@ module m_wavefproducts_noinv
 
 CONTAINS
    SUBROUTINE wavefproducts_noinv5(bandi, bandf, bandoi, bandof, nk, iq, &
-                                    input, jsp, cell, atoms, mpdata, hybrid,&
+                                    input, jsp, cell, atoms, mpdata, hybinp,&
                                    hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                    nkqpt, cprod)
       USE m_types
@@ -18,7 +18,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)     :: mpdata
-      TYPE(t_hybrid), INTENT(IN)      :: hybrid
+      TYPE(t_hybinp), INTENT(IN)      :: hybinp
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
 !     - scalars -
@@ -29,7 +29,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(OUT)    ::  cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       INTEGER        :: g_t(3)
       REAL           :: kqpt(3), kqpthlp(3)
@@ -46,26 +46,26 @@ CONTAINS
       IF (.not. kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts: k-point not found')
 
       call wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t,&
-                                         input, jsp, cell, atoms, mpdata, hybrid,&
+                                         input, jsp, cell, atoms, mpdata, hybinp,&
                                         hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                         nkqpt, cprod)
 
       call wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                   input,atoms, mpdata, hybrid, hybdat, kpts, &
+                                   input,atoms, mpdata, hybinp, hybdat, kpts, &
                                   nkqpt, cprod)
       call timestop("wavefproducts_noinv5")
 
    END SUBROUTINE wavefproducts_noinv5
 
    subroutine wavefproducts_noinv5_IS(bandi, bandf, bandoi, bandof, nk, iq, g_t, &
-                                       input, jsp, cell, atoms, mpdata, hybrid,&
+                                       input, jsp, cell, atoms, mpdata, hybinp,&
                                       hybdat, kpts, lapw, sym, nbasm_mt, noco,&
                                       nkqpt, cprod)
       use m_types
       use m_constants
       use m_wavefproducts_aux
       use m_judft
-      use m_io_hybrid
+      use m_io_hybinp
       implicit NONE
       TYPE(t_input), INTENT(IN)       :: input
       TYPE(t_noco), INTENT(IN)        :: noco
@@ -75,7 +75,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_lapw), INTENT(IN)        :: lapw
       TYPE(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybrid), INTENT(IN)      :: hybrid
+      TYPE(t_hybinp), INTENT(IN)      :: hybinp
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
 !     - scalars -
@@ -86,7 +86,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(OUT)    ::  cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2
@@ -162,7 +162,7 @@ CONTAINS
       END DO
       call timestop("step function")
 
-      call timestart("hybrid g")
+      call timestart("hybinp g")
       ic = nbasm_mt
       DO igptm = 1, mpdata%n_g(iq)
          carr = 0
@@ -189,7 +189,7 @@ CONTAINS
          END DO
          cprod(ic, :,:) = carr(:,:)
       END DO
-      call timestop("hybrid g")
+      call timestop("hybinp g")
       deallocate(z0, pointer, gpt0)
       call timestop("calc convolution")
 
@@ -198,11 +198,11 @@ CONTAINS
 
 
    subroutine wavefproducts_noinv_MT(bandi, bandf, bandoi, bandof, nk, iq, &
-                                      input,atoms, mpdata, hybrid, hybdat, kpts, &
+                                      input,atoms, mpdata, hybinp, hybdat, kpts, &
                                      nkqpt, cprod)
       use m_types
       USE m_constants
-      use m_io_hybrid
+      use m_io_hybinp
       use m_judft
       use m_wavefproducts_aux
       IMPLICIT NONE
@@ -210,7 +210,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
       TYPE(t_mpdata), INTENT(IN)     :: mpdata
-      TYPE(t_hybrid), INTENT(IN)      :: hybrid
+      TYPE(t_hybinp), INTENT(IN)      :: hybinp
       TYPE(t_hybdat), INTENT(INOUT)   :: hybdat
 
       !     - scalars -
@@ -220,7 +220,7 @@ CONTAINS
 
       !     - arrays -
 
-      COMPLEX, INTENT(INOUT)    ::  cprod(hybrid%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(INOUT)    ::  cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0
@@ -235,8 +235,8 @@ CONTAINS
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX                 ::  carr(bandoi:bandof, bandf - bandi + 1)
-      COMPLEX                 ::  cmt(input%neig, hybrid%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(input%neig, hybrid%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
 
       call timestart("wavefproducts_noinv5 MT")
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)
@@ -268,7 +268,7 @@ CONTAINS
 
             atom_phase = exp(-ImagUnit*tpi_const*dot_product(kpts%bkf(:,iq), atoms%taual(:,ic)))
 
-            DO l = 0, hybrid%lcutm1(itype)
+            DO l = 0, hybinp%lcutm1(itype)
 
                DO n = 1, hybdat%nindxp1(l, itype) ! loop over basis-function products
                   call mpdata%set_nl(n,l,itype, n1,l1,n2,l2)
