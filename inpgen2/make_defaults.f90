@@ -15,7 +15,7 @@ MODULE m_make_defaults
 CONTAINS
 
    SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, &
-                            xcpot, noco, hybrid)
+                            xcpot, noco, mpinp, hybrid)
       USE m_types_atoms
       USE m_types_cell
       USE m_types_sym
@@ -24,6 +24,7 @@ CONTAINS
       USE m_types_input
       USE m_types_stars
       USE m_types_noco
+      USE m_types_mpinp
       USE m_types_hybrid
       USE m_juDFT
 
@@ -36,6 +37,7 @@ CONTAINS
       TYPE(t_stars), INTENT(INOUT) ::stars
       TYPE(t_xcpot_inbuild_nf), INTENT(INOUT) ::xcpot
       TYPE(t_noco), INTENT(INOUT)  ::noco
+      TYPE(t_mpinp), INTENT(INOUT) ::mpinp
       TYPE(t_hybrid), INTENT(INOUT)::hybrid
 
       integer :: n
@@ -135,7 +137,7 @@ CONTAINS
       hybrid%select1(2, :) = 0
       hybrid%select1(3, :) = 4
       hybrid%select1(4, :) = 2
-      hybrid%g_cutoff = round_to_deci(input%rkmax - 0.5, 1)
-      hybrid%linear_dep_tol = 1e-4
+      mpinp%g_cutoff = round_to_deci(input%rkmax - 0.5, 1)
+      mpinp%linear_dep_tol = 1e-4
    END SUBROUTINE make_defaults
 END MODULE m_make_defaults

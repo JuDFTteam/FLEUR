@@ -8,11 +8,12 @@ MODULE m_fleur_init
 CONTAINS
   SUBROUTINE fleur_init(mpi,&
        input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
-       sliceplot,banddos,enpara,xcpot,results,kpts,hybrid,&
+       sliceplot,banddos,enpara,xcpot,results,kpts,mpinp,hybrid,&
        oneD,coreSpecInput,hub1,wann)
     USE m_types
     USE m_fleurinput_read_xml
     USE m_fleurinput_mpi_bc
+    USE m_types_mpinp
     USE m_judft
     USE m_juDFT_init
     USE m_init_wannier_defaults
@@ -71,6 +72,7 @@ CONTAINS
     CLASS(t_xcpot),ALLOCATABLE,INTENT(OUT):: xcpot
     TYPE(t_results)  ,INTENT(OUT):: results
     TYPE(t_kpts)     ,INTENT(OUT):: kpts
+    TYPE(t_mpinp)    ,INTENT(OUT):: mpinp
     TYPE(t_hybrid)   ,INTENT(OUT):: hybrid
     TYPE(t_oneD)     ,INTENT(OUT):: oneD
     TYPE(t_coreSpecInput),INTENT(OUT) :: coreSpecInput
@@ -162,7 +164,7 @@ CONTAINS
     IF (mpi%irank.EQ.0) THEN
        CALL w_inpXML(&
             atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-            cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
+            cell,sym,xcpot,noco,oneD,mpinp,hybrid,kpts,enpara,&
             .TRUE.,[.TRUE.,.TRUE.,.TRUE.,.TRUE.])
     END IF
     !

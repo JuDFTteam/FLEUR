@@ -40,6 +40,7 @@ PROGRAM inpgen
   USE m_types_stars
   use m_read_old_inp
   use m_fleurinput_read_xml
+  USE m_types_mpinp
 
       IMPLICIT NONE
 
@@ -54,6 +55,7 @@ PROGRAM inpgen
       TYPE(t_noco)     :: noco
       TYPE(t_vacuum)   :: vacuum
       TYPE(t_banddos)  :: banddos
+      TYPE(t_mpinp)    :: mpinp
       TYPE(t_hybrid)   :: hybrid
       TYPE(t_xcpot_inbuild_nf)::xcpot
       TYPE(t_enpara)   :: enpara
@@ -121,7 +123,7 @@ PROGRAM inpgen
 
          !Set all defaults that have not been specified before or can not be specified in inpgen
          CALL make_defaults(atoms,sym,cell,vacuum,input,stars,&
-                   xcpot,noco,hybrid)
+                   xcpot,noco,mpinp,hybrid)
       ENDIF
       !
       ! k-points can also be modified here
@@ -136,7 +138,7 @@ PROGRAM inpgen
          !CALL dump_FleurInputSchema()
          CALL w_inpxml(&
               atoms,vacuum,input,stars,sliceplot,forcetheo,banddos,&
-              cell,sym,xcpot,noco,oneD,hybrid,kpts,enpara,&
+              cell,sym,xcpot,noco,oneD,mpinp,hybrid,kpts,enpara,&
               l_explicit,l_include,"inp.xml")
          if (.not.l_include(1)) CALL sym%print_XML(99,"sym.xml")
       ENDIF

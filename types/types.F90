@@ -27,6 +27,7 @@ MODULE m_types
   USE m_types_force
   USE m_types_forcetheo
   USE m_types_hybrid
+  USE m_types_mpinp
   USE m_types_mpbasis
   USE m_types_greensf
   USE m_types_greensfCoeffs

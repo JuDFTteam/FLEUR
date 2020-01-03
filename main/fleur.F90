@@ -98,6 +98,7 @@ CONTAINS
     TYPE(t_enpara)                  :: enpara
     TYPE(t_results)                 :: results
     TYPE(t_kpts)                    :: kpts
+    TYPE(t_mpinp)                   :: mpinp
     TYPE(t_hybrid)                  :: hybrid
     TYPE(t_mpbasis)                 :: mpbasis
     TYPE(t_oneD)                    :: oneD
@@ -131,7 +132,7 @@ CONTAINS
 
     CALL timestart("Initialization")
     CALL fleur_init(mpi,input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,sliceplot,&
-                    banddos,enpara,xcpot,results,kpts,hybrid,oneD,coreSpecInput,hub1,wann)
+                    banddos,enpara,xcpot,results,kpts,mpinp,hybrid,oneD,coreSpecInput,hub1,wann)
     CALL timestop("Initialization")
 
     IF ( ( input%preconditioning_param /= 0 ) .AND. oneD%odi%d1 ) THEN

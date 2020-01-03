@@ -34,8 +34,6 @@ MODULE m_types_hybrid
       INTEGER, ALLOCATABLE   ::  nbands(:)
       INTEGER, ALLOCATABLE   ::  nobd(:, :)
       REAL, ALLOCATABLE      ::  div_vv(:, :, :)
-      real                   :: g_cutoff = 0.0
-      real                   :: linear_dep_tol = 0.0
    CONTAINS
       PROCEDURE :: read_xml => read_xml_hybrid
       PROCEDURE :: mpi_bc => mpi_bc_hybrid
@@ -102,14 +100,15 @@ CONTAINS
       TYPE(t_xml), INTENT(in)     :: xml
 
       INTEGER::numberNodes, ntype, itype
-      CHARACTER(len=100)::xPathA
+      CHARACTER(len=100)  :: xPathA
+      CHARACTER(len=4), allocatable  :: xc_name
 
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       ALLOCATE (this%lcutm1(ntype), this%lcutwf(ntype), this%select1(4, ntype), source=0)
       numberNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
       IF (numberNodes == 1) THEN
-         !this%gcutm1=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
-         !this%tolerance1=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
+         ! this%g_cutoff=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
+         ! this%linear_dep_tol=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
          this%ewaldlambda = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
          this%lexp = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
          this%bands1 = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))
@@ -130,5 +129,12 @@ CONTAINS
             this%lcutm1(iType) = -1
          ENDIF
       END DO
+
+      xc_name = trim(xml%GetAttributeValue('/fleurInput/xcFunctional/@name'))
+      if(trim(xc_name) == "pbe0") then
+         this%l_hybrid = .True.
+      else
+         this%l_hybrid = .False.
+      endif
    END SUBROUTINE read_xml_hybrid
 END MODULE m_types_hybrid

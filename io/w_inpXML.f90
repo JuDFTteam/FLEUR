@@ -18,7 +18,7 @@ MODULE m_winpXML
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, &
-      cell, sym, xcpot, noco, oneD, hybrid, kpts, enpara, &
+      cell, sym, xcpot, noco, oneD, mpinp, hybrid, kpts, enpara, &
       l_explicitIn, l_includeIn, filename)
 
       use m_types_input
@@ -28,6 +28,7 @@ CONTAINS
       use m_types_vacuum
       use m_types_kpts
       use m_types_oneD
+      use m_types_mpinp
       use m_types_hybrid
       use m_types_cell
       use m_types_banddos
@@ -53,6 +54,8 @@ CONTAINS
       TYPE(t_vacuum), INTENT(IN)   :: vacuum
       TYPE(t_kpts), INTENT(IN)     :: kpts
       TYPE(t_oneD), INTENT(IN)     :: oneD
+
+      TYPE(t_mpinp), INTENT(IN)    :: mpinp
       TYPE(t_hybrid), INTENT(IN)   :: hybrid
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_banddos), INTENT(IN)  :: banddos
@@ -175,7 +178,7 @@ CONTAINS
 
       IF (l_explicit .OR. hybrid%l_hybrid) THEN
 155      FORMAT('      <prodBasis gcutm="', f0.8, '" tolerance="', f0.8, '" ewaldlambda="', i0, '" lexp="', i0, '" bands="', i0, '"/>')
-         WRITE (fileNum, 155) hybrid%g_cutoff, hybrid%linear_dep_tol, hybrid%ewaldlambda, hybrid%lexp, hybrid%bands1
+         WRITE (fileNum, 155) mpinp%g_cutoff, mpinp%linear_dep_tol, hybrid%ewaldlambda, hybrid%lexp, hybrid%bands1
       END IF
 
       IF (l_nocoOpt .OR. l_explicit) THEN
