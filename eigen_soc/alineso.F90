@@ -113,6 +113,9 @@ CONTAINS
        ENDIF
        nsz(jsp) = ne
     ENDDO
+#ifdef CPP_MPI
+    CALL MPI_BARRIER(mpi%sub_comm,ierr) ! Synchronizes the RMA operations
+#endif
     !
     ! set up size of e.v. problem in second variation: nsize
     !
