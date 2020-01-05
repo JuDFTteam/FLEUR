@@ -29,7 +29,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(OUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       INTEGER        :: g_t(3)
       REAL           :: kqpt(3), kqpthlp(3)
@@ -86,7 +86,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(OUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
 !     - local scalars -
       INTEGER                 :: ic, n1, n2
@@ -220,7 +220,7 @@ CONTAINS
 
       !     - arrays -
 
-      COMPLEX, INTENT(INOUT)    ::  cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(INOUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0

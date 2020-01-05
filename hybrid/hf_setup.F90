@@ -216,10 +216,10 @@ CONTAINS
          allocate(basprod(atoms%jmtd), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation basprod')
          IF(ALLOCATED(hybdat%prodm)) DEALLOCATE(hybdat%prodm)
-         allocate(hybdat%prodm(maxval(mpdata%num_radbasfn), hybinp%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
+         allocate(hybdat%prodm(maxval(mpdata%num_radbasfn), hybdat%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
          IF (ok /= 0) call judft_error('eigen_hf: failure allocation hybdat%prodm')
 
-         call mpdata%init(hybinp, atoms)
+         call mpdata%init(hybinp, hybdat, atoms)
 
          basprod = 0; hybdat%prodm = 0; mpdata%l1 = 0; mpdata%l2 = 0
          mpdata%n1 = 0; mpdata%n2 = 0

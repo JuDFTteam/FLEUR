@@ -18,9 +18,6 @@ MODULE m_types_hybinp
       INTEGER                ::  ewaldlambda = -1
       INTEGER                ::  lexp = -1
       INTEGER                ::  bands1 = -1 !Only read in
-      INTEGER                ::  nbasp = -1
-      INTEGER                ::  maxbasm1 = -1
-      INTEGER                ::  max_indx_p_1 = -1 !new
       INTEGER, ALLOCATABLE   ::  select1(:, :)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
@@ -56,9 +53,6 @@ CONTAINS
       CALL mpi_bc(this%ewaldlambda, rank, mpi_comm)
       CALL mpi_bc(this%lexp, rank, mpi_comm)
       CALL mpi_bc(this%bands1, rank, mpi_comm)
-      CALL mpi_bc(this%nbasp, rank, mpi_comm)
-      CALL mpi_bc(this%maxbasm1, rank, mpi_comm)
-      CALL mpi_bc(this%max_indx_p_1, rank, mpi_comm)
       CALL mpi_bc(this%select1, rank, mpi_comm)
       CALL mpi_bc(this%lcutm1, rank, mpi_comm)
       CALL mpi_bc(this%lcutwf, rank, mpi_comm)

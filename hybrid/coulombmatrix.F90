@@ -35,13 +35,13 @@ MODULE m_coulombmatrix
 
 CONTAINS
 
-   SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, xcpot)
+   SUBROUTINE coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, hybdat, xcpot)
       USE m_types_hybdat
       USE m_types
       USE m_juDFT
       USE m_constants, ONLY: pi_const
       USE m_olap, ONLY: olap_pw
-      use m_types_hybdat, only: gptnorm
+      use m_types_hybdat
       USE m_trafo, ONLY: symmetrize, bramat_trafo
       USE m_intgrf, ONLY: intgrf, intgrf_init
       use m_util, only: primitivef
@@ -56,6 +56,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)       :: mpi
       TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
+      TYPE(t_hybdat), INTENT(IN) :: hybdat
       TYPE(t_sym), INTENT(IN)       :: sym
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_kpts), INTENT(IN)      :: kpts
@@ -156,7 +157,7 @@ CONTAINS
 
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
-      nbasm1 = hybinp%nbasp + mpdata%n_g(:)
+      nbasm1 = hybdat%nbasp + mpdata%n_g(:)
 
       !     Calculate the structure constant
       CALL structureconstant(structconst, cell, hybinp, atoms, kpts, mpi)
@@ -170,7 +171,7 @@ CONTAINS
       call timestart("coulomb allocation")
       IF (ALLOCATED(coulomb)) deallocate(coulomb)
 
-      allocate(coulomb(hybinp%maxbasm1*(hybinp%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
+      allocate(coulomb(hybdat%maxbasm1*(hybdat%maxbasm1 + 1)/2, kpts%nkpt), stat=ok)
       IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulomb matrix')
       coulomb = 0
       call timestop("coulomb allocation")
@@ -465,7 +466,7 @@ CONTAINS
 
          !       (1b) r,r' in different MT
 
-         allocate(coulmat(hybinp%nbasp, hybinp%nbasp), stat=ok)
+         allocate(coulmat(hybdat%nbasp, hybdat%nbasp), stat=ok)
          IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
          coulmat = 0
 
@@ -525,12 +526,12 @@ CONTAINS
 
             IF (sym%invs) THEN
                !symmetrize makes the Coulomb matrix real symmetric
-               CALL symmetrize(coulmat, hybinp%nbasp, hybinp%nbasp, 3, .FALSE., &
+               CALL symmetrize(coulmat, hybdat%nbasp, hybdat%nbasp, 3, .FALSE., &
                                atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                                mpdata%num_radbasfn, sym)
             ENDIF
 
-            coulomb(:hybinp%nbasp*(hybinp%nbasp + 1)/2, ikpt) = packmat(coulmat)
+            coulomb(:hybdat%nbasp*(hybdat%nbasp + 1)/2, ikpt) = packmat(coulmat)
 
          END IF
          call timestop("MT-MT part")
@@ -559,7 +560,7 @@ CONTAINS
          !     (2b) r,r' in same MT
          !     (2c) r,r' in different MT
 
-         allocate(coulmat(hybinp%nbasp, maxval(mpdata%n_g)), stat=ok)
+         allocate(coulmat(hybdat%nbasp, maxval(mpdata%n_g)), stat=ok)
          IF (ok /= 0) call judft_error('coulombmatrix: failure allocation coulmat')
          coulmat = 0
 
@@ -571,7 +572,7 @@ CONTAINS
             DO igpt0 = igptmin(ikpt), igptmax(ikpt) !1,ngptm1(ikpt)
                igpt = pgptm1(igpt0, ikpt)
                igptp = mpdata%gptm_ptr(igpt, ikpt)
-               ix = hybinp%nbasp + igpt
+               ix = hybdat%nbasp + igpt
                q = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp), cell%bmat)
                qnorm = norm2(q)
                iqnrm = pqnrm(igpt, ikpt)
@@ -657,13 +658,13 @@ CONTAINS
                               iy = iy + 1
 
                               IF (ikpt == 1 .AND. igpt == 1) THEN
-                                 IF (l == 0) coulmat(iy, ix - hybinp%nbasp) = &
+                                 IF (l == 0) coulmat(iy, ix - hybdat%nbasp) = &
                                     -cdum*moment2(n, itype)/6/svol         ! (2a)
-                                 coulmat(iy, ix - hybinp%nbasp) = coulmat(iy, ix - hybinp%nbasp) &
+                                 coulmat(iy, ix - hybdat%nbasp) = coulmat(iy, ix - hybdat%nbasp) &
                                                                   + (-cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                                                                      + csum*moment(n, l, itype))/svol          ! (2c)
                               ELSE
-                                 coulmat(iy, ix - hybinp%nbasp) = &
+                                 coulmat(iy, ix - hybdat%nbasp) = &
                                     (cdum*olap(n, l, itype, iqnrm)/qnorm**2 &  ! (2a)&
                                      - cdum/(2*l + 1)*integral(n, l, itype, iqnrm) & ! (2b)&
                                      + csum*moment(n, l, itype))/svol          ! (2c)
@@ -680,15 +681,15 @@ CONTAINS
             END DO
 
             IF (sym%invs) THEN
-               CALL symmetrize(coulmat, hybinp%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
+               CALL symmetrize(coulmat, hybdat%nbasp, mpdata%n_g(ikpt), 1, .FALSE., &
                                atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
             ENDIF
 
-            M = hybinp%nbasp*(hybinp%nbasp + 1)/2
+            M = hybdat%nbasp*(hybdat%nbasp + 1)/2
             DO i = 1, mpdata%n_g(ikpt)
-               DO j = 1, hybinp%nbasp + i
+               DO j = 1, hybdat%nbasp + i
                   M = M + 1
-                  IF (j <= hybinp%nbasp) coulomb(M, ikpt) = coulmat(j, i)
+                  IF (j <= hybdat%nbasp) coulomb(M, ikpt) = coulmat(j, i)
                END DO
             END DO
          END DO
@@ -749,8 +750,8 @@ CONTAINS
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
-               ix = hybinp%nbasp + igpt2
-               iy = hybinp%nbasp
+               ix = hybdat%nbasp + igpt2
+               iy = hybdat%nbasp
                q2 = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp2), cell%bmat)
                rdum2 = SUM(q2**2)
                IF (abs(rdum2) > 1e-12) rdum2 = 4*pi_const/rdum2
@@ -820,7 +821,7 @@ CONTAINS
 
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
-               ix = hybinp%nbasp + igpt2
+               ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
                ic2 = 0
@@ -858,7 +859,7 @@ CONTAINS
                call timestop("itype loops")
 
                call timestart("igpt1")
-               iy = hybinp%nbasp
+               iy = hybdat%nbasp
                DO igpt1 = 1, igpt2
                   iy = iy + 1
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -894,12 +895,12 @@ CONTAINS
          rdum = (4*pi_const)**(1.5)/cell%vol**2*gmat(1, 1)
          DO igpt0 = 1, ngptm1(1)
             igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
-            ix = hybinp%nbasp + igpt2
+            ix = hybdat%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
             igptp2 = mpdata%gptm_ptr(igpt2, 1)
             q2 = MATMUL(mpdata%g(:, igptp2), cell%bmat)
             qnorm2 = norm2(q2)
-            iy = hybinp%nbasp + 1
+            iy = hybdat%nbasp + 1
             DO igpt1 = 2, igpt2
                iy = iy + 1
                idum = ix*(ix - 1)/2 + iy
@@ -937,10 +938,10 @@ CONTAINS
             END DO
          END DO
          ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
-         iy = hybinp%nbasp + 1
+         iy = hybdat%nbasp + 1
          DO igpt0 = 1, ngptm1(1)
             igpt2 = pgptm1(igpt0, 1); IF (igpt2 == 1) CYCLE
-            ix = hybinp%nbasp + igpt2
+            ix = hybdat%nbasp + igpt2
             iqnrm2 = pqnrm(igpt2, 1)
             igptp2 = mpdata%gptm_ptr(igpt2, 1)
             qnorm2 = qnrm(iqnrm2)
@@ -963,8 +964,8 @@ CONTAINS
             END DO
          END DO
          ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
-         iy = hybinp%nbasp + 1
-         ix = hybinp%nbasp + 1
+         iy = hybdat%nbasp + 1
+         ix = hybdat%nbasp + 1
          idum = ix*(ix - 1)/2 + iy
          DO itype1 = 1, atoms%ntype
             DO ineq1 = 1, atoms%neq(itype1)
@@ -1009,12 +1010,12 @@ CONTAINS
             call timestart("q loop")
             DO igpt0 = igptmin(ikpt), igptmax(ikpt)!1,ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
-               ix = hybinp%nbasp + igpt2
+               ix = hybdat%nbasp + igpt2
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
                iqnrm2 = pqnrm(igpt2, ikpt)
                q2 = MATMUL(kpts%bk(:, ikpt) + mpdata%g(:, igptp2), cell%bmat)
                y2 = CONJG(carr2(:, igpt2))
-               iy = hybinp%nbasp
+               iy = hybdat%nbasp
                DO igpt1 = 1, igpt2
                   iy = iy + 1
                   igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
@@ -1072,7 +1073,7 @@ CONTAINS
          ! All elements are needed so send all data to all processes treating the
          ! respective k-points
 
-         allocate(carr2(hybinp%maxbasm1, 2), iarr(maxval(mpdata%n_g)))
+         allocate(carr2(hybdat%maxbasm1, 2), iarr(maxval(mpdata%n_g)))
          allocate(nsym_gpt(mpdata%num_gpts(), kpts%nkpt), &
                    sym_gpt(MAXVAL(nsym1), mpdata%num_gpts(), kpts%nkpt))
          nsym_gpt = 0; sym_gpt = 0
@@ -1084,11 +1085,11 @@ CONTAINS
                lsym = ((igptmin(ikpt) <= igpt0) .AND. &
                        (igptmax(ikpt) >= igpt0))
                igpt2 = pgptm1(igpt0, ikpt)
-               j = (hybinp%nbasp + igpt2 - 1)*(hybinp%nbasp + igpt2)/2
-               i = hybinp%nbasp + igpt2
+               j = (hybdat%nbasp + igpt2 - 1)*(hybdat%nbasp + igpt2)/2
+               i = hybdat%nbasp + igpt2
                carr2(1:i, 2) = coulomb(j + 1:j + i, ikpt)
                j = j + i
-               DO i = hybinp%nbasp + igpt2 + 1, nbasm1(ikpt)
+               DO i = hybdat%nbasp + igpt2 + 1, nbasm1(ikpt)
                   j = j + i - 1
                   IF (sym%invs) THEN
                      carr2(i, 2) = coulomb(j, ikpt)
@@ -1108,7 +1109,7 @@ CONTAINS
                      sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, hybinp, &
                      kpts, maxval(hybinp%lcutm1), atoms, hybinp%lcutm1, &
                      mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), dwgn(:, :, :, isym), &
-                     hybinp%nbasp, nbasm1)
+                     hybdat%nbasp, nbasm1)
                   IF (iarr(igpt1) == 0) THEN
                      CALL bramat_trafo( &
                         carr2(:, 1), igpt1, &
@@ -1116,9 +1117,9 @@ CONTAINS
                         sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, hybinp, &
                         kpts, maxval(hybinp%lcutm1), atoms, hybinp%lcutm1, &
                         mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), &
-                        dwgn(:, :, :, isym), hybinp%nbasp, nbasm1)
-                     l = (hybinp%nbasp + igpt1 - 1)*(hybinp%nbasp + igpt1)/2
-                     coulomb(l + 1:l + hybinp%nbasp + igpt1, ikpt) = carr2(:hybinp%nbasp + igpt1, 1)
+                        dwgn(:, :, :, isym), hybdat%nbasp, nbasm1)
+                     l = (hybdat%nbasp + igpt1 - 1)*(hybdat%nbasp + igpt1)/2
+                     coulomb(l + 1:l + hybdat%nbasp + igpt1, ikpt) = carr2(:hybdat%nbasp + igpt1, 1)
                      iarr(igpt1) = 1
                      IF (lsym) THEN
                         ic = ic + 1
@@ -1147,7 +1148,8 @@ CONTAINS
          ! the normal Coulomb matrix
          !
       ELSE
-         IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, nbasm1, gridf, coulomb)
+         IF (ikptmin == 1) CALL subtract_sphaverage(sym, cell, atoms, mpdata,  &
+                                                   hybinp, hybdat, nbasm1, gridf, coulomb)
       END IF
 
       ! transform Coulomb matrix to the biorthogonal set
@@ -1208,14 +1210,14 @@ CONTAINS
          call timestart("multiply inverse rhs")
          if (olapm%l_real) THEN
             !multiply with inverse olap from right hand side
-            coulhlp%data_r(:, hybinp%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybinp%nbasp + 1:), olapm%data_r)
+            coulhlp%data_r(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_r(:, hybdat%nbasp + 1:), olapm%data_r)
             !multiply with inverse olap from left side
-            coulhlp%data_r(hybinp%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybinp%nbasp + 1:, :))
+            coulhlp%data_r(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_r, coulhlp%data_r(hybdat%nbasp + 1:, :))
          else
             !multiply with inverse olap from right hand side
-            coulhlp%data_c(:, hybinp%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybinp%nbasp + 1:), olapm%data_c)
+            coulhlp%data_c(:, hybdat%nbasp + 1:) = MATMUL(coulhlp%data_c(:, hybdat%nbasp + 1:), olapm%data_c)
             !multiply with inverse olap from left side
-            coulhlp%data_c(hybinp%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybinp%nbasp + 1:, :))
+            coulhlp%data_c(hybdat%nbasp + 1:, :) = MATMUL(olapm%data_c, coulhlp%data_c(hybdat%nbasp + 1:, :))
          end if
          coulomb(:(nbasm1(ikpt)*(nbasm1(ikpt) + 1))/2, ikpt) = coulhlp%to_packed()
          call timestop("multiply inverse rhs")
@@ -1343,9 +1345,9 @@ CONTAINS
                      iatom = iatom + 1
                      DO n = 1, mpdata%num_radbasfn(0, itype) - 1
                         if (coulhlp%l_real) THEN
-                           coulomb_mt2_r(n, 0, maxval(hybinp%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_r(ic + n, hybinp%nbasp + 1)
+                           coulomb_mt2_r(n, 0, maxval(hybinp%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_r(ic + n, hybdat%nbasp + 1)
                         else
-                           coulomb_mt2_c(n, 0, maxval(hybinp%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_c(ic + n, hybinp%nbasp + 1)
+                           coulomb_mt2_c(n, 0, maxval(hybinp%lcutm1) + 1, iatom, ikpt0) = coulhlp%data_c(ic + n, hybdat%nbasp + 1)
                         endif
                      END DO
                      ic = ic + SUM([((2*l + 1)*mpdata%num_radbasfn(l, itype), l=0, hybinp%lcutm1(itype))])
@@ -1465,10 +1467,10 @@ CONTAINS
                      DO igpt = 1, mpdata%n_g(ikpt)
                         indx2 = indx2 + 1
                         IF (sym%invs) THEN
-                           coulomb_mtir_r(indx1, indx2, ikpt1) = coulhlp%data_r(indx3, hybinp%nbasp + igpt)
+                           coulomb_mtir_r(indx1, indx2, ikpt1) = coulhlp%data_r(indx3, hybdat%nbasp + igpt)
                            coulomb_mtir_r(indx2, indx1, ikpt1) = coulomb_mtir_r(indx1, indx2, ikpt1)
                         ELSE
-                           coulomb_mtir_c(indx1, indx2, ikpt1) = coulhlp%data_c(indx3, hybinp%nbasp + igpt)
+                           coulomb_mtir_c(indx1, indx2, ikpt1) = coulhlp%data_c(indx3, hybdat%nbasp + igpt)
                            coulomb_mtir_c(indx2, indx1, ikpt1) = CONJG(coulomb_mtir_c(indx1, indx2, ikpt1))
                         ENDIF
 
@@ -1487,12 +1489,12 @@ CONTAINS
          !
          if (sym%invs) THEN
             coulomb_mtir_r(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), ikpt1) &
-               = coulhlp%data_r(hybinp%nbasp + 1:nbasm1(ikpt), hybinp%nbasp + 1:nbasm1(ikpt))
+               = coulhlp%data_r(hybdat%nbasp + 1:nbasm1(ikpt), hybdat%nbasp + 1:nbasm1(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
             coulombp_mtir_r(:ic2*(ic2 + 1)/2, ikpt0) = packmat(coulomb_mtir_r(:ic2, :ic2, ikpt1))
          else
             coulomb_mtir_c(ic + 1:ic + mpdata%n_g(ikpt), ic + 1:ic + mpdata%n_g(ikpt), ikpt1) &
-               = coulhlp%data_c(hybinp%nbasp + 1:nbasm1(ikpt), hybinp%nbasp + 1:nbasm1(ikpt))
+               = coulhlp%data_c(hybdat%nbasp + 1:nbasm1(ikpt), hybdat%nbasp + 1:nbasm1(ikpt))
             ic2 = indx1 + mpdata%n_g(ikpt)
             coulombp_mtir_c(:ic2*(ic2 + 1)/2, ikpt0) = packmat(coulomb_mtir_c(:ic2, :ic2, ikpt1))
          end if
@@ -1538,7 +1540,7 @@ CONTAINS
    !     Calculate body of Coulomb matrix at Gamma point: v_IJ = SUM(G) c^*_IG c_JG 4*pi/G**2 .
    !     For this we must subtract from coulomb(:,1) the spherical average of a term that comes
    !     from the fact that MT functions have k-dependent Fourier coefficients (see script).
-   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, nbasm1, gridf, coulomb)
+   SUBROUTINE subtract_sphaverage(sym, cell, atoms, mpdata, hybinp, hybdat, nbasm1, gridf, coulomb)
 
       USE m_types
       USE m_constants
@@ -1554,6 +1556,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)    :: hybinp
+      TYPE(t_hybdat), INTENT(IN)    :: hybdat
 
       INTEGER, INTENT(IN)    :: nbasm1(:)
       REAL, INTENT(IN)    :: gridf(:,:)
@@ -1607,9 +1610,9 @@ CONTAINS
          END DO
       END DO
       IF (olap%l_real) THEN
-         coeff(hybinp%nbasp + 1:n) = olap%data_r(1, 1:n - hybinp%nbasp)
+         coeff(hybdat%nbasp + 1:n) = olap%data_r(1, 1:n - hybdat%nbasp)
       else
-         coeff(hybinp%nbasp + 1:n) = olap%data_c(1, 1:n - hybinp%nbasp)
+         coeff(hybdat%nbasp + 1:n) = olap%data_c(1, 1:n - hybdat%nbasp)
       END IF
       IF (sym%invs) THEN
          CALL symmetrize(coeff, 1, nbasm1(1), 2, .FALSE., &
@@ -1639,8 +1642,8 @@ CONTAINS
                                  + CONJG(claplace(i))*coeff(j))/2)
          END DO
       END DO
-      coeff(hybinp%nbasp + 1) = 1.0
-      coeff(hybinp%nbasp + 2:) = 0.0
+      coeff(hybdat%nbasp + 1) = 1.0
+      coeff(hybdat%nbasp + 2:) = 0.0
       IF (sym%invs) THEN
 
          CALL desymmetrize(coeff, 1, nbasm1(1), 2, &
@@ -1652,7 +1655,7 @@ CONTAINS
       ENDIF
       ! Explicit normalization here in order to prevent failure of the diagonalization in diagonalize_coulomb
       ! due to inaccuracies in the overlap matrix (which can make it singular).
-      !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybinp%nbasp))**2) + dot_product ( coeff(hybinp%nbasp+1:), MATMUL(olap,coeff(hybinp%nbasp+1:)) ) ) )
+      !constfunc = coeff / SQRT ( ( SUM(ABS(coeff(:hybdat%nbasp))**2) + dot_product ( coeff(hybdat%nbasp+1:), MATMUL(olap,coeff(hybdat%nbasp+1:)) ) ) )
 
    END SUBROUTINE subtract_sphaverage
 

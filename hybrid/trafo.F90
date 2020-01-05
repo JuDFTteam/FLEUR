@@ -535,7 +535,7 @@ CONTAINS
    SUBROUTINE bra_trafo2( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
       dim, nobd, nbands, ikpt0, ikpt1, iop, sym, &
-      mpdata, hybinp, kpts, atoms, &
+      mpdata, hybinp, hybdat, kpts, atoms, &
       phase)
 
       !  ikpt0  ::  parent of ikpt1
@@ -548,6 +548,7 @@ CONTAINS
       IMPLICIT NONE
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
+      TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_kpts), INTENT(IN)   :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -598,7 +599,7 @@ CONTAINS
          vecin1 = vecin_r
          DO i = 1, nbands
             DO j = 1, nobd
-               CALL desymmetrize(vecin1(:hybinp%nbasp, j, i), hybinp%nbasp, 1, 1, &
+               CALL desymmetrize(vecin1(:hybdat%nbasp, j, i), hybdat%nbasp, 1, 1, &
                                  atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
             END DO
          END DO
@@ -727,7 +728,7 @@ CONTAINS
          END IF
          cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g1, trans(:)))
 
-         vecout1(hybinp%nbasp + igptm, :, :) = cdum*vecin1(hybinp%nbasp + igptm2, :, :)
+         vecout1(hybdat%nbasp + igptm, :, :) = cdum*vecin1(hybdat%nbasp + igptm2, :, :)
       END DO
 
       deallocate(vecin1)

@@ -63,7 +63,7 @@ contains
          &     recl=input%neig*hybdat%maxlmindx*atoms%nat*16)
 
 #ifdef CPP_NOSPMVEC
-    irecl_coulomb = hybinp%maxbasm1 * (hybinp%maxbasm1+1) * 8 / 2
+    irecl_coulomb = hybdat%maxbasm1 * (hybdat%maxbasm1+1) * 8 / 2
     if (.not.l_real) irecl_coulomb =irecl_coulomb *2
     OPEN(unit=778,file='coulomb',form='unformatted',access='direct', recl=irecl_coulomb)
     id_coulomb=778

@@ -56,7 +56,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_mpdata), intent(inout)  :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
-      TYPE(t_hybdat), INTENT(IN) :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_cell), INTENT(IN)    :: cell
@@ -136,7 +136,7 @@ CONTAINS
 
       ! determine maximal indices of (radial) mixed-basis functions (->num_radbasfn)
       ! (will be reduced later-on due to overlap)
-      hybinp%max_indx_p_1 = 0
+      hybdat%max_indx_p_1 = 0
       DO itype = 1, atoms%ntype
          seleco = .FALSE.
          selecu = .FALSE.
@@ -184,7 +184,7 @@ CONTAINS
             IF (n_radbasfn == 0 .AND. mpi%irank == 0) &
                WRITE (6, '(A)') 'mixedbasis: Warning!  No basis-function product of '//lchar(l)// &
                '-angular momentum defined.'
-            hybinp%max_indx_p_1 = MAX(hybinp%max_indx_p_1, M)
+            hybdat%max_indx_p_1 = MAX(hybdat%max_indx_p_1, M)
             mpdata%num_radbasfn(l, itype) = n_radbasfn*input%jspins
          END DO
       END DO
@@ -369,16 +369,16 @@ CONTAINS
       call mpdata%check_radbasfn(atoms, hybinp)
 
       !count basis functions
-      hybinp%nbasp = 0
+      hybdat%nbasp = 0
       DO itype = 1, atoms%ntype
          DO i = 1, atoms%neq(itype)
             DO l = 0, hybinp%lcutm1(itype)
-               hybinp%nbasp = hybinp%nbasp + (2*l+1) * mpdata%num_radbasfn(l, itype)
+               hybdat%nbasp = hybdat%nbasp + (2*l+1) * mpdata%num_radbasfn(l, itype)
             END DO
          END DO
       END DO
-      hybinp%maxbasm1 = hybinp%nbasp + maxval(mpdata%n_g)
-      hybinp%nbasm = hybinp%nbasp + mpdata%n_g
+      hybdat%maxbasm1 = hybdat%nbasp + maxval(mpdata%n_g)
+      hybinp%nbasm = hybdat%nbasp + mpdata%n_g
 
       hybdat%maxlmindx = 0
       do itype = 1,atoms%ntype

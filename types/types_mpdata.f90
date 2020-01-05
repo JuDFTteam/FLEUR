@@ -497,19 +497,21 @@ contains
       end do
    end subroutine mpdata_normalize
 
-   subroutine mpdata_init(mpdata, hybinp, atoms)
+   subroutine mpdata_init(mpdata, hybinp, hybdat, atoms)
       use m_types_setup
       use m_types_hybinp
+      use m_types_hybdat
       use m_judft
       implicit none
       class(t_mpdata)           :: mpdata
       type(t_hybinp), intent(in) :: hybinp
+      type(t_hybdat), intent(in) :: hybdat
       type(t_atoms), intent(in)  :: atoms
 
       integer                    :: ok
 
       if(.not. allocated(mpdata%l1)) then
-         allocate(mpdata%l1(hybinp%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
+         allocate(mpdata%l1(hybdat%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%l1')
 
          allocate(mpdata%l2, mold=mpdata%l1, stat=ok)

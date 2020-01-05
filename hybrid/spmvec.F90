@@ -4,7 +4,7 @@ CONTAINS
    !Note this module contains a real/complex version of spmvec
 
    SUBROUTINE spmvec_invs(&
-              atoms, mpdata, hybinp,&
+              atoms, mpdata, hybinp, hybdat,&
               ikpt, &
               coulomb_mt1, coulomb_mt2, coulomb_mt3,&
               coulomb_mtir, vecin,&
@@ -16,6 +16,7 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
+      TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpdata), intent(in)  :: mpdata
       TYPE(t_atoms), INTENT(IN)    :: atoms
 
@@ -114,7 +115,7 @@ CONTAINS
                   indx3 = indx3 + atoms%neq(itype1)*ishift1
                END DO
 
-               IF (indx3 /= hybinp%nbasp) call judft_error('spmvec: error counting index indx3')
+               IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
 
                      vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:mpdata%num_radbasfn(l, itype) - 1, 0, maxval(hybinp%lcutm1) + 1, iatom)*vecinhlp(indx3 + 1)
 
@@ -159,7 +160,7 @@ CONTAINS
                iatom = iatom + 1
                indx1 = indx0 + 1
                indx2 = indx1 + mpdata%num_radbasfn(0, itype) - 2
-                     vecout(hybinp%nbasp + 1) = vecout(hybinp%nbasp + 1) + dot_product(coulomb_mt2(:mpdata%num_radbasfn(0, itype) - 1, 0, maxval(hybinp%lcutm1) + 1, iatom), vecinhlp(indx1:indx2))
+                     vecout(hybdat%nbasp + 1) = vecout(hybdat%nbasp + 1) + dot_product(coulomb_mt2(:mpdata%num_radbasfn(0, itype) - 1, 0, maxval(hybinp%lcutm1) + 1, iatom), vecinhlp(indx1:indx2))
 
                indx0 = indx0 + ishift
             END DO
@@ -192,7 +193,7 @@ CONTAINS
                indx0 = indx0 + ishift
             END DO
          END DO
-         IF (indx0 /= hybinp%nbasp) call judft_error('spmvec: error index counting (indx0)')
+         IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
       CALL reorder(hybinp%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
@@ -201,7 +202,7 @@ CONTAINS
    END SUBROUTINE spmvec_invs
 
    SUBROUTINE spmvec_noinvs(&
-                atoms, mpdata, hybinp,&
+                atoms, mpdata, hybinp, hybdat,&
                 ikpt, &
                 coulomb_mt1, coulomb_mt2, coulomb_mt3,&
                 coulomb_mtir, vecin,&
@@ -214,6 +215,7 @@ CONTAINS
       IMPLICIT NONE
       TYPE(t_mpdata), INTENT(IN)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
+      TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_atoms), INTENT(IN)    :: atoms
 
       ! - scalars -
@@ -314,7 +316,7 @@ CONTAINS
                   indx3 = indx3 + atoms%neq(itype1)*ishift1
                END DO
 
-               IF (indx3 /= hybinp%nbasp) call judft_error('spmvec: error counting index indx3')
+               IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
 
                      vecout(indx1:indx2) = vecout(indx1:indx2) + coulomb_mt2(:mpdata%num_radbasfn(l, itype) - 1, 0, maxval(hybinp%lcutm1) + 1, iatom)*vecinhlp(indx3 + 1)
 
@@ -359,7 +361,7 @@ CONTAINS
                iatom = iatom + 1
                indx1 = indx0 + 1
                indx2 = indx1 + mpdata%num_radbasfn(0, itype) - 2
-                     vecout(hybinp%nbasp + 1) = vecout(hybinp%nbasp + 1) + dot_product(coulomb_mt2(:mpdata%num_radbasfn(0, itype) - 1, 0, maxval(hybinp%lcutm1) + 1, iatom), vecinhlp(indx1:indx2))
+                     vecout(hybdat%nbasp + 1) = vecout(hybdat%nbasp + 1) + dot_product(coulomb_mt2(:mpdata%num_radbasfn(0, itype) - 1, 0, maxval(hybinp%lcutm1) + 1, iatom), vecinhlp(indx1:indx2))
 
                indx0 = indx0 + ishift
             END DO
@@ -392,7 +394,7 @@ CONTAINS
                indx0 = indx0 + ishift
             END DO
          END DO
-         IF (indx0 /= hybinp%nbasp) call judft_error('spmvec: error index counting (indx0)')
+         IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
       CALL reorder(hybinp%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn,&

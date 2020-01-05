@@ -129,8 +129,8 @@ CONTAINS
       COMPLEX              :: hessian(3, 3)
       COMPLEX              :: proj_ibsc(3, mnobd, hybdat%nbands(nk))
       COMPLEX              :: olap_ibsc(3, 3, mnobd, mnobd)
-      REAL                 :: carr1_v_r(hybinp%maxbasm1)
-      COMPLEX              :: carr1_v_c(hybinp%maxbasm1)
+      REAL                 :: carr1_v_r(hybdat%maxbasm1)
+      COMPLEX              :: carr1_v_c(hybdat%maxbasm1)
       COMPLEX, ALLOCATABLE :: phase_vv(:, :)
       REAL, ALLOCATABLE :: cprod_vv_r(:, :, :), carr3_vv_r(:, :, :)
       COMPLEX, ALLOCATABLE :: cprod_vv_c(:, :, :), carr3_vv_c(:, :, :)
@@ -161,7 +161,7 @@ CONTAINS
       ! the contribution of the Gamma-point is treated separately (see below)
 
       ! determine package size loop over the occupied bands
-      rdum = hybinp%maxbasm1*hybdat%nbands(nk)*4/1048576.
+      rdum = hybdat%maxbasm1*hybdat%nbands(nk)*4/1048576.
       psize = 1
       DO iband = mnobd, 1, -1
          ! ensure that the packages have equal size
@@ -184,17 +184,17 @@ CONTAINS
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       if (mat_ex%l_real) THEN
-         allocate(cprod_vv_c(hybinp%maxbasm1, 0, 0), carr3_vv_c(hybinp%maxbasm1, 0, 0))
-         allocate(cprod_vv_r(hybinp%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
+         allocate(cprod_vv_c(hybdat%maxbasm1, 0, 0), carr3_vv_c(hybdat%maxbasm1, 0, 0))
+         allocate(cprod_vv_r(hybdat%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
-         allocate(carr3_vv_r(hybinp%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
+         allocate(carr3_vv_r(hybdat%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_r = 0; carr3_vv_r = 0
       ELSE
-         allocate(cprod_vv_r(hybinp%maxbasm1, 0, 0), carr3_vv_r(hybinp%maxbasm1, 0, 0))
-         allocate(cprod_vv_c(hybinp%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
+         allocate(cprod_vv_r(hybdat%maxbasm1, 0, 0), carr3_vv_r(hybdat%maxbasm1, 0, 0))
+         allocate(cprod_vv_c(hybdat%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
-         allocate(carr3_vv_c(hybinp%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
+         allocate(carr3_vv_c(hybdat%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_c = 0; carr3_vv_c = 0
       END IF
@@ -205,7 +205,7 @@ CONTAINS
 
          ikpt0 = pointer_EIBZ(ikpt)
 
-         n = hybinp%nbasp + mpdata%n_g(ikpt0)
+         n = hybdat%nbasp + mpdata%n_g(ikpt0)
          IF (hybinp%nbasm(ikpt0) /= n) call judft_error('error hybinp%nbasm')
          nn = n*(n + 1)/2
 
@@ -227,11 +227,11 @@ CONTAINS
 
             IF (mat_ex%l_real) THEN
                CALL wavefproducts_inv5(1, hybdat%nbands(nk), ibando, ibando + psize - 1, input, jsp, atoms, &
-                                       lapw, kpts, nk, ikpt0, hybdat, mpdata, hybinp, cell, hybinp%nbasp, sym, &
+                                       lapw, kpts, nk, ikpt0, hybdat, mpdata, hybinp, cell, hybdat%nbasp, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
                CALL wavefproducts_noinv5(1, hybdat%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, input, jsp, &!jsp,&
-                                         cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, hybinp%nbasp, noco, nkqpt, cprod_vv_c)
+                                         cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, hybdat%nbasp, noco, nkqpt, cprod_vv_c)
             END IF
 
             ! The sparse matrix technique is not feasible for the HSE
@@ -259,7 +259,7 @@ CONTAINS
                CALL bra_trafo2(mat_ex%l_real, carr3_vv_r(:hybinp%nbasm(ikpt0), :, :), cprod_vv_r(:hybinp%nbasm(ikpt0), :, :), &
                                carr3_vv_c(:hybinp%nbasm(ikpt0), :, :), cprod_vv_c(:hybinp%nbasm(ikpt0), :, :), &
                                hybinp%nbasm(ikpt0), psize, hybdat%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
-                               mpdata, hybinp, kpts, atoms, phase_vv)
+                               mpdata, hybinp, hybdat, kpts, atoms, phase_vv)
                IF (mat_ex%l_real) THEN
                   cprod_vv_r(:hybinp%nbasm(ikpt0), :, :) = carr3_vv_r(:hybinp%nbasm(ikpt0), :, :)
                ELSE
@@ -280,11 +280,11 @@ CONTAINS
                   call timestart("sparse matrix products")
                   IF (mat_ex%l_real) THEN
                      carr1_v_r(:n) = 0
-                     CALL spmvec_invs(atoms, mpdata, hybinp, ikpt0, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
+                     CALL spmvec_invs(atoms, mpdata, hybinp, hybdat, ikpt0, coulomb_mt1, coulomb_mt2_r, coulomb_mt3_r, &
                                       coulomb_mtir_r, cprod_vv_r(:n, iband, n1), carr1_v_r(:n))
                   ELSE
                      carr1_v_c(:n) = 0
-                     CALL spmvec_noinvs(atoms, mpdata, hybinp, ikpt0, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
+                     CALL spmvec_noinvs(atoms, mpdata, hybinp, hybdat, ikpt0, coulomb_mt1, coulomb_mt2_c, coulomb_mt3_c, &
                                         coulomb_mtir_c, cprod_vv_c(:n, iband, n1), carr1_v_c(:n))
                   END IF
                   call timestop("sparse matrix products")

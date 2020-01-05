@@ -42,7 +42,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybinp%maxbasm1, mnobd, bandf - bandi + 1)
+      COMPLEX, INTENT(OUT)    ::  cprod(hybdat%maxbasm1, mnobd, bandf - bandi + 1)
 
 !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll
@@ -307,7 +307,7 @@ CONTAINS
       ! - arrays -
       INTEGER, INTENT(IN)      ::    parent(kpts%nkptf)
 
-      REAL, INTENT(OUT)       ::    cprod(hybinp%maxbasm1, mnobd, bandf - bandi + 1)
+      REAL, INTENT(OUT)       ::    cprod(hybdat%maxbasm1, mnobd, bandf - bandi + 1)
 
       ! - local scalars -
       INTEGER                 ::    i, ikpt, ic, iband, iband1, igpt, igptp, ibando, iatom, iiatom, itype, ieq, ishift, ioffset, iatom1, iatom2
@@ -1237,7 +1237,7 @@ CONTAINS
       ! - arrays -
       INTEGER, INTENT(IN)      ::    parent(kpts%nkptf)
 
-      REAL, INTENT(OUT)        ::    cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      REAL, INTENT(OUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       ! - local scalars -
       INTEGER                 ::    i, ikpt, ic, iband, iband1, igpt, igptp, ig, ig2, ig1
@@ -2257,7 +2257,7 @@ CONTAINS
 
 !     - arrays -
 
-      COMPLEX, INTENT(OUT)    ::  cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      COMPLEX, INTENT(OUT)    ::  cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
 !     - local scalars -
       INTEGER                 ::  ic, l, n, l1, l2, n1, n2, lm_0, lm1_0, lm2_0, lm, lm1, lm2, m1, m2, i, j, ll

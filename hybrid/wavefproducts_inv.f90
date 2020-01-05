@@ -38,7 +38,7 @@ CONTAINS
       INTEGER, INTENT(OUT)     :: nkqpt
 
       ! - arrays -
-      REAL, INTENT(OUT)        ::    cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+      REAL, INTENT(OUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
       ! - local scalars -
       INTEGER                 ::    g_t(3)
@@ -92,7 +92,7 @@ CONTAINS
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(OUT)        ::    cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+     REAL, INTENT(OUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
      ! - local scalars -
      INTEGER                 ::    ic, ig, ig2, ig1, ok, igptm, iigptm
@@ -208,7 +208,7 @@ CONTAINS
      INTEGER, INTENT(IN)      :: nkqpt
 
      ! - arrays -
-     REAL, INTENT(INOUT)        ::    cprod(hybinp%maxbasm1, bandoi:bandof, bandf - bandi + 1)
+     REAL, INTENT(INOUT)        ::    cprod(hybdat%maxbasm1, bandoi:bandof, bandf - bandi + 1)
 
      ! - local scalars -
      INTEGER                 ::    i, iband
