@@ -23,7 +23,6 @@ MODULE m_types_hybinp
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
       INTEGER, ALLOCATABLE   ::  map(:, :)
       INTEGER, ALLOCATABLE   ::  tvec(:, :, :)
-      INTEGER, ALLOCATABLE   ::  nbasm(:)
       !REAL, ALLOCATABLE      ::  radbasfn_mt(:,:,:,:)
       COMPLEX, ALLOCATABLE   ::  d_wgn2(:, :, :, :)
 
@@ -58,7 +57,6 @@ CONTAINS
       CALL mpi_bc(this%lcutwf, rank, mpi_comm)
       CALL mpi_bc(this%map, rank, mpi_comm)
       CALL mpi_bc(this%tvec, rank, mpi_comm)
-      CALL mpi_bc(this%nbasm, rank, mpi_comm)
       CALL mpi_bc(this%d_wgn2, rank, mpi_comm)
    END SUBROUTINE mpi_bc_hybinp
    SUBROUTINE read_xml_hybinp(this, xml)

@@ -98,8 +98,8 @@ CONTAINS
          if(allocated(hybdat%nobd)) deallocate(hybdat%nobd)
          allocate(hybdat%nobd(kpts%nkptf, input%jspins), source=0)
 
-         if(allocated(hybinp%nbasm)) deallocate(hybinp%nbasm)
-         allocate(hybinp%nbasm(kpts%nkptf), source=0)
+         if(allocated(hybdat%nbasm)) deallocate(hybdat%nbasm)
+         allocate(hybdat%nbasm(kpts%nkptf), source=0)
 
          if(allocated(hybdat%div_vv)) deallocate(hybdat%div_vv)
          allocate(hybdat%div_vv(input%neig, kpts%nkpt, input%jspins), source=0.0)

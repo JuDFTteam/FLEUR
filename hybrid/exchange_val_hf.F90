@@ -206,7 +206,7 @@ CONTAINS
          ikpt0 = pointer_EIBZ(ikpt)
 
          n = hybdat%nbasp + mpdata%n_g(ikpt0)
-         IF (hybinp%nbasm(ikpt0) /= n) call judft_error('error hybinp%nbasm')
+         IF (hybdat%nbasm(ikpt0) /= n) call judft_error('error hybdat%nbasm')
          nn = n*(n + 1)/2
 
          ! read in coulomb matrix from direct access file coulomb
@@ -247,23 +247,23 @@ CONTAINS
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
                                                 hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                                                 mpdata%n_g(ikpt0), mpdata%gptm_ptr(:, ikpt0), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-                                                hybinp%nbasm(ikpt0), iband1, hybdat%nbands(nk), nsest, ibando, psize, indx_sest, &
-                                                sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybinp%nbasm(ikpt0), :, :), &
-                                                cprod_vv_c(:hybinp%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
+                                                hybdat%nbasm(ikpt0), iband1, hybdat%nbands(nk), nsest, ibando, psize, indx_sest, &
+                                                sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybdat%nbasm(ikpt0), :, :), &
+                                                cprod_vv_c(:hybdat%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
             END IF
 
             ! the Coulomb matrix is only evaluated at the irrecuible k-points
             ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
             ! from IBZ to current k-point
             IF (kpts%bkp(ikpt0) /= ikpt0) THEN
-               CALL bra_trafo2(mat_ex%l_real, carr3_vv_r(:hybinp%nbasm(ikpt0), :, :), cprod_vv_r(:hybinp%nbasm(ikpt0), :, :), &
-                               carr3_vv_c(:hybinp%nbasm(ikpt0), :, :), cprod_vv_c(:hybinp%nbasm(ikpt0), :, :), &
-                               hybinp%nbasm(ikpt0), psize, hybdat%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
+               CALL bra_trafo2(mat_ex%l_real, carr3_vv_r(:hybdat%nbasm(ikpt0), :, :), cprod_vv_r(:hybdat%nbasm(ikpt0), :, :), &
+                               carr3_vv_c(:hybdat%nbasm(ikpt0), :, :), cprod_vv_c(:hybdat%nbasm(ikpt0), :, :), &
+                               hybdat%nbasm(ikpt0), psize, hybdat%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
                                mpdata, hybinp, hybdat, kpts, atoms, phase_vv)
                IF (mat_ex%l_real) THEN
-                  cprod_vv_r(:hybinp%nbasm(ikpt0), :, :) = carr3_vv_r(:hybinp%nbasm(ikpt0), :, :)
+                  cprod_vv_r(:hybdat%nbasm(ikpt0), :, :) = carr3_vv_r(:hybdat%nbasm(ikpt0), :, :)
                ELSE
-                  cprod_vv_c(:hybinp%nbasm(ikpt0), :, :) = carr3_vv_c(:hybinp%nbasm(ikpt0), :, :)
+                  cprod_vv_c(:hybdat%nbasm(ikpt0), :, :) = carr3_vv_c(:hybdat%nbasm(ikpt0), :, :)
                ENDIF
             ELSE
                phase_vv(:, :) = (1.0, 0.0)

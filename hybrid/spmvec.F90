@@ -30,8 +30,8 @@ CONTAINS
                                           0:maxval(hybinp%lcutm1) + 1, atoms%nat)
       REAL, INTENT(IN) ::  coulomb_mt3(:, :, :)
       REAL, INTENT(IN) ::  coulomb_mtir(:)
-      REAL, INTENT(IN) ::  vecin(:)!(hybinp%nbasm)
-      REAL, INTENT(INOUT)::  vecout(:)!(hybinp%nbasm)
+      REAL, INTENT(IN) ::  vecin(:)!(hybdat%nbasm)
+      REAL, INTENT(INOUT)::  vecout(:)!(hybdat%nbasm)
 
       ! - local scalars -
       INTEGER             ::  itype, ieq, iatom, ishift
@@ -41,12 +41,12 @@ CONTAINS
       INTEGER             ::  l, n, m
       ! - local arrays -
 
-      REAL                ::  vecinhlp(hybinp%nbasm(ikpt))
+      REAL                ::  vecinhlp(hybdat%nbasm(ikpt))
 
       call timestart("spmvec_invs")
       vecinhlp = vecin
 
-      CALL reorder(hybinp%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vecinhlp)
+      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vecinhlp)
 
       ibasm = 0
       iatom = 0
@@ -196,7 +196,7 @@ CONTAINS
          IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybinp%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
+      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), &
                    mpdata%num_radbasfn,2, vecout)
      call timestop("spmvec_invs")
    END SUBROUTINE spmvec_invs
@@ -228,8 +228,8 @@ CONTAINS
                                           0:maxval(hybinp%lcutm1) + 1, atoms%nat)
       COMPLEX, INTENT(IN) ::  coulomb_mt3(:, :, :)
       COMPLEX, INTENT(IN) ::  coulomb_mtir(:)
-      COMPLEX, INTENT(IN) ::  vecin(:)!(hybinp%nbasm)
-      COMPLEX, INTENT(OUT)::  vecout(:)!(hybinp%nbasm)
+      COMPLEX, INTENT(IN) ::  vecin(:)!(hybdat%nbasm)
+      COMPLEX, INTENT(OUT)::  vecout(:)!(hybdat%nbasm)
 
       ! - local scalars -
       INTEGER             ::  itype, ieq, iatom, ishift
@@ -241,12 +241,12 @@ CONTAINS
 
       ! - local arrays -
 
-      COMPLEX             ::  vecinhlp(hybinp%nbasm(ikpt))
+      COMPLEX             ::  vecinhlp(hybdat%nbasm(ikpt))
 
       call timestart("spmvec_noinvs")
       vecinhlp = vecin
 
-      CALL reorder(hybinp%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vec_c=vecinhlp)
+      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, 1, vec_c=vecinhlp)
 
       ibasm = 0
       iatom = 0
@@ -397,7 +397,7 @@ CONTAINS
          IF (indx0 /= hybdat%nbasp) call judft_error('spmvec: error index counting (indx0)')
       END IF
 
-      CALL reorder(hybinp%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn,&
+      CALL reorder(hybdat%nbasm(ikpt), atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn,&
                    2,&
                    vec_c=vecout)
      call timestop("spmvec_noinvs")

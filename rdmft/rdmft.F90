@@ -371,10 +371,10 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    IF(ALLOCATED(hybdat%ne_eig)) DEALLOCATE(hybdat%ne_eig)
    IF(ALLOCATED(hybdat%nbands)) DEALLOCATE(hybdat%nbands)
    IF(ALLOCATED(hybdat%nobd)) DEALLOCATE(hybdat%nobd)
-   IF(ALLOCATED(hybinp%nbasm)) DEALLOCATE(hybinp%nbasm)
+   IF(ALLOCATED(hybdat%nbasm)) DEALLOCATE(hybdat%nbasm)
    IF(ALLOCATED(hybdat%div_vv)) DEALLOCATE(hybdat%div_vv)
    ALLOCATE(hybdat%ne_eig(kpts%nkpt),hybdat%nbands(kpts%nkpt),hybdat%nobd(kpts%nkptf,input%jspins))
-   ALLOCATE(hybinp%nbasm(kpts%nkptf))
+   ALLOCATE(hybdat%nbasm(kpts%nkptf))
    ALLOCATE(hybdat%div_vv(input%neig,kpts%nkpt,input%jspins))
 
    l_zref = (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)

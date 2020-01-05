@@ -28,6 +28,7 @@ MODULE m_types_hybdat
       INTEGER                ::  nbasp = -1
       INTEGER                ::  max_indx_p_1 = -1
       INTEGER                ::  maxbasm1 = -1
+      INTEGER, ALLOCATABLE   ::  nbasm(:)
    contains
       procedure  :: set_stepfunction => set_stepfunction
    END TYPE t_hybdat
