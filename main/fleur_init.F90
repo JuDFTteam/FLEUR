@@ -213,48 +213,6 @@ CONTAINS
     !new check mode will only run the init-part of FLEUR
     IF (judft_was_argument("-check")) CALL judft_end("Check-mode done",mpi%irank)
   CONTAINS
-    SUBROUTINE init_hybinp()
-      IF (xcpot%is_hybrid().OR.input%l_rdmft) THEN
-         IF (input%film.OR.oneD%odi%d1) THEN
-            CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
-                 calledby ="fleur", hint="Use a supercell or a different functional")
-         END IF
-
-         !             IF( ANY( atoms%l_geo  ) )&
-         !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
-         !                  &                    calledby ="fleur")
-
-         !calculate whole Brilloun zone
-         !CALL gen_bz(kpts,sym)
-         CALL gen_map(atoms,sym,oneD,hybinp)
-
-         ! calculate d_wgn
-         ALLOCATE (hybinp%d_wgn2(-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,sym%nsym))
-         CALL d_wigner(sym%nop,sym%mrot,cell%bmat,atoms%lmaxd,hybinp%d_wgn2(:,:,1:,:sym%nop))
-         hybinp%d_wgn2(:,:,0,:) = 1
-
-         DO isym = sym%nop+1,sym%nsym
-            iisym = isym - sym%nop
-            DO l = 0,atoms%lmaxd
-               DO m2 = -l,l
-                  DO m1 = -l,-1
-                     cdum                  = hybinp%d_wgn2( m1,m2,l,iisym)
-                     hybinp%d_wgn2( m1,m2,l,isym) = hybinp%d_wgn2(-m1,m2,l,iisym)*(-1)**m1
-                     hybinp%d_wgn2(-m1,m2,l,isym) = cdum                  *(-1)**m1
-                  END DO
-                  hybinp%d_wgn2(0,m2,l,isym) = hybinp%d_wgn2(0,m2,l,iisym)
-               END DO
-            END DO
-         END DO
-      ELSE
-         hybinp%l_calhf = .FALSE.
-         ALLOCATE(hybinp%map(0,0),hybinp%tvec(0,0,0),hybinp%d_wgn2(0,0,0,0))
-         IF(input%l_rdmft) THEN
-            hybinp%l_calhf = .FALSE.
-         END IF
-      ENDIF
-    END SUBROUTINE init_hybinp
-
     SUBROUTINE init_wannier()
       ! Initializations for Wannier functions (start)
       IF (mpi%irank.EQ.0) THEN
