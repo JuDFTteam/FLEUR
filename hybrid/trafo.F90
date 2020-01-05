@@ -534,7 +534,7 @@ CONTAINS
 
    SUBROUTINE bra_trafo( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
-      dim, nobd, nbands, ikpt, iop, sym, &
+      nobd, nbands, ikpt, iop, sym, &
       mpdata, hybinp, hybdat, kpts, atoms, &
       phase)
 
@@ -554,7 +554,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  ikpt, iop, dim, nobd, nbands
+      INTEGER, INTENT(IN)      ::  ikpt, iop, nobd, nbands
 
 !     - arrays -
 
@@ -581,13 +581,12 @@ CONTAINS
       REAL                    ::  rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1),&
                                        -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1))
-!       COMPLEX                 ::  vecin1(dim,nobd,nbands),vecout1(dim,nobd,nbands)
       COMPLEX, ALLOCATABLE    ::  vecin1(:, :, :), vecout1(:, :, :)
 
       call timestart("bra trafo")
 
-      allocate(vecin1(dim, nobd, nbands), &
-                 vecout1(dim, nobd, nbands), stat=ok)
+      allocate(vecin1(hybdat%nbasm(ikpt), nobd, nbands), &
+                 vecout1(hybdat%nbasm(ikpt), nobd, nbands), stat=ok)
       IF (ok /= 0) &
                    call judft_error('bra_trafo: error allocating vecin1 or vecout1')
       vecin1 = 0; vecout1 = 0
@@ -737,10 +736,10 @@ CONTAINS
          DO i = 1, nbands
             DO j = 1, nobd
 
-               CALL symmetrize(vecout1(:, j, i), dim, 1, 1, .false., &
+               CALL symmetrize(vecout1(:, j, i), hybdat%nbasm(ikpt), 1, 1, .false., &
                                atoms, hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, sym)
 
-               CALL commonphase(phase(j, i), vecout1(:, j, i), dim)
+               CALL commonphase(phase(j, i), vecout1(:, j, i), hybdat%nbasm(ikpt))
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
                IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
                   WRITE (*, *) vecout1(:, j, i)
