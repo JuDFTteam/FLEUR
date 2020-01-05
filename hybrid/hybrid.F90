@@ -28,7 +28,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
       type(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_enpara), INTENT(IN)    :: enpara
@@ -101,8 +101,8 @@ CONTAINS
          if(allocated(hybinp%nbasm)) deallocate(hybinp%nbasm)
          allocate(hybinp%nbasm(kpts%nkptf), source=0)
 
-         if(allocated(hybinp%div_vv)) deallocate(hybinp%div_vv)
-         allocate(hybinp%div_vv(input%neig, kpts%nkpt, input%jspins), source=0.0)
+         if(allocated(hybdat%div_vv)) deallocate(hybdat%div_vv)
+         allocate(hybdat%div_vv(input%neig, kpts%nkpt, input%jspins), source=0.0)
          init_vex = .FALSE.
       END IF
 

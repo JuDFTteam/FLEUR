@@ -55,7 +55,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)     :: xcpot
       TYPE(t_mpi), INTENT(IN)       :: mpi
       TYPE(t_mpdata), intent(in)  :: mpdata
-      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_sym), INTENT(IN)       :: sym
       TYPE(t_cell), INTENT(IN)      :: cell
       TYPE(t_kpts), INTENT(IN)      :: kpts
@@ -1687,7 +1687,7 @@ CONTAINS
 
       TYPE(t_mpi), INTENT(IN)   :: mpi
 
-      TYPE(t_hybinp), INTENT(INOUT)   :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
 
       TYPE(t_cell), INTENT(IN)   :: cell
 

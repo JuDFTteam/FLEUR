@@ -69,7 +69,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_lapw), INTENT(IN)    :: lapw
       TYPE(t_mpdata), intent(inout)  :: mpdata
-      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_results), INTENT(INOUT) :: results
 

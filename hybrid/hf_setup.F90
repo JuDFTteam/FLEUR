@@ -22,7 +22,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_mpdata), INTENT(inout)   :: mpdata
-      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_mpi), INTENT(IN)    :: mpi

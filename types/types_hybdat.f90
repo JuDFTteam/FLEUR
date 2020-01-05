@@ -16,6 +16,7 @@ MODULE m_types_hybdat
       REAL, ALLOCATABLE      :: bas1(:,:,:,:), bas2(:,:,:,:)
       REAL, ALLOCATABLE      :: bas1_MT(:,:,:), drbas1_MT(:,:,:)
       REAL, ALLOCATABLE      :: prodm(:,:,:,:)
+      REAL, ALLOCATABLE      :: div_vv(:, :, :)
       INTEGER, ALLOCATABLE   :: pntgptd(:)
       INTEGER, ALLOCATABLE   :: pntgpt(:,:,:,:)
       INTEGER, ALLOCATABLE   :: nindxp1(:,:)

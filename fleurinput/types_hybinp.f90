@@ -33,7 +33,6 @@ MODULE m_types_hybinp
       INTEGER, ALLOCATABLE   ::  ne_eig(:)
       INTEGER, ALLOCATABLE   ::  nbands(:)
       INTEGER, ALLOCATABLE   ::  nobd(:, :)
-      REAL, ALLOCATABLE      ::  div_vv(:, :, :)
    CONTAINS
       PROCEDURE :: read_xml => read_xml_hybinp
       PROCEDURE :: mpi_bc => mpi_bc_hybinp

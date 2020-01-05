@@ -28,7 +28,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_stars), INTENT(IN)    :: stars

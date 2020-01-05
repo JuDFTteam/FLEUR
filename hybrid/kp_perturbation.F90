@@ -24,7 +24,7 @@ CONTAINS
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybinp), INTENT(INOUT)   :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_input), INTENT(IN)   :: input
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_cell), INTENT(IN)   :: cell

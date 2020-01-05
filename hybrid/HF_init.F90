@@ -13,7 +13,7 @@ CONTAINS
       USE m_types_hybdat
       IMPLICIT NONE
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybinp), INTENT(INOUT)     :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_atoms), INTENT(IN)         :: atoms
       TYPE(t_input), INTENT(IN)         :: input
       TYPE(t_hybdat), INTENT(OUT)       :: hybdat

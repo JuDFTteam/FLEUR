@@ -59,7 +59,7 @@ CONTAINS
       TYPE(t_results), INTENT(INOUT) :: results
       CLASS(t_xcpot), INTENT(IN)    :: xcpot
       TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_lapw), INTENT(IN)    :: lapw
       TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -129,8 +129,8 @@ CONTAINS
          END IF
          IF (hybinp%l_calhf) THEN
             WRITE (6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
-               kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybinp%div_vv(iband, nk, jsp))*(-27.211608), &
-               hybinp%div_vv(iband, nk, jsp)*(-27.211608), REAL(exch(iband, iband))*(-27.211608)
+               kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybdat%div_vv(iband, nk, jsp))*(-27.211608), &
+               hybdat%div_vv(iband, nk, jsp)*(-27.211608), REAL(exch(iband, iband))*(-27.211608)
          END IF
       END DO
    END SUBROUTINE add_vnonlocal

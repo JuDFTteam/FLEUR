@@ -49,7 +49,7 @@ CONTAINS
 
       TYPE(t_oneD),INTENT(IN)      :: oneD
       TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybinp),INTENT(INOUT) :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_enpara),INTENT(INOUT) :: enpara
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_vacuum),INTENT(IN)    :: vacuum

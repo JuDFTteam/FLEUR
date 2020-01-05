@@ -79,7 +79,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_mpdata), intent(inout)  :: mpdata
-      TYPE(t_hybinp), INTENT(INOUT) :: hybinp
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -417,7 +417,7 @@ CONTAINS
 
                ! due to the symmetrization afterwards the factor 1/n_q(1) must be added
 
-               IF (n1 == nn2) hybinp%div_vv(n1, nk, jsp) = REAL(cdum2)
+               IF (n1 == nn2) hybdat%div_vv(n1, nk, jsp) = REAL(cdum2)
                exch_vv(nn2, n1) = exch_vv(nn2, n1) + (exch0 + cdum2)/n_q(1)
 
             END DO !n2

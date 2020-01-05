@@ -63,7 +63,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_noco),          INTENT(INOUT) :: noco
    TYPE(t_xcpot_inbuild), INTENT(INOUT) :: xcpot
    TYPE(t_mpdata),       intent(inout) :: mpdata
-   TYPE(t_hybinp),        INTENT(INOUT) :: hybinp
+   TYPE(t_hybinp), INTENT(IN) :: hybinp
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
    TYPE(t_potden),        INTENT(INOUT) :: outDen
@@ -372,10 +372,10 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    IF(ALLOCATED(hybinp%nbands)) DEALLOCATE(hybinp%nbands)
    IF(ALLOCATED(hybinp%nobd)) DEALLOCATE(hybinp%nobd)
    IF(ALLOCATED(hybinp%nbasm)) DEALLOCATE(hybinp%nbasm)
-   IF(ALLOCATED(hybinp%div_vv)) DEALLOCATE(hybinp%div_vv)
+   IF(ALLOCATED(hybdat%div_vv)) DEALLOCATE(hybdat%div_vv)
    ALLOCATE(hybinp%ne_eig(kpts%nkpt),hybinp%nbands(kpts%nkpt),hybinp%nobd(kpts%nkptf,input%jspins))
    ALLOCATE(hybinp%nbasm(kpts%nkptf))
-   ALLOCATE(hybinp%div_vv(input%neig,kpts%nkpt,input%jspins))
+   ALLOCATE(hybdat%div_vv(input%neig,kpts%nkpt,input%jspins))
 
    l_zref = (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
    iterHF = 0
