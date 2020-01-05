@@ -528,18 +528,18 @@ CONTAINS
 
    END SUBROUTINE desymmetrize
 
-   ! bra_trafo1 rotates cprod at ikpt0(<=> not irreducible k-point) to cprod at ikpt1 (bkp(ikpt0)), which is the
+   ! bra_trafo1 rotates cprod at ikpt0(<=> not irreducible k-point) to cprod at ikpt (bkp(ikpt0)), which is the
    ! symmetrie equivalent one
-   ! isym maps ikpt0 on ikpt1
+   ! isym maps ikpt0 on ikpt
 
    SUBROUTINE bra_trafo( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
-      dim, nobd, nbands, ikpt0, ikpt1, iop, sym, &
+      dim, nobd, nbands, ikpt0, ikpt, iop, sym, &
       mpdata, hybinp, hybdat, kpts, atoms, &
       phase)
 
-      !  ikpt0  ::  parent of ikpt1
-      !  iop maps ikpt0 on ikpt1
+      !  ikpt0  ::  parent of ikpt
+      !  iop maps ikpt0 on ikpt
 
       USE m_constants
       USE m_dwigner
@@ -554,7 +554,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  ikpt0, ikpt1, iop, dim, nobd, nbands
+      INTEGER, INTENT(IN)      ::  ikpt0, ikpt, iop, dim, nobd, nbands
 
 !     - arrays -
 
@@ -642,9 +642,9 @@ CONTAINS
             EXIT
          END IF
       END DO
-      IF (nrkpt /= ikpt1) THEN
-         PRINT *, ikpt0, ikpt1
-         PRINT *, kpts%bkf(:, ikpt1)
+      IF (nrkpt /= ikpt) THEN
+         PRINT *, ikpt0, ikpt
+         PRINT *, kpts%bkf(:, ikpt)
          PRINT *, kpts%bkf(:, ikpt0)
          PRINT *, rkpt
 
@@ -670,7 +670,7 @@ CONTAINS
 
 !     Multiplication
       ! MT
-      cexp = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g, trans(:)))
+      cexp = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt) + g, trans(:)))
       ic = 0
       iiatom = 0
       DO itype = 1, atoms%ntype
@@ -707,26 +707,26 @@ CONTAINS
          igptp = mpdata%gptm_ptr(igptm, ikpt0)
          g1 = matmul(rrot, mpdata%g(:, igptp)) + g
          igptm2 = 0
-         DO i = 1, mpdata%n_g(ikpt1)
-            IF (maxval(abs(g1 - mpdata%g(:, mpdata%gptm_ptr(i, ikpt1)))) <= 1E-06) THEN
+         DO i = 1, mpdata%n_g(ikpt)
+            IF (maxval(abs(g1 - mpdata%g(:, mpdata%gptm_ptr(i, ikpt)))) <= 1E-06) THEN
                igptm2 = i
                EXIT
             END IF
          END DO
          IF (igptm2 == 0) THEN
-            WRITE (*, *) ikpt0, ikpt1, g1
-            WRITE (*, *) mpdata%n_g(ikpt0), mpdata%n_g(ikpt1)
+            WRITE (*, *) ikpt0, ikpt, g1
+            WRITE (*, *) mpdata%n_g(ikpt0), mpdata%n_g(ikpt)
             WRITE (*, *)
             WRITE (*, *) igptp, mpdata%g(:, igptp)
             WRITE (*, *) g
             WRITE (*, *) rrot
             WRITE (*, *) "Failed tests:", g1
-            DO i = 1, mpdata%n_g(ikpt1)
-               WRITE (*, *) mpdata%g(:, mpdata%gptm_ptr(i, ikpt1))
+            DO i = 1, mpdata%n_g(ikpt)
+               WRITE (*, *) mpdata%g(:, mpdata%gptm_ptr(i, ikpt))
             ENDDO
             call judft_error('bra_trafo: G-point not found in G-point set.')
          END IF
-         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g1, trans(:)))
+         cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
 
          vecout1(hybdat%nbasp + igptm, :, :) = cdum*vecin1(hybdat%nbasp + igptm2, :, :)
       END DO
