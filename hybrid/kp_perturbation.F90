@@ -828,10 +828,10 @@ CONTAINS
       REAL                    ::  qg(lapw%nv(jsp), 3)
 
       COMPLEX                 ::  hlp(3, 3)
-      COMPLEX                 ::  cvec1(hybinp%maxlmindx), cvec2(hybinp%maxlmindx), cvec3(hybinp%maxlmindx)
-      COMPLEX                 ::  cmt1(hybinp%maxlmindx, bandi1:bandf1), cmt2(hybinp%maxlmindx, bandi2:bandf2)
+      COMPLEX                 ::  cvec1(hybdat%maxlmindx), cvec2(hybdat%maxlmindx), cvec3(hybdat%maxlmindx)
+      COMPLEX                 ::  cmt1(hybdat%maxlmindx, bandi1:bandf1), cmt2(hybdat%maxlmindx, bandi2:bandf2)
       COMPLEX                 ::  carr1(3), carr2(3)
-      COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat)
       REAL                    ::  olap_r(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
       COMPLEX                 ::  olap_c(lapw%nv(jsp)*(lapw%nv(jsp) + 1)/2)
       REAL                    ::  vec1_r(lapw%nv(jsp)), vec2_r(lapw%nv(jsp)), vec3_r(lapw%nv(jsp))

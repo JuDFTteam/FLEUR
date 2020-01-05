@@ -176,9 +176,9 @@ CONTAINS
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation bcof')
       allocate(ccof(-atoms%llod:atoms%llod, input%neig, atoms%nlod, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation ccof')
-      allocate(cmt(input%neig, hybinp%maxlmindx, atoms%nat), stat=ok)
+      allocate(cmt(input%neig, hybdat%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: Failure allocation cmt')
-      allocate(cmthlp(input%neig, hybinp%maxlmindx, atoms%nat), stat=ok)
+      allocate(cmthlp(input%neig, hybdat%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) call judft_error('gen_wavf: failure allocation cmthlp')
 
       DO ikpt0 = 1, nkpti

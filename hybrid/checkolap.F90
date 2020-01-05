@@ -60,7 +60,7 @@
             REAL, ALLOCATABLE   :: olapcv_avg(:, :, :, :), olapcv_max(:, :, :, :)
             TYPE(t_mat), ALLOCATABLE :: z(:)
 
-            COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat, nkpti)
+            COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat, nkpti)
             COMPLEX                 ::  y((atoms%lmaxd + 1)**2)
             COMPLEX, ALLOCATABLE   ::  olapcv(:, :)
             COMPLEX, ALLOCATABLE   ::  carr1(:, :), carr2(:, :), carr3(:, :)

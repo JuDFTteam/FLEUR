@@ -23,6 +23,7 @@ MODULE m_types_hybdat
       INTEGER, ALLOCATABLE   ::  ne_eig(:)
       INTEGER, ALLOCATABLE   ::  nbands(:)
       INTEGER, ALLOCATABLE   ::  nobd(:, :)
+      INTEGER                ::  maxlmindx = -1
       COMPLEX, ALLOCATABLE   :: stepfunc(:,:,:)
    contains
       procedure  :: set_stepfunction => set_stepfunction

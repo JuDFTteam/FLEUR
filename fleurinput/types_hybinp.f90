@@ -21,7 +21,6 @@ MODULE m_types_hybinp
       INTEGER                ::  nbasp = -1
       INTEGER                ::  maxbasm1 = -1
       INTEGER                ::  max_indx_p_1 = -1 !new
-      INTEGER                ::  maxlmindx = -1
       INTEGER, ALLOCATABLE   ::  select1(:, :)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
       INTEGER, ALLOCATABLE   ::  lcutwf(:)
@@ -60,7 +59,6 @@ CONTAINS
       CALL mpi_bc(this%nbasp, rank, mpi_comm)
       CALL mpi_bc(this%maxbasm1, rank, mpi_comm)
       CALL mpi_bc(this%max_indx_p_1, rank, mpi_comm)
-      CALL mpi_bc(this%maxlmindx, rank, mpi_comm)
       CALL mpi_bc(this%select1, rank, mpi_comm)
       CALL mpi_bc(this%lcutm1, rank, mpi_comm)
       CALL mpi_bc(this%lcutwf, rank, mpi_comm)

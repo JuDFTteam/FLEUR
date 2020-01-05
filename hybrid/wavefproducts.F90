@@ -72,8 +72,8 @@ CONTAINS
 !      COMPLEX                 :: chelp(maxbasm,mnobd,bandf-bandi+1,nkpt_EIBZ)
       COMPLEX                 ::  cexp
       COMPLEX                 ::  z_help(lapw%nv(jsp))
-      COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE     ::  cprod_ir(:, :, :)
       TYPE(t_mat)             :: z_nk, z_kqpt
       TYPE(t_lapw)            :: lapw_nkqpt
@@ -338,11 +338,11 @@ CONTAINS
 
       REAL                    ::    z_help(lapw%nv(jsp))
 
-      REAL                    ::    cmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
-      REAL                    ::    cmt(input%neig, hybinp%maxlmindx, atoms%nat)
+      REAL                    ::    cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
+      REAL                    ::    cmt(input%neig, hybdat%maxlmindx, atoms%nat)
 
-      COMPLEX                 ::    ccmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
-      COMPLEX                 ::    ccmt(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                 ::    ccmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                 ::    ccmt(input%neig, hybdat%maxlmindx, atoms%nat)
 
       REAL                    ::    rarr1(1:mnobd, bandf - bandi + 1)
       REAL                    ::    rarr(2, 1:mnobd, bandf - bandi + 1)
@@ -1268,8 +1268,8 @@ CONTAINS
 
       REAL                    ::    kqpt(3), kqpthlp(3)
       REAL                    ::    bkpt(3)
-      REAL                    ::    cmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
-      REAL                    ::    cmt(input%neig, hybinp%maxlmindx, atoms%nat)
+      REAL                    ::    cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
+      REAL                    ::    cmt(input%neig, hybdat%maxlmindx, atoms%nat)
       REAL                    ::    rarr1(bandoi:bandof)
       REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
       REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
@@ -1451,7 +1451,7 @@ CONTAINS
       END DO
 
       ! read in cmt coefficient at k-point nk
-      ALLOCATE (ccmt_nk(input%neig, hybinp%maxlmindx, atoms%nat), ccmt(input%neig, hybinp%maxlmindx, atoms%nat), stat=ok)
+      ALLOCATE (ccmt_nk(input%neig, hybdat%maxlmindx, atoms%nat), ccmt(input%neig, hybdat%maxlmindx, atoms%nat), stat=ok)
       IF (ok /= 0) STOP 'wavefproducts_inv5: error allocation ccmt_nk/ccmt'
 
       call read_cmt(ccmt_nk, nk)
@@ -2290,8 +2290,8 @@ CONTAINS
       COMPLEX                 ::  carr1(bandoi:bandof)
       COMPLEX                 ::  carr2(bandoi:bandof, bandf - bandi + 1)
       TYPE(t_mat)             ::  z_nk, z_kqpt
-      COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE     ::  z0(:, :)
 
       call timestart("wavefproducts_noinv5")

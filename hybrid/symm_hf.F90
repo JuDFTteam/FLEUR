@@ -134,8 +134,8 @@ CONTAINS
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE             :: olapmt(:, :, :, :)
 
-      COMPLEX                         :: cmt(input%neig, hybinp%maxlmindx, atoms%nat)
-      COMPLEX                         :: carr1(hybinp%maxlmindx, atoms%nat)
+      COMPLEX                         :: cmt(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                         :: carr1(hybdat%maxlmindx, atoms%nat)
       COMPLEX, ALLOCATABLE             :: carr(:), wavefolap(:, :)
       COMPLEX, ALLOCATABLE             :: cmthlp(:, :, :)
       COMPLEX, ALLOCATABLE             :: cpwhlp(:, :)
@@ -291,7 +291,7 @@ CONTAINS
          CALL wfolap_init(olappw, olapmt, lapw%gvec(:, :, jsp), atoms, mpdata, &
                           cell, hybdat%bas1, hybdat%bas2)
 
-         allocate(cmthlp(hybinp%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
+         allocate(cmthlp(hybdat%maxlmindx, atoms%nat, maxndb), cpwhlp(lapw%nv(jsp), maxndb), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation cmthlp/cpwhlp')
 
          DO isym = 1, nsymop
@@ -306,7 +306,7 @@ CONTAINS
                   cpwhlp = 0
 
                   CALL waveftrafo_symm(cmthlp(:, :, :ndb), cpwhlp(:, :ndb), cmt, z%l_real, z%data_r, z%data_c, &
-                                       i, ndb, nk, iop, atoms,input, mpdata, hybinp, kpts, sym, jsp, lapw)
+                                       i, ndb, nk, iop, atoms, mpdata, hybinp, hybdat, kpts, sym, jsp, lapw)
 
                   DO iband = 1, ndb
                      carr1 = cmt(iband + i - 1, :, :)

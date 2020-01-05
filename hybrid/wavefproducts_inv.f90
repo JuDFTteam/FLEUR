@@ -228,8 +228,8 @@ CONTAINS
      ! - local arrays -
      INTEGER                 ::    lmstart(0:atoms%lmaxd, atoms%ntype)
 
-     REAL                    ::    cmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
-     REAL                    ::    cmt(input%neig, hybinp%maxlmindx, atoms%nat)
+     REAL                    ::    cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
+     REAL                    ::    cmt(input%neig, hybdat%maxlmindx, atoms%nat)
      REAL                    ::    rarr2(bandoi:bandof, bandf - bandi + 1)
      REAL                    ::    rarr3(2, bandoi:bandof, bandf - bandi + 1)
 
@@ -245,8 +245,8 @@ CONTAINS
      END DO
 
      ! read in cmt coefficient at k-point nk
-     allocate(ccmt_nk(input%neig, hybinp%maxlmindx, atoms%nat), &
-               ccmt(input%neig, hybinp%maxlmindx, atoms%nat), &
+     allocate(ccmt_nk(input%neig, hybdat%maxlmindx, atoms%nat), &
+               ccmt(input%neig, hybdat%maxlmindx, atoms%nat), &
                source=cmplx(0.0, 0.0), stat=ok)
      IF (ok /= 0) call juDFT_error('wavefproducts_inv5: error allocation ccmt_nk/ccmt')
 

@@ -8,8 +8,8 @@ MODULE m_subvxc
 
 CONTAINS
 
-   SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybinp, el, ello, sym, &
-                     cell, sphhar, stars, xcpot, mpi, oneD, hmat, vx)
+   SUBROUTINE subvxc(lapw, bk, input, jsp, vr0, atoms, usdus, mpdata, hybinp, hybdat,&
+                     el, ello, sym, cell, sphhar, stars, xcpot, mpi, oneD, hmat, vx)
 
       USE m_types
       USE m_judft
@@ -29,6 +29,7 @@ CONTAINS
       TYPE(t_oneD), INTENT(IN)    :: oneD
       TYPE(t_mpdata), intent(inout) :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
+      TYPE(t_hybdat), INTENT(IN) :: hybdat
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_stars), INTENT(IN)    :: stars
@@ -81,8 +82,8 @@ CONTAINS
 
       COMPLEX               ::  vpw(stars%ng3)
       COMPLEX               ::  vxc(hmat%matsize1*(hmat%matsize1 + 1)/2)
-      COMPLEX               ::  vrmat(hybinp%maxlmindx, hybinp%maxlmindx)
-      COMPLEX               ::  carr(hybinp%maxlmindx, lapw%dim_nvd()), carr1(lapw%dim_nvd(), lapw%dim_nvd())
+      COMPLEX               ::  vrmat(hybdat%maxlmindx, hybdat%maxlmindx)
+      COMPLEX               ::  carr(hybdat%maxlmindx, lapw%dim_nvd()), carr1(lapw%dim_nvd(), lapw%dim_nvd())
       COMPLEX, ALLOCATABLE  ::  ahlp(:, :, :), bhlp(:, :, :)
       COMPLEX, ALLOCATABLE  ::  bascof(:, :, :)
 #ifndef CPP_OLDINTEL

@@ -163,8 +163,9 @@ CONTAINS
                                                       input,kpts,jsp,results,xcpot,noco,hmat)
 
                IF(hybinp%l_subvxc) THEN
-                  CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,mpdata,hybinp,enpara%el0,enpara%ello0,&
-                              sym,cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
+                  CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,&
+                              mpdata,hybinp,hybdat,enpara%el0,enpara%ello0,sym,&
+                              cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
                END IF
             END IF ! hybinp%l_hybrid
 

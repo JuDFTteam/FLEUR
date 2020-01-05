@@ -44,13 +44,14 @@ contains
   END SUBROUTINE open_hybinp_io1b
 
 
-  SUBROUTINE open_hybinp_io2(mpdata,hybinp,input,atoms,l_real)
+  SUBROUTINE open_hybinp_io2(mpdata,hybinp,hybdat,input,atoms,l_real)
     IMPLICIT NONE
     type(t_mpdata), intent(in) :: mpdata
-    TYPE(t_hybinp),INTENT(IN)   :: hybinp
-    TYPE(t_input),INTENT(IN):: input
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    LOGICAL,INTENT(IN)          :: l_real
+    TYPE(t_hybinp),INTENT(IN)  :: hybinp
+    TYPE(t_hybdat),INTENT(IN)  :: hybdat
+    TYPE(t_input),INTENT(IN)   :: input
+    TYPE(t_atoms),INTENT(IN)   :: atoms
+    LOGICAL,INTENT(IN)         :: l_real
     INTEGER:: irecl_coulomb
     LOGICAL :: opened=.FALSE.
 
@@ -59,7 +60,7 @@ contains
     if (opened) return
     opened=.true.
     OPEN(unit=777,file='cmt',form='unformatted',access='direct',&
-         &     recl=input%neig*hybinp%maxlmindx*atoms%nat*16)
+         &     recl=input%neig*hybdat%maxlmindx*atoms%nat*16)
 
 #ifdef CPP_NOSPMVEC
     irecl_coulomb = hybinp%maxbasm1 * (hybinp%maxbasm1+1) * 8 / 2

@@ -38,7 +38,8 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpdata, hybinp, enpara, mpi, v, iterHF)
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpdata, hybinp, hybdat,&
+                         enpara, mpi, v, iterHF)
 
       USE m_judft
       USE m_loddop, ONLY: loddop
@@ -55,6 +56,7 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_mpdata), intent(inout)  :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
+      TYPE(t_hybdat), INTENT(IN) :: hybdat
       TYPE(t_enpara), INTENT(IN)    :: enpara
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_cell), INTENT(IN)    :: cell
@@ -378,9 +380,9 @@ CONTAINS
       hybinp%maxbasm1 = hybinp%nbasp + maxval(mpdata%n_g)
       hybinp%nbasm = hybinp%nbasp + mpdata%n_g
 
-      hybinp%maxlmindx = 0
+      hybdat%maxlmindx = 0
       do itype = 1,atoms%ntype
-         hybinp%maxlmindx = max(hybinp%maxlmindx,&
+         hybdat%maxlmindx = max(hybdat%maxlmindx,&
                                 SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))])&
                                 )
       enddo

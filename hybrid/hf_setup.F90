@@ -271,7 +271,7 @@ CONTAINS
             hybdat%nobd(nk,jsp) = COUNT(results%w_iks(:hybdat%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
-         hybinp%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
+         hybdat%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
          hybdat%nbands = MIN(hybinp%bands1, input%neig)
 
       ENDIF ! hybinp%l_calhf

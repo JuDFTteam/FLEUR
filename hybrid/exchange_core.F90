@@ -65,7 +65,7 @@ CONTAINS
       REAL, ALLOCATABLE        ::  fprod(:, :), fprod2(:, :)
       REAL, ALLOCATABLE        ::  integral(:, :)
 
-      COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat)
       COMPLEX                 ::  exchange(hybdat%nbands(nk), hybdat%nbands(nk))
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 

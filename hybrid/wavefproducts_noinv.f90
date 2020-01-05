@@ -235,8 +235,8 @@ CONTAINS
       INTEGER                 ::  lmstart(0:atoms%lmaxd, atoms%ntype)
 
       COMPLEX                 ::  carr(bandoi:bandof, bandf - bandi + 1)
-      COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
-      COMPLEX                 ::  cmt_nk(input%neig, hybinp%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt(input%neig, hybdat%maxlmindx, atoms%nat)
+      COMPLEX                 ::  cmt_nk(input%neig, hybdat%maxlmindx, atoms%nat)
 
       call timestart("wavefproducts_noinv5 MT")
       ! lmstart = lm start index for each l-quantum number and atom type (for cmt-coefficients)

@@ -9,8 +9,8 @@ MODULE m_trafo
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
-                              nk, iop, atoms, input,mpdata, hybinp, kpts, sym, &
-                              jsp, lapw)
+                              nk, iop, atoms, mpdata, hybinp, hybdat, kpts, &
+                              sym, jsp, lapw)
 
       USE m_constants
       USE m_wrapper
@@ -18,9 +18,9 @@ CONTAINS
       USE m_juDFT
       IMPLICIT NONE
 
-      TYPE(t_input), INTENT(IN)       :: input
-      TYPE(t_mpdata), INTENT(IN)     :: mpdata
+      TYPE(t_mpdata), INTENT(IN)      :: mpdata
       TYPE(t_hybinp), INTENT(IN)      :: hybinp
+      TYPE(t_hybdat), INTENT(IN)      :: hybdat
       TYPE(t_sym), INTENT(IN)         :: sym
       TYPE(t_kpts), INTENT(IN)        :: kpts
       TYPE(t_atoms), INTENT(IN)       :: atoms
@@ -35,7 +35,7 @@ CONTAINS
       LOGICAL, INTENT(IN)      ::  l_real
       REAL, INTENT(IN)         ::  z_r(:,:)
       COMPLEX, INTENT(IN)      ::  z_c(:,:)
-      COMPLEX, INTENT(OUT)     ::  cmt_out(hybinp%maxlmindx, atoms%nat, ndb)
+      COMPLEX, INTENT(OUT)     ::  cmt_out(hybdat%maxlmindx, atoms%nat, ndb)
       COMPLEX, INTENT(OUT)     ::  z_out(lapw%nv(jsp), ndb)
 
 !     - local -
