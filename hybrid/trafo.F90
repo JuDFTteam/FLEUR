@@ -534,12 +534,12 @@ CONTAINS
 
    SUBROUTINE bra_trafo( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
-      nobd, nbands, ikpt, iop, sym, &
+      nobd, nbands, ikpt, sym, &
       mpdata, hybinp, hybdat, kpts, atoms, &
       phase)
 
       !  kpts%bkp(ikpt)  ::  parent of ikpt
-      !  iop maps kpts%bkp(ikpt) on ikpt
+      !  kpts%bksym(ikpt) maps kpts%bkp(ikpt) on ikpt
 
       USE m_constants
       USE m_dwigner
@@ -554,7 +554,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  ikpt, iop, nobd, nbands
+      INTEGER, INTENT(IN)      ::  ikpt, nobd, nbands
 
 !     - arrays -
 
@@ -606,17 +606,17 @@ CONTAINS
          vecin1 = vecin_c
       endif
 
-      IF (iop <= sym%nop) THEN
-         inviop = sym%invtab(iop)
-         rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-         invrot = sym%mrot(:, :, sym%invtab(iop))
-         trans = sym%tau(:, iop)
+      IF (kpts%bksym(ikpt) <= sym%nop) THEN
+         inviop = sym%invtab(kpts%bksym(ikpt))
+         rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
+         invrot = sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt)))
+         trans = sym%tau(:, kpts%bksym(ikpt))
 
          dwgn(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1)) &
             = hybinp%d_wgn2(-maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), -maxval(hybinp%lcutm1):maxval(hybinp%lcutm1), 0:maxval(hybinp%lcutm1), inviop)
 
       ELSE
-         iiop = iop - sym%nop
+         iiop = kpts%bksym(ikpt) - sym%nop
          inviop = sym%invtab(iiop) + sym%nop
          rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
          invrot = sym%mrot(:, :, sym%invtab(iiop))
@@ -676,7 +676,7 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
 
-            rcent = hybinp%map(ic, iop)
+            rcent = hybinp%map(ic, kpts%bksym(ikpt))
 
             cdum = cexp*exp(-img*tpi_const*dot_product(g, atoms%taual(:, rcent)))
 
