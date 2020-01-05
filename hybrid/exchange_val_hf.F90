@@ -256,7 +256,7 @@ CONTAINS
             ! bra_trafo transforms cprod instead of rotating the Coulomb matrix
             ! from IBZ to current k-point
             IF (kpts%bkp(ikpt0) /= ikpt0) THEN
-               CALL bra_trafo2(mat_ex%l_real, carr3_vv_r(:hybdat%nbasm(ikpt0), :, :), cprod_vv_r(:hybdat%nbasm(ikpt0), :, :), &
+               CALL bra_trafo(mat_ex%l_real, carr3_vv_r(:hybdat%nbasm(ikpt0), :, :), cprod_vv_r(:hybdat%nbasm(ikpt0), :, :), &
                                carr3_vv_c(:hybdat%nbasm(ikpt0), :, :), cprod_vv_c(:hybdat%nbasm(ikpt0), :, :), &
                                hybdat%nbasm(ikpt0), psize, hybdat%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
                                mpdata, hybinp, hybdat, kpts, atoms, phase_vv)

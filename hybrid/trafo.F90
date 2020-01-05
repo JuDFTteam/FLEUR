@@ -532,7 +532,7 @@ CONTAINS
    ! symmetrie equivalent one
    ! isym maps ikpt0 on ikpt1
 
-   SUBROUTINE bra_trafo2( &
+   SUBROUTINE bra_trafo( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
       dim, nobd, nbands, ikpt0, ikpt1, iop, sym, &
       mpdata, hybinp, hybdat, kpts, atoms, &
@@ -589,10 +589,10 @@ CONTAINS
       allocate(vecin1(dim, nobd, nbands), &
                  vecout1(dim, nobd, nbands), stat=ok)
       IF (ok /= 0) &
-                   call judft_error('bra_trafo2: error allocating vecin1 or vecout1')
+                   call judft_error('bra_trafo: error allocating vecin1 or vecout1')
       vecin1 = 0; vecout1 = 0
 
-      IF (maxval(hybinp%lcutm1) > atoms%lmaxd) call judft_error('bra_trafo2: maxlcutm > atoms%lmaxd')   ! very improbable case
+      IF (maxval(hybinp%lcutm1) > atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
 
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       if (l_real) THEN
@@ -648,7 +648,7 @@ CONTAINS
          PRINT *, kpts%bkf(:, ikpt0)
          PRINT *, rkpt
 
-         call judft_error('bra_trafo2: rotation failed')
+         call judft_error('bra_trafo: rotation failed')
       ENDIF
 #endif
 
@@ -724,7 +724,7 @@ CONTAINS
             DO i = 1, mpdata%n_g(ikpt1)
                WRITE (*, *) mpdata%g(:, mpdata%gptm_ptr(i, ikpt1))
             ENDDO
-            call judft_error('bra_trafo2: G-point not found in G-point set.')
+            call judft_error('bra_trafo: G-point not found in G-point set.')
          END IF
          cdum = exp(img*tpi_const*dot_product(kpts%bkf(:, ikpt1) + g1, trans(:)))
 
@@ -744,7 +744,7 @@ CONTAINS
                vecout1(:, j, i) = vecout1(:, j, i)/phase(j, i)
                IF (any(abs(aimag(vecout1(:, j, i))) > 1e-8)) THEN
                   WRITE (*, *) vecout1(:, j, i)
-                  call judft_error('bra_trafo2: Residual imaginary part.')
+                  call judft_error('bra_trafo: Residual imaginary part.')
                END IF
 
             END DO
@@ -760,7 +760,7 @@ CONTAINS
       endif
       deallocate(vecout1)
       call timestop("bra trafo")
-   END SUBROUTINE bra_trafo2
+   END SUBROUTINE bra_trafo
 
    ! Determines common phase factor (with unit norm)
    SUBROUTINE commonphase(cfac, carr, n)
