@@ -12,9 +12,6 @@ MODULE m_types_hybinp
 
    TYPE, EXTENDS(t_fleurinput_base):: t_hybinp
       LOGICAL                ::  l_hybrid = .false.
-      LOGICAL                ::  l_subvxc = .false.
-      LOGICAL                ::  l_calhf = .false.
-      LOGICAL                ::  l_addhf = .false.
       INTEGER                ::  ewaldlambda = -1
       INTEGER                ::  lexp = -1
       INTEGER                ::  bands1 = -1 !Only read in
@@ -46,9 +43,6 @@ CONTAINS
          rank = 0
       END IF
       CALL mpi_bc(this%l_hybrid, rank, mpi_comm)
-      CALL mpi_bc(this%l_subvxc, rank, mpi_comm)
-      CALL mpi_bc(this%l_calhf, rank, mpi_comm)
-      CALL mpi_bc(this%l_addhf, rank, mpi_comm)
       CALL mpi_bc(this%ewaldlambda, rank, mpi_comm)
       CALL mpi_bc(this%lexp, rank, mpi_comm)
       CALL mpi_bc(this%bands1, rank, mpi_comm)

@@ -56,7 +56,7 @@ CONTAINS
    USE m_mix
    USE m_xmlOutput
    USE m_juDFT_time
-   USE m_calc_hybinp
+   USE m_calc_hybrid
    USE m_rdmft
    USE m_io_hybinp
    USE m_wann_optional
@@ -100,6 +100,7 @@ CONTAINS
     TYPE(t_kpts)                    :: kpts
     TYPE(t_mpinp)                   :: mpinp
     TYPE(t_hybinp)                  :: hybinp
+    TYPE(t_hybdat)                  :: hybdat
     TYPE(t_mpdata)                 :: mpdata
     TYPE(t_oneD)                    :: oneD
     TYPE(t_mpi)                     :: mpi
@@ -245,10 +246,10 @@ CONTAINS
        IF (hybinp%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
-             CALL calc_hybinp(eig_id,mpdata,hybinp,kpts,atoms,input,mpi,noco,&
+             CALL calc_hybrid(eig_id,mpdata,hybinp,hybdat,kpts,atoms,input,mpi,noco,&
                               cell,oneD,enpara,results,sym,xcpot,vTot,iterHF)
           END SELECT
-          IF(hybinp%l_calhf) THEN
+          IF(hybdat%l_calhf) THEN
              call mixing_history_reset(mpi)
              iter = 0
           END IF
@@ -259,7 +260,7 @@ CONTAINS
        END IF
 
        !IF(.not.input%eig66(1))THEN
-          CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybinp call but before eigen
+          CALL reset_eig(eig_id,noco%l_soc) ! This has to be placed after the calc_hybrid call but before eigen
        !END IF
 
        !#endif
@@ -280,7 +281,7 @@ CONTAINS
     !          ,sym,oneD,cell,noco,input,atoms,inDen)
 !END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
        CALL timestart("generation of potential")
-       CALL vgen(hybinp,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+       CALL vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                  cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
 
@@ -308,7 +309,8 @@ CONTAINS
           CALL timestop("Updating energy parameters")
           !IF(.not.input%eig66(1))THEN
             CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
-                     cell,enpara,banddos,noco,oneD,mpdata,hybinp,iter,eig_id,results,inDen,vTemp,vx,hub1)
+                       cell,enpara,banddos,noco,oneD,mpdata,hybinp,hybdat,&
+                       iter,eig_id,results,inDen,vTemp,vx,hub1)
           !ENDIF
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -317,7 +319,7 @@ CONTAINS
           ! add all contributions to total energy
 #ifdef CPP_MPI
           ! send all result of local total energies to the r
-          IF (hybinp%l_hybrid.AND.hybinp%l_calhf) THEN
+          IF (hybinp%l_hybrid.AND.hybdat%l_calhf) THEN
              IF (mpi%irank==0) THEN
                 CALL MPI_Reduce(MPI_IN_PLACE,results%te_hfex%core,1,MPI_REAL8,MPI_SUM,0,mpi%mpi_comm,ierr(1))
              ELSE
@@ -431,7 +433,8 @@ CONTAINS
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
                    CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybinp,results,coreSpecInput,archiveType,outDen)
+                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybinp,hybdat,&
+                              results,coreSpecInput,archiveType,outDen)
              END SELECT
           END IF
 
@@ -474,7 +477,7 @@ CONTAINS
              ! total energy
              CALL timestart('determination of total energy')
              CALL totale(mpi,atoms,sphhar,stars,vacuum,sym,input,noco,cell,oneD,&
-                         xcpot,hybinp,vTot,vCoul,iter,inDen,results)
+                         xcpot,hybdat,vTot,vCoul,iter,inDen,results)
              CALL timestop('determination of total energy')
           IF (hybinp%l_hybrid) CALL close_eig(eig_id)
 
@@ -524,14 +527,14 @@ CONTAINS
 
        l_cont = .TRUE.
        IF (hybinp%l_hybrid) THEN
-          IF(hybinp%l_calhf) THEN
+          IF(hybdat%l_calhf) THEN
              l_cont = l_cont.AND.(iterHF < input%itmax)
              l_cont = l_cont.AND.(input%mindistance<=results%last_distance)
              CALL check_time_for_next_iteration(iterHF,l_cont)
           ELSE
              l_cont = l_cont.AND.(iter < 50) ! Security stop for non-converging nested PBE calculations
           END IF
-          IF (hybinp%l_subvxc) THEN
+          IF (hybdat%l_subvxc) THEN
              results%te_hfex%valence = 0
           END IF
        ELSE

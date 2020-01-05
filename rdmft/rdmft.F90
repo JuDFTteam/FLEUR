@@ -9,7 +9,8 @@ MODULE m_rdmft
 CONTAINS
 
 SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybinp,results,coreSpecInput,archiveType,outDen)
+                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybinp, hybdat,&
+                 results,coreSpecInput,archiveType,outDen)
 
    USE m_types
    USE m_juDFT
@@ -62,8 +63,9 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_noco),          INTENT(INOUT) :: noco
    TYPE(t_xcpot_inbuild), INTENT(INOUT) :: xcpot
-   TYPE(t_mpdata),       intent(inout) :: mpdata
-   TYPE(t_hybinp), INTENT(IN) :: hybinp
+   TYPE(t_mpdata),        intent(inout) :: mpdata
+   TYPE(t_hybinp),        INTENT(IN)    :: hybinp
+   TYPE(t_hybdat),        INTENT(INOUT) :: hybdat
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_coreSpecInput), INTENT(IN)    :: coreSpecInput
    TYPE(t_potden),        INTENT(INOUT) :: outDen
@@ -80,7 +82,6 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_moments)                      :: moments
    TYPE(t_mat)                          :: exMat, zMat, olap, trafo, invtrafo, tmpMat, exMatLAPW
    TYPE(t_lapw)                         :: lapw
-   TYPE(t_hybdat)                       :: hybdat
    INTEGER                              :: ikpt, ikpt_i, iBand, jkpt, jBand, iAtom, i, na, itype, lh, j
    INTEGER                              :: jspin, jspmax, jsp, isp, ispin, nbasfcn, nbands
    INTEGER                              :: nsymop, nkpt_EIBZ, ikptf, iterHF, mnobd
@@ -379,15 +380,15 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    l_zref = (sym%zrfs.AND.(SUM(ABS(kpts%bk(3,:kpts%nkpt))).LT.1e-9).AND..NOT.noco%l_noco)
    iterHF = 0
-   hybinp%l_calhf = .TRUE.
+   hybdat%l_calhf = .TRUE.
 
 !   CALL open_hybinp_io1(sym%invs)
 
-   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpdata,hybinp,enpara,mpi,vTot, iterHF)
+   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpdata,hybinp, hybdat,enpara,mpi,vTot, iterHF)
 
-   CALL open_hybinp_io2(mpdata, hybinp,input,atoms,sym%invs)
+   CALL open_hybinp_io2(mpdata, hybinp,hybdat,input,atoms,sym%invs)
 
-   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpdata,hybinp,xcpot)
+   CALL coulombmatrix(mpi,atoms,kpts,cell,sym,mpdata,hybinp,hybdat,xcpot)
 
    CALL hf_init(mpdata,hybinp,atoms,input,hybdat)
 
@@ -755,7 +756,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    WRITE(*,*) 'RDMFT: convergence loop end'
 
-   hybinp%l_calhf = .FALSE.
+   hybdat%l_calhf = .FALSE.
 
    ! Calculate final overall density
 

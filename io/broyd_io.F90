@@ -28,7 +28,7 @@ SUBROUTINE readLastIterInAndDiffDen(hybinp,vecLen,nextIter,alpha,inDenVec,diffDe
 
    ! At the moment broyden IO is mode independent
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (57,file='hf_broyd',form='unformatted',status='unknown')
    ELSE
       OPEN (57,file='broyd',form='unformatted',status='unknown')
@@ -58,7 +58,7 @@ SUBROUTINE writeLastIterInAndDiffDen(hybinp,vecLen,nextIter,alpha,inDenVec,diffD
 
    ! At the moment broyden IO is mode independent
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (57,file='hf_broyd',form='unformatted',status='unknown')
    ELSE
       OPEN (57,file='broyd',form='unformatted',status='unknown')
@@ -90,7 +90,7 @@ SUBROUTINE readUVec(input,hybinp,vecLen,relIter,currentIter,uVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -123,7 +123,7 @@ SUBROUTINE writeUVec(input,hybinp,vecLen,currentIter,uVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -157,7 +157,7 @@ SUBROUTINE readVVec(input,hybinp,vecLen,relIter,currentIter,dfivi,vVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -191,7 +191,7 @@ SUBROUTINE writeVVec(input,hybinp,vecLen,currentIter,dfivi,vVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -232,7 +232,7 @@ SUBROUTINE readDeltaNVec(input,hybinp,vecLen,relIter,currentIter,deltaNVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd_DN',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -268,7 +268,7 @@ SUBROUTINE writeDeltaNVec(input,hybinp,vecLen,currentIter,deltaNVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd_DN',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -303,7 +303,7 @@ SUBROUTINE readDeltaFVec(input,hybinp,vecLen,relIter,currentIter,deltaFVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd_DF',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -339,7 +339,7 @@ SUBROUTINE writeDeltaFVec(input,hybinp,vecLen,currentIter,deltaFVec)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd_DF',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -375,7 +375,7 @@ SUBROUTINE writeBroydenOverlapExt(input,hybinp,currentIter,historyLength,&
    recLen = 8*4*input%maxIter    ! sizeOfReal*numberOfVectors*vectorLength
    recLen = recLen + 2*8         ! storage for currentIter, historyLength
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broydOvlp',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -419,7 +419,7 @@ SUBROUTINE readBroydenOverlaps(input,hybinp,currentIter,historyLength,&
    recLen = 8*4*input%maxIter    ! sizeOfReal*numberOfVectors*vectorLength
    recLen = recLen + 2*8         ! storage for currentIter, historyLength
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broydOvlp',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -517,7 +517,7 @@ LOGICAL FUNCTION initBroydenHistory(input,hybinp, vecLen)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd.'//CHAR(input%imix+48),access='direct',&
             recl=recLen,form='unformatted',status='unknown')
    ELSE
@@ -546,7 +546,7 @@ LOGICAL FUNCTION initBroydenHistory2(input,hybinp, vecLen)
 
    recLen=(vecLen+1)*8
 
-   IF (hybinp%l_calhf) THEN
+   IF (hybdat%l_calhf) THEN
       OPEN (59,file='hf_broyd_DF',access='direct',&
             recl=recLen,form='unformatted',status='unknown')
       OPEN (60,file='hf_broyd_DN',access='direct',&

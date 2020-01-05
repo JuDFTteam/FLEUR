@@ -96,7 +96,7 @@ CONTAINS
          END DO
       END DO
       ! calculate HF energy
-      IF (hybinp%l_calhf) THEN
+      IF (hybdat%l_calhf) THEN
          WRITE (6, '(A)') new_line('n')//new_line('n')//' ###     '//'        diagonal HF exchange elements (eV)              ###'
 
          WRITE (6, '(A)') new_line('n')//'         k-point      '//'band          tail           pole       total(valence+core)'
@@ -128,7 +128,7 @@ CONTAINS
          IF (iband <= hybdat%nobd(nk,jsp)) THEN
             results%te_hfex%valence = results%te_hfex%valence - a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband)
          END IF
-         IF (hybinp%l_calhf) THEN
+         IF (hybdat%l_calhf) THEN
             WRITE (6, '(      ''  ('',F5.3,'','',F5.3,'','',F5.3,'')'',I4,4X,3F15.5)') &
                kpts%bkf(:, nk), iband, (REAL(exch(iband, iband)) - hybdat%div_vv(iband, nk, jsp))*(-27.211608), &
                hybdat%div_vv(iband, nk, jsp)*(-27.211608), REAL(exch(iband, iband))*(-27.211608)

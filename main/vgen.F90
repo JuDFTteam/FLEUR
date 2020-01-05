@@ -19,7 +19,7 @@ CONTAINS
    !!     TE_VEFF:   charge density-effective potential integral
    !!     TE_EXC :   charge density-ex-corr.energy density integral
 
-   SUBROUTINE vgen(hybinp,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+   SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    cell,oneD,sliceplot,mpi,results,noco,EnergyDen,den,vTot,vx,vCoul)
 
       USE m_types
@@ -36,7 +36,7 @@ CONTAINS
 
       TYPE(t_results),   INTENT(INOUT)  :: results
       CLASS(t_xcpot),    INTENT(INOUT)  :: xcpot
-      TYPE(t_hybinp),    INTENT(IN)     :: hybinp
+      TYPE(t_hybdat),    INTENT(IN)     :: hybdat
       TYPE(t_mpi),       INTENT(IN)     :: mpi
 
       TYPE(t_oneD),      INTENT(IN)     :: oneD
@@ -101,7 +101,7 @@ CONTAINS
          IF (noco%l_mtnocoPot) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)
       ENDIF
 
-      CALL vgen_xcpot(hybinp,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+      CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                       cell,oneD,sliceplot,mpi,noco,den,denRot,EnergyDen,vTot,vx,results)
 
       !ToDo, check if this is needed for more potentials as well...

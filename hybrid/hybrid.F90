@@ -4,12 +4,12 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_calc_hybinp
+MODULE m_calc_hybrid
    USE m_judft
 
 CONTAINS
 
-   SUBROUTINE calc_hybinp(eig_id, mpdata, hybinp, kpts, atoms, input,  mpi, noco, cell, oneD, &
+   SUBROUTINE calc_hybrid(eig_id, mpdata, hybinp, hybdat, kpts, atoms, input,  mpi, noco, cell, oneD, &
                           enpara, results, sym, xcpot, v, iterHF)
 
       USE m_types_hybdat
@@ -29,6 +29,7 @@ CONTAINS
       TYPE(t_oneD), INTENT(IN)    :: oneD
       type(t_mpdata), intent(inout) :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
+      TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_enpara), INTENT(IN)    :: enpara
@@ -44,7 +45,6 @@ CONTAINS
 
       ! local variables
       INTEGER           :: jsp, nk, err
-      TYPE(t_hybdat)    :: hybdat
       type(t_lapw)      :: lapw
       LOGICAL           :: init_vex = .TRUE. !In first call we have to init v_nonlocal
       LOGICAL           :: l_zref
@@ -56,7 +56,7 @@ CONTAINS
       ! close(7465)
 
       CALL timestart("hybinp code")
-      INQUIRE (file="v_x.mat", exist=hybinp%l_addhf)
+      INQUIRE (file="v_x.mat", exist=hybdat%l_addhf)
       CALL open_hybinp_io1( sym%invs)
 
       IF (kpts%nkptf == 0) THEN
@@ -65,11 +65,11 @@ CONTAINS
       END IF
 
       !Check if new non-local potential shall be generated
-      hybinp%l_subvxc = hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
+      hybdat%l_subvxc = hybinp%l_hybrid .AND. (.NOT. xcpot%is_name("exx"))
       !If this is the first iteration loop we can not calculate a new non-local potential
-      hybinp%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < input%minDistance)
-      IF (.NOT. hybinp%l_calhf) THEN
-         hybinp%l_subvxc = hybinp%l_subvxc .AND. hybinp%l_addhf
+      hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < input%minDistance)
+      IF (.NOT. hybdat%l_calhf) THEN
+         hybdat%l_subvxc = hybdat%l_subvxc .AND. hybdat%l_addhf
          CALL timestop("hybinp code")
          RETURN
       ENDIF
@@ -78,7 +78,7 @@ CONTAINS
 
       !Check if we are converged well enough to calculate a new potential
       CALL open_hybinp_io1b( sym%invs)
-      hybinp%l_addhf = .TRUE.
+      hybdat%l_addhf = .TRUE.
 
       !In first iteration allocate some memory
       IF (init_vex) THEN
@@ -106,10 +106,10 @@ CONTAINS
          init_vex = .FALSE.
       END IF
 
-      hybinp%l_subvxc = (hybinp%l_subvxc .AND. hybinp%l_addhf)
+      hybdat%l_subvxc = (hybdat%l_subvxc .AND. hybdat%l_addhf)
       IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(input%neig, kpts%nkpt, input%jspins))
 
-      IF (hybinp%l_calhf) THEN
+      IF (hybdat%l_calhf) THEN
          iterHF = iterHF + 1
 
          !Delete broyd files
@@ -125,12 +125,13 @@ CONTAINS
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
          write (*,*) "iterHF = ", iterHF
-         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpdata, hybinp, enpara, mpi, v, iterHF)
+         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpdata, hybinp, hybdat,&
+                         enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
-         CALL open_hybinp_io2(mpdata, hybinp, input, atoms, sym%invs)
+         CALL open_hybinp_io2(mpdata, hybinp, hybdat, input, atoms, sym%invs)
 
-         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, xcpot)
+         CALL coulombmatrix(mpi, atoms, kpts, cell, sym, mpdata, hybinp, hybdat, xcpot)
 
          CALL hf_init(mpdata, hybinp, atoms, input,  hybdat)
          CALL timestop("Preparation for hybinp functionals")
@@ -154,5 +155,5 @@ CONTAINS
 
       ENDIF
       CALL timestop("hybinp code")
-   END SUBROUTINE calc_hybinp
-END MODULE m_calc_hybinp
+   END SUBROUTINE calc_hybrid
+END MODULE m_calc_hybrid

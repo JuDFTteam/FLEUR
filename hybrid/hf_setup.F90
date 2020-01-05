@@ -61,7 +61,7 @@ CONTAINS
 
       skip_kpt = .FALSE.
 
-      IF (hybinp%l_calhf) THEN
+      IF (hybdat%l_calhf) THEN
          ! Preparations for HF and hybinp functional calculation
          CALL timestart("gen_bz and gen_wavf")
 
@@ -263,7 +263,7 @@ CONTAINS
          deallocate(basprod)
          CALL timestop("gen_bz and gen_wavf")
 
-      ELSE IF (hybinp%l_hybrid) THEN ! hybinp%l_calhf is false
+      ELSE IF (hybinp%l_hybrid) THEN ! hybdat%l_calhf is false
 
          !DO nk = n_start,kpts%nkpt,n_stride
          DO nk = 1, kpts%nkpt, 1
@@ -274,7 +274,7 @@ CONTAINS
          hybdat%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
          hybdat%nbands = MIN(hybinp%bands1, input%neig)
 
-      ENDIF ! hybinp%l_calhf
+      ENDIF ! hybdat%l_calhf
 
    END SUBROUTINE hf_setup
 

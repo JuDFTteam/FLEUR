@@ -6,16 +6,16 @@
 MODULE m_totale
 CONTAINS
   SUBROUTINE totale(mpi,atoms,sphhar,stars,vacuum, &
-       sym,input,noco,cell,oneD, xcpot,hybinp,vTot,vCoul,it,den,results)
+       sym,input,noco,cell,oneD, xcpot,hybdat,vTot,vCoul,it,den,results)
     !
     !     ***************************************************
-    !     subroutine calculates the total energy 
+    !     subroutine calculates the total energy
     !     ***************************************************
     !     single particle energies
     !     SEIGC  sum of the eigenvalues of the core states
     !            calculated in cdngen.f
     !     SEIGSCV  sum of the eigenvalues of the semicore and valence states
-    !              calculated in fermie.f 
+    !              calculated in fermie.f
     !     TS         : entropy contribution to the free energy
     !     SEIGC,SEIGSCV, TS are calculated in fermie.f
     !     ***************************************************
@@ -40,7 +40,7 @@ CONTAINS
     !     E0 = TOTE - TS/2
     !     ***************************************************
     !
-    USE m_intgr    , ONLY : intgr3 
+    USE m_intgr    , ONLY : intgr3
     USE m_constants
     USE m_force_a4
     USE m_force_a3
@@ -53,7 +53,7 @@ CONTAINS
     TYPE(t_results),INTENT(INOUT)   :: results
     CLASS(t_xcpot),INTENT(IN)       :: xcpot
     TYPE(t_oneD),INTENT(IN)         :: oneD
-    TYPE(t_hybinp),INTENT(IN)       :: hybinp
+    TYPE(t_hybdat),INTENT(IN)       :: hybdat
     TYPE(t_input),INTENT(IN)        :: input
     TYPE(t_vacuum),INTENT(IN)       :: vacuum
     TYPE(t_noco),INTENT(IN)         :: noco
@@ -62,12 +62,12 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)         :: cell
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_atoms),INTENT(IN)        :: atoms
-    
+
     TYPE(t_potden),INTENT(IN)       :: vTot,vCoul
     TYPE(t_potden),INTENT(IN)       :: den
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER,INTENT (IN) :: it      
+    INTEGER,INTENT (IN) :: it
 
     ! Local type instances
 
@@ -111,7 +111,7 @@ CONTAINS
        WRITE (6,FMT=8040) results%te_exc
 8040   FORMAT (/,10x,'charge density-ex.-corr.energy density integral=', t40,f20.10)
        !
-       !      ---> Fock exchange contribution 
+       !      ---> Fock exchange contribution
        !
        IF (xcpot%is_hybrid()) THEN
           !IF (xcpot%is_name("exx")) THEN
@@ -180,7 +180,7 @@ CONTAINS
           results%tote = results%tote - results%e_ldau             ! gu test
        ENDIF
        ! print 'HF' before total energy to make it grepable
-       IF ( .NOT. hybinp%l_calhf ) THEN
+       IF ( .NOT. hybdat%l_calhf ) THEN
           WRITE ( 6,FMT=8060) results%tote
        ELSE
           WRITE ( 6,FMT=8061) results%tote
@@ -190,7 +190,7 @@ CONTAINS
        !          extrapolated for T->0
        !
        ! print 'HF' before all energies to make them grepable
-       IF ( .NOT. hybinp%l_calhf ) THEN
+       IF ( .NOT. hybdat%l_calhf ) THEN
           WRITE ( 6,FMT=8065) results%ts
           WRITE ( 6,FMT=8070) results%tote-results%ts
           WRITE ( 6,FMT=8080) results%tote-0.5e0*results%ts
@@ -203,7 +203,7 @@ CONTAINS
        WRITE(attributes(1),'(f20.10)') results%tote
        WRITE(attributes(2),'(a)') 'Htr'
        WRITE(attributes(3),'(a)') 'HF'
-       IF (hybinp%l_calhf) THEN
+       IF (hybdat%l_calhf) THEN
           CALL openXMLElementForm('totalEnergy',(/'value  ','units  ','comment'/),attributes,reshape((/40,20/),(/1,2/)))
        ELSE
           CALL openXMLElementForm('totalEnergy',(/'value','units'/),attributes(1:2),reshape((/40,20/),(/1,2/)))

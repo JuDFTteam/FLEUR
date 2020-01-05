@@ -136,7 +136,7 @@ CONTAINS
       END IF
       call timestop("read in olap")
 
-      IF (hybinp%l_calhf) THEN
+      IF (hybdat%l_calhf) THEN
          ncstd = sum([((hybdat%nindxc(l, itype)*(2*l + 1)*atoms%neq(itype), l=0, hybdat%lmaxc(itype)), itype=1, atoms%ntype)])
          IF (nk == 1 .and. mpi%irank == 0) WRITE (*, *) 'calculate new HF matrix'
          IF (nk == 1 .and. jsp == 1 .and. input%imix > 10) CALL system('rm -f broyd*')
@@ -215,7 +215,7 @@ CONTAINS
          call timestop("symmetrizeh")
 
          CALL write_v_x(v_x, kpts%nkpt*(jsp - 1) + nk)
-      END IF ! hybinp%l_calhf
+      END IF ! hybdat%l_calhf
 
       CALL timestop("total time hsfock")
 

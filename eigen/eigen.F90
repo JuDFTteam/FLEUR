@@ -159,10 +159,10 @@ CONTAINS
             END IF ! hybinp%l_hybrid.OR.input%l_rdmft
 
             IF(hybinp%l_hybrid) THEN
-               IF (hybinp%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybinp,hybdat,&
+               IF (hybdat%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybinp,hybdat,&
                                                       input,kpts,jsp,results,xcpot,noco,hmat)
 
-               IF(hybinp%l_subvxc) THEN
+               IF(hybdat%l_subvxc) THEN
                   CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,&
                               mpdata,hybinp,hybdat,enpara%el0,enpara%ello0,sym,&
                               cell,sphhar,stars,xcpot,mpi,oneD,hmat,vx)
@@ -281,11 +281,11 @@ CONTAINS
          END DO
       END IF
 
-      !IF (hybinp%l_hybrid.OR.hybinp%l_calhf) CALL close_eig(eig_id)
+      !IF (hybinp%l_hybrid.OR.hybdat%l_calhf) CALL close_eig(eig_id)
 
       IF( input%jspins .EQ. 1 .AND. hybinp%l_hybrid ) THEN
          results%te_hfex%valence = 2*results%te_hfex%valence
-         IF(hybinp%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
+         IF(hybdat%l_calhf) results%te_hfex%core = 2*results%te_hfex%core
       END IF
       enpara%epara_min = MINVAL(enpara%el0)
       enpara%epara_min = MIN(MINVAL(enpara%ello0),enpara%epara_min)
