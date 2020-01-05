@@ -528,18 +528,18 @@ CONTAINS
 
    END SUBROUTINE desymmetrize
 
-   ! bra_trafo1 rotates cprod at ikpt0(<=> not irreducible k-point) to cprod at ikpt (bkp(ikpt0)), which is the
+   ! bra_trafo1 rotates cprod at kpts%bkp(ikpt)(<=> not irreducible k-point) to cprod at ikpt (bkp(kpts%bkp(ikpt))), which is the
    ! symmetrie equivalent one
-   ! isym maps ikpt0 on ikpt
+   ! isym maps kpts%bkp(ikpt) on ikpt
 
    SUBROUTINE bra_trafo( &
       l_real, vecout_r, vecin_r, vecout_c, vecin_c, &
-      dim, nobd, nbands, ikpt0, ikpt, iop, sym, &
+      dim, nobd, nbands, ikpt, iop, sym, &
       mpdata, hybinp, hybdat, kpts, atoms, &
       phase)
 
-      !  ikpt0  ::  parent of ikpt
-      !  iop maps ikpt0 on ikpt
+      !  kpts%bkp(ikpt)  ::  parent of ikpt
+      !  iop maps kpts%bkp(ikpt) on ikpt
 
       USE m_constants
       USE m_dwigner
@@ -554,7 +554,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
 !     - scalars -
-      INTEGER, INTENT(IN)      ::  ikpt0, ikpt, iop, dim, nobd, nbands
+      INTEGER, INTENT(IN)      ::  ikpt, iop, dim, nobd, nbands
 
 !     - arrays -
 
@@ -628,7 +628,7 @@ CONTAINS
 
       END IF
 
-      rkpt = matmul(rrot, kpts%bkf(:, ikpt0))
+      rkpt = matmul(rrot, kpts%bkf(:, kpts%bkp(ikpt)))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g = nint(rkpthlp - rkpt)
@@ -643,9 +643,9 @@ CONTAINS
          END IF
       END DO
       IF (nrkpt /= ikpt) THEN
-         PRINT *, ikpt0, ikpt
+         PRINT *, kpts%bkp(ikpt), ikpt
          PRINT *, kpts%bkf(:, ikpt)
-         PRINT *, kpts%bkf(:, ikpt0)
+         PRINT *, kpts%bkf(:, kpts%bkp(ikpt))
          PRINT *, rkpt
 
          call judft_error('bra_trafo: rotation failed')
@@ -703,8 +703,8 @@ CONTAINS
       END DO
 
       ! PW
-      DO igptm = 1, mpdata%n_g(ikpt0)
-         igptp = mpdata%gptm_ptr(igptm, ikpt0)
+      DO igptm = 1, mpdata%n_g(kpts%bkp(ikpt))
+         igptp = mpdata%gptm_ptr(igptm, kpts%bkp(ikpt))
          g1 = matmul(rrot, mpdata%g(:, igptp)) + g
          igptm2 = 0
          DO i = 1, mpdata%n_g(ikpt)
@@ -714,8 +714,8 @@ CONTAINS
             END IF
          END DO
          IF (igptm2 == 0) THEN
-            WRITE (*, *) ikpt0, ikpt, g1
-            WRITE (*, *) mpdata%n_g(ikpt0), mpdata%n_g(ikpt)
+            WRITE (*, *) kpts%bkp(ikpt), ikpt, g1
+            WRITE (*, *) mpdata%n_g(kpts%bkp(ikpt)), mpdata%n_g(ikpt)
             WRITE (*, *)
             WRITE (*, *) igptp, mpdata%g(:, igptp)
             WRITE (*, *) g
