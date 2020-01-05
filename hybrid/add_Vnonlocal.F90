@@ -119,13 +119,13 @@ CONTAINS
 
       CALL v_x%multiply(z, tmp)
 
-      DO iband = 1, hybinp%nbands(nk)
+      DO iband = 1, hybdat%nbands(nk)
          IF (z%l_real) THEN
             exch(iband, iband) = dot_product(z%data_r(:z%matsize1, iband), tmp%data_r(:, iband))
          ELSE
             exch(iband, iband) = dot_product(z%data_c(:z%matsize1, iband), tmp%data_c(:, iband))
          END IF
-         IF (iband <= hybinp%nobd(nk,jsp)) THEN
+         IF (iband <= hybdat%nobd(nk,jsp)) THEN
             results%te_hfex%valence = results%te_hfex%valence - a_ex*results%w_iks(iband, nk, jsp)*exch(iband, iband)
          END IF
          IF (hybinp%l_calhf) THEN

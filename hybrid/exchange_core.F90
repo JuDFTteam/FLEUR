@@ -66,7 +66,7 @@ CONTAINS
       REAL, ALLOCATABLE        ::  integral(:, :)
 
       COMPLEX                 ::  cmt(input%neig, hybinp%maxlmindx, atoms%nat)
-      COMPLEX                 ::  exchange(hybinp%nbands(nk), hybinp%nbands(nk))
+      COMPLEX                 ::  exchange(hybdat%nbands(nk), hybdat%nbands(nk))
       COMPLEX, ALLOCATABLE     ::  carr(:, :), carr2(:, :), carr3(:, :)
 
 
@@ -115,7 +115,7 @@ CONTAINS
 
                      ! Evaluate radial integrals (special part of Coulomb matrix : contribution from single MT)
 
-                     allocate(integral(n, n), carr(n, hybinp%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
+                     allocate(integral(n, n), carr(n, hybdat%nbands(nk)), carr2(n, lapw%nv(jsp)), carr3(n, lapw%nv(jsp)))
 
                      DO i = 1, n
                         CALL primitivef(primf1, fprod(:atoms%jri(itype), i)*atoms%rmsh(:atoms%jri(itype), itype)**(l + 1), atoms%rmsh, atoms%dx, atoms%jri, atoms%jmtd, itype, atoms%ntype)
@@ -136,7 +136,7 @@ CONTAINS
                            m2 = m1 + M
 
                            carr = 0
-                           DO n1 = 1, hybinp%nbands(nk)
+                           DO n1 = 1, hybdat%nbands(nk)
 
                               DO i = 1, n
                                  ll = larr(i)
@@ -173,7 +173,7 @@ CONTAINS
          END IF
       ENDIF
 
-      DO n1 = 1, hybinp%nobd(nk,jsp)
+      DO n1 = 1, hybdat%nobd(nk,jsp)
          results%te_hfex%core = real(results%te_hfex%Core - a_ex*results%w_iks(n1, nk, jsp)*exchange(n1, n1))
       END DO
 

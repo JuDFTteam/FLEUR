@@ -20,6 +20,9 @@ MODULE m_types_hybdat
       INTEGER, ALLOCATABLE   :: pntgptd(:)
       INTEGER, ALLOCATABLE   :: pntgpt(:,:,:,:)
       INTEGER, ALLOCATABLE   :: nindxp1(:,:)
+      INTEGER, ALLOCATABLE   ::  ne_eig(:)
+      INTEGER, ALLOCATABLE   ::  nbands(:)
+      INTEGER, ALLOCATABLE   ::  nobd(:, :)
       COMPLEX, ALLOCATABLE   :: stepfunc(:,:,:)
    contains
       procedure  :: set_stepfunction => set_stepfunction

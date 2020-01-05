@@ -368,12 +368,12 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
    WRITE(*,*) 'RDMFT: HF initializations start'
 
-   IF(ALLOCATED(hybinp%ne_eig)) DEALLOCATE(hybinp%ne_eig)
-   IF(ALLOCATED(hybinp%nbands)) DEALLOCATE(hybinp%nbands)
-   IF(ALLOCATED(hybinp%nobd)) DEALLOCATE(hybinp%nobd)
+   IF(ALLOCATED(hybdat%ne_eig)) DEALLOCATE(hybdat%ne_eig)
+   IF(ALLOCATED(hybdat%nbands)) DEALLOCATE(hybdat%nbands)
+   IF(ALLOCATED(hybdat%nobd)) DEALLOCATE(hybdat%nobd)
    IF(ALLOCATED(hybinp%nbasm)) DEALLOCATE(hybinp%nbasm)
    IF(ALLOCATED(hybdat%div_vv)) DEALLOCATE(hybdat%div_vv)
-   ALLOCATE(hybinp%ne_eig(kpts%nkpt),hybinp%nbands(kpts%nkpt),hybinp%nobd(kpts%nkptf,input%jspins))
+   ALLOCATE(hybdat%ne_eig(kpts%nkpt),hybdat%nbands(kpts%nkpt),hybdat%nobd(kpts%nkptf,input%jspins))
    ALLOCATE(hybinp%nbasm(kpts%nkptf))
    ALLOCATE(hybdat%div_vv(input%neig,kpts%nkpt,input%jspins))
 
@@ -516,7 +516,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
          results%neig(:,:) = highestState(:,:) + 1
 
-         mnobd = MAXVAL(hybinp%nobd(:,jsp))
+         mnobd = MAXVAL(hybdat%nobd(:,jsp))
 
          DO ikpt = 1,kpts%nkpt
 
@@ -556,18 +556,18 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
             CALL zMat%init(olap%l_real,nbasfcn,input%neig)
 
-            CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybinp%nbands(ikpt))],neig=nbands,zmat=zMat)
+            CALL read_eig(eig_id,ikpt,jspin,list=[(i,i=1,hybdat%nbands(ikpt))],neig=nbands,zmat=zMat)
 
 !            CALL read_z(zMat,kpts%nkpt*(jspin-1)+ikpt)
-            zMat%matsize2 = hybinp%nbands(ikpt) ! reduce "visible matsize" for the following computations
+            zMat%matsize2 = hybdat%nbands(ikpt) ! reduce "visible matsize" for the following computations
 
             CALL olap%multiply(zMat,trafo)
 
-            CALL invtrafo%alloc(olap%l_real,hybinp%nbands(ikpt),nbasfcn)
+            CALL invtrafo%alloc(olap%l_real,hybdat%nbands(ikpt),nbasfcn)
             CALL trafo%TRANSPOSE(invtrafo)
             IF(.NOT.invtrafo%l_real) invtrafo%data_c = CONJG(invtrafo%data_c)
 
-            DO i = 1, hybinp%nbands(ikpt)
+            DO i = 1, hybdat%nbands(ikpt)
                DO j = 1, i-1
                   IF (exMat%l_real) THEN
                      exMat%data_r(i,j)=exMat%data_r(j,i)

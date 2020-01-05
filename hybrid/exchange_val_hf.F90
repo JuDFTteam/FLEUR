@@ -124,10 +124,10 @@ CONTAINS
 
       ! local arrays
       COMPLEX              :: exchcorrect(kpts%nkptf)
-      COMPLEX              :: dcprod(hybinp%nbands(nk), hybinp%nbands(nk), 3)
-      COMPLEX              :: exch_vv(hybinp%nbands(nk), hybinp%nbands(nk))
+      COMPLEX              :: dcprod(hybdat%nbands(nk), hybdat%nbands(nk), 3)
+      COMPLEX              :: exch_vv(hybdat%nbands(nk), hybdat%nbands(nk))
       COMPLEX              :: hessian(3, 3)
-      COMPLEX              :: proj_ibsc(3, mnobd, hybinp%nbands(nk))
+      COMPLEX              :: proj_ibsc(3, mnobd, hybdat%nbands(nk))
       COMPLEX              :: olap_ibsc(3, 3, mnobd, mnobd)
       REAL                 :: carr1_v_r(hybinp%maxbasm1)
       COMPLEX              :: carr1_v_c(hybinp%maxbasm1)
@@ -161,7 +161,7 @@ CONTAINS
       ! the contribution of the Gamma-point is treated separately (see below)
 
       ! determine package size loop over the occupied bands
-      rdum = hybinp%maxbasm1*hybinp%nbands(nk)*4/1048576.
+      rdum = hybinp%maxbasm1*hybdat%nbands(nk)*4/1048576.
       psize = 1
       DO iband = mnobd, 1, -1
          ! ensure that the packages have equal size
@@ -178,23 +178,23 @@ CONTAINS
          WRITE (6, '(A,A,i3,A,f7.2,A)') ' Divide the loop over the occupied hybinp%bands in packages', &
             ' of the size', psize, ' (cprod=', rdum*psize, 'MB)'
       END IF
-      allocate(phase_vv(psize, hybinp%nbands(nk)), stat=ok)
+      allocate(phase_vv(psize, hybdat%nbands(nk)), stat=ok)
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
       phase_vv = 0
       IF (ok /= 0) call judft_error('exchange_val_hf: error allocation phase')
 
       if (mat_ex%l_real) THEN
          allocate(cprod_vv_c(hybinp%maxbasm1, 0, 0), carr3_vv_c(hybinp%maxbasm1, 0, 0))
-         allocate(cprod_vv_r(hybinp%maxbasm1, psize, hybinp%nbands(nk)), stat=ok)
+         allocate(cprod_vv_r(hybinp%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
-         allocate(carr3_vv_r(hybinp%maxbasm1, psize, hybinp%nbands(nk)), stat=ok)
+         allocate(carr3_vv_r(hybinp%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_r = 0; carr3_vv_r = 0
       ELSE
          allocate(cprod_vv_r(hybinp%maxbasm1, 0, 0), carr3_vv_r(hybinp%maxbasm1, 0, 0))
-         allocate(cprod_vv_c(hybinp%maxbasm1, psize, hybinp%nbands(nk)), stat=ok)
+         allocate(cprod_vv_c(hybinp%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation cprod')
-         allocate(carr3_vv_c(hybinp%maxbasm1, psize, hybinp%nbands(nk)), stat=ok)
+         allocate(carr3_vv_c(hybinp%maxbasm1, psize, hybdat%nbands(nk)), stat=ok)
          IF (ok /= 0) call judft_error('exchange_val_hf: error allocation carr3')
          cprod_vv_c = 0; carr3_vv_c = 0
       END IF
@@ -226,11 +226,11 @@ CONTAINS
          DO ibando = 1, mnobd, psize
 
             IF (mat_ex%l_real) THEN
-               CALL wavefproducts_inv5(1, hybinp%nbands(nk), ibando, ibando + psize - 1, input, jsp, atoms, &
+               CALL wavefproducts_inv5(1, hybdat%nbands(nk), ibando, ibando + psize - 1, input, jsp, atoms, &
                                        lapw, kpts, nk, ikpt0, hybdat, mpdata, hybinp, cell, hybinp%nbasp, sym, &
                                        noco, nkqpt, cprod_vv_r)
             ELSE
-               CALL wavefproducts_noinv5(1, hybinp%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, input, jsp, &!jsp,&
+               CALL wavefproducts_noinv5(1, hybdat%nbands(nk), ibando, ibando + psize - 1, nk, ikpt0, input, jsp, &!jsp,&
                                          cell, atoms, mpdata, hybinp, hybdat, kpts, lapw, sym, hybinp%nbasp, noco, nkqpt, cprod_vv_c)
             END IF
 
@@ -240,14 +240,14 @@ CONTAINS
             ! are Fourier transformed, so that the exchange can be calculated
             ! in Fourier space
             IF (xcpot%is_name("hse") .OR. xcpot%is_name("vhse")) THEN
-               iband1 = hybinp%nobd(nkqpt,jsp)
+               iband1 = hybdat%nobd(nkqpt,jsp)
 
                exch_vv = exch_vv + &
                          dynamic_hse_adjustment(atoms%rmsh, atoms%rmt, atoms%dx, atoms%jri, atoms%jmtd, kpts%bkf(:, ikpt0), ikpt0, &
                                                 kpts%nkptf, cell%bmat, cell%omtil, atoms%ntype, atoms%neq, atoms%nat, atoms%taual, &
                                                 hybinp%lcutm1, maxval(hybinp%lcutm1), mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), mpdata%g, &
                                                 mpdata%n_g(ikpt0), mpdata%gptm_ptr(:, ikpt0), mpdata%num_gpts(), mpdata%radbasfn_mt, &
-                                                hybinp%nbasm(ikpt0), iband1, hybinp%nbands(nk), nsest, ibando, psize, indx_sest, &
+                                                hybinp%nbasm(ikpt0), iband1, hybdat%nbands(nk), nsest, ibando, psize, indx_sest, &
                                                 sym%invsat, sym%invsatnr, mpi%irank, cprod_vv_r(:hybinp%nbasm(ikpt0), :, :), &
                                                 cprod_vv_c(:hybinp%nbasm(ikpt0), :, :), mat_ex%l_real, wl_iks(:iband1, nkqpt), n_q(ikpt))
             END IF
@@ -258,7 +258,7 @@ CONTAINS
             IF (kpts%bkp(ikpt0) /= ikpt0) THEN
                CALL bra_trafo2(mat_ex%l_real, carr3_vv_r(:hybinp%nbasm(ikpt0), :, :), cprod_vv_r(:hybinp%nbasm(ikpt0), :, :), &
                                carr3_vv_c(:hybinp%nbasm(ikpt0), :, :), cprod_vv_c(:hybinp%nbasm(ikpt0), :, :), &
-                               hybinp%nbasm(ikpt0), psize, hybinp%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
+                               hybinp%nbasm(ikpt0), psize, hybdat%nbands(nk), kpts%bkp(ikpt0), ikpt0, kpts%bksym(ikpt0), sym, &
                                mpdata, hybinp, kpts, atoms, phase_vv)
                IF (mat_ex%l_real) THEN
                   cprod_vv_r(:hybinp%nbasm(ikpt0), :, :) = carr3_vv_r(:hybinp%nbasm(ikpt0), :, :)
@@ -272,9 +272,9 @@ CONTAINS
             ! calculate exchange matrix at ikpt0
 
             call timestart("exchange matrix")
-            DO n1 = 1, hybinp%nbands(nk)
+            DO n1 = 1, hybdat%nbands(nk)
                DO iband = 1, psize
-                  IF ((ibando + iband - 1) > hybinp%nobd(nkqpt,jsp)) CYCLE
+                  IF ((ibando + iband - 1) > hybdat%nobd(nkqpt,jsp)) CYCLE
 
                   cdum = wl_iks(ibando + iband - 1, nkqpt)*conjg(phase_vv(iband, n1))/n_q(ikpt)
                   call timestart("sparse matrix products")
@@ -311,7 +311,7 @@ CONTAINS
       END DO  !ikpt
 
 !   WRITE(7001,'(a,i7)') 'nk: ', nk
-!   DO n1=1,hybinp%nbands(nk)
+!   DO n1=1,hybdat%nbands(nk)
 !      DO n2=1,n1
 !         WRITE(7001,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
 !     END DO
@@ -329,11 +329,11 @@ CONTAINS
          END IF
 
          IF (zero_order) THEN
-            CALL dwavefproducts(dcprod, nk, 1, hybinp%nbands(nk), 1, hybinp%nbands(nk), .false., input,atoms, mpdata,hybinp, &
+            CALL dwavefproducts(dcprod, nk, 1, hybdat%nbands(nk), 1, hybdat%nbands(nk), .false., input,atoms, mpdata,hybinp, &
                                 cell, hybdat, kpts, kpts%nkpt, lapw, jsp, eig_irr)
 
             ! make dcprod hermitian
-            DO n1 = 1, hybinp%nbands(nk)
+            DO n1 = 1, hybdat%nbands(nk)
                DO n2 = 1, n1
                   dcprod(n1, n2, :) = (dcprod(n1, n2, :) - conjg(dcprod(n2, n1, :)))/2
                   dcprod(n2, n1, :) = -conjg(dcprod(n1, n2, :))
@@ -348,7 +348,7 @@ CONTAINS
 
          !This should be done with w_iks I guess!TODO
          occup = .false.
-         DO i = 1, hybinp%ne_eig(nk)
+         DO i = 1, hybdat%ne_eig(nk)
             IF (results%ef >= eig_irr(i, nk)) THEN
                occup(i) = .true.
             ELSE IF ((eig_irr(i, nk) - results%ef) <= 1E-06) THEN
@@ -356,7 +356,7 @@ CONTAINS
             END IF
          END DO
 
-         DO n1 = 1, hybinp%nbands(nk)
+         DO n1 = 1, hybdat%nbands(nk)
             DO n2 = 1, nsest(n1)!n1
                nn2 = indx_sest(n2, n1)
                exchcorrect = 0
@@ -374,7 +374,7 @@ CONTAINS
                   IF (occup(n1) .and. occup(nn2)) THEN
                      DO i = 1, 3
                         j = i
-                        DO iband = 1, hybinp%nbands(nk)
+                        DO iband = 1, hybdat%nbands(nk)
                            IF (occup(iband)) THEN
                               hessian(i, j) = hessian(i, j) + conjg(dcprod(iband, n1, i))*dcprod(iband, nn2, j)
                            END IF
@@ -384,7 +384,7 @@ CONTAINS
                         ! ibs correction
                         IF (ibs_corr) THEN
                            hessian(i, j) = hessian(i, j) - olap_ibsc(i, j, n1, nn2)/cell%omtil
-                           DO iband = 1, hybinp%nbands(nk)
+                           DO iband = 1, hybdat%nbands(nk)
                               hessian(i, j) = hessian(i, j) + conjg(proj_ibsc(i, nn2, iband))*proj_ibsc(j, n1, iband)/cell%omtil
                            END DO
                         END IF
@@ -392,7 +392,7 @@ CONTAINS
                   ELSE
                      DO i = 1, 3
                         j = i
-                        DO iband = 1, hybinp%nbands(nk)
+                        DO iband = 1, hybdat%nbands(nk)
                            IF (occup(iband)) THEN
                               hessian(i, j) = hessian(i, j) + conjg(dcprod(iband, n1, i))*dcprod(iband, nn2, j)
                            END IF
@@ -430,14 +430,14 @@ CONTAINS
       END IF
 
 !   WRITE(7000,'(a,i7)') 'nk: ', nk
-!   DO n1=1,hybinp%nbands(nk)
+!   DO n1=1,hybdat%nbands(nk)
 !      DO n2=1,n1
 !         WRITE(7000,'(2i7,2f15.8)') n2, n1, exch_vv(n2,n1)
 !      END DO
 !   END DO
 
       ! write exch_vv in mat_ex
-      CALL mat_ex%alloc(matsize1=hybinp%nbands(nk))
+      CALL mat_ex%alloc(matsize1=hybdat%nbands(nk))
       IF (mat_ex%l_real) THEN
          mat_ex%data_r = exch_vv
       ELSE

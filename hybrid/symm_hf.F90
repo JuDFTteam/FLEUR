@@ -103,7 +103,7 @@ CONTAINS
       INTEGER, INTENT(IN)              :: rrot(:,:,:)
       INTEGER, INTENT(IN)              :: psym(:)
       INTEGER, INTENT(OUT)             :: parent(kpts%nkptf)
-      INTEGER, INTENT(OUT)             :: nsest(hybinp%nbands(nk)), indx_sest(hybinp%nbands(nk), hybinp%nbands(nk))
+      INTEGER, INTENT(OUT)             :: nsest(hybdat%nbands(nk)), indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
       INTEGER, ALLOCATABLE, INTENT(OUT) :: pointer_EIBZ(:)
       INTEGER, ALLOCATABLE, INTENT(OUT) :: n_q(:)
 
@@ -129,7 +129,7 @@ CONTAINS
 !     - local arrays -
       INTEGER                         :: neqvkpt(kpts%nkptf)
       INTEGER                         :: list(kpts%nkptf)
-      INTEGER                         :: degenerat(hybinp%ne_eig(nk))
+      INTEGER                         :: degenerat(hybdat%ne_eig(nk))
 
       REAL                            :: rotkpt(3), g(3)
       REAL, ALLOCATABLE             :: olapmt(:, :, :, :)
@@ -246,15 +246,15 @@ CONTAINS
 
       WRITE (6, '(A,f10.8)') ' Tolerance for determining degenerate states=', tolerance
 
-      DO i = 1, hybinp%nbands(nk)
-         DO j = i + 1, hybinp%nbands(nk)
+      DO i = 1, hybdat%nbands(nk)
+         DO j = i + 1, hybdat%nbands(nk)
             IF (abs(eig_irr(i, nk) - eig_irr(j, nk)) <= tolerance) THEN
                degenerat(i) = degenerat(i) + 1
             END IF
          END DO
       END DO
 
-      DO i = 1, hybinp%ne_eig(nk)
+      DO i = 1, hybdat%ne_eig(nk)
          IF (degenerat(i) /= 1 .or. degenerat(i) /= 0) THEN
             degenerat(i + 1:i + degenerat(i) - 1) = 0
          END IF
@@ -267,8 +267,8 @@ CONTAINS
       nddb = count(degenerat >= 1)
 
       WRITE (6, *) ' Degenerate states:'
-      DO iband = 1, hybinp%nbands(nk)/5 + 1
-         WRITE (6, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybinp%nbands(nk)))
+      DO iband = 1, hybdat%nbands(nk)/5 + 1
+         WRITE (6, '(5i5)') degenerat(iband*5 - 4:min(iband*5, hybdat%nbands(nk)))
       END DO
 
       IF (irreps) THEN
@@ -298,7 +298,7 @@ CONTAINS
             iop = psym(isym)
 
             ic = 0
-            DO i = 1, hybinp%nbands(nk)
+            DO i = 1, hybdat%nbands(nk)
                ndb = degenerat(i)
                IF (ndb >= 1) THEN
                   ic = ic + 1
@@ -332,7 +332,7 @@ CONTAINS
 
          ic = 0
          trace = 0
-         DO iband = 1, hybinp%nbands(nk)
+         DO iband = 1, hybdat%nbands(nk)
             ndb = degenerat(iband)
             IF (ndb >= 1) THEN
                ic = ic + 1
@@ -353,12 +353,12 @@ CONTAINS
 
          ic1 = 0
          symequivalent = .false.
-         DO iband1 = 1, hybinp%nbands(nk)
+         DO iband1 = 1, hybdat%nbands(nk)
             ndb1 = degenerat(iband1)
             IF (ndb1 >= 1) THEN
                ic1 = ic1 + 1
                ic2 = 0
-               DO iband2 = 1, hybinp%nbands(nk)
+               DO iband2 = 1, hybdat%nbands(nk)
                   ndb2 = degenerat(iband2)
                   IF (ndb2 >= 1) THEN
                      ic2 = ic2 + 1
@@ -403,7 +403,7 @@ CONTAINS
             END DO
          END DO
 
-         allocate(wavefolap(hybinp%nbands(nk), hybinp%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
+         allocate(wavefolap(hybdat%nbands(nk), hybdat%nbands(nk)), carr(maxval(mpdata%num_radfun_per_l)), stat=ok)
          IF (ok /= 0) call judft_error('symm: failure allocation wfolap/maxindx')
          wavefolap = 0
 
@@ -415,7 +415,7 @@ CONTAINS
                DO l = 0, atoms%lmax(itype)
                   DO M = -l, l
                      nn = mpdata%num_radfun_per_l(l, itype)
-                     DO iband1 = 1, hybinp%nbands(nk)
+                     DO iband1 = 1, hybdat%nbands(nk)
                         carr(:nn) = matmul(olapmt(:nn, :nn, l, itype),&
                                             cmt(iband1, lm + 1:lm + nn, iatom))
                         DO iband2 = 1, iband1
@@ -430,7 +430,7 @@ CONTAINS
             END DO
          END DO
 
-         DO iband1 = 1, hybinp%nbands(nk)
+         DO iband1 = 1, hybdat%nbands(nk)
             DO iband2 = 1, iband1
                wavefolap(iband1, iband2) = conjg(wavefolap(iband2, iband1))
             END DO
@@ -440,12 +440,12 @@ CONTAINS
          IF (ok /= 0) call judft_error('symm: failure allocation symequivalent')
          symequivalent = .false.
          ic1 = 0
-         DO iband1 = 1, hybinp%nbands(nk)
+         DO iband1 = 1, hybdat%nbands(nk)
             ndb1 = degenerat(iband1)
             IF (ndb1 == 0) CYCLE
             ic1 = ic1 + 1
             ic2 = 0
-            DO iband2 = 1, hybinp%nbands(nk)
+            DO iband2 = 1, hybdat%nbands(nk)
                ndb2 = degenerat(iband2)
                IF (ndb2 == 0) CYCLE
                ic2 = ic2 + 1
@@ -466,7 +466,7 @@ CONTAINS
       ic1 = 0
       indx_sest = 0
       nsest = 0
-      DO iband1 = 1, hybinp%nbands(nk)
+      DO iband1 = 1, hybdat%nbands(nk)
          ndb1 = degenerat(iband1)
          IF (ndb1 >= 1) ic1 = ic1 + 1
          i = 0
@@ -475,7 +475,7 @@ CONTAINS
          END DO
          ndb1 = degenerat(iband1 - i)
          ic2 = 0
-         DO iband2 = 1, hybinp%nbands(nk)
+         DO iband2 = 1, hybdat%nbands(nk)
             ndb2 = degenerat(iband2)
             IF (ndb2 >= 1) ic2 = ic2 + 1
             i = 0

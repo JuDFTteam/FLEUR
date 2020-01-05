@@ -93,7 +93,7 @@ CONTAINS
       REAL                    ::  a_ex
 
       ! local arrays
-      INTEGER                 ::  nsest(hybinp%nbands(nk)), indx_sest(hybinp%nbands(nk), hybinp%nbands(nk))
+      INTEGER                 ::  nsest(hybdat%nbands(nk)), indx_sest(hybdat%nbands(nk), hybdat%nbands(nk))
       INTEGER                 ::  rrot(3, 3, sym%nsym)
       INTEGER                 ::  psym(sym%nsym) ! Note: psym is only filled up to index nsymop
 
@@ -183,19 +183,19 @@ CONTAINS
 
          CALL timestart("time for performing T^-1*mat_ex*T^-1*")
          !calculate trafo from wavefunctions to APW basis
-         IF (input%neig < hybinp%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
+         IF (input%neig < hybdat%nbands(nk)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
 
          call z%init(olap%l_real, nbasfcn, input%neig)
          call read_z(z, kpts%nkptf*(jsp - 1) + nk)
-         z%matsize2 = hybinp%nbands(nk) ! reduce "visible matsize" for the following computations
+         z%matsize2 = hybdat%nbands(nk) ! reduce "visible matsize" for the following computations
 
          call olap%multiply(z, trafo)
 
-         CALL invtrafo%alloc(olap%l_real, hybinp%nbands(nk), nbasfcn)
+         CALL invtrafo%alloc(olap%l_real, hybdat%nbands(nk), nbasfcn)
          CALL trafo%TRANSPOSE(invtrafo)
          IF (.NOT. invtrafo%l_real) invtrafo%data_c = CONJG(invtrafo%data_c)
 
-         DO i = 1, hybinp%nbands(nk)
+         DO i = 1, hybdat%nbands(nk)
             DO j = 1, i - 1
                IF (ex%l_real) THEN
                   ex%data_r(i, j) = ex%data_r(j, i)

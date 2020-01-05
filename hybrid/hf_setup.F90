@@ -101,7 +101,7 @@ CONTAINS
             END IF
 
             eig_irr(:, nk) = results%eig(:, nk, jsp)
-            hybinp%ne_eig(nk) = results%neig(nk, jsp)
+            hybdat%ne_eig(nk) = results%neig(nk, jsp)
          END DO
 
          IF(l_exist) CLOSE(993)
@@ -123,57 +123,57 @@ CONTAINS
             WRITE (6, '(A)') "   k-point      |   number of occupied bands  |   maximal number of bands"
          END IF
          degenerat = 1
-         hybinp%nobd(:,jsp) = 0
+         hybdat%nobd(:,jsp) = 0
          DO nk = 1, kpts%nkpt
-            DO i = 1, hybinp%ne_eig(nk)
-               DO j = i + 1, hybinp%ne_eig(nk)
+            DO i = 1, hybdat%ne_eig(nk)
+               DO j = i + 1, hybdat%ne_eig(nk)
                   IF (ABS(results%eig(i, nk, jsp) - results%eig(j, nk, jsp)) < 1E-07) THEN !0.015
                      degenerat(i, nk) = degenerat(i, nk) + 1
                   END IF
                END DO
             END DO
 
-            DO i = 1, hybinp%ne_eig(nk)
+            DO i = 1, hybdat%ne_eig(nk)
                IF ((degenerat(i, nk) /= 1) .OR. (degenerat(i, nk) /= 0)) degenerat(i + 1:i + degenerat(i, nk) - 1, nk) = 0
             END DO
 
             ! set the size of the exchange matrix in the space of the wavefunctions
 
-            hybinp%nbands(nk) = hybinp%bands1
-            IF (hybinp%nbands(nk) > hybinp%ne_eig(nk)) THEN
+            hybdat%nbands(nk) = hybinp%bands1
+            IF (hybdat%nbands(nk) > hybdat%ne_eig(nk)) THEN
                IF (mpi%irank == 0) THEN
-                  WRITE (*, *) ' maximum for hybinp%nbands is', hybinp%ne_eig(nk)
+                  WRITE (*, *) ' maximum for hybdat%nbands is', hybdat%ne_eig(nk)
                   WRITE (*, *) ' increase energy window to obtain enough eigenvalues'
-                  WRITE (*, *) ' set hybinp%nbands equal to hybinp%ne_eig'
+                  WRITE (*, *) ' set hybdat%nbands equal to hybdat%ne_eig'
                END IF
-               hybinp%nbands(nk) = hybinp%ne_eig(nk)
+               hybdat%nbands(nk) = hybdat%ne_eig(nk)
             END IF
 
-            DO i = hybinp%nbands(nk) - 1, 1, -1
-               IF ((degenerat(i, nk) >= 1) .AND. (degenerat(i, nk) + i - 1 /= hybinp%nbands(nk))) THEN
-                  hybinp%nbands(nk) = i + degenerat(i, nk) - 1
+            DO i = hybdat%nbands(nk) - 1, 1, -1
+               IF ((degenerat(i, nk) >= 1) .AND. (degenerat(i, nk) + i - 1 /= hybdat%nbands(nk))) THEN
+                  hybdat%nbands(nk) = i + degenerat(i, nk) - 1
                   EXIT
                END IF
             END DO
 
-            DO i = 1, hybinp%ne_eig(nk)
-               IF (results%w_iks(i, nk, jsp) > 0.0) hybinp%nobd(nk,jsp) = hybinp%nobd(nk,jsp) + 1
+            DO i = 1, hybdat%ne_eig(nk)
+               IF (results%w_iks(i, nk, jsp) > 0.0) hybdat%nobd(nk,jsp) = hybdat%nobd(nk,jsp) + 1
             END DO
 
-            IF (hybinp%nobd(nk,jsp) > hybinp%nbands(nk)) THEN
+            IF (hybdat%nobd(nk,jsp) > hybdat%nbands(nk)) THEN
                WRITE (*, *) 'k-point: ', nk
-               WRITE (*, *) 'number of bands:          ', hybinp%nbands(nk)
-               WRITE (*, *) 'number of occupied bands: ', hybinp%nobd(nk,jsp)
+               WRITE (*, *) 'number of bands:          ', hybdat%nbands(nk)
+               WRITE (*, *) 'number of occupied bands: ', hybdat%nobd(nk,jsp)
                CALL judft_warn("More occupied bands than total no of bands!?")
-               hybinp%nbands(nk) = hybinp%nobd(nk,jsp)
+               hybdat%nbands(nk) = hybdat%nobd(nk,jsp)
             END IF
-            PRINT *, "bands:", nk, hybinp%nobd(nk,jsp), hybinp%nbands(nk), hybinp%ne_eig(nk)
+            PRINT *, "bands:", nk, hybdat%nobd(nk,jsp), hybdat%nbands(nk), hybdat%ne_eig(nk)
          END DO
 
-         ! spread hybinp%nobd from IBZ to whole BZ
+         ! spread hybdat%nobd from IBZ to whole BZ
          DO nk = 1, kpts%nkptf
             i = kpts%bkp(nk)
-            hybinp%nobd(nk,jsp) = hybinp%nobd(i,jsp)
+            hybdat%nobd(nk,jsp) = hybdat%nobd(i,jsp)
          END DO
 
          ! generate eigenvectors z and MT coefficients from the previous iteration at all k-points
@@ -267,12 +267,12 @@ CONTAINS
 
          !DO nk = n_start,kpts%nkpt,n_stride
          DO nk = 1, kpts%nkpt, 1
-            hybinp%ne_eig(nk) = results%neig(nk, jsp)
-            hybinp%nobd(nk,jsp) = COUNT(results%w_iks(:hybinp%ne_eig(nk), nk, jsp) > 0.0)
+            hybdat%ne_eig(nk) = results%neig(nk, jsp)
+            hybdat%nobd(nk,jsp) = COUNT(results%w_iks(:hybdat%ne_eig(nk), nk, jsp) > 0.0)
          END DO
 
          hybinp%maxlmindx = MAXVAL([(SUM([(mpdata%num_radfun_per_l(l, itype)*(2*l + 1), l=0, atoms%lmax(itype))]), itype=1, atoms%ntype)])
-         hybinp%nbands = MIN(hybinp%bands1, input%neig)
+         hybdat%nbands = MIN(hybinp%bands1, input%neig)
 
       ENDIF ! hybinp%l_calhf
 

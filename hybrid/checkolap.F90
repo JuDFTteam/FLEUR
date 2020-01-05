@@ -55,7 +55,7 @@
             REAL                    ::  sphbes(0:atoms%lmaxd)
             REAL                    ::  q(3)
             REAL                    ::  integrand(atoms%jmtd)
-            REAL                    ::  rarr(maxval(hybinp%nbands))
+            REAL                    ::  rarr(maxval(hybdat%nbands))
             REAL, ALLOCATABLE   ::  olapcb(:)
             REAL, ALLOCATABLE   :: olapcv_avg(:, :, :, :), olapcv_max(:, :, :, :)
             TYPE(t_mat), ALLOCATABLE :: z(:)
@@ -110,7 +110,7 @@
             END DO
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') ' Overlap <core|basis>'
-            allocate(olapcb(maxval(mpdata%num_radfun_per_l)), olapcv(maxval(hybinp%nbands), nkpti),&
+            allocate(olapcb(maxval(mpdata%num_radfun_per_l)), olapcv(maxval(hybdat%nbands), nkpti),&
                       olapcv_avg(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
                       olapcv_max(-hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype),&
                       olapcv_loc(2, -hybdat%lmaxcd:hybdat%lmaxcd, hybdat%maxindxc, 0:hybdat%lmaxcd, atoms%ntype))
@@ -145,13 +145,13 @@
                         DO j = 1, mpdata%num_radfun_per_l(l, itype)
                            lm = lm + 1
                            olapcv(:, :) = olapcv(:, :) + &
-                                         olapcb(j)*cmt(:maxval(hybinp%nbands), lm, iatom, :nkpti)
+                                         olapcb(j)*cmt(:maxval(hybdat%nbands), lm, iatom, :nkpti)
                         END DO
                         rdum = sum(abs(olapcv(:, :))**2)
                         rdum1 = maxval(abs(olapcv(:, :)))
                         iarr = maxloc(abs(olapcv(:, :)))
                         olapcv_avg(m, i, l, itype) = &
-                                sqrt(rdum/nkpti/sum(hybinp%nbands(:nkpti))*nkpti)
+                                sqrt(rdum/nkpti/sum(hybdat%nbands(:nkpti))*nkpti)
                         olapcv_max(m, i, l, itype) = rdum1
                         olapcv_loc(:, m, i, l, itype) = iarr
                      END DO
@@ -224,9 +224,9 @@
 
             IF (mpi%irank == 0) WRITE (6, '(/A)') &
                       'Mismatch of wave functions at the MT-sphere boundaries'
-            allocate(carr1(maxval(hybinp%nbands), (atoms%lmaxd + 1)**2))
-            allocate(carr2(maxval(hybinp%nbands), (atoms%lmaxd + 1)**2))
-            allocate(carr3(maxval(hybinp%nbands), (atoms%lmaxd + 1)**2))
+            allocate(carr1(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
+            allocate(carr2(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
+            allocate(carr3(maxval(hybdat%nbands), (atoms%lmaxd + 1)**2))
             DO ikpt = 1, nkpti
                call read_z(z(ikpt), kpts%nkptf*(jsp - 1) + ikpt)
             END DO
@@ -263,7 +263,7 @@
                            cdum = 4*pi_const*img**l/sqrt(cell%omtil)*sphbes(l)*cexp
                            DO m = -l, l
                               lm = lm + 1
-                              DO iband = 1, hybinp%nbands(ikpt)
+                              DO iband = 1, hybdat%nbands(ikpt)
                                  if (z(1)%l_real) THEN
                                     carr2(iband, lm) = carr2(iband, lm) + cdum*z(ikpt)%data_r(igpt, iband)*y(lm)
                                  Else
@@ -283,7 +283,7 @@
                            DO n = 1, mpdata%num_radfun_per_l(l, itype)
                               lm1 = lm1 + 1
                               rdum = hybdat%bas1(atoms%jri(itype), n, l, itype)/atoms%rmt(itype)
-                              DO iband = 1, hybinp%nbands(ikpt)
+                              DO iband = 1, hybdat%nbands(ikpt)
                                  carr3(iband, lm) = carr3(iband, lm) + cmt(iband, lm1, iatom, ikpt)*rdum
                               END DO
                            END DO

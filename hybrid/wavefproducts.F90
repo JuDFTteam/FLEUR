@@ -150,7 +150,7 @@ CONTAINS
 
          END DO
 
-         DO iband1 = 1, hybinp%nobd(nkqpt)
+         DO iband1 = 1, hybdat%nobd(nkqpt)
             where (iarr > 0)
             z_help(:) = z_kqpt%data_c(iarr(:), iband1)
             elsewhere
@@ -406,7 +406,7 @@ CONTAINS
 
          END DO
 
-         DO iband1 = 1, hybinp%nobd(nkqpt)
+         DO iband1 = 1, hybdat%nobd(nkqpt)
             where (iarr > 0)
             z_help(:) = z_kqpt%data_r(iarr(:), iband1)
             elsewhere
@@ -569,7 +569,7 @@ CONTAINS
                                     rdum1 = rdum*cmt_nk(iband, lmp1, iatom1)
                                     rdum2 = rdum*cmt_nk(iband, lmp1, iatom2)
                                     ! loop over occupied bands
-                                    DO ibando = 1, mnobd!hybinp%nobd(peibz(ikpt))
+                                    DO ibando = 1, mnobd!hybdat%nobd(peibz(ikpt))
 
                                        rarr(1, ibando, iband) = rarr(1, ibando, iband) + rdum1*cmt(ibando, lmp2, iatom1) + rdum2*cmt(ibando, lmp2, iatom2)
 
@@ -589,7 +589,7 @@ CONTAINS
                                     rdum1 = rdum*cmt_nk(iband, lmp2, iatom1)
                                     rdum2 = rdum*cmt_nk(iband, lmp2, iatom2)
                                     ! loop over occupied bands
-                                    DO ibando = 1, mnobd!hybinp%nobd(peibz(ikpt)
+                                    DO ibando = 1, mnobd!hybdat%nobd(peibz(ikpt)
                                        rarr(1, ibando, iband) = rarr(1, ibando, iband) + rdum1*cmt(ibando, lmp1, iatom1) + rdum2*cmt(ibando, lmp1, iatom2)
 
                                        rarr(2, ibando, iband) = rarr(2, ibando, iband) + rdum1*cmt(ibando, lmp1, iatom2) - rdum2*cmt(ibando, lmp1, iatom1)
