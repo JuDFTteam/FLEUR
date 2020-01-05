@@ -19,7 +19,8 @@ CONTAINS
    !> The matrices generated and diagonalized here are of type m_mat as defined in m_types_mat.
    !>@author D. Wortmann
    SUBROUTINE eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
-                    cell,enpara,banddos,noco,oneD,mpdata,hybinp,iter,eig_id,results,inden,v,vx,hub1)
+                    cell,enpara,banddos,noco,oneD,mpdata,hybinp,hybdat,&
+                    iter,eig_id,results,inden,v,vx,hub1)
 
 #include"cpp_double.h"
       USE m_types
@@ -48,8 +49,9 @@ CONTAINS
       TYPE(t_mpi),INTENT(IN)       :: mpi
 
       TYPE(t_oneD),INTENT(IN)      :: oneD
-      TYPE(t_mpdata), intent(inout) :: mpdata
-      TYPE(t_hybinp), INTENT(IN) :: hybinp
+      TYPE(t_mpdata), intent(inout):: mpdata
+      TYPE(t_hybinp), INTENT(IN)   :: hybinp
+      TYPE(t_hybdat), INTENT(INOUT):: hybdat
       TYPE(t_enpara),INTENT(INOUT) :: enpara
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -157,7 +159,8 @@ CONTAINS
             END IF ! hybinp%l_hybrid.OR.input%l_rdmft
 
             IF(hybinp%l_hybrid) THEN
-               IF (hybinp%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybinp,input,kpts,jsp,results,xcpot,noco,hmat)
+               IF (hybinp%l_addhf) CALL add_Vnonlocal(nk,lapw,atoms,hybinp,hybdat,&
+                                                      input,kpts,jsp,results,xcpot,noco,hmat)
 
                IF(hybinp%l_subvxc) THEN
                   CALL subvxc(lapw,kpts%bk(:,nk),input,jsp,v%mt(:,0,:,:),atoms,ud,mpdata,hybinp,enpara%el0,enpara%ello0,&

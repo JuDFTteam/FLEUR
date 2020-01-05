@@ -42,7 +42,7 @@ MODULE m_add_vnonlocal
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 CONTAINS
 
-   SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybinp, input, kpts, jsp, results, xcpot, noco, hmat)
+   SUBROUTINE add_vnonlocal(nk, lapw, atoms, hybinp, hybdat, input, kpts, jsp, results, xcpot, noco, hmat)
 
       USE m_symm_hf, ONLY: symm_hf
       USE m_intgrf, ONLY: intgrf, intgrf_init
@@ -57,14 +57,15 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_results), INTENT(INOUT) :: results
-      CLASS(t_xcpot), INTENT(IN)    :: xcpot
-      TYPE(t_input), INTENT(IN)    :: input
-      TYPE(t_hybinp), INTENT(IN) :: hybinp
-      TYPE(t_kpts), INTENT(IN)    :: kpts
-      TYPE(t_lapw), INTENT(IN)    :: lapw
-      TYPE(t_atoms), INTENT(IN)    :: atoms
-      TYPE(t_noco), INTENT(IN)    :: noco
-      TYPE(t_mat), INTENT(INOUT) :: hmat
+      CLASS(t_xcpot), INTENT(IN)     :: xcpot
+      TYPE(t_input), INTENT(IN)      :: input
+      TYPE(t_hybdat), INTENT(INOUT)  :: hybdat
+      TYPE(t_hybinp), INTENT(IN)     :: hybinp
+      TYPE(t_kpts), INTENT(IN)       :: kpts
+      TYPE(t_lapw), INTENT(IN)       :: lapw
+      TYPE(t_atoms), INTENT(IN)      :: atoms
+      TYPE(t_noco), INTENT(IN)       :: noco
+      TYPE(t_mat), INTENT(INOUT)     :: hmat
 
       INTEGER, INTENT(IN)    :: jsp
       INTEGER, INTENT(IN)    :: nk
