@@ -90,8 +90,6 @@ CONTAINS
       CALL mpi_bc(this%ne_eig, rank, mpi_comm)
       CALL mpi_bc(this%nbands, rank, mpi_comm)
       CALL mpi_bc(this%nobd, rank, mpi_comm)
-      CALL mpi_bc(this%div_vv, rank, mpi_comm)
-
    END SUBROUTINE mpi_bc_hybinp
    SUBROUTINE read_xml_hybinp(this, xml)
       USE m_types_xml
