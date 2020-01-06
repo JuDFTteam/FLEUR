@@ -645,4 +645,30 @@ MODULE m_intgr
       RETURN
    END SUBROUTINE intgr7
 
+   SUBROUTINE sfint(y,x,h,jri,z)
+
+      INTEGER, INTENT (IN) :: jri
+      REAL,    INTENT (IN) :: h
+      REAL,    INTENT (IN) :: x(jri), y(jri)
+      REAL,    INTENT (OUT):: z(jri)
+
+      REAL    :: alpha
+      INTEGER :: i
+
+      z = 0.0
+      IF (y(1)*y(2).GT.zero) THEN 
+         alpha = 1.0 + log(y(2)/y(1))/h
+         IF (alpha.GT.zero) z(1) = x(1)*y(1)/alpha
+      ENDIF
+
+      z(2)=z(1)+h*(x(1)*y(1)+x(2)*y(2))/2
+
+      DO i=3, jri-1
+         z(i)=z(i-1)-h*(x(i-2)*y(i-2)-13*x(i-1)*y(i-1)-13*x(i)*y(i)+x(i+1)*y(i+1))/24
+      END DO
+
+      z(i)=z(i-1)+h*(x(i-1)*y(i-1)+x(i)*y(i))/2
+      
+   END SUBROUTINE
+
 END MODULE m_intgr
