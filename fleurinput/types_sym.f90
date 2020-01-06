@@ -19,7 +19,7 @@ MODULE m_types_sym
      !translation vectors (3,nop)
      REAL, ALLOCATABLE::tau(:, :)
      !Symophic group
-     LOGICAL ::symor
+     LOGICAL ::symor=.false.
      !2D-inv-sym
      LOGICAL ::invs2
      !Inversion-sym
