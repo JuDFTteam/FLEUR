@@ -99,7 +99,7 @@ MODULE m_types_input
      INTEGER :: rdmftFunctional=0
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_input
-     PROCEDURE :: init
+     PROCEDURE :: init => init_input
      PROCEDURE ::mpi_bc =>mpi_bc_input
   END TYPE t_input
 
@@ -388,7 +388,7 @@ CONTAINS
     END IF
   END SUBROUTINE read_xml_input
 
-  subroutine init(input,noco,nbasfcn)
+  subroutine init_input(input,noco,nbasfcn)
     use m_types_noco
     Class(t_input),intent(inout):: input
     TYPE(t_noco),intent(in)     :: noco
@@ -411,5 +411,5 @@ CONTAINS
     IF (noco%l_noco) input%neig = 2*input%neig
 
 
-  end subroutine init
+   end subroutine init_input
 END MODULE m_types_input

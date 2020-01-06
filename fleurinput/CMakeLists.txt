@@ -14,9 +14,10 @@ types_cell.f90             types_kpts.f90       types_fleurinput.f90
 types_sliceplot.f90        types_sym.f90        types_atoms.F90
 types_econfig.F90          types_field.F90      types_xcpot.F90
 types_enparaXML.f90        types_forcetheo_data.f90
-types_mpinp.f90 
+types_mpinp.f90
 types_xml.f90
 calculator.f constants.f90 mpi_bc_tool.F90 ../io/xml/inputSchema.h ../io/xml/dropInputSchema.c ../io/xml/xmlInterfaceWrapper.c
+../math/d_wigner.F90 ../math/inv3.f90
 )
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/fleurinput")
