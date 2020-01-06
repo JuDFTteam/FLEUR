@@ -129,8 +129,6 @@ CONTAINS
          !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
          !                  &                    calledby ="fleur")
 
-         !calculate whole Brilloun zone
-         !CALL gen_bz(kpts,sym)
          CALL self%gen_map(atoms, sym, oneD)
 
          ! calculate d_wgn
