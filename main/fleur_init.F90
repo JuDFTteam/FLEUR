@@ -18,7 +18,6 @@ CONTAINS
     USE m_juDFT_init
     USE m_init_wannier_defaults
     USE m_dwigner
-    !USE m_gen_bz
     USE m_ylm
     !USE m_InitParallelProcesses
     USE m_xmlOutput
