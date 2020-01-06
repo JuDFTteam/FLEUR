@@ -151,7 +151,7 @@ CONTAINS
              l = atoms%llo(ilo,n)
              IF( enpara%qn_ello(ilo,n,jsp).NE.0) THEN
                 lo_done(ilo,n,jsp) = .TRUE.
-                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,v%mt(:,0,n,jsp),e_lo(l,n),e_up(l,n))
+                enpara%ello0(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,v%mt(:,0,n,jsp),elo_lo(ilo,n),elo_up(ilo,n))
              ELSE
                 lo_done(ilo,n,jsp) = .FALSE.
              ENDIF
