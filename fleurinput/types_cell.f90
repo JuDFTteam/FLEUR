@@ -14,21 +14,21 @@ MODULE m_types_cell
   !> and call its init routine.
   TYPE,EXTENDS(t_fleurinput_base):: t_cell
      !vol of dtilde box
-     REAL::omtil
+     REAL::omtil= REAL_NOT_INITALIZED
      !2D area
-     REAL::area
+     REAL::area= REAL_NOT_INITALIZED
      !bravais matrix
-     REAL::amat(3, 3)
+     REAL::amat(3, 3)= REAL_NOT_INITALIZED
      !rez. bravais matrx
-     REAL::bmat(3, 3)
+     REAL::bmat(3, 3)= REAL_NOT_INITALIZED
      !square of bbmat
-     REAL::bbmat(3, 3),aamat(3,3)
+     REAL::bbmat(3, 3)= REAL_NOT_INITALIZED,aamat(3,3)= REAL_NOT_INITALIZED
      !d-value
      REAL::z1=0.0
      !volume of cell
-     REAL::vol
+     REAL::vol= REAL_NOT_INITALIZED
      !volume of interstitial
-     REAL::volint
+     REAL::volint= REAL_NOT_INITALIZED
    CONTAINS
      PROCEDURE :: init
      PROCEDURE :: read_xml=>read_xml_cell

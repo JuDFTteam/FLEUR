@@ -21,11 +21,11 @@ MODULE m_types_sym
      !Symophic group
      LOGICAL ::symor=.false.
      !2D-inv-sym
-     LOGICAL ::invs2
+     LOGICAL ::invs2=.false.
      !Inversion-sym
-     LOGICAL ::invs
+     LOGICAL ::invs=.false.
      !Z-refls. sym
-     LOGICAL ::zrfs
+     LOGICAL ::zrfs=.false.
      !inverse operation (nop)
      INTEGER, ALLOCATABLE::invtab(:)
      !multiplication table

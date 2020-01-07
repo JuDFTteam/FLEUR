@@ -40,15 +40,15 @@ MODULE m_types_atoms
   END TYPE t_utype
   TYPE,EXTENDS(t_fleurinput_base):: t_atoms
      !<no of types
-  INTEGER :: ntype
+  INTEGER :: ntype=-1
   !<total-no of atoms
-  INTEGER :: nat
+  INTEGER :: nat=-1
   !<dimensions of LO's
-  INTEGER ::nlod
+  INTEGER ::nlod=0
   INTEGER ::llod=0
-  INTEGER ::nlotot
+  INTEGER ::nlotot=0
   !lmaxd=maxval(lmax)
-  INTEGER:: lmaxd
+  INTEGER:: lmaxd=-1
   ! no of lda+us
   INTEGER ::n_u=0
   ! no of lda+hubbard1s
@@ -58,7 +58,7 @@ MODULE m_types_atoms
   ! no of greens function calculations (in total)
   INTEGER :: n_gf=0
   ! dimensions
-  INTEGER :: jmtd
+  INTEGER :: jmtd=-1
   INTEGER :: msh=0 !core state mesh was in dimension
   !No of element
   INTEGER, ALLOCATABLE ::nz(:)
