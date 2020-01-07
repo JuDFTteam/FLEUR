@@ -97,7 +97,8 @@ CONTAINS
 
     CHARACTER(len=100)::xpatha,xpathb
     INTEGER:: numberNodes,i
-    
+
+    allocate(this%b_field_mt(xml%get_ntype()));this%b_field_mt=0.0
     xPathA = '/fleurInput/calculationSetup/fields'
     numberNodes = xml%GetNumberOfNodes(xPathA)
     IF (numberNodes.EQ.1) THEN
@@ -113,7 +114,7 @@ CONTAINS
        this%efield%autocomp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@autocomp'))
        this%efield%dirichlet = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@dirichlet'))
        this%efield%l_eV = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eV'))
-       
+
        numberNodes=xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/shape')
        ALLOCATE(this%efield%shapes(numberNodes))
        DO i=1,numberNodes

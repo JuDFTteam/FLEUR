@@ -57,12 +57,12 @@ CONTAINS
 
       atoms%nz(:) = NINT(atoms%zatom(:))
       atoms%rmt(:) = 999.9
-      atoms%l_geo(:) = .TRUE.;
+      atoms%l_geo(:) = .TRUE.
       atoms%flipSpinPhi=0.0
       atoms%flipSpinTheta=0.0
       atoms%flipSpinScale=.FALSE.
 
-      atoms%lda_u%l = -1 ; atoms%relax(1:2,:) = 1 ; atoms%relax(:,:) = 1
+      atoms%lda_u%l = -1 ;  atoms%relax(:,:) = 1
 
       !Determine MT-radii
       CALL check_mt_radii(atoms,input,vacuum,cell,oneD,.false.,atoms%rmt)
@@ -96,13 +96,7 @@ CONTAINS
          CALL atoms%econf(n)%init(ap(n)%econfig)
          if (abs(ap(n)%bmu)>1E-8) call atoms%econf(n)%set_initial_moment(ap(n)%bmu)
          !atoms%ncst(n)=econfig_count_core(econfig)
-
-
-         atoms%lda_u(n)%l=-1
-         atoms%l_geo(n)=.FALSE.
-         atoms%relax(:,n)=1
-
-         ! rounding
+     ! rounding
          atoms%dx(:)   = REAL(NINT(atoms%dx(:)   * 1000) / 1000.)
          !Generate species-names
          DO nn=1,n

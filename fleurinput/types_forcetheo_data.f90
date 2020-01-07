@@ -31,7 +31,7 @@ MODULE m_types_forcetheo_data
      REAL,ALLOCATABLE:: qvec(:,:) !DMI,Jij,ssdisp
      REAL,ALLOCATABLE:: theta(:)  !DMI,MAE,jij(1st only)
      REAL,ALLOCATABLE:: phi(:)    !MAE
-    
+
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_forcetheo_data
      PROCEDURE :: mpi_bc=>mpi_bc_forcetheo_data
@@ -60,7 +60,11 @@ CONTAINS
     CLASS(t_forcetheo_data),INTENT(INOUT):: this
     TYPE(t_xml),INTENT(IN)             :: xml
     CHARACTER(len=200)::str
-    
+
+    allocate(this%qvec(0,0))
+    allocate(this%theta(0))
+    allocate(this%phi(0))
+
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/MAE')==1) THEN
        this%mode=1
        str=xml%GetAttributeValue('/fleurInput/forceTheorem/MAE/@theta')
@@ -79,10 +83,9 @@ CONTAINS
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/Jij')==1) THEN
        this%mode=3
        this%qvec=xml%read_q_list('/fleurInput/forceTheorem/Jij/qVectors')
-       ALLOCATE(this%theta(1))
-       this%theta(1)=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/forceTheorem/Jij/@thetaj'))      
+       this%theta=[evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/forceTheorem/Jij/@thetaj'))]
     ENDIF
-    
+
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/spinSpiralDispersion')==1) THEN
        this%mode=4
        this%qvec=xml%read_q_list('/fleurInput/forceTheorem/spinSpiralDispersion')
@@ -90,4 +93,3 @@ CONTAINS
   END SUBROUTINE read_xml_forcetheo_data
 
 END MODULE m_types_forcetheo_data
-

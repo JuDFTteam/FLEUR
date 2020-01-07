@@ -15,7 +15,7 @@ MODULE m_types_input
      INTEGER :: jspins=1
      INTEGER :: neig=0
      LOGICAL :: total
-     REAL    :: rkmax
+     REAL    :: rkmax=0.0
      REAL    :: gmax
      REAL    :: zelec
      LOGICAL :: strho =.FALSE.
@@ -25,7 +25,7 @@ MODULE m_types_input
      LOGICAL :: eonly =.FALSE.
      LOGICAL :: ctail =.TRUE.
      INTEGER :: coretail_lmax =0
-     INTEGER :: itmax =9
+     INTEGER :: itmax =15
      REAL    :: minDistance=1.0e-5
      REAL    :: minoccDistance=1.0e-2 !Distances for the density matrix in DFT+Hubbard 1 case
      REAL    :: minmatDistance=1.0e-3
@@ -68,8 +68,8 @@ MODULE m_types_input
      LOGICAL :: l_core_confpot=.TRUE. !Former CPP_CORE
      LOGICAL :: l_useapw=.FALSE.
      LOGICAL :: ldauLinMix=.FALSE.
-     REAL    :: ldauMixParam=0.1
-     REAL    :: ldauSpinf=2.0
+     REAL    :: ldauMixParam=0.05
+     REAL    :: ldauSpinf=1.0
      LOGICAL :: ldauAdjEnpara=.false.
       LOGICAL :: l_dftspinpol=.false.
       LOGICAL :: l_gfsphavg=.false.
