@@ -93,7 +93,7 @@ CONTAINS
   SUBROUTINE read_xml_field(this,xml)
     USE m_types_xml
     CLASS(t_field),INTENT(INOUT)::this
-    TYPE(t_xml),INTENT(IN)::xml
+    TYPE(t_xml),INTENT(INOUT)::xml
 
     CHARACTER(len=100)::xpatha,xpathb
     INTEGER:: numberNodes,i

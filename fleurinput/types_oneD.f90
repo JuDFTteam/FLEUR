@@ -109,7 +109,7 @@ MODULE m_types_oneD
    SUBROUTINE read_xml_oneD(this,xml)
      use m_types_xml
      class(t_oned),intent(inout)::this
-     type(t_xml),intent(in)   ::xml
+     type(t_xml),intent(inout)   ::xml
 
 
       ! Read in optional 1D parameters if present

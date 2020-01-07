@@ -58,7 +58,7 @@ CONTAINS
    SUBROUTINE read_xml_hybinp(this, xml)
       USE m_types_xml
       CLASS(t_hybinp), INTENT(INout):: this
-      TYPE(t_xml), INTENT(in)     :: xml
+      TYPE(t_xml),INTENT(INOUT) ::xml
 
       INTEGER::numberNodes, ntype, itype
       CHARACTER(len=100)  :: xPathA

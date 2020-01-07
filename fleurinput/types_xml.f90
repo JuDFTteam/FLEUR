@@ -19,11 +19,12 @@ MODULE m_types_xml
 
   TYPE t_xml
      INTEGER:: id
+     character(len=200):: basepath=""
    CONTAINS
      PROCEDURE        :: init
-     PROCEDURE,NOPASS :: GetNumberOfNodes
+     PROCEDURE        :: GetNumberOfNodes
      PROCEDURE,NOPASS :: SetAttributeValue
-     PROCEDURE,NOPASS :: GetAttributeValue
+     PROCEDURE        :: GetAttributeValue
      PROCEDURE,NOPASS :: getIntegerSequenceFromString
      PROCEDURE        :: read_q_list
      PROCEDURE,NOPASS :: popFirstStringToken
@@ -35,11 +36,19 @@ MODULE m_types_xml
      PROCEDURE :: get_nlo
      PROCEDURE :: get_ntype
      PROCEDURE :: posPath
+     PROCEDURE :: set_basepath
   END TYPE t_xml
   PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBoolOnly,evaluateFirstIntOnly,&
        evaluateList
 
 CONTAINS
+  subroutine set_basepath(xml,xpath)
+    CLASS(t_xml),INTENT(INOUT)::xml
+    character(len=*)::xpath
+
+    xml%basepath=xpath
+  end subroutine
+
   SUBROUTINE init(xml)
     USE iso_c_binding
     CLASS(t_xml),INTENT(IN)::xml
@@ -494,13 +503,14 @@ CONTAINS
     CALL init_from_command_line()
   END SUBROUTINE InitXPath
 
-  FUNCTION GetNumberOfNodes(xPath)
+  FUNCTION GetNumberOfNodes(xml,xPath)
 
     USE iso_c_binding
 
     IMPLICIT NONE
 
     INTEGER :: GetNumberOfNodes
+    CLASS(t_xml),INTENT(IN):: xml
     CHARACTER(LEN=*,KIND=c_char), INTENT(IN) :: xPath
 
     INTERFACE
@@ -511,18 +521,18 @@ CONTAINS
        END FUNCTION getNumberOfXMLNodes
     END INTERFACE
 
-    GetNumberOfNodes = getNumberOfXMLNodes(TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
+    GetNumberOfNodes = getNumberOfXMLNodes(trim(adjustl(xml%basepath))//TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
 
   END FUNCTION GetNumberOfNodes
 
-  FUNCTION GetAttributeValue(xPath)
+  FUNCTION GetAttributeValue(xml,xPath)
 
     USE iso_c_binding
 
     IMPLICIT NONE
 
     CHARACTER(LEN=:),ALLOCATABLE :: GetAttributeValue
-
+    CLASS(t_xml),INTENT(IN):: xml
     CHARACTER(LEN=*, KIND=c_char), INTENT(IN) :: xPath
 
     CHARACTER (LEN=1, KIND=c_char), POINTER, DIMENSION (:) :: valueFromC => NULL()
@@ -538,13 +548,13 @@ CONTAINS
        END FUNCTION getXMLAttributeValue
     END INTERFACE
 
-    IF (GetNumberOfNodes(xPath)<1) THEN
+    IF (xml%GetNumberOfNodes(xPath)<1) THEN
       call judft_warn("Invalid xPath:"//xPath)
       GetAttributeValue=""
       RETURN
     ENDIF
 
-    c_string = getXMLAttributeValue(TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
+    c_string = getXMLAttributeValue(trim(adjustl(xml%basepath))//TRIM(ADJUSTL(xPath))//C_NULL_CHAR)
 
     CALL C_F_POINTER(c_string, valueFromC, [ 255 ])
     IF (.NOT.C_ASSOCIATED(c_string)) THEN

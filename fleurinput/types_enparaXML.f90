@@ -46,7 +46,7 @@ CONTAINS
   SUBROUTINE read_xml_enpara(this,xml)
     use m_types_xml
     CLASS(t_enparaXML),INTENT(INOUT):: this
-    TYPE(t_xml),INTENT(IN)     :: xml
+    TYPE(t_xml),INTENT(INOUT)   ::xml
 
     LOGICAL :: l_enpara,film
     INTEGER :: jspins,ntype,lmaxd,n,lo,i

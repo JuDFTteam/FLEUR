@@ -307,7 +307,7 @@ CONTAINS
   SUBROUTINE read_xml_wannier(this,xml)
     USE m_types_xml
     CLASS(t_wann),INTENT(inout):: this
-    TYPE(t_xml),INTENT(in)   :: xml
+    TYPE(t_xml),INTENT(INOUT) ::xml
     ! Read in optional Wannier functions parameters
 
     CHARACTER(len=100):: xPathA

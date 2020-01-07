@@ -35,7 +35,7 @@ MODULE m_types_fleurinput_base
        USE m_types_xml
        IMPORT t_fleurinput_base
        CLASS(t_fleurinput_base),INTENT(INOUT):: this
-       TYPE(t_xml),INTENT(IN)              :: xml
+       TYPE(t_xml),INTENT(INOUT)             :: xml
      END SUBROUTINE read_xml_abstract
   END INTERFACE
 

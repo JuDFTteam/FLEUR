@@ -117,7 +117,7 @@ CONTAINS
    SUBROUTINE  read_xml_cell(this,xml)
      use m_types_xml
      class(t_cell),intent(INout)::this
-     type(t_xml),intent(in)   ::xml
+     type(t_xml),intent(inout)   ::xml
 
      ! Read in lattice parameters
      character(len=200)::valueString,path

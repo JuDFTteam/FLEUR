@@ -110,7 +110,7 @@ CONTAINS
   SUBROUTINE  read_xml_constants(this,xml)
     USE m_types_xml
     CLASS(t_constants),INTENT(INout)::this
-    TYPE(t_xml),INTENT(in)   ::xml
+    TYPE(t_xml),INTENT(inout)   ::xml
 
     IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/expertModes/@warp_factor')==1)&
     warp_factor=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/expertModes/@warp_factor'))

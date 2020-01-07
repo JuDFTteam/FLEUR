@@ -40,28 +40,17 @@ CONTAINS
 
       oldform=.FALSE.
       INQUIRE(file="plotin",exist = oldform)
-      INQUIRE(file="plot_inp",exist = newform)
 
       IF (oldform) THEN
          CALL juDFT_error("Use of plotin file no longer supported", &
                           calledby="plot")
       END IF
-
-      IF (.NOT.newform) THEN
-         OPEN(20,file="plot_inp")
-         WRITE(20,'(i2,a5,l1)') 2,",xsf=",.true.
-         WRITE(20,*) "&PLOT twodim=t,cartesian=t"
-         WRITE(20,*) "  vec1(1)=10.0 vec2(2)=10.0"
-         WRITE(20,*) "  filename='plot1' /"
-         WRITE(20,*) "&PLOT twodim=f,cartesian=f"
-         WRITE(20,*) "  vec1(1)=1.0 vec1(2)=0.0 vec1(3)=0.0 "
-         WRITE(20,*) "  vec2(1)=0.0 vec2(2)=1.0 vec2(3)=0.0 "
-         WRITE(20,*) "  vec3(1)=0.0 vec3(2)=0.0 vec3(3)=1.0 "
-         WRITE(20,*) "  grid(1)=30  grid(2)=30  grid(3)=30  "
-         WRITE(20,*) "  zero(1)=0.0 zero(2)=0.0 zero(3)=0.5 "
-         WRITE(20,*) "  filename ='plot2' /"
-         CLOSE(20)
+      INQUIRE(file="plot_inp",exist = newform)
+      IF (newform) THEN
+        CALL juDFT_error("Use of plot_inp file no longer supported", &
+        calledby="plot")
       END IF
+
 
    END SUBROUTINE checkplotinp
 
@@ -441,7 +430,7 @@ CONTAINS
 
    END SUBROUTINE matrixsplit
 
-   SUBROUTINE savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                      noco, score, potnorm, denName, denf, denA1, denA2, denA3)
       USE m_outcdn
       USE m_xsf_io
@@ -470,7 +459,7 @@ CONTAINS
       !                             (n_21(r_vec),n_22(r_vec)))
       !          ---> rho_f.xsf, rho_A1.xsf, rho_A2.xsf, rho_A3.xsf
       !                                [n(r_vec),m_vec(r_vec)]
-
+      type(t_sliceplot),           INTENT(IN) :: sliceplot
       TYPE(t_stars),               INTENT(IN) :: stars
       TYPE(t_atoms),               INTENT(IN) :: atoms
       TYPE(t_sphhar),              INTENT(IN) :: sphhar
@@ -558,16 +547,17 @@ CONTAINS
       END IF
 
       ! Open the plot_inp file for input
-      OPEN (18,file='plot_inp')
-      READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
-      polar = .FALSE.
-      IF ((noco%l_noco).AND.(numInDen.EQ.4)) THEN
-         polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
-         IF (polar) THEN
-            numOutFiles = 7
-         END IF
-      END IF
 
+      !OPEN (18,file='plot_inp')
+      !READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
+      polar = .FALSE.
+      !IF ((noco%l_noco).AND.(numInDen.EQ.4)) THEN
+      !   polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
+      !     IF (polar) THEN
+      !      numOutFiles = 7
+      !   END IF
+      !END IF
+      xsf=sliceplot%format==PLOT_XSF_FORMAT
       ALLOCATE(outFilenames(numOutFiles))
       ALLOCATE(xdnout(numOutFiles))
 
@@ -597,18 +587,15 @@ CONTAINS
       END IF
 
       ! Loop over all plots
-      DO nplo = 1, nplot
-
-         ! the defaults
-         twodim = .TRUE.
-         cartesian = .TRUE.
-         grid = (/100,100,100/)
-         vec1 = (/0.,0.,0./)
-         vec2 = (/0.,0.,0./)
-         vec3 = (/0.,0.,0./)
-         zero = (/0.,0.,0./)
-         filename = "default"
-         READ(18,plot)
+      DO nplo = 1, size(sliceplot%plot)
+        twodim=sliceplot%plot(nplo)%twodim
+        cartesian=sliceplot%plot(nplo)%cartesian
+        grid=sliceplot%plot(nplo)%grid
+        vec1=sliceplot%plot(nplo)%vec1
+        vec2=sliceplot%plot(nplo)%vec2
+        vec3=sliceplot%plot(nplo)%vec3
+        zero=sliceplot%plot(nplo)%zero
+        filename=sliceplot%plot(nplo)%filename
          IF (twodim.AND.ANY(grid(1:2)<1)) &
             CALL juDFT_error("Illegal grid size in plot",calledby="plot")
          IF (.NOT.twodim.AND.ANY(grid<1)) &
@@ -787,7 +774,6 @@ CONTAINS
 
       END DO !nplot
 
-      CLOSE(18)
       IF (xsf) THEN
          DO i = 1, numOutFiles
             CLOSE(nfile+i)
@@ -798,13 +784,13 @@ CONTAINS
 
    END SUBROUTINE savxsf
 
-   SUBROUTINE vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                          noco, factor, score, potnorm, denmat, denName)
 
       ! Takes a spin-polarized t_potden variable, i.e. a 2D vector in MT-sphere/
       ! plane wave representation, splits it into two spinless ones, which are
       ! then passed on to the savxsf routine to get 2 .xsf files out.
-
+      TYPE(t_sliceplot), INTENT(IN) :: sliceplot
       TYPE(t_stars),     INTENT(IN) :: stars
       TYPE(t_atoms),     INTENT(IN) :: atoms
       TYPE(t_sphhar),    INTENT(IN) :: sphhar
@@ -824,18 +810,18 @@ CONTAINS
       CALL vectorsplit(stars, atoms, sphhar, vacuum, input, factor, denmat, &
                        cden, mden)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   score, potnorm, denName, cden, mden)
 
    END SUBROUTINE vectorplot
 
-   SUBROUTINE matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                          noco, factor, score, potnorm, denmat, denName)
 
       ! Takes a 2x2 t_potden variable, i.e. a sum of Pauli matrices in MT-
       ! sphere/ plane wave representation and splits it into four spinless ones,
       ! which are then passed on to the savxsf routine to get 4 .xsf files out.
-
+      TYPE(t_sliceplot), INTENT(IN) :: sliceplot
       TYPE(t_stars),     INTENT(IN) :: stars
       TYPE(t_atoms),     INTENT(IN) :: atoms
       TYPE(t_sphhar),    INTENT(IN) :: sphhar
@@ -855,7 +841,7 @@ CONTAINS
       CALL matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco, factor, &
                        denmat, cden, mxden, myden, mzden)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   score, potnorm, denName, cden, mxden, myden, mzden)
 
    END SUBROUTINE matrixplot
@@ -866,7 +852,6 @@ CONTAINS
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
       ! identifier n is done.
-
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -896,16 +881,16 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -921,16 +906,16 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -946,16 +931,16 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -971,16 +956,16 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -996,16 +981,16 @@ CONTAINS
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -1023,16 +1008,16 @@ CONTAINS
          potnorm = .TRUE.
          IF (input%jspins.EQ.2) THEN
             IF (noco%l_noco) THEN
-               CALL matrixplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             ELSE
-               CALL vectorplot(stars, atoms, sphhar, vacuum, input, oneD, sym, &
+               CALL vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, &
                                cell, noco, factor, score, potnorm, denmat, &
                                denName)
             END IF
          ELSE
-            CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+            CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, score, potnorm, denName, denmat)
          END IF
       END IF
@@ -1046,7 +1031,6 @@ CONTAINS
       ! not plots should be made. Before the plot command is processed, we check
       ! whether the plot_inp is there and no oldform is given. If that is not the
       ! case, we create a plot_inp.
-
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar

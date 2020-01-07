@@ -1,10 +1,10 @@
 MODULE m_sfTests
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
+   SUBROUTINE plotBtest(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &
                         noco, xcB, div, phi, cvec, corrB, div2)
       USE m_plot
-
+      TYPE(t_sliceplot), INTENT(IN) :: sliceplot
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -21,22 +21,22 @@ CONTAINS
 
       CALL checkplotinp()
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'bInitial            ', xcB(1), xcB(1), xcB(2), xcB(3))
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'div                 ', div)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .TRUE., 'phiDiv              ', phi)
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'gradPhiDiv          ', cvec(1), cvec(1), cvec(2), cvec(3))
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'bCorrected          ', corrB(1), corrB(1), corrB(2), corrB(3))
 
-      CALL savxsf(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
+      CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, &
                   .FALSE., .FALSE., 'divCorrected        ', div2)
 
       INQUIRE(file="bInitial_f.xsf",exist=xsf)
@@ -56,7 +56,6 @@ CONTAINS
       USE m_mt_tofrom_grid
       USE m_pw_tofrom_grid
       USE m_xcBfield
-
       TYPE(t_stars),                INTENT(IN)     :: stars
       TYPE(t_atoms),                INTENT(IN)     :: atoms
       TYPE(t_sphhar),               INTENT(IN)     :: sphhar
@@ -201,10 +200,11 @@ CONTAINS
 
    END SUBROUTINE buildAtest
 
-   SUBROUTINE sftest(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,itest,denMat,factor)
+   SUBROUTINE sftest(sliceplot,mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,itest,denMat,factor)
       USE m_xcBfield
       USE m_divergence
       USE m_analysistests
+      TYPE(t_sliceplot), INTENT(IN) :: sliceplot
       TYPE(t_field),                INTENT(INOUT)  :: field
       TYPE(t_mpi),                  INTENT(IN)     :: mpi
       TYPE(t_stars),                INTENT(IN)     :: stars
@@ -238,7 +238,7 @@ CONTAINS
       IF (PRESENT(denMat)) THEN
         CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,1,aVec,denMat,factor)
         CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,aVec,div,phi,cvec,corrB,checkdiv)
-        CALL plotBtest(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, aVec, div, phi, cvec, corrB, checkdiv)
+        CALL plotBtest(sliceplot,stars, atoms, sphhar, vacuum, input, oneD, sym, cell, noco, aVec, div, phi, cvec, corrB, checkdiv)
       ELSE
         CALL buildAtest(stars,atoms,sphhar,vacuum,input,noco,sym,cell,0,aVec)
         RETURN

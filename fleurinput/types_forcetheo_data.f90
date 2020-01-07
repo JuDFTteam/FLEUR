@@ -58,7 +58,7 @@ CONTAINS
   SUBROUTINE read_xml_forcetheo_data(this,xml)
     USE m_types_xml
     CLASS(t_forcetheo_data),INTENT(INOUT):: this
-    TYPE(t_xml),INTENT(IN)             :: xml
+    TYPE(t_xml),INTENT(INOUT)             :: xml
     CHARACTER(len=200)::str
 
     allocate(this%qvec(0,0))

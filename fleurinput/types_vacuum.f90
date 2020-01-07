@@ -71,7 +71,7 @@ END SUBROUTINE mpi_bc_vacuum
 SUBROUTINE read_xml(this,xml)
  USE m_types_xml
  CLASS(t_vacuum),INTENT(INOUT)::this
- TYPE(t_xml),INTENT(IN)::xml
+ TYPE(t_xml),INTENT(INOUT)::xml
  CHARACTER(len=100)::xpatha
 
 

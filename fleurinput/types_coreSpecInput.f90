@@ -56,27 +56,27 @@ CONTAINS
     CALL mpi_bc(this%beta_ex   ,rank,mpi_comm)
     CALL MPI_BC(THIS%I0        ,RANK,MPI_COMM)
     !CALL MPI_BC(THIS%edge,RANK,MPI_COMM)
-    
+
     DO n=1,SIZE(this%edgeidx)
        CALL MPI_BC(THIS%edgeidx(n),RANK,MPI_COMM)
     END DO
-   
+
   END SUBROUTINE mpi_bc_corespecinput
 
   SUBROUTINE read_xml_corespecinput(This,xml)
     USE m_types_xml
     CLASS(t_coreSpecInput),INTENT(INOUT)::this
-    TYPE(t_xml),INTENT(IN)::xml
-    
-    
+    Type(T_xml),Intent(Inout)::Xml
+
+
     INTEGER:: numberNodes,tempInt,numTokens,i
     LOGICAL::tempBool
     CHARACTER(len=100) :: xPathA,xPathB,valueString
     ! Read in optional core spectrum (EELS) input parameters
-    
+
     xPathA = '/fleurInput/output/coreSpectrum'
     numberNodes = xml%GetNumberOfNodes(xPathA)
-    
+
     IF (numberNodes.EQ.1) THEN
        tempBool = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@verbose'))
        IF(tempBool) this%verb = 1
@@ -105,6 +105,6 @@ CONTAINS
           this%edgeidx(i) = evaluateFirstIntOnly(xml%popFirstStringToken(valueString))
        END DO
     END IF
-    
+
   END SUBROUTINE read_xml_corespecinput
 END MODULE m_types_coreSpecInput

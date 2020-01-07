@@ -101,7 +101,7 @@ MODULE m_types_xcpot
     SUBROUTINE read_xml_xcpot(this,xml)
      USE m_types_xml
      CLASS(t_xcpot),INTENT(INOUT):: this
-     TYPE(t_xml),INTENT(in)      :: xml
+     TYPE(t_xml),INTENT(INOUT)    ::xml
 
      CHARACTER(len=10)::xpathA,xpathB
      INTEGER          :: vxc_id_x,vxc_id_c, exc_id_x,  exc_id_c,jspins

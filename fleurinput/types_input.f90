@@ -181,7 +181,7 @@ CONTAINS
     USE m_types_xml
     use m_constants
     CLASS(t_input),INTENT(inout):: this
-    TYPE(t_xml),intent(in)    :: xml
+    TYPE(t_xml),INTENT(INOUT)  ::xml
 
     CHARACTER(len=100):: valueString,xpathA,xpathB
     INTEGER:: numberNodes,nodeSum

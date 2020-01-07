@@ -69,7 +69,7 @@ CONTAINS
   SUBROUTINE read_xml_banddos(this,xml)
     USE m_types_xml
     CLASS(t_banddos),INTENT(INOUT)::this
-    TYPE(t_xml),INTENT(IN)::xml
+    TYPE(t_xml),INTENT(INOUT)::xml
 
     INTEGER::numberNodes
     this%band = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/@band'))

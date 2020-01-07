@@ -249,7 +249,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  USE m_constants
  IMPLICIT NONE
  CLASS(t_atoms),INTENT(INOUT):: this
- TYPE(t_xml),INTENT(IN)    :: xml
+ TYPE(t_xml),INTENT(INOUT)    :: xml
 
  CHARACTER(len=200):: xpaths,xpathg,xpath,valueString,lstring,nstring,core,valence
  INTEGER           :: i,j,numberNodes,ilo,lNumCount,nNumCount,l,n,itype,na,jrc
