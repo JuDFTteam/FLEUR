@@ -542,7 +542,6 @@ CONTAINS
       !  kpts%bksym(ikpt) maps kpts%bkp(ikpt) on ikpt
 
       USE m_constants
-      USE m_dwigner
       USE m_util
       USE m_types
       IMPLICIT NONE

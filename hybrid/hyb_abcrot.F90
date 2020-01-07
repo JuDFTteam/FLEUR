@@ -10,7 +10,6 @@ CONTAINS
 !     *                                                             *
 !     * Christoph Friedrich Mar/2005                                *
 !     ***************************************************************
-      USE m_dwigner
       USE m_types
       USE m_juDFT
       IMPLICIT NONE

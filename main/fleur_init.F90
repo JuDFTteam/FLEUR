@@ -7,7 +7,7 @@ MODULE m_fleur_init
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleur_init(mpi,&
-       input,field,atoms,sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
+       input,field,atoms, sphhar,cell,stars,sym,noco,vacuum,forcetheo,&
        sliceplot,banddos,enpara,xcpot,results,kpts,mpinp,hybinp,&
        oneD,coreSpecInput,hub1,wann)
     USE m_types
@@ -17,9 +17,7 @@ CONTAINS
     USE m_judft
     USE m_juDFT_init
     USE m_init_wannier_defaults
-    USE m_gen_map
     USE m_dwigner
-    !USE m_gen_bz
     USE m_ylm
     !USE m_InitParallelProcesses
     USE m_xmlOutput
@@ -149,6 +147,7 @@ CONTAINS
     call lapw_dim(kpts,cell,input,noco,oneD,forcetheo,atoms)
     call input%init(noco,lapw_dim_nbasfcn)
     call oned%init(atoms) !call again, because make_stars modified it :-)
+    call kpts%init(cell, sym, input%film)
     ! Store structure data
     CALL storeStructureIfNew(input,stars, atoms, cell, vacuum, oneD, sym, mpi,sphhar,noco)
     CALL prp_xcfft(stars,input,cell,xcpot)

@@ -203,7 +203,7 @@ CONTAINS
       oldfleur=.FALSE.
       checkinp=.false.
      READ(line,input,iostat=ios)
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
      IF (ANY([cal_symm, checkinp,oldfleur])) CALL judft_error("Switches cal_symm, checkinp,oldfleur no longer supported")
    END SUBROUTINE process_input
 
@@ -219,7 +219,7 @@ CONTAINS
      READ(buf,*,iostat=ios) noco%qss
      noco%l_ss=.TRUE.
      noco%l_noco=.TRUE.
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
    END SUBROUTINE process_qss
 
    SUBROUTINE process_soc(line,noco)
@@ -233,7 +233,7 @@ CONTAINS
 
      READ(buf,*,iostat=ios) noco%theta,noco%phi
      noco%l_soc=.TRUE.
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
    END SUBROUTINE process_soc
 
    SUBROUTINE process_film(line,dvac,dtild)
@@ -242,7 +242,7 @@ CONTAINS
      INTEGER :: ios
      NAMELIST /film/   dvac, dtild
      READ(line,film,iostat=ios)
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
    END SUBROUTINE process_film
 
    SUBROUTINE process_shift(line,atompos)
@@ -255,7 +255,7 @@ CONTAINS
      buf=ADJUSTL(line(7:len_TRIM(line)-1))
      READ(buf,*,iostat=ios) shift
 
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
      DO n=1,SIZE(atompos,2)
         atompos(:,n)=atompos(:,n)+shift
      ENDDO
@@ -271,7 +271,7 @@ CONTAINS
      buf=ADJUSTL(line(8:len_TRIM(line)-1))
      READ(buf,*,iostat=ios) factor
 
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
      DO n=1,SIZE(atompos,2)
         atompos(:,n)=atompos(:,n)/factor
      ENDDO
@@ -289,7 +289,7 @@ CONTAINS
      relxc=.false.
      xctyp='pbe'
      READ(line,exco,iostat=ios)
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//trim(line)))
+     IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
 
      xcpot%l_inbuild=.true.
      xcpot%inbuild_name=xctyp
@@ -307,7 +307,7 @@ CONTAINS
      NAMELIST /comp/   jspins, frcor, ctail, kcrel, gmax, gmaxxc, kmax
 
      READ(line,comp,iostat=ios)
-     IF (ios.NE.0) CALL judft_error(("Error reading:"//line))
+     IF (ios.NE.0) CALL judft_error(("Error reading:" //trim(line)))
    END SUBROUTINE process_comp
 
 
