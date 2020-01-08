@@ -152,7 +152,7 @@ CONTAINS
     INTEGER::numberNodes,i
 
     this%cartesian = evaluateFirstBoolOnly(xml%GetAttributeValue('/@cartesian'))
-    this%twodim     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@2D'))
+    this%twodim     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@TwoD'))
 
     line=xml%GetAttributeValue('/@grid')
     call evaluateList(x,line)

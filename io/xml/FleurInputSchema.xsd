@@ -619,17 +619,17 @@
    </xsd:complexType>
 
    <xsd:complexType name="PlottingType">
-      <xsd:attribute default="0" name="iplot" type="xsd:nonNegativeInteger" use="optional"/>
-      <xsd:attribute default="F" name="polar" type="FleurBool" use="optional"/>
-      <xsd:attribute default="1" name="format" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="plot" type="PlotType"/>
       </xsd:sequence>
+      <xsd:attribute default="0" name="iplot" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute default="F" name="polar" type="FleurBool" use="optional"/>
+      <xsd:attribute default="1" name="format" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
     <xsd:complexType name="PlotType">
-      <xsd:attribute default="F" name="cartesian" type="FLeurBool" use="optional"/>
-      <xsd:attribute default="T" name="2D" type="FLeurBool" use="optional"/>
+      <xsd:attribute default="F" name="cartesian" type="FleurBool" use="optional"/>
+      <xsd:attribute default="T" name="TwoD" type="FleurBool" use="optional"/>
       <xsd:attribute default="30 30 30" name="grid" type="xsd:string" use="optional"/>
       <xsd:attribute default="1.0 0.0 0.0" name="vec1" type="xsd:string" use="optional"/>
       <xsd:attribute default="0.0 1.0 0.0" name="vec2" type="xsd:string" use="optional"/>

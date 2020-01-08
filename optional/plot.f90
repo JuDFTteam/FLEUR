@@ -18,8 +18,6 @@ MODULE m_plot
    ! At the cost of reduced postprocess functionality, this allowed us to re-
    ! move I/O (using plot.hdf/text files) from the plotting routine completely.
    !
-   ! TODO:
-   ! - plot_inp files are still in use and should be replaced by a plotting type.
    !
    ! A. Neukirchen & R. Hilgers, September 2019
    !------------------------------------------------
