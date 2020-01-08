@@ -37,6 +37,7 @@ MODULE m_types_xml
      PROCEDURE :: get_ntype
      PROCEDURE :: posPath
      PROCEDURE :: set_basepath
+     PROCEDURE,NOPASS :: FreeResources
   END TYPE t_xml
   PUBLIC t_xml,evaluateFirstOnly,EvaluateFirst,evaluateFirstBoolOnly,evaluateFirstIntOnly,&
        evaluateList

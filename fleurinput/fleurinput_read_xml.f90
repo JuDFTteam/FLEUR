@@ -49,5 +49,6 @@ CONTAINS
     if (present(enparaXML)) call enparaXML%read_xml(xml)
     if (present(kpts)) CALL kpts%read_xml(xml)
 
+    call xml%FreeResources()
   END SUBROUTINE fleurinput_read_xml
 END MODULE m_fleurinput_read_xml
