@@ -10,6 +10,7 @@ MODULE m_types_sliceplot
   IMPLICIT NONE
   PRIVATE
   INTEGER,PUBLIC,PARAMETER :: PLOT_XSF_FORMAT=1
+  INTEGER,PUBLIC,PARAMETER :: PLOT_TAB_FORMAT=2
   PUBLIC :: t_sliceplot,t_plot
   TYPE ,extends(t_fleurinput_base):: t_plot
     LOGICAL :: cartesian=.false.

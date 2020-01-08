@@ -2,7 +2,6 @@
 #The following arguments are passed: executable, working directory
 
 jt::copyfile("files/inp-2.xml","$workdir/inp.xml");
-jt::copyfile("files/plot_inp",$workdir);
 
 jt::testrun($executable,$workdir);
 

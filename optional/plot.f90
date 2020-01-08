@@ -550,7 +550,7 @@ CONTAINS
 
       !OPEN (18,file='plot_inp')
       !READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
-      polar = .FALSE.
+      polar = sliceplot%polar
       !IF ((noco%l_noco).AND.(numInDen.EQ.4)) THEN
       !   polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
       !     IF (polar) THEN
