@@ -50,11 +50,12 @@ SUBROUTINE magnMomFromDen(input,atoms,noco,den,moments,theta_mt_avg,phi_mt_avg)
       DO j=1, jsp
 !!Integration over r
            IF (den%potdenType<=1000) THEN
+              CALL denloc%copyPotDen(den)
               DO ir=1, atoms%jri(i)
-                 denloc%mt(ir,:,i,j)=den%mt(ir,:,i,j)*atoms%rmsh(ir,i)
+                 denloc%mt(ir,:,i,j)=den%mt(ir,:,i,j)*atoms%rmsh(ir,i)**2
               END DO
            ELSE
-              denloc=den
+              CALL denloc%copyPotDen(den)
            END IF
            CALL intgr3(denloc%mt(:,0,i,j), atoms%rmsh(:,i),atoms%dx(i),atoms%jri(i),dummyResults(i,j))
 !!Considering Lattice harmonics integral (Only L=0 component does not vanish and has a factor of sqrt(4*Pi))

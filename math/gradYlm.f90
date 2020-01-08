@@ -234,7 +234,7 @@ CONTAINS
       COMPLEX, INTENT(IN) :: gradMtx(:,:,:,:), gradMty(:,:,:,:), gradMtz(:,:,:,:) !r,lm,n,x
       COMPLEX, INTENT(OUT) :: divMt(:,:,:)
 
-      divMT(:,:,:)=gradMtx(:,:,:,1)+gradMty(:,:,:,2)+gradMtz(:,:,:,3)
+      divMt(:,:,:)=gradMtx(:,:,:,1)+gradMty(:,:,:,2)+gradMtz(:,:,:,3)
 
    END SUBROUTINE divYlm
 END MODULE m_gradYlm

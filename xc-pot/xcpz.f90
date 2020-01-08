@@ -56,8 +56,8 @@ CONTAINS
       INTEGER, INTENT (IN) :: mgrid,ngrid !  mesh points
 
 !     .. Array Arguments ..
-      REAL, INTENT (IN)  :: rh(mgrid,jspins)                   ! charge density
-      REAL, INTENT (OUT) :: vx(mgrid,jspins),vxc(mgrid,jspins) ! x/xc potential
+      REAL, INTENT (IN)  :: rh(:,:)                             ! charge density
+      REAL, INTENT (OUT) :: vx(:,:),vxc(:,:)                    ! x/xc potential
 
 !     .. Local Scalars ..
       REAL :: c_2, cbrt1, cbrt2, dfds, decds, dec1, dec2, vcf, vcp

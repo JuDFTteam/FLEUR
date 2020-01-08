@@ -131,6 +131,7 @@ CONTAINS
                                   atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
                                   vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
       ALLOCATE(div%pw_w,mold=div%pw)
+      div%pw_w = CMPLX(0.0,0.0)
 
       CALL divergence2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
 
@@ -147,6 +148,7 @@ CONTAINS
       DO i=1,3
          CALL cvec(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(cvec(i)%pw_w,mold=cvec(i)%pw)
+         cvec(i)%pw_w=CMPLX(0.0,0.0)
       ENDDO
 
       CALL divpotgrad2(input,stars,atoms,sphhar,vacuum,sym,cell,noco,phi,cvec)
@@ -154,6 +156,7 @@ CONTAINS
       DO i=1,3
          CALL corrB(i)%init_potden_simple(stars%ng3,atoms%jmtd,sphhar%nlhd,atoms%ntype,atoms%n_u,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
          ALLOCATE(corrB(i)%pw_w,mold=corrB(i)%pw)
+         corrB(i)%pw_w=CMPLX(0.0,0.0)
          CALL corrB(i)%addPotDen(aVec(i),cvec(i))
       ENDDO
 
