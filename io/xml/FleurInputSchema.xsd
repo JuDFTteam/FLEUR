@@ -635,6 +635,7 @@
       <xsd:attribute default="0.0 1.0 0.0" name="vec2" type="xsd:string" use="optional"/>
       <xsd:attribute default="0.0 0.0 1.0" name="vec3" type="xsd:string" use="optional"/>
       <xsd:attribute default="0.0 0.0 0.0" name="zero" type="xsd:string" use="optional"/>
+      <xsd:attribute default="plot" name="file" type="xsd:string" use="optional"/>
     </xsd:complexType>
 
    <xsd:complexType name="ChargeDensitySlicingType">
