@@ -171,6 +171,10 @@ CONTAINS
     call evaluateList(x,line)
     if (size(x)/=3) call judft_error("Wrong number of coordinates for vec3")
     this%vec3=x
+    line=xml%GetAttributeValue('/@zero')
+    call evaluateList(x,line)
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec0")
+    this%zero=x
 
     this%filename=xml%GetAttributeValue('/@file')
 
