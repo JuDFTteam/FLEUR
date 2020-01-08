@@ -65,7 +65,7 @@ CONTAINS
 
 
     ! Once it is tested:
-    IF (noco%l_mtnocoPot.AND.(.FALSE.)) THEN ! l_sf will go here
+    IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN ! l_sf will go here
        CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
        DO i=1,atoms%ntype
           WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)

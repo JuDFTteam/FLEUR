@@ -95,6 +95,7 @@
       <xsd:attribute default="0.0" name="thetaJ" type="xsd:string" use="optional"/>
       <xsd:attribute default="0" name="nsh" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="l_mtNocoPot" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="l_sourceFree" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OneDParamType">

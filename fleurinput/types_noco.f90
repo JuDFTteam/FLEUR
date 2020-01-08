@@ -16,6 +16,7 @@ MODULE m_types_noco
     LOGICAL:: l_mperp = .FALSE.
     LOGICAL:: l_constr = .FALSE.
     LOGICAL:: l_mtNocoPot = .FALSE.
+    LOGICAL:: l_sourceFree = .FALSE.
     REAL   :: qss(3)=[0.,0.,0.]
     REAL   :: mix_b=0.0
     LOGICAL:: l_spav= .FALSE.
@@ -56,6 +57,7 @@ MODULE m_types_noco
      CALL mpi_bc(this%l_mperp ,rank,mpi_comm)
      CALL mpi_bc(this%l_constr ,rank,mpi_comm)
      CALL mpi_bc(this%l_mtNocoPot ,rank,mpi_comm)
+     CALL mpi_bc(this%l_sourceFree ,rank,mpi_comm)
      CALL mpi_bc(rank,mpi_comm,this%qss)
      CALL mpi_bc(this%mix_b,rank,mpi_comm)
      CALL mpi_bc(this%l_spav,rank,mpi_comm)
@@ -104,6 +106,7 @@ MODULE m_types_noco
          this%l_mperp = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mperp'))
          this%l_constr = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_constr'))
          this%l_mtNocoPot = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_mtNocoPot'))
+         this%l_sourceFree = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_sourceFree'))
          this%mix_b = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mix_b'))
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/qss')))
          READ(valueString,*) this%qss(1), this%qss(2), this%qss(3)
