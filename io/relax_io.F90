@@ -164,7 +164,6 @@ CONTAINS
           disp(:,indx(2))=disp(:,indx(2))*0.9
           WRITE(*,*) "Attention: Overlapping MT-spheres. Reduced displacement by 10%"
           WRITE(*,*) indx,overlap(indx(1),indx(2))
-          WRITE(6,*) "Attention, overlapping MT-spheres:",indx
        END IF
     END DO
 
