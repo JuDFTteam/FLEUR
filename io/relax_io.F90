@@ -53,7 +53,7 @@ CONTAINS
   END SUBROUTINE write_relax
 
   SUBROUTINE read_relax(positions,forces,energies)
-    USE m_xmlIntWrapFort 
+    USE m_xmlIntWrapFort
     USE m_calculator
     REAL,INTENT(INOUT),ALLOCATABLE:: positions(:,:,:)
     REAL,INTENT(INOUT),ALLOCATABLE:: forces(:,:,:)
@@ -69,7 +69,7 @@ CONTAINS
        IF (.NOT.ALLOCATED(positions)) ALLOCATE(positions(0,0,0),forces(0,0,0),energies(0))
        RETURN
     END IF
-    IF (ALLOCATED(positions)) THEN 
+    IF (ALLOCATED(positions)) THEN
        !Assume that we got already a set of positions, forces, energy and extend that list
        rtmp=positions
        DEALLOCATE(positions)
@@ -102,7 +102,7 @@ CONTAINS
 
 
   SUBROUTINE read_displacements(atoms,disp)
-    USE m_xmlIntWrapFort 
+    USE m_xmlIntWrapFort
     USE m_calculator
     USE m_types
     TYPE(t_atoms),INTENT(in)::atoms
@@ -151,7 +151,7 @@ CONTAINS
     !Now check for overlapping mt-spheres
     overlap=1.0
     DO WHILE(ANY(overlap>1E-10))
-       atoms%taual=taual0  
+       atoms%taual=taual0
        CALL rotate_to_all_sites(disp,atoms,cell,sym,disp_all)
        atoms%taual=taual0+disp_all
        atoms%pos=MATMUL(cell%amat,atoms%taual)
@@ -160,11 +160,11 @@ CONTAINS
           IF (ANY(overlap(0,:)>1E-10)) CALL judft_error("Atom spills out into vacuum during relaxation")
           indx=MAXLOC(overlap(1:,:)) !the two indices with the most overlap
           !Try only 90% of displacement
-          disp(:,indx(1))=disp(:,indx(1))*0.9 
+          disp(:,indx(1))=disp(:,indx(1))*0.9
           disp(:,indx(2))=disp(:,indx(2))*0.9
           WRITE(*,*) "Attention: Overlapping MT-spheres. Reduced displacement by 10%"
           WRITE(*,*) indx,overlap(indx(1),indx(2))
-          WRITE(6,*) "Attention, overlapping MT-spheres:",indx
+          WRITE(6,'(a,2(i0,1x),f12.8)') "Attention, overlapping MT-spheres: ",indx,overlap(indx(1),indx(2))
        END IF
     END DO
 
