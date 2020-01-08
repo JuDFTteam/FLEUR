@@ -1,22 +1,5 @@
-         <kPointList name="default" count="20">
-            <kPoint weight="    2.000000">    0.125000     0.437500     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.250000     0.312500     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.187500     0.375000     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.062500     0.437500     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.062500     0.375000     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.187500     0.250000     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.125000     0.312500     0.000000</kPoint>
-            <kPoint weight="    2.000000">   -0.000000     0.437500     0.000000</kPoint>
-            <kPoint weight="    2.000000">    0.312500     0.312500     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.187500     0.312500     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.062500     0.312500     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.062500     0.250000     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.125000     0.187500     0.000000</kPoint>
-            <kPoint weight="    2.000000">   -0.000000     0.312500     0.000000</kPoint>
-            <kPoint weight="    2.000000">    0.187500     0.187500     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.062500     0.187500     0.000000</kPoint>
-            <kPoint weight="    4.000000">    0.062500     0.125000     0.000000</kPoint>
-            <kPoint weight="    2.000000">   -0.000000     0.187500     0.000000</kPoint>
-            <kPoint weight="    2.000000">    0.062500     0.062500     0.000000</kPoint>
-            <kPoint weight="    2.000000">   -0.000000     0.062500     0.000000</kPoint>
-         </kPointList>
+<kPointList name="default" count="3" >
+         <kPoint weight="0.222222">0.333333            0.333333            0.000000</kPoint>
+         <kPoint weight="0.666667">-0.000000            0.333333            0.000000</kPoint>
+         <kPoint weight="0.111111">0.000000            0.000000            0.000000</kPoint>
+      </kPointList>
