@@ -115,6 +115,7 @@ CONTAINS
     IF (numberNodes.EQ.1) THEN
        this%iplot = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
        this%polar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@polar'))
+       this%format = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@format'))
        xPathA = '/fleurInput/output/plotting/plot'
        numberNodes = xml%GetNumberOfNodes(xPathA)
        allocate(this%plot(numberNodes))
