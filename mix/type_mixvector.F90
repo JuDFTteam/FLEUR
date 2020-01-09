@@ -54,6 +54,7 @@ MODULE m_types_mixvector
      PROCEDURE :: multiply_dot_mask
      PROCEDURE :: read_unformatted
      PROCEDURE :: write_unformatted
+     PROCEDURE :: allocated => mixvector_allocated
      !GENERIC :: READ(UNFORMATTED) =>read_unformatted
      !GENERIC :: WRITE(UNFORMATTED) =>write_unformatted
   END TYPE t_mixvector
@@ -648,4 +649,15 @@ CONTAINS
       dprod=dprod_tmp
 #endif
     END FUNCTION multiply_dot_mask
+
+    FUNCTION mixvector_allocated(self) result(l_array)
+      implicit none
+      CLASS(t_mixvector), intent(in) :: self
+      LOGICAL, allocatable :: l_array(:)
+
+      l_array = [allocated(self%vec_pw),&
+                 allocated(self%vec_mt),&
+                 allocated(self%vec_vac),&
+                 allocated(self%vec_misc)]
+    END FUNCTION mixvector_allocated
   end MODULE m_types_mixvector
