@@ -127,7 +127,7 @@ build-intel:
      expire_in: 1h
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
-    - cd /builds/fleur/fleur; CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" ./configure.sh -t -d -l intel INTEL_MPI ; cd build.intel.debug; make -j 4
+    - cd /builds/fleur/fleur; CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -lxml2 -lz -llzma -ldl" ./configure.sh -t -d -l intel INTEL_MPI ; cd build.intel.debug; make -j 4
   allow_failure: true
   only:
     - schedules
