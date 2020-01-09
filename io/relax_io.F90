@@ -53,7 +53,7 @@ CONTAINS
   END SUBROUTINE write_relax
 
   SUBROUTINE read_relax(positions,forces,energies)
-    USE m_types_xml 
+    USE m_types_xml
     USE m_calculator
     REAL,INTENT(INOUT),ALLOCATABLE:: positions(:,:,:)
     REAL,INTENT(INOUT),ALLOCATABLE:: forces(:,:,:)
@@ -65,14 +65,14 @@ CONTAINS
     CHARACTER(len=100):: path,p,str
 
     TYPE(t_xml)::xml
-
+    call xml%init()
     no_steps=xml%GetNumberOfNodes('/fleurInput/relaxation/relaxation-history/step')
     ntype=SIZE(positions,2)
     IF (no_steps==0) THEN
        IF (.NOT.ALLOCATED(positions)) ALLOCATE(positions(0,0,0),forces(0,0,0),energies(0))
        RETURN
     END IF
-    IF (ALLOCATED(positions)) THEN 
+    IF (ALLOCATED(positions)) THEN
        !Assume that we got already a set of positions, forces, energy and extend that list
        rtmp=positions
        DEALLOCATE(positions)
@@ -101,11 +101,12 @@ CONTAINS
           Forces(:,n,step)=(/evaluateFirst(str),evaluateFirst(str),evaluateFirst(str)/)
        ENDDO
     END DO
+    call xml%FreeResources()
   END SUBROUTINE read_relax
 
 
   SUBROUTINE read_displacements(atoms,disp)
-    USE m_types_xml 
+    USE m_types_xml
     USE m_calculator
     USE m_types
     TYPE(t_atoms),INTENT(in)::atoms
@@ -157,7 +158,7 @@ CONTAINS
     !Now check for overlapping mt-spheres
     overlap=1.0
     DO WHILE(ANY(overlap>1E-10))
-       atoms%taual=taual0  
+       atoms%taual=taual0
        CALL rotate_to_all_sites(disp,atoms,cell,sym,disp_all)
        atoms%taual=taual0+disp_all
        atoms%pos=MATMUL(cell%amat,atoms%taual)
@@ -166,7 +167,7 @@ CONTAINS
           IF (ANY(overlap(0,:)>1E-10)) CALL judft_error("Atom spills out into vacuum during relaxation")
           indx=MAXLOC(overlap(1:,:)) !the two indices with the most overlap
           !Try only 90% of displacement
-          disp(:,indx(1))=disp(:,indx(1))*0.9 
+          disp(:,indx(1))=disp(:,indx(1))*0.9
           disp(:,indx(2))=disp(:,indx(2))*0.9
           WRITE(*,*) "Attention: Overlapping MT-spheres. Reduced displacement by 10%"
           WRITE(*,*) indx,overlap(indx(1),indx(2))
