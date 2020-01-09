@@ -108,9 +108,9 @@ CONTAINS
       IMPLICIT NONE
       atoms => NULL()
       sym => NULL()
-      IF (ALLOCATED(g_mt)) DEALLOCATE (g_mt)
-      IF (ALLOCATED(g_vac)) DEALLOCATE (g_vac)
-      IF (ALLOCATED(g_misc)) DEALLOCATE (g_misc)
+      IF (ALLOCATED(g_mt)) deallocate(g_mt)
+      IF (ALLOCATED(g_vac)) deallocate(g_vac)
+      IF (ALLOCATED(g_misc)) deallocate(g_misc)
    END SUBROUTINE mixvector_reset
 
    SUBROUTINE mixvector_from_density(vec, den, swapspin)
@@ -255,7 +255,7 @@ CONTAINS
       INTEGER:: js, ii, n, l, iv
       COMPLEX, ALLOCATABLE::pw(:), pw_w(:)
       mvec = vec
-      IF (pw_here) ALLOCATE (pw(stars%ng3), pw_w(stars%ng3))
+      IF (pw_here) allocate(pw(stars%ng3), pw_w(stars%ng3))
 
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
          IF (spin_here(js)) THEN
@@ -308,7 +308,7 @@ CONTAINS
 
       IF (mt_here) THEN
          !This PE stores some(or all) MT data
-         ALLOCATE (g_mt(mt_length_g))
+         allocate(g_mt(mt_length_g))
          i = 0
          DO n = mt_rank + 1, atoms%ntype, mt_size
             dxn = atoms%neq(n)*atoms%dx(n)/3.0
@@ -345,7 +345,7 @@ CONTAINS
          iv2 = 2
          IF (sym%invs2) iv2 = 1
 
-         ALLOCATE (g_vac(vac_length_g), wght(vacuum%nmzd))
+         allocate(g_vac(vac_length_g), wght(vacuum%nmzd))
          dvol = cell%area*vacuum%delz
          ! nvac=1 if (zrfs.or.invs)
          IF (vacuum%nvac .EQ. 1) dvol = dvol + dvol
@@ -387,7 +387,7 @@ CONTAINS
          END DO
       END IF
       IF (misc_here) THEN
-         ALLOCATE (g_misc(misc_length_g))
+         allocate(g_misc(misc_length_g))
          g_misc = 1.0
       END IF
 
@@ -527,10 +527,10 @@ CONTAINS
    SUBROUTINE mixvector_alloc(vec)
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(OUT)    :: vec
-      ALLOCATE (vec%vec_pw(pw_length))
-      ALLOCATE (vec%vec_mt(mt_length))
-      ALLOCATE (vec%vec_vac(vac_length))
-      ALLOCATE (vec%vec_misc(misc_length))
+      allocate(vec%vec_pw(pw_length))
+      allocate(vec%vec_mt(mt_length))
+      allocate(vec%vec_vac(vac_length))
+      allocate(vec%vec_misc(misc_length))
    END SUBROUTINE mixvector_alloc
 
    FUNCTION multiply_scalar(scalar, vec) RESULT(vecout)
@@ -581,6 +581,9 @@ CONTAINS
    FUNCTION subtract_vectors(vec1, vec2) RESULT(vecout)
       TYPE(t_mixvector), INTENT(IN)::vec1, vec2
       TYPE(t_mixvector)           ::vecout
+
+      write (*,*) "vec1 allocated: ", vec1%allocated()
+      write (*,*) "vec2 allocated: ", vec2%allocated()
 
       vecout = vec1
       vecout%vec_pw = vecout%vec_pw - vec2%vec_pw
