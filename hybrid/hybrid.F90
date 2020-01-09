@@ -125,6 +125,7 @@ CONTAINS
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
          write (*,*) "iterHF = ", iterHF
+         call mpdata%init(hybinp, hybdat, atoms)
          CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpdata, hybinp, hybdat,&
                          enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")

@@ -510,6 +510,9 @@ contains
 
       integer                    :: ok
 
+      if(.not. allocated(mpdata%num_radfun_per_l)) THEN
+         allocate(mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype))
+      endif
       if(.not. allocated(mpdata%l1)) then
          allocate(mpdata%l1(hybdat%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%l1')
