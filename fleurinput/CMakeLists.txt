@@ -23,7 +23,7 @@ calculator.f constants.f90 mpi_bc_tool.F90 ../io/xml/inputSchema.h ../io/xml/dro
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/fleurinput")
 
 if (DEFINED FLEURINPUT_COMPILEOPTS )
-  target_compile_options(fleurinput PRIVATE ${FLEURINPUT_COMPILEOPTS})
+  target_compile_options(fleurinput PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${FLEURINPUT_COMPILEOPTS}>)
 endif()
 
 target_link_libraries(fleurinput juDFT)

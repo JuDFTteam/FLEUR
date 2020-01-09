@@ -109,9 +109,8 @@ build-intel-static:
   artifacts:
     when: on_success
     paths:
-    - build.intel-static/fleur
     - build.intel-static/fleur_MPI
-    - build.intel-static/inpgen
+    - build.intel-static/inpgen2/inpgen2
   allow_failure: true
   only:
     - schedules
