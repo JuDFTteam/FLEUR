@@ -20,6 +20,7 @@ CONTAINS
     USE m_types
     USE m_rotate_mt_den_tofrom_local
     USE m_sfTests
+    USE m_magnMomFromDen
     IMPLICIT NONE
     TYPE(t_mpi),       INTENT(IN)     :: mpi
     TYPE(t_oneD),      INTENT(IN)     :: oneD
@@ -39,6 +40,7 @@ CONTAINS
 
       TYPE(t_potden) :: div, phi, checkdiv
       TYPE(t_potden), DIMENSION(3) :: cvec, corrB, bxc
+      REAL                         :: b(3,atoms%ntype),dummy1(atoms%ntype),dummy2(atoms%ntype)
 
 
 
@@ -60,12 +62,33 @@ CONTAINS
     !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,inDen,1.0)
     !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,vTot,2.0)
 
+
+
     ! Once it is tested:
-    !IF (noco%l_mtnocoPot.AND.(.FALSE.)) THEN ! l_sf will go here
-       !CALL makeVectorField(stars,atoms,sphhar,vacuum,input,noco,vTot,2.0,bxc)
-       !CALL sourcefree(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)
-       !CALL correctPot(vTot,cvec)
-    !END IF
+    IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN ! l_sf will go here
+       CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
+       DO i=1,atoms%ntype
+          WRITE  (6,8025) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
+          8025 FORMAT(2x,'--> Bfield before SF (atom ',i2,': ','Bx 1=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
+       END DO
+       CALL makeVectorField(sym,stars,atoms,sphhar,vacuum,input,noco,vTot,2.0,bxc)
+       CALL sourcefree(mpi,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,bxc,div,phi,cvec,corrB,checkdiv)
+       CALL div%resetPotDen()
+       CALL checkdiv%resetPotDen()
+       CALL phi%resetPotDen()
+       DO i=1,3
+          CALL bxc(i)%resetPotDen()
+          CALL corrB(i)%resetPotDen()
+       END DO
+       CALL correctPot(vTot,cvec)
+       CALL magnMomFromDen(input,atoms,noco,vTot,b,dummy1,dummy2)
+       DO i=1,atoms%ntype
+          WRITE  (6,8026) i,b(1,i),b(2,i),b(3,i),SQRT(b(1,i)**2+b(2,i)**2+b(3,i)**2)
+          8026 FORMAT(2x,'--> Bfield after SF (atom ',i2,': ','Bx 1=',f9.5,' By=',f9.5,' Bz=',f9.5,' |B|=',f9.5)
+       END DO
+    END IF
+
+
 
   !           ---> store v(l=0) component as r*v(l=0)/sqrt(4pi)
 

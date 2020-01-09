@@ -10,6 +10,7 @@ MODULE m_types_sliceplot
   IMPLICIT NONE
   PRIVATE
   INTEGER,PUBLIC,PARAMETER :: PLOT_XSF_FORMAT=1
+  INTEGER,PUBLIC,PARAMETER :: PLOT_TAB_FORMAT=2
   PUBLIC :: t_sliceplot,t_plot
   TYPE ,extends(t_fleurinput_base):: t_plot
     LOGICAL :: cartesian=.false.
@@ -115,6 +116,7 @@ CONTAINS
     IF (numberNodes.EQ.1) THEN
        this%iplot = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@iplot'))
        this%polar = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@polar'))
+       this%format = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@format'))
        xPathA = '/fleurInput/output/plotting/plot'
        numberNodes = xml%GetNumberOfNodes(xPathA)
        allocate(this%plot(numberNodes))
@@ -150,7 +152,7 @@ CONTAINS
     INTEGER::numberNodes,i
 
     this%cartesian = evaluateFirstBoolOnly(xml%GetAttributeValue('/@cartesian'))
-    this%twodim     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@2D'))
+    this%twodim     = evaluateFirstBoolOnly(xml%GetAttributeValue('/@TwoD'))
 
     line=xml%GetAttributeValue('/@grid')
     call evaluateList(x,line)
@@ -169,6 +171,10 @@ CONTAINS
     call evaluateList(x,line)
     if (size(x)/=3) call judft_error("Wrong number of coordinates for vec3")
     this%vec3=x
+    line=xml%GetAttributeValue('/@zero')
+    call evaluateList(x,line)
+    if (size(x)/=3) call judft_error("Wrong number of coordinates for vec0")
+    this%zero=x
 
     this%filename=xml%GetAttributeValue('/@file')
 

@@ -192,7 +192,7 @@ CONTAINS
 
       DEALLOCATE(flm)
 
-      CALL divYlm(grsflm1(:,:,:,:),grsflm2(:,:,:,:),grsflm3(:,:,:,:), divflm)
+      CALL divYlm(grsflm1(:,:indmax,:,:),grsflm2(:,:indmax,:,:),grsflm3(:,:indmax,:,:), divflm)
 
       DO iType=1, atoms%ntype
          CALL lh_from_lm(sym,atoms, sphhar, iType, divflm(:,1:indmax,iType), div%mt(:,0:,iType,1))

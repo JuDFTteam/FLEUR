@@ -18,8 +18,6 @@ MODULE m_plot
    ! At the cost of reduced postprocess functionality, this allowed us to re-
    ! move I/O (using plot.hdf/text files) from the plotting routine completely.
    !
-   ! TODO:
-   ! - plot_inp files are still in use and should be replaced by a plotting type.
    !
    ! A. Neukirchen & R. Hilgers, September 2019
    !------------------------------------------------
@@ -550,7 +548,7 @@ CONTAINS
 
       !OPEN (18,file='plot_inp')
       !READ(18,'(i2,5x,l1,1x,a)') nplot,xsf,textline
-      polar = .FALSE.
+      polar = sliceplot%polar
       !IF ((noco%l_noco).AND.(numInDen.EQ.4)) THEN
       !   polar = (textline(1:7)=='polar=T').OR.(textline(1:7)=='polar=t')
       !     IF (polar) THEN

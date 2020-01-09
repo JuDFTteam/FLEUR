@@ -2,6 +2,7 @@
 
 jt::copyfile("files/inp.xml",$workdir);
 jt::copyfile("files/sym.out",$workdir);
+jt::copyfile("files/kpts.xml",$workdir);
 
 jt::testrun($executable,$workdir);
 

@@ -52,7 +52,7 @@
          TYPE(t_xcpot_inbuild) :: xcpot_tmp
          TYPE(t_potden)        :: vTot_tmp
          TYPE(t_sphhar)        :: tmp_sphhar
-         REAL, ALLOCATABLE     :: ch(:,:)
+         REAL, ALLOCATABLE     :: ch(:,:),v_x(:,:),v_xc(:,:),e_xc(:,:)
          INTEGER               :: n,nsp,nt,jr, loc_n
          INTEGER               :: i, j, idx, cnt
          REAL                  :: divi
@@ -62,9 +62,6 @@
          !locals for mpi
          integer :: ierr
          integer:: n_start,n_stride
-         REAL:: v_x((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,input%jspins)
-         REAL:: v_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,input%jspins)
-         REAL:: e_xc((atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1)*atoms%jmtd,1)
          REAL,ALLOCATABLE:: xcl(:,:)
          LOGICAL :: lda_atom(atoms%ntype),l_libxc, perform_MetaGGA
          !.....------------------------------------------------------------------
@@ -88,8 +85,8 @@
          END SELECT
 
          nsp=atoms%nsp()
-         ALLOCATE(ch(nsp*atoms%jmtd,input%jspins))
-         IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
+         !ALLOCATE(ch(nsp*atoms%jmtd,input%jspins),v_x(nsp*atoms%jmtd,input%jspins),v_xc(nsp*atoms%jmtd,input%jspins),e_xc(nsp*atoms%jmtd,input%jspins))
+         !IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
 
          CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot%needs_grad(),sym)
 
@@ -109,23 +106,26 @@
          !TODO: MetaGGA
          !call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
+            ALLOCATE(ch(nsp*atoms%jri(n),input%jspins),v_x(nsp*atoms%jri(n),input%jspins),&
+                     v_xc(nsp*atoms%jri(n),input%jspins),e_xc(nsp*atoms%jri(n),input%jspins))
+            IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
             loc_n = loc_n + 1
 
-            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,.True.,den%mt(:,0:,n,:),n,noco,grad,ch(:,1:input%jspins))
+            CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,.True.,den%mt(:,0:,n,:),n,noco,grad,ch)
 
             !
             !         calculate the ex.-cor. potential
 #ifdef CPP_LIBXC
             if(perform_MetaGGA .and. xcpot%kinED%set) then
-              CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
-                   , v_x(:nsp*atoms%jri(n),:),grad, kinED_KS=xcpot%kinED%mt(:,:,loc_n))
+              CALL xcpot%get_vxc(input%jspins,ch,v_xc&
+                   , v_x,grad, kinED_KS=xcpot%kinED%mt(:,:,loc_n))
             else
-               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
-                  , v_x(:nsp*atoms%jri(n),:),grad)
+               CALL xcpot%get_vxc(input%jspins,ch,v_xc&
+                  , v_x,grad)
             endif
 #else
-               CALL xcpot%get_vxc(input%jspins,ch(:nsp*atoms%jri(n),:),v_xc(:nsp*atoms%jri(n),:)&
-                  , v_x(:nsp*atoms%jri(n),:),grad)
+               CALL xcpot%get_vxc(input%jspins,ch,v_xc&
+                  , v_x,grad)
 #endif
             IF (lda_atom(n)) THEN
                ! Use local part of pw91 for this atom
@@ -182,6 +182,7 @@
                ENDIF
                CALL mt_from_grid(atoms,sym,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
+            DEALLOCATE (ch,v_x,v_xc,e_xc)
          ENDDO
 
          CALL finish_mt_grid()

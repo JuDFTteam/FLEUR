@@ -251,7 +251,7 @@ CONTAINS
              ch(jr,2) = rho_down
          END DO
       ELSE
-         ch(:,1:jspins)=ch_calc(:,1:jspins)
+         ch(:nsp*atoms%jri(n),1:jspins)=ch_calc(:nsp*atoms%jri(n),1:jspins)
 
       EnD IF
    END SUBROUTINE mt_to_grid

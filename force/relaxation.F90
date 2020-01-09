@@ -12,13 +12,14 @@ MODULE m_relaxation
 
 CONTAINS
   SUBROUTINE relaxation(mpi,input,atoms,cell,sym,force_new,energies_new)
-    !This routine uses the current force,energies and atomic positions to 
-    !generate a displacement in a relaxation step. 
+    !This routine uses the current force,energies and atomic positions to
+    !generate a displacement in a relaxation step.
     !The history is taken into account by read_relax from m_relaxio
     !After generating new positions the code stops
     USE m_types
     USE m_relaxio
     USE m_mixing_history
+    USE m_types_xml
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
 #endif
@@ -33,9 +34,13 @@ CONTAINS
     REAL,ALLOCATABLE :: displace(:,:),old_displace(:,:)
     INTEGER          :: n,ierr
     LOGICAL          :: l_conv
+    !to calculate the current displacement
+    Type(t_xml)  :: xml
+    TYPE(t_atoms):: atoms_non_displaced
 
     IF (mpi%irank==0) THEN
-       ALLOCATE(pos(3,atoms%ntype,1)); 
+       call xml%init()
+       ALLOCATE(pos(3,atoms%ntype,1));
        DO n=1,atoms%ntype
           pos(:,n,1)=atoms%pos(:,SUM(atoms%neq(:n-1))+1)
        END DO
@@ -51,8 +56,8 @@ CONTAINS
              force(:,n,1)=0.0
           ENDIF
        ENDDO
-       
-       ! add history 
+
+       ! add history
        CALL read_relax(pos,force,energies)
 
        !determine new positions
@@ -79,7 +84,11 @@ CONTAINS
        ENDDO
 
        !New displacements relative to positions in inp.xml
-       CALL read_displacements(atoms,old_displace)
+       !CALL read_displacements(atoms,old_displace)
+       call atoms_non_displaced%read_xml(xml)
+       call xml%freeResources()
+       old_displace=atoms%taual-atoms_non_displaced%taual
+
        displace=displace+old_displace
 
        !Write file
@@ -108,11 +117,11 @@ CONTAINS
     REAL,INTENT(OUT) :: displace(:,:)
 
     real :: corr
-    
+
     displace = alpha*force(:,:,SIZE(force,3))
     corr=maxdisp/maxval(abs(displace))
     if (corr<1.0) displace = corr*alpha*force(:,:,size(force,3))
-    
+
   END SUBROUTINE simple_step
 
   SUBROUTINE simple_bfgs(pos,force,shift)
@@ -157,7 +166,7 @@ CONTAINS
           DO j = 1,n_force
              h(j,j) = 1.0
           ENDDO
-          CYCLE 
+          CYCLE
        ELSE
           !update h
           IF (n == 2) THEN

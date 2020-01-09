@@ -1,0 +1,5 @@
+<kPointList name="default" count="3" >
+         <kPoint weight="0.222222">0.333333            0.333333            0.000000</kPoint>
+         <kPoint weight="0.666667">-0.000000            0.333333            0.000000</kPoint>
+         <kPoint weight="0.111111">0.000000            0.000000            0.000000</kPoint>
+      </kPointList>
