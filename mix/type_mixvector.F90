@@ -582,9 +582,6 @@ CONTAINS
       TYPE(t_mixvector), INTENT(IN)::vec1, vec2
       TYPE(t_mixvector)           ::vecout
 
-      write (*,*) "vec1 allocated: ", vec1%allocated()
-      write (*,*) "vec2 allocated: ", vec2%allocated()
-
       vecout = vec1
       vecout%vec_pw = vecout%vec_pw - vec2%vec_pw
       vecout%vec_mt = vecout%vec_mt - vec2%vec_mt
