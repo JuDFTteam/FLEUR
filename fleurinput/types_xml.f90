@@ -16,7 +16,7 @@ MODULE m_types_xml
   USE m_calculator
   IMPLICIT NONE
   PRIVATE
-
+  LOGICAL :: INITIALIZED=.false.
   TYPE t_xml
      INTEGER:: id
      character(len=200):: basepath=""
@@ -66,6 +66,8 @@ CONTAINS
        END FUNCTION dropInputSchema
     END INTERFACE
 
+    if (INITIALIZED) RETURN
+    INITITALIZED=.true.
     errorStatus = 0
     errorStatus = dropInputSchema()
     IF(errorStatus.NE.0) THEN
@@ -621,7 +623,7 @@ CONTAINS
          INTEGER freeXMLResources
        END FUNCTION freeXMLResources
     END INTERFACE
-
+    return
     errorStatus = 0
     errorStatus = freeXMLResources()
     IF(errorStatus.NE.0) THEN
