@@ -67,7 +67,7 @@ CONTAINS
     END INTERFACE
 
     if (INITIALIZED) RETURN
-    INITITALIZED=.true.
+    INITIALIZED=.true.
     errorStatus = 0
     errorStatus = dropInputSchema()
     IF(errorStatus.NE.0) THEN
