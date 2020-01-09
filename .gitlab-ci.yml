@@ -27,8 +27,7 @@ test-gfortran-hdf5:
   artifacts:
     when: on_failure
     paths:
-      - build/Testing/failed
-      - build/Testing/test.oldlogs
+      - build/Testing
 #  only:
 #    - schedules
 #    - triggers
