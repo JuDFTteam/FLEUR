@@ -293,7 +293,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    END DO
 #endif
 
-   CALL cdnmt(mpi,input%jspins,atoms,sym,sphhar,noco,jsp_start,jsp_end,&
+   CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,&
                  enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1,input%l_dftspinpol)
 
    IF (mpi%irank==0) THEN
