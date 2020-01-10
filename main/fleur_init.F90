@@ -145,7 +145,7 @@ CONTAINS
     CALL make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,xcpot,oneD,noco,mpi)
     call make_forcetheo(forcetheo_data,cell,sym,atoms,forcetheo)
     call lapw_dim(kpts,cell,input,noco,oneD,forcetheo,atoms)
-    call input%init(noco,lapw_dim_nbasfcn)
+    call input%init(noco,hybinp%l_hybrid,lapw_dim_nbasfcn)
     call oned%init(atoms) !call again, because make_stars modified it :-)
     call kpts%init(cell, sym, input%film)
     ! Store structure data

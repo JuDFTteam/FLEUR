@@ -474,6 +474,7 @@ contains
       use m_intgrf, only: intgrf
       use m_types_hybinp
       use m_types_setup
+      use m_judft
       implicit NONE
 
       class(t_mpdata), intent(inout):: mpdata
@@ -491,7 +492,6 @@ contains
                       intgrf(mpdata%radbasfn_mt(:, i_basfn, l, itype)**2, &
                              atoms, itype, gridf) &
                       )
-
                mpdata%radbasfn_mt(:atoms%jri(itype), i_basfn, l, itype) &
                   = mpdata%radbasfn_mt(:atoms%jri(itype), i_basfn, l, itype)/norm
             end do
