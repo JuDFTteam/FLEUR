@@ -65,11 +65,8 @@ CONTAINS
       IF (hybinp%l_hybrid) THEN
          input%ellow = input%ellow - 2.0
          input%elup = input%elup + 10.0
-         input%gw_neigd = max(nint(input%zelec)*10, 60)
          input%minDistance = 1.0e-5
          input%ctail = .false.
-      ELSE
-         input%gw_neigd = 0
       END IF
 
       IF (input%rkmax == 0.0) input%rkmax = MAXVAL(atoms%lmax/atoms%rmt)
@@ -139,5 +136,6 @@ CONTAINS
       hybinp%select1(4, :) = 2
       mpinp%g_cutoff = round_to_deci(input%rkmax - 0.5, 1)
       mpinp%linear_dep_tol = 1e-4
+      call input%init(noco,hybinp%l_hybrid)
    END SUBROUTINE make_defaults
 END MODULE m_make_defaults
