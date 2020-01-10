@@ -11,8 +11,8 @@ MODULE m_types_mpinp
    PRIVATE
 
    TYPE, EXTENDS(t_fleurinput_base):: t_mpinp
-      real                   :: g_cutoff = 0.0
-      real                   :: linear_dep_tol = 0.0
+      real                   :: g_cutoff = REAL_NOT_INITALIZED
+      real                   :: linear_dep_tol = REAL_NOT_INITALIZED
    CONTAINS
       PROCEDURE :: read_xml => read_xml_mpinp
       PROCEDURE :: mpi_bc => mpi_bc_mpinp

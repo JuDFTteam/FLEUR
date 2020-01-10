@@ -9,7 +9,7 @@ MODULE m_calc_hybrid
 
 CONTAINS
 
-   SUBROUTINE calc_hybrid(eig_id, mpdata, hybinp, hybdat, kpts, atoms, input,  mpi, noco, cell, oneD, &
+   SUBROUTINE calc_hybrid(eig_id, mpinp, mpdata, hybinp, hybdat, kpts, atoms, input,  mpi, noco, cell, oneD, &
                           enpara, results, sym, xcpot, v, iterHF)
 
       USE m_types_hybdat
@@ -27,6 +27,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_oneD), INTENT(IN)    :: oneD
+      type(t_mpinp), intent(in)    :: mpinp
       type(t_mpdata), intent(inout) :: mpdata
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
@@ -126,7 +127,7 @@ CONTAINS
          CALL timestart("generation of mixed basis")
          write (*,*) "iterHF = ", iterHF
          call mpdata%init(hybinp, hybdat, atoms)
-         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpdata, hybinp, hybdat,&
+         CALL mixedbasis(atoms, kpts,  input, cell, xcpot, mpinp, mpdata, hybinp, hybdat,&
                          enpara, mpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 

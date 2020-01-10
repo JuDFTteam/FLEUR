@@ -246,7 +246,7 @@ CONTAINS
        IF (hybinp%l_hybrid) THEN
           SELECT TYPE(xcpot)
           TYPE IS(t_xcpot_inbuild)
-             CALL calc_hybrid(eig_id,mpdata,hybinp,hybdat,kpts,atoms,input,mpi,noco,&
+             CALL calc_hybrid(eig_id,mpinp,mpdata,hybinp,hybdat,kpts,atoms,input,mpi,noco,&
                               cell,oneD,enpara,results,sym,xcpot,vTot,iterHF)
           END SELECT
           IF(hybdat%l_calhf) THEN
@@ -433,7 +433,7 @@ CONTAINS
              SELECT TYPE(xcpot)
                 TYPE IS(t_xcpot_inbuild)
                    CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybinp,hybdat,&
+                              sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpinp,mpdata,hybinp,hybdat,&
                               results,coreSpecInput,archiveType,outDen)
              END SELECT
           END IF

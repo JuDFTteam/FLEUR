@@ -9,7 +9,7 @@ MODULE m_rdmft
 CONTAINS
 
 SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
-                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpdata,hybinp, hybdat,&
+                 sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpinp,mpdata,hybinp, hybdat,&
                  results,coreSpecInput,archiveType,outDen)
 
    USE m_types
@@ -63,6 +63,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
    TYPE(t_oneD),          INTENT(IN)    :: oneD
    TYPE(t_noco),          INTENT(INOUT) :: noco
    TYPE(t_xcpot_inbuild), INTENT(INOUT) :: xcpot
+   TYPE(t_mpinp),         INTENT(IN)    :: mpinp
    TYPE(t_mpdata),        intent(inout) :: mpdata
    TYPE(t_hybinp),        INTENT(IN)    :: hybinp
    TYPE(t_hybdat),        INTENT(INOUT) :: hybdat
@@ -384,7 +385,7 @@ SUBROUTINE rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars
 
 !   CALL open_hybinp_io1(sym%invs)
 
-   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpdata,hybinp, hybdat,enpara,mpi,vTot, iterHF)
+   CALL mixedbasis(atoms,kpts,input,cell,xcpot,mpinp,mpdata,hybinp, hybdat,enpara,mpi,vTot, iterHF)
 
    CALL open_hybinp_io2(mpdata, hybinp,hybdat,input,atoms,sym%invs)
 

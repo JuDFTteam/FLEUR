@@ -127,14 +127,14 @@ CONTAINS
     !Only PE==0 reads the input and does basic postprocessing
     IF (mpi%irank.EQ.0) THEN
       CALL fleurinput_read_xml(cell,sym,atoms,input,noco,vacuum,field,&
-      sliceplot,banddos,hybinp,oneD,coreSpecInput,wann,&
-      xcpot,forcetheo_data,kpts,enparaXML)
+                              sliceplot,banddos,mpinp,hybinp,oneD,coreSpecInput,&
+                              wann,xcpot,forcetheo_data,kpts,enparaXML)
       call fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
       Banddos,Oned,Xcpot,Kpts)
     END IF
     !Distribute input to all PE
     CALL fleurinput_mpi_bc(Cell,Sym,Atoms,Input,Noco,Vacuum,Field,&
-         Sliceplot,Banddos,hybinp,Oned,Corespecinput,Wann,&
+         Sliceplot,Banddos,mpinp,hybinp,Oned,Corespecinput,Wann,&
          Xcpot,Forcetheo_data,Kpts,Enparaxml,Mpi%Mpi_comm)
 
     !Remaining init is done using all PE

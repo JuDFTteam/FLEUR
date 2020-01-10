@@ -15,6 +15,7 @@ MODULE m_types_fleurinput
   USE m_types_field
   USE m_types_sliceplot
   USE m_types_banddos
+  USE m_types_mpinp
   USE m_types_hybinp
   USE m_types_oneD
   USE m_types_coreSpecInput
@@ -47,6 +48,5 @@ CONTAINS
     TYPE(t_forcetheo_data),INTENT(IN)::forcetheo_data
     TYPE(t_enparaXML),INTENT(IN)::enparaXML
     TYPE(t_kpts),INTENT(IN)::kpts
-  END SUBROUTINE 
+  END SUBROUTINE
 END MODULE m_types_fleurinput
-
