@@ -12,8 +12,8 @@ MODULE m_types_hybinp
 
    TYPE, EXTENDS(t_fleurinput_base):: t_hybinp
       LOGICAL                ::  l_hybrid = .false.
-      INTEGER                ::  ewaldlambda = -1
-      INTEGER                ::  lexp = -1
+      INTEGER                ::  ewaldlambda = 3
+      INTEGER                ::  lexp = 16
       INTEGER                ::  bands1 = -1 !Only read in
       INTEGER, ALLOCATABLE   ::  select1(:, :)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)

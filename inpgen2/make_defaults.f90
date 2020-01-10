@@ -137,5 +137,6 @@ CONTAINS
       mpinp%g_cutoff = round_to_deci(input%rkmax - 0.5, 1)
       mpinp%linear_dep_tol = 1e-4
       call input%init(noco,hybinp%l_hybrid)
+      hybinp%bands1 = ceiling(0.75*input%gw_neigd)
    END SUBROUTINE make_defaults
 END MODULE m_make_defaults
