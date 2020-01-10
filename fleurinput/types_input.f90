@@ -97,6 +97,7 @@ MODULE m_types_input
      INTEGER :: rdmftStatesBelow=0
      INTEGER :: rdmftStatesAbove=0
      INTEGER :: rdmftFunctional=0
+     INTEGER :: lResMax = 3
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_input
      PROCEDURE :: init => init_input

@@ -63,7 +63,7 @@ SUBROUTINE resMoms(sym,input,atoms,sphhar,noco,den,rhoLRes)
 
    CALL magDiMom(sym,input,atoms,sphhar,noco,noco%l_mperp,rhoTemp,t_op,elecDip)
 
-   DO l = 0, atoms%lmaxd
+   DO l = 0, input%lResMax
       DO lp = 0, l
          llp = (l* (l+1))/2 + lp
          rhoTemp = 0.0
