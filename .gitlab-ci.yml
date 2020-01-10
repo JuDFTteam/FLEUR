@@ -39,7 +39,7 @@ pages:
   script:
     - echo "HTML should be ready from cache..."
     - mv /builds/fleur/fleur/docs/Docu_main.html /builds/fleur/fleur/public/index.html
-  environment: 
+  environment:
      name: HTML-Pages
      url: https://fleur.iffgit.fz-juelich.de/fleur
   artifacts:
@@ -47,7 +47,7 @@ pages:
       - public
   only:
     - web
-  
+
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:latest
   stage: html
@@ -68,19 +68,19 @@ doxygen:
 build-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:pgi
   stage: build
-  artifacts: 
+  artifacts:
      paths:
        - build.pgi
      expire_in: 1h
   script:
-    - cd /builds/fleur/fleur; ./configure.sh -l pgi ; cd build.pgi; make 
+    - cd /builds/fleur/fleur; ./configure.sh -l pgi ; cd build.pgi; make
   allow_failure: true
   only:
     - schedules
     - triggers
     - web
- 
-    
+
+
 test-pgi:
   image: iffregistry.fz-juelich.de/fleur/fleur:pgi
   stage: test
@@ -93,12 +93,12 @@ test-pgi:
      - schedules
      - web
      - triggers
-     
+
 
 build-intel-static:
   image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: build
-  artifacts: 
+  artifacts:
      paths:
        - build.intel-static
      expire_in: 1h
@@ -115,25 +115,25 @@ build-intel-static:
     - schedules
     - triggers
     - web
- 
+
 
 build-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: build
-  artifacts: 
+  artifacts:
      paths:
        - build.intel.debug
      expire_in: 1h
   script:
     - set +e && source compilervars.sh intel64 && set -e ; ulimit -s unlimited
-    - cd /builds/fleur/fleur; CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -lxml2 -lz -llzma -ldl" ./configure.sh -t -d -l intel INTEL_MPI ; cd build.intel.debug; make -j 4
+    - cd /builds/fleur/fleur; CC=gcc FC=mpiifort  FLEUR_LIBRARIES="-lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -lxml2 -lz -llzma -ldl" ./configure.sh -d -l intel INTEL_MPI ; cd build.intel.debug; make -j 4
   allow_failure: true
   only:
     - schedules
     - triggers
     - web
- 
-    
+
+
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:intel-static
   stage: test
@@ -160,17 +160,16 @@ gfortran-coverage:
       - cd /builds/fleur/fleur; ./configure.sh -l coverage -flags --coverage GITLAB; cd build.coverage; make -j 4
       - lcov --capture --initial -d CMakeFiles -o baseline.info
       - ulimit -s unlimited ;export juDFT_MPI="mpirun -n 2 --allow-run-as-root ";ctest
-      - lcov --capture  -d CMakeFiles -o after.info 
+      - lcov --capture  -d CMakeFiles -o after.info
       - lcov --add-tracefile baseline.info --add-tracefile after.info -o combined.info
       - genhtml combined.info --output-directory html_out
       - mkdir ../public;mv html_out ../public/coverage_html
   allow_failure: true
   artifacts:
     paths:
-      - public 
+      - public
   environment:
     name: Coverage
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
   only:
       - web
-    

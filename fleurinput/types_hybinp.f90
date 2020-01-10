@@ -65,7 +65,9 @@ CONTAINS
       CHARACTER(len=4), allocatable  :: xc_name
 
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
-      ALLOCATE (this%lcutm1(ntype), this%lcutwf(ntype), this%select1(4, ntype), source=0)
+      ALLOCATE (this%lcutm1(ntype), source=0)
+      ALLOCATE (this%lcutwf(ntype), source=0)
+      ALLOCATE (this%select1(4, ntype), source=0)
       numberNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
       IF (numberNodes == 1) THEN
          ! this%g_cutoff=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
