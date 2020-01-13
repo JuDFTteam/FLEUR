@@ -38,7 +38,7 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpdata, hybinp, hybdat,&
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpinp, mpdata, hybinp, hybdat,&
                          enpara, mpi, v, iterHF)
 
       USE m_judft
@@ -55,6 +55,7 @@ CONTAINS
       TYPE(t_xcpot_inbuild), INTENT(IN)    :: xcpot
       TYPE(t_mpi), INTENT(IN)    :: mpi
       TYPE(t_mpdata), intent(inout)  :: mpdata
+      TYPE(t_mpinp), intent(in)     :: mpinp
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_hybdat), INTENT(INOUT) :: hybdat
       TYPE(t_enpara), INTENT(IN)    :: enpara
@@ -120,7 +121,7 @@ CONTAINS
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
       ! construct G-vectors with cutoff smaller than gcutm
-      call mpdata%gen_gvec(cell, kpts, mpi)
+      call mpdata%gen_gvec(mpinp, cell, kpts, mpi)
 
       ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
 

@@ -12,8 +12,8 @@ MODULE m_types_hybinp
 
    TYPE, EXTENDS(t_fleurinput_base):: t_hybinp
       LOGICAL                ::  l_hybrid = .false.
-      INTEGER                ::  ewaldlambda = -1
-      INTEGER                ::  lexp = -1
+      INTEGER                ::  ewaldlambda = 3
+      INTEGER                ::  lexp = 16
       INTEGER                ::  bands1 = -1 !Only read in
       INTEGER, ALLOCATABLE   ::  select1(:, :)
       INTEGER, ALLOCATABLE   ::  lcutm1(:)
@@ -65,11 +65,11 @@ CONTAINS
       CHARACTER(len=4), allocatable  :: xc_name
 
       ntype = xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
-      ALLOCATE (this%lcutm1(ntype), this%lcutwf(ntype), this%select1(4, ntype), source=0)
+      ALLOCATE (this%lcutm1(ntype), source=0)
+      ALLOCATE (this%lcutwf(ntype), source=0)
+      ALLOCATE (this%select1(4, ntype), source=0)
       numberNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/prodBasis')
       IF (numberNodes == 1) THEN
-         ! this%g_cutoff=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@gcutm'))
-         ! this%linear_dep_tol=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@tolerance'))
          this%ewaldlambda = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@ewaldlambda'))
          this%lexp = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@lexp'))
          this%bands1 = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/prodBasis/@bands'))

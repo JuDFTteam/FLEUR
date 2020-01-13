@@ -42,7 +42,7 @@ check_arguments.F90
 check_para.F90
 xmlOutput.F90
 round.f90
-npy.f90
+#npy.f90
 round.f90
 )
 if (JUDFT_USE_MPI)
@@ -77,3 +77,4 @@ endif()
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/juDFT")
 set_target_properties(juDFT PROPERTIES Fortran_MODULE_DIRECTORY modules/juDFT)
+set_source_files_properties(time.F90 PROPERTIES COMPILE_FLAGS -O0)

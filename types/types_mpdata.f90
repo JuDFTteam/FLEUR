@@ -5,7 +5,6 @@ module m_types_mpdata
       integer, allocatable   :: g(:, :) ! (3, num_gpts)
       integer, allocatable   :: n_g(:) ! (ik)
       integer, allocatable   :: gptm_ptr(:, :) ! (ig, ik)
-      real                   :: g_cutoff
       integer, allocatable   :: num_radbasfn(:, :) !(l,itype)
       real, allocatable      :: radbasfn_mt(:,:,:,:) !(jri,n,l,itype)
       real                   :: linear_dep_tol  !only read in
@@ -41,14 +40,17 @@ contains
       mpdata_num_gpts = size(mpdata%g, dim=2)
    end function mpdata_num_gpts
 
-   subroutine mpdata_gen_gvec(mpdata, cell, kpts, mpi)
+   subroutine mpdata_gen_gvec(mpdata, mpinp, cell, kpts, mpi)
+      use m_judft
       use m_types_setup
       use m_types_kpts
       use m_types_mpi
+      use m_types_mpinp
       use m_intgrf, only: intgrf_init, intgrf
       use m_rorder, only: rorderpf
       implicit NONE
       class(t_mpdata), intent(inout) :: mpdata
+      type(t_mpinp), intent(in)      :: mpinp
       type(t_cell), intent(in)       :: cell
       type(t_kpts), intent(in)       :: kpts
       type(t_mpi), intent(in)        :: mpi
@@ -82,10 +84,10 @@ contains
                n2 = n1 - ABS(y)
                do z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  if ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpdata%g_cutoff) CYCLE
+                  if ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpinp%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
                   do ikpt = 1, kpts%nkptf
-                     if (norm2(MATMUL(kpts%bkf(:, ikpt) + g, cell%bmat)) <= mpdata%g_cutoff) THEN
+                     if (norm2(MATMUL(kpts%bkf(:, ikpt) + g, cell%bmat)) <= mpinp%g_cutoff) THEN
                         if (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
                            l_found_kg_in_sphere = .TRUE.
@@ -127,12 +129,12 @@ contains
                n2 = n1 - ABS(y)
                do z = -n2, n2, MAX(2*n2, 1)
                   g = [x, y, z]
-                  if ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpdata%g_cutoff) CYCLE
+                  if ((norm2(MATMUL(g, cell%bmat)) - longest_k) > mpinp%g_cutoff) CYCLE
                   l_found_kg_in_sphere = .FALSE.
                   do ikpt = 1, kpts%nkptf
                      kvec = kpts%bkf(:, ikpt)
 
-                     if (norm2(MATMUL(kvec + g, cell%bmat)) <= mpdata%g_cutoff) THEN
+                     if (norm2(MATMUL(kvec + g, cell%bmat)) <= mpinp%g_cutoff) THEN
                         if (.NOT. l_found_kg_in_sphere) THEN
                            i = i + 1
                            mpdata%g(:, i) = g
@@ -172,7 +174,7 @@ contains
          WRITE (6, '(/A)') 'Mixed basis'
          WRITE (6, '(A,I5)') 'Number of unique G-vectors: ', mpdata%num_gpts()
          WRITE (6, *)
-         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpdata%g_cutoff/2*input%rkmax):'
+         WRITE (6, '(3x,A)') 'IR Plane-wave basis with cutoff of gcutm (mpinp%g_cutoff/2*input%rkmax):'
          WRITE (6, '(5x,A,I5)') 'Maximal number of G-vectors:', maxval(mpdata%n_g)
       END if
    end subroutine mpdata_gen_gvec
@@ -472,6 +474,7 @@ contains
       use m_intgrf, only: intgrf
       use m_types_hybinp
       use m_types_setup
+      use m_judft
       implicit NONE
 
       class(t_mpdata), intent(inout):: mpdata
@@ -489,7 +492,6 @@ contains
                       intgrf(mpdata%radbasfn_mt(:, i_basfn, l, itype)**2, &
                              atoms, itype, gridf) &
                       )
-
                mpdata%radbasfn_mt(:atoms%jri(itype), i_basfn, l, itype) &
                   = mpdata%radbasfn_mt(:atoms%jri(itype), i_basfn, l, itype)/norm
             end do
@@ -510,6 +512,9 @@ contains
 
       integer                    :: ok
 
+      if(.not. allocated(mpdata%num_radfun_per_l)) THEN
+         allocate(mpdata%num_radfun_per_l(0:atoms%lmaxd, atoms%ntype))
+      endif
       if(.not. allocated(mpdata%l1)) then
          allocate(mpdata%l1(hybdat%max_indx_p_1, 0:maxval(hybinp%lcutm1), atoms%ntype), stat=ok)
          if (ok /= 0) call judft_error('mpdata_init: failure allocation mpdata%l1')

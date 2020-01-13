@@ -10,7 +10,7 @@ MODULE m_cdnmt
   !     Philipp Kurz 2000-02-03
   !***********************************************************************
 CONTAINS
-  SUBROUTINE cdnmt(mpi,jspd,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,&
+  SUBROUTINE cdnmt(mpi,jspd,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,&
                    vr,denCoeffs,usdus,orb,denCoeffsOffdiag,moments,rho,hub1,l_dftspinpol)
     use m_constants,only: sfp_const
     USE m_rhosphnlo
@@ -19,6 +19,7 @@ CONTAINS
     USE m_types
     USE m_xmlOutput
     IMPLICIT NONE
+    TYPE(t_input),   INTENT(IN)    :: input
     TYPE(t_mpi),     INTENT(IN)    :: mpi
     TYPE(t_usdus),   INTENT(INOUT) :: usdus !in fact only the lo part is intent(in)
     TYPE(t_noco),    INTENT(IN)    :: noco
@@ -115,7 +116,9 @@ CONTAINS
                      +   denCoeffs%dd(l,itype,ispin)*( g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin) )&
                      + 2*denCoeffs%du(l,itype,ispin)*( f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin) )
                 rho(j,0,itype,ispin) = rho(j,0,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
-                moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
+                IF (l.LE.input%lResMax) THEN
+                   moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin)+ s/(atoms%neq(itype)*sfp_const)
+                END IF
              ENDDO
           ENDDO
 
@@ -126,7 +129,7 @@ CONTAINS
              qmtllo(l) = 0.0
           END DO
 
-          CALL rhosphnlo(itype,atoms,sphhar,sym,&
+          CALL rhosphnlo(itype,input,atoms,sphhar,sym,&
                usdus%uloulopn(:,:,itype,ispin),usdus%dulon(:,itype,ispin),&
                usdus%uulon(:,itype,ispin),enpara%ello0(:,itype,ispin),&
                vr(:,itype,ispin),denCoeffs%aclo(:,itype,ispin),denCoeffs%bclo(:,itype,ispin),&
@@ -179,7 +182,9 @@ CONTAINS
                            + denCoeffs%dunmt(llp,lh,itype,ispin)*(g(j,1,l,ispin)*f(j,1,lp,ispin)&
                            + g(j,2,l,ispin)*f(j,2,lp,ispin) )
                       rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ s/atoms%neq(itype)
-                      moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin)+ s/atoms%neq(itype)
+                      IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
+                         moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin)+ s/atoms%neq(itype)
+                      END IF
                    ENDDO
                 ENDDO
              ENDDO
@@ -228,8 +233,10 @@ CONTAINS
                    rho21=CONJG(cs)/(atoms%neq(itype)*sfp_const)
                    rho(j,0,itype,3)=rho(j,0,itype,3)+REAL(rho21)
                    rho(j,0,itype,4)=rho(j,0,itype,4)+aimag(rho21)
-                   moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3)+ REAL(conjg(cs)/(atoms%neq(itype)*sfp_const))
-                   moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4)+ AIMAG(conjg(cs)/(atoms%neq(itype)*sfp_const))
+                   IF (l.LE.input%lResMax) THEN
+                      moments%rhoLRes(j,0,llp,itype,3) = moments%rhoLRes(j,0,llp,itype,3)+ REAL(conjg(cs)/(atoms%neq(itype)*sfp_const))
+                      moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4)+ AIMAG(conjg(cs)/(atoms%neq(itype)*sfp_const))
+                   END IF
                 ENDDO
              ENDDO
 
@@ -250,8 +257,10 @@ CONTAINS
                          rho21=CONJG(cs)/atoms%neq(itype)
                          rho(j,lh,itype,3)=rho(j,lh,itype,3)+REAL(rho21)
                          rho(j,lh,itype,4)=rho(j,lh,itype,4)+aimag(rho21)
-                         moments%rhoLRes(j,lh,llpb,itype,3)= moments%rhoLRes(j,lh,llpb,itype,3) + REAL(conjg(cs)/atoms%neq(itype))
-                         moments%rhoLRes(j,lh,llpb,itype,4)= moments%rhoLRes(j,lh,llpb,itype,4) + AIMAG(conjg(cs)/atoms%neq(itype))
+                         IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
+                            moments%rhoLRes(j,lh,llpb,itype,3)= moments%rhoLRes(j,lh,llpb,itype,3) + REAL(conjg(cs)/atoms%neq(itype))
+                            moments%rhoLRes(j,lh,llpb,itype,4)= moments%rhoLRes(j,lh,llpb,itype,4) + AIMAG(conjg(cs)/atoms%neq(itype))
+                         END IF
                       ENDDO
                    ENDDO
                 ENDDO

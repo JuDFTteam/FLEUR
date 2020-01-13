@@ -97,6 +97,7 @@ MODULE m_types_input
      INTEGER :: rdmftStatesBelow=0
      INTEGER :: rdmftStatesAbove=0
      INTEGER :: rdmftFunctional=0
+     INTEGER :: lResMax = 3
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_input
      PROCEDURE :: init => init_input
@@ -388,11 +389,13 @@ CONTAINS
     END IF
   END SUBROUTINE read_xml_input
 
-  subroutine init_input(input,noco,nbasfcn)
+  subroutine init_input(input,noco,l_hybrid,nbasfcn)
     use m_types_noco
     Class(t_input),intent(inout):: input
     TYPE(t_noco),intent(in)     :: noco
-    INTEGER,INTENT(IN)          :: nbasfcn
+    logical, intent(in)         :: l_hybrid
+    INTEGER,INTENT(IN),optional :: nbasfcn
+
     ! Generate missing general parameters
     INTEGER :: minNeigd
     minNeigd = MAX(5,NINT(0.75*input%zelec) + 1)
@@ -405,11 +408,11 @@ CONTAINS
       ENDIF
       input%neig = minNeigd
     END IF
-    IF(input%neig.EQ.-1) THEN
+    IF(input%neig == -1. .and. present(nbasfcn)) THEN
       input%neig = nbasfcn
     END IF
     IF (noco%l_noco) input%neig = 2*input%neig
-
+    input%gw_neigd = merge(max(nint(input%zelec)*10, 60),0, l_hybrid)
 
    end subroutine init_input
 END MODULE m_types_input

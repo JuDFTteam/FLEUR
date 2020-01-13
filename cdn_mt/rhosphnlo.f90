@@ -12,7 +12,7 @@ MODULE m_rhosphnlo
   ! Philipp Kurz 99/04
   !***********************************************************************
 CONTAINS
-  SUBROUTINE rhosphnlo(itype,atoms,sphhar,sym, uloulopn,dulon,uulon,&
+  SUBROUTINE rhosphnlo(itype,input,atoms,sphhar,sym, uloulopn,dulon,uulon,&
        ello,vr, aclo,bclo,cclo,acnmt,bcnmt,ccnmt,f,g, rho,rholres,qmtllo)
 
     USE m_constants, ONLY : c_light,sfp_const
@@ -20,6 +20,7 @@ CONTAINS
     USE m_radsrdn
     USE m_types
     IMPLICIT NONE
+    TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_sym),INTENT(IN)      :: sym
@@ -99,7 +100,9 @@ CONTAINS
                  (aclo(lo) * ( f(j,1,l)*flo(j,1,lo) +f(j,2,l)*flo(j,2,lo) ) +&
                  bclo(lo) * ( g(j,1,l)*flo(j,1,lo) +g(j,2,l)*flo(j,2,lo) ) )
           rho(j,0) = rho(j,0) + temp
-          rhoLRes(j,0,llp) = rhoLRes(j,0,llp) + temp
+          IF (l.LE.input%lResMax) THEN
+             rhoLRes(j,0,llp) = rhoLRes(j,0,llp) + temp
+          END IF
        END DO
        DO lop = 1,atoms%nlo(itype)
           IF (atoms%llo(lop,itype).EQ.l) THEN
@@ -107,7 +110,9 @@ CONTAINS
                 temp = c_2 * cclo(lop,lo) *&
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
                 rho(j,0) = rho(j,0) + temp
-                rhoLRes(j,0,llp) = rhoLRes(j,0,llp) + temp
+                IF (l.LE.input%lResMax) THEN
+                   rhoLRes(j,0,llp) = rhoLRes(j,0,llp) + temp
+                END IF
              END DO
           END IF
        END DO
@@ -126,7 +131,9 @@ CONTAINS
                      acnmt(lp,lo,lh) * (f(j,1,lp)*flo(j,1,lo) +f(j,2,lp)*flo(j,2,lo) ) +&
                      bcnmt(lp,lo,lh) * (g(j,1,lp)*flo(j,1,lo) +g(j,2,lp)*flo(j,2,lo) ) )
                 rho(j,lh) = rho(j,lh) + temp
-                rhoLRes(j,lh,llp) = rhoLRes(j,lh,llp) + temp
+                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
+                   rhoLRes(j,lh,llp) = rhoLRes(j,lh,llp) + temp
+                END IF
              END DO
           END DO
        END DO
@@ -139,7 +146,9 @@ CONTAINS
                 temp = c_1 * ccnmt(lop,lo,lh) *&
                      ( flo(j,1,lop)*flo(j,1,lo) +flo(j,2,lop)*flo(j,2,lo) )
                 rho(j,lh) = rho(j,lh) + temp
-                rhoLRes(j,lh,llp) = rhoLRes(j,lh,llp) + temp
+                IF ((l.LE.input%lResMax).AND.(lp.LE.input%lResMax)) THEN
+                   rhoLRes(j,lh,llp) = rhoLRes(j,lh,llp) + temp
+                END IF
              END DO
           END DO
        END DO

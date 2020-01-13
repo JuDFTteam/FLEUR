@@ -19,7 +19,10 @@ MODULE m_types_econfig
      REAL               :: core_electrons
      REAL               :: valence_electrons
    CONTAINS
-     PROCEDURE :: init_num,init_simple,init_nz,init_all
+     PROCEDURE :: init_num
+     PROCEDURE :: init_simple
+     PROCEDURE :: init_nz
+     PROCEDURE :: init_all
      GENERIC   :: init => init_num,init_simple,init_nz,init_all
      PROCEDURE :: set_occupation
      PROCEDURE :: set_initial_moment

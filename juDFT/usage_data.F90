@@ -84,7 +84,7 @@ CONTAINS
       use m_juDFT_string
       IMPLICIT NONE
       INTEGER            :: i,ierr(2),pid,dt(8)
-      CHARACTER(len=200) :: model, modelname, VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap
+      CHARACTER(len=200) :: model, modelname, VmPeak, VmSize, VmHWM, VmData, VmStk, VmExe, VmSwap
       INTEGER(8)         :: r
 #ifdef CPP_MPI
       INCLUDE 'mpif.h'
@@ -105,9 +105,10 @@ CONTAINS
       call add_usage_data("cpu_modelname", modelname)
 
       !add meminfos
-      call get_meminfo(VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap)
+      call get_meminfo(VmPeak, VmSize, VmHWM, VmData, VmStk, VmExe, VmSwap)
       call add_usage_data("VmPeak", VmPeak, string_val=.False.)
       call add_usage_data("VmSize", VmSize, string_val=.False.)
+      call add_usage_data("VmHWM",  VmHWM,  string_val=.False.)
       call add_usage_data("VmData", VmData, string_val=.False.)
       call add_usage_data("VmStk",  VmStk, string_val=.False.)
       call add_usage_data("VmExe",  VmExe, string_val=.False.)
@@ -222,16 +223,17 @@ CONTAINS
       if(openstatus == 0) close(77)
    END SUBROUTINE get_cpuinfo
 
-   SUBROUTINE get_meminfo(VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap)
+   SUBROUTINE get_meminfo(VmPeak, VmSize, VmHWM, VmData, VmStk, VmExe, VmSwap)
       use m_juDFT_string
       implicit none
-      character(len=200), intent(out)   :: VmPeak, VmSize, VmData, VmStk, VmExe, VmSwap
+      character(len=200), intent(out)   :: VmPeak, VmSize, VmHWM, VmData, VmStk, VmExe, VmSwap
       character(len=1000)               :: line
       integer                           :: openstat, readstat
 
    
       VmPeak = ""
       VmSize = ""
+      VmHWM = ""
       VmData = ""
       VmStk  = ""
       VmExe  = ""
@@ -244,6 +246,7 @@ CONTAINS
          read(77,'(A)', iostat=readstat) line
          if(index(line, "VmPeak") /= 0) VmPeak = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
          if(index(line, "VmSize") /= 0) VmSize = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
+         if(index(line, "VmHWM")  /= 0) VmHWM  = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
          if(index(line, "VmData") /= 0) VmData = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
          if(index(line, "VmStk")  /= 0) VmStk  = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
          if(index(line, "VmExe")  /= 0) VmExe  = strip(line(index(line, ":")+1:index(line,"kB", back=.True.)-1))
