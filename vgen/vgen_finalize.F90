@@ -70,12 +70,14 @@ CONTAINS
        sfscale=1.12
     END IF
 
-    CALL vTot%SpinsToChargeAndMagnetisation()
-    vTot%mt(:,0:,:,  2:4) = sfscale*vTot%mt(:,0:,:,2:4)
-    vTot%pw(:,       2:3) = sfscale*vTot%pw(:,     2:3)
-    vTot%vacz(:,:,   2:4) = sfscale*vTot%vacz(:,:, 2:4)
-    vTot%vacxy(:,:,:,2:3) = sfscale*vTot%vacxy(:,:,:,2:3)
-    CALL vTot%ChargeAndMagnetisationToSpins()
+    IF (noco%l_sourceFree) THEN
+       CALL vTot%SpinsToChargeAndMagnetisation()
+       vTot%mt(:,0:,:,  2:4) = sfscale*vTot%mt(:,0:,:,2:4)
+       vTot%pw(:,       2:3) = sfscale*vTot%pw(:,     2:3)
+       vTot%vacz(:,:,   2:4) = sfscale*vTot%vacz(:,:, 2:4)
+       vTot%vacxy(:,:,:,2:3) = sfscale*vTot%vacxy(:,:,:,2:3)
+       CALL vTot%ChargeAndMagnetisationToSpins()
+    END IF
 
     ! Once it is tested:
     IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN ! l_sf will go here
