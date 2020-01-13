@@ -7,7 +7,7 @@ MODULE m_vgen_finalize
   USE m_juDFT
    USE m_xcBfield
 CONTAINS
-  SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,sphhar,vTot,vCoul,denRot)
+  SUBROUTINE vgen_finalize(mpi,oneD,field,cell,atoms,stars,vacuum,sym,noco,input,xcpot,sphhar,vTot,vCoul,denRot)
     !     ***********************************************************
     !     FLAPW potential generator                           *
     !     ***********************************************************
@@ -32,6 +32,7 @@ CONTAINS
     TYPE(t_stars),INTENT(IN)        :: stars
     TYPE(t_atoms),INTENT(IN)        :: atoms
     TYPE(t_input),INTENT(IN)        :: input
+    CLASS(t_xcpot),INTENT(IN)       :: xcpot
     TYPE(t_sphhar),INTENT(IN)       :: sphhar
     TYPE(t_potden),INTENT(INOUT)    :: vTot,vCoul,denRot
     !     ..
@@ -40,7 +41,7 @@ CONTAINS
 
       TYPE(t_potden) :: div, phi, checkdiv
       TYPE(t_potden), DIMENSION(3) :: cvec, corrB, bxc
-      REAL                         :: b(3,atoms%ntype),dummy1(atoms%ntype),dummy2(atoms%ntype)
+      REAL                         :: b(3,atoms%ntype),dummy1(atoms%ntype),dummy2(atoms%ntype),sfscale
 
 
 
@@ -61,8 +62,20 @@ CONTAINS
     ! Source-free testwise
     !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,inDen,1.0)
     !CALL sftest(mpi,dimension,field,stars,atoms,sphhar,vacuum,input,oneD,sym,cell,noco,1,vTot,2.0)
+    
+    sfscale=1.0
+    IF (xcpot%needs_grad()) THEN
+       sfscale=1.14
+    ELSE
+       sfscale=1.12
+    END IF
 
-
+    CALL vTot%SpinsToChargeAndMagnetisation()
+    vTot%mt(:,0:,:,  2:4) = sfscale*vTot%mt(:,0:,:,2:4)
+    vTot%pw(:,       2:3) = sfscale*vTot%pw(:,     2:3)
+    vTot%vacz(:,:,   2:4) = sfscale*vTot%vacz(:,:, 2:4)
+    vTot%vacxy(:,:,:,2:3) = sfscale*vTot%vacxy(:,:,:,2:3)
+    CALL vTot%ChargeAndMagnetisationToSpins()
 
     ! Once it is tested:
     IF (noco%l_mtnocoPot.AND.noco%l_sourceFree) THEN ! l_sf will go here
