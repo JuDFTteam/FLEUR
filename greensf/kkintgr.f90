@@ -12,6 +12,7 @@ MODULE m_kkintgr
    !>  in the complex plane from the imaginary part calculated on the real axis
    !
    !------------------------------------------------------------------------------
+   USE ieee_arithmetic
 
    USE m_constants
    USE m_juDFT
@@ -34,7 +35,6 @@ MODULE m_kkintgr
 
       !The dominant source of error for this routine is a insufficiently dense energy mesh on the real axis
       !TODO: Some way to estimate the error (maybe search for the sharpest peak and estimate from width)
-
       USE m_smooth
 
       IMPLICIT NONE
@@ -95,7 +95,7 @@ MODULE m_kkintgr
             im_n1 = MERGE(im_calc(n1),0.0,(n1.LE.ne).AND.(n1.GE.1))
             im_n2 = MERGE(im_calc(n2),0.0,(n2.LE.ne).AND.(n2.GE.1))
             g(iz) = g(iz) + ImagUnit *( (im_n2-im_n1)/del * (REAL(ez(iz))-(n1-1)*del-eb) + im_n1 )
-            IF(ISNAN(AIMAG(g(iz))).OR.ISNAN(REAL(g(iz)))) THEN
+            IF(ieee_IS_NAN(AIMAG(g(iz))).OR.ieee_IS_NAN(REAL(g(iz)))) THEN
                CALL juDFT_error("Kkintgr failed",calledby="kkintgr")
             ENDIF
             IF(l_conjg) g(iz) = conjg(g(iz))
@@ -229,7 +229,7 @@ MODULE m_kkintgr
             je = je+1
          ENDDO
       ENDDO
-      IF(ANY(ISNAN(f(:)))) CALL juDFT_error("Smoothing failed", calledby="lorentzian_smooth")
+      IF(ANY(ieee_IS_NAN(f(:)))) CALL juDFT_error("Smoothing failed", calledby="lorentzian_smooth")
 
 
    END SUBROUTINE lorentzian_smooth
