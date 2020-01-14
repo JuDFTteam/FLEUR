@@ -13,7 +13,7 @@ MODULE m_occmtx
 
 CONTAINS
 
-   SUBROUTINE occmtx(g,l,nType,atoms,sym,input,mmpMat,err,lp,nTypep,l_write,check)
+   SUBROUTINE occmtx(g,l,nType,atoms,input,mmpMat,err,lp,nTypep,l_write,check)
 
       !calculates the occupation of a orbital treated with DFT+HIA from the related greens function
       !The Greens-function should already be prepared on a energy contour ending at e_fermi
@@ -27,7 +27,6 @@ CONTAINS
 
       TYPE(t_greensf),        INTENT(IN)  :: g
       TYPE(t_atoms),          INTENT(IN)  :: atoms
-      TYPE(t_sym),            INTENT(IN)  :: sym
       TYPE(t_input),          INTENT(IN)  :: input
       COMPLEX,                INTENT(OUT) :: mmpMat(-lmaxU_const:,-lmaxU_const:,:)
       INTEGER,                INTENT(IN)  :: l

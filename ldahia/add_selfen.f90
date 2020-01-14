@@ -4,7 +4,7 @@ MODULE m_add_selfen
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g,selfen,atoms,input,sym,noco,hub1,ef,n_occ,gp,mmpMat)
+   SUBROUTINE add_selfen(g,selfen,atoms,input,noco,hub1,ef,n_occ,gp,mmpMat)
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -29,7 +29,6 @@ MODULE m_add_selfen
       TYPE(t_hub1ham),  INTENT(IN)     :: hub1
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_noco),     INTENT(IN)     :: noco
-      TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_input),    INTENT(IN)     :: input
       COMPLEX,          INTENT(IN)     :: selfen(:,:,:,:,:)
       REAL,             INTENT(IN)     :: ef
@@ -104,7 +103,7 @@ MODULE m_add_selfen
                   ind = AINT((mu+0.2)/0.01)
                   CALL gfDOS(gp,l,nType,500+ind,atoms,input,ef)
                ENDIF
-               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
+               CALL occmtx(gp,l,nType,atoms,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
                IF(err.AND.l_selfenDebug) CALL gfDOS(gp,l,nType,999,atoms,input,ef)
                !Calculate the trace
                n = 0.0
@@ -157,7 +156,7 @@ MODULE m_add_selfen
                      CALL gmat%free()
                   ENDDO
                ENDDO
-               CALL occmtx(gp,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.) !check makes sure that the elements are reasonable
+               CALL occmtx(gp,l,nType,atoms,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.) !check makes sure that the elements are reasonable
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
