@@ -201,7 +201,7 @@ contains
 
       ! calculate overlap matrix
       call mpdata%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
-      write (*,*) "olap(2,2)",olap(2,2)
+      
       !subtract identity-matrix
       do i = 1, size(olap, dim=1)
          olap(i, i) = olap(i, i) - 1.0
