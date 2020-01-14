@@ -138,7 +138,7 @@ CONTAINS
          Xcpot,Forcetheo_data,Kpts,Enparaxml,Mpi%Mpi_comm)
 
     !Remaining init is done using all PE
-    CALL ylmnorm_init(atoms%lmaxd)
+    CALL ylmnorm_init(max(atoms%lmaxd, 2*hybinp%lexp))
     CALL gaunt_init(atoms%lmaxd+1)
     CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
     CALL make_sphhar(atoms,sphhar,sym,cell,oneD)
