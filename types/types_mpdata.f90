@@ -249,7 +249,8 @@ contains
       enddo
    end subroutine mpdata_check_radbasfn
 
-   subroutine mpdata_calc_olap_radbasfn(mpdata, atoms, l, itype, gridf, olap)
+   SUBROUTINE mpdata_calc_olap_radbasfn(mpdata, atoms, l, itype, gridf, olap)
+      USE ieee_arithmetic
       use m_intgrf, only: intgrf
       use m_types_setup
       use m_judft
@@ -276,13 +277,13 @@ contains
          do n1 = 1, n2
             olap(n1, n2) = intgrf(mpdata%radbasfn_mt(:, n1, l, itype)*mpdata%radbasfn_mt(:, n2, l, itype), &
                                   atoms, itype, gridf)
-            if(isnan(olap(n1,n2))) then
+            if(ieee_is_nan(olap(n1,n2))) then
                write (*,*) "nan at", n1, n2
             endif
             olap(n2, n1) = olap(n1, n2)
          END do
       END do
-      if(any(isnan(olap))) call juDFT_error("Mixed-product basis olap is nan")
+      if(any(ieee_is_nan(olap))) call juDFT_error("Mixed-product basis olap is nan")
       call timestop("calc mpdata overlap")
    end subroutine mpdata_calc_olap_radbasfn
 
