@@ -80,7 +80,7 @@ CONTAINS
           END IF
        ENDDO param_loop
        IF (n>SIZE(params)) THEN
-          PRINT *,"Unkown command line argument:"//str
+          PRINT *,"Unknown command line argument:"//str
           check_arguments=.FALSE.
        END IF
        i=i+1

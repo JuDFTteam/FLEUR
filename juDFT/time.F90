@@ -631,7 +631,7 @@ CONTAINS
    !>
    SUBROUTINE juDFT_time_lastlocation()
       IF (ASSOCIATED(current_timer)) THEN
-         WRITE (0, *) "Last kown location:"
+         WRITE (0, *) "Last known location:"
          WRITE (0, *) "Last timer:", current_timer%name
          IF (lastline > 0) THEN
             WRITE (0, *) "File:", TRIM(lastfile), ":", lastline

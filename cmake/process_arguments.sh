@@ -33,7 +33,7 @@ do
 	-make) make_directly=1;;	     
 	-warn_only) CLI_WARN_ONLY=1;;	     
         -d) debug=1;;
-	-*) error="Unkown argument";;
+	-*) error="Unknown argument";;
 	*)  break;;	# terminate while loop
     esac
     shift
@@ -58,7 +58,7 @@ then
 fi
 if [ $# -gt 0 ]
 then
-    error="Extra unkown arguments"
+    error="Extra unknown arguments"
 fi
 
 #check if -h or  -help was given as argument
