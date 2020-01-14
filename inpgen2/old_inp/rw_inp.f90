@@ -215,7 +215,7 @@
           WRITE (6,9030) a2(1),a2(2),a2(3)
       ELSE
           WRITE (6,*) 'rw_inp: latnam ',latnam,' unknown'
-           CALL juDFT_error("Unkown lattice name",calledby="rw_inp")
+           CALL juDFT_error("Unknown lattice name",calledby="rw_inp")
       ENDIF
 !
 !

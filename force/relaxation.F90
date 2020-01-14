@@ -73,7 +73,7 @@ CONTAINS
        ELSE IF (input%forcemix==2) THEN
           CALL simple_bfgs(pos,force,displace)
        ELSE
-          CALL juDFT_error('unkown mixing scheme for forces', calledby='relaxation')
+          CALL juDFT_error('Unknown mixing scheme for forces', calledby='relaxation')
        END IF
 
        !Check for convergence of forces/displacements
