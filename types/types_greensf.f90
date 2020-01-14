@@ -21,47 +21,46 @@ MODULE m_types_greensf
    !>       -r\=r' (not stored we calculate the gf by calling calc_intersite in m_intersite for specific r and r')
    !------------------------------------------------------------------------------
 
+   USE m_juDFT
+   USE m_constants
+   USE m_types_setup
+
    IMPLICIT NONE
 
    PRIVATE
 
-      TYPE t_greensf
+   TYPE t_greensf
 
-         !Energy contour parameters
-         INTEGER  :: mode = -1  !Determines the shape of the contour (more information in kkintgr.f90)
-         INTEGER  :: nz = 0   !number of points in the contour
-         INTEGER  :: nmatsub = 0
+      !Energy contour parameters
+      INTEGER  :: mode = -1  !Determines the shape of the contour (more information in kkintgr.f90)
+      INTEGER  :: nz = 0   !number of points in the contour
 
-         !array for energy contour
-         COMPLEX, ALLOCATABLE  :: e(:)  !energy points
-         COMPLEX, ALLOCATABLE  :: de(:) !weights for integration
+      !array for energy contour
+      COMPLEX, ALLOCATABLE  :: e(:)  !energy points
+      COMPLEX, ALLOCATABLE  :: de(:) !weights for integration
 
-         !Arrays for Green's function
-         COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:)
+      !Arrays for Green's function
+      COMPLEX, ALLOCATABLE :: gmmpMat(:,:,:,:,:,:)
 
-         !for radial dependence
-         COMPLEX, ALLOCATABLE :: uu(:,:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: dd(:,:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: du(:,:,:,:,:,:)
-         COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
+      !for radial dependence
+      COMPLEX, ALLOCATABLE :: uu(:,:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: dd(:,:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: du(:,:,:,:,:,:)
+      COMPLEX, ALLOCATABLE :: ud(:,:,:,:,:,:)
 
-         CONTAINS
-            PROCEDURE, PASS :: init    => greensf_init
-            PROCEDURE       :: get     => get_gf
-            PROCEDURE       :: set     => set_gf
-            PROCEDURE       :: reset   => reset_gf
-            PROCEDURE       :: getEnergyContour => e_contour
-      END TYPE t_greensf
-
+      CONTAINS
+         PROCEDURE, PASS :: init    => greensf_init
+         PROCEDURE       :: get     => get_gf
+         PROCEDURE       :: set     => set_gf
+         PROCEDURE       :: reset   => reset_gf
+         PROCEDURE       :: getEnergyContour => e_contour
+   END TYPE t_greensf
 
    PUBLIC t_greensf
 
    CONTAINS
 
-      SUBROUTINE greensf_init(thisGREENSF,input,lmax,atoms,noco,nz_in,e_in,de_in,matsub_in)
-
-         USE m_juDFT
-         USE m_types_setup
+      SUBROUTINE greensf_init(thisGREENSF,input,lmax,atoms,noco,nz_in,e_in,de_in)
 
          CLASS(t_greensf),    INTENT(INOUT)  :: thisGREENSF
          TYPE(t_atoms),       INTENT(IN)     :: atoms
@@ -70,65 +69,41 @@ MODULE m_types_greensf
          TYPE(t_noco),        INTENT(IN)     :: noco
          !Pass a already calculated energy contour to the type
          INTEGER, OPTIONAL,   INTENT(IN)     :: nz_in
-         INTEGER, OPTIONAL,   INTENT(IN)     :: matsub_in
          COMPLEX, OPTIONAL,   INTENT(IN)     :: e_in(:)
          COMPLEX, OPTIONAL,   INTENT(IN)     :: de_in(:)
 
-         INTEGER i,j,r_dim,l_dim,spin_dim
-         REAL    tol,n
-         LOGICAL l_new
+         INTEGER spin_dim
 
-
-         !IF(noco%l_mperp) CALL juDFT_error("NOCO + gf not implemented",calledby="greensf_init")
-
-         !
-         !Set up general parameters for the Green's function
-         !
          !
          !Setting up parameters for the energy contour
          !
          thisGREENSF%mode     = input%gf_mode
          IF(PRESENT(nz_in)) THEN
             thisGREENSF%nz = nz_in
-            thisGREENSF%nmatsub = matsub_in
          ELSE
-            !Parameters for the energy contour in the complex plane
-
             IF(thisGREENSF%mode.EQ.1) THEN
                   thisGREENSF%nz = input%gf_n1+input%gf_n2+input%gf_n3+input%gf_nmatsub
-                  thisGREENSF%nmatsub = input%gf_nmatsub
             ELSE IF(thisGREENSF%mode.GE.2) THEN
                thisGREENSF%nz = input%gf_n
-               thisGREENSF%nmatsub = 0
             ENDIF
          END IF
 
-         ALLOCATE (thisGREENSF%e(thisGREENSF%nz))
-         ALLOCATE (thisGREENSF%de(thisGREENSF%nz))
+         ALLOCATE(thisGREENSF%e(thisGREENSF%nz),source=cmplx_0)
+         ALLOCATE(thisGREENSF%de(thisGREENSF%nz),source=cmplx_0)
 
          IF(PRESENT(e_in)) THEN
             thisGREENSF%e(:) = e_in(:)
             thisGREENSF%de(:)= de_in(:)
-         ELSE
-            !If no energy contour is given it is set up to zero
-            thisGREENSF%e(:) = CMPLX(0.0,0.0)
-            thisGREENSF%de(:)= CMPLX(0.0,0.0)
-         END IF
-
+         ENDIF
 
          IF(atoms%n_gf.GT.0) THEN !Are there Green's functions to be calculated?
             spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
-            ALLOCATE ( thisGREENSF%gmmpMat(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
-            thisGREENSF%gmmpMat = 0.0
+            ALLOCATE(thisGREENSF%gmmpMat(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)),source=cmplx_0)
             IF(.NOT.input%l_gfsphavg) THEN
-               ALLOCATE ( thisGREENSF%uu(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
-               ALLOCATE ( thisGREENSF%dd(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
-               ALLOCATE ( thisGREENSF%du(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
-               ALLOCATE ( thisGREENSF%ud(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)) )
-               thisGREENSF%uu = 0.0
-               thisGREENSF%dd = 0.0
-               thisGREENSF%du = 0.0
-               thisGREENSF%ud = 0.0
+               ALLOCATE(thisGREENSF%uu(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)),source=cmplx_0)
+               ALLOCATE(thisGREENSF%dd(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)),source=cmplx_0)
+               ALLOCATE(thisGREENSF%du(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)),source=cmplx_0)
+               ALLOCATE(thisGREENSF%ud(thisGREENSF%nz,-lmax:lmax,-lmax:lmax,spin_dim,2,MAX(1,atoms%n_gf)),source=cmplx_0)
             ENDIF
          ENDIF
 
@@ -136,15 +111,9 @@ MODULE m_types_greensf
 
       SUBROUTINE e_contour(this,input,mpi,eb,et,ef)
 
-
-         USE m_types_setup
          USE m_types_mpi
-         USE m_constants
-         USE m_juDFT
          USE m_grule
          USE m_ExpSave
-
-         IMPLICIT NONE
 
          CLASS(t_greensf),  INTENT(INOUT)  :: this
          TYPE(t_input),     INTENT(IN)     :: input
@@ -160,19 +129,15 @@ MODULE m_types_greensf
          REAL r, xr, xm, c, s, a, b
          REAL x(this%nz), w(this%nz)
 
-
-
          IF(this%mode.EQ.1) THEN
 
             sigma = input%gf_sigma * pi_const
-
-            IF(this%nmatsub > 0) THEN
-
+            IF(input%gf_nmatsub > 0) THEN
                e1 = ef+input%gf_eb
-
                nz = 0
+
                !Left Vertical part (e1,0) -> (e1,sigma)
-               de = this%nmatsub * CMPLX(0.0,sigma)
+               de = input%gf_nmatsub * CMPLX(0.0,sigma)
                CALL grule(input%gf_n1,x(1:(input%gf_n1)/2),w(1:(input%gf_n1)/2))
                x = -x
                DO i = 1, (input%gf_n1+3)/2-1
@@ -197,7 +162,7 @@ MODULE m_types_greensf
                DO iz = 1, input%gf_n2
                   nz = nz + 1
                   IF(nz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
-                  this%e(nz) = de*x(iz) + de + e1 + 2 * this%nmatsub * ImagUnit * sigma
+                  this%e(nz) = de*x(iz) + de + e1 + 2 * input%gf_nmatsub * ImagUnit * sigma
                   this%de(nz) = de*w(iz)
                ENDDO
 
@@ -212,12 +177,12 @@ MODULE m_types_greensf
                DO iz = 1, input%gf_n3
                   nz = nz + 1
                   IF(nz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
-                  this%e(nz) = de*x(iz)+ef +  2 * this%nmatsub * ImagUnit * sigma
+                  this%e(nz) = de*x(iz)+ef +  2 * input%gf_nmatsub * ImagUnit * sigma
                   this%de(nz) = w(iz)*de/(1.0+exp_save((REAL(this%e(nz))-ef)/input%gf_sigma))
                ENDDO
 
                !Matsubara frequencies
-               DO iz = this%nmatsub , 1, -1
+               DO iz = input%gf_nmatsub , 1, -1
                   nz = nz + 1
                   IF(nz.GT.this%nz) CALL juDFT_error("Dimension error in energy mesh",calledby="init_e_contour")
                   this%e(nz)  = ef + (2*iz-1) * ImagUnit *sigma
@@ -230,7 +195,6 @@ MODULE m_types_greensf
             e1 = ef+input%gf_eb
             e2 = ef+input%gf_et
 
-            this%nmatsub = 0
             !Radius
             r  = (e2-e1)*0.5
             !midpoint
@@ -251,8 +215,8 @@ MODULE m_types_greensf
             ENDDO
 
          ELSE IF(this%mode.EQ.3) THEN
-            !Equidistant contour (without vertical edges)
 
+            !Equidistant contour (without vertical edges)
             de = (et-eb)/REAL(this%nz-1)
             DO iz = 1, this%nz
                this%e(iz) = (iz-1) * de + eb + ImagUnit * input%gf_sigma
@@ -264,9 +228,7 @@ MODULE m_types_greensf
             ENDDO
 
          ELSE
-
             CALL juDFT_error("Invalid mode for energy contour in Green's function calculation", calledby="e_contour")
-
          END IF
 
          IF(mpi%irank.EQ.0) THEN
@@ -281,7 +243,7 @@ MODULE m_types_greensf
 
             CASE(1)
                WRITE(6,"(A)") "Rectangular Contour: "
-               WRITE(6,1010) this%nz, this%nmatsub,input%gf_n1,input%gf_n2,input%gf_n3
+               WRITE(6,1010) this%nz, input%gf_nmatsub,input%gf_n1,input%gf_n2,input%gf_n3
                WRITE(6,"(A)") "Energy limits (rel. to fermi energy): "
                WRITE(6,1040) input%gf_eb,0.0
             CASE(2)
@@ -319,14 +281,10 @@ MODULE m_types_greensf
       SUBROUTINE get_gf(this,gmat,atoms,input,iz,l,nType,l_conjg,spin,lp,nTypep,u,udot)
 
          USE m_types_mat
-         USE m_types_setup
-         USE m_juDFT
          USE m_ind_greensf
 
          !Returns the matrix belonging to energy point iz with l,lp,nType,nTypep
          !when jr (and jrp) are given return for that radial point
-
-         IMPLICIT NONE
 
          CLASS(t_greensf),    INTENT(IN)  :: this
          TYPE(t_atoms),       INTENT(IN)  :: atoms
@@ -471,14 +429,10 @@ MODULE m_types_greensf
       SUBROUTINE set_gf(this,gmat,atoms,input,iz,l,nType,l_conjg,spin,lp,nTypep)
 
          USE m_types_mat
-         USE m_types_setup
-         USE m_juDFT
          USE m_ind_greensf
 
          !Sets the spherically averaged greens function matrix belonging to energy point iz with l,lp,nType,nTypep
          !equal to gmat
-
-         IMPLICIT NONE
 
          CLASS(t_greensf),    INTENT(INOUT)  :: this
          TYPE(t_atoms),       INTENT(IN)     :: atoms
@@ -564,16 +518,12 @@ MODULE m_types_greensf
       SUBROUTINE reset_gf(this,atoms,input,l,nType,lp,ntypep)
 
          USE m_constants
-         USE m_types_setup
-         USE m_juDFT
          USE m_ind_greensf
 
          !---------------------------------------------------
          ! Sets all gmmpMat arrays back to 0
          ! if no element is specified all elements are reset
          !---------------------------------------------------
-
-         IMPLICIT NONE
 
          CLASS(t_greensf),       INTENT(INOUT)  :: this
          TYPE(t_atoms),          INTENT(IN)     :: atoms
