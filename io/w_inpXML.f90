@@ -306,10 +306,10 @@ CONTAINS
       speciesNames = ''
       numSpecies = 0
       DO n = 1, atoms%ntype
-         known_species = ANY(atoms%speciesname(n) == speciesNames(:numSpecies))
+         known_species = ANY(trim(atoms%speciesname(n)) == speciesNames(:numSpecies))
          if (.not. known_species) THEN
             numSpecies = numSpecies + 1
-            speciesNames(numSpecies) = atoms%speciesname(n)
+            speciesNames(numSpecies) = trim(atoms%speciesname(n))
             speciesRepAtomType(numSpecies) = n
          end if
       enddo
@@ -329,7 +329,7 @@ CONTAINS
          END IF
 !      <species name="Si-1" element="Si" atomicNumber="14" coreStates="4" magMom="0.0" flipSpin="F">
 300      FORMAT('      <species name="', a, '" element="', a, '" atomicNumber="', i0, '" flipSpinPhi="', f0.8, '" flipSpinTheta="', f0.8, '" flipSpinScale="', l1, '">')
-         speciesName = TRIM(ADJUSTL(atoms%speciesName(iSpecies)))
+         speciesName = TRIM(ADJUSTL(speciesNames(iSpecies)))
          WRITE (fileNum, 300) TRIM(ADJUSTL(speciesName)), TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)))), atoms%nz(iAtomType), atoms%flipSpinPhi(iAtomType), atoms%flipSpinTheta(iAtomType), atoms%flipSpinScale(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>

@@ -120,7 +120,7 @@ CONTAINS
     INTEGER :: iter,iterHF,i,n
     INTEGER :: wannierspin
     LOGICAL :: l_opti,l_cont,l_qfix,l_real
-    REAL    :: fix
+    REAL    :: fix, sfscale
 
 #ifdef CPP_MPI
     INCLUDE 'mpif.h'
@@ -280,10 +280,35 @@ CONTAINS
     !   IF(.FALSE.)CALL rotateMagnetToSpinAxis(vacuum,sphhar,stars&
     !          ,sym,oneD,cell,noco,input,atoms,inDen)
 !END Rot For Testing (HIGHLY EXPERIMENTAL ROUTINE)
+       
+       IF (noco%l_sourceFree) THEN
+          sfscale=1.0
+          IF (xcpot%needs_grad()) THEN
+             sfscale=1.14
+          ELSE
+             sfscale=1.12
+          END IF
+          CALL inDen%SpinsToChargeAndMagnetisation()
+          inDen%mt(:,0:,:,  2:4) = sfscale*inDen%mt(:,0:,:,2:4)
+          inDen%pw(:,       2:3) = sfscale*inDen%pw(:,     2:3)
+          inDen%vacz(:,:,   2:4) = sfscale*inDen%vacz(:,:, 2:4)
+          inDen%vacxy(:,:,:,2:3) = sfscale*inDen%vacxy(:,:,:,2:3)
+          CALL inDen%ChargeAndMagnetisationToSpins()
+       END IF
+
        CALL timestart("generation of potential")
        CALL vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                  cell,oneD,sliceplot,mpi,results,noco,EnergyDen,inDen,vTot,vx,vCoul)
        CALL timestop("generation of potential")
+
+       IF (noco%l_sourceFree) THEN
+          CALL inDen%SpinsToChargeAndMagnetisation()
+          inDen%mt(:,0:,:,  2:4) = inDen%mt(:,0:,:,2:4)/sfscale
+          inDen%pw(:,       2:3) = inDen%pw(:,     2:3)/sfscale
+          inDen%vacz(:,:,   2:4) = inDen%vacz(:,:, 2:4)/sfscale
+          inDen%vacxy(:,:,:,2:3) = inDen%vacxy(:,:,:,2:3)/sfscale
+          CALL inDen%ChargeAndMagnetisationToSpins()
+       END IF
 
        IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
           CALL makeplots(stars, atoms, sphhar, vacuum, input, oneD, sym, cell, &

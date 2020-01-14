@@ -255,21 +255,17 @@ CONTAINS
                END DO !l2
             END DO  !l1
 
-            !normalize radbasfn_mt
-            call mpdata%normalize(atoms, hybinp, gridf)
 
             IF (i_basfn /= full_n_radbasfn) call judft_error('counting error for product functions', hint='This is a BUG, please report', calledby='mixedbasis')
 
-            ! In order to get rid of the linear dependencies in the
-            ! radial functions radbasfn_mt belonging to fixed l and itype
-            ! the overlap matrix is diagonalized and those eigenvectors
-            ! with a eigenvalue greater then mpdata%linear_dep_tol are retained
-
-            call mpdata%reduce_linear_dep(atoms, mpi, hybinp, l, itype, gridf, iterHF)
 
          END DO !l
          IF (mpi%irank == 0) WRITE (6, '(6X,A,I7)') 'Total:', SUM(mpdata%num_radbasfn(0:hybinp%lcutm1(itype), itype))
       END DO ! itype
+
+      !normalize radbasfn_mt
+      call mpdata%normalize(atoms, hybinp, gridf)
+      call mpdata%reduce_linear_dep(mpinp,atoms, mpi, hybinp, gridf, iterHF)
 
       allocate(basmhlp(atoms%jmtd, maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), atoms%ntype))
       basmhlp(1:atoms%jmtd, 1:maxval(mpdata%num_radbasfn), 0:maxval(hybinp%lcutm1), 1:atoms%ntype) &

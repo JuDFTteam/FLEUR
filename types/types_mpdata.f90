@@ -7,7 +7,6 @@ module m_types_mpdata
       integer, allocatable   :: gptm_ptr(:, :) ! (ig, ik)
       integer, allocatable   :: num_radbasfn(:, :) !(l,itype)
       real, allocatable      :: radbasfn_mt(:,:,:,:) !(jri,n,l,itype)
-      real                   :: linear_dep_tol  !only read in
       INTEGER, ALLOCATABLE   :: num_radfun_per_l(:,:) !(l,itype)
 
       integer, allocatable   :: l1(:,:,:) !(n, l, itype)
@@ -202,7 +201,7 @@ contains
 
       ! calculate overlap matrix
       call mpdata%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
-
+      write (*,*) "olap(2,2)",olap(2,2)
       !subtract identity-matrix
       do i = 1, size(olap, dim=1)
          olap(i, i) = olap(i, i) - 1.0
@@ -212,9 +211,10 @@ contains
       if (norm2(olap) > 1e-6) then
          if (mpi%irank == 0) THEN
             err_loc = maxloc(abs(olap))
-            WRITE (6, '(A)') 'mixedbasis: Bad orthonormality of ' &
+            WRITE (*, *) 'mixedbasis: Bad orthonormality of ' &
                //lchar(l)//'-mpdatauct basis. Increase tolerance.'
-            WRITE (6, '(12X,A,F9.6,A,2(I3.3,A))') 'Deviation of', &
+            write (*,*) "itype =", itype, "l =",l
+            WRITE (*, *) 'Deviation of', &
                maxval(abs(olap)), ' occurred for (', &
                err_loc(1), ',', err_loc(2), ')-overlap.'
          endif
@@ -254,6 +254,8 @@ contains
       use m_intgrf, only: intgrf
       use m_types_setup
       use m_judft
+      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED
+
       implicit NONE
       class(t_mpdata), intent(in)       :: mpdata
       type(t_atoms), intent(in)          :: atoms
@@ -271,7 +273,8 @@ contains
             deallocate(olap)
          endif
       endif
-      if (.not. allocated(olap)) allocate(olap(n_radbasfn, n_radbasfn), source=0.0)
+      if (.not. allocated(olap)) allocate(olap(n_radbasfn, n_radbasfn), &
+                                          source=REAL_NOT_INITALIZED)
 
       do n2 = 1, n_radbasfn
          do n1 = 1, n2
@@ -287,11 +290,13 @@ contains
       call timestop("calc mpdata overlap")
    end subroutine mpdata_calc_olap_radbasfn
 
-   subroutine mpdata_filter_radbasfn(mpdata, l, itype, n_radbasfn, eig, eigv)
+   subroutine mpdata_filter_radbasfn(mpdata, mpinp, l, itype, n_radbasfn, eig, eigv)
       ! Get rid of linear dependencies (eigenvalue <= mpdata%linear_dep_tol)
       use m_judft
+      use m_types_mpinp
       implicit none
-      class(t_mpdata), intent(inout)       :: mpdata
+      class(t_mpdata), intent(inout)        :: mpdata
+      type(t_mpinp), intent(in)             :: mpinp
       integer, intent(in)                   :: l, itype, n_radbasfn
       real, intent(inout)                   :: eig(:), eigv(:, :)
 
@@ -303,7 +308,7 @@ contains
       num_radbasfn = 0
 
       do i_bas = 1, mpdata%num_radbasfn(l, itype)
-         if (eig(i_bas) > mpdata%linear_dep_tol) THEN
+         if (eig(i_bas) > mpinp%linear_dep_tol) THEN
             num_radbasfn = num_radbasfn + 1
             remaining_basfn(num_radbasfn) = i_bas
          END if
@@ -317,6 +322,7 @@ contains
 
    subroutine mpdata_diagonialize_olap(olap, eig_val, eig_vec)
       use m_judft
+      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED
       implicit NONE
       real, intent(in)  :: olap(:, :)
       real, allocatable :: eig_val(:), eig_vec(:, :)
@@ -337,6 +343,7 @@ contains
          if (size(eig_val) /= n) deallocate(eig_val)
       endif
       if (.not. allocated(eig_val)) allocate(eig_val(n))
+      eig_val = REAL_NOT_INITALIZED
 
       eig_vec = olap
       ! get sizes of work arrays
@@ -431,41 +438,55 @@ contains
       call timestop("add l0 to mpdata")
    end subroutine mpdata_add_l0_fun
 
-   subroutine mpdata_reduce_linear_dep(mpdata, atoms, mpi, hybinp, l, itype, gridf, iterHF)
+   subroutine mpdata_reduce_linear_dep(mpdata, mpinp, atoms, mpi, hybinp, gridf, iterHF)
       use m_types_setup
       use m_types_hybinp
       use m_types_mpi
       use m_judft
+      use m_types_mpinp
       implicit none
-      class(t_mpdata)              :: mpdata
+      class(t_mpdata)               :: mpdata
+      type(t_mpinp), intent(in)     :: mpinp
       type(t_atoms), intent(in)     :: atoms
       type(t_mpi), intent(in)       :: mpi
       type(t_hybinp), intent(in)    :: hybinp
-      integer, intent(in)           :: l, itype, iterHF
+      integer, intent(in)           :: iterHF
 
       real, allocatable             :: olap(:, :), eig(:), eigv(:, :)
       real                          :: gridf(:, :)
-      integer                       :: full_n_radbasfn, n_grid_pt
+      integer                       :: full_n_radbasfn, n_grid_pt, l, itype
+
+      ! In order to get rid of the linear dependencies in the
+      ! radial functions radbasfn_mt belonging to fixed l and itype
+      ! the overlap matrix is diagonalized and those eigenvectors
+      ! with a eigenvalue greater then mpdata%linear_dep_tol are retained
 
       call timestart("reduce lin. dep. mpdata")
-      full_n_radbasfn = mpdata%num_radbasfn(l, itype)
-      n_grid_pt = atoms%jri(itype)
 
-      ! Calculate overlap
-      call mpdata%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
+      do itype = 1, atoms%ntype
+         DO l = 0, hybinp%lcutm1(itype)
+            full_n_radbasfn = mpdata%num_radbasfn(l, itype)
+            n_grid_pt = atoms%jri(itype)
 
-      ! Diagonalize
-      call mpdata_diagonialize_olap(olap, eig, eigv)
+            ! Calculate overlap
+            call mpdata%calc_olap_radbasfn(atoms, l, itype, gridf, olap)
 
-      call mpdata%filter_radbasfn(l, itype, full_n_radbasfn, eig, eigv)
+            ! Diagonalize
+            call mpdata_diagonialize_olap(olap, eig, eigv)
 
-      call mpdata%trafo_to_orthonorm_bas(full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
+            call mpdata%filter_radbasfn(mpinp, l, itype, full_n_radbasfn, eig, eigv)
 
-      ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
-      call mpdata%add_l0_fun(atoms, hybinp, n_grid_pt, l, itype, gridf)
+            call mpdata%trafo_to_orthonorm_bas(full_n_radbasfn, n_grid_pt, l, itype, eig, eigv)
 
-      ! Check orthonormality of mpdatauct basis
-      call mpdata%check_orthonormality(atoms, mpi, l, itype, gridf)
+            ! Add constant function to l=0 basis and then do a Gram-Schmidt orthonormalization
+            if(l ==0) then
+               call mpdata%add_l0_fun(atoms, hybinp, n_grid_pt, l, itype, gridf)
+            endif
+
+            ! Check orthonormality of mpdatauct basis
+            call mpdata%check_orthonormality(atoms, mpi, l, itype, gridf)
+         enddo
+      enddo
 
       deallocate(olap, eigv, eig)
       call timestop("reduce lin. dep. mpdata")

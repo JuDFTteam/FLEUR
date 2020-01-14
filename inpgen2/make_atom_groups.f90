@@ -11,7 +11,7 @@ CONTAINS
     USE m_types_sym
     USE m_types_cell
     USE m_types_atoms
-    
+
     IMPLICIT NONE
     TYPE(t_sym),INTENT(in)     :: sym
     TYPE(t_cell),INTENT(IN)    :: cell
@@ -25,9 +25,9 @@ CONTAINS
     LOGICAL              :: lnew
     REAL                 :: tr(3)
     REAL,PARAMETER       :: eps7=1.e-7,eps12=1e-12
-    
+
     ALLOCATE(natype(SIZE(atomid)),natrep(SIZE(atomid)),ity(SIZE(atomid)))
-  
+
     ntypm = 1
     ity(1) = 1
     DO n=2, SIZE(atomid)
@@ -45,7 +45,7 @@ CONTAINS
        ENDIF
     ENDDO
 
-    
+
     natype(1:size(atomid)) = 0
     ntype = 0
     DO i =1,SIZE(atomid)
@@ -69,10 +69,10 @@ CONTAINS
        ENDDO
     ENDDO
 
-    
+
     atoms%ntype=ntype
     atoms%nat=SIZE(atomid)
-    
+
     ALLOCATE(atoms%neq(ntype),atoms%taual(3,atoms%nat),atoms%pos(3,atoms%nat),atoms%zatom(ntype),atoms%label(atoms%nat))
 
     atoms%neq(1:ntype) = 0
@@ -80,12 +80,16 @@ CONTAINS
        atoms%neq( natype(n) ) = atoms%neq( natype(n) ) + 1
        atoms%zatom( natype(n) ) = atomid(n)
     ENDDO
-    atoms%taual=atompos(:,:atoms%nat)
-    atoms%label=atomlabel
+    DO n=1,atoms%ntype
+      atoms%taual(1,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(1,:),natype==n)
+      atoms%taual(2,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(2,:),natype==n)
+      atoms%taual(3,sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atompos(3,:),natype==n)
+      atoms%label(sum(atoms%neq(:n-1))+1:sum(atoms%neq(:n)))=pack(atomlabel(:),natype==n)
+    enddo
     WHERE ( ABS( atoms%taual ) < eps12 ) atoms%taual = 0.00
-    
+
     !Generate postions in cartesian coordinates
     atoms%pos(:,:) = MATMUL( cell%amat , atoms%taual(:,:) )
-    
+
   END SUBROUTINE make_atom_groups
 END MODULE m_make_atom_groups
