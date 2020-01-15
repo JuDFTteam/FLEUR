@@ -131,7 +131,7 @@ MODULE m_types_xcpot_inbuild_nofunction
             xcpot%icorr=n
          ENDIF
       ENDDO
-      if (xcpot%icorr==0) CALL judft_error("Unkown xc-potential:"//xcpot%inbuild_name,calledby="types_xcpot.F90")
+      if (xcpot%icorr==0) CALL judft_error("Unknown xc-potential:"//xcpot%inbuild_name,calledby="types_xcpot.F90")
       IF (xcpot%l_relativistic)THEN
          xcpot%DATA%krla=1
       ELSE

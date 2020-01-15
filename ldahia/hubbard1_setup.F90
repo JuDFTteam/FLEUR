@@ -11,7 +11,7 @@ MODULE m_hubbard1_setup
 
    CONTAINS
 
-   SUBROUTINE hubbard1_setup(atoms,input,sym,mpi,noco,pot,gdft,hub1,results,den)
+   SUBROUTINE hubbard1_setup(atoms,input,mpi,noco,pot,gdft,hub1,results,den)
 
       USE m_types
       USE m_constants
@@ -31,7 +31,6 @@ MODULE m_hubbard1_setup
 
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_input),    INTENT(IN)     :: input
-      TYPE(t_sym),      INTENT(IN)     :: sym
       TYPE(t_mpi),      INTENT(IN)     :: mpi
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_potden),   INTENT(IN)     :: pot
@@ -84,7 +83,7 @@ MODULE m_hubbard1_setup
          !was not yet run
          !--> write out the configuration for the hubbard 1 solver
          IF(.NOT.ANY(gdft%gmmpMat(:,:,:,:,:,:).NE.0.0)) CALL juDFT_error("Hubbard-1 has no DFT greensf available",calledby="hubbard1_setup")
-         CALL gu%init(input,lmaxU_const,atoms,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de,matsub_in=gdft%nmatsub)
+         CALL gu%init(input,lmaxU_const,atoms,noco,nz_in=gdft%nz, e_in=gdft%e,de_in=gdft%de)
          ALLOCATE(selfen(2*(2*lmaxU_const+1),2*(2*lmaxU_const+1),gdft%nz,2,atoms%n_hia))
          selfen = 0.0
 
@@ -123,7 +122,7 @@ MODULE m_hubbard1_setup
                ENDDO
             ELSE
                !calculate the occupation of the correlated shell
-               CALL occmtx(gdft,l,nType,atoms,sym,input,mmpMat(:,:,i_hia,:),occ_err)
+               CALL occmtx(gdft,l,nType,atoms,input,mmpMat(:,:,i_hia,:),occ_err)
                n_l(i_hia,:) = 0.0
                DO ispin = 1, input%jspins
                   DO m = -l, l
@@ -267,7 +266,7 @@ MODULE m_hubbard1_setup
             ! so that the occupation of the correlated orbital does not change
             !----------------------------------------------------------------------
             CALL timestart("Hubbard 1: Add Selfenenergy")
-            CALL add_selfen(gdft,selfen,atoms,input,sym,noco,hub1,results%ef,n_l,gu,mmpMat)
+            CALL add_selfen(gdft,selfen,atoms,input,noco,hub1,results%ef,n_l,gu,mmpMat)
             CALL timestop("Hubbard 1: Add Selfenenergy")
             IF(l_setupdebug) THEN
                DO i_hia = 1, atoms%n_hia

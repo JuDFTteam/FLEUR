@@ -1,3 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
 MODULE m_types_greensfCoeffs
 
    !------------------------------------------------------------------------------
@@ -27,10 +33,8 @@ MODULE m_types_greensfCoeffs
 
       TYPE t_greensfCoeffs
 
-         LOGICAL  :: l_calc   !Should the greens function be calculated in this iteration
-
          !Energy grid for Imaginary part
-         INTEGER  :: ne       !number of energy grid points for imaginary part calculations
+         INTEGER  :: ne       !number of energy grid points for imaginary part calculations (REDUNDANT)
          REAL     :: e_top    !Cutoff energies
          REAL     :: e_bot
          REAL     :: del
@@ -71,8 +75,6 @@ MODULE m_types_greensfCoeffs
 
          INTEGER i,j,l_dim,spin_dim
 
-         !IF(thisGREENSFCOEFFS%l_calc) THEN
-         !
          !Set up general parameters for the Green's function (intersite and onsite)
          !
          !Parameters for calculation of the imaginary part

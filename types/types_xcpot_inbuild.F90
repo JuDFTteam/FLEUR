@@ -116,7 +116,7 @@ MODULE m_types_xcpot_inbuild
             ! if exact exchange calculation do nothing
             vxc = 0
          ELSE
-            CALL juDFT_error("Unkown LDA potential",calledby="type xcpot")
+            CALL juDFT_error("Unknown LDA potential",calledby="type xcpot")
          ENDIF
       ENDIF
 !
@@ -194,7 +194,7 @@ MODULE m_types_xcpot_inbuild
          ELSEIF (xcpot%is_name("exx")) THEN
             CALL juDFT_error('EXX should now be treated as a GGA functional', calledby='xcpot_get_exc')
          ELSE
-            CALL juDFT_error("Unkown LDA potential",calledby="type xcpot")
+            CALL juDFT_error("Unknown LDA potential",calledby="type xcpot")
          ENDIF
       ENDIF
 !c-----> hartree units

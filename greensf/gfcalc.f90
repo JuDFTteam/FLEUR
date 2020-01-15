@@ -99,7 +99,7 @@ MODULE m_gfcalc
          !Density of states from Greens function
          CALL gfDOS(greensf,l,nType,i_gf,atoms,input,results%ef)
          !Occupation matrix
-         CALL occmtx(greensf,l,nType,atoms,sym,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
+         CALL occmtx(greensf,l,nType,atoms,input,mmpmat(:,:,i_gf,:),err,l_write=.TRUE.,check=.TRUE.)
          !Hybridization function
          !CALL hybridization(greensf,l,nType,atoms,input,results%ef)
       ENDDO

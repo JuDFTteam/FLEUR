@@ -291,50 +291,6 @@ MODULE m_hubbard1_io
       WRITE(*,"(A)") "You are using an old input file format. This does not support the additional arguments"
    END SUBROUTINE write_hubbard1_input_old
 
-   SUBROUTINE write_gf(app,gOnsite,i_gf)
-
-      !writes out the onsite green's function calculated from the KS-eigenstates
-
-      TYPE(t_greensf),  INTENT(IN)  :: gOnsite
-      CHARACTER(len=*), INTENT(IN)  :: app
-      INTEGER,          INTENT(IN)  :: i_gf
-
-      INTEGER  io_unit,io_error
-      INTEGER  iz,ipm
-      CHARACTER(len=2) :: ret
-
-      io_unit = 17
-      DO ipm = 1, 2
-         IF(ipm.EQ.1) THEN
-            ret = "_R"
-         ELSE
-            ret = "_A"
-         ENDIF
-         OPEN(unit=io_unit, file=TRIM(ADJUSTL(app)) // TRIM(ADJUSTL(ret)), status="replace", action="write", iostat=io_error)
-
-         IF(io_error.NE.0) CALL juDFT_error("IO-Error in Hubbard 1 IO", calledby="write_onsite_gf")
-
-         DO iz = 1, gOnsite%nz-gOnsite%Nmatsub
-            !Write out energy
-            WRITE(io_unit,9020) gOnsite%e(iz)
-            WRITE(io_unit,"(A)") "Spin up"
-            WRITE(io_unit,"(A)") "   Real part"
-            WRITE(io_unit,9010)  REAL(gOnsite%gmmpMat(iz,:,:,1,ipm,i_gf))
-            WRITE(io_unit,"(A)") "   Imaginary part"
-            WRITE(io_unit,9010)  AIMAG(gOnsite%gmmpMat(iz,:,:,1,ipm,i_gf))
-            WRITE(io_unit,"(A)") "Spin down"
-            WRITE(io_unit,"(A)") "   Real part"
-            WRITE(io_unit,9010)  REAL(gOnsite%gmmpMat(iz,:,:,2,ipm,i_gf))
-            WRITE(io_unit,"(A)") "   Imaginary part"
-            WRITE(io_unit,9010)  AIMAG(gOnsite%gmmpMat(iz,:,:,2,ipm,i_gf))
-         ENDDO
-         CLOSE(unit=io_unit)
-      ENDDO
-
-9010  FORMAT(7f14.8)
-9020  FORMAT("Energy:"2f14.8)
-   END SUBROUTINE write_gf
-
    SUBROUTINE write_ccfmat(path,ccfmat,l)
 
       CHARACTER(len=*), INTENT(IN)  :: path
