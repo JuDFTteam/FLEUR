@@ -160,6 +160,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%nlotot,rank,mpi_comm)
  CALL mpi_bc(this%lmaxd,rank,mpi_comm)
  CALL mpi_bc(this%n_u,rank,mpi_comm)
+ CALL mpi_bc(this%n_hia,rank,mpi_comm)
  CALL mpi_bc(this%jmtd,rank,mpi_comm)
  CALL mpi_bc(this%msh,rank,mpi_comm)
  CALL mpi_bc(this%nz,rank,mpi_comm)
@@ -201,7 +202,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  DO n=1,this%ntype
     CALL this%econf(n)%broadcast(rank,mpi_comm)
  ENDDO
- DO n=1,this%n_u
+ DO n=1,this%n_u+this%n_hia
     CALL mpi_bc(this%lda_u(n)%j,rank,mpi_comm)
     CALL mpi_bc(this%lda_u(n)%u,rank,mpi_comm)
     CALL mpi_bc(this%lda_u(n)%theta,rank,mpi_comm)
@@ -252,7 +253,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  TYPE(t_xml),INTENT(INOUT)    :: xml
 
  CHARACTER(len=200):: xpaths,xpathg,xpath,valueString,lstring,nstring,core,valence
- INTEGER           :: i,j,numberNodes,ilo,lNumCount,nNumCount,l,n,itype,na,jrc
+ INTEGER           :: i,j,numberNodes,ilo,lNumCount,nNumCount,l,n,itype,na,jrc,numU
  INTEGER,ALLOCATABLE::lNumbers(:),nNumbers(:)
  LOGICAL           :: relaxx,relaxy,relaxz
  INTEGER,ALLOCATABLE :: itmp(:,:)
@@ -366,7 +367,7 @@ SUBROUTINE read_xml_atoms(this,xml)
     !LDA+U
     DO i = 1,xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/ldaU')
        WRITE(xpath,*) TRIM(ADJUSTL(xPaths))//'/ldaU[',i,']'
-       IF (i.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="types_this")
+       IF (i.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="read_xml_atoms")
        this%n_u = this%n_u + 1
        this%lda_u(this%n_u)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l'))
 
@@ -438,6 +439,25 @@ SUBROUTINE read_xml_atoms(this,xml)
 
  END DO
 
+ !Read in DFT+Hubbard1 information (only LDA+U relevant information rest is stored in hub1inp)
+ !Stored behind LDA+U in the same array
+ DO n = 1, this%ntype
+    !To avoid segmentation faults read in the number of LDA+U for this atom again
+    xpathS=xml%speciesPath(n)
+    numU = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/ldaU')
+    DO i = 1,xml%getNumberOfNodes(TRIM(ADJUSTL(xPathS))//'/ldaHIA')
+       WRITE(xpath,*) TRIM(ADJUSTL(xPathS))//'/ldaHIA[',i,']'
+       IF(i+numU.GT.4) CALL juDFT_error("Too many U parameters provided for a certain species (maximum is 4).",calledby ="read_xml_atoms")
+       this%n_hia = this%n_hia + 1
+       this%lda_u(this%n_u+this%n_hia)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l'))
+
+       this%lda_u(this%n_u+this%n_hia)%u =  evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@U'))
+       this%lda_u(this%n_u+this%n_hia)%j = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@J'))
+       this%lda_u(this%n_u+this%n_hia)%l_amf =  evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@l_amf'))
+       this%lda_u(this%n_u+this%n_hia)%atomType = n
+    END DO
+ ENDDO
+
  this%nlotot = 0
  DO n = 1, this%ntype
     DO l = 1,this%nlo(n)
@@ -495,15 +515,26 @@ SUBROUTINE read_xml_atoms(this,xml)
 
  ! Check lda+u stuff (from inped)
 
- DO i = 1, this%n_u
+ DO i = 1, this%n_u+this%n_hia
     n = this%lda_u(i)%atomType
     IF (this%nlo(n).GE.1) THEN
        DO j = 1, this%nlo(n)
           IF ((ABS(this%llo(j,n)).EQ.this%lda_u(i)%l) .AND. (.NOT.this%l_dulo(j,n)) ) &
-               WRITE (*,*) 'LO and LDA+U for same l not implemented'
+               CALL juDFT_warn("LO and LDA+U for same l not implemented",calledby="read_xml_atoms")
        END DO
     END IF
  END DO
+ IF(this%n_u.GE.1) THEN
+    DO i = this%n_u+1, this%n_u+this%n_hia
+       n = this%lda_u(i)%atomType
+       l = this%lda_u(i)%l
+       DO j = 1, this%n_u
+          IF(this%lda_u(j)%atomType.EQ.n.AND.this%lda_u(j)%l.EQ.l) &
+             CALL juDFT_error("LDA+U and LDA+Hubbard1 should not be used on the same orbital",calledby="read_xml_atoms")
+       END DO
+    END DO
+ END IF
+
 
  this%jmtd = MAXVAL(this%jri(:))
  ALLOCATE(this%rmsh(this%jmtd,this%ntype))
