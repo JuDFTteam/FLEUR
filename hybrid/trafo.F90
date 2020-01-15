@@ -568,7 +568,7 @@ CONTAINS
 !          - local -
 
 !     - scalars -
-      INTEGER                 ::  nrkpt, rcent, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2, ok
+      INTEGER                 ::  nrkpt, itype, ieq, ic, l, n, i, j, nn, i1, i2, j1, j2, ok
       INTEGER                 ::  igptm, igptm2, igptp, iiatom, iiop, inviop
       COMPLEX                 ::  cexp, cdum
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
@@ -675,9 +675,7 @@ CONTAINS
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
 
-            rcent = hybinp%map(ic, kpts%bksym(ikpt))
-
-            cdum = cexp*exp(-img*tpi_const*dot_product(g, atoms%taual(:, rcent)))
+            cdum = cexp*exp(-img*tpi_const*dot_product(g, atoms%taual(:, hybinp%map(ic, kpts%bksym(ikpt)))))
 
             DO l = 0, hybinp%lcutm1(itype)
                nn = mpdata%num_radbasfn(l, itype)
@@ -685,7 +683,7 @@ CONTAINS
 
                   i1 = pnt(n, l, ic)
                   i2 = i1 + nn*2*l
-                  j1 = pnt(n, l, rcent)
+                  j1 = pnt(n, l, hybinp%map(ic, kpts%bksym(ikpt)))
                   j2 = j1 + nn*2*l
 
                   DO i = 1, nbands
@@ -828,7 +826,7 @@ CONTAINS
 !     - private scalars -
       INTEGER                 ::  itype, ieq, ic, l, n, i, nn, i1, i2, j1, j2
       INTEGER                 ::  igptm, igptm2, igptp, isym
-      INTEGER                 ::  ikpt1, rcent
+      INTEGER                 ::  ikpt1
       LOGICAL                 ::  trs
       COMPLEX, PARAMETER       ::  img = (0.0, 1.0)
       COMPLEX                 ::  cexp, cdum
@@ -911,8 +909,7 @@ CONTAINS
       DO itype = 1, atoms%ntype
          DO ieq = 1, atoms%neq(itype)
             ic = ic + 1
-            rcent = hybinp%map(ic, sym%invtab(isym))
-            cdum = cexp*exp(img*tpi_const*dot_product(g, atoms%taual(:, ic))) !rcent)))
+            cdum = cexp*exp(img*tpi_const*dot_product(g, atoms%taual(:, ic)))
             cdum = conjg(cdum)
             DO l = 0, lcutm(itype)
                nn = nindxm(l, itype)
@@ -920,7 +917,7 @@ CONTAINS
 
                   i1 = pnt(n, l, ic)
                   i2 = i1 + nn*2*l
-                  j1 = pnt(n, l, rcent)
+                  j1 = pnt(n, l, hybinp%map(ic, sym%invtab(isym)))
                   j2 = j1 + nn*2*l
 
                   vecout(i1:i2:nn) = cdum*matmul(dwgn(-l:l, -l:l, l), vecin1(j1:j2:nn))
