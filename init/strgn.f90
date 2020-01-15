@@ -37,7 +37,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL arltv1,arltv2,arltv3,s
-    REAL gmi,gla,eps 
+    REAL gmi,gla,eps
     REAL gfx,gfy,pon,pon2
     INTEGER j,k,k1,k2,k3,m0,mxx1,mxx2,n
     INTEGER ned1,nint,kdone,i,i_sym,n_sym
@@ -63,16 +63,13 @@ CONTAINS
 
     ALLOCATE (gsk3(stars%ng3),INDEX(stars%ng3),index3(stars%ng3),kv3rev(stars%ng3,3))
 
-    !
-    !WRITE (*,*) ' stars are always ordered '
-
     l_xcExtended = xcpot%needs_grad()
     !--->    read in information if exists
     CALL readStars(stars,l_xcExtended,.TRUE.,l_error)
     IF(.NOT.l_error) THEN
        GOTO 270
     END IF
- 
+
     IF (input%film.AND.sym%invs.AND.(.not.sym%zrfs).AND.(.not.sym%symor)) THEN
       n_sym = 2 ! needs reordering of 2d-stars
     ELSE
@@ -107,7 +104,7 @@ CONTAINS
             !--->   check if generated vector belongs to a star already
             !--->   stars should be within the g_max-sphere !   (Oct.97) sbluegel
             !
-            IF (s.LT.stars%gmax) THEN      
+            IF (s.LT.stars%gmax) THEN
                CALL spgrot(&
                     &                     sym%nop,sym%symor,sym%mrot,sym%tau,sym%invtab,&
                     &                     kv,&
@@ -116,7 +113,7 @@ CONTAINS
                   IF (mxx1.LT.kr(1,n)) mxx1 = kr(1,n)
                   IF (mxx2.LT.kr(2,n)) mxx2 = kr(2,n)
                ENDDO
-               DO k = 1,stars%ng2 
+               DO k = 1,stars%ng2
                   DO n = 1,sym%nop2
                      IF (kr(1,n).EQ.stars%kv2(1,k) .AND.&
                           &                   kr(2,n).EQ.stars%kv2(2,k)) CYCLE k2_loop
@@ -211,7 +208,7 @@ CONTAINS
           s = SQRT(stars%sk2(k2)**2+ (k3*cell%bmat(3,3))**2)
           !
           !--->   stars should be within the g_max-sphere !   (Oct.97) sbluegel
-          IF (s.LT.stars%gmax) THEN      
+          IF (s.LT.stars%gmax) THEN
              !
              stars%ng3 = stars%ng3 + 1
              IF (stars%ng3.GT.stars%ng3) THEN
@@ -253,7 +250,7 @@ CONTAINS
        stars%sk3(k) = gsk3(k)
        stars%ig2(k) = ig2p(k)
     ENDDO
-  
+
     !
     !--->  determine true gmax and change old gmax to new gmax
     !
@@ -304,7 +301,7 @@ CONTAINS
                 kfy = kr(2,n)
                 kfz = kr(3,n)
                 !+guta
-                gfx = cell%bmat(1,1)*kfx+cell%bmat(2,1)*kfy+cell%bmat(3,1)*kfz 
+                gfx = cell%bmat(1,1)*kfx+cell%bmat(2,1)*kfy+cell%bmat(3,1)*kfz
                 gfy = cell%bmat(1,2)*kfx+cell%bmat(2,2)*kfy+cell%bmat(3,2)*kfz
                 !-guta
                 IF (kfx.LT.0) kfx = kfx+nfftx
@@ -312,7 +309,7 @@ CONTAINS
                 IF (kfz.LT.0) kfz = kfz+nfftz
                 kfft = kfx + kfy*nfftx + kfz*nfftxy
                 !
-                ! -->            store the number of the star, its position 
+                ! -->            store the number of the star, its position
                 !c                 on fft-grid and phase
                 !
                 stars%igfft(kidx,1) = k
@@ -356,7 +353,7 @@ CONTAINS
           ENDDO
 
        ELSE
-          !        here: kv3(3,k) =/= 0 
+          !        here: kv3(3,k) =/= 0
 
           DO  n = 1,sym%nop
              !+gu
@@ -394,7 +391,7 @@ CONTAINS
        ENDIF
 
     ENDDO
-    !    
+    !
     stars%kimax=kidx-1
     stars%kimax2=kidx2-1
     !
@@ -452,9 +449,9 @@ CONTAINS
        ENDDO
     ENDIF
 
-    
+
     IF (stars%mx1< mxx1 .or.  stars%mx2< mxx2) then
-          print *,stars%mx1, mxx1, stars%mx2, mxx2       
+          print *,stars%mx1, mxx1, stars%mx2, mxx2
           CALL judft_error("BUG in strgn")
     endif
     !stars%mx1=mxx1
@@ -553,9 +550,6 @@ CONTAINS
 
     ALLOCATE (gsk3(stars%ng3),INDEX(stars%ng3),index3(stars%ng3),kv3rev(stars%ng3,3))
 
-    !
-    WRITE (*,*) ' stars are always ordered '
-
     l_xcExtended = xcpot%needs_grad()
     !--->    read in information if exists
     CALL readStars(stars,l_xcExtended,.FALSE.,l_error)
@@ -585,7 +579,7 @@ CONTAINS
              s = g(1)**2 + g(2)**2 + g(3)**2
              !
              !--->   check if generated vector belongs to a star already
-             IF (s.LT.gmax2) THEN      
+             IF (s.LT.gmax2) THEN
                 !
                 !--->    new representative found
                 CALL spgrot(&
@@ -721,7 +715,7 @@ CONTAINS
 
        ENDDO ops
     ENDDO starloop
-    !    
+    !
     stars%kimax=kidx-1
     !
     !     count number of members for each star
@@ -779,17 +773,17 @@ CONTAINS
        !OMP END PARALLLEL DO
     ENDIF
     if ( stars%mx1 < mxx1 .or. stars%mx2 < mxx2 .or. stars%mx3 < mxx3 ) call &
-         judft_error("BUG 1 in strgen") 
+         judft_error("BUG 1 in strgen")
     stars%ng2 = 2 ; stars%kv2 = 0 ; stars%ig2 = 0 ; stars%kimax2= 0 ; stars%igfft2 = 0
     stars%sk2 = 0.0 ; stars%pgfft2 = 0.0  ; stars%nstr2 = 0
     IF (xcpot%needs_grad()) THEN
-       stars%ft2_gfx = 0.0 ; stars%ft2_gfy = 0.0 
+       stars%ft2_gfx = 0.0 ; stars%ft2_gfy = 0.0
     ENDIF
 
     !--->    write /str0/ and /str1/ to file
-    CALL timestart("writeStars") 
+    CALL timestart("writeStars")
     CALL writeStars(stars,l_xcExtended,.FALSE.)
-    CALL timestop("writeStars") 
+    CALL timestop("writeStars")
 
 270 CONTINUE
 

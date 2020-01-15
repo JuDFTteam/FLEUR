@@ -55,7 +55,7 @@ MODULE m_types_xcpot
       PROCEDURE        :: vx_is_GGA => xcpot_vx_is_GGA
       PROCEDURE        :: vx_is_MetaGGA => xcpot_vx_is_MetaGGA
 
-      PROCEDURE        :: vc_is_LDA => xcpot_vc_is_LDA
+      PROCEDURE(vc_is_LDA_abstract), DEFERRED :: vc_is_LDA
       PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
 
       PROCEDURE        :: exc_is_LDA => xcpot_exc_is_LDA
@@ -63,7 +63,7 @@ MODULE m_types_xcpot
       PROCEDURE        :: exc_is_MetaGGA => xcpot_exc_is_MetaGGA
 
       PROCEDURE        :: needs_grad => xcpot_needs_grad
-      PROCEDURE(is_hybrid_abstract),DEFERRED :: is_hybrid
+      PROCEDURE(is_hybrid_abstract), DEFERRED :: is_hybrid
 
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc => xcpot_get_vxc
@@ -71,13 +71,31 @@ MODULE m_types_xcpot
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       PROCEDURE        :: read_xml => read_xml_xcpot
+      PROCEDURE(mpi_bc_xcpot_abstract), DEFERRED :: mpi_bc
    END TYPE t_xcpot
 
    INTERFACE
       LOGICAL FUNCTION is_hybrid_abstract(xcpot)
-        IMPORT t_xcpot
-        CLASS(t_xcpot),INTENT(IN):: xcpot
-     END FUNCTION is_hybrid_abstract
+         IMPORT t_xcpot
+         CLASS(t_xcpot), INTENT(IN):: xcpot
+      END FUNCTION is_hybrid_abstract
+   END INTERFACE
+
+   INTERFACE
+      LOGICAL FUNCTION vc_is_LDA_abstract(xcpot)
+         IMPORT t_xcpot
+         CLASS(t_xcpot), INTENT(IN):: xcpot
+      END FUNCTION vc_is_LDA_abstract
+   END INTERFACE
+
+   INTERFACE
+      subroutine mpi_bc_xcpot_abstract(This, Mpi_comm, Irank)
+         Use M_mpi_bc_tool
+         IMPORT t_xcpot
+         class(t_xcpot), intent(inout)::This
+         integer, intent(in):: Mpi_comm
+         integer, intent(in), Optional::Irank
+      end subroutine mpi_bc_xcpot_abstract
    END INTERFACE
 CONTAINS
 
@@ -157,12 +175,6 @@ CONTAINS
    END SUBROUTINE read_xml_xcpot
 
    ! LDA
-   LOGICAL FUNCTION xcpot_vc_is_LDA(xcpot)
-      IMPLICIT NONE
-      CLASS(t_xcpot), INTENT(IN):: xcpot
-      xcpot_vc_is_LDA = .FALSE.
-   END FUNCTION xcpot_vc_is_LDA
-
    LOGICAL FUNCTION xcpot_vx_is_LDA(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot), INTENT(IN):: xcpot
