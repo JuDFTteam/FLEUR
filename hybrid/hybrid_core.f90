@@ -315,7 +315,7 @@ CONTAINS
 
       !  - local scalars -
       INTEGER              :: itype, korb, ncmsh, nst
-      REAL                 :: e, fj, fl, fn, bmu, c
+      REAL                 :: e, fj, fl, fn, bmu
       REAL                 :: d, dxx, rn, rnot, z
 
       !  - local arrays -
@@ -326,8 +326,6 @@ CONTAINS
 
       !   - intrinsic functions -
       INTRINSIC exp, iabs, isign
-
-      c = c_light(1.0)
 
       ! this loop determines the dimensions
 
