@@ -16,7 +16,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_atoms), INTENT(IN)         :: atoms
       TYPE(t_input), INTENT(IN)         :: input
-      TYPE(t_hybdat), INTENT(OUT)       :: hybdat
+      TYPE(t_hybdat), INTENT(INOUT)     :: hybdat
 
       INTEGER:: l, m, i, l1, l2, m1, m2, ok
 
