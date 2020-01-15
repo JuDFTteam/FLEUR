@@ -186,7 +186,7 @@ CONTAINS
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
-    CALL gOnsite%init(input,lmaxU_const,atoms,noco)
+    IF(atoms%n_gf>0) CALL gOnsite%init(input,lmaxU_const,atoms,noco)
     ! Initialize Green's function (end)
 
     ! Open/allocate eigenvector storage (start)

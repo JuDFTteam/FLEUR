@@ -27,6 +27,10 @@ MODULE m_types_greensfCoeffs
    ! February 2019 - Initial Version
    !------------------------------------------------------------------------------
 
+   USE m_juDFT
+   USE m_types_setup
+   USE m_constants
+
    IMPLICIT NONE
 
    PRIVATE
@@ -63,9 +67,6 @@ MODULE m_types_greensfCoeffs
 
       SUBROUTINE greensfCoeffs_init(thisGREENSFCOEFFS,input,lmax,atoms,noco,ef)
 
-         USE m_juDFT
-         USE m_types_setup
-
          CLASS(t_greensfCoeffs), INTENT(INOUT)  :: thisGREENSFCOEFFS
          TYPE(t_atoms),          INTENT(IN)     :: atoms
          TYPE(t_input),          INTENT(IN)     :: input
@@ -94,28 +95,20 @@ MODULE m_types_greensfCoeffs
          spin_dim = MERGE(3,input%jspins,input%l_gfmperp)
 
          IF(atoms%n_gf.GT.0) THEN
-            ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2))
-            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
-            thisGREENSFCOEFFS%projdos     = 0.0
+            ALLOCATE(thisGREENSFCOEFFS%kkintgr_cutoff(atoms%n_gf,input%jspins,2),source=0)
+            ALLOCATE (thisGREENSFCOEFFS%projdos(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim),source=cmplx_0)
             IF(.NOT.input%l_gfsphavg) THEN
-               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
-               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim))
-
-               thisGREENSFCOEFFS%uu      = 0.0
-               thisGREENSFCOEFFS%dd      = 0.0
-               thisGREENSFCOEFFS%du      = 0.0
-               thisGREENSFCOEFFS%ud      = 0.0
+               ALLOCATE (thisGREENSFCOEFFS%uu(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim),source=cmplx_0)
+               ALLOCATE (thisGREENSFCOEFFS%dd(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim),source=cmplx_0)
+               ALLOCATE (thisGREENSFCOEFFS%du(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim),source=cmplx_0)
+               ALLOCATE (thisGREENSFCOEFFS%ud(thisGREENSFCOEFFS%ne,-lmax:lmax,-lmax:lmax,0:MAXVAL(atoms%neq),MAX(1,atoms%n_gf),spin_dim),source=cmplx_0)
             ENDIF
          END IF
 
       END SUBROUTINE greensfCoeffs_init
 
       SUBROUTINE getEnergyMesh(this,ne,eMesh)
-
-         IMPLICIT NONE
-
+         
          CLASS(t_greensfCoeffs),    INTENT(IN)  :: this
          INTEGER,                   INTENT(OUT) :: ne
          REAL, ALLOCATABLE,         INTENT(OUT) :: eMesh(:)
