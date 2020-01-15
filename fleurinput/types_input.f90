@@ -414,5 +414,6 @@ CONTAINS
     IF (noco%l_noco) input%neig = 2*input%neig
     input%gw_neigd = merge(max(nint(input%zelec)*10, 60),0, l_hybrid)
 
+    IF(present(nbasfcn)) input%neig = min(input%neig, nbasfcn)
    end subroutine init_input
 END MODULE m_types_input
