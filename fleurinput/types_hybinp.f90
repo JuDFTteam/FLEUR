@@ -115,7 +115,7 @@ CONTAINS
       type(t_input), intent(in)      :: input
       type(t_oneD), intent(in)       :: oneD
       type(t_sym), intent(in)        :: sym
-      type(t_xcpot), intent(in)      :: xcpot
+      class(t_xcpot), intent(in)     :: xcpot
 
       integer :: isym, iisym, l, m2, m1
 

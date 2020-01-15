@@ -34,7 +34,7 @@ MODULE m_types_xcpot
       REAL, ALLOCATABLE :: laplace(:, :)
    END TYPE t_gradients
 
-   TYPE, EXTENDS(t_fleurinput_base) :: t_xcpot
+   TYPE, abstract, EXTENDS(t_fleurinput_base) :: t_xcpot
       REAL :: gmaxxc
       !Data for libxc
       LOGICAL                  :: l_libxc = .FALSE.
@@ -47,6 +47,7 @@ MODULE m_types_xcpot
       LOGICAL          :: l_relativistic = .FALSE.
 
    CONTAINS
+
       PROCEDURE        :: vxc_is_LDA => xcpot_vxc_is_LDA
       PROCEDURE        :: vxc_is_GGA => xcpot_vxc_is_GGA
 
@@ -62,7 +63,7 @@ MODULE m_types_xcpot
       PROCEDURE        :: exc_is_MetaGGA => xcpot_exc_is_MetaGGA
 
       PROCEDURE        :: needs_grad => xcpot_needs_grad
-      PROCEDURE        :: is_hybrid => xcpot_is_hybrid
+      PROCEDURE(is_hybrid_abstract),DEFERRED :: is_hybrid
 
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc => xcpot_get_vxc
@@ -70,33 +71,15 @@ MODULE m_types_xcpot
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       PROCEDURE        :: read_xml => read_xml_xcpot
-      PROCEDURE        :: mpi_bc => mpi_bc_xcpot
    END TYPE t_xcpot
 
+   INTERFACE
+      LOGICAL FUNCTION is_hybrid_abstract(xcpot)
+        IMPORT t_xcpot
+        CLASS(t_xcpot),INTENT(IN):: xcpot
+     END FUNCTION is_hybrid_abstract
+   END INTERFACE
 CONTAINS
-
-   Subroutine Mpi_bc_xcpot(This, Mpi_comm, Irank)
-      Use M_mpi_bc_tool
-      Class(T_xcpot), Intent(Inout)::This
-      Integer, Intent(In):: Mpi_comm
-      Integer, Intent(In), Optional::Irank
-      Integer ::Rank
-      If (Present(Irank)) Then
-         Rank = Irank
-      Else
-         Rank = 0
-      End If
-
-      CALL mpi_bc(this%l_libxc, rank, mpi_comm)
-      CALL mpi_bc(this%func_vxc_id_c, rank, mpi_comm)
-      CALL mpi_bc(this%func_vxc_id_x, rank, mpi_comm)
-      CALL mpi_bc(this%func_exc_id_c, rank, mpi_comm)
-      CALL mpi_bc(this%func_exc_id_x, rank, mpi_comm)
-      CALL mpi_bc(this%l_inbuild, rank, mpi_comm)
-      CALL mpi_bc(rank, mpi_comm, this%inbuild_name)
-      CALL mpi_bc(this%l_relativistic, rank, mpi_comm)
-
-   END SUBROUTINE mpi_bc_xcpot
 
    SUBROUTINE read_xml_xcpot(this, xml)
       USE m_types_xml

@@ -79,8 +79,17 @@ MODULE m_types_xcpot_inbuild_nofunction
        Rank=0
     End If
 
-    call this%t_xcpot%mpi_bc(mpi_comm,irank)
+    ! Bcasts for abstract base class t_xcpot
+    CALL mpi_bc(this%l_libxc, rank, mpi_comm)
+    CALL mpi_bc(this%func_vxc_id_c, rank, mpi_comm)
+    CALL mpi_bc(this%func_vxc_id_x, rank, mpi_comm)
+    CALL mpi_bc(this%func_exc_id_c, rank, mpi_comm)
+    CALL mpi_bc(this%func_exc_id_x, rank, mpi_comm)
+    CALL mpi_bc(this%l_inbuild, rank, mpi_comm)
+    CALL mpi_bc(rank, mpi_comm, this%inbuild_name)
+    CALL mpi_bc(this%l_relativistic, rank, mpi_comm)
 
+    ! Bcasts for derived class t_xcpot_inbuild
     CALL mpi_bc(this%icorr,rank,mpi_comm)
     CALL mpi_bc(this%data%is_rpbe,rank,mpi_comm)
     CALL mpi_bc(this%data%is_wc,rank,mpi_comm)
