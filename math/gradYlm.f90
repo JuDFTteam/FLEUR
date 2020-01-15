@@ -136,7 +136,8 @@ CONTAINS
     complex,       allocatable                     :: rDerFshMt(:)
     complex,       allocatable                     :: r2GrFshMtNat(:, :, :, :)
     !Matrix syntax idea from http://stackoverflow.com/questions/3708307/how-to-initialize-two-dimensional-arrays-in-fortran
-    complex, parameter, dimension(3, 3)  :: Tmatrix = transpose(reshape([                                                          &
+    complex, dimension(3, 3)  :: Tmatrix !no parameter anymore since the init below is not OK for this
+    Tmatrix = transpose(reshape([                                                          &
                                                                    & cmplx(1 / sqrt(2.), 0), cmplx(0, 0), cmplx(-1 / sqrt(2.), 0), &
                                                                    & -ImagUnit / sqrt(2.), cmplx(0, 0), -ImagUnit / sqrt(2.), &
                                                                    & cmplx(0, 0), cmplx(1, 0), cmplx(0, 0) &
