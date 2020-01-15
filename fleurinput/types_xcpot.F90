@@ -225,12 +225,6 @@ CONTAINS
       xcpot_needs_grad = xcpot%vc_is_gga()
    END FUNCTION xcpot_needs_grad
 
-   LOGICAL FUNCTION xcpot_is_hybrid(xcpot)
-      IMPLICIT NONE
-      CLASS(t_xcpot), INTENT(IN):: xcpot
-      xcpot_is_hybrid = .FALSE.
-   END FUNCTION xcpot_is_hybrid
-
    FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
       USE m_judft
       IMPLICIT NONE
