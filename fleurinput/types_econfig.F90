@@ -35,10 +35,12 @@ CONTAINS
 
   SUBROUTINE get_core(econf,nst,nprnc,kappa,occupation,l_valence)
     CLASS(t_econfig),INTENT(IN)  :: econf
-    INTEGER         ,INTENT(out) :: nst
-    INTEGER         ,INTENT(out) :: nprnc(:),kappa(:)
-    REAL            ,INTENT(out) :: occupation(:,:)
+    INTEGER         ,INTENT(inout) :: nst
+    INTEGER         ,INTENT(inout) :: nprnc(:),kappa(:)
+    REAL            ,INTENT(inout) :: occupation(:,:)
     LOGICAL,OPTIONAL,INTENT(IN)  :: l_valence
+
+    nst = -1; nprnc = -99999; kappa = -99999
 
     nst=econf%num_core_states
     if (present(l_valence)) then
@@ -157,6 +159,7 @@ CONTAINS
 
 
     INTEGER :: np(40),kap(40)
+    kap = 0; np = 0
 
     econf%coreconfig=core
     econf%valenceconfig=valence
