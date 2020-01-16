@@ -24,7 +24,7 @@
 
    CONTAINS
       SUBROUTINE vmt_xc(mpi,sphhar,atoms,&
-                        den,xcpot,input,sym,EnergyDen,noco,vTot,vx,exc)
+                        den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc)
 #include"cpp_double.h"
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
@@ -34,7 +34,7 @@
          USE m_juDFT_string
          IMPLICIT NONE
 
-         CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
+         CLASS(t_xcpot),INTENT(IN)      :: xcpot
          TYPE(t_mpi),INTENT(IN)         :: mpi
          TYPE(t_input),INTENT(IN)       :: input
          TYPE(t_sym),INTENT(IN)         :: sym
@@ -43,6 +43,7 @@
          TYPE(t_potden),INTENT(IN)      :: den,EnergyDen
          TYPE(t_noco), INTENT(IN)       :: noco
          TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc
+         TYPE(t_kinED),INTENT(IN)       :: kinED
 #ifdef CPP_MPI
          include "mpif.h"
 #endif
@@ -104,7 +105,6 @@
 #endif
          loc_n = 0
          !TODO: MetaGGA
-         !call xcpot%kinED%alloc_mt(nsp*atoms%jmtd,input%jspins, n_start, atoms%ntype, n_stride)
          DO n = n_start,atoms%ntype,n_stride
             ALLOCATE(ch(nsp*atoms%jri(n),input%jspins),v_x(nsp*atoms%jri(n),input%jspins),&
                      v_xc(nsp*atoms%jri(n),input%jspins),e_xc(nsp*atoms%jri(n),input%jspins))
@@ -116,9 +116,9 @@
             !
             !         calculate the ex.-cor. potential
 #ifdef CPP_LIBXC
-            if(perform_MetaGGA .and. xcpot%kinED%set) then
+            if(perform_MetaGGA .and. kinED%set) then
               CALL xcpot%get_vxc(input%jspins,ch,v_xc&
-                   , v_x,grad, kinED_KS=xcpot%kinED%mt(:,:,loc_n))
+                   , v_x,grad, kinED_KS=kinED%mt(:,:,loc_n))
             else
                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
                   , v_x,grad)
@@ -154,10 +154,10 @@
                !           calculate the ex.-cor energy density
                !
 #ifdef CPP_LIBXC
-               IF(perform_MetaGGA .and. xcpot%kinED%set) THEN
+               IF(perform_MetaGGA .and. kinED%set) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, &
-                     kinED_KS=xcpot%kinED%mt(:,:,loc_n), mt_call=.True.)
+                     kinED_KS=kinED%mt(:,:,loc_n), mt_call=.True.)
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)

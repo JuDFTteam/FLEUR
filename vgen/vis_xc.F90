@@ -17,7 +17,7 @@ MODULE m_vis_xc
    !     including gradient corrections. t.a. 1996.
    !     ******************************************************
 CONTAINS
-   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,vTot,vx,exc)
+   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,kinED,vTot,vx,exc)
 
       !     ******************************************************
       !     instead of visxcor.f: the different exchange-correlation
@@ -45,6 +45,7 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_potden),INTENT(IN)  :: den, EnergyDen
       TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc
+      TYPE(t_kinED),INTENT(IN)      ::kinED
 
       TYPE(t_gradients) :: grad, tmp_grad
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:)
@@ -63,8 +64,8 @@ CONTAINS
       ALLOCATE(v_xc,mold=rho)
       ALLOCATE(v_x,mold=rho)
 #ifdef CPP_LIBXC
-      if(perform_MetaGGA .and. xcpot%kinED%set) then
-         CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinED_KS=xcpot%kinED%is)
+      if(perform_MetaGGA .and. kinED%set) then
+         CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinED_KS=kinED%is)
       else
          CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
       endif
@@ -85,8 +86,8 @@ CONTAINS
       IF (ALLOCATED(exc%pw_w)) THEN
          ALLOCATE ( e_xc(SIZE(rho,1),1) ); e_xc=0.0
 #ifdef CPP_LIBXC
-         IF(xcpot%kinED%set) THEN
-            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, xcpot%kinED%is, mt_call=.False.)
+         IF(kinED%set) THEN
+            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, kinED%is, mt_call=.False.)
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
          ENDIF
