@@ -231,13 +231,14 @@ SUBROUTINE cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum,&
 
       END IF
    END IF ! mpi%irank == 0
-
-   perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
-                   .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
-   if(perform_MetaGGA) then
-      call set_kinED(mpi, sphhar, atoms, sym, core_den, val_den, xcpot, &
-                     input, noco, stars, cell, outDen, EnergyDen, vTot)
+   Perform_metagga = Allocated(Energyden%Mt) &
+                   .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
+   If(Perform_metagga) Then
+     CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                           0,-1.0,0.0,.FALSE.,core_den,'cdnc')
    endif
+
+
 #ifdef CPP_MPI
    CALL MPI_BCAST(noco%l_ss,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)
    CALL MPI_BCAST(noco%l_mperp,1,MPI_LOGICAL,0,mpi%mpi_comm,ierr)

@@ -34,6 +34,7 @@ CONTAINS
       USE m_convol
       USE m_cdntot
       USE m_intgr
+      USE m_metagga
 
       IMPLICIT NONE
 
@@ -57,6 +58,7 @@ CONTAINS
 
       ! Local type instances
       TYPE(t_potden)    :: workDen, exc, veff
+      Type(t_kinED)     :: kinED
       REAL, ALLOCATABLE :: tmp_mt(:,:,:), tmp_is(:,:)
       REAL, ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
       REAL, ALLOCATABLE :: tec(:,:), qintc(:,:)
@@ -70,6 +72,10 @@ CONTAINS
 
       CALL exc%init(stars, atoms, sphhar, vacuum, noco, 1, 1) !one spin only
       ALLOCATE (exc%pw_w(stars%ng3, 1)); exc%pw_w = 0.0
+
+      call set_kinED(mpi, sphhar, atoms, sym,  xcpot, &
+      input, noco, stars, cell, Den, EnergyDen, vTot,kinED)
+
       IF (PRESENT(results)) THEN
          CALL veff%init(stars, atoms, sphhar, vacuum, noco, input%jspins, 1)
 #ifndef CPP_OLDINTEL
@@ -115,7 +121,7 @@ CONTAINS
 
          ! interstitial region
          CALL timestart("Vxc in interstitial")
-            CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen, vTot, vx, exc)
+            CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc)
       CALL timestop("Vxc in interstitial")
       END IF !irank==0
 
@@ -128,7 +134,7 @@ CONTAINS
       END IF
 
       CALL vmt_xc(mpi, sphhar, atoms, den, xcpot, input, sym, &
-                  EnergyDen, noco,vTot, vx, exc)
+                  EnergyDen,kinED, noco,vTot, vx, exc)
 
       ! add MT EXX potential to vr
       IF (mpi%irank == 0) THEN

@@ -13,7 +13,32 @@ MODULE m_metagga
       REAL, ALLOCATABLE :: is(:,:), mt(:,:)
    end type t_RS_potden
 
+   TYPE t_kinED
+      logical             :: set=.false.
+      real, allocatable   :: is(:,:)   ! (nsp*jmtd, jspins)
+      real, allocatable   :: mt(:,:,:) ! (nsp*jmtd, jspins, local num of types)
+   contains
+      procedure           :: alloc_mt => kED_alloc_mt
+   END TYPE t_kinED
+
 CONTAINS
+
+  SUBROUTINE kED_alloc_mt(kED,nsp_x_jmtd, jspins, n_start, n_types, n_stride)
+    IMPLICIT NONE
+    class(t_kinED), intent(inout)   :: kED
+    integer, intent(in)            :: nsp_x_jmtd, jspins, n_start, n_types, n_stride
+    integer                        :: cnt, n
+
+    if(.not. allocated(kED%mt)) then
+      cnt = 0
+      do n = n_start,n_types,n_stride
+        cnt = cnt + 1
+      enddo
+      allocate(kED%mt(nsp_x_jmtd, jspins, cnt), source=0.0)
+    endif
+  END SUBROUTINE kED_alloc_mt
+
+
    SUBROUTINE calc_kinEnergyDen_pw(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS)
       USE m_juDFT_stop
       !use m_cdngen
@@ -210,24 +235,38 @@ CONTAINS
       endif
    end subroutine undo_vgen_finalize
 
-   subroutine set_kinED(mpi,   sphhar, atoms, sym, core_den, val_den, xcpot, &
-                        input, noco,   stars, cell,     den,     EnergyDen, vTot)
+   subroutine set_kinED(mpi,   sphhar, atoms, sym,  xcpot, &
+                        input, noco,   stars, cell,     den,     EnergyDen, vTot,kinED)
       use m_types
       implicit none
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_atoms),INTENT(IN)     :: atoms
       TYPE(t_sym), INTENT(IN)      :: sym
-      TYPE(t_potden),INTENT(IN)    :: core_den, val_den
-      CLASS(t_xcpot),INTENT(INOUT) :: xcpot
+      CLASS(t_xcpot),INTENT(OUT)   :: xcpot
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
+      TYPE(t_kinED),INTENT(OUT)    :: kinED
 
       TYPE(t_potden)               :: vTot_corrected
+
+      LOGICAL :: perform_MetaGGA
+      TYPE(t_potden)    :: core_den, val_den
+      real :: rdum
+      logical :: ldum
+      perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
+                      .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+      if(.not.perform_MetaGGA) return
 #ifdef CPP_LIBXC
+
+      call readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,oneD,&
+                          CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                           0,-1.0,rdum,ldum,core_den,'cdnc')
+      call val_den%subPotDen(den,core_den)
+
       call vTot_corrected%copyPotDen(vTot)
       call undo_vgen_finalize(vTot_corrected, atoms, noco, stars)
 
@@ -237,17 +276,18 @@ CONTAINS
 #endif
    end subroutine set_kinED
 #ifdef CPP_LIBXC
-   subroutine set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot)
+   subroutine set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot,kinED)
       use m_types
       use m_pw_tofrom_grid
       implicit none
-      CLASS(t_xcpot),INTENT(INOUT) :: xcpot
+      CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_noco),INTENT(IN)      :: noco
       TYPE(t_stars),INTENT(IN)     :: stars
       TYPE(t_sym), INTENT(IN)      :: sym
       TYPE(t_cell),INTENT(IN)      :: cell
       TYPE(t_potden),INTENT(IN)    :: den, EnergyDen, vTot
+      TYPE(t_kinED),INTENT(INOUT)  :: kinED
 
       !local arrays
       REAL, ALLOCATABLE            :: den_rs(:,:), ED_rs(:,:), vTot_rs(:,:)
@@ -264,13 +304,13 @@ CONTAINS
 
       CALL finish_pw_grid()
 
-      call calc_kinEnergyDen_pw(ED_rs, vTot_rs, den_rs, xcpot%kinED%is)
+      call calc_kinEnergyDen_pw(ED_rs, vTot_rs, den_rs, kinED%is)
       !xcpot%kinED%is  = ED_RS - vTot_RS * den_RS
-      xcpot%kinED%set = .True.
+      kinED%set = .True.
    end subroutine set_kinED_is
 
    subroutine set_kinED_mt(mpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
-                           xcpot, EnergyDen, input, vTot)
+                           xcpot, EnergyDen, input, vTot,kinED)
       use m_types
       use m_mt_tofrom_grid
       implicit none
@@ -280,9 +320,9 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)        :: sym
       TYPE(t_noco), INTENT(IN)       :: noco
       TYPE(t_potden),INTENT(IN)      :: core_den, val_den, EnergyDen, vTot
-      CLASS(t_xcpot),INTENT(INOUT)   :: xcpot
+      CLASS(t_xcpot),INTENT(IN)      :: xcpot
       TYPE(t_input),INTENT(IN)       :: input
-
+      TYPE(t_kinED),INTENT(INOUT)    :: kinED
       INTEGER                        :: jr, loc_n, n, n_start, n_stride, cnt
       REAL,ALLOCATABLE               :: vTot_mt(:,:,:), ED_rs(:,:), vTot_rs(:,:), vTot0_rs(:,:),&
                                         core_den_rs(:,:), val_den_rs(:,:)
@@ -304,7 +344,7 @@ CONTAINS
       allocate(core_den_rs, mold=ED_rs)
       allocate(val_den_rs, mold=ED_rs)
 
-      call xcpot%kinED%alloc_mt(atoms%nsp()*atoms%jmtd, input%jspins, &
+      call kinED%alloc_mt(atoms%nsp()*atoms%jmtd, input%jspins, &
                                 n_start,                atoms%ntype,  n_stride)
       loc_n = 0
       do n = n_start,atoms%ntype,n_stride
@@ -335,10 +375,10 @@ CONTAINS
                          val_den%mt(:,0:,n,:), n,noco, tmp_grad, val_den_rs)
 
          call calc_kinEnergyDen_mt(ED_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
-                                   xcpot%kinED%mt(:,:,loc_n))
+                                   kinED%mt(:,:,loc_n))
          !xcpot%kinED%mt(:,:,loc_n) = ED_RS - (vTot0_rs * core_den_rs + vTot_rs * val_den_rs)
       enddo
-      xcpot%kinED%set = .True.
+      kinED%set = .True.
       CALL finish_mt_grid()
    end subroutine set_kinED_mt
 #endif
