@@ -37,7 +37,7 @@ CONTAINS
       USE m_metagga
       IMPLICIT NONE
 
-      CLASS(t_xcpot),INTENT(INOUT)  :: xcpot
+      CLASS(t_xcpot),INTENT(IN)     :: xcpot
       TYPE(t_input),INTENT(IN)      :: input
       TYPE(t_noco),INTENT(IN)       :: noco
       TYPE(t_sym),INTENT(IN)        :: sym

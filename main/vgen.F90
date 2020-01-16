@@ -35,7 +35,7 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT)  :: results
-      CLASS(t_xcpot),    INTENT(INOUT)  :: xcpot
+      CLASS(t_xcpot),    INTENT(IN)     :: xcpot
       TYPE(t_hybdat),    INTENT(IN)     :: hybdat
       TYPE(t_mpi),       INTENT(IN)     :: mpi
 
