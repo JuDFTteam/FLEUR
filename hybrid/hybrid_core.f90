@@ -321,7 +321,7 @@ CONTAINS
       !  - local arrays -
       INTEGER              :: kappa(29), nprnc(29)
       INTEGER              :: nindxcr(0:29, atoms%ntype)
-      REAL                 :: occ(29), occ_h(29, 2)
+      REAL                 :: occ(29), occ_h(29, input%jspins)
       INTEGER              :: lmaxc(atoms%ntype)
 
       !   - intrinsic functions -
