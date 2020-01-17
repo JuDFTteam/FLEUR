@@ -71,7 +71,7 @@ CONTAINS
 
 
    SUBROUTINE calc_EnergyDen(eig_id, mpi, kpts, noco, input, banddos, cell, atoms, enpara, stars, &
-         vacuum,  sphhar, sym, vTot, oneD, results, EnergyDen)
+         vacuum,  sphhar, sym, gfinp, hub1inp, vTot, oneD, results, EnergyDen)
       ! calculates the energy density
       ! EnergyDen = \sum_i n_i(r) \varepsilon_i
       ! where n_i(r) is the one-particle density
@@ -104,6 +104,8 @@ CONTAINS
 
       TYPE(t_sphhar),    INTENT(in)           :: sphhar
       TYPE(t_sym),       INTENT(in)           :: sym
+      TYPE(t_gfinp),     INTENT(in)           :: gfinp
+      TYPE(t_hub1inp),   INTENT(in)           :: hub1inp
       TYPE(t_potden),    INTENT(in)           :: vTot
       TYPE(t_oneD),      INTENT(in)           :: oneD
       TYPE(t_results),   INTENT(in)           :: results
@@ -135,7 +137,7 @@ CONTAINS
 
          CALL cdnval(eig_id, mpi, kpts, jspin, noco, input, banddos, cell, atoms, &
             enpara, stars, vacuum,  sphhar, sym, vTot, oneD, cdnvalJob, &
-            EnergyDen, regCharges, dos, tmp_results, moments)
+            EnergyDen, regCharges, dos, tmp_results, moments, gfinp, hub1inp)
       ENDDO
 
    END SUBROUTINE calc_EnergyDen

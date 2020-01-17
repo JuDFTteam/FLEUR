@@ -4,7 +4,6 @@ MODULE m_lsTOjmj
    USE m_types
    USE m_juDFT
 
-
    IMPLICIT NONE
 
    CONTAINS

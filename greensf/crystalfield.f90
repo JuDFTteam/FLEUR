@@ -15,7 +15,6 @@ MODULE m_crystalfield
    USE m_types
    USE m_constants
    USE m_kkintgr
-   USE m_ind_greensf
    USE m_sgml
    USE m_anglso
 
@@ -25,37 +24,35 @@ MODULE m_crystalfield
 
    CONTAINS
 
-   SUBROUTINE crystal_field(atoms,input,noco,greensfCoeffs,hub1,v)
+   SUBROUTINE crystal_field(atoms,gfinp,hub1inp,input,noco,greensfCoeffs,v,ef,hub1data)
 
       !calculates the crystal-field matrix for the local hamiltonian
 
-      IMPLICIT NONE
-
-      !-Type Arguments
       TYPE(t_greensfCoeffs), INTENT(IN)    :: greensfCoeffs
       TYPE(t_atoms),         INTENT(IN)    :: atoms
+      TYPE(t_gfinp),         INTENT(IN)    :: gfinp
       TYPE(t_input),         INTENT(IN)    :: input
       TYPE(t_noco),          INTENT(IN)    :: noco
-      TYPE(t_hub1ham),       INTENT(INOUT) :: hub1
-
-      !-Array Arguments
+      TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
       TYPE(t_potden),        INTENT(IN)    :: v !LDA+U potential (should be removed from h_loc)
+      REAL,                  INTENT(IN)    :: ef
+      TYPE(t_hub1data),      INTENT(INOUT) :: hub1data
 
       !-Local Scalars
       INTEGER i_gf,l,nType,jspin,m,mp,ie,i_hia,kkcut,i_u,isp
-      REAL    tr,xiSOC
+      REAL    tr,xiSOC,del,eb
       COMPLEX vso
       !-Local Arrays
       REAL :: h_loc(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,atoms%n_hia,input%jspins)
       REAL :: ex(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
-      REAL :: integrand(greensfCoeffs%ne), norm(greensfCoeffs%ne)
+      REAL :: integrand(gfinp%ne), norm(gfinp%ne)
 
       h_loc = 0.0
       DO i_hia = 1, atoms%n_hia
 
          l     = atoms%lda_u(atoms%n_u+i_hia)%l
          nType = atoms%lda_u(atoms%n_u+i_hia)%atomType
-         i_gf = ind_greensf(atoms,l,nType)
+         i_gf = gfinp%find(l,nType)
          !---------------------------------------------------------
          ! Perform the integration
          !---------------------------------------------------------
@@ -65,6 +62,7 @@ MODULE m_crystalfield
          ! connected to the imaginary part of the greens function
          ! with a factor -1/pi
          !---------------------------------------------------------
+         CALL gfinp%eMesh(ef,del,eb)
          DO jspin = 1, input%jspins
             !Use the same cutoffs as in the kramer kronigs integration
             kkcut = greensfCoeffs%kkintgr_cutoff(i_gf,jspin,2)
@@ -73,11 +71,11 @@ MODULE m_crystalfield
                DO mp = -l, l
                   integrand = 0.0
                   DO ie = 1, kkcut
-                     integrand(ie) = -1.0/pi_const * ((ie-1) * greensfCoeffs%del+greensfCoeffs%e_bot) &
+                     integrand(ie) = -1.0/pi_const * ((ie-1) * del+eb) &
                                      * REAL(greensfCoeffs%projdos(ie,m,mp,0,i_gf,jspin)/(3.0-input%jspins))
                      IF(m.EQ.mp) norm(ie) = norm(ie) -1.0/pi_const * REAL(greensfCoeffs%projdos(ie,m,mp,0,i_gf,jspin))/(3.0-input%jspins)
                   ENDDO
-                  h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),greensfCoeffs%del,kkcut)
+                  h_loc(m,mp,i_hia,jspin) = trapz(integrand(1:kkcut),del,kkcut)
                ENDDO
             ENDDO
          ENDDO
@@ -101,12 +99,12 @@ MODULE m_crystalfield
             DO m = -l, l
                DO mp = -l, l
                   isp = 3.0-2.0*jspin !1,-1
-                  IF((ABS(noco%theta).LT.0.00001).AND.(ABS(noco%phi).LT.0.00001)) THEN
+                  IF((ABS(noco%theta).LT.1e-5).AND.(ABS(noco%phi).LT.1e-5)) THEN
                      vso = CMPLX(sgml(l,m,isp,l,mp,isp),0.0)
                   ELSE
                      vso = anglso(noco%theta,noco%phi,l,m,isp,l,mp,isp)
                   ENDIF
-                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1%xi(i_hia)/hartree_to_ev_const
+                  h_loc(m,mp,i_hia,jspin) = h_loc(m,mp,i_hia,jspin) - REAL(vso)/2.0 * hub1data%xi(i_hia)/hartree_to_ev_const
                ENDDO
             ENDDO
          ENDDO
@@ -149,32 +147,32 @@ MODULE m_crystalfield
         ENDIF
 
          !Average over spins
-         hub1%ccfmat(i_hia,:,:) = 0.0
+         hub1data%ccfmat(i_hia,:,:) = 0.0
          DO m = -l, l
             DO mp = -l, l
-               hub1%ccfmat(i_hia,m,mp) = SUM(h_loc(m,mp,i_hia,:))/2.0
+               hub1data%ccfmat(i_hia,m,mp) = SUM(h_loc(m,mp,i_hia,:))/2.0
                !For jspins.EQ.1 we need to take care of the fact that the spin-orbit coupling is opposite in spin 1/2
-               IF(input%jspins.EQ.1) hub1%ccfmat(i_hia,m,mp) = (h_loc(m,mp,i_hia,1)+h_loc(-m,-mp,i_hia,1))/2.0
+               IF(input%jspins.EQ.1) hub1data%ccfmat(i_hia,m,mp) = (h_loc(m,mp,i_hia,1)+h_loc(-m,-mp,i_hia,1))/2.0
             ENDDO
          ENDDO
          IF(l_debug) THEN
             WRITE(*,*) "Average"
-            WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)
+            WRITE(*,"(7f7.3)") hub1data%ccfmat(i_hia,-3:3,-3:3)
          ENDIF
          DO m = -l, l
             DO mp = -l, l
-               hub1%ccfmat(i_hia,m,mp) = (hub1%ccfmat(i_hia,m,mp)+hub1%ccfmat(i_hia,-m,-mp))/2.0
-               hub1%ccfmat(i_hia,-m,-mp) = hub1%ccfmat(i_hia,m,mp)
+               hub1data%ccfmat(i_hia,m,mp) = (hub1data%ccfmat(i_hia,m,mp)+hub1data%ccfmat(i_hia,-m,-mp))/2.0
+               hub1data%ccfmat(i_hia,-m,-mp) = hub1data%ccfmat(i_hia,m,mp)
             ENDDO
          ENDDO
          IF(l_debug) THEN
             WRITE(*,*) "SOC"
-            WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)
+            WRITE(*,"(7f7.3)") hub1data%ccfmat(i_hia,-3:3,-3:3)
          ENDIF
          tr = 0.0
          !calculate the trace
          DO m = -l, l
-            tr = tr + hub1%ccfmat(i_hia,m,m)
+            tr = tr + hub1data%ccfmat(i_hia,m,m)
          ENDDO
          IF(l_debug) THEN
             WRITE(*,*) "TRACE"
@@ -182,12 +180,12 @@ MODULE m_crystalfield
          ENDIF
          !Remove trace
          DO m = -l, l
-            hub1%ccfmat(i_hia,m,m) = hub1%ccfmat(i_hia,m,m) - tr/(2*l+1)
+            hub1data%ccfmat(i_hia,m,m) = hub1data%ccfmat(i_hia,m,m) - tr/(2*l+1)
          ENDDO
 
          IF(l_debug) THEN
             WRITE(*,*) "TRACELESS (eV)"
-            WRITE(*,"(7f7.3)") hub1%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const
+            WRITE(*,"(7f7.3)") hub1data%ccfmat(i_hia,-3:3,-3:3)*hartree_to_ev_const
          ENDIF
       ENDDO
    END SUBROUTINE crystal_field

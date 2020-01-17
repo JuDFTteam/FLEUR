@@ -4,23 +4,22 @@ MODULE m_j0
    USE m_types
    USE m_constants
    USE m_kkintgr
-   USE m_ind_greensf
 
    IMPLICIT NONE
 
    CONTAINS
 
-   SUBROUTINE eff_excinteraction(g0,atoms,input,ef,g0Coeffs)
+   SUBROUTINE eff_excinteraction(g0,gfinp,input,ef,g0Coeffs)
 
       TYPE(t_greensf),        INTENT(IN)  :: g0
-      TYPE(t_atoms),          INTENT(IN)  :: atoms
+      TYPE(t_gfinp),          INTENT(IN)  :: gfinp
       TYPE(t_greensfCoeffs),  INTENT(IN)  :: g0Coeffs !For determining the onsite exchange splitting from the difference in the COM of the bands
       TYPE(t_input),          INTENT(IN)  :: input
       REAL,                   INTENT(IN)  :: ef
 
       COMPLEX integrand, sumup, sumdwn, sumupdwn
       INTEGER i,iz,m,l,mp,ispin,n,i_gf,matsize,ipm,ie,n_cut
-      REAL beta,j0(0:lmaxU_const),exc_split(0:lmaxU_const),tmp,avgexc
+      REAL beta,j0(0:lmaxU_const),exc_split(0:lmaxU_const),tmp,avgexc,del,eb
       INTEGER nType,l_min,l_max,i_j0
       CHARACTER(len=30) :: filename
 
@@ -29,18 +28,18 @@ MODULE m_j0
       TYPE(t_mat) :: delta
       TYPE(t_mat) :: calc
 
-      REAL :: int_com(g0Coeffs%ne,input%jspins),int_norm(g0Coeffs%ne,input%jspins)
+      REAL :: int_com(gfinp%ne,input%jspins),int_norm(gfinp%ne,input%jspins)
       REAL, PARAMETER    :: boltzmannConst = 3.1668114e-6 ! value is given in Hartree/Kelvin
 
       l_matinv = .FALSE. !Determines how the onsite exchange splitting is calculated
 
-      DO i_j0 = 1, atoms%n_j0
+      DO i_j0 = 1, gfinp%n_j0
 
-         nType = atoms%j0(i_j0)%atomType
-         l_min = atoms%j0(i_j0)%l_min
-         l_max = atoms%j0(i_j0)%l_max
+         nType = gfinp%j0elem(i_j0)%atomType
+         l_min = gfinp%j0elem(i_j0)%lmin
+         l_max = gfinp%j0elem(i_j0)%lmax
          WRITE(6,9010) nType
-         WRITE(6,9020) l_min,l_max,atoms%j0(i_j0)%l_avgexc
+         WRITE(6,9020) l_min,l_max,gfinp%j0elem(i_j0)%l_avgexc
          j0 = 0.0
          !Calculate the onsite exchange splitting by determining the difference in the center of mass
          !of the bands under consideration
@@ -48,7 +47,7 @@ MODULE m_j0
          IF(.NOT.l_matinv) THEN
             exc_split = 0.0
             DO l = l_min, l_max
-               i_gf = ind_greensf(atoms,l,nType)
+               i_gf = gfinp%find(l,nType)
                !-------------------------------------------------
                ! Evaluate center of mass of the bands in question
                ! and tkae the differrence between spin up/down
@@ -60,17 +59,19 @@ MODULE m_j0
                   int_com = 0.0
                   int_norm = 0.0
                   n_cut = g0Coeffs%kkintgr_cutoff(i_gf,ispin,2)
+                  CALL gfinp%eMesh(ef,del,eb)
                   DO ie = 1, n_cut
                      DO m = -l, l
-                        int_com(ie,ispin) = int_com(ie,ispin) + ((ie-1)*g0Coeffs%del+g0Coeffs%e_bot)&
+                        int_com(ie,ispin) = int_com(ie,ispin) + ((ie-1)*del+eb)&
                                                                 *REAL(g0Coeffs%projdos(ie,m,m,0,i_gf,ispin))
                         int_norm(ie,ispin) = int_norm(ie,ispin) + REAL(g0Coeffs%projdos(ie,m,m,0,i_gf,ispin))
                      ENDDO
                   ENDDO
-                  exc_split(l) = exc_split(l) + (-1)**(ispin) * 1.0/(trapz(int_norm(:n_cut,ispin),g0Coeffs%del,n_cut)) * trapz(int_com(:n_cut,ispin),g0Coeffs%del,n_cut)
+                  exc_split(l) = exc_split(l) + (-1)**(ispin) * 1.0/(trapz(int_norm(:n_cut,ispin),del,n_cut)) &
+                                                               * trapz(int_com(:n_cut,ispin),del,n_cut)
                ENDDO
             ENDDO
-            IF(atoms%j0(i_j0)%l_avgexc) THEN
+            IF(gfinp%j0elem(i_j0)%l_avgexc) THEN
                avgexc = SUM(exc_split(l_min:l_max))/(l_max-l_min+1)
                DO l = l_min,l_max
                   exc_split(l) = avgexc
@@ -79,7 +80,7 @@ MODULE m_j0
          ENDIF
       DO l = l_min,l_max
          WRITE(filename,9060) i_j0, l
-         IF(atoms%j0(i_j0)%l_eDependence) OPEN(unit=1337,file=filename,status="replace")
+         IF(gfinp%j0elem(i_j0)%l_eDependence) OPEN(unit=1337,file=filename,status="replace")
          WRITE(6,9030) l,exc_split(l)*hartree_to_ev_const
 
          matsize = (2*l+1)
@@ -107,7 +108,7 @@ MODULE m_j0
                delta%data_c = 0.0
                DO ispin = 1, input%jspins
                   DO ipm = 1, 2
-                     CALL g0%get(calc,atoms,input,iz,l,nType,ipm.EQ.2,spin=ispin)
+                     CALL g0%get(calc,gfinp,input,iz,l,nType,ipm.EQ.2,spin=ispin)
                      CALL calc%inverse()
                      delta%data_c = delta%data_c + 1/2.0 * (-1)**(ispin-1) * calc%data_c
                   ENDDO
@@ -123,8 +124,8 @@ MODULE m_j0
             sumdwn = 0.0
             sumupdwn = 0.0
             DO ipm = 1, 2
-               CALL g0%get(calcup,atoms,input,iz,l,nType,ipm.EQ.2,spin=1)
-               CALL g0%get(calcdwn,atoms,input,iz,l,nType,ipm.EQ.2,spin=2)
+               CALL g0%get(calcup,gfinp,input,iz,l,nType,ipm.EQ.2,spin=1)
+               CALL g0%get(calcdwn,gfinp,input,iz,l,nType,ipm.EQ.2,spin=2)
                calcup%data_c  = matmul(delta%data_c,calcup%data_c)
                calcdwn%data_c = matmul(delta%data_c,calcdwn%data_c)
                calc%data_c    = matmul(calcup%data_c,calcdwn%data_c)
@@ -151,11 +152,10 @@ MODULE m_j0
             ENDIF
             j0(l) = j0(l) + AIMAG(integrand)
 
-            IF(atoms%j0(i_j0)%l_eDependence) THEN
+            IF(gfinp%j0elem(i_j0)%l_eDependence) THEN
             WRITE(1337,"(5f14.8)") REAL(g0%e(iz)-ef)*hartree_to_ev_const, -1/(2.0*fpi_const)*hartree_to_ev_const *j0(l),&
                                    AIMAG(sumup),AIMAG(sumdwn),AIMAG(sumupdwn)
             ENDIF
-
 
             IF(l_matinv) CALL calc%free()
 
@@ -164,7 +164,7 @@ MODULE m_j0
          WRITE(6,9040) l,j0(l),ABS(j0(l))*2/3*1/(boltzmannConst*hartree_to_ev_const)
 
 
-         IF(atoms%j0(i_j0)%l_eDependence) CLOSE(unit=1337)
+         IF(gfinp%j0elem(i_j0)%l_eDependence) CLOSE(unit=1337)
          CALL delta%free()
          CALL calc%free()
          ENDDO

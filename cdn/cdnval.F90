@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,oneD,cdnvalJob,den,regCharges,dos,results,&
-                  moments,hub1,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle)
+                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,greensfCoeffs,angle)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -73,13 +73,15 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    TYPE(t_kpts),          INTENT(IN)    :: kpts
    TYPE(t_sphhar),        INTENT(IN)    :: sphhar
    TYPE(t_atoms),         INTENT(IN)    :: atoms
+   TYPE(t_gfinp),         INTENT(IN)    :: gfinp
+   TYPE(t_hub1inp),       INTENT(IN)    :: hub1inp
    TYPE(t_potden),        INTENT(IN)    :: vTot
    TYPE(t_cdnvalJob),     INTENT(IN)    :: cdnvalJob
    TYPE(t_potden),        INTENT(INOUT) :: den
    TYPE(t_regionCharges), INTENT(INOUT) :: regCharges
    TYPE(t_dos),           INTENT(INOUT) :: dos
    TYPE(t_moments),       INTENT(INOUT) :: moments
-   TYPE(t_hub1ham),       OPTIONAL, INTENT(INOUT) :: hub1
+   TYPE(t_hub1data),      OPTIONAL, INTENT(INOUT) :: hub1data
    TYPE(t_coreSpecInput), OPTIONAL, INTENT(IN)    :: coreSpecInput
    TYPE(t_mcd),           OPTIONAL, INTENT(INOUT) :: mcd
    TYPE(t_slab),          OPTIONAL, INTENT(INOUT) :: slab
@@ -95,7 +97,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 #endif
 
    ! Local Scalars
-   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,ne
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp
    INTEGER :: iErr,nbands,noccbd,iType
    INTEGER :: skip_t,skip_tt,nbasfcn
    LOGICAL :: l_orbcomprot, l_real, l_dosNdir, l_corespec
@@ -123,7 +125,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco)
    l_dosNdir = banddos%dos.AND.(banddos%ndir.EQ.-3)
 
-   IF (noco%l_mperp.OR.input%l_gfmperp) THEN
+   IF (noco%l_mperp.OR.gfinp%l_mperp) THEN
       ! when the off-diag. part of the desinsity matrix, i.e. m_x and
       ! m_y, is calculated inside the muffin-tins (l_mperp = T), cdnval
       ! is called only once. therefore, several spin loops have been
@@ -170,9 +172,9 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
    DO iType = 1, atoms%ntype
       DO ispin = jsp_start, jsp_end
-         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),input%l_dftspinpol)
+         CALL genMTBasis(atoms,enpara,vTot,mpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),hub1inp%l_dftspinpol)
       END DO
-      IF (noco%l_mperp.OR.input%l_gfmperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
+      IF (noco%l_mperp.OR.gfinp%l_mperp) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
       IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,29,input%jspins,jspin,results%ef,&
                                         atoms%msh,vTot%mt(:,0,:,:),f,g)
@@ -185,14 +187,14 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
    jsp = MERGE(1,jspin,noco%l_noco)
 
    !Get the energy mesh for the tetrahedron method
-   IF(atoms%n_gf>0) CALL greensfCoeffs%eMesh(ne,eMesh)
+   IF(gfinp%n>0) CALL gfinp%eMesh(results%ef,eMesh=eMesh)
 
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
 
       CALL lapw%init(input,noco, kpts,atoms,sym,ikpt,cell,.false., mpi)
       skip_t = skip_tt
-      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos.OR.atoms%n_gf>0)
+      ev_list=cdnvaljob%compact_ev_list(ikpt_i,banddos%dos.OR.gfinp%n>0)
       noccbd = SIZE(ev_list)
       we  = cdnvalJob%weights(ev_list,ikpt)
       eig = results%eig(ev_list,ikpt,jsp)
@@ -231,13 +233,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,noco,jspin,noccbd)
-      IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
+      IF (gfinp%n.GT.0.AND.(input%tria.OR.input%gfTet)) THEN
          CALL timestart("TetrahedronWeights")
-         ALLOCATE(dosWeights(greensfCoeffs%ne,noccbd))
-         ALLOCATE(resWeights(greensfCoeffs%ne,noccbd))
-         resWeights = 0.0
+         ALLOCATE(dosWeights(gfinp%ne,noccbd),source=0.0)
+         ALLOCATE(resWeights(gfinp%ne,noccbd),source=0.0)
          ALLOCATE(dosBound(noccbd,2))
-         CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),noccbd,eMesh,ne,input%film,dosWeights,bounds=dosBound,dos=.TRUE.)
+         CALL tetrahedronInit(kpts,ikpt,results%eig(ev_list,:,jsp),noccbd,eMesh,gfinp%ne,&
+                              input%film,dosWeights,bounds=dosBound,dos=.TRUE.)
          CALL timestop("TetrahedronWeights")
       ENDIF
       DO ispin = jsp_start, jsp_end
@@ -249,8 +251,8 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) CALL n_mat21(atoms,sym,angle,noccbd,we,denCoeffsOffdiag,&
                                                                                 eigVecCoeffs,den%mmpMat(:,:,:,3))
 
-         IF (atoms%n_gf.GT.0) CALL bzIntegrationGF(atoms,sym,input,angle,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
-                                                   eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensfCoeffs,ispin==jsp_end)
+         IF (gfinp%n.GT.0) CALL bzIntegrationGF(atoms,gfinp,sym,input,angle,ispin,noccbd,dosWeights,resWeights,dosBound,kpts%wtkpt(ikpt),&
+                                                results%ef,eig,denCoeffsOffdiag,usdus,eigVecCoeffs,greensfCoeffs,ispin==jsp_end)
 
          ! perform Brillouin zone integration and summation over the
          ! bands in order to determine the energy parameters for each atom and angular momentum
@@ -277,7 +279,7 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
          IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
-      IF (atoms%n_gf.GT.0.AND.(input%tria.OR.input%gfTet)) DEALLOCATE(dosWeights,resWeights,dosBound)
+      IF (gfinp%n.GT.0.AND.(input%tria.OR.input%gfTet)) DEALLOCATE(dosWeights,resWeights,dosBound)
       IF (noco%l_mperp) CALL denCoeffsOffdiag%calcCoefficients(atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
 
       IF ((banddos%dos.OR.banddos%vacdos.OR.input%cdinf).AND.(banddos%ndir.GT.0)) THEN
@@ -288,13 +290,13 @@ SUBROUTINE cdnval(eig_id, mpi,kpts,jspin,noco,input,banddos,cell,atoms,enpara,st
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,ispin,regCharges,dos,&
+      CALL mpi_col_den(mpi,sphhar,atoms,oneD,stars,vacuum,input,noco,gfinp,ispin,regCharges,dos,&
                        results,denCoeffs,orb,denCoeffsOffdiag,den,mcd,slab,orbcomp,greensfCoeffs)
    END DO
 #endif
 
-   CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,&
-                 enpara,vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1,input%l_dftspinpol)
+   CALL cdnmt(mpi,input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,&
+              vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,moments,den%mt,hub1inp,hub1data)
 
    IF (mpi%irank==0) THEN
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)

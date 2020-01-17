@@ -366,7 +366,7 @@ CONTAINS
       ENDDO
    END FUNCTION find_gfelem
 
-   SUBROUTINE eMesh_gfinp(this,ef,del_out,eb_out,eMesh)
+   SUBROUTINE eMesh_gfinp(this,ef,del_out,eb_out,et_out,eMesh)
 
       !Gives back the information for the energy mesh on the real axis
       !Energies are shifted according to the fermi level
@@ -375,6 +375,7 @@ CONTAINS
       REAL,                         INTENT(IN)    :: ef
       REAL, OPTIONAL,               INTENT(INOUT) :: del_out
       REAL, OPTIONAL,               INTENT(INOUT) :: eb_out
+      REAL, OPTIONAL,               INTENT(INOUT) :: et_out
       REAL, ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: eMesh(:)
 
       INTEGER :: ie
@@ -384,6 +385,7 @@ CONTAINS
       del = (this%elup-this%ellow)/REAL(this%ne-1)
 
       IF(PRESENT(eb_out)) eb_out = eb
+      IF(PRESENT(et_out)) et_out = ef+this%elup
       IF(PRESENT(del_out)) del_out = del
 
       IF(PRESENT(eMesh)) THEN

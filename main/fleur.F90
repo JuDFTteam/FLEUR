@@ -153,8 +153,8 @@ CONTAINS
 
     iter     = 0
     iterHF   = 0
-    hub1%iter  = 0
-    hub1%l_runthisiter = .FALSE.
+    hub1data%iter  = 0
+    hub1data%l_runthisiter = .FALSE.
     l_cont = (iter < input%itmax)
 
     IF (mpi%irank.EQ.0) CALL openXMLElementNoAttributes('scfLoop')
@@ -189,7 +189,7 @@ CONTAINS
     ! Initialize potentials (end)
 
     ! Initialize Green's function (start)
-    IF(atoms%n_gf>0) CALL gOnsite%init(input,lmaxU_const,atoms,noco)
+    IF(gfinp%n>0) CALL gOnsite%init(gfinp,input,noco)
     ! Initialize Green's function (end)
 
     ! Open/allocate eigenvector storage (start)
@@ -214,9 +214,9 @@ CONTAINS
     scfloop:DO WHILE (l_cont)
 
        iter = iter + 1
-       IF(hub1%l_runthisiter.AND.atoms%n_hia>0) THEN
-          hub1%iter = hub1%iter + 1
-          CALL hubbard1_setup(atoms,input,mpi,noco,vTot,gOnsite,hub1,results,inDen)
+       IF(hub1data%l_runthisiter.AND.atoms%n_hia>0) THEN
+          hub1data%iter = hub1data%iter + 1
+          CALL hubbard1_setup(atoms,gfinp,hub1inp,input,mpi,noco,vTot,gOnsite,hub1data,results,inDen)
        ENDIF
        IF (mpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),&
                                                        (/iter,inden%iter/), RESHAPE((/19,13,5,5/),(/2,2/)))
@@ -338,7 +338,7 @@ CONTAINS
           !IF(.not.input%eig66(1))THEN
             CALL eigen(mpi,stars,sphhar,atoms,xcpot,sym,kpts,vacuum,input,&
                        cell,enpara,banddos,noco,oneD,mpdata,hybinp,hybdat,&
-                       iter,eig_id,results,inDen,vTemp,vx,hub1)
+                       iter,eig_id,results,inDen,vTemp,vx,hub1inp,hub1data)
           !ENDIF
           vTot%mmpMat = vTemp%mmpMat
 !!$          eig_idList(pc) = eig_id
@@ -364,7 +364,7 @@ CONTAINS
           ! WRITE(6,fmt='(A)') 'Starting 2nd variation ...'
           IF (noco%l_soc.AND..NOT.noco%l_noco) &
              CALL eigenso(eig_id,mpi,stars,vacuum,atoms,sphhar,&
-                          sym,cell,noco,input,kpts, oneD,vTot,enpara,results,hub1)
+                          sym,cell,noco,input,kpts, oneD,vTot,enpara,results,hub1inp,hub1data)
           CALL timestop("gen. of hamil. and diag. (total)")
 
 #ifdef CPP_MPI
@@ -443,9 +443,9 @@ CONTAINS
           CALL outDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_DEN)
           outDen%iter = inDen%iter
           CALL cdngen(eig_id,mpi,input,banddos,sliceplot,vacuum, &
-                      kpts,atoms,sphhar,stars,sym,&
+                      kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                       enpara,cell,noco,vTot,results,oneD,coreSpecInput,&
-                      archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1)
+                      archiveType,xcpot,outDen,EnergyDen,gOnsite,hub1data)
           !The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
           outDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:) = inDen%mmpMat(:,:,atoms%n_u+1:atoms%n_u+atoms%n_hia,:)
           IF ((sliceplot%iplot.NE.0 ).AND.(mpi%irank==0) ) THEN
@@ -462,7 +462,7 @@ CONTAINS
                 TYPE IS(t_xcpot_inbuild)
                    CALL rdmft(eig_id,mpi,input,kpts,banddos,sliceplot,cell,atoms,enpara,stars,vacuum,&
                               sphhar,sym,field,vTot,vCoul,oneD,noco,xcpot,mpinp,mpdata,hybinp,hybdat,&
-                              results,coreSpecInput,archiveType,outDen)
+                              gfinp,hub1inp,results,coreSpecInput,archiveType,outDen)
              END SELECT
           END IF
 

@@ -20,48 +20,55 @@ MODULE m_greensfImag21
    USE m_juDFT
    USE m_constants
 
+   IMPLICIT NONE
+
    CONTAINS
 
-   SUBROUTINE greensfImag21(atoms,sym,angle,input,nbands,dosWeights,resWeights,ind,wtkpt,eig,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
-
-
-      IMPLICIT NONE
+   SUBROUTINE greensfImag21(atoms,gfinp,sym,angle,input,nbands,dosWeights,resWeights,ind,wtkpt,ef,eig,denCoeffsOffDiag,eigVecCoeffs,greensfCoeffs)
 
       TYPE(t_atoms),             INTENT(IN)     :: atoms
+      TYPE(t_gfinp),             INTENT(IN)     :: gfinp
       TYPE(t_sym),               INTENT(IN)     :: sym
       REAL,                      INTENT(IN)     :: angle(:)
       TYPE(t_input),             INTENT(IN)     :: input
       TYPE(t_eigVecCoeffs),      INTENT(IN)     :: eigVecCoeffs
       TYPE(t_denCoeffsOffDiag),  INTENT(IN)     :: denCoeffsOffDiag
       TYPE(t_greensfCoeffs),     INTENT(INOUT)  :: greensfCoeffs
-
       INTEGER,                   INTENT(IN)     :: nbands
       REAL,                      INTENT(IN)     :: wtkpt
+      REAL,                      INTENT(IN)     :: ef
       REAL,                      INTENT(IN)     :: dosWeights(:,:)
       REAL,                      INTENT(IN)     :: resWeights(:,:)
       INTEGER,                   INTENT(IN)     :: ind(:,:)
       REAL,                      INTENT(IN)     :: eig(:)
 
-      INTEGER  i_gf,nType,l,natom,ib,j,ie,m,lm,mp,lmp,ilo,ilop,nn
+      INTEGER  i_gf,nType,l,natom,ib,j
+      INTEGER  ie,m,lm,mp,lmp,ilo,ilop,nn
+      REAL del,eb
       COMPLEX  weight
       LOGICAL  l_zero,l_tria
       COMPLEX, ALLOCATABLE :: im(:,:)
 
-      IF(.NOT.input%l_gfsphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
+      IF(.NOT.gfinp%l_sphavg) CALL juDFT_error("NOCO-offdiagonal + Radial dependence of onsite-GF not implemented",calledby="onsite21")
 
       l_tria = (input%tria.OR.input%gfTet).AND..NOT.input%l_hist
+
+
+      !Get the information on the real axis energy mesh
+      CALL gfinp%eMesh(ef,del,eb)
+
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(wtkpt,nbands,l_tria) &
-      !$OMP SHARED(atoms,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig) &
+      !$OMP SHARED(wtkpt,nbands,l_tria,del,eb) &
+      !$OMP SHARED(atoms,gfinp,input,eigVecCoeffs,greensfCoeffs,denCoeffsOffDiag,eig) &
       !$OMP SHARED(dosWeights,resWeights,ind) &
       !$OMP PRIVATE(i_gf,l,nType,natom,nn,ie,m,mp,lm,lmp,weight,ib,j,l_zero,ilo,ilop) &
       !$OMP PRIVATE(im)
       !$OMP DO
-      DO i_gf = 1, atoms%n_gf
-         nType = atoms%gfelem(i_gf)%atomType
-         l = atoms%gfelem(i_gf)%l
+      DO i_gf = 1, gfinp%n
+         nType = gfinp%elem(i_gf)%atomType
+         l =     gfinp%elem(i_gf)%l
 
-         ALLOCATE(im(greensfCoeffs%ne,MERGE(1,5,input%l_gfsphavg)))
+         ALLOCATE(im(gfinp%ne,MERGE(1,5,gfinp%l_sphavg)))
 
          DO nn = 1, atoms%neq(nType)
             natom = SUM(atoms%neq(:nType-1)) + nn
@@ -76,24 +83,23 @@ MODULE m_greensfImag21
 
                      l_zero = .true.
                      IF(l_tria) THEN
-                        IF(.NOT.input%l_resolvent) THEN
+                        !IF(.NOT.input%l_resolvent) THEN
                            !TETRAHEDRON METHOD: check if the weight for this eigenvalue is non zero
                            IF(ANY(dosWeights(ind(ib,1):ind(ib,2),ib).NE.0.0)) l_zero = .false.
-                        ELSE
-                           l_zero = .false.
-                        ENDIF
+                        !ELSE
+                        !   l_zero = .false.
+                        !ENDIF
                      ELSE
                         !HISTOGRAM METHOD: check if eigenvalue is inside the energy range
-                        j = FLOOR((eig(ib)-greensfCoeffs%e_bot)/greensfCoeffs%del)+1
-                        IF( (j.LE.greensfCoeffs%ne).AND.(j.GE.1) )         l_zero = .false.
+                        j = FLOOR((eig(ib)-eb)/del)+1
+                        IF( (j.LE.gfinp%ne).AND.(j.GE.1) ) l_zero = .false.
                      END IF
 
                      IF(l_zero) CYCLE
 
                      DO ie = MERGE(ind(ib,1),j,l_tria), MERGE(ind(ib,2),j,l_tria)
 
-                         weight = 2.0/input%jspins*(MERGE(resWeights(ie,ib),0.0,input%l_resolvent)&
-                                                - ImagUnit * pi_const * MERGE(dosWeights(ie,ib),wtkpt/greensfCoeffs%del,l_tria))
+                        weight = -2.0/input%jspins*ImagUnit * pi_const * MERGE(dosWeights(ie,ib),wtkpt/del,l_tria)
                         !
                         !Contribution from states
                         !
@@ -102,7 +108,7 @@ MODULE m_greensfImag21
                                             + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)&
                                             + CONJG(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)&
                                             + CONJG(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%du21n(l,nType))
-                        IF(.NOT.input%l_gfsphavg) THEN
+                        IF(.NOT.gfinp%l_sphavg) THEN
                            im(ie,2) = im(ie,2) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%acof(ib,lm,natom,1) * denCoeffsOffdiag%uu21n(l,nType)
                            im(ie,3) = im(ie,3) + weight * conjg(eigVecCoeffs%bcof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%dd21n(l,nType)
                            im(ie,4) = im(ie,4) + weight * conjg(eigVecCoeffs%acof(ib,lmp,natom,2)) * eigVecCoeffs%bcof(ib,lm,natom,1) * denCoeffsOffdiag%ud21n(l,nType)
@@ -133,7 +139,7 @@ MODULE m_greensfImag21
                         ENDDO!local orbitals
                      ENDDO!ie
                   ENDDO!ib
-                  DO ie = 1, greensfCoeffs%ne
+                  DO ie = 1, gfinp%ne
                      greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) = greensfCoeffs%projdos(ie,m,mp,nn,i_gf,3) + im(ie,1)
                   ENDDO
                ENDDO!mp
@@ -145,5 +151,4 @@ MODULE m_greensfImag21
       !$OMP END PARALLEL
 
    END SUBROUTINE greensfImag21
-
 END MODULE m_greensfImag21

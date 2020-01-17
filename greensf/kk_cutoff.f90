@@ -1,32 +1,29 @@
 MODULE m_kk_cutoff
 
+   USE m_kkintgr
+   USE m_types
+   USE m_constants
+
+   IMPLICIT NONE
 
    LOGICAL, PARAMETER :: l_debug=.FALSE.
 
    CONTAINS
 
-   SUBROUTINE kk_cutoff(im,atoms,noco,l,jspins,ne,del,e_bot,e_top,cutoff)
+   SUBROUTINE kk_cutoff(im,noco,l,jspins,ne,del,e_bot,e_top,cutoff)
       !This Subroutine determines the cutoff energy for the kramers-kronig-integration
       !This cutoff energy is defined so that the integral over the fDOS up to this cutoff
       !is equal to 2*(2l+1) (the number of states in the correlated shell) or not to small
 
-      USE m_kkintgr
-      USE m_types
-
-      IMPLICIT NONE
-
       COMPLEX,             INTENT(INOUT)  :: im(:,-lmaxU_const:,-lmaxU_const:,:)
-      TYPE(t_atoms),       INTENT(IN)     :: atoms
       TYPE(t_noco),        INTENT(IN)     :: noco
-
       INTEGER,             INTENT(IN)     :: l
       INTEGER,             INTENT(IN)     :: jspins
       INTEGER,             INTENT(IN)     :: ne
       REAL,                INTENT(IN)     :: del
       REAL,                INTENT(IN)     :: e_bot
       REAL,                INTENT(IN)     :: e_top
-
-      INTEGER,             INTENT(OUT)    :: cutoff(:,:)
+      INTEGER,             INTENT(INOUT)  :: cutoff(:,:)
 
 
       INTEGER i,m,n_c,ispin,spins_cut

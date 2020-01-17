@@ -1,10 +1,18 @@
 MODULE m_add_selfen
 
+   USE m_types
+   USE m_constants
+   USE m_juDFT
+
+   IMPLICIT NONE
+
    LOGICAL, PARAMETER :: l_selfenDebug = .TRUE.
 
    CONTAINS
 
-   SUBROUTINE add_selfen(g,selfen,atoms,input,noco,hub1,ef,n_occ,gp,mmpMat)
+   SUBROUTINE add_selfen(g,selfen,atoms,gfinp,input,noco,hub1inp,ef,n_occ,gp,mmpMat)
+
+      USE m_gfcalc
 
       !Calculates the interacting Green's function for the mt-sphere with
       !
@@ -19,14 +27,9 @@ MODULE m_add_selfen
       !Then the desired chemical potential is found with the bisection method
       !to the right of the maximum
 
-      USE m_types
-      USE m_constants
-      USE m_gfcalc
-
-      IMPLICIT NONE
-
       TYPE(t_greensf),  INTENT(IN)     :: g
-      TYPE(t_hub1ham),  INTENT(IN)     :: hub1
+      TYPE(t_gfinp),    INTENT(IN)     :: gfinp
+      TYPE(t_hub1inp),  INTENT(IN)     :: hub1inp
       TYPE(t_atoms),    INTENT(IN)     :: atoms
       TYPE(t_noco),     INTENT(IN)     :: noco
       TYPE(t_input),    INTENT(IN)     :: input
@@ -34,9 +37,10 @@ MODULE m_add_selfen
       REAL,             INTENT(IN)     :: ef
       REAL,             INTENT(IN)     :: n_occ(:,:)
       TYPE(t_greensf),  INTENT(INOUT)  :: gp
-      COMPLEX,          INTENT(OUT)    :: mmpMat(-lmaxU_const:,-lmaxU_const:,:,:)
+      COMPLEX,          INTENT(INOUT)  :: mmpMat(-lmaxU_const:,-lmaxU_const:,:,:)
 
-      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm,spin_match,matsize,start,end,i_match,ind
+      INTEGER i_hia,l,nType,ns,ispin,m,mp,iz,ipm
+      INTEGER spin_match,matsize,start,end,i_match,ind
       CHARACTER(len=6) app,filename
 
       REAL mu_a,mu_b,mu_step,mu_max,n_max
@@ -73,27 +77,27 @@ MODULE m_add_selfen
             start = MERGE(1,1+(i_match-1)*ns,l_match_both_spins)
             end   = MERGE(2*ns,i_match*ns,l_match_both_spins)
             DO WHILE(mu.LE.mu_b)
-               CALL gp%reset(atoms,input,l,nType)
+               CALL gp%reset(gfinp,l,nType)
                mu = mu + mu_step
                DO ipm = 1, 2
                   DO iz = 1, g%nz
                      !Read selfenergy
                      vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
-                     IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
+                     IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
                         !Dismiss spin-off-diagonal elements
                         vmat%data_c(1:ns,ns+1:2*ns) = 0.0
                         vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                      ENDIF
                      IF(l_match_both_spins) THEN
-                        CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                        CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
                      ELSE
-                        CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL add_pot(gmat,vmat,mu)
                      IF(l_match_both_spins) THEN
-                        CALL gp%set(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                        CALL gp%set(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
                      ELSE
-                        CALL gp%set(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL gp%set(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL gmat%free()
                   ENDDO
@@ -101,10 +105,10 @@ MODULE m_add_selfen
                IF(mu.GT.-0.2.AND.mu.LT.0.2.AND.l_selfenDebug.AND..FALSE.) THEN
                   !DEBUG OUTPUT: Give the gfDOS around 0 (where we expect to find mu)
                   ind = AINT((mu+0.2)/0.01)
-                  CALL gfDOS(gp,l,nType,500+ind,atoms,input,ef)
+                  CALL gfDOS(gp,l,nType,500+ind,gfinp,input,ef)
                ENDIF
-               CALL occmtx(gp,l,nType,atoms,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
-               IF(err.AND.l_selfenDebug) CALL gfDOS(gp,l,nType,999,atoms,input,ef)
+               CALL occmtx(gp,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.)
+               IF(err.AND.l_selfenDebug) CALL gfDOS(gp,l,nType,999,gfinp,input,ef)
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
@@ -131,32 +135,32 @@ MODULE m_add_selfen
             !Set up the interval for the bisection method (mu_max,mu_b)
             mu_a = mu_max
             DO
-               CALL gp%reset(atoms,input,l,nType)
+               CALL gp%reset(gfinp,l,nType)
                mu = (mu_a + mu_b)/2.0
                DO ipm = 1, 2
                   DO iz = 1, g%nz
                      !Read selfenergy
                      vmat%data_c = selfen(start:end,start:end,iz,ipm,i_hia)
-                     IF(.NOT.input%l_gfmperp.AND.l_match_both_spins) THEN
+                     IF(.NOT.gfinp%l_mperp.AND.l_match_both_spins) THEN
                         !Dismiss spin-off-diagonal elements
                         vmat%data_c(1:ns,ns+1:2*ns) = 0.0
                         vmat%data_c(ns+1:2*ns,1:ns) = 0.0
                      ENDIF
                      IF(l_match_both_spins) THEN
-                        CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                        CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
                      ELSE
-                        CALL g%get(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL g%get(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL add_pot(gmat,vmat,mu)
                      IF(l_match_both_spins) THEN
-                        CALL gp%set(gmat,atoms,input,iz,l,nType,ipm.EQ.2)
+                        CALL gp%set(gmat,gfinp,input,iz,l,nType,ipm.EQ.2)
                      ELSE
-                        CALL gp%set(gmat,atoms,input,iz,l,nType,ipm.EQ.2,spin=i_match)
+                        CALL gp%set(gmat,gfinp,input,iz,l,nType,ipm.EQ.2,spin=i_match)
                      ENDIF
                      CALL gmat%free()
                   ENDDO
                ENDDO
-               CALL occmtx(gp,l,nType,atoms,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.) !check makes sure that the elements are reasonable
+               CALL occmtx(gp,l,nType,gfinp,input,mmpMat(:,:,i_hia,:),err,check=.TRUE.) !check makes sure that the elements are reasonable
                !Calculate the trace
                n = 0.0
                DO ispin = 1, input%jspins
@@ -198,11 +202,6 @@ MODULE m_add_selfen
    END SUBROUTINE add_selfen
 
    SUBROUTINE add_pot(gmat,vmat,mu)
-
-      USE m_types
-      USE m_juDFT
-
-      IMPLICIT NONE
 
       TYPE(t_mat),      INTENT(INOUT)  :: gmat
       TYPE(t_mat),      INTENT(IN)     :: vmat
