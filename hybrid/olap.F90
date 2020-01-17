@@ -73,7 +73,7 @@ CONTAINS
 
    SUBROUTINE olap_pwp(l_real, olap_r, olap_c, gpt, ngpt, atoms, cell)
 
-      USE m_constants
+      USE m_constants, ONLY: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED
       USE m_types
       IMPLICIT NONE
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -85,13 +85,15 @@ CONTAINS
       INTEGER, INTENT(IN)       :: gpt(:,:)
 
       LOGICAL, INTENT(IN)       :: l_real
-      REAL, INTENT(OUT)         ::  olap_r(ngpt*(ngpt + 1)/2)
-      COMPLEX, INTENT(OUT)      ::  olap_c(ngpt*(ngpt + 1)/2)
+      REAL, INTENT(INOUT)       ::  olap_r(ngpt*(ngpt + 1)/2)
+      COMPLEX, INTENT(INOUT)    ::  olap_c(ngpt*(ngpt + 1)/2)
 !     - local -
       INTEGER                  :: i, j, k, itype, icent, ineq
       REAL                     :: g, r, fgr
       COMPLEX, PARAMETER        :: img = (0.0, 1.0)
       INTEGER                  :: dg(3)
+
+      olap_r=REAL_NOT_INITALIZED; olap_c=CMPLX_NOT_INITALIZED
 
       if (l_real) THEN
          k = 0
